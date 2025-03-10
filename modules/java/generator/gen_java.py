@@ -425,6 +425,8 @@ class FuncInfo(GeneralInfo):
             arg_fix_map = func_fix_map.get(arg[1], {})
             arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
             arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
+            if arg[0] == 'dnn_Net':
+                arg[0] = 'Net'
             self.args.append(ArgInfo(arg))
 
     def fullClassJAVA(self):
@@ -474,7 +476,7 @@ class JavaWrapperGenerator(object):
             jni_name = "(*("+classinfo.fullNameCPP()+"*)%(n)s_nativeObj)"
         type_dict.setdefault(name, {}).update(
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : jni_name,
               "jni_type" : "jlong",
               "suffix" : "J",
@@ -483,7 +485,7 @@ class JavaWrapperGenerator(object):
         )
         type_dict.setdefault(name+'*', {}).update(
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : "&("+jni_name+")",
               "jni_type" : "jlong",
               "suffix" : "J",
@@ -686,7 +688,7 @@ class JavaWrapperGenerator(object):
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
             j_code.write( " "*4 + msg )
-            logging.warning("SKIP:" + c_decl.strip() + "\t due to RET type " + fi.ctype)
+            logging.info("SKIP:" + c_decl.strip() + "\t due to RET type " + fi.ctype)
             return
         for a in fi.args:
             if a.ctype not in type_dict:
@@ -698,7 +700,7 @@ class JavaWrapperGenerator(object):
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
-                logging.warning("SKIP:" + c_decl.strip() + "\t due to ARG type " + a.ctype + "/" + (a.out or "I"))
+                logging.info("SKIP:" + c_decl.strip() + "\t due to ARG type " + a.ctype + "/" + (a.out or "I"))
                 return
 
         self.ported_func_list.append(c_decl)
@@ -1240,13 +1242,13 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
 def copy_java_files(java_files_dir, java_base_path, default_package_path='org/opencv/'):
     global total_files, updated_files
     java_files = []
-    re_filter = re.compile(r'^.+\.(java|aidl|kt)(.in)?$')
+    re_filter = re.compile(r'^.+\.(java|kt)(.in)?$')
     for root, dirnames, filenames in os.walk(java_files_dir):
        java_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
     java_files = [f.replace('\\', '/') for f in java_files]
 
     re_package = re.compile(r'^package +(.+);')
-    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|aidl|kt)(.in)?$')
+    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|kt)(.in)?$')
     for java_file in java_files:
         src = checkFileRemap(java_file)
         with open(src, 'r') as f:
@@ -1353,7 +1355,7 @@ def sanitize_java_documentation_string(doc, type):
                 indexDiff += 1
             lines[index + indexDiff] = lines[index + indexDiff][0:i] + lines[index + indexDiff][i + 1:]
         else:
-            if listInd and (not line or line == "*" or line.startswith("@note")):
+            if listInd and (not line or line == "*" or line.strip().startswith("@note") or line.strip().startswith("@param")):
                 lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
                 indexDiff += 1
                 del listInd[-1]
@@ -1419,7 +1421,8 @@ if __name__ == "__main__":
     java_base_path = os.path.join(dstdir, 'java'); mkdir_p(java_base_path)
     java_test_base_path = os.path.join(dstdir, 'test'); mkdir_p(java_test_base_path)
 
-    for (subdir, target_subdir) in [('src/java', 'java'), ('android/java', None), ('android-21/java', None)]:
+    for (subdir, target_subdir) in [('src/java', 'java'), ('android/java', None),
+                                    ('android-21/java', None), ('android-24/java', None)]:
         if target_subdir is None:
             target_subdir = subdir
         java_files_dir = os.path.join(SCRIPT_DIR, subdir)

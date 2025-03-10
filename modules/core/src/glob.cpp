@@ -276,7 +276,7 @@ static void glob_rec(const cv::String& directory, const cv::String& wildchart, s
     }
     else
     {
-        CV_Error_(CV_StsObjectNotFound, ("could not open directory: %s", directory.c_str()));
+        CV_Error_(cv::Error::StsObjectNotFound, ("could not open directory: %s", directory.c_str()));
     }
 }
 #endif // OPENCV_HAVE_FILESYSTEM_SUPPORT

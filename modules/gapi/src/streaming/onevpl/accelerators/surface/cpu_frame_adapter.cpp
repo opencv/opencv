@@ -65,7 +65,6 @@ MediaFrame::View VPLMediaFrameCPUAdapter::access(MediaFrame::Access) {
 
 cv::util::any VPLMediaFrameCPUAdapter::blobParams() const {
     throw std::runtime_error("VPLMediaFrameCPUAdapter::blobParams() is not implemented");
-    return {};
 }
 
 void VPLMediaFrameCPUAdapter::serialize(cv::gapi::s11n::IOStream&) {

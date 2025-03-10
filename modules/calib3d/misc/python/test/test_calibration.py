@@ -67,7 +67,30 @@ class calibration_test(NewOpenCVTests):
         self.assertLess(cv.norm(camera_matrix - cameraMatrixTest, cv.NORM_L1), normCamEps)
         self.assertLess(cv.norm(dist_coefs - distCoeffsTest, cv.NORM_L1), normDistEps)
 
+    def test_projectPoints(self):
+        objectPoints = np.array([[181.24588 ,  87.80361 ,  11.421074],
+            [ 87.17948 , 184.75563 ,  37.223446],
+            [ 22.558456,  45.495266, 246.05797 ]], dtype=np.float32)
+        rvec = np.array([[ 0.9357548 , -0.28316498,  0.21019171],
+            [ 0.30293274,  0.9505806 , -0.06803132],
+            [-0.18054008,  0.12733458,  0.9752903 ]], dtype=np.float32)
+        tvec = np.array([ 69.32692 ,  17.602057, 135.77672 ], dtype=np.float32)
+        cameraMatrix = np.array([[214.0047  ,  26.98735 , 253.37799 ],
+            [189.8172  ,  10.038101,  18.862494],
+            [114.07123 , 200.87277 , 194.56332 ]], dtype=np.float32)
+        distCoeffs = distCoeffs = np.zeros((4, 1), dtype=np.float32)
 
+        imagePoints, jacobian = cv.projectPoints(objectPoints, rvec, tvec, cameraMatrix, distCoeffs)
+        self.assertTrue(imagePoints is not None)
+        self.assertTrue(jacobian is not None)
+
+    def test_sampsonDistance_valid2D(self):
+        pt1 = (np.random.rand(3, 10) * 256).astype(np.float64)
+        pt2 = (np.random.rand(3, 10) * 256).astype(np.float64)
+        F = (np.random.rand(3, 3) * 256).astype(np.float64)
+        dist = cv.sampsonDistance(pt1, pt2, F)
+        self.assertTrue(isinstance(dist, (float, np.floating)))
+        self.assertGreaterEqual(dist, 0.0)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

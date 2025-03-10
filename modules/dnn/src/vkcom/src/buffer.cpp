@@ -6,7 +6,6 @@
 // Third party copyrights are property of their respective owners.
 
 #include "../../precomp.hpp"
-#include "common.hpp"
 #include "internal.hpp"
 #include "../include/buffer.hpp"
 
@@ -16,59 +15,64 @@ namespace cv { namespace dnn { namespace vkcom {
 
 static uint32_t findMemoryType(uint32_t memoryTypeBits, VkMemoryPropertyFlags properties)
 {
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-
-    vkGetPhysicalDeviceMemoryProperties(kPhysicalDevice, &memoryProperties);
-
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
+    for (uint32_t i = 0; i < physicalDeviceMemoryProperties.memoryTypeCount; ++i)
+    {
         if ((memoryTypeBits & (1 << i)) &&
-                ((memoryProperties.memoryTypes[i].propertyFlags & properties) == properties))
+                ((physicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & properties) == properties))
             return i;
     }
-    return -1;
+    return uint32_t(-1);
+}
+
+Buffer::Buffer(VkBufferUsageFlags usageFlag) : usageFlag_(usageFlag), buffer_(VK_NULL_HANDLE), memory_(VK_NULL_HANDLE)
+{
 }
 
 bool Buffer::init(size_t size_in_bytes, const char* data)
 {
     if (buffer_ != VK_NULL_HANDLE)
     {
-        printf("Warn: Buffer object already inited\n");
+        CV_LOG_WARNING(NULL, "Warn: Buffer object already inited!");
         return false;
     }
 
     VkBufferCreateInfo bufferCreateInfo = {};
     bufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferCreateInfo.size = size_in_bytes;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    bufferCreateInfo.size = (VkDeviceSize)size_in_bytes;
+    bufferCreateInfo.usage = usageFlag_;
     bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    VK_CHECK_RESULT(vkCreateBuffer(device_, &bufferCreateInfo, NULL, &buffer_));
+    VK_CHECK_RESULT(vkCreateBuffer(kDevice, &bufferCreateInfo, NULL, &buffer_));
 
     VkMemoryRequirements memoryRequirements;
-    vkGetBufferMemoryRequirements(device_, buffer_, &memoryRequirements);
+    vkGetBufferMemoryRequirements(kDevice, buffer_, &memoryRequirements);
 
     VkMemoryAllocateInfo allocateInfo = {};
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.allocationSize = memoryRequirements.size;
+
+    // TODO: Try to optimize the memory at discrete graphics card. For AMD and GPU discrete graphics card,
+    //  we should use VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT.
+
     allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits,
                                                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
-                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    VK_CHECK_RESULT(vkAllocateMemory(device_, &allocateInfo, NULL, &memory_));
+                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+                                                  );
+    VK_CHECK_RESULT(vkAllocateMemory(kDevice, &allocateInfo, NULL, &memory_));
 
     if (data)
     {
         char* dst;
-        VK_CHECK_RESULT(vkMapMemory(device_, memory_, 0, size_in_bytes, 0, (void **)&dst));
+        VK_CHECK_RESULT(vkMapMemory(kDevice, memory_, 0, size_in_bytes, 0, (void **)&dst));
         memcpy(dst, data, size_in_bytes);
-        vkUnmapMemory(device_, memory_);
+        vkUnmapMemory(kDevice, memory_);
     }
 
-    VK_CHECK_RESULT(vkBindBufferMemory(device_, buffer_, memory_, 0));
+    VK_CHECK_RESULT(vkBindBufferMemory(kDevice, buffer_, memory_, 0));
     return true;
 }
 
-Buffer::Buffer(VkDevice& device, size_t size_in_bytes, const char* data)
+Buffer::Buffer(size_t size_in_bytes, const char* data, VkBufferUsageFlags usageFlag) : usageFlag_(usageFlag)
 {
-    device_ = device;
     buffer_ = VK_NULL_HANDLE;
     memory_ = VK_NULL_HANDLE;
     init(size_in_bytes, data);
@@ -76,8 +80,8 @@ Buffer::Buffer(VkDevice& device, size_t size_in_bytes, const char* data)
 
 Buffer::~Buffer()
 {
-    vkFreeMemory(device_, memory_, NULL);
-    vkDestroyBuffer(device_, buffer_, NULL);
+    vkFreeMemory(kDevice, memory_, NULL);
+    vkDestroyBuffer(kDevice, buffer_, NULL);
 }
 
 #endif // HAVE_VULKAN

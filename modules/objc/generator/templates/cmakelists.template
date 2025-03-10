@@ -8,7 +8,7 @@ set(MODULES "$modules")
 set (CMAKE_CXX_STANDARD 11)
 set (CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-set (OBJC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak -fvisibility=hidden -fPIC -D__OPENCV_BUILD=1")
+set (OBJC_COMPILE_FLAGS "-fobjc-arc -fobjc-weak -fvisibility=hidden -fPIC -D__OPENCV_BUILD=1 $module_availability_defines")
 set (SUPPRESS_WARNINGS_FLAGS "-Wno-incomplete-umbrella")
 set (CMAKE_CXX_FLAGS  "$${CMAKE_CXX_FLAGS} $${OBJC_COMPILE_FLAGS} $${SUPPRESS_WARNINGS_FLAGS}")
 

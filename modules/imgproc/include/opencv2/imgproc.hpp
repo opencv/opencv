@@ -46,143 +46,143 @@
 #include "opencv2/core.hpp"
 
 /**
-  @defgroup imgproc Image Processing
+@defgroup imgproc Image Processing
 
-This module includes image-processing functions.
+This module offers a comprehensive suite of image processing functions, enabling tasks such as those listed above.
 
-  @{
+@{
     @defgroup imgproc_filter Image Filtering
 
-Functions and classes described in this section are used to perform various linear or non-linear
-filtering operations on 2D images (represented as Mat's). It means that for each pixel location
-\f$(x,y)\f$ in the source image (normally, rectangular), its neighborhood is considered and used to
-compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of
-morphological operations, it is the minimum or maximum values, and so on. The computed response is
-stored in the destination image at the same location \f$(x,y)\f$. It means that the output image
-will be of the same size as the input image. Normally, the functions support multi-channel arrays,
-in which case every channel is processed independently. Therefore, the output image will also have
-the same number of channels as the input one.
+    Functions and classes described in this section are used to perform various linear or non-linear
+    filtering operations on 2D images (represented as Mat's). It means that for each pixel location
+    \f$(x,y)\f$ in the source image (normally, rectangular), its neighborhood is considered and used to
+    compute the response. In case of a linear filter, it is a weighted sum of pixel values. In case of
+    morphological operations, it is the minimum or maximum values, and so on. The computed response is
+    stored in the destination image at the same location \f$(x,y)\f$. It means that the output image
+    will be of the same size as the input image. Normally, the functions support multi-channel arrays,
+    in which case every channel is processed independently. Therefore, the output image will also have
+    the same number of channels as the input one.
 
-Another common feature of the functions and classes described in this section is that, unlike
-simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For
-example, if you want to smooth an image using a Gaussian \f$3 \times 3\f$ filter, then, when
-processing the left-most pixels in each row, you need pixels to the left of them, that is, outside
-of the image. You can let these pixels be the same as the left-most image pixels ("replicated
-border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant
-border" extrapolation method), and so on. OpenCV enables you to specify the extrapolation method.
-For details, see #BorderTypes
+    Another common feature of the functions and classes described in this section is that, unlike
+    simple arithmetic functions, they need to extrapolate values of some non-existing pixels. For
+    example, if you want to smooth an image using a Gaussian \f$3 \times 3\f$ filter, then, when
+    processing the left-most pixels in each row, you need pixels to the left of them, that is, outside
+    of the image. You can let these pixels be the same as the left-most image pixels ("replicated
+    border" extrapolation method), or assume that all the non-existing pixels are zeros ("constant
+    border" extrapolation method), and so on. OpenCV enables you to specify the extrapolation method.
+    For details, see #BorderTypes
 
-@anchor filter_depths
-### Depth combinations
-Input depth (src.depth()) | Output depth (ddepth)
---------------------------|----------------------
-CV_8U                     | -1/CV_16S/CV_32F/CV_64F
-CV_16U/CV_16S             | -1/CV_32F/CV_64F
-CV_32F                    | -1/CV_32F
-CV_64F                    | -1/CV_64F
+    @anchor filter_depths
+    ### Depth combinations
+    Input depth (src.depth()) | Output depth (ddepth)
+    --------------------------|----------------------
+    CV_8U                     | -1/CV_16S/CV_32F/CV_64F
+    CV_16U/CV_16S             | -1/CV_32F/CV_64F
+    CV_32F                    | -1/CV_32F
+    CV_64F                    | -1/CV_64F
 
-@note when ddepth=-1, the output image will have the same depth as the source.
+    @note when ddepth=-1, the output image will have the same depth as the source.
 
-@note if you need double floating-point accuracy and using single floating-point input data
-(CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
-the input data to the desired precision.
+    @note if you need double floating-point accuracy and using single floating-point input data
+    (CV_32F input and CV_64F output depth combination), you can use @ref Mat.convertTo to convert
+    the input data to the desired precision.
 
     @defgroup imgproc_transform Geometric Image Transformations
 
-The functions in this section perform various geometrical transformations of 2D images. They do not
-change the image content but deform the pixel grid and map this deformed grid to the destination
-image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from
-destination to the source. That is, for each pixel \f$(x, y)\f$ of the destination image, the
-functions compute coordinates of the corresponding "donor" pixel in the source image and copy the
-pixel value:
+    The functions in this section perform various geometrical transformations of 2D images. They do not
+    change the image content but deform the pixel grid and map this deformed grid to the destination
+    image. In fact, to avoid sampling artifacts, the mapping is done in the reverse order, from
+    destination to the source. That is, for each pixel \f$(x, y)\f$ of the destination image, the
+    functions compute coordinates of the corresponding "donor" pixel in the source image and copy the
+    pixel value:
 
-\f[\texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))\f]
+    \f[\texttt{dst} (x,y)= \texttt{src} (f_x(x,y), f_y(x,y))\f]
 
-In case when you specify the forward mapping \f$\left<g_x, g_y\right>: \texttt{src} \rightarrow
-\texttt{dst}\f$, the OpenCV functions first compute the corresponding inverse mapping
-\f$\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}\f$ and then use the above formula.
+    In case when you specify the forward mapping \f$\left<g_x, g_y\right>: \texttt{src} \rightarrow
+    \texttt{dst}\f$, the OpenCV functions first compute the corresponding inverse mapping
+    \f$\left<f_x, f_y\right>: \texttt{dst} \rightarrow \texttt{src}\f$ and then use the above formula.
 
-The actual implementations of the geometrical transformations, from the most generic remap and to
-the simplest and the fastest resize, need to solve two main problems with the above formula:
+    The actual implementations of the geometrical transformations, from the most generic remap and to
+    the simplest and the fastest resize, need to solve two main problems with the above formula:
 
-- Extrapolation of non-existing pixels. Similarly to the filtering functions described in the
-previous section, for some \f$(x,y)\f$, either one of \f$f_x(x,y)\f$, or \f$f_y(x,y)\f$, or both
-of them may fall outside of the image. In this case, an extrapolation method needs to be used.
-OpenCV provides the same selection of extrapolation methods as in the filtering functions. In
-addition, it provides the method #BORDER_TRANSPARENT. This means that the corresponding pixels in
-the destination image will not be modified at all.
+    - Extrapolation of non-existing pixels. Similarly to the filtering functions described in the
+    previous section, for some \f$(x,y)\f$, either one of \f$f_x(x,y)\f$, or \f$f_y(x,y)\f$, or both
+    of them may fall outside of the image. In this case, an extrapolation method needs to be used.
+    OpenCV provides the same selection of extrapolation methods as in the filtering functions. In
+    addition, it provides the method #BORDER_TRANSPARENT. This means that the corresponding pixels in
+    the destination image will not be modified at all.
 
-- Interpolation of pixel values. Usually \f$f_x(x,y)\f$ and \f$f_y(x,y)\f$ are floating-point
-numbers. This means that \f$\left<f_x, f_y\right>\f$ can be either an affine or perspective
-transformation, or radial lens distortion correction, and so on. So, a pixel value at fractional
-coordinates needs to be retrieved. In the simplest case, the coordinates can be just rounded to the
-nearest integer coordinates and the corresponding pixel can be used. This is called a
-nearest-neighbor interpolation. However, a better result can be achieved by using more
-sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_interpolation) ,
-where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
-f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
-interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
-#resize for details.
+    - Interpolation of pixel values. Usually \f$f_x(x,y)\f$ and \f$f_y(x,y)\f$ are floating-point
+    numbers. This means that \f$\left<f_x, f_y\right>\f$ can be either an affine or perspective
+    transformation, or radial lens distortion correction, and so on. So, a pixel value at fractional
+    coordinates needs to be retrieved. In the simplest case, the coordinates can be just rounded to the
+    nearest integer coordinates and the corresponding pixel can be used. This is called a
+    nearest-neighbor interpolation. However, a better result can be achieved by using more
+    sophisticated [interpolation methods](http://en.wikipedia.org/wiki/Multivariate_interpolation) ,
+    where a polynomial function is fit into some neighborhood of the computed pixel \f$(f_x(x,y),
+    f_y(x,y))\f$, and then the value of the polynomial at \f$(f_x(x,y), f_y(x,y))\f$ is taken as the
+    interpolated pixel value. In OpenCV, you can choose between several interpolation methods. See
+    #resize for details.
 
-@note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
+    @note The geometrical transformations do not work with `CV_8S` or `CV_32S` images.
 
     @defgroup imgproc_misc Miscellaneous Image Transformations
     @defgroup imgproc_draw Drawing Functions
 
-Drawing functions work with matrices/images of arbitrary depth. The boundaries of the shapes can be
-rendered with antialiasing (implemented only for 8-bit images for now). All the functions include
-the parameter color that uses an RGB value (that may be constructed with the Scalar constructor )
-for color images and brightness for grayscale images. For color images, the channel ordering is
-normally *Blue, Green, Red*. This is what imshow, imread, and imwrite expect. So, if you form a
-color using the Scalar constructor, it should look like:
+    Drawing functions work with matrices/images of arbitrary depth. The boundaries of the shapes can be
+    rendered with antialiasing (implemented only for 8-bit images for now). All the functions include
+    the parameter color that uses an RGB value (that may be constructed with the Scalar constructor )
+    for color images and brightness for grayscale images. For color images, the channel ordering is
+    normally *Blue, Green, Red*. This is what imshow, imread, and imwrite expect. So, if you form a
+    color using the Scalar constructor, it should look like:
 
-\f[\texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])\f]
+    \f[\texttt{Scalar} (blue \_ component, green \_ component, red \_ component[, alpha \_ component])\f]
 
-If you are using your own image rendering and I/O functions, you can use any channel ordering. The
-drawing functions process each channel independently and do not depend on the channel order or even
-on the used color space. The whole image can be converted from BGR to RGB or to a different color
-space using cvtColor .
+    If you are using your own image rendering and I/O functions, you can use any channel ordering. The
+    drawing functions process each channel independently and do not depend on the channel order or even
+    on the used color space. The whole image can be converted from BGR to RGB or to a different color
+    space using cvtColor .
 
-If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also,
-many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means
-that the coordinates can be passed as fixed-point numbers encoded as integers. The number of
-fractional bits is specified by the shift parameter and the real point coordinates are calculated as
-\f$\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})\f$ . This feature is
-especially effective when rendering antialiased shapes.
+    If a drawn figure is partially or completely outside the image, the drawing functions clip it. Also,
+    many drawing functions can handle pixel coordinates specified with sub-pixel accuracy. This means
+    that the coordinates can be passed as fixed-point numbers encoded as integers. The number of
+    fractional bits is specified by the shift parameter and the real point coordinates are calculated as
+    \f$\texttt{Point}(x,y)\rightarrow\texttt{Point2f}(x*2^{-shift},y*2^{-shift})\f$ . This feature is
+    especially effective when rendering antialiased shapes.
 
-@note The functions do not support alpha-transparency when the target image is 4-channel. In this
-case, the color[3] is simply copied to the repainted pixels. Thus, if you want to paint
-semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
-image.
+    @note The functions do not support alpha-transparency when the target image is 4-channel. In this
+    case, the color[3] is simply copied to the repainted pixels. Thus, if you want to paint
+    semi-transparent shapes, you can paint them in a separate buffer and then blend it with the main
+    image.
 
     @defgroup imgproc_color_conversions Color Space Conversions
     @defgroup imgproc_colormap ColorMaps in OpenCV
 
-The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
-sensitive to observing changes between colors, so you often need to recolor your grayscale images to
-get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your
-computer vision application.
+    The human perception isn't built for observing fine changes in grayscale images. Human eyes are more
+    sensitive to observing changes between colors, so you often need to recolor your grayscale images to
+    get a clue about them. OpenCV now comes with various colormaps to enhance the visualization in your
+    computer vision application.
 
-In OpenCV you only need applyColorMap to apply a colormap on a given image. The following sample
-code reads the path to an image from command line, applies a Jet colormap on it and shows the
-result:
+    In OpenCV you only need applyColorMap to apply a colormap on a given image. The following sample
+    code reads the path to an image from command line, applies a Jet colormap on it and shows the
+    result:
 
-@include snippets/imgproc_applyColorMap.cpp
+    @include snippets/imgproc_applyColorMap.cpp
 
-@see #ColormapTypes
+    @see #ColormapTypes
 
     @defgroup imgproc_subdiv2d Planar Subdivision
 
-The Subdiv2D class described in this section is used to perform various planar subdivision on
-a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
-using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
-In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
-diagram with red lines.
+    The Subdiv2D class described in this section is used to perform various planar subdivision on
+    a set of 2D points (represented as vector of Point2f). OpenCV subdivides a plane into triangles
+    using the Delaunay's algorithm, which corresponds to the dual graph of the Voronoi diagram.
+    In the figure below, the Delaunay's triangulation is marked with black lines and the Voronoi
+    diagram with red lines.
 
-![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
+    ![Delaunay triangulation (black) and Voronoi (red)](pics/delaunay_voronoi.png)
 
-The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
-location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
+    The subdivisions can be used for the 3D piece-wise transformation of a plane, morphing, fast
+    location of points on the plane, building special graphs (such as NNG,RNG), and so forth.
 
     @defgroup imgproc_hist Histograms
     @defgroup imgproc_shape Structural Analysis and Shape Descriptors
@@ -190,7 +190,6 @@ location of points on the plane, building special graphs (such as NNG,RNG), and 
     @defgroup imgproc_feature Feature Detection
     @defgroup imgproc_object Object Detection
     @defgroup imgproc_segmentation Image Segmentation
-    @defgroup imgproc_c C API
     @defgroup imgproc_hal Hardware Acceleration Layer
     @{
         @defgroup imgproc_hal_functions Functions
@@ -237,7 +236,7 @@ enum MorphShapes {
     MORPH_CROSS   = 1, //!< a cross-shaped structuring element:
                        //!< \f[E_{ij} = \begin{cases} 1 & \texttt{if } {i=\texttt{anchor.y } {or } {j=\texttt{anchor.x}}} \\0 & \texttt{otherwise} \end{cases}\f]
     MORPH_ELLIPSE = 2 //!< an elliptic structuring element, that is, a filled ellipse inscribed
-                      //!< into the rectangle Rect(0, 0, esize.width, 0.esize.height)
+                      //!< into the rectangle Rect(0, 0, esize.width, esize.height)
 };
 
 //! @} imgproc_filter
@@ -275,7 +274,8 @@ enum InterpolationFlags{
     - flag is __not__ set: \f$dst( \rho , \phi ) = src(x,y)\f$
     - flag is set: \f$dst(x,y) = src( \rho , \phi )\f$
     */
-    WARP_INVERSE_MAP     = 16
+    WARP_INVERSE_MAP     = 16,
+    WARP_RELATIVE_MAP    = 32
 };
 
 /** \brief Specify the polar mapping mode
@@ -329,7 +329,8 @@ enum ThresholdTypes {
     THRESH_TOZERO_INV = 4, //!< \f[\texttt{dst} (x,y) =  \fork{0}{if \(\texttt{src}(x,y) > \texttt{thresh}\)}{\texttt{src}(x,y)}{otherwise}\f]
     THRESH_MASK       = 7,
     THRESH_OTSU       = 8, //!< flag, use Otsu algorithm to choose the optimal threshold value
-    THRESH_TRIANGLE   = 16 //!< flag, use Triangle algorithm to choose the optimal threshold value
+    THRESH_TRIANGLE   = 16, //!< flag, use Triangle algorithm to choose the optimal threshold value
+    THRESH_DRYRUN     = 128 //!< flag, compute threshold only (useful for OTSU/TRIANGLE) but does not actually run thresholding
 };
 
 //! adaptive threshold algorithm
@@ -641,112 +642,109 @@ enum ColorConversionCodes {
     COLOR_YUV2BGR      = 84,
     COLOR_YUV2RGB      = 85,
 
-    //! YUV 4:2:0 family to RGB
-    COLOR_YUV2RGB_NV12  = 90,
-    COLOR_YUV2BGR_NV12  = 91,
-    COLOR_YUV2RGB_NV21  = 92,
-    COLOR_YUV2BGR_NV21  = 93,
-    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21,
-    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21,
+    COLOR_YUV2RGB_NV12  = 90, //!< convert between 4:2:0-subsampled YUV NV12 and RGB, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_NV12  = 91, //!< convert between 4:2:0-subsampled YUV NV12 and BGR, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_NV21  = 92, //!< convert between 4:2:0-subsampled YUV NV21 and RGB, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_NV21  = 93, //!< convert between 4:2:0-subsampled YUV NV21 and BGR, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV420sp2RGB  = COLOR_YUV2RGB_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGR  = COLOR_YUV2BGR_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGBA_NV12 = 94,
-    COLOR_YUV2BGRA_NV12 = 95,
-    COLOR_YUV2RGBA_NV21 = 96,
-    COLOR_YUV2BGRA_NV21 = 97,
-    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21,
-    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21,
+    COLOR_YUV2RGBA_NV12 = 94, //!< convert between 4:2:0-subsampled YUV NV12 and RGBA, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_NV12 = 95, //!< convert between 4:2:0-subsampled YUV NV12 and BGRA, two planes (in one or separate arrays): Y and U/V interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_NV21 = 96, //!< convert between 4:2:0-subsampled YUV NV21 and RGBA, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_NV21 = 97, //!< convert between 4:2:0-subsampled YUV NV21 and BGRA, two planes (in one or separate arrays): Y and V/U interleaved, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV420sp2RGBA = COLOR_YUV2RGBA_NV21, //!< synonym to NV21
+    COLOR_YUV420sp2BGRA = COLOR_YUV2BGRA_NV21, //!< synonym to NV21
 
-    COLOR_YUV2RGB_YV12  = 98,
-    COLOR_YUV2BGR_YV12  = 99,
-    COLOR_YUV2RGB_IYUV  = 100,
-    COLOR_YUV2BGR_IYUV  = 101,
-    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV,
-    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV,
-    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12,
-    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12,
+    COLOR_YUV2RGB_YV12  =  98, //!< convert between 4:2:0-subsampled YUV YV12 and RGB, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YV12  =  99, //!< convert between 4:2:0-subsampled YUV YV12 and BGR, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_IYUV  = 100, //!< convert between 4:2:0-subsampled YUV IYUV and RGB, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_IYUV  = 101, //!< convert between 4:2:0-subsampled YUV IYUV and BGR, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_I420  = COLOR_YUV2RGB_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGR_I420  = COLOR_YUV2BGR_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGB   = COLOR_YUV2RGB_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGR   = COLOR_YUV2BGR_YV12, //!< synonym to YV12
 
-    COLOR_YUV2RGBA_YV12 = 102,
-    COLOR_YUV2BGRA_YV12 = 103,
-    COLOR_YUV2RGBA_IYUV = 104,
-    COLOR_YUV2BGRA_IYUV = 105,
-    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV,
-    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV,
-    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12,
-    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12,
+    COLOR_YUV2RGBA_YV12 = 102, //!< convert between 4:2:0-subsampled YUV YV12 and RGBA, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YV12 = 103, //!< convert between 4:2:0-subsampled YUV YV12 and BGRA, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_IYUV = 104, //!< convert between 4:2:0-subsampled YUV YV12 and RGBA, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_IYUV = 105, //!< convert between 4:2:0-subsampled YUV YV12 and BGRA, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_I420 = COLOR_YUV2RGBA_IYUV, //!< synonym to IYUV
+    COLOR_YUV2BGRA_I420 = COLOR_YUV2BGRA_IYUV, //!< synonym to IYUV
+    COLOR_YUV420p2RGBA  = COLOR_YUV2RGBA_YV12, //!< synonym to YV12
+    COLOR_YUV420p2BGRA  = COLOR_YUV2BGRA_YV12, //!< synonym to YV12
 
-    COLOR_YUV2GRAY_420  = 106,
-    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420,
-    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420,
-    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420,
-    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420,
+    COLOR_YUV2GRAY_420  = 106, //!< extract Y channel from YUV 4:2:0 image
+    COLOR_YUV2GRAY_NV21 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_NV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_YV12 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_IYUV = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV2GRAY_I420 = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420sp2GRAY = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
+    COLOR_YUV420p2GRAY  = COLOR_YUV2GRAY_420, //!< synonym to COLOR_YUV2GRAY_420
 
-    //! YUV 4:2:2 family to RGB
-    COLOR_YUV2RGB_UYVY = 107,
-    COLOR_YUV2BGR_UYVY = 108,
-    //COLOR_YUV2RGB_VYUY = 109,
-    //COLOR_YUV2BGR_VYUY = 110,
-    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY,
-    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY,
-    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY,
+    COLOR_YUV2RGB_UYVY = 107, //!< convert between YUV UYVY and RGB, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_UYVY = 108, //!< convert between YUV UYVY and BGR, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2RGB_VYUY = 109, //!< convert between YUV VYUY and RGB, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2BGR_VYUY = 110, //!< convert between YUV VYUY and BGR, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_Y422 = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_Y422 = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGB_UYNV = COLOR_YUV2RGB_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGR_UYNV = COLOR_YUV2BGR_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGBA_UYVY = 111,
-    COLOR_YUV2BGRA_UYVY = 112,
-    //COLOR_YUV2RGBA_VYUY = 113,
-    //COLOR_YUV2BGRA_VYUY = 114,
-    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY,
-    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY,
-    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY,
+    COLOR_YUV2RGBA_UYVY = 111, //!< convert between YUV UYVY and RGBA, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_UYVY = 112, //!< convert between YUV UYVY and BGRA, YUV is 4:2:2-subsampled and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2RGBA_VYUY = 113, //!< convert between YUV VYUY and RGBA, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    //COLOR_YUV2BGRA_VYUY = 114, //!< convert between YUV VYUY and BGRA, YUV is 4:2:2-subsampled and interleaved as V/Y1/U/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_Y422 = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_Y422 = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2RGBA_UYNV = COLOR_YUV2RGBA_UYVY, //!< synonym to UYVY
+    COLOR_YUV2BGRA_UYNV = COLOR_YUV2BGRA_UYVY, //!< synonym to UYVY
 
-    COLOR_YUV2RGB_YUY2 = 115,
-    COLOR_YUV2BGR_YUY2 = 116,
-    COLOR_YUV2RGB_YVYU = 117,
-    COLOR_YUV2BGR_YVYU = 118,
-    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2,
-    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2,
-    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2,
+    COLOR_YUV2RGB_YUY2 = 115, //!< convert between YUV YUY2 and RGB, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YUY2 = 116, //!< convert between YUV YUY2 and BGR, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_YVYU = 117, //!< convert between YUV YVYU and RGB, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGR_YVYU = 118, //!< convert between YUV YVYU and BGR, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGB_YUYV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUYV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGB_YUNV = COLOR_YUV2RGB_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGR_YUNV = COLOR_YUV2BGR_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2RGBA_YUY2 = 119,
-    COLOR_YUV2BGRA_YUY2 = 120,
-    COLOR_YUV2RGBA_YVYU = 121,
-    COLOR_YUV2BGRA_YVYU = 122,
-    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2,
-    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2,
-    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2,
+    COLOR_YUV2RGBA_YUY2 = 119, //!< convert between YUV YUY2 and RGBA, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YUY2 = 120, //!< convert between YUV YUY2 and BGRA, YUV is 4:2:2-subsampled and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_YVYU = 121, //!< convert between YUV YVYU and RGBA, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2BGRA_YVYU = 122, //!< convert between YUV YVYU and BGRA, YUV is 4:2:2-subsampled and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_YUV2RGBA_YUYV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUYV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2RGBA_YUNV = COLOR_YUV2RGBA_YUY2, //!< synonym to YUY2
+    COLOR_YUV2BGRA_YUNV = COLOR_YUV2BGRA_YUY2, //!< synonym to YUY2
 
-    COLOR_YUV2GRAY_UYVY = 123,
-    COLOR_YUV2GRAY_YUY2 = 124,
-    //CV_YUV2GRAY_VYUY    = CV_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY,
-    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2,
-    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2,
+    COLOR_YUV2GRAY_UYVY = 123, //!< extract Y channel from YUV 4:2:2 image
+    COLOR_YUV2GRAY_YUY2 = 124, //!< extract Y channel from YUV 4:2:2 image
+    //CV_YUV2GRAY_VYUY  = CV_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_Y422 = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_UYNV = COLOR_YUV2GRAY_UYVY, //!< synonym to COLOR_YUV2GRAY_UYVY
+    COLOR_YUV2GRAY_YVYU = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUYV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
+    COLOR_YUV2GRAY_YUNV = COLOR_YUV2GRAY_YUY2, //!< synonym to COLOR_YUV2GRAY_YUY2
 
     //! alpha premultiplication
     COLOR_RGBA2mRGBA    = 125,
     COLOR_mRGBA2RGBA    = 126,
 
-    //! RGB to YUV 4:2:0 family
-    COLOR_RGB2YUV_I420  = 127,
-    COLOR_BGR2YUV_I420  = 128,
-    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420,
-    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420,
+    COLOR_RGB2YUV_I420  = 127, //!< convert between RGB and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_I420  = 128, //!< convert between BGR and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_IYUV  = COLOR_RGB2YUV_I420, //!< synonym to I420
+    COLOR_BGR2YUV_IYUV  = COLOR_BGR2YUV_I420, //!< synonym to I420
 
-    COLOR_RGBA2YUV_I420 = 129,
-    COLOR_BGRA2YUV_I420 = 130,
-    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420,
-    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420,
-    COLOR_RGB2YUV_YV12  = 131,
-    COLOR_BGR2YUV_YV12  = 132,
-    COLOR_RGBA2YUV_YV12 = 133,
-    COLOR_BGRA2YUV_YV12 = 134,
+    COLOR_RGBA2YUV_I420 = 129, //!< convert between RGBA and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_I420 = 130, //!< convert between BGRA and 4:2:0-subsampled YUV I420, three planes in one array: Y, U and V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_IYUV = COLOR_RGBA2YUV_I420, //!< synonym to I420
+    COLOR_BGRA2YUV_IYUV = COLOR_BGRA2YUV_I420, //!< synonym to I420
+    COLOR_RGB2YUV_YV12  = 131, //!< convert between RGB and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YV12  = 132, //!< convert between BGR and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YV12 = 133, //!< convert between RGBA and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YV12 = 134, //!< convert between BGRA and 4:2:0-subsampled YUV YV12, three planes in one array: Y, V and U, see @ref color_convert_rgb_yuv_42x
 
     //! Demosaicing, see @ref color_convert_bayer "color conversions" for additional information
     COLOR_BayerBG2BGR = 46, //!< equivalent to RGGB Bayer pattern
@@ -842,7 +840,39 @@ enum ColorConversionCodes {
     COLOR_BayerRG2RGBA = COLOR_BayerBG2BGRA, //!< equivalent to BGGR Bayer pattern
     COLOR_BayerGR2RGBA = COLOR_BayerGB2BGRA, //!< equivalent to GBRG Bayer pattern
 
-    COLOR_COLORCVT_MAX  = 143
+    COLOR_RGB2YUV_UYVY = 143, //!< convert between RGB and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_UYVY = 144, //!< convert between BGR and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_Y422 = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_Y422 = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGB2YUV_UYNV = COLOR_RGB2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGR2YUV_UYNV = COLOR_BGR2YUV_UYVY, //!< synonym to UYVY
+
+    COLOR_RGBA2YUV_UYVY = 145, //!< convert between RGBA and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_UYVY = 146, //!< convert between BGRA and YUV UYVU, YUV is 4:2:2 and interleaved as U/Y1/V/Y2, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_Y422 = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_Y422 = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_RGBA2YUV_UYNV = COLOR_RGBA2YUV_UYVY, //!< synonym to UYVY
+    COLOR_BGRA2YUV_UYNV = COLOR_BGRA2YUV_UYVY, //!< synonym to UYVY
+
+    COLOR_RGB2YUV_YUY2 = 147, //!< convert between RGB and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YUY2 = 148, //!< convert between BGR and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_YVYU = 149, //!< convert between RGB and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGR2YUV_YVYU = 150, //!< convert between BGR and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGB2YUV_YUYV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUYV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGB2YUV_YUNV = COLOR_RGB2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGR2YUV_YUNV = COLOR_BGR2YUV_YUY2, //!< synonym to YUY2
+
+    COLOR_RGBA2YUV_YUY2 = 151, //!< convert between RGBA and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YUY2 = 152, //!< convert between BGRA and YUV YUY2, YUV is 4:2:2 and interleaved as Y1/U/Y2/V, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YVYU = 153, //!< convert between RGBA and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_BGRA2YUV_YVYU = 154, //!< convert between BGRA and YUV YVYU, YUV is 4:2:2 and interleaved as Y1/V/Y2/U, see @ref color_convert_rgb_yuv_42x
+    COLOR_RGBA2YUV_YUYV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUYV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
+    COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
+
+    COLOR_COLORCVT_MAX  = 155
 };
 
 //! @addtogroup imgproc_shape
@@ -1507,12 +1537,14 @@ respectively (see #getGaussianKernel for details); to fully control the result r
 possible future modifications of all this semantics, it is recommended to specify all of ksize,
 sigmaX, and sigmaY.
 @param borderType pixel extrapolation method, see #BorderTypes. #BORDER_WRAP is not supported.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @sa  sepFilter2D, filter2D, blur, boxFilter, bilateralFilter, medianBlur
  */
 CV_EXPORTS_W void GaussianBlur( InputArray src, OutputArray dst, Size ksize,
                                 double sigmaX, double sigmaY = 0,
-                                int borderType = BORDER_DEFAULT );
+                                int borderType = BORDER_DEFAULT,
+                                AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Applies the bilateral filter to an image.
 
@@ -2134,11 +2166,13 @@ Must fall between 0 and max_theta.
 @param max_theta For standard and multi-scale Hough transform, an upper bound for the angle.
 Must fall between min_theta and CV_PI. The actual maximum angle in the accumulator may be slightly
 less than max_theta, depending on the parameters min_theta and theta.
+@param use_edgeval True if you want to use weighted Hough transform.
  */
 CV_EXPORTS_W void HoughLines( InputArray image, OutputArray lines,
                               double rho, double theta, int threshold,
                               double srn = 0, double stn = 0,
-                              double min_theta = 0, double max_theta = CV_PI );
+                              double min_theta = 0, double max_theta = CV_PI,
+                              bool use_edgeval = false );
 
 /** @brief Finds line segments in a binary image using the probabilistic Hough transform.
 
@@ -2227,7 +2261,7 @@ too large, some circles may be missed.
 @param param1 First method-specific parameter. In case of #HOUGH_GRADIENT and #HOUGH_GRADIENT_ALT,
 it is the higher threshold of the two passed to the Canny edge detector (the lower one is twice smaller).
 Note that #HOUGH_GRADIENT_ALT uses #Scharr algorithm to compute image derivatives, so the threshold value
-shough normally be higher, such as 300 or normally exposed and contrasty images.
+should normally be higher, such as 300 or normally exposed and contrasty images.
 @param param2 Second method-specific parameter. In case of #HOUGH_GRADIENT, it is the
 accumulator threshold for the circle centers at the detection stage. The smaller it is, the more
 false circles may be detected. Circles, corresponding to the larger accumulator values, will be
@@ -2457,6 +2491,10 @@ The function remap transforms the source image using the specified map:
 
 \f[\texttt{dst} (x,y) =  \texttt{src} (map_x(x,y),map_y(x,y))\f]
 
+with the WARP_RELATIVE_MAP flag :
+
+\f[\texttt{dst} (x,y) =  \texttt{src} (x+map_x(x,y),y+map_y(x,y))\f]
+
 where values of pixels with non-integer coordinates are computed using one of available
 interpolation methods. \f$map_x\f$ and \f$map_y\f$ can be encoded as separate floating-point maps
 in \f$map_1\f$ and \f$map_2\f$ respectively, or interleaved floating-point maps of \f$(x,y)\f$ in
@@ -2475,7 +2513,9 @@ representation to fixed-point for speed.
 @param map2 The second map of y values having the type CV_16UC1, CV_32FC1, or none (empty map
 if map1 is (x,y) points), respectively.
 @param interpolation Interpolation method (see #InterpolationFlags). The methods #INTER_AREA
-and #INTER_LINEAR_EXACT are not supported by this function.
+#INTER_LINEAR_EXACT and #INTER_NEAREST_EXACT are not supported by this function.
+The extra flag WARP_RELATIVE_MAP can be ORed to the interpolation method
+(e.g. INTER_LINEAR | WARP_RELATIVE_MAP)
 @param borderMode Pixel extrapolation method (see #BorderTypes). When
 borderMode=#BORDER_TRANSPARENT, it means that the pixels in the destination image that
 corresponds to the "outliers" in the source image are not modified by the function.
@@ -3248,7 +3288,7 @@ images[0].channels() + images[1].channels()-1, and so on.
 size and depth as images[0] .
 @param ranges Array of arrays of the histogram bin boundaries in each dimension. See #calcHist .
 @param scale Optional scale factor for the output back projection.
-@param uniform Flag indicating whether the histogram is uniform or not (see above).
+@param uniform Flag indicating whether the histogram is uniform or not (see #calcHist).
 
 @sa calcHist, compareHist
  */
@@ -3690,20 +3730,21 @@ floating-point.
 @param code color space conversion code (see #ColorConversionCodes).
 @param dstCn number of channels in the destination image; if the parameter is 0, the number of the
 channels is derived automatically from src and code.
+@param hint Implementation modfication flags. See #AlgorithmHint
 
 @see @ref imgproc_color_conversions
  */
-CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0 );
+CV_EXPORTS_W void cvtColor( InputArray src, OutputArray dst, int code, int dstCn = 0, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief Converts an image from one color space to another where the source image is
 stored in two planes.
 
 This function only supports YUV420 to RGB conversion as of now.
 
-@param src1: 8-bit image (#CV_8U) of the Y plane.
-@param src2: image containing interleaved U/V plane.
-@param dst: output image.
-@param code: Specifies the type of conversion. It can take any of the following values:
+@param src1 8-bit image (#CV_8U) of the Y plane.
+@param src2 image containing interleaved U/V plane.
+@param dst output image.
+@param code Specifies the type of conversion. It can take any of the following values:
 - #COLOR_YUV2BGR_NV12
 - #COLOR_YUV2RGB_NV12
 - #COLOR_YUV2BGRA_NV12
@@ -3712,8 +3753,9 @@ This function only supports YUV420 to RGB conversion as of now.
 - #COLOR_YUV2RGB_NV21
 - #COLOR_YUV2BGRA_NV21
 - #COLOR_YUV2RGBA_NV21
+@param hint Implementation modfication flags. See #AlgorithmHint
 */
-CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code );
+CV_EXPORTS_W void cvtColorTwoPlane( InputArray src1, InputArray src2, OutputArray dst, int code, AlgorithmHint hint = cv::ALGO_HINT_DEFAULT );
 
 /** @brief main function for all demosaicing processes
 
@@ -3757,8 +3799,8 @@ CV_EXPORTS_W void demosaicing(InputArray src, OutputArray dst, int code, int dst
 The function computes moments, up to the 3rd order, of a vector shape or a rasterized shape. The
 results are returned in the structure cv::Moments.
 
-@param array Raster image (single-channel, 8-bit or floating-point 2D array) or an array (
-\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f ).
+@param array Single chanel raster image (CV_8U, CV_16U, CV_16S, CV_32F, CV_64F) or an array (
+\f$1 \times N\f$ or \f$N \times 1\f$ ) of 2D points (Point or Point2f).
 @param binaryImage If it is true, all non-zero image pixels are treated as 1's. The parameter is
 used for images only.
 @returns moments.
@@ -3869,7 +3911,7 @@ is \f$W \times H\f$ and templ is \f$w \times h\f$ , then result is \f$(W-w+1) \t
             of channels as template or only one channel, which is then used for all template and
             image channels. If the data type is #CV_8U, the mask is interpreted as a binary mask,
             meaning only elements where mask is nonzero are used and are kept unchanged independent
-            of the actual mask value (weight equals 1). For data tpye #CV_32F, the mask values are
+            of the actual mask value (weight equals 1). For data type #CV_32F, the mask values are
             used as weights. The exact formulas are documented in #TemplateMatchModes.
  */
 CV_EXPORTS_W void matchTemplate( InputArray image, InputArray templ,
@@ -3994,15 +4036,18 @@ CV_EXPORTS_W void findContours( InputArray image, OutputArrayOfArrays contours,
 CV_EXPORTS void findContours( InputArray image, OutputArrayOfArrays contours,
                               int mode, int method, Point offset = Point());
 
-/** @example samples/cpp/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in a list of images (pic1-6.png). Returns sequence of squares detected on the image.
-*/
+//! @brief Find contours using link runs algorithm
+//!
+//! This function implements an algorithm different from cv::findContours:
+//! - doesn't allocate temporary image internally, thus it has reduced memory consumption
+//! - supports CV_8UC1 images only
+//! - outputs 2-level hierarhy only (RETR_CCOMP mode)
+//! - doesn't support approximation change other than CHAIN_APPROX_SIMPLE
+//! In all other aspects this function is compatible with cv::findContours.
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours, OutputArray hierarchy);
 
-/** @example samples/tapi/squares.cpp
-A program using pyramid scaling, Canny, contours and contour simplification to find
-squares in the input image.
-*/
+//! @overload
+CV_EXPORTS_W void findContoursLinkRuns(InputArray image, OutputArrayOfArrays contours);
 
 /** @brief Approximates a polygonal curve(s) with the specified precision.
 
@@ -4020,6 +4065,28 @@ connected). Otherwise, it is not closed.
 CV_EXPORTS_W void approxPolyDP( InputArray curve,
                                 OutputArray approxCurve,
                                 double epsilon, bool closed );
+
+/** @brief Approximates a polygon with a convex hull with a specified accuracy and number of sides.
+
+The cv::approxPolyN function approximates a polygon with a convex hull
+so that the difference between the contour area of the original contour and the new polygon is minimal.
+It uses a greedy algorithm for contracting two vertices into one in such a way that the additional area is minimal.
+Straight lines formed by each edge of the convex contour are drawn and the areas of the resulting triangles are considered.
+Each vertex will lie either on the original contour or outside it.
+
+The algorithm based on the paper @cite LowIlie2003 .
+
+@param curve Input vector of a 2D points stored in std::vector or Mat, points must be float or integer.
+@param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
+@param nsides The parameter defines the number of sides of the result polygon.
+@param epsilon_percentage defines the percentage of the maximum of additional area.
+If it equals -1, it is not used. Otherwise algorighm stops if additional area is greater than contourArea(_curve) * percentage.
+If additional area exceeds the limit, algorithm returns as many vertices as there were at the moment the limit was exceeded.
+@param ensure_convex If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
+ */
+CV_EXPORTS_W void approxPolyN(InputArray curve, OutputArray approxCurve,
+                              int nsides, float epsilon_percentage = -1.0,
+                              bool ensure_convex = true);
 
 /** @brief Calculates a contour perimeter or a curve length.
 
@@ -4087,7 +4154,7 @@ The function finds the four vertices of a rotated rectangle. This function is us
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 
-@param box The input rotated rectangle. It may be the output of
+@param box The input rotated rectangle. It may be the output of @ref minAreaRect.
 @param points The output array of four vertices of rectangles.
  */
 CV_EXPORTS_W void boxPoints(RotatedRect box, OutputArray points);
@@ -4214,7 +4281,7 @@ Examples of how intersectConvexConvex works
 When false, no intersection is found. If the polygons share a side or the vertex of one polygon lies on an edge
 of the other, they are not considered nested and an intersection will be found regardless of the value of handleNested.
 
-@returns Absolute value of area of intersecting polygon
+@returns Area of intersecting polygon. May be negative, if algorithm has not converged, e.g. non-convex input.
 
 @note intersectConvexConvex doesn't confirm that both polygons are convex and will return invalid results if they aren't.
  */
@@ -4279,7 +4346,7 @@ CV_EXPORTS_W RotatedRect fitEllipseAMS( InputArray points );
 
  The function calculates the ellipse that fits a set of 2D points.
  It returns the rotated rectangle in which the ellipse is inscribed.
- The Direct least square (Direct) method by @cite Fitzgibbon1999 is used.
+ The Direct least square (Direct) method by @cite oy1998NumericallySD is used.
 
  For an ellipse, this basis set is \f$ \chi= \left(x^2, x y, y^2, x, y, 1\right) \f$,
  which is a set of six free coefficients \f$ A^T=\left\{A_{\text{xx}},A_{\text{xy}},A_{\text{yy}},A_x,A_y,A_0\right\} \f$.
@@ -4437,7 +4504,7 @@ An example using applyColorMap function
 
 /** @brief Applies a GNU Octave/MATLAB equivalent colormap on a given image.
 
-@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3. If CV_8UC3, then the CV_8UC1 image is generated internally using cv::COLOR_BGR2GRAY.
 @param dst The result is the colormapped source image. Note: Mat::create is called on dst.
 @param colormap The colormap to apply, see #ColormapTypes
 */
@@ -4445,8 +4512,8 @@ CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, int colormap);
 
 /** @brief Applies a user colormap on a given image.
 
-@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3.
-@param dst The result is the colormapped source image. Note: Mat::create is called on dst.
+@param src The source image, grayscale or colored of type CV_8UC1 or CV_8UC3. If CV_8UC3, then the CV_8UC1 image is generated internally using cv::COLOR_BGR2GRAY.
+@param dst The result is the colormapped source image of the same number of channels as userColor. Note: Mat::create is called on dst.
 @param userColor The colormap to apply of type CV_8UC1 or CV_8UC3 and size 256
 */
 CV_EXPORTS_W void applyColorMap(InputArray src, OutputArray dst, InputArray userColor);
@@ -4784,6 +4851,11 @@ CV_EXPORTS void ellipse2Poly(Point2d center, Size2d axes, int angle,
 The function cv::putText renders the specified text string in the image. Symbols that cannot be rendered
 using the specified font are replaced by question marks. See #getTextSize for a text rendering code
 example.
+
+The `fontScale` parameter is a scale factor that is multiplied by the base font size:
+- When scale > 1, the text is magnified.
+- When 0 < scale < 1, the text is minimized.
+- When scale < 0, the text is mirrored or reversed.
 
 @param img Image.
 @param text Text string to be drawn.

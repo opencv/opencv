@@ -17,6 +17,59 @@ import android.util.Log;
 
 public class UtilsTest extends OpenCVTestCase {
 
+    private int[] testImgWH = new int[]{64, 48};
+    private byte[] testImgBgColor = new byte[]{1, 2, 3};
+    private int[] testImgRect = new int[] {15, 17, 25, 37};
+    private byte[] testImgRectColor = new byte[]{45, 15, 67};
+
+    private Mat createTestBGRImg() {
+        Mat img = new Mat(testImgWH[1], testImgWH[0], CvType.CV_8UC3,
+                          new Scalar(testImgBgColor[2], testImgBgColor[1], testImgBgColor[0]));
+        byte[] color = new byte[]{testImgRectColor[2], testImgRectColor[1], testImgRectColor[0]};
+
+        for (int i = testImgRect[1]; i < testImgRect[3]; i++) {
+            for (int j = testImgRect[0]; j < testImgRect[2]; j++) {
+                img.put(i, j, color);
+            }
+        }
+        return img;
+    }
+
+    private Bitmap createTestBitmap() {
+        Bitmap img = Bitmap.createBitmap(testImgWH[0], testImgWH[1], Bitmap.Config.ARGB_8888);
+        img.eraseColor(Color.argb(255, testImgBgColor[0], testImgBgColor[1] ,testImgBgColor[2]));
+
+        for (int i = testImgRect[1]; i < testImgRect[3]; i++) {
+            for (int j = testImgRect[0]; j < testImgRect[2]; j++) {
+                img.setPixel(j, i, Color.argb(
+                        255, testImgRectColor[0], testImgRectColor[1], testImgRectColor[2]));
+            }
+        }
+        return img;
+    }
+
+    public void testMatBitmapConversion() {
+        Mat mat = new Mat();
+        Imgproc.cvtColor(createTestBGRImg(), mat, Imgproc.COLOR_BGR2RGBA);
+        Bitmap bmp = createTestBitmap();
+
+        Bitmap convertedBmp = Bitmap.createBitmap(
+                Bitmap.createBitmap(testImgWH[0], testImgWH[1], Bitmap.Config.ARGB_8888));
+        Utils.matToBitmap(mat, convertedBmp);
+        assertTrue(bmp.sameAs(convertedBmp));
+
+        Mat convertedMat = new Mat();
+        Utils.bitmapToMat(bmp, convertedMat);
+        Mat diff = new Mat();
+        Core.absdiff(mat, convertedMat, diff);
+        Scalar channelsDiff = Core.sumElems(diff);
+        assertEquals(0.0, channelsDiff.val[0]);
+        assertEquals(0.0, channelsDiff.val[1]);
+        assertEquals(0.0, channelsDiff.val[2]);
+        assertEquals(0.0, channelsDiff.val[3]);
+    }
+
+
     public void testBitmapToMat() {
         BitmapFactory.Options opt16 = new BitmapFactory.Options();
         opt16.inPreferredConfig = Bitmap.Config.RGB_565;

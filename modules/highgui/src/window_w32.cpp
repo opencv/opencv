@@ -587,7 +587,7 @@ void cvSetModeWindow_W32(const char* name, double prop_value)//Yannick Verdie
 
 static bool setModeWindow_(CvWindow& window, int mode)
 {
-    if (window.flags & CV_WINDOW_AUTOSIZE)//if the flag CV_WINDOW_AUTOSIZE is set
+    if (window.flags & cv::WINDOW_AUTOSIZE)//if the flag cv::WINDOW_AUTOSIZE is set
         return false;
 
     if (window.status == mode)
@@ -597,18 +597,18 @@ static bool setModeWindow_(CvWindow& window, int mode)
         DWORD dwStyle = (DWORD)GetWindowLongPtr(window.frame, GWL_STYLE);
         CvRect position;
 
-        if (window.status == CV_WINDOW_FULLSCREEN && mode == CV_WINDOW_NORMAL)
+        if (window.status == cv::WINDOW_FULLSCREEN && mode == cv::WINDOW_NORMAL)
         {
             icvLoadWindowPos(window.name.c_str(), position);
             SetWindowLongPtr(window.frame, GWL_STYLE, dwStyle | WS_CAPTION | WS_THICKFRAME);
 
             SetWindowPos(window.frame, HWND_TOP, position.x, position.y , position.width,position.height, SWP_NOZORDER | SWP_FRAMECHANGED);
-            window.status=CV_WINDOW_NORMAL;
+            window.status=cv::WINDOW_NORMAL;
 
             return true;
         }
 
-        if (window.status == CV_WINDOW_NORMAL && mode == CV_WINDOW_FULLSCREEN)
+        if (window.status == cv::WINDOW_NORMAL && mode == cv::WINDOW_FULLSCREEN)
         {
             //save dimension
             RECT rect = { 0 };
@@ -630,7 +630,7 @@ static bool setModeWindow_(CvWindow& window, int mode)
             SetWindowLongPtr(window.frame, GWL_STYLE, dwStyle & ~WS_CAPTION & ~WS_THICKFRAME);
 
             SetWindowPos(window.frame, HWND_TOP, position.x, position.y , position.width,position.height, SWP_NOZORDER | SWP_FRAMECHANGED);
-            window.status=CV_WINDOW_FULLSCREEN;
+            window.status=cv::WINDOW_FULLSCREEN;
 
             return true;
         }
@@ -681,7 +681,7 @@ void cvSetPropTopmost_W32(const char* name, const bool topmost)
 
 static bool setPropTopmost_(CvWindow& window, bool topmost)
 {
-    HWND flag    = topmost ? HWND_TOPMOST : HWND_TOP;
+    HWND flag    = topmost ? HWND_TOPMOST : HWND_NOTOPMOST;
     BOOL success = SetWindowPos(window.frame, flag, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
     if (!success)
@@ -836,7 +836,7 @@ double cvGetPropWindowAutoSize_W32(const char* name)
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", name));
 
-    result = window->flags & CV_WINDOW_AUTOSIZE;
+    result = window->flags & cv::WINDOW_AUTOSIZE;
 
     return result;
 }
@@ -1055,11 +1055,11 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
     CvRect rect;
     icvLoadWindowPos(name.c_str(), rect);
 
-    if (!(flags & CV_WINDOW_AUTOSIZE))//YV add border in order to resize the window
+    if (!(flags & cv::WINDOW_AUTOSIZE))//YV add border in order to resize the window
        defStyle |= WS_SIZEBOX;
 
 #ifdef HAVE_OPENGL
-    if (flags & CV_WINDOW_OPENGL)
+    if (flags & cv::WINDOW_OPENGL)
         defStyle |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
 #endif
 
@@ -1076,14 +1076,14 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
         CV_Error(Error::StsError, "Frame window can not be created");
 
 #ifndef HAVE_OPENGL
-    if (flags & CV_WINDOW_OPENGL)
+    if (flags & cv::WINDOW_OPENGL)
         CV_Error(Error::OpenGlNotSupported, "Library was built without OpenGL support");
 #else
     useGl = false;
     hGLDC = 0;
     hGLRC = 0;
 
-    if (flags & CV_WINDOW_OPENGL)
+    if (flags & cv::WINDOW_OPENGL)
         createGlContext(hWnd, hGLDC, hGLRC, useGl);
 #endif
 
@@ -1117,7 +1117,7 @@ static std::shared_ptr<CvWindow> namedWindow_(const std::string& name, int flags
 #endif
 
     window->last_key = 0;
-    window->status = CV_WINDOW_NORMAL;//YV
+    window->status = cv::WINDOW_NORMAL;//YV
 
     window->on_mouse = 0;
     window->on_mouse_param = 0;
@@ -1338,7 +1338,7 @@ static void icvUpdateWindowPos(CvWindow& window)
 {
     RECT rect = { 0 };
 
-    if ((window.flags & CV_WINDOW_AUTOSIZE) && window.image)
+    if ((window.flags & cv::WINDOW_AUTOSIZE) && window.image)
     {
         int i;
         SIZE size = {0,0};
@@ -1383,7 +1383,7 @@ cvShowImage(const char* name, const CvArr* arr)
         window = icvFindWindowByName(name);
         if (!window)
         {
-            cvNamedWindow(name, CV_WINDOW_AUTOSIZE);
+            cvNamedWindow(name, cv::WINDOW_AUTOSIZE);
             window = icvFindWindowByName(name);
         }
     }
@@ -1548,7 +1548,7 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_GETMINMAXINFO:
-        if (!(window.flags & CV_WINDOW_AUTOSIZE))
+        if (!(window.flags & cv::WINDOW_AUTOSIZE))
         {
             MINMAXINFO* minmax = (MINMAXINFO*)lParam;
             RECT rect = { 0 };
@@ -1579,7 +1579,7 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 MoveWindow(window.toolbar.toolbar, 0, 0, pos->cx, rect.bottom - rect.top, TRUE);
             }
 
-            if (!(window.flags & CV_WINDOW_AUTOSIZE))
+            if (!(window.flags & cv::WINDOW_AUTOSIZE))
                 icvUpdateWindowPos(window);
 
             break;
@@ -1624,13 +1624,13 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_MOUSEHWHEEL:
        if (window.on_mouse)
        {
-          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
-                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
-                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
-                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
-                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
-          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+          int flags = (wParam & MK_LBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? cv::EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? cv::EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? cv::EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? cv::EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? cv::EVENT_MOUSEWHEEL    : cv::EVENT_MOUSEHWHEEL);
 
           // Set the wheel delta of mouse wheel to be in the upper word of 'event'
           int delta = GET_WHEEL_DELTA_WPARAM(wParam);
@@ -1822,22 +1822,22 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         {
             POINT pt;
 
-            int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
-                        (wParam & MK_MBUTTON ? CV_EVENT_FLAG_MBUTTON : 0)|
-                        (wParam & MK_CONTROL ? CV_EVENT_FLAG_CTRLKEY : 0)|
-                        (wParam & MK_SHIFT ? CV_EVENT_FLAG_SHIFTKEY : 0)|
-                        (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY : 0);
-            int event = uMsg == WM_LBUTTONDOWN ? CV_EVENT_LBUTTONDOWN :
-                        uMsg == WM_RBUTTONDOWN ? CV_EVENT_RBUTTONDOWN :
-                        uMsg == WM_MBUTTONDOWN ? CV_EVENT_MBUTTONDOWN :
-                        uMsg == WM_LBUTTONUP ? CV_EVENT_LBUTTONUP :
-                        uMsg == WM_RBUTTONUP ? CV_EVENT_RBUTTONUP :
-                        uMsg == WM_MBUTTONUP ? CV_EVENT_MBUTTONUP :
-                        uMsg == WM_LBUTTONDBLCLK ? CV_EVENT_LBUTTONDBLCLK :
-                        uMsg == WM_RBUTTONDBLCLK ? CV_EVENT_RBUTTONDBLCLK :
-                        uMsg == WM_MBUTTONDBLCLK ? CV_EVENT_MBUTTONDBLCLK :
-                                                   CV_EVENT_MOUSEMOVE;
+            int flags = (wParam & MK_LBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (wParam & MK_RBUTTON ? cv::EVENT_FLAG_RBUTTON : 0)|
+                        (wParam & MK_MBUTTON ? cv::EVENT_FLAG_MBUTTON : 0)|
+                        (wParam & MK_CONTROL ? cv::EVENT_FLAG_CTRLKEY : 0)|
+                        (wParam & MK_SHIFT ? cv::EVENT_FLAG_SHIFTKEY : 0)|
+                        (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_ALTKEY : 0);
+            int event = uMsg == WM_LBUTTONDOWN ? cv::EVENT_LBUTTONDOWN :
+                        uMsg == WM_RBUTTONDOWN ? cv::EVENT_RBUTTONDOWN :
+                        uMsg == WM_MBUTTONDOWN ? cv::EVENT_MBUTTONDOWN :
+                        uMsg == WM_LBUTTONUP ? cv::EVENT_LBUTTONUP :
+                        uMsg == WM_RBUTTONUP ? cv::EVENT_RBUTTONUP :
+                        uMsg == WM_MBUTTONUP ? cv::EVENT_MBUTTONUP :
+                        uMsg == WM_LBUTTONDBLCLK ? cv::EVENT_LBUTTONDBLCLK :
+                        uMsg == WM_RBUTTONDBLCLK ? cv::EVENT_RBUTTONDBLCLK :
+                        uMsg == WM_MBUTTONDBLCLK ? cv::EVENT_MBUTTONDBLCLK :
+                                                   cv::EVENT_MOUSEMOVE;
             if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN || uMsg == WM_MBUTTONDOWN)
                 SetCapture(hwnd);
             if (uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP)
@@ -1846,7 +1846,7 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
             pt.x = GET_X_LPARAM(lParam);
             pt.y = GET_Y_LPARAM(lParam);
 
-            if (window.flags & CV_WINDOW_AUTOSIZE)
+            if (window.flags & cv::WINDOW_AUTOSIZE)
             {
                 // As user can't change window size, do not scale window coordinates. Underlying windowing system
                 // may prevent full window from being displayed and in this case coordinates should not be scaled.
@@ -1908,7 +1908,7 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
                 SetDIBColorTable(window.dc, 0, 255, table);
             }
 
-            if (window.flags & CV_WINDOW_AUTOSIZE)
+            if (window.flags & cv::WINDOW_AUTOSIZE)
             {
                 BitBlt(hdc, 0, 0, size.cx, size.cy, window.dc, 0, 0, SRCCOPY);
             }
@@ -2030,7 +2030,7 @@ static void icvUpdateTrackbar(CvTrackbar& trackbar, int pos)
             memcpy(pos_text, trackbar.name.c_str(), name_len + 1);
         }
 
-        sprintf(pos_text + strlen(pos_text), "%s: %d\n", suffix, pos);
+        snprintf(pos_text + strlen(pos_text), sizeof(pos_text) - strlen(pos_text), "%s: %d\n", suffix, pos);
         SetWindowText(trackbar.buddy, pos_text);
     }
 }
@@ -2067,28 +2067,23 @@ static LRESULT CALLBACK HGToolbarProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARA
     case WM_NCCALCSIZE:
         {
             LRESULT ret = CallWindowProc(window.toolbar.toolBarProc, hwnd, uMsg, wParam, lParam);
-            int rows = (int)SendMessage(hwnd, TB_GETROWS, 0, 0);
 
-            if (window.toolbar.rows != rows)
+            auto& trakbars = window.toolbar.trackbars;
+
+            for (auto it = trakbars.begin(); it != trakbars.end(); ++it)
             {
-                SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
-                auto& trakbars = window.toolbar.trackbars;
-
-                for (auto it = trakbars.begin(); it != trakbars.end(); ++it)
-                {
-                    auto trackbar = *it;
-                    CV_Assert(trackbar);
-                    RECT rect = { 0 };
-                    SendMessage(window.toolbar.toolbar, TB_GETITEMRECT,
-                               (WPARAM)trackbar->id, (LPARAM)&rect);
-                    MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
-                               rect.right - rect.left - HG_BUDDY_WIDTH,
-                               rect.bottom - rect.top, FALSE);
-                    MoveWindow(trackbar->buddy, rect.left, rect.top,
-                               HG_BUDDY_WIDTH, rect.bottom - rect.top, FALSE);
-                }
-                window.toolbar.rows = rows;
+                auto trackbar = *it;
+                CV_Assert(trackbar);
+                RECT rect = { 0 };
+                SendMessage(window.toolbar.toolbar, TB_GETITEMRECT,
+                           (WPARAM)trackbar->id, (LPARAM)&rect);
+                MoveWindow(trackbar->hwnd, rect.left + HG_BUDDY_WIDTH, rect.top,
+                           rect.right - rect.left - HG_BUDDY_WIDTH,
+                           rect.bottom - rect.top, FALSE);
+                MoveWindow(trackbar->buddy, rect.left, rect.top,
+                           HG_BUDDY_WIDTH, rect.bottom - rect.top, FALSE);
             }
+            window.toolbar.rows = static_cast<int>(SendMessage(hwnd, TB_GETROWS, 0, 0));
             return ret;
         }
     }
@@ -2163,18 +2158,27 @@ static void showSaveDialog(CvWindow& window)
 #ifdef HAVE_JPEG
                       "JPEG files (*.jpeg;*.jpg;*.jpe)\0*.jpeg;*.jpg;*.jpe\0"
 #endif
+#ifdef HAVE_JPEGXL
+                      "JPEG XL files (*.jxl)\0*.jxl\0"
+#endif
 #ifdef HAVE_TIFF
                       "TIFF Files (*.tiff;*.tif)\0*.tiff;*.tif\0"
 #endif
-#ifdef HAVE_JASPER
+#if defined(HAVE_JASPER) || defined(HAVE_OPENJPEG)
                       "JPEG-2000 files (*.jp2)\0*.jp2\0"
 #endif
 #ifdef HAVE_WEBP
                       "WebP files (*.webp)\0*.webp\0"
 #endif
-                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pxm;*.pnm)\0*.pbm;*.pgm;*.ppm;*.pxm;*.pnm\0"
+                      "Portable image format (*.pbm;*.pgm;*.ppm;*.pnm;*.pam)\0*.pbm;*.pgm;*.ppm;*.pnm;*.pam\0"
 #ifdef HAVE_OPENEXR
                       "OpenEXR Image files (*.exr)\0*.exr\0"
+#endif
+#ifdef HAVE_AVIF
+                      "AVIF files (*.avif)\0*.avif\0"
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+                      "Graphics Interchange Format 89a(*.gif)\0*.gif\0"
 #endif
                       "Radiance HDR (*.hdr;*.pic)\0*.hdr;*.pic\0"
                       "Sun raster files (*.sr;*.ras)\0*.sr;*.ras\0"
@@ -2196,7 +2200,7 @@ static void showSaveDialog(CvWindow& window)
     }
 #else
     CV_UNUSED(window);
-    CV_LOG_WARNING("Save dialog requires enabled 'imgcodecs' module.");
+    CV_LOG_WARNING(NULL, "Save dialog requires enabled 'imgcodecs' module.");
     return;
 #endif
 }
@@ -2337,12 +2341,6 @@ std::shared_ptr<CvTrackbar> icvFindTrackbarByName(CvWindow& window, const std::s
     }
     return std::shared_ptr<CvTrackbar>();
 }
-static inline
-std::shared_ptr<CvTrackbar> icvFindTrackbarByName(const std::shared_ptr<CvWindow>& window, const std::string& name)
-{
-    CV_Assert(window);
-    return icvFindTrackbarByName(window, name);
-}
 
 static
 std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string& trackbar_name,
@@ -2431,21 +2429,6 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     /* Retrieve current buttons count */
     int bcount = (int)SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
 
-    if (bcount > 1)
-    {
-        /* If this is not the first button then we need to
-        separate it from the previous one */
-        tbs.iBitmap = 0;
-        tbs.idCommand = bcount; // Set button id to it's number
-        tbs.iString = 0;
-        tbs.fsStyle = TBSTYLE_SEP;
-        tbs.fsState = TBSTATE_ENABLED;
-        SendMessage(window.toolbar.toolbar, TB_ADDBUTTONS, 1, (LPARAM)&tbs);
-
-        // Retrieve current buttons count
-        bcount = (int)SendMessage(window.toolbar.toolbar, TB_BUTTONCOUNT, 0, 0);
-    }
-
     /* Add a button which we're going to cover with the slider */
     tbs.iBitmap = 0;
     tbs.idCommand = bcount; // Set button id to it's number
@@ -2475,7 +2458,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
     tbis.dwMask = TBIF_SIZE;
 
     RECT rect = { 0 };
-    GetClientRect(window.hwnd, &rect);
+    GetClientRect(window.toolbar.toolbar, &rect);
     tbis.cx = (unsigned short)(rect.right - rect.left);
 
     SendMessage(window.toolbar.toolbar, TB_SETBUTTONINFO,
@@ -2487,7 +2470,7 @@ std::shared_ptr<CvTrackbar> createTrackbar_(CvWindow& window, const std::string&
 
     /* Create a slider */
     auto trackbar = std::make_shared<CvTrackbar>(window, trackbar_name);
-    trackbar->id = bcount;
+    trackbar->id = tbs.idCommand;
     window.toolbar.trackbars.push_back(trackbar);
 
     auto slider_name = cv::format("Trackbar%p", trackbar.get());
@@ -2586,7 +2569,7 @@ CV_IMPL int cvGetTrackbarPos(const char* trackbar_name, const char* window_name)
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2607,7 +2590,7 @@ CV_IMPL void cvSetTrackbarPos(const char* trackbar_name, const char* window_name
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2639,7 +2622,7 @@ CV_IMPL void cvSetTrackbarMax(const char* trackbar_name, const char* window_name
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2668,7 +2651,7 @@ CV_IMPL void cvSetTrackbarMin(const char* trackbar_name, const char* window_name
     if (!window)
         CV_Error_(Error::StsNullPtr, ("NULL window: '%s'", window_name));
 
-    auto trackbar = icvFindTrackbarByName(window, trackbar_name);
+    auto trackbar = icvFindTrackbarByName(*window, trackbar_name);
     if (!trackbar)
         CV_Error_(Error::StsNullPtr, ("NULL trackbar: '%s'", trackbar_name));
 
@@ -2831,7 +2814,7 @@ public:
         switch ((WindowPropertyFlags)prop)
         {
         case WND_PROP_FULLSCREEN:
-            if (value != WINDOW_NORMAL && value != WINDOW_FULLSCREEN)  // bad arg
+            if ((int)value != WINDOW_NORMAL && (int)value != WINDOW_FULLSCREEN)  // bad arg
                 break;
             setModeWindow_(window, (int)value);
             return true;
@@ -3029,6 +3012,11 @@ public:
     int pollKey() CV_OVERRIDE
     {
         return pollKey_W32();
+    }
+
+    const std::string getName() const CV_OVERRIDE
+    {
+        return "WIN32";
     }
 };  // Win32BackendUI
 

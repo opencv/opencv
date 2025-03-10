@@ -1,12 +1,45 @@
 package org.opencv.test.imgcodecs;
 
+import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfInt;
+import org.opencv.imgproc.Imgproc;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.opencv.imgcodecs.Animation;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ImgcodecsTest extends OpenCVTestCase {
+
+    public void testAnimation() {
+        Mat src = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_REDUCED_COLOR_4);
+        assertFalse(src.empty());
+
+        Mat rgb = new Mat();
+        Imgproc.cvtColor(src, rgb, Imgproc.COLOR_BGR2RGB);
+
+        Animation animation = new Animation();
+        List<Mat> frames = new ArrayList<>();
+        MatOfInt durations = new MatOfInt(100, 100);
+
+        frames.add(src);
+        frames.add(rgb);
+
+        animation.set_frames(frames);
+        animation.set_durations(durations);
+
+        String filename = OpenCVTestRunner.getTempFileName("png");
+        assertTrue(Imgcodecs.imwriteanimation(filename, animation));
+
+        Animation readAnimation = new Animation();
+        assertTrue(Imgcodecs.imreadanimation(filename, readAnimation));
+
+        List<Mat> readFrames = readAnimation.get_frames();
+        assertTrue(readFrames.size() == 2);
+    }
 
     public void testImdecode() {
         fail("Not yet implemented");
@@ -45,7 +78,7 @@ public class ImgcodecsTest extends OpenCVTestCase {
     }
 
     public void testImreadStringInt() {
-        dst = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, 0);
+        dst = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_GRAYSCALE);
         assertFalse(dst.empty());
         assertEquals(1, dst.channels());
         assertTrue(512 == dst.cols());

@@ -93,10 +93,10 @@ void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
         scalarToRawData_<double>(s, (double*)_buf, cn, unroll_to);
         break;
     case CV_16F:
-        scalarToRawData_<float16_t>(s, (float16_t*)_buf, cn, unroll_to);
+        scalarToRawData_<hfloat>(s, (hfloat*)_buf, cn, unroll_to);
         break;
     default:
-        CV_Error(CV_StsUnsupportedFormat,"");
+        CV_Error(cv::Error::StsUnsupportedFormat,"");
     }
 }
 
@@ -156,15 +156,15 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
         const uchar* src = (const uchar*)_src;
         uchar* dst = (uchar*)_dst;
         int x = 0;
-        #if CV_SIMD
+        #if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             v_uint8 v_zero = vx_setzero_u8();
 
-            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
+            for( ; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
             {
                 v_uint8 v_src   = vx_load(src  + x),
                         v_dst   = vx_load(dst  + x),
-                        v_nmask = vx_load(mask + x) == v_zero;
+                        v_nmask = v_eq(vx_load(mask + x), v_zero);
 
                 v_dst = v_select(v_nmask, v_dst, v_src);
                 v_store(dst + x, v_dst);
@@ -188,23 +188,23 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
         const ushort* src = (const ushort*)_src;
         ushort* dst = (ushort*)_dst;
         int x = 0;
-        #if CV_SIMD
+        #if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             v_uint8 v_zero = vx_setzero_u8();
 
-            for( ; x <= size.width - v_uint8::nlanes; x += v_uint8::nlanes )
+            for( ; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
             {
-                v_uint16 v_src1 = vx_load(src + x), v_src2 = vx_load(src + x + v_uint16::nlanes),
-                         v_dst1 = vx_load(dst + x), v_dst2 = vx_load(dst + x + v_uint16::nlanes);
+                v_uint16 v_src1 = vx_load(src + x), v_src2 = vx_load(src + x + VTraits<v_uint16>::vlanes()),
+                         v_dst1 = vx_load(dst + x), v_dst2 = vx_load(dst + x + VTraits<v_uint16>::vlanes());
 
                 v_uint8 v_nmask1, v_nmask2;
-                v_uint8 v_nmask = vx_load(mask + x) == v_zero;
+                v_uint8 v_nmask = v_eq(vx_load(mask + x), v_zero);
                 v_zip(v_nmask, v_nmask, v_nmask1, v_nmask2);
 
                 v_dst1 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst1, v_src1);
                 v_dst2 = v_select(v_reinterpret_as_u16(v_nmask2), v_dst2, v_src2);
                 v_store(dst + x, v_dst1);
-                v_store(dst + x + v_uint16::nlanes, v_dst2);
+                v_store(dst + x + VTraits<v_uint16>::vlanes(), v_dst2);
             }
         }
         vx_cleanup();
@@ -788,7 +788,7 @@ int cv::borderInterpolate( int p, int len, int borderType )
     else if( borderType == BORDER_CONSTANT )
         p = -1;
     else
-        CV_Error( CV_StsBadArg, "Unknown/unsupported border type" );
+        CV_Error( cv::Error::StsBadArg, "Unknown/unsupported border type" );
     return p;
 }
 
@@ -860,14 +860,14 @@ void copyMakeBorder_8u( const uchar* src, size_t srcstep, cv::Size srcroi,
     }
 
     dstroi.width *= elemSize;
-    dst += dststep*top;
 
     for( i = 0; i < top; i++ )
     {
         j = cv::borderInterpolate(i - top, srcroi.height, borderType);
-        memcpy(dst + (i - top)*dststep, dst + j*dststep, dstroi.width);
+        memcpy(dst + i*dststep, dst + (top+j)*dststep, dstroi.width);
     }
 
+    dst += dststep*top;
     for( i = 0; i < bottom; i++ )
     {
         j = cv::borderInterpolate(i + srcroi.height, srcroi.height, borderType);

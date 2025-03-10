@@ -48,7 +48,6 @@
 #include "ap3p.h"
 #include "ippe.hpp"
 #include "sqpnp.hpp"
-#include "calib3d_c_api.h"
 
 #include "usac.hpp"
 
@@ -56,7 +55,7 @@
 
 namespace cv
 {
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
 {
     CV_CheckType(_objectPoints.type(), _objectPoints.type() == CV_32FC3 || _objectPoints.type() == CV_64FC3,
@@ -152,12 +151,13 @@ public:
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
         Mat opoints = _m1.getMat(), ipoints = _m2.getMat();
-
+        Mat iter_rvec = rvec.clone();
+        Mat iter_tvec = tvec.clone();
         bool correspondence = solvePnP( _m1, _m2, cameraMatrix, distCoeffs,
-                                            rvec, tvec, useExtrinsicGuess, flags );
+                                            iter_rvec, iter_tvec, useExtrinsicGuess, flags );
 
         Mat _local_model;
-        hconcat(rvec, tvec, _local_model);
+        hconcat(iter_rvec, iter_tvec, _local_model);
         _local_model.copyTo(_model);
 
         return correspondence;
@@ -197,21 +197,6 @@ public:
     Mat rvec;
     Mat tvec;
 };
-
-UsacParams::UsacParams()
-{
-    confidence = 0.99;
-    isParallel = false;
-    loIterations = 5;
-    loMethod = LocalOptimMethod::LOCAL_OPTIM_INNER_LO;
-    loSampleSize = 14;
-    maxIterations = 5000;
-    neighborsSearch = NeighborSearchMethod::NEIGH_GRID;
-    randomGeneratorState = 0;
-    sampler = SamplingMethod::SAMPLING_UNIFORM;
-    score = ScoreMethod::SCORE_METHOD_MSAC;
-    threshold = 1.5;
-}
 
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
@@ -336,7 +321,13 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     ipoints_inliers.resize(npoints1);
     try
     {
-        result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
+       if (flags == SOLVEPNP_ITERATIVE && !useExtrinsicGuess)
+       {
+          rvec = _local_model.col(0).clone();
+          tvec = _local_model.col(1).clone();
+          useExtrinsicGuess = true;
+       }
+       result = solvePnP(opoints_inliers, ipoints_inliers, cameraMatrix,
                           distCoeffs, rvec, tvec, useExtrinsicGuess,
                           (flags == SOLVEPNP_P3P || flags == SOLVEPNP_AP3P) ? SOLVEPNP_EPNP : flags) ? 1 : -1;
     }
@@ -400,7 +391,7 @@ bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
     usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :
         usac::EstimationMethod::P3P, params, inliers.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model_params, imagePoints, objectPoints, model_params->getRandomGeneratorState(),
+    if (usac::run(model_params, imagePoints, objectPoints,
             ransac_output, cameraMatrix, noArray(), distCoeffs, noArray())) {
         if (inliers.needed()) {
             const auto &inliers_mask = ransac_output->getInliersMask();
@@ -900,12 +891,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             tvec.create(3, 1, CV_64FC1);
         }
 
-        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
-        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
-        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
-        cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
-                                     &c_rvec, &c_tvec, useExtrinsicGuess );
+        findExtrinsicCameraParams2(opoints, ipoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess);
 
         vec_rvecs.push_back(rvec);
         vec_tvecs.push_back(tvec);
@@ -946,7 +932,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     {
         CV_Assert(npoints == 4);
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
         double Xs[4][3];
         if (opoints.depth() == CV_32F)
         {
@@ -1049,7 +1035,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
         vec_tvecs.push_back(tvec);
     }*/
     else
-        CV_Error(CV_StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
+        CV_Error(cv::Error::StsBadArg, "The flags argument must be one of SOLVEPNP_ITERATIVE, SOLVEPNP_P3P, "
             "SOLVEPNP_EPNP, SOLVEPNP_DLS, SOLVEPNP_UPNP, SOLVEPNP_AP3P, SOLVEPNP_IPPE, SOLVEPNP_IPPE_SQUARE or SOLVEPNP_SQPNP");
 
     CV_Assert(vec_rvecs.size() == vec_tvecs.size());

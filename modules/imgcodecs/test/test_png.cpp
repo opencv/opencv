@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
+#include "test_common.hpp"
 
 namespace opencv_test { namespace {
 
@@ -83,6 +84,14 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(0, 0, 255));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
 
+    img = imread(root + "readwrite/color_palette_alpha.png", IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_TRUE(img.channels() == 3);
+
+    // pixel is red in RGB
+    EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
+    EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
+
     // Fourth Test : Read PNG without alpha, imread flag 1
     img = imread(root + "readwrite/color_palette_no_alpha.png", IMREAD_COLOR);
     ASSERT_FALSE(img.empty());
@@ -91,101 +100,15 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     // pixel is red in BGR
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(0, 0, 255));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(0, 0, 255));
+
+    img = imread(root + "readwrite/color_palette_no_alpha.png", IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    ASSERT_TRUE(img.channels() == 3);
+
+    // pixel is red in RGB
+    EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
+    EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
 }
-
-/**
- * Test for check whether reading exif orientation tag was processed successfully or not
- * The test info is the set of 8 images named testExifRotate_{1 to 8}.png
- * The test image is the square 10x10 points divided by four sub-squares:
- * (R corresponds to Red, G to Green, B to Blue, W to white)
- * ---------             ---------
- * | R | G |             | G | R |
- * |-------| - (tag 1)   |-------| - (tag 2)
- * | B | W |             | W | B |
- * ---------             ---------
- *
- * ---------             ---------
- * | W | B |             | B | W |
- * |-------| - (tag 3)   |-------| - (tag 4)
- * | G | R |             | R | G |
- * ---------             ---------
- *
- * ---------             ---------
- * | R | B |             | G | W |
- * |-------| - (tag 5)   |-------| - (tag 6)
- * | G | W |             | R | B |
- * ---------             ---------
- *
- * ---------             ---------
- * | W | G |             | B | R |
- * |-------| - (tag 7)   |-------| - (tag 8)
- * | B | R |             | W | G |
- * ---------             ---------
- *
- *
- * Every image contains exif field with orientation tag (0x112)
- * After reading each image and applying the orientation tag,
- * the resulting image should be:
- * ---------
- * | R | G |
- * |-------|
- * | B | W |
- * ---------
- *
- */
-
-typedef testing::TestWithParam<string> Imgcodecs_PNG_Exif;
-
-// Solution to issue 16579: PNG read doesn't support Exif orientation data
-#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
-TEST_P(Imgcodecs_PNG_Exif, exif_orientation)
-#else
-TEST_P(Imgcodecs_PNG_Exif, DISABLED_exif_orientation)
-#endif
-{
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + GetParam();
-    const int colorThresholdHigh = 250;
-    const int colorThresholdLow = 5;
-
-    Mat m_img = imread(filename);
-    ASSERT_FALSE(m_img.empty());
-    Vec3b vec;
-
-    //Checking the first quadrant (with supposed red)
-    vec = m_img.at<Vec3b>(2, 2); //some point inside the square
-    EXPECT_LE(vec.val[0], colorThresholdLow);
-    EXPECT_LE(vec.val[1], colorThresholdLow);
-    EXPECT_GE(vec.val[2], colorThresholdHigh);
-
-    //Checking the second quadrant (with supposed green)
-    vec = m_img.at<Vec3b>(2, 7);  //some point inside the square
-    EXPECT_LE(vec.val[0], colorThresholdLow);
-    EXPECT_GE(vec.val[1], colorThresholdHigh);
-    EXPECT_LE(vec.val[2], colorThresholdLow);
-
-    //Checking the third quadrant (with supposed blue)
-    vec = m_img.at<Vec3b>(7, 2);  //some point inside the square
-    EXPECT_GE(vec.val[0], colorThresholdHigh);
-    EXPECT_LE(vec.val[1], colorThresholdLow);
-    EXPECT_LE(vec.val[2], colorThresholdLow);
-}
-
-const string exif_files[] =
-{
-    "readwrite/testExifOrientation_1.png",
-    "readwrite/testExifOrientation_2.png",
-    "readwrite/testExifOrientation_3.png",
-    "readwrite/testExifOrientation_4.png",
-    "readwrite/testExifOrientation_5.png",
-    "readwrite/testExifOrientation_6.png",
-    "readwrite/testExifOrientation_7.png",
-    "readwrite/testExifOrientation_8.png"
-};
-
-INSTANTIATE_TEST_CASE_P(ExifFiles, Imgcodecs_PNG_Exif,
-    testing::ValuesIn(exif_files));
-
 
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
 
@@ -404,6 +327,79 @@ const string pngsuite_files_corrupted[] = {
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
+
+CV_ENUM(PNGStrategy, IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED);
+CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS);
+
+typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
+
+TEST_P(Imgcodecs_Png_Encode, params)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/" + get<0>(GetParam());
+
+    const int strategy = get<1>(GetParam());
+    const int filter = get<2>(GetParam());
+    const int compression_level = get<3>(GetParam());
+
+    std::vector<uchar> file_buf;
+    readFileBytes(filename, file_buf);
+    Mat src = imdecode(file_buf, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot decode test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter });
+    EXPECT_EQ(buf.size(), file_buf.size());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Encode,
+    testing::Values(
+        make_tuple("f00n0g08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f00n2c08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f01n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f01n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f02n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f02n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f03n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f04n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("f04n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("z03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 3),
+        make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
+        make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
+
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
+
+TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_ImwriteFlags,
+    testing::Values(
+        make_tuple("../perf/512x512.png", 0, 788279),
+        make_tuple("../perf/512x512.png", 1, 179503),
+        make_tuple("../perf/512x512.png", 2, 176007),
+        make_tuple("../perf/512x512.png", 3, 170497),
+        make_tuple("../perf/512x512.png", 4, 163357),
+        make_tuple("../perf/512x512.png", 5, 159190),
+        make_tuple("../perf/512x512.png", 6, 156621),
+        make_tuple("../perf/512x512.png", 7, 155696),
+        make_tuple("../perf/512x512.png", 8, 153708),
+        make_tuple("../perf/512x512.png", 9, 152181)));
 
 #endif // HAVE_PNG
 

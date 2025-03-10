@@ -90,7 +90,7 @@ const static struct pam_header_field fields[] = {
 #define PAM_FIELDS_NO (sizeof (fields) / sizeof ((fields)[0]))
 
 typedef bool (*cvtFunc) (void *src, void *target, int width, int target_channels,
-    int target_depth);
+    int target_depth, bool use_rgb);
 
 struct channel_layout {
     uint rchan, gchan, bchan, graychan;
@@ -108,7 +108,7 @@ struct pam_format {
 };
 
 static bool rgb_convert (void *src, void *target, int width, int target_channels,
-    int target_depth);
+    int target_depth, bool use_rgb);
 
 const static struct pam_format formats[] = {
     {IMWRITE_PAM_FORMAT_NULL, "", NULL, {0, 0, 0, 0} },
@@ -125,19 +125,25 @@ const static struct pam_format formats[] = {
  */
 
 static bool
-rgb_convert (void *src, void *target, int width, int target_channels, int target_depth)
+rgb_convert (void *src, void *target, int width, int target_channels, int target_depth, bool use_rgb)
 {
     bool ret = false;
     if (target_channels == 3) {
         switch (target_depth) {
             case CV_8U:
-                icvCvt_RGB2BGR_8u_C3R( (uchar*) src, 0, (uchar*) target, 0,
-                    Size(width,1) );
+                if (use_rgb)
+                    memcpy(target, src, sizeof(uchar) * width);
+                else
+                    icvCvt_RGB2BGR_8u_C3R( (uchar*) src, 0, (uchar*) target, 0,
+                                           Size(width,1) );
                 ret = true;
                 break;
             case CV_16U:
-                icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)target, 0,
-                    Size(width,1) );
+                if (use_rgb)
+                    memcpy(target, src, sizeof(ushort) * width);
+                else
+                    icvCvt_RGB2BGR_16u_C3R( (ushort *)src, 0, (ushort *)target, 0,
+                                            Size(width,1) );
                 ret = true;
                 break;
             default:
@@ -169,7 +175,7 @@ rgb_convert (void *src, void *target, int width, int target_channels, int target
 
 static void
 basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_size,
-    int src_width, void *target, int target_channels, int target_depth)
+    int src_width, void *target, int target_channels, int target_depth, bool use_rgb)
 {
     switch (target_depth) {
         case CV_8U:
@@ -182,11 +188,18 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                         d[0] = d[1] = d[2] = s[layout->graychan];
                     break;
                 case 3:
-                    for( ; s < end; d += 3, s += src_sampe_size ) {
-                        d[0] = s[layout->bchan];
-                        d[1] = s[layout->gchan];
-                        d[2] = s[layout->rchan];
-                    }
+                    if (use_rgb)
+                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                            d[0] = s[layout->rchan];
+                            d[1] = s[layout->gchan];
+                            d[2] = s[layout->bchan];
+                        }
+                    else
+                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                            d[0] = s[layout->bchan];
+                            d[1] = s[layout->gchan];
+                            d[2] = s[layout->rchan];
+                        }
                     break;
                 default:
                     CV_Error(Error::StsInternal, "");
@@ -203,11 +216,18 @@ basic_conversion (void *src, const struct channel_layout *layout, int src_sampe_
                         d[0] = d[1] = d[2] = s[layout->graychan];
                     break;
                 case 3:
-                    for( ; s < end; d += 3, s += src_sampe_size ) {
-                        d[0] = s[layout->bchan];
-                        d[1] = s[layout->gchan];
-                        d[2] = s[layout->rchan];
-                    }
+                    if (use_rgb)
+                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                            d[0] = s[layout->rchan];
+                            d[1] = s[layout->gchan];
+                            d[2] = s[layout->bchan];
+                        }
+                    else
+                        for( ; s < end; d += 3, s += src_sampe_size ) {
+                            d[0] = s[layout->bchan];
+                            d[1] = s[layout->gchan];
+                            d[2] = s[layout->rchan];
+                        }
                     break;
                 default:
                     CV_Error(Error::StsInternal, "");
@@ -610,18 +630,18 @@ bool PAMDecoder::readData(Mat& img)
                         bool funcout = false;
                         if (fmt->cvt_func)
                             funcout = fmt->cvt_func (src, data, m_width, target_channels,
-                                img.depth());
+                                img.depth(), m_use_rgb);
                         /* fall back to default if there is no conversion function or it
                          * can't handle the specified characteristics
                          */
                         if (!funcout)
                             basic_conversion (src, &fmt->layout, m_channels,
-                                m_width, data, target_channels, img.depth());
+                                m_width, data, target_channels, img.depth(), m_use_rgb);
 
                     /* default to selecting the first available channels */
                     } else {
                         basic_conversion (src, &layout, m_channels,
-                            m_width, data, target_channels, img.depth());
+                            m_width, data, target_channels, img.depth(), m_use_rgb);
                     }
                 }
             }
@@ -695,14 +715,14 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 
     /* write header */
     tmp = 0;
-    tmp += sprintf( buffer, "P7\n");
-    tmp += sprintf( buffer + tmp, "WIDTH %d\n", width);
-    tmp += sprintf( buffer + tmp, "HEIGHT %d\n", height);
-    tmp += sprintf( buffer + tmp, "DEPTH %d\n", img.channels());
-    tmp += sprintf( buffer + tmp, "MAXVAL %d\n", (1 << img.elemSize1()*8) - 1);
+    tmp += snprintf( buffer, bufsize, "P7\n");
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "WIDTH %d\n", width);
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "HEIGHT %d\n", height);
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "DEPTH %d\n", img.channels());
+    tmp += snprintf( buffer + tmp, bufsize - tmp, "MAXVAL %d\n", (1 << img.elemSize1()*8) - 1);
     if (fmt)
-        tmp += sprintf( buffer + tmp, "TUPLTYPE %s\n", fmt->name );
-    sprintf( buffer + tmp, "ENDHDR\n" );
+        tmp += snprintf( buffer + tmp, bufsize - tmp, "TUPLTYPE %s\n", fmt->name );
+    snprintf( buffer + tmp, bufsize - tmp, "ENDHDR\n" );
 
     strm.putBytes( buffer, (int)strlen(buffer) );
     /* write data */

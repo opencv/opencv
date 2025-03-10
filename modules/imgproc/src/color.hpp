@@ -71,6 +71,8 @@ inline bool swapBlue(int code)
     case COLOR_YUV2BGR_UYVY: case COLOR_YUV2BGRA_UYVY: case COLOR_YUV2BGR_YUY2:
     case COLOR_YUV2BGRA_YUY2:  case COLOR_YUV2BGR_YVYU: case COLOR_YUV2BGRA_YVYU:
     case COLOR_BGR2YUV_IYUV: case COLOR_BGRA2YUV_IYUV: case COLOR_BGR2YUV_YV12: case COLOR_BGRA2YUV_YV12:
+    case COLOR_BGR2YUV_UYVY:   case COLOR_BGRA2YUV_UYVY: case COLOR_BGR2YUV_YUY2:
+    case COLOR_BGRA2YUV_YUY2:  case COLOR_BGR2YUV_YVYU:  case COLOR_BGRA2YUV_YVYU:
         return false;
     default:
         return true;
@@ -104,6 +106,10 @@ inline int dstChannels(int code)
             return 4;
 
         case COLOR_BGRA2BGR: case COLOR_RGBA2BGR: case COLOR_RGB2BGR:
+        case COLOR_HSV2RGB: case COLOR_HSV2BGR: case COLOR_RGB2HSV: case COLOR_BGR2HSV:
+        case COLOR_HLS2RGB: case COLOR_HLS2BGR: case COLOR_RGB2HLS: case COLOR_BGR2HLS:
+        case COLOR_HSV2RGB_FULL: case COLOR_HSV2BGR_FULL: case COLOR_RGB2HSV_FULL: case COLOR_BGR2HSV_FULL:
+        case COLOR_HLS2RGB_FULL: case COLOR_HLS2BGR_FULL: case COLOR_RGB2HLS_FULL: case COLOR_BGR2HLS_FULL:
         case COLOR_YUV2RGB: case COLOR_YUV2BGR: case COLOR_RGB2YUV: case COLOR_BGR2YUV:
         case COLOR_BGR5652BGR: case COLOR_BGR5552BGR: case COLOR_BGR5652RGB: case COLOR_BGR5552RGB:
         case COLOR_GRAY2BGR:
@@ -111,8 +117,21 @@ inline int dstChannels(int code)
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV:
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU:
         case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2:
+        case COLOR_Lab2BGR: case COLOR_Lab2RGB: case COLOR_BGR2Lab: case COLOR_RGB2Lab:
+        case COLOR_Lab2LBGR: case COLOR_Lab2LRGB:
+        case COLOR_Luv2BGR: case COLOR_Luv2RGB: case COLOR_BGR2Luv: case COLOR_RGB2Luv:
+        case COLOR_Luv2LBGR: case COLOR_Luv2LRGB:
+        case COLOR_YCrCb2BGR: case COLOR_YCrCb2RGB: case COLOR_BGR2YCrCb: case COLOR_RGB2YCrCb:
+        case COLOR_XYZ2BGR: case COLOR_XYZ2RGB: case COLOR_BGR2XYZ: case COLOR_RGB2XYZ:
 
             return 3;
+
+        case COLOR_RGB2YUV_UYVY: case COLOR_BGR2YUV_UYVY: case COLOR_RGB2YUV_YVYU: case COLOR_BGR2YUV_YVYU:
+        case COLOR_RGB2YUV_YUY2: case COLOR_BGR2YUV_YUY2:
+        case COLOR_RGBA2YUV_UYVY: case COLOR_BGRA2YUV_UYVY: case COLOR_RGBA2YUV_YVYU: case COLOR_BGRA2YUV_YVYU:
+        case COLOR_RGBA2YUV_YUY2: case COLOR_BGRA2YUV_YUY2:
+
+            return 2;
 
         default:
             return 0;
@@ -149,6 +168,7 @@ inline int uIndex(int code)
             return 2;
 
         case COLOR_YUV2RGB_YVYU: case COLOR_YUV2BGR_YVYU: case COLOR_YUV2RGBA_YVYU: case COLOR_YUV2BGRA_YVYU:
+        case COLOR_RGB2YUV_YVYU: case COLOR_BGR2YUV_YVYU: case COLOR_RGBA2YUV_YVYU: case COLOR_BGRA2YUV_YVYU:
         case COLOR_RGB2YUV_IYUV: case COLOR_BGR2YUV_IYUV: case COLOR_RGBA2YUV_IYUV: case COLOR_BGRA2YUV_IYUV:
         case COLOR_YUV2BGR_NV21:  case COLOR_YUV2RGB_NV21: case COLOR_YUV2BGRA_NV21: case COLOR_YUV2RGBA_NV21:
         case COLOR_YUV2BGR_YV12: case COLOR_YUV2RGB_YV12: case COLOR_YUV2BGRA_YV12: case COLOR_YUV2RGBA_YV12:
@@ -159,6 +179,8 @@ inline int uIndex(int code)
         case COLOR_YUV2BGR_IYUV: case COLOR_YUV2RGB_IYUV: case COLOR_YUV2BGRA_IYUV: case COLOR_YUV2RGBA_IYUV:
         case COLOR_YUV2RGB_UYVY: case COLOR_YUV2BGR_UYVY: case COLOR_YUV2RGBA_UYVY: case COLOR_YUV2BGRA_UYVY:
         case COLOR_YUV2RGB_YUY2: case COLOR_YUV2BGR_YUY2: case COLOR_YUV2RGBA_YUY2: case COLOR_YUV2BGRA_YUY2:
+        case COLOR_RGB2YUV_UYVY: case COLOR_BGR2YUV_UYVY: case COLOR_RGBA2YUV_UYVY: case COLOR_BGRA2YUV_UYVY:
+        case COLOR_RGB2YUV_YUY2: case COLOR_BGR2YUV_YUY2: case COLOR_RGBA2YUV_YUY2: case COLOR_BGRA2YUV_YUY2:
 
             return 0;
 
@@ -180,8 +202,8 @@ struct CvtHelper
         int stype = _src.type();
         scn = CV_MAT_CN(stype), depth = CV_MAT_DEPTH(stype);
 
-        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
-        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckChannels(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_CheckChannels(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
         CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         if (_src.getObj() == _dst.getObj()) // inplace processing (#6653)
@@ -225,8 +247,8 @@ struct OclHelper
         int scn = src.channels();
         int depth = src.depth();
 
-        CV_Check(scn, VScn::contains(scn), "Invalid number of channels in input image");
-        CV_Check(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
+        CV_CheckChannels(scn, VScn::contains(scn), "Invalid number of channels in input image");
+        CV_CheckChannels(dcn, VDcn::contains(dcn), "Invalid number of channels in output image");
         CV_CheckDepth(depth, VDepth::contains(depth), "Unsupported depth of input image");
 
         switch (sizePolicy)
@@ -255,7 +277,7 @@ struct OclHelper
         int pxPerWIy = dev.isIntel() && (dev.type() & ocl::Device::TYPE_GPU) ? 4 : 1;
         int pxPerWIx = 1;
 
-        cv::String baseOptions = format("-D depth=%d -D scn=%d -D PIX_PER_WI_Y=%d ",
+        cv::String baseOptions = format("-D SRC_DEPTH=%d -D SCN=%d -D PIX_PER_WI_Y=%d ",
                                         src.depth(), src.channels(), pxPerWIy);
 
         switch (sizePolicy)
@@ -519,6 +541,7 @@ bool oclCvtColorBGR2YUV( InputArray _src, OutputArray _dst, int bidx );
 bool oclCvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx );
 
 bool oclCvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx );
+bool oclCvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx, int yidx );
 bool oclCvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx );
 bool oclCvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, int uidx );
 bool oclCvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, int bidx, int uidx );
@@ -533,14 +556,15 @@ void cvtColorLuv2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bo
 void cvtColorBGR2XYZ( InputArray _src, OutputArray _dst, bool swapb );
 void cvtColorXYZ2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb );
 
-void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, bool swapb, bool crcb);
-void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, bool crcb);
+void cvtColorBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, bool crcb);
+void cvtColorYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, bool crcb);
 
-void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx, int ycn);
-void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, int dcn, bool swapb, int uidx );
-void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, bool swapb, int uidx);
+void cvtColorOnePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx, int ycn );
+void cvtColorOnePlaneBGR2YUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx, int ycn );
+void cvtColorTwoPlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorTwoPlaneYUV2BGRpair( InputArray _ysrc, InputArray _uvsrc, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorThreePlaneYUV2BGR( InputArray _src, OutputArray _dst, AlgorithmHint hint, int dcn, bool swapb, int uidx );
+void cvtColorBGR2ThreePlaneYUV( InputArray _src, OutputArray _dst, AlgorithmHint hint, bool swapb, int uidx );
 void cvtColorYUV2Gray_420( InputArray _src, OutputArray _dst );
 void cvtColorYUV2Gray_ch( InputArray _src, OutputArray _dst, int coi );
 

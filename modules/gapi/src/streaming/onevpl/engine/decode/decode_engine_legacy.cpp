@@ -190,7 +190,7 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
         // TODO make proper direction
         mfxDecParams.IOPattern = MFX_IOPATTERN_OUT_SYSTEM_MEMORY;
     } else {
-        GAPI_Assert(false && "unsupported AccelType from device selector");
+        GAPI_Error("unsupported AccelType from device selector");
     }
 
     // try fetch & decode input data
@@ -251,7 +251,8 @@ VPLLegacyDecodeEngine::SessionParam VPLLegacyDecodeEngine::prepare_session_param
 
     }
 
-    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE | MFX_MEMTYPE_FROM_VPPIN;
+    decRequest.Type |= MFX_MEMTYPE_EXTERNAL_FRAME | MFX_MEMTYPE_FROM_DECODE |
+                       MFX_MEMTYPE_FROM_VPPIN | MFX_MEMTYPE_SHARED_RESOURCE;
     VPLAccelerationPolicy::pool_key_t decode_pool_key =
                 acceleration_policy->create_surface_pool(decRequest, mfxDecParams.mfx.FrameInfo);
 

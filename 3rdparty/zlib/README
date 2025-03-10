@@ -1,6 +1,6 @@
 ZLIB DATA COMPRESSION LIBRARY
 
-zlib 1.2.12 is a general purpose data compression library.  All the code is
+zlib 1.3.1 is a general purpose data compression library.  All the code is
 thread safe.  The data format used by the zlib library is described by RFCs
 (Request for Comments) 1950 to 1952 in the files
 http://tools.ietf.org/html/rfc1950 (zlib format), rfc1951 (deflate format) and
@@ -29,18 +29,17 @@ PLEASE read the zlib FAQ http://zlib.net/zlib_faq.html before asking for help.
 
 Mark Nelson <markn@ieee.org> wrote an article about zlib for the Jan.  1997
 issue of Dr.  Dobb's Journal; a copy of the article is available at
-http://marknelson.us/1997/01/01/zlib-engine/ .
+https://marknelson.us/posts/1997/01/01/zlib-engine.html .
 
-The changes made in version 1.2.12 are documented in the file ChangeLog.
+The changes made in version 1.3.1 are documented in the file ChangeLog.
 
 Unsupported third party contributions are provided in directory contrib/ .
 
-zlib is available in Java using the java.util.zip package, documented at
-http://java.sun.com/developer/technicalArticles/Programming/compression/ .
+zlib is available in Java using the java.util.zip package. Follow the API
+Documentation link at: https://docs.oracle.com/search/?q=java.util.zip .
 
-A Perl interface to zlib written by Paul Marquess <pmqs@cpan.org> is available
-at CPAN (Comprehensive Perl Archive Network) sites, including
-http://search.cpan.org/~pmqs/IO-Compress-Zlib/ .
+A Perl interface to zlib and bzip2 written by Paul Marquess <pmqs@cpan.org>
+can be found at https://github.com/pmqs/IO-Compress .
 
 A Python interface to zlib written by A.M. Kuchling <amk@amk.ca> is
 available in Python 1.5 and later versions, see
@@ -64,7 +63,7 @@ Notes for some targets:
 - zlib doesn't work with gcc 2.6.3 on a DEC 3000/300LX under OSF/1 2.1 it works
   when compiled with cc.
 
-- On Digital Unix 4.0D (formely OSF/1) on AlphaServer, the cc option -std1 is
+- On Digital Unix 4.0D (formerly OSF/1) on AlphaServer, the cc option -std1 is
   necessary to get gzprintf working correctly. This is done by configure.
 
 - zlib doesn't work on HP-UX 9.05 with some versions of /bin/cc. It works with
@@ -84,7 +83,7 @@ Acknowledgments:
 
 Copyright notice:
 
- (C) 1995-2022 Jean-loup Gailly and Mark Adler
+ (C) 1995-2024 Jean-loup Gailly and Mark Adler
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages

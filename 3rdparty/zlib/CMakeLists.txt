@@ -23,9 +23,6 @@ endif()
 #
 if(NOT MSVC)
   check_include_file(unistd.h Z_HAVE_UNISTD_H)
-  if(Z_HAVE_UNISTD_H)
-    add_definitions(-DZ_HAVE_UNISTD_H)
-  endif()
 endif()
 
 if(MSVC)
@@ -41,10 +38,13 @@ if(HAVE_OFF64_T)
   add_definitions(-D_LARGEFILE64_SOURCE=1)
 endif()
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+configure_file(	${CMAKE_CURRENT_SOURCE_DIR}/zconf.h.cmakein
+                ${CMAKE_CURRENT_BINARY_DIR}/zconf.h @ONLY)
+
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}")
 
 set(ZLIB_PUBLIC_HDRS
-    zconf.h
+    ${CMAKE_CURRENT_BINARY_DIR}/zconf.h
     zlib.h
 )
 set(ZLIB_PRIVATE_HDRS
@@ -102,4 +102,4 @@ if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(${ZLIB_LIBRARY} EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)
 endif()
 
-ocv_install_3rdparty_licenses(zlib README)
+ocv_install_3rdparty_licenses(zlib LICENSE)

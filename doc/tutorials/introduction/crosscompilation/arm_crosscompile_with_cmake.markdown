@@ -2,7 +2,7 @@ Cross compilation for ARM based Linux systems {#tutorial_arm_crosscompile_with_c
 =============================================
 
 @prev_tutorial{tutorial_macos_install}
-@next_tutorial{tutorial_building_tegra_cuda}
+@next_tutorial{tutorial_crosscompile_with_multiarch}
 
 |    |    |
 | -: | :- |

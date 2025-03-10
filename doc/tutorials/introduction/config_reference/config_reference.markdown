@@ -2,7 +2,7 @@ OpenCV configuration options reference {#tutorial_config_reference}
 ======================================
 
 @prev_tutorial{tutorial_general_install}
-@next_tutorial{tutorial_linux_install}
+@next_tutorial{tutorial_env_reference}
 
 @tableofcontents
 
@@ -217,6 +217,7 @@ Following options can be used to produce special builds with instrumentation or 
 | `ENABLE_BUILD_HARDENING` | GCC, Clang, MSVC | Enable compiler options which reduce possibility of code exploitation.  |
 | `ENABLE_LTO` | GCC, Clang, MSVC | Enable Link Time Optimization (LTO). |
 | `ENABLE_THIN_LTO` | Clang | Enable thin LTO which incorporates intermediate bitcode to binaries allowing consumers optimize their applications later. |
+| `OPENCV_ALGO_HINT_DEFAULT` | Any | Set default OpenCV implementation hint value: `ALGO_HINT_ACCURATE` or `ALGO_HINT_APPROX`. Dangerous! The option  changes behaviour globally and may affect accuracy of many algorithms. |
 
 @see [GCC instrumentation](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html)
 @see [Build hardening](https://en.wikipedia.org/wiki/Hardening_(computing))
@@ -224,6 +225,16 @@ Following options can be used to produce special builds with instrumentation or 
 @see [Link time optimization](https://gcc.gnu.org/wiki/LinkTimeOptimization)
 @see [ThinLTO](https://clang.llvm.org/docs/ThinLTO.html)
 
+## Enable IPP optimization
+
+Following options can be used to enables IPP optimizations for each functions but increases the size of the opencv library. All options are disabled by default.
+
+| Option | Functions | + roughly size |
+| -------| --------- | -------------- |
+| `OPENCV_IPP_GAUSSIAN_BLUR` | GaussianBlur() | +8Mb |
+| `OPENCV_IPP_MEAN` | mean() / meanStdDev() | +0.2Mb |
+| `OPENCV_IPP_MINMAX` | minMaxLoc() / minMaxIdx() | +0.2Mb |
+| `OPENCV_IPP_SUM` | sum() | +0.1Mb |
 
 # Functional features and dependencies {#tutorial_config_reference_func}
 
@@ -282,28 +293,37 @@ TODO: other options: `WITH_OPENCL_SVM`, `WITH_OPENCLAMDFFT`, `WITH_OPENCLAMDBLAS
 
 Following formats can be read by OpenCV without help of any third-party library:
 
-- [BMP](https://en.wikipedia.org/wiki/BMP_file_format)
-- [HDR](https://en.wikipedia.org/wiki/RGBE_image_format) (`WITH_IMGCODEC_HDR`)
-- [Sun Raster](https://en.wikipedia.org/wiki/Sun_Raster) (`WITH_IMGCODEC_SUNRASTER`)
-- [PPM, PGM, PBM, PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) (`WITH_IMGCODEC_PXM`, `WITH_IMGCODEC_PFM`)
+| Formats | Option | Default |
+| --------| ------ | ------- |
+| [BMP](https://en.wikipedia.org/wiki/BMP_file_format) | (Always) | _ON_ |
+| [HDR](https://en.wikipedia.org/wiki/RGBE_image_format) | `WITH_IMGCODEC_HDR` | _ON_ |
+| [Sun Raster](https://en.wikipedia.org/wiki/Sun_Raster) | `WITH_IMGCODEC_SUNRASTER` | _ON_ |
+| [PPM, PGM, PBM, PAM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PXM` | _ON_ |
+| [PFM](https://en.wikipedia.org/wiki/Netpbm#File_formats) | `WITH_IMGCODEC_PFM` | _ON_ |
+| [GIF](https://en.wikipedia.org/wiki/GIF) | `WITH_IMGCODEC_GIF` | _OFF_ |
 
+### PNG, JPEG, TIFF, WEBP, JPEG 2000, EXR, JPEG XL support
 
-### PNG, JPEG, TIFF, WEBP support
-
-| Formats | Option | Default | Force build own |
-| --------| ------ | ------- | --------------- |
-| [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) | `WITH_PNG` | _ON_ | `BUILD_PNG` |
-| [JPEG](https://en.wikipedia.org/wiki/JPEG) | `WITH_JPEG` | _ON_ | `BUILD_JPEG` |
-| [TIFF](https://en.wikipedia.org/wiki/TIFF) | `WITH_TIFF` | _ON_ | `BUILD_TIFF` |
-| [WEBP](https://en.wikipedia.org/wiki/WebP) | `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
-| [JPEG2000 with OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
-| [JPEG2000 with JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
-| [EXR](https://en.wikipedia.org/wiki/OpenEXR) | `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| Formats | Library | Option | Default | Force build own |
+| --------| ------- | ------ | ------- | --------------- |
+| [PNG](https://en.wikipedia.org/wiki/Portable_Network_Graphics) | [libpng](https://en.wikipedia.org/wiki/Libpng)| `WITH_PNG` | _ON_ | `BUILD_PNG` |
+|^| [libspng(simple png)](https://libspng.org/) | `WITH_SPNG` | _OFF_ | `BUILD_SPNG` |
+| [JPEG](https://en.wikipedia.org/wiki/JPEG) | [libjpeg-turbo](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _ON_ | `BUILD_JPEG` |
+|^| [libjpeg](https://en.wikipedia.org/wiki/Libjpeg) | `WITH_JPEG` | _OFF_ | `BUILD_JPEG` with `BUILD_JPEG_TURBO_DISABLE` |
+| [TIFF](https://en.wikipedia.org/wiki/TIFF) | [LibTIFF](https://en.wikipedia.org/wiki/LibTIFF) | `WITH_TIFF` | _ON_ | `BUILD_TIFF` |
+| [WebP](https://en.wikipedia.org/wiki/WebP) || `WITH_WEBP` | _ON_ | `BUILD_WEBP` |
+| [JPEG 2000](https://en.wikipedia.org/wiki/JPEG_2000) | [OpenJPEG](https://en.wikipedia.org/wiki/OpenJPEG) | `WITH_OPENJPEG` | _ON_ | `BUILD_OPENJPEG` |
+|^| [JasPer](https://en.wikipedia.org/wiki/JasPer) | `WITH_JASPER` | _ON_ (see note) | `BUILD_JASPER` |
+| [OpenEXR](https://en.wikipedia.org/wiki/OpenEXR) || `WITH_OPENEXR` | _ON_ | `BUILD_OPENEXR` |
+| [JPEG XL](https://en.wikipedia.org/wiki/JPEG_XL) || `WITH_JPEGXL` | _ON_ | Not supported. (see note) |
 
 All libraries required to read images in these formats are included into OpenCV and will be built automatically if not found at the configuration stage. Corresponding `BUILD_*` options will force building and using own libraries, they are enabled by default on some platforms, e.g. Windows.
 
-@note OpenJPEG have higher priority than JasPer which is deprecated. In order to use JasPer, OpenJPEG must be disabled.
+@note (All) Only one library for each image format can be enabled(e.g. In order to use JasPer for JPEG 2000 format, OpenJPEG must be disabled).
+@note (JPEG 2000) OpenJPEG have higher priority than JasPer which is deprecated.
+@note (JPEG XL) OpenCV doesn't contain libjxl source code, so `BUILD_JPEGXL` is not supported.
 
+@warning OpenEXR ver 2.2 or earlier cannot be used in combination with C++17 or later. In this case, updating OpenEXR ver 2.3.0 or later is required.
 
 ### GDAL integration
 
@@ -382,7 +402,7 @@ There are multiple less popular frameworks which can be used to read and write v
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `WITH_1394` | _ON_ | [IIDC IEEE1394](https://en.wikipedia.org/wiki/IEEE_1394#IIDC) support using DC1394 library |
+| `WITH_1394` | _OFF_ | [IIDC IEEE1394](https://en.wikipedia.org/wiki/IEEE_1394#IIDC) support using DC1394 library |
 | `WITH_OPENNI` | _OFF_ | [OpenNI](https://en.wikipedia.org/wiki/OpenNI) can be used to capture data from depth-sensing cameras. Deprecated. |
 | `WITH_OPENNI2` | _OFF_ | [OpenNI2](https://structure.io/openni) can be used to capture data from depth-sensing cameras. |
 | `WITH_PVAPI` | _OFF_ | [PVAPI](https://www.alliedvision.com/en/support/software-downloads.html) is legacy SDK for Prosilica GigE cameras. Deprecated. |
@@ -444,6 +464,8 @@ OpenCV relies on various GUI libraries for window drawing.
 | `WITH_WIN32UI` | _ON_ | Windows | [WinAPI](https://en.wikipedia.org/wiki/Windows_API) is a standard GUI API in Windows. |
 | N/A | _ON_ | macOS | [Cocoa](https://en.wikipedia.org/wiki/Cocoa_(API)) is a framework used in macOS. |
 | `WITH_QT` | _OFF_ | Cross-platform | [Qt](https://en.wikipedia.org/wiki/Qt_(software)) is a cross-platform GUI framework. |
+| `WITH_FRAMEBUFFER` | _OFF_ | Linux | Experimental backend using [Linux framebuffer](https://en.wikipedia.org/wiki/Linux_framebuffer). Have limited functionality but does not require dependencies. |
+| `WITH_FRAMEBUFFER_XVFB` | _OFF_ | Linux | Enables special output mode of the FRAMEBUFFER backend compatible with [xvfb](https://en.wikipedia.org/wiki/Xvfb) tool. Requires some X11 headers. |
 
 @note OpenCV compiled with Qt support enables advanced _highgui_ interface, see @ref highgui_qt for details.
 
@@ -484,7 +506,6 @@ OpenCV have own DNN inference module which have own build-in engine, but can als
 | `OPENCV_DNN_CUDA` | _OFF_ | Enable CUDA backend. [CUDA](https://en.wikipedia.org/wiki/CUDA), CUBLAS and [CUDNN](https://developer.nvidia.com/cudnn) must be installed. |
 | `WITH_HALIDE` | _OFF_ | Use experimental [Halide](https://en.wikipedia.org/wiki/Halide_(programming_language)) backend which can generate optimized code for dnn-layers at runtime. Halide must be installed. |
 | `WITH_VULKAN` | _OFF_ | Enable experimental [Vulkan](https://en.wikipedia.org/wiki/Vulkan_(API)) backend. Does not require additional dependencies, but can use external Vulkan headers (`VULKAN_INCLUDE_DIRS`). |
-| `WITH_TENGINE` | _OFF_ | Enable experimental [Tengine](https://github.com/OAID/Tengine) backend for ARM CPUs. Tengine library must be installed. |
 
 
 # Installation layout {#tutorial_config_reference_install}
@@ -566,6 +587,7 @@ Following options can be used to change installation layout for common scenarios
 | ------ | ------- | ----------- |
 | `OPENCV_ENABLE_NONFREE` | _OFF_ | Some algorithms included in the library are known to be protected by patents and are disabled by default. |
 | `OPENCV_FORCE_3RDPARTY_BUILD`| _OFF_ | Enable all `BUILD_` options at once. |
+| `OPENCV_IPP_ENABLE_ALL`| _OFF_ | Enable all `OPENCV_IPP_` options at once. |
 | `ENABLE_CCACHE` | _ON_ (on Unix-like platforms) | Enable [ccache](https://en.wikipedia.org/wiki/Ccache) auto-detection. This tool wraps compiler calls and caches results, can significantly improve re-compilation time. |
 | `ENABLE_PRECOMPILED_HEADERS` | _ON_ (for MSVC) | Enable precompiled headers support. Improves build time. |
 | `BUILD_DOCS` | _OFF_ | Enable documentation build (_doxygen_, _doxygen_cpp_, _doxygen_python_, _doxygen_javadoc_ targets). [Doxygen](http://www.doxygen.org/index.html) must be installed for C++ documentation build. Python and [BeautifulSoup4](https://en.wikipedia.org/wiki/Beautiful_Soup_(HTML_parser)) must be installed for Python documentation build. Javadoc and Ant must be installed for Java documentation build (part of Java SDK). |
@@ -612,6 +634,7 @@ Following build options are utilized in `opencv_contrib` modules, as stated [pre
 `CMAKE_TOOLCHAIN_FILE`
 
 `WITH_CAROTENE`
+`WITH_KLEIDICV`
 `WITH_CPUFEATURES`
 `WITH_EIGEN`
 `WITH_OPENVX`

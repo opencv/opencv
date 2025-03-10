@@ -57,6 +57,25 @@ namespace cv
  *           0  0  0
  *           1  2  1
  */
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+template <typename T>
+static inline void spatialGradientKernel_vec( T& vx, T& vy,
+                                          const T& v00, const T& v01, const T& v02,
+                                          const T& v10,               const T& v12,
+                                          const T& v20, const T& v21, const T& v22 )
+{
+    // vx = (v22 - v00) + (v02 - v20) + 2 * (v12 - v10)
+    // vy = (v22 - v00) + (v20 - v02) + 2 * (v21 - v01)
+    T tmp_add = v_sub(v22, v00),
+      tmp_sub = v_sub(v02, v20),
+      tmp_x   = v_sub(v12, v10),
+      tmp_y   = v_sub(v21, v01);
+
+    vx = v_add(v_add(v_add(tmp_add, tmp_sub), tmp_x), tmp_x);
+    vy = v_add(v_add(v_sub(tmp_add, tmp_sub), tmp_y), tmp_y);
+}
+#endif
+
 template <typename T>
 static inline void spatialGradientKernel( T& vx, T& vy,
                                           const T& v00, const T& v01, const T& v02,
@@ -65,7 +84,6 @@ static inline void spatialGradientKernel( T& vx, T& vy,
 {
     // vx = (v22 - v00) + (v02 - v20) + 2 * (v12 - v10)
     // vy = (v22 - v00) + (v20 - v02) + 2 * (v21 - v01)
-
     T tmp_add = v22 - v00,
       tmp_sub = v02 - v20,
       tmp_x   = v12 - v10,
@@ -125,7 +143,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
     int i_start = 0;
     int j_start = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     // Characters in variable names have the following meanings:
     // u: unsigned char
     // s: signed int
@@ -148,7 +166,7 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
         short *n_dy = dy.ptr<short>(i+1);
 
         // Process rest of columns 16-column chunks at a time
-        for ( j = 1; j < W - v_uint8::nlanes; j += v_uint8::nlanes)
+        for ( j = 1; j < W - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
         {
             // Load top row for 3x3 Sobel filter
             v_uint8 v_um = vx_load(&p_src[j-1]);
@@ -195,22 +213,22 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
 
             // dx & dy for rows 1, 2, 3
             v_int16 v_sdx1, v_sdy1;
-            spatialGradientKernel<v_int16>( v_sdx1, v_sdy1,
+            spatialGradientKernel_vec<v_int16>( v_sdx1, v_sdy1,
                                               v_s1m1, v_s1n1, v_s1p1,
                                               v_s2m1,         v_s2p1,
                                               v_s3m1, v_s3n1, v_s3p1 );
 
             v_int16 v_sdx2, v_sdy2;
-            spatialGradientKernel<v_int16>( v_sdx2, v_sdy2,
+            spatialGradientKernel_vec<v_int16>( v_sdx2, v_sdy2,
                                               v_s1m2, v_s1n2, v_s1p2,
                                               v_s2m2,         v_s2p2,
                                               v_s3m2, v_s3n2, v_s3p2 );
 
             // Store
             v_store(&c_dx[j],                 v_sdx1);
-            v_store(&c_dx[j+v_int16::nlanes], v_sdx2);
+            v_store(&c_dx[j+VTraits<v_int16>::vlanes()], v_sdx2);
             v_store(&c_dy[j],                 v_sdy1);
-            v_store(&c_dy[j+v_int16::nlanes], v_sdy2);
+            v_store(&c_dy[j+VTraits<v_int16>::vlanes()], v_sdy2);
 
             // Load fourth row for 3x3 Sobel filter
             v_um = vx_load(&m_src[j-1]);
@@ -227,21 +245,21 @@ void spatialGradient( InputArray _src, OutputArray _dx, OutputArray _dy,
             v_int16 v_s4p2 = v_reinterpret_as_s16(v_up2);
 
             // dx & dy for rows 2, 3, 4
-            spatialGradientKernel<v_int16>( v_sdx1, v_sdy1,
+            spatialGradientKernel_vec<v_int16>( v_sdx1, v_sdy1,
                                               v_s2m1, v_s2n1, v_s2p1,
                                               v_s3m1,         v_s3p1,
                                               v_s4m1, v_s4n1, v_s4p1 );
 
-            spatialGradientKernel<v_int16>( v_sdx2, v_sdy2,
+            spatialGradientKernel_vec<v_int16>( v_sdx2, v_sdy2,
                                               v_s2m2, v_s2n2, v_s2p2,
                                               v_s3m2,         v_s3p2,
                                               v_s4m2, v_s4n2, v_s4p2 );
 
             // Store
             v_store(&n_dx[j],                 v_sdx1);
-            v_store(&n_dx[j+v_int16::nlanes], v_sdx2);
+            v_store(&n_dx[j+VTraits<v_int16>::vlanes()], v_sdx2);
             v_store(&n_dy[j],                 v_sdy1);
-            v_store(&n_dy[j+v_int16::nlanes], v_sdy2);
+            v_store(&n_dy[j+VTraits<v_int16>::vlanes()], v_sdy2);
         }
     }
     i_start = i;

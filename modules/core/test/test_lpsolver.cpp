@@ -151,4 +151,18 @@ TEST(Core_LPSolver, issue_12337)
     EXPECT_ANY_THROW(Mat1b z_8u; cv::solveLP(A, B, z_8u));
 }
 
+// NOTE: Test parameters found experimentally to get numerically inaccurate result.
+// The test behaviour may change after algorithm tuning and may removed.
+TEST(Core_LPSolver, issue_12343)
+{
+    Mat A = (cv::Mat_<double>(4, 1) << 3., 3., 3., 4.);
+    Mat B = (cv::Mat_<double>(4, 5) << 0., 1., 4., 4., 3.,
+                                       3., 1., 2., 2., 3.,
+                                       4., 4., 0., 1., 4.,
+                                       4., 0., 4., 1., 4.);
+    Mat z;
+    int result = cv::solveLP(A, B, z);
+    EXPECT_EQ(SOLVELP_LOST, result);
+}
+
 }} // namespace

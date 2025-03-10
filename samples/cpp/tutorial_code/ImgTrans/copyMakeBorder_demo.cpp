@@ -45,9 +45,9 @@ int main( int argc, char** argv )
     printf( " ** Press 'r' to set the border to be replicated \n");
     printf( " ** Press 'ESC' to exit the program \n");
 
-    //![create_window]
+//![create_window]
     namedWindow( window_name, WINDOW_AUTOSIZE );
-    //![create_window]
+//![create_window]
 
     //![init_arguments]
     // Initialize arguments for the filter

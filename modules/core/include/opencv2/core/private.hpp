@@ -209,6 +209,7 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
 #define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
+#define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
@@ -235,6 +236,10 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wstrict-prototypes"
+#  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -245,6 +250,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
+#  endif
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic pop
 #  endif
 #endif
 

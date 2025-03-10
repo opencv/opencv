@@ -26,7 +26,7 @@ template<size_t num_channels> class IntegralCalculator;
 template<size_t num_channels>
 class IntegralCalculator  {
 public:
-    IntegralCalculator() {};
+    IntegralCalculator() {}
 
 
     void calculate_integral_avx512(const uchar *src, size_t _srcstep,
@@ -385,7 +385,7 @@ __m512d IntegralCalculator < 3 > ::calculate_integral(const __m512i src_longs, c
     //    shifts data left by 3 and 6 qwords(lanes) and gets rolling sum in all lanes
     //   Vertical LANES:     76543210
     //   src_longs       :   HGFEDCBA
-    //   shit3lanes      : + EDCBA
+    //   shift3lanes      : + EDCBA
     //   shift6lanes     : + BA
     //   carry_over_idxs : + 65765765  (index position of result from previous iteration)
     //                     = integral
@@ -418,7 +418,7 @@ __m512d IntegralCalculator < 4 > ::calculate_integral(const __m512i src_longs, c
     //    shifts data left by 3 and 6 qwords(lanes) and gets rolling sum in all lanes
     //   Vertical LANES:     76543210
     //   src_longs       :   HGFEDCBA
-    //   shit4lanes      : + DCBA
+    //   shift4lanes      : + DCBA
     //   carry_over_idxs : + 76547654  (index position of result from previous iteration)
     //                     = integral
     __m512i shifted4lanes = _mm512_maskz_expand_epi64(0xF0, src_longs);
@@ -464,6 +464,7 @@ void calculate_integral_avx512(const uchar *src,   size_t _srcstep,
         case 4: {
             IntegralCalculator< 4 > calculator;
             calculator.calculate_integral_avx512(src, _srcstep, sum, _sumstep, sqsum, _sqsumstep, width, height);
+            break;
         }
     }
 }

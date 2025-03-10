@@ -12,6 +12,21 @@
 
 namespace cvtest {
 
+// Standard library (technically) forbids using std::min_element
+// with non-strict std::less_equal, so we make our own min_element
+template <typename Iter, typename Comp>
+Iter custom_min_element(Iter begin, Iter end, Comp cmp_less)
+{
+    if (begin == end)
+        return begin;
+    Iter result = begin;
+    while (++begin != end)
+        if (cmp_less(*begin, *result))
+            result = begin;
+    return result;
+}
+
+
 template <class Cmp, typename T>
 struct reduceMinMaxImpl
 {
@@ -30,7 +45,7 @@ struct reduceMinMaxImpl
             cv::Mat sub = src(idx);
 
             auto begin = sub.begin<T>();
-            auto it = std::min_element(begin, sub.end<T>(), cmp);
+            auto it = custom_min_element(begin, sub.end<T>(), cmp);
             *dst(idx).ptr<int32_t>() = static_cast<int32_t>(std::distance(begin, it));
 
             for (int j = static_cast<int>(idx.size()) - 1; j >= 0; --j)

@@ -1,8 +1,9 @@
-﻿/**
+/**
 * @brief You will learn how to remove periodic noise in the Fourier domain
 * @author Karpushin Vladislav, karpushin@ngs.ru, https://github.com/VladKarpushin
 */
 #include <iostream>
+#include "opencv2/highgui.hpp"
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -14,15 +15,25 @@ void filter2DFreq(const Mat& inputImg, Mat& outputImg, const Mat& H);
 void synthesizeFilterH(Mat& inputOutput_H, Point center, int radius);
 void calcPSD(const Mat& inputImg, Mat& outputImg, int flag = 0);
 
-int main()
+const String keys =
+"{help h usage ? |             | print this message   }"
+"{@image          |period_input.jpg | input image name     }"
+;
+
+int main(int argc, char* argv[])
 {
-    Mat imgIn = imread("input.jpg", IMREAD_GRAYSCALE);
+    CommandLineParser parser(argc, argv, keys);
+    string strInFileName = parser.get<String>("@image");
+    samples::addSamplesDataSearchSubDirectory("doc/tutorials/imgproc/periodic_noise_removing_filter/images");
+
+    Mat imgIn = imread(samples::findFile(strInFileName), IMREAD_GRAYSCALE);
     if (imgIn.empty()) //check whether the image is loaded or not
     {
         cout << "ERROR : Image cannot be loaded..!!" << endl;
         return -1;
     }
 
+    imshow("Image corrupted", imgIn);
     imgIn.convertTo(imgIn, CV_32F);
 
 //! [main]
@@ -57,7 +68,9 @@ int main()
     imwrite("PSD.jpg", imgPSD);
     fftshift(H, H);
     normalize(H, H, 0, 255, NORM_MINMAX);
+    imshow("Debluring", imgOut);
     imwrite("filter.jpg", H);
+    waitKey(0);
     return 0;
 }
 

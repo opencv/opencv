@@ -80,7 +80,7 @@ Explanation / Result
 
 Get image from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tutorials/imgproc/morph_lines_detection/images/src.png) .
 
-#### Load Image
+### Load Image
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp load_image
@@ -96,7 +96,7 @@ Get image from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tu
 
 ![](images/src.png)
 
-#### Grayscale
+### Grayscale
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp gray
@@ -112,7 +112,7 @@ Get image from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tu
 
 ![](images/gray.png)
 
-#### Grayscale to Binary image
+### Grayscale to Binary image
 
 @add_toggle_cpp
 @snippet samples/cpp/tutorial_code/ImgProc/morph_lines_detection/Morphology_3.cpp bin
@@ -128,7 +128,7 @@ Get image from [here](https://raw.githubusercontent.com/opencv/opencv/4.x/doc/tu
 
 ![](images/binary.png)
 
-#### Output images
+### Output images
 
 Now we are ready to apply morphological operations in order to extract the horizontal and vertical lines and as a consequence to separate the music notes from the music sheet, but first let's initialize the output images that we will use for that reason:
 
@@ -144,7 +144,7 @@ Now we are ready to apply morphological operations in order to extract the horiz
 @snippet samples/python/tutorial_code/imgProc/morph_lines_detection/morph_lines_detection.py init
 @end_toggle
 
-#### Structure elements
+### Structure elements
 
 As we specified in the theory in order to extract the object that we desire, we need to create the corresponding structure element. Since  we want to extract the horizontal lines, a corresponding structure element for that purpose will have the following shape:
 ![](images/linear_horiz.png)
@@ -182,7 +182,7 @@ and again this is represented as follows:
 
 ![](images/vert.png)
 
-#### Refine edges / Result
+### Refine edges / Result
 
 As you can see we are almost there. However, at that point you will notice that the edges of the notes are a bit rough. For that reason we need to refine the edges in order to obtain a smoother result:
 

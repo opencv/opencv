@@ -381,14 +381,14 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
                                                          reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0,
                                                          Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(img.data), step * 2, reinterpret_cast<ushort *>(img.data), step * 2, Size(m_width, m_height));
                         }
@@ -402,12 +402,12 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGBA2BGRA_8u_C4R(buffer[row_info.row_num], 0, buffer[row_info.row_num], 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGBA2BGRA_8u_C4R(img.data, step, img.data, step, Size(m_width, m_height));
                         }
@@ -421,13 +421,13 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
                                                        reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(img.data), step,
                                                    reinterpret_cast<ushort *>(img.data), step, Size(m_width, m_height));
@@ -442,12 +442,12 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0)
+                            if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
                                 icvCvt_RGB2BGR_8u_C3R(buffer[row_info.row_num], 0, buffer[row_info.row_num], 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method)
+                        if (ihdr.interlace_method && !m_use_rgb)
                         {
                             icvCvt_RGB2BGR_8u_C3R(img.data, step, img.data, step, Size(m_width, m_height));
                         }
@@ -521,7 +521,6 @@ int SPngEncoder::writeDataToBuf(void *ctx, void *user, void *dst_src, size_t len
 
 bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 {
-    int fmt;
     spng_ctx *ctx = spng_ctx_new(SPNG_CTX_ENCODER);
     FILE *volatile f = 0;
     int width = img.cols, height = img.rows;
@@ -536,9 +535,12 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
         struct spng_ihdr ihdr = {};
         ihdr.height = height;
         ihdr.width = width;
-        int compression_level = -1;                          // Invalid value to allow setting 0-9 as valid
+        int compression_level = Z_BEST_SPEED;
         int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
+        int filter = IMWRITE_PNG_FILTER_SUB; // Default filter
         bool isBilevel = false;
+        bool set_compression_level = false;
+        bool set_filter = false;
 
         for (size_t i = 0; i < params.size(); i += 2)
         {
@@ -547,6 +549,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                 compression_level = params[i + 1];
                 compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                set_compression_level = true;
             }
             if (params[i] == IMWRITE_PNG_STRATEGY)
             {
@@ -557,12 +560,16 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             {
                 isBilevel = params[i + 1] != 0;
             }
+            if( params[i] == IMWRITE_PNG_FILTER )
+            {
+                filter = params[i+1];
+                set_filter = true;
+            }
         }
-        fmt = channels == 1 ? SPNG_COLOR_TYPE_GRAYSCALE : channels == 3 ? SPNG_COLOR_TYPE_TRUECOLOR
-                                                                        : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA;
 
         ihdr.bit_depth = depth == CV_8U ? isBilevel ? 1 : 8 : 16;
-        ihdr.color_type = fmt;
+        ihdr.color_type = (uint8_t)(channels == 1 ? SPNG_COLOR_TYPE_GRAYSCALE : channels == 3 ? SPNG_COLOR_TYPE_TRUECOLOR
+                                                                                              : SPNG_COLOR_TYPE_TRUECOLOR_ALPHA);
         ihdr.interlace_method = SPNG_INTERLACE_NONE;
         ihdr.filter_method = SPNG_FILTER_NONE;
         ihdr.compression_method = 0;
@@ -581,15 +588,9 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
         if (m_buf || f)
         {
-            if (compression_level >= 0)
-            {
-                spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
-            }
-            else
-            {
-                spng_set_option(ctx, SPNG_FILTER_CHOICE, SPNG_FILTER_CHOICE_SUB);
-                spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, Z_BEST_SPEED);
-            }
+            if (!set_compression_level || set_filter)
+                spng_set_option(ctx, SPNG_FILTER_CHOICE, filter);
+            spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
 
             int ret;
@@ -597,7 +598,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             ret = spng_encode_image(ctx, nullptr, 0, SPNG_FMT_PNG, SPNG_ENCODE_PROGRESSIVE);
             if (channels > 1)
             {
-                int error;
+                int error = SPNG_OK;
                 if (ret == SPNG_OK)
                 {
                     if (depth == CV_16U)
@@ -659,7 +660,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             }
             else
             {
-                int error;
+                int error = SPNG_OK;
                 for (int y = 0; y < height; y++)
                 {
                     error = spng_encode_row(ctx, img.data + y * img.step, width * channels * (depth == CV_16U ? 2 : 1));
@@ -711,17 +712,17 @@ void spngCvt_BGRA2Gray_8u_C4C1R(const uchar *bgra, int rgba_step,
                                 uchar *gray, int gray_step,
                                 cv::Size size, int _swap_rb)
 {
-    int i;
     for (; size.height--; gray += gray_step)
     {
         double cBGR0 = 0.1140441895;
+        double cBGR1 = 0.5869750977;
         double cBGR2 = 0.2989807129;
+
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
-        for (i = 0; i < size.width; i++, bgra += 4)
+        for (int i = 0; i < size.width; i++, bgra += 4)
         {
-            int t = cBGR0 * bgra[0] + 0.5869750977 * bgra[1] + cBGR2 * bgra[2];
-            gray[i] = (uchar)t;
+            gray[i] = cv::saturate_cast<uchar>(cBGR0 * bgra[0] + cBGR1 * bgra[1] + cBGR2 * bgra[2]);
         }
 
         bgra += rgba_step - size.width * 4;
@@ -732,17 +733,17 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
                                  ushort *gray, int gray_step,
                                  cv::Size size, int ncn, int _swap_rb)
 {
-    int i;
     for (; size.height--; gray += gray_step)
     {
         double cBGR0 = 0.1140441895;
+        double cBGR1 = 0.5869750977;
         double cBGR2 = 0.2989807129;
+
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
-        for (i = 0; i < size.width; i++, bgr += ncn)
+        for (int i = 0; i < size.width; i++, bgr += ncn)
         {
-            int t = cBGR0 * bgr[0] + 0.5869750977 * bgr[1] + cBGR2 * bgr[2];
-            gray[i] = (ushort)t;
+            gray[i] = (ushort)(cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2]);
         }
 
         bgr += bgr_step - size.width * ncn;

@@ -63,7 +63,7 @@ protected:
 
 CV_ThreshTest::CV_ThreshTest(int test_type)
 {
-    CV_Assert( (test_type & CV_THRESH_MASK) == 0 );
+    CV_Assert( (test_type & cv::THRESH_MASK) == 0 );
     test_array[INPUT].push_back(NULL);
     test_array[OUTPUT].push_back(NULL);
     test_array[REF_OUTPUT].push_back(NULL);
@@ -84,7 +84,7 @@ void CV_ThreshTest::get_test_array_types_and_sizes( int test_case_idx,
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     depth = depth == 0 ? CV_8U : depth == 1 ? CV_16S : depth == 2 ? CV_16U : depth == 3 ? CV_32F : CV_64F;
 
-    if ( extra_type == CV_THRESH_OTSU )
+    if ( extra_type == cv::THRESH_OTSU )
     {
         depth = cvtest::randInt(rng) % 2 == 0 ? CV_8U : CV_16U;
         cn = 1;
@@ -197,7 +197,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
     int width_n = _src.cols*cn, height = _src.rows;
     int ithresh = cvFloor(thresh);
     int imaxval, ithresh2;
-    if (extra_type == CV_THRESH_OTSU)
+    if (extra_type == cv::THRESH_OTSU)
     {
         thresh = compute_otsu_thresh(_src);
         ithresh = cvFloor(thresh);
@@ -228,7 +228,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
 
     switch( thresh_type )
     {
-    case CV_THRESH_BINARY:
+    case cv::THRESH_BINARY:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -268,7 +268,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_BINARY_INV:
+    case cv::THRESH_BINARY_INV:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -308,7 +308,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TRUNC:
+    case cv::THRESH_TRUNC:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -363,7 +363,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TOZERO:
+    case cv::THRESH_TOZERO:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -418,7 +418,7 @@ static void test_threshold( const Mat& _src, Mat& _dst,
             }
         }
         break;
-    case CV_THRESH_TOZERO_INV:
+    case cv::THRESH_TOZERO_INV:
         for( i = 0; i < height; i++ )
         {
             if( depth == CV_8U )
@@ -486,7 +486,7 @@ void CV_ThreshTest::prepare_to_validation( int /*test_case_idx*/ )
 }
 
 TEST(Imgproc_Threshold, accuracy) { CV_ThreshTest test; test.safe_run(); }
-TEST(Imgproc_Threshold, accuracyOtsu) { CV_ThreshTest test(CV_THRESH_OTSU); test.safe_run(); }
+TEST(Imgproc_Threshold, accuracyOtsu) { CV_ThreshTest test(cv::THRESH_OTSU); test.safe_run(); }
 
 BIGDATA_TEST(Imgproc_Threshold, huge)
 {
@@ -501,6 +501,25 @@ BIGDATA_TEST(Imgproc_Threshold, huge)
     int nz = cv::countNonZero(m);  // FIXIT 'int' is not enough here (overflow is possible with other inputs)
     ASSERT_EQ((uint64)nz, n / 2);
 }
+
+TEST(Imgproc_Threshold, threshold_dryrun)
+{
+    Size sz(16, 16);
+    Mat input_original(sz, CV_8U, Scalar::all(2));
+    Mat input = input_original.clone();
+    std::vector<int> threshTypes = {THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV};
+    std::vector<int> threshFlags = {0, THRESH_OTSU, THRESH_TRIANGLE};
+    for(int threshType : threshTypes)
+    {
+        for(int threshFlag : threshFlags)
+        {
+            const int _threshType = threshType | threshFlag | THRESH_DRYRUN;
+            cv::threshold(input, input, 2.0, 0.0, _threshType);
+            EXPECT_MAT_NEAR(input, input_original, 0);
+        }
+    }
+}
+
 
 TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_16085)
 {
@@ -539,6 +558,60 @@ TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_21258_Max)
     Mat result;
     cv::threshold(input, result, max_val, 0.0, THRESH_TOZERO);
     EXPECT_EQ(0, cv::norm(result, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, mean)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 15, 8);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold1.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, mean_inv)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY_INV, 15, 8);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold1.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    gt = Mat(gt.rows, gt.cols, CV_8UC1, cv::Scalar(255)) - gt;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, gauss)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 200, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY, 21, -5);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold2.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
+}
+
+TEST(Imgproc_AdaptiveThreshold, gauss_inv)
+{
+    const string input_path = cvtest::findDataFile("../cv/shared/baboon.png");
+    Mat input = imread(input_path, IMREAD_GRAYSCALE);
+    Mat result;
+
+    cv::adaptiveThreshold(input, result, 200, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, 21, -5);
+
+    const string gt_path = cvtest::findDataFile("../cv/imgproc/adaptive_threshold2.png");
+    Mat gt = imread(gt_path, IMREAD_GRAYSCALE);
+    gt = Mat(gt.rows, gt.cols, CV_8UC1, cv::Scalar(200)) - gt;
+    EXPECT_EQ(0, cv::norm(result, gt, NORM_INF));
 }
 
 }} // namespace

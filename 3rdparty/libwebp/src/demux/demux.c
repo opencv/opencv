@@ -24,7 +24,7 @@
 #include "src/webp/format_constants.h"
 
 #define DMUX_MAJ_VERSION 1
-#define DMUX_MIN_VERSION 2
+#define DMUX_MIN_VERSION 4
 #define DMUX_REV_VERSION 0
 
 typedef struct {
@@ -221,12 +221,16 @@ static ParseStatus StoreFrame(int frame_num, uint32_t min_size,
     const size_t chunk_start_offset = mem->start_;
     const uint32_t fourcc = ReadLE32(mem);
     const uint32_t payload_size = ReadLE32(mem);
-    const uint32_t payload_size_padded = payload_size + (payload_size & 1);
-    const size_t payload_available = (payload_size_padded > MemDataSize(mem))
-                                   ? MemDataSize(mem) : payload_size_padded;
-    const size_t chunk_size = CHUNK_HEADER_SIZE + payload_available;
+    uint32_t payload_size_padded;
+    size_t payload_available;
+    size_t chunk_size;
 
     if (payload_size > MAX_CHUNK_PAYLOAD) return PARSE_ERROR;
+
+    payload_size_padded = payload_size + (payload_size & 1);
+    payload_available = (payload_size_padded > MemDataSize(mem))
+                      ? MemDataSize(mem) : payload_size_padded;
+    chunk_size = CHUNK_HEADER_SIZE + payload_available;
     if (SizeIsInvalid(mem, payload_size_padded)) return PARSE_ERROR;
     if (payload_size_padded > MemDataSize(mem)) status = PARSE_NEED_MORE_DATA;
 
@@ -451,9 +455,11 @@ static ParseStatus ParseVP8XChunks(WebPDemuxer* const dmux) {
     const size_t chunk_start_offset = mem->start_;
     const uint32_t fourcc = ReadLE32(mem);
     const uint32_t chunk_size = ReadLE32(mem);
-    const uint32_t chunk_size_padded = chunk_size + (chunk_size & 1);
+    uint32_t chunk_size_padded;
 
     if (chunk_size > MAX_CHUNK_PAYLOAD) return PARSE_ERROR;
+
+    chunk_size_padded = chunk_size + (chunk_size & 1);
     if (SizeIsInvalid(mem, chunk_size_padded)) return PARSE_ERROR;
 
     switch (fourcc) {
@@ -608,7 +614,6 @@ static int IsValidExtendedFormat(const WebPDemuxer* const dmux) {
 
   while (f != NULL) {
     const int cur_frame_set = f->frame_num_;
-    int frame_count = 0;
 
     // Check frame properties.
     for (; f != NULL && f->frame_num_ == cur_frame_set; f = f->next_) {
@@ -643,8 +648,6 @@ static int IsValidExtendedFormat(const WebPDemuxer* const dmux) {
                             dmux->canvas_width_, dmux->canvas_height_)) {
         return 0;
       }
-
-      ++frame_count;
     }
   }
   return 1;

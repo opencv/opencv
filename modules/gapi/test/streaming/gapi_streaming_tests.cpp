@@ -49,7 +49,7 @@ std::ostream& operator<< (std::ostream &os, const KernelPackage &e)
         _C(OCL);
         _C(OCL_FLUID);
 #undef _C
-    default: GAPI_Assert(false);
+    default: GAPI_Error("InternalError");
     }
     return os;
 }
@@ -190,7 +190,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             data = cv::MediaFrame::Create<TestMediaBGR>(cv::util::get<cv::Mat>(data));
             return true;
@@ -232,7 +232,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
             cv::Mat y, uv;
@@ -256,7 +256,7 @@ public:
         : cv::gapi::wip::GCaptureSource(pipeline) {
     }
 
-    bool pull(cv::gapi::wip::Data& data) {
+    bool pull(cv::gapi::wip::Data& data) override {
         if (cv::gapi::wip::GCaptureSource::pull(data)) {
             cv::Mat bgr = cv::util::get<cv::Mat>(data);
             cv::Mat gray;
@@ -298,7 +298,7 @@ void checkPullOverload(const cv::Mat& ref,
             out_mat = *opt_mat;
             break;
         }
-        default: GAPI_Assert(false && "Incorrect type of Args");
+        default: GAPI_Error("Incorrect type of Args");
     }
 
     EXPECT_EQ(0., cv::norm(ref, out_mat, cv::NORM_INF));
@@ -316,10 +316,10 @@ public:
 
     static std::string exception_msg()
     {
-        return "InvalidSource sucessfuly failed!";
+        return "InvalidSource successfully failed!";
     }
 
-    bool pull(cv::gapi::wip::Data& d) {
+    bool pull(cv::gapi::wip::Data& d) override {
         ++m_curr_frame_id;
         if (m_curr_frame_id > m_num_frames) {
             return false;
@@ -355,7 +355,7 @@ GAPI_OCV_KERNEL(GThrowExceptionKernel, GThrowExceptionOp)
 {
     static std::string exception_msg()
     {
-        return "GThrowExceptionKernel sucessfuly failed";
+        return "GThrowExceptionKernel successfully failed";
     }
 
     static void run(const cv::Mat&, cv::Mat&)
@@ -716,14 +716,16 @@ TEST_P(GAPI_Streaming, SmokeTest_AutoMeta_VideoScalar)
     EXPECT_EQ(165u, test_frames);
 }
 
+// Instantiate tests with different backends, but default queue capacity
 INSTANTIATE_TEST_CASE_P(TestStreaming, GAPI_Streaming,
-                        Combine(Values(  KernelPackage::OCV
-                                    //, KernelPackage::OCL // FIXME: Fails bit-exactness check, maybe relax it?
-                                      , KernelPackage::OCV_FLUID
-                                    //, KernelPackage::OCL // FIXME: Fails bit-exactness check, maybe relax it?
-                                ),
-                                Values(cv::optional<size_t>{}, 1u, 4u))
-                        );
+                        Combine(Values( KernelPackage::OCV
+                                      , KernelPackage::OCV_FLUID),
+                                Values(cv::optional<size_t>{})));
+
+// Instantiate tests with the same backend but various queue capacity
+INSTANTIATE_TEST_CASE_P(TestStreaming_QC, GAPI_Streaming,
+                        Combine(Values(KernelPackage::OCV_FLUID),
+                                Values(1u, 4u)));
 
 namespace TypesTest
 {
@@ -2420,7 +2422,7 @@ TEST(GAPI_Streaming, TestPythonAPI)
     switch (args.index()) {
         case RunArgs::index_of<cv::GRunArgs>():
             out_args = util::get<cv::GRunArgs>(args); break;
-        default: GAPI_Assert(false && "Incorrect type of return value");
+        default: GAPI_Error("Incorrect type of return value");
     }
 
     ASSERT_EQ(1u, out_args.size());

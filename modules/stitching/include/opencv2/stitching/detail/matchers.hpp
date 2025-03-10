@@ -61,7 +61,7 @@ struct CV_EXPORTS_W_SIMPLE ImageFeatures
     CV_PROP_RW Size img_size;
     CV_PROP_RW std::vector<KeyPoint> keypoints;
     CV_PROP_RW UMat descriptors;
-    CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; };
+    CV_WRAP std::vector<KeyPoint> getKeypoints() { return keypoints; }
 };
 /** @brief
 
@@ -109,8 +109,8 @@ struct CV_EXPORTS_W_SIMPLE MatchesInfo
     CV_PROP_RW int num_inliers;                    //!< Number of geometrically consistent matches
     CV_PROP_RW Mat H;                              //!< Estimated transformation
     CV_PROP_RW double confidence;                  //!< Confidence two images are from the same panorama
-    CV_WRAP std::vector<DMatch> getMatches() { return matches; };
-    CV_WRAP std::vector<uchar> getInliers() { return inliers_mask; };
+    CV_WRAP std::vector<DMatch> getMatches() { return matches; }
+    CV_WRAP std::vector<uchar> getInliers() { return inliers_mask; }
 };
 
 /** @brief Feature matchers base class. */
@@ -138,7 +138,7 @@ public:
     @sa detail::MatchesInfo
     */
     CV_WRAP_AS(apply2) void operator ()(const std::vector<ImageFeatures> &features, CV_OUT std::vector<MatchesInfo> &pairwise_matches,
-                                        const cv::UMat &mask = cv::UMat()) { match(features, pairwise_matches, mask); };
+                                        const cv::UMat &mask = cv::UMat()) { match(features, pairwise_matches, mask); }
 
     /** @return True, if it's possible to use the same matcher instance in parallel, false otherwise
     */

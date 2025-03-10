@@ -191,8 +191,8 @@ void cv::GComputation::recompile(GMetaArgs&& in_metas, GCompileArgs &&args)
     if (m_priv->m_lastMetas != in_metas)
     {
         if (m_priv->m_lastCompiled &&
-                m_priv->m_lastCompiled.canReshape() &&
-                formats_are_same(m_priv->m_lastMetas, in_metas))
+            m_priv->m_lastCompiled.canReshape() &&
+            formats_are_same(m_priv->m_lastMetas, in_metas))
         {
             m_priv->m_lastCompiled.reshape(in_metas, args);
         }
@@ -202,6 +202,11 @@ void cv::GComputation::recompile(GMetaArgs&& in_metas, GCompileArgs &&args)
             m_priv->m_lastCompiled = compile(GMetaArgs(in_metas), std::move(args));
         }
         m_priv->m_lastMetas = in_metas;
+    }
+    else if (in_metas.size() == 0) {
+        // Happens when the graph is head-less (e.g. starts with const-vals only)
+        // always compile ad-hoc
+        m_priv->m_lastCompiled = compile(GMetaArgs(in_metas), std::move(args));
     }
 }
 

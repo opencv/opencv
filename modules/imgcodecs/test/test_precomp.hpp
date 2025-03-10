@@ -6,7 +6,6 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc/imgproc_c.h"
 
 namespace cv {
 
@@ -25,6 +24,16 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
         CV_Assert(IMREAD_COLOR == 1);
         v &= ~IMREAD_COLOR;
         *os << "IMREAD_COLOR" << (v == 0 ? "" : " | ");
+    }
+    else if ((v & IMREAD_COLOR_RGB) != 0)
+    {
+        CV_Assert(IMREAD_COLOR_RGB == 256);
+        v &= ~IMREAD_COLOR_RGB;
+        *os << "IMREAD_COLOR_RGB" << (v == 0 ? "" : " | ");
+    }
+    else if ((v & IMREAD_ANYCOLOR) != 0)
+    {
+        // Do nothing
     }
     else
     {
@@ -66,6 +75,7 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
         case IMREAD_REDUCED_GRAYSCALE_8: // fallthru
         case IMREAD_REDUCED_COLOR_8: *os << "REDUCED_8"; return;
         case IMREAD_IGNORE_ORIENTATION: return;
+        case IMREAD_COLOR_RGB: return;
     } // don't use "default:" to emit compiler warnings
     *os << "IMREAD_UNKNOWN(" << (int)v << ")";
 }

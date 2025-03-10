@@ -39,7 +39,7 @@ class GOAKExecutable final: public GIslandExecutable {
     friend class OAKKernelParams;
     virtual void run(std::vector<InObj>&&,
                      std::vector<OutObj>&&) override {
-        GAPI_Assert(false && "Not implemented");
+        GAPI_Error("Not implemented");
     }
 
     virtual void run(GIslandExecutable::IInput &in,
@@ -121,7 +121,7 @@ public:
     // FIXME: could it reshape?
     virtual bool canReshape() const override { return false; }
     virtual void reshape(ade::Graph&, const GCompileArgs&) override {
-        GAPI_Assert(false && "GOAKExecutable::reshape() is not supported");
+        GAPI_Error("GOAKExecutable::reshape() is not supported");
     }
 
     virtual void handleNewStream() override;
@@ -391,7 +391,7 @@ void cv::gimpl::GOAKExecutable::linkCopy(ade::NodeHandle handle) {
     for (const auto& copy_next_op : copy_out.front().get()->outNodes()) {
         const auto& op = m_gm.metadata(copy_next_op).get<Op>();
         if (op.k.name == "org.opencv.oak.copy") {
-            GAPI_Assert(false && "Back-to-back Copy operations are not supported in graph");
+            GAPI_Error("Back-to-back Copy operations are not supported in graph");
         }
     }
 
@@ -701,14 +701,14 @@ cv::gimpl::GOAKExecutable::GOAKExecutable(const ade::Graph& g,
                                     [](ExtractTypeHelper::InputPtr ptr) {
                             return ptr == nullptr;
                         })) {
-                        GAPI_Assert(false && "DAI input are not set");
+                        GAPI_Error("DAI input are not set");
                     }
 
                     if (std::any_of(node_info.outputs.cbegin(), node_info.outputs.cend(),
                                     [](ExtractTypeHelper::OutputPtr ptr) {
                             return ptr == nullptr;
                         })) {
-                        GAPI_Assert(false && "DAI outputs are not set");
+                        GAPI_Error("DAI outputs are not set");
                     }
                 }
             }
@@ -907,7 +907,7 @@ void cv::gimpl::GOAKExecutable::run(GIslandExecutable::IInput  &in,
         }
         // FIXME: Add support for remaining types
         default:
-            GAPI_Assert(false && "Unsupported type in OAK backend");
+            GAPI_Error("Unsupported type in OAK backend");
         }
 
         out.meta(out_arg, meta);
@@ -1080,7 +1080,7 @@ class GOAKBackendImpl final : public cv::gapi::GBackend::Priv {
         // NB: how could we have non-OAK source in streaming mode, then OAK backend in
         //     streaming mode but without camera input?
         if (!gm.metadata().contains<cv::gimpl::Streaming>()) {
-            GAPI_Assert(false && "OAK backend only supports Streaming mode for now");
+            GAPI_Error("OAK backend only supports Streaming mode for now");
         }
         return EPtr{new cv::gimpl::GOAKExecutable(graph, args, nodes, ins_data, outs_data)};
     }
@@ -1118,14 +1118,11 @@ namespace gapi {
 namespace oak {
 
 cv::gapi::GKernelPackage kernels() {
-    GAPI_Assert(false && "Built without OAK support");
-    return {};
+    GAPI_Error("Built without OAK support");
 }
 
 cv::gapi::GBackend backend() {
-    GAPI_Assert(false && "Built without OAK support");
-    static cv::gapi::GBackend this_backend(nullptr);
-    return this_backend;
+    GAPI_Error("Built without OAK support");
 }
 
 } // namespace oak

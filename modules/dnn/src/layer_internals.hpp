@@ -146,7 +146,7 @@ struct DataLayer : public Layer
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                 forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        bool isFP16 = outputs_arr.depth() == CV_16S;
+        bool isFP16 = outputs_arr.depth() == CV_16F;
 
         std::vector<Mat> outputs, internals;
         outputs_arr.getMatVector(outputs);
@@ -159,7 +159,7 @@ struct DataLayer : public Layer
 
             CV_Assert(mean == Scalar() || inputsData[i].size[1] <= 4);
             if (isFP16)
-                CV_CheckTypeEQ(outputs[i].type(), CV_16SC1, "");
+                CV_CheckTypeEQ(outputs[i].type(), CV_16FC1, "");
             else
                 CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
 
@@ -175,7 +175,7 @@ struct DataLayer : public Layer
                 {
                     Mat input_f32;
                     inputsData[i].convertTo(input_f32, CV_32F, scale, -mean[0] * scale);
-                    convertFp16(input_f32, outputs[i]);
+                    input_f32.convertTo(outputs[i], CV_16F);
                 }
                 else
                 {
@@ -194,7 +194,7 @@ struct DataLayer : public Layer
                         {
                             Mat input_f32;
                             inp.convertTo(input_f32, CV_32F, scale, -mean[c] * scale);
-                            convertFp16(input_f32, out);
+                            input_f32.convertTo(out, CV_16F);
                         }
                         else
                         {
@@ -209,7 +209,7 @@ struct DataLayer : public Layer
 #ifdef HAVE_OPENCL
     bool forward_ocl(InputArrayOfArrays, OutputArrayOfArrays outputs_, OutputArrayOfArrays internals_)
     {
-        bool isFP16 = outputs_.depth() == CV_16S;
+        bool isFP16 = outputs_.depth() == CV_16F;
 
         std::vector<UMat> outputs;
         outputs_.getUMatVector(outputs);
@@ -223,7 +223,7 @@ struct DataLayer : public Layer
 
             CV_Assert(mean == Scalar() || inputData.size[1] <= 4);
             if (isFP16)
-                CV_CheckTypeEQ(outputs[i].type(), CV_16SC1, "");
+                CV_CheckTypeEQ(outputs[i].type(), CV_16FC1, "");
             else
                 CV_CheckTypeEQ(outputs[i].type(), CV_32FC1, "");
 
@@ -239,7 +239,7 @@ struct DataLayer : public Layer
                 {
                     UMat input_i;
                     inputData.convertTo(input_i, CV_32F, scale, -mean[0] * scale);
-                    convertFp16(input_i, outputs[i]);
+                    input_i.convertTo(outputs[i], CV_16F);
                 }
                 else
                 {
@@ -263,7 +263,7 @@ struct DataLayer : public Layer
                         {
                             UMat input_i;
                             inp.convertTo(input_i, CV_32F, scale, -mean[c] * scale);
-                            convertFp16(input_i, out);
+                            input_i.convertTo(out, CV_16F);
                         }
                         else
                         {

@@ -86,6 +86,23 @@ using cv::gapi::own::rintd;
         return;                                            \
     }
 
+#define MERGE3_(T, OP, ...)                                \
+    if (cv::DataType<T>::depth == dst.meta().depth &&      \
+        cv::DataType<T>::depth == src1.meta().depth)       \
+    {                                                      \
+        GAPI_DbgAssert(dst.length() == src1.length());     \
+        GAPI_DbgAssert(dst.length() == src2.length());     \
+        GAPI_DbgAssert(dst.length() == src3.length());     \
+                                                           \
+        GAPI_DbgAssert(1 == src1.meta().chan);             \
+        GAPI_DbgAssert(1 == src2.meta().chan);             \
+        GAPI_DbgAssert(1 == src3.meta().chan);             \
+        GAPI_DbgAssert(3 == dst.meta().chan);              \
+                                                           \
+        OP<T>(__VA_ARGS__);                                \
+        return;                                            \
+    }
+
 } // namespace fluid
 } // namespace gapi
 } // namespace cv

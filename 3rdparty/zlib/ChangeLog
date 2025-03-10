@@ -1,6 +1,46 @@
 
                 ChangeLog file for zlib
 
+Changes in 1.3.1 (22 Jan 2024)
+- Reject overflows of zip header fields in minizip
+- Fix bug in inflateSync() for data held in bit buffer
+- Add LIT_MEM define to use more memory for a small deflate speedup
+- Fix decision on the emission of Zip64 end records in minizip
+- Add bounds checking to ERR_MSG() macro, used by zError()
+- Neutralize zip file traversal attacks in miniunz
+- Fix a bug in ZLIB_DEBUG compiles in check_match()
+- Various portability and appearance improvements
+
+Changes in 1.3 (18 Aug 2023)
+- Remove K&R function definitions and zlib2ansi
+- Fix bug in deflateBound() for level 0 and memLevel 9
+- Fix bug when gzungetc() is used immediately after gzopen()
+- Fix bug when using gzflush() with a very small buffer
+- Fix crash when gzsetparams() attempted for transparent write
+- Fix test/example.c to work with FORCE_STORED
+- Rewrite of zran in examples (see zran.c version history)
+- Fix minizip to allow it to open an empty zip file
+- Fix reading disk number start on zip64 files in minizip
+- Fix logic error in minizip argument processing
+- Add minizip testing to Makefile
+- Read multiple bytes instead of byte-by-byte in minizip unzip.c
+- Add memory sanitizer to configure (--memory)
+- Various portability improvements
+- Various documentation improvements
+- Various spelling and typo corrections
+
+Changes in 1.2.13 (13 Oct 2022)
+- Fix configure issue that discarded provided CC definition
+- Correct incorrect inputs provided to the CRC functions
+- Repair prototypes and exporting of new CRC functions
+- Fix inflateBack to detect invalid input with distances too far
+- Have infback() deliver all of the available output up to any error
+- Fix a bug when getting a gzip header extra field with inflate()
+- Fix bug in block type selection when Z_FIXED used
+- Tighten deflateBound bounds
+- Remove deleted assembler code references
+- Various portability and appearance improvements
+
 Changes in 1.2.12 (27 Mar 2022)
 - Cygwin does not have _wopen(), so do not create gzopen_w() there
 - Permit a deflateParams() parameter change as soon as possible
@@ -159,7 +199,7 @@ Changes in 1.2.7.1 (24 Mar 2013)
 - Fix types in contrib/minizip to match result of get_crc_table()
 - Simplify contrib/vstudio/vc10 with 'd' suffix
 - Add TOP support to win32/Makefile.msc
-- Suport i686 and amd64 assembler builds in CMakeLists.txt
+- Support i686 and amd64 assembler builds in CMakeLists.txt
 - Fix typos in the use of _LARGEFILE64_SOURCE in zconf.h
 - Add vc11 and vc12 build files to contrib/vstudio
 - Add gzvprintf() as an undocumented function in zlib
@@ -359,14 +399,14 @@ Changes in 1.2.5.1 (10 Sep 2011)
 - Use u4 type for crc_table to avoid conversion warnings
 - Apply casts in zlib.h to avoid conversion warnings
 - Add OF to prototypes for adler32_combine_ and crc32_combine_ [Miller]
-- Improve inflateSync() documentation to note indeterminancy
+- Improve inflateSync() documentation to note indeterminacy
 - Add deflatePending() function to return the amount of pending output
 - Correct the spelling of "specification" in FAQ [Randers-Pehrson]
 - Add a check in configure for stdarg.h, use for gzprintf()
 - Check that pointers fit in ints when gzprint() compiled old style
 - Add dummy name before $(SHAREDLIBV) in Makefile [Bar-Lev, Bowler]
 - Delete line in configure that adds -L. libz.a to LDFLAGS [Weigelt]
-- Add debug records in assmebler code [Londer]
+- Add debug records in assembler code [Londer]
 - Update RFC references to use http://tools.ietf.org/html/... [Li]
 - Add --archs option, use of libtool to configure for Mac OS X [Borstel]
 
@@ -1033,7 +1073,7 @@ Changes in 1.2.0.1 (17 March 2003)
     - Include additional header file on VMS for off_t typedef
 - Try to use _vsnprintf where it supplants vsprintf [Vollant]
 - Add some casts in inffast.c
-- Enchance comments in zlib.h on what happens if gzprintf() tries to
+- Enhance comments in zlib.h on what happens if gzprintf() tries to
   write more than 4095 bytes before compression
 - Remove unused state from inflateBackEnd()
 - Remove exit(0) from minigzip.c, example.c
@@ -1211,7 +1251,7 @@ Changes in 1.0.9 (17 Feb 1998)
 - Avoid gcc 2.8.0 comparison bug a little differently than zlib 1.0.8
 - in inftrees.c, avoid cc -O bug on HP (Farshid Elahi)
 - in zconf.h move the ZLIB_DLL stuff earlier to avoid problems with
-  the declaration of FAR (Gilles VOllant)
+  the declaration of FAR (Gilles Vollant)
 - install libz.so* with mode 755 (executable) instead of 644 (Marc Lehmann)
 - read_buf buf parameter of type Bytef* instead of charf*
 - zmemcpy parameters are of type Bytef*, not charf* (Joseph Strout)
@@ -1433,7 +1473,7 @@ Changes in 0.99 (27 Jan 96)
 - fix typo in Make_vms.com (f$trnlnm -> f$getsyi)
 - in fcalloc, normalize pointer if size > 65520 bytes
 - don't use special fcalloc for 32 bit Borland C++
-- use STDC instead of __GO32__ to avoid redeclaring exit, calloc, etc...
+- use STDC instead of __GO32__ to avoid redeclaring exit, calloc, etc.
 - use Z_BINARY instead of BINARY
 - document that gzclose after gzdopen will close the file
 - allow "a" as mode in gzopen
@@ -1567,7 +1607,7 @@ Changes in 0.4:
 - renamed deflateOptions as deflateInit2, call one or the other but not both
 - added the method parameter for deflateInit2
 - added inflateInit2
-- simplied considerably deflateInit and inflateInit by not supporting
+- simplified considerably deflateInit and inflateInit by not supporting
   user-provided history buffer. This is supported only in deflateInit2
   and inflateInit2
 

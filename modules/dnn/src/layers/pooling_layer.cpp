@@ -47,16 +47,12 @@
 #include "../op_halide.hpp"
 #include "../op_inf_engine.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/roi_pooling.hpp>
-#include <ngraph/op/psroi_pooling.hpp>
-#else
-#include <ngraph/op/experimental/layers/roi_pooling.hpp>
-#include <ngraph/op/experimental/layers/psroi_pooling.hpp>
-#endif
+#include <openvino/op/roi_pooling.hpp>
+#include <openvino/op/psroi_pooling.hpp>
 #endif
 
 #include "../op_vkcom.hpp"
@@ -181,10 +177,10 @@ public:
         if (inputs[0].dims == 3)
         {
             // Pool1D
-            kernel_size.assign(1, kernel_size[0]);
-            strides.assign(1, strides[0]);
-            pads_begin.assign(1, pads_begin[0]);
-            pads_end.assign(1, pads_end[0]);
+            kernel_size.resize(1, kernel_size[0]);
+            strides.resize(1, strides[0]);
+            pads_begin.resize(1, pads_begin[0]);
+            pads_end.resize(1, pads_end[0]);
         }
 
 #ifdef HAVE_OPENCL
@@ -199,16 +195,23 @@ public:
         {
             return type == MAX || type == AVE || type == ROI;
         }
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+        {
+            return type == MAX || type == AVE;
+        }
+#endif
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
-            return !computeMaxIdx && type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin());
+            return type != STOCHASTIC && kernel_size.size() > 1 && (kernel_size.size() != 3 || !isArmComputePlugin()) &&
+                   (!computeMaxIdx || INF_ENGINE_VER_MAJOR_GE(INF_ENGINE_RELEASE_2022_1));
         }
 #endif
         if (backendId == DNN_BACKEND_OPENCV)
         {
             if (kernel_size.size() == 3)
-                return preferableTarget == DNN_TARGET_CPU;
+                return IS_DNN_CPU_TARGET(preferableTarget);
             if (kernel_size.size() <= 2)
                 return true;
             else
@@ -219,13 +222,6 @@ public:
             if (kernel_size.empty() || kernel_size.size() == 2)
                 return haveHalide() &&
                        (type == MAX || (type == AVE && !pads_begin[0] && !pads_begin[1] && !pads_end[0] && !pads_end[1]));
-        }
-        else if (backendId == DNN_BACKEND_VKCOM)
-        {
-            if (kernel_size.empty() || kernel_size.size() == 2)
-                return haveVulkan() &&
-                           (type == MAX || type == AVE);
-            return false;
         }
         else if (backendId == DNN_BACKEND_WEBNN)
         {
@@ -292,7 +288,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -352,7 +348,7 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -494,42 +490,6 @@ public:
     }
 #endif
 
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
-    {
-        int padding_mode;
-        vkcom::PoolType pool_type;
-        int filter_size[2] = {static_cast<int>(kernel_size[0]), static_cast<int>(kernel_size[1])};
-        int pad_size[2] = {static_cast<int>(pads_begin[0]), static_cast<int>(pads_begin[1])};
-        int stride_size[2] = {static_cast<int>(strides[0]), static_cast<int>(strides[1])};
-        pool_type = type == MAX ? vkcom::kPoolTypeMax:
-                   (type == AVE ? vkcom::kPoolTypeAvg:
-                            vkcom::kPoolTypeNum);
-
-        if (padMode.empty())
-        {
-            padding_mode = vkcom::kPaddingModeCaffe;
-        }
-        else if (padMode == "VALID")
-        {
-            padding_mode = vkcom::kPaddingModeValid;
-        }
-        else if (padMode == "SAME")
-        {
-            padding_mode = vkcom::kPaddingModeSame;
-        }
-        else
-            CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
-
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPool(filter_size, pad_size,
-                                                            stride_size, padding_mode,
-                                                            pool_type, avePoolPaddedArea));
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, op));
-    }
-#endif
-
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &inputs) CV_OVERRIDE
     {
         if (type == MAX)
@@ -540,6 +500,81 @@ public:
             return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x_desc = x->getTensorDesc();
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        if (type == MAX)
+        {
+            auto op = std::make_shared<ge::op::MaxPoolV3>(name);
+
+            // set attributes
+            op->set_attr_ksize(ge::Operator::OpListInt(
+                {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]}
+            ));
+            op->set_attr_strides(ge::Operator::OpListInt(
+                {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
+            ));
+            std::string cann_pad_mode{"CALCULATED"};
+            if (padMode == "SAME" || padMode == "VALID")
+                cann_pad_mode = padMode;
+            op->set_attr_padding_mode(cann_pad_mode.c_str());
+            op->set_attr_pads(ge::Operator::OpListInt(
+                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
+            ));
+            op->set_attr_data_format("NCHW");
+            op->set_attr_global_pooling(globalPooling);
+            op->set_attr_ceil_mode(ceilMode);
+
+            // set inputs
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+            // set outputs
+            op->update_output_desc_y(*output_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else if (type == AVE)
+        {
+            auto op = std::make_shared<ge::op::AvgPoolV2>(name);
+
+            // set attributes
+            op->set_attr_ksize(ge::Operator::OpListInt(
+                {1, 1, (int64_t)kernel_size[0], (int64_t)kernel_size[1]}
+            ));
+            op->set_attr_strides(ge::Operator::OpListInt(
+                {1, 1, (int64_t)strides[0], (int64_t)strides[1]}
+            ));
+            std::string cann_pad_mode{"CALCULATED"};
+            if (padMode == "SAME" || padMode == "VALID")
+                cann_pad_mode = padMode;
+            op->set_attr_padding_mode(cann_pad_mode.c_str());
+            op->set_attr_pads(ge::Operator::OpListInt(
+                {(int64_t)pads_begin[0], (int64_t)pads_end[0], (int64_t)pads_begin[1], (int64_t)pads_end[1]}
+            ));
+            op->set_attr_global_pooling(globalPooling);
+            op->set_attr_ceil_mode(ceilMode);
+            auto cann_exclusive = !avePoolPaddedArea;
+            op->set_attr_exclusive(cann_exclusive);
+
+            // set inputs
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+            // set outputs
+            op->update_output_desc_y(*output_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported pooling type");
+    }
+#endif
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -548,20 +583,20 @@ public:
         CV_Assert_N((inputs.size() == 1 && (type == MAX || type == AVE || type == SUM)) || inputs.size() == 2, nodes.size() == inputs.size());
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-        ngraph::op::PadType pad_type = ngraph::op::PadType::EXPLICIT;
+        ov::op::PadType pad_type = ov::op::PadType::EXPLICIT;
         if (!padMode.empty())
-            pad_type = padMode == "VALID" ? ngraph::op::PadType::VALID : ngraph::op::PadType::SAME_UPPER;
+            pad_type = padMode == "VALID" ? ov::op::PadType::VALID : ov::op::PadType::SAME_UPPER;
 
-        auto rounding_type = ceilMode ? ngraph::op::RoundingType::CEIL : ngraph::op::RoundingType::FLOOR;
+        auto rounding_type = ceilMode ? ov::op::RoundingType::CEIL : ov::op::RoundingType::FLOOR;
         if (type == AVE) {
             auto exclude_pad = !avePoolPaddedArea;
-            auto ave_pool = std::make_shared<ngraph::op::v1::AvgPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
+            auto ave_pool = std::make_shared<ov::op::v1::AvgPool>(ieInpNode, ov::Strides(strides),
+                            ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
                             exclude_pad, rounding_type, pad_type);
             return Ptr<BackendNode>(new InfEngineNgraphNode(ave_pool));
         }
         else if (type == SUM) {
-            ngraph::Shape inpShape = ieInpNode->get_shape();
+            ov::Shape inpShape = ieInpNode.get_shape();
             CV_Assert(inpShape.size() == 2 + kernel_size.size());
             std::vector<int64_t> axes;
             for (size_t i = 0; i < kernel_size.size(); i++)
@@ -569,25 +604,33 @@ public:
                 if (inpShape[2 + i] == kernel_size[i])
                     axes.push_back(2 + i);
             }
-            auto reduction_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{axes.size()}, axes);
-            auto reduce_sum = std::make_shared<ngraph::op::v1::ReduceSum>(ieInpNode, reduction_axes, true);
+            auto reduction_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{axes.size()}, axes);
+            auto reduce_sum = std::make_shared<ov::op::v1::ReduceSum>(ieInpNode, reduction_axes, true);
             return Ptr<BackendNode>(new InfEngineNgraphNode(reduce_sum));
         }
         else if (type == MAX) {
-            auto max_pool = std::make_shared<ngraph::op::v1::MaxPool>(ieInpNode, ngraph::Strides(strides),
-                            ngraph::Shape(pads_begin), ngraph::Shape(pads_end), ngraph::Shape(kernel_size),
-                            rounding_type, pad_type);
+            std::shared_ptr<ov::Node> max_pool;
+            if (computeMaxIdx) {
+                std::vector<size_t> dilations(kernel_size.size(), 1);
+                max_pool = std::make_shared<ov::op::v8::MaxPool>(ieInpNode, ov::Strides(strides), ov::Strides(dilations),
+                                ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
+                                rounding_type, pad_type);
+            } else {
+                max_pool = std::make_shared<ov::op::v1::MaxPool>(ieInpNode, ov::Strides(strides),
+                                ov::Shape(pads_begin), ov::Shape(pads_end), ov::Shape(kernel_size),
+                                rounding_type, pad_type);
+            }
             return Ptr<BackendNode>(new InfEngineNgraphNode(max_pool));
         }
         else if (type == ROI) {
             auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            auto roi = std::make_shared<ngraph::op::ROIPooling>(ieInpNode, coords,
-                       ngraph::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
+            auto roi = std::make_shared<ov::op::v0::ROIPooling>(ieInpNode, coords,
+                       ov::Shape{(size_t)pooledSize.height, (size_t)pooledSize.width}, spatialScale, "max");
             return Ptr<BackendNode>(new InfEngineNgraphNode(roi));
         }
         else if (type == PSROI) {
             auto& coords = nodes[1].dynamicCast<InfEngineNgraphNode>()->node;
-            auto psroi = std::make_shared<ngraph::op::PSROIPooling>(ieInpNode, coords,
+            auto psroi = std::make_shared<ov::op::v0::PSROIPooling>(ieInpNode, coords,
                          (size_t)psRoiOutChannels, (size_t)pooledSize.width, spatialScale, 1, 1, "average");
             return Ptr<BackendNode>(new InfEngineNgraphNode(psroi));
         }
@@ -846,25 +889,25 @@ public:
                                 v_float32x4 max_idx0 = v_setall_f32(-1.f);
                                 v_float32x4 max_idx1 = max_idx0;
                                 int index0 = ystart * inp_width + xstart;
-                                v_float32x4 idx0 = idx00 + v_setall_f32((float)index0);
-                                v_float32x4 idx1 = idx0 + v_setall_f32((float)(stride_w*4));
+                                v_float32x4 idx0 = v_add(idx00, v_setall_f32((float)index0));
+                                v_float32x4 idx1 = v_add(idx0, v_setall_f32((float)(stride_w * 4)));
 
                                 for (int y = ystart; y < yend; ++y)
                                 {
-                                    for (int x = xstart; x < xend; ++x, idx0 += ones, idx1 += ones)
+                                    for (int x = xstart; x < xend; ++x, idx0 = v_add(idx0, ones), idx1 = v_add(idx1, ones))
                                     {
                                         const int index = y * inp_width + x;
                                         v_float32x4 v0(srcData[index], srcData[index + stride_w],
                                                        srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                         v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                        srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                        max_idx0 = v_select(v0 > max_val0, idx0, max_idx0);
-                                        max_idx1 = v_select(v1 > max_val1, idx1, max_idx1);
+                                        max_idx0 = v_select(v_gt(v0, max_val0), idx0, max_idx0);
+                                        max_idx1 = v_select(v_gt(v1, max_val1), idx1, max_idx1);
                                         max_val0 = v_max(max_val0, v0);
                                         max_val1 = v_max(max_val1, v1);
                                     }
-                                    idx0 += idx_delta;
-                                    idx1 += idx_delta;
+                                    idx0 = v_add(idx0, idx_delta);
+                                    idx1 = v_add(idx1, idx_delta);
                                 }
                                 v_store(dstData + x0, max_val0);
                                 v_store(dstData + x0 + 4, max_val1);
@@ -1017,12 +1060,12 @@ public:
                                                    srcData[index + stride_w*2], srcData[index + stride_w*3]);
                                     v_float32x4 v1(srcData[index + stride_w*4], srcData[index + stride_w*5],
                                                    srcData[index + stride_w*6], srcData[index + stride_w*7]);
-                                    sum_val0 += v0;
-                                    sum_val1 += v1;
+                                    sum_val0 = v_add(sum_val0, v0);
+                                    sum_val1 = v_add(sum_val1, v1);
                                 }
                             }
-                            v_store(dstData + x0, sum_val0*ikarea);
-                            v_store(dstData + x0 + 4, sum_val1*ikarea);
+                            v_store(dstData + x0, v_mul(sum_val0, ikarea));
+                            v_store(dstData + x0 + 4, v_mul(sum_val1, ikarea));
                             x0 += 7;
                         }
                         else

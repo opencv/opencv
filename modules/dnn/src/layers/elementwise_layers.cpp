@@ -48,6 +48,7 @@
 #include "../ie_ngraph.hpp"
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <iostream>
@@ -137,7 +138,7 @@ public:
             {
                 const float* srcptr = src_->ptr<float>(i) + stripeStart;
                 float* dstptr = dst_->ptr<float>(i) + stripeStart;
-                func_->apply(srcptr, dstptr, (int)(stripeEnd - stripeStart), planeSize, 0, outCn);
+                func_->apply(srcptr, dstptr, stripeStart, (int)(stripeEnd - stripeStart), planeSize, 0, outCn);
             }
         }
     };
@@ -186,6 +187,14 @@ public:
         return Ptr<BackendNode>();
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        return func.initCannOp(Layer::name, inputs, nodes);
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
@@ -207,13 +216,6 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> >& inputs) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        return Ptr<BackendNode>(new VkComBackendNode(inputs, func.initVkCom()));
-#endif  // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
 
     virtual bool tryFuse(Ptr<dnn::Layer>& top) CV_OVERRIDE
     {
@@ -241,7 +243,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -266,7 +268,7 @@ public:
 
     void forwardSlice(const float* src, float* dst, int len, size_t planeSize, int cn0, int cn1) const CV_OVERRIDE
     {
-        func.apply(src, dst, len, planeSize, cn0, cn1);
+        func.apply(src, dst, -1, len, planeSize, cn0, cn1);
     }
 
 #ifdef HAVE_CUDA
@@ -350,11 +352,12 @@ struct ReLUFunctor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_VKCOM;
+               backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         float s = slope;
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
@@ -367,10 +370,10 @@ struct ReLUFunctor : public BaseFunctor
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s4);
-                x1 = v_select(x1 >= z, x1, x1*s4);
-                x2 = v_select(x2 >= z, x2, x2*s4);
-                x3 = v_select(x3 >= z, x3, x3*s4);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s4));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s4));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s4));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s4));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -450,14 +453,50 @@ struct ReLUFunctor : public BaseFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x_desc = x->getTensorDesc();
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        if (slope)
+        {
+            auto op = std::make_shared<ge::op::LeakyRelu>(name);
+
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+
+            op->set_attr_negative_slope(slope);
+
+            op->update_output_desc_y(*output_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+
+        auto op = std::make_shared<ge::op::Relu>(name);
+
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        op->update_input_desc_x(*x_desc);
+
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
+
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         if (slope) {
-            auto param = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &slope);
-            return std::make_shared<ngraph::op::PRelu>(node, param);
+            auto param = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{1}, &slope);
+            return std::make_shared<ov::op::v0::PRelu>(node, param);
         }
-        return std::make_shared<ngraph::op::Relu>(node);
+        return std::make_shared<ov::op::v0::Relu>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -467,14 +506,6 @@ struct ReLUFunctor : public BaseFunctor
         return builder.Relu(input);
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpReLU(slope));
-        return op;
-    }
-#endif  // HAVE_VULKAN
 
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
@@ -525,11 +556,13 @@ struct ReLU6Functor : public BaseFunctor
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_HALIDE ||
-               backendId == DNN_BACKEND_WEBNN;
+               backendId == DNN_BACKEND_WEBNN ||
+               backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
             int i = 0;
@@ -607,11 +640,43 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::ClipByValue>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        Mat min_value_mat(1, 1, CV_32F, Scalar(minValue));
+        std::vector<int> shape_{1};
+        auto op_const_minv = std::make_shared<CannConstOp>(min_value_mat.data, min_value_mat.type(), shape_, cv::format("%s_min_value", name.c_str()));
+        op->set_input_clip_value_min(*(op_const_minv->getOp()));
+        op->update_input_desc_clip_value_min(*(op_const_minv->getTensorDesc()));
+
+        Mat max_value_mat(1, 1, CV_32F, Scalar(maxValue));
+        auto op_const_maxv = std::make_shared<CannConstOp>(max_value_mat.data, max_value_mat.type(), shape_, cv::format("%s_max_value", name.c_str()));
+        op->set_input_clip_value_max(*(op_const_maxv->getOp()));
+        op->update_input_desc_clip_value_max(*(op_const_maxv->getTensorDesc()));
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif
+
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Clamp>(node, minValue, maxValue);
+        return std::make_shared<ov::op::v0::Clamp>(node, minValue, maxValue);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -627,14 +692,6 @@ struct ReLU6Functor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
-
     bool tryQuantize(const std::vector<std::vector<float> > &scales,
                      const std::vector<std::vector<int> > &zeropoints, LayerParams& params)
     {
@@ -649,8 +706,9 @@ struct ReLU6Functor : public BaseFunctor
 template <class T>
 struct BaseDefaultFunctor : public BaseFunctor
 {
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize )
         {
             for( int i = 0; i < len; i++ )
@@ -728,9 +786,17 @@ struct BaseDefaultFunctor : public BaseFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         CV_Error(Error::StsNotImplemented, "");
     }
@@ -743,17 +809,175 @@ struct BaseDefaultFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
-
 private:
     static const char* const ocl_kernel_name;
 };
+
+namespace {
+    // Refer to v_erf in modules/core/include/opencv2/core/hal/intrin_math.hpp
+    constexpr float c_erf_coef0 = 0.3275911f;
+    constexpr float c_erf_coef1 = 1.061405429f;
+    constexpr float c_erf_coef2 = -1.453152027f;
+    constexpr float c_erf_coef3 = 1.421413741f;
+    constexpr float c_erf_coef4 = -0.284496736f;
+    constexpr float c_erf_coef5 = 0.254829592f;
+
+    inline float erf_approx(float v) {
+        float t = 1.f / fmaf(fabsf(v), c_erf_coef0, 1.f);
+        float r = fmaf(c_erf_coef1, t, c_erf_coef2);
+        r = fmaf(r, t, c_erf_coef3);
+        r = fmaf(r, t, c_erf_coef4);
+        r = fmaf(r, t, c_erf_coef5);
+        r = 1.f - r * t * expf(-v * v);
+        return std::copysignf(r, v);
+    }
+}
+
+struct GeluFunctor : public BaseFunctor {
+    using Layer = GeluLayer;
+    int vlanes;
+
+    explicit GeluFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
+
+    bool supportBackend(int backendId, int) {
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+            v_float32 half = vx_setall_f32(0.5f),
+                      one = vx_setall_f32(1.0f),
+                      reciprocal_sqrt2 = vx_setall_f32(M_SQRT1_2);
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x0 = vx_load(srcptr + i);
+
+                // t = x * M_SQRT1_2
+                v_float32 t0 = v_mul(reciprocal_sqrt2, x0);
+
+                // t = 1.0f + t
+                t0 = v_add(one, v_erf(t0));
+
+                // x = 0.5 * x
+                x0 = v_mul(half, x0);
+
+                // x = x * t
+                x0 = v_mul(x0, t0);
+
+                vx_store(dstptr + i, x0);
+            }
+#endif
+            // 0.5f * x * (1.0f + erf(x * M_SQRT1_2));
+            for( ; i < len; i++ )
+            {
+                float x = srcptr[i];
+                dstptr[i] = 0.5f * x * (1.0f + erf_approx(x * M_SQRT1_2));
+            }
+        }
+    }
+
+#ifdef HAVE_CUDA
+    Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
+    {
+        return make_cuda_node<cuda4dnn::GeluOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_OPENCL
+    bool initKernel(ocl::Kernel &ker, const UMat &src) const
+    {
+        String buildopt = oclGetTMacro(src);
+
+        if (!ker.create("GeluForward", ocl::dnn::activations_oclsrc, buildopt))
+            return false;
+
+        return true;
+    }
+
+    bool applyOCL(InputArrayOfArrays inps, OutputArrayOfArrays outs, OutputArrayOfArrays internals)
+    {
+        std::vector<UMat> inputs;
+        std::vector<UMat> outputs;
+
+        inps.getUMatVector(inputs);
+        outs.getUMatVector(outputs);
+
+        for (size_t i = 0; i < inputs.size(); i++)
+        {
+            UMat& src = inputs[i];
+            UMat& dst = outputs[i];
+            CV_Assert(src.isContinuous() && dst.isContinuous() && !src.offset && !dst.offset);
+
+            ocl::Kernel kernel;
+            CV_Assert(initKernel(kernel, src));
+            kernel.set(0, (int)src.total());
+            kernel.set(1, ocl::KernelArg::PtrReadOnly(src));
+            kernel.set(2, ocl::KernelArg::PtrWriteOnly(dst));
+
+            size_t gSize = src.total();
+            CV_Assert(kernel.run(1, &gSize, NULL, false));
+        }
+
+        return true;
+    }
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
+    {
+        return std::make_shared<ov::op::v0::Gelu>(node);
+    }
+#endif  // HAVE_DNN_NGRAPH
+
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif // HAVE_CANN
+
+    int64 getFLOPSPerElement() const { return 100; }
+};
+
+namespace GeluApproximationConstants
+{
+    static constexpr float sqrt_2_pi = 0.7978845834732056f;
+    static constexpr float coef_sqrt_2_pi = 0.044714998453855515f * sqrt_2_pi;
+}
+
+struct GeluApproximationFunctor : public BaseDefaultFunctor<GeluApproximationFunctor>
+{
+    typedef GeluApproximationLayer Layer;
+
+    explicit GeluApproximationFunctor() {}
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    inline float calculate(float x) const
+    {
+        return 0.5f * x * (1.f + tanh(x * (GeluApproximationConstants::sqrt_2_pi +
+                                           GeluApproximationConstants::coef_sqrt_2_pi * x * x)));
+    }
+
+    int64 getFLOPSPerElement() const { return 100; }
+};
+
+template<>
+const char* const BaseDefaultFunctor<GeluApproximationFunctor>::ocl_kernel_name = "GeluApproximationForward";
 
 struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 {
@@ -767,7 +991,8 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
@@ -790,10 +1015,31 @@ struct TanHFunctor : public BaseDefaultFunctor<TanHFunctor>
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
     {
-        return std::make_shared<ngraph::op::Tanh>(node);
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Tanh>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
+    {
+        return std::make_shared<ov::op::v0::Tanh>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -805,18 +1051,56 @@ const char* const TanHFunctor::BaseDefaultFunctor<TanHFunctor>::ocl_kernel_name 
 
 struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 {
-    typedef SwishLayer Layer;
+    using Layer = SwishLayer;
+
+    int vlanes;
+
+    explicit SwishFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
     {
         return x / (1.f + exp(-x));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            // x / (1.f + exp(-x));
+            v_float32 one = vx_setall_f32(1.0f),
+                      zero = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_sub(zero, x);
+                t = v_exp(t);
+                t = v_add(one, t);
+                t = v_div(x, t);
+
+                vx_store(dstptr + i, t);
+            }
+#endif
+            // In case SIMD is not available or len < vlanes
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -834,11 +1118,34 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
     {
-        auto sigmoid = std::make_shared<ngraph::op::Sigmoid>(node);
-        return std::make_shared<ngraph::op::v1::Multiply>(node, sigmoid);
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Swish>(name);
+
+        op->set_attr_scale(1.0f);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
+    {
+        auto sigmoid = std::make_shared<ov::op::v0::Sigmoid>(node);
+        return std::make_shared<ov::op::v1::Multiply>(node, sigmoid);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -848,28 +1155,67 @@ struct SwishFunctor : public BaseDefaultFunctor<SwishFunctor>
 template<>
 const char* const SwishFunctor::BaseDefaultFunctor<SwishFunctor>::ocl_kernel_name = "SwishForward";
 
+namespace {
+    constexpr float MISH_THRESHOLD = -36.73f;
+}
+
+/*
+    This implementation is derived from
+    https://github.com/vpisarev/ficus/blob/3c9a8b78f49e17489c5e1fd6dd5dd487348c99c2/lib/NN/OpElemwise.fx#L110
+*/
 struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
 {
-    typedef MishLayer Layer;
+    using Layer = MishLayer;
+
+    int vlanes;
+
+    explicit MishFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
     {
-        // Use fast approximation introduced in https://github.com/opencv/opencv/pull/17200
-        if (x >= 8.f)
-        {
-            return x;
-        }
+        float y = x > MISH_THRESHOLD ? std::exp(-x) : 1.f;
+        x *= x > MISH_THRESHOLD ? 1.f : 0.f;
+        return x * (1 + 2 * y) / (1 + 2 * y + 2 * y * y);
+    }
 
-        float eX = exp(x);
-        float n = (eX + 2.f) * eX;
-        return (x * n) / (n + 2.f);
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 v_threshold = vx_setall_f32(MISH_THRESHOLD), one = vx_setall_f32(1.f), z = vx_setzero_f32();
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+
+                x = v_select(v_le(x, v_threshold), z, x);
+                v_float32 y = v_exp(v_sub(z, x));
+                v_float32 _2y = v_add(y, y),
+                          _2ya1 = v_add(_2y, one);
+                x = v_div(v_mul(x, _2ya1), v_add(_2ya1, v_mul(_2y, y)));
+
+                vx_store(dstptr + i, x);
+            }
+#endif
+            // In case SIMD is not available or len < vlanes
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
@@ -887,16 +1233,31 @@ struct MishFunctor : public BaseDefaultFunctor<MishFunctor>
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
     {
-        float one = 1.0f;
-        auto constant = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &one);
-        auto exp_node = std::make_shared<ngraph::op::v0::Exp>(node);
-        auto sum = std::make_shared<ngraph::op::v1::Add>(constant, exp_node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto log_node = std::make_shared<ngraph::op::v0::Log>(sum);
-        auto tanh_node = std::make_shared<ngraph::op::Tanh>(log_node);
-        return std::make_shared<ngraph::op::v1::Multiply>(node, tanh_node);
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Mish>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
+    {
+        return std::make_shared<ov::op::v4::Mish>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -918,12 +1279,20 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
     {
-        return 1.f / (1.f + exp(-x));
+        float y;
+        if (x >= 0)
+            y = 1.f / (1.f + exp(-x));
+        else {
+            y = exp(x);
+            y = y / (1 + y);
+        }
+        return y;
     }
 
 #ifdef HAVE_CUDA
@@ -941,11 +1310,31 @@ struct SigmoidFunctor : public BaseDefaultFunctor<SigmoidFunctor>
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Sigmoid>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::Sigmoid>(node);
+        return std::make_shared<ov::op::v0::Sigmoid>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -957,10 +1346,18 @@ const char* const SigmoidFunctor::BaseDefaultFunctor<SigmoidFunctor>::ocl_kernel
 
 struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 {
-    typedef ELULayer Layer;
-    float alpha;
+    using Layer = ELULayer;
 
-    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
+    float alpha;
+    int vlanes;
+
+    explicit ELUFunctor(float alpha_ = 1.f) : alpha(alpha_) {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -970,12 +1367,35 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
     {
         return x >= 0.f ? x : alpha * (exp(x) - 1.f);
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 z = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha), one = vx_setall_f32(1.0f);
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
+                x = v_select(v_ge(x, z), x, t);
+
+                vx_store(dstptr + i, x);
+            }
+#endif
+            // In case SIMD is not available or len < vlanes
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
@@ -998,10 +1418,33 @@ struct ELUFunctor : public BaseDefaultFunctor<ELUFunctor>
     }
 #endif  // HAVE_HALIDE
 
-#ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
     {
-        return std::make_shared<ngraph::op::Elu>(node, alpha);
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Elu>(name);
+
+        op->set_attr_alpha(alpha);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
+    {
+        return std::make_shared<ov::op::v0::Elu>(node, alpha);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1023,7 +1466,8 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
@@ -1046,14 +1490,31 @@ struct AbsValFunctor : public BaseDefaultFunctor<AbsValFunctor>
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Abs>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        float coeff = -0.999999f;
-        // float coeff = preferableTarget == DNN_TARGET_MYRIAD ? -0.999f : -0.999999f;
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{1}, &coeff);
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        return std::make_shared<ov::op::v0::Abs>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1071,7 +1532,8 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
     {
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
@@ -1086,6 +1548,27 @@ struct BNLLFunctor : public BaseDefaultFunctor<BNLLFunctor>
         return make_cuda_node<cuda4dnn::BNLLOp>(target, stream);
     }
 #endif
+
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::BNLL>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -1123,6 +1606,27 @@ struct CeilFunctor : public BaseDefaultFunctor<CeilFunctor>
     }
 #endif
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::BNLL>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
+
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
     {
@@ -1143,7 +1647,10 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_HALIDE;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
@@ -1157,6 +1664,27 @@ struct FloorFunctor : public BaseDefaultFunctor<FloorFunctor>
         return make_cuda_node<cuda4dnn::FloorOp>(target, stream);
     }
 #endif
+
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Floor>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_HALIDE
     void attachHalide(const Halide::Expr& input, Halide::Func& top)
@@ -1219,10 +1747,10 @@ struct RoundFunctor : public BaseDefaultFunctor<RoundFunctor>
     inline float calculate(float x) const
     {
         // Rounds to even numbers in halfway cases, so 2.5 -> 2, -2.5 -> -2
-        int old_rounding_direction = std::fegetround();
-        std::fesetround(FE_TONEAREST);
+        int old_rounding_direction = fegetround();
+        fesetround(FE_TONEAREST);
         float y = std::nearbyint(x);
-        std::fesetround(old_rounding_direction);
+        fesetround(old_rounding_direction);
         return y;
     }
 
@@ -1277,9 +1805,9 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        return std::make_shared<ngraph::op::v0::Sqrt>(node);
+        return std::make_shared<ov::op::v0::Sqrt>(node);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -1569,22 +2097,79 @@ const char* const BaseDefaultFunctor<ErfFunctor>::ocl_kernel_name = "ErfForward"
 
 struct HardSwishFunctor : public BaseDefaultFunctor<HardSwishFunctor>
 {
-    typedef HardSwishLayer Layer;
+    using Layer = HardSwishLayer;
+    int vlanes;
+
+    explicit HardSwishFunctor() {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
     {
-        return x * max(0.f, min(1.f, x / 6.f + 0.5f));
+        return x * std::max(0.f, std::min(1.f, x / 6.f + 0.5f));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 zero = vx_setzero_f32(), one = vx_setall_f32(1.0f),
+                      half = vx_setall_f32(0.5f), sixth = vx_setall_f32(1 / 6.0f);
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_add(v_mul(x, sixth), half);
+                t = v_min(one, t);
+                t = v_max(zero, t);
+                t = v_mul(x, t);
+
+                vx_store(dstptr + i, t);
+            }
+#endif
+            // In case SIMD is not available or len > vlanes
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
 #ifdef HAVE_CUDA
     Ptr<BackendNode> initCUDA(int target, csl::Stream stream)
     {
         return make_cuda_node<cuda4dnn::HardSwishOp>(target, stream);
+    }
+#endif
+
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::HardSwish>(name);
+
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        auto x_desc = x->getTensorDesc();
+        op->update_input_desc_x(*x_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
     }
 #endif
 
@@ -1731,11 +2316,18 @@ const char* const BaseDefaultFunctor<TanFunctor>::ocl_kernel_name = "TanForward"
 
 struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
 {
-    typedef CeluLayer Layer;
+    using Layer = CeluLayer;
 
     float alpha;
+    int vlanes;
 
-    explicit CeluFunctor(float alpha_ = 1.f) : alpha(alpha_) {}
+    explicit CeluFunctor(float alpha_ = 1.f) : alpha(alpha_) {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1744,7 +2336,30 @@ struct CeluFunctor : public BaseDefaultFunctor<CeluFunctor>
 
     inline float calculate(float x) const
     {
-        return max(0.f, x) + min(0.f, alpha * expm1(x / alpha));
+        return std::max(0.f, x) + std::min(0.f, alpha * expm1(x / alpha));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 zero = vx_setzero_f32(), v_alpha = vx_setall_f32(alpha),
+                      one = vx_setall_f32(1.0f), v_ralpha = vx_setall_f32(1.0f / alpha);
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_min(zero, v_mul(v_alpha, v_sub(v_exp(v_mul(x, v_ralpha)), one)));
+                t = v_add(v_max(zero, x), t);
+
+                vx_store(dstptr + i, t);
+            }
+#endif
+            // In case SIMD is not available or len < vlanes
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
@@ -1805,13 +2420,21 @@ const char* const BaseDefaultFunctor<HardSigmoidFunctor>::ocl_kernel_name = "Har
 
 struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
 {
-    typedef SeluLayer Layer;
+    using Layer = SeluLayer;
 
     float alpha;
     float gamma;
+    int vlanes;
 
     explicit SeluFunctor(float alpha_ = 1.67326319217681884765625f,
-                         float gamma_ = 1.05070102214813232421875f) : alpha(alpha_), gamma(gamma_) {}
+                         float gamma_ = 1.05070102214813232421875f)
+        : alpha(alpha_), gamma(gamma_) {
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        vlanes = VTraits<v_float32>::vlanes();
+#else
+        vlanes = 1;
+#endif
+    }
 
     bool supportBackend(int backendId, int)
     {
@@ -1821,6 +2444,30 @@ struct SeluFunctor : public BaseDefaultFunctor<SeluFunctor>
     inline float calculate(float x) const
     {
         return gamma * (x > 0.f ? x : alpha * expm1(x));
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
+        CV_UNUSED(stripeStart);
+        for (int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize) {
+            int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+            v_float32 z = vx_setzero_f32(), one = vx_setall_f32(1.0f),
+                      v_alpha = vx_setall_f32(alpha), v_gamma = vx_setall_f32(gamma);
+            for (; i <= len - vlanes; i += vlanes) {
+                v_float32 x = vx_load(srcptr + i);
+
+                v_float32 t = v_mul(v_alpha, v_sub(v_exp(x), one));
+                x = v_select(v_le(x, z), t, x);
+                x = v_mul(v_gamma, x);
+
+                vx_store(dstptr + i, x);
+            }
+#endif
+            // In case SIMD is not available or len > vlanes
+            for (; i < len; i++) {
+                dstptr[i] = calculate(srcptr[i]);
+            }
+        }
     }
 
     inline void setKernelParams(ocl::Kernel& kernel) const
@@ -1910,8 +2557,9 @@ struct PowerFunctor : public BaseFunctor
         shift = originShift;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         float a = scale, b = shift, p = power;
         if( p == 1.f )
         {
@@ -1992,24 +2640,32 @@ struct PowerFunctor : public BaseFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &scale);
-        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &shift);
+        auto scale_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &scale);
+        auto shift_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &shift);
 
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(scale_node, node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(mul, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
+        auto mul = std::make_shared<ov::op::v1::Multiply>(scale_node, node, ov::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ov::op::v1::Add>(mul, shift_node, ov::op::AutoBroadcastType::NUMPY);
 
         if (power == 1)
             return scale_shift;
 
-        auto power_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &power);
-        return std::make_shared<ngraph::op::v1::Power>(scale_shift, power_node, ngraph::op::AutoBroadcastType::NUMPY);
+        auto power_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &power);
+        return std::make_shared<ov::op::v1::Power>(scale_shift, power_node, ov::op::AutoBroadcastType::NUMPY);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2021,14 +2677,6 @@ struct PowerFunctor : public BaseFunctor
         return operand;
     }
 #endif
-
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
 
     bool tryFuse(Ptr<dnn::Layer>& top)
     {
@@ -2112,15 +2760,15 @@ struct ExpFunctor : public BaseDefaultFunctor<ExpFunctor>
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
-        auto scale_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &normScale);
-        auto shift_node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
-                                                                 ngraph::Shape{1}, &normShift);
-        auto mul = std::make_shared<ngraph::op::v1::Multiply>(scale_node, node, ngraph::op::AutoBroadcastType::NUMPY);
-        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(mul, shift_node, ngraph::op::AutoBroadcastType::NUMPY);
-        return std::make_shared<ngraph::op::v0::Exp>(scale_shift);
+        auto scale_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &normScale);
+        auto shift_node = std::make_shared<ov::op::v0::Constant>(ov::element::f32,
+                                                                 ov::Shape{1}, &normShift);
+        auto mul = std::make_shared<ov::op::v1::Multiply>(scale_node, node, ov::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ov::op::v1::Add>(mul, shift_node, ov::op::AutoBroadcastType::NUMPY);
+        return std::make_shared<ov::op::v0::Exp>(scale_shift);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2136,6 +2784,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     Mat scale;
 #ifdef HAVE_OPENCL
     UMat scale_umat;
+    std::string oclKernelName = "ChannelsPReLUForward";
 #endif
 
     explicit ChannelsPReLUFunctor(const Mat& scale_=Mat()) : scale(scale_)
@@ -2150,11 +2799,13 @@ struct ChannelsPReLUFunctor : public BaseFunctor
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
-               backendId == DNN_BACKEND_HALIDE;
+               backendId == DNN_BACKEND_HALIDE ||
+               backendId == DNN_BACKEND_CANN;
     }
 
-    void apply(const float* srcptr, float* dstptr, int len, size_t planeSize, int cn0, int cn1) const
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
     {
+        CV_UNUSED(stripeStart);
         CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
 
         const float* scaleptr = scale.ptr<float>();
@@ -2172,10 +2823,10 @@ struct ChannelsPReLUFunctor : public BaseFunctor
                 v_float32x4 x1 = v_load(srcptr + i + 4);
                 v_float32x4 x2 = v_load(srcptr + i + 8);
                 v_float32x4 x3 = v_load(srcptr + i + 12);
-                x0 = v_select(x0 >= z, x0, x0*s4);
-                x1 = v_select(x1 >= z, x1, x1*s4);
-                x2 = v_select(x2 >= z, x2, x2*s4);
-                x3 = v_select(x3 >= z, x3, x3*s4);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s4));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s4));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s4));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s4));
                 v_store(dstptr + i, x0);
                 v_store(dstptr + i + 4, x1);
                 v_store(dstptr + i + 8, x2);
@@ -2208,7 +2859,7 @@ struct ChannelsPReLUFunctor : public BaseFunctor
             UMat& src = inputs[i];
             UMat& dst = outputs[i];
 
-            ocl::Kernel kernel("PReLUForward", ocl::dnn::activations_oclsrc, buildopt);
+            ocl::Kernel kernel(oclKernelName.c_str(), ocl::dnn::activations_oclsrc, buildopt);
             kernel.set(0, (int)src.total());
             kernel.set(1, (int)src.size[1]);
             kernel.set(2, (int)total(shape(src), 2));
@@ -2240,13 +2891,39 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     }
 #endif  // HAVE_HALIDE
 
+#ifdef HAVE_CANN
+    Ptr<BackendNode> initCannOp(const std::string& name,
+                                const std::vector<Ptr<BackendWrapper> > &inputs,
+                                const std::vector<Ptr<BackendNode> >& nodes)
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto x_desc = x->getTensorDesc();
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        auto op = std::make_shared<ge::op::PRelu>(name);
+
+        op->set_input_x_by_name(*op_x, x->name.c_str());
+        op->update_input_desc_x(*x_desc);
+
+        std::vector<int> shape_{scale.size[0]}; // scale should be a 1d of shape [n] tensor, and it is a 2d mat of shape [n, 1] in opencv
+        auto op_const_slope = std::make_shared<CannConstOp>(scale.data, scale.type(), shape_, cv::format("%s_weight", name.c_str()));
+        op->set_input_weight(*(op_const_slope->getOp()));
+        op->update_input_desc_weight(*(op_const_slope->getTensorDesc()));
+
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
-    std::shared_ptr<ngraph::Node> initNgraphAPI(const std::shared_ptr<ngraph::Node>& node)
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
     {
         const size_t numChannels = scale.total();
-        auto slope = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{numChannels}, scale.data);
-        return std::make_shared<ngraph::op::PRelu>(node, slope);
+        auto slope = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{numChannels}, scale.data);
+        return std::make_shared<ov::op::v0::PRelu>(node, slope);
     }
 #endif  // HAVE_DNN_NGRAPH
 
@@ -2259,15 +2936,76 @@ struct ChannelsPReLUFunctor : public BaseFunctor
     }
 #endif
 
-#ifdef HAVE_VULKAN
-    std::shared_ptr<vkcom::OpBase> initVkCom()
-    {
-        // TODO: add vkcom implementation
-        return std::shared_ptr<vkcom::OpBase>();
-    }
-#endif  // HAVE_VULKAN
-
     int64 getFLOPSPerElement() const { return 1; }
+};
+
+struct PReLUFunctor : public ChannelsPReLUFunctor
+{
+    explicit PReLUFunctor(const Mat& scale_=Mat()) : ChannelsPReLUFunctor(scale_)
+    {
+#ifdef HAVE_OPENCL
+        oclKernelName = "PReLUForward";
+#endif
+    }
+
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CANN ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    }
+
+    void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const
+    {
+        CV_UNUSED(stripeStart);
+        CV_Assert(scale.isContinuous() && scale.type() == CV_32F);
+
+        if (stripeStart < 0)
+            CV_Error(Error::StsNotImplemented, "PReLUFunctor requires stripe offset parameter");
+
+        const float* scaleptr = scale.ptr<float>() + cn0 * planeSize + stripeStart;
+        for( int cn = cn0; cn < cn1; cn++, srcptr += planeSize, dstptr += planeSize, scaleptr += planeSize )
+        {
+            int i = 0;
+        #if CV_SIMD128
+            v_float32x4 z = v_setzero_f32();
+            for( ; i <= len - 16; i += 16 )
+            {
+                v_float32x4 x0 = v_load(srcptr + i);
+                v_float32x4 x1 = v_load(srcptr + i + 4);
+                v_float32x4 x2 = v_load(srcptr + i + 8);
+                v_float32x4 x3 = v_load(srcptr + i + 12);
+                v_float32x4 s0 = v_load(scaleptr + i);
+                v_float32x4 s1 = v_load(scaleptr + i + 4);
+                v_float32x4 s2 = v_load(scaleptr + i + 8);
+                v_float32x4 s3 = v_load(scaleptr + i + 12);
+                x0 = v_select(v_ge(x0, z), x0, v_mul(x0, s0));
+                x1 = v_select(v_ge(x1, z), x1, v_mul(x1, s1));
+                x2 = v_select(v_ge(x2, z), x2, v_mul(x2, s2));
+                x3 = v_select(v_ge(x3, z), x3, v_mul(x3, s3));
+                v_store(dstptr + i, x0);
+                v_store(dstptr + i + 4, x1);
+                v_store(dstptr + i + 8, x2);
+                v_store(dstptr + i + 12, x3);
+            }
+        #endif
+            for( ; i < len; i++ )
+            {
+                float x = srcptr[i];
+                float s = scaleptr[i];
+                dstptr[i] = x >= 0.f ? x : s*x;
+            }
+        }
+    }
+
+#ifdef HAVE_DNN_NGRAPH
+    std::shared_ptr<ov::Node> initNgraphAPI(const ov::Output<ov::Node>& node)
+    {
+        auto shape = getShape<size_t>(scale);
+        auto slope = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, scale.ptr<float>());
+        return std::make_shared<ov::op::v0::PRelu>(node, slope);
+    }
+#endif  // HAVE_DNN_NGRAPH
 };
 
 struct SignFunctor : public BaseDefaultFunctor<SignFunctor>
@@ -2360,11 +3098,6 @@ template<>
 const char* const ReciprocalFunctor::BaseDefaultFunctor<ReciprocalFunctor>::ocl_kernel_name = "ReciprocalForward";
 
 
-#define ACTIVATION_CREATOR_FOR(_Layer, _Functor, ...) \
-Ptr<_Layer> _Layer::create() { \
-    return return Ptr<_Layer>( new ElementWiseLayer<_Functor>(_Functor()) ); }
-
-
 Ptr<ReLULayer> ReLULayer::create(const LayerParams& params)
 {
     float negativeSlope = params.get<float>("negative_slope", 0.f);
@@ -2383,6 +3116,22 @@ Ptr<ReLU6Layer> ReLU6Layer::create(const LayerParams& params)
     l->setParamsFrom(params);
     l->minValue = minValue;
     l->maxValue = maxValue;
+
+    return l;
+}
+
+Ptr<GeluLayer> GeluLayer::create(const LayerParams& params)
+{
+    Ptr<GeluLayer> l(new ElementWiseLayer<GeluFunctor>(GeluFunctor()));
+    l->setParamsFrom(params);
+
+    return l;
+}
+
+Ptr<GeluApproximationLayer> GeluApproximationLayer::create(const LayerParams& params)
+{
+    Ptr<GeluApproximationLayer> l(new ElementWiseLayer<GeluApproximationFunctor>(GeluApproximationFunctor()));
+    l->setParamsFrom(params);
 
     return l;
 }
@@ -2689,13 +3438,26 @@ Ptr<ExpLayer> ExpLayer::create(const LayerParams& params)
 Ptr<Layer> ChannelsPReLULayer::create(const LayerParams& params)
 {
     CV_Assert(params.blobs.size() == 1);
-    if (params.blobs[0].total() == 1)
+    Mat scale = params.blobs[0];
+    float slope = *scale.ptr<float>();
+    if (scale.total() == 1 || countNonZero(scale != slope) == 0)
     {
         LayerParams reluParams = params;
-        reluParams.set("negative_slope", *params.blobs[0].ptr<float>());
+        reluParams.set("negative_slope", slope);
         return ReLULayer::create(reluParams);
     }
-    Ptr<ChannelsPReLULayer> l(new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(params.blobs[0])));
+
+    Ptr<Layer> l;
+    // Check first two dimensions of scale (batch, channels)
+    MatShape scaleShape = shape(scale);
+    if (std::count_if(scaleShape.begin(), scaleShape.end(), [](int d){ return d != 1;}) > 1)
+    {
+        l = new ElementWiseLayer<PReLUFunctor>(PReLUFunctor(scale));
+    }
+    else
+    {
+        l = new ElementWiseLayer<ChannelsPReLUFunctor>(ChannelsPReLUFunctor(scale));
+    }
     l->setParamsFrom(params);
 
     return l;

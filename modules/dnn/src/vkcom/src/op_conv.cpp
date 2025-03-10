@@ -1,287 +1,221 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-//
-// Copyright (C) 2018, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
 
 #include "../../precomp.hpp"
-#include "common.hpp"
 #include "internal.hpp"
 #include "../include/op_conv.hpp"
 
 namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
+#define BLOCK_SIZE 64
 
-#define DEFAULT_LOCAL_SZ 256
-#define MAX_COMPUTE_GFLOPS 10
-// TODO: query group count from vulkan device
 #define MAX_GROUP_COUNT_X 65535
 #define MAX_GROUP_COUNT_Y 65535
 #define MAX_GROUP_COUNT_Z 65535
 
-struct ShaderConstant {
-    int lsz_x;
-    int lsz_y;
-    int lsz_z;
-    int in_h;
-    int in_w;
-    int out_w;
-    int stride_h;
-    int stride_w;
-    int pad_h;
-    int pad_w;
-    int filter_h;
-    int filter_w;
-    int channels;
-    int batch;
-    int m;
-    int k;
-    int n;
-    int tail_m;
-    int dilation_h;
-    int dilation_w;
-};
-
-struct ShaderParam {
-    int in_h;
-    int in_w;
-    int out_h;
-    int out_w;
-    int stride_h;
-    int stride_w;
-    int pad_h;
-    int pad_w;
-    int filter_h;
-    int filter_w;
-    int dilation_h;
-    int dilation_w;
-    int channels;
-    int batch;
-    int has_bias;
-    int M;
-    int K;
-    int N;
-    int basic_shader_batch_idx;
-    int basic_shader_partition_idx;
-    int basic_shader_partition_size;
-};
-
-OpConv::OpConv(const int out_channel, const bool has_bias,
-               const int* filter_size, const int* pad,
-               const int* stride, const int* dilation,
-               const int activation, const int group,
-               const int padding_mode)
+OpConv::OpConv(const Mat& weightBlob, const std::vector<float>& biasvec, int _activType, const int _ngroups, const int _K,
+               const int _C, const int _Hk, const int _Wk, const int _stride_h, const int _stride_w,
+               const int _dilation_h, const int _dilation_w, const int _pad_left, const int _pad_top):
+               activ((FusedActivationType)_activType), ngroups(_ngroups), K(_K), C(_C), Hk(_Hk), Wk(_Wk), stride_h(_stride_h), stride_w(_stride_w),
+               dilation_h(_dilation_h), dilation_w(_dilation_w), pad_left(_pad_left), pad_top(_pad_top)
 {
-    init(out_channel, has_bias, filter_size, pad,
-         stride, dilation, activation, group, padding_mode);
-    type_ = "Conv";
-}
+    type_ = kOpTypeConv;
+    CV_Assert(!weightBlob.empty());
 
-void OpConv::reshapeOutTensor(Tensor& in, Tensor& out)
-{
-    Shape in_shape = in.getShape();
-    batch_ = in_shape[kShapeIdxBatch];
-    in_height_ = in_shape[kShapeIdxHeight];
-    in_width_ = in_shape[kShapeIdxWidth];
-    computeConvOutputShapeAndPadding(padding_mode_, padding_top_, padding_left_,
-                                     in_height_, in_width_,
-                                     filter_height_, filter_width_,
-                                     dilation_height_, dilation_width_,
-                                     stride_height_, stride_width_,
-                                     out_height_, out_width_);
-    Shape shape = {batch_, out_channel_, out_height_, out_width_};
-    out.reshape(NULL, shape);
-}
+    Kg = K/ngroups, Cg = max(C/ngroups, 1);
+    ksize = Hk * Wk;
+    CgHkWk = Cg * ksize;
+    fast_1x1 = ksize == 1 && stride_w == 1 && stride_h == 1 && pad_top == 0 && pad_left == 0;
 
-bool OpConv::init(const int out_channel, const bool has_bias,
-                  const int* filter_size, const int* pad,
-                  const int* stride, const int* dilation,
-                  const int activation, const int group,
-                  const int padding_mode)
-{
-    out_channel_ = out_channel;
-    filter_height_ = filter_size[0];
-    filter_width_ = filter_size[1];
-    padding_top_ = pad[0];
-    padding_left_ = pad[1];
-    stride_height_ = stride[0];
-    stride_width_ = stride[1];
-    dilation_height_ = dilation[0];
-    dilation_width_ = dilation[1];
-    padding_mode_ = (PaddingMode)padding_mode;
-    has_bias_ = has_bias ? 1 : 0;
-    activation_ = activation;
-    group_ = group;
-
-    #define BUFFER_NUM 4
-    OpBase::initVulkanThing(BUFFER_NUM);
-    return true;
-}
-
-bool OpConv::forward(std::vector<Tensor>& ins,
-                     std::vector<Tensor>& blobs,
-                     std::vector<Tensor>& outs)
-{
-    std::vector<int> shape = {1};
-    Tensor bias(0, shape);
-
-    if (has_bias_)
+    if (ngroups > 1 && ngroups == K && ngroups == C)
     {
-        assert(blobs.size() == 2);
-        bias = blobs[1];
-    }
-
-    return forward(ins[0], blobs[0], bias, outs[0]);
-}
-
-bool OpConv::forward(Tensor& in, Tensor& filter_weights, Tensor& bias, Tensor& out)
-{
-    Shape in_shape = in.getShape();
-    Shape out_shape = out.getShape();
-    batch_ = in_shape[kShapeIdxBatch];
-    in_height_ = in_shape[kShapeIdxHeight];
-    in_width_ = in_shape[kShapeIdxWidth];
-    in_channel_= in_shape[kShapeIdxChannel];
-    out_height_ = out_shape[kShapeIdxHeight];
-    out_width_ = out_shape[kShapeIdxWidth];
-    int M = out_height_ * out_width_;
-    int K = filter_height_ * filter_width_ * in_channel_;
-    int N = out_channel_;
-
-    if (pipeline_ == VK_NULL_HANDLE)
-    {
-        config_.local_size_x = DEFAULT_LOCAL_SZ;
-        config_.local_size_y = 1;
-        config_.local_size_z = 1;
-        config_.block_height = 1;
-        config_.block_width  = 1;
-        config_.block_depth  = 1;
-        if ((N % 8 == 0) && (K % 4 == 0) && (M % 4) == 0)
-        {
-            assert(group_ == 1); // TODO: support group > 1
-            config_.shader_type  = kConvShaderType48;
-            config_.local_size_x = 1;
-            config_.local_size_y = DEFAULT_LOCAL_SZ;
-            config_.local_size_z = 1;
-            config_.block_height = 4;
-            config_.block_width  = 8;
-            has_bias_ ? createShaderModule(conv48_spv, sizeof(conv48_spv))
-                : createShaderModule(conv48_nobias_spv, sizeof(conv48_nobias_spv));
-            // specialization constants
-            VkSpecializationInfo spec_info;
-            ShaderConstant shader_constant;
-#define SPECIALIZATION_CONST_NUM 20
-            VkSpecializationMapEntry entry[SPECIALIZATION_CONST_NUM];
-#define SET_SPEC_CONST_ENTRY(n_, id_, offset_, size_) \
-            entry[n_].constantID = id_; \
-            entry[n_].offset = offset_; \
-            entry[n_].size = size_;
-
-            shader_constant.lsz_x = config_.local_size_x;
-            shader_constant.lsz_y = config_.local_size_y;
-            shader_constant.lsz_z = config_.local_size_z;
-            shader_constant.in_h  = in_height_;
-            shader_constant.in_w  = in_width_;
-            shader_constant.out_w = out_width_;
-            shader_constant.stride_h = stride_height_;
-            shader_constant.stride_w = stride_width_;
-            shader_constant.pad_h = padding_top_;
-            shader_constant.pad_w = padding_left_;
-            shader_constant.filter_h = filter_height_;
-            shader_constant.filter_w = filter_width_;
-            shader_constant.channels = in_channel_;
-            shader_constant.batch = batch_;
-            shader_constant.m = M;
-            shader_constant.k = K;
-            shader_constant.n = N;
-            shader_constant.tail_m = M % 4;
-            shader_constant.dilation_h = dilation_height_;
-            shader_constant.dilation_w = dilation_width_;
-
-            SET_SPEC_CONST_ENTRY(0, 0, offsetof(ShaderConstant,lsz_x), sizeof(int));
-            SET_SPEC_CONST_ENTRY(1, 1, offsetof(ShaderConstant,lsz_y), sizeof(int));
-            SET_SPEC_CONST_ENTRY(2, 2, offsetof(ShaderConstant,lsz_z), sizeof(int));
-            SET_SPEC_CONST_ENTRY(3, 3, offsetof(ShaderConstant,in_h), sizeof(int));
-            SET_SPEC_CONST_ENTRY(4, 4, offsetof(ShaderConstant,in_w), sizeof(int));
-            SET_SPEC_CONST_ENTRY(5, 5, offsetof(ShaderConstant,out_w), sizeof(int));
-            SET_SPEC_CONST_ENTRY(6, 6, offsetof(ShaderConstant,stride_h), sizeof(int));
-            SET_SPEC_CONST_ENTRY(7, 7, offsetof(ShaderConstant,stride_w), sizeof(int));
-            SET_SPEC_CONST_ENTRY(8, 8, offsetof(ShaderConstant,pad_h), sizeof(int));
-            SET_SPEC_CONST_ENTRY(9, 9, offsetof(ShaderConstant,pad_w), sizeof(int));
-            SET_SPEC_CONST_ENTRY(10, 10, offsetof(ShaderConstant,filter_h), sizeof(int));
-            SET_SPEC_CONST_ENTRY(11, 11, offsetof(ShaderConstant,filter_w), sizeof(int));
-            SET_SPEC_CONST_ENTRY(12, 12, offsetof(ShaderConstant,channels), sizeof(int));
-            SET_SPEC_CONST_ENTRY(13, 13, offsetof(ShaderConstant,batch), sizeof(int));
-            SET_SPEC_CONST_ENTRY(14, 14, offsetof(ShaderConstant,m), sizeof(int));
-            SET_SPEC_CONST_ENTRY(15, 15, offsetof(ShaderConstant,k), sizeof(int));
-            SET_SPEC_CONST_ENTRY(16, 16, offsetof(ShaderConstant,n), sizeof(int));
-            SET_SPEC_CONST_ENTRY(17, 17, offsetof(ShaderConstant,tail_m), sizeof(int));
-            SET_SPEC_CONST_ENTRY(18, 18, offsetof(ShaderConstant,dilation_h), sizeof(int));
-            SET_SPEC_CONST_ENTRY(19, 19, offsetof(ShaderConstant,dilation_w), sizeof(int));
-
-            spec_info.mapEntryCount = SPECIALIZATION_CONST_NUM;
-            spec_info.pMapEntries = entry;
-            spec_info.dataSize = sizeof(shader_constant);
-            spec_info.pData = &shader_constant;
-            createPipeline(sizeof(ShaderParam), &spec_info);
-        }
-        else if (out_channel_ == in_channel_ && in_channel_ == group_)
-        {
-            config_.shader_type  = kConvShaderTypeDepthWise;
-            createShaderModule(dw_conv_spv, sizeof(dw_conv_spv));
-            createPipeline(sizeof(ShaderParam));
-        }
+        if (Hk == 3 && Wk == 3)
+            shader_name = "conv_depthwise_3x3_spv";
         else
-        {
-            assert(group_ == 1); // TODO: support group > 1
-            config_.shader_type  = kConvShaderTypeBasic;
-            createShaderModule(conv_spv, sizeof(conv_spv));
-            createPipeline(sizeof(ShaderParam));
-        }
+            shader_name = "conv_depthwise_spv";
 
-        computeGroupCount();
+        shaderType = kConvShaderTypeDepthWise;
+        STRIP_LEN = 16;
     }
-
-    bindTensor(device_, in, 0, descriptor_set_);
-    bindTensor(device_, bias, 1, descriptor_set_);
-    bindTensor(device_, filter_weights, 2, descriptor_set_);
-    bindTensor(device_, out, 3, descriptor_set_);
-
-    ShaderParam param = {in_height_, in_width_,
-                         out_height_, out_width_,
-                         stride_height_, stride_width_,
-                         padding_top_, padding_left_,
-                         filter_height_, filter_width_,
-                         dilation_height_, dilation_width_,
-                         in_channel_, batch_, has_bias_,
-                         M, K, N, 0, 0, 0};
-
-    if (config_.shader_type == kConvShaderTypeBasic || config_.shader_type == kConvShaderTypeDepthWise)
+    else if (fast_1x1) // 1x1
     {
-        int partition_num = 1;
-        if (config_.shader_type == kConvShaderTypeBasic)
-        {
-            param.basic_shader_partition_size = group_y_;
-            partition_num = (int)ceil(1.0 * out_channel_ / group_y_);
-        }
-
-        for (int b = 0;  b < batch_; b++)
-        {
-            param.basic_shader_batch_idx = b;
-            for (int n = 0;  n < partition_num; n++)
-            {
-                param.basic_shader_partition_idx = n;
-                recordCommandBuffer((void *)&param, sizeof(ShaderParam));
-                runCommandBuffer();
-            }
-        }
+        shader_name = "conv_1x1_fast_spv";
+        shaderType = kConvShaderTypeGeneric;
+        STRIP_LEN = 32;
     }
     else
     {
-        recordCommandBuffer();
-        runCommandBuffer();
+        shader_name = "conv_implicit_gemm_spv";
+        shaderType = kConvShaderTypeGeneric;
+        STRIP_LEN = 32;
+    }
+
+    CgHkWk_aligned = alignSize(CgHkWk, STRIP_LEN);
+    // repack the weight. The shape is from [K, C, Hk, Wk] to [ngroups, Ceil(K/group), Align(Cg*Hk*Wk, STRIP_LEN)]
+    if (shaderType == kConvShaderTypeGeneric)
+    {
+        std::vector<int> repackWeightShape = {ngroups, Kg, CgHkWk_aligned};
+
+        Mat repackWeight = Mat(repackWeightShape, CV_32FC1, Scalar_<float>(0.0f));
+        float* weightsBufPtr = repackWeight.ptr<float>();
+        const float* srcWeight = weightBlob.ptr<float>();
+        const size_t wstep = weightBlob.step1(); // Hk*Wk*Cg
+
+        // Pack the weight.
+        parallel_for_(Range(0, ngroups * Kg), [&](const Range& r0){
+        for (int gki = r0.start; gki < r0.end; gki++)
+        {
+            const float* wptr = srcWeight + gki * wstep;
+            float* packed_wptr = weightsBufPtr + gki * CgHkWk_aligned;
+
+            memcpy(packed_wptr, wptr, sizeof(wptr[0]) * CgHkWk);
+        }});
+
+        // Create weightTensor
+        Tensor weightTensor;
+        CV_Assert(repackWeight.isContinuous() && weightBlob.type() == CV_32F);
+        weightTensor.reshape((const char*)repackWeight.data, repackWeightShape);
+        weightTensorPtr = makePtr<Tensor>(weightTensor);
+    }
+    else
+    {
+        // Create weightTensor
+        Tensor weightTensor;
+        CV_Assert(weightBlob.isContinuous() && weightBlob.type() == CV_32F);
+        std::vector<int> matShape = shape(weightBlob);
+        weightTensor.reshape((const char*)weightBlob.data, matShape); // This code will copy the src data from Mat to VkBuffer.
+
+        weightTensorPtr = makePtr<Tensor>(weightTensor);
+    }
+
+    if (!biasvec.empty())
+    {
+        int biasAlignedSize = alignSize(biasvec.size(), BLOCK_SIZE);
+        std::vector<int> biasShape = {biasAlignedSize};
+
+        biasCopy.resize(biasAlignedSize, 0.f);
+
+        for (int i = 0; i < biasvec.size(); i++)
+        {
+            biasCopy[i] = biasvec[i];
+        }
+
+        Tensor biasTensor;
+        biasTensor.reshape((const char*)biasCopy.data(), biasShape); // This code will copy the src data from Mat to VkBuffer.
+
+        biasTensorPtr = makePtr<Tensor>(biasTensor);
+    }
+    else
+    {
+        std::vector<int> shape = {K};
+        Tensor bias(0, shape);
+        biasTensorPtr = makePtr<Tensor>(bias);
+    }
+}
+
+void OpConv::firstForward()
+{
+    if (!firstForwardFinsh)
+    {
+        config.local_size_x = BLOCK_SIZE;
+        config.local_size_y = BLOCK_SIZE;
+        config.local_size_z = 1;
+
+        computeGroupCount();
+        firstForwardFinsh = true;
+    }
+    else
+        return;
+}
+
+OpConv::~OpConv()
+{
+}
+
+bool OpConv::forward(std::vector<Tensor>& ins, std::vector<Tensor>& outs)
+{
+    CV_Assert(ins.size() == 1 && outs.size() == 1);
+    Shape inputShape = ins[0].getShape();
+    Shape outputShape = outs[0].getShape();
+    CV_Assert(inputShape.size() == outputShape.size());
+
+    batch = inputShape[kShapeIdxBatch];
+    Hi = inputShape[kShapeIdxHeight];
+    Wi = inputShape[kShapeIdxWidth];
+
+    H0 = outputShape[kShapeIdxHeight];
+    W0 = outputShape[kShapeIdxWidth];
+
+    firstForward();
+
+    std::vector<int> param = {Hi, Wi,
+                              H0, W0,
+                              stride_h, stride_w,
+                              pad_top, pad_left,
+                              Hk, Wk,
+                              dilation_h, dilation_w,
+                              Kg, Cg,
+                              ngroups,
+                              CgHkWk_aligned,
+                              (int)activ,
+                              0, 0};
+
+    std::vector<int> shape = {(int)param.size()};
+    destTypes = {
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // input
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // bias
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // weight
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, // output
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER  // param
+    };
+
+    Ptr<Pipeline> pipeline = pipelineFactoryPtr->getPipeline(shader_name, destTypes);
+    Ptr<Descriptor> desSet = pipeline->createSet();
+    Ptr<CommandBuffer> cmdBuffer = cmdPoolPtr->allocBuffer();
+
+    VkCommandBuffer cmdBufferReal = cmdBuffer->get();
+    desSet->writeTensor(ins[0], 0);
+    desSet->writeTensor(*biasTensorPtr, 1);
+    desSet->writeTensor(*weightTensorPtr, 2);
+    desSet->writeTensor(outs[0], 3);
+
+    if (shaderType == kConvShaderTypeGeneric)
+    {
+        for (int b = 0; b < batch; b++)
+        {
+            for (int g = 0; g < ngroups; g++)
+            {
+                param[17] = b;
+                param[18] = g;
+                Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), shape, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+                desSet->writeTensor(paramTensor, 4);
+
+                cmdBuffer->beginRecord();
+                pipeline->bind(cmdBufferReal, desSet->get());
+                vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
+                cmdBuffer->endRecord();
+
+                cmdPoolPtr->submitAndWait(cmdBufferReal);
+            }
+        }
+    }
+    else if (shaderType == kConvShaderTypeDepthWise)
+    {
+        for (int b = 0; b < batch; b++)
+        {
+            param[17] = b;
+            Tensor paramTensor = Tensor(reinterpret_cast<const char *>(param.data()), shape, kFormatInt32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            desSet->writeTensor(paramTensor, 4);
+
+            cmdBuffer->beginRecord();
+            pipeline->bind(cmdBufferReal, desSet->get());
+            vkCmdDispatch(cmdBufferReal, group_x_, group_y_, group_z_);
+            cmdBuffer->endRecord();
+
+            cmdPoolPtr->submitAndWait(cmdBufferReal);
+        }
     }
 
     return true;
@@ -289,39 +223,28 @@ bool OpConv::forward(Tensor& in, Tensor& filter_weights, Tensor& bias, Tensor& o
 
 bool OpConv::computeGroupCount()
 {
-    if (config_.shader_type == kConvShaderTypeDepthWise)
+    int outplan = H0 * W0;
+    if (shaderType == kConvShaderTypeDepthWise)
     {
-        group_x_ = alignSize(out_width_, config_.local_size_x) / config_.local_size_x;
-        group_y_ = alignSize(out_height_, config_.local_size_y) / config_.local_size_y;
-        group_z_ = alignSize(in_channel_, config_.local_size_z) / config_.local_size_z;
+        group_x_ = alignSize(outplan, config.local_size_x) / config.local_size_x;
+        group_y_ = K;
+        group_z_ = 1;
         return true;
     }
-
-    int M = out_height_ * out_width_;
-    int N = out_channel_;
-
-    if (config_.shader_type == kConvShaderTypeBasic)
+    else if (shaderType == kConvShaderTypeGeneric)
     {
-
-        group_x_ = alignSize(out_height_ * out_width_, config_.local_size_x) / config_.local_size_x;
-        float GFLOPS = (2.0 * filter_height_ * filter_width_ * in_channel_ + 1) *
-                       (out_channel_ * out_height_ * out_width_) / 1000 / 1000 / 1000;
-        CV_Assert(config_.local_size_y == 1);
-        group_y_ = std::min(MAX_GROUP_COUNT_Y, (int)floor(MAX_COMPUTE_GFLOPS / (GFLOPS / out_channel_)));
+        group_x_ = alignSize(Kg, config.local_size_x) / config.local_size_x;
+        group_y_ = alignSize(outplan, config.local_size_y) / config.local_size_y;
         group_z_ = 1;
     }
-    else if (config_.shader_type == kConvShaderType48)
+    else if (shaderType == kConvShaderTest)
     {
-        assert(config_.block_width == 8 &&
-               config_.block_height == 4 &&
-               config_.block_depth == 1 &&
-               config_.local_size_z == 1);
-        group_x_ = N / config_.block_width;
-        group_y_ = alignSize(alignSize(M, 4) / 4, config_.local_size_y) / config_.local_size_y;
-        group_z_ = batch_;
+        group_x_ = 1;
+        group_y_ = 1;
+        group_z_ = 1;
     }
     else
-        CV_Assert(0);
+        CV_Error(cv::Error::StsNotImplemented, "shader type is not supported at compute GroupCount.");
 
     CV_Assert(group_x_ <= MAX_GROUP_COUNT_X);
     CV_Assert(group_y_ <= MAX_GROUP_COUNT_Y);

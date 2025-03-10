@@ -9,6 +9,8 @@ namespace cv { namespace hal {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
 // forward declarations
+void cartToPolar32f(const float *X, const float *Y, float* mag, float *angle, int len, bool angleInDegrees);
+void cartToPolar64f(const double *X, const double *Y, double* mag, double *angle, int len, bool angleInDegrees);
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
@@ -93,13 +95,13 @@ struct v_atan_f32
     {
         v_float32 ax = v_abs(x);
         v_float32 ay = v_abs(y);
-        v_float32 c = v_min(ax, ay) / (v_max(ax, ay) + eps);
-        v_float32 cc = c * c;
-        v_float32 a = v_fma(v_fma(v_fma(cc, p7, p5), cc, p3), cc, p1)*c;
-        a = v_select(ax >= ay, a, val90 - a);
-        a = v_select(x < z, val180 - a, a);
-        a = v_select(y < z, val360 - a, a);
-        return a * s;
+        v_float32 c = v_div(v_min(ax, ay), v_add(v_max(ax, ay), this->eps));
+        v_float32 cc = v_mul(c, c);
+        v_float32 a = v_mul(v_fma(v_fma(v_fma(cc, this->p7, this->p5), cc, this->p3), cc, this->p1), c);
+        a = v_select(v_ge(ax, ay), a, v_sub(this->val90, a));
+        a = v_select(v_lt(x, this->z), v_sub(this->val180, a), a);
+        a = v_select(v_lt(y, this->z), v_sub(this->val360, a), a);
+        return v_mul(a, this->s);
     }
 
     v_float32 eps;
@@ -118,14 +120,88 @@ struct v_atan_f32
 
 } // anonymous::
 
-///////////////////////////////////// ATAN2 ////////////////////////////////////
+static void cartToPolar32f_(const float *X, const float *Y, float *mag, float *angle, int len, bool angleInDegrees )
+{
+    float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
+    int i = 0;
+#if CV_SIMD
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    v_atan_f32 v(scale);
+
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            // if it's inplace operation, we cannot repeatedly process
+            // the tail for the second time, so we have to use the
+            // scalar code
+            if( i == 0 || angle == X || angle == Y )
+                break;
+            i = len - VECSZ*2;
+        }
+
+        v_float32 x0 = vx_load(X + i);
+        v_float32 y0 = vx_load(Y + i);
+        v_float32 x1 = vx_load(X + i + VECSZ);
+        v_float32 y1 = vx_load(Y + i + VECSZ);
+
+        v_float32 m0 = v_sqrt(v_muladd(x0, x0, v_mul(y0, y0)));
+        v_float32 m1 = v_sqrt(v_muladd(x1, x1, v_mul(y1, y1)));
+
+        v_float32 r0 = v.compute(y0, x0);
+        v_float32 r1 = v.compute(y1, x1);
+
+        v_store(mag + i, m0);
+        v_store(mag + i + VECSZ, m1);
+
+        v_store(angle + i, r0);
+        v_store(angle + i + VECSZ, r1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        float x0 = X[i], y0 = Y[i];
+        mag[i] = std::sqrt(x0*x0 + y0*y0);
+        angle[i] = atan_f32(y0, x0)*scale;
+    }
+}
+
+void cartToPolar32f(const float *X, const float *Y, float *mag, float *angle, int len, bool angleInDegrees )
+{
+    CV_INSTRUMENT_REGION();
+    cartToPolar32f_(X, Y, mag, angle, len, angleInDegrees );
+}
+
+void cartToPolar64f(const double *X, const double *Y, double *mag, double *angle, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int BLKSZ = 128;
+    float ybuf[BLKSZ], xbuf[BLKSZ], mbuf[BLKSZ], abuf[BLKSZ];
+    for( int i = 0; i < len; i += BLKSZ )
+    {
+        int j, blksz = std::min(BLKSZ, len - i);
+        for( j = 0; j < blksz; j++ )
+        {
+            xbuf[j] = (float)X[i + j];
+            ybuf[j] = (float)Y[i + j];
+        }
+        cartToPolar32f_(xbuf, ybuf, mbuf, abuf, blksz, angleInDegrees);
+        for( j = 0; j < blksz; j++ )
+            mag[i + j] = mbuf[j];
+        for( j = 0; j < blksz; j++ )
+            angle[i + j] = abuf[j];
+    }
+}
 
 static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
     float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
     int i = 0;
 #if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+    const int VECSZ = VTraits<v_float32>::vlanes();
     v_atan_f32 v(scale);
 
     for( ; i < len; i += VECSZ*2 )
@@ -198,7 +274,7 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
     int i = 0;
 
 #if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -209,8 +285,8 @@ void magnitude32f(const float* x, const float* y, float* mag, int len)
         }
         v_float32 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
         v_float32 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
-        x0 = v_sqrt(v_muladd(x0, x0, y0*y0));
-        x1 = v_sqrt(v_muladd(x1, x1, y1*y1));
+        x0 = v_sqrt(v_muladd(x0, x0, v_mul(y0, y0)));
+        x1 = v_sqrt(v_muladd(x1, x1, v_mul(y1, y1)));
         v_store(mag + i, x0);
         v_store(mag + i + VECSZ, x1);
     }
@@ -231,7 +307,7 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
     int i = 0;
 
 #if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+    const int VECSZ = VTraits<v_float64>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -242,8 +318,8 @@ void magnitude64f(const double* x, const double* y, double* mag, int len)
         }
         v_float64 x0 = vx_load(x + i), x1 = vx_load(x + i + VECSZ);
         v_float64 y0 = vx_load(y + i), y1 = vx_load(y + i + VECSZ);
-        x0 = v_sqrt(v_muladd(x0, x0, y0*y0));
-        x1 = v_sqrt(v_muladd(x1, x1, y1*y1));
+        x0 = v_sqrt(v_muladd(x0, x0, v_mul(y0, y0)));
+        x1 = v_sqrt(v_muladd(x1, x1, v_mul(y1, y1)));
         v_store(mag + i, x0);
         v_store(mag + i + VECSZ, x1);
     }
@@ -264,8 +340,8 @@ void invSqrt32f(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -292,8 +368,8 @@ void invSqrt64f(const double* src, double* dst, int len)
     CV_INSTRUMENT_REGION();
     int i = 0;
 
-#if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int VECSZ = VTraits<v_float64>::vlanes();
     for ( ; i < len; i += VECSZ*2)
     {
         if( i + VECSZ*2 > len )
@@ -320,8 +396,8 @@ void sqrt32f(const float* src, float* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -349,8 +425,8 @@ void sqrt64f(const double* src, double* dst, int len)
 
     int i = 0;
 
-#if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int VECSZ = VTraits<v_float64>::vlanes();
     for( ; i < len; i += VECSZ*2 )
     {
         if( i + VECSZ*2 > len )
@@ -451,8 +527,8 @@ void exp32f( const float *_x, float *y, int n )
     float maxval = (float)(exp_max_val/exp_prescale);
     float postscale = (float)exp_postscale;
 
-#if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
     const v_float32 vprescale = vx_setall_f32((float)exp_prescale);
     const v_float32 vpostscale = vx_setall_f32((float)exp_postscale);
     const v_float32 vminval = vx_setall_f32(minval);
@@ -481,26 +557,26 @@ void exp32f( const float *_x, float *y, int n )
         xf0 = v_min(v_max(xf0, vminval), vmaxval);
         xf1 = v_min(v_max(xf1, vminval), vmaxval);
 
-        xf0 *= vprescale;
-        xf1 *= vprescale;
+        xf0 = v_mul(xf0, vprescale);
+        xf1 = v_mul(xf1, vprescale);
 
         v_int32 xi0 = v_round(xf0);
         v_int32 xi1 = v_round(xf1);
-        xf0 = (xf0 - v_cvt_f32(xi0))*vpostscale;
-        xf1 = (xf1 - v_cvt_f32(xi1))*vpostscale;
+        xf0 = v_mul(v_sub(xf0, v_cvt_f32(xi0)), vpostscale);
+        xf1 = v_mul(v_sub(xf1, v_cvt_f32(xi1)), vpostscale);
 
-        v_float32 yf0 = v_lut(expTab_f, xi0 & vidxmask);
-        v_float32 yf1 = v_lut(expTab_f, xi1 & vidxmask);
+        v_float32 yf0 = v_lut(expTab_f, v_and(xi0, vidxmask));
+        v_float32 yf1 = v_lut(expTab_f, v_and(xi1, vidxmask));
 
         v_int32 v0 = vx_setzero_s32(), v127 = vx_setall_s32(127), v255 = vx_setall_s32(255);
-        xi0 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi0) + v127, v0), v255);
-        xi1 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi1) + v127, v0), v255);
+        xi0 = v_min(v_max(v_add(v_shr<6>(xi0), v127), v0), v255);
+        xi1 = v_min(v_max(v_add(v_shr<6>(xi1), v127), v0), v255);
 
-        yf0 *= v_reinterpret_as_f32(v_shl<23>(xi0));
-        yf1 *= v_reinterpret_as_f32(v_shl<23>(xi1));
+        yf0 = v_mul(yf0, v_reinterpret_as_f32(v_shl<23>(xi0)));
+        yf1 = v_mul(yf1, v_reinterpret_as_f32(v_shl<23>(xi1)));
 
-        v_float32 zf0 = xf0 + vA1;
-        v_float32 zf1 = xf1 + vA1;
+        v_float32 zf0 = v_add(xf0, vA1);
+        v_float32 zf1 = v_add(xf1, vA1);
 
         zf0 = v_fma(zf0, xf0, vA2);
         zf1 = v_fma(zf1, xf1, vA2);
@@ -511,8 +587,8 @@ void exp32f( const float *_x, float *y, int n )
         zf0 = v_fma(zf0, xf0, vA4);
         zf1 = v_fma(zf1, xf1, vA4);
 
-        zf0 *= yf0;
-        zf1 *= yf1;
+        zf0 = v_mul(zf0, yf0);
+        zf1 = v_mul(zf1, yf1);
 
         if( y_aligned )
         {
@@ -565,8 +641,8 @@ void exp64f( const double *_x, double *y, int n )
     double minval = (-exp_max_val/exp_prescale);
     double maxval = (exp_max_val/exp_prescale);
 
-#if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+    const int VECSZ = VTraits<v_float64>::vlanes();
     const v_float64 vprescale = vx_setall_f64(exp_prescale);
     const v_float64 vpostscale = vx_setall_f64(exp_postscale);
     const v_float64 vminval = vx_setall_f64(minval);
@@ -596,30 +672,30 @@ void exp64f( const double *_x, double *y, int n )
         xf0 = v_min(v_max(xf0, vminval), vmaxval);
         xf1 = v_min(v_max(xf1, vminval), vmaxval);
 
-        xf0 *= vprescale;
-        xf1 *= vprescale;
+        xf0 = v_mul(xf0, vprescale);
+        xf1 = v_mul(xf1, vprescale);
 
         v_int32 xi0 = v_round(xf0);
         v_int32 xi1 = v_round(xf1);
-        xf0 = (xf0 - v_cvt_f64(xi0))*vpostscale;
-        xf1 = (xf1 - v_cvt_f64(xi1))*vpostscale;
+        xf0 = v_mul(v_sub(xf0, v_cvt_f64(xi0)), vpostscale);
+        xf1 = v_mul(v_sub(xf1, v_cvt_f64(xi1)), vpostscale);
 
-        v_float64 yf0 = v_lut(expTab, xi0 & vidxmask);
-        v_float64 yf1 = v_lut(expTab, xi1 & vidxmask);
+        v_float64 yf0 = v_lut(expTab, v_and(xi0, vidxmask));
+        v_float64 yf1 = v_lut(expTab, v_and(xi1, vidxmask));
 
         v_int32 v0 = vx_setzero_s32(), v1023 = vx_setall_s32(1023), v2047 = vx_setall_s32(2047);
-        xi0 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi0) + v1023, v0), v2047);
-        xi1 = v_min(v_max(v_shr<EXPTAB_SCALE>(xi1) + v1023, v0), v2047);
+        xi0 = v_min(v_max(v_add(v_shr<6>(xi0), v1023), v0), v2047);
+        xi1 = v_min(v_max(v_add(v_shr<6>(xi1), v1023), v0), v2047);
 
         v_int64 xq0, xq1, dummy;
         v_expand(xi0, xq0, dummy);
         v_expand(xi1, xq1, dummy);
 
-        yf0 *= v_reinterpret_as_f64(v_shl<52>(xq0));
-        yf1 *= v_reinterpret_as_f64(v_shl<52>(xq1));
+        yf0 = v_mul(yf0, v_reinterpret_as_f64(v_shl<52>(xq0)));
+        yf1 = v_mul(yf1, v_reinterpret_as_f64(v_shl<52>(xq1)));
 
-        v_float64 zf0 = xf0 + vA1;
-        v_float64 zf1 = xf1 + vA1;
+        v_float64 zf0 = v_add(xf0, vA1);
+        v_float64 zf1 = v_add(xf1, vA1);
 
         zf0 = v_fma(zf0, xf0, vA2);
         zf1 = v_fma(zf1, xf1, vA2);
@@ -633,8 +709,8 @@ void exp64f( const double *_x, double *y, int n )
         zf0 = v_fma(zf0, xf0, vA5);
         zf1 = v_fma(zf1, xf1, vA5);
 
-        zf0 *= yf0;
-        zf1 *= yf1;
+        zf0 = v_mul(zf0, yf0);
+        zf1 = v_mul(zf1, yf1);
 
         if( y_aligned )
         {
@@ -696,7 +772,7 @@ void log32f( const float *_x, float *y, int n )
     const int* x = (const int*)_x;
 
 #if CV_SIMD
-    const int VECSZ = v_float32::nlanes;
+    const int VECSZ = VTraits<v_float32>::vlanes();
     const v_float32 vln2 = vx_setall_f32((float)ln_2);
     const v_float32 v1 = vx_setall_f32(1.f);
     const v_float32 vshift = vx_setall_f32(-1.f/512);
@@ -715,18 +791,18 @@ void log32f( const float *_x, float *y, int n )
         }
 
         v_int32 h0 = vx_load(x + i);
-        v_int32 yi0 = (v_shr<23>(h0) & vx_setall_s32(255)) - vx_setall_s32(127);
-        v_int32 xi0 = (h0 & vx_setall_s32(LOGTAB_MASK2_32F)) | vx_setall_s32(127 << 23);
+        v_int32 yi0 = v_sub(v_and(v_shr<23>(h0), vx_setall_s32(255)), vx_setall_s32(127));
+        v_int32 xi0 = v_or(v_and(h0, vx_setall_s32(LOGTAB_MASK2_32F)), vx_setall_s32(127 << 23));
 
-        h0 = v_shr<23 - LOGTAB_SCALE - 1>(h0) & vx_setall_s32(LOGTAB_MASK*2);
+        h0 = v_and(v_shr<23 - 8 - 1>(h0), vx_setall_s32(((1 << 8) - 1) * 2));
         v_float32 yf0, xf0;
 
         v_lut_deinterleave(logTab_f, h0, yf0, xf0);
 
         yf0 = v_fma(v_cvt_f32(yi0), vln2, yf0);
 
-        v_float32 delta = v_select(v_reinterpret_as_f32(h0 == vx_setall_s32(510)), vshift, vx_setall<float>(0));
-        xf0 = v_fma((v_reinterpret_as_f32(xi0) - v1), xf0, delta);
+        v_float32 delta = v_select(v_reinterpret_as_f32(v_eq(h0, vx_setall_s32(510))), vshift, vx_setall<float>(0));
+        xf0 = v_fma((v_sub(v_reinterpret_as_f32(xi0), v1)), xf0, delta);
 
         v_float32 zf0 = v_fma(xf0, vA0, vA1);
         zf0 = v_fma(zf0, xf0, vA2);
@@ -771,7 +847,7 @@ void log64f( const double *x, double *y, int n )
     int i = 0;
 
 #if CV_SIMD_64F
-    const int VECSZ = v_float64::nlanes;
+    const int VECSZ = VTraits<v_float64>::vlanes();
     const v_float64 vln2 = vx_setall_f64(ln_2);
 
     const v_float64
@@ -791,20 +867,20 @@ void log64f( const double *x, double *y, int n )
 
         v_int64 h0 = vx_load((const int64*)x + i);
         v_int32 yi0 = v_pack(v_shr<52>(h0), vx_setzero_s64());
-        yi0 = (yi0 & vx_setall_s32(0x7ff)) - vx_setall_s32(1023);
+        yi0 = v_sub(v_and(yi0, vx_setall_s32(2047)), vx_setall_s32(1023));
 
-        v_int64 xi0 = (h0 & vx_setall_s64(LOGTAB_MASK2_64F)) | vx_setall_s64((int64)1023 << 52);
+        v_int64 xi0 = v_or(v_and(h0, vx_setall_s64(LOGTAB_MASK2_64F)), vx_setall_s64((int64)1023 << 52));
         h0 = v_shr<52 - LOGTAB_SCALE - 1>(h0);
-        v_int32 idx = v_pack(h0, h0) & vx_setall_s32(LOGTAB_MASK*2);
+        v_int32 idx = v_and(v_pack(h0, h0), vx_setall_s32(((1 << 8) - 1) * 2));
 
         v_float64 xf0, yf0;
         v_lut_deinterleave(logTab, idx, yf0, xf0);
 
         yf0 = v_fma(v_cvt_f64(yi0), vln2, yf0);
-        v_float64 delta = v_cvt_f64(idx == vx_setall_s32(510))*vx_setall_f64(1./512);
-        xf0 = v_fma(v_reinterpret_as_f64(xi0) - vx_setall_f64(1.), xf0, delta);
+        v_float64 delta = v_mul(v_cvt_f64(v_eq(idx, vx_setall_s32(510))), vx_setall_f64(1. / 512));
+        xf0 = v_fma(v_sub(v_reinterpret_as_f64(xi0), vx_setall_f64(1.)), xf0, delta);
 
-        v_float64 xq = xf0*xf0;
+        v_float64 xq = v_mul(xf0, xf0);
         v_float64 zf0 = v_fma(xq, vA0, vA2);
         v_float64 zf1 = v_fma(xq, vA1, vA3);
         zf0 = v_fma(zf0, xq, vA4);
