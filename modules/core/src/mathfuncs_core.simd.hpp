@@ -238,77 +238,46 @@ static inline void SinCos_32f(const float* mag, const float* angle, float* cosva
     else
         k1 = N/360.;
 
-#if CV_AVX2
-    if (USE_AVX2)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    const v_float32 scale = vx_setall_f32(angle_in_degrees ? (float)CV_PI / 180.f : 1.f);
+
+    for( ; i < len; i += VECSZ*2 )
     {
-        __m128d v_k1 = _mm_set1_pd(k1);
-        __m128d v_1 = _mm_set1_pd(1);
-        __m128i v_N1 = _mm_set1_epi32(N - 1);
-        __m128i v_N4 = _mm_set1_epi32(N >> 2);
-        __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
-        __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
-        __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
-
-        for ( ; i <= len - 4; i += 4)
+        if( i + VECSZ*2 > len )
         {
-            __m128 v_angle = _mm_loadu_ps(angle + i);
-
-            // 0-1
-            __m128d v_t = _mm_mul_pd(_mm_cvtps_pd(v_angle), v_k1);
-            __m128i v_it = _mm_cvtpd_epi32(v_t);
-            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
-
-            __m128i v_sin_idx = _mm_and_si128(v_it, v_N1);
-            __m128i v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
-
-            __m128d v_t2 = _mm_mul_pd(v_t, v_t);
-            __m128d v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
-            __m128d v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
-
-            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
-            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
-
-            __m128d v_sin_val_0 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
-                                             _mm_mul_pd(v_cos_a, v_sin_b));
-            __m128d v_cos_val_0 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
-                                             _mm_mul_pd(v_sin_a, v_sin_b));
-
-            // 2-3
-            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
-            v_it = _mm_cvtpd_epi32(v_t);
-            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
-
-            v_sin_idx = _mm_and_si128(v_it, v_N1);
-            v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
-
-            v_t2 = _mm_mul_pd(v_t, v_t);
-            v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
-            v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
-
-            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
-            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
-
-            __m128d v_sin_val_1 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
-                                             _mm_mul_pd(v_cos_a, v_sin_b));
-            __m128d v_cos_val_1 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
-                                             _mm_mul_pd(v_sin_a, v_sin_b));
-
-            __m128 v_sin_val = _mm_movelh_ps(_mm_cvtpd_ps(v_sin_val_0),
-                                             _mm_cvtpd_ps(v_sin_val_1));
-            __m128 v_cos_val = _mm_movelh_ps(_mm_cvtpd_ps(v_cos_val_0),
-                                             _mm_cvtpd_ps(v_cos_val_1));
-
-            if (mag)
-            {
-                __m128 v_mag = _mm_loadu_ps(mag + i);
-                v_sin_val = _mm_mul_ps(v_sin_val, v_mag);
-                v_cos_val = _mm_mul_ps(v_cos_val, v_mag);
-            }
-
-            _mm_storeu_ps(sinval + i, v_sin_val);
-            _mm_storeu_ps(cosval + i, v_cos_val);
+            // if it's inplace operation, we cannot repeatedly process
+            // the tail for the second time, so we have to use the
+            // scalar code
+            if( i == 0 || angle == cosval || angle == sinval || mag == cosval || mag == sinval )
+                break;
+            i = len - VECSZ*2;
         }
+
+        v_float32 r0 = v_mul(vx_load(angle + i), scale);
+        v_float32 r1 = v_mul(vx_load(angle + i + VECSZ), scale);
+
+        v_float32 c0, c1, s0, s1;
+        v_sincos(r0, s0, c0);
+        v_sincos(r1, s1, c1);
+
+        if( mag )
+        {
+            v_float32 m0 = vx_load(mag + i);
+            v_float32 m1 = vx_load(mag + i + VECSZ);
+            c0 = v_mul(c0, m0);
+            c1 = v_mul(c1, m1);
+            s0 = v_mul(s0, m0);
+            s1 = v_mul(s1, m1);
+        }
+
+        v_store(cosval + i, c0);
+        v_store(cosval + i + VECSZ, c1);
+
+        v_store(sinval + i, s0);
+        v_store(sinval + i + VECSZ, s1);
     }
+    vx_cleanup();
 #endif
 
     for( ; i < len; i++ )

@@ -92,6 +92,22 @@ template <typename Dst_T, typename RVV_T>
 using RVV_SameLen =
     RVV<Dst_T, RVV_LMUL(RVV_T::lmul / sizeof(typename RVV_T::ElemType) * sizeof(Dst_T))>;
 
+template <size_t DstSize> struct RVV_ToIntHelper;
+template <size_t DstSize> struct RVV_ToUintHelper;
+template <size_t DstSize> struct RVV_ToFloatHelper;
+
+template <typename RVV_T>
+using RVV_ToInt =
+    RVV<typename RVV_ToIntHelper<sizeof(typename RVV_T::ElemType)>::type, RVV_T::lmul>;
+
+template <typename RVV_T>
+using RVV_ToUint =
+    RVV<typename RVV_ToUintHelper<sizeof(typename RVV_T::ElemType)>::type, RVV_T::lmul>;
+
+template <typename RVV_T>
+using RVV_ToFloat =
+    RVV<typename RVV_ToFloatHelper<sizeof(typename RVV_T::ElemType)>::type, RVV_T::lmul>;
+
 template <typename RVV_T>
 using RVV_BaseType = RVV<typename RVV_T::ElemType, LMUL_1>;
 
@@ -199,7 +215,7 @@ static inline BaseType vredmax(VecType vs2, BaseType vs1, size_t vl) {          
         using BoolType = HAL_RVV_BOOL_TYPE(__VA_ARGS__);   \
         using BaseType = v##VEC_TYPE##m1_t;                \
                                                            \
-        static constexpr size_t lmul = LMUL_TYPE;          \
+        static constexpr RVV_LMUL lmul = LMUL_TYPE;        \
                                                            \
         HAL_RVV_SIZE_RELATED(EEW, TYPE, LMUL, __VA_ARGS__) \
         HAL_RVV_SIZE_UNRELATED(__VA_ARGS__)                \
@@ -299,6 +315,20 @@ HAL_RVV_DEFINE_ONE( float, float32, LMUL_f2, 32, f32, mf2, HAL_RVV_FLOAT_PARAM)
 #undef HAL_RVV_SIZE_RELATED
 
 // -------------------------------Define cast--------------------------------
+
+template <> struct RVV_ToIntHelper<1> {using type = int8_t;};
+template <> struct RVV_ToIntHelper<2> {using type = int16_t;};
+template <> struct RVV_ToIntHelper<4> {using type = int32_t;};
+template <> struct RVV_ToIntHelper<8> {using type = int64_t;};
+
+template <> struct RVV_ToUintHelper<1> {using type = uint8_t;};
+template <> struct RVV_ToUintHelper<2> {using type = uint16_t;};
+template <> struct RVV_ToUintHelper<4> {using type = uint32_t;};
+template <> struct RVV_ToUintHelper<8> {using type = uint64_t;};
+
+template <> struct RVV_ToFloatHelper<2> {using type = _Float16;};
+template <> struct RVV_ToFloatHelper<4> {using type = float;};
+template <> struct RVV_ToFloatHelper<8> {using type = double;};
 
 #define HAL_RVV_CVT(ONE, TWO)                                                                   \
     template <>                                                                                 \
