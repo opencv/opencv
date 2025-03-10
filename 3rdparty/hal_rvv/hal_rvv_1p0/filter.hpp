@@ -204,6 +204,8 @@ static void process5(int anchor, int left, int right, float delta, const float* 
     }
 }
 
+// the algorithm is copied from 3rdparty/carotene/src/convolution.cpp,
+// in the function void CAROTENE_NS::convolution
 template<int ksize>
 static inline int filter(int start, int end, Filter2D* data, const uchar* src_data, size_t src_step, uchar* dst_data, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
 {
@@ -353,6 +355,8 @@ inline int sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, in
     return CV_HAL_ERROR_OK;
 }
 
+// the algorithm is copied from 3rdparty/carotene/src/separable_filter.hpp,
+// in the functor RowFilter3x3S16Generic and ColFilter3x3S16Generic
 template<int ksize>
 static inline int sepFilterRow(int start, int end, sepFilter2D* data, const uchar* src_data, size_t src_step, float* dst_data, int width, int full_width, int offset_x)
 {
@@ -612,6 +616,8 @@ template<> struct rvv<CV_HAL_MORPH_DILATE>
     static inline vuint8m4_t vop(vuint8m4_t a, uchar b, size_t c) { return __riscv_vmaxu(a, b, c); }
 };
 
+// the algorithm is copied from 3rdparty/carotene/src/morph.cpp,
+// in the function template void morph3x3
 template<int op>
 static inline int morph(int start, int end, Morph2D* data, const uchar* src_data, size_t src_step, uchar* dst_data, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
 {
