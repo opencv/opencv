@@ -93,7 +93,6 @@
 
 /* Image I/O functions (cdjpeg.h) */
 #ifdef C_LOSSLESS_SUPPORTED
-#define _jinit_read_gif  j16init_read_gif
 #define _jinit_read_ppm  j16init_read_ppm
 #endif
 
@@ -209,7 +208,6 @@
 #define _buffer  buffer12
 
 /* Image I/O functions (cdjpeg.h) */
-#define _jinit_read_gif  j12init_read_gif
 #define _jinit_write_gif  j12init_write_gif
 #define _jinit_read_ppm  j12init_read_ppm
 #define _jinit_write_ppm  j12init_write_ppm
@@ -324,7 +322,6 @@
 #define _buffer  buffer
 
 /* Image I/O functions (cdjpeg.h) */
-#define _jinit_read_gif  jinit_read_gif
 #define _jinit_write_gif  jinit_write_gif
 #define _jinit_read_ppm  jinit_read_ppm
 #define _jinit_write_ppm  jinit_write_ppm

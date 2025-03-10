@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2010, 2016, 2018, 2022, D. R. Commander.
+ * Copyright (C) 2010, 2016, 2018, 2022, 2024, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
@@ -56,14 +56,19 @@ initial_setup(j_decompress_ptr cinfo)
       (long)cinfo->image_width > (long)JPEG_MAX_DIMENSION)
     ERREXIT1(cinfo, JERR_IMAGE_TOO_BIG, (unsigned int)JPEG_MAX_DIMENSION);
 
-  /* For now, precision must match compiled-in value... */
+  /* Lossy JPEG images must have 8 or 12 bits per sample.  Lossless JPEG images
+   * can have 2 to 16 bits per sample.
+   */
 #ifdef D_LOSSLESS_SUPPORTED
-  if (cinfo->data_precision != 8 && cinfo->data_precision != 12 &&
-      cinfo->data_precision != 16)
-#else
-  if (cinfo->data_precision != 8 && cinfo->data_precision != 12)
+  if (cinfo->master->lossless) {
+    if (cinfo->data_precision < 2 || cinfo->data_precision > 16)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  } else
 #endif
-    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  {
+    if (cinfo->data_precision != 8 && cinfo->data_precision != 12)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  }
 
   /* Check that number of components won't exceed internal array sizes */
   if (cinfo->num_components > MAX_COMPONENTS)

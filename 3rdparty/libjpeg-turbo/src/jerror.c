@@ -40,8 +40,6 @@
  * Create the message string table.
  * We do this from the master message list in jerror.h by re-reading
  * jerror.h with a suitable definition for macro JMESSAGE.
- * The message table is made an external symbol just in case any applications
- * want to refer to it directly.
  */
 
 #define JMESSAGE(code, string)  string,
