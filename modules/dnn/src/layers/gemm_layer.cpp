@@ -174,10 +174,8 @@ public:
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
 
-
-        bool const_B_ = const_B || inputs.size() < 2;
-        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
-        bool have_bias_ = have_bias || inputs.size() == 3;
+        bool const_B_ = (const_B || inputs.size() < 2) && blobs.size() > 0;
+        bool const_C_ = (const_C || inputs.size() < 3) && blobs.size() > 1; 
 
         // pack B if it is const
         if (const_B_) {
@@ -185,7 +183,7 @@ public:
         }
 
         // also pre-broadcast bias
-        if (const_C_ && have_bias_) {
+        if (const_C_) {
             const auto &C = blobs.back();
 
             std::vector<Mat> outputs;
