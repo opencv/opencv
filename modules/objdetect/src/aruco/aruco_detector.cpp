@@ -1068,8 +1068,6 @@ struct ArucoDetector::ArucoDetectorImpl {
         }
     }
 
-};
-
     void performCornerSubpixRefinement(const Mat& grey, const vector<Mat>& grey_pyramid, int closest_pyr_image_idx, const vector<vector<Point2f>>& candidates, const Dictionary& dictionary) const {
         CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
                 detectorParams.cornerRefinementMinAccuracy > 0);
