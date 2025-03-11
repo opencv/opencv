@@ -616,7 +616,7 @@ bool PngDecoder::nextPage() {
 
 void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img)
 {
-    const int elem_size = img.elemSize();
+    const size_t elem_size = img.elemSize();
     if (_bop == 0) {
         // Overwrite mode: copy source row directly to destination
         for(uint32_t j = 0; j < h; ++j) {
