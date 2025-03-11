@@ -892,7 +892,6 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<vector<size_t> > groupedCandidates;
         vector<bool> isSelectedContours(candidateTree.size(), true);
 
-        size_t countSelectedContours = 0ull;
         for (size_t i = 0ull; i < candidateTree.size(); i++) {
             for (size_t j = i + 1ull; j < candidateTree.size(); j++) {
                 float minDist = getAverageDistance(candidateTree[i].corners, candidateTree[j].corners);
@@ -925,7 +924,12 @@ struct ArucoDetector::ArucoDetectorImpl {
                     }
                 }
             }
-            countSelectedContours += isSelectedContours[i];
+            // group of one candidate
+            if(isSelectedContours[i]) {
+                isSelectedContours[i] = false;
+                groupId[i] = (int)groupedCandidates.size();
+                groupedCandidates.push_back({i});
+            }
         }
 
         for (vector<size_t>& grouped : groupedCandidates) {
@@ -948,8 +952,8 @@ struct ArucoDetector::ArucoDetectorImpl {
             }
         }
 
-        vector<MarkerCandidateTree> selectedCandidates(countSelectedContours + groupedCandidates.size());
-        countSelectedContours = 0ull;
+        vector<MarkerCandidateTree> selectedCandidates(groupedCandidates.size());
+        size_t countSelectedContours = 0ull;
         for (size_t i = 0ull; i < candidateTree.size(); i++) {
             if (isSelectedContours[i]) {
                 selectedCandidates[countSelectedContours] = std::move(candidateTree[i]);
