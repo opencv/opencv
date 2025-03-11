@@ -75,13 +75,13 @@ class FcvSobelLoop_Invoker : public cv::ParallelLoopBody
         // Need additional lines to be border.
         if(range.start > 0)
         {
-            topLines     += halfKernelSize;
-            paddedHeight += halfKernelSize;
+            topLines     += MIN(range.start, halfKernelSize);
+            paddedHeight += MIN(range.start, halfKernelSize);
         }
 
         if(range.end < height)
         {
-            paddedHeight += halfKernelSize;
+            paddedHeight += MIN(height-range.end, halfKernelSize);
         }
 
         cv::Mat srcPadded = src(cv::Rect(0, range.start-topLines, width, paddedHeight));
@@ -305,8 +305,9 @@ int fastcv_hal_sobel(
     else
     {
         int nThreads = cv::getNumThreads();
-        int nStripes = nThreads > 1 ? 3*nThreads : 1;
-
+        // In each stripe, the height should be equal or larger than ksize.
+        // Use 3*nThreads stripes to avoid too many threads.
+        int nStripes = nThreads > 1 ? MIN(height / (int)ksize, 3 * nThreads) : 1;
         cv::parallel_for_(cv::Range(0, height), FcvSobelLoop_Invoker(src, dst, dx, dy, ksize, fcvBorder, 0), nStripes);
     }
 
@@ -466,47 +467,30 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
 {
     public:
 
-    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, fcvBorderType _fcvBorder, int _fcvBorderValue) :
-        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), fcvBorder(_fcvBorder), fcvBorderValue(_fcvBorderValue)
+    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, int _borderType, int _fcvBorderValue) :
+        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), borderType(_borderType), fcvBorderValue(_fcvBorderValue)
     {
         width       = src.cols;
         height      = src.rows;
-        halfKernelSize   = ksize / 2;
+        halfKSize   = ksize / 2;
         fcvFuncType = FCV_MAKETYPE(ksize, src.depth());
     }
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        int topLines     = 0;
-        int rangeHeight  = range.end-range.start;
-        int paddedHeight = rangeHeight;
+        int rangeHeight  = range.end - range.start;
+        int paddedHeight = rangeHeight + halfKSize * 2;
+        int paddedWidth  = width;
 
-        // Need additional lines to be border.
-        if(range.start != 0)
-        {
-            topLines     += halfKernelSize;
-            paddedHeight += halfKernelSize;
-        }
-
-        if(range.end != height)
-        {
-            paddedHeight += halfKernelSize;
-        }
-
-        const cv::Mat srcPadded = src(cv::Rect(0, range.start - topLines, width, paddedHeight));
-        cv::Mat dstPadded       = cv::Mat(paddedHeight, width, CV_8U);
+        cv::Mat srcPadded = src(cv::Rect(0, range.start, paddedWidth, paddedHeight));
+        cv::Mat dstPadded = dst(cv::Rect(0, range.start, paddedWidth, paddedHeight));
 
         if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
-            fcvFilterGaussian3x3u8_v4(srcPadded.data, width, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
-                fcvBorder, 0);
+            fcvFilterGaussian3x3u8_v4(srcPadded.data, paddedWidth, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
+                fcvBorderType::FASTCV_BORDER_UNDEFINED, fcvBorderValue);
         else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
-            fcvFilterGaussian5x5u8_v3(srcPadded.data, width, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
-                fcvBorder, 0);
-
-        // Only copy center part back to output image and ignore the padded lines
-        cv::Mat temp1 = dstPadded(cv::Rect(0, topLines, width, rangeHeight));
-        cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
-        temp1.copyTo(temp2);
+            fcvFilterGaussian5x5u8_v3(srcPadded.data, paddedWidth, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
+                fcvBorderType::FASTCV_BORDER_UNDEFINED, fcvBorderValue);
     }
 
     private:
@@ -515,9 +499,9 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
     int             width;
     int             height;
     const int       ksize;
-    int             halfKernelSize;
+    int             halfKSize;
     int             fcvFuncType;
-    fcvBorderType   fcvBorder;
+    int             borderType;
     int             fcvBorderValue;
 
     FcvGaussianBlurLoop_Invoker(const FcvGaussianBlurLoop_Invoker &);  // = delete;
@@ -544,9 +528,9 @@ int fastcv_hal_gaussianBlurBinomial(
     if (src_data == dst_data)
         CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
 
-    // The input image width and height should greater than kernel size
-    if (((size_t)height <= ksize) || ((size_t)width <= ksize))
-        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than kernel size");
+    // The pixels of input image should larger than 320*240
+    if((width*height) < (320*240))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than 320*240");
 
     // The input channel should be 1
     if (cn != 1)
@@ -559,35 +543,7 @@ int fastcv_hal_gaussianBlurBinomial(
     INITIALIZATION_CHECK;
 
     fcvStatus status = FASTCV_SUCCESS;
-    fcvBorderType fcvBorder = fcvBorderType::FASTCV_BORDER_UNDEFINED;
-    int fcvFuncType = FCV_MAKETYPE(ksize,depth);
-
-    switch (border_type)
-    {
-        case cv::BorderTypes::BORDER_REPLICATE:
-        {
-            fcvBorder = fcvBorderType::FASTCV_BORDER_REPLICATE;
-            break;
-        }
-        // For constant border, there are no border value, OpenCV default value is 0
-        case cv::BorderTypes::BORDER_CONSTANT:
-        {
-            fcvBorder = fcvBorderType::FASTCV_BORDER_CONSTANT;
-            break;
-        }
-        case cv::BorderTypes::BORDER_REFLECT:
-        {
-            fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT;
-            break;
-        }
-        case cv::BorderTypes::BORDER_REFLECT_101:
-        {
-            fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT_V2;
-            break;
-        }
-        default:
-            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
-    }
+    int fcvFuncType = FCV_MAKETYPE(ksize, depth);
 
     int nThreads = cv::getNumThreads();
     int nStripes = (nThreads > 1) ? ((height > 60) ? 3 * nThreads : 1) : 1;
@@ -597,9 +553,13 @@ int fastcv_hal_gaussianBlurBinomial(
         case FCV_MAKETYPE(3,CV_8U):
         case FCV_MAKETYPE(5,CV_8U):
         {
-            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void*)src_data, src_step);
-            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void*)dst_data, dst_step);
-            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src, dst, ksize, fcvBorder, 0), nStripes);
+            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void *)src_data, src_step);
+            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void *)dst_data, dst_step);
+            cv::Mat src_tmp = cv::Mat(height + ksize - 1, width + ksize - 1, CV_8UC1);
+            cv::Mat dst_tmp = cv::Mat(height + ksize - 1, width + ksize - 1, CV_8UC1);
+            cv::copyMakeBorder(src, src_tmp, ksize / 2, ksize / 2, ksize / 2, ksize / 2, border_type);
+            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src_tmp, dst_tmp, ksize, border_type, 0), nStripes);
+            dst_tmp(cv::Rect(ksize / 2, ksize / 2, width, height)).copyTo(dst);
             break;
         }
         default:
@@ -1017,10 +977,10 @@ int fastcv_hal_canny(
 
     if (lowThreshold > highThreshold)
         CV_HAL_RETURN_NOT_IMPLEMENTED("lowThreshold is greater then highThreshold");
-	
-	const double epsilon = 1e-9;
-	
-	if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
+
+    const double epsilon = 1e-9;
+
+    if (std::abs(lowThreshold - std::round(lowThreshold)) > epsilon || std::abs(highThreshold - std::round(highThreshold)) > epsilon)
         CV_HAL_RETURN_NOT_IMPLEMENTED("threshold with decimal values not supported");
 
     INITIALIZATION_CHECK;
