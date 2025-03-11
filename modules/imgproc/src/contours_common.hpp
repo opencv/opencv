@@ -198,14 +198,17 @@ public:
     size_t size(void) const {return last - first;}
 public:
     void clear(void) {first = last;}
-    bool resize(size_t newSize) {
+    bool resize(size_t newSize)
+    {
         bool ok = (newSize <= size());
         if (ok)
             last = first+newSize;
         return ok;
     }
-    void push_back(const data_storage_t& value) {
-        if (empty()) {
+    void push_back(const data_storage_t& value)
+    {
+        if (empty())
+        {
             first = storage->size();
         }
         storage->push_back(value);
@@ -236,8 +239,7 @@ public:
 
     explicit Contour(ContourPointsStorage::storage_t* pointStorage_,
                      ContourCodesStorage::storage_t* codesStorage_)
-                    :pts(pointStorage_),codes(codesStorage_) {
-    }
+                    :pts(pointStorage_),codes(codesStorage_) {}
     Contour(const Contour&) = delete;
     Contour(Contour&& other) noexcept = default;
     Contour& operator=(const Contour&) = delete;
