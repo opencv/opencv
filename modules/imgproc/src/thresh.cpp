@@ -1781,10 +1781,6 @@ double cv::thresholdWithMask( InputArray _src, InputOutputArray _dst, InputArray
         int src_type = src.type();
         CV_CheckType(src_type, src_type == CV_8UC1 || src_type == CV_16UC1, "THRESH_OTSU mode");
 
-        CALL_HAL_RET(thresholdMaskOtsu, cv_hal_threshold_mask_otsu, thresh, src.data, src.step, dst.data, dst.step,
-                     mask.data, mask.step,
-                     src.cols, src.rows, src_type, maxval, type);
-
         thresh = src.type() == CV_8UC1 ? getThreshVal_Otsu_8u( src, mask )
                                        : getThreshVal_Otsu_16u( src, mask );
     }
