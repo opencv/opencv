@@ -249,6 +249,11 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t si
 
 bool  PngDecoder::readHeader()
 {
+    if (m_frame_count > 1 /* if true, it means readHeader() was called before */)
+    {
+        return true;
+    }
+
     // Declare dynamic variables before a potential longjmp.
     Chunk chunk;
 

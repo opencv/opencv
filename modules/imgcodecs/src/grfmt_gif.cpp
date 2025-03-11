@@ -34,6 +34,11 @@ GifDecoder::~GifDecoder() {
 }
 
 bool GifDecoder::readHeader() {
+    if (m_frame_count > 1 /* if true, it means readHeader() was called before */)
+    {
+        return true;
+    }
+
     if (!m_buf.empty()) {
         if (!m_strm.open(m_buf)) {
             return false;
