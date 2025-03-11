@@ -13,7 +13,7 @@
 
 #include <cfloat>
 
-namespace cv::cv_hal_rvv {
+namespace cv { namespace cv_hal_rvv {
 
 namespace detail {
 // ref: mathfuncs_core.simd.hpp
@@ -125,4 +125,4 @@ inline int fast_atan_64(const double *y, const double *x, double *dst, size_t n,
     return CV_HAL_ERROR_OK;
 }
 
-} // namespace cv::cv_hal_rvv
+}} // namespace cv::cv_hal_rvv
