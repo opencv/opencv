@@ -732,7 +732,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<vector<Point2f>> rejectedImgPoints;
         if (DictionaryMode::Single == dictMode) {
             Dictionary& dictionary = dictionaries.at(0);
-            auto selectedCandidates = filterTooCloseCandidates(candidates, contours, dictionary.markerSize);
+            auto selectedCandidates = filterTooCloseCandidates(grey.size(), candidates, contours, dictionary.markerSize);
             candidates.clear();
             contours.clear();
 
@@ -755,7 +755,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 // copy candidates
                 vector<vector<Point2f>> candidatesCopy = candidates;
                 vector<vector<Point> > contoursCopy = contours;
-                candidatesTreeEntry.second = filterTooCloseCandidates(candidatesCopy, contoursCopy, candidatesTreeEntry.first);
+                candidatesTreeEntry.second = filterTooCloseCandidates(grey.size(), candidatesCopy, contoursCopy, candidatesTreeEntry.first);
             }
             candidates.clear();
             contours.clear();
@@ -942,8 +942,6 @@ struct ArucoDetector::ArucoDetectorImpl {
                 }
             }
             if (tooNearBorder) {
-                isSelectedContours[currId] = false;
-                countSelectedContours--;
                 continue;
             }
             isSelectedContours[currId] = true;
@@ -958,12 +956,11 @@ struct ArucoDetector::ArucoDetectorImpl {
             }
         }
 
-        vector<MarkerCandidateTree> selectedCandidates(groupedCandidates.size());
-        size_t countSelectedContours = 0ull;
+        vector<MarkerCandidateTree> selectedCandidates;
+        selectedCandidates.reserve(groupedCandidates.size());
         for (size_t i = 0ull; i < candidateTree.size(); i++) {
             if (isSelectedContours[i]) {
-                selectedCandidates[countSelectedContours] = std::move(candidateTree[i]);
-                countSelectedContours++;
+                selectedCandidates.push_back(std::move(candidateTree[i]));
             }
         }
 
