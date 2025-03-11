@@ -1068,7 +1068,6 @@ struct ArucoDetector::ArucoDetectorImpl {
         }
     }
 
-<<<<<<< HEAD
 };
 
 ArucoDetector::ArucoDetector(const Dictionary &_dictionary,
@@ -1159,9 +1158,6 @@ void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corner
 
     /// STEP 3: Corner refinement :: use corner subpix
     if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
-=======
-    void performCornerSubpixRefinement(const Mat& grey, const vector<Mat>& grey_pyramid, int closest_pyr_image_idx, const vector<vector<Point2f>>& candidates, const Dictionary& dictionary) const {
->>>>>>> 4.x
         CV_Assert(detectorParams.cornerRefinementWinSize > 0 && detectorParams.cornerRefinementMaxIterations > 0 &&
                 detectorParams.cornerRefinementMinAccuracy > 0);
         // Do subpixel estimation. In Aruco3 start on the lowest pyramid level and upscale the corners
