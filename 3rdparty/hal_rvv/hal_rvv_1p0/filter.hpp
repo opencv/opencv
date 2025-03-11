@@ -4,6 +4,7 @@
 #ifndef OPENCV_HAL_RVV_FILTER_HPP_INCLUDED
 #define OPENCV_HAL_RVV_FILTER_HPP_INCLUDED
 
+#include "../../imgproc/include/opencv2/imgproc/hal/interface.h"
 #include <riscv_vector.h>
 
 struct cvhalFilter2D;
@@ -538,9 +539,6 @@ namespace morph {
 #define cv_hal_morphInit cv::cv_hal_rvv::morph::morphInit
 #define cv_hal_morph cv::cv_hal_rvv::morph::morph
 #define cv_hal_morphFree cv::cv_hal_rvv::morph::morphFree
-
-#define CV_HAL_MORPH_ERODE 0
-#define CV_HAL_MORPH_DILATE 1
 
 struct Morph2D
 {
