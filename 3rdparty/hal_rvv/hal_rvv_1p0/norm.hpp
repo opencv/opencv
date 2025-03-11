@@ -6,10 +6,10 @@
 
 #include <riscv_vector.h>
 
-namespace cv { namespace cv_hal_rvv {
+namespace cv { namespace cv_hal_rvv { namespace norm {
 
 #undef cv_hal_norm
-#define cv_hal_norm cv::cv_hal_rvv::norm
+#define cv_hal_norm cv::cv_hal_rvv::norm::norm
 
 inline int normInf_8UC1(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step, int width, int height, double* result)
 {
@@ -512,6 +512,6 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
-}}
+}}}
 
 #endif

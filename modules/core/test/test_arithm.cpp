@@ -1258,7 +1258,7 @@ struct ExpOp : public BaseArithmOp
     }
     void getValueRange(int depth, double& minval, double& maxval)
     {
-        maxval = depth == CV_32F ? 50 : 100;
+        maxval = depth == CV_32F ? 80 : 700;
         minval = -maxval;
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
@@ -3538,12 +3538,14 @@ INSTANTIATE_TEST_CASE_P(
     testing::Values(perf::MatDepth(CV_16F), CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 );
 
-struct Core_LUT: public testing::TestWithParam<perf::MatDepth>
+CV_ENUM(LutMatType, CV_8U, CV_16U, CV_16F, CV_32S, CV_32F, CV_64F)
+
+struct Core_LUT: public testing::TestWithParam<LutMatType>
 {
-    template<typename T, int ch>
+    template<typename T, int ch, bool same_cn>
     cv::Mat referenceWithType(cv::Mat input, cv::Mat table)
     {
-        cv::Mat ref(input.size(), CV_MAKE_TYPE(table.type(), ch));
+        cv::Mat ref(input.size(), CV_MAKE_TYPE(table.depth(), ch));
         for (int i = 0; i < input.rows; i++)
         {
             for (int j = 0; j < input.cols; j++)
@@ -3557,7 +3559,14 @@ struct Core_LUT: public testing::TestWithParam<perf::MatDepth>
                     Vec<T, ch> val;
                     for (int k = 0; k < ch; k++)
                     {
-                       val[k] = table.at<T>(input.at<Vec<uchar, ch>>(i, j)[k]);
+                        if (same_cn)
+                        {
+                            val[k] = table.at<Vec<T, ch>>(input.at<Vec<uchar, ch>>(i, j)[k])[k];
+                        }
+                        else
+                        {
+                            val[k] = table.at<T>(input.at<Vec<uchar, ch>>(i, j)[k]);
+                        }
                     }
                     ref.at<Vec<T, ch>>(i, j) = val;
                 }
@@ -3566,36 +3575,36 @@ struct Core_LUT: public testing::TestWithParam<perf::MatDepth>
         return ref;
     }
 
-    template<int ch = 1>
+    template<int ch = 1, bool same_cn = false>
     cv::Mat reference(cv::Mat input, cv::Mat table)
     {
-        if ((table.type() == CV_8U) || (table.type() == CV_8S) || (table.type() == CV_Bool))
+        if ((table.depth() == CV_8U) || (table.depth() == CV_8S) || (table.depth() == CV_Bool))
         {
-            return referenceWithType<uchar, ch>(input, table);
+            return referenceWithType<uchar, ch, same_cn>(input, table);
         }
-        else if ((table.type() == CV_16U) || (table.type() == CV_16S))
+        else if ((table.depth() == CV_16U) || (table.depth() == CV_16S))
         {
-            return referenceWithType<ushort, ch>(input, table);
+            return referenceWithType<ushort, ch, same_cn>(input, table);
         }
-        else if ((table.type() == CV_16F) || (table.type() == CV_16BF))
+        else if ((table.depth() == CV_16F) || (table.depth() == CV_16BF))
         {
-            return referenceWithType<ushort, ch>(input, table);
+            return referenceWithType<ushort, ch, same_cn>(input, table);
         }
-        else if ((table.type() == CV_32S) || (table.type() == CV_32U))
+        else if ((table.depth() == CV_32S) || (table.depth() == CV_32U))
         {
-            return referenceWithType<uint, ch>(input, table);
+            return referenceWithType<int, ch, same_cn>(input, table);
         }
         else if ((table.type() == CV_64S) || (table.type() == CV_64U))
         {
-            return referenceWithType<uint64_t, ch>(input, table);
+            return referenceWithType<uint64_t, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_32F)
+        else if (table.depth() == CV_32F)
         {
-            return referenceWithType<float, ch>(input, table);
+            return referenceWithType<float, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_64F)
+        else if (table.depth() == CV_64F)
         {
-            return referenceWithType<double, ch>(input, table);
+            return referenceWithType<double, ch, same_cn>(input, table);
         }
 
         return cv::Mat();
@@ -3609,7 +3618,7 @@ TEST_P(Core_LUT, accuracy)
     randu(input, 0, 256);
 
     cv::Mat table(1, 256, CV_MAKE_TYPE(type, 1));
-    randu(table, 0, 127);
+    randu(table, 0, getMaxVal(type));
 
     cv::Mat output;
     cv::LUT(input, table, output);
@@ -3633,7 +3642,7 @@ TEST_P(Core_LUT, accuracy_multi)
     randu(input, 0, 256);
 
     cv::Mat table(1, 256, CV_MAKE_TYPE(type, 1));
-    randu(table, 0, 127);
+    randu(table, 0, getMaxVal(type));
 
     cv::Mat output;
     cv::LUT(input, table, output);
@@ -3651,7 +3660,24 @@ TEST_P(Core_LUT, accuracy_multi)
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, perf::MatDepth::all());
+TEST_P(Core_LUT, accuracy_multi2)
+{
+    int type = (int)GetParam();
+    cv::Mat input(117, 113, CV_8UC3);
+    randu(input, 0, 256);
+
+    cv::Mat table(1, 256, CV_MAKE_TYPE(type, 3));
+    randu(table, 0, getMaxVal(type));
+
+    cv::Mat output;
+    cv::LUT(input, table, output);
+
+    cv::Mat gt = reference<3, true>(input, table);
+
+    ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, LutMatType::all());
 
 CV_ENUM(MaskType, CV_8U, CV_8S, CV_Bool)
 typedef testing::TestWithParam<MaskType> Core_MaskTypeTest;

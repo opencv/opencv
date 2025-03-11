@@ -247,15 +247,15 @@ int fastcv_hal_cvtBGRtoYUVApprox(
 /// @param width Source image width
 /// @param height Source image height
 /// @param cn Number of channels
-/// @param lowThreshold low hresholds value
+/// @param lowThreshold low thresholds value
 /// @param highThreshold high thresholds value
 /// @param ksize Kernel size for Sobel operator.
 /// @param L2gradient Flag, indicating use of L2 or L1 norma.
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int fastcv_hal_canny(
-    const uchar* 	src_data,
+    const uchar*    src_data,
     size_t          src_step,
-    uchar* 			dst_data,
+    uchar*          dst_data,
     size_t          dst_step,
     int             width,
     int             height,

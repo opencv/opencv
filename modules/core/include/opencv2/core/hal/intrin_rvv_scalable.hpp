@@ -8,7 +8,8 @@
 #ifndef OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 #define OPENCV_HAL_INTRIN_RVV_SCALABLE_HPP
 
-#include <opencv2/core/base.hpp>
+#include <array>
+#include <opencv2/core/check.hpp>
 
 #if defined(__GNUC__) && !defined(__clang__)
 // FIXIT: eliminate massive warnigs from templates
@@ -71,8 +72,9 @@ struct VTraits<REG> \
 { \
     static inline int vlanes() { return __riscv_vsetvlmax_##SUF(); } \
     using lane_type = TYP; \
-    static const int max_nlanes = CV_RVV_MAX_VLEN/SZ; \
+    static const int max_nlanes = CV_RVV_MAX_VLEN/SZ*2; \
 };
+// `max_nlanes` is multiplied by 2 because of using LMUL=2 (m2)
 
 OPENCV_HAL_IMPL_RVV_TRAITS(vint8m1_t, int8_t, e8m1, 8)
 OPENCV_HAL_IMPL_RVV_TRAITS(vint8m2_t, int8_t, e8m2, 8)
@@ -672,6 +674,28 @@ inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
 { \
     vuint32m1_t vidx_ = __riscv_vmul(__riscv_vlmul_trunc_u32m1(__riscv_vreinterpret_u32m2(vidx)), sizeof(double), VTraits<v_float64>::vlanes()); \
     return __riscv_vloxei32(tab, vidx_, VTraits<v_float64>::vlanes()); \
+}
+#endif
+
+
+// Strangely, __riscv_vluxseg2ei32 is slower (tested on Muse-Pi and CanMV K230)
+#define OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(_Tpvec, _Tp, suffix) \
+inline void v_lut_deinterleave(const _Tp* tab, const v_int32& vidx, _Tpvec& vx, _Tpvec& vy) \
+{ \
+    v_uint32 vidx_ = __riscv_vmul(__riscv_vreinterpret_u32m2(vidx), sizeof(_Tp), VTraits<v_int32>::vlanes()); \
+    vx = __riscv_vluxei32(tab, vidx_, VTraits<_Tpvec>::vlanes()); \
+    vy = __riscv_vluxei32(tab, __riscv_vadd(vidx_, sizeof(_Tp), VTraits<v_int32>::vlanes()), VTraits<_Tpvec>::vlanes()); \
+}
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_float32, float, f32)
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_int32, int, i32)
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_uint32, unsigned, u32)
+
+#if CV_SIMD_SCALABLE_64F
+inline void v_lut_deinterleave(const double* tab, const v_int32& vidx, v_float64& vx, v_float64& vy) \
+{ \
+    vuint32m1_t vidx_ = __riscv_vmul(__riscv_vlmul_trunc_u32m1(__riscv_vreinterpret_u32m2(vidx)), sizeof(double), VTraits<v_float64>::vlanes()); \
+    vx = __riscv_vluxei32(tab, vidx_, VTraits<v_float64>::vlanes()); \
+    vy = __riscv_vluxei32(tab, __riscv_vadd(vidx_, sizeof(double), VTraits<v_int32>::vlanes()), VTraits<v_float64>::vlanes()); \
 }
 #endif
 
@@ -2000,23 +2024,31 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED(int64, int64, int64, i64, 64, 32, VTraits<v_int6
 OPENCV_HAL_IMPL_RVV_INTERLEAVED(float64, double, double, f64, 64, 32, VTraits<v_float64>::vlanes())
 #endif
 
-static uint64_t idx_interleave_pairs[] = { \
+static std::array<uint64_t, 32> idx_interleave_pairs = { \
     0x0705060403010200, 0x0f0d0e0c0b090a08, 0x1715161413111210, 0x1f1d1e1c1b191a18, \
     0x2725262423212220, 0x2f2d2e2c2b292a28, 0x3735363433313230, 0x3f3d3e3c3b393a38, \
     0x4745464443414240, 0x4f4d4e4c4b494a48, 0x5755565453515250, 0x5f5d5e5c5b595a58, \
-    0x6765666463616260, 0x6f6d6e6c6b696a68, 0x7775767473717270, 0x7f7d7e7c7b797a78};
+    0x6765666463616260, 0x6f6d6e6c6b696a68, 0x7775767473717270, 0x7f7d7e7c7b797a78, \
+    0x8785868483818280, 0x8f8d8e8c8b898a88, 0x9795969493919290, 0x9f9d9e9c9b999a98, \
+    0xa7a5a6a4a3a1a2a0, 0xafadaeacaba9aaa8, 0xb7b5b6b4b3b1b2b0, 0xbfbdbebcbbb9bab8, \
+    0xc7c5c6c4c3c1c2c0, 0xcfcdcecccbc9cac8, 0xd7d5d6d4d3d1d2d0, 0xdfdddedcdbd9dad8, \
+    0xe7e5e6e4e3e1e2e0, 0xefedeeecebe9eae8, 0xf7f5f6f4f3f1f2f0, 0xfffdfefcfbf9faf8};
 
-static uint64_t idx_interleave_quads[] = { \
+static std::array<uint64_t, 32> idx_interleave_quads = { \
     0x0703060205010400, 0x0f0b0e0a0d090c08, 0x1713161215111410, 0x1f1b1e1a1d191c18, \
     0x2723262225212420, 0x2f2b2e2a2d292c28, 0x3733363235313430, 0x3f3b3e3a3d393c38, \
     0x4743464245414440, 0x4f4b4e4a4d494c48, 0x5753565255515450, 0x5f5b5e5a5d595c58, \
-    0x6763666265616460, 0x6f6b6e6a6d696c68, 0x7773767275717470, 0x7f7b7e7a7d797c78};
+    0x6763666265616460, 0x6f6b6e6a6d696c68, 0x7773767275717470, 0x7f7b7e7a7d797c78, \
+    0x8783868285818480, 0x8f8b8e8a8d898c88, 0x9793969295919490, 0x9f9b9e9a9d999c98, \
+    0xa7a3a6a2a5a1a4a0, 0xafabaeaaada9aca8, 0xb7b3b6b2b5b1b4b0, 0xbfbbbebabdb9bcb8, \
+    0xc7c3c6c2c5c1c4c0, 0xcfcbcecacdc9ccc8, 0xd7d3d6d2d5d1d4d0, 0xdfdbdedaddd9dcd8, \
+    0xe7e3e6e2e5e1e4e0, 0xefebeeeaede9ece8, 0xf7f3f6f2f5f1f4f0, 0xfffbfefafdf9fcf8};
 
 #define OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(_Tpvec, func) \
 inline _Tpvec v_interleave_##func(const _Tpvec& vec) { \
     CV_CheckLE(VTraits<_Tpvec>::vlanes(), VTraits<_Tpvec>::max_nlanes, "RVV implementation only supports VLEN in the range [128, 1024]"); \
     vuint8m2_t vidx = __riscv_vundefined_u8m2();\
-    vidx = __riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func, 16)); \
+    vidx = __riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func.data(), idx_interleave_##func.size())); \
     return __riscv_vrgather(vec, vidx, VTraits<v_uint8>::vlanes()); \
 }
 OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_uint8, pairs)
@@ -2028,7 +2060,7 @@ OPENCV_HAL_IMPL_RVV_INTERLEAVED_PQ_NOEXPEND(v_int8, quads)
 inline _Tpvec v_interleave_##func(const _Tpvec& vec) { \
     CV_CheckLE(VTraits<_Tpvec>::vlanes(), VTraits<_Tpvec>::max_nlanes, "RVV implementation only supports VLEN in the range [128, 1024]"); \
     vuint##width##m2_t vidx = __riscv_vundefined_u##width##m2();\
-    vidx = __riscv_vget_u##width##m2(vzext_vfx(__riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func, 16)), VTraits<v_uint8>::vlanes()), 0); \
+    vidx = __riscv_vget_u##width##m2(vzext_vfx(__riscv_vreinterpret_u8m2(__riscv_vle64_v_u64m2(idx_interleave_##func.data(), idx_interleave_##func.size())), VTraits<v_uint8>::vlanes()), 0); \
     return __riscv_vrgather(vec, vidx, VTraits<_Tpvec>::vlanes()); \
 }
 
@@ -2100,20 +2132,19 @@ inline v_uint64 v_popcount(const v_uint64& a)
 
 inline v_uint8 v_popcount(const v_int8& a)
 {
-    return v_popcount(v_abs(a));\
+    return v_popcount(__riscv_vreinterpret_u8m2(a));\
 }
 inline v_uint16 v_popcount(const v_int16& a)
 {
-    return v_popcount(v_abs(a));\
+    return v_popcount(__riscv_vreinterpret_u16m2(a));\
 }
 inline v_uint32 v_popcount(const v_int32& a)
 {
-    return v_popcount(v_abs(a));\
+    return v_popcount(__riscv_vreinterpret_u32m2(a));\
 }
 inline v_uint64 v_popcount(const v_int64& a)
 {
-    // max(0 - a) is used, since v_abs does not support 64-bit integers.
-    return v_popcount(v_reinterpret_as_u64(__riscv_vmax(a, v_sub(v_setzero_s64(), a), VTraits<v_int64>::vlanes())));
+    return v_popcount(__riscv_vreinterpret_u64m2(a));
 }
 
 
@@ -2211,14 +2242,14 @@ inline void v_pack_store(hfloat* ptr, const v_float32& v)
 #else
 inline v_float32 v_load_expand(const hfloat* ptr)
 {
-    float buf[32];
+    float buf[VTraits<v_float32>::max_nlanes];
     for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) buf[i] = (float)ptr[i];
     return v_load(buf);
 }
 
 inline void v_pack_store(hfloat* ptr, const v_float32& v)
 {
-    float buf[32];
+    float buf[VTraits<v_float32>::max_nlanes];
     v_store(buf, v);
     for( int i = 0; i < VTraits<v_float32>::vlanes(); i++ ) ptr[i] = hfloat(buf[i]);
 }

@@ -1,6 +1,8 @@
 Deep Neural Networks (dnn module) {#tutorial_table_of_content_dnn}
 =====================================
 
+@tableofcontents
+
 -   @subpage tutorial_dnn_googlenet
 -   @subpage tutorial_dnn_openvino
 -   @subpage tutorial_dnn_yolo

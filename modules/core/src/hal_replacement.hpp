@@ -856,10 +856,28 @@ inline int hal_ni_dft1D(cvhalDFT *context, const uchar *src, uchar *dst) { retur
  */
 inline int hal_ni_dftFree1D(cvhalDFT *context) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+/**
+@param src source data
+@param dst destination data
+@param depth depth of source
+@param nf OcvDftOptions data
+@param factors OcvDftOptions data
+@param scale OcvDftOptions data
+@param itab OcvDftOptions data
+@param wave OcvDftOptions data
+@param tab_size OcvDftOptions data
+@param n OcvDftOptions data
+@param isInverse OcvDftOptions data
+@param noPermute OcvDftOptions data
+ */
+inline int hal_ni_dft(const uchar* src, uchar* dst, int depth, int nf, int *factors, double scale, int* itab, void* wave,
+                         int tab_size, int n, bool isInverse, bool noPermute) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
 //! @cond IGNORED
 #define cv_hal_dftInit1D hal_ni_dftInit1D
 #define cv_hal_dft1D hal_ni_dft1D
 #define cv_hal_dftFree1D hal_ni_dftFree1D
+#define cv_hal_dft hal_ni_dft
 //! @endcond
 
 /**

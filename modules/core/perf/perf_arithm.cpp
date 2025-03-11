@@ -909,4 +909,29 @@ PERF_TEST_P(ExpFixture, Exp,
     SANITY_CHECK_NOTHING();
 }
 
+//////////////LOG////////////
+
+typedef Size_MatType LogFixture;
+
+PERF_TEST_P(LogFixture, Log,
+    testing::Combine(testing::Values(TYPICAL_MAT_SIZES), testing::Values(CV_32F, CV_64F)))
+{
+    cv::Size size = std::get<0>(GetParam());
+    int type = std::get<1>(GetParam());
+
+    cv::Mat src(size, type);
+    cv::Mat dst(size, type);
+
+    declare.in(src).out(dst);
+
+    cv::randu(src, 1e-5, 1e5);
+
+    TEST_CYCLE()
+    {
+        cv::log(src, dst);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
 } // namespace

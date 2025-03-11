@@ -43,6 +43,7 @@ typedef std::vector<DMatch> vector_DMatch;
 typedef std::vector<String> vector_String;
 typedef std::vector<std::string> vector_string;
 typedef std::vector<Scalar> vector_Scalar;
+typedef std::vector<aruco::Dictionary> vector_Dictionary;
 
 typedef std::vector<std::vector<char> > vector_vector_char;
 typedef std::vector<std::vector<Point> > vector_vector_Point;

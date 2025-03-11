@@ -6,7 +6,7 @@
  * Lossless JPEG Modifications:
  * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2022, D. R. Commander.
+ * Copyright (C) 2022, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -324,8 +324,21 @@ _jinit_c_prep_controller(j_compress_ptr cinfo, boolean need_full_buffer)
   jpeg_component_info *compptr;
   int data_unit = cinfo->master->lossless ? 1 : DCTSIZE;
 
-  if (cinfo->data_precision != BITS_IN_JSAMPLE)
-    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+#ifdef C_LOSSLESS_SUPPORTED
+  if (cinfo->master->lossless) {
+#if BITS_IN_JSAMPLE == 8
+    if (cinfo->data_precision > BITS_IN_JSAMPLE || cinfo->data_precision < 2)
+#else
+    if (cinfo->data_precision > BITS_IN_JSAMPLE ||
+        cinfo->data_precision < BITS_IN_JSAMPLE - 3)
+#endif
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  } else
+#endif
+  {
+    if (cinfo->data_precision != BITS_IN_JSAMPLE)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  }
 
   if (need_full_buffer)         /* safety check */
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
