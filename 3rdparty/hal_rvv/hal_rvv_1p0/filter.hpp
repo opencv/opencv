@@ -64,14 +64,6 @@ static inline int borderInterpolate( int p, int len, int borderType )
         }
         while( (unsigned)p >= (unsigned)len );
     }
-    else if( borderType == BORDER_WRAP )
-    {
-        CV_Assert(len > 0);
-        if( p < 0 )
-            p -= ((p-len+1)/len)*len;
-        if( p >= len )
-            p %= len;
-    }
     else if( borderType == BORDER_CONSTANT )
         p = -1;
     return p;
@@ -99,6 +91,8 @@ inline int filterInit(cvhalFilter2D** context, uchar* kernel_data, size_t kernel
     if (kernel_width != kernel_height)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (kernel_width != 3 && kernel_width != 5)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if ((borderType & ~BORDER_ISOLATED) == BORDER_WRAP)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     anchor_x = anchor_x < 0 ? kernel_width  / 2 : anchor_x;
@@ -349,6 +343,8 @@ inline int sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, in
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (kernelx_length != 3 && kernelx_length != 5)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if ((borderType & ~BORDER_ISOLATED) == BORDER_WRAP)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     anchor_x = anchor_x < 0 ? kernelx_length / 2 : anchor_x;
     anchor_y = anchor_y < 0 ? kernely_length / 2 : anchor_y;
@@ -568,6 +564,8 @@ inline int morphInit(cvhalFilter2D** context, int operation, int src_type, int d
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (operation != CV_HAL_MORPH_ERODE && operation != CV_HAL_MORPH_DILATE)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    if ((borderType & ~BORDER_ISOLATED) == BORDER_WRAP)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     uchar* borderV;
     if (src_type == CV_8UC1)
@@ -706,7 +704,6 @@ static inline int morph(int start, int end, Morph2D* data, const uchar* src_data
             for (int j = 0; j < width; j++)
                 process(i, j);
         }
-        // continue;
         else
         {
             for (int j = 0; j < left; j++)
