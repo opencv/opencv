@@ -126,7 +126,7 @@ public:
 class SIMDBayerInterpolator_8u
 {
 public:
-    static int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
+    int bayer2Gray(const uchar* bayer, int bayer_step, uchar* dst,
                    int width, int bcoeff, int gcoeff, int rcoeff)
     {
 #if CV_SIMD
