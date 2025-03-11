@@ -222,6 +222,8 @@ static inline BaseType vredmax(VecType vs2, BaseType vs1, size_t vl) {          
                                                            \
         template <typename FROM>                           \
         inline static VecType cast(FROM v, size_t vl);     \
+        template <typename FROM>                           \
+        inline static VecType reinterpret(FROM v);         \
     };                                                     \
                                                            \
     template <>                                            \
@@ -467,18 +469,52 @@ HAL_RVV_CVT(RVV_F32MF2, RVV_F64M1)
 
 #undef HAL_RVV_CVT
 
-#define HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_TYPE, LMUL)                                    \
+#define HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_TYPE, LMUL, IS_U)                              \
     template <>                                                                               \
     inline RVV<A, LMUL_TYPE>::VecType RVV<A, LMUL_TYPE>::cast(                                \
-        RVV<B, LMUL_TYPE>::VecType v, [[maybe_unused]] size_t vl                              \
+        RVV<B, LMUL_TYPE>::VecType v, size_t vl                                               \
     ) {                                                                                       \
-        return __riscv_vreinterpret_##A_TYPE##LMUL(v);                                        \
+        return __riscv_vfcvt_f_x##IS_U##_v_##A_TYPE##LMUL(v, vl);                             \
     }                                                                                         \
     template <>                                                                               \
     inline RVV<B, LMUL_TYPE>::VecType RVV<B, LMUL_TYPE>::cast(                                \
-        RVV<A, LMUL_TYPE>::VecType v, [[maybe_unused]] size_t vl                              \
+        RVV<A, LMUL_TYPE>::VecType v, size_t vl                                               \
     ) {                                                                                       \
-        return __riscv_vreinterpret_##B_TYPE##LMUL(v);                                        \
+        return __riscv_vfcvt_x##IS_U##_f_v_##B_TYPE##LMUL(v, vl);                             \
+    }
+
+HAL_RVV_CVT( float,  int32_t, f32, i32,  LMUL_1,  m1, )
+HAL_RVV_CVT( float,  int32_t, f32, i32,  LMUL_2,  m2, )
+HAL_RVV_CVT( float,  int32_t, f32, i32,  LMUL_4,  m4, )
+HAL_RVV_CVT( float,  int32_t, f32, i32,  LMUL_8,  m8, )
+HAL_RVV_CVT( float,  int32_t, f32, i32, LMUL_f2, mf2, )
+
+HAL_RVV_CVT( float, uint32_t, f32, u32,  LMUL_1,  m1, u)
+HAL_RVV_CVT( float, uint32_t, f32, u32,  LMUL_2,  m2, u)
+HAL_RVV_CVT( float, uint32_t, f32, u32,  LMUL_4,  m4, u)
+HAL_RVV_CVT( float, uint32_t, f32, u32,  LMUL_8,  m8, u)
+HAL_RVV_CVT( float, uint32_t, f32, u32, LMUL_f2, mf2, u)
+
+HAL_RVV_CVT(double,  int64_t, f64, i64,  LMUL_1,  m1, )
+HAL_RVV_CVT(double,  int64_t, f64, i64,  LMUL_2,  m2, )
+HAL_RVV_CVT(double,  int64_t, f64, i64,  LMUL_4,  m4, )
+HAL_RVV_CVT(double,  int64_t, f64, i64,  LMUL_8,  m8, )
+
+HAL_RVV_CVT(double, uint64_t, f64, u64,  LMUL_1,  m1, u)
+HAL_RVV_CVT(double, uint64_t, f64, u64,  LMUL_2,  m2, u)
+HAL_RVV_CVT(double, uint64_t, f64, u64,  LMUL_4,  m4, u)
+HAL_RVV_CVT(double, uint64_t, f64, u64,  LMUL_8,  m8, u)
+
+#undef HAL_RVV_CVT
+
+#define HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_TYPE, LMUL)                                           \
+    template <>                                                                                      \
+    inline RVV<A, LMUL_TYPE>::VecType RVV<A, LMUL_TYPE>::reinterpret(RVV<B, LMUL_TYPE>::VecType v) { \
+        return __riscv_vreinterpret_##A_TYPE##LMUL(v);                                               \
+    }                                                                                                \
+    template <>                                                                                      \
+    inline RVV<B, LMUL_TYPE>::VecType RVV<B, LMUL_TYPE>::reinterpret(RVV<A, LMUL_TYPE>::VecType v) { \
+        return __riscv_vreinterpret_##B_TYPE##LMUL(v);                                               \
     }
 
 #define HAL_RVV_CVT2(A, B, A_TYPE, B_TYPE)        \

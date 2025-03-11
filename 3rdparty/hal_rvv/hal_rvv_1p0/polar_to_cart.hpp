@@ -22,9 +22,9 @@ inline int
     using T = RVV_F32M4;
     const auto sincos_scale = angleInDegrees ? detail::sincos_deg_scale : detail::sincos_rad_scale;
 
-    size_t vl = T::setvlmax();
-    auto cos_p2 = T::vmv(detail::sincos_cos_p2, vl);
-    auto cos_p0 = T::vmv(detail::sincos_cos_p0, vl);
+    size_t vl;
+    auto cos_p2 = T::vmv(detail::sincos_cos_p2, T::setvlmax());
+    auto cos_p0 = T::vmv(detail::sincos_cos_p0, T::setvlmax());
     for (; len > 0; len -= (int)vl, angle += vl, x += vl, y += vl)
     {
         vl = RVV_T::setvl(len);
