@@ -175,7 +175,7 @@ public:
         opt.init();
 
         bool const_B_ = (const_B || inputs.size() < 2) && blobs.size() > 0;
-        bool const_C_ = (const_C || inputs.size() < 3) && blobs.size() > 1; 
+        bool const_C_ = (const_C || inputs.size() < 3) && blobs.size() > 1;
 
         // pack B if it is const
         if (const_B_) {
