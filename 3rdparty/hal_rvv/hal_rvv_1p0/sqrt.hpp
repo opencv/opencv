@@ -6,17 +6,27 @@
 
 #include <riscv_vector.h>
 #include <cmath>
+#include "hal_rvv_1p0/types.hpp"
 
 namespace cv { namespace cv_hal_rvv {
 
 #undef cv_hal_sqrt32f
-#define cv_hal_sqrt32f cv::cv_hal_rvv::sqrt<cv::cv_hal_rvv::Sqrt32f>
 #undef cv_hal_sqrt64f
-#define cv_hal_sqrt64f cv::cv_hal_rvv::sqrt<cv::cv_hal_rvv::Sqrt64f>
 #undef cv_hal_invSqrt32f
-#define cv_hal_invSqrt32f cv::cv_hal_rvv::invSqrt<cv::cv_hal_rvv::InvSqrt32f>
 #undef cv_hal_invSqrt64f
-#define cv_hal_invSqrt64f cv::cv_hal_rvv::invSqrt<cv::cv_hal_rvv::InvSqrt64f>
+
+#define cv_hal_sqrt32f cv::cv_hal_rvv::sqrt<cv::cv_hal_rvv::Sqrt32f<cv::cv_hal_rvv::RVV_F32M8>>
+#define cv_hal_sqrt64f cv::cv_hal_rvv::sqrt<cv::cv_hal_rvv::Sqrt64f<cv::cv_hal_rvv::RVV_F64M8>>
+
+#ifdef __clang__
+// Strange bug in clang: invSqrt use 2 LMUL registers to store mask, which will cause memory access.
+// So a smaller LMUL is used here.
+#    define cv_hal_invSqrt32f cv::cv_hal_rvv::invSqrt<cv::cv_hal_rvv::Sqrt32f<cv::cv_hal_rvv::RVV_F32M4>>
+#    define cv_hal_invSqrt64f cv::cv_hal_rvv::invSqrt<cv::cv_hal_rvv::Sqrt64f<cv::cv_hal_rvv::RVV_F64M4>>
+#else
+#    define cv_hal_invSqrt32f cv::cv_hal_rvv::invSqrt<cv::cv_hal_rvv::Sqrt32f<cv::cv_hal_rvv::RVV_F32M8>>
+#    define cv_hal_invSqrt64f cv::cv_hal_rvv::invSqrt<cv::cv_hal_rvv::Sqrt64f<cv::cv_hal_rvv::RVV_F64M8>>
+#endif
 
 namespace detail {
 
@@ -65,76 +75,43 @@ inline VEC_T invSqrt(VEC_T x, size_t vl)
 
 }  // namespace detail
 
-struct Sqrt_f32m4
+template <typename RVV_T>
+struct Sqrt32f
 {
-    using ElemType = float;
+    using T = RVV_T;
     static constexpr size_t iter_times = 2;
-    static inline size_t setvl(size_t len) { return __riscv_vsetvl_e32m4(len); }
-    static inline vfloat32m4_t vload(const float* ptr, size_t vl) { return __riscv_vle32_v_f32m4(ptr, vl); }
-    static inline void vstore(float* ptr, vfloat32m4_t v, size_t vl) { __riscv_vse32(ptr, v, vl); }
 };
 
-struct Sqrt_f32m8
+template <typename RVV_T>
+struct Sqrt64f
 {
-    using ElemType = float;
-    static constexpr size_t iter_times = 2;
-    static inline size_t setvl(size_t len) { return __riscv_vsetvl_e32m8(len); }
-    static inline vfloat32m8_t vload(const float* ptr, size_t vl) { return __riscv_vle32_v_f32m8(ptr, vl); }
-    static inline void vstore(float* ptr, vfloat32m8_t v, size_t vl) { __riscv_vse32(ptr, v, vl); }
-};
-
-struct Sqrt_f64m4
-{
-    using ElemType = double;
+    using T = RVV_T;
     static constexpr size_t iter_times = 3;
-    static inline size_t setvl(size_t len) { return __riscv_vsetvl_e64m4(len); }
-    static inline vfloat64m4_t vload(const double* ptr, size_t vl) { return __riscv_vle64_v_f64m4(ptr, vl); }
-    static inline void vstore(double* ptr, vfloat64m4_t v, size_t vl) { __riscv_vse64(ptr, v, vl); }
 };
 
-struct Sqrt_f64m8
-{
-    using ElemType = double;
-    static constexpr size_t iter_times = 3;
-    static inline size_t setvl(size_t len) { return __riscv_vsetvl_e64m8(len); }
-    static inline vfloat64m8_t vload(const double* ptr, size_t vl) { return __riscv_vle64_v_f64m8(ptr, vl); }
-    static inline void vstore(double* ptr, vfloat64m8_t v, size_t vl) { __riscv_vse64(ptr, v, vl); }
-};
-
-using Sqrt32f = Sqrt_f32m8;
-using Sqrt64f = Sqrt_f64m8;
-#ifdef __clang__
-// Strange bug in clang: invSqrt use 2 LMUL registers to store mask, which will cause memory access.
-using InvSqrt32f = Sqrt_f32m4;
-using InvSqrt64f = Sqrt_f64m4;
-#else
-using InvSqrt32f = Sqrt_f32m8;
-using InvSqrt64f = Sqrt_f64m8;
-#endif
-
-template <typename RVV_T, typename Elem = typename RVV_T::ElemType>
+template <typename SQRT_T, typename Elem = typename SQRT_T::T::ElemType>
 inline int sqrt(const Elem* src, Elem* dst, int _len)
 {
     size_t vl;
     for (size_t len = _len; len > 0; len -= vl, src += vl, dst += vl)
     {
-        vl = RVV_T::setvl(len);
-        auto x = RVV_T::vload(src, vl);
-        RVV_T::vstore(dst, detail::sqrt<RVV_T::iter_times>(x, vl), vl);
+        vl = SQRT_T::T::setvl(len);
+        auto x = SQRT_T::T::vload(src, vl);
+        SQRT_T::T::vstore(dst, detail::sqrt<SQRT_T::iter_times>(x, vl), vl);
     }
 
     return CV_HAL_ERROR_OK;
 }
 
-template <typename RVV_T, typename Elem = typename RVV_T::ElemType>
+template <typename SQRT_T, typename Elem = typename SQRT_T::T::ElemType>
 inline int invSqrt(const Elem* src, Elem* dst, int _len)
 {
     size_t vl;
     for (size_t len = _len; len > 0; len -= vl, src += vl, dst += vl)
     {
-        vl = RVV_T::setvl(len);
-        auto x = RVV_T::vload(src, vl);
-        RVV_T::vstore(dst, detail::invSqrt<RVV_T::iter_times>(x, vl), vl);
+        vl = SQRT_T::T::setvl(len);
+        auto x = SQRT_T::T::vload(src, vl);
+        SQRT_T::T::vstore(dst, detail::invSqrt<SQRT_T::iter_times>(x, vl), vl);
     }
 
     return CV_HAL_ERROR_OK;
