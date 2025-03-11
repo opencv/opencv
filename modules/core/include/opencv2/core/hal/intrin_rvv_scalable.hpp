@@ -509,6 +509,28 @@ inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
 #endif
 
 
+// Strangely, __riscv_vluxseg2ei32 is slower (tested on Muse-Pi and CanMV K230)
+#define OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(_Tpvec, _Tp, suffix) \
+inline void v_lut_deinterleave(const _Tp* tab, const v_int32& vidx, _Tpvec& vx, _Tpvec& vy) \
+{ \
+    v_uint32 vidx_ = __riscv_vmul(__riscv_vreinterpret_u32m2(vidx), sizeof(_Tp), VTraits<v_int32>::vlanes()); \
+    vx = __riscv_vluxei32(tab, vidx_, VTraits<_Tpvec>::vlanes()); \
+    vy = __riscv_vluxei32(tab, __riscv_vadd(vidx_, sizeof(_Tp), VTraits<v_int32>::vlanes()), VTraits<_Tpvec>::vlanes()); \
+}
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_float32, float, f32)
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_int32, int, i32)
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_uint32, unsigned, u32)
+
+#if CV_SIMD_SCALABLE_64F
+inline void v_lut_deinterleave(const double* tab, const v_int32& vidx, v_float64& vx, v_float64& vy) \
+{ \
+    vuint32m1_t vidx_ = __riscv_vmul(__riscv_vlmul_trunc_u32m1(__riscv_vreinterpret_u32m2(vidx)), sizeof(double), VTraits<v_float64>::vlanes()); \
+    vx = __riscv_vluxei32(tab, vidx_, VTraits<v_float64>::vlanes()); \
+    vy = __riscv_vluxei32(tab, __riscv_vadd(vidx_, sizeof(double), VTraits<v_int32>::vlanes()), VTraits<v_float64>::vlanes()); \
+}
+#endif
+
+
 inline v_uint8 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
 inline v_uint8 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
 inline v_uint8 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }

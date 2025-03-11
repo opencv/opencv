@@ -1099,7 +1099,7 @@ struct ExpOp : public BaseElemWiseOp
     }
     void getValueRange(int depth, double& minval, double& maxval)
     {
-        maxval = depth == CV_32F ? 50 : 100;
+        maxval = depth == CV_32F ? 80 : 700;
         minval = -maxval;
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
