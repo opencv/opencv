@@ -1,12 +1,10 @@
 Image Processing (imgproc module) {#tutorial_table_of_content_imgproc}
 =================================
 
-@prev_tutorial{tutorial_table_of_content_core}
-@next_tutorial{tutorial_table_of_content_app}
 @tableofcontents
 
-The imgproc module in OpenCV is a collection of functions designed for image processing and computer vision tasks.
-These functions allow you to perform a wide range of operations like geometric transformations, filtering, edge detection, histogram operations, and more.
+The imgproc module in OpenCV is a collection of per-pixel image operations (color conversions, filters) drawing (contours, objects, text), and
+geometry transformations (warping, resize) useful for computer vision.
 Here's an overview of the content in the imgproc module, categorized for easier navigation:
 
 ##### Basic
