@@ -771,7 +771,7 @@ void log32f( const float *_x, float *y, int n )
     int i = 0;
     const int* x = (const int*)_x;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VECSZ = VTraits<v_float32>::vlanes();
     const v_float32 vln2 = vx_setall_f32((float)ln_2);
     const v_float32 v1 = vx_setall_f32(1.f);
@@ -846,7 +846,7 @@ void log64f( const double *x, double *y, int n )
 
     int i = 0;
 
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     const int VECSZ = VTraits<v_float64>::vlanes();
     const v_float64 vln2 = vx_setall_f64(ln_2);
 
