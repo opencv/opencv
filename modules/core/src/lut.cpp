@@ -363,7 +363,6 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.createSameSize(_src, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-
     CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
              lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
 

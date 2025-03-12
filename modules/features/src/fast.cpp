@@ -368,8 +368,6 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 }
 #endif
 
-
-
 static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
 {
     if (threshold > 20)
@@ -437,7 +435,9 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     cv::Mat img = _img.getMat();
     CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
 
-    size_t keypoints_count;
+    size_t keypoints_count = 10000;
+    keypoints.clear();
+    keypoints.resize(keypoints_count);
     CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
              (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
 
