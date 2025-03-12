@@ -148,7 +148,7 @@ public:
             if (real_ndims_C_ == 1) { // (1,) or (N,)
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
             } else if (real_ndims_C_ == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
-                printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
+                // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
                 CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
                                      (shape_C[0] == 1 && shape_C[1] == N) ||
                                      (shape_C[0] == M && shape_C[1] == 1) ||
