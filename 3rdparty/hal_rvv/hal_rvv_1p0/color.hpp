@@ -3006,12 +3006,9 @@ static inline int cvtBGRtoLab_f(int start, int end, const float * src, size_t sr
                     return __riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmul(a0, w0, vl), a1, w1, vl), a2, w2, vl), a3, w3, vl), a4, w4, vl), a5, w5, vl), a6, w6, vl), a7, w7, vl);
                 };
 
-                lo = __riscv_vfmul(__riscv_vfcvt_f(__riscv_vssra(interpolate(base), 12, __RISCV_VXRM_RNU, vl), vl), 1.0f / LabTable::Tab::LAB_BASE, vl);
-                ao = __riscv_vfmul(__riscv_vfcvt_f(__riscv_vssra(interpolate(__riscv_vadd(base, 8 * sizeof(short), vl)), 12, __RISCV_VXRM_RNU, vl), vl), 1.0f / LabTable::Tab::LAB_BASE, vl);
-                bo = __riscv_vfmul(__riscv_vfcvt_f(__riscv_vssra(interpolate(__riscv_vadd(base, 16 * sizeof(short), vl)), 12, __RISCV_VXRM_RNU, vl), vl), 1.0f / LabTable::Tab::LAB_BASE, vl);
-                lo = __riscv_vfmul(lo, 100.0f, vl);
-                ao = __riscv_vfmadd(ao, 256.0f, __riscv_vfmv_v_f_f32m2(-128.0f, vl), vl);
-                bo = __riscv_vfmadd(bo, 256.0f, __riscv_vfmv_v_f_f32m2(-128.0f, vl), vl);
+                lo = __riscv_vfmul(__riscv_vfcvt_f(__riscv_vssra(interpolate(base), 12, __RISCV_VXRM_RNU, vl), vl), 100.0f / LabTable::Tab::LAB_BASE, vl);
+                ao = __riscv_vfmadd(__riscv_vfcvt_f(__riscv_vssra(interpolate(__riscv_vadd(base, 8 * sizeof(short), vl)), 12, __RISCV_VXRM_RNU, vl), vl), 256.0f / LabTable::Tab::LAB_BASE, __riscv_vfmv_v_f_f32m2(-128.0f, vl), vl);
+                bo = __riscv_vfmadd(__riscv_vfcvt_f(__riscv_vssra(interpolate(__riscv_vadd(base, 16 * sizeof(short), vl)), 12, __RISCV_VXRM_RNU, vl), vl), 256.0f / LabTable::Tab::LAB_BASE, __riscv_vfmv_v_f_f32m2(-128.0f, vl), vl);
             }
             else
             {
