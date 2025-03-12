@@ -282,7 +282,7 @@ public:
         outputs_arr.getMatVector(outputs);
 
         LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
-        
+
         const auto &A = inputs[0];
         auto &Y = outputs[0];
 
