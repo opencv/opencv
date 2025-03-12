@@ -58,6 +58,11 @@ public:
         trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
+        
+        // The params are not part of ONNX, but set by old ONNX parser
+        const_B = params.get<bool>("constB", false); 
+        const_C = params.get<bool>("constC", false); 
+        have_bias =  params.get<bool>("have_bias", false); 
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
@@ -143,7 +148,7 @@ public:
             if (real_ndims_C_ == 1) { // (1,) or (N,)
                 CV_Check(shape_C[0], shape_C[0] == 1 || shape_C[0] == N, "DNN/Gemm: invalid dimension of C");
             } else if (real_ndims_C_ == 2) { // (1, 1) or (1, N) or (M, 1) or (M, N)
-                // printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
+                printf("shape_C=[%d, %d]\n", shape_C[0], shape_C[1]);
                 CV_Check(shape_C[0], (shape_C[0] == 1 && shape_C[1] == 1) ||
                                      (shape_C[0] == 1 && shape_C[1] == N) ||
                                      (shape_C[0] == M && shape_C[1] == 1) ||
