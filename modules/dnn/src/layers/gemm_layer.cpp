@@ -19,6 +19,35 @@ using namespace cv::dnn::cuda4dnn;
 #include "cpu_kernels/fast_gemm.hpp"
 
 namespace cv { namespace dnn {
+
+enum class LayerGemmOpMode {
+    blobB,
+    blobBC,
+    blobC,
+    noblob
+};
+
+bool constB(LayerGemmOpMode mode){
+    switch (mode) {
+        case LayerGemmOpMode::blobB:
+        case LayerGemmOpMode::blobBC:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool constC(LayerGemmOpMode mode){
+    switch (mode) {
+        case LayerGemmOpMode::blobC:
+        case LayerGemmOpMode::blobBC:
+            return true;
+        default:
+            return false;
+    }
+}
+
+
 // Y = alpha * A’ * B’ + beta * C
 class GemmLayerImpl CV_FINAL : public GemmLayer {
 public:
@@ -30,28 +59,34 @@ public:
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
 
-        if (params.has("constB") || params.has("constC") || params.has("have_bias"))
-        {
-            // The params are not part of ONNX, but set by old ONNX parser
-            const_B = params.get<bool>("constB", false); // true means blobs[0] is B
-            const_C = params.get<bool>("constC", false); // true means blobs.back() is C
-            have_bias = params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
-        }
-        else
-        {
-            // TODO: With the new parser the function should be smart enough to figure out
-            // the operation mode from the number of 'inputs' and number of 'blobs'.
-            // note, however, that 'inputs' may not be set yet in the constructor
-            // Ticket: https://github.com/opencv/opencv/issues/26209
 
-            if (!blobs.empty()) {
-                const_B = const_C = true;
-            } else {
-                const_B = const_C = false;
-            }
+        // The params are not part of ONNX, but set by old ONNX parser
+        const_B = params.get<bool>("constB", false); // true means blobs[0] is B
+        const_C = params.get<bool>("constC", false); // true means blobs.back() is C
+        have_bias =  params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
 
-            have_bias = blobs.size() > 1 || params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
-        }
+        // if (params.has("constB") || params.has("constC") || params.has("have_bias"))
+        // {
+        //     // The params are not part of ONNX, but set by old ONNX parser
+        //     const_B = params.get<bool>("constB", false); // true means blobs[0] is B
+        //     const_C = params.get<bool>("constC", false); // true means blobs.back() is C
+        //     have_bias = params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        // }
+        // else
+        // {
+        //     // TODO: With the new parser the function should be smart enough to figure out
+        //     // the operation mode from the number of 'inputs' and number of 'blobs'.
+        //     // note, however, that 'inputs' may not be set yet in the constructor
+        //     // Ticket: https://github.com/opencv/opencv/issues/26209
+
+        //     if (!blobs.empty()) {
+        //         const_B = const_C = true;
+        //     } else {
+        //         const_B = const_C = false;
+        //     }
+
+        //     have_bias = blobs.size() > 1 || params.get<bool>("have_bias", false); // NOTE: have_bias being true does not mean bias is constant
+        // }
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
@@ -64,21 +99,52 @@ public:
                (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !have_bias && !trans_a);
     }
 
+
+
+    LayerGemmOpMode getOpMode(size_t n_inputs, size_t n_blobs) const {
+        if (n_blobs == 0) return LayerGemmOpMode::noblob;
+        if (n_inputs == 3) return LayerGemmOpMode::noblob ; // if all inputs are given, then no blobs are used
+        if (n_inputs == 2) {
+            if (have_bias) {
+                // check where the input comes from
+                if(const_B) 
+                    return LayerGemmOpMode::blobB;
+                if(const_C)
+                    return LayerGemmOpMode::blobC;
+                return LayerGemmOpMode::blobC;
+            } else {
+                if (n_blobs == 1) 
+                    // 2 inputs, no bias => input[1] is B
+                    return LayerGemmOpMode::noblob;
+                if (n_blobs == 2)
+                    return LayerGemmOpMode::blobC;
+            }
+        }
+        if (n_inputs == 1) {
+            // only A is given per input
+            if (n_blobs == 2) 
+                return LayerGemmOpMode::blobBC;
+            else
+                return LayerGemmOpMode::blobB;
+        }
+        CV_Error(Error::StsError, "DNN/Gemm: could not derive OP mode"); 
+    }
+
+
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         int num_inputs = static_cast<int>(inputs.size() + blobs.size());
-        CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs");
+        
+        CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs"); 
         CV_CheckLE(num_inputs, 3, "DNN/Gemm: Gemm takes at most three inputs");
-
-        bool const_B_ = const_B || inputs.size() < 2;
-        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
-        bool have_bias_ = have_bias || inputs.size() == 3;
+        
+        LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
 
         // Check whether A and B are two dimensional
         const auto shape_A = inputs[0];
-        const auto shape_B = const_B_ ? shape(blobs[0]) : inputs[1];
+        const auto shape_B =  constB(mode) ? shape(blobs[0]) : inputs[1];
         CV_CheckGE(shape_A.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor A must be n-dimensional (n >= 2)");
         CV_CheckEQ(shape_B.size(), static_cast<size_t>(2), "DNN/Gemm: Tensor B must be two dimensional");
 
@@ -95,8 +161,8 @@ public:
         CV_CheckEQ(K_a, K_b, "DNN/Gemm: Invalid dimension of dim K");
 
         // Check whether C can be unidirectional broadcast to (M, N). Handle carefully with 1D Mat.
-        if (have_bias_) {
-            const auto shape_C = const_C_ ? shape(blobs.back()) : inputs.back();
+        if (have_bias) {
+            const auto shape_C = constC(mode) ? shape(blobs.back()) : inputs.back();
 
             auto ndims_C = shape_C.size();
             CV_CheckLE(ndims_C, static_cast<size_t>(2), "DNN/Gemm: C can only be 0d (scalar) / 1d / 2d tensor");
@@ -171,19 +237,21 @@ public:
         }
     }
 
+
+
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         opt.init();
-
-        bool const_B_ = (const_B || inputs.size() < 2) && blobs.size() > 0;
-        bool const_C_ = (const_C || inputs.size() < 3) && blobs.size() > 1;
+        std::vector<Mat> inputs;
+        inputs_arr.getMatVector(inputs);
+        LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
 
         // pack B if it is const
-        if (const_B_) {
+        if (constB(mode)) {
             fastGemmPackB(blobs[0], packed_B, trans_b, opt);
         }
 
         // also pre-broadcast bias
-        if (const_C_) {
+        if (constC(mode)) {
             const auto &C = blobs.back();
 
             std::vector<Mat> outputs;
@@ -213,10 +281,8 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        bool const_B_ = const_B || inputs.size() < 2;
-        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
-        bool have_bias_ = have_bias || inputs.size() == 3;
-
+        LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
+        
         const auto &A = inputs[0];
         auto &Y = outputs[0];
 
@@ -227,9 +293,10 @@ public:
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
 
+        
         // broadcast C and copy C to output
-        if (have_bias_) {
-            if (!const_C_ || broadcast_C.empty()) {
+        if (constC(mode) || inputs.size() >= 3) {
+            if (!constC(mode) || broadcast_C.empty()) {
                 broadcastCWtihBeta(M, N, (inputs.size() >= 3 ? inputs.back() : blobs.back()));
             }
             int step = M * N;
@@ -242,7 +309,7 @@ public:
             std::memset(ptr_y, 0, total * sizeof(float));
         }
 
-        if (const_B_) {
+        if (constB(mode)) {
             CV_CheckGT(packed_B.size(), static_cast<size_t>(0), "DNN/Gemm: constant B is not pre-packed");
             fastGemm(trans_a, M, N, K, alpha, A.ptr<const float>(), na, packed_B.data(), 1.f, Y.ptr<float>(), N, opt);
         } else {
@@ -274,10 +341,6 @@ public:
     virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE {
-        bool const_B_ = const_B || inputs.size() < 2;
-        bool const_C_ = const_C || inputs.size() < 3; // may be true if no bias is provided, has to be used in combo with have_bias_
-        bool have_bias_ = have_bias || inputs.size() == 3;
-
         auto x1 = inputs[0].dynamicCast<CannBackendWrapper>();
         auto desc_x1 = x1->getTensorDesc();
         auto op_x1 = nodes[0].dynamicCast<CannBackendNode>()->getOp();
@@ -293,7 +356,7 @@ public:
         op->set_input_x1_by_name(*op_x1, x1->name.c_str());
         op->update_input_desc_x1(*desc_x1);
         // set inputs : x2
-        if (const_B_) {
+        if (const_B) {
             auto B = blobs[0];
             auto op_const_B = std::make_shared<CannConstOp>(B.data, B.type(), shape(B), cv::format("%s_w", name.c_str()));
             op->set_input_x2_by_name(*(op_const_B->getOp()), "y");
@@ -403,6 +466,8 @@ public:
         return Ptr<BackendNode>(new VkComBackendNode(inputs, op, outputs));
     }
 #endif
+
+
 
 private:
     bool const_B;
