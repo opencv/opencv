@@ -218,6 +218,7 @@ class Builder:
             rm_one(d)
 
     def build_library(self, abi, do_install, no_media_ndk):
+        print("::group::Building Library", flush=True)
         cmd = [self.cmake_path, "-GNinja"]
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
@@ -294,8 +295,10 @@ class Builder:
             execute([self.ninja_path, "install" if (self.debug_info or self.debug) else "install/strip"])
         else:
             execute([self.ninja_path, "-j1", "install" if (self.debug_info or self.debug) else "install/strip"])
+        print("::endgroup::", flush=True)
 
     def build_javadoc(self):
+        print("::group::Building Javadoc", flush=True)
         classpaths = []
         for dir, _, files in os.walk(os.environ["ANDROID_SDK"]):
             for f in files:
@@ -344,6 +347,7 @@ class Builder:
         # HACK: remove temporary files needed to satisfy javadoc imports
         os.remove(os.path.join(srcdir, 'org', 'opencv', 'BuildConfig.java'))
         os.remove(os.path.join(srcdir, 'org', 'opencv', 'R.java'))
+        print("::endgroup::", flush=True)
 
     def gather_results(self):
         # Copy all files
