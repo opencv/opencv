@@ -293,7 +293,6 @@ public:
         int M = shape_Y[dims_Y - 2], N = shape_Y[dims_Y - 1];
         int K = trans_a ? ma : na;
 
-        
         // broadcast C and copy C to output
         if (constC(mode) || inputs.size() >= 3) {
             if (!constC(mode) || broadcast_C.empty()) {
