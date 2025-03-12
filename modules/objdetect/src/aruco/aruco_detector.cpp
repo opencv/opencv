@@ -130,10 +130,10 @@ static void _threshold(InputArray _in, OutputArray _out, int winSize, double con
 static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candidates,
                                 vector<vector<Point> > &contoursOut, double minPerimeterRate,
                                 double maxPerimeterRate, double accuracyRate,
-                                double minCornerDistanceRate, int minDistanceToBorder, int minSize) {
+                                double minCornerDistanceRate, int minSize) {
 
     CV_Assert(minPerimeterRate > 0 && maxPerimeterRate > 0 && accuracyRate > 0 &&
-              minCornerDistanceRate >= 0 && minDistanceToBorder >= 0);
+              minCornerDistanceRate >= 0);
 
     // calculate maximum and minimum sizes in pixels
     unsigned int minPerimeterPixels =
@@ -170,16 +170,6 @@ static void _findMarkerContours(const Mat &in, vector<vector<Point2f> > &candida
         }
         double minCornerDistancePixels = double(contours[i].size()) * minCornerDistanceRate;
         if(minDistSq < minCornerDistancePixels * minCornerDistancePixels) continue;
-
-        // check if it is too near to the image border
-        bool tooNearBorder = false;
-        for(int j = 0; j < 4; j++) {
-            if(approxCurve[j].x < minDistanceToBorder || approxCurve[j].y < minDistanceToBorder ||
-               approxCurve[j].x > in.cols - 1 - minDistanceToBorder ||
-               approxCurve[j].y > in.rows - 1 - minDistanceToBorder)
-               tooNearBorder = true;
-        }
-        if(tooNearBorder) continue;
 
         // if it passes all the test, add to candidates vector
         vector<Point2f> currentCandidate;
@@ -305,7 +295,7 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
             _findMarkerContours(thresh, candidatesArrays[i], contoursArrays[i],
                                 params.minMarkerPerimeterRate, params.maxMarkerPerimeterRate,
                                 params.polygonalApproxAccuracyRate, params.minCornerDistanceRate,
-                                params.minDistanceToBorder, params.minSideLengthCanonicalImg);
+                                params.minSideLengthCanonicalImg);
         }
     });
     // join candidates
@@ -742,7 +732,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<vector<Point2f>> rejectedImgPoints;
         if (DictionaryMode::Single == dictMode) {
             Dictionary& dictionary = dictionaries.at(0);
-            auto selectedCandidates = filterTooCloseCandidates(candidates, contours, dictionary.markerSize);
+            auto selectedCandidates = filterTooCloseCandidates(grey.size(), candidates, contours, dictionary.markerSize);
             candidates.clear();
             contours.clear();
 
@@ -765,7 +755,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 // copy candidates
                 vector<vector<Point2f>> candidatesCopy = candidates;
                 vector<vector<Point> > contoursCopy = contours;
-                candidatesTreeEntry.second = filterTooCloseCandidates(candidatesCopy, contoursCopy, candidatesTreeEntry.first);
+                candidatesTreeEntry.second = filterTooCloseCandidates(grey.size(), candidatesCopy, contoursCopy, candidatesTreeEntry.first);
             }
             candidates.clear();
             contours.clear();
@@ -872,14 +862,14 @@ struct ArucoDetector::ArucoDetectorImpl {
     }
 
     /**
-     * @brief  FILTER OUT NEAR CANDIDATE PAIRS
+     * @brief FILTER OUT NEAR CANDIDATES PAIRS AND TOO NEAR CANDIDATES TO IMAGE BORDER
      *
-     * save the outter/inner border (i.e. potential candidates) to vector<MarkerCandidateTree>,
+     * save the outer/inner border (i.e. potential candidates) to vector<MarkerCandidateTree>,
      * clear candidates and contours
      */
     vector<MarkerCandidateTree>
-    filterTooCloseCandidates(vector<vector<Point2f> > &candidates, vector<vector<Point> > &contours, int markerSize) {
-        CV_Assert(detectorParams.minMarkerDistanceRate >= 0.);
+    filterTooCloseCandidates(const Size &imageSize, vector<vector<Point2f> > &candidates, vector<vector<Point> > &contours, int markerSize) {
+        CV_Assert(detectorParams.minMarkerDistanceRate >= 0. && detectorParams.minDistanceToBorder >= 0);
         vector<MarkerCandidateTree> candidateTree(candidates.size());
         for(size_t i = 0ull; i < candidates.size(); i++) {
             candidateTree[i] = MarkerCandidateTree(std::move(candidates[i]), std::move(contours[i]));
@@ -940,6 +930,20 @@ struct ArucoDetector::ArucoDetectorImpl {
             else // if detectInvertedMarker==false choose largest contours
                 std::stable_sort(grouped.begin(), grouped.end());
             size_t currId = grouped[0];
+            // check if it is too near to the image border
+            bool tooNearBorder = false;
+            for (const auto& corner : candidateTree[currId].corners) {
+                if (corner.x < detectorParams.minDistanceToBorder ||
+                    corner.y < detectorParams.minDistanceToBorder ||
+                    corner.x > imageSize.width - 1 - detectorParams.minDistanceToBorder ||
+                    corner.y > imageSize.height - 1 - detectorParams.minDistanceToBorder) {
+                    tooNearBorder = true;
+                    break;
+                }
+            }
+            if (tooNearBorder) {
+                continue;
+            }
             isSelectedContours[currId] = true;
             for (size_t i = 1ull; i < grouped.size(); i++) {
                 size_t id = grouped[i];
@@ -952,12 +956,11 @@ struct ArucoDetector::ArucoDetectorImpl {
             }
         }
 
-        vector<MarkerCandidateTree> selectedCandidates(groupedCandidates.size());
-        size_t countSelectedContours = 0ull;
+        vector<MarkerCandidateTree> selectedCandidates;
+        selectedCandidates.reserve(groupedCandidates.size());
         for (size_t i = 0ull; i < candidateTree.size(); i++) {
             if (isSelectedContours[i]) {
-                selectedCandidates[countSelectedContours] = std::move(candidateTree[i]);
-                countSelectedContours++;
+                selectedCandidates.push_back(std::move(candidateTree[i]));
             }
         }
 
