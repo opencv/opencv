@@ -45,11 +45,8 @@ inline VEC_T sqrt(VEC_T x, size_t vl)
         t = __riscv_vfrsub(t, 1.5, vl);
         y = __riscv_vfmul(t, y, vl);
     }
-    // just to prevent the compiler from calculating mask before the invSqrt, which will run out
-    // of registers and cause memory access.
-    asm volatile("" ::: "memory");
-    auto mask = __riscv_vmfne(x, 0.0, vl);
-    mask = __riscv_vmfne_mu(mask, mask, x, INFINITY, vl);
+    auto mask = __riscv_vmfne(y, 0.0, vl);
+    mask = __riscv_vmfne_mu(mask, mask, y, INFINITY, vl);
     return __riscv_vfmul_mu(mask, x, x, y, vl);
 }
 
