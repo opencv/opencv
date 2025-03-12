@@ -531,7 +531,6 @@ TEST_P(Imgproc_Threshold_Masked_Fixed, threshold_mask_fixed)
     int cn = get<2>(GetParam());
     int threshType = get<3>(GetParam());
     int threshFlag = get<4>(GetParam());
-    int type = CV_MAKETYPE(depth, cn);
 
     const int _threshType = threshType | threshFlag;
     Size sz(127, 127);
@@ -567,16 +566,18 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked_Fixed,
     )
 );
 
-typedef testing::TestWithParam< Imgproc_Threshold_Masked_Params_t > Imgproc_Threshold_Masked_Auto_Otsu;
+typedef testing::TestWithParam< Imgproc_Threshold_Masked_Params_t > Imgproc_Threshold_Masked_Auto;
 
-TEST_P(Imgproc_Threshold_Masked_Auto_Otsu, threshold_mask_auto_otsu)
+TEST_P(Imgproc_Threshold_Masked_Auto, threshold_mask_auto)
 {
     bool useROI = get<0>(GetParam());
     int depth = get<1>(GetParam());
     int cn = get<2>(GetParam());
     int threshType = get<3>(GetParam());
     int threshFlag = get<4>(GetParam());
-    int type = CV_MAKETYPE(depth, cn);
+
+    if (threshFlag == THRESH_TRIANGLE && depth != CV_8U)
+        throw SkipTestException("THRESH_TRIANGLE option supports CV_8UC1 input only");
 
     const int _threshType = threshType | threshFlag;
     Size sz(127, 127);
@@ -602,61 +603,15 @@ TEST_P(Imgproc_Threshold_Masked_Auto_Otsu, threshold_mask_auto_otsu)
     EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
 }
 
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked_Auto_Otsu,
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked_Auto,
     testing::Combine(
         testing::Values(false, true),//use roi
         testing::Values(CV_8U, CV_16U),//depth
         testing::Values(1),//channels
         testing::Values(THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV),// threshTypes
-        testing::Values(THRESH_OTSU)
+        testing::Values(THRESH_OTSU, THRESH_TRIANGLE)
     )
 );
-
-typedef testing::TestWithParam< Imgproc_Threshold_Masked_Params_t > Imgproc_Threshold_Masked_Auto_Triangle;
-
-TEST_P(Imgproc_Threshold_Masked_Auto_Triangle, threshold_mask_auto_triangle)
-{
-    bool useROI = get<0>(GetParam());
-    int depth = get<1>(GetParam());
-    int cn = get<2>(GetParam());
-    int threshType = get<3>(GetParam());
-    int threshFlag = get<4>(GetParam());
-    int type = CV_MAKETYPE(depth, cn);
-
-    const int _threshType = threshType | threshFlag;
-    Size sz(127, 127);
-    Size wrapperSize = useROI ? Size(sz.width+4, sz.height+4) : sz;
-    Mat wrapper(wrapperSize, CV_MAKETYPE(depth, cn));
-    Mat input = useROI ? Mat(wrapper, Rect(Point(), sz)) : wrapper;
-    cv::randu(input, cv::Scalar::all(0), cv::Scalar::all(255));
-
-    //for OTSU and TRIANGLE, we use a rectangular mask that can be just cropped
-    //in order to compute the threshold of the non-masked version
-    Mat mask = cv::Mat::zeros(sz, CV_8UC1);
-    cv::Rect roiRect(sz.width/4, sz.height/4, sz.width/2, sz.height/2);
-    cv::rectangle(mask, roiRect, cv::Scalar::all(255), cv::FILLED);
-
-    Mat output_with_mask = cv::Mat::zeros(sz, input.type());
-    const double autoThreshWithMask = cv::thresholdWithMask(input, output_with_mask, mask, 127, 255, _threshType);
-    output_with_mask = Mat(output_with_mask, roiRect);
-
-    Mat output_without_mask;
-    const double autoThresholdWithoutMask = cv::threshold(Mat(input, roiRect), output_without_mask, 127, 255, _threshType);
-
-    ASSERT_EQ(autoThreshWithMask, autoThresholdWithoutMask);
-    EXPECT_MAT_NEAR(output_with_mask, output_without_mask, 0);
-}
-
-INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgproc_Threshold_Masked_Auto_Triangle,
-    testing::Combine(
-        testing::Values(false, true),//use roi
-        testing::Values(CV_8U),//depth
-        testing::Values(1),//channels
-        testing::Values(THRESH_BINARY, THRESH_BINARY_INV, THRESH_TRUNC, THRESH_TOZERO, THRESH_TOZERO_INV),// threshTypes
-        testing::Values(THRESH_TRIANGLE)
-    )
-);
-
 
 TEST(Imgproc_Threshold, regression_THRESH_TOZERO_IPP_16085)
 {
