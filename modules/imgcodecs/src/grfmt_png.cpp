@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#include <memory>
+
 #ifdef HAVE_PNG
 
 /****************************************************************************************\
@@ -328,6 +330,8 @@ bool  PngDecoder::readHeader()
             delay_den = png_get_uint_16(&chunk.p[30]);
             dop = chunk.p[32];
             bop = chunk.p[33];
+            if (dop > 2 || bop > 1)
+                return false;
         }
 
         if (id == id_PLTE || id == id_tRNS)
@@ -480,6 +484,11 @@ bool  PngDecoder::readData( Mat& img )
                 {
                     return false;
                 }
+                // Asking for blend over with no alpha is invalid.
+                if (bop == 1 && img.channels() != 4)
+                {
+                    return false;
+                }
 
                 memcpy(&m_chunkIHDR.p[8], &chunk.p[12], 8);
                 return true;
@@ -607,6 +616,15 @@ bool PngDecoder::nextPage() {
 
 void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img)
 {
+    const size_t elem_size = img.elemSize();
+    if (_bop == 0) {
+        // Overwrite mode: copy source row directly to destination
+        for(uint32_t j = 0; j < h; ++j) {
+            std::memcpy(rows_dst[j + y] + x * elem_size,rows_src[j], w * elem_size);
+        }
+        return;
+    }
+
     int channels = img.channels();
     if (img.depth() == CV_16U)
         cv::parallel_for_(cv::Range(0, h), [&](const cv::Range& range) {
@@ -614,30 +632,24 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             uint16_t* sp = reinterpret_cast<uint16_t*>(rows_src[j]);
             uint16_t* dp = reinterpret_cast<uint16_t*>(rows_dst[j + y]) + x * channels;
 
-            if (_bop == 0) {
-                // Overwrite mode: copy source row directly to destination
-                memcpy(dp, sp, w * channels * sizeof(uint16_t));
-            }
-            else {
-                // Blending mode
-                for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
-                    if (sp[3] == 65535) { // Fully opaque in 16-bit (max value)
-                        memcpy(dp, sp, channels * sizeof(uint16_t));
+            // Blending mode
+            for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
+                if (channels < 4 || sp[3] == 65535) { // Fully opaque in 16-bit (max value)
+                    memcpy(dp, sp, elem_size);
+                }
+                else if (sp[3] != 0) { // Partially transparent
+                    if (dp[3] != 0) { // Both source and destination have alpha
+                        uint32_t u = sp[3] * 65535; // 16-bit max
+                        uint32_t v = (65535 - sp[3]) * dp[3];
+                        uint32_t al = u + v;
+                        dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
+                        dp[1] = static_cast<uint16_t>((sp[1] * u + dp[1] * v) / al); // Green
+                        dp[2] = static_cast<uint16_t>((sp[2] * u + dp[2] * v) / al); // Blue
+                        dp[3] = static_cast<uint16_t>(al / 65535);                  // Alpha
                     }
-                    else if (sp[3] != 0) { // Partially transparent
-                        if (dp[3] != 0) { // Both source and destination have alpha
-                            uint32_t u = sp[3] * 65535; // 16-bit max
-                            uint32_t v = (65535 - sp[3]) * dp[3];
-                            uint32_t al = u + v;
-                            dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
-                            dp[1] = static_cast<uint16_t>((sp[1] * u + dp[1] * v) / al); // Green
-                            dp[2] = static_cast<uint16_t>((sp[2] * u + dp[2] * v) / al); // Blue
-                            dp[3] = static_cast<uint16_t>(al / 65535);                  // Alpha
-                        }
-                        else {
-                            // If destination alpha is 0, copy source pixel
-                            memcpy(dp, sp, channels * sizeof(uint16_t));
-                        }
+                    else {
+                        // If destination alpha is 0, copy source pixel
+                        memcpy(dp, sp, elem_size);
                     }
                 }
             }
@@ -649,32 +661,26 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             unsigned char* sp = rows_src[j];
             unsigned char* dp = rows_dst[j + y] + x * channels;
 
-            if (_bop == 0) {
-                // Overwrite mode: copy source row directly to destination
-                memcpy(dp, sp, w * channels);
-            }
-            else {
-                // Blending mode
-                for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
-                    if (sp[3] == 255) {
-                        // Fully opaque: copy source pixel directly
-                        memcpy(dp, sp, channels);
+            // Blending mode
+            for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
+                if (channels < 4 || sp[3] == 255) {
+                    // Fully opaque: copy source pixel directly
+                    memcpy(dp, sp, elem_size);
+                }
+                else if (sp[3] != 0) {
+                    // Alpha blending
+                    if (dp[3] != 0) {
+                        int u = sp[3] * 255;
+                        int v = (255 - sp[3]) * dp[3];
+                        int al = u + v;
+                        dp[0] = (sp[0] * u + dp[0] * v) / al; // Red
+                        dp[1] = (sp[1] * u + dp[1] * v) / al; // Green
+                        dp[2] = (sp[2] * u + dp[2] * v) / al; // Blue
+                        dp[3] = al / 255;                     // Alpha
                     }
-                    else if (sp[3] != 0) {
-                        // Alpha blending
-                        if (dp[3] != 0) {
-                            int u = sp[3] * 255;
-                            int v = (255 - sp[3]) * dp[3];
-                            int al = u + v;
-                            dp[0] = (sp[0] * u + dp[0] * v) / al; // Red
-                            dp[1] = (sp[1] * u + dp[1] * v) / al; // Green
-                            dp[2] = (sp[2] * u + dp[2] * v) / al; // Blue
-                            dp[3] = al / 255;                     // Alpha
-                        }
-                        else {
-                            // If destination alpha is 0, copy source pixel
-                            memcpy(dp, sp, channels);
-                        }
+                    else {
+                        // If destination alpha is 0, copy source pixel
+                        memcpy(dp, sp, elem_size);
                     }
                 }
             }
