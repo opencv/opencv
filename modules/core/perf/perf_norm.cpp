@@ -59,7 +59,7 @@ PERF_TEST_P(Size_MatType_NormType, norm_mask,
 PERF_TEST_P(Size_MatType_NormType, norm2,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(TYPICAL_MAT_TYPES),
+                testing::Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1),
                 testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2, (int)(NORM_RELATIVE+NORM_INF), (int)(NORM_RELATIVE+NORM_L1), (int)(NORM_RELATIVE+NORM_L2))
                 )
             )
@@ -82,7 +82,7 @@ PERF_TEST_P(Size_MatType_NormType, norm2,
 PERF_TEST_P(Size_MatType_NormType, norm2_mask,
             testing::Combine(
                 testing::Values(TYPICAL_MAT_SIZES),
-                testing::Values(TYPICAL_MAT_TYPES),
+                testing::Values(CV_8UC1, CV_8UC4, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1),
                 testing::Values((int)NORM_INF, (int)NORM_L1, (int)NORM_L2, (int)(NORM_RELATIVE|NORM_INF), (int)(NORM_RELATIVE|NORM_L1), (int)(NORM_RELATIVE|NORM_L2))
                 )
             )
