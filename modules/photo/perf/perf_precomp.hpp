@@ -3,5 +3,6 @@
 
 #include "opencv2/ts.hpp"
 #include "opencv2/photo.hpp"
+#include "opencv2/ccm.hpp"
 
 #endif
