@@ -58,11 +58,11 @@ public:
         trans_b = params.get<bool>("transB", false);
         alpha = params.get<float>("alpha", 1.0f);
         beta = params.get<float>("beta", 1.0f);
-        
+
         // The params are not part of ONNX, but set by old ONNX parser
-        const_B = params.get<bool>("constB", false); 
-        const_C = params.get<bool>("constC", false); 
-        have_bias =  params.get<bool>("have_bias", false); 
+        const_B = params.get<bool>("constB", false);
+        const_C = params.get<bool>("constC", false);
+        have_bias =  params.get<bool>("have_bias", false);
 
         real_ndims_C = params.get<int>("real_ndims_C", -1);
     }
@@ -83,13 +83,13 @@ public:
         if (n_inputs == 2) {
             if (have_bias) {
                 // check where the input comes from
-                if(const_B) 
+                if(const_B)
                     return LayerGemmOpMode::blobB;
                 if(const_C)
                     return LayerGemmOpMode::blobC;
                 return LayerGemmOpMode::blobC;
             } else {
-                if (n_blobs == 1) 
+                if (n_blobs == 1)
                     // 2 inputs, no bias => input[1] is B
                     return LayerGemmOpMode::noblob;
                 if (n_blobs == 2)
@@ -98,12 +98,12 @@ public:
         }
         if (n_inputs == 1) {
             // only A is given per input
-            if (n_blobs == 2) 
+            if (n_blobs == 2)
                 return LayerGemmOpMode::blobBC;
             else
                 return LayerGemmOpMode::blobB;
         }
-        CV_Error(Error::StsError, "DNN/Gemm: could not derive OP mode"); 
+        CV_Error(Error::StsError, "DNN/Gemm: could not derive OP mode");
     }
 
 
@@ -113,9 +113,9 @@ public:
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         int num_inputs = static_cast<int>(inputs.size() + blobs.size());
 
-        CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs"); 
+        CV_CheckGE(num_inputs, 2, "DNN/Gemm: Gemm takes at least two inputs");
         CV_CheckLE(num_inputs, 3, "DNN/Gemm: Gemm takes at most three inputs");
-        
+
         LayerGemmOpMode mode = getOpMode(inputs.size(), blobs.size());
 
         // Check whether A and B are two dimensional
