@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
 */
 
@@ -32,6 +32,9 @@
 #define cv_hal_mul16s               fastcv_hal_mul16s
 #undef  cv_hal_mul32f
 #define cv_hal_mul32f               fastcv_hal_mul32f
+#undef  cv_hal_SVD32f
+#define cv_hal_SVD32f               fastcv_hal_SVD32f
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief look-up table transform of an array.
@@ -218,5 +221,33 @@ int fastcv_hal_mul32f(
     int             width,
     int             height,
     double          scale);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Performs singular value decomposition of \f$M\times N\f$(\f$M>N\f$) matrix \f$A = U*\Sigma*V^T\f$.
+///
+/// @param src      Pointer to input MxN matrix A stored in column major order.
+///                 After finish of work src will be filled with rows of U or not modified (depends of flag CV_HAL_SVD_MODIFY_A).
+/// @param src_step Number of bytes between two consequent columns of matrix A.
+/// @param w        Pointer to array for singular values of matrix A (i. e. first N diagonal elements of matrix \f$\Sigma\f$).
+/// @param u        Pointer to output MxN or MxM matrix U (size depends of flags).
+///                 Pointer must be valid if flag CV_HAL_SVD_MODIFY_A not used.
+/// @param u_step   Number of bytes between two consequent rows of matrix U.
+/// @param vt       Pointer to array for NxN matrix V^T.
+/// @param vt_step  Number of bytes between two consequent rows of matrix V^T.
+/// @param m        Number fo rows in matrix A.
+/// @param n        Number of columns in matrix A.
+/// @param flags    Algorithm options (combination of CV_HAL_SVD_FULL_UV, ...).
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_SVD32f(
+    float* src,
+    size_t src_step,
+    float* w,
+    float* u,
+    size_t u_step,
+    float* vt,
+    size_t vt_step,
+    int    m,
+    int    n,
+    int    flags);
 
 #endif
