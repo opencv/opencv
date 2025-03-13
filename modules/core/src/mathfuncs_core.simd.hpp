@@ -73,48 +73,30 @@ static inline float atan_f32(float y, float x)
 }
 #endif
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
-struct v_atan_f32
+v_float32 v_atan_f32(const v_float32& y, const v_float32& x)
 {
-    explicit v_atan_f32(const float& scale)
-    {
-        eps = vx_setall_f32((float)DBL_EPSILON);
-        z = vx_setzero_f32();
-        p7 = vx_setall_f32(atan2_p7);
-        p5 = vx_setall_f32(atan2_p5);
-        p3 = vx_setall_f32(atan2_p3);
-        p1 = vx_setall_f32(atan2_p1);
-        val90 = vx_setall_f32(90.f);
-        val180 = vx_setall_f32(180.f);
-        val360 = vx_setall_f32(360.f);
-        s = vx_setall_f32(scale);
-    }
+    v_float32 eps = vx_setall_f32((float)DBL_EPSILON);
+    v_float32 z = vx_setzero_f32();
+    v_float32 p7 = vx_setall_f32(atan2_p7);
+    v_float32 p5 = vx_setall_f32(atan2_p5);
+    v_float32 p3 = vx_setall_f32(atan2_p3);
+    v_float32 p1 = vx_setall_f32(atan2_p1);
+    v_float32 val90 = vx_setall_f32(90.f);
+    v_float32 val180 = vx_setall_f32(180.f);
+    v_float32 val360 = vx_setall_f32(360.f);
 
-    v_float32 compute(const v_float32& y, const v_float32& x)
-    {
-        v_float32 ax = v_abs(x);
-        v_float32 ay = v_abs(y);
-        v_float32 c = v_div(v_min(ax, ay), v_add(v_max(ax, ay), this->eps));
-        v_float32 cc = v_mul(c, c);
-        v_float32 a = v_mul(v_fma(v_fma(v_fma(cc, this->p7, this->p5), cc, this->p3), cc, this->p1), c);
-        a = v_select(v_ge(ax, ay), a, v_sub(this->val90, a));
-        a = v_select(v_lt(x, this->z), v_sub(this->val180, a), a);
-        a = v_select(v_lt(y, this->z), v_sub(this->val360, a), a);
-        return v_mul(a, this->s);
-    }
-
-    v_float32 eps;
-    v_float32 z;
-    v_float32 p7;
-    v_float32 p5;
-    v_float32 p3;
-    v_float32 p1;
-    v_float32 val90;
-    v_float32 val180;
-    v_float32 val360;
-    v_float32 s;
-};
+    v_float32 ax = v_abs(x);
+    v_float32 ay = v_abs(y);
+    v_float32 c = v_div(v_min(ax, ay), v_add(v_max(ax, ay), eps));
+    v_float32 cc = v_mul(c, c);
+    v_float32 a = v_mul(v_fma(v_fma(v_fma(cc, p7, p5), cc, p3), cc, p1), c);
+    a = v_select(v_ge(ax, ay), a, v_sub(val90, a));
+    a = v_select(v_lt(x, z), v_sub(val180, a), a);
+    a = v_select(v_lt(y, z), v_sub(val360, a), a);
+    return a;
+}
 
 #endif
 
@@ -124,9 +106,9 @@ static void cartToPolar32f_(const float *X, const float *Y, float *mag, float *a
 {
     float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
     int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VECSZ = VTraits<v_float32>::vlanes();
-    v_atan_f32 v(scale);
+    v_float32 s = vx_setall_f32(scale);
 
     for( ; i < len; i += VECSZ*2 )
     {
@@ -148,8 +130,8 @@ static void cartToPolar32f_(const float *X, const float *Y, float *mag, float *a
         v_float32 m0 = v_sqrt(v_muladd(x0, x0, v_mul(y0, y0)));
         v_float32 m1 = v_sqrt(v_muladd(x1, x1, v_mul(y1, y1)));
 
-        v_float32 r0 = v.compute(y0, x0);
-        v_float32 r1 = v.compute(y1, x1);
+        v_float32 r0 = v_mul(v_atan_f32(y0, x0), s);
+        v_float32 r1 = v_mul(v_atan_f32(y1, x1), s);
 
         v_store(mag + i, m0);
         v_store(mag + i + VECSZ, m1);
@@ -200,9 +182,9 @@ static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, 
 {
     float scale = angleInDegrees ? 1.f : (float)(CV_PI/180);
     int i = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     const int VECSZ = VTraits<v_float32>::vlanes();
-    v_atan_f32 v(scale);
+    v_float32 s = vx_setall_f32(scale);
 
     for( ; i < len; i += VECSZ*2 )
     {
@@ -221,8 +203,8 @@ static void fastAtan32f_(const float *Y, const float *X, float *angle, int len, 
         v_float32 y1 = vx_load(Y + i + VECSZ);
         v_float32 x1 = vx_load(X + i + VECSZ);
 
-        v_float32 r0 = v.compute(y0, x0);
-        v_float32 r1 = v.compute(y1, x1);
+        v_float32 r0 = v_mul(v_atan_f32(y0, x0), s);
+        v_float32 r1 = v_mul(v_atan_f32(y1, x1), s);
 
         v_store(angle + i, r0);
         v_store(angle + i + VECSZ, r1);
