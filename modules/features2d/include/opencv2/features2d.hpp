@@ -715,15 +715,16 @@ public:
 
 The class implements a simple algorithm for extracting blobs from an image:
 
-1.  Convert the source image to binary images by applying thresholding with several thresholds from
-    minThreshold (inclusive) to maxThreshold (exclusive) with distance thresholdStep between
-    neighboring thresholds.
-2.  Extract connected components from every binary image by findContours and calculate their
+1.  Convert the source image to a binary image by applying adaptiveThreshold, or to several binary
+    images with thresholds from minThreshold (inclusive) to maxThreshold (exclusive) with distance
+    thresholdStep between neighboring thresholds.
+2.  Extract connected components from the binary image/s by findContours and calculate their
     centers.
-3.  Group centers from several binary images by their coordinates. Close centers form one group that
-    corresponds to one blob, which is controlled by the minDistBetweenBlobs parameter.
-4.  From the groups, estimate final centers of blobs and their radiuses and return as locations and
-    sizes of keypoints.
+3.  If several thresholds are used, group centers from several binary images by their coordinates.
+    Close centers form one group that corresponds to one blob, which is controlled by the
+    minDistBetweenBlobs parameter.
+4.  Return centers of blobs and their radiuses as locations and sizes of keypoints. If several
+    thresholds are used, estimate final centers of blobs and their radiuses from the groups.
 
 This class performs several filtrations of returned blobs. You should set filterBy\* to true/false
 to turn on/off corresponding filtration. Available filtrations:
@@ -748,6 +749,13 @@ public:
   struct CV_EXPORTS_W_SIMPLE Params
   {
       CV_WRAP Params();
+
+      CV_PROP_RW bool useAdaptiveThreshold;
+      CV_PROP_RW int method;
+      CV_PROP_RW int type;
+      CV_PROP_RW int blockSize;
+      CV_PROP_RW double delta;
+      
       CV_PROP_RW float thresholdStep;
       CV_PROP_RW float minThreshold;
       CV_PROP_RW float maxThreshold;
