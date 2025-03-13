@@ -146,8 +146,8 @@ double getPSNR(const Mat &I1, const Mat &I2)
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
-    if (sse <= 1e-10)                                   // for small values return zero
-        return std::numeric_limits<double>::infinity(); // Identical images → Infinite PSNR
+    if (sse <= 1e-10) // for small values return 360
+        return 360;
     else
     {
         double mse = sse / (double)(I1.channels() * I1.total());
