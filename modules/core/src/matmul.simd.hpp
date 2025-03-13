@@ -2544,7 +2544,7 @@ double dotProd_32s(const int* src1, const int* src2, int len)
 #if CV_SIMD_WIDTH == 16
     const int wstep = step * 2;
     v_float64 v_sum1 = vx_setzero_f64();
-    for (; i < len - wstep; i += wstep, src1 += wstep, src2 += wstep)
+    for (; i <= len - wstep; i += wstep, src1 += wstep, src2 += wstep)
     {
         v_int32 v_src10 = vx_load(src1);
         v_int32 v_src20 = vx_load(src2);
@@ -2555,7 +2555,7 @@ double dotProd_32s(const int* src1, const int* src2, int len)
     }
     v_sum0 = v_add(v_sum0, v_sum1);
 #endif
-    for (; i < len - step; i += step, src1 += step, src2 += step)
+    for (; i <= len - step; i += step, src1 += step, src2 += step)
     {
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src2 = vx_load(src2);
