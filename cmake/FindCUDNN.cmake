@@ -42,7 +42,7 @@ The following cache variables will be set if cuDNN was found. They may also be s
 # find the library
 if(CUDA_FOUND)
   find_cuda_helper_libs(cudnn)
-  set(CUDNN_LIBRARY "C:/Program Files/NVIDIA/CUDNN/v9.5/lib/x64/cudnn.lib" CACHE FILEPATH "location of the cuDNN library")
+ set(CUDNN_LIBRARY "C:/Program Files/NVIDIA/CUDNN/v9.5/lib/x64/cudnn.lib" CACHE FILEPATH "location of the cuDNN library")
   unset(CUDA_cudnn_LIBRARY CACHE)
 endif()
 
