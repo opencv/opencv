@@ -165,8 +165,7 @@ int main(int, char *argv[])
     time /= TIMES;
 
     cout << "Time of MSSIM CUDA OPTIMIZED ( / " << TIMES << " runs): " << time << " milliseconds."
-         << " With result of B" << x.val[0] << " G" << x.val[1] << " R" << x.val[2] << endl
-         << endl;
+         << " With result of B" << x.val[0] << " G" << x.val[1] << " R" << x.val[2] << endl<< endl;
     return 0;
 }
 
@@ -182,8 +181,8 @@ double getPSNR(const Mat &I1, const Mat &I2)
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
-    if (sse <= 1e-10) // for small values return 360
-        return 360;
+    if (sse <= 1e-10) // for small values return zero
+        return 0;
     else
     {
         double mse = sse / (double)(I1.channels() * I1.total());
@@ -207,8 +206,8 @@ double getPSNR_CUDA_optimized(const Mat &I1, const Mat &I2, BufferPSNR &b)
 
     double sse = cuda::sum(b.gs, b.buf)[0];
 
-    if (sse <= 1e-10) // for small values return 360
-        return 360;
+    if (sse <= 1e-10) // for small values return zero
+        return 0;
     else
     {
         double mse = sse / (double)(I1.channels() * I1.total());
@@ -235,8 +234,8 @@ double getPSNR_CUDA(const Mat &I1, const Mat &I2)
     Scalar s = cuda::sum(gs);
     double sse = s.val[0] + s.val[1] + s.val[2];
 
-    if (sse <= 1e-10) // for small values return 360
-        return 360;
+    if (sse <= 1e-10) // for small values return zero
+        return 0;
     else
     {
         double mse = sse / (double)(gI1.channels() * I1.total());

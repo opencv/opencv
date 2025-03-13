@@ -41,8 +41,7 @@ int main(int argc, char *argv[])
 
     const string sourceReference = argv[1], sourceCompareWith = argv[2];
     int psnrTriggerValue, delay;
-    conv << argv[3] << endl
-         << argv[4];                   // put in the strings
+    conv << argv[3] << endl<< argv[4];                   // put in the strings
     conv >> psnrTriggerValue >> delay; // take out the numbers
 
     int frameNum = -1; // Frame counter
@@ -146,8 +145,8 @@ double getPSNR(const Mat &I1, const Mat &I2)
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
-    if (sse <= 1e-10) // for small values return 360
-        return 360;
+    if (sse <= 1e-10) // for small values return zero
+        return 0;
     else
     {
         double mse = sse / (double)(I1.channels() * I1.total());
