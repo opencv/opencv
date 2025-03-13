@@ -3126,10 +3126,15 @@ void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodePr
 {   
     int k=-1;
     
-    if (node_proto.hasAttribute("k")) 
+    for (const auto& attr : node_proto.attribute())
+{
+    if (attr.name() == "k")
     {
-        k = node_proto.getAttribute("k").i();
+        k = attr.i();
+        break;
     }
+}
+
     // K needs to be constant in case of being input (since opset 10)
    else if (node_proto.input_size() == 2) {
         bool K_const = constBlobs.find(node_proto.input(1)) != constBlobs.end();
