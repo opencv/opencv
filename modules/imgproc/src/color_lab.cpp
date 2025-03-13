@@ -1953,7 +1953,7 @@ struct RGB2Lab_f
             {
                 const int vsize = VTraits<v_float32>::vlanes();
                 static const int nPixels = vsize*2;
-                for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
+                for(; i <= n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
                 {
                     v_float32 rvec0, gvec0, bvec0, rvec1, gvec1, bvec1;
                     if(scn == 3)
@@ -3297,7 +3297,7 @@ struct RGB2Luvinterpolate
         {
             const int vsize = VTraits<v_uint16>::vlanes();
             static const int nPixels = vsize*2;
-            for(; i < n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
+            for(; i <= n - 3*nPixels; i += 3*nPixels, src += scn*nPixels)
             {
                 /*
                     int R = src[bIdx], G = src[1], B = src[bIdx^2];
