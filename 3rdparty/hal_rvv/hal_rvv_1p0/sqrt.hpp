@@ -45,11 +45,12 @@ inline VEC_T sqrt(VEC_T x, size_t vl)
         t = __riscv_vfrsub(t, 1.5, vl);
         y = __riscv_vfmul(t, y, vl);
     }
-    // just to prevent the compiler from calculating mask before the invSqrt, which will run out
+    // just to prevent the compiler from calculating mask before the iteration, which will run out
     // of registers and cause memory access.
     asm volatile("" ::: "memory");
-    auto mask = __riscv_vmfne(x, 0.0, vl);
-    mask = __riscv_vmfne_mu(mask, mask, x, INFINITY, vl);
+    auto classified = __riscv_vfclass(x, vl);
+    // block -0, +0, positive subnormal number, +inf
+    auto mask = __riscv_vmseq(__riscv_vand(classified, 0b10111000, vl), 0, vl);
     return __riscv_vfmul_mu(mask, x, x, y, vl);
 }
 
@@ -58,8 +59,9 @@ inline VEC_T sqrt(VEC_T x, size_t vl)
 template <size_t iter_times, typename VEC_T>
 inline VEC_T invSqrt(VEC_T x, size_t vl)
 {
-    auto mask = __riscv_vmfne(x, 0.0, vl);
-    mask = __riscv_vmfne_mu(mask, mask, x, INFINITY, vl);
+    auto classified = __riscv_vfclass(x, vl);
+    // block -0, +0, positive subnormal number, +inf
+    auto mask = __riscv_vmseq(__riscv_vand(classified, 0b10111000, vl), 0, vl);
     auto x2 = __riscv_vfmul(x, 0.5, vl);
     auto y = __riscv_vfrsqrt7(x, vl);
 #pragma unroll
