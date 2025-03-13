@@ -8,6 +8,11 @@ using namespace cv;
 traincascade.cpp is the source file of the program used for cascade training.
 User has to provide training input in form of positive and negative training images,
 and other data related to training in form of command line argument.
+commit1
+*/
+
+/*
+commit one
 */
 int main( int argc, char* argv[] )
 {
