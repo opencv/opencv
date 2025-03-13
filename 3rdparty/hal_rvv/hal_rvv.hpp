@@ -31,6 +31,7 @@
 #include "hal_rvv_1p0/minmax.hpp" // core
 #include "hal_rvv_1p0/atan.hpp" // core
 #include "hal_rvv_1p0/split.hpp" // core
+#include "hal_rvv_1p0/magnitude.hpp" // core
 #include "hal_rvv_1p0/flip.hpp" // core
 #include "hal_rvv_1p0/lut.hpp" // core
 #include "hal_rvv_1p0/exp.hpp" // core
@@ -39,6 +40,7 @@
 #include "hal_rvv_1p0/cholesky.hpp" // core
 #include "hal_rvv_1p0/qr.hpp" // core
 #include "hal_rvv_1p0/svd.hpp" // core
+#include "hal_rvv_1p0/sqrt.hpp" // core
 
 #include "hal_rvv_1p0/filter.hpp" // imgproc
 #include "hal_rvv_1p0/pyramids.hpp" // imgproc
