@@ -3123,9 +3123,8 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
 }
 
 void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
-{   
+{
     int k = -1;
-    
     for (const auto& attr : node_proto.attribute())
     {
         if (attr.name() == "k")
