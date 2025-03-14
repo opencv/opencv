@@ -45,7 +45,7 @@ struct NormL2_SIMD {
     inline ST operator() (const T* src, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = src[i];
+            ST v = (ST)src[i];
             s += v * v;
         }
         return s;
