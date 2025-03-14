@@ -126,7 +126,7 @@ public:
     CV_WRAP void getContour(const Point& targetPt, OutputArray contour, bool backward = false) const;
 
 #ifndef CV_DOXYGEN
-    struct Impl;
+    struct CV_IMPL_HIDDEN Impl;
     inline Impl* getImpl() const { return impl.get(); }
 protected:
     std::shared_ptr<Impl> impl;

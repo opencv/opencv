@@ -73,7 +73,7 @@ public:
     */
     CV_WRAP bool detectAndDecodeMulti(InputArray img, CV_OUT std::vector<std::string>& decoded_info, OutputArray points = noArray(),
                                       OutputArrayOfArrays straight_code = noArray()) const;
-    struct Impl;
+    struct CV_IMPL_HIDDEN Impl;
 protected:
     Ptr<Impl> p;
 };
