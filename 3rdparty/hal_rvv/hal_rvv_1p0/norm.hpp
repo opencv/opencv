@@ -1,34 +1,55 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-
+//
 // Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+// Copyright (C) 2025, SpaceMIT Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #ifndef OPENCV_HAL_RVV_NORM_HPP_INCLUDED
 #define OPENCV_HAL_RVV_NORM_HPP_INCLUDED
 
 #include "common.hpp"
 
-namespace cv { namespace cv_hal_rvv {
+namespace cv { namespace cv_hal_rvv { namespace norm {
 
-#undef cv_hal_getNormFunc
-#define cv_hal_getNormFunc cv::cv_hal_rvv::get_norm_func
+#undef cv_hal_norm
+#define cv_hal_norm cv::cv_hal_rvv::norm::norm
 
 namespace {
 
 template <typename T, typename ST>
 struct NormInf_RVV {
-    inline ST operator() (const T* src, int n) const { return 0; }
+    inline ST operator() (const T* src, int n) const {
+        ST s = 0;
+        for (int i = 0; i < n; i++) {
+            s = std::max(s, (ST)cv_abs(src[i]));
+        }
+        return s;
+    }
 };
 
 template <typename T, typename ST>
 struct NormL1_RVV {
-    inline ST operator() (const T* src, int n) const { return 0; }
+    inline ST operator() (const T* src, int n) const {
+        ST s = 0;
+        for (int i = 0; i < n; i++) {
+            s += cv_abs(src[i]);
+        }
+        return s;
+    }
 };
 
 template <typename T, typename ST>
 struct NormL2_RVV {
-    inline ST operator() (const T* src, int n) const { return 0; }
+    inline ST operator() (const T* src, int n) const {
+        ST s = 0;
+        for (int i = 0; i < n; i++) {
+            ST v = src[i];
+            s += v * v;
+        }
+        return s;
+    }
 };
 
 template<>
@@ -951,11 +972,16 @@ CV_HAL_RVV_DEF_NORM_ALL(64f, double, double, double, double)
 }
 
 using NormFunc = int (*)(const uchar*, const uchar*, uchar*, int, int);
-inline int get_norm_func(int normType, int depth, NormFunc *fn)
-{
+inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step, int width,
+                int height, int type, int norm_type, double* result) {
+    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+
+    if (result == nullptr || depth == CV_16F || norm_type > NORM_L2SQR) {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
     // [FIXME] append 0's when merging to 5.x
-    static NormFunc norm_tab[3][CV_DEPTH_MAX] =
-    {
+    static NormFunc norm_tab[3][CV_DEPTH_MAX] = {
         {
             (NormFunc)(normInf_8u), (NormFunc)(normInf_8s),
             (NormFunc)(normInf_16u), (NormFunc)(normInf_16s),
@@ -975,15 +1001,94 @@ inline int get_norm_func(int normType, int depth, NormFunc *fn)
             (NormFunc)(normL2_64f), 0,
         },
     };
-    *fn = norm_tab[normType][depth];
-    if (*fn) {
-        return CV_HAL_ERROR_OK;
+
+    static const size_t elem_size_tab[CV_DEPTH_MAX] = {
+        sizeof(uchar),   sizeof(schar),
+        sizeof(ushort),  sizeof(short),
+        sizeof(int),     sizeof(float),
+        sizeof(int64_t), 0,
+    };
+
+    bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
+    bool mask_continuous = (mask_step == width);
+    size_t nplanes = 1;
+    size_t size = width * height;
+    if ((mask && (!src_continuous || !mask_continuous)) || !src_continuous) {
+        nplanes = height;
+        size = width;
     }
-    else {
+
+    NormFunc func = norm_tab[norm_type >> 1][depth];
+    if (func == nullptr) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
+
+    // Handle overflow
+    union {
+        double d;
+        int i;
+        float f;
+    } res;
+    res.d = 0;
+    if ((norm_type == NORM_L1 && depth <= CV_16S) ||
+        ((norm_type == NORM_L2 || norm_type == NORM_L2SQR) && depth <= CV_8S)) {
+        const size_t esz = elem_size_tab[depth] * cn;
+        const int total = (int)size;
+        const int intSumBlockSize = (norm_type == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
+        const int blockSize = std::min(total, intSumBlockSize);
+        int isum = 0;
+        int count = 0;
+        auto _src = src;
+        auto _mask = mask;
+        for (size_t i = 0; i < nplanes; i++) {
+            if ((mask && (!src_continuous || !mask_continuous)) || !src_continuous) {
+                _src = src + src_step * i;
+                _mask = mask + mask_step * i;
+            }
+            for (int j = 0; j < total; j += blockSize) {
+                int bsz = std::min(total - j, blockSize);
+                func(_src, _mask, (uchar*)&isum, bsz, cn);
+                count += bsz;
+                if (count + blockSize >= intSumBlockSize || (i + 1 >= nplanes && j + bsz >= total)) {
+                    res.d += isum;
+                    isum = 0;
+                    count = 0;
+                }
+                _src += bsz * esz;
+                if (mask) {
+                    _mask += bsz;
+                }
+            }
+        }
+    } else {
+        auto _src = src;
+        auto _mask = mask;
+        for (size_t i = 0; i < nplanes; i++) {
+            if ((mask && (!src_continuous || !mask_continuous)) || !src_continuous) {
+                _src = src + src_step * i;
+                _mask = mask + mask_step * i;
+            }
+            func(_src, _mask, (uchar*)&res, (int)size, cn);
+        }
+    }
+
+    if (norm_type == NORM_INF) {
+        if (depth == CV_64F) {
+            *result = res.d;
+        } else if (depth == CV_32F) {
+            *result = res.f;
+        } else {
+            *result = res.i;
+        }
+    } else if (norm_type == NORM_L2) {
+        *result = std::sqrt(res.d);
+    } else {
+        *result = res.d;
+    }
+
+    return CV_HAL_ERROR_OK;
 }
 
-}}
+}}} // cv::cv_hal_rvv::norm
 
 #endif

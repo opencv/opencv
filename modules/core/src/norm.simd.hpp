@@ -1331,9 +1331,6 @@ NormFunc getNormFunc(int normType, int depth)
 {
     CV_INSTRUMENT_REGION();
 
-    NormFunc fn;
-    CALL_HAL_RET(getNormFunc, cv_hal_getNormFunc, fn, normType, depth);
-
     // [FIXME] append 0's when merging to 5.x
     static NormFunc normTab[3][CV_DEPTH_MAX] =
     {
@@ -1350,8 +1347,8 @@ NormFunc getNormFunc(int normType, int depth)
             (NormFunc)GET_OPTIMIZED(normL2_32s), (NormFunc)GET_OPTIMIZED(normL2_32f), (NormFunc)normL2_64f, 0
         }
     };
-    fn = normTab[normType][depth];
-    return fn;
+
+    return normTab[normType][depth];
 }
 
 NormDiffFunc getNormDiffFunc(int normType, int depth)

@@ -523,12 +523,6 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
     if (!result)
         return CV_HAL_ERROR_OK;
 
-    if(norm_type & NORM_RELATIVE)
-    {
-        // [TODO] Support NORM_RELATIVE via a redesign of this HAL
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    }
-
     int ret;
     switch (type)
     {
@@ -594,6 +588,16 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
         break;
     default:
         ret = CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    if(ret == CV_HAL_ERROR_OK && (norm_type & NORM_RELATIVE))
+    {
+        double result_;
+        ret = cv::cv_hal_rvv::norm::norm(src2, src2_step, mask, mask_step, width, height, type, norm_type & ~NORM_RELATIVE, &result_);
+        if(ret == CV_HAL_ERROR_OK)
+        {
+            *result /= result_ + DBL_EPSILON;
+        }
     }
 
     return ret;
