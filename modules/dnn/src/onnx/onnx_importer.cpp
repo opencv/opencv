@@ -2246,10 +2246,21 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
     if (node_proto.input_size() == 2)
     {
         Mat blob = getBlob(node_proto, 1);
+        CV_Assert(blob.dims == 1 || blob.total() == 1);
         axes = DictValue::arrayInt(blob.ptr<int>(), blob.total());
     }
     else
         axes = layerParams.get("axes");
+    std::vector<int> inputShape = layerParams.get("input_shape").getIntVector();
+    for (int i = 0; i < axes.size(); i++)
+    {
+        int axis = axes.getIntValue(i);
+        CV_Assert(axis >= 0 && axis <= static_cast<int>(inputShape.size()));
+        inputShape.insert(inputShape.begin() + axis, 1);
+    }
+    layerParams.set("shape", DictValue::arrayInt(inputShape.data(), (int)inputShape.size()));
+}
+
 
     if (constBlobs.find(node_proto.input(0)) != constBlobs.end())
     {
