@@ -341,8 +341,8 @@ void CV_ArucoDetectionUnc::run(int) {
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
 
     // Params to test
-    float ingnoreMarginPerCell[3] = {0.0, 0.1, 0.2};
-    int borderBitsTest[3] = {1,2,3};
+    const float ingnoreMarginPerCell[3] = {0.0f, 0.1f, 0.2f};
+    const int borderBitsTest[3] = {1,2,3};
 
     const int markerSidePixels = 150;
     const int imageSize = (markerSidePixels * 2) + 3 * (markerSidePixels / 2);
@@ -361,11 +361,11 @@ void CV_ArucoDetectionUnc::run(int) {
         Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
 
         // Invert the pixel value of a % of each cell [0%, 2%, 4%, ..., 48%]
-        float invertPixelPercent = 2 * i / 100.f;
-        int markerSizeWithBorders = 6 + 2 * params.markerBorderBits;
-        int cellSidePixelsSize = markerSidePixels / markerSizeWithBorders;
-        int cellSidePixelsInvert = int(sqrt(invertPixelPercent) * cellSidePixelsSize);
-        int cellMarginPixels = (cellSidePixelsSize - cellSidePixelsInvert) / 2; // Invert center of the cell
+        const float invertPixelPercent = 2 * i / 100.f;
+        const int markerSizeWithBorders = 6 + 2 * params.markerBorderBits;
+        const int cellSidePixelsSize = markerSidePixels / markerSizeWithBorders;
+        const int cellSidePixelsInvert = int(sqrt(invertPixelPercent) * cellSidePixelsSize);
+        const int cellMarginPixels = (cellSidePixelsSize - cellSidePixelsInvert) / 2; // Invert center of the cell
 
         float groundTruthUnc;
 
@@ -373,7 +373,7 @@ void CV_ArucoDetectionUnc::run(int) {
         for(int y = 0; y < 2; y++) {
             for(int x = 0; x < 2; x++) {
                 Mat marker;
-                int id = i * 4 + y * 2 + x;
+                const int id = i * 4 + y * 2 + x;
                 groundTruthIds.push_back(id);
 
                 // Generate marker
@@ -398,8 +398,8 @@ void CV_ArucoDetectionUnc::run(int) {
                     // loop over each cell
                     for(int k = 0; k < markerSizeWithBorders; k++) {
                         for(int p = 0; p < markerSizeWithBorders; p++) {
-                            int Xstart = p * (cellSidePixelsSize) + cellMarginPixels;
-                            int Ystart = k * (cellSidePixelsSize) + cellMarginPixels;
+                            const int Xstart = p * (cellSidePixelsSize) + cellMarginPixels;
+                            const int Ystart = k * (cellSidePixelsSize) + cellMarginPixels;
                             Mat square(marker, Rect(Xstart, Ystart, cellSidePixelsInvert, cellSidePixelsInvert));
                             square = ~square;
                         }
