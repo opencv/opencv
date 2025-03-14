@@ -439,6 +439,70 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
 }
 
 
+/** @brief Given a matrix containing the percentage of white pixels in each marker cell, returns the normalized marker uncertainty [0;1] for the specific id.
+ * The uncertainty is defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
+ * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
+ */
+static float _getMarkerUnc(const Dictionary& dictionary, const Mat &whitePixRatio, const int id,
+                                     const int rotation, const int borderSize) {
+
+    CV_Assert(id >= 0 && id < dictionary.bytesList.rows);
+    const int markerSize = dictionary.markerSize;
+    const int sizeWithBorders = markerSize + 2 * borderSize;
+
+    CV_Assert(markerSize > 0 && whitePixRatio.cols == sizeWithBorders && whitePixRatio.rows == sizeWithBorders);
+
+    // Get border uncertainty. Assuming black borders, the uncertainty is the ratio of white pixels.
+    float tempBorderUnc = 0.f;
+    for(int y = 0; y < sizeWithBorders; y++) {
+        for(int k = 0; k < borderSize; k++) {
+            // Left and right vertical sides
+            tempBorderUnc += whitePixRatio.ptr<float>(y)[k];
+            tempBorderUnc += whitePixRatio.ptr<float>(y)[sizeWithBorders - 1 - k];
+        }
+    }
+    for(int x = borderSize; x < sizeWithBorders - borderSize; x++) {
+        for(int k = 0; k < borderSize; k++) {
+            // Top and bottom horizontal sides
+            tempBorderUnc += whitePixRatio.ptr<float>(k)[x];
+            tempBorderUnc += whitePixRatio.ptr<float>(sizeWithBorders - 1 - k)[x];
+        }
+    }
+
+    // Get the ground truth bits and rotate them:
+    Mat groundTruthbits = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(id, id + 1), markerSize);
+    CV_Assert(groundTruthbits.cols == markerSize && groundTruthbits.rows == markerSize);
+
+    if(rotation == 1){
+        // 90 deg CCW
+        transpose(groundTruthbits, groundTruthbits);
+        flip(groundTruthbits, groundTruthbits,0);
+
+    } else if (rotation == 2){
+        // 180 deg CCW
+        flip(groundTruthbits, groundTruthbits,-1);
+
+    } else if (rotation == 3){
+        // 90 deg CW
+        transpose(groundTruthbits, groundTruthbits);
+        flip(groundTruthbits, groundTruthbits,1);
+    }
+
+    // Get the inner marker uncertainty. For a white or black cell, the uncertainty is the ratio of black or white pixels respectively.
+    float tempInnerUnc = 0.f;
+    for(int y = borderSize; y < markerSize + borderSize; y++) {
+        for(int x = borderSize; x < markerSize + borderSize; x++) {
+            tempInnerUnc += abs(groundTruthbits.ptr<unsigned char>(y - borderSize)[x - borderSize] - whitePixRatio.ptr<float>(y)[x]);
+        }
+    }
+
+    // Compute the overall normalized marker uncertainty
+    float normalizedMarkerUnc = (tempInnerUnc + tempBorderUnc) / (sizeWithBorders * sizeWithBorders);
+
+    return normalizedMarkerUnc;
+}
+
+
 /**
  * @brief Tries to identify one candidate given the dictionary
  * @return candidate typ. zero if the candidate is not valid,
@@ -505,7 +569,7 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         return 0;
 
     // compute the candidate's uncertainty
-    markerUnc = dictionary.getMarkerUnc(whitePixRatio, idx, rotation, params.markerBorderBits);
+    markerUnc = _getMarkerUnc(dictionary, whitePixRatio, idx, rotation, params.markerBorderBits);
 
     return typ;
 }

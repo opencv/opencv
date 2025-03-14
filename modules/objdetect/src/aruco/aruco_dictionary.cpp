@@ -110,65 +110,6 @@ bool Dictionary::identify(const Mat &onlyBits, int &idx, int &rotation, double m
     return idx != -1;
 }
 
-float Dictionary::getMarkerUnc(InputArray _whitePixRatio, int id, int rotation, int borderSize) const {
-
-    CV_Assert(id >= 0 && id < bytesList.rows);
-    const int sizeWithBorders = markerSize + 2 * borderSize;
-
-    Mat whitePixRatio = _whitePixRatio.getMat();
-
-    CV_Assert(markerSize > 0 && whitePixRatio.cols == sizeWithBorders && whitePixRatio.rows == sizeWithBorders);
-
-    // Get border uncertainty. Assuming black borders, the uncertainty is the ratio of white pixels.
-    float tempBorderUnc = 0.f;
-    for(int y = 0; y < sizeWithBorders; y++) {
-        for(int k = 0; k < borderSize; k++) {
-            // Left and right vertical sides
-            tempBorderUnc += whitePixRatio.ptr<float>(y)[k];
-            tempBorderUnc += whitePixRatio.ptr<float>(y)[sizeWithBorders - 1 - k];
-        }
-    }
-    for(int x = borderSize; x < sizeWithBorders - borderSize; x++) {
-        for(int k = 0; k < borderSize; k++) {
-            // Top and bottom horizontal sides
-            tempBorderUnc += whitePixRatio.ptr<float>(k)[x];
-            tempBorderUnc += whitePixRatio.ptr<float>(sizeWithBorders - 1 - k)[x];
-        }
-    }
-
-    // Get the ground truth bits and rotate them:
-    Mat groundTruthbits = getBitsFromByteList(bytesList.rowRange(id, id + 1), markerSize);
-    CV_Assert(groundTruthbits.cols == markerSize && groundTruthbits.rows == markerSize);
-
-    if(rotation == 1){
-        // 90 deg CCW
-        transpose(groundTruthbits, groundTruthbits);
-        flip(groundTruthbits, groundTruthbits,0);
-
-    } else if (rotation == 2){
-        // 180 deg CCW
-        flip(groundTruthbits, groundTruthbits,-1);
-
-    } else if (rotation == 3){
-        // 90 deg CW
-        transpose(groundTruthbits, groundTruthbits);
-        flip(groundTruthbits, groundTruthbits,1);
-    }
-
-    // Get the inner marker uncertainty. For a white or black cell, the uncertainty is the ratio of black or white pixels respectively.
-    float tempInnerUnc = 0.f;
-    for(int y = borderSize; y < markerSize + borderSize; y++) {
-        for(int x = borderSize; x < markerSize + borderSize; x++) {
-            tempInnerUnc += abs(groundTruthbits.ptr<unsigned char>(y - borderSize)[x - borderSize] - whitePixRatio.ptr<float>(y)[x]);
-        }
-    }
-
-    // Compute the overall normalized marker uncertainty
-    float normalizedMarkerUnc = (tempInnerUnc + tempBorderUnc) / (sizeWithBorders * sizeWithBorders);
-
-    return normalizedMarkerUnc;
-}
-
 
 int Dictionary::getDistanceToId(InputArray bits, int id, bool allRotations) const {
 

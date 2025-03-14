@@ -71,12 +71,6 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      */
     CV_WRAP int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
 
-    /** @brief Given a matrix containing the percentage of white pixels in each marker cell, returns the normalized marker uncertainty [0;1] for the specific id.
-     * The uncertainty is defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
-     * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
-     */
-    CV_WRAP float getMarkerUnc(InputArray whitePixelRatio, int id, int rotation = 0, int borderBits = 1) const;
-
     /** @brief Generate a canonical marker image
      */
     CV_WRAP void generateImageMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
