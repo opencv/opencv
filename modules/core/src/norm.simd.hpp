@@ -59,8 +59,8 @@ struct NormDiffInf_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = ST(src1[i] - src2[i]);
-            s = std::max(s, (ST)cv_abs(v));
+            ST v = ST(cv_absdiff(src1[i], src2[i]));
+            s = std::max(s, v);
         }
         return s;
     }
@@ -71,7 +71,7 @@ struct NormDiffL1_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = ST(src1[i] - src2[i]);
+            ST v = ST(cv_absdiff(src1[i], src2[i]));
             s += cv_abs(v);
         }
         return s;
@@ -81,9 +81,10 @@ struct NormDiffL1_SIMD {
 template <typename T, typename ST>
 struct NormDiffL2_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
+        // return normL2Sqr<T, ST>(src1, src2, n);
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = ST(src1[i] - src2[i]);
+            ST v = (ST)src1[i] - (ST)src2[i];
             s += v * v;
         }
         return s;
@@ -1353,7 +1354,7 @@ normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int l
         for( int i = 0; i < len; i++, src1 += cn, src2 += cn ) {
             if( mask[i] ) {
                 for( int k = 0; k < cn; k++ ) {
-                    result = std::max(result, (ST)cv_abs(src1[k] - src2[k]));
+                    result = std::max(result, (ST)cv_absdiff(src1[k], src2[k]));
                 }
             }
         }
@@ -1368,12 +1369,11 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     if( !mask ) {
         NormDiffL1_SIMD<T, ST> op;
         result += op(src1, src2, len*cn);
-    }
-    else {
+    } else {
         for( int i = 0; i < len; i++, src1 += cn, src2 += cn ) {
             if( mask[i] ) {
                 for( int k = 0; k < cn; k++ ) {
-                    result += cv_abs(src1[k] - src2[k]);
+                    result += cv_absdiff(src1[k], src2[k]);
                 }
             }
         }
@@ -1392,7 +1392,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
         for( int i = 0; i < len; i++, src1 += cn, src2 += cn ) {
             if( mask[i] ) {
                 for( int k = 0; k < cn; k++ ) {
-                    ST v = src1[k] - src2[k];
+                    ST v = (ST)src1[k] - (ST)src2[k];
                     result += v*v;
                 }
             }
