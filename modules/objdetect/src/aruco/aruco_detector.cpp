@@ -313,7 +313,7 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
   * the border bits
   */
 static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int markerSize,
-                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu, OutputArray _whitePixRatio = noArray()) {
+                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu, OutputArray _cellPixelRatio = noArray()) {
     CV_Assert(_image.getMat().channels() == 1);
     CV_Assert(corners.size() == 4ull);
     CV_Assert(markerBorderBits > 0 && cellSize > 0 && cellMarginRate >= 0 && cellMarginRate <= 0.5);
@@ -339,7 +339,7 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
 
     // output image containing the bits
     Mat bits(markerSizeWithBorders, markerSizeWithBorders, CV_8UC1, Scalar::all(0));
-    Mat whitePixRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
+    Mat cellPixelRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
 
     // check if standard deviation is enough to apply Otsu
     // if not enough, it probably means all bits are the same color (black or white)
@@ -352,13 +352,13 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
         // all black or all white, depending on mean value
         if(mean.ptr< double >(0)[0] > 127){
             bits.setTo(1);
-            whitePixRatio.setTo(1);
+            cellPixelRatio.setTo(1);
         }
         else {
             bits.setTo(0);
-            whitePixRatio.setTo(0);
+            cellPixelRatio.setTo(0);
         }
-        if(_whitePixRatio.needed()) whitePixRatio.copyTo(_whitePixRatio);
+        if(_cellPixelRatio.needed()) cellPixelRatio.copyTo(_cellPixelRatio);
         return bits;
     }
 
@@ -376,7 +376,8 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
             size_t nZ = (size_t) countNonZero(square);
             if(nZ > square.total() / 2) bits.at<unsigned char>(y, x) = 1;
 
-            if(_whitePixRatio.needed()){
+            // define the cell pixel ratio as the ratio of the white pixels. For inverted markers, the ratio will be inverted.
+            if(_cellPixelRatio.needed()){
 
                 // Get white pixel ratio from the complete cell
                 if(cellMarginPixels > 0){
@@ -397,16 +398,16 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
                     nZMarginPixels += (size_t) countNonZero(rightRect);
                     totalMarginPixels += rightRect.total();
 
-                    whitePixRatio.at<float>(y, x) = (nZ + nZMarginPixels) / (float)(square.total() + totalMarginPixels);
+                    cellPixelRatio.at<float>(y, x) = (nZ + nZMarginPixels) / (float)(square.total() + totalMarginPixels);
                 }
                 else {
-                    whitePixRatio.at<float>(y, x) = (nZ / (float)square.total());
+                    cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
                 }
             }
         }
     }
 
-    if(_whitePixRatio.needed()) whitePixRatio.copyTo(_whitePixRatio);
+    if(_cellPixelRatio.needed()) cellPixelRatio.copyTo(_cellPixelRatio);
 
     return bits;
 }
@@ -443,29 +444,29 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
  * The uncertainty is defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
  * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
  */
-static float _getMarkerUnc(const Dictionary& dictionary, const Mat &whitePixRatio, const int id,
+static float _getMarkerUnc(const Dictionary& dictionary, const Mat &cellPixelRatio, const int id,
                                      const int rotation, const int borderSize) {
 
     CV_Assert(id >= 0 && id < dictionary.bytesList.rows);
     const int markerSize = dictionary.markerSize;
     const int sizeWithBorders = markerSize + 2 * borderSize;
 
-    CV_Assert(markerSize > 0 && whitePixRatio.cols == sizeWithBorders && whitePixRatio.rows == sizeWithBorders);
+    CV_Assert(markerSize > 0 && cellPixelRatio.cols == sizeWithBorders && cellPixelRatio.rows == sizeWithBorders);
 
-    // Get border uncertainty. Assuming black borders, the uncertainty is the ratio of white pixels.
+    // Get border uncertainty. cellPixelRatio has the opposite color as the borders --> it is the uncertainty.
     float tempBorderUnc = 0.f;
     for(int y = 0; y < sizeWithBorders; y++) {
         for(int k = 0; k < borderSize; k++) {
             // Left and right vertical sides
-            tempBorderUnc += whitePixRatio.ptr<float>(y)[k];
-            tempBorderUnc += whitePixRatio.ptr<float>(y)[sizeWithBorders - 1 - k];
+            tempBorderUnc += cellPixelRatio.ptr<float>(y)[k];
+            tempBorderUnc += cellPixelRatio.ptr<float>(y)[sizeWithBorders - 1 - k];
         }
     }
     for(int x = borderSize; x < sizeWithBorders - borderSize; x++) {
         for(int k = 0; k < borderSize; k++) {
             // Top and bottom horizontal sides
-            tempBorderUnc += whitePixRatio.ptr<float>(k)[x];
-            tempBorderUnc += whitePixRatio.ptr<float>(sizeWithBorders - 1 - k)[x];
+            tempBorderUnc += cellPixelRatio.ptr<float>(k)[x];
+            tempBorderUnc += cellPixelRatio.ptr<float>(sizeWithBorders - 1 - k)[x];
         }
     }
 
@@ -492,7 +493,7 @@ static float _getMarkerUnc(const Dictionary& dictionary, const Mat &whitePixRati
     float tempInnerUnc = 0.f;
     for(int y = borderSize; y < markerSize + borderSize; y++) {
         for(int x = borderSize; x < markerSize + borderSize; x++) {
-            tempInnerUnc += abs(groundTruthbits.ptr<unsigned char>(y - borderSize)[x - borderSize] - whitePixRatio.ptr<float>(y)[x]);
+            tempInnerUnc += abs(groundTruthbits.ptr<unsigned char>(y - borderSize)[x - borderSize] - cellPixelRatio.ptr<float>(y)[x]);
         }
     }
 
@@ -524,12 +525,12 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         scaled_corners[i].y = _corners[i].y * scale;
     }
 
-    Mat whitePixRatio;
+    Mat cellPixelRatio;
     Mat candidateBits =
         _extractBits(_image, scaled_corners, dictionary.markerSize, params.markerBorderBits,
                      params.perspectiveRemovePixelPerCell,
                      params.perspectiveRemoveIgnoredMarginPerCell, params.minOtsuStdDev,
-                     whitePixRatio);
+                     cellPixelRatio);
 
     // analyze border bits
     int maximumErrorsInBorder =
@@ -542,11 +543,11 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         // to get from 255 to 1
         Mat invertedImg = ~candidateBits-254;
         int invBError = _getBorderErrors(invertedImg, dictionary.markerSize, params.markerBorderBits);
+        cellPixelRatio = -1.0 * cellPixelRatio + 1;
         // white marker
         if(invBError<borderErrors){
             borderErrors = invBError;
             invertedImg.copyTo(candidateBits);
-            whitePixRatio = -1.0 * whitePixRatio + 1;
             typ=2;
         }
     }
@@ -558,18 +559,12 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
                                candidateBits.rows - params.markerBorderBits)
             .colRange(params.markerBorderBits, candidateBits.cols - params.markerBorderBits);
 
-    Mat onlyWhitePixRatio =
-        whitePixRatio.rowRange(params.markerBorderBits,
-                               whitePixRatio.rows - params.markerBorderBits)
-            .colRange(params.markerBorderBits, whitePixRatio.cols - params.markerBorderBits);
-
-
     // try to indentify the marker
     if(!dictionary.identify(onlyBits, idx, rotation, params.errorCorrectionRate))
         return 0;
 
     // compute the candidate's uncertainty
-    markerUnc = _getMarkerUnc(dictionary, whitePixRatio, idx, rotation, params.markerBorderBits);
+    markerUnc = _getMarkerUnc(dictionary, cellPixelRatio, idx, rotation, params.markerBorderBits);
 
     return typ;
 }
