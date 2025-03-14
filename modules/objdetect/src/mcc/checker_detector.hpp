@@ -70,7 +70,7 @@ public:
     {
         return m_checkers;
     }
-    virtual void getRefColor(const COLORCHART chartType, Mat& output) CV_OVERRIDE;
+    virtual void getRefColors(const COLORCHART chartType, Mat& output) CV_OVERRIDE;
 
     virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const Scalar color = CV_RGB(0,250,0), const int thickness = 2) CV_OVERRIDE;
 

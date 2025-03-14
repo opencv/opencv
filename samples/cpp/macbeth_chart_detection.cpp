@@ -50,6 +50,53 @@ const string target_keys = format(
 
 string keys = param_keys + backend_keys + target_keys;
 
+static void processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, COLORCHART chartType, int nc, bool isLastFrame){
+    Mat imageCopy = frame.clone();
+    if (!detector->process(frame, chartType, nc, true))
+    {
+        printf("ChartColor not detected \n");
+    }
+    else
+    {
+        vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
+        detector->draw(checkers, frame);
+
+        int key = waitKey(10);
+        if (key == ' '){
+            Mat src = checkers[0]->getChartsRGB(false);
+            Mat tgt;
+            detector->getRefColors(MCC24, tgt);
+            cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+            cout<<"Actual colors: "<<src<<endl<<endl;
+            cout<<"Press spacebar to resume."<<endl;
+
+            for(;;) {
+                int pauseKey = waitKey(0);
+                if (pauseKey == ' ') {
+                    break;
+                } else if (pauseKey == 27) {
+                    exit(0);
+                }
+            }
+        }
+        imshow("image result | q or esc to quit", frame);
+        imshow("original", imageCopy);
+        if (key == 27)
+            exit(0);
+
+        if (isLastFrame){
+            Mat src = checkers[0]->getChartsRGB(false);
+            Mat tgt;
+            detector->getRefColors(MCC24, tgt);
+            cout << "\n*** Last Frame Colors ***" << endl;
+            cout << "Reference colors: " << tgt << endl;
+            cout << "Actual colors: " << src << endl;
+
+            waitKey(0);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     CommandLineParser parser(argc, argv, keys);
@@ -87,13 +134,6 @@ int main(int argc, char *argv[])
     int nc = parser.get<int>("num_charts");
     bool use_gpu = parser.has("use_gpu");
 
-    int waitTime=10;
-    VideoCapture cap;
-    if (parser.has("input"))
-        cap.open(findFile(parser.get<String>("input")));
-    else
-        cap.open(0);
-
     Ptr<CCheckerDetector> detector;
     if (model_path != "" && pbtxt_path != ""){
         Net net = readNetFromTensorflow(model_path, pbtxt_path);
@@ -114,37 +154,47 @@ int main(int argc, char *argv[])
         detector = CCheckerDetector::create();
     }
 
-    while (cap.grab())
-    {
-        Mat image, imageCopy;
-        cap.retrieve(image);
+    bool isVideo = true;
+    Mat image;
+    VideoCapture cap;
 
-        imageCopy = image.clone();
-
-        // Marker type to detect
-        if (!detector->process(image, chartType, nc, true))
+    if (parser.has("input")){
+        const string inputFile = parser.get<String>("input");
+        image = imread(findFile(inputFile));
+        if (!image.empty())
         {
-            printf("ChartColor not detected \n");
+            isVideo = false;
         }
         else
         {
-            vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
-            detector->draw(checkers, image);
-
-            Mat chartRgb = checkers[0]->getChartsRGB();
-            Mat src = chartRgb.col(1).clone().reshape(3, chartRgb.rows/3);
-            Mat tgt;
-            detector->getRefColor(MCC24, tgt);
-            cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
-            cout<<"Actual colors: "<<src<<endl;
+            // Not an image, so try opening it as a video.
+            cap.open(findFile(inputFile));
+            if (!cap.isOpened())
+            {
+                cout << "[ERROR] Could not open file as an image or video: " << inputFile << endl;
+                return -1;
+            }
         }
-
-        imshow("image result | q or esc to quit", image);
-        imshow("original", imageCopy);
-        char key = (char)waitKey(waitTime);
-        if (key == 27)
-            break;
     }
-    waitKey(0);
+    else
+        cap.open(0);
+
+    if (isVideo){
+        cout<<"To print the actual colors and reference colors for current frame press SPACEBAR. To resume press SPACEBAR again"<<endl;
+        double totalFrames = cap.get(cv::CAP_PROP_FRAME_COUNT);
+        while (cap.grab())
+        {
+            Mat image;
+            cap.retrieve(image);
+
+            double currentFrame = cap.get(cv::CAP_PROP_POS_FRAMES);
+            bool isLastFrame = (currentFrame == totalFrames);
+
+            processFrame(image, detector, chartType, nc, isLastFrame);
+        }
+    }
+    else{
+        processFrame(image, detector, chartType, nc, true);
+    }
     return 0;
 }

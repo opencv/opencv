@@ -138,7 +138,7 @@ public:
     COLORCHART getTarget() CV_OVERRIDE;
     std::vector<Point2f> getBox() CV_OVERRIDE;
     std::vector<Point2f> getColorCharts() CV_OVERRIDE;
-    Mat getChartsRGB() CV_OVERRIDE;
+    Mat getChartsRGB(bool getStats = true) CV_OVERRIDE;
     Mat getChartsYCbCr() CV_OVERRIDE;
     float getCost() CV_OVERRIDE;
     Point2f getCenter() CV_OVERRIDE;
