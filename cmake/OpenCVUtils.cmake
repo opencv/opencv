@@ -559,9 +559,9 @@ MACRO(ocv_check_compiler_flag LANG FLAG RESULT)
 ENDMACRO()
 
 macro(ocv_check_flag_support lang flag varname base_options)
-  if(CMAKE_BUILD_TYPE)
+if(CMAKE_BUILD_TYPE)
     set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
-  endif()
+endif()
 
   if("_${lang}_" MATCHES "_CXX_")
     set(_lang CXX)
@@ -1592,7 +1592,7 @@ function(ocv_add_library target)
   if(APPLE_FRAMEWORK AND BUILD_SHARED_LIBS)
     message(STATUS "Setting Apple target properties for ${target}")
 
-    set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG 1)
+    set(CMAKE_SHARED_LIBRARY_RUNTIME_C_FLAG "-Wl,-rpath,")
 
     if((IOS OR XROS) AND NOT MAC_CATALYST)
       set(OPENCV_APPLE_INFO_PLIST "${CMAKE_BINARY_DIR}/ios/Info.plist")
