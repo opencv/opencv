@@ -578,7 +578,8 @@ normInf_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     ST result = *_result;
     if( !mask )
     {
-        result = std::max(result, normInf<T, ST>(src, len*cn));
+        NormInf_SIMD<T, ST> op;
+        result = std::max(result, op(src, len*cn));
     }
     else
     {
@@ -599,7 +600,8 @@ normL1_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     ST result = *_result;
     if( !mask )
     {
-        result += normL1<T, ST>(src, len*cn);
+        NormL1_SIMD<T, ST> op;
+        result += op(src, len*cn);
     }
     else
     {
@@ -620,7 +622,8 @@ normL2_(const T* src, const uchar* mask, ST* _result, int len, int cn)
     ST result = *_result;
     if( !mask )
     {
-        result += normL2Sqr<T, ST>(src, len*cn);
+        NormL2_SIMD<T, ST> op;
+        result += op(src, len*cn);
     }
     else
     {
