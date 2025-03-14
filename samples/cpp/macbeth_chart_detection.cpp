@@ -184,13 +184,13 @@ int main(int argc, char *argv[])
         double totalFrames = cap.get(cv::CAP_PROP_FRAME_COUNT);
         while (cap.grab())
         {
-            Mat image;
-            cap.retrieve(image);
+            Mat frame;
+            cap.retrieve(frame);
 
             double currentFrame = cap.get(cv::CAP_PROP_POS_FRAMES);
             bool isLastFrame = (currentFrame == totalFrames);
 
-            processFrame(image, detector, chartType, nc, isLastFrame);
+            processFrame(frame, detector, chartType, nc, isLastFrame);
         }
     }
     else{
