@@ -38,10 +38,10 @@ private:
 };
 
 template<typename... Args>
-static inline int invoke(int start, int end, std::function<int(int, int, Args...)> func, Args&&... args)
+static inline int invoke(int height, std::function<int(int, int, Args...)> func, Args&&... args)
 {
-    cv::parallel_for_(Range(start + 1, end), FilterInvoker(func, std::forward<Args>(args)...), cv::getNumThreads());
-    return func(start, start + 1, std::forward<Args>(args)...);
+    cv::parallel_for_(Range(1, height), FilterInvoker(func, std::forward<Args>(args)...), cv::getNumThreads());
+    return func(0, 1, std::forward<Args>(args)...);
 }
 
 static inline int borderInterpolate( int p, int len, int borderType )
@@ -179,10 +179,10 @@ static void process5(int anchor, int left, int right, float delta, const float* 
             auto v3 = __riscv_vfwcvt_f(__riscv_vwcvtu_x(__riscv_vget_v_u8m1x4_u8m1(src, 3), vl), vl);
 
             const uchar* extra = row + (i + vl - anchor) * 4;
-            s0 = addshift(s0, v0, k0, k1, k2, k3, k4, *(extra    ), *(extra + 4), *(extra +  8), *(extra + 12));
-            s1 = addshift(s1, v1, k0, k1, k2, k3, k4, *(extra + 1), *(extra + 5), *(extra +  9), *(extra + 13));
-            s2 = addshift(s2, v2, k0, k1, k2, k3, k4, *(extra + 2), *(extra + 6), *(extra + 10), *(extra + 14));
-            s3 = addshift(s3, v3, k0, k1, k2, k3, k4, *(extra + 3), *(extra + 7), *(extra + 11), *(extra + 15));
+            s0 = addshift(s0, v0, k0, k1, k2, k3, k4, extra[0], extra[4], extra[ 8], extra[12]);
+            s1 = addshift(s1, v1, k0, k1, k2, k3, k4, extra[1], extra[5], extra[ 9], extra[13]);
+            s2 = addshift(s2, v2, k0, k1, k2, k3, k4, extra[2], extra[6], extra[10], extra[14]);
+            s3 = addshift(s3, v3, k0, k1, k2, k3, k4, extra[3], extra[7], extra[11], extra[15]);
         };
 
         loadsrc(row0, kernel[ 0], kernel[ 1], kernel[ 2], kernel[ 3], kernel[ 4]);
@@ -250,9 +250,9 @@ static inline int filter(int start, int end, Filter2D* data, const uchar* src_da
         dst_data[(x * width + y) * 4 + 3] = std::max(0, std::min((int)std::round(sum3), (int)std::numeric_limits<uchar>::max()));
     };
 
+    const int left = data->anchor_x, right = width - (ksize - 1 - data->anchor_x);
     for (int i = start; i < end; i++)
     {
-        const int left = ksize - 1, right = width - (ksize - 1);
         if (left >= right)
         {
             for (int j = 0; j < width; j++)
@@ -293,10 +293,10 @@ inline int filter(cvhalFilter2D* context, uchar* src_data, size_t src_step, ucha
     switch (data->kernel_width)
     {
     case 3:
-        res = invoke(0, height, {filter<3>}, data, src_data, src_step, dst.data(), width, height, full_width, full_height, offset_x, offset_y);
+        res = invoke(height, {filter<3>}, data, src_data, src_step, dst.data(), width, height, full_width, full_height, offset_x, offset_y);
         break;
     case 5:
-        res = invoke(0, height, {filter<5>}, data, src_data, src_step, dst.data(), width, height, full_width, full_height, offset_x, offset_y);
+        res = invoke(height, {filter<5>}, data, src_data, src_step, dst.data(), width, height, full_width, full_height, offset_x, offset_y);
         break;
     }
 
@@ -355,85 +355,10 @@ inline int sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, in
 // the algorithm is copied from 3rdparty/carotene/src/separable_filter.hpp,
 // in the functor RowFilter3x3S16Generic and ColFilter3x3S16Generic
 template<int ksize>
-static inline int sepFilterRow(int start, int end, sepFilter2D* data, const uchar* src_data, size_t src_step, float* dst_data, int width, int full_width, int offset_x)
+static inline int sepFilter(int start, int end, sepFilter2D* data, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
 {
     constexpr int noval = std::numeric_limits<int>::max();
-    auto access = [&](int y) {
-        int pj;
-        if (data->borderType & BORDER_ISOLATED)
-        {
-            pj = filter::borderInterpolate(y - data->anchor_x, width, data->borderType & ~BORDER_ISOLATED);
-            pj = pj < 0 ? noval : pj;
-        }
-        else
-        {
-            pj = filter::borderInterpolate(offset_x + y - data->anchor_x, full_width, data->borderType);
-            pj = pj < 0 ? noval : pj - offset_x;
-        }
-        return pj;
-    };
-
-    const float* kx = reinterpret_cast<const float*>(data->kernelx_data);
-    auto process = [&](int x, int y) {
-        float sum = 0;
-        for (int i = 0; i < ksize; i++)
-        {
-            int p = access(y + i);
-            if (p != noval)
-            {
-                sum += kx[i] * src_data[x * src_step + p];
-            }
-        }
-        dst_data[x * width + y] = sum;
-    };
-
-    for (int i = start; i < end; i++)
-    {
-        const int left = ksize - 1, right = width - (ksize - 1);
-        if (left >= right)
-        {
-            for (int j = 0; j < width; j++)
-                process(i, j);
-        }
-        else
-        {
-            for (int j = 0; j < left; j++)
-                process(i, j);
-            for (int j = right; j < width; j++)
-                process(i, j);
-
-            int vl;
-            for (int j = left; j < right; j += vl)
-            {
-                vl = __riscv_vsetvl_e8m2(right - j);
-                const uchar* extra = src_data + i * src_step + j - data->anchor_x;
-                auto sum = __riscv_vfmv_v_f_f32m8(0, vl);
-                auto src = __riscv_vfwcvt_f(__riscv_vwcvtu_x(__riscv_vle8_v_u8m2(extra, vl), vl), vl);
-                sum = __riscv_vfmacc(sum, kx[0], src, vl);
-                src = __riscv_vfslide1down(src, extra[vl], vl);
-                sum = __riscv_vfmacc(sum, kx[1], src, vl);
-                src = __riscv_vfslide1down(src, extra[vl + 1], vl);
-                sum = __riscv_vfmacc(sum, kx[2], src, vl);
-                if (ksize == 5)
-                {
-                    src = __riscv_vfslide1down(src, extra[vl + 2], vl);
-                    sum = __riscv_vfmacc(sum, kx[3], src, vl);
-                    src = __riscv_vfslide1down(src, extra[vl + 3], vl);
-                    sum = __riscv_vfmacc(sum, kx[4], src, vl);
-                }
-                __riscv_vse32(dst_data + i * width + j, sum, vl);
-            }
-        }
-    }
-
-    return CV_HAL_ERROR_OK;
-}
-
-template<int ksize>
-static inline int sepFilterCol(int start, int end, sepFilter2D* data, const float* src_data, uchar* dst_data, size_t dst_step, int width, int height, int full_height, int offset_y)
-{
-    constexpr int noval = std::numeric_limits<int>::max();
-    auto access = [&](int x) {
+    auto accessX = [&](int x) {
         int pi;
         if (data->borderType & BORDER_ISOLATED)
         {
@@ -447,42 +372,115 @@ static inline int sepFilterCol(int start, int end, sepFilter2D* data, const floa
         }
         return pi;
     };
-
-    const float* ky = reinterpret_cast<const float*>(data->kernely_data);
-    for (int i = start; i < end; i++)
-    {
-        const float* row0 = access(i    ) == noval ? nullptr : src_data + access(i    ) * width;
-        const float* row1 = access(i + 1) == noval ? nullptr : src_data + access(i + 1) * width;
-        const float* row2 = access(i + 2) == noval ? nullptr : src_data + access(i + 2) * width;
-        const float* row3, *row4;
-        if (ksize == 5)
+    auto accessY = [&](int y) {
+        int pj;
+        if (data->borderType & BORDER_ISOLATED)
         {
-            row3 = access(i + 3) == noval ? nullptr : src_data + access(i + 3) * width;
-            row4 = access(i + 4) == noval ? nullptr : src_data + access(i + 4) * width;
+            pj = filter::borderInterpolate(y - data->anchor_x, width, data->borderType & ~BORDER_ISOLATED);
+            pj = pj < 0 ? noval : pj;
         }
-
-        int vl;
-        for (int j = 0; j < width; j += vl)
+        else
         {
-            vl = __riscv_vsetvl_e32m4(width - j);
-            auto v0 = row0 ? __riscv_vle32_v_f32m4(row0 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
-            auto v1 = row1 ? __riscv_vle32_v_f32m4(row1 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
-            auto v2 = row2 ? __riscv_vle32_v_f32m4(row2 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
-            auto sum = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmv_v_f_f32m4(data->delta, vl), ky[0], v0, vl), ky[1], v1, vl), ky[2], v2, vl);
+            pj = filter::borderInterpolate(offset_x + y - data->anchor_x, full_width, data->borderType);
+            pj = pj < 0 ? noval : pj - offset_x;
+        }
+        return pj;
+    };
+    auto p2idx = [&](int x, int y){ return (x + ksize) % ksize * width + y; };
 
-            if (ksize == 5)
+    const float* kx = reinterpret_cast<const float*>(data->kernelx_data);
+    const float* ky = reinterpret_cast<const float*>(data->kernely_data);
+    std::vector<float> res(width * ksize);
+    auto process = [&](int x, int y) {
+        float sum = 0;
+        for (int i = 0; i < ksize; i++)
+        {
+            int p = accessY(y + i);
+            if (p != noval)
             {
-                auto v3 = row3 ? __riscv_vle32_v_f32m4(row3 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
-                auto v4 = row4 ? __riscv_vle32_v_f32m4(row4 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
-                sum = __riscv_vfmacc(__riscv_vfmacc(sum, ky[3], v3, vl), ky[4], v4, vl);
+                sum += kx[i] * src_data[x * src_step + p];
             }
-            if (data->dst_type == CV_16SC1)
+        }
+        res[p2idx(x, y)] = sum;
+    };
+
+    const int left = data->anchor_x, right = width - (ksize - 1 - data->anchor_x);
+    for (int i = start - data->anchor_y; i < end + (ksize - 1 - data->anchor_y); i++)
+    {
+        if (i + offset_y >= 0 && i + offset_y < full_height)
+        {
+            if (left >= right)
             {
-                __riscv_vse16(reinterpret_cast<short*>(dst_data + i * dst_step) + j, __riscv_vfncvt_x(sum, vl), vl);
+                for (int j = 0; j < width; j++)
+                    process(i, j);
             }
             else
             {
-                __riscv_vse32(reinterpret_cast<float*>(dst_data + i * dst_step) + j, sum, vl);
+                for (int j = 0; j < left; j++)
+                    process(i, j);
+                for (int j = right; j < width; j++)
+                    process(i, j);
+
+                int vl;
+                for (int j = left; j < right; j += vl)
+                {
+                    vl = __riscv_vsetvl_e8m2(right - j);
+                    const uchar* extra = src_data + i * src_step + j - data->anchor_x;
+                    auto sum = __riscv_vfmv_v_f_f32m8(0, vl);
+                    auto src = __riscv_vfwcvt_f(__riscv_vwcvtu_x(__riscv_vle8_v_u8m2(extra, vl), vl), vl);
+                    sum = __riscv_vfmacc(sum, kx[0], src, vl);
+                    src = __riscv_vfslide1down(src, extra[vl], vl);
+                    sum = __riscv_vfmacc(sum, kx[1], src, vl);
+                    src = __riscv_vfslide1down(src, extra[vl + 1], vl);
+                    sum = __riscv_vfmacc(sum, kx[2], src, vl);
+                    if (ksize == 5)
+                    {
+                        src = __riscv_vfslide1down(src, extra[vl + 2], vl);
+                        sum = __riscv_vfmacc(sum, kx[3], src, vl);
+                        src = __riscv_vfslide1down(src, extra[vl + 3], vl);
+                        sum = __riscv_vfmacc(sum, kx[4], src, vl);
+                    }
+                    __riscv_vse32(res.data() + p2idx(i, j), sum, vl);
+                }
+            }
+        }
+
+        int cur = i - (ksize - 1 - data->anchor_y);
+        if (cur >= start)
+        {
+            const float* row0 = accessX(cur    ) == noval ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
+            const float* row1 = accessX(cur + 1) == noval ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
+            const float* row2 = accessX(cur + 2) == noval ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
+            const float* row3, *row4;
+            if (ksize == 5)
+            {
+                row3 = accessX(cur + 3) == noval ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
+                row4 = accessX(cur + 4) == noval ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
+            }
+
+            int vl;
+            for (int j = 0; j < width; j += vl)
+            {
+                vl = __riscv_vsetvl_e32m4(width - j);
+                auto v0 = row0 ? __riscv_vle32_v_f32m4(row0 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
+                auto v1 = row1 ? __riscv_vle32_v_f32m4(row1 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
+                auto v2 = row2 ? __riscv_vle32_v_f32m4(row2 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
+                auto sum = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmv_v_f_f32m4(data->delta, vl), ky[0], v0, vl), ky[1], v1, vl), ky[2], v2, vl);
+
+                if (ksize == 5)
+                {
+                    auto v3 = row3 ? __riscv_vle32_v_f32m4(row3 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
+                    auto v4 = row4 ? __riscv_vle32_v_f32m4(row4 + j, vl) : __riscv_vfmv_v_f_f32m4(0, vl);
+                    sum = __riscv_vfmacc(__riscv_vfmacc(sum, ky[3], v3, vl), ky[4], v4, vl);
+                }
+                if (data->dst_type == CV_16SC1)
+                {
+                    __riscv_vse16(reinterpret_cast<short*>(dst_data + cur * dst_step) + j, __riscv_vfncvt_x(sum, vl), vl);
+                }
+                else
+                {
+                    __riscv_vse32(reinterpret_cast<float*>(dst_data + cur * dst_step) + j, sum, vl);
+                }
             }
         }
     }
@@ -493,29 +491,13 @@ static inline int sepFilterCol(int start, int end, sepFilter2D* data, const floa
 inline int sepFilter(cvhalFilter2D *context, uchar *src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
 {
     sepFilter2D* data = reinterpret_cast<sepFilter2D*>(context);
-    const int padding = data->kernelx_length - 1;
-    std::vector<float> _result(width * (height + 2 * padding));
-    float* result = _result.data() + width * padding;
-
-    int res = CV_HAL_ERROR_NOT_IMPLEMENTED;
-    switch (data->kernelx_length)
-    {
-    case 3:
-        res = filter::invoke(-std::min(offset_y, padding), height + std::min(full_height - height - offset_y, padding), {sepFilterRow<3>}, data, src_data, src_step, result, width, full_width, offset_x);
-        break;
-    case 5:
-        res = filter::invoke(-std::min(offset_y, padding), height + std::min(full_height - height - offset_y, padding), {sepFilterRow<5>}, data, src_data, src_step, result, width, full_width, offset_x);
-        break;
-    }
-    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     switch (data->kernelx_length)
     {
     case 3:
-        return filter::invoke(0, height, {sepFilterCol<3>}, data, result, dst_data, dst_step, width, height, full_height, offset_y);
+        return filter::invoke(height, {sepFilter<3>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
     case 5:
-        return filter::invoke(0, height, {sepFilterCol<5>}, data, result, dst_data, dst_step, width, height, full_height, offset_y);
+        return filter::invoke(height, {sepFilter<5>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -696,9 +678,9 @@ static inline int morph(int start, int end, Morph2D* data, const uchar* src_data
         }
     };
 
+    const int left = data->anchor_x, right = width - (2 - data->anchor_x);
     for (int i = start; i < end; i++)
     {
-        const int left = 2, right = width - 2;
         if (left >= right)
         {
             for (int j = 0; j < width; j++)
@@ -827,10 +809,10 @@ inline int morph(cvhalFilter2D* context, uchar *src_data, size_t src_step, uchar
     switch (data->operation)
     {
     case CV_HAL_MORPH_ERODE:
-        res = filter::invoke(0, height, {morph<CV_HAL_MORPH_ERODE>}, data, src_data, src_step, dst.data(), width, height, src_full_width, src_full_height, src_roi_x, src_roi_y);
+        res = filter::invoke(height, {morph<CV_HAL_MORPH_ERODE>}, data, src_data, src_step, dst.data(), width, height, src_full_width, src_full_height, src_roi_x, src_roi_y);
         break;
     case CV_HAL_MORPH_DILATE:
-        res = filter::invoke(0, height, {morph<CV_HAL_MORPH_DILATE>}, data, src_data, src_step, dst.data(), width, height, src_full_width, src_full_height, src_roi_x, src_roi_y);
+        res = filter::invoke(height, {morph<CV_HAL_MORPH_DILATE>}, data, src_data, src_step, dst.data(), width, height, src_full_width, src_full_height, src_roi_x, src_roi_y);
         break;
     }
 
