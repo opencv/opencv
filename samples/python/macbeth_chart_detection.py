@@ -54,15 +54,50 @@ def get_args_parser(func_args):
         ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 
+def process_frame(frame, detector, chart_type, num_charts, is_last_frame):
+    image_copy = frame.copy()
+    if not detector.process(frame, chart_type, num_charts, True):
+        print("ChartColor not detected.")
+    else:
+        checkers = detector.getListColorChecker()
+        detector.draw(checkers, frame)
+
+        key = cv.waitKey(10) & 0xFF
+        if key == ord(' '):
+            src = checkers[0].getChartsRGB(False)
+            tgt = np.empty((src.shape), dtype=np.int32)
+            detector.getRefColors(cv.mcc.MCC24, tgt)
+
+            print("Actual colors: ", src)
+            print("Reference colors: ", tgt)
+
+            while(True):
+                pause_key = cv.waitKey(0)
+                if pause_key == ord(' '):
+                    break
+                elif pause_key == 27:
+                    exit(0)
+
+        cv.imshow("image result | Press ESC to quit", frame)
+        cv.imshow("original", image_copy)
+        if key == 27:
+            exit(0)
+
+        if is_last_frame:
+            src = checkers[0].getChartsRGB(False)
+            tgt = np.empty((src.shape), dtype=np.int32)
+            detector.getRefColors(cv.mcc.MCC24, tgt)
+
+            print("Actual colors: ", src)
+            print("Reference colors: ", tgt)
+            cv.waitKey(0)
+
+
 def main(func_args=None):
     args = get_args_parser(func_args)
 
     if not (0 <= args.type <= 2):
         raise ValueError("chartType must be 0, 1, or 2")
-
-    # Open input video stream (camera or file)
-    cap = cv.VideoCapture(findFile(args.input) if args.input else 0)
-    wait_time = 10
 
     if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None:
         try:
@@ -91,38 +126,32 @@ def main(func_args=None):
         detector = cv.mcc_CCheckerDetector.create()
         print("Detecting checkers using default method (no DNN).")
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+    is_video = True
 
-        image_copy = frame.copy()
-
-        if not detector.process(frame, args.type, args.num_charts, True):
-            print("ChartColor not detected.")
+    if args.input:
+        image = cv.imread(findFile(args.input))
+        if image is not None:
+            is_video = False
         else:
-            checkers = detector.getListColorChecker()
-            detector.draw(checkers, frame)
-            chart_rgb = checkers[0].getChartsRGB()
+            cap = cv.VideoCapture(findFile(args.input))
+    else:
+        cap = cv.VideoCapture(0)
 
-            src = chart_rgb[:, 1].copy()
-            src = src.reshape((chart_rgb.shape[0] // 3, 3))
-            tgt = np.empty((src.shape), dtype=np.int32)
-            tgt = np.expand_dims(tgt, axis=1)
-            detector.getRefColor(cv.mcc.MCC24, tgt)
-            tgt = tgt.squeeze(1)
+    if is_video:
+        print("To print the actual colors and reference colors for current frame press SPACEBAR. To resume press SPACEBAR again")
+        total_frames = cap.get(cv.CAP_PROP_FRAME_COUNT)
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-            print("Actual colors: ", src)
-            print("Reference colors: ", tgt)
+            curr_frame = cap.get(cv.CAP_PROP_POS_FRAMES)
+            is_last_frame = (curr_frame == total_frames)
 
-        cv.imshow("image result | Press ESC to quit", frame)
-        cv.imshow("original", image_copy)
-        key = cv.waitKey(wait_time) & 0xFF
-        if key == 27:
-            break
+            process_frame(frame, detector, args.type, args.num_charts, is_last_frame)
+    else:
+        process_frame(image, detector, args.type, args.num_charts, True)
 
-    cv.waitKey(0)
-    cap.release()
     cv.destroyAllWindows()
 
 if __name__ == "__main__":

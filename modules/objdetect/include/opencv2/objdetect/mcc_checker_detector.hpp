@@ -91,7 +91,7 @@ public:
      */
     CV_WRAP virtual std::vector<Point2f> getColorCharts() = 0;
 
-    CV_WRAP virtual Mat getChartsRGB() = 0;
+    CV_WRAP virtual Mat getChartsRGB(bool getStats = true) = 0;
     CV_WRAP virtual Mat getChartsYCbCr() = 0;
     CV_WRAP virtual float getCost() = 0;
     CV_WRAP virtual Point2f getCenter() = 0;
@@ -285,7 +285,7 @@ public:
      * @param output returns the reference color in color space RGB
     */
 
-    CV_WRAP virtual void getRefColor(const COLORCHART chartType, Mat& output) = 0;
+    CV_WRAP virtual void getRefColors(const COLORCHART chartType, Mat& output) = 0;
 };
 
 //! @} mcc

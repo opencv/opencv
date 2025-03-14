@@ -439,8 +439,12 @@ std::vector<Point2f> CCheckerImpl::getColorCharts()
     }
     return charts;
 }
-Mat CCheckerImpl::getChartsRGB()
+Mat CCheckerImpl::getChartsRGB(bool getStats /* = true */)
 {
+    if (!getStats){
+        Mat src = chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3);
+        return src;
+    }
     return chartsRGB;
 }
 Mat CCheckerImpl::getChartsYCbCr()

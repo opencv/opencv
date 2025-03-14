@@ -949,7 +949,7 @@ void CCheckerDetectorImpl::draw(std::vector<Ptr<CChecker>>& checkers, InputOutpu
         }
     }
 }
-void CCheckerDetectorImpl::getRefColor(const COLORCHART chartType, Mat& output) {
+void CCheckerDetectorImpl::getRefColors(const COLORCHART chartType, Mat& output) {
     static const double ColorChecker2005_LAB_D50_2[24][3] = { { 37.986, 13.555, 14.059 },
         { 65.711, 18.13, 17.81 },
         { 49.927, -4.88, -21.925 },
