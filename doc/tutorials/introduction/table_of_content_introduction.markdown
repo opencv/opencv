@@ -1,6 +1,8 @@
 Introduction to OpenCV {#tutorial_table_of_content_introduction}
 ======================
 
+@tableofcontents
+
 - @subpage tutorial_general_install
 - @subpage tutorial_config_reference
 - @subpage tutorial_env_reference

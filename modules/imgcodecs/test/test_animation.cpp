@@ -543,6 +543,99 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
+typedef testing::TestWithParam<string> Imgcodecs_ImageCollection;
+
+const string exts_multi[] = {
+#ifdef HAVE_AVIF
+    ".avif",
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+    ".gif",
+#endif
+    ".png",
+#ifdef HAVE_TIFF
+    ".tiff",
+#endif
+#ifdef HAVE_WEBP
+    ".webp",
+#endif
+};
+
+TEST_P(Imgcodecs_ImageCollection, animations)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
+
+    string output = cv::tempfile(GetParam().c_str());
+    ASSERT_TRUE(imwritemulti(output, s_animation.frames));
+    vector<Mat> read_frames;
+    ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+
+    {
+        ImageCollection collection(output, IMREAD_UNCHANGED);
+        EXPECT_EQ(read_frames.size(), collection.size());
+        int i = 0;
+        for (auto&& frame : collection)
+        {
+            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+            ++i;
+        }
+    }
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_ImageCollection,
+    testing::ValuesIn(exts_multi));
+
+TEST(Imgcodecs_APNG, imdecode_animation)
+{
+    Animation gt_animation, mem_animation;
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+
+    EXPECT_TRUE(imreadanimation(filename, gt_animation));
+    EXPECT_EQ(1000, gt_animation.durations.back());
+
+    std::vector<unsigned char> buf;
+    readFileBytes(filename, buf);
+    EXPECT_TRUE(imdecodeanimation(buf, mem_animation));
+
+    EXPECT_EQ(mem_animation.frames.size(), gt_animation.frames.size());
+    EXPECT_EQ(mem_animation.bgcolor, gt_animation.bgcolor);
+    EXPECT_EQ(mem_animation.loop_count, gt_animation.loop_count);
+    for (size_t i = 0; i < gt_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(mem_animation.frames[i], gt_animation.frames[i], NORM_INF));
+        EXPECT_EQ(mem_animation.durations[i], gt_animation.durations[i]);
+    }
+}
+
+TEST(Imgcodecs_APNG, imencode_animation)
+{
+    Animation gt_animation, mem_animation;
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+
+    EXPECT_TRUE(imreadanimation(filename, gt_animation));
+    EXPECT_EQ(1000, gt_animation.durations.back());
+
+    std::vector<unsigned char> buf;
+    EXPECT_TRUE(imencodeanimation(".png", gt_animation, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, mem_animation));
+
+        EXPECT_EQ(mem_animation.frames.size(), gt_animation.frames.size());
+    EXPECT_EQ(mem_animation.bgcolor, gt_animation.bgcolor);
+    EXPECT_EQ(mem_animation.loop_count, gt_animation.loop_count);
+    for (size_t i = 0; i < gt_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(mem_animation.frames[i], gt_animation.frames[i], NORM_INF));
+        EXPECT_EQ(mem_animation.durations[i], gt_animation.durations[i]);
+    }
+}
+
 #endif // HAVE_PNG
 
 }} // namespace
