@@ -2242,7 +2242,7 @@ void ONNXImporter::parseFlatten(LayerParams& layerParams, const opencv_onnx::Nod
 void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_Assert(node_proto.input_size() == 1 || node_proto.input_size() == 2);
-    DictValue axes;
+    DictValue axes = layerParams.get("axes");
     if (node_proto.input_size() == 2)
     {
         Mat blob = getBlob(node_proto, 1);
@@ -2250,8 +2250,12 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
         axes = DictValue::arrayInt(blob.ptr<int>(), blob.total());
     }
     else
-        axes = layerParams.get("axes");
-    std::vector<int> inputShape = layerParams.get("input_shape").getIntVector();
+    {
+        MatShape inpShape = outShapes[node_proto.input(0)];
+        int depth = layerParams.get<int>("depth", CV_32F);}    
+        for (int i = 0; i < layerParams.get("input_shape").size(); i++) {
+            inputShape.push_back(layerParams.get("input_shape").getIntValue(i));
+        }        
     for (int i = 0; i < axes.size(); i++)
     {
         int axis = axes.getIntValue(i);
