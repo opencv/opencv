@@ -235,13 +235,13 @@ inline int threshold_otsu(const uchar* src_data, size_t src_step, uchar* dst_dat
         q1 += p_i;
         q2 = 1. - q1;
 
-        if( std::min(q1,q2) < FLT_EPSILON || std::max(q1,q2) > 1. - FLT_EPSILON )
+        if (std::min(q1,q2) < FLT_EPSILON || std::max(q1,q2) > 1. - FLT_EPSILON)
             continue;
 
         mu1 = (mu1 + i*p_i)/q1;
         mu2 = (mu - q1*mu1)/q2;
         sigma = q1*q2*(mu1 - mu2)*(mu1 - mu2);
-        if( sigma > max_sigma )
+        if (sigma > max_sigma)
         {
             max_sigma = sigma;
             max_val = i;
