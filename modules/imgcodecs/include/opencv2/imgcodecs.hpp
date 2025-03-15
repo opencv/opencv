@@ -270,9 +270,9 @@ struct CV_EXPORTS_W_SIMPLE Animation
     CV_PROP_RW Scalar bgcolor;
     //! Duration for each frame in milliseconds.
     /*! @note (GIF) Due to file format limitation
-     *  - Durations are rounded in 10 millsecond unit and stored.
+     *  - Durations must be multiples of 10 milliseconds. Any provided value will be rounded down to the nearest 10ms (e.g., 88ms → 80ms).
      *  - 0ms(or smaller than expected in user application) duration may cause undefined behavior, e.g. it is handled with default duration.
-     *  - Over 65535 * 10 millsecond duration is not supported.
+     *  - Over 65535 * 10 milliseconds duration is not supported.
      */
     CV_PROP_RW std::vector<int> durations;
     //! Vector of frames, where each Mat represents a single frame.
