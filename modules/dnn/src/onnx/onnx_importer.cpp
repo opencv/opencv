@@ -3124,18 +3124,35 @@ void ONNXImporter::parseLayerNorm(LayerParams& layerParams, const opencv_onnx::N
 
 void ONNXImporter::parseTopK(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    // K needs to be constant in case of being input (since opset 10)
-    if (node_proto.input_size() == 2) {
-        bool K_const = constBlobs.find(node_proto.input(1)) != constBlobs.end();
-        CV_CheckTrue(K_const, "OnnxImporter/TopK: K being non-constant is not supported");
-
-        Mat input_K = getBlob(node_proto, 1);
-        int K = input_K.at<int>(0);
-        layerParams.set("k", K);
+    int k = -1;
+    for (const auto& attr : node_proto.attribute())
+    {
+        if (attr.name() == "k")
+        {
+            k = attr.i();
+            break;
+        }
     }
 
+    int K = -1;
+    if (node_proto.input_size() == 2) {
+        auto it = constBlobs.find(node_proto.input(1));
+        if (it != constBlobs.end()) {
+            Mat input_K = getBlob(node_proto, 1);
+            K = input_K.at<int>(0);
+        }
+        else {
+            CV_LOG_WARNING(NULL, "OnnxImporter/TopK: K is not constant, falling back to attribute value if available");
+        }
+    }
+
+    CV_CheckTrue(k != -1 || K != -1, "OnnxImporter/TopK: K parameter is required but missing");
+
+    layerParams.set("k", K != -1 ? K : k);
     addLayer(layerParams, node_proto);
 }
+
+
 
 void ONNXImporter::parseSimpleLayers(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
