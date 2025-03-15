@@ -71,7 +71,6 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
      */
     CV_WRAP int getDistanceToId(InputArray bits, int id, bool allRotations = true) const;
 
-
     /** @brief Generate a canonical marker image
      */
     CV_WRAP void generateImageMarker(int id, int sidePixels, OutputArray _img, int borderBits = 1) const;
