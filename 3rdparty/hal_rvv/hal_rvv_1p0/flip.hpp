@@ -1,7 +1,12 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-#pragma once
+
+// Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+
+#ifndef OPENCV_HAL_RVV_FLIP_HPP_INCLUDED
+#define OPENCV_HAL_RVV_FLIP_HPP_INCLUDED
+
 
 #include <riscv_vector.h>
 #include <opencv2/core/base.hpp>
@@ -223,3 +228,5 @@ inline int flip(int src_type,
 }
 
 }}  // namespace cv::cv_hal_rvv
+
+#endif //OPENCV_HAL_RVV_FLIP_HPP_INCLUDED

@@ -1,7 +1,11 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level
 // directory of this distribution and at http://opencv.org/license.html.
-#pragma once
+
+// Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+
+#ifndef OPENCV_HAL_RVV_ATAN_HPP_INCLUDED
+#define OPENCV_HAL_RVV_ATAN_HPP_INCLUDED
 
 #undef cv_hal_fastAtan32f
 #define cv_hal_fastAtan32f cv::cv_hal_rvv::fast_atan_32
@@ -119,4 +123,6 @@ inline int fast_atan_64(const double* y, const double* x, double* dst, size_t n,
     return CV_HAL_ERROR_OK;
 }
 
-}}  // namespace cv::cv_hal_rvv
+}} // namespace cv::cv_hal_rvv
+
+#endif //OPENCV_HAL_RVV_ATAN_HPP_INCLUDED
