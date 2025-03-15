@@ -297,10 +297,9 @@ static inline int adaptiveThreshold(int start, int end, const uchar* src_data, s
                 for (int j = left; j < right; j += vl)
                 {
                     vl = __riscv_vsetvl_e8m4(right - j);
-                    auto sum = __riscv_vmv_v_x_i16m8(0, vl);
                     const uchar* row = src_data + i * src_step + j - ksize / 2;
                     auto src = __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vzext_vf2(__riscv_vle8_v_u8m4(row, vl), vl));
-                    sum = __riscv_vadd(sum, src, vl);
+                    auto sum = src;
                     src = __riscv_vslide1down(src, row[vl], vl);
                     sum = __riscv_vadd(sum, src, vl);
                     src = __riscv_vslide1down(src, row[vl + 1], vl);
@@ -328,8 +327,7 @@ static inline int adaptiveThreshold(int start, int end, const uchar* src_data, s
                 for (int j = 0; j < width; j += vl)
                 {
                     vl = __riscv_vsetvl_e16m8(width - j);
-                    auto sum = __riscv_vmv_v_x_i16m8(0, vl);
-                    sum = __riscv_vadd(sum, __riscv_vle16_v_i16m8(row0 + j, vl), vl);
+                    auto sum = __riscv_vle16_v_i16m8(row0 + j, vl);
                     sum = __riscv_vadd(sum, __riscv_vle16_v_i16m8(row1 + j, vl), vl);
                     sum = __riscv_vadd(sum, __riscv_vle16_v_i16m8(row2 + j, vl), vl);
                     if (ksize == 5)
@@ -379,10 +377,9 @@ static inline int adaptiveThreshold(int start, int end, const uchar* src_data, s
                 for (int j = left; j < right; j += vl)
                 {
                     vl = __riscv_vsetvl_e8m2(right - j);
-                    auto sum = __riscv_vfmv_v_f_f32m8(0, vl);
                     const uchar* row = src_data + i * src_step + j - ksize / 2;
                     auto src = __riscv_vfwcvt_f(__riscv_vzext_vf2(__riscv_vle8_v_u8m2(row, vl), vl), vl);
-                    sum = __riscv_vfmacc(sum, kernel[ksize == 5][0], src, vl);
+                    auto sum = __riscv_vfmul(src, kernel[ksize == 5][0], vl);
                     src = __riscv_vfslide1down(src, row[vl], vl);
                     sum = __riscv_vfmacc(sum, kernel[ksize == 5][1], src, vl);
                     src = __riscv_vfslide1down(src, row[vl + 1], vl);
