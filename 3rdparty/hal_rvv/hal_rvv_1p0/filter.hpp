@@ -864,16 +864,19 @@ namespace gaussianBlurBinomial {
 
 // the algorithm is same as cv_hal_sepFilter
 template<int ksize, typename helperT, typename helperWT>
-static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int border_type)
+static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int full_width, int full_height, int offset_x, int offset_y, int border_type)
 {
     using T = typename helperT::ElemType;
     using WT = typename helperWT::ElemType;
 
+    constexpr int noval = std::numeric_limits<int>::max();
     auto accessX = [&](int x) {
-        return filter::borderInterpolate(x - ksize / 2, height, border_type);
+        int pi = filter::borderInterpolate(offset_y + x - ksize / 2, full_height, border_type);
+        return pi < 0 ? noval : pi - offset_y;
     };
     auto accessY = [&](int y) {
-        return filter::borderInterpolate(y - ksize / 2, width, border_type);
+        int pj = filter::borderInterpolate(offset_x + y - ksize / 2, full_width, border_type);
+        return pj < 0 ? noval : pj - offset_x;
     };
     auto p2idx = [&](int x, int y){ return (x + ksize) % ksize * width + y; };
 
@@ -884,7 +887,7 @@ static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size
         for (int i = 0; i < ksize; i++)
         {
             int p = accessY(y + i);
-            if (p != -1)
+            if (p != noval)
             {
                 sum += kernel[ksize == 5][i] * static_cast<WT>(reinterpret_cast<const T*>(src_data + x * src_step)[p]);
             }
@@ -895,7 +898,7 @@ static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size
     const int left = ksize / 2, right = width - ksize / 2;
     for (int i = start - ksize / 2; i < end + ksize / 2; i++)
     {
-        if (i >= 0 && i < height)
+        if (i + offset_y >= 0 && i + offset_y < full_height)
         {
             if (left >= right)
             {
@@ -944,14 +947,14 @@ static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size
         int cur = i - ksize / 2;
         if (cur >= start)
         {
-            const WT* row0 = accessX(cur    ) == -1 ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
-            const WT* row1 = accessX(cur + 1) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
-            const WT* row2 = accessX(cur + 2) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
+            const WT* row0 = accessX(cur    ) == noval ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
+            const WT* row1 = accessX(cur + 1) == noval ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
+            const WT* row2 = accessX(cur + 2) == noval ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
             const WT* row3 = nullptr, *row4 = nullptr;
             if (ksize == 5)
             {
-                row3 = accessX(cur + 3) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
-                row4 = accessX(cur + 4) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
+                row3 = accessX(cur + 3) == noval ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
+                row4 = accessX(cur + 4) == noval ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
             }
 
             int vl;
@@ -983,13 +986,16 @@ static inline int gaussianBlurC1(int start, int end, const uchar* src_data, size
 }
 
 template<int ksize>
-static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int border_type)
+static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int full_width, int full_height, int offset_x, int offset_y, int border_type)
 {
+    constexpr int noval = std::numeric_limits<int>::max();
     auto accessX = [&](int x) {
-        return filter::borderInterpolate(x - ksize / 2, height, border_type);
+        int pi = filter::borderInterpolate(offset_y + x - ksize / 2, full_height, border_type);
+        return pi < 0 ? noval : pi - offset_y;
     };
     auto accessY = [&](int y) {
-        return filter::borderInterpolate(y - ksize / 2, width, border_type);
+        int pj = filter::borderInterpolate(offset_x + y - ksize / 2, full_width, border_type);
+        return pj < 0 ? noval : pj - offset_x;
     };
     auto p2idx = [&](int x, int y){ return ((x + ksize) % ksize * width + y) * 4; };
 
@@ -1001,7 +1007,7 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
         for (int i = 0; i < ksize; i++)
         {
             int p = accessY(y + i);
-            if (p != -1)
+            if (p != noval)
             {
                 sum0 += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * 4    ]);
                 sum1 += kernel[ksize == 5][i] * static_cast<ushort>((src_data + x * src_step)[p * 4 + 1]);
@@ -1018,7 +1024,7 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
     const int left = ksize / 2, right = width - ksize / 2;
     for (int i = start - ksize / 2; i < end + ksize / 2; i++)
     {
-        if (i >= 0 && i < height)
+        if (i + offset_y >= 0 && i + offset_y < full_height)
         {
             if (left >= right)
             {
@@ -1113,14 +1119,14 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
         int cur = i - ksize / 2;
         if (cur >= start)
         {
-            const ushort* row0 = accessX(cur    ) == -1 ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
-            const ushort* row1 = accessX(cur + 1) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
-            const ushort* row2 = accessX(cur + 2) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
+            const ushort* row0 = accessX(cur    ) == noval ? nullptr : res.data() + p2idx(accessX(cur    ), 0);
+            const ushort* row1 = accessX(cur + 1) == noval ? nullptr : res.data() + p2idx(accessX(cur + 1), 0);
+            const ushort* row2 = accessX(cur + 2) == noval ? nullptr : res.data() + p2idx(accessX(cur + 2), 0);
             const ushort* row3 = nullptr, *row4 = nullptr;
             if (ksize == 5)
             {
-                row3 = accessX(cur + 3) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
-                row4 = accessX(cur + 4) == -1 ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
+                row3 = accessX(cur + 3) == noval ? nullptr : res.data() + p2idx(accessX(cur + 3), 0);
+                row4 = accessX(cur + 4) == noval ? nullptr : res.data() + p2idx(accessX(cur + 4), 0);
             }
 
             int vl;
@@ -1198,7 +1204,7 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
     return CV_HAL_ERROR_OK;
 }
 
-inline int gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t /*margin_left*/, size_t /*margin_top*/, size_t /*margin_right*/, size_t /*margin_bottom*/, size_t ksize, int border_type)
+inline int gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize, int border_type)
 {
     const int type = CV_MAKETYPE(depth, cn);
     if (type != CV_8UC1 && type != CV_8UC4 && type != CV_16UC1)
@@ -1209,22 +1215,21 @@ inline int gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* d
     switch (ksize*100 + type)
     {
     case 300 + CV_8UC1:
-        return filter::invoke(height, {gaussianBlurC1<3, RVV_U8M4, RVV_U16M8>}, src_data, src_step, dst_data, dst_step, width, height, border_type);
+        return filter::invoke(height, {gaussianBlurC1<3, RVV_U8M4, RVV_U16M8>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 500 + CV_8UC1:
-        return filter::invoke(height, {gaussianBlurC1<5, RVV_U8M4, RVV_U16M8>}, src_data, src_step, dst_data, dst_step, width, height, border_type);
+        return filter::invoke(height, {gaussianBlurC1<5, RVV_U8M4, RVV_U16M8>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 300 + CV_16UC1:
-        return filter::invoke(height, {gaussianBlurC1<3, RVV_U16M4, RVV_U32M8>}, src_data, src_step, dst_data, dst_step, width, height, border_type);
+        return filter::invoke(height, {gaussianBlurC1<3, RVV_U16M4, RVV_U32M8>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 500 + CV_16UC1:
-        return filter::invoke(height, {gaussianBlurC1<5, RVV_U16M4, RVV_U32M8>}, src_data, src_step, dst_data, dst_step, width, height, border_type);
+        return filter::invoke(height, {gaussianBlurC1<5, RVV_U16M4, RVV_U32M8>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 300 + CV_8UC4:
-        return filter::invoke(height, {gaussianBlurC4<3>}, src_data, src_step, dst_data, dst_step, width, height, border_type);
+        return filter::invoke(height, {gaussianBlurC4<3>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     case 500 + CV_8UC4:
-        return filter::invoke(height, {gaussianBlurC4<5>}, src_data, src_step, dst_data, dst_step, width, height, border_type);
+        return filter::invoke(height, {gaussianBlurC4<5>}, src_data, src_step, dst_data, dst_step, width, margin_left + width + margin_right, margin_top + height + margin_bottom, margin_left, margin_top, border_type);
     }
 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
-
 } // cv::cv_hal_rvv::gaussianBlurBinomial
 
 }}
