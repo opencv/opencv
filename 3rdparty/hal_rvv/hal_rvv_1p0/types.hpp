@@ -161,6 +161,13 @@ static inline BoolType vmge_mu(BoolType vm, BoolType vd, VecType vs2, VecType vs
     return __riscv_vm##S_OR_F##ge##IS_U##_mu(vm, vd, vs2, vs1, vl);                             \
 }                                                                                               \
                                                                                                 \
+static inline VecType vadd(VecType vs2, VecType vs1, size_t vl) {                               \
+    return __riscv_v##IS_F##add(vs2, vs1, vl);                                                  \
+}                                                                                               \
+static inline VecType vsub(VecType vs2, VecType vs1, size_t vl) {                               \
+    return __riscv_v##IS_F##sub(vs2, vs1, vl);                                                  \
+}                                                                                               \
+                                                                                                \
 static inline VecType vmin(VecType vs2, VecType vs1, size_t vl) {                               \
     return __riscv_v##IS_F##min##IS_U(vs2, vs1, vl);                                            \
 }                                                                                               \
