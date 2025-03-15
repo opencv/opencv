@@ -345,9 +345,7 @@ inline int sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, in
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if (dst_type != CV_16SC1 && dst_type != CV_32FC1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    if (kernelx_length != kernely_length)
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-    if (kernelx_length != 3 && kernelx_length != 5)
+    if ((kernelx_length != 3 && kernelx_length != 5) || kernelx_length != kernely_length)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if ((borderType & ~BORDER_ISOLATED) == BORDER_WRAP)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -512,23 +510,61 @@ inline int sepFilter(cvhalFilter2D *context, uchar *src_data, size_t src_step, u
 {
     sepFilter2D* data = reinterpret_cast<sepFilter2D*>(context);
 
+    uchar* _dst_data = dst_data;
+    size_t _dst_step = dst_step;
+    size_t size = 1;
+    switch (data->dst_type)
+    {
+    case CV_16SC1:
+        size = 2;
+        break;
+    case CV_32FC1:
+        size = 4;
+        break;
+    }
+    std::vector<uchar> *dst = nullptr;
+    if (src_data == _dst_data)
+    {
+        dst = new std::vector<uchar>(width * height * size);
+        dst_data = dst->data();
+        dst_step = width * size;
+    }
+
+    int res = CV_HAL_ERROR_NOT_IMPLEMENTED;
     switch (data->kernelx_length*100 + data->src_type)
     {
     case 300 + CV_8UC1:
-        return filter::invoke(height, {sepFilter<3, uchar>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        res = filter::invoke(height, {sepFilter<3, uchar>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        break;
     case 500 + CV_8UC1:
-        return filter::invoke(height, {sepFilter<5, uchar>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        res = filter::invoke(height, {sepFilter<5, uchar>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        break;
     case 300 + CV_16SC1:
-        return filter::invoke(height, {sepFilter<3, short>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        res = filter::invoke(height, {sepFilter<3, short>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        break;
     case 500 + CV_16SC1:
-        return filter::invoke(height, {sepFilter<5, short>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        res = filter::invoke(height, {sepFilter<5, short>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        break;
     case 300 + CV_32FC1:
-        return filter::invoke(height, {sepFilter<3, float>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        res = filter::invoke(height, {sepFilter<3, float>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        break;
     case 500 + CV_32FC1:
-        return filter::invoke(height, {sepFilter<5, float>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        res = filter::invoke(height, {sepFilter<5, float>}, data, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
+        break;
+    }
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    if (src_data == _dst_data)
+    {
+        for (int i = 0; i < height; i++)
+        {
+            std::copy(dst->begin() + i * dst_step, dst->begin() + (i + 1) * dst_step, _dst_data + i * _dst_step);
+        }
+        delete dst;
     }
 
-    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return res;
 }
 
 inline int sepFilterFree(cvhalFilter2D* context)
@@ -1207,7 +1243,7 @@ static inline int gaussianBlurC4(int start, int end, const uchar* src_data, size
 inline int gaussianBlurBinomial(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, int cn, size_t margin_left, size_t margin_top, size_t margin_right, size_t margin_bottom, size_t ksize, int border_type)
 {
     const int type = CV_MAKETYPE(depth, cn);
-    if (type != CV_8UC1 && type != CV_8UC4 && type != CV_16UC1)
+    if ((type != CV_8UC1 && type != CV_8UC4 && type != CV_16UC1) || src_data == dst_data)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     if ((ksize != 3 && ksize != 5) || border_type & BORDER_ISOLATED || border_type == BORDER_WRAP)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
