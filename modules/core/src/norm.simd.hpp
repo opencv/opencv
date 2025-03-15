@@ -1004,7 +1004,7 @@ struct NormDiffL1_SIMD<int, double> {
         double s = 0.f;
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
-        for (; j <= n - VTraits<v_int32>::vlanes(); j += VTraits<v_int32>::vlanes()) {
+        for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
             v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
             v_uint32 v0 = v_absdiff(v01, v02);
             v_uint64 ev01, ev02;
