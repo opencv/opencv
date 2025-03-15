@@ -191,6 +191,8 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
     if( !vt )
         return CV_HAL_ERROR_OK;
 
+    uint64 rng = 0x12345678;
+    auto next = [&rng]{ return (unsigned)(rng = (uint64)(unsigned)rng * 4164903690U + (unsigned)(rng >> 32)); };
     for( i = 0; i < n1; i++ )
     {
         sd = i < n ? W[i] : 0;
@@ -203,7 +205,7 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
             const T val0 = (T)(1./m);
             for( k = 0; k < m; k++ )
             {
-                T val = (rand() & 256) != 0 ? val0 : -val0;
+                T val = (next() & 256) != 0 ? val0 : -val0;
                 src[i*src_step + k] = val;
             }
             for( iter = 0; iter < 2; iter++ )
