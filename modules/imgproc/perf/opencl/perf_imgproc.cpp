@@ -223,18 +223,24 @@ OCL_PERF_TEST_P(PreCornerDetectFixture, PreCornerDetect,
 
 ///////////// Integral ////////////////////////
 
-typedef tuple<Size, MatDepth> IntegralParams;
+typedef tuple<Size, tuple<MatDepth, MatDepth>> IntegralParams;
 typedef TestBaseWithParam<IntegralParams> IntegralFixture;
 
-OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32S, CV_32F)))
+OCL_PERF_TEST_P(IntegralFixture, Integral1,
+    ::testing::Combine(OCL_TEST_SIZES,
+        OCL_PERF_ENUM(std::make_tuple(CV_8UC1, CV_32S),
+                      std::make_tuple(CV_8UC1, CV_32F),
+                      std::make_tuple(CV_32FC1, CV_32F))))
 {
-    const IntegralParams params = GetParam();
-    const Size srcSize = get<0>(params);
-    const int ddepth = get<1>(params);
+    const auto& params = GetParam();
+    const Size srcSize = std::get<0>(params);
+    const auto& type_depth = std::get<1>(params);
+    const int srcType = std::get<0>(type_depth);
+    const int ddepth = std::get<1>(type_depth);
 
     checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
 
-    UMat src(srcSize, CV_8UC1), dst(srcSize + Size(1, 1), ddepth);
+    UMat src(srcSize, srcType), dst(srcSize + Size(1, 1), ddepth);
     declare.in(src, WARMUP_RNG).out(dst);
 
     OCL_TEST_CYCLE() cv::integral(src, dst, ddepth);
@@ -242,15 +248,19 @@ OCL_PERF_TEST_P(IntegralFixture, Integral1, ::testing::Combine(OCL_TEST_SIZES, O
     SANITY_CHECK(dst, 2e-6, ERROR_RELATIVE);
 }
 
-OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES, OCL_PERF_ENUM(CV_32S, CV_32F)))
+OCL_PERF_TEST_P(IntegralFixture, Integral2, ::testing::Combine(OCL_TEST_SIZES,
+    OCL_PERF_ENUM(std::make_tuple(CV_8UC1, CV_32S),
+                  std::make_tuple(CV_8UC1, CV_32F))))
 {
     const IntegralParams params = GetParam();
     const Size srcSize = get<0>(params);
-    const int ddepth = get<1>(params);
+    const auto& type_depth = std::get<1>(params);
+    const int srcType = std::get<0>(type_depth);
+    const int ddepth = std::get<1>(type_depth);
 
     checkDeviceMaxMemoryAllocSize(srcSize, ddepth);
 
-    UMat src(srcSize, CV_8UC1), sum(srcSize + Size(1, 1), ddepth), sqsum(srcSize + Size(1, 1), CV_32F);
+    UMat src(srcSize, srcType), sum(srcSize + Size(1, 1), ddepth), sqsum(srcSize + Size(1, 1), CV_32F);
     declare.in(src, WARMUP_RNG).out(sum, sqsum);
 
     OCL_TEST_CYCLE() cv::integral(src, sum, sqsum, ddepth, CV_32F);

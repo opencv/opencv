@@ -1691,7 +1691,7 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
 
     depth = depth == 0 ? CV_8U : CV_32F;
     int b = (cvtest::randInt(rng) & 1) != 0;
-    sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
+    sum_depth = depth == CV_8U ? (b ? CV_32S : CV_32F) : (b ? CV_32F : CV_64F);
 
     types[INPUT][0] = CV_MAKETYPE(depth,cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] =
