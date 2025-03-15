@@ -46,25 +46,32 @@ static inline int invoke(int height, std::function<int(int, int, Args...)> func,
 
 static inline int borderInterpolate( int p, int len, int borderType )
 {
-    if( (unsigned)p < (unsigned)len )
+    if ((unsigned)p < (unsigned)len)
         ;
-    else if( borderType == BORDER_REPLICATE )
+    else if (borderType == BORDER_REPLICATE)
         p = p < 0 ? 0 : len - 1;
-    else if( borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101 )
+    else if (borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101)
     {
         int delta = borderType == BORDER_REFLECT_101;
-        if( len == 1 )
+        if (len == 1)
             return 0;
         do
         {
-            if( p < 0 )
+            if (p < 0)
                 p = -p - 1 + delta;
             else
                 p = len - 1 - (p - len) - delta;
         }
         while( (unsigned)p >= (unsigned)len );
     }
-    else if( borderType == BORDER_CONSTANT )
+    else if (borderType == BORDER_WRAP)
+    {
+        if (p < 0)
+            p -= ((p-len+1)/len)*len;
+        if (p >= len)
+            p %= len;
+    }
+    else if (borderType == BORDER_CONSTANT)
         p = -1;
     return p;
 }
@@ -512,14 +519,14 @@ inline int sepFilter(cvhalFilter2D *context, uchar *src_data, size_t src_step, u
 
     uchar* _dst_data = dst_data;
     size_t _dst_step = dst_step;
-    size_t size = 1;
+    size_t size = sizeof(char);
     switch (data->dst_type)
     {
     case CV_16SC1:
-        size = 2;
+        size = sizeof(short);
         break;
     case CV_32FC1:
-        size = 4;
+        size = sizeof(float);
         break;
     }
     std::vector<uchar> *dst = nullptr;
@@ -1577,13 +1584,17 @@ inline int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, si
     size_t size = cn;
     switch (dst_depth)
     {
+    case CV_8U:
+    case CV_8S:
+        size *= sizeof(char);
+        break;
     case CV_16U:
     case CV_16S:
-        size *= 2;
+        size *= sizeof(short);
         break;
     case CV_32F:
     case CV_32S:
-        size *= 4;
+        size *= sizeof(float);
         break;
     }
     std::vector<uchar> *dst = nullptr;
