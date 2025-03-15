@@ -123,6 +123,6 @@ inline int fast_atan_64(const double* y, const double* x, double* dst, size_t n,
     return CV_HAL_ERROR_OK;
 }
 
-} // namespace cv::cv_hal_rvv
+}} // namespace cv::cv_hal_rvv
 
 #endif //OPENCV_HAL_RVV_ATAN_HPP_INCLUDED
