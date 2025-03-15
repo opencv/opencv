@@ -101,7 +101,7 @@ PERF_TEST_P(Encode, bgr, testing::ValuesIn(exts))
 
     TEST_CYCLE() imencode(GetParam(), src, buf);
 
-    std::cout << "Encoded buffer size: " << buf.size()
+    std::cout << "  Encoded buffer size: " << buf.size()
         << " bytes, Compression ratio: " << std::fixed << std::setprecision(2)
         << (static_cast<double>(buf.size()) / (src.total() * src.channels())) * 100.0 << "%" << std::endl;
 
@@ -120,7 +120,7 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
 
     TEST_CYCLE() imencode(GetParam(), vec, buf);
 
-    std::cout << "Encoded buffer size: " << buf.size()
+    std::cout << "  Encoded buffer size: " << buf.size()
         << " bytes, Compression ratio: " << std::fixed << std::setprecision(2)
         << (static_cast<double>(buf.size()) / (vec[0].total() * vec[0].channels())) * 100.0 << "%" << std::endl;
 

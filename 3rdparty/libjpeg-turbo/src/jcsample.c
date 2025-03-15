@@ -8,7 +8,7 @@
  * libjpeg-turbo Modifications:
  * Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
  * Copyright (C) 2014, MIPS Technologies, Inc., California.
- * Copyright (C) 2015, 2019, 2022, D. R. Commander.
+ * Copyright (C) 2015, 2019, 2022, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -470,8 +470,21 @@ _jinit_downsampler(j_compress_ptr cinfo)
   jpeg_component_info *compptr;
   boolean smoothok = TRUE;
 
-  if (cinfo->data_precision != BITS_IN_JSAMPLE)
-    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+#ifdef C_LOSSLESS_SUPPORTED
+  if (cinfo->master->lossless) {
+#if BITS_IN_JSAMPLE == 8
+    if (cinfo->data_precision > BITS_IN_JSAMPLE || cinfo->data_precision < 2)
+#else
+    if (cinfo->data_precision > BITS_IN_JSAMPLE ||
+        cinfo->data_precision < BITS_IN_JSAMPLE - 3)
+#endif
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  } else
+#endif
+  {
+    if (cinfo->data_precision != BITS_IN_JSAMPLE)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  }
 
   downsample = (my_downsample_ptr)
     (*cinfo->mem->alloc_small) ((j_common_ptr)cinfo, JPOOL_IMAGE,

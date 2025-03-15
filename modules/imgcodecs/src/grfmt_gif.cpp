@@ -34,6 +34,11 @@ GifDecoder::~GifDecoder() {
 }
 
 bool GifDecoder::readHeader() {
+    if (m_frame_count > 1 /* if true, it means readHeader() was called before */)
+    {
+        return true;
+    }
+
     if (!m_buf.empty()) {
         if (!m_strm.open(m_buf)) {
             return false;
@@ -314,9 +319,9 @@ bool GifDecoder::lzwDecode() {
     lzwMinCodeSize = m_strm.getByte();
     const int lzwMaxSize = (1 << 12); // 4096 is the maximum size of the LZW table (12 bits)
     int lzwCodeSize = lzwMinCodeSize + 1;
+    CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
     int clearCode = 1 << lzwMinCodeSize;
     int exitCode = clearCode + 1;
-    CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
     std::vector<lzwNodeD> lzwExtraTable(lzwMaxSize + 1);
     int colorTableSize = clearCode;
     int lzwTableSize = exitCode;

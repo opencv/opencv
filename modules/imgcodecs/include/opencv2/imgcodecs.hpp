@@ -96,6 +96,7 @@ enum ImwriteFlags {
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
        IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
+       IMWRITE_PNG_FILTER          = 19, //!< One of cv::ImwritePNGFilterFlags, default is IMWRITE_PNG_FILTER_SUB.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
        IMWRITE_EXR_TYPE            = (3 << 4) + 0 /* 48 */, //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_EXR_COMPRESSION     = (3 << 4) + 1 /* 49 */, //!< override EXR compression type (ZIP_COMPRESSION = 3 is default)
@@ -209,6 +210,17 @@ enum ImwritePNGFlags {
        IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY = 2, //!< Use this value to force Huffman encoding only (no string match).
        IMWRITE_PNG_STRATEGY_RLE          = 3, //!< Use this value to limit match distances to one (run-length encoding).
        IMWRITE_PNG_STRATEGY_FIXED        = 4  //!< Using this value prevents the use of dynamic Huffman codes, allowing for a simpler decoder for special applications.
+     };
+
+//! Imwrite PNG specific values for IMWRITE_PNG_FILTER parameter key
+enum ImwritePNGFilterFlags {
+       IMWRITE_PNG_FILTER_NONE           = 8,   //!< Applies no filter to the PNG image (useful when you want to save the raw pixel data without any compression filter).
+       IMWRITE_PNG_FILTER_SUB            = 16,  //!< Applies the "sub" filter, which calculates the difference between the current byte and the previous byte in the row.
+       IMWRITE_PNG_FILTER_UP             = 32,  //!< applies the "up" filter, which calculates the difference between the current byte and the corresponding byte directly above it.
+       IMWRITE_PNG_FILTER_AVG            = 64,  //!< applies the "average" filter, which calculates the average of the byte to the left and the byte above.
+       IMWRITE_PNG_FILTER_PAETH          = 128, //!< applies the "Paeth" filter, a more complex filter that predicts the next pixel value based on neighboring pixels.
+       IMWRITE_PNG_FAST_FILTERS          = (IMWRITE_PNG_FILTER_NONE | IMWRITE_PNG_FILTER_SUB | IMWRITE_PNG_FILTER_UP), //!< This is a combination of IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, and IMWRITE_PNG_FILTER_UP, typically used for faster compression.
+       IMWRITE_PNG_ALL_FILTERS           = (IMWRITE_PNG_FAST_FILTERS | IMWRITE_PNG_FILTER_AVG | IMWRITE_PNG_FILTER_PAETH) //!< This combines all available filters (NONE, SUB, UP, AVG, and PAETH), which will attempt to apply all of them for the best possible compression.
      };
 
 //! Imwrite PAM specific tupletype flags used to define the 'TUPLETYPE' field of a PAM file.
@@ -386,6 +398,19 @@ The function imreadanimation loads frames from an animated image file (e.g., GIF
 */
 CV_EXPORTS_W bool imreadanimation(const String& filename, CV_OUT Animation& animation, int start = 0, int count = INT16_MAX);
 
+/** @brief Loads frames from an animated image buffer into an Animation structure.
+
+The function imdecodeanimation loads frames from an animated image buffer (e.g., GIF, AVIF, APNG, WEBP) into the provided Animation struct.
+
+@param buf A reference to an InputArray containing the image buffer.
+@param animation A reference to an Animation structure where the loaded frames will be stored. It should be initialized before the function is called.
+@param start The index of the first frame to load. This is optional and defaults to 0.
+@param count The number of frames to load. This is optional and defaults to 32767.
+
+@return Returns true if the buffer was successfully loaded and frames were extracted; returns false otherwise.
+*/
+CV_EXPORTS_W bool imdecodeanimation(InputArray buf, CV_OUT Animation& animation, int start = 0, int count = INT16_MAX);
+
 /** @brief Saves an Animation to a specified file.
 
 The function imwriteanimation saves the provided Animation data to the specified file in an animated format.
@@ -399,6 +424,26 @@ These parameters are used to specify additional options for the encoding process
 @return Returns true if the animation was successfully saved; returns false otherwise.
 */
 CV_EXPORTS_W bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params = std::vector<int>());
+
+/** @brief Encodes an Animation to a memory buffer.
+
+The function imencodeanimation encodes the provided Animation data into a memory
+buffer in an animated format. Supported formats depend on the implementation and
+may include formats like GIF, AVIF, APNG, or WEBP.
+
+@param ext The file extension that determines the format of the encoded data.
+@param animation A constant reference to an Animation struct containing the
+frames and metadata to be encoded.
+@param buf A reference to a vector of unsigned chars where the encoded data will
+be stored.
+@param params Optional format-specific parameters encoded as pairs (paramId_1,
+paramValue_1, paramId_2, paramValue_2, ...). These parameters are used to
+specify additional options for the encoding process. Refer to `cv::ImwriteFlags`
+for details on possible parameters.
+
+@return Returns true if the animation was successfully encoded; returns false otherwise.
+*/
+CV_EXPORTS_W bool imencodeanimation(const String& ext, const Animation& animation, CV_OUT std::vector<uchar>& buf, const std::vector<int>& params = std::vector<int>());
 
 /** @brief Returns the number of images inside the given file
 

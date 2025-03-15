@@ -22,6 +22,7 @@
 #if defined(__riscv_v) && __riscv_v == 1000000
 #include "hal_rvv_1p0/merge.hpp" // core
 #include "hal_rvv_1p0/mean.hpp" // core
+#include "hal_rvv_1p0/dxt.hpp" // core
 #include "hal_rvv_1p0/norm.hpp" // core
 #include "hal_rvv_1p0/norm_diff.hpp" // core
 #include "hal_rvv_1p0/norm_hamming.hpp" // core
@@ -29,7 +30,21 @@
 #include "hal_rvv_1p0/minmax.hpp" // core
 #include "hal_rvv_1p0/atan.hpp" // core
 #include "hal_rvv_1p0/split.hpp" // core
+#include "hal_rvv_1p0/magnitude.hpp" // core
+#include "hal_rvv_1p0/cart_to_polar.hpp" // core
 #include "hal_rvv_1p0/flip.hpp" // core
+#include "hal_rvv_1p0/lut.hpp" // core
+#include "hal_rvv_1p0/exp.hpp" // core
+#include "hal_rvv_1p0/log.hpp" // core
+#include "hal_rvv_1p0/lu.hpp" // core
+#include "hal_rvv_1p0/cholesky.hpp" // core
+#include "hal_rvv_1p0/qr.hpp" // core
+#include "hal_rvv_1p0/svd.hpp" // core
+#include "hal_rvv_1p0/sqrt.hpp" // core
+
+#include "hal_rvv_1p0/filter.hpp" // imgproc
+#include "hal_rvv_1p0/pyramids.hpp" // imgproc
+#include "hal_rvv_1p0/color.hpp" // imgproc
 #endif
 
 #endif
