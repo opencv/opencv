@@ -570,6 +570,12 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
     // confirm the params
     for (size_t i = 0; i < params.size(); i += 2) {
         switch (params[i]) {
+            case IMWRITE_GIF_LOOP:
+                CV_LOG_WARNING(NULL, "IMWRITE_GIF_LOOP is not functional since 4.12.0. Replaced by cv::Animation::loop_count.");
+                break;
+            case IMWRITE_GIF_SPEED:
+                CV_LOG_WARNING(NULL, "IMWRITE_GIF_SPEED is not functional since 4.12.0. Replaced by cv::Animation::durations.");
+                break;
             case IMWRITE_GIF_DITHER:
                 dithering = std::min(std::max(params[i + 1], -1), 3);
                 fast = false;

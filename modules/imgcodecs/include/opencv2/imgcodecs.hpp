@@ -117,8 +117,8 @@ enum ImwriteFlags {
        IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
        IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
        IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
-       IMWRITE_GIF_RESERVED_0      = 1024, //!< For GIF, reserved.
-       IMWRITE_GIF_RESERVED_1      = 1025, //!< For GIF, reserved.
+       IMWRITE_GIF_LOOP            = 1024, //!< Not functional since 4.12.0. Replaced by cv::Animation::loop_count.
+       IMWRITE_GIF_SPEED           = 1025, //!< Not functional since 4.12.0. Replaced by cv::Animation::durations.
        IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
        IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
        IMWRITE_GIF_TRANSPARENCY    = 1028, //!< For GIF, the alpha channel lower than this will be set to transparent. Default is 1.
