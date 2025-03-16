@@ -515,31 +515,31 @@ struct NormDiffInf_SIMD<short, int> {
 };
 
 template<>
-struct NormDiffInf_SIMD<int, int> {
-    int operator() (const int* src1, const int* src2, int n) const {
+struct NormDiffInf_SIMD<int, unsigned> {
+    unsigned operator() (const int* src1, const int* src2, int n) const {
         int j = 0;
-        int s = 0;
+        unsigned s = 0;
         v_uint32 r0 = vx_setzero_u32(), r1 = vx_setzero_u32();
         v_uint32 r2 = vx_setzero_u32(), r3 = vx_setzero_u32();
         for (; j <= n - 4 * VTraits<v_int32>::vlanes(); j += 4 * VTraits<v_int32>::vlanes()) {
             v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
-            r0 = v_max(r0, v_abs(v_sub(v01, v02)));
+            r0 = v_max(r0, v_absdiff(v01, v02));
 
             v_int32 v11 = vx_load(src1 + j + VTraits<v_int32>::vlanes()),
                     v12 = vx_load(src2 + j + VTraits<v_int32>::vlanes());
-            r1 = v_max(r1, v_abs(v_sub(v11, v12)));
+            r1 = v_max(r1, v_absdiff(v11, v12));
 
             v_int32 v21 = vx_load(src1 + j + 2 * VTraits<v_int32>::vlanes()),
                     v22 = vx_load(src2 + j + 2 * VTraits<v_int32>::vlanes());
-            r2 = v_max(r2, v_abs(v_sub(v21, v22)));
+            r2 = v_max(r2, v_absdiff(v21, v22));
 
             v_int32 v31 = vx_load(src1 + j + 3 * VTraits<v_int32>::vlanes()),
                     v32 = vx_load(src2 + j + 3 * VTraits<v_int32>::vlanes());
-            r3 = v_max(r3, v_abs(v_sub(v31, v32)));
+            r3 = v_max(r3, v_absdiff(v31, v32));
         }
         s = (int)v_reduce_max(v_max(v_max(v_max(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = (int)cv_absdiff(src1[j], src2[j]);
+            unsigned v = (unsigned)cv_absdiff(src1[j], src2[j]);
             s = std::max(s, v);
         }
         return s;
@@ -997,37 +997,37 @@ struct NormDiffInf_SIMD<double, double> {
     }
 };
 
-template<>
-struct NormDiffL1_SIMD<int, double> {
-    double operator() (const int* src1, const int* src2, int n) const {
-        int j = 0;
-        double s = 0.f;
-        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
-        v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
-        for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-            v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
-            v_uint32 v0 = v_absdiff(v01, v02);
-            v_uint64 ev01, ev02;
-            v_expand(v0, ev01, ev02);
-            r0 = v_add(r0, v_cvt_f64(v_reinterpret_as_s64(ev01)));
-            r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(ev02)));
+// template<>
+// struct NormDiffL1_SIMD<int, double> {
+//     double operator() (const int* src1, const int* src2, int n) const {
+//         int j = 0;
+//         double s = 0.f;
+//         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
+//         v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
+//         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
+//             v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
+//             v_uint32 v0 = v_absdiff(v01, v02);
+//             v_uint64 ev01, ev02;
+//             v_expand(v0, ev01, ev02);
+//             r0 = v_add(r0, v_cvt_f64(v_reinterpret_as_s64(ev01)));
+//             r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(ev02)));
 
-            v_int32 v11 = vx_load(src1 + j + VTraits<v_int32>::vlanes()),
-                    v12 = vx_load(src2 + j + VTraits<v_int32>::vlanes());
-            v_uint32 v1 = v_absdiff(v11, v12);
-            v_uint64 ev11, ev12;
-            v_expand(v1, ev11, ev12);
-            r2 = v_add(r2, v_cvt_f64(v_reinterpret_as_s64(ev11)));
-            r3 = v_add(r3, v_cvt_f64(v_reinterpret_as_s64(ev12)));
-        }
-        s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
-        for (; j < n; j++) {
-            double v = (double)cv_absdiff(src1[j], src2[j]);
-            s += v;
-        }
-        return s;
-    }
-};
+//             v_int32 v11 = vx_load(src1 + j + VTraits<v_int32>::vlanes()),
+//                     v12 = vx_load(src2 + j + VTraits<v_int32>::vlanes());
+//             v_uint32 v1 = v_absdiff(v11, v12);
+//             v_uint64 ev11, ev12;
+//             v_expand(v1, ev11, ev12);
+//             r2 = v_add(r2, v_cvt_f64(v_reinterpret_as_s64(ev11)));
+//             r3 = v_add(r3, v_cvt_f64(v_reinterpret_as_s64(ev12)));
+//         }
+//         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
+//         for (; j < n; j++) {
+//             double v = (double)cv_absdiff(src1[j], src2[j]);
+//             s += v;
+//         }
+//         return s;
+//     }
+// };
 
 template<>
 struct NormDiffL1_SIMD<float, double> {
