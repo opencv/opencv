@@ -650,6 +650,39 @@ TEST(CV_ArucoDetectMarkers, regression_contour_24220)
     }
 }
 
+TEST(CV_ArucoDetectMarkers, regression_26922)
+{
+    const auto arucoDict = aruco::getPredefinedDictionary(aruco::DICT_4X4_1000);
+    const aruco::GridBoard gridBoard(Size(19, 10), 1, 0.25, arucoDict);
+
+    const Size imageSize(7200, 3825);
+
+    Mat boardImage;
+    gridBoard.generateImage(imageSize, boardImage, 75, 1);
+
+    const aruco::ArucoDetector detector(arucoDict);
+
+    vector<vector<Point2f>> corners;
+    vector<int> ids;
+    detector.detectMarkers(boardImage, corners, ids);
+
+    EXPECT_EQ(ids.size(), 190ull);
+    EXPECT_TRUE(find(ids.begin(), ids.end(), 76) != ids.end());
+    EXPECT_TRUE(find(ids.begin(), ids.end(), 172) != ids.end());
+
+    float transformMatrixData[9] = {1, -0.2, 300, 0.4, 1, -1000, 0, 0, 1};
+    const Mat transformMatrix(Size(3, 3), CV_32FC1, transformMatrixData);
+
+    Mat warpedImage;
+    warpPerspective(boardImage, warpedImage, transformMatrix, imageSize);
+
+    detector.detectMarkers(warpedImage, corners, ids);
+
+    EXPECT_EQ(ids.size(), 133ull);
+    EXPECT_FALSE(find(ids.begin(), ids.end(), 76) != ids.end());
+    EXPECT_FALSE(find(ids.begin(), ids.end(), 172) != ids.end());
+}
+
 TEST(CV_ArucoMultiDict, setGetDictionaries)
 {
     vector<aruco::Dictionary> dictionaries = {aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)};
