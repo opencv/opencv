@@ -30,7 +30,8 @@ const string param_keys =
     "{ input i         |                   | Path to input image for computing CCM. Skip to use device camera. }"
     "{ query q         |                   | Path to query image to apply color correction. If not provided, input image will be used. }"
     "{ type            |         0         | chartType: 0-Standard, 1-DigitalSG, 2-Vinyl }"
-    "{ num_charts      |         1         | Maximum number of charts in the image }";
+    "{ num_charts      |         1         | Maximum number of charts in the image }"
+    "{ ccm_file        |                   | Path to YAML file containing pre-computed CCM parameters }";
 
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
@@ -101,79 +102,111 @@ int main(int argc, char* argv[]) {
 
     int nc = parser.get<int>("num_charts");
 
-    Ptr<CCheckerDetector> detector;
-    if (!modelPath.empty() && !configPath.empty()) {
-        Net net = readNetFromTensorflow(modelPath, configPath);
-        net.setPreferableBackend(getBackendID(backend));
-        net.setPreferableTarget(getTargetID(target));
-        detector = CCheckerDetector::create(net);
-        cout << "Using DNN-based checker detector." << endl;
-    } else {
-        detector = CCheckerDetector::create();
-        cout << "Using thresholding-based checker detector." << endl;
-    }
-    detector->setColorChartType(chartType);
-
     // Get input and target image paths
     const string inputFile = parser.get<String>("input");
     const string queryFile = parser.get<String>("query");
+    const string ccmFile = parser.get<String>("ccm_file");
 
-    if (inputFile.empty()) {
-        cout << "Error: Input image path must be provided." << endl;
-        parser.printMessage();
-        return -1;
-    }
-
-    // Read input image
-    Mat originalImage = imread(findFile(inputFile));
-    if (originalImage.empty()) {
-        cout << "Error: Unable to read input image." << endl;
-        return -1;
-    }
-
-    // Read query image or use input image if not provided
-    Mat queryImage;
-    if (queryFile.empty()) {
-        cout << "[WARN] No query image provided, applying color correction on input image" << endl;
-        queryImage = originalImage.clone();
+    if (!ccmFile.empty()) {
+        // When ccm_file is provided, only query is required
+        if (queryFile.empty()) {
+            cout << "Error: Query image path must be provided when using pre-computed CCM." << endl;
+            parser.printMessage();
+            return -1;
+        }
     } else {
+        // Original validation for when computing new CCM
+        if (inputFile.empty()) {
+            cout << "Error: Input image path must be provided." << endl;
+            parser.printMessage();
+            return -1;
+        }
+    }
+
+    cv::ccm::ColorCorrectionModel model;
+    Mat queryImage;
+
+    if (!ccmFile.empty()) {
+        // Load CCM from YAML file
+        FileStorage fs(ccmFile, FileStorage::READ);
+        if (!fs.isOpened()) {
+            cout << "Error: Unable to open CCM file: " << ccmFile << endl;
+            return -1;
+        }
+        model.read(fs["ColorCorrectionModel"]);
+        fs.release();
+        cout << "Loaded CCM from file: " << ccmFile << endl;
+
+        // Read query image when using pre-computed CCM
         queryImage = imread(findFile(queryFile));
         if (queryImage.empty()) {
             cout << "Error: Unable to read query image." << endl;
             return -1;
         }
+    } else {
+        // Read input image for computing new CCM
+        Mat originalImage = imread(findFile(inputFile));
+        if (originalImage.empty()) {
+            cout << "Error: Unable to read input image." << endl;
+            return -1;
+        }
+
+        // Process first image to compute CCM
+        Mat image = originalImage.clone();
+        Mat src;
+
+        Ptr<CCheckerDetector> detector;
+        if (!modelPath.empty() && !configPath.empty()) {
+            Net net = readNetFromTensorflow(modelPath, configPath);
+            net.setPreferableBackend(getBackendID(backend));
+            net.setPreferableTarget(getTargetID(target));
+            detector = CCheckerDetector::create(net);
+            cout << "Using DNN-based checker detector." << endl;
+        } else {
+            detector = CCheckerDetector::create();
+            cout << "Using thresholding-based checker detector." << endl;
+        }
+        detector->setColorChartType(chartType);
+
+        if (!processFrame(image, detector, src, nc)) {
+            cout << "No chart detected in the input image!" << endl;
+            return -1;
+        }
+
+        cout << "Actual colors: " << src << endl << endl;
+
+        // Convert to double and normalize
+        src.convertTo(src, CV_64F, 1.0/255.0);
+
+        // Color correction model
+        model = cv::ccm::ColorCorrectionModel(src, cv::ccm::COLORCHECKER_MACBETH);
+        model.setCCMType(CCM_LINEAR);
+        model.setDistance(DISTANCE_CIE2000);
+        model.setLinearization(LINEARIZATION_GAMMA);
+        model.setLinearizationGamma(2.2);
+
+        Mat ccm = model.compute();
+        cout << "Computed CCM Matrix:\n" << ccm << endl;
+        cout << "Loss: " << model.getLoss() << endl;
+
+        // Save model parameters to YAML file
+        FileStorage fs("ccm_output.yaml", FileStorage::WRITE);
+        model.write(fs);
+        fs.release();
+        cout << "Model parameters saved to ccm_output.yaml" << endl;
+
+        // Set query image for correction
+        if (queryFile.empty()) {
+            cout << "[WARN] No query image provided, applying color correction on input image" << endl;
+            queryImage = originalImage.clone();
+        } else {
+            queryImage = imread(findFile(queryFile));
+            if (queryImage.empty()) {
+                cout << "Error: Unable to read query image." << endl;
+                return -1;
+            }
+        }
     }
-
-    // Process first image to compute CCM
-    Mat image = originalImage.clone();
-    Mat src;
-    if (!processFrame(image, detector, src, nc)) {
-        cout << "No chart detected in the input image!" << endl;
-        return -1;
-    }
-
-    cout << "Actual colors: " << src << endl << endl;
-
-    // Convert to double and normalize
-    src.convertTo(src, CV_64F, 1.0/255.0);
-
-    // Color correction model
-    cv::ccm::ColorCorrectionModel model(src, cv::ccm::COLORCHECKER_MACBETH);
-    model.setCCMType(CCM_LINEAR);
-    model.setDistance(DISTANCE_CIE2000);
-    model.setLinearization(LINEARIZATION_GAMMA);
-    model.setLinearizationGamma(2.2);
-
-    Mat ccm = model.compute();
-    cout << "Computed CCM Matrix:\n" << ccm << endl;
-    cout << "Loss: " << model.getLoss() << endl;
-
-    // Save model parameters to YAML file
-    FileStorage fs("ccm_output.yaml", FileStorage::WRITE);
-    fs << "ccm" << ccm;
-    fs << "loss" << model.getLoss();
-    fs.release();
-    cout << "Model parameters saved to ccm_output.yaml" << endl;
 
     // Apply correction to query image
     Mat calibratedImage, normalizedImage;

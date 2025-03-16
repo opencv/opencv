@@ -11,6 +11,28 @@
 namespace cv {
 namespace ccm {
 
+Polyfit::Polyfit() : deg(0) {}
+
+void Polyfit::write(cv::FileStorage& fs) const {
+    fs << "{" << "deg" << deg << "p" << p << "}";
+}
+
+void Polyfit::read(const cv::FileNode& node) {
+    node["deg"] >> deg;
+    node["p"] >> p;
+}
+
+// Global functions to support FileStorage for Polyfit
+void write(cv::FileStorage& fs, const std::string&, const Polyfit& polyfit) {
+    polyfit.write(fs);
+}
+void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& default_value) {
+    if(node.empty())
+        polyfit = default_value;
+    else
+        polyfit.read(node);
+}
+
 Polyfit::Polyfit(Mat x, Mat y, int deg_)
     : deg(deg_)
 {
@@ -44,6 +66,29 @@ double Polyfit::fromEW(double x)
     return res;
 };
 
+// Default constructor for LogPolyfit
+LogPolyfit::LogPolyfit() : deg(0) {}
+
+void LogPolyfit::write(cv::FileStorage& fs) const {
+    fs << "{" << "deg" << deg << "p" << p << "}";
+}
+
+void LogPolyfit::read(const cv::FileNode& node) {
+    node["deg"] >> deg;
+    node["p"] >> p;
+}
+
+// Global functions to support FileStorage for LogPolyfit
+void write(cv::FileStorage& fs, const std::string&, const LogPolyfit& logpolyfit) {
+    logpolyfit.write(fs);
+}
+void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& default_value) {
+    if(node.empty())
+        logpolyfit = default_value;
+    else
+        logpolyfit.read(node);
+}
+
 LogPolyfit::LogPolyfit(Mat x, Mat y, int deg_)
     : deg(deg_)
 {
@@ -66,6 +111,132 @@ Mat LogPolyfit::operator()(const Mat& inp)
     y_.copyTo(res, mask_);
     return res;
 };
+
+void LinearIdentity::write(cv::FileStorage& fs) const
+{
+    fs << "{" << "}";
+}
+
+void LinearIdentity::read(const cv::FileNode&)
+{
+}
+
+void LinearGamma::write(cv::FileStorage& fs) const
+{
+    fs << "{" << "gamma" << gamma << "}";
+}
+
+void LinearGamma::read(const cv::FileNode& node)
+{
+    node["gamma"] >> gamma;
+}
+
+template <typename T>
+void LinearColor<T>::write(cv::FileStorage& fs) const
+{
+    fs << "{" << "deg" << deg << "pr" << pr << "pg" << pg << "pb" << pb << "}";
+}
+
+template <typename T>
+void LinearColor<T>::read(const cv::FileNode& node)
+{
+    node["deg"] >> deg;
+    node["pr"] >> pr;
+    node["pg"] >> pg;
+    node["pb"] >> pb;
+}
+
+template <typename T>
+void LinearGray<T>::write(cv::FileStorage& fs) const
+{
+    fs << "{" << "deg" << deg << "p" << p << "}";
+}
+
+template <typename T>
+void LinearGray<T>::read(const cv::FileNode& node)
+{
+    node["deg"] >> deg;
+    node["p"] >> p;
+}
+
+void Linear::write(cv::FileStorage&) const
+{
+    CV_Error(Error::StsNotImplemented, "This is a base class, so this shouldn't be called");
+}
+
+void Linear::read(const cv::FileNode&)
+{
+    CV_Error(Error::StsNotImplemented, "This is a base class, so this shouldn't be called");
+}
+
+void write(cv::FileStorage& fs, const std::string&, const Linear& linear)
+{
+    linear.write(fs);
+}
+
+void read(const cv::FileNode& node, Linear& linear, const Linear& default_value)
+{
+    if (node.empty())
+        linear = default_value;
+    else
+        linear.read(node);
+}
+
+void write(cv::FileStorage& fs, const std::string&, const LinearIdentity& linearidentity)
+{
+    linearidentity.write(fs);
+}
+
+void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& default_value)
+{
+    if (node.empty())
+        linearidentity = default_value;
+    else
+        linearidentity.read(node);
+}
+
+void write(cv::FileStorage& fs, const std::string&, const LinearGamma& lineargamma)
+{
+    lineargamma.write(fs);
+}
+
+void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& default_value)
+{
+    if (node.empty())
+        lineargamma = default_value;
+    else
+        lineargamma.read(node);
+}
+
+template <typename T>
+void write(cv::FileStorage& fs, const std::string&, const LinearColor<T>& linearcolor)
+{
+    linearcolor.write(fs);
+}
+
+template <typename T>
+void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& default_value)
+{
+    if (node.empty())
+        linearcolor = default_value;
+    else
+        linearcolor.read(node);
+}
+
+template <typename T>
+void write(cv::FileStorage& fs, const std::string&, const LinearGray<T>& lineargray)
+{
+    lineargray.write(fs);
+}
+
+template <typename T>
+void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& default_value)
+{
+    if (node.empty())
+        lineargray = default_value;
+    else
+        lineargray.read(node);
+}
 
 Mat Linear::linearize(Mat inp)
 {

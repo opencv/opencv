@@ -252,5 +252,45 @@ TEST(Photo_ColorCorrection, mcc_ccm_combined)
     EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
 }
 
+TEST(CV_mcc_ccm_test, serialization)
+{
+    auto path1 = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
+    FileStorage fs(path1, FileStorage::READ);
+    Mat chartsRGB;
+    FileNode node = fs["chartsRGB"];
+    node >> chartsRGB;
+    fs.release();
+
+    // compute CCM
+    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model.compute();
+
+    // write model
+    path1 = cv::tempfile();
+    FileStorage fs1(path1, FileStorage::WRITE);
+    fs1 << "model" << model;
+    fs1.release();
+
+    // read model
+    cv::ccm::ColorCorrectionModel model1;
+    FileStorage fs2(path1, FileStorage::READ);
+    fs2["model"] >> model1;
+    fs2.release();
+
+    // write model again
+    auto path2 = cv::tempfile();
+    FileStorage fs3(path2, FileStorage::WRITE);
+    fs3 << "model" << model1;
+    fs3.release();
+
+    // read both yamls from disk
+    std::ifstream file1(path1);
+    std::string str1((std::istreambuf_iterator<char>(file1)), std::istreambuf_iterator<char>());
+    std::ifstream file2(path2);
+    std::string str2((std::istreambuf_iterator<char>(file2)), std::istreambuf_iterator<char>());
+    // compare them
+    EXPECT_EQ(str1, str2);
+}
+
 } // namespace
 } // namespace opencv_test

@@ -14,9 +14,12 @@ class ColorCorrectionModel::Impl
 {
 public:
     Mat src;
+
     std::shared_ptr<Color> dst = std::make_shared<Color>();
     Mat dist;
     RGBBase_& cs;
+    // Track initialization parameters for serialization
+    ColorSpace cs_enum;
     Mat mask;
 
     // RGBl of detected data and the reference
@@ -119,6 +122,7 @@ public:
 
 ColorCorrectionModel::Impl::Impl()
     : cs(*GetCS::getInstance().getRgb(COLOR_SPACE_SRGB))
+    , cs_enum(COLOR_SPACE_SRGB)
     , ccmType(CCM_LINEAR)
     , distance(DISTANCE_CIE2000)
     , linearizationType(LINEARIZATION_GAMMA)
@@ -262,6 +266,10 @@ void ColorCorrectionModel::Impl::fitting(void)
     ccm = reshapeccm.reshape(0, shape / 3);
     loss = pow((res / masked_len), 0.5);
 }
+
+ColorCorrectionModel::ColorCorrectionModel()
+: p(std::make_shared<Impl>())
+{}
 
 void ColorCorrectionModel::correctImage(InputArray src, OutputArray dst, bool islinear)
 {
@@ -419,5 +427,78 @@ Mat ColorCorrectionModel::getMask() const{
 Mat ColorCorrectionModel::getWeights() const{
     return p->weights;
 }
+
+void ColorCorrectionModel::write(FileStorage& fs) const
+{
+    fs << "ColorCorrectionModel" << "{"  // Add a valid key name here
+       << "ccm" << p->ccm
+       << "loss" << p->loss
+       << "cs_enum" << p->cs_enum
+       << "ccm_type" << p->ccmType
+       << "shape" << p->shape
+       << "linear" << *p->linear
+       << "distance" << p->distance
+       << "linear_type" << p->linearizationType
+       << "gamma" << p->gamma
+       << "deg" << p->deg
+       << "saturated_threshold" << p->saturatedThreshold
+       << "}";
+}
+
+void ColorCorrectionModel::read(const FileNode& node)
+{
+    node["ccm"] >> p->ccm;
+    node["loss"] >> p->loss;
+    node["ccm_type"] >> p->ccmType;
+    node["shape"] >> p->shape;
+    node["distance"] >> p->distance;
+    node["gamma"] >> p->gamma;
+    node["deg"] >> p->deg;
+    node["saturated_threshold"] >> p->saturatedThreshold;
+
+    ColorSpace cs_enum;
+    node["cs_enum"] >> cs_enum;
+    setColorSpace(cs_enum);
+
+    node["linear_type"] >> p->linearizationType;
+    switch (p->linearizationType) {
+        case cv::ccm::LINEARIZATION_GAMMA:
+            p->linear = std::shared_ptr<Linear>(new LinearGamma());
+            break;
+        case cv::ccm::LINEARIZATION_COLORPOLYFIT:
+            p->linear = std::shared_ptr<Linear>(new LinearColor<Polyfit>());
+            break;
+        case cv::ccm::LINEARIZATION_IDENTITY:
+            p->linear = std::shared_ptr<Linear>(new LinearIdentity());
+            break;
+        case cv::ccm::LINEARIZATION_COLORLOGPOLYFIT:
+            p->linear = std::shared_ptr<Linear>(new LinearColor<LogPolyfit>());
+            break;
+        case cv::ccm::LINEARIZATION_GRAYPOLYFIT:
+            p->linear = std::shared_ptr<Linear>(new LinearGray<Polyfit>());
+            break;
+        case cv::ccm::LINEARIZATION_GRAYLOGPOLYFIT:
+            p->linear = std::shared_ptr<Linear>(new LinearGray<LogPolyfit>());
+            break;
+        default:
+            CV_Error(Error::StsBadArg, "Wrong linear_type!");
+            break;
+    }
+    node["linear"] >> *p->linear;
+}
+
+void write(FileStorage& fs, const std::string&, const cv::ccm::ColorCorrectionModel& ccm)
+{
+    ccm.write(fs);
+}
+
+void read(const cv::FileNode& node, cv::ccm::ColorCorrectionModel& ccm, const cv::ccm::ColorCorrectionModel& default_value)
+{
+    if (node.empty())
+        ccm = default_value;
+    else
+        ccm.read(node);
+}
+
 }
 }  // namespace cv::ccm

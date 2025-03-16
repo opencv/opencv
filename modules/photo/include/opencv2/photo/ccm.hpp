@@ -136,6 +136,8 @@ Produce a ColorCorrectionModel instance for inference
 class CV_EXPORTS_W ColorCorrectionModel
 {
 public:
+    CV_WRAP ColorCorrectionModel();
+
     /** @brief Color Correction Model
 
         Supported list of color cards:
@@ -283,10 +285,16 @@ public:
     */
     CV_WRAP void correctImage(InputArray src, OutputArray dst, bool islinear = false);
 
+    CV_WRAP void write(cv::FileStorage& fs) const;
+    CV_WRAP void read(const cv::FileNode& node);
+
     class Impl;
 private:
     std::shared_ptr<Impl> p;
 };
+
+CV_EXPORTS void write(cv::FileStorage& fs, const std::string&, const ColorCorrectionModel& ccm);
+CV_EXPORTS void read(const cv::FileNode& node, ColorCorrectionModel& ccm, const ColorCorrectionModel& default_value = ColorCorrectionModel());
 
 //! @} ccm
 } // namespace ccm

@@ -23,7 +23,7 @@ class Polyfit
 public:
     int deg;
     Mat p;
-    Polyfit() {};
+    Polyfit();
 
     /** @brief Polyfit method.
     https://en.wikipedia.org/wiki/Polynomial_regression
@@ -34,9 +34,17 @@ public:
     virtual ~Polyfit() {};
     Mat operator()(const Mat& inp);
 
+    // Serialization support
+    void write(cv::FileStorage& fs) const;
+    void read(const cv::FileNode& node);
+
 private:
     double fromEW(double x);
 };
+
+// Global functions for FileStorage for Polyfit
+void write(cv::FileStorage& fs, const std::string&, const Polyfit& polyfit);
+void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& default_value = Polyfit());
 
 /** @brief Logpolyfit model.
 */
@@ -47,14 +55,22 @@ public:
     int deg;
     Polyfit p;
 
-    LogPolyfit() {};
+    LogPolyfit();
 
     /** @brief Logpolyfit method.
     */
     LogPolyfit(Mat x, Mat y, int deg);
     virtual ~LogPolyfit() {};
     Mat operator()(const Mat& inp);
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const;
+    void read(const cv::FileNode& node);
 };
+
+// Global functions for FileStorage for LogPolyfit
+void write(cv::FileStorage& fs, const std::string&, const LogPolyfit& logpolyfit);
+void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& default_value = LogPolyfit());
 
 /** @brief Linearization base.
 */
@@ -72,13 +88,29 @@ public:
     /** @brief Evaluate linearization model.
     */
     virtual void value(void) {};
+
+    // Serialization support
+    virtual void write(cv::FileStorage& fs) const;
+    virtual void read(const cv::FileNode& node);
 };
+
+// Global functions for FileStorage for Linear
+void write(cv::FileStorage& fs, const std::string&, const Linear& linear);
+void read(const cv::FileNode& node, Linear& linear, const Linear& default_value = Linear());
 
 /** @brief Linearization identity.
            make no change.
 */
 class LinearIdentity : public Linear
-{};
+{
+    public:
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
+};
+
+// Global functions for FileStorage for LinearIdentity
+void write(cv::FileStorage& fs, const std::string&, const LinearIdentity& linearidentity);
+void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& default_value = LinearIdentity());
 
 /** @brief Linearization gamma correction.
 */
@@ -87,11 +119,22 @@ class LinearGamma : public Linear
 public:
     double gamma;
 
+    LinearGamma()
+        : gamma(1.0) {};
+
     LinearGamma(double gamma_)
         : gamma(gamma_) {};
 
     Mat linearize(Mat inp) CV_OVERRIDE;
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
 };
+
+// Global functions for FileStorage for LinearGamma
+void write(cv::FileStorage& fs, const std::string&, const LinearGamma& lineargamma);
+void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& default_value = LinearGamma());
 
 /** @brief Linearization.
            Grayscale polynomial fitting.
@@ -102,6 +145,9 @@ class LinearGray : public Linear
 public:
     int deg;
     T p;
+
+    LinearGray(): deg(3) {};
+
     LinearGray(int deg_, Mat src, Color dst, Mat mask, RGBBase_ cs)
         : deg(deg_)
     {
@@ -127,7 +173,17 @@ public:
     {
         return p(inp);
     };
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
 };
+
+// Global functions for FileStorage for LinearGray
+template <typename T>
+void write(cv::FileStorage& fs, const std::string&, const LinearGray<T>& lineargray);
+template <typename T>
+void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& default_value = LinearGray<T>());
 
 /** @brief Linearization.
            Fitting channels respectively.
@@ -140,6 +196,8 @@ public:
     T pr;
     T pg;
     T pb;
+
+    LinearColor(): deg(3) {};
 
     LinearColor(int deg_, Mat src_, Color dst, Mat mask, RGBBase_ cs)
         : deg(deg_)
@@ -169,7 +227,17 @@ public:
         merge(std::vector<Mat> { pr(channels[0]), pg(channels[1]), pb(channels[2]) }, res);
         return res;
     };
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
 };
+
+// Global functions for FileStorage for LinearColor
+template <typename T>
+void write(cv::FileStorage& fs, const std::string&, const LinearColor<T>& linearcolor);
+template <typename T>
+void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& default_value = LinearColor<T>());
 
 /** @brief Get linearization method.
            used in ccm model.
