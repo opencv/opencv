@@ -39,7 +39,7 @@ endif()
 
 unset(CUDA_nvcuvenc_LIBRARY CACHE)
 set(HAVE_CUDA 1)
-if(NOT CUDA_VERSION VERSION_LESS 11.0)
+if(NOT CUDA_VERSION_SHORT VERSION_LESS 11.0)
   # CUDA 11.0 removes nppicom
   ocv_list_filterout(CUDA_nppi_LIBRARY "nppicom")
   ocv_list_filterout(CUDA_npp_LIBRARY "nppicom")
@@ -69,8 +69,8 @@ if(WITH_NVCUVID OR WITH_NVCUVENC)
   set(cuda_toolkit_dirs "${CUDA_TOOLKIT_TARGET_DIR}" "${CUDA_TOOLKIT_ROOT_DIR}")
   ocv_check_for_nvidia_video_codec_sdk("${cuda_toolkit_dirs}")
 endif()
-
-message(STATUS "CUDA detected: " ${CUDA_VERSION})
+string(REGEX MATCH "^[0-9]+\\.[0-9]+" CUDA_VERSION_SHORT "${CUDA_VERSION}")
+message(STATUS "CUDA detected: ${CUDA_VERSION_SHORT}")
 
 ocv_set_cuda_detection_nvcc_flags(CUDA_HOST_COMPILER)
 ocv_set_cuda_arch_bin_and_ptx(${CUDA_NVCC_EXECUTABLE})
@@ -153,7 +153,7 @@ macro(ocv_cuda_compile VAR)
 
   if(UNIX OR APPLE)
     if(NOT " ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS_DEBUG} ${CUDA_NVCC_FLAGS}" MATCHES "-std=")
-      if(CUDA_VERSION VERSION_LESS "11.0")
+      if(CUDA_VERSION_SHORT VERSION_LESS "11.0")
         list(APPEND CUDA_NVCC_FLAGS "--std=c++11")
       else()
         list(APPEND CUDA_NVCC_FLAGS "--std=c++14")
