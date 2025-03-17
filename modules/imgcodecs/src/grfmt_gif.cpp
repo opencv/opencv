@@ -320,11 +320,18 @@ bool GifDecoder::lzwDecode() {
     const int lzwMaxSize = (1 << 12); // 4096 is the maximum size of the LZW table (12 bits)
     int lzwCodeSize = lzwMinCodeSize + 1;
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
-    int clearCode = 1 << lzwMinCodeSize;
-    int exitCode = clearCode + 1;
-    std::vector<lzwNodeD> lzwExtraTable(lzwMaxSize + 1);
-    int colorTableSize = clearCode;
-    int lzwTableSize = exitCode;
+    const int clearCode = 1 << lzwMinCodeSize;
+    const int exitCode = clearCode + 1;
+    std::vector<lzwNodeD> lzwExtraTable;
+    const int colorTableSize = clearCode;
+    int lzwTableSize;
+    auto clear = [&]() {
+        lzwExtraTable.clear();
+        lzwExtraTable.resize(lzwMaxSize + 1);
+        // reset the code size, the same as that in the initialization part
+        lzwCodeSize  = lzwMinCodeSize + 1;
+        lzwTableSize = exitCode;
+    };
 
     idx = 0;
     int leftBits = 0;
@@ -337,6 +344,7 @@ bool GifDecoder::lzwDecode() {
             leftBits += 8;
         }
 
+        clear();
         while (leftBits >= lzwCodeSize) {
             // get the code
             uint16_t code = src & ((1 << lzwCodeSize) - 1);
@@ -345,18 +353,11 @@ bool GifDecoder::lzwDecode() {
 
             // clear code
             if (!(code ^ clearCode)) {
-                lzwExtraTable.clear();
-                lzwExtraTable.resize(lzwMaxSize + 1);
-                // reset the code size, the same as that in the initialization part
-                lzwCodeSize  = lzwMinCodeSize + 1;
-                lzwTableSize = exitCode;
+                clear();
                 continue;
             }
             // end of information
             if (!(code ^ exitCode)) {
-                lzwExtraTable.clear();
-                lzwCodeSize  = lzwMinCodeSize + 1;
-                lzwTableSize = exitCode;
                 break;
             }
 
