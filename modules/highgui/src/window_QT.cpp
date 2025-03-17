@@ -2949,6 +2949,7 @@ void DefaultViewPort::stopDisplayInfo()
 {
     timerDisplay->stop();
     drawInfo = false;
+    viewport()->update();
 }
 
 
