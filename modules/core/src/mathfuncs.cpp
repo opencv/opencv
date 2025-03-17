@@ -328,149 +328,6 @@ void cartToPolar( InputArray src1, InputArray src2,
 *                                  Polar -> Cartezian                                    *
 \****************************************************************************************/
 
-static void SinCos_32f( const float *angle, float *sinval, float* cosval,
-                        int len, int angle_in_degrees )
-{
-    const int N = 64;
-
-    static const double sin_table[] =
-    {
-     0.00000000000000000000,     0.09801714032956060400,
-     0.19509032201612825000,     0.29028467725446233000,
-     0.38268343236508978000,     0.47139673682599764000,
-     0.55557023301960218000,     0.63439328416364549000,
-     0.70710678118654746000,     0.77301045336273699000,
-     0.83146961230254524000,     0.88192126434835494000,
-     0.92387953251128674000,     0.95694033573220894000,
-     0.98078528040323043000,     0.99518472667219682000,
-     1.00000000000000000000,     0.99518472667219693000,
-     0.98078528040323043000,     0.95694033573220894000,
-     0.92387953251128674000,     0.88192126434835505000,
-     0.83146961230254546000,     0.77301045336273710000,
-     0.70710678118654757000,     0.63439328416364549000,
-     0.55557023301960218000,     0.47139673682599786000,
-     0.38268343236508989000,     0.29028467725446239000,
-     0.19509032201612861000,     0.09801714032956082600,
-     0.00000000000000012246,    -0.09801714032956059000,
-    -0.19509032201612836000,    -0.29028467725446211000,
-    -0.38268343236508967000,    -0.47139673682599764000,
-    -0.55557023301960196000,    -0.63439328416364527000,
-    -0.70710678118654746000,    -0.77301045336273666000,
-    -0.83146961230254524000,    -0.88192126434835494000,
-    -0.92387953251128652000,    -0.95694033573220882000,
-    -0.98078528040323032000,    -0.99518472667219693000,
-    -1.00000000000000000000,    -0.99518472667219693000,
-    -0.98078528040323043000,    -0.95694033573220894000,
-    -0.92387953251128663000,    -0.88192126434835505000,
-    -0.83146961230254546000,    -0.77301045336273688000,
-    -0.70710678118654768000,    -0.63439328416364593000,
-    -0.55557023301960218000,    -0.47139673682599792000,
-    -0.38268343236509039000,    -0.29028467725446250000,
-    -0.19509032201612872000,    -0.09801714032956050600,
-    };
-
-    static const double k2 = (2*CV_PI)/N;
-
-    static const double sin_a0 = -0.166630293345647*k2*k2*k2;
-    static const double sin_a2 = k2;
-
-    static const double cos_a0 = -0.499818138450326*k2*k2;
-    /*static const double cos_a2 =  1;*/
-
-    double k1;
-    int i = 0;
-
-    if( !angle_in_degrees )
-        k1 = N/(2*CV_PI);
-    else
-        k1 = N/360.;
-
-#if CV_AVX2
-    if (USE_AVX2)
-    {
-        __m128d v_k1 = _mm_set1_pd(k1);
-        __m128d v_1 = _mm_set1_pd(1);
-        __m128i v_N1 = _mm_set1_epi32(N - 1);
-        __m128i v_N4 = _mm_set1_epi32(N >> 2);
-        __m128d v_sin_a0 = _mm_set1_pd(sin_a0);
-        __m128d v_sin_a2 = _mm_set1_pd(sin_a2);
-        __m128d v_cos_a0 = _mm_set1_pd(cos_a0);
-
-        for ( ; i <= len - 4; i += 4)
-        {
-            __m128 v_angle = _mm_loadu_ps(angle + i);
-
-            // 0-1
-            __m128d v_t = _mm_mul_pd(_mm_cvtps_pd(v_angle), v_k1);
-            __m128i v_it = _mm_cvtpd_epi32(v_t);
-            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
-
-            __m128i v_sin_idx = _mm_and_si128(v_it, v_N1);
-            __m128i v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
-
-            __m128d v_t2 = _mm_mul_pd(v_t, v_t);
-            __m128d v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
-            __m128d v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
-
-            __m128d v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
-            __m128d v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
-
-            __m128d v_sin_val_0 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
-                                             _mm_mul_pd(v_cos_a, v_sin_b));
-            __m128d v_cos_val_0 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
-                                             _mm_mul_pd(v_sin_a, v_sin_b));
-
-            // 2-3
-            v_t = _mm_mul_pd(_mm_cvtps_pd(_mm_castsi128_ps(_mm_srli_si128(_mm_castps_si128(v_angle), 8))), v_k1);
-            v_it = _mm_cvtpd_epi32(v_t);
-            v_t = _mm_sub_pd(v_t, _mm_cvtepi32_pd(v_it));
-
-            v_sin_idx = _mm_and_si128(v_it, v_N1);
-            v_cos_idx = _mm_and_si128(_mm_sub_epi32(v_N4, v_sin_idx), v_N1);
-
-            v_t2 = _mm_mul_pd(v_t, v_t);
-            v_sin_b = _mm_mul_pd(_mm_add_pd(_mm_mul_pd(v_sin_a0, v_t2), v_sin_a2), v_t);
-            v_cos_b = _mm_add_pd(_mm_mul_pd(v_cos_a0, v_t2), v_1);
-
-            v_sin_a = _mm_i32gather_pd(sin_table, v_sin_idx, 8);
-            v_cos_a = _mm_i32gather_pd(sin_table, v_cos_idx, 8);
-
-            __m128d v_sin_val_1 = _mm_add_pd(_mm_mul_pd(v_sin_a, v_cos_b),
-                                             _mm_mul_pd(v_cos_a, v_sin_b));
-            __m128d v_cos_val_1 = _mm_sub_pd(_mm_mul_pd(v_cos_a, v_cos_b),
-                                             _mm_mul_pd(v_sin_a, v_sin_b));
-
-            _mm_storeu_ps(sinval + i, _mm_movelh_ps(_mm_cvtpd_ps(v_sin_val_0),
-                                                    _mm_cvtpd_ps(v_sin_val_1)));
-            _mm_storeu_ps(cosval + i, _mm_movelh_ps(_mm_cvtpd_ps(v_cos_val_0),
-                                                    _mm_cvtpd_ps(v_cos_val_1)));
-        }
-    }
-#endif
-
-    for( ; i < len; i++ )
-    {
-        double t = angle[i]*k1;
-        int it = cvRound(t);
-        t -= it;
-        int sin_idx = it & (N - 1);
-        int cos_idx = (N/4 - sin_idx) & (N - 1);
-
-        double sin_b = (sin_a0*t*t + sin_a2)*t;
-        double cos_b = cos_a0*t*t + 1;
-
-        double sin_a = sin_table[sin_idx];
-        double cos_a = sin_table[cos_idx];
-
-        double sin_val = sin_a*cos_b + cos_a*sin_b;
-        double cos_val = cos_a*cos_b - sin_a*sin_b;
-
-        sinval[i] = (float)sin_val;
-        cosval[i] = (float)cos_val;
-    }
-}
-
-
 #ifdef HAVE_OPENCL
 
 static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
@@ -587,11 +444,13 @@ void polarToCart( InputArray src1, InputArray src2,
 
     CV_Assert(dst1.getObj() != dst2.getObj());
 
+#ifdef HAVE_IPP
     const bool isInPlace =
         (src1.getObj() == dst1.getObj()) ||
         (src1.getObj() == dst2.getObj()) ||
         (src2.getObj() == dst1.getObj()) ||
         (src2.getObj() == dst2.getObj());
+#endif
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
@@ -610,95 +469,25 @@ void polarToCart( InputArray src1, InputArray src2,
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4] = {};
     NAryMatIterator it(arrays, ptrs);
-    cv::AutoBuffer<float> _buf;
-    float* buf[2] = {0, 0};
-    int j, k, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
+    int j, total = (int)(it.size*cn), blockSize = std::min(total, ((BLOCK_SIZE+cn-1)/cn)*cn);
     size_t esz1 = Angle.elemSize1();
-
-    if (( depth == CV_64F ) || isInPlace)
-    {
-        _buf.allocate(blockSize*2);
-        buf[0] = _buf.data();
-        buf[1] = buf[0] + blockSize;
-    }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
     {
         for( j = 0; j < total; j += blockSize )
         {
             int len = std::min(total - j, blockSize);
-            if (( depth == CV_32F ) && !isInPlace)
+            if ( depth == CV_32F )
             {
                 const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
                 float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
-
-                SinCos_32f( angle, y, x, len, angleInDegrees );
-                if( mag )
-                {
-                    k = 0;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-                    int cWidth = VTraits<v_float32>::vlanes();
-                    for( ; k <= len - cWidth; k += cWidth )
-                    {
-                        v_float32 v_m = vx_load(mag + k);
-                        v_store(x + k, v_mul(vx_load(x + k), v_m));
-                        v_store(y + k, v_mul(vx_load(y + k), v_m));
-                    }
-                    vx_cleanup();
-#endif
-
-                    for( ; k < len; k++ )
-                    {
-                        float m = mag[k];
-                        x[k] *= m; y[k] *= m;
-                    }
-                }
-            }
-            else if (( depth == CV_32F ) && isInPlace)
-            {
-                const float *mag = (const float*)ptrs[0], *angle = (const float*)ptrs[1];
-                float *x = (float*)ptrs[2], *y = (float*)ptrs[3];
-
-                for( k = 0; k < len; k++ )
-                    buf[0][k] = (float)angle[k];
-
-                SinCos_32f( buf[0], buf[1], buf[0], len, angleInDegrees );
-                if( mag )
-                    for( k = 0; k < len; k++ )
-                    {
-                        float m = mag[k];
-                        x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
-                    }
-                else
-                {
-                    std::memcpy(x, buf[0], sizeof(float) * len);
-                    std::memcpy(y, buf[1], sizeof(float) * len);
-                }
+                hal::polarToCart32f( mag, angle, x, y, len, angleInDegrees );
             }
             else
             {
                 const double *mag = (const double*)ptrs[0], *angle = (const double*)ptrs[1];
                 double *x = (double*)ptrs[2], *y = (double*)ptrs[3];
-
-                for( k = 0; k < len; k++ )
-                    buf[0][k] = (float)angle[k];
-
-                SinCos_32f( buf[0], buf[1], buf[0], len, angleInDegrees );
-                if( mag )
-                    for( k = 0; k < len; k++ )
-                    {
-                        double m = mag[k];
-                        x[k] = buf[0][k]*m; y[k] = buf[1][k]*m;
-                    }
-                else
-                {
-                    for( k = 0; k < len; k++ )
-                    {
-                        x[k] = buf[0][k];
-                        y[k] = buf[1][k];
-                    }
-                }
+                hal::polarToCart64f( mag, angle, x, y, len, angleInDegrees );
             }
 
             if( ptrs[0] )

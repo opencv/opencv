@@ -29,6 +29,26 @@ void cartToPolar64f(const double* x, const double* y, double* mag, double* angle
         CV_CPU_DISPATCH_MODES_ALL);
 }
 
+void polarToCart32f(const float* mag, const float* angle, float* x, float* y, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(polarToCart32f, cv_hal_polarToCart32f, mag, angle, x, y, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(polarToCart32f, (mag, angle, x, y, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+void polarToCart64f(const double* mag, const double* angle, double* x, double* y, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    CALL_HAL(polarToCart64f, cv_hal_polarToCart64f, mag, angle, x, y, len, angleInDegrees);
+
+    CV_CPU_DISPATCH(polarToCart64f, (mag, angle, x, y, len, angleInDegrees),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION();

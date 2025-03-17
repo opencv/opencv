@@ -11,6 +11,8 @@ CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 // forward declarations
 void cartToPolar32f(const float *X, const float *Y, float* mag, float *angle, int len, bool angleInDegrees);
 void cartToPolar64f(const double *X, const double *Y, double* mag, double *angle, int len, bool angleInDegrees);
+void polarToCart32f(const float *mag, const float *angle, float *X, float *Y, int len, bool angleInDegrees);
+void polarToCart64f(const double *mag, const double *angle, double *X, double *Y, int len, bool angleInDegrees);
 void fastAtan32f(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
 void fastAtan64f(const double *Y, const double *X, double *angle, int len, bool angleInDegrees);
 void fastAtan2(const float *Y, const float *X, float *angle, int len, bool angleInDegrees);
@@ -175,6 +177,167 @@ void cartToPolar64f(const double *X, const double *Y, double *mag, double *angle
             mag[i + j] = mbuf[j];
         for( j = 0; j < blksz; j++ )
             angle[i + j] = abuf[j];
+    }
+}
+
+namespace {
+
+static inline void SinCos_32f(const float* mag, const float* angle, float* cosval, float* sinval, int len, int angle_in_degrees)
+{
+    const int N = 64;
+
+    static const double sin_table[] =
+    {
+     0.00000000000000000000,     0.09801714032956060400,
+     0.19509032201612825000,     0.29028467725446233000,
+     0.38268343236508978000,     0.47139673682599764000,
+     0.55557023301960218000,     0.63439328416364549000,
+     0.70710678118654746000,     0.77301045336273699000,
+     0.83146961230254524000,     0.88192126434835494000,
+     0.92387953251128674000,     0.95694033573220894000,
+     0.98078528040323043000,     0.99518472667219682000,
+     1.00000000000000000000,     0.99518472667219693000,
+     0.98078528040323043000,     0.95694033573220894000,
+     0.92387953251128674000,     0.88192126434835505000,
+     0.83146961230254546000,     0.77301045336273710000,
+     0.70710678118654757000,     0.63439328416364549000,
+     0.55557023301960218000,     0.47139673682599786000,
+     0.38268343236508989000,     0.29028467725446239000,
+     0.19509032201612861000,     0.09801714032956082600,
+     0.00000000000000012246,    -0.09801714032956059000,
+    -0.19509032201612836000,    -0.29028467725446211000,
+    -0.38268343236508967000,    -0.47139673682599764000,
+    -0.55557023301960196000,    -0.63439328416364527000,
+    -0.70710678118654746000,    -0.77301045336273666000,
+    -0.83146961230254524000,    -0.88192126434835494000,
+    -0.92387953251128652000,    -0.95694033573220882000,
+    -0.98078528040323032000,    -0.99518472667219693000,
+    -1.00000000000000000000,    -0.99518472667219693000,
+    -0.98078528040323043000,    -0.95694033573220894000,
+    -0.92387953251128663000,    -0.88192126434835505000,
+    -0.83146961230254546000,    -0.77301045336273688000,
+    -0.70710678118654768000,    -0.63439328416364593000,
+    -0.55557023301960218000,    -0.47139673682599792000,
+    -0.38268343236509039000,    -0.29028467725446250000,
+    -0.19509032201612872000,    -0.09801714032956050600,
+    };
+
+    static const double k2 = (2*CV_PI)/N;
+
+    static const double sin_a0 = -0.166630293345647*k2*k2*k2;
+    static const double sin_a2 = k2;
+
+    static const double cos_a0 = -0.499818138450326*k2*k2;
+    /*static const double cos_a2 =  1;*/
+
+    double k1;
+    int i = 0;
+
+    if( !angle_in_degrees )
+        k1 = N/(2*CV_PI);
+    else
+        k1 = N/360.;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    const int VECSZ = VTraits<v_float32>::vlanes();
+    const v_float32 scale = vx_setall_f32(angle_in_degrees ? (float)CV_PI / 180.f : 1.f);
+
+    for( ; i < len; i += VECSZ*2 )
+    {
+        if( i + VECSZ*2 > len )
+        {
+            // if it's inplace operation, we cannot repeatedly process
+            // the tail for the second time, so we have to use the
+            // scalar code
+            if( i == 0 || angle == cosval || angle == sinval || mag == cosval || mag == sinval )
+                break;
+            i = len - VECSZ*2;
+        }
+
+        v_float32 r0 = v_mul(vx_load(angle + i), scale);
+        v_float32 r1 = v_mul(vx_load(angle + i + VECSZ), scale);
+
+        v_float32 c0, c1, s0, s1;
+        v_sincos(r0, s0, c0);
+        v_sincos(r1, s1, c1);
+
+        if( mag )
+        {
+            v_float32 m0 = vx_load(mag + i);
+            v_float32 m1 = vx_load(mag + i + VECSZ);
+            c0 = v_mul(c0, m0);
+            c1 = v_mul(c1, m1);
+            s0 = v_mul(s0, m0);
+            s1 = v_mul(s1, m1);
+        }
+
+        v_store(cosval + i, c0);
+        v_store(cosval + i + VECSZ, c1);
+
+        v_store(sinval + i, s0);
+        v_store(sinval + i + VECSZ, s1);
+    }
+    vx_cleanup();
+#endif
+
+    for( ; i < len; i++ )
+    {
+        double t = angle[i]*k1;
+        int it = cvRound(t);
+        t -= it;
+        int sin_idx = it & (N - 1);
+        int cos_idx = (N/4 - sin_idx) & (N - 1);
+
+        double sin_b = (sin_a0*t*t + sin_a2)*t;
+        double cos_b = cos_a0*t*t + 1;
+
+        double sin_a = sin_table[sin_idx];
+        double cos_a = sin_table[cos_idx];
+
+        double sin_val = sin_a*cos_b + cos_a*sin_b;
+        double cos_val = cos_a*cos_b - sin_a*sin_b;
+
+        if (mag)
+        {
+            double mag_val = mag[i];
+            sin_val *= mag_val;
+            cos_val *= mag_val;
+        }
+
+        sinval[i] = (float)sin_val;
+        cosval[i] = (float)cos_val;
+    }
+}
+
+} // anonymous::
+
+void polarToCart32f(const float *mag, const float *angle, float *X, float *Y, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+    SinCos_32f(mag, angle, X, Y, len, angleInDegrees);
+}
+
+void polarToCart64f(const double *mag, const double *angle, double *X, double *Y, int len, bool angleInDegrees)
+{
+    CV_INSTRUMENT_REGION();
+
+    const int BLKSZ = 128;
+    float ybuf[BLKSZ], xbuf[BLKSZ], _mbuf[BLKSZ], abuf[BLKSZ];
+    float* mbuf = mag ? _mbuf : nullptr;
+    for( int i = 0; i < len; i += BLKSZ )
+    {
+        int j, blksz = std::min(BLKSZ, len - i);
+        for( j = 0; j < blksz; j++ )
+        {
+            if (mbuf)
+                mbuf[j] = (float)mag[i + j];
+            abuf[j] = (float)angle[i + j];
+        }
+        SinCos_32f(mbuf, abuf, xbuf, ybuf, blksz, angleInDegrees);
+        for( j = 0; j < blksz; j++ )
+            X[i + j] = xbuf[j];
+        for( j = 0; j < blksz; j++ )
+            Y[i + j] = ybuf[j];
     }
 }
 

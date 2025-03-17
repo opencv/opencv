@@ -79,6 +79,28 @@ PERF_TEST_P(CartToPolarFixture, CartToPolar,
     SANITY_CHECK_NOTHING();
 }
 
+///////////// Polar to Cart /////////////
+
+typedef Size_MatType PolarToCartFixture;
+
+PERF_TEST_P(PolarToCartFixture, PolarToCart,
+    testing::Combine(testing::Values(TYPICAL_MAT_SIZES), testing::Values(CV_32F, CV_64F)))
+{
+    cv::Size size = std::get<0>(GetParam());
+    int type = std::get<1>(GetParam());
+
+    cv::Mat magnitude(size, type);
+    cv::Mat angle(size, type);
+    cv::Mat x(size, type);
+    cv::Mat y(size, type);
+
+    declare.in(magnitude, angle, WARMUP_RNG).out(x, y);
+
+    TEST_CYCLE() cv::polarToCart(magnitude, angle, x, y);
+
+    SANITY_CHECK_NOTHING();
+}
+
 // generates random vectors, performs Gram-Schmidt orthogonalization on them
 Mat randomOrtho(int rows, int ftype, RNG& rng)
 {
