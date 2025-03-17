@@ -8,6 +8,7 @@
 #define OPENCV_HAL_RVV_THRESH_HPP_INCLUDED
 
 #include "hal_rvv_1p0/types.hpp"
+#include <atomic>
 
 namespace cv { namespace cv_hal_rvv {
 
@@ -62,7 +63,7 @@ template<> struct rvv<double>
 // the algorithm is copied from imgproc/src/thresh.cpp,
 // in the functor ThresholdRunner
 template<typename helper, int type, typename T = typename helper::ElemType>
-static inline int threshold(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, T tval_f, T tval_r, T mval)
+static inline int threshold(int start, int end, const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, T tval, T mval)
 {
     auto zero = helper::vmv(0, helper::setvlmax());
     for (int i = start; i < end; i++)
@@ -81,24 +82,24 @@ static inline int threshold(int start, int end, const uchar* src_data, size_t sr
             switch (type)
             {
             case CV_HAL_THRESH_BINARY:
-                dst0 = rvv<T>::vmerge(zero, mval, helper::vmgt(src0, tval_f, vl0), vl0);
-                dst1 = rvv<T>::vmerge(zero, mval, helper::vmgt(src1, tval_f, vl1), vl1);
+                dst0 = rvv<T>::vmerge(zero, mval, helper::vmgt(src0, tval, vl0), vl0);
+                dst1 = rvv<T>::vmerge(zero, mval, helper::vmgt(src1, tval, vl1), vl1);
                 break;
             case CV_HAL_THRESH_BINARY_INV:
-                dst0 = rvv<T>::vmerge(zero, mval, helper::vmle(src0, tval_f, vl0), vl0);
-                dst1 = rvv<T>::vmerge(zero, mval, helper::vmle(src1, tval_f, vl1), vl1);
+                dst0 = rvv<T>::vmerge(zero, mval, helper::vmle(src0, tval, vl0), vl0);
+                dst1 = rvv<T>::vmerge(zero, mval, helper::vmle(src1, tval, vl1), vl1);
                 break;
             case CV_HAL_THRESH_TRUNC:
-                dst0 = rvv<T>::vmerge(src0, tval_r, helper::vmgt(src0, tval_f, vl0), vl0);
-                dst1 = rvv<T>::vmerge(src1, tval_r, helper::vmgt(src1, tval_f, vl1), vl1);
+                dst0 = rvv<T>::vmerge(src0, tval, helper::vmgt(src0, tval, vl0), vl0);
+                dst1 = rvv<T>::vmerge(src1, tval, helper::vmgt(src1, tval, vl1), vl1);
                 break;
             case CV_HAL_THRESH_TOZERO:
-                dst0 = rvv<T>::vmerge(src0, 0, helper::vmle(src0, tval_f, vl0), vl0);
-                dst1 = rvv<T>::vmerge(src1, 0, helper::vmle(src1, tval_f, vl1), vl1);
+                dst0 = rvv<T>::vmerge(src0, 0, helper::vmle(src0, tval, vl0), vl0);
+                dst1 = rvv<T>::vmerge(src1, 0, helper::vmle(src1, tval, vl1), vl1);
                 break;
             case CV_HAL_THRESH_TOZERO_INV:
-                dst0 = rvv<T>::vmerge(src0, 0, helper::vmgt(src0, tval_f, vl0), vl0);
-                dst1 = rvv<T>::vmerge(src1, 0, helper::vmgt(src1, tval_f, vl1), vl1);
+                dst0 = rvv<T>::vmerge(src0, 0, helper::vmgt(src0, tval, vl0), vl0);
+                dst1 = rvv<T>::vmerge(src1, 0, helper::vmgt(src1, tval, vl1), vl1);
                 break;
             }
             helper::vstore(dst + j, dst0, vl0);
@@ -121,60 +122,60 @@ static inline int threshold_range(int start, int end, const uchar* src_data, siz
         switch (thresholdType)
         {
         case CV_HAL_THRESH_BINARY:
-            return threshold<RVV_U8M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(thresh)), saturate_8u(std::round(maxValue)));
+            return threshold<RVV_U8M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(maxValue)));
         case CV_HAL_THRESH_BINARY_INV:
-            return threshold<RVV_U8M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(thresh)), saturate_8u(std::round(maxValue)));
+            return threshold<RVV_U8M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(maxValue)));
         case CV_HAL_THRESH_TRUNC:
-            return threshold<RVV_U8M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(thresh)), saturate_8u(std::round(maxValue)));
+            return threshold<RVV_U8M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(maxValue)));
         case CV_HAL_THRESH_TOZERO:
-            return threshold<RVV_U8M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(thresh)), saturate_8u(std::round(maxValue)));
+            return threshold<RVV_U8M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(maxValue)));
         case CV_HAL_THRESH_TOZERO_INV:
-            return threshold<RVV_U8M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(thresh)), saturate_8u(std::round(maxValue)));
+            return threshold<RVV_U8M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_8u(std::floor(thresh)), saturate_8u(std::round(maxValue)));
         }
         break;
     case CV_16S:
         switch (thresholdType)
         {
         case CV_HAL_THRESH_BINARY:
-            return threshold<RVV_I16M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(thresh)), saturate_16s(std::round(maxValue)));
+            return threshold<RVV_I16M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(maxValue)));
         case CV_HAL_THRESH_BINARY_INV:
-            return threshold<RVV_I16M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(thresh)), saturate_16s(std::round(maxValue)));
+            return threshold<RVV_I16M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(maxValue)));
         case CV_HAL_THRESH_TRUNC:
-            return threshold<RVV_I16M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(thresh)), saturate_16s(std::round(maxValue)));
+            return threshold<RVV_I16M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(maxValue)));
         case CV_HAL_THRESH_TOZERO:
-            return threshold<RVV_I16M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(thresh)), saturate_16s(std::round(maxValue)));
+            return threshold<RVV_I16M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(maxValue)));
         case CV_HAL_THRESH_TOZERO_INV:
-            return threshold<RVV_I16M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(thresh)), saturate_16s(std::round(maxValue)));
+            return threshold<RVV_I16M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, saturate_16s(std::floor(thresh)), saturate_16s(std::round(maxValue)));
         }
         break;
     case CV_32F:
         switch (thresholdType)
         {
         case CV_HAL_THRESH_BINARY:
-            return threshold<RVV_F32M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(thresh), static_cast<float>(maxValue));
+            return threshold<RVV_F32M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(maxValue));
         case CV_HAL_THRESH_BINARY_INV:
-            return threshold<RVV_F32M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(thresh), static_cast<float>(maxValue));
+            return threshold<RVV_F32M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(maxValue));
         case CV_HAL_THRESH_TRUNC:
-            return threshold<RVV_F32M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(thresh), static_cast<float>(maxValue));
+            return threshold<RVV_F32M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(maxValue));
         case CV_HAL_THRESH_TOZERO:
-            return threshold<RVV_F32M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(thresh), static_cast<float>(maxValue));
+            return threshold<RVV_F32M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(maxValue));
         case CV_HAL_THRESH_TOZERO_INV:
-            return threshold<RVV_F32M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(thresh), static_cast<float>(maxValue));
+            return threshold<RVV_F32M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, static_cast<float>(thresh), static_cast<float>(maxValue));
         }
         break;
     case CV_64F:
         switch (thresholdType)
         {
         case CV_HAL_THRESH_BINARY:
-            return threshold<RVV_F64M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, thresh, maxValue);
+            return threshold<RVV_F64M4, CV_HAL_THRESH_BINARY>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, maxValue);
         case CV_HAL_THRESH_BINARY_INV:
-            return threshold<RVV_F64M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, thresh, maxValue);
+            return threshold<RVV_F64M4, CV_HAL_THRESH_BINARY_INV>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, maxValue);
         case CV_HAL_THRESH_TRUNC:
-            return threshold<RVV_F64M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, thresh, maxValue);
+            return threshold<RVV_F64M4, CV_HAL_THRESH_TRUNC>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, maxValue);
         case CV_HAL_THRESH_TOZERO:
-            return threshold<RVV_F64M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, thresh, maxValue);
+            return threshold<RVV_F64M4, CV_HAL_THRESH_TOZERO>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, maxValue);
         case CV_HAL_THRESH_TOZERO_INV:
-            return threshold<RVV_F64M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, thresh, maxValue);
+            return threshold<RVV_F64M4, CV_HAL_THRESH_TOZERO_INV>(start, end, src_data, src_step, dst_data, dst_step, width, thresh, maxValue);
         }
         break;
     }
@@ -191,29 +192,36 @@ namespace threshold_otsu {
 #undef cv_hal_threshold_otsu
 #define cv_hal_threshold_otsu cv::cv_hal_rvv::threshold_otsu::threshold_otsu
 
+static inline int otsu(int start, int end, const uchar* src_data, size_t src_step, int width, std::atomic<int>* cnt, int N, int* h)
+{
+    const int c = cnt->fetch_add(1) % cv::getNumThreads();
+    h += c * N;
+
+    for (int i = start; i < end; i++)
+    {
+        for (int j = 0; j < width; j++)
+            h[src_data[i * src_step + j]]++;
+    }
+    return CV_HAL_ERROR_OK;
+}
+
 // the algorithm is copied from imgproc/src/thresh.cpp,
 // in the function template static double getThreshVal_Otsu
 inline int threshold_otsu(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int depth, double maxValue, int thresholdType, double* thresh)
 {
-    if (depth != CV_8UC1)
+    if (depth != CV_8UC1 || width * height < (1 << 15))
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
     const int N = std::numeric_limits<uchar>::max() + 1;
-    std::vector<int> _h(N, 0);
+    const int nums = cv::getNumThreads();
+    std::vector<int> _h(N * nums, 0);
     int* h = _h.data();
 
-    for (int i = 0; i < height; i++)
+    std::atomic<int> cnt(0);
+    cv::parallel_for_(Range(0, height), threshold::ThresholdInvoker({otsu}, src_data, src_step, width, &cnt, N, h), nums);
+    for (int i = N; i < nums * N; i++)
     {
-        int vl;
-        for (int j = 0; j < width; j += vl)
-        {
-            vl = __riscv_vsetvl_e8m2(width - j);
-            auto src = __riscv_vzext_vf2(__riscv_vle8_v_u8m2(src_data + i * src_step + j, vl), vl);
-            src = __riscv_vmul(src, sizeof(int), vl);
-            auto dst = __riscv_vloxei16_v_i32m8(h, src, vl);
-            dst = __riscv_vadd(dst, 1, vl);
-            __riscv_vsoxei16_v_i32m8(h, src, dst, vl);
-        }
+        h[i % N] += h[i];
     }
 
     double mu = 0, scale = 1. / (width*height);
@@ -249,6 +257,8 @@ inline int threshold_otsu(const uchar* src_data, size_t src_step, uchar* dst_dat
     }
 
     *thresh = max_val;
+    if (dst_data == nullptr)
+        return CV_HAL_ERROR_OK;
 
     return threshold::invoke(width, height, {threshold::threshold_range}, src_data, src_step, dst_data, dst_step, width, depth, 1, max_val, maxValue, thresholdType);
 }
