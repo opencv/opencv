@@ -299,13 +299,6 @@ CV_IMPL void cvDisplayOverlay(const char* name, const char* text, int delayms)
         Q_ARG(QString, QString(name)),
         Q_ARG(QString, QString(text)),
         Q_ARG(int, delayms));
-
-    if (delayms > 0)
-    {
-        QTimer::singleShot(delayms, [name]() {
-            cvUpdateWindow(name);  // Force redraw
-        });
-    }
 }
 
 
@@ -2662,10 +2655,7 @@ void DefaultViewPort::startDisplayInfo(QString text, int delayms)
         stopDisplayInfo();
 
     infoText = text;
-    if (delayms > 0)  {
-        timerDisplay->start(delayms);
-        QTimer::singleShot(delayms, this, SLOT(update())); //force referesh
-    }
+    if (delayms > 0) timerDisplay->start(delayms);
     drawInfo = true;
 }
 
@@ -2959,6 +2949,7 @@ void DefaultViewPort::stopDisplayInfo()
 {
     timerDisplay->stop();
     drawInfo = false;
+    viewport()->update();
 }
 
 
