@@ -25,8 +25,8 @@ template<> struct rvv<uchar>
     using WT = RVV_SameLen<int, T>;
     using MT = RVV_SameLen<uint, T>;
 
-    static inline WT::VecType vcvt_T_WT(T::VecType a, size_t b) { return WT::cast(MT::cast(a, b), b); }
-    static inline T::VecType vcvt_WT_T(WT::VecType a, int b, size_t c) { return T::cast(MT::cast(__riscv_vsra(__riscv_vadd(a, 1 << (b - 1), c), b, c), c), c); }
+    static inline WT::VecType vcvt_T_WT(T::VecType a, size_t b) { return WT::reinterpret(MT::cast(a, b)); }
+    static inline T::VecType vcvt_WT_T(WT::VecType a, int b, size_t c) { return T::cast(MT::reinterpret(__riscv_vsra(__riscv_vadd(a, 1 << (b - 1), c), b, c)), c); }
     static inline WT::VecType down0(WT::VecType vec_src0, WT::VecType vec_src1, WT::VecType vec_src2, WT::VecType vec_src3, WT::VecType vec_src4, size_t vl) {
         return __riscv_vadd(__riscv_vadd(__riscv_vadd(vec_src0, vec_src4, vl), __riscv_vadd(vec_src2, vec_src2, vl), vl),
                             __riscv_vsll(__riscv_vadd(__riscv_vadd(vec_src1, vec_src2, vl), vec_src3, vl), 2, vl), vl);
