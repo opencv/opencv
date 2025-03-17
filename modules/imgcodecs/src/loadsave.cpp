@@ -505,7 +505,7 @@ imread_( const String& filename, int flags, OutputArray mat )
     {
         if (decoder->readData(real_mat))
         {
-            CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
+            CV_CheckTrue((decoder->getFrameCount() > 1) || original_ptr == real_mat.data, "Internal imread issue");
             success = true;
         }
     }
