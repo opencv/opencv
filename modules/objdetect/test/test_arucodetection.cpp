@@ -670,7 +670,7 @@ TEST(CV_ArucoDetectMarkers, regression_26922)
     EXPECT_TRUE(find(ids.begin(), ids.end(), 76) != ids.end());
     EXPECT_TRUE(find(ids.begin(), ids.end(), 172) != ids.end());
 
-    float transformMatrixData[9] = {1, -0.2, 300, 0.4, 1, -1000, 0, 0, 1};
+    float transformMatrixData[9] = {1, -0.2f, 300, 0.4f, 1, -1000, 0, 0, 1};
     const Mat transformMatrix(Size(3, 3), CV_32FC1, transformMatrixData);
 
     Mat warpedImage;
@@ -679,6 +679,7 @@ TEST(CV_ArucoDetectMarkers, regression_26922)
     detector.detectMarkers(warpedImage, corners, ids);
 
     EXPECT_EQ(ids.size(), 133ull);
+    // markers with id 76 and 172 are on border and should not be detected
     EXPECT_FALSE(find(ids.begin(), ids.end(), 76) != ids.end());
     EXPECT_FALSE(find(ids.begin(), ids.end(), 172) != ids.end());
 }
