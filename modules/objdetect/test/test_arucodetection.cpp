@@ -539,7 +539,7 @@ void CV_ArucoDetectionUnc::run(int) {
         vector<vector<Point2f>> corners, rejected;
         vector<int> ids;
         vector<float> markerUnc;
-        detector.detectMarkersWithUnc(img, corners, ids, rejected, markerUnc);
+        detector.detectMarkersWithUnc(img, corners, ids, markerUnc, rejected);
 
         // Verify that every marker is detected and its uncertainty is within tolerance.
         for (size_t m = 0; m < groundTruthIds.size(); m++) {

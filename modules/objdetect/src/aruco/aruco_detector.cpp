@@ -1174,8 +1174,8 @@ ArucoDetector::ArucoDetector(const vector<Dictionary> &_dictionaries,
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionaries, _detectorParams, _refineParams);
 }
 
-void ArucoDetector::detectMarkersWithUnc(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
-                                  OutputArrayOfArrays _rejectedImgPoints, OutputArray _markersUnc) const {
+void ArucoDetector::detectMarkersWithUnc(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids, OutputArray _markersUnc,
+                                  OutputArrayOfArrays _rejectedImgPoints) const {
     arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), _markersUnc, DictionaryMode::Single);
 }
 
