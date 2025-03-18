@@ -40,7 +40,9 @@ inline VEC_T sqrt(VEC_T x, size_t vl)
 {
     auto x2 = __riscv_vfmul(x, 0.5, vl);
     auto y = __riscv_vfrsqrt7(x, vl);
+#ifdef __clang__
 #pragma unroll
+#endif
     for (size_t i = 0; i < iter_times; i++)
     {
         auto t = __riscv_vfmul(y, y, vl);
@@ -67,7 +69,9 @@ inline VEC_T invSqrt(VEC_T x, size_t vl)
     auto mask = __riscv_vmseq(__riscv_vand(classified, 0b10111000, vl), 0, vl);
     auto x2 = __riscv_vfmul(x, 0.5, vl);
     auto y = __riscv_vfrsqrt7(x, vl);
+#ifdef __clang__
 #pragma unroll
+#endif
     for (size_t i = 0; i < iter_times; i++)
     {
         auto t = __riscv_vfmul(y, y, vl);
