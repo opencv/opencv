@@ -55,8 +55,7 @@ struct NormDiffInf_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = ST(src1[i] - src2[i]);
-            s = std::max(s, (ST)cv_abs(v));
+            s = std::max(s, (ST)std::abs(src1[i] - src2[i]));
         }
         return s;
     }
@@ -67,8 +66,7 @@ struct NormDiffL1_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = ST(src1[i] - src2[i]);
-            s += cv_abs(v);
+            s += std::abs(src1[i] - src2[i]);
         }
         return s;
     }
@@ -79,7 +77,7 @@ struct NormDiffL2_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
         ST s = 0;
         for (int i = 0; i < n; i++) {
-            ST v = ST(src1[i] - src2[i]);
+            ST v = (ST)src1[i] - (ST)src2[i];
             s += v * v;
         }
         return s;
@@ -383,8 +381,7 @@ struct NormDiffInf_SIMD<uchar, int> {
         }
         s = (int)v_reduce_max(v_max(v_max(v_max(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s = std::max(s, (int)cv_abs(v));
+            s = std::max(s, (int)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -415,8 +412,7 @@ struct NormDiffInf_SIMD<schar, int> {
         }
         s = (int)v_reduce_max(v_max(v_max(v_max(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s = std::max(s, (int)cv_abs(v));
+            s = std::max(s, (int)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -447,8 +443,7 @@ struct NormDiffInf_SIMD<ushort, int> {
         }
         s = (int)v_reduce_max(v_max(v_max(v_max(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s = std::max(s, (int)cv_abs(v));
+            s = std::max(s, (int)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -479,8 +474,7 @@ struct NormDiffInf_SIMD<short, int> {
         }
         s = (int)v_reduce_max(v_max(v_max(v_max(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s = std::max(s, (int)cv_abs(v));
+            s = std::max(s, (int)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -511,8 +505,7 @@ struct NormDiffInf_SIMD<int, int> {
         }
         s = (int)v_reduce_max(v_max(v_max(v_max(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s = std::max(s, (int)cv_abs(v));
+            s = std::max(s, (int)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -534,8 +527,7 @@ struct NormDiffInf_SIMD<float, float> {
         }
         s = v_reduce_max(v_max(r0, r1));
         for (; j < n; j++) {
-            float v = src1[j] - src2[j];
-            s = std::max(s, cv_abs(v));
+            s = std::max(s, (float)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -558,8 +550,7 @@ struct NormDiffL1_SIMD<uchar, int> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s += (int)cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -582,8 +573,7 @@ struct NormDiffL1_SIMD<schar, int> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            int v =src1[j] - src2[j];
-            s += (int)cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -622,8 +612,7 @@ struct NormDiffL1_SIMD<ushort, int> {
         }
         s += (int)v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s += (int)cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -662,8 +651,7 @@ struct NormDiffL1_SIMD<short, int> {
         }
         s += (int)v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            int v = src1[j] - src2[j];
-            s += (int)cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -687,7 +675,7 @@ struct NormDiffL2_SIMD<uchar, int> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            int v = saturate_cast<int>(src1[j] - src2[j]);
+            int v = (int)src1[j] - (int)src2[j];
             s += v * v;
         }
         return s;
@@ -712,7 +700,7 @@ struct NormDiffL2_SIMD<schar, int> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            int v = saturate_cast<int>(src1[j] - src2[j]);
+            int v = (int)src1[j] - (int)src2[j];
             s += v * v;
         }
         return s;
@@ -955,11 +943,10 @@ struct NormDiffInf_SIMD<double, double> {
         double t[VTraits<v_float64>::max_nlanes];
         vx_store(t, v_max(r0, r1));
         for (int i = 0; i < VTraits<v_float64>::vlanes(); i++) {
-            s = std::max(s, cv_abs(t[i]));
+            s = std::max(s, std::abs(t[i]));
         }
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
-            s = std::max(s, cv_abs(v));
+            s = std::max(s, (double)std::abs(src1[j] - src2[j]));
         }
         return s;
     }
@@ -984,8 +971,7 @@ struct NormDiffL1_SIMD<int, double> {
         }
         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
-            s += cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -1010,8 +996,7 @@ struct NormDiffL1_SIMD<float, double> {
         }
         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
-            s += cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -1033,8 +1018,7 @@ struct NormDiffL1_SIMD<double, double> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
-            s += cv_abs(v);
+            s += std::abs(src1[j] - src2[j]);
         }
         return s;
     }
@@ -1060,7 +1044,7 @@ struct NormDiffL2_SIMD<ushort, double> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            double v = saturate_cast<double>(src1[j] - src2[j]);
+            double v = (double)src1[j] - (double)src2[j];
             s += v * v;
         }
         return s;
@@ -1087,7 +1071,7 @@ struct NormDiffL2_SIMD<short, double> {
         }
         s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
-            double v = saturate_cast<double>(src1[j] - src2[j]);
+            double v = (double)src1[j] - (double)src2[j];
             s += v * v;
         }
         return s;
@@ -1117,7 +1101,7 @@ struct NormDiffL2_SIMD<int, double> {
         }
         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
+            double v = (double)src1[j] - (double)src2[j];
             s += v * v;
         }
         return s;
@@ -1145,7 +1129,7 @@ struct NormDiffL2_SIMD<float, double> {
         }
         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
+            double v = (double)src1[j] - (double)src2[j];
             s += v * v;
         }
         return s;
@@ -1181,7 +1165,7 @@ struct NormDiffL2_SIMD<double, double> {
         }
         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
         for (; j < n; j++) {
-            double v = src1[j] - src2[j];
+            double v = (double)src1[j] - (double)src2[j];
             s += v * v;
         }
         return s;
@@ -1297,7 +1281,7 @@ normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
         for( int i = 0; i < len; i++, src1 += cn, src2 += cn ) {
             if( mask[i] ) {
                 for( int k = 0; k < cn; k++ ) {
-                    ST v = src1[k] - src2[k];
+                    ST v = (ST)src1[k] - (ST)src2[k];
                     result += v*v;
                 }
             }
@@ -1331,7 +1315,6 @@ NormFunc getNormFunc(int normType, int depth)
 {
     CV_INSTRUMENT_REGION();
 
-    // [FIXME] append 0's when merging to 5.x
     static NormFunc normTab[3][CV_DEPTH_MAX] =
     {
         {
@@ -1353,7 +1336,7 @@ NormFunc getNormFunc(int normType, int depth)
 
 NormDiffFunc getNormDiffFunc(int normType, int depth)
 {
-    static NormDiffFunc normDiffTab[3][8] =
+    static NormDiffFunc normDiffTab[3][CV_DEPTH_MAX] =
     {
         {
             (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
