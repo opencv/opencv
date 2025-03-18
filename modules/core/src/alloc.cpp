@@ -173,13 +173,6 @@ void* alignedMalloc(size_t size, int alignment)
     return adata;
 #endif
 }
-    if (isAlignedAllocationEnabled())
-    {
-        void* ptr = _aligned_malloc(size, CV_MALLOC_ALIGN);
-        if(!ptr)
-            return OutOfMemoryError(size);
-        return ptr;
-    }
 #endif
     uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
     if(!udata)
@@ -207,11 +200,6 @@ CV_EXPORTS void alignedFree(void* ptr)
 {
     if (ptr) _aligned_free(ptr);
 }
-   if (isAlignedAllocationEnabled())
-    {
-        alignedFree(ptr);
-        return;
-    }
 #endif
     if(ptr)
     {
