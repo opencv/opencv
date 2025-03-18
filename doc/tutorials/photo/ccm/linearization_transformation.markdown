@@ -1,4 +1,4 @@
-Linearization Transformation {#tutorial_ccm_linearization_transformation}
+Linearization Transformation For Color Correction {#tutorial_ccm_linearization_transformation}
 ============================
 
 Overview

@@ -21,7 +21,7 @@ See details of ColorCorrection Algorithm at https://github.com/riskiest/color_ca
 Source Code of the sample
 -----------
 
-The sample has two parts of code, the first is the color checker detector model, see details at @ref tutorial_macbeth_chart_detection, the second part is to make color calibration.
+The sample has two parts of code, the first is the color checker detector model, see details at tutorial_macbeth_chart_detection, the second part is to make color calibration.
 
 ```
 Here are the parameters for ColorCorrectionModel
