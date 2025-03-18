@@ -377,33 +377,7 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
             if(nZ > square.total() / 2) bits.at<unsigned char>(y, x) = 1;
 
             // define the cell pixel ratio as the ratio of the white pixels. For inverted markers, the ratio will be inverted.
-            if(_cellPixelRatio.needed()){
-
-                // Get white pixel ratio from the complete cell
-                if(cellMarginPixels > 0){
-                    // Consider the full cell. If perspectiveRemoveIgnoredMarginPerCell != 0, manually include the pixels of the margins
-                    Mat topRect = resultImg(Rect(Xstart - cellMarginPixels, Ystart - cellMarginPixels, cellSize, cellMarginPixels));
-                    size_t nZMarginPixels = (size_t) countNonZero(topRect);
-                    size_t totalMarginPixels = topRect.total();
-
-                    Mat leftRect = resultImg(Rect(Xstart - cellMarginPixels, Ystart, cellMarginPixels, cellSize - 2 * cellMarginPixels));
-                    nZMarginPixels += (size_t) countNonZero(leftRect);
-                    totalMarginPixels += leftRect.total();
-
-                    Mat bottomRect = resultImg(Rect(Xstart - cellMarginPixels, Ystart + cellSize - 2 * cellMarginPixels, cellSize, cellMarginPixels));
-                    nZMarginPixels += (size_t) countNonZero(bottomRect);
-                    totalMarginPixels += bottomRect.total();
-
-                    Mat rightRect = resultImg(Rect(Xstart + cellSize - 2 * cellMarginPixels, Ystart, cellMarginPixels, cellSize - 2 * cellMarginPixels));
-                    nZMarginPixels += (size_t) countNonZero(rightRect);
-                    totalMarginPixels += rightRect.total();
-
-                    cellPixelRatio.at<float>(y, x) = (nZ + nZMarginPixels) / (float)(square.total() + totalMarginPixels);
-                }
-                else {
-                    cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
-                }
-            }
+            if(_cellPixelRatio.needed()) cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
         }
     }
 
@@ -444,13 +418,12 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
  * The uncertainty is defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
  * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
  */
-static float _getMarkerUnc(const Dictionary& dictionary, const Mat &cellPixelRatio, const int id,
-                                     const int rotation, const int borderSize) {
 
-    CV_Assert(id >= 0 && id < dictionary.bytesList.rows);
-    const int markerSize = dictionary.markerSize;
+static float _getMarkerUnc(const Mat& groundTruthbits, const Mat &cellPixelRatio, const int markerSize, const int borderSize) {
+
+    CV_Assert(markerSize == groundTruthbits.cols && markerSize == groundTruthbits.rows);
+
     const int sizeWithBorders = markerSize + 2 * borderSize;
-
     CV_Assert(markerSize > 0 && cellPixelRatio.cols == sizeWithBorders && cellPixelRatio.rows == sizeWithBorders);
 
     // Get border uncertainty. cellPixelRatio has the opposite color as the borders --> it is the uncertainty.
@@ -470,30 +443,11 @@ static float _getMarkerUnc(const Dictionary& dictionary, const Mat &cellPixelRat
         }
     }
 
-    // Get the ground truth bits and rotate them:
-    Mat groundTruthbits = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(id, id + 1), markerSize);
-    CV_Assert(groundTruthbits.cols == markerSize && groundTruthbits.rows == markerSize);
-
-    if(rotation == 1){
-        // 90 deg CCW
-        transpose(groundTruthbits, groundTruthbits);
-        flip(groundTruthbits, groundTruthbits,0);
-
-    } else if (rotation == 2){
-        // 180 deg CCW
-        flip(groundTruthbits, groundTruthbits,-1);
-
-    } else if (rotation == 3){
-        // 90 deg CW
-        transpose(groundTruthbits, groundTruthbits);
-        flip(groundTruthbits, groundTruthbits,1);
-    }
-
     // Get the inner marker uncertainty. For a white or black cell, the uncertainty is the ratio of black or white pixels respectively.
     float tempInnerUnc = 0.f;
     for(int y = borderSize; y < markerSize + borderSize; y++) {
         for(int x = borderSize; x < markerSize + borderSize; x++) {
-            tempInnerUnc += abs(groundTruthbits.ptr<unsigned char>(y - borderSize)[x - borderSize] - cellPixelRatio.ptr<float>(y)[x]);
+            tempInnerUnc += abs(groundTruthbits.ptr<float>(y - borderSize)[x - borderSize] - cellPixelRatio.ptr<float>(y)[x]);
         }
     }
 
@@ -564,7 +518,10 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         return 0;
 
     // compute the candidate's uncertainty
-    markerUnc = _getMarkerUnc(dictionary, cellPixelRatio, idx, rotation, params.markerBorderBits);
+    Mat groundTruthbits;
+    Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
+    bitsUints.convertTo(groundTruthbits, CV_32F);
+    markerUnc = _getMarkerUnc(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
 
     return typ;
 }

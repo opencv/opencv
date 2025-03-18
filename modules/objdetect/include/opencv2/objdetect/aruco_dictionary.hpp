@@ -83,7 +83,7 @@ class CV_EXPORTS_W_SIMPLE Dictionary {
 
     /** @brief Transform list of bytes to matrix of bits
       */
-    CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize);
+    CV_WRAP static Mat getBitsFromByteList(const Mat &byteList, int markerSize, int rotationId = 0);
 };
 
 

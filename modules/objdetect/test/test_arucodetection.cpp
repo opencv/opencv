@@ -371,18 +371,21 @@ Mat generateMarkerImage(const MarkerCreationConfig &markerConfig, const ArucoUnc
     // Compute the number of cells in one dimension.
     const int markerSizeWithBorders = dictionary.markerSize + 2 * detectorConfig.markerBorderBits;
     const int cellSidePixelsSize = markerConfig.markerSidePixels / markerSizeWithBorders;
+    // Size of the cell used for marker identification and uncertainty computations
+    const int cellMarginPixels = int(detectorConfig.perspectiveRemoveIgnoredMarginPerCell * cellSidePixelsSize);
+    const int innerCellSizePixelsSize = cellSidePixelsSize - 2 * cellMarginPixels;
     // We want the inverted square area to have an area ratio equal to invertPixelPercent.
-    // That is: (cellSidePixelsInvert/cellSidePixelsSize)^2 = invertPixelPercent.
-    int cellSidePixelsInvert = int(cellSidePixelsSize * std::sqrt(detectorConfig.invertPixelPercent));
-    int cellMarginPixels = (cellSidePixelsSize - cellSidePixelsInvert) / 2;
+    // That is: (cellSidePixelsInvert/innerCellSizePixelsSize)^2 = invertPixelPercent.
+    const int cellSidePixelsInvert = int(innerCellSizePixelsSize * std::sqrt(detectorConfig.invertPixelPercent));
+    const int inversionOffsetPixels = (cellSidePixelsSize - cellSidePixelsInvert) / 2;
 
     int numCellsInverted = 0;
     // Loop over each cell in the marker grid.
     if (cellSidePixelsInvert > 0) {
         for (int row = 0; row < markerSizeWithBorders; row++) {
             for (int col = 0; col < markerSizeWithBorders; col++) {
-                int xStart = col * cellSidePixelsSize + cellMarginPixels;
-                int yStart = row * cellSidePixelsSize + cellMarginPixels;
+                int xStart = col * cellSidePixelsSize + inversionOffsetPixels;
+                int yStart = row * cellSidePixelsSize + inversionOffsetPixels;
                 Rect cellRect(xStart, yStart, cellSidePixelsInvert, cellSidePixelsInvert);
                 Mat cellROI = marker(cellRect);
                 bitwise_not(cellROI, cellROI);
@@ -391,9 +394,9 @@ Mat generateMarkerImage(const MarkerCreationConfig &markerConfig, const ArucoUnc
         }
     }
 
-    // Compute ground-truth uncertainty as (inverted area)/(total marker area).
+    // Compute ground-truth uncertainty as (inverted area)/(total area used to detect marker).
     groundTruthUnc = (numCellsInverted * cellSidePixelsInvert * cellSidePixelsInvert) /
-                     static_cast<double>(markerConfig.markerSidePixels * markerConfig.markerSidePixels);
+                     static_cast<double>(markerSizeWithBorders * innerCellSizePixelsSize * markerSizeWithBorders * innerCellSizePixelsSize);
 
     // Optionally apply a distortion (a perspective warp) to simulate a non-ideal capture.
     if (detectorConfig.distortionRatio > 0.f) {
@@ -553,6 +556,16 @@ void CV_ArucoDetectionUnc::run(int) {
                 ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
                 return;
             }
+
+            double gtComputationDiff = fabs(groundTruthUncs[m] - detCfg.invertPixelPercent);
+            if (gtComputationDiff > 0.02) {
+                ts->printf(cvtest::TS::LOG,
+                           "Marker id %d: ground truth uncertainty %.2f differs test config uncertainty %.2f (diff=%.2f) (detector config %zu)\n",
+                           groundTruthIds[m], groundTruthUncs[m], detCfg.invertPixelPercent, gtComputationDiff, cfgIdx);
+                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                return;
+            }
+
             double diff = fabs(groundTruthUncs[m] - markerUnc[detectedIdx]);
             if (diff > 0.05) {
                 ts->printf(cvtest::TS::LOG,
