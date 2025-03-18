@@ -65,7 +65,8 @@
 #define OPENCV_ALLOC_STATISTICS_LIMIT 4096  // don't track buffers less than N bytes
 #include <map>
 #endif
-
+CV_EXPORTS void alignedFree(void* ptr);
+CV_EXPORTS void* alignedMalloc(size_t size, int alignment);
 namespace cv {
 
 static void* OutOfMemoryError(size_t size)
@@ -149,6 +150,29 @@ void* fastMalloc(size_t size)
         return ptr;
     }
 #elif defined HAVE_WIN32_ALIGNED_MALLOC
+void* alignedMalloc(size_t size, int alignment)
+{
+#if defined(HAVE_POSIX_MEMALIGN)
+    void* ptr = nullptr;
+    if (posix_memalign(&ptr, alignment, size) != 0)
+        return nullptr;
+    return ptr;
+#elif defined(HAVE_MEMALIGN)
+    void* ptr = memalign(alignment, size);
+    if (!ptr)
+        return nullptr;
+    return ptr;
+#elif defined(HAVE_WIN32_ALIGNED_MALLOC)
+    return _aligned_malloc(size, alignment);
+#else
+    uchar* udata = (uchar*)malloc(size + sizeof(void*) + alignment);
+    if (!udata)
+        return nullptr;
+    uchar** adata = alignPtr((uchar**)udata + 1, alignment);
+    adata[-1] = udata;
+    return adata;
+#endif
+}
     if (isAlignedAllocationEnabled())
     {
         void* ptr = _aligned_malloc(size, CV_MALLOC_ALIGN);
@@ -169,7 +193,7 @@ void* fastMalloc(size_t size)
 static inline
 void fastFree_(void* ptr)
 #else
-void fastFree(void* ptr)
+CV_EXPORTS void fastFree(void* ptr)
 #endif
 {
 #if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
@@ -179,9 +203,13 @@ void fastFree(void* ptr)
         return;
     }
 #elif defined HAVE_WIN32_ALIGNED_MALLOC
-    if (isAlignedAllocationEnabled())
+CV_EXPORTS void alignedFree(void* ptr)
+{
+    if (ptr) _aligned_free(ptr);
+}
+   if (isAlignedAllocationEnabled())
     {
-        _aligned_free(ptr);
+        alignedFree(ptr);
         return;
     }
 #endif
