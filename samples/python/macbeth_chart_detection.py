@@ -19,8 +19,6 @@ def get_args_parser(func_args):
                         help='chartType: 0-Standard, 1-DigitalSG, 2-Vinyl, default:0')
     parser.add_argument('--num_charts', type=int, default=1,
                         help='Maximum number of charts in the image')
-    parser.add_argument('--use_gpu', action='store_true',
-                        help='Use this flag to run DNN inference on CUDA')
     parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
                          "default: automatically (by default), "
@@ -71,12 +69,9 @@ def process_frame(frame, detector, chart_type, num_charts, is_last_frame):
             print("Actual colors: ", src)
             print("Reference colors: ", tgt)
 
-            while(True):
-                pause_key = cv.waitKey(0)
-                if pause_key == ord(' '):
-                    break
-                elif pause_key == 27:
-                    exit(0)
+            pause_key = cv.waitKey(0)
+            if pause_key == 27:
+                exit(0)
 
         cv.imshow("image result | Press ESC to quit", frame)
         cv.imshow("original", image_copy)
@@ -114,11 +109,12 @@ def main(func_args=None):
 
     if args.model and args.config:
         # Load the DNN from TensorFlow model
-        net = cv.dnn.readNetFromTensorflow(args.model, args.config)
-
-        if args.use_gpu:
-            net.setPreferableBackend(get_backend_id(args.backend))
-            net.setPreferableTarget(get_target_id(args.target))
+        engine = cv.dnn.ENGINE_AUTO
+        if args.backend != "default" or args.target != "cpu":
+            engine = cv.dnn.ENGINE_CLASSIC
+        net = cv.dnn.readNetFromTensorflow(args.model, args.config, engine)
+        net.setPreferableBackend(get_backend_id(args.backend))
+        net.setPreferableTarget(get_target_id(args.target))
 
         detector = cv.mcc_CCheckerDetector.create(net)
         print("Detecting checkers using neural network.")

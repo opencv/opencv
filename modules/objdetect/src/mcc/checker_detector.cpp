@@ -222,9 +222,12 @@ bool CCheckerDetectorImpl::
 #endif
                     for (Ptr<CChecker> checker : checkers)
                     {
-                        for (Point2f &corner : checker->getBox())
-                            corner += static_cast<Point2f>(region.tl());
-
+                        const std::vector<Point2f>& checkerBox = checker->getBox();
+                        std::vector<Point2f> restore_box(checkerBox.size());
+                        for (size_t a = 0; a < checkerBox.size(); ++a) {
+                            restore_box[a] = checkerBox[a] + static_cast<Point2f>(region.tl());
+                        }
+                        checker->setBox(restore_box);
                         {
                             AutoLock lock(mtx);
                             m_checkers.push_back(checker);
@@ -439,9 +442,12 @@ bool CCheckerDetectorImpl::
 #endif
                             for (Ptr<CChecker> checker : checkers)
                             {
-                                for (Point2f &corner : checker->getBox())
-                                    corner += static_cast<Point2f>(region.tl() + innerRegion.tl());
-
+                                const std::vector<Point2f>& checkerBox = checker->getBox();
+                                std::vector<Point2f> restore_box(checkerBox.size());
+                                for (size_t a = 0; a < checkerBox.size(); ++a) {
+                                    restore_box[a] = checkerBox[a] + static_cast<Point2f>(region.tl() + innerRegion.tl());
+                                }
+                                checker->setBox(restore_box);
                                 {
                                     AutoLock lock(mtx);
                                     m_checkers.push_back(checker);

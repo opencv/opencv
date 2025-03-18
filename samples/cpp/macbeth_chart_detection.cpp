@@ -1,5 +1,4 @@
 #include <opencv2/core.hpp>
-
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect.hpp>
 #include <opencv2/dnn.hpp>
@@ -26,7 +25,6 @@ const string param_keys =
     "{ input i         |                   | Path to input image or video file. Skip this argument to capture frames from a camera.}"
     "{ type            |         0         | chartType: 0-Standard, 1-DigitalSG, 2-Vinyl, default:0 }"
     "{ num_charts      |         1         | Maximum number of charts in the image }"
-    "{ use_gpu         |                   | Add this flag if you want to use gpu}"
     "{ model           |                   | Path to the model file for using dnn model. }";
 
 const string backend_keys = format(
@@ -70,17 +68,14 @@ static void processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, COLOR
             cout<<"Actual colors: "<<src<<endl<<endl;
             cout<<"Press spacebar to resume."<<endl;
 
-            for(;;) {
-                int pauseKey = waitKey(0);
-                if (pauseKey == ' ') {
-                    break;
-                } else if (pauseKey == 27) {
-                    exit(0);
-                }
+            int pauseKey = waitKey(0);
+            if (pauseKey == 27) {
+                exit(0);
             }
+            cout << "Resumed! Processing continues..." << endl;
         }
-        imshow("image result | q or esc to quit", frame);
-        imshow("original", imageCopy);
+        imshow("Image result", frame);
+        imshow("Original", imageCopy);
         if (key == 27)
             exit(0);
 
@@ -130,22 +125,20 @@ int main(int argc, char *argv[])
     const string model_path = findModel(parser.get<string>("model"), sha1);
     const string config_sha1 = parser.get<String>("config_sha1");
     const string pbtxt_path = findModel(parser.get<string>("config"), config_sha1);
+    const string backend = parser.get<String>("backend");
+    const string target = parser.get<String>("target");
 
     int nc = parser.get<int>("num_charts");
-    bool use_gpu = parser.has("use_gpu");
 
     Ptr<CCheckerDetector> detector;
     if (model_path != "" && pbtxt_path != ""){
-        Net net = readNetFromTensorflow(model_path, pbtxt_path);
-
-        if (use_gpu)
-        {
-            net.setPreferableBackend(getBackendID("cuda"));
-            net.setPreferableTarget(getTargetID("cuda"));
-        }else{
-            net.setPreferableBackend(getBackendID(parser.get<String>("backend")));
-            net.setPreferableTarget(getTargetID(parser.get<String>("target")));
+        EngineType engine = ENGINE_AUTO;
+        if (backend != "default" || target != "cpu"){
+            engine = ENGINE_CLASSIC;
         }
+        Net net = readNetFromTensorflow(model_path, pbtxt_path, engine);
+        net.setPreferableBackend(getBackendID(backend));
+        net.setPreferableTarget(getTargetID(target));
 
         detector = CCheckerDetector::create(net);
         cout<<"Detecting checkers using neural network."<<endl;
