@@ -10,19 +10,13 @@ using namespace std;
 using namespace cv;
 using namespace ccm;
 
-const char *about = "Basic chart detection";
+const char *about = "Color correction sample";
 const char *keys =
-    "{ help h  |    | show this message }"
-    "{ f       | 1    | Path of the file to process (-v) }";
+    "{ help h  |        | show this message }"
+    "{ f       |   1    | Path of the file to process (-v) }";
 
 int main(int argc, char *argv[])
 {
-
-
-    // ----------------------------------------------------------
-    // Scroll down a bit (~40 lines) to find actual relevant code
-    // ----------------------------------------------------------
-    //! [get_messages_of_image]
     CommandLineParser parser(argc, argv, keys);
     parser.about(about);
     if (argc==1 || parser.has("help"))
@@ -45,7 +39,6 @@ int main(int argc, char *argv[])
         cout << "Invalid Image!" << endl;
         return 1;
     }
-    //! [get_messages_of_image]
 
     Mat src(24, 1, CV_64FC3);
 
@@ -83,14 +76,12 @@ int main(int argc, char *argv[])
     }
 
     //compte color correction matrix
-    //! [get_ccm_Matrix]
     ColorCorrectionModel model1(src, COLORCHECKER_Macbeth);
     model1.run();
     Mat ccm = model1.getCCM();
     std::cout<<"ccm "<<ccm<<std::endl;
     double loss = model1.getLoss();
     std::cout<<"loss "<<loss<<std::endl;
-    //! [get_ccm_Matrix]
         /* brief More models with different parameters, try it & check the document for details.
     */
     // model1.setColorSpace(COLOR_SPACE_sRGB);
@@ -126,9 +117,7 @@ int main(int argc, char *argv[])
 
     // ColorCorrectionModel model8(src,ref,COLOR_SPACE_Lab_D50_2);
     // model8.run();
-    //! [reference_color_values]
 
-    //! [make_color_correction]
     Mat img_;
     cvtColor(image, img_, COLOR_BGR2RGB);
     img_.convertTo(img_, CV_64F);
@@ -137,9 +126,7 @@ int main(int argc, char *argv[])
     img_ = img_ / inp_size;
     Mat calibratedImage= model1.infer(img_);
     Mat out_ = calibratedImage * out_size;
-    //! [make_color_correction]
 
-    //! [Save_calibrated_image]
     // Save the calibrated image to {FILE_NAME}.calibrated.{FILE_EXT}
     out_.convertTo(out_, CV_8UC3);
     Mat img_out = min(max(out_, 0), out_size);
@@ -151,7 +138,6 @@ int main(int argc, char *argv[])
     string ext = filename.substr(dotIndex+1, filename.length()-dotIndex);
     string calibratedFilePath = baseName + ".calibrated." + ext;
     imwrite(calibratedFilePath, out_img);
-    //! [Save_calibrated_image]
 
     return 0;
 }
