@@ -130,7 +130,12 @@ class Builder:
                 cmake_flags.append("-DCMAKE_EXE_LINKER_FLAGS=" + " ".join(c_flags))
 
                 # CMake cannot compile Swift for Catalyst https://gitlab.kitware.com/cmake/cmake/-/issues/21436
-                # cmake_flags.append("-DCMAKE_Swift_FLAGS=" + " " + target_flag)
+                import shutil
+                swift_compiler = shutil.which("swift")
+                if swift_compiler:
+                    cmake_flags.append(f"-DCMAKE_Swift_COMPILER={swift_compiler}")
+                else:
+                    print("Error: Swift compiler not found!")
                 cmake_flags.append("-DSWIFT_DISABLED=1")
 
                 cmake_flags.append("-DIOS=1")  # Build the iOS codebase
