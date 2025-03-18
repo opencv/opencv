@@ -85,10 +85,10 @@ cv::String join(const cv::String& base, const cv::String& path)
 
 CV_EXPORTS cv::String getParent(const cv::String &path)
 {
-    std::string::size_type loc = path.find_last_of("/\\");
-    if (loc == std::string::npos)
-        return std::string();
-    return std::string(path, 0, loc);
+    std::wstring::size_type loc = path.find_last_of(L"\\");
+    if (loc == std::wstring::npos)
+        return std::wstring();
+    return std::wstring(path, 0, loc);    
 }
 
 CV_EXPORTS std::wstring getParent(const std::wstring& path)
@@ -447,7 +447,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
 #elif defined __ANDROID__
         // no defaults
 #elif defined __APPLE__
-        const std::string tmpdir_env = utils::getConfigurationParameterString("TMPDIR");
+        const std::wstring tmpdir_env = utils::getConfigurationParameterString("TMPDIR");
         if (!tmpdir_env.empty() && utils::fs::isDirectory(tmpdir_env))
         {
             default_cache_path = tmpdir_env;
@@ -461,7 +461,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
         if (default_cache_path.empty())
         {
-            const std::string xdg_cache_env = utils::getConfigurationParameterString("XDG_CACHE_HOME");
+            const std::wstring xdg_cache_env = utils::getConfigurationParameterString("XDG_CACHE_HOME");
             if (!xdg_cache_env.empty() && utils::fs::isDirectory(xdg_cache_env))
             {
                 default_cache_path = xdg_cache_env;
@@ -469,7 +469,7 @@ cv::String getCacheDirectory(const char* sub_directory_name, const char* configu
         }
         if (default_cache_path.empty())
         {
-            const std::string home_env = utils::getConfigurationParameterString("HOME");
+            const std::wstring home_env = utils::getConfigurationParameterString("HOME");
             if (!home_env.empty() && utils::fs::isDirectory(home_env))
             {
                 cv::String home_path = home_env;

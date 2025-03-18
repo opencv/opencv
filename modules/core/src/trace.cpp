@@ -88,7 +88,7 @@ static bool param_synchronizeOpenCL = utils::getConfigurationParameterBool("OPEN
 static bool param_ITT_registerParentScope = utils::getConfigurationParameterBool("OPENCV_TRACE_ITT_PARENT", false);
 #endif
 
-static const char* _spaces(int count)
+static const wchar_t* _spaces(int count);
 {
     static const char buf[64] =
 "                                                               ";
@@ -208,7 +208,7 @@ static bool isITTEnabled()
             {
                 isEnabled = !!(__itt_api_version());
                 CV_LOG_ITT("ITT is " << (isEnabled ? "enabled" : "disabled"));
-                domain = __itt_domain_create("OpenCVTrace");
+                domain = __itt_domain_create(L"OpenCVTrace");
             }
             else
             {
@@ -811,7 +811,7 @@ TraceStorage* TraceManagerThreadLocal::getStorage() const
         {
             const std::string filepath = cv::format("%s-%03d.txt", getParameterTraceLocation().c_str(), threadID).c_str();
             TraceMessage msg;
-            const char* pos = strrchr(filepath.c_str(), '/'); // extract filename
+            const wchar_t* pos = wcsrchr(filepath.c_str(), L'/');            // extract filename
 #ifdef _WIN32
             if (!pos)
                 pos = strrchr(filepath.c_str(), '\\');

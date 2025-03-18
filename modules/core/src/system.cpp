@@ -1072,7 +1072,7 @@ String tempfile( const char* suffix )
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     String fname;
 
-    std::string temp_dir = utils::getConfigurationParameterString("OPENCV_TEMP_PATH");
+    std::filesystem::path temp_dir = utils::getConfigurationParameterString("OPENCV_TEMP_PATH");
 
 #if defined _WIN32
 #ifdef WINRT
@@ -1112,7 +1112,7 @@ String tempfile( const char* suffix )
     if (temp_dir.empty())
     {
         ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
-        temp_dir = std::string(temp_dir2);
+        temp_dir = std::filesystem::path(temp_dir2);
     }
     if(0 == ::GetTempFileNameA(temp_dir.c_str(), "ocv", 0, temp_file))
         return String();
@@ -2279,7 +2279,7 @@ size_t utils::getConfigurationParameterSizeT(const char* name, size_t defaultVal
     return read<size_t>(name, defaultValue);
 }
 
-std::string utils::getConfigurationParameterString(const char* name, const std::string & defaultValue)
+cv::string utils::getConfigurationParameterString(const char* name, const std::string & defaultValue)
 {
     return read<cv::String>(name, defaultValue);
 }
