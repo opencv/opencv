@@ -78,6 +78,30 @@ struct NormDiffL1_SIMD {
     }
 };
 
+// This specialization is needed because https://github.com/opencv/opencv/issues/27080
+template <>
+struct NormDiffL1_SIMD<int, double> {
+    inline double operator() (const int* src1, const int* src2, int n) const {
+        double s = 0;
+        int j = 0;
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+        v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
+        for (; j <= n - VTraits<v_int32>::vlanes(); j += VTraits<v_int32>::vlanes()) {
+            v_float32 v01 = v_cvt_f32(vx_load(src1 + j)), v02 = v_cvt_f32(vx_load(src2 + j));
+            v_float32 v0 = v_absdiff(v01, v02);
+            r0 = v_add(r0, v_cvt_f64(v0));
+            r1 = v_add(r1, v_cvt_f64_high(v0));
+        }
+        s += v_reduce_sum(v_add(r0, r1));
+#endif
+        for (; j < n; j++) {
+            double d1 = (double)src1[j], d2 = (double)src2[j];
+            s += (double)std::abs(d1 - d2);
+        }
+        return s;
+    }
+};
+
 template <typename T, typename ST>
 struct NormDiffL2_SIMD {
     inline ST operator() (const T* src1, const T* src2, int n) const {
@@ -996,38 +1020,6 @@ struct NormDiffInf_SIMD<double, double> {
         return s;
     }
 };
-
-// template<>
-// struct NormDiffL1_SIMD<int, double> {
-//     double operator() (const int* src1, const int* src2, int n) const {
-//         int j = 0;
-//         double s = 0.f;
-//         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
-//         v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
-//         for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-//             v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
-//             v_uint32 v0 = v_absdiff(v01, v02);
-//             v_uint64 ev01, ev02;
-//             v_expand(v0, ev01, ev02);
-//             r0 = v_add(r0, v_cvt_f64(v_reinterpret_as_s64(ev01)));
-//             r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(ev02)));
-
-//             v_int32 v11 = vx_load(src1 + j + VTraits<v_int32>::vlanes()),
-//                     v12 = vx_load(src2 + j + VTraits<v_int32>::vlanes());
-//             v_uint32 v1 = v_absdiff(v11, v12);
-//             v_uint64 ev11, ev12;
-//             v_expand(v1, ev11, ev12);
-//             r2 = v_add(r2, v_cvt_f64(v_reinterpret_as_s64(ev11)));
-//             r3 = v_add(r3, v_cvt_f64(v_reinterpret_as_s64(ev12)));
-//         }
-//         s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
-//         for (; j < n; j++) {
-//             double v = (double)cv_absdiff(src1[j], src2[j]);
-//             s += v;
-//         }
-//         return s;
-//     }
-// };
 
 template<>
 struct NormDiffL1_SIMD<float, double> {
