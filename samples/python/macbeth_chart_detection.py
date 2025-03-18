@@ -52,7 +52,7 @@ def get_args_parser(func_args):
         ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 
-def process_frame(frame, detector, chart_type, num_charts, is_last_frame):
+def process_frame(frame, detector, chart_type, num_charts):
     image_copy = frame.copy()
     if not detector.process(frame, chart_type, num_charts, True):
         print("ChartColor not detected.")
@@ -60,33 +60,15 @@ def process_frame(frame, detector, chart_type, num_charts, is_last_frame):
         checkers = detector.getListColorChecker()
         detector.draw(checkers, frame)
 
-        key = cv.waitKey(10) & 0xFF
-        if key == ord(' '):
-            src = checkers[0].getChartsRGB(False)
-            tgt = np.empty((src.shape), dtype=np.int32)
-            detector.getRefColors(cv.mcc.MCC24, tgt)
-
-            print("Actual colors: ", src)
-            print("Reference colors: ", tgt)
-
-            pause_key = cv.waitKey(0)
-            if pause_key == 27:
-                exit(0)
+        src = checkers[0].getChartsRGB(False)
+        tgt = np.empty((src.shape), dtype=np.int32)
+        detector.getRefColors(cv.mcc.MCC24, tgt)
 
         cv.imshow("image result | Press ESC to quit", frame)
         cv.imshow("original", image_copy)
-        if key == 27:
-            exit(0)
 
-        if is_last_frame:
-            src = checkers[0].getChartsRGB(False)
-            tgt = np.empty((src.shape), dtype=np.int32)
-            detector.getRefColors(cv.mcc.MCC24, tgt)
-
-            print("Actual colors: ", src)
-            print("Reference colors: ", tgt)
-            cv.waitKey(0)
-
+        return src, tgt
+    return None, None
 
 def main(func_args=None):
     args = get_args_parser(func_args)
@@ -135,18 +117,33 @@ def main(func_args=None):
 
     if is_video:
         print("To print the actual colors and reference colors for current frame press SPACEBAR. To resume press SPACEBAR again")
-        total_frames = cap.get(cv.CAP_PROP_FRAME_COUNT)
+
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
-            curr_frame = cap.get(cv.CAP_PROP_POS_FRAMES)
-            is_last_frame = (curr_frame == total_frames)
+            src, tgt = process_frame(frame, detector, args.type, args.num_charts)
 
-            process_frame(frame, detector, args.type, args.num_charts, is_last_frame)
+            key = cv.waitKey(10) & 0xFF
+            if key == ord(' '):
+                print("Actual colors: ", src)
+                print("Reference colors: ", tgt)
+                print("Press spacebar to resume.")
+
+                pause_key = cv.waitKey(0)
+                if pause_key == 27:
+                    exit(0)
+                print("Resumed! Processing continues...")
+            elif key == 27:
+                exit(0)
+        print("Actual colors: ", src)
+        print("Reference colors: ", tgt)
     else:
-        process_frame(image, detector, args.type, args.num_charts, True)
+        src, tgt = process_frame(image, detector, args.type, args.num_charts)
+        print("Actual colors: ", src)
+        print("Reference colors: ", tgt)
+        cv.waitKey(0)
 
     cv.destroyAllWindows()
 

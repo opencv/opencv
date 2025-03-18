@@ -48,7 +48,7 @@ const string target_keys = format(
 
 string keys = param_keys + backend_keys + target_keys;
 
-static void processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, COLORCHART chartType, int nc, bool isLastFrame){
+static void processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, COLORCHART chartType, Mat& src, Mat& tgt, int nc){
     Mat imageCopy = frame.clone();
     if (!detector->process(frame, chartType, nc, true))
     {
@@ -58,37 +58,11 @@ static void processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, COLOR
     {
         vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
         detector->draw(checkers, frame);
+        src = checkers[0]->getChartsRGB(false);
+        detector->getRefColors(MCC24, tgt);
 
-        int key = waitKey(10);
-        if (key == ' '){
-            Mat src = checkers[0]->getChartsRGB(false);
-            Mat tgt;
-            detector->getRefColors(MCC24, tgt);
-            cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
-            cout<<"Actual colors: "<<src<<endl<<endl;
-            cout<<"Press spacebar to resume."<<endl;
-
-            int pauseKey = waitKey(0);
-            if (pauseKey == 27) {
-                exit(0);
-            }
-            cout << "Resumed! Processing continues..." << endl;
-        }
         imshow("Image result", frame);
         imshow("Original", imageCopy);
-        if (key == 27)
-            exit(0);
-
-        if (isLastFrame){
-            Mat src = checkers[0]->getChartsRGB(false);
-            Mat tgt;
-            detector->getRefColors(MCC24, tgt);
-            cout << "\n*** Last Frame Colors ***" << endl;
-            cout << "Reference colors: " << tgt << endl;
-            cout << "Actual colors: " << src << endl;
-
-            waitKey(0);
-        }
     }
 }
 
@@ -172,22 +146,39 @@ int main(int argc, char *argv[])
     else
         cap.open(0);
 
+    Mat src, tgt;
     if (isVideo){
         cout<<"To print the actual colors and reference colors for current frame press SPACEBAR. To resume press SPACEBAR again"<<endl;
-        double totalFrames = cap.get(cv::CAP_PROP_FRAME_COUNT);
+
         while (cap.grab())
         {
             Mat frame;
             cap.retrieve(frame);
 
-            double currentFrame = cap.get(cv::CAP_PROP_POS_FRAMES);
-            bool isLastFrame = (currentFrame == totalFrames);
+            processFrame(frame, detector, chartType, src, tgt, nc);
 
-            processFrame(frame, detector, chartType, nc, isLastFrame);
+            int key = waitKey(10);
+            if (key == ' '){
+                cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+                cout<<"Actual colors: "<<src<<endl<<endl;
+                cout<<"Press spacebar to resume."<<endl;
+
+                int pauseKey = waitKey(0);
+                if (pauseKey == 27) {
+                    exit(0);
+                }
+                cout << "Resumed! Processing continues..." << endl;
+            }
+            else if (key == 27) exit(0);
         }
+        cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+        cout<<"Actual colors: "<<src<<endl<<endl;
     }
     else{
-        processFrame(image, detector, chartType, nc, true);
+        processFrame(image, detector, chartType, src, tgt, nc);
+        cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+        cout<<"Actual colors: "<<src<<endl<<endl;
+        waitKey(0);
     }
     return 0;
 }
