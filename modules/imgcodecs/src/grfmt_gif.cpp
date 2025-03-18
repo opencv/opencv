@@ -47,8 +47,8 @@ bool GifDecoder::readHeader() {
         return false;
     }
 
-    String signature(6, ' ');
-    m_strm.getBytes((uchar*)signature.data(), 6);
+    std::string signature(6, ' ');
+    m_strm.getBytes((uchar*)signature.c_str(), 6);
     CV_Assert(signature == R"(GIF87a)" || signature == R"(GIF89a)");
 
     // #1: read logical screen descriptor
@@ -440,11 +440,11 @@ bool GifDecoder::getFrameCount_() {
                 bool isFoundNetscape = false;
                 while (len) {
                     if (len == 11) {
-                        String app_auth_code(len, ' ');
-                        m_strm.getBytes(const_cast<void*>(static_cast<const void*>(app_auth_code.data())), len);
-                        isFoundNetscape = (memcmp(app_auth_code.data(), "NETSCAPE2.0", len) == 0);
-                    }  else if ( (len == 3) && (isFoundNetscape) ) {
-                        if (m_strm.getByte() == 0x01) {
+                        std::string app_auth_code(len, ' ');
+                        m_strm.getBytes(const_cast<void*>(static_cast<const void*>(app_auth_code.c_str())), len);
+                        isFoundNetscape = (app_auth_code == R"(NETSCAPE2.0)");
+                    }  else if (len == 3) {
+                        if (isFoundNetscape && (m_strm.getByte() == 0x01)) {
                             int loop_count = m_strm.getWord();
                             // If loop_count == 0, it means loop forever.
                             // Otherwise, the loop is displayed extra one time than it is written in the data.
@@ -513,8 +513,8 @@ bool GifDecoder::getFrameCount_() {
 }
 
 bool GifDecoder::skipHeader() {
-    String signature(6, ' ');
-    m_strm.getBytes((uchar *) signature.data(), 6);
+    std::string signature(6, ' ');
+    m_strm.getBytes((uchar *) signature.c_str(), 6);
     // skip height and width
     m_strm.skip(4);
     char flags = (char) m_strm.getByte();

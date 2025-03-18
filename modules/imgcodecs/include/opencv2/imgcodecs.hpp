@@ -260,10 +260,10 @@ It provides support for looping, background color settings, frame timing, and fr
 struct CV_EXPORTS_W_SIMPLE Animation
 {
     //! Number of times the animation should loop. 0 means infinite looping.
-    /*! @note (GIF) When N is set, whether it is displayed N or N+1 times depends on the implementation of the user application.
-              Animated GIF with loop is extended with the Netscape Application Block(NAB), which it not a part of GIF89a specification.
-              See https://en.wikipedia.org/wiki/GIF#Animated_GIF .
-              This loop times behaviour has not been documented clearly.
+    /*! @note At some file format, when N is set, whether it is displayed N or N+1 times depends on the implementation of the user application. This loop times behaviour has not been documented clearly.
+     *  - (GIF) See https://issues.chromium.org/issues/40459899
+     *    And animated GIF with loop is extended with the Netscape Application Block(NAB), which it not a part of GIF89a specification. See https://en.wikipedia.org/wiki/GIF#Animated_GIF .
+     *  - (WebP) See https://issues.chromium.org/issues/41276895
      */
     CV_PROP_RW int loop_count;
     //! Background color of the animation in BGRA format.
