@@ -47,6 +47,7 @@
 #include "hal_rvv_1p0/filter.hpp" // imgproc
 #include "hal_rvv_1p0/pyramids.hpp" // imgproc
 #include "hal_rvv_1p0/color.hpp" // imgproc
+#include "hal_rvv_1p0/thresh.hpp" // imgproc
 #endif
 
 #endif

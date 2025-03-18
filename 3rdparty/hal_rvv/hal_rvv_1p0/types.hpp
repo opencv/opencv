@@ -165,6 +165,12 @@ static inline BoolType vmle(VecType vs2, VecType vs1, size_t vl) {              
 static inline BoolType vmgt(VecType vs2, VecType vs1, size_t vl) {                              \
     return __riscv_vm##S_OR_F##gt##IS_U(vs2, vs1, vl);                                          \
 }                                                                                               \
+static inline BoolType vmle(VecType vs2, ElemType vs1, size_t vl) {                             \
+    return __riscv_vm##S_OR_F##le##IS_U(vs2, vs1, vl);                                          \
+}                                                                                               \
+static inline BoolType vmgt(VecType vs2, ElemType vs1, size_t vl) {                             \
+    return __riscv_vm##S_OR_F##gt##IS_U(vs2, vs1, vl);                                          \
+}                                                                                               \
 static inline BoolType vmge(VecType vs2, VecType vs1, size_t vl) {                              \
     return __riscv_vm##S_OR_F##ge##IS_U(vs2, vs1, vl);                                          \
 }                                                                                               \
