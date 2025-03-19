@@ -205,7 +205,6 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     OutputArray _inliers, int flags)
 {
     CV_INSTRUMENT_REGION();
-
     if (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC){
         return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
@@ -216,7 +215,6 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
             confidence, _inliers, SOLVEPNP_ITERATIVE);  
     }
-
     Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
     Mat opoints, ipoints;
     if( opoints0.depth() == CV_64F || !opoints0.isContinuous() )
