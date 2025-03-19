@@ -5,7 +5,7 @@
 #define OPENCV_HAL_RVV_FILTER_HPP_INCLUDED
 
 #include "../../imgproc/include/opencv2/imgproc/hal/interface.h"
-#include "hal_rvv_1p0/types.hpp"
+#include <riscv_vector.h>
 
 struct cvhalFilter2D;
 
