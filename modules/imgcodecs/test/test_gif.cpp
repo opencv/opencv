@@ -414,6 +414,110 @@ TEST(Imgcodecs_Gif, decode_disposal_method)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/26970
+typedef testing::TestWithParam<int> Imgcodecs_Gif_loop_count;
+TEST_P(Imgcodecs_Gif_loop_count, imwriteanimation)
+{
+    const string gif_filename = cv::tempfile(".gif");
+
+    int loopCount = GetParam();
+    cv::Animation anim(loopCount);
+
+    vector<cv::Mat> src;
+    for(int n = 1; n <= 5 ; n ++ )
+    {
+        cv::Mat frame(64, 64, CV_8UC3, cv::Scalar::all(0));
+        cv::putText(frame, cv::format("%d", n), cv::Point(0,64), cv::FONT_HERSHEY_PLAIN, 4.0, cv::Scalar::all(255));
+        anim.frames.push_back(frame);
+        anim.durations.push_back(1000 /* ms */);
+    }
+
+    bool ret = false;
+#if 0
+    // To output gif image for test.
+    EXPECT_NO_THROW(ret = imwriteanimation(cv::format("gif_loop-%d.gif", loopCount), anim));
+    EXPECT_TRUE(ret);
+#endif
+    EXPECT_NO_THROW(ret = imwriteanimation(gif_filename, anim));
+    EXPECT_TRUE(ret);
+
+    // Read raw GIF data.
+    std::ifstream ifs(gif_filename);
+    std::stringstream ss;
+    ss << ifs.rdbuf();
+    string tmp = ss.str();
+    std::vector<uint8_t> buf(tmp.begin(), tmp.end());
+
+    std::vector<uint8_t> netscape = {0x21, 0xFF, 0x0B, 'N','E','T','S','C','A','P','E','2','.','0'};
+    auto pos = std::search(buf.begin(), buf.end(), netscape.begin(), netscape.end());
+    if(loopCount == 1) {
+        EXPECT_EQ(pos, buf.end()) << "Netscape Application Block should not be included if Animation.loop_count == 1";
+    } else {
+        EXPECT_NE(pos, buf.end()) << "Netscape Application Block should be included if Animation.loop_count != 1";
+    }
+
+    remove(gif_filename.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/,
+    Imgcodecs_Gif_loop_count,
+    testing::Values(
+        -1,
+         0, // Default, loop-forever
+         1,
+         2,
+     65534,
+     65535, // Maximum Limit
+     65536
+    )
+);
+
+typedef testing::TestWithParam<int> Imgcodecs_Gif_duration;
+TEST_P(Imgcodecs_Gif_duration, imwriteanimation)
+{
+    const string gif_filename = cv::tempfile(".gif");
+
+    cv::Animation anim;
+
+    int duration = GetParam();
+    vector<cv::Mat> src;
+    for(int n = 1; n <= 5 ; n ++ )
+    {
+        cv::Mat frame(64, 64, CV_8UC3, cv::Scalar::all(0));
+        cv::putText(frame, cv::format("%d", n), cv::Point(0,64), cv::FONT_HERSHEY_PLAIN, 4.0, cv::Scalar::all(255));
+        anim.frames.push_back(frame);
+        anim.durations.push_back(duration /* ms */);
+    }
+
+    bool ret = false;
+#if 0
+    // To output gif image for test.
+    EXPECT_NO_THROW(ret = imwriteanimation(cv::format("gif_duration-%d.gif", duration), anim));
+    EXPECT_EQ(ret, ( (0 <= duration) && (duration <= 655350) ) );
+#endif
+    EXPECT_NO_THROW(ret = imwriteanimation(gif_filename, anim));
+    EXPECT_EQ(ret, ( (0 <= duration) && (duration <= 655350) ) );
+
+    remove(gif_filename.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/,
+    Imgcodecs_Gif_duration,
+    testing::Values(
+         -1, // Unsupported
+          0, // Undefined Behaviour
+          1,
+          9,
+         10,
+         50,
+        100, // 10 FPS
+       1000, //  1 FPS
+     655340,
+     655350, // Maximum Limit
+     655360  // Unsupported
+    )
+);
+
 }//opencv_test
 }//namespace
 
