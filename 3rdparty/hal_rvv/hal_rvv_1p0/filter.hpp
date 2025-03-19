@@ -344,7 +344,7 @@ struct sepFilter2D
     int borderType;
 };
 
-inline int sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, int kernel_type, uchar *kernelx_data, int kernelx_length, uchar *kernely_data, int kernely_length, int anchor_x, int anchor_y, double delta, int borderType)
+inline int sepFilterInit(cvhalFilter2D **context, int src_type, int dst_type, int kernel_type, uchar* kernelx_data, int kernelx_length, uchar* kernely_data, int kernely_length, int anchor_x, int anchor_y, double delta, int borderType)
 {
     if (kernel_type != CV_32FC1)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -513,7 +513,7 @@ static inline int sepFilter(int start, int end, sepFilter2D* data, const uchar* 
     return CV_HAL_ERROR_OK;
 }
 
-inline int sepFilter(cvhalFilter2D *context, uchar *src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
+inline int sepFilter(cvhalFilter2D *context, uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int full_width, int full_height, int offset_x, int offset_y)
 {
     sepFilter2D* data = reinterpret_cast<sepFilter2D*>(context);
 
@@ -529,11 +529,11 @@ inline int sepFilter(cvhalFilter2D *context, uchar *src_data, size_t src_step, u
         size = sizeof(float);
         break;
     }
-    std::vector<uchar> *dst = nullptr;
+    std::vector<uchar> dst;
     if (src_data == _dst_data)
     {
-        dst = new std::vector<uchar>(width * height * size);
-        dst_data = dst->data();
+        dst = std::vector<uchar>(width * height * size);
+        dst_data = dst.data();
         dst_step = width * size;
     }
 
@@ -565,10 +565,7 @@ inline int sepFilter(cvhalFilter2D *context, uchar *src_data, size_t src_step, u
     if (src_data == _dst_data)
     {
         for (int i = 0; i < height; i++)
-        {
-            memcpy(_dst_data + i * _dst_step, dst->data() + i * dst_step, dst_step);
-        }
-        delete dst;
+            memcpy(_dst_data + i * _dst_step, dst.data() + i * dst_step, dst_step);
     }
 
     return res;
@@ -595,7 +592,7 @@ struct Morph2D
     int src_type;
     int dst_type;
     int kernel_type;
-    uchar *kernel_data;
+    uchar* kernel_data;
     size_t kernel_step;
     int kernel_width;
     int kernel_height;
@@ -605,7 +602,7 @@ struct Morph2D
     const uchar* borderValue;
 };
 
-inline int morphInit(cvhalFilter2D** context, int operation, int src_type, int dst_type, int /*max_width*/, int /*max_height*/, int kernel_type, uchar *kernel_data, size_t kernel_step, int kernel_width, int kernel_height, int anchor_x, int anchor_y, int borderType, const double borderValue[4], int iterations, bool /*allowSubmatrix*/, bool /*allowInplace*/)
+inline int morphInit(cvhalFilter2D** context, int operation, int src_type, int dst_type, int /*max_width*/, int /*max_height*/, int kernel_type, uchar* kernel_data, size_t kernel_step, int kernel_width, int kernel_height, int anchor_x, int anchor_y, int borderType, const double borderValue[4], int iterations, bool /*allowSubmatrix*/, bool /*allowInplace*/)
 {
     if (kernel_type != CV_8UC1 || src_type != dst_type)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -871,7 +868,7 @@ static inline int morph(int start, int end, Morph2D* data, const uchar* src_data
     return CV_HAL_ERROR_OK;
 }
 
-inline int morph(cvhalFilter2D* context, uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int width, int height, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y, int /*dst_full_width*/, int /*dst_full_height*/, int /*dst_roi_x*/, int /*dst_roi_y*/)
+inline int morph(cvhalFilter2D* context, uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height, int src_full_width, int src_full_height, int src_roi_x, int src_roi_y, int /*dst_full_width*/, int /*dst_full_height*/, int /*dst_roi_x*/, int /*dst_roi_y*/)
 {
     Morph2D* data = reinterpret_cast<Morph2D*>(context);
     int cn = data->src_type == CV_8UC1 ? 1 : 4;
@@ -2153,11 +2150,11 @@ inline int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, si
         size *= sizeof(float);
         break;
     }
-    std::vector<uchar> *dst = nullptr;
+    std::vector<uchar> dst;
     if (src_data == _dst_data)
     {
-        dst = new std::vector<uchar>(width * height * size);
-        dst_data = dst->data();
+        dst = std::vector<uchar>(width * height * size);
+        dst_data = dst.data();
         dst_step = width * size;
     }
 
@@ -2220,10 +2217,7 @@ inline int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, si
     if (src_data == _dst_data)
     {
         for (int i = 0; i < height; i++)
-        {
-            memcpy(_dst_data + i * _dst_step, dst->data() + i * dst_step, dst_step);
-        }
-        delete dst;
+            memcpy(_dst_data + i * _dst_step, dst.data() + i * dst_step, dst_step);
     }
 
     return res;
@@ -2517,18 +2511,20 @@ inline int bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_da
             double r = std::sqrt((double)i*i + (double)j*j);
             if (r <= radius && (depth == CV_8U || i != 0 || j != 0))
             {
-                space_weight[maxk] = (float)std::exp(r*r*gauss_space_coeff);
+                space_weight[maxk] = static_cast<float>(r*r*gauss_space_coeff);
                 space_ofs[maxk++] = (i * (temp_step / size) + j) * cn;
             }
         }
     }
+    cv::cv_hal_rvv::exp32f(space_weight, space_weight, maxk);
 
     if (depth == CV_8U)
     {
         std::vector<float> _color_weight(cn*256);
         float* color_weight = _color_weight.data();
         for (int i = 0; i < 256*cn; i++)
-            color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
+            color_weight[i] = static_cast<float>(i*i*gauss_color_coeff);
+        cv::cv_hal_rvv::exp32f(color_weight, color_weight, 256*cn);
 
         switch (cn)
         {
@@ -2556,11 +2552,10 @@ inline int bilateralFilter(const uchar* src_data, size_t src_step, uchar* dst_da
         float* expLUT = _expLUT.data();
         for (int i = 0; i < kExpNumBins+2; i++)
         {
-            if (i && expLUT[i - 1] <= 0)
-                break;
             double val = i / scale_index;
-            expLUT[i] = (float)std::exp(val * val * gauss_color_coeff);
+            expLUT[i] = static_cast<float>(val * val * gauss_color_coeff);
         }
+        cv::cv_hal_rvv::exp32f(expLUT, expLUT, kExpNumBins+2);
 
         switch (cn)
         {
