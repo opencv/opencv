@@ -36,6 +36,11 @@ namespace color {
         cv::parallel_for_(Range(1, height), ColorInvoker(func, std::forward<Args>(args)...), (width - 1) * height / static_cast<double>(1 << 15));
         return func(0, 1, std::forward<Args>(args)...);
     }
+
+    template<typename T> T rint(T val)
+    {
+        return val - std::remainder(val, 1.0);
+    }
 } // cv::cv_hal_rvv::color
 
 namespace BGRtoBGR {
@@ -2246,7 +2251,7 @@ namespace LabTable
             for (int i = 0; i < 3072; i++)
             {
                 float x = i * 1.0f / (255*8);
-                LabCbrtTab_b[i] = (ushort)roundeven((1 << 15) * applyCbrt(x));
+                LabCbrtTab_b[i] = (ushort)color::rint((1 << 15) * applyCbrt(x));
             }
             // tweak to imitate the error of cv::softfloat, or bitExactness tests won't pass
             LabCbrtTab_b[324] -= 1, LabCbrtTab_b[2079] -= 1;
@@ -2254,12 +2259,12 @@ namespace LabTable
             for (int i = 0; i < 256; i++)
             {
                 float x = i / 255.0f;
-                sRGBGammaTab_b[i] = (ushort)roundeven(2040 * applyGamma(x));
+                sRGBGammaTab_b[i] = (ushort)color::rint(2040 * applyGamma(x));
             }
             for (int i = 0; i < INV_GAMMA_TAB_SIZE; i++)
             {
                 float x = i * 1.0f / INV_GAMMA_TAB_SIZE;
-                sRGBInvGammaTab_b[i] = (ushort)roundeven(255 * applyInvGamma(x));
+                sRGBInvGammaTab_b[i] = (ushort)color::rint(255 * applyInvGamma(x));
             }
 
             for (int i = 0; i < 256; i++)
@@ -2275,8 +2280,8 @@ namespace LabTable
                     fy = (li + 16.0f) / 116.0f;
                     yy = fy * fy * fy;
                 }
-                LabToYF_b[i*2  ] = (short)roundeven(yy * LAB_BASE);
-                LabToYF_b[i*2+1] = (short)roundeven(fy * LAB_BASE);
+                LabToYF_b[i*2  ] = (short)color::rint(yy * LAB_BASE);
+                LabToYF_b[i*2+1] = (short)color::rint(fy * LAB_BASE);
             }
 
             for (int LL = 0; LL < 256; LL++)
@@ -2286,7 +2291,7 @@ namespace LabTable
                 {
                     float u = uu*354.0f/255 - 134;
                     float up = 9.0f*(u + L*2.5719122887f);
-                    LuToUp_b[LL*256+uu] = (int)roundeven(up*float(LAB_BASE/1024));
+                    LuToUp_b[LL*256+uu] = (int)color::rint(up*float(LAB_BASE/1024));
                 }
                 for (int vv = 0; vv < 256; vv++)
                 {
@@ -2294,7 +2299,7 @@ namespace LabTable
                     float vp = 0.25f/(v + L*6.0884485245f);
                     if (vp >  0.25f) vp =  0.25f;
                     if (vp < -0.25f) vp = -0.25f;
-                    LvToVp_b[LL*256+vv] = (int)roundeven(vp*float(LAB_BASE*1024));
+                    LvToVp_b[LL*256+vv] = (int)color::rint(vp*float(LAB_BASE*1024));
                 }
             }
             // tweak
@@ -2344,9 +2349,9 @@ namespace LabTable
                             float a = 500.0f * (FX - FY);
                             float b = 200.0f * (FY - FZ);
 
-                            RGB2Labprev[idx]   = (short)(roundeven(LAB_BASE*L/100.0f));
-                            RGB2Labprev[idx+1] = (short)(roundeven(LAB_BASE*(a+128.0f)/256.0f));
-                            RGB2Labprev[idx+2] = (short)(roundeven(LAB_BASE*(b+128.0f)/256.0f));
+                            RGB2Labprev[idx]   = (short)(color::rint(LAB_BASE*L/100.0f));
+                            RGB2Labprev[idx+1] = (short)(color::rint(LAB_BASE*(a+128.0f)/256.0f));
+                            RGB2Labprev[idx+2] = (short)(color::rint(LAB_BASE*(b+128.0f)/256.0f));
                         }
                         {
                             float X = R*BGR2XYZ_D65[0] + G*BGR2XYZ_D65[1] + B*BGR2XYZ_D65[2];
@@ -2360,9 +2365,9 @@ namespace LabTable
                             float u = L*(X*d - 2.5719122887f);
                             float v = L*(2.25f*Y*d - 6.0884485245f);
 
-                            RGB2Luvprev[idx  ] = (short)roundeven(LAB_BASE*L/100.0f);
-                            RGB2Luvprev[idx+1] = (short)roundeven(LAB_BASE*(u+134.0f)/354.0f);
-                            RGB2Luvprev[idx+2] = (short)roundeven(LAB_BASE*(v+140.0f)/262.0f);
+                            RGB2Luvprev[idx  ] = (short)color::rint(LAB_BASE*L/100.0f);
+                            RGB2Luvprev[idx+1] = (short)color::rint(LAB_BASE*(u+134.0f)/354.0f);
+                            RGB2Luvprev[idx+2] = (short)color::rint(LAB_BASE*(v+140.0f)/262.0f);
                         }
                     }
                 }
@@ -2506,15 +2511,15 @@ inline int cvtLabtoBGR<uchar>(int start, int end, const uchar * src, size_t src_
 {
     static const int XYZ2BGR[] =
     {
-        (int)roundeven((1 << 12) *  0.055648f * 0.950456f), (int)roundeven((1 << 12) * -0.204043f), (int)roundeven((1 << 12) *  1.057311f * 1.088754f),
-        (int)roundeven((1 << 12) * -0.969256f * 0.950456f), (int)roundeven((1 << 12) *  1.875991f), (int)roundeven((1 << 12) *  0.041556f * 1.088754f),
-        (int)roundeven((1 << 12) *  3.240479f * 0.950456f), (int)roundeven((1 << 12) * -1.53715f ), (int)roundeven((1 << 12) * -0.498535f * 1.088754f)
+        (int)color::rint((1 << 12) *  0.055648f * 0.950456f), (int)color::rint((1 << 12) * -0.204043f), (int)color::rint((1 << 12) *  1.057311f * 1.088754f),
+        (int)color::rint((1 << 12) * -0.969256f * 0.950456f), (int)color::rint((1 << 12) *  1.875991f), (int)color::rint((1 << 12) *  0.041556f * 1.088754f),
+        (int)color::rint((1 << 12) *  3.240479f * 0.950456f), (int)color::rint((1 << 12) * -1.53715f ), (int)color::rint((1 << 12) * -0.498535f * 1.088754f)
     };
     static const int XYZ2BGR_D65[] =
     {
-        (int)roundeven((1 << 12) *  0.055648f), (int)roundeven((1 << 12) * -0.204043f), (int)roundeven((1 << 12) *  1.057311f),
-        (int)roundeven((1 << 12) * -0.969256f), (int)roundeven((1 << 12) *  1.875991f), (int)roundeven((1 << 12) *  0.041556f),
-        (int)roundeven((1 << 12) *  3.240479f), (int)roundeven((1 << 12) * -1.53715f ), (int)roundeven((1 << 12) * -0.498535f)
+        (int)color::rint((1 << 12) *  0.055648f), (int)color::rint((1 << 12) * -0.204043f), (int)color::rint((1 << 12) *  1.057311f),
+        (int)color::rint((1 << 12) * -0.969256f), (int)color::rint((1 << 12) *  1.875991f), (int)color::rint((1 << 12) *  0.041556f),
+        (int)color::rint((1 << 12) *  3.240479f), (int)color::rint((1 << 12) * -1.53715f ), (int)color::rint((1 << 12) * -0.498535f)
     };
 
     const int* XYZtab = isLab ? XYZ2BGR : XYZ2BGR_D65;
@@ -2767,9 +2772,9 @@ template<bool srgb> struct rvv<true, srgb> : rvv_base
     {
         static const ushort BGR2XYZ[] =
         {
-            (ushort)roundeven((1 << 12) * 0.180423f / 0.950456f), (ushort)roundeven((1 << 12) * 0.357580f / 0.950456f), (ushort)roundeven((1 << 12) * 0.412453f / 0.950456f),
-            (ushort)roundeven((1 << 12) * 0.072169f            ), (ushort)roundeven((1 << 12) * 0.715160f            ), (ushort)roundeven((1 << 12) * 0.212671f            ),
-            (ushort)roundeven((1 << 12) * 0.950227f / 1.088754f), (ushort)roundeven((1 << 12) * 0.119193f / 1.088754f), (ushort)roundeven((1 << 12) * 0.019334f / 1.088754f)
+            (ushort)color::rint((1 << 12) * 0.180423f / 0.950456f), (ushort)color::rint((1 << 12) * 0.357580f / 0.950456f), (ushort)color::rint((1 << 12) * 0.412453f / 0.950456f),
+            (ushort)color::rint((1 << 12) * 0.072169f            ), (ushort)color::rint((1 << 12) * 0.715160f            ), (ushort)color::rint((1 << 12) * 0.212671f            ),
+            (ushort)color::rint((1 << 12) * 0.950227f / 1.088754f), (ushort)color::rint((1 << 12) * 0.119193f / 1.088754f), (ushort)color::rint((1 << 12) * 0.019334f / 1.088754f)
         };
 
         vuint16m2_t bb, gg, rr;

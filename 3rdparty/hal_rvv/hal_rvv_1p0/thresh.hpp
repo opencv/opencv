@@ -7,7 +7,7 @@
 #ifndef OPENCV_HAL_RVV_THRESH_HPP_INCLUDED
 #define OPENCV_HAL_RVV_THRESH_HPP_INCLUDED
 
-#include "hal_rvv_1p0/types.hpp"
+#include <riscv_vector.h>
 #include <atomic>
 
 namespace cv { namespace cv_hal_rvv {
