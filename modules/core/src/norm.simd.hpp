@@ -87,10 +87,12 @@ struct NormDiffL1_SIMD<int, double> {
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
         for (; j <= n - VTraits<v_int32>::vlanes(); j += VTraits<v_int32>::vlanes()) {
-            v_float32 v01 = v_cvt_f32(vx_load(src1 + j)), v02 = v_cvt_f32(vx_load(src2 + j));
-            v_float32 v0 = v_absdiff(v01, v02);
-            r0 = v_add(r0, v_cvt_f64(v0));
-            r1 = v_add(r1, v_cvt_f64_high(v0));
+            v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
+            v_uint32 v0 = v_absdiff(v01, v02);
+            v_uint64 ev0, ev1;
+            v_expand(v0, ev0, ev1);
+            r0 = v_add(r0, v_cvt_f64(v_reinterpret_as_s64(ev0)));
+            r1 = v_add(r1, v_cvt_f64(v_reinterpret_as_s64(ev1)));
         }
         s += v_reduce_sum(v_add(r0, r1));
 #endif
@@ -1130,22 +1132,15 @@ struct NormDiffL2_SIMD<int, double> {
         int j = 0;
         double s = 0.f;
         v_float64 r0 = vx_setzero_f64(), r1 = vx_setzero_f64();
-        v_float64 r2 = vx_setzero_f64(), r3 = vx_setzero_f64();
-        for (; j <= n - 2 * VTraits<v_int32>::vlanes(); j += 2 * VTraits<v_int32>::vlanes()) {
-            v_float32 v01 = v_cvt_f32(vx_load(src1 + j)), v02 = v_cvt_f32(vx_load(src2 + j));
-            v_float32 v0 = v_absdiff(v01, v02);
-            v_float64 f00, f01;
-            f00 = v_cvt_f64(v0); f01 = v_cvt_f64_high(v0);
-            r0 = v_fma(f00, f00, r0); r1 = v_fma(f01, f01, r1);
-
-            v_float32 v11 = v_cvt_f32(vx_load(src1 + j + VTraits<v_int32>::vlanes())),
-                      v12 = v_cvt_f32(vx_load(src2 + j + VTraits<v_int32>::vlanes()));
-            v_float32 v1 = v_absdiff(v11, v12);
-            v_float64 f10, f11;
-            f10 = v_cvt_f64(v1); f11 = v_cvt_f64_high(v1);
-            r2 = v_fma(f10, f10, r2); r3 = v_fma(f11, f11, r3);
+        for (; j <= n - VTraits<v_int32>::vlanes(); j += VTraits<v_int32>::vlanes()) {
+            v_int32 v01 = vx_load(src1 + j), v02 = vx_load(src2 + j);
+            v_uint32 v0 = v_absdiff(v01, v02);
+            v_uint64 ev0, ev1;
+            v_expand(v0, ev0, ev1);
+            v_float64 f0 = v_cvt_f64(v_reinterpret_as_s64(ev0)), f1 = v_cvt_f64(v_reinterpret_as_s64(ev1));
+            r0 = v_fma(f0, f0, r0); r1 = v_fma(f1, f1, r1);
         }
-        s += v_reduce_sum(v_add(v_add(v_add(r0, r1), r2), r3));
+        s += v_reduce_sum(v_add(r0, r1));
         for (; j < n; j++) {
             double v = (double)src1[j] - (double)src2[j];
             s += v * v;
