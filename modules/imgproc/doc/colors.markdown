@@ -187,7 +187,7 @@ The Bayer pattern is widely used in CCD and CMOS cameras. It enables you to get 
 from a single plane where R, G, and B pixels (sensors of a particular component) are interleaved
 as follows:
 
-![Bayer patterns (BGGR, GBRG, GRGB, RGGB)](pics/Bayer_patterns.png)
+![Bayer patterns (BGGR, GBRG, GRBG, RGGB)](pics/Bayer_patterns.png)
 
 The output RGB components of a pixel are interpolated from 1, 2, or 4 neighbors of the pixel
 having the same color.
