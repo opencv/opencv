@@ -139,7 +139,7 @@ Mat GetColor::getColorChecker(const double* checker, int row)
     return res;
 }
 
-Mat GetColor::getColorCheckerMASK(const uchar* checker, int row)
+Mat GetColor::getColorCheckerMask(const uchar* checker, int row)
 {
     Mat res(row, 1, CV_8U);
     for (int i = 0; i < row; ++i)
@@ -352,7 +352,7 @@ std::shared_ptr<Color> GetColor::getColor(CONST_COLOR const_color)
     case cv::ccm::COLORCHECKER_Macbeth:
     {
         Mat ColorChecker2005_LAB_D50_2_ = GetColor::getColorChecker(*ColorChecker2005_LAB_D50_2, 24);
-        Mat ColorChecker2005_COLORED_MASK_ = GetColor::getColorCheckerMASK(ColorChecker2005_COLORED_MASK, 24);
+        Mat ColorChecker2005_COLORED_MASK_ = GetColor::getColorCheckerMask(ColorChecker2005_COLORED_MASK, 24);
         std::shared_ptr<Color> Macbeth_D50_2 = std::make_shared<Color>(ColorChecker2005_LAB_D50_2_, COLOR_SPACE_Lab_D50_2, ColorChecker2005_COLORED_MASK_);
         return Macbeth_D50_2;
     }
@@ -360,7 +360,7 @@ std::shared_ptr<Color> GetColor::getColor(CONST_COLOR const_color)
     case cv::ccm::COLORCHECKER_Vinyl:
     {
         Mat Vinyl_LAB_D50_2__ = GetColor::getColorChecker(*Vinyl_LAB_D50_2, 18);
-        Mat Vinyl_COLORED_MASK__ = GetColor::getColorCheckerMASK(Vinyl_COLORED_MASK, 18);
+        Mat Vinyl_COLORED_MASK__ = GetColor::getColorCheckerMask(Vinyl_COLORED_MASK, 18);
         std::shared_ptr<Color> Vinyl_D50_2 = std::make_shared<Color>(Vinyl_LAB_D50_2__, COLOR_SPACE_Lab_D50_2, Vinyl_COLORED_MASK__);
         return Vinyl_D50_2;
     }

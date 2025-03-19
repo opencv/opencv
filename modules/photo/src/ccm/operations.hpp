@@ -46,7 +46,7 @@ public:
     void add(const Operation& other);
 
     void clear();
-    static Operation& get_IDENTITY_OP()
+    static Operation& getIdentityOp()
     {
         static Operation identity_op([](Mat x) { return x; });
         return identity_op;
@@ -70,9 +70,9 @@ public:
     /** @brief run operations to make color conversion
     */
     Mat run(Mat abc);
-    static const Operations& get_IDENTITY_OPS()
+    static const Operations& getIdentityOps()
     {
-        static Operations Operation_op {Operation::get_IDENTITY_OP()};
+        static Operations Operation_op {Operation::getIdentityOp()};
         return Operation_op;
     }
 };

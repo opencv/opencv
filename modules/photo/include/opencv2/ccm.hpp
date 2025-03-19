@@ -25,8 +25,8 @@ namespace ccm
 */
 enum CCM_TYPE
 {
-    CCM_3x3,   ///< The CCM with the shape \f$3\times3\f$ performs linear transformation on color values.
-    CCM_4x3,   ///< The CCM with the shape \f$4\times3\f$ performs affine transformation.
+    CCM_LINEAR,   ///< Uses a \f$3\times3\f$ matrix to linearly transform RGB values without offsets.
+    CCM_AFFINE,   ///< Uses a \f$4\times3\f$ matrix to affine transform RGB values with both scaling and offset terms.
 };
 
 /** @brief Enum of the possible types of initial method.
@@ -186,9 +186,9 @@ public:
 
     /** @brief set ccm_type
     @param ccm_type the shape of color correction matrix(CCM);\n
-                    default: @ref CCM_3x3
+                    default: @ref CCM_LINEAR
     */
-    CV_WRAP void setCCM_TYPE(CCM_TYPE ccm_type);
+    CV_WRAP void setCCMType(CCM_TYPE ccm_type);
 
     /** @brief set Distance
     @param distance the type of color distance;\n
@@ -267,7 +267,7 @@ public:
     CV_WRAP void setEpsilon(const double& epsilon);
 
     /** @brief make color correction */
-    CV_WRAP void run();
+    CV_WRAP void computeCCM();
 
     CV_WRAP Mat getCCM() const;
     CV_WRAP double getLoss() const;

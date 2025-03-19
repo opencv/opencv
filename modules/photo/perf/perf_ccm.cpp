@@ -24,7 +24,7 @@ PERF_TEST(CV_mcc_perf, infer) {
 
     // compute CCM
     ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., COLORCHECKER_Macbeth);
-    model.run();
+    model.computeCCM();
 
     Mat img(1000, 4000, CV_8UC3);
     randu(img, 0, 255);

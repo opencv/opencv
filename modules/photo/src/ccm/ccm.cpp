@@ -47,8 +47,8 @@ public:
     double epsilon;
     Impl();
 
-    /** @brief Make no change for CCM_3x3.
-             convert cv::Mat A to [A, 1] in CCM_4x3.
+    /** @brief Make no change for CCM_LINEAR.
+             convert cv::Mat A to [A, 1] in CCM_AFFINE.
         @param inp the input array, type of cv::Mat.
         @return the output array, type of cv::Mat
     */
@@ -119,7 +119,7 @@ public:
 
 ColorCorrectionModel::Impl::Impl()
     : cs(*GetCS::getInstance().get_rgb(COLOR_SPACE_sRGB))
-    , ccm_type(CCM_3x3)
+    , ccm_type(CCM_LINEAR)
     , distance(DISTANCE_CIE2000)
     , linear_type(LINEARIZATION_GAMMA)
     , weights(Mat())
@@ -136,10 +136,10 @@ Mat ColorCorrectionModel::Impl::prepare(const Mat& inp)
 {
     switch (ccm_type)
     {
-    case cv::ccm::CCM_3x3:
+    case cv::ccm::CCM_LINEAR:
         shape = 9;
         return inp;
-    case cv::ccm::CCM_4x3:
+    case cv::ccm::CCM_AFFINE:
     {
         shape = 12;
         Mat arr1 = Mat::ones(inp.size(), CV_64F);
@@ -314,7 +314,7 @@ void ColorCorrectionModel::setColorSpace(COLOR_SPACE cs_)
 {
     p->cs = *GetCS::getInstance().get_rgb(cs_);
 }
-void ColorCorrectionModel::setCCM_TYPE(CCM_TYPE ccm_type_)
+void ColorCorrectionModel::setCCMType(CCM_TYPE ccm_type_)
 {
     p->ccm_type = ccm_type_;
 }
@@ -358,7 +358,7 @@ void ColorCorrectionModel::setEpsilon(const double& epsilon_)
 {
     p->epsilon = epsilon_;
 }
-void ColorCorrectionModel::run()
+void ColorCorrectionModel::computeCCM()
 {
 
     Mat saturate_mask = saturate(p->src, p->saturated_threshold[0], p->saturated_threshold[1]);
@@ -368,7 +368,7 @@ void ColorCorrectionModel::run()
     p->dst->colors = maskCopyTo(p->dst->colors, p->mask);
     p->dst_rgbl = p->dst->to(*(p->cs.l)).colors;
 
-    // make no change for CCM_3x3, make change for CCM_4x3.
+    // make no change for CCM_LINEAR, make change for CCM_AFFINE.
     p->src_rgbl = p->prepare(p->src_rgbl);
 
     // distance function may affect the loss function and the fitting function
