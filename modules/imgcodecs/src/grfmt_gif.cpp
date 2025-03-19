@@ -337,6 +337,7 @@ bool GifDecoder::lzwDecode() {
     int leftBits = 0;
     uint32_t src = 0;
     auto blockLen = (uchar)m_strm.getByte();
+    clear();
     while (blockLen) {
         if (leftBits < lzwCodeSize) {
             src |= m_strm.getByte() << leftBits;
@@ -344,7 +345,6 @@ bool GifDecoder::lzwDecode() {
             leftBits += 8;
         }
 
-        clear();
         while (leftBits >= lzwCodeSize) {
             // get the code
             uint16_t code = src & ((1 << lzwCodeSize) - 1);
@@ -358,6 +358,7 @@ bool GifDecoder::lzwDecode() {
             }
             // end of information
             if (!(code ^ exitCode)) {
+                clear();
                 break;
             }
 
