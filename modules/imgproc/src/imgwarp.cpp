@@ -3725,9 +3725,9 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     else
     {
         const int ANGLE_BORDER = 1;
-        cv::copyMakeBorder(_src, _dst, ANGLE_BORDER, ANGLE_BORDER, 0, 0, cv::BORDER_WRAP);
-        cv::Mat src = _dst.getMat();
-        cv::Size ssize = _dst.size();
+        cv::copyMakeBorder(_src, _dst, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
+        Mat src = _dst.getMat();
+        Size ssize = _dst.size();
         ssize.height -= 2 * ANGLE_BORDER;
         CV_Assert(!ssize.empty());
         const double Kangle = CV_2PI / ssize.height;
@@ -3746,14 +3746,14 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         bufa = Mat(1, dsize.width, CV_32F);
 
         for (x = 0; x < dsize.width; x++)
-            bufx.at<float>(0, x) = (float)x - center.x;;
+            bufx.at<float>(0, x) = (float)x - center.x;
 
         cv::parallel_for_(cv::Range(0, dsize.height), [&](const cv::Range& range) {
             for (int y = range.start; y < range.end; ++y) {
                Mat local_bufx = bufx.clone();
-               Mat local_bufy =Mat(1, dsize.width, CV_32F);
-               Mat local_bufp =Mat(1, dsize.width, CV_32F);
-               Mat local_bufa =Mat(1, dsize.width, CV_32F);
+               Mat local_bufy = Mat(1, dsize.width, CV_32F);
+               Mat local_bufp = Mat(1, dsize.width, CV_32F);
+               Mat local_bufa = Mat(1, dsize.width, CV_32F);
 
                 for (int x = 0; x < dsize.width; x++) {
                     local_bufy.at<float>(0, x) = static_cast<float>(y) - center.y;
@@ -3777,9 +3777,9 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
                 }
             }
         });
-        
+
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
-            (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
+              (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }
 }
 
