@@ -3745,11 +3745,8 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         bufp = Mat(1, dsize.width, CV_32F);
         bufa = Mat(1, dsize.width, CV_32F);
 
-        cv::parallel_for_(cv::Range(0, dsize.width), [&](const cv::Range& range) {
-            for (int x = range.start; x < range.end; ++x) {
-                bufx.at<float>(0, x) = static_cast<float>(x) - center.x;
-            }
-        });
+        for (x = 0; x < dsize.width; x++)
+            bufx.at<float>(0, x) = (float)x - center.x;;
 
         cv::parallel_for_(cv::Range(0, dsize.height), [&](const cv::Range& range) {
             for (int y = range.start; y < range.end; ++y) {
