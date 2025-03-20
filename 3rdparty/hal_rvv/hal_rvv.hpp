@@ -49,6 +49,7 @@
 #include "hal_rvv_1p0/pyramids.hpp" // imgproc
 #include "hal_rvv_1p0/color.hpp" // imgproc
 #include "hal_rvv_1p0/thresh.hpp" // imgproc
+#include "hal_rvv_1p0/histogram.hpp" // imgproc
 #endif
 
 #endif
