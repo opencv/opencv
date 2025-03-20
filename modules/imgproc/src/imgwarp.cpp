@@ -54,7 +54,8 @@
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/softfloat.hpp"
 #include "imgwarp.hpp"
-
+#include <omp.h>
+#include <thread>
 using namespace cv;
 
 namespace cv
@@ -3724,6 +3725,8 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
     }
     else
     {
+        int max_threads = omp_get_max_threads();  
+		int adjusted_threads = std::max(max_threads - 2, 2);  
         const int ANGLE_BORDER = 1;
         cv::copyMakeBorder(_src, _dst, ANGLE_BORDER, ANGLE_BORDER, 0, 0, BORDER_WRAP);
         Mat src = _dst.getMat();
@@ -3744,33 +3747,40 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         bufy = Mat(1, dsize.width, CV_32F);
         bufp = Mat(1, dsize.width, CV_32F);
         bufa = Mat(1, dsize.width, CV_32F);
-
+        #pragma omp parallel for num_threads(adjusted_threads)
         for (x = 0; x < dsize.width; x++)
             bufx.at<float>(0, x) = (float)x - center.x;
-
+        #pragma omp parallel for num_threads(adjusted_threads)
         for (y = 0; y < dsize.height; y++)
         {
-            float* mx = (float*)(mapx.data + y*mapx.step);
-            float* my = (float*)(mapy.data + y*mapy.step);
+            Mat local_bufx = Mat(1, dsize.width, CV_32F);
+			Mat local_bufy = Mat(1, dsize.width, CV_32F);
+			Mat local_bufp = Mat(1, dsize.width, CV_32F);
+			Mat local_bufa = Mat(1, dsize.width, CV_32F);
 
-            for (x = 0; x < dsize.width; x++)
-                bufy.at<float>(0, x) = (float)y - center.y;
+			for (int x = 0; x < dsize.width; x++) {
+				local_bufx.at<float>(0, x) = bufx.at<float>(0, x); // 复制 bufx 的值
+				local_bufy.at<float>(0, x) = (float)y - center.y;  // 计算 bufy 的值
+			}
 
-            cartToPolar(bufx, bufy, bufp, bufa, 0);
+				// 调用 cartToPolar
+			cartToPolar(local_bufx, local_bufy, local_bufp, local_bufa, false);
 
-            if (semiLog)
-            {
-                bufp += 1.f;
-                log(bufp, bufp);
-            }
+			if (semiLog) {
+				local_bufp += 1.f;
+				log(local_bufp, local_bufp);
+			}
 
-            for (x = 0; x < dsize.width; x++)
-            {
-                double rho = bufp.at<float>(0, x) / Kmag;
-                double phi = bufa.at<float>(0, x) / Kangle;
-                mx[x] = (float)rho;
-                my[x] = (float)phi + ANGLE_BORDER;
-            }
+		
+			float* mx = (float*)(mapx.data + y * mapx.step);
+			float* my = (float*)(mapy.data + y * mapy.step);
+
+			for (int x = 0; x < dsize.width; x++) {
+				double rho = local_bufp.at<float>(0, x) / Kmag;
+				double phi = local_bufa.at<float>(0, x) / Kangle;
+				mx[x] = (float)rho;
+				my[x] = (float)phi + ANGLE_BORDER;
+			}
         }
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
               (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
