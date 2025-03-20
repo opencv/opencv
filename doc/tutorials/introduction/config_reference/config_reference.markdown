@@ -64,6 +64,21 @@ Only 0- and 1-level deep module locations are supported, following command will 
 cmake -DOPENCV_EXTRA_MODULES_PATH=../opencv_contrib ../opencv
 ```
 
+## Build with C++ Standard setting {#tutorial_config_reference_general_cxx_standard}
+
+`CMAKE_CXX_STANDARD` option can be used to set C++ standard settings for OpenCV building.
+
+```.sh
+cmake -DCMAKE_CXX_STANDARD=17 ../opencv
+cmake --build .
+```
+
+- C++11 is default/required/recommended for OpenCV4. C++17 is default/required/recomended for OpenCV5.
+- If your compiler does not support required C++ Standard features, OpenCV configuration should be fail.
+- If you set older C++ Standard than required, OpenCV configuration should be fail.
+  For workaround, `OPENCV_SKIP_CMAKE_CXX_STANDARD_CHECKS` option can be used to skip `CMAKE_CXX_STANDARD` version check.
+- If you set newer C++ Standard than recomended, numerous warnings may appear or OpenCV build may fail.
+
 
 ## Debug build {#tutorial_config_reference_general_debug}
 
