@@ -199,19 +199,25 @@ public:
 };
 
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
-                    InputArray _cameraMatrix, InputArray _distCoeffs,
-                    OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
-                    int iterationsCount, float reprojectionError, double confidence,
-                    OutputArray _inliers, int flags)
+    InputArray _cameraMatrix, InputArray _distCoeffs,
+    OutputArray _rvec, OutputArray _tvec, 
+    bool useExtrinsicGuess, int iterationsCount, 
+    float reprojectionError, double confidence, 
+    OutputArray _inliers, 
+    int method = SOLVEPNP_ITERATIVE,
+    int flags = 0);
 {
     CV_INSTRUMENT_REGION();
     if (!(flags == SOLVEPNP_ITERATIVE ||
         flags == SOLVEPNP_EPNP ||
         flags == SOLVEPNP_P3P ||
         flags == SOLVEPNP_AP3P ||
+        flags == SOLVEPNP_DLS ||
+        flags == SOLVEPNP_UPNP ||
+        flags == SOLVEPNP_IPPE || 
         (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)))
   {
-    throw std::invalid_argument("Error: Invalid flag provided for solvePnPRansac.");
+      throw std::invalid_argument("Error: Invalid flag provided for solvePnPRansac");
   }
     if (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)
         {return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
