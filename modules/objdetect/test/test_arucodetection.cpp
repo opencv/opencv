@@ -321,99 +321,213 @@ void CV_ArucoDetectionPerspective::run(int) {
     }
 }
 
-// Helper struc and functions for CV_ArucoDetectionUnc
+// Helper struct and functions for CV_ArucoDetectionUnc
+
+// Inverts a square subregion inside selected cells of a marker to simulate uncertainty
+enum class MarkerRegionToTemper {
+    BORDER, // Only invert cells within the marker border bits
+    INNER,  // Only invert cells in the inner part of the marker (excluding borders)
+    ALL     // Invert any cells
+};
+
+// Define the characteristics of cell inversions
+struct MarkerTemperingConfig {
+    float cellRatioToTemper;                   // [0,1] ratio of the cell to invert
+    int numCellsToTemper;                      // Number of cells to invert
+    MarkerRegionToTemper markerRegionToTemper; // Which cells to invert (BORDER, INNER, ALL)
+};
+
+// Test configs for CV_ArucoDetectionUnc
 struct ArucoUncTestConfig {
-    // Number of bits (per dimension) for each cell of the marker when removing the perspective (default 4).
-    int perspectiveRemovePixelPerCell;
-    // Width of the margin of pixels on each cell not considered for the determination of the cell bit.
-    // This parameter is relative to the total size of the cell.
-    // For instance if the cell size is 40 pixels and the value of this parameter is 0.1, a margin of 40*0.1=4 pixels is ignored in the cells.
-    float perspectiveRemoveIgnoredMarginPerCell;
-    // Number of bits of the marker border, i.e. marker border width (default 1).
-    int markerBorderBits;
-    // Fraction of tempered (inverted) pixels per cell (area ratio, e.g. 0.02 for 2%)
-    float invertPixelPercent;
-    // Percentage of offset used for perspective distortion, bigger means more distorted
-    float distortionRatio;
+    MarkerTemperingConfig markerTemperingConfig; // Configuration of cells to invert (percentage, number and markerRegionToTemper)
+    float perspectiveRemoveIgnoredMarginPerCell; // Width of the margin of pixels on each cell not considered for the marker identification
+    int markerBorderBits;                        // Number of bits of the marker border
+    float distortionRatio;                       // Percentage of offset used for perspective distortion, bigger means more distorted
+};
+
+enum class markerRot
+{
+    NONE = 0,
+    ROT_90,
+    ROT_180,
+    ROT_270
+};
+
+struct markerDetectionGT {
+    int id;               // Marker identification
+    double uncertainty;   // Pixel-based uncertainty defined as inverted area / total area
+    bool expectDetection; // True if we expect to detect the marker
 };
 
 struct MarkerCreationConfig {
-    int id;                 // Unique marker ID (will be offset per test run)
-    int markerSidePixels;   // Marker size (in pixels)
-    int rotation;           // Rotation of the marker in degrees (0, 90, 180, 270)
+    int id;               // Marker identification
+    int markerSidePixels; // Marker size (in pixels)
+    markerRot rotation;   // Rotation of the marker in degrees (0, 90, 180, 270)
 };
 
-/**
- * @brief Create a synthetic image of a marker
- * Applies an optional rotation and an optional perspective warp to simulate a distorted marker.
- * Inverts a square region within each cell (including borders) to simulate uncertainty in detection.
- * Computes the ground-truth uncertainty as the ratio of inverted area to the total marker area.
- */
-Mat generateMarkerImage(const MarkerCreationConfig &markerConfig, const ArucoUncTestConfig &detectorConfig,
-                        const aruco::Dictionary &dictionary, double &groundTruthUnc)
+void rotateMarker(Mat &marker, const markerRot rotation)
 {
-    Mat marker;
-    // Generate the synthetic marker image
-    aruco::generateImageMarker(dictionary, markerConfig.id, markerConfig.markerSidePixels,
-                               marker, detectorConfig.markerBorderBits);
+    if(rotation == markerRot::NONE)
+        return;
 
-    // Rotate the marker if needed.
-    if (markerConfig.rotation == 90) {
+    if (rotation == markerRot::ROT_90) {
         cv::transpose(marker, marker);
         cv::flip(marker, marker, 0);
-    } else if (markerConfig.rotation == 180) {
+    } else if (rotation == markerRot::ROT_180) {
         cv::flip(marker, marker, -1);
-    } else if (markerConfig.rotation == 270) {
+    } else if (rotation == markerRot::ROT_270) {
         cv::transpose(marker, marker);
         cv::flip(marker, marker, 1);
     }
+}
 
-    // Compute the number of cells in one dimension.
-    const int markerSizeWithBorders = dictionary.markerSize + 2 * detectorConfig.markerBorderBits;
-    const int cellSidePixelsSize = markerConfig.markerSidePixels / markerSizeWithBorders;
-    // Size of the cell used for marker identification and uncertainty computations
-    const int cellMarginPixels = int(detectorConfig.perspectiveRemoveIgnoredMarginPerCell * cellSidePixelsSize);
-    const int innerCellSizePixelsSize = cellSidePixelsSize - 2 * cellMarginPixels;
-    // We want the inverted square area to have an area ratio equal to invertPixelPercent.
-    // That is: (cellSidePixelsInvert/innerCellSizePixelsSize)^2 = invertPixelPercent.
-    const int cellSidePixelsInvert = int(innerCellSizePixelsSize * std::sqrt(detectorConfig.invertPixelPercent));
+void distortMarker(Mat &marker, const float distortionRatio)
+{
+
+    if (distortionRatio < FLT_EPSILON)
+        return;
+
+    // apply a distortion (a perspective warp) to simulate a non-ideal capture
+    vector<Point2f> src = { {0, 0},
+                            {static_cast<float>(marker.cols), 0},
+                            {static_cast<float>(marker.cols), static_cast<float>(marker.rows)},
+                            {0, static_cast<float>(marker.rows)} };
+    float offset = marker.cols * distortionRatio; // distortionRatio % offset for distortion
+    vector<Point2f> dst = { {offset, offset},
+                            {marker.cols - offset, 0},
+                            {marker.cols - offset, marker.rows - offset},
+                            {0, marker.rows - offset} };
+    Mat M = getPerspectiveTransform(src, dst);
+    warpPerspective(marker, marker, M, marker.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
+}
+
+/**
+ * @brief Inverts a square subregion inside selected cells of a marker image to simulate uncertainty.
+ *
+ * The function computes the marker grid parameters and then applies a bitwise inversion
+ * on a square markerRegionToTemper inside the chosen cells. The number of cells to be inverted is determined by
+ * the parameter 'numCellsToTemper'. The candidate cells can be filtered to only include border cells,
+ * inner cells, or all cells according to the parameter 'markerRegionToTemper'.
+ *
+ * @param marker           The marker image
+ * @param markerSidePixels The total size of the marker in pixels (inner and border).
+ * @param markerId         The id of the marker
+ * @param params           The Aruco detector configuration (provides border bits, margin ratios, etc.).
+ * @param dictionary       The Aruco marker dictionary (used to determine marker grid size).
+ * @param cellTempConfig   Cell tempering config as defined in MarkerTemperingConfig
+ * @return Cell tempering ground truth as defined in markerDetectionGT
+ */
+markerDetectionGT applyTemperingToMarkerCells(cv::Mat &marker,
+                                 const int markerSidePixels,
+                                 const int markerId,
+                                 const aruco::DetectorParameters &params,
+                                 const aruco::Dictionary &dictionary,
+                                 const MarkerTemperingConfig &cellTempConfig)
+{
+
+    // nothing to invert
+    if(cellTempConfig.numCellsToTemper <= 0 || cellTempConfig.cellRatioToTemper <= FLT_EPSILON)
+        return {markerId, 0.0, true};
+
+    // compute the overall grid dimensions.
+    const int markerSizeWithBorders = dictionary.markerSize + 2 * params.markerBorderBits;
+    const int cellSidePixelsSize = markerSidePixels / markerSizeWithBorders;
+
+    // compute the margin within each cell used for identification.
+    const int cellMarginPixels = static_cast<int>(params.perspectiveRemoveIgnoredMarginPerCell * cellSidePixelsSize);
+    const int innerCellSizePixels = cellSidePixelsSize - 2 * cellMarginPixels;
+
+    // determine the size of the square that will be inverted in each cell.
+    // (cellSidePixelsInvert / innerCellSizePixels)^2 should equal cellRatioToTemper.
+    const int cellSidePixelsInvert = min(cellSidePixelsSize, static_cast<int>(innerCellSizePixels * std::sqrt(cellTempConfig.cellRatioToTemper)));
     const int inversionOffsetPixels = (cellSidePixelsSize - cellSidePixelsInvert) / 2;
 
-    int numCellsInverted = 0;
-    // Loop over each cell in the marker grid.
-    if (cellSidePixelsInvert > 0) {
-        for (int row = 0; row < markerSizeWithBorders; row++) {
-            for (int col = 0; col < markerSizeWithBorders; col++) {
-                int xStart = col * cellSidePixelsSize + inversionOffsetPixels;
-                int yStart = row * cellSidePixelsSize + inversionOffsetPixels;
-                Rect cellRect(xStart, yStart, cellSidePixelsInvert, cellSidePixelsInvert);
-                Mat cellROI = marker(cellRect);
-                bitwise_not(cellROI, cellROI);
-                numCellsInverted++;
+    // nothing to invert
+    if(cellSidePixelsInvert <= 0)
+        return {markerId, 0.0, true};
+
+    int cellsTempered = 0;
+    int borderErrors = 0;
+    int innerCellsErrors = 0;
+    // iterate over each cell in the grid.
+    for (int row = 0; row < markerSizeWithBorders; row++) {
+        for (int col = 0; col < markerSizeWithBorders; col++) {
+
+            // decide if this cell falls in the markerRegionToTemper to temper.
+            const bool isBorder = (row < params.markerBorderBits ||
+                                   col < params.markerBorderBits ||
+                                   row >= markerSizeWithBorders - params.markerBorderBits ||
+                                   col >= markerSizeWithBorders - params.markerBorderBits);
+
+            const bool inRegion = (cellTempConfig.markerRegionToTemper == MarkerRegionToTemper::ALL ||
+                        (isBorder && cellTempConfig.markerRegionToTemper == MarkerRegionToTemper::BORDER) ||
+                        (!isBorder && cellTempConfig.markerRegionToTemper == MarkerRegionToTemper::INNER));
+
+            // apply the inversion to simulate tempering.
+            if (inRegion && (cellsTempered < cellTempConfig.numCellsToTemper)) {
+                const int xStart = col * cellSidePixelsSize + inversionOffsetPixels;
+                const int yStart = row * cellSidePixelsSize + inversionOffsetPixels;
+                cv::Rect cellRect(xStart, yStart, cellSidePixelsInvert, cellSidePixelsInvert);
+                cv::Mat cellROI = marker(cellRect);
+                cv::bitwise_not(cellROI, cellROI);
+                ++cellsTempered;
+
+                // cell too tempered, no detection expected
+                if(cellTempConfig.cellRatioToTemper > 0.5f) {
+                    if(isBorder){
+                        ++borderErrors;
+                    } else {
+                        ++innerCellsErrors;
+                    }
+                }
             }
+
+            if(cellsTempered >= cellTempConfig.numCellsToTemper)
+                break;
         }
+
+        if(cellsTempered >= cellTempConfig.numCellsToTemper)
+            break;
     }
 
-    // Compute ground-truth uncertainty as (inverted area)/(total area used to detect marker).
-    groundTruthUnc = (numCellsInverted * cellSidePixelsInvert * cellSidePixelsInvert) /
-                     static_cast<double>(markerSizeWithBorders * innerCellSizePixelsSize * markerSizeWithBorders * innerCellSizePixelsSize);
+    // compute the ground-truth uncertainty
+    const double invertedArea = cellsTempered * cellSidePixelsInvert * cellSidePixelsInvert;
+    const double totalDetectionArea = markerSizeWithBorders * innerCellSizePixels * markerSizeWithBorders * innerCellSizePixels;
+    const double groundTruthUnc = invertedArea / totalDetectionArea;
 
-    // Optionally apply a distortion (a perspective warp) to simulate a non-ideal capture.
-    if (detectorConfig.distortionRatio > 0.f) {
-        vector<Point2f> src = { {0, 0},
-                                {static_cast<float>(marker.cols), 0},
-                                {static_cast<float>(marker.cols), static_cast<float>(marker.rows)},
-                                {0, static_cast<float>(marker.rows)} };
-        float offset = marker.cols * detectorConfig.distortionRatio; // distortionRatio % offset for distortion
-        vector<Point2f> dst = { {offset, offset},
-                                {marker.cols - offset, 0},
-                                {marker.cols - offset, marker.rows - offset},
-                                {0, marker.rows - offset} };
-        Mat M = getPerspectiveTransform(src, dst);
-        warpPerspective(marker, marker, M, marker.size(), INTER_LINEAR, BORDER_CONSTANT, Scalar(255));
-    }
+    // check if marker is expected to be detected
+    const int maximumErrorsInBorder = static_cast<int>(dictionary.markerSize * dictionary.markerSize * params.maxErroneousBitsInBorderRate);
+    const int maxCorrectionRecalculed = static_cast<int>(dictionary.maxCorrectionBits * params.errorCorrectionRate);
+    const bool expectDetection = static_cast<bool>(borderErrors <= maximumErrorsInBorder && innerCellsErrors <= maxCorrectionRecalculed);
 
-    return marker;
+    return {markerId, groundTruthUnc, expectDetection};
+}
+
+/**
+ * @brief Create an image of a marker with inverted (tempered) regions to simulate detection uncertainty
+ *
+ * Applies an optional rotation and an optional perspective warp to simulate a distorted marker.
+ * Inverts a square subregion inside selected cells of a marker image to simulate uncertainty.
+ * Computes the ground-truth uncertainty as the ratio of inverted area to the total marker area used for identification.
+ *
+ */
+markerDetectionGT generateTemperedMarkerImage(Mat &marker, const MarkerCreationConfig &markerConfig, const MarkerTemperingConfig &markerTemperingConfig,
+                        const aruco::DetectorParameters &params, const aruco::Dictionary &dictionary, const float distortionRatio = 0.f)
+{
+    // generate the synthetic marker image
+    aruco::generateImageMarker(dictionary, markerConfig.id, markerConfig.markerSidePixels,
+                               marker, params.markerBorderBits);
+
+    // rotate marker if necessary
+    rotateMarker(marker, markerConfig.rotation);
+
+    // temper with cells to simulate detection uncertainty
+    markerDetectionGT groundTruth = applyTemperingToMarkerCells(marker, markerConfig.markerSidePixels, markerConfig.id, params, dictionary, markerTemperingConfig);
+
+    // apply a distortion (a perspective warp) to simulate a non-ideal capture
+    distortMarker(marker, distortionRatio);
+
+    return groundTruth;
 }
 
 
@@ -428,12 +542,14 @@ void placeMarker(Mat &img, const Mat &marker, const Point2f &topLeft)
 
 
 /**
- * @brief Test the marker uncertainty computations.
- * Loops over a set of detector configurations (expected uncertainty, distortion, DetectorParameters such as markerBorderBits)
+ * @brief Test the marker uncertainty computations
+ *
+ * Loops over a set of detector configurations (e.g. expected uncertainty, distortion, DetectorParameters)
  * For each configuration, it creates a synthetic image containing four markers arranged in a 2x2 grid.
  * Each marker is generated with its own configuration (id, size, rotation).
  * Finally, it runs the detector and checks that each marker is detected and
  * that its computed uncertainty is close to the ground truth value.
+ *
  */
 class CV_ArucoDetectionUnc : public cvtest::BaseTest {
     public:
@@ -449,130 +565,137 @@ class CV_ArucoDetectionUnc : public cvtest::BaseTest {
 void CV_ArucoDetectionUnc::run(int) {
 
     aruco::DetectorParameters params;
+    // make sure there are no bits have any detection errors
+    params.maxErroneousBitsInBorderRate = 0.0;
+    params.errorCorrectionRate = 0.0;
+    params.perspectiveRemovePixelPerCell = 8; // esnsure that there is enough resolution to properly handle distortions
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_6X6_250), params);
 
     const bool detectInvertedMarker = (arucoAlgParam == ArucoAlgParams::DETECT_INVERTED_MARKER);
 
-    // Define several detector configurations to test different settings.
-    // perspectiveRemovePixelPerCell, perspectiveRemoveIgnoredMarginPerCell, markerBorderBits, invertPixelPercent, distortionRatio
+    // define several detector configurations to test different settings
+    // {{MarkerTemperingConfig}, perspectiveRemoveIgnoredMarginPerCell, markerBorderBits, distortionRatio}
     vector<ArucoUncTestConfig> detectorConfigs = {
         // No margins, No distortion
-        {8, 0.0f, 1, 0.0f, 0.f},
-        {8, 0.0f, 1, 0.01f, 0.f},
-        {8, 0.0f, 2, 0.05f, 0.f},
-        {8, 0.0f, 1, 0.1f, 0.f},
+        {{0.f,   64, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.f},
+        {{0.01f, 64, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.f},
+        {{0.05f, 100, MarkerRegionToTemper::ALL}, 0.0f, 2, 0.f},
+        {{0.1f,  64, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.f},
+        {{0.15f, 30, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.f},
+        {{0.20f, 55, MarkerRegionToTemper::ALL}, 0.0f, 2, 0.f},
         // Margins, No distortion
-        {8, 0.05f, 1, 0.0f, 0.f},
-        {8, 0.05f, 2, 0.01f, 0.f},
-        {8, 0.1f,  3, 0.05f, 0.f},
-        {8, 0.15f, 1, 0.1f, 0.f},
+        {{0.f,   26, MarkerRegionToTemper::BORDER}, 0.05f, 1, 0.f},
+        {{0.01f, 56, MarkerRegionToTemper::BORDER}, 0.05f, 2, 0.f},
+        {{0.05f, 144, MarkerRegionToTemper::ALL}, 0.1f,  3, 0.f},
+        {{0.10f, 49, MarkerRegionToTemper::ALL}, 0.15f, 1, 0.f},
         // No margins, distortion
-        {8, 0.0f, 1, 0.0f, 0.01f},
-        {8, 0.0f, 1, 0.01f, 0.02f},
-        {8, 0.0f, 2, 0.05f, 0.05f},
-        {8, 0.0f, 1, 0.1f, 0.1f},
-        {8, 0.0f, 2, 0.1f, 0.2f},
+        {{0.f,   36, MarkerRegionToTemper::INNER}, 0.0f, 1, 0.01f},
+        {{0.01f, 36, MarkerRegionToTemper::INNER}, 0.0f, 1, 0.02f},
+        {{0.05f, 12, MarkerRegionToTemper::INNER}, 0.0f, 2, 0.05f},
+        {{0.1f,  64, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.1f},
+        {{0.1f,  81, MarkerRegionToTemper::ALL}, 0.0f, 2, 0.2f},
         // Margins, distortion
-        {8, 0.05f, 2, 0.0f, 0.01f},
-        {8, 0.05f, 1, 0.01f, 0.02f},
-        {8, 0.1f,  2, 0.05f, 0.05f},
-        {8, 0.15f, 1, 0.1f, 0.1f},
-        {8, 0.0f, 1, 0.1f, 0.2f},
+        {{0.f,   81, MarkerRegionToTemper::ALL}, 0.05f, 2, 0.01f},
+        {{0.01f, 64, MarkerRegionToTemper::ALL}, 0.05f, 1, 0.02f},
+        {{0.05f, 81, MarkerRegionToTemper::ALL}, 0.1f,  2, 0.05f},
+        {{0.1f,  64, MarkerRegionToTemper::ALL}, 0.15f, 1, 0.1f},
+        {{0.1f,  64, MarkerRegionToTemper::ALL}, 0.0f,  1, 0.2f},
+        // no marker detection, too much tempering
+        {{0.9f, 1, MarkerRegionToTemper::ALL}, 0.05f, 2, 0.0f},
+        {{0.9f, 1, MarkerRegionToTemper::BORDER}, 0.05f, 2, 0.0f},
+        {{0.9f, 1, MarkerRegionToTemper::INNER}, 0.05f, 2, 0.0f},
     };
 
-    // Define marker configurations for the 4 markers.
-    const int markerSidePixels = 480;
-    // id, markerSidePixels, rotation
+    // define marker configurations for the 4 markers in each image
+    const int markerSidePixels = 480; // To simplify the cell division, markerSidePixels is a multiple of 8. (6x6 dict + 2 border bits)
     vector<MarkerCreationConfig> markerCreationConfig = {
-        {0, markerSidePixels, 90, },
-        {1, markerSidePixels, 270,},
-        {2, markerSidePixels, 0,  },
-        {3, markerSidePixels, 180,}
+        {0, markerSidePixels, markerRot::ROT_90},     // {id, markerSidePixels, rotation}
+        {1, markerSidePixels, markerRot::ROT_270},
+        {2, markerSidePixels, markerRot::NONE},
+        {3, markerSidePixels, markerRot::ROT_180}
     };
 
-    // Loop over each detector configuration.
+    // loop over each detector configuration
     for (size_t cfgIdx = 0; cfgIdx < detectorConfigs.size(); cfgIdx++) {
         ArucoUncTestConfig detCfg = detectorConfigs[cfgIdx];
 
-        // Update detector parameters.
-        params.perspectiveRemovePixelPerCell = detCfg.perspectiveRemovePixelPerCell;
+        // update detector parameters
         params.perspectiveRemoveIgnoredMarginPerCell = detCfg.perspectiveRemoveIgnoredMarginPerCell;
         params.markerBorderBits = detCfg.markerBorderBits;
         params.detectInvertedMarker = detectInvertedMarker;
         detector.setDetectorParameters(params);
 
-        // Create a blank image large enough to hold 4 markers in a 2x2 grid.
+        // create a blank image large enough to hold 4 markers in a 2x2 grid
         const int margin = markerSidePixels / 2;
         const int imageSize = (markerSidePixels * 2) + margin * 3;
         Mat img(imageSize, imageSize, CV_8UC1, Scalar(255));
 
-        vector<double> groundTruthUncs;
-        vector<int> groundTruthIds;
+        vector<markerDetectionGT> groundTruths;
         const aruco::Dictionary &dictionary = detector.getDictionary();
 
-        // Place each marker into the image.
+        // place each marker into the image
         for (int row = 0; row < 2; row++) {
             for (int col = 0; col < 2; col++) {
                 int index = row * 2 + col;
                 MarkerCreationConfig markerCfg = markerCreationConfig[index];
-                // Adjust marker id to be unique for each detector configuration.
+                // adjust marker id to be unique for each detector configuration
                 markerCfg.id += static_cast<int>(cfgIdx * markerCreationConfig.size());
-                groundTruthIds.push_back(markerCfg.id);
 
-                double gtUnc = 0.0;
-                Mat markerImg = generateMarkerImage(markerCfg, detCfg, dictionary, gtUnc);
-                groundTruthUncs.push_back(gtUnc);
+                // generate img
+                Mat markerImg;
+                markerDetectionGT gt = generateTemperedMarkerImage(markerImg, markerCfg, detCfg.markerTemperingConfig, params, dictionary, detCfg.distortionRatio);
+                groundTruths.push_back(gt);
 
-                // Place marker in the image.
+                // place marker in the image
                 Point2f topLeft(margin + col * (markerSidePixels + margin),
                                 margin + row * (markerSidePixels + margin));
                 placeMarker(img, markerImg, topLeft);
             }
         }
 
-        // If testing inverted markers globally, invert the whole image.
+        // if testing inverted markers globally, invert the whole image
         if (detectInvertedMarker) {
             bitwise_not(img, img);
         }
 
-        // Run detection.
+        // run detection.
         vector<vector<Point2f>> corners, rejected;
         vector<int> ids;
         vector<float> markerUnc;
         detector.detectMarkersWithUnc(img, corners, ids, markerUnc, rejected);
 
-        // Verify that every marker is detected and its uncertainty is within tolerance.
-        for (size_t m = 0; m < groundTruthIds.size(); m++) {
+        // verify that every marker is detected and its uncertainty is within tolerance
+        for (size_t m = 0; m < groundTruths.size(); m++) {
+            markerDetectionGT currentGT = groundTruths[m];
+
+            // check if current marker id is present in detected markers
             int detectedIdx = -1;
             for (size_t k = 0; k < ids.size(); k++) {
-                if (groundTruthIds[m] == ids[k]) {
-                    detectedIdx = static_cast<int>(k);
+                if (currentGT.id == ids[k]) {
+                    detectedIdx = static_cast<int>(ids[k]);
                     break;
                 }
             }
-            if (detectedIdx == -1) {
-                ts->printf(cvtest::TS::LOG, "Marker id %d: not detected (detector config %zu)\n",
-                           groundTruthIds[m], cfgIdx);
+
+            // check if marker was detected or not based on GT
+            const int expectedIdx = currentGT.expectDetection ? currentGT.id : -1;
+            if (detectedIdx != expectedIdx) {
+                ts->printf(cvtest::TS::LOG, "Detected marker id: %d | expected idx: %d (detector config %zu)\n",
+                           detectedIdx, expectedIdx, cfgIdx);
                 ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
                 return;
             }
 
-            double gtComputationDiff = fabs(groundTruthUncs[m] - detCfg.invertPixelPercent);
-            if (gtComputationDiff > 0.02) {
-                ts->printf(cvtest::TS::LOG,
-                           "Marker id %d: ground truth uncertainty %.2f differs test config uncertainty %.2f (diff=%.2f) (detector config %zu)\n",
-                           groundTruthIds[m], groundTruthUncs[m], detCfg.invertPixelPercent, gtComputationDiff, cfgIdx);
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                return;
-            }
-
-            double diff = fabs(groundTruthUncs[m] - markerUnc[detectedIdx]);
-            if (diff > 0.05) {
-                ts->printf(cvtest::TS::LOG,
-                           "Marker id %d: computed uncertainty %.2f differs from ground truth %.2f (diff=%.2f) (detector config %zu)\n",
-                           groundTruthIds[m], markerUnc[detectedIdx], groundTruthUncs[m], diff, cfgIdx);
-                ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                return;
+            // check uncertainty if marker detected
+            if(detectedIdx != -1){
+                double gtComputationDiff = fabs(currentGT.uncertainty - markerUnc[m]);
+                if (gtComputationDiff > 0.05) {
+                    ts->printf(cvtest::TS::LOG,
+                            "Computed uncertainty: %.2f | expected uncertainty: %.2f (diff=%.2f) (Marker id: %d, detector config %zu)\n",
+                            markerUnc[m], currentGT.uncertainty, gtComputationDiff, currentGT.id, cfgIdx);
+                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+                    return;
+                }
             }
         }
     }
