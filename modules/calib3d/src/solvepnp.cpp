@@ -893,8 +893,30 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
 
         findExtrinsicCameraParams2(opoints, ipoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess);
 
-        vec_rvecs.push_back(rvec);
-        vec_tvecs.push_back(tvec);
+        Mat projectedPoints, ipoints64, projected64;
+
+        projectPoints(opoints, rvec, tvec, cameraMatrix, distCoeffs, projectedPoints);
+        ipoints.convertTo(ipoints64, CV_64F);
+        projectedPoints.convertTo(projected64, CV_64F);
+
+        const double MAX_REPROJ_ERROR = 10.0;
+        double error = norm(projected64.reshape(1, npoints * 2),
+                            ipoints64.reshape(1, npoints * 2),
+                            NORM_L2) /
+                       sqrt(npoints * 2);
+        bool sucess = (error <= MAX_REPROJ_ERROR);
+
+        if (sucess)
+        {
+            vec_rvecs.push_back(rvec.clone());
+            vec_tvecs.push_back(tvec.clone());
+        }
+
+        if (!sucess)
+        {
+            vec_rvecs.clear();
+            vec_tvecs.clear();
+        }
     }
     else if (flags == SOLVEPNP_IPPE)
     {
