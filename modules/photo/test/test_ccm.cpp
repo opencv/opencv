@@ -65,7 +65,7 @@ TEST(Photo_ColorCorrection, test_model)
         Vec3d(0.66743106, 0.24076803, 0.03394333),
         Vec3d(0.47141286, 0.13592419, 0.01362205),
         Vec3d(0.17377101, 0.03256864, 0.00203026));
-    EXPECT_MAT_NEAR(src_rgbl, model.get_src_rgbl(), 1e-4);
+    EXPECT_MAT_NEAR(src_rgbl, model.getSrcRgbl(), 1e-4);
 
     Mat dst_rgbl = (Mat_<Vec3d>(24, 1) <<
         Vec3d(0.17303173, 0.08211037, 0.05672686),
@@ -92,7 +92,7 @@ TEST(Photo_ColorCorrection, test_model)
         Vec3d(0.19007357, 0.19186587, 0.19308397),
         Vec3d(0.08529188, 0.08887994, 0.09257601),
         Vec3d(0.0303193, 0.03113818, 0.03274845));
-    EXPECT_MAT_NEAR(dst_rgbl, model.get_dst_rgbl(), 1e-4);
+    EXPECT_MAT_NEAR(dst_rgbl, model.getDstRgbl(), 1e-4);
 
     Mat mask = Mat::ones(24, 1, CV_8U);
     EXPECT_MAT_NEAR(model.getMask(), mask, 0.0);

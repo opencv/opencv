@@ -458,7 +458,7 @@ GetCS& GetCS::getInstance()
     return instance;
 }
 
-std::shared_ptr<RGBBase_> GetCS::get_rgb(enum COLOR_SPACE cs_name)
+std::shared_ptr<RGBBase_> GetCS::getRgb(enum COLOR_SPACE cs_name)
 {
     switch (cs_name)
     {
@@ -575,7 +575,7 @@ std::shared_ptr<RGBBase_> GetCS::get_rgb(enum COLOR_SPACE cs_name)
     return (std::dynamic_pointer_cast<RGBBase_>)(map_cs[cs_name]);
 }
 
-std::shared_ptr<ColorSpace> GetCS::get_cs(enum COLOR_SPACE cs_name)
+std::shared_ptr<ColorSpace> GetCS::getCS(enum COLOR_SPACE cs_name)
 {
     switch (cs_name)
     {

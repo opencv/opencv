@@ -333,8 +333,8 @@ protected:
 public:
     static GetCS& getInstance();
 
-    std::shared_ptr<RGBBase_> get_rgb(enum COLOR_SPACE cs_name);
-    std::shared_ptr<ColorSpace> get_cs(enum COLOR_SPACE cs_name);
+    std::shared_ptr<RGBBase_> getRgb(enum COLOR_SPACE cs_name);
+    std::shared_ptr<ColorSpace> getCS(enum COLOR_SPACE cs_name);
 };
 
 }

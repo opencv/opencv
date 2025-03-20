@@ -271,8 +271,8 @@ public:
 
     CV_WRAP Mat getCCM() const;
     CV_WRAP double getLoss() const;
-    CV_WRAP Mat get_src_rgbl() const;
-    CV_WRAP Mat get_dst_rgbl() const;
+    CV_WRAP Mat getSrcRgbl() const;
+    CV_WRAP Mat getDstRgbl() const;
     CV_WRAP Mat getMask() const;
     CV_WRAP Mat getWeights() const;
 
