@@ -205,7 +205,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     float reprojectionError, double confidence, 
     OutputArray _inliers, 
     int method = SOLVEPNP_ITERATIVE,
-    int flags = 0);
+    int flags = 0)
 {
     CV_INSTRUMENT_REGION();
     if (!(flags == SOLVEPNP_ITERATIVE ||
