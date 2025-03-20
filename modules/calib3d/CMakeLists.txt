@@ -6,7 +6,7 @@ set(debug_modules "")
 if(DEBUG_opencv_calib3d)
   list(APPEND debug_modules opencv_highgui)
 endif()
-ocv_define_module(calib3d opencv_imgproc opencv_features2d opencv_flann ${debug_modules}
+ocv_define_module(calib3d opencv_core opencv_imgproc opencv_features2d opencv_flann ${debug_modules}
     WRAP java objc python js
 )
-ocv_target_link_libraries(${the_module} ${LAPACK_LIBRARIES})
+ocv_target_link_libraries(${the_module} opencv_core ${LAPACK_LIBRARIES})

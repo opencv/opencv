@@ -197,7 +197,6 @@ public:
     Mat rvec;
     Mat tvec;
 };
-
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     InputArray _cameraMatrix, InputArray _distCoeffs,
     OutputArray _rvec, OutputArray _tvec, 
