@@ -322,9 +322,9 @@ bool GifDecoder::lzwDecode() {
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
     const int clearCode = 1 << lzwMinCodeSize;
     const int exitCode = clearCode + 1;
-    std::vector<lzwNodeD> lzwExtraTable;
+    std::vector<lzwNodeD> lzwExtraTable(lzwMaxSize + 1);
     const int colorTableSize = clearCode;
-    int lzwTableSize;
+    int lzwTableSize = exitCode;
     auto clear = [&]() {
         lzwExtraTable.clear();
         lzwExtraTable.resize(lzwMaxSize + 1);
@@ -337,7 +337,6 @@ bool GifDecoder::lzwDecode() {
     int leftBits = 0;
     uint32_t src = 0;
     auto blockLen = (uchar)m_strm.getByte();
-    clear();
     while (blockLen) {
         if (leftBits < lzwCodeSize) {
             src |= m_strm.getByte() << leftBits;
