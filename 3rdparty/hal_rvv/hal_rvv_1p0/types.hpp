@@ -209,6 +209,13 @@ static inline VecType vmul(VecType vs2, VecType vs1, size_t vl) {               
     return __riscv_v##IS_F##mul(vs2, vs1, vl);                                                  \
 }                                                                                               \
                                                                                                 \
+static inline VecType vslide1down(VecType vs2, ElemType vs1, size_t vl) {                       \
+    return __riscv_v##IS_F##slide1down(vs2, vs1, vl);                                           \
+}                                                                                               \
+static inline VecType vslide1up(VecType vs2, ElemType vs1, size_t vl) {                         \
+    return __riscv_v##IS_F##slide1up(vs2, vs1, vl);                                             \
+}                                                                                               \
+                                                                                                \
 static inline VecType vmin(VecType vs2, VecType vs1, size_t vl) {                               \
     return __riscv_v##IS_F##min##IS_U(vs2, vs1, vl);                                            \
 }                                                                                               \
