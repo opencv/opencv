@@ -451,6 +451,9 @@ bool  PngDecoder::readData( Mat& img )
                         delay_den = 100;
                     m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
+                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                        mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
+
                     if (mat_cur.channels() == img.channels())
                         mat_cur.copyTo(img);
                     else if (img.channels() == 1)
@@ -485,7 +488,7 @@ bool  PngDecoder::readData( Mat& img )
                     return false;
                 }
                 // Asking for blend over with no alpha is invalid.
-                if (bop == 1 && img.channels() != 4)
+                if (bop == 1 && mat_cur.channels() != 4)
                 {
                     return false;
                 }
@@ -513,6 +516,9 @@ bool  PngDecoder::readData( Mat& img )
                     if (!delay_den)
                         delay_den = 100;
                     m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
+
+                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                        mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
 
                     if (mat_cur.channels() == img.channels())
                         mat_cur.copyTo(img);
@@ -774,6 +780,9 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
         png_set_gray_to_rgb(m_png_ptr); // Gray->RGB
     else
         png_set_rgb_to_gray(m_png_ptr, 1, 0.299, 0.587); // RGB->Gray
+
+    if (!isBigEndian() && m_bit_depth == 16)
+        png_set_swap(m_png_ptr);
 
     for (size_t i = 0; i < m_chunksInfo.size(); i++)
         png_process_data(m_png_ptr, m_info_ptr, m_chunksInfo[i].p.data(), m_chunksInfo[i].p.size());
