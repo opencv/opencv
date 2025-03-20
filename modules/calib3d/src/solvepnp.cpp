@@ -209,10 +209,10 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         flags == SOLVEPNP_EPNP ||
         flags == SOLVEPNP_P3P ||
         flags == SOLVEPNP_AP3P ||
-        (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC))) 
+        (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)))
   {
       flags = SOLVEPNP_ITERATIVE;
-  }  
+  }
     if (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)
         return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
