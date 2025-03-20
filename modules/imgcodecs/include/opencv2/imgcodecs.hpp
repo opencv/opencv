@@ -118,8 +118,8 @@ enum ImwriteFlags {
        IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
        IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
        IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
-       IMWRITE_GIF_LOOP            = 1024,//!< For GIF, it can be a loop flag from 0 to 65535. Default is 0 - loop forever.
-       IMWRITE_GIF_SPEED           = 1025,//!< For GIF, it is between 1 (slowest) and 100 (fastest). Default is 96.
+       IMWRITE_GIF_LOOP            = 1024, //!< Not functional since 4.12.0. Replaced by cv::Animation::loop_count.
+       IMWRITE_GIF_SPEED           = 1025, //!< Not functional since 4.12.0. Replaced by cv::Animation::durations.
        IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
        IMWRITE_GIF_DITHER          = 1027, //!< For GIF, it can be a quality from -1(most dither) to 3(no dither). Default is 0.
        IMWRITE_GIF_TRANSPARENCY    = 1028, //!< For GIF, the alpha channel lower than this will be set to transparent. Default is 1.
@@ -260,10 +260,20 @@ It provides support for looping, background color settings, frame timing, and fr
 struct CV_EXPORTS_W_SIMPLE Animation
 {
     //! Number of times the animation should loop. 0 means infinite looping.
+    /*! @note At some file format, when N is set, whether it is displayed N or N+1 times depends on the implementation of the user application. This loop times behaviour has not been documented clearly.
+     *  - (GIF) See https://issues.chromium.org/issues/40459899
+     *    And animated GIF with loop is extended with the Netscape Application Block(NAB), which it not a part of GIF89a specification. See https://en.wikipedia.org/wiki/GIF#Animated_GIF .
+     *  - (WebP) See https://issues.chromium.org/issues/41276895
+     */
     CV_PROP_RW int loop_count;
     //! Background color of the animation in BGRA format.
     CV_PROP_RW Scalar bgcolor;
     //! Duration for each frame in milliseconds.
+    /*! @note (GIF) Due to file format limitation
+     *  - Durations must be multiples of 10 milliseconds. Any provided value will be rounded down to the nearest 10ms (e.g., 88ms → 80ms).
+     *  - 0ms(or smaller than expected in user application) duration may cause undefined behavior, e.g. it is handled with default duration.
+     *  - Over 65535 * 10 milliseconds duration is not supported.
+     */
     CV_PROP_RW std::vector<int> durations;
     //! Vector of frames, where each Mat represents a single frame.
     CV_PROP_RW std::vector<Mat> frames;
