@@ -211,12 +211,12 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         flags == SOLVEPNP_AP3P ||
         (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)))
   {
-      flags = SOLVEPNP_ITERATIVE;
+    throw std::invalid_argument("Error: Invalid flag provided for solvePnPRansac.");
   }
     if (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)
-        return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
+        {return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
-            confidence, _inliers, flags);
+            confidence, _inliers, flags);}
 
     Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
     Mat opoints, ipoints;
