@@ -94,7 +94,7 @@ using RVV_F64M8 = struct RVV<double, LMUL_8>;
 // Only for dst type lmul >= 1
 template <typename Dst_T, typename RVV_T>
 using RVV_SameLen =
-    RVV<Dst_T, RVV_LMUL(RVV_T::lmul / sizeof(typename RVV_T::ElemType) * sizeof(Dst_T))>;
+    RVV<Dst_T, RVV_LMUL(RVV_T::lmul * sizeof(Dst_T) / sizeof(typename RVV_T::ElemType))>;
 
 template <size_t DstSize> struct RVV_ToIntHelper;
 template <size_t DstSize> struct RVV_ToUintHelper;
@@ -117,7 +117,7 @@ using RVV_BaseType = RVV<typename RVV_T::ElemType, LMUL_1>;
 
 // -------------------------------Supported operations--------------------------------
 
-#define HAL_RVV_SIZE_RELATED(EEW, TYPE, LMUL, S_OR_F, X_OR_F, IS_U, IS_F)                            \
+#define HAL_RVV_SIZE_RELATED(EEW, TYPE, LMUL, S_OR_F, X_OR_F, IS_U, IS_F, IS_O)                      \
 static inline size_t setvlmax() { return __riscv_vsetvlmax_e##EEW##LMUL(); }                         \
 static inline size_t setvl(size_t vl) { return __riscv_vsetvl_e##EEW##LMUL(vl); }                    \
 static inline VecType vload(const ElemType* ptr, size_t vl) {                                        \
@@ -153,7 +153,7 @@ static inline VecType vmv_s(ElemType a, size_t vl) {                            
 }                                                                                                    \
 HAL_RVV_SIZE_RELATED_CUSTOM(EEW, TYPE, LMUL)
 
-#define HAL_RVV_SIZE_UNRELATED(S_OR_F, X_OR_F, IS_U, IS_F)                                      \
+#define HAL_RVV_SIZE_UNRELATED(S_OR_F, X_OR_F, IS_U, IS_F, IS_O)                                \
 static inline ElemType vmv_x(VecType vs2) { return __riscv_v##IS_F##mv_##X_OR_F(vs2); }         \
                                                                                                 \
 static inline BoolType vmlt(VecType vs2, VecType vs1, size_t vl) {                              \
@@ -174,6 +174,12 @@ static inline BoolType vmgt(VecType vs2, ElemType vs1, size_t vl) {             
 static inline BoolType vmge(VecType vs2, VecType vs1, size_t vl) {                              \
     return __riscv_vm##S_OR_F##ge##IS_U(vs2, vs1, vl);                                          \
 }                                                                                               \
+static inline BoolType vmeq(VecType vs2, ElemType vs1, size_t vl) {                             \
+    return __riscv_vm##S_OR_F##eq(vs2, vs1, vl);                                                \
+}                                                                                               \
+static inline BoolType vmne(VecType vs2, ElemType vs1, size_t vl) {                             \
+    return __riscv_vm##S_OR_F##ne(vs2, vs1, vl);                                                \
+}                                                                                               \
 static inline BoolType vmlt_mu(BoolType vm, BoolType vd, VecType vs2, VecType vs1, size_t vl) { \
     return __riscv_vm##S_OR_F##lt##IS_U##_mu(vm, vd, vs2, vs1, vl);                             \
 }                                                                                               \
@@ -185,6 +191,22 @@ static inline BoolType vmgt_mu(BoolType vm, BoolType vd, VecType vs2, VecType vs
 }                                                                                               \
 static inline BoolType vmge_mu(BoolType vm, BoolType vd, VecType vs2, VecType vs1, size_t vl) { \
     return __riscv_vm##S_OR_F##ge##IS_U##_mu(vm, vd, vs2, vs1, vl);                             \
+}                                                                                               \
+                                                                                                \
+static inline VecType vadd(VecType vs2, VecType vs1, size_t vl) {                               \
+    return __riscv_v##IS_F##add(vs2, vs1, vl);                                                  \
+}                                                                                               \
+static inline VecType vsub(VecType vs2, VecType vs1, size_t vl) {                               \
+    return __riscv_v##IS_F##sub(vs2, vs1, vl);                                                  \
+}                                                                                               \
+static inline VecType vadd_tu(VecType vd, VecType vs2, VecType vs1, size_t vl) {                \
+    return __riscv_v##IS_F##add_tu(vd, vs2, vs1, vl);                                           \
+}                                                                                               \
+static inline VecType vsub_tu(VecType vd, VecType vs2, VecType vs1, size_t vl) {                \
+    return __riscv_v##IS_F##sub_tu(vd, vs2, vs1, vl);                                           \
+}                                                                                               \
+static inline VecType vmul(VecType vs2, VecType vs1, size_t vl) {                               \
+    return __riscv_v##IS_F##mul(vs2, vs1, vl);                                                  \
 }                                                                                               \
                                                                                                 \
 static inline VecType vmin(VecType vs2, VecType vs1, size_t vl) {                               \
@@ -211,9 +233,12 @@ static inline BaseType vredmin(VecType vs2, BaseType vs1, size_t vl) {          
 }                                                                                               \
 static inline BaseType vredmax(VecType vs2, BaseType vs1, size_t vl) {                          \
     return __riscv_v##IS_F##redmax##IS_U(vs2, vs1, vl);                                         \
+}                                                                                               \
+static inline BaseType vredsum(VecType vs2, BaseType vs1, size_t vl) {                          \
+    return __riscv_v##IS_F##red##IS_O##sum(vs2, vs1, vl);                                       \
 }
 
-#define HAL_RVV_BOOL_TYPE(S_OR_F, X_OR_F, IS_U, IS_F) \
+#define HAL_RVV_BOOL_TYPE(S_OR_F, X_OR_F, IS_U, IS_F, IS_O) \
     decltype(__riscv_vm##S_OR_F##eq(std::declval<VecType>(), std::declval<VecType>(), 0))
 
 #define HAL_RVV_DEFINE_ONE(ELEM_TYPE, VEC_TYPE, LMUL_TYPE, \
@@ -259,9 +284,9 @@ static inline BaseType vredmax(VecType vs2, BaseType vs1, size_t vl) {          
     HAL_RVV_DEFINE_ONE(ELEM_TYPE, VEC_TYPE, LMUL_8, \
                        EEW, TYPE, m8, __VA_ARGS__)
 
-#define HAL_RVV_SIGNED_PARAM   s,x, ,
-#define HAL_RVV_UNSIGNED_PARAM s,x,u,
-#define HAL_RVV_FLOAT_PARAM    f,f, ,f
+#define HAL_RVV_SIGNED_PARAM   s,x, , ,
+#define HAL_RVV_UNSIGNED_PARAM s,x,u, ,
+#define HAL_RVV_FLOAT_PARAM    f,f, ,f,o
 
 // -------------------------------Define Unsigned Integer--------------------------------
 
