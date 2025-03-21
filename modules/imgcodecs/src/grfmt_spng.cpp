@@ -212,12 +212,7 @@ bool SPngDecoder::readData(Mat &img)
         }
         if (img.channels() == 3)
         {
-            fmt = SPNG_FMT_RGB8;
-            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE || m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA) &&
-                m_bit_depth == 16)
-                fmt = SPNG_FMT_RGB8;
-            else if (m_bit_depth == 16)
-                fmt = SPNG_FMT_PNG;
+            fmt = img.depth() == CV_8U ? SPNG_FMT_RGB8 : SPNG_FMT_RGBA16;
         }
         else if (img.channels() == 1)
         {
@@ -260,6 +255,12 @@ bool SPngDecoder::readData(Mat &img)
             else
                 fmt = SPNG_FMT_RGB8;
         }
+
+        if (img.depth() == CV_16U)
+        {
+            fmt = SPNG_FMT_RGBA16;
+        }
+
 
         size_t image_width, image_size = 0;
         int ret = spng_decoded_image_size(png_ptr, fmt, &image_size);
@@ -365,6 +366,7 @@ bool SPngDecoder::readData(Mat &img)
                 }
                 else if (color)
                 { // RGB -> BGR, convert row by row if png is non-interlaced, otherwise convert image as one
+                    Mat tmp = img.row(0).clone();
                     int step = m_width * img.channels();
                     AutoBuffer<uchar *> _buffer(m_height);
                     uchar **buffer = _buffer.data();
@@ -372,25 +374,20 @@ bool SPngDecoder::readData(Mat &img)
                     {
                         buffer[y] = img.data + y * img.step;
                     }
-                    if (img.channels() == 4 && m_bit_depth == 16)
+                    if (img.channels() > 2 && img.depth() == CV_16U)
                     {
-                        do
-                        {
-                            ret = spng_get_row_info(png_ptr, &row_info);
-                            if (ret)
-                                break;
 
-                            ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
+                        ret = spng_get_row_info(png_ptr, &row_info);
+
+                        for (int i = 0; i < img.rows; i++)
+                        {
+                            ret = spng_decode_row(png_ptr, tmp.data, image_width);
                             if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
-                                icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
-                                                         reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0,
-                                                         Size(m_width, 1));
+                                cvtColor(tmp, img.row(i), COLOR_RGBA2BGRA);
                             }
-                        } while (ret == SPNG_OK);
-                        if (ihdr.interlace_method && !m_use_rgb)
-                        {
-                            icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(img.data), step * 2, reinterpret_cast<ushort *>(img.data), step * 2, Size(m_width, m_height));
+                            else
+                                tmp.copyTo(img.row(i));
                         }
                     }
                     else if (img.channels() == 4)
