@@ -216,8 +216,8 @@ void GMM::calcInverseCovAndDeterm(int ci, const double singularFix)
             dtrm = c[0] * (c[4] * c[8] - c[5] * c[7]) - c[1] * (c[3] * c[8] - c[5] * c[6]) + c[2] * (c[3] * c[7] - c[4] * c[6]);
         }
         covDeterms[ci] = dtrm;
-
-        CV_Assert( dtrm > std::numeric_limits<double>::epsilon() );
+        const double EPSILON = 1e-6;
+        CV_Assert( dtrm > EPSILON );
         double inv_dtrm = 1.0 / dtrm;
         inverseCovs[ci][0][0] =  (c[4]*c[8] - c[5]*c[7]) * inv_dtrm;
         inverseCovs[ci][1][0] = -(c[3]*c[8] - c[5]*c[6]) * inv_dtrm;
