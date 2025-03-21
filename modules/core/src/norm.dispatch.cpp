@@ -218,195 +218,8 @@ int normL1_(const uchar* a, const uchar* b, int n)
 
 //==================================================================================================
 
-template<typename T, typename ST> int
-normDiffInf_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
-{
-    ST result = *_result;
-    if( !mask )
-    {
-        result = std::max(result, normInf<T, ST>(src1, src2, len*cn));
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                    result = std::max(result, (ST)cv_absdiff(src1[k], src2[k]));
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-template<typename T, typename ST, typename WT=T> int
-normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
-{
-    ST result = *_result;
-    if( !mask )
-    {
-        result += normL1<T, ST>(src1, src2, len*cn);
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                    result += cv_absdiff(src1[k], src2[k]);
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-template<typename T, typename ST> int
-normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn)
-{
-    ST result = *_result;
-    if( !mask )
-    {
-        result += normL2Sqr<T, ST>(src1, src2, len*cn);
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                {
-                    ST v = (ST)src1[k] - (ST)src2[k];
-                    result += v*v;
-                }
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-static int
-normDiffInf_Bool(const uchar* src1, const uchar* src2, const uchar* mask, int* _result, int len, int cn)
-{
-    int result = *_result;
-    if( !mask )
-    {
-        for( int i = 0; i < len*cn; i++ ) {
-            result = std::max(result, (int)((src1[i] != 0) != (src2[i] != 0)));
-            if (result != 0)
-                break;
-        }
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                    result = std::max(result, (int)((src1[k] != 0) != (src2[k] != 0)));
-                if (result != 0)
-                    break;
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-static int
-normDiffL1_Bool(const uchar* src1, const uchar* src2, const uchar* mask, int* _result, int len, int cn)
-{
-    int result = *_result;
-    if( !mask )
-    {
-        for( int i = 0; i < len*cn; i++ )
-            result += (int)((src1[i] != 0) != (src2[i] != 0));
-    }
-    else
-    {
-        for( int i = 0; i < len; i++, src1 += cn, src2 += cn )
-            if( mask[i] )
-            {
-                for( int k = 0; k < cn; k++ )
-                    result += (int)((src1[k] != 0) != (src2[k] != 0));
-            }
-    }
-    *_result = result;
-    return 0;
-}
-
-static int
-normDiffL2_Bool(const uchar* src1, const uchar* src2, const uchar* mask, int* _result, int len, int cn)
-{
-    return normDiffL1_Bool(src1, src2, mask, _result, len, cn);
-}
-
-#define CV_DEF_NORM_DIFF_FUNC(L, suffix, type, ntype) \
-    static int normDiff##L##_##suffix(const type* src1, const type* src2, \
-    const uchar* mask, ntype* r, int len, int cn) \
-{ return normDiff##L##_(src1, src2, mask, r, (int)len, cn); }
-
-#define CV_DEF_NORM_DIFF_ALL(suffix, type, inftype, l1type, l2type) \
-    CV_DEF_NORM_DIFF_FUNC(Inf, suffix, type, inftype) \
-    CV_DEF_NORM_DIFF_FUNC(L1, suffix, type, l1type) \
-    CV_DEF_NORM_DIFF_FUNC(L2, suffix, type, l2type)
-
-CV_DEF_NORM_DIFF_ALL(8u, uchar, int, int, int)
-CV_DEF_NORM_DIFF_ALL(8s, schar, int, int, int)
-CV_DEF_NORM_DIFF_ALL(16u, ushort, int, int, double)
-CV_DEF_NORM_DIFF_ALL(16s, short, int, int, double)
-CV_DEF_NORM_DIFF_ALL(32u, unsigned, unsigned, double, double)
-CV_DEF_NORM_DIFF_ALL(32s, int, int, double, double)
-CV_DEF_NORM_DIFF_ALL(32f, float, float, double, double)
-CV_DEF_NORM_DIFF_ALL(64f, double, double, double, double)
-CV_DEF_NORM_DIFF_ALL(64u, uint64, uint64, double, double)
-CV_DEF_NORM_DIFF_ALL(64s, int64, uint64, double, double)
-CV_DEF_NORM_DIFF_ALL(16f, hfloat, float, float, float)
-CV_DEF_NORM_DIFF_ALL(16bf, bfloat, float, float, float)
-
 typedef int (*NormFunc)(const uchar*, const uchar*, uchar*, int, int);
 typedef int (*NormDiffFunc)(const uchar*, const uchar*, const uchar*, uchar*, int, int);
-
-static NormDiffFunc getNormDiffFunc(int normType, int depth)
-{
-    static NormDiffFunc normDiffTab[3][CV_DEPTH_MAX] =
-    {
-        {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffInf_8u), (NormDiffFunc)normDiffInf_8s,
-            (NormDiffFunc)normDiffInf_16u, (NormDiffFunc)normDiffInf_16s,
-            (NormDiffFunc)normDiffInf_32s,
-            (NormDiffFunc)normDiffInf_32f, (NormDiffFunc)normDiffInf_64f,
-            (NormDiffFunc)normDiffInf_16f, (NormDiffFunc)normDiffInf_16bf,
-            (NormDiffFunc)normDiffInf_Bool,
-            (NormDiffFunc)normDiffInf_64u, (NormDiffFunc)normDiffInf_64s,
-            (NormDiffFunc)normDiffInf_32u,
-            0
-        },
-        {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL1_8u), (NormDiffFunc)normDiffL1_8s,
-            (NormDiffFunc)normDiffL1_16u, (NormDiffFunc)GET_OPTIMIZED(normDiffL1_16s),
-            (NormDiffFunc)normDiffL1_32s,
-            (NormDiffFunc)normDiffL1_32f, (NormDiffFunc)normDiffL1_64f,
-            (NormDiffFunc)normDiffL1_16f, (NormDiffFunc)normDiffL1_16bf,
-            (NormDiffFunc)normDiffL1_Bool,
-            (NormDiffFunc)normDiffL1_64u, (NormDiffFunc)normDiffL1_64s,
-            (NormDiffFunc)normDiffL1_32u,
-            0
-        },
-        {
-            (NormDiffFunc)GET_OPTIMIZED(normDiffL2_8u),
-            (NormDiffFunc)normDiffL2_8s,
-            (NormDiffFunc)normDiffL2_16u, (NormDiffFunc)normDiffL2_16s,
-            (NormDiffFunc)normDiffL2_32s,
-            (NormDiffFunc)normDiffL2_32f, (NormDiffFunc)normDiffL2_64f,
-            (NormDiffFunc)normDiffL2_16f, (NormDiffFunc)normDiffL2_16bf,
-            (NormDiffFunc)normDiffL2_Bool,
-            (NormDiffFunc)normDiffL2_64u, (NormDiffFunc)normDiffL2_64s,
-            (NormDiffFunc)normDiffL2_32u,
-            0
-        }
-    };
-
-    return normDiffTab[normType][depth];
-}
 
 #ifdef HAVE_OPENCL
 
@@ -595,6 +408,10 @@ static bool ipp_norm(Mat &src, int normType, Mat &mask, double &result)
 static NormFunc getNormFunc(int normType, int depth) {
     CV_INSTRUMENT_REGION();
     CV_CPU_DISPATCH(getNormFunc, (normType, depth), CV_CPU_DISPATCH_MODES_ALL);
+}
+static NormDiffFunc getNormDiffFunc(int normType, int depth) {
+    CV_INSTRUMENT_REGION();
+    CV_CPU_DISPATCH(getNormDiffFunc, (normType, depth), CV_CPU_DISPATCH_MODES_ALL);
 }
 
 double norm( InputArray _src, int normType, InputArray _mask )
@@ -1114,6 +931,9 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
                normType == NORM_L2 || normType == NORM_L2SQR ||
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
 
+    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
+    CV_Assert( func != 0 );
+
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
         size_t len = src1.total()*src1.channels();
@@ -1121,31 +941,19 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
         {
             if( src1.depth() == CV_32F )
             {
-                const float* data1 = src1.ptr<float>();
-                const float* data2 = src2.ptr<float>();
+                const uchar* data1 = src1.ptr<const uchar>();
+                const uchar* data2 = src2.ptr<const uchar>();
 
-                if( normType == NORM_L2 )
+                if( normType == NORM_L2 || normType == NORM_L2SQR || normType == NORM_L1 )
                 {
                     double result = 0;
-                    GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
-                    return std::sqrt(result);
-                }
-                if( normType == NORM_L2SQR )
-                {
-                    double result = 0;
-                    GET_OPTIMIZED(normDiffL2_32f)(data1, data2, 0, &result, (int)len, 1);
-                    return result;
-                }
-                if( normType == NORM_L1 )
-                {
-                    double result = 0;
-                    GET_OPTIMIZED(normDiffL1_32f)(data1, data2, 0, &result, (int)len, 1);
-                    return result;
+                    func(data1, data2, 0, (uchar*)&result, (int)len, 1);
+                    return normType == NORM_L2 ? std::sqrt(result) : result;
                 }
                 if( normType == NORM_INF )
                 {
                     float result = 0;
-                    GET_OPTIMIZED(normDiffInf_32f)(data1, data2, 0, &result, (int)len, 1);
+                    func(data1, data2, 0, (uchar*)&result, (int)len, 1);
                     return result;
                 }
             }
@@ -1178,9 +986,6 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
 
         return result;
     }
-
-    NormDiffFunc func = getNormDiffFunc(normType >> 1, depth);
-    CV_Assert( func != 0 );
 
     const Mat* arrays[] = {&src1, &src2, &mask, 0};
     uchar* ptrs[3] = {};
