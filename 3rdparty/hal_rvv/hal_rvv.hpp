@@ -6,6 +6,7 @@
 #define OPENCV_HAL_RVV_HPP_INCLUDED
 
 #include "opencv2/core/hal/interface.h"
+#include "opencv2/imgproc/hal/interface.h"
 
 #ifndef CV_HAL_RVV_071_ENABLED
 #  if defined(__GNUC__) && __GNUC__ == 10 && __GNUC_MINOR__ == 4 && defined(__THEAD_VERSION__) && defined(__riscv_v) && __riscv_v == 7000

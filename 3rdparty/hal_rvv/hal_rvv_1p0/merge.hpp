@@ -214,7 +214,7 @@ inline int merge16u(const ushort** src, ushort* dst, int len, int cn ) {
     return CV_HAL_ERROR_OK;
 }
 
-#if defined __GNUC__
+#if defined __GNUC__ && !defined(__clang__)
 __attribute__((optimize("no-tree-vectorize")))
 #endif
 inline int merge32s(const int** src, int* dst, int len, int cn ) {
@@ -284,7 +284,7 @@ inline int merge32s(const int** src, int* dst, int len, int cn ) {
     return CV_HAL_ERROR_OK;
 }
 
-#if defined __GNUC__
+#if defined __GNUC__ && !defined(__clang__)
 __attribute__((optimize("no-tree-vectorize")))
 #endif
 inline int merge64s(const int64** src, int64* dst, int len, int cn ) {
