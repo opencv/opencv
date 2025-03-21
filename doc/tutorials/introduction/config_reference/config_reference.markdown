@@ -73,10 +73,10 @@ cmake -DCMAKE_CXX_STANDARD=17 ../opencv
 cmake --build .
 ```
 
-- C++11 is default/required/recommended for OpenCV4. C++17 is default/required/recomended for OpenCV5.
+- C++11 is default/required/recommended for OpenCV 4.x. C++17 is default/required/recomended for OpenCV 5.x.
 - If your compiler does not support required C++ Standard features, OpenCV configuration should be fail.
 - If you set older C++ Standard than required, OpenCV configuration should be fail.
-  For workaround, `OPENCV_SKIP_CMAKE_CXX_STANDARD_CHECKS` option can be used to skip `CMAKE_CXX_STANDARD` version check.
+  For workaround, `OPENCV_SKIP_CMAKE_CXX_STANDARD` option can be used to skip `CMAKE_CXX_STANDARD` version check.
 - If you set newer C++ Standard than recomended, numerous warnings may appear or OpenCV build may fail.
 
 

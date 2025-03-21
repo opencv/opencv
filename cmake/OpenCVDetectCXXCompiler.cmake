@@ -207,36 +207,32 @@ if(CMAKE_VERSION VERSION_LESS "3.1")
   endforeach()
 endif()
 
+# See https://github.com/opencv/opencv/issues/27105
+# - CMAKE_COMPILE_FEATURES is used to detect what features are available by the compiler.
+# - CMAKE_CXX_STANDARD is used to detect what features are available in this configuration.
 if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
+  if(DEFINED CMAKE_CXX_STANDARD AND ((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 11)))
+    message(FATAL_ERROR "OpenCV 4.x requires C++11, but your configuration does not enable(CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}).")
+  endif()
+
   ocv_update(CMAKE_CXX_STANDARD 11)
   ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
   ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
 endif()
 
-# See https://github.com/opencv/opencv/issues/27105
-# CMAKE_COMPILE_FEATURES is used to detect what features are available by the compiler.
 if("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  set(HAVE_CXX11 ON)
+  if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 11))
+    set(HAVE_CXX11 ON)
+  endif()
 endif()
 if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
-  set(HAVE_CXX17 ON)
-endif()
-if(NOT HAVE_CXX11)
-  message(FATAL_ERROR "OpenCV 4.x requires C++11 features, but your compiler does not support it")
+  if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 17))
+    set(HAVE_CXX17 ON)
+  endif()
 endif()
 
-# CMAKE_CXX_STANDARD is used to detect what features are available in this configuration.
-if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD_CHECKS AND DEFINED CMAKE_CXX_STANDARD)
-  if(CMAKE_CXX_STANDARD EQUAL 98)
-    set(HAVE_CXX11 OFF)
-    set(HAVE_CXX17 OFF)
-  endif()
-  if(CMAKE_CXX_STANDARD LESS 17)
-    set(HAVE_CXX17 OFF)
-  endif()
-endif()
 if(NOT HAVE_CXX11)
-  message(FATAL_ERROR "OpenCV 4.x requires C++11 features, but your configuration does not enable it")
+  message(FATAL_ERROR "OpenCV 4.x requires C++11, but your compiler does not support it")
 endif()
 
 set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)
