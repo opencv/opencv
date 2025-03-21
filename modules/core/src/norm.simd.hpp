@@ -1374,6 +1374,27 @@ normDiffL1_(const T* src1, const T* src2, const uchar* mask, ST* _result, int le
     return 0;
 }
 
+// This specialization is needed because https://github.com/opencv/opencv/issues/27080
+template<> int
+normDiffL1_(const int* src1, const int* src2, const uchar* mask, double* _result, int len, int cn) {
+    double result = *_result;
+    if( !mask ) {
+        NormDiffL1_SIMD<int, double> op;
+        result += op(src1, src2, len*cn);
+    } else {
+        for( int i = 0; i < len; i++, src1 += cn, src2 += cn ) {
+            if( mask[i] ) {
+                for( int k = 0; k < cn; k++ ) {
+                    double d1 = (double)src1[k], d2 = (double)src2[k];
+                    result += (double)std::abs(d1 - d2);
+                }
+            }
+        }
+    }
+    *_result = result;
+    return 0;
+}
+
 template<typename T, typename ST> int
 normDiffL2_(const T* src1, const T* src2, const uchar* mask, ST* _result, int len, int cn) {
     ST result = *_result;
