@@ -1562,6 +1562,40 @@ TEST(Calib3d_SolvePnP, generic)
     }
 }
 
+TEST(Calib3d_SolvePnP, solvePnP_Iterative_InvalidPoseShouldReturnFalse)
+{
+    // Realated issue :
+    // https://github.com/opencv/opencv/issues/25094
+
+    cv::Mat cameraMatrix = (cv::Mat_<double>(3,3) << 1000, 0, 500,
+                                                     0, 1000, 500,
+                                                     0,    0,   1);
+    cv::Mat distCoeffs = cv::Mat::zeros(4, 1, CV_64F);
+
+    std::vector<cv::Point3f> objPoints = {
+        {0.f, 0.f, 0.f},
+        {1.f, 0.f, 0.f},
+        {0.f, 0.f, 1.f},
+        {-1.f, 0.f, 0.f},
+        {0.f, 0.f, -1.f},
+        {0.f, 2.f, 0.f}
+    };
+    std::vector<cv::Point2f> imgPoints = {
+        {500.f, 500.f},
+        {600.f, 500.f},
+        {500.f, 400.f},
+        {400.f, 500.f},
+        {500.f, 600.f},
+        {500.f, 500.f}
+    };
+
+    cv::Mat rvec, tvec;
+    bool success = cv::solvePnP(objPoints, imgPoints, cameraMatrix, distCoeffs,
+                                rvec, tvec, false, cv::SOLVEPNP_ITERATIVE);
+
+    EXPECT_FALSE(success) << "Here solvePnP was expected to return false due to huge reprojection error but it returned true.";
+}
+
 TEST(Calib3d_SolvePnP, refine3pts)
 {
     {
