@@ -256,6 +256,12 @@ bool SPngDecoder::readData(Mat &img)
                 fmt = SPNG_FMT_RGB8;
         }
 
+        if (img.depth() == CV_16U)
+        {
+            fmt = SPNG_FMT_RGBA16;
+        }
+
+
         size_t image_width, image_size = 0;
         int ret = spng_decoded_image_size(png_ptr, fmt, &image_size);
         struct spng_ihdr ihdr;
@@ -367,7 +373,7 @@ bool SPngDecoder::readData(Mat &img)
                     {
                         buffer[y] = img.data + y * img.step;
                     }
-                    if (img.channels() == 4 && m_bit_depth == 16)
+                    if (img.channels() > 2 && img.depth() == CV_16U)
                     {
                         do
                         {
