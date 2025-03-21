@@ -55,10 +55,9 @@
 //#define OPENCV_ALLOC_ENABLE_STATISTICS
 
 
-#ifdef HAVE_POSIX_MEMALIGN
-#include <stdlib.h>
-#elif defined HAVE_MALLOC_H
-#include <malloc.h>
+#include <cstdlib>
+#if defined HAVE_MALLOC_H
+	#include <malloc.h>
 #endif
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
@@ -130,39 +129,14 @@ void* fastMalloc_(size_t size)
 void* fastMalloc(size_t size)
 #endif
 {
-#ifdef HAVE_POSIX_MEMALIGN
-    if (isAlignedAllocationEnabled())
-    {
-        void* ptr = NULL;
-        if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
-            ptr = NULL;
-        if(!ptr)
-            return OutOfMemoryError(size);
-        return ptr;
-    }
-#elif defined HAVE_MEMALIGN
-    if (isAlignedAllocationEnabled())
-    {
-        void* ptr = memalign(CV_MALLOC_ALIGN, size);
-        if(!ptr)
-            return OutOfMemoryError(size);
-        return ptr;
-    }
-#elif defined HAVE_WIN32_ALIGNED_MALLOC
-    if (isAlignedAllocationEnabled())
-    {
-        void* ptr = _aligned_malloc(size, CV_MALLOC_ALIGN);
-        if(!ptr)
-            return OutOfMemoryError(size);
-        return ptr;
-    }
+#if defined(_MSC_VER)
+	void* ptr = _aligned_alloc(size, CV_MALLOC_ALIGN);
+#else
+	void* ptr = std::aligned_alloc(size, CV_MALLOC_ALIGN);
 #endif
-    uchar* udata = (uchar*)malloc(size + sizeof(void*) + CV_MALLOC_ALIGN);
-    if(!udata)
-        return OutOfMemoryError(size);
-    uchar** adata = alignPtr((uchar**)udata + 1, CV_MALLOC_ALIGN);
-    adata[-1] = udata;
-    return adata;
+	if(!ptr)
+		return OutOfMemoryError(size);
+	return ptr;
 }
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
@@ -172,26 +146,11 @@ void fastFree_(void* ptr)
 void fastFree(void* ptr)
 #endif
 {
-#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
-    if (isAlignedAllocationEnabled())
-    {
-        free(ptr);
-        return;
-    }
-#elif defined HAVE_WIN32_ALIGNED_MALLOC
-    if (isAlignedAllocationEnabled())
-    {
-        _aligned_free(ptr);
-        return;
-    }
+#if defined(_MSC_VER)
+	_aligned_free(ptr);
+#else
+	free(ptr);
 #endif
-    if(ptr)
-    {
-        uchar* udata = ((uchar**)ptr)[-1];
-        CV_DbgAssert(udata < (uchar*)ptr &&
-               ((uchar*)ptr - udata) <= (ptrdiff_t)(sizeof(void*)+CV_MALLOC_ALIGN));
-        free(udata);
-    }
 }
 
 #ifdef OPENCV_ALLOC_ENABLE_STATISTICS
