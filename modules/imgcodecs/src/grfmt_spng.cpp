@@ -212,12 +212,7 @@ bool SPngDecoder::readData(Mat &img)
         }
         if (img.channels() == 3)
         {
-            fmt = SPNG_FMT_RGB8;
-            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE || m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA) &&
-                m_bit_depth == 16)
-                fmt = SPNG_FMT_RGB8;
-            else if (m_bit_depth == 16)
-                fmt = SPNG_FMT_PNG;
+            fmt = img.depth() == CV_8U ? SPNG_FMT_RGB8 : SPNG_FMT_RGBA16;
         }
         else if (img.channels() == 1)
         {
