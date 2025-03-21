@@ -278,6 +278,9 @@ struct CV_EXPORTS_W_SIMPLE Animation
     //! Vector of frames, where each Mat represents a single frame.
     CV_PROP_RW std::vector<Mat> frames;
 
+    //! Indicates whether the animation contains a hidden first frame.
+    CV_PROP_RW bool has_hidden_frame;
+
     /** @brief Constructs an Animation object with optional loop count and background color.
 
     @param loopCount An integer representing the number of times the animation should loop:
