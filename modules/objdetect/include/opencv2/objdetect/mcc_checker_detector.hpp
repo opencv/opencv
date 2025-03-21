@@ -43,11 +43,11 @@ namespace mcc
 //! @addtogroup mcc
 //! @{
 
-/** COLORCHART
+/** ColorChart
  *
  * @brief enum to hold the type of the checker
  */
-enum COLORCHART
+enum ColorChart
 {
     MCC24 = 0, ///< Standard Macbeth Chart with 24 squares
     SG140,     ///< DigitalSG with 140 squares
@@ -73,14 +73,14 @@ public:
      */
     CV_WRAP static Ptr<CChecker> create();
 public:
-    CV_WRAP virtual void setTarget(COLORCHART _target)  = 0;
+    CV_WRAP virtual void setTarget(ColorChart _target)  = 0;
     CV_WRAP virtual void setBox(std::vector<Point2f> _box) = 0;
     CV_WRAP virtual void setChartsRGB(Mat _chartsRGB) = 0;
     CV_WRAP virtual void setChartsYCbCr(Mat _chartsYCbCr) = 0;
     CV_WRAP virtual void setCost(float _cost) = 0;
     CV_WRAP virtual void setCenter(Point2f _center) = 0;
 
-    CV_WRAP virtual COLORCHART getTarget() = 0;
+    CV_WRAP virtual ColorChart getTarget() = 0;
     CV_WRAP virtual std::vector<Point2f> getBox() = 0;
 
     /** @brief Computes and returns the coordinates of the central parts of the charts modules.
@@ -194,25 +194,17 @@ public:
     * detector, these can be accessed later on using getBestColorChecker()
     * and getListColorChecker()
     * @param image image in color space BGR
-    * @param chartType type of the chart to detect
     * @param regionsOfInterest regions of image to look for the chart, if
     *                          it is empty, charts are looked for in the
     *                          entire image
     * @param nc number of charts in the image, if you don't know the exact
     *           then keeping this number high helps.
-    * @param useNet if it is true the network provided using the setNet()
-    *               is used for preliminary search for regions where chart
-    *               could be present, inside the regionsOfInterest provied.
-    * @param params parameters of the detection system. More information
-    *               about them can be found in the struct DetectorParametersMCC.
     * @return true if atleast one chart is detected otherwise false
     */
 
     CV_WRAP_AS(processWithROI) virtual bool
-    process(InputArray image, const COLORCHART chartType,
-            const std::vector<Rect> &regionsOfInterest,
-            const int nc = 1, bool useNet = false,
-            const DetectorParametersMCC &params = DetectorParametersMCC()) = 0;
+    process(InputArray image, const std::vector<Rect> &regionsOfInterest,
+            const int nc = 1) = 0;
 
 
     /** @brief Find the ColorCharts in the given image.
@@ -225,21 +217,13 @@ public:
     * detector, these can be accessed later on using getBestColorChecker()
     * and getListColorChecker()
     * @param image image in color space BGR
-    * @param chartType type of the chart to detect
     * @param nc number of charts in the image, if you don't know the exact
     *           then keeping this number high helps.
-    * @param useNet if it is true the network provided using the setNet()
-    *               is used for preliminary search for regions where chart
-    *               could be present, inside the regionsOfInterest provied.
-    * @param params parameters of the detection system. More information
-    *               about them can be found in the struct DetectorParametersMCC.
     * @return true if atleast one chart is detected otherwise false
     */
 
     CV_WRAP virtual bool
-    process(InputArray image, const COLORCHART chartType,
-            const int nc = 1, bool useNet = false,
-            const DetectorParametersMCC &params = DetectorParametersMCC()) = 0;
+    process(InputArray image, const int nc = 1) = 0;
 
     /** @brief Get the best color checker. By the best it means the one
     *         detected with the highest confidence.
@@ -280,12 +264,14 @@ public:
 
     CV_WRAP virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const Scalar color = CV_RGB(0,250,0), const int thickness = 2) = 0;
 
-    /** @brief Draws the checker to the given image.
-     * @param chartType type of the chart to detect
-     * @param output returns the reference color in color space RGB
+    /** @brief Gets the reference color for mentioned chart.
     */
 
-    CV_WRAP virtual void getRefColors(const COLORCHART chartType, Mat& output) = 0;
+    CV_WRAP virtual Mat getRefColors() = 0;
+
+    CV_WRAP virtual void setExtraParams(const DetectorParametersMCC &params) = 0;
+
+    CV_WRAP virtual void setColorChartType(ColorChart chartType) = 0;
 };
 
 //! @} mcc

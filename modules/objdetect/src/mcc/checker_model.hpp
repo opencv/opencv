@@ -70,7 +70,7 @@ public:
     } SUBCCMModel;
 
 public:
-    CChartModel(const COLORCHART chartType);
+    CChartModel(const ColorChart chartType);
     ~CChartModel();
 
     /** @brief evaluate submodel in this checker type*/
@@ -128,14 +128,14 @@ public:
     CCheckerImpl() {}
     ~CCheckerImpl() {}
 
-    void setTarget(COLORCHART _target)  CV_OVERRIDE;
+    void setTarget(ColorChart _target)  CV_OVERRIDE;
     void setBox(std::vector<Point2f> _box) CV_OVERRIDE;
     void setChartsRGB(Mat _chartsRGB) CV_OVERRIDE;
     void setChartsYCbCr(Mat _chartsYCbCr) CV_OVERRIDE;
     void setCost(float _cost) CV_OVERRIDE;
     void setCenter(Point2f _center) CV_OVERRIDE;
 
-    COLORCHART getTarget() CV_OVERRIDE;
+    ColorChart getTarget() CV_OVERRIDE;
     std::vector<Point2f> getBox() CV_OVERRIDE;
     std::vector<Point2f> getColorCharts() CV_OVERRIDE;
     Mat getChartsRGB(bool getStats = true) CV_OVERRIDE;
@@ -144,7 +144,7 @@ public:
     Point2f getCenter() CV_OVERRIDE;
 
 private:
-    COLORCHART target;             ///< type of checkercolor
+    ColorChart target;             ///< type of checkercolor
     std::vector<Point2f> box; ///< positions of the corners
     Mat chartsRGB;             ///< charts profile in rgb color space
     Mat chartsYCbCr;         ///< charts profile in YCbCr color space

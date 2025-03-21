@@ -48,22 +48,21 @@ const string target_keys = format(
 
 string keys = param_keys + backend_keys + target_keys;
 
-static void processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, COLORCHART chartType, Mat& src, Mat& tgt, int nc){
+static bool processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, Mat& src, Mat& tgt, int nc){
     Mat imageCopy = frame.clone();
-    if (!detector->process(frame, chartType, nc, true))
+    if (!detector->process(frame, nc))
     {
-        printf("ChartColor not detected \n");
+        return false;
     }
-    else
-    {
-        vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
-        detector->draw(checkers, frame);
-        src = checkers[0]->getChartsRGB(false);
-        detector->getRefColors(MCC24, tgt);
+    vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
+    detector->draw(checkers, frame);
+    src = checkers[0]->getChartsRGB(false);
+    tgt = detector->getRefColors();
 
-        imshow("Image result", frame);
-        imshow("Original", imageCopy);
-    }
+    imshow("Image result", frame);
+    imshow("Original", imageCopy);
+
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -93,7 +92,7 @@ int main(int argc, char *argv[])
     int t = parser.get<int>("type");
 
     CV_Assert(0 <= t && t <= 2);
-    COLORCHART chartType = COLORCHART(t);
+    ColorChart chartType = ColorChart(t);
 
     const string sha1 = parser.get<String>("sha1");
     const string model_path = findModel(parser.get<string>("model"), sha1);
@@ -120,6 +119,7 @@ int main(int argc, char *argv[])
     else{
         detector = CCheckerDetector::create();
     }
+    detector->setColorChartType(chartType);
 
     bool isVideo = true;
     Mat image;
@@ -147,6 +147,7 @@ int main(int argc, char *argv[])
         cap.open(0);
 
     Mat src, tgt;
+    bool found = false;
     if (isVideo){
         cout<<"To print the actual colors and reference colors for current frame press SPACEBAR. To resume press SPACEBAR again"<<endl;
 
@@ -155,30 +156,39 @@ int main(int argc, char *argv[])
             Mat frame;
             cap.retrieve(frame);
 
-            processFrame(frame, detector, chartType, src, tgt, nc);
+            found = processFrame(frame, detector, src, tgt, nc);
 
             int key = waitKey(10);
             if (key == ' '){
-                cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
-                cout<<"Actual colors: "<<src<<endl<<endl;
-                cout<<"Press spacebar to resume."<<endl;
+                if(found){
+                    cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+                    cout<<"Actual colors: "<<src<<endl<<endl;
+                    cout<<"Press spacebar to resume."<<endl;
 
-                int pauseKey = waitKey(0);
-                if (pauseKey == 27) {
-                    exit(0);
+                    waitKey(0);
+                    cout << "Resumed! Processing continues..." << endl;
                 }
-                cout << "Resumed! Processing continues..." << endl;
+                else{
+                    cout<<"No color chart detected!!"<<endl;
+                }
             }
             else if (key == 27) exit(0);
         }
-        cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
-        cout<<"Actual colors: "<<src<<endl<<endl;
+        if(found){
+            cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+            cout<<"Actual colors: "<<src<<endl<<endl;
+        }
     }
     else{
-        processFrame(image, detector, chartType, src, tgt, nc);
-        cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
-        cout<<"Actual colors: "<<src<<endl<<endl;
-        waitKey(0);
+        found = processFrame(image, detector, src, tgt, nc);
+        if(found){
+            cout<<"Reference colors: "<<tgt<<endl<<"--------------------"<<endl;
+            cout<<"Actual colors: "<<src<<endl<<endl;
+            waitKey(0);
+        }
+        else{
+            cout<<"No chart detected!!"<<endl;
+        }
     }
     return 0;
 }

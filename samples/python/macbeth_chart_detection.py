@@ -15,7 +15,7 @@ def get_args_parser(func_args):
                         help='An optional path to file with preprocessing parameters.')
     parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.', default=0, required=False)
     parser.add_argument('--method', help='choose method: dexined or canny', default='canny', required=False)
-    parser.add_argument('--type', type=int, default=0,
+    parser.add_argument('--chart_type', type=int, default=0,
                         help='chartType: 0-Standard, 1-DigitalSG, 2-Vinyl, default:0')
     parser.add_argument('--num_charts', type=int, default=1,
                         help='Maximum number of charts in the image')
@@ -52,28 +52,26 @@ def get_args_parser(func_args):
         ''', formatter_class=argparse.RawTextHelpFormatter)
     return parser.parse_args(func_args)
 
-def process_frame(frame, detector, chart_type, num_charts):
+def process_frame(frame, detector, num_charts):
     image_copy = frame.copy()
-    if not detector.process(frame, chart_type, num_charts, True):
-        print("ChartColor not detected.")
-    else:
-        checkers = detector.getListColorChecker()
-        detector.draw(checkers, frame)
+    if not detector.process(frame, num_charts):
+        return None, None
 
-        src = checkers[0].getChartsRGB(False)
-        tgt = np.empty((src.shape), dtype=np.int32)
-        detector.getRefColors(cv.mcc.MCC24, tgt)
+    checkers = detector.getListColorChecker()
+    detector.draw(checkers, frame)
 
-        cv.imshow("image result | Press ESC to quit", frame)
-        cv.imshow("original", image_copy)
+    src = checkers[0].getChartsRGB(False)
+    tgt = detector.getRefColors()
 
-        return src, tgt
-    return None, None
+    cv.imshow("image result | Press ESC to quit", frame)
+    cv.imshow("original", image_copy)
+
+    return src, tgt
 
 def main(func_args=None):
     args = get_args_parser(func_args)
 
-    if not (0 <= args.type <= 2):
+    if not (0 <= args.chart_type <= 2):
         raise ValueError("chartType must be 0, 1, or 2")
 
     if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None:
@@ -104,6 +102,7 @@ def main(func_args=None):
         detector = cv.mcc_CCheckerDetector.create()
         print("Detecting checkers using default method (no DNN).")
 
+    detector.setColorChartType(args.chart_type)
     is_video = True
 
     if args.input:
@@ -123,27 +122,32 @@ def main(func_args=None):
             if not ret:
                 break
 
-            src, tgt = process_frame(frame, detector, args.type, args.num_charts)
+            src, tgt = process_frame(frame, detector, args.num_charts)
 
             key = cv.waitKey(10) & 0xFF
             if key == ord(' '):
-                print("Actual colors: ", src)
-                print("Reference colors: ", tgt)
-                print("Press spacebar to resume.")
+                if src is None or tgt is None:
+                    print("No color chart detected!!")
+                else:
+                    print("Actual colors: ", src)
+                    print("Reference colors: ", tgt)
+                    print("Press spacebar to resume.")
 
-                pause_key = cv.waitKey(0)
-                if pause_key == 27:
-                    exit(0)
-                print("Resumed! Processing continues...")
+                    cv.waitKey(0)
+                    print("Resumed! Processing continues...")
             elif key == 27:
                 exit(0)
-        print("Actual colors: ", src)
-        print("Reference colors: ", tgt)
+        if src is not None or tgt is not None:
+            print("Actual colors: ", src)
+            print("Reference colors: ", tgt)
     else:
-        src, tgt = process_frame(image, detector, args.type, args.num_charts)
-        print("Actual colors: ", src)
-        print("Reference colors: ", tgt)
-        cv.waitKey(0)
+        src, tgt = process_frame(image, detector, args.num_charts)
+        if src is None or tgt is None:
+            print("No color chart detected!!")
+        else:
+            print("Actual colors: ", src)
+            print("Reference colors: ", tgt)
+            cv.waitKey(0)
 
     cv.destroyAllWindows()
 

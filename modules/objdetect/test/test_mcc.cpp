@@ -18,7 +18,7 @@ using namespace cv::mcc;
  *                Test detection works properly on the simplest images
 \****************************************************************************************/
 
-void runCCheckerDetectorBasic(std::string image_name, COLORCHART chartType)
+void runCCheckerDetectorBasic(std::string image_name, ColorChart chartType)
 {
     Ptr<CCheckerDetector> detector = CCheckerDetector::create();
     std::string path = cvtest::findDataFile("mcc/" + image_name);
