@@ -339,6 +339,8 @@ static inline int remap32fC4(int start, int end, const uchar *src_data, size_t s
     return CV_HAL_ERROR_OK;
 }
 
+// the algorithm is copied from 3rdparty/carotene/src/remap.cpp,
+// in the function void CAROTENE_NS::remapNearestNeighbor and void CAROTENE_NS::remapLinear
 inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
@@ -647,6 +649,8 @@ static inline int warpC4(int start, int end, const uchar *src_data, size_t src_s
     return CV_HAL_ERROR_OK;
 }
 
+// the algorithm is copied from 3rdparty/carotene/src/warp_affine.cpp,
+// in the function void CAROTENE_NS::warpAffineNearestNeighbor and void CAROTENE_NS::warpAffineLinear
 inline int warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
     if (src_type != CV_8UC1 && src_type != CV_8UC3 && src_type != CV_8UC4)
@@ -669,6 +673,8 @@ inline int warpAffine(int src_type, const uchar *src_data, size_t src_step, int 
     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 }
 
+// the algorithm is copied from 3rdparty/carotene/src/warp_perspective.cpp,
+// in the function void CAROTENE_NS::warpPerspectiveNearestNeighbor and void CAROTENE_NS::warpPerspectiveLinear
 inline int warpPerspective(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, const double M[9], int interpolation, int borderType, const double borderValue[4])
 {
     if (src_type != CV_8UC1 && src_type != CV_8UC3 && src_type != CV_8UC4)
