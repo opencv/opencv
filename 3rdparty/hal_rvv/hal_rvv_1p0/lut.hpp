@@ -82,14 +82,14 @@ public:
     size_t dst_step;
     size_t width;
 
-    LUTParallelBody(const uchar* src_data,
-                    size_t src_step,
-                    const uchar* lut_data,
-                    uchar* dst_data,
-                    size_t dst_step,
-                    size_t width) :
-        src_data(src_data), lut_data(lut_data), dst_data(dst_data), src_step(src_step),
-        dst_step(dst_step), width(width)
+    LUTParallelBody(const uchar* _src_data,
+                    size_t _src_step,
+                    const uchar* _lut_data,
+                    uchar* _dst_data,
+                    size_t _dst_step,
+                    size_t _width) :
+        src_data(_src_data), lut_data(_lut_data), dst_data(_dst_data), src_step(_src_step),
+        dst_step(_dst_step), width(_width)
     {
     }
 

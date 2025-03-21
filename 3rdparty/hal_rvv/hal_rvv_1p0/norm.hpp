@@ -1010,7 +1010,7 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
     };
 
     bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
-    bool mask_continuous = (mask_step == width);
+    bool mask_continuous = (mask_step == static_cast<size_t>(width));
     size_t nplanes = 1;
     size_t size = width * height;
     if ((mask && (!src_continuous || !mask_continuous)) || !src_continuous) {

@@ -36,6 +36,11 @@ namespace color {
         cv::parallel_for_(Range(1, height), ColorInvoker(func, std::forward<Args>(args)...), (width - 1) * height / static_cast<double>(1 << 15));
         return func(0, 1, std::forward<Args>(args)...);
     }
+
+    template<typename T> T rint(T val)
+    {
+        return val - std::remainder(val, 1.0);
+    }
 } // cv::cv_hal_rvv::color
 
 namespace BGRtoBGR {
@@ -2246,7 +2251,7 @@ namespace LabTable
             for (int i = 0; i < 3072; i++)
             {
                 float x = i * 1.0f / (255*8);
-                LabCbrtTab_b[i] = (ushort)std::rint((1 << 15) * applyCbrt(x));
+                LabCbrtTab_b[i] = (ushort)color::rint((1 << 15) * applyCbrt(x));
             }
             // tweak to imitate the error of cv::softfloat, or bitExactness tests won't pass
             LabCbrtTab_b[324] -= 1, LabCbrtTab_b[2079] -= 1;
@@ -2254,12 +2259,12 @@ namespace LabTable
             for (int i = 0; i < 256; i++)
             {
                 float x = i / 255.0f;
-                sRGBGammaTab_b[i] = (ushort)std::rint(2040 * applyGamma(x));
+                sRGBGammaTab_b[i] = (ushort)color::rint(2040 * applyGamma(x));
             }
             for (int i = 0; i < INV_GAMMA_TAB_SIZE; i++)
             {
                 float x = i * 1.0f / INV_GAMMA_TAB_SIZE;
-                sRGBInvGammaTab_b[i] = (ushort)std::rint(255 * applyInvGamma(x));
+                sRGBInvGammaTab_b[i] = (ushort)color::rint(255 * applyInvGamma(x));
             }
 
             for (int i = 0; i < 256; i++)
@@ -2275,8 +2280,8 @@ namespace LabTable
                     fy = (li + 16.0f) / 116.0f;
                     yy = fy * fy * fy;
                 }
-                LabToYF_b[i*2  ] = (short)std::rint(yy * LAB_BASE);
-                LabToYF_b[i*2+1] = (short)std::rint(fy * LAB_BASE);
+                LabToYF_b[i*2  ] = (short)color::rint(yy * LAB_BASE);
+                LabToYF_b[i*2+1] = (short)color::rint(fy * LAB_BASE);
             }
 
             for (int LL = 0; LL < 256; LL++)
@@ -2286,7 +2291,7 @@ namespace LabTable
                 {
                     float u = uu*354.0f/255 - 134;
                     float up = 9.0f*(u + L*2.5719122887f);
-                    LuToUp_b[LL*256+uu] = (int)std::rint(up*float(LAB_BASE/1024));
+                    LuToUp_b[LL*256+uu] = (int)color::rint(up*float(LAB_BASE/1024));
                 }
                 for (int vv = 0; vv < 256; vv++)
                 {
@@ -2294,7 +2299,7 @@ namespace LabTable
                     float vp = 0.25f/(v + L*6.0884485245f);
                     if (vp >  0.25f) vp =  0.25f;
                     if (vp < -0.25f) vp = -0.25f;
-                    LvToVp_b[LL*256+vv] = (int)std::rint(vp*float(LAB_BASE*1024));
+                    LvToVp_b[LL*256+vv] = (int)color::rint(vp*float(LAB_BASE*1024));
                 }
             }
             // tweak
@@ -2307,13 +2312,19 @@ namespace LabTable
                 LvToVp_b[error1[i]] += error1[i + 1];
             #endif
 
+            static constexpr float BGR2XYZ[] =
+            {
+                0.180423f / 0.950456f, 0.357580f / 0.950456f, 0.412453f / 0.950456f,
+                0.072169f            , 0.715160f            , 0.212671f            ,
+                0.950227f / 1.088754f, 0.119193f / 1.088754f, 0.019334f / 1.088754f
+            };
             static constexpr float BGR2XYZ_D65[] =
             {
                 0.180423f, 0.357580f, 0.412453f,
                 0.072169f, 0.715160f, 0.212671f,
                 0.950227f, 0.119193f, 0.019334f
             };
-            short RGB2Luvprev[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
+            short RGB2Labprev[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3], RGB2Luvprev[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3];
             for (int p = 0; p < LAB_LUT_DIM; p++)
             {
                 for (int q = 0; q < LAB_LUT_DIM; q++)
@@ -2325,28 +2336,51 @@ namespace LabTable
                         float G = applyGamma(q / 32.0f);
                         float B = applyGamma(r / 32.0f);
 
-                        float X = R*BGR2XYZ_D65[0] + G*BGR2XYZ_D65[1] + B*BGR2XYZ_D65[2];
-                        float Y = R*BGR2XYZ_D65[3] + G*BGR2XYZ_D65[4] + B*BGR2XYZ_D65[5];
-                        float Z = R*BGR2XYZ_D65[6] + G*BGR2XYZ_D65[7] + B*BGR2XYZ_D65[8];
+                        {
+                            float X = R*BGR2XYZ[0] + G*BGR2XYZ[1] + B*BGR2XYZ[2];
+                            float Y = R*BGR2XYZ[3] + G*BGR2XYZ[4] + B*BGR2XYZ[5];
+                            float Z = R*BGR2XYZ[6] + G*BGR2XYZ[7] + B*BGR2XYZ[8];
 
-                        float L = applyCbrt(Y);
-                        L = L*116.0f - 16.0f;
+                            float FX = applyCbrt(X);
+                            float FY = applyCbrt(Y);
+                            float FZ = applyCbrt(Z);
 
-                        float d = 52.0f/std::max(X + 15.0f * Y + 3.0f * Z, FLT_EPSILON);
-                        float u = L*(X*d - 2.5719122887f);
-                        float v = L*(2.25f*Y*d - 6.0884485245f);
+                            float L = Y > 0.008856f ? (116.0f*FY - 16.0f) : (903.3f*Y);
+                            float a = 500.0f * (FX - FY);
+                            float b = 200.0f * (FY - FZ);
 
-                        RGB2Luvprev[idx  ] = (short)std::rint(LAB_BASE*L/100.0f);
-                        RGB2Luvprev[idx+1] = (short)std::rint(LAB_BASE*(u+134.0f)/354.0f);
-                        RGB2Luvprev[idx+2] = (short)std::rint(LAB_BASE*(v+140.0f)/262.0f);
+                            RGB2Labprev[idx]   = (short)(color::rint(LAB_BASE*L/100.0f));
+                            RGB2Labprev[idx+1] = (short)(color::rint(LAB_BASE*(a+128.0f)/256.0f));
+                            RGB2Labprev[idx+2] = (short)(color::rint(LAB_BASE*(b+128.0f)/256.0f));
+                        }
+                        {
+                            float X = R*BGR2XYZ_D65[0] + G*BGR2XYZ_D65[1] + B*BGR2XYZ_D65[2];
+                            float Y = R*BGR2XYZ_D65[3] + G*BGR2XYZ_D65[4] + B*BGR2XYZ_D65[5];
+                            float Z = R*BGR2XYZ_D65[6] + G*BGR2XYZ_D65[7] + B*BGR2XYZ_D65[8];
+
+                            float L = applyCbrt(Y);
+                            L = L*116.0f - 16.0f;
+
+                            float d = 52.0f/std::max(X + 15.0f * Y + 3.0f * Z, FLT_EPSILON);
+                            float u = L*(X*d - 2.5719122887f);
+                            float v = L*(2.25f*Y*d - 6.0884485245f);
+
+                            RGB2Luvprev[idx  ] = (short)color::rint(LAB_BASE*L/100.0f);
+                            RGB2Luvprev[idx+1] = (short)color::rint(LAB_BASE*(u+134.0f)/354.0f);
+                            RGB2Luvprev[idx+2] = (short)color::rint(LAB_BASE*(v+140.0f)/262.0f);
+                        }
                     }
                 }
             }
             // tweak
-            static constexpr int error2[] = {32,-1,5246,-1,6662,-1,7837,1,8625,-1,11969,1,15290,1,19142,1,19588,1,21707,-1,22731,-1,24291,-1,25922,-1,27402,-1,28485,-1,29878,-1,32405,-1,36227,1,38265,-1,38296,1,38403,-1,41795,1,41867,1,43796,1,48096,-1,50562,-1,51054,-1,54496,1,55328,-1,56973,-1,58594,1,61568,1,66512,-1,68543,-1,68615,1,70105,-1,70692,-1,74924,1,76336,-1,78781,1,79259,-1,80855,1,81662,1,82290,-1,83208,-1,84370,1,86293,1,87263,-1,87939,-1,89942,-1,90258,-1,92101,-1,92325,-1,95244,-1,97556,1,97758,-1,97769,1,98455,1,104087,-1,106997,-1};
+            static constexpr int error2[] = {37,-1,124,-1,503,-1,4150,1,5548,1,6544,1,6659,1,8625,-1,11704,1,16108,-1,16347,-1,16446,-1,18148,1,19624,-1,22731,-1,23479,1,24001,1,24291,-1,25199,-1,25352,-1,27402,-1,28485,-1,29788,1,29807,-1,32149,-1,33451,-1,33974,-1,38265,-1,38403,-1,41038,-1,41279,1,41824,-1,42856,-1,48096,-1,49201,-1,50562,-1,51054,-1,51550,-1,51821,1,56973,-1,57283,1,62335,-1,67867,-1,70692,-1,71194,-1,71662,1,71815,1,72316,-1,73487,1,75722,-1,75959,1,82290,-1,82868,-1,83208,-1,83534,-1,84217,-1,85793,1,86683,-1,87939,-1,89143,1,90258,-1,91432,-1,92302,1,92325,-1,92572,1,93143,-1,93731,-1,94142,-1,95244,-1,96025,-1,96950,-1,97758,-1,102409,-1,104165,-1};
+            static constexpr int error3[] = {32,-1,5246,-1,6662,-1,7837,1,8625,-1,11969,1,15290,1,19142,1,19588,1,21707,-1,22731,-1,24291,-1,25922,-1,27402,-1,28485,-1,29878,-1,32405,-1,36227,1,38265,-1,38296,1,38403,-1,41795,1,41867,1,43796,1,48096,-1,50562,-1,51054,-1,54496,1,55328,-1,56973,-1,58594,1,61568,1,66512,-1,68543,-1,68615,1,70105,-1,70692,-1,74924,1,76336,-1,78781,1,79259,-1,80855,1,81662,1,82290,-1,83208,-1,84370,1,86293,1,87263,-1,87939,-1,89942,-1,90258,-1,92101,-1,92325,-1,95244,-1,97556,1,97758,-1,97769,1,98455,1,104087,-1,106997,-1};
             for (size_t i = 0; i < sizeof(error2) / sizeof(int); i += 2)
-                RGB2Luvprev[error2[i]] += error2[i + 1];
+                RGB2Labprev[error2[i]] += error2[i + 1];
+            for (size_t i = 0; i < sizeof(error3) / sizeof(int); i += 2)
+                RGB2Luvprev[error3[i]] += error3[i + 1];
             #ifdef __clang__
+            RGB2Labprev[9704] -= 1, RGB2Labprev[41279] -= 1, RGB2Labprev[71194] += 1, RGB2Labprev[73487] -= 1, RGB2Labprev[85793] -= 1;
             RGB2Luvprev[36227] -= 1, RGB2Luvprev[38587] += 1;
             #endif
             for (int p = 0; p < LAB_LUT_DIM; p++)
@@ -2360,6 +2394,9 @@ namespace LabTable
                                     idxold += std::min(q+q_, (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*3;
                                     idxold += std::min(r+r_, (int)(LAB_LUT_DIM-1))*LAB_LUT_DIM*LAB_LUT_DIM*3;
                                     int idxnew = p*3*8 + q*LAB_LUT_DIM*3*8 + r*LAB_LUT_DIM*LAB_LUT_DIM*3*8+4*p_+2*q_+r_;
+                                    RGB2LabLUT[idxnew]    = RGB2Labprev[idxold];
+                                    RGB2LabLUT[idxnew+8]  = RGB2Labprev[idxold+1];
+                                    RGB2LabLUT[idxnew+16] = RGB2Labprev[idxold+2];
                                     RGB2LuvLUT[idxnew]    = RGB2Luvprev[idxold];
                                     RGB2LuvLUT[idxnew+8]  = RGB2Luvprev[idxold+1];
                                     RGB2LuvLUT[idxnew+16] = RGB2Luvprev[idxold+2];
@@ -2438,7 +2475,8 @@ namespace LabTable
         ushort sRGBGammaTab_b[256], sRGBInvGammaTab_b[INV_GAMMA_TAB_SIZE];
         short LabToYF_b[256*2];
         int LuToUp_b[256*256], LvToVp_b[256*256];
-        short RGB2LuvLUT[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8], trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
+        short RGB2LabLUT[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8], RGB2LuvLUT[LAB_LUT_DIM*LAB_LUT_DIM*LAB_LUT_DIM*3*8];
+        short trilinearLUT[TRILINEAR_BASE*TRILINEAR_BASE*TRILINEAR_BASE*8];
 
         static Tab& instance()
         {
@@ -2473,15 +2511,15 @@ inline int cvtLabtoBGR<uchar>(int start, int end, const uchar * src, size_t src_
 {
     static const int XYZ2BGR[] =
     {
-        (int)std::rint((1 << 12) *  0.055648f * 0.950456f), (int)std::rint((1 << 12) * -0.204043f), (int)std::rint((1 << 12) *  1.057311f * 1.088754f),
-        (int)std::rint((1 << 12) * -0.969256f * 0.950456f), (int)std::rint((1 << 12) *  1.875991f), (int)std::rint((1 << 12) *  0.041556f * 1.088754f),
-        (int)std::rint((1 << 12) *  3.240479f * 0.950456f), (int)std::rint((1 << 12) * -1.53715f ), (int)std::rint((1 << 12) * -0.498535f * 1.088754f)
+        (int)color::rint((1 << 12) *  0.055648f * 0.950456f), (int)color::rint((1 << 12) * -0.204043f), (int)color::rint((1 << 12) *  1.057311f * 1.088754f),
+        (int)color::rint((1 << 12) * -0.969256f * 0.950456f), (int)color::rint((1 << 12) *  1.875991f), (int)color::rint((1 << 12) *  0.041556f * 1.088754f),
+        (int)color::rint((1 << 12) *  3.240479f * 0.950456f), (int)color::rint((1 << 12) * -1.53715f ), (int)color::rint((1 << 12) * -0.498535f * 1.088754f)
     };
     static const int XYZ2BGR_D65[] =
     {
-        (int)std::rint((1 << 12) *  0.055648f), (int)std::rint((1 << 12) * -0.204043f), (int)std::rint((1 << 12) *  1.057311f),
-        (int)std::rint((1 << 12) * -0.969256f), (int)std::rint((1 << 12) *  1.875991f), (int)std::rint((1 << 12) *  0.041556f),
-        (int)std::rint((1 << 12) *  3.240479f), (int)std::rint((1 << 12) * -1.53715f ), (int)std::rint((1 << 12) * -0.498535f)
+        (int)color::rint((1 << 12) *  0.055648f), (int)color::rint((1 << 12) * -0.204043f), (int)color::rint((1 << 12) *  1.057311f),
+        (int)color::rint((1 << 12) * -0.969256f), (int)color::rint((1 << 12) *  1.875991f), (int)color::rint((1 << 12) *  0.041556f),
+        (int)color::rint((1 << 12) *  3.240479f), (int)color::rint((1 << 12) * -1.53715f ), (int)color::rint((1 << 12) * -0.498535f)
     };
 
     const int* XYZtab = isLab ? XYZ2BGR : XYZ2BGR_D65;
@@ -2734,9 +2772,9 @@ template<bool srgb> struct rvv<true, srgb> : rvv_base
     {
         static const ushort BGR2XYZ[] =
         {
-            (ushort)std::rint((1 << 12) * 0.180423f / 0.950456f), (ushort)std::rint((1 << 12) * 0.357580f / 0.950456f), (ushort)std::rint((1 << 12) * 0.412453f / 0.950456f),
-            (ushort)std::rint((1 << 12) * 0.072169f            ), (ushort)std::rint((1 << 12) * 0.715160f            ), (ushort)std::rint((1 << 12) * 0.212671f            ),
-            (ushort)std::rint((1 << 12) * 0.950227f / 1.088754f), (ushort)std::rint((1 << 12) * 0.119193f / 1.088754f), (ushort)std::rint((1 << 12) * 0.019334f / 1.088754f)
+            (ushort)color::rint((1 << 12) * 0.180423f / 0.950456f), (ushort)color::rint((1 << 12) * 0.357580f / 0.950456f), (ushort)color::rint((1 << 12) * 0.412453f / 0.950456f),
+            (ushort)color::rint((1 << 12) * 0.072169f            ), (ushort)color::rint((1 << 12) * 0.715160f            ), (ushort)color::rint((1 << 12) * 0.212671f            ),
+            (ushort)color::rint((1 << 12) * 0.950227f / 1.088754f), (ushort)color::rint((1 << 12) * 0.119193f / 1.088754f), (ushort)color::rint((1 << 12) * 0.019334f / 1.088754f)
         };
 
         vuint16m2_t bb, gg, rr;
@@ -2938,40 +2976,79 @@ static inline int cvtBGRtoLab_f(int start, int end, const float * src, size_t sr
                 auto t = b;
                 b = r, r = t;
             }
-
             b = __riscv_vfmin(__riscv_vfmax(b, 0.0f, vl), 1.0f, vl);
             g = __riscv_vfmin(__riscv_vfmax(g, 0.0f, vl), 1.0f, vl);
             r = __riscv_vfmin(__riscv_vfmax(r, 0.0f, vl), 1.0f, vl);
-            if (srgb)
+
+            vfloat32m2_t lo, ao, bo;
+            if (isLab && srgb)
             {
-                b = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(b, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                g = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(g, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                r = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(r, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
-            }
+                auto ib = __riscv_vfcvt_xu(__riscv_vfmul(b, LabTable::Tab::LAB_BASE, vl), vl);
+                auto ig = __riscv_vfcvt_xu(__riscv_vfmul(g, LabTable::Tab::LAB_BASE, vl), vl);
+                auto ir = __riscv_vfcvt_xu(__riscv_vfmul(r, LabTable::Tab::LAB_BASE, vl), vl);
 
-            auto x = __riscv_vfmadd(b, BGRtab[0], __riscv_vfmadd(g, BGRtab[1], __riscv_vfmul(r, BGRtab[2], vl), vl), vl);
-            auto y = __riscv_vfmadd(b, BGRtab[3], __riscv_vfmadd(g, BGRtab[4], __riscv_vfmul(r, BGRtab[5], vl), vl), vl);
-            auto z = __riscv_vfmadd(b, BGRtab[6], __riscv_vfmadd(g, BGRtab[7], __riscv_vfmul(r, BGRtab[8], vl), vl), vl);
-            auto fy = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(y, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                auto x = __riscv_vand(__riscv_vsrl(ib, 5, vl), 15, vl), y = __riscv_vand(__riscv_vsrl(ig, 5, vl), 15, vl), z = __riscv_vand(__riscv_vsrl(ir, 5, vl), 15, vl);
+                auto base = __riscv_vmul(__riscv_vmacc(__riscv_vmacc(__riscv_vmul(x, 8, vl), 8*LabTable::Tab::TRILINEAR_BASE, y, vl), 8*LabTable::Tab::TRILINEAR_BASE*LabTable::Tab::TRILINEAR_BASE, z, vl), sizeof(short), vl);
+                auto tab = __riscv_vloxseg8ei32_v_i16m1x8(LabTable::Tab::instance().trilinearLUT, base, vl);
+                auto w0 = __riscv_vget_v_i16m1x8_i16m1(tab, 0);
+                auto w1 = __riscv_vget_v_i16m1x8_i16m1(tab, 1);
+                auto w2 = __riscv_vget_v_i16m1x8_i16m1(tab, 2);
+                auto w3 = __riscv_vget_v_i16m1x8_i16m1(tab, 3);
+                auto w4 = __riscv_vget_v_i16m1x8_i16m1(tab, 4);
+                auto w5 = __riscv_vget_v_i16m1x8_i16m1(tab, 5);
+                auto w6 = __riscv_vget_v_i16m1x8_i16m1(tab, 6);
+                auto w7 = __riscv_vget_v_i16m1x8_i16m1(tab, 7);
 
-            auto lo = __riscv_vfmadd(fy, 116.0f, __riscv_vfmv_v_f_f32m2(-16.0f, vl), vl);
-            vfloat32m2_t ao, bo;
-            if (isLab)
-            {
-                x = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(x, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
-                z = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(z, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                auto tx = __riscv_vsrl(ib, 9, vl), ty = __riscv_vsrl(ig, 9, vl), tz = __riscv_vsrl(ir, 9, vl);
+                base = __riscv_vmul(__riscv_vmacc(__riscv_vmacc(__riscv_vmul(tx, 3*8, vl), 3*8*LabTable::Tab::LAB_LUT_DIM, ty, vl), 3*8*LabTable::Tab::LAB_LUT_DIM*LabTable::Tab::LAB_LUT_DIM, tz, vl), sizeof(short), vl);
+                auto interpolate = [&](vuint32m2_t p) {
+                    tab = __riscv_vloxseg8ei32_v_i16m1x8(LabTable::Tab::instance().RGB2LabLUT, p, vl);
+                    auto a0 = __riscv_vget_v_i16m1x8_i16m1(tab, 0);
+                    auto a1 = __riscv_vget_v_i16m1x8_i16m1(tab, 1);
+                    auto a2 = __riscv_vget_v_i16m1x8_i16m1(tab, 2);
+                    auto a3 = __riscv_vget_v_i16m1x8_i16m1(tab, 3);
+                    auto a4 = __riscv_vget_v_i16m1x8_i16m1(tab, 4);
+                    auto a5 = __riscv_vget_v_i16m1x8_i16m1(tab, 5);
+                    auto a6 = __riscv_vget_v_i16m1x8_i16m1(tab, 6);
+                    auto a7 = __riscv_vget_v_i16m1x8_i16m1(tab, 7);
+                    return __riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmacc(__riscv_vwmul(a0, w0, vl), a1, w1, vl), a2, w2, vl), a3, w3, vl), a4, w4, vl), a5, w5, vl), a6, w6, vl), a7, w7, vl);
+                };
 
-                lo = __riscv_vmerge(__riscv_vfmul(y, 903.3f, vl), lo, __riscv_vmfgt(y, 0.008856f, vl), vl);
-                ao = __riscv_vfmul(__riscv_vfsub(x, fy, vl), 500.0f, vl);
-                bo = __riscv_vfmul(__riscv_vfsub(fy, z, vl), 200.0f, vl);
+                lo = __riscv_vfmul(__riscv_vfcvt_f(__riscv_vssra(interpolate(base), 12, __RISCV_VXRM_RNU, vl), vl), 100.0f / LabTable::Tab::LAB_BASE, vl);
+                ao = __riscv_vfmadd(__riscv_vfcvt_f(__riscv_vssra(interpolate(__riscv_vadd(base, 8 * sizeof(short), vl)), 12, __RISCV_VXRM_RNU, vl), vl), 256.0f / LabTable::Tab::LAB_BASE, __riscv_vfmv_v_f_f32m2(-128.0f, vl), vl);
+                bo = __riscv_vfmadd(__riscv_vfcvt_f(__riscv_vssra(interpolate(__riscv_vadd(base, 16 * sizeof(short), vl)), 12, __RISCV_VXRM_RNU, vl), vl), 256.0f / LabTable::Tab::LAB_BASE, __riscv_vfmv_v_f_f32m2(-128.0f, vl), vl);
             }
             else
             {
-                auto d = __riscv_vfrdiv(__riscv_vfmax(__riscv_vfmadd(y, 15.0f, __riscv_vfmadd(z, 3.0f, x, vl), vl), FLT_EPSILON, vl), 52.0f, vl);
-                ao = __riscv_vfmul(__riscv_vfmadd(x, d, __riscv_vfmv_v_f_f32m2(-2.5719122887f, vl), vl), lo, vl);
-                bo = __riscv_vfmul(__riscv_vfmadd(__riscv_vfmul(y, 2.25f, vl), d, __riscv_vfmv_v_f_f32m2(-6.0884485245f, vl), vl), lo, vl);
-            }
+                if (srgb)
+                {
+                    b = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(b, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                    g = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(g, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                    r = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(r, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().sRGBGammaTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                }
 
+                auto x = __riscv_vfmadd(b, BGRtab[0], __riscv_vfmadd(g, BGRtab[1], __riscv_vfmul(r, BGRtab[2], vl), vl), vl);
+                auto y = __riscv_vfmadd(b, BGRtab[3], __riscv_vfmadd(g, BGRtab[4], __riscv_vfmul(r, BGRtab[5], vl), vl), vl);
+                auto z = __riscv_vfmadd(b, BGRtab[6], __riscv_vfmadd(g, BGRtab[7], __riscv_vfmul(r, BGRtab[8], vl), vl), vl);
+                auto fy = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(y, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+
+                lo = __riscv_vfmadd(fy, 116.0f, __riscv_vfmv_v_f_f32m2(-16.0f, vl), vl);
+                if (isLab)
+                {
+                    x = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(x, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+                    z = LabTable::Tab::splineInterpolate(vl, __riscv_vfmul(z, LabTable::Tab::GAMMA_TAB_SIZE, vl), LabTable::Tab::instance().LabCbrtTab, LabTable::Tab::GAMMA_TAB_SIZE);
+
+                    lo = __riscv_vmerge(__riscv_vfmul(y, 903.3f, vl), lo, __riscv_vmfgt(y, 0.008856f, vl), vl);
+                    ao = __riscv_vfmul(__riscv_vfsub(x, fy, vl), 500.0f, vl);
+                    bo = __riscv_vfmul(__riscv_vfsub(fy, z, vl), 200.0f, vl);
+                }
+                else
+                {
+                    auto d = __riscv_vfrdiv(__riscv_vfmax(__riscv_vfmadd(y, 15.0f, __riscv_vfmadd(z, 3.0f, x, vl), vl), FLT_EPSILON, vl), 52.0f, vl);
+                    ao = __riscv_vfmul(__riscv_vfmadd(x, d, __riscv_vfmv_v_f_f32m2(-2.5719122887f, vl), vl), lo, vl);
+                    bo = __riscv_vfmul(__riscv_vfmadd(__riscv_vfmul(y, 2.25f, vl), d, __riscv_vfmv_v_f_f32m2(-6.0884485245f, vl), vl), lo, vl);
+                }
+            }
             vfloat32m2x3_t vec_dst{};
             vec_dst = __riscv_vset_v_f32m2_f32m2x3(vec_dst, 0, lo);
             vec_dst = __riscv_vset_v_f32m2_f32m2x3(vec_dst, 1, ao);
