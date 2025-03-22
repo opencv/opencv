@@ -305,6 +305,12 @@ bool  PngDecoder::readHeader()
                 fseek(m_f, 0, SEEK_SET);
             else
                 m_buf_pos = 0;
+
+            if (m_frame_count > 1 && !m_is_fcTL_loaded)
+            {
+                m_animation.has_hidden_frame = true;
+                m_frame_count++;
+            }
             break;
         }
 
@@ -831,7 +837,7 @@ PngEncoder::PngEncoder()
     m_buf_supported = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
-    next_seq_num = 0;
+    m_next_seq_num = 0;
     trnssize = 0;
     palsize = 0;
     m_compression_level = Z_BEST_SPEED;
@@ -1007,7 +1013,7 @@ void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint
 
     if (memcmp(name, "fdAT", 4) == 0)
     {
-        png_save_uint_32(buf, next_seq_num++);
+        png_save_uint_32(buf, m_next_seq_num++);
         writeToStreamOrBuffer(buf, 4, f);
         crc = crc32(crc, buf, 4);
         length -= 4;
@@ -1458,7 +1464,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
     if (m_isBilevel)
         CV_LOG_WARNING(NULL, "IMWRITE_PNG_BILEVEL parameter is not supported yet.");
-    uint32_t first =0;
+
     uint32_t loops= animation.loop_count;
     uint32_t coltype= animation.frames[0].channels() == 1 ? PNG_COLOR_TYPE_GRAY : animation.frames[0].channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
 
@@ -1543,7 +1549,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         buf_IHDR[11] = 0;
         buf_IHDR[12] = 0;
 
-        png_save_uint_32(buf_acTL, num_frames - first);
+        png_save_uint_32(buf_acTL, animation.has_hidden_frame ? num_frames - 1 : num_frames);
         png_save_uint_32(buf_acTL + 4, loops);
 
         writeToStreamOrBuffer(header, 8, m_f);
@@ -1552,8 +1558,6 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         if (num_frames > 1)
             writeChunk(m_f, "acTL", buf_acTL, 8);
-        else
-            first = 0;
 
         if (palsize > 0)
             writeChunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
@@ -1605,14 +1609,14 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         w0 = width;
         h0 = height;
         bop = 0;
-        next_seq_num = 0;
+        m_next_seq_num = 0;
 
         for (j = 0; j < 6; j++)
             op[j].valid = 0;
         deflateRectOp(frames[0].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
         deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
 
-        if (first)
+        if (false)
         {
             writeIDATs(m_f, 0, zbuf.data(), zsize, idat_size);
             for (j = 0; j < 6; j++)
@@ -1621,7 +1625,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
         }
 
-        for (i = first; i < num_frames - 1; i++)
+        for (i = 0; i < num_frames - 1; i++)
         {
             uint32_t op_min;
             int op_best;
@@ -1648,7 +1652,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             }
 
             /* dispose = previous */
-            if (i > first)
+            if (i)
                 getRect(width, height, rest.data(), frames[i + 1].getPixels(), over3.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 2);
 
             op_min = op[0].size;
@@ -1665,7 +1669,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
             dop = op_best >> 1;
 
-            png_save_uint_32(buf_fcTL, next_seq_num++);
+            png_save_uint_32(buf_fcTL, m_next_seq_num++);
             png_save_uint_32(buf_fcTL + 4, w0);
             png_save_uint_32(buf_fcTL + 8, h0);
             png_save_uint_32(buf_fcTL + 12, x0);
@@ -1674,7 +1678,11 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             png_save_uint_16(buf_fcTL + 22, frames[i].getDelayDen());
             buf_fcTL[24] = dop;
             buf_fcTL[25] = bop;
-            writeChunk(m_f, "fcTL", buf_fcTL, 26);
+
+            if (!animation.has_hidden_frame || i > 0)
+                writeChunk(m_f, "fcTL", buf_fcTL, 26);
+            else
+                m_next_seq_num--;
 
             writeIDATs(m_f, i, zbuf.data(), zsize, idat_size);
 
@@ -1705,7 +1713,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         if (num_frames > 1)
         {
-            png_save_uint_32(buf_fcTL, next_seq_num++);
+            png_save_uint_32(buf_fcTL, m_next_seq_num++);
             png_save_uint_32(buf_fcTL + 4, w0);
             png_save_uint_32(buf_fcTL + 8, h0);
             png_save_uint_32(buf_fcTL + 12, x0);

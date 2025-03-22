@@ -800,6 +800,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.has_hidden_frame = decoder->animation().has_hidden_frame;
 
     return success;
 }
@@ -910,6 +911,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.has_hidden_frame = decoder->animation().has_hidden_frame;
 
     return success;
 }
@@ -1784,6 +1786,7 @@ ImageCollection::iterator ImageCollection::iterator::operator++(int) {
 Animation::Animation(int loopCount, Scalar bgColor)
     : loop_count(loopCount), bgcolor(bgColor)
 {
+    this->has_hidden_frame = false;
     if (loopCount < 0 || loopCount > 0xffff)
         this->loop_count = 0; // loop_count should be non-negative
 }
