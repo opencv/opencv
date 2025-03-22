@@ -761,6 +761,8 @@ inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int sr
     case CV_HAL_INTER_CUBIC*100 + CV_32FC1:
         return invoke(dst_width, dst_height, {remap32fCubic<RVV_F32M1>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
 
+    // Lanczos4 is disabled in clang since register allocation strategy is buggy in clang 20.0
+    // remove this #ifndef in the future if newer clang fixes this problem
 #ifndef __clang__
     case CV_HAL_INTER_LANCZOS4*100 + CV_8UC1:
         return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U8MF2>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
