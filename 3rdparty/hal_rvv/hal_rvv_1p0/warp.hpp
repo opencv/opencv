@@ -16,6 +16,8 @@ namespace remap {
 #define cv_hal_remap32f cv::cv_hal_rvv::remap::remap32f
 #undef cv_hal_remap32fc2
 #define cv_hal_remap32fc2 cv::cv_hal_rvv::remap::remap32fc2
+#undef cv_hal_remap16s
+#define cv_hal_remap16s cv::cv_hal_rvv::remap::remap16s
 
 class RemapInvoker : public ParallelLoopBody
 {
@@ -120,7 +122,7 @@ template<> struct rvv<RVV_F32M2>
 };
 
 template<typename helper>
-static inline int remap32fC1(int start, int end, const uchar *src_data, size_t src_step, int src_width, int src_height,
+static inline int remap32fC1(int start, int end, bool s16, const uchar *src_data, size_t src_step, int src_width, int src_height,
                              uchar *dst_data, size_t dst_step, int dst_width,
                              const float* mapx, size_t mapx_step, const float* mapy, size_t mapy_step,
                              int interpolation, int border_type, const double* border_value)
@@ -135,15 +137,24 @@ static inline int remap32fC1(int start, int end, const uchar *src_data, size_t s
         {
             vl = helper::setvl(dst_width - j);
             typename RVV_SameLen<float, helper>::VecType mx, my;
-            if (mapy == nullptr)
+            if (s16)
             {
-                mx = RVV_SameLen<float, helper>::vload_stride(mapx + i * mapx_step + j * 2    , sizeof(float) * 2, vl);
-                my = RVV_SameLen<float, helper>::vload_stride(mapx + i * mapx_step + j * 2 + 1, sizeof(float) * 2, vl);
+                auto map = __riscv_vlseg2e16_v_i16m4x2(reinterpret_cast<const short*>(mapx) + i * mapx_step + j * 2, vl);
+                mx = __riscv_vfwcvt_f(__riscv_vget_v_i16m4x2_i16m4(map, 0), vl);
+                my = __riscv_vfwcvt_f(__riscv_vget_v_i16m4x2_i16m4(map, 1), vl);
             }
             else
             {
-                mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
-                my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                if (mapy == nullptr)
+                {
+                    mx = RVV_SameLen<float, helper>::vload_stride(mapx + i * mapx_step + j * 2    , sizeof(float) * 2, vl);
+                    my = RVV_SameLen<float, helper>::vload_stride(mapx + i * mapx_step + j * 2 + 1, sizeof(float) * 2, vl);
+                }
+                else
+                {
+                    mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
+                    my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                }
             }
             if (interpolation & CV_HAL_WARP_RELATIVE_MAP)
             {
@@ -170,18 +181,29 @@ static inline int remap32fC1(int start, int end, const uchar *src_data, size_t s
             else if (mode == CV_HAL_INTER_LINEAR)
             {
                 typename RVV_SameLen<int, helper>::VecType ix0, iy0;
-                int rd;
-                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m8,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
-                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+                if (s16)
+                {
+                    ix0 = __riscv_vfcvt_x(mx, vl);
+                    iy0 = __riscv_vfcvt_x(my, vl);
+                    auto md = __riscv_vle16_v_u16m4(reinterpret_cast<const ushort*>(mapy) + i * mapy_step + j, vl);
+                    mx = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(md, 31, vl), vl), 32, vl);
+                    my = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl), vl), 32, vl);
+                }
+                else
+                {
+                    int rd;
+                    asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m8,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
+                                 : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
+                                 : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+                    mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
+                    my = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
+                }
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
                 auto v0 = rvv<helper>::vcvt0(access(ix0, iy0), vl);
                 auto v1 = rvv<helper>::vcvt0(access(ix1, iy0), vl);
                 auto v2 = rvv<helper>::vcvt0(access(ix0, iy1), vl);
                 auto v3 = rvv<helper>::vcvt0(access(ix1, iy1), vl);
 
-                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
-                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
                 v0 = __riscv_vfmacc(v0, mx, __riscv_vfsub(v1, v0, vl), vl);
                 v2 = __riscv_vfmacc(v2, mx, __riscv_vfsub(v3, v2, vl), vl);
                 v0 = __riscv_vfmacc(v0, my, __riscv_vfsub(v2, v0, vl), vl);
@@ -198,7 +220,7 @@ static inline int remap32fC1(int start, int end, const uchar *src_data, size_t s
 }
 
 template<typename helper>
-static inline int remap32fCubic(int start, int end, const uchar *src_data, size_t src_step, int src_width, int src_height,
+static inline int remap32fCubic(int start, int end, bool s16, const uchar *src_data, size_t src_step, int src_width, int src_height,
                                 uchar *dst_data, size_t dst_step, int dst_width,
                                 const float* mapx, size_t mapx_step, const float* mapy, size_t mapy_step,
                                 int interpolation, int border_type, const double* border_value)
@@ -212,16 +234,25 @@ static inline int remap32fCubic(int start, int end, const uchar *src_data, size_
         {
             vl = helper::setvl(dst_width - j);
             typename RVV_SameLen<float, helper>::VecType mx, my;
-            if (mapy == nullptr)
+            if (s16)
             {
-                auto map = __riscv_vlseg2e32_v_f32m1x2(mapx + i * mapx_step + j * 2, vl);
-                mx = __riscv_vget_v_f32m1x2_f32m1(map, 0);
-                my = __riscv_vget_v_f32m1x2_f32m1(map, 1);
+                auto map = __riscv_vlseg2e16_v_i16mf2x2(reinterpret_cast<const short*>(mapx) + i * mapx_step + j * 2, vl);
+                mx = __riscv_vfwcvt_f(__riscv_vget_v_i16mf2x2_i16mf2(map, 0), vl);
+                my = __riscv_vfwcvt_f(__riscv_vget_v_i16mf2x2_i16mf2(map, 1), vl);
             }
             else
             {
-                mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
-                my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                if (mapy == nullptr)
+                {
+                    auto map = __riscv_vlseg2e32_v_f32m1x2(mapx + i * mapx_step + j * 2, vl);
+                    mx = __riscv_vget_v_f32m1x2_f32m1(map, 0);
+                    my = __riscv_vget_v_f32m1x2_f32m1(map, 1);
+                }
+                else
+                {
+                    mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
+                    my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                }
             }
             if (interpolation & CV_HAL_WARP_RELATIVE_MAP)
             {
@@ -242,16 +273,26 @@ static inline int remap32fCubic(int start, int end, const uchar *src_data, size_
             };
 
             typename RVV_SameLen<int, helper>::VecType ix1, iy1;
-            int rd;
-            asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m1,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                         : "=&r"(rd), "=&vr"(ix1), "=&vr"(iy1)
-                         : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+            if (s16)
+            {
+                ix1 = __riscv_vfcvt_x(mx, vl);
+                iy1 = __riscv_vfcvt_x(my, vl);
+                auto md = __riscv_vle16_v_u16mf2(reinterpret_cast<const ushort*>(mapy) + i * mapy_step + j, vl);
+                mx = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(md, 31, vl), vl), 32, vl);
+                my = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl), vl), 32, vl);
+            }
+            else
+            {
+                int rd;
+                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m1,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
+                             : "=&r"(rd), "=&vr"(ix1), "=&vr"(iy1)
+                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix1, vl), vl);
+                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy1, vl), vl);
+            }
             auto ix0 = __riscv_vsub(ix1, 1, vl), iy0 = __riscv_vsub(iy1, 1, vl);
             auto ix2 = __riscv_vadd(ix1, 1, vl), iy2 = __riscv_vadd(iy1, 1, vl);
             auto ix3 = __riscv_vadd(ix1, 2, vl), iy3 = __riscv_vadd(iy1, 2, vl);
-
-            mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix1, vl), vl);
-            my = __riscv_vfsub(my, __riscv_vfcvt_f(iy1, vl), vl);
 
             // the algorithm is copied from imgproc/src/imgwarp.cpp,
             // in the function static void interpolateCubic
@@ -299,7 +340,7 @@ static inline int remap32fCubic(int start, int end, const uchar *src_data, size_
     return CV_HAL_ERROR_OK;
 }
 
-template<typename helper>
+template<typename helper, bool s16>
 static inline int remap32fLanczos4(int start, int end, const uchar *src_data, size_t src_step, int src_width, int src_height,
                                    uchar *dst_data, size_t dst_step, int dst_width,
                                    const float* mapx, size_t mapx_step, const float* mapy, size_t mapy_step,
@@ -314,16 +355,25 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
         {
             vl = helper::setvl(dst_width - j);
             typename RVV_SameLen<float, helper>::VecType mx, my;
-            if (mapy == nullptr)
+            if (s16)
             {
-                auto map = __riscv_vlseg2e32_v_f32m2x2(mapx + i * mapx_step + j * 2, vl);
-                mx = __riscv_vget_v_f32m2x2_f32m2(map, 0);
-                my = __riscv_vget_v_f32m2x2_f32m2(map, 1);
+                auto map = __riscv_vlseg2e16_v_i16m1x2(reinterpret_cast<const short*>(mapx) + i * mapx_step + j * 2, vl);
+                mx = __riscv_vfwcvt_f(__riscv_vget_v_i16m1x2_i16m1(map, 0), vl);
+                my = __riscv_vfwcvt_f(__riscv_vget_v_i16m1x2_i16m1(map, 1), vl);
             }
             else
             {
-                mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
-                my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                if (mapy == nullptr)
+                {
+                    auto map = __riscv_vlseg2e32_v_f32m2x2(mapx + i * mapx_step + j * 2, vl);
+                    mx = __riscv_vget_v_f32m2x2_f32m2(map, 0);
+                    my = __riscv_vget_v_f32m2x2_f32m2(map, 1);
+                }
+                else
+                {
+                    mx = RVV_SameLen<float, helper>::vload(mapx + i * mapx_step + j, vl);
+                    my = RVV_SameLen<float, helper>::vload(mapy + i * mapy_step + j, vl);
+                }
             }
             if (interpolation & CV_HAL_WARP_RELATIVE_MAP)
             {
@@ -344,10 +394,23 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
             };
 
             typename RVV_SameLen<int, helper>::VecType ix3, iy3;
-            int rd;
-            asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                         : "=&r"(rd), "=&vr"(ix3), "=&vr"(iy3)
-                         : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+            if (s16)
+            {
+                ix3 = __riscv_vfcvt_x(mx, vl);
+                iy3 = __riscv_vfcvt_x(my, vl);
+                auto md = __riscv_vle16_v_u16m1(reinterpret_cast<const ushort*>(mapy) + i * mapy_step + j, vl);
+                mx = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(md, 31, vl), vl), 32, vl);
+                my = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl), vl), 32, vl);
+            }
+            else
+            {
+                int rd;
+                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
+                             : "=&r"(rd), "=&vr"(ix3), "=&vr"(iy3)
+                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix3, vl), vl);
+                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy3, vl), vl);
+            }
             auto ix0 = __riscv_vsub(ix3, 3, vl), iy0 = __riscv_vsub(iy3, 3, vl);
             auto ix1 = __riscv_vsub(ix3, 2, vl), iy1 = __riscv_vsub(iy3, 2, vl);
             auto ix2 = __riscv_vsub(ix3, 1, vl), iy2 = __riscv_vsub(iy3, 1, vl);
@@ -355,9 +418,6 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
             auto ix5 = __riscv_vadd(ix3, 2, vl), iy5 = __riscv_vadd(iy3, 2, vl);
             auto ix6 = __riscv_vadd(ix3, 3, vl), iy6 = __riscv_vadd(iy3, 3, vl);
             auto ix7 = __riscv_vadd(ix3, 4, vl), iy7 = __riscv_vadd(iy3, 4, vl);
-
-            mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix3, vl), vl);
-            my = __riscv_vfsub(my, __riscv_vfcvt_f(iy3, vl), vl);
 
             // the algorithm is copied from imgproc/src/imgwarp.cpp,
             // in the function static void interpolateLanczos4
@@ -712,6 +772,7 @@ static inline int remap32fC4(int start, int end, const uchar *src_data, size_t s
 
 // the algorithm is copied from 3rdparty/carotene/src/remap.cpp,
 // in the function void CAROTENE_NS::remapNearestNeighbor and void CAROTENE_NS::remapLinear
+template<bool s16 = false>
 inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
                     uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
                     float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
@@ -728,8 +789,8 @@ inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int sr
     if ((mode == CV_HAL_INTER_CUBIC || mode == CV_HAL_INTER_LANCZOS4) && CV_MAKETYPE(src_type, 1) != src_type)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    mapx_step /= sizeof(float);
-    mapy_step /= sizeof(float);
+    mapx_step /= s16 ? sizeof(short) : sizeof(float);
+    mapy_step /= s16 ? sizeof(ushort) : sizeof(float);
     switch (src_type)
     {
     case CV_8UC3:
@@ -741,37 +802,38 @@ inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int sr
     {
     case CV_HAL_INTER_NEAREST*100 + CV_8UC1:
     case CV_HAL_INTER_LINEAR*100 + CV_8UC1:
-        return invoke(dst_width, dst_height, {remap32fC1<RVV_U8M2>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fC1<RVV_U8M2>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_NEAREST*100 + CV_16UC1:
     case CV_HAL_INTER_LINEAR*100 + CV_16UC1:
-        return invoke(dst_width, dst_height, {remap32fC1<RVV_U16M4>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fC1<RVV_U16M4>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_NEAREST*100 + CV_16SC1:
     case CV_HAL_INTER_LINEAR*100 + CV_16SC1:
-        return invoke(dst_width, dst_height, {remap32fC1<RVV_I16M4>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fC1<RVV_I16M4>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_NEAREST*100 + CV_32FC1:
     case CV_HAL_INTER_LINEAR*100 + CV_32FC1:
-        return invoke(dst_width, dst_height, {remap32fC1<RVV_F32M8>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fC1<RVV_F32M8>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     
     case CV_HAL_INTER_CUBIC*100 + CV_8UC1:
-        return invoke(dst_width, dst_height, {remap32fCubic<RVV_U8MF4>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fCubic<RVV_U8MF4>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_CUBIC*100 + CV_16UC1:
-        return invoke(dst_width, dst_height, {remap32fCubic<RVV_U16MF2>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fCubic<RVV_U16MF2>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_CUBIC*100 + CV_16SC1:
-        return invoke(dst_width, dst_height, {remap32fCubic<RVV_I16MF2>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fCubic<RVV_I16MF2>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_CUBIC*100 + CV_32FC1:
-        return invoke(dst_width, dst_height, {remap32fCubic<RVV_F32M1>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fCubic<RVV_F32M1>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
 
     // Lanczos4 is disabled in clang since register allocation strategy is buggy in clang 20.0
-    // remove this #ifndef in the future if newer clang fixes this problem
+    // remove this #ifndef in the future if possible
 #ifndef __clang__
     case CV_HAL_INTER_LANCZOS4*100 + CV_8UC1:
-        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U8MF2>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
-    case CV_HAL_INTER_LANCZOS4*100 + CV_16UC1:
-        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U16M1>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U8MF2, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+    // disabled since UI is fast enough
+    // case CV_HAL_INTER_LANCZOS4*100 + CV_16UC1:
+    //     return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_U16M1, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_LANCZOS4*100 + CV_16SC1:
-        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_I16M1>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_I16M1, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_LANCZOS4*100 + CV_32FC1:
-        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_F32M2>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
+        return invoke(dst_width, dst_height, {remap32fLanczos4<RVV_F32M2, s16>}, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
 #endif
     }
 
@@ -783,6 +845,16 @@ inline int remap32fc2(int src_type, const uchar *src_data, size_t src_step, int 
                       float* map, size_t map_step, int interpolation, int border_type, const double border_value[4])
 {
     return remap32f(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, map, map_step, nullptr, 0, interpolation, border_type, border_value);
+}
+
+inline int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                    uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                    short* mapx, size_t mapx_step, ushort* mapy, size_t mapy_step,
+                    int interpolation, int border_type, const double border_value[4])
+{
+    if (CV_MAKETYPE(src_type, 1) != src_type)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return remap32f<true>(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, reinterpret_cast<float*>(mapx), mapx_step, reinterpret_cast<float*>(mapy), mapy_step, interpolation, border_type, border_value);
 }
 } // cv::cv_hal_rvv::remap
 
