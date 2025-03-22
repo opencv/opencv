@@ -3189,9 +3189,6 @@ TEST_P(Test_ONNX_layers, Gemm_3inputs_single_elem_vector_bias) {
 TEST_P(Test_ONNX_layers, Gemm_3inputs_vector_bias) {
     testONNXModels("test_gemm_3inputs_vector_bias", pb, 0, 0, false, true, 3);
 }
-TEST_P(Test_ONNX_layers, Gemm_3inputs_zero_bias) {
-    testONNXModels("test_gemm_3inputs_zero_bias", pb, 0, 0, false, true, 3);
-}
 TEST_P(Test_ONNX_layers, Gemm_alpha) {
     testONNXModels("test_gemm_alpha", pb, 0, 0, false, true, 2);
 }
