@@ -109,7 +109,7 @@ static inline int remap32fC1(int start, int end, const uchar *src_data, size_t s
                 vint32m8_t ix0, iy0;
                 int rd;
                 asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m8,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=vr"(ix0), "=vr"(iy0)
+                             : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
                              : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
                 auto v0 = rvv<T>::vcvt0(access(ix0, iy0), vl);
@@ -180,7 +180,7 @@ static inline int remap32fC3(int start, int end, const uchar *src_data, size_t s
                 vint32m2_t ix0, iy0;
                 int rd;
                 asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=vr"(ix0), "=vr"(iy0)
+                             : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
                              : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
 
@@ -282,7 +282,7 @@ static inline int remap32fC4(int start, int end, const uchar *src_data, size_t s
                 vint32m2_t ix0, iy0;
                 int rd;
                 asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=vr"(ix0), "=vr"(iy0)
+                             : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
                              : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
 
