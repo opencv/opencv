@@ -220,12 +220,15 @@ if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
   ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
 endif()
 
-if("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+# Meta-feature "cxx_std_XX" in CMAKE_CXX_COMPILE_FEATURES are supported in CMake 3.8+.
+# - See https://cmake.org/cmake/help/latest/release/3.8.html
+# For CMake 3.7-, use CMAKE_CXXxx_COMPILE_FEATURES instead of it.
+if(CMAKE_CXX11_COMPILE_FEATURES OR ("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES))
   if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 11))
     set(HAVE_CXX11 ON)
   endif()
 endif()
-if("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+if(CMAKE_CXX17_COMPILE_FEATURES OR ("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES))
   if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 17))
     set(HAVE_CXX17 ON)
   endif()
