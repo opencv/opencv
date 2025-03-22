@@ -1720,6 +1720,11 @@ void cv::remap( InputArray _src, OutputArray _dst,
         CALL_HAL(remap32f, cv_hal_remap32f, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                  map1.ptr<float>(), map1.step, map2.ptr<float>(), map2.step, interpolation, borderType, borderValue.val);
     }
+    if ((map1.type() == CV_32FC2) && map2.empty())
+    {
+        CALL_HAL(remap32fc2, cv_hal_remap32fc2, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                 map1.ptr<float>(), map1.step, interpolation, borderType, borderValue.val);
+    }
 
     interpolation &= ~WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
