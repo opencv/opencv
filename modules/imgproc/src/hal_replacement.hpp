@@ -373,9 +373,58 @@ inline int hal_ni_remap32f(int src_type, const uchar *src_data, size_t src_step,
                            float* mapx, size_t mapx_step, float* mapy, size_t mapy_step,
                            int interpolation, int border_type, const double border_value[4])
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_remap with floating point maps
+   @param src_type source and destination image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source image width
+   @param src_height source image height
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param map map for xy values
+   @param map_step map matrix step
+   @param interpolation interpolation mode (CV_HAL_INTER_NEAREST, ...)
+   @param border_type border processing mode (CV_HAL_BORDER_REFLECT, ...)
+   @param border_value values to use for CV_HAL_BORDER_CONSTANT mode
+   @sa cv::remap
+ */
+inline int hal_ni_remap32fc2(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                             uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                             float* map, size_t map_step, int interpolation, int border_type, const double border_value[4])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief hal_remap with fixed-point maps
+   @param src_type source and destination image type
+   @param src_data source image data
+   @param src_step source image step
+   @param src_width source image width
+   @param src_height source image height
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param mapx map for x values
+   @param mapx_step mapx matrix step
+   @param mapy map for y values
+   @param mapy_step mapy matrix step
+   @param interpolation interpolation mode (CV_HAL_INTER_NEAREST, ...)
+   @param border_type border processing mode (CV_HAL_BORDER_REFLECT, ...)
+   @param border_value values to use for CV_HAL_BORDER_CONSTANT mode
+   @sa cv::remap
+ */
+inline int hal_ni_remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height,
+                           uchar *dst_data, size_t dst_step, int dst_width, int dst_height,
+                           short* mapx, size_t mapx_step, ushort* mapy, size_t mapy_step,
+                           int interpolation, int border_type, const double border_value[4])
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_remap32f hal_ni_remap32f
+#define cv_hal_remap32fc2 hal_ni_remap32fc2
+#define cv_hal_remap16s hal_ni_remap16s
 //! @endcond
 
 /**
