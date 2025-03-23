@@ -100,7 +100,7 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
         0) :
         norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
         (
-            #if (IPP_DISABLE_NORM)
+            #if (!IPP_DISABLE_NORM_8U)
             type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
             #endif
             type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C1R :

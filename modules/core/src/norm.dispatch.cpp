@@ -292,7 +292,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
                normType == NORM_L2 || normType == NORM_L2SQR ||
                ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && _src.type() == CV_8U) );
 
-#if defined HAVE_OPENCL || defined HAVE_IPP
+#if defined HAVE_OPENCL
     double _result = 0;
 #endif
 
@@ -537,7 +537,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
     CV_CheckTypeEQ(_src1.type(), _src2.type(), "Input type mismatch");
     CV_Assert(_src1.sameSize(_src2));
 
-#if defined HAVE_OPENCL || defined HAVE_IPP
+#if defined HAVE_OPENCL
     double _result = 0;
 #endif
 
