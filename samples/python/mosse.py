@@ -107,7 +107,7 @@ class MOSSE:
         h, w = f.shape
         f = np.roll(f, -h//2, 0)
         f = np.roll(f, -w//2, 1)
-        kernel = np.uint8( (f-f.min()) / f.ptp()*255 )
+        kernel = np.uint8( (f-f.min()) / np.ptp(f)*255 )
         resp = self.last_resp
         resp = np.uint8(np.clip(resp/resp.max(), 0, 1)*255)
         vis = np.hstack([self.last_img, kernel, resp])
