@@ -219,6 +219,52 @@ static inline int remap32fC1(int start, int end, bool s16, const uchar *src_data
     return CV_HAL_ERROR_OK;
 }
 
+class RemapTable
+{
+private:
+    RemapTable()
+    {
+        // the algorithm is copied from imgproc/src/imgwarp.cpp,
+        // in the function static void interpolateLanczos4
+        constexpr double s45 = 0.70710678118654752440084436210485;
+        constexpr double cs[][2] = {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
+
+        for (int t = 0; t < 32; t++)
+        {
+            float x = t / 32.0f;
+            if (x < FLT_EPSILON)
+            {
+                for (int i = 0; i < 8; i++)
+                    coeffs[t*8+i] = 0;
+                coeffs[t*8+3] = 1;
+                return;
+            }
+
+            float sum = 0;
+            double y0=-(x+3)*CV_PI*0.25, s0 = std::sin(y0), c0= std::cos(y0);
+            for (int i = 0; i < 8; i++)
+            {
+                double y = -(x+3-i)*CV_PI*0.25;
+                coeffs[t*8+i] = (float)((cs[i][0]*s0 + cs[i][1]*c0)/(y*y));
+                sum += coeffs[t*8+i];
+            }
+
+            sum = 1.f/sum;
+            for (int i = 0; i < 8; i++)
+                coeffs[t*8+i] *= sum;
+        }
+    }
+
+public:
+    float coeffs[32 * 8];
+
+    static RemapTable& instance()
+    {
+        static RemapTable tab;
+        return tab;
+    }
+};
+
 template<typename helper>
 static inline int remap32fCubic(int start, int end, bool s16, const uchar *src_data, size_t src_step, int src_width, int src_height,
                                 uchar *dst_data, size_t dst_step, int dst_width,
@@ -394,22 +440,23 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
             };
 
             typename RVV_SameLen<int, helper>::VecType ix3, iy3;
+            typename RVV_SameLen<ushort, helper>::VecType imx, imy;
             if (s16)
             {
                 ix3 = __riscv_vfcvt_x(mx, vl);
                 iy3 = __riscv_vfcvt_x(my, vl);
                 auto md = __riscv_vle16_v_u16m1(reinterpret_cast<const ushort*>(mapy) + i * mapy_step + j, vl);
-                mx = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(md, 31, vl), vl), 32, vl);
-                my = __riscv_vfdiv(__riscv_vfwcvt_f(__riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl), vl), 32, vl);
+                imx = __riscv_vand(md, 31, vl);
+                imy = __riscv_vand(__riscv_vsrl(md, 5, vl), 31, vl);
             }
             else
             {
-                auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
-                auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
-                ix3 = __riscv_vsra(imx, 5, vl);
-                iy3 = __riscv_vsra(imy, 5, vl);
-                mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
-                my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
+                auto dmx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                auto dmy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                ix3 = __riscv_vsra(dmx, 5, vl);
+                iy3 = __riscv_vsra(dmy, 5, vl);
+                imx = __riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(dmx, 31, vl)), vl);
+                imy = __riscv_vncvt_x(__riscv_vreinterpret_v_i32m2_u32m2(__riscv_vand(dmy, 31, vl)), vl);
             }
             auto ix0 = __riscv_vsub(ix3, 3, vl), iy0 = __riscv_vsub(iy3, 3, vl);
             auto ix1 = __riscv_vsub(ix3, 2, vl), iy1 = __riscv_vsub(iy3, 2, vl);
@@ -419,45 +466,22 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
             auto ix6 = __riscv_vadd(ix3, 3, vl), iy6 = __riscv_vadd(iy3, 3, vl);
             auto ix7 = __riscv_vadd(ix3, 4, vl), iy7 = __riscv_vadd(iy3, 4, vl);
 
-            // the algorithm is copied from imgproc/src/imgwarp.cpp,
-            // in the function static void interpolateLanczos4
             typename RVV_SameLen<float, helper>::VecType c0, c1, c2, c3, c4, c5, c6, c7;
-            auto intertab = [&](typename RVV_SameLen<float, helper>::VecType x) {
-                constexpr double s45 = 0.70710678118654752440084436210485;
-                constexpr double cs[][2] = {{1, 0}, {-s45, -s45}, {0, 1}, {s45, -s45}, {-1, 0}, {s45, s45}, {0, -1}, {-s45, s45}};
-
-                auto y0 = __riscv_vfmul(__riscv_vfrsub(x, -3, vl), CV_PI * 0.25, vl);
-                typename RVV_SameLen<float, helper>::VecType sin0, cos0;
-                detail::SinCos32f<RVV_SameLen<float, helper>>(y0, sin0, cos0, detail::sincos_rad_scale, RVV_SameLen<float, helper>::vmv(detail::sincos_cos_p2, vl), RVV_SameLen<float, helper>::vmv(detail::sincos_cos_p0, vl), vl);
-
-                c0 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[0][0], __riscv_vfmul(cos0, cs[0][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c1 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[1][0], __riscv_vfmul(cos0, cs[1][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c2 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[2][0], __riscv_vfmul(cos0, cs[2][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c3 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[3][0], __riscv_vfmul(cos0, cs[3][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c4 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[4][0], __riscv_vfmul(cos0, cs[4][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c5 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[5][0], __riscv_vfmul(cos0, cs[5][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c6 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[6][0], __riscv_vfmul(cos0, cs[6][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-                y0 = __riscv_vfadd(y0, CV_PI * 0.25, vl);
-                c7 = __riscv_vfdiv(__riscv_vfmadd(sin0, cs[7][0], __riscv_vfmul(cos0, cs[7][1], vl), vl), __riscv_vfmul(y0, y0, vl), vl);
-
-                auto sum = __riscv_vfrdiv(__riscv_vfadd(__riscv_vfadd(__riscv_vfadd(__riscv_vfadd(__riscv_vfadd(__riscv_vfadd(__riscv_vfadd(c0, c1, vl), c2, vl), c3, vl), c4, vl), c5, vl), c6, vl), c7, vl), 1, vl);
-                c0 = __riscv_vfmul(c0, sum, vl);
-                c1 = __riscv_vfmul(c1, sum, vl);
-                c2 = __riscv_vfmul(c2, sum, vl);
-                c3 = __riscv_vfmul(c3, sum, vl);
-                c4 = __riscv_vfmul(c4, sum, vl);
-                c5 = __riscv_vfmul(c5, sum, vl);
-                c6 = __riscv_vfmul(c6, sum, vl);
-                c7 = __riscv_vfmul(c7, sum, vl);
+            auto intertab = [&](typename RVV_SameLen<ushort, helper>::VecType x) {
+                x = __riscv_vmul(x, sizeof(float) * 8, vl);
+                auto val = __riscv_vloxseg4ei16_v_f32m2x4(RemapTable::instance().coeffs, x, vl);
+                c0 = __riscv_vget_v_f32m2x4_f32m2(val, 0);
+                c1 = __riscv_vget_v_f32m2x4_f32m2(val, 1);
+                c2 = __riscv_vget_v_f32m2x4_f32m2(val, 2);
+                c3 = __riscv_vget_v_f32m2x4_f32m2(val, 3);
+                val = __riscv_vloxseg4ei16_v_f32m2x4(RemapTable::instance().coeffs, __riscv_vadd(x, sizeof(float) * 4, vl), vl);
+                c4 = __riscv_vget_v_f32m2x4_f32m2(val, 0);
+                c5 = __riscv_vget_v_f32m2x4_f32m2(val, 1);
+                c6 = __riscv_vget_v_f32m2x4_f32m2(val, 2);
+                c7 = __riscv_vget_v_f32m2x4_f32m2(val, 3);
             };
 
-            intertab(mx);
+            intertab(imx);
             auto v0 = rvv<helper>::vcvt0(access(ix0, iy0), vl);
             auto v1 = rvv<helper>::vcvt0(access(ix1, iy0), vl);
             auto v2 = rvv<helper>::vcvt0(access(ix2, iy0), vl);
@@ -531,7 +555,7 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
             v7 = rvv<helper>::vcvt0(access(ix7, iy7), vl);
             auto k7 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(v0, c0, vl), v1, c1, vl), v2, c2, vl), v3, c3, vl), v4, c4, vl), v5, c5, vl), v6, c6, vl), v7, c7, vl);
 
-            intertab(my);
+            intertab(imy);
             k0 = __riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmacc(__riscv_vfmul(k0, c0, vl), k1, c1, vl), k2, c2, vl), k3, c3, vl), k4, c4, vl), k5, c5, vl), k6, c6, vl), k7, c7, vl);
 
             helper::vstore(reinterpret_cast<T*>(dst_data + i * dst_step) + j, rvv<helper>::vcvt1(k0, vl), vl);
