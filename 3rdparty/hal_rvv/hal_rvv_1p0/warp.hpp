@@ -191,12 +191,12 @@ static inline int remap32fC1(int start, int end, bool s16, const uchar *src_data
                 }
                 else
                 {
-                    int rd;
-                    asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m8,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                                 : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
-                                 : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
-                    mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
-                    my = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
+                    auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                    auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                    ix0 = __riscv_vsra(imx, 5, vl);
+                    iy0 = __riscv_vsra(imy, 5, vl);
+                    mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
+                    my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
                 }
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
                 auto v0 = rvv<helper>::vcvt0(access(ix0, iy0), vl);
@@ -283,12 +283,12 @@ static inline int remap32fCubic(int start, int end, bool s16, const uchar *src_d
             }
             else
             {
-                int rd;
-                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m1,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=&vr"(ix1), "=&vr"(iy1)
-                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
-                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix1, vl), vl);
-                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy1, vl), vl);
+                auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                ix1 = __riscv_vsra(imx, 5, vl);
+                iy1 = __riscv_vsra(imy, 5, vl);
+                mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
+                my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
             }
             auto ix0 = __riscv_vsub(ix1, 1, vl), iy0 = __riscv_vsub(iy1, 1, vl);
             auto ix2 = __riscv_vadd(ix1, 1, vl), iy2 = __riscv_vadd(iy1, 1, vl);
@@ -404,12 +404,12 @@ static inline int remap32fLanczos4(int start, int end, const uchar *src_data, si
             }
             else
             {
-                int rd;
-                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=&vr"(ix3), "=&vr"(iy3)
-                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
-                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix3, vl), vl);
-                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy3, vl), vl);
+                auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                ix3 = __riscv_vsra(imx, 5, vl);
+                iy3 = __riscv_vsra(imy, 5, vl);
+                mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
+                my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
             }
             auto ix0 = __riscv_vsub(ix3, 3, vl), iy0 = __riscv_vsub(iy3, 3, vl);
             auto ix1 = __riscv_vsub(ix3, 2, vl), iy1 = __riscv_vsub(iy3, 2, vl);
@@ -598,12 +598,13 @@ static inline int remap32fC3(int start, int end, const uchar *src_data, size_t s
             }
             else
             {
-                vint32m2_t ix0, iy0;
-                int rd;
-                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
-                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+                auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                auto ix0 = __riscv_vsra(imx, 5, vl);
+                auto iy0 = __riscv_vsra(imy, 5, vl);
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
+                my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
 
                 vfloat32m2_t v00, v10, v20;
                 vfloat32m2_t v01, v11, v21;
@@ -627,8 +628,6 @@ static inline int remap32fC3(int start, int end, const uchar *src_data, size_t s
                 v13 = __riscv_vfcvt_f(__riscv_vzext_vf4(src1, vl), vl);
                 v23 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
 
-                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
-                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
                 v00 = __riscv_vfmacc(v00, mx, __riscv_vfsub(v01, v00, vl), vl);
                 v02 = __riscv_vfmacc(v02, mx, __riscv_vfsub(v03, v02, vl), vl);
                 v00 = __riscv_vfmacc(v00, my, __riscv_vfsub(v02, v00, vl), vl);
@@ -710,12 +709,13 @@ static inline int remap32fC4(int start, int end, const uchar *src_data, size_t s
             }
             else
             {
-                vint32m2_t ix0, iy0;
-                int rd;
-                asm volatile("fsrmi %0, 2 \n\t vsetvli zero,%3,e32,m2,ta,ma \n\t vfcvt.x.f.v %1,%4 \n\t vfcvt.x.f.v %2,%5 \n\t fsrm %0"
-                             : "=&r"(rd), "=&vr"(ix0), "=&vr"(iy0)
-                             : "r"(vl), "vr"(mx), "vr"(my)); // Rounding Mode: RDN
+                auto imx = __riscv_vfcvt_x(__riscv_vfmul(mx, 32, vl), vl);
+                auto imy = __riscv_vfcvt_x(__riscv_vfmul(my, 32, vl), vl);
+                auto ix0 = __riscv_vsra(imx, 5, vl);
+                auto iy0 = __riscv_vsra(imy, 5, vl);
                 auto ix1 = __riscv_vadd(ix0, 1, vl), iy1 = __riscv_vadd(iy0, 1, vl);
+                mx = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imx, 31, vl), vl), 32, vl);
+                my = __riscv_vfdiv(__riscv_vfcvt_f(__riscv_vand(imy, 31, vl), vl), 32, vl);
 
                 vfloat32m2_t v00, v10, v20, v30;
                 vfloat32m2_t v01, v11, v21, v31;
@@ -743,8 +743,6 @@ static inline int remap32fC4(int start, int end, const uchar *src_data, size_t s
                 v23 = __riscv_vfcvt_f(__riscv_vzext_vf4(src2, vl), vl);
                 v33 = __riscv_vfcvt_f(__riscv_vzext_vf4(src3, vl), vl);
 
-                mx = __riscv_vfsub(mx, __riscv_vfcvt_f(ix0, vl), vl);
-                my = __riscv_vfsub(my, __riscv_vfcvt_f(iy0, vl), vl);
                 v00 = __riscv_vfmacc(v00, mx, __riscv_vfsub(v01, v00, vl), vl);
                 v02 = __riscv_vfmacc(v02, mx, __riscv_vfsub(v03, v02, vl), vl);
                 v00 = __riscv_vfmacc(v00, my, __riscv_vfsub(v02, v00, vl), vl);

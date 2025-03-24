@@ -231,7 +231,7 @@ void CV_ImageWarpBaseTest::run(int)
 float CV_ImageWarpBaseTest::get_success_error_level(int _interpolation, int) const
 {
     if (_interpolation == INTER_CUBIC)
-        return 6.0f;
+        return 1.0f;
     else if (_interpolation == INTER_LANCZOS4)
         return 1.0f;
     else if (_interpolation == INTER_NEAREST)
