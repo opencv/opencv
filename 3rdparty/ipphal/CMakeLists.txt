@@ -7,7 +7,9 @@ set(IPP_HAL_HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/include/ipp_hal_core.hpp"
   CACHE INTERNAL "")
 
-add_library(ipphal STATIC "${CMAKE_CURRENT_SOURCE_DIR}/src/mean_ipp.cpp")
+add_library(ipphal STATIC
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/mean_ipp.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/src/norm_ipp.cpp")
 
 if(HAVE_IPP_ICV)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_ICV)
