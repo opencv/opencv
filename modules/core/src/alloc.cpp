@@ -54,8 +54,7 @@
 
 //#define OPENCV_ALLOC_ENABLE_STATISTICS
 
-
-#ifdef HAVE_POSIX_MEMALIGN
+#if defined(HAVE_POSIX_MEMALIGN) || (__cplusplus >= 201703L)
 #include <stdlib.h>
 #elif defined HAVE_MALLOC_H
 #include <malloc.h>
@@ -130,6 +129,15 @@ void* fastMalloc_(size_t size)
 void* fastMalloc(size_t size)
 #endif
 {
+#if __cplusplus >= 201703L
+    if (isAlignedAllocationEnabled())
+    {
+        void* ptr = std::aligned_alloc(size, CV_MALLOC_ALIGN);
+        if(!ptr)
+            return OutOfMemoryError(size);
+        return ptr;
+    }
+#endif
 #ifdef HAVE_POSIX_MEMALIGN
     if (isAlignedAllocationEnabled())
     {
@@ -172,7 +180,7 @@ void fastFree_(void* ptr)
 void fastFree(void* ptr)
 #endif
 {
-#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN
+#if defined HAVE_POSIX_MEMALIGN || defined HAVE_MEMALIGN || (__cplusplus >= 201703L)
     if (isAlignedAllocationEnabled())
     {
         free(ptr);
