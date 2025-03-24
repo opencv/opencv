@@ -953,4 +953,63 @@ inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestP
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
 
+TEST(videoio_ffmpeg, write_colorless_images) {
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const std::string filename = "grayscale_video.mp4";
+    const Mat frame(480, 640, CV_8UC3, Scalar(255, 0, 0)); // 3 channels (BGR)
+    const double fps = 30.0;
+    const bool isColor = false; // encoder will work with grayscale frames
+
+    VideoWriter writer(filename, VideoWriter::fourcc('m', 'p', '4', 'v'), fps, frame.size(), isColor);
+
+    ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer";
+
+    for (int i = 1; i <= 90; i++)
+    {
+        // write converts input to grayscale internally,
+        // as ffmpeg doesn't handle this conversion
+        writer.write(frame);
+    }
+
+    writer.release();
+
+    EXPECT_GT(getFileSize(filename), 0);
+
+    VideoCapture cap(filename, CAP_FFMPEG);
+    if (!cap.isOpened())
+        throw SkipTestException("Failed to open video file, stream not supported or invalid");
+
+    Mat readFrame;
+    int frameCount = 0;
+    while (cap.read(readFrame))
+    {
+        // check if grayscale conversion was successful
+        bool isGrayscale = true;
+        for (int y = 0; y < readFrame.rows; y++)
+        {
+            for (int x = 0; x < readFrame.cols; x++)
+            {
+                Vec3b pixel = readFrame.at<Vec3b>(y, x);
+                // all 3 channels (B, G, R) must have the same value for grayscale
+                if (pixel[0] != pixel[1] || pixel[1] != pixel[2]) {
+                    isGrayscale = false;
+                    break;
+                }
+            }
+            if (!isGrayscale)
+                break;
+        }
+
+        ASSERT_TRUE(isGrayscale) << "Frame is not grayscale";
+
+        frameCount++;
+    }
+
+    EXPECT_EQ(frameCount, 90);
+
+    std::remove(filename.c_str());
+}
+
 }} // namespace

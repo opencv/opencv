@@ -2143,6 +2143,7 @@ struct CvVideoWriter_FFMPEG
     bool writeHWFrame(cv::InputArray input);
     double getProperty(int propId) const;
     bool setProperty(int, double);
+    bool isColor();
 
     void init();
 
@@ -2640,14 +2641,16 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         }
         hw_frame->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
-        ret = ret_write >= 0 ? true : false;
+        // AVERROR(EAGAIN) means the encoder needs more input, not an error
+        ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
         av_frame_free(&hw_frame);
     } else
 #endif
     {
         picture->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, picture, frame_idx);
-        ret = ret_write >= 0 ? true : false;
+        // AVERROR(EAGAIN) means the encoder needs more input, not an error
+        ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
     }
 
     frame_idx++;
@@ -2729,6 +2732,11 @@ bool CvVideoWriter_FFMPEG::setProperty(int property_id, double value)
         return false;
     }
     return true;
+}
+
+bool CvVideoWriter_FFMPEG::isColor()
+{
+    return input_pix_fmt == AV_PIX_FMT_BGR24;
 }
 
 /// close video output stream and free associated memory
