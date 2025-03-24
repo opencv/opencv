@@ -392,6 +392,7 @@ bool GifDecoder::lzwDecode() {
             if (code < colorTableSize) {
                 imgCodeStream[idx++] = (uchar)code;
             } else {
+                if (idx + lzwExtraTable[code].length > width * height) return false;
                 for (int i = 0; i < lzwExtraTable[code].length - 1; i++) {
                     imgCodeStream[idx++] = lzwExtraTable[code].prefix[i];
                 }
