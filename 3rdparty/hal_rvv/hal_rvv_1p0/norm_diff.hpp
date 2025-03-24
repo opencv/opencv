@@ -1111,13 +1111,13 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
         },
     };
 
-    // [FIXME] append more when merging to 5.x
     static const size_t elem_size_tab[CV_DEPTH_MAX] = {
         sizeof(uchar),   sizeof(schar),
         sizeof(ushort),  sizeof(short),
         sizeof(int),     sizeof(float),
         sizeof(int64_t), 0,
     };
+    CV_ASSERT(elem_size_tab[depth]);
 
     bool src_continuous = (src1_step == width * elem_size_tab[depth] * cn || (src1_step != width * elem_size_tab[depth] * cn && height == 1));
     src_continuous &= (src2_step == width * elem_size_tab[depth] * cn || (src2_step != width * elem_size_tab[depth] * cn && height == 1));

@@ -1002,13 +1002,13 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
         },
     };
 
-    // [FIXME] append more when merging to 5.x
     static const size_t elem_size_tab[CV_DEPTH_MAX] = {
         sizeof(uchar),   sizeof(schar),
         sizeof(ushort),  sizeof(short),
         sizeof(int),     sizeof(float),
         sizeof(int64_t), 0,
     };
+    CV_ASSERT(elem_size_tab[depth]);
 
     bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
     bool mask_continuous = (mask_step == width);
