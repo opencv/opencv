@@ -1008,7 +1008,7 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
         sizeof(int),     sizeof(float),
         sizeof(int64_t), 0,
     };
-    assert(elem_size_tab[depth]);
+    CV_Assert(elem_size_tab[depth]);
 
     bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
     bool mask_continuous = (mask_step == width);
