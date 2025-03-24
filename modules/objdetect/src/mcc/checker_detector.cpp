@@ -251,7 +251,7 @@ bool CCheckerDetectorImpl::
 {
     m_checkers.clear();
 
-    if (this->net.empty())
+    if (this->net.empty() || !m_useNet)
     {
         return _no_net_process(image, nc, regionsOfInterest);
     }
@@ -482,7 +482,7 @@ bool CCheckerDetectorImpl::
                    nc);
 }
 
-void CCheckerDetectorImpl::setExtraParams(const DetectorParametersMCC &params)
+void CCheckerDetectorImpl::setDetectionParams(const DetectorParametersMCC &params)
 {
     this->m_params = params;
 }
@@ -490,6 +490,26 @@ void CCheckerDetectorImpl::setExtraParams(const DetectorParametersMCC &params)
 void CCheckerDetectorImpl::setColorChartType(ColorChart chartType)
 {
     this->m_chartType = chartType;
+}
+
+void CCheckerDetectorImpl::setUseNet(bool useNet)
+{
+    this->m_useNet = useNet;
+}
+
+bool CCheckerDetectorImpl::getUseNet() const
+{
+    return m_useNet;
+}
+
+const DetectorParametersMCC& CCheckerDetectorImpl::getDetectionParams() const
+{
+    return m_params;
+}
+
+ColorChart CCheckerDetectorImpl::getColorChartType() const
+{
+    return m_chartType;
 }
 
 void CCheckerDetectorImpl::

@@ -98,6 +98,7 @@ def main(func_args=None):
 
         detector = cv.mcc_CCheckerDetector.create(net)
         print("Detecting checkers using neural network.")
+        detector.setUseNet(True); #To use neural network this parameters needs to be True. (default: False)
     else:
         detector = cv.mcc_CCheckerDetector.create()
         print("Detecting checkers using default method (no DNN).")

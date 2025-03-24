@@ -253,25 +253,44 @@ public:
     CV_WRAP static Ptr<CCheckerDetector> create(const dnn::Net &net);
 
     /** @brief Draws the checker to the given image.
-     * @param img image in color space BGR
-
-    * @param checkers The checkers which will be drawn by this object.
-    * @param color The color by with which the squares of the checker
-    *         will be drawn
-    * @param thickness The thickness with which the sqaures will be
-    *         drawn
+        * @param img image in color space BGR
+        * @param checkers The checkers which will be drawn by this object.
+        * @param color The color by with which the squares of the checker
+        *         will be drawn
+        * @param thickness The thickness with which the sqaures will be
+        *         drawn
     */
 
     CV_WRAP virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const Scalar color = CV_RGB(0,250,0), const int thickness = 2) = 0;
 
-    /** @brief Gets the reference color for mentioned chart.
+    /** @brief Gets the reference color for chart.
     */
 
     CV_WRAP virtual Mat getRefColors() = 0;
 
-    CV_WRAP virtual void setExtraParams(const DetectorParametersMCC &params) = 0;
+    /** @brief Sets the detection paramaters for mcc.
+        * @param params DetectorParametersMCC structure containing detection configuration parameters.
+    */
+
+    CV_WRAP virtual void setDetectionParams(const DetectorParametersMCC &params) = 0;
+
+    /** @brief Sets the color chart type for MCC detection.
+        * @param chartType ColorChart enum specifying the type of color chart to detect.
+    */
 
     CV_WRAP virtual void setColorChartType(ColorChart chartType) = 0;
+
+    /** @brief Enables or disables the use of the neural network for detection.
+        * @param useNet Boolean flag to indicate whether to use neural network (true) or not (false).
+    */
+
+    CV_WRAP virtual void setUseNet(bool useNet) = 0;
+
+    CV_WRAP virtual bool getUseNet() const = 0;
+
+    CV_WRAP virtual const DetectorParametersMCC& getDetectionParams() const = 0;
+
+    CV_WRAP virtual ColorChart getColorChartType() const = 0;
 };
 
 //! @} mcc

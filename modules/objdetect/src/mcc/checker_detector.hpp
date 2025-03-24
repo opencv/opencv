@@ -68,9 +68,17 @@ public:
     }
     virtual Mat getRefColors() CV_OVERRIDE;
 
-    virtual void setExtraParams(const DetectorParametersMCC &params) CV_OVERRIDE;
+    virtual void setDetectionParams(const DetectorParametersMCC &params) CV_OVERRIDE;
 
     virtual void setColorChartType(ColorChart chartType) CV_OVERRIDE;
+
+    virtual void setUseNet(bool useNet) CV_OVERRIDE;
+
+    virtual bool getUseNet() const CV_OVERRIDE;
+
+    virtual const DetectorParametersMCC& getDetectionParams() const CV_OVERRIDE;
+
+    virtual ColorChart getColorChartType() const CV_OVERRIDE;
 
     virtual void draw(std::vector<Ptr<CChecker>>& checkers, InputOutputArray img, const Scalar color = CV_RGB(0,250,0), const int thickness = 2) CV_OVERRIDE;
 
@@ -159,6 +167,7 @@ protected:
     dnn::Net net;
     DetectorParametersMCC m_params = DetectorParametersMCC();
     ColorChart m_chartType;
+    bool m_useNet = false;
 
 private: // methods aux
     void get_subbox_chart_physical(
