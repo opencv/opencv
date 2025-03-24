@@ -4160,7 +4160,11 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 /** @brief Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
-specified point set. Developer should keep in mind that the returned RotatedRect can contain negative
+specified point set. The angle of rotation represents the angle between the line connecting the starting 
+and ending points (based on the clockwise order with greatest index for the corner with greatest \f$y\f$)
+and the horizontal axis. This angle always falls between \f$[-90, 0)\f$ because, if the object 
+rotates more than a rect angle, the next edge is used to measure the angle. The starting and ending points change 
+as the object rotates.Developer should keep in mind that the returned RotatedRect can contain negative
 indices when data is close to the containing Mat element boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
