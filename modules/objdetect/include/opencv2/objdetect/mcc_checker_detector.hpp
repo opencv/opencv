@@ -281,12 +281,12 @@ public:
     CV_WRAP virtual void setColorChartType(ColorChart chartType) = 0;
 
     /** @brief Enables or disables the use of the neural network for detection.
-        * @param useNet Boolean flag to indicate whether to use neural network (true) or not (false).
+        * @param useDnn Boolean flag to indicate whether to use neural network (true) or not (false).
     */
 
-    CV_WRAP virtual void setUseNet(bool useNet) = 0;
+    CV_WRAP virtual void setUseDnnModel(bool useDnn) = 0;
 
-    CV_WRAP virtual bool getUseNet() const = 0;
+    CV_WRAP virtual bool getUseDnnModel() const = 0;
 
     CV_WRAP virtual const DetectorParametersMCC& getDetectionParams() const = 0;
 

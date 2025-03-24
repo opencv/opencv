@@ -114,7 +114,6 @@ int main(int argc, char *argv[])
         net.setPreferableTarget(getTargetID(target));
 
         detector = CCheckerDetector::create(net);
-        detector->setUseNet(true); //To use neural network this parameters needs to be true. (default: false)
         cout<<"Detecting checkers using neural network."<<endl;
     }
     else{

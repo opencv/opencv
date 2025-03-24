@@ -72,9 +72,9 @@ public:
 
     virtual void setColorChartType(ColorChart chartType) CV_OVERRIDE;
 
-    virtual void setUseNet(bool useNet) CV_OVERRIDE;
+    virtual void setUseDnnModel(bool useDnn) CV_OVERRIDE;
 
-    virtual bool getUseNet() const CV_OVERRIDE;
+    virtual bool getUseDnnModel() const CV_OVERRIDE;
 
     virtual const DetectorParametersMCC& getDetectionParams() const CV_OVERRIDE;
 
@@ -167,7 +167,7 @@ protected:
     dnn::Net net;
     DetectorParametersMCC m_params = DetectorParametersMCC();
     ColorChart m_chartType;
-    bool m_useNet = false;
+    bool m_useDnn = true;
 
 private: // methods aux
     void get_subbox_chart_physical(

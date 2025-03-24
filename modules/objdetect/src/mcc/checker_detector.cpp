@@ -251,7 +251,7 @@ bool CCheckerDetectorImpl::
 {
     m_checkers.clear();
 
-    if (this->net.empty() || !m_useNet)
+    if (this->net.empty() || !m_useDnn)
     {
         return _no_net_process(image, nc, regionsOfInterest);
     }
@@ -492,14 +492,14 @@ void CCheckerDetectorImpl::setColorChartType(ColorChart chartType)
     this->m_chartType = chartType;
 }
 
-void CCheckerDetectorImpl::setUseNet(bool useNet)
+void CCheckerDetectorImpl::setUseDnnModel(bool useDnn)
 {
-    this->m_useNet = useNet;
+    this->m_useDnn = useDnn;
 }
 
-bool CCheckerDetectorImpl::getUseNet() const
+bool CCheckerDetectorImpl::getUseDnnModel() const
 {
-    return m_useNet;
+    return m_useDnn;
 }
 
 const DetectorParametersMCC& CCheckerDetectorImpl::getDetectionParams() const
