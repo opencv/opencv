@@ -209,9 +209,27 @@ public:
         eps[SOLVEPNP_AP3P] = 1.0e-2;
         eps[SOLVEPNP_DLS] = 1.0e-2;
         eps[SOLVEPNP_UPNP] = 1.0e-2;
+        eps[SOLVEPNP_IPPE] = 1.0e-2;
+        eps[SOLVEPNP_IPPE_SQUARE] = 1.0e-2;
         eps[SOLVEPNP_SQPNP] = 1.0e-2;
-        totalTestsCount = 10;
-        pointsCount = 500;
+
+        totalTestsCount = 1000;
+
+        if (planar || planarTag)
+        {
+            if (planarTag)
+            {
+                pointsCount = 4;
+            }
+            else
+            {
+                pointsCount = 30;
+            }
+        }
+        else
+        {
+            pointsCount = 500;
+        }
     }
     ~CV_solvePnPRansac_Test() {}
 protected:
@@ -320,17 +338,20 @@ protected:
         vector<Point2f> projectedPoints;
         projectedPoints.resize(points.size());
         projectPoints(points, trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
+
+        size_t numOutliers = 0;
         for (size_t i = 0; i < projectedPoints.size(); i++)
         {
-            if (i % 20 == 0)
+            if (!planarTag && rng.uniform(0., 1.) > 0.95)
             {
                 projectedPoints[i] = projectedPoints[rng.uniform(0,(int)points.size()-1)];
+                numOutliers++;
             }
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, pointsCount, 0.5f, 0.99, inliers, method);
 
-        bool isTestSuccess = inliers.size() >= points.size()*0.95;
+        bool isTestSuccess = inliers.size() + numOutliers >= points.size();
 
         double rvecDiff = cvtest::norm(rvec, trueRvec, NORM_L2), tvecDiff = cvtest::norm(tvec, trueTvec, NORM_L2);
         isTestSuccess = isTestSuccess && rvecDiff < eps[method] && tvecDiff < eps[method];
@@ -703,6 +724,8 @@ protected:
 
 TEST(Calib3d_SolveP3P, accuracy) { CV_solveP3P_Test test; test.safe_run();}
 TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy_planar) { CV_solvePnPRansac_Test test(true); test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy_planar_tag) { CV_solvePnPRansac_Test test(true, true); test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy_planar) { CV_solvePnP_Test test(true); test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy_planar_tag) { CV_solvePnP_Test test(true, true); test.safe_run(); }
