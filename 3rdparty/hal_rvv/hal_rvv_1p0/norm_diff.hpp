@@ -1117,7 +1117,7 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
         sizeof(int),     sizeof(float),
         sizeof(int64_t), 0,
     };
-    CV_ASSERT(elem_size_tab[depth]);
+    assert(elem_size_tab[depth]);
 
     bool src_continuous = (src1_step == width * elem_size_tab[depth] * cn || (src1_step != width * elem_size_tab[depth] * cn && height == 1));
     src_continuous &= (src2_step == width * elem_size_tab[depth] * cn || (src2_step != width * elem_size_tab[depth] * cn && height == 1));
