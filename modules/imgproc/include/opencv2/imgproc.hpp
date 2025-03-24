@@ -4169,7 +4169,9 @@ CV_EXPORTS_W RotatedRect minAreaRect( InputArray points );
 
 /** @brief Finds the four vertices of a rotated rect. Useful to draw the rotated rectangle.
 
-The function finds the four vertices of a rotated rectangle. This function is useful to draw the
+The function finds the four vertices of a rotated rectangle. The four vertices are returned 
+in clockwise order starting from the point with greatest \f$y\f$. If two points have the 
+same \f$y\f$ coordinate the rightmost is the starting point. This function is useful to draw the
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 
