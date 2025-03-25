@@ -166,7 +166,7 @@ struct NormL1_RVV<uchar, int> {
         for (int i = 0; i < n; i += vl) {
             vl = __riscv_vsetvl_e8m8(n - i);
             auto v = __riscv_vle8_v_u8m8(src + i, vl);
-            s = __riscv_vwredsumu(__riscv_vwredsumu_tu(zero, v, zero, vl), s, vl);
+            s = __riscv_vwredsumu(__riscv_vwredsumu_tu(zero, v, zero, vl), s, __riscv_vsetvlmax_e16m1());
         }
         return __riscv_vmv_x(s);
     }
@@ -181,7 +181,7 @@ struct NormL1_RVV<schar, int> {
         for (int i = 0; i < n; i += vl) {
             vl = __riscv_vsetvl_e8m8(n - i);
             auto v = custom_intrin::__riscv_vabs(__riscv_vle8_v_i8m8(src + i, vl), vl);
-            s = __riscv_vwredsumu(__riscv_vwredsumu_tu(zero, v, zero, vl), s, vl);
+            s = __riscv_vwredsumu(__riscv_vwredsumu_tu(zero, v, zero, vl), s, __riscv_vsetvlmax_e16m1());
         }
         return __riscv_vmv_x(s);
     }
@@ -1013,6 +1013,7 @@ inline int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mas
         sizeof(uint64_t),   sizeof(int64_t),
         sizeof(unsigned),   0,
     };
+    CV_Assert(elem_size_tab[depth]);
 
     bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
     bool mask_continuous = (mask_step == width);
