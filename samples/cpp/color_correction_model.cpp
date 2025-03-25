@@ -14,8 +14,8 @@ using namespace ccm;
 const char *about = "Color correction sample";
 const char *keys =
     "{ help h  |                                                     | show this message }"
-    "{ f       |   opencv_extra/testdata/cv/mcc/mcc_ccm_test.jpg     | Path of the image file to process }"
-    "{ c       |             samples/cpp/src_color.txt               | Path to the txt file containing color values }";
+    "{ input   |   opencv_extra/testdata/cv/mcc/mcc_ccm_test.jpg     | Path of the image file to process }"
+    "{ colors  |             samples/data/ccm_test_data.txt               | Path to the txt file containing color values }";
 
 int main(int argc, char *argv[])
 {
@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    string filepath = parser.get<string>("f");
-    string colorFile = parser.get<string>("c");
+    string filepath = parser.get<string>("input");
+    string colorFile = parser.get<string>("colors");
 
     if (!parser.check())
     {
