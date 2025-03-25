@@ -760,7 +760,7 @@ bool CvCaptureCAM_V4L::initCapture()
     FirstCapture = true;
 
     return true;
-};
+}
 
 bool CvCaptureCAM_V4L::requestBuffers()
 {
