@@ -25,7 +25,8 @@ void runCCheckerDetectorBasic(std::string image_name, ColorChart chartType)
     cv::Mat img = imread(path);
     ASSERT_FALSE(img.empty()) << "Test image can't be loaded: " << path;
 
-    ASSERT_TRUE(detector->process(img, chartType));
+    detector->setColorChartType(chartType);
+    ASSERT_TRUE(detector->process(img));
 }
 TEST(CV_mccRunCCheckerDetectorBasic, accuracy_SG140)
 {
