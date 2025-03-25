@@ -180,6 +180,41 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 }
 
 template<> void
+copyMask_<Vec3b>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const uchar* src = (const uchar*)_src;
+        uchar* dst = (uchar*)_dst;
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for( ; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
+        {
+            v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+
+            v_uint8 v_src0, v_src1, v_src2;
+            v_uint8 v_dst0, v_dst1, v_dst2;
+            v_load_deinterleave(src + 3 * x, v_src0, v_src1, v_src2);
+            v_load_deinterleave(dst + 3 * x, v_dst0, v_dst1, v_dst2);
+
+            v_dst0 = v_select(v_nmask, v_dst0, v_src0);
+            v_dst1 = v_select(v_nmask, v_dst1, v_src1);
+            v_dst2 = v_select(v_nmask, v_dst2, v_src2);
+
+            v_store_interleave(dst + 3 * x, v_dst0, v_dst1, v_dst2);
+        }
+        vx_cleanup();
+#endif
+        for( ; x < size.width; x++ )
+            if( mask[x] ) {
+                dst[3 * x] = src[3 * x];
+                dst[3 * x + 1] = src[3 * x + 1];
+                dst[3 * x + 2] = src[3 * x + 2];
+            }
+    }
+}
+
+template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_16u_C1MR, (const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
