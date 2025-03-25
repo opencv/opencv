@@ -36,7 +36,8 @@ inputElement.addEventListener('change', (e) => {
     imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 
-imgElement.onload = function() {
+imgElement.onload = async function() {
+    cv = (cv instanceof Promise) ? await cv : cv;
     let mat = cv.imread(imgElement);
     cv.imshow('canvasOutput', mat);
     mat.delete();
