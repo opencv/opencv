@@ -216,6 +216,47 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
     }
 }
 
+template<> void
+copyMask_<int>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const int* src = (const int*)_src;
+        int* dst = (int*)_dst;
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for (; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
+        {
+            v_int32 v_src0 = vx_load(src + x), v_dst0 = vx_load(dst + x);
+            v_int32 v_src1 = vx_load(src + x +     VTraits<v_int32>::vlanes()), v_dst1 = vx_load(dst + x +     VTraits<v_int32>::vlanes());
+            v_int32 v_src2 = vx_load(src + x + 2 * VTraits<v_int32>::vlanes()), v_dst2 = vx_load(dst + x + 2 * VTraits<v_int32>::vlanes());
+            v_int32 v_src3 = vx_load(src + x + 3 * VTraits<v_int32>::vlanes()), v_dst3 = vx_load(dst + x + 3 * VTraits<v_int32>::vlanes());
+
+            v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+            v_uint8 v_nmask0, v_nmask1;
+            v_zip(v_nmask, v_nmask, v_nmask0, v_nmask1);
+            v_uint8 v_nmask00, v_nmask01, v_nmask10, v_nmask11;
+            v_zip(v_nmask0, v_nmask0, v_nmask00, v_nmask01);
+            v_zip(v_nmask1, v_nmask1, v_nmask10, v_nmask11);
+
+            v_dst0 = v_select(v_reinterpret_as_s32(v_nmask00), v_dst0, v_src0);
+            v_dst1 = v_select(v_reinterpret_as_s32(v_nmask01), v_dst1, v_src1);
+            v_dst2 = v_select(v_reinterpret_as_s32(v_nmask10), v_dst2, v_src2);
+            v_dst3 = v_select(v_reinterpret_as_s32(v_nmask11), v_dst3, v_src3);
+
+            vx_store(dst + x, v_dst0);
+            vx_store(dst + x +     VTraits<v_int32>::vlanes(), v_dst1);
+            vx_store(dst + x + 2 * VTraits<v_int32>::vlanes(), v_dst2);
+            vx_store(dst + x + 3 * VTraits<v_int32>::vlanes(), v_dst3);
+        }
+        vx_cleanup();
+#endif
+        for (; x < size.width; x++)
+            if ( mask[x] )
+                dst[x] = src[x];
+    }
+}
+
 static void
 copyMaskGeneric(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size, void* _esz)
 {
