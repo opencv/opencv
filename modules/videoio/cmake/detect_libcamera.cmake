@@ -1,0 +1,15 @@
+# --- libcamera ---
+if(NOT HAVE_LIBCAMERA AND PKG_CONFIG_FOUND)
+  ocv_check_modules(LIBCAMERA libcamera)
+
+  if(LIBCAMERA_FOUND)
+    set(HAVE_LIBCAMERA TRUE)
+    set(LIBCAMERA_VERSION ${LIBCAMERA_VERSION})
+    set(LIBCAMERA_LIBRARIES ${LIBCAMERA_LIBRARIES})
+    set(LIBCAMERA_INCLUDE_DIRS ${LIBCAMERA_INCLUDE_DIRS})
+  endif()
+endif()
+
+if(HAVE_LIBCAMERA)
+  ocv_add_external_target(libcamera "${LIBCAMERA_INCLUDE_DIRS}" "${LIBCAMERA_LIBRARIES}" "HAVE_LIBCAMERA")
+endif()
