@@ -11,7 +11,7 @@
 
 #include "operations.hpp"
 #include "io.hpp"
-#include "opencv2/ccm.hpp"
+#include "opencv2/photo.hpp"
 
 namespace cv {
 namespace ccm {

@@ -10,7 +10,7 @@
 #define __OPENCV_CCM_DISTANCE_HPP__
 
 #include "utils.hpp"
-#include "opencv2/ccm.hpp"
+#include "opencv2/photo.hpp"
 
 namespace cv {
 namespace ccm {
@@ -72,7 +72,7 @@ double deltaCMC1To1(const Vec3d& lab1, const Vec3d& lab2);
 
 double deltaCMC2To1(const Vec3d& lab1, const Vec3d& lab2);
 
-Mat distance(Mat src,Mat ref, DISTANCE_TYPE distance_type);
+Mat distance(Mat src,Mat ref, DistanceType distanceType);
 
 }
 }  // namespace cv::ccm

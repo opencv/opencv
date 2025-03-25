@@ -82,12 +82,12 @@ Mat Color::toLuminant(IO io, CAM method, bool save)
     return channel(this->to(lab, method, save).colors, 0);
 }
 
-Mat Color::diff(Color& other, DISTANCE_TYPE method)
+Mat Color::diff(Color& other, DistanceType method)
 {
     return diff(other, cs.io, method);
 }
 
-Mat Color::diff(Color& other, IO io, DISTANCE_TYPE method)
+Mat Color::diff(Color& other, IO io, DistanceType method)
 {
     Lab lab = *Lab::get(io);
     switch (method)
@@ -149,7 +149,7 @@ Mat GetColor::getColorCheckerMask(const uchar* checker, int row)
     return res;
 }
 
-std::shared_ptr<Color> GetColor::getColor(CONST_COLOR const_color)
+std::shared_ptr<Color> GetColor::getColor(ColorCheckerType const_color)
 {
 
     /** @brief Data is from https://www.imatest.com/wp-content/uploads/2011/11/Lab-data-Iluminate-D65-D50-spectro.xls

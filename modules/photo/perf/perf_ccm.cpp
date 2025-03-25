@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "perf_precomp.hpp"
-#include "opencv2/ccm.hpp"
+#include "opencv2/photo.hpp"
 
 namespace opencv_test
 {

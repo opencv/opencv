@@ -174,9 +174,9 @@ double deltaCMC2To1(const Vec3d& lab1, const Vec3d& lab2)
     return deltaCMC(lab1, lab2, 2, 1);
 }
 
-Mat distance(Mat src, Mat ref, DISTANCE_TYPE distance_type)
+Mat distance(Mat src, Mat ref, DistanceType distanceType)
 {
-    switch (distance_type)
+    switch (distanceType)
     {
     case cv::ccm::DISTANCE_CIE76:
         return distanceWise(src, ref, deltaCIE76);
@@ -195,7 +195,7 @@ Mat distance(Mat src, Mat ref, DISTANCE_TYPE distance_type)
     case cv::ccm::DISTANCE_RGBL:
         return distanceWise(src, ref, deltaCIE76);
     default:
-        CV_Error(Error::StsBadArg, "Wrong distance_type!" );
+        CV_Error(Error::StsBadArg, "Wrong distanceType!" );
         break;
     }
 };

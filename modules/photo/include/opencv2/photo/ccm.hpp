@@ -23,7 +23,7 @@ namespace ccm
 
 /** @brief Enum of the possible types of ccm.
 */
-enum CCM_TYPE
+enum CCMType
 {
     CCM_LINEAR,   ///< Uses a \f$3\times3\f$ matrix to linearly transform RGB values without offsets.
     CCM_AFFINE,   ///< Uses a \f$4\times3\f$ matrix to affine transform RGB values with both scaling and offset terms.
@@ -31,7 +31,7 @@ enum CCM_TYPE
 
 /** @brief Enum of the possible types of initial method.
 */
-enum INITIAL_METHOD_TYPE
+enum InitialMethodType
 {
     INITIAL_METHOD_WHITE_BALANCE,      ///< The white balance method. The initial value is:\n
                         /// \f$
@@ -52,7 +52,7 @@ enum INITIAL_METHOD_TYPE
 };
 /** @brief  Macbeth and Vinyl ColorChecker with 2deg D50
 */
-enum CONST_COLOR {
+enum ColorCheckerType {
     COLORCHECKER_Macbeth,                ///< Macbeth ColorChecker
     COLORCHECKER_Vinyl,                  ///< DKK ColorChecker
     COLORCHECKER_DigitalSG,              ///< DigitalSG ColorChecker with 140 squares
@@ -102,7 +102,7 @@ enum COLOR_SPACE {
 
 /** @brief Linearization transformation type
 */
-enum LINEAR_TYPE
+enum LinearType
 {
 
     LINEARIZATION_IDENTITY,                  ///<no change is made
@@ -117,7 +117,7 @@ enum LINEAR_TYPE
 
 See https://en.wikipedia.org/wiki/Color_difference for details
 */
-enum DISTANCE_TYPE
+enum DistanceType
 {
     DISTANCE_CIE76,                      ///<The 1976 formula is the first formula that related a measured color difference to a known set of CIELAB coordinates.
     DISTANCE_CIE94_GRAPHIC_ARTS,         ///<The 1976 definition was extended to address perceptual non-uniformities.
@@ -147,7 +147,7 @@ public:
                     the color type is RGB not BGR, and the color values are in [0, 1];
         @param constcolor the Built-in color card
     */
-    CV_WRAP ColorCorrectionModel(const Mat& src, CONST_COLOR constcolor);
+    CV_WRAP ColorCorrectionModel(const Mat& src, ColorCheckerType constcolor);
 
     /** @brief Color Correction Model
         @param src detected colors of ColorChecker patches;\n
@@ -184,23 +184,23 @@ public:
     */
     CV_WRAP void setColorSpace(COLOR_SPACE cs);
 
-    /** @brief set ccm_type
-    @param ccm_type the shape of color correction matrix(CCM);\n
+    /** @brief set ccmType
+    @param ccmType the shape of color correction matrix(CCM);\n
                     default: @ref CCM_LINEAR
     */
-    CV_WRAP void setCCMType(CCM_TYPE ccm_type);
+    CV_WRAP void setCCMType(CCMType ccmType);
 
     /** @brief set Distance
     @param distance the type of color distance;\n
                     default: @ref DISTANCE_CIE2000
     */
-    CV_WRAP void setDistance(DISTANCE_TYPE distance);
+    CV_WRAP void setDistance(DistanceType distance);
 
     /** @brief set Linear
-    @param linear_type the method of linearization;\n
+    @param linearType the method of linearization;\n
                        default: @ref LINEARIZATION_GAMMA
     */
-    CV_WRAP void setLinear(LINEAR_TYPE linear_type);
+    CV_WRAP void setLinear(LinearType linearType);
 
     /** @brief set Gamma
 
@@ -247,10 +247,10 @@ public:
     CV_WRAP void setWeightCoeff(const double& weights_coeff);
 
     /** @brief set InitialMethod
-    @param initial_method_type the method of calculating CCM initial value;\n
+    @param initialMethodType the method of calculating CCM initial value;\n
             default: INITIAL_METHOD_LEAST_SQUARE
     */
-    CV_WRAP void setInitialMethod(INITIAL_METHOD_TYPE initial_method_type);
+    CV_WRAP void setInitialMethod(InitialMethodType initialMethodType);
 
     /** @brief set MaxCount
     @param max_count used in MinProblemSolver-DownhillSolver;\n

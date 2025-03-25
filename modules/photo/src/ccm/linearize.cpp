@@ -77,10 +77,10 @@ Mat LinearGamma::linearize(Mat inp)
     return gammaCorrection(inp, gamma);
 };
 
-std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LINEAR_TYPE linear_type)
+std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LinearType linearType)
 {
     std::shared_ptr<Linear> p = std::make_shared<Linear>();
-    switch (linear_type)
+    switch (linearType)
     {
     case cv::ccm::LINEARIZATION_IDENTITY:
         p.reset(new LinearIdentity());
@@ -101,7 +101,7 @@ std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat
         p.reset(new LinearGray<LogPolyfit>(deg, src, dst, mask, cs));
         break;
     default:
-        CV_Error(Error::StsBadArg, "Wrong linear_type!" );
+        CV_Error(Error::StsBadArg, "Wrong linearType!" );
         break;
     }
     return p;

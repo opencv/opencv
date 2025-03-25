@@ -21,7 +21,7 @@ def main():
     try:
         with open(args.colors, 'r') as infile:
             lines = infile.readlines()
-    except Exception as e:
+    except Exception:
         print("Failed to open color values file!")
         return 1
 

@@ -12,7 +12,7 @@
 #include <opencv2/core.hpp>
 #include <map>
 #include "color.hpp"
-#include "opencv2/ccm.hpp"
+#include "opencv2/photo.hpp"
 namespace cv {
 namespace ccm {
 
@@ -179,10 +179,10 @@ public:
     @param dst the input array, type of cv::Mat.
     @param mask the input array, type of cv::Mat.
     @param cs type of RGBBase_.
-    @param linear_type type of linear.
+    @param linearType type of linear.
 */
 
-std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LINEAR_TYPE linear_type);
+std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LinearType linearType);
 
 }
 }  // namespace cv::ccm
