@@ -5,6 +5,7 @@
 #ifndef OPENCV_HAL_RVV_HPP_INCLUDED
 #define OPENCV_HAL_RVV_HPP_INCLUDED
 
+#include "opencv2/core/base.hpp"
 #include "opencv2/core/hal/interface.h"
 #include "opencv2/imgproc/hal/interface.h"
 
