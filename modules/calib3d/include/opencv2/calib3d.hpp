@@ -3347,7 +3347,6 @@ public:
 
 
 /**
- * @class StereoBM
  * @brief Class for computing stereo correspondence using the block matching algorithm, introduced and contributed to OpenCV by K. Konolige.
  * @details This class implements a block matching algorithm for stereo correspondence, which is used to compute disparity maps from stereo image pairs. It provides methods to fine-tune parameters such as pre-filtering, texture thresholds, uniqueness ratios, and regions of interest (ROIs) to optimize performance and accuracy.
  */
