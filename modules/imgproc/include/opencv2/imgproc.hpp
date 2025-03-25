@@ -4160,7 +4160,11 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 /** @brief Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
-specified point set. Developer should keep in mind that the returned RotatedRect can contain negative
+specified point set. The angle of rotation represents the angle between the line connecting the starting
+and ending points (based on the clockwise order with greatest index for the corner with greatest \f$y\f$)
+and the horizontal axis. This angle always falls between \f$[-90, 0)\f$ because, if the object
+rotates more than a rect angle, the next edge is used to measure the angle. The starting and ending points change
+as the object rotates.Developer should keep in mind that the returned RotatedRect can contain negative
 indices when data is close to the containing Mat element boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
@@ -4169,7 +4173,9 @@ CV_EXPORTS_W RotatedRect minAreaRect( InputArray points );
 
 /** @brief Finds the four vertices of a rotated rect. Useful to draw the rotated rectangle.
 
-The function finds the four vertices of a rotated rectangle. This function is useful to draw the
+The function finds the four vertices of a rotated rectangle. The four vertices are returned
+in clockwise order starting from the point with greatest \f$y\f$. If two points have the
+same \f$y\f$ coordinate the rightmost is the starting point. This function is useful to draw the
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 
