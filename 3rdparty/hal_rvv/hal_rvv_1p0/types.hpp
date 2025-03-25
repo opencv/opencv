@@ -91,10 +91,12 @@ using RVV_F64M2 = struct RVV<double, LMUL_2>;
 using RVV_F64M4 = struct RVV<double, LMUL_4>;
 using RVV_F64M8 = struct RVV<double, LMUL_8>;
 
-// Only for dst type lmul >= 1
 template <typename Dst_T, typename RVV_T>
 using RVV_SameLen =
-    RVV<Dst_T, RVV_LMUL(RVV_T::lmul * sizeof(Dst_T) / sizeof(typename RVV_T::ElemType))>;
+    RVV<Dst_T, RVV_LMUL(static_cast<int>((RVV_T::lmul <= 8 ? RVV_T::lmul * static_cast<float>(sizeof(Dst_T)) : RVV_T::lmul == 9 ? static_cast<float>(sizeof(Dst_T)) / 2 : RVV_T::lmul == 10 ? static_cast<float>(sizeof(Dst_T)) / 4 : static_cast<float>(sizeof(Dst_T)) / 8) / sizeof(typename RVV_T::ElemType) == 0.5   ? 9  : \
+                                         (RVV_T::lmul <= 8 ? RVV_T::lmul * static_cast<float>(sizeof(Dst_T)) : RVV_T::lmul == 9 ? static_cast<float>(sizeof(Dst_T)) / 2 : RVV_T::lmul == 10 ? static_cast<float>(sizeof(Dst_T)) / 4 : static_cast<float>(sizeof(Dst_T)) / 8) / sizeof(typename RVV_T::ElemType) == 0.25  ? 10 : \
+                                         (RVV_T::lmul <= 8 ? RVV_T::lmul * static_cast<float>(sizeof(Dst_T)) : RVV_T::lmul == 9 ? static_cast<float>(sizeof(Dst_T)) / 2 : RVV_T::lmul == 10 ? static_cast<float>(sizeof(Dst_T)) / 4 : static_cast<float>(sizeof(Dst_T)) / 8) / sizeof(typename RVV_T::ElemType) == 0.125 ? 11 : \
+                                         (RVV_T::lmul <= 8 ? RVV_T::lmul * static_cast<float>(sizeof(Dst_T)) : RVV_T::lmul == 9 ? static_cast<float>(sizeof(Dst_T)) / 2 : RVV_T::lmul == 10 ? static_cast<float>(sizeof(Dst_T)) / 4 : static_cast<float>(sizeof(Dst_T)) / 8) / sizeof(typename RVV_T::ElemType)))>;
 
 template <size_t DstSize> struct RVV_ToIntHelper;
 template <size_t DstSize> struct RVV_ToUintHelper;
