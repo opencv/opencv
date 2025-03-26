@@ -50,4 +50,18 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     EXPECT_EQ(trig_cnt, 105);
 }
 
+TEST(Imgproc_Subdiv2D, issue_25696) {
+    std::vector<cv::Point2f> points{
+        {0, 0}, {40, 40}, {84, 104}, {86, 108}
+    };
+
+    cv::Rect subdivRect{cv::Point{-10, -10}, cv::Point{96, 118}};
+    cv::Subdiv2D subdiv{subdivRect};
+    subdiv.insert(points);
+
+    std::vector<cv::Vec6f> triangles;
+    subdiv.getTriangleList(triangles);
+
+    ASSERT_EQ(triangles.size(), 2);
+}
 }}
