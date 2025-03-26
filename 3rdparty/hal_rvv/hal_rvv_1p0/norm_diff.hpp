@@ -1121,7 +1121,7 @@ inline int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size
 
     bool src_continuous = (src1_step == width * elem_size_tab[depth] * cn || (src1_step != width * elem_size_tab[depth] * cn && height == 1));
     src_continuous &= (src2_step == width * elem_size_tab[depth] * cn || (src2_step != width * elem_size_tab[depth] * cn && height == 1));
-    bool mask_continuous = (mask_step == width);
+    bool mask_continuous = (mask_step == static_cast<size_t>(width));
     size_t nplanes = 1;
     size_t size = width * height;
     if ((mask && (!src_continuous || !mask_continuous)) || !src_continuous) {

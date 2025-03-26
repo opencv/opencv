@@ -521,16 +521,7 @@ inline int sepFilter(cvhalFilter2D *context, uchar* src_data, size_t src_step, u
 
     uchar* _dst_data = dst_data;
     size_t _dst_step = dst_step;
-    size_t size = sizeof(char);
-    switch (data->dst_type)
-    {
-    case CV_16SC1:
-        size = sizeof(short);
-        break;
-    case CV_32FC1:
-        size = sizeof(float);
-        break;
-    }
+    const size_t size = CV_ELEM_SIZE(data->dst_type);
     std::vector<uchar> dst;
     if (src_data == _dst_data)
     {
@@ -2136,22 +2127,7 @@ inline int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, si
 
     uchar* _dst_data = dst_data;
     size_t _dst_step = dst_step;
-    size_t size = cn;
-    switch (dst_depth)
-    {
-    case CV_8U:
-    case CV_8S:
-        size *= sizeof(char);
-        break;
-    case CV_16U:
-    case CV_16S:
-        size *= sizeof(short);
-        break;
-    case CV_32F:
-    case CV_32S:
-        size *= sizeof(float);
-        break;
-    }
+    const size_t size = CV_ELEM_SIZE(dst_depth);
     std::vector<uchar> dst;
     if (src_data == _dst_data)
     {
