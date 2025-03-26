@@ -120,7 +120,16 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     FileStorage fs(xml_filename, FileStorage::READ);
     EXPECT_TRUE(fs.isOpened());
 
-    Mat src = imread(filename, IMREAD_UNCHANGED);
+    Mat src = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(src.empty());
+    src = imread(filename, IMREAD_COLOR);
+    ASSERT_FALSE(src.empty());
+    src = imread(filename, IMREAD_ANYDEPTH);
+    ASSERT_FALSE(src.empty());
+    src = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
+    ASSERT_FALSE(src.empty());
+
+    src = imread(filename, IMREAD_UNCHANGED);
     Mat gt;
     fs.getFirstTopLevelNode() >> gt;
 
