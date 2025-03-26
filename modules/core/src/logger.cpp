@@ -8,6 +8,7 @@
 #include <opencv2/core/utils/logger.hpp>
 #include "utils/logtagmanager.hpp"
 #include "utils/logtagconfigparser.hpp"
+#include "utils/logcallbackmanager.hpp"
 
 #include <sstream>
 #include <iostream>
@@ -41,9 +42,11 @@ public:
 
 public:
     LogTagManager logTagManager;
+    LogCallbackManager callbackManager;
 
     GlobalLoggingInitStruct()
         : logTagManager(m_defaultUnconfiguredGlobalLevel)
+        , callbackManager{}
     {
         (void)getInitializationMutex();  // ensure initialization of global objects
 
@@ -119,6 +122,12 @@ static LogTagManager& getLogTagManager()
     return logTagManagerInstance;
 }
 
+static LogCallbackManager& getLogCallbackManager()
+{
+    static LogCallbackManager& logCallbackManagerInstance = getGlobalLoggingInitStruct().callbackManager;
+    return logCallbackManagerInstance;
+}
+
 static LogLevel& getLogLevelVariable()
 {
     static LogLevel& refGlobalLogLevel = getGlobalLogTag()->level;
@@ -179,6 +188,126 @@ LogLevel getLogLevel()
     return internal::getLogLevelVariable();
 }
 
+void addLoggingCallback(LoggingCallbackPtrType callback)
+{
+    if (!callback)
+    {
+        return;
+    }
+    if (callback == &cv::utils::logging::internal::writeLogMessage)
+    {
+        // Prevent malicious use of causing infinite recursion
+        return;
+    }
+    LogCallbackManager& refCallbackManager = internal::getLogCallbackManager();
+    refCallbackManager.add(callback);
+}
+
+void addLoggingCallbackHandler(cv::Ptr<LoggingCallbackHandler> callback)
+{
+    if (!callback)
+    {
+        return;
+    }
+    LogCallbackManager& refCallbackManager = internal::getLogCallbackManager();
+    refCallbackManager.add(callback);
+}
+
+void removeLoggingCallback(LoggingCallbackPtrType callback)
+{
+    LogCallbackManager& refCallbackManager = internal::getLogCallbackManager();
+    refCallbackManager.remove(callback);
+}
+
+void removeLoggingCallbackHandler(cv::Ptr<LoggingCallbackHandler> callback)
+{
+    LogCallbackManager& refCallbackManager = internal::getLogCallbackManager();
+    refCallbackManager.remove(callback);
+}
+
+void removeAllLoggingCallbacks()
+{
+    LogCallbackManager& refCallbackManager = internal::getLogCallbackManager();
+    refCallbackManager.removeAll();
+}
+
+namespace /*unnamed*/
+{
+
+class LoggingCallbackHandlerFromFunction final
+    : public LoggingCallbackHandler
+{
+public:
+    LoggingCallbackHandlerFromFunction(std::function<void(LogLevel, const char*, const char*, int, const char*, const char*)> callback)
+        : m_callback(callback)
+    {
+    }
+
+    ~LoggingCallbackHandlerFromFunction() final
+    {
+    }
+
+    void operator()(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message) final
+    {
+        if (this->m_callback)
+        {
+            this->m_callback(logLevel, tag, file, line, func, message);
+        }
+    }
+
+private:
+    std::function<void(LogLevel, const char*, const char*, int, const char*, const char*)> m_callback;
+};
+
+class LoggingCallbackHandlerFromStaticFuncPtr final
+    : public LoggingCallbackHandler
+{
+public:
+    LoggingCallbackHandlerFromStaticFuncPtr(void (*callback)(LogLevel, const char*, const char*, int, const char*, const char*) )
+        : m_callback(callback)
+    {
+    }
+
+    ~LoggingCallbackHandlerFromStaticFuncPtr() final
+    {
+    }
+
+    void operator()(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message) final
+    {
+        auto callback = this->m_callback;
+        if (callback)
+        {
+            (*callback)(logLevel, tag, file, line, func, message);
+        }
+    }
+
+private:
+    void (*m_callback)(LogLevel, const char*, const char*, int, const char*, const char*);
+};
+
+} //unnamed
+
+cv::Ptr<LoggingCallbackHandler> LoggingCallbackHandler::createFromFunction(
+    std::function<void(LogLevel, const char*, const char*, int, const char*, const char*)> callback)
+{
+    /**
+     * @warning This allocation may leak - handlers don't get automatically removed from the callback manager at shutdown.
+     * @todo Check valgrand and update suppression.
+     */
+    return cv::makePtr<LoggingCallbackHandlerFromFunction>(callback);
+}
+
+cv::Ptr<LoggingCallbackHandler> LoggingCallbackHandler::createFromStaticFuncPtr(
+    void (*callback)(LogLevel, const char*, const char*, int, const char*, const char*) )
+{
+    /**
+     * @warning This allocation may leak - handlers don't get automatically removed from the callback manager at shutdown.
+     * @todo Check valgrand and update suppression.
+     */
+    return cv::makePtr<LoggingCallbackHandlerFromStaticFuncPtr>(callback);
+}
+
+
 namespace internal {
 
 static int getShowTimestampMode()
@@ -230,7 +359,21 @@ void writeLogMessage(LogLevel logLevel, const char* message)
     std::ostream* out = (logLevel <= LOG_LEVEL_WARNING) ? &std::cerr : &std::cout;
     (*out) << ss.str();
     if (logLevel <= LOG_LEVEL_WARNING)
+    {
         (*out) << std::flush;
+    }
+
+    LogCallbackManager& refCallbackManager = cv::utils::logging::internal::getLogCallbackManager();
+    std::vector<LoggingCallbackPtrType> callbacks;
+    callbacks.reserve(16u); // reserve some space to avoid reallocations; can grow if needed.
+    refCallbackManager.readInto(callbacks);
+    for (const auto& callback : callbacks)
+    {
+        if (callback)
+        {
+            (*callback)(logLevel, ss.str().c_str());
+        }
+    }
 }
 
 static const char* stripSourceFilePathPrefix(const char* file)
@@ -252,6 +395,18 @@ static const char* stripSourceFilePathPrefix(const char* file)
 
 void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message)
 {
+    LogCallbackManager& refCallbackManager = cv::utils::logging::internal::getLogCallbackManager();
+    std::vector<cv::Ptr<LoggingCallbackHandler>> handlers;
+    handlers.reserve(16u); // reserve some space to avoid reallocations; can grow if needed.
+    refCallbackManager.readInto(handlers);
+    for (const auto& handler : handlers)
+    {
+        if (handler)
+        {
+            handler->operator()(logLevel, tag, file, line, func, message);
+        }
+    }
+
     std::ostringstream strm;
     if (tag)
     {

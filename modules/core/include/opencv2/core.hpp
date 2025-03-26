@@ -74,6 +74,10 @@ performing mathematical computations, and managing memory efficiently within the
     @defgroup core_utils Utility and system functions and macros
     @{
         @defgroup core_logging Logging facilities
+        @{
+            @defgroup core_logging_callback_interface Logging callback interface
+            @defgroup core_logging_callback Logging callback registration
+        @}
         @defgroup core_utils_sse SSE utilities
         @defgroup core_utils_neon NEON utilities
         @defgroup core_utils_vsx VSX utilities

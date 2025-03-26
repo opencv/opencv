@@ -8,13 +8,107 @@
 #include <iostream>
 #include <sstream>
 #include <limits.h> // INT_MAX
+#include <functional>
 
+#include "opencv2/core/cvstd.hpp"
 #include "logger.defines.hpp"
 #include "logtag.hpp"
 
 namespace cv {
 namespace utils {
 namespace logging {
+
+//! @addtogroup core_logging_callback_interface
+//! \ingroup core_logging
+//! @{
+
+/**
+ * @brief Logging callback handler (abstract base class).
+ * @details Users should subclass this and implement their own operator() to handle
+ *          log messages from OpenCV.
+ */
+class CV_EXPORTS LoggingCallbackHandler
+{
+protected:
+    LoggingCallbackHandler() = default;
+
+public:
+    virtual ~LoggingCallbackHandler() = default;
+
+    /**
+     * @brief Function to be called to handle log messages from OpenCV.
+     * @warning Subclass implementations must treat all C-style string
+     *          arguments as potentially being NULL.
+     */
+    virtual void operator()(LogLevel logLevel, const char* tag,
+        const char* file, int line, const char* func,
+        const char* message) = 0;
+
+public:
+    /**
+     * @brief Creates a LoggingCallbackHandler instance from a std::function or
+     *        a C++11 lambda expression.
+     * @warning If the std::function requires any dynamic resources, they need
+     *          to be properly captured at every stage of functional wrapping.
+     */
+    static CV_EXPORTS cv::Ptr<LoggingCallbackHandler> createFromFunction(
+        std::function<void(LogLevel, const char*, const char*, int,
+            const char*, const char*)> callback);
+
+    /**
+     * @brief Creates a LoggingCallbackHandler instance from a C-style function pointer.
+     * @warning Only use for functions with static lifetime. This wrapper cannot be
+     *          used with C++ instance member functions.
+     */
+    static CV_EXPORTS cv::Ptr<LoggingCallbackHandler> createFromStaticFuncPtr(
+        void (*callback)(LogLevel, const char*, const char*, int,
+            const char*, const char*) );
+};
+
+//! @} core_logging_callback_interface
+
+
+//! @addtogroup core_logging_callback
+//! \ingroup core_logging
+//! @{
+
+/**
+ * @brief Registers a logging callback handler object.
+ */
+CV_EXPORTS void addLoggingCallbackHandler(cv::Ptr<LoggingCallbackHandler> callback);
+
+/**
+ * @brief Unregistered a logging callback handler object.
+ * @note All previous registrations using the same handler object will become
+ *       unregistered, regardless of the number of prior registration calls.
+ */
+CV_EXPORTS void removeLoggingCallbackHandler(cv::Ptr<LoggingCallbackHandler> callback);
+
+/**
+ * @brief Removes all registered callbacks, including C-style callbacks and
+ *        cv::Ptr<LoggingCallbackHandler> instances.
+ */
+CV_EXPORTS void removeAllLoggingCallbacks();
+
+/**
+ * @brief Registers a raw pointer to a logging callback function, having
+ *        the same signature as writeLogMessage.
+ * @deprecated Using log handler objects is preferred. See LoggingCallbackHandler.
+ */
+CV_EXPORTS void addLoggingCallback(LoggingCallbackPtrType callback);
+
+/**
+ * @brief Unregisters a logging callback function that was previously registered using
+ *        addLoggingCallback(LoggingCallbackPtrType).
+ * @note All previous registrations using the same function pointer will become
+ *       unregistered, regardless of the number of prior registration calls.
+ * @note This function cannot be used to unregister handler objects.
+ * @deprecated Using log handler objects is preferred. See LoggingCallbackHandler.
+ */
+CV_EXPORTS void removeLoggingCallback(LoggingCallbackPtrType callback);
+
+//! @} core_logging_callback
+
 
 //! @addtogroup core_logging
 //! @{
