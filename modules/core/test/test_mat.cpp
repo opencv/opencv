@@ -2634,4 +2634,29 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     EXPECT_NO_THROW(m.create(dims, depth));
 }
 
+TEST(Mat, ScalarMultiplicationSaturation) {
+    for (int c = 1; c <= 9; c++) {
+        cv::Mat m1 = cv::Mat::zeros(1,1, CV_8UC1);
+        cv::Mat m3 = cv::Mat::zeros(1,1, CV_8UC3);
+        m1 += cv::Scalar(100);
+        m3 += cv::Scalar(100,100,100);
+        cv::Scalar b1 = cv::Scalar(70);
+        cv::Scalar b3 = cv::Scalar(70,70,70);
+        m1 = c * (m1 - b1);
+        m3 = c * (m3 - b3);
+        int m1_val = m1.at<uchar>(0,0);
+        int m3_val = m3.at<cv::Vec3b>(0,0)[0];
+
+        if (c * (100 - 70) > 255) {
+            EXPECT_EQ(m1_val, 255);
+        } else {
+            EXPECT_EQ(m1_val, c * (100 - 70));
+        }
+        if (c * (100 - 70) > 255) {
+            EXPECT_EQ(m3_val, 255);
+        } else {
+            EXPECT_EQ(m3_val, c * (100 - 70));
+        }
+    }
+  }
 }} // namespace
