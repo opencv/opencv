@@ -207,30 +207,35 @@ if(CMAKE_VERSION VERSION_LESS "3.1")
   endforeach()
 endif()
 
+# See https://github.com/opencv/opencv/issues/27105
+# - CMAKE_COMPILE_FEATURES is used to detect what features are available by the compiler.
+# - CMAKE_CXX_STANDARD is used to detect what features are available in this configuration.
 if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
+  if(DEFINED CMAKE_CXX_STANDARD AND ((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 11)))
+    message(FATAL_ERROR "OpenCV 4.x requires C++11, but your configuration does not enable(CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}).")
+  endif()
+
   ocv_update(CMAKE_CXX_STANDARD 11)
   ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
   ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
-  if(CMAKE_CXX11_COMPILE_FEATURES)
+endif()
+
+# Meta-feature "cxx_std_XX" in CMAKE_CXX_COMPILE_FEATURES are supported in CMake 3.8+.
+# - See https://cmake.org/cmake/help/latest/release/3.8.html
+# For CMake 3.7-, use CMAKE_CXXxx_COMPILE_FEATURES instead of it.
+if(CMAKE_CXX11_COMPILE_FEATURES OR ("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES))
+  if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 11))
     set(HAVE_CXX11 ON)
   endif()
-  if(CMAKE_CXX17_COMPILE_FEATURES)
-    set(HAVE_CXX17 ON)
-  endif()
 endif()
-if(NOT HAVE_CXX11)
-  ocv_check_compiler_flag(CXX "" HAVE_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-  if(NOT HAVE_CXX11)
-    ocv_check_compiler_flag(CXX "-std=c++11" HAVE_STD_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-    if(HAVE_STD_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      set(HAVE_CXX11 ON)
-    endif()
+if(CMAKE_CXX17_COMPILE_FEATURES OR ("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES))
+  if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 17))
+    set(HAVE_CXX17 ON)
   endif()
 endif()
 
 if(NOT HAVE_CXX11)
-  message(FATAL_ERROR "OpenCV 4.x requires C++11")
+  message(FATAL_ERROR "OpenCV 4.x requires C++11, but your compiler does not support it")
 endif()
 
 set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)
