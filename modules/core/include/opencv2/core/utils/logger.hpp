@@ -43,6 +43,25 @@ CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
 /** Write log message */
 CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message);
 
+typedef void (*WriteLogMessageFuncType)(LogLevel, const char*);
+typedef void (*WriteLogMessageExFuncType)(LogLevel, const char*, const char*, int, const char*, const char*);
+
+/**
+ * @brief Replaces the OpenCV writeLogMessage function with a user-defined function.
+ * @note Once replaced, logs will not go through the OpenCV writeLogMessage function.
+ * @note To restore, call this function with a nullptr.
+ */
+CV_EXPORTS void replaceWriteLogMessage(WriteLogMessageFuncType f);
+
+/**
+ * @brief Replaces the OpenCV writeLogMessageEx function with a user-defined function.
+ * @note Once replaced, logs will not go through any of the OpenCV logging functions
+ *       such as writeLogMessage or writeLogMessageEx, until their respective restore
+ *       methods are called.
+ * @note To restore, call this function with a nullptr.
+ */
+CV_EXPORTS void replaceWriteLogMessageEx(WriteLogMessageExFuncType f);
+
 } // namespace
 
 struct LogTagAuto
