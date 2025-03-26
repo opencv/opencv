@@ -155,7 +155,7 @@ bool APNGFrame::setMat(const cv::Mat& src, unsigned delayNum, unsigned delayDen)
 
     if (!src.empty())
     {
-        png_uint_32 rowbytes = src.depth() == CV_16U ? src.cols * src.channels() * 2 : src.cols * src.channels();
+        png_uint_32 rowbytes = src.cols * (uint32_t)src.elemSize();
         _width = src.cols;
         _height = src.rows;
         _colorType = src.channels() == 1 ? PNG_COLOR_TYPE_GRAY : src.channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
@@ -406,14 +406,17 @@ bool  PngDecoder::readData( Mat& img )
 
         if (m_frame_no == 0)
         {
+            if (m_mat_raw.empty())
+            {
+                if (m_f)
+                    fseek(m_f, -8, SEEK_CUR);
+                else
+                    m_buf_pos -= 8;
+            }
             m_mat_raw = Mat(img.rows, img.cols, m_type);
             m_mat_next = Mat(img.rows, img.cols, m_type);
             frameRaw.setMat(m_mat_raw);
             frameNext.setMat(m_mat_next);
-            if (m_f)
-                fseek(m_f, -8, SEEK_CUR);
-            else
-                m_buf_pos -= 8;
         }
         else
             m_mat_next.copyTo(mat_cur);
@@ -436,54 +439,52 @@ bool  PngDecoder::readData( Mat& img )
             {
                 if (!m_is_fcTL_loaded)
                 {
-                    m_is_fcTL_loaded = true;
-                    w0 = m_width;
-                    h0 = m_height;
+                    m_mat_raw.copyTo(m_animation.still_image);
                 }
-
-                if (processing_finish())
-                {
-                    if (dop == 2)
-                        memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
-
-                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                    if (!delay_den)
-                        delay_den = 100;
-                    m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
-
-                    if (mat_cur.channels() == img.channels())
+                else
+                    if (processing_finish())
                     {
-                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                            mat_cur.convertTo(img, CV_8U, 1. / 255);
+                        if (dop == 2)
+                            memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
+
+                        compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
+                        if (!delay_den)
+                            delay_den = 100;
+                        m_animation.durations.push_back(cvRound(1000. * delay_num / delay_den));
+
+                        if (mat_cur.channels() == img.channels())
+                        {
+                            if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                                mat_cur.convertTo(img, CV_8U, 1. / 255);
+                            else
+                                mat_cur.copyTo(img);
+                        }
                         else
-                            mat_cur.copyTo(img);
+                        {
+                            Mat mat_cur_scaled;
+                            if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                                mat_cur.convertTo(mat_cur_scaled, CV_8U, 1. / 255);
+                            else
+                                mat_cur_scaled = mat_cur;
+
+                            if (img.channels() == 1)
+                                cvtColor(mat_cur_scaled, img, COLOR_BGRA2GRAY);
+                            else if (img.channels() == 3)
+                                cvtColor(mat_cur_scaled, img, COLOR_BGRA2BGR);
+                        }
+
+                        if (dop != 2)
+                        {
+                            memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
+                            if (dop == 1)
+                                for (j = 0; j < h0; j++)
+                                    memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
+                        }
                     }
                     else
                     {
-                        Mat mat_cur_scaled;
-                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                            mat_cur.convertTo(mat_cur_scaled, CV_8U, 1. / 255);
-                        else
-                            mat_cur_scaled = mat_cur;
-
-                        if (img.channels() == 1)
-                            cvtColor(mat_cur_scaled, img, COLOR_BGRA2GRAY);
-                        else if (img.channels() == 3)
-                            cvtColor(mat_cur_scaled, img, COLOR_BGRA2BGR);
+                        return false;
                     }
-
-                    if (dop != 2)
-                    {
-                        memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
-                        if (dop == 1)
-                            for (j = 0; j < h0; j++)
-                                memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
-                    }
-                }
-                else
-                {
-                    return false;
-                }
 
                 w0 = png_get_uint_32(&chunk.p[12]);
                 h0 = png_get_uint_32(&chunk.p[16]);
@@ -505,7 +506,14 @@ bool  PngDecoder::readData( Mat& img )
                 }
 
                 memcpy(&m_chunkIHDR.p[8], &chunk.p[12], 8);
-                return true;
+
+                if (m_is_fcTL_loaded)
+                    return true;
+                else
+                {
+                    m_is_fcTL_loaded = true;
+                    return readData(img);
+                }
             }
             else if (id == id_IDAT)
             {
@@ -660,13 +668,13 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
                 }
                 else if (sp[3] != 0) { // Partially transparent
                     if (dp[3] != 0) { // Both source and destination have alpha
-                        uint32_t u = sp[3] * 65535; // 16-bit max
-                        uint32_t v = (65535 - sp[3]) * dp[3];
+                        uint32_t u = sp[3];
+                        uint32_t v = 65535 - dp[3];
                         uint32_t al = u + v;
                         dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
                         dp[1] = static_cast<uint16_t>((sp[1] * u + dp[1] * v) / al); // Green
                         dp[2] = static_cast<uint16_t>((sp[2] * u + dp[2] * v) / al); // Blue
-                        dp[3] = static_cast<uint16_t>(al / 65535);                  // Alpha
+                        dp[3] = static_cast<uint16_t>(sp[3] * 65535 + dp[3] * (65535 - sp[3])) / 65535; // Alpha
                     }
                     else {
                         // If destination alpha is 0, copy source pixel
@@ -1473,7 +1481,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
     if (m_isBilevel)
         CV_LOG_WARNING(NULL, "IMWRITE_PNG_BILEVEL parameter is not supported yet.");
-    uint32_t first =0;
+
     uint32_t loops= animation.loop_count;
     uint32_t coltype= animation.frames[0].channels() == 1 ? PNG_COLOR_TYPE_GRAY : animation.frames[0].channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
 
@@ -1558,7 +1566,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         buf_IHDR[11] = 0;
         buf_IHDR[12] = 0;
 
-        png_save_uint_32(buf_acTL, num_frames - first);
+        png_save_uint_32(buf_acTL, num_frames);
         png_save_uint_32(buf_acTL + 4, loops);
 
         writeToStreamOrBuffer(header, 8, m_f);
@@ -1567,8 +1575,6 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         if (num_frames > 1)
             writeChunk(m_f, "acTL", buf_acTL, 8);
-        else
-            first = 0;
 
         if (palsize > 0)
             writeChunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
@@ -1624,19 +1630,21 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
         for (j = 0; j < 6; j++)
             op[j].valid = 0;
+
+        if (!animation.still_image.empty())
+        {
+            CV_Assert(animation.still_image.type() == animation.frames[0].type() && animation.still_image.size() == animation.frames[0].size());
+            APNGFrame apngFrame;
+            apngFrame.setMat(animation.still_image);
+            deflateRectOp(apngFrame.getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
+            deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
+            writeIDATs(m_f, 0, zbuf.data(), zsize, idat_size);
+        }
+
         deflateRectOp(frames[0].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
         deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
 
-        if (first)
-        {
-            writeIDATs(m_f, 0, zbuf.data(), zsize, idat_size);
-            for (j = 0; j < 6; j++)
-                op[j].valid = 0;
-            deflateRectOp(frames[1].getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
-            deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, 0);
-        }
-
-        for (i = first; i < num_frames - 1; i++)
+        for (i = 0; i < num_frames - 1; i++)
         {
             uint32_t op_min;
             int op_best;
@@ -1663,7 +1671,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             }
 
             /* dispose = previous */
-            if (i > first)
+            if (i)
                 getRect(width, height, rest.data(), frames[i + 1].getPixels(), over3.data(), bpp, rowbytes, zbuf_size, has_tcolor, tcolor, 2);
 
             op_min = op[0].size;
@@ -1689,8 +1697,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             png_save_uint_16(buf_fcTL + 22, frames[i].getDelayDen());
             buf_fcTL[24] = dop;
             buf_fcTL[25] = bop;
-            writeChunk(m_f, "fcTL", buf_fcTL, 26);
 
+            writeChunk(m_f, "fcTL", buf_fcTL, 26);
             writeIDATs(m_f, i, zbuf.data(), zsize, idat_size);
 
             /* process apng dispose - begin */
@@ -1718,7 +1726,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             deflateRectFin(zbuf.data(), &zsize, bpp, rowbytes, rows.data(), zbuf_size, op_best);
         }
 
-        if (num_frames > 1)
+        if (num_frames > 1 /* don't write fcTL chunk if animation has only one frame */)
         {
             png_save_uint_32(buf_fcTL, next_seq_num++);
             png_save_uint_32(buf_fcTL + 4, w0);
