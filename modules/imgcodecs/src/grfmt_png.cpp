@@ -401,7 +401,7 @@ bool  PngDecoder::readData( Mat& img )
         Mat mat_cur = Mat::zeros(img.rows, img.cols, m_type);
         uint32_t id = 0;
         uint32_t j = 0;
-        uint32_t imagesize = m_width * m_height * mat_cur.channels();
+        uint32_t imagesize = m_width * m_height * (uint32_t)mat_cur.elemSize();
         m_is_IDAT_loaded = false;
 
         if (m_frame_no == 0)
@@ -451,15 +451,26 @@ bool  PngDecoder::readData( Mat& img )
                         delay_den = 100;
                     m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
-                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                        mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
-
                     if (mat_cur.channels() == img.channels())
-                        mat_cur.copyTo(img);
-                    else if (img.channels() == 1)
-                        cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
-                    else if (img.channels() == 3)
-                        cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                    {
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                            mat_cur.convertTo(img, CV_8U, 1. / 255);
+                        else
+                            mat_cur.copyTo(img);
+                    }
+                    else
+                    {
+                        Mat mat_cur_scaled;
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                            mat_cur.convertTo(mat_cur_scaled, CV_8U, 1. / 255);
+                        else
+                            mat_cur_scaled = mat_cur;
+
+                        if (img.channels() == 1)
+                            cvtColor(mat_cur_scaled, img, COLOR_BGRA2GRAY);
+                        else if (img.channels() == 3)
+                            cvtColor(mat_cur_scaled, img, COLOR_BGRA2BGR);
+                    }
 
                     if (dop != 2)
                     {
@@ -517,15 +528,19 @@ bool  PngDecoder::readData( Mat& img )
                         delay_den = 100;
                     m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
-                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                        mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
-
-                    if (mat_cur.channels() == img.channels())
-                        mat_cur.copyTo(img);
-                    else if (img.channels() == 1)
-                        cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
-                    else if (img.channels() == 3)
-                        cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U && mat_cur.channels() == img.channels())
+                        mat_cur.convertTo(img, CV_8U, 1. / 255);
+                    else
+                    {
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                            mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
+                        if (mat_cur.channels() == img.channels())
+                            mat_cur.copyTo(img);
+                        else if (img.channels() == 1)
+                            cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
+                        else if (img.channels() == 3)
+                            cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                    }
                 }
                 else
                     return false;
