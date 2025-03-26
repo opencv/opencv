@@ -186,8 +186,8 @@ class GGUFImporter
         GGUFImporter();
         void parseFile(const char *filename);
 
-    protected:
-        void parse_attn_qkv(LayerParams& layerParams, size_t blkN);
+    // protected:
+        void parse_attn_qkv(LayerParams& layerParams); //, size_t blkN);
 
         void addLayer(LayerParams& layerParams, int num_inputs);
 
@@ -238,12 +238,12 @@ Mat GGUFImporter::parseTensor(std::string name) {
 }
 
 // for now this is the test method
-void GGUFImporter::parse_attn_qkv(LayerParams& layerParams, size_t blkN) 
+void GGUFImporter::parse_attn_qkv(LayerParams& layerParams) // , size_t blkN) 
 {   
-    std::string weightKey = "blk." + std::to_string(blkN) + ".attn_qkv.weight";
-    std::string biasKey = "blk." + std::to_string(blkN) + ".attn_qkv.bias";
-    std::string inputKey = "blk." + std::to_string(blkN) + ".attn_qkv.input";
-    std::string outputKey = "blk." + std::to_string(blkN) + ".attn_qkv.output";
+    std::string weightKey = "blk.0.attn_qkv.weight";
+    std::string biasKey = "blk.0.attn_qkv.bias";
+    std::string inputKey = "blk.0.attn_qkv.input";
+    std::string outputKey = "blk.0.attn_qkv.output";
 
     Mat weight = parseTensor(weightKey);
     Mat bias = parseTensor(biasKey);
@@ -267,6 +267,16 @@ void GGUFImporter::parse_attn_qkv(LayerParams& layerParams, size_t blkN)
     layer->netimpl = netimpl;
 
     graph->setProg({layer});
+
+    netimpl->mainGraph = graph;
+    netimpl->modelFormat = DNN_MODEL_GENERIC;
+    netimpl->originalLayout = DATA_LAYOUT_UNKNOWN;
+
+    netimpl->prepareForInference();
+
+    net.dumpToStream(std::cout);
+
+
 }
 
 
