@@ -307,34 +307,36 @@ struct GGUFImporter
 { 
         GGUFImporter(const char *filename);
 
-        void parse_attn_qkv(); //, size_t blkN);
+        // Layerwise construction 
+        void add_output_layer(); //, size_t blkN);
 
-        // void addLayer(LayerParams& layerParams, int num_inputs);
-
-        // Ptr<Graph> createGraph();
-
+        // Parsing infos and metadata
         void parseMetadata(size_t& offset);
         void parseHeader(size_t& offset);
         void parseTensorInfo(size_t& offset);
 
         Mat parseTensor(std::string name);
 
+        // Metadata Storage which will be used during layer construction
         std::map<std::string, std::unique_ptr<MetadataKeyValueNode>> metadata;    
         std::map<std::string, std::unique_ptr<TensorMetadata>> tensorsMetadata;
         std::string filename;
 
+        // GGUF file header definitions
         uint32_t version; 
         uint64_t tensor_count;
         uint32_t magic;
         uint64_t metadata_kv_count;
         
+        // File buffer
         std::vector<uint8_t> buffer; 
 
-        size_t n_tensors;
+        // Offsets for parsing (helper variables - should be wrapped into something more structured)
         size_t offset = 0;
         size_t tensor_data_ofset =  -1;
         size_t metadata_offset = 0;
 
+        // Net impl stuff
         Net net;
         Net::Impl* netimpl;
         std::vector<Ptr<Layer> > prog;
@@ -374,7 +376,7 @@ Mat GGUFImporter::parseTensor(std::string name) {
     return tensor;
 }
 
-void GGUFImporter::parse_attn_qkv() // , size_t blkN) 
+void GGUFImporter::parse_output_layer() // , size_t blkN) 
 {   
     LayerParams layerParams;
 
