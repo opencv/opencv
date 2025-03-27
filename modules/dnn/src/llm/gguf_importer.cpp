@@ -446,43 +446,45 @@ void GGUFImporter::prepareFile(const char *filename) {
 
 void GGUFImporter::addOutpuLayer() // , size_t blkN) 
 {   
-    LayerParams layerParams;
+    CV_Error(Error::StsNotImplemented, "TODO");
 
-    std::string weightKey = "output.weight";
-    std::string biasKey = "output.bias";
-    std::string inputKey = "output_input";
-    std::string outputKey = "output_output";
+    // LayerParams layerParams;
 
-    Mat weight = parseTensor(weightKey);
-    Mat bias = parseTensor(biasKey);
+    // std::string weightKey = "output.weight";
+    // std::string biasKey = "output.bias";
+    // std::string inputKey = "output_input";
+    // std::string outputKey = "output_output";
 
-    netimpl->newConstArg(weightKey, weight);
-    netimpl->newConstArg(biasKey, bias);
-    Arg input_arg = netimpl->newArg(inputKey, DNN_ARG_INPUT);
-    Arg output_arg = netimpl->newArg(outputKey, DNN_ARG_OUTPUT);
+    // Mat weight = ggufFile.getTensor(weightKey);
+    // Mat bias = ggufFile.getTensor(biasKey);
 
-    std::vector<Arg> inputs = {input_arg};
+    // netimpl->newConstArg(weightKey, weight);
+    // netimpl->newConstArg(biasKey, bias);
+    // Arg input_arg = netimpl->newArg(inputKey, DNN_ARG_INPUT);
+    // Arg output_arg = netimpl->newArg(outputKey, DNN_ARG_OUTPUT);
 
-    Ptr<Graph> graph =  netimpl->newGraph("GGUFGraph", inputs, 1);
+    // std::vector<Arg> inputs = {input_arg};
+
+    // Ptr<Graph> graph =  netimpl->newGraph("GGUFGraph", inputs, 1);
     
-    layerParams.type = "Gemm";
-    layerParams.blobs.push_back(weight);
-    layerParams.blobs.push_back(bias);
+    // layerParams.type = "Gemm";
+    // layerParams.blobs.push_back(weight);
+    // layerParams.blobs.push_back(bias);
 
-    Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
-    layer->inputs = inputs;
-    layer->outputs = {output_arg};
-    layer->netimpl = netimpl;
+    // Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
+    // layer->inputs = inputs;
+    // layer->outputs = {output_arg};
+    // layer->netimpl = netimpl;
 
-    graph->setProg({layer});
+    // graph->setProg({layer});
 
-    netimpl->mainGraph = graph;
-    netimpl->modelFormat = DNN_MODEL_GENERIC;
-    netimpl->originalLayout = DATA_LAYOUT_UNKNOWN;
+    // netimpl->mainGraph = graph;
+    // netimpl->modelFormat = DNN_MODEL_GENERIC;
+    // netimpl->originalLayout = DATA_LAYOUT_UNKNOWN;
 
-    netimpl->prepareForInference();
+    // netimpl->prepareForInference();
 
-    net.dumpToStream(std::cout);
+    // net.dumpToStream(std::cout);
 
 }
 
@@ -490,18 +492,11 @@ void GGUFImporter::addOutpuLayer() // , size_t blkN)
 //     return 
 // }
 
-Net parseFromGGUF(const char *filename) {
+Net readNetFromGGUF(const char *filename) {
 
-    GGUFImporter importer(filename);
-    
-    size_t offset = 0;
-    importer.parseHeader(offset);
-    importer.parseMetadata(offset);
-
-    for (size_t i = 0; i < importer.tensor_count; ++i) {
-        importer.parseTensorInfo(offset);
-    }
-
+    GGUFImporter importer;
+    importer.prepareFile(filename);
+    return importer.net;
     // set the offset 
 }
 
