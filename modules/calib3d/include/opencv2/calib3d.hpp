@@ -1012,12 +1012,14 @@ makes the function resistant to outliers.
        the method #SOLVEPNP_EPNP will be used instead.
  */
 CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
-                                  InputArray cameraMatrix, InputArray distCoeffs,
-                                  OutputArray rvec, OutputArray tvec,
-                                  bool useExtrinsicGuess = false, int iterationsCount = 100,
-                                  float reprojectionError = 8.0, double confidence = 0.99,
-                                  OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE );
-
+                                InputArray cameraMatrix, InputArray distCoeffs,
+                                OutputArray rvec, OutputArray tvec,
+                                bool useExtrinsicGuess = false, 
+                                int iterationsCount = 100,
+                                float reprojectionError = 8.0, 
+                                double confidence = 0.99,
+                                OutputArray inliers = noArray(),
+                                int method = SOLVEPNP_ITERATIVE);
 
 /*
 Finds rotation and translation vector.

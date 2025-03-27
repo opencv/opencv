@@ -197,20 +197,31 @@ public:
     Mat rvec;
     Mat tvec;
 };
-
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
-                    InputArray _cameraMatrix, InputArray _distCoeffs,
-                    OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
-                    int iterationsCount, float reprojectionError, double confidence,
-                    OutputArray _inliers, int flags)
+    InputArray _cameraMatrix, InputArray _distCoeffs,
+    OutputArray _rvec, OutputArray _tvec,
+    bool useExtrinsicGuess, int iterationsCount,
+    float reprojectionError, double confidence,
+    OutputArray _inliers,
+    int method = SOLVEPNP_ITERATIVE,
+    int flags = 0)
 {
     CV_INSTRUMENT_REGION();
-
+    if (!(flags == SOLVEPNP_ITERATIVE ||
+        flags == SOLVEPNP_EPNP ||
+        flags == SOLVEPNP_P3P ||
+        flags == SOLVEPNP_AP3P ||
+        flags == SOLVEPNP_DLS ||
+        flags == SOLVEPNP_UPNP ||
+        flags == SOLVEPNP_IPPE ||
+        (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)))
+  {
+      throw std::invalid_argument("Error: Invalid flag provided for solvePnPRansac");
+  }
     if (flags >= USAC_DEFAULT && flags <= USAC_MAGSAC)
-        return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
+        {return usac::solvePnPRansac(_opoints, _ipoints, _cameraMatrix, _distCoeffs,
             _rvec, _tvec, useExtrinsicGuess, iterationsCount, reprojectionError,
-            confidence, _inliers, flags);
-
+            confidence, _inliers, flags);}
     Mat opoints0 = _opoints.getMat(), ipoints0 = _ipoints.getMat();
     Mat opoints, ipoints;
     if( opoints0.depth() == CV_64F || !opoints0.isContinuous() )
@@ -221,10 +232,8 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
         ipoints0.convertTo(ipoints, CV_32F);
     else
         ipoints = ipoints0;
-
     int npoints = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F));
     CV_Assert( npoints >= 4 && npoints == std::max(ipoints.checkVector(2, CV_32F), ipoints.checkVector(2, CV_64F)) );
-
     CV_Assert(opoints.isContinuous());
     CV_Assert(opoints.depth() == CV_32F || opoints.depth() == CV_64F);
     CV_Assert((opoints.rows == 1 && opoints.channels() == 3) || opoints.cols*opoints.channels() == 3);
