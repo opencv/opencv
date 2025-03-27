@@ -2127,7 +2127,7 @@ inline int boxFilter(const uchar* src_data, size_t src_step, uchar* dst_data, si
 
     uchar* _dst_data = dst_data;
     size_t _dst_step = dst_step;
-    const size_t size = CV_ELEM_SIZE(dst_depth);
+    const size_t size = CV_ELEM_SIZE(dst_type);
     std::vector<uchar> dst;
     if (src_data == _dst_data)
     {
