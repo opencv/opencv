@@ -2,13 +2,144 @@
 #include "../net_impl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
-#include "gguf_def.hpp"
-#include <opencv2/dnn/shape_utils.hpp>
+#include <opencv2/dnn/layer_reg.private.hpp>
+
+#include <opencv2/core/utils/fp_control_utils.hpp>
+#include <opencv2/core/utils/logger.defines.hpp>
+#undef CV_LOG_STRIP_LEVEL
+#define CV_LOG_STRIP_LEVEL CV_LOG_LEVEL_VERBOSE + 1
+#include <opencv2/core/utils/logger.hpp>
+
+#include <opencv2/core/utils/configuration.private.hpp>
+
+#include <algorithm>
+#include <array>
+#include <iostream>
+#include <fstream>
+#include <limits>
+#include <set>
+#include <string>
+
 
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
+
+
+// =====================
+// GGML Type Enumeration
+// =====================
+enum ggml_type : uint32_t {
+    GGML_TYPE_F32     = 0,
+    GGML_TYPE_F16     = 1,
+    GGML_TYPE_Q4_0    = 2,
+    GGML_TYPE_Q4_1    = 3,
+    GGML_TYPE_Q5_0    = 6,
+    GGML_TYPE_Q5_1    = 7,
+    GGML_TYPE_Q8_0    = 8,
+    GGML_TYPE_Q8_1    = 9,
+    GGML_TYPE_Q2_K    = 10,
+    GGML_TYPE_Q3_K    = 11,
+    GGML_TYPE_Q4_K    = 12,
+    GGML_TYPE_Q5_K    = 13,
+    GGML_TYPE_Q6_K    = 14,
+    GGML_TYPE_Q8_K    = 15,
+    GGML_TYPE_IQ2_XXS = 16,
+    GGML_TYPE_IQ2_XS  = 17,
+    GGML_TYPE_IQ3_XXS = 18,
+    GGML_TYPE_IQ1_S   = 19,
+    GGML_TYPE_IQ4_NL  = 20,
+    GGML_TYPE_IQ3_S   = 21,
+    GGML_TYPE_IQ2_S   = 22,
+    GGML_TYPE_IQ4_XS  = 23,
+    GGML_TYPE_I8      = 24,
+    GGML_TYPE_I16     = 25,
+    GGML_TYPE_I32     = 26,
+    GGML_TYPE_I64     = 27,
+    GGML_TYPE_F64     = 28,
+    GGML_TYPE_IQ1_M   = 29,
+    GGML_TYPE_COUNT,
+};
+
+// ==============================
+// GGUF Metadata Value Type Enum
+// ==============================
+enum gguf_metadata_value_type : uint32_t {
+    GGUF_METADATA_VALUE_TYPE_UINT8    = 0,
+    GGUF_METADATA_VALUE_TYPE_INT8     = 1,
+    GGUF_METADATA_VALUE_TYPE_UINT16   = 2,
+    GGUF_METADATA_VALUE_TYPE_INT16    = 3,
+    GGUF_METADATA_VALUE_TYPE_UINT32   = 4,
+    GGUF_METADATA_VALUE_TYPE_INT32    = 5,
+    GGUF_METADATA_VALUE_TYPE_FLOAT32  = 6,
+    GGUF_METADATA_VALUE_TYPE_BOOL     = 7,
+    GGUF_METADATA_VALUE_TYPE_STRING   = 8,
+    GGUF_METADATA_VALUE_TYPE_ARRAY    = 9,
+    GGUF_METADATA_VALUE_TYPE_UINT64   = 10,
+    GGUF_METADATA_VALUE_TYPE_INT64    = 11,
+    GGUF_METADATA_VALUE_TYPE_FLOAT64  = 12,
+};
+
+// ===============
+// GGUF Structures
+// ===============
+struct gguf_string_t {
+    uint64_t len;
+    std::string data;
+};
+
+union gguf_metadata_value_t {
+    uint8_t uint8;
+    int8_t int8;
+    uint16_t uint16;
+    int16_t int16;
+    uint32_t uint32;
+    int32_t int32;
+    float float32;
+    uint64_t uint64;
+    int64_t int64;
+    double float64;
+    bool bool_;
+    gguf_string_t string;
+    struct {
+        // Any value type is valid, including arrays.
+        gguf_metadata_value_type type;
+        // Number of elements, not bytes
+        uint64_t len;
+        // The array of values
+        gguf_metadata_value_t*array;
+    } array;
+};
+
+struct gguf_metadata_kv_t {
+    gguf_string_t key;
+    gguf_metadata_value_type value_type;
+    gguf_metadata_value_t value;
+};
+
+struct gguf_header_t {
+    uint32_t magic;
+    uint32_t version;
+    uint64_t tensor_count;
+    uint64_t metadata_kv_count;
+    std::vector<gguf_metadata_kv_t> metadata_kv;
+};
+
+struct gguf_tensor_info_t {
+    gguf_string_t name;
+    uint32_t n_dimensions;
+    std::vector<uint64_t> dimensions;
+    ggml_type type;
+    uint64_t offset;
+};
+
+struct gguf_file_t {
+    gguf_header_t header;
+    std::vector<gguf_tensor_info_t> tensor_infos;
+    uint8_t _padding;
+    uint8_t tensor_data[]; // flexible array member (pointer interpreted)
+};
 
 struct MetadataValueNode{
     virtual ~MetadataValueNode() = default;
@@ -136,12 +267,6 @@ std::unique_ptr<MetadataValueNode> parseMetadataValueNode(const uint8_t* buffer,
     return std::make_unique<MetadataArrayNode>(std::move(arrayNode));
 }
 
-void parseMetadataKeyValuePair(const uint8_t* buffer, size_t offset, MetadataKeyValueNode& result)
-{
-    // Parse key
-    result.key = parseGGUFString(buffer, offset);
-    // offset += sizeof(uint64_t) + result.key.len;
-}
 
 struct TensorMetadata {
     std::string name;
@@ -155,7 +280,6 @@ struct TensorMetadata {
 size_t TensorMetadata::size() const {
     return dims.total();
 }
-
 
 std::unique_ptr<TensorMetadata> parseTensorMetaData(const uint8_t* buffer, size_t& offset)
 {
@@ -179,19 +303,15 @@ std::unique_ptr<TensorMetadata> parseTensorMetaData(const uint8_t* buffer, size_
     return tensor;    
 }
 
+struct GGUFImporter 
+{ 
+        GGUFImporter(const char *filename);
 
-class GGUFImporter 
-{
-    public:
-        GGUFImporter();
-        void parseFile(const char *filename);
+        void parse_attn_qkv(); //, size_t blkN);
 
-    // protected:
-        void parse_attn_qkv(LayerParams& layerParams); //, size_t blkN);
+        // void addLayer(LayerParams& layerParams, int num_inputs);
 
-        void addLayer(LayerParams& layerParams, int num_inputs);
-
-        //Ptr<Graph> createGraph();
+        // Ptr<Graph> createGraph();
 
         void parseMetadata(size_t& offset);
         void parseHeader(size_t& offset);
@@ -220,8 +340,25 @@ class GGUFImporter
         std::vector<Ptr<Layer> > prog;
 };
 
-GGUFImporter::GGUFImporter() {
+GGUFImporter::GGUFImporter(const char *filename) {
     netimpl = net.getImpl();
+
+    this->filename = filename;
+
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file: ");
+    }
+
+    // Get the size of the file and prepare a buffer
+    const std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    buffer.resize(size);
+
+    // Read the file content into the buffer
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+        throw std::runtime_error("Error reading file: " );
+    }
 }
 
 Mat GGUFImporter::parseTensor(std::string name) {
@@ -237,9 +374,10 @@ Mat GGUFImporter::parseTensor(std::string name) {
     return tensor;
 }
 
-// for now this is the test method
-void GGUFImporter::parse_attn_qkv(LayerParams& layerParams) // , size_t blkN) 
+void GGUFImporter::parse_attn_qkv() // , size_t blkN) 
 {   
+    LayerParams layerParams;
+
     std::string weightKey = "blk.0.attn_qkv.weight";
     std::string biasKey = "blk.0.attn_qkv.bias";
     std::string inputKey = "blk.0.attn_qkv.input";
@@ -276,14 +414,11 @@ void GGUFImporter::parse_attn_qkv(LayerParams& layerParams) // , size_t blkN)
 
     net.dumpToStream(std::cout);
 
-
 }
-
 
 // Ptr<Graph> GGUFImporter::createGraph(){
 //     return 
 // }
-
 
 void GGUFImporter::parseHeader(size_t& offset) {
     //uint32_t magic = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
@@ -299,7 +434,6 @@ void GGUFImporter::parseHeader(size_t& offset) {
     offset += sizeof(uint64_t);
 }
 
-
 void GGUFImporter::parseMetadata(size_t& offset) {
     // Loop through and parse each key–value pair.
     for (uint64_t i = 0; i < metadata_kv_count; ++i) {
@@ -308,7 +442,8 @@ void GGUFImporter::parseMetadata(size_t& offset) {
 
         // Parse the key (stored as a GGUF string).
         kv->key = parseGGUFString(buffer.data(), offset);
-
+        CV_LOG_DEBUG(NULL, "Parsing metadata key: " << kv->key);
+        
         // Parse the value node (which will read its type and then the data).
         kv->value = parseMetadataValueNode(buffer.data(), offset);
 
@@ -318,30 +453,18 @@ void GGUFImporter::parseMetadata(size_t& offset) {
 }
 
 
-void GGUFImporter::parseFile(const char *filename) {
-    this->filename = filename;
 
-    std::ifstream file(filename, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open file: ");
-    }
 
-    // Get the size of the file and prepare a buffer
-    const std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-    buffer.resize(size);
+Net parseFromGGUF(const char *filename) {
 
-    // Read the file content into the buffer
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-        throw std::runtime_error("Error reading file: " );
-    }
-
+    GGUFImporter importer(filename);
+    
     size_t offset = 0;
-    parseHeader(offset);
-    parseMetadata(offset);
+    importer.parseHeader(offset);
+    importer.parseMetadata(offset);
 
-    for (size_t i = 0; i < tensor_count; ++i) {
-        parseTensorInfo(offset);
+    for (size_t i = 0; i < importer.tensor_count; ++i) {
+        importer.parseTensorInfo(offset);
     }
 
     // set the offset 
