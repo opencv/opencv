@@ -337,46 +337,6 @@ copyMask_<int>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep,
     }
 }
 
-template<> void
-copyMask_<Vec2i>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
-{
-    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
-    {
-        const int* src = (const int*)_src;
-        int* dst = (int*)_dst;
-        int x = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        const int uf = VTraits<v_uint32>::vlanes(); // VTraits<v_uint8>::vlanes() / 4
-        for (; x <= size.width - uf; x += uf)
-        {
-            v_int32 v_src0, v_src1;
-            v_int32 v_dst0, v_dst1;
-            v_src0 = vx_load(src + 2 * x);
-            v_src1 = vx_load(src + 2 * x + VTraits<v_int32>::vlanes());
-            v_dst0 = vx_load(dst + 2 * x);
-            v_dst1 = vx_load(dst + 2 * x + VTraits<v_int32>::vlanes());
-
-            v_uint32 v_nmask = v_eq(vx_load_expand_q(mask + x), vx_setzero_u32());
-            v_uint32 v_nmask0, v_nmask1;
-            v_zip(v_nmask, v_nmask, v_nmask0, v_nmask1);
-
-            v_dst0 = v_select(v_reinterpret_as_s32(v_nmask0), v_dst0, v_src0);
-            v_dst1 = v_select(v_reinterpret_as_s32(v_nmask1), v_dst1, v_src1);
-
-            vx_store(dst + 2 * x, v_dst0);
-            vx_store(dst + 2 * x + VTraits<v_int32>::vlanes(), v_dst1);
-        }
-        vx_cleanup();
-#endif
-        for (; x < size.width; x++)
-            if ( mask[x] ) {
-                dst[2 * x] = src[2 * x];
-                dst[2 * x + 1] = src[2 * x + 1];
-            }
-    }
-}
-
-
 static void
 copyMaskGeneric(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size, void* _esz)
 {
