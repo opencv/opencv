@@ -167,11 +167,16 @@ struct MetadataArrayNode : public MetadataValueNode
     std::vector<std::unique_ptr<MetadataValueNode>> array;
 };
 
-std::string parseGGUFString(const uint8_t* buffer, size_t offset)
+std::string parseGGUFString(const uint8_t* buffer, size_t& offset)
 {
     std::string result;
+    
     uint64_t len = *reinterpret_cast<const uint64_t*>(buffer + offset);
-    result.assign(reinterpret_cast<const char*>(buffer + offset + sizeof(uint64_t)), len);
+    offset += sizeof(uint64_t);
+
+    result.assign(reinterpret_cast<const char*>(buffer + offset), len);
+    offset = offset + sizeof(char) * len;
+    
     return result;
 }
 
@@ -295,7 +300,7 @@ std::unique_ptr<TensorMetadata> parseTensorMetaData(const uint8_t* buffer, size_
     // @TODO: Potential bug here, we are assuming that the shape is always int32_t
     for (uint64_t i = 0; i < ndims; ++i) {
         shape[i] = *reinterpret_cast<const int32_t*>(buffer + offset);
-        offset += sizeof(int32_t);
+        offset += sizeof(uint64_t);
     }
 
     tensor->dims = MatShape(shape);
