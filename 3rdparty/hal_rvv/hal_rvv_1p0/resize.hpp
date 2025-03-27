@@ -8,7 +8,7 @@
 #define OPENCV_HAL_RVV_RESIZE_HPP_INCLUDED
 
 #include <riscv_vector.h>
-#include <set>
+#include <list>
 
 namespace cv { namespace cv_hal_rvv {
 
@@ -892,39 +892,32 @@ static inline int resizeArea(int src_type, const uchar *src_data, size_t src_ste
         // reorder xtab to avoid data dependency between __riscv_vloxei and __riscv_vsoxei
         int range = __riscv_vlenb() * 4 / sizeof(float);
         std::vector<std::vector<ushort>> idx(dst_width);
-        std::set<ushort> remain;
         for (int i = 0; i < xtab_size; i++)
         {
             idx[x_dtab[i]].push_back(i);
-            remain.insert(x_dtab[i]);
+        }
+        std::list<ushort> remain;
+        for (int i = 0; i < dst_width; i++)
+        {
+            remain.push_back(i);
         }
 
         std::vector<ushort> list;
-        bool finished = false;
         for (int i = 0; i < xtab_size / range; i++)
         {
-            std::set<ushort> inserted;
-            for (int j = 0; j < range; j++)
+            auto it = remain.begin();
+            int j;
+            for (j = 0; j < range; j++)
             {
-                auto it = remain.begin();
-                while (it != remain.end() && inserted.count(*it))
-                    it++;
                 if (it == remain.end())
-                {
-                    finished = true;
                     break;
-                }
-
                 ushort val = *it;
-                inserted.insert(val);
+
                 list.push_back(idx[val].back());
                 idx[val].pop_back();
-                if (idx[val].empty())
-                {
-                    remain.erase(it);
-                }
+                it = idx[val].empty() ? remain.erase(it) : ++it;
             }
-            if (finished)
+            if (j < range)
                 break;
         }
 
