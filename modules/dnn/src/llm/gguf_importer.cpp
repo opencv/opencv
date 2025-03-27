@@ -267,7 +267,6 @@ std::unique_ptr<MetadataValueNode> parseMetadataValueNode(const uint8_t* buffer,
     return std::make_unique<MetadataArrayNode>(std::move(arrayNode));
 }
 
-
 struct TensorMetadata {
     std::string name;
     MatShape dims;
@@ -301,50 +300,42 @@ std::unique_ptr<TensorMetadata> parseTensorMetaData(const uint8_t* buffer, size_
 
     tensor->dims = MatShape(shape);
     return tensor;    
-}
-
-struct GGUFImporter 
-{ 
-        GGUFImporter(const char *filename);
-
-        // Layerwise construction 
-        void add_output_layer(); //, size_t blkN);
-
-        // Parsing infos and metadata
-        void parseMetadata(size_t& offset);
-        void parseHeader(size_t& offset);
-        void parseTensorInfo(size_t& offset);
-
-        Mat parseTensor(std::string name);
-
-        // Metadata Storage which will be used during layer construction
-        std::map<std::string, std::unique_ptr<MetadataKeyValueNode>> metadata;    
-        std::map<std::string, std::unique_ptr<TensorMetadata>> tensorsMetadata;
-        std::string filename;
-
-        // GGUF file header definitions
-        uint32_t version; 
-        uint64_t tensor_count;
-        uint32_t magic;
-        uint64_t metadata_kv_count;
-        
-        // File buffer
-        std::vector<uint8_t> buffer; 
-
-        // Offsets for parsing (helper variables - should be wrapped into something more structured)
-        size_t offset = 0;
-        size_t tensor_data_ofset =  -1;
-        size_t metadata_offset = 0;
-
-        // Net impl stuff
-        Net net;
-        Net::Impl* netimpl;
-        std::vector<Ptr<Layer> > prog;
 };
 
-GGUFImporter::GGUFImporter(const char *filename) {
-    netimpl = net.getImpl();
 
+/* Representation of a GGUF binary file format, which is convenient for final Net construction */
+struct GGUFParser 
+{ 
+    void prepareFile(const char *filename);
+
+    // Parsing infos and metadata
+    void parseMetadata(size_t& offset);
+    void parseHeader(size_t& offset);
+    void parseTensorInfo(size_t& offset);
+
+    Mat getTensor(std::string name);
+
+    // Metadata Storage which will be used during layer construction
+    std::map<std::string, std::unique_ptr<MetadataKeyValueNode>> metadata;    
+    std::map<std::string, std::unique_ptr<TensorMetadata>> tensorsMetadata;
+    std::string filename;
+
+    // GGUF file header definitions
+    uint32_t version; 
+    uint64_t tensor_count;
+    uint32_t magic;
+    uint64_t metadata_kv_count;
+    
+    // File buffer
+    std::vector<uint8_t> buffer; 
+
+    // Offsets for parsing (helper variables - should be wrapped into something more structured)
+    size_t offset = 0;
+    size_t tensor_data_ofset =  -1;
+    size_t metadata_offset = 0;
+};
+
+void GGUFParser::prepareFile(const char *filename) {
     this->filename = filename;
 
     std::ifstream file(filename, std::ios::binary | std::ios::ate);
@@ -361,9 +352,59 @@ GGUFImporter::GGUFImporter(const char *filename) {
     if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
         throw std::runtime_error("Error reading file: " );
     }
+
+    size_t offset = 0;
+    parseHeader(offset);
+    parseMetadata(offset);
+    parseTensorInfo(offset);
 }
 
-Mat GGUFImporter::parseTensor(std::string name) {
+void GGUFParser::parseHeader(size_t& offset) {
+    //uint32_t magic = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
+    offset += sizeof(uint32_t);
+
+    version = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
+    offset += sizeof(uint32_t);
+
+    tensor_count = *reinterpret_cast<const uint64_t*>(buffer.data() + offset);
+    offset += sizeof(uint64_t);
+
+    metadata_kv_count = *reinterpret_cast<const uint64_t*>(buffer.data() + offset);
+    offset += sizeof(uint64_t);
+}
+
+void GGUFParser::parseMetadata(size_t& offset) {
+    // Loop through and parse each key–value pair.
+    for (uint64_t i = 0; i < metadata_kv_count; ++i) {
+        // Create a new metadata key–value node.
+        auto kv = std::make_unique<MetadataKeyValueNode>();
+
+        // Parse the key (stored as a GGUF string).
+        kv->key = parseGGUFString(buffer.data(), offset);
+        CV_LOG_DEBUG(NULL, "Parsing metadata key: " << kv->key);
+        
+        // Parse the value node (which will read its type and then the data).
+        kv->value = parseMetadataValueNode(buffer.data(), offset);
+
+        // Store the parsed key–value node in the metadata map.
+        metadata[kv->key] = std::move(kv);
+    }
+}
+
+void GGUFParser::parseTensorInfo(size_t& offset) {
+    for(size_t t = 0; t < tensor_count; ++t) {
+        auto tensor = parseTensorMetaData(buffer.data(), offset);
+        tensorsMetadata[tensor->name] = std::move(tensor);
+    }
+
+    auto tensor = parseTensorMetaData(buffer.data(), offset);
+    tensorsMetadata[tensor->name] = std::move(tensor);
+
+    // @TODO: this is dangerous. Offset should be set in a more clear way.
+    tensor_data_ofset = offset;
+}
+
+Mat GGUFParser::getTensor(std::string name) {
     Mat tensor;
 
     std::unique_ptr<TensorMetadata>& tensorMetadata = tensorsMetadata[name];
@@ -374,16 +415,43 @@ Mat GGUFImporter::parseTensor(std::string name) {
 
     memcpy(tensor.data, buffer.data() + start, end - start);
     return tensor;
+};
+
+
+/* Fabric for creating Net from GGUF file */
+struct GGUFImporter
+{   
+    GGUFImporter();
+
+    void addOutpuLayer();
+    void addAttentionBlock();
+
+    void prepareFile(const char *filename);
+
+    GGUFParser ggufFile;
+
+    // Net impl stuff
+    Net net;
+    Net::Impl* netimpl;
+    std::vector<Ptr<Layer> > prog;
+};
+
+GGUFImporter::GGUFImporter(){
+    netimpl = net.getImpl();
+};
+
+void GGUFImporter::prepareFile(const char *filename) {
+    ggufFile.prepareFile(filename);
 }
 
-void GGUFImporter::parse_output_layer() // , size_t blkN) 
+void GGUFImporter::addOutpuLayer() // , size_t blkN) 
 {   
     LayerParams layerParams;
 
-    std::string weightKey = "blk.0.attn_qkv.weight";
-    std::string biasKey = "blk.0.attn_qkv.bias";
-    std::string inputKey = "blk.0.attn_qkv.input";
-    std::string outputKey = "blk.0.attn_qkv.output";
+    std::string weightKey = "output.weight";
+    std::string biasKey = "output.bias";
+    std::string inputKey = "output_input";
+    std::string outputKey = "output_output";
 
     Mat weight = parseTensor(weightKey);
     Mat bias = parseTensor(biasKey);
@@ -421,41 +489,6 @@ void GGUFImporter::parse_output_layer() // , size_t blkN)
 // Ptr<Graph> GGUFImporter::createGraph(){
 //     return 
 // }
-
-void GGUFImporter::parseHeader(size_t& offset) {
-    //uint32_t magic = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
-    offset += sizeof(uint32_t);
-
-    version = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
-    offset += sizeof(uint32_t);
-
-    tensor_count = *reinterpret_cast<const uint64_t*>(buffer.data() + offset);
-    offset += sizeof(uint64_t);
-
-    metadata_kv_count = *reinterpret_cast<const uint64_t*>(buffer.data() + offset);
-    offset += sizeof(uint64_t);
-}
-
-void GGUFImporter::parseMetadata(size_t& offset) {
-    // Loop through and parse each key–value pair.
-    for (uint64_t i = 0; i < metadata_kv_count; ++i) {
-        // Create a new metadata key–value node.
-        auto kv = std::make_unique<MetadataKeyValueNode>();
-
-        // Parse the key (stored as a GGUF string).
-        kv->key = parseGGUFString(buffer.data(), offset);
-        CV_LOG_DEBUG(NULL, "Parsing metadata key: " << kv->key);
-        
-        // Parse the value node (which will read its type and then the data).
-        kv->value = parseMetadataValueNode(buffer.data(), offset);
-
-        // Store the parsed key–value node in the metadata map.
-        metadata[kv->key] = std::move(kv);
-    }
-}
-
-
-
 
 Net parseFromGGUF(const char *filename) {
 
