@@ -198,7 +198,7 @@ static int getShowTimestampMode()
 void writeLogMessage(LogLevel logLevel, const char* message)
 {
     WriteLogMessageFuncType userFunc = stc_userWriteLogMessageFunc.load();
-    if (userFunc && userFunc != &writeLogMessage)
+    if (userFunc && userFunc != writeLogMessage)
     {
         (*userFunc)(logLevel, message);
         return;
@@ -269,7 +269,7 @@ static const char* stripSourceFilePathPrefix(const char* file)
 void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message)
 {
     WriteLogMessageExFuncType userFunc = stc_userWriteLogMessageExFunc.load();
-    if (userFunc && userFunc != &writeLogMessageEx)
+    if (userFunc && userFunc != writeLogMessageEx)
     {
         (*userFunc)(logLevel, tag, file, line, func, message);
         return;
@@ -299,7 +299,7 @@ void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int
 
 void replaceWriteLogMessage(WriteLogMessageFuncType f)
 {
-    if (f == &writeLogMessage)
+    if (f == writeLogMessage)
     {
         f = nullptr;
     }
@@ -308,7 +308,7 @@ void replaceWriteLogMessage(WriteLogMessageFuncType f)
 
 void replaceWriteLogMessageEx(WriteLogMessageExFuncType f)
 {
-    if (f == &writeLogMessageEx)
+    if (f == writeLogMessageEx)
     {
         f = nullptr;
     }
