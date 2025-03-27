@@ -437,7 +437,7 @@ static bool hal_copyToMask(const Mat &src, Mat &dst, const Mat &mask) {
             w = (int)sz;
             h = 1;
         }
-        bool ret = cv_hal_copyToMask(src.data, src.step, dst.data, dst.step, w, h, src.type(), mask.data, mask.step, mask.type());
+        int ret = cv_hal_copyToMask(src.data, src.step, dst.data, dst.step, w, h, src.type(), mask.data, mask.step, mask.type());
         return ret == CV_HAL_ERROR_OK;
     }
     else {
@@ -445,9 +445,9 @@ static bool hal_copyToMask(const Mat &src, Mat &dst, const Mat &mask) {
         uchar *ptrs[3] = {nullptr};
         NAryMatIterator it(arrays, ptrs);
 
-        int w = it.size, h = 1;
+        int w = (int)it.size, h = 1;
         for (size_t i = 0; i < it.nplanes; i++, ++it) {
-            bool ret = cv_hal_copyToMask(ptrs[0], 0, ptrs[1], 0, w, h, src.type(), ptrs[2], 0, mask.type());
+            int ret = cv_hal_copyToMask(ptrs[0], 0, ptrs[1], 0, w, h, src.type(), ptrs[2], 0, mask.type());
             if (ret != CV_HAL_ERROR_OK) {
                 return false;
             }
