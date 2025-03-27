@@ -45,6 +45,7 @@
 #include "hal_rvv_1p0/qr.hpp" // core
 #include "hal_rvv_1p0/svd.hpp" // core
 #include "hal_rvv_1p0/sqrt.hpp" // core
+#include "hal_rvv_1p0/copy_mask.hpp" // core
 
 #include "hal_rvv_1p0/moments.hpp" // imgproc
 #include "hal_rvv_1p0/filter.hpp" // imgproc
