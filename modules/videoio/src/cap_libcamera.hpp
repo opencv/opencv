@@ -198,6 +198,21 @@ protected:
 	std::unique_ptr<Options> options_;
 
 private:
+
+	static std::shared_ptr<CameraManager> getCameraManager() {
+		static std::shared_ptr<CameraManager> camera_manager_;
+		if (!camera_manager_) {
+			std::cerr << "creating manager" << std::endl;
+			camera_manager_ = std::make_shared<CameraManager>();
+			int ret = camera_manager_->start();
+			if (ret)
+				throw std::runtime_error("camera manager failed to start,"
+					"code " + std::to_string(-ret));
+		}
+
+		return camera_manager_;
+	}
+
 	template <typename T>
 	class MessageQueue
 	{
@@ -235,7 +250,7 @@ private:
 	void requestComplete(Request *request);
 	void configureDenoise(const std::string &denoise_mode);
 
-	std::unique_ptr<CameraManager> camera_manager_;
+	// std::unique_ptr<CameraManager> camera_manager_;
 	std::shared_ptr<Camera> camera_;
 	bool camera_acquired_ = false;
 	std::unique_ptr<CameraConfiguration> configuration_;
