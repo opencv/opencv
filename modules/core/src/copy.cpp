@@ -459,6 +459,18 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     }
 
     CV_IPP_RUN_FAST(ipp_copyTo(*this, dst, mask))
+    if ( this->dims <= 2 ) {
+        if ( this->size() == dst.size() && this->size() == dst.size() ) {
+            CALL_HAL(copyToMask, cv_hal_copyToMasked, this->data, this->step, dst.data, dst.step, this->cols, this->rows, this->type(), mask.data, mask.step, mask.type());
+        }
+    }
+    else if ( this->isContinuous() && dst.isContinuous() && mask.isContinuous() )
+    {
+        size_t sz = this->total();
+        if (sz < INT_MAX) {
+            CALL_HAL(copyToMask, cv_hal_copyToMasked, this->data, 0, dst.data, 0, (int)sz, 1, this->type(), mask.data, 0, mask.type());
+        }
+    }
 
     size_t esz = colorMask ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
