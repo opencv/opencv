@@ -477,3 +477,18 @@ ldm_inpainting:
   height: 512
   rgb: true
   sample: "ldm_inpainting"
+
+################################################################################
+# Macbeth chart detection model.
+################################################################################
+
+mcc:
+  load_info:
+    url: "https://github.com/gursimarsingh/opencv_zoo/raw/refs/heads/mcc_model/models/macbeth_chart_detector/frozen_inference_graph.pb?download="
+    sha1: "fae7dbef14c4ae1fca76f3662220fbd460ed5ed6"
+  model: "frozen_inference_graph.pb"
+  config_load_info:
+    url: "https://github.com/gursimarsingh/opencv_zoo/raw/refs/heads/mcc_model/models/macbeth_chart_detector/graph.pbtxt?download="
+    sha1: "8350cb8f078ecefa1cd566e89930ede25a192310"
+  config: "graph.pbtxt"
+  sample: "mcc"
