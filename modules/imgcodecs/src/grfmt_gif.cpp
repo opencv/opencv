@@ -392,7 +392,6 @@ bool GifDecoder::lzwDecode() {
             if (code < colorTableSize) {
                 imgCodeStream[idx++] = (uchar)code;
             } else {
-                CV_LOG_WARNING(NULL, "Too long LZW length in GIF.");
                 CV_Assert(idx + lzwExtraTable[code].length <= width * height);
                 for (int i = 0; i < lzwExtraTable[code].length - 1; i++) {
                     imgCodeStream[idx++] = lzwExtraTable[code].prefix[i];
