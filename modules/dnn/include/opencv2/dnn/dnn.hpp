@@ -1270,6 +1270,12 @@ CV__DNN_INLINE_NS_BEGIN
      */
     CV_EXPORTS_W Mat readTensorFromONNX(CV_WRAP_FILE_PATH const String& path);
 
+    /** @brief Creates a network from .gguf file.
+     *  @param path to the .gguf file. 
+     *  @returns Net.
+     */
+    CV_EXPORTS_W Net readNetFromGGUF(const char *filename);
+
     /** @brief Creates 4-dimensional blob from image. Optionally resizes and crops @p image from center,
      *  subtract @p mean values, scales values by @p scalefactor, swap Blue and Red channels.
      *  @param image input image (with 1-, 3- or 4-channels).
