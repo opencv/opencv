@@ -763,6 +763,7 @@ LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
 
 LibcameraApp::~LibcameraApp()
 {
+
 	StopCamera();
 	Teardown();
 	CloseCamera();
@@ -779,22 +780,17 @@ void LibcameraApp::OpenCamera()
 	if (options_->verbose)
 		std::cerr << "Opening camera..." << std::endl;
 
-	camera_manager_ = std::make_unique<CameraManager>();
-	int ret = camera_manager_->start();
-	if (ret)
-		throw std::runtime_error("camera manager failed to start, code " + std::to_string(-ret));
-
-	if (camera_manager_->cameras().size() == 0)
+	if (getCameraManager()->cameras().size() == 0)
 		throw std::runtime_error("no cameras available");
-	if (options_->camera >= camera_manager_->cameras().size())
+	if (options_->camera >= getCameraManager()->cameras().size())
 		throw std::runtime_error("selected camera is not available");
 
-	std::string const &cam_id = camera_manager_->cameras()[options_->camera]->id();
-	camera_ = camera_manager_->get(cam_id);
+	std::string const &cam_id = getCameraManager()->cameras()[options_->camera]->id();
+	camera_ = getCameraManager()->get(cam_id);
 	if (!camera_)
 		throw std::runtime_error("failed to find camera " + cam_id);
 
-	if (camera_->acquire())
+	if (!camera_acquired_ && camera_->acquire())
 		throw std::runtime_error("failed to acquire camera " + cam_id);
 	camera_acquired_ = true;
 
@@ -811,11 +807,22 @@ void LibcameraApp::CloseCamera()
 
 	camera_.reset();
 
-	camera_manager_.reset();
-
 	if (options_->verbose && !options_->help)
 		std::cerr << "Camera closed" << std::endl;
 }
+
+// void LibcameraApp::CloseCamera() {
+//     std::lock_guard<std::mutex> lock(camera_stop_mutex_); 
+//     if (camera_acquired_) {
+//         try {
+//             camera_->release();
+//             camera_acquired_ = false;
+//             camera_.reset();
+//         } catch (const std::exception& e) {
+//             std::cerr << "Error releasing camera: " << e.what() << std::endl;
+//         }
+//     }
+// }
 
 
 void LibcameraApp::ConfigureViewfinder()
@@ -952,11 +959,17 @@ void LibcameraApp::StopCamera()
 		std::lock_guard<std::mutex> lock(camera_stop_mutex_);
 		if (camera_started_)
 		{
+            std::cerr << "Camera tries to stop!!" << std::endl;
 			if (camera_->stop())
 				throw std::runtime_error("failed to stop camera");
 
 			camera_started_ = false;
+            
 		}
+        // camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete);
+        // if (!camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete)) {
+        //     throw std::runtime_error("failed to disconnect camera callbacks");
+        // }
 	}
 
 	if (camera_)
@@ -1125,8 +1138,9 @@ void LibcameraApp::setupCapture()
 	else if (validation == CameraConfiguration::Adjusted)
 		std::cerr << "Stream configuration adjusted" << std::endl;
 
-	if (camera_->configure(configuration_.get()) < 0)
-		throw std::runtime_error("failed to configure streams");
+        if (camera_->configure(configuration_.get()) < 0)
+		    throw std::runtime_error("failed to configure streams");
+
 	if (options_->verbose)
 		std::cerr << "Camera streams configured" << std::endl;
 
@@ -1290,6 +1304,7 @@ protected:
     uint8_t *framebuffer;
     std::mutex mtx;
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::condition_variable cv;
     std::mutex cv_mtx;
     bool thread_exit = false;
@@ -1300,6 +1315,11 @@ protected:
     bool isFramePending;
     bool needsReconfigure;
 >>>>>>> f1cd8084b4 (New branch for debugging)
+=======
+    // bool isFramePending;
+    // bool needsReconfigure;
+    std::atomic<bool> isFramePending,needsReconfigure;
+>>>>>>> 724680b5bd (multi camera support)
 };
 
 LibcameraCapture::LibcameraCapture()
@@ -1324,12 +1344,18 @@ LibcameraCapture::LibcameraCapture()
     frameready.store(false, std::memory_order_release);;
     framebuffer=nullptr;
 <<<<<<< HEAD
+<<<<<<< HEAD
     // isFramePending=false;
     isFramePending.store(false, std::memory_order_release);
     needsReconfigure.store(false, std::memory_order_release);
 =======
     isFramePending=false;
 >>>>>>> f1cd8084b4 (New branch for debugging)
+=======
+    // isFramePending=false;
+    isFramePending.store(false, std::memory_order_release);
+    needsReconfigure.store(false, std::memory_order_release);
+>>>>>>> 724680b5bd (multi camera support)
 }
 
 <<<<<<< HEAD
@@ -1573,7 +1599,8 @@ bool LibcameraCapture::grabFrame()
             // restart the camera
             stopVideo();
             startVideo();
-            needsReconfigure = false;
+            // needsReconfigure = false;
+            needsReconfigure.store(false, std::memory_order_release);
         }
 >>>>>>> f1cd8084b4 (New branch for debugging)
         return true;
@@ -1589,10 +1616,15 @@ bool LibcameraCapture::grabFrame()
             return false;
         }
 <<<<<<< HEAD
+<<<<<<< HEAD
         // isFramePending = true;
         // isFramePending.store(true, std::memory_order_release);
 =======
         isFramePending = true;
+=======
+        // isFramePending = true;
+        isFramePending.store(true, std::memory_order_release);
+>>>>>>> 724680b5bd (multi camera support)
         
 >>>>>>> f1cd8084b4 (New branch for debugging)
 	}
@@ -1637,12 +1669,17 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         // restart the camera
         stopVideo();
         startVideo();
-        needsReconfigure = false;
+        // needsReconfigure = false;
+        needsReconfigure.store(false, std::memory_order_release);
     }
 
+<<<<<<< HEAD
 >>>>>>> f1cd8084b4 (New branch for debugging)
 	if(!running.load(std::memory_order_acquire))return false;
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+	if(!running.load(std::memory_order_acquire)) return false;
+>>>>>>> 724680b5bd (multi camera support)
     auto start_time = std::chrono::high_resolution_clock::now();
     bool timeout_reached = false;
     timespec req;
@@ -1787,22 +1824,22 @@ bool LibcameraCapture::setProperty(int propId, double value)
     {
     case cv::CAP_PROP_BRIGHTNESS:
         options->brightness = value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_CONTRAST:
         options->contrast = value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_SATURATION:
         options->saturation = value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_SHARPNESS:
         options->sharpness = value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_AUTO_EXPOSURE:
@@ -1812,17 +1849,17 @@ bool LibcameraCapture::setProperty(int propId, double value)
         else{
             options->setExposureMode(Exposure_Modes::EXPOSURE_SHORT);
         }
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_EXPOSURE:
         options->shutter = value; // Assumes value is in milliseconds, libcamera uses seconds
-        needsReconfigure = true;        
+        needsReconfigure.store(true, std::memory_order_release);        
         break;
 
     case cv::CAP_PROP_AUTO_WB:
         options->setWhiteBalance(value ? WhiteBalance_Modes::WB_AUTO : WhiteBalance_Modes::WB_INDOOR);
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_WB_TEMPERATURE:
@@ -1838,7 +1875,7 @@ bool LibcameraCapture::setProperty(int propId, double value)
         } else {
             options->setWhiteBalance(WhiteBalance_Modes::WB_CLOUDY);
         }
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     // case cv::CAP_PROP_ZOOM: // This is a custom property for ROI
@@ -1888,29 +1925,29 @@ bool LibcameraCapture::setProperty(int propId, double value)
         //     std::cerr << "Warning: FourCC code " << fourcc << " not supported." << std::endl;
         //     return false;
         // }
-        // // needsReconfigure = true;
+        // // needsReconfigure.store(true, std::memory_order_release);
         break;
     }
 
     case cv::CAP_PROP_FRAME_WIDTH:
         options->video_width = options->photo_width = (int)value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_FRAME_HEIGHT:
         options->video_height = options->photo_height = (int)value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_FPS:
         options->framerate = (float)value;
-        needsReconfigure = true;
+        needsReconfigure.store(true, std::memory_order_release);
         break;
     case cv::CAP_PROP_AUTOFOCUS: // Not implemented
     case cv::CAP_PROP_BUFFERSIZE: // Not implemented
     case cv::CAP_PROP_PAN: // Not implemented
     case cv::CAP_PROP_TILT: // Not implemented
-    case cv::CAP_PROP_ROLL: // Not implemented
+    case cv::CAP_PROP_ROLL: // Not implemen ted
     case cv::CAP_PROP_IRIS: // Not implemented
         // These properties might need to trigger a re-configuration of the camera.
         // You can handle them here if you want to support changing resolution or framerate on-the-fly.

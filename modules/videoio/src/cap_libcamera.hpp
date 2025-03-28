@@ -219,6 +219,9 @@ protected:
 
 private:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 724680b5bd (multi camera support)
 
 	static std::shared_ptr<CameraManager> getCameraManager() {
 		static std::shared_ptr<CameraManager> camera_manager_;
@@ -234,8 +237,11 @@ private:
 		return camera_manager_;
 	}
 
+<<<<<<< HEAD
 =======
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+>>>>>>> 724680b5bd (multi camera support)
 	template <typename T>
 	class MessageQueue
 	{
@@ -274,10 +280,14 @@ private:
 	void configureDenoise(const std::string &denoise_mode);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 	// std::unique_ptr<CameraManager> camera_manager_;
 =======
 	std::unique_ptr<CameraManager> camera_manager_;
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+	// std::unique_ptr<CameraManager> camera_manager_;
+>>>>>>> 724680b5bd (multi camera support)
 	std::shared_ptr<Camera> camera_;
 	bool camera_acquired_ = false;
 	std::unique_ptr<CameraConfiguration> configuration_;
