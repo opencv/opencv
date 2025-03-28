@@ -1115,12 +1115,12 @@ inline int hal_ni_transpose2d(const uchar* src_data, size_t src_step, uchar* dst
     @param type Type of source and destination images, for example CV_8UC1 or CV_32FC3
     @param mask_data, mask_step, mask_type Mask
 */
-inline int hal_ni_copyToMask(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height,
+inline int hal_ni_copyToMasked(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int width, int height,
                              int type, const uchar* mask_data, size_t mask_step, int mask_type)
 { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
-#define cv_hal_copyToMask hal_ni_copyToMask
+#define cv_hal_copyToMasked hal_ni_copyToMasked
 //! @endcond
 
 //! @}

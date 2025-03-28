@@ -423,39 +423,6 @@ static bool ipp_copyTo(const Mat &src, Mat &dst, const Mat &mask)
 }
 #endif
 
-static bool hal_copyToMask(const Mat &src, Mat &dst, const Mat &mask) {
-    if (src.size() != dst.size() || src.size() != mask.size()) {
-        return false;
-    }
-
-    if (src.dims <= 2) {
-        int64_t sz = (int64_t)src.cols * src.rows * mask.channels();
-        bool hasIntOverflow = sz >= INT_MAX;
-        bool isContiguous = ((src.flags & dst.flags & mask.flags) & Mat::CONTINUOUS_FLAG) != 0;
-        int w = src.cols * mask.channels(), h = src.rows;
-        if (isContiguous && !hasIntOverflow) {
-            w = (int)sz;
-            h = 1;
-        }
-        int ret = cv_hal_copyToMask(src.data, src.step, dst.data, dst.step, w, h, src.type(), mask.data, mask.step, mask.type());
-        return ret == CV_HAL_ERROR_OK;
-    }
-    else {
-        const Mat *arrays[] = {&src, &dst, &mask, nullptr};
-        uchar *ptrs[3] = {nullptr};
-        NAryMatIterator it(arrays, ptrs);
-
-        int w = (int)it.size, h = 1;
-        for (size_t i = 0; i < it.nplanes; i++, ++it) {
-            int ret = cv_hal_copyToMask(ptrs[0], 0, ptrs[1], 0, w, h, src.type(), ptrs[2], 0, mask.type());
-            if (ret != CV_HAL_ERROR_OK) {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
 void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 {
     CV_INSTRUMENT_REGION();
@@ -492,8 +459,17 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     }
 
     CV_IPP_RUN_FAST(ipp_copyTo(*this, dst, mask))
-    if (hal_copyToMask(*this, dst, mask)) {
-        return;
+    if ( this->dims <= 2 ) {
+        if ( this->size() == dst.size() && this->size() == dst.size() ) {
+            CALL_HAL(copyToMask, cv_hal_copyToMasked, this->data, this->step, dst.data, dst.step, this->cols, this->rows, this->type(), mask.data, mask.step, mask.type());
+        }
+    }
+    else if ( this->isContinuous() && dst.isContinuous() && mask.isContinuous() )
+    {
+        size_t sz = this->total();
+        if (sz < INT_MAX) {
+            CALL_HAL(copyToMask, cv_hal_copyToMasked, this->data, 0, dst.data, 0, (int)sz, 1, this->type(), mask.data, 0, mask.type());
+        }
     }
 
     size_t esz = colorMask ? elemSize1() : elemSize();
