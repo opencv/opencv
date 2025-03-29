@@ -1491,20 +1491,18 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
         cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
         return;
     }
-    case V4L2_PIX_FMT_Y12:
-    {
-        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-        cv::Mat(imageSize, CV_16UC1, start).convertTo(temp, CV_8U, 1.0 / 16);
-        cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
-        return;
-    }
-    case V4L2_PIX_FMT_Y10:
-    {
-        cv::Mat temp(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-        cv::Mat(imageSize, CV_16UC1, start).convertTo(temp, CV_8U, 1.0 / 4);
-        cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
-        return;
-    }
+    case V4L2_PIX_FMT_Y12:  // 16-bit grayscale format
+{
+    frame = cv::Mat(imageSize, CV_16UC1, start).clone();  // Preserve 16-bit depth
+    cv::cvtColor(frame, frame, COLOR_GRAY2BGR);  // Convert to BGR
+    return;
+}
+case V4L2_PIX_FMT_Y10:  // Another 16-bit format
+{
+    frame = cv::Mat(imageSize, CV_16UC1, start).clone();  // Preserve 16-bit depth
+    cv::cvtColor(frame, frame, COLOR_GRAY2BGR);  // Convert to BGR
+    return;
+}
     case V4L2_PIX_FMT_SN9C10X:
     {
         sonix_decompress_init();
@@ -1512,7 +1510,7 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
                 start, (unsigned char*)buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
 
         cv::Mat cv_buf(imageSize, CV_8UC1, buffers[MAX_V4L_BUFFERS].memories[MEMORY_RGB].start);
-        cv::cvtColor(cv_buf, frame, COLOR_BayerRG2BGR);
+         cv::cvtColor(temp, frame, COLOR_GRAY2BGR);
         return;
     }
     case V4L2_PIX_FMT_SRGGB8:
