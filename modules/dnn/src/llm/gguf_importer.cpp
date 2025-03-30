@@ -71,7 +71,7 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
     layerParams.name = "attention_block";
     layerParams.set("num_heads", 1);
 
-    Mat weight = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv");
+    Mat weight = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.weight");
     // zero bias for now
     Mat bias = Mat::zeros(weight.size[0], weight.size[1], CV_32F);
     layerParams.blobs.push_back(weight);
