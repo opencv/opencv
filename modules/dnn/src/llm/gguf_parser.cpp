@@ -1,5 +1,6 @@
 #include "../precomp.hpp"
 #include "gguf_parser.hpp"
+//#include "gguf_buffer.hpp"
 #include "gguf_def.hpp"
 #include <fstream>
 #include "opencv2/core.hpp"
@@ -8,137 +9,140 @@ namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 using namespace dnn;
 
-std::string parseGGUFString(const uint8_t* buffer, size_t& offset)
+std::string parseGGUFString(GGUFBufferReader& reader)
 {
     std::string result;
     
-    uint64_t len = *reinterpret_cast<const uint64_t*>(buffer + offset);
-    offset += sizeof(uint64_t);
-
-    result.assign(reinterpret_cast<const char*>(buffer + offset), len);
-    offset = offset + sizeof(char) * len;
+    uint64_t len = reader.readSingleValue<uint64_t>();
+    return reader.readString(len);
+    // result.assign(reinterpret_cast<const char*>(buffer + offset), len);
+    // offset = offset + sizeof(char) * len;
     
-    return result;
+    // return result;
 }
 
-Ptr<MetadataValueNode> parseMetadataSingleValueNode(const uint8_t* buffer, size_t& offset, uint32_t type)
+Ptr<MetadataValueNode> parseMetadataSingleValueNode(GGUFBufferReader& reader, uint32_t type)
 {
     switch (type) {
-        case GGUF_METADATA_VALUE_TYPE_UINT8: {
-            uint8_t val = *(buffer + offset);
-            offset += sizeof(uint8_t);
-            return makePtr<MetadataSingleValueNode<uint8_t>>(val, GGUF_METADATA_VALUE_TYPE_UINT8);
-        }
-        case GGUF_METADATA_VALUE_TYPE_INT8: {
-            int8_t val = *reinterpret_cast<const int8_t*>(buffer + offset);
-            offset += sizeof(int8_t);
-            return makePtr<MetadataSingleValueNode<int8_t>>(val, GGUF_METADATA_VALUE_TYPE_INT8);
-        }
-        case GGUF_METADATA_VALUE_TYPE_UINT16: {
-            uint16_t val = *reinterpret_cast<const uint16_t*>(buffer + offset);
-            offset += sizeof(uint16_t);
-            return makePtr<MetadataSingleValueNode<uint16_t>>(val, GGUF_METADATA_VALUE_TYPE_UINT16);
-        }
-        case GGUF_METADATA_VALUE_TYPE_INT16: {
-            int16_t val = *reinterpret_cast<const int16_t*>(buffer + offset);
-            offset += sizeof(int16_t);
-            return makePtr<MetadataSingleValueNode<int16_t>>(val, GGUF_METADATA_VALUE_TYPE_INT16);
-        }
-        case GGUF_METADATA_VALUE_TYPE_UINT32: {
-            uint32_t val = *reinterpret_cast<const uint32_t*>(buffer + offset);
-            offset += sizeof(uint32_t);
-            return makePtr<MetadataSingleValueNode<uint32_t>>(val, GGUF_METADATA_VALUE_TYPE_UINT32);
-        }
-        case GGUF_METADATA_VALUE_TYPE_INT32: {
-            int32_t val = *reinterpret_cast<const int32_t*>(buffer + offset);
-            offset += sizeof(int32_t);
-            return makePtr<MetadataSingleValueNode<int32_t>>(val, GGUF_METADATA_VALUE_TYPE_INT32);
-        }
-        case GGUF_METADATA_VALUE_TYPE_UINT64: {
-            uint64_t val = *reinterpret_cast<const uint64_t*>(buffer + offset);
-            offset += sizeof(uint64_t);
-            return makePtr<MetadataSingleValueNode<uint64_t>>(val, GGUF_METADATA_VALUE_TYPE_UINT64);
-        }
-        case GGUF_METADATA_VALUE_TYPE_INT64: {
-            int64_t val = *reinterpret_cast<const int64_t*>(buffer + offset);
-            offset += sizeof(int64_t);
-            return makePtr<MetadataSingleValueNode<int64_t>>(val, GGUF_METADATA_VALUE_TYPE_INT64);
-        }
-        case GGUF_METADATA_VALUE_TYPE_FLOAT32: {
-            float val = *reinterpret_cast<const float*>(buffer + offset);
-            offset += sizeof(float);
-            return makePtr<MetadataSingleValueNode<float>>(val, GGUF_METADATA_VALUE_TYPE_FLOAT32);
-        }
-        case GGUF_METADATA_VALUE_TYPE_FLOAT64: {
-            double val = *reinterpret_cast<const double*>(buffer + offset);
-            offset += sizeof(double);
-            return makePtr<MetadataSingleValueNode<double>>(val, GGUF_METADATA_VALUE_TYPE_FLOAT64);
-        }
+        case GGUF_METADATA_VALUE_TYPE_UINT8:
+            return makePtr<MetadataSingleValueNode<uint8_t>>(
+                reader.readSingleValue<uint8_t>(), 
+                GGUF_METADATA_VALUE_TYPE_UINT8
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_INT8:
+            return makePtr<MetadataSingleValueNode<int8_t>>(
+                reader.readSingleValue<int8_t>(), 
+                GGUF_METADATA_VALUE_TYPE_INT8
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_UINT16:
+            return makePtr<MetadataSingleValueNode<uint16_t>>(
+                reader.readSingleValue<uint16_t>(), 
+                GGUF_METADATA_VALUE_TYPE_UINT16
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_INT16:
+            return makePtr<MetadataSingleValueNode<int16_t>>(
+                reader.readSingleValue<int16_t>(), 
+                GGUF_METADATA_VALUE_TYPE_INT16
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_UINT32:
+            return makePtr<MetadataSingleValueNode<uint32_t>>(
+                reader.readSingleValue<uint32_t>(), 
+                GGUF_METADATA_VALUE_TYPE_UINT32
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_INT32:
+            return makePtr<MetadataSingleValueNode<int32_t>>(
+                reader.readSingleValue<int32_t>(), 
+                GGUF_METADATA_VALUE_TYPE_INT32
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_UINT64:
+            return makePtr<MetadataSingleValueNode<uint64_t>>(
+                reader.readSingleValue<uint64_t>(), 
+                GGUF_METADATA_VALUE_TYPE_UINT64
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_INT64:
+            return makePtr<MetadataSingleValueNode<int64_t>>(
+                reader.readSingleValue<int64_t>(), 
+                GGUF_METADATA_VALUE_TYPE_INT64
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_FLOAT32:
+            return makePtr<MetadataSingleValueNode<float>>(
+                reader.readSingleValue<float>(), 
+                GGUF_METADATA_VALUE_TYPE_FLOAT32
+            );
+
+        case GGUF_METADATA_VALUE_TYPE_FLOAT64:
+            return makePtr<MetadataSingleValueNode<double>>(
+                reader.readSingleValue<double>(), 
+                GGUF_METADATA_VALUE_TYPE_FLOAT64
+            );
+
         case GGUF_METADATA_VALUE_TYPE_BOOL: {
-            uint8_t val = *(buffer + offset);
-            offset += sizeof(uint8_t);
-            bool boolVal = (val != 0);
-            return makePtr<MetadataSingleValueNode<bool>>(boolVal, GGUF_METADATA_VALUE_TYPE_BOOL);
+            uint8_t raw = reader.readSingleValue<uint8_t>();
+            return makePtr<MetadataSingleValueNode<bool>>(
+                raw != 0, 
+                GGUF_METADATA_VALUE_TYPE_BOOL
+            );
         }
+
         case GGUF_METADATA_VALUE_TYPE_STRING: {
-            std::string str = parseGGUFString(buffer, offset);
+            std::string str = parseGGUFString(reader);
             return makePtr<MetadataSingleValueNode<std::string>>(str, GGUF_METADATA_VALUE_TYPE_STRING);
         }
+
         default:
             throw std::runtime_error("Unknown metadata value type ID: " + std::to_string(type));
     }
 }
 
-Ptr<MetadataValueNode> parseMetadataValueNode(const uint8_t* buffer, size_t& offset) {
-    uint32_t type = *reinterpret_cast<const uint32_t*>(buffer + offset);
-    offset += sizeof(uint32_t);
+Ptr<MetadataValueNode> parseMetadataValueNode(GGUFBufferReader& reader) {
+    uint32_t type = reader.readSingleValue<uint32_t>();
 
     if (type != GGUF_METADATA_VALUE_TYPE_ARRAY) {
-        return parseMetadataSingleValueNode(buffer, offset, type);
+        return parseMetadataSingleValueNode(reader, type);
     }
 
-    uint32_t elementType = *reinterpret_cast<const uint32_t*>(buffer + offset);
-    offset += sizeof(uint32_t);
-
-    uint64_t count = *reinterpret_cast<const uint64_t*>(buffer + offset);
-    offset += sizeof(uint64_t);
+    uint32_t elementType = reader.readSingleValue<uint32_t>();
+    uint64_t count = reader.readSingleValue<uint64_t>();
 
     auto arrayNode = makePtr<MetadataArrayNode>(static_cast<gguf_metadata_value_type>(elementType));
     for (uint64_t i = 0; i < count; ++i) {
-        arrayNode->array.push_back(parseMetadataSingleValueNode(buffer, offset, elementType));
+        arrayNode->array.push_back(
+            parseMetadataSingleValueNode(reader, elementType)
+        );
     }
 
     return arrayNode;
 }
 
-TensorMetadata parseTensorMetaData(const uint8_t* buffer, size_t& offset){
+TensorMetadata parseTensorMetaData(GGUFBufferReader& reader) {
     auto tensor = TensorMetadata();
 
-    tensor.name = parseGGUFString(buffer, offset);
+    tensor.name = parseGGUFString(reader);
     tensor.dims = MatShape();
 
-    uint32_t dim_count = *reinterpret_cast<const uint32_t*>(buffer + offset);
-    offset += sizeof(uint32_t);
+    uint32_t dim_count = reader.readSingleValue<uint32_t>();
 
     for (uint32_t i = 0; i < dim_count; ++i) {
-        int64_t dim = *reinterpret_cast<const int64_t*>(buffer + offset);
-        offset += sizeof(int64_t);
-        tensor.dims.push_back(dim);
+        tensor.dims.push_back( reader.readSingleValue<int64_t>());
     }
 
-    uint32_t type = *reinterpret_cast<const uint32_t*>(buffer + offset);
-    offset += sizeof(uint32_t);
-
-    tensor.type = type;
+    tensor.type = reader.readSingleValue<uint32_t>();;
     // now we support only float32
-    if (type != GGML_TYPE_F32) {
-        throw std::runtime_error("Unsupported tensor type: " + std::to_string(type));
+    if (tensor.type != GGML_TYPE_F32) {
+        throw std::runtime_error("Unsupported tensor type: " + std::to_string(tensor.type));
     }   
 
     tensor.type_size = sizeof(float);
 
-    size_t tensor_data_offset = *reinterpret_cast<const uint64_t*>(buffer + offset);
-    offset += sizeof(uint64_t);
+    size_t tensor_data_offset = reader.readSingleValue<uint64_t>();
     tensor.data_offset = tensor_data_offset;
 
     return tensor;
@@ -152,85 +156,55 @@ size_t TensorMetadata::size() const {
     return size * type_size;
 }
 
+GGUFParser::GGUFParser(const String& ggufFileName) {
+    buffer = makePtr<GGUFBuffer>(ggufFileName);
+    GGUFBufferReader reader(buffer);
+    magic = reader.readSingleValue<uint32_t>();
+    version = reader.readSingleValue<uint32_t>();
+    tensor_count = reader.readSingleValue<uint64_t>();
+    metadata_kv_count = reader.readSingleValue<uint64_t>();
 
-void GGUFParser::prepareFile(const String& ggufFileName) {
-    std::ifstream file(ggufFileName, std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open file: ");
-    }
-
-    // Get the size of the file and prepare a buffer
-    const std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-    buffer.resize(size);
-
-    // Read the file content into the buffer
-    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-        throw std::runtime_error("Error reading file: " );
-    }
-
-    size_t offset = 0;
-    parseHeader(offset);
-    parseMetadata(offset);
-    parseTensorInfo(offset);
-};
-
-void GGUFParser::parseHeader(size_t& offset) {
-    //uint32_t magic = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
-    offset += sizeof(uint32_t);
-
-    version = *reinterpret_cast<const uint32_t*>(buffer.data() + offset);
-    offset += sizeof(uint32_t);
-
-    tensor_count = *reinterpret_cast<const uint64_t*>(buffer.data() + offset);
-    offset += sizeof(uint64_t);
-
-    metadata_kv_count = *reinterpret_cast<const uint64_t*>(buffer.data() + offset);
-    offset += sizeof(uint64_t);
-};
-
-void GGUFParser::parseMetadata(size_t& offset) {
     // Loop through and parse each key–value pair.
     for (uint64_t i = 0; i < metadata_kv_count; ++i) {
         // Create a new metadata key–value node.
         auto kv = Ptr<MetadataKeyValueNode>();
-
         // Parse the key (stored as a GGUF string).
-        kv->key = parseGGUFString(buffer.data(), offset);
-        
+        kv->key = parseGGUFString(reader);
         // Parse the value node (which will read its type and then the data).
-        kv->value = parseMetadataValueNode(buffer.data(), offset);
-
+        kv->value = parseMetadataValueNode(reader);
         // Store the parsed key–value node in the metadata map.
-        metadata[kv->key] = std::move(kv);
+        metadata[kv->key] = kv;
     }
-}
 
-
-void GGUFParser::parseTensorInfo(size_t& offset) {
     for(size_t t = 0; t < tensor_count; ++t) {
-        auto tensor = parseTensorMetaData(buffer.data(), offset);
-        tensorsMetadata[tensor.name] =tensor;
+        auto tensor = parseTensorMetaData(reader);
+        tensorsMetadata[tensor.name] = tensor;
     }
 
-    auto tensor = parseTensorMetaData(buffer.data(), offset);
+    auto tensor = parseTensorMetaData(reader);
     tensorsMetadata[tensor.name] = tensor;
 
-    // @TODO: this is dangerous. Offset should be set in a more clear way.
-    tensor_data_ofset = offset;
+    tensor_reader = makePtr<GGUFBufferReader>(buffer);
+    tensor_reader->current_offset = reader.current_offset;
 };
 
 Mat GGUFParser::getTensor(std::string name) {
     Mat tensor;
-
     TensorMetadata tensorMetadata = tensorsMetadata[name];
-    tensor.create(tensorMetadata.dims, CV_32F);
+    
+    if (tensorMetadata.dims.size() != 0) {
+        throw std::runtime_error("Currently only 2D Tensor supported");
+    }
+    if (tensorMetadata.type != GGML_TYPE_F32) {
+        throw std::runtime_error("Unsupported tensor type: " + std::to_string(tensorMetadata.type));
+    }
 
-    size_t start = tensor_data_ofset + tensorMetadata.data_offset;
-    size_t end = start + tensorMetadata.size() * sizeof(float);
-
-    memcpy(tensor.data, buffer.data() + start, end - start);
-    return tensor;
+    return tensor_reader->read2DMat(
+        GGML_TYPE_F32,
+        tensorMetadata.dims[0],
+        tensorMetadata.dims[1],
+        tensorMetadata.data_offset
+    );
 };
 
 std::string GGUFParser::getStringMetadata(const std::string key) {

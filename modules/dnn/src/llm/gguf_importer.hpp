@@ -38,10 +38,12 @@ struct VanillaArchBlockConstructor : public ArchBlockConstructor{
 /* Fabric for creating Net from GGUF file */
 struct GGUFImporter
 {   
+    GGUFImporter(const String& ggufFileName) {
+        ggufFile = makePtr<GGUFParser>(ggufFileName);
+    }
     // net construction
     Net constructNet();
     // parser
-    void prepareFile(const String& ggufFileName);
     Ptr<GGUFParser> ggufFile;
     // Net impl stuff
     Net net;

@@ -105,12 +105,6 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
     prog.push_back(layer);
 }
 
-
-void GGUFImporter::prepareFile(const String& ggufFileName) {
-    ggufFile->prepareFile(ggufFileName);
-}
-
-
 Net GGUFImporter::constructNet() {
     VanillaArchBlockConstructor archBlockConstructor(ggufFile);
     archBlockConstructor.initGraph(netimpl);
@@ -123,8 +117,7 @@ Net GGUFImporter::constructNet() {
 
 
 Net readNetFromGGUF(const String& ggufFileName){
-    GGUFImporter importer;
-    importer.prepareFile(ggufFileName);
+    GGUFImporter importer(ggufFileName);
     return importer.constructNet();
 }
 

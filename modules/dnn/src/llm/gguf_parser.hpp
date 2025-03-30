@@ -7,14 +7,15 @@
 // #include <opencv2/core.hpp>
 // #include <opencv2/dnn.hpp>
 #include "gguf_def.hpp"
+#include "gguf_buffer.hpp"
 
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 using namespace cv::dnn;
-std::string parseGGUFString(const uint8_t* buffer, size_t& offset);
 
+std::string parseGGUFString(GGUFBufferReader& reader);
 
 struct MetadataValueNode{
     virtual ~MetadataValueNode() = default;
@@ -23,7 +24,6 @@ struct MetadataValueNode{
     protected:
         MetadataValueNode(gguf_metadata_value_type type) : valueType(type) {}
 };
-    
 
 struct MetadataKeyValueNode
 {
@@ -50,10 +50,8 @@ struct MetadataArrayNode : public MetadataValueNode
         : MetadataValueNode(GGUF_METADATA_VALUE_TYPE_ARRAY), elementType(elemType) {}
 };
 
-
-Ptr<MetadataValueNode> parseMetadataSingleValueNode(const uint8_t* buffer, size_t& offset, uint32_t type);
-Ptr<MetadataValueNode> parseMetadataValueNode(const uint8_t* buffer, size_t& offset);
-
+Ptr<MetadataValueNode> parseMetadataSingleValueNode(GGUFBufferReader& reader, uint32_t type);
+Ptr<MetadataValueNode> parseMetadataValueNode(GGUFBufferReader& reader);
 
 struct TensorMetadata {
     std::string name;
@@ -65,18 +63,11 @@ struct TensorMetadata {
     size_t size() const;
 };
 
-
-TensorMetadata parseTensorMetaData(const uint8_t* buffer, size_t& offset);
-
+TensorMetadata parseTensorMetaData(GGUFBufferReader& reader);
 
 struct GGUFParser 
 { 
-    void prepareFile(const String& ggufFileName);
-
-    // Parsing infos and metadata
-    void parseMetadata(size_t& offset);
-    void parseHeader(size_t& offset);
-    void parseTensorInfo(size_t& offset);
+    GGUFParser(const String& ggufFileName);
 
     // helpers which will be used in GGUFImporter
     Mat getTensor(std::string name);
@@ -97,11 +88,9 @@ struct GGUFParser
     uint64_t metadata_kv_count;
     
     // File buffer
-    std::vector<uint8_t> buffer; 
+    Ptr<GGUFBuffer> buffer;
+    Ptr<GGUFBufferReader> tensor_reader;
 
-    // Offsets for parsing (helper variables - should be wrapped into something more structured)
-    size_t tensor_data_ofset =  -1;
-    size_t metadata_offset = -1;
 };
 
 
@@ -133,7 +122,7 @@ T GGUFParser::getTypedMetadata(const std::string& key,
 }
 
 
-std::string parseGGUFString(const uint8_t* buffer, size_t& offset);
+std::string parseGGUFString(GGUFBufferReader& reader);
 
 
 CV__DNN_INLINE_NS_END
