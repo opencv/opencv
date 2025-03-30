@@ -1,9 +1,11 @@
 
+#include "../precomp.hpp"
 #include "gguf_importer.hpp"
+#include "gguf_parser.hpp"
 #include "gguf_def.hpp"
 #include "../net_impl.hpp"
-#include <opencv2/core.hpp>
-#include "../precomp.hpp"
+// #include <opencv2/core.hpp>
+
 
 #include <fstream>
 
@@ -104,8 +106,8 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
 }
 
 
-void GGUFImporter::prepareFile(const char *filename) {
-    ggufFile->prepareFile(filename);
+void GGUFImporter::prepareFile(const String& ggufFileName) {
+    ggufFile->prepareFile(ggufFileName);
 }
 
 
@@ -117,6 +119,13 @@ Net GGUFImporter::constructNet() {
         archBlockConstructor.AddAttentionBlock(netimpl, i);
     }
     return net;
+}
+
+
+Net readNetFromGGUF(const String& ggufFileName){
+    GGUFImporter importer;
+    importer.prepareFile(ggufFileName);
+    return importer.constructNet();
 }
 
 CV__DNN_INLINE_NS_END

@@ -1,3 +1,4 @@
+#include "../precomp.hpp"
 #include "gguf_parser.hpp"
 #include "gguf_def.hpp"
 #include <fstream>
@@ -110,9 +111,50 @@ Ptr<MetadataValueNode> parseMetadataValueNode(const uint8_t* buffer, size_t& off
     return arrayNode;
 }
 
+TensorMetadata parseTensorMetaData(const uint8_t* buffer, size_t& offset){
+    auto tensor = TensorMetadata();
 
-void GGUFParser::prepareFile(const char *filename) {
-    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    tensor.name = parseGGUFString(buffer, offset);
+    tensor.dims = MatShape();
+
+    uint32_t dim_count = *reinterpret_cast<const uint32_t*>(buffer + offset);
+    offset += sizeof(uint32_t);
+
+    for (uint32_t i = 0; i < dim_count; ++i) {
+        int64_t dim = *reinterpret_cast<const int64_t*>(buffer + offset);
+        offset += sizeof(int64_t);
+        tensor.dims.push_back(dim);
+    }
+
+    uint32_t type = *reinterpret_cast<const uint32_t*>(buffer + offset);
+    offset += sizeof(uint32_t);
+
+    tensor.type = type;
+    // now we support only float32
+    if (type != GGML_TYPE_F32) {
+        throw std::runtime_error("Unsupported tensor type: " + std::to_string(type));
+    }   
+
+    tensor.type_size = sizeof(float);
+
+    size_t tensor_data_offset = *reinterpret_cast<const uint64_t*>(buffer + offset);
+    offset += sizeof(uint64_t);
+    tensor.data_offset = tensor_data_offset;
+
+    return tensor;
+}
+
+size_t TensorMetadata::size() const {
+    size_t size = 1;
+    for (const auto& dim : dims) {
+        size *= dim;
+    }
+    return size * type_size;
+}
+
+
+void GGUFParser::prepareFile(const String& ggufFileName) {
+    std::ifstream file(ggufFileName, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         throw std::runtime_error("Could not open file: ");
     }
@@ -164,14 +206,15 @@ void GGUFParser::parseMetadata(size_t& offset) {
     }
 }
 
+
 void GGUFParser::parseTensorInfo(size_t& offset) {
     for(size_t t = 0; t < tensor_count; ++t) {
         auto tensor = parseTensorMetaData(buffer.data(), offset);
-        tensorsMetadata[tensor->name] = std::move(tensor);
+        tensorsMetadata[tensor.name] =tensor;
     }
 
     auto tensor = parseTensorMetaData(buffer.data(), offset);
-    tensorsMetadata[tensor->name] = std::move(tensor);
+    tensorsMetadata[tensor.name] = tensor;
 
     // @TODO: this is dangerous. Offset should be set in a more clear way.
     tensor_data_ofset = offset;
@@ -180,11 +223,11 @@ void GGUFParser::parseTensorInfo(size_t& offset) {
 Mat GGUFParser::getTensor(std::string name) {
     Mat tensor;
 
-    Ptr<TensorMetadata> tensorMetadata = tensorsMetadata[name];
-    tensor.create(tensorMetadata->dims, CV_32F);
+    TensorMetadata tensorMetadata = tensorsMetadata[name];
+    tensor.create(tensorMetadata.dims, CV_32F);
 
-    size_t start = tensor_data_ofset + tensorMetadata->data_offset;
-    size_t end = start + tensorMetadata->size() * sizeof(float);
+    size_t start = tensor_data_ofset + tensorMetadata.data_offset;
+    size_t end = start + tensorMetadata.size() * sizeof(float);
 
     memcpy(tensor.data, buffer.data() + start, end - start);
     return tensor;
@@ -207,32 +250,7 @@ std::string GGUFParser::getStringMetadata(const std::string key) {
     return singleValueNode->value;
 }
 
-template<typename T>
-T GGUFParser::getTypedMetadata(const std::string& key,
-                               gguf_metadata_value_type expectedType)
-{
-    // 1. Check if key exists in the map
-    auto it = metadata.find(key);
-    if (it == metadata.end()) {
-        throw std::runtime_error("Key not found in metadata: " + key);
-    }
 
-    // 2. Check that node type matches what we expect
-    MetadataValueNode* valueNode = it->second->value.get();
-    if (valueNode->valueType != expectedType) {
-        throw std::runtime_error(
-            "Value type mismatch for key '" + key + "'. Expected: " +
-            std::to_string(expectedType) + ", Found: " +
-            std::to_string(valueNode->valueType)
-        );
-    }
-
-    // 3. Safely cast to the correct single-value node type
-    auto* singleValueNode = static_cast<MetadataSingleValueNode<T>*>(valueNode);
-
-    // 4. Return the stored value
-    return singleValueNode->value;
-}
 
 
 std::string GGUFParser::get_architecture(){

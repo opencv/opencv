@@ -2,11 +2,12 @@
 
 #ifndef __OPENCV_GGUFIMPORTER_HPP__
 #define __OPENCV_GGUFIMPORTER_HPP__
-#include <opencv2/core.hpp>
 #include <opencv2/dnn.hpp>
 #include "gguf_def.hpp"
 #include "opencv2/core.hpp"
 #include "gguf_parser.hpp"
+
+
 namespace cv { namespace dnn {
 
 CV__DNN_INLINE_NS_BEGIN
@@ -17,8 +18,8 @@ struct ArchBlockConstructor {
 
     virtual ~ArchBlockConstructor() = default;
 
-    virtual void initGraph(Net::Impl* netimpl);
-    virtual void AddAttentionBlock(Net::Impl* netimpl,int blockn);
+    virtual void initGraph(Net::Impl* netimpl){};
+    virtual void AddAttentionBlock(Net::Impl* netimpl,int blockn){};
     void finalizeGraph();
 
     Ptr<GGUFParser> ggufFile;
@@ -37,11 +38,10 @@ struct VanillaArchBlockConstructor : public ArchBlockConstructor{
 /* Fabric for creating Net from GGUF file */
 struct GGUFImporter
 {   
-    GGUFImporter(); 
     // net construction
     Net constructNet();
     // parser
-    void prepareFile(const char *filename);
+    void prepareFile(const String& ggufFileName);
     Ptr<GGUFParser> ggufFile;
     // Net impl stuff
     Net net;
@@ -49,9 +49,9 @@ struct GGUFImporter
     std::vector<Ptr<Layer>> prog;
 };
 
+Net readNetFromGGUF(const String& ggufFileName);
 
 CV__DNN_INLINE_NS_END
-
 }}
 
 #endif

@@ -3,7 +3,6 @@
 
 #include <string>
 #include <map>
-#include "../precomp.hpp"
 #include "opencv2/core.hpp"
 // #include <opencv2/core.hpp>
 // #include <opencv2/dnn.hpp>
@@ -60,18 +59,19 @@ struct TensorMetadata {
     std::string name;
     MatShape dims;
     size_t data_offset;
-    //std::vector<uint8_t> data;
+    uint32_t type;
+    uint32_t type_size;
 
     size_t size() const;
 };
 
 
-Ptr<TensorMetadata> parseTensorMetaData(const uint8_t* buffer, size_t& offset);
+TensorMetadata parseTensorMetaData(const uint8_t* buffer, size_t& offset);
 
 
 struct GGUFParser 
 { 
-    void prepareFile(const char *filename);
+    void prepareFile(const String& ggufFileName);
 
     // Parsing infos and metadata
     void parseMetadata(size_t& offset);
@@ -88,7 +88,7 @@ struct GGUFParser
 
     // Metadata Storage which will be used during layer construction
     std::map<std::string, Ptr<MetadataKeyValueNode>> metadata;    
-    std::map<std::string, Ptr<TensorMetadata>> tensorsMetadata;
+    std::map<std::string, TensorMetadata> tensorsMetadata;
 
     // GGUF file header definitions
     uint32_t version; 
@@ -103,6 +103,34 @@ struct GGUFParser
     size_t tensor_data_ofset =  -1;
     size_t metadata_offset = -1;
 };
+
+
+template<typename T>
+T GGUFParser::getTypedMetadata(const std::string& key,
+                               gguf_metadata_value_type expectedType)
+{
+    // 1. Check if key exists in the map
+    auto it = metadata.find(key);
+    if (it == metadata.end()) {
+        throw std::runtime_error("Key not found in metadata: " + key);
+    }
+
+    // 2. Check that node type matches what we expect
+    MetadataValueNode* valueNode = it->second->value.get();
+    if (valueNode->valueType != expectedType) {
+        throw std::runtime_error(
+            "Value type mismatch for key '" + key + "'. Expected: " +
+            std::to_string(expectedType) + ", Found: " +
+            std::to_string(valueNode->valueType)
+        );
+    }
+
+    // 3. Safely cast to the correct single-value node type
+    auto* singleValueNode = static_cast<MetadataSingleValueNode<T>*>(valueNode);
+
+    // 4. Return the stored value
+    return singleValueNode->value;
+}
 
 
 std::string parseGGUFString(const uint8_t* buffer, size_t& offset);
