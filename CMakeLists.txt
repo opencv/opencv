@@ -684,6 +684,7 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
 
     cmake_policy(SET CMP0092 NEW) # CMake 3.15+: leave warning flags out of default CMAKE_<LANG>_FLAGS flags.
     if(CMAKE_CUDA_COMPILER)
+      #  CMake 3.18+: if CMAKE_CUDA_ARCHITECTURES is empty enable_language(CUDA) sets it to the default architecture chosen by the compiler, to trigger the OpenCV custom CUDA architecture search an empty value needs to be respected see https://github.com/opencv/opencv/pull/25941.
       if(CMAKE_CUDA_ARCHITECTURES)
         set(USER_DEFINED_CMAKE_CUDA_ARCHITECTURES TRUE)
       endif()
