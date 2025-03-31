@@ -308,11 +308,6 @@ protected:
 
     virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, double& errorTrans, double& errorRot)
     {
-        if ((!planar && method == SOLVEPNP_IPPE) || method == SOLVEPNP_IPPE_SQUARE)
-        {
-            return true;
-        }
-
         Mat rvec, tvec;
         vector<int> inliers;
         Mat trueRvec, trueTvec;
@@ -383,6 +378,22 @@ protected:
         {
             for (int method = 0; method < SOLVEPNP_MAX_COUNT; method++)
             {
+                // SOLVEPNP_IPPE need planar object
+                if (!planar && method == SOLVEPNP_IPPE)
+                {
+                    cout << "mode: " << printMode(mode) << ", method: " << printMethod(method) << " -> "
+                         << "Skip for non-planar object" << endl;
+                    continue;
+                }
+
+                // SOLVEPNP_IPPE_SQUARE need planar tag object
+                if (!planarTag && method == SOLVEPNP_IPPE_SQUARE)
+                {
+                    cout << "mode: " << printMode(mode) << ", method: " << printMethod(method) << " -> "
+                         << "Skip for non-planar tag object" << endl;
+                    continue;
+                }
+
                 //To get the same input for each methods
                 RNG rngCopy = rng;
                 std::vector<double> vec_errorTrans, vec_errorRot;
@@ -486,15 +497,6 @@ public:
 protected:
     virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, double& errorTrans, double& errorRot)
     {
-        if ((!planar && (method == SOLVEPNP_IPPE || method == SOLVEPNP_IPPE_SQUARE)) ||
-            (!planarTag && method == SOLVEPNP_IPPE_SQUARE))
-        {
-            errorTrans = -1;
-            errorRot = -1;
-            //SOLVEPNP_IPPE and SOLVEPNP_IPPE_SQUARE need planar object
-            return true;
-        }
-
         //Tune thresholds...
         double epsilon_trans[SOLVEPNP_MAX_COUNT];
         memcpy(epsilon_trans, eps, SOLVEPNP_MAX_COUNT * sizeof(*epsilon_trans));
