@@ -56,6 +56,7 @@
 #include "hal_rvv_1p0/thresh.hpp" // imgproc
 #include "hal_rvv_1p0/histogram.hpp" // imgproc
 #include "hal_rvv_1p0/resize.hpp" // imgproc
+#include "hal_rvv_1p0/integral.hpp" // imgproc
 #endif
 
 #endif
