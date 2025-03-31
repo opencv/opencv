@@ -636,6 +636,35 @@ TEST(Imgcodecs_APNG, imencode_animation)
     }
 }
 
+TEST(Imgcodecs_APNG, animation_has_hidden_frame)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/033.png";
+    Animation animation1, animation2, animation3;
+
+    imreadanimation(filename, animation1);
+
+    EXPECT_FALSE(animation1.still_image.empty());
+    EXPECT_EQ((size_t)2, animation1.frames.size());
+
+    std::vector<unsigned char> buf;
+    EXPECT_TRUE(imencodeanimation(".png", animation1, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, animation2));
+
+    EXPECT_FALSE(animation2.still_image.empty());
+    EXPECT_EQ(animation1.frames.size(), animation2.frames.size());
+
+    animation1.frames.erase(animation1.frames.begin());
+    animation1.durations.erase(animation1.durations.begin());
+    EXPECT_TRUE(imencodeanimation(".png", animation1, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, animation3));
+
+    EXPECT_FALSE(animation1.still_image.empty());
+    EXPECT_TRUE(animation3.still_image.empty());
+    EXPECT_EQ((size_t)1, animation3.frames.size());
+}
+
 #endif // HAVE_PNG
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
@@ -649,48 +678,48 @@ TEST(Imgcodecs_APNG, imread_animation_16u)
     Mat img = imread(filename, IMREAD_UNCHANGED);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC4);
-    EXPECT_EQ(0,     img.at<ushort>(0, 0));
-    EXPECT_EQ(0,     img.at<ushort>(0, 1));
-    EXPECT_EQ(65280, img.at<ushort>(0, 2));
+    EXPECT_EQ(0, img.at<ushort>(0, 0));
+    EXPECT_EQ(0, img.at<ushort>(0, 1));
+    EXPECT_EQ(0, img.at<ushort>(0, 2));
     EXPECT_EQ(65535, img.at<ushort>(0, 3));
 
     img = imread(filename, IMREAD_GRAYSCALE);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_8UC1);
-    EXPECT_EQ(76, img.at<uchar>(0, 0));
+    EXPECT_EQ(0, img.at<uchar>(0, 0));
 
     img = imread(filename, IMREAD_COLOR);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_8UC3);
-    EXPECT_EQ(0,   img.at<uchar>(0, 0));
-    EXPECT_EQ(0,   img.at<uchar>(0, 1));
-    EXPECT_EQ(255, img.at<uchar>(0, 2));
+    EXPECT_EQ(0, img.at<uchar>(0, 0));
+    EXPECT_EQ(0, img.at<uchar>(0, 1));
+    EXPECT_EQ(0, img.at<uchar>(0, 2));
 
     img = imread(filename, IMREAD_COLOR_RGB);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_8UC3);
-    EXPECT_EQ(255, img.at<uchar>(0, 0));
-    EXPECT_EQ(0,   img.at<uchar>(0, 1));
-    EXPECT_EQ(0,   img.at<uchar>(0, 2));
+    EXPECT_EQ(0, img.at<uchar>(0, 0));
+    EXPECT_EQ(0, img.at<uchar>(0, 1));
+    EXPECT_EQ(0, img.at<uchar>(0, 2));
 
     img = imread(filename, IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC1);
-    EXPECT_EQ(19519, img.at<ushort>(0, 0));
+    EXPECT_EQ(0, img.at<ushort>(0, 0));
 
     img = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC3);
-    EXPECT_EQ(0,     img.at<ushort>(0, 0));
-    EXPECT_EQ(0,     img.at<ushort>(0, 1));
-    EXPECT_EQ(65280, img.at<ushort>(0, 2));
+    EXPECT_EQ(0, img.at<ushort>(0, 0));
+    EXPECT_EQ(0, img.at<ushort>(0, 1));
+    EXPECT_EQ(0, img.at<ushort>(0, 2));
 
     img = imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC3);
-    EXPECT_EQ(65280, img.at<ushort>(0, 0));
-    EXPECT_EQ(0,     img.at<ushort>(0, 1));
-    EXPECT_EQ(0,     img.at<ushort>(0, 2));
+    EXPECT_EQ(0, img.at<ushort>(0, 0));
+    EXPECT_EQ(0, img.at<ushort>(0, 1));
+    EXPECT_EQ(0, img.at<ushort>(0, 2));
 }
 
 #endif // HAVE_PNG || HAVE_SPNG
