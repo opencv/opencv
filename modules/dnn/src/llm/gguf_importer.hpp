@@ -39,6 +39,7 @@ struct VanillaArchBlockConstructor : public ArchBlockConstructor{
 struct GGUFImporter
 {   
     GGUFImporter(const String& ggufFileName) {
+        netimpl = net.getImpl();
         ggufFile = makePtr<GGUFParser>(ggufFileName);
     }
     // net construction

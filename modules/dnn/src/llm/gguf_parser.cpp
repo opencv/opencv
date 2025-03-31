@@ -167,7 +167,7 @@ GGUFParser::GGUFParser(const String& ggufFileName) {
     // Loop through and parse each key–value pair.
     for (uint64_t i = 0; i < metadata_kv_count; ++i) {
         // Create a new metadata key–value node.
-        auto kv = Ptr<MetadataKeyValueNode>();
+        Ptr<MetadataKeyValueNode> kv = makePtr<MetadataKeyValueNode>();
         // Parse the key (stored as a GGUF string).
         kv->key = parseGGUFString(reader);
         // Parse the value node (which will read its type and then the data).
@@ -176,13 +176,12 @@ GGUFParser::GGUFParser(const String& ggufFileName) {
         metadata[kv->key] = kv;
     }
 
+    num_blocks = getTypedMetadata<int32_t>("num_blocks", GGUF_METADATA_VALUE_TYPE_INT32);
+
     for(size_t t = 0; t < tensor_count; ++t) {
         auto tensor = parseTensorMetaData(reader);
         tensorsMetadata[tensor.name] = tensor;
     }
-
-    auto tensor = parseTensorMetaData(reader);
-    tensorsMetadata[tensor.name] = tensor;
 
     tensor_reader = makePtr<GGUFBufferReader>(buffer);
     tensor_reader->current_offset = reader.current_offset;
@@ -192,7 +191,7 @@ Mat GGUFParser::getTensor(std::string name) {
     Mat tensor;
     TensorMetadata tensorMetadata = tensorsMetadata[name];
     
-    if (tensorMetadata.dims.size() != 0) {
+    if (tensorMetadata.dims.size() != 2) {
         throw std::runtime_error("Currently only 2D Tensor supported");
     }
     if (tensorMetadata.type != GGML_TYPE_F32) {

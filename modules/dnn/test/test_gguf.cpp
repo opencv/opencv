@@ -24,7 +24,7 @@ protected:
 TEST_F(Test_GGUFImporter, readNetFromGGUF)
 {
     // Locate the GGUF file; this should be in the directory dnn/gguf/ (adjust the filename as needed)
-    std::string filePath = _tf("dummy.gguf", true);
+    std::string filePath = _tf("vanilla_attention.gguf", true);
     
     Net net = readNetFromGGUF(filePath.c_str());
     

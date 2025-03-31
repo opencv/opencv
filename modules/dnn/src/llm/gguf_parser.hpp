@@ -86,6 +86,7 @@ struct GGUFParser
     uint64_t tensor_count;
     uint32_t magic;
     uint64_t metadata_kv_count;
+    size_t num_blocks;
     
     // File buffer
     Ptr<GGUFBuffer> buffer;
@@ -93,7 +94,7 @@ struct GGUFParser
 
 };
 
-
+// @TODO: This type conversion here is not safe at all. Need to craft a safer way for getting metadata
 template<typename T>
 T GGUFParser::getTypedMetadata(const std::string& key,
                                gguf_metadata_value_type expectedType)
@@ -114,8 +115,10 @@ T GGUFParser::getTypedMetadata(const std::string& key,
         );
     }
 
-    // 3. Safely cast to the correct single-value node type
-    auto* singleValueNode = static_cast<MetadataSingleValueNode<T>*>(valueNode);
+    auto* singleValueNode = dynamic_cast<MetadataSingleValueNode<T>*>(valueNode);
+    if (!singleValueNode) {
+        throw std::runtime_error("Failed to cast metadata value to expected type.");
+    }
 
     // 4. Return the stored value
     return singleValueNode->value;
