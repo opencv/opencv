@@ -32,6 +32,8 @@
 #define cv_hal_mul16s               fastcv_hal_mul16s
 #undef  cv_hal_mul32f
 #define cv_hal_mul32f               fastcv_hal_mul32f
+#undef  cv_hal_gemm32f
+#define cv_hal_gemm32f              fastcv_hal_gemm32f
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// @brief look-up table transform of an array.
@@ -218,5 +220,22 @@ int fastcv_hal_mul32f(
     int             width,
     int             height,
     double          scale);
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int fastcv_hal_gemm32f(
+    const float*    src1,
+    size_t          src1_step,
+    const float*    src2,
+    size_t          src2_step,
+    float           alpha,
+    const float*    src3,
+    size_t          src3_step,
+    float           beta,
+    float*          dst,
+    size_t          dst_step,
+    int             m,
+    int             n,
+    int             k,
+    int             flags);
 
 #endif
