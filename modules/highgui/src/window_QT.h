@@ -459,7 +459,7 @@ public:
     double getRatio() CV_OVERRIDE;
     void setRatio(int flags) CV_OVERRIDE;
 
-    void updateImage(const CvArr* arr) CV_OVERRIDE;
+    void updateImage(cv::InputArray arr) CV_OVERRIDE;
 
     void startDisplayInfo(QString text, int delayms) CV_OVERRIDE;
 
