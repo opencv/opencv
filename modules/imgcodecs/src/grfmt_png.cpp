@@ -683,8 +683,8 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
 
                 if (alpha != 0) {
                     // Alpha blending
-                    uint64_t u = alpha * 65535;
-                    uint64_t v = (65535 - alpha) * dp[3];
+                    uint64_t u = static_cast<uint64_t>(alpha) * 65535;
+                    uint64_t v = static_cast<uint64_t>(65535 - alpha) * dp[3];
                     uint64_t al = u + v;
 
                     dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
