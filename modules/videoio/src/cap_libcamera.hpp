@@ -42,7 +42,7 @@ public:
         std::cout << "libcamera cameras(): " << cm_->cameras().size() << std::endl;
         if (index >= cm_->cameras().size())
         {
-            std::cerr << "Invalid camera index " << index << std::endl;
+            CV_LOG_ERROR(NULL, "Invalid camera index");
             return;
         }
 
@@ -51,13 +51,13 @@ public:
 
         if (!camera_)
         {
-            std::cerr << "Camera " << cameraId_ << " not found" << std::endl;
+            CV_LOG_ERROR(NULL, cv::format("Camera %s not found", cameraId_.c_str()));
             return;
         }
 
         if (camera_->acquire())
         {
-            std::cerr << "Failed to acquire camera " << cameraId_ << std::endl;
+            CV_LOG_ERROR(NULL, cv::format("Failed to acquire camera %s", cameraId_.c_str()));
             return;
         }
 
@@ -202,7 +202,7 @@ public:
     };
     StreamConfiguration streamConfig_;
     StreamRole strcfg_ = StreamRole::VideoRecording;
-    PixelFormat pixelFormat_ = libcamera::formats::MJPEG;
+    PixelFormat pixelFormat_ = libcamera::formats::YUYV;
 };
 }
 
