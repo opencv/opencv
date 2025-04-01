@@ -42,7 +42,7 @@ int CvCapture_libcamera_proxy::mapFrameBuffer(const FrameBuffer *buffer)
     int error;
     if (buffer->planes().empty())
     {
-        std::cerr << "Buffer has no planes " << std::endl;
+        CV_LOG_ERROR(NULL, "Buffer has no planes");
         return -EINVAL;
     }
     maps_.clear();
@@ -60,10 +60,10 @@ int CvCapture_libcamera_proxy::mapFrameBuffer(const FrameBuffer *buffer)
         const size_t length = mappedBuffers[fd].dmabufLength;
         if (plane.offset > length || plane.offset + plane.length > length)
         {
-                    std::cerr << "plane is out of buffer: "
-                     << "buffer length=" << length
-                     << ", plane offset=" << plane.offset
-                     << ", plane length=" << plane.length << std::endl;
+            CV_LOG_ERROR(NULL, cv::format("plane is out of buffer: buffer length=%zu, "
+                "plane offset=%u, plane length=%u",
+                static_cast<size_t>(length), plane.offset, plane.length));
+
             return -ERANGE;
         }
         size_t &mapLength = mappedBuffers[fd].mapLength;
@@ -81,8 +81,7 @@ int CvCapture_libcamera_proxy::mapFrameBuffer(const FrameBuffer *buffer)
             if (address == MAP_FAILED)
             {
                 error = -errno;
-                std::cerr <<  "Failed to mmap plane: "
-                         << strerror(-error) << std::endl;
+                CV_LOG_ERROR(NULL, "Failed to mmap plane.");
                 return -error;
             }
             info.address = static_cast<uint8_t *>(address);
@@ -123,7 +122,7 @@ int CvCapture_libcamera_proxy::convertToRgb(Request *request, OutputArray &outIm
     const FrameMetadata &metadata = fb->metadata();
     if (ret < 0 || !fb)
     {
-        std::cerr << "Failed to mmap buffer." << std::endl;
+        CV_LOG_ERROR(NULL, "Failed to mmap buffer.");
         return ret;
     }
 
@@ -143,7 +142,7 @@ int CvCapture_libcamera_proxy::convertToRgb(Request *request, OutputArray &outIm
             if (metadata.planes()[0].bytesused <
                 config_->at(0).size.width * config_->at(0).size.height * 2)
             {
-                std::cerr << "YUYV: Frame too small." << std::endl;
+                CV_LOG_ERROR(NULL,"YUYV: Frame too small.");
                 return -1;
             }
 
@@ -201,7 +200,7 @@ int CvCapture_libcamera_proxy::convertToRgb(Request *request, OutputArray &outIm
             if (metadata.planes()[0].bytesused <
                 config_->at(0).size.width * config_->at(0).size.height * 2)
             {
-                std::cerr << "YUYV: Frame too small." << std::endl;
+                CV_LOG_ERROR(NULL,"YUYV: Frame too small.");
                 return -1;
             }
             cv::cvtColor(
@@ -229,7 +228,7 @@ bool CvCapture_libcamera_proxy::open()
             ret = allocator_->allocate(cfg.stream());
             if (ret < 0)
             {
-                std::cerr << "Can't allocate buffers" << std::endl;
+                CV_LOG_ERROR(NULL,"Can't allocate buffers.");
                 return false;
             }
             allocated_ = allocator_->buffers(cfg.stream()).size();
@@ -241,7 +240,7 @@ bool CvCapture_libcamera_proxy::open()
             request = camera_->createRequest();
             if (!request)
             {
-                std::cerr << "Can't create request" << std::endl;
+                CV_LOG_ERROR(NULL, "Can't create request");
                 return EXIT_FAILURE;
             }
             for (StreamConfiguration &cfg : *config_)
@@ -253,7 +252,7 @@ bool CvCapture_libcamera_proxy::open()
                 ret = request->addBuffer(stream, buffer.get());
                 if (ret < 0)
                 {
-                    std::cerr << "Can't set buffer for request"<< std::endl;
+                    CV_LOG_ERROR(NULL, "Can't set buffer for request");
                     return ret;
                 }
             }
@@ -268,8 +267,8 @@ bool CvCapture_libcamera_proxy::open()
     }
     catch(const std::exception& e)
     {
-        std::cerr << e.what() << '\n';
-        std::cerr<<"CvCapture_libcamera_proxy::open failed"<<std::endl;
+        CV_LOG_ERROR(NULL, e.what());
+        CV_LOG_ERROR(NULL, "CvCapture_libcamera_proxy::open failed");
         opened_ = false;
     }
 
@@ -288,7 +287,7 @@ bool CvCapture_libcamera_proxy::grabFrame()
         config_ = camera_->generateConfiguration({ strcfg_ });
         if (!config_ || config_->empty())
         {
-            std::cerr << "Failed to generate stream configuration." << std::endl;
+            CV_LOG_ERROR(NULL, "Failed to generate stream configuration.");
             return -1;
         }
 
@@ -303,12 +302,12 @@ bool CvCapture_libcamera_proxy::grabFrame()
 
         if (status == CameraConfiguration::Invalid)
         {
-            std::cerr << "Camera configuration is invalid!" << std::endl;
+            CV_LOG_INFO(NULL, "Camera configuration is invalid!");
             return -1;
         }
         if (status == CameraConfiguration::Adjusted)
         {
-            std::cout << "Camera configuration was adjusted by libcamera!" << std::endl;
+            CV_LOG_INFO(NULL, "Camera configuration was adjusted by libcamera!");
         }
 
         camera_->configure(config_.get());
