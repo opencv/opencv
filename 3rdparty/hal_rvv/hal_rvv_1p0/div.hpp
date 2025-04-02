@@ -9,64 +9,54 @@
 #define OPENCV_HAL_RVV_DIV_HPP_INCLUDED
 
 #include <riscv_vector.h>
-
 #include <limits>
 
 namespace cv { namespace cv_hal_rvv { namespace div {
 
 namespace {
 
-    template <typename ST> inline size_t setvl(int);
-    template<> inline size_t setvl<uint8_t>(int l)  { return __riscv_vsetvl_e8m1(l); }
-    template<> inline size_t setvl<int8_t>(int l)   { return __riscv_vsetvl_e8m1(l); }
-    template<> inline size_t setvl<uint16_t>(int l) { return __riscv_vsetvl_e16m2(l); }
-    template<> inline size_t setvl<int16_t>(int l)  { return __riscv_vsetvl_e16m2(l); }
-    template<> inline size_t setvl<int>(int l)      { return __riscv_vsetvl_e32m4(l); }
-    template<> inline size_t setvl<float>(int l)    { return __riscv_vsetvl_e32m4(l); }
-    // template<> inline size_t setvl<double>(int l)   { return __riscv_vsetvl_e64m1(l); }
+    inline size_t setvl(int l) { return __riscv_vsetvl_e8m2(l); }
 
-    inline vuint8m1_t   vle(const uint8_t  *p, int vl) { return __riscv_vle8_v_u8m1(p, vl); }
-    inline vint8m1_t    vle(const int8_t   *p, int vl) { return __riscv_vle8_v_i8m1(p, vl); }
-    inline vuint16m2_t  vle(const uint16_t *p, int vl) { return __riscv_vle16_v_u16m2(p, vl); }
-    inline vint16m2_t   vle(const int16_t  *p, int vl) { return __riscv_vle16_v_i16m2(p, vl); }
-    inline vint32m4_t   vle(const int      *p, int vl) { return __riscv_vle32_v_i32m4(p, vl); }
-    inline vfloat32m4_t vle(const float    *p, int vl) { return __riscv_vle32_v_f32m4(p, vl); }
-    // inline vfloat64m1_t vle(const double   *p, int vl) { return __riscv_vle64_v_f64m1(p, vl); }
+    inline   vuint8m2_t vle(const uint8_t  *p, int vl) { return __riscv_vle8_v_u8m2(p, vl); }
+    inline    vint8m2_t vle(const int8_t   *p, int vl) { return __riscv_vle8_v_i8m2(p, vl); }
+    inline  vuint16m4_t vle(const uint16_t *p, int vl) { return __riscv_vle16_v_u16m4(p, vl); }
+    inline   vint16m4_t vle(const int16_t  *p, int vl) { return __riscv_vle16_v_i16m4(p, vl); }
+    inline   vint32m8_t vle(const int      *p, int vl) { return __riscv_vle32_v_i32m8(p, vl); }
+    inline vfloat32m8_t vle(const float    *p, int vl) { return __riscv_vle32_v_f32m8(p, vl); }
 
-    inline void vse(uint8_t  *p, const vuint8m1_t   &v, int vl) { __riscv_vse8_v_u8m1(p, v, vl); }
-    inline void vse(int8_t   *p, const vint8m1_t    &v, int vl) { __riscv_vse8_v_i8m1(p, v, vl); }
-    inline void vse(uint16_t *p, const vuint16m2_t  &v, int vl) { __riscv_vse16_v_u16m2(p, v, vl); }
-    inline void vse(int16_t  *p, const vint16m2_t   &v, int vl) { __riscv_vse16_v_i16m2(p, v, vl); }
-    inline void vse(int      *p, const vint32m4_t   &v, int vl) { __riscv_vse32_v_i32m4(p, v, vl); }
-    inline void vse(float    *p, const vfloat32m4_t &v, int vl) { __riscv_vse32_v_f32m4(p, v, vl); }
-    // inline void vse(double   *p, const vfloat64m1_t &v, int vl) { __riscv_vse64_v_f64m1(p, v, vl); }
+    inline void vse(uint8_t  *p, const   vuint8m2_t &v, int vl) { __riscv_vse8(p, v, vl); }
+    inline void vse(int8_t   *p, const    vint8m2_t &v, int vl) { __riscv_vse8(p, v, vl); }
+    inline void vse(uint16_t *p, const  vuint16m4_t &v, int vl) { __riscv_vse16(p, v, vl); }
+    inline void vse(int16_t  *p, const   vint16m4_t &v, int vl) { __riscv_vse16(p, v, vl); }
+    inline void vse(int      *p, const   vint32m8_t &v, int vl) { __riscv_vse32(p, v, vl); }
+    inline void vse(float    *p, const vfloat32m8_t &v, int vl) { __riscv_vse32(p, v, vl); }
 
-    inline vuint16m2_t ext(const vuint8m1_t  &v, const int vl) { return __riscv_vzext_vf2(v, vl); }
-    inline vint16m2_t  ext(const vint8m1_t   &v, const int vl) { return __riscv_vsext_vf2(v, vl); }
-    inline vuint32m4_t ext(const vuint16m2_t &v, const int vl) { return __riscv_vzext_vf2(v, vl); }
-    inline vint32m4_t  ext(const vint16m2_t  &v, const int vl) { return __riscv_vsext_vf2(v, vl); }
+    inline vuint16m4_t ext(const  vuint8m2_t &v, const int vl) { return __riscv_vzext_vf2(v, vl); }
+    inline  vint16m4_t ext(const   vint8m2_t &v, const int vl) { return __riscv_vsext_vf2(v, vl); }
+    inline vuint32m8_t ext(const vuint16m4_t &v, const int vl) { return __riscv_vzext_vf2(v, vl); }
+    inline  vint32m8_t ext(const  vint16m4_t &v, const int vl) { return __riscv_vsext_vf2(v, vl); }
 
-    inline vuint8m1_t  nclip(const vuint16m2_t &v, const int vl) { return __riscv_vnclipu(v, 0, __RISCV_VXRM_RDN, vl); }
-    inline vint8m1_t   nclip(const vint16m2_t  &v, const int vl) { return __riscv_vnclip(v, 0, __RISCV_VXRM_RDN, vl); }
-    inline vuint16m2_t nclip(const vuint32m4_t &v, const int vl) { return __riscv_vnclipu(v, 0, __RISCV_VXRM_RDN, vl); }
-    inline vint16m2_t  nclip(const vint32m4_t  &v, const int vl) { return __riscv_vnclip(v, 0, __RISCV_VXRM_RDN, vl); }
+    inline  vuint8m2_t nclip(const vuint16m4_t &v, const int vl) { return __riscv_vnclipu(v, 0, __RISCV_VXRM_RNU, vl); }
+    inline   vint8m2_t nclip(const  vint16m4_t &v, const int vl) { return __riscv_vnclip(v, 0, __RISCV_VXRM_RNU, vl); }
+    inline vuint16m4_t nclip(const vuint32m8_t &v, const int vl) { return __riscv_vnclipu(v, 0, __RISCV_VXRM_RNU, vl); }
+    inline  vint16m4_t nclip(const  vint32m8_t &v, const int vl) { return __riscv_vnclip(v, 0, __RISCV_VXRM_RNU, vl); }
 
     template <typename VT> inline
     VT div_sat(const VT &v1, const VT &v2, const float scale, const int vl) {
         return nclip(div_sat(ext(v1, vl), ext(v2, vl), scale, vl), vl);
     }
     template <> inline
-    vint32m4_t div_sat(const vint32m4_t &v1, const vint32m4_t &v2, const float scale, const int vl) {
+    vint32m8_t div_sat(const vint32m8_t &v1, const vint32m8_t &v2, const float scale, const int vl) {
         auto f1 = __riscv_vfcvt_f(v1, vl);
         auto f2 = __riscv_vfcvt_f(v2, vl);
-        auto res = __riscv_vfmul(__riscv_vfmul(f1, scale, vl), custom_intrin::__riscv_vfrecprocal(f2, vl), vl);
+        auto res = __riscv_vfmul(f1, __riscv_vfrdiv(f2, scale, vl), vl);
         return __riscv_vfcvt_x(res, vl);
     }
     template <> inline
-    vuint32m4_t div_sat(const vuint32m4_t &v1, const vuint32m4_t &v2, const float scale, const int vl) {
+    vuint32m8_t div_sat(const vuint32m8_t &v1, const vuint32m8_t &v2, const float scale, const int vl) {
         auto f1 = __riscv_vfcvt_f(v1, vl);
         auto f2 = __riscv_vfcvt_f(v2, vl);
-        auto res = __riscv_vfmul(__riscv_vfmul(f1, scale, vl), custom_intrin::__riscv_vfrecprocal(f2, vl), vl);
+        auto res = __riscv_vfmul(f1, __riscv_vfrdiv(f2, scale, vl), vl);
         return __riscv_vfcvt_xu(res, vl);
     }
 
@@ -75,15 +65,15 @@ namespace {
         return nclip(recip_sat(ext(v, vl), scale, vl), vl);
     }
     template <> inline
-    vint32m4_t recip_sat(const vint32m4_t &v, const float scale, const int vl) {
+    vint32m8_t recip_sat(const vint32m8_t &v, const float scale, const int vl) {
         auto f = __riscv_vfcvt_f(v, vl);
-        auto res = __riscv_vfmul(custom_intrin::__riscv_vfrecprocal(f, vl), scale, vl);
+        auto res = __riscv_vfrdiv(f, scale, vl);
         return __riscv_vfcvt_x(res, vl);
     }
     template <> inline
-    vuint32m4_t recip_sat(const vuint32m4_t &v, const float scale, const int vl) {
+    vuint32m8_t recip_sat(const vuint32m8_t &v, const float scale, const int vl) {
         auto f = __riscv_vfcvt_f(v, vl);
-        auto res = __riscv_vfmul(custom_intrin::__riscv_vfrecprocal(f, vl), scale, vl);
+        auto res = __riscv_vfrdiv(f, scale, vl);
         return __riscv_vfcvt_xu(res, vl);
     }
 
@@ -124,12 +114,13 @@ int div(const ST *src1, size_t step1, const ST *src2, size_t step2,
 
         int vl;
         for (int w = 0; w < width; w += vl) {
-            vl = setvl<ST>(width - w);
+            vl = setvl(width - w);
 
             auto v1 = vle(src1_h + w, vl);
             auto v2 = vle(src2_h + w, vl);
 
-            vse(dst_h + w, div_sat(v1, v2, scale, vl), vl);
+            auto mask = __riscv_vmseq(v2, 0, vl);
+            vse(dst_h + w, __riscv_vmerge(div_sat(v1, v2, scale, vl), 0, mask, vl), vl);
         }
     }
 
@@ -155,12 +146,12 @@ int div(const float *src1, size_t step1, const float *src2, size_t step2,
 
             int vl;
             for (int w = 0; w < width; w += vl) {
-                vl = setvl<float>(width - w);
+                vl = setvl(width - w);
 
                 auto v1 = vle(src1_h + w, vl);
                 auto v2 = vle(src2_h + w, vl);
 
-                vse(dst_h + w, __riscv_vfmul(v1, custom_intrin::__riscv_vfrecprocal(v2, vl), vl), vl);
+                vse(dst_h + w, __riscv_vfmul(v1, __riscv_vfrdiv(v2, 1.f, vl), vl), vl);
             }
         }
     } else {
@@ -171,12 +162,12 @@ int div(const float *src1, size_t step1, const float *src2, size_t step2,
 
             int vl;
             for (int w = 0; w < width; w += vl) {
-                vl = setvl<float>(width - w);
+                vl = setvl(width - w);
 
                 auto v1 = vle(src1_h + w, vl);
                 auto v2 = vle(src2_h + w, vl);
 
-                vse(dst_h + w, __riscv_vfmul(__riscv_vfmul(v1, scale, vl), custom_intrin::__riscv_vfrecprocal(v2, vl), vl), vl);
+                vse(dst_h + w, __riscv_vfmul(v1, __riscv_vfrdiv(v2, scale, vl), vl), vl);
             }
         }
     }
@@ -216,11 +207,12 @@ int recip(const ST *src_data, size_t src_step, ST *dst_data, size_t dst_step,
 
         int vl;
         for (int w = 0; w < width; w += vl) {
-            vl = setvl<ST>(width - w);
+            vl = setvl(width - w);
 
             auto v = vle(src_h + w, vl);
 
-            vse(dst_h + w, recip_sat(v, scale, vl), vl);
+            auto mask = __riscv_vmseq(v, 0, vl);
+            vse(dst_h + w, __riscv_vmerge(recip_sat(v, scale, vl), 0, mask, vl), vl);
         }
     }
 
@@ -245,11 +237,11 @@ int recip(const float *src_data, size_t src_step, float *dst_data, size_t dst_st
 
             int vl;
             for (int w = 0; w < width; w += vl) {
-                vl = setvl<float>(width - w);
+                vl = setvl(width - w);
 
                 auto v = vle(src_h + w, vl);
 
-                vse(dst_h + w, custom_intrin::__riscv_vfrecprocal(v, vl), vl);
+                vse(dst_h + w, __riscv_vfrdiv(v, 1.f, vl), vl);
             }
         }
     } else {
@@ -259,11 +251,11 @@ int recip(const float *src_data, size_t src_step, float *dst_data, size_t dst_st
 
             int vl;
             for (int w = 0; w < width; w += vl) {
-                vl = setvl<float>(width - w);
+                vl = setvl(width - w);
 
                 auto v = vle(src_h + w, vl);
 
-                vse(dst_h + w, __riscv_vfmul(custom_intrin::__riscv_vfrecprocal(v, vl), scale, vl), vl);
+                vse(dst_h + w, __riscv_vfrdiv(v, scale, vl), vl);
             }
         }
     }

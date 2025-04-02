@@ -47,19 +47,6 @@ CV_HAL_RVV_COMMON_CUSTOM_INTRIN_ABSDIFF(vint16m8_t, vuint16m8_t, __riscv_vreinte
 CV_HAL_RVV_COMMON_CUSTOM_INTRIN_ABSDIFF(vint32m4_t, vuint32m4_t, __riscv_vreinterpret_u32m4, vsub, vmax, vmin)
 CV_HAL_RVV_COMMON_CUSTOM_INTRIN_ABSDIFF(vint32m8_t, vuint32m8_t, __riscv_vreinterpret_u32m8, vsub, vmax, vmin)
 
-#define CV_HAL_RVV_COMMON_CUSTOM_INTRIN_RECIPROCAL(_Tpv, suffix) \
-    inline _Tpv __riscv_vfrecprocal(const _Tpv& a, const int vl) { \
-        _Tpv recp = __riscv_vfrec7_v_##suffix(a, vl); \
-        _Tpv two = __riscv_vfmv_v_f_##suffix(2.f, vl); \
-        recp = __riscv_vfmul_vv_##suffix(__riscv_vfnmsac_vv_##suffix(two, a, recp, vl), \
-                                      recp, vl); \
-        recp = __riscv_vfmul_vv_##suffix(__riscv_vfnmsac_vv_##suffix(two, a, recp, vl), \
-                                      recp, vl); \
-        return recp; \
-    }
-
-CV_HAL_RVV_COMMON_CUSTOM_INTRIN_RECIPROCAL(vfloat32m4_t, f32m4)
-
 }}} // cv::cv_hal_rvv::custom_intrin
 
 #endif
