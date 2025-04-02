@@ -565,8 +565,8 @@ protected:
             case SOLVEPNP_AP3P:
                 opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
                 break;
-            //UPnP is mapped to EPnP
-            //Uncomment this when UPnP is fixed
+                //UPnP is mapped to EPnP
+                //Uncomment this when UPnP is fixed
 //            case SOLVEPNP_UPNP:
 //                if (points.size() > 50)
 //                {
