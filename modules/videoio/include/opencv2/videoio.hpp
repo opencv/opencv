@@ -122,7 +122,8 @@ enum VideoCaptureAPIs {
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
        CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
-     };
+       CAP_LIBCAMERA    = 2700,         //!< libcamera
+      };
 
 
 /** @brief cv::VideoCapture generic properties identifier.
@@ -402,6 +403,26 @@ enum { CAP_PVAPI_PIXELFORMAT_MONO8    = 1,    //!< Mono8
      };
 
 //! @} PvAPI
+
+//! libcamera: PixelFormat
+enum { FMT_MJPEG = 0,
+  FMT_YUYV  = 1,
+  FMT_NV12 = 2,
+  FMT_NV21 = 3,
+  FMT_RGB888 = 4,
+  FMT_BGR888 = 5,
+  FMT_UYVY = 6,
+  FMT_YUV420 = 7
+};
+
+//! libcamera: StreamRole
+enum { ROLE_VIDEO = 0,
+  ROLE_STILL = 1,
+  ROLE_RAW = 2,
+  ROLE_VIEWFINDER = 3
+};
+
+//! @} libcamera
 
 /** @name XIMEA Camera API
     @{

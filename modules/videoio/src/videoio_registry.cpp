@@ -112,6 +112,9 @@ static const struct VideoBackendInfo builtin_backends[] =
     DECLARE_STATIC_BACKEND(CAP_V4L, "V4L_BSD", MODE_CAPTURE_ALL, create_V4L_capture_file, create_V4L_capture_cam, 0)
 #endif
 
+#if defined HAVE_LIBCAMERA
+    DECLARE_STATIC_BACKEND(CAP_LIBCAMERA, "libcamera", MODE_CAPTURE_ALL, create_V4L_capture_file, create_libcamera_capture_cam, 0)
+#endif
 
     // RGB-D universal
 #ifdef HAVE_OPENNI2
