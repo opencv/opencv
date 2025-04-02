@@ -110,39 +110,67 @@ public:
         std::cout << "Closing the device" << std::endl;
     }
 
-    private:
-    bool getLibcameraPixelFormat(int value)
+    bool getLibcameraPixelFormat(int value = 0)
     {
-        switch (value)
+        if (!config_)
         {
-            case FMT_MJPEG:
-                pixelFormat_ = libcamera::formats::MJPEG;
-                return true;
-
-            case FMT_YUYV:
-                pixelFormat_ = libcamera::formats::YUYV;
-                return true;
-
-            case FMT_RGB888:
-                pixelFormat_ = libcamera::formats::RGB888;
-                return true;
-
-            case FMT_BGR888:
-                pixelFormat_ = libcamera::formats::BGR888;
-                return true;
-
-            case FMT_NV12:
-                pixelFormat_ = libcamera::formats::NV12;
-                return true;
-
-            case FMT_YUV420:
-                pixelFormat_ = libcamera::formats::YUV420;
-                return true;
-
-            default:
-                pixelFormat_ = libcamera::formats::YUYV;
-                return false;
+            CV_LOG_ERROR(NULL, "Camera configuration missing.");
+            return false;
         }
+
+        // Retrieve supported formats
+        const StreamConfiguration &cfg = config_->at(0);
+        const StreamFormats &formats = cfg.formats();
+        std::map<int, std::pair<libcamera::PixelFormat, int>> formatMap =
+        {
+            {FMT_MJPEG, {libcamera::formats::MJPEG, FMT_MJPEG}},
+            {FMT_YUYV, {libcamera::formats::YUYV, FMT_YUYV}},
+            {FMT_NV12, {libcamera::formats::NV12, FMT_NV12}},
+            {FMT_NV21, {libcamera::formats::NV21, FMT_NV21}},
+            {FMT_RGB888, {libcamera::formats::RGB888, FMT_RGB888}},
+            {FMT_BGR888, {libcamera::formats::BGR888, FMT_BGR888}},
+            {FMT_UYVY, {libcamera::formats::UYVY, FMT_UYVY}},
+            {FMT_YUV420, {libcamera::formats::YUV420, FMT_YUV420}}
+        };
+
+        // Log all supported formats
+        CV_LOG_DEBUG(NULL, "Supported pixel formats:");
+        std::vector<PixelFormat> availableFormats = formats.pixelformats();
+        for (PixelFormat pixelformat : availableFormats)
+        {
+            std::ostringstream formatStream;
+            formatStream << pixelformat;
+            CV_LOG_INFO(NULL, " * " << formatStream.str() << " -> "
+            << formats.range(pixelformat).toString());
+        }
+
+        // Ensure requested format is available
+        auto it = formatMap.find(value);
+        if (it != formatMap.end() && std::find(availableFormats.begin(),
+            availableFormats.end(), it->second.first) != availableFormats.end())
+        {
+            pixelFormat_ = it->second.first;
+            pixFmt_ = it->second.second;
+            CV_LOG_INFO(NULL, "Pixel format set to: " << pixelFormat_ << ", pixFmt_: " << pixFmt_);
+            return true;
+        }
+
+        // If requested format isn't supported, fallback to supported format
+        for (const auto &entry : formatMap)
+        {
+            if (std::find(availableFormats.begin(), availableFormats.end(),
+                entry.second.first) != availableFormats.end())
+            {
+                pixelFormat_ = entry.second.first;
+                pixFmt_ = entry.second.second;
+                CV_LOG_WARNING(NULL, "Requested format not supported. Defaulting to: "
+                    << pixelFormat_ << ", pixFmt_: " << pixFmt_);
+                return true;
+            }
+        }
+
+        CV_LOG_ERROR(NULL, "No OpenCV-supported pixel formats available.");
+        return false;
     }
 
     bool getCameraConfiguration(int value)
@@ -202,7 +230,7 @@ public:
     };
     StreamConfiguration streamConfig_;
     StreamRole strcfg_ = StreamRole::VideoRecording;
-    PixelFormat pixelFormat_ = libcamera::formats::YUYV;
+    PixelFormat pixelFormat_;
 };
 }
 
