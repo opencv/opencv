@@ -296,13 +296,13 @@ static inline int getCapacity(int version, QRCodeEncoder::CorrectionLevel ecc_le
     }
 }
 
-bool QRCodeEncoderImpl::estimateVersion(const int bit_length, EncodeMode mode, vector<int>& possible_version)
+bool QRCodeEncoderImpl::estimateVersion(const int bitStreamLength, EncodeMode mode, vector<int>& possible_version)
 {
     possible_version.clear();
 
     CV_Assert(mode != EncodeMode::MODE_AUTO);
 
-    if (bit_length > getCapacity(MAX_VERSION, ecc_level, mode) * 8)
+    if (bitStreamLength > getCapacity(MAX_VERSION, ecc_level, mode) * 8)
     {
         return false;
     }
@@ -311,7 +311,7 @@ bool QRCodeEncoderImpl::estimateVersion(const int bit_length, EncodeMode mode, v
 
     for (; version > 0; --version)
     {
-        if (bit_length > getCapacity(version, ecc_level, mode)* 8) {
+        if (bitStreamLength> getCapacity(version, ecc_level, mode) * 8) {
             break;
         }
     }
@@ -338,16 +338,16 @@ int QRCodeEncoderImpl::versionAuto(const std::string& input_str)
     encodeAuto(input_str, payload_tmp, &mode);
 
     vector<int> possible_version;
-    int bit_length = static_cast<int>(payload_tmp.size());
-    if (!estimateVersion(bit_length, mode, possible_version)) {
+    int bitStreamLength = static_cast<int>(payload_tmp.size());
+    if (!estimateVersion(bitStreamLength, mode, possible_version)) {
         return -1;
     }
 
     // Extra info for structure's position, total and parity + mode of final message
     if (mode_type == MODE_STRUCTURED_APPEND)
-        bit_length += 4 + 4 + 8 + 4;
+        bitStreamLength += 4 + 4 + 8 + 4;
 
-    const auto tmp_version = findVersionCapacity(bit_length, ecc_level, possible_version);
+    const auto tmp_version = findVersionCapacity(bitStreamLength, ecc_level, possible_version);
 
     return tmp_version;
 }
