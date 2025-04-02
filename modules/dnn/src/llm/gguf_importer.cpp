@@ -125,6 +125,7 @@ Net GGUFImporter::constructNet() {
     for (int i = 0; i < num_blocks; i++){
         archBlockConstructor.AddAttentionBlock(netimpl, i);
     }
+    netimpl->prepareForInference();
     return net;
 }
 
