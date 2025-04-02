@@ -62,6 +62,6 @@ TEST(Imgproc_Subdiv2D, issue_25696) {
     std::vector<cv::Vec6f> triangles;
     subdiv.getTriangleList(triangles);
 
-    ASSERT_EQ(triangles.size(), 2);
+    ASSERT_EQ(static_cast<size_t>(2), triangles.size());
 }
 }}
