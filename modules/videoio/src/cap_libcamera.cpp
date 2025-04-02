@@ -292,8 +292,9 @@ bool CvCapture_libcamera_proxy::grabFrame()
         }
 
         // Update configuration
+        CV_LOG_DEBUG(NULL, "Updating configuration.");
         StreamConfiguration &cfg = config_->at(0);
-        cfg.pixelFormat = pixelFormat_;
+        getLibcameraPixelFormat(pixFmt_);
         cfg.size.width = width_;
         cfg.size.height = height_;
 
@@ -363,7 +364,7 @@ bool CvCapture_libcamera_proxy::setProperty(int property_id, double value)
             return icvSetFrameSize(width_, cvRound(value));
         case CAP_PROP_MODE:
             pixFmt_ = cvRound(value);
-            return getLibcameraPixelFormat(pixFmt_);
+            return true;
         case CAP_PROP_FORMAT:
             propFmt_ = cvRound(value);
             return getCameraConfiguration(propFmt_);
