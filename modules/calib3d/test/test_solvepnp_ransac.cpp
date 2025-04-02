@@ -313,12 +313,12 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
-        // UPnP is mapped to EPnP
-        // Uncomment this when UPnP is fixed
-        // if (method == SOLVEPNP_UPNP)
-        // {
-        //     intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
-        // }
+        //UPnP is mapped to EPnP
+        //Uncomment this when UPnP is fixed
+//        if (method == SOLVEPNP_UPNP)
+//        {
+//            intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
+//        }
         if (mode == 0)
         {
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
@@ -541,12 +541,12 @@ protected:
         Mat trueRvec, trueTvec;
         Mat intrinsics, distCoeffs;
         generateCameraMatrix(intrinsics, rng);
-        // UPnP is mapped to EPnP
-        // Uncomment this when UPnP is fixed
-        // if (method == SOLVEPNP_UPNP)
-        // {
-        //     intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
-        // }
+        //UPnP is mapped to EPnP
+        //Uncomment this when UPnP is fixed
+//        if (method == SOLVEPNP_UPNP)
+//        {
+//            intrinsics.at<double>(1,1) = intrinsics.at<double>(0,0);
+//        }
         if (mode == 0)
         {
             distCoeffs = Mat::zeros(4, 1, CV_64FC1);
@@ -565,18 +565,18 @@ protected:
             case SOLVEPNP_AP3P:
                 opoints = std::vector<Point3f>(points.begin(), points.begin()+4);
                 break;
-            // UPnP is mapped to EPnP
-            // Uncomment this when UPnP is fixed
-            // case SOLVEPNP_UPNP:
-            //     if (points.size() > 50)
-            //     {
-            //         opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
-            //     }
-            //     else
-            //     {
-            //         opoints = points;
-            //     }
-            //     break;
+            //UPnP is mapped to EPnP
+            //Uncomment this when UPnP is fixed
+//            case SOLVEPNP_UPNP:
+//                if (points.size() > 50)
+//                {
+//                    opoints = std::vector<Point3f>(points.begin(), points.begin()+50);
+//                }
+//                else
+//                {
+//                    opoints = points;
+//                }
+//                break;
             default:
                 opoints = points;
                 break;
