@@ -49,43 +49,6 @@ TEST_F(Test_GGUFImporter, readNetFromGGUF)
     // limits thardcode as in 
     normAssert(ref, out, "", 1e-5, 1e-4);
 
-
-
-
-
-    // Check if the output is not empty
-
-
-
-
-
-    
-    
-    //     CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
-
-    // Net net = readNetFromONNX(onnxmodel);
-    // ASSERT_FALSE(net.empty());
-
-
-    // // Parse the file (throws if file reading or parsing fails)
-    // ASSERT_NO_THROW(importer.parseFile(filePath.c_str()));
-    
-    // // Create a dummy LayerParams object for the attn_qkv layer
-    // LayerParams lp;
-    
-    // // Call parse_attn_qkv to simulate the test parsing step
-    // ASSERT_NO_THROW(importer.parse_attn_qkv(lp));
-    
-    // // After parse_attn_qkv, the importer.net should have a mainGraph set.
-    // Ptr<Graph> graph = importer.net.getImpl()->mainGraph;
-    // ASSERT_FALSE(graph.empty()) << "Graph should not be empty after parsing attn_qkv.";
-    
-    // // The graph should contain at least one layer.
-    // std::vector<Ptr<Layer>> prog = graph->getProg();
-    // ASSERT_FALSE(prog.empty()) << "Graph program should contain at least one layer.";
-    
-    // // We expect that parse_attn_qkv creates a Gemm layer.
-    // EXPECT_EQ(prog[0]->type, "Gemm");
 }
     
 // Main entry point for tests.
