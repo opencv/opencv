@@ -208,7 +208,7 @@ Mat GGUFParser::getTensor(std::string name) {
         );
 
     throw std::runtime_error(
-        "Unsupported tensor dimension: " + std::to_string(tensorMetadata.dims.size()));xw
+        "Unsupported tensor dimension: " + std::to_string(tensorMetadata.dims.size()));
 };
 
 std::string GGUFParser::getStringMetadata(const std::string key) {
