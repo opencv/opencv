@@ -69,22 +69,27 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
     LayerParams layerParams;
     layerParams.type = "Attention";
     layerParams.name = "attention_block";
-    layerParams.set("num_heads", 1);
-
-    Mat weight = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.weight");
+    Mat weight = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.weight").t(); // opencv requires weight to be of shpae D_emb 
+    Mat bias = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.bias");
     int k_hidden_size = ggufFile->getTypedMetadata<int32_t>(
         "k_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
     int v_hidden_size = ggufFile->getTypedMetadata<int32_t>(
         "v_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
     int q_hidden_size = ggufFile->getTypedMetadata<int32_t>(
         "q_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
+    int num_heads = ggufFile->getTypedMetadata<int32_t>(
+        "num_heads", GGUF_METADATA_VALUE_TYPE_INT32);
+    
+    MatShape weightshape = weight.shape();
+    int hidden_size = weightshape[1];
+    
     std::vector<int> qkv_hidden_sizes = {k_hidden_size, q_hidden_size, v_hidden_size};
     layerParams.set(
         "qkv_hidden_sizes",
         DictValue::arrayInt(&qkv_hidden_sizes[0], 3)
     );
+    layerParams.set("num_heads", num_heads);
     // zero bias for now
-    Mat bias = Mat::zeros(weight.size[0], weight.size[1], CV_32F);
     layerParams.blobs.push_back(weight);
     layerParams.blobs.push_back(bias);
 
@@ -107,9 +112,30 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
         CV_Error(Error::StsBadArg, "VanillaArchBlockConstructor: input or output name for a block is empty");
     }
 
+    /////////////////////////////////
+    // Set proper ArgData for input
+    /////////////////////////////////    
     Arg input = netimpl->getArg(inputName);
-    Arg output = netimpl->getArg(outputName);
+    ArgData& inputAdata = netimpl->args.at(input.idx);
+    // Infer shape
+    inputAdata.shape.resize(3);
+    inputAdata.shape[0] = -1; // batch size
+    inputAdata.shape[1] = -1; // variable length
+    inputAdata.shape[2] = hidden_size;
+    inputAdata.type = CV_32F;
 
+
+    /////////////////////////////////
+    // Set proper ArgData for output
+    /////////////////////////////////   
+    Arg output =  netimpl->getArg(outputName); 
+    ArgData& outputAdata = netimpl->args.at(input.idx);
+    // Infer shape
+    outputAdata.shape.resize(3);
+    outputAdata.shape[0] = -1; // batch size
+    outputAdata.shape[1] = -1; // variable length
+    outputAdata.shape[2] = hidden_size;
+    outputAdata.type = CV_32F;
 
     Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
     layer->netimpl = netimpl;
@@ -125,6 +151,8 @@ Net GGUFImporter::constructNet() {
     for (int i = 0; i < num_blocks; i++){
         archBlockConstructor.AddAttentionBlock(netimpl, i);
     }
+    archBlockConstructor.finalizeGraph();
+
     netimpl->prepareForInference();
     return net;
 }
