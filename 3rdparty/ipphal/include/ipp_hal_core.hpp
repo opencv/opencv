@@ -34,4 +34,18 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
 
 #endif
 
+#ifdef HAVE_IPP_IW
+int ipp_hal_flip(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                 uchar* dst_data, size_t dst_step, int flip_mode);
+
+#undef cv_hal_flip
+#define cv_hal_flip ipp_hal_flip
+#endif
+
+int ipp_hal_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width,
+                       int src_height, int element_size);
+
+#undef cv_hal_transpose2d
+#define cv_hal_transpose2d ipp_hal_transpose2d
+
 #endif

@@ -1,6 +1,6 @@
 #include "ipp_hal_core.hpp"
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/base.hpp>
 
 #if IPP_VERSION_X100 >= 700
