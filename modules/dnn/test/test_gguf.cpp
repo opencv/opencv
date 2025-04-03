@@ -24,10 +24,49 @@ protected:
 TEST_F(Test_GGUFImporter, readNetFromGGUF)
 {
     // Locate the GGUF file; this should be in the directory dnn/gguf/ (adjust the filename as needed)
-    std::string filePath = _tf("vanilla_attention.gguf", true);
+    std::string ggufModelPath = _tf("mha.gguf", true);
+    std::string onnxModelPath = _tf("mha.onnx", true);
+    std::string inputTensorPath = _tf("input.pb", true);
+
+    Net ggufnet = readNetFromGGUF(ggufModelPath.c_str());
+    ASSERT_FALSE(ggufnet.empty());
+
+    Net onnxnet = readNetFromONNX(onnxModelPath.c_str());
+    ASSERT_FALSE(onnxnet.empty());
+
+    std::vector<Mat> inps;
+    inps.push_back( readTensorFromONNX(inputTensorPath.c_str()));
+
+    std::vector<String> inputNames;
+    inputNames.push_back("input");
+    onnxnet.setInputsNames(inputNames);
+    onnxnet.setInput(inps[0], "input");
+    Mat ref = onnxnet.forward("");
+    //ggufnet.setInputsNames(inputNames);
+    ggufnet.setInput(inps[0], "globInput");
+    Mat out = ggufnet.forward("");
+
+    // limits thardcode as in 
+    normAssert(ref, out, "", 1e-5, 1e-4);
+
+
+
+
+
+    // Check if the output is not empty
+
+
+
+
+
     
-    Net net = readNetFromGGUF(filePath.c_str());
     
+    //     CV_Error(Error::StsUnsupportedFormat, "Unsupported extension");
+
+    // Net net = readNetFromONNX(onnxmodel);
+    // ASSERT_FALSE(net.empty());
+
+
     // // Parse the file (throws if file reading or parsing fails)
     // ASSERT_NO_THROW(importer.parseFile(filePath.c_str()));
     
