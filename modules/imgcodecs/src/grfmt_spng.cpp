@@ -210,14 +210,9 @@ bool SPngDecoder::readData(Mat &img)
             else
                 fmt = SPNG_FMT_RGBA8;
         }
-        if (img.channels() == 3)
+        if (img.type() == CV_8UC3)
         {
             fmt = SPNG_FMT_RGB8;
-            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE || m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA) &&
-                m_bit_depth == 16)
-                fmt = SPNG_FMT_RGB8;
-            else if (m_bit_depth == 16)
-                fmt = SPNG_FMT_PNG;
         }
         else if (img.channels() == 1)
         {
@@ -225,19 +220,12 @@ bool SPngDecoder::readData(Mat &img)
                 fmt = SPNG_FMT_G8;
             else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && m_bit_depth == 16)
             {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = SPNG_FMT_PNG;
-                }
+                fmt = SPNG_FMT_PNG;
             }
             else if (m_color_type == SPNG_COLOR_TYPE_INDEXED ||
                      m_color_type == SPNG_COLOR_TYPE_TRUECOLOR)
             {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
+                if (img.depth() == CV_8U)
                 {
                     fmt = SPNG_FMT_RGB8;
                 }
@@ -248,7 +236,7 @@ bool SPngDecoder::readData(Mat &img)
             }
             else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA || fmt == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
             {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
+                if (img.depth() == CV_8U)
                 {
                     fmt = SPNG_FMT_RGB8;
                 }
@@ -414,17 +402,29 @@ bool SPngDecoder::readData(Mat &img)
                     }
                     else if (fmt == SPNG_FMT_PNG)
                     {
+                        AutoBuffer<unsigned char> bufcn4;
+                        bufcn4.allocate(image_width);
                         do
                         {
                             ret = spng_get_row_info(png_ptr, &row_info);
                             if (ret)
                                 break;
 
-                            ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0 && !m_use_rgb)
+                            if (ihdr.color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
                             {
-                                icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
-                                                       reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0, Size(m_width, 1));
+                                ret = spng_decode_row(png_ptr, bufcn4.data(), image_width);
+                                icvCvt_BGRA2BGR_16u_C4C3R(reinterpret_cast<const ushort*>(bufcn4.data()), 0,
+                                    reinterpret_cast<ushort*>(buffer[row_info.row_num]), 0, Size(m_width, 1), m_use_rgb ? 0 : 1);
+                            }
+                            else
+                            {
+                                ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
+
+                                if (ihdr.interlace_method == 0 && !m_use_rgb)
+                                {
+                                    icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort*>(buffer[row_info.row_num]), 0,
+                                        reinterpret_cast<ushort*>(buffer[row_info.row_num]), 0, Size(m_width, 1));
+                                }
                             }
                         } while (ret == SPNG_OK);
                         if (ihdr.interlace_method && !m_use_rgb)
@@ -457,11 +457,27 @@ bool SPngDecoder::readData(Mat &img)
                 {
                     do
                     {
+                        if (img.depth() == CV_8U && m_bit_depth == 16)
+                        {
+                            Mat buffer(1, image_width / 2, CV_16U);
+                            do
+                            {
+                                ret = spng_get_row_info(png_ptr, &row_info);
+                                if (ret)
+                                    break;
+
+                                ret = spng_decode_row(png_ptr, buffer.data, image_width);
+                                buffer.convertTo(img.row(row_info.row_num), CV_8U, 1. / 255);
+                            } while (ret == SPNG_OK);
+                        }
+                        else
+                        {
                         ret = spng_get_row_info(png_ptr, &row_info);
                         if (ret)
                             break;
 
                         ret = spng_decode_row(png_ptr, img.data + row_info.row_num * image_width, image_width);
+                        }
                     } while (ret == SPNG_OK);
                 }
             }
