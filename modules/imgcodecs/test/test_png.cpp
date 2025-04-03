@@ -125,6 +125,11 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     fs.getFirstTopLevelNode() >> gt;
 
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
+
+    EXPECT_FALSE(imread(filename, IMREAD_GRAYSCALE).empty());
+    EXPECT_FALSE(imread(filename, IMREAD_COLOR).empty());
+    EXPECT_FALSE(imread(filename, IMREAD_ANYDEPTH).empty());
+    EXPECT_FALSE(imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH).empty());
 }
 
 const string pngsuite_files[] =
