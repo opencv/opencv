@@ -190,20 +190,25 @@ GGUFParser::GGUFParser(const String& ggufFileName) {
 Mat GGUFParser::getTensor(std::string name) {
     Mat tensor;
     TensorMetadata tensorMetadata = tensorsMetadata[name];
-    
-    if (tensorMetadata.dims.size() != 2) {
-        throw std::runtime_error("Currently only 2D Tensor supported");
-    }
     if (tensorMetadata.type != GGML_TYPE_F32) {
         throw std::runtime_error("Unsupported tensor type: " + std::to_string(tensorMetadata.type));
     }
+    if (tensorMetadata.dims.size() == 2) 
+        return tensor_reader->read2DMat(
+            GGML_TYPE_F32,
+            tensorMetadata.dims[0],
+            tensorMetadata.dims[1],
+            tensorMetadata.data_offset
+        );
+    if (tensorMetadata.dims.size() == 1) 
+        return tensor_reader->read1DMat(
+            GGML_TYPE_F32,
+            tensorMetadata.dims[0],
+            tensorMetadata.data_offset
+        );
 
-    return tensor_reader->read2DMat(
-        GGML_TYPE_F32,
-        tensorMetadata.dims[0],
-        tensorMetadata.dims[1],
-        tensorMetadata.data_offset
-    );
+    throw std::runtime_error(
+        "Unsupported tensor dimension: " + std::to_string(tensorMetadata.dims.size()));xw
 };
 
 std::string GGUFParser::getStringMetadata(const std::string key) {

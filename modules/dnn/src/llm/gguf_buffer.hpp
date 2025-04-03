@@ -20,6 +20,7 @@ struct GGUFBufferReader
     template<typename T>T readSingleValue();
     std::string readString(size_t len);
     Mat read2DMat(ggml_type type, size_t rows, size_t cols, size_t offset);
+    Mat read1DMat(ggml_type type, size_t rows, size_t offset);
     Ptr<const GGUFBuffer> buffer;
     size_t current_offset;
 };

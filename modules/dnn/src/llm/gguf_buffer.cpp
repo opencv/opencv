@@ -37,7 +37,6 @@ Mat GGUFBufferReader::read2DMat(ggml_type type, size_t rows, size_t cols, size_t
     }   
     const float* dataPtr = reinterpret_cast<const float*>(buffer->buf.data() + current_offset + offset);
 
-    // Option 2 (recommended): copy & transpose to match OpenCV row-major layout
     Mat mat((int)cols, (int)rows, CV_32F);
     for (size_t row = 0; row < cols; row++) {
         for (size_t col = 0; col < rows; col++) {
@@ -50,11 +49,21 @@ Mat GGUFBufferReader::read2DMat(ggml_type type, size_t rows, size_t cols, size_t
     }
 
     return mat;
+}
 
-    // const size_t elemSize = sizeof(float);
-    // // const size_t totalSize = rows * cols * elemSize;
-    // size_t step = rows * elemSize;
-    // Mat mat((int)rows, (int)cols, CV_32F, (void*)dataPtr, step);
+Mat GGUFBufferReader::read1DMat(ggml_type type, size_t rows, size_t offset) {
+    if (type != GGML_TYPE_F32) {
+        throw std::runtime_error("Unsupported tensor type: " + std::to_string(type));
+    }   
+    const float* dataPtr = reinterpret_cast<const float*>(buffer->buf.data() + current_offset + offset);
+
+    Mat mat(rows, 1, CV_32F);
+    for (size_t row = 0; row < rows; row++) {
+        printf("r: %d, -- %f \n", (int)row, dataPtr[row]);
+        mat.at<float>((int)row,0) = dataPtr[row];
+    }
+
+    return mat;
 }
 
 CV__DNN_INLINE_NS_END
