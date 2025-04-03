@@ -676,7 +676,12 @@ TEST(Imgcodecs_APNG, imread_animation_16u)
     img = imread(filename, IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC1);
+#ifdef HAVE_PNG
     EXPECT_EQ(19519, img.at<ushort>(0, 0));
+#endif
+#ifdef HAVE_SPNG
+    EXPECT_EQ(19532, img.at<ushort>(0, 0));
+#endif
 
     img = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());
