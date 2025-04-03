@@ -35,10 +35,15 @@ public:
     virtual bool setProperty(int, double) CV_OVERRIDE;
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
 
+    static std::shared_ptr<CameraManager> cm_;
+
     CvCapture_libcamera_proxy(size_t index = 0)
     {
-        cm_ = std::make_unique<CameraManager>();
-        cm_->start();
+        if (!cm_)
+        {
+            cm_ = std::make_shared<CameraManager>();
+            cm_->start();
+        }
         std::cout << "libcamera cameras(): " << cm_->cameras().size() << std::endl;
         if (index >= cm_->cameras().size())
         {
@@ -204,7 +209,6 @@ public:
 
     std::queue<Request*> completedRequests_;
     std::unique_ptr<CameraConfiguration> config_;
-    std::unique_ptr<CameraManager> cm_;
     std::shared_ptr<Camera> camera_;
     std::string cameraId_;
     std::vector<libcamera::Span<uint8_t>> planes_;
@@ -232,6 +236,9 @@ public:
     StreamRole strcfg_ = StreamRole::VideoRecording;
     PixelFormat pixelFormat_;
 };
+
+std::shared_ptr<CameraManager> CvCapture_libcamera_proxy::cm_ = nullptr;
+
 }
 
 #endif
