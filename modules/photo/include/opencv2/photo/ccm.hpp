@@ -57,47 +57,47 @@ enum ColorCheckerType {
     COLORCHECKER_Vinyl,                  ///< DKK ColorChecker
     COLORCHECKER_DigitalSG,              ///< DigitalSG ColorChecker with 140 squares
 };
-enum COLOR_SPACE {
-    COLOR_SPACE_sRGB,                       ///< https://en.wikipedia.org/wiki/SRGB , RGB color space
-    COLOR_SPACE_sRGBL,                      ///< https://en.wikipedia.org/wiki/SRGB , linear RGB color space
-    COLOR_SPACE_AdobeRGB,                   ///< https://en.wikipedia.org/wiki/Adobe_RGB_color_space , RGB color space
-    COLOR_SPACE_AdobeRGBL,                  ///< https://en.wikipedia.org/wiki/Adobe_RGB_color_space , linear RGB color space
-    COLOR_SPACE_WideGamutRGB,               ///< https://en.wikipedia.org/wiki/Wide-gamut_RGB_color_space , RGB color space
-    COLOR_SPACE_WideGamutRGBL,              ///< https://en.wikipedia.org/wiki/Wide-gamut_RGB_color_space , linear RGB color space
-    COLOR_SPACE_ProPhotoRGB,                ///< https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space , RGB color space
-    COLOR_SPACE_ProPhotoRGBL,               ///< https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space , linear RGB color space
+enum ColorSpace {
+    COLOR_SPACE_SRGB,                       ///< https://en.wikipedia.org/wiki/SRGB , RGB color space
+    COLOR_SPACE_SRGBL,                      ///< https://en.wikipedia.org/wiki/SRGB , linear RGB color space
+    COLOR_SPACE_ADOBE_RGB,                  ///< https://en.wikipedia.org/wiki/Adobe_RGB_color_space , RGB color space
+    COLOR_SPACE_ADOBE_RGBL,                 ///< https://en.wikipedia.org/wiki/Adobe_RGB_color_space , linear RGB color space
+    COLOR_SPACE_WIDE_GAMUT_RGB,             ///< https://en.wikipedia.org/wiki/Wide-gamut_RGB_color_space , RGB color space
+    COLOR_SPACE_WIDE_GAMUT_RGBL,            ///< https://en.wikipedia.org/wiki/Wide-gamut_RGB_color_space , linear RGB color space
+    COLOR_SPACE_PRO_PHOTO_RGB,              ///< https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space , RGB color space
+    COLOR_SPACE_PRO_PHOTO_RGBL,             ///< https://en.wikipedia.org/wiki/ProPhoto_RGB_color_space , linear RGB color space
     COLOR_SPACE_DCI_P3_RGB,                 ///< https://en.wikipedia.org/wiki/DCI-P3 , RGB color space
     COLOR_SPACE_DCI_P3_RGBL,                ///< https://en.wikipedia.org/wiki/DCI-P3 , linear RGB color space
-    COLOR_SPACE_AppleRGB,                   ///< https://en.wikipedia.org/wiki/RGB_color_space , RGB color space
-    COLOR_SPACE_AppleRGBL,                  ///< https://en.wikipedia.org/wiki/RGB_color_space , linear RGB color space
+    COLOR_SPACE_APPLE_RGB,                  ///< http://www.brucelindbloom.com/index.html?WorkingSpaceInfo.html , RGB color space
+    COLOR_SPACE_APPLE_RGBL,                 ///< http://www.brucelindbloom.com/index.html?WorkingSpaceInfo.html , linear RGB color space
     COLOR_SPACE_REC_709_RGB,                ///< https://en.wikipedia.org/wiki/Rec._709 , RGB color space
     COLOR_SPACE_REC_709_RGBL,               ///< https://en.wikipedia.org/wiki/Rec._709 , linear RGB color space
     COLOR_SPACE_REC_2020_RGB,               ///< https://en.wikipedia.org/wiki/Rec._2020 , RGB color space
     COLOR_SPACE_REC_2020_RGBL,              ///< https://en.wikipedia.org/wiki/Rec._2020 , linear RGB color space
-    COLOR_SPACE_XYZ_D65_2,                  ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , non-RGB color space
-    COLOR_SPACE_XYZ_D65_10,                 ///< non-RGB color space
-    COLOR_SPACE_XYZ_D50_2,                  ///< non-RGB color space
-    COLOR_SPACE_XYZ_D50_10,                 ///< non-RGB color space
-    COLOR_SPACE_XYZ_A_2,                    ///< non-RGB color space
-    COLOR_SPACE_XYZ_A_10,                   ///< non-RGB color space
-    COLOR_SPACE_XYZ_D55_2,                  ///< non-RGB color space
-    COLOR_SPACE_XYZ_D55_10,                 ///< non-RGB color space
-    COLOR_SPACE_XYZ_D75_2,                  ///< non-RGB color space
-    COLOR_SPACE_XYZ_D75_10,                 ///< non-RGB color space
-    COLOR_SPACE_XYZ_E_2,                    ///< non-RGB color space
-    COLOR_SPACE_XYZ_E_10,                   ///< non-RGB color space
-    COLOR_SPACE_Lab_D65_2,                  ///< https://en.wikipedia.org/wiki/CIELAB_color_space , non-RGB color space
-    COLOR_SPACE_Lab_D65_10,                 ///< non-RGB color space
-    COLOR_SPACE_Lab_D50_2,                  ///< non-RGB color space
-    COLOR_SPACE_Lab_D50_10,                 ///< non-RGB color space
-    COLOR_SPACE_Lab_A_2,                    ///< non-RGB color space
-    COLOR_SPACE_Lab_A_10,                   ///< non-RGB color space
-    COLOR_SPACE_Lab_D55_2,                  ///< non-RGB color space
-    COLOR_SPACE_Lab_D55_10,                 ///< non-RGB color space
-    COLOR_SPACE_Lab_D75_2,                  ///< non-RGB color space
-    COLOR_SPACE_Lab_D75_10,                 ///< non-RGB color space
-    COLOR_SPACE_Lab_E_2,                    ///< non-RGB color space
-    COLOR_SPACE_Lab_E_10,                   ///< non-RGB color space
+    COLOR_SPACE_XYZ_D65_2,                  ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D65 illuminant, 2 degree
+    COLOR_SPACE_XYZ_D50_2,                  ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D50 illuminant, 2 degree
+    COLOR_SPACE_XYZ_D65_10,                 ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D65 illuminant, 10 degree
+    COLOR_SPACE_XYZ_D50_10,                 ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D50 illuminant, 10 degree
+    COLOR_SPACE_XYZ_A_2,                    ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, A illuminant, 2 degree
+    COLOR_SPACE_XYZ_A_10,                   ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, A illuminant, 10 degree
+    COLOR_SPACE_XYZ_D55_2,                  ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D55 illuminant, 2 degree
+    COLOR_SPACE_XYZ_D55_10,                 ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D55 illuminant, 10 degree
+    COLOR_SPACE_XYZ_D75_2,                  ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D75 illuminant, 2 degree
+    COLOR_SPACE_XYZ_D75_10,                 ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, D75 illuminant, 10 degree
+    COLOR_SPACE_XYZ_E_2,                    ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, E illuminant, 2 degree
+    COLOR_SPACE_XYZ_E_10,                   ///< https://en.wikipedia.org/wiki/CIE_1931_color_space , XYZ color space, E illuminant, 10 degree
+    COLOR_SPACE_LAB_D65_2,                  ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D65 illuminant, 2 degree
+    COLOR_SPACE_LAB_D50_2,                  ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D50 illuminant, 2 degree
+    COLOR_SPACE_LAB_D65_10,                 ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D65 illuminant, 10 degree
+    COLOR_SPACE_LAB_D50_10,                 ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D50 illuminant, 10 degree
+    COLOR_SPACE_LAB_A_2,                    ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, A illuminant, 2 degree
+    COLOR_SPACE_LAB_A_10,                   ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, A illuminant, 10 degree
+    COLOR_SPACE_LAB_D55_2,                  ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D55 illuminant, 2 degree
+    COLOR_SPACE_LAB_D55_10,                 ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D55 illuminant, 10 degree
+    COLOR_SPACE_LAB_D75_2,                  ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D75 illuminant, 2 degree
+    COLOR_SPACE_LAB_D75_10,                 ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, D75 illuminant, 10 degree
+    COLOR_SPACE_LAB_E_2,                    ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, E illuminant, 2 degree
+    COLOR_SPACE_LAB_E_10                    ///< https://en.wikipedia.org/wiki/CIELAB_color_space , Lab color space, E illuminant, 10 degree
 };
 
 /** @brief Linearization transformation type
@@ -156,7 +156,7 @@ public:
         @param ref_cs the corresponding color space
                 If the color type is some RGB, the format is RGB not BGR;\n
     */
-    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, COLOR_SPACE ref_cs);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace ref_cs);
 
     /** @brief Color Correction Model
         @param src detected colors of ColorChecker patches;\n
@@ -166,23 +166,23 @@ public:
                     If the color type is some RGB, the format is RGB not BGR;
         @param colored mask of colored color
     */
-    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, COLOR_SPACE ref_cs, InputArray colored);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace ref_cs, InputArray colored);
 
     /** @brief set ColorSpace
         @note It should be some RGB color space;
         Supported list of color cards:
-        - @ref COLOR_SPACE_sRGB
-        - @ref COLOR_SPACE_AdobeRGB
-        - @ref COLOR_SPACE_WideGamutRGB
-        - @ref COLOR_SPACE_ProPhotoRGB
+        - @ref COLOR_SPACE_SRGB
+        - @ref COLOR_SPACE_ADOBE_RGB
+        - @ref COLOR_SPACE_WIDE_GAMUT_RGB
+        - @ref COLOR_SPACE_PRO_PHOTO_RGB
         - @ref COLOR_SPACE_DCI_P3_RGB
-        - @ref COLOR_SPACE_AppleRGB
+        - @ref COLOR_SPACE_APPLE_RGB
         - @ref COLOR_SPACE_REC_709_RGB
         - @ref COLOR_SPACE_REC_2020_RGB
         @param cs the absolute color space that detected colors convert to;\n
-              default: @ref COLOR_SPACE_sRGB
+              default: @ref COLOR_SPACE_SRGB
     */
-    CV_WRAP void setColorSpace(COLOR_SPACE cs);
+    CV_WRAP void setColorSpace(ColorSpace cs);
 
     /** @brief set ccmType
     @param ccmType the shape of color correction matrix(CCM);\n

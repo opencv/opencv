@@ -33,8 +33,8 @@ public:
     std::map<ColorSpaceBase, std::shared_ptr<Color>> history;
 
     Color();
-    Color(Mat colors_, enum COLOR_SPACE cs_);
-    Color(Mat colors_, enum COLOR_SPACE cs_, Mat colored);
+    Color(Mat colors_, enum ColorSpace cs_);
+    Color(Mat colors_, enum ColorSpace cs_, Mat colored);
     Color(Mat colors_, const ColorSpaceBase& cs, Mat colored);
     Color(Mat colors_, const ColorSpaceBase& cs);
     Color(Mat colors_, std::shared_ptr<ColorSpaceBase> cs_);
@@ -49,13 +49,13 @@ public:
     */
     Color to(const ColorSpaceBase& other, CAM method = BRADFORD, bool save = true);
 
-    /** @brief Convert color to another color space using COLOR_SPACE enum.
-        @param other type of COLOR_SPACE.
-        @param method chromatic adaption method.
-        @param save whether to save the result.
-        @return Color.
+    /** @brief Convert color to another color space using ColorSpace enum.
+        @param other type of ColorSpace.
+        @param method the method of chromatic adaptation.
+        @param save whether to save the conversion history.
+        @return the output array, type of Color.
     */
-    Color to(COLOR_SPACE other, CAM method = BRADFORD, bool save = true);
+    Color to(ColorSpace other, CAM method = BRADFORD, bool save = true);
 
     /** @brief Channels split.
        @return each channel.
