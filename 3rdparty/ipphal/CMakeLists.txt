@@ -11,11 +11,20 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mean_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/minmax_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/norm_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/transforms_ipp.cpp"
 )
 
 if(HAVE_IPP_ICV)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_ICV)
 endif()
+
+if(HAVE_IPP_IW)
+  target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
+endif()
+
+# HACK: The macro is temporaty.
+# Some functions from private.hpp are needed till full IPP migration to HAL
+target_compile_definitions(ipphal PRIVATE __OPENCV_BUILD)
 
 target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 

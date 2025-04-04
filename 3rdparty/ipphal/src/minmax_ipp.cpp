@@ -1,6 +1,6 @@
 #include "ipp_hal_core.hpp"
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/base.hpp>
 
 #define IPP_DISABLE_MINMAXIDX_MANY_ROWS 1  // see Core_MinMaxIdx.rows_overflow test
