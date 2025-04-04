@@ -11,7 +11,6 @@ namespace
 {
 
 using namespace std;
-using namespace cv::ccm;
 
 PERF_TEST(CV_mcc_perf, infer) {
     // read gold chartsRGB
@@ -20,10 +19,11 @@ PERF_TEST(CV_mcc_perf, infer) {
     Mat chartsRGB;
     FileNode node = fs["chartsRGB"];
     node >> chartsRGB;
+    ASSERT_FALSE(chartsRGB.empty());
     fs.release();
 
     // compute CCM
-    ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., COLORCHECKER_Macbeth);
+    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_Macbeth);
     model.computeCCM();
 
     Mat img(1000, 4000, CV_8UC3);

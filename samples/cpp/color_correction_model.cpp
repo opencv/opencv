@@ -32,52 +32,54 @@ int main(int argc, char *argv[])
 
     if (!parser.check())
     {
-        parser.printErrors();
-        return 0;
-    }
-
-    Mat image = imread(filepath, IMREAD_COLOR);
-    if (!image.data)
-    {
-        cout << "Invalid Image!" << endl;
+        cout << "Usage: " << argv[0] << " <input_image> <color_values.yml>" << endl;
         return 1;
     }
 
-    ifstream infile(colorFile);
-    if (!infile.is_open())
+    Mat image = imread(filepath, IMREAD_COLOR);
+    if (image.empty())
+    {
+        cout << "Failed to open image file!" << endl;
+        return 1;
+    }
+
+    // Read color values from YAML file
+    FileStorage fs(colorFile, FileStorage::READ);
+    if (!fs.isOpened())
     {
         cout << "Failed to open color values file!" << endl;
         return 1;
     }
 
-    Mat src(24, 1, CV_64FC3);
-    double r, g, b;
-    for (int i = 0; i < 24; i++)
-    {
-        infile >> r >> g >> b;
-        src.at<Vec3d>(i, 0) = Vec3d(r, g, b);
-    }
-    infile.close();
-
-    ColorCorrectionModel model1(src, COLORCHECKER_Macbeth);
-    model1.computeCCM();
-    Mat ccm = model1.getCCM();
-    cout << "ccm " << ccm << endl;
-    double loss = model1.getLoss();
-    cout << "loss " << loss << endl;
-
-    // Save CCM matrix and loss using OpenCV FileStorage
-    FileStorage fs("ccm_output.yaml", FileStorage::WRITE);
-    fs << "ccm" << ccm;
-    fs << "loss" << loss;
+    Mat src;
+    fs["color_values"] >> src;
     fs.release();
 
-    Mat img_;
-    cvtColor(image, img_, COLOR_BGR2RGB);
-    img_.convertTo(img_, CV_64F);
-    img_ = img_ / 255.0;
+    if (src.empty())
+    {
+        cout << "Failed to read color values from file!" << endl;
+        return 1;
+    }
 
-    Mat calibratedImage = model1.infer(img_);
+    // Convert to double and normalize
+    src.convertTo(src, CV_64F, 1.0/255.0);
+
+    // Create and train the model
+    cv::ccm::ColorCorrectionModel model(src, cv::ccm::COLORCHECKER_Macbeth);
+    model.setColorSpace(cv::ccm::COLOR_SPACE_sRGB);
+    model.setCCMType(cv::ccm::CCM_LINEAR);
+    model.setDistance(cv::ccm::DISTANCE_CIE2000);
+    model.setLinear(cv::ccm::LINEARIZATION_GAMMA);
+    model.setLinearGamma(2.2);
+    model.computeCCM();
+
+    // Save the model parameters
+    FileStorage modelFs("model.yml", FileStorage::WRITE);
+    modelFs << "ccm" << model.getCCM();
+    modelFs << "loss" << model.getLoss();
+    modelFs.release();
+
+    Mat calibratedImage = model.infer(image);
     Mat out_ = calibratedImage * 255.0;
 
     out_.convertTo(out_, CV_8UC3);

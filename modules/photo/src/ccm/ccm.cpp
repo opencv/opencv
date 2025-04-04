@@ -283,31 +283,33 @@ void ColorCorrectionModel::Impl::getColor(ColorCheckerType constcolor)
 {
     dst = (GetColor::getColor(constcolor));
 }
+
 void ColorCorrectionModel::Impl::getColor(Mat colors_, COLOR_SPACE ref_cs_)
 {
     dst.reset(new Color(colors_, *GetCS::getInstance().getCS(ref_cs_)));
 }
+
 void ColorCorrectionModel::Impl::getColor(Mat colors_, COLOR_SPACE cs_, Mat colored_)
 {
     dst.reset(new Color(colors_, *GetCS::getInstance().getCS(cs_), colored_));
 }
-ColorCorrectionModel::ColorCorrectionModel(const Mat& src_, ColorCheckerType constcolor)
-    : p(std::make_shared<Impl>())
+
+ColorCorrectionModel::ColorCorrectionModel(InputArray src_, int constcolor): p(std::make_shared<Impl>())
 {
-    p->src = src_;
-    p->getColor(constcolor);
+    p->src = src_.getMat();
+    p->getColor(static_cast<ColorCheckerType>(constcolor));
 }
-ColorCorrectionModel::ColorCorrectionModel(const Mat& src_, Mat colors_, COLOR_SPACE ref_cs_)
-    : p(std::make_shared<Impl>())
+
+ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, COLOR_SPACE ref_cs_): p(std::make_shared<Impl>())
 {
-    p->src = src_;
-    p->getColor(colors_, ref_cs_);
+    p->src = src_.getMat();
+    p->getColor(colors_.getMat(), ref_cs_);
 }
-ColorCorrectionModel::ColorCorrectionModel(const Mat& src_, Mat colors_, COLOR_SPACE cs_, Mat colored_)
-    : p(std::make_shared<Impl>())
+
+ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, COLOR_SPACE cs_, InputArray colored_): p(std::make_shared<Impl>())
 {
-    p->src = src_;
-    p->getColor(colors_, cs_, colored_);
+    p->src = src_.getMat();
+    p->getColor(colors_.getMat(), cs_, colored_.getMat());
 }
 
 void ColorCorrectionModel::setColorSpace(COLOR_SPACE cs_)
@@ -326,15 +328,15 @@ void ColorCorrectionModel::setLinear(LinearType linearType)
 {
     p->linearType = linearType;
 }
-void ColorCorrectionModel::setLinearGamma(const double& gamma)
+void ColorCorrectionModel::setLinearGamma(double gamma)
 {
     p->gamma = gamma;
 }
-void ColorCorrectionModel::setLinearDegree(const int& deg)
+void ColorCorrectionModel::setLinearDegree(int deg)
 {
     p->deg = deg;
 }
-void ColorCorrectionModel::setSaturatedThreshold(const double& lower, const double& upper)
+void ColorCorrectionModel::setSaturatedThreshold(double lower, double upper)
 {  //std::vector<double> saturatedThreshold
     p->saturatedThreshold = { lower, upper };
 }
@@ -342,7 +344,7 @@ void ColorCorrectionModel::setWeightsList(const Mat& weights_list)
 {
     p->weights_list = weights_list;
 }
-void ColorCorrectionModel::setWeightCoeff(const double& weights_coeff)
+void ColorCorrectionModel::setWeightCoeff(double weights_coeff)
 {
     p->weights_coeff = weights_coeff;
 }
@@ -350,11 +352,11 @@ void ColorCorrectionModel::setInitialMethod(InitialMethodType initialMethodType)
 {
     p->initialMethodType = initialMethodType;
 }
-void ColorCorrectionModel::setMaxCount(const int& max_count_)
+void ColorCorrectionModel::setMaxCount(int max_count_)
 {
     p->max_count = max_count_;
 }
-void ColorCorrectionModel::setEpsilon(const double& epsilon_)
+void ColorCorrectionModel::setEpsilon(double epsilon_)
 {
     p->epsilon = epsilon_;
 }

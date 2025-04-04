@@ -37,8 +37,7 @@ Mat s = (Mat_<Vec3d>(24, 1) <<
 
 TEST(Photo_ColorCorrection, test_model)
 {
-
-    ColorCorrectionModel model(s / 255, COLORCHECKER_Macbeth);
+    cv::ccm::ColorCorrectionModel model(s / 255, cv::ccm::COLORCHECKER_Macbeth);
     model.computeCCM();
     Mat src_rgbl = (Mat_<Vec3d>(24, 1) <<
         Vec3d(0.68078957, 0.12382801, 0.01514889),
@@ -111,11 +110,11 @@ TEST(Photo_ColorCorrection, test_masks_weights_1)
                             1.3, 0, 0, 1.4, 0, 0,
                             0.5, 0, 0, 0.6, 0, 0,
                             0.7, 0, 0, 0.8, 0, 0);
-    ColorCorrectionModel model1(s / 255,COLORCHECKER_Macbeth);
-    model1.setColorSpace(COLOR_SPACE_sRGB);
-    model1.setCCMType(CCM_LINEAR);
-    model1.setDistance(DISTANCE_CIE2000);
-    model1.setLinear(LINEARIZATION_GAMMA);
+    cv::ccm::ColorCorrectionModel model1(s / 255, cv::ccm::COLORCHECKER_Macbeth);
+    model1.setColorSpace(cv::ccm::COLOR_SPACE_sRGB);
+    model1.setCCMType(cv::ccm::CCM_LINEAR);
+    model1.setDistance(cv::ccm::DISTANCE_CIE2000);
+    model1.setLinear(cv::ccm::LINEARIZATION_GAMMA);
     model1.setLinearGamma(2.2);
     model1.setLinearDegree(3);
     model1.setSaturatedThreshold(0, 0.98);
@@ -137,10 +136,10 @@ TEST(Photo_ColorCorrection, test_masks_weights_1)
 
 TEST(Photo_ColorCorrection, test_masks_weights_2)
 {
-    ColorCorrectionModel model2(s / 255, COLORCHECKER_Macbeth);
-    model2.setCCMType(CCM_LINEAR);
-    model2.setDistance(DISTANCE_CIE2000);
-    model2.setLinear(LINEARIZATION_GAMMA);
+    cv::ccm::ColorCorrectionModel model2(s / 255, cv::ccm::COLORCHECKER_Macbeth);
+    model2.setCCMType(cv::ccm::CCM_LINEAR);
+    model2.setDistance(cv::ccm::DISTANCE_CIE2000);
+    model2.setLinear(cv::ccm::LINEARIZATION_GAMMA);
     model2.setLinearGamma(2.2);
     model2.setLinearDegree(3);
     model2.setSaturatedThreshold(0.05, 0.93);

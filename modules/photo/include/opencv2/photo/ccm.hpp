@@ -147,7 +147,7 @@ public:
                     the color type is RGB not BGR, and the color values are in [0, 1];
         @param constcolor the Built-in color card
     */
-    CV_WRAP ColorCorrectionModel(const Mat& src, ColorCheckerType constcolor);
+    CV_WRAP ColorCorrectionModel(InputArray src, int constcolor);
 
     /** @brief Color Correction Model
         @param src detected colors of ColorChecker patches;\n
@@ -156,7 +156,7 @@ public:
         @param ref_cs the corresponding color space
                 If the color type is some RGB, the format is RGB not BGR;\n
     */
-    CV_WRAP ColorCorrectionModel(const Mat& src, Mat colors, COLOR_SPACE ref_cs);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, COLOR_SPACE ref_cs);
 
     /** @brief Color Correction Model
         @param src detected colors of ColorChecker patches;\n
@@ -166,7 +166,7 @@ public:
                     If the color type is some RGB, the format is RGB not BGR;
         @param colored mask of colored color
     */
-    CV_WRAP ColorCorrectionModel(const Mat& src, Mat colors, COLOR_SPACE ref_cs, Mat colored);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, COLOR_SPACE ref_cs, InputArray colored);
 
     /** @brief set ColorSpace
         @note It should be some RGB color space;
@@ -209,7 +209,7 @@ public:
     @param gamma the gamma value of gamma correction;\n
                  default: 2.2;
     */
-    CV_WRAP void setLinearGamma(const double& gamma);
+    CV_WRAP void setLinearGamma(double gamma);
 
     /** @brief set degree
         @note only valid when linear is set to
@@ -222,7 +222,7 @@ public:
             default: 3
 
     */
-    CV_WRAP void setLinearDegree(const int& deg);
+    CV_WRAP void setLinearDegree(int deg);
 
     /** @brief set SaturatedThreshold.
                 The colors in the closed interval [lower, upper] are reserved to participate
@@ -232,7 +232,7 @@ public:
         @param upper the upper threshold to determine saturation;\n
                 default: 0
     */
-    CV_WRAP void setSaturatedThreshold(const double& lower, const double& upper);
+    CV_WRAP void setSaturatedThreshold(double lower, double upper);
 
     /** @brief set WeightsList
     @param weights_list the list of weight of each color;\n
@@ -244,7 +244,7 @@ public:
     @param weights_coeff the exponent number of L* component of the reference color in CIE Lab color space;\n
                          default: 0
     */
-    CV_WRAP void setWeightCoeff(const double& weights_coeff);
+    CV_WRAP void setWeightCoeff(double weights_coeff);
 
     /** @brief set InitialMethod
     @param initialMethodType the method of calculating CCM initial value;\n
@@ -257,14 +257,14 @@ public:
         Terminal criteria to the algorithm;\n
                      default: 5000;
     */
-    CV_WRAP void setMaxCount(const int& max_count);
+    CV_WRAP void setMaxCount(int max_count);
 
     /** @brief set Epsilon
     @param epsilon used in MinProblemSolver-DownhillSolver;\n
         Terminal criteria to the algorithm;\n
                    default: 1e-4;
     */
-    CV_WRAP void setEpsilon(const double& epsilon);
+    CV_WRAP void setEpsilon(double epsilon);
 
     /** @brief make color correction */
     CV_WRAP void computeCCM();
