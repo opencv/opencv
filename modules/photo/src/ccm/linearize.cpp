@@ -48,11 +48,11 @@ LogPolyfit::LogPolyfit(Mat x, Mat y, int deg_)
     : deg(deg_)
 {
     Mat mask_ = (x > 0) & (y > 0);
-    Mat src_, dst_, s_, d_;
-    src_ = maskCopyTo(x, mask_);
-    dst_ = maskCopyTo(y, mask_);
-    log(src_, s_);
-    log(dst_, d_);
+    Mat src_masked, dst_masked, s_, d_;
+    x.copyTo(src_masked, mask_);
+    y.copyTo(dst_masked, mask_);
+    log(src_masked, s_);
+    log(dst_masked, d_);
     p = Polyfit(s_, d_, deg);
 }
 

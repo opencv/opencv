@@ -178,7 +178,8 @@ void ColorCorrectionModel::Impl::calWeightsMasks(const Mat& weights_list_, doubl
     // weights' mask
     if (!weights.empty())
     {
-        Mat weights_masked = maskCopyTo(this->weights, this->mask);
+        Mat weights_masked;
+        weights.copyTo(weights_masked, this->mask);
         weights = weights_masked / mean(weights_masked)[0];
     }
     masked_len = (int)sum(mask)[0];
@@ -366,9 +367,11 @@ void ColorCorrectionModel::computeCCM()
     Mat saturate_mask = saturate(p->src, p->saturatedThreshold[0], p->saturatedThreshold[1]);
     p->linear = getLinear(p->gamma, p->deg, p->src, *(p->dst), saturate_mask, (p->cs), p->linearType);
     p->calWeightsMasks(p->weights_list, p->weights_coeff, saturate_mask);
-    p->src_rgbl = p->linear->linearize(maskCopyTo(p->src, p->mask));
-    p->dst->colors = maskCopyTo(p->dst->colors, p->mask);
-    p->dst_rgbl = p->dst->to(*(p->cs.l)).colors;
+    Mat src_masked, dst_masked;
+    p->src.copyTo(src_masked, p->mask);
+    p->dst->colors.copyTo(dst_masked, p->mask);
+    p->src_rgbl = p->linear->linearize(src_masked);
+    p->dst->colors = dst_masked;
 
     // make no change for CCM_LINEAR, make change for CCM_AFFINE.
     p->src_rgbl = p->prepare(p->src_rgbl);
@@ -413,8 +416,11 @@ Mat ColorCorrectionModel::getDstRgbl() const{
 Mat ColorCorrectionModel::getMask() const{
     return p->mask;
 }
-Mat ColorCorrectionModel::getWeights() const{
-    return p->weights;
+Mat ColorCorrectionModel::getWeights() const
+{
+    Mat weights_masked;
+    p->weights.copyTo(weights_masked, p->mask);
+    return weights_masked;
 }
 }
 }  // namespace cv::ccm

@@ -126,7 +126,9 @@ void Color::getGray(double JDN)
 
 Color Color::operator[](Mat mask)
 {
-    return Color(maskCopyTo(colors, mask), cs);
+    Mat masked_colors;
+    colors.copyTo(masked_colors, mask);
+    return Color(masked_colors, cs);
 }
 
 Mat GetColor::getColorChecker(const double* checker, int row)

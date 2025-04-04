@@ -109,8 +109,11 @@ public:
         Mat lear_gray_mask = mask & dst.grays;
 
         // the grayscale function is approximate for src is in relative color space.
-        src = rgb2gray(maskCopyTo(src, lear_gray_mask));
-        Mat dst_ = maskCopyTo(dst.toGray(cs.io), lear_gray_mask);
+        Mat src_masked, dst_masked;
+        src.copyTo(src_masked, lear_gray_mask);
+        dst.toGray(cs.io).copyTo(dst_masked, lear_gray_mask);
+        src = rgb2gray(src_masked);
+        Mat dst_ = dst_masked;
         calc(src, dst_);
     }
 
@@ -144,8 +147,11 @@ public:
     LinearColor(int deg_, Mat src_, Color dst, Mat mask, RGBBase_ cs)
         : deg(deg_)
     {
-        Mat src = maskCopyTo(src_, mask);
-        Mat dst_ = maskCopyTo(dst.to(*cs.l).colors, mask);
+        Mat src_masked, dst_masked;
+        src_.copyTo(src_masked, mask);
+        dst.to(*cs.l).colors.copyTo(dst_masked, mask);
+        Mat src = src_masked;
+        Mat dst_ = dst_masked;
         calc(src, dst_);
     }
 

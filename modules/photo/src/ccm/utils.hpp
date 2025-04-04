@@ -27,25 +27,20 @@ double gammaCorrection_(const double& element, const double& gamma);
  */
 Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst=Mat());
 
-/** @brief maskCopyTo a function to delete unsatisfied elementwise.
-    @param src the input array, type of Mat.
-    @param mask operation mask that used to choose satisfided elementwise.
- */
-Mat maskCopyTo(const Mat& src, const Mat& mask);
-
 /** @brief multiple the function used to compute an array with n channels
-      mulipied by ccm.
+      multiplied by ccm using cv::transform.
     @param xyz the input array, type of Mat.
     @param ccm the ccm matrix to make color correction.
+    @note This function internally uses cv::transform for matrix multiplication.
  */
 Mat multiple(const Mat& xyz, const Mat& ccm);
 
-/** @brief multiple the function used to get the mask of saturated colors,
-            colors between low and up will be choosed.
+/** @brief saturate a function to delete unsatisfied elementwise.
     @param src the input array, type of Mat.
     @param low  the threshold to choose saturated colors
     @param up  the threshold to choose saturated colors
-*/
+ */
+ 
 Mat saturate(Mat& src, const double& low, const double& up);
 
 /** @brief rgb2gray it is an approximation grayscale function for relative RGB
@@ -144,8 +139,6 @@ Mat distanceWise(Mat& src, Mat& ref, F&& lambda)
     }
     return dst;
 }
-
-Mat multiple(const Mat& xyz, const Mat& ccm);
 
 }
 }  // namespace cv::ccm

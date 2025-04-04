@@ -21,54 +21,11 @@ Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst)
     return elementWise(src, [gamma](double element) -> double { return gammaCorrection_(element, gamma); }, dst);
 }
 
-Mat maskCopyTo(const Mat& src, const Mat& mask)
-{
-    Mat dst(countNonZero(mask), 1, src.type());
-    const int channel = src.channels();
-    auto it_mask = mask.begin<uchar>();
-    switch (channel)
-    {
-    case 1:
-    {
-        auto it_src = src.begin<double>(), end_src = src.end<double>();
-        auto it_dst = dst.begin<double>();
-        for (; it_src != end_src; ++it_src, ++it_mask)
-        {
-            if (*it_mask)
-            {
-                (*it_dst) = (*it_src);
-                ++it_dst;
-            }
-        }
-        break;
-    }
-    case 3:
-    {
-        auto it_src = src.begin<Vec3d>(), end_src = src.end<Vec3d>();
-        auto it_dst = dst.begin<Vec3d>();
-        for (; it_src != end_src; ++it_src, ++it_mask)
-        {
-            if (*it_mask)
-            {
-                (*it_dst) = (*it_src);
-                ++it_dst;
-            }
-        }
-        break;
-    }
-    default:
-        CV_Error(Error::StsBadArg, "Wrong channel!" );
-        break;
-    }
-    return dst;
-}
-
 Mat multiple(const Mat& xyz, const Mat& ccm)
 {
-    Mat tmp = xyz.reshape(1, xyz.rows * xyz.cols);
-    Mat res = tmp * ccm;
-    res = res.reshape(res.cols, xyz.rows);
-    return res;
+    Mat dst;
+    cv::transform(xyz, dst, ccm);
+    return dst;
 }
 
 Mat saturate(Mat& src, const double& low, const double& up)
