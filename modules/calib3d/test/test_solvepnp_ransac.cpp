@@ -182,9 +182,9 @@ static std::string printMethod(int method)
     case 2:
         return "SOLVEPNP_P3P";
     case 3:
-        return "SOLVEPNP_DLS (remaped to SOLVEPNP_EPNP)";
+        return "SOLVEPNP_DLS (remapped to SOLVEPNP_EPNP)";
     case 4:
-        return "SOLVEPNP_UPNP (remaped to SOLVEPNP_EPNP)";
+        return "SOLVEPNP_UPNP (remapped to SOLVEPNP_EPNP)";
     case 5:
         return "SOLVEPNP_AP3P";
     case 6:
@@ -207,8 +207,8 @@ public:
         eps[SOLVEPNP_EPNP] = 1.0e-2;
         eps[SOLVEPNP_P3P] = 1.0e-2;
         eps[SOLVEPNP_AP3P] = 1.0e-2;
-        eps[SOLVEPNP_DLS] = 1.0e-2;
-        eps[SOLVEPNP_UPNP] = 1.0e-2;
+        eps[SOLVEPNP_DLS] = 1.0e-2; // DLS is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_UPNP] = 1.0e-2; // UPnP is remapped to EPnP, so we use the same threshold
         eps[SOLVEPNP_IPPE] = 1.0e-2;
         eps[SOLVEPNP_IPPE_SQUARE] = 1.0e-2;
         eps[SOLVEPNP_SQPNP] = 1.0e-2;
@@ -468,8 +468,8 @@ public:
         eps[SOLVEPNP_EPNP] = 1.0e-6;
         eps[SOLVEPNP_P3P] = 2.0e-4;
         eps[SOLVEPNP_AP3P] = 1.0e-4;
-        eps[SOLVEPNP_DLS] = 1.0e-6; //DLS is remapped to EPnP, so we use the same threshold
-        eps[SOLVEPNP_UPNP] = 1.0e-6; //UPnP is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_DLS] = 1.0e-6; // DLS is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_UPNP] = 1.0e-6; // UPnP is remapped to EPnP, so we use the same threshold
         eps[SOLVEPNP_IPPE] = 1.0e-6;
         eps[SOLVEPNP_IPPE_SQUARE] = 1.0e-6;
         eps[SOLVEPNP_SQPNP] = 1.0e-6;
@@ -509,19 +509,19 @@ protected:
             if (mode == 0)
             {
                 epsilon_trans[SOLVEPNP_EPNP] = 5.0e-3;
-                epsilon_trans[SOLVEPNP_DLS] = 5.0e-3;
-                epsilon_trans[SOLVEPNP_UPNP] = 5.0e-3;
+                epsilon_trans[SOLVEPNP_DLS] = 5.0e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_trans[SOLVEPNP_UPNP] = 5.0e-3; // UPnP is remapped to EPnP, so we use the same threshold
 
                 epsilon_rot[SOLVEPNP_EPNP] = 5.0e-3;
-                epsilon_rot[SOLVEPNP_DLS] = 5.0e-3;
-                epsilon_rot[SOLVEPNP_UPNP] = 5.0e-3;
+                epsilon_rot[SOLVEPNP_DLS] = 5.0e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_rot[SOLVEPNP_UPNP] = 5.0e-3; // UPnP is remapped to EPnP, so we use the same threshold
             }
             else
             {
                 epsilon_trans[SOLVEPNP_ITERATIVE] = 1e-4;
                 epsilon_trans[SOLVEPNP_EPNP] = 5e-3;
-                epsilon_trans[SOLVEPNP_DLS] = 5e-3;
-                epsilon_trans[SOLVEPNP_UPNP] = 5e-3;
+                epsilon_trans[SOLVEPNP_DLS] = 5e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_trans[SOLVEPNP_UPNP] = 5e-3; // UPnP is remapped to EPnP, so we use the same threshold
                 epsilon_trans[SOLVEPNP_P3P] = 1e-4;
                 epsilon_trans[SOLVEPNP_AP3P] = 1e-4;
                 epsilon_trans[SOLVEPNP_IPPE] = 1e-4;
@@ -529,8 +529,8 @@ protected:
 
                 epsilon_rot[SOLVEPNP_ITERATIVE] = 1e-4;
                 epsilon_rot[SOLVEPNP_EPNP] = 5e-3;
-                epsilon_rot[SOLVEPNP_DLS] = 5e-3;
-                epsilon_rot[SOLVEPNP_UPNP] = 5e-3;
+                epsilon_rot[SOLVEPNP_DLS] = 5e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_rot[SOLVEPNP_UPNP] = 5e-3; // UPnP is remapped to EPnP, so we use the same threshold
                 epsilon_rot[SOLVEPNP_P3P] = 1e-4;
                 epsilon_rot[SOLVEPNP_AP3P] = 1e-4;
                 epsilon_rot[SOLVEPNP_IPPE] = 1e-4;
