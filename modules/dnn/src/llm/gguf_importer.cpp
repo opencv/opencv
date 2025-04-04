@@ -2,7 +2,6 @@
 #include "../precomp.hpp"
 #include "gguf_importer.hpp"
 #include "gguf_parser.hpp"
-#include "gguf_def.hpp"
 #include "../net_impl.hpp"
 // #include <opencv2/core.hpp>
 
@@ -21,16 +20,14 @@ void VanillaArchBlockConstructor::initGraph(Net::Impl* netimpl) {
     // For now, we ignore automatic shape computation and require,
     // that input and output shape are stored in metadata
 
-      // vanilla architecture blocks just consist of vanilla attention. 
+    // vanilla architecture blocks just consist of vanilla attention. 
     // hence input size is determined by the columns of the attention block
     MatShape inputshape(3);
 
-    size_t k_hidden_size = ggufFile->getTypedMetadata<int32_t>(
-        "k_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
-    size_t q_hidden_size = ggufFile->getTypedMetadata<int32_t>(
-        "q_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
-    size_t v_hidden_size = ggufFile->getTypedMetadata<int32_t>(
-        "v_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
+    size_t k_hidden_size = ggufFile->metadataDict.get<int>("k_hidden_size");
+    size_t q_hidden_size = ggufFile->metadataDict.get<int>("q_hidden_size");
+    size_t v_hidden_size = ggufFile->metadataDict.get<int>("v_hidden_size");
+    size_t output_size = ggufFile->metadataDict.get<int>("output_size");
 
     inputshape[0] = 1;                                               // batch size
     inputshape[1] = -1;                                              // variable length
@@ -42,15 +39,11 @@ void VanillaArchBlockConstructor::initGraph(Net::Impl* netimpl) {
     // @TODO set from a const from now to avoid multiple definitions
     inputdata.type = CV_32F;
     
-
     graph = netimpl->newGraph("VanillaAttention", {input}, true);
 
     // vanilla architecture blocks just consist of vanilla attention. 
     // hence input size is determined by the columns of the attention block
     MatShape outputshape(3);
-
-    size_t output_size = ggufFile->getTypedMetadata<int32_t>(
-        "output_size", GGUF_METADATA_VALUE_TYPE_INT32);
     
     outputshape[0] = 1;                                               // batch size
     outputshape[1] = -1;                                              // variable length
@@ -71,15 +64,13 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
     layerParams.name = "attention_block";
     Mat weight = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.weight").t(); // opencv requires weight to be of shpae D_emb 
     Mat bias = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.bias");
-    int k_hidden_size = ggufFile->getTypedMetadata<int32_t>(
-        "k_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
-    int v_hidden_size = ggufFile->getTypedMetadata<int32_t>(
-        "v_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
-    int q_hidden_size = ggufFile->getTypedMetadata<int32_t>(
-        "q_hidden_size", GGUF_METADATA_VALUE_TYPE_INT32);
-    int num_heads = ggufFile->getTypedMetadata<int32_t>(
-        "num_heads", GGUF_METADATA_VALUE_TYPE_INT32);
-    
+
+    int k_hidden_size = ggufFile->metadataDict.get<int>("k_hidden_size");
+    int q_hidden_size = ggufFile->metadataDict.get<int>("q_hidden_size");
+    int v_hidden_size = ggufFile->metadataDict.get<int>("v_hidden_size");
+    int num_heads = ggufFile->metadataDict.get<int>("num_heads");
+    int num_blocks = ggufFile->metadataDict.get<int>("num_blocks");
+
     MatShape weightshape = weight.shape();
     int hidden_size = weightshape[1];
     
@@ -99,8 +90,6 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
     } else {
         inputName = "blk." + std::to_string(blockn - 1) + ".attn_out";
     }
-
-    size_t num_blocks = ggufFile->getTypedMetadata<int32_t>("num_blocks", GGUF_METADATA_VALUE_TYPE_INT32);
 
     if (blockn >= num_blocks - 1){
         outputName = "globOut";
@@ -147,7 +136,7 @@ void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int bloc
 Net GGUFImporter::constructNet() {
     VanillaArchBlockConstructor archBlockConstructor(ggufFile);
     archBlockConstructor.initGraph(netimpl);
-    size_t num_blocks = ggufFile->getTypedMetadata<int32_t>("num_blocks", GGUF_METADATA_VALUE_TYPE_INT32);
+    size_t num_blocks = ggufFile->metadataDict.get<int>("num_blocks");
     for (int i = 0; i < num_blocks; i++){
         archBlockConstructor.AddAttentionBlock(netimpl, i);
     }

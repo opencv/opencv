@@ -3,7 +3,6 @@
 #ifndef __OPENCV_GGUFIMPORTER_HPP__
 #define __OPENCV_GGUFIMPORTER_HPP__
 #include <opencv2/dnn.hpp>
-#include "gguf_def.hpp"
 #include "opencv2/core.hpp"
 #include "gguf_parser.hpp"
 
