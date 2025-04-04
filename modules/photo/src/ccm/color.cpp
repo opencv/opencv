@@ -12,45 +12,50 @@ namespace cv {
 namespace ccm {
 Color::Color()
     : colors(Mat())
-    , cs(*std::make_shared<ColorSpace>())
+    , cs(std::make_shared<ColorSpaceBase>())
 {}
 Color::Color(Mat colors_, enum COLOR_SPACE cs_)
     : colors(colors_)
-    , cs(*GetCS::getInstance().getCS(cs_))
+    , cs(GetCS::getInstance().getCS(cs_))
 {}
 
-Color::Color(Mat colors_, const ColorSpace& cs_, Mat colored_)
-    : colors(colors_)
-    , cs(cs_)
-    , colored(colored_)
-{
-    grays = ~colored;
-}
 Color::Color(Mat colors_, enum COLOR_SPACE cs_, Mat colored_)
     : colors(colors_)
-    , cs(*GetCS::getInstance().getCS(cs_))
+    , cs(GetCS::getInstance().getCS(cs_))
+    , colored(colored_)
+{
+    grays = ~colored;
+}
+Color::Color(Mat colors_, const ColorSpaceBase& cs_, Mat colored_)
+    : colors(colors_)
+    , cs(std::make_shared<ColorSpaceBase>(cs_))
     , colored(colored_)
 {
     grays = ~colored;
 }
 
-Color::Color(Mat colors_, const ColorSpace& cs_)
+Color::Color(Mat colors_, const ColorSpaceBase& cs_)
+    : colors(colors_)
+    , cs(std::make_shared<ColorSpaceBase>(cs_))
+{}
+
+Color::Color(Mat colors_, std::shared_ptr<ColorSpaceBase> cs_)
     : colors(colors_)
     , cs(cs_)
 {}
 
-Color Color::to(const ColorSpace& other, CAM method, bool save)
+Color Color::to(const ColorSpaceBase& other, CAM method, bool save)
 {
     if (history.count(other) == 1)
     {
         return *history[other];
     }
-    if (cs.relate(other))
+    if (cs->relate(other))
     {
-        return Color(cs.relation(other).run(colors), other);
+        return Color(cs->relation(other).run(colors), other);
     }
     Operations ops;
-    ops.add(cs.to).add(XYZ(cs.io).cam(other.io, method)).add(other.from);
+    ops.add(cs->to).add(XYZ(cs->io).cam(other.io, method)).add(other.from);
     std::shared_ptr<Color> color(new Color(ops.run(colors), other));
     if (save)
     {
@@ -58,6 +63,7 @@ Color Color::to(const ColorSpace& other, CAM method, bool save)
     }
     return *color;
 }
+
 Color Color::to(COLOR_SPACE other, CAM method, bool save)
 {
     return to(*GetCS::getInstance().getCS(other), method, save);
@@ -84,7 +90,7 @@ Mat Color::toLuminant(IO io, CAM method, bool save)
 
 Mat Color::diff(Color& other, DistanceType method)
 {
-    return diff(other, cs.io, method);
+    return diff(other, cs->io, method);
 }
 
 Mat Color::diff(Color& other, IO io, DistanceType method)
@@ -100,9 +106,9 @@ Mat Color::diff(Color& other, IO io, DistanceType method)
     case cv::ccm::DISTANCE_CMC_2TO1:
         return distance(to(lab).colors, other.to(lab).colors, method);
     case cv::ccm::DISTANCE_RGB:
-        return distance(to(*cs.nl).colors, other.to(*cs.nl).colors, method);
+        return distance(to(*cs->nl).colors, other.to(*cs->nl).colors, method);
     case cv::ccm::DISTANCE_RGBL:
-        return distance(to(*cs.l).colors, other.to(*cs.l).colors, method);
+        return distance(to(*cs->l).colors, other.to(*cs->l).colors, method);
     default:
         CV_Error(Error::StsBadArg, "Wrong method!" );
         break;

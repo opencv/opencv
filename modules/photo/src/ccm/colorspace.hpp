@@ -18,7 +18,7 @@ namespace ccm {
 
 /** @brief Basic class for ColorSpace.
 */
-class ColorSpace
+class ColorSpaceBase
 {
 public:
     typedef std::function<Mat(Mat)> MatFunc;
@@ -27,26 +27,26 @@ public:
     bool linear;
     Operations to;
     Operations from;
-    ColorSpace* l;
-    ColorSpace* nl;
+    ColorSpaceBase* l;
+    ColorSpaceBase* nl;
 
-    ColorSpace() {};
+    ColorSpaceBase() {};
 
-    ColorSpace(IO io_, std::string type_, bool linear_)
+    ColorSpaceBase(IO io_, std::string type_, bool linear_)
         : io(io_)
         , type(type_)
         , linear(linear_) {};
 
-    virtual ~ColorSpace()
+    virtual ~ColorSpaceBase()
     {
         l = 0;
         nl = 0;
     };
-    virtual bool relate(const ColorSpace& other) const;
+    virtual bool relate(const ColorSpaceBase& other) const;
 
-    virtual Operations relation(const ColorSpace& /*other*/) const;
+    virtual Operations relation(const ColorSpaceBase& /*other*/) const;
 
-    bool operator<(const ColorSpace& other) const;
+    bool operator<(const ColorSpaceBase& other) const;
 };
 
 /** @brief Base of RGB color space;
@@ -54,7 +54,7 @@ public:
            Data from https://en.wikipedia.org/wiki/Adobe_RGB_color_space
 */
 
-class RGBBase_ : public ColorSpace
+class RGBBase_ : public ColorSpaceBase
 {
 public:
     // primaries
@@ -67,17 +67,17 @@ public:
     Mat M_to;
     Mat M_from;
 
-    using ColorSpace::ColorSpace;
+    using ColorSpaceBase::ColorSpaceBase;
 
     /** @brief There are 3 kinds of relationships for RGB:
                1. Different types;    - no operation
                1. Same type, same linear; - copy
                2. Same type, different linear, self is nonlinear; - 2 toL
                3. Same type, different linear, self is linear - 3 fromL
-        @param other type of ColorSpace.
+        @param other type of ColorSpaceBase.
         @return Operations.
     */
-    Operations relation(const ColorSpace& other) const CV_OVERRIDE;
+    Operations relation(const ColorSpaceBase& other) const CV_OVERRIDE;
 
     /** @brief Initial operations.
     */
@@ -275,11 +275,11 @@ enum CAM
 /** @brief XYZ color space.
            Chromatic adaption matrices.
 */
-class XYZ : public ColorSpace
+class XYZ : public ColorSpaceBase
 {
 public:
     XYZ(IO io_)
-        : ColorSpace(io_, "XYZ", true) {};
+        : ColorSpaceBase(io_, "XYZ", true) {};
     Operations cam(IO dio, CAM method = BRADFORD);
     static std::shared_ptr<XYZ> get(IO io);
 
@@ -295,10 +295,10 @@ private:
 
 /** @brief Lab color space.
 */
-class Lab : public ColorSpace
+class Lab : public ColorSpaceBase
 {
 public:
-    Lab(IO io);
+    Lab(IO io_);
     static std::shared_ptr<Lab> get(IO io);
 
 private:
@@ -327,14 +327,14 @@ private:
 class GetCS
 {
 protected:
-    std::map<enum COLOR_SPACE, std::shared_ptr<ColorSpace>> map_cs;
+    std::map<enum COLOR_SPACE, std::shared_ptr<ColorSpaceBase>> map_cs;
 
     GetCS();  // singleton, use getInstance()
 public:
     static GetCS& getInstance();
 
     std::shared_ptr<RGBBase_> getRgb(enum COLOR_SPACE cs_name);
-    std::shared_ptr<ColorSpace> getCS(enum COLOR_SPACE cs_name);
+    std::shared_ptr<ColorSpaceBase> getCS(enum COLOR_SPACE cs_name);
 };
 
 }

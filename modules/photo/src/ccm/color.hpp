@@ -27,26 +27,35 @@ public:
         @param history storage of historical conversion
     */
     Mat colors;
-    const ColorSpace& cs;
+    std::shared_ptr<ColorSpaceBase> cs;
     Mat grays;
     Mat colored;
-    std::map<ColorSpace, std::shared_ptr<Color>> history;
+    std::map<ColorSpaceBase, std::shared_ptr<Color>> history;
+
     Color();
-    Color(Mat colors_, enum COLOR_SPACE cs);
-    Color(Mat colors_, enum COLOR_SPACE cs, Mat colored);
-    Color(Mat colors_, const ColorSpace& cs, Mat colored);
-    Color(Mat colors_, const ColorSpace& cs);
+    Color(Mat colors_, enum COLOR_SPACE cs_);
+    Color(Mat colors_, enum COLOR_SPACE cs_, Mat colored);
+    Color(Mat colors_, const ColorSpaceBase& cs, Mat colored);
+    Color(Mat colors_, const ColorSpaceBase& cs);
+    Color(Mat colors_, std::shared_ptr<ColorSpaceBase> cs_);
     virtual ~Color() {};
 
     /** @brief Change to other color space.
                  The conversion process incorporates linear transformations to speed up.
-        @param other type of ColorSpace.
+        @param other type of ColorSpaceBase.
         @param  method the chromatic adapation method.
         @param save when save if True, get data from history first.
         @return Color.
     */
+    Color to(const ColorSpaceBase& other, CAM method = BRADFORD, bool save = true);
+
+    /** @brief Convert color to another color space using COLOR_SPACE enum.
+        @param other type of COLOR_SPACE.
+        @param method chromatic adaption method.
+        @param save whether to save the result.
+        @return Color.
+    */
     Color to(COLOR_SPACE other, CAM method = BRADFORD, bool save = true);
-    Color to(const ColorSpace& other, CAM method = BRADFORD, bool save = true);
 
     /** @brief Channels split.
        @return each channel.
