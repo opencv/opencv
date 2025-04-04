@@ -51,8 +51,25 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    Mat src;
-    fs["color_values"] >> src;
+    Mat src(24, 1, CV_64FC3);
+    double r, g, b;
+    for (int i = 0; i < 24; i++)
+    {
+        infile >> r >> g >> b;
+        src.at<Vec3d>(i, 0) = Vec3d(r, g, b);
+    }
+    infile.close();
+
+    ColorCorrectionModel model1(src, COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model1.compute();
+    cout << "colorCorrectionMatrix " << colorCorrectionMat << endl;
+    double loss = model1.getLoss();
+    cout << "loss " << loss << endl;
+
+    // Save CCM matrix and loss using OpenCV FileStorage
+    FileStorage fs("ccm_output.yaml", FileStorage::WRITE);
+    fs << "colorCorrectionMatrix" << colorCorrectionMat;
+    fs << "loss" << loss;
     fs.release();
 
     if (src.empty())
@@ -61,25 +78,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Convert to double and normalize
-    src.convertTo(src, CV_64F, 1.0/255.0);
-
-    // Create and train the model
-    cv::ccm::ColorCorrectionModel model(src, cv::ccm::COLORCHECKER_Macbeth);
-    model.setColorSpace(cv::ccm::COLOR_SPACE_SRGB);
-    model.setCCMType(cv::ccm::CCM_LINEAR);
-    model.setDistance(cv::ccm::DISTANCE_CIE2000);
-    model.setLinear(cv::ccm::LINEARIZATION_GAMMA);
-    model.setLinearGamma(2.2);
-    model.computeCCM();
-
-    // Save the model parameters
-    FileStorage modelFs("model.yml", FileStorage::WRITE);
-    modelFs << "ccm" << model.getCCM();
-    modelFs << "loss" << model.getLoss();
-    modelFs.release();
-
-    Mat calibratedImage = model.infer(image);
+    Mat calibratedImage;
+    model1.correctImage(img_, calibratedImage);
     Mat out_ = calibratedImage * 255.0;
 
     out_.convertTo(out_, CV_8UC3);

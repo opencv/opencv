@@ -43,26 +43,26 @@ Here are the parameters for ColorCorrectionModel
                   If the color type is some RGB, the format is RGB not BGR;
     Supported Color Space:
             Supported list of RGB color spaces:
-                COLOR_SPACE_sRGB;
-                COLOR_SPACE_AdobeRGB;
-                COLOR_SPACE_WideGamutRGB;
-                COLOR_SPACE_ProPhotoRGB;
+                COLOR_SPACE_SRGB;
+                COLOR_SPACE_ADOBE_RGB;
+                COLOR_SPACE_WIDE_GAMUT_RGB;
+                COLOR_SPACE_PRO_PHOTO_RGB;
                 COLOR_SPACE_DCI_P3_RGB;
-                COLOR_SPACE_AppleRGB;
+                COLOR_SPACE_APPLE_RGB;
                 COLOR_SPACE_REC_709_RGB;
                 COLOR_SPACE_REC_2020_RGB;
             Supported list of linear RGB color spaces:
-                COLOR_SPACE_sRGBL;
-                COLOR_SPACE_AdobeRGBL;
-                COLOR_SPACE_WideGamutRGBL;
-                COLOR_SPACE_ProPhotoRGBL;
+                COLOR_SPACE_SRGBL;
+                COLOR_SPACE_ADOBE_RGBL;
+                COLOR_SPACE_WIDE_GAMUT_RGBL;
+                COLOR_SPACE_PRO_PHOTO_RGBL;
                 COLOR_SPACE_DCI_P3_RGBL;
-                COLOR_SPACE_AppleRGBL;
+                COLOR_SPACE_APPLE_RGBL;
                 COLOR_SPACE_REC_709_RGBL;
                 COLOR_SPACE_REC_2020_RGBL;
             Supported list of non-RGB color spaces:
-                COLOR_SPACE_Lab_D50_2;
-                COLOR_SPACE_Lab_D65_2;
+                COLOR_SPACE_LAB_D50_2;
+                COLOR_SPACE_LAB_D65_2;
                 COLOR_SPACE_XYZ_D50_2;
                 COLOR_SPACE_XYZ_D65_2;
                 COLOR_SPACE_XYZ_D65_10;
@@ -75,16 +75,16 @@ Here are the parameters for ColorCorrectionModel
                 COLOR_SPACE_XYZ_D75_10;
                 COLOR_SPACE_XYZ_E_2;
                 COLOR_SPACE_XYZ_E_10;
-                COLOR_SPACE_Lab_D65_10;
-                COLOR_SPACE_Lab_D50_10;
-                COLOR_SPACE_Lab_A_2;
-                COLOR_SPACE_Lab_A_10;
-                COLOR_SPACE_Lab_D55_2;
-                COLOR_SPACE_Lab_D55_10;
-                COLOR_SPACE_Lab_D75_2;
-                COLOR_SPACE_Lab_D75_10;
-                COLOR_SPACE_Lab_E_2;
-                COLOR_SPACE_Lab_E_10;
+                COLOR_SPACE_LAB_D65_10;
+                COLOR_SPACE_LAB_D50_10;
+                COLOR_SPACE_LAB_A_2;
+                COLOR_SPACE_LAB_A_10;
+                COLOR_SPACE_LAB_D55_2;
+                COLOR_SPACE_LAB_D55_10;
+                COLOR_SPACE_LAB_D75_2;
+                COLOR_SPACE_LAB_D75_10;
+                COLOR_SPACE_LAB_E_2;
+                COLOR_SPACE_LAB_E_10;
 ```
 
 

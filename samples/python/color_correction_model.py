@@ -38,16 +38,15 @@ def main():
     src = np.array(colors, dtype=np.float64).reshape(24, 1, 3)
 
     # Create and compute the Color Correction Model
-    model1 = cv2.ccm.ColorCorrectionModel(src, cv2.ccm.COLORCHECKER_Macbeth)
-    model1.computeCCM()
-    ccm = model1.getCCM()
-    print("ccm", ccm)
+    model1 = cv2.ccm.ColorCorrectionModel(src, cv2.ccm.COLORCHECKER_MACBETH)
+    color_correction_matrix = model1.compute()
+    print("color_correction_matrix", color_correction_matrix)
     loss = model1.getLoss()
     print("loss", loss)
 
     # Save the CCM matrix and loss using OpenCV FileStorage
     fs = cv2.FileStorage("ccm_output.yaml", cv2.FILE_STORAGE_WRITE)
-    fs.write("ccm", ccm)
+    fs.write("color_correction_matrix", color_correction_matrix)
     fs.write("loss", loss)
     fs.release()
 
@@ -56,7 +55,8 @@ def main():
     img_rgb = img_rgb.astype(np.float64) / 255.0
 
     # Apply color correction inference
-    calibratedImage = model1.infer(img_rgb)
+    calibratedImage = np.zeros_like(img_rgb)
+    model1.infer(img_rgb, calibratedImage)
     out_ = calibratedImage * 255.0
     out_ = np.clip(out_, 0, 255).astype(np.uint8)
 

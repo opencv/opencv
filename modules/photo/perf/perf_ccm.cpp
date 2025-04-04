@@ -12,7 +12,7 @@ namespace
 
 using namespace std;
 
-PERF_TEST(CV_mcc_perf, infer) {
+PERF_TEST(CV_mcc_perf, correctImage) {
     // read gold chartsRGB
     string path = cvtest::findDataFile("cv/mcc/mcc_ccm_test.yml");
     FileStorage fs(path, FileStorage::READ);
@@ -23,15 +23,16 @@ PERF_TEST(CV_mcc_perf, infer) {
     fs.release();
 
     // compute CCM
-    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_Macbeth);
-    model.computeCCM();
+    ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model.compute();
 
     Mat img(1000, 4000, CV_8UC3);
     randu(img, 0, 255);
     img.convertTo(img, CV_64F, 1. / 255.);
 
+    Mat correctedImg;
     TEST_CYCLE() {
-        model.infer(img);
+        model.correctImage(img, correctedImg);
     }
 
     SANITY_CHECK_NOTHING();
