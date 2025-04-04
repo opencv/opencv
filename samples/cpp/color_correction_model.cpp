@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 
     // Create and train the model
     cv::ccm::ColorCorrectionModel model(src, cv::ccm::COLORCHECKER_Macbeth);
-    model.setColorSpace(cv::ccm::COLOR_SPACE_sRGB);
+    model.setColorSpace(cv::ccm::COLOR_SPACE_SRGB);
     model.setCCMType(cv::ccm::CCM_LINEAR);
     model.setDistance(cv::ccm::DISTANCE_CIE2000);
     model.setLinear(cv::ccm::LINEARIZATION_GAMMA);

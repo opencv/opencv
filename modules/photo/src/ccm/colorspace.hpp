@@ -327,14 +327,14 @@ private:
 class GetCS
 {
 protected:
-    std::map<enum COLOR_SPACE, std::shared_ptr<ColorSpaceBase>> map_cs;
+    std::map<enum ColorSpace, std::shared_ptr<ColorSpaceBase>> map_cs;
 
     GetCS();  // singleton, use getInstance()
 public:
     static GetCS& getInstance();
 
-    std::shared_ptr<RGBBase_> getRgb(enum COLOR_SPACE cs_name);
-    std::shared_ptr<ColorSpaceBase> getCS(enum COLOR_SPACE cs_name);
+    std::shared_ptr<RGBBase_> getRgb(enum ColorSpace cs_name);
+    std::shared_ptr<ColorSpaceBase> getCS(enum ColorSpace cs_name);
 };
 
 }

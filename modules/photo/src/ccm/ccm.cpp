@@ -82,8 +82,8 @@ public:
 
     void getColor(Mat& img_, bool islinear = false);
     void getColor(ColorCheckerType constcolor);
-    void getColor(Mat colors_, COLOR_SPACE cs_, Mat colored_);
-    void getColor(Mat colors_, COLOR_SPACE ref_cs_);
+    void getColor(Mat colors_, ColorSpace cs_, Mat colored_);
+    void getColor(Mat colors_, ColorSpace ref_cs_);
 
     /** @brief Loss function base on cv::MinProblemSolver::Function.
              see details in https://github.com/opencv/opencv/blob/master/modules/core/include/opencv2/core/optim.hpp
@@ -118,7 +118,7 @@ public:
 };
 
 ColorCorrectionModel::Impl::Impl()
-    : cs(*GetCS::getInstance().getRgb(COLOR_SPACE_sRGB))
+    : cs(*GetCS::getInstance().getRgb(COLOR_SPACE_SRGB))
     , ccmType(CCM_LINEAR)
     , distance(DISTANCE_CIE2000)
     , linearType(LINEARIZATION_GAMMA)
@@ -230,7 +230,7 @@ void ColorCorrectionModel::Impl::initialLeastSquare(bool fit)
 double ColorCorrectionModel::Impl::calcLoss_(Color color)
 {
     Mat distlist = color.diff(*dst, distance);
-    Color lab = color.to(COLOR_SPACE_Lab_D50_2);
+    Color lab = color.to(COLOR_SPACE_LAB_D50_2);
     Mat dist_;
     pow(distlist, 2, dist_);
     if (!weights.empty())
@@ -284,12 +284,12 @@ void ColorCorrectionModel::Impl::getColor(ColorCheckerType constcolor)
     dst = (GetColor::getColor(constcolor));
 }
 
-void ColorCorrectionModel::Impl::getColor(Mat colors_, COLOR_SPACE ref_cs_)
+void ColorCorrectionModel::Impl::getColor(Mat colors_, ColorSpace ref_cs_)
 {
     dst.reset(new Color(colors_, *GetCS::getInstance().getCS(ref_cs_)));
 }
 
-void ColorCorrectionModel::Impl::getColor(Mat colors_, COLOR_SPACE cs_, Mat colored_)
+void ColorCorrectionModel::Impl::getColor(Mat colors_, ColorSpace cs_, Mat colored_)
 {
     dst.reset(new Color(colors_, *GetCS::getInstance().getCS(cs_), colored_));
 }
@@ -300,19 +300,19 @@ ColorCorrectionModel::ColorCorrectionModel(InputArray src_, int constcolor): p(s
     p->getColor(static_cast<ColorCheckerType>(constcolor));
 }
 
-ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, COLOR_SPACE ref_cs_): p(std::make_shared<Impl>())
+ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, ColorSpace ref_cs_): p(std::make_shared<Impl>())
 {
     p->src = src_.getMat();
     p->getColor(colors_.getMat(), ref_cs_);
 }
 
-ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, COLOR_SPACE cs_, InputArray colored_): p(std::make_shared<Impl>())
+ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, ColorSpace cs_, InputArray colored_): p(std::make_shared<Impl>())
 {
     p->src = src_.getMat();
     p->getColor(colors_.getMat(), cs_, colored_.getMat());
 }
 
-void ColorCorrectionModel::setColorSpace(COLOR_SPACE cs_)
+void ColorCorrectionModel::setColorSpace(ColorSpace cs_)
 {
     p->cs = *GetCS::getInstance().getRgb(cs_);
 }

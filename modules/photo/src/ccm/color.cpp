@@ -14,12 +14,12 @@ Color::Color()
     : colors(Mat())
     , cs(std::make_shared<ColorSpaceBase>())
 {}
-Color::Color(Mat colors_, enum COLOR_SPACE cs_)
+Color::Color(Mat colors_, enum ColorSpace cs_)
     : colors(colors_)
     , cs(GetCS::getInstance().getCS(cs_))
 {}
 
-Color::Color(Mat colors_, enum COLOR_SPACE cs_, Mat colored_)
+Color::Color(Mat colors_, enum ColorSpace cs_, Mat colored_)
     : colors(colors_)
     , cs(GetCS::getInstance().getCS(cs_))
     , colored(colored_)
@@ -64,7 +64,7 @@ Color Color::to(const ColorSpaceBase& other, CAM method, bool save)
     return *color;
 }
 
-Color Color::to(COLOR_SPACE other, CAM method, bool save)
+Color Color::to(ColorSpace other, CAM method, bool save)
 {
     return to(*GetCS::getInstance().getCS(other), method, save);
 }
@@ -121,7 +121,7 @@ void Color::getGray(double JDN)
     {
         return;
     }
-    Mat lab = to(COLOR_SPACE_Lab_D65_2).colors;
+    Mat lab = to(COLOR_SPACE_LAB_D65_2).colors;
     Mat gray(colors.size(), colors.type());
     int fromto[] = { 0, 0, -1, 1, -1, 2 };
     mixChannels(&lab, 1, &gray, 1, fromto, 3);
@@ -359,7 +359,7 @@ std::shared_ptr<Color> GetColor::getColor(ColorCheckerType const_color)
     {
         Mat ColorChecker2005_LAB_D50_2_ = GetColor::getColorChecker(*ColorChecker2005_LAB_D50_2, 24);
         Mat ColorChecker2005_COLORED_MASK_ = GetColor::getColorCheckerMask(ColorChecker2005_COLORED_MASK, 24);
-        std::shared_ptr<Color> Macbeth_D50_2 = std::make_shared<Color>(ColorChecker2005_LAB_D50_2_, COLOR_SPACE_Lab_D50_2, ColorChecker2005_COLORED_MASK_);
+        std::shared_ptr<Color> Macbeth_D50_2 = std::make_shared<Color>(ColorChecker2005_LAB_D50_2_, COLOR_SPACE_LAB_D50_2, ColorChecker2005_COLORED_MASK_);
         return Macbeth_D50_2;
     }
 
@@ -367,14 +367,14 @@ std::shared_ptr<Color> GetColor::getColor(ColorCheckerType const_color)
     {
         Mat Vinyl_LAB_D50_2__ = GetColor::getColorChecker(*Vinyl_LAB_D50_2, 18);
         Mat Vinyl_COLORED_MASK__ = GetColor::getColorCheckerMask(Vinyl_COLORED_MASK, 18);
-        std::shared_ptr<Color> Vinyl_D50_2 = std::make_shared<Color>(Vinyl_LAB_D50_2__, COLOR_SPACE_Lab_D50_2, Vinyl_COLORED_MASK__);
+        std::shared_ptr<Color> Vinyl_D50_2 = std::make_shared<Color>(Vinyl_LAB_D50_2__, COLOR_SPACE_LAB_D50_2, Vinyl_COLORED_MASK__);
         return Vinyl_D50_2;
     }
 
     case cv::ccm::COLORCHECKER_DigitalSG:
     {
         Mat DigitalSG_LAB_D50_2__ = GetColor::getColorChecker(*DigitalSG_LAB_D50_2, 140);
-        std::shared_ptr<Color> DigitalSG_D50_2 = std::make_shared<Color>(DigitalSG_LAB_D50_2__, COLOR_SPACE_Lab_D50_2);
+        std::shared_ptr<Color> DigitalSG_D50_2 = std::make_shared<Color>(DigitalSG_LAB_D50_2__, COLOR_SPACE_LAB_D50_2);
         return DigitalSG_D50_2;
     }
     }

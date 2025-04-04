@@ -111,7 +111,7 @@ TEST(Photo_ColorCorrection, test_masks_weights_1)
                             0.5, 0, 0, 0.6, 0, 0,
                             0.7, 0, 0, 0.8, 0, 0);
     cv::ccm::ColorCorrectionModel model1(s / 255, cv::ccm::COLORCHECKER_Macbeth);
-    model1.setColorSpace(cv::ccm::COLOR_SPACE_sRGB);
+    model1.setColorSpace(cv::ccm::COLOR_SPACE_SRGB);
     model1.setCCMType(cv::ccm::CCM_LINEAR);
     model1.setDistance(cv::ccm::DISTANCE_CIE2000);
     model1.setLinear(cv::ccm::LINEARIZATION_GAMMA);
