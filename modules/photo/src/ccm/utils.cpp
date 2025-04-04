@@ -18,14 +18,7 @@ inline double gammaCorrection_(const double& element, const double& gamma)
 
 Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst)
 {
-    return elementWise(src, [gamma](double element) -> double { return gammaCorrection_(element, gamma); }, dst);
-}
-
-Mat multiple(const Mat& xyz, const Mat& ccm)
-{
-    Mat dst;
-    cv::transform(xyz, dst, ccm);
-    return dst;
+    return elementWise(src, [gamma](const double& element) { return gammaCorrection_(element, gamma); }, dst);
 }
 
 Mat saturate(Mat& src, const double& low, const double& up)
@@ -50,7 +43,9 @@ Mat saturate(Mat& src, const double& low, const double& up)
 Mat rgb2gray(const Mat& rgb)
 {
     const Matx31d m_gray(0.2126, 0.7152, 0.0722);
-    return multiple(rgb, Mat(m_gray));
+    Mat dst;
+    cv::transform(rgb, dst, Mat(m_gray));
+    return dst;
 }
 
 }

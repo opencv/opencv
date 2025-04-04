@@ -21,7 +21,9 @@ Mat Operation::operator()(Mat& abc)
     {
         return abc;
     }
-    return multiple(abc, M);
+    Mat dst;
+    transform(abc, dst, M);
+    return dst;
 };
 
 void Operation::add(const Operation& other)

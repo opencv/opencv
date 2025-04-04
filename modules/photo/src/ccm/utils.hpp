@@ -27,20 +27,11 @@ double gammaCorrection_(const double& element, const double& gamma);
  */
 Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst=Mat());
 
-/** @brief multiple the function used to compute an array with n channels
-      multiplied by ccm using cv::transform.
-    @param xyz the input array, type of Mat.
-    @param ccm the ccm matrix to make color correction.
-    @note This function internally uses cv::transform for matrix multiplication.
- */
-Mat multiple(const Mat& xyz, const Mat& ccm);
-
 /** @brief saturate a function to delete unsatisfied elementwise.
     @param src the input array, type of Mat.
     @param low  the threshold to choose saturated colors
     @param up  the threshold to choose saturated colors
  */
- 
 Mat saturate(Mat& src, const double& low, const double& up);
 
 /** @brief rgb2gray it is an approximation grayscale function for relative RGB

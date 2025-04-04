@@ -272,7 +272,8 @@ Mat ColorCorrectionModel::infer(const Mat& img, bool islinear)
     }
     Mat img_lin = (p->linear)->linearize(img);
     Mat ccm = p->ccm.reshape(0, p->shape / 3);
-    Mat img_ccm = multiple(p->prepare(img_lin), ccm);
+    Mat img_ccm;
+    cv::transform(p->prepare(img_lin), img_ccm, ccm);
     if (islinear == true)
     {
         return img_ccm;
