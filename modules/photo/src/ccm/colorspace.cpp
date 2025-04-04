@@ -33,19 +33,19 @@ static const std::vector<double>& getIlluminants(const IO& io)
     return it->second;
 };
 
-/* @brief Basic class for ColorSpace.
+/* @brief Basic class for ColorSpaceBase.
  */
-bool ColorSpace::relate(const ColorSpace& other) const
+bool ColorSpaceBase::relate(const ColorSpaceBase& other) const
 {
     return (type == other.type) && (io == other.io);
 };
 
-Operations ColorSpace::relation(const ColorSpace& /*other*/) const
+Operations ColorSpaceBase::relation(const ColorSpaceBase& /*other*/) const
 {
     return Operations::getIdentityOps();
 }
 
-bool ColorSpace::operator<(const ColorSpace& other) const
+bool ColorSpaceBase::operator<(const ColorSpaceBase& other) const
 {
     return (io < other.io || (io == other.io && type < other.type) || (io == other.io && type == other.type && linear < other.linear));
 }
@@ -54,7 +54,7 @@ bool ColorSpace::operator<(const ColorSpace& other) const
  *        the argument values are from AdobeRGB;
  *        Data from https://en.wikipedia.org/wiki/Adobe_RGB_color_space
  */
-Operations RGBBase_::relation(const ColorSpace& other) const
+Operations RGBBase_::relation(const ColorSpaceBase& other) const
 {
     if (linear == other.linear)
     {
@@ -383,7 +383,7 @@ std::shared_ptr<XYZ> XYZ::get(IO io)
 /* @brief Lab color space.
  */
 Lab::Lab(IO io_)
-    : ColorSpace(io_, "Lab", true)
+    : ColorSpaceBase(io_, "Lab", true)
 {
     to = { Operation([this](Mat src) -> Mat { return tosrc(src); }) };
     from = { Operation([this](Mat src) -> Mat { return fromsrc(src); }) };
@@ -575,7 +575,7 @@ std::shared_ptr<RGBBase_> GetCS::getRgb(enum COLOR_SPACE cs_name)
     return (std::dynamic_pointer_cast<RGBBase_>)(map_cs[cs_name]);
 }
 
-std::shared_ptr<ColorSpace> GetCS::getCS(enum COLOR_SPACE cs_name)
+std::shared_ptr<ColorSpaceBase> GetCS::getCS(enum COLOR_SPACE cs_name)
 {
     switch (cs_name)
     {
