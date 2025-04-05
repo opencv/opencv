@@ -99,7 +99,7 @@ PERF_TEST_P(Size_MatType, Mat_Clone_Roi,
 
 PERF_TEST_P(Size_MatType, Mat_CopyToWithMask,
             testing::Combine(testing::Values(::perf::sz1080p, ::perf::szODD),
-                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_16UC1, CV_32SC1, CV_32FC4))
+                             testing::Values(CV_8UC1, CV_8UC2, CV_8UC3, CV_16UC1, CV_16UC3, CV_32SC1, CV_32SC2, CV_32FC4))
             )
 {
     const Size_MatType_t params = GetParam();
