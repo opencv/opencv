@@ -431,12 +431,8 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
         Vec2d pi = sdepth == CV_32F ? (Vec2d)srcf[i] : srcd[i];  // image point
         Vec2d pw((pi[0] - c[0])/f[0], (pi[1] - c[1])/f[1]);      // world point
 
+        // Note: theta_d is not really the incident angle and it does not require filtering at first.
         double theta_d = sqrt(pw[0]*pw[0] + pw[1]*pw[1]);
-
-        // the current camera model is only valid up to 180 FOV
-        // for larger FOV the loop below does not converge
-        // clip values so we still get plausible results for super fisheye images > 180 grad
-        theta_d = min(max(-CV_PI/2., theta_d), CV_PI/2.);
 
         bool converged = false;
         double theta = theta_d;
@@ -463,7 +459,15 @@ void cv::fisheye::undistortPoints( InputArray distorted, OutputArray undistorted
                 }
             }
 
-            scale = std::tan(theta) / theta_d;
+            // Here we need to filter invalid solutions. The thetas should be within 90deg
+            if (theta <= -CV_PI/2. || theta >= CV_PI/2.)
+            {
+                converged = false;  // This will set the point to (-1000000.0, -1000000.0) later
+            }
+            else
+            {
+                scale = std::tan(theta) / theta_d;
+            }
         }
         else
         {
