@@ -469,16 +469,21 @@ bool SPngDecoder::readData(Mat &img)
                     {
                         if (img.depth() == CV_8U && m_bit_depth == 16)
                         {
-                            Mat buffer(1, (int)image_width / 2, CV_16U);
+                           
+                            Mat tmp(m_height,m_width, CV_16U);
                             do
                             {
                                 ret = spng_get_row_info(png_ptr, &row_info);
                                 if (ret)
                                     break;
 
-                                ret = spng_decode_row(png_ptr, buffer.data, image_width);
-                                buffer.convertTo(img.row(row_info.row_num), CV_8U, 1. / 255);
+                                ret = spng_decode_row(png_ptr, tmp.row(row_info.row_num).data, m_width * 2);
                             } while (ret == SPNG_OK);
+
+                            if (ret == SPNG_EOI)
+                                tmp.convertTo(img, CV_8U, 1. / 255);
+                            else
+                                return false;
                         }
                         else
                         {
