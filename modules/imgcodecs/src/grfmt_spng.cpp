@@ -260,6 +260,15 @@ bool SPngDecoder::readData(Mat &img)
 
             if (!color && fmt == SPNG_FMT_RGB8 && ihdr.interlace_method != 0)
             {
+                Mat tmp(m_height,m_width,CV_8UC3);
+                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
+                    return false;
+                cvtColor(tmp, img, COLOR_BGR2GRAY);
+                return true;
+            }
+
+            if (!color && fmt == SPNG_FMT_RGB8 && ihdr.interlace_method != 0)
+            {
                 AutoBuffer<unsigned char> imageBuffer(image_size);
                 if (SPNG_OK != spng_decode_image(png_ptr, imageBuffer.data(), image_size, fmt, 0))
                     return false;
@@ -460,7 +469,7 @@ bool SPngDecoder::readData(Mat &img)
                     {
                         if (img.depth() == CV_8U && m_bit_depth == 16)
                         {
-                            Mat buffer(1, image_width / 2, CV_16U);
+                            Mat buffer(1, (int)image_width / 2, CV_16U);
                             do
                             {
                                 ret = spng_get_row_info(png_ptr, &row_info);
