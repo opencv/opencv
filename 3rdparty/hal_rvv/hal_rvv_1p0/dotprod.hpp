@@ -37,10 +37,39 @@ double dotProd_8u(const uchar *a, const uchar *b, int len) {
 
             s = __riscv_vwredsumu(__riscv_vwmulu(va, vb, vl), s, vl);
         }
+        r += (double)__riscv_vmv_x(s);
+
         i += block_size;
         a += block_size;
         b += block_size;
+    }
+
+    return r;
+}
+
+double dotProd_8s(const schar *a, const schar *b, int len) {
+    constexpr int block_size0 = (1 << 14);
+
+    double r = 0;
+    int i = 0;
+    while (i < len) {
+        int block_size = std::min(block_size0, len - i);
+
+        vint32m1_t s = __riscv_vmv_v_x_i32m1(0, __riscv_vsetvlmax_e32m1());
+        int vl;
+        for (int j = 0; j < block_size; j += vl) {
+            vl = __riscv_vsetvl_e8m4(block_size - j);
+
+            auto va = __riscv_vle8_v_i8m4(a + j, vl);
+            auto vb = __riscv_vle8_v_i8m4(b + j, vl);
+
+            s = __riscv_vwredsum(__riscv_vwmul(va, vb, vl), s, vl);
+        }
         r += (double)__riscv_vmv_x(s);
+
+        i += block_size;
+        a += block_size;
+        b += block_size;
     }
 
     return r;
@@ -54,7 +83,7 @@ inline int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size
     int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
 
     static DotProdFunc dotprod_tab[CV_DEPTH_MAX] = {
-        (DotProdFunc)dotProd_8u,  nullptr,
+        (DotProdFunc)dotProd_8u,  (DotProdFunc)dotProd_8s,
         nullptr, nullptr,
         nullptr, nullptr,
         nullptr, nullptr
