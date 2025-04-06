@@ -145,31 +145,28 @@ bool SPngDecoder::readHeader()
             m_color_type = ihdr.color_type;
             m_bit_depth = ihdr.bit_depth;
 
-            if (ihdr.bit_depth <= 8 || ihdr.bit_depth == 16)
+            int num_trans;
+            switch (ihdr.color_type)
             {
-                int num_trans;
-                switch (ihdr.color_type)
-                {
-                case SPNG_COLOR_TYPE_TRUECOLOR:
-                case SPNG_COLOR_TYPE_INDEXED:
-                    struct spng_trns trns;
-                    num_trans = !spng_get_trns(ctx, &trns);
-                    if (num_trans > 0)
-                        m_type = CV_8UC4;
-                    else
-                        m_type = CV_8UC3;
-                    break;
-                case SPNG_COLOR_TYPE_GRAYSCALE_ALPHA:
-                case SPNG_COLOR_TYPE_TRUECOLOR_ALPHA:
+            case SPNG_COLOR_TYPE_TRUECOLOR:
+            case SPNG_COLOR_TYPE_INDEXED:
+                struct spng_trns trns;
+                num_trans = !spng_get_trns(ctx, &trns);
+                if (num_trans > 0)
                     m_type = CV_8UC4;
-                    break;
-                default:
-                    m_type = CV_8UC1;
-                }
-                if (ihdr.bit_depth == 16)
-                    m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
-                result = true;
+                else
+                    m_type = CV_8UC3;
+                break;
+            case SPNG_COLOR_TYPE_GRAYSCALE_ALPHA:
+            case SPNG_COLOR_TYPE_TRUECOLOR_ALPHA:
+                m_type = CV_8UC4;
+                break;
+            default:
+                m_type = CV_8UC1;
             }
+            if (ihdr.bit_depth == 16)
+                m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
+            result = true;
         }
     }
 
@@ -260,10 +257,21 @@ bool SPngDecoder::readData(Mat &img)
 
             if (!color && fmt == SPNG_FMT_RGB8 && ihdr.interlace_method != 0)
             {
+                if (img.depth() == CV_16U)
+                {
+                    Mat tmp(m_height, m_width, CV_16UC4);
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_PNG, 0))
+                        return false;
+                    cvtColor(tmp, img, COLOR_BGRA2GRAY);
+                }
+                else
+                {
                 Mat tmp(m_height,m_width,CV_8UC3);
                 if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
                     return false;
                 cvtColor(tmp, img, COLOR_BGR2GRAY);
+                }
+
                 return true;
             }
 
@@ -469,8 +477,7 @@ bool SPngDecoder::readData(Mat &img)
                     {
                         if (img.depth() == CV_8U && m_bit_depth == 16)
                         {
-                           
-                            Mat tmp(m_height,m_width, CV_16U);
+                            Mat tmp(m_height, m_width, CV_16U);
                             do
                             {
                                 ret = spng_get_row_info(png_ptr, &row_info);
@@ -480,10 +487,10 @@ bool SPngDecoder::readData(Mat &img)
                                 ret = spng_decode_row(png_ptr, tmp.row(row_info.row_num).data, m_width * 2);
                             } while (ret == SPNG_OK);
 
-                            if (ret == SPNG_EOI)
-                                tmp.convertTo(img, CV_8U, 1. / 255);
-                            else
+                            if (ret != SPNG_EOI)
                                 return false;
+
+                            tmp.convertTo(img, CV_8U, 1. / 255);
                         }
                         else
                         {
