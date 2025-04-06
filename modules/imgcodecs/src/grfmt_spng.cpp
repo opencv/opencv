@@ -231,19 +231,14 @@ bool SPngDecoder::readData(Mat &img)
                     fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGB8;
                 }
             }
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA || fmt == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
+            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA)
             {
-                if (img.depth() == CV_8U)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8;
-                }
+                fmt = img.depth() == CV_8U ? SPNG_FMT_RGB8 : SPNG_FMT_RGBA16;
             }
             else
-                fmt = SPNG_FMT_RGB8;
+            {
+                fmt = img.depth() == CV_16U ? SPNG_FMT_RGBA16 : SPNG_FMT_RGB8;
+            }
         }
 
         size_t image_width, image_size = 0;
@@ -255,56 +250,23 @@ bool SPngDecoder::readData(Mat &img)
         {
             image_width = image_size / m_height;
 
-            if (!color && fmt == SPNG_FMT_RGB8 && ihdr.interlace_method != 0)
+            if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16) && ihdr.interlace_method != 0)
             {
                 if (img.depth() == CV_16U)
                 {
+                    if (fmt == SPNG_FMT_RGB8)
+                        fmt = SPNG_FMT_PNG;
                     Mat tmp(m_height, m_width, CV_16UC4);
-                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_PNG, 0))
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
                         return false;
                     cvtColor(tmp, img, COLOR_BGRA2GRAY);
                 }
                 else
                 {
-                Mat tmp(m_height,m_width,CV_8UC3);
-                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
-                    return false;
-                cvtColor(tmp, img, COLOR_BGR2GRAY);
-                }
-
-                return true;
-            }
-
-            if (!color && fmt == SPNG_FMT_RGB8 && ihdr.interlace_method != 0)
-            {
-                AutoBuffer<unsigned char> imageBuffer(image_size);
-                if (SPNG_OK != spng_decode_image(png_ptr, imageBuffer.data(), image_size, fmt, 0))
-                    return false;
-
-                int step = m_width * img.channels();
-                if (fmt == SPNG_FMT_RGB8)
-                {
-                    spngCvt_BGR2Gray_8u_C3C1R(
-                        imageBuffer.data(),
-                        step,
-                        img.data,
-                        step, Size(m_width, m_height), 2);
-                }
-                else if (fmt == SPNG_FMT_RGBA8)
-                {
-                    spngCvt_BGRA2Gray_8u_C4C1R(
-                        imageBuffer.data(),
-                        step,
-                        img.data,
-                        step, Size(m_width, m_height), 2);
-                }
-                else if (fmt == SPNG_FMT_RGBA16)
-                {
-                    spngCvt_BGRA2Gray_16u_CnC1R(
-                        reinterpret_cast<const ushort*>(imageBuffer.data()), step / 3,
-                        reinterpret_cast<ushort*>(img.data),
-                        step / 3, Size(m_width, m_height),
-                        4, 2);
+                    Mat tmp(m_height, m_width, CV_8UC3);
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
+                        return false;
+                    cvtColor(tmp, img, COLOR_BGR2GRAY);
                 }
                 return true;
             }
