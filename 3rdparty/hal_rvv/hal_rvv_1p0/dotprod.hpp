@@ -149,6 +149,34 @@ double dotProd_32s(const int *a, const int *b, int len) {
     return r;
 }
 
+double dotProd_32f(const float *a, const float *b, int len) {
+    constexpr int block_size0 = (1 << 13);
+
+    double r = 0;
+    int i = 0;
+    while (i < len) {
+        int block_size = std::min(block_size0, len - i);
+
+        vfloat32m4_t s = __riscv_vfmv_v_f_f32m4(0.f, __riscv_vsetvlmax_e32m4());
+        int vl;
+        for (int j = 0; j < block_size; j += vl) {
+            vl = __riscv_vsetvl_e32m4(block_size - j);
+
+            auto va = __riscv_vle32_v_f32m4(a + j, vl);
+            auto vb = __riscv_vle32_v_f32m4(b + j, vl);
+
+            s = __riscv_vfmacc(s, va, vb, vl);
+        }
+        r += (double)__riscv_vfmv_f(__riscv_vfredusum(s, __riscv_vfmv_v_f_f32m1(0.f, __riscv_vsetvlmax_e32m1()), vl));
+
+        i += block_size;
+        a += block_size;
+        b += block_size;
+    }
+
+    return r;
+}
+
 } // anonymous
 
 using DotProdFunc = double (*)(const uchar *a, const uchar *b, int len);
@@ -159,7 +187,7 @@ inline int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size
     static DotProdFunc dotprod_tab[CV_DEPTH_MAX] = {
         (DotProdFunc)dotProd_8u,  (DotProdFunc)dotProd_8s,
         (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
-        (DotProdFunc)dotProd_32s, nullptr,
+        (DotProdFunc)dotProd_32s, (DotProdFunc)dotProd_32f,
         nullptr, nullptr
     };
     DotProdFunc func = dotprod_tab[depth];
