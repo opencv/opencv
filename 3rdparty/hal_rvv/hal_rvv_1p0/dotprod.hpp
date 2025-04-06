@@ -131,6 +131,24 @@ double dotProd_16s(const short *a, const short *b, int len) {
     return r;
 }
 
+double dotProd_32s(const int *a, const int *b, int len) {
+    double r = 0;
+
+    vfloat64m8_t s = __riscv_vfmv_v_f_f64m8(0.f, __riscv_vsetvlmax_e64m8());
+    int vl;
+    for (int j = 0; j < len; j += vl) {
+        vl = __riscv_vsetvl_e32m4(len - j);
+
+        auto va = __riscv_vle32_v_i32m4(a + j, vl);
+        auto vb = __riscv_vle32_v_i32m4(b + j, vl);
+
+        s = __riscv_vfadd(s, __riscv_vfcvt_f(__riscv_vwmul(va, vb, vl), vl), vl);
+    }
+    r = __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_v_f_f64m1(0.f, __riscv_vsetvlmax_e64m1()), vl));
+
+    return r;
+}
+
 } // anonymous
 
 using DotProdFunc = double (*)(const uchar *a, const uchar *b, int len);
@@ -141,7 +159,7 @@ inline int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size
     static DotProdFunc dotprod_tab[CV_DEPTH_MAX] = {
         (DotProdFunc)dotProd_8u,  (DotProdFunc)dotProd_8s,
         (DotProdFunc)dotProd_16u, (DotProdFunc)dotProd_16s,
-        nullptr, nullptr,
+        (DotProdFunc)dotProd_32s, nullptr,
         nullptr, nullptr
     };
     DotProdFunc func = dotprod_tab[depth];
