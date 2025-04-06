@@ -75,6 +75,34 @@ double dotProd_8s(const schar *a, const schar *b, int len) {
     return r;
 }
 
+double dotProd_16u(const ushort *a, const ushort *b, int len) {
+    constexpr int block_size0 = (1 << 24);
+
+    double r = 0;
+    int i = 0;
+    while (i < len) {
+        int block_size = std::min(block_size0, len - i);
+
+        vuint64m1_t s = __riscv_vmv_v_x_u64m1(0, __riscv_vsetvlmax_e64m1());
+        int vl;
+        for (int j = 0; j < block_size; j += vl) {
+            vl = __riscv_vsetvl_e16m4(block_size - j);
+
+            auto va = __riscv_vle16_v_u16m4(a + j, vl);
+            auto vb = __riscv_vle16_v_u16m4(b + j, vl);
+
+            s = __riscv_vwredsumu(__riscv_vwmulu(va, vb, vl), s, vl);
+        }
+        r += (double)__riscv_vmv_x(s);
+
+        i += block_size;
+        a += block_size;
+        b += block_size;
+    }
+
+    return r;
+}
+
 } // anonymous
 
 using DotProdFunc = double (*)(const uchar *a, const uchar *b, int len);
@@ -84,7 +112,7 @@ inline int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size
 
     static DotProdFunc dotprod_tab[CV_DEPTH_MAX] = {
         (DotProdFunc)dotProd_8u,  (DotProdFunc)dotProd_8s,
-        nullptr, nullptr,
+        (DotProdFunc)dotProd_16u, nullptr,
         nullptr, nullptr,
         nullptr, nullptr
     };
