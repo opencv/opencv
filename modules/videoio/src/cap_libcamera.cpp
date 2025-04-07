@@ -594,6 +594,8 @@ protected:
     uint8_t *framebuffer;
     std::mutex mtx;
     std::condition_variable cv;
+    std::mutex cv_mtx;
+    bool thread_exit = false;
     // bool isFramePending;
     // bool needsReconfigure;
     std::atomic<bool> isFramePending,needsReconfigure;
@@ -637,41 +639,46 @@ LibcameraCapture::~LibcameraCapture()
 
 
 
-void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
-{   
+void *LibcameraCapture::videoThreadFunc(void *p)
+{
     LibcameraCapture *t = (LibcameraCapture *)p;
     t->running.store(true, std::memory_order_release);
-    //allocate framebuffer
-    //unsigned int vw,vh,vstr;
-    libcamera::Stream *stream = t->app->ViewfinderStream(&t->vw,&t->vh,&t->vstr);
-    int buffersize=t->vh*t->vstr;
-    if(t->framebuffer)delete[] t->framebuffer;
-    t->framebuffer=new uint8_t[buffersize];
+
+    libcamera::Stream *stream = t->app->ViewfinderStream(&t->vw, &t->vh, &t->vstr);
+    int buffersize = t->vh * t->vstr;
+    if (t->framebuffer) delete[] t->framebuffer;
+    t->framebuffer = new uint8_t[buffersize];
     std::vector<libcamera::Span<uint8_t>> mem;
 
-    //main loop
-    while(t->running.load(std::memory_order_acquire)){
+    while (t->running.load(std::memory_order_acquire)) {
         LibcameraApp::Msg msg = t->app->Wait();
-        std::cerr<<"msg get"<<std::endl;
-        if (msg.type == LibcameraApp::MsgType::Quit){
-            std::cerr<<"Quit message received"<<std::endl;
-            t->running.store(false,std::memory_order_release);
-        }
-        else if (msg.type != LibcameraApp::MsgType::RequestComplete)
+        if (msg.type == LibcameraApp::MsgType::Quit) {
+            t->running.store(false, std::memory_order_release);
+        } else if (msg.type != LibcameraApp::MsgType::RequestComplete) {
             throw std::runtime_error("unrecognised message!");
-
+        }
 
         CompletedRequestPtr payload = std::get<CompletedRequestPtr>(msg.payload);
         mem = t->app->Mmap(payload->buffers[stream]);
-        t->mtx.lock();
-            memcpy(t->framebuffer,mem[0].data(),buffersize);
-        t->mtx.unlock();
+
+        {
+            std::lock_guard<std::mutex> lock(t->mtx);
+            memcpy(t->framebuffer, mem[0].data(), buffersize);
+        }
+
         t->frameready.store(true, std::memory_order_release);
     }
-    std::cerr << "Thread finished" << std::endl;
-    if(t->framebuffer){
+
+    // 通知主线程子线程即将退出
+    {
+        std::lock_guard<std::mutex> lock(t->cv_mtx);
+        t->thread_exit = true;
+    }
+    t->cv.notify_one();
+
+    if (t->framebuffer) {
         delete[] t->framebuffer;
-        t->framebuffer=nullptr;
+        t->framebuffer = nullptr;
     }
     return NULL;
 }
@@ -706,22 +713,28 @@ bool LibcameraCapture::startVideo() //not resolved
     return true;
 }
 
-void LibcameraCapture::stopVideo() //not resolved
+void LibcameraCapture::stopVideo()
 {
-    if(!running)return;
+    if (!running.load(std::memory_order_acquire)) return;
 
-    running.store(false, std::memory_order_release);;
+    running.store(false, std::memory_order_release);
 
-    //join thread
+    // 等待线程退出
+    {
+        std::unique_lock<std::mutex> lock(cv_mtx);
+        cv.wait(lock, [this] { return thread_exit; });
+    }
+
     void *status;
     int ret = pthread_join(videothread, &status);
-    if(ret<0)
-        std::cerr<<"Error joining thread"<<std::endl;
+    if (ret < 0) {
+        std::cerr << "Error joining thread" << std::endl;
+    }
 
     LibcameraCapture::app->StopCamera();
     LibcameraCapture::app->Teardown();
     LibcameraCapture::app->CloseCamera();
-    frameready.store(false, std::memory_order_release);;
+    frameready.store(false, std::memory_order_release);
 }
 
 /**
