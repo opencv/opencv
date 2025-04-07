@@ -36,6 +36,32 @@ using std::string;
 
 typedef std::unordered_map<std::string, int64_t> NamesHash;
 
+
+// Zero'th version of PagedCacheManager
+// Useful especially for LLMs and other setting where we cache some Args. 
+// The cache is organized in pages (vLLM style).
+// The initialization starts with allocateInitialPagesForArg.. The shape of pages is determined by splitting 
+// the input MatShape along 0-th axis.
+// So if we get a MatShape of (100, 4, 4) and pageSize of 16, we will get 7 pages of shape (16, 4, 4)
+// In this sense, `curIdx` points to the last row of the last page, which is filled. So, in the example above
+// curIdx will be 3. 
+struct PagedCacheManager {
+    int pageSize = 16;          // Number of "rows" (e.g., tokens or entries) per page
+    int dtype = CV_32F;         // Default data type for storage
+    int curIdx;
+    std::unordered_map<int, std::vector<cv::Mat>> cache;
+
+    void reset();
+    void allocateInitialPagesForArg(int argIdx, const cv::MatShape& shape, int totalRows);
+    bool needsNewPage(int argIdx, int currentRowIndex) const;
+    void createNewPage(int argIdx, const cv::MatShape& shape);
+    cv::Mat getPage(int argIdx, int pageIdx);
+    int numPages(int argIdx) const;
+    cv::Mat concatPages(int argIdx) const;
+};
+
+
+
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
 {
@@ -86,7 +112,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
-
+    PagedCacheManager pagedCacheManager;
     Ptr<Graph> mainGraph;
     int globGraphIdx;
 
@@ -424,6 +450,8 @@ inline Net::Impl* getNetImpl(const Layer* layer)
 {
     return reinterpret_cast<Net::Impl*>(layer->netimpl);
 }
+
+
 
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);
