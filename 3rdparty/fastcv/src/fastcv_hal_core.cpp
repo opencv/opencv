@@ -595,7 +595,11 @@ int fastcv_hal_gemm32f(
 
     INITIALIZATION_CHECK;
 
-    if(flags & (cv::GEMM_1_T))
+    if((flags & (cv::GEMM_1_T)) && (flags & (cv::GEMM_2_T)))
+    {
+        height_a = n; width_a = m;
+    }
+    else if(flags & (cv::GEMM_1_T))
     {
         src1_t = cv::Mat(width_a, height_a, CV_32FC1);
         fcvTransposef32_v2(src1, width_a, height_a, src1_step, src1_t.ptr<float>(), src1_t.step[0]);
@@ -603,13 +607,14 @@ int fastcv_hal_gemm32f(
         src1_step = src1_t.step[0];
         height_a = n; width_a = m;
     }
-    if(flags & (cv::GEMM_2_T))
+    else if(flags & (cv::GEMM_2_T))
     {
         src2_t = cv::Mat(width_a, width_d, CV_32FC1);
         fcvTransposef32_v2(src2, width_a, width_d, src2_step, src2_t.ptr<float>(), src2_t.step[0]);
         src2p = src2_t.ptr<float>();
         src2_step = src2_t.step[0];
     }
+
     if((flags & cv::GEMM_3_T) && beta != 0.0 && src3 != NULL)
     {
         src3_t = cv::Mat(height_a, width_d, CV_32FC1);
@@ -640,8 +645,21 @@ int fastcv_hal_gemm32f(
     fcvStatus status = FASTCV_SUCCESS;
 
     if(alpha != 0.0)
-        status = fcvMatrixMultiplyf32_v2(src1p, width_a, height_a, src1_step, src2p, width_d,
-                                          src2_step, dstp, dst_stride);
+    {
+        if((flags & (cv::GEMM_1_T)) && (flags & (cv::GEMM_2_T)))
+        {
+            cv::Mat dst_temp2 = cv::Mat(k, n, CV_32FC1);
+            fcvMatrixMultiplyf32_v2(src2p, m, k, src2_step, src1p, n, src1_step,
+                                         dst_temp2.ptr<float>(), dst_temp2.step[0]);
+            fcvTransposef32_v2(dst_temp2.ptr<float>(), n, k, dst_temp2.step[0], dstp, dst_stride);
+            
+        }
+        else
+        {
+            status = fcvMatrixMultiplyf32_v2(src1p, width_a, height_a, src1_step, src2p, width_d,
+                                                src2_step, dstp, dst_stride);
+        }
+    }
 
     if(alpha != 1.0 && alpha != 0.0 && status == FASTCV_SUCCESS)
     {
@@ -664,9 +682,8 @@ int fastcv_hal_gemm32f(
     if(inplace)
     {
         cv::Mat dst_mat = cv::Mat(height_a, width_d, CV_32FC1, (void*)dst, dst_step);
-        dst_temp1(cv::Rect(0, 0, width_d, height_a)).copyTo(dst_mat(cv::Rect(0, 0, width_d, height_a)));
+        dst_temp1.copyTo(dst_mat);
     }
-    src1p = NULL; src2p = NULL; src3p = NULL;
 
     CV_HAL_RETURN(status,hal_gemm32f);
 }
