@@ -60,6 +60,7 @@ LibcameraApp::~LibcameraApp()
 	StopCamera();
 	Teardown();
 	CloseCamera();
+    std::cerr << "End of ~LibcameraApp() call" << std::endl;
 }
 
 std::string const &LibcameraApp::CameraId() const
@@ -592,6 +593,7 @@ protected:
     std::atomic<bool> running,frameready;
     uint8_t *framebuffer;
     std::mutex mtx;
+    std::condition_variable cv;
     // bool isFramePending;
     // bool needsReconfigure;
     std::atomic<bool> isFramePending,needsReconfigure;
@@ -628,6 +630,7 @@ LibcameraCapture::~LibcameraCapture()
 {   
     stopVideo();
     delete app;
+    std::cerr << "End of ~LibcameraCapture() call" << std::endl;
 }
 
 // using namespace LibcameraApp;
@@ -734,16 +737,16 @@ void LibcameraCapture::stopVideo() //not resolved
  */
 bool LibcameraCapture::grabFrame()
 {   
-    if(isFramePending)
+    if(running.load(std::memory_order_acquire))
     {
-        if (needsReconfigure)
-        {
-            // restart the camera
-            stopVideo();
-            startVideo();
-            // needsReconfigure = false;
-            needsReconfigure.store(false, std::memory_order_release);
-        }
+        // if (needsReconfigure)
+        // {
+        //     // restart the camera
+        //     stopVideo();
+        //     startVideo();
+        //     // needsReconfigure = false;
+        //     needsReconfigure.store(false, std::memory_order_release);
+        // }
         return true;
     }
     else 
@@ -757,10 +760,9 @@ bool LibcameraCapture::grabFrame()
             return false;
         }
         // isFramePending = true;
-        isFramePending.store(true, std::memory_order_release);
-        
+        // isFramePending.store(true, std::memory_order_release);
 	}
-    return isFramePending;
+    return running.load(std::memory_order_acquire);
 }
 
 
@@ -781,14 +783,14 @@ bool LibcameraCapture::grabFrame()
 */
 bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
 {   
-    if (needsReconfigure)
-    {
-        // restart the camera
-        stopVideo();
-        startVideo();
-        // needsReconfigure = false;
-        needsReconfigure.store(false, std::memory_order_release);
-    }
+    // if (needsReconfigure)
+    // {
+    //     // restart the camera
+    //     stopVideo();
+    //     startVideo();
+    //     // needsReconfigure = false;
+    //     needsReconfigure.store(false, std::memory_order_release);
+    // }
 
 	if(!running.load(std::memory_order_acquire)) return false;
     auto start_time = std::chrono::high_resolution_clock::now();
