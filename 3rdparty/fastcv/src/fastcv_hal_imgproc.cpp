@@ -420,6 +420,9 @@ int fastcv_hal_boxFilter(
     if(src_depth == CV_32F && normalize != 1)
         CV_HAL_RETURN_NOT_IMPLEMENTED("normalized kernel supported for float types");
 
+    if(src_depth == CV_32F && (height < 5 || width < 5 || ksize_height < 5))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("size not supported");
+
     if(src_depth == CV_8U && (ksize_width != 3 && ksize_width != 5))
         CV_HAL_RETURN_NOT_IMPLEMENTED("kernel size not supported");
 
@@ -437,15 +440,18 @@ int fastcv_hal_boxFilter(
     else
         dst_temp = cv::Mat(height, width, src_depth, (void*)dst_data, dst_step);
 
-    int nStripes, stripeHeight = nThreads * 10;
+    int nStripes, stripeHeight = src.rows/nThreads;
 
-    if(src.rows/stripeHeight == 0)
+    if((size_t)src.rows < ksize_height || stripeHeight < 5 || nThreads <= 1)
     {
         nStripes = 1;
         stripeHeight = src.rows;
     }
     else
-        nStripes = (src.rows/stripeHeight);
+    {
+        nStripes = nThreads;
+        stripeHeight = src.rows/nThreads;
+    }
     
     cv::parallel_for_(cv::Range(0, nStripes),
             FcvBoxLoop_Invoker(src, width, height, dst_temp, border_type, ksize_width, normalize, stripeHeight, nStripes, src_depth), nStripes);
@@ -453,7 +459,7 @@ int fastcv_hal_boxFilter(
     if(inPlace)
     {
         cv::Mat dst = cv::Mat(height, width, src_depth, (void*)dst_data, dst_step);
-        dst_temp(cv::Rect(0, 0, width, height)).copyTo(dst(cv::Rect(0, 0, width, height)));
+        dst_temp.copyTo(dst);
     }
 
     fcvStatus status = FASTCV_SUCCESS;
@@ -790,7 +796,7 @@ public:
         src_ = cv::Mat(height_ + 2*n, width_ + 2*n, CV_8U);
 
         if(range.start == 0 && range.end == nStripes)
-            cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_)), src_, n, n, n, n, bdr);
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width, height)), src_, n, n, n, n, bdr);
         else if(range.start == 0)
             cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_ + n)), src_, n, 0, n, n, bdr);
         else if(range.end == nStripes)
@@ -902,10 +908,7 @@ int fastcv_hal_pyrdown(
         int nStripes, stripeHeight = nThreads * 10;
 
         if(src.rows/stripeHeight == 0)
-        {
             nStripes = 1;
-            stripeHeight = src.rows;
-        }
         else
             nStripes = (src.rows/stripeHeight);
 
