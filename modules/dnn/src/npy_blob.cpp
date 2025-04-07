@@ -1,15 +1,10 @@
-// This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.
-//
-// Copyright (C) 2017, Intel Corporation, all rights reserved.
-// Third party copyrights are property of their respective owners.
+#include "precomp.hpp"
+#include "opencv2/dnn/utils/npy_blob.hpp"
+#include <fstream>
+#include <sstream>
 
-#include "test_precomp.hpp"
-#include "npy_blob.hpp"
-
-namespace cv
-{
+namespace cv {
+namespace dnn {
 
 static std::string getType(const std::string& header)
 {
@@ -46,7 +41,6 @@ static std::vector<int> getShape(const std::string& header)
     if (shapeStr.empty())
         return std::vector<int>(1, 1);
 
-    // Remove all commas.
     shapeStr.erase(std::remove(shapeStr.begin(), shapeStr.end(), ','),
                    shapeStr.end());
 
@@ -61,7 +55,7 @@ static std::vector<int> getShape(const std::string& header)
     return shape;
 }
 
-Mat blobFromNPY(const std::string& path)
+Mat blobFromNPY(const String& path)
 {
     std::ifstream ifs(path.c_str(), std::ios::binary);
     CV_Assert(ifs.is_open());
@@ -70,8 +64,8 @@ Mat blobFromNPY(const std::string& path)
     ifs.read(&magic[0], magic.size());
     CV_Assert(magic == "\x93NUMPY");
 
-    ifs.ignore(1);  // Skip major version byte.
-    ifs.ignore(1);  // Skip minor version byte.
+    ifs.ignore(1);  // Skip major version byte
+    ifs.ignore(1);  // Skip minor version byte
 
     unsigned short headerSize;
     ifs.read((char*)&headerSize, sizeof(headerSize));
@@ -79,7 +73,6 @@ Mat blobFromNPY(const std::string& path)
     std::string header(headerSize, '*');
     ifs.read(&header[0], header.size());
 
-    // Extract data type.
     int matType;
     if (getType(header) == "<f4")
         matType = CV_32F;
@@ -87,6 +80,8 @@ Mat blobFromNPY(const std::string& path)
         matType = CV_32S;
     else if (getType(header) == "<i8")
         matType = CV_64S;
+    else if (getType(header) == "<f8")
+        matType = CV_64F;
     else
         CV_Error(Error::BadDepth, "Unsupported numpy type");
 
@@ -100,4 +95,4 @@ Mat blobFromNPY(const std::string& path)
     return blob;
 }
 
-}  // namespace cv
+}} // namespace cv::dnn
