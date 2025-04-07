@@ -290,7 +290,8 @@ public:
     };
 
     _InputArray();
-    _InputArray(int _flags, void* _obj);
+    template <typename _Tp>
+    _InputArray(int _flags, _Tp* _obj);
     _InputArray(const Mat& m);
     _InputArray(const MatExpr& expr);
     _InputArray(const std::vector<Mat>& vec);
@@ -327,7 +328,8 @@ public:
     ogl::Buffer getOGlBuffer() const;
 
     int getFlags() const;
-    void* getObj() const;
+    template <typename _Tp>
+    _Tp* getObj() const;
     Size getSz() const;
 
     _InputArray::KindFlag kind() const;
@@ -348,6 +350,7 @@ public:
     bool empty(int i) const;
     void copyTo(const _OutputArray& arr) const;
     void copyTo(const _OutputArray& arr, const _InputArray & mask) const;
+    bool pointsTo(const _InputArray& arr) const;
     size_t offset(int i=-1) const;
     size_t step(int i=-1) const;
     bool isMat() const;
@@ -359,6 +362,7 @@ public:
     bool isVector() const;
     bool isGpuMat() const;
     bool isGpuMatVector() const;
+    bool isNull() const;
     ~_InputArray();
 
 protected:
@@ -366,8 +370,10 @@ protected:
     void* obj;
     Size sz;
 
-    void init(int _flags, const void* _obj);
-    void init(int _flags, const void* _obj, Size _sz);
+    template <typename _Tp>
+    void init(int _flags, const _Tp* _obj);
+    template <typename _Tp>
+    void init(int _flags, const _Tp* _obj, Size _sz);
 };
 CV_ENUM_FLAGS(_InputArray::KindFlag)
 __CV_ENUM_FLAGS_BITWISE_AND(_InputArray::KindFlag, int, _InputArray::KindFlag)
@@ -422,7 +428,8 @@ public:
     };
 
     _OutputArray();
-    _OutputArray(int _flags, void* _obj);
+    template <typename _Tp>
+    _OutputArray(int _flags, _Tp* _obj);
     _OutputArray(Mat& m);
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(cuda::GpuMat& d_mat);
@@ -510,7 +517,8 @@ class CV_EXPORTS _InputOutputArray : public _OutputArray
 {
 public:
     _InputOutputArray();
-    _InputOutputArray(int _flags, void* _obj);
+    template <typename _Tp>
+    _InputOutputArray(int _flags, _Tp* _obj);
     _InputOutputArray(Mat& m);
     _InputOutputArray(std::vector<Mat>& vec);
     _InputOutputArray(cuda::GpuMat& d_mat);

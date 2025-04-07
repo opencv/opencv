@@ -1269,13 +1269,12 @@ void UMat::copyTo(OutputArray _dst) const
     if( dims == 0 && empty() )
     {
         _dst.release();
-        void* obj = _dst.getObj();
         if (_dst.isMat())
-            reinterpret_cast<Mat*>(obj)->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | stype;
+            _dst.getObj<Mat>()->flags = Mat::MAGIC_VAL | Mat::CONTINUOUS_FLAG | stype;
         else if (_dst.isUMat())
-            reinterpret_cast<UMat*>(obj)->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | stype;
+            _dst.getObj<UMat>()->flags = UMat::MAGIC_VAL | UMat::CONTINUOUS_FLAG | stype;
         else if (_dst.isGpuMat())
-            reinterpret_cast<cuda::GpuMat*>(obj)->flags = stype;
+            _dst.getObj<cuda::GpuMat>()->flags = stype;
         return;
     }
 

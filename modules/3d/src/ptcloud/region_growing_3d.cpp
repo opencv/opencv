@@ -162,7 +162,7 @@ RegionGrowing3DImpl::segment(OutputArrayOfArrays regions_idx_, OutputArray label
         sort(regions_idx.begin(), regions_idx.end(), compareRegionSize);
     }
 
-    std::vector<std::vector<int>> &_regions_idx = *(std::vector<std::vector<int>> *) regions_idx_.getObj();
+    std::vector<std::vector<int>> &_regions_idx = *regions_idx_.getObj<std::vector<std::vector<int>>>();
     _regions_idx.resize(regions_idx.size());
     Mat labels = Mat::zeros(pts_size, 1, CV_32S);
     int *labels_ptr = (int *) labels.data;
