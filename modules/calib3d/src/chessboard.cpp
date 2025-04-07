@@ -3720,10 +3720,11 @@ Chessboard::Board Chessboard::detectImpl(const Mat& gray,std::vector<cv::Mat> &f
                     continue;
                 }
 
+                iter_boards->normalizeOrientation(false);
+
                 if(iter_boards->getSize() == parameters.chessboard_size ||
                         iter_boards->getSize() == chessboard_size2)
                 {
-                    iter_boards->normalizeOrientation(false);
                     if(iter_boards->getSize() != parameters.chessboard_size)
                     {
                         if(iter_boards->isCellBlack(0,0) == iter_boards->isCellBlack(0,int(iter_boards->colCount())-1))

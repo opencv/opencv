@@ -428,6 +428,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public IVideoCapture
     bool tryIoctl(unsigned long ioctlCode, void *parameter, bool failIfBusy = true, int attempts = 10) const;
     bool controlInfo(int property_id, __u32 &v4l2id, cv::Range &range) const;
     bool icvControl(__u32 v4l2id, int &value, bool isSet) const;
+    void initFrameNonBGR();
 
     bool icvSetFrameSize(int _width, int _height);
     bool v4l2_reset();
@@ -919,8 +920,8 @@ bool CvCaptureCAM_V4L::open(const std::string & _deviceName)
 {
     CV_LOG_DEBUG(NULL, "VIDEOIO(V4L2:" << _deviceName << "): opening...");
     FirstCapture = true;
-    width = DEFAULT_V4L_WIDTH;
-    height = DEFAULT_V4L_HEIGHT;
+    width = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_V4L_DEFAULT_WIDTH", DEFAULT_V4L_WIDTH);
+    height = utils::getConfigurationParameterSizeT("OPENCV_VIDEOIO_V4L_DEFAULT_HEIGHT", DEFAULT_V4L_HEIGHT);
     width_set = height_set = 0;
     bufferSize = DEFAULT_V4L_BUFFERS;
     fps = DEFAULT_V4L_FPS;
@@ -1427,18 +1428,13 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
 
         imageSize = cv::Size(form.fmt.pix.width, form.fmt.pix.height);
     }
-    // Not found conversion
-    switch (palette)
-    {
+
+    frame.create(imageSize, CV_8UC3);
+
+    switch (palette) {
     case V4L2_PIX_FMT_YUV411P:
-        frame.create(imageSize, CV_8UC3);
         yuv411p_to_rgb24(imageSize.width, imageSize.height, start, frame.data);
         return;
-    default:
-        break;
-    }
-    // Converted by cvtColor or imdecode
-    switch (palette) {
     case V4L2_PIX_FMT_YVU420:
         cv::cvtColor(cv::Mat(imageSize.height * 3 / 2, imageSize.width, CV_8U, start), frame,
                      COLOR_YUV2BGR_YV12);
@@ -1537,15 +1533,15 @@ void CvCaptureCAM_V4L::convertToRgb(const Buffer &currentBuffer)
     }
     case V4L2_PIX_FMT_GREY:
         cv::cvtColor(cv::Mat(imageSize, CV_8UC1, start), frame, COLOR_GRAY2BGR);
-        break;
+        return;
     case V4L2_PIX_FMT_XBGR32:
     case V4L2_PIX_FMT_ABGR32:
         cv::cvtColor(cv::Mat(imageSize, CV_8UC4, start), frame, COLOR_BGRA2BGR);
-        break;
+        return;
     case V4L2_PIX_FMT_BGR24:
     default:
-        Mat(1, currentBuffer.bytesused, CV_8U, start).copyTo(frame);
-        break;
+        Mat(1, currentBuffer.bytesused, CV_8U, start).reshape(frame.channels(), frame.rows).copyTo(frame);
+        return;
     }
 }
 
@@ -1914,11 +1910,13 @@ bool CvCaptureCAM_V4L::setProperty( int property_id, double _value )
         }
     case cv::CAP_PROP_FOURCC:
     {
-        if (palette == static_cast<__u32>(value))
+        __u32 new_palette = static_cast<__u32>(_value);
+        if (palette == new_palette)
             return true;
 
         __u32 old_palette = palette;
-        palette = static_cast<__u32>(value);
+        palette = new_palette;
+
         if (v4l2_reset())
             return true;
 
@@ -2033,12 +2031,80 @@ bool CvCaptureCAM_V4L::streaming(bool startStream)
     return startStream;
 }
 
+void CvCaptureCAM_V4L::initFrameNonBGR()
+{
+    Size size;
+    if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
+        CV_Assert(form.fmt.pix_mp.width <= (uint)std::numeric_limits<int>::max());
+        CV_Assert(form.fmt.pix_mp.height <= (uint)std::numeric_limits<int>::max());
+        size = Size{(int)form.fmt.pix_mp.width, (int)form.fmt.pix_mp.height};
+    } else {
+        CV_Assert(form.fmt.pix.width <= (uint)std::numeric_limits<int>::max());
+        CV_Assert(form.fmt.pix.height <= (uint)std::numeric_limits<int>::max());
+        size = Size{(int)form.fmt.pix.width, (int)form.fmt.pix.height};
+    }
+
+    int image_type = CV_8UC3;
+    switch (palette) {
+    case V4L2_PIX_FMT_BGR24:
+    case V4L2_PIX_FMT_RGB24:
+        image_type = CV_8UC3;
+        break;
+    case V4L2_PIX_FMT_XBGR32:
+    case V4L2_PIX_FMT_ABGR32:
+        image_type = CV_8UC4;
+        break;
+    case V4L2_PIX_FMT_YUYV:
+    case V4L2_PIX_FMT_UYVY:
+        image_type = CV_8UC2;
+        break;
+    case V4L2_PIX_FMT_YVU420:
+    case V4L2_PIX_FMT_YUV420:
+    case V4L2_PIX_FMT_NV12:
+    case V4L2_PIX_FMT_NV21:
+        image_type = CV_8UC1;
+        size.height = size.height * 3 / 2; // "1.5" channels
+        break;
+    case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_Y16_BE:
+    case V4L2_PIX_FMT_Y12:
+    case V4L2_PIX_FMT_Y10:
+        image_type = CV_16UC1;
+        break;
+    case V4L2_PIX_FMT_GREY:
+        image_type = CV_8UC1;
+        break;
+    default:
+        image_type = CV_8UC1;
+        if(bufferIndex < 0)
+            size = Size(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length, 1);
+        else {
+            __u32 bytesused = 0;
+            if (V4L2_TYPE_IS_MULTIPLANAR(type)) {
+                __u32 data_offset;
+                for (unsigned char n_planes = 0; n_planes < num_planes; n_planes++) {
+                    data_offset = buffers[bufferIndex].planes[n_planes].data_offset;
+                    bytesused += buffers[bufferIndex].planes[n_planes].bytesused - data_offset;
+                }
+            } else {
+                bytesused = buffers[bufferIndex].buffer.bytesused;
+            }
+            size = Size(bytesused, 1);
+        }
+        break;
+    }
+    frame.create(size, image_type);
+}
+
 bool CvCaptureCAM_V4L::retrieveFrame(int, OutputArray ret)
 {
     havePendingFrame = false;  // unlock .grab()
 
     if (bufferIndex < 0)
+    {
         frame.copyTo(ret);
+        return true;
+    }
 
     /* Now get what has already been captured as a IplImage return */
     const Buffer &currentBuffer = buffers[bufferIndex];
@@ -2068,8 +2134,8 @@ bool CvCaptureCAM_V4L::retrieveFrame(int, OutputArray ret)
                        std::min(currentBuffer.memories[n_planes].length, (size_t)cur_plane.bytesused));
             }
         } else {
-            const Size sz(std::min(buffers[MAX_V4L_BUFFERS].memories[MEMORY_ORIG].length, (size_t)currentBuffer.buffer.bytesused), 1);
-            frame = Mat(sz, CV_8U, currentBuffer.memories[MEMORY_ORIG].start);
+            initFrameNonBGR();
+            Mat(frame.size(), frame.type(), currentBuffer.memories[MEMORY_ORIG].start).copyTo(frame);
         }
     }
     //Revert buffer to the queue

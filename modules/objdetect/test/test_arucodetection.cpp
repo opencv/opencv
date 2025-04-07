@@ -6,6 +6,18 @@
 #include "opencv2/objdetect/aruco_detector.hpp"
 #include "opencv2/calib3d.hpp"
 
+namespace cv {
+    namespace aruco {
+        bool operator==(const Dictionary& d1, const Dictionary& d2);
+        bool operator==(const Dictionary& d1, const Dictionary& d2) {
+            return d1.markerSize == d2.markerSize
+                && std::equal(d1.bytesList.begin<Vec<uint8_t, 4>>(), d1.bytesList.end<Vec<uint8_t, 4>>(), d2.bytesList.begin<Vec<uint8_t, 4>>())
+                && std::equal(d2.bytesList.begin<Vec<uint8_t, 4>>(), d2.bytesList.end<Vec<uint8_t, 4>>(), d1.bytesList.begin<Vec<uint8_t, 4>>())
+                && d1.maxCorrectionBits == d2.maxCorrectionBits;
+        };
+    }
+}
+
 namespace opencv_test { namespace {
 
 /**
@@ -635,6 +647,189 @@ TEST(CV_ArucoDetectMarkers, regression_contour_24220)
     {
         EXPECT_NEAR(static_cast<float>(goldCorners[j * 2]), markerCorners[0][j].x, 1.f);
         EXPECT_NEAR(static_cast<float>(goldCorners[j * 2 + 1]), markerCorners[0][j].y, 1.f);
+    }
+}
+
+TEST(CV_ArucoDetectMarkers, regression_26922)
+{
+    const auto arucoDict = aruco::getPredefinedDictionary(aruco::DICT_4X4_1000);
+    const aruco::GridBoard gridBoard(Size(19, 10), 1, 0.25, arucoDict);
+
+    const Size imageSize(7200, 3825);
+
+    Mat boardImage;
+    gridBoard.generateImage(imageSize, boardImage, 75, 1);
+
+    const aruco::ArucoDetector detector(arucoDict);
+
+    vector<vector<Point2f>> corners;
+    vector<int> ids;
+    detector.detectMarkers(boardImage, corners, ids);
+
+    EXPECT_EQ(ids.size(), 190ull);
+    EXPECT_TRUE(find(ids.begin(), ids.end(), 76) != ids.end());
+    EXPECT_TRUE(find(ids.begin(), ids.end(), 172) != ids.end());
+
+    float transformMatrixData[9] = {1, -0.2f, 300, 0.4f, 1, -1000, 0, 0, 1};
+    const Mat transformMatrix(Size(3, 3), CV_32FC1, transformMatrixData);
+
+    Mat warpedImage;
+    warpPerspective(boardImage, warpedImage, transformMatrix, imageSize);
+
+    detector.detectMarkers(warpedImage, corners, ids);
+
+    EXPECT_EQ(ids.size(), 133ull);
+    // markers with id 76 and 172 are on border and should not be detected
+    EXPECT_FALSE(find(ids.begin(), ids.end(), 76) != ids.end());
+    EXPECT_FALSE(find(ids.begin(), ids.end(), 172) != ids.end());
+}
+
+TEST(CV_ArucoMultiDict, setGetDictionaries)
+{
+    vector<aruco::Dictionary> dictionaries = {aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)};
+    aruco::ArucoDetector detector(dictionaries);
+    vector<aruco::Dictionary> dicts = detector.getDictionaries();
+    ASSERT_EQ(dicts.size(), 2ul);
+    EXPECT_EQ(dicts[0].markerSize, 4);
+    EXPECT_EQ(dicts[1].markerSize, 5);
+    dictionaries.clear();
+    dictionaries.push_back(aruco::getPredefinedDictionary(aruco::DICT_6X6_100));
+    dictionaries.push_back(aruco::getPredefinedDictionary(aruco::DICT_7X7_250));
+    dictionaries.push_back(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_25h9));
+    detector.setDictionaries(dictionaries);
+    dicts = detector.getDictionaries();
+    ASSERT_EQ(dicts.size(), 3ul);
+    EXPECT_EQ(dicts[0].markerSize, 6);
+    EXPECT_EQ(dicts[1].markerSize, 7);
+    EXPECT_EQ(dicts[2].markerSize, 5);
+    auto dict = detector.getDictionary();
+    EXPECT_EQ(dict.markerSize, 6);
+    detector.setDictionary(aruco::getPredefinedDictionary(aruco::DICT_APRILTAG_16h5));
+    dicts = detector.getDictionaries();
+    ASSERT_EQ(dicts.size(), 3ul);
+    EXPECT_EQ(dicts[0].markerSize, 4);
+    EXPECT_EQ(dicts[1].markerSize, 7);
+    EXPECT_EQ(dicts[2].markerSize, 5);
+}
+
+
+TEST(CV_ArucoMultiDict, noDict)
+{
+    aruco::ArucoDetector detector;
+    EXPECT_THROW({
+        detector.setDictionaries({});
+    }, Exception);
+}
+
+
+TEST(CV_ArucoMultiDict, multiMarkerDetection)
+{
+    const int markerSidePixels = 100;
+    const int imageSize = markerSidePixels * 2 + 3 * (markerSidePixels / 2);
+    vector<aruco::Dictionary> usedDictionaries;
+
+    // draw synthetic image
+    Mat img = Mat(imageSize, imageSize, CV_8UC1, Scalar::all(255));
+    for(int y = 0; y < 2; y++) {
+        for(int x = 0; x < 2; x++) {
+            Mat marker;
+            int id = y * 2 + x;
+            int dictId = x * 4 + y * 8;
+            auto dict = aruco::getPredefinedDictionary(dictId);
+            usedDictionaries.push_back(dict);
+            aruco::generateImageMarker(dict, id, markerSidePixels, marker);
+            Point2f firstCorner(markerSidePixels / 2.f + x * (1.5f * markerSidePixels),
+                        markerSidePixels / 2.f + y * (1.5f * markerSidePixels));
+            Mat aux = img(Rect((int)firstCorner.x, (int)firstCorner.y, markerSidePixels, markerSidePixels));
+            marker.copyTo(aux);
+        }
+    }
+    img.convertTo(img, CV_8UC3);
+
+    aruco::ArucoDetector detector(usedDictionaries);
+
+    vector<vector<Point2f> > markerCorners;
+    vector<int> markerIds;
+    vector<vector<Point2f> > rejectedImgPts;
+    vector<int> dictIds;
+    detector.detectMarkersMultiDict(img, markerCorners, markerIds, rejectedImgPts, dictIds);
+    ASSERT_EQ(markerIds.size(), 4u);
+    ASSERT_EQ(dictIds.size(), 4u);
+    for (size_t i = 0; i < dictIds.size(); ++i) {
+        EXPECT_EQ(dictIds[i], (int)i);
+    }
+}
+
+
+TEST(CV_ArucoMultiDict, multiMarkerDoubleDetection)
+{
+    const int markerSidePixels = 100;
+    const int imageWidth = 2 * markerSidePixels + 3 * (markerSidePixels / 2);
+    const int imageHeight = markerSidePixels + 2 * (markerSidePixels / 2);
+    vector<aruco::Dictionary> usedDictionaries = {
+        aruco::getPredefinedDictionary(aruco::DICT_5X5_50),
+        aruco::getPredefinedDictionary(aruco::DICT_5X5_100)
+    };
+
+    // draw synthetic image
+    Mat img = Mat(imageHeight, imageWidth, CV_8UC1, Scalar::all(255));
+    for(int y = 0; y < 2; y++) {
+        Mat marker;
+        int id = 49 + y;
+        auto dict = aruco::getPredefinedDictionary(aruco::DICT_5X5_100);
+        aruco::generateImageMarker(dict, id, markerSidePixels, marker);
+        Point2f firstCorner(markerSidePixels / 2.f + y * (1.5f * markerSidePixels),
+                    markerSidePixels / 2.f);
+        Mat aux = img(Rect((int)firstCorner.x, (int)firstCorner.y, markerSidePixels, markerSidePixels));
+        marker.copyTo(aux);
+    }
+    img.convertTo(img, CV_8UC3);
+
+    aruco::ArucoDetector detector(usedDictionaries);
+
+    vector<vector<Point2f> > markerCorners;
+    vector<int> markerIds;
+    vector<vector<Point2f> > rejectedImgPts;
+    vector<int> dictIds;
+    detector.detectMarkersMultiDict(img, markerCorners, markerIds, rejectedImgPts, dictIds);
+    ASSERT_EQ(markerIds.size(), 3u);
+    ASSERT_EQ(dictIds.size(), 3u);
+    EXPECT_EQ(dictIds[0], 0); // 5X5_50
+    EXPECT_EQ(dictIds[1], 1); // 5X5_100
+    EXPECT_EQ(dictIds[2], 1); // 5X5_100
+}
+
+
+TEST(CV_ArucoMultiDict, serialization)
+{
+    aruco::ArucoDetector detector;
+    {
+        FileStorage fs_out(".json", FileStorage::WRITE + FileStorage::MEMORY);
+        ASSERT_TRUE(fs_out.isOpened());
+        detector.write(fs_out);
+        std::string serialized_string = fs_out.releaseAndGetString();
+        FileStorage test_fs(serialized_string, FileStorage::Mode::READ + FileStorage::MEMORY);
+        ASSERT_TRUE(test_fs.isOpened());
+        aruco::ArucoDetector test_detector;
+        test_detector.read(test_fs.root());
+        // compare default constructor result
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), test_detector.getDictionary());
+    }
+    detector.setDictionaries({aruco::getPredefinedDictionary(aruco::DICT_4X4_50), aruco::getPredefinedDictionary(aruco::DICT_5X5_100)});
+    {
+        FileStorage fs_out(".json", FileStorage::WRITE + FileStorage::MEMORY);
+        ASSERT_TRUE(fs_out.isOpened());
+        detector.write(fs_out);
+        std::string serialized_string = fs_out.releaseAndGetString();
+        FileStorage test_fs(serialized_string, FileStorage::Mode::READ + FileStorage::MEMORY);
+        ASSERT_TRUE(test_fs.isOpened());
+        aruco::ArucoDetector test_detector;
+        test_detector.read(test_fs.root());
+        // check for one additional dictionary
+        auto dicts = test_detector.getDictionaries();
+        ASSERT_EQ(2ul, dicts.size());
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_4X4_50), dicts[0]);
+        EXPECT_EQ(aruco::getPredefinedDictionary(aruco::DICT_5X5_100), dicts[1]);
     }
 }
 
