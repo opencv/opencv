@@ -1310,9 +1310,12 @@ protected:
     std::condition_variable cv;
     std::mutex cv_mtx;
     bool thread_exit = false;
+<<<<<<< HEAD
 =======
     std::condition_variable cv;
 >>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
+=======
+>>>>>>> 868737b3fd (add condition variable)
     // bool isFramePending;
     // bool needsReconfigure;
     std::atomic<bool> isFramePending,needsReconfigure;
@@ -1462,9 +1465,14 @@ bool LibcameraCapture::capturePhoto(cv::Mat &frame)
 =======
 >>>>>>> f1cd8084b4 (New branch for debugging)
 
+<<<<<<< HEAD
 void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 {   
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
+=======
+void *LibcameraCapture::videoThreadFunc(void *p)
+{
+>>>>>>> 868737b3fd (add condition variable)
     LibcameraCapture *t = (LibcameraCapture *)p;
     t->running.store(true, std::memory_order_release);
 
@@ -1476,11 +1484,17 @@ void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 
     while (t->running.load(std::memory_order_acquire)) {
         LibcameraApp::Msg msg = t->app->Wait();
+<<<<<<< HEAD
         if (msg.type == LibcameraApp::MsgType::Quit){
             std::cerr<<"Quit message received"<<std::endl;
             t->running.store(false,std::memory_order_release);
         }
         else if (msg.type != LibcameraApp::MsgType::RequestComplete)
+=======
+        if (msg.type == LibcameraApp::MsgType::Quit) {
+            t->running.store(false, std::memory_order_release);
+        } else if (msg.type != LibcameraApp::MsgType::RequestComplete) {
+>>>>>>> 868737b3fd (add condition variable)
             throw std::runtime_error("unrecognised message!");
         }
 
@@ -1494,7 +1508,19 @@ void *LibcameraCapture::videoThreadFunc(void *p) //not resolved
 
         t->frameready.store(true, std::memory_order_release);
     }
+<<<<<<< HEAD
     if(t->framebuffer){
+=======
+
+    // 通知主线程子线程即将退出
+    {
+        std::lock_guard<std::mutex> lock(t->cv_mtx);
+        t->thread_exit = true;
+    }
+    t->cv.notify_one();
+
+    if (t->framebuffer) {
+>>>>>>> 868737b3fd (add condition variable)
         delete[] t->framebuffer;
         t->framebuffer = nullptr;
     }
