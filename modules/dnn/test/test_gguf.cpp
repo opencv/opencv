@@ -43,7 +43,7 @@ TEST_F(Test_GGUFImporter, readNetFromGGUF)
     onnxnet.setInput(inps[0], "input");
     Mat ref = onnxnet.forward("");
     //ggufnet.setInputsNames(inputNames);
-    ggufnet.setInput(inps[0], "globInput");
+    ggufnet.setInput(inps[0], "input");
     Mat out = ggufnet.forward("");
 
     // limits thardcode as in 
