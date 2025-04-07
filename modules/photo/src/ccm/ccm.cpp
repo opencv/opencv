@@ -30,7 +30,7 @@ public:
     // linear method and distance
     std::shared_ptr<Linear> linear = std::make_shared<Linear>();
     DistanceType distance;
-    LinearType linearType;
+    LinearizationType linearizationType;
 
     Mat weights;
     Mat weights_list;
@@ -121,7 +121,7 @@ ColorCorrectionModel::Impl::Impl()
     : cs(*GetCS::getInstance().getRgb(COLOR_SPACE_SRGB))
     , ccmType(CCM_LINEAR)
     , distance(DISTANCE_CIE2000)
-    , linearType(LINEARIZATION_GAMMA)
+    , linearizationType(LINEARIZATION_GAMMA)
     , weights(Mat())
     , gamma(2.2)
     , deg(3)
@@ -263,20 +263,21 @@ void ColorCorrectionModel::Impl::fitting(void)
     loss = pow((res / masked_len), 0.5);
 }
 
-Mat ColorCorrectionModel::infer(const Mat& img, bool islinear)
+void ColorCorrectionModel::correctImage(InputArray src, OutputArray dst, bool islinear)
 {
     if (!p->ccm.data)
     {
         CV_Error(Error::StsBadArg, "No CCM values!" );
     }
-    Mat img_lin = (p->linear)->linearize(img);
+    Mat img_lin = (p->linear)->linearize(src.getMat());
     Mat ccm = p->ccm.reshape(0, p->shape / 3);
     Mat img_ccm = multiple(p->prepare(img_lin), ccm);
     if (islinear == true)
     {
-        return img_ccm;
+        img_ccm.copyTo(dst);
     }
-    return p->cs.fromLFunc(img_ccm, img_lin);
+    Mat imgCorrected = p->cs.fromLFunc(img_ccm, img_lin);
+    imgCorrected.copyTo(dst);
 }
 
 void ColorCorrectionModel::Impl::getColor(ColorCheckerType constcolor)
@@ -324,15 +325,15 @@ void ColorCorrectionModel::setDistance(DistanceType distance_)
 {
     p->distance = distance_;
 }
-void ColorCorrectionModel::setLinear(LinearType linearType)
+void ColorCorrectionModel::setLinearization(LinearizationType linearizationType)
 {
-    p->linearType = linearType;
+    p->linearizationType = linearizationType;
 }
-void ColorCorrectionModel::setLinearGamma(double gamma)
+void ColorCorrectionModel::setLinearizationGamma(double gamma)
 {
     p->gamma = gamma;
 }
-void ColorCorrectionModel::setLinearDegree(int deg)
+void ColorCorrectionModel::setLinearizationDegree(int deg)
 {
     p->deg = deg;
 }
@@ -360,11 +361,11 @@ void ColorCorrectionModel::setEpsilon(double epsilon_)
 {
     p->epsilon = epsilon_;
 }
-void ColorCorrectionModel::computeCCM()
+Mat ColorCorrectionModel::compute()
 {
 
     Mat saturate_mask = saturate(p->src, p->saturatedThreshold[0], p->saturatedThreshold[1]);
-    p->linear = getLinear(p->gamma, p->deg, p->src, *(p->dst), saturate_mask, (p->cs), p->linearType);
+    p->linear = getLinear(p->gamma, p->deg, p->src, *(p->dst), saturate_mask, (p->cs), p->linearizationType);
     p->calWeightsMasks(p->weights_list, p->weights_coeff, saturate_mask);
     p->src_rgbl = p->linear->linearize(maskCopyTo(p->src, p->mask));
     p->dst->colors = maskCopyTo(p->dst->colors, p->mask);
@@ -395,8 +396,10 @@ void ColorCorrectionModel::computeCCM()
         break;
     }
     p->fitting();
+
+    return p->ccm;
 }
-Mat ColorCorrectionModel::getCCM() const
+Mat ColorCorrectionModel::getColorCorrectionMatrix() const
 {
     return p->ccm;
 }
@@ -404,10 +407,10 @@ double ColorCorrectionModel::getLoss() const
 {
     return p->loss;
 }
-Mat ColorCorrectionModel::getSrcRgbl() const{
+Mat ColorCorrectionModel::getSrcLinearRGB() const{
     return p->src_rgbl;
 }
-Mat ColorCorrectionModel::getDstRgbl() const{
+Mat ColorCorrectionModel::getRefLinearRGB() const{
     return p->dst_rgbl;
 }
 Mat ColorCorrectionModel::getMask() const{

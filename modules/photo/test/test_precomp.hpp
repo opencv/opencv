@@ -7,6 +7,7 @@
 #include "opencv2/ts.hpp"
 #include "opencv2/ts/ocl_test.hpp"
 #include "opencv2/photo.hpp"
+#include "opencv2/objdetect.hpp"
 
 namespace opencv_test
 {

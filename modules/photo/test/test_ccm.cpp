@@ -37,8 +37,8 @@ Mat s = (Mat_<Vec3d>(24, 1) <<
 
 TEST(Photo_ColorCorrection, test_model)
 {
-    cv::ccm::ColorCorrectionModel model(s / 255, cv::ccm::COLORCHECKER_Macbeth);
-    model.computeCCM();
+    cv::ccm::ColorCorrectionModel model(s / 255, cv::ccm::COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model.compute();
     Mat src_rgbl = (Mat_<Vec3d>(24, 1) <<
         Vec3d(0.68078957, 0.12382801, 0.01514889),
         Vec3d(0.81177942, 0.32550452, 0.089818),
@@ -64,7 +64,7 @@ TEST(Photo_ColorCorrection, test_model)
         Vec3d(0.66743106, 0.24076803, 0.03394333),
         Vec3d(0.47141286, 0.13592419, 0.01362205),
         Vec3d(0.17377101, 0.03256864, 0.00203026));
-    EXPECT_MAT_NEAR(src_rgbl, model.getSrcRgbl(), 1e-4);
+    EXPECT_MAT_NEAR(src_rgbl, model.getSrcLinearRGB(), 1e-4);
 
     Mat dst_rgbl = (Mat_<Vec3d>(24, 1) <<
         Vec3d(0.17303173, 0.08211037, 0.05672686),
@@ -91,17 +91,16 @@ TEST(Photo_ColorCorrection, test_model)
         Vec3d(0.19007357, 0.19186587, 0.19308397),
         Vec3d(0.08529188, 0.08887994, 0.09257601),
         Vec3d(0.0303193, 0.03113818, 0.03274845));
-    EXPECT_MAT_NEAR(dst_rgbl, model.getDstRgbl(), 1e-4);
+    EXPECT_MAT_NEAR(dst_rgbl, model.getRefLinearRGB(), 1e-4);
 
     Mat mask = Mat::ones(24, 1, CV_8U);
     EXPECT_MAT_NEAR(model.getMask(), mask, 0.0);
 
-
-    Mat ccm = (Mat_<double>(3, 3) <<
+    Mat refColorMat = (Mat_<double>(3, 3) <<
     0.37406520, 0.02066507, 0.05804047,
     0.12719672, 0.77389268, -0.01569404,
     -0.27627010, 0.00603427, 2.74272981);
-    EXPECT_MAT_NEAR(model.getCCM(), ccm, 1e-4);
+    EXPECT_MAT_NEAR(colorCorrectionMat, refColorMat, 1e-4);
 }
 TEST(Photo_ColorCorrection, test_masks_weights_1)
 {
@@ -110,17 +109,17 @@ TEST(Photo_ColorCorrection, test_masks_weights_1)
                             1.3, 0, 0, 1.4, 0, 0,
                             0.5, 0, 0, 0.6, 0, 0,
                             0.7, 0, 0, 0.8, 0, 0);
-    cv::ccm::ColorCorrectionModel model1(s / 255, cv::ccm::COLORCHECKER_Macbeth);
+    cv::ccm::ColorCorrectionModel model1(s / 255,cv::ccm::COLORCHECKER_MACBETH);
     model1.setColorSpace(cv::ccm::COLOR_SPACE_SRGB);
     model1.setCCMType(cv::ccm::CCM_LINEAR);
     model1.setDistance(cv::ccm::DISTANCE_CIE2000);
-    model1.setLinear(cv::ccm::LINEARIZATION_GAMMA);
-    model1.setLinearGamma(2.2);
-    model1.setLinearDegree(3);
+    model1.setLinearization(cv::ccm::LINEARIZATION_GAMMA);
+    model1.setLinearizationGamma(2.2);
+    model1.setLinearizationDegree(3);
     model1.setSaturatedThreshold(0, 0.98);
     model1.setWeightsList(weights_list_);
     model1.setWeightCoeff(1.5);
-    model1.computeCCM();
+    Mat colorCorrectionMat = model1.compute();
     Mat weights = (Mat_<double>(8, 1) <<
                             1.15789474, 1.26315789, 1.36842105, 1.47368421,
                             0.52631579, 0.63157895, 0.73684211, 0.84210526);
@@ -136,16 +135,16 @@ TEST(Photo_ColorCorrection, test_masks_weights_1)
 
 TEST(Photo_ColorCorrection, test_masks_weights_2)
 {
-    cv::ccm::ColorCorrectionModel model2(s / 255, cv::ccm::COLORCHECKER_Macbeth);
+    cv::ccm::ColorCorrectionModel model2(s / 255, cv::ccm::COLORCHECKER_MACBETH);
     model2.setCCMType(cv::ccm::CCM_LINEAR);
     model2.setDistance(cv::ccm::DISTANCE_CIE2000);
-    model2.setLinear(cv::ccm::LINEARIZATION_GAMMA);
-    model2.setLinearGamma(2.2);
-    model2.setLinearDegree(3);
+    model2.setLinearization(cv::ccm::LINEARIZATION_GAMMA);
+    model2.setLinearizationGamma(2.2);
+    model2.setLinearizationDegree(3);
     model2.setSaturatedThreshold(0.05, 0.93);
     model2.setWeightsList(Mat());
     model2.setWeightCoeff(1.5);
-    model2.computeCCM();
+    Mat colorCorrectionMat = model2.compute();
     Mat weights = (Mat_<double>(20, 1) <<
                             0.65554256, 1.49454705, 1.00499244, 0.79735434, 1.16327759,
                             1.68623868, 1.37973155, 0.73213388, 1.0169629, 0.47430246,
@@ -159,6 +158,98 @@ TEST(Photo_ColorCorrection, test_masks_weights_2)
                             true, true, true, false, true, true,
                             false, false, true, true, true, true);
     EXPECT_MAT_NEAR(model2.getMask(), mask, 0.0);
+}
+
+TEST(Photo_ColorCorrection, compute_color_correction_matrix)
+{
+    // read gold chartsRGB
+    string path = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
+    FileStorage fs(path, FileStorage::READ);
+    Mat chartsRGB;
+    FileNode node = fs["chartsRGB"];
+    node >> chartsRGB;
+
+    // compute CCM
+    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model.compute();
+
+    // read gold CCM
+    node = fs["ccm"];
+    ASSERT_FALSE(node.empty());
+    Mat gold_ccm;
+    node >> gold_ccm;
+    fs.release();
+
+    // check CCM
+    EXPECT_MAT_NEAR(gold_ccm, colorCorrectionMat, 1e-8);
+
+    const double gold_loss = 4.6386569120323129;
+    // check loss
+    const double loss = model.getLoss();
+    EXPECT_NEAR(gold_loss, loss, 1e-8);
+}
+
+TEST(Photo_ColorCorrection, correctImage)
+{
+    string path = cvtest::findDataFile("mcc/mcc_ccm_test.jpg");
+    Mat img = imread(path, IMREAD_COLOR);
+    // read gold calibrate img
+    path = cvtest::findDataFile("mcc/mcc_ccm_test_res.png");
+    Mat gold_img = imread(path);
+
+    // read gold chartsRGB
+    path = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
+    FileStorage fs(path, FileStorage::READ);
+    Mat chartsRGB;
+    FileNode node = fs["chartsRGB"];
+    node >> chartsRGB;
+    fs.release();
+
+    // compute CCM
+    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model.compute();
+
+    // compute calibrate image
+    Mat image, calibratedImage;
+    cvtColor(img, image, COLOR_BGR2RGB);
+    image.convertTo(image, CV_64F, 1. / 255.);
+    model.correctImage(image, calibratedImage);
+    calibratedImage.convertTo(calibratedImage, CV_8UC3, 255.);
+    cvtColor(calibratedImage, calibratedImage, COLOR_RGB2BGR);
+    // check calibrated image
+    EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
+}
+
+TEST(Photo_ColorCorrection, detect_Macbeth)
+{
+    Ptr<cv::mcc::CCheckerDetector> detector = cv::mcc::CCheckerDetector::create();
+    std::string path = cvtest::findDataFile("mcc/mcc_ccm_test.png");
+    Mat img = imread(path);
+
+    ASSERT_FALSE(img.empty()) << "Test image can't be loaded: " << path;
+    // read gold calibrate img
+    path = cvtest::findDataFile("mcc/mcc_ccm_test_res.png");
+    Mat gold_img = imread(path);
+
+    ASSERT_FALSE(img.empty()) << "Grouth truth for test image can't be loaded: " << path;
+
+    detector->setColorChartType(cv::mcc::MCC24);
+    ASSERT_TRUE(detector->process(img));
+
+    vector<Ptr<cv::mcc::CChecker>> checkers = detector->getListColorChecker();
+    Mat chartsRGB = checkers[0]->getChartsRGB();
+    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
+    Mat colorCorrectionMat = model.compute();
+
+    // compute calibrate image
+    Mat image, calibratedImage;
+    cvtColor(img, image, COLOR_BGR2RGB);
+    image.convertTo(image, CV_64F, 1. / 255.);
+    model.correctImage(image, calibratedImage);
+    calibratedImage.convertTo(calibratedImage, CV_8UC3, 255.);
+    cvtColor(calibratedImage, calibratedImage, COLOR_RGB2BGR);
+    // check calibrated image
+    EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
 }
 
 } // namespace

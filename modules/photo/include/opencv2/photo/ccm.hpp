@@ -53,9 +53,9 @@ enum InitialMethodType
 /** @brief  Macbeth and Vinyl ColorChecker with 2deg D50
 */
 enum ColorCheckerType {
-    COLORCHECKER_Macbeth,                ///< Macbeth ColorChecker
-    COLORCHECKER_Vinyl,                  ///< DKK ColorChecker
-    COLORCHECKER_DigitalSG,              ///< DigitalSG ColorChecker with 140 squares
+    COLORCHECKER_MACBETH,                ///< Macbeth ColorChecker
+    COLORCHECKER_VINYL,                  ///< DKK ColorChecker
+    COLORCHECKER_DIGITAL_SG,              ///< DigitalSG ColorChecker with 140 squares
 };
 enum ColorSpace {
     COLOR_SPACE_SRGB,                       ///< https://en.wikipedia.org/wiki/SRGB , RGB color space
@@ -102,7 +102,7 @@ enum ColorSpace {
 
 /** @brief Linearization transformation type
 */
-enum LinearType
+enum LinearizationType
 {
 
     LINEARIZATION_IDENTITY,                  ///<no change is made
@@ -139,9 +139,9 @@ public:
     /** @brief Color Correction Model
 
         Supported list of color cards:
-        - @ref COLORCHECKER_Macbeth, the Macbeth ColorChecker
-        - @ref COLORCHECKER_Vinyl, the DKK ColorChecker
-        - @ref COLORCHECKER_DigitalSG, the DigitalSG ColorChecker with 140 squares
+        - @ref COLORCHECKER_MACBETH, the Macbeth ColorChecker
+        - @ref COLORCHECKER_VINYL, the DKK ColorChecker
+        - @ref COLORCHECKER_DIGITAL_SG, the DigitalSG ColorChecker with 140 squares
 
         @param src detected colors of ColorChecker patches;\n
                     the color type is RGB not BGR, and the color values are in [0, 1];
@@ -197,10 +197,10 @@ public:
     CV_WRAP void setDistance(DistanceType distance);
 
     /** @brief set Linear
-    @param linearType the method of linearization;\n
+    @param linearizationType the method of linearization;\n
                        default: @ref LINEARIZATION_GAMMA
     */
-    CV_WRAP void setLinear(LinearType linearType);
+    CV_WRAP void setLinearization(LinearizationType linearizationType);
 
     /** @brief set Gamma
 
@@ -209,7 +209,7 @@ public:
     @param gamma the gamma value of gamma correction;\n
                  default: 2.2;
     */
-    CV_WRAP void setLinearGamma(double gamma);
+    CV_WRAP void setLinearizationGamma(double gamma);
 
     /** @brief set degree
         @note only valid when linear is set to
@@ -222,7 +222,7 @@ public:
             default: 3
 
     */
-    CV_WRAP void setLinearDegree(int deg);
+    CV_WRAP void setLinearizationDegree(int deg);
 
     /** @brief set SaturatedThreshold.
                 The colors in the closed interval [lower, upper] are reserved to participate
@@ -267,21 +267,21 @@ public:
     CV_WRAP void setEpsilon(double epsilon);
 
     /** @brief make color correction */
-    CV_WRAP void computeCCM();
+    CV_WRAP Mat compute();
 
-    CV_WRAP Mat getCCM() const;
+    CV_WRAP Mat getColorCorrectionMatrix() const;
     CV_WRAP double getLoss() const;
-    CV_WRAP Mat getSrcRgbl() const;
-    CV_WRAP Mat getDstRgbl() const;
+    CV_WRAP Mat getSrcLinearRGB() const;
+    CV_WRAP Mat getRefLinearRGB() const;
     CV_WRAP Mat getMask() const;
     CV_WRAP Mat getWeights() const;
 
-    /** @brief Infer using fitting ccm.
-        @param img the input image.
+    /** @brief Applies color correction to the input image using a fitted color correction matrix.
+        @param src the input image.
+        @param dst the output array.
         @param islinear default false.
-        @return the output array.
     */
-    CV_WRAP Mat infer(const Mat& img, bool islinear = false);
+    CV_WRAP void correctImage(InputArray src, OutputArray dst, bool islinear = false);
 
     class Impl;
 private:

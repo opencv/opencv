@@ -179,10 +179,10 @@ public:
     @param dst the input array, type of cv::Mat.
     @param mask the input array, type of cv::Mat.
     @param cs type of RGBBase_.
-    @param linearType type of linear.
+    @param linearizationType type of linear.
 */
 
-std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LinearType linearType);
+std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LinearizationType linearizationType);
 
 }
 }  // namespace cv::ccm
