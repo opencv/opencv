@@ -339,6 +339,9 @@ Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters&
 Ptr<IVideoCapture> create_V4L_capture_cam(int index);
 Ptr<IVideoCapture> create_V4L_capture_file(const std::string &filename);
 
+Ptr<IVideoCapture> create_libcamera_capture_cam(int index);
+Ptr<IVideoCapture> create_libcamera_capture_file(const std::string &filename);
+
 Ptr<IVideoCapture> create_OpenNI2_capture_cam( int index );
 Ptr<IVideoCapture> create_OpenNI2_capture_file( const std::string &filename );
 
