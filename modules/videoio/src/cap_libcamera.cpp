@@ -767,6 +767,7 @@ LibcameraApp::~LibcameraApp()
 	StopCamera();
 	Teardown();
 	CloseCamera();
+    std::cerr << "End of ~LibcameraApp() call" << std::endl;
 }
 
 std::string const &LibcameraApp::CameraId() const
@@ -1305,9 +1306,13 @@ protected:
     std::mutex mtx;
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     std::condition_variable cv;
     std::mutex cv_mtx;
     bool thread_exit = false;
+=======
+    std::condition_variable cv;
+>>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
     // bool isFramePending;
     // bool needsReconfigure;
     std::atomic<bool> isFramePending,needsReconfigure;
@@ -1579,12 +1584,17 @@ void LibcameraCapture::stopVideo()
 bool LibcameraCapture::grabFrame()
 {   
 <<<<<<< HEAD
+<<<<<<< HEAD
     if(running.load(std::memory_order_acquire))
 =======
     if(isFramePending)
 >>>>>>> d87c3ab97e (Merge the code, create a header file for the libcamera class)
     {
 <<<<<<< HEAD
+=======
+    if(running.load(std::memory_order_acquire))
+    {
+>>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
         // if (needsReconfigure)
         // {
         //     // restart the camera
@@ -1593,6 +1603,7 @@ bool LibcameraCapture::grabFrame()
         //     // needsReconfigure = false;
         //     needsReconfigure.store(false, std::memory_order_release);
         // }
+<<<<<<< HEAD
 =======
         if (needsReconfigure)
         {
@@ -1603,6 +1614,8 @@ bool LibcameraCapture::grabFrame()
             needsReconfigure.store(false, std::memory_order_release);
         }
 >>>>>>> f1cd8084b4 (New branch for debugging)
+=======
+>>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
         return true;
     }
     else 
@@ -1623,10 +1636,14 @@ bool LibcameraCapture::grabFrame()
         isFramePending = true;
 =======
         // isFramePending = true;
+<<<<<<< HEAD
         isFramePending.store(true, std::memory_order_release);
 >>>>>>> 724680b5bd (multi camera support)
         
 >>>>>>> f1cd8084b4 (New branch for debugging)
+=======
+        // isFramePending.store(true, std::memory_order_release);
+>>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
 	}
     return running.load(std::memory_order_acquire);
 }
@@ -1651,6 +1668,9 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
 {   
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
     // if (needsReconfigure)
     // {
     //     // restart the camera
@@ -1659,6 +1679,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     //     // needsReconfigure = false;
     //     needsReconfigure.store(false, std::memory_order_release);
     // }
+<<<<<<< HEAD
 
 	if(!running.load(std::memory_order_acquire)) return false;
 =======
@@ -1672,6 +1693,8 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         // needsReconfigure = false;
         needsReconfigure.store(false, std::memory_order_release);
     }
+=======
+>>>>>>> c7c18208f8 (Fix on-hot reload of camera parameters)
 
 <<<<<<< HEAD
 >>>>>>> f1cd8084b4 (New branch for debugging)
