@@ -276,7 +276,7 @@ bool SPngDecoder::readData(Mat &img)
                 Mat tmp(m_height, m_width, CV_16U);
                 if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, SPNG_FMT_PNG, 0))
                     return false;
-                //cvtColor(tmp, img, COLOR_BGR2GRAY);
+                cvtColor(tmp, img, COLOR_GRAY2BGR);
                 //icvCvt_Gray2BGR_16u_C1C3R(reinterpret_cast<const ushort*>(tmp.data), 0,
                     //reinterpret_cast<ushort*>(img.data), 0, Size(m_width, 1));
                 return true;
@@ -443,37 +443,6 @@ bool SPngDecoder::readData(Mat &img)
                             icvCvt_RGB2BGR_8u_C3R(img.data, step, img.data, step, Size(m_width, m_height));
                         }
                     }
-                }
-                else
-                {
-                    do
-                    {
-                        if (img.depth() == CV_8U && m_bit_depth == 16)
-                        {
-                            Mat tmp(m_height, m_width, CV_16U);
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
-
-                                ret = spng_decode_row(png_ptr, tmp.row(row_info.row_num).data, m_width * 2);
-                            } while (ret == SPNG_OK);
-
-                            if (ret != SPNG_EOI)
-                                return false;
-
-                            tmp.convertTo(img, CV_8U, 1. / 255);
-                        }
-                        else
-                        {
-                        ret = spng_get_row_info(png_ptr, &row_info);
-                        if (ret)
-                            break;
-
-                        ret = spng_decode_row(png_ptr, img.data + row_info.row_num * image_width, image_width);
-                        }
-                    } while (ret == SPNG_OK);
                 }
             }
 
