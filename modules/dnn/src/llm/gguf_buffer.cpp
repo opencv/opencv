@@ -120,15 +120,26 @@ Mat GGUFBufferReader::read2DMat(ggml_type type, size_t rows, size_t cols, size_t
     }   
     const float* dataPtr = reinterpret_cast<const float*>(buffer->buf.data() + current_offset + offset);
 
-    Mat mat((int)cols, (int)rows, CV_32F);
+    Mat mat((int)rows, (int)cols, CV_32F);
+    // for (size_t i = 0; i < cols; i++) {
+    //     for (size_t j = 0; j < rows; j++) {
+    //         printf("%d,%d, -- %f \n", (int)j, (int)i, dataPtr[i * cols + j]);
+    //         mat.at<float>((int)j, (int)i) = dataPtr[i * cols + j];
+    //     } 
+    // }
 
-    for (size_t i = 0; i < cols; i++) {
-        for (size_t j = 0; j < rows; j++) {
-            mat.at<float>((int)i, (int)j) = dataPtr[i * rows + j];
-        } 
+    for (size_t i = 0; i < rows; i++) {
+        for (size_t j = 0; j < cols; j++) {
+            float value = dataPtr[i * cols + j];  // row-major access
+            printf("%d,%d -- %f\n", (int)i, (int)j, value);
+            mat.at<float>((int)i, (int)j) = value;
+        }
     }
     return mat;
 }
+
+
+
 
 Mat GGUFBufferReader::read1DMat(ggml_type type, size_t rows, size_t offset) {
     if (type != GGML_TYPE_F32) {

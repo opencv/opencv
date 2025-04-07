@@ -1,8 +1,9 @@
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
+#include <opencv2/dnn/layer_reg.private.hpp>
 #include "gguf_importer.hpp"
 #include "gguf_parser.hpp"
-#include "../net_impl.hpp"
 // #include <opencv2/core.hpp>
 
 
@@ -11,141 +12,68 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-void ArchBlockConstructor::finalizeGraph() {
-    graph->setProg(prog);
-}
+GGUFImporter::GGUFImporter(const String& ggufFileName) {
+    netimpl = net.getImpl();
+    ggufFile = makePtr<GGUFParser>(ggufFileName);
 
-
-void VanillaArchBlockConstructor::initGraph(Net::Impl* netimpl) {
-    // For now, we ignore automatic shape computation and require,
-    // that input and output shape are stored in metadata
-
-    // vanilla architecture blocks just consist of vanilla attention. 
-    // hence input size is determined by the columns of the attention block
-    MatShape inputshape(3);
-
-    size_t k_hidden_size = ggufFile->metadataDict.get<int>("k_hidden_size");
-    size_t q_hidden_size = ggufFile->metadataDict.get<int>("q_hidden_size");
-    size_t v_hidden_size = ggufFile->metadataDict.get<int>("v_hidden_size");
-    size_t output_size = ggufFile->metadataDict.get<int>("output_size");
-
-    inputshape[0] = 1;                                               // batch size
-    inputshape[1] = -1;                                              // variable length
-    inputshape[2] = k_hidden_size + q_hidden_size + v_hidden_size;   // qkv_hidden_size
-
-    Arg input = netimpl->newArg("globInput",  DNN_ARG_INPUT );
-    ArgData inputdata = netimpl->args.at(input.idx);
-    inputdata.shape = inputshape;
-    // @TODO set from a const from now to avoid multiple definitions
+    netInput = netimpl->newArg("input",  DNN_ARG_INPUT, true);
+    netOutput = netimpl->newArg("output",  DNN_ARG_OUTPUT, true );
+    ArgData inputdata = netimpl->args.at(netInput.idx);
+    inputdata.shape = ggufFile->blocks[0].getInputShape();
+    // @TODO make more flexible
     inputdata.type = CV_32F;
-    
-    graph = netimpl->newGraph("VanillaAttention", {input}, true);
 
-    // vanilla architecture blocks just consist of vanilla attention. 
-    // hence input size is determined by the columns of the attention block
-    MatShape outputshape(3);
-    
-    outputshape[0] = 1;                                               // batch size
-    outputshape[1] = -1;                                              // variable length
-    outputshape[2] = output_size;   // qkv_hidden_size
+    ArgData outputdata = netimpl->args.at(netOutput.idx);
+    outputdata.shape =  ggufFile->blocks[ggufFile->blocks.size() - 1].getOutputShape(); // output size;
+    outputdata.type = CV_32F;
 
-    Arg output = netimpl->newArg("globOut",  DNN_ARG_OUTPUT );
-    ArgData outputdata = netimpl->args.at(output.idx);
-    outputdata.shape = outputshape;
+    netimpl->args[netInput.idx] = inputdata;
+    netimpl->args[netOutput.idx] = outputdata;
 
-    graph->setOutputs({output});
-}
-
-
-void VanillaArchBlockConstructor::AddAttentionBlock(Net::Impl* netimpl, int blockn) {
-    // Add attention block to the net
-    LayerParams layerParams;
-    layerParams.type = "Attention";
-    layerParams.name = "attention_block";
-    Mat weight = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.weight").t(); // opencv requires weight to be of shpae D_emb 
-    Mat bias = ggufFile->getTensor("blk." + std::to_string(blockn) + ".attn_qkv.bias");
-
-    int k_hidden_size = ggufFile->metadataDict.get<int>("k_hidden_size");
-    int q_hidden_size = ggufFile->metadataDict.get<int>("q_hidden_size");
-    int v_hidden_size = ggufFile->metadataDict.get<int>("v_hidden_size");
-    int num_heads = ggufFile->metadataDict.get<int>("num_heads");
-    int num_blocks = ggufFile->metadataDict.get<int>("num_blocks");
-
-    MatShape weightshape = weight.shape();
-    int hidden_size = weightshape[1];
-    
-    std::vector<int> qkv_hidden_sizes = {k_hidden_size, q_hidden_size, v_hidden_size};
-    layerParams.set(
-        "qkv_hidden_sizes",
-        DictValue::arrayInt(&qkv_hidden_sizes[0], 3)
-    );
-    layerParams.set("num_heads", num_heads);
-    // zero bias for now
-    layerParams.blobs.push_back(weight);
-    layerParams.blobs.push_back(bias);
-
-    std::string inputName, outputName;
-    if (blockn == 0){
-        inputName = "globInput";
-    } else {
-        inputName = "blk." + std::to_string(blockn - 1) + ".attn_out";
-    }
-
-    if (blockn >= num_blocks - 1){
-        outputName = "globOut";
-    } else {
-        outputName = "blk." + std::to_string(blockn) + ".attn_out";
-    }
-
-    if(inputName.empty() || outputName.empty()){
-        CV_Error(Error::StsBadArg, "VanillaArchBlockConstructor: input or output name for a block is empty");
-    }
-
-    /////////////////////////////////
-    // Set proper ArgData for input
-    /////////////////////////////////    
-    Arg input = netimpl->getArg(inputName);
-    ArgData& inputAdata = netimpl->args.at(input.idx);
-    // Infer shape
-    inputAdata.shape.resize(3);
-    inputAdata.shape[0] = -1; // batch size
-    inputAdata.shape[1] = -1; // variable length
-    inputAdata.shape[2] = hidden_size;
-    inputAdata.type = CV_32F;
-
-
-    /////////////////////////////////
-    // Set proper ArgData for output
-    /////////////////////////////////   
-    Arg output =  netimpl->getArg(outputName); 
-    ArgData& outputAdata = netimpl->args.at(input.idx);
-    // Infer shape
-    outputAdata.shape.resize(3);
-    outputAdata.shape[0] = -1; // batch size
-    outputAdata.shape[1] = -1; // variable length
-    outputAdata.shape[2] = hidden_size;
-    outputAdata.type = CV_32F;
-
-    Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
-    layer->netimpl = netimpl;
-    layer->inputs = {input};
-    layer->outputs = {output};
-    prog.push_back(layer);
+    graph = netimpl->newGraph("VanillaAttention", {netInput}, true);
+    graph->setOutputs({netOutput});
 }
 
 Net GGUFImporter::constructNet() {
-    VanillaArchBlockConstructor archBlockConstructor(ggufFile);
-    archBlockConstructor.initGraph(netimpl);
-    size_t num_blocks = ggufFile->metadataDict.get<int>("num_blocks");
-    for (int i = 0; i < num_blocks; i++){
-        archBlockConstructor.AddAttentionBlock(netimpl, i);
-    }
-    archBlockConstructor.finalizeGraph();
+    std::vector<Arg> blockInputs = {netInput};
+    std::vector<Arg> blockOutputs = {netOutput};
 
+    for (auto& block : ggufFile->blocks){
+        addBlock(block, blockInputs, blockOutputs);
+    }
+
+    graph->setProg(prog);
     netimpl->prepareForInference();
+
     return net;
 }
 
+void GGUFImporter::addBlock(BlockMetadata block, std::vector<Arg>& blockInputs, std::vector<Arg>& blockOutputs) {
+    bool is_final_block = block.blockn == ggufFile->blocks.size() - 1;
+    // ArgKind outputArgKind = is_final_block ? DNN_ARG_OUTPUT : DNN_ARG_TEMP;
+    // Add attention
+    LayerParams layerParams;
+    // @TODO need to rework the naming system
+    std::string outArgName = is_final_block ? "output" : "";
+    Arg out = netimpl->getArg(outArgName);
+    if(!is_final_block) {
+        ArgData outData = netimpl->args.at(out.idx);
+        outData.shape = block.getOutputShape();
+        // @TODO make more flexible
+        outData.type = CV_32F;
+        netimpl->args[out.idx] = outData;
+    }
+
+    // Attention layer
+    block.getAttentionLayerParams(ggufFile->tensor_reader, layerParams);
+    Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
+    layer->netimpl = netimpl;
+    layer->inputs = blockInputs;
+    layer->outputs = {out};
+    prog.push_back(layer);
+
+    blockOutputs = {out};
+}
 
 Net readNetFromGGUF(const String& ggufFileName){
     GGUFImporter importer(ggufFileName);

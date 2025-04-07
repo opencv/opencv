@@ -5,6 +5,7 @@
 #include <opencv2/dnn.hpp>
 #include "opencv2/core.hpp"
 #include "gguf_parser.hpp"
+#include "../net_impl.hpp"
 
 
 namespace cv { namespace dnn {
@@ -12,44 +13,22 @@ namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 using namespace cv::dnn;
 
-struct ArchBlockConstructor {
-    ArchBlockConstructor(Ptr<GGUFParser> ggufFile) : ggufFile(ggufFile) {};
-
-    virtual ~ArchBlockConstructor() = default;
-
-    virtual void initGraph(Net::Impl* netimpl){};
-    virtual void AddAttentionBlock(Net::Impl* netimpl,int blockn){};
-    void finalizeGraph();
-
-    Ptr<GGUFParser> ggufFile;
-    Ptr<Graph> graph;
-    std::vector<Ptr<Layer> > prog;
-};
-
-// Vanilla means just existing Attention from opencv dnn
-struct VanillaArchBlockConstructor : public ArchBlockConstructor{
-    using ArchBlockConstructor::ArchBlockConstructor;  // inherit constructors if needed
-
-    void initGraph(Net::Impl* netimpl) override;
-    void AddAttentionBlock(Net::Impl* netimpl, int blockn) override;
-};
-
 /* Fabric for creating Net from GGUF file */
 struct GGUFImporter
 {   
-    GGUFImporter(const String& ggufFileName) {
-        netimpl = net.getImpl();
-        ggufFile = makePtr<GGUFParser>(ggufFileName);
-    }
-    // net construction
+    GGUFImporter(const String& ggufFileName);
     Net constructNet();
+    void addBlock(BlockMetadata block, std::vector<Arg>& blockInputs, std::vector<Arg>& blockOutputs);
     // parser
     Ptr<GGUFParser> ggufFile;
+    Arg netInput,netOutput;
     // Net impl stuff
     Net net;
     Net::Impl* netimpl;
     std::vector<Ptr<Layer>> prog;
+    Ptr<Graph> graph;
 };
+
 
 Net readNetFromGGUF(const String& ggufFileName);
 

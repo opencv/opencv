@@ -7,7 +7,6 @@
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
-
 // https://github.com/ggml-org/ggml/blob/master/docs/gguf.md
 enum ggml_type : uint32_t {
     GGML_TYPE_F32     = 0,
@@ -87,7 +86,6 @@ struct GGUFBufferReader
     Ptr<const GGUFBuffer> buffer;
     size_t current_offset;
 };
-
 
 template<typename T,typename R>
 R GGUFBufferReader::readSingleValue() {
