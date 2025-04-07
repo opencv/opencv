@@ -213,7 +213,6 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
-#define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
 #define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
 #define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
 
