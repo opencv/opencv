@@ -271,6 +271,17 @@ bool SPngDecoder::readData(Mat &img)
                 return true;
             }
 
+            if (fmt == SPNG_FMT_PNG && img.elemSize() * m_width / 3 == image_width)
+            {
+                Mat tmp(m_height, m_width, CV_16U);
+                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, SPNG_FMT_PNG, 0))
+                    return false;
+                //cvtColor(tmp, img, COLOR_BGR2GRAY);
+                //icvCvt_Gray2BGR_16u_C1C3R(reinterpret_cast<const ushort*>(tmp.data), 0,
+                    //reinterpret_cast<ushort*>(img.data), 0, Size(m_width, 1));
+                return true;
+            }
+
             ret = spng_decode_image(png_ptr, nullptr, 0, fmt, SPNG_DECODE_PROGRESSIVE | decode_flags);
             if (ret == SPNG_OK)
             {
