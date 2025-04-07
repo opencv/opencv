@@ -1271,7 +1271,6 @@ void error( const Exception& exc )
         static volatile int* p = 0;
         *p = 0;
     }
-
     throw exc;
 #ifdef __GNUC__
 # if !defined __clang__ && !defined __APPLE__

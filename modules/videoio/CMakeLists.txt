@@ -269,6 +269,11 @@ if(OBSENSOR_USE_ORBBEC_SDK)
   list(APPEND tgts ocv.3rdparty.obsensor)
 endif()
 
+if(TARGET ocv.3rdparty.libcamera)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libcamera.cpp)
+  list(APPEND tgts ocv.3rdparty.libcamera)
+endif()
+
 if(tgts STREQUAL "PRIVATE")
   set(tgts "")
 endif()
