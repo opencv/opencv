@@ -23,43 +23,34 @@ Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst)
 
 Mat maskCopyTo(const Mat& src, const Mat& mask)
 {
-    Mat dst(countNonZero(mask), 1, src.type());
-    const int channel = src.channels();
-    auto it_mask = mask.begin<uchar>();
-    switch (channel)
+    Mat fullMasked;
+    src.copyTo(fullMasked, mask);
+
+    std::vector<Point> nonZeroLocations;
+    findNonZero(mask, nonZeroLocations);
+
+    Mat dst(static_cast<int>(nonZeroLocations.size()), 1, src.type());
+
+    int channels = src.channels();
+    if (channels == 1)
     {
-    case 1:
-    {
-        auto it_src = src.begin<double>(), end_src = src.end<double>();
-        auto it_dst = dst.begin<double>();
-        for (; it_src != end_src; ++it_src, ++it_mask)
+        for (size_t i = 0; i < nonZeroLocations.size(); i++)
         {
-            if (*it_mask)
-            {
-                (*it_dst) = (*it_src);
-                ++it_dst;
-            }
+            dst.at<double>(static_cast<int>(i), 0) = fullMasked.at<double>(nonZeroLocations[i]);
         }
-        break;
     }
-    case 3:
+    else if (channels == 3)
     {
-        auto it_src = src.begin<Vec3d>(), end_src = src.end<Vec3d>();
-        auto it_dst = dst.begin<Vec3d>();
-        for (; it_src != end_src; ++it_src, ++it_mask)
+        for (size_t i = 0; i < nonZeroLocations.size(); i++)
         {
-            if (*it_mask)
-            {
-                (*it_dst) = (*it_src);
-                ++it_dst;
-            }
+            dst.at<Vec3d>(static_cast<int>(i), 0) = fullMasked.at<Vec3d>(nonZeroLocations[i]);
         }
-        break;
     }
-    default:
-        CV_Error(Error::StsBadArg, "Wrong channel!" );
-        break;
+    else
+    {
+        CV_Error(Error::StsBadArg, "Unsupported number of channels");
     }
+
     return dst;
 }
 
@@ -73,22 +64,17 @@ Mat multiple(const Mat& xyz, const Mat& ccm)
 
 Mat saturate(Mat& src, const double& low, const double& up)
 {
-    Mat dst = Mat::ones(src.size(), CV_8UC1);
-    MatIterator_<Vec3d> it_src = src.begin<Vec3d>(), end_src = src.end<Vec3d>();
-    MatIterator_<uchar> it_dst = dst.begin<uchar>();
-    for (; it_src != end_src; ++it_src, ++it_dst)
-    {
-        for (int i = 0; i < 3; ++i)
-        {
-            if ((*it_src)[i] > up || (*it_src)[i] < low)
-            {
-                *it_dst = 0;
-                break;
-            }
-        }
-    }
-    return dst;
+    CV_Assert(src.type() == CV_64FC3);
+    Scalar lower_bound(low, low, low);
+    Scalar upper_bound(up, up, up);
+
+    Mat mask;
+    inRange(src, lower_bound, upper_bound, mask);
+    mask /= 255;
+
+    return mask;
 }
+
 
 Mat rgb2gray(const Mat& rgb)
 {

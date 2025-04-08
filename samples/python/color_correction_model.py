@@ -58,7 +58,7 @@ def process_frame(frame, detector, num_charts):
     checkers = detector.getListColorChecker()
     detector.draw(checkers, frame)
     src = checkers[0].getChartsRGB(False)
-    
+
     return src
 
 def main(func_args=None):
@@ -145,13 +145,13 @@ def main(func_args=None):
     print("Model parameters saved to ccm_output.yaml")
 
     # Apply correction to query image
-    normalized_image = query_image.astype(np.float64) / 255.0
+    normalized_image = cv.cvtColor(query_image, cv.COLOR_BGR2RGB).astype(np.float64) / 255.0
     calibrated_image = np.zeros_like(normalized_image)
     model.correctImage(normalized_image, calibrated_image)
-    
+    calibrated_image = cv.cvtColor(calibrated_image, cv.COLOR_RGB2BGR)
     # Convert back to 8-bit
     calibrated_image = (calibrated_image * 255.0).astype(np.uint8)
-    
+
     # Save corrected image
     output_file = "corrected_output.png"
     cv.imwrite(output_file, calibrated_image)

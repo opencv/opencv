@@ -220,10 +220,10 @@ TEST(Photo_ColorCorrection, correctImage)
     EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
 }
 
-TEST(Photo_ColorCorrection, detect_Macbeth)
+TEST(Photo_ColorCorrection, mcc_ccm_combined)
 {
     Ptr<cv::mcc::CCheckerDetector> detector = cv::mcc::CCheckerDetector::create();
-    std::string path = cvtest::findDataFile("mcc/mcc_ccm_test.png");
+    std::string path = cvtest::findDataFile("mcc/mcc_ccm_test.jpg");
     Mat img = imread(path);
 
     ASSERT_FALSE(img.empty()) << "Test image can't be loaded: " << path;
