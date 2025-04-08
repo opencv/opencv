@@ -300,14 +300,20 @@ template<typename R> struct TheTest
 #else
 #error "Configuration error"
 #endif
+        R setall_res3 = v_setall_<R>((LaneType)7);
+        R setall_resz = v_setzero_<R>();
 #if CV_SIMD_WIDTH > 0
         Data<R> setall_res1_; v_store(setall_res1_.d, setall_res1);
         Data<R> setall_res2_; v_store(setall_res2_.d, setall_res2);
+        Data<R> setall_res3_; v_store(setall_res3_.d, setall_res3);
+        Data<R> setall_resz_; v_store(setall_resz_.d, setall_resz);
         for (int i = 0; i < VTraits<R>::vlanes(); ++i)
         {
             SCOPED_TRACE(cv::format("i=%d", i));
             EXPECT_EQ((LaneType)5, setall_res1_[i]);
             EXPECT_EQ((LaneType)6, setall_res2_[i]);
+            EXPECT_EQ((LaneType)7, setall_res3_[i]);
+            EXPECT_EQ((LaneType)0, setall_resz_[i]);
         }
 #endif
 
@@ -840,7 +846,15 @@ template<typename R> struct TheTest
             2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x50-0x5f
             2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x60-0x6f
             3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0x70-0x7f
-            1                                               //0x80
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x80-0x8f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x90-0x9f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0xa0-0xaf
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0xb0-0xbf
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0xc0-0xcf
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0xd0-0xdf
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0xe0-0xef
+            4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8, //0xf0-0xff
+            0
         };
         Data<R> dataA;
         R a = dataA;
@@ -972,7 +986,11 @@ template<typename R> struct TheTest
         R l = dataB;
         dataB[1] = mask_one;
         dataB[VTraits<R>::vlanes() / 2] = mask_one;
-        dataC *= (LaneType)-1;
+        for (int i = 0; i < VTraits<R>::vlanes(); i++)
+        {
+            auto c_signed = dataC.as_int(i);
+            dataC[i] = (LaneType)(c_signed == 0 ? -1 : -std::abs(c_signed));
+        }
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
         dataC[VTraits<R>::vlanes() - 1] = 0;
         R nl = dataC;
@@ -1899,11 +1917,104 @@ template<typename R> struct TheTest
                     EXPECT_TRUE(std::isnan(outputs[j]));
                 } else {
                     LaneType ref_output = std::erf(inputs[j]);
-                    EXPECT_LT(std::abs(outputs[j] - ref_output), 1e-3f * (std::abs(ref_output) + FLT_MIN * 1e4f));
+                    EXPECT_LT(std::abs(outputs[j] - ref_output), 9e-3f * (std::abs(ref_output) + FLT_MIN * 1e4f));
                 }
             }
         }
 
+        return *this;
+    }
+
+    void __test_sincos(LaneType diff_thr, LaneType flt_min) {
+        int n = VTraits<R>::vlanes();
+        // Test each value for a period, from -PI to PI
+        const LaneType step = (LaneType) 0.01;
+        for (LaneType i = 0; i <= (LaneType)M_PI;) {
+            Data<R> dataPosPI, dataNegPI;
+            for (int j = 0; j < n; ++j) {
+                dataPosPI[j] = i;
+                dataNegPI[j] = -i;
+                i += step;
+            }
+            R posPI = dataPosPI, negPI = dataNegPI, sinPos, cosPos, sinNeg, cosNeg;
+            v_sincos(posPI, sinPos, cosPos);
+            v_sincos(negPI, sinNeg, cosNeg);
+            Data<R> resSinPos = sinPos, resCosPos = cosPos, resSinNeg = sinNeg, resCosNeg = cosNeg;
+            for (int j = 0; j < n; ++j) {
+                LaneType std_sin_pos = (LaneType) std::sin(dataPosPI[j]);
+                LaneType std_cos_pos = (LaneType) std::cos(dataPosPI[j]);
+                LaneType std_sin_neg = (LaneType) std::sin(dataNegPI[j]);
+                LaneType std_cos_neg = (LaneType) std::cos(dataNegPI[j]);
+                SCOPED_TRACE(cv::format("Period test value: %lf and %lf", (double) dataPosPI[j], (double) dataNegPI[j]));
+                EXPECT_LT(std::abs(resSinPos[j] - std_sin_pos), diff_thr * (std::abs(std_sin_pos) + flt_min * 100));
+                EXPECT_LT(std::abs(resCosPos[j] - std_cos_pos), diff_thr * (std::abs(std_cos_pos) + flt_min * 100));
+                EXPECT_LT(std::abs(resSinNeg[j] - std_sin_neg), diff_thr * (std::abs(std_sin_neg) + flt_min * 100));
+                EXPECT_LT(std::abs(resCosNeg[j] - std_cos_neg), diff_thr * (std::abs(std_cos_neg) + flt_min * 100));
+            }
+        }
+
+        // Test special values
+        std::vector<LaneType> specialValues = {(LaneType) 0, (LaneType) M_PI, (LaneType) (M_PI / 2), (LaneType) INFINITY, (LaneType) -INFINITY, (LaneType) NAN};
+        const int testRandNum = 10000;
+        const double specialValueProbability = 0.1; // 10% chance to insert a special value
+        cv::RNG_MT19937 rng;
+
+        for (int i = 0; i < testRandNum; i++) {
+            Data<R> dataRand;
+            for (int j = 0; j < n; ++j) {
+                if (rng.uniform(0.f, 1.f) <= specialValueProbability) {
+                    // Insert a special value
+                    int specialValueIndex = rng.uniform(0, (int) specialValues.size());
+                    dataRand[j] = specialValues[specialValueIndex];
+                } else {
+                    // Generate uniform random data in [-1000, 1000]
+                    dataRand[j] = (LaneType) rng.uniform(-1000, 1000);
+                }
+            }
+
+            // Compare with std::sin and std::cos
+            R x = dataRand, s, c;
+            v_sincos(x, s, c);
+            Data<R> resSin = s, resCos = c;
+            for (int j = 0; j < n; ++j) {
+                SCOPED_TRACE(cv::format("Random test value: %lf", (double) dataRand[j]));
+                LaneType std_sin = (LaneType) std::sin(dataRand[j]);
+                LaneType std_cos = (LaneType) std::cos(dataRand[j]);
+                // input NaN, +INF, -INF -> output NaN
+                if (std::isnan(dataRand[j]) || std::isinf(dataRand[j])) {
+                    EXPECT_TRUE(std::isnan(resSin[j]));
+                    EXPECT_TRUE(std::isnan(resCos[j]));
+                } else if(dataRand[j] == 0) {
+                    // sin(0) -> 0, cos(0) -> 1
+                    EXPECT_EQ(resSin[j], 0);
+                    EXPECT_EQ(resCos[j], 1);
+                } else {
+                    EXPECT_LT(std::abs(resSin[j] - std_sin), diff_thr * (std::abs(std_sin) + flt_min * 100));
+                    EXPECT_LT(std::abs(resCos[j] - std_cos), diff_thr * (std::abs(std_cos) + flt_min * 100));
+                }
+            }
+        }
+    }
+
+    TheTest &test_sincos_fp16() {
+#if CV_SIMD_FP16
+        hfloat flt16_min;
+        uint16_t flt16_min_hex = 0x0400;
+        std::memcpy(&flt16_min, &flt16_min_hex, sizeof(hfloat));
+        __test_sincos((hfloat) 1e-3, flt16_min);
+#endif
+        return *this;
+    }
+
+    TheTest &test_sincos_fp32() {
+        __test_sincos(1e-6f, FLT_MIN);
+        return *this;
+    }
+
+    TheTest &test_sincos_fp64() {
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+        __test_sincos(1e-11, DBL_MIN);
+#endif
         return *this;
     }
 };
@@ -2221,6 +2332,7 @@ void test_hal_intrin_float32()
         .test_pack_triplets()
         .test_exp_fp32()
         .test_log_fp32()
+        .test_sincos_fp32()
         .test_erf_fp32()
 #if CV_SIMD_WIDTH == 32
         .test_extract<4>().test_extract<5>().test_extract<6>().test_extract<7>()
@@ -2255,6 +2367,7 @@ void test_hal_intrin_float64()
         .test_extract_highest()
         .test_exp_fp64()
         .test_log_fp64()
+        .test_sincos_fp64()
         //.test_broadcast_element<0>().test_broadcast_element<1>()
 #if CV_SIMD_WIDTH == 32
         .test_extract<2>().test_extract<3>()
@@ -2277,6 +2390,7 @@ void test_hal_intrin_float16()
         .test_float_cvt_fp16()
         .test_exp_fp16()
         .test_log_fp16()
+        .test_sincos_fp16()
 #endif
         ;
 #else

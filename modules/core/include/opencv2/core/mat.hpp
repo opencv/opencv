@@ -79,9 +79,10 @@ It is defined as:
 @code
     typedef const _InputArray& InputArray;
 @endcode
-where _InputArray is a class that can be constructed from `Mat`, `Mat_<T>`, `Matx<T, m, n>`,
-`std::vector<T>`, `std::vector<std::vector<T> >`, `std::vector<Mat>`, `std::vector<Mat_<T> >`,
-`UMat`, `std::vector<UMat>` or `double`. It can also be constructed from a matrix expression.
+where \ref cv::_InputArray is a class that can be constructed from \ref cv::Mat, \ref cv::Mat_<T>,
+\ref cv::Matx<T, m, n>, std::vector<T>, std::vector<std::vector<T>>, std::vector<Mat>,
+std::vector<Mat_<T>>, \ref cv::UMat, std::vector<UMat> or `double`. It can also be constructed from
+a matrix expression.
 
 Since this is mostly implementation-level class, and its interface may change in future versions, we
 do not describe it in details. There are a few key things, though, that should be kept in mind:
@@ -371,6 +372,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    Mat reinterpret( int type ) const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -446,6 +448,22 @@ typedef OutputArray OutputArrayOfArrays;
 typedef const _InputOutputArray& InputOutputArray;
 typedef InputOutputArray InputOutputArrayOfArrays;
 
+/** @brief Returns an empty InputArray or OutputArray.
+
+ This function is used to provide an "empty" or "null" array when certain functions
+ take optional input or output arrays that you don't want to provide.
+
+ Many OpenCV functions accept optional arguments as `cv::InputArray` or `cv::OutputArray`.
+ When you don't want to pass any data for these optional parameters, you can use `cv::noArray()`
+ to indicate that you are omitting them.
+
+ @return An empty `cv::InputArray` or `cv::OutputArray` that can be used as a placeholder.
+
+ @note This is often used when a function has optional arrays, and you do not want to
+ provide a specific input or output array.
+
+ @see cv::InputArray, cv::OutputArray
+ */
 CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
@@ -1321,6 +1339,15 @@ public:
      * the original sizes in those dimensions are presumed.
      */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
+
+    /** @brief Reset the type of matrix.
+
+    The methods reset the data type of matrix. If the new type and the old type of the matrix
+    have the same element size, the current buffer can be reused. The method needs to consider whether the
+    current mat is a submatrix or has any references.
+    @param type New data type.
+     */
+    Mat reinterpret( int type ) const;
 
     /** @brief Transposes a matrix.
 
@@ -3539,7 +3566,7 @@ public:
 /** @brief Matrix expression representation
 @anchor MatrixExpressions
 This is a list of implemented matrix operations that can be combined in arbitrary complex
-expressions (here A, B stand for matrices ( Mat ), s for a scalar ( Scalar ), alpha for a
+expressions (here A, B stand for matrices ( cv::Mat ), s for a cv::Scalar, alpha for a
 real-valued scalar ( double )):
 -   Addition, subtraction, negation: `A+B`, `A-B`, `A+s`, `A-s`, `s+A`, `s-A`, `-A`
 -   Scaling: `A*alpha`
@@ -3554,13 +3581,13 @@ real-valued scalar ( double )):
     0.
 -   Bitwise logical operations: `A logicop B`, `A logicop s`, `s logicop A`, `~A`, where *logicop* is one of
   `&`, `|`, `^`.
--   Element-wise minimum and maximum: `min(A, B)`, `min(A, alpha)`, `max(A, B)`, `max(A, alpha)`
--   Element-wise absolute value: `abs(A)`
+-   Element-wise minimum and maximum: cv::min(A, B), cv::min(A, alpha), cv::max(A, B), cv::max(A, alpha)
+-   Element-wise absolute value: cv::abs(A)
 -   Cross-product, dot-product: `A.cross(B)`, `A.dot(B)`
--   Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as norm,
-    mean, sum, countNonZero, trace, determinant, repeat, and others.
+-   Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as cv::norm,
+    cv::mean, cv::sum, cv::countNonZero, cv::trace, cv::determinant, cv::repeat, and others.
 -   Matrix initializers ( Mat::eye(), Mat::zeros(), Mat::ones() ), matrix comma-separated
-    initializers, matrix constructors and operators that extract sub-matrices (see Mat description).
+    initializers, matrix constructors and operators that extract sub-matrices (see cv::Mat description).
 -   Mat_<destination_type>() constructors to cast the result to the proper type.
 @note Comma-separated initializers and probably some other operations may require additional
 explicit Mat() or Mat_<T>() constructor calls to resolve a possible ambiguity.

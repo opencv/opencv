@@ -119,7 +119,7 @@ private: \
 #define TEGRA_BINARYOP(type, op, src1, sz1, src2, sz2, dst, sz, w, h) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
-    parallel_for_(Range(0, h), \
+    parallel_for_(cv::Range(0, h), \
     TegraGenOp_##op##_Invoker<const type, type>(src1, sz1, src2, sz2, dst, sz, w, h), \
     (w * h) / static_cast<double>(1<<16)), \
     CV_HAL_ERROR_OK \
@@ -154,7 +154,7 @@ TegraUnaryOp_Invoker(bitwiseNot, bitwiseNot)
 #define TEGRA_UNARYOP(type, op, src1, sz1, dst, sz, w, h) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
-    parallel_for_(Range(0, h), \
+    parallel_for_(cv::Range(0, h), \
     TegraGenOp_##op##_Invoker<const type, type>(src1, sz1, dst, sz, w, h), \
     (w * h) / static_cast<double>(1<<16)), \
     CV_HAL_ERROR_OK \
@@ -254,32 +254,32 @@ TegraGenOp_Invoker(cmpLE, cmpGE, 2, 1, 0, RANGE_DATA(ST, src2_data, src2_step), 
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
         ((op) == cv::CMP_EQ) ? \
-        parallel_for_(Range(0, h), \
+        parallel_for_(cv::Range(0, h), \
         TegraGenOp_cmpEQ_Invoker<const type, CAROTENE_NS::u8>(src1, sz1, src2, sz2, dst, sz, w, h), \
         (w * h) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         ((op) == cv::CMP_NE) ? \
-        parallel_for_(Range(0, h), \
+        parallel_for_(cv::Range(0, h), \
         TegraGenOp_cmpNE_Invoker<const type, CAROTENE_NS::u8>(src1, sz1, src2, sz2, dst, sz, w, h), \
         (w * h) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         ((op) == cv::CMP_GT) ? \
-        parallel_for_(Range(0, h), \
+        parallel_for_(cv::Range(0, h), \
         TegraGenOp_cmpGT_Invoker<const type, CAROTENE_NS::u8>(src1, sz1, src2, sz2, dst, sz, w, h), \
         (w * h) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         ((op) == cv::CMP_GE) ? \
-        parallel_for_(Range(0, h), \
+        parallel_for_(cv::Range(0, h), \
         TegraGenOp_cmpGE_Invoker<const type, CAROTENE_NS::u8>(src1, sz1, src2, sz2, dst, sz, w, h), \
         (w * h) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         ((op) == cv::CMP_LT) ? \
-        parallel_for_(Range(0, h), \
+        parallel_for_(cv::Range(0, h), \
         TegraGenOp_cmpLT_Invoker<const type, CAROTENE_NS::u8>(src1, sz1, src2, sz2, dst, sz, w, h), \
         (w * h) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         ((op) == cv::CMP_LE) ? \
-        parallel_for_(Range(0, h), \
+        parallel_for_(cv::Range(0, h), \
         TegraGenOp_cmpLE_Invoker<const type, CAROTENE_NS::u8>(src1, sz1, src2, sz2, dst, sz, w, h), \
         (w * h) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
@@ -310,7 +310,7 @@ TegraGenOp_Invoker(cmpLE, cmpGE, 2, 1, 0, RANGE_DATA(ST, src2_data, src2_step), 
 #define TEGRA_BINARYOPSCALE(type, op, src1, sz1, src2, sz2, dst, sz, w, h, scales) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
-    parallel_for_(Range(0, h), \
+    parallel_for_(cv::Range(0, h), \
     TegraGenOp_##op##_Invoker<const type, type>(src1, sz1, src2, sz2, dst, sz, w, h, scales), \
     (w * h) / static_cast<double>(1<<16)), \
     CV_HAL_ERROR_OK \
@@ -332,7 +332,7 @@ TegraBinaryOpScale_Invoker(divf, div, 1, scale)
 #define TEGRA_UNARYOPSCALE(type, op, src1, sz1, dst, sz, w, h, scales) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
-    parallel_for_(Range(0, h), \
+    parallel_for_(cv::Range(0, h), \
     TegraGenOp_##op##_Invoker<const type, type>(src1, sz1, dst, sz, w, h, scales), \
     (w * h) / static_cast<double>(1<<16)), \
     CV_HAL_ERROR_OK \
@@ -928,17 +928,17 @@ TegraRowOp_Invoker(split4, split4, 1, 4, 0, RANGE_DATA(ST, src1_data, 4*sizeof(S
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
         cn == 2 ? \
-        parallel_for_(Range(0, len), \
+        parallel_for_(cv::Range(0, len), \
         TegraRowOp_split2_Invoker<const type, type>(src, dst[0], dst[1]), \
         (len) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         cn == 3 ? \
-        parallel_for_(Range(0, len), \
+        parallel_for_(cv::Range(0, len), \
         TegraRowOp_split3_Invoker<const type, type>(src, dst[0], dst[1], dst[2]), \
         (len) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         cn == 4 ? \
-        parallel_for_(Range(0, len), \
+        parallel_for_(cv::Range(0, len), \
         TegraRowOp_split4_Invoker<const type, type>(src, dst[0], dst[1], dst[2], dst[3]), \
         (len) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
@@ -990,17 +990,17 @@ TegraRowOp_Invoker(combine4, combine4, 4, 1, 0, RANGE_DATA(ST, src1_data, sizeof
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
         cn == 2 ? \
-        parallel_for_(Range(0, len), \
+        parallel_for_(cv::Range(0, len), \
         TegraRowOp_combine2_Invoker<const type, type>(src[0], src[1], dst), \
         (len) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         cn == 3 ? \
-        parallel_for_(Range(0, len), \
+        parallel_for_(cv::Range(0, len), \
         TegraRowOp_combine3_Invoker<const type, type>(src[0], src[1], src[2], dst), \
         (len) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
         cn == 4 ? \
-        parallel_for_(Range(0, len), \
+        parallel_for_(cv::Range(0, len), \
         TegraRowOp_combine4_Invoker<const type, type>(src[0], src[1], src[2], src[3], dst), \
         (len) / static_cast<double>(1<<16)), \
         CV_HAL_ERROR_OK : \
@@ -1033,7 +1033,7 @@ TegraRowOp_Invoker(phase, phase, 2, 1, 1, RANGE_DATA(ST, src1_data, sizeof(CAROT
 #define TEGRA_FASTATAN(y, x, dst, len, angleInDegrees) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
-    parallel_for_(Range(0, len), \
+    parallel_for_(cv::Range(0, len), \
     TegraRowOp_phase_Invoker<const CAROTENE_NS::f32, CAROTENE_NS::f32>(x, y, dst, angleInDegrees ? 1.0f : M_PI/180), \
     (len) / static_cast<double>(1<<16)), \
     CV_HAL_ERROR_OK \
@@ -1049,7 +1049,7 @@ TegraRowOp_Invoker(magnitude, magnitude, 2, 1, 0, RANGE_DATA(ST, src1_data, size
 #define TEGRA_MAGNITUDE(x, y, dst, len) \
 ( \
     CAROTENE_NS::isSupportedConfiguration() ? \
-    parallel_for_(Range(0, len), \
+    parallel_for_(cv::Range(0, len), \
     TegraRowOp_magnitude_Invoker<const CAROTENE_NS::f32, CAROTENE_NS::f32>(x, y, dst), \
     (len) / static_cast<double>(1<<16)), \
     CV_HAL_ERROR_OK \
@@ -1563,17 +1563,17 @@ TegraCvtColor_Invoker(rgbx2bgrx, rgbx2bgrx, src_data + static_cast<size_t>(range
         scn == 3 ? \
             dcn == 3 ? \
                 swapBlue ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgb2bgr_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)), \
                     CV_HAL_ERROR_OK : \
                     CV_HAL_ERROR_NOT_IMPLEMENTED : \
             dcn == 4 ? \
                 (swapBlue ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgb2bgrx_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgb2rgbx_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) ), \
                 CV_HAL_ERROR_OK : \
@@ -1581,16 +1581,16 @@ TegraCvtColor_Invoker(rgbx2bgrx, rgbx2bgrx, src_data + static_cast<size_t>(range
         scn == 4 ? \
             dcn == 3 ? \
                 (swapBlue ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgbx2bgr_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgbx2rgb_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) ), \
                 CV_HAL_ERROR_OK : \
             dcn == 4 ? \
                 swapBlue ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgbx2bgrx_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)), \
                     CV_HAL_ERROR_OK : \
@@ -1613,19 +1613,19 @@ TegraCvtColor_Invoker(rgbx2rgb565, rgbx2rgb565, src_data + static_cast<size_t>(r
     greenBits == 6 && CAROTENE_NS::isSupportedConfiguration() ? \
         scn == 3 ? \
             (swapBlue ? \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgb2bgr565_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) : \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgb2rgb565_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
         scn == 4 ? \
             (swapBlue ? \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgbx2bgr565_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) : \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgbx2rgb565_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
@@ -1646,19 +1646,19 @@ TegraCvtColor_Invoker(bgrx2gray, bgrx2gray, CAROTENE_NS::COLOR_SPACE_BT601, src_
     depth == CV_8U && CAROTENE_NS::isSupportedConfiguration() ? \
         scn == 3 ? \
             (swapBlue ? \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgb2gray_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) : \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_bgr2gray_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
         scn == 4 ? \
             (swapBlue ? \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgbx2gray_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) : \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_bgrx2gray_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
@@ -1674,12 +1674,12 @@ TegraCvtColor_Invoker(gray2rgbx, gray2rgbx, src_data + static_cast<size_t>(range
 ( \
     depth == CV_8U && CAROTENE_NS::isSupportedConfiguration() ? \
         dcn == 3 ? \
-            parallel_for_(Range(0, height), \
+            parallel_for_(cv::Range(0, height), \
             TegraCvtColor_gray2rgb_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
             (width * height) / static_cast<double>(1<<16)), \
             CV_HAL_ERROR_OK : \
         dcn == 4 ? \
-            parallel_for_(Range(0, height), \
+            parallel_for_(cv::Range(0, height), \
             TegraCvtColor_gray2rgbx_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
             (width * height) / static_cast<double>(1<<16)), \
             CV_HAL_ERROR_OK : \
@@ -1700,19 +1700,19 @@ TegraCvtColor_Invoker(bgrx2ycrcb, bgrx2ycrcb, src_data + static_cast<size_t>(ran
     isCbCr && depth == CV_8U && CAROTENE_NS::isSupportedConfiguration() ? \
         scn == 3 ? \
             (swapBlue ? \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgb2ycrcb_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) : \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_bgr2ycrcb_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
         scn == 4 ? \
             (swapBlue ? \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_rgbx2ycrcb_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) : \
-                parallel_for_(Range(0, height), \
+                parallel_for_(cv::Range(0, height), \
                 TegraCvtColor_bgrx2ycrcb_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                 (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
@@ -1742,34 +1742,34 @@ TegraCvtColor_Invoker(bgrx2hsvf, bgrx2hsv, src_data + static_cast<size_t>(range.
         scn == 3 ? \
             (swapBlue ? \
                 isFullRange ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgb2hsvf_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgb2hsv_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
                 isFullRange ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_bgr2hsvf_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_bgr2hsv_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
         scn == 4 ? \
             (swapBlue ? \
                 isFullRange ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgbx2hsvf_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_rgbx2hsv_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
                 isFullRange ? \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_bgrx2hsvf_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) : \
-                    parallel_for_(Range(0, height), \
+                    parallel_for_(cv::Range(0, height), \
                     TegraCvtColor_bgrx2hsv_Invoker(src_data, src_step, dst_data, dst_step, width, height), \
                     (width * height) / static_cast<double>(1<<16)) ), \
             CV_HAL_ERROR_OK : \
@@ -1931,5 +1931,51 @@ inline int TEGRA_GaussianBlurBinomial(const uchar* src_data, size_t src_step, uc
 #endif // __ARM_ARCH=7
 
 #endif // OPENCV_IMGPROC_HAL_INTERFACE_H
+
+// The optimized branch was developed for old armv7 processors
+#if defined(__ARM_ARCH) && (__ARM_ARCH == 7)
+inline int TEGRA_LKOpticalFlowLevel(const uchar *prev_data, size_t prev_data_step,
+                       const short* prev_deriv_data, size_t prev_deriv_step,
+                       const uchar* next_data, size_t next_step,
+                       int width, int height, int cn,
+                       const float *prev_points, float *next_points, size_t point_count,
+                       uchar *status, float *err,
+                       const int win_width, const int win_height,
+                       int termination_count, double termination_epsilon,
+                       bool get_min_eigen_vals,
+                       float min_eigen_vals_threshold)
+{
+    if (!CAROTENE_NS::isSupportedConfiguration())
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    CAROTENE_NS::pyrLKOptFlowLevel(CAROTENE_NS::Size2D(width, height), cn,
+        prev_data, prev_data_step, prev_deriv_data, prev_deriv_step,
+        next_data, next_step,
+        point_count, prev_points, next_points,
+        status, err, CAROTENE_NS::Size2D(win_width, win_height),
+        termination_count, termination_epsilon,
+        get_min_eigen_vals, min_eigen_vals_threshold);
+    return CV_HAL_ERROR_OK;
+}
+
+#undef cv_hal_LKOpticalFlowLevel
+#define cv_hal_LKOpticalFlowLevel TEGRA_LKOpticalFlowLevel
+#endif // __ARM_ARCH=7
+
+#if 0 // OpenCV provides fater parallel implementation
+inline int TEGRA_ScharrDeriv(const uchar* src_data, size_t src_step,
+                      short* dst_data, size_t dst_step,
+                      int width, int height, int cn)
+{
+    if (!CAROTENE_NS::isSupportedConfiguration())
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+
+    CAROTENE_NS::ScharrDeriv(CAROTENE_NS::Size2D(width, height), cn, src_data, src_step, dst_data, dst_step);
+    return CV_HAL_ERROR_OK;
+}
+
+#undef cv_hal_ScharrDeriv
+#define cv_hal_ScharrDeriv TEGRA_ScharrDeriv
+#endif
 
 #endif

@@ -48,7 +48,6 @@
 #include "ap3p.h"
 #include "ippe.hpp"
 #include "sqpnp.hpp"
-#include "calib3d_c_api.h"
 
 #include "usac.hpp"
 
@@ -56,7 +55,7 @@
 
 namespace cv
 {
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
 {
     CV_CheckType(_objectPoints.type(), _objectPoints.type() == CV_32FC3 || _objectPoints.type() == CV_64FC3,
@@ -892,12 +891,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             tvec.create(3, 1, CV_64FC1);
         }
 
-        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
-        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
-        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
-        cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
-                                     &c_rvec, &c_tvec, useExtrinsicGuess );
+        findExtrinsicCameraParams2(opoints, ipoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess);
 
         vec_rvecs.push_back(rvec);
         vec_tvecs.push_back(tvec);
@@ -938,7 +932,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     {
         CV_Assert(npoints == 4);
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
         double Xs[4][3];
         if (opoints.depth() == CV_32F)
         {

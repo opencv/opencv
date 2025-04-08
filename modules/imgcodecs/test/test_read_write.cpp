@@ -157,6 +157,9 @@ const string exts[] = {
 #ifdef HAVE_JPEG
     "jpg",
 #endif
+#ifdef HAVE_JPEGXL
+    "jxl",
+#endif
 #if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
     || defined(HAVE_OPENJPEG)
     "jp2",
@@ -238,6 +241,8 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 32;
+    if (ext == "jxl")
+        psnrThreshold = 30;
 #if defined(HAVE_JASPER)
     if (ext == "jp2")
         psnrThreshold = 95;
@@ -267,6 +272,8 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
 
     double psnrThreshold = 100;
     if (ext == "jpg")
+        psnrThreshold = 40;
+    if (ext == "jxl")
         psnrThreshold = 40;
 #if defined(HAVE_JASPER)
     if (ext == "jp2")
@@ -520,8 +527,78 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
          EXPECT_TRUE(cv::norm(img1, img[i], NORM_INF) == 0);
     }
 }
+
+// See https://github.com/opencv/opencv/issues/26207
+TEST(Imgcodecs, imencodemulti_regression_26207)
+{
+    vector<Mat> imgs;
+    const cv::Mat img(100, 100, CV_8UC1, cv::Scalar::all(0));
+    imgs.push_back(img);
+    std::vector<uchar> buf;
+    bool ret = false;
+
+    // Encode single image
+    EXPECT_NO_THROW(ret = imencode(".tiff", img, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+
+    // Encode multiple images
+    imgs.push_back(img.clone());
+    EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+
+    // Count stored images from buffer.
+    // imcount() doesn't support buffer, so encoded buffer outputs to file temporary.
+    const size_t len = buf.size();
+    const string filename = cv::tempfile(".tiff");
+    FILE *f = fopen(filename.c_str(), "wb");
+    EXPECT_NE(f, nullptr);
+    EXPECT_EQ(len, fwrite(&buf[0], 1, len, f));
+    fclose(f);
+
+    EXPECT_EQ(2, (int)imcount(filename));
+    EXPECT_EQ(0, remove(filename.c_str()));
+}
 #endif
 
+// See https://github.com/opencv/opencv/pull/26211
+// ( related with https://github.com/opencv/opencv/issues/26207 )
+TEST(Imgcodecs, imencode_regression_26207_extra)
+{
+    // CV_32F is not supported depth for BMP Encoder.
+    // Encoded buffer contains CV_8U image which is fallbacked.
+    const cv::Mat src(100, 100, CV_32FC1, cv::Scalar::all(0));
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".bmp", src, buf));
+    EXPECT_TRUE(ret);
+
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_GRAYSCALE));
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(CV_8UC1, dst.type());
+}
+TEST(Imgcodecs, imwrite_regression_26207_extra)
+{
+    // CV_32F is not supported depth for BMP Encoder.
+    // Encoded buffer contains CV_8U image which is fallbacked.
+    const cv::Mat src(100, 100, CV_32FC1, cv::Scalar::all(0));
+    const string filename = cv::tempfile(".bmp");
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imwrite(filename, src));
+    EXPECT_TRUE(ret);
+
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = imread(filename, IMREAD_GRAYSCALE));
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(CV_8UC1, dst.type());
+    EXPECT_EQ(0, remove(filename.c_str()));
+}
 
 TEST(Imgcodecs_Params, imwrite_regression_22752)
 {

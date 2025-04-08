@@ -161,14 +161,14 @@ TEST_P(Imgcodecs_Avif_Image_EncodeDecodeSuite, imencode_imdecode) {
 
   // Encode.
   std::vector<unsigned char> buf;
-  if (!IsBitDepthValid()) {
-    EXPECT_THROW(cv::imencode(".avif", img_original, buf, encoding_params_),
-                 cv::Exception);
-    return;
-  }
   bool result = true;
   EXPECT_NO_THROW(
       result = cv::imencode(".avif", img_original, buf, encoding_params_););
+
+  if (!IsBitDepthValid()) {
+    EXPECT_FALSE(result);
+    return;
+  }
   EXPECT_TRUE(result);
 
   // Read back.
@@ -184,51 +184,6 @@ INSTANTIATE_TEST_CASE_P(
                        ::testing::ValuesIn({0, 50, 100}),
                        ::testing::ValuesIn({IMREAD_UNCHANGED, IMREAD_GRAYSCALE,
                                             IMREAD_COLOR, IMREAD_COLOR_RGB})));
-
-////////////////////////////////////////////////////////////////////////////////
-
-typedef testing::TestWithParam<string> Imgcodecs_AVIF_Exif;
-
-TEST_P(Imgcodecs_AVIF_Exif, exif_orientation) {
-  const string root = cvtest::TS::ptr()->get_data_path();
-  const string filename = root + GetParam();
-  const int colorThresholdHigh = 250;
-  const int colorThresholdLow = 5;
-
-  Mat m_img = imread(filename);
-  ASSERT_FALSE(m_img.empty());
-  Vec3b vec;
-
-  // Checking the first quadrant (with supposed red)
-  vec = m_img.at<Vec3b>(2, 2);  // some point inside the square
-  EXPECT_LE(vec.val[0], colorThresholdLow);
-  EXPECT_LE(vec.val[1], colorThresholdLow);
-  EXPECT_GE(vec.val[2], colorThresholdHigh);
-
-  // Checking the second quadrant (with supposed green)
-  vec = m_img.at<Vec3b>(2, 7);  // some point inside the square
-  EXPECT_LE(vec.val[0], colorThresholdLow);
-  EXPECT_GE(vec.val[1], colorThresholdHigh);
-  EXPECT_LE(vec.val[2], colorThresholdLow);
-
-  // Checking the third quadrant (with supposed blue)
-  vec = m_img.at<Vec3b>(7, 2);  // some point inside the square
-  EXPECT_GE(vec.val[0], colorThresholdHigh);
-  EXPECT_LE(vec.val[1], colorThresholdLow);
-  EXPECT_LE(vec.val[2], colorThresholdLow);
-}
-
-const string exif_files[] = {"readwrite/testExifOrientation_1.avif",
-                             "readwrite/testExifOrientation_2.avif",
-                             "readwrite/testExifOrientation_3.avif",
-                             "readwrite/testExifOrientation_4.avif",
-                             "readwrite/testExifOrientation_5.avif",
-                             "readwrite/testExifOrientation_6.avif",
-                             "readwrite/testExifOrientation_7.avif",
-                             "readwrite/testExifOrientation_8.avif"};
-
-INSTANTIATE_TEST_CASE_P(ExifFiles, Imgcodecs_AVIF_Exif,
-                        testing::ValuesIn(exif_files));
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -336,11 +291,21 @@ TEST_P(Imgcodecs_Avif_Animation_WriteDecodeSuite, encode_decode) {
   file.seekg(0, std::ios::beg);
   std::vector<unsigned char> buf(size);
   EXPECT_TRUE(file.read(reinterpret_cast<char*>(buf.data()), size));
-  EXPECT_EQ(0, remove(output.c_str()));
+  file.close();
   std::vector<cv::Mat> anim;
   ASSERT_TRUE(cv::imdecodemulti(buf, imread_mode_, anim));
 
   ValidateRead(anim_original, anim);
+
+  if (imread_mode_ == IMREAD_UNCHANGED) {
+    ImageCollection collection(output, IMREAD_UNCHANGED);
+    anim.clear();
+    for (auto&& i : collection)
+      anim.push_back(i);
+    ValidateRead(anim_original, anim);
+  }
+
+  EXPECT_EQ(0, remove(output.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(

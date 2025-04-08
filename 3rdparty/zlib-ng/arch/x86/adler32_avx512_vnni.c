@@ -9,11 +9,10 @@
 
 #ifdef X86_AVX512VNNI
 
-#include "../../zbuild.h"
-#include "../../adler32_p.h"
-#include "../../cpu_features.h"
+#include "zbuild.h"
+#include "adler32_p.h"
+#include "arch_functions.h"
 #include <immintrin.h>
-#include "../../adler32_fold.h"
 #include "x86_intrins.h"
 #include "adler32_avx512_p.h"
 #include "adler32_avx2_p.h"
@@ -28,20 +27,10 @@ Z_INTERNAL uint32_t adler32_avx512_vnni(uint32_t adler, const uint8_t *src, size
 
 rem_peel:
     if (len < 32)
-#if defined(X86_SSSE3)
         return adler32_ssse3(adler, src, len);
-#else
-        return adler32_len_16(adler0, src, len, adler1);
-#endif
 
     if (len < 64)
-#ifdef X86_AVX2
         return adler32_avx2(adler, src, len);
-#elif defined(X86_SSE3)
-        return adler32_ssse3(adler, src, len);
-#else
-        return adler32_len_16(adler0, src, len, adler1);
-#endif
 
     const __m512i dot2v = _mm512_set_epi8(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                                           20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37,
@@ -135,11 +124,7 @@ rem_peel_copy:
         __m256i copy_vec = _mm256_maskz_loadu_epi8(storemask, src);
         _mm256_mask_storeu_epi8(dst, storemask, copy_vec);
 
-#if defined(X86_SSSE3)
         return adler32_ssse3(adler, src, len);
-#else
-        return adler32_len_16(adler0, src, len, adler1);
-#endif
     }
 
     const __m256i dot2v = _mm256_set_epi8(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,

@@ -4,6 +4,7 @@ target_include_directories(openvx_hal PUBLIC
   ${OPENCV_3P_OPENVX_DIR}/include
   ${CMAKE_SOURCE_DIR}/modules/core/include
   ${CMAKE_SOURCE_DIR}/modules/imgproc/include
+  ${CMAKE_SOURCE_DIR}/modules/features2d/include
   ${OPENVX_INCLUDE_DIR})
 target_link_libraries(openvx_hal PUBLIC ${OPENVX_LIBRARIES})
 set_target_properties(openvx_hal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})

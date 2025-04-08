@@ -1595,7 +1595,10 @@ transform_16u( const ushort* src, ushort* dst, const float* m, int len, int scn,
 static void
 transform_32f( const float* src, float* dst, const float* m, int len, int scn, int dcn )
 {
-#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64)
+// Disabled for RISC-V Vector (scalable), because of:
+// 1. v_matmuladd for RVV is 128-bit only but not scalable, this will fail the test `Core_Transform.accuracy`.
+// 2. Both gcc and clang can autovectorize this, with better performance than using Universal intrinsic.
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64) && !(CV_TRY_RVV && CV_RVV)
     int x = 0;
     if( scn == 3 && dcn == 3 )
     {
@@ -2533,8 +2536,7 @@ double dotProd_16s(const short* src1, const short* src2, int len)
 
 double dotProd_32s(const int* src1, const int* src2, int len)
 {
-#if CV_SIMD_64F // TODO: enable for CV_SIMD_SCALABLE_64F
-// Test failed on RVV(QEMU): Too big difference (=1.20209e-08 > 1.11022e-12)
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
     double r = .0;
     int i = 0;
     const int step  = VTraits<v_int32>::vlanes();
@@ -2542,7 +2544,7 @@ double dotProd_32s(const int* src1, const int* src2, int len)
 #if CV_SIMD_WIDTH == 16
     const int wstep = step * 2;
     v_float64 v_sum1 = vx_setzero_f64();
-    for (; i < len - wstep; i += wstep, src1 += wstep, src2 += wstep)
+    for (; i <= len - wstep; i += wstep, src1 += wstep, src2 += wstep)
     {
         v_int32 v_src10 = vx_load(src1);
         v_int32 v_src20 = vx_load(src2);
@@ -2553,7 +2555,7 @@ double dotProd_32s(const int* src1, const int* src2, int len)
     }
     v_sum0 = v_add(v_sum0, v_sum1);
 #endif
-    for (; i < len - step; i += step, src1 += step, src2 += step)
+    for (; i <= len - step; i += step, src1 += step, src2 += step)
     {
         v_int32 v_src1 = vx_load(src1);
         v_int32 v_src2 = vx_load(src2);
