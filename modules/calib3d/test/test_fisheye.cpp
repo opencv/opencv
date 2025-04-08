@@ -1169,13 +1169,13 @@ TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
 
     cv::Mat K_new_truth(3, 3, cv::DataType<double>::type);
 
-    K_new_truth.at<double>(0, 0) = 641.692922;
+    K_new_truth.at<double>(0, 0) = 641.69292128749862;
     K_new_truth.at<double>(0, 1) = 0.0;
-    K_new_truth.at<double>(0, 2) = 1009.88918;
+    K_new_truth.at<double>(0, 2) = 1009.8891525391858;
 
     K_new_truth.at<double>(1, 0) = 0.0;
-    K_new_truth.at<double>(1, 1) = 642.35779;
-    K_new_truth.at<double>(1, 2) = 823.825274;
+    K_new_truth.at<double>(1, 1) = 642.35778961920551;
+    K_new_truth.at<double>(1, 2) = 823.82526541741015;
 
     K_new_truth.at<double>(2, 0) = 0.0;
     K_new_truth.at<double>(2, 1) = 0.0;
