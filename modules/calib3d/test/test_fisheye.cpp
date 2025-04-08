@@ -1152,16 +1152,16 @@ TEST_F(fisheyeTest, stereoCalibrateWithPerViewTransformations)
 
 TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
 {
-    cv::Size size(1920, 1080);
+    cv::Size size(1920, 960);
 
     cv::Mat K_fullhd(3, 3, cv::DataType<double>::type);
-    K_fullhd.at<double>(0, 0) = 600.44477382;
+    K_fullhd.at<double>(0, 0) = 675.6;
     K_fullhd.at<double>(0, 1) = 0.0;
-    K_fullhd.at<double>(0, 2) = 992.06425788;
+    K_fullhd.at<double>(0, 2) = 966.63333333;
 
     K_fullhd.at<double>(1, 0) = 0.0;
-    K_fullhd.at<double>(1, 1) = 578.99298055;
-    K_fullhd.at<double>(1, 2) = 549.26826242;
+    K_fullhd.at<double>(1, 1) = 676.3;
+    K_fullhd.at<double>(1, 2) = 641.43333333;
 
     K_fullhd.at<double>(2, 0) = 0.0;
     K_fullhd.at<double>(2, 1) = 0.0;
@@ -1169,23 +1169,23 @@ TEST_F(fisheyeTest, estimateNewCameraMatrixForUndistortRectify)
 
     cv::Mat K_new_truth(3, 3, cv::DataType<double>::type);
 
-    K_new_truth.at<double>(0, 0) = 387.5118215642316;
+    K_new_truth.at<double>(0, 0) = 641.692922;
     K_new_truth.at<double>(0, 1) = 0.0;
-    K_new_truth.at<double>(0, 2) = 1033.936556777084;
+    K_new_truth.at<double>(0, 2) = 1009.88918;
 
     K_new_truth.at<double>(1, 0) = 0.0;
-    K_new_truth.at<double>(1, 1) = 373.6673784974842;
-    K_new_truth.at<double>(1, 2) = 538.794152656429;
+    K_new_truth.at<double>(1, 1) = 642.35779;
+    K_new_truth.at<double>(1, 2) = 823.825274;
 
     K_new_truth.at<double>(2, 0) = 0.0;
     K_new_truth.at<double>(2, 1) = 0.0;
     K_new_truth.at<double>(2, 2) = 1.0;
 
     cv::Mat D_fullhd(4, 1, cv::DataType<double>::type);
-    D_fullhd.at<double>(0, 0) = -0.05090103223466704;
-    D_fullhd.at<double>(1, 0) = 0.030944413642173308;
-    D_fullhd.at<double>(2, 0) = -0.021509225493198905;
-    D_fullhd.at<double>(3, 0) = 0.0043378096628297145;
+    D_fullhd.at<double>(0, 0) = 0.056743;
+    D_fullhd.at<double>(1, 0) = -0.0048614;
+    D_fullhd.at<double>(2, 0) = -0.00011769;
+    D_fullhd.at<double>(3, 0) = -0.00029011;
     cv::Mat E = cv::Mat::eye(3, 3, cv::DataType<double>::type);
 
     cv::Mat K_new(3, 3, cv::DataType<double>::type);
