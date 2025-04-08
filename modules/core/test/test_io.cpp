@@ -611,10 +611,8 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {   /* init */
 
             /* a normal mat */
-            _2d_out = cv::Mat(10, 20, CV_8UC3, cvScalar(1U, 2U, 127U));
-            for (int i = 0; i < _2d_out.rows; ++i)
-                for (int j = 0; j < _2d_out.cols; ++j)
-                    _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+            _2d_out = Mat(10, 20, CV_8UC3);
+            cv::randu(_2d_out, 0U, 255U);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
@@ -731,29 +729,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        ASSERT_EQ(_2d_in.rows   , _2d_out.rows);
-        ASSERT_EQ(_2d_in.cols   , _2d_out.cols);
-        ASSERT_EQ(_2d_in.dims   , _2d_out.dims);
-        ASSERT_EQ(_2d_in.depth(), _2d_out.depth());
-
-        errors = 0;
-        for(int i = 0; i < _2d_out.rows; ++i)
-        {
-            for (int j = 0; j < _2d_out.cols; ++j)
-            {
-                EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
-                if (::testing::Test::HasNonfatalFailure())
-                {
-                    printf("i = %d, j = %d\n", i, j);
-                    errors++;
-                }
-                if (errors >= 3)
-                {
-                    i = _2d_out.rows;
-                    break;
-                }
-            }
-        }
+        EXPECT_MAT_NEAR(_2d_in, _2d_out, 0);
 
         ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
         ASSERT_EQ(_nd_in.cols   , _nd_out.cols);
@@ -2002,5 +1978,110 @@ TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
 
     ASSERT_EQ(0, std::remove(fileName.c_str()));
 }
+
+// see https://github.com/opencv/opencv/issues/26829
+TEST(Core_InputOutput, FileStorage_int64_26829)
+{
+    String content =
+        "%YAML:1.0\n"
+        "String1: string1\n"
+        "IntMin: -2147483648\n"
+        "String2: string2\n"
+        "Int64Min: -9223372036854775808\n"
+        "String3: string3\n"
+        "IntMax: 2147483647\n"
+        "String4: string4\n"
+        "Int64Max: 9223372036854775807\n"
+        "String5: string5\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    {
+        std::string str;
+
+        fs["String1"] >> str;
+        EXPECT_EQ(str, "string1");
+
+        fs["String2"] >> str;
+        EXPECT_EQ(str, "string2");
+
+        fs["String3"] >> str;
+        EXPECT_EQ(str, "string3");
+
+        fs["String4"] >> str;
+        EXPECT_EQ(str, "string4");
+
+        fs["String5"] >> str;
+        EXPECT_EQ(str, "string5");
+    }
+
+    {
+        int value;
+
+        fs["IntMin"] >> value;
+        EXPECT_EQ(value, INT_MIN);
+
+        fs["IntMax"] >> value;
+        EXPECT_EQ(value, INT_MAX);
+    }
+
+
+    {
+        int64_t value;
+
+        fs["Int64Min"] >> value;
+        EXPECT_EQ(value, INT64_MIN);
+
+        fs["Int64Max"] >> value;
+        EXPECT_EQ(value, INT64_MAX);
+    }
+}
+
+template <typename T>
+T fsWriteRead(const T& expectedValue, const char* ext)
+{
+    std::string fname = cv::tempfile(ext);
+    FileStorage fs_w(fname, FileStorage::WRITE);
+    fs_w << "value" << expectedValue;
+    fs_w.release();
+
+    FileStorage fs_r(fname, FileStorage::READ);
+
+    T value;
+    fs_r["value"] >> value;
+    return value;
+}
+
+void testExactMat(const Mat& src, const char* ext)
+{
+    bool srcIsEmpty = src.empty();
+    Mat dst = fsWriteRead(src, ext);
+    EXPECT_EQ(dst.empty(), srcIsEmpty);
+    EXPECT_EQ(src.dims, dst.dims);
+    EXPECT_EQ(src.size, dst.size);
+    if (!srcIsEmpty)
+    {
+        EXPECT_EQ(0.0, cv::norm(src, dst, NORM_INF));
+    }
+}
+
+typedef testing::TestWithParam<const char*> FileStorage_exact_type;
+TEST_P(FileStorage_exact_type, empty_mat)
+{
+    testExactMat(Mat(), GetParam());
+}
+
+TEST_P(FileStorage_exact_type, long_int)
+{
+    for (const int64_t expected : std::vector<int64_t>{INT64_MAX, INT64_MIN, -1, 1, 0})
+    {
+        int64_t value = fsWriteRead(expected, GetParam());
+        EXPECT_EQ(value, expected);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core_InputOutput,
+    FileStorage_exact_type, Values(".yml", ".xml", ".json")
+);
 
 }} // namespace

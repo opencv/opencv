@@ -3346,52 +3346,136 @@ public:
 };
 
 
-/** @brief Class for computing stereo correspondence using the block matching algorithm, introduced and
-contributed to OpenCV by K. Konolige.
+/**
+ * @brief Class for computing stereo correspondence using the block matching algorithm, introduced and contributed to OpenCV by K. Konolige.
+ * @details This class implements a block matching algorithm for stereo correspondence, which is used to compute disparity maps from stereo image pairs. It provides methods to fine-tune parameters such as pre-filtering, texture thresholds, uniqueness ratios, and regions of interest (ROIs) to optimize performance and accuracy.
  */
 class CV_EXPORTS_W StereoBM : public StereoMatcher
 {
 public:
-    enum { PREFILTER_NORMALIZED_RESPONSE = 0,
-           PREFILTER_XSOBEL              = 1
-         };
+    /**
+     * @brief Pre-filter types for the stereo matching algorithm.
+     * @details These constants define the type of pre-filtering applied to the images before computing the disparity map.
+     * - PREFILTER_NORMALIZED_RESPONSE: Uses normalized response for pre-filtering.
+     * - PREFILTER_XSOBEL: Uses the X-Sobel operator for pre-filtering.
+     */
+    enum {
+        PREFILTER_NORMALIZED_RESPONSE = 0,  ///< Normalized response pre-filter
+        PREFILTER_XSOBEL              = 1   ///< X-Sobel pre-filter
+    };
 
+    /**
+     * @brief Gets the type of pre-filtering currently used in the algorithm.
+     * @return The current pre-filter type: 0 for PREFILTER_NORMALIZED_RESPONSE or 1 for PREFILTER_XSOBEL.
+     */
     CV_WRAP virtual int getPreFilterType() const = 0;
+
+    /**
+     * @brief Sets the type of pre-filtering used in the algorithm.
+     * @param preFilterType The type of pre-filter to use. Possible values are:
+     * - PREFILTER_NORMALIZED_RESPONSE (0): Uses normalized response for pre-filtering.
+     * - PREFILTER_XSOBEL (1): Uses the X-Sobel operator for pre-filtering.
+     * @details The pre-filter type affects how the images are prepared before computing the disparity map. Different pre-filtering methods can enhance specific image features or reduce noise, influencing the quality of the disparity map.
+     */
     CV_WRAP virtual void setPreFilterType(int preFilterType) = 0;
 
+    /**
+     * @brief Gets the current size of the pre-filter kernel.
+     * @return The current pre-filter size.
+     */
     CV_WRAP virtual int getPreFilterSize() const = 0;
+
+    /**
+     * @brief Sets the size of the pre-filter kernel.
+     * @param preFilterSize The size of the pre-filter kernel. Must be an odd integer, typically between 5 and 255.
+     * @details The pre-filter size determines the spatial extent of the pre-filtering operation, which prepares the images for disparity computation by normalizing brightness and enhancing texture. Larger sizes reduce noise but may blur details, while smaller sizes preserve details but are more susceptible to noise.
+     */
     CV_WRAP virtual void setPreFilterSize(int preFilterSize) = 0;
 
+    /**
+     * @brief Gets the current truncation value for prefiltered pixels.
+     * @return The current pre-filter cap value.
+     */
     CV_WRAP virtual int getPreFilterCap() const = 0;
+
+    /**
+     * @brief Sets the truncation value for prefiltered pixels.
+     * @param preFilterCap The truncation value. Typically in the range [1, 63].
+     * @details This value caps the output of the pre-filter to [-preFilterCap, preFilterCap], helping to reduce the impact of noise and outliers in the pre-filtered image.
+     */
     CV_WRAP virtual void setPreFilterCap(int preFilterCap) = 0;
 
+    /**
+     * @brief Gets the current texture threshold value.
+     * @return The current texture threshold.
+     */
     CV_WRAP virtual int getTextureThreshold() const = 0;
+
+    /**
+     * @brief Sets the threshold for filtering low-texture regions.
+     * @param textureThreshold The threshold value. Must be non-negative.
+     * @details This parameter filters out regions with low texture, where establishing correspondences is difficult, thus reducing noise in the disparity map. Higher values filter more aggressively but may discard valid information.
+     */
     CV_WRAP virtual void setTextureThreshold(int textureThreshold) = 0;
 
+    /**
+     * @brief Gets the current uniqueness ratio value.
+     * @return The current uniqueness ratio.
+     */
     CV_WRAP virtual int getUniquenessRatio() const = 0;
+
+    /**
+     * @brief Sets the uniqueness ratio for filtering ambiguous matches.
+     * @param uniquenessRatio The uniqueness ratio value. Typically in the range [5, 15], but can be from 0 to 100.
+     * @details This parameter ensures that the best match is sufficiently better than the next best match, reducing false positives. Higher values are stricter but may filter out valid matches in difficult regions.
+     */
     CV_WRAP virtual void setUniquenessRatio(int uniquenessRatio) = 0;
 
+    /**
+     * @brief Gets the current size of the smaller block used for texture check.
+     * @return The current smaller block size.
+     */
     CV_WRAP virtual int getSmallerBlockSize() const = 0;
+
+    /**
+     * @brief Sets the size of the smaller block used for texture check.
+     * @param blockSize The size of the smaller block. Must be an odd integer between 5 and 255.
+     * @details This parameter determines the size of the block used to compute texture variance. Smaller blocks capture finer details but are more sensitive to noise, while larger blocks are more robust but may miss fine details.
+     */
     CV_WRAP virtual void setSmallerBlockSize(int blockSize) = 0;
 
+    /**
+     * @brief Gets the current Region of Interest (ROI) for the left image.
+     * @return The current ROI for the left image.
+     */
     CV_WRAP virtual Rect getROI1() const = 0;
+
+    /**
+     * @brief Sets the Region of Interest (ROI) for the left image.
+     * @param roi1 The ROI rectangle for the left image.
+     * @details By setting the ROI, the stereo matching computation is limited to the specified region, improving performance and potentially accuracy by focusing on relevant parts of the image.
+     */
     CV_WRAP virtual void setROI1(Rect roi1) = 0;
 
+    /**
+     * @brief Gets the current Region of Interest (ROI) for the right image.
+     * @return The current ROI for the right image.
+     */
     CV_WRAP virtual Rect getROI2() const = 0;
+
+    /**
+     * @brief Sets the Region of Interest (ROI) for the right image.
+     * @param roi2 The ROI rectangle for the right image.
+     * @details Similar to setROI1, this limits the computation to the specified region in the right image.
+     */
     CV_WRAP virtual void setROI2(Rect roi2) = 0;
 
-    /** @brief Creates StereoBM object
-
-    @param numDisparities the disparity search range. For each pixel algorithm will find the best
-    disparity from 0 (default minimum disparity) to numDisparities. The search range can then be
-    shifted by changing the minimum disparity.
-    @param blockSize the linear size of the blocks compared by the algorithm. The size should be odd
-    (as the block is centered at the current pixel). Larger block size implies smoother, though less
-    accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher
-    chance for algorithm to find a wrong correspondence.
-
-    The function create StereoBM object. You can then call StereoBM::compute() to compute disparity for
-    a specific stereo pair.
+    /**
+     * @brief Creates StereoBM object
+     * @param numDisparities The disparity search range. For each pixel, the algorithm will find the best disparity from 0 (default minimum disparity) to numDisparities. The search range can be shifted by changing the minimum disparity.
+     * @param blockSize The linear size of the blocks compared by the algorithm. The size should be odd (as the block is centered at the current pixel). Larger block size implies smoother, though less accurate disparity map. Smaller block size gives more detailed disparity map, but there is a higher chance for the algorithm to find a wrong correspondence.
+     * @return A pointer to the created StereoBM object.
+     * @details The function creates a StereoBM object. You can then call StereoBM::compute() to compute disparity for a specific stereo pair.
      */
     CV_WRAP static Ptr<StereoBM> create(int numDisparities = 0, int blockSize = 21);
 };
@@ -4075,6 +4159,40 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     the provided rvec and tvec values as initial approximations of the rotation and translation
     vectors, respectively, and further optimizes them.
     @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
+    @param criteria Termination criteria for internal undistortPoints call.
+    The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+    thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
+    for more information.
+    */
+    CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
+                                InputArray cameraMatrix, InputArray distCoeffs,
+                                OutputArray rvec, OutputArray tvec,
+                                bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE,
+                                TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
+                              );
+
+    /**
+    @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme for fisheye camera moodel.
+
+    @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+    1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+    @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+    where N is the number of points. vector\<Point2d\> can be also passed here.
+    @param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+    @param distCoeffs Input vector of distortion coefficients (4x1/1x4).
+    @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+    the model coordinate system to the camera coordinate system.
+    @param tvec Output translation vector.
+    @param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+    the provided rvec and tvec values as initial approximations of the rotation and translation
+    vectors, respectively, and further optimizes them.
+    @param iterationsCount Number of iterations.
+    @param reprojectionError Inlier threshold value used by the RANSAC procedure. The parameter value
+    is the maximum allowed distance between the observed and computed point projections to consider it
+    an inlier.
+    @param confidence The probability that the algorithm produces a useful result.
+    @param inliers Output vector that contains indices of inliers in objectPoints and imagePoints .
+    @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
     This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
     coordinate frame to the camera coordinate frame, using different methods:
     - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
@@ -4091,12 +4209,14 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
     for more information.
     */
-    CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
-                                InputArray cameraMatrix, InputArray distCoeffs,
-                                OutputArray rvec, OutputArray tvec,
-                                bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE,
-                                TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
-                              );
+    CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+                                      InputArray cameraMatrix, InputArray distCoeffs,
+                                      OutputArray rvec, OutputArray tvec,
+                                      bool useExtrinsicGuess = false, int iterationsCount = 100,
+                                      float reprojectionError = 8.0, double confidence = 0.99,
+                                      OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE,
+                                      TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
+                                    );
 
 //! @} calib3d_fisheye
 } // end namespace fisheye

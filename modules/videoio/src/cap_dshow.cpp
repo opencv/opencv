@@ -303,15 +303,7 @@ interface ISampleGrabber : public IUnknown
 
 static void DebugPrintOut(const char *format, ...)
 {
-    static int gs_verbose = -1;
-    if (gs_verbose < 0)
-    {
-        // Fetch initial debug state from environment - defaults to disabled
-        const char* s = getenv("OPENCV_DSHOW_DEBUG");
-        gs_verbose = s != NULL && atoi(s) != 0;
-    }
-
-
+    static const bool gs_verbose = utils::getConfigurationParameterBool("OPENCV_DSHOW_DEBUG");
     if (gs_verbose)
     {
         va_list args;
@@ -2982,18 +2974,18 @@ int videoInput::start(int deviceID, videoDevice *VD){
     VD->readyToCapture = true;
 
     // check for optional saving the direct show graph to a file
-    const char* graph_filename = getenv("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
-    if (graph_filename) {
-        size_t filename_len = strlen(graph_filename);
+    std::string graph_filename = utils::getConfigurationParameterString("OPENCV_DSHOW_SAVEGRAPH_FILENAME");
+    if (!graph_filename.empty()) {
+        size_t filename_len = graph_filename.size();
         std::vector<WCHAR> wfilename(filename_len + 1);
-        size_t len = mbstowcs(&wfilename[0], graph_filename, filename_len  + 1);
+        size_t len = mbstowcs(&wfilename[0], &graph_filename[0], filename_len  + 1);
         CV_Assert(len == filename_len);
 
         HRESULT res = SaveGraphFile(VD->pGraph, &wfilename[0]);
         if (SUCCEEDED(res)) {
-            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename);
+            DebugPrintOut("Saved DSHOW graph to %s\n", graph_filename.c_str());
         } else {
-            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename);
+            DebugPrintOut("Failed to save DSHOW graph to %s\n", graph_filename.c_str());
         }
     }
 
@@ -3368,7 +3360,7 @@ namespace cv
 {
 videoInput VideoCapture_DShow::g_VI;
 
-VideoCapture_DShow::VideoCapture_DShow(int index)
+VideoCapture_DShow::VideoCapture_DShow(int index, const VideoCaptureParameters& params)
     : m_index(-1)
     , m_width(-1)
     , m_height(-1)
@@ -3378,6 +3370,16 @@ VideoCapture_DShow::VideoCapture_DShow(int index)
     , m_convertRGBSet(true)
 {
     CoInitialize(0);
+
+    if (!params.empty()) {
+        int tmpW = params.get<int>(CAP_PROP_FRAME_WIDTH, -1);
+        int tmpH = params.get<int>(CAP_PROP_FRAME_HEIGHT, -1);
+        int tmpFOURCC = params.get<int>(CAP_PROP_FOURCC, -1);
+        if (tmpW != -1 && tmpH != -1) {
+            g_VI.setupDeviceFourcc(index, tmpW, tmpH, tmpFOURCC);
+        }
+    }
+
     open(index);
 }
 VideoCapture_DShow::~VideoCapture_DShow()
@@ -3683,9 +3685,9 @@ void VideoCapture_DShow::close()
     m_convertRGBSet = true;
 }
 
-Ptr<IVideoCapture> create_DShow_capture(int index)
+Ptr<IVideoCapture> create_DShow_capture(int index, const VideoCaptureParameters& params)
 {
-    return makePtr<VideoCapture_DShow>(index);
+    return makePtr<VideoCapture_DShow>(index, params);
 }
 
 

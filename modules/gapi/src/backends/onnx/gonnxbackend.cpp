@@ -701,6 +701,26 @@ namespace cv {
 namespace gimpl {
 namespace onnx {
 
+static GraphOptimizationLevel convertToGraphOptimizationLevel(const int opt_level) {
+    switch (opt_level) {
+    case ORT_DISABLE_ALL:
+        return ORT_DISABLE_ALL;
+    case ORT_ENABLE_BASIC:
+        return ORT_ENABLE_BASIC;
+    case ORT_ENABLE_EXTENDED:
+        return ORT_ENABLE_EXTENDED;
+    case ORT_ENABLE_ALL:
+        return ORT_ENABLE_ALL;
+    default:
+        if (opt_level > ORT_ENABLE_ALL) {  // relax constraint
+            return ORT_ENABLE_ALL;
+        }
+        else {
+            cv::util::throw_error(std::invalid_argument("Invalid argument opt_level = " + std::to_string(opt_level)));
+        }
+    }
+}
+
 ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     : params(pp) {
     // Validate input parameters before allocating any resources
@@ -712,6 +732,11 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
         cv::util::throw_error(std::logic_error("Please specify output layer names for "
                                                + params.model_path));
     }
+    // WA: Some ONNX Runtime + OVEP libraries don't allow
+    //     creation of environment after addition of OpenVINO
+    //     Execution Provider.
+    // Create and initialize the ONNX environment
+    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
     // Create and initialize the ONNX session
     Ort::SessionOptions session_options;
     GAPI_LOG_INFO(NULL, "Adding Execution Providers for \"" << pp.model_path << "\"");
@@ -726,7 +751,10 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     if (pp.disable_mem_pattern) {
         session_options.DisableMemPattern();
     }
-    this_env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+
+    if (pp.opt_level.has_value()) {
+        session_options.SetGraphOptimizationLevel(convertToGraphOptimizationLevel(pp.opt_level.value()));
+    }
 #ifndef _WIN32
     this_session = Ort::Session(this_env, params.model_path.data(), session_options);
 #else

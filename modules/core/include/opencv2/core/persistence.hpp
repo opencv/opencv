@@ -365,6 +365,8 @@ public:
      */
     CV_WRAP void write(const String& name, int val);
     /// @overload
+    CV_WRAP void write(const String& name, int64_t val);
+    /// @overload
     CV_WRAP void write(const String& name, double val);
     /// @overload
     CV_WRAP void write(const String& name, const String& val);
@@ -530,6 +532,8 @@ public:
     CV_WRAP size_t rawSize() const;
     //! returns the node content as an integer. If the node stores floating-point number, it is rounded.
     operator int() const;
+    //! returns the node content as a signed 64bit integer. If the node stores floating-point number, it is rounded.
+    operator int64_t() const;
     //! returns the node content as float
     operator float() const;
     //! returns the node content as double
@@ -654,6 +658,7 @@ protected:
 /////////////////// XML & YAML I/O implementation //////////////////
 
 CV_EXPORTS void write( FileStorage& fs, const String& name, int value );
+CV_EXPORTS void write( FileStorage& fs, const String& name, int64_t value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, float value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, double value );
 CV_EXPORTS void write( FileStorage& fs, const String& name, const String& value );
@@ -665,11 +670,13 @@ CV_EXPORTS void write( FileStorage& fs, const String& name, const std::vector<DM
 #endif
 
 CV_EXPORTS void writeScalar( FileStorage& fs, int value );
+CV_EXPORTS void writeScalar( FileStorage& fs, int64_t value );
 CV_EXPORTS void writeScalar( FileStorage& fs, float value );
 CV_EXPORTS void writeScalar( FileStorage& fs, double value );
 CV_EXPORTS void writeScalar( FileStorage& fs, const String& value );
 
 CV_EXPORTS void read(const FileNode& node, int& value, int default_value);
+CV_EXPORTS void read(const FileNode& node, int64_t& value, int64_t default_value);
 CV_EXPORTS void read(const FileNode& node, float& value, float default_value);
 CV_EXPORTS void read(const FileNode& node, double& value, double default_value);
 CV_EXPORTS void read(const FileNode& node, std::string& value, const std::string& default_value);
