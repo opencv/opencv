@@ -252,7 +252,7 @@ TEST(Photo_ColorCorrection, mcc_ccm_combined)
     EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
 }
 
-TEST(CV_mcc_ccm_test, serialization)
+TEST(Photo_ColorCorrection, serialization)
 {
     auto path1 = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
     FileStorage fs(path1, FileStorage::READ);
@@ -266,7 +266,8 @@ TEST(CV_mcc_ccm_test, serialization)
     Mat colorCorrectionMat = model.compute();
 
     // write model
-    path1 = cv::tempfile();
+    path1 = cv::tempfile() + ".yaml";
+
     FileStorage fs1(path1, FileStorage::WRITE);
     fs1 << "model" << model;
     fs1.release();
@@ -278,7 +279,7 @@ TEST(CV_mcc_ccm_test, serialization)
     fs2.release();
 
     // write model again
-    auto path2 = cv::tempfile();
+    auto path2 =  cv::tempfile() + ".yaml";
     FileStorage fs3(path2, FileStorage::WRITE);
     fs3 << "model" << model1;
     fs3.release();
