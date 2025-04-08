@@ -144,7 +144,7 @@ double dotProd_32s(const int *a, const int *b, int len) {
 
         s = __riscv_vfadd(s, __riscv_vfcvt_f(__riscv_vwmul(va, vb, vl), vl), vl);
     }
-    r = __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_v_f_f64m1(0.f, __riscv_vsetvlmax_e64m1()), vl));
+    r = __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_v_f_f64m1(0.f, __riscv_vsetvlmax_e64m1()), __riscv_vsetvlmax_e64m8()));
 
     return r;
 }
@@ -152,7 +152,7 @@ double dotProd_32s(const int *a, const int *b, int len) {
 double dotProd_32f(const float *a, const float *b, int len) {
     constexpr int block_size0 = (1 << 13);
 
-    double r = 0;
+    double r = 0.f;
     int i = 0;
     while (i < len) {
         int block_size = std::min(block_size0, len - i);
@@ -167,7 +167,7 @@ double dotProd_32f(const float *a, const float *b, int len) {
 
             s = __riscv_vfmacc(s, va, vb, vl);
         }
-        r += (double)__riscv_vfmv_f(__riscv_vfredusum(s, __riscv_vfmv_v_f_f32m1(0.f, __riscv_vsetvlmax_e32m1()), vl));
+        r += (double)__riscv_vfmv_f(__riscv_vfredusum(s, __riscv_vfmv_v_f_f32m1(0.f, __riscv_vsetvlmax_e32m1()), __riscv_vsetvlmax_e32m4()));
 
         i += block_size;
         a += block_size;
