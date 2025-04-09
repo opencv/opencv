@@ -904,15 +904,15 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
                             ipoints64.reshape(1, npoints * 2),
                             NORM_L2) /
                        sqrt(npoints * 2);
-        bool sucess = (error <= MAX_REPROJ_ERROR);
+        bool success = (error <= MAX_REPROJ_ERROR);
 
-        if (sucess)
+        if (success)
         {
             vec_rvecs.push_back(rvec.clone());
             vec_tvecs.push_back(tvec.clone());
         }
 
-        if (!sucess)
+        if (!success)
         {
             vec_rvecs.clear();
             vec_tvecs.clear();
