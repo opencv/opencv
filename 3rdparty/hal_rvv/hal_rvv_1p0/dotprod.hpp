@@ -150,7 +150,7 @@ double dotProd_32s(const int *a, const int *b, int len) {
 }
 
 double dotProd_32f(const float *a, const float *b, int len) {
-    constexpr int block_size0 = (1 << 13);
+    constexpr int block_size0 = (1 << 11);
 
     double r = 0.f;
     int i = 0;
