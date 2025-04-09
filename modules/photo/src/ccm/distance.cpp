@@ -46,83 +46,83 @@ double deltaCIE94Textiles(const Vec3d& lab1, const Vec3d& lab2)
 double deltaCIEDE2000_(const Vec3d& lab1, const Vec3d& lab2, const double& kL,
         const double& kC, const double& kH)
 {
-    double delta_L_apo = lab2[0] - lab1[0];
-    double l_bar_apo = (lab1[0] + lab2[0]) / 2.0;
+    double deltaLApo = lab2[0] - lab1[0];
+    double lBarApo = (lab1[0] + lab2[0]) / 2.0;
     double C1 = sqrt(pow(lab1[1], 2) + pow(lab1[2], 2));
     double C2 = sqrt(pow(lab2[1], 2) + pow(lab2[2], 2));
-    double C_bar = (C1 + C2) / 2.0;
-    double G = sqrt(pow(C_bar, 7) / (pow(C_bar, 7) + pow(25, 7)));
-    double a1_apo = lab1[1] + lab1[1] / 2.0 * (1.0 - G);
-    double a2_apo = lab2[1] + lab2[1] / 2.0 * (1.0 - G);
-    double C1_apo = sqrt(pow(a1_apo, 2) + pow(lab1[2], 2));
-    double C2_apo = sqrt(pow(a2_apo, 2) + pow(lab2[2], 2));
-    double C_bar_apo = (C1_apo + C2_apo) / 2.0;
-    double delta_C_apo = C2_apo - C1_apo;
+    double cBar = (C1 + C2) / 2.0;
+    double G = sqrt(pow(cBar, 7) / (pow(cBar, 7) + pow(25, 7)));
+    double a1Apo = lab1[1] + lab1[1] / 2.0 * (1.0 - G);
+    double a2Apo = lab2[1] + lab2[1] / 2.0 * (1.0 - G);
+    double c1Apo = sqrt(pow(a1Apo, 2) + pow(lab1[2], 2));
+    double c2Apo = sqrt(pow(a2Apo, 2) + pow(lab2[2], 2));
+    double cBarApo = (c1Apo + c2Apo) / 2.0;
+    double deltaCApo = c2Apo - c1Apo;
 
-    double h1_apo;
-    if (C1_apo == 0)
+    double h1Apo;
+    if (c1Apo == 0)
     {
-        h1_apo = 0.0;
+        h1Apo = 0.0;
     }
     else
     {
-        h1_apo = atan2(lab1[2], a1_apo);
-        if (h1_apo < 0.0)
-            h1_apo += 2. * CV_PI;
+        h1Apo = atan2(lab1[2], a1Apo);
+        if (h1Apo < 0.0)
+            h1Apo += 2. * CV_PI;
     }
 
-    double h2_apo;
-    if (C2_apo == 0)
+    double h2Apo;
+    if (c2Apo == 0)
     {
-        h2_apo = 0.0;
+        h2Apo = 0.0;
     }
     else
     {
-        h2_apo = atan2(lab2[2], a2_apo);
-        if (h2_apo < 0.0)
-            h2_apo += 2. * CV_PI;
+        h2Apo = atan2(lab2[2], a2Apo);
+        if (h2Apo < 0.0)
+            h2Apo += 2. * CV_PI;
     }
 
-    double delta_h_apo;
-    if (abs(h2_apo - h1_apo) <= CV_PI)
+    double deltaHApo;
+    if (abs(h2Apo - h1Apo) <= CV_PI)
     {
-        delta_h_apo = h2_apo - h1_apo;
+        deltaHApo = h2Apo - h1Apo;
     }
-    else if (h2_apo <= h1_apo)
+    else if (h2Apo <= h1Apo)
     {
-        delta_h_apo = h2_apo - h1_apo + 2. * CV_PI;
+        deltaHApo = h2Apo - h1Apo + 2. * CV_PI;
     }
     else
     {
-        delta_h_apo = h2_apo - h1_apo - 2. * CV_PI;
+        deltaHApo = h2Apo - h1Apo - 2. * CV_PI;
     }
 
-    double H_bar_apo;
-    if (C1_apo == 0 || C2_apo == 0)
+    double hBarApo;
+    if (c1Apo == 0 || c2Apo == 0)
     {
-        H_bar_apo = h1_apo + h2_apo;
+        hBarApo = h1Apo + h2Apo;
     }
-    else if (abs(h1_apo - h2_apo) <= CV_PI)
+    else if (abs(h1Apo - h2Apo) <= CV_PI)
     {
-        H_bar_apo = (h1_apo + h2_apo) / 2.0;
+        hBarApo = (h1Apo + h2Apo) / 2.0;
     }
-    else if (h1_apo + h2_apo < 2. * CV_PI)
+    else if (h1Apo + h2Apo < 2. * CV_PI)
     {
-        H_bar_apo = (h1_apo + h2_apo + 2. * CV_PI) / 2.0;
+        hBarApo = (h1Apo + h2Apo + 2. * CV_PI) / 2.0;
     }
     else
     {
-        H_bar_apo = (h1_apo + h2_apo - 2. * CV_PI) / 2.0;
+        hBarApo = (h1Apo + h2Apo - 2. * CV_PI) / 2.0;
     }
 
-    double delta_H_apo = 2.0 * sqrt(C1_apo * C2_apo) * sin(delta_h_apo / 2.0);
-    double T = 1.0 - 0.17 * cos(H_bar_apo - toRad(30.)) + 0.24 * cos(2.0 * H_bar_apo) + 0.32 * cos(3.0 * H_bar_apo + toRad(6.0)) - 0.2 * cos(4.0 * H_bar_apo - toRad(63.0));
-    double sC = 1.0 + 0.045 * C_bar_apo;
-    double sH = 1.0 + 0.015 * C_bar_apo * T;
-    double sL = 1.0 + ((0.015 * pow(l_bar_apo - 50.0, 2.0)) / sqrt(20.0 + pow(l_bar_apo - 50.0, 2.0)));
-    double R_C = 2.0 * sqrt(pow(C_bar_apo, 7.0) / (pow(C_bar_apo, 7.0) + pow(25, 7)));
-    double RT = -sin(toRad(60.0) * exp(-pow((H_bar_apo - toRad(275.0)) / toRad(25.0), 2.0))) * R_C;
-    double res = (pow(delta_L_apo / (kL * sL), 2.0) + pow(delta_C_apo / (kC * sC), 2.0) + pow(delta_H_apo / (kH * sH), 2.0) + RT * (delta_C_apo / (kC * sC)) * (delta_H_apo / (kH * sH)));
+    double deltaH_Apo = 2.0 * sqrt(c1Apo * c2Apo) * sin(deltaHApo / 2.0);
+    double T = 1.0 - 0.17 * cos(hBarApo - toRad(30.)) + 0.24 * cos(2.0 * hBarApo) + 0.32 * cos(3.0 * hBarApo + toRad(6.0)) - 0.2 * cos(4.0 * hBarApo - toRad(63.0));
+    double sC = 1.0 + 0.045 * cBarApo;
+    double sH = 1.0 + 0.015 * cBarApo * T;
+    double sL = 1.0 + ((0.015 * pow(lBarApo - 50.0, 2.0)) / sqrt(20.0 + pow(lBarApo - 50.0, 2.0)));
+    double rC = 2.0 * sqrt(pow(cBarApo, 7.0) / (pow(cBarApo, 7.0) + pow(25, 7)));
+    double rT = -sin(toRad(60.0) * exp(-pow((hBarApo - toRad(275.0)) / toRad(25.0), 2.0))) * rC;
+    double res = (pow(deltaLApo / (kL * sL), 2.0) + pow(deltaCApo / (kC * sC), 2.0) + pow(deltaH_Apo / (kH * sH), 2.0) + rT * (deltaCApo / (kC * sC)) * (deltaH_Apo / (kH * sH)));
     return res > 0 ? sqrt(res) : 0;
 }
 

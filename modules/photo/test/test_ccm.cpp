@@ -267,21 +267,21 @@ TEST(Photo_ColorCorrection, serialization)
 
     // write model
     path1 = cv::tempfile() + ".yaml";
-
     FileStorage fs1(path1, FileStorage::WRITE);
-    fs1 << "model" << model;
+    model.write(fs1);
     fs1.release();
 
     // read model
     cv::ccm::ColorCorrectionModel model1;
     FileStorage fs2(path1, FileStorage::READ);
-    fs2["model"] >> model1;
+    FileNode modelNode = fs2["ColorCorrectionModel"];
+    model1.read(modelNode);
     fs2.release();
 
     // write model again
-    auto path2 =  cv::tempfile() + ".yaml";
+    auto path2 = cv::tempfile() + ".yaml";
     FileStorage fs3(path2, FileStorage::WRITE);
-    fs3 << "model" << model1;
+    model1.write(fs3);
     fs3.release();
 
     // read both yamls from disk

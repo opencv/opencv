@@ -226,11 +226,11 @@ private:
 /** @brief Apple RGB color space.
            data from http://www.brucelindbloom.com/index.html?WorkingSpaceInfo.html.
 */
-class appleRGB_ : public AdobeRGBBase_
+class AppleRGB_ : public AdobeRGBBase_
 {
 public:
-    appleRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IO::getIOs(D65_2), "appleRGB", linear_) {};
+    AppleRGB_(bool linear_ = false)
+        : AdobeRGBBase_(IO::getIOs(D65_2), "AppleRGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;

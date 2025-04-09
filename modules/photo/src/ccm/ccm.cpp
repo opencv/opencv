@@ -198,8 +198,8 @@ void ColorCorrectionModel::Impl::initialWhiteBalance(void)
         sum(dchannels[1])[0] / sum(schannels[1])[0], 0, 0, 0,
         sum(dchannels[2])[0] / sum(schannels[2])[0], 0, 0, 0 };
     std::vector<double> initialVec_(initialVec.begin(), initialVec.begin() + shape);
-    Mat initial_white_balance = Mat(initialVec_, true).reshape(0, shape / 3);
-    ccm0 = initial_white_balance;
+    Mat initialWhiteBalanceMat = Mat(initialVec_, true).reshape(0, shape / 3);
+    ccm0 = initialWhiteBalanceMat;
 }
 
 void ColorCorrectionModel::Impl::initialLeastSquare(bool fit)
@@ -315,10 +315,10 @@ ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, 
     p->getColor(colors_.getMat(), refColorSpace_);
 }
 
-ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, ColorSpace cs_, InputArray colored_): p(std::make_shared<Impl>())
+ColorCorrectionModel::ColorCorrectionModel(InputArray src_, InputArray colors_, ColorSpace cs_, InputArray coloredPatchesMask_): p(std::make_shared<Impl>())
 {
     p->src = src_.getMat();
-    p->getColor(colors_.getMat(), cs_, colored_.getMat());
+    p->getColor(colors_.getMat(), cs_, coloredPatchesMask_.getMat());
 }
 
 void ColorCorrectionModel::setColorSpace(ColorSpace cs_)
@@ -430,7 +430,7 @@ Mat ColorCorrectionModel::getWeights() const{
 
 void ColorCorrectionModel::write(FileStorage& fs) const
 {
-    fs << "{"  // Add a valid key name here
+    fs << "ColorCorrectionModel" << "{"
        << "ccm" << p->ccm
        << "loss" << p->loss
        << "csEnum" << p->csEnum

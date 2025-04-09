@@ -59,7 +59,6 @@ def process_frame(frame, detector, num_charts):
         return None
 
     checkers = detector.getListColorChecker()
-    detector.draw(checkers, frame)
     src = checkers[0].getChartsRGB(False)
 
     return src
@@ -73,11 +72,11 @@ def main(func_args=None):
     # Validate arguments based on whether using pre-computed CCM
     if args.ccm_file:
         if not args.query:
-            print("Error: Query image path must be provided when using pre-computed CCM.")
+            print("[ERROR] Query image path must be provided when using pre-computed CCM.")
             return -1
     else:
         if not args.input:
-            print("Error: Input image path must be provided when computing new CCM.")
+            print("[ERROR] Input image path must be provided when computing new CCM.")
             return -1
 
     # Read query image
@@ -85,8 +84,21 @@ def main(func_args=None):
     if args.query:
         query_image = cv.imread(findFile(args.query))
         if query_image is None:
-            print("Error: Unable to read query image.")
+            print("[ERROR] Unable to read query image.")
             return -1
+
+    if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None:
+        try:
+            args.model = findModel(args.model, args.sha1)
+            args.config = findModel(args.config, args.config_sha1)
+        except:
+            print("[WARN] Model file not provided, using default detector. Pass model using --model and config using --config to use dnn based detector.\n\n")
+            args.model = None
+            args.config = None
+    else:
+        args.model = None
+        args.config = None
+        print("[WARN] Model file not provided, using default detector. Pass model using --model and config using --config to use dnn based detector. Or, set OPENCV_SAMPLES_DATA_PATH environment variable.\n\n")
 
     # Create color correction model
     model = cv.ccm.ColorCorrectionModel()
@@ -95,30 +107,17 @@ def main(func_args=None):
         # Load CCM from YAML file
         fs = cv.FileStorage(args.ccm_file, cv.FileStorage_READ)
         if not fs.isOpened():
-            print(f"Error: Unable to open CCM file: {args.ccm_file}")
+            print(f"[ERROR] Unable to open CCM file: {args.ccm_file}")
             return -1
-        model.read(fs["ColorCorrectionModel"])
+        model.read(fs.getNode("ColorCorrectionModel"))
         fs.release()
         print(f"Loaded CCM from file: {args.ccm_file}")
     else:
         # Read input image for computing new CCM
         image = cv.imread(findFile(args.input))
         if image is None:
-            print("Error: Unable to read input image.")
+            print("[ERROR] Unable to read input image.")
             return -1
-
-        if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None:
-            try:
-                args.model = findModel(args.model, args.sha1)
-                args.config = findModel(args.config, args.config_sha1)
-            except:
-                print("[WARN] Model file not provided, using default detector. Pass model using --model and config using --config to use dnn based detector.\n\n")
-                args.model = None
-                args.config = None
-        else:
-            args.model = None
-            args.config = None
-            print("[WARN] Model file not provided, using default detector. Pass model using --model and config using --config to use dnn based detector. Or, set OPENCV_SAMPLES_DATA_PATH environment variable.\n\n")
 
         # Create color checker detector
         if args.model and args.config:
@@ -151,7 +150,7 @@ def main(func_args=None):
 
         # Create and configure color correction model
         model = cv.ccm.ColorCorrectionModel(src, cv.ccm.COLORCHECKER_MACBETH)
-        model.setCCMType(cv.ccm.CCM_LINEAR)
+        model.setCcmType(cv.ccm.CCM_LINEAR)
         model.setDistance(cv.ccm.DISTANCE_CIE2000)
         model.setLinearization(cv.ccm.LINEARIZATION_GAMMA)
         model.setLinearizationGamma(2.2)
@@ -168,17 +167,18 @@ def main(func_args=None):
         print("Model parameters saved to ccm_output.yaml")
 
         # Set query image for correction if not provided
-        if not query_image:
+        if query_image is None:
             print("[WARN] No query image provided, applying color correction on input image")
             query_image = image.copy()
 
     # Apply correction to query image
     normalized_image = cv.cvtColor(query_image, cv.COLOR_BGR2RGB).astype(np.float64) / 255.0
-    calibrated_image = np.zeros_like(normalized_image)
+    calibrated_image = np.empty_like(normalized_image, dtype=np.float64)
     model.correctImage(normalized_image, calibrated_image)
-    calibrated_image = cv.cvtColor(calibrated_image, cv.COLOR_RGB2BGR)
-    # Convert back to 8-bit
+
+    calibrated_image = np.clip(calibrated_image, 0.0, 1.0)
     calibrated_image = (calibrated_image * 255.0).astype(np.uint8)
+    calibrated_image = cv.cvtColor(calibrated_image, cv.COLOR_RGB2BGR)
 
     # Save corrected image
     output_file = "corrected_output.png"

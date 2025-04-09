@@ -60,7 +60,6 @@ static bool processFrame(const Mat& frame, Ptr<CCheckerDetector> detector, Mat& 
         return false;
     }
     vector<Ptr<CChecker>> checkers = detector->getListColorChecker();
-    detector->draw(checkers, frame);
     src = checkers[0]->getChartsRGB(false);
 
     return true;

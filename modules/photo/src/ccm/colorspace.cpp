@@ -283,7 +283,7 @@ void DCI_P3_RGB_::setParameter()
  *        data from
  * http://www.brucelindbloom.com/index.html?WorkingSpaceInfo.html.
  */
-void appleRGB_::setParameter()
+void AppleRGB_::setParameter()
 {
     xr = 0.625;
     yr = 0.34;
@@ -524,11 +524,11 @@ std::shared_ptr<RGBBase_> GetCS::getRgb(enum ColorSpace cs_name)
     {
         if (map_cs.count(cs_name) < 1)
         {
-            std::shared_ptr<appleRGB_> appleRGB_CS(new appleRGB_(false));
-            std::shared_ptr<appleRGB_> appleRGBL_CS(new appleRGB_(true));
-            (*appleRGB_CS).bind(*appleRGBL_CS);
-            map_cs[COLOR_SPACE_APPLE_RGB] = appleRGB_CS;
-            map_cs[COLOR_SPACE_APPLE_RGBL] = appleRGBL_CS;
+            std::shared_ptr<AppleRGB_> AppleRGB_CS(new AppleRGB_(false));
+            std::shared_ptr<AppleRGB_> AppleRGBL_CS(new AppleRGB_(true));
+            (*AppleRGB_CS).bind(*AppleRGBL_CS);
+            map_cs[COLOR_SPACE_APPLE_RGB] = AppleRGB_CS;
+            map_cs[COLOR_SPACE_APPLE_RGBL] = AppleRGBL_CS;
         }
         break;
     }
@@ -646,11 +646,11 @@ std::shared_ptr<ColorSpaceBase> GetCS::getCS(enum ColorSpace cs_name)
     {
         if (map_cs.count(cs_name) < 1)
         {
-            std::shared_ptr<appleRGB_> appleRGB_CS(new appleRGB_(false));
-            std::shared_ptr<appleRGB_> appleRGBL_CS(new appleRGB_(true));
-            (*appleRGB_CS).bind(*appleRGBL_CS);
-            map_cs[COLOR_SPACE_APPLE_RGB] = appleRGB_CS;
-            map_cs[COLOR_SPACE_APPLE_RGBL] = appleRGBL_CS;
+            std::shared_ptr<AppleRGB_> AppleRGB_CS(new AppleRGB_(false));
+            std::shared_ptr<AppleRGB_> AppleRGBL_CS(new AppleRGB_(true));
+            (*AppleRGB_CS).bind(*AppleRGBL_CS);
+            map_cs[COLOR_SPACE_APPLE_RGB] = AppleRGB_CS;
+            map_cs[COLOR_SPACE_APPLE_RGBL] = AppleRGBL_CS;
         }
         break;
     }

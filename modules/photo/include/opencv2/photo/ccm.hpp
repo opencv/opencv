@@ -34,21 +34,21 @@ enum CcmType
 enum InitialMethodType
 {
     INITIAL_METHOD_WHITE_BALANCE,      ///< The white balance method. The initial value is:\n
-                        /// \f$
-                        /// M_{CCM}=
-                        /// \begin{bmatrix}
-                        /// k_R & 0 & 0\\
-                        /// 0 & k_G & 0\\
-                        /// 0 & 0 & k_B\\
-                        /// \end{bmatrix}
-                        /// \f$\n
-                        /// where\n
-                        /// \f$
-                        /// k_R=mean(R_{li}')/mean(R_{li})\\
-                        /// k_R=mean(G_{li}')/mean(G_{li})\\
-                        /// k_R=mean(B_{li}')/mean(B_{li})
-                        /// \f$
-    INITIAL_METHOD_LEAST_SQUARE,       ///<the least square method is an optimal solution under the linear RGB distance function
+                                       /// \f$
+                                       /// M_{CCM}=
+                                       /// \begin{bmatrix}
+                                       /// k_R & 0 & 0\\
+                                       /// 0 & k_G & 0\\
+                                       /// 0 & 0 & k_B\\
+                                       /// \end{bmatrix}
+                                       /// \f$\n
+                                       /// where\n
+                                       /// \f$
+                                       /// k_R=mean(R_{li}')/mean(R_{li})\\
+                                       /// k_G=mean(G_{li}')/mean(G_{li})\\
+                                       /// k_B=mean(B_{li}')/mean(B_{li})
+                                       /// \f$
+    INITIAL_METHOD_LEAST_SQUARE,       ///< The least square method is an optimal solution under the linear RGB distance function
 };
 /** @brief  Macbeth and Vinyl ColorChecker with 2deg D50
 */
@@ -166,9 +166,9 @@ public:
         @param colors the reference color values, the color values are in [0, 1].
         @param refColorSpace the corresponding color space
                     If the color type is some RGB, the format is RGB not BGR;
-        @param colored mask of colored color
+        @param coloredPatchesMask binary mask indicating which patches are colored (non-gray) patches
     */
-    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace refColorSpace, InputArray colored);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace refColorSpace, InputArray coloredPatchesMask);
 
     /** @brief set ColorSpace
         @note It should be some RGB color space;
