@@ -23,7 +23,7 @@ namespace ccm
 
 /** @brief Enum of the possible types of ccm.
 */
-enum CCMType
+enum CcmType
 {
     CCM_LINEAR,   ///< Uses a \f$3\times3\f$ matrix to linearly transform RGB values without offsets.
     CCM_AFFINE,   ///< Uses a \f$4\times3\f$ matrix to affine transform RGB values with both scaling and offset terms.
@@ -147,28 +147,28 @@ public:
 
         @param src detected colors of ColorChecker patches;\n
                     the color type is RGB not BGR, and the color values are in [0, 1];
-        @param constcolor the Built-in color card
+        @param constColor the Built-in color card
     */
-    CV_WRAP ColorCorrectionModel(InputArray src, int constcolor);
+    CV_WRAP ColorCorrectionModel(InputArray src, int constColor);
 
     /** @brief Color Correction Model
         @param src detected colors of ColorChecker patches;\n
                 the color type is RGB not BGR, and the color values are in [0, 1];
         @param colors the reference color values, the color values are in [0, 1].\n
-        @param ref_cs the corresponding color space
+        @param refColorSpace the corresponding color space
                 If the color type is some RGB, the format is RGB not BGR;\n
     */
-    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace ref_cs);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace refColorSpace);
 
     /** @brief Color Correction Model
         @param src detected colors of ColorChecker patches;\n
                     the color type is RGB not BGR, and the color values are in [0, 1];
         @param colors the reference color values, the color values are in [0, 1].
-        @param ref_cs the corresponding color space
+        @param refColorSpace the corresponding color space
                     If the color type is some RGB, the format is RGB not BGR;
         @param colored mask of colored color
     */
-    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace ref_cs, InputArray colored);
+    CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace refColorSpace, InputArray colored);
 
     /** @brief set ColorSpace
         @note It should be some RGB color space;
@@ -190,7 +190,7 @@ public:
     @param ccmType the shape of color correction matrix(CCM);\n
                     default: @ref CCM_LINEAR
     */
-    CV_WRAP void setCCMType(CCMType ccmType);
+    CV_WRAP void setCcmType(CcmType ccmType);
 
     /** @brief set Distance
     @param distance the type of color distance;\n
@@ -237,16 +237,16 @@ public:
     CV_WRAP void setSaturatedThreshold(double lower, double upper);
 
     /** @brief set WeightsList
-    @param weights_list the list of weight of each color;\n
+    @param weightsList the list of weight of each color;\n
                         default: empty array
     */
-    CV_WRAP void setWeightsList(const Mat& weights_list);
+    CV_WRAP void setWeightsList(const Mat& weightsList);
 
     /** @brief set WeightCoeff
-    @param weights_coeff the exponent number of L* component of the reference color in CIE Lab color space;\n
+    @param weightsCoeff the exponent number of L* component of the reference color in CIE Lab color space;\n
                          default: 0
     */
-    CV_WRAP void setWeightCoeff(double weights_coeff);
+    CV_WRAP void setWeightCoeff(double weightsCoeff);
 
     /** @brief set InitialMethod
     @param initialMethodType the method of calculating CCM initial value;\n
@@ -255,11 +255,11 @@ public:
     CV_WRAP void setInitialMethod(InitialMethodType initialMethodType);
 
     /** @brief set MaxCount
-    @param max_count used in MinProblemSolver-DownhillSolver;\n
+    @param maxCount used in MinProblemSolver-DownhillSolver;\n
         Terminal criteria to the algorithm;\n
                      default: 5000;
     */
-    CV_WRAP void setMaxCount(int max_count);
+    CV_WRAP void setMaxCount(int maxCount);
 
     /** @brief set Epsilon
     @param epsilon used in MinProblemSolver-DownhillSolver;\n
@@ -294,7 +294,7 @@ private:
 };
 
 CV_EXPORTS void write(cv::FileStorage& fs, const std::string&, const ColorCorrectionModel& ccm);
-CV_EXPORTS void read(const cv::FileNode& node, ColorCorrectionModel& ccm, const ColorCorrectionModel& default_value = ColorCorrectionModel());
+CV_EXPORTS void read(const cv::FileNode& node, ColorCorrectionModel& ccm, const ColorCorrectionModel& defaultValue = ColorCorrectionModel());
 
 //! @} ccm
 } // namespace ccm

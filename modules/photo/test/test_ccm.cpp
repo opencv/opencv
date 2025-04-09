@@ -39,7 +39,7 @@ TEST(Photo_ColorCorrection, test_model)
 {
     cv::ccm::ColorCorrectionModel model(s / 255, cv::ccm::COLORCHECKER_MACBETH);
     Mat colorCorrectionMat = model.compute();
-    Mat src_rgbl = (Mat_<Vec3d>(24, 1) <<
+    Mat srcRgbl = (Mat_<Vec3d>(24, 1) <<
         Vec3d(0.68078957, 0.12382801, 0.01514889),
         Vec3d(0.81177942, 0.32550452, 0.089818),
         Vec3d(0.61259378, 0.2831933, 0.07478902),
@@ -64,9 +64,9 @@ TEST(Photo_ColorCorrection, test_model)
         Vec3d(0.66743106, 0.24076803, 0.03394333),
         Vec3d(0.47141286, 0.13592419, 0.01362205),
         Vec3d(0.17377101, 0.03256864, 0.00203026));
-    EXPECT_MAT_NEAR(src_rgbl, model.getSrcLinearRGB(), 1e-4);
+    EXPECT_MAT_NEAR(srcRgbl, model.getSrcLinearRGB(), 1e-4);
 
-    Mat dst_rgbl = (Mat_<Vec3d>(24, 1) <<
+    Mat dstRgbl = (Mat_<Vec3d>(24, 1) <<
         Vec3d(0.17303173, 0.08211037, 0.05672686),
         Vec3d(0.56832031, 0.29269488, 0.21835529),
         Vec3d(0.10365019, 0.19588357, 0.33140475),
@@ -91,7 +91,7 @@ TEST(Photo_ColorCorrection, test_model)
         Vec3d(0.19007357, 0.19186587, 0.19308397),
         Vec3d(0.08529188, 0.08887994, 0.09257601),
         Vec3d(0.0303193, 0.03113818, 0.03274845));
-    EXPECT_MAT_NEAR(dst_rgbl, model.getRefLinearRGB(), 1e-4);
+    EXPECT_MAT_NEAR(dstRgbl, model.getRefLinearRGB(), 1e-4);
 
     Mat mask = Mat::ones(24, 1, CV_8U);
     EXPECT_MAT_NEAR(model.getMask(), mask, 0.0);
@@ -104,20 +104,20 @@ TEST(Photo_ColorCorrection, test_model)
 }
 TEST(Photo_ColorCorrection, test_masks_weights_1)
 {
-    Mat weights_list_ = (Mat_<double>(24, 1) <<
+    Mat weightsList_ = (Mat_<double>(24, 1) <<
                             1.1, 0, 0, 1.2, 0, 0,
                             1.3, 0, 0, 1.4, 0, 0,
                             0.5, 0, 0, 0.6, 0, 0,
                             0.7, 0, 0, 0.8, 0, 0);
     cv::ccm::ColorCorrectionModel model1(s / 255,cv::ccm::COLORCHECKER_MACBETH);
     model1.setColorSpace(cv::ccm::COLOR_SPACE_SRGB);
-    model1.setCCMType(cv::ccm::CCM_LINEAR);
+    model1.setCcmType(cv::ccm::CCM_LINEAR);
     model1.setDistance(cv::ccm::DISTANCE_CIE2000);
     model1.setLinearization(cv::ccm::LINEARIZATION_GAMMA);
     model1.setLinearizationGamma(2.2);
     model1.setLinearizationDegree(3);
     model1.setSaturatedThreshold(0, 0.98);
-    model1.setWeightsList(weights_list_);
+    model1.setWeightsList(weightsList_);
     model1.setWeightCoeff(1.5);
     Mat colorCorrectionMat = model1.compute();
     Mat weights = (Mat_<double>(8, 1) <<
@@ -136,7 +136,7 @@ TEST(Photo_ColorCorrection, test_masks_weights_1)
 TEST(Photo_ColorCorrection, test_masks_weights_2)
 {
     cv::ccm::ColorCorrectionModel model2(s / 255, cv::ccm::COLORCHECKER_MACBETH);
-    model2.setCCMType(cv::ccm::CCM_LINEAR);
+    model2.setCcmType(cv::ccm::CCM_LINEAR);
     model2.setDistance(cv::ccm::DISTANCE_CIE2000);
     model2.setLinearization(cv::ccm::LINEARIZATION_GAMMA);
     model2.setLinearizationGamma(2.2);

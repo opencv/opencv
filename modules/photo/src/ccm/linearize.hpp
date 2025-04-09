@@ -44,7 +44,7 @@ private:
 
 // Global functions for FileStorage for Polyfit
 void write(cv::FileStorage& fs, const std::string&, const Polyfit& polyfit);
-void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& default_value = Polyfit());
+void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& defaultValue = Polyfit());
 
 /** @brief Logpolyfit model.
 */
@@ -70,7 +70,7 @@ public:
 
 // Global functions for FileStorage for LogPolyfit
 void write(cv::FileStorage& fs, const std::string&, const LogPolyfit& logpolyfit);
-void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& default_value = LogPolyfit());
+void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& defaultValue = LogPolyfit());
 
 /** @brief Linearization base.
 */
@@ -96,7 +96,7 @@ public:
 
 // Global functions for FileStorage for Linear
 void write(cv::FileStorage& fs, const std::string&, const Linear& linear);
-void read(const cv::FileNode& node, Linear& linear, const Linear& default_value = Linear());
+void read(const cv::FileNode& node, Linear& linear, const Linear& defaultValue = Linear());
 
 /** @brief Linearization identity.
            make no change.
@@ -110,7 +110,7 @@ class LinearIdentity : public Linear
 
 // Global functions for FileStorage for LinearIdentity
 void write(cv::FileStorage& fs, const std::string&, const LinearIdentity& linearidentity);
-void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& default_value = LinearIdentity());
+void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& defaultValue = LinearIdentity());
 
 /** @brief Linearization gamma correction.
 */
@@ -134,7 +134,7 @@ public:
 
 // Global functions for FileStorage for LinearGamma
 void write(cv::FileStorage& fs, const std::string&, const LinearGamma& lineargamma);
-void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& default_value = LinearGamma());
+void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& defaultValue = LinearGamma());
 
 /** @brief Linearization.
            Grayscale polynomial fitting.
@@ -183,7 +183,7 @@ public:
 template <typename T>
 void write(cv::FileStorage& fs, const std::string&, const LinearGray<T>& lineargray);
 template <typename T>
-void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& default_value = LinearGray<T>());
+void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& defaultValue = LinearGray<T>());
 
 /** @brief Linearization.
            Fitting channels respectively.
@@ -237,7 +237,7 @@ public:
 template <typename T>
 void write(cv::FileStorage& fs, const std::string&, const LinearColor<T>& linearcolor);
 template <typename T>
-void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& default_value = LinearColor<T>());
+void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& defaultValue = LinearColor<T>());
 
 /** @brief Get linearization method.
            used in ccm model.

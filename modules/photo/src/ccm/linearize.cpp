@@ -26,9 +26,9 @@ void Polyfit::read(const cv::FileNode& node) {
 void write(cv::FileStorage& fs, const std::string&, const Polyfit& polyfit) {
     polyfit.write(fs);
 }
-void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& default_value) {
+void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& defaultValue) {
     if(node.empty())
-        polyfit = default_value;
+        polyfit = defaultValue;
     else
         polyfit.read(node);
 }
@@ -82,9 +82,9 @@ void LogPolyfit::read(const cv::FileNode& node) {
 void write(cv::FileStorage& fs, const std::string&, const LogPolyfit& logpolyfit) {
     logpolyfit.write(fs);
 }
-void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& default_value) {
+void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& defaultValue) {
     if(node.empty())
-        logpolyfit = default_value;
+        logpolyfit = defaultValue;
     else
         logpolyfit.read(node);
 }
@@ -174,10 +174,10 @@ void write(cv::FileStorage& fs, const std::string&, const Linear& linear)
     linear.write(fs);
 }
 
-void read(const cv::FileNode& node, Linear& linear, const Linear& default_value)
+void read(const cv::FileNode& node, Linear& linear, const Linear& defaultValue)
 {
     if (node.empty())
-        linear = default_value;
+        linear = defaultValue;
     else
         linear.read(node);
 }
@@ -187,10 +187,10 @@ void write(cv::FileStorage& fs, const std::string&, const LinearIdentity& linear
     linearidentity.write(fs);
 }
 
-void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& default_value)
+void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& defaultValue)
 {
     if (node.empty())
-        linearidentity = default_value;
+        linearidentity = defaultValue;
     else
         linearidentity.read(node);
 }
@@ -200,10 +200,10 @@ void write(cv::FileStorage& fs, const std::string&, const LinearGamma& lineargam
     lineargamma.write(fs);
 }
 
-void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& default_value)
+void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& defaultValue)
 {
     if (node.empty())
-        lineargamma = default_value;
+        lineargamma = defaultValue;
     else
         lineargamma.read(node);
 }
@@ -215,10 +215,10 @@ void write(cv::FileStorage& fs, const std::string&, const LinearColor<T>& linear
 }
 
 template <typename T>
-void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& default_value)
+void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& defaultValue)
 {
     if (node.empty())
-        linearcolor = default_value;
+        linearcolor = defaultValue;
     else
         linearcolor.read(node);
 }
@@ -230,10 +230,10 @@ void write(cv::FileStorage& fs, const std::string&, const LinearGray<T>& linearg
 }
 
 template <typename T>
-void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& default_value)
+void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& defaultValue)
 {
     if (node.empty())
-        lineargray = default_value;
+        lineargray = defaultValue;
     else
         lineargray.read(node);
 }

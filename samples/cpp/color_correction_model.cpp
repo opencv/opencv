@@ -180,7 +180,7 @@ int main(int argc, char* argv[]) {
 
         // Color correction model
         model = cv::ccm::ColorCorrectionModel(src, cv::ccm::COLORCHECKER_MACBETH);
-        model.setCCMType(CCM_LINEAR);
+        model.setCcmType(CCM_LINEAR);
         model.setDistance(DISTANCE_CIE2000);
         model.setLinearization(LINEARIZATION_GAMMA);
         model.setLinearizationGamma(2.2);

@@ -38,7 +38,7 @@ Here are the parameters for ColorCorrectionModel
            the reference color values
            and corresponding color space
            NOTICE: the color values are in [0, 1]
-    ref_cs :
+    refColorSpace :
            the corresponding color space
                   If the color type is some RGB, the format is RGB not BGR;
     Supported Color Space:
