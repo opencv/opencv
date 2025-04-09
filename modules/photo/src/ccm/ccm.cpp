@@ -430,7 +430,7 @@ Mat ColorCorrectionModel::getWeights() const{
 
 void ColorCorrectionModel::write(FileStorage& fs) const
 {
-    fs << "ColorCorrectionModel" << "{"  // Add a valid key name here
+    fs << "{"  // Add a valid key name here
        << "ccm" << p->ccm
        << "loss" << p->loss
        << "cs_enum" << p->cs_enum
