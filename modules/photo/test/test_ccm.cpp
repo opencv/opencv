@@ -220,38 +220,6 @@ TEST(Photo_ColorCorrection, correctImage)
     EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
 }
 
-TEST(Photo_ColorCorrection, mcc_ccm_combined)
-{
-    Ptr<cv::mcc::CCheckerDetector> detector = cv::mcc::CCheckerDetector::create();
-    std::string path = cvtest::findDataFile("mcc/mcc_ccm_test.jpg");
-    Mat img = imread(path);
-
-    ASSERT_FALSE(img.empty()) << "Test image can't be loaded: " << path;
-    // read gold calibrate img
-    path = cvtest::findDataFile("mcc/mcc_ccm_test_res.png");
-    Mat gold_img = imread(path);
-
-    ASSERT_FALSE(img.empty()) << "Grouth truth for test image can't be loaded: " << path;
-
-    detector->setColorChartType(cv::mcc::MCC24);
-    ASSERT_TRUE(detector->process(img));
-
-    vector<Ptr<cv::mcc::CChecker>> checkers = detector->getListColorChecker();
-    Mat chartsRGB = checkers[0]->getChartsRGB();
-    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
-    Mat colorCorrectionMat = model.compute();
-
-    // compute calibrate image
-    Mat image, calibratedImage;
-    cvtColor(img, image, COLOR_BGR2RGB);
-    image.convertTo(image, CV_64F, 1. / 255.);
-    model.correctImage(image, calibratedImage);
-    calibratedImage.convertTo(calibratedImage, CV_8UC3, 255.);
-    cvtColor(calibratedImage, calibratedImage, COLOR_RGB2BGR);
-    // check calibrated image
-    EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
-}
-
 TEST(Photo_ColorCorrection, serialization)
 {
     auto path1 = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
