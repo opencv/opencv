@@ -509,6 +509,28 @@ inline v_float64 v_lut(const double* tab, const v_int32& vidx) \
 #endif
 
 
+// Strangely, __riscv_vluxseg2ei32 is slower (tested on Muse-Pi and CanMV K230)
+#define OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(_Tpvec, _Tp, suffix) \
+inline void v_lut_deinterleave(const _Tp* tab, const v_int32& vidx, _Tpvec& vx, _Tpvec& vy) \
+{ \
+    v_uint32 vidx_ = __riscv_vmul(__riscv_vreinterpret_u32m2(vidx), sizeof(_Tp), VTraits<v_int32>::vlanes()); \
+    vx = __riscv_vluxei32(tab, vidx_, VTraits<_Tpvec>::vlanes()); \
+    vy = __riscv_vluxei32(tab, __riscv_vadd(vidx_, sizeof(_Tp), VTraits<v_int32>::vlanes()), VTraits<_Tpvec>::vlanes()); \
+}
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_float32, float, f32)
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_int32, int, i32)
+OPENCV_HAL_IMPL_RVV_LUT_DEINTERLEAVE(v_uint32, unsigned, u32)
+
+#if CV_SIMD_SCALABLE_64F
+inline void v_lut_deinterleave(const double* tab, const v_int32& vidx, v_float64& vx, v_float64& vy) \
+{ \
+    vuint32m1_t vidx_ = __riscv_vmul(__riscv_vlmul_trunc_u32m1(__riscv_vreinterpret_u32m2(vidx)), sizeof(double), VTraits<v_float64>::vlanes()); \
+    vx = __riscv_vluxei32(tab, vidx_, VTraits<v_float64>::vlanes()); \
+    vy = __riscv_vluxei32(tab, __riscv_vadd(vidx_, sizeof(double), VTraits<v_int32>::vlanes()), VTraits<v_float64>::vlanes()); \
+}
+#endif
+
+
 inline v_uint8 v_lut(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut((schar*)tab, idx)); }
 inline v_uint8 v_lut_pairs(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_pairs((schar*)tab, idx)); }
 inline v_uint8 v_lut_quads(const uchar* tab, const int* idx) { return v_reinterpret_as_u8(v_lut_quads((schar*)tab, idx)); }
@@ -2108,7 +2130,17 @@ inline v_int64 v_dotprod_expand_fast(const v_int16& a, const v_int16& b, const v
 // 32 >> 64f
 #if CV_SIMD_SCALABLE_64F
 inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b)
-{ return v_cvt_f64(v_dotprod_fast(a, b)); }
+{
+    vfloat64m1_t zero = __riscv_vfmv_v_f_f64m1(0, VTraits<vuint64m1_t>::vlanes());
+    auto prod_i64 = __riscv_vwmul(a, b, VTraits<v_int32>::vlanes());
+    // Convert to f64 before reduction to avoid overflow: #27003
+    auto prod_f64 = __riscv_vfcvt_f(prod_i64, VTraits<v_int32>::vlanes());
+    return __riscv_vset( // Needs v_float64 (vfloat64m2_t) here.
+        v_setall_f64(0.0f), // zero_f64m2
+        0,
+        __riscv_vfredusum_tu(zero, prod_f64, zero, VTraits<v_int32>::vlanes())
+    );
+}
 inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b, const v_float64& c)
 { return v_add(v_dotprod_expand_fast(a, b) , c); }
 #endif

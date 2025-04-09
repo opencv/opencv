@@ -1720,6 +1720,16 @@ void cv::remap( InputArray _src, OutputArray _dst,
         CALL_HAL(remap32f, cv_hal_remap32f, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                  map1.ptr<float>(), map1.step, map2.ptr<float>(), map2.step, interpolation, borderType, borderValue.val);
     }
+    if ((map1.type() == CV_32FC2) && map2.empty())
+    {
+        CALL_HAL(remap32fc2, cv_hal_remap32fc2, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                 map1.ptr<float>(), map1.step, interpolation, borderType, borderValue.val);
+    }
+    if ((map1.type() == CV_16SC2) && (map2.empty() || map2.type() == CV_16UC1))
+    {
+        CALL_HAL(remap16s, cv_hal_remap16s, src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
+                 map1.ptr<short>(), map1.step, map2.ptr<ushort>(), map2.step, interpolation, borderType, borderValue.val);
+    }
 
     interpolation &= ~WARP_RELATIVE_MAP;
     if( interpolation == INTER_AREA )
@@ -3737,7 +3747,6 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         else
             Kmag = maxRadius / ssize.width;
 
-        int x, y;
         Mat bufx, bufy, bufp, bufa;
 
         bufx = Mat(1, dsize.width, CV_32F);
@@ -3745,33 +3754,39 @@ void cv::warpPolar(InputArray _src, OutputArray _dst, Size dsize,
         bufp = Mat(1, dsize.width, CV_32F);
         bufa = Mat(1, dsize.width, CV_32F);
 
-        for (x = 0; x < dsize.width; x++)
+        for (int x = 0; x < dsize.width; x++)
             bufx.at<float>(0, x) = (float)x - center.x;
 
-        for (y = 0; y < dsize.height; y++)
-        {
-            float* mx = (float*)(mapx.data + y*mapx.step);
-            float* my = (float*)(mapy.data + y*mapy.step);
+        cv::parallel_for_(cv::Range(0, dsize.height), [&](const cv::Range& range) {
+            for (int y = range.start; y < range.end; ++y) {
+               Mat local_bufx = bufx.clone();
+               Mat local_bufy = Mat(1, dsize.width, CV_32F);
+               Mat local_bufp = Mat(1, dsize.width, CV_32F);
+               Mat local_bufa = Mat(1, dsize.width, CV_32F);
 
-            for (x = 0; x < dsize.width; x++)
-                bufy.at<float>(0, x) = (float)y - center.y;
+                for (int x = 0; x < dsize.width; x++) {
+                    local_bufy.at<float>(0, x) = static_cast<float>(y) - center.y;
+                }
 
-            cartToPolar(bufx, bufy, bufp, bufa, 0);
+                cartToPolar(local_bufx, local_bufy, local_bufp, local_bufa, false);
 
-            if (semiLog)
-            {
-                bufp += 1.f;
-                log(bufp, bufp);
+                if (semiLog) {
+                    local_bufp += 1.f;
+                    log(local_bufp, local_bufp);
+                }
+
+                float* mx = (float*)(mapx.data + y * mapx.step);
+                float* my = (float*)(mapy.data + y * mapy.step);
+
+                for (int x = 0; x < dsize.width; x++) {
+                    double rho = local_bufp.at<float>(0, x) / Kmag;
+                    double phi = local_bufa.at<float>(0, x) / Kangle;
+                    mx[x] = static_cast<float>(rho);
+                    my[x] = static_cast<float>(phi) + ANGLE_BORDER;
+                }
             }
+        });
 
-            for (x = 0; x < dsize.width; x++)
-            {
-                double rho = bufp.at<float>(0, x) / Kmag;
-                double phi = bufa.at<float>(0, x) / Kangle;
-                mx[x] = (float)rho;
-                my[x] = (float)phi + ANGLE_BORDER;
-            }
-        }
         remap(src, _dst, mapx, mapy, flags & cv::INTER_MAX,
               (flags & cv::WARP_FILL_OUTLIERS) ? cv::BORDER_CONSTANT : cv::BORDER_TRANSPARENT);
     }

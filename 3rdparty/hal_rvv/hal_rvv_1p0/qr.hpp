@@ -1,47 +1,29 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+
+// Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+
 #ifndef OPENCV_HAL_RVV_QR_HPP_INCLUDED
 #define OPENCV_HAL_RVV_QR_HPP_INCLUDED
 
+#include <cfloat>
+#include <cmath>
+#include <typeinfo>
+#include <vector>
 #include <riscv_vector.h>
+#include "hal_rvv_1p0/types.hpp"
 
 namespace cv { namespace cv_hal_rvv { namespace qr {
 
 #undef cv_hal_QR32f
-#define cv_hal_QR32f cv::cv_hal_rvv::qr::QR
+#define cv_hal_QR32f cv::cv_hal_rvv::qr::QR<cv::cv_hal_rvv::RVV_F32M4>
 #undef cv_hal_QR64f
-#define cv_hal_QR64f cv::cv_hal_rvv::qr::QR
-
-template<typename T> struct rvv;
-
-template<> struct rvv<float>
-{
-    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e32m4(); }
-    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e32m4(a); }
-    static inline vfloat32m4_t vfmv_v_f(float a, size_t b) { return __riscv_vfmv_v_f_f32m4(a, b); }
-    static inline vfloat32m1_t vfmv_s_f(float a, size_t b) { return __riscv_vfmv_s_f_f32m1(a, b); }
-    static inline vfloat32m4_t vle(const float* a, size_t b) { return __riscv_vle32_v_f32m4(a, b); }
-    static inline vfloat32m4_t vlse(const float* a, ptrdiff_t b, size_t c) { return __riscv_vlse32_v_f32m4(a, b, c); }
-    static inline void vse(float* a, vfloat32m4_t b, size_t c) { __riscv_vse32(a, b, c); }
-    static inline void vsse(float* a, ptrdiff_t b, vfloat32m4_t c, size_t d) { __riscv_vsse32(a, b, c, d); }
-};
-
-template<> struct rvv<double>
-{
-    static inline size_t vsetvlmax() { return __riscv_vsetvlmax_e64m4(); }
-    static inline size_t vsetvl(size_t a) { return __riscv_vsetvl_e64m4(a); }
-    static inline vfloat64m4_t vfmv_v_f(double a, size_t b) { return __riscv_vfmv_v_f_f64m4(a, b); }
-    static inline vfloat64m1_t vfmv_s_f(double a, size_t b) { return __riscv_vfmv_s_f_f64m1(a, b); }
-    static inline vfloat64m4_t vle(const double* a, size_t b) { return __riscv_vle64_v_f64m4(a, b); }
-    static inline vfloat64m4_t vlse(const double* a, ptrdiff_t b, size_t c) { return __riscv_vlse64_v_f64m4(a, b, c); }
-    static inline void vse(double* a, vfloat64m4_t b, size_t c) { __riscv_vse64(a, b, c); }
-    static inline void vsse(double* a, ptrdiff_t b, vfloat64m4_t c, size_t d) { __riscv_vsse64(a, b, c, d); }
-};
+#define cv_hal_QR64f cv::cv_hal_rvv::qr::QR<cv::cv_hal_rvv::RVV_F64M4>
 
 // the algorithm is copied from core/src/matrix_decomp.cpp,
 // in the function template static int cv::QRImpl
-template<typename T>
+template<typename RVV_T, typename T = typename RVV_T::ElemType>
 inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t src2_step, T* dst, int* info)
 {
     T eps;
@@ -61,50 +43,50 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
     if (dst == NULL)
         dst = val + m;
 
-    int vlmax = rvv<T>::vsetvlmax(), vl;
+    int vlmax = RVV_T::setvlmax(), vl;
     for (int l = 0; l < n; l++)
     {
         //generate val
         int vlSize = m - l;
-        auto vec_sum = rvv<T>::vfmv_v_f(0, vlmax);
+        auto vec_sum = RVV_T::vmv(0, vlmax);
         for (int i = 0; i < vlSize; i += vl)
         {
-            vl = rvv<T>::vsetvl(vlSize - i);
-            auto vec_src = rvv<T>::vlse(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vl);
-            rvv<T>::vse(val + i, vec_src, vl);
+            vl = RVV_T::setvl(vlSize - i);
+            auto vec_src = RVV_T::vload_stride(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vl);
+            RVV_T::vstore(val + i, vec_src, vl);
             vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src, vec_src, vl);
         }
-        T vlNorm = __riscv_vfmv_f(__riscv_vfredosum(vec_sum, rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+        T vlNorm = __riscv_vfmv_f(__riscv_vfredosum(vec_sum, RVV_BaseType<RVV_T>::vmv_s(0, vlmax), vlmax));
         T tmpV = val[0];
         val[0] = val[0] + (val[0] >= 0 ? 1 : -1) * std::sqrt(vlNorm);
         vlNorm = std::sqrt(vlNorm + val[0] * val[0] - tmpV*tmpV);
         for (int i = 0; i < vlSize; i += vl)
         {
-            vl = rvv<T>::vsetvl(vlSize - i);
-            auto vec_src = rvv<T>::vle(val + i, vl);
+            vl = RVV_T::setvl(vlSize - i);
+            auto vec_src = RVV_T::vload(val + i, vl);
             vec_src = __riscv_vfdiv(vec_src, vlNorm, vl);
-            rvv<T>::vse(val + i, vec_src, vl);
+            RVV_T::vstore(val + i, vec_src, vl);
         }
         //multiply A_l*val
         for (int j = l; j < n; j++)
         {
-            vec_sum = rvv<T>::vfmv_v_f(0, vlmax);
+            vec_sum = RVV_T::vmv(0, vlmax);
             for (int i = l; i < m; i += vl)
             {
-                vl = rvv<T>::vsetvl(m - i);
-                auto vec_src1 = rvv<T>::vle(val + i - l, vl);
-                auto vec_src2 = rvv<T>::vlse(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
+                vl = RVV_T::setvl(m - i);
+                auto vec_src1 = RVV_T::vload(val + i - l, vl);
+                auto vec_src2 = RVV_T::vload_stride(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
                 vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src1, vec_src2, vl);
             }
-            T v_lA = 2 * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+            T v_lA = 2 * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, RVV_BaseType<RVV_T>::vmv_s(0, vlmax), vlmax));
 
             for (int i = l; i < m; i += vl)
             {
-                vl = rvv<T>::vsetvl(m - i);
-                auto vec_src1 = rvv<T>::vle(val + i - l, vl);
-                auto vec_src2 = rvv<T>::vlse(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
+                vl = RVV_T::setvl(m - i);
+                auto vec_src1 = RVV_T::vload(val + i - l, vl);
+                auto vec_src2 = RVV_T::vload_stride(src1 + i * src1_step + j, sizeof(T) * src1_step, vl);
                 vec_src2 = __riscv_vfnmsac(vec_src2, v_lA, vec_src1, vl);
-                rvv<T>::vsse(src1 + i * src1_step + j, sizeof(T) * src1_step, vec_src2, vl);
+                RVV_T::vstore_stride(src1 + i * src1_step + j, sizeof(T) * src1_step, vec_src2, vl);
             }
         }
 
@@ -112,10 +94,10 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
         dst[l] = val[0] * val[0];
         for (int i = 1; i < vlSize; i += vl)
         {
-            vl = rvv<T>::vsetvl(vlSize - i);
-            auto vec_src = rvv<T>::vle(val + i, vl);
+            vl = RVV_T::setvl(vlSize - i);
+            auto vec_src = RVV_T::vload(val + i, vl);
             vec_src = __riscv_vfdiv(vec_src, val[0], vl);
-            rvv<T>::vsse(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vec_src, vl);
+            RVV_T::vstore_stride(src1 + (l + i) * src1_step + l, sizeof(T) * src1_step, vec_src, vl);
         }
     }
 
@@ -128,31 +110,31 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
             val[0] = (T)1;
             for (int j = 1; j < m - l; j += vl)
             {
-                vl = rvv<T>::vsetvl(m - l - j);
-                auto vec_src = rvv<T>::vlse(src1 + (j + l) * src1_step + l, sizeof(T) * src1_step, vl);
-                rvv<T>::vse(val + j, vec_src, vl);
+                vl = RVV_T::setvl(m - l - j);
+                auto vec_src = RVV_T::vload_stride(src1 + (j + l) * src1_step + l, sizeof(T) * src1_step, vl);
+                RVV_T::vstore(val + j, vec_src, vl);
             }
 
             //h_l*x
             for (int j = 0; j < k; j++)
             {
-                auto vec_sum = rvv<T>::vfmv_v_f(0, vlmax);
+                auto vec_sum = RVV_T::vmv(0, vlmax);
                 for (int i = l; i < m; i += vl)
                 {
-                    vl = rvv<T>::vsetvl(m - i);
-                    auto vec_src1 = rvv<T>::vle(val + i - l, vl);
-                    auto vec_src2 = rvv<T>::vlse(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
+                    vl = RVV_T::setvl(m - i);
+                    auto vec_src1 = RVV_T::vload(val + i - l, vl);
+                    auto vec_src2 = RVV_T::vload_stride(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
                     vec_sum = __riscv_vfmacc_tu(vec_sum, vec_src1, vec_src2, vl);
                 }
-                T v_lB = 2 * dst[l] * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, rvv<T>::vfmv_s_f(0, vlmax), vlmax));
+                T v_lB = 2 * dst[l] * __riscv_vfmv_f(__riscv_vfredosum(vec_sum, RVV_BaseType<RVV_T>::vmv_s(0, vlmax), vlmax));
 
                 for (int i = l; i < m; i += vl)
                 {
-                    vl = rvv<T>::vsetvl(m - i);
-                    auto vec_src1 = rvv<T>::vle(val + i - l, vl);
-                    auto vec_src2 = rvv<T>::vlse(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
+                    vl = RVV_T::setvl(m - i);
+                    auto vec_src1 = RVV_T::vload(val + i - l, vl);
+                    auto vec_src2 = RVV_T::vload_stride(src2 + i * src2_step + j, sizeof(T) * src2_step, vl);
                     vec_src2 = __riscv_vfnmsac(vec_src2, v_lB, vec_src1, vl);
-                    rvv<T>::vsse(src2 + i * src2_step + j, sizeof(T) * src2_step, vec_src2, vl);
+                    RVV_T::vstore_stride(src2 + i * src2_step + j, sizeof(T) * src2_step, vec_src2, vl);
                 }
             }
         }
@@ -163,11 +145,11 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
             {
                 for (int p = 0; p < k; p += vl)
                 {
-                    vl = rvv<T>::vsetvl(k - p);
-                    auto vec_src1 = rvv<T>::vle(src2 + i * src2_step + p, vl);
-                    auto vec_src2 = rvv<T>::vle(src2 + j * src2_step + p, vl);
+                    vl = RVV_T::setvl(k - p);
+                    auto vec_src1 = RVV_T::vload(src2 + i * src2_step + p, vl);
+                    auto vec_src2 = RVV_T::vload(src2 + j * src2_step + p, vl);
                     vec_src1 = __riscv_vfnmsac(vec_src1, src1[i*src1_step + j], vec_src2, vl);
-                    rvv<T>::vse(src2 + i * src2_step + p, vec_src1, vl);
+                    RVV_T::vstore(src2 + i * src2_step + p, vec_src1, vl);
                 }
             }
             if (std::abs(src1[i*src1_step + i]) < eps)
@@ -177,10 +159,10 @@ inline int QR(T* src1, size_t src1_step, int m, int n, int k, T* src2, size_t sr
             }
             for (int p = 0; p < k; p += vl)
             {
-                vl = rvv<T>::vsetvl(k - p);
-                auto vec_src = rvv<T>::vle(src2 + i * src2_step + p, vl);
+                vl = RVV_T::setvl(k - p);
+                auto vec_src = RVV_T::vload(src2 + i * src2_step + p, vl);
                 vec_src = __riscv_vfdiv(vec_src, src1[i*src1_step + i], vl);
-                rvv<T>::vse(src2 + i * src2_step + p, vec_src, vl);
+                RVV_T::vstore(src2 + i * src2_step + p, vec_src, vl);
             }
         }
     }

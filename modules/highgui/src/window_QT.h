@@ -298,7 +298,6 @@ class CvWindow : public CvWinModel
     Q_OBJECT
 public:
     CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
-    ~CvWindow();
 
     void setMouseCallBack(CvMouseCallback m, void* param);
 
@@ -349,6 +348,7 @@ public:
 
 protected:
     virtual void keyPressEvent(QKeyEvent* event) CV_OVERRIDE;
+    virtual void closeEvent(QCloseEvent* event) CV_OVERRIDE;
 
 private:
 
