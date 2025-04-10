@@ -67,3 +67,5 @@ Answer: After obtaining the camera pose using solvePnP, the rotation (rvec) and 
 
         // assuming 'point' is the 3D position of a chessboard corner in the camera coordinate system
         double distance = norm(point);
+
+This is equivalent to applying the L2 norm on the 3D point’s coordinates (x, y, z).
