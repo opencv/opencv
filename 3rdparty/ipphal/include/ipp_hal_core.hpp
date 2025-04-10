@@ -42,4 +42,18 @@ int ipp_hal_polarToCart64f(const double* mag, const double* angle, double* x, do
 #undef cv_hal_polarToCart64f
 #define cv_hal_polarToCart64f ipp_hal_polarToCart64f
 
+#ifdef HAVE_IPP_IW
+int ipp_hal_flip(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                 uchar* dst_data, size_t dst_step, int flip_mode);
+
+#undef cv_hal_flip
+#define cv_hal_flip ipp_hal_flip
+#endif
+
+int ipp_hal_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width,
+                        int src_height, int element_size);
+
+#undef cv_hal_transpose2d
+#define cv_hal_transpose2d ipp_hal_transpose2d
+
 #endif
