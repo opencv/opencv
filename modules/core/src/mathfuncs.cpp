@@ -378,79 +378,12 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
 
 #endif
 
-#ifdef HAVE_IPP
-static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int depth = angle.depth();
-    if(depth != CV_32F && depth != CV_64F)
-        return false;
-
-    if(angle.dims <= 2)
-    {
-        int len = (int)(angle.cols*angle.channels());
-
-        if(depth == CV_32F)
-        {
-            for (int h = 0; h < angle.rows; h++)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_32f, (const float*)mag.ptr(h), (const float*)angle.ptr(h), (float*)x.ptr(h), (float*)y.ptr(h), len) < 0)
-                    return false;
-            }
-        }
-        else
-        {
-            for (int h = 0; h < angle.rows; h++)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_64f, (const double*)mag.ptr(h), (const double*)angle.ptr(h), (double*)x.ptr(h), (double*)y.ptr(h), len) < 0)
-                    return false;
-            }
-        }
-        return true;
-    }
-    else
-    {
-        const Mat      *arrays[] = {&mag, &angle, &x, &y, NULL};
-        uchar          *ptrs[4]  = {NULL};
-        NAryMatIterator it(arrays, ptrs);
-        int len = (int)(it.size*angle.channels());
-
-        if(depth == CV_32F)
-        {
-            for (size_t i = 0; i < it.nplanes; i++, ++it)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_32f, (const float*)ptrs[0], (const float*)ptrs[1], (float*)ptrs[2], (float*)ptrs[3], len) < 0)
-                    return false;
-            }
-        }
-        else
-        {
-            for (size_t i = 0; i < it.nplanes; i++, ++it)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_64f, (const double*)ptrs[0], (const double*)ptrs[1], (double*)ptrs[2], (double*)ptrs[3], len) < 0)
-                    return false;
-            }
-        }
-        return true;
-    }
-}
-#endif
-
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert(dst1.getObj() != dst2.getObj());
-
-#ifdef HAVE_IPP
-    const bool isInPlace =
-        (src1.getObj() == dst1.getObj()) ||
-        (src1.getObj() == dst2.getObj()) ||
-        (src2.getObj() == dst1.getObj()) ||
-        (src2.getObj() == dst2.getObj());
-#endif
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
@@ -463,8 +396,6 @@ void polarToCart( InputArray src1, InputArray src2,
     dst1.create( Angle.dims, Angle.size, type );
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
-
-    CV_IPP_RUN(!angleInDegrees && !isInPlace, ipp_polarToCart(Mag, Angle, X, Y));
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4] = {};
