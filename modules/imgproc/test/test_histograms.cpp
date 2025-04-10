@@ -2108,7 +2108,7 @@ TEST(Imgproc_Hist_Compare, intersect_regression_24757)
     src1.at<float>(32 * 2,0) = -55555555.5f; // work = +1.0         0.0
     src1.at<float>(32 * 3,0) = -1.0f;        // work = 0.0          -1.0
 
-    EXPECT_FLOAT_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0f);
+    EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
 }
 
 }} // namespace
