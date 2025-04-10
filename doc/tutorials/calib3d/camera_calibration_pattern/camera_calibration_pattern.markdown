@@ -47,7 +47,7 @@ create a ChAruco board pattern in charuco_board.svg with 7 rows, 5 columns, squa
 
         python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board --square_size 30 --marker_size 15 -f DICT_5X5_100.json.gz
 
-If you want to change the unit of measurement, use the -u option (e.g. mm, inches, px, m)
+If you want to change the measurement units, use the -u option (e.g. mm, inches, px, m)
 
 If you want to change the page size, use the -w (width) and -h (height) options
 
