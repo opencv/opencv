@@ -34,4 +34,12 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
 
 #endif
 
+int ipp_hal_polarToCart32f(const float* mag, const float* angle, float* x, float* y, int len, bool angleInDegrees);
+int ipp_hal_polarToCart64f(const double* mag, const double* angle, double* x, double* y, int len, bool angleInDegrees);
+
+#undef cv_hal_polarToCart32f
+#define cv_hal_polarToCart32f ipp_hal_polarToCart32f
+#undef cv_hal_polarToCart64f
+#define cv_hal_polarToCart64f ipp_hal_polarToCart64f
+
 #endif
