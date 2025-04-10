@@ -2132,7 +2132,8 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
                 v_result = v_add(v_result, v_add(v_cvt_f64(v_src), v_cvt_f64_high(v_src)));
             }
             result += v_reduce_sum(v_result);
-#elif CV_SIMD
+#elif CV_SIMD && 0 // Disable vectorization for CV_COMP_INTERSECT if f64 is unsupported due to low precision
+                   // See https://github.com/opencv/opencv/issues/24757
             v_float32 v_result = vx_setzero_f32();
             for (; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
             {
