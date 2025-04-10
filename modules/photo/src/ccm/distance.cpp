@@ -13,8 +13,8 @@ namespace ccm {
 
 double deltaCIE76(const Vec3d& lab1, const Vec3d& lab2) { return norm(lab1 - lab2); };
 
-double deltaCIE94(const Vec3d& lab1, const Vec3d& lab2, const double& kH,
-        const double& kC, const double& kL, const double& k1, const double& k2)
+double deltaCIE94(const Vec3d& lab1, const Vec3d& lab2, double kH,
+        double kC, double kL, double k1, double k2)
 {
     double dl = lab1[0] - lab2[0];
     double c1 = sqrt(pow(lab1[1], 2) + pow(lab1[2], 2));
@@ -36,15 +36,15 @@ double deltaCIE94GraphicArts(const Vec3d& lab1, const Vec3d& lab2)
     return deltaCIE94(lab1, lab2);
 }
 
-double toRad(const double& degree) { return degree / 180 * CV_PI; };
+double toRad(double degree) { return degree / 180 * CV_PI; };
 
 double deltaCIE94Textiles(const Vec3d& lab1, const Vec3d& lab2)
 {
     return deltaCIE94(lab1, lab2, 1.0, 1.0, 2.0, 0.048, 0.014);
 }
 
-double deltaCIEDE2000_(const Vec3d& lab1, const Vec3d& lab2, const double& kL,
-        const double& kC, const double& kH)
+double deltaCIEDE2000_(const Vec3d& lab1, const Vec3d& lab2, double kL,
+        double kC, double kH)
 {
     double deltaLApo = lab2[0] - lab1[0];
     double lBarApo = (lab1[0] + lab2[0]) / 2.0;
@@ -131,7 +131,7 @@ double deltaCIEDE2000(const Vec3d& lab1, const Vec3d& lab2)
     return deltaCIEDE2000_(lab1, lab2);
 }
 
-double deltaCMC(const Vec3d& lab1, const Vec3d& lab2, const double& kL, const double& kC)
+double deltaCMC(const Vec3d& lab1, const Vec3d& lab2, double kL, double kC)
 {
     double dL = lab2[0] - lab1[0];
     double da = lab2[1] - lab1[1];

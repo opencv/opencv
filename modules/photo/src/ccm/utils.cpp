@@ -11,12 +11,12 @@
 namespace cv {
 namespace ccm {
 
-inline double gammaCorrection_(const double& element, const double& gamma)
+inline double gammaCorrection_(double element, double gamma)
 {
     return (element >= 0 ? pow(element, gamma) : -pow((-element), gamma));
 }
 
-Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst)
+Mat gammaCorrection(const Mat& src, double gamma, Mat dst)
 {
     return elementWise(src, [gamma](double element) -> double { return gammaCorrection_(element, gamma); }, dst);
 }
@@ -62,7 +62,7 @@ Mat multiple(const Mat& xyz, const Mat& ccm)
     return res;
 }
 
-Mat saturate(Mat& src, const double& low, const double& up)
+Mat saturate(Mat& src, double low, double up)
 {
     CV_Assert(src.type() == CV_64FC3);
     Scalar lower_bound(low, low, low);

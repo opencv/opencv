@@ -36,13 +36,13 @@ double deltaCIE76(const Vec3d& lab1, const Vec3d& lab2);
     @return distance between lab1 and lab2
 */
 
-double deltaCIE94(const Vec3d& lab1, const Vec3d& lab2, const double& kH = 1.0,
-        const double& kC = 1.0, const double& kL = 1.0, const double& k1 = 0.045,
-        const double& k2 = 0.015);
+double deltaCIE94(const Vec3d& lab1, const Vec3d& lab2, double kH = 1.0,
+        double kC = 1.0, double kL = 1.0, double k1 = 0.045,
+        double k2 = 0.015);
 
 double deltaCIE94GraphicArts(const Vec3d& lab1, const Vec3d& lab2);
 
-double toRad(const double& degree);
+double toRad(double degree);
 
 double deltaCIE94Textiles(const Vec3d& lab1, const Vec3d& lab2);
 
@@ -54,8 +54,8 @@ double deltaCIE94Textiles(const Vec3d& lab1, const Vec3d& lab2);
     @param kH Hue scale
     @return distance between lab1 and lab2
 */
-double deltaCIEDE2000_(const Vec3d& lab1, const Vec3d& lab2, const double& kL = 1.0,
-        const double& kC = 1.0, const double& kH = 1.0);
+double deltaCIEDE2000_(const Vec3d& lab1, const Vec3d& lab2, double kL = 1.0,
+        double kC = 1.0, double kH = 1.0);
 double deltaCIEDE2000(const Vec3d& lab1, const Vec3d& lab2);
 
 /** @brief  distance between two points in formula CMC
@@ -66,7 +66,7 @@ double deltaCIEDE2000(const Vec3d& lab1, const Vec3d& lab2);
     @return distance between lab1 and lab2
 */
 
-double deltaCMC(const Vec3d& lab1, const Vec3d& lab2, const double& kL = 1, const double& kC = 1);
+double deltaCMC(const Vec3d& lab1, const Vec3d& lab2, double kL = 1, double kC = 1);
 
 double deltaCMC1To1(const Vec3d& lab1, const Vec3d& lab2);
 

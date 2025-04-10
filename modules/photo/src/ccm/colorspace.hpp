@@ -138,7 +138,7 @@ private:
     virtual void calLinear() CV_OVERRIDE;
     /** @brief Used by toLFunc.
     */
-    double toLFuncEW(double& x) const;
+    double toLFuncEW(double x) const;
 
     /** @brief Linearization.
         @param rgb the input array, type of cv::Mat.
@@ -148,7 +148,7 @@ private:
 
     /** @brief Used by fromLFunc.
     */
-    double fromLFuncEW(const double& x) const;
+    double fromLFuncEW(double x) const;
 
     /** @brief Delinearization.
         @param rgbl the input array, type of cv::Mat.

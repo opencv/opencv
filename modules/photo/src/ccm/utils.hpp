@@ -14,7 +14,7 @@
 namespace cv {
 namespace ccm {
 
-double gammaCorrection_(const double& element, const double& gamma);
+double gammaCorrection_(double element, double gamma);
 
 /** @brief gamma correction.
            \f[
@@ -25,7 +25,7 @@ double gammaCorrection_(const double& element, const double& gamma);
     @param gamma a constant for gamma correction.
     @param dst the output array, type of Mat.
  */
-Mat gammaCorrection(const Mat& src, const double& gamma, Mat dst=Mat());
+Mat gammaCorrection(const Mat& src, double gamma, Mat dst=Mat());
 
 /** @brief maskCopyTo a function to delete unsatisfied elementwise.
     @param src the input array, type of Mat.
@@ -46,7 +46,7 @@ Mat multiple(const Mat& xyz, const Mat& ccm);
     @param low  the threshold to choose saturated colors
     @param up  the threshold to choose saturated colors
 */
-Mat saturate(Mat& src, const double& low, const double& up);
+Mat saturate(Mat& src, double low, double up);
 
 /** @brief rgb2gray it is an approximation grayscale function for relative RGB
            color space

@@ -155,7 +155,7 @@ void sRGBBase_::calLinear()
 
 /* @brief Used by toLFunc.
  */
-double sRGBBase_::toLFuncEW(double& x) const
+double sRGBBase_::toLFuncEW(double x) const
 {
     if (x > K0)
     {
@@ -183,7 +183,7 @@ Mat sRGBBase_::toLFunc(Mat& rgb) const
 
 /* @brief Used by fromLFunc.
  */
-double sRGBBase_::fromLFuncEW(const double& x) const
+double sRGBBase_::fromLFuncEW(double x) const
 {
     if (x > beta)
     {
