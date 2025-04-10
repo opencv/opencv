@@ -11,6 +11,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mean_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/minmax_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/norm_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/cart_polar_ipp.cpp"
 )
 
 if(HAVE_IPP_ICV)
