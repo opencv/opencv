@@ -145,31 +145,28 @@ bool SPngDecoder::readHeader()
             m_color_type = ihdr.color_type;
             m_bit_depth = ihdr.bit_depth;
 
-            if (ihdr.bit_depth <= 8 || ihdr.bit_depth == 16)
+            int num_trans;
+            switch (ihdr.color_type)
             {
-                int num_trans;
-                switch (ihdr.color_type)
-                {
-                case SPNG_COLOR_TYPE_TRUECOLOR:
-                case SPNG_COLOR_TYPE_INDEXED:
-                    struct spng_trns trns;
-                    num_trans = !spng_get_trns(ctx, &trns);
-                    if (num_trans > 0)
-                        m_type = CV_8UC4;
-                    else
-                        m_type = CV_8UC3;
-                    break;
-                case SPNG_COLOR_TYPE_GRAYSCALE_ALPHA:
-                case SPNG_COLOR_TYPE_TRUECOLOR_ALPHA:
+            case SPNG_COLOR_TYPE_TRUECOLOR:
+            case SPNG_COLOR_TYPE_INDEXED:
+                struct spng_trns trns;
+                num_trans = !spng_get_trns(ctx, &trns);
+                if (num_trans > 0)
                     m_type = CV_8UC4;
-                    break;
-                default:
-                    m_type = CV_8UC1;
-                }
-                if (ihdr.bit_depth == 16)
-                    m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
-                result = true;
+                else
+                    m_type = CV_8UC3;
+                break;
+            case SPNG_COLOR_TYPE_GRAYSCALE_ALPHA:
+            case SPNG_COLOR_TYPE_TRUECOLOR_ALPHA:
+                m_type = CV_8UC4;
+                break;
+            default:
+                m_type = CV_8UC1;
             }
+            if (ihdr.bit_depth == 16)
+                m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
+            result = true;
         }
     }
 
@@ -210,14 +207,9 @@ bool SPngDecoder::readData(Mat &img)
             else
                 fmt = SPNG_FMT_RGBA8;
         }
-        if (img.channels() == 3)
+        if (img.type() == CV_8UC3)
         {
             fmt = SPNG_FMT_RGB8;
-            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE || m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA) &&
-                m_bit_depth == 16)
-                fmt = SPNG_FMT_RGB8;
-            else if (m_bit_depth == 16)
-                fmt = SPNG_FMT_PNG;
         }
         else if (img.channels() == 1)
         {
@@ -225,19 +217,12 @@ bool SPngDecoder::readData(Mat &img)
                 fmt = SPNG_FMT_G8;
             else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && m_bit_depth == 16)
             {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = SPNG_FMT_PNG;
-                }
+                fmt = SPNG_FMT_PNG;
             }
             else if (m_color_type == SPNG_COLOR_TYPE_INDEXED ||
                      m_color_type == SPNG_COLOR_TYPE_TRUECOLOR)
             {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
+                if (img.depth() == CV_8U)
                 {
                     fmt = SPNG_FMT_RGB8;
                 }
@@ -246,19 +231,14 @@ bool SPngDecoder::readData(Mat &img)
                     fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGB8;
                 }
             }
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA || fmt == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
+            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA)
             {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8;
-                }
+                fmt = img.depth() == CV_8U ? SPNG_FMT_RGB8 : SPNG_FMT_RGBA16;
             }
             else
-                fmt = SPNG_FMT_RGB8;
+            {
+                fmt = img.depth() == CV_16U ? SPNG_FMT_RGBA16 : SPNG_FMT_RGB8;
+            }
         }
 
         size_t image_width, image_size = 0;
@@ -270,6 +250,38 @@ bool SPngDecoder::readData(Mat &img)
         {
             image_width = image_size / m_height;
 
+            if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16) && ihdr.interlace_method != 0)
+            {
+                if (img.depth() == CV_16U)
+                {
+                    if (fmt == SPNG_FMT_RGB8)
+                        fmt = SPNG_FMT_PNG;
+                    Mat tmp(m_height, m_width, CV_16UC4);
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
+                        return false;
+                    cvtColor(tmp, img, COLOR_BGRA2GRAY);
+                }
+                else
+                {
+                    Mat tmp(m_height, m_width, CV_8UC3);
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
+                        return false;
+                    cvtColor(tmp, img, COLOR_BGR2GRAY);
+                }
+                return true;
+            }
+
+            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && img.depth() == CV_16U) && ihdr.interlace_method && img.elemSize() * m_width / 3 == image_width)
+            {
+                Mat tmp(m_height, m_width, CV_16U);
+                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, SPNG_FMT_PNG, 0))
+                    return false;
+                cvtColor(tmp, img, COLOR_GRAY2BGR);
+                //icvCvt_Gray2BGR_16u_C1C3R(reinterpret_cast<const ushort*>(tmp.data), 0,
+                    //reinterpret_cast<ushort*>(img.data), 0, Size(m_width, 1));
+                return true;
+            }
+
             ret = spng_decode_image(png_ptr, nullptr, 0, fmt, SPNG_DECODE_PROGRESSIVE | decode_flags);
             if (ret == SPNG_OK)
             {
@@ -279,88 +291,55 @@ bool SPngDecoder::readData(Mat &img)
                 // decode image then convert to grayscale
                 if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA8 || fmt == SPNG_FMT_RGBA16))
                 {
-                    if (ihdr.interlace_method == 0)
+                    AutoBuffer<unsigned char> buffer;
+                    buffer.allocate(image_width);
+                    if (fmt == SPNG_FMT_RGB8)
                     {
-                        AutoBuffer<unsigned char> buffer;
-                        buffer.allocate(image_width);
-                        if (fmt == SPNG_FMT_RGB8)
+                        do
                         {
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
 
-                                ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                                spngCvt_BGR2Gray_8u_C3C1R(
-                                    buffer.data(),
-                                    0,
-                                    img.data + row_info.row_num * img.step,
-                                    0, Size(m_width, 1), 2);
-                            } while (ret == SPNG_OK);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA8)
-                        {
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
-
-                                ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                                spngCvt_BGRA2Gray_8u_C4C1R(
-                                    buffer.data(),
-                                    0,
-                                    img.data + row_info.row_num * img.step,
-                                    0, Size(m_width, 1), 2);
-                            } while (ret == SPNG_OK);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA16)
-                        {
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
-
-                                ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                                spngCvt_BGRA2Gray_16u_CnC1R(
-                                    reinterpret_cast<const ushort *>(buffer.data()), 0,
-                                    reinterpret_cast<ushort *>(img.data + row_info.row_num * img.step),
-                                    0, Size(m_width, 1),
-                                    4, 2);
-                            } while (ret == SPNG_OK);
-                        }
-                    }
-                    else
-                    {
-                        AutoBuffer<unsigned char> imageBuffer(image_size);
-                        ret = spng_decode_image(png_ptr, imageBuffer.data(), image_size, fmt, 0);
-                        int step = m_width * img.channels();
-                        if (fmt == SPNG_FMT_RGB8)
-                        {
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
                             spngCvt_BGR2Gray_8u_C3C1R(
-                                imageBuffer.data(),
-                                step,
-                                img.data,
-                                step, Size(m_width, m_height), 2);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA8)
+                                buffer.data(),
+                                0,
+                                img.data + row_info.row_num * img.step,
+                                0, Size(m_width, 1), 2);
+                        } while (ret == SPNG_OK);
+                    }
+                    else if (fmt == SPNG_FMT_RGBA8)
+                    {
+                        do
                         {
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
                             spngCvt_BGRA2Gray_8u_C4C1R(
-                                imageBuffer.data(),
-                                step,
-                                img.data,
-                                step, Size(m_width, m_height), 2);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA16)
+                                buffer.data(),
+                                0,
+                                img.data + row_info.row_num * img.step,
+                                0, Size(m_width, 1), 2);
+                        } while (ret == SPNG_OK);
+                    }
+                    else if (fmt == SPNG_FMT_RGBA16)
+                    {
+                        do
                         {
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
                             spngCvt_BGRA2Gray_16u_CnC1R(
-                                reinterpret_cast<const ushort *>(imageBuffer.data()), step / 3,
-                                reinterpret_cast<ushort *>(img.data),
-                                step / 3, Size(m_width, m_height),
+                                reinterpret_cast<const ushort*>(buffer.data()), 0,
+                                reinterpret_cast<ushort*>(img.data + row_info.row_num * img.step),
+                                0, Size(m_width, 1),
                                 4, 2);
-                        }
+                        } while (ret == SPNG_OK);
                     }
                 }
                 else if (color)
@@ -414,17 +393,29 @@ bool SPngDecoder::readData(Mat &img)
                     }
                     else if (fmt == SPNG_FMT_PNG)
                     {
+                        AutoBuffer<unsigned char> bufcn4;
+                        bufcn4.allocate(image_width);
                         do
                         {
                             ret = spng_get_row_info(png_ptr, &row_info);
                             if (ret)
                                 break;
 
-                            ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
-                            if (ihdr.interlace_method == 0 && !m_use_rgb)
+                            if (ihdr.color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
                             {
-                                icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
-                                                       reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0, Size(m_width, 1));
+                                ret = spng_decode_row(png_ptr, bufcn4.data(), image_width);
+                                icvCvt_BGRA2BGR_16u_C4C3R(reinterpret_cast<const ushort*>(bufcn4.data()), 0,
+                                    reinterpret_cast<ushort*>(buffer[row_info.row_num]), 0, Size(m_width, 1), m_use_rgb ? 0 : 1);
+                            }
+                            else
+                            {
+                                ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
+
+                                if (ihdr.interlace_method == 0 && !m_use_rgb)
+                                {
+                                    icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort*>(buffer[row_info.row_num]), 0,
+                                        reinterpret_cast<ushort*>(buffer[row_info.row_num]), 0, Size(m_width, 1));
+                                }
                             }
                         } while (ret == SPNG_OK);
                         if (ihdr.interlace_method && !m_use_rgb)
@@ -457,11 +448,31 @@ bool SPngDecoder::readData(Mat &img)
                 {
                     do
                     {
+                        if (img.depth() == CV_8U && m_bit_depth == 16)
+                        {
+                            Mat tmp(m_height, m_width, CV_16U);
+                            do
+                            {
+                                ret = spng_get_row_info(png_ptr, &row_info);
+                                if (ret)
+                                    break;
+
+                                ret = spng_decode_row(png_ptr, tmp.row(row_info.row_num).data, m_width * 2);
+                            } while (ret == SPNG_OK);
+
+                            if (ret != SPNG_EOI)
+                                return false;
+
+                            tmp.convertTo(img, CV_8U, 1. / 255);
+                        }
+                        else
+                        {
                         ret = spng_get_row_info(png_ptr, &row_info);
                         if (ret)
                             break;
 
                         ret = spng_decode_row(png_ptr, img.data + row_info.row_num * image_width, image_width);
+                        }
                     } while (ret == SPNG_OK);
                 }
             }
