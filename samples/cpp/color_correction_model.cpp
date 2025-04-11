@@ -1,4 +1,3 @@
-//! [tutorial]
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -18,20 +17,20 @@ using namespace mcc;
 const string about =
     "This sample detects Macbeth color checker using DNN or thresholding and applies color correction."
     "To run default:\n"
-    "\t ./example_cpp_color_correction_model --input=path/to/your/input/image\n"
+    "\t ./example_cpp_color_correction_model --input=path/to/your/input/image --query=path/to/your/query/image\n"
     "With DNN model:\n"
-    "\t ./example_cpp_color_correction_model mcc --input=path/to/your/input/image/\n\n"
+    "\t ./example_cpp_color_correction_model mcc --input=path/to/your/input/image --query=path/to/your/query/image\n\n"
     "Model path can also be specified using --model argument. And config path can be specified using --config. Download it using python download_models.py mcc from dnn samples directory\n\n";
 
 const string param_keys =
     "{ help h          |                   | Print help message. }"
     "{ @alias          |                   | An alias name of model to extract preprocessing parameters from models.yml file. }"
     "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-    "{ input i         |                   | Path to input image for computing CCM. Skip to use device camera. }"
-    "{ query q         |                   | Path to query image to apply color correction. If not provided, input image will be used. }"
+    "{ input i         |  mcc_ccm_test.jpg | Path to input image for computing CCM.}"
+    "{ query q         |     baboon.jpg    | Path to query image to apply color correction. If not provided, input image will be used. }"
     "{ type            |         0         | chartType: 0-Standard, 1-DigitalSG, 2-Vinyl }"
     "{ num_charts      |         1         | Maximum number of charts in the image }"
-    "{ ccm_file        |                   | Path to YAML file containing pre-computed CCM parameters }";
+    "{ ccm_file        |                   | Path to YAML file containing pre-computed CCM parameters}";
 
 const string backend_keys = format(
     "{ backend          | default | Choose one of computation backends: "
@@ -122,7 +121,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    cv::ccm::ColorCorrectionModel model;
+    ColorCorrectionModel model;
     Mat queryImage;
 
     if (!ccmFile.empty()) {
@@ -171,14 +170,11 @@ int main(int argc, char* argv[]) {
             cout << "No chart detected in the input image!" << endl;
             return -1;
         }
-
-        cout << "Actual colors: " << src << endl << endl;
-
         // Convert to double and normalize
         src.convertTo(src, CV_64F, 1.0/255.0);
 
         // Color correction model
-        model = cv::ccm::ColorCorrectionModel(src, cv::ccm::COLORCHECKER_MACBETH);
+        model = ColorCorrectionModel(src, COLORCHECKER_MACBETH);
         model.setCcmType(CCM_LINEAR);
         model.setDistance(DISTANCE_CIE2000);
         model.setLinearization(LINEARIZATION_GAMMA);
@@ -218,10 +214,9 @@ int main(int argc, char* argv[]) {
     calibratedImage.convertTo(calibratedImage, CV_8UC3);
     cvtColor(calibratedImage, calibratedImage, COLOR_RGB2BGR);
 
-    string outputFile = "corrected_output.png";
-    imwrite(outputFile, calibratedImage);
-    cout << "Corrected image saved to: " << outputFile << endl;
+    imshow("Original Image", queryImage);
+    imshow("Corrected Image", calibratedImage);
+    waitKey(0);
 
     return 0;
 }
-//! [tutorial]
