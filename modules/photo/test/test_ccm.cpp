@@ -103,7 +103,7 @@ TEST(Photo_ColorCorrection, test_model)
     EXPECT_MAT_NEAR(colorCorrectionMat, refColorMat, 1e-4);
 }
 
-TEST(Photo_ColorCorrection, test_model2)
+TEST(Photo_ColorCorrection, test_model_with_color_patches_mask)
 {
     Mat dstData = (Mat_<Vec3d>(24, 1) <<
         Vec3d(37.986, 13.555, 14.059),
@@ -235,7 +235,7 @@ TEST(Photo_ColorCorrection, compute_color_correction_matrix)
     EXPECT_NEAR(gold_loss, loss, 1e-8);
 }
 
-TEST(Photo_ColorCorrection, correctImage)
+TEST(Photo_ColorCorrection, correct_image)
 {
     string path = cvtest::findDataFile("mcc/mcc_ccm_test.jpg");
     Mat img = imread(path, IMREAD_COLOR);

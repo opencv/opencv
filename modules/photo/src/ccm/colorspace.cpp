@@ -389,14 +389,14 @@ Lab::Lab(IO io_)
     from = { Operation([this](Mat src) -> Mat { return fromsrc(src); }) };
 }
 
-Vec3d Lab::fromxyz(cv::Vec3d& xyz)
+Vec3d Lab::fromxyz(const Vec3d& xyz)
 {
     auto& il = getIlluminants(io);
     double x = xyz[0] / il[0],
            y = xyz[1] / il[1],
            z = xyz[2] / il[2];
     auto f = [](double t) -> double {
-        return t > t0 ? std::cbrt(t) : (m * t + c);
+        return t > T0 ? std::cbrt(t) : (M * t + C);
     };
     double fx = f(x), fy = f(y), fz = f(z);
     return { 116. * fy - 16., 500 * (fx - fy), 200 * (fy - fz) };
@@ -412,10 +412,10 @@ Mat Lab::fromsrc(Mat& src)
             [this](cv::Vec3d a) -> cv::Vec3d { return fromxyz(a); });
 }
 
-Vec3d Lab::tolab(cv::Vec3d& lab)
+Vec3d Lab::tolab(const Vec3d& lab)
 {
     auto f_inv = [](double t) -> double {
-        return t > delta ? pow(t, 3.0) : (t - c) / m;
+        return t > DELTA ? pow(t, 3.0) : (t - C) / M;
     };
     double L = (lab[0] + 16.) / 116., a = lab[1] / 500., b = lab[2] / 200.;
     auto& il = getIlluminants(io);

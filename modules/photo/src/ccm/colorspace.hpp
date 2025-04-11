@@ -302,12 +302,12 @@ public:
     static std::shared_ptr<Lab> get(IO io);
 
 private:
-    static constexpr double delta = (6. / 29.);
-    static constexpr double m = 1. / (3. * delta * delta);
-    static constexpr double t0 = delta * delta * delta;
-    static constexpr double c = 4. / 29.;
+    static constexpr double DELTA = (6. / 29.);
+    static constexpr double M = 1. / (3. * DELTA * DELTA);
+    static constexpr double T0 = DELTA * DELTA * DELTA;
+    static constexpr double C = 4. / 29.;
 
-    Vec3d fromxyz(Vec3d& xyz);
+    Vec3d fromxyz(const Vec3d& xyz);
 
     /** @brief Calculate From.
         @param src the input array, type of cv::Mat.
@@ -315,7 +315,7 @@ private:
     */
     Mat fromsrc(Mat& src);
 
-    Vec3d tolab(Vec3d& lab);
+    Vec3d tolab(const Vec3d& lab);
 
     /** @brief Calculate To.
         @param src the input array, type of cv::Mat.
