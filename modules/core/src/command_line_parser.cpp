@@ -31,7 +31,7 @@ public:
 };
 
 
-struct CommandLineParser::Impl
+struct CV_IMPL_HIDDEN CommandLineParser::Impl
 {
     bool error;
     String error_message;
