@@ -314,6 +314,69 @@ int fastcv_hal_sobel(
     CV_HAL_RETURN(status, hal_sobel);
 }
 
+class FcvBoxLoop_Invoker : public cv::ParallelLoopBody
+{
+public:
+
+    FcvBoxLoop_Invoker(cv::Mat src_, int width_, int height_, cv::Mat dst_, int bdr_, int knl_, int normalize_, int stripeHeight_, int nStripes_, int depth_) :
+        cv::ParallelLoopBody(), src(src_), width(width_), height(height_), dst(dst_), bdr(bdr_), knl(knl_), normalize(normalize_), stripeHeight(stripeHeight_), nStripes(nStripes_), depth(depth_)
+    {
+    }
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        int height_ = stripeHeight * (range.end - range.start);
+        int width_  = width;
+        cv::Mat src_;
+        int n = knl/2;
+
+        if(range.end == nStripes)
+            height_ += (height - range.end * stripeHeight);
+
+        src_ = cv::Mat(height_ + 2*n, width_ + 2*n, depth);
+
+        if(range.start == 0 && range.end == nStripes)
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_)), src_, n, n, n, n, bdr);
+        else if(range.start == 0)
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_ + n)), src_, n, 0, n, n, bdr);
+        else if(range.end == nStripes)
+            cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + n)), src_, 0, n, n, n, bdr);
+        else
+            cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + 2*n)), src_, 0, 0, n, n, bdr);
+
+        cv::Mat dst_padded = cv::Mat(height_ + 2*n, width_ + 2*n, depth);
+        if(depth == CV_32F)
+            fcvBoxFilterNxNf32((float*)src_.data, width_ + 2*n, height_ + 2*n, (width_ + 2*n)*sizeof(float),
+                                       knl, (float*)dst_padded.data, dst_padded.step[0]);
+        else
+        {
+            auto func = knl == 3 ? fcvBoxFilter3x3u8_v3 : fcvBoxFilter5x5u8_v2;
+
+            func(src_.data, width_ + 2*n, height_ + 2*n, width_ + 2*n,
+                            dst_padded.data, dst_padded.step[0], normalize, FASTCV_BORDER_UNDEFINED, 0);
+        }
+        int start_val = stripeHeight * range.start;
+        cv::Mat dst_temp1 = dst_padded(cv::Rect(n, n, width_, height_));
+        cv::Mat dst_temp2 = dst(cv::Rect(0, start_val, width_, height_));
+        dst_temp1.copyTo(dst_temp2);
+    }
+
+private:
+    cv::Mat src;
+    const int width;
+    const int height;
+    cv::Mat dst;
+    const int bdr;
+    const int knl;
+    const int normalize;
+    const int stripeHeight;
+    const int nStripes;
+    int depth;
+
+    FcvBoxLoop_Invoker(const FcvBoxLoop_Invoker &);  // = delete;
+    const FcvBoxLoop_Invoker& operator= (const FcvBoxLoop_Invoker &);  // = delete;
+};
+
 int fastcv_hal_boxFilter(
     const uchar*     src_data,
     size_t           src_step,
@@ -335,15 +398,7 @@ int fastcv_hal_boxFilter(
     bool             normalize,
     int              border_type)
 {
-    if((width*height) < (320*240))
-    {
-        CV_HAL_RETURN_NOT_IMPLEMENTED("input size not supported");
-    }
-    else if(src_data == dst_data)
-    {
-        CV_HAL_RETURN_NOT_IMPLEMENTED("in-place processing not supported");
-    }
-    else if(src_depth != CV_8U || cn != 1)
+    if((src_depth != CV_8U && src_depth != CV_32F) || cn != 1)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
     }
@@ -351,8 +406,7 @@ int fastcv_hal_boxFilter(
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("same src and dst type supported");
     }
-    else if(ksize_width != ksize_height ||
-           (ksize_width != 3 && ksize_width != 5))
+    else if(ksize_width != ksize_height)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("kernel size not supported");
     }
@@ -363,37 +417,52 @@ int fastcv_hal_boxFilter(
         CV_HAL_RETURN_NOT_IMPLEMENTED("ROI not supported");
     }
 
+    if(src_depth == CV_32F && normalize != 1)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("normalized kernel supported for float types");
+
+    if(src_depth == CV_32F && (height < 5 || width < 5 || ksize_height < 5))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("size not supported");
+
+    if(src_depth == CV_8U && (ksize_width != 3 && ksize_width != 5))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("kernel size not supported");
+
     INITIALIZATION_CHECK;
 
-    fcvBorderType bdr;
-    uint8_t bdrVal = 0;
-    switch(border_type)
+    cv::Mat dst_temp;
+    bool inPlace = src_data == dst_data ? true : false ;
+
+    int nThreads = cv::getNumThreads();
+
+    cv::Mat src = cv::Mat(height, width, src_depth, (void*)src_data, src_step);
+
+    if(inPlace)
+        dst_temp = cv::Mat(height, width, src_depth);
+    else
+        dst_temp = cv::Mat(height, width, src_depth, (void*)dst_data, dst_step);
+
+    int nStripes, stripeHeight = src.rows/nThreads;
+
+    if((size_t)src.rows < ksize_height || stripeHeight < 5 || nThreads <= 1)
     {
-        case cv::BORDER_REPLICATE:
-            bdr = FASTCV_BORDER_REPLICATE;
-            break;
-        case cv::BORDER_REFLECT:
-            bdr = FASTCV_BORDER_REFLECT;
-            break;
-        case cv::BORDER_REFLECT101:    // cv::BORDER_REFLECT_101, BORDER_DEFAULT
-            bdr = FASTCV_BORDER_REFLECT_V2;
-            break;
-        default:
-            CV_HAL_RETURN_NOT_IMPLEMENTED("border type not supported");
+        nStripes = 1;
+        stripeHeight = src.rows;
+    }
+    else
+    {
+        nStripes = nThreads;
+        stripeHeight = src.rows/nThreads;
+    }
+    
+    cv::parallel_for_(cv::Range(0, nStripes),
+            FcvBoxLoop_Invoker(src, width, height, dst_temp, border_type, ksize_width, normalize, stripeHeight, nStripes, src_depth), nStripes);
+
+    if(inPlace)
+    {
+        cv::Mat dst = cv::Mat(height, width, src_depth, (void*)dst_data, dst_step);
+        dst_temp.copyTo(dst);
     }
 
     fcvStatus status = FASTCV_SUCCESS;
-    if(ksize_width == 3)
-    {
-        status = fcvBoxFilter3x3u8_v3(src_data, width, height, src_step,
-                                      dst_data, dst_step, normalize, bdr, bdrVal);
-    }
-    else if(ksize_width == 5)
-    {
-        status = fcvBoxFilter5x5u8_v2(src_data, width, height, src_step,
-                                      dst_data, dst_step, normalize, bdr, bdrVal);
-    }
-
     CV_HAL_RETURN(status,hal_boxFilter);
 }
 
