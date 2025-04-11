@@ -11,13 +11,24 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/mean_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/minmax_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/norm_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/cart_polar_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/transforms_ipp.cpp"
 )
 
+#TODO: HAVE_IPP_ICV and HAVE_IPP_IW added as private macro till OpenCV itself is
+#      source of IPP and public definitions lead to redefinition warning
+#      The macro should be redefined as PUBLIC when IPP part is removed from core
+#      to make HAL the source of IPP integration
 if(HAVE_IPP_ICV)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_ICV)
 endif()
 
+if(HAVE_IPP_IW)
+  target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
+endif()
+
 target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-suggest-override)
 
 target_include_directories(ipphal PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
