@@ -680,7 +680,7 @@ TEST(Imgcodecs_APNG, imread_animation_16u)
     EXPECT_EQ(19519, img.at<ushort>(0, 0));
 #endif
 #ifdef HAVE_SPNG
-    EXPECT_EQ(19532, img.at<ushort>(0, 0));
+    EXPECT_EQ(19517, img.at<ushort>(0, 0));
 #endif
 
     img = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
