@@ -246,6 +246,15 @@ bool SPngDecoder::readData(Mat &img)
         struct spng_ihdr ihdr;
         spng_get_ihdr(png_ptr, &ihdr);
 
+        if (fmt == SPNG_FMT_PNG  && ihdr.bit_depth == 16 && (ihdr.color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA || ihdr.color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA))
+        {
+            Mat tmp(m_height, m_width, CV_16UC4);
+            if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
+                return false;
+            cvtColor(tmp, img, COLOR_RGBA2BGR);
+            return true;
+        }
+
         if (ret == SPNG_OK)
         {
             image_width = image_size / m_height;
@@ -271,7 +280,7 @@ bool SPngDecoder::readData(Mat &img)
                 return true;
             }
 
-            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && img.depth() == CV_16U) && ihdr.interlace_method && img.elemSize() * m_width / 3 == image_width)
+            if (fmt == SPNG_FMT_PNG && img.elemSize() * m_width / 3 == image_width)
             {
                 Mat tmp(m_height, m_width, CV_16U);
                 if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, SPNG_FMT_PNG, 0))
