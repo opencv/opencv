@@ -1901,9 +1901,45 @@ TEST(Imgproc_ColorBayerVNG, regression)
         Mat diff;
         absdiff(gold, result, diff);
 
-        EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+	EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
     }
 }
+
+// See https://github.com/opencv/opencv/issues/5089
+// See https://github.com/opencv/opencv/issues/27225
+typedef testing::TestWithParam<cv::ColorConversionCodes> Imgproc_ColorBayerVNG_Modes;
+
+TEST_P(Imgproc_ColorBayerVNG_Modes, regression27225)
+{
+    const int mode = GetParam();
+    const int margin = (mode == cv::COLOR_BayerGB2BGR_VNG || mode == cv::COLOR_BayerGR2BGR_VNG)? 5 : 4;
+
+    cv::Mat in = cv::Mat::eye(16, 16, CV_8UC1) * 255;
+    cv::resize(in, in, {}, 2, 2, cv::INTER_NEAREST);
+
+    cv::Mat out;
+    EXPECT_NO_THROW(cv::cvtColor(in, out, mode));
+
+    for(int iy=0; iy < out.size().height; iy++) {
+        for(int ix=0; ix < out.size().width; ix++) {
+            // Avoid to test around main diagonal pixels.
+            if(cv::abs(ix - iy) < margin) {
+                continue;
+            }
+            // Others should be completely black.
+            const Vec3b pixel = out.at<Vec3b>(iy, ix);
+            EXPECT_EQ(pixel[0], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+            EXPECT_EQ(pixel[1], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+            EXPECT_EQ(pixel[2], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+        }
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_ColorBayerVNG_Modes,
+    testing::Values( cv::ColorConversionCodes(cv::COLOR_BayerBG2BGR_VNG),
+                     cv::COLOR_BayerGB2BGR_VNG,
+                     cv::COLOR_BayerRG2BGR_VNG,
+                     cv::COLOR_BayerGR2BGR_VNG));
 
 // creating Bayer pattern
 template <typename T, int depth>
