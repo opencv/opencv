@@ -251,7 +251,7 @@ bool SPngDecoder::readData(Mat &img)
             Mat tmp(m_height, m_width, CV_16UC4);
             if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
                 return false;
-            cvtColor(tmp, img, COLOR_RGBA2BGR);
+            cvtColor(tmp, img, m_use_rgb ? COLOR_RGBA2RGB : COLOR_RGBA2BGR);
             return true;
         }
 
@@ -268,14 +268,14 @@ bool SPngDecoder::readData(Mat &img)
                     Mat tmp(m_height, m_width, CV_16UC4);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
                         return false;
-                    cvtColor(tmp, img, COLOR_BGRA2GRAY);
+                    cvtColor(tmp, img, COLOR_RGBA2GRAY);
                 }
                 else
                 {
                     Mat tmp(m_height, m_width, CV_8UC3);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
                         return false;
-                    cvtColor(tmp, img, COLOR_BGR2GRAY);
+                    cvtColor(tmp, img, COLOR_RGB2GRAY);
                 }
                 return true;
             }
