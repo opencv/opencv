@@ -1901,7 +1901,7 @@ TEST(Imgproc_ColorBayerVNG, regression)
         Mat diff;
         absdiff(gold, result, diff);
 
-	EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+        EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
     }
 }
 
