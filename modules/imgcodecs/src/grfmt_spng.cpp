@@ -268,14 +268,14 @@ bool SPngDecoder::readData(Mat &img)
                     Mat tmp(m_height, m_width, CV_16UC4);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
                         return false;
-                    spngCvt_BGRA2Gray_8u_C4C1R(tmp.data,tmp.step1(), img.data, img.step1(), Size(m_width, m_height), 2);
+                    spngCvt_BGRA2Gray_8u_C4C1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 2);
                 }
                 else
                 {
                     Mat tmp(m_height, m_width, CV_8UC3);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
                         return false;
-                    spngCvt_BGR2Gray_8u_C3C1R(tmp.data,tmp.step1(), img.data, img.step1(), Size(m_width, m_height), 2);
+                    spngCvt_BGR2Gray_8u_C3C1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 2);
                 }
                 return true;
             }
