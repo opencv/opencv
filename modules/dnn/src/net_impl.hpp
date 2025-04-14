@@ -45,19 +45,14 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 // So if we get a MatShape of (100, 4, 4) and pageSize of 16, we will get 7 pages of shape (16, 4, 4)
 // In this sense, `curIdx` points to the last row of the last page, which is filled. So, in the example above
 // curIdx will be 3. 
-struct PagedCacheManager {
-    int pageSize = 16;          // Number of "rows" (e.g., tokens or entries) per page
-    int dtype = CV_32F;         // Default data type for storage
-    int curIdx;
-    std::unordered_map<int, std::vector<cv::Mat>> cache;
-
-    void reset();
-    void allocateInitialPagesForArg(int argIdx, const cv::MatShape& shape, int totalRows);
-    bool needsNewPage(int argIdx, int currentRowIndex) const;
-    void createNewPage(int argIdx, const cv::MatShape& shape);
-    cv::Mat getPage(int argIdx, int pageIdx);
-    int numPages(int argIdx) const;
-    cv::Mat concatPages(int argIdx) const;
+class PagedCacheManager {
+    public:
+        PagedCacheManager( Net::Impl* netImpl_) : netImpl(netImpl_) {}
+        void allocate(MatShape shape, MatType dtype);
+        std::vector <Mat> getPages(Arg arg);
+    protected:
+        std::unordered_map<int, std::vector<cv::Mat>> cache;
+        Net::Impl* netImpl;
 };
 
 
