@@ -187,10 +187,13 @@ bool SPngDecoder::readData(Mat &img)
         struct spng_trns trns;
         int have_trns = spng_get_trns((struct spng_ctx *)m_ctx, &trns);
 
-        int decode_flags = 0;
+        double gamma;
+        spng_get_gama(png_ptr, &gamma);
+        int decode_flags = (gamma != 1.0 && m_bit_depth != 16) ? SPNG_DECODE_GAMMA : 0;
+
         if (have_trns == SPNG_OK)
         {
-            decode_flags = SPNG_DECODE_TRNS;
+            decode_flags |= SPNG_DECODE_TRNS;
         }
         if (img.channels() == 4)
         {
@@ -263,8 +266,6 @@ bool SPngDecoder::readData(Mat &img)
             {
                 if (img.depth() == CV_16U)
                 {
-                    if (fmt == SPNG_FMT_RGB8)
-                        fmt = SPNG_FMT_PNG;
                     Mat tmp(m_height, m_width, CV_16UC4);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
                         return false;
