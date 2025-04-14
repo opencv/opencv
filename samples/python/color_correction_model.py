@@ -13,8 +13,8 @@ def get_args_parser(func_args):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), '../dnn', 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
-    parser.add_argument('--input', help='Path to input image for computing CCM')
-    parser.add_argument('--query', help='Path to query image to apply color correction')
+    parser.add_argument('--input', default='mcc_ccm_test.jpg', help='Path to input image for computing CCM')
+    parser.add_argument('--query', default='baboon.jpg', help='Path to query image to apply color correction')
     parser.add_argument('--ccm_file', help='Path to YAML file containing pre-computed CCM parameters')
     parser.add_argument('--chart_type', type=int, default=0,
                         help='chartType: 0-Standard, 1-DigitalSG, 2-Vinyl, default:0')
@@ -48,7 +48,7 @@ def get_args_parser(func_args):
             DNN model:
                 python color_correction_model.py mcc --input=path/to/your/input/image --query=path/to/query/image
             Using pre-computed CCM:
-                python color_correction_model.py --ccm_file=path/to/ccm.yaml --query=path/to/query/image
+                python color_correction_model.py --ccm_file=path/to/ccm_output.yaml --query=path/to/query/image
 
         Model path can also be specified using --model argument. And config path can be specified using --config.
         ''', formatter_class=argparse.RawTextHelpFormatter)
@@ -180,10 +180,9 @@ def main(func_args=None):
     calibrated_image = (calibrated_image * 255.0).astype(np.uint8)
     calibrated_image = cv.cvtColor(calibrated_image, cv.COLOR_RGB2BGR)
 
-    # Save corrected image
-    output_file = "corrected_output.png"
-    cv.imwrite(output_file, calibrated_image)
-    print("Corrected image saved to:", output_file)
+    cv.imshow("Original Image", query_image)
+    cv.imshow("Corrected Image", calibrated_image)
+    cv.waitKey(0)
 
     return 0
 

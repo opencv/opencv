@@ -1,3 +1,4 @@
+//! [tutorial]
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -20,6 +21,8 @@ const string about =
     "\t ./example_cpp_color_correction_model --input=path/to/your/input/image --query=path/to/your/query/image\n"
     "With DNN model:\n"
     "\t ./example_cpp_color_correction_model mcc --input=path/to/your/input/image --query=path/to/your/query/image\n\n"
+    "Using pre-computed CCM:\n"
+    "\t ./example_cpp_color_correction_model mcc --input=--ccm_file=path/to/ccm_output.yaml --query=path/to/your/query/image\n\n"
     "Model path can also be specified using --model argument. And config path can be specified using --config. Download it using python download_models.py mcc from dnn samples directory\n\n";
 
 const string param_keys =
@@ -220,3 +223,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
+//! [tutorial]
