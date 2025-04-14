@@ -39,6 +39,23 @@ namespace obsensor {
 #define OBSENSOR_FEMTO_MEGA_PID 0x0669 // pid of Orbbec Femto Mega Camera
 #define OBSENSOR_GEMINI2L_PID 0x0673 // pid of Orbbec Gemini 2 L Camera
 #define OBSENSOR_GEMINI2XL_PID 0x0671 // pid of Orbbec Gemini 2 XL Camera
+#define OBSENSOR_GEMINI335_PID 0x0800 // pid of Orbbec Gemini 335 Camera
+#define OBSENSOR_GEMINI330_PID 0x0801 // pid of Orbbec Gemini 330 Camera
+#define OBSENSOR_GEMINI336_PID 0x0803 // pid of Orbbec Gemini 336 Camera
+#define OBSENSOR_GEMINI335L_PID 0x0804 // pid of Orbbec Gemini 335L Camera
+#define OBSENSOR_GEMINI330L_PID 0x0805 // pid of Orbbec Gemini 330L Camera
+#define OBSENSOR_GEMINI336L_PID 0x0807 // pid of Orbbec Gemini 336L Camera
+#define OBSENSOR_GEMINI335LG_PID 0x080B // pid of Orbbec Gemini 335Lg Camera
+
+#define IS_OBSENSOR_GEMINI330_SHORT_PID(pid) \
+    ((pid) == OBSENSOR_GEMINI335_PID || (pid) == OBSENSOR_GEMINI330_PID || (pid) == OBSENSOR_GEMINI336_PID)
+
+#define IS_OBSENSOR_GEMINI330_LONG_PID(pid) \
+    ((pid) == OBSENSOR_GEMINI335L_PID || (pid) == OBSENSOR_GEMINI330L_PID || \
+    (pid) == OBSENSOR_GEMINI336L_PID || (pid) == OBSENSOR_GEMINI335LG_PID)
+
+#define IS_OBSENSOR_GEMINI330_PID(pid) \
+    (IS_OBSENSOR_GEMINI330_SHORT_PID(pid) || IS_OBSENSOR_GEMINI330_LONG_PID(pid))
 
 enum StreamType
 {

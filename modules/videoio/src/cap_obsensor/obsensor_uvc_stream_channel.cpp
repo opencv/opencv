@@ -41,13 +41,14 @@ const uint8_t OB_EXT_CMD2[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x56, 0x00
 const uint8_t OB_EXT_CMD3[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x58, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD4[16] = { 0x47, 0x4d, 0x02, 0x00, 0x03, 0x00, 0x60, 0x00, 0xed, 0x03, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD5[16] = { 0x47, 0x4d, 0x02, 0x00, 0x03, 0x00, 0x62, 0x00, 0xe9, 0x03, 0x00, 0x00 };
-const uint8_t OB_EXT_CMD6[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x7c, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+const uint8_t OB_EXT_CMD6[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x7c, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD7[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x12, 0x55, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD8[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD9[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x13, 0x4b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD11[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD12[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD13[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x13, 0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+const uint8_t OB_EXT_CMD14[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x14, 0xd3, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 
 #if defined(HAVE_OBSENSOR_V4L2)
 #define fourCc2Int(a, b, c, d) \
@@ -62,6 +63,7 @@ const std::map<uint32_t, FrameFormat> fourccToOBFormat = {
     {fourCc2Int('M', 'J', 'P', 'G'), FRAME_FORMAT_MJPG},
     {fourCc2Int('Y', '1', '6', ' '), FRAME_FORMAT_Y16},
     {fourCc2Int('Y', '1', '4', ' '), FRAME_FORMAT_Y14},
+    {fourCc2Int('Z', '1', '6', ' '), FRAME_FORMAT_Y16}
 };
 
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName)
@@ -204,6 +206,54 @@ DepthFrameUnpacker::~DepthFrameUnpacker() {
     delete[] outputDataBuf_;
 }
 
+HardwareD2CProcessor::HardwareD2CProcessor(const OBHardwareD2CParams& param) : param_(param){}
+
+void HardwareD2CProcessor::process(Frame* frame) {
+    const float scale = param_.scale;
+    const int crop_left = std::max(-param_.left, 0);
+    const int crop_right = std::max(-param_.right, 0);
+    const int pad_top = std::max(param_.top, 0);
+    const int crop_bottom = std::max(-param_.bottom, 0);
+
+    cv::Mat srcMat(frame->height, frame->width, CV_16UC1, frame->data);
+    cv::resize(srcMat, srcMat, cv::Size(), scale, scale, cv::INTER_LINEAR);
+
+    // left/right crop
+    const int valid_width = srcMat.cols - crop_left - crop_right;
+    if (valid_width <= 0 || srcMat.rows <= 0) {
+        CV_LOG_ERROR(NULL, "Invalid horizontal crop parameters");
+        return;
+    }
+    srcMat = srcMat(cv::Rect(crop_left, 0, valid_width, srcMat.rows));
+
+    // top padding
+    if (pad_top > 0) {
+        cv::copyMakeBorder(srcMat, srcMat, pad_top, 0, 0, 0, cv::BORDER_CONSTANT, 0);
+    }
+
+    // bottom crop
+    const int valid_height = srcMat.rows - crop_bottom;
+    if (valid_height <= 0) {
+        CV_LOG_ERROR(NULL, "Invalid vertical crop parameters");
+        return;
+    }
+    srcMat = srcMat(cv::Rect(0, 0, srcMat.cols, valid_height));
+
+    const size_t required_size = srcMat.total() * srcMat.elemSize();
+    if (!srcMat.empty() && required_size <= frame->dataSize) {
+        if (srcMat.isContinuous()) {
+            memcpy(frame->data, srcMat.ptr(), required_size);
+        } else { // handle non-continuous memory
+            cv::Mat contMat = srcMat.clone();
+            memcpy(frame->data, contMat.ptr(), contMat.total() * contMat.elemSize());
+        }
+        frame->width = srcMat.cols;
+        frame->height = srcMat.rows;
+        frame->dataSize = required_size;
+    } else {
+        CV_LOG_ERROR(NULL, "Output buffer too small or empty result");
+    }
+}
 
 #define ON_BITS(count) ((1 << count) - 1)
 #define CREATE_MASK(count, offset) (ON_BITS(count) << offset)
@@ -245,6 +295,7 @@ void DepthFrameUnpacker::process(Frame *frame){
 
 IUvcStreamChannel::IUvcStreamChannel(const UvcDeviceInfo& devInfo) :
     devInfo_(devInfo),
+    xuUnit_(IS_OBSENSOR_GEMINI330_PID(devInfo.pid) ? OBSENSOR_G330_XU_UNIT : OBSENSOR_COMMON_XU_UNIT),
     streamType_(parseUvcDeviceNameToStreamType(devInfo_.name))
 {
 
@@ -285,6 +336,11 @@ bool IUvcStreamChannel::setProperty(int propId, const uint8_t* /*data*/, uint32_
             rst &= setXu(2, OB_EXT_CMD11, sizeof(OB_EXT_CMD11));
             rst &= getXu(2, &rcvData, &rcvLen);
             rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
+            rst &= getXu(2, &rcvData, &rcvLen);
+        }else if(IS_OBSENSOR_GEMINI330_PID(devInfo_.pid)) {
+            rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
+            rst &= getXu(2, &rcvData, &rcvLen);
+            rst &= setXu(2, OB_EXT_CMD14, sizeof(OB_EXT_CMD14));
             rst &= getXu(2, &rcvData, &rcvLen);
         }else{
             rst &= setXu(2, OB_EXT_CMD0, sizeof(OB_EXT_CMD0));
@@ -400,6 +456,42 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
             *recvDataSize = sizeof(CameraParam);
             memcpy(recvData, &param, *recvDataSize);
         }
+        else if(IS_OBSENSOR_GEMINI330_SHORT_PID(devInfo_.pid)){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 460.656f;
+            param.p0[1] = 460.782f;
+            param.p0[2] = 320.985f;
+            param.p0[3] = 233.921f;
+            param.p1[0] = 460.656f;
+            param.p1[1] = 460.782f;
+            param.p1[2] = 320.985f;
+            param.p1[3] = 233.921f;
+            param.p6[0] = 640;
+            param.p6[1] = 480;
+            param.p7[0] = 640;
+            param.p7[1] = 480;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }
+        else if(IS_OBSENSOR_GEMINI330_LONG_PID(devInfo_.pid)){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 366.283f;
+            param.p0[1] = 366.279f;
+            param.p0[2] = 317.089f;
+            param.p0[3] = 234.836f;
+            param.p1[0] = 366.283f;
+            param.p1[1] = 366.279f;
+            param.p1[2] = 317.089f;
+            param.p1[3] = 234.836f;
+            param.p6[0] = 640;
+            param.p6[1] = 480;
+            param.p7[0] = 640;
+            param.p7[1] = 480;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }
         else{
             rst &= setXu(2, OB_EXT_CMD5, sizeof(OB_EXT_CMD5));
             rst &= getXu(2, &rcvData, &rcvLen);
@@ -453,7 +545,15 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
 
         setXu(2, OB_EXT_CMD13, sizeof(OB_EXT_CMD13));
         getXu(2, &rcvData, &rcvLen);
+        return true;
+    }
+    else if(IS_OBSENSOR_GEMINI330_PID(devInfo_.pid))
+    {
+        uint8_t* rcvData;
+        uint32_t rcvLen;
 
+        setXu(2, OB_EXT_CMD7, sizeof(OB_EXT_CMD7));
+        getXu(2, &rcvData, &rcvLen);
         return true;
     }
     else if(streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4)))
@@ -467,6 +567,22 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
         }
     }
     return false;
+}
+
+bool IUvcStreamChannel::initHardwareD2CProcessor()
+{
+    if (IS_OBSENSOR_GEMINI330_LONG_PID(devInfo_.pid)) {
+        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{0.96, -64, 24, -110, -4});
+        return true;
+    }
+    else if(IS_OBSENSOR_GEMINI330_SHORT_PID(devInfo_.pid)) {
+        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{1.0, 0, 0, -208, 0});
+        return true;
+    }
+    else {
+        //todo: G2, G2L, G2XL, Astro2, Femto need to implement hardwareD2CProcessor_
+        return false;
+    }
 }
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR_V4L2 || HAVE_OBSENSOR_MSMF
