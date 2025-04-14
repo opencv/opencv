@@ -135,86 +135,90 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     // Declare matrices for ground truth in different imread flag combinations
     Mat gt_0, gt_1, gt_2, gt_3, gt_256, gt_258;
 
-    // Compare the image loaded with IMREAD_UNCHANGED to the ground truth
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
-
-    // Handle grayscale 8-bit images
-    if (gt.channels() == 1 && gt.depth() == CV_8U)
+    if (GetParam()[0] == 'g' && GetParam()[6] != '1')
+        cout << "\tGamma correction differences are tested manually." << endl;
+    else
     {
-        gt.copyTo(gt_0); // For IMREAD_GRAYSCALE
-        gt_2 = gt_0; // For IMREAD_ANYDEPTH
-        cvtColor(gt, gt_1, COLOR_GRAY2BGR); // For IMREAD_COLOR
-        gt_3 = gt_1; // For IMREAD_COLOR | IMREAD_ANYDEPTH
-        gt_256 = gt_3; // For IMREAD_COLOR_RGB
-        gt_258 = gt_3; // For IMREAD_COLOR_RGB | IMREAD_ANYDEPTH
-    }
+        // Compare the image loaded with IMREAD_UNCHANGED to the ground truth
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
 
-    // Handle grayscale 16-bit images (convert to 8-bit for comparison)
-    if (gt.channels() == 1 && gt.depth() == CV_16U)
-    {
-        gt.copyTo(gt_0);
-        gt.copyTo(gt_2);
-        gt_0.convertTo(gt_0, CV_8U, 1. / 256); // Convert to 8-bit grayscale
-        cvtColor(gt, gt_1, COLOR_GRAY2BGR);
-        gt_1.convertTo(gt_1, CV_8U, 1. / 256);
-        cvtColor(gt, gt_3, COLOR_GRAY2BGR);
-        gt_256 = gt_1;
-        gt_258 = gt_3;
-    }
-
-    // Handle color images (3 or 4 channels) with 8-bit depth
-    if (gt.channels() > 1 && gt.depth() == CV_8U)
-    {
-        // Convert to grayscale
-        cvtColor(gt, gt_0, COLOR_BGRA2GRAY);
-        gt_2 = gt_0;
-
-        // Convert to 3-channel BGR
-        if (gt.channels() == 3)
-            gt.copyTo(gt_1);
-        else
-            cvtColor(gt, gt_1, COLOR_BGRA2BGR);
-
-        gt_3 = gt_1;
-        // Convert to RGB for IMREAD_COLOR_RGB variants
-        cvtColor(gt_3, gt_256, COLOR_BGR2RGB);
-        gt_258 = gt_256;
-    }
-
-    // Handle color images (3 or 4 channels) with 16-bit depth
-    if (gt.channels() > 1 && gt.depth() == CV_16U)
-    {
-        // Convert to 8-bit grayscale
-        cvtColor(gt, gt_2, COLOR_BGRA2GRAY);
-        gt_2.convertTo(gt_0, CV_8U, 1. / 256);
-
-        if (gt.channels() == 3)
+        // Handle grayscale 8-bit images
+        if (gt.channels() == 1 && gt.depth() == CV_8U)
         {
-            // Convert to 8-bit color
-            gt.copyTo(gt_3);
-            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
-            cvtColor(gt_1, gt_256, COLOR_BGR2RGB);
-            cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
+            gt.copyTo(gt_0); // For IMREAD_GRAYSCALE
+            gt_2 = gt_0; // For IMREAD_ANYDEPTH
+            cvtColor(gt, gt_1, COLOR_GRAY2BGR); // For IMREAD_COLOR
+            gt_3 = gt_1; // For IMREAD_COLOR | IMREAD_ANYDEPTH
+            gt_256 = gt_3; // For IMREAD_COLOR_RGB
+            gt_258 = gt_3; // For IMREAD_COLOR_RGB | IMREAD_ANYDEPTH
         }
-        else
-        {
-            // Convert from 4-channel 16-bit to 3-channel 8-bit
-            cvtColor(gt, gt_3, COLOR_BGRA2BGR);
-            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
-            cvtColor(gt_1, gt_256, COLOR_BGR2RGB);
-            cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
-        }
-    }
 
-    // Perform comparisons with different imread flags
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(2, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR), gt_1);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_ANYDEPTH), gt_2);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);
+        // Handle grayscale 16-bit images (convert to 8-bit for comparison)
+        if (gt.channels() == 1 && gt.depth() == CV_16U)
+        {
+            gt.copyTo(gt_0);
+            gt.copyTo(gt_2);
+            gt_0.convertTo(gt_0, CV_8U, 1. / 256); // Convert to 8-bit grayscale
+            cvtColor(gt, gt_1, COLOR_GRAY2BGR);
+            gt_1.convertTo(gt_1, CV_8U, 1. / 256);
+            cvtColor(gt, gt_3, COLOR_GRAY2BGR);
+            gt_256 = gt_1;
+            gt_258 = gt_3;
+        }
+
+        // Handle color images (3 or 4 channels) with 8-bit depth
+        if (gt.channels() > 1 && gt.depth() == CV_8U)
+        {
+            // Convert to grayscale
+            cvtColor(gt, gt_0, COLOR_BGRA2GRAY);
+            gt_2 = gt_0;
+
+            // Convert to 3-channel BGR
+            if (gt.channels() == 3)
+                gt.copyTo(gt_1);
+            else
+                cvtColor(gt, gt_1, COLOR_BGRA2BGR);
+
+            gt_3 = gt_1;
+            // Convert to RGB for IMREAD_COLOR_RGB variants
+            cvtColor(gt_3, gt_256, COLOR_BGR2RGB);
+            gt_258 = gt_256;
+        }
+
+        // Handle color images (3 or 4 channels) with 16-bit depth
+        if (gt.channels() > 1 && gt.depth() == CV_16U)
+        {
+            // Convert to 8-bit grayscale
+            cvtColor(gt, gt_2, COLOR_BGRA2GRAY);
+            gt_2.convertTo(gt_0, CV_8U, 1. / 256);
+
+            if (gt.channels() == 3)
+            {
+                // Convert to 8-bit color
+                gt.copyTo(gt_3);
+                gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+                cvtColor(gt_1, gt_256, COLOR_BGR2RGB);
+                cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
+            }
+            else
+            {
+                // Convert from 4-channel 16-bit to 3-channel 8-bit
+                cvtColor(gt, gt_3, COLOR_BGRA2BGR);
+                gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+                cvtColor(gt_1, gt_256, COLOR_BGR2RGB);
+                cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
+            }
+        }
+
+        // Perform comparisons with different imread flags
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(2, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR), gt_1);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_ANYDEPTH), gt_2);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);
+    }
 }
-
 
 const string pngsuite_files[] =
 {
