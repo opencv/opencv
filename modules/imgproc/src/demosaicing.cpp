@@ -1041,9 +1041,11 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
     int dst_step = (int)(dstmat.step/sizeof(T));
     Size size = srcmat.size();
     int blue = (code == COLOR_BayerBG2BGR || code == COLOR_BayerGB2BGR ||
-                code == COLOR_BayerBG2BGRA || code == COLOR_BayerGB2BGRA ) ? -1 : 1;
+                code == COLOR_BayerBG2BGRA || code == COLOR_BayerGB2BGRA ||
+                code == COLOR_BayerBG2BGR_VNG || code == COLOR_BayerGB2BGR_VNG) ? -1 : 1;
     int start_with_green = (code == COLOR_BayerGB2BGR || code == COLOR_BayerGR2BGR ||
-                            code == COLOR_BayerGB2BGRA || code == COLOR_BayerGR2BGRA);
+                            code == COLOR_BayerGB2BGRA || code == COLOR_BayerGR2BGRA ||
+                            code == COLOR_BayerGB2BGR_VNG || code == COLOR_BayerGR2BGR_VNG);
 
     int dcn = dstmat.channels();
     size.height -= 2;
@@ -1075,6 +1077,13 @@ static void Bayer2RGB_( const Mat& srcmat, Mat& dstmat, int code )
 
 static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
 {
+    // for too small images use the simple interpolation algorithm
+    if( MIN(_srcmat.size().width, _srcmat.size().height) < 8 )
+    {
+        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>( _srcmat, dstmat, code );
+        return;
+    }
+
     // VNG uses a 5x5 filter to calculate the gradient around the target pixel.
     // To make it simple for edge pixels, 2 pixel paddings are added using reflection.
     cv::Mat srcmat;
@@ -1088,13 +1097,6 @@ static void Bayer2RGB_VNG_8u( const Mat& _srcmat, Mat& dstmat, int code )
 
     int blueIdx = code == COLOR_BayerBG2BGR_VNG || code == COLOR_BayerGB2BGR_VNG ? 0 : 2;
     bool greenCell0 = code != COLOR_BayerBG2BGR_VNG && code != COLOR_BayerRG2BGR_VNG;
-
-    // for too small images use the simple interpolation algorithm
-    if( MIN(size.width, size.height) < 8 )
-    {
-        Bayer2RGB_<uchar, SIMDBayerInterpolator_8u>( srcmat, dstmat, code );
-        return;
-    }
 
     const int brows = 3, bcn = 7;
     int N = size.width, N2 = N*2, N3 = N*3, N4 = N*4, N5 = N*5, N6 = N*6, N7 = N*7;

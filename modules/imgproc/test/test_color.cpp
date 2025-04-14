@@ -1907,18 +1907,19 @@ TEST(Imgproc_ColorBayerVNG, regression)
 
 // See https://github.com/opencv/opencv/issues/5089
 // See https://github.com/opencv/opencv/issues/27225
-typedef testing::TestWithParam<cv::ColorConversionCodes> Imgproc_ColorBayerVNG_Modes;
+typedef tuple<cv::ColorConversionCodes, cv::ColorConversionCodes> VNGandINT;
+typedef testing::TestWithParam<VNGandINT> Imgproc_ColorBayerVNG_Codes;
 
-TEST_P(Imgproc_ColorBayerVNG_Modes, regression27225)
+TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225)
 {
-    const int mode = GetParam();
-    const int margin = (mode == cv::COLOR_BayerGB2BGR_VNG || mode == cv::COLOR_BayerGR2BGR_VNG)? 5 : 4;
+    const cv::ColorConversionCodes codeVNG = get<0>(GetParam());
+    const int margin = (codeVNG == cv::COLOR_BayerGB2BGR_VNG || codeVNG == cv::COLOR_BayerGR2BGR_VNG)? 5 : 4;
 
     cv::Mat in = cv::Mat::eye(16, 16, CV_8UC1) * 255;
     cv::resize(in, in, {}, 2, 2, cv::INTER_NEAREST);
 
     cv::Mat out;
-    EXPECT_NO_THROW(cv::cvtColor(in, out, mode));
+    EXPECT_NO_THROW(cv::cvtColor(in, out, codeVNG));
 
     for(int iy=0; iy < out.size().height; iy++) {
         for(int ix=0; ix < out.size().width; ix++) {
@@ -1935,11 +1936,32 @@ TEST_P(Imgproc_ColorBayerVNG_Modes, regression27225)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Imgproc_ColorBayerVNG_Modes,
-    testing::Values( cv::ColorConversionCodes(cv::COLOR_BayerBG2BGR_VNG),
-                     cv::COLOR_BayerGB2BGR_VNG,
-                     cv::COLOR_BayerRG2BGR_VNG,
-                     cv::COLOR_BayerGR2BGR_VNG));
+TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225_small)
+{
+    // for too small images use the simple interpolation algorithm
+    const cv::ColorConversionCodes codeVNG = get<0>(GetParam());
+    const cv::ColorConversionCodes codeINT = get<1>(GetParam());
+    cv::Mat in = cv::Mat::eye(7, 7, CV_8UC1) * 255;
+
+    cv::Mat outVNG;
+    EXPECT_NO_THROW(cv::cvtColor(in, outVNG, codeVNG));
+    cv::Mat outINT;
+    EXPECT_NO_THROW(cv::cvtColor(in, outINT, codeINT));
+
+    Mat diff;
+    absdiff(outVNG, outINT, diff);
+
+    imwrite("outVNG.png", outVNG);
+    imwrite("outINT.png", outINT);
+    EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_ColorBayerVNG_Codes,
+    testing::Values(
+        make_tuple(cv::COLOR_BayerBG2BGR_VNG, cv::COLOR_BayerBG2BGR),
+        make_tuple(cv::COLOR_BayerGB2BGR_VNG, cv::COLOR_BayerGB2BGR),
+        make_tuple(cv::COLOR_BayerRG2BGR_VNG, cv::COLOR_BayerRG2BGR),
+        make_tuple(cv::COLOR_BayerGR2BGR_VNG, cv::COLOR_BayerGR2BGR)));
 
 // creating Bayer pattern
 template <typename T, int depth>
