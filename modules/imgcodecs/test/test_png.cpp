@@ -122,11 +122,12 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
 
     // Load the XML file containing the ground truth data
     FileStorage fs(xml_filename, FileStorage::READ);
-    EXPECT_TRUE(fs.isOpened()); // Ensure the file was opened successfully
+    ASSERT_TRUE(fs.isOpened()); // Ensure the file was opened successfully
 
     // Load the image using IMREAD_UNCHANGED to preserve original format
     Mat src = imread(filename, IMREAD_UNCHANGED);
-    
+    ASSERT_FALSE(src.empty()); // Ensure the image was loaded successfully
+
     // Load the ground truth matrix from XML
     Mat gt;
     fs.getFirstTopLevelNode() >> gt;
