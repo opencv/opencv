@@ -124,12 +124,67 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     Mat gt;
     fs.getFirstTopLevelNode() >> gt;
 
+    Mat gt_0, gt_1, gt_2, gt_3, gt_256, gt_258;
+
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
 
-    EXPECT_FALSE(imread(filename, IMREAD_GRAYSCALE).empty());
-    EXPECT_FALSE(imread(filename, IMREAD_COLOR).empty());
-    EXPECT_FALSE(imread(filename, IMREAD_ANYDEPTH).empty());
-    EXPECT_FALSE(imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH).empty());
+    if (gt.channels() == 1 && gt.depth() == CV_8U)
+    {
+        gt.copyTo(gt_0);
+        gt.copyTo(gt_2);
+        cvtColor(gt, gt_1, COLOR_GRAY2BGR);
+        cvtColor(gt, gt_3, COLOR_GRAY2BGR);
+        cvtColor(gt, gt_256, COLOR_GRAY2BGR);
+        cvtColor(gt, gt_258, COLOR_GRAY2BGR);
+    }
+
+    if (gt.channels() == 1 && gt.depth() == CV_16U)
+    {
+        gt.copyTo(gt_0);
+        gt.copyTo(gt_2);
+        gt_0.convertTo(gt_0, CV_8U, 1. / 256);
+        cvtColor(gt, gt_1, COLOR_GRAY2BGR);
+        gt_1.convertTo(gt_1, CV_8U, 1. / 256);
+        cvtColor(gt, gt_3, COLOR_GRAY2BGR);
+        cvtColor(gt, gt_256, COLOR_GRAY2BGR);
+        cvtColor(gt, gt_258, COLOR_GRAY2BGR);
+    }
+
+    if (gt.channels() > 1 && gt.depth() == CV_8U)
+    {
+        cvtColor(gt, gt_0, COLOR_BGRA2GRAY);
+        cvtColor(gt, gt_2, COLOR_BGRA2GRAY);
+        if (gt.channels() == 3)
+            gt.copyTo(gt_1);
+        else
+            cvtColor(gt, gt_1, COLOR_BGRA2BGR);
+        gt_3 = gt_1;
+        gt_256 = gt_1;
+        gt_258 = gt_1;
+    }
+
+    if (gt.channels() > 1 && gt.depth() == CV_16U)
+    {
+        cvtColor(gt, gt_2, COLOR_BGRA2GRAY);
+        gt_2.convertTo(gt_0, CV_8U, 1. / 256);
+        if (gt.channels() == 3)
+        {
+            gt.copyTo(gt_3);
+            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+        }
+        else
+        {
+            cvtColor(gt, gt_3, COLOR_BGRA2BGR);
+            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+        }
+    }
+
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(2, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(2, 0), imread(filename, IMREAD_COLOR),     gt_1);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_ANYDEPTH),  gt_2);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
+    //EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
+    //EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_258);
 }
 
 const string pngsuite_files[] =
