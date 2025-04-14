@@ -259,7 +259,7 @@ bool SPngDecoder::readData(Mat &img)
         {
             image_width = image_size / m_height;
 
-            if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16) && ihdr.interlace_method != 0)
+            if (!color && ihdr.interlace_method && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16))
             {
                 if (img.depth() == CV_16U)
                 {
@@ -268,7 +268,8 @@ bool SPngDecoder::readData(Mat &img)
                     Mat tmp(m_height, m_width, CV_16UC4);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
                         return false;
-                    spngCvt_BGRA2Gray_8u_C4C1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 2);
+                    spngCvt_BGRA2Gray_16u_CnC1R(reinterpret_cast<const ushort*>(tmp.data), (int)tmp.step1(),
+                        reinterpret_cast<ushort*>(img.data), (int)img.step1(), Size(m_width, m_height), 4, 2);
                 }
                 else
                 {
