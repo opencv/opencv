@@ -132,15 +132,15 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     Mat gt;
     fs.getFirstTopLevelNode() >> gt;
 
-    // Declare matrices for ground truth in different imread flag combinations
-    Mat gt_0, gt_1, gt_2, gt_3, gt_256, gt_258;
+    // Compare the image loaded with IMREAD_UNCHANGED to the ground truth
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
 
     if (GetParam()[0] == 'g' && GetParam()[6] != '1')
         cout << "\tGamma correction differences are tested manually." << endl;
     else
     {
-        // Compare the image loaded with IMREAD_UNCHANGED to the ground truth
-        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
+        // Declare matrices for ground truth in different imread flag combinations
+        Mat gt_0, gt_1, gt_2, gt_3, gt_256, gt_258;
 
         // Handle grayscale 8-bit images
         if (gt.channels() == 1 && gt.depth() == CV_8U)
