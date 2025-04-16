@@ -20,14 +20,12 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             Mat img = new Mat(10, 10, CvType.CV_8UC4, new Scalar(0, 1, 2, 3));
             Scalar scalefactor = new Scalar(0.1, 0.2, 0.3, 0.4);
 
-
             Image2BlobParams params = new Image2BlobParams();
             params.set_scalefactor(scalefactor);
             params.set_datalayout(Dnn.DNN_LAYOUT_NHWC);
 
-
             Mat blob = Dnn.blobFromImageWithParams(img, params); // [1, 10, 10, 4]
- 
+
             float[] expectedValues = { (float)scalefactor.val[0] * 0, (float)scalefactor.val[1] * 1, (float)scalefactor.val[2] * 2, (float)scalefactor.val[3] * 3 }; // Target Value.
             for (int h = 0; h < 10; h++)
             {
@@ -68,7 +66,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             Mat targetBlob = Dnn.blobFromImage(targetImg, 1.0, targetSize);
 
             assertEquals(0, Core.norm(targetBlob, blob, Core.NORM_INF), EPS);
-         
         }
 
         public void testBlobFromImageWithParams4chLetterBox()
@@ -88,11 +85,9 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
                 Core.multiply(rowM, new Scalar(i), targetChannels[i] = new Mat());
             }
 
-
             Mat targetImg = new Mat();
             Core.merge(Arrays.asList(targetChannels), targetImg);
             Size targetSize = new Size(20, 20);
-
 
             Image2BlobParams params = new Image2BlobParams();
             params.set_size(targetSize);
@@ -101,7 +96,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             Mat targetBlob = Dnn.blobFromImage(targetImg, 1.0, targetSize); // only convert data from uint8 to float32.
 
             assertEquals(0, Core.norm(targetBlob, blob, Core.NORM_INF), EPS);
-     
         }
 
         public void testBlobFromImageWithParams4chMultiImage()
@@ -120,7 +114,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
             Core.multiply(img, Scalar.all(2), img2);
             images.add(img2);
 
-
             Mat blobs = Dnn.blobFromImagesWithParams(images, param);
 
             Range[] ranges = new Range[4];
@@ -133,7 +126,6 @@ public class DnnBlobFromImageWithParamsTest extends OpenCVTestCase {
 
             ranges[0] = new Range(1, 2);
             Mat blob1 = blobs.submat(ranges).clone();
-
 
             Core.multiply(blob0, Scalar.all(2), blob0);
 
