@@ -9,7 +9,7 @@ if(HAVE_FASTCV)
 
   file(GLOB FASTCV_HAL_FILES    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
-  add_library(fastcv_hal STATIC ${FASTCV_HAL_FILES})
+  add_library(fastcv_hal STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${FASTCV_HAL_FILES})
 
   target_include_directories(fastcv_hal PRIVATE
     ${CMAKE_SOURCE_DIR}/modules/core/include
