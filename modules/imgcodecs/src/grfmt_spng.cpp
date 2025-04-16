@@ -407,36 +407,15 @@ bool SPngDecoder::readData(Mat &img)
                     }
                 }
                 else
-                {
                     do
                     {
-                        if (img.depth() == CV_8U && m_bit_depth == 16)
-                        {
-                            Mat tmp(m_height, m_width, CV_16U);
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
+                        ret = spng_get_row_info(png_ptr, &row_info);
+                        if (ret)
+                            break;
 
-                                ret = spng_decode_row(png_ptr, tmp.row(row_info.row_num).data, m_width * 2);
-                            } while (ret == SPNG_OK);
+                        ret = spng_decode_row(png_ptr, img.data + row_info.row_num * image_width, image_width);
 
-                            if (ret != SPNG_EOI)
-                                return false;
-
-                            tmp.convertTo(img, CV_8U, 1. / 255);
-                        }
-                        else
-                        {
-                            ret = spng_get_row_info(png_ptr, &row_info);
-                            if (ret)
-                                break;
-
-                            ret = spng_decode_row(png_ptr, img.data + row_info.row_num * image_width, image_width);
-                        }
                     } while (ret == SPNG_OK);
-                }
             }
 
             if (ret == SPNG_EOI)
