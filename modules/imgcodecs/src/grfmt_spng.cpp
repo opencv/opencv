@@ -192,6 +192,7 @@ bool SPngDecoder::readData(Mat &img)
         {
             decode_flags = SPNG_DECODE_TRNS;
         }
+
         if (img.channels() == 4)
         {
             if (m_color_type == SPNG_COLOR_TYPE_TRUECOLOR ||
@@ -207,6 +208,7 @@ bool SPngDecoder::readData(Mat &img)
             else
                 fmt = SPNG_FMT_RGBA8;
         }
+
         if (img.type() == CV_8UC3)
         {
             fmt = SPNG_FMT_RGB8;
@@ -215,10 +217,6 @@ bool SPngDecoder::readData(Mat &img)
         {
             if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && m_bit_depth <= 8)
                 fmt = SPNG_FMT_G8;
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && m_bit_depth == 16)
-            {
-                fmt = SPNG_FMT_PNG;
-            }
             else if (m_color_type == SPNG_COLOR_TYPE_INDEXED ||
                      m_color_type == SPNG_COLOR_TYPE_TRUECOLOR)
             {
@@ -246,7 +244,7 @@ bool SPngDecoder::readData(Mat &img)
         struct spng_ihdr ihdr;
         spng_get_ihdr(png_ptr, &ihdr);
 
-        if (fmt == SPNG_FMT_PNG  && ihdr.bit_depth == 16 && (ihdr.color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA || ihdr.color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA))
+        if (fmt == SPNG_FMT_PNG && m_bit_depth == 16 && m_color_type >= SPNG_COLOR_TYPE_GRAYSCALE_ALPHA)
         {
             Mat tmp(m_height, m_width, CV_16UC4);
             if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
