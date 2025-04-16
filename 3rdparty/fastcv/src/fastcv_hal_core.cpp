@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  * SPDX-License-Identifier: Apache-2.0
 */
 
@@ -399,7 +399,7 @@ int fastcv_hal_mul8u(
     int8_t sF;
 
     if(FCV_CMP_EQ(scale,1.0))              { sF =  0; }
-    else if(scale > 1.0)                    
+    else if(scale > 1.0)
     {
         if(FCV_CMP_EQ(scale,2.0))          { sF = -1; }
         else if(FCV_CMP_EQ(scale,4.0))     { sF = -2; }
@@ -471,7 +471,7 @@ int fastcv_hal_mul16s(
     int8_t sF;
 
     if(FCV_CMP_EQ(scale,1.0))              { sF =  0; }
-    else if(scale > 1.0)                    
+    else if(scale > 1.0)
     {
         if(FCV_CMP_EQ(scale,2.0))          { sF = -1; }
         else if(FCV_CMP_EQ(scale,4.0))     { sF = -2; }
@@ -571,4 +571,56 @@ int fastcv_hal_mul32f(
 
     fcvStatus status = FASTCV_SUCCESS;
     CV_HAL_RETURN(status, hal_mul32f);
+}
+
+int fastcv_hal_SVD32f(
+    float*  src,
+    size_t  src_step,
+    float*  w,
+    float*  u,
+    size_t  u_step,
+    float*  vt,
+    size_t  vt_step,
+    int     m,
+    int     n,
+    int     flags)
+{
+    if (n * sizeof(float) != src_step)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("step is not supported");
+
+    INITIALIZATION_CHECK;
+
+    fcvStatus status = FASTCV_SUCCESS;
+
+    cv::Mat tmpU(m, n, CV_32F);
+    cv::Mat tmpV(n, n, CV_32F);
+
+    switch (flags)
+    {
+        case CV_HAL_SVD_NO_UV:
+        {
+            status = fcvSVDf32_v2(src, m, n, w, u, vt, (float32_t *)tmpU.data, (float32_t *)tmpV.data, false);
+            break;
+        }
+        case CV_HAL_SVD_SHORT_UV:
+        {
+            if ((n * sizeof(float) == u_step) && (n * sizeof(float) == vt_step))
+                status = fcvSVDf32_v2(src, m, n, w, u, vt, (float32_t *)tmpU.data, (float32_t *)tmpV.data, false);
+            else
+                CV_HAL_RETURN_NOT_IMPLEMENTED("step is not supported");
+            break;
+        }
+        case CV_HAL_SVD_FULL_UV:
+        {
+            if ((n * sizeof(float) == u_step) && (n * sizeof(float) == vt_step))
+                status = fcvSVDf32_v2(src, m, n, w, u, vt, (float32_t *)tmpU.data, (float32_t *)tmpV.data, true);
+            else
+                CV_HAL_RETURN_NOT_IMPLEMENTED("step is not supported");
+            break;
+        }
+        default:
+            CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Flags:%d is not supported", flags));
+    }
+
+    CV_HAL_RETURN(status, fastcv_hal_SVD32f);
 }
