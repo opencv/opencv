@@ -505,7 +505,6 @@ if __name__ == "__main__":
         builder.build_library(abi, do_install, args.no_media_ndk)
 
     builder.gather_results()
-    check_have_ipp_flag()
 
     if args.build_doc:
         builder.build_javadoc()
