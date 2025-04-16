@@ -26,37 +26,82 @@ static void transpose_8u(const uchar *src_data, size_t src_step, uchar *dst_data
         }
     }
 }
+*/
 
 static void transpose_16u(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    for (int h = 0; h < src_height; h++) {
+    auto transpose_16u_8x8 = [](const ushort *src, size_t src_step, ushort *dst, size_t dst_step) {
+        auto v =__riscv_vlsseg8e16_v_u16m1x8(src, src_step, 8);
+
+        auto v0 = __riscv_vget_v_u16m1x8_u16m1(v, 0);
+        auto v1 = __riscv_vget_v_u16m1x8_u16m1(v, 1);
+        auto v2 = __riscv_vget_v_u16m1x8_u16m1(v, 2);
+        auto v3 = __riscv_vget_v_u16m1x8_u16m1(v, 3);
+        auto v4 = __riscv_vget_v_u16m1x8_u16m1(v, 4);
+        auto v5 = __riscv_vget_v_u16m1x8_u16m1(v, 5);
+        auto v6 = __riscv_vget_v_u16m1x8_u16m1(v, 6);
+        auto v7 = __riscv_vget_v_u16m1x8_u16m1(v, 7);
+
+        __riscv_vse16(dst, v0, 8);
+        __riscv_vse16(dst + dst_step, v1, 8);
+        __riscv_vse16(dst + 2 * dst_step, v2, 8);
+        __riscv_vse16(dst + 3 * dst_step, v3, 8);
+        __riscv_vse16(dst + 4 * dst_step, v4, 8);
+        __riscv_vse16(dst + 5 * dst_step, v5, 8);
+        __riscv_vse16(dst + 6 * dst_step, v6, 8);
+        __riscv_vse16(dst + 7 * dst_step, v7, 8);
+    };
+
+    size_t src_step_base = src_step / sizeof(ushort);
+    size_t dst_step_base = dst_step / sizeof(ushort);
+
+    int h = 0, w = 0;
+    for (; h <= src_height - 8; h += 8) {
+        const ushort *src = (const ushort*)(src_data + h * src_step);
+        uchar *dst = dst_data + h * sizeof(ushort);
+        for (w = 0; w <= src_width - 8; w += 8) {
+            transpose_16u_8x8(src + w, src_step, (ushort*)(dst + w * dst_step), dst_step_base);
+        }
+        int vl;
+        for (; w < src_width; w += vl) {
+            vl = __riscv_vsetvl_e32m1(src_width - w);
+
+            auto v0 = __riscv_vle16_v_u16m1(src + w, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step), dst_step, v0, vl);
+
+            auto v1 = __riscv_vle16_v_u16m1(src + w + src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + sizeof(ushort)), dst_step, v1, vl);
+
+            auto v2 = __riscv_vle16_v_u16m1(src + w + 2 * src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + 2 * sizeof(ushort)), dst_step, v2, vl);
+
+            auto v3 = __riscv_vle16_v_u16m1(src + w + 3 * src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + 3 * sizeof(ushort)), dst_step, v3, vl);
+
+            auto v4 = __riscv_vle16_v_u16m1(src + w + 4 * src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + 4 * sizeof(ushort)), dst_step, v4, vl);
+
+            auto v5 = __riscv_vle16_v_u16m1(src + w + 5 * src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + 5 * sizeof(ushort)), dst_step, v5, vl);
+
+            auto v6 = __riscv_vle16_v_u16m1(src + w + 6 * src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + 6 * sizeof(ushort)), dst_step, v6, vl);
+
+            auto v7 = __riscv_vle16_v_u16m1(src + w + 7 * src_step_base, vl);
+            __riscv_vsse16((ushort*)(dst + w * dst_step + 7 * sizeof(ushort)), dst_step, v7, vl);
+        }
+    }
+    for (; h < src_height; h++) {
         const ushort *src = (const ushort*)(src_data + h * src_step);
         uchar *dst = dst_data + h * sizeof(ushort);
         int vl;
-        for (int w = 0; w < src_width; w += vl) {
-            vl = __riscv_vsetvl_e16m8(src_width - w);
+        for (w = 0; w < src_width; w += vl) {
+            vl = __riscv_vsetvl_e16m1(src_width - w);
 
-            auto v = __riscv_vle16_v_u16m8(src + w, vl);
+            auto v = __riscv_vle16_v_u16m1(src + w, vl);
             __riscv_vsse16((ushort*)(dst + w * dst_step), dst_step, v, vl);
         }
     }
 }
-
-// ~3x slower
-static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    for (int h = 0; h < src_height; h++) {
-        const int *src = (const int*)(src_data + h * src_step);
-        uchar *dst = dst_data + h * sizeof(int);
-        int vl;
-        for (int w = 0; w < src_width; w += vl) {
-            vl = __riscv_vsetvl_e32m8(src_width - w);
-
-            auto v = __riscv_vle32_v_i32m8(src + w, vl);
-            __riscv_vsse32((int*)(dst + w * dst_step), dst_step, v, vl);
-        }
-    }
-}
-
-*/
 
 static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
     auto transpose_32s_4x4 = [](const int *src, size_t src_step, int *dst, size_t dst_step) {
@@ -129,7 +174,7 @@ inline int transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, 
     //     0, 0, 0, 0, 0, 0, 0, transpose_32sC6, 0, 0, 0, 0, 0, 0, 0, transpose_32sC8
     // };
     static Transpose2dFunc tab[] = {
-        0, 0, 0, 0,
+        0, 0, transpose_16u, 0,
         transpose_32s, 0, 0, 0,
         0, 0, 0, 0,
         0, 0, 0, 0,
