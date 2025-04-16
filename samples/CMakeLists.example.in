@@ -1,5 +1,5 @@
 # cmake needs this line
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 
 if(NOT DEFINED EXAMPLE_NAME)
   message(FATAL_ERROR "Invalid build script: missing EXAMPLE_NAME")
