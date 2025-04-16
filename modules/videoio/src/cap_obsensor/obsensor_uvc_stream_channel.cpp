@@ -249,7 +249,7 @@ void HardwareD2CProcessor::process(Frame* frame) {
         }
         frame->width = srcMat.cols;
         frame->height = srcMat.rows;
-        frame->dataSize = required_size;
+        frame->dataSize = static_cast<uint32_t>(required_size);
     } else {
         CV_LOG_ERROR(NULL, "Output buffer too small or empty result");
     }
@@ -572,11 +572,11 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
 bool IUvcStreamChannel::initHardwareD2CProcessor()
 {
     if (IS_OBSENSOR_GEMINI330_LONG_PID(devInfo_.pid)) {
-        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{0.96, -64, 24, -110, -4});
+        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{0.96f, -64, 24, -110, -4});
         return true;
     }
     else if(IS_OBSENSOR_GEMINI330_SHORT_PID(devInfo_.pid)) {
-        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{1.0, 0, 0, -208, 0});
+        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{1.0f, 0, 0, -208, 0});
         return true;
     }
     else {
