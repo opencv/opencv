@@ -289,7 +289,7 @@ class photo_test(NewOpenCVTests):
         image = image.astype(np.float64) / 255.
         calibratedImage = np.zeros_like(image)
         model.correctImage(image, calibratedImage)
-        calibratedImage = np.rint(np.clip(calibratedImage, 0, 1)*255).astype(np.uint8)
+        calibratedImage = np.clip(calibratedImage * 255.0 + 0.5, 0, 255).astype(np.uint8)
         calibratedImage = cv.cvtColor(calibratedImage, cv.COLOR_RGB2BGR)
 
         np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
