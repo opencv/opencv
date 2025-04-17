@@ -97,21 +97,21 @@ static void transpose_16u(const uchar *src_data, size_t src_step, uchar *dst_dat
 }
 
 static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    auto transpose_32s_4x4 = [](const int *src, size_t src_step, int *dst, size_t dst_step) {
-        auto v =__riscv_vlsseg4e32_v_i32m1x4(src, src_step, 4);
+    auto transpose_32s_4xVl = [](const int *src, size_t src_step, int *dst, size_t dst_step, const int vl) {
+        auto v =__riscv_vlsseg4e32_v_i32m1x8(src, src_step, vl);
 
         auto v0 = __riscv_vget_v_i32m1x4_i32m1(v, 0);
         auto v1 = __riscv_vget_v_i32m1x4_i32m1(v, 1);
         auto v2 = __riscv_vget_v_i32m1x4_i32m1(v, 2);
         auto v3 = __riscv_vget_v_i32m1x4_i32m1(v, 3);
 
-        __riscv_vse32(dst, v0, 4);
-        __riscv_vse32(dst + dst_step, v1, 4);
-        __riscv_vse32(dst + 2 * dst_step, v2, 4);
-        __riscv_vse32(dst + 3 * dst_step, v3, 4);
+        __riscv_vse32(dst, v0, vl);
+        __riscv_vse32(dst + dst_step, v1, vl);
+        __riscv_vse32(dst + 2 * dst_step, v2, vl);
+        __riscv_vse32(dst + 3 * dst_step, v3, vl);
     };
 
-    constexpr int block_size = 88; // multiple of 4
+    constexpr int block_size = 96; // multiple of 4
     size_t src_step_base = src_step / sizeof(int);
     size_t dst_step_base = dst_step / sizeof(int);
 
@@ -123,8 +123,10 @@ static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_dat
             const auto *src = _src + w;
             auto *dst = _dst + w * dst_step_base;
             for (int i = 0; i < block_size; i += 4) {
-                for (int j = 0; j < block_size; j += 4) {
-                    transpose_32s_4x4(src + j, src_step, dst + j * dst_step_base, dst_step_base);
+                int vl;
+                for (int j = 0; j < block_size; j += vl) {
+                    vl = __riscv_vsetvl_e32m1(block_size - j);
+                    transpose_32s_4xVl(src + j, src_step, dst + j * dst_step_base, dst_step_base, vl);
                 }
                 src += 4 * src_step_base;
                 dst += 4;
@@ -135,12 +137,11 @@ static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_dat
         for (; w < src_width; w += vl) {
             const auto *src = _src + w;
             auto *dst = _dst + w * dst_step_base;
-            vl = __riscv_vsetvl_e32m2(src_width - w);
-            for (int i = 0; i < block_size; i++) {
-                auto v = __riscv_vle32_v_i32m2(src, vl);
-                __riscv_vsse32(dst, dst_step, v, vl);
-                src += src_step_base;
-                dst += 1;
+            vl = __riscv_vsetvl_e32m1(src_width - w);
+            for (int i = 0; i < block_size; i += 4) {
+                transpose_32s_4xVl(src, src_step, dst, dst_step_base, vl);
+                src += 4 * src_step_base;
+                dst += 4;
             }
         }
     }
