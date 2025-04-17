@@ -380,20 +380,18 @@ def get_ndk_dir():
         return android_sdk_ndk_bundle
     return None
 
-
-def check_have_ipp_flag():
-    cmake_file = '/home/ci/build/o4a/CMakeVars.txt'
+def check_have_ipp_flag(cmake_file):
     if not os.path.isfile(cmake_file):
-        print(f"ERROR: File {cmake_file} does not exist.")
+        print(f" ERROR: File {cmake_file} does not exist.")
         sys.exit(1)
-
+        
     with open(cmake_file, 'r') as file:
         for line in file:
             if line.strip().startswith("HAVE_IPP="):
                 value = line.strip().split('=')[1]
                 if value == '1':
                     return
-                    print("HAVE_IPP=1 found. IPP support is enabled.")
+                    print(f"HAVE_IPP=1 found. IPP support is enabled.")
                 else:
                     print(f"ERROR: HAVE_IPP is set to {value}, expected 1.")
                     sys.exit(1)
@@ -506,8 +504,8 @@ if __name__ == "__main__":
         builder.build_library(abi, do_install, args.no_media_ndk)
 
     builder.gather_results()
-    # Проверка HAVE_IPP
-    check_have_ipp_flag()
+   
+    check_have_ipp_flag(os.path.join(builder.libdest, "CMakeVars.txt"))
     
     if args.build_doc:
         builder.build_javadoc()
