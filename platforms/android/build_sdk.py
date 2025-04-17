@@ -381,6 +381,7 @@ def get_ndk_dir():
     return None
 
 def check_have_ipp_flag(cmake_file):
+    print("Checking build flag in:", cmake_file)
     if not os.path.isfile(cmake_file):
         print(f" ERROR: File {cmake_file} does not exist.")
         sys.exit(1)
