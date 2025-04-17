@@ -390,8 +390,8 @@ def check_have_ipp_flag(cmake_file):
             if line.strip().startswith("HAVE_IPP="):
                 value = line.strip().split('=')[1]
                 if value == '1':
+                    print("HAVE_IPP=1 found. IPP support is enabled.")
                     return
-                    print(f"HAVE_IPP=1 found. IPP support is enabled.")
                 else:
                     print(f"ERROR: HAVE_IPP is set to {value}, expected 1.")
                     sys.exit(1)
