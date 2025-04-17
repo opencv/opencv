@@ -24,6 +24,93 @@ static void packWeight(size_t num_heads, size_t head_size, size_t input_hidden_s
     }
 }
 
+
+static void rotationKernel(float* data,
+                           const float* sin_table,
+                           const float* cos_table,
+                           size_t seq_len,
+                           size_t head_size)
+{
+    CV_Assert(head_size % 2 == 0);
+    size_t half_dim = head_size / 2;
+
+    for (size_t pos = 0; pos < seq_len; ++pos)
+    {
+        float*       out_ptr = data     + pos * head_size;
+        const float* sin_ptr = sin_table + pos * half_dim;
+        const float* cos_ptr = cos_table + pos * half_dim;
+
+#ifdef CV_SIMD
+        const size_t w = VTraits<v_float32x4>::max_nlanes;  // typically 4
+
+        // vectorized path
+        size_t d = 0;
+        for (; d + w <= half_dim; d +=  w)
+        {
+            // load sin/cos
+            v_float32x4 sin_v = v_load(sin_ptr + d);
+            v_float32x4 cos_v = v_load(cos_ptr + d);
+
+            // deinterleave data → x_even, x_odd
+            v_float32x4 x_even, x_odd;
+            v_load_deinterleave(out_ptr + 2*d, x_even, x_odd);
+
+            // complex rotation: [ cos -sin; sin cos ]
+            v_float32x4 out_even = v_sub(v_mul(cos_v , x_even), v_mul(sin_v, x_odd));
+            v_float32x4 out_odd  = v_add(v_mul(sin_v , x_even),v_mul(cos_v, x_odd));
+
+            // store back interleaved
+            v_store_interleave(out_ptr + 2*d, out_even, out_odd);
+        }
+        // scalar tail
+        for (; d < half_dim; ++d)
+        {
+            float s  = sin_ptr[d];
+            float c  = cos_ptr[d];
+            float xe = out_ptr[2*d];
+            float xo = out_ptr[2*d+1];
+            out_ptr[2*d]   = xe * c - xo * s;
+            out_ptr[2*d+1] = xo * c + xe * s;
+        }
+#else
+        // fallback: pure scalar
+        for (size_t d = 0; d < half_dim; ++d)
+        {
+            float s  = sin_ptr[d];
+            float c  = cos_ptr[d];
+            float xe = out_ptr[2*d];
+            float xo = out_ptr[2*d+1];
+            out_ptr[2*d]   = xe * c - xo * s;
+            out_ptr[2*d+1] = xo * c + xe * s;
+        }
+#endif
+    }
+}
+
+
+static void precompRotationTables(float *data,
+                                  size_t seq_len,
+                                  size_t head_size) {
+    // RoPE precomputation
+    // RoPE is a positional encoding method used in transformer models.
+    // It uses sine and cosine functions to encode the position of tokens in a sequence
+    // initially introduced for NLP in https://arxiv.org/pdf/2104.09864
+    
+    // assume data is of shape [2,seq_ken,head_size]
+
+    float* sin_table = data;
+    float* cos_table = sin_table + seq_len * head_size;
+
+    for (size_t pos = 0; pos < seq_len; ++pos) {
+        for (size_t i = 0; i < head_size; ++i) {
+            float theta = pos * std::pow(10000.f, -2.f * static_cast<float>(i) / static_cast<float>(head_size * 2));
+            sin_table[pos * head_size + i] = std::sin(theta);
+            cos_table[pos * head_size + i] = std::cos(theta);
+        }
+    }
+}
+
+
 // Operator spec: https://github.com/microsoft/onnxruntime/blob/v1.16.1/docs/ContribOperators.md#com.microsoft.Attention
 class AttentionLayerImpl CV_FINAL : public AttentionLayer {
  public:
@@ -51,6 +138,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         scale = 1.f / params.get<float>("scale", sqrt(qkv_head_sizes[0]));
 
         output_ndims = params.get<int>("output_ndims", 3);
+
+        do_rotary = params.get<bool>("do_rotary", false);
 
         is_prepacked = false;
     }
@@ -96,6 +185,21 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
         internals.assign(1, gemm_buffer_shape);
         internals.push_back(attention_prob_shape);
         internals.push_back(output_buffer_shape);
+
+        if (do_rotary)
+        {
+            // sin and cos table for rotation
+            assert(qkv_head_sizes[0] % 2 == 0);
+            assert(qkv_head_sizes[1] % 2 == 0);
+            // pick maximum of q and k head dim
+            int half_dim = max(
+                int(qkv_head_sizes[0] / 2),
+                int(qkv_head_sizes[1] / 2)
+            );
+
+            MatShape rotation_table_shape{2, seq_len_, half_dim};
+            internals.push_back(rotation_table_shape);
+        }
 
         return false;
     }
@@ -154,6 +258,19 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         float *packed_weights[3] = {packed_weight_q.data(), packed_weight_k.data(), packed_weight_v.data()};
         size_t packed_weights_size[3] = {packed_weight_q.size() / num_heads, packed_weight_k.size() / num_heads, packed_weight_v.size() / num_heads};
+        CV_Assert(internals.size() == 3 + (do_rotary ? 1 : 0));
+
+        if (do_rotary)
+        {
+            // precompute sin/cos table
+            auto &rope_table = internals.back();
+            auto *rope_table_data = rope_table.ptr<float>();
+            int half_dim = max(
+                int(qkv_head_sizes[0] / 2),
+                int(qkv_head_sizes[1] / 2)
+            );
+            precompRotationTables(rope_table_data, seq_len, half_dim);
+        }
 
         // Compute Q/K/V
         auto &gemm_buffer = internals[0];
@@ -166,6 +283,10 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             const auto &bias = blobs.empty() ? inputs[2] : blobs.back();
             const auto *input_data = input.ptr<const float>();
             const auto *bias_data = bias.ptr<const float>();
+
+            // If rotary is false, evaluates to internals[2], which is the output_buffer
+            // but this is not dramatic, because in case rotary is false, the table is not used
+            const auto &rope_table = internals.back(); 
 
             opt.multi_thread = false;
             auto fn = [&](const Range &r) {
@@ -194,6 +315,19 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                     fastGemm(false, seq_len, head_size, input_hidden_size,
                             1.f, input_data + input_offset, input_hidden_size,
                             packed_weight, 1.f, dst + dst_offset, head_size, opt);
+
+                    if(qkv_index < 2 && do_rotary) {
+                        // rotate on the fly
+                        int rope_head_size = max(
+                            static_cast<int>(qkv_head_sizes[0]) / 2,
+                            static_cast<int>(qkv_head_sizes[1]) / 2
+                        );
+                        const auto *rope_table_data = rope_table.ptr<const float>();
+                        rotationKernel( dst + dst_offset, 
+                            rope_table_data, rope_table_data + seq_len * rope_head_size, 
+                            seq_len,  qkv_head_sizes[qkv_index]
+                        );
+                    }
                 }
             };
 
@@ -281,6 +415,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
     size_t input_hidden_size;
     size_t hidden_size;
 
+    bool do_rotary;
     bool is_prepacked;
     std::vector<float> packed_weight_q;
     std::vector<float> packed_weight_k;
