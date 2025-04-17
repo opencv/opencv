@@ -754,7 +754,7 @@ TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
     mhaParams.blobs[1] = QKV_bias;
     mhaParams.set("num_heads", 4);
     mhaParams.set(
-        "qkv_hidden_sizes", 
+        "qkv_hidden_sizes",
         DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size())
     );
     mhaParams.set("do_rotary", true);
