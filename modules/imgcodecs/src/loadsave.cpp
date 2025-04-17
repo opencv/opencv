@@ -800,6 +800,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -910,6 +911,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
