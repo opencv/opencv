@@ -187,6 +187,7 @@ V4L2StreamChannel::V4L2StreamChannel(const UvcDeviceInfo &devInfo) : IUvcStreamC
     else if (streamType_ == OBSENSOR_STREAM_DEPTH)
     {
         initDepthFrameProcessor();
+        initHardwareD2CProcessor();
     }
 
 }
@@ -299,6 +300,10 @@ void V4L2StreamChannel::grabFrame()
         {
             depthFrameProcessor_->process(&fo);
         }
+        if (hardwareD2CProcessor_)
+        {
+            hardwareD2CProcessor_->process(&fo);
+        }
         frameCallback_(&fo);
         IOCTL_FAILED_CONTINUE(xioctl(devFd_, VIDIOC_QBUF, &buf));
     }
@@ -314,7 +319,7 @@ bool V4L2StreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len)
     }
     memcpy(xuSendBuf_.data(), data, len);
     struct uvc_xu_control_query xu_ctrl_query = {
-        .unit = XU_UNIT_ID,
+        .unit = xuUnit_.unit,
         .selector = ctrl,
         .query = UVC_SET_CUR,
         .size = (__u16)(ctrl == 1 ? 512 : (ctrl == 2 ? 64 : 1024)),
@@ -333,7 +338,7 @@ bool V4L2StreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len)
         xuRecvBuf_.resize(XU_MAX_DATA_LENGTH);
     }
     struct uvc_xu_control_query xu_ctrl_query = {
-        .unit = XU_UNIT_ID,
+        .unit = xuUnit_.unit,
         .selector = ctrl,
         .query = UVC_GET_CUR,
         .size = (__u16)(ctrl == 1 ? 512 : (ctrl == 2 ? 64 : 1024)),

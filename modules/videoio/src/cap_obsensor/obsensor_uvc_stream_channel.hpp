@@ -27,7 +27,8 @@
 namespace cv {
 namespace obsensor {
 #define XU_MAX_DATA_LENGTH 1024
-#define XU_UNIT_ID 4
+#define XU_UNIT_ID_COMMON 4
+#define XU_UNIT_ID_G330 3
 
 struct UvcDeviceInfo
 {
@@ -46,6 +47,19 @@ enum StreamState
     STREAM_STARTED = 2,
     STREAM_STOPPING = 3,
 };
+struct Guid {
+    uint32_t data1;
+    uint16_t data2, data3;
+    uint8_t  data4[8];
+};
+
+struct ObExtensionUnit {
+    uint8_t unit;
+    Guid id;
+};
+
+static const ObExtensionUnit OBSENSOR_COMMON_XU_UNIT = { XU_UNIT_ID_COMMON, { 0xA55751A1, 0xF3C5, 0x4A5E, { 0x8D, 0x5A, 0x68, 0x54, 0xB8, 0xFA, 0x27, 0x16 } } };
+static const ObExtensionUnit OBSENSOR_G330_XU_UNIT = { XU_UNIT_ID_G330, { 0xC9606CCB, 0x594C, 0x4D25, { 0xaf, 0x47, 0xcc, 0xc4, 0x96, 0x43, 0x59, 0x95 } } };
 
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName);
 FrameFormat frameFourccToFormat(uint32_t fourcc);
@@ -56,6 +70,14 @@ struct OBExtensionParam {
     float bl2;
     float pd;
     float ps;
+};
+
+struct OBHardwareD2CParams {
+    float scale;
+    int left;
+    int top;
+    int right;
+    int bottom;
 };
 
 class IFrameProcessor{
@@ -73,6 +95,16 @@ public:
 private:
     const OBExtensionParam param_;
     uint16_t* lookUpTable_;
+};
+
+class HardwareD2CProcessor: public IFrameProcessor {
+public:
+    HardwareD2CProcessor(const OBHardwareD2CParams& param);
+    virtual ~HardwareD2CProcessor() = default;
+    virtual void process(Frame* frame) override;
+
+private:
+    const OBHardwareD2CParams param_;
 };
 
 class DepthFrameUnpacker: public IFrameProcessor {
@@ -101,11 +133,14 @@ protected:
     virtual bool getXu(uint8_t ctrl, uint8_t** data, uint32_t* len) = 0;
 
     bool initDepthFrameProcessor();
+    bool initHardwareD2CProcessor();
 
 protected:
     const UvcDeviceInfo devInfo_;
+    const ObExtensionUnit xuUnit_;
     StreamType streamType_;
     Ptr<IFrameProcessor> depthFrameProcessor_;
+    Ptr<IFrameProcessor> hardwareD2CProcessor_;
 };
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR

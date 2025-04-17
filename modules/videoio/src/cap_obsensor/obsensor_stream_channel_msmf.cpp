@@ -228,8 +228,8 @@ MSMFStreamChannel::MSMFStreamChannel(const UvcDeviceInfo& devInfo) :
         })
         delete[] buffer;
         HR_FAILED_RETURN(MFCreateDeviceSource(deviceAttrs_.Get(), &deviceSource_));
-        HR_FAILED_RETURN(deviceSource_->QueryInterface(__uuidof(IAMCameraControl), reinterpret_cast<void**>(&cameraControl_)));
-        HR_FAILED_RETURN(deviceSource_->QueryInterface(__uuidof(IAMVideoProcAmp), reinterpret_cast<void**>(&videoProcAmp_)));
+        HR_FAILED_LOG(deviceSource_->QueryInterface(__uuidof(IAMCameraControl), reinterpret_cast<void**>(&cameraControl_)));
+        HR_FAILED_LOG(deviceSource_->QueryInterface(__uuidof(IAMVideoProcAmp), reinterpret_cast<void**>(&videoProcAmp_)));
 
         HR_FAILED_RETURN(MFCreateAttributes(&readerAttrs_, 3));
         HR_FAILED_RETURN(readerAttrs_->SetUINT32(MF_SOURCE_READER_DISCONNECT_MEDIASOURCE_ON_SHUTDOWN, false));
@@ -259,6 +259,7 @@ MSMFStreamChannel::MSMFStreamChannel(const UvcDeviceInfo& devInfo) :
         if (streamType_ == OBSENSOR_STREAM_DEPTH)
         {
             initDepthFrameProcessor();
+            initHardwareD2CProcessor();
         }
 }
 
@@ -314,7 +315,7 @@ void MSMFStreamChannel::start(const StreamProfile& profile, FrameCallback frameC
     currentProfile_ = profile;
     currentStreamIndex_ = -1;
 
-    for (uint8_t index = 0; index <= 5; index++)
+    for (uint8_t index = 0; index < 5; index++)
     {
         for (uint32_t k = 0;; k++)
         {
@@ -341,6 +342,12 @@ void MSMFStreamChannel::start(const StreamProfile& profile, FrameCallback frameC
                 fps == profile.fps &&
                 frameFourccToFormat(device_fourcc) == profile.format)
             {
+                for (uint8_t i = 0; i < 5; ++i) {
+                    if (index == i)
+                        continue;
+
+                    streamReader_->SetStreamSelection(i, FALSE);
+                }
                 HR_FAILED_RETURN(streamReader_->SetCurrentMediaType(index, nullptr, mediaType.Get()));
                 HR_FAILED_RETURN(streamReader_->SetStreamSelection(index, true));
                 streamReader_->ReadSample(index, 0, nullptr, nullptr, nullptr, nullptr);
@@ -391,9 +398,9 @@ bool  MSMFStreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len)
     }
     memcpy(xuSendBuf_.data(), data, len);
 
-    KSP_NODE                              node;
+    KSP_NODE node;
     memset(&node, 0, sizeof(KSP_NODE));
-    node.Property.Set = { 0xA55751A1, 0xF3C5, 0x4A5E, {0x8D, 0x5A, 0x68, 0x54, 0xB8, 0xFA, 0x27, 0x16} };
+    node.Property.Set = reinterpret_cast<const GUID &>(xuUnit_.id);
     node.Property.Id = ctrl;
     node.Property.Flags = KSPROPERTY_TYPE_SET | KSPROPERTY_TYPE_TOPOLOGY;
     node.NodeId = xuNodeId_;
@@ -412,7 +419,7 @@ bool  MSMFStreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len)
     }
     KSP_NODE node;
     memset(&node, 0, sizeof(KSP_NODE));
-    node.Property.Set = { 0xA55751A1, 0xF3C5, 0x4A5E, {0x8D, 0x5A, 0x68, 0x54, 0xB8, 0xFA, 0x27, 0x16} };
+    node.Property.Set = reinterpret_cast<const GUID&>(xuUnit_.id);
     node.Property.Id = ctrl;
     node.Property.Flags = KSPROPERTY_TYPE_GET | KSPROPERTY_TYPE_TOPOLOGY;
     node.NodeId = xuNodeId_;
@@ -484,6 +491,10 @@ STDMETHODIMP MSMFStreamChannel::OnReadSample(HRESULT hrStatus, DWORD dwStreamInd
             if (depthFrameProcessor_)
             {
                 depthFrameProcessor_->process(&fo);
+            }
+            if(hardwareD2CProcessor_)
+            {
+                hardwareD2CProcessor_->process(&fo);
             }
             frameCallback_(&fo);
             buffer->Unlock();

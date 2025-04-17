@@ -38,6 +38,8 @@ VideoCapture_obsensor::VideoCapture_obsensor(int)
     ob::Context::setLoggerToFile(OB_LOG_SEVERITY_OFF, "");
     config = std::make_shared<ob::Config>();
     pipe = std::make_shared<ob::Pipeline>();
+    alignFilter = std::make_shared<ob::Align>(OB_STREAM_COLOR);
+
     auto colorProfiles = pipe->getStreamProfileList(OB_SENSOR_COLOR);
     auto colorProfile = colorProfiles->getProfile(OB_PROFILE_DEFAULT);
     config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
@@ -45,13 +47,17 @@ VideoCapture_obsensor::VideoCapture_obsensor(int)
     auto depthProfiles = pipe->getStreamProfileList(OB_SENSOR_DEPTH);
     auto depthProfile = depthProfiles->getProfile(OB_PROFILE_DEFAULT);
     config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
+    config->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_ALL_TYPE_FRAME_REQUIRE);
 
-    config->setAlignMode(ALIGN_D2C_SW_MODE);
-
+    pipe->enableFrameSync();
     pipe->start(config, [&](std::shared_ptr<ob::FrameSet> frameset) {
         std::unique_lock<std::mutex> lk(videoFrameMutex);
-        colorFrame = frameset->colorFrame();
-        depthFrame = frameset->depthFrame();
+
+        auto alignFrameSet = alignFilter->process(frameset);
+        if (alignFrameSet) {
+            colorFrame = alignFrameSet->as<ob::FrameSet>()->colorFrame();
+            depthFrame = alignFrameSet->as<ob::FrameSet>()->depthFrame();
+        }
     });
 
     auto param = pipe->getCameraParam();
