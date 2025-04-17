@@ -194,7 +194,16 @@ public:
             }
         }
 
-        icvWriteFrame_FFMPEG_p(ffmpegWriter, (const uchar*)image.getMat().ptr(), (int)image.step(), image.cols(), image.rows(), image.channels(), 0);
+        cv::Mat imageMat = image.getMat();
+        // when isColor=false, image must have 1 channel (grayscale)
+        if (!ffmpegWriter->isColor() && imageMat.channels() != 1)
+        {
+            // convert input image to grayscale
+            cv::cvtColor(imageMat, imageMat, cv::COLOR_BGR2GRAY);
+        }
+
+        if(!icvWriteFrame_FFMPEG_p(ffmpegWriter, imageMat.data, (int)imageMat.step, imageMat.cols, imageMat.rows, imageMat.channels(), 0))
+            CV_LOG_WARNING(NULL, "FFmpeg: Unable to write frame");
     }
     virtual bool open( const cv::String& filename, int fourcc, double fps, cv::Size frameSize, const VideoWriterParameters& params )
     {
