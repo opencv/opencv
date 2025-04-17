@@ -536,30 +536,88 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
 {
     public:
 
-    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, int _borderType, int _fcvBorderValue) :
-        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), borderType(_borderType), fcvBorderValue(_fcvBorderValue)
+    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, int _borderType) :
+        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), borderType(_borderType)
     {
         width       = src.cols;
         height      = src.rows;
         halfKSize   = ksize / 2;
         fcvFuncType = FCV_MAKETYPE(ksize, src.depth());
+
+        switch (borderType)
+        {
+            case cv::BorderTypes::BORDER_REPLICATE:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_REPLICATE;
+                break;
+            }
+            // For constant border, there are no border value, OpenCV default value is 0
+            case cv::BorderTypes::BORDER_CONSTANT:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_CONSTANT;
+                break;
+            }
+            case cv::BorderTypes::BORDER_REFLECT:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT;
+                break;
+            }
+            case cv::BorderTypes::BORDER_REFLECT_101:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT_V2;
+                break;
+            }
+        }
     }
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        int rangeHeight  = range.end - range.start;
-        int paddedHeight = rangeHeight + halfKSize * 2;
-        int paddedWidth  = width;
+        int topLines     = 0;
+        int bottomLines  = 0;
+        int rangeHeight  = range.end-range.start;
+        int paddedHeight = rangeHeight;
 
-        cv::Mat srcPadded = src(cv::Rect(0, range.start, paddedWidth, paddedHeight));
-        cv::Mat dstPadded = dst(cv::Rect(0, range.start, paddedWidth, paddedHeight));
+        // Need additional lines to be border.
+        if(range.start > 0)
+        {
+            topLines     = MIN(range.start, halfKSize);
+            paddedHeight += topLines;
+        }
+
+        if(range.end < height)
+        {
+            bottomLines  = MIN(height-range.end, halfKSize);
+            paddedHeight += bottomLines;
+        }
 
         if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
-            fcvFilterGaussian3x3u8_v4(srcPadded.data, paddedWidth, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
-                fcvBorderType::FASTCV_BORDER_UNDEFINED, fcvBorderValue);
+        {
+            cv::Mat srcPadded = src(cv::Rect(0, range.start - topLines, width, paddedHeight));
+            cv::Mat dstPadded = cv::Mat(paddedHeight, width, CV_8UC1);
+            fcvFilterGaussian3x3u8_v4(srcPadded.data, width, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
+                                      fcvBorder, 0);
+
+            // Only copy center part back to output image and ignore the padded lines
+            cv::Mat temp1 = dstPadded(cv::Rect(0, topLines, width, rangeHeight));
+            cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
+            temp1.copyTo(temp2);
+        }
         else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
-            fcvFilterGaussian5x5u8_v3(srcPadded.data, paddedWidth, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
-                fcvBorderType::FASTCV_BORDER_UNDEFINED, fcvBorderValue);
+        {
+            int width_  = width + ksize - 1;
+            int height_ = rangeHeight + ksize - 1;
+            cv::Mat srcPadded = cv::Mat(height_, width_, CV_8UC1);
+            cv::Mat dstPadded = cv::Mat(height_, width_, CV_8UC1);
+            cv::copyMakeBorder(src(cv::Rect(0, range.start - topLines, width, paddedHeight)), srcPadded,
+                               halfKSize - topLines, halfKSize - bottomLines, halfKSize, halfKSize, borderType);
+            fcvFilterGaussian5x5u8_v3(srcPadded.data, width_, height_, srcPadded.step, dstPadded.data, dstPadded.step,
+                                      fcvBorderType::FASTCV_BORDER_UNDEFINED, 0);
+
+            // Only copy center part back to output image and ignore the padded lines
+            cv::Mat temp1 = dstPadded(cv::Rect(halfKSize, halfKSize, width, rangeHeight));
+            cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
+            temp1.copyTo(temp2);
+        }
     }
 
     private:
@@ -569,9 +627,9 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
     int             height;
     const int       ksize;
     int             halfKSize;
-    int             fcvFuncType;
     int             borderType;
-    int             fcvBorderValue;
+    int             fcvFuncType;
+    fcvBorderType   fcvBorder;
 
     FcvGaussianBlurLoop_Invoker(const FcvGaussianBlurLoop_Invoker &);  // = delete;
     const FcvGaussianBlurLoop_Invoker& operator= (const FcvGaussianBlurLoop_Invoker &);  // = delete;
@@ -597,9 +655,9 @@ int fastcv_hal_gaussianBlurBinomial(
     if (src_data == dst_data)
         CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
 
-    // The pixels of input image should larger than 320*240
-    if((width*height) < (320*240))
-        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than 320*240");
+    // The input image width and height should greater than kernel size
+    if (((size_t)height <= ksize) || ((size_t)width <= ksize))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than kernel size");
 
     // The input channel should be 1
     if (cn != 1)
@@ -609,26 +667,31 @@ int fastcv_hal_gaussianBlurBinomial(
     if((margin_left!=0) || (margin_top != 0) || (margin_right != 0) || (margin_bottom !=0))
         CV_HAL_RETURN_NOT_IMPLEMENTED("ROI is not supported");
 
+    // Border type check
+    if( border_type != cv::BorderTypes::BORDER_CONSTANT  &&
+        border_type != cv::BorderTypes::BORDER_REPLICATE &&
+        border_type != cv::BorderTypes::BORDER_REFLECT   &&
+        border_type != cv::BorderTypes::BORDER_REFLECT101)
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
+
     INITIALIZATION_CHECK;
 
     fcvStatus status = FASTCV_SUCCESS;
-    int fcvFuncType = FCV_MAKETYPE(ksize, depth);
+    int fcvFuncType  = FCV_MAKETYPE(ksize, depth);
 
     int nThreads = cv::getNumThreads();
-    int nStripes = (nThreads > 1) ? ((height > 60) ? 3 * nThreads : 1) : 1;
+    // In each stripe, the height should be equal or larger than ksize.
+    // Use 3*nThreads stripes to avoid too many threads.
+    int nStripes = nThreads > 1 ? MIN(height / (int)ksize, 3 * nThreads) : 1;
 
     switch (fcvFuncType)
     {
         case FCV_MAKETYPE(3,CV_8U):
         case FCV_MAKETYPE(5,CV_8U):
         {
-            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void *)src_data, src_step);
-            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void *)dst_data, dst_step);
-            cv::Mat src_tmp = cv::Mat(height + ksize - 1, width + ksize - 1, CV_8UC1);
-            cv::Mat dst_tmp = cv::Mat(height + ksize - 1, width + ksize - 1, CV_8UC1);
-            cv::copyMakeBorder(src, src_tmp, ksize / 2, ksize / 2, ksize / 2, ksize / 2, border_type);
-            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src_tmp, dst_tmp, ksize, border_type, 0), nStripes);
-            dst_tmp(cv::Rect(ksize / 2, ksize / 2, width, height)).copyTo(dst);
+            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void*)src_data, src_step);
+            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void*)dst_data, dst_step);
+            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src, dst, ksize, border_type), nStripes);
             break;
         }
         default:
