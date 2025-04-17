@@ -51,54 +51,47 @@ static void transpose_16u(const uchar *src_data, size_t src_step, uchar *dst_dat
         __riscv_vse16(dst + 7 * dst_step, v7, 8);
     };
 
+    constexpr int block_size = 128; // multiple of 8
     size_t src_step_base = src_step / sizeof(ushort);
     size_t dst_step_base = dst_step / sizeof(ushort);
 
     int h = 0, w = 0;
-    for (; h <= src_height - 8; h += 8) {
-        const ushort *src = (const ushort*)(src_data + h * src_step);
-        uchar *dst = dst_data + h * sizeof(ushort);
-        for (w = 0; w <= src_width - 8; w += 8) {
-            transpose_16u_8x8(src + w, src_step, (ushort*)(dst + w * dst_step), dst_step_base);
+    for (; h <= src_height - block_size; h += block_size) {
+        const ushort *_src = (const ushort*)(src_data) + h * src_step_base;
+        ushort *_dst = (ushort*)(dst_data) + h;
+        for (w = 0; w <= src_width - block_size; w += block_size) {
+            const auto *src = _src + w;
+            auto *dst = _dst + w * dst_step_base;
+            for (int i = 0; i < block_size; i += 8) {
+                for (int j = 0; j < block_size; j += 8) {
+                    transpose_16u_8x8(src + j, src_step, dst + j * dst_step_base, dst_step_base);
+                }
+                src += 8 * src_step_base;
+                dst += 8;
+            }
         }
+
         int vl;
-        for (; w < src_width; w += vl) {
-            vl = __riscv_vsetvl_e32m1(src_width - w);
-
-            auto v0 = __riscv_vle16_v_u16m1(src + w, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step), dst_step, v0, vl);
-
-            auto v1 = __riscv_vle16_v_u16m1(src + w + src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + sizeof(ushort)), dst_step, v1, vl);
-
-            auto v2 = __riscv_vle16_v_u16m1(src + w + 2 * src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + 2 * sizeof(ushort)), dst_step, v2, vl);
-
-            auto v3 = __riscv_vle16_v_u16m1(src + w + 3 * src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + 3 * sizeof(ushort)), dst_step, v3, vl);
-
-            auto v4 = __riscv_vle16_v_u16m1(src + w + 4 * src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + 4 * sizeof(ushort)), dst_step, v4, vl);
-
-            auto v5 = __riscv_vle16_v_u16m1(src + w + 5 * src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + 5 * sizeof(ushort)), dst_step, v5, vl);
-
-            auto v6 = __riscv_vle16_v_u16m1(src + w + 6 * src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + 6 * sizeof(ushort)), dst_step, v6, vl);
-
-            auto v7 = __riscv_vle16_v_u16m1(src + w + 7 * src_step_base, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step + 7 * sizeof(ushort)), dst_step, v7, vl);
+        for (int j = w; j < src_width; j += vl) {
+            const auto *src = _src + j;
+            auto *dst = _dst + j * dst_step_base;
+            vl = __riscv_vsetvl_e16m2(src_width - j);
+            for (int i = 0; i < block_size; i++) {
+                auto v = __riscv_vle16_v_u16m2(src, vl);
+                __riscv_vsse16(dst, dst_step, v, vl);
+                src += src_step_base;
+                dst += 1;
+            }
         }
     }
     for (; h < src_height; h++) {
-        const ushort *src = (const ushort*)(src_data + h * src_step);
-        uchar *dst = dst_data + h * sizeof(ushort);
+        const ushort *src = (const ushort*)(src_data) + h * src_step_base;
+        ushort *dst = (ushort*)(dst_data) + h;
         int vl;
         for (w = 0; w < src_width; w += vl) {
-            vl = __riscv_vsetvl_e16m1(src_width - w);
-
-            auto v = __riscv_vle16_v_u16m1(src + w, vl);
-            __riscv_vsse16((ushort*)(dst + w * dst_step), dst_step, v, vl);
+            vl = __riscv_vsetvl_e16m8(src_width - w);
+            auto v = __riscv_vle16_v_u16m8(src + w, vl);
+            __riscv_vsse16(dst + w * dst_step_base, dst_step, v, vl);
         }
     }
 }
