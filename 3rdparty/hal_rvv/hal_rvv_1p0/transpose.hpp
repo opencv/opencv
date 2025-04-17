@@ -98,7 +98,7 @@ static void transpose_16u(const uchar *src_data, size_t src_step, uchar *dst_dat
 
 static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
     auto transpose_32s_4xVl = [](const int *src, size_t src_step, int *dst, size_t dst_step, const int vl) {
-        auto v =__riscv_vlsseg4e32_v_i32m1x8(src, src_step, vl);
+        auto v =__riscv_vlsseg4e32_v_i32m1x4(src, src_step, vl);
 
         auto v0 = __riscv_vget_v_i32m1x4_i32m1(v, 0);
         auto v1 = __riscv_vget_v_i32m1x4_i32m1(v, 1);
@@ -111,38 +111,17 @@ static void transpose_32s(const uchar *src_data, size_t src_step, uchar *dst_dat
         __riscv_vse32(dst + 3 * dst_step, v3, vl);
     };
 
-    constexpr int block_size = 96; // multiple of 4
     size_t src_step_base = src_step / sizeof(int);
     size_t dst_step_base = dst_step / sizeof(int);
 
     int h = 0, w = 0;
-    for (; h <= src_height - block_size; h += block_size) {
-        const int *_src = (const int*)(src_data) + h * src_step_base;
-        int *_dst = (int*)(dst_data) + h;
-        for (w = 0; w <= src_width - block_size; w += block_size) {
-            const auto *src = _src + w;
-            auto *dst = _dst + w * dst_step_base;
-            for (int i = 0; i < block_size; i += 4) {
-                int vl;
-                for (int j = 0; j < block_size; j += vl) {
-                    vl = __riscv_vsetvl_e32m1(block_size - j);
-                    transpose_32s_4xVl(src + j, src_step, dst + j * dst_step_base, dst_step_base, vl);
-                }
-                src += 4 * src_step_base;
-                dst += 4;
-            }
-        }
-
+    for (; h <= src_height - 4; h += 4) {
+        const int *src = (const int*)(src_data) + h * src_step_base;
+        int *dst = (int*)(dst_data) + h;
         int vl;
-        for (; w < src_width; w += vl) {
-            const auto *src = _src + w;
-            auto *dst = _dst + w * dst_step_base;
+        for (w = 0; w < src_width; w += vl) {
             vl = __riscv_vsetvl_e32m1(src_width - w);
-            for (int i = 0; i < block_size; i += 4) {
-                transpose_32s_4xVl(src, src_step, dst, dst_step_base, vl);
-                src += 4 * src_step_base;
-                dst += 4;
-            }
+            transpose_32s_4xVl(src + w, src_step, dst + w * dst_step_base, dst_step_base, vl);
         }
     }
     for (; h < src_height; h++) {
