@@ -668,9 +668,9 @@ int fastcv_hal_gaussianBlurBinomial(
         CV_HAL_RETURN_NOT_IMPLEMENTED("ROI is not supported");
 
     // Border type check
-    if( border_type != cv::BorderTypes::BORDER_CONSTANT  ||
-        border_type != cv::BorderTypes::BORDER_REPLICATE ||
-        border_type != cv::BorderTypes::BORDER_REFLECT   ||
+    if( border_type != cv::BorderTypes::BORDER_CONSTANT  &&
+        border_type != cv::BorderTypes::BORDER_REPLICATE &&
+        border_type != cv::BorderTypes::BORDER_REFLECT   &&
         border_type != cv::BorderTypes::BORDER_REFLECT101)
         CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
 
