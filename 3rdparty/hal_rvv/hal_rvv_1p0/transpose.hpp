@@ -29,8 +29,8 @@ static void transpose_8u(const uchar *src_data, size_t src_step, uchar *dst_data
 */
 
 static void transpose_16u(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    auto transpose_16u_8x8 = [](const ushort *src, size_t src_step, ushort *dst, size_t dst_step) {
-        auto v =__riscv_vlsseg8e16_v_u16m1x8(src, src_step, 8);
+    auto transpose_16u_8xVl = [](const ushort *src, size_t src_step, ushort *dst, size_t dst_step, const int vl) {
+        auto v =__riscv_vlsseg8e16_v_u16m1x8(src, src_step, vl);
 
         auto v0 = __riscv_vget_v_u16m1x8_u16m1(v, 0);
         auto v1 = __riscv_vget_v_u16m1x8_u16m1(v, 1);
@@ -41,47 +41,28 @@ static void transpose_16u(const uchar *src_data, size_t src_step, uchar *dst_dat
         auto v6 = __riscv_vget_v_u16m1x8_u16m1(v, 6);
         auto v7 = __riscv_vget_v_u16m1x8_u16m1(v, 7);
 
-        __riscv_vse16(dst, v0, 8);
-        __riscv_vse16(dst + dst_step, v1, 8);
-        __riscv_vse16(dst + 2 * dst_step, v2, 8);
-        __riscv_vse16(dst + 3 * dst_step, v3, 8);
-        __riscv_vse16(dst + 4 * dst_step, v4, 8);
-        __riscv_vse16(dst + 5 * dst_step, v5, 8);
-        __riscv_vse16(dst + 6 * dst_step, v6, 8);
-        __riscv_vse16(dst + 7 * dst_step, v7, 8);
+        __riscv_vse16(dst, v0, vl);
+        __riscv_vse16(dst + dst_step, v1, vl);
+        __riscv_vse16(dst + 2 * dst_step, v2, vl);
+        __riscv_vse16(dst + 3 * dst_step, v3, vl);
+        __riscv_vse16(dst + 4 * dst_step, v4, vl);
+        __riscv_vse16(dst + 5 * dst_step, v5, vl);
+        __riscv_vse16(dst + 6 * dst_step, v6, vl);
+        __riscv_vse16(dst + 7 * dst_step, v7, vl);
     };
 
-    constexpr int block_size = 128; // multiple of 8
+
     size_t src_step_base = src_step / sizeof(ushort);
     size_t dst_step_base = dst_step / sizeof(ushort);
 
     int h = 0, w = 0;
-    for (; h <= src_height - block_size; h += block_size) {
-        const ushort *_src = (const ushort*)(src_data) + h * src_step_base;
-        ushort *_dst = (ushort*)(dst_data) + h;
-        for (w = 0; w <= src_width - block_size; w += block_size) {
-            const auto *src = _src + w;
-            auto *dst = _dst + w * dst_step_base;
-            for (int i = 0; i < block_size; i += 8) {
-                for (int j = 0; j < block_size; j += 8) {
-                    transpose_16u_8x8(src + j, src_step, dst + j * dst_step_base, dst_step_base);
-                }
-                src += 8 * src_step_base;
-                dst += 8;
-            }
-        }
-
+    for (; h <= src_height - 8; h += 8) {
+        const ushort *src = (const ushort*)(src_data) + h * src_step_base;
+        ushort *dst = (ushort*)(dst_data) + h;
         int vl;
-        for (int j = w; j < src_width; j += vl) {
-            const auto *src = _src + j;
-            auto *dst = _dst + j * dst_step_base;
-            vl = __riscv_vsetvl_e16m2(src_width - j);
-            for (int i = 0; i < block_size; i++) {
-                auto v = __riscv_vle16_v_u16m2(src, vl);
-                __riscv_vsse16(dst, dst_step, v, vl);
-                src += src_step_base;
-                dst += 1;
-            }
+        for (w = 0; w < src_width; w += vl) {
+            vl = __riscv_vsetvl_e16m1(src_width - w);
+            transpose_16u_8xVl(src + w, src_step, dst + w * dst_step_base, dst_step_base, vl);
         }
     }
     for (; h < src_height; h++) {
