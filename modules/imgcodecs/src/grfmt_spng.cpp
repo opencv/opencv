@@ -224,7 +224,7 @@ bool SPngDecoder::readData(Mat &img)
         {
             image_width = image_size / m_height;
 
-            if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16))
+            if (!color && ihdr.interlace_method && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16))
             {
                 if (img.depth() == CV_16U)
                 {
@@ -258,7 +258,55 @@ bool SPngDecoder::readData(Mat &img)
             {
                 struct spng_row_info row_info{};
 
-                if (color)
+                // If user wants to read image as grayscale(IMREAD_GRAYSCALE), but image format is not
+                // decode image then convert to grayscale
+                if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA8 || fmt == SPNG_FMT_RGBA16))
+                {
+                    AutoBuffer<unsigned char> buffer;
+                    buffer.allocate(image_width);
+                    if (fmt == SPNG_FMT_RGB8)
+                    {
+                        do
+                        {
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
+                            spngCvt_BGR2Gray_8u_C3C1R(buffer.data(), 0,
+                                img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 2);
+                        } while (ret == SPNG_OK);
+                    }
+                    else if (fmt == SPNG_FMT_RGBA8)
+                    {
+                        do
+                        {
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
+                            spngCvt_BGRA2Gray_8u_C4C1R(buffer.data(), 0,
+                                img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 2);
+                        } while (ret == SPNG_OK);
+                    }
+                    else if (fmt == SPNG_FMT_RGBA16)
+                    {
+                        do
+                        {
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
+                            spngCvt_BGRA2Gray_16u_CnC1R(
+                                reinterpret_cast<const ushort*>(buffer.data()), 0,
+                                reinterpret_cast<ushort*>(img.data + row_info.row_num * img.step),
+                                0, Size(m_width, 1), 4, 2);
+                        } while (ret == SPNG_OK);
+                    }
+                }
+                else if (color)
                 { // RGB -> BGR, convert row by row if png is non-interlaced, otherwise convert image as one
                     int step = m_width * img.channels();
                     AutoBuffer<uchar *> _buffer(m_height);
