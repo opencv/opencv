@@ -380,24 +380,39 @@ def get_ndk_dir():
         return android_sdk_ndk_bundle
     return None
 
-def check_have_ipp_flag(cmake_file):
-    print("Checking build flag in:", cmake_file)
+def check_cmake_flag_enabled(cmake_file, flag_name, strict=True):
+    print(f"Checking build flag '{flag_name}' in: {cmake_file}")
+    
     if not os.path.isfile(cmake_file):
-        print(f" ERROR: File {cmake_file} does not exist.")
-        sys.exit(1)
-        
+        msg = f"ERROR: File {cmake_file} does not exist."
+        if strict:
+            print(msg)
+            sys.exit(1)
+        else:
+            print("WARNING:", msg)
+            return
+
     with open(cmake_file, 'r') as file:
         for line in file:
-            if line.strip().startswith("HAVE_IPP="):
+            if line.strip().startswith(f"{flag_name}="):
                 value = line.strip().split('=')[1]
                 if value == '1':
-                    print("HAVE_IPP=1 found. IPP support is enabled.")
+                    print(f"{flag_name}=1 found. Support is enabled.")
                     return
                 else:
-                    print(f"ERROR: HAVE_IPP is set to {value}, expected 1.")
-                    sys.exit(1)
-    print("ERROR: HAVE_IPP not found in CMakeVars.txt.")
-    sys.exit(1)
+                    msg = f"ERROR: {flag_name} is set to {value}, expected 1."
+                    if strict:
+                        print(msg)
+                        sys.exit(1)
+                    else:
+                        print("WARNING:", msg)
+                        return
+    msg = f"ERROR: {flag_name} not found in {os.path.basename(cmake_file)}."
+    if strict:
+        print(msg)
+        sys.exit(1)
+    else:
+        print("WARNING:", msg)
     
 #===================================================================================================
 
@@ -506,7 +521,7 @@ if __name__ == "__main__":
 
     builder.gather_results()
    
-    check_have_ipp_flag(os.path.join(builder.libdest, "CMakeVars.txt"))
+    check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=True)
     
     if args.build_doc:
         builder.build_javadoc()
