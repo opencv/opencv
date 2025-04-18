@@ -638,14 +638,22 @@ void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
     int i;
     for (; size.height--; gray += gray_step)
     {
-        double cBGR0 = 0.1140441895;
-        double cBGR2 = 0.2989807129;
+        int cBGR0 = 3737;
+        int cBGR1 = 19234;
+        int cBGR2 = 9797;
+
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
         for (i = 0; i < size.width; i++, bgr += 3)
         {
-            int t = static_cast<int>(cBGR0 * bgr[0] + 0.5869750977 * bgr[1] + cBGR2 * bgr[2]);
-            gray[i] = (uchar)t;
+            if (bgr[0] != bgr[1] || bgr[0] != bgr[2])
+            {
+                gray[i] = (uchar)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2]) >> 15);
+            }
+            else
+            {
+                gray[i] = bgr[0];
+            }
         }
 
         bgr += bgr_step - size.width * 3;
@@ -658,15 +666,22 @@ void spngCvt_BGRA2Gray_8u_C4C1R(const uchar *bgra, int rgba_step,
 {
     for (; size.height--; gray += gray_step)
     {
-        double cBGR0 = 0.1140441895;
-        double cBGR1 = 0.5869750977;
-        double cBGR2 = 0.2989807129;
+        int cBGR0 = 3737;
+        int cBGR1 = 19234;
+        int cBGR2 = 9797;
 
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
         for (int i = 0; i < size.width; i++, bgra += 4)
         {
-            gray[i] = cv::saturate_cast<uchar>(cBGR0 * bgra[0] + cBGR1 * bgra[1] + cBGR2 * bgra[2]);
+            if (bgra[0] != bgra[1] || bgra[0] != bgra[2])
+            {
+                gray[i] = (uchar)((cBGR0 * bgra[0] + cBGR1 * bgra[1] + cBGR2 * bgra[2]) >> 15);
+            }
+            else
+            {
+                gray[i] = bgra[0];
+            }
         }
 
         bgra += rgba_step - size.width * 4;
@@ -679,15 +694,15 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
 {
     for (; size.height--; gray += gray_step)
     {
-        double cBGR0 = 0.1140441895;
-        double cBGR1 = 0.5869750977;
-        double cBGR2 = 0.2989807129;
+        int cBGR0 = 3737;
+        int cBGR1 = 19234;
+        int cBGR2 = 9797;
 
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
         for (int i = 0; i < size.width; i++, bgr += ncn)
         {
-            gray[i] = (ushort)(cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2]);
+            gray[i] = (ushort)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15);
         }
 
         bgr += bgr_step - size.width * ncn;
