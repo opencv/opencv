@@ -40,7 +40,7 @@ static void rotationKernel(float* data,
         const float* sin_ptr = sin_table + pos * half_dim;
         const float* cos_ptr = cos_table + pos * half_dim;
 
-#ifdef CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         const size_t w = VTraits<v_float32>::vlanes();  // dynamic lanes for RVV
         size_t d = 0;
         for (; d + w <= half_dim; d += w)
