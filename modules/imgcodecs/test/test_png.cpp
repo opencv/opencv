@@ -145,9 +145,15 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
         if (gt.depth() == CV_16U)
             gt_2.convertTo(gt_0, CV_8U, 1. / 256);
         else
-        gt_0 = gt_2; // For IMREAD_GRAYSCALE
-        cvtColor(gt_0, gt_1, COLOR_GRAY2BGR);  // For IMREAD_COLOR
-        cvtColor(gt, gt_3, COLOR_GRAY2BGR); // For IMREAD_COLOR | IMREAD_ANYDEPTH
+            gt_0 = gt_2; // For IMREAD_GRAYSCALE
+
+        cvtColor(gt_2, gt_3, COLOR_GRAY2BGR);  // For IMREAD_COLOR | IMREAD_ANYDEPTH
+
+        if (gt.depth() == CV_16U)
+            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+        else
+            gt_1 = gt_3; // For IMREAD_COLOR
+
         gt_256 = gt_1; // For IMREAD_COLOR_RGB
         gt_258 = gt_3; // For IMREAD_COLOR_RGB | IMREAD_ANYDEPTH
     }
@@ -174,8 +180,8 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
             gt_1 = gt_3;
 
         // Convert to RGB for IMREAD_COLOR_RGB variants
-        cvtColor(gt_3, gt_256, COLOR_BGR2RGB);
-        gt_258 = gt_256;
+        cvtColor(gt_1, gt_256, COLOR_BGR2RGB);
+        cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
     }
 
     // Perform comparisons with different imread flags
