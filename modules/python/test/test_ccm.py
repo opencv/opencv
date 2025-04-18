@@ -305,7 +305,6 @@ class photo_test(NewOpenCVTests):
         image = image.astype(np.float64) / 255.
         calibratedImage = np.zeros_like(image)
         model.correctImage(image, calibratedImage)
-<<<<<<< HEAD
         
         # Ensure values are in valid range before conversion
         calibratedImage = np.clip(calibratedImage, 0.0, 1.0)
@@ -313,9 +312,6 @@ class photo_test(NewOpenCVTests):
         # Convert to uint8 with explicit rounding
         calibratedImage = (calibratedImage * 255.0).astype(np.float64)
         calibratedImage = np.rint(calibratedImage).astype(np.uint8)
-=======
-        calibratedImage = np.clip(calibratedImage * 255.0 + 0.5, 0, 255).astype(np.uint8)
->>>>>>> 144bf9b09a96edc365d5142131686f725aa47021
         calibratedImage = cv.cvtColor(calibratedImage, cv.COLOR_RGB2BGR)
         
         np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
