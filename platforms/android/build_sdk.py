@@ -519,10 +519,14 @@ if __name__ == "__main__":
         os.chdir(builder.libdest)
         builder.clean_library_build_dir()
         builder.build_library(abi, do_install, args.no_media_ndk)
+        
+        #Check HAVE_IPP x86 / x86_64
+        if abi.haveIPP():
+           log.info("Checking HAVE_IPP for ABI: %s", abi.name)
+           check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=args.strict_dependencies)
 
     builder.gather_results()
    
-    check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=args.strict_dependencies)
     
     if args.build_doc:
         builder.build_javadoc()
