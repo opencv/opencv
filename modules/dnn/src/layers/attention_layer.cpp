@@ -286,7 +286,7 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
             // If rotary is false, evaluates to internals[2], which is the output_buffer
             // but this is not dramatic, because in case rotary is false, the table is not used
-            const auto &rope_table = internals.back(); 
+            const auto &rope_table = internals.back();
 
             opt.multi_thread = false;
             auto fn = [&](const Range &r) {
@@ -427,5 +427,6 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 Ptr<AttentionLayer> AttentionLayer::create(const LayerParams &params) {
     return makePtr<AttentionLayerImpl>(params);
 }
+
 
 }} // cv::dnn
