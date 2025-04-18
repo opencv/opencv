@@ -41,25 +41,25 @@ static void rotationKernel(float* data,
         const float* cos_ptr = cos_table + pos * half_dim;
 
 #ifdef CV_SIMD
-        const size_t w = VTraits<v_float32x4>::max_nlanes;  // typically 4
-
-        // vectorized path
+        const size_t w = VTraits<v_float32>::vlanes();  // dynamic lanes for RVV
         size_t d = 0;
-        for (; d + w <= half_dim; d +=  w)
+        for (; d + w <= half_dim; d += w)
         {
-            // load sin/cos
-            v_float32x4 sin_v = v_load(sin_ptr + d);
-            v_float32x4 cos_v = v_load(cos_ptr + d);
+            // load sin/cos into scalable vectors
+            v_float32 sin_v = v_load(sin_ptr + d);
+            v_float32 cos_v = v_load(cos_ptr + d);
 
-            // deinterleave data → x_even, x_odd
-            v_float32x4 x_even, x_odd;
+            // deinterleave
+            v_float32 x_even, x_odd;
             v_load_deinterleave(out_ptr + 2*d, x_even, x_odd);
 
-            // complex rotation: [ cos -sin; sin cos ]
-            v_float32x4 out_even = v_sub(v_mul(cos_v , x_even), v_mul(sin_v, x_odd));
-            v_float32x4 out_odd  = v_add(v_mul(sin_v , x_even),v_mul(cos_v, x_odd));
+            // complex rotation
+            v_float32 out_even = v_sub(v_mul(cos_v, x_even),
+                                    v_mul(sin_v, x_odd));
+            v_float32 out_odd  = v_add(v_mul(sin_v, x_even),
+                                    v_mul(cos_v, x_odd));
 
-            // store back interleaved
+            // store back
             v_store_interleave(out_ptr + 2*d, out_even, out_odd);
         }
         // scalar tail
