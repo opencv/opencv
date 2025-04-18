@@ -166,7 +166,7 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
         if (gt.depth() == CV_16U)
             gt_2.convertTo(gt_0, CV_8U, 1. / 256);
         else
-           gt_0 = gt_2;
+            gt_0 = gt_2;
 
         // Convert to 3-channel BGR
         if (gt.channels() == 3)
@@ -191,6 +191,23 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);
+
+#if 0
+    imwrite(filename + "_0.png", imread(filename, IMREAD_GRAYSCALE));
+    imwrite(filename + "_1.png", imread(filename, IMREAD_COLOR));
+    imwrite(filename + "_2.png", imread(filename, IMREAD_ANYDEPTH));
+    imwrite(filename + "_3.png", imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH));
+    imwrite(filename + "_256.png", imread(filename, IMREAD_COLOR_RGB));
+    imwrite(filename + "_258.png", imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH));
+#endif
+#if 0
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_GRAYSCALE), imread(filename + "_0.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR), imread(filename + "_1.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_ANYDEPTH), imread(filename + "_2.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), imread(filename + "_3.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB), imread(filename + "_256.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), imread(filename + "_258.png", IMREAD_UNCHANGED));
+#endif
 }
 
 const string pngsuite_files[] =
