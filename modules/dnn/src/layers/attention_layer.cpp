@@ -95,7 +95,7 @@ static void precompRotationTables(float *data,
     // RoPE is a positional encoding method used in transformer models.
     // It uses sine and cosine functions to encode the position of tokens in a sequence
     // initially introduced for NLP in https://arxiv.org/pdf/2104.09864
-    
+
     // assume data is of shape [2,seq_ken,head_size]
 
     float* sin_table = data;
