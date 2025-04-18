@@ -12,6 +12,7 @@
 
 #include <sys/types.h>
 #include <windows.h>
+#include <memoryapi.h>
 #include <errno.h>
 #include <io.h>
 

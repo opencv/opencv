@@ -62,7 +62,7 @@ namespace cv {
     protected:
 
         bool                    started;
-        CvSize                  size;
+        Size                    size;
         int                     bytesPerPixel;
         unsigned long           frameCurrent;
         std::atomic<bool>       isFrameNew;

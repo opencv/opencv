@@ -121,7 +121,6 @@ void updateWindowImpl(const char* window_name);
 void cvSetModeWindow_W32(const char* name, double prop_value);
 void cvSetModeWindow_GTK(const char* name, double prop_value);
 void cvSetModeWindow_COCOA(const char* name, double prop_value);
-void cvSetModeWindow_WinRT(const char* name, double prop_value);
 
 cv::Rect cvGetWindowRect_W32(const char* name);
 cv::Rect cvGetWindowRect_GTK(const char* name);
@@ -131,7 +130,6 @@ cv::Rect cvGetWindowRect_WAYLAND(const char* name);
 double cvGetModeWindow_W32(const char* name);
 double cvGetModeWindow_GTK(const char* name);
 double cvGetModeWindow_COCOA(const char* name);
-double cvGetModeWindow_WinRT(const char* name);
 
 double cvGetPropWindowAutoSize_W32(const char* name);
 double cvGetPropWindowAutoSize_GTK(const char* name);
