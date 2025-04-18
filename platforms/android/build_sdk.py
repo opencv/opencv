@@ -440,6 +440,7 @@ if __name__ == "__main__":
     parser.add_argument('--no_media_ndk', action="store_true", help="Do not link Media NDK (required for video I/O support)")
     parser.add_argument('--hwasan', action="store_true", help="Enable Hardware Address Sanitizer on ARM64")
     parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF). To disable multiple, specify this flag again, e.g. "--disable TBB --disable OPENMP"')
+    parser.add_argument('--no-strict-dependencies',action='store_false',dest='strict_dependencies',help='Disable strict dependency checking (default: strict mode ON)')
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -521,7 +522,7 @@ if __name__ == "__main__":
 
     builder.gather_results()
    
-    check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=True)
+    check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=args.strict_dependencies)
     
     if args.build_doc:
         builder.build_javadoc()
