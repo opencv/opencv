@@ -323,8 +323,8 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
                             static_cast<int>(qkv_head_sizes[1]) / 2
                         );
                         const auto *rope_table_data = rope_table.ptr<const float>();
-                        rotationKernel( dst + dst_offset, 
-                            rope_table_data, rope_table_data + seq_len * rope_head_size, 
+                        rotationKernel( dst + dst_offset,
+                            rope_table_data, rope_table_data + seq_len * rope_head_size,
                             seq_len,  qkv_head_sizes[qkv_index]
                         );
                     }
