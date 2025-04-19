@@ -190,6 +190,27 @@ inline int msync(void *addr, size_t len, int /*flags*/)
     return -1;
 }
 
+#pragma region Desktop Family or OneCore Family
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP | WINAPI_PARTITION_SYSTEM)
+
+WINBASEAPI
+BOOL
+WINAPI
+VirtualLock(
+    _In_ LPVOID lpAddress,
+    _In_ SIZE_T dwSize
+);
+
+WINBASEAPI
+BOOL
+WINAPI
+VirtualUnlock(
+    _In_ LPVOID lpAddress,
+    _In_ SIZE_T dwSize
+);
+
+#endif // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP | WINAPI_PARTITION_SYSTEM)
+
 inline int mlock(const void *addr, size_t len)
 {
     if (VirtualLock((LPVOID)addr, len))
