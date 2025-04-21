@@ -129,7 +129,7 @@ Explanation
 -#  **Find the pattern in the current input**
 
     The formation of the equations I mentioned above aims
-    to finding major patterns in the input: in case of the chessboard this are corners of the
+    to finding major patterns in the input: in case of the chessboard these are corners of the
     squares and for the circles, well, the circles themselves. ChArUco board is equivalent to
     chessboard, but corners are matched by ArUco markers. The position of these will form the
     result which will be written into the *pointBuf* vector.
@@ -140,7 +140,7 @@ Explanation
     of the patterns. cv::findChessboardCorners and cv::findCirclesGrid return a boolean variable
     which states if the pattern was found in the input (we only need to take into account
     those images where this is true!). `CharucoDetector::detectBoard` may detect partially visible
-    pattern and returns coordunates and ids of visible inner corners.
+    pattern and returns coordinates and ids of visible inner corners.
 
     @note Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
     All chessboard related algorithm expects amount of inner corners as board width and height.
