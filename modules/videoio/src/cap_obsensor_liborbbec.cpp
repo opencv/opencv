@@ -47,7 +47,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int)
     auto depthProfiles = pipe->getStreamProfileList(OB_SENSOR_DEPTH);
     auto depthProfile = depthProfiles->getProfile(OB_PROFILE_DEFAULT);
     config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
-    config->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_ALL_TYPE_FRAME_REQUIRE);
+    config->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_FULL_FRAME_REQUIRE);
 
     pipe->enableFrameSync();
     pipe->start(config, [&](std::shared_ptr<ob::FrameSet> frameset) {
