@@ -741,10 +741,10 @@ public:
         CV_PROP_RW int version;
 
         //! The optional level of error correction (by default - the lowest).
-        CV_PROP_RW CorrectionLevel correction_level;
+        CV_PROP_RW QRCodeEncoder::CorrectionLevel correction_level;
 
         //! The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
-        CV_PROP_RW EncodeMode mode;
+        CV_PROP_RW QRCodeEncoder::EncodeMode mode;
 
         //! The optional number of QR codes to generate in Structured Append mode.
         CV_PROP_RW int structure_number;
