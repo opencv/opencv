@@ -4,4 +4,3 @@ ABIs = [
     ABI("5", "x86_64",      None, 21, cmake_vars=dict(ANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES='ON')),
     ABI("4", "x86",         None, 21),
 ]
-
