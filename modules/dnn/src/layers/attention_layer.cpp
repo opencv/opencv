@@ -46,8 +46,8 @@ static void rotationKernel(float* data,
         for (; d + w <= half_dim; d += w)
         {
             // load sin/cos into scalable vectors
-            v_float32 sin_v = v_load(sin_ptr + d);
-            v_float32 cos_v = v_load(cos_ptr + d);
+            v_float32 sin_v = vx_load(sin_ptr + d);
+            v_float32 cos_v = vx_load(cos_ptr + d);
 
             // deinterleave
             v_float32 x_even, x_odd;
