@@ -153,6 +153,12 @@ static inline VecType vmv(ElemType a, size_t vl) {                              
 static inline VecType vmv_s(ElemType a, size_t vl) {                                                 \
     return __riscv_v##IS_F##mv_s_##X_OR_F##_##TYPE##LMUL(a, vl);                                     \
 }                                                                                                    \
+static inline VecType vslideup(VecType vs2, VecType vs1, size_t n, size_t vl) {                      \
+    return __riscv_vslideup_vx_##TYPE##LMUL(vs2, vs1, n, vl);                                        \
+}                                                                                                    \
+static inline VecType vslidedown(VecType vs, size_t n, size_t vl) {                                  \
+    return __riscv_vslidedown_vx_##TYPE##LMUL(vs, n, vl);                                            \
+}                                                                                                    \
 HAL_RVV_SIZE_RELATED_CUSTOM(EEW, TYPE, LMUL)
 
 #define HAL_RVV_SIZE_UNRELATED(S_OR_F, X_OR_F, IS_U, IS_F, IS_O)                                \
@@ -380,7 +386,7 @@ template <> struct RVV_ToFloatHelper<8> {using type = double;};
     template <>                                                                                 \
     inline ONE::VecType ONE::cast(TWO::VecType v, size_t vl) { return __riscv_vncvt_x(v, vl); } \
     template <>                                                                                 \
-    inline TWO::VecType TWO::cast(ONE::VecType v, size_t vl) { return __riscv_vwcvt_x(v, vl); }
+    inline TWO::VecType TWO::cast(ONE::VecType v, size_t vl) { return __riscv_vsext_vf2(v, vl); }
 
 HAL_RVV_CVT(RVV_I8M4, RVV_I16M8)
 HAL_RVV_CVT(RVV_I8M2, RVV_I16M4)
@@ -406,7 +412,7 @@ HAL_RVV_CVT(RVV_I32MF2, RVV_I64M1)
     template <>                                                                                 \
     inline ONE::VecType ONE::cast(TWO::VecType v, size_t vl) { return __riscv_vncvt_x(v, vl); } \
     template <>                                                                                 \
-    inline TWO::VecType TWO::cast(ONE::VecType v, size_t vl) { return __riscv_vwcvtu_x(v, vl); }
+    inline TWO::VecType TWO::cast(ONE::VecType v, size_t vl) { return __riscv_vzext_vf2(v, vl); }
 
 HAL_RVV_CVT(RVV_U8M4, RVV_U16M8)
 HAL_RVV_CVT(RVV_U8M2, RVV_U16M4)
@@ -591,6 +597,277 @@ HAL_RVV_CVT(uint16_t, int16_t, u16, i16, LMUL_f4, mf4)
 HAL_RVV_CVT( uint8_t,  int8_t,  u8,  i8, LMUL_f8, mf8)
 
 #undef HAL_RVV_CVT
+
+#define HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_TYPE, LMUL)                                                                \
+    template <>                                                                                                           \
+    inline RVV<A, LMUL_TYPE>::VecType RVV<A, LMUL_TYPE>::cast(RVV<B, LMUL_TYPE>::VecType v, [[maybe_unused]] size_t vl) { \
+        return __riscv_vreinterpret_##A_TYPE##LMUL(v);                                                                    \
+    }                                                                                                                     \
+    template <>                                                                                                           \
+    inline RVV<B, LMUL_TYPE>::VecType RVV<B, LMUL_TYPE>::cast(RVV<A, LMUL_TYPE>::VecType v, [[maybe_unused]] size_t vl) { \
+        return __riscv_vreinterpret_##B_TYPE##LMUL(v);                                                                    \
+    }
+
+#define HAL_RVV_CVT2(A, B, A_TYPE, B_TYPE)        \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_1, m1) \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_2, m2) \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_4, m4) \
+    HAL_RVV_CVT(A, B, A_TYPE, B_TYPE, LMUL_8, m8)
+
+HAL_RVV_CVT2( uint8_t,  int8_t,  u8,  i8)
+HAL_RVV_CVT2(uint16_t, int16_t, u16, i16)
+HAL_RVV_CVT2(uint32_t, int32_t, u32, i32)
+HAL_RVV_CVT2(uint64_t, int64_t, u64, i64)
+
+#undef HAL_RVV_CVT2
+#undef HAL_RVV_CVT
+
+#define HAL_RVV_CVT(FROM, INTERMEDIATE, TO)                      \
+    template <>                                                  \
+    inline TO::VecType TO::cast(FROM::VecType v, size_t vl) {    \
+        return TO::cast(INTERMEDIATE::cast(v, vl), vl);          \
+    }                                                            \
+    template <>                                                  \
+    inline FROM::VecType FROM::cast(TO::VecType v, size_t vl) {  \
+        return FROM::cast(INTERMEDIATE::cast(v, vl), vl);        \
+    }
+
+// Integer and Float conversions
+HAL_RVV_CVT(RVV_I8M1, RVV_I32M4, RVV_F32M4)
+HAL_RVV_CVT(RVV_I8M2, RVV_I32M8, RVV_F32M8)
+HAL_RVV_CVT(RVV_I8M1, RVV_I64M8, RVV_F64M8)
+
+HAL_RVV_CVT(RVV_I16M1, RVV_I32M2, RVV_F32M2)
+HAL_RVV_CVT(RVV_I16M2, RVV_I32M4, RVV_F32M4)
+HAL_RVV_CVT(RVV_I16M4, RVV_I32M8, RVV_F32M8)
+HAL_RVV_CVT(RVV_I16M1, RVV_I64M4, RVV_F64M4)
+HAL_RVV_CVT(RVV_I16M2, RVV_I64M8, RVV_F64M8)
+
+HAL_RVV_CVT(RVV_I32M1, RVV_I64M2, RVV_F64M2)
+HAL_RVV_CVT(RVV_I32M2, RVV_I64M4, RVV_F64M4)
+HAL_RVV_CVT(RVV_I32M4, RVV_I64M8, RVV_F64M8)
+
+HAL_RVV_CVT(RVV_U8M1, RVV_U32M4, RVV_F32M4)
+HAL_RVV_CVT(RVV_U8M2, RVV_U32M8, RVV_F32M8)
+HAL_RVV_CVT(RVV_U8M1, RVV_U64M8, RVV_F64M8)
+
+HAL_RVV_CVT(RVV_U16M1, RVV_U32M2, RVV_F32M2)
+HAL_RVV_CVT(RVV_U16M2, RVV_U32M4, RVV_F32M4)
+HAL_RVV_CVT(RVV_U16M4, RVV_U32M8, RVV_F32M8)
+HAL_RVV_CVT(RVV_U16M1, RVV_U64M4, RVV_F64M4)
+HAL_RVV_CVT(RVV_U16M2, RVV_U64M8, RVV_F64M8)
+
+HAL_RVV_CVT(RVV_U32M1, RVV_U64M2, RVV_F64M2)
+HAL_RVV_CVT(RVV_U32M2, RVV_U64M4, RVV_F64M4)
+HAL_RVV_CVT(RVV_U32M4, RVV_U64M8, RVV_F64M8)
+
+// Signed and Unsigned conversions
+HAL_RVV_CVT(RVV_U8M1, RVV_U16M2, RVV_I16M2)
+HAL_RVV_CVT(RVV_U8M2, RVV_U16M4, RVV_I16M4)
+HAL_RVV_CVT(RVV_U8M4, RVV_U16M8, RVV_I16M8)
+
+HAL_RVV_CVT(RVV_U8M1, RVV_U32M4, RVV_I32M4)
+HAL_RVV_CVT(RVV_U8M2, RVV_U32M8, RVV_I32M8)
+
+HAL_RVV_CVT(RVV_U8M1, RVV_U64M8, RVV_I64M8)
+
+#undef HAL_RVV_CVT
+
+// ---------------------------- Define Register Group Operations -------------------------------
+
+#if defined(__clang__) && __clang_major__ <= 17
+#define HAL_RVV_GROUP(ONE, TWO, TYPE, ONE_LMUL, TWO_LMUL)                     \
+    template <size_t idx>                                                     \
+    inline ONE::VecType vget(TWO::VecType v) {                                \
+        return __riscv_vget_v_##TYPE##TWO_LMUL##_##TYPE##ONE_LMUL(v, idx);    \
+    }                                                                         \
+    template <size_t idx>                                                     \
+    inline void vset(TWO::VecType v, ONE::VecType val) {                      \
+        __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##TWO_LMUL(v, idx, val);      \
+    }                                                                         \
+    inline TWO::VecType vcreate(ONE::VecType v0, ONE::VecType v1) {           \
+        TWO::VecType v{};                                                     \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##TWO_LMUL(v, 0, v0);     \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##TWO_LMUL(v, 1, v1);     \
+        return v;                                                             \
+    }
+#else
+#define HAL_RVV_GROUP(ONE, TWO, TYPE, ONE_LMUL, TWO_LMUL)                     \
+    template <size_t idx>                                                     \
+    inline ONE::VecType vget(TWO::VecType v) {                                \
+        return __riscv_vget_v_##TYPE##TWO_LMUL##_##TYPE##ONE_LMUL(v, idx);    \
+    }                                                                         \
+    template <size_t idx>                                                     \
+    inline void vset(TWO::VecType v, ONE::VecType val) {                      \
+        __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##TWO_LMUL(v, idx, val);      \
+    }                                                                         \
+    inline TWO::VecType vcreate(ONE::VecType v0, ONE::VecType v1) {           \
+        return __riscv_vcreate_v_##TYPE##ONE_LMUL##_##TYPE##TWO_LMUL(v0, v1); \
+    }
+#endif
+
+HAL_RVV_GROUP(RVV_I8M1, RVV_I8M2, i8, m1, m2)
+HAL_RVV_GROUP(RVV_I8M2, RVV_I8M4, i8, m2, m4)
+HAL_RVV_GROUP(RVV_I8M4, RVV_I8M8, i8, m4, m8)
+
+HAL_RVV_GROUP(RVV_I16M1, RVV_I16M2, i16, m1, m2)
+HAL_RVV_GROUP(RVV_I16M2, RVV_I16M4, i16, m2, m4)
+HAL_RVV_GROUP(RVV_I16M4, RVV_I16M8, i16, m4, m8)
+
+HAL_RVV_GROUP(RVV_I32M1, RVV_I32M2, i32, m1, m2)
+HAL_RVV_GROUP(RVV_I32M2, RVV_I32M4, i32, m2, m4)
+HAL_RVV_GROUP(RVV_I32M4, RVV_I32M8, i32, m4, m8)
+
+HAL_RVV_GROUP(RVV_I64M1, RVV_I64M2, i64, m1, m2)
+HAL_RVV_GROUP(RVV_I64M2, RVV_I64M4, i64, m2, m4)
+HAL_RVV_GROUP(RVV_I64M4, RVV_I64M8, i64, m4, m8)
+
+HAL_RVV_GROUP(RVV_U8M1, RVV_U8M2, u8, m1, m2)
+HAL_RVV_GROUP(RVV_U8M2, RVV_U8M4, u8, m2, m4)
+HAL_RVV_GROUP(RVV_U8M4, RVV_U8M8, u8, m4, m8)
+
+HAL_RVV_GROUP(RVV_U16M1, RVV_U16M2, u16, m1, m2)
+HAL_RVV_GROUP(RVV_U16M2, RVV_U16M4, u16, m2, m4)
+HAL_RVV_GROUP(RVV_U16M4, RVV_U16M8, u16, m4, m8)
+
+HAL_RVV_GROUP(RVV_U32M1, RVV_U32M2, u32, m1, m2)
+HAL_RVV_GROUP(RVV_U32M2, RVV_U32M4, u32, m2, m4)
+HAL_RVV_GROUP(RVV_U32M4, RVV_U32M8, u32, m4, m8)
+
+HAL_RVV_GROUP(RVV_U64M1, RVV_U64M2, u64, m1, m2)
+HAL_RVV_GROUP(RVV_U64M2, RVV_U64M4, u64, m2, m4)
+HAL_RVV_GROUP(RVV_U64M4, RVV_U64M8, u64, m4, m8)
+
+HAL_RVV_GROUP(RVV_F32M1, RVV_F32M2, f32, m1, m2)
+HAL_RVV_GROUP(RVV_F32M2, RVV_F32M4, f32, m2, m4)
+HAL_RVV_GROUP(RVV_F32M4, RVV_F32M8, f32, m4, m8)
+
+HAL_RVV_GROUP(RVV_F64M1, RVV_F64M2, f64, m1, m2)
+HAL_RVV_GROUP(RVV_F64M2, RVV_F64M4, f64, m2, m4)
+HAL_RVV_GROUP(RVV_F64M4, RVV_F64M8, f64, m4, m8)
+
+#undef HAL_RVV_GROUP
+
+#if defined(__clang__) && __clang_major__ <= 17
+#define HAL_RVV_GROUP(ONE, FOUR, TYPE, ONE_LMUL, FOUR_LMUL)                                            \
+    template <size_t idx>                                                                              \
+    inline ONE::VecType vget(FOUR::VecType v) {                                                        \
+        return __riscv_vget_v_##TYPE##FOUR_LMUL##_##TYPE##ONE_LMUL(v, idx);                            \
+    }                                                                                                  \
+    template <size_t idx>                                                                              \
+    inline void vset(FOUR::VecType v, ONE::VecType val) {                                              \
+        __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v, idx, val);                              \
+    }                                                                                                  \
+    inline FOUR::VecType vcreate(ONE::VecType v0, ONE::VecType v1, ONE::VecType v2, ONE::VecType v3) { \
+        FOUR::VecType v{};                                                                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v, 0, v0);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v, 1, v1);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v, 2, v2);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v, 3, v3);                             \
+        return v;                                                                                      \
+    }
+#else
+#define HAL_RVV_GROUP(ONE, FOUR, TYPE, ONE_LMUL, FOUR_LMUL)                                            \
+    template <size_t idx>                                                                              \
+    inline ONE::VecType vget(FOUR::VecType v) {                                                        \
+        return __riscv_vget_v_##TYPE##FOUR_LMUL##_##TYPE##ONE_LMUL(v, idx);                            \
+    }                                                                                                  \
+    template <size_t idx>                                                                              \
+    inline void vset(FOUR::VecType v, ONE::VecType val) {                                              \
+        __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v, idx, val);                              \
+    }                                                                                                  \
+    inline FOUR::VecType vcreate(ONE::VecType v0, ONE::VecType v1, ONE::VecType v2, ONE::VecType v3) { \
+        return __riscv_vcreate_v_##TYPE##ONE_LMUL##_##TYPE##FOUR_LMUL(v0, v1, v2, v3);                 \
+    }
+#endif
+
+HAL_RVV_GROUP(RVV_I8M1, RVV_I8M4, i8, m1, m4)
+HAL_RVV_GROUP(RVV_I8M2, RVV_I8M8, i8, m2, m8)
+
+HAL_RVV_GROUP(RVV_U8M1, RVV_U8M4, u8, m1, m4)
+HAL_RVV_GROUP(RVV_U8M2, RVV_U8M8, u8, m2, m8)
+
+HAL_RVV_GROUP(RVV_I16M1, RVV_I16M4, i16, m1, m4)
+HAL_RVV_GROUP(RVV_I16M2, RVV_I16M8, i16, m2, m8)
+
+HAL_RVV_GROUP(RVV_U16M1, RVV_U16M4, u16, m1, m4)
+HAL_RVV_GROUP(RVV_U16M2, RVV_U16M8, u16, m2, m8)
+
+HAL_RVV_GROUP(RVV_I32M1, RVV_I32M4, i32, m1, m4)
+HAL_RVV_GROUP(RVV_I32M2, RVV_I32M8, i32, m2, m8)
+
+HAL_RVV_GROUP(RVV_U32M1, RVV_U32M4, u32, m1, m4)
+HAL_RVV_GROUP(RVV_U32M2, RVV_U32M8, u32, m2, m8)
+
+HAL_RVV_GROUP(RVV_I64M1, RVV_I64M4, i64, m1, m4)
+HAL_RVV_GROUP(RVV_I64M2, RVV_I64M8, i64, m2, m8)
+
+HAL_RVV_GROUP(RVV_U64M1, RVV_U64M4, u64, m1, m4)
+HAL_RVV_GROUP(RVV_U64M2, RVV_U64M8, u64, m2, m8)
+
+HAL_RVV_GROUP(RVV_F32M1, RVV_F32M4, f32, m1, m4)
+HAL_RVV_GROUP(RVV_F32M2, RVV_F32M8, f32, m2, m8)
+
+HAL_RVV_GROUP(RVV_F64M1, RVV_F64M4, f64, m1, m4)
+HAL_RVV_GROUP(RVV_F64M2, RVV_F64M8, f64, m2, m8)
+
+#undef HAL_RVV_GROUP
+
+#if defined(__clang__) && __clang_major__ <= 17
+#define HAL_RVV_GROUP(ONE, EIGHT, TYPE, ONE_LMUL, EIGHT_LMUL)                                           \
+    template <size_t idx>                                                                               \
+    inline ONE::VecType vget(EIGHT::VecType v) {                                                        \
+        return __riscv_vget_v_##TYPE##EIGHT_LMUL##_##TYPE##ONE_LMUL(v, idx);                            \
+    }                                                                                                   \
+    template <size_t idx>                                                                               \
+    inline void vset(EIGHT::VecType v, ONE::VecType val) {                                              \
+        __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, idx, val);                              \
+    }                                                                                                   \
+    inline EIGHT::VecType vcreate(ONE::VecType v0, ONE::VecType v1, ONE::VecType v2, ONE::VecType v3,   \
+        ONE::VecType v4, ONE::VecType v5, ONE::VecType v6, ONE::VecType v7) {                           \
+        EIGHT::VecType v{};                                                                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 0, v0);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 1, v1);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 2, v2);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 3, v3);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 4, v4);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 5, v5);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 6, v6);                             \
+        v = __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, 7, v7);                             \
+        return v;                                                                                       \
+    }
+#else
+#define HAL_RVV_GROUP(ONE, EIGHT, TYPE, ONE_LMUL, EIGHT_LMUL)                                           \
+    template <size_t idx>                                                                               \
+    inline ONE::VecType vget(EIGHT::VecType v) {                                                        \
+        return __riscv_vget_v_##TYPE##EIGHT_LMUL##_##TYPE##ONE_LMUL(v, idx);                            \
+    }                                                                                                   \
+    template <size_t idx>                                                                               \
+    inline void vset(EIGHT::VecType v, ONE::VecType val) {                                              \
+        __riscv_vset_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v, idx, val);                              \
+    }                                                                                                   \
+    inline EIGHT::VecType vcreate(ONE::VecType v0, ONE::VecType v1, ONE::VecType v2, ONE::VecType v3,   \
+        ONE::VecType v4, ONE::VecType v5, ONE::VecType v6, ONE::VecType v7) {                           \
+        return __riscv_vcreate_v_##TYPE##ONE_LMUL##_##TYPE##EIGHT_LMUL(v0, v1, v2, v3, v4, v5, v6, v7); \
+    }
+#endif
+
+HAL_RVV_GROUP(RVV_I8M1, RVV_I8M8, i8, m1, m8)
+HAL_RVV_GROUP(RVV_U8M1, RVV_U8M8, u8, m1, m8)
+
+HAL_RVV_GROUP(RVV_I16M1, RVV_I16M8, i16, m1, m8)
+HAL_RVV_GROUP(RVV_U16M1, RVV_U16M8, u16, m1, m8)
+
+HAL_RVV_GROUP(RVV_I32M1, RVV_I32M8, i32, m1, m8)
+HAL_RVV_GROUP(RVV_U32M1, RVV_U32M8, u32, m1, m8)
+
+HAL_RVV_GROUP(RVV_I64M1, RVV_I64M8, i64, m1, m8)
+HAL_RVV_GROUP(RVV_U64M1, RVV_U64M8, u64, m1, m8)
+
+HAL_RVV_GROUP(RVV_F32M1, RVV_F32M8, f32, m1, m8)
+HAL_RVV_GROUP(RVV_F64M1, RVV_F64M8, f64, m1, m8)
+
+#undef HAL_RVV_GROUP
 
 }}  // namespace cv::cv_hal_rvv
 
