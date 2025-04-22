@@ -25,77 +25,99 @@ static void packWeight(size_t num_heads, size_t head_size, size_t input_hidden_s
 }
 
 
-static void rotationKernel(float* data,
-                           const float* sin_table,
-                           const float* cos_table,
-                           size_t seq_len,
-                           size_t head_size)
+static void rotationKernel(
+    float* data, const float* rotation_table,
+    size_t seq_len, size_t d
+)
 {
-    CV_Assert(head_size % 2 == 0);
-    size_t half_dim = head_size / 2;
+    CV_Assert(d % 2 == 0);
+    const size_t d_half = d / 2;
 
-    for (size_t pos = 0; pos < seq_len; ++pos)
+    double nstripes = double(seq_len) * d_half * (1.0/1024.0);
+
+    auto fn = [&](const cv::Range& range)
     {
-        float*       out_ptr = data     + pos * head_size;
-        const float* sin_ptr = sin_table + pos * half_dim;
-        const float* cos_ptr = cos_table + pos * half_dim;
-
-        size_t d = 0;
+        for (int t = range.start; t < range.end; ++t)
+        {
+            float* out_ptr    = data + size_t(t) * d;
+            const float* table_ptr = rotation_table + size_t(t) * d;
+            size_t i = 0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-        const size_t w = VTraits<v_float32>::vlanes();  // dynamic lanes for RVV
-        for (; d + w <= half_dim; d += w)
-        {
-            // load sin/cos into scalable vectors
-            v_float32 sin_v = vx_load(sin_ptr + d);
-            v_float32 cos_v = vx_load(cos_ptr + d);
+            const size_t w = VTraits<v_float32>::vlanes();
+            for (; i + w <= d_half; i += w)
+            {
+                v_float32 sin_v, cos_v, x_even, x_odd;
+                v_load_deinterleave(table_ptr + 2*i, sin_v, cos_v);
+                v_load_deinterleave(out_ptr    + 2*i, x_even, x_odd);
 
-            // deinterleave
-            v_float32 x_even, x_odd;
-            v_load_deinterleave(out_ptr + 2*d, x_even, x_odd);
+                v_float32 out_even = v_sub(v_mul(cos_v, x_even), v_mul(sin_v, x_odd));
+                v_float32 out_odd  = v_add(v_mul(sin_v, x_even), v_mul(cos_v, x_odd));
 
-            // complex rotation
-            v_float32 out_even = v_sub(v_mul(cos_v, x_even),
-                                    v_mul(sin_v, x_odd));
-            v_float32 out_odd  = v_add(v_mul(sin_v, x_even),
-                                    v_mul(cos_v, x_odd));
-
-            // store back
-            v_store_interleave(out_ptr + 2*d, out_even, out_odd);
-        }
+                v_store_interleave(out_ptr + 2*i, out_even, out_odd);
+            }
 #endif
-        // scalar tail
-        for (; d < half_dim; ++d)
-        {
-            float s  = sin_ptr[d];
-            float c  = cos_ptr[d];
-            float xe = out_ptr[2*d];
-            float xo = out_ptr[2*d+1];
-            out_ptr[2*d]   = xe * c - xo * s;
-            out_ptr[2*d+1] = xo * c + xe * s;
+            // scalar tail
+            for (; i < d_half; ++i)
+            {
+                float s  = table_ptr[2*i  ];
+                float c  = table_ptr[2*i+1];
+                float xe = out_ptr[2*i];
+                float xo = out_ptr[2*i+1];
+                out_ptr[2*i]   = xe * c - xo * s;
+                out_ptr[2*i+1] = xo * c + xe * s;
+            }
         }
-    }
+    };
+
+    // This will spin up threads and run fn over [0, seq_len)
+    parallel_for_(cv::Range(0, int(seq_len)), fn, nstripes);
 }
 
-
-static void precompRotationTables(float *data,
+static void precompRotationTable(float *data,
                                   size_t seq_len,
-                                  size_t head_size) {
+                                  size_t d) {
     // RoPE precomputation
     // RoPE is a positional encoding method used in transformer models.
     // It uses sine and cosine functions to encode the position of tokens in a sequence
     // initially introduced for NLP in https://arxiv.org/pdf/2104.09864
 
-    // assume data is of shape [2,seq_ken,head_size]
-
-    float* sin_table = data;
-    float* cos_table = sin_table + seq_len * head_size;
-
+    // assume data is of shape [seq_ken,d]
+    const float  logBase = std::log(10000.0f);
+    const float  inv_d   = 1.0f / float(d);
+    const size_t d_half = d / 2;
     for (size_t pos = 0; pos < seq_len; ++pos) {
-        for (size_t i = 0; i < head_size; ++i) {
-            float theta = pos * std::pow(10000.f, -2.f * static_cast<float>(i) / static_cast<float>(head_size * 2));
-            sin_table[pos * head_size + i] = std::sin(theta);
-            cos_table[pos * head_size + i] = std::cos(theta);
+
+        size_t i = 0;
+        float* data_ptr = data + pos * d;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const size_t w = VTraits<v_float32>::vlanes();
+        const v_float32 v_logBase = v_setall_f32(logBase);
+        const v_float32 v_inv_d   = v_setall_f32(inv_d);
+        const v_float32 v_neg2    = v_setall_f32(-2.0f);
+
+        for (; i + w <= d_half; i+=w) {
+            int idx_buf[w];
+            for (int k = 0; k < int(w); ++k)
+                idx_buf[k] = int(i + k);
+            // [i, i+1, …, i+w-1]
+            v_float32 v_idx = v_cvt_f32(vx_load(idx_buf));
+            // [10_000^(-i/d), 10_000^(-(i+1)/d), …, 10_000^(-(i+w-1)/d)]
+            v_float32 v_theta   = v_exp(v_mul(v_mul(v_neg2, v_mul(v_idx, v_inv_d)), v_logBase));
+            v_theta = v_mul(v_setall_f32(float(pos)), v_theta);
+            v_float32 sin_v, cos_v;
+            v_sincos(v_theta, sin_v, cos_v);
+            // store back with interleave
+            v_store_interleave(data_ptr + 2*i, sin_v, cos_v);
+        }
+#endif
+        // scalar tail
+        for (; i < d_half; i+=1)
+        {
+            float theta = pos * std::exp(-2.f * i/d * logBase);
+            data_ptr[2*i    ] = std::sin(theta);
+            data_ptr[2*i + 1] = std::cos(theta);
         }
     }
 }
@@ -178,16 +200,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
         if (do_rotary)
         {
-            // sin and cos table for rotation
-            assert(qkv_head_sizes[0] % 2 == 0);
-            assert(qkv_head_sizes[1] % 2 == 0);
+            CV_Assert(qkv_head_sizes[0] == qkv_head_sizes[1]);
+            const int d = qkv_head_sizes[0];
+            CV_Assert(d % 2 == 0);
             // pick maximum of q and k head dim
-            int half_dim = max(
-                int(qkv_head_sizes[0] / 2),
-                int(qkv_head_sizes[1] / 2)
-            );
 
-            MatShape rotation_table_shape{2, seq_len_, half_dim};
+            MatShape rotation_table_shape{seq_len_, d};
             internals.push_back(rotation_table_shape);
         }
 
@@ -255,11 +273,9 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
             // precompute sin/cos table
             auto &rope_table = internals.back();
             auto *rope_table_data = rope_table.ptr<float>();
-            int half_dim = max(
-                int(qkv_head_sizes[0] / 2),
-                int(qkv_head_sizes[1] / 2)
-            );
-            precompRotationTables(rope_table_data, seq_len, half_dim);
+            // currently, support rotary embeddings only if q and k head sizes are equal
+            CV_Assert(qkv_head_sizes[0] == qkv_head_sizes[1]);
+            precompRotationTable(rope_table_data, seq_len, qkv_head_sizes[0]);
         }
 
         // Compute Q/K/V
@@ -308,14 +324,12 @@ class AttentionLayerImpl CV_FINAL : public AttentionLayer {
 
                     if(qkv_index < 2 && do_rotary) {
                         // rotate on the fly
-                        int rope_head_size = max(
-                            static_cast<int>(qkv_head_sizes[0]) / 2,
-                            static_cast<int>(qkv_head_sizes[1]) / 2
-                        );
                         const auto *rope_table_data = rope_table.ptr<const float>();
-                        rotationKernel( dst + dst_offset,
-                            rope_table_data, rope_table_data + seq_len * rope_head_size,
-                            seq_len,  qkv_head_sizes[qkv_index]
+                        rotationKernel(
+                            dst + dst_offset,
+                            rope_table_data,
+                            seq_len,
+                            qkv_head_sizes[qkv_index]
                         );
                     }
                 }
