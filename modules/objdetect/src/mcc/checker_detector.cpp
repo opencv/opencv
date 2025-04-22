@@ -1444,7 +1444,7 @@ void CCheckerDetectorImpl::
     Mat mask(im_rgb.size(), CV_8U);
     mask.setTo(Scalar::all(0));
     std::vector<Point2f> bch(4), bcht(4);
-    int N = cellchart.size() / 4;
+    size_t N = cellchart.size() / 4;
 
     // Create table charts information
     //          |p_size|average|stddev|max|min|
