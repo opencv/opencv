@@ -491,4 +491,3 @@ if __name__ == '__main__':
             if hasattr(cap, 'release'):  # For ThreadedVideoCapture
                 cap.release()
         cv.destroyAllWindows()
-
