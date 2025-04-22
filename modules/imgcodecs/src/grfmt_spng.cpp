@@ -43,6 +43,10 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
                                  ushort *gray, int gray_step,
                                  cv::Size size, int ncn, int _swap_rb);
 
+void spngCvt_BGRA2Gray_16u28u_CnC1R(const ushort *bgr, int bgr_step,
+                                 uchar *gray, int gray_step,
+                                 cv::Size size, int ncn, int _swap_rb);
+
 namespace cv
 {
 
@@ -215,15 +219,28 @@ bool SPngDecoder::readData(Mat &img)
         {
             image_width = image_size / m_height;
 
+            if (!color && fmt == SPNG_FMT_RGB8 && m_bit_depth == 16 && (m_color_type == SPNG_COLOR_TYPE_TRUECOLOR || m_color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA))
+            {
+                ret = spng_decoded_image_size(png_ptr, SPNG_FMT_RGBA16, &image_size);
+                Mat tmp(m_height, m_width, CV_16UC4);
+                Mat tmp1(m_height, m_width, CV_16U);
+                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
+                    return false;
+                spngCvt_BGRA2Gray_16u28u_CnC1R(reinterpret_cast<const ushort*>(tmp.data), (int)tmp.step1(),
+                    img.data, (int)img.step1(), Size(m_width, m_height), 4, 2);
+                return true;
+            }
+
             if (!color && ihdr.interlace_method && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16))
             {
-                if (img.depth() == CV_16U)
+                if (fmt == SPNG_FMT_RGBA16)
                 {
                     Mat tmp(m_height, m_width, CV_16UC4);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
                         return false;
                     spngCvt_BGRA2Gray_16u_CnC1R(reinterpret_cast<const ushort*>(tmp.data), (int)tmp.step1(),
                         reinterpret_cast<ushort*>(img.data), (int)img.step1(), Size(m_width, m_height), 4, 2);
+                    return true;
                 }
                 else
                 {
@@ -231,8 +248,8 @@ bool SPngDecoder::readData(Mat &img)
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
                         return false;
                     spngCvt_BGR2Gray_8u_C3C1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 2);
+                    return true;
                 }
-                return true;
             }
 
             if (fmt == SPNG_FMT_PNG && img.elemSize() * m_width / 3 == image_width)
@@ -694,6 +711,27 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
         for (int i = 0; i < size.width; i++, bgr += ncn)
         {
             gray[i] = (ushort)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15);
+        }
+
+        bgr += bgr_step - size.width * ncn;
+    }
+}
+
+void spngCvt_BGRA2Gray_16u28u_CnC1R(const ushort *bgr, int bgr_step,
+                                 uchar *gray, int gray_step,
+                                 cv::Size size, int ncn, int _swap_rb)
+{
+    int cBGR0 = 3737;
+    int cBGR1 = 19234;
+    int cBGR2 = 9797;
+    if (_swap_rb)
+        std::swap(cBGR0, cBGR2);
+
+    for (; size.height--; gray += gray_step)
+    {
+        for (int i = 0; i < size.width; i++, bgr += ncn)
+        {
+            gray[i] = static_cast<uchar>(((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15) >> 8);
         }
 
         bgr += bgr_step - size.width * ncn;
