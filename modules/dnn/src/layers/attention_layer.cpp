@@ -40,9 +40,10 @@ static void rotationKernel(float* data,
         const float* sin_ptr = sin_table + pos * half_dim;
         const float* cos_ptr = cos_table + pos * half_dim;
 
+        size_t d = 0;
+
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const size_t w = VTraits<v_float32>::vlanes();  // dynamic lanes for RVV
-        size_t d = 0;
         for (; d + w <= half_dim; d += w)
         {
             // load sin/cos into scalable vectors
@@ -62,6 +63,7 @@ static void rotationKernel(float* data,
             // store back
             v_store_interleave(out_ptr + 2*d, out_even, out_odd);
         }
+#endif
         // scalar tail
         for (; d < half_dim; ++d)
         {
@@ -72,18 +74,6 @@ static void rotationKernel(float* data,
             out_ptr[2*d]   = xe * c - xo * s;
             out_ptr[2*d+1] = xo * c + xe * s;
         }
-#else
-        // fallback: pure scalar
-        for (size_t d = 0; d < half_dim; ++d)
-        {
-            float s  = sin_ptr[d];
-            float c  = cos_ptr[d];
-            float xe = out_ptr[2*d];
-            float xo = out_ptr[2*d+1];
-            out_ptr[2*d]   = xe * c - xo * s;
-            out_ptr[2*d+1] = xo * c + xe * s;
-        }
-#endif
     }
 }
 
