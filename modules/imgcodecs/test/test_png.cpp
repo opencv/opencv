@@ -185,9 +185,9 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     }
 
     // Perform comparisons with different imread flags
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(2, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR), gt_1);
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(5, 0), imread(filename, IMREAD_ANYDEPTH), gt_2);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(4, 0), imread(filename, IMREAD_ANYDEPTH), gt_2);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);
