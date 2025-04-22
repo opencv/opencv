@@ -58,9 +58,6 @@ struct ObExtensionUnit {
     Guid id;
 };
 
-static const ObExtensionUnit OBSENSOR_COMMON_XU_UNIT = { XU_UNIT_ID_COMMON, { 0xA55751A1, 0xF3C5, 0x4A5E, { 0x8D, 0x5A, 0x68, 0x54, 0xB8, 0xFA, 0x27, 0x16 } } };
-static const ObExtensionUnit OBSENSOR_G330_XU_UNIT = { XU_UNIT_ID_G330, { 0xC9606CCB, 0x594C, 0x4D25, { 0xaf, 0x47, 0xcc, 0xc4, 0x96, 0x43, 0x59, 0x95 } } };
-
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName);
 FrameFormat frameFourccToFormat(uint32_t fourcc);
 uint32_t frameFormatToFourcc(FrameFormat);
