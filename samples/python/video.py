@@ -40,7 +40,10 @@ import platform
 import sys
 import threading
 from time import time
-from queue import Queue, Empty
+try:
+    from queue import Queue, Empty
+except ImportError:
+    from Queue import Queue, Empty  # for Python 2 compatibility
 
 # local modules
 from tst_scene_render import TestSceneRender
@@ -192,22 +195,27 @@ class ThreadedVideoCapture:
         self.stopped = False
         
         # Set resolution if provided
-        if width is not None:
+        if width is not None and width > 0:
             self.cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
-        if height is not None:
+        if height is not None and height > 0:
             self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
             
-        # Platform-specific optimizations
-        system = platform.system()
-        if system == 'Windows':
-            # DirectShow optimizations for Windows
-            self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
-        elif system == 'Linux':
-            # V4L2 optimizations for Linux
-            self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+        # Platform-specific optimizations - only apply if camera source (integer)
+        if isinstance(source, int):
+            system = platform.system()
+            try:
+                if system == 'Windows':
+                    # DirectShow optimizations for Windows
+                    self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+                elif system == 'Linux':
+                    # V4L2 optimizations for Linux
+                    self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+            except Exception as e:
+                print(f"Warning: could not set codec format: {e}")
         
         # Start thread
-        self.thread = threading.Thread(target=self._update, args=(), daemon=True)
+        self.thread = threading.Thread(target=self._update, args=())
+        self.thread.daemon = True
         self.thread.start()
     
     def _update(self):
@@ -218,6 +226,10 @@ class ThreadedVideoCapture:
                     self.stopped = True
                     break
                 self.queue.put((ret, frame))
+            else:
+                # Small delay to prevent CPU overload when queue is full
+                if hasattr(time, 'sleep'):
+                    time.sleep(0.001)
     
     def read(self):
         try:
@@ -233,12 +245,18 @@ class ThreadedVideoCapture:
         if self.thread.is_alive():
             self.thread.join(timeout=1.0)
         self.cap.release()
-    
-    def set(self, propId, value):
-        return self.cap.set(propId, value)
+        # Clear the queue to prevent deadlocks
+        while not self.queue.empty():
+            try:
+                self.queue.get(block=False)
+            except Empty:
+                break
     
     def get(self, propId):
         return self.cap.get(propId)
+    
+    def set(self, propId, value):
+        return self.cap.set(propId, value)
 
 
 classes = dict(chess=Chess, book=Book, cube=Cube)
@@ -256,64 +274,80 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
     '''source: <int> or '<int>|<filename>|synth [:<param_name>=<value> [:...]]'
     '''
     source = str(source).strip()
-
+    params = {}
+    
     # Handle paths across different platforms
     if os.path.exists(source):
         source = os.path.abspath(source)
     else:
-        # Normalize path separators for Windows
-        if platform.system() == 'Windows':
-            source = re.sub(r'(^|=)([a-zA-Z]):([/\\a-zA-Z0-9])', r'\1?disk\2?\3', source)
-            chunks = source.split(':')
-            chunks = [re.sub(r'\?disk([a-zA-Z])\?', r'\1:', s) for s in chunks]
-            source = chunks[0]
-            params = dict(s.split('=') for s in chunks[1:] if '=' in s)
-        else:
-            # For Unix-like systems
-            chunks = source.split(':')
-            source = chunks[0]
+        chunks = source.split(':')
+        source = chunks[0]
+        if len(chunks) > 1:
             params = dict(s.split('=') for s in chunks[1:] if '=' in s)
 
+    # Convert source to integer if it represents a number
     try: 
         source = int(source)
     except ValueError:
         pass
 
+    # Create the appropriate capture object
     cap = None
     if source == 'synth':
         Class = classes.get(params.get('class', None), VideoSynthBase)
         try: 
             cap = Class(**params)
-        except: 
+        except Exception as e: 
+            print(f"Error creating synthetic source: {e}")
             pass
     else:
         width = int(params.get('width', DEFAULT_WIDTH)) if 'width' in params else None
         height = int(params.get('height', DEFAULT_HEIGHT)) if 'height' in params else None
         
-        # Use threaded capture for better performance if requested
+        # Use threaded capture for better performance if requested and if it's a camera source
         if threaded and isinstance(source, int):
             try:
                 cap = ThreadedVideoCapture(source, width, height)
+                if not cap.isOpened():
+                    raise Exception("Failed to open threaded capture")
             except Exception as e:
                 print(f"Warning: could not use threaded capture: {e}")
+                cap = None
+        
+        # Fall back to regular capture if threaded didn't work or wasn't requested
+        if cap is None:
+            try:
                 cap = cv.VideoCapture(source)
-        else:
-            cap = cv.VideoCapture(source)
+                if width is not None and width > 0:
+                    cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
+                if height is not None and height > 0:
+                    cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
+            except Exception as e:
+                print(f"Error creating regular capture: {e}")
+                cap = None
             
-        if 'size' in params:
-            w, h = map(int, params['size'].split('x'))
-            cap.set(cv.CAP_PROP_FRAME_WIDTH, w)
-            cap.set(cv.CAP_PROP_FRAME_HEIGHT, h)
-            
-        # Try platform-specific optimizations
-        system = platform.system()
-        if isinstance(source, int) and not isinstance(cap, ThreadedVideoCapture):
-            if system == 'Windows':
-                # Optimize for Windows
-                cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
-            elif system == 'Linux':
-                # Optimize for Linux V4L2
-                cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+        # Apply additional settings if the capture was created successfully
+        if cap is not None and cap.isOpened():
+            if 'size' in params:
+                try:
+                    w, h = map(int, params['size'].split('x'))
+                    cap.set(cv.CAP_PROP_FRAME_WIDTH, w)
+                    cap.set(cv.CAP_PROP_FRAME_HEIGHT, h)
+                except Exception as e:
+                    print(f"Warning: could not set size: {e}")
+                
+            # Try platform-specific optimizations for non-threaded captures
+            if not isinstance(cap, ThreadedVideoCapture) and isinstance(source, int):
+                try:
+                    system = platform.system()
+                    if system == 'Windows':
+                        # Optimize for Windows
+                        cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+                    elif system == 'Linux':
+                        # Optimize for Linux V4L2
+                        cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+                except Exception as e:
+                    print(f"Warning: could not set codec format: {e}")
                 
     if cap is None or not cap.isOpened():
         print('Warning: unable to open video source: ', source)
@@ -337,16 +371,19 @@ def get_optimal_fps():
 
 def get_optimal_format(cap):
     """Select optimal pixel format based on platform"""
-    system = platform.system()
-    
-    if system == 'Windows':
-        cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
-    elif system == 'Linux':
-        try:
+    if not cap.isOpened():
+        return cap
+        
+    try:
+        system = platform.system()
+        
+        if system == 'Windows':
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
-        except:
-            # Fallback for some Linux cameras
-            pass
+        elif system == 'Linux':
+            cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+    except Exception as e:
+        print(f"Warning: could not set optimal format: {e}")
+    
     return cap
 
 
@@ -405,6 +442,9 @@ if __name__ == '__main__':
         while True:
             imgs = []
             for i, cap in enumerate(caps):
+                if not cap.isOpened():
+                    continue
+                    
                 ret, img = cap.read()
                 if not ret:
                     print(f"Warning: Failed to get frame from source {i}")
