@@ -29,7 +29,9 @@
 #ifndef OPENCV_OBJDETECT_MCC_CHECKER_DETECTOR_HPP
 #define OPENCV_OBJDETECT_MCC_CHECKER_DETECTOR_HPP
 #include <opencv2/core.hpp>
+#ifdef HAVE_OPENCV_DNN
 #include <opencv2/dnn.hpp>
+#endif
 #include <opencv2/imgproc.hpp>
 
 //---------------------------------------------------------------
@@ -241,7 +243,9 @@ public:
     *
     */
     CV_WRAP static Ptr<CCheckerDetector> create();
-     /** @brief Set the net which will be used to find the approximate
+
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Set the net which will be used to find the approximate
     *         bounding boxes for the color charts. And returns the implementation of the CCheckerDetector.
     *
     * It is not necessary to use this, but this usually results in
@@ -251,6 +255,7 @@ public:
     *            the function will return false.
     */
     CV_WRAP static Ptr<CCheckerDetector> create(const dnn::Net &net);
+#endif
 
     /** @brief Draws the checker to the given image.
         * @param img image in color space BGR
@@ -280,6 +285,7 @@ public:
 
     CV_WRAP virtual void setColorChartType(ColorChart chartType) = 0;
 
+#ifdef HAVE_OPENCV_DNN
     /** @brief Enables or disables the use of the neural network for detection.
         * @param useDnn Boolean flag to indicate whether to use neural network (true) or not (false).
     */
@@ -287,6 +293,7 @@ public:
     CV_WRAP virtual void setUseDnnModel(bool useDnn) = 0;
 
     CV_WRAP virtual bool getUseDnnModel() const = 0;
+#endif
 
     CV_WRAP virtual const DetectorParametersMCC& getDetectionParams() const = 0;
 

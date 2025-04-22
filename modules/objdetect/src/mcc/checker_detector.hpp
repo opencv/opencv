@@ -45,9 +45,11 @@ class CCheckerDetectorImpl : public CCheckerDetector
 
 public:
     CCheckerDetectorImpl();
+#ifdef HAVE_OPENCV_DNN
     CCheckerDetectorImpl(const dnn::Net& _net){
         net = _net;
     }
+#endif
     virtual ~CCheckerDetectorImpl();
 
     bool process(InputArray image, const std::vector<Rect> &regionsOfInterest,
@@ -72,9 +74,11 @@ public:
 
     virtual void setColorChartType(ColorChart chartType) CV_OVERRIDE;
 
+#ifdef HAVE_OPENCV_DNN
     virtual void setUseDnnModel(bool useDnn) CV_OVERRIDE;
 
     virtual bool getUseDnnModel() const CV_OVERRIDE;
+#endif
 
     virtual const DetectorParametersMCC& getDetectionParams() const CV_OVERRIDE;
 
@@ -164,10 +168,14 @@ protected: // methods pipeline
 
 protected:
     std::vector<Ptr<CChecker>> m_checkers;
+#ifdef HAVE_OPENCV_DNN
     dnn::Net net;
+    bool m_useDnn = true;
+#else
+    bool m_useDnn = false;
+#endif
     DetectorParametersMCC m_params = DetectorParametersMCC();
     ColorChart m_chartType;
-    bool m_useDnn = true;
 
 private: // methods aux
     void get_subbox_chart_physical(
