@@ -175,23 +175,14 @@ bool SPngDecoder::readHeader()
 
 bool SPngDecoder::readData(Mat &img)
 {
-    volatile bool result = false;
-    bool color = img.channels() > 1;
-
-    struct spng_ctx *png_ptr = (struct spng_ctx *)m_ctx;
+    bool result = false;
 
     if (m_ctx && m_width && m_height)
     {
+        struct spng_ctx* png_ptr = (struct spng_ctx*)m_ctx;
+        bool color = img.channels() > 1;
         int fmt = img.channels() == 4 ? m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8 : SPNG_FMT_PNG;
-
-        struct spng_trns trns;
-        int have_trns = spng_get_trns((struct spng_ctx *)m_ctx, &trns);
-        int decode_flags = 0;
-
-        if (have_trns == SPNG_OK)
-        {
-            decode_flags = SPNG_DECODE_TRNS;
-        }
+        int decode_flags = img.channels() == 4 ? SPNG_DECODE_TRNS : 0;
 
         if (img.type() == CV_8UC3)
         {
