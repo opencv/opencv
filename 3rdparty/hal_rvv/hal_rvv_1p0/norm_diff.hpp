@@ -130,7 +130,8 @@ struct NormDiffInf_RVV<int, int> {
             vl = __riscv_vsetvl_e32m8(n - i);
             auto v1 = __riscv_vle32_v_i32m8(src1 + i, vl);
             auto v2 = __riscv_vle32_v_i32m8(src2 + i, vl);
-            auto v = custom_intrin::__riscv_vabd(v1, v2, vl);
+            // auto v = custom_intrin::__riscv_vabd(v1, v2, vl); // 5.x
+            auto v = custom_intrin::__riscv_vabs(__riscv_vsub(v1, v2, vl), vl); // 4.x
             s = __riscv_vmaxu_tu(s, s, v, vl);
         }
         return __riscv_vmv_x(__riscv_vredmaxu(s, __riscv_vmv_s_x_u32m1(0, __riscv_vsetvlmax_e32m1()), vlmax));
@@ -247,7 +248,8 @@ struct NormDiffL1_RVV<int, double> {
             vl = __riscv_vsetvl_e32m4(n - i);
             auto v1 = __riscv_vle32_v_i32m4(src1 + i, vl);
             auto v2 = __riscv_vle32_v_i32m4(src2 + i, vl);
-            auto v = custom_intrin::__riscv_vabd(v1, v2, vl);
+            // auto v = custom_intrin::__riscv_vabd(v1, v2, vl); // 5.x
+            auto v = custom_intrin::__riscv_vabs(__riscv_vsub(v1, v2, vl), vl); // 4.x
             s = __riscv_vfadd_tu(s, s, __riscv_vfwcvt_f(v, vl), vl);
         }
         return __riscv_vfmv_f(__riscv_vfredosum(s, __riscv_vfmv_s_f_f64m1(0, __riscv_vsetvlmax_e64m1()), vlmax));
@@ -577,7 +579,8 @@ struct MaskedNormDiffInf_RVV<int, int> {
                 vl = __riscv_vsetvl_e32m8(len - i);
                 auto v1 = __riscv_vlse32_v_i32m8(src1 + cn * i + cn_index, sizeof(int) * cn, vl);
                 auto v2 = __riscv_vlse32_v_i32m8(src2 + cn * i + cn_index, sizeof(int) * cn, vl);
-                auto v = custom_intrin::__riscv_vabd(v1, v2, vl);
+                // auto v = custom_intrin::__riscv_vabd(v1, v2, vl); // 5.x
+                auto v = custom_intrin::__riscv_vabs(__riscv_vsub(v1, v2, vl), vl); // 4.x
                 auto m = __riscv_vle8_v_u8m2(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
                 s = __riscv_vmaxu_tumu(b, s, s, v, vl);
@@ -759,7 +762,8 @@ struct MaskedNormDiffL1_RVV<int, double> {
                 vl = __riscv_vsetvl_e32m4(len - i);
                 auto v1 = __riscv_vlse32_v_i32m4(src1 + cn * i + cn_index, sizeof(int) * cn, vl);
                 auto v2 = __riscv_vlse32_v_i32m4(src2 + cn * i + cn_index, sizeof(int) * cn, vl);
-                auto v = custom_intrin::__riscv_vabd(v1, v2, vl);
+                // auto v = custom_intrin::__riscv_vabd(v1, v2, vl); // 5.x
+                auto v = custom_intrin::__riscv_vabs(__riscv_vsub(v1, v2, vl), vl); // 4.x
                 auto m = __riscv_vle8_v_u8m1(mask + i, vl);
                 auto b = __riscv_vmsne(m, 0, vl);
                 s = __riscv_vfadd_tumu(b, s, s, __riscv_vfwcvt_f(b, v, vl), vl);
