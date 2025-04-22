@@ -202,13 +202,16 @@ class ThreadedVideoCapture:
             
         # Platform-specific optimizations - only apply if camera source (integer)
         if isinstance(source, int):
-            system = platform.system()
             try:
+                system = platform.system()
                 if system == 'Windows':
                     # DirectShow optimizations for Windows
                     self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
                 elif system == 'Linux':
                     # V4L2 optimizations for Linux
+                    self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+                elif system == 'Darwin':  # macOS
+                    # AVFoundation optimizations for macOS
                     self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
             except Exception as e:
                 print(f"Warning: could not set codec format: {e}")
@@ -346,6 +349,9 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
                     elif system == 'Linux':
                         # Optimize for Linux V4L2
                         cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+                    elif system == 'Darwin':  # macOS
+                        # Optimize for macOS AVFoundation
+                        cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
                 except Exception as e:
                     print(f"Warning: could not set codec format: {e}")
                 
@@ -380,6 +386,8 @@ def get_optimal_format(cap):
         if system == 'Windows':
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
         elif system == 'Linux':
+            cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
+        elif system == 'Darwin':  # macOS
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
     except Exception as e:
         print(f"Warning: could not set optimal format: {e}")
