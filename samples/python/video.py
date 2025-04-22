@@ -92,7 +92,7 @@ class VideoSynthBase(object):
 
     def isOpened(self):
         return True
-        
+
     def get(self, propId):
         # Add support for the get method to synthetic video sources
         if propId == cv.CAP_PROP_FRAME_WIDTH:
@@ -102,7 +102,7 @@ class VideoSynthBase(object):
         elif propId == cv.CAP_PROP_FPS:
             return 30
         return 0
-        
+
     def set(self, propId, value):
         # Add support for the set method to synthetic video sources
         if propId == cv.CAP_PROP_FRAME_WIDTH:
@@ -193,13 +193,13 @@ class ThreadedVideoCapture:
         self.cap = cv.VideoCapture(source)
         self.queue = Queue(maxsize=QUEUE_SIZE)
         self.stopped = False
-        
+
         # Set resolution if provided
         if width is not None and width > 0:
             self.cap.set(cv.CAP_PROP_FRAME_WIDTH, width)
         if height is not None and height > 0:
             self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, height)
-            
+
         # Platform-specific optimizations - only apply if camera source (integer)
         if isinstance(source, int):
             try:
@@ -215,12 +215,12 @@ class ThreadedVideoCapture:
                     self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
             except Exception as e:
                 print(f"Warning: could not set codec format: {e}")
-        
+
         # Start thread
         self.thread = threading.Thread(target=self._update, args=())
         self.thread.daemon = True
         self.thread.start()
-    
+
     def _update(self):
         while not self.stopped:
             if not self.queue.full():
@@ -233,16 +233,16 @@ class ThreadedVideoCapture:
                 # Small delay to prevent CPU overload when queue is full
                 if hasattr(time, 'sleep'):
                     time.sleep(0.001)
-    
+
     def read(self):
         try:
             return self.queue.get(timeout=1.0)
         except Empty:
             return (False, None)
-    
+
     def isOpened(self):
         return self.cap.isOpened() and not self.stopped
-    
+
     def release(self):
         self.stopped = True
         if self.thread.is_alive():
@@ -254,10 +254,10 @@ class ThreadedVideoCapture:
                 self.queue.get(block=False)
             except Empty:
                 break
-    
+
     def get(self, propId):
         return self.cap.get(propId)
-    
+
     def set(self, propId, value):
         return self.cap.set(propId, value)
 
@@ -278,7 +278,7 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
     '''
     source = str(source).strip()
     params = {}
-    
+
     # Handle paths across different platforms
     if os.path.exists(source):
         source = os.path.abspath(source)
@@ -289,7 +289,7 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
             params = dict(s.split('=') for s in chunks[1:] if '=' in s)
 
     # Convert source to integer if it represents a number
-    try: 
+    try:
         source = int(source)
     except ValueError:
         pass
@@ -298,15 +298,15 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
     cap = None
     if source == 'synth':
         Class = classes.get(params.get('class', None), VideoSynthBase)
-        try: 
+        try:
             cap = Class(**params)
-        except Exception as e: 
+        except Exception as e:
             print(f"Error creating synthetic source: {e}")
             pass
     else:
         width = int(params.get('width', DEFAULT_WIDTH)) if 'width' in params else None
         height = int(params.get('height', DEFAULT_HEIGHT)) if 'height' in params else None
-        
+
         # Use threaded capture for better performance if requested and if it's a camera source
         if threaded and isinstance(source, int):
             try:
@@ -316,7 +316,7 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
             except Exception as e:
                 print(f"Warning: could not use threaded capture: {e}")
                 cap = None
-        
+
         # Fall back to regular capture if threaded didn't work or wasn't requested
         if cap is None:
             try:
@@ -328,7 +328,7 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
             except Exception as e:
                 print(f"Error creating regular capture: {e}")
                 cap = None
-            
+
         # Apply additional settings if the capture was created successfully
         if cap is not None and cap.isOpened():
             if 'size' in params:
@@ -338,7 +338,7 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
                     cap.set(cv.CAP_PROP_FRAME_HEIGHT, h)
                 except Exception as e:
                     print(f"Warning: could not set size: {e}")
-                
+
             # Try platform-specific optimizations for non-threaded captures
             if not isinstance(cap, ThreadedVideoCapture) and isinstance(source, int):
                 try:
@@ -354,7 +354,7 @@ def create_capture(source=0, fallback=presets['chess'], threaded=True):
                         cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
                 except Exception as e:
                     print(f"Warning: could not set codec format: {e}")
-                
+
     if cap is None or not cap.isOpened():
         print('Warning: unable to open video source: ', source)
         if fallback is not None:
@@ -366,7 +366,7 @@ def get_optimal_fps():
     """Return optimal FPS based on system capabilities"""
     system = platform.system()
     cpu_count = os.cpu_count() or 1
-    
+
     if system == 'Windows':
         return min(30, cpu_count * 5)
     elif system == 'Darwin':  # macOS
@@ -379,10 +379,10 @@ def get_optimal_format(cap):
     """Select optimal pixel format based on platform"""
     if not cap.isOpened():
         return cap
-        
+
     try:
         system = platform.system()
-        
+
         if system == 'Windows':
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
         elif system == 'Linux':
@@ -391,7 +391,7 @@ def get_optimal_format(cap):
             cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M','J','P','G'))
     except Exception as e:
         print(f"Warning: could not set optimal format: {e}")
-    
+
     return cap
 
 
@@ -400,7 +400,7 @@ if __name__ == '__main__':
     import getopt
 
     print(__doc__)
-    
+
     # Add debug information
     print("Python version:", sys.version)
     print("OpenCV version:", cv.__version__)
@@ -410,7 +410,7 @@ if __name__ == '__main__':
     args = dict(args)
     shotdir = args.get('--shotdir', '.')
     threaded = args.get('--threaded', 'True').lower() in ('true', 'yes', 't', 'y', '1')
-    
+
     if len(sources) == 0:
         sources = [0]
 
@@ -426,13 +426,13 @@ if __name__ == '__main__':
                 print(f"Failed to open source {src}")
         except Exception as e:
             print(f"Error with source {src}: {e}")
-    
+
     if not caps:
         print("No video sources could be opened. Exiting.")
         sys.exit(1)
-        
+
     shot_idx = 0
-    
+
     # Determine if we should use a smaller or larger window based on screen resolution
     window_sizes = []
     for i, cap in enumerate(caps):
@@ -440,24 +440,24 @@ if __name__ == '__main__':
         height = int(cap.get(cv.CAP_PROP_FRAME_HEIGHT))
         window_sizes.append((width, height))
         print(f"Source {i} resolution: {width}x{height}")
-        
+
     start_time = time()
     frame_count = 0
     fps_display_interval = 2.0  # seconds
     fps = 0
-    
+
     try:
         while True:
             imgs = []
             for i, cap in enumerate(caps):
                 if not cap.isOpened():
                     continue
-                    
+
                 ret, img = cap.read()
                 if not ret:
                     print(f"Warning: Failed to get frame from source {i}")
                     continue
-                    
+
                 # Calculate and display FPS
                 frame_count += 1
                 elapsed = time() - start_time
@@ -465,17 +465,17 @@ if __name__ == '__main__':
                     fps = frame_count / elapsed
                     frame_count = 0
                     start_time = time()
-                
-                cv.putText(img, f"FPS: {fps:.1f}", (10, 30), 
+
+                cv.putText(img, f"FPS: {fps:.1f}", (10, 30),
                           cv.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-                
+
                 imgs.append(img)
                 cv.imshow(f'capture {i}', img)
-                
+
             if not imgs:
                 print("All video sources closed. Exiting.")
                 break
-                
+
             ch = cv.waitKey(1)
             if ch == 27:  # ESC
                 break
@@ -491,3 +491,4 @@ if __name__ == '__main__':
             if hasattr(cap, 'release'):  # For ThreadedVideoCapture
                 cap.release()
         cv.destroyAllWindows()
+
