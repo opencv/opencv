@@ -204,7 +204,7 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
 #endif
 
 // Uncomment this block to verify that saved images (from above) load identically
-// when read back with IMREAD_UNCHANGED. Helps ensure write-read symmetry.    
+// when read back with IMREAD_UNCHANGED. Helps ensure write-read symmetry.
 #if 0
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_GRAYSCALE), imread(filename + "_0.png", IMREAD_UNCHANGED));
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR), imread(filename + "_1.png", IMREAD_UNCHANGED));
