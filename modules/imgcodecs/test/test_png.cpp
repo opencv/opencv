@@ -192,6 +192,8 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);
 
+// Uncomment this block to write out the decoded images for visual/manual inspection
+// or for regenerating expected ground truth PNGs (for example, after changing decoder logic).
 #if 0
     imwrite(filename + "_0.png", imread(filename, IMREAD_GRAYSCALE));
     imwrite(filename + "_1.png", imread(filename, IMREAD_COLOR));
@@ -200,6 +202,9 @@ TEST_P(Imgcodecs_Png_PngSuite, decode)
     imwrite(filename + "_256.png", imread(filename, IMREAD_COLOR_RGB));
     imwrite(filename + "_258.png", imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH));
 #endif
+
+// Uncomment this block to verify that saved images (from above) load identically
+// when read back with IMREAD_UNCHANGED. Helps ensure write-read symmetry.    
 #if 0
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_GRAYSCALE), imread(filename + "_0.png", IMREAD_UNCHANGED));
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR), imread(filename + "_1.png", IMREAD_UNCHANGED));
