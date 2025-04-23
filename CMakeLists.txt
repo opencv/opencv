@@ -16,7 +16,7 @@ endif()
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-  cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+  cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
   #Required to resolve linker error issues due to incompatibility with CMake v3.0+ policies.
   #CMake fails to find _fseeko() which leads to subsequent linker error.
   #See details here: http://www.cmake.org/Wiki/CMake/Policies
@@ -686,6 +686,7 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
 
     cmake_policy(SET CMP0092 NEW) # CMake 3.15+: leave warning flags out of default CMAKE_<LANG>_FLAGS flags.
     if(CMAKE_CUDA_COMPILER)
+      #  CMake 3.18+: if CMAKE_CUDA_ARCHITECTURES is empty enable_language(CUDA) sets it to the default architecture chosen by the compiler, to trigger the OpenCV custom CUDA architecture search an empty value needs to be respected see https://github.com/opencv/opencv/pull/25941.
       if(CMAKE_CUDA_ARCHITECTURES)
         set(USER_DEFINED_CMAKE_CUDA_ARCHITECTURES TRUE)
       endif()
@@ -954,7 +955,15 @@ if(NOT DEFINED OpenCV_HAL)
   set(OpenCV_HAL "OpenCV_HAL")
 endif()
 
+if(HAVE_IPP)
+  ocv_debug_message(STATUS "Enable IPP acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";ipp;")
+    set(OpenCV_HAL "ipp;${OpenCV_HAL}")
+  endif()
+endif()
+
 if(HAVE_OPENVX)
+  ocv_debug_message(STATUS "Enable OpenVX acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";openvx;")
     set(OpenCV_HAL "openvx;${OpenCV_HAL}")
   endif()
@@ -1032,6 +1041,10 @@ foreach(hal ${OpenCV_HAL})
     else()
       message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
     endif()
+  elseif(hal STREQUAL "ipp")
+    add_subdirectory(3rdparty/ipphal)
+    ocv_hal_register(IPP_HAL_LIBRARIES IPP_HAL_HEADERS IPP_HAL_INCLUDE_DIRS)
+    list(APPEND OpenCV_USED_HAL "ipp (ver ${IPP_HAL_VERSION})")
   elseif(hal STREQUAL "openvx")
     add_subdirectory(3rdparty/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)

@@ -1,7 +1,11 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-#pragma once
+
+// Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+
+#ifndef OPENCV_HAL_RVV_LUT_HPP_INCLUDED
+#define OPENCV_HAL_RVV_LUT_HPP_INCLUDED
 
 #include <riscv_vector.h>
 #include <opencv2/core/base.hpp>
@@ -78,14 +82,14 @@ public:
     size_t dst_step;
     size_t width;
 
-    LUTParallelBody(const uchar* src_data,
-                    size_t src_step,
-                    const uchar* lut_data,
-                    uchar* dst_data,
-                    size_t dst_step,
-                    size_t width) :
-        src_data(src_data), lut_data(lut_data), dst_data(dst_data), src_step(src_step),
-        dst_step(dst_step), width(width)
+    LUTParallelBody(const uchar* _src_data,
+                    size_t _src_step,
+                    const uchar* _lut_data,
+                    uchar* _dst_data,
+                    size_t _dst_step,
+                    size_t _width) :
+        src_data(_src_data), lut_data(_lut_data), dst_data(_dst_data), src_step(_src_step),
+        dst_step(_dst_step), width(_width)
     {
     }
 
@@ -188,3 +192,5 @@ inline int lut(const uchar* src_data,
 }
 
 }}  // namespace cv::cv_hal_rvv
+
+#endif //OPENCV_HAL_RVV_LUT_HPP_INCLUDED

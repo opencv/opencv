@@ -626,7 +626,7 @@ TEST(Imgcodecs_APNG, imencode_animation)
     EXPECT_TRUE(imencodeanimation(".png", gt_animation, buf));
     EXPECT_TRUE(imdecodeanimation(buf, mem_animation));
 
-        EXPECT_EQ(mem_animation.frames.size(), gt_animation.frames.size());
+    EXPECT_EQ(mem_animation.frames.size(), gt_animation.frames.size());
     EXPECT_EQ(mem_animation.bgcolor, gt_animation.bgcolor);
     EXPECT_EQ(mem_animation.loop_count, gt_animation.loop_count);
     for (size_t i = 0; i < gt_animation.frames.size(); i++)
@@ -637,5 +637,62 @@ TEST(Imgcodecs_APNG, imencode_animation)
 }
 
 #endif // HAVE_PNG
+
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
+
+TEST(Imgcodecs_APNG, imread_animation_16u)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/033.png";
+
+    Mat img = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC4);
+    EXPECT_EQ(0,     img.at<ushort>(0, 0));
+    EXPECT_EQ(0,     img.at<ushort>(0, 1));
+    EXPECT_EQ(65280, img.at<ushort>(0, 2));
+    EXPECT_EQ(65535, img.at<ushort>(0, 3));
+
+    img = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_8UC1);
+    EXPECT_EQ(76, img.at<uchar>(0, 0));
+
+    img = imread(filename, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_8UC3);
+    EXPECT_EQ(0,   img.at<uchar>(0, 0));
+    EXPECT_EQ(0,   img.at<uchar>(0, 1));
+    EXPECT_EQ(255, img.at<uchar>(0, 2));
+
+    img = imread(filename, IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_8UC3);
+    EXPECT_EQ(255, img.at<uchar>(0, 0));
+    EXPECT_EQ(0,   img.at<uchar>(0, 1));
+    EXPECT_EQ(0,   img.at<uchar>(0, 2));
+
+    img = imread(filename, IMREAD_ANYDEPTH);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC1);
+    EXPECT_EQ(19519, img.at<ushort>(0, 0));
+
+    img = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC3);
+    EXPECT_EQ(0,     img.at<ushort>(0, 0));
+    EXPECT_EQ(0,     img.at<ushort>(0, 1));
+    EXPECT_EQ(65280, img.at<ushort>(0, 2));
+
+    img = imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC3);
+    EXPECT_EQ(65280, img.at<ushort>(0, 0));
+    EXPECT_EQ(0,     img.at<ushort>(0, 1));
+    EXPECT_EQ(0,     img.at<ushort>(0, 2));
+}
+
+#endif // HAVE_PNG || HAVE_SPNG
 
 }} // namespace

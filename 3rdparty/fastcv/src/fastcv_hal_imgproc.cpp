@@ -314,6 +314,69 @@ int fastcv_hal_sobel(
     CV_HAL_RETURN(status, hal_sobel);
 }
 
+class FcvBoxLoop_Invoker : public cv::ParallelLoopBody
+{
+public:
+
+    FcvBoxLoop_Invoker(cv::Mat src_, int width_, int height_, cv::Mat dst_, int bdr_, int knl_, int normalize_, int stripeHeight_, int nStripes_, int depth_) :
+        cv::ParallelLoopBody(), src(src_), width(width_), height(height_), dst(dst_), bdr(bdr_), knl(knl_), normalize(normalize_), stripeHeight(stripeHeight_), nStripes(nStripes_), depth(depth_)
+    {
+    }
+
+    virtual void operator()(const cv::Range& range) const CV_OVERRIDE
+    {
+        int height_ = stripeHeight * (range.end - range.start);
+        int width_  = width;
+        cv::Mat src_;
+        int n = knl/2;
+
+        if(range.end == nStripes)
+            height_ += (height - range.end * stripeHeight);
+
+        src_ = cv::Mat(height_ + 2*n, width_ + 2*n, depth);
+
+        if(range.start == 0 && range.end == nStripes)
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_)), src_, n, n, n, n, bdr);
+        else if(range.start == 0)
+            cv::copyMakeBorder(src(cv::Rect(0, 0, width_, height_ + n)), src_, n, 0, n, n, bdr);
+        else if(range.end == nStripes)
+            cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + n)), src_, 0, n, n, n, bdr);
+        else
+            cv::copyMakeBorder(src(cv::Rect(0, range.start * stripeHeight - n, width_, height_ + 2*n)), src_, 0, 0, n, n, bdr);
+
+        cv::Mat dst_padded = cv::Mat(height_ + 2*n, width_ + 2*n, depth);
+        if(depth == CV_32F)
+            fcvBoxFilterNxNf32((float*)src_.data, width_ + 2*n, height_ + 2*n, (width_ + 2*n)*sizeof(float),
+                                       knl, (float*)dst_padded.data, dst_padded.step[0]);
+        else
+        {
+            auto func = knl == 3 ? fcvBoxFilter3x3u8_v3 : fcvBoxFilter5x5u8_v2;
+
+            func(src_.data, width_ + 2*n, height_ + 2*n, width_ + 2*n,
+                            dst_padded.data, dst_padded.step[0], normalize, FASTCV_BORDER_UNDEFINED, 0);
+        }
+        int start_val = stripeHeight * range.start;
+        cv::Mat dst_temp1 = dst_padded(cv::Rect(n, n, width_, height_));
+        cv::Mat dst_temp2 = dst(cv::Rect(0, start_val, width_, height_));
+        dst_temp1.copyTo(dst_temp2);
+    }
+
+private:
+    cv::Mat src;
+    const int width;
+    const int height;
+    cv::Mat dst;
+    const int bdr;
+    const int knl;
+    const int normalize;
+    const int stripeHeight;
+    const int nStripes;
+    int depth;
+
+    FcvBoxLoop_Invoker(const FcvBoxLoop_Invoker &);  // = delete;
+    const FcvBoxLoop_Invoker& operator= (const FcvBoxLoop_Invoker &);  // = delete;
+};
+
 int fastcv_hal_boxFilter(
     const uchar*     src_data,
     size_t           src_step,
@@ -335,15 +398,7 @@ int fastcv_hal_boxFilter(
     bool             normalize,
     int              border_type)
 {
-    if((width*height) < (320*240))
-    {
-        CV_HAL_RETURN_NOT_IMPLEMENTED("input size not supported");
-    }
-    else if(src_data == dst_data)
-    {
-        CV_HAL_RETURN_NOT_IMPLEMENTED("in-place processing not supported");
-    }
-    else if(src_depth != CV_8U || cn != 1)
+    if((src_depth != CV_8U && src_depth != CV_32F) || cn != 1)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("src type not supported");
     }
@@ -351,8 +406,7 @@ int fastcv_hal_boxFilter(
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("same src and dst type supported");
     }
-    else if(ksize_width != ksize_height ||
-           (ksize_width != 3 && ksize_width != 5))
+    else if(ksize_width != ksize_height)
     {
         CV_HAL_RETURN_NOT_IMPLEMENTED("kernel size not supported");
     }
@@ -363,37 +417,52 @@ int fastcv_hal_boxFilter(
         CV_HAL_RETURN_NOT_IMPLEMENTED("ROI not supported");
     }
 
+    if(src_depth == CV_32F && normalize != 1)
+        CV_HAL_RETURN_NOT_IMPLEMENTED("normalized kernel supported for float types");
+
+    if(src_depth == CV_32F && (height < 5 || width < 5 || ksize_height < 5))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("size not supported");
+
+    if(src_depth == CV_8U && (ksize_width != 3 && ksize_width != 5))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("kernel size not supported");
+
     INITIALIZATION_CHECK;
 
-    fcvBorderType bdr;
-    uint8_t bdrVal = 0;
-    switch(border_type)
+    cv::Mat dst_temp;
+    bool inPlace = src_data == dst_data ? true : false ;
+
+    int nThreads = cv::getNumThreads();
+
+    cv::Mat src = cv::Mat(height, width, src_depth, (void*)src_data, src_step);
+
+    if(inPlace)
+        dst_temp = cv::Mat(height, width, src_depth);
+    else
+        dst_temp = cv::Mat(height, width, src_depth, (void*)dst_data, dst_step);
+
+    int nStripes, stripeHeight = src.rows/nThreads;
+
+    if((size_t)src.rows < ksize_height || stripeHeight < 5 || nThreads <= 1)
     {
-        case cv::BORDER_REPLICATE:
-            bdr = FASTCV_BORDER_REPLICATE;
-            break;
-        case cv::BORDER_REFLECT:
-            bdr = FASTCV_BORDER_REFLECT;
-            break;
-        case cv::BORDER_REFLECT101:    // cv::BORDER_REFLECT_101, BORDER_DEFAULT
-            bdr = FASTCV_BORDER_REFLECT_V2;
-            break;
-        default:
-            CV_HAL_RETURN_NOT_IMPLEMENTED("border type not supported");
+        nStripes = 1;
+        stripeHeight = src.rows;
+    }
+    else
+    {
+        nStripes = nThreads;
+        stripeHeight = src.rows/nThreads;
+    }
+    
+    cv::parallel_for_(cv::Range(0, nStripes),
+            FcvBoxLoop_Invoker(src, width, height, dst_temp, border_type, ksize_width, normalize, stripeHeight, nStripes, src_depth), nStripes);
+
+    if(inPlace)
+    {
+        cv::Mat dst = cv::Mat(height, width, src_depth, (void*)dst_data, dst_step);
+        dst_temp.copyTo(dst);
     }
 
     fcvStatus status = FASTCV_SUCCESS;
-    if(ksize_width == 3)
-    {
-        status = fcvBoxFilter3x3u8_v3(src_data, width, height, src_step,
-                                      dst_data, dst_step, normalize, bdr, bdrVal);
-    }
-    else if(ksize_width == 5)
-    {
-        status = fcvBoxFilter5x5u8_v2(src_data, width, height, src_step,
-                                      dst_data, dst_step, normalize, bdr, bdrVal);
-    }
-
     CV_HAL_RETURN(status,hal_boxFilter);
 }
 
@@ -467,30 +536,88 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
 {
     public:
 
-    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, int _borderType, int _fcvBorderValue) :
-        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), borderType(_borderType), fcvBorderValue(_fcvBorderValue)
+    FcvGaussianBlurLoop_Invoker(const cv::Mat& _src, cv::Mat& _dst, int _ksize, int _borderType) :
+        cv::ParallelLoopBody(), src(_src),dst(_dst), ksize(_ksize), borderType(_borderType)
     {
         width       = src.cols;
         height      = src.rows;
         halfKSize   = ksize / 2;
         fcvFuncType = FCV_MAKETYPE(ksize, src.depth());
+
+        switch (borderType)
+        {
+            case cv::BorderTypes::BORDER_REPLICATE:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_REPLICATE;
+                break;
+            }
+            // For constant border, there are no border value, OpenCV default value is 0
+            case cv::BorderTypes::BORDER_CONSTANT:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_CONSTANT;
+                break;
+            }
+            case cv::BorderTypes::BORDER_REFLECT:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT;
+                break;
+            }
+            case cv::BorderTypes::BORDER_REFLECT_101:
+            {
+                fcvBorder = fcvBorderType::FASTCV_BORDER_REFLECT_V2;
+                break;
+            }
+        }
     }
 
     virtual void operator()(const cv::Range& range) const CV_OVERRIDE
     {
-        int rangeHeight  = range.end - range.start;
-        int paddedHeight = rangeHeight + halfKSize * 2;
-        int paddedWidth  = width;
+        int topLines     = 0;
+        int bottomLines  = 0;
+        int rangeHeight  = range.end-range.start;
+        int paddedHeight = rangeHeight;
 
-        cv::Mat srcPadded = src(cv::Rect(0, range.start, paddedWidth, paddedHeight));
-        cv::Mat dstPadded = dst(cv::Rect(0, range.start, paddedWidth, paddedHeight));
+        // Need additional lines to be border.
+        if(range.start > 0)
+        {
+            topLines     = MIN(range.start, halfKSize);
+            paddedHeight += topLines;
+        }
+
+        if(range.end < height)
+        {
+            bottomLines  = MIN(height-range.end, halfKSize);
+            paddedHeight += bottomLines;
+        }
 
         if (fcvFuncType == FCV_MAKETYPE(3,CV_8U))
-            fcvFilterGaussian3x3u8_v4(srcPadded.data, paddedWidth, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
-                fcvBorderType::FASTCV_BORDER_UNDEFINED, fcvBorderValue);
+        {
+            cv::Mat srcPadded = src(cv::Rect(0, range.start - topLines, width, paddedHeight));
+            cv::Mat dstPadded = cv::Mat(paddedHeight, width, CV_8UC1);
+            fcvFilterGaussian3x3u8_v4(srcPadded.data, width, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
+                                      fcvBorder, 0);
+
+            // Only copy center part back to output image and ignore the padded lines
+            cv::Mat temp1 = dstPadded(cv::Rect(0, topLines, width, rangeHeight));
+            cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
+            temp1.copyTo(temp2);
+        }
         else if (fcvFuncType == FCV_MAKETYPE(5,CV_8U))
-            fcvFilterGaussian5x5u8_v3(srcPadded.data, paddedWidth, paddedHeight, srcPadded.step, dstPadded.data, dstPadded.step,
-                fcvBorderType::FASTCV_BORDER_UNDEFINED, fcvBorderValue);
+        {
+            int width_  = width + ksize - 1;
+            int height_ = rangeHeight + ksize - 1;
+            cv::Mat srcPadded = cv::Mat(height_, width_, CV_8UC1);
+            cv::Mat dstPadded = cv::Mat(height_, width_, CV_8UC1);
+            cv::copyMakeBorder(src(cv::Rect(0, range.start - topLines, width, paddedHeight)), srcPadded,
+                               halfKSize - topLines, halfKSize - bottomLines, halfKSize, halfKSize, borderType);
+            fcvFilterGaussian5x5u8_v3(srcPadded.data, width_, height_, srcPadded.step, dstPadded.data, dstPadded.step,
+                                      fcvBorderType::FASTCV_BORDER_UNDEFINED, 0);
+
+            // Only copy center part back to output image and ignore the padded lines
+            cv::Mat temp1 = dstPadded(cv::Rect(halfKSize, halfKSize, width, rangeHeight));
+            cv::Mat temp2 = dst(cv::Rect(0, range.start, width, rangeHeight));
+            temp1.copyTo(temp2);
+        }
     }
 
     private:
@@ -500,9 +627,9 @@ class FcvGaussianBlurLoop_Invoker : public cv::ParallelLoopBody
     int             height;
     const int       ksize;
     int             halfKSize;
-    int             fcvFuncType;
     int             borderType;
-    int             fcvBorderValue;
+    int             fcvFuncType;
+    fcvBorderType   fcvBorder;
 
     FcvGaussianBlurLoop_Invoker(const FcvGaussianBlurLoop_Invoker &);  // = delete;
     const FcvGaussianBlurLoop_Invoker& operator= (const FcvGaussianBlurLoop_Invoker &);  // = delete;
@@ -528,9 +655,9 @@ int fastcv_hal_gaussianBlurBinomial(
     if (src_data == dst_data)
         CV_HAL_RETURN_NOT_IMPLEMENTED("Inplace is not supported");
 
-    // The pixels of input image should larger than 320*240
-    if((width*height) < (320*240))
-        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than 320*240");
+    // The input image width and height should greater than kernel size
+    if (((size_t)height <= ksize) || ((size_t)width <= ksize))
+        CV_HAL_RETURN_NOT_IMPLEMENTED("Input image size should be larger than kernel size");
 
     // The input channel should be 1
     if (cn != 1)
@@ -540,26 +667,31 @@ int fastcv_hal_gaussianBlurBinomial(
     if((margin_left!=0) || (margin_top != 0) || (margin_right != 0) || (margin_bottom !=0))
         CV_HAL_RETURN_NOT_IMPLEMENTED("ROI is not supported");
 
+    // Border type check
+    if( border_type != cv::BorderTypes::BORDER_CONSTANT  &&
+        border_type != cv::BorderTypes::BORDER_REPLICATE &&
+        border_type != cv::BorderTypes::BORDER_REFLECT   &&
+        border_type != cv::BorderTypes::BORDER_REFLECT101)
+        CV_HAL_RETURN_NOT_IMPLEMENTED(cv::format("Border type:%s is not supported", borderToString(border_type)));
+
     INITIALIZATION_CHECK;
 
     fcvStatus status = FASTCV_SUCCESS;
-    int fcvFuncType = FCV_MAKETYPE(ksize, depth);
+    int fcvFuncType  = FCV_MAKETYPE(ksize, depth);
 
     int nThreads = cv::getNumThreads();
-    int nStripes = (nThreads > 1) ? ((height > 60) ? 3 * nThreads : 1) : 1;
+    // In each stripe, the height should be equal or larger than ksize.
+    // Use 3*nThreads stripes to avoid too many threads.
+    int nStripes = nThreads > 1 ? MIN(height / (int)ksize, 3 * nThreads) : 1;
 
     switch (fcvFuncType)
     {
         case FCV_MAKETYPE(3,CV_8U):
         case FCV_MAKETYPE(5,CV_8U):
         {
-            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void *)src_data, src_step);
-            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void *)dst_data, dst_step);
-            cv::Mat src_tmp = cv::Mat(height + ksize - 1, width + ksize - 1, CV_8UC1);
-            cv::Mat dst_tmp = cv::Mat(height + ksize - 1, width + ksize - 1, CV_8UC1);
-            cv::copyMakeBorder(src, src_tmp, ksize / 2, ksize / 2, ksize / 2, ksize / 2, border_type);
-            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src_tmp, dst_tmp, ksize, border_type, 0), nStripes);
-            dst_tmp(cv::Rect(ksize / 2, ksize / 2, width, height)).copyTo(dst);
+            cv::Mat src = cv::Mat(height, width, CV_8UC1, (void*)src_data, src_step);
+            cv::Mat dst = cv::Mat(height, width, CV_8UC1, (void*)dst_data, dst_step);
+            cv::parallel_for_(cv::Range(0, height), FcvGaussianBlurLoop_Invoker(src, dst, ksize, border_type), nStripes);
             break;
         }
         default:

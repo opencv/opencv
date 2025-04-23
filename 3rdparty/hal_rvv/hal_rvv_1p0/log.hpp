@@ -1,7 +1,11 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level
 // directory of this distribution and at http://opencv.org/license.html.
-#pragma once
+
+// Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+
+#ifndef OPENCV_HAL_RVV_LOG_HPP_INCLUDED
+#define OPENCV_HAL_RVV_LOG_HPP_INCLUDED
 
 #include <riscv_vector.h>
 
@@ -379,3 +383,5 @@ inline int log64f(const double* src, double* dst, int _len)
 }
 
 }}  // namespace cv::cv_hal_rvv
+
+#endif //OPENCV_HAL_RVV_LOG_HPP_INCLUDED

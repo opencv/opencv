@@ -12,6 +12,7 @@
 // Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
 // Copyright (C) 2009-2011, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014, Itseez Inc., all rights reserved.
+// Copyright (C) 2025, SpaceMIT Inc., all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -179,6 +180,41 @@ copyMask_<uchar>(const uchar* _src, size_t sstep, const uchar* mask, size_t mste
 }
 
 template<> void
+copyMask_<Vec3b>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const uchar* src = (const uchar*)_src;
+        uchar* dst = (uchar*)_dst;
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for( ; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
+        {
+            v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+
+            v_uint8 v_src0, v_src1, v_src2;
+            v_uint8 v_dst0, v_dst1, v_dst2;
+            v_load_deinterleave(src + 3 * x, v_src0, v_src1, v_src2);
+            v_load_deinterleave(dst + 3 * x, v_dst0, v_dst1, v_dst2);
+
+            v_dst0 = v_select(v_nmask, v_dst0, v_src0);
+            v_dst1 = v_select(v_nmask, v_dst1, v_src1);
+            v_dst2 = v_select(v_nmask, v_dst2, v_src2);
+
+            v_store_interleave(dst + 3 * x, v_dst0, v_dst1, v_dst2);
+        }
+        vx_cleanup();
+#endif
+        for( ; x < size.width; x++ )
+            if( mask[x] ) {
+                dst[3 * x] = src[3 * x];
+                dst[3 * x + 1] = src[3 * x + 1];
+                dst[3 * x + 2] = src[3 * x + 2];
+            }
+    }
+}
+
+template<> void
 copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
 {
     CV_IPP_RUN_FAST(CV_INSTRUMENT_FUN_IPP(ippiCopy_16u_C1MR, (const Ipp16u *)_src, (int)sstep, (Ipp16u *)_dst, (int)dstep, ippiSize(size), mask, (int)mstep) >= 0)
@@ -211,6 +247,92 @@ copyMask_<ushort>(const uchar* _src, size_t sstep, const uchar* mask, size_t mst
         #endif
         for( ; x < size.width; x++ )
             if( mask[x] )
+                dst[x] = src[x];
+    }
+}
+
+template<> void
+copyMask_<Vec3s>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const ushort* src = (const ushort*)_src;
+        ushort* dst = (ushort*)_dst;
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for( ; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes() )
+        {
+            v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+            v_uint8 v_nmask0, v_nmask1;
+            v_zip(v_nmask, v_nmask, v_nmask0, v_nmask1);
+
+            v_uint16 v_src0, v_src1, v_src2;
+            v_uint16 v_dst0, v_dst1, v_dst2;
+            v_load_deinterleave(src + 3 * x, v_src0, v_src1, v_src2);
+            v_load_deinterleave(dst + 3 * x, v_dst0, v_dst1, v_dst2);
+            v_uint16 v_src3, v_src4, v_src5;
+            v_uint16 v_dst3, v_dst4, v_dst5;
+            v_load_deinterleave(src + 3 * (x + VTraits<v_uint16>::vlanes()), v_src3, v_src4, v_src5);
+            v_load_deinterleave(dst + 3 * (x + VTraits<v_uint16>::vlanes()), v_dst3, v_dst4, v_dst5);
+
+            v_dst0 = v_select(v_reinterpret_as_u16(v_nmask0), v_dst0, v_src0);
+            v_dst1 = v_select(v_reinterpret_as_u16(v_nmask0), v_dst1, v_src1);
+            v_dst2 = v_select(v_reinterpret_as_u16(v_nmask0), v_dst2, v_src2);
+            v_dst3 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst3, v_src3);
+            v_dst4 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst4, v_src4);
+            v_dst5 = v_select(v_reinterpret_as_u16(v_nmask1), v_dst5, v_src5);
+
+            v_store_interleave(dst + 3 * x, v_dst0, v_dst1, v_dst2);
+            v_store_interleave(dst + 3 * (x + VTraits<v_uint16>::vlanes()), v_dst3, v_dst4, v_dst5);
+        }
+        vx_cleanup();
+#endif
+        for( ; x < size.width; x++ )
+            if( mask[x] ) {
+                dst[3 * x] = src[3 * x];
+                dst[3 * x + 1] = src[3 * x + 1];
+                dst[3 * x + 2] = src[3 * x + 2];
+            }
+    }
+}
+
+template<> void
+copyMask_<int>(const uchar* _src, size_t sstep, const uchar* mask, size_t mstep, uchar* _dst, size_t dstep, Size size)
+{
+    for( ; size.height--; mask += mstep, _src += sstep, _dst += dstep )
+    {
+        const int* src = (const int*)_src;
+        int* dst = (int*)_dst;
+        int x = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        for (; x <= size.width - VTraits<v_uint8>::vlanes(); x += VTraits<v_uint8>::vlanes())
+        {
+            v_int32 v_src0 = vx_load(src + x), v_dst0 = vx_load(dst + x);
+            v_int32 v_src1 = vx_load(src + x +     VTraits<v_int32>::vlanes()), v_dst1 = vx_load(dst + x +     VTraits<v_int32>::vlanes());
+            v_int32 v_src2 = vx_load(src + x + 2 * VTraits<v_int32>::vlanes()), v_dst2 = vx_load(dst + x + 2 * VTraits<v_int32>::vlanes());
+            v_int32 v_src3 = vx_load(src + x + 3 * VTraits<v_int32>::vlanes()), v_dst3 = vx_load(dst + x + 3 * VTraits<v_int32>::vlanes());
+
+            v_uint8 v_nmask = v_eq(vx_load(mask + x), vx_setzero_u8());
+            v_uint8 v_nmask0, v_nmask1;
+            v_zip(v_nmask, v_nmask, v_nmask0, v_nmask1);
+            v_uint8 v_nmask00, v_nmask01, v_nmask10, v_nmask11;
+            v_zip(v_nmask0, v_nmask0, v_nmask00, v_nmask01);
+            v_zip(v_nmask1, v_nmask1, v_nmask10, v_nmask11);
+
+            v_dst0 = v_select(v_reinterpret_as_s32(v_nmask00), v_dst0, v_src0);
+            v_dst1 = v_select(v_reinterpret_as_s32(v_nmask01), v_dst1, v_src1);
+            v_dst2 = v_select(v_reinterpret_as_s32(v_nmask10), v_dst2, v_src2);
+            v_dst3 = v_select(v_reinterpret_as_s32(v_nmask11), v_dst3, v_src3);
+
+            vx_store(dst + x, v_dst0);
+            vx_store(dst + x +     VTraits<v_int32>::vlanes(), v_dst1);
+            vx_store(dst + x + 2 * VTraits<v_int32>::vlanes(), v_dst2);
+            vx_store(dst + x + 3 * VTraits<v_int32>::vlanes(), v_dst3);
+        }
+        vx_cleanup();
+#endif
+        for (; x < size.width; x++)
+            if ( mask[x] )
                 dst[x] = src[x];
     }
 }
@@ -459,6 +581,18 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     }
 
     CV_IPP_RUN_FAST(ipp_copyTo(*this, dst, mask))
+    if ( this->dims <= 2 ) {
+        if ( this->size() == dst.size() && this->size() == dst.size() ) {
+            CALL_HAL(copyToMask, cv_hal_copyToMasked, this->data, this->step, dst.data, dst.step, this->cols, this->rows, this->type(), mask.data, mask.step, mask.type());
+        }
+    }
+    else if ( this->isContinuous() && dst.isContinuous() && mask.isContinuous() )
+    {
+        size_t sz = this->total();
+        if (sz < INT_MAX) {
+            CALL_HAL(copyToMask, cv_hal_copyToMasked, this->data, 0, dst.data, 0, (int)sz, 1, this->type(), mask.data, 0, mask.type());
+        }
+    }
 
     size_t esz = colorMask ? elemSize1() : elemSize();
     BinaryFunc copymask = getCopyMaskFunc(esz);
