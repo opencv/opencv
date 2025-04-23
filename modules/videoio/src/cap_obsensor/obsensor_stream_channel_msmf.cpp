@@ -259,7 +259,6 @@ MSMFStreamChannel::MSMFStreamChannel(const UvcDeviceInfo& devInfo) :
         if (streamType_ == OBSENSOR_STREAM_DEPTH)
         {
             initDepthFrameProcessor();
-            initHardwareD2CProcessor();
         }
 }
 
@@ -491,10 +490,6 @@ STDMETHODIMP MSMFStreamChannel::OnReadSample(HRESULT hrStatus, DWORD dwStreamInd
             if (depthFrameProcessor_)
             {
                 depthFrameProcessor_->process(&fo);
-            }
-            if(hardwareD2CProcessor_)
-            {
-                hardwareD2CProcessor_->process(&fo);
             }
             frameCallback_(&fo);
             buffer->Unlock();

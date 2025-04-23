@@ -44,7 +44,6 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
     static const obsensor::StreamProfile gemini2lDepthProfile = { 1280, 800, 30, obsensor::FRAME_FORMAT_Y16 };
     static const obsensor::StreamProfile gemini2XlColorProfile = { 1280, 800, 10, obsensor::FRAME_FORMAT_MJPG };
     static const obsensor::StreamProfile gemini2XlDepthProfile = { 1280, 800, 10, obsensor::FRAME_FORMAT_Y16 };
-    static const obsensor::StreamProfile gemini300DepthProfile = { 848, 480, 30, obsensor::FRAME_FORMAT_Y16 };
 
     streamChannelGroup_ = obsensor::getStreamChannelGroup(index);
     if (!streamChannelGroup_.empty())
@@ -89,8 +88,6 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                     profile = gemini2lDepthProfile;
                 }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
                     profile = gemini2XlDepthProfile;
-                }else if(IS_OBSENSOR_GEMINI330_PID(channel->getPid())){
-                    profile = gemini300DepthProfile;
                 }
                 channel->start(profile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);

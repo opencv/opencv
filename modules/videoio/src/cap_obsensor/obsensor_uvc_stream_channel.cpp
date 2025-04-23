@@ -209,55 +209,6 @@ DepthFrameUnpacker::~DepthFrameUnpacker() {
     delete[] outputDataBuf_;
 }
 
-HardwareD2CProcessor::HardwareD2CProcessor(const OBHardwareD2CParams& param) : param_(param){}
-
-void HardwareD2CProcessor::process(Frame* frame) {
-    const float scale = param_.scale;
-    const int crop_left = std::max(-param_.left, 0);
-    const int crop_right = std::max(-param_.right, 0);
-    const int pad_top = std::max(param_.top, 0);
-    const int crop_bottom = std::max(-param_.bottom, 0);
-
-    cv::Mat srcMat(frame->height, frame->width, CV_16UC1, frame->data);
-    cv::resize(srcMat, srcMat, cv::Size(), scale, scale, cv::INTER_LINEAR);
-
-    // left/right crop
-    const int valid_width = srcMat.cols - crop_left - crop_right;
-    if (valid_width <= 0 || srcMat.rows <= 0) {
-        CV_LOG_ERROR(NULL, "Invalid horizontal crop parameters");
-        return;
-    }
-    srcMat = srcMat(cv::Rect(crop_left, 0, valid_width, srcMat.rows));
-
-    // top padding
-    if (pad_top > 0) {
-        cv::copyMakeBorder(srcMat, srcMat, pad_top, 0, 0, 0, cv::BORDER_CONSTANT, 0);
-    }
-
-    // bottom crop
-    const int valid_height = srcMat.rows - crop_bottom;
-    if (valid_height <= 0) {
-        CV_LOG_ERROR(NULL, "Invalid vertical crop parameters");
-        return;
-    }
-    srcMat = srcMat(cv::Rect(0, 0, srcMat.cols, valid_height));
-
-    const size_t required_size = srcMat.total() * srcMat.elemSize();
-    if (!srcMat.empty() && required_size <= frame->dataSize) {
-        if (srcMat.isContinuous()) {
-            memcpy(frame->data, srcMat.ptr(), required_size);
-        } else { // handle non-continuous memory
-            cv::Mat contMat = srcMat.clone();
-            memcpy(frame->data, contMat.ptr(), contMat.total() * contMat.elemSize());
-        }
-        frame->width = srcMat.cols;
-        frame->height = srcMat.rows;
-        frame->dataSize = static_cast<uint32_t>(required_size);
-    } else {
-        CV_LOG_ERROR(NULL, "Output buffer too small or empty result");
-    }
-}
-
 #define ON_BITS(count) ((1 << count) - 1)
 #define CREATE_MASK(count, offset) (ON_BITS(count) << offset)
 #define TAKE_BITS(source, count, offset) ((source & CREATE_MASK(count, offset)) >> offset)
@@ -480,14 +431,14 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
         else if(IS_OBSENSOR_GEMINI330_LONG_PID(devInfo_.pid)){
             // return default param
             CameraParam param;
-            param.p0[0] = 366.283f;
-            param.p0[1] = 366.279f;
-            param.p0[2] = 317.089f;
-            param.p0[3] = 234.836f;
-            param.p1[0] = 366.283f;
-            param.p1[1] = 366.279f;
-            param.p1[2] = 317.089f;
-            param.p1[3] = 234.836f;
+            param.p0[0] = 366.751f;
+            param.p0[1] = 365.782f;
+            param.p0[2] = 319.893f;
+            param.p0[3] = 243.415f;
+            param.p1[0] = 366.751f;
+            param.p1[1] = 365.782f;
+            param.p1[2] = 319.893f;
+            param.p1[3] = 243.415f;
             param.p6[0] = 640;
             param.p6[1] = 480;
             param.p7[0] = 640;
@@ -570,22 +521,6 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
         }
     }
     return false;
-}
-
-bool IUvcStreamChannel::initHardwareD2CProcessor()
-{
-    if (IS_OBSENSOR_GEMINI330_LONG_PID(devInfo_.pid)) {
-        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{0.96f, -64, 24, -110, -4});
-        return true;
-    }
-    else if(IS_OBSENSOR_GEMINI330_SHORT_PID(devInfo_.pid)) {
-        hardwareD2CProcessor_ = makePtr<HardwareD2CProcessor>(OBHardwareD2CParams{1.0f, 0, 0, -208, 0});
-        return true;
-    }
-    else {
-        //todo: G2, G2L, G2XL, Astro2, Femto need to implement hardwareD2CProcessor_
-        return false;
-    }
 }
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR_V4L2 || HAVE_OBSENSOR_MSMF

@@ -187,7 +187,6 @@ V4L2StreamChannel::V4L2StreamChannel(const UvcDeviceInfo &devInfo) : IUvcStreamC
     else if (streamType_ == OBSENSOR_STREAM_DEPTH)
     {
         initDepthFrameProcessor();
-        initHardwareD2CProcessor();
     }
 
 }
@@ -299,10 +298,6 @@ void V4L2StreamChannel::grabFrame()
         if (depthFrameProcessor_)
         {
             depthFrameProcessor_->process(&fo);
-        }
-        if (hardwareD2CProcessor_)
-        {
-            hardwareD2CProcessor_->process(&fo);
         }
         frameCallback_(&fo);
         IOCTL_FAILED_CONTINUE(xioctl(devFd_, VIDIOC_QBUF, &buf));

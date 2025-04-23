@@ -69,14 +69,6 @@ struct OBExtensionParam {
     float ps;
 };
 
-struct OBHardwareD2CParams {
-    float scale;
-    int left;
-    int top;
-    int right;
-    int bottom;
-};
-
 class IFrameProcessor{
 public:
     virtual void process(Frame* frame) = 0;
@@ -92,16 +84,6 @@ public:
 private:
     const OBExtensionParam param_;
     uint16_t* lookUpTable_;
-};
-
-class HardwareD2CProcessor: public IFrameProcessor {
-public:
-    HardwareD2CProcessor(const OBHardwareD2CParams& param);
-    virtual ~HardwareD2CProcessor() = default;
-    virtual void process(Frame* frame) override;
-
-private:
-    const OBHardwareD2CParams param_;
 };
 
 class DepthFrameUnpacker: public IFrameProcessor {
@@ -130,14 +112,12 @@ protected:
     virtual bool getXu(uint8_t ctrl, uint8_t** data, uint32_t* len) = 0;
 
     bool initDepthFrameProcessor();
-    bool initHardwareD2CProcessor();
 
 protected:
     const UvcDeviceInfo devInfo_;
     const ObExtensionUnit xuUnit_;
     StreamType streamType_;
     Ptr<IFrameProcessor> depthFrameProcessor_;
-    Ptr<IFrameProcessor> hardwareD2CProcessor_;
 };
 }} // namespace cv::obsensor::
 #endif // HAVE_OBSENSOR
