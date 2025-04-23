@@ -39,7 +39,7 @@ static void rotationKernel(
     {
         for (int t = range.start; t < range.end; ++t)
         {
-            float* out_ptr    = data + size_t(t) * d;
+            float* out_ptr = data + size_t(t) * d;
             const float* table_ptr = rotation_table + size_t(t) * d;
             size_t i = 0;
 
@@ -104,7 +104,7 @@ static void precompRotationTable(float *data,
             // [i, i+1, …, i+w-1]
             v_float32 v_idx = v_cvt_f32(vx_load(idx_buf));
             // [10_000^(-i/d), 10_000^(-(i+1)/d), …, 10_000^(-(i+w-1)/d)]
-            v_float32 v_theta   = v_exp(v_mul(v_mul(v_neg2, v_mul(v_idx, v_inv_d)), v_logBase));
+            v_float32 v_theta = v_exp(v_mul(v_mul(v_neg2, v_mul(v_idx, v_inv_d)), v_logBase));
             v_theta = v_mul(v_setall_f32(float(pos)), v_theta);
             v_float32 sin_v, cos_v;
             v_sincos(v_theta, sin_v, cos_v);
