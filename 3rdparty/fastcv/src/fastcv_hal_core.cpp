@@ -623,6 +623,7 @@ int fastcv_hal_SVD32f(
     }
 
     CV_HAL_RETURN(status, fastcv_hal_SVD32f);
+}
 
 int fastcv_hal_gemm32f(
     const float*    src1,
