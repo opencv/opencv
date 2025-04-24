@@ -115,7 +115,7 @@ static void precompRotationTable(float *data,
         // scalar tail
         for (; i < d_half; i+=1)
         {
-            float theta = pos * std::exp(-2.f * i/d * logBase);
+            float theta = pos * std::exp(-2.f * i * inv_d * logBase);
             data_ptr[2*i    ] = std::sin(theta);
             data_ptr[2*i + 1] = std::cos(theta);
         }
