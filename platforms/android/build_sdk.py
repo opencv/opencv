@@ -139,6 +139,8 @@ class ABI:
         return "%s (%s)" % (self.name, self.toolchain)
     def haveIPP(self):
         return self.name == "x86" or self.name == "x86_64"
+    def haveKleidiCV(self):
+        return self.name == "arm64-v8a"
 
 #===================================================================================================
 
@@ -382,7 +384,7 @@ def get_ndk_dir():
 
 def check_cmake_flag_enabled(cmake_file, flag_name, strict=True):
     print(f"Checking build flag '{flag_name}' in: {cmake_file}")
-    
+
     if not os.path.isfile(cmake_file):
         msg = f"ERROR: File {cmake_file} does not exist."
         if strict:
@@ -396,7 +398,7 @@ def check_cmake_flag_enabled(cmake_file, flag_name, strict=True):
         for line in file:
             if line.strip().startswith(f"{flag_name}="):
                 value = line.strip().split('=')[1]
-                if value == '1':
+                if value == '1' or value == 'ON':
                     print(f"{flag_name}=1 found. Support is enabled.")
                     return
                 else:
@@ -413,7 +415,7 @@ def check_cmake_flag_enabled(cmake_file, flag_name, strict=True):
         sys.exit(1)
     else:
         print("WARNING:", msg)
-    
+
 #===================================================================================================
 
 if __name__ == "__main__":
@@ -519,15 +521,19 @@ if __name__ == "__main__":
         os.chdir(builder.libdest)
         builder.clean_library_build_dir()
         builder.build_library(abi, do_install, args.no_media_ndk)
-        
+
         #Check HAVE_IPP x86 / x86_64
         if abi.haveIPP():
            log.info("Checking HAVE_IPP for ABI: %s", abi.name)
            check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=args.strict_dependencies)
 
+        #Check HAVE_KLEIDICV for armv8
+        if abi.haveKleidiCV():
+           log.info("Checking HAVE_KLEIDICV for ABI: %s", abi.name)
+           check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_KLEIDICV", strict=args.strict_dependencies)
+
     builder.gather_results()
-   
-    
+
     if args.build_doc:
         builder.build_javadoc()
 
