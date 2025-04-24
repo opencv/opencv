@@ -31,21 +31,17 @@
  * with these values. (png_set_rgb_to_gray( png_ptr, 1, 0.299, 0.587 );) For this codec implementation,
  * slightly modified versions are implemented in the below of this page.
 */
-void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
-                               uchar *gray, int gray_step,
-                               cv::Size size, int _swap_rb);
-
-void spngCvt_BGRA2Gray_8u_C4C1R(const uchar *bgra, int rgba_step,
+void spngCvt_BGRA2Gray_8u_CnC1R(const uchar *bgr, int bgr_step,
                                 uchar *gray, int gray_step,
-                                cv::Size size, int _swap_rb);
+                                cv::Size size, int ncn, int _swap_rb);
 
 void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
                                  ushort *gray, int gray_step,
                                  cv::Size size, int ncn, int _swap_rb);
 
 void spngCvt_BGRA2Gray_16u28u_CnC1R(const ushort *bgr, int bgr_step,
-                                 uchar *gray, int gray_step,
-                                 cv::Size size, int ncn, int _swap_rb);
+                                    uchar *gray, int gray_step,
+                                    cv::Size size, int ncn, int _swap_rb);
 
 namespace cv
 {
@@ -247,7 +243,7 @@ bool SPngDecoder::readData(Mat &img)
                     Mat tmp(m_height, m_width, CV_8UC3);
                     if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
                         return false;
-                    spngCvt_BGR2Gray_8u_C3C1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 2);
+                    spngCvt_BGRA2Gray_8u_CnC1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 3, 2);
                     return true;
                 }
             }
@@ -281,8 +277,7 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                            spngCvt_BGR2Gray_8u_C3C1R(buffer.data(), 0,
-                                img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 2);
+                            spngCvt_BGRA2Gray_8u_CnC1R(buffer.data(), 0, img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 3, 2);
                         } while (ret == SPNG_OK);
                     }
                     else if (fmt == SPNG_FMT_RGBA8)
@@ -294,8 +289,7 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                            spngCvt_BGRA2Gray_8u_C4C1R(buffer.data(), 0,
-                                img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 2);
+                            spngCvt_BGRA2Gray_8u_CnC1R(buffer.data(), 0, img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 4, 2);
                         } while (ret == SPNG_OK);
                     }
                     else if (fmt == SPNG_FMT_RGBA16)
@@ -639,9 +633,9 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
 }
 
-void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
-                               uchar *gray, int gray_step,
-                               cv::Size size, int _swap_rb)
+void spngCvt_BGRA2Gray_8u_CnC1R(const uchar *bgr, int bgr_step,
+                                uchar *gray, int gray_step,
+                                cv::Size size, int ncn, int _swap_rb)
 {
     int i;
     for (; size.height--; gray += gray_step)
@@ -652,7 +646,7 @@ void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
 
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
-        for (i = 0; i < size.width; i++, bgr += 3)
+        for (i = 0; i < size.width; i++, bgr += ncn)
         {
             if (bgr[0] != bgr[1] || bgr[0] != bgr[2])
             {
@@ -664,35 +658,7 @@ void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
             }
         }
 
-        bgr += bgr_step - size.width * 3;
-    }
-}
-
-void spngCvt_BGRA2Gray_8u_C4C1R(const uchar *bgra, int rgba_step,
-                                uchar *gray, int gray_step,
-                                cv::Size size, int _swap_rb)
-{
-    for (; size.height--; gray += gray_step)
-    {
-        int cBGR0 = 3737;
-        int cBGR1 = 19234;
-        int cBGR2 = 9797;
-
-        if (_swap_rb)
-            std::swap(cBGR0, cBGR2);
-        for (int i = 0; i < size.width; i++, bgra += 4)
-        {
-            if (bgra[0] != bgra[1] || bgra[0] != bgra[2])
-            {
-                gray[i] = (uchar)((cBGR0 * bgra[0] + cBGR1 * bgra[1] + cBGR2 * bgra[2]) >> 15);
-            }
-            else
-            {
-                gray[i] = bgra[0];
-            }
-        }
-
-        bgra += rgba_step - size.width * 4;
+        bgr += bgr_step - size.width * ncn;
     }
 }
 
@@ -710,7 +676,14 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
             std::swap(cBGR0, cBGR2);
         for (int i = 0; i < size.width; i++, bgr += ncn)
         {
-            gray[i] = (ushort)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15);
+            if (bgr[0] != bgr[1] || bgr[0] != bgr[2])
+            {
+                gray[i] = (ushort)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15);
+            }
+            else
+            {
+                gray[i] = bgr[0];
+            }
         }
 
         bgr += bgr_step - size.width * ncn;
@@ -718,8 +691,8 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
 }
 
 void spngCvt_BGRA2Gray_16u28u_CnC1R(const ushort *bgr, int bgr_step,
-                                 uchar *gray, int gray_step,
-                                 cv::Size size, int ncn, int _swap_rb)
+                                    uchar *gray, int gray_step,
+                                    cv::Size size, int ncn, int _swap_rb)
 {
     int cBGR0 = 3737;
     int cBGR1 = 19234;
