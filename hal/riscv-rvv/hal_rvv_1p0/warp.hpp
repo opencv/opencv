@@ -834,7 +834,7 @@ inline int remap32f(int src_type, const uchar *src_data, size_t src_step, int sr
     case CV_HAL_INTER_NEAREST*100 + CV_32FC1:
     case CV_HAL_INTER_LINEAR*100 + CV_32FC1:
         return invoke(dst_width, dst_height, {remap32fC1<RVV_F32M8>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
-    
+
     case CV_HAL_INTER_CUBIC*100 + CV_8UC1:
         return invoke(dst_width, dst_height, {remap32fCubic<RVV_U8MF4>}, s16, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, mapx, mapx_step, mapy, mapy_step, interpolation, border_type, border_value);
     case CV_HAL_INTER_CUBIC*100 + CV_16UC1:

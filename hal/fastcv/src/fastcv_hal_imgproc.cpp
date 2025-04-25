@@ -452,7 +452,7 @@ int fastcv_hal_boxFilter(
         nStripes = nThreads;
         stripeHeight = src.rows/nThreads;
     }
-    
+
     cv::parallel_for_(cv::Range(0, nStripes),
             FcvBoxLoop_Invoker(src, width, height, dst_temp, border_type, ksize_width, normalize, stripeHeight, nStripes, src_depth), nStripes);
 

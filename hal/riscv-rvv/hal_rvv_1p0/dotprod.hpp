@@ -231,4 +231,3 @@ inline int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size
 }}} // cv::cv_hal_rvv::dotprod
 
 #endif // OPENCV_HAL_RVV_DOTPROD_HPP_INCLUDED
-
