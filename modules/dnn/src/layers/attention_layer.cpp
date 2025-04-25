@@ -93,9 +93,9 @@ static void precompRotationTable(float *data,
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const size_t w = VTraits<v_float32>::vlanes();
-        const v_float32 v_logBase = v_setall_f32(logBase);
-        const v_float32 v_inv_d   = v_setall_f32(inv_d);
-        const v_float32 v_neg2    = v_setall_f32(-2.0f);
+        const v_float32 v_logBase = vx_setall_f32(logBase);
+        const v_float32 v_inv_d   = vx_setall_f32(inv_d);
+        const v_float32 v_neg2    = vx_setall_f32(-2.0f);
 
         for (; i + w <= d_half; i+=w) {
             int idx_buf[CV_SIMD_WIDTH];
