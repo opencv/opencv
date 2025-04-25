@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 // Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+// Copyright (C) 2025, SpaceMIT Inc., all rights reserved.
 
 #ifndef OPENCV_HAL_RVV_FLIP_HPP_INCLUDED
 #define OPENCV_HAL_RVV_FLIP_HPP_INCLUDED
@@ -51,35 +52,12 @@ inline void flipFillBuffer(T* buf, size_t len, int esz)
             buf[j] = (T)(i + j);
 }
 
-inline void flipX(int esz,
-                  const uchar* src_data,
-                  size_t src_step,
-                  int src_width,
-                  int src_height,
-                  uchar* dst_data,
-                  size_t dst_step)
-{
-    size_t w = (size_t)src_width * esz;
-    auto src0 = src_data, src1 = src_data + src_step * (src_height - 1);
-    auto dst0 = dst_data, dst1 = dst_data + dst_step * (src_height - 1);
-    size_t vl;
-    for (src_height -= 2; src_height >= 0;
-         src_height -= 2, src0 += src_step, dst0 += dst_step, src1 -= src_step, dst1 -= dst_step)
-    {
-        for (size_t i = 0; i < w; i += vl)
-        {
-            vl = __riscv_vsetvl_e8m8(w - i);
-            __riscv_vse8(dst1 + i, __riscv_vle8_v_u8m8(src0 + i, vl), vl);
-            __riscv_vse8(dst0 + i, __riscv_vle8_v_u8m8(src1 + i, vl), vl);
-        }
-    }
-    if (src_height == -1)
-    {
-        for (size_t i = 0; i < w; i += (int)vl)
-        {
-            vl = __riscv_vsetvl_e8m8(w - i);
-            __riscv_vse8(dst0 + i, __riscv_vle8_v_u8m8(src1 + i, vl), vl);
-        }
+inline void flipX(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                  int src_width, int src_height, int esz) {
+    for (int h = 0; h < src_height; h++) {
+        const uchar* src_row = src_data + src_step * h;
+        uchar* dst_row = dst_data + dst_step * (src_height - h - 1);
+        std::memcpy(dst_row, src_row, esz * src_width);
     }
 }
 
@@ -207,9 +185,11 @@ inline int flip(int src_type,
     int esz = CV_ELEM_SIZE(src_type);
     if (flip_mode == 0)
     {
-        flipX(esz, src_data, src_step, src_width, src_height, dst_data, dst_step);
+        flipX(src_data, src_step, dst_data, dst_step, src_width, src_height, esz);
+        return CV_HAL_ERROR_OK;
     }
-    else if (flip_mode > 0)
+
+    if (flip_mode > 0)
     {
         if (__riscv_vlenb() * 8 <= 256)
             flipY<FlipVlen256>(esz, src_data, src_step, src_width, src_height, dst_data, dst_step);
