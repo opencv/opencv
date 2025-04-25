@@ -624,3 +624,118 @@ int fastcv_hal_SVD32f(
 
     CV_HAL_RETURN(status, fastcv_hal_SVD32f);
 }
+
+int fastcv_hal_gemm32f(
+    const float*    src1,
+    size_t          src1_step,
+    const float*    src2,
+    size_t          src2_step,
+    float           alpha,
+    const float*    src3,
+    size_t          src3_step,
+    float           beta,
+    float*          dst,
+    size_t          dst_step,
+    int             m,
+    int             n,
+    int             k,
+    int             flags)
+{
+    cv::Mat src1_t, src2_t, src3_t, dst_temp1;
+    int height_a = m, width_a = n, width_d = k;
+    const float *src1p = src1, *src2p = src2, *src3p = src3;
+
+    INITIALIZATION_CHECK;
+
+    if((flags & (cv::GEMM_1_T)) && (flags & (cv::GEMM_2_T)))
+    {
+        height_a = n; width_a = m;
+    }
+    else if(flags & (cv::GEMM_1_T))
+    {
+        src1_t = cv::Mat(width_a, height_a, CV_32FC1);
+        fcvTransposef32_v2(src1, width_a, height_a, src1_step, src1_t.ptr<float>(), src1_t.step[0]);
+        src1p = src1_t.ptr<float>();
+        src1_step = src1_t.step[0];
+        height_a = n; width_a = m;
+    }
+    else if(flags & (cv::GEMM_2_T))
+    {
+        src2_t = cv::Mat(width_a, width_d, CV_32FC1);
+        fcvTransposef32_v2(src2, width_a, width_d, src2_step, src2_t.ptr<float>(), src2_t.step[0]);
+        src2p = src2_t.ptr<float>();
+        src2_step = src2_t.step[0];
+    }
+
+    if((flags & cv::GEMM_3_T) && beta != 0.0 && src3 != NULL)
+    {
+        src3_t = cv::Mat(height_a, width_d, CV_32FC1);
+        fcvTransposef32_v2(src3, height_a, width_d, src3_step, src3_t.ptr<float>(), src3_t.step[0]);
+        src3p = src3_t.ptr<float>();
+        src3_step = src3_t.step[0];
+    }
+
+    bool inplace = false;
+    size_t dst_stride;
+    float *dstp = NULL;
+
+    if(src1 == dst || src2 == dst || src3 == dst)
+    {
+        dst_temp1 = cv::Mat(height_a, width_d, CV_32FC1);
+        dstp = dst_temp1.ptr<float>();
+        inplace = true;
+        dst_stride = dst_temp1.step[0];
+    }
+    else
+    {
+        dstp = dst;
+        dst_stride = dst_step;
+    }
+
+    float *dstp1 = dstp;
+
+    fcvStatus status = FASTCV_SUCCESS;
+
+    if(alpha != 0.0)
+    {
+        if((flags & (cv::GEMM_1_T)) && (flags & (cv::GEMM_2_T)))
+        {
+            cv::Mat dst_temp2 = cv::Mat(k, n, CV_32FC1);
+            fcvMatrixMultiplyf32_v2(src2p, m, k, src2_step, src1p, n, src1_step,
+                                         dst_temp2.ptr<float>(), dst_temp2.step[0]);
+            fcvTransposef32_v2(dst_temp2.ptr<float>(), n, k, dst_temp2.step[0], dstp, dst_stride);
+            
+        }
+        else
+        {
+            status = fcvMatrixMultiplyf32_v2(src1p, width_a, height_a, src1_step, src2p, width_d,
+                                                src2_step, dstp, dst_stride);
+        }
+    }
+
+    if(alpha != 1.0 && alpha != 0.0 && status == FASTCV_SUCCESS)
+    {
+        status = fcvMultiplyScalarf32(dstp, width_d, height_a, dst_stride, alpha, dstp1, dst_stride);
+    }
+
+    if(src3 != NULL && beta != 0.0 && status == FASTCV_SUCCESS)
+    {
+        cv::Mat dst3 = cv::Mat(height_a, width_d, CV_32FC1);
+        if(beta != 1.0)
+        {
+            status = fcvMultiplyScalarf32(src3p, width_d, height_a, src3_step, beta, (float32_t*)dst3.data, dst3.step);
+            if(status == FASTCV_SUCCESS)
+                fcvAddf32_v2(dstp, width_d, height_a, dst_stride, (float32_t*)dst3.data, dst3.step, dstp1, dst_stride);
+        }
+        else
+            fcvAddf32_v2(dstp, width_d, height_a, dst_stride, src3p, src3_step, dstp1, dst_stride);
+    }
+
+    if(inplace)
+    {
+        cv::Mat dst_mat = cv::Mat(height_a, width_d, CV_32FC1, (void*)dst, dst_step);
+        dst_temp1.copyTo(dst_mat);
+    }
+
+    CV_HAL_RETURN(status,hal_gemm32f);
+}
