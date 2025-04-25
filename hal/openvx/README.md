@@ -19,33 +19,33 @@ The following short sample gives basic knowledge on the wrappers usage:
 
 int main()
 {
-	vx_uint32 width = 640, height = 480;
-	try
-	{
-		ivx::Context context = ivx::Context::create();
-		ivx::Graph graph = ivx::Graph::create(context);
-		ivx::Image
-		    gray = ivx::Image::create(context, width, height, VX_DF_IMAGE_U8),
-		    gb   = ivx::Image::createVirtual(graph),
-		    res  = ivx::Image::create(context, width, height, VX_DF_IMAGE_U8);
+    vx_uint32 width = 640, height = 480;
+    try
+    {
+        ivx::Context context = ivx::Context::create();
+        ivx::Graph graph = ivx::Graph::create(context);
+        ivx::Image
+            gray = ivx::Image::create(context, width, height, VX_DF_IMAGE_U8),
+            gb   = ivx::Image::createVirtual(graph),
+            res  = ivx::Image::create(context, width, height, VX_DF_IMAGE_U8);
 
-		context.loadKernels("openvx-debug");  // ivx::debug::*
+        context.loadKernels("openvx-debug");  // ivx::debug::*
 
-		ivx::debug::fReadImage(context, inputPath, gray);
+        ivx::debug::fReadImage(context, inputPath, gray);
 
-		ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_3x3, gray, gb);
-		ivx::Node::create(
-		    graph,
-		    VX_KERNEL_THRESHOLD,
-		    gb,
-		    ivx::Threshold::createBinary(context, VX_TYPE_UINT8, 50),
-		    res
-		);
+        ivx::Node::create(graph, VX_KERNEL_GAUSSIAN_3x3, gray, gb);
+        ivx::Node::create(
+            graph,
+            VX_KERNEL_THRESHOLD,
+            gb,
+            ivx::Threshold::createBinary(context, VX_TYPE_UINT8, 50),
+            res
+        );
 
-		graph.verify();
-		graph.process();
+        graph.verify();
+        graph.process();
 
-		ivx::debug::fWriteImage(context, res, "ovx-res-cpp.pgm");
+        ivx::debug::fWriteImage(context, res, "ovx-res-cpp.pgm");
     }
     catch (const ivx::RuntimeError& e)
     {
@@ -65,7 +65,7 @@ int main()
 
     return 0;
 }
-	
+
 ```
 ## C++ API overview
 

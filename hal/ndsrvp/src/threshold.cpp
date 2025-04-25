@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.	
+// of this distribution and at http://opencv.org/license.html.
 
 #include "ndsrvp_hal.hpp"
 #include "opencv2/imgproc/hal/interface.h"
@@ -129,13 +129,13 @@ int threshold(const uchar* src_data, size_t src_step,
         {
             threshold_op<uchar, uint8x8_t, 8, opThreshBinary_t>,
             threshold_op<uchar, uint8x8_t, 8, opThreshBinaryInv_t>,
-            threshold_op<uchar, uint8x8_t, 8, opThreshTrunc_t>, 
+            threshold_op<uchar, uint8x8_t, 8, opThreshTrunc_t>,
             threshold_op<uchar, uint8x8_t, 8, opThreshToZero_t>,
             threshold_op<uchar, uint8x8_t, 8, opThreshToZeroInv_t> },
         {
             threshold_op<char, int8x8_t, 8, opThreshBinary_t>,
             threshold_op<char, int8x8_t, 8, opThreshBinaryInv_t>,
-            threshold_op<char, int8x8_t, 8, opThreshTrunc_t>, 
+            threshold_op<char, int8x8_t, 8, opThreshTrunc_t>,
             threshold_op<char, int8x8_t, 8, opThreshToZero_t>,
             threshold_op<char, int8x8_t, 8, opThreshToZeroInv_t> },
         {

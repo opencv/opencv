@@ -704,7 +704,6 @@ int fastcv_hal_gemm32f(
             fcvMatrixMultiplyf32_v2(src2p, m, k, src2_step, src1p, n, src1_step,
                                          dst_temp2.ptr<float>(), dst_temp2.step[0]);
             fcvTransposef32_v2(dst_temp2.ptr<float>(), n, k, dst_temp2.step[0], dstp, dst_stride);
-            
         }
         else
         {

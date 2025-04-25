@@ -378,7 +378,7 @@ void extract4(const Size2D &size,
                                   vst1q_##sgn##bits(dst1 + d1j, vals.v4.val[3]); \
                               }
 
-#endif 
+#endif
 
 #define SPLIT4ALPHA(sgn,bits) void split4(const Size2D &_size,                                          \
                                           const sgn##bits * srcBase, ptrdiff_t srcStride,               \

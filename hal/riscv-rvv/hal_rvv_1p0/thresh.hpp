@@ -298,9 +298,9 @@ static inline int adaptiveThreshold(int start, int end, const uchar* src_data, s
         {
             if (i >= 0 && i < height)
             {
-                for (int j = 0; j < left; j++) 
+                for (int j = 0; j < left; j++)
                     process(i, j);
-                for (int j = right; j < width; j++) 
+                for (int j = right; j < width; j++)
                     process(i, j);
 
                 int vl;
@@ -378,9 +378,9 @@ static inline int adaptiveThreshold(int start, int end, const uchar* src_data, s
         {
             if (i >= 0 && i < height)
             {
-                for (int j = 0; j < left; j++) 
+                for (int j = 0; j < left; j++)
                     process(i, j);
-                for (int j = right; j < width; j++) 
+                for (int j = right; j < width; j++)
                     process(i, j);
 
                 int vl;

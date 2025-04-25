@@ -1,6 +1,6 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
-// of this distribution and at http://opencv.org/license.html.	
+// of this distribution and at http://opencv.org/license.html.
 
 #include "ndsrvp_hal.hpp"
 #include "opencv2/imgproc/hal/interface.h"
@@ -49,7 +49,7 @@ int integral(int depth, int sdepth, int sqdepth,
             int j = 0;
 
             for (; j + 8 <= width; j += 8) {
-                unsigned long vs8x8 = *(unsigned long*)(src_row + j); 
+                unsigned long vs8x8 = *(unsigned long*)(src_row + j);
 
                 unsigned long vs810 = __nds__zunpkd810(vs8x8);
                 unsigned long vs832 = __nds__zunpkd832(vs8x8);

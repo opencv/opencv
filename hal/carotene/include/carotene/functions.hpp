@@ -359,7 +359,7 @@ namespace CAROTENE_NS {
 
     /*
         For each point `p` within `size`, do:
-        dst[p] = src0[p] * scale / src1[p] 
+        dst[p] = src0[p] * scale / src1[p]
 
         NOTE: ROUND_TO_ZERO convert policy is used
     */
@@ -420,7 +420,7 @@ namespace CAROTENE_NS {
 
     /*
         For each point `p` within `size`, do:
-        dst[p] = scale / src[p] 
+        dst[p] = scale / src[p]
 
         NOTE: ROUND_TO_ZERO convert policy is used
     */

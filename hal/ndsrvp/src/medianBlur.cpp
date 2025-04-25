@@ -287,7 +287,7 @@ int medianBlur(const uchar* src_data, size_t src_step,
             medianBlur_SortNet<ushort, int, uint16x4_t>( src_data_rep, src_step, dst_data, dst_step, width, height, cn, ksize );
         else if( depth == CV_16S )
             medianBlur_SortNet<short, int, int16x4_t>( src_data_rep, src_step, dst_data, dst_step, width, height, cn, ksize );
-        else 
+        else
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
         return CV_HAL_ERROR_OK;
