@@ -123,4 +123,5 @@ This tutorial code's is shown lines below. You can also download it from
 ![BGR And DEPTH And DepthToColor frame](images/orbbec_uvc_cpp.jpg)
 
 ### Note
-Mac users need sudo privileges to execute the code.
+ - Mac users need sudo privileges to execute the code.
+ - **Firmware**: If you’re using an Orbbec UVC 3D camera, please ensure your camera’s firmware is updated to the latest version to avoid potential compatibility issues. For more details, see [Orbbec’s Release Notes](https://github.com/orbbec/OrbbecSDK_v2/releases).
