@@ -243,7 +243,7 @@ inline int SVD(T* src, size_t src_step, T* w, T*, size_t, T* vt, size_t vt_step,
                     }
                 }
             }
-            
+
             auto vec_sum = RVV_T::vmv(0, vlmax);
             for( k = 0; k < m; k += vl )
             {
