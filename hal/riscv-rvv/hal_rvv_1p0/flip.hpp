@@ -46,45 +46,36 @@ CV_HAL_RVV_FLIPY_C1(16UC1, ushort, RVV_U16M8)
 CV_HAL_RVV_FLIPY_C1(32UC1, unsigned, RVV_U32M8)
 CV_HAL_RVV_FLIPY_C1(64UC1, uint64_t, RVV_U64M8)
 
-struct RVV_C3_U8M2 : RVV_U8M2 {
-    static inline vuint8m2x3_t vload3(const uint8_t *base, size_t vl) { return __riscv_vlseg3e8_v_u8m2x3(base, vl); }
-    static inline vuint8m2x3_t vflip3(const vuint8m2x3_t &v_tuple, const vuint8m2_t &indices, size_t vl) {
-        return __riscv_vcreate_v_u8m2x3(__riscv_vrgather(__riscv_vget_u8m2(v_tuple, 0), indices, vl),
-                                        __riscv_vrgather(__riscv_vget_u8m2(v_tuple, 1), indices, vl),
-                                        __riscv_vrgather(__riscv_vget_u8m2(v_tuple, 2), indices, vl));
-    }
-    static inline void vstore3(uint8_t *base, const vuint8m2x3_t &v_tuple, size_t vl) { __riscv_vsseg3e8(base, v_tuple, vl); }
+#if defined (__clang__) && __clang_major__ < 18
+#define OPENCV_HAL_IMPL_RVV_VCREATE_x3(suffix, width, v0, v1, v2) \
+    __riscv_vset_v_##suffix##m##width##_##suffix##m##width##x3(v, 0, v0); \
+    v = __riscv_vset(v, 1, v1); \
+    v = __riscv_vset(v, 2, v2);
+#define __riscv_vcreate_v_u8m2x3(v0, v1, v2)  OPENCV_HAL_IMPL_RVV_VCREATE_x3(u8, 2, v0, v1, v2)
+#define __riscv_vcreate_v_u16m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(u16, 2, v0, v1, v2)
+#define __riscv_vcreate_v_u32m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(u32, 2, v0, v1, v2)
+#define __riscv_vcreate_v_u64m2x3(v0, v1, v2) OPENCV_HAL_IMPL_RVV_VCREATE_x3(u64, 2, v0, v1, v2)
+#endif
+
+#define CV_HAL_RVV_FLIPY_C3_TYPES(width) \
+struct RVV_C3_U##width##M2 : RVV_U##width##M2 { \
+    static inline vuint##width##m2x3_t vload3(const uint##width##_t *base, size_t vl) { return __riscv_vlseg3e##width##_v_u##width##m2x3(base, vl); } \
+    static inline vuint##width##m2x3_t vflip3(const vuint##width##m2x3_t &v_tuple, const vuint##width##m2_t &indices, size_t vl) { \
+        auto v0 = __riscv_vrgather(__riscv_vget_u##width##m2(v_tuple, 0), indices, vl); \
+        auto v1 = __riscv_vrgather(__riscv_vget_u##width##m2(v_tuple, 1), indices, vl); \
+        auto v2 = __riscv_vrgather(__riscv_vget_u##width##m2(v_tuple, 2), indices, vl); \
+        vuint##width##m2x3_t v = __riscv_vcreate_v_u##width##m2x3(v0, v1, v2); \
+        return v; \
+    } \
+    static inline void vstore3(uint##width##_t *base, const vuint##width##m2x3_t &v_tuple, size_t vl) { __riscv_vsseg3e##width(base, v_tuple, vl); } \
 };
-struct RVV_C3_U16M2 : RVV_U16M2 {
-    static inline vuint16m2x3_t vload3(const uint16_t *base, size_t vl) { return __riscv_vlseg3e16_v_u16m2x3(base, vl); }
-    static inline vuint16m2x3_t vflip3(const vuint16m2x3_t &v_tuple, const vuint16m2_t &indices, size_t vl) {
-        return __riscv_vcreate_v_u16m2x3(__riscv_vrgather(__riscv_vget_u16m2(v_tuple, 0), indices, vl),
-                                         __riscv_vrgather(__riscv_vget_u16m2(v_tuple, 1), indices, vl),
-                                         __riscv_vrgather(__riscv_vget_u16m2(v_tuple, 2), indices, vl));
-    }
-    static inline void vstore3(uint16_t *base, const vuint16m2x3_t &v_tuple, size_t vl) { __riscv_vsseg3e16(base, v_tuple, vl); }
-};
-struct RVV_C3_U32M2 : RVV_U32M2 {
-    static inline vuint32m2x3_t vload3(const uint32_t *base, size_t vl) { return __riscv_vlseg3e32_v_u32m2x3(base, vl); }
-    static inline vuint32m2x3_t vflip3(const vuint32m2x3_t &v_tuple, const vuint32m2_t &indices, size_t vl) {
-        return __riscv_vcreate_v_u32m2x3(__riscv_vrgather(__riscv_vget_u32m2(v_tuple, 0), indices, vl),
-                                         __riscv_vrgather(__riscv_vget_u32m2(v_tuple, 1), indices, vl),
-                                         __riscv_vrgather(__riscv_vget_u32m2(v_tuple, 2), indices, vl));
-    }
-    static inline void vstore3(uint32_t *base, const vuint32m2x3_t &v_tuple, size_t vl) { __riscv_vsseg3e32(base, v_tuple, vl); }
-};
-struct RVV_C3_U64M2 : RVV_U64M2 {
-    static inline vuint64m2x3_t vload3(const uint64_t *base, size_t vl) { return __riscv_vlseg3e64_v_u64m2x3(base, vl); }
-    static inline vuint64m2x3_t vflip3(const vuint64m2x3_t &v_tuple, const vuint64m2_t &indices, size_t vl) {
-        return __riscv_vcreate_v_u64m2x3(__riscv_vrgather(__riscv_vget_u64m2(v_tuple, 0), indices, vl),
-                                         __riscv_vrgather(__riscv_vget_u64m2(v_tuple, 1), indices, vl),
-                                         __riscv_vrgather(__riscv_vget_u64m2(v_tuple, 2), indices, vl));
-    }
-    static inline void vstore3(uint64_t *base, const vuint64m2x3_t &v_tuple, size_t vl) { __riscv_vsseg3e64(base, v_tuple, vl); }
-};
+CV_HAL_RVV_FLIPY_C3_TYPES(8)
+CV_HAL_RVV_FLIPY_C3_TYPES(16)
+CV_HAL_RVV_FLIPY_C3_TYPES(32)
+CV_HAL_RVV_FLIPY_C3_TYPES(64)
+
 #define CV_HAL_RVV_FLIPY_C3(name, _Tps, RVV) \
 inline void flipY_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height) { \
-    int vlmax = RVV::setvlmax(); \
     for (int h = 0; h < src_height; h++) { \
         const _Tps* src_row = (const _Tps*)(src_data + src_step * h); \
         _Tps* dst_row = (_Tps*)(dst_data + dst_step * (h + 1)); \
