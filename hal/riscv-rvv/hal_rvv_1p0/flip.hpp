@@ -18,20 +18,13 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_flip
 #define cv_hal_flip cv::cv_hal_rvv::flip
 
-inline void flipX(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                  int src_width, int src_height, int esz) {
-    for (int h = 0; h < src_height; h++) {
-        const uchar* src_row = src_data + src_step * h;
-        uchar* dst_row = dst_data + dst_step * (src_height - h - 1);
-        std::memcpy(dst_row, src_row, esz * src_width);
-    }
-}
+namespace {
 
 #define CV_HAL_RVV_FLIPY_C1(name, _Tps, RVV) \
-inline void flipY_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height) { \
+inline void flip_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height, int flip_mode) { \
     for (int h = 0; h < src_height; h++) { \
         const _Tps* src_row = (const _Tps*)(src_data + src_step * h); \
-        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (h + 1)); \
+        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (flip_mode < 0 ? (src_height - h) : (h + 1))); \
         int vl; \
         for (int w = 0; w < src_width; w += vl) { \
             vl = RVV::setvl(src_width - w); \
@@ -75,10 +68,10 @@ CV_HAL_RVV_FLIPY_C3_TYPES(32)
 CV_HAL_RVV_FLIPY_C3_TYPES(64)
 
 #define CV_HAL_RVV_FLIPY_C3(name, _Tps, RVV) \
-inline void flipY_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height) { \
+inline void flip_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height, int flip_mode) { \
     for (int h = 0; h < src_height; h++) { \
         const _Tps* src_row = (const _Tps*)(src_data + src_step * h); \
-        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (h + 1)); \
+        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (flip_mode < 0 ? (src_height - h) : (h + 1))); \
         int vl; \
         for (int w = 0; w < src_width; w += vl) { \
             vl = RVV::setvl(src_width - w); \
@@ -237,61 +230,41 @@ inline void flipXY(int esz,
     }
 }
 
-inline int flip(int src_type,
-                const uchar* src_data,
-                size_t src_step,
-                int src_width,
-                int src_height,
-                uchar* dst_data,
-                size_t dst_step,
-                int flip_mode)
+} // namespace anonymous
+
+inline int flip(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height,
+                uchar* dst_data, size_t dst_step, int flip_mode)
 {
-    if (src_width < 0 || src_height < 0 || src_data == dst_data)
+    int esz = CV_ELEM_SIZE(src_type);
+    if (src_width < 0 || src_height < 0 || src_data == dst_data || esz > 32)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    int esz = CV_ELEM_SIZE(src_type);
     if (flip_mode == 0)
     {
-        flipX(src_data, src_step, dst_data, dst_step, src_width, src_height, esz);
+        for (int h = 0; h < src_height; h++) {
+            const uchar* src_row = src_data + src_step * h;
+            uchar* dst_row = dst_data + dst_step * (src_height - h - 1);
+            std::memcpy(dst_row, src_row, esz * src_width);
+        }
         return CV_HAL_ERROR_OK;
     }
 
-    if (flip_mode > 0) {
-        switch (esz) {
-            case 1: {
-                flipY_8UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 2: {
-                flipY_16UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 3: {
-                flipY_8UC3(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 4: {
-                flipY_32UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 6: {
-                flipY_16UC3(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 8: {
-                flipY_64UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 12: {
-                flipY_32UC3(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            case 24: {
-                flipY_64UC3(src_data, src_step, dst_data, dst_step, src_width, src_height);
-                return CV_HAL_ERROR_OK;
-            }
-            // no default
-        }
+    using FlipFunc = void (*)(const uchar*, size_t, uchar*, size_t, int, int, int);
+    static FlipFunc flip_func_tab[] = {
+        0, flip_8UC1, flip_16UC1, flip_8UC3,
+        flip_32UC1, 0, flip_16UC3, 0,
+        flip_64UC1, 0, 0, 0,
+        flip_32UC3, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        flip_64UC3, 0, 0, 0,
+        0, 0, 0, 0,
+        0
+    };
+    FlipFunc func = flip_func_tab[esz];
+    if (func) {
+        func(src_data, src_step, dst_data, dst_step, src_width, src_height, flip_mode);
+        return CV_HAL_ERROR_OK;
     }
 
     if (flip_mode > 0)
