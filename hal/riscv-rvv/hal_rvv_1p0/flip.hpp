@@ -18,6 +18,34 @@ namespace cv { namespace cv_hal_rvv {
 #undef cv_hal_flip
 #define cv_hal_flip cv::cv_hal_rvv::flip
 
+inline void flipX(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
+                  int src_width, int src_height, int esz) {
+    for (int h = 0; h < src_height; h++) {
+        const uchar* src_row = src_data + src_step * h;
+        uchar* dst_row = dst_data + dst_step * (src_height - h - 1);
+        std::memcpy(dst_row, src_row, esz * src_width);
+    }
+}
+
+#define CV_HAL_RVV_FLIPY_C1(name, _Tps, RVV) \
+inline void flipY_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height) { \
+    for (int h = 0; h < src_height; h++) { \
+        const _Tps* src_row = (const _Tps*)(src_data + src_step * h); \
+        _Tps* dst_row = (_Tps*)(dst_data + dst_step * (h + 1)); \
+        int vl; \
+        for (int w = 0; w < src_width; w += vl) { \
+            vl = RVV::setvl(src_width - w); \
+            RVV::VecType indices = __riscv_vrsub(RVV::vid(vl), vl - 1, vl); \
+            auto v = RVV::vload(src_row + w, vl); \
+            RVV::vstore(dst_row - w - vl, __riscv_vrgather(v, indices, vl), vl); \
+        } \
+    } \
+}
+CV_HAL_RVV_FLIPY_C1(8UC1, uchar, RVV_U8M8)
+CV_HAL_RVV_FLIPY_C1(16UC1, ushort, RVV_U16M8)
+CV_HAL_RVV_FLIPY_C1(32UC1, unsigned, RVV_U32M8)
+CV_HAL_RVV_FLIPY_C1(64UC1, uint64_t, RVV_U64M8)
+
 struct FlipVlen256
 {
     using SrcType = RVV_U8M8;
@@ -50,15 +78,6 @@ inline void flipFillBuffer(T* buf, size_t len, int esz)
     for (int i = (int)len - esz; i >= 0; i -= esz, buf += esz)
         for (int j = 0; j < esz; j++)
             buf[j] = (T)(i + j);
-}
-
-inline void flipX(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step,
-                  int src_width, int src_height, int esz) {
-    for (int h = 0; h < src_height; h++) {
-        const uchar* src_row = src_data + src_step * h;
-        uchar* dst_row = dst_data + dst_step * (src_height - h - 1);
-        std::memcpy(dst_row, src_row, esz * src_width);
-    }
 }
 
 template <typename FlipVlen,
@@ -187,6 +206,28 @@ inline int flip(int src_type,
     {
         flipX(src_data, src_step, dst_data, dst_step, src_width, src_height, esz);
         return CV_HAL_ERROR_OK;
+    }
+
+    if (flip_mode > 0) {
+        switch (esz) {
+            case 1: {
+                flipY_8UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
+                return CV_HAL_ERROR_OK;
+            }
+            case 2: {
+                flipY_16UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
+                return CV_HAL_ERROR_OK;
+            }
+            case 4: {
+                flipY_32UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
+                return CV_HAL_ERROR_OK;
+            }
+            case 8: {
+                flipY_64UC1(src_data, src_step, dst_data, dst_step, src_width, src_height);
+                return CV_HAL_ERROR_OK;
+            }
+            // no default
+        }
     }
 
     if (flip_mode > 0)
