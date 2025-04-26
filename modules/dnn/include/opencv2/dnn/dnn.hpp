@@ -606,7 +606,7 @@ CV__DNN_INLINE_NS_BEGIN
          *
          *  @returns index of bound layer (the same as layerId or newly created)
          */
-        int registerOutput(const std::string& outputName, int layerId, int outputPort);
+        CV_WRAP int registerOutput(const std::string& outputName, int layerId, int outputPort);
 
         /** @brief Sets outputs names of the network input pseudo layer.
          *
