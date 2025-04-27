@@ -246,7 +246,7 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_ARG_OUTPUT=3, //!< output of the model.
         DNN_ARG_TEMP=4,   //!< intermediate result, a result of some operation and input to some other operation(s).
         DNN_ARG_PATTERN=5, //!< not used for now
-        DNN_ARG_CACHED=6
+        DNN_ARG_CACHED=6 //!< cached argument, used in some operations to store intermediate results
     };
 
     CV_EXPORTS std::string argKindToString(ArgKind kind);
