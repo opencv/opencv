@@ -37,24 +37,48 @@ using std::string;
 typedef std::unordered_map<std::string, int64_t> NamesHash;
 
 
-// Zero'th version of PagedCacheManager
-// Useful especially for LLMs and other setting where we cache some Args. 
-// The cache is organized in pages (vLLM style).
-// The initialization starts with allocateInitialPagesForArg.. The shape of pages is determined by splitting 
-// the input MatShape along 0-th axis.
-// So if we get a MatShape of (100, 4, 4) and pageSize of 16, we will get 7 pages of shape (16, 4, 4)
-// In this sense, `curIdx` points to the last row of the last page, which is filled. So, in the example above
-// curIdx will be 3. 
+
+// PagedCacheManager
+// A manager for caching Args' memory allocations across forward passes in a DNN graph.
+//
+// - Memory is organized into *pages*, each page consisting of a batch of entries along the 0-th dimension.
+// - Pages are used to store sequences of fixed-shaped blocks efficiently without frequent reallocations.
+// - This mechanism is particularly useful for caching data like KV caches in LLMs or any temporal buffers.
+//
+// Usage:
+// - `PagedCacheManager` allocates pages to store up to T blocks, where each block has shape [d1, d2, ..., dn].
+// - Allocation ensures consistency: block shape and data type must match across allocations for a given Arg.
+// - Pages grow automatically if more blocks are needed over time.
+//
+// Interface:
+// - `allocate(arg, shape, dtype)`: Allocates sufficient pages to fit the requested shape.
+// - `const std::vector<cv::Mat>& getPagesRef(arg) const`: Returns a reference to the pages for reading/writing data.
+//   (Modifying the page vector structure itself is disallowed; only Mat contents can be modified.)
+// - `free(arg)`: Releases the cached pages for a specific Arg.
+//
+// Example layout:
+//   Requested shape: [100, 64, 64]
+//   Page size: 16
+//   Allocated: 7 pages of shape [16, 64, 64]
 class PagedCacheManager {
     public:
-        PagedCacheManager( Net::Impl* netImpl_) : netImpl(netImpl_) {}
-        void allocate(MatShape shape, MatType dtype);
-        std::vector <Mat> getPages(Arg arg);
-    protected:
-        std::unordered_map<int, std::vector<cv::Mat>> cache;
+        PagedCacheManager(Net::Impl* netImpl_) : netImpl(netImpl_) {}
+        void allocate(Arg arg, const MatShape& shape, MatType dtype);
+        void free(Arg arg);
+        const std::vector<cv::Mat>& getPagesRef(Arg arg) const;
+    private:
+        struct PageInfo {
+            std::vector<cv::Mat> pages;
+            int curIdx = -1;            // index of last filled block
+            int pageSize = -1;          // how many entries per page (along 0th dim)
+            MatShape blockShape;        // shape of a single block (without the batch dim)
+            MatShape pageShape;         // shape of a page (with pageSize as 0-th dim)
+            MatType dtype;
+        };
+
+        std::unordered_map<int, PageInfo> cache;
         Net::Impl* netImpl;
 };
-
 
 
 // NB: Implementation is divided between of multiple .cpp files
@@ -107,7 +131,7 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
-    PagedCacheManager pagedCacheManager;
+    PagedCacheManager pagedCacheManager = PagedCacheManager(this);
     Ptr<Graph> mainGraph;
     int globGraphIdx;
 

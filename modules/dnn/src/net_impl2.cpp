@@ -1106,60 +1106,66 @@ std::ostream& Net::Impl::dump(std::ostream& strm)
 }
 
 
+void PagedCacheManager::allocate(Arg arg, const MatShape& shape, MatType dtype)
+{
+    CV_Assert(shape.size() >= 1); // At least batch dimension
 
+    int totalBlocks = shape[0]; // Number of blocks requested
+    MatShape blockShape(shape.begin() + 1, shape.end()); // d1 x d2 x ... x dn
 
-void PagedCacheManager::reset() {
-    cache.clear();
-}
+    int argIdx = arg.idx;
+    ArgData& adata = netImpl->args.at(argIdx);
 
-void PagedCacheManager::allocateInitialPagesForArg(int argIdx, const cv::MatShape& shape, int totalRows) {
-    int numPagesNeeded = (totalRows + pageSize - 1) / pageSize;
-    cv::MatShape pageShape = shape;
-    pageShape[0] = pageSize;
+    // @TODO: Validate and update the shape and dtype
+    CV_Assert(adata.kind == DNN_ARG_CACHED);
 
-    auto& pages = cache[argIdx];
-    for (int i = 0; i < numPagesNeeded; ++i) {
-        pages.emplace_back(pageShape, dtype);
+    auto& pageInfo = cache[argIdx];
+    if (pageInfo.pages.empty()) {
+        pageInfo.pageSize = 16; // 16 by default
+        pageInfo.blockShape = blockShape;
+        pageInfo.pageShape = shape;
+        pageInfo.pageShape[0] = pageInfo.pageSize;
+        pageInfo.dtype = dtype;
+        pageInfo.curIdx = -1;
+    }
+    else {
+        // Validate block shape and dtype match
+        CV_Assert(pageInfo.blockShape == blockShape);
+        CV_Assert(pageInfo.dtype == dtype);
+    }
+
+    int pageSize = pageInfo.pageSize;
+    int neededPages = (totalBlocks + pageSize - 1) / pageSize;
+    int existingPages = static_cast<int>(pageInfo.pages.size());
+
+    if (existingPages < neededPages) {
+        for (int i = existingPages; i < neededPages; ++i) {
+            Mat page(pageInfo.pageShape, pageInfo.dtype);
+            pageInfo.pages.push_back(page);
+        }
     }
 }
 
-bool PagedCacheManager::needsNewPage(int argIdx, int currentRowIndex) const {
+const std::vector<cv::Mat>& PagedCacheManager::getPagesRef(Arg arg) const
+{
+    int argIdx = arg.idx;
     auto it = cache.find(argIdx);
-    if (it == cache.end()) return true;
-    int rowsAllocated = static_cast<int>(it->second.size()) * pageSize;
-    return currentRowIndex >= rowsAllocated;
+    if (it == cache.end())
+    {
+        CV_Error(Error::StsObjectNotFound, "PagedCacheManager: no cache entry for the given Arg");
+    }
+    return it->second.pages;
 }
 
-void PagedCacheManager::createNewPage(int argIdx, const cv::MatShape& shape) {
-    cv::MatShape pageShape = shape;
-    pageShape[0] = pageSize;
-    cache[argIdx].emplace_back(pageShape, dtype);
-}
-
-cv::Mat PagedCacheManager::getPage(int argIdx, int pageIdx) {
-    return cache.at(argIdx).at(pageIdx);
-}
-
-int PagedCacheManager::numPages(int argIdx) const {
+void PagedCacheManager::free(Arg arg)
+{
+    int argIdx = arg.idx;
     auto it = cache.find(argIdx);
-    if (it == cache.end()) return 0;
-    return static_cast<int>(it->second.size());
+    if (it != cache.end())
+    {
+        cache.erase(it);
+    }
 }
-
-cv::Mat PagedCacheManager::concatPages(int argIdx) const {
-    auto it = cache.find(argIdx);
-    if (it == cache.end() || it->second.empty())
-        return cv::Mat();
-
-    std::vector<cv::Mat> pages = it->second;
-    cv::Mat result;
-    cv::vconcat(pages, result); // assumes first dim is concat-able (rows)
-    return result;
-}
-
-
-
-
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
