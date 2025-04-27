@@ -44,6 +44,8 @@ typedef std::unordered_map<std::string, int64_t> NamesHash;
 // - Memory is organized into *pages*, each page consisting of a batch of entries along the 0-th dimension.
 // - Pages are used to store sequences of fixed-shaped blocks efficiently without frequent reallocations.
 // - This mechanism is particularly useful for caching data like KV caches in LLMs or any temporal buffers.
+// - see https://docs.vllm.ai/en/latest/design/kernel/paged_attention.html as a reference for the particular
+//   use case
 //
 // Usage:
 // - `PagedCacheManager` allocates pages to store up to T blocks, where each block has shape [d1, d2, ..., dn].
