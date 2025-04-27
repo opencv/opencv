@@ -98,7 +98,7 @@ static void precompRotationTable(float *data,
         const v_float32 v_neg2    = vx_setall_f32(-2.0f);
 
         for (; i + w <= d_half; i+=w) {
-            int idx_buf[CV_SIMD_WIDTH];
+            int idx_buf[VTraits<v_float32>::max_nlanes];
             for (int k = 0; k < int(w); ++k)
                 idx_buf[k] = int(i + k);
             // [i, i+1, …, i+w-1]
