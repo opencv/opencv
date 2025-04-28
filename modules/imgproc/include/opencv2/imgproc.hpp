@@ -3033,11 +3033,30 @@ types.
 @param type thresholding type (see #ThresholdTypes).
 @return the computed threshold value if Otsu's or Triangle methods used.
 
-@sa  adaptiveThreshold, findContours, compare, min, max
+@sa  thresholdWithMask, adaptiveThreshold, findContours, compare, min, max
  */
 CV_EXPORTS_W double threshold( InputArray src, OutputArray dst,
                                double thresh, double maxval, int type );
 
+/** @brief Same as #threshold, but with an optional mask
+
+@note If the mask is empty, #thresholdWithMask is equivalent to #threshold.
+If the mask is not empty, dst *must* be of the same size and type as src, so that
+outliers pixels are left as-is
+
+@param src input array (multiple-channel, 8-bit or 32-bit floating point).
+@param dst output array of the same size  and type and the same number of channels as src.
+@param mask optional mask (same size as src, 8-bit).
+@param thresh threshold value.
+@param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding
+types.
+@param type thresholding type (see #ThresholdTypes).
+@return the computed threshold value if Otsu's or Triangle methods used.
+
+@sa  threshold, adaptiveThreshold, findContours, compare, min, max
+*/
+CV_EXPORTS_W double thresholdWithMask( InputArray src, InputOutputArray dst, InputArray mask,
+                                       double thresh, double maxval, int type );
 
 /** @brief Applies an adaptive threshold to an array.
 
@@ -4106,7 +4125,11 @@ CV_EXPORTS_W double contourArea( InputArray contour, bool oriented = false );
 /** @brief Finds a rotated rectangle of the minimum area enclosing the input 2D point set.
 
 The function calculates and returns the minimum-area bounding rectangle (possibly rotated) for a
-specified point set. Developer should keep in mind that the returned RotatedRect can contain negative
+specified point set. The angle of rotation represents the angle between the line connecting the starting
+and ending points (based on the clockwise order with greatest index for the corner with greatest \f$y\f$)
+and the horizontal axis. This angle always falls between \f$[-90, 0)\f$ because, if the object
+rotates more than a rect angle, the next edge is used to measure the angle. The starting and ending points change
+as the object rotates.Developer should keep in mind that the returned RotatedRect can contain negative
 indices when data is close to the containing Mat element boundary.
 
 @param points Input vector of 2D points, stored in std::vector\<\> or Mat
@@ -4115,7 +4138,9 @@ CV_EXPORTS_W RotatedRect minAreaRect( InputArray points );
 
 /** @brief Finds the four vertices of a rotated rect. Useful to draw the rotated rectangle.
 
-The function finds the four vertices of a rotated rectangle. This function is useful to draw the
+The function finds the four vertices of a rotated rectangle. The four vertices are returned
+in clockwise order starting from the point with greatest \f$y\f$. If two points have the
+same \f$y\f$ coordinate the rightmost is the starting point. This function is useful to draw the
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
 visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
 

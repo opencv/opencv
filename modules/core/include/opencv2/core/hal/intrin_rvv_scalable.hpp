@@ -2565,7 +2565,17 @@ inline v_int64 v_dotprod_expand_fast(const v_int16& a, const v_int16& b, const v
 // 32 >> 64f
 #if CV_SIMD_SCALABLE_64F
 inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b)
-{ return v_cvt_f64(v_dotprod_fast(a, b)); }
+{
+    vfloat64m1_t zero = __riscv_vfmv_v_f_f64m1(0, VTraits<vuint64m1_t>::vlanes());
+    auto prod_i64 = __riscv_vwmul(a, b, VTraits<v_int32>::vlanes());
+    // Convert to f64 before reduction to avoid overflow: #27003
+    auto prod_f64 = __riscv_vfcvt_f(prod_i64, VTraits<v_int32>::vlanes());
+    return __riscv_vset( // Needs v_float64 (vfloat64m2_t) here.
+        v_setall_f64(0.0f), // zero_f64m2
+        0,
+        __riscv_vfredusum_tu(zero, prod_f64, zero, VTraits<v_int32>::vlanes())
+    );
+}
 inline v_float64 v_dotprod_expand_fast(const v_int32& a, const v_int32& b, const v_float64& c)
 { return v_add(v_dotprod_expand_fast(a, b) , c); }
 #endif

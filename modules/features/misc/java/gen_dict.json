@@ -7,6 +7,12 @@
             "jni_var": "Feature2D %(n)s",
             "suffix": "J",
             "j_import": "org.opencv.features.Feature2D"
+        },
+        "uchar": {
+            "j_type": "byte",
+            "jn_type": "byte",
+            "jni_type": "jbyte",
+            "suffix": "B"
         }
     }
 }

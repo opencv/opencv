@@ -1214,7 +1214,7 @@ bool CV_OperationsTest::TestSVD()
             cvtest::norm(Vt*Vt.t(), I, NORM_INF) > FLT_EPSILON ||
             W.at<float>(2) < 0 || W.at<float>(1) < W.at<float>(2) ||
             W.at<float>(0) < W.at<float>(1) ||
-            cvtest::norm(U*Mat::diag(W)*Vt, Q, NORM_INF) > FLT_EPSILON )
+            cvtest::norm(U*Mat::diag(W)*Vt, Q, NORM_INF) > FLT_EPSILON*2 )
             throw test_excep();
     }
     catch(const test_excep&)

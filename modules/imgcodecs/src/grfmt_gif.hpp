@@ -157,7 +157,6 @@ private:
     int             globalColorTableSize;
     int             localColorTableSize;
 
-    uchar           opMode;
     uchar           criticalTransparency;
     uchar           transparentColor;
     Vec3b           transparentRGB;
@@ -173,8 +172,6 @@ private:
     std::vector<uchar> localColorTable;
 
     // params
-    int             loopCount;
-    int             frameDelay;
     int             colorNum;
     int             bitDepth;
     int             dithering;
@@ -182,8 +179,8 @@ private:
     bool            fast;
 
     bool writeFrames(const std::vector<Mat>& img_vec, const std::vector<int>& params);
-    bool writeHeader(const std::vector<Mat>& img_vec);
-    bool writeFrame(const Mat& img);
+    bool writeHeader(const std::vector<Mat>& img_vec, const int loopCount);
+    bool writeFrame(const Mat& img, const int frameDelay);
     bool pixel2code(const Mat& img);
     void getColorTable(const std::vector<Mat>& img_vec, bool isGlobal);
     static int ditheringKernel(const Mat &img, Mat &img_, int depth, uchar transparency);

@@ -494,6 +494,7 @@ public:
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
     void setZero() const;
+    Mat reinterpret( int type ) const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -1539,6 +1540,15 @@ public:
      * @param newshape New shape in the form of initializer list.
      */
     Mat reshape(int cn, std::initializer_list<int> newshape) const;
+
+    /** @brief Reset the type of matrix.
+
+    The methods reset the data type of matrix. If the new type and the old type of the matrix
+    have the same element size, the current buffer can be reused. The method needs to consider whether the
+    current mat is a submatrix or has any references.
+    @param type New data type.
+     */
+    Mat reinterpret( int type ) const;
 
     /** @brief Transposes a matrix.
 

@@ -173,74 +173,6 @@ static bool ocl_transpose( InputArray _src, OutputArray _dst )
 
 #endif
 
-#ifdef HAVE_IPP
-static bool ipp_transpose( Mat &src, Mat &dst )
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int type = src.type();
-    typedef IppStatus (CV_STDCALL * IppiTranspose)(const void * pSrc, int srcStep, void * pDst, int dstStep, IppiSize roiSize);
-    typedef IppStatus (CV_STDCALL * IppiTransposeI)(const void * pSrcDst, int srcDstStep, IppiSize roiSize);
-    IppiTranspose ippiTranspose = 0;
-    IppiTransposeI ippiTranspose_I = 0;
-
-    if (dst.data == src.data && dst.cols == dst.rows)
-    {
-        CV_SUPPRESS_DEPRECATED_START
-        ippiTranspose_I =
-            type == CV_8UC1 ? (IppiTransposeI)ippiTranspose_8u_C1IR :
-            type == CV_8UC3 ? (IppiTransposeI)ippiTranspose_8u_C3IR :
-            type == CV_8UC4 ? (IppiTransposeI)ippiTranspose_8u_C4IR :
-            type == CV_16UC1 ? (IppiTransposeI)ippiTranspose_16u_C1IR :
-            type == CV_16UC3 ? (IppiTransposeI)ippiTranspose_16u_C3IR :
-            type == CV_16UC4 ? (IppiTransposeI)ippiTranspose_16u_C4IR :
-            type == CV_16SC1 ? (IppiTransposeI)ippiTranspose_16s_C1IR :
-            type == CV_16SC3 ? (IppiTransposeI)ippiTranspose_16s_C3IR :
-            type == CV_16SC4 ? (IppiTransposeI)ippiTranspose_16s_C4IR :
-            type == CV_32SC1 ? (IppiTransposeI)ippiTranspose_32s_C1IR :
-            type == CV_32SC3 ? (IppiTransposeI)ippiTranspose_32s_C3IR :
-            type == CV_32SC4 ? (IppiTransposeI)ippiTranspose_32s_C4IR :
-            type == CV_32FC1 ? (IppiTransposeI)ippiTranspose_32f_C1IR :
-            type == CV_32FC3 ? (IppiTransposeI)ippiTranspose_32f_C3IR :
-            type == CV_32FC4 ? (IppiTransposeI)ippiTranspose_32f_C4IR : 0;
-        CV_SUPPRESS_DEPRECATED_END
-    }
-    else
-    {
-        ippiTranspose =
-            type == CV_8UC1 ? (IppiTranspose)ippiTranspose_8u_C1R :
-            type == CV_8UC3 ? (IppiTranspose)ippiTranspose_8u_C3R :
-            type == CV_8UC4 ? (IppiTranspose)ippiTranspose_8u_C4R :
-            type == CV_16UC1 ? (IppiTranspose)ippiTranspose_16u_C1R :
-            type == CV_16UC3 ? (IppiTranspose)ippiTranspose_16u_C3R :
-            type == CV_16UC4 ? (IppiTranspose)ippiTranspose_16u_C4R :
-            type == CV_16SC1 ? (IppiTranspose)ippiTranspose_16s_C1R :
-            type == CV_16SC3 ? (IppiTranspose)ippiTranspose_16s_C3R :
-            type == CV_16SC4 ? (IppiTranspose)ippiTranspose_16s_C4R :
-            type == CV_32SC1 ? (IppiTranspose)ippiTranspose_32s_C1R :
-            type == CV_32SC3 ? (IppiTranspose)ippiTranspose_32s_C3R :
-            type == CV_32SC4 ? (IppiTranspose)ippiTranspose_32s_C4R :
-            type == CV_32FC1 ? (IppiTranspose)ippiTranspose_32f_C1R :
-            type == CV_32FC3 ? (IppiTranspose)ippiTranspose_32f_C3R :
-            type == CV_32FC4 ? (IppiTranspose)ippiTranspose_32f_C4R : 0;
-    }
-
-    IppiSize roiSize = { src.cols, src.rows };
-    if (ippiTranspose != 0)
-    {
-        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose, src.ptr(), (int)src.step, dst.ptr(), (int)dst.step, roiSize) >= 0)
-            return true;
-    }
-    else if (ippiTranspose_I != 0)
-    {
-        if (CV_INSTRUMENT_FUN_IPP(ippiTranspose_I, dst.ptr(), (int)dst.step, roiSize) >= 0)
-            return true;
-    }
-    return false;
-}
-#endif
-
-
 void transpose( InputArray _src, OutputArray _dst )
 {
     CV_INSTRUMENT_REGION();
@@ -270,8 +202,6 @@ void transpose( InputArray _src, OutputArray _dst )
     }
 
     CALL_HAL(transpose2d, cv_hal_transpose2d, src.data, src.step, dst.data, dst.step, src.cols, src.rows, esz);
-
-    CV_IPP_RUN_FAST(ipp_transpose(src, dst))
 
     if( dst.data == src.data )
     {
@@ -735,48 +665,6 @@ static bool ocl_flip(InputArray _src, OutputArray _dst, int flipCode )
 
 #endif
 
-#if defined HAVE_IPP
-static bool ipp_flip(Mat &src, Mat &dst, int flip_mode)
-{
-#ifdef HAVE_IPP_IW
-    CV_INSTRUMENT_REGION_IPP();
-
-    // Details: https://github.com/opencv/opencv/issues/12943
-    if (flip_mode <= 0 /* swap rows */
-        && cv::ipp::getIppTopFeatures() != ippCPUID_SSE42
-        && (int64_t)(src.total()) * src.elemSize() >= CV_BIG_INT(0x80000000)/*2Gb*/
-    )
-        return false;
-
-    IppiAxis ippMode;
-    if(flip_mode < 0)
-        ippMode = ippAxsBoth;
-    else if(flip_mode == 0)
-        ippMode = ippAxsHorizontal;
-    else
-        ippMode = ippAxsVertical;
-
-    try
-    {
-        ::ipp::IwiImage iwSrc = ippiGetImage(src);
-        ::ipp::IwiImage iwDst = ippiGetImage(dst);
-
-        CV_INSTRUMENT_FUN_IPP(::ipp::iwiMirror, iwSrc, iwDst, ippMode);
-    }
-    catch(const ::ipp::IwException &)
-    {
-        return false;
-    }
-
-    return true;
-#else
-    CV_UNUSED(src); CV_UNUSED(dst); CV_UNUSED(flip_mode);
-    return false;
-#endif
-}
-#endif
-
-
 void flip( InputArray _src, OutputArray _dst, int flip_mode )
 {
     CV_INSTRUMENT_REGION();
@@ -807,8 +695,6 @@ void flip( InputArray _src, OutputArray _dst, int flip_mode )
 
     CALL_HAL(flip, cv_hal_flip, type, src.ptr(), src.step, src.cols, src.rows,
              dst.ptr(), dst.step, flip_mode);
-
-    CV_IPP_RUN_FAST(ipp_flip(src, dst, flip_mode));
 
     size_t esz = CV_ELEM_SIZE(type);
 

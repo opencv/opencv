@@ -1718,6 +1718,12 @@ void _OutputArray::create(const MatShape& shape, int mtype, int i,
     }
 }
 
+Mat _OutputArray::reinterpret(int mtype) const
+{
+    mtype = CV_MAT_TYPE(mtype);
+    return getMat().reinterpret(mtype);
+}
+
 void _OutputArray::createSameSize(const _InputArray& arr, int mtype) const
 {
     int arrsz[CV_MAX_DIM], d = arr.sizend(arrsz);

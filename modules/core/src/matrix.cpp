@@ -1876,6 +1876,16 @@ Mat Mat::reshape(int _cn, std::initializer_list<int> newshape_) const
     return reshape(_cn, (int)newshape_dims, newshape);
 }
 
+Mat Mat::reinterpret(int type) const
+{
+    type = CV_MAT_TYPE(type);
+    CV_Assert(CV_ELEM_SIZE(this->type()) == CV_ELEM_SIZE(type));
+    Mat m = *this;
+    m.flags = (m.flags & ~CV_MAT_TYPE_MASK) | type;
+    m.updateContinuityFlag();
+    return m;
+}
+
 Mat Mat::diag(const Mat& d)
 {
     CV_Assert( d.cols == 1 || d.rows == 1 );

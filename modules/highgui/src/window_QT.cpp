@@ -795,7 +795,7 @@ void GuiReceiver::isLastWindow()
         delete guiMainThread;//delete global_control_panel too
         guiMainThread = NULL;
 
-        if (!doesExternalQAppExist)
+        if (doesExternalQAppExist)
         {
             qApp->quit();
         }
@@ -1665,13 +1665,6 @@ CvWindow::CvWindow(QString name, int arg2)
 }
 
 
-CvWindow::~CvWindow()
-{
-    if (guiMainThread)
-        guiMainThread->isLastWindow();
-}
-
-
 void CvWindow::setMouseCallBack(CvMouseCallback callback, void* param)
 {
     myView->setMouseCallBack(callback, param);
@@ -2182,6 +2175,15 @@ void CvWindow::keyPressEvent(QKeyEvent *evnt)
     }
 
     QWidget::keyPressEvent(evnt);
+}
+
+
+void CvWindow::closeEvent(QCloseEvent* evnt)
+{
+    QWidget::closeEvent(evnt);
+
+    if (guiMainThread)
+        guiMainThread->isLastWindow();
 }
 
 
@@ -2859,6 +2861,7 @@ void DefaultViewPort::stopDisplayInfo()
 {
     timerDisplay->stop();
     drawInfo = false;
+    viewport()->update();
 }
 
 
