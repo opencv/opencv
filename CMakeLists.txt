@@ -224,6 +224,9 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
+OCV_OPTION(WITH_LIBCAMERA "Include libcamera support" OFF
+  VISIBLE_IF NOT IOS AND NOT WINRT
+  VERIFY HAVE_LIBCAMERA)
 OCV_OPTION(WITH_VULKAN "Include Vulkan support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_VULKAN)
@@ -1583,6 +1586,13 @@ if(WITH_V4L OR HAVE_V4L)
     IF HAVE_VIDEOIO THEN "sys/videoio.h"
     ELSE "NO")
   status("    v4l/v4l2:" HAVE_V4L THEN "YES (${v4l_status})" ELSE NO)
+endif()
+
+if(WITH_LIBCAMERA OR HAVE_LIBCAMERA)
+  ocv_build_features_string(libcamera_status
+    IF HAVE_LIBCAMERA THEN "${LIBCAMERA_VERSION}"
+    ELSE "NO")
+  status("    libcamera:" HAVE_LIBCAMERA THEN "YES (${libcamera_status})" ELSE NO)
 endif()
 
 if(WITH_DSHOW OR HAVE_DSHOW)
