@@ -63,4 +63,9 @@ image.
     opencv/samples/cpp/calibration.cpp, function computeReprojectionErrors).
 
 Question: how would you calculate distance from the camera origin to any one of the corners?
-Answer: As our image lies in a 3D space, firstly we would calculate the relative camera pose. This would give us 3D to 2D correspondences. Next, we can apply a simple L2 norm to calculate distance between any point (end point for corners).
+Answer: After obtaining the camera pose using solvePnP, the rotation (rvec) and translation (tvec) vectors define the transformation between the world (chessboard) coordinates and the camera coordinate system. To calculate the distance from the camera’s origin to any chessboard corner, first transform the 3D point from the chessboard coordinate system to the camera coordinate system (if not already done) and then compute its Euclidean distance using the L2 norm, for example:
+
+        // assuming 'point' is the 3D position of a chessboard corner in the camera coordinate system
+        double distance = norm(point);
+
+This is equivalent to applying the L2 norm on the 3D point’s coordinates (x, y, z).

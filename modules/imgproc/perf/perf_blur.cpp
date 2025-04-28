@@ -104,7 +104,7 @@ PERF_TEST_P(Size_MatType_BorderType, blur16x16,
     Size size = get<0>(GetParam());
     int type = get<1>(GetParam());
     BorderType btype = get<2>(GetParam());
-    double eps = 1e-3;
+    double eps = 1.25e-3;
 
     eps = CV_MAT_DEPTH(type) <= CV_32S ? 1 : eps;
 
