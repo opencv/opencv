@@ -230,8 +230,6 @@ void cv::setWindowProperty(const String& name, int prop_id, double prop_value)
             cvSetModeWindow_GTK(name.c_str(),prop_value);
         #elif defined (HAVE_COCOA)
             cvSetModeWindow_COCOA(name.c_str(),prop_value);
-        #elif defined (WINRT)
-            cvSetModeWindow_WinRT(name.c_str(), prop_value);
         #endif
 
     break;
@@ -314,8 +312,6 @@ double cv::getWindowProperty(const String& name, int prop_id)
             return cvGetModeWindow_GTK(name.c_str());
         #elif defined (HAVE_COCOA)
             return cvGetModeWindow_COCOA(name.c_str());
-        #elif defined (WINRT)
-            return cvGetModeWindow_WinRT(name.c_str());
         #else
             return -1;
         #endif
@@ -1182,7 +1178,7 @@ int cv::createButton(const String&, ButtonCallback, void*, int , bool )
 //========================= NO GUI fallback =========================
 
 #if !defined (HAVE_WIN32UI) && !defined (HAVE_GTK) && !defined (HAVE_COCOA) && !defined (HAVE_QT) \
-    && !defined (HAVE_WAYLAND) && !defined (WINRT) && !defined (WINRT_8_0)
+    && !defined (HAVE_WAYLAND)
 
 // No windowing system present at compile time ;-(
 //

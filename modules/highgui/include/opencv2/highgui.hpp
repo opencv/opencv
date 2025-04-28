@@ -87,44 +87,6 @@ It provides easy interface to:
     See below the example used to generate the figure:
 
     @include highgui_qt.cpp
-
-    @defgroup highgui_winrt WinRT support
-
-    This figure explains new functionality implemented with WinRT GUI. The new GUI provides an Image control,
-    and a slider panel. Slider panel holds trackbars attached to it.
-
-    Sliders are attached below the image control. Every new slider is added below the previous one.
-
-    See below the example used to generate the figure:
-    @code
-    void sample_app::MainPage::ShowWindow()
-    {
-        static cv::String windowName("sample");
-        cv::winrt_initContainer(this->cvContainer);
-        cv::namedWindow(windowName); // not required
-
-        cv::Mat image = cv::imread("Assets/sample.jpg");
-        cv::Mat converted = cv::Mat(image.rows, image.cols, CV_8UC4);
-        cv::cvtColor(image, converted, COLOR_BGR2BGRA);
-        cv::imshow(windowName, converted); // this will create window if it hasn't been created before
-
-        int state = 42;
-        cv::TrackbarCallback callback = [](int pos, void* userdata)
-        {
-            if (pos == 0) {
-                cv::destroyWindow(windowName);
-            }
-        };
-        cv::TrackbarCallback callbackTwin = [](int pos, void* userdata)
-        {
-            if (pos >= 70) {
-                cv::destroyAllWindows();
-            }
-        };
-        cv::createTrackbar("Sample trackbar", windowName, &state, 100, callback);
-        cv::createTrackbar("Twin brother", windowName, &state, 100, callbackTwin);
-    }
-    @endcode
 @}
 */
 
