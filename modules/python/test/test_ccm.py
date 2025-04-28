@@ -255,7 +255,7 @@ class photo_test(NewOpenCVTests):
         fs.release()
 
         src = (chartsRGB[:, 1].reshape(-1, 1, 3) / 255.).astype(np.float64)
-  
+
         np.savetxt('src_test_correct.txt',src.reshape(-1,3),fmt="%.2f")
         model = cv.ccm.ColorCorrectionModel(src, cv.ccm.COLORCHECKER_MACBETH)
         _ = model.compute()
@@ -274,7 +274,7 @@ class photo_test(NewOpenCVTests):
 
         img = self.get_sample('cv/mcc/mcc_ccm_test.jpg')
         self.assertIsNotNone(img, "Test image can't be loaded: ")
-    
+
         gold_img = self.get_sample('cv/mcc/mcc_ccm_test_res.png')
         self.assertIsNotNone(gold_img, "Ground truth for test image can't be loaded: ")
 
@@ -285,17 +285,17 @@ class photo_test(NewOpenCVTests):
         # Get colors from detector and save for debugging
         src = checkers[0].getChartsRGB(False).reshape(-1, 1, 3) / 255.
         src = src.astype(np.float64)
-        
+
         # Load reference colors from file for comparison
         path = self.find_file('cv/mcc/mcc_ccm_test.yml')
         fs = cv.FileStorage(path, cv.FileStorage_READ)
         chartsRGB = fs.getNode("chartsRGB").mat()
         ref_src = (chartsRGB[:, 1].reshape(-1, 1, 3) / 255.).astype(np.float64)
         fs.release()
-        
+
         # Verify that detected colors are close to reference colors
         np.testing.assert_allclose(src, ref_src, rtol=0.01, atol=0.01)
-        
+
         # Use reference colors for model computation
         model = cv.ccm.ColorCorrectionModel(ref_src, cv.ccm.COLORCHECKER_MACBETH)
         _ = model.compute()
@@ -305,15 +305,15 @@ class photo_test(NewOpenCVTests):
         image = image.astype(np.float64) / 255.
         calibratedImage = np.zeros_like(image)
         model.correctImage(image, calibratedImage)
-        
+
         # Ensure values are in valid range before conversion
         calibratedImage = np.clip(calibratedImage, 0.0, 1.0)
-        
+
         # Convert to uint8 with explicit rounding
         calibratedImage = (calibratedImage * 255.0).astype(np.float64)
         calibratedImage = np.rint(calibratedImage).astype(np.uint8)
         calibratedImage = cv.cvtColor(calibratedImage, cv.COLOR_RGB2BGR)
-        
+
         np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
 
     def test_serialization(self):
