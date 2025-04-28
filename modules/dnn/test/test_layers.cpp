@@ -743,6 +743,32 @@ TEST_F(Layer_RNN_Test, get_set_test)
     EXPECT_EQ(shape(outputs[1]), shape(nT, nS, nH));
 }
 
+TEST(Layer_MHARoPe_Test_Accuracy_with_, Pytorch)
+{
+    Mat QKV = blobFromNPY(_tf("mha_rope.QKV.npy"));
+    Mat QKV_bias = blobFromNPY(_tf("mha_rope.QKV_bias.npy"));
+    std::vector<int> qkv_hidden_sizes = { 256, 256, 256 };
+    LayerParams mhaParams;
+    mhaParams.blobs.resize(2);
+    mhaParams.blobs[0] = QKV;
+    mhaParams.blobs[1] = QKV_bias;
+    mhaParams.set("num_heads", 4);
+    mhaParams.set(
+        "qkv_hidden_sizes",
+        DictValue::arrayInt(&qkv_hidden_sizes[0], qkv_hidden_sizes.size())
+    );
+    mhaParams.set("do_rotary", true);
+
+    Ptr<AttentionLayer> layer = AttentionLayer::create(mhaParams);
+    Mat inp = blobFromNPY(_tf("mha_rope.input.npy"));
+    std::vector<Mat> inputs(1, inp), outputs;
+    runLayer(layer, inputs, outputs);
+    Mat h_t_reference = blobFromNPY(_tf("mha_rope.output.npy"));
+    normAssert(h_t_reference, outputs[0]);
+}
+
+
+
 TEST_P(Test_Caffe_layers, Accum)
 {
 #ifdef OPENCV_DNN_EXTERNAL_PROTOBUF
