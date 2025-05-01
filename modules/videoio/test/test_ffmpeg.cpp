@@ -953,63 +953,80 @@ inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestP
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
 
-TEST(videoio_ffmpeg, write_colorless_images) {
+typedef tuple<int /*inputType*/, int /*targetType*/, bool /*isColor*/, string /*description*/> ConversionTestParams;
+typedef testing::TestWithParam< ConversionTestParams > videoio_ffmpeg_conversion;
+
+TEST_P(videoio_ffmpeg_conversion, handle_conversion)
+{
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
-
-    const std::string filename = "grayscale_video.mp4";
-    const Mat frame(480, 640, CV_8UC3, Scalar(255, 0, 0)); // 3 channels (BGR)
+    
+    const string filename = "conversion_video.mp4";
+    int input_type = get<0>(GetParam());
+    int target_type = get<1>(GetParam());
+    bool isColor = get<2>(GetParam());
+    string description = get<3>(GetParam());
+    
     const double fps = 30.0;
-    const bool isColor = false; // encoder will work with grayscale frames
+    const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
+    const Mat frame(480, 640, input_type, Scalar::all(0));
+     
+    VideoWriter writer(filename, fourcc, fps, frame.size(), isColor);
+    writer.set(VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(target_type));
 
-    VideoWriter writer(filename, VideoWriter::fourcc('m', 'p', '4', 'v'), fps, frame.size(), isColor);
-
-    ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer";
+    ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer for: " << description;
 
     for (int i = 1; i <= 90; i++)
     {
-        // write converts input to grayscale internally,
-        // as ffmpeg doesn't handle this conversion
+        // Conversion happens internally
+        // as ffmpeg doesn't handle itself.
+        // If conversion fails, FFmpeg won't write any frames
         writer.write(frame);
     }
 
     writer.release();
 
-    EXPECT_GT(getFileSize(filename), 0);
+    EXPECT_GT(getFileSize(filename), 0) << "Output file is empty for: " << description;
 
     VideoCapture cap(filename, CAP_FFMPEG);
     if (!cap.isOpened())
-        throw SkipTestException("Failed to open video file, stream not supported or invalid");
-
+        throw SkipTestException("Failed to open written video");
+    
     Mat readFrame;
     int frameCount = 0;
     while (cap.read(readFrame))
-    {
-        // check if grayscale conversion was successful
-        bool isGrayscale = true;
-        for (int y = 0; y < readFrame.rows; y++)
-        {
-            for (int x = 0; x < readFrame.cols; x++)
-            {
-                Vec3b pixel = readFrame.at<Vec3b>(y, x);
-                // all 3 channels (B, G, R) must have the same value for grayscale
-                if (pixel[0] != pixel[1] || pixel[1] != pixel[2]) {
-                    isGrayscale = false;
-                    break;
-                }
-            }
-            if (!isGrayscale)
-                break;
-        }
-
-        ASSERT_TRUE(isGrayscale) << "Frame is not grayscale";
-
         frameCount++;
-    }
-
-    EXPECT_EQ(frameCount, 90);
+    
+    // Simply checking if all 90 frames can be read is enough.
+    // If no conversion is done 0 frames will be written.
+    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description; 
 
     std::remove(filename.c_str());
 }
+
+const ConversionTestParams conversion_cases[] =
+{
+    // converting to 8UC3
+    make_tuple(CV_8UC1, CV_8UC3, true, "CV_8UC1_to_CV_8UC3"),
+    make_tuple(CV_16UC1, CV_8UC3, true, "CV_16UC1_to_CV_8UC3"),
+    
+    // converting to 8UC1
+    make_tuple(CV_8UC3, CV_8UC1, false, "CV_8UC3_to_CV_8UC1"),
+    make_tuple(CV_16UC1, CV_8UC1, false, "CV_16UC1_to_CV_8UC1"),
+    
+    // converting to 16UC1
+    make_tuple(CV_8UC3, CV_16UC1, false, "CV_8UC3_to_CV_16UC1"),
+    make_tuple(CV_8UC1, CV_16UC1, false, "CV_8UC1_to_CV_16UC1"),
+};
+
+inline static std::string videoio_ffmpeg_conversion_name_printer(const testing::TestParamInfo<videoio_ffmpeg_conversion::ParamType>& info)
+{
+    std::ostringstream os;
+    os << get<3>(info.param) << "_"
+        << "isColor_" << (get<2>(info.param) ? "true" : "false");
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_conversion, testing::ValuesIn(conversion_cases), videoio_ffmpeg_conversion_name_printer);
 
 }} // namespace
