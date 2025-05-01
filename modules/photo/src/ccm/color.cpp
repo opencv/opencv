@@ -155,7 +155,7 @@ Mat GetColor::getColorCheckerMask(const uchar* checker, int row)
     return res;
 }
 
-std::shared_ptr<Color> GetColor::getColor(ColorCheckerType const_color)
+Color GetColor::getColor(ColorCheckerType const_color)
 {
 
     /** @brief Data is from https://www.imatest.com/wp-content/uploads/2011/11/Lab-data-Iluminate-D65-D50-spectro.xls
@@ -359,7 +359,7 @@ std::shared_ptr<Color> GetColor::getColor(ColorCheckerType const_color)
     {
         Mat ColorChecker2005_LAB_D50_2_ = GetColor::getColorChecker(*ColorChecker2005_LAB_D50_2, 24);
         Mat ColorChecker2005_COLORED_MASK_ = GetColor::getColorCheckerMask(ColorChecker2005_COLORED_MASK, 24);
-        std::shared_ptr<Color> Macbeth_D50_2 = std::make_shared<Color>(ColorChecker2005_LAB_D50_2_, COLOR_SPACE_LAB_D50_2, ColorChecker2005_COLORED_MASK_);
+        Color Macbeth_D50_2 = Color(ColorChecker2005_LAB_D50_2_, COLOR_SPACE_LAB_D50_2, ColorChecker2005_COLORED_MASK_);
         return Macbeth_D50_2;
     }
 
@@ -367,14 +367,14 @@ std::shared_ptr<Color> GetColor::getColor(ColorCheckerType const_color)
     {
         Mat Vinyl_LAB_D50_2__ = GetColor::getColorChecker(*Vinyl_LAB_D50_2, 18);
         Mat Vinyl_COLORED_MASK__ = GetColor::getColorCheckerMask(Vinyl_COLORED_MASK, 18);
-        std::shared_ptr<Color> Vinyl_D50_2 = std::make_shared<Color>(Vinyl_LAB_D50_2__, COLOR_SPACE_LAB_D50_2, Vinyl_COLORED_MASK__);
+        Color Vinyl_D50_2 = Color(Vinyl_LAB_D50_2__, COLOR_SPACE_LAB_D50_2, Vinyl_COLORED_MASK__);
         return Vinyl_D50_2;
     }
 
     case cv::ccm::COLORCHECKER_DIGITAL_SG:
     {
         Mat DigitalSG_LAB_D50_2__ = GetColor::getColorChecker(*DigitalSG_LAB_D50_2, 140);
-        std::shared_ptr<Color> DigitalSG_D50_2 = std::make_shared<Color>(DigitalSG_LAB_D50_2__, COLOR_SPACE_LAB_D50_2);
+        Color DigitalSG_D50_2 = Color(DigitalSG_LAB_D50_2__, COLOR_SPACE_LAB_D50_2);
         return DigitalSG_D50_2;
     }
     }

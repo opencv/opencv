@@ -11,14 +11,23 @@
 namespace cv {
 namespace ccm {
 
-inline double gammaCorrection_(double element, double gamma)
+inline double gammaOp(double element, double gamma)
 {
-    return (element >= 0 ? pow(element, gamma) : -pow((-element), gamma));
+    return (element >= 0.0) ? pow(element, gamma) : -pow(-element, gamma);
 }
 
-Mat gammaCorrection(const Mat& src, double gamma, Mat dst)
+void gammaCorrection(InputArray _src, OutputArray _dst, double gamma)
 {
-    return elementWise(src, [gamma](double element) -> double { return gammaCorrection_(element, gamma); }, dst);
+    Mat src = _src.getMat();
+    _dst.create(src.size(), src.type());
+    Mat dst = _dst.getMat();
+
+    const int n = static_cast<int>(src.total() * src.channels());
+    const double* s = src.ptr<double>();
+    double*       d = dst.ptr<double>();
+
+    for (int i = 0; i < n; ++i)
+        d[i] = gammaOp(s[i], gamma);
 }
 
 Mat maskCopyTo(const Mat& src, const Mat& mask)

@@ -245,7 +245,9 @@ Mat Linear::linearize(Mat inp)
 
 Mat LinearGamma::linearize(Mat inp)
 {
-    return gammaCorrection(inp, gamma);
+    Mat out;
+    gammaCorrection(inp, out, gamma);
+    return out;
 };
 
 std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LinearizationType linearizationType)

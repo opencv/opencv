@@ -22,7 +22,7 @@ const string about =
     "With DNN model:\n"
     "\t ./example_cpp_color_correction_model mcc --input=path/to/your/input/image --query=path/to/your/query/image\n\n"
     "Using pre-computed CCM:\n"
-    "\t ./example_cpp_color_correction_model mcc --input=--ccm_file=path/to/ccm_output.yaml --query=path/to/your/query/image\n\n"
+    "\t ./example_cpp_color_correction_model mcc --ccm_file=path/to/ccm_output.yaml --query=path/to/your/query/image\n\n"
     "Model path can also be specified using --model argument. And config path can be specified using --config. Download it using python download_models.py mcc from dnn samples directory\n\n";
 
 const string param_keys =
@@ -91,7 +91,13 @@ int main(int argc, char* argv[]) {
     parser = CommandLineParser(argc, argv, keys);
 
     int t = parser.get<int>("type");
-    CV_Assert(0 <= t && t <= 2);
+    if (t < 0 || t > 2)
+    {
+        cout << "Error: --type must be 0, 1 or 2" << endl;
+        parser.printMessage();          // prints full usage
+        return -1;
+    }
+    
     ColorChart chartType = ColorChart(t);
 
     const string sha1 = parser.get<String>("sha1");

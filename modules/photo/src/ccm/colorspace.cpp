@@ -135,11 +135,17 @@ Mat RGBBase_::fromLFunc(Mat& /*rgbl*/, Mat dst) const { return dst; }
 /* @brief Base of Adobe RGB color space;
  */
 
-Mat AdobeRGBBase_::toLFunc(Mat& rgb) const { return gammaCorrection(rgb, gamma); }
+Mat AdobeRGBBase_::toLFunc(Mat& rgb) const 
+{ 
+    Mat out;
+    gammaCorrection(rgb, out, gamma);
+    return out; 
+}
 
 Mat AdobeRGBBase_::fromLFunc(Mat& rgbl, Mat dst) const
 {
-    return gammaCorrection(rgbl, 1. / gamma, dst);
+    gammaCorrection(rgbl, dst, 1. / gamma);
+    return dst;
 }
 
 /* @brief Base of sRGB color space;

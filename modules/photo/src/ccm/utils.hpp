@@ -14,7 +14,7 @@
 namespace cv {
 namespace ccm {
 
-double gammaCorrection_(double element, double gamma);
+double gammaOp(double element, double gamma);
 
 /** @brief gamma correction.
            \f[
@@ -25,7 +25,7 @@ double gammaCorrection_(double element, double gamma);
     @param gamma a constant for gamma correction.
     @param dst the output array, type of Mat.
  */
-Mat gammaCorrection(const Mat& src, double gamma, Mat dst=Mat());
+ CV_EXPORTS void gammaCorrection(InputArray src, OutputArray dst, double gamma);
 
 /** @brief maskCopyTo a function to delete unsatisfied elementwise.
     @param src the input array, type of Mat.

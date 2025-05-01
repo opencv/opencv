@@ -8,14 +8,16 @@
 
 #include "opencv2/photo.hpp"
 #include "linearize.hpp"
+#include <cmath>
 namespace cv {
 namespace ccm {
+
 class ColorCorrectionModel::Impl
 {
 public:
     Mat src;
 
-    std::shared_ptr<Color> dst = std::make_shared<Color>();
+    Color ref = Color();
     Mat dist;
     RGBBase_& cs;
     // Track initialization parameters for serialization
@@ -146,13 +148,17 @@ Mat ColorCorrectionModel::Impl::prepare(const Mat& inp)
     case cv::ccm::CCM_AFFINE:
     {
         shape = 12;
-        Mat arr1 = Mat::ones(inp.size(), CV_64F);
-        Mat arr_out(inp.size(), CV_64FC4);
-        Mat arr_channels[3];
-        split(inp, arr_channels);
-        merge(std::vector<Mat> { arr_channels[0], arr_channels[1], arr_channels[2], arr1 }, arr_out);
-        return arr_out;
+        Mat out(inp.size(), CV_64FC4);
+        const int fromTo[] = { 0,0, 1,1, 2,2 };         // inp[ch] → out[ch]
+        mixChannels(&inp, 1, &out, 1, fromTo, 3);    
+        Mat ones(inp.size(), CV_64F, Scalar(1));
+        std::vector<Mat> planes;
+        split(out, planes);          // planes.size() == 4
+        ones.copyTo(planes[3]);
+        merge(planes, out);    
+        return out;
     }
+        
     default:
         CV_Error(Error::StsBadArg, "Wrong ccmType!");
         break;
@@ -168,7 +174,7 @@ void ColorCorrectionModel::Impl::calWeightsMasks(const Mat& weightsList_, double
     }
     else if (weightsCoeff_ != 0)
     {
-        pow(dst->toLuminant(cs.io), weightsCoeff_, weights);
+        pow(ref.toLuminant(cs.io), weightsCoeff_, weights);
     }
 
     // masks
@@ -188,19 +194,28 @@ void ColorCorrectionModel::Impl::calWeightsMasks(const Mat& weightsList_, double
     maskedLen = (int)sum(mask)[0];
 }
 
-void ColorCorrectionModel::Impl::initialWhiteBalance(void)
+void ColorCorrectionModel::Impl::initialWhiteBalance()
 {
-    Mat schannels[4];
-    split(srcRgbl, schannels);
-    Mat dchannels[4];
-    split(dstRgbl, dchannels);
-    std::vector<double> initialVec = { sum(dchannels[0])[0] / sum(schannels[0])[0], 0, 0, 0,
-        sum(dchannels[1])[0] / sum(schannels[1])[0], 0, 0, 0,
-        sum(dchannels[2])[0] / sum(schannels[2])[0], 0, 0, 0 };
-    std::vector<double> initialVec_(initialVec.begin(), initialVec.begin() + shape);
-    Mat initialWhiteBalanceMat = Mat(initialVec_, true).reshape(0, shape / 3);
-    ccm0 = initialWhiteBalanceMat;
+    // sum over all pixels – Scalar holds per-channel sums
+    const cv::Scalar srcSum = cv::sum(srcRgbl);
+    const cv::Scalar dstSum = cv::sum(dstRgbl);
+
+    // channel-wise gain factors
+    const double gR = dstSum[0] / srcSum[0];
+    const double gG = dstSum[1] / srcSum[1];
+    const double gB = dstSum[2] / srcSum[2];
+
+    // diagonal CCM with those gains (extra zeros kept for CCM_AFFINE case)
+    std::vector<double> coeffs = {
+        gR, 0, 0, 0,
+        gG, 0, 0, 0,
+        gB, 0, 0, 0
+    };
+    coeffs.resize(shape);                       // shape = 9 (linear) or 12 (affine)
+
+    ccm0 = cv::Mat(coeffs, true).reshape(0, shape / 3);   // 3×3 or 3×4
 }
+
 
 void ColorCorrectionModel::Impl::initialLeastSquare(bool fit)
 {
@@ -233,7 +248,7 @@ void ColorCorrectionModel::Impl::initialLeastSquare(bool fit)
 
 double ColorCorrectionModel::Impl::calcLoss_(Color color)
 {
-    Mat distlist = color.diff(*dst, distance);
+    Mat distlist = color.diff(ref, distance);
     Color lab = color.to(COLOR_SPACE_LAB_D50_2);
     Mat dist_;
     pow(distlist, 2, dist_);
@@ -264,14 +279,14 @@ void ColorCorrectionModel::Impl::fitting(void)
     solver->setTermCriteria(termcrit);
     double res = solver->minimize(reshapeCcm);
     ccm = reshapeCcm.reshape(0, shape / 3);
-    loss = pow((res / maskedLen), 0.5);
+    loss = sqrt(res / maskedLen);
 }
 
 ColorCorrectionModel::ColorCorrectionModel()
 : p(std::make_shared<Impl>())
 {}
 
-void ColorCorrectionModel::correctImage(InputArray src, OutputArray dst, bool islinear)
+void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool islinear)
 {
     if (!p->ccm.data)
     {
@@ -282,25 +297,25 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray dst, bool is
     Mat imgCcm = multiple(p->prepare(linearImg), ccm);
     if (islinear == true)
     {
-        imgCcm.copyTo(dst);
+        imgCcm.copyTo(ref);
     }
     Mat imgCorrected = p->cs.fromLFunc(imgCcm, linearImg);
-    imgCorrected.copyTo(dst);
+    imgCorrected.copyTo(ref);
 }
 
 void ColorCorrectionModel::Impl::getColor(ColorCheckerType constColor)
 {
-    dst = (GetColor::getColor(constColor));
+    ref = GetColor().getColor(constColor);
 }
 
 void ColorCorrectionModel::Impl::getColor(Mat colors_, ColorSpace refColorSpace_)
 {
-    dst.reset(new Color(colors_, *GetCS::getInstance().getCS(refColorSpace_)));
+    ref = Color(colors_, *GetCS::getInstance().getCS(refColorSpace_));
 }
 
 void ColorCorrectionModel::Impl::getColor(Mat colors_, ColorSpace cs_, Mat colored_)
 {
-    dst.reset(new Color(colors_, *GetCS::getInstance().getCS(cs_), colored_));
+    ref = Color(colors_, *GetCS::getInstance().getCS(cs_), colored_);
 }
 
 ColorCorrectionModel::ColorCorrectionModel(InputArray src_, int constColor): p(std::make_shared<Impl>())
@@ -373,11 +388,11 @@ Mat ColorCorrectionModel::compute()
 {
 
     Mat saturateMask = saturate(p->src, p->saturatedThreshold[0], p->saturatedThreshold[1]);
-    p->linear = getLinear(p->gamma, p->deg, p->src, *(p->dst), saturateMask, (p->cs), p->linearizationType);
+    p->linear = getLinear(p->gamma, p->deg, p->src, p->ref, saturateMask, (p->cs), p->linearizationType);
     p->calWeightsMasks(p->weightsList, p->weightsCoeff, saturateMask);
     p->srcRgbl = p->linear->linearize(maskCopyTo(p->src, p->mask));
-    p->dst->colors = maskCopyTo(p->dst->colors, p->mask);
-    p->dstRgbl = p->dst->to(*(p->cs.l)).colors;
+    p->ref.colors = maskCopyTo(p->ref.colors, p->mask);
+    p->dstRgbl = p->ref.to(*(p->cs.l)).colors;
 
     // make no change for CCM_LINEAR, make change for CCM_AFFINE.
     p->srcRgbl = p->prepare(p->srcRgbl);

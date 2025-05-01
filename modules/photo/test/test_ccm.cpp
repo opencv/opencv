@@ -279,32 +279,24 @@ TEST(Photo_ColorCorrection, serialization)
     cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
     Mat colorCorrectionMat = model.compute();
 
-    // write model
-    path1 = cv::tempfile() + ".yaml";
-    FileStorage fs1(path1, FileStorage::WRITE);
+    //--- 1. write model to memory -------------------------------------------
+    FileStorage fs1("", FileStorage::WRITE | FileStorage::MEMORY);
     model.write(fs1);
-    fs1.release();
+    std::string yaml1 = fs1.releaseAndGetString();
 
-    // read model
+    //--- 2. read model back from memory -------------------------------------
     cv::ccm::ColorCorrectionModel model1;
-    FileStorage fs2(path1, FileStorage::READ);
-    FileNode modelNode = fs2["ColorCorrectionModel"];
-    model1.read(modelNode);
+    FileStorage fs2(yaml1, FileStorage::READ | FileStorage::MEMORY);
+    model1.read(fs2["ColorCorrectionModel"]);
     fs2.release();
 
-    // write model again
-    auto path2 = cv::tempfile() + ".yaml";
-    FileStorage fs3(path2, FileStorage::WRITE);
+    //--- 3. write the re-loaded model again to memory -----------------------
+    FileStorage fs3("", FileStorage::WRITE | FileStorage::MEMORY);
     model1.write(fs3);
-    fs3.release();
+    std::string yaml2 = fs3.releaseAndGetString();
 
-    // read both yamls from disk
-    std::ifstream file1(path1);
-    std::string str1((std::istreambuf_iterator<char>(file1)), std::istreambuf_iterator<char>());
-    std::ifstream file2(path2);
-    std::string str2((std::istreambuf_iterator<char>(file2)), std::istreambuf_iterator<char>());
-    // compare them
-    EXPECT_EQ(str1, str2);
+    //--- 4. compare the two YAML strings ------------------------------------
+    EXPECT_EQ(yaml1, yaml2);
 }
 
 } // namespace
