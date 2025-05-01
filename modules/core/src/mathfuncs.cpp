@@ -938,9 +938,40 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
     const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
+    // Note: channels are unrolled
+
+    std::string extra_opts ="";
+    if (is_ipower)
+    {
+        int wdepth = CV_32F;
+        if (depth == CV_64F)
+            wdepth = CV_64F;
+        else if (depth == CV_16F)
+            wdepth = CV_16F;
+
+        char cvt[2][50];
+        extra_opts = format(
+            " -D srcT1=%s -DsrcT1_C1=%s"
+            " -D srcT2=int -D workST=int"
+            " -D workT=%s -D wdepth=%d -D convertToWT1=%s"
+            " -D convertToDT=%s"
+            " -D workT1=%s",
+            ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+            ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+            ocl::typeToStr(CV_MAKE_TYPE(wdepth, 1)),
+            wdepth,
+            ocl::convertTypeStr(depth, wdepth, 1, cvt[0], sizeof(cvt[0])),
+            ocl::convertTypeStr(wdepth, depth, 1, cvt[1], sizeof(cvt[1])),
+            ocl::typeToStr(wdepth)
+        );
+    }
+
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
-                         ocl::typeToStr(depth), depth, rowsPerWI, op,
+                  format("-D cn=%d -D dstT=%s -D dstT_C1=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D %s%s%s%s",
+                         1,
+                         ocl::typeToStr(depth), ocl::typeToStr(depth), depth, rowsPerWI, op,
+                         " -D UNARY_OP=1",
+                         extra_opts.empty() ? "" : extra_opts.c_str(),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
