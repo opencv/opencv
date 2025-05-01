@@ -693,7 +693,7 @@ OCL_PERF_TEST_P(PowFixture, Pow, ::testing::Combine(
 
 ///////////// iPow ////////////////////////
 OCL_PERF_TEST_P(PowFixture, iPow, ::testing::Combine(
-                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8SC1,CV_16UC1,CV_16SC1,CV_32SC1)))
+                OCL_TEST_SIZES, OCL_PERF_ENUM(CV_8UC1, CV_8UC3, CV_8SC1, CV_16UC1, CV_16SC1, CV_32SC1, CV_32FC1, CV_64FC1)))
 {
     const Size_MatType_t params = GetParam();
     const Size srcSize = get<0>(params);
@@ -705,7 +705,7 @@ OCL_PERF_TEST_P(PowFixture, iPow, ::testing::Combine(
     randu(src, 0, 100);
     declare.in(src).out(dst);
 
-    OCL_TEST_CYCLE() cv::pow(src, 7.0, dst);
+    OCL_TEST_CYCLE() cv::pow(src, 3, dst);
 
     SANITY_CHECK_NOTHING();
 }
