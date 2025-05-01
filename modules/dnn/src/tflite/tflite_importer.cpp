@@ -944,9 +944,6 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
     {
         if (endMask & (1 << i))
             ends.at<int>(i) = INT_MAX;
-        if (strides.at<int>(i) != 1)
-            CV_Error(Error::StsNotImplemented,
-                     format("StridedSlice with stride %d", strides.at<int>(i)));
     }
     if (begins.total() == 4 && layouts[op.inputs()->Get(0)] == DNN_LAYOUT_NHWC)
     {
@@ -955,9 +952,12 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
         std::swap(begins.at<int>(1), begins.at<int>(2));
         std::swap(ends.at<int>(2), ends.at<int>(3));
         std::swap(ends.at<int>(1), ends.at<int>(2));
+        std::swap(strides.at<int>(2), strides.at<int>(3));
+        std::swap(strides.at<int>(1), strides.at<int>(2));
     }
     layerParams.set("begin", DictValue::arrayInt((int*)begins.data, begins.total()));
     layerParams.set("end", DictValue::arrayInt((int*)ends.data, ends.total()));
+    layerParams.set("steps", DictValue::arrayInt((int*)strides.data, strides.total()));
     addLayer(layerParams, op);
 }
 
