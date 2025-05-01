@@ -2552,7 +2552,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
                 inputMat.convertTo(convertedMat, CV_16UC1, 256.0);  // CV_8UC1 -> CV_16UC1
             }
             break;
-        
+
         default:
             CV_LOG_WARNING(NULL, "Unknown pixel format: " << av_get_pix_fmt_name(input_pix_fmt));
             CV_Assert(false);

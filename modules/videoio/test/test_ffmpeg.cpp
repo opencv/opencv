@@ -960,17 +960,17 @@ TEST_P(videoio_ffmpeg_conversion, handle_conversion)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
-    
+
     const string filename = "conversion_video.mp4";
     int input_type = get<0>(GetParam());
     int target_type = get<1>(GetParam());
     bool isColor = get<2>(GetParam());
     string description = get<3>(GetParam());
-    
+
     const double fps = 30.0;
     const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
     const Mat frame(480, 640, input_type, Scalar::all(0));
-     
+
     VideoWriter writer(filename, fourcc, fps, frame.size(), isColor);
     writer.set(VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(target_type));
 
@@ -991,15 +991,15 @@ TEST_P(videoio_ffmpeg_conversion, handle_conversion)
     VideoCapture cap(filename, CAP_FFMPEG);
     if (!cap.isOpened())
         throw SkipTestException("Failed to open written video");
-    
+
     Mat readFrame;
     int frameCount = 0;
     while (cap.read(readFrame))
         frameCount++;
-    
+
     // Simply checking if all 90 frames can be read is enough.
     // If no conversion is done 0 frames will be written.
-    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description; 
+    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description;
 
     std::remove(filename.c_str());
 }
@@ -1009,11 +1009,11 @@ const ConversionTestParams conversion_cases[] =
     // converting to 8UC3
     make_tuple(CV_8UC1, CV_8UC3, true, "CV_8UC1_to_CV_8UC3"),
     make_tuple(CV_16UC1, CV_8UC3, true, "CV_16UC1_to_CV_8UC3"),
-    
+
     // converting to 8UC1
     make_tuple(CV_8UC3, CV_8UC1, false, "CV_8UC3_to_CV_8UC1"),
     make_tuple(CV_16UC1, CV_8UC1, false, "CV_16UC1_to_CV_8UC1"),
-    
+
     // converting to 16UC1
     make_tuple(CV_8UC3, CV_16UC1, false, "CV_8UC3_to_CV_16UC1"),
     make_tuple(CV_8UC1, CV_16UC1, false, "CV_8UC1_to_CV_16UC1"),
