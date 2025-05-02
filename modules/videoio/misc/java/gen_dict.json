@@ -1,0 +1,6 @@
+{
+
+    "func_arg_fix" : {
+        "read" : { "buffer" : {"ctype" : "nc_string"} }
+    }
+}

@@ -5,6 +5,7 @@ import java.util.List;
 import org.opencv.core.Size;
 import org.opencv.videoio.Videoio;
 import org.opencv.videoio.VideoCapture;
+import org.opencv.videoio.IStreamReader;
 
 import org.opencv.test.OpenCVTestCase;
 
@@ -61,4 +62,20 @@ public class VideoCaptureTest extends OpenCVTestCase {
         assertNotNull(capture);
     }
 
+    public void testConstructorStream() {
+        IStreamReader stream = new IStreamReader(0) {
+            @Override
+            public int read(String buffer, int size) {
+                return 0;
+            }
+
+            @Override
+            public int seek(int offset, int origin) {
+                return 0;
+            }
+        };
+        capture = new VideoCapture(stream, Videoio.CAP_ANY, null);
+        assertNotNull(capture);
+        assertTrue(capture.isOpened());
+    }
 }

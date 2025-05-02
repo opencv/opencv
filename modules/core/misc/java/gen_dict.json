@@ -657,6 +657,15 @@
             "suffix": "Ljava_lang_String_2",
             "j_import": "java.lang.String"
         },
+        "nc_string": {
+            "j_type": "String",
+            "jn_type": "String",
+            "jni_name": "const_cast<char*>(n_%(n)s.c_str())",
+            "jni_type": "jstring",
+            "jni_var": "const char* utf_%(n)s = env->GetStringUTFChars(%(n)s, 0); String n_%(n)s( utf_%(n)s ? utf_%(n)s : \"\" ); env->ReleaseStringUTFChars(%(n)s, utf_%(n)s)",
+            "suffix": "Ljava_lang_String_2",
+            "j_import": "java.lang.String"
+        },
         "size_t": {
             "j_type": "long",
             "jn_type": "long",
