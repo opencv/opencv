@@ -44,7 +44,7 @@ macro(_find_header_file_in_dirs VAR NAME)
 endmacro()
 
 macro(ocv_lapack_check)
-  cmake_parse_arguments(LAPACK "" "IMPL;CBLAS_H;LAPACKE_H" "INCLUDE_DIR;LIBRARIES" ${ARGN})
+  cmake_parse_arguments(LAPACK "SKIP_BUILD" "IMPL;CBLAS_H;LAPACKE_H" "INCLUDE_DIR;LIBRARIES" ${ARGN})
 
   ocv_debug_message("LAPACK_IMPL=${LAPACK_IMPL}")
   ocv_debug_message("LAPACK_CBLAS_H=${LAPACK_CBLAS_H}")
@@ -145,28 +145,32 @@ macro(ocv_lapack_check)
       add_compile_definitions(ACCELERATE_LAPACK_ILP64)
     endif()
 
-    try_compile(__VALID_LAPACK
-        "${OpenCV_BINARY_DIR}"
-        "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
-        CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
-                    "-DLINK_DIRECTORIES:STRING=${__link_directories}"
-        COMPILE_DEFINITIONS ${LAPACK_TRY_COMPILE_DEF}
-        LINK_LIBRARIES ${LAPACK_LIBRARIES}
-        OUTPUT_VARIABLE TRY_OUT
-    )
-    if(NOT __VALID_LAPACK)
-      file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
-          "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
-          "    LAPACK_INCLUDE_DIR: '${LAPACK_INCLUDE_DIR}'\n"
-          "    LAPACK_LIBRARIES: '${LAPACK_LIBRARIES}'\n"
-          "    LAPACK_LINK_LIBRARIES: '${__link_directories}'\n"
-          "    Output:\n${TRY_OUT}\n\n")
-      message(STATUS "LAPACK(${LAPACK_IMPL}): Can't build LAPACK check code. This LAPACK version is not supported.")
-      unset(LAPACK_LIBRARIES)
+    if(NOT LAPACK_SKIP_BUILD)
+      try_compile(__VALID_LAPACK
+          "${OpenCV_BINARY_DIR}"
+          "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
+          CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
+                      "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+          COMPILE_DEFINITIONS ${LAPACK_TRY_COMPILE_DEF}
+          LINK_LIBRARIES ${LAPACK_LIBRARIES}
+          OUTPUT_VARIABLE TRY_OUT
+      )
+      if(NOT __VALID_LAPACK)
+        file(APPEND ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeError.log
+            "\nLAPACK(${LAPACK_IMPL}) check FAILED:\n"
+            "    LAPACK_INCLUDE_DIR: '${LAPACK_INCLUDE_DIR}'\n"
+            "    LAPACK_LIBRARIES: '${LAPACK_LIBRARIES}'\n"
+            "    LAPACK_LINK_LIBRARIES: '${__link_directories}'\n"
+            "    Output:\n${TRY_OUT}\n\n")
+        message(STATUS "LAPACK(${LAPACK_IMPL}): Can't build LAPACK check code. This LAPACK version is not supported.")
+        unset(LAPACK_LIBRARIES)
+      else()
+        message(STATUS "LAPACK(${LAPACK_IMPL}): Support is enabled.")
+        ocv_include_directories(${LAPACK_INCLUDE_DIR})
+        set(HAVE_LAPACK 1)
+      endif()
     else()
-      message(STATUS "LAPACK(${LAPACK_IMPL}): Support is enabled.")
-      ocv_include_directories(${LAPACK_INCLUDE_DIR})
-      set(HAVE_LAPACK 1)
+      message(STATUS "Skipped LAPACK build check")
     endif()
   endif()
 endmacro()
@@ -264,16 +268,12 @@ if(WITH_LAPACK)
 
   if(BUILD_CLAPACK)
     add_subdirectory(3rdparty/clapack)
-
-    set(LAPACK_CBLAS_H  "cblas.h")
-    set(LAPACK_LAPACKE_H  "lapack.h")
-    set(LAPACK_IMPL  "LAPACK/clapack")
-    set(LAPACK_INCLUDE_DIR "${CLAPACK_INCLUDE_DIR}")
-    set(LAPACK_LIBRARIES ${CLAPACK_LIBRARIES})
-    set(LAPACK_VERSION "${CLAPACK_VERSION}")
-    ocv_lapack_make_hdr("${LAPACK_INCLUDE_DIR}/${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}/${LAPACK_LAPACKE_H}")
-    # unable to properly check against source code without binaries: ocv_lapack_check()
-    ocv_include_directories(${LAPACK_INCLUDE_DIR})
+    ocv_lapack_check(IMPL "Built-In"
+      CBLAS_H "cblas.h"
+      LAPACKE_H "lapack.h"
+      INCLUDE_DIR "${CLAPACK_INCLUDE_DIR}"
+      LIBRARIES "${CLAPACK_LIBRARIES}"
+      SKIP_BUILD)
     set(HAVE_LAPACK 1)
   endif()
 
