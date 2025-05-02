@@ -965,7 +965,7 @@ TEST_P(videoio_ffmpeg_conversion, handle_conversion)
     int input_type = get<0>(GetParam());
     int target_type = get<1>(GetParam());
     bool isColor = get<2>(GetParam());
-    string description = get<3>(GetParam());
+    const string description = get<3>(GetParam());
 
     const double fps = 30.0;
     const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
@@ -990,16 +990,15 @@ TEST_P(videoio_ffmpeg_conversion, handle_conversion)
 
     VideoCapture cap(filename, CAP_FFMPEG);
     if (!cap.isOpened())
-        throw SkipTestException("Failed to open written video");
+        throw SkipTestException("Failed to open video file, stream not supported or invalid");
 
     Mat readFrame;
     int frameCount = 0;
     while (cap.read(readFrame))
         frameCount++;
 
-    // Simply checking if all 90 frames can be read is enough.
-    // If no conversion is done 0 frames will be written.
-    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description;
+    // Checking if all 90 frames can be read is enough, if no conversion is done 0 frames will be written.
+    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description << "(expected 90, got " << frameCount << ")";
 
     std::remove(filename.c_str());
 }
