@@ -63,16 +63,16 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testConstructorStream() {
-        IStreamReader stream = new IStreamReader(0) {
-            @Override
-            public int read(String buffer, int size) {
-                return 0;
-            }
+        IStreamReader stream = new IStreamReader() {
+            // @Override
+            // public int read(String buffer, int size) {
+            //     return 0;
+            // }
 
-            @Override
-            public int seek(int offset, int origin) {
-                return 0;
-            }
+            // @Override
+            // public int seek(int offset, int origin) {
+            //     return 0;
+            // }
         };
         capture = new VideoCapture(stream, Videoio.CAP_ANY, null);
         assertNotNull(capture);

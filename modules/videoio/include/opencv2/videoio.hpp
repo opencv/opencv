@@ -721,7 +721,7 @@ enum VideoCaptureOBSensorProperties{
 
 /** @brief Read data stream interface
  */
-class CV_EXPORTS_W IStreamReader
+class CV_EXPORTS IStreamReader
 {
 public:
     virtual ~IStreamReader();
