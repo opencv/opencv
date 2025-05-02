@@ -40,7 +40,7 @@ static void broadcast1D2TargetMat(Mat& data, const MatShape& targetShape, int ax
 
 static void block_repeat(InputArray src, const MatShape& srcShape, int axis, int repetitions, OutputArray dst)
 {
-    CV_Assert(src.getObj() != dst.getObj());
+    CV_Assert(!src.pointsTo(dst));
     CV_Check(axis, axis >= 0 && (axis < src.dims() || (src.dims()==1 && axis==1)), "axis is out of range"); // (src.dims()==1 && axis==1) has been added as a temporary fix for quantized models. Refer issue https://github.com/opencv/opencv_zoo/issues/273
     CV_CheckGT(repetitions, 1, "More than one repetition expected");
 
