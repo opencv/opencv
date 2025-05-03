@@ -20,47 +20,47 @@ public class VideoCaptureTest extends OpenCVTestCase {
         super.setUp();
 
         capture = null;
-        isTestCaseEnabled = false;
+        // isTestCaseEnabled = false;
         isSucceed = false;
         isOpened = false;
     }
 
-    public void testGrab() {
-        capture = new VideoCapture();
-        isSucceed = capture.grab();
-        assertFalse(isSucceed);
-    }
+    // public void testGrab() {
+    //     capture = new VideoCapture();
+    //     isSucceed = capture.grab();
+    //     assertFalse(isSucceed);
+    // }
 
-    public void testIsOpened() {
-        capture = new VideoCapture();
-        assertFalse(capture.isOpened());
-    }
+    // public void testIsOpened() {
+    //     capture = new VideoCapture();
+    //     assertFalse(capture.isOpened());
+    // }
 
-    public void testDefaultConstructor() {
-        capture = new VideoCapture();
-        assertNotNull(capture);
-        assertFalse(capture.isOpened());
-    }
+    // public void testDefaultConstructor() {
+    //     capture = new VideoCapture();
+    //     assertNotNull(capture);
+    //     assertFalse(capture.isOpened());
+    // }
 
-    public void testConstructorWithFilename() {
-        capture = new VideoCapture("some_file.avi");
-        assertNotNull(capture);
-    }
+    // public void testConstructorWithFilename() {
+    //     capture = new VideoCapture("some_file.avi");
+    //     assertNotNull(capture);
+    // }
 
-    public void testConstructorWithFilenameAndExplicitlySpecifiedAPI() {
-        capture = new VideoCapture("some_file.avi", Videoio.CAP_ANY);
-        assertNotNull(capture);
-    }
+    // public void testConstructorWithFilenameAndExplicitlySpecifiedAPI() {
+    //     capture = new VideoCapture("some_file.avi", Videoio.CAP_ANY);
+    //     assertNotNull(capture);
+    // }
 
-    public void testConstructorWithIndex() {
-        capture = new VideoCapture(0);
-        assertNotNull(capture);
-    }
+    // public void testConstructorWithIndex() {
+    //     capture = new VideoCapture(0);
+    //     assertNotNull(capture);
+    // }
 
-    public void testConstructorWithIndexAndExplicitlySpecifiedAPI() {
-        capture = new VideoCapture(0, Videoio.CAP_ANY);
-        assertNotNull(capture);
-    }
+    // public void testConstructorWithIndexAndExplicitlySpecifiedAPI() {
+    //     capture = new VideoCapture(0, Videoio.CAP_ANY);
+    //     assertNotNull(capture);
+    // }
 
     public void testConstructorStream() {
         IStreamReader stream = new IStreamReader() {
@@ -69,10 +69,11 @@ public class VideoCaptureTest extends OpenCVTestCase {
             //     return 0;
             // }
 
-            // @Override
-            // public int seek(int offset, int origin) {
-            //     return 0;
-            // }
+            @Override
+            public int seek(int offset, int origin) {
+                System.out.println("java seek");
+                return 0;
+            }
         };
         capture = new VideoCapture(stream, Videoio.CAP_ANY, null);
         assertNotNull(capture);

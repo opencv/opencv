@@ -3,14 +3,9 @@
         "Ptr_IStreamReader": {
             "j_type": "IStreamReader",
             "jn_type": "IStreamReader",
-            "jn_args": [
-                [
-                    "",
-                    ".getNativeObjAddr()"
-                ]
-            ],
-            "jni_type": "jobject",
-            "jni_var": "auto %(n)s = makePtr<JavaStreamReader>()",
+            "jni_name": "n_%(n)s",
+            "jni_type": "jclass",
+            "jni_var": "auto n_%(n)s = makePtr<JavaStreamReader>(source)",
             "j_import": "org.opencv.videoio.IStreamReader"
         }
     }

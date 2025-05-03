@@ -1,7 +1,5 @@
 package org.opencv.videoio;
 
-public class IStreamReader {
-    long getNativeObjAddr() {
-        return 0;
-    }
+public interface IStreamReader {
+    public int seek(int offset, int origin);
 }
