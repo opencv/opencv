@@ -272,6 +272,10 @@ TEST_P(Test_TFLite, leakyRelu) {
     testLayer("leakyRelu");
 }
 
+TEST_P(Test_TFLite, StridedSlice) {
+    testLayer("strided_slice");
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
