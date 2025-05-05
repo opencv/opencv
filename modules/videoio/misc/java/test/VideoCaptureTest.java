@@ -1,8 +1,14 @@
 package org.opencv.test.videoio;
 
 import java.util.List;
+import java.io.File;
+import java.io.RandomAccessFile;
+import java.io.IOException;
+import java.io.FileNotFoundException;
 
+import org.opencv.core.Mat;
 import org.opencv.core.Size;
+import org.opencv.core.MatOfInt;
 import org.opencv.videoio.Videoio;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.IStreamReader;
@@ -10,19 +16,26 @@ import org.opencv.videoio.IStreamReader;
 import org.opencv.test.OpenCVTestCase;
 
 public class VideoCaptureTest extends OpenCVTestCase {
+    private final static String ENV_OPENCV_TEST_DATA_PATH = "OPENCV_TEST_DATA_PATH";
 
     private VideoCapture capture;
     private boolean isOpened;
     private boolean isSucceed;
+    private File testDataPath;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
 
         capture = null;
-        // isTestCaseEnabled = false;
         isSucceed = false;
         isOpened = false;
+
+        String envTestDataPath = System.getenv(ENV_OPENCV_TEST_DATA_PATH);
+
+        if(envTestDataPath == null) throw new Exception(ENV_OPENCV_TEST_DATA_PATH + " has to be defined!");
+
+        testDataPath = new File(envTestDataPath);
     }
 
     // public void testGrab() {
@@ -62,21 +75,49 @@ public class VideoCaptureTest extends OpenCVTestCase {
     //     assertNotNull(capture);
     // }
 
-    public void testConstructorStream() {
+    public void testConstructorStream() throws FileNotFoundException {
+        RandomAccessFile f = new RandomAccessFile(new File(testDataPath, "cv/video/768x576.avi"), "r");
+
         IStreamReader stream = new IStreamReader() {
-            // @Override
-            // public int read(String buffer, int size) {
-            //     return 0;
-            // }
+            @Override
+            public long read(byte[] buffer, long size) {
+                try
+                {
+                    return f.read(buffer);
+                }
+                catch (IOException e)
+                {
+                    System.out.println(e.getMessage());
+                    return 0;
+                }
+            }
 
             @Override
-            public int seek(int offset, int origin) {
-                System.out.println("java seek");
-                return 0;
+            public long seek(long offset, long origin) {
+                try
+                {
+                    if (origin == 0)
+                    {
+                        f.seek(offset);
+                        return offset;
+                    }
+                    else
+                        throw new IOException("seek");
+                }
+                catch (IOException e)
+                {
+                    System.out.println(e.getMessage());
+                    return 0;
+                }
             }
         };
-        capture = new VideoCapture(stream, Videoio.CAP_ANY, null);
+        capture = new VideoCapture(stream, Videoio.CAP_FFMPEG, new MatOfInt());
         assertNotNull(capture);
         assertTrue(capture.isOpened());
+
+        Mat frame = new Mat();
+        assertTrue(capture.read(frame));
+        assertEquals(frame.rows(), 576);
+        assertEquals(frame.cols(), 768);
     }
 }

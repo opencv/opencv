@@ -5,7 +5,7 @@
             "jn_type": "IStreamReader",
             "jni_name": "n_%(n)s",
             "jni_type": "jclass",
-            "jni_var": "auto n_%(n)s = makePtr<JavaStreamReader>(source)",
+            "jni_var": "auto n_%(n)s = makePtr<JavaStreamReader>(env, source)",
             "j_import": "org.opencv.videoio.IStreamReader"
         }
     }
