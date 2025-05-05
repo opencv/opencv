@@ -266,7 +266,7 @@ if(WITH_LAPACK)
       LIBRARIES "${LAPACK_LIBRARIES}")
   endif()
 
-  if(BUILD_CLAPACK)
+  if(BUILD_CLAPACK OR NOT HAVE_LAPACK)
     add_subdirectory(3rdparty/clapack)
     ocv_lapack_check(IMPL "Built-In"
       CBLAS_H "cblas.h"
