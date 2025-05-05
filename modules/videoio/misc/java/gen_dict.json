@@ -7,6 +7,14 @@
             "jni_type": "jclass",
             "jni_var": "auto n_%(n)s = makePtr<JavaStreamReader>(env, source)",
             "j_import": "org.opencv.videoio.IStreamReader"
+        },
+        "vector_VideoCaptureAPIs": {
+            "j_type": "List<Integer>",
+            "jn_type": "List<Integer>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< cv::VideoCaptureAPIs > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_VideoCaptureAPIs"
         }
     }
 }

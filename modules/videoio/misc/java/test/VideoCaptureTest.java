@@ -76,11 +76,34 @@ public class VideoCaptureTest extends OpenCVTestCase {
     }
 
     public void testConstructorStream() throws FileNotFoundException {
+        // Check backend is available
+        Integer apiPref = Videoio.CAP_ANY;
+        for (Integer backend : Videoio.getStreamBufferedBackends())
+        {
+            if (!Videoio.hasBackend(backend))
+                continue;
+            if (!Videoio.isBackendBuiltIn(backend))
+            {
+                int[] abi = new int[1], api = new int[1];
+                Videoio.getStreamBufferedBackendPluginVersion(backend, abi, api);
+                if (abi[0] < 1 || (abi[0] == 1 && api[0] < 2))
+                    continue;
+            }
+            apiPref = backend;
+            break;
+        }
+        if (apiPref == Videoio.CAP_ANY)
+        {
+            throw new TestSkipException();
+        }
+
         RandomAccessFile f = new RandomAccessFile(new File(testDataPath, "cv/video/768x576.avi"), "r");
 
-        IStreamReader stream = new IStreamReader() {
+        IStreamReader stream = new IStreamReader()
+        {
             @Override
-            public long read(byte[] buffer) {
+            public long read(byte[] buffer)
+            {
                 try
                 {
                     return f.read(buffer);
@@ -93,7 +116,8 @@ public class VideoCaptureTest extends OpenCVTestCase {
             }
 
             @Override
-            public long seek(long offset, long origin) {
+            public long seek(long offset, long origin)
+            {
                 try
                 {
                     if (origin == 0)
@@ -111,7 +135,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
                 }
             }
         };
-        capture = new VideoCapture(stream, Videoio.CAP_FFMPEG, new MatOfInt());
+        capture = new VideoCapture(stream, apiPref, new MatOfInt());
         assertNotNull(capture);
         assertTrue(capture.isOpened());
 

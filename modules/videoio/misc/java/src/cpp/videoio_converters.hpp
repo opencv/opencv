@@ -18,4 +18,6 @@ private:
     jclass obj;
 };
 
+jobject vector_VideoCaptureAPIs_to_List(JNIEnv* env, std::vector<cv::VideoCaptureAPIs>& vs);
+
 #endif
