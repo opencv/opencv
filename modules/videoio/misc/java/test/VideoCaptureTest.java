@@ -80,7 +80,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 
         IStreamReader stream = new IStreamReader() {
             @Override
-            public long read(byte[] buffer, long size) {
+            public long read(byte[] buffer) {
                 try
                 {
                     return f.read(buffer);

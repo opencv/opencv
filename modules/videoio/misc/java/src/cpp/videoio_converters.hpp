@@ -9,13 +9,13 @@
 class JavaStreamReader : public cv::IStreamReader
 {
 public:
-    JavaStreamReader(JNIEnv* _env, jclass _jobject);
+    JavaStreamReader(JNIEnv* env, jclass obj);
     long long read(char* buffer, long long size) CV_OVERRIDE;
     long long seek(long long offset, int way) CV_OVERRIDE;
 
 private:
     JNIEnv* env;
-    jclass jobject;
+    jclass obj;
 };
 
 #endif
