@@ -727,7 +727,7 @@ public:
     virtual ~IStreamReader();
 
     /** @brief Read bytes from stream */
-    CV_WRAP virtual long long read(char* buffer, long long size) = 0;
+    virtual long long read(char* buffer, long long size) = 0;
 
     /** @brief Sets the stream position
      *
@@ -736,7 +736,7 @@ public:
      *
      * @see fseek
      */
-     CV_WRAP virtual long long seek(long long offset, int origin) = 0;
+    virtual long long seek(long long offset, int origin) = 0;
 };
 
 class IVideoCapture;

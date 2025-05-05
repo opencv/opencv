@@ -161,7 +161,6 @@ class CppHeaderParser(object):
         # pass 2: decrypt the list
         wi = -1
         prev_w = ""
-        print("word_list", word_list)
         for w in word_list:
             wi += 1
             if w == "*":
@@ -191,15 +190,12 @@ class CppHeaderParser(object):
                 angle_stack[-1] += 1
             elif arg_type == "struct":
                 arg_type += " " + w
-            elif prev_w in ["signed", "unsigned", "short", "long"] and w in ["char", "short", "int", "long"]:
-                arg_type += " " + w
             elif arg_type and arg_type != "~":
                 arg_name = " ".join(word_list[wi:])
                 break
             else:
                 arg_type += w
             prev_w = w
-        print(arg_type)
 
         counter_str = ""
         add_star = False

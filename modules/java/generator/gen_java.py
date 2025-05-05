@@ -65,7 +65,6 @@ type_dict = {
     "char"    : { "j_type" : "char", "jn_type" : "char", "jni_type" : "jchar", "suffix" : "C" },
     "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
-    "long long" : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "float"   : { "j_type" : "float", "jn_type" : "float", "jni_type" : "jfloat", "suffix" : "F" },
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
@@ -224,13 +223,11 @@ def get_cname(name):
     return name.replace(".", "::")
 
 def cast_from(t):
-    print(f"cast_from {t}")
     if t in type_dict and "cast_from" in type_dict[t]:
         return type_dict[t]["cast_from"]
     return t
 
 def cast_to(t):
-    print(f"cast_to {t}")
     if t in type_dict and "cast_to" in type_dict[t]:
         return type_dict[t]["cast_to"]
     return t
