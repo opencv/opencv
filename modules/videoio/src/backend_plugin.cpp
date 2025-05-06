@@ -472,8 +472,8 @@ public:
                     auto is = reinterpret_cast<IStreamReader*>(opaque);
                     try {
                         return is->read(buffer, size);
-                    } catch (std::exception& e) {
-                        CV_LOG_WARNING(NULL, "IStreamReader::read(" << size << ") failed: " << e.what());
+                    } catch (...) {
+                        CV_LOG_WARNING(NULL, "IStreamReader::read(" << size << ") failed");
                         return 0;
                     }
                 },
@@ -482,8 +482,8 @@ public:
                     auto is = reinterpret_cast<IStreamReader*>(opaque);
                     try {
                         return is->seek(offset, way);
-                    } catch (std::exception& e) {
-                        CV_LOG_WARNING(NULL, "IStreamReader::seek(" << offset << ", way=" << way << ") failed: " << e.what());
+                    } catch (...) {
+                        CV_LOG_WARNING(NULL, "IStreamReader::seek(" << offset << ", way=" << way << ") failed");
                         return -1;
                     }
                 }, c_params, n_params, &capture))
