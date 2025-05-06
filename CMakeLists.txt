@@ -1688,7 +1688,7 @@ if(WITH_VA OR HAVE_VA)
 endif()
 
 if(WITH_LAPACK OR HAVE_LAPACK)
-  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_LIBRARIES} ${LAPACK_VERSION})" ELSE NO)
+  status("    Lapack:"      HAVE_LAPACK     THEN "YES (${LAPACK_IMPL} ${LAPACK_LIBRARIES})" ELSE NO)
 endif()
 
 if(HAVE_OPENVINO

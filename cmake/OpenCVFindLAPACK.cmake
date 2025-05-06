@@ -267,6 +267,7 @@ if(WITH_LAPACK)
   endif()
 
   if(BUILD_CLAPACK OR NOT HAVE_LAPACK)
+    message(STATUS "Lapack not found - fallback to built-in")
     add_subdirectory(3rdparty/clapack)
     ocv_lapack_check(IMPL "Built-In"
       CBLAS_H "cblas.h"
