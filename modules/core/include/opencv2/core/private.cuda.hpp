@@ -147,7 +147,23 @@ namespace cv { namespace cuda
         inline explicit NppStreamHandler(cudaStream_t newStream)
         {
             nppStreamContext = {};
-            nppSafeCall(nppGetStreamContext(&nppStreamContext));
+            #if CUDA_VERSION < 12090
+                nppSafeCall(nppGetStreamContext(&nppStreamContext));
+            #else
+                int device = 0;
+                cudaSafeCall(cudaGetDevice(&device));
+
+                cudaDeviceProp prop{};
+                cudaSafeCall(cudaGetDeviceProperties(&prop, device));
+                
+                nppStreamContext.nCudaDeviceId = device;
+                nppStreamContext.nMultiProcessorCount = prop.multiProcessorCount;
+                nppStreamContext.nMaxThreadsPerMultiProcessor = prop.maxThreadsPerMultiProcessor;
+                nppStreamContext.nMaxThreadsPerBlock = prop.maxThreadsPerBlock;
+                nppStreamContext.nSharedMemPerBlock = prop.sharedMemPerBlock;
+                nppStreamContext.nCudaDevAttrComputeCapabilityMajor = prop.major;
+                nppStreamContext.nCudaDevAttrComputeCapabilityMinor = prop.minor;
+            #endif
             nppStreamContext.hStream = newStream;
             cudaSafeCall(cudaStreamGetFlags(nppStreamContext.hStream, &nppStreamContext.nStreamFlags));
         }
