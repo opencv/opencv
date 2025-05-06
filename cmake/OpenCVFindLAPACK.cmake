@@ -44,7 +44,7 @@ macro(_find_header_file_in_dirs VAR NAME)
 endmacro()
 
 macro(ocv_lapack_check)
-  cmake_parse_arguments(LAPACK "SKIP_BUILD" "IMPL;CBLAS_H;LAPACKE_H" "INCLUDE_DIR;LIBRARIES" ${ARGN})
+  cmake_parse_arguments(LAPACK "SKIP_BUILD;SKIP_FIND" "IMPL;CBLAS_H;LAPACKE_H" "INCLUDE_DIR;LIBRARIES" ${ARGN})
 
   ocv_debug_message("LAPACK_IMPL=${LAPACK_IMPL}")
   ocv_debug_message("LAPACK_CBLAS_H=${LAPACK_CBLAS_H}")
@@ -54,8 +54,13 @@ macro(ocv_lapack_check)
 
   string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" _lapack_impl "${LAPACK_IMPL}")
   message(STATUS "LAPACK(${LAPACK_IMPL}): LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
-  _find_header_file_in_dirs(OPENCV_CBLAS_H_PATH_${_lapack_impl} "${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}")
-  _find_header_file_in_dirs(OPENCV_LAPACKE_H_PATH_${_lapack_impl} "${LAPACK_LAPACKE_H}" "${LAPACK_INCLUDE_DIR}")
+  if(NOT LAPACK_SKIP_FIND)
+    _find_header_file_in_dirs(OPENCV_CBLAS_H_PATH_${_lapack_impl} "${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}")
+    _find_header_file_in_dirs(OPENCV_LAPACKE_H_PATH_${_lapack_impl} "${LAPACK_LAPACKE_H}" "${LAPACK_INCLUDE_DIR}")
+  else()
+    set(OPENCV_CBLAS_H_PATH_${_lapack_impl} "${LAPACK_INCLUDE_DIR}/${LAPACK_CBLAS_H}")
+    set(OPENCV_LAPACKE_H_PATH_${_lapack_impl} "${LAPACK_INCLUDE_DIR}/${LAPACK_LAPACKE_H}")
+  endif()
   if(NOT OPENCV_CBLAS_H_PATH_${_lapack_impl} OR NOT OPENCV_LAPACKE_H_PATH_${_lapack_impl})
     message(WARNING "LAPACK(${LAPACK_IMPL}): CBLAS/LAPACK headers are not found in '${LAPACK_INCLUDE_DIR}'")
     unset(LAPACK_LIBRARIES)
@@ -274,7 +279,8 @@ if(WITH_LAPACK)
       LAPACKE_H "lapack.h"
       INCLUDE_DIR "${CLAPACK_INCLUDE_DIR}"
       LIBRARIES "${CLAPACK_LIBRARIES}"
-      SKIP_BUILD)
+      SKIP_BUILD
+      SKIP_FIND)
     set(HAVE_LAPACK 1)
   endif()
 
