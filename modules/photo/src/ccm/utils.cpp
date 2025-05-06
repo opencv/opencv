@@ -19,6 +19,13 @@ inline double gammaOp(double element, double gamma)
 void gammaCorrection(InputArray _src, OutputArray _dst, double gamma)
 {
     Mat src = _src.getMat();
+    // must be a double-precision image (since we use ptr<double>())
+    CV_Assert(src.depth() == CV_64F);
+    // require continuous layout so ptr<double>() + index is valid
+    CV_Assert(src.isContinuous());
+    // gamma should be positive
+    CV_Assert(gamma > 0);
+
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
 
@@ -84,12 +91,11 @@ Mat saturate(Mat& src, double low, double up)
     return mask;
 }
 
-
 Mat rgb2gray(const Mat& rgb)
 {
-    const Matx31d m_gray(0.2126, 0.7152, 0.0722);
-    return multiple(rgb, Mat(m_gray));
+    Mat gray;
+    cv::cvtColor(rgb, gray, cv::COLOR_RGB2GRAY);
+    return gray;
 }
-
 }
 }  // namespace cv::ccm

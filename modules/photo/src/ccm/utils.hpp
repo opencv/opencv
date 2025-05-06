@@ -10,6 +10,7 @@
 #define __OPENCV_CCM_UTILS_HPP__
 
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace cv {
 namespace ccm {
@@ -25,7 +26,7 @@ double gammaOp(double element, double gamma);
     @param gamma a constant for gamma correction.
     @param dst the output array, type of Mat.
  */
- CV_EXPORTS void gammaCorrection(InputArray src, OutputArray dst, double gamma);
+ CV_EXPORTS_W void gammaCorrection(InputArray src, OutputArray dst, double gamma);
 
 /** @brief maskCopyTo a function to delete unsatisfied elementwise.
     @param src the input array, type of Mat.

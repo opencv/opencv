@@ -46,22 +46,28 @@ Color::Color(Mat colors_, std::shared_ptr<ColorSpaceBase> cs_)
 
 Color Color::to(const ColorSpaceBase& other, CAM method, bool save)
 {
-    if (history.count(other) == 1)
+    auto it = history.find(other);
+    if ( it != history.end() )
     {
-        return *history[other];
+        return *(it->second);
     }
     if (cs->relate(other))
     {
         return Color(cs->relation(other).run(colors), other);
     }
     Operations ops;
-    ops.add(cs->to).add(XYZ(cs->io).cam(other.io, method)).add(other.from);
-    std::shared_ptr<Color> color(new Color(ops.run(colors), other));
+    ops.add(cs->to).add(XYZ(cs->illumobserver).cam(other.illumobserver, method)).add(other.from);
+    Mat converted = ops.run(colors);
     if (save)
     {
-        history[other] = color;
+        auto ptr = std::make_shared<Color>(converted, other);
+        history[other] = ptr;
+        return *ptr;
     }
-    return *color;
+    else
+    {
+        return Color(converted, other);
+    }
 }
 
 Color Color::to(ColorSpace other, CAM method, bool save)
@@ -76,26 +82,26 @@ Mat Color::channel(Mat m, int i)
     return dchannels[i];
 }
 
-Mat Color::toGray(IO io, CAM method, bool save)
+Mat Color::toGray(const IllumObserver& illumobserver, CAM method, bool save)
 {
-    XYZ xyz = *XYZ::get(io);
+    XYZ xyz = *XYZ::get(illumobserver);
     return channel(this->to(xyz, method, save).colors, 1);
 }
 
-Mat Color::toLuminant(IO io, CAM method, bool save)
+Mat Color::toLuminant(const IllumObserver& illumobserver, CAM method, bool save)
 {
-    Lab lab = *Lab::get(io);
+    Lab lab = *Lab::get(illumobserver);
     return channel(this->to(lab, method, save).colors, 0);
 }
 
 Mat Color::diff(Color& other, DistanceType method)
 {
-    return diff(other, cs->io, method);
+    return diff(other, cs->illumobserver, method);
 }
 
-Mat Color::diff(Color& other, IO io, DistanceType method)
+Mat Color::diff(Color& other, const IllumObserver& illumobserver, DistanceType method)
 {
-    Lab lab = *Lab::get(io);
+    Lab lab = *Lab::get(illumobserver);
     switch (method)
     {
     case cv::ccm::DISTANCE_CIE76:

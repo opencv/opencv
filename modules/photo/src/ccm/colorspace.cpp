@@ -8,27 +8,27 @@
 
 #include "colorspace.hpp"
 #include "operations.hpp"
-#include "io.hpp"
+#include "illumobserver.hpp"
 
 namespace cv {
 namespace ccm {
-static const std::vector<double>& getIlluminants(const IO& io)
+static const std::vector<double>& getIlluminants(const IllumObserver& illumobserver)
 {
-    static const std::map<IO, std::vector<double>> illuminants = {
-        { IO::getIOs(A_2), { 1.098466069456375, 1, 0.3558228003436005 } },
-        { IO::getIOs(A_10), { 1.111420406956693, 1, 0.3519978321919493 } },
-        { IO::getIOs(D50_2), { 0.9642119944211994, 1, 0.8251882845188288 } },
-        { IO::getIOs(D50_10), { 0.9672062750333777, 1, 0.8142801513128616 } },
-        { IO::getIOs(D55_2), { 0.956797052643698, 1, 0.9214805860173273 } },
-        { IO::getIOs(D55_10), { 0.9579665682254781, 1, 0.9092525159847462 } },
-        { IO::getIOs(D65_2), { 0.95047, 1., 1.08883 } },
-        { IO::getIOs(D65_10), { 0.94811, 1., 1.07304 } },
-        { IO::getIOs(D75_2), { 0.9497220898840717, 1, 1.226393520724154 } },
-        { IO::getIOs(D75_10), { 0.9441713925645873, 1, 1.2064272211720228 } },
-        { IO::getIOs(E_2), { 1., 1., 1. } },
-        { IO::getIOs(E_10), { 1., 1., 1. } },
+    static const std::map<IllumObserver, std::vector<double>> illuminants = {
+        { IllumObserver::getIllumObservers(A_2), { 1.098466069456375, 1, 0.3558228003436005 } },
+        { IllumObserver::getIllumObservers(A_10), { 1.111420406956693, 1, 0.3519978321919493 } },
+        { IllumObserver::getIllumObservers(D50_2), { 0.9642119944211994, 1, 0.8251882845188288 } },
+        { IllumObserver::getIllumObservers(D50_10), { 0.9672062750333777, 1, 0.8142801513128616 } },
+        { IllumObserver::getIllumObservers(D55_2), { 0.956797052643698, 1, 0.9214805860173273 } },
+        { IllumObserver::getIllumObservers(D55_10), { 0.9579665682254781, 1, 0.9092525159847462 } },
+        { IllumObserver::getIllumObservers(D65_2), { 0.95047, 1., 1.08883 } },
+        { IllumObserver::getIllumObservers(D65_10), { 0.94811, 1., 1.07304 } },
+        { IllumObserver::getIllumObservers(D75_2), { 0.9497220898840717, 1, 1.226393520724154 } },
+        { IllumObserver::getIllumObservers(D75_10), { 0.9441713925645873, 1, 1.2064272211720228 } },
+        { IllumObserver::getIllumObservers(E_2), { 1., 1., 1. } },
+        { IllumObserver::getIllumObservers(E_10), { 1., 1., 1. } },
     };
-    auto it = illuminants.find(io);
+    auto it = illuminants.find(illumobserver);
     CV_Assert(it != illuminants.end());
     return it->second;
 };
@@ -37,7 +37,7 @@ static const std::vector<double>& getIlluminants(const IO& io)
  */
 bool ColorSpaceBase::relate(const ColorSpaceBase& other) const
 {
-    return (type == other.type) && (io == other.io);
+    return (type == other.type) && (illumobserver == other.illumobserver);
 };
 
 Operations ColorSpaceBase::relation(const ColorSpaceBase& /*other*/) const
@@ -47,7 +47,7 @@ Operations ColorSpaceBase::relation(const ColorSpaceBase& /*other*/) const
 
 bool ColorSpaceBase::operator<(const ColorSpaceBase& other) const
 {
-    return (io < other.io || (io == other.io && type < other.type) || (io == other.io && type == other.type && linear < other.linear));
+    return (illumobserver < other.illumobserver || (illumobserver == other.illumobserver && type < other.type) || (illumobserver == other.illumobserver && type == other.type && linear < other.linear));
 }
 
 /* @brief Base of RGB color space;
@@ -100,7 +100,7 @@ void RGBBase_::calM()
     XYZb = Mat(xyY2XYZ({ xb, yb }), true);
     merge(std::vector<Mat> { XYZr, XYZg, XYZb }, XYZ_rgbl);
     XYZ_rgbl = XYZ_rgbl.reshape(1, (int)XYZ_rgbl.total());
-    Mat XYZw = Mat(getIlluminants(io), true);
+    Mat XYZw = Mat(getIlluminants(illumobserver), true);
     XYZw = XYZw.reshape(1, (int)XYZw.total());
     solve(XYZ_rgbl, XYZw, Srgb);
     merge(std::vector<Mat> { Srgb.at<double>(0) * XYZr, Srgb.at<double>(1) * XYZg,
@@ -331,14 +331,14 @@ void REC_2020_RGB_::setParameter()
     gamma = 1 / 0.45;
 }
 
-Operations XYZ::cam(IO dio, CAM method)
+Operations XYZ::cam(IllumObserver dio, CAM method)
 {
-    return (io == dio) ? Operations()
-                       : Operations({ Operation(cam_(io, dio, method).t()) });
+    return (illumobserver == dio) ? Operations()
+                       : Operations({ Operation(cam_(illumobserver, dio, method).t()) });
 }
-Mat XYZ::cam_(IO sio, IO dio, CAM method) const
+Mat XYZ::cam_(IllumObserver sio, IllumObserver dio, CAM method) const
 {
-    static std::map<std::tuple<IO, IO, CAM>, Mat> cams;
+    static std::map<std::tuple<IllumObserver, IllumObserver, CAM>, Mat> cams;
 
     if (sio == dio)
     {
@@ -373,23 +373,23 @@ Mat XYZ::cam_(IO sio, IO dio, CAM method) const
     return M;
 }
 
-std::shared_ptr<XYZ> XYZ::get(IO io)
+std::shared_ptr<XYZ> XYZ::get(IllumObserver illumobserver)
 {
-    static std::map<IO, std::shared_ptr<XYZ>> xyz_cs;
+    static std::map<IllumObserver, std::shared_ptr<XYZ>> xyz_cs;
 
-    if (xyz_cs.count(io) == 1)
+    if (xyz_cs.count(illumobserver) == 1)
     {
-        return xyz_cs[io];
+        return xyz_cs[illumobserver];
     }
-    std::shared_ptr<XYZ> XYZ_CS = std::make_shared<XYZ>(io);
-    xyz_cs[io] = XYZ_CS;
-    return xyz_cs[io];
+    std::shared_ptr<XYZ> XYZ_CS = std::make_shared<XYZ>(illumobserver);
+    xyz_cs[illumobserver] = XYZ_CS;
+    return xyz_cs[illumobserver];
 }
 
 /* @brief Lab color space.
  */
-Lab::Lab(IO io_)
-    : ColorSpaceBase(io_, "Lab", true)
+Lab::Lab(IllumObserver illumobserver_)
+    : ColorSpaceBase(illumobserver_, "Lab", true)
 {
     to = { Operation([this](Mat src) -> Mat { return tosrc(src); }) };
     from = { Operation([this](Mat src) -> Mat { return fromsrc(src); }) };
@@ -397,7 +397,7 @@ Lab::Lab(IO io_)
 
 Vec3d Lab::fromxyz(const Vec3d& xyz)
 {
-    auto& il = getIlluminants(io);
+    auto& il = getIlluminants(illumobserver);
     double x = xyz[0] / il[0],
            y = xyz[1] / il[1],
            z = xyz[2] / il[2];
@@ -424,7 +424,7 @@ Vec3d Lab::tolab(const Vec3d& lab)
         return t > DELTA ? pow(t, 3.0) : (t - C) / M;
     };
     double L = (lab[0] + 16.) / 116., a = lab[1] / 500., b = lab[2] / 200.;
-    auto& il = getIlluminants(io);
+    auto& il = getIlluminants(illumobserver);
     return { il[0] * f_inv(L + a),
         il[1] * f_inv(L),
         il[2] * f_inv(L - b) };
@@ -440,17 +440,17 @@ Mat Lab::tosrc(Mat& src)
             [this](cv::Vec3d a) -> cv::Vec3d { return tolab(a); });
 }
 
-std::shared_ptr<Lab> Lab::get(IO io)
+std::shared_ptr<Lab> Lab::get(IllumObserver illumobserver)
 {
-    static std::map<IO, std::shared_ptr<Lab>> 	lab_cs;
+    static std::map<IllumObserver, std::shared_ptr<Lab>> 	lab_cs;
 
-    if (lab_cs.count(io) == 1)
+    if (lab_cs.count(illumobserver) == 1)
     {
-        return lab_cs[io];
+        return lab_cs[illumobserver];
     }
-    std::shared_ptr<Lab> Lab_CS(new Lab(io));
-    lab_cs[io] = Lab_CS;
-    return lab_cs[io];
+    std::shared_ptr<Lab> Lab_CS(new Lab(illumobserver));
+    lab_cs[illumobserver] = Lab_CS;
+    return lab_cs[illumobserver];
 }
 
 GetCS::GetCS()
@@ -687,76 +687,76 @@ std::shared_ptr<ColorSpaceBase> GetCS::getCS(enum ColorSpace cs_name)
         break;
     }
     case cv::ccm::COLOR_SPACE_XYZ_D65_2:
-        return XYZ::get(IO::getIOs(D65_2));
+        return XYZ::get(IllumObserver::getIllumObservers(D65_2));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D50_2:
-        return XYZ::get(IO::getIOs(D50_2));
+        return XYZ::get(IllumObserver::getIllumObservers(D50_2));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D65_10:
-        return XYZ::get(IO::getIOs(D65_10));
+        return XYZ::get(IllumObserver::getIllumObservers(D65_10));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D50_10:
-        return XYZ::get(IO::getIOs(D50_10));
+        return XYZ::get(IllumObserver::getIllumObservers(D50_10));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_A_2:
-        return XYZ::get(IO::getIOs(A_2));
+        return XYZ::get(IllumObserver::getIllumObservers(A_2));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_A_10:
-        return XYZ::get(IO::getIOs(A_10));
+        return XYZ::get(IllumObserver::getIllumObservers(A_10));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D55_2:
-        return XYZ::get(IO::getIOs(D55_2));
+        return XYZ::get(IllumObserver::getIllumObservers(D55_2));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D55_10:
-        return XYZ::get(IO::getIOs(D55_10));
+        return XYZ::get(IllumObserver::getIllumObservers(D55_10));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D75_2:
-        return XYZ::get(IO::getIOs(D75_2));
+        return XYZ::get(IllumObserver::getIllumObservers(D75_2));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_D75_10:
-        return XYZ::get(IO::getIOs(D75_10));
+        return XYZ::get(IllumObserver::getIllumObservers(D75_10));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_E_2:
-        return XYZ::get(IO::getIOs(E_2));
+        return XYZ::get(IllumObserver::getIllumObservers(E_2));
         break;
     case cv::ccm::COLOR_SPACE_XYZ_E_10:
-        return XYZ::get(IO::getIOs(E_10));
+        return XYZ::get(IllumObserver::getIllumObservers(E_10));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D65_2:
-        return Lab::get(IO::getIOs(D65_2));
+        return Lab::get(IllumObserver::getIllumObservers(D65_2));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D50_2:
-        return Lab::get(IO::getIOs(D50_2));
+        return Lab::get(IllumObserver::getIllumObservers(D50_2));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D65_10:
-        return Lab::get(IO::getIOs(D65_10));
+        return Lab::get(IllumObserver::getIllumObservers(D65_10));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D50_10:
-        return Lab::get(IO::getIOs(D50_10));
+        return Lab::get(IllumObserver::getIllumObservers(D50_10));
         break;
     case cv::ccm::COLOR_SPACE_LAB_A_2:
-        return Lab::get(IO::getIOs(A_2));
+        return Lab::get(IllumObserver::getIllumObservers(A_2));
         break;
     case cv::ccm::COLOR_SPACE_LAB_A_10:
-        return Lab::get(IO::getIOs(A_10));
+        return Lab::get(IllumObserver::getIllumObservers(A_10));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D55_2:
-        return Lab::get(IO::getIOs(D55_2));
+        return Lab::get(IllumObserver::getIllumObservers(D55_2));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D55_10:
-        return Lab::get(IO::getIOs(D55_10));
+        return Lab::get(IllumObserver::getIllumObservers(D55_10));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D75_2:
-        return Lab::get(IO::getIOs(D75_2));
+        return Lab::get(IllumObserver::getIllumObservers(D75_2));
         break;
     case cv::ccm::COLOR_SPACE_LAB_D75_10:
-        return Lab::get(IO::getIOs(D75_10));
+        return Lab::get(IllumObserver::getIllumObservers(D75_10));
         break;
     case cv::ccm::COLOR_SPACE_LAB_E_2:
-        return Lab::get(IO::getIOs(E_2));
+        return Lab::get(IllumObserver::getIllumObservers(E_2));
         break;
     case cv::ccm::COLOR_SPACE_LAB_E_10:
-        return Lab::get(IO::getIOs(E_10));
+        return Lab::get(IllumObserver::getIllumObservers(E_10));
         break;
     default:
         break;

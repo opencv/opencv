@@ -64,26 +64,26 @@ public:
 
     /** @brief To Gray.
     */
-    Mat toGray(IO io, CAM method = BRADFORD, bool save = true);
+    Mat toGray(const IllumObserver& illumobserver, CAM method = BRADFORD, bool save = true);
 
     /** @brief To Luminant.
     */
-    Mat toLuminant(IO io, CAM method = BRADFORD, bool save = true);
+    Mat toLuminant(const IllumObserver& illumobserver, CAM method = BRADFORD, bool save = true);
 
-    /** @brief Diff without IO.
+    /** @brief Diff without IllumObserver.
         @param other type of Color.
         @param method type of distance.
         @return distance between self and other
     */
     Mat diff(Color& other, DistanceType method = DISTANCE_CIE2000);
 
-    /** @brief Diff with IO.
+    /** @brief Diff with IllumObserver.
         @param other type of Color.
-        @param io type of IO.
+        @param illumobserver type of IllumObserver.
         @param method type of distance.
         @return distance between self and other
     */
-    Mat diff(Color& other, IO io, DistanceType method = DISTANCE_CIE2000);
+    Mat diff(Color& other, const IllumObserver& illumobserver, DistanceType method = DISTANCE_CIE2000);
 
     /** @brief Calculate gray mask.
     */

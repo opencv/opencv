@@ -65,7 +65,7 @@ Mat Operations::run(Mat abc)
     }
     abc = hd(abc);
     return abc;
-};
+}
 
 }
 }  // namespace cv::ccm

@@ -148,14 +148,11 @@ Mat ColorCorrectionModel::Impl::prepare(const Mat& inp)
     case cv::ccm::CCM_AFFINE:
     {
         shape = 12;
-        Mat out(inp.size(), CV_64FC4);
-        const int fromTo[] = { 0,0, 1,1, 2,2 };         // inp[ch] → out[ch]
-        mixChannels(&inp, 1, &out, 1, fromTo, 3);    
         Mat ones(inp.size(), CV_64F, Scalar(1));
-        std::vector<Mat> planes;
-        split(out, planes);          // planes.size() == 4
-        ones.copyTo(planes[3]);
-        merge(planes, out);    
+        Mat out(inp.size(), CV_64FC4);
+        const Mat srcs[] = { inp, ones };
+        const int fromTo[] = { 0,0, 1,1, 2,2, 3,3 };         // inp[ch] → out[ch]
+        mixChannels(srcs, 2, &out, 1, fromTo, 4);
         return out;
     }
         
@@ -174,7 +171,7 @@ void ColorCorrectionModel::Impl::calWeightsMasks(const Mat& weightsList_, double
     }
     else if (weightsCoeff_ != 0)
     {
-        pow(ref.toLuminant(cs.io), weightsCoeff_, weights);
+        pow(ref.toLuminant(cs.illumobserver), weightsCoeff_, weights);
     }
 
     // masks
@@ -205,15 +202,21 @@ void ColorCorrectionModel::Impl::initialWhiteBalance()
     const double gG = dstSum[1] / srcSum[1];
     const double gB = dstSum[2] / srcSum[2];
 
-    // diagonal CCM with those gains (extra zeros kept for CCM_AFFINE case)
-    std::vector<double> coeffs = {
-        gR, 0, 0, 0,
-        gG, 0, 0, 0,
-        gB, 0, 0, 0
-    };
-    coeffs.resize(shape);                       // shape = 9 (linear) or 12 (affine)
-
-    ccm0 = cv::Mat(coeffs, true).reshape(0, shape / 3);   // 3×3 or 3×4
+    // shape == 9 for a 3×3 linear CCM, or 12 for a 3×4 affine CCM
+    if (shape == 9) {
+        // 3×3 diagonal matrix
+        ccm0 = cv::Mat::zeros(3, 3, CV_64F);
+        ccm0.at<double>(0, 0) = gR;
+        ccm0.at<double>(1, 1) = gG;
+        ccm0.at<double>(2, 2) = gB;
+    }
+    else {
+        // 3×4 affine matrix (last column = zeros)
+        ccm0 = cv::Mat::zeros(3, 4, CV_64F);
+        ccm0.at<double>(0, 0) = gR;
+        ccm0.at<double>(1, 1) = gG;
+        ccm0.at<double>(2, 2) = gB;
+    }
 }
 
 

@@ -10,7 +10,7 @@
 #define __OPENCV_CCM_COLORSPACE_HPP__
 
 #include "operations.hpp"
-#include "io.hpp"
+#include "illumobserver.hpp"
 #include "opencv2/photo.hpp"
 
 namespace cv {
@@ -22,7 +22,7 @@ class ColorSpaceBase
 {
 public:
     typedef std::function<Mat(Mat)> MatFunc;
-    IO io;
+    IllumObserver illumobserver;
     std::string type;
     bool linear;
     Operations to;
@@ -32,8 +32,8 @@ public:
 
     ColorSpaceBase() {};
 
-    ColorSpaceBase(IO io_, std::string type_, bool linear_)
-        : io(io_)
+    ColorSpaceBase(IllumObserver illumobserver_, std::string type_, bool linear_)
+        : illumobserver(illumobserver_)
         , type(type_)
         , linear(linear_) {};
 
@@ -165,7 +165,7 @@ class sRGB_ : public sRGBBase_
 {
 public:
     sRGB_(bool linear_)
-        : sRGBBase_(IO::getIOs(D65_2), "sRGB", linear_) {};
+        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "sRGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -177,7 +177,7 @@ class AdobeRGB_ : public AdobeRGBBase_
 {
 public:
     AdobeRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IO::getIOs(D65_2), "AdobeRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "AdobeRGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -190,7 +190,7 @@ class WideGamutRGB_ : public AdobeRGBBase_
 {
 public:
     WideGamutRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IO::getIOs(D50_2), "WideGamutRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D50_2), "WideGamutRGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -204,7 +204,7 @@ class ProPhotoRGB_ : public AdobeRGBBase_
 {
 public:
     ProPhotoRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IO::getIOs(D50_2), "ProPhotoRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D50_2), "ProPhotoRGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -217,7 +217,7 @@ class DCI_P3_RGB_ : public AdobeRGBBase_
 {
 public:
     DCI_P3_RGB_(bool linear_ = false)
-        : AdobeRGBBase_(IO::getIOs(D65_2), "DCI_P3_RGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "DCI_P3_RGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -230,7 +230,7 @@ class AppleRGB_ : public AdobeRGBBase_
 {
 public:
     AppleRGB_(bool linear_ = false)
-        : AdobeRGBBase_(IO::getIOs(D65_2), "AppleRGB", linear_) {};
+        : AdobeRGBBase_(IllumObserver::getIllumObservers(D65_2), "AppleRGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -243,7 +243,7 @@ class REC_709_RGB_ : public sRGBBase_
 {
 public:
     REC_709_RGB_(bool linear_)
-        : sRGBBase_(IO::getIOs(D65_2), "REC_709_RGB", linear_) {};
+        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "REC_709_RGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -256,7 +256,7 @@ class REC_2020_RGB_ : public sRGBBase_
 {
 public:
     REC_2020_RGB_(bool linear_)
-        : sRGBBase_(IO::getIOs(D65_2), "REC_2020_RGB", linear_) {};
+        : sRGBBase_(IllumObserver::getIllumObservers(D65_2), "REC_2020_RGB", linear_) {};
 
 private:
     void setParameter() CV_OVERRIDE;
@@ -278,19 +278,19 @@ enum CAM
 class XYZ : public ColorSpaceBase
 {
 public:
-    XYZ(IO io_)
-        : ColorSpaceBase(io_, "XYZ", true) {};
-    Operations cam(IO dio, CAM method = BRADFORD);
-    static std::shared_ptr<XYZ> get(IO io);
+    XYZ(IllumObserver illumobserver_)
+        : ColorSpaceBase(illumobserver_, "XYZ", true) {};
+    Operations cam(IllumObserver dio, CAM method = BRADFORD);
+    static std::shared_ptr<XYZ> get(IllumObserver illumobserver);
 
 private:
     /** @brief Get cam.
-        @param sio the input IO of src.
-        @param dio the input IO of dst.
+        @param sio the input IllumObserver of src.
+        @param dio the input IllumObserver of dst.
         @param method type of CAM.
         @return the output array, type of cv::Mat.
     */
-    Mat cam_(IO sio, IO dio, CAM method = BRADFORD) const;
+    Mat cam_(IllumObserver sio, IllumObserver dio, CAM method = BRADFORD) const;
 };
 
 /** @brief Lab color space.
@@ -298,8 +298,8 @@ private:
 class Lab : public ColorSpaceBase
 {
 public:
-    Lab(IO io_);
-    static std::shared_ptr<Lab> get(IO io);
+    Lab(IllumObserver illumobserver_);
+    static std::shared_ptr<Lab> get(IllumObserver illumobserver);
 
 private:
     static constexpr double DELTA = (6. / 29.);

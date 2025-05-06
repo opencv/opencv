@@ -5,36 +5,97 @@
 #include "perf_precomp.hpp"
 #include "opencv2/photo.hpp"
 
-namespace opencv_test
-{
-namespace
-{
+namespace opencv_test {
+namespace {
 
+using namespace cv;
 using namespace std;
 
-PERF_TEST(CV_mcc_perf, correctImage) {
-    // read gold chartsRGB
+PERF_TEST(CV_mcc_perf_480_640, correctImage)
+{
     string path = cvtest::findDataFile("cv/mcc/mcc_ccm_test.yml");
     FileStorage fs(path, FileStorage::READ);
     Mat chartsRGB;
-    FileNode node = fs["chartsRGB"];
-    node >> chartsRGB;
-    ASSERT_FALSE(chartsRGB.empty());
+    fs["chartsRGB"] >> chartsRGB;
     fs.release();
 
-    // compute CCM
-    cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
-    Mat colorCorrectionMat = model.compute();
+    cv::ccm::ColorCorrectionModel model(
+        chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
+        cv::ccm::COLORCHECKER_MACBETH
+    );
 
-    Mat img(1000, 4000, CV_8UC3);
+    Mat img(480, 640, CV_8UC3);
     randu(img, 0, 255);
-    img.convertTo(img, CV_64F, 1. / 255.);
+    img.convertTo(img, CV_64F, 1.0/255.0);
 
     Mat correctedImage;
-    TEST_CYCLE() {
-        model.correctImage(img, correctedImage);
-    }
+    TEST_CYCLE() { model.correctImage(img, correctedImage); }
+    SANITY_CHECK_NOTHING();
+}
 
+PERF_TEST(CV_mcc_perf_720_1280, correctImage)
+{
+    string path = cvtest::findDataFile("cv/mcc/mcc_ccm_test.yml");
+    FileStorage fs(path, FileStorage::READ);
+    Mat chartsRGB;
+    fs["chartsRGB"] >> chartsRGB;
+    fs.release();
+
+    cv::ccm::ColorCorrectionModel model(
+        chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
+        cv::ccm::COLORCHECKER_MACBETH
+    );
+
+    Mat img(720, 1280, CV_8UC3);
+    randu(img, 0, 255);
+    img.convertTo(img, CV_64F, 1.0/255.0);
+
+    Mat correctedImage;
+    TEST_CYCLE() { model.correctImage(img, correctedImage); }
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST(CV_mcc_perf_1080_1920, correctImage)
+{
+    string path = cvtest::findDataFile("cv/mcc/mcc_ccm_test.yml");
+    FileStorage fs(path, FileStorage::READ);
+    Mat chartsRGB;
+    fs["chartsRGB"] >> chartsRGB;
+    fs.release();
+
+    cv::ccm::ColorCorrectionModel model(
+        chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
+        cv::ccm::COLORCHECKER_MACBETH
+    );
+
+    Mat img(1080, 1920, CV_8UC3);
+    randu(img, 0, 255);
+    img.convertTo(img, CV_64F, 1.0/255.0);
+
+    Mat correctedImage;
+    TEST_CYCLE() { model.correctImage(img, correctedImage); }
+    SANITY_CHECK_NOTHING();
+}
+
+PERF_TEST(CV_mcc_perf_2160_3840, correctImage)
+{
+    string path = cvtest::findDataFile("cv/mcc/mcc_ccm_test.yml");
+    FileStorage fs(path, FileStorage::READ);
+    Mat chartsRGB;
+    fs["chartsRGB"] >> chartsRGB;
+    fs.release();
+
+    cv::ccm::ColorCorrectionModel model(
+        chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
+        cv::ccm::COLORCHECKER_MACBETH
+    );
+
+    Mat img(2160, 3840, CV_8UC3);
+    randu(img, 0, 255);
+    img.convertTo(img, CV_64F, 1.0/255.0);
+
+    Mat correctedImage;
+    TEST_CYCLE() { model.correctImage(img, correctedImage); }
     SANITY_CHECK_NOTHING();
 }
 

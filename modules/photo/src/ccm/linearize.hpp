@@ -49,7 +49,6 @@ void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& defaultValu
 /** @brief Logpolyfit model.
 */
 class LogPolyfit
-
 {
 public:
     int deg;
@@ -156,7 +155,7 @@ public:
 
         // the grayscale function is approximate for src is in relative color space.
         src = rgb2gray(maskCopyTo(src, lear_gray_mask));
-        Mat dst_ = maskCopyTo(dst.toGray(cs.io), lear_gray_mask);
+        Mat dst_ = maskCopyTo(dst.toGray(cs.illumobserver), lear_gray_mask);
         calc(src, dst_);
     }
 

@@ -6,8 +6,8 @@
 //         Jinheng Zhang <zhangjinheng1@huawei.com>
 //         Chenqi Shan <shanchenqi@huawei.com>
 
-#ifndef __OPENCV_CCM_IO_HPP__
-#define __OPENCV_CCM_IO_HPP__
+#ifndef __OPENCV_CCM_IllumObserver_HPP__
+#define __OPENCV_CCM_IllumObserver_HPP__
 
 #include <opencv2/core.hpp>
 #include <map>
@@ -15,7 +15,7 @@
 namespace cv {
 namespace ccm {
 
-enum IO_TYPE
+enum IllumObserver_TYPE
 {
     A_2,
     A_10,
@@ -31,19 +31,19 @@ enum IO_TYPE
     E_10
 };
 
-/** @brief Io is the meaning of illuminant and observer. See notes of ccm.hpp
+/** @brief IllumObserver is the meaning of illuminant and observer. See notes of ccm.hpp
            for supported list for illuminant and observer*/
-class IO
+class IllumObserver
 {
 public:
     std::string illuminant;
     std::string observer;
-    IO() {};
-    IO(std::string illuminant, std::string observer);
-    virtual ~IO() {};
-    bool operator<(const IO& other) const;
-    bool operator==(const IO& other) const;
-    static IO getIOs(IO_TYPE io);
+    IllumObserver() {};
+    IllumObserver(std::string illuminant, std::string observer);
+    virtual ~IllumObserver() {};
+    bool operator<(const IllumObserver& other) const;
+    bool operator==(const IllumObserver& other) const;
+    static IllumObserver getIllumObservers(IllumObserver_TYPE illumobserver);
 };
 std::vector<double> xyY2XYZ(const std::vector<double>& xyY);
 
