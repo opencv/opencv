@@ -11,31 +11,50 @@
 namespace cv {
 namespace ccm {
 
-inline double gammaOp(double element, double gamma)
-{
-    return (element >= 0.0) ? pow(element, gamma) : -pow(-element, gamma);
-}
-
 void gammaCorrection(InputArray _src, OutputArray _dst, double gamma)
 {
     Mat src = _src.getMat();
-    // must be a double-precision image (since we use ptr<double>())
-    CV_Assert(src.depth() == CV_64F);
-    // require continuous layout so ptr<double>() + index is valid
-    CV_Assert(src.isContinuous());
-    // gamma should be positive
     CV_Assert(gamma > 0);
+
+    double  maxVal;
+    int     depth = src.depth();
+    switch (depth)
+    {
+        case CV_8U:  maxVal = 255.0;    break;
+        case CV_16U: maxVal = 65535.0;  break;
+        case CV_16S: maxVal = 32767.0;  break;
+        case CV_32F: maxVal = 1.0;      break;
+        case CV_64F: maxVal = 1.0;      break;
+        default:
+            CV_Error(Error::StsUnsupportedFormat,
+                "gammaCorrection: unsupported image depth");
+    }
+
+    // Special‐case for uint8 with a LUT
+    if (depth == CV_8U)
+    {
+        Mat lut(1, 256, CV_8U);
+        uchar* p = lut.ptr<uchar>();
+        for (int i = 0; i < 256; ++i)
+        {
+            double fn = std::pow(i / 255.0, gamma) * 255.0;
+            p[i] = cv::saturate_cast<uchar>(fn + 0.5);
+        }
+        _dst.create(src.size(), src.type());
+        Mat dst = _dst.getMat();
+        cv::LUT(src, lut, dst);
+        return;
+    }
+
+    Mat f;
+    src.convertTo(f, CV_64F, 1.0 / maxVal);
+    cv::pow(f, gamma, f);
 
     _dst.create(src.size(), src.type());
     Mat dst = _dst.getMat();
-
-    const int n = static_cast<int>(src.total() * src.channels());
-    const double* s = src.ptr<double>();
-    double*       d = dst.ptr<double>();
-
-    for (int i = 0; i < n; ++i)
-        d[i] = gammaOp(s[i], gamma);
+    f.convertTo(dst, src.type(), maxVal);
 }
+
 
 Mat maskCopyTo(const Mat& src, const Mat& mask)
 {

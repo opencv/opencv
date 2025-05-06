@@ -155,7 +155,6 @@ Mat ColorCorrectionModel::Impl::prepare(const Mat& inp)
         mixChannels(srcs, 2, &out, 1, fromTo, 4);
         return out;
     }
-        
     default:
         CV_Error(Error::StsBadArg, "Wrong ccmType!");
         break;

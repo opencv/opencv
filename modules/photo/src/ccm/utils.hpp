@@ -14,16 +14,13 @@
 
 namespace cv {
 namespace ccm {
-
-double gammaOp(double element, double gamma);
-
 /** @brief gamma correction.
            \f[
             C_l=C_n^{\gamma},\qquad C_n\ge0\\
             C_l=-(-C_n)^{\gamma},\qquad C_n<0\\\\
             \f]
     @param src the input array,type of Mat.
-    @param gamma a constant for gamma correction.
+    @param gamma a constant for gamma correction greater than zero.
     @param dst the output array, type of Mat.
  */
  CV_EXPORTS_W void gammaCorrection(InputArray src, OutputArray dst, double gamma);
