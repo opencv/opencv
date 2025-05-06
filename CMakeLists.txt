@@ -268,6 +268,9 @@ OCV_OPTION(WITH_FFMPEG "Include FFMPEG support" (NOT ANDROID)
 OCV_OPTION(WITH_GSTREAMER "Include Gstreamer support" ON
   VISIBLE_IF NOT ANDROID AND NOT IOS AND NOT XROS AND NOT WINRT
   VERIFY HAVE_GSTREAMER AND GSTREAMER_VERSION VERSION_GREATER "0.99")
+OCV_OPTION(WITH_LIBCAMERA "Include Libcamera support" ON
+  VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
+  VERIFY HAVE_LIBCAMERA OR HAVE_VIDEOIO)
 OCV_OPTION(WITH_GTK "Include GTK support" ON
   VISIBLE_IF UNIX AND NOT APPLE AND NOT ANDROID
   VERIFY HAVE_GTK)
@@ -1718,6 +1721,13 @@ endif()
 if(ANDROID)
   status("   MEDIANDK:"         HAVE_ANDROID_MEDIANDK THEN "YES"                              ELSE NO)
   status("   NDK Camera:"       HAVE_ANDROID_NATIVE_CAMERA THEN "YES"                         ELSE NO)
+endif()
+
+if(WITH_LIBCAMERA OR HAVE_LIBCAMERA)
+  ocv_build_features_string(libcamera_status
+    IF HAVE_LIBCAMERA THEN "libcamera/libcamera/libcamera.h"
+    ELSE "NO")
+  status("    libcamera:" HAVE_LIBCAMERA THEN YES ELSE NO)
 endif()
 
 # Order is similar to CV_PARALLEL_FRAMEWORK in core/src/parallel.cpp
