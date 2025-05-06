@@ -9,13 +9,15 @@
 class JavaStreamReader : public cv::IStreamReader
 {
 public:
-    JavaStreamReader(JNIEnv* env, jclass obj);
+    JavaStreamReader(JNIEnv* env, jobject obj);
+    ~JavaStreamReader();
     long long read(char* buffer, long long size) CV_OVERRIDE;
     long long seek(long long offset, int way) CV_OVERRIDE;
 
 private:
     JNIEnv* env;
-    jclass obj;
+    jobject obj;
+    jmethodID m_read, m_seek;
 };
 
 jobject vector_VideoCaptureAPIs_to_List(JNIEnv* env, std::vector<cv::VideoCaptureAPIs>& vs);

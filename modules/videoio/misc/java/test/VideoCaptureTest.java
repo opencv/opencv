@@ -106,7 +106,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
             {
                 try
                 {
-                    return f.read(buffer);
+                    return Math.max(f.read(buffer), 0);
                 }
                 catch (IOException e)
                 {
@@ -121,12 +121,8 @@ public class VideoCaptureTest extends OpenCVTestCase {
                 try
                 {
                     if (origin == 0)
-                    {
                         f.seek(offset);
-                        return offset;
-                    }
-                    else
-                        return 0;
+                    return f.getFilePointer();
                 }
                 catch (IOException e)
                 {
