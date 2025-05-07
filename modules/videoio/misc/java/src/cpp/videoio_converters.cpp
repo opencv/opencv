@@ -4,8 +4,8 @@ JavaStreamReader::JavaStreamReader(JNIEnv* _env, jobject _obj) : env(_env)
 {
     obj = env->NewLocalRef(_obj);
     jclass cls = env->GetObjectClass(obj);
-    m_read = env->GetMethodID(cls, "read", "([B)J");
-    m_seek = env->GetMethodID(cls, "seek", "(JJ)J");
+    m_read = env->GetMethodID(cls, "read", "([BJ)J");
+    m_seek = env->GetMethodID(cls, "seek", "(JI)J");
 }
 
 JavaStreamReader::~JavaStreamReader()
@@ -20,7 +20,7 @@ long long JavaStreamReader::read(char* buffer, long long size)
     jbyteArray jBuffer = env->NewByteArray(static_cast<jsize>(size));
     if (!jBuffer)
         return 0;
-    jlong res = env->CallLongMethod(obj, m_read, jBuffer);
+    jlong res = env->CallLongMethod(obj, m_read, jBuffer, size);
     env->GetByteArrayRegion(jBuffer, 0, static_cast<jsize>(size), reinterpret_cast<jbyte*>(buffer));
     env->DeleteLocalRef(jBuffer);
     return res;

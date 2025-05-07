@@ -721,13 +721,13 @@ enum VideoCaptureOBSensorProperties{
 
 /** @brief Read data stream interface
  */
-class CV_EXPORTS IStreamReader
+class CV_EXPORTS_W IStreamReader
 {
 public:
     virtual ~IStreamReader();
 
     /** @brief Read bytes from stream */
-    virtual long long read(char* buffer, long long size) = 0;
+    CV_WRAP virtual long long read(char* buffer, long long size) = 0;
 
     /** @brief Sets the stream position
      *
@@ -736,7 +736,7 @@ public:
      *
      * @see fseek
      */
-    virtual long long seek(long long offset, int origin) = 0;
+     CV_WRAP virtual long long seek(long long offset, int origin) = 0;
 };
 
 class IVideoCapture;

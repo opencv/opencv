@@ -1,4 +1,7 @@
 {
+    "func_arg_fix" : {
+        "read": { "buffer": {"ctype" : "byte[]"} }
+    },
     "type_dict": {
         "Ptr_IStreamReader": {
             "j_type": "IStreamReader",
