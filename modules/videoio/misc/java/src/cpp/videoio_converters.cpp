@@ -2,7 +2,7 @@
 
 JavaStreamReader::JavaStreamReader(JNIEnv* _env, jobject _obj) : env(_env)
 {
-    obj = env->NewLocalRef(_obj);
+    obj = env->NewGlobalRef(_obj);
     jclass cls = env->GetObjectClass(obj);
     m_read = env->GetMethodID(cls, "read", "([BJ)J");
     m_seek = env->GetMethodID(cls, "seek", "(JI)J");
@@ -10,7 +10,7 @@ JavaStreamReader::JavaStreamReader(JNIEnv* _env, jobject _obj) : env(_env)
 
 JavaStreamReader::~JavaStreamReader()
 {
-    env->DeleteLocalRef(obj);
+    env->DeleteGlobalRef(obj);
 }
 
 long long JavaStreamReader::read(char* buffer, long long size)

@@ -264,9 +264,6 @@ _PREDEFINED_TYPES = (
         export_name="ExtractMetaCallback",
         required_modules=("gapi",)
     ),
-
-    # videoio, optional
-    AliasTypeNode.ref_("IStreamReader", "io.BufferedIOBase"),
 )
 
 PREDEFINED_TYPES = dict(
