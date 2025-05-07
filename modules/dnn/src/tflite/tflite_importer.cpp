@@ -67,6 +67,7 @@ private:
     void parseDetectionPostProcess(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseSplit(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseStridedSlice(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
@@ -290,6 +291,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
     dispatch["MEAN"] = dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
+    dispatch["STRIDED_SLICE"] = &TFLiteImporter::parseStridedSlice;
     return dispatch;
 }
 
@@ -916,6 +918,46 @@ void TFLiteImporter::parseSplit(const Operator& op, const std::string& opcode, L
     auto options = op.builtin_options_as_SplitOptions();
     CV_Assert(options);
     layerParams.set("num_split", options->num_splits());
+    addLayer(layerParams, op);
+}
+
+void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    layerParams.type = "Slice";
+    auto options = op.builtin_options_as_StridedSliceOptions();
+    CV_Assert(options);
+    int endMask = options->end_mask();
+    if (options->new_axis_mask())
+        CV_Error(Error::StsNotImplemented, "New axis during StridedSlice");
+    if (options->shrink_axis_mask())
+        CV_Error(Error::StsNotImplemented, "Shrink axis during StridedSlice");
+
+    Mat begins = allTensors[op.inputs()->Get(1)];
+    Mat ends = allTensors[op.inputs()->Get(2)];
+    Mat strides = allTensors[op.inputs()->Get(3)];
+
+    CV_CheckTypeEQ(begins.type(), CV_32SC1, "");
+    CV_CheckTypeEQ(ends.type(), CV_32SC1, "");
+    CV_CheckTypeEQ(strides.type(), CV_32SC1, "");
+    const int num = begins.total();
+    CV_Assert_N(num == ends.total(), num == strides.total());
+    for (int i = 0; i < num; ++i)
+    {
+        if (endMask & (1 << i))
+            ends.at<int>(i) = INT_MAX;
+    }
+    if (begins.total() == 4 && layouts[op.inputs()->Get(0)] == DNN_LAYOUT_NHWC)
+    {
+        // Swap NHWC parameters' order to NCHW.
+        std::swap(begins.at<int>(2), begins.at<int>(3));
+        std::swap(begins.at<int>(1), begins.at<int>(2));
+        std::swap(ends.at<int>(2), ends.at<int>(3));
+        std::swap(ends.at<int>(1), ends.at<int>(2));
+        std::swap(strides.at<int>(2), strides.at<int>(3));
+        std::swap(strides.at<int>(1), strides.at<int>(2));
+    }
+    layerParams.set("begin", DictValue::arrayInt((int*)begins.data, begins.total()));
+    layerParams.set("end", DictValue::arrayInt((int*)ends.data, ends.total()));
+    layerParams.set("steps", DictValue::arrayInt((int*)strides.data, strides.total()));
     addLayer(layerParams, op);
 }
 

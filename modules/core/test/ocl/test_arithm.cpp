@@ -132,19 +132,25 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
         use_roi = GET_PARAM(2);
     }
 
-    void generateTestData(bool with_val_in_range = false)
+    void generateTestData(bool with_val_in_range = false,
+        double minVal1 = std::numeric_limits<double>::quiet_NaN(), double maxVal1 = std::numeric_limits<double>::quiet_NaN(),
+        double minVal2 = std::numeric_limits<double>::quiet_NaN(), double maxVal2 = std::numeric_limits<double>::quiet_NaN()
+    )
     {
         const int type = CV_MAKE_TYPE(depth, cn);
 
-        double minV = cvtest::getMinVal(type);
-        double maxV = cvtest::getMaxVal(type);
+        double minV1 = cvIsNaN(minVal1) ? 2 : minVal1;
+        double maxV1 = cvIsNaN(maxVal1) ? 11 : maxVal1;
+
+        double minV2 = cvIsNaN(minVal2) ? std::max(-1540., cvtest::getMinVal(type)) : minVal2;
+        double maxV2 = cvIsNaN(maxVal2) ? std::min(1740., cvtest::getMaxVal(type)) : maxVal2;
 
         Size roiSize = randomSize(1, MAX_VALUE);
         Border src1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src1, src1_roi, roiSize, src1Border, type, 2, 11); // FIXIT: Test with minV, maxV
+        randomSubMat(src1, src1_roi, roiSize, src1Border, type, minV1, maxV1); // FIXIT: Test with minV, maxV
 
         Border src2Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
-        randomSubMat(src2, src2_roi, roiSize, src2Border, type, std::max(-1540., minV), std::min(1740., maxV));
+        randomSubMat(src2, src2_roi, roiSize, src2Border, type, minV2, maxV2);
 
         Border dst1Border = randomBorder(0, use_roi ? MAX_VALUE : 0);
         randomSubMat(dst1, dst1_roi, roiSize, dst1Border, type, 5, 16);
@@ -162,8 +168,8 @@ PARAM_TEST_CASE(ArithmTestBase, MatDepth, Channels, bool)
 
         if (with_val_in_range)
         {
-            val_in_range = cv::Scalar(rng.uniform(minV, maxV), rng.uniform(minV, maxV),
-                                      rng.uniform(minV, maxV), rng.uniform(minV, maxV));
+            val_in_range = cv::Scalar(rng.uniform(minV1, maxV1), rng.uniform(minV1, maxV1),
+                                      rng.uniform(minV1, maxV1), rng.uniform(minV1, maxV1));
         }
 
         UMAT_UPLOAD_INPUT_PARAMETER(src1);
@@ -844,14 +850,30 @@ OCL_TEST_P(Pow, Mat)
     for (int j = 0; j < 1/*test_loop_times*/; j++)
         for (int k = 0, size = sizeof(pows) / sizeof(double); k < size; ++k)
         {
-            SCOPED_TRACE(pows[k]);
+            SCOPED_TRACE(cv::format("POW=%g", pows[k]));
 
-            generateTestData();
+            generateTestData(false, 1, 3);
 
             OCL_OFF(cv::pow(src1_roi, pows[k], dst1_roi));
             OCL_ON(cv::pow(usrc1_roi, pows[k], udst1_roi));
 
             OCL_EXPECT_MATS_NEAR_RELATIVE(dst1, 1e-5);
+
+            if (cvtest::debugLevel >= 100)
+            {
+                cv::Rect roi(0, 0, 4, 4);
+                std::cout << src1_roi(roi) << std::endl;
+                std::cout << dst1_roi(roi) << std::endl;
+                std::cout << udst1_roi(roi) << std::endl;
+
+                Mat diff;
+                cv::absdiff(dst1_roi, udst1_roi, diff);
+                std::cout << std::endl << diff(roi) << std::endl;
+
+                std::cout << std::endl << dst1_roi << std::endl;
+                std::cout << std::endl << udst1_roi << std::endl;
+                std::cout << std::endl << diff << std::endl;
+            }
         }
 }
 
