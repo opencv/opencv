@@ -736,7 +736,7 @@ public:
      *
      * @see fseek
      */
-     CV_WRAP virtual long long seek(long long offset, int origin) = 0;
+    CV_WRAP virtual long long seek(long long offset, int origin) = 0;
 };
 
 class IVideoCapture;

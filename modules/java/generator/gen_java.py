@@ -519,8 +519,8 @@ class JavaWrapperGenerator(object):
 
         if classinfo.base:
             classinfo.addImports(classinfo.base)
-        if f"Ptr_{name}" not in type_dict:
-            type_dict[f"Ptr_{name}"] = {
+        if ("Ptr_"+name) not in type_dict:
+            type_dict["Ptr_"+name] = {
                 "j_type" : classinfo.jname,
                 "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
                 "jni_name" : "*((Ptr<"+classinfo.fullNameCPP()+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
