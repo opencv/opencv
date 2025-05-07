@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
         parser.printMessage();          // prints full usage
         return -1;
     }
-    
+
     ColorChart chartType = ColorChart(t);
 
     const string sha1 = parser.get<String>("sha1");
