@@ -343,6 +343,88 @@ R & t \\
 0 & 1
 \end{bmatrix} P_{h_0}.\f]
 
+<B> Homogeneous Transformations, Object frame / Camera frame </B><br>
+Change of basis or computing the 3D coordinates from one frame to another frame can be achieved easily using
+the following notation:
+\f[
+\mathbf{X}_c = \hspace{0.2em}
+{}^{c}\mathbf{T}_o \hspace{0.2em} \mathbf{X}_o
+\f]
+\f[
+\begin{bmatrix}
+X_c \\
+Y_c \\
+Z_c \\
+1
+\end{bmatrix} =
+\begin{bmatrix}
+{}^{c}\mathbf{R}_o & {}^{c}\mathbf{t}_o \\
+0_{1 \times 3} & 1
+\end{bmatrix}
+\begin{bmatrix}
+X_o \\
+Y_o \\
+Z_o \\
+1
+\end{bmatrix}
+\f]
+For a 3D points (\f$ \mathbf{X}_o \f$) expressed in the object frame, the homogeneous transformation matrix
+\f$ {}^{c}\mathbf{T}_o \f$ allows computing the corresponding coordinate (\f$ \mathbf{X}_c \f$) in the camera frame.
+This transformation matrix is composed of a 3x3 rotation matrix \f$ {}^{c}\mathbf{R}_o \f$ and a 3x1 translation vector
+\f$ {}^{c}\mathbf{t}_o \f$.
+The 3x1 translation vector \f$ {}^{c}\mathbf{t}_o \f$ is the position of the object frame in the camera frame and the
+3x3 rotation matrix \f$ {}^{c}\mathbf{R}_o \f$ the orientation of the object frame in the camera frame.
+With this simple notation, it is easy to chain the transformations. For instance, to compute the 3D coordinates of a point
+expressed in the object frame in the world frame can be done with:
+\f[
+\mathbf{X}_w = \hspace{0.2em}
+{}^{w}\mathbf{T}_c \hspace{0.2em} {}^{c}\mathbf{T}_o \hspace{0.2em}
+\mathbf{X}_o =
+{}^{w}\mathbf{T}_o \hspace{0.2em} \mathbf{X}_o
+\f]
+Similarly, computing the inverse transformation can be done with:
+\f[
+\mathbf{X}_o = \hspace{0.2em}
+{}^{o}\mathbf{T}_c \hspace{0.2em} \mathbf{X}_c =
+\left( {}^{c}\mathbf{T}_o \right)^{-1} \hspace{0.2em} \mathbf{X}_c
+\f]
+The inverse of an homogeneous transformation matrix is then:
+\f[
+{}^{o}\mathbf{T}_c = \left( {}^{c}\mathbf{T}_o \right)^{-1} =
+\begin{bmatrix}
+{}^{c}\mathbf{R}^{\top}_o & - \hspace{0.2em} {}^{c}\mathbf{R}^{\top}_o \hspace{0.2em} {}^{c}\mathbf{t}_o \\
+0_{1 \times 3} & 1
+\end{bmatrix}
+\f]
+One can note that the inverse of a 3x3 rotation matrix is directly its matrix transpose.
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png)
+This figure summarizes the whole process. The object pose returned for instance by the @ref solvePnP function
+or pose from fiducial marker detection is this \f$ {}^{c}\mathbf{T}_o \f$ transformation.
+The camera intrinsic matrix \f$ \mathbf{K} \f$ allows projecting the 3D point expressed in the camera frame onto the image plane
+assuming a perspective projection model (pinhole camera model). Image coordinates extracted from classical image processing functions
+assume a (u,v) top-left coordinates frame.
+\note
+- for an online video course on this topic, see for instance:
+  - ["3.3.1. Homogeneous Transformation Matrices", Modern Robotics, Kevin M. Lynch and Frank C. Park](https://modernrobotics.northwestern.edu/nu-gm-book-resource/3-3-1-homogeneous-transformation-matrices/)
+- the 3x3 rotation matrix is composed of 9 values but describes a 3 dof transformation
+- some additional properties of the 3x3 rotation matrix are:
+  - \f$ \mathrm{det} \left( \mathbf{R} \right) = 1 \f$
+  - \f$ \mathbf{R} \mathbf{R}^{\top} = \mathbf{R}^{\top} \mathbf{R} = \mathrm{I}_{3 \times 3} \f$
+  - interpolating rotation can be done using the [Slerp (spherical linear interpolation)](https://en.wikipedia.org/wiki/Slerp) method
+- quick conversions between the different rotation formalisms can be done using this [online tool](https://www.andre-gaschler.com/rotationconverter/)
+<B> Intrinsic parameters from camera lens specifications </B><br>
+When dealing with industrial cameras, the camera intrinsic matrix or more precisely \f$ \left(f_x, f_y \right) \f$
+can be deduced, approximated from the camera specifications:
+\f[
+f_x = \frac{f_{\text{mm}}}{\text{pixel_size_in_mm}} = \frac{f_{\text{mm}}}{\text{sensor_size_in_mm} / \text{nb_pixels}}
+\f]
+In a same way, the physical focal length can be deduced from the angular field of view:
+\f[
+f_{\text{mm}} = \frac{\text{sensor_size_in_mm}}{2 \times \tan{\frac{\text{fov}}{2}}}
+\f]
+This latter conversion can be useful when using a rendering software to mimic a physical camera device.
+
+<B> Additional references, notes </B><br>
 @note
     -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although all
         functions assume the same structure of this parameter, they may name it differently. The

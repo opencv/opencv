@@ -63,13 +63,16 @@ Example for asynchronous loading
 ### Use OpenCV.js
 
 Once `opencv.js` is ready, you can access OpenCV objects and functions through `cv` object.
+The promise-typed `cv` object should be unwrap with `await` operator.
+See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await .
 
 For example, you can create a cv.Mat from an image by cv.imread.
 
 @note Because image loading is asynchronous, you need to put cv.Mat creation inside the `onload` callback.
 
 @code{.js}
-imgElement.onload = function() {
+imgElement.onload = await function() {
+  cv = (cv instanceof Promise) ? await cv : cv;
   let mat = cv.imread(imgElement);
 }
 @endcode
@@ -116,7 +119,8 @@ inputElement.addEventListener('change', (e) => {
   imgElement.src = URL.createObjectURL(e.target.files[0]);
 }, false);
 
-imgElement.onload = function() {
+imgElement.onload = async function() {
+  cv = (cv instanceof Promise) ? await cv : cv;
   let mat = cv.imread(imgElement);
   cv.imshow('canvasOutput', mat);
   mat.delete();

@@ -47,8 +47,8 @@ bool GifDecoder::readHeader() {
         return false;
     }
 
-    String signature(6, ' ');
-    m_strm.getBytes((uchar*)signature.data(), 6);
+    std::string signature(6, ' ');
+    m_strm.getBytes((uchar*)signature.c_str(), 6);
     CV_Assert(signature == R"(GIF87a)" || signature == R"(GIF89a)");
 
     // #1: read logical screen descriptor
@@ -319,12 +319,19 @@ bool GifDecoder::lzwDecode() {
     lzwMinCodeSize = m_strm.getByte();
     const int lzwMaxSize = (1 << 12); // 4096 is the maximum size of the LZW table (12 bits)
     int lzwCodeSize = lzwMinCodeSize + 1;
-    int clearCode = 1 << lzwMinCodeSize;
-    int exitCode = clearCode + 1;
     CV_Assert(lzwCodeSize > 2 && lzwCodeSize <= 12);
+    const int clearCode = 1 << lzwMinCodeSize;
+    const int exitCode = clearCode + 1;
     std::vector<lzwNodeD> lzwExtraTable(lzwMaxSize + 1);
-    int colorTableSize = clearCode;
+    const int colorTableSize = clearCode;
     int lzwTableSize = exitCode;
+    auto clear = [&]() {
+        lzwExtraTable.clear();
+        lzwExtraTable.resize(lzwMaxSize + 1);
+        // reset the code size, the same as that in the initialization part
+        lzwCodeSize  = lzwMinCodeSize + 1;
+        lzwTableSize = exitCode;
+    };
 
     idx = 0;
     int leftBits = 0;
@@ -345,18 +352,12 @@ bool GifDecoder::lzwDecode() {
 
             // clear code
             if (!(code ^ clearCode)) {
-                lzwExtraTable.clear();
-                lzwExtraTable.resize(lzwMaxSize + 1);
-                // reset the code size, the same as that in the initialization part
-                lzwCodeSize  = lzwMinCodeSize + 1;
-                lzwTableSize = exitCode;
+                clear();
                 continue;
             }
             // end of information
             if (!(code ^ exitCode)) {
-                lzwExtraTable.clear();
-                lzwCodeSize  = lzwMinCodeSize + 1;
-                lzwTableSize = exitCode;
+                clear();
                 break;
             }
 
@@ -391,6 +392,7 @@ bool GifDecoder::lzwDecode() {
             if (code < colorTableSize) {
                 imgCodeStream[idx++] = (uchar)code;
             } else {
+                CV_Check(idx, idx + lzwExtraTable[code].length <= width * height, "Too long LZW length in GIF.");
                 for (int i = 0; i < lzwExtraTable[code].length - 1; i++) {
                     imgCodeStream[idx++] = lzwExtraTable[code].prefix[i];
                 }
@@ -428,6 +430,7 @@ void GifDecoder::close() {
 
 bool GifDecoder::getFrameCount_() {
     m_frame_count = 0;
+    m_animation.loop_count = 1;
     auto type = (uchar)m_strm.getByte();
     while (type != 0x3B) {
         if (!(type ^ 0x21)) {
@@ -436,11 +439,18 @@ bool GifDecoder::getFrameCount_() {
             // Application Extension need to be handled for the loop count
             if (extension == 0xFF) {
                 int len = m_strm.getByte();
+                bool isFoundNetscape = false;
                 while (len) {
-                    // TODO: In strictly, Application Identifier and Authentication Code should be checked.
-                    if (len == 3) {
-                        if (m_strm.getByte() == 0x01) {
-                            m_animation.loop_count = m_strm.getWord();
+                    if (len == 11) {
+                        std::string app_auth_code(len, ' ');
+                        m_strm.getBytes(const_cast<void*>(static_cast<const void*>(app_auth_code.c_str())), len);
+                        isFoundNetscape = (app_auth_code == R"(NETSCAPE2.0)");
+                    }  else if (len == 3) {
+                        if (isFoundNetscape && (m_strm.getByte() == 0x01)) {
+                            int loop_count = m_strm.getWord();
+                            // If loop_count == 0, it means loop forever.
+                            // Otherwise, the loop is displayed extra one time than it is written in the data.
+                            m_animation.loop_count = (loop_count == 0) ? 0 : loop_count + 1;
                         } else {
                             // this branch should not be reached in normal cases
                             m_strm.skip(2);
@@ -505,8 +515,8 @@ bool GifDecoder::getFrameCount_() {
 }
 
 bool GifDecoder::skipHeader() {
-    String signature(6, ' ');
-    m_strm.getBytes((uchar *) signature.data(), 6);
+    std::string signature(6, ' ');
+    m_strm.getBytes((uchar *) signature.c_str(), 6);
     // skip height and width
     m_strm.skip(4);
     char flags = (char) m_strm.getByte();
@@ -538,9 +548,7 @@ GifEncoder::GifEncoder() {
 
     // default value of the params
     fast = true;
-    loopCount = 0; // infinite loops by default
     criticalTransparency = 1; // critical transparency, default 1, range from 0 to 255, 0 means no transparency
-    frameDelay = 5; // 20fps by default, 10ms per unit
     bitDepth = 8; // the number of bits per pixel, default 8, currently it is a constant number
     lzwMinCodeSize = 8; // the minimum code size, default 8, this changes as the color number changes
     colorNum = 256; // the number of colors in the color table, default 256
@@ -566,16 +574,14 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
         return false;
     }
 
-    loopCount = animation.loop_count;
-
     // confirm the params
     for (size_t i = 0; i < params.size(); i += 2) {
         switch (params[i]) {
             case IMWRITE_GIF_LOOP:
-                loopCount = std::min(std::max(params[i + 1], 0), 65535); // loop count is in 2 bytes
+                CV_LOG_WARNING(NULL, "IMWRITE_GIF_LOOP is not functional since 4.12.0. Replaced by cv::Animation::loop_count.");
                 break;
             case IMWRITE_GIF_SPEED:
-                frameDelay = 100 - std::min(std::max(params[i + 1] - 1, 0), 99); // from 10ms to 1000ms
+                CV_LOG_WARNING(NULL, "IMWRITE_GIF_SPEED is not functional since 4.12.0. Replaced by cv::Animation::durations.");
                 break;
             case IMWRITE_GIF_DITHER:
                 dithering = std::min(std::max(params[i + 1], -1), 3);
@@ -648,15 +654,28 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
     } else {
         img_vec_ = animation.frames;
     }
-    bool result = writeHeader(img_vec_);
+    bool result = writeHeader(img_vec_, animation.loop_count);
     if (!result) {
         strm.close();
         return false;
     }
 
     for (size_t i = 0; i < img_vec_.size(); i++) {
-        frameDelay = cvRound(animation.durations[i] / 10);
-        result = writeFrame(img_vec_[i]);
+        // Animation duration is in 1ms unit.
+        const int frameDelay = animation.durations[i];
+        CV_CheckGE(frameDelay, 0, "It must be positive value");
+
+        // GIF file stores duration in 10ms unit.
+        const int frameDelay10ms = cvRound(frameDelay / 10);
+        CV_LOG_IF_WARNING(NULL, (frameDelay10ms == 0),
+                          cv::format("frameDelay(%d) is rounded to 0ms, its behaviour is user application depended.", frameDelay));
+        CV_CheckLE(frameDelay10ms, 65535, "It requires to be stored in WORD");
+
+        result = writeFrame(img_vec_[i], frameDelay10ms);
+        if (!result) {
+            strm.close();
+            return false;
+        }
     }
 
     strm.putByte(0x3B); // trailer
@@ -668,10 +687,11 @@ ImageEncoder GifEncoder::newEncoder() const {
     return makePtr<GifEncoder>();
 }
 
-bool GifEncoder::writeFrame(const Mat &img) {
+bool GifEncoder::writeFrame(const Mat &img, const int frameDelay10ms) {
     if (img.empty()) {
         return false;
     }
+
     height = m_height, width = m_width;
 
     // graphic control extension
@@ -681,7 +701,7 @@ bool GifEncoder::writeFrame(const Mat &img) {
     const int gcePackedFields = static_cast<int>(GIF_DISPOSE_RESTORE_PREVIOUS << GIF_DISPOSE_METHOD_SHIFT) |
                                 static_cast<int>(criticalTransparency ? GIF_TRANSPARENT_INDEX_GIVEN : GIF_TRANSPARENT_INDEX_NOT_GIVEN);
     strm.putByte(gcePackedFields);
-    strm.putWord(frameDelay);
+    strm.putWord(frameDelay10ms);
     strm.putByte(transparentColor);
     strm.putByte(0x00); // end of the extension
 
@@ -796,7 +816,7 @@ bool GifEncoder::lzwEncode() {
     return true;
 }
 
-bool GifEncoder::writeHeader(const std::vector<Mat>& img_vec) {
+bool GifEncoder::writeHeader(const std::vector<Mat>& img_vec, const int loopCount) {
     strm.putBytes(fmtGifHeader, (int)strlen(fmtGifHeader));
 
     if (img_vec[0].empty()) {
@@ -821,16 +841,23 @@ bool GifEncoder::writeHeader(const std::vector<Mat>& img_vec) {
         strm.putBytes(globalColorTable.data(), globalColorTableSize * 3);
     }
 
+    if ( loopCount != 1 ) // If no-loop, Netscape Application Block is unnecessary.
+    {
+        // loopCount 0 means loop forever.
+        // Otherwise, most browsers(Edge, Chrome, Firefox...) will loop with extra 1 time.
+        // GIF data should be written with loop count decreased by 1.
+        const int _loopCount = ( loopCount == 0 ) ? loopCount : loopCount - 1;
 
-    // add application extension to set the loop count
-    strm.putByte(0x21); // GIF extension code
-    strm.putByte(0xFF); // application extension table
-    strm.putByte(0x0B); // length of application block, in decimal is 11
-    strm.putBytes(R"(NETSCAPE2.0)", 11); // application authentication code
-    strm.putByte(0x03); // length of application block, in decimal is 3
-    strm.putByte(0x01); // identifier
-    strm.putWord(loopCount);
-    strm.putByte(0x00); // end of the extension
+        // add Netscape Application Block to set the loop count in application extension.
+        strm.putByte(0x21); // GIF extension code
+        strm.putByte(0xFF); // application extension table
+        strm.putByte(0x0B); // length of application block, in decimal is 11
+        strm.putBytes(R"(NETSCAPE2.0)", 11); // application authentication code
+        strm.putByte(0x03); // length of application block, in decimal is 3
+        strm.putByte(0x01); // identifier
+        strm.putWord(_loopCount);
+        strm.putByte(0x00); // end of the extension
+    }
 
     return true;
 }

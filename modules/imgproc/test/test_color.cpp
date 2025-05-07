@@ -1905,6 +1905,64 @@ TEST(Imgproc_ColorBayerVNG, regression)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/5089
+// See https://github.com/opencv/opencv/issues/27225
+typedef tuple<cv::ColorConversionCodes, cv::ColorConversionCodes> VNGandINT;
+typedef testing::TestWithParam<VNGandINT> Imgproc_ColorBayerVNG_Codes;
+
+TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225)
+{
+    const cv::ColorConversionCodes codeVNG = get<0>(GetParam());
+    const int margin = (codeVNG == cv::COLOR_BayerGB2BGR_VNG || codeVNG == cv::COLOR_BayerGR2BGR_VNG)? 5 : 4;
+
+    cv::Mat in = cv::Mat::eye(16, 16, CV_8UC1) * 255;
+    cv::resize(in, in, {}, 2, 2, cv::INTER_NEAREST);
+
+    cv::Mat out;
+    EXPECT_NO_THROW(cv::cvtColor(in, out, codeVNG));
+
+    for(int iy=0; iy < out.size().height; iy++) {
+        for(int ix=0; ix < out.size().width; ix++) {
+            // Avoid to test around main diagonal pixels.
+            if(cv::abs(ix - iy) < margin) {
+                continue;
+            }
+            // Others should be completely black.
+            const Vec3b pixel = out.at<Vec3b>(iy, ix);
+            EXPECT_EQ(pixel[0], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+            EXPECT_EQ(pixel[1], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+            EXPECT_EQ(pixel[2], 0) << cv::format(" - iy = %d, ix = %d", iy, ix);
+        }
+    }
+}
+
+TEST_P(Imgproc_ColorBayerVNG_Codes, regression27225_small)
+{
+    // for too small images use the simple interpolation algorithm
+    const cv::ColorConversionCodes codeVNG = get<0>(GetParam());
+    const cv::ColorConversionCodes codeINT = get<1>(GetParam());
+    cv::Mat in = cv::Mat::eye(7, 7, CV_8UC1) * 255;
+
+    cv::Mat outVNG;
+    EXPECT_NO_THROW(cv::cvtColor(in, outVNG, codeVNG));
+    cv::Mat outINT;
+    EXPECT_NO_THROW(cv::cvtColor(in, outINT, codeINT));
+
+    Mat diff;
+    absdiff(outVNG, outINT, diff);
+
+    imwrite("outVNG.png", outVNG);
+    imwrite("outINT.png", outINT);
+    EXPECT_EQ(0, countNonZero(diff.reshape(1) > 1));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_ColorBayerVNG_Codes,
+    testing::Values(
+        make_tuple(cv::COLOR_BayerBG2BGR_VNG, cv::COLOR_BayerBG2BGR),
+        make_tuple(cv::COLOR_BayerGB2BGR_VNG, cv::COLOR_BayerGB2BGR),
+        make_tuple(cv::COLOR_BayerRG2BGR_VNG, cv::COLOR_BayerRG2BGR),
+        make_tuple(cv::COLOR_BayerGR2BGR_VNG, cv::COLOR_BayerGR2BGR)));
+
 // creating Bayer pattern
 template <typename T, int depth>
 static void calculateBayerPattern(const Mat& src, Mat& bayer, const char* pattern)
