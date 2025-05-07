@@ -65,6 +65,7 @@ type_dict = {
     "char"    : { "j_type" : "char", "jn_type" : "char", "jni_type" : "jchar", "suffix" : "C" },
     "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
+    "long long" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "float"   : { "j_type" : "float", "jn_type" : "float", "jni_type" : "jfloat", "suffix" : "F" },
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
@@ -88,6 +89,13 @@ type_dict = {
         'suffix': 'Ljava_util_List',
         'v_type': 'string',
         'j_import': 'java.lang.String'
+    },
+    "byte[]": {
+        "j_type" : "byte[]",
+        "jn_type": "byte[]",
+        "jni_type": "jbyteArray",
+        "jni_name": "n_%(n)s",
+        "jni_var": "char* n_%(n)s = reinterpret_cast<char*>(env->GetByteArrayElements(%(n)s, NULL))",
     },
 }
 
@@ -511,14 +519,14 @@ class JavaWrapperGenerator(object):
 
         if classinfo.base:
             classinfo.addImports(classinfo.base)
-        type_dict.setdefault("Ptr_"+name, {}).update(
-            { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
-              "jni_name" : "*((Ptr<"+classinfo.fullNameCPP()+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
-              "suffix" : "J",
-              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+        if ("Ptr_"+name) not in type_dict:
+            type_dict["Ptr_"+name] = {
+                "j_type" : classinfo.jname,
+                "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
+                "jni_name" : "*((Ptr<"+classinfo.fullNameCPP()+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
+                "suffix" : "J",
+                "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
             }
-        )
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
     def add_const(self, decl, enumType=None): # [ "const cname", val, [], [] ]
