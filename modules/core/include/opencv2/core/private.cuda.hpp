@@ -155,7 +155,7 @@ namespace cv { namespace cuda
 
                 cudaDeviceProp prop{};
                 cudaSafeCall(cudaGetDeviceProperties(&prop, device));
-                
+
                 nppStreamContext.nCudaDeviceId = device;
                 nppStreamContext.nMultiProcessorCount = prop.multiProcessorCount;
                 nppStreamContext.nMaxThreadsPerMultiProcessor = prop.maxThreadsPerMultiProcessor;
