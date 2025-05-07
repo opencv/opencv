@@ -10,7 +10,7 @@
 // (cv::gapi::ov::backend() is still there and is defined always)
 #include "backends/ov/govbackend.hpp"
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
+#ifdef HAVE_OPENVINO_2_0
 
 #include "backends/ov/util.hpp"
 #include "api/gbackend_priv.hpp" // FIXME: Make it part of Backend SDK!
@@ -1643,11 +1643,11 @@ void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in
     }
 }
 
-#else // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
+#else // HAVE_OPENVINO_2_0
 
 cv::gapi::GBackend cv::gapi::ov::backend() {
     // Still provide this symbol to avoid linking issues
     util::throw_error(std::runtime_error("G-API has been compiled without OpenVINO support"));
 }
 
-#endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
+#endif // HAVE_OPENVINO_2_0

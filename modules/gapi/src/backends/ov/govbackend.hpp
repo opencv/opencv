@@ -10,9 +10,8 @@
 // Include anyway - cv::gapi::ov::backend() still needs to be defined
 #include "opencv2/gapi/infer/ov.hpp"
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
-
-#include <openvino/openvino.hpp>
+#include "backends/ov/ovdef.hpp"
+#ifdef HAVE_OPENVINO_2_0
 
 #include "backends/common/gbackend.hpp"
 
@@ -70,7 +69,9 @@ public:
                      GIslandExecutable::IOutput &out) override;
 };
 
-}}}
+} // namespace ov
+} // namespace gimpl
+} // namespace cv
 
-#endif // HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2022010000
+#endif // HAVE_OPENVINO_2_0
 #endif // OPENCV_GAPI_GOVBACKEND_HPP
