@@ -109,7 +109,7 @@ int SPngDecoder::readDataFromBuf(void *sp_ctx, void *user, void *dst, size_t siz
 
 bool SPngDecoder::readHeader()
 {
-    volatile bool result = false;
+    bool result = false;
     close();
 
     spng_ctx *ctx = spng_ctx_new(SPNG_CTX_IGNORE_ADLER32);
@@ -136,9 +136,8 @@ bool SPngDecoder::readHeader()
     if (!m_buf.empty() || m_f)
     {
         struct spng_ihdr ihdr;
-        int ret = spng_get_ihdr(ctx, &ihdr);
 
-        if (ret == SPNG_OK)
+        if (spng_get_ihdr(ctx, &ihdr) == SPNG_OK)
         {
             m_width = static_cast<int>(ihdr.width);
             m_height = static_cast<int>(ihdr.height);
@@ -217,9 +216,7 @@ bool SPngDecoder::readData(Mat &img)
 
             if (!color && fmt == SPNG_FMT_RGB8 && m_bit_depth == 16 && (m_color_type == SPNG_COLOR_TYPE_TRUECOLOR || m_color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA))
             {
-                ret = spng_decoded_image_size(png_ptr, SPNG_FMT_RGBA16, &image_size);
                 Mat tmp(m_height, m_width, CV_16UC4);
-                Mat tmp1(m_height, m_width, CV_16U);
                 if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
                     return false;
                 spngCvt_BGRA2Gray_16u28u_CnC1R(reinterpret_cast<const ushort*>(tmp.data), (int)tmp.step1(),
