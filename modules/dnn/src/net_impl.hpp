@@ -36,53 +36,6 @@ using std::string;
 
 typedef std::unordered_map<std::string, int64_t> NamesHash;
 
-
-
-// PagedCacheManager
-// A manager for caching Args' memory allocations across forward passes in a DNN graph.
-//
-// - Memory is organized into *pages*, each page consisting of a batch of entries along the 0-th dimension.
-// - Pages are used to store sequences of fixed-shaped blocks efficiently without frequent reallocations.
-// - This mechanism is particularly useful for caching data like KV caches in LLMs or any temporal buffers.
-// - see https://docs.vllm.ai/en/latest/design/kernel/paged_attention.html as a reference for the particular
-//   use case
-//
-// Usage:
-// - `PagedCacheManager` allocates pages to store up to T blocks, where each block has shape [d1, d2, ..., dn].
-// - Allocation ensures consistency: block shape and data type must match across allocations for a given Arg.
-// - Pages grow automatically if more blocks are needed over time.
-//
-// Interface:
-// - `allocate(arg, shape, dtype)`: Allocates sufficient pages to fit the requested shape.
-// - `const std::vector<cv::Mat>& getPagesRef(arg) const`: Returns a reference to the pages for reading/writing data.
-//   (Modifying the page vector structure itself is disallowed; only Mat contents can be modified.)
-// - `free(arg)`: Releases the cached pages for a specific Arg.
-//
-// Example layout:
-//   Requested shape: [100, 64, 64]
-//   Page size: 16
-//   Allocated: 7 pages of shape [16, 64, 64]
-class PagedCacheManager {
-    public:
-        PagedCacheManager(Net::Impl* netImpl_) : netImpl(netImpl_) {}
-        void allocate(Arg arg, const MatShape& shape, MatType dtype);
-        void free(Arg arg);
-        const std::vector<cv::Mat>& getPagesRef(Arg arg) const;
-    private:
-        struct PageInfo {
-            std::vector<cv::Mat> pages;
-            int curIdx = -1;            // index of last filled block
-            int pageSize = -1;          // how many entries per page (along 0th dim)
-            MatShape blockShape;        // shape of a single block (without the batch dim)
-            MatShape pageShape;         // shape of a page (with pageSize as 0-th dim)
-            MatType dtype;
-        };
-
-        std::unordered_map<int, PageInfo> cache;
-        Net::Impl* netImpl;
-};
-
-
 // NB: Implementation is divided between of multiple .cpp files
 struct Net::Impl : public detail::NetImplBase
 {
@@ -133,7 +86,17 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> buffers;
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
-    PagedCacheManager pagedCacheManager = PagedCacheManager(this);
+
+    struct PageInfo {
+        // Cache pages
+        std::vector<cv::Mat> pages;
+        int curIdx = -1;            // index of last filled block
+        MatShape shape;        // shape of a single block (without the batch dim)
+        MatType dtype;
+        // int size; // may need this later
+    };
+    std::unordered_map<int, PageInfo> cache;
+
     Ptr<Graph> mainGraph;
     int globGraphIdx;
 
@@ -154,9 +117,7 @@ struct Net::Impl : public detail::NetImplBase
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
 
-
     virtual void clear();
-
 
     virtual void validateBackendAndTarget();
 
@@ -382,6 +343,7 @@ struct Net::Impl : public detail::NetImplBase
     Arg getArg(const std::string& name);
     bool haveArg(const std::string& name) const;
 
+    Arg newCachedArg(const std::string& name, bool allowEmptyName);
     Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
@@ -394,6 +356,11 @@ struct Net::Impl : public detail::NetImplBase
     int findDim(const std::string& name, bool insert=false);
 
     void prepareForInference();
+
+    // @TODO
+    void allocateCache(Arg arg, const MatShape& shape, MatType dtype, int nPages = 1);
+    void growCache(Arg arg);
+    const std::vector<Mat>& getCache(Arg arg) const;
 
     // pre-allocates memory for output tensors.
     // if useBufferPool==true, the method uses 'buffers'

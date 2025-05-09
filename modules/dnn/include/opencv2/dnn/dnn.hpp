@@ -277,6 +277,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW std::vector<Mat> blobs;
         std::vector<Arg> inputs;
         std::vector<Arg> outputs;
+        std::vector<Arg> cache;
         void* netimpl;
 
         virtual std::vector<Ptr<Graph> >* subgraphs() const;

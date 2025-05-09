@@ -27,8 +27,7 @@ std::string argKindToString(ArgKind kind)
         kind == DNN_ARG_OUTPUT ? "Output" :
         kind == DNN_ARG_TEMP ? "Temp" :
         kind == DNN_ARG_PATTERN ? "Pattern" : "???";
-        kind == DNN_ARG_CACHED ? "Cached" : "???";
-}
+    }
 
 ArgData::ArgData()
 {
@@ -237,6 +236,8 @@ Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
 Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName)
 {
     CV_Assert(allowEmptyName || !name.empty());
+    CV_Assert(kind != DNN_ARG_CACHED); // use newCachedArg instead
+
     int idx = (int)args.size();
 
     if (!name.empty()) {
@@ -254,6 +255,25 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     return Arg(idx);
 }
 
+// add new cache Arg
+// ArgData for cached args does not hold type and shape for now
+// this is held by `PageInfo`
+Arg Net::Impl::newCachedArg(const std::string& name, bool allowEmptyName)
+{
+    CV_Assert(allowEmptyName || !name.empty());
+    int idx = (int)args.size();
+    argnames.insert(std::make_pair(name, (int64_t)idx));
+
+    if (!name.empty()) {
+        CV_Assert(argnames.find(name) == argnames.end());
+        argnames.insert(std::make_pair(name, (int64_t)idx));
+    }
+
+    ArgData adata;
+    adata.name = name;
+    adata.kind = DNN_ARG_CACHED;
+    args.push_back(adata);
+}
 
 int Net::Impl::findDim(const std::string& dimname, bool insert)
 {
@@ -303,6 +323,47 @@ void Net::Impl::prepareForInference()
         prepared = true;
         finalizeLayers = true;
     }
+}
+
+// This is called from a Layer, eg on forward pass,
+// when the shape of allocation is known.
+// General procedure:
+// 1. finds the page list in cache
+// 2. `pages`should be empty
+// 3. create the first page - a Mat of given type and shape
+void Net::Impl::allocateCache(Arg arg, const MatShape& shape, MatType dtype, int nPages = 1){
+    auto it = cache.find(arg.idx);
+    CV_Assert(it != cache.end());
+    CV_Assert(it->second.pages.empty());
+    Mat page(shape, dtype);
+    size_t size = page.total();
+    PageInfo PageInfo{
+        .pages = {page},
+        .curIdx = -1,
+        .shape = shape,
+        .dtype = dtype
+    };
+    cache[arg.idx] = PageInfo;
+}
+
+// add a single page to cache
+void Net::Impl::growCache(Arg arg){
+    auto it = cache.find(arg.idx);
+    CV_Assert(it != cache.end());
+    CV_Assert(!it->second.pages.empty());
+    PageInfo& pageInfo = it->second;
+    MatShape shape = pageInfo.shape;
+
+    Mat newPage(pageInfo.shape, pageInfo.dtype);
+    pageInfo.pages.push_back(newPage);
+}
+
+// get all pages from cache
+const std::vector<Mat>& Net::Impl::getCache(Arg arg) const {
+    auto it = cache.find(arg.idx);
+    CV_Assert(it != cache.end());
+    CV_Assert(!it->second.pages.empty());
+    return it->second.pages;
 }
 
 void Net::Impl::allocateLayerOutputs(
@@ -1103,68 +1164,6 @@ std::ostream& Net::Impl::dump(std::ostream& strm)
     }
     strm << "}\n";
     return strm;
-}
-
-
-void PagedCacheManager::allocate(Arg arg, const MatShape& shape, MatType dtype)
-{
-    CV_Assert(shape.size() >= 1); // At least batch dimension
-
-    int totalBlocks = shape[0]; // Number of blocks requested
-    MatShape blockShape(shape.begin() + 1, shape.end()); // d1 x d2 x ... x dn
-
-    int argIdx = arg.idx;
-    ArgData& adata = netImpl->args.at(argIdx);
-
-    // @TODO: Validate and update the shape and dtype
-    CV_Assert(adata.kind == DNN_ARG_CACHED);
-
-    auto& pageInfo = cache[argIdx];
-    if (pageInfo.pages.empty()) {
-        pageInfo.pageSize = 16; // 16 by default
-        pageInfo.blockShape = blockShape;
-        pageInfo.pageShape = shape;
-        pageInfo.pageShape[0] = pageInfo.pageSize;
-        pageInfo.dtype = dtype;
-        pageInfo.curIdx = -1;
-    }
-    else {
-        // Validate block shape and dtype match
-        CV_Assert(pageInfo.blockShape == blockShape);
-        CV_Assert(pageInfo.dtype == dtype);
-    }
-
-    int pageSize = pageInfo.pageSize;
-    int neededPages = (totalBlocks + pageSize - 1) / pageSize;
-    int existingPages = static_cast<int>(pageInfo.pages.size());
-
-    if (existingPages < neededPages) {
-        for (int i = existingPages; i < neededPages; ++i) {
-            Mat page(pageInfo.pageShape, pageInfo.dtype);
-            pageInfo.pages.push_back(page);
-        }
-    }
-}
-
-const std::vector<cv::Mat>& PagedCacheManager::getPagesRef(Arg arg) const
-{
-    int argIdx = arg.idx;
-    auto it = cache.find(argIdx);
-    if (it == cache.end())
-    {
-        CV_Error(Error::StsObjectNotFound, "PagedCacheManager: no cache entry for the given Arg");
-    }
-    return it->second.pages;
-}
-
-void PagedCacheManager::free(Arg arg)
-{
-    int argIdx = arg.idx;
-    auto it = cache.find(argIdx);
-    if (it != cache.end())
-    {
-        cache.erase(it);
-    }
 }
 
 CV__DNN_INLINE_NS_END
