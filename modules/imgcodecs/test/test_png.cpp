@@ -121,26 +121,25 @@ TEST(Imgcodecs_Png, decode_regression27295)
 
     Mat img;
 
-    // If first is IHDR chunk, output shall not be empty.
-    // 8 means PNG sigunature length.
-    // 4 means lenght of chunk.
+    // If IHDR chunk found as the first chunk, output shall not be empty.
+    // 8 means PNG signature length.
+    // 4 means length field(uint32_t).
     EXPECT_EQ(buff[8+4+0], 'I');
     EXPECT_EQ(buff[8+4+1], 'H');
     EXPECT_EQ(buff[8+4+2], 'D');
     EXPECT_EQ(buff[8+4+3], 'R');
-
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
     EXPECT_FALSE(img.empty());
 
-    // If first is not IHDR chunk, output shall be empty.
-    buff[8+4+0] = 'i';
+    // If Non-IHDR chunk found as the first chunk, output shall be empty.
+    buff[8+4+0] = 'i'; // Not 'I'
     buff[8+4+1] = 'H';
     buff[8+4+2] = 'D';
     buff[8+4+3] = 'R';
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
     EXPECT_TRUE(img.empty());
 
-    // If first is CgBI chunk(Apple private), output shall be empty with special message.
+    // If CgBI chunk (Apple private) found as the first chunk, output shall be empty with special message.
     buff[8+4+0] = 'C';
     buff[8+4+1] = 'g';
     buff[8+4+2] = 'B';
