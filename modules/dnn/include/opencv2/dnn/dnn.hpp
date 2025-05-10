@@ -245,7 +245,8 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_ARG_INPUT=2, //!< input of the whole model. Before Net::forward() or in Net::forward() all inputs must be set
         DNN_ARG_OUTPUT=3, //!< output of the model.
         DNN_ARG_TEMP=4,   //!< intermediate result, a result of some operation and input to some other operation(s).
-        DNN_ARG_PATTERN=5 //!< not used for now
+        DNN_ARG_PATTERN=5, //!< not used for now
+        DNN_ARG_CACHED=6 //!< cached argument, used in some operations to store intermediate results
     };
 
     CV_EXPORTS std::string argKindToString(ArgKind kind);
@@ -276,6 +277,7 @@ CV__DNN_INLINE_NS_BEGIN
         CV_PROP_RW std::vector<Mat> blobs;
         std::vector<Arg> inputs;
         std::vector<Arg> outputs;
+        std::vector<Arg> cache;
         void* netimpl;
 
         virtual std::vector<Ptr<Graph> >* subgraphs() const;
@@ -1234,6 +1236,8 @@ CV__DNN_INLINE_NS_BEGIN
     CV_EXPORTS
     Net readNetFromModelOptimizer(const uchar* bufferModelConfigPtr, size_t bufferModelConfigSize,
                                            const uchar* bufferWeightsPtr, size_t bufferWeightsSize);
+
+
 
 
     /** @brief Reads a network model <a href="https://onnx.ai/">ONNX</a>.
