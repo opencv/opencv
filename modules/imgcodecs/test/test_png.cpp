@@ -110,6 +110,45 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
 }
 
+// IHDR shall be first.
+// See https://github.com/opencv/opencv/issues/27295
+TEST(Imgcodecs_Png, decode_regression27295)
+{
+    vector<uchar> buff;
+    Mat src = Mat::zeros(240, 180, CV_8UC3);
+    vector<int> param;
+    EXPECT_NO_THROW(imencode(".png", src, buff, param));
+
+    Mat img;
+
+    // If first is IHDR chunk, output shall not be empty.
+    // 8 means PNG sigunature length.
+    // 4 means lenght of chunk.
+    EXPECT_EQ(buff[8+4+0], 'I');
+    EXPECT_EQ(buff[8+4+1], 'H');
+    EXPECT_EQ(buff[8+4+2], 'D');
+    EXPECT_EQ(buff[8+4+3], 'R');
+
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_FALSE(img.empty());
+
+    // If first is not IHDR chunk, output shall be empty.
+    buff[8+4+0] = 'i';
+    buff[8+4+1] = 'H';
+    buff[8+4+2] = 'D';
+    buff[8+4+3] = 'R';
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_TRUE(img.empty());
+
+    // If first is CgBI chunk(Apple private), output shall be empty with special message.
+    buff[8+4+0] = 'C';
+    buff[8+4+1] = 'g';
+    buff[8+4+2] = 'B';
+    buff[8+4+3] = 'I';
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_TRUE(img.empty());
+}
+
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
 
 TEST_P(Imgcodecs_Png_PngSuite, decode)
