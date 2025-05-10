@@ -358,7 +358,7 @@ struct Net::Impl : public detail::NetImplBase
     void prepareForInference();
 
     // @TODO
-    void allocateCache(Arg arg, const MatShape& shape, MatType dtype, int nPages = 1);
+    void allocateCache(Arg arg, const MatShape& shape, MatType dtype);
     void growCache(Arg arg);
     const std::vector<Mat>& getCache(Arg arg) const;
 

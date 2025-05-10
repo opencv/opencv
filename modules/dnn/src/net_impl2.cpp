@@ -331,12 +331,11 @@ void Net::Impl::prepareForInference()
 // 1. finds the page list in cache
 // 2. `pages`should be empty
 // 3. create the first page - a Mat of given type and shape
-void Net::Impl::allocateCache(Arg arg, const MatShape& shape, MatType dtype, int nPages = 1){
+void Net::Impl::allocateCache(Arg arg, const MatShape& shape, MatType dtype){
     auto it = cache.find(arg.idx);
     CV_Assert(it != cache.end());
     CV_Assert(it->second.pages.empty());
     Mat page(shape, dtype);
-    size_t size = page.total();
     PageInfo PageInfo{
         .pages = {page},
         .curIdx = -1,
