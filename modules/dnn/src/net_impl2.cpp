@@ -338,13 +338,12 @@ void Net::Impl::allocateCache(Arg arg, const MatShape& shape, MatType dtype){
     CV_Assert(it != cache.end());
     CV_Assert(it->second.pages.empty());
     Mat page(shape, dtype);
-    PageInfo PageInfo{
-        .pages = {page},
-        .curIdx = -1,
-        .shape = shape,
-        .dtype = dtype
-    };
-    cache[arg.idx] = PageInfo;
+    PageInfo pageInfo;
+    pageInfo.pages = {page};
+    pageInfo.curIdx = -1;
+    pageInfo.shape = shape;
+    pageInfo.dtype = dtype;
+    cache[arg.idx] = pageInfo;
 }
 
 // add a single page to cache
