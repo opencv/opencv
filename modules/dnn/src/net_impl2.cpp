@@ -273,6 +273,8 @@ Arg Net::Impl::newCachedArg(const std::string& name, bool allowEmptyName)
     adata.name = name;
     adata.kind = DNN_ARG_CACHED;
     args.push_back(adata);
+
+    return Arg(idx);
 }
 
 int Net::Impl::findDim(const std::string& dimname, bool insert)
@@ -351,7 +353,6 @@ void Net::Impl::growCache(Arg arg){
     CV_Assert(it != cache.end());
     CV_Assert(!it->second.pages.empty());
     PageInfo& pageInfo = it->second;
-    MatShape shape = pageInfo.shape;
 
     Mat newPage(pageInfo.shape, pageInfo.dtype);
     pageInfo.pages.push_back(newPage);
