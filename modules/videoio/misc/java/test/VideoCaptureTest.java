@@ -99,7 +99,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
 
         RandomAccessFile f = new RandomAccessFile(new File(testDataPath, "cv/video/768x576.avi"), "r");
 
-        IStreamReader stream = new IStreamReader(0)
+        IStreamReader stream = new IStreamReader()
         {
             @Override
             public long read(byte[] buffer, long size)

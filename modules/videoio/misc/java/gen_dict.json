@@ -1,4 +1,15 @@
 {
+    "ManualFuncs" : {
+        "IStreamReader" : {
+            "IStreamReader" : {
+                "j_code"   : [
+                    "    protected IStreamReader() { nativeObj = 0; }"
+                ],
+                "jn_code": [],
+                "cpp_code": []
+            }
+        }
+    },
     "func_arg_fix" : {
         "read": { "buffer": {"ctype" : "byte[]"} }
     },
