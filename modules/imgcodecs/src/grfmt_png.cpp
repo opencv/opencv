@@ -133,6 +133,7 @@ const uint32_t id_bKGD = 0x624B4744; // The bKGD chunk specifies a default backg
 const uint32_t id_tRNS = 0x74524E53; // The tRNS chunk provides transparency information
 const uint32_t id_tEXt = 0x74455874; // The tEXt chunk stores metadata as text in key-value pairs
 const uint32_t id_IEND = 0x49454E44; // end/footer chunk
+const uint32_t id_CgBI = 0x43674249; // The CgBI chunk (Apple private) is not supported.
 
 APNGFrame::APNGFrame()
 {
@@ -285,9 +286,18 @@ bool  PngDecoder::readHeader()
     if (!readFromStreamOrBuffer(&sig, 8))
         return false;
 
+    // IHDR chunk shall be first. ( https://www.w3.org/TR/png-3/#5ChunkOrdering )
     id = read_chunk(m_chunkIHDR);
-    if (id != id_IHDR)
+    if (id == id_CgBI)
+    {
+        CV_LOG_ERROR(NULL, "CgBI chunk (Apple private) found as the first chunk. IHDR is expected.");
         return false;
+    }
+    if (id != id_IHDR)
+    {
+        CV_LOG_ERROR(NULL, "IHDR chunk shall be first. This data may be broken or malformed.");
+        return false;
+    }
 
     m_is_fcTL_loaded = false;
     while (true)
