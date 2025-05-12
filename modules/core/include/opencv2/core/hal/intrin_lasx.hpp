@@ -1010,7 +1010,11 @@ OPENCV_HAL_IMPL_LASX_CMP_OP_INT(v_uint32x8,  v_int32x8,  w, wu)
     inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)          \
     { return _Tpvec(__lasx_xvseq_##suffix(a.val, b.val)); }       \
     inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)          \
-    { return v_not(v_eq(a, b)); }
+    { return v_not(v_eq(a, b)); }                                 \
+    inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b)          \
+    { return _Tpvec(__lasx_xvslt_##suffix(b.val, a.val)); }       \
+    inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)          \
+    { return _Tpvec(__lasx_xvslt_##suffix(a.val, b.val)); }
 
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_uint64x4, d)
 OPENCV_HAL_IMPL_LASX_CMP_OP_64BIT(v_int64x4, d)
