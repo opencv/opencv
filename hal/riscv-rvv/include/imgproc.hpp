@@ -236,6 +236,14 @@ int integral(int depth, int sdepth, int sqdepth,
 
 #endif // CV_HAL_RVV_1P0_ENABLED
 
+#if CV_HAL_RVV_071_ENABLED
+
+int cvtBGRtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int depth, int scn, int dcn, bool swapBlue);
+#undef cv_hal_cvtBGRtoBGR
+#define cv_hal_cvtBGRtoBGR cv::rvv_hal::imgproc::cvtBGRtoBGR
+
+#endif // CV_HAL_RVV_071_ENABLED
+
 }}} // cv::rvv_hal::imgproc
 
 #endif // OPENCV_RVV_HAL_IMGPROC_HPP

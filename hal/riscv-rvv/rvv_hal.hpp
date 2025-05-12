@@ -10,22 +10,18 @@
 #include "opencv2/core/hal/interface.h"
 
 #if defined(__riscv_v) && __riscv_v == 1000000
-
 #define CV_HAL_RVV_1P0_ENABLED 1
+#endif
 
+#if defined(__riscv_v) && __riscv_v == 7000 && defined(__GNUC__) && __GNUC__ == 10 && __GNUC_MINOR__ == 4 && defined(__THEAD_VERSION__)
+#define CV_HAL_RVV_071_ENABLED 1
+#endif
+
+#if CV_HAL_RVV_1P0_ENABLED || CV_HAL_RVV_071_ENABLED
 #include <riscv_vector.h>
+#endif
 #include "include/types.hpp"
 #include "include/core.hpp"
 #include "include/imgproc.hpp"
 
-#endif
-
-#ifndef CV_HAL_RVV_071_ENABLED
-#  if defined(__GNUC__) && __GNUC__ == 10 && __GNUC_MINOR__ == 4 && defined(__THEAD_VERSION__) && defined(__riscv_v) && __riscv_v == 7000
-#    define CV_HAL_RVV_071_ENABLED 1
-#  else
-#    define CV_HAL_RVV_071_ENABLED 0
-#  endif
-#endif
-
-#endif
+#endif // OPENCV_HAL_RVV_HPP_INCLUDED
