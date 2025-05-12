@@ -170,11 +170,15 @@ ocv_create_module(${extra_libs})
 
 ocv_target_link_libraries(${the_module} PRIVATE
     "${ZLIB_LIBRARIES}" "${OPENCL_LIBRARIES}" "${VA_LIBRARIES}"
-    "${OPENGL_LIBRARIES}" "${OPENGL_egl_LIBRARY}"
+    "${OPENGL_LIBRARIES}"
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
 )
+
+if (OPENCV_ENABLE_EGL_INTEROP)
+  ocv_target_link_libraries(${the_module} PRIVATE "${OPENGL_egl_LIBRARY}")
+endif()
 
 if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
