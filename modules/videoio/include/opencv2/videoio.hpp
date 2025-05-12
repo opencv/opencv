@@ -726,7 +726,13 @@ class CV_EXPORTS_W IStreamReader
 public:
     virtual ~IStreamReader();
 
-    /** @brief Read bytes from stream */
+    /** @brief Read bytes from stream
+     *
+     * @param buffer already allocated buffer of at least @p size bytes
+     * @param size maximum number of bytes to read
+     *
+     * @return actual number of read bytes
+     */
     CV_WRAP virtual long long read(char* buffer, long long size) = 0;
 
     /** @brief Sets the stream position

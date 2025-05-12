@@ -15,7 +15,7 @@ public:
     long long seek(long long offset, int way) CV_OVERRIDE;
 
 private:
-    JNIEnv* env;
+    JavaVM* vm;
     jobject obj;
     jmethodID m_read, m_seek;
 };

@@ -1,21 +1,28 @@
 #include "videoio_converters.hpp"
 
-JavaStreamReader::JavaStreamReader(JNIEnv* _env, jobject _obj) : env(_env)
+JavaStreamReader::JavaStreamReader(JNIEnv* env, jobject _obj)
 {
     obj = env->NewGlobalRef(_obj);
     jclass cls = env->GetObjectClass(obj);
     m_read = env->GetMethodID(cls, "read", "([BJ)J");
     m_seek = env->GetMethodID(cls, "seek", "(JI)J");
+    env->GetJavaVM(&vm);
 }
 
 JavaStreamReader::~JavaStreamReader()
 {
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+        return;
     env->DeleteGlobalRef(obj);
 }
 
 long long JavaStreamReader::read(char* buffer, long long size)
 {
     if (!m_read)
+        return 0;
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
         return 0;
     jbyteArray jBuffer = env->NewByteArray(static_cast<jsize>(size));
     if (!jBuffer)
@@ -28,6 +35,9 @@ long long JavaStreamReader::read(char* buffer, long long size)
 
 long long JavaStreamReader::seek(long long offset, int way)
 {
+    JNIEnv* env;
+    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+        return 0;
     if (!m_seek)
         return 0;
     return env->CallLongMethod(obj, m_seek, offset, way);

@@ -104,6 +104,7 @@ public class VideoCaptureTest extends OpenCVTestCase {
             @Override
             public long read(byte[] buffer, long size)
             {
+                assertEquals(buffer.length, size);
                 try
                 {
                     return Math.max(f.read(buffer), 0);
