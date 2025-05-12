@@ -396,7 +396,7 @@ bool  PngDecoder::readData( Mat& img )
     unsigned char** buffer = _buffer.data();
     Chunk chunk;
 
-    if (m_frame_count > 1)
+    if (m_frame_count > 5)
     {
         Mat mat_cur = Mat::zeros(img.rows, img.cols, m_type);
         uint32_t id = 0;
