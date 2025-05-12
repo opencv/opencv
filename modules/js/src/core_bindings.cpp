@@ -466,7 +466,8 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<double>("DoubleVector");
     register_vector<std::string>("StringVector");
     register_vector<cv::Point>("PointVector");
-    register_vector<cv::Point3f>("Point3fVector");
+    register_vector<cv::Point2f>("Point2fVector");
+    register_vector<cv::Point3_<float>>("Point3fVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
     register_vector<cv::KeyPoint>("KeyPointVector");
@@ -612,6 +613,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 
     EMSCRIPTEN_CV_RECT(int, "Rect")
     EMSCRIPTEN_CV_RECT(float, "Rect2f")
+    EMSCRIPTEN_CV_RECT(double, "Rect2d")
 
     emscripten::value_object<cv::RotatedRect>("RotatedRect")
         .field("center", &cv::RotatedRect::center)
