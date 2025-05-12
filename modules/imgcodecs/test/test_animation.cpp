@@ -677,6 +677,8 @@ TEST(Imgcodecs_APNG, imread_animation_16u)
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC1);
 #ifdef HAVE_PNG
+    // TO DO: The difference between HAVE_PNG and HAVE_SPNG occurs because the cvtColor function is used for APNG loading.
+    // For HAVE_PNG, the result should be the same as with HAVE_SPNG.
     EXPECT_EQ(19519, img.at<ushort>(0, 0));
 #endif
 #ifdef HAVE_SPNG
