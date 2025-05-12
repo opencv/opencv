@@ -130,7 +130,7 @@ bool GifDecoder::readData(Mat &img) {
                                                   globalColorTable[bgColor * 3 + 1], // G
                                                   globalColorTable[bgColor * 3 + 0], // R
                                                   0);                                // A
-                restore = Mat(width, height, CV_8UC4, background);
+                restore = Mat(height, width, CV_8UC4, background);
             }
             else
             {
