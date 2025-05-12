@@ -86,8 +86,8 @@ def MatchingMethod(param):
     ## [match_loc]
 
     ## [imshow]
-    cv.rectangle(img_display, matchLoc, (matchLoc[0] + templ.shape[0], matchLoc[1] + templ.shape[1]), (0,0,0), 2, 8, 0 )
-    cv.rectangle(result, matchLoc, (matchLoc[0] + templ.shape[0], matchLoc[1] + templ.shape[1]), (0,0,0), 2, 8, 0 )
+    cv.rectangle(img_display, matchLoc, (matchLoc[0] + templ.shape[1], matchLoc[1] + templ.shape[0]), (0,0,0), 2, 8, 0 )
+    cv.rectangle(result, matchLoc, (matchLoc[0] + templ.shape[1], matchLoc[1] + templ.shape[0]), (0,0,0), 2, 8, 0 )
     cv.imshow(image_window, img_display)
     cv.imshow(result_window, result)
     ## [imshow]
