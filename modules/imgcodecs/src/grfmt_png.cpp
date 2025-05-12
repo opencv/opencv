@@ -42,6 +42,8 @@
 
 #include "precomp.hpp"
 
+#include <memory>
+
 #ifdef HAVE_PNG
 
 /****************************************************************************************\
@@ -121,15 +123,17 @@
 namespace cv
 {
 
-const uint32_t id_IHDR = 0x52444849; // PNG header
-const uint32_t id_acTL = 0x4C546361; // Animation control chunk
-const uint32_t id_fcTL = 0x4C546366; // Frame control chunk
-const uint32_t id_IDAT = 0x54414449; // first frame and/or default image
-const uint32_t id_fdAT = 0x54416466; // Frame data chunk
-const uint32_t id_PLTE = 0x45544C50;
-const uint32_t id_bKGD = 0x44474B62;
-const uint32_t id_tRNS = 0x534E5274;
-const uint32_t id_IEND = 0x444E4549; // end/footer chunk
+const uint32_t id_IHDR = 0x49484452; // PNG header
+const uint32_t id_acTL = 0x6163544C; // Animation control chunk
+const uint32_t id_fcTL = 0x6663544C; // Frame control chunk
+const uint32_t id_IDAT = 0x49444154; // first frame and/or default image
+const uint32_t id_fdAT = 0x66644154; // Frame data chunk
+const uint32_t id_PLTE = 0x504C5445; // The PLTE chunk contains a color palette for indexed-color images
+const uint32_t id_bKGD = 0x624B4744; // The bKGD chunk specifies a default background color for the image
+const uint32_t id_tRNS = 0x74524E53; // The tRNS chunk provides transparency information
+const uint32_t id_tEXt = 0x74455874; // The tEXt chunk stores metadata as text in key-value pairs
+const uint32_t id_IEND = 0x49454E44; // end/footer chunk
+const uint32_t id_CgBI = 0x43674249; // The CgBI chunk (Apple private) is not supported.
 
 APNGFrame::APNGFrame()
 {
@@ -248,6 +252,11 @@ void  PngDecoder::readDataFromBuf( void* _png_ptr, unsigned char* dst, size_t si
 
 bool  PngDecoder::readHeader()
 {
+    if (m_frame_count > 1 /* if true, it means readHeader() was called before */)
+    {
+        return true;
+    }
+
     // Declare dynamic variables before a potential longjmp.
     Chunk chunk;
 
@@ -274,14 +283,19 @@ bool  PngDecoder::readHeader()
     }
 
     // Read PNG header: 137 80 78 71 13 10 26 10
-    if (!read_from_io(&sig, 8))
+    if (!readFromStreamOrBuffer(&sig, 8))
         return false;
 
+    // IHDR chunk shall be first. ( https://www.w3.org/TR/png-3/#5ChunkOrdering )
     id = read_chunk(m_chunkIHDR);
-    // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
-    // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
-    if (!(id == id_IHDR && m_chunkIHDR.p.size() == 8 + 13 + 4))
+    if (id == id_CgBI)
     {
+        CV_LOG_ERROR(NULL, "CgBI chunk (Apple private) found as the first chunk. IHDR is expected.");
+        return false;
+    }
+    if (id != id_IHDR)
+    {
+        CV_LOG_ERROR(NULL, "IHDR chunk shall be first. This data may be broken or malformed.");
         return false;
     }
 
@@ -306,10 +320,7 @@ bool  PngDecoder::readHeader()
 
         if (id == id_acTL)
         {
-            // 8=HDR+size, 8=size of acTL chunk, 4=CRC
             // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
-            if (chunk.p.size() != 8 + 8 + 4)
-                return false;
             m_animation.loop_count = png_get_uint_32(&chunk.p[12]);
 
             m_frame_count = png_get_uint_32(&chunk.p[8]);
@@ -319,10 +330,7 @@ bool  PngDecoder::readHeader()
 
         if (id == id_fcTL)
         {
-            // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
             // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
-            if (chunk.p.size() != 8 + 26 + 4)
-                return false;
             m_is_fcTL_loaded = true;
             w0 = png_get_uint_32(&chunk.p[12]);
             h0 = png_get_uint_32(&chunk.p[16]);
@@ -332,20 +340,8 @@ bool  PngDecoder::readHeader()
             delay_den = png_get_uint_16(&chunk.p[30]);
             dop = chunk.p[32];
             bop = chunk.p[33];
-        }
-
-        if (id == id_bKGD)
-        {
-            // 8=HDR+size, ??=size of bKGD chunk, 4=CRC
-            // The spec is actually more complex: http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
-            // TODO: we only check that 4 bytes can be read from &chunk.p[8]. Fix.
-            if (chunk.p.size() < 8 + 4)
+            if (dop > 2 || bop > 1)
                 return false;
-            int bgcolor = png_get_uint_32(&chunk.p[8]);
-            m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
-            m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
-            m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
-            m_animation.bgcolor[0] = bgcolor & 0xFF;
         }
 
         if (id == id_PLTE || id == id_tRNS)
@@ -370,8 +366,12 @@ bool  PngDecoder::readHeader()
     m_color_type = color_type;
     m_bit_depth = bit_depth;
 
-    if (m_is_fcTL_loaded && (int(x0 + w0) > m_width || int(y0 + h0) > m_height || dop > 2 || bop > 1))
+    if (m_is_fcTL_loaded && ((long long int)x0 + w0 > m_width || (long long int)y0 + h0 > m_height || dop > 2 || bop > 1))
         return false;
+
+    png_color_16p background_color;
+    if (png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
+        m_animation.bgcolor = Scalar(background_color->blue, background_color->green, background_color->red);
 
     if (bit_depth <= 8 || bit_depth == 16)
     {
@@ -411,7 +411,7 @@ bool  PngDecoder::readData( Mat& img )
         Mat mat_cur = Mat::zeros(img.rows, img.cols, m_type);
         uint32_t id = 0;
         uint32_t j = 0;
-        uint32_t imagesize = m_width * m_height * mat_cur.channels();
+        uint32_t imagesize = m_width * m_height * (uint32_t)mat_cur.elemSize();
         m_is_IDAT_loaded = false;
 
         if (m_frame_no == 0)
@@ -462,11 +462,25 @@ bool  PngDecoder::readData( Mat& img )
                     m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
                     if (mat_cur.channels() == img.channels())
-                        mat_cur.copyTo(img);
-                    else if (img.channels() == 1)
-                        cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
-                    else if (img.channels() == 3)
-                        cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                    {
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                            mat_cur.convertTo(img, CV_8U, 1. / 255);
+                        else
+                            mat_cur.copyTo(img);
+                    }
+                    else
+                    {
+                        Mat mat_cur_scaled;
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                            mat_cur.convertTo(mat_cur_scaled, CV_8U, 1. / 255);
+                        else
+                            mat_cur_scaled = mat_cur;
+
+                        if (img.channels() == 1)
+                            cvtColor(mat_cur_scaled, img, COLOR_BGRA2GRAY);
+                        else if (img.channels() == 3)
+                            cvtColor(mat_cur_scaled, img, COLOR_BGRA2BGR);
+                    }
 
                     if (dop != 2)
                     {
@@ -491,6 +505,11 @@ bool  PngDecoder::readData( Mat& img )
                 bop = chunk.p[33];
 
                 if (int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
+                {
+                    return false;
+                }
+                // Asking for blend over with no alpha is invalid.
+                if (bop == 1 && mat_cur.channels() != 4)
                 {
                     return false;
                 }
@@ -519,12 +538,19 @@ bool  PngDecoder::readData( Mat& img )
                         delay_den = 100;
                     m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
 
-                    if (mat_cur.channels() == img.channels())
-                        mat_cur.copyTo(img);
-                    else if (img.channels() == 1)
-                        cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
-                    else if (img.channels() == 3)
-                        cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U && mat_cur.channels() == img.channels())
+                        mat_cur.convertTo(img, CV_8U, 1. / 255);
+                    else
+                    {
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                            mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
+                        if (mat_cur.channels() == img.channels())
+                            mat_cur.copyTo(img);
+                        else if (img.channels() == 1)
+                            cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
+                        else if (img.channels() == 3)
+                            cvtColor(mat_cur, img, COLOR_BGRA2BGR);
+                    }
                 }
                 else
                     return false;
@@ -621,6 +647,15 @@ bool PngDecoder::nextPage() {
 
 void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img)
 {
+    const size_t elem_size = img.elemSize();
+    if (_bop == 0) {
+        // Overwrite mode: copy source row directly to destination
+        for(uint32_t j = 0; j < h; ++j) {
+            std::memcpy(rows_dst[j + y] + x * elem_size,rows_src[j], w * elem_size);
+        }
+        return;
+    }
+
     int channels = img.channels();
     if (img.depth() == CV_16U)
         cv::parallel_for_(cv::Range(0, h), [&](const cv::Range& range) {
@@ -628,30 +663,24 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             uint16_t* sp = reinterpret_cast<uint16_t*>(rows_src[j]);
             uint16_t* dp = reinterpret_cast<uint16_t*>(rows_dst[j + y]) + x * channels;
 
-            if (_bop == 0) {
-                // Overwrite mode: copy source row directly to destination
-                memcpy(dp, sp, w * channels * sizeof(uint16_t));
-            }
-            else {
-                // Blending mode
-                for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
-                    if (sp[3] == 65535) { // Fully opaque in 16-bit (max value)
-                        memcpy(dp, sp, channels * sizeof(uint16_t));
+            // Blending mode
+            for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
+                if (channels < 4 || sp[3] == 65535) { // Fully opaque in 16-bit (max value)
+                    memcpy(dp, sp, elem_size);
+                }
+                else if (sp[3] != 0) { // Partially transparent
+                    if (dp[3] != 0) { // Both source and destination have alpha
+                        uint32_t u = sp[3] * 65535; // 16-bit max
+                        uint32_t v = (65535 - sp[3]) * dp[3];
+                        uint32_t al = u + v;
+                        dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
+                        dp[1] = static_cast<uint16_t>((sp[1] * u + dp[1] * v) / al); // Green
+                        dp[2] = static_cast<uint16_t>((sp[2] * u + dp[2] * v) / al); // Blue
+                        dp[3] = static_cast<uint16_t>(al / 65535);                  // Alpha
                     }
-                    else if (sp[3] != 0) { // Partially transparent
-                        if (dp[3] != 0) { // Both source and destination have alpha
-                            uint32_t u = sp[3] * 65535; // 16-bit max
-                            uint32_t v = (65535 - sp[3]) * dp[3];
-                            uint32_t al = u + v;
-                            dp[0] = static_cast<uint16_t>((sp[0] * u + dp[0] * v) / al); // Red
-                            dp[1] = static_cast<uint16_t>((sp[1] * u + dp[1] * v) / al); // Green
-                            dp[2] = static_cast<uint16_t>((sp[2] * u + dp[2] * v) / al); // Blue
-                            dp[3] = static_cast<uint16_t>(al / 65535);                  // Alpha
-                        }
-                        else {
-                            // If destination alpha is 0, copy source pixel
-                            memcpy(dp, sp, channels * sizeof(uint16_t));
-                        }
+                    else {
+                        // If destination alpha is 0, copy source pixel
+                        memcpy(dp, sp, elem_size);
                     }
                 }
             }
@@ -663,32 +692,26 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             unsigned char* sp = rows_src[j];
             unsigned char* dp = rows_dst[j + y] + x * channels;
 
-            if (_bop == 0) {
-                // Overwrite mode: copy source row directly to destination
-                memcpy(dp, sp, w * channels);
-            }
-            else {
-                // Blending mode
-                for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
-                    if (sp[3] == 255) {
-                        // Fully opaque: copy source pixel directly
-                        memcpy(dp, sp, channels);
+            // Blending mode
+            for (unsigned int i = 0; i < w; i++, sp += channels, dp += channels) {
+                if (channels < 4 || sp[3] == 255) {
+                    // Fully opaque: copy source pixel directly
+                    memcpy(dp, sp, elem_size);
+                }
+                else if (sp[3] != 0) {
+                    // Alpha blending
+                    if (dp[3] != 0) {
+                        int u = sp[3] * 255;
+                        int v = (255 - sp[3]) * dp[3];
+                        int al = u + v;
+                        dp[0] = (sp[0] * u + dp[0] * v) / al; // Red
+                        dp[1] = (sp[1] * u + dp[1] * v) / al; // Green
+                        dp[2] = (sp[2] * u + dp[2] * v) / al; // Blue
+                        dp[3] = al / 255;                     // Alpha
                     }
-                    else if (sp[3] != 0) {
-                        // Alpha blending
-                        if (dp[3] != 0) {
-                            int u = sp[3] * 255;
-                            int v = (255 - sp[3]) * dp[3];
-                            int al = u + v;
-                            dp[0] = (sp[0] * u + dp[0] * v) / al; // Red
-                            dp[1] = (sp[1] * u + dp[1] * v) / al; // Green
-                            dp[2] = (sp[2] * u + dp[2] * v) / al; // Blue
-                            dp[3] = al / 255;                     // Alpha
-                        }
-                        else {
-                            // If destination alpha is 0, copy source pixel
-                            memcpy(dp, sp, channels);
-                        }
+                    else {
+                        // If destination alpha is 0, copy source pixel
+                        memcpy(dp, sp, elem_size);
                     }
                 }
             }
@@ -696,7 +719,7 @@ void PngDecoder::compose_frame(std::vector<png_bytep>& rows_dst, const std::vect
             });
 }
 
-bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
+bool PngDecoder::readFromStreamOrBuffer(void* buffer, size_t num_bytes)
 {
     if (m_f)
         return fread(buffer, 1, num_bytes, m_f) == num_bytes;
@@ -713,20 +736,45 @@ bool PngDecoder::read_from_io(void* buffer, size_t num_bytes)
 
 uint32_t PngDecoder::read_chunk(Chunk& chunk)
 {
-    unsigned char len[4];
-    if (read_from_io(&len, 4))
-    {
-        const size_t size = static_cast<size_t>(png_get_uint_32(len)) + 12;
+    unsigned char size_id[8];
+    if (!readFromStreamOrBuffer(&size_id, 8))
+        return 0;
+    const size_t size = static_cast<size_t>(png_get_uint_32(size_id)) + 12;
+
+    const uint32_t id = png_get_uint_32(size_id + 4);
+    if (id == id_IHDR) {
+        // 8=HDR+size, 13=size of IHDR chunk, 4=CRC
+        // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.IHDR
+        if (size != 8 + 13 + 4)
+            return 0;
+    } else if (id == id_acTL) {
+        // 8=HDR+size, 8=size of acTL chunk, 4=CRC
+        // https://wiki.mozilla.org/APNG_Specification#%60acTL%60:_The_Animation_Control_Chunk
+        if (size != 8 + 8 + 4)
+            return 0;
+    } else if (id == id_fcTL) {
+        // 8=HDR+size, 26=size of fcTL chunk, 4=CRC
+        // https://wiki.mozilla.org/APNG_Specification#%60fcTL%60:_The_Frame_Control_Chunk
+        if (size != 8 + 26 + 4)
+            return 0;
+    } else if (id == id_bKGD) {
+        // 8=HDR+size, (1, 2 or 6)=size of bKGD chunk, 4=CRC
+        // The spec is actually more complex:
+        // http://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.bKGD
+        if (size != 8 + 1 + 4 && size != 8 + 2 + 4 && size != 8 + 6 + 4)
+            return 0;
+    } else if (id != id_fdAT && id != id_IDAT && id != id_IEND && id != id_PLTE && id != id_tEXt && id != id_tRNS) {
         if (size > PNG_USER_CHUNK_MALLOC_MAX)
         {
-            CV_LOG_WARNING(NULL, "chunk data is too large");
+            CV_LOG_WARNING(NULL, "user chunk data is too large");
             return 0;
         }
-        chunk.p.resize(size);
-        memcpy(chunk.p.data(), len, 4);
-        if (read_from_io(&chunk.p[4], chunk.p.size() - 4))
-            return *(uint32_t*)(&chunk.p[4]);
     }
+
+    chunk.p.resize(size);
+    memcpy(chunk.p.data(), size_id, 8);
+    if (readFromStreamOrBuffer(&chunk.p[8], chunk.p.size() - 8))
+        return id;
     return 0;
 }
 
@@ -757,6 +805,9 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
         png_set_gray_to_rgb(m_png_ptr); // Gray->RGB
     else
         png_set_rgb_to_gray(m_png_ptr, 1, 0.299, 0.587); // RGB->Gray
+
+    if (!isBigEndian() && m_bit_depth == 16)
+        png_set_swap(m_png_ptr);
 
     for (size_t i = 0; i < m_chunksInfo.size(); i++)
         png_process_data(m_png_ptr, m_info_ptr, m_chunksInfo[i].p.data(), m_chunksInfo[i].p.size());
@@ -808,6 +859,10 @@ PngEncoder::PngEncoder()
     next_seq_num = 0;
     trnssize = 0;
     palsize = 0;
+    m_compression_level = Z_BEST_SPEED;
+    m_compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
+    m_filter = IMWRITE_PNG_FILTER_SUB; // Default filter
+    m_isBilevel = false;
     memset(palette, 0, sizeof(palette));
     memset(trns, 0, sizeof(trns));
     memset(op, 0, sizeof(op));
@@ -864,6 +919,9 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
         {
             if( setjmp( png_jmpbuf ( png_ptr ) ) == 0 )
             {
+                bool set_compression_level = false;
+                bool set_filter = false;
+
                 if( m_buf )
                 {
                     png_set_write_fn(png_ptr, this,
@@ -876,45 +934,39 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         png_init_io( png_ptr, (png_FILE_p)f );
                 }
 
-                int compression_level = -1; // Invalid value to allow setting 0-9 as valid
-                int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
-                bool isBilevel = false;
-
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
                     if( params[i] == IMWRITE_PNG_COMPRESSION )
                     {
-                        compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                        compression_level = params[i+1];
-                        compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                        m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
+                        m_compression_level = params[i+1];
+                        m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
+                        set_compression_level = true;
                     }
                     if( params[i] == IMWRITE_PNG_STRATEGY )
                     {
-                        compression_strategy = params[i+1];
-                        compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+                        m_compression_strategy = params[i+1];
+                        m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
                     }
                     if( params[i] == IMWRITE_PNG_BILEVEL )
                     {
-                        isBilevel = params[i+1] != 0;
+                        m_isBilevel = params[i+1] != 0;
+                    }
+                    if( params[i] == IMWRITE_PNG_FILTER )
+                    {
+                        m_filter = params[i+1];
+                        set_filter = true;
                     }
                 }
 
                 if( m_buf || f )
                 {
-                    if( compression_level >= 0 )
-                    {
-                        png_set_compression_level( png_ptr, compression_level );
-                    }
-                    else
-                    {
-                        // tune parameters for speed
-                        // (see http://wiki.linuxquestions.org/wiki/Libpng)
-                        png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, PNG_FILTER_SUB);
-                        png_set_compression_level(png_ptr, Z_BEST_SPEED);
-                    }
-                    png_set_compression_strategy(png_ptr, compression_strategy);
+                    if (!set_compression_level || set_filter)
+                        png_set_filter(png_ptr, PNG_FILTER_TYPE_BASE, m_filter);
+                    png_set_compression_level(png_ptr, m_compression_level);
+                    png_set_compression_strategy(png_ptr, m_compression_strategy);
 
-                    png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? isBilevel?1:8 : 16,
+                    png_set_IHDR( png_ptr, info_ptr, width, height, depth == CV_8U ? m_isBilevel ? 1 : 8 : 16,
                         channels == 1 ? PNG_COLOR_TYPE_GRAY :
                         channels == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
@@ -922,7 +974,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                     png_write_info( png_ptr, info_ptr );
 
-                    if (isBilevel)
+                    if (m_isBilevel)
                         png_set_packing(png_ptr);
 
                     png_set_bgr( png_ptr );
@@ -948,15 +1000,24 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
     return result;
 }
 
-size_t PngEncoder::write_to_io(void const* _Buffer, size_t  _ElementSize, size_t _ElementCount, FILE * _Stream)
+size_t PngEncoder::writeToStreamOrBuffer(void const* buffer, size_t num_bytes, FILE* stream)
 {
-    if (_Stream)
-        return fwrite(_Buffer, _ElementSize, _ElementCount, _Stream);
+    if (!buffer || !num_bytes)
+        return 0; // Handle null buffer or empty writes
+
+    if (stream)
+    {
+        size_t written = fwrite(buffer, 1, num_bytes, stream);
+        return written; // fwrite handles the write count
+    }
 
     size_t cursz = m_buf->size();
-    m_buf->resize(cursz + _ElementCount);
-    memcpy( &(*m_buf)[cursz], _Buffer, _ElementCount );
-    return _ElementCount;
+    if (cursz + num_bytes > m_buf->max_size())
+        throw std::runtime_error("Buffer size exceeds maximum capacity");
+
+    m_buf->resize(cursz + num_bytes);
+    memcpy(&(*m_buf)[cursz], buffer, num_bytes);
+    return num_bytes;
 }
 
 void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint32_t length)
@@ -965,26 +1026,26 @@ void PngEncoder::writeChunk(FILE* f, const char* name, unsigned char* data, uint
     uint32_t crc = crc32(0, Z_NULL, 0);
 
     png_save_uint_32(buf, length);
-    write_to_io(buf, 1, 4, f);
-    write_to_io(name, 1, 4, f);
+    writeToStreamOrBuffer(buf, 4, f);
+    writeToStreamOrBuffer(name, 4, f);
     crc = crc32(crc, (const Bytef*)name, 4);
 
     if (memcmp(name, "fdAT", 4) == 0)
     {
         png_save_uint_32(buf, next_seq_num++);
-        write_to_io(buf, 1, 4, f);
+        writeToStreamOrBuffer(buf, 4, f);
         crc = crc32(crc, buf, 4);
         length -= 4;
     }
 
     if (data != NULL && length > 0)
     {
-        write_to_io(data, 1, length, f);
+        writeToStreamOrBuffer(data, length, f);
         crc = crc32(crc, data, length);
     }
 
     png_save_uint_32(buf, crc);
-    write_to_io(buf, 1, 4, f);
+    writeToStreamOrBuffer(buf, 4, f);
 }
 
 void PngEncoder::writeIDATs(FILE* f, int frame, unsigned char* data, uint32_t length, uint32_t idat_size)
@@ -1384,7 +1445,7 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
     fin_zstream.zalloc = Z_NULL;
     fin_zstream.zfree = Z_NULL;
     fin_zstream.opaque = Z_NULL;
-    deflateInit2(&fin_zstream, Z_BEST_COMPRESSION, 8, 15, 8, op[n].filters ? Z_FILTERED : Z_DEFAULT_STRATEGY);
+    deflateInit2(&fin_zstream, m_compression_level, 8, 15, 8, op[n].filters ? Z_FILTERED : m_compression_strategy);
 
     fin_zstream.next_out = zbuf;
     fin_zstream.avail_out = zbuf_size;
@@ -1397,30 +1458,31 @@ void PngEncoder::deflateRectFin(unsigned char* zbuf, uint32_t* zsize, int bpp, i
 
 bool PngEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
 {
-    int compression_level = 6;
-    int compression_strategy = IMWRITE_PNG_STRATEGY_RLE; // Default strategy
-    bool isBilevel = false;
+    int frame_type = animation.frames[0].type();
+    int frame_depth = animation.frames[0].depth();
+    CV_CheckType(frame_type, frame_depth == CV_8U || frame_depth == CV_16U, "APNG decoder supports only 8 or 16 bit unsigned images");
 
     for (size_t i = 0; i < params.size(); i += 2)
     {
         if (params[i] == IMWRITE_PNG_COMPRESSION)
         {
-            compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-            compression_level = params[i + 1];
-            compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+            m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
+            m_compression_level = params[i + 1];
+            m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
         }
         if (params[i] == IMWRITE_PNG_STRATEGY)
         {
-            compression_strategy = params[i + 1];
-            compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+            m_compression_strategy = params[i + 1];
+            m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
         }
         if (params[i] == IMWRITE_PNG_BILEVEL)
         {
-            isBilevel = params[i + 1] != 0;
+            m_isBilevel = params[i + 1] != 0;
         }
     }
 
-    CV_UNUSED(isBilevel);
+    if (m_isBilevel)
+        CV_LOG_WARNING(NULL, "IMWRITE_PNG_BILEVEL parameter is not supported yet.");
     uint32_t first =0;
     uint32_t loops= animation.loop_count;
     uint32_t coltype= animation.frames[0].channels() == 1 ? PNG_COLOR_TYPE_GRAY : animation.frames[0].channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
@@ -1509,7 +1571,7 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         png_save_uint_32(buf_acTL, num_frames - first);
         png_save_uint_32(buf_acTL + 4, loops);
 
-        write_to_io(header, 1, 8, m_f);
+        writeToStreamOrBuffer(header, 8, m_f);
 
         writeChunk(m_f, "IHDR", buf_IHDR, 13);
 
@@ -1521,13 +1583,13 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         if (palsize > 0)
             writeChunk(m_f, "PLTE", (unsigned char*)(&palette), palsize * 3);
 
-        if ((animation.bgcolor != Scalar()) && (animation.frames.size() > 1))
+        if ((animation.bgcolor != Scalar()) && coltype)
         {
-            uint64_t bgvalue = (static_cast<int>(animation.bgcolor[0]) & 0xFF) << 24 |
-                (static_cast<int>(animation.bgcolor[1]) & 0xFF) << 16 |
-                (static_cast<int>(animation.bgcolor[2]) & 0xFF) << 8 |
-                (static_cast<int>(animation.bgcolor[3]) & 0xFF);
-            writeChunk(m_f, "bKGD", (unsigned char*)(&bgvalue), 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
+            unsigned char bgvalue[6] = {};
+            bgvalue[1] = animation.bgcolor[2];
+            bgvalue[3] = animation.bgcolor[1];
+            bgvalue[5] = animation.bgcolor[0];
+            writeChunk(m_f, "bKGD", bgvalue, 6); //the bKGD chunk must precede the first IDAT chunk, and must follow the PLTE chunk.
         }
 
         if (trnssize > 0)
@@ -1537,13 +1599,13 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
         op_zstream1.zalloc = Z_NULL;
         op_zstream1.zfree = Z_NULL;
         op_zstream1.opaque = Z_NULL;
-        deflateInit2(&op_zstream1, compression_level, 8, 15, 8, compression_strategy);
+        deflateInit2(&op_zstream1, m_compression_level, 8, 15, 8, m_compression_strategy);
 
         op_zstream2.data_type = Z_BINARY;
         op_zstream2.zalloc = Z_NULL;
         op_zstream2.zfree = Z_NULL;
         op_zstream2.opaque = Z_NULL;
-        deflateInit2(&op_zstream2, compression_level, 8, 15, 8, Z_FILTERED);
+        deflateInit2(&op_zstream2, m_compression_level, 8, 15, 8, Z_FILTERED);
 
         idat_size = (rowbytes + 1) * height;
         zbuf_size = idat_size + ((idat_size + 7) >> 3) + ((idat_size + 63) >> 6) + 11;

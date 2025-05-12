@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
+#include "test_common.hpp"
 
 namespace opencv_test { namespace {
 
@@ -107,6 +108,44 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     // pixel is red in RGB
     EXPECT_EQ(img.at<Vec3b>(0, 0), Vec3b(255, 0, 0));
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
+}
+
+// IHDR shall be first.
+// See https://github.com/opencv/opencv/issues/27295
+TEST(Imgcodecs_Png, decode_regression27295)
+{
+    vector<uchar> buff;
+    Mat src = Mat::zeros(240, 180, CV_8UC3);
+    vector<int> param;
+    EXPECT_NO_THROW(imencode(".png", src, buff, param));
+
+    Mat img;
+
+    // If IHDR chunk found as the first chunk, output shall not be empty.
+    // 8 means PNG signature length.
+    // 4 means length field(uint32_t).
+    EXPECT_EQ(buff[8+4+0], 'I');
+    EXPECT_EQ(buff[8+4+1], 'H');
+    EXPECT_EQ(buff[8+4+2], 'D');
+    EXPECT_EQ(buff[8+4+3], 'R');
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_FALSE(img.empty());
+
+    // If Non-IHDR chunk found as the first chunk, output shall be empty.
+    buff[8+4+0] = 'i'; // Not 'I'
+    buff[8+4+1] = 'H';
+    buff[8+4+2] = 'D';
+    buff[8+4+3] = 'R';
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_TRUE(img.empty());
+
+    // If CgBI chunk (Apple private) found as the first chunk, output shall be empty with special message.
+    buff[8+4+0] = 'C';
+    buff[8+4+1] = 'g';
+    buff[8+4+2] = 'B';
+    buff[8+4+3] = 'I';
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_TRUE(img.empty());
 }
 
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
@@ -326,6 +365,79 @@ const string pngsuite_files_corrupted[] = {
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
+
+CV_ENUM(PNGStrategy, IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED);
+CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS);
+
+typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
+
+TEST_P(Imgcodecs_Png_Encode, params)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/" + get<0>(GetParam());
+
+    const int strategy = get<1>(GetParam());
+    const int filter = get<2>(GetParam());
+    const int compression_level = get<3>(GetParam());
+
+    std::vector<uchar> file_buf;
+    readFileBytes(filename, file_buf);
+    Mat src = imdecode(file_buf, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot decode test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter });
+    EXPECT_EQ(buf.size(), file_buf.size());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Encode,
+    testing::Values(
+        make_tuple("f00n0g08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f00n2c08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f01n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f01n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f02n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f02n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f03n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f04n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("f04n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("z03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 3),
+        make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
+        make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
+
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
+
+TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_ImwriteFlags,
+    testing::Values(
+        make_tuple("../perf/512x512.png", 0, 788279),
+        make_tuple("../perf/512x512.png", 1, 179503),
+        make_tuple("../perf/512x512.png", 2, 176007),
+        make_tuple("../perf/512x512.png", 3, 170497),
+        make_tuple("../perf/512x512.png", 4, 163357),
+        make_tuple("../perf/512x512.png", 5, 159190),
+        make_tuple("../perf/512x512.png", 6, 156621),
+        make_tuple("../perf/512x512.png", 7, 155696),
+        make_tuple("../perf/512x512.png", 8, 153708),
+        make_tuple("../perf/512x512.png", 9, 152181)));
 
 #endif // HAVE_PNG
 

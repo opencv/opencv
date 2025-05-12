@@ -314,7 +314,7 @@ bool V4L2StreamChannel::setXu(uint8_t ctrl, const uint8_t* data, uint32_t len)
     }
     memcpy(xuSendBuf_.data(), data, len);
     struct uvc_xu_control_query xu_ctrl_query = {
-        .unit = XU_UNIT_ID,
+        .unit = xuUnit_.unit,
         .selector = ctrl,
         .query = UVC_SET_CUR,
         .size = (__u16)(ctrl == 1 ? 512 : (ctrl == 2 ? 64 : 1024)),
@@ -333,7 +333,7 @@ bool V4L2StreamChannel::getXu(uint8_t ctrl, uint8_t** data, uint32_t* len)
         xuRecvBuf_.resize(XU_MAX_DATA_LENGTH);
     }
     struct uvc_xu_control_query xu_ctrl_query = {
-        .unit = XU_UNIT_ID,
+        .unit = xuUnit_.unit,
         .selector = ctrl,
         .query = UVC_GET_CUR,
         .size = (__u16)(ctrl == 1 ? 512 : (ctrl == 2 ? 64 : 1024)),

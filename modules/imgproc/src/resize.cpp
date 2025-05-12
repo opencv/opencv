@@ -1325,7 +1325,7 @@ struct VResizeLinearVec_32s8u
                 v_store(dst + x, v_rshr_pack_u<2>(v_add(v_mul_hi(v_pack(v_shr<4>(vx_load(S0 + x)), v_shr<4>(vx_load(S0 + x + VTraits<v_int32>::vlanes()))), b0), v_mul_hi(v_pack(v_shr<4>(vx_load(S1 + x)), v_shr<4>(vx_load(S1 + x + VTraits<v_int32>::vlanes()))), b1)),
                                                   v_add(v_mul_hi(v_pack(v_shr<4>(vx_load(S0 + x + 2 * VTraits<v_int32>::vlanes())), v_shr<4>(vx_load(S0 + x + 3 * VTraits<v_int32>::vlanes()))), b0), v_mul_hi(v_pack(v_shr<4>(vx_load(S1 + x + 2 * VTraits<v_int32>::vlanes())), v_shr<4>(vx_load(S1 + x + 3 * VTraits<v_int32>::vlanes()))), b1))));
 
-        for( ; x < width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
+        for( ; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
             v_rshr_pack_u_store<2>(dst + x, v_add(v_mul_hi(v_pack(v_shr<4>(vx_load(S0 + x)), v_shr<4>(vx_load(S0 + x + VTraits<v_int32>::vlanes()))), b0), v_mul_hi(v_pack(v_shr<4>(vx_load(S1 + x)), v_shr<4>(vx_load(S1 + x + VTraits<v_int32>::vlanes()))), b1)));
 
         return x;
@@ -1349,7 +1349,7 @@ struct VResizeLinearVec_32f16u
             for (; x <= width - VTraits<v_uint16>::vlanes(); x += VTraits<v_uint16>::vlanes())
                 v_store(dst + x, v_pack_u(v_round(v_muladd(vx_load(S0 + x                    ), b0, v_mul(vx_load(S1 + x), b1))),
                                           v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        for( ; x < width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
+        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
         {
             v_int32 t0 = v_round(v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
             v_store_low(dst + x, v_pack_u(t0, t0));
@@ -1376,7 +1376,7 @@ struct VResizeLinearVec_32f16s
             for (; x <= width - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
                 v_store(dst + x, v_pack(v_round(v_muladd(vx_load(S0 + x                    ), b0, v_mul(vx_load(S1 + x), b1))),
                                         v_round(v_muladd(vx_load(S0 + x + VTraits<v_float32>::vlanes()), b0, v_mul(vx_load(S1 + x + VTraits<v_float32>::vlanes()), b1)))));
-        for( ; x < width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
+        for( ; x <= width - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
         {
             v_int32 t0 = v_round(v_muladd(vx_load(S0 + x), b0, v_mul(vx_load(S1 + x), b1)));
             v_store_low(dst + x, v_pack(t0, t0));

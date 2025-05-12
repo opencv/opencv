@@ -43,6 +43,7 @@ protected:
     JxlPixelFormat m_format;
     std::vector<uint8_t> m_read_buffer;
     JxlDecoderStatus m_status;
+    bool m_is_mbuf_set;
 
 private:
     bool read();

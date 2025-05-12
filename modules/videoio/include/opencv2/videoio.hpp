@@ -128,7 +128,7 @@ enum VideoCaptureAPIs {
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
-       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Gemini330, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
      };
 
 
@@ -168,7 +168,7 @@ enum VideoCaptureProperties {
        CAP_PROP_TRIGGER       =24,
        CAP_PROP_TRIGGER_DELAY =25,
        CAP_PROP_WHITE_BALANCE_RED_V =26,
-       CAP_PROP_ZOOM          =27,
+       CAP_PROP_ZOOM          =27, //!< Android: May switch physical cameras/lenses. Factor and range are hardware-dependent.
        CAP_PROP_FOCUS         =28,
        CAP_PROP_GUID          =29,
        CAP_PROP_ISO_SPEED     =30,
