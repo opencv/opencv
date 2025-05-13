@@ -712,8 +712,12 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                         vop(p4, p2); vop(p6, p4); vop(p4, p2);
                         vop.store(dst+j, p4);
 
-                        int residue = size.width - j -cn;
-                        j <= size.width - nlanes - cn? j += nlanes : j += residue;
+                        int offset = nlanes;
+                        if( j > (size.width - nlanes - cn) )
+                        {
+                            offset = size.width - j - cn;
+                        }
+                        j += offset;
 
                         /*In the last row(height-1) processing, additional store would overwrite outside output buffer.
                         Its avoided with below check. */
@@ -853,8 +857,12 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                         vop(p7, p11); vop(p11, p13); vop(p11, p12);
                         vop.store(dst+j, p12);
 
-                        int residue = size.width - j - cn*2;
-                        j <= size.width - nlanes - cn*2? j += nlanes : j += residue;
+                        int offset = nlanes;
+                        if( j > (size.width - nlanes - cn*2) )
+                        {
+                            offset = size.width - j - cn*2;
+                        }
+                        j += offset;
 
                         /*In the last row(height-1) processing, additional store would overwrite outside output buffer.
                         Its avoided with below check. */
