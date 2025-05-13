@@ -1,5 +1,35 @@
 #include "videoio_converters.hpp"
 
+class JNIEnvHandler
+{
+public:
+    JNIEnvHandler(JavaVM* _vm) : vm(_vm)
+    {
+        jint res = vm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        if (res == JNI_EDETACHED)
+        {
+#ifdef __ANDROID__
+            res = vm->AttachCurrentThread(&env, NULL);
+#else
+            res = vm->AttachCurrentThread((void**)&env, NULL);
+#endif // __ANDROID__
+            detach = true;
+        }
+    }
+
+    ~JNIEnvHandler()
+    {
+        if (env && detach)
+        {
+            vm->DetachCurrentThread();
+        }
+    }
+
+    JavaVM* vm;
+    JNIEnv* env = nullptr;
+    bool detach = false;
+};
+
 JavaStreamReader::JavaStreamReader(JNIEnv* env, jobject _obj)
 {
     obj = env->NewGlobalRef(_obj);
@@ -11,8 +41,9 @@ JavaStreamReader::JavaStreamReader(JNIEnv* env, jobject _obj)
 
 JavaStreamReader::~JavaStreamReader()
 {
-    JNIEnv* env;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+    JNIEnvHandler handler(vm);
+    JNIEnv* env = handler.env;
+    if (!env)
         return;
     env->DeleteGlobalRef(obj);
 }
@@ -21,8 +52,9 @@ long long JavaStreamReader::read(char* buffer, long long size)
 {
     if (!m_read)
         return 0;
-    JNIEnv* env;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+    JNIEnvHandler handler(vm);
+    JNIEnv* env = handler.env;
+    if (!env)
         return 0;
     jbyteArray jBuffer = env->NewByteArray(static_cast<jsize>(size));
     if (!jBuffer)
@@ -35,8 +67,9 @@ long long JavaStreamReader::read(char* buffer, long long size)
 
 long long JavaStreamReader::seek(long long offset, int way)
 {
-    JNIEnv* env;
-    if (vm->GetEnv((void**)&env, JNI_VERSION_1_6) != JNI_OK)
+    JNIEnvHandler handler(vm);
+    JNIEnv* env = handler.env;
+    if (!env)
         return 0;
     if (!m_seek)
         return 0;
