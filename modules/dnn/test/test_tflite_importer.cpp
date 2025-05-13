@@ -64,6 +64,7 @@ void Test_TFLite::testModel(Net& net, const std::string& modelName, const Mat& i
             ref = ref.reshape(1, 1);
             outs[i] = outs[i].reshape(1, 1);
         }
+        ASSERT_EQ(ref.size, outs[i].size);
         normAssert(ref, outs[i], outNames[i].c_str(), l1, lInf);
     }
 }

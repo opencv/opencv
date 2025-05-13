@@ -557,7 +557,7 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         layerParams.type = "Sqrt";
     }
     else if (opcode == "SQUARED_DIFFERENCE") {
-        layerParams.type = "Sqrt";
+        layerParams.set("operation", "sub");
     }
     else if (opcode == "RSQRT") {
         layerParams.type = "Sqrt";
@@ -690,6 +690,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     auto options = reinterpret_cast<const ConcatenationOptions*>(op.builtin_options());
     int axis = options->axis();
 
+    bool hasNHWCInput = false;
     for (int idx : *op.inputs()) {
         DataLayout inpLayout = layouts[idx];
         if (inpLayout == DNN_LAYOUT_NHWC) {
@@ -697,8 +698,9 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
             axis = normalize_axis(axis, 4);
             static const int remap[] = {0, 2, 3, 1};
             axis = remap[axis];
+            hasNHWCInput = true;
+            break;
         }
-        break;
     }
     layerParams.set("axis", axis);
 
@@ -706,7 +708,14 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
         if (layerIds.find(idx) != layerIds.end()) {
             continue;  // Output from a different layer
         }
-        int constId = addConstLayer(allTensors[idx], modelTensors->Get(idx)->name()->str());
+        Mat blob = allTensors[idx];
+        if (hasNHWCInput && layouts[idx] == DNN_LAYOUT_UNKNOWN && blob.dims == 4)
+        {
+            Mat nchwBlob;
+            transposeND(blob, {0, 3, 1, 2}, nchwBlob);
+            blob = nchwBlob;
+        }
+        int constId = addConstLayer(blob, modelTensors->Get(idx)->name()->str());
         layerIds[idx] = std::make_pair(constId, 0);
     }
     addLayer(layerParams, op);
