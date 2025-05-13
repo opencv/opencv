@@ -927,7 +927,7 @@ TEST(Calib3d_StereoSGBM, deterministic) {
     int widthNarrow = 28;
     int height = 15;
 
-    cv::Mat leftNarrow(height, widthNarrow, CV_8UC1); 
+    cv::Mat leftNarrow(height, widthNarrow, CV_8UC1);
     cv::Mat rightNarrow(height, widthNarrow, CV_8UC1);
     randu(leftNarrow, cv::Scalar(0), cv::Scalar(255));
     randu(rightNarrow, cv::Scalar(0), cv::Scalar(255));
@@ -937,7 +937,7 @@ TEST(Calib3d_StereoSGBM, deterministic) {
 
     // Deterministic case, image is sufficiently large for StereSGBM parameters
     int widthWide = 40;
-    cv::Mat leftWide(height, widthWide, CV_8UC1); 
+    cv::Mat leftWide(height, widthWide, CV_8UC1);
     cv::Mat rightWide(height, widthWide, CV_8UC1);
     randu(leftWide, cv::Scalar(0), cv::Scalar(255));
     randu(rightWide, cv::Scalar(0), cv::Scalar(255));
