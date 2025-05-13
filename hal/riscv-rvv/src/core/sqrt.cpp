@@ -47,7 +47,7 @@ int sqrt32f(const float* src, float* dst, int len) {
     return sqrt<common::Sqrt32f<RVV_F32M8>>(src, dst, len);
 }
 int sqrt64f(const double* src, double* dst, int len) {
-    return sqrt<common::Sqrt64f<RVV_F64M8>>(dst, dst, len);
+    return sqrt<common::Sqrt64f<RVV_F64M8>>(src, dst, len);
 }
 
 int invSqrt32f(const float* src, float* dst, int len) {
