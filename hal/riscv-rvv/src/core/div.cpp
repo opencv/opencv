@@ -81,9 +81,8 @@ vuint32m8_t recip_sat(const vuint32m8_t &v, const float scale, const int vl) {
 template <typename ST> inline
 int div(const ST *src1, size_t step1, const ST *src2, size_t step2,
          ST *dst, size_t step, int width, int height, float scale) {
-    if (scale == 0.f ||
-        (scale * static_cast<float>(std::numeric_limits<ST>::max())) <  1.f &&
-        (scale * static_cast<float>(std::numeric_limits<ST>::max())) > -1.f) {
+    float max_fval = static_cast<float>(std::numeric_limits<ST>::max());
+    if (scale == 0.f || ((scale * max_fval) <  1.f && (scale * max_fval) > -1.f)) {
         for (int h = 0; h < height; h++) {
             ST *dst_h = reinterpret_cast<ST*>((uchar*)dst + h * step);
             std::memset(dst_h, 0, sizeof(ST) * width);
@@ -162,7 +161,7 @@ int div(const float *src1, size_t step1, const float *src2, size_t step2,
 template <typename ST> inline
 int recip(const ST *src_data, size_t src_step, ST *dst_data, size_t dst_step,
           int width, int height, float scale) {
-    if (scale == 0.f || scale < 1.f && scale > -1.f) {
+    if (scale == 0.f || (scale < 1.f && scale > -1.f)) {
         for (int h = 0; h < height; h++) {
             ST *dst_h = reinterpret_cast<ST*>((uchar*)dst_data + h * dst_step);
             std::memset(dst_h, 0, sizeof(ST) * width);
