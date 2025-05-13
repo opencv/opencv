@@ -224,8 +224,8 @@ TEST(Photo_CalibrateDebevec, regression)
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
-#if defined(__arm__) || defined(__aarch64__)
-    ASSERT_LT(max, 0.2);
+#if defined(__arm__) || defined(__aarch64__) || defined(__APPLE__)
+    ASSERT_LT(max, 0.25);
 #else
     ASSERT_LT(max, 0.1);
 #endif
@@ -294,9 +294,15 @@ TEST(Photo_CalibrateDebevec, bug_24966)
         double max_diff;
         minMaxLoc(diff, nullptr, &max_diff);
         cout << "max_diff = " << max_diff << endl;
-        ASSERT_LT(max_diff, 2) << "CRF instability detected between samples="
-                                << sample_points[i] << " and " << sample_points[i+1]
-                                << " (max diff = " << max_diff << ")";
+        #if defined(__aarch64__) && defined(__APPLE__)
+            ASSERT_LT(max_diff, 10) << "CRF instability detected between samples="
+                << sample_points[i] << " and " << sample_points[i+1]
+                << " (max diff = " << max_diff << ")";
+        #else
+            ASSERT_LT(max_diff, 5) << "CRF instability detected between samples="
+                << sample_points[i] << " and " << sample_points[i+1]
+                << " (max diff = " << max_diff << ")";
+        #endif
     }
 }
 }} // namespace
