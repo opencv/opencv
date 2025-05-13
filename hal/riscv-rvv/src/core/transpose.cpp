@@ -35,17 +35,17 @@ namespace cv { namespace rvv_hal { namespace core {
 #if CV_HAL_RVV_1P0_ENABLED
 
 static void transpose2d_8u(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    auto transpose_8u_8xVl = [](const uchar *src, size_t src_step, uchar *dst, size_t dst_step, const int vl) {
+    auto transpose_8u_8xVl = [](const uchar *src, size_t sstep, uchar *dst, size_t dstep, const int vl) {
         auto v0 = __riscv_vle8_v_u8m1(src, vl);
-        auto v1 = __riscv_vle8_v_u8m1(src + src_step, vl);
-        auto v2 = __riscv_vle8_v_u8m1(src + 2 * src_step, vl);
-        auto v3 = __riscv_vle8_v_u8m1(src + 3 * src_step, vl);
-        auto v4 = __riscv_vle8_v_u8m1(src + 4 * src_step, vl);
-        auto v5 = __riscv_vle8_v_u8m1(src + 5 * src_step, vl);
-        auto v6 = __riscv_vle8_v_u8m1(src + 6 * src_step, vl);
-        auto v7 = __riscv_vle8_v_u8m1(src + 7 * src_step, vl);
+        auto v1 = __riscv_vle8_v_u8m1(src + sstep, vl);
+        auto v2 = __riscv_vle8_v_u8m1(src + 2 * sstep, vl);
+        auto v3 = __riscv_vle8_v_u8m1(src + 3 * sstep, vl);
+        auto v4 = __riscv_vle8_v_u8m1(src + 4 * sstep, vl);
+        auto v5 = __riscv_vle8_v_u8m1(src + 5 * sstep, vl);
+        auto v6 = __riscv_vle8_v_u8m1(src + 6 * sstep, vl);
+        auto v7 = __riscv_vle8_v_u8m1(src + 7 * sstep, vl);
         vuint8m1x8_t v = __riscv_vcreate_v_u8m1x8(v0, v1, v2, v3, v4, v5, v6, v7);
-        __riscv_vssseg8e8(dst, dst_step, v, vl);
+        __riscv_vssseg8e8(dst, dstep, v, vl);
     };
 
     int h = 0, w = 0;
@@ -71,17 +71,17 @@ static void transpose2d_8u(const uchar *src_data, size_t src_step, uchar *dst_da
 }
 
 static void transpose2d_16u(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    auto transpose_16u_8xVl = [](const ushort *src, size_t src_step, ushort *dst, size_t dst_step, const int vl) {
+    auto transpose_16u_8xVl = [](const ushort *src, size_t sstep, ushort *dst, size_t dstep, const int vl) {
         auto v0 = __riscv_vle16_v_u16m1(src, vl);
-        auto v1 = __riscv_vle16_v_u16m1(src + src_step, vl);
-        auto v2 = __riscv_vle16_v_u16m1(src + 2 * src_step, vl);
-        auto v3 = __riscv_vle16_v_u16m1(src + 3 * src_step, vl);
-        auto v4 = __riscv_vle16_v_u16m1(src + 4 * src_step, vl);
-        auto v5 = __riscv_vle16_v_u16m1(src + 5 * src_step, vl);
-        auto v6 = __riscv_vle16_v_u16m1(src + 6 * src_step, vl);
-        auto v7 = __riscv_vle16_v_u16m1(src + 7 * src_step, vl);
+        auto v1 = __riscv_vle16_v_u16m1(src + sstep, vl);
+        auto v2 = __riscv_vle16_v_u16m1(src + 2 * sstep, vl);
+        auto v3 = __riscv_vle16_v_u16m1(src + 3 * sstep, vl);
+        auto v4 = __riscv_vle16_v_u16m1(src + 4 * sstep, vl);
+        auto v5 = __riscv_vle16_v_u16m1(src + 5 * sstep, vl);
+        auto v6 = __riscv_vle16_v_u16m1(src + 6 * sstep, vl);
+        auto v7 = __riscv_vle16_v_u16m1(src + 7 * sstep, vl);
         vuint16m1x8_t v = __riscv_vcreate_v_u16m1x8(v0, v1, v2, v3, v4, v5, v6, v7);
-        __riscv_vssseg8e16(dst, dst_step, v, vl);
+        __riscv_vssseg8e16(dst, dstep, v, vl);
     };
 
     size_t src_step_base = src_step / sizeof(ushort);
@@ -110,13 +110,13 @@ static void transpose2d_16u(const uchar *src_data, size_t src_step, uchar *dst_d
 }
 
 static void transpose2d_32s(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    auto transpose_32s_4xVl = [](const int *src, size_t src_step, int *dst, size_t dst_step, const int vl) {
+    auto transpose_32s_4xVl = [](const int *src, size_t sstep, int *dst, size_t dstep, const int vl) {
         auto v0 = __riscv_vle32_v_i32m1(src, vl);
-        auto v1 = __riscv_vle32_v_i32m1(src + src_step, vl);
-        auto v2 = __riscv_vle32_v_i32m1(src + 2 * src_step, vl);
-        auto v3 = __riscv_vle32_v_i32m1(src + 3 * src_step, vl);
+        auto v1 = __riscv_vle32_v_i32m1(src + sstep, vl);
+        auto v2 = __riscv_vle32_v_i32m1(src + 2 * sstep, vl);
+        auto v3 = __riscv_vle32_v_i32m1(src + 3 * sstep, vl);
         vint32m1x4_t v = __riscv_vcreate_v_i32m1x4(v0, v1, v2, v3);
-        __riscv_vssseg4e32(dst, dst_step, v, vl);
+        __riscv_vssseg4e32(dst, dstep, v, vl);
     };
 
     size_t src_step_base = src_step / sizeof(int);
@@ -145,17 +145,17 @@ static void transpose2d_32s(const uchar *src_data, size_t src_step, uchar *dst_d
 }
 
 static void transpose2d_32sC2(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int src_width, int src_height) {
-    auto transpose_64s_8xVl = [](const int64_t *src, size_t src_step, int64_t *dst, size_t dst_step, const int vl) {
+    auto transpose_64s_8xVl = [](const int64_t *src, size_t sstep, int64_t *dst, size_t dstep, const int vl) {
         auto v0 = __riscv_vle64_v_i64m1(src, vl);
-        auto v1 = __riscv_vle64_v_i64m1(src + src_step, vl);
-        auto v2 = __riscv_vle64_v_i64m1(src + 2 * src_step, vl);
-        auto v3 = __riscv_vle64_v_i64m1(src + 3 * src_step, vl);
-        auto v4 = __riscv_vle64_v_i64m1(src + 4 * src_step, vl);
-        auto v5 = __riscv_vle64_v_i64m1(src + 5 * src_step, vl);
-        auto v6 = __riscv_vle64_v_i64m1(src + 6 * src_step, vl);
-        auto v7 = __riscv_vle64_v_i64m1(src + 7 * src_step, vl);
+        auto v1 = __riscv_vle64_v_i64m1(src + sstep, vl);
+        auto v2 = __riscv_vle64_v_i64m1(src + 2 * sstep, vl);
+        auto v3 = __riscv_vle64_v_i64m1(src + 3 * sstep, vl);
+        auto v4 = __riscv_vle64_v_i64m1(src + 4 * sstep, vl);
+        auto v5 = __riscv_vle64_v_i64m1(src + 5 * sstep, vl);
+        auto v6 = __riscv_vle64_v_i64m1(src + 6 * sstep, vl);
+        auto v7 = __riscv_vle64_v_i64m1(src + 7 * sstep, vl);
         vint64m1x8_t v = __riscv_vcreate_v_i64m1x8(v0, v1, v2, v3, v4, v5, v6, v7);
-        __riscv_vssseg8e64(dst, dst_step, v, vl);
+        __riscv_vssseg8e64(dst, dstep, v, vl);
     };
 
     size_t src_step_base = src_step / sizeof(int64_t);
