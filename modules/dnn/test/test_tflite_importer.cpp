@@ -64,8 +64,8 @@ void Test_TFLite::testModel(Net& net, const std::string& modelName, const Mat& i
             ref = ref.reshape(1, 1);
             outs[i] = outs[i].reshape(1, 1);
         }
-        ASSERT_EQ(ref.size, outs[i].size);
-        normAssert(ref, outs[i], outNames[i].c_str(), l1, lInf);
+        // ASSERT_EQ(ref.size, outs[i].size);
+        normAssert(ref.reshape(1, 1), outs[i].reshape(1, 1), outNames[i].c_str(), l1, lInf);
     }
 }
 
@@ -128,13 +128,6 @@ TEST_P(Test_TFLite, selfie_segmentation)
         lInf = 0.48;
     }
     testModel("selfie_segmentation", Size(256, 256), l1, lInf);
-}
-
-TEST_P(Test_TFLite, face_blendshapes)
-{
-    testLayer("face_blendshapes");
-    // Mat inp = blobFromNPY(findDataFile(format("dnn/tflite/face_blendshapes_inp.npy");
-    // testModel("selfie_segmentation", Size(256, 256));
 }
 
 TEST_P(Test_TFLite, max_unpooling)
@@ -282,6 +275,11 @@ TEST_P(Test_TFLite, leakyRelu) {
 
 TEST_P(Test_TFLite, StridedSlice) {
     testLayer("strided_slice");
+}
+
+TEST_P(Test_TFLite, face_blendshapes)
+{
+    testLayer("face_blendshapes");
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());

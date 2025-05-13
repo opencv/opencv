@@ -87,12 +87,6 @@ public:
         outputs.resize(1, inputs[0]);
         int cAxis = normalize_axis(axis, inputs[0]);
 
-        for (int i = 0; i < inputs.size(); ++i)
-        {
-            std::cout << inputs[i] << std::endl;
-        }
-        std::cout << std::endl;
-
         int axisSum = 0;
         for (size_t i = 0; i < inputs.size(); i++)
         {

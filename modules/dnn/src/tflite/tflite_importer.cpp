@@ -554,7 +554,8 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         layerParams.set("operation", "sub");
     }
     else if (opcode == "NEG") {
-        layerParams.type = "Sqrt";
+        layerParams.type = "Scale";
+        layerParams.blobs.resize(1, Mat(1, 1, CV_32F, Scalar(-1)));
     }
     else if (opcode == "SQUARED_DIFFERENCE") {
         layerParams.set("operation", "sub");
@@ -597,6 +598,21 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     }
     addLayer(layerParams, op);
     parseFusedActivation(op, activ);
+
+    // Layers that split on multiple operations
+    if (opcode == "SQUARED_DIFFERENCE") {
+        int outId = op.outputs()->Get(0);
+        LayerParams lp;
+        lp.set("power", 2);
+        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/square", "Power", isInt8(op) ? CV_8S : CV_32F, lp);
+        layerIds[outId] = std::make_pair(id, 0);
+    }
+    else if (opcode == "RSQRT") {
+        LayerParams lp;
+        int outId = op.outputs()->Get(0);
+        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/inv", "Reciprocal", isInt8(op) ? CV_8S : CV_32F, lp);
+        layerIds[outId] = std::make_pair(id, 0);
+    }
 }
 
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
