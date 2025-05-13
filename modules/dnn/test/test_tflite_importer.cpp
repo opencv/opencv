@@ -129,6 +129,13 @@ TEST_P(Test_TFLite, selfie_segmentation)
     testModel("selfie_segmentation", Size(256, 256), l1, lInf);
 }
 
+TEST_P(Test_TFLite, face_blendshapes)
+{
+    testLayer("face_blendshapes");
+    // Mat inp = blobFromNPY(findDataFile(format("dnn/tflite/face_blendshapes_inp.npy");
+    // testModel("selfie_segmentation", Size(256, 256));
+}
+
 TEST_P(Test_TFLite, max_unpooling)
 {
     if (backend == DNN_BACKEND_CUDA)

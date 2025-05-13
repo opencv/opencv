@@ -73,6 +73,7 @@ private:
     void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams);
+    void parseReduce(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
     void parseActivation(const Operator& op, const std::string& opcode, LayerParams& layerParams, bool isFused);
@@ -81,6 +82,7 @@ private:
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype);
     int addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype);
+    int addConstLayer(const Mat& data, const std::string& name);
 
     inline bool isInt8(const Operator& op);
     inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
@@ -88,9 +90,12 @@ private:
 
 Mat TFLiteImporter::parseTensor(const Tensor& tensor)
 {
+    std::vector<int> shape;
     const auto tensor_shape = tensor.shape();
-    CV_Assert(tensor_shape);
-    std::vector<int> shape(tensor_shape->begin(), tensor_shape->end());
+    if (tensor_shape)
+        shape.assign(tensor_shape->begin(), tensor_shape->end());
+    else
+        shape.resize(1, 1);
     int bufferIdx = tensor.buffer();
     CV_Assert(bufferIdx != 0);  // 0th buffer is a no-data buffer
     const Buffer* buffer = model->buffers()->Get(bufferIdx);
@@ -118,7 +123,11 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     default:
         CV_Error(Error::StsNotImplemented, format("Parse tensor with type %s", EnumNameTensorType(tensor.type())));
     }
-    return shape.empty() ? Mat() : Mat(shape, dtype, const_cast<void*>(data));
+    Mat res = Mat(shape, dtype, const_cast<void*>(data));
+    // workaround for scalars support
+    if (!tensor_shape)
+        res.dims = 1;
+    return res;
 }
 
 TFLiteImporter::TFLiteImporter(Net& dstNet, const char* modelBuffer, size_t bufSize)
@@ -237,6 +246,8 @@ void TFLiteImporter::populateNet()
                     // Dequantize a buffer
                     Mat dataFP32;
                     data.convertTo(dataFP32, CV_32F);
+                    // workaround for scalars support
+                    dataFP32.dims = data.dims;
                     allTensors[op_outputs->Get(0)] = dataFP32;
                     continue;
                 }
@@ -270,7 +281,9 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
 
     dispatch["CONV_2D"] = &TFLiteImporter::parseConvolution;
     dispatch["DEPTHWISE_CONV_2D"] = &TFLiteImporter::parseDWConvolution;
-    dispatch["ADD"] = dispatch["MUL"] = &TFLiteImporter::parseEltwise;
+    dispatch["ADD"] = dispatch["MUL"] = dispatch["SUB"] =
+        dispatch["SQRT"] = dispatch["DIV"] = dispatch["NEG"] =
+        dispatch["RSQRT"] = dispatch["SQUARED_DIFFERENCE"] = &TFLiteImporter::parseEltwise;
     dispatch["RELU"] = dispatch["PRELU"] = dispatch["HARD_SWISH"] =
         dispatch["LOGISTIC"] = dispatch["LEAKY_RELU"] = &TFLiteImporter::parseActivation;
     dispatch["MAX_POOL_2D"] = dispatch["AVERAGE_POOL_2D"] = &TFLiteImporter::parsePooling;
@@ -292,6 +305,7 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
     dispatch["MEAN"] = dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
     dispatch["STRIDED_SLICE"] = &TFLiteImporter::parseStridedSlice;
+    dispatch["SUM"] = &TFLiteImporter::parseReduce;
     return dispatch;
 }
 
@@ -518,8 +532,8 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
 
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     ActivationFunctionType activ = ActivationFunctionType_NONE;
-    layerParams.type = "Eltwise";
-    if (opcode == "ADD") {
+    layerParams.type = "NaryEltwise";
+    if (opcode == "ADD" || opcode == "SUM") {
         auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
         activ = options->fused_activation_function();
         layerParams.set("operation", "sum");
@@ -527,7 +541,29 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     else if (opcode == "MUL") {
         auto options = reinterpret_cast<const MulOptions*>(op.builtin_options());
         activ = options->fused_activation_function();
-        layerParams.set("operation", "prod");
+        layerParams.set("operation", "mul");
+    }
+    else if (opcode == "DIV") {
+        auto options = reinterpret_cast<const DivOptions*>(op.builtin_options());
+        activ = options->fused_activation_function();
+        layerParams.set("operation", "div");
+    }
+    else if (opcode == "SUB") {
+        auto options = reinterpret_cast<const SubOptions*>(op.builtin_options());
+        activ = options->fused_activation_function();
+        layerParams.set("operation", "sub");
+    }
+    else if (opcode == "NEG") {
+        layerParams.type = "Sqrt";
+    }
+    else if (opcode == "SQUARED_DIFFERENCE") {
+        layerParams.type = "Sqrt";
+    }
+    else if (opcode == "RSQRT") {
+        layerParams.type = "Sqrt";
+    }
+    else if (opcode == "SQRT") {
+        layerParams.type = "Sqrt";
     } else {
         CV_Error(Error::StsNotImplemented, "Unknown opcode for Eltwise layer: " + opcode);
     }
@@ -654,14 +690,25 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     auto options = reinterpret_cast<const ConcatenationOptions*>(op.builtin_options());
     int axis = options->axis();
 
-    DataLayout inpLayout = layouts[op.inputs()->Get(0)];
-    if (inpLayout == DNN_LAYOUT_NHWC) {
-        // OpenCV works in NCHW data layout. So change the axis correspondingly.
-        axis = normalize_axis(axis, 4);
-        static const int remap[] = {0, 2, 3, 1};
-        axis = remap[axis];
+    for (int idx : *op.inputs()) {
+        DataLayout inpLayout = layouts[idx];
+        if (inpLayout == DNN_LAYOUT_NHWC) {
+            // OpenCV works in NCHW data layout. So change the axis correspondingly.
+            axis = normalize_axis(axis, 4);
+            static const int remap[] = {0, 2, 3, 1};
+            axis = remap[axis];
+        }
+        break;
     }
     layerParams.set("axis", axis);
+
+    for (int idx : *op.inputs()) {
+        if (layerIds.find(idx) != layerIds.end()) {
+            continue;  // Output from a different layer
+        }
+        int constId = addConstLayer(allTensors[idx], modelTensors->Get(idx)->name()->str());
+        layerIds[idx] = std::make_pair(constId, 0);
+    }
     addLayer(layerParams, op);
     parseFusedActivation(op, options->fused_activation_function());
 }
@@ -763,6 +810,20 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
         }
 
     }
+    else if (inpLayout == DNN_LAYOUT_UNKNOWN && perm.size() == 4) {
+        if (perm[0] != 0) {
+            CV_Error(Error::StsParseError, "The first axis should not be permuted.");
+        }
+        if (perm[1] == 1 && perm[2] == 3 && perm[3] == 2) {
+            std::vector<int> orderLP = {0, 2, 1, 3};
+            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
+            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NHWC;
+        }
+        else
+        {
+            layerParams.set("order", DictValue::arrayInt<int*>(perm.data(), perm.size()));
+        }
+    }
     else {
         layerParams.set("order", DictValue::arrayInt<int*>(perm.data(), perm.size()));
     }
@@ -801,6 +862,24 @@ void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& o
     }
 }
 
+void TFLiteImporter::parseReduce(const Operator& op, const std::string& opcode, LayerParams& layerParams)
+{
+    layerParams.type = "Reduce";
+    if (opcode == "SUM") {
+        layerParams.set("reduce", "sum");
+    }
+    else {
+        CV_Error(Error::StsNotImplemented, "Unsupported reducing " + opcode);
+    }
+    auto options = op.builtin_options_as_ReducerOptions();
+    layerParams.set("keepdims", options->keep_dims());
+
+    Mat axes = allTensors[op.inputs()->Get(1)];
+    CV_CheckTypeEQ(axes.type(), CV_32S, "");
+    layerParams.set("axes", DictValue::arrayInt(axes.ptr<int>(), axes.total()));
+    addLayer(layerParams, op);
+}
+
 int TFLiteImporter::addPermuteLayer(const std::vector<int>& order, const std::string& permName,
                                     const std::pair<int, int>& inpId, int dtype)
 {
@@ -831,6 +910,13 @@ int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& n
     int id = dstNet.addLayer(name, "Flatten", dtype, lp);
     dstNet.connect(inpId.first, inpId.second, id, 0);
     return id;
+}
+
+int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
+{
+    LayerParams lp;
+    lp.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+    return dstNet.addLayer(name, "Const", lp);
 }
 
 void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -928,8 +1014,8 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
     int endMask = options->end_mask();
     if (options->new_axis_mask())
         CV_Error(Error::StsNotImplemented, "New axis during StridedSlice");
-    if (options->shrink_axis_mask())
-        CV_Error(Error::StsNotImplemented, "Shrink axis during StridedSlice");
+    // if (options->shrink_axis_mask())
+    //     CV_Error(Error::StsNotImplemented, "Shrink axis during StridedSlice");
 
     Mat begins = allTensors[op.inputs()->Get(1)];
     Mat ends = allTensors[op.inputs()->Get(2)];
