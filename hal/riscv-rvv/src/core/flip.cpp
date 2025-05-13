@@ -66,6 +66,13 @@ CV_HAL_RVV_FLIP_INPLACE_C1(16UC1, ushort, RVV_U16M8)
 CV_HAL_RVV_FLIP_INPLACE_C1(32UC1, unsigned, RVV_U32M8)
 CV_HAL_RVV_FLIP_INPLACE_C1(64UC1, uint64_t, RVV_U64M8)
 
+// Suppress warnings of "ignoring attributes applied to VecType after definition", 
+// VecType is vuint8m2x3_t, vuint16m2x3_t, vuint32m2x3_t or vuint64m2x3_t
+#if defined (__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 #define CV_HAL_RVV_FLIP_C3_TYPES(width) \
 struct RVV_C3_U##width##M2 : RVV_U##width##M2 { \
     static inline vuint##width##m2x3_t vload3(const uint##width##_t *base, size_t vl) { return __riscv_vlseg3e##width##_v_u##width##m2x3(base, vl); } \
@@ -82,6 +89,10 @@ CV_HAL_RVV_FLIP_C3_TYPES(8)
 CV_HAL_RVV_FLIP_C3_TYPES(16)
 CV_HAL_RVV_FLIP_C3_TYPES(32)
 CV_HAL_RVV_FLIP_C3_TYPES(64)
+
+#if defined (__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 #define CV_HAL_RVV_FLIP_C3(name, _Tps, RVV) \
 inline void flip_##name(const uchar* src_data, size_t src_step, uchar* dst_data, size_t dst_step, int src_width, int src_height, int flip_mode) { \
