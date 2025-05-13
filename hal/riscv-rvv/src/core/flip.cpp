@@ -66,7 +66,7 @@ CV_HAL_RVV_FLIP_INPLACE_C1(16UC1, ushort, RVV_U16M8)
 CV_HAL_RVV_FLIP_INPLACE_C1(32UC1, unsigned, RVV_U32M8)
 CV_HAL_RVV_FLIP_INPLACE_C1(64UC1, uint64_t, RVV_U64M8)
 
-// Suppress warnings of "ignoring attributes applied to VecType after definition", 
+// Suppress warnings of "ignoring attributes applied to VecType after definition",
 // VecType is vuint8m2x3_t, vuint16m2x3_t, vuint32m2x3_t or vuint64m2x3_t
 #if defined (__GNUC__)
 #pragma GCC diagnostic push
