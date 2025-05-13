@@ -9,6 +9,7 @@
 #ifndef OPENCV_HAL_RVV_IMGPROC_COMMON_HPP_INCLUDED
 #define OPENCV_HAL_RVV_IMGPROC_COMMON_HPP_INCLUDED
 
+#include "opencv2/core/hal/interface.h"
 #include "opencv2/imgproc/hal/interface.h"
 
 namespace cv { namespace rvv_hal { namespace imgproc { namespace common {
@@ -17,11 +18,11 @@ inline int borderInterpolate( int p, int len, int borderType )
 {
     if ((unsigned)p < (unsigned)len)
         ;
-    else if (borderType == BORDER_REPLICATE)
+    else if (borderType == CV_HAL_BORDER_REPLICATE)
         p = p < 0 ? 0 : len - 1;
-    else if (borderType == BORDER_REFLECT || borderType == BORDER_REFLECT_101)
+    else if (borderType == CV_HAL_BORDER_REFLECT || borderType == CV_HAL_BORDER_REFLECT_101)
     {
-        int delta = borderType == BORDER_REFLECT_101;
+        int delta = borderType == CV_HAL_BORDER_REFLECT_101;
         if (len == 1)
             return 0;
         do
@@ -33,14 +34,14 @@ inline int borderInterpolate( int p, int len, int borderType )
         }
         while( (unsigned)p >= (unsigned)len );
     }
-    else if (borderType == BORDER_WRAP)
+    else if (borderType == CV_HAL_BORDER_WRAP)
     {
         if (p < 0)
             p -= ((p-len+1)/len)*len;
         if (p >= len)
             p %= len;
     }
-    else if (borderType == BORDER_CONSTANT)
+    else if (borderType == CV_HAL_BORDER_CONSTANT)
         p = -1;
     return p;
 }
