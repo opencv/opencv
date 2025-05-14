@@ -72,7 +72,6 @@ private:
     void parseSoftmax(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseCast(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseTranspose(const Operator& op, const std::string& opcode, LayerParams& layerParams);
-    void parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams);
     void parseReduce(const Operator& op, const std::string& opcode, LayerParams& layerParams);
 
     void parseFusedActivation(const Operator& op, ActivationFunctionType activ);
@@ -608,14 +607,8 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
             continue;  // Output from a different layer
         }
         Mat blob = allTensors[idx];
-        if (layouts[op.inputs()->Get(0)] == DNN_LAYOUT_NHWC && blob.dims != 4) {
-            MatShape sz = shape(blob);
-            for (int i = blob.dims; i < 4; ++i)
-                sz.insert(sz.begin(), 1);
-            blob = blob.reshape(1, sz);
-            Mat blobNCHW;
-            transposeND(blob, {0, 3, 1, 2}, blobNCHW);
-            blob = blobNCHW;
+        if (layouts[op.inputs()->Get(0)] == DNN_LAYOUT_NHWC && blob.dims == 1) {
+            blob = blob.reshape(1, {1, (int)blob.total(), 1, 1});
         }
         int constId = addConstLayer(blob, modelTensors->Get(idx)->name()->str());
         layerIds[idx] = std::make_pair(constId, 0);
@@ -626,17 +619,15 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
 
     // Layers that split on multiple operations
     if (opcode == "SQUARED_DIFFERENCE") {
-        int outId = op.outputs()->Get(0);
         LayerParams lp;
         lp.set("power", 2);
-        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/square", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
-        layerIds[outId] = std::make_pair(id, 0);
+        int id = dstNet.addLayerToPrev(layerParams.name + "/square", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
+        layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
     }
     else if (opcode == "RSQRT") {
         LayerParams lp;
-        int outId = op.outputs()->Get(0);
-        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/inv", "Reciprocal", isOpInt8 ? CV_8S : CV_32F, lp);
-        layerIds[outId] = std::make_pair(id, 0);
+        int id = dstNet.addLayerToPrev(layerParams.name + "/inv", "Reciprocal", isOpInt8 ? CV_8S : CV_32F, lp);
+        layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
     }
 }
 
