@@ -3,7 +3,13 @@
         "IStreamReader" : {
             "IStreamReader" : {
                 "j_code"   : [
-                    "    protected IStreamReader() { nativeObj = 0; }"
+                    "\n",
+                    "/**",
+                    " * Constructor of streaming callback object with abstract 'read' and 'seek' methods that should be implemented in Java code.<br>",
+                    " * <b>NOTE</b>: Implemented callbacks should be called from the creation thread to avoid JNI performance degradation",
+                    "*/",
+                    "protected IStreamReader() { nativeObj = 0; }",
+                    "\n"
                 ],
                 "jn_code": [],
                 "cpp_code": []
