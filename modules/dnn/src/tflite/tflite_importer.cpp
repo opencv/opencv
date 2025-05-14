@@ -270,6 +270,11 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
+        // Uncomment to finish model build aftet specific node
+        // if (op_outputs->Get(0) == 90)
+        // {
+        //     break;
+        // }
     }
 }
 
@@ -303,9 +308,8 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
-    dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
     dispatch["STRIDED_SLICE"] = &TFLiteImporter::parseStridedSlice;
-    dispatch["MEAN"] = dispatch["SUM"] = &TFLiteImporter::parseReduce;
+    dispatch["REDUCE_MAX"] = dispatch["MEAN"] = dispatch["SUM"] = &TFLiteImporter::parseReduce;
     return dispatch;
 }
 
@@ -531,8 +535,9 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
 }
 
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
+    bool isOpInt8 = isInt8(op);
     ActivationFunctionType activ = ActivationFunctionType_NONE;
-    layerParams.type = "NaryEltwise";
+    layerParams.type = isOpInt8 ? "Eltwise" : "NaryEltwise";
     if (opcode == "ADD") {
         auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
         activ = options->fused_activation_function();
@@ -548,7 +553,7 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         activ = options->fused_activation_function();
         layerParams.set("operation", "div");
     }
-    else if (opcode == "SUB") {
+    else if (opcode == "SUB" && !isOpInt8) {
         auto options = reinterpret_cast<const SubOptions*>(op.builtin_options());
         activ = options->fused_activation_function();
         layerParams.set("operation", "sub");
@@ -557,19 +562,19 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         layerParams.type = "Scale";
         layerParams.blobs.resize(1, Mat(1, 1, CV_32F, Scalar(-1)));
     }
-    else if (opcode == "SQUARED_DIFFERENCE") {
+    else if (opcode == "SQUARED_DIFFERENCE" && !isOpInt8) {
         layerParams.set("operation", "sub");
     }
-    else if (opcode == "RSQRT") {
+    else if (opcode == "RSQRT" && !isOpInt8) {
         layerParams.type = "Sqrt";
     }
-    else if (opcode == "SQRT") {
+    else if (opcode == "SQRT" && !isOpInt8) {
         layerParams.type = "Sqrt";
     } else {
-        CV_Error(Error::StsNotImplemented, "Unknown opcode for Eltwise layer: " + opcode);
+        CV_Error(Error::StsNotImplemented, cv::format("DNN/TFLite: Unknown opcode for %s Eltwise layer '%s'", isOpInt8 ? "INT8" : "FP32", opcode.c_str()));
     }
 
-    if (isInt8(op)) {
+    if (isOpInt8) {
         const Tensor* out = modelTensors->Get(op.outputs()->Get(0));
         float outScale = out->quantization()->scale()->Get(0);
         int outZero = out->quantization()->zero_point()->Get(0);
@@ -624,13 +629,13 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         int outId = op.outputs()->Get(0);
         LayerParams lp;
         lp.set("power", 2);
-        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/square", "Power", isInt8(op) ? CV_8S : CV_32F, lp);
+        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/square", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
         layerIds[outId] = std::make_pair(id, 0);
     }
     else if (opcode == "RSQRT") {
         LayerParams lp;
         int outId = op.outputs()->Get(0);
-        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/inv", "Reciprocal", isInt8(op) ? CV_8S : CV_32F, lp);
+        int id = dstNet.addLayerToPrev(modelTensors->Get(outId)->name()->str() + "/inv", "Reciprocal", isOpInt8 ? CV_8S : CV_32F, lp);
         layerIds[outId] = std::make_pair(id, 0);
     }
 }
@@ -876,38 +881,13 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
     addLayer(layerParams, op);
 }
 
-void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams)
-{
-    layerParams.type = "Pooling";
-    if (opcode == "REDUCE_MAX") {
-        layerParams.set("pool", "max");
-    }
-    else {
-        CV_Error(Error::StsNotImplemented, "Unsupported pooling " + opcode);
-    }
-    layerParams.set("global_pooling", true);
-    auto options = op.builtin_options_as_ReducerOptions();
-    bool keep_dims = options->keep_dims();
-
-    if (!keep_dims) {
-        const auto name = layerParams.name;
-        layerParams.name += "/global_pooling";
-        addLayer(layerParams, op);
-
-        int out = op.outputs()->Get(0);
-        auto outId = layerIds[out];
-        int flattenId = addFlattenLayer(1, -1, name, outId, isInt8(op) ? CV_8S : CV_32F);
-        layerIds[out] = std::make_pair(flattenId, 0);
-    }
-    else {
-        addLayer(layerParams, op);
-    }
-}
-
 void TFLiteImporter::parseReduce(const Operator& op, const std::string& opcode, LayerParams& layerParams)
 {
     layerParams.type = "Reduce";
-    if (opcode == "SUM") {
+    if (opcode == "REDUCE_MAX") {
+        layerParams.set("reduce", "max");
+    }
+    else if (opcode == "SUM") {
         layerParams.set("reduce", "sum");
     }
     else if (opcode == "MEAN") {
@@ -971,7 +951,6 @@ int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
 {
     LayerParams lp;
     lp.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
-    CV_Assert(blob.dims == lp.blobs[0].dims);
     return dstNet.addLayer(name, "Const", lp);
 }
 
