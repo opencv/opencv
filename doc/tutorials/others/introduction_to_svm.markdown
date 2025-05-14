@@ -3,7 +3,7 @@ Introduction to Support Vector Machines {#tutorial_introduction_to_svm}
 
 @tableofcontents
 
-@prev_tutorial{tutorial_traincascade}
+@prev_tutorial{tutorial_barcode_detect_and_decode}
 @next_tutorial{tutorial_non_linear_svms}
 
 |    |    |

@@ -11,11 +11,14 @@ Create calibration pattern {#tutorial_camera_calibration_pattern}
 | Compatibility | OpenCV >= 3.0 |
 
 
-The goal of this tutorial is to learn how to create calibration pattern.
+The goal of this tutorial is to learn how to create a calibration pattern.
 
 You can find a chessboard pattern in https://github.com/opencv/opencv/blob/4.x/doc/pattern.png
 
 You can find a circleboard pattern in https://github.com/opencv/opencv/blob/4.x/doc/acircles_pattern.png
+
+You can find a ChAruco board pattern in https://github.com/opencv/opencv/blob/4.x/doc/charuco_board_pattern.png
+(7X5 ChAruco board, square size: 30 mm , marker size: 15 mm, aruco dict: DICT_5X5_100, page width: 210 mm, page height: 297 mm)
 
 Create your own pattern
 ---------------
@@ -28,7 +31,7 @@ create a checkerboard pattern in file chessboard.svg with 9 rows, 6 columns and 
 
         python gen_pattern.py -o chessboard.svg --rows 9 --columns 6 --type checkerboard --square_size 20
 
-create a circle board pattern in file circleboard.svg with 7 rows, 5 columns and a radius of 15mm:
+create a circle board pattern in file circleboard.svg with 7 rows, 5 columns and a radius of 15 mm:
 
         python gen_pattern.py -o circleboard.svg --rows 7 --columns 5 --type circles --square_size 15
 
@@ -40,13 +43,18 @@ create a radon checkerboard for findChessboardCornersSB() with markers in (7 4),
 
         python gen_pattern.py -o radon_checkerboard.svg --rows 10 --columns 15 --type radon_checkerboard -s 12.1 -m 7 4 7 5 8 5
 
-If you want to change unit use -u option (mm inches, px, m)
+create a ChAruco board pattern in charuco_board.svg with 7 rows, 5 columns, square size 30 mm, aruco marker size 15 mm and using DICT_5X5_100 as dictionary for aruco markers (it contains in DICT_ARUCO.json file):
 
-If you want to change page size use -w and -h options
+        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board --square_size 30 --marker_size 15 -f DICT_5X5_100.json.gz
 
-@cond HAVE_opencv_aruco
-If you want to create a ChArUco board read @ref tutorial_charuco_detection "tutorial Detection of ChArUco Corners" in opencv_contrib tutorial.
-@endcond
-@cond !HAVE_opencv_aruco
-If you want to create a ChArUco board read tutorial Detection of ChArUco Corners in opencv_contrib tutorial.
-@endcond
+If you want to change the measurement units, use the -u option (e.g. mm, inches, px, m)
+
+If you want to change the page size, use the -w (width) and -h (height) options
+
+If you want to use your own dictionary for the ChAruco board, specify the name of your dictionary file. For example
+
+        python gen_pattern.py -o charuco_board.svg --rows 7 --columns 5 -T charuco_board -f my_dictionary.json
+
+You can generate your dictionary in the file my_dictionary.json with 30 markers and a marker size of 5 bits using the utility provided in opencv/samples/cpp/aruco_dict_utils.cpp.
+
+        bin/example_cpp_aruco_dict_utils.exe my_dict.json -nMarkers=30 -markerSize=5

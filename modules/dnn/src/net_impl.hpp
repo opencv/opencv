@@ -179,6 +179,7 @@ struct Net::Impl : public detail::NetImplBase
 #endif
 
 #ifdef HAVE_VULKAN
+    Ptr<vkcom::Context> context;
     void initVkComBackend();
 #endif
 
@@ -272,13 +273,12 @@ struct Net::Impl : public detail::NetImplBase
 
     Mat getBlob(String outputName) const;
 
-#ifdef CV_CXX11
     virtual AsyncArray getBlobAsync(const LayerPin& pin);
 
     AsyncArray getBlobAsync(String outputName);
-#endif  // CV_CXX11
 
     string dump(bool forceAllocation = false) const;
+    string dumpToPbtxt(bool forceAllocation = false) const;
 
     void dumpNetworkToFile() const;
 

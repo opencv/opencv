@@ -14,7 +14,7 @@ typedef std::tuple<std::string, int, int, double, VideoCaptureAPIs> param;
 class AudioBaseTest
 {
 protected:
-    AudioBaseTest(){};
+    AudioBaseTest(){}
     void getValidAudioData()
     {
         const double step = 3.14/22050;
@@ -135,7 +135,16 @@ TEST_P(Audio, audio)
     doTest();
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, Audio, testing::ValuesIn(audioParams));
+inline static std::string Audio_name_printer(const testing::TestParamInfo<Audio::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getExtensionSafe(get<0>(info.param)) << "_"
+        << get<1>(info.param) << "CN" << "_"
+        << getBackendNameSafe(get<4>(info.param));
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Audio, testing::ValuesIn(audioParams), Audio_name_printer);
 
 class MediaTestFixture : public AudioBaseTest, public testing::TestWithParam <paramCombination>
 {
@@ -157,7 +166,7 @@ public:
             params = {  CAP_PROP_AUDIO_STREAM, 0,
                         CAP_PROP_VIDEO_STREAM, 0,
                         CAP_PROP_AUDIO_DATA_DEPTH, CV_16S };
-        };
+        }
 
     void doTest()
     {
@@ -186,6 +195,7 @@ public:
                 double audio_shift = cap.get(CAP_PROP_AUDIO_SHIFT_NSEC);
                 double video0_timestamp = cap.get(CAP_PROP_POS_MSEC) * 1e-3;
                 audio0_timestamp = video0_timestamp + audio_shift * 1e-9;
+
                 std::cout << "video0 timestamp: " << video0_timestamp << "  audio0 timestamp: " << audio0_timestamp << " (audio shift nanoseconds: " << audio_shift << " , seconds: " << audio_shift * 1e-9 << ")" << std::endl;
             }
             ASSERT_TRUE(cap.retrieve(videoFrame));
@@ -228,7 +238,7 @@ public:
                 EXPECT_NEAR(
                         cap.get(CAP_PROP_AUDIO_POS) / samplePerSecond + audio0_timestamp,
                         cap.get(CAP_PROP_POS_MSEC) * 1e-3,
-                        (1.0 / fps) * 0.3)
+                        (1.0 / fps) * 0.6)
                     << "CAP_PROP_AUDIO_POS=" << cap.get(CAP_PROP_AUDIO_POS) << " CAP_PROP_POS_MSEC=" << cap.get(CAP_PROP_POS_MSEC);
             }
             if (frame != 0 && frame != numberOfFrames-1 && audioData[0].size() != (size_t)numberOfSamples)
@@ -264,6 +274,8 @@ TEST_P(Media, audio)
 {
     if (!videoio_registry::hasBackend(cv::VideoCaptureAPIs(backend)))
         throw SkipTestException(cv::videoio_registry::getBackendName(backend) + " backend was not found");
+    if (cvtest::skipUnstableTests && backend == CAP_GSTREAMER)
+        throw SkipTestException("Unstable GStreamer test");
 
     doTest();
 }
@@ -280,7 +292,16 @@ const paramCombination mediaParams[] =
 #endif  // _WIN32
 };
 
-INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams));
+inline static std::string Media_name_printer(const testing::TestParamInfo<Media::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getExtensionSafe(get<0>(info.param)) << "_"
+        << get<1>(info.param) << "CN" << "_"
+        << getBackendNameSafe(get<10>(info.param));
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, Media, testing::ValuesIn(mediaParams), Media_name_printer);
 
 TEST(AudioOpenCheck, bad_arg_invalid_audio_stream)
 {

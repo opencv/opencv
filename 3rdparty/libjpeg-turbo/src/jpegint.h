@@ -4,8 +4,10 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
  * Modified 1997-2009 by Guido Vollbeding.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2015-2016, 2019, 2021, D. R. Commander.
+ * Copyright (C) 2015-2017, 2019, 2021-2022, 2024, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * Copyright (C) 2021, Alex Richardson.
  * For conditions of distribution and use, see the accompanying README.ijg
@@ -15,6 +17,17 @@
  * These declarations are considered internal to the JPEG library; most
  * applications using the library shouldn't need to include this file.
  */
+
+
+/* Representation of a spatial difference value.
+ * This should be a signed value of at least 16 bits; int is usually OK.
+ */
+
+typedef int JDIFF;
+
+typedef JDIFF FAR *JDIFFROW;    /* pointer to one row of difference values */
+typedef JDIFFROW *JDIFFARRAY;   /* ptr to some rows (a 2-D diff array) */
+typedef JDIFFARRAY *JDIFFIMAGE; /* a 3-D diff array: top index is color */
 
 
 /* Declarations for both compression & decompression */
@@ -61,6 +74,9 @@ typedef __UINTPTR_TYPE__ JUINTPTR;
 typedef size_t JUINTPTR;
 #endif
 
+#define IsExtRGB(cs) \
+  (cs == JCS_RGB || (cs >= JCS_EXT_RGB && cs <= JCS_EXT_ARGB))
+
 /*
  * Left shift macro that handles a negative operand without causing any
  * sanitizer warnings
@@ -80,6 +96,7 @@ struct jpeg_comp_master {
   /* State variables made visible to other modules */
   boolean call_pass_startup;    /* True if pass_startup must be called */
   boolean is_last_pass;         /* True during last pass */
+  boolean lossless;             /* True if lossless mode is enabled */
 };
 
 /* Main buffer control (downsampled-data buffer) */
@@ -87,6 +104,12 @@ struct jpeg_c_main_controller {
   void (*start_pass) (j_compress_ptr cinfo, J_BUF_MODE pass_mode);
   void (*process_data) (j_compress_ptr cinfo, JSAMPARRAY input_buf,
                         JDIMENSION *in_row_ctr, JDIMENSION in_rows_avail);
+  void (*process_data_12) (j_compress_ptr cinfo, J12SAMPARRAY input_buf,
+                           JDIMENSION *in_row_ctr, JDIMENSION in_rows_avail);
+#ifdef C_LOSSLESS_SUPPORTED
+  void (*process_data_16) (j_compress_ptr cinfo, J16SAMPARRAY input_buf,
+                           JDIMENSION *in_row_ctr, JDIMENSION in_rows_avail);
+#endif
 };
 
 /* Compression preprocessing (downsampling input buffer control) */
@@ -97,12 +120,32 @@ struct jpeg_c_prep_controller {
                             JSAMPIMAGE output_buf,
                             JDIMENSION *out_row_group_ctr,
                             JDIMENSION out_row_groups_avail);
+  void (*pre_process_data_12) (j_compress_ptr cinfo, J12SAMPARRAY input_buf,
+                               JDIMENSION *in_row_ctr,
+                               JDIMENSION in_rows_avail,
+                               J12SAMPIMAGE output_buf,
+                               JDIMENSION *out_row_group_ctr,
+                               JDIMENSION out_row_groups_avail);
+#ifdef C_LOSSLESS_SUPPORTED
+  void (*pre_process_data_16) (j_compress_ptr cinfo, J16SAMPARRAY input_buf,
+                               JDIMENSION *in_row_ctr,
+                               JDIMENSION in_rows_avail,
+                               J16SAMPIMAGE output_buf,
+                               JDIMENSION *out_row_group_ctr,
+                               JDIMENSION out_row_groups_avail);
+#endif
 };
 
-/* Coefficient buffer control */
+/* Lossy mode: Coefficient buffer control
+ * Lossless mode: Difference buffer control
+ */
 struct jpeg_c_coef_controller {
   void (*start_pass) (j_compress_ptr cinfo, J_BUF_MODE pass_mode);
   boolean (*compress_data) (j_compress_ptr cinfo, JSAMPIMAGE input_buf);
+  boolean (*compress_data_12) (j_compress_ptr cinfo, J12SAMPIMAGE input_buf);
+#ifdef C_LOSSLESS_SUPPORTED
+  boolean (*compress_data_16) (j_compress_ptr cinfo, J16SAMPIMAGE input_buf);
+#endif
 };
 
 /* Colorspace conversion */
@@ -111,6 +154,14 @@ struct jpeg_color_converter {
   void (*color_convert) (j_compress_ptr cinfo, JSAMPARRAY input_buf,
                          JSAMPIMAGE output_buf, JDIMENSION output_row,
                          int num_rows);
+  void (*color_convert_12) (j_compress_ptr cinfo, J12SAMPARRAY input_buf,
+                            J12SAMPIMAGE output_buf, JDIMENSION output_row,
+                            int num_rows);
+#ifdef C_LOSSLESS_SUPPORTED
+  void (*color_convert_16) (j_compress_ptr cinfo, J16SAMPARRAY input_buf,
+                            J16SAMPIMAGE output_buf, JDIMENSION output_row,
+                            int num_rows);
+#endif
 };
 
 /* Downsampling */
@@ -119,24 +170,47 @@ struct jpeg_downsampler {
   void (*downsample) (j_compress_ptr cinfo, JSAMPIMAGE input_buf,
                       JDIMENSION in_row_index, JSAMPIMAGE output_buf,
                       JDIMENSION out_row_group_index);
+  void (*downsample_12) (j_compress_ptr cinfo, J12SAMPIMAGE input_buf,
+                         JDIMENSION in_row_index, J12SAMPIMAGE output_buf,
+                         JDIMENSION out_row_group_index);
+#ifdef C_LOSSLESS_SUPPORTED
+  void (*downsample_16) (j_compress_ptr cinfo, J16SAMPIMAGE input_buf,
+                         JDIMENSION in_row_index, J16SAMPIMAGE output_buf,
+                         JDIMENSION out_row_group_index);
+#endif
 
   boolean need_context_rows;    /* TRUE if need rows above & below */
 };
 
-/* Forward DCT (also controls coefficient quantization) */
+/* Lossy mode: Forward DCT (also controls coefficient quantization)
+ * Lossless mode: Prediction, sample differencing, and point transform
+ */
 struct jpeg_forward_dct {
   void (*start_pass) (j_compress_ptr cinfo);
+
+  /* Lossy mode */
   /* perhaps this should be an array??? */
   void (*forward_DCT) (j_compress_ptr cinfo, jpeg_component_info *compptr,
                        JSAMPARRAY sample_data, JBLOCKROW coef_blocks,
                        JDIMENSION start_row, JDIMENSION start_col,
                        JDIMENSION num_blocks);
+  void (*forward_DCT_12) (j_compress_ptr cinfo, jpeg_component_info *compptr,
+                          J12SAMPARRAY sample_data, JBLOCKROW coef_blocks,
+                          JDIMENSION start_row, JDIMENSION start_col,
+                          JDIMENSION num_blocks);
 };
 
 /* Entropy encoding */
 struct jpeg_entropy_encoder {
   void (*start_pass) (j_compress_ptr cinfo, boolean gather_statistics);
+
+  /* Lossy mode */
   boolean (*encode_mcu) (j_compress_ptr cinfo, JBLOCKROW *MCU_data);
+  /* Lossless mode */
+  JDIMENSION (*encode_mcus) (j_compress_ptr cinfo, JDIFFIMAGE diff_buf,
+                             JDIMENSION MCU_row_num, JDIMENSION MCU_col_num,
+                             JDIMENSION nMCU);
+
   void (*finish_pass) (j_compress_ptr cinfo);
 };
 
@@ -164,6 +238,7 @@ struct jpeg_decomp_master {
 
   /* State variables made visible to other modules */
   boolean is_dummy_pass;        /* True during 1st pass for 2-pass quant */
+  boolean lossless;             /* True if decompressing a lossless image */
 
   /* Partial decompression variables */
   JDIMENSION first_iMCU_col;
@@ -174,6 +249,9 @@ struct jpeg_decomp_master {
 
   /* Last iMCU row that was successfully decoded */
   JDIMENSION last_good_iMCU_row;
+
+  /* Tail of list of saved markers */
+  jpeg_saved_marker_ptr marker_list_end;
 };
 
 /* Input control module */
@@ -193,14 +271,36 @@ struct jpeg_d_main_controller {
   void (*start_pass) (j_decompress_ptr cinfo, J_BUF_MODE pass_mode);
   void (*process_data) (j_decompress_ptr cinfo, JSAMPARRAY output_buf,
                         JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail);
+  void (*process_data_12) (j_decompress_ptr cinfo, J12SAMPARRAY output_buf,
+                           JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail);
+#ifdef D_LOSSLESS_SUPPORTED
+  void (*process_data_16) (j_decompress_ptr cinfo, J16SAMPARRAY output_buf,
+                           JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail);
+#endif
 };
 
-/* Coefficient buffer control */
+/* Lossy mode: Coefficient buffer control
+ * Lossless mode: Difference buffer control
+ */
 struct jpeg_d_coef_controller {
   void (*start_input_pass) (j_decompress_ptr cinfo);
   int (*consume_data) (j_decompress_ptr cinfo);
   void (*start_output_pass) (j_decompress_ptr cinfo);
   int (*decompress_data) (j_decompress_ptr cinfo, JSAMPIMAGE output_buf);
+  int (*decompress_data_12) (j_decompress_ptr cinfo, J12SAMPIMAGE output_buf);
+#ifdef D_LOSSLESS_SUPPORTED
+  int (*decompress_data_16) (j_decompress_ptr cinfo, J16SAMPIMAGE output_buf);
+#endif
+
+  /* These variables keep track of the current location of the input side. */
+  /* cinfo->input_iMCU_row is also used for this. */
+  JDIMENSION MCU_ctr;           /* counts MCUs processed in current row */
+  int MCU_vert_offset;          /* counts MCU rows within iMCU row */
+  int MCU_rows_per_iMCU_row;    /* number of such rows needed */
+
+  /* The output side's location is represented by cinfo->output_iMCU_row. */
+
+  /* Lossy mode */
   /* Pointer to array of coefficient virtual arrays, or NULL if none */
   jvirt_barray_ptr *coef_arrays;
 };
@@ -213,6 +313,20 @@ struct jpeg_d_post_controller {
                              JDIMENSION in_row_groups_avail,
                              JSAMPARRAY output_buf, JDIMENSION *out_row_ctr,
                              JDIMENSION out_rows_avail);
+  void (*post_process_data_12) (j_decompress_ptr cinfo, J12SAMPIMAGE input_buf,
+                                JDIMENSION *in_row_group_ctr,
+                                JDIMENSION in_row_groups_avail,
+                                J12SAMPARRAY output_buf,
+                                JDIMENSION *out_row_ctr,
+                                JDIMENSION out_rows_avail);
+#ifdef D_LOSSLESS_SUPPORTED
+  void (*post_process_data_16) (j_decompress_ptr cinfo, J16SAMPIMAGE input_buf,
+                                JDIMENSION *in_row_group_ctr,
+                                JDIMENSION in_row_groups_avail,
+                                J16SAMPARRAY output_buf,
+                                JDIMENSION *out_row_ctr,
+                                JDIMENSION out_rows_avail);
+#endif
 };
 
 /* Marker reading & parsing */
@@ -238,24 +352,42 @@ struct jpeg_marker_reader {
 /* Entropy decoding */
 struct jpeg_entropy_decoder {
   void (*start_pass) (j_decompress_ptr cinfo);
+
+  /* Lossy mode */
   boolean (*decode_mcu) (j_decompress_ptr cinfo, JBLOCKROW *MCU_data);
+  /* Lossless mode */
+  JDIMENSION (*decode_mcus) (j_decompress_ptr cinfo, JDIFFIMAGE diff_buf,
+                             JDIMENSION MCU_row_num, JDIMENSION MCU_col_num,
+                             JDIMENSION nMCU);
+  boolean (*process_restart) (j_decompress_ptr cinfo);
 
   /* This is here to share code between baseline and progressive decoders; */
   /* other modules probably should not use it */
   boolean insufficient_data;    /* set TRUE after emitting warning */
 };
 
-/* Inverse DCT (also performs dequantization) */
+/* Lossy mode: Inverse DCT (also performs dequantization)
+ * Lossless mode: Prediction, sample undifferencing, point transform, and
+ * sample size scaling
+ */
 typedef void (*inverse_DCT_method_ptr) (j_decompress_ptr cinfo,
                                         jpeg_component_info *compptr,
                                         JCOEFPTR coef_block,
                                         JSAMPARRAY output_buf,
                                         JDIMENSION output_col);
+typedef void (*inverse_DCT_12_method_ptr) (j_decompress_ptr cinfo,
+                                           jpeg_component_info *compptr,
+                                           JCOEFPTR coef_block,
+                                           J12SAMPARRAY output_buf,
+                                           JDIMENSION output_col);
 
 struct jpeg_inverse_dct {
   void (*start_pass) (j_decompress_ptr cinfo);
+
+  /* Lossy mode */
   /* It is useful to allow each component to have a separate IDCT method. */
   inverse_DCT_method_ptr inverse_DCT[MAX_COMPONENTS];
+  inverse_DCT_12_method_ptr inverse_DCT_12[MAX_COMPONENTS];
 };
 
 /* Upsampling (note that upsampler must also call color converter) */
@@ -265,6 +397,16 @@ struct jpeg_upsampler {
                     JDIMENSION *in_row_group_ctr,
                     JDIMENSION in_row_groups_avail, JSAMPARRAY output_buf,
                     JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail);
+  void (*upsample_12) (j_decompress_ptr cinfo, J12SAMPIMAGE input_buf,
+                       JDIMENSION *in_row_group_ctr,
+                       JDIMENSION in_row_groups_avail, J12SAMPARRAY output_buf,
+                       JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail);
+#ifdef D_LOSSLESS_SUPPORTED
+  void (*upsample_16) (j_decompress_ptr cinfo, J16SAMPIMAGE input_buf,
+                       JDIMENSION *in_row_group_ctr,
+                       JDIMENSION in_row_groups_avail, J16SAMPARRAY output_buf,
+                       JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail);
+#endif
 
   boolean need_context_rows;    /* TRUE if need rows above & below */
 };
@@ -275,6 +417,14 @@ struct jpeg_color_deconverter {
   void (*color_convert) (j_decompress_ptr cinfo, JSAMPIMAGE input_buf,
                          JDIMENSION input_row, JSAMPARRAY output_buf,
                          int num_rows);
+  void (*color_convert_12) (j_decompress_ptr cinfo, J12SAMPIMAGE input_buf,
+                            JDIMENSION input_row, J12SAMPARRAY output_buf,
+                            int num_rows);
+#ifdef D_LOSSLESS_SUPPORTED
+  void (*color_convert_16) (j_decompress_ptr cinfo, J16SAMPIMAGE input_buf,
+                            JDIMENSION input_row, J16SAMPARRAY output_buf,
+                            int num_rows);
+#endif
 };
 
 /* Color quantization or color precision reduction */
@@ -282,6 +432,8 @@ struct jpeg_color_quantizer {
   void (*start_pass) (j_decompress_ptr cinfo, boolean is_pre_scan);
   void (*color_quantize) (j_decompress_ptr cinfo, JSAMPARRAY input_buf,
                           JSAMPARRAY output_buf, int num_rows);
+  void (*color_quantize_12) (j_decompress_ptr cinfo, J12SAMPARRAY input_buf,
+                             J12SAMPARRAY output_buf, int num_rows);
   void (*finish_pass) (j_decompress_ptr cinfo);
   void (*new_color_map) (j_decompress_ptr cinfo);
 };
@@ -293,6 +445,12 @@ struct jpeg_color_quantizer {
 #define MAX(a, b)       ((a) > (b) ? (a) : (b))
 #undef MIN
 #define MIN(a, b)       ((a) < (b) ? (a) : (b))
+
+#ifdef ZERO_BUFFERS
+#define MALLOC(size)  calloc(1, size)
+#else
+#define MALLOC(size)  malloc(size)
+#endif
 
 
 /* We assume that right shift corresponds to signed division by 2 with
@@ -323,36 +481,95 @@ EXTERN(void) jinit_c_master_control(j_compress_ptr cinfo,
                                     boolean transcode_only);
 EXTERN(void) jinit_c_main_controller(j_compress_ptr cinfo,
                                      boolean need_full_buffer);
+EXTERN(void) j12init_c_main_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
 EXTERN(void) jinit_c_prep_controller(j_compress_ptr cinfo,
                                      boolean need_full_buffer);
+EXTERN(void) j12init_c_prep_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
 EXTERN(void) jinit_c_coef_controller(j_compress_ptr cinfo,
                                      boolean need_full_buffer);
+EXTERN(void) j12init_c_coef_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
 EXTERN(void) jinit_color_converter(j_compress_ptr cinfo);
+EXTERN(void) j12init_color_converter(j_compress_ptr cinfo);
 EXTERN(void) jinit_downsampler(j_compress_ptr cinfo);
+EXTERN(void) j12init_downsampler(j_compress_ptr cinfo);
 EXTERN(void) jinit_forward_dct(j_compress_ptr cinfo);
+EXTERN(void) j12init_forward_dct(j_compress_ptr cinfo);
 EXTERN(void) jinit_huff_encoder(j_compress_ptr cinfo);
 EXTERN(void) jinit_phuff_encoder(j_compress_ptr cinfo);
 EXTERN(void) jinit_arith_encoder(j_compress_ptr cinfo);
 EXTERN(void) jinit_marker_writer(j_compress_ptr cinfo);
+#ifdef C_LOSSLESS_SUPPORTED
+EXTERN(void) j16init_c_main_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) j16init_c_prep_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) j16init_color_converter(j_compress_ptr cinfo);
+EXTERN(void) j16init_downsampler(j_compress_ptr cinfo);
+EXTERN(void) jinit_c_diff_controller(j_compress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) j12init_c_diff_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) j16init_c_diff_controller(j_compress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) jinit_lhuff_encoder(j_compress_ptr cinfo);
+EXTERN(void) jinit_lossless_compressor(j_compress_ptr cinfo);
+EXTERN(void) j12init_lossless_compressor(j_compress_ptr cinfo);
+EXTERN(void) j16init_lossless_compressor(j_compress_ptr cinfo);
+#endif
+
 /* Decompression module initialization routines */
 EXTERN(void) jinit_master_decompress(j_decompress_ptr cinfo);
 EXTERN(void) jinit_d_main_controller(j_decompress_ptr cinfo,
                                      boolean need_full_buffer);
+EXTERN(void) j12init_d_main_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
 EXTERN(void) jinit_d_coef_controller(j_decompress_ptr cinfo,
                                      boolean need_full_buffer);
+EXTERN(void) j12init_d_coef_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
 EXTERN(void) jinit_d_post_controller(j_decompress_ptr cinfo,
                                      boolean need_full_buffer);
+EXTERN(void) j12init_d_post_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
 EXTERN(void) jinit_input_controller(j_decompress_ptr cinfo);
 EXTERN(void) jinit_marker_reader(j_decompress_ptr cinfo);
 EXTERN(void) jinit_huff_decoder(j_decompress_ptr cinfo);
 EXTERN(void) jinit_phuff_decoder(j_decompress_ptr cinfo);
 EXTERN(void) jinit_arith_decoder(j_decompress_ptr cinfo);
 EXTERN(void) jinit_inverse_dct(j_decompress_ptr cinfo);
+EXTERN(void) j12init_inverse_dct(j_decompress_ptr cinfo);
 EXTERN(void) jinit_upsampler(j_decompress_ptr cinfo);
+EXTERN(void) j12init_upsampler(j_decompress_ptr cinfo);
 EXTERN(void) jinit_color_deconverter(j_decompress_ptr cinfo);
+EXTERN(void) j12init_color_deconverter(j_decompress_ptr cinfo);
 EXTERN(void) jinit_1pass_quantizer(j_decompress_ptr cinfo);
+EXTERN(void) j12init_1pass_quantizer(j_decompress_ptr cinfo);
 EXTERN(void) jinit_2pass_quantizer(j_decompress_ptr cinfo);
+EXTERN(void) j12init_2pass_quantizer(j_decompress_ptr cinfo);
 EXTERN(void) jinit_merged_upsampler(j_decompress_ptr cinfo);
+EXTERN(void) j12init_merged_upsampler(j_decompress_ptr cinfo);
+#ifdef D_LOSSLESS_SUPPORTED
+EXTERN(void) j16init_d_main_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) j16init_d_post_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) j16init_upsampler(j_decompress_ptr cinfo);
+EXTERN(void) j16init_color_deconverter(j_decompress_ptr cinfo);
+EXTERN(void) jinit_d_diff_controller(j_decompress_ptr cinfo,
+                                     boolean need_full_buffer);
+EXTERN(void) j12init_d_diff_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) j16init_d_diff_controller(j_decompress_ptr cinfo,
+                                       boolean need_full_buffer);
+EXTERN(void) jinit_lhuff_decoder(j_decompress_ptr cinfo);
+EXTERN(void) jinit_lossless_decompressor(j_decompress_ptr cinfo);
+EXTERN(void) j12init_lossless_decompressor(j_decompress_ptr cinfo);
+EXTERN(void) j16init_lossless_decompressor(j_decompress_ptr cinfo);
+#endif
+
 /* Memory manager initialization */
 EXTERN(void) jinit_memory_mgr(j_common_ptr cinfo);
 
@@ -362,6 +579,14 @@ EXTERN(long) jround_up(long a, long b);
 EXTERN(void) jcopy_sample_rows(JSAMPARRAY input_array, int source_row,
                                JSAMPARRAY output_array, int dest_row,
                                int num_rows, JDIMENSION num_cols);
+EXTERN(void) j12copy_sample_rows(J12SAMPARRAY input_array, int source_row,
+                                 J12SAMPARRAY output_array, int dest_row,
+                                 int num_rows, JDIMENSION num_cols);
+#if defined(C_LOSSLESS_SUPPORTED) || defined(D_LOSSLESS_SUPPORTED)
+EXTERN(void) j16copy_sample_rows(J16SAMPARRAY input_array, int source_row,
+                                 J16SAMPARRAY output_array, int dest_row,
+                                 int num_rows, JDIMENSION num_cols);
+#endif
 EXTERN(void) jcopy_block_row(JBLOCKROW input_row, JBLOCKROW output_row,
                              JDIMENSION num_blocks);
 EXTERN(void) jzero_far(void *target, size_t bytestozero);

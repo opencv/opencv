@@ -117,12 +117,36 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
             if (ld.id != 0 && !layer->supportBackend(preferableBackend))
             {
                 newWasSupported = false;
-                CV_LOG_INFO(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to CPU backend");
+                CV_LOG_ONCE_WARNING(NULL, "DNN/CANN: layer (name=" << ld.name << ", type=" << ld.type << ") is not supported by CANN backend. Going back to default backend on CPU target");
             }
         }
     }
     if (!newWasSupported)
         return ;
+
+    // initialize each blob wrappers' names
+    for (MapIdToLayerData::const_iterator it = layers.begin(); it != layers.end(); ++it)
+    {
+        const LayerData& ld = it->second;
+        if (ld.id == 0)
+        {
+            for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+            {
+                auto cannWrapper = ld.outputBlobsWrappers[i].dynamicCast<CannBackendWrapper>();
+                // cannWrapper->name = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
+                cannWrapper->name = std::string("y");
+            }
+        }
+        else
+        {
+            for (int i = 0; i < ld.outputBlobsWrappers.size(); ++i)
+            {
+                auto cannWrapper = ld.outputBlobsWrappers[i].dynamicCast<CannBackendWrapper>();
+                // cannWrapper->name = ld.outputBlobsWrappers.size() > 1 ? (ld.name + ":" + std::to_string(i)) : ld.name;
+                cannWrapper->name = ld.outputBlobsWrappers.size() > 1 ? (std::string("y") + std::to_string(i)) : std::string("y");
+            }
+        }
+    }
 
     // convert layers to CANN operators,
     // collect graph input and output operators,
@@ -141,14 +165,15 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
         {
             for (int i = 0; i < ld.outputBlobsWrappers.size(); i++)
             {
-                std::string inputName = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
-                auto inputOp = std::make_shared<ge::op::Data>(inputName);
-
                 // retrieve tensor description
                 auto wrapper = ld.outputBlobsWrappers[i];
                 graphInputWrappers.push_back(wrapper);
                 auto cannWrapper = wrapper.dynamicCast<CannBackendWrapper>();
                 CV_Assert(!cannWrapper.empty());
+
+                // create graph input op
+                std::string inputOpName = netInputLayer->outNames.empty() ? cv::format("%s_%d", ld.name.c_str(), i) : netInputLayer->outNames[i];
+                auto inputOp = std::make_shared<ge::op::Data>(inputOpName);
 
                 inputOp->update_input_desc_x(*(cannWrapper->desc_));
                 inputOp->update_output_desc_y(*(cannWrapper->desc_));
@@ -170,14 +195,14 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
                 {
                     layerInputNodes.push_back(netInputNodes[layerInputOid]);
                 }
-                else // here we do not consider an op with multiple outputs
+                else
                 {
                     layerInputNodes.push_back(layers[layerInputLid].backendNodes[preferableBackend]);
                 }
             }
 
             CV_LOG_INFO(NULL, "DNN/CANN: converting layer " << ld.name << "@" << ld.type << "@" << ld.id << " to CANN operator");
-            auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.id, layerInputNodes);
+            auto backendNode = layer->initCann(ld.inputBlobsWrappers, ld.outputBlobsWrappers, layerInputNodes); // it's ok if ld.name is empty
 
             // collect outputs
             bool isOutputNode = ld.consumers.size() == 0 ? true : false;
@@ -201,7 +226,7 @@ void NetImplCann::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 
     // build graph from collected graph inputs and outputs
     CV_LOG_INFO(NULL, "DNN/CANN: building ge::Graph");
-    std::string graphName = cv::format("graph_%d", 0);
+    std::string graphName = cv::format("graph_%d", networkId);
     std::shared_ptr<ge::Graph> graph = std::make_shared<ge::Graph>(graphName.c_str());
     (void)graph->SetInputs(graphInputOps);
     (void)graph->SetOutputs(graphOutputOps);
@@ -279,9 +304,9 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
         bool ok;
         if ((child=fork()) == 0)
         {
-            // initialize engine
+            // initialize engine   Ascend310/Ascend310P3/Ascend910B/Ascend310B
             std::map<ge::AscendString, ge::AscendString> options = {
-                {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString("Ascend310")},
+                {ge::AscendString(ge::ir_option::SOC_VERSION), ge::AscendString(aclrtGetSocName())},
             };
             ACL_CHECK_GRAPH_RET(ge::aclgrphBuildInitialize(options));
 
@@ -292,9 +317,9 @@ std::shared_ptr<ge::ModelBufferData> compileCannGraph(std::shared_ptr<ge::Graph>
 
 #if 0
             // (optional). Dump model
-            AscendString graph_name;
-            graph.GetName(graph_name);
-            aclgrphDumpGraph(graph, graph_name.GetString(), 7);
+            ge::AscendString graph_name;
+            graph->GetName(graph_name);
+            aclgrphDumpGraph(*graph, graph_name.GetString(), 7);
             // (optional). Save model
             aclgrphSaveModel(graph_name.GetString(), *om_model);
 #endif

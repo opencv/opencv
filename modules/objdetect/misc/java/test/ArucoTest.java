@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.opencv.test.OpenCVTestCase;
+import org.junit.Assert;
 import org.opencv.core.Scalar;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.Size;
 import org.opencv.core.CvType;
 import org.opencv.objdetect.*;
@@ -29,7 +31,7 @@ public class ArucoTest extends OpenCVTestCase {
         Mat ids = new Mat(1, 1, CvType.CV_32SC1);
         ids.put(row, col, 0);
 
-        Board board = Board.create(objPoints, dictionary, ids);
+        Board board = new Board(objPoints, dictionary, ids);
 
         Mat image = new Mat();
         board.generateImage(new Size(80, 80), image, 2);
@@ -80,4 +82,32 @@ public class ArucoTest extends OpenCVTestCase {
         assertArrayEquals(new double[]{size + offset - 1, size + offset - 1}, res.get(0, 2), 0.0);
         assertArrayEquals(new double[]{offset, size + offset - 1}, res.get(0, 3), 0.0);
     }
+
+    public void testCharucoDetector() {
+        Dictionary dictionary = Objdetect.getPredefinedDictionary(0);
+        int boardSizeX = 3, boardSizeY = 3;
+        CharucoBoard board = new CharucoBoard(new Size(boardSizeX, boardSizeY), 1.f, 0.8f, dictionary);
+        CharucoDetector charucoDetector = new CharucoDetector(board);
+
+        int cellSize = 80;
+        Mat boardImage = new Mat();
+        board.generateImage(new Size(cellSize*boardSizeX, cellSize*boardSizeY), boardImage);
+
+        assertTrue(boardImage.total() > 0);
+
+        Mat charucoCorners = new Mat();
+        Mat charucoIds = new Mat();
+        charucoDetector.detectBoard(boardImage, charucoCorners, charucoIds);
+
+        assertEquals(4, charucoIds.total());
+        int[] intCharucoIds = (new MatOfInt(charucoIds)).toArray();
+        Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, intCharucoIds);
+
+        double eps = 0.2;
+        assertArrayEquals(new double[]{cellSize, cellSize}, charucoCorners.get(0, 0), eps);
+        assertArrayEquals(new double[]{2*cellSize, cellSize}, charucoCorners.get(1, 0), eps);
+        assertArrayEquals(new double[]{cellSize, 2*cellSize}, charucoCorners.get(2, 0), eps);
+        assertArrayEquals(new double[]{2*cellSize, 2*cellSize}, charucoCorners.get(3, 0), eps);
+    }
+
 }

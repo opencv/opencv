@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "perf_precomp.hpp"
+#include "../test/test_qr_utils.hpp"
 
 namespace opencv_test
 {
@@ -23,10 +24,11 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, detect)
     std::vector< Point > corners;
     QRCodeDetector qrcode;
     TEST_CYCLE() ASSERT_TRUE(qrcode.detect(src, corners));
-    SANITY_CHECK(corners);
+    const int pixels_error = 3;
+    check_qr(root, name_current_image, "test_images", corners, {}, pixels_error);
+    SANITY_CHECK_NOTHING();
 }
 
-#ifdef HAVE_QUIRC
 PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
 {
     const std::string name_current_image = GetParam();
@@ -45,48 +47,50 @@ PERF_TEST_P_(Perf_Objdetect_QRCode, decode)
         decoded_info = qrcode.decode(src, corners, straight_barcode);
         ASSERT_FALSE(decoded_info.empty());
     }
-
-    std::vector<uint8_t> decoded_info_uint8_t(decoded_info.begin(), decoded_info.end());
-    SANITY_CHECK(decoded_info_uint8_t);
-    SANITY_CHECK(straight_barcode);
-
+    const int pixels_error = 3;
+    check_qr(root, name_current_image, "test_images", corners, {decoded_info}, pixels_error);
+    SANITY_CHECK_NOTHING();
 }
-#endif
 
-typedef ::perf::TestBaseWithParam< std::string > Perf_Objdetect_QRCode_Multi;
+typedef ::perf::TestBaseWithParam<std::tuple<std::string, std::string>> Perf_Objdetect_QRCode_Multi;
 
-static inline bool compareCorners(const Point2f& corner1, const Point2f& corner2) {
-    return corner1.x == corner2.x ? corner1.y < corner2.y : corner1.x < corner2.x;
-}
+static std::set<std::pair<std::string, std::string>> disabled_samples = {{"5_qrcodes.png", "aruco_based"}};
 
 PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, detectMulti)
 {
-    const std::string name_current_image = GetParam();
+    const std::string name_current_image = get<0>(GetParam());
+    const std::string method = get<1>(GetParam());
     const std::string root = "cv/qrcode/multiple/";
 
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-    std::vector<Point2f> corners;
-    QRCodeDetector qrcode;
+    std::vector<Point> corners;
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
     TEST_CYCLE() ASSERT_TRUE(qrcode.detectMulti(src, corners));
-    sort(corners.begin(), corners.end(), compareCorners);
-    SANITY_CHECK(corners);
+    const int pixels_error = 7;
+    check_qr(root, name_current_image, "multiple_images", corners, {}, pixels_error, true);
+    SANITY_CHECK_NOTHING();
 }
 
-static inline bool compareQR(const pair<string, Mat>& v1, const pair<string, Mat>& v2) {
-    return v1.first < v2.first;
-}
-
-#ifdef HAVE_QUIRC
 PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
 {
-    const std::string name_current_image = GetParam();
+    const std::string name_current_image = get<0>(GetParam());
+    std::string method = get<1>(GetParam());
     const std::string root = "cv/qrcode/multiple/";
     std::string image_path = findDataFile(root + name_current_image);
     Mat src = imread(image_path);
     ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
-    QRCodeDetector qrcode;
+    if (disabled_samples.find({name_current_image, method}) != disabled_samples.end()) {
+        throw SkipTestException(name_current_image + " is disabled sample for method " + method);
+    }
+    GraphicalCodeDetector qrcode = QRCodeDetector();
+    if (method == "aruco_based") {
+        qrcode = QRCodeDetectorAruco();
+    }
     std::vector<Point2f> corners;
     ASSERT_TRUE(qrcode.detectMulti(src, corners));
     std::vector<Mat> straight_barcode;
@@ -94,28 +98,21 @@ PERF_TEST_P_(Perf_Objdetect_QRCode_Multi, decodeMulti)
     TEST_CYCLE()
     {
         ASSERT_TRUE(qrcode.decodeMulti(src, corners, decoded_info, straight_barcode));
-        for(size_t i = 0; i < decoded_info.size(); i++)
-        {
-            ASSERT_FALSE(decoded_info[i].empty());
-        }
+    }
+    ASSERT_TRUE(decoded_info.size() > 0ull);
+    for(size_t i = 0; i < decoded_info.size(); i++) {
+        ASSERT_FALSE(decoded_info[i].empty());
     }
     ASSERT_EQ(decoded_info.size(), straight_barcode.size());
-    vector<pair<string, Mat> > result;
-    for (size_t i = 0ull;  i < decoded_info.size(); i++) {
-        result.push_back(make_pair(decoded_info[i], straight_barcode[i]));
+    vector<Point> corners_result(corners.size());
+    for (size_t i = 0ull; i < corners_result.size(); i++) {
+        corners_result[i] = corners[i];
     }
 
-    sort(result.begin(), result.end(), compareQR);
-    vector<vector<uint8_t> > decoded_info_sort;
-    vector<Mat> straight_barcode_sort;
-    for (size_t i = 0ull;  i < result.size(); i++) {
-        vector<uint8_t> tmp(result[i].first.begin(), result[i].first.end());
-        decoded_info_sort.push_back(tmp);
-        straight_barcode_sort.push_back(result[i].second);
-    }
-    SANITY_CHECK(decoded_info_sort);
+    const int pixels_error = 7;
+    check_qr(root, name_current_image, "multiple_images", corners_result, decoded_info, pixels_error, true);
+    SANITY_CHECK_NOTHING();
 }
-#endif
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode,
     ::testing::Values(
@@ -127,11 +124,10 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode,
 // version_5_right.jpg DISABLED after tile fix, PR #22025
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_QRCode_Multi,
-    ::testing::Values(
-      "2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
-      "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"
-    )
-);
+    testing::Combine(testing::Values("2_qrcodes.png", "3_close_qrcodes.png", "3_qrcodes.png", "4_qrcodes.png",
+                                     "5_qrcodes.png", "6_qrcodes.png", "7_qrcodes.png", "8_close_qrcodes.png"),
+                     testing::Values("contours_based", "aruco_based")));
+
 
 typedef ::perf::TestBaseWithParam< tuple< std::string, Size > > Perf_Objdetect_Not_QRCode;
 
@@ -163,7 +159,6 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, detect)
     SANITY_CHECK_NOTHING();
 }
 
-#ifdef HAVE_QUIRC
 PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
 {
     Mat straight_barcode;
@@ -195,7 +190,6 @@ PERF_TEST_P_(Perf_Objdetect_Not_QRCode, decode)
     TEST_CYCLE() ASSERT_TRUE(qrcode.decode(not_qr_code, corners, straight_barcode).empty());
     SANITY_CHECK_NOTHING();
 }
-#endif
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Perf_Objdetect_Not_QRCode,
       ::testing::Combine(

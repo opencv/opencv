@@ -21,25 +21,27 @@ const string FOLDER_OMIT_INIT = "initOmit";
 #include "test_trackers.impl.hpp"
 
 //[TESTDATA]
-PARAM_TEST_CASE(DistanceAndOverlap, string)
+PARAM_TEST_CASE(DistanceAndOverlap, string, int)
 {
     string dataset;
+    int numFramesLimit;
     virtual void SetUp()
     {
         dataset = GET_PARAM(0);
+        numFramesLimit = GET_PARAM(1);
     }
 };
 
 TEST_P(DistanceAndOverlap, MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .65f, NoTransform);
-    test.run();
+    test.run(numFramesLimit);
 }
 
 TEST_P(DistanceAndOverlap, Shifted_Data_MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .6f, CenterShiftLeft);
-    test.run();
+    test.run(numFramesLimit);
 }
 
 /***************************************************************************************/
@@ -48,7 +50,7 @@ TEST_P(DistanceAndOverlap, Shifted_Data_MIL)
 TEST_P(DistanceAndOverlap, Scaled_Data_MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .7f, Scale_1_1);
-    test.run();
+    test.run(numFramesLimit);
 }
 
 TEST_P(DistanceAndOverlap, GOTURN)
@@ -59,10 +61,23 @@ TEST_P(DistanceAndOverlap, GOTURN)
     params.modelTxt = model;
     params.modelBin = weights;
     TrackerTest<Tracker, Rect> test(TrackerGOTURN::create(params), dataset, 35, .35f, NoTransform);
-    test.run();
+    test.run(numFramesLimit);
 }
 
-INSTANTIATE_TEST_CASE_P(Tracking, DistanceAndOverlap, TESTSET_NAMES);
+INSTANTIATE_TEST_CASE_P(Tracking, DistanceAndOverlap,
+    testing::Combine(
+        TESTSET_NAMES,
+        testing::Values(0)
+    )
+);
+
+INSTANTIATE_TEST_CASE_P(Tracking5Frames, DistanceAndOverlap,
+    testing::Combine(
+        TESTSET_NAMES,
+        testing::Values(5)
+    )
+);
+
 
 static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
 {
@@ -158,6 +173,15 @@ TEST(NanoTrack, accuracy_NanoTrack_V2)
     params.neckhead = neckheadPath;
     cv::Ptr<Tracker> tracker = TrackerNano::create(params);
     checkTrackingAccuracy(tracker, 0.69);
+}
+
+TEST(vittrack, accuracy_vittrack)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    cv::TrackerVit::Params params;
+    params.net = model;
+    cv::Ptr<Tracker> tracker = TrackerVit::create(params);
+    checkTrackingAccuracy(tracker, 0.64);
 }
 
 }}  // namespace opencv_test::

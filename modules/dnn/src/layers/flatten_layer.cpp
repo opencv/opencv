@@ -56,6 +56,7 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 
+
 namespace cv
 {
 namespace dnn
@@ -176,15 +177,16 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto x_desc = x->getTensorDesc();
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
         auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
 
-        std::string op_name = cv::format("flatten_%d", index);
-        auto op = std::make_shared<ge::op::FlattenV2>(op_name);
+        auto op = std::make_shared<ge::op::FlattenV2>(name);
 
         // set attributes
         int num_axes = x->host->dims;
@@ -194,7 +196,7 @@ public:
         op->set_attr_end_axis(end_axis);
 
         // set inputs
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         op->update_input_desc_x(*x_desc);
         // set outputs
         op->update_output_desc_y(*output_desc);
@@ -208,7 +210,7 @@ public:
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> dims = ieInpNode->get_shape();
+        std::vector<size_t> dims = ieInpNode.get_shape();
 
         int numAxes = dims.size();
         int startAxis = normalize_axis(_startAxis, numAxes);
@@ -223,9 +225,9 @@ public:
         outputShapeVec.push_back(flattenedDimensionSize);
         outputShapeVec.insert(outputShapeVec.end(), dims.begin() + endAxis + 1, dims.end());
 
-        auto shape   = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({outputShapeVec.size()}), outputShapeVec.data());
-        auto reshape = std::make_shared<ngraph::op::v1::Reshape>(ieInpNode, shape, true);
+        auto shape   = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape({outputShapeVec.size()}), outputShapeVec.data());
+        auto reshape = std::make_shared<ov::op::v1::Reshape>(ieInpNode, shape, true);
         return Ptr<BackendNode>(new InfEngineNgraphNode(reshape));
     }
 #endif  // HAVE_DNN_NGRAPH

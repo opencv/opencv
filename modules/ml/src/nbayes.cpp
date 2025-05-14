@@ -101,7 +101,7 @@ public:
                 norm(var_idx, __var_idx, NORM_INF) != 0 ||
                 cls_labels.size() != __cls_labels.size() ||
                 norm(cls_labels, __cls_labels, NORM_INF) != 0 )
-                CV_Error( CV_StsBadArg,
+                CV_Error( cv::Error::StsBadArg,
                 "The new training data is inconsistent with the original training data; varIdx and the class labels should be the same" );
         }
 
@@ -312,11 +312,11 @@ public:
         bool rawOutput = (flags & RAW_OUTPUT) != 0;
 
         if( samples.type() != CV_32F || samples.cols != nallvars )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                      "The input samples must be 32f matrix with the number of columns = nallvars" );
 
         if( (samples.rows > 1) && (! _results.needed()) )
-            CV_Error( CV_StsNullPtr,
+            CV_Error( cv::Error::StsNullPtr,
                      "When the number of input samples is >1, the output vector of results must be passed" );
 
         if( _results.needed() )
@@ -388,7 +388,7 @@ public:
         fn["var_all"] >> nallvars;
 
         if( nallvars <= 0 )
-            CV_Error( CV_StsParseError,
+            CV_Error( cv::Error::StsParseError,
                      "The field \"var_count\" of NBayes classifier is missing or non-positive" );
 
         fn["var_idx"] >> var_idx;
@@ -397,7 +397,7 @@ public:
         int nclasses = (int)cls_labels.total(), i;
 
         if( cls_labels.empty() || nclasses < 1 )
-            CV_Error( CV_StsParseError, "No or invalid \"cls_labels\" in NBayes classifier" );
+            CV_Error( cv::Error::StsParseError, "No or invalid \"cls_labels\" in NBayes classifier" );
 
         FileNodeIterator
             count_it = fn["count"].begin(),

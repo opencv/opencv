@@ -49,8 +49,6 @@ The references are:
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 namespace cv
 {
 
@@ -120,8 +118,8 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                         for (; j < img.cols - 16 - 3; j += 16, ptr += 16)
                         {
                             v_uint8x16 v = v_load(ptr);
-                            v_int8x16 v0 = v_reinterpret_as_s8((v + t) ^ delta);
-                            v_int8x16 v1 = v_reinterpret_as_s8((v - t) ^ delta);
+                            v_int8x16 v0 = v_reinterpret_as_s8(v_xor(v_add(v, t), delta));
+                            v_int8x16 v1 = v_reinterpret_as_s8(v_xor(v_sub(v, t), delta));
 
                             v_int8x16 x0 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[0]), delta));
                             v_int8x16 x1 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[quarterPatternSize]), delta));
@@ -129,15 +127,15 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             v_int8x16 x3 = v_reinterpret_as_s8(v_sub_wrap(v_load(ptr + pixel[3*quarterPatternSize]), delta));
 
                             v_int8x16 m0, m1;
-                            m0 = (v0 < x0) & (v0 < x1);
-                            m1 = (x0 < v1) & (x1 < v1);
-                            m0 = m0 | ((v0 < x1) & (v0 < x2));
-                            m1 = m1 | ((x1 < v1) & (x2 < v1));
-                            m0 = m0 | ((v0 < x2) & (v0 < x3));
-                            m1 = m1 | ((x2 < v1) & (x3 < v1));
-                            m0 = m0 | ((v0 < x3) & (v0 < x0));
-                            m1 = m1 | ((x3 < v1) & (x0 < v1));
-                            m0 = m0 | m1;
+                            m0 = v_and(v_lt(v0, x0), v_lt(v0, x1));
+                            m1 = v_and(v_lt(x0, v1), v_lt(x1, v1));
+                            m0 = v_or(m0, v_and(v_lt(v0, x1), v_lt(v0, x2)));
+                            m1 = v_or(m1, v_and(v_lt(x1, v1), v_lt(x2, v1)));
+                            m0 = v_or(m0, v_and(v_lt(v0, x2), v_lt(v0, x3)));
+                            m1 = v_or(m1, v_and(v_lt(x2, v1), v_lt(x3, v1)));
+                            m0 = v_or(m0, v_and(v_lt(v0, x3), v_lt(v0, x0)));
+                            m1 = v_or(m1, v_and(v_lt(x3, v1), v_lt(x0, v1)));
+                            m0 = v_or(m0, m1);
 
                             if( !v_check_any(m0) )
                                 continue;
@@ -154,18 +152,18 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                             v_uint8x16 max1 = v_setzero_u8();
                             for( k = 0; k < N; k++ )
                             {
-                                v_int8x16 x = v_reinterpret_as_s8(v_load((ptr + pixel[k])) ^ delta);
-                                m0 = v0 < x;
-                                m1 = x < v1;
+                                v_int8x16 x = v_reinterpret_as_s8(v_xor(v_load((ptr + pixel[k])), delta));
+                                m0 = v_lt(v0, x);
+                                m1 = v_lt(x, v1);
 
-                                c0 = v_sub_wrap(c0, m0) & m0;
-                                c1 = v_sub_wrap(c1, m1) & m1;
+                                c0 = v_and(v_sub_wrap(c0, m0), m0);
+                                c1 = v_and(v_sub_wrap(c1, m1), m1);
 
                                 max0 = v_max(max0, v_reinterpret_as_u8(c0));
                                 max1 = v_max(max1, v_reinterpret_as_u8(c1));
                             }
 
-                            max0 = K16 < v_max(max0, max1);
+                            max0 = v_lt(K16, v_max(max0, max1));
                             unsigned int m = v_signmask(v_reinterpret_as_s8(max0));
 
                             for( k = 0; m > 0 && k < 16; k++, m >>= 1 )
@@ -190,7 +188,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                                             a1 = v_min(a1, v_nms);
                                             b1 = v_max(b1, v_nms);
                                         }
-                                        curr[j + k] = (uchar)(v_reduce_max(v_max(v_max(a0, a1), v_setzero_s16() - v_min(b0, b1))) - 1);
+                                        curr[j + k] = (uchar)(v_reduce_max(v_max(v_max(a0, a1), v_sub(v_setzero_s16(), v_min(b0, b1)))) - 1);
                                     }
                                 }
                             }
@@ -370,72 +368,6 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 }
 #endif
 
-
-#ifdef HAVE_OPENVX
-namespace ovx {
-    template <> inline bool skipSmallImages<VX_KERNEL_FAST_CORNERS>(int w, int h) { return w*h < 800 * 600; }
-}
-static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
-                        int _threshold, bool nonmaxSuppression, int type)
-{
-    using namespace ivx;
-
-    // Nonmax suppression is done differently in OpenCV than in OpenVX
-    // 9/16 is the only supported mode in OpenVX
-    if(nonmaxSuppression || type != FastFeatureDetector::TYPE_9_16)
-        return false;
-
-    Mat imgMat = _img.getMat();
-    if(imgMat.empty() || imgMat.type() != CV_8UC1)
-        return false;
-
-    if (ovx::skipSmallImages<VX_KERNEL_FAST_CORNERS>(imgMat.cols, imgMat.rows))
-        return false;
-
-    try
-    {
-        Context context = ovx::getOpenVXContext();
-        Image img = Image::createFromHandle(context, Image::matTypeToFormat(imgMat.type()),
-                                            Image::createAddressing(imgMat), (void*)imgMat.data);
-        ivx::Scalar threshold = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _threshold);
-        vx_size capacity = imgMat.cols * imgMat.rows;
-        Array corners = Array::create(context, VX_TYPE_KEYPOINT, capacity);
-
-        ivx::Scalar numCorners = ivx::Scalar::create<VX_TYPE_SIZE>(context, 0);
-
-        IVX_CHECK_STATUS(vxuFastCorners(context, img, threshold, (vx_bool)nonmaxSuppression, corners, numCorners));
-
-        size_t nPoints = numCorners.getValue<vx_size>();
-        keypoints.clear(); keypoints.reserve(nPoints);
-        std::vector<vx_keypoint_t> vxCorners;
-        corners.copyTo(vxCorners);
-        for(size_t i = 0; i < nPoints; i++)
-        {
-            vx_keypoint_t kp = vxCorners[i];
-            //if nonmaxSuppression is false, kp.strength is undefined
-            keypoints.push_back(KeyPoint((float)kp.x, (float)kp.y, 7.f, -1, kp.strength));
-        }
-
-#ifdef VX_VERSION_1_1
-        //we should take user memory back before release
-        //(it's not done automatically according to standard)
-        img.swapHandle();
-#endif
-    }
-    catch (const RuntimeError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const WrapperError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
-
-#endif
-
 static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
 {
     if (threshold > 20)
@@ -503,12 +435,11 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     cv::Mat img = _img.getMat();
     CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
 
-    size_t keypoints_count;
+    size_t keypoints_count = 10000;
+    keypoints.clear();
+    keypoints.resize(keypoints_count);
     CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
              (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
-
-    CV_OVX_RUN(true,
-               openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
 
     switch(type) {
     case FastFeatureDetector::TYPE_5_8:

@@ -67,6 +67,9 @@ int Device::doubleFPConfig() const { OCL_NOT_AVAILABLE(); }
 int Device::singleFPConfig() const { OCL_NOT_AVAILABLE(); }
 int Device::halfFPConfig() const { OCL_NOT_AVAILABLE(); }
 
+bool Device::hasFP64() const { OCL_NOT_AVAILABLE(); }
+bool Device::hasFP16() const { OCL_NOT_AVAILABLE(); }
+
 bool Device::endianLittle() const { OCL_NOT_AVAILABLE(); }
 bool Device::errorCorrectionSupport() const { OCL_NOT_AVAILABLE(); }
 

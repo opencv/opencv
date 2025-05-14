@@ -39,6 +39,8 @@
 // the use of this software, even if advised of the possibility of such damage.
 //
 //M*/
+#include <TargetConditionals.h>
+#if (TARGET_OS_IOS || TARGET_OS_VISION) && !TARGET_OS_MACCATALYST
 
 #import <UIKit/UIKit.h>
 #include "apple_conversions.h"
@@ -61,3 +63,4 @@ void UIImageToMat(const UIImage* image, cv::Mat& m, bool alphaExist) {
     CGImageRef imageRef = image.CGImage;
     CGImageToMat(imageRef, m, alphaExist);
 }
+#endif

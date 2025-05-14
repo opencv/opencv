@@ -78,7 +78,7 @@ CV_WRAP inline void nonLocalMeans(const GpuMat& src, CV_OUT GpuMat& dst,
                             Stream& stream = Stream::Null())
 {
     nonLocalMeans(InputArray(src), OutputArray(dst), h, search_window, block_size, borderMode, stream);
-};
+}
 
 /** @brief Perform image denoising using Non-local Means Denoising algorithm
 <http://www.ipol.im/pub/algo/bcm_non_local_means_denoising> with several computational

@@ -8,7 +8,7 @@
 
 namespace cv {
 namespace aruco {
-//! @addtogroup aruco
+//! @addtogroup objdetect_aruco
 //! @{
 
 class Dictionary;
@@ -22,29 +22,15 @@ class Dictionary;
  * - The dictionary which indicates the type of markers of the board
  * - The identifier of all the markers in the board.
  */
-class CV_EXPORTS_W Board {
-protected:
-    Board(); // use ::create()
+class CV_EXPORTS_W_SIMPLE Board {
 public:
-    /** @brief Draw a planar board
-     *
-     * @param outSize size of the output image in pixels.
-     * @param img output image with the board. The size of this image will be outSize
-     * and the board will be on the center, keeping the board proportions.
-     * @param marginSize minimum margins (in pixels) of the board in the output image
-     * @param borderBits width of the marker borders.
-     *
-     * This function return the image of the GridBoard, ready to be printed.
-     */
-    CV_WRAP virtual void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
-
-    /** @brief Provide way to create Board by passing necessary data. Specially needed in Python.
+    /** @brief Common Board constructor
      *
      * @param objPoints array of object points of all the marker corners in the board
      * @param dictionary the dictionary of markers employed for this board
      * @param ids vector of the identifiers of the markers in the board
      */
-    CV_WRAP static Ptr<Board> create(InputArrayOfArrays objPoints, const Dictionary &dictionary, InputArray ids);
+    CV_WRAP Board(InputArrayOfArrays objPoints, const Dictionary& dictionary, InputArray ids);
 
     /** @brief return the Dictionary of markers employed for this board
      */
@@ -72,31 +58,27 @@ public:
     CV_WRAP const Point3f& getRightBottomCorner() const;
 
     /** @brief Given a board configuration and a set of detected markers, returns the corresponding
-     * image points and object points to call solvePnP
+     * image points and object points, can be used in solvePnP()
      *
      * @param detectedCorners List of detected marker corners of the board.
-     * @param detectedIds List of identifiers for each marker.
-     * @param objPoints Vector of vectors of board marker points in the board coordinate space.
-     * @param imgPoints Vector of vectors of the projections of board marker corner points.
+     * For cv::Board and cv::GridBoard the method expects std::vector<std::vector<Point2f>> or std::vector<Mat> with Aruco marker corners.
+     * For cv::CharucoBoard the method expects std::vector<Point2f> or Mat with ChAruco corners (chess board corners matched with Aruco markers).
+     *
+     * @param detectedIds List of identifiers for each marker or charuco corner.
+     * For any Board class the method expects std::vector<int> or Mat.
+     *
+     * @param objPoints Vector of marker points in the board coordinate space.
+     * For any Board class the method expects std::vector<cv::Point3f> objectPoints or cv::Mat
+     *
+     * @param imgPoints Vector of marker points in the image coordinate space.
+     * For any Board class the method expects std::vector<cv::Point2f> objectPoints or cv::Mat
+     *
+     * @sa solvePnP
      */
     CV_WRAP void matchImagePoints(InputArrayOfArrays detectedCorners, InputArray detectedIds,
                                   OutputArray objPoints, OutputArray imgPoints) const;
-    virtual ~Board();
-protected:
-    struct BoardImpl;
-    Ptr<BoardImpl> boardImpl;
-};
 
-/** @brief Planar board with grid arrangement of markers
- *
- * More common type of board. All markers are placed in the same plane in a grid arrangement.
- * The board image can be drawn using generateImage() method.
- */
-class CV_EXPORTS_W GridBoard : public Board {
-protected:
-    GridBoard();
-public:
-    /** @brief Draw a GridBoard
+     /** @brief Draw a planar board
      *
      * @param outSize size of the output image in pixels.
      * @param img output image with the board. The size of this image will be outSize
@@ -104,50 +86,44 @@ public:
      * @param marginSize minimum margins (in pixels) of the board in the output image
      * @param borderBits width of the marker borders.
      *
-     * This function return the image of the GridBoard, ready to be printed.
+     * This function return the image of the board, ready to be printed.
      */
-    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
+    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const;
 
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    Board();
+
+    struct Impl;
+protected:
+    Board(const Ptr<Impl>& impl);
+    Ptr<Impl> impl;
+};
+
+/** @brief Planar board with grid arrangement of markers
+ *
+ * More common type of board. All markers are placed in the same plane in a grid arrangement.
+ * The board image can be drawn using generateImage() method.
+ */
+class CV_EXPORTS_W_SIMPLE GridBoard : public Board {
+public:
     /**
-     * @brief Create a GridBoard object
+     * @brief GridBoard constructor
      *
-     * @param markersX number of markers in X direction
-     * @param markersY number of markers in Y direction
+     * @param size number of markers in x and y directions
      * @param markerLength marker side length (normally in meters)
      * @param markerSeparation separation between two markers (same unit as markerLength)
      * @param dictionary dictionary of markers indicating the type of markers
-     * @param ids set marker ids in dictionary to use on board.
-     * @return the output GridBoard object
-     *
-     * This functions creates a GridBoard object given the number of markers in each direction and
-     * the marker size and marker separation.
+     * @param ids set of marker ids in dictionary to use on board.
      */
-    CV_WRAP static Ptr<GridBoard> create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                         const Dictionary &dictionary, InputArray ids);
-
-    /**
-     * @overload
-     * @brief Create a GridBoard object
-     *
-     * @param markersX number of markers in X direction
-     * @param markersY number of markers in Y direction
-     * @param markerLength marker side length (normally in meters)
-     * @param markerSeparation separation between two markers (same unit as markerLength)
-     * @param dictionary dictionary of markers indicating the type of markers
-     * @param firstMarker id of first marker in dictionary to use on board.
-     * @return the output GridBoard object
-     */
-    CV_WRAP static Ptr<GridBoard> create(int markersX, int markersY, float markerLength, float markerSeparation,
-                                         const Dictionary &dictionary, int firstMarker = 0);
+    CV_WRAP GridBoard(const Size& size, float markerLength, float markerSeparation,
+                      const Dictionary &dictionary, InputArray ids = noArray());
 
     CV_WRAP Size getGridSize() const;
     CV_WRAP float getMarkerLength() const;
     CV_WRAP float getMarkerSeparation() const;
 
-protected:
-    struct GridImpl;
-    Ptr<GridImpl> gridImpl;
-    friend class CharucoBoard;
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    GridBoard();
 };
 
 /**
@@ -156,40 +132,31 @@ protected:
  * The benefits of ChArUco boards is that they provide both, ArUco markers versatility and chessboard corner precision,
  * which is important for calibration and pose estimation. The board image can be drawn using generateImage() method.
  */
-class CV_EXPORTS_W CharucoBoard : public Board {
-protected:
-    CharucoBoard();
+class CV_EXPORTS_W_SIMPLE CharucoBoard : public Board {
 public:
-
-    /** @brief Draw a ChArUco board
+    /** @brief CharucoBoard constructor
      *
-     * @param outSize size of the output image in pixels.
-     * @param img output image with the board. The size of this image will be outSize
-     * and the board will be on the center, keeping the board proportions.
-     * @param marginSize minimum margins (in pixels) of the board in the output image
-     * @param borderBits width of the marker borders.
-     *
-     * This function return the image of the ChArUco board, ready to be printed.
-     */
-    CV_WRAP void generateImage(Size outSize, OutputArray img, int marginSize = 0, int borderBits = 1) const CV_OVERRIDE;
-
-
-    /** @brief Create a CharucoBoard object
-     *
-     * @param squaresX number of chessboard squares in X direction
-     * @param squaresY number of chessboard squares in Y direction
-     * @param squareLength chessboard square side length (normally in meters)
+     * @param size number of chessboard squares in x and y directions
+     * @param squareLength squareLength chessboard square side length (normally in meters)
      * @param markerLength marker side length (same unit than squareLength)
-     * @param dictionary dictionary of markers indicating the type of markers.
+     * @param dictionary dictionary of markers indicating the type of markers
      * @param ids array of id used markers
      * The first markers in the dictionary are used to fill the white chessboard squares.
-     * @return the output CharucoBoard object
-     *
-     * This functions creates a CharucoBoard object given the number of squares in each direction
-     * and the size of the markers and chessboard squares.
      */
-    CV_WRAP static Ptr<CharucoBoard> create(int squaresX, int squaresY, float squareLength, float markerLength,
-                                            const Dictionary &dictionary, InputArray ids = noArray());
+    CV_WRAP CharucoBoard(const Size& size, float squareLength, float markerLength,
+                         const Dictionary &dictionary, InputArray ids = noArray());
+
+    /** @brief set legacy chessboard pattern.
+     *
+     * Legacy setting creates chessboard patterns starting with a white box in the upper left corner
+     * if there is an even row count of chessboard boxes, otherwise it starts with a black box.
+     * This setting ensures compatibility to patterns created with OpenCV versions prior OpenCV 4.6.0.
+     * See https://github.com/opencv/opencv/issues/23152.
+     *
+     * Default value: false.
+     */
+    CV_WRAP void setLegacyPattern(bool legacyPattern);
+    CV_WRAP bool getLegacyPattern() const;
 
     CV_WRAP Size getChessboardSize() const;
     CV_WRAP float getSquareLength() const;
@@ -199,11 +166,11 @@ public:
      */
     CV_WRAP std::vector<Point3f> getChessboardCorners() const;
 
-    /** @brief get CharucoBoard::nearestMarkerIdx
+    /** @brief get CharucoBoard::nearestMarkerIdx, for each charuco corner, nearest marker index in ids array
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerIdx() const;
 
-    /** @brief get CharucoBoard::nearestMarkerCorners
+    /** @brief get CharucoBoard::nearestMarkerCorners, for each charuco corner, nearest marker corner id of each marker
      */
     CV_PROP std::vector<std::vector<int> > getNearestMarkerCorners() const;
 
@@ -220,10 +187,8 @@ public:
      */
     CV_WRAP bool checkCharucoCornersCollinear(InputArray charucoIds) const;
 
-protected:
-    struct CharucoImpl;
-    friend struct CharucoImpl;
-    Ptr<CharucoImpl> charucoImpl;
+    CV_DEPRECATED_EXTERNAL  // avoid using in C++ code, will be moved to "protected" (need to fix bindings first)
+    CharucoBoard();
 };
 
 //! @}

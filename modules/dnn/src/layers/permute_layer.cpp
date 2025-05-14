@@ -144,7 +144,6 @@ public:
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan()) ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -320,7 +319,7 @@ public:
             mnew_stride.copyTo(unew_stride);
         }
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         String opts = format("-DDtype=%s", use_half ? "half" : "float");
         for (size_t i = 0; i < inputs.size(); i++)
         {
@@ -351,7 +350,7 @@ public:
                    inputs_arr.depth() != CV_8S,
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -441,13 +440,14 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
 
         // create operator
-        std::string op_name = cv::format("permute_%d", index);
-        auto op = std::make_shared<ge::op::Permute>(op_name);
+        auto op = std::make_shared<ge::op::Permute>(name);
 
         // set attributes
         op->set_attr_order(ge::Operator::OpListInt(
@@ -457,7 +457,7 @@ public:
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
 
@@ -475,9 +475,9 @@ public:
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         std::vector<int64_t> order(_order.begin(), _order.end());
-        auto tr_axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64,
-                       ngraph::Shape({order.size()}), order.data());
-        auto transpose = std::make_shared<ngraph::op::Transpose>(ieInpNode, tr_axes);
+        auto tr_axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
+                       ov::Shape({order.size()}), order.data());
+        auto transpose = std::make_shared<ov::op::v1::Transpose>(ieInpNode, tr_axes);
         return Ptr<BackendNode>(new InfEngineNgraphNode(transpose));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -509,15 +509,6 @@ public:
     }
 #endif
 
-
-#ifdef HAVE_VULKAN
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-        CV_Assert(!_order.empty());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpPermute(_order));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-    }
-#endif // HAVE_VULKAN
 
 #ifdef HAVE_TIMVX
   virtual Ptr<BackendNode> initTimVX(void* timVXInfo_,

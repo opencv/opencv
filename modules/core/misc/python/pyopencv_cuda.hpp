@@ -20,18 +20,18 @@ template<> struct pyopencvVecConverter<cuda::GpuMat>
     }
 };
 
-CV_PY_TO_CLASS(cuda::GpuMat);
-CV_PY_TO_CLASS(cuda::Stream);
-CV_PY_TO_CLASS(cuda::Event);
-CV_PY_TO_CLASS(cuda::HostMem);
+CV_PY_TO_CLASS(cuda::GpuMat)
+CV_PY_TO_CLASS(cuda::Stream)
+CV_PY_TO_CLASS(cuda::Event)
+CV_PY_TO_CLASS(cuda::HostMem)
 
-CV_PY_TO_CLASS_PTR(cuda::GpuMat);
-CV_PY_TO_CLASS_PTR(cuda::GpuMat::Allocator);
+CV_PY_TO_CLASS_PTR(cuda::GpuMat)
+CV_PY_TO_CLASS_PTR(cuda::GpuMat::Allocator)
 
-CV_PY_FROM_CLASS(cuda::GpuMat);
-CV_PY_FROM_CLASS(cuda::Stream);
-CV_PY_FROM_CLASS(cuda::HostMem);
+CV_PY_FROM_CLASS(cuda::GpuMat)
+CV_PY_FROM_CLASS(cuda::Stream)
+CV_PY_FROM_CLASS(cuda::HostMem)
 
-CV_PY_FROM_CLASS_PTR(cuda::GpuMat::Allocator);
+CV_PY_FROM_CLASS_PTR(cuda::GpuMat::Allocator)
 
 #endif

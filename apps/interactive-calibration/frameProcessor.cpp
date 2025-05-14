@@ -11,7 +11,6 @@
 
 #include <vector>
 #include <string>
-#include <algorithm>
 #include <limits>
 
 using namespace calib;
@@ -59,14 +58,14 @@ FrameProcessor::~FrameProcessor()
 bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 {
     int chessBoardFlags = cv::CALIB_CB_ADAPTIVE_THRESH | cv::CALIB_CB_NORMALIZE_IMAGE | cv::CALIB_CB_FAST_CHECK;
-    bool isTemplateFound = cv::findChessboardCorners(frame, mBoardSize, mCurrentImagePoints, chessBoardFlags);
+    bool isTemplateFound = cv::findChessboardCorners(frame, mBoardSizeInnerCorners, mCurrentImagePoints, chessBoardFlags);
 
     if (isTemplateFound) {
         cv::Mat viewGray;
         cv::cvtColor(frame, viewGray, cv::COLOR_BGR2GRAY);
         cv::cornerSubPix(viewGray, mCurrentImagePoints, cv::Size(11,11),
             cv::Size(-1,-1), cv::TermCriteria( cv::TermCriteria::EPS+cv::TermCriteria::COUNT, 30, 0.1 ));
-        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+        cv::drawChessboardCorners(frame, mBoardSizeInnerCorners, cv::Mat(mCurrentImagePoints), isTemplateFound);
         mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
     }
     return isTemplateFound;
@@ -74,17 +73,12 @@ bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 {
-#ifdef HAVE_OPENCV_ARUCO
     cv::Ptr<cv::aruco::Board> board = mCharucoBoard.staticCast<cv::aruco::Board>();
 
-    std::vector<std::vector<cv::Point2f> > corners, rejected;
+    std::vector<std::vector<cv::Point2f> > corners;
     std::vector<int> ids;
-    cv::aruco::detectMarkers(frame, cv::makePtr<cv::aruco::Dictionary>(mArucoDictionary), corners, ids, cv::makePtr<cv::aruco::DetectorParameters>(), rejected);
-    cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
     cv::Mat currentCharucoCorners, currentCharucoIds;
-    if(ids.size() > 0)
-        cv::aruco::interpolateCornersCharuco(corners, ids, frame, mCharucoBoard, currentCharucoCorners,
-                                         currentCharucoIds);
+    detector->detectBoard(frame, currentCharucoCorners, currentCharucoIds, corners, ids);
     if(ids.size() > 0) cv::aruco::drawDetectedMarkers(frame, corners);
 
     if(currentCharucoCorners.total() > 3) {
@@ -102,28 +96,25 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
         mCurrentCharucoIds = currentCharucoIds;
         return true;
     }
-#else
-    CV_UNUSED(frame);
-#endif
     return false;
 }
 
 bool CalibProcessor::detectAndParseCircles(const cv::Mat &frame)
 {
-    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_SYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isTemplateFound = findCirclesGrid(frame, mBoardSizeUnits, mCurrentImagePoints, cv::CALIB_CB_SYMMETRIC_GRID, mBlobDetectorPtr);
     if(isTemplateFound) {
         mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
-        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+        cv::drawChessboardCorners(frame, mBoardSizeUnits, cv::Mat(mCurrentImagePoints), isTemplateFound);
     }
     return isTemplateFound;
 }
 
 bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
 {
-    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isTemplateFound = findCirclesGrid(frame, mBoardSizeUnits, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
     if(isTemplateFound) {
         mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
-        cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
+        cv::drawChessboardCorners(frame, mBoardSizeUnits, cv::Mat(mCurrentImagePoints), isTemplateFound);
     }
     return isTemplateFound;
 }
@@ -134,18 +125,18 @@ bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 
     cv::Mat invertedView;
     cv::bitwise_not(frame, invertedView);
-    bool isWhiteGridFound = cv::findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isWhiteGridFound = cv::findCirclesGrid(frame, mBoardSizeUnits, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
     if(!isWhiteGridFound)
         return false;
-    bool isBlackGridFound = cv::findCirclesGrid(invertedView, mBoardSize, blackPointbuf, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
+    bool isBlackGridFound = cv::findCirclesGrid(invertedView, mBoardSizeUnits, blackPointbuf, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
 
     if(!isBlackGridFound)
     {
         mCurrentImagePoints.clear();
         return false;
     }
-    cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isWhiteGridFound);
-    cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(blackPointbuf), isBlackGridFound);
+    cv::drawChessboardCorners(frame, mBoardSizeUnits, cv::Mat(mCurrentImagePoints), isWhiteGridFound);
+    cv::drawChessboardCorners(frame, mBoardSizeUnits, cv::Mat(blackPointbuf), isBlackGridFound);
     mCurrentImagePoints.insert(mCurrentImagePoints.end(), blackPointbuf.begin(), blackPointbuf.end());
     mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
 
@@ -155,54 +146,60 @@ bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 void CalibProcessor::saveFrameData()
 {
     std::vector<cv::Point3f> objectPoints;
+    std::vector<cv::Point2f> imagePoints;
 
     switch(mBoardType)
     {
     case Chessboard:
-        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
-        for( int i = 0; i < mBoardSize.height; ++i )
-            for( int j = 0; j < mBoardSize.width; ++j )
+        objectPoints.reserve(mBoardSizeInnerCorners.height*mBoardSizeInnerCorners.width);
+        for( int i = 0; i < mBoardSizeInnerCorners.height; ++i )
+            for( int j = 0; j < mBoardSizeInnerCorners.width; ++j )
                 objectPoints.push_back(cv::Point3f(j*mSquareSize, i*mSquareSize, 0));
         mCalibData->imagePoints.push_back(mCurrentImagePoints);
         mCalibData->objectPoints.push_back(objectPoints);
         break;
-    case chAruco:
+    case ChArUco:
         mCalibData->allCharucoCorners.push_back(mCurrentCharucoCorners);
         mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
+
+        mCharucoBoard->matchImagePoints(mCurrentCharucoCorners, mCurrentCharucoIds, objectPoints, imagePoints);
+        CV_Assert(mCurrentCharucoIds.total() == imagePoints.size());
+        mCalibData->imagePoints.push_back(imagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
         break;
     case CirclesGrid:
-        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
-        for( int i = 0; i < mBoardSize.height; i++ )
-            for( int j = 0; j < mBoardSize.width; j++ )
+        objectPoints.reserve(mBoardSizeUnits.height*mBoardSizeUnits.width);
+        for( int i = 0; i < mBoardSizeUnits.height; i++ )
+            for( int j = 0; j < mBoardSizeUnits.width; j++ )
                 objectPoints.push_back(cv::Point3f(j*mSquareSize, i*mSquareSize, 0));
         mCalibData->imagePoints.push_back(mCurrentImagePoints);
         mCalibData->objectPoints.push_back(objectPoints);
         break;
     case AcirclesGrid:
-        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
-        for( int i = 0; i < mBoardSize.height; i++ )
-            for( int j = 0; j < mBoardSize.width; j++ )
+        objectPoints.reserve(mBoardSizeUnits.height*mBoardSizeUnits.width);
+        for( int i = 0; i < mBoardSizeUnits.height; i++ )
+            for( int j = 0; j < mBoardSizeUnits.width; j++ )
                 objectPoints.push_back(cv::Point3f((2*j + i % 2)*mSquareSize, i*mSquareSize, 0));
         mCalibData->imagePoints.push_back(mCurrentImagePoints);
         mCalibData->objectPoints.push_back(objectPoints);
         break;
     case DoubleAcirclesGrid:
     {
-        float gridCenterX = (2*((float)mBoardSize.width - 1) + 1)*mSquareSize + mTemplDist / 2;
-        float gridCenterY = (mBoardSize.height - 1)*mSquareSize / 2;
-        objectPoints.reserve(2*mBoardSize.height*mBoardSize.width);
+        float gridCenterX = (2*((float)mBoardSizeUnits.width - 1) + 1)*mSquareSize + mTemplDist / 2;
+        float gridCenterY = (mBoardSizeUnits.height - 1)*mSquareSize / 2;
+        objectPoints.reserve(2*mBoardSizeUnits.height*mBoardSizeUnits.width);
 
         //white part
-        for( int i = 0; i < mBoardSize.height; i++ )
-            for( int j = 0; j < mBoardSize.width; j++ )
+        for( int i = 0; i < mBoardSizeUnits.height; i++ )
+            for( int j = 0; j < mBoardSizeUnits.width; j++ )
                 objectPoints.push_back(
                             cv::Point3f(-float((2*j + i % 2)*mSquareSize + mTemplDist +
-                                               (2*(mBoardSize.width - 1) + 1)*mSquareSize - gridCenterX),
+                                               (2*(mBoardSizeUnits.width - 1) + 1)*mSquareSize - gridCenterX),
                                         -float(i*mSquareSize) - gridCenterY,
                                         0));
         //black part
-        for( int i = 0; i < mBoardSize.height; i++ )
-            for( int j = 0; j < mBoardSize.width; j++ )
+        for( int i = 0; i < mBoardSizeUnits.height; i++ )
+            for( int j = 0; j < mBoardSizeUnits.width; j++ )
                 objectPoints.push_back(cv::Point3f(-float((2*j + i % 2)*mSquareSize - gridCenterX),
                                           -float(i*mSquareSize) - gridCenterY, 0));
 
@@ -248,43 +245,24 @@ bool CalibProcessor::checkLastFrame()
     else
         mCalibData->cameraMatrix.copyTo(tmpCamMatrix);
 
-    if(mBoardType != chAruco) {
-        cv::Mat r, t, angles;
-        cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
-        RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-            mCalibData->objectPoints.pop_back();
-            mCalibData->imagePoints.pop_back();
-            isFrameBad = true;
-        }
-    }
-    else {
-#ifdef HAVE_OPENCV_ARUCO
-        cv::Mat r, t, angles;
-        std::vector<cv::Point3f> allObjPoints;
-        allObjPoints.reserve(mCurrentCharucoIds.total());
-        for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
-            int pointID = mCurrentCharucoIds.at<int>((int)i);
-            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->getChessboardCorners().size());
-            allObjPoints.push_back(mCharucoBoard->getChessboardCorners()[pointID]);
-        }
-
-        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
-        RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
-            isFrameBad = true;
+    cv::Mat r, t, angles;
+    cv::solvePnP(mCalibData->objectPoints.back(), mCalibData->imagePoints.back(), tmpCamMatrix, mCalibData->distCoeffs, r, t);
+    RodriguesToEuler(r, angles, CALIB_DEGREES);
+    if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
+        mCalibData->objectPoints.pop_back();
+        mCalibData->imagePoints.pop_back();
+        if (mCalibData->allCharucoCorners.size()) {
             mCalibData->allCharucoCorners.pop_back();
             mCalibData->allCharucoIds.pop_back();
         }
-#endif
+        isFrameBad = true;
     }
     return isFrameBad;
 }
 
 CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters &capParams) :
-    mCalibData(data), mBoardType(capParams.board), mBoardSize(capParams.boardSize)
+    mCalibData(data), mBoardType(capParams.board), mBoardSizeUnits(capParams.boardSizeUnits),
+    mBoardSizeInnerCorners(capParams.boardSizeInnerCorners)
 {
     mCapuredFrames = 0;
     mNeededFramesNum = capParams.calibrationStep;
@@ -295,15 +273,24 @@ CalibProcessor::CalibProcessor(cv::Ptr<calibrationData> data, captureParameters 
     mTemplDist = capParams.templDst;
     mSaveFrames = capParams.saveFrames;
     mZoom = capParams.zoom;
+    cv::aruco::CharucoParameters charucoParameters;
+    charucoParameters.tryRefineMarkers = true;
 
     switch(mBoardType)
     {
-    case chAruco:
-#ifdef HAVE_OPENCV_ARUCO
-        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
-        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLength,
-                                                        capParams.charucoMarkerSize, mArucoDictionary);
-#endif
+    case ChArUco:
+        if (capParams.charucoDictFile != "None") {
+            std::string filename = capParams.charucoDictFile;
+            cv::FileStorage dict_file(filename, cv::FileStorage::Mode::READ);
+            cv::FileNode fn(dict_file.root());
+            mArucoDictionary.readDictionary(fn);
+        }
+        else {
+            mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PredefinedDictionaryType(capParams.charucoDictName));
+        }
+        mCharucoBoard = cv::makePtr<cv::aruco::CharucoBoard>(cv::Size(mBoardSizeUnits.width, mBoardSizeUnits.height), capParams.charucoSquareLength,
+                                capParams.charucoMarkerSize, mArucoDictionary);
+        detector = cv::makePtr<cv::aruco::CharucoDetector>(cv::aruco::CharucoDetector(*mCharucoBoard, charucoParameters));
         break;
     case CirclesGrid:
     case AcirclesGrid:
@@ -333,7 +320,7 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
     case Chessboard:
         isTemplateFound = detectAndParseChessboard(frameCopy);
         break;
-    case chAruco:
+    case ChArUco:
         isTemplateFound = detectAndParseChAruco(frameCopy);
         break;
     case CirclesGrid:
@@ -413,7 +400,7 @@ void ShowProcessor::drawBoard(cv::Mat &img, cv::InputArray points)
 
 void ShowProcessor::drawGridPoints(const cv::Mat &frame)
 {
-    if(mBoardType != chAruco)
+    if(mBoardType != ChArUco)
         for(std::vector<std::vector<cv::Point2f> >::iterator it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
             for(std::vector<cv::Point2f>::iterator pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt)
                 cv::circle(frame, *pointIt, POINT_SIZE, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
@@ -535,7 +522,7 @@ void ShowProcessor::updateBoardsView()
     if(mVisMode == Window) {
         cv::Size originSize = mCalibdata->imageSize;
         cv::Mat altGridView = cv::Mat::zeros((int)(originSize.height*mGridViewScale), (int)(originSize.width*mGridViewScale), CV_8UC3);
-        if(mBoardType != chAruco)
+        if(mBoardType != ChArUco)
             for(std::vector<std::vector<cv::Point2f> >::iterator it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
                 if(mBoardType != DoubleAcirclesGrid)
                     drawBoard(altGridView, *it);

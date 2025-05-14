@@ -54,7 +54,8 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 f = np.fft.fft2(img)
 fshift = np.fft.fftshift(f)
 magnitude_spectrum = 20*np.log(np.abs(fshift))
@@ -79,7 +80,7 @@ using **np.ifft2()** function. The result, again, will be a complex number. You 
 absolute value.
 @code{.py}
 rows, cols = img.shape
-crow,ccol = rows//2 , cols//2
+crow, ccol = rows//2, cols//2
 fshift[crow-30:crow+31, ccol-30:ccol+31] = 0
 f_ishift = np.fft.ifftshift(fshift)
 img_back = np.fft.ifft2(f_ishift)
@@ -121,7 +122,8 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 
 dft = cv.dft(np.float32(img),flags = cv.DFT_COMPLEX_OUTPUT)
 dft_shift = np.fft.fftshift(dft)
@@ -144,7 +146,7 @@ content, and 0 at HF region.
 
 @code{.py}
 rows, cols = img.shape
-crow,ccol = rows/2 , cols/2
+crow, ccol = rows//2, cols//2
 
 # create a mask first, center square is 1, remaining all zeros
 mask = np.zeros((rows,cols,2),np.uint8)
@@ -184,7 +186,8 @@ So how do we find this optimal size ? OpenCV provides a function, **cv.getOptima
 this. It is applicable to both **cv.dft()** and **np.fft.fft2()**. Let's check their performance
 using IPython magic command %timeit.
 @code{.py}
-In [16]: img = cv.imread('messi5.jpg',0)
+In [15]: img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+In [16]: assert img is not None, "file could not be read, check with os.path.exists()"
 In [17]: rows,cols = img.shape
 In [18]: print("{} {}".format(rows,cols))
 342 548
@@ -288,6 +291,3 @@ Additional Resources
     Theory](http://cns-alumni.bu.edu/~slehar/fourier/fourier.html) by Steven Lehar
 2.  [Fourier Transform](http://homepages.inf.ed.ac.uk/rbf/HIPR2/fourier.htm) at HIPR
 3.  [What does frequency domain denote in case of images?](http://dsp.stackexchange.com/q/1637/818)
-
-Exercises
----------

@@ -67,7 +67,7 @@ import numpy as np
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-img = cv.imread('simple.jpg',0)
+img = cv.imread('simple.jpg', cv.IMREAD_GRAYSCALE)
 
 # Initiate ORB detector
 orb = cv.ORB_create()
@@ -93,6 +93,3 @@ Additional Resources
 
 -#  Ethan Rublee, Vincent Rabaud, Kurt Konolige, Gary R. Bradski: ORB: An efficient alternative to
     SIFT or SURF. ICCV 2011: 2564-2571.
-
-Exercises
----------

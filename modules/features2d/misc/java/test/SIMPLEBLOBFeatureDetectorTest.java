@@ -108,8 +108,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         assertEquals(2, params.get_minRepeatability());
         assertEquals(10.0f, params.get_minDistBetweenBlobs());
         assertEquals(true, params.get_filterByColor());
-        // FIXME: blobColor field has uchar type in C++ and cannot be automatically wrapped to Java as it does not support unsigned types
-        //assertEquals(0, params.get_blobColor());
+        assertEquals(0, params.get_blobColor());
         assertEquals(true, params.get_filterByArea());
         assertEquals(800f, params.get_minArea());
         assertEquals(6000f, params.get_maxArea());
@@ -133,8 +132,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         String filename = OpenCVTestRunner.getTempFileName("xml");
 
         detector.write(filename);
-
-        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<format>3</format>\n<thresholdStep>10.</thresholdStep>\n<minThreshold>50.</minThreshold>\n<maxThreshold>220.</maxThreshold>\n<minRepeatability>2</minRepeatability>\n<minDistBetweenBlobs>10.</minDistBetweenBlobs>\n<filterByColor>1</filterByColor>\n<blobColor>0</blobColor>\n<filterByArea>1</filterByArea>\n<minArea>25.</minArea>\n<maxArea>5000.</maxArea>\n<filterByCircularity>0</filterByCircularity>\n<minCircularity>8.0000001192092896e-01</minCircularity>\n<maxCircularity>3.4028234663852886e+38</maxCircularity>\n<filterByInertia>1</filterByInertia>\n<minInertiaRatio>1.0000000149011612e-01</minInertiaRatio>\n<maxInertiaRatio>3.4028234663852886e+38</maxInertiaRatio>\n<filterByConvexity>1</filterByConvexity>\n<minConvexity>9.4999998807907104e-01</minConvexity>\n<maxConvexity>3.4028234663852886e+38</maxConvexity>\n<collectContours>0</collectContours>\n</opencv_storage>\n";
+        String truth = "<?xml version=\"1.0\"?>\n<opencv_storage>\n<format>3</format>\n<thresholdStep>10.</thresholdStep>\n<minThreshold>50.</minThreshold>\n<maxThreshold>220.</maxThreshold>\n<minRepeatability>2</minRepeatability>\n<minDistBetweenBlobs>10.</minDistBetweenBlobs>\n<filterByColor>1</filterByColor>\n<blobColor>0</blobColor>\n<filterByArea>1</filterByArea>\n<minArea>25.</minArea>\n<maxArea>5000.</maxArea>\n<filterByCircularity>0</filterByCircularity>\n<minCircularity>0.80000001192092896</minCircularity>\n<maxCircularity>3.4028234663852886e+38</maxCircularity>\n<filterByInertia>1</filterByInertia>\n<minInertiaRatio>0.10000000149011612</minInertiaRatio>\n<maxInertiaRatio>3.4028234663852886e+38</maxInertiaRatio>\n<filterByConvexity>1</filterByConvexity>\n<minConvexity>0.94999998807907104</minConvexity>\n<maxConvexity>3.4028234663852886e+38</maxConvexity>\n<collectContours>0</collectContours>\n</opencv_storage>\n";
         assertEquals(truth, readFile(filename));
     }
 }

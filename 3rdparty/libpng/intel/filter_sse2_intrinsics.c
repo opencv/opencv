@@ -259,7 +259,7 @@ void png_read_filter_row_paeth3_sse2(png_row_infop row_info, png_bytep row,
       a = d; d = _mm_unpacklo_epi8(load4(row ), zero);
 
       /* (p-a) == (a+b-c - a) == (b-c) */
-   
+
       pa = _mm_sub_epi16(b,c);
 
       /* (p-b) == (a+b-c - b) == (a-c) */

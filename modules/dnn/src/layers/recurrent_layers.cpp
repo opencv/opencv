@@ -113,12 +113,19 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
     MatShape outTailShape;  //shape of single output sample
     MatShape outTsShape;    //shape of N output samples
 
+    enum layout_t : int {
+        SEQ_BATCH_HID = 0,
+        BATCH_SEQ_HID = 1
+    };
+
     bool useTimestampDim;
     bool produceCellOutput;
     float forgetBias, cellClip;
     bool useCellClip, usePeephole;
     bool reverse;   // If true, go in negative direction along the time axis
     bool bidirectional;  // If true, produces both forward and reversed directions along time axis
+    layout_t layout;  // If layout == BATCH_SEQ_HID, uses batch_size x seq_length x num_hidden for input and output
+                      // else uses seq_length x batch_size x num_hidden
 
     ActivationFunction f_activation;
     ActivationFunction g_activation;
@@ -173,9 +180,17 @@ public:
             CV_CheckEQ(Wh.rows, Wx.rows, "");
             CV_CheckEQ(Wh.rows, (1 + static_cast<int>(bidirectional))*4*Wh.cols, "");
             CV_CheckEQ(Wh.rows, (int)bias.total(), "");
-            CV_CheckEQ(hInternal.cols, Wh.cols, "");
-            CV_CheckEQ(hInternal.cols, cInternal.cols, "");
-            CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            // Only perform these checks if hInternal and cInternal are not empty matrices
+            // e.g. inputs are not given by a user
+            if(!hInternal.empty()){
+                CV_CheckEQ(hInternal.cols, Wh.cols, "");
+            }
+            if(!cInternal.empty()){
+                CV_CheckEQ(cInternal.cols, Wh.cols, "");
+            }
+            if (!hInternal.empty() && !cInternal.empty()){ //otherwise check in forward
+                CV_CheckEQ(hInternal.rows, cInternal.rows, "");
+            }
             CV_Assert(Wh.type() == Wx.type() && Wx.type() == bias.type());
 
             // Peephole weights.
@@ -190,6 +205,7 @@ public:
                 }
             }
         }
+        layout = (layout_t) params.get<int>("layout", SEQ_BATCH_HID);
         useTimestampDim = params.get<bool>("use_timestamp_dim", true);
         produceCellOutput = params.get<bool>("produce_cell_output", false);
         forgetBias = params.get<float>("forget_bias", 0.0f);
@@ -266,7 +282,7 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(inputs.size() == 1);
+        CV_Assert((inputs.size() == 1 || inputs.size() == 3));
         const MatShape& inp0 = inputs[0];
 
         const Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -283,8 +299,13 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.size() >= 2 && total(inp0, 2) == _numInp);
-            _numSamples = inp0[1];
-            outResShape.push_back(inp0[0]);
+            if (layout == SEQ_BATCH_HID) {
+                _numSamples = inp0[1];
+                outResShape.push_back(inp0[0]);
+            } else {
+                _numSamples = inp0[0];
+                outResShape.push_back(inp0[1]);
+            }
         }
         else
         {
@@ -326,7 +347,7 @@ public:
         inputs_arr.getMatVector(input);
 
         CV_Assert((!usePeephole && blobs.size() == 5) || (usePeephole && blobs.size() == 8));
-        CV_Assert(input.size() == 1);
+        CV_Assert((input.size() == 1 || input.size() == 3));
         const Mat& inp0 = input[0];
 
         Mat &Wh = blobs[0], &Wx = blobs[1];
@@ -341,8 +362,13 @@ public:
         if (useTimestampDim)
         {
             CV_Assert(inp0.dims >= 2 && (int)inp0.total(2) == numInp);
-            numTimeStamps = inp0.size[0];
-            numSamples = inp0.size[1];
+            if (layout == SEQ_BATCH_HID){
+                numTimeStamps = inp0.size[0];
+                numSamples = inp0.size[1];
+            }else{
+                numTimeStamps = inp0.size[1];
+                numSamples = inp0.size[0];
+            }
         }
         else
         {
@@ -364,7 +390,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -375,6 +401,21 @@ public:
         outputs_arr.getMatVector(output);
         internals_arr.getMatVector(internals);
 
+        if (layout == BATCH_SEQ_HID){
+            //swap axis 0 and 1 input x
+            cv::Mat tmp;
+            // Since python input is 4 dimentional and C++ input 3 dimentinal
+            // we need to proccess each differently
+            if (input[0].dims == 4){
+                // here !!!
+                CV_Assert(input[0].size[3] == 1);
+                cv::transposeND(input[0], {1, 0, 2, 3}, tmp); //back to seq_len, batch_size, hidden_size format
+            }else{
+                cv::transposeND(input[0], {1, 0, 2}, tmp); //back to seq_len, batch_size, hidden_size format
+            }
+            input[0] = tmp;
+        }
+
         Mat cOut = produceCellOutput ? output[0].clone() : Mat();
         const bool needYcTransform = !originalBlobs.empty(); // if the producer is onnx
         const int numDirs = 1 + static_cast<int>(bidirectional);
@@ -383,8 +424,20 @@ public:
             Mat Wh = blobs[0];
             Mat Wx = blobs[1];
             Mat bias = blobs[2];
-            Mat h_0 = blobs[3];
-            Mat c_0 = blobs[4];
+
+            Mat h_0, c_0;
+            // Handle h_0 and c_0 based on input size
+            h_0 = (input.size() >= 2) ? input[1].reshape(1, input[1].size[0] * input[1].size[1]) : blobs[3];
+            c_0 = (input.size() == 3) ? input[2].reshape(1, input[2].size[0] * input[2].size[1]) : blobs[4];
+
+            // Perform checks if input size is 2 or 3
+            if (input.size() >= 2) {
+                CV_CheckEQ(h_0.cols, Wh.cols, "");
+                CV_CheckEQ(h_0.cols, c_0.cols, "");
+                CV_CheckEQ(h_0.rows, c_0.rows, "");
+            }
+
+
             Mat pI, pF, pO;
 
             Wh = Wh.rowRange(i * Wh.rows / numDirs, (i + 1) * Wh.rows / numDirs);
@@ -579,7 +632,12 @@ public:
                     cInternal.copyTo(cOutTs.rowRange(curRowRange));
             }
         }
-
+        // transpose to match batch first output
+        if (layout == BATCH_SEQ_HID){
+            cv::Mat tmp;
+            cv::transposeND(output[0], {1, 0, 2}, tmp);
+            output[0] = tmp;
+        }
         if (needYcTransform && produceCellOutput)
         {
             fixCellState(cOut, numDirs);
@@ -598,7 +656,13 @@ public:
 
         // permute to {0, 2, 1, 3};
         cv::Mat newCellState;
-        cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+        // transpose to match batch first output
+        if (layout == BATCH_SEQ_HID){
+            cv::transposeND(cOut, {2, 0, 1, 3}, newCellState);
+        }
+        else{
+            cv::transposeND(cOut, {0, 2, 1, 3}, newCellState);
+        }
         cOut = newCellState;
 
         if (numDirs == 1)
@@ -842,7 +906,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -1002,7 +1066,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;

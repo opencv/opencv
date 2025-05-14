@@ -7,10 +7,8 @@
 
 #include <opencv2/core/mat.hpp>
 
-#ifdef CV_CXX11
 //#include <future>
 #include <chrono>
-#endif
 
 namespace cv {
 
@@ -69,7 +67,6 @@ public:
 
     CV_WRAP bool valid() const CV_NOEXCEPT;
 
-#ifdef CV_CXX11
     inline AsyncArray(AsyncArray&& o) { p = o.p; o.p = NULL; }
     inline AsyncArray& operator=(AsyncArray&& o) CV_NOEXCEPT { std::swap(p, o.p); return *this; }
 
@@ -88,7 +85,6 @@ public:
 #if 0
     std::future<Mat> getFutureMat() const;
     std::future<UMat> getFutureUMat() const;
-#endif
 #endif
 
 

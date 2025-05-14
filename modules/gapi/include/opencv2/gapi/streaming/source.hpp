@@ -16,7 +16,7 @@
 namespace cv {
 namespace gapi {
 namespace wip {
-    struct Data; // "forward-declaration" of GRunArg
+struct Data; // forward-declaration of Data to avoid circular dependencies
 
 /**
  * @brief Abstract streaming pipeline source.
@@ -43,6 +43,11 @@ public:
     Ptr ptr() { return shared_from_this(); }
     virtual bool pull(Data &data) = 0;
     virtual GMetaArg descr_of() const = 0;
+    virtual void halt() {
+        // Do nothing by default to maintain compatibility with the existing sources...
+        // In fact needs to be decorated atop of the child classes to maintain the behavior
+        // FIXME: Make it mandatory in OpenCV 5.0
+    };
     virtual ~IStreamSource() = default;
 };
 

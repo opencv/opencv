@@ -181,12 +181,9 @@ static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, c
     if (test_case == TestSolver::Fundam || test_case == TestSolver::Essen) {
         cv::Mat l2 = model     * pt1;
         cv::Mat l1 = model.t() * pt2;
-        if (test_case == TestSolver::Fundam) // sampson error
-            return fabs(pt2.dot(l2)) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
-                                      pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
-        else // symmetric geometric distance
-            return sqrt(pow(pt1.dot(l1),2) / (pow(l1.at<double>(0),2) + pow(l1.at<double>(1),2)) +
-                        pow(pt2.dot(l2),2) / (pow(l2.at<double>(0),2) + pow(l2.at<double>(1),2)));
+        // Sampson error
+        return fabs(pt2.dot(l2)) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
+                                  pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
     } else
     if (test_case == TestSolver::PnP) { // PnP, reprojection error
         cv::Mat img_pt = model * pt2; img_pt /= img_pt.at<double>(2);
@@ -340,7 +337,7 @@ TEST_P(usac_Essential, maxiters) {
     cv::Mat K1 = cv::Mat(cv::Matx33d(1, 0, 0,
                                      0, 1, 0,
                                      0, 0, 1.));
-    const double conf = 0.99, thr = 0.5;
+    const double conf = 0.99, thr = 0.25;
     int roll_results_sum = 0;
 
     for (int iters = 0; iters < 10; iters++) {
@@ -361,8 +358,8 @@ TEST_P(usac_Essential, maxiters) {
                 FAIL() << "Essential matrix estimation failed!\n";
             else continue;
         }
-        EXPECT_NE(roll_results_sum, 0);
     }
+    EXPECT_NE(roll_results_sum, 0);
 }
 
 INSTANTIATE_TEST_CASE_P(Calib3d, usac_Essential, UsacMethod::all());
@@ -416,7 +413,7 @@ TEST (usac_Affine2D, accuracy) {
 
 TEST(usac_testUsacParams, accuracy) {
     std::vector<int> gt_inliers;
-    const int pts_size = 1500;
+    const int pts_size = 150000;
     cv::RNG &rng = cv::theRNG();
     const cv::UsacParams usac_params = cv::UsacParams();
     cv::Mat pts1, pts2, K1, K2, mask, model, rvec, tvec, R;

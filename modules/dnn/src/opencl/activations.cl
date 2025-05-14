@@ -48,6 +48,10 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+#if !defined(M_SQRT1_2)
+#define M_SQRT1_2   0.707106781186547524400844362104849039  /* 1/sqrt(2)      */
+#endif
+
 __kernel void ReLUForward(const int count, __global const T* in, __global T* out
 #ifndef RELU_NO_SLOPE
 , KERNEL_ARG_DTYPE negative_slope
@@ -73,14 +77,23 @@ __kernel void ReLU6Forward(const int count, __global const T* in, __global T* ou
   }
 }
 
+__kernel void ChannelsPReLUForward(const int count, const int channels, const int plane_size,
+                                   __global const T* in, __global T* out,
+                                   __global const KERNEL_ARG_DTYPE* slope_data)
+{
+  int index = get_global_id(0);
+  int c = (index / plane_size) % channels;
+  if(index < count)
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+}
+
 __kernel void PReLUForward(const int count, const int channels, const int plane_size,
                            __global const T* in, __global T* out,
                            __global const KERNEL_ARG_DTYPE* slope_data)
 {
   int index = get_global_id(0);
-  int c = (index / plane_size) % channels;
   if(index < count)
-  out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[c];
+    out[index] = in[index] > 0 ? in[index] : in[index] * slope_data[index];
 }
 
 __kernel void TanHForward(const int count, __global T* in, __global T* out) {
@@ -305,6 +318,30 @@ __kernel void ThresholdedReluForward(const int n, __global T* in, __global T* ou
     int index = get_global_id(0);
     if(index < n)
         out[index] = (in[index] > alpha ? in[index] : 0.f);
+}
+
+__kernel void GeluForward(const int n, __global T* in, __global T* out)
+{
+    int index = get_global_id(0);
+    if (index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + erf(x * M_SQRT1_2) );
+    }
+}
+
+__kernel void GeluApproximationForward(const int n, __global T* in, __global T* out)
+{
+    // see GeluApproximationConstants from modules/dnn/src/layers/elementwise_layers.cpp
+    const T sqrt_2_pi = 0.7978845834732056f;
+    const T coef_sqrt_2_pi = 0.044714998453855515f * sqrt_2_pi;
+
+    int index = get_global_id(0);
+    if(index < n)
+    {
+        T x = in[index];
+        out[index] = (T)0.5f * x * ( (T)1.f + tanh(x * (sqrt_2_pi + coef_sqrt_2_pi * x * x)) );
+    }
 }
 
 __kernel void ShrinkForward(const int n, __global T* in, __global T* out,

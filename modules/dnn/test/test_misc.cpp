@@ -6,23 +6,90 @@
 // Third party copyrights are property of their respective owners.
 
 #include "test_precomp.hpp"
+#include "npy_blob.hpp"
 #include <opencv2/core/ocl.hpp>
 #include <opencv2/core/opencl/ocl_defs.hpp>
 #include <opencv2/dnn/layer.details.hpp>  // CV_DNN_REGISTER_LAYER_CLASS
 
 namespace opencv_test { namespace {
 
+TEST(blobRectToImageRect, DNN_PMODE_NULL)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    Rect rBlob(inputSize.width / 2 - inputSize.width / 4, inputSize.height / 2 - inputSize.height / 4, inputSize.width / 2, inputSize.height / 2);
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1.f);
+    paramNet.size = inputSize;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    paramNet.paddingmode = DNN_PMODE_NULL;
+    Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
+    Rect rImg = Rect(rBlob.x * (float)imgSize.width / inputSize.width, rBlob.y * (float)imgSize.height / inputSize.height,
+        rBlob.width * (float)imgSize.width / inputSize.width, rBlob.height * (float)imgSize.height / inputSize.height);
+    ASSERT_EQ(rImg, rOri);
+}
+
+TEST(blobRectToImageRect, DNN_PMODE_CROP_CENTER)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    Rect rBlob(inputSize.width / 2 - inputSize.width / 4, inputSize.height / 2 - inputSize.height / 4, inputSize.width / 2, inputSize.height / 2);
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1.f);
+    paramNet.size = inputSize;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    paramNet.paddingmode = DNN_PMODE_CROP_CENTER;
+    Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
+    float resizeFactor = std::max(inputSize.width / (float)imgSize.width,
+        inputSize.height / (float)imgSize.height);
+    Rect rImg = Rect((rBlob.x + 0.5 * (imgSize.width * resizeFactor - inputSize.width)) / resizeFactor, (rBlob.y + 0.5 * (imgSize.height * resizeFactor - inputSize.height)) / resizeFactor,
+        rBlob.width / resizeFactor, rBlob.height / resizeFactor);
+    ASSERT_EQ(rImg, rOri);
+}
+
+TEST(blobRectToImageRect, DNN_PMODE_LETTERBOX)
+{
+    Size inputSize(50 + (rand() % 100) / 4 * 4, 50 + (rand() % 100) / 4 * 4);
+    Size imgSize(200 + (rand() % 100) / 4 * 4, 200 + (rand() % 100) / 4 * 4);
+    Rect rBlob(inputSize.width / 2 - inputSize.width / 4, inputSize.height / 2 - inputSize.height / 4, inputSize.width / 2, inputSize.height / 2);
+    Image2BlobParams paramNet;
+    paramNet.scalefactor = Scalar::all(1.f);
+    paramNet.size = inputSize;
+    paramNet.ddepth = CV_32F;
+    paramNet.mean = Scalar();
+    paramNet.swapRB = false;
+    paramNet.datalayout = DNN_LAYOUT_NHWC;
+    paramNet.paddingmode = DNN_PMODE_LETTERBOX;
+    Rect rOri = paramNet.blobRectToImageRect(rBlob, imgSize);
+    float resizeFactor = std::min(inputSize.width / (float)imgSize.width,
+        inputSize.height / (float)imgSize.height);
+    int rh = int(imgSize.height * resizeFactor);
+    int rw = int(imgSize.width * resizeFactor);
+
+    int top = (inputSize.height - rh) / 2;
+    int left = (inputSize.width - rw) / 2;
+    Rect rImg = Rect((rBlob.x - left) / resizeFactor, (rBlob.y - top) / resizeFactor, rBlob.width / resizeFactor, rBlob.height / resizeFactor);
+    ASSERT_EQ(rImg, rOri);
+}
+
+
 TEST(blobFromImage_4ch, Regression)
 {
     Mat ch[4];
-    for(int i = 0; i < 4; i++)
-        ch[i] = Mat::ones(10, 10, CV_8U)*i;
+    for (int i = 0; i < 4; i++)
+        ch[i] = Mat::ones(10, 10, CV_8U) * i;
 
     Mat img;
     merge(ch, 4, img);
     Mat blob = dnn::blobFromImage(img, 1., Size(), Scalar(), false, false);
 
-    for(int i = 0; i < 4; i++)
+    for (int i = 0; i < 4; i++)
     {
         ch[i] = Mat(img.rows, img.cols, CV_32F, blob.ptr(0, i));
         ASSERT_DOUBLE_EQ(cvtest::norm(ch[i], cv::NORM_INF), i);
@@ -31,7 +98,7 @@ TEST(blobFromImage_4ch, Regression)
 
 TEST(blobFromImage, allocated)
 {
-    int size[] = {1, 3, 4, 5};
+    int size[] = { 1, 3, 4, 5 };
     Mat img(size[2], size[3], CV_32FC(size[1]));
     Mat blob(4, size, CV_32F);
     void* blobData = blob.data;
@@ -61,6 +128,118 @@ TEST(imagesFromBlob, Regression)
             << " inputImgs[i]=" << inputImgs[i].size
             << " outputImgs[i]=" << outputImgs[i].size;
     }
+}
+
+TEST(blobFromImageWithParams_4ch, NHWC_scalar_scale)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+    std::vector<double> factorVec = { 0.1, 0.2, 0.3, 0.4 };
+
+    Scalar scalefactor(factorVec[0], factorVec[1], factorVec[2], factorVec[3]);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+    Mat blob = dnn::blobFromImageWithParams(img, param); // [1, 10, 10, 4]
+
+    float* blobPtr = blob.ptr<float>(0);
+    std::vector<float> targetVec = { (float)factorVec[0] * 0, (float)factorVec[1] * 1, (float)factorVec[2] * 2, (float)factorVec[3] * 3 }; // Target Value.
+    for (int hi = 0; hi < 10; hi++)
+    {
+        for (int wi = 0; wi < 10; wi++)
+        {
+            float* hwPtr = blobPtr + hi * 10 * 4 + wi * 4;
+
+            // Check equal
+            EXPECT_NEAR(hwPtr[0], targetVec[0], 1e-5);
+            EXPECT_NEAR(hwPtr[1], targetVec[1], 1e-5);
+            EXPECT_NEAR(hwPtr[2], targetVec[2], 1e-5);
+            EXPECT_NEAR(hwPtr[3], targetVec[3], 1e-5);
+        }
+    }
+}
+
+TEST(blobFromImageWithParams_CustomPadding, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, Scalar(0, 1, 2, 3));
+
+    // Custom padding value that you have added
+    Scalar customPaddingValue(5, 6, 7, 8); // Example padding value
+
+    Size targetSize(20, 20);
+
+    Mat targetImg = img.clone();
+
+    cv::copyMakeBorder(
+        targetImg, targetImg, 0, 0,
+        targetSize.width / 2,
+        targetSize.width / 2,
+        BORDER_CONSTANT,
+        customPaddingValue);
+
+    // Set up Image2BlobParams with your new functionality
+    Image2BlobParams param;
+    param.size = targetSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    param.borderValue = customPaddingValue; // Use your new feature here
+
+    // Create blob with custom padding
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+
+    // Create target blob for comparison
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targetSize);
+
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
+TEST(blobFromImageWithParams_4ch, letter_box)
+{
+    Mat img(40, 20, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+
+    // Construct target mat.
+    Mat targetCh[4];
+    // The letterbox will add zero at the left and right of output blob.
+    // After the letterbox, every row data would have same value showing as valVec.
+    std::vector<uint8_t> valVec = { 0,0,0,0,0, 1,1,1,1,1,1,1,1,1,1, 0,0,0,0,0 };
+    Mat rowM(1, 20, CV_8UC1, valVec.data());
+
+    for (int i = 0; i < 4; i++)
+    {
+        targetCh[i] = rowM * i;
+    }
+
+    Mat targetImg;
+    merge(targetCh, 4, targetImg);
+    Size targeSize(20, 20);
+
+    Image2BlobParams param;
+    param.size = targeSize;
+    param.paddingmode = DNN_PMODE_LETTERBOX;
+    Mat blob = dnn::blobFromImageWithParams(img, param);
+    Mat targetBlob = dnn::blobFromImage(targetImg, 1.0, targeSize); // only convert data from uint8 to float32.
+    EXPECT_EQ(0, cvtest::norm(targetBlob, blob, NORM_INF));
+}
+
+TEST(blobFromImagesWithParams_4ch, multi_image)
+{
+    Mat img(10, 10, CV_8UC4, cv::Scalar(0, 1, 2, 3));
+    Scalar scalefactor(0.1, 0.2, 0.3, 0.4);
+
+    Image2BlobParams param;
+    param.scalefactor = scalefactor;
+    param.datalayout = DNN_LAYOUT_NHWC;
+
+    Mat blobs = blobFromImagesWithParams(std::vector<Mat> { img, 2 * img }, param);
+    vector<Range> ranges;
+    ranges.push_back(Range(0, 1));
+    ranges.push_back(Range(0, blobs.size[1]));
+    ranges.push_back(Range(0, blobs.size[2]));
+    ranges.push_back(Range(0, blobs.size[3]));
+    Mat blob0 = blobs(ranges);
+    ranges[0] = Range(1, 2);
+    Mat blob1 = blobs(ranges);
+
+    EXPECT_EQ(0, cvtest::norm(2 * blob0, blob1, NORM_INF));
 }
 
 TEST(readNet, Regression)
@@ -792,6 +971,35 @@ TEST_P(Test_Model_Optimizer, flexible_inputs)
     normAssert(ref, out, 0, 0);
 }
 
+TEST_P(Test_Model_Optimizer, readONNX)
+{
+    const Backend backendId = get<0>(GetParam());
+    const Target targetId = get<1>(GetParam());
+
+    ASSERT_EQ(DNN_BACKEND_INFERENCE_ENGINE_NGRAPH, backendId);
+
+    const std::string& model = findDataFile("dnn/onnx/models/convolution.onnx");
+
+    std::vector<Net> nets = {
+        // Old API
+        readNetFromModelOptimizer(model, ""),
+        readNet("", model, "dldt"),
+        // New API
+        readNetFromModelOptimizer(model),
+        readNet(model, "", "openvino")
+    };
+
+    Mat inp = blobFromNPY(findDataFile("dnn/onnx/data/input_convolution.npy"));
+    Mat ref = blobFromNPY(findDataFile("dnn/onnx/data/output_convolution.npy"));
+
+    for (int i = 0; i < nets.size(); ++i) {
+        nets[i].setPreferableTarget(targetId);
+        nets[i].setInput(inp);
+        Mat out = nets[i].forward();
+        normAssert(out, ref, format("Index: %d", i).c_str());
+    }
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model_Optimizer,
     dnnBackendsAndTargetsIE()
 );
@@ -827,14 +1035,10 @@ TEST_P(Test_two_inputs, basic)
     randu(firstInp, 0, 100);
     randu(secondInp, 0, 100);
 
-#ifndef CV_CXX11
     std::vector<String> input_names;
     input_names.push_back("data");
     input_names.push_back("second_input");
     net.setInputsNames(input_names);
-#else
-    net.setInputsNames({"data", "second_input"});
-#endif
     net.setInput(firstInp, "data", kScale);
     net.setInput(secondInp, "second_input", kScaleInv);
     net.setPreferableBackend(backendId);

@@ -36,7 +36,8 @@ Now let's create a function, draw which takes the corners in the chessboard (obt
 **cv.findChessboardCorners()**) and **axis points** to draw a 3D axis.
 @code{.py}
 def draw(img, corners, imgpts):
-    corner = tuple(corners[0].ravel())
+    corner = tuple(corners[0].ravel().astype("int32"))
+    imgpts = imgpts.astype("int32")
     img = cv.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
     img = cv.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
     img = cv.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
@@ -119,9 +120,3 @@ And look at the result below:
 
 If you are interested in graphics, augmented reality etc, you can use OpenGL to render more
 complicated figures.
-
-Additional Resources
---------------------
-
-Exercises
----------

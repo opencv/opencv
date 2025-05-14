@@ -41,6 +41,7 @@
 //M*/
 
 #include "test_precomp.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
 
@@ -181,9 +182,9 @@ static std::string printMethod(int method)
     case 2:
         return "SOLVEPNP_P3P";
     case 3:
-        return "SOLVEPNP_DLS (remaped to SOLVEPNP_EPNP)";
+        return "SOLVEPNP_DLS (remapped to SOLVEPNP_EPNP)";
     case 4:
-        return "SOLVEPNP_UPNP (remaped to SOLVEPNP_EPNP)";
+        return "SOLVEPNP_UPNP (remapped to SOLVEPNP_EPNP)";
     case 5:
         return "SOLVEPNP_AP3P";
     case 6:
@@ -206,11 +207,29 @@ public:
         eps[SOLVEPNP_EPNP] = 1.0e-2;
         eps[SOLVEPNP_P3P] = 1.0e-2;
         eps[SOLVEPNP_AP3P] = 1.0e-2;
-        eps[SOLVEPNP_DLS] = 1.0e-2;
-        eps[SOLVEPNP_UPNP] = 1.0e-2;
+        eps[SOLVEPNP_DLS] = 1.0e-2; // DLS is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_UPNP] = 1.0e-2; // UPnP is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_IPPE] = 1.0e-2;
+        eps[SOLVEPNP_IPPE_SQUARE] = 1.0e-2;
         eps[SOLVEPNP_SQPNP] = 1.0e-2;
-        totalTestsCount = 10;
-        pointsCount = 500;
+
+        totalTestsCount = 1000;
+
+        if (planar || planarTag)
+        {
+            if (planarTag)
+            {
+                pointsCount = 4;
+            }
+            else
+            {
+                pointsCount = 30;
+            }
+        }
+        else
+        {
+            pointsCount = 500;
+        }
     }
     ~CV_solvePnPRansac_Test() {}
 protected:
@@ -289,11 +308,6 @@ protected:
 
     virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, double& errorTrans, double& errorRot)
     {
-        if ((!planar && method == SOLVEPNP_IPPE) || method == SOLVEPNP_IPPE_SQUARE)
-        {
-            return true;
-        }
-
         Mat rvec, tvec;
         vector<int> inliers;
         Mat trueRvec, trueTvec;
@@ -319,17 +333,20 @@ protected:
         vector<Point2f> projectedPoints;
         projectedPoints.resize(points.size());
         projectPoints(points, trueRvec, trueTvec, intrinsics, distCoeffs, projectedPoints);
+
+        size_t numOutliers = 0;
         for (size_t i = 0; i < projectedPoints.size(); i++)
         {
-            if (i % 20 == 0)
+            if (!planarTag && rng.uniform(0., 1.) > 0.95)
             {
                 projectedPoints[i] = projectedPoints[rng.uniform(0,(int)points.size()-1)];
+                numOutliers++;
             }
         }
 
         solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, pointsCount, 0.5f, 0.99, inliers, method);
 
-        bool isTestSuccess = inliers.size() >= points.size()*0.95;
+        bool isTestSuccess = inliers.size() + numOutliers >= points.size();
 
         double rvecDiff = cvtest::norm(rvec, trueRvec, NORM_L2), tvecDiff = cvtest::norm(tvec, trueTvec, NORM_L2);
         isTestSuccess = isTestSuccess && rvecDiff < eps[method] && tvecDiff < eps[method];
@@ -361,6 +378,22 @@ protected:
         {
             for (int method = 0; method < SOLVEPNP_MAX_COUNT; method++)
             {
+                // SOLVEPNP_IPPE need planar object
+                if (!planar && method == SOLVEPNP_IPPE)
+                {
+                    cout << "mode: " << printMode(mode) << ", method: " << printMethod(method) << " -> "
+                         << "Skip for non-planar object" << endl;
+                    continue;
+                }
+
+                // SOLVEPNP_IPPE_SQUARE need planar tag object
+                if (!planarTag && method == SOLVEPNP_IPPE_SQUARE)
+                {
+                    cout << "mode: " << printMode(mode) << ", method: " << printMethod(method) << " -> "
+                         << "Skip for non-planar tag object" << endl;
+                    continue;
+                }
+
                 //To get the same input for each methods
                 RNG rngCopy = rng;
                 std::vector<double> vec_errorTrans, vec_errorRot;
@@ -435,8 +468,8 @@ public:
         eps[SOLVEPNP_EPNP] = 1.0e-6;
         eps[SOLVEPNP_P3P] = 2.0e-4;
         eps[SOLVEPNP_AP3P] = 1.0e-4;
-        eps[SOLVEPNP_DLS] = 1.0e-6; //DLS is remapped to EPnP, so we use the same threshold
-        eps[SOLVEPNP_UPNP] = 1.0e-6; //UPnP is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_DLS] = 1.0e-6; // DLS is remapped to EPnP, so we use the same threshold
+        eps[SOLVEPNP_UPNP] = 1.0e-6; // UPnP is remapped to EPnP, so we use the same threshold
         eps[SOLVEPNP_IPPE] = 1.0e-6;
         eps[SOLVEPNP_IPPE_SQUARE] = 1.0e-6;
         eps[SOLVEPNP_SQPNP] = 1.0e-6;
@@ -464,15 +497,6 @@ public:
 protected:
     virtual bool runTest(RNG& rng, int mode, int method, const vector<Point3f>& points, double& errorTrans, double& errorRot)
     {
-        if ((!planar && (method == SOLVEPNP_IPPE || method == SOLVEPNP_IPPE_SQUARE)) ||
-            (!planarTag && method == SOLVEPNP_IPPE_SQUARE))
-        {
-            errorTrans = -1;
-            errorRot = -1;
-            //SOLVEPNP_IPPE and SOLVEPNP_IPPE_SQUARE need planar object
-            return true;
-        }
-
         //Tune thresholds...
         double epsilon_trans[SOLVEPNP_MAX_COUNT];
         memcpy(epsilon_trans, eps, SOLVEPNP_MAX_COUNT * sizeof(*epsilon_trans));
@@ -485,19 +509,19 @@ protected:
             if (mode == 0)
             {
                 epsilon_trans[SOLVEPNP_EPNP] = 5.0e-3;
-                epsilon_trans[SOLVEPNP_DLS] = 5.0e-3;
-                epsilon_trans[SOLVEPNP_UPNP] = 5.0e-3;
+                epsilon_trans[SOLVEPNP_DLS] = 5.0e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_trans[SOLVEPNP_UPNP] = 5.0e-3; // UPnP is remapped to EPnP, so we use the same threshold
 
                 epsilon_rot[SOLVEPNP_EPNP] = 5.0e-3;
-                epsilon_rot[SOLVEPNP_DLS] = 5.0e-3;
-                epsilon_rot[SOLVEPNP_UPNP] = 5.0e-3;
+                epsilon_rot[SOLVEPNP_DLS] = 5.0e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_rot[SOLVEPNP_UPNP] = 5.0e-3; // UPnP is remapped to EPnP, so we use the same threshold
             }
             else
             {
                 epsilon_trans[SOLVEPNP_ITERATIVE] = 1e-4;
                 epsilon_trans[SOLVEPNP_EPNP] = 5e-3;
-                epsilon_trans[SOLVEPNP_DLS] = 5e-3;
-                epsilon_trans[SOLVEPNP_UPNP] = 5e-3;
+                epsilon_trans[SOLVEPNP_DLS] = 5e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_trans[SOLVEPNP_UPNP] = 5e-3; // UPnP is remapped to EPnP, so we use the same threshold
                 epsilon_trans[SOLVEPNP_P3P] = 1e-4;
                 epsilon_trans[SOLVEPNP_AP3P] = 1e-4;
                 epsilon_trans[SOLVEPNP_IPPE] = 1e-4;
@@ -505,8 +529,8 @@ protected:
 
                 epsilon_rot[SOLVEPNP_ITERATIVE] = 1e-4;
                 epsilon_rot[SOLVEPNP_EPNP] = 5e-3;
-                epsilon_rot[SOLVEPNP_DLS] = 5e-3;
-                epsilon_rot[SOLVEPNP_UPNP] = 5e-3;
+                epsilon_rot[SOLVEPNP_DLS] = 5e-3; // DLS is remapped to EPnP, so we use the same threshold
+                epsilon_rot[SOLVEPNP_UPNP] = 5e-3; // UPnP is remapped to EPnP, so we use the same threshold
                 epsilon_rot[SOLVEPNP_P3P] = 1e-4;
                 epsilon_rot[SOLVEPNP_AP3P] = 1e-4;
                 epsilon_rot[SOLVEPNP_IPPE] = 1e-4;
@@ -702,6 +726,8 @@ protected:
 
 TEST(Calib3d_SolveP3P, accuracy) { CV_solveP3P_Test test; test.safe_run();}
 TEST(Calib3d_SolvePnPRansac, accuracy) { CV_solvePnPRansac_Test test; test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy_planar) { CV_solvePnPRansac_Test test(true); test.safe_run(); }
+TEST(Calib3d_SolvePnPRansac, accuracy_planar_tag) { CV_solvePnPRansac_Test test(true, true); test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy) { CV_solvePnP_Test test; test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy_planar) { CV_solvePnP_Test test(true); test.safe_run(); }
 TEST(Calib3d_SolvePnP, accuracy_planar_tag) { CV_solvePnP_Test test(true, true); test.safe_run(); }
@@ -1531,8 +1557,8 @@ TEST(Calib3d_SolvePnP, generic)
                 }
                 else
                 {
-                    p3f = p3f_;
-                    p2f = p2f_;
+                    p3f = vector<Point3f>(p3f_.begin(), p3f_.end());
+                    p2f = vector<Point2f>(p2f_.begin(), p2f_.end());
                 }
 
                 vector<double> reprojectionErrors;
@@ -2255,6 +2281,67 @@ TEST(Calib3d_SolvePnP, inputShape)
             EXPECT_LE(cvtest::norm(true_rvec, rvec, NORM_INF), 1e-3);
             EXPECT_LE(cvtest::norm(true_tvec, Tvec, NORM_INF), 1e-3);
         }
+    }
+}
+
+bool hasNan(const cv::Mat& mat)
+{
+    bool has = false;
+    if (mat.type() == CV_32F)
+    {
+        for(int i = 0; i < static_cast<int>(mat.total()); i++)
+            has |= cvIsNaN(mat.at<float>(i)) != 0;
+    }
+    else if (mat.type() == CV_64F)
+    {
+        for(int i = 0; i < static_cast<int>(mat.total()); i++)
+            has |= cvIsNaN(mat.at<double>(i)) != 0;
+    }
+    else
+    {
+        has = true;
+        CV_LOG_ERROR(NULL, "check hasNan called with unsupported type!");
+    }
+
+    return has;
+}
+
+TEST(AP3P, ctheta1p_nan_23607)
+{
+    // the task is not well defined and may not converge (empty R, t) or should
+    // converge to some non-NaN solution
+    const std::array<cv::Point2d, 3> cameraPts = {
+        cv::Point2d{0.042784865945577621, 0.59844839572906494},
+        cv::Point2d{-0.028428621590137482, 0.60354739427566528},
+        cv::Point2d{0.0046037044376134872, 0.70674681663513184}
+    };
+    const std::array<cv::Point3d, 3> modelPts = {
+        cv::Point3d{-0.043258000165224075, 0.020459245890378952, -0.0069921980611979961},
+        cv::Point3d{-0.045648999512195587, 0.0029820732306689024, 0.0079000638797879219},
+        cv::Point3d{-0.043276999145746231, -0.013622495345771313, 0.0080113131552934647}
+    };
+
+    std::vector<Mat> R, t;
+    solveP3P(modelPts, cameraPts, Mat::eye(3, 3, CV_64F), Mat(), R, t, SOLVEPNP_AP3P);
+
+    EXPECT_EQ(R.size(), 2ul);
+    EXPECT_EQ(t.size(), 2ul);
+
+    // Try apply rvec and tvec to get model points from camera points.
+    Mat pts = Mat(modelPts).reshape(1, 3);
+    Mat expected = Mat(cameraPts).reshape(1, 3);
+    for (size_t i = 0; i < R.size(); ++i) {
+        EXPECT_TRUE(!hasNan(R[i]));
+        EXPECT_TRUE(!hasNan(t[i]));
+
+        Mat transform;
+        cv::Rodrigues(R[i], transform);
+        Mat res = pts * transform.t();
+        for (int j = 0; j < 3; ++j) {
+            res.row(j) += t[i].reshape(1, 1);
+            res.row(j) /= res.row(j).at<double>(2);
+        }
+        EXPECT_LE(cvtest::norm(res.colRange(0, 2), expected, NORM_INF), 3.34e-16);
     }
 }
 

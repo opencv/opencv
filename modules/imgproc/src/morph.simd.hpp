@@ -106,12 +106,12 @@ struct MorphNoVec
     int operator()(uchar**, int, uchar*, int) const { return 0; }
 };
 
-#if CV_SIMD
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
 
 template<class VecUpdate> struct MorphRowVec
 {
     typedef typename VecUpdate::vtype vtype;
-    typedef typename vtype::lane_type stype;
+    typedef typename VTraits<vtype>::lane_type stype;
     MorphRowVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
     int operator()(const uchar* src, uchar* dst, int width, int cn) const
     {
@@ -121,52 +121,52 @@ template<class VecUpdate> struct MorphRowVec
         width *= cn;
         VecUpdate updateOp;
 
-        for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes )
+        for( i = 0; i <= width - 4*VTraits<vtype>::vlanes(); i += 4*VTraits<vtype>::vlanes() )
         {
             vtype s0 = vx_load((const stype*)src + i);
-            vtype s1 = vx_load((const stype*)src + i + vtype::nlanes);
-            vtype s2 = vx_load((const stype*)src + i + 2*vtype::nlanes);
-            vtype s3 = vx_load((const stype*)src + i + 3*vtype::nlanes);
+            vtype s1 = vx_load((const stype*)src + i + VTraits<vtype>::vlanes());
+            vtype s2 = vx_load((const stype*)src + i + 2*VTraits<vtype>::vlanes());
+            vtype s3 = vx_load((const stype*)src + i + 3*VTraits<vtype>::vlanes());
             for (k = cn; k < _ksize; k += cn)
             {
                 s0 = updateOp(s0, vx_load((const stype*)src + i + k));
-                s1 = updateOp(s1, vx_load((const stype*)src + i + k + vtype::nlanes));
-                s2 = updateOp(s2, vx_load((const stype*)src + i + k + 2*vtype::nlanes));
-                s3 = updateOp(s3, vx_load((const stype*)src + i + k + 3*vtype::nlanes));
+                s1 = updateOp(s1, vx_load((const stype*)src + i + k + VTraits<vtype>::vlanes()));
+                s2 = updateOp(s2, vx_load((const stype*)src + i + k + 2*VTraits<vtype>::vlanes()));
+                s3 = updateOp(s3, vx_load((const stype*)src + i + k + 3*VTraits<vtype>::vlanes()));
             }
             v_store((stype*)dst + i, s0);
-            v_store((stype*)dst + i + vtype::nlanes, s1);
-            v_store((stype*)dst + i + 2*vtype::nlanes, s2);
-            v_store((stype*)dst + i + 3*vtype::nlanes, s3);
+            v_store((stype*)dst + i + VTraits<vtype>::vlanes(), s1);
+            v_store((stype*)dst + i + 2*VTraits<vtype>::vlanes(), s2);
+            v_store((stype*)dst + i + 3*VTraits<vtype>::vlanes(), s3);
         }
-        if( i <= width - 2*vtype::nlanes )
+        if( i <= width - 2*VTraits<vtype>::vlanes() )
         {
             vtype s0 = vx_load((const stype*)src + i);
-            vtype s1 = vx_load((const stype*)src + i + vtype::nlanes);
+            vtype s1 = vx_load((const stype*)src + i + VTraits<vtype>::vlanes());
             for( k = cn; k < _ksize; k += cn )
             {
                 s0 = updateOp(s0, vx_load((const stype*)src + i + k));
-                s1 = updateOp(s1, vx_load((const stype*)src + i + k + vtype::nlanes));
+                s1 = updateOp(s1, vx_load((const stype*)src + i + k + VTraits<vtype>::vlanes()));
             }
             v_store((stype*)dst + i, s0);
-            v_store((stype*)dst + i + vtype::nlanes, s1);
-            i += 2*vtype::nlanes;
+            v_store((stype*)dst + i + VTraits<vtype>::vlanes(), s1);
+            i += 2*VTraits<vtype>::vlanes();
         }
-        if( i <= width - vtype::nlanes )
+        if( i <= width - VTraits<vtype>::vlanes() )
         {
             vtype s = vx_load((const stype*)src + i);
             for( k = cn; k < _ksize; k += cn )
                 s = updateOp(s, vx_load((const stype*)src + i + k));
             v_store((stype*)dst + i, s);
-            i += vtype::nlanes;
+            i += VTraits<vtype>::vlanes();
         }
-        if( i <= width - vtype::nlanes/2 )
+        if( i <= width - VTraits<vtype>::vlanes()/2 )
         {
             vtype s = vx_load_low((const stype*)src + i);
             for( k = cn; k < _ksize; k += cn )
                 s = updateOp(s, vx_load_low((const stype*)src + i + k));
             v_store_low((stype*)dst + i, s);
-            i += vtype::nlanes/2;
+            i += VTraits<vtype>::vlanes()/2;
         }
 
         return i - i % cn;
@@ -179,7 +179,7 @@ template<class VecUpdate> struct MorphRowVec
 template<class VecUpdate> struct MorphColumnVec
 {
     typedef typename VecUpdate::vtype vtype;
-    typedef typename vtype::lane_type stype;
+    typedef typename VTraits<vtype>::lane_type stype;
     MorphColumnVec(int _ksize, int _anchor) : ksize(_ksize), anchor(_anchor) {}
     int operator()(const uchar** _src, uchar* _dst, int dststep, int count, int width) const
     {
@@ -189,7 +189,7 @@ template<class VecUpdate> struct MorphColumnVec
         VecUpdate updateOp;
 
         for( i = 0; i < count + ksize - 1; i++ )
-            CV_Assert( ((size_t)_src[i] & (CV_SIMD_WIDTH-1)) == 0 );
+            CV_Assert( ((size_t)_src[i] & (VTraits<v_uint8>::vlanes()-1)) == 0 );
 
         const stype** src = (const stype**)_src;
         stype* dst = (stype*)_dst;
@@ -197,58 +197,58 @@ template<class VecUpdate> struct MorphColumnVec
 
         for( ; _ksize > 1 && count > 1; count -= 2, dst += dststep*2, src += 2 )
         {
-            for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes)
+            for( i = 0; i <= width - 4*VTraits<vtype>::vlanes(); i += 4*VTraits<vtype>::vlanes())
             {
                 const stype* sptr = src[1] + i;
                 vtype s0 = vx_load_aligned(sptr);
-                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
-                vtype s2 = vx_load_aligned(sptr + 2*vtype::nlanes);
-                vtype s3 = vx_load_aligned(sptr + 3*vtype::nlanes);
+                vtype s1 = vx_load_aligned(sptr + VTraits<vtype>::vlanes());
+                vtype s2 = vx_load_aligned(sptr + 2*VTraits<vtype>::vlanes());
+                vtype s3 = vx_load_aligned(sptr + 3*VTraits<vtype>::vlanes());
 
                 for( k = 2; k < _ksize; k++ )
                 {
                     sptr = src[k] + i;
                     s0 = updateOp(s0, vx_load_aligned(sptr));
-                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
-                    s2 = updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes));
-                    s3 = updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes()));
+                    s2 = updateOp(s2, vx_load_aligned(sptr + 2*VTraits<vtype>::vlanes()));
+                    s3 = updateOp(s3, vx_load_aligned(sptr + 3*VTraits<vtype>::vlanes()));
                 }
 
                 sptr = src[0] + i;
                 v_store(dst + i, updateOp(s0, vx_load_aligned(sptr)));
-                v_store(dst + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
-                v_store(dst + i + 2*vtype::nlanes, updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes)));
-                v_store(dst + i + 3*vtype::nlanes, updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes)));
+                v_store(dst + i + VTraits<vtype>::vlanes(), updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes())));
+                v_store(dst + i + 2*VTraits<vtype>::vlanes(), updateOp(s2, vx_load_aligned(sptr + 2*VTraits<vtype>::vlanes())));
+                v_store(dst + i + 3*VTraits<vtype>::vlanes(), updateOp(s3, vx_load_aligned(sptr + 3*VTraits<vtype>::vlanes())));
 
                 sptr = src[k] + i;
                 v_store(dst + dststep + i, updateOp(s0, vx_load_aligned(sptr)));
-                v_store(dst + dststep + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
-                v_store(dst + dststep + i + 2*vtype::nlanes, updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes)));
-                v_store(dst + dststep + i + 3*vtype::nlanes, updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes)));
+                v_store(dst + dststep + i + VTraits<vtype>::vlanes(), updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes())));
+                v_store(dst + dststep + i + 2*VTraits<vtype>::vlanes(), updateOp(s2, vx_load_aligned(sptr + 2*VTraits<vtype>::vlanes())));
+                v_store(dst + dststep + i + 3*VTraits<vtype>::vlanes(), updateOp(s3, vx_load_aligned(sptr + 3*VTraits<vtype>::vlanes())));
             }
-            if( i <= width - 2*vtype::nlanes )
+            if( i <= width - 2*VTraits<vtype>::vlanes() )
             {
                 const stype* sptr = src[1] + i;
                 vtype s0 = vx_load_aligned(sptr);
-                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
+                vtype s1 = vx_load_aligned(sptr + VTraits<vtype>::vlanes());
 
                 for( k = 2; k < _ksize; k++ )
                 {
                     sptr = src[k] + i;
                     s0 = updateOp(s0, vx_load_aligned(sptr));
-                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes()));
                 }
 
                 sptr = src[0] + i;
                 v_store(dst + i, updateOp(s0, vx_load_aligned(sptr)));
-                v_store(dst + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
+                v_store(dst + i + VTraits<vtype>::vlanes(), updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes())));
 
                 sptr = src[k] + i;
                 v_store(dst + dststep + i, updateOp(s0, vx_load_aligned(sptr)));
-                v_store(dst + dststep + i + vtype::nlanes, updateOp(s1, vx_load_aligned(sptr + vtype::nlanes)));
-                i += 2*vtype::nlanes;
+                v_store(dst + dststep + i + VTraits<vtype>::vlanes(), updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes())));
+                i += 2*VTraits<vtype>::vlanes();
             }
-            if( i <= width - vtype::nlanes )
+            if( i <= width - VTraits<vtype>::vlanes() )
             {
                 vtype s0 = vx_load_aligned(src[1] + i);
 
@@ -257,9 +257,9 @@ template<class VecUpdate> struct MorphColumnVec
 
                 v_store(dst + i, updateOp(s0, vx_load_aligned(src[0] + i)));
                 v_store(dst + dststep + i, updateOp(s0, vx_load_aligned(src[k] + i)));
-                i += vtype::nlanes;
+                i += VTraits<vtype>::vlanes();
             }
-            if( i <= width - vtype::nlanes/2 )
+            if( i <= width - VTraits<vtype>::vlanes()/2 )
             {
                 vtype s0 = vx_load_low(src[1] + i);
 
@@ -268,66 +268,66 @@ template<class VecUpdate> struct MorphColumnVec
 
                 v_store_low(dst + i, updateOp(s0, vx_load_low(src[0] + i)));
                 v_store_low(dst + dststep + i, updateOp(s0, vx_load_low(src[k] + i)));
-                i += vtype::nlanes/2;
+                i += VTraits<vtype>::vlanes()/2;
             }
         }
 
         for( ; count > 0; count--, dst += dststep, src++ )
         {
-            for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes)
+            for( i = 0; i <= width - 4*VTraits<vtype>::vlanes(); i += 4*VTraits<vtype>::vlanes())
             {
                 const stype* sptr = src[0] + i;
                 vtype s0 = vx_load_aligned(sptr);
-                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
-                vtype s2 = vx_load_aligned(sptr + 2*vtype::nlanes);
-                vtype s3 = vx_load_aligned(sptr + 3*vtype::nlanes);
+                vtype s1 = vx_load_aligned(sptr + VTraits<vtype>::vlanes());
+                vtype s2 = vx_load_aligned(sptr + 2*VTraits<vtype>::vlanes());
+                vtype s3 = vx_load_aligned(sptr + 3*VTraits<vtype>::vlanes());
 
                 for( k = 1; k < _ksize; k++ )
                 {
                     sptr = src[k] + i;
                     s0 = updateOp(s0, vx_load_aligned(sptr));
-                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
-                    s2 = updateOp(s2, vx_load_aligned(sptr + 2*vtype::nlanes));
-                    s3 = updateOp(s3, vx_load_aligned(sptr + 3*vtype::nlanes));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes()));
+                    s2 = updateOp(s2, vx_load_aligned(sptr + 2*VTraits<vtype>::vlanes()));
+                    s3 = updateOp(s3, vx_load_aligned(sptr + 3*VTraits<vtype>::vlanes()));
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + vtype::nlanes, s1);
-                v_store(dst + i + 2*vtype::nlanes, s2);
-                v_store(dst + i + 3*vtype::nlanes, s3);
+                v_store(dst + i + VTraits<vtype>::vlanes(), s1);
+                v_store(dst + i + 2*VTraits<vtype>::vlanes(), s2);
+                v_store(dst + i + 3*VTraits<vtype>::vlanes(), s3);
             }
-            if( i <= width - 2*vtype::nlanes )
+            if( i <= width - 2*VTraits<vtype>::vlanes() )
             {
                 const stype* sptr = src[0] + i;
                 vtype s0 = vx_load_aligned(sptr);
-                vtype s1 = vx_load_aligned(sptr + vtype::nlanes);
+                vtype s1 = vx_load_aligned(sptr + VTraits<vtype>::vlanes());
 
                 for( k = 1; k < _ksize; k++ )
                 {
                     sptr = src[k] + i;
                     s0 = updateOp(s0, vx_load_aligned(sptr));
-                    s1 = updateOp(s1, vx_load_aligned(sptr + vtype::nlanes));
+                    s1 = updateOp(s1, vx_load_aligned(sptr + VTraits<vtype>::vlanes()));
                 }
                 v_store(dst + i, s0);
-                v_store(dst + i + vtype::nlanes, s1);
-                i += 2*vtype::nlanes;
+                v_store(dst + i + VTraits<vtype>::vlanes(), s1);
+                i += 2*VTraits<vtype>::vlanes();
             }
-            if( i <= width - vtype::nlanes )
+            if( i <= width - VTraits<vtype>::vlanes() )
             {
                 vtype s0 = vx_load_aligned(src[0] + i);
 
                 for( k = 1; k < _ksize; k++ )
                     s0 = updateOp(s0, vx_load_aligned(src[k] + i));
                 v_store(dst + i, s0);
-                i += vtype::nlanes;
+                i += VTraits<vtype>::vlanes();
             }
-            if( i <= width - vtype::nlanes/2 )
+            if( i <= width - VTraits<vtype>::vlanes()/2 )
             {
                 vtype s0 = vx_load_low(src[0] + i);
 
                 for( k = 1; k < _ksize; k++ )
                     s0 = updateOp(s0, vx_load_low(src[k] + i));
                 v_store_low(dst + i, s0);
-                i += vtype::nlanes/2;
+                i += VTraits<vtype>::vlanes()/2;
             }
         }
 
@@ -341,7 +341,7 @@ template<class VecUpdate> struct MorphColumnVec
 template<class VecUpdate> struct MorphVec
 {
     typedef typename VecUpdate::vtype vtype;
-    typedef typename vtype::lane_type stype;
+    typedef typename VTraits<vtype>::lane_type stype;
     int operator()(uchar** _src, int nz, uchar* _dst, int width) const
     {
         CV_INSTRUMENT_REGION();
@@ -351,56 +351,56 @@ template<class VecUpdate> struct MorphVec
         int i, k;
         VecUpdate updateOp;
 
-        for( i = 0; i <= width - 4*vtype::nlanes; i += 4*vtype::nlanes )
+        for( i = 0; i <= width - 4*VTraits<vtype>::vlanes(); i += 4*VTraits<vtype>::vlanes() )
         {
             const stype* sptr = src[0] + i;
             vtype s0 = vx_load(sptr);
-            vtype s1 = vx_load(sptr + vtype::nlanes);
-            vtype s2 = vx_load(sptr + 2*vtype::nlanes);
-            vtype s3 = vx_load(sptr + 3*vtype::nlanes);
+            vtype s1 = vx_load(sptr + VTraits<vtype>::vlanes());
+            vtype s2 = vx_load(sptr + 2*VTraits<vtype>::vlanes());
+            vtype s3 = vx_load(sptr + 3*VTraits<vtype>::vlanes());
             for( k = 1; k < nz; k++ )
             {
                 sptr = src[k] + i;
                 s0 = updateOp(s0, vx_load(sptr));
-                s1 = updateOp(s1, vx_load(sptr + vtype::nlanes));
-                s2 = updateOp(s2, vx_load(sptr + 2*vtype::nlanes));
-                s3 = updateOp(s3, vx_load(sptr + 3*vtype::nlanes));
+                s1 = updateOp(s1, vx_load(sptr + VTraits<vtype>::vlanes()));
+                s2 = updateOp(s2, vx_load(sptr + 2*VTraits<vtype>::vlanes()));
+                s3 = updateOp(s3, vx_load(sptr + 3*VTraits<vtype>::vlanes()));
             }
             v_store(dst + i, s0);
-            v_store(dst + i + vtype::nlanes, s1);
-            v_store(dst + i + 2*vtype::nlanes, s2);
-            v_store(dst + i + 3*vtype::nlanes, s3);
+            v_store(dst + i + VTraits<vtype>::vlanes(), s1);
+            v_store(dst + i + 2*VTraits<vtype>::vlanes(), s2);
+            v_store(dst + i + 3*VTraits<vtype>::vlanes(), s3);
         }
-        if( i <= width - 2*vtype::nlanes )
+        if( i <= width - 2*VTraits<vtype>::vlanes() )
         {
             const stype* sptr = src[0] + i;
             vtype s0 = vx_load(sptr);
-            vtype s1 = vx_load(sptr + vtype::nlanes);
+            vtype s1 = vx_load(sptr + VTraits<vtype>::vlanes());
             for( k = 1; k < nz; k++ )
             {
                 sptr = src[k] + i;
                 s0 = updateOp(s0, vx_load(sptr));
-                s1 = updateOp(s1, vx_load(sptr + vtype::nlanes));
+                s1 = updateOp(s1, vx_load(sptr + VTraits<vtype>::vlanes()));
             }
             v_store(dst + i, s0);
-            v_store(dst + i + vtype::nlanes, s1);
-            i += 2*vtype::nlanes;
+            v_store(dst + i + VTraits<vtype>::vlanes(), s1);
+            i += 2*VTraits<vtype>::vlanes();
         }
-        if( i <= width - vtype::nlanes )
+        if( i <= width - VTraits<vtype>::vlanes() )
         {
             vtype s0 = vx_load(src[0] + i);
             for( k = 1; k < nz; k++ )
                 s0 = updateOp(s0, vx_load(src[k] + i));
             v_store(dst + i, s0);
-            i += vtype::nlanes;
+            i += VTraits<vtype>::vlanes();
         }
-        if( i <= width - vtype::nlanes/2 )
+        if( i <= width - VTraits<vtype>::vlanes()/2 )
         {
             vtype s0 = vx_load_low(src[0] + i);
             for( k = 1; k < nz; k++ )
                 s0 = updateOp(s0, vx_load_low(src[k] + i));
             v_store_low(dst + i, s0);
-            i += vtype::nlanes/2;
+            i += VTraits<vtype>::vlanes()/2;
         }
         return i;
     }
@@ -753,7 +753,7 @@ Ptr<BaseRowFilter> getMorphologyRowFilter(int op, int type, int ksize, int ancho
                                       DilateRowVec64f> >(ksize, anchor);
     }
 
-    CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
+    CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
 }
 
 Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int anchor)
@@ -801,7 +801,7 @@ Ptr<BaseColumnFilter> getMorphologyColumnFilter(int op, int type, int ksize, int
                                          DilateColumnVec64f> >(ksize, anchor);
     }
 
-    CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
+    CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
 }
 
 Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point anchor)
@@ -838,7 +838,7 @@ Ptr<BaseFilter> getMorphologyFilter(int op, int type, const Mat& kernel, Point a
             return makePtr<MorphFilter<MaxOp<double>, DilateVec64f> >(kernel, anchor);
     }
 
-    CV_Error_( CV_StsNotImplemented, ("Unsupported data type (=%d)", type));
+    CV_Error_( cv::Error::StsNotImplemented, ("Unsupported data type (=%d)", type));
 }
 
 #endif

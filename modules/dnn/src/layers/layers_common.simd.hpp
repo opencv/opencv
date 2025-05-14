@@ -46,16 +46,6 @@ namespace cv {
 namespace dnn {
 CV_CPU_OPTIMIZATION_NAMESPACE_BEGIN
 
-void fastDepthwiseConv( const float* weights,
-                      int kernel_h, int kernel_w,
-                      int stride_h, int stride_w,
-                      int dilation_h, int dilation_w,
-                      int pad_t, int pad_l,
-                      const float* bias, const float* relu,
-                      const float* inptr,
-                      int height, int width,
-                      float* outptr,
-                      int out_d, int outH, int outW );
 void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize );
@@ -69,185 +59,6 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
 #undef _mm256_fmadd_ps
 #define _mm256_fmadd_ps(a, b, c) _mm256_add_ps(c, _mm256_mul_ps(a, b))
 #endif
-
-static inline void _mm256_load_deinterleave(const float* ptr, __m256& a, __m256& b)
-{
-    __m256 t0 = _mm256_loadu_ps(ptr);
-    __m256 t1 = _mm256_loadu_ps(ptr + 8);
-
-    __m256 lo = _mm256_permute2f128_ps(t0, t1, 0+2*16);
-    __m256 hi = _mm256_permute2f128_ps(t0, t1, 1+3*16);
-    a = _mm256_shuffle_ps(lo, hi, 0x88);
-    b = _mm256_shuffle_ps(lo, hi, 0xdd);
-}
-
-void fastDepthwiseConv( const float* wptr,
-                     int kernel_h, int kernel_w,
-                     int stride_h, int stride_w,
-                     int dilation_h, int dilation_w,
-                     int pad_t, int pad_l,
-                     const float* biasptr, const float* relu,
-                     const float* inptr_,
-                     int height, int width,
-                     float* outptr_,
-                     int out_d, int outH, int outW )
-{
-    const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
-                w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
-                w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
-    float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
-
-    for (int out_i = 0; out_i < outH; out_i++)
-    {
-        int in_i = out_i * stride_h - pad_t, out_j = 0;
-        const float* imgptr0 = inptr_ + in_i*width;
-        const float* imgptr1 = imgptr0 + dilation_h*width;
-        const float* imgptr2 = imgptr0 + (dilation_h*2)*width;
-        float out, w00 = w00_, w01 = w01_, w02 = w02_;
-        float w20 = w20_, w21 = w21_, w22 = w22_;
-        if (in_i < 0)
-        {
-            w00 = w01 = w02 = 0.f;
-            imgptr0 = imgptr1;
-        }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
-        {
-            w20 = w21 = w22 = 0.f;
-            imgptr2 = imgptr1;
-        }
-        float* outptr = outptr_ + out_i*outW;
-        if (pad_l > 0)
-        {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[0] = out;
-            out_j = 1;
-        }
-
-        if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
-        {
-            const int VECSZ = 8;
-            __m256 vw00 = _mm256_set1_ps(w00), vw01 = _mm256_set1_ps(w01), vw02 = _mm256_set1_ps(w02),
-                      vw10 = _mm256_set1_ps(w10), vw11 = _mm256_set1_ps(w11), vw12 = _mm256_set1_ps(w12),
-                      vw20 = _mm256_set1_ps(w20), vw21 = _mm256_set1_ps(w21), vw22 = _mm256_set1_ps(w22);
-            __m256 z = _mm256_setzero_ps(), vbias = _mm256_set1_ps(bias), vrc = _mm256_set1_ps(relu_coeff);
-
-            if( stride_w == 1 )
-                for( ; out_j < outW1; out_j += VECSZ )
-                {
-                    if (out_j + VECSZ > outW1 && out_j > pad_l)
-                        out_j = outW1 - VECSZ;
-                    int in_j = out_j * stride_w - pad_l;
-                    __m256 v00 = _mm256_loadu_ps(imgptr0 + in_j),
-                           v01 = _mm256_loadu_ps(imgptr0 + in_j + dilation_w),
-                           v02 = _mm256_loadu_ps(imgptr0 + in_j + dilation_w*2),
-                           v10 = _mm256_loadu_ps(imgptr1 + in_j),
-                           v11 = _mm256_loadu_ps(imgptr1 + in_j + dilation_w),
-                           v12 = _mm256_loadu_ps(imgptr1 + in_j + dilation_w*2),
-                           v20 = _mm256_loadu_ps(imgptr2 + in_j),
-                           v21 = _mm256_loadu_ps(imgptr2 + in_j + dilation_w),
-                           v22 = _mm256_loadu_ps(imgptr2 + in_j + dilation_w*2);
-
-                    __m256 vout0 = _mm256_fmadd_ps(v00, vw00, vbias);
-                    __m256 vout1 = _mm256_mul_ps(v01, vw01);
-                    __m256 vout2 = _mm256_mul_ps(v02, vw02);
-
-                    vout0 = _mm256_fmadd_ps(v10, vw10, vout0);
-                    vout1 = _mm256_fmadd_ps(v11, vw11, vout1);
-                    vout2 = _mm256_fmadd_ps(v12, vw12, vout2);
-
-                    vout0 = _mm256_fmadd_ps(v20, vw20, vout0);
-                    vout1 = _mm256_fmadd_ps(v21, vw21, vout1);
-                    vout2 = _mm256_fmadd_ps(v22, vw22, vout2);
-
-                    vout0 = _mm256_add_ps(_mm256_add_ps(vout0, vout1), vout2);
-                    if (relu)
-                    {
-                        __m256 m = _mm256_cmp_ps(vout0, z, _CMP_GT_OQ);
-                        vout0 = _mm256_blendv_ps(_mm256_mul_ps(vout0, vrc), vout0, m);
-                    }
-                    _mm256_storeu_ps(outptr + out_j, vout0);
-                }
-            else
-                for( ; out_j < outW1; out_j += VECSZ )
-                {
-                    if (out_j + VECSZ > outW1 && out_j > pad_l)
-                        out_j = outW1 - VECSZ;
-                    int in_j = out_j * stride_w - pad_l;
-                    __m256 v00, v01, v02, v10, v11, v12, v20, v21, v22, unused;
-                    _mm256_load_deinterleave(imgptr0 + in_j, v00, v01);
-                    _mm256_load_deinterleave(imgptr0 + in_j + 2, v02, unused);
-                    _mm256_load_deinterleave(imgptr1 + in_j, v10, v11);
-                    _mm256_load_deinterleave(imgptr1 + in_j + 2, v12, unused);
-                    _mm256_load_deinterleave(imgptr2 + in_j, v20, v21);
-                    _mm256_load_deinterleave(imgptr2 + in_j + 2, v22, unused);
-
-                    __m256 vout0 = _mm256_fmadd_ps(v00, vw00, vbias);
-                    __m256 vout1 = _mm256_mul_ps(v01, vw01);
-                    __m256 vout2 = _mm256_mul_ps(v02, vw02);
-
-                    vout0 = _mm256_fmadd_ps(v10, vw10, vout0);
-                    vout1 = _mm256_fmadd_ps(v11, vw11, vout1);
-                    vout2 = _mm256_fmadd_ps(v12, vw12, vout2);
-
-                    vout0 = _mm256_fmadd_ps(v20, vw20, vout0);
-                    vout1 = _mm256_fmadd_ps(v21, vw21, vout1);
-                    vout2 = _mm256_fmadd_ps(v22, vw22, vout2);
-
-                    vout0 = _mm256_add_ps(_mm256_add_ps(vout0, vout1), vout2);
-                    if (relu)
-                    {
-                        __m256 m = _mm256_cmp_ps(vout0, z, _CMP_GT_OQ);
-                        vout0 = _mm256_blendv_ps(_mm256_mul_ps(vout0, vrc), vout0, m);
-                    }
-                    _mm256_storeu_ps(outptr + out_j, vout0);
-                }
-        }
-
-        for (; out_j < outW1; out_j++)
-        {
-            int in_j = out_j * stride_w - pad_l;
-            out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 +
-                  imgptr1[in_j]*w10 + imgptr1[in_j + dilation_w]*w11 + imgptr1[in_j + dilation_w*2]*w12 +
-                  imgptr2[in_j]*w20 + imgptr2[in_j + dilation_w]*w21 + imgptr2[in_j + dilation_w*2]*w22 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[out_j] = out;
-        }
-
-        for (; out_j < outW; out_j++ )
-        {
-            int in_j0 = out_j * stride_w - pad_l, in_j1 = in_j0 + dilation_w, in_j2 = in_j0 + dilation_w*2;
-            float s0 = 1.f, s1 = 1.f, s2 = 1.f;
-            if (in_j0 >= width)
-            {
-                in_j0 = 0;
-                s0 = 0.f;
-            }
-            if (in_j1 >= width)
-            {
-                in_j1 = 0;
-                s1 = 0.f;
-            }
-            if (in_j2 >= width)
-            {
-                in_j2 = 0;
-                s2 = 0.f;
-            }
-            out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
-                  imgptr1[in_j0]*w10*s0 + imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
-                  imgptr2[in_j0]*w20*s0 + imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[out_j] = out;
-        }
-    }
-    _mm256_zeroupper();
-}
 
 // Used to generate the mask used when calculating tails
 static const uint32_t tailMaskArray[15] = {
@@ -484,7 +295,7 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
     int avl = nb, vl;
     for(int n = 0; n < nb; n += vl, avl -= vl)
     {
-        vl = vsetvl_e32m4(avl);
+        vl = __riscv_vsetvl_e32m4(avl);
         for( int m = 0; m < ma; m += 7 )
         {
             const float* aptr0 = aptr + astep*m;
@@ -503,13 +314,13 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
             float* cptr5 = cptr + cstep*std::min(m+5, ma-1);
             float* cptr6 = cptr + cstep*std::min(m+6, ma-1);
 
-            vfloat32m4_t d0 = vfmv_v_f_f32m4(0, vl);
-            vfloat32m4_t d1 = vfmv_v_f_f32m4(0, vl);
-            vfloat32m4_t d2 = vfmv_v_f_f32m4(0, vl);
-            vfloat32m4_t d3 = vfmv_v_f_f32m4(0, vl);
-            vfloat32m4_t d4 = vfmv_v_f_f32m4(0, vl);
-            vfloat32m4_t d5 = vfmv_v_f_f32m4(0, vl);
-            vfloat32m4_t d6 = vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d0 = __riscv_vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d1 = __riscv_vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d2 = __riscv_vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d3 = __riscv_vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d4 = __riscv_vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d5 = __riscv_vfmv_v_f_f32m4(0, vl);
+            vfloat32m4_t d6 = __riscv_vfmv_v_f_f32m4(0, vl);
 
             for( int k = 0; k < na; k++ )
             {
@@ -521,22 +332,22 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                 float a5 = aptr5[k];
                 float a6 = aptr6[k];
 
-                vfloat32m4_t b = vle32_v_f32m4(bptr + k*bstep + n, vl);
-                d0 = vfmacc_vf_f32m4(d0, a0, b, vl);
-                d1 = vfmacc_vf_f32m4(d1, a1, b, vl);
-                d2 = vfmacc_vf_f32m4(d2, a2, b, vl);
-                d3 = vfmacc_vf_f32m4(d3, a3, b, vl);
-                d4 = vfmacc_vf_f32m4(d4, a4, b, vl);
-                d5 = vfmacc_vf_f32m4(d5, a5, b, vl);
-                d6 = vfmacc_vf_f32m4(d6, a6, b, vl);
+                vfloat32m4_t b = __riscv_vle32_v_f32m4(bptr + k*bstep + n, vl);
+                d0 = __riscv_vfmacc_vf_f32m4(d0, a0, b, vl);
+                d1 = __riscv_vfmacc_vf_f32m4(d1, a1, b, vl);
+                d2 = __riscv_vfmacc_vf_f32m4(d2, a2, b, vl);
+                d3 = __riscv_vfmacc_vf_f32m4(d3, a3, b, vl);
+                d4 = __riscv_vfmacc_vf_f32m4(d4, a4, b, vl);
+                d5 = __riscv_vfmacc_vf_f32m4(d5, a5, b, vl);
+                d6 = __riscv_vfmacc_vf_f32m4(d6, a6, b, vl);
             }
-            vse32_v_f32m4(cptr0 + n, d0, vl);
-            vse32_v_f32m4(cptr1 + n, d1, vl);
-            vse32_v_f32m4(cptr2 + n, d2, vl);
-            vse32_v_f32m4(cptr3 + n, d3, vl);
-            vse32_v_f32m4(cptr4 + n, d4, vl);
-            vse32_v_f32m4(cptr5 + n, d5, vl);
-            vse32_v_f32m4(cptr6 + n, d6, vl);
+            __riscv_vse32_v_f32m4(cptr0 + n, d0, vl);
+            __riscv_vse32_v_f32m4(cptr1 + n, d1, vl);
+            __riscv_vse32_v_f32m4(cptr2 + n, d2, vl);
+            __riscv_vse32_v_f32m4(cptr3 + n, d3, vl);
+            __riscv_vse32_v_f32m4(cptr4 + n, d4, vl);
+            __riscv_vse32_v_f32m4(cptr5 + n, d5, vl);
+            __riscv_vse32_v_f32m4(cptr6 + n, d6, vl);
         }
     }
 }
@@ -545,490 +356,118 @@ void fastGEMM1T( const float* vec, const float* weights,
                  size_t wstep, const float* bias,
                  float* dst, int nvecs, int vecsize )
 {
-    const int vlm2 = vsetvlmax_e32m2();
+    const int vlm2 = __riscv_vsetvlmax_e32m2();
     int i = 0;
     for( ; i <= nvecs - 15; i += 15 )
     {
         const float* wptr = weights + i*wstep;
         vfloat32m2_t
-               vs0 = vfmv_v_f_f32m2(0, vlm2), vs1 = vfmv_v_f_f32m2(0, vlm2), vs2 = vfmv_v_f_f32m2(0, vlm2),
-               vs3 = vfmv_v_f_f32m2(0, vlm2), vs4 = vfmv_v_f_f32m2(0, vlm2), vs5 = vfmv_v_f_f32m2(0, vlm2),
-               vs6 = vfmv_v_f_f32m2(0, vlm2), vs7 = vfmv_v_f_f32m2(0, vlm2), vs8 = vfmv_v_f_f32m2(0, vlm2),
-               vs9 = vfmv_v_f_f32m2(0, vlm2), vs10 = vfmv_v_f_f32m2(0, vlm2), vs11 = vfmv_v_f_f32m2(0, vlm2),
-               vs12 = vfmv_v_f_f32m2(0, vlm2), vs13 = vfmv_v_f_f32m2(0, vlm2), vs14 = vfmv_v_f_f32m2(0, vlm2);
+               vs0 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs1 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs2 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs3 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs4 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs5 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs6 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs7 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs8 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs9 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs10 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs11 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs12 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs13 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs14 = __riscv_vfmv_v_f_f32m2(0, vlm2);
         int avl = vecsize, vl;
         for(int k = 0 ; k < vecsize; k += vl, wptr += vl, avl -= vl)
         {
-            vl = vsetvl_e32m2(avl);
-            vfloat32m2_t v = vle32_v_f32m2(vec + k, vl);
-            vs0 = vfmacc_vv_f32m2(vs0, vle32_v_f32m2(wptr, vl), v, vl);
-            vs1 = vfmacc_vv_f32m2(vs1, vle32_v_f32m2(wptr + wstep, vl), v, vl);
-            vs2 = vfmacc_vv_f32m2(vs2, vle32_v_f32m2(wptr + wstep*2, vl), v, vl);
-            vs3 = vfmacc_vv_f32m2(vs3, vle32_v_f32m2(wptr + wstep*3, vl), v, vl);
-            vs4 = vfmacc_vv_f32m2(vs4, vle32_v_f32m2(wptr + wstep*4, vl), v, vl);
-            vs5 = vfmacc_vv_f32m2(vs5, vle32_v_f32m2(wptr + wstep*5, vl), v, vl);
-            vs6 = vfmacc_vv_f32m2(vs6, vle32_v_f32m2(wptr + wstep*6, vl), v, vl);
-            vs7 = vfmacc_vv_f32m2(vs7, vle32_v_f32m2(wptr + wstep*7, vl), v, vl);
-            vs8 = vfmacc_vv_f32m2(vs8, vle32_v_f32m2(wptr + wstep*8, vl), v, vl);
-            vs9 = vfmacc_vv_f32m2(vs9, vle32_v_f32m2(wptr + wstep*9, vl), v, vl);
-            vs10 = vfmacc_vv_f32m2(vs10, vle32_v_f32m2(wptr + wstep*10, vl), v, vl);
-            vs11 = vfmacc_vv_f32m2(vs11, vle32_v_f32m2(wptr + wstep*11, vl), v, vl);
-            vs12 = vfmacc_vv_f32m2(vs12, vle32_v_f32m2(wptr + wstep*12, vl), v, vl);
-            vs13 = vfmacc_vv_f32m2(vs13, vle32_v_f32m2(wptr + wstep*13, vl), v, vl);
-            vs14 = vfmacc_vv_f32m2(vs14, vle32_v_f32m2(wptr + wstep*14, vl), v, vl);
+            vl = __riscv_vsetvl_e32m2(avl);
+            vfloat32m2_t v = __riscv_vle32_v_f32m2(vec + k, vl);
+            vs0 = __riscv_vfmacc_vv_f32m2(vs0, __riscv_vle32_v_f32m2(wptr, vl), v, vl);
+            vs1 = __riscv_vfmacc_vv_f32m2(vs1, __riscv_vle32_v_f32m2(wptr + wstep, vl), v, vl);
+            vs2 = __riscv_vfmacc_vv_f32m2(vs2, __riscv_vle32_v_f32m2(wptr + wstep*2, vl), v, vl);
+            vs3 = __riscv_vfmacc_vv_f32m2(vs3, __riscv_vle32_v_f32m2(wptr + wstep*3, vl), v, vl);
+            vs4 = __riscv_vfmacc_vv_f32m2(vs4, __riscv_vle32_v_f32m2(wptr + wstep*4, vl), v, vl);
+            vs5 = __riscv_vfmacc_vv_f32m2(vs5, __riscv_vle32_v_f32m2(wptr + wstep*5, vl), v, vl);
+            vs6 = __riscv_vfmacc_vv_f32m2(vs6, __riscv_vle32_v_f32m2(wptr + wstep*6, vl), v, vl);
+            vs7 = __riscv_vfmacc_vv_f32m2(vs7, __riscv_vle32_v_f32m2(wptr + wstep*7, vl), v, vl);
+            vs8 = __riscv_vfmacc_vv_f32m2(vs8, __riscv_vle32_v_f32m2(wptr + wstep*8, vl), v, vl);
+            vs9 = __riscv_vfmacc_vv_f32m2(vs9, __riscv_vle32_v_f32m2(wptr + wstep*9, vl), v, vl);
+            vs10 = __riscv_vfmacc_vv_f32m2(vs10, __riscv_vle32_v_f32m2(wptr + wstep*10, vl), v, vl);
+            vs11 = __riscv_vfmacc_vv_f32m2(vs11, __riscv_vle32_v_f32m2(wptr + wstep*11, vl), v, vl);
+            vs12 = __riscv_vfmacc_vv_f32m2(vs12, __riscv_vle32_v_f32m2(wptr + wstep*12, vl), v, vl);
+            vs13 = __riscv_vfmacc_vv_f32m2(vs13, __riscv_vle32_v_f32m2(wptr + wstep*13, vl), v, vl);
+            vs14 = __riscv_vfmacc_vv_f32m2(vs14, __riscv_vle32_v_f32m2(wptr + wstep*14, vl), v, vl);
         }
 
         // Calculate the sum of each vector
         float sum[15];
-        vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm2);
-        sum[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
-        sum[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
-        sum[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
-        sum[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
-        sum[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
-        sum[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
-        sum[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
-        sum[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
-        sum[8] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
-        sum[9] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
-        sum[10] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
-        sum[11] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
-        sum[12] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
-        sum[13] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
-        sum[14] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs14, zero, vlm2));
+        vfloat32m1_t zero = __riscv_vfmv_v_f_f32m1(0, vlm2);
+        sum[0] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs0, zero, vlm2));
+        sum[1] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs1, zero, vlm2));
+        sum[2] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs2, zero, vlm2));
+        sum[3] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs3, zero, vlm2));
+        sum[4] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs4, zero, vlm2));
+        sum[5] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs5, zero, vlm2));
+        sum[6] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs6, zero, vlm2));
+        sum[7] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs7, zero, vlm2));
+        sum[8] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs8, zero, vlm2));
+        sum[9] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs9, zero, vlm2));
+        sum[10] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs10, zero, vlm2));
+        sum[11] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs11, zero, vlm2));
+        sum[12] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs12, zero, vlm2));
+        sum[13] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs13, zero, vlm2));
+        sum[14] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs14, zero, vlm2));
 
-        vfloat32m4_t s0 = vfadd_vv_f32m4(vle32_v_f32m4(sum, 15), vle32_v_f32m4(bias + i, 15), 15);
-        vse32_v_f32m4(dst + i, s0, 15);
+        vfloat32m4_t s0 = __riscv_vfadd_vv_f32m4(__riscv_vle32_v_f32m4(sum, 15), __riscv_vle32_v_f32m4(bias + i, 15), 15);
+        __riscv_vse32_v_f32m4(dst + i, s0, 15);
     }
     int unroll_tail = nvecs - i;
     if (unroll_tail > 0)
     {
         const float* wptr = weights + i*wstep;
         vfloat32m2_t
-               vs0 = vfmv_v_f_f32m2(0, vlm2), vs1 = vfmv_v_f_f32m2(0, vlm2), vs2 = vfmv_v_f_f32m2(0, vlm2),
-               vs3 = vfmv_v_f_f32m2(0, vlm2), vs4 = vfmv_v_f_f32m2(0, vlm2), vs5 = vfmv_v_f_f32m2(0, vlm2),
-               vs6 = vfmv_v_f_f32m2(0, vlm2), vs7 = vfmv_v_f_f32m2(0, vlm2), vs8 = vfmv_v_f_f32m2(0, vlm2),
-               vs9 = vfmv_v_f_f32m2(0, vlm2), vs10 = vfmv_v_f_f32m2(0, vlm2), vs11 = vfmv_v_f_f32m2(0, vlm2),
-               vs12 = vfmv_v_f_f32m2(0, vlm2), vs13 = vfmv_v_f_f32m2(0, vlm2);
+               vs0 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs1 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs2 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs3 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs4 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs5 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs6 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs7 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs8 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs9 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs10 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs11 = __riscv_vfmv_v_f_f32m2(0, vlm2),
+               vs12 = __riscv_vfmv_v_f_f32m2(0, vlm2), vs13 = __riscv_vfmv_v_f_f32m2(0, vlm2);
         int avl = vecsize, vl;
         for(int k = 0; k < vecsize; k += vl, wptr += vl, avl -= vl)
         {
-            vl = vsetvl_e32m2(avl);
-            vfloat32m2_t v = vle32_v_f32m2(vec + k, vl);
-            vs0 = vfmacc_vv_f32m2(vs0, vle32_v_f32m2(wptr, vl), v, vl);
-            vs1 = vfmacc_vv_f32m2(vs1, vle32_v_f32m2(wptr + wstep*std::min(1, unroll_tail-1), vl), v, vl);
-            vs2 = vfmacc_vv_f32m2(vs2, vle32_v_f32m2(wptr + wstep*std::min(2, unroll_tail-1), vl), v, vl);
-            vs3 = vfmacc_vv_f32m2(vs3, vle32_v_f32m2(wptr + wstep*std::min(3, unroll_tail-1), vl), v, vl);
-            vs4 = vfmacc_vv_f32m2(vs4, vle32_v_f32m2(wptr + wstep*std::min(4, unroll_tail-1), vl), v, vl);
-            vs5 = vfmacc_vv_f32m2(vs5, vle32_v_f32m2(wptr + wstep*std::min(5, unroll_tail-1), vl), v, vl);
-            vs6 = vfmacc_vv_f32m2(vs6, vle32_v_f32m2(wptr + wstep*std::min(6, unroll_tail-1), vl), v, vl);
-            vs7 = vfmacc_vv_f32m2(vs7, vle32_v_f32m2(wptr + wstep*std::min(7, unroll_tail-1), vl), v, vl);
-            vs8 = vfmacc_vv_f32m2(vs8, vle32_v_f32m2(wptr + wstep*std::min(8, unroll_tail-1), vl), v, vl);
-            vs9 = vfmacc_vv_f32m2(vs9, vle32_v_f32m2(wptr + wstep*std::min(9, unroll_tail-1), vl), v, vl);
-            vs10 = vfmacc_vv_f32m2(vs10, vle32_v_f32m2(wptr + wstep*std::min(10, unroll_tail-1), vl), v, vl);
-            vs11 = vfmacc_vv_f32m2(vs11, vle32_v_f32m2(wptr + wstep*std::min(11, unroll_tail-1), vl), v, vl);
-            vs12 = vfmacc_vv_f32m2(vs12, vle32_v_f32m2(wptr + wstep*std::min(12, unroll_tail-1), vl), v, vl);
-            vs13 = vfmacc_vv_f32m2(vs13, vle32_v_f32m2(wptr + wstep*std::min(13, unroll_tail-1), vl), v, vl);
+            vl = __riscv_vsetvl_e32m2(avl);
+            vfloat32m2_t v = __riscv_vle32_v_f32m2(vec + k, vl);
+            vs0 = __riscv_vfmacc_vv_f32m2(vs0, __riscv_vle32_v_f32m2(wptr, vl), v, vl);
+            vs1 = __riscv_vfmacc_vv_f32m2(vs1, __riscv_vle32_v_f32m2(wptr + wstep*std::min(1, unroll_tail-1), vl), v, vl);
+            vs2 = __riscv_vfmacc_vv_f32m2(vs2, __riscv_vle32_v_f32m2(wptr + wstep*std::min(2, unroll_tail-1), vl), v, vl);
+            vs3 = __riscv_vfmacc_vv_f32m2(vs3, __riscv_vle32_v_f32m2(wptr + wstep*std::min(3, unroll_tail-1), vl), v, vl);
+            vs4 = __riscv_vfmacc_vv_f32m2(vs4, __riscv_vle32_v_f32m2(wptr + wstep*std::min(4, unroll_tail-1), vl), v, vl);
+            vs5 = __riscv_vfmacc_vv_f32m2(vs5, __riscv_vle32_v_f32m2(wptr + wstep*std::min(5, unroll_tail-1), vl), v, vl);
+            vs6 = __riscv_vfmacc_vv_f32m2(vs6, __riscv_vle32_v_f32m2(wptr + wstep*std::min(6, unroll_tail-1), vl), v, vl);
+            vs7 = __riscv_vfmacc_vv_f32m2(vs7, __riscv_vle32_v_f32m2(wptr + wstep*std::min(7, unroll_tail-1), vl), v, vl);
+            vs8 = __riscv_vfmacc_vv_f32m2(vs8, __riscv_vle32_v_f32m2(wptr + wstep*std::min(8, unroll_tail-1), vl), v, vl);
+            vs9 = __riscv_vfmacc_vv_f32m2(vs9, __riscv_vle32_v_f32m2(wptr + wstep*std::min(9, unroll_tail-1), vl), v, vl);
+            vs10 = __riscv_vfmacc_vv_f32m2(vs10, __riscv_vle32_v_f32m2(wptr + wstep*std::min(10, unroll_tail-1), vl), v, vl);
+            vs11 = __riscv_vfmacc_vv_f32m2(vs11, __riscv_vle32_v_f32m2(wptr + wstep*std::min(11, unroll_tail-1), vl), v, vl);
+            vs12 = __riscv_vfmacc_vv_f32m2(vs12, __riscv_vle32_v_f32m2(wptr + wstep*std::min(12, unroll_tail-1), vl), v, vl);
+            vs13 = __riscv_vfmacc_vv_f32m2(vs13, __riscv_vle32_v_f32m2(wptr + wstep*std::min(13, unroll_tail-1), vl), v, vl);
         }
 
         // Calculate the sum of each vector
         float sum[14];
-        vfloat32m1_t zero = vfmv_v_f_f32m1(0, vlm2);
-        sum[0] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs0, zero, vlm2));
-        sum[1] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs1, zero, vlm2));
-        sum[2] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs2, zero, vlm2));
-        sum[3] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs3, zero, vlm2));
-        sum[4] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs4, zero, vlm2));
-        sum[5] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs5, zero, vlm2));
-        sum[6] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs6, zero, vlm2));
-        sum[7] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs7, zero, vlm2));
-        sum[8] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs8, zero, vlm2));
-        sum[9] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs9, zero, vlm2));
-        sum[10] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs10, zero, vlm2));
-        sum[11] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs11, zero, vlm2));
-        sum[12] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs12, zero, vlm2));
-        sum[13] = vfmv_f_s_f32m1_f32(vfredosum_vs_f32m2_f32m1(zero, vs13, zero, vlm2));
+        vfloat32m1_t zero = __riscv_vfmv_v_f_f32m1(0, vlm2);
+        sum[0] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs0, zero, vlm2));
+        sum[1] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs1, zero, vlm2));
+        sum[2] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs2, zero, vlm2));
+        sum[3] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs3, zero, vlm2));
+        sum[4] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs4, zero, vlm2));
+        sum[5] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs5, zero, vlm2));
+        sum[6] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs6, zero, vlm2));
+        sum[7] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs7, zero, vlm2));
+        sum[8] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs8, zero, vlm2));
+        sum[9] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs9, zero, vlm2));
+        sum[10] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs10, zero, vlm2));
+        sum[11] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs11, zero, vlm2));
+        sum[12] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs12, zero, vlm2));
+        sum[13] = __riscv_vfmv_f_s_f32m1_f32(__riscv_vfredusum_vs_f32m2_f32m1(vs13, zero, vlm2));
 
-        vfloat32m4_t s0 = vfadd_vv_f32m4(vle32_v_f32m4(sum, unroll_tail), vle32_v_f32m4(bias + i, unroll_tail), unroll_tail);
-        vse32_v_f32m4(dst + i, s0, unroll_tail);
-    }
-}
-
-/*
-Example for load_deinterleave:
-    input: ptr[16] = {1,2,3, ... ,14,15,16}
-    output: a = {1, 3, 5, 7, 9, 11, 13, 15}
-    output: b = {2, 4, 6, 8,10, 12, 14, 16}
-*/
-static inline void vfloat32m2_load_deinterleave(const float* ptr, vfloat32m2_t& a, vfloat32m2_t& b, int vl)
-{
-    vuint64m4_t mask = vmv_v_x_u64m4(1,vl*2);
-    vuint32m4_t mask_re = vreinterpret_v_u64m4_u32m4(mask);
-    vbool8_t mask0 = vmseq_vx_u32m4_b8 (mask_re, 1, vl*2);
-    vbool8_t mask1 = vmseq_vx_u32m4_b8 (mask_re, 0, vl*2);
-    vfloat32m4_t tempa = vundefined_f32m4(), tempb = vundefined_f32m4();
-    vfloat32m4_t vw = vle32_v_f32m4(ptr, vl*2);
-    tempa = vcompress_vm_f32m4(mask0, tempa, vw, vl*2);
-    tempb = vcompress_vm_f32m4(mask1, tempb, vw, vl*2);
-    /* The following instructions have not to be supported by the GNU toolchain.
-       So we temporarily use store and load instead.
-    // a = vlmul_trunc_v_f32m4_f32m2(tempa);
-    // b = vlmul_trunc_v_f32m4_f32m2(tempb);
-    */
-    cv::AutoBuffer<float> cvBuffer(sizeof(float)*vl*2);
-    float* buffer = (float*)cvBuffer.data();
-    vse32_v_f32m4(buffer, tempa, vl);
-    a = vle32_v_f32m2(buffer, vl);
-    vse32_v_f32m4(buffer, tempb, vl);
-    b = vle32_v_f32m2(buffer, vl);
-}
-
-void fastDepthwiseConv( const float* wptr,
-                     int kernel_h, int kernel_w,
-                     int stride_h, int stride_w,
-                     int dilation_h, int dilation_w,
-                     int pad_t, int pad_l,
-                     const float* biasptr, const float* relu,
-                     const float* inptr_,
-                     int height, int width,
-                     float* outptr_,
-                     int out_d, int outH, int outW )
-{
-    int vl;
-    const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
-                w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
-                w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    int outW1 = std::min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
-    float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
-
-    for (int out_i = 0; out_i < outH; out_i++)
-    {
-        int in_i = out_i * stride_h - pad_t, out_j = 0;
-        const float* imgptr0 = inptr_ + in_i*width;
-        const float* imgptr1 = imgptr0 + dilation_h*width;
-        const float* imgptr2 = imgptr0 + (dilation_h*2)*width;
-        float out, w00 = w00_, w01 = w01_, w02 = w02_;
-        float w20 = w20_, w21 = w21_, w22 = w22_;
-        if (in_i < 0)
-        {
-            w00 = w01 = w02 = 0.f;
-            imgptr0 = imgptr1;
-        }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
-        {
-            w20 = w21 = w22 = 0.f;
-            imgptr2 = imgptr1;
-        }
-        float* outptr = outptr_ + out_i*outW;
-        if (pad_l > 0)
-        {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[0] = out;
-            out_j = 1;
-        }
-
-        if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
-        {
-            int avl = outW1 - out_j;
-            if( stride_w == 1 )
-                for( ; out_j < outW1; out_j += vl, avl -= vl)
-                {
-                    vl = vsetvl_e32m2(avl);
-                    int in_j = out_j * stride_w - pad_l;
-                    vfloat32m2_t v00 = vle32_v_f32m2(imgptr0 + in_j, vl),
-                           v01 = vle32_v_f32m2(imgptr0 + in_j + dilation_w, vl),
-                           v02 = vle32_v_f32m2(imgptr0 + in_j + dilation_w*2, vl),
-                           v10 = vle32_v_f32m2(imgptr1 + in_j, vl),
-                           v11 = vle32_v_f32m2(imgptr1 + in_j + dilation_w, vl),
-                           v12 = vle32_v_f32m2(imgptr1 + in_j + dilation_w*2, vl),
-                           v20 = vle32_v_f32m2(imgptr2 + in_j, vl),
-                           v21 = vle32_v_f32m2(imgptr2 + in_j + dilation_w, vl),
-                           v22 = vle32_v_f32m2(imgptr2 + in_j + dilation_w*2, vl);
-
-                    vfloat32m2_t vout0 = vfmul_vf_f32m2(v00, w00, vl);
-                    vfloat32m2_t vout1 = vfmul_vf_f32m2(v01, w01, vl);
-                    vfloat32m2_t vout2 = vfmul_vf_f32m2(v02, w02, vl);
-                    vout0 = vfadd_vf_f32m2(vout0, bias, vl);
-
-                    vout0 = vfmacc_vf_f32m2(vout0, w10, v10, vl);
-                    vout1 = vfmacc_vf_f32m2(vout1, w11, v11, vl);
-                    vout2 = vfmacc_vf_f32m2(vout2, w12, v12, vl);
-
-                    vout0 = vfmacc_vf_f32m2(vout0, w20, v20, vl);
-                    vout1 = vfmacc_vf_f32m2(vout1, w21, v21, vl);
-                    vout2 = vfmacc_vf_f32m2(vout2, w22, v22, vl);
-
-                    vout0 = vfadd_vv_f32m2(vfadd_vv_f32m2(vout0, vout1, vl), vout2, vl);
-                    if (relu)
-                    {
-                        vbool16_t m = vmfgt_vf_f32m2_b16(vout0, 0, vl);
-                        vout0 = vmerge_vvm_f32m2(m, vfmul_vf_f32m2(vout0, relu_coeff, vl), vout0, vl);
-                    }
-                    vse32_v_f32m2(outptr + out_j, vout0, vl);
-                }
-            else //stride_w == 2 && dilation_w == 1
-                for( ; out_j < outW1; out_j += vl, avl -= vl)
-                {
-                    vl = vsetvl_e32m2(avl);
-                    int in_j = out_j * stride_w - pad_l;
-                    vfloat32m2_t v00, v01, v02, v10, v11, v12, v20, v21, v22, unused;
-                    vfloat32m2_load_deinterleave(imgptr0 + in_j, v00, v01, vl);
-                    vfloat32m2_load_deinterleave(imgptr0 + in_j + 2, v02, unused, vl);
-                    vfloat32m2_load_deinterleave(imgptr1 + in_j, v10, v11, vl);
-                    vfloat32m2_load_deinterleave(imgptr1 + in_j + 2, v12, unused, vl);
-                    vfloat32m2_load_deinterleave(imgptr2 + in_j, v20, v21, vl);
-                    vfloat32m2_load_deinterleave(imgptr2 + in_j + 2, v22, unused, vl);
-
-                    vfloat32m2_t vout0 = vfmul_vf_f32m2(v00, w00, vl);
-                    vfloat32m2_t vout1 = vfmul_vf_f32m2(v01, w01, vl);
-                    vfloat32m2_t vout2 = vfmul_vf_f32m2(v02, w02, vl);
-                    vout0 = vfadd_vf_f32m2(vout0, bias, vl);
-
-                    vout0 = vfmacc_vf_f32m2(vout0, w10, v10, vl);
-                    vout1 = vfmacc_vf_f32m2(vout1, w11, v11, vl);
-                    vout2 = vfmacc_vf_f32m2(vout2, w12, v12, vl);
-
-                    vout0 = vfmacc_vf_f32m2(vout0, w20, v20, vl);
-                    vout1 = vfmacc_vf_f32m2(vout1, w21, v21, vl);
-                    vout2 = vfmacc_vf_f32m2(vout2, w22, v22, vl);
-
-                    vout0 = vfadd_vv_f32m2(vfadd_vv_f32m2(vout0, vout1, vl), vout2, vl);
-                    if (relu)
-                    {
-                        vbool16_t m = vmfgt_vf_f32m2_b16(vout0, 0, vl);
-                        vout0 = vmerge_vvm_f32m2(m, vfmul_vf_f32m2(vout0, relu_coeff, vl), vout0, vl);
-                    }
-                    vse32_v_f32m2(outptr + out_j, vout0, vl);
-                }
-        }
-
-        for (; out_j < outW1; out_j++)
-        {
-            int in_j = out_j * stride_w - pad_l;
-            out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 +
-                  imgptr1[in_j]*w10 + imgptr1[in_j + dilation_w]*w11 + imgptr1[in_j + dilation_w*2]*w12 +
-                  imgptr2[in_j]*w20 + imgptr2[in_j + dilation_w]*w21 + imgptr2[in_j + dilation_w*2]*w22 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[out_j] = out;
-        }
-
-        for (; out_j < outW; out_j++ )
-        {
-            int in_j0 = out_j * stride_w - pad_l, in_j1 = in_j0 + dilation_w, in_j2 = in_j0 + dilation_w*2;
-            float s0 = 1.f, s1 = 1.f, s2 = 1.f;
-            if (in_j0 >= width)
-            {
-                in_j0 = 0;
-                s0 = 0.f;
-            }
-            if (in_j1 >= width)
-            {
-                in_j1 = 0;
-                s1 = 0.f;
-            }
-            if (in_j2 >= width)
-            {
-                in_j2 = 0;
-                s2 = 0.f;
-            }
-            out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
-                  imgptr1[in_j0]*w10*s0 + imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
-                  imgptr2[in_j0]*w20*s0 + imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[out_j] = out;
-        }
+        vfloat32m4_t s0 = __riscv_vfadd_vv_f32m4(__riscv_vle32_v_f32m4(sum, unroll_tail), __riscv_vle32_v_f32m4(bias + i, unroll_tail), unroll_tail);
+        __riscv_vse32_v_f32m4(dst + i, s0, unroll_tail);
     }
 }
 
 #endif // CV_RVV
 
 #if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_LASX
-
-static inline void _v256_load_deinterleave(const float* ptr, __m256& a, __m256& b)
-{
-    __m256 t0 = (__m256)__lasx_xvld(ptr, 0);
-    __m256 t1 = (__m256)__lasx_xvld(ptr, 8*4);
-
-    __m256 lo = (__m256)__lasx_xvpermi_q(t0, t1, 2+0*16);
-    __m256 hi = (__m256)__lasx_xvpermi_q(t0, t1, 3+1*16);
-
-    a = (__m256)__lasx_xvpermi_w(hi, lo, 0x88);
-    b = (__m256)__lasx_xvpermi_w(hi, lo, 0xdd);
-}
-
-void fastDepthwiseConv( const float* wptr,
-                     int kernel_h, int kernel_w,
-                     int stride_h, int stride_w,
-                     int dilation_h, int dilation_w,
-                     int pad_t, int pad_l,
-                     const float* biasptr, const float* relu,
-                     const float* inptr_,
-                     int height, int width,
-                     float* outptr_,
-                     int out_d, int outH, int outW )
-{
-    const float w00_ = wptr[0], w01_ = wptr[1], w02_ = wptr[2],
-                w10 = wptr[3], w11 = wptr[4], w12 = wptr[5],
-                w20_ = wptr[6], w21_ = wptr[7], w22_ = wptr[8];
-    int outW1 = min(outW, (width - dilation_w*(kernel_w - 1) + pad_l)/stride_w);
-    float relu_coeff = relu ? relu[out_d] : 1.f, bias = biasptr[out_d];
-
-    for (int out_i = 0; out_i < outH; out_i++)
-    {
-        int in_i = out_i * stride_h - pad_t, out_j = 0;
-        const float* imgptr0 = inptr_ + in_i*width;
-        const float* imgptr1 = imgptr0 + dilation_h*width;
-        const float* imgptr2 = imgptr0 + (dilation_h*2)*width;
-        float out, w00 = w00_, w01 = w01_, w02 = w02_;
-        float w20 = w20_, w21 = w21_, w22 = w22_;
-        if (in_i < 0)
-        {
-            w00 = w01 = w02 = 0.f;
-            imgptr0 = imgptr1;
-        }
-        else if (in_i + dilation_h*(kernel_h-1) >= height)
-        {
-            w20 = w21 = w22 = 0.f;
-            imgptr2 = imgptr1;
-        }
-        float* outptr = outptr_ + out_i*outW;
-        if (pad_l > 0)
-        {
-            out = imgptr0[0]*w01 + imgptr0[dilation_w]*w02 +
-                  imgptr1[0]*w11 + imgptr1[dilation_w]*w12 +
-                  imgptr2[0]*w21 + imgptr2[dilation_w]*w22 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[0] = out;
-            out_j = 1;
-        }
-
-        if (stride_w == 1 || (stride_w == 2 && dilation_w == 1))
-        {
-            const int VECSZ = 8;
-            __m256 vw00 = _v256_setall_ps(w00), vw01 = _v256_setall_ps(w01), vw02 = _v256_setall_ps(w02),
-                   vw10 = _v256_setall_ps(w10), vw11 = _v256_setall_ps(w11), vw12 = _v256_setall_ps(w12),
-                   vw20 = _v256_setall_ps(w20), vw21 = _v256_setall_ps(w21), vw22 = _v256_setall_ps(w22);
-            __m256 z = (__m256)__lasx_xvxor_v((__m256i)vw00, (__m256i)vw00),
-            vbias = _v256_setall_ps(bias), vrc = _v256_setall_ps(relu_coeff);
-
-            if( stride_w == 1 )
-                for( ; out_j < outW1; out_j += VECSZ )
-                {
-                    if (out_j + VECSZ > outW1 && out_j > pad_l)
-                        out_j = outW1 - VECSZ;
-                    int in_j = out_j * stride_w - pad_l;
-                    __m256 v00 = (__m256)__lasx_xvld(imgptr0 + in_j, 0),
-                           v01 = (__m256)__lasx_xvld(imgptr0 + in_j + dilation_w, 0),
-                           v02 = (__m256)__lasx_xvld(imgptr0 + in_j + dilation_w*2, 0),
-                           v10 = (__m256)__lasx_xvld(imgptr1 + in_j, 0),
-                           v11 = (__m256)__lasx_xvld(imgptr1 + in_j + dilation_w, 0),
-                           v12 = (__m256)__lasx_xvld(imgptr1 + in_j + dilation_w*2, 0),
-                           v20 = (__m256)__lasx_xvld(imgptr2 + in_j, 0),
-                           v21 = (__m256)__lasx_xvld(imgptr2 + in_j + dilation_w, 0),
-                           v22 = (__m256)__lasx_xvld(imgptr2 + in_j + dilation_w*2, 0);
-
-                    __m256 vout0 = __lasx_xvfmadd_s(v00, vw00, vbias);
-                    __m256 vout1 = __lasx_xvfmul_s(v01, vw01);
-                    __m256 vout2 = __lasx_xvfmul_s(v02, vw02);
-
-                    vout0 = __lasx_xvfmadd_s(v10, vw10, vout0);
-                    vout1 = __lasx_xvfmadd_s(v11, vw11, vout1);
-                    vout2 = __lasx_xvfmadd_s(v12, vw12, vout2);
-
-                    vout0 = __lasx_xvfmadd_s(v20, vw20, vout0);
-                    vout1 = __lasx_xvfmadd_s(v21, vw21, vout1);
-                    vout2 = __lasx_xvfmadd_s(v22, vw22, vout2);
-
-                    vout0 = __lasx_xvfadd_s(__lasx_xvfadd_s(vout0, vout1), vout2);
-                    if (relu)
-                    {
-                        __m256i m = __lasx_xvfcmp_clt_s(z, vout0);
-                        vout0 = (__m256)__lasx_xvbitsel_v((__m256i)__lasx_xvfmul_s(vout0, vrc), (__m256i)vout0, m);
-                    }
-                    __lasx_xvst(vout0, outptr + out_j, 0);
-                }
-            else
-                for( ; out_j < outW1; out_j += VECSZ )
-                {
-                    if (out_j + VECSZ > outW1 && out_j > pad_l)
-                        out_j = outW1 - VECSZ;
-                    int in_j = out_j * stride_w - pad_l;
-                    __m256 v00, v01, v02, v10, v11, v12, v20, v21, v22, unused;
-                    _v256_load_deinterleave(imgptr0 + in_j, v00, v01);
-                    _v256_load_deinterleave(imgptr0 + in_j + 2, v02, unused);
-                    _v256_load_deinterleave(imgptr1 + in_j, v10, v11);
-                    _v256_load_deinterleave(imgptr1 + in_j + 2, v12, unused);
-                    _v256_load_deinterleave(imgptr2 + in_j, v20, v21);
-                    _v256_load_deinterleave(imgptr2 + in_j + 2, v22, unused);
-
-                    __m256 vout0 = __lasx_xvfmadd_s(v00, vw00, vbias);
-                    __m256 vout1 = __lasx_xvfmul_s(v01, vw01);
-                    __m256 vout2 = __lasx_xvfmul_s(v02, vw02);
-
-                    vout0 = __lasx_xvfmadd_s(v10, vw10, vout0);
-                    vout1 = __lasx_xvfmadd_s(v11, vw11, vout1);
-                    vout2 = __lasx_xvfmadd_s(v12, vw12, vout2);
-
-                    vout0 = __lasx_xvfmadd_s(v20, vw20, vout0);
-                    vout1 = __lasx_xvfmadd_s(v21, vw21, vout1);
-                    vout2 = __lasx_xvfmadd_s(v22, vw22, vout2);
-
-                    vout0 = __lasx_xvfadd_s(__lasx_xvfadd_s(vout0, vout1), vout2);
-                    if (relu)
-                    {
-                        __m256i m = __lasx_xvfcmp_clt_s(z, vout0);
-                        vout0 = (__m256)__lasx_xvbitsel_v((__m256i)__lasx_xvfmul_s(vout0, vrc), (__m256i)vout0, m);
-                    }
-                    __lasx_xvst(vout0, outptr + out_j, 0);
-                }
-        }
-
-        for (; out_j < outW1; out_j++)
-        {
-            int in_j = out_j * stride_w - pad_l;
-            out = imgptr0[in_j]*w00 + imgptr0[in_j + dilation_w]*w01 + imgptr0[in_j + dilation_w*2]*w02 +
-                  imgptr1[in_j]*w10 + imgptr1[in_j + dilation_w]*w11 + imgptr1[in_j + dilation_w*2]*w12 +
-                  imgptr2[in_j]*w20 + imgptr2[in_j + dilation_w]*w21 + imgptr2[in_j + dilation_w*2]*w22 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[out_j] = out;
-        }
-
-        for (; out_j < outW; out_j++ )
-        {
-            int in_j0 = out_j * stride_w - pad_l, in_j1 = in_j0 + dilation_w, in_j2 = in_j0 + dilation_w*2;
-            float s0 = 1.f, s1 = 1.f, s2 = 1.f;
-            if (in_j0 >= width)
-            {
-                in_j0 = 0;
-                s0 = 0.f;
-            }
-            if (in_j1 >= width)
-            {
-                in_j1 = 0;
-                s1 = 0.f;
-            }
-            if (in_j2 >= width)
-            {
-                in_j2 = 0;
-                s2 = 0.f;
-            }
-            out = imgptr0[in_j0]*w00*s0 + imgptr0[in_j1]*w01*s1 + imgptr0[in_j2]*w02*s2 +
-                  imgptr1[in_j0]*w10*s0 + imgptr1[in_j1]*w11*s1 + imgptr1[in_j2]*w12*s2 +
-                  imgptr2[in_j0]*w20*s0 + imgptr2[in_j1]*w21*s1 + imgptr2[in_j2]*w22*s2 + bias;
-            if (relu)
-                out = out > 0.f ? out : out*relu_coeff;
-            outptr[out_j] = out;
-        }
-    }
-}
 
 // dst = vec * weights^t + bias
 void fastGEMM1T( const float* vec, const float* weights,

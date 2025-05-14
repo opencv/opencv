@@ -1,7 +1,7 @@
 set(ade_src_dir "${OpenCV_BINARY_DIR}/3rdparty/ade")
-set(ade_filename "v0.1.2a.zip")
-set(ade_subdir "ade-0.1.2a")
-set(ade_md5 "fa4b3e25167319cb0fa9432ef8281945")
+set(ade_filename "v0.1.2e.zip")
+set(ade_subdir "ade-0.1.2e")
+set(ade_md5 "962ce79e0b95591f226431f7b5f152cd")
 ocv_download(FILENAME ${ade_filename}
              HASH ${ade_md5}
              URL
@@ -24,6 +24,12 @@ add_library(ade STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL}
     ${ADE_include}
     ${ADE_sources}
 )
+
+# https://github.com/opencv/ade/issues/32
+if(CV_CLANG AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13.1)
+  ocv_warnings_disable(CMAKE_CXX_FLAGS -Wdeprecated-copy)
+endif()
+
 target_include_directories(ade PUBLIC $<BUILD_INTERFACE:${ADE_root}/include>)
 set_target_properties(ade PROPERTIES
   POSITION_INDEPENDENT_CODE True

@@ -13,7 +13,7 @@ void checkIppStatus();
 extern bool skipUnstableTests;
 extern bool runBigDataTests;
 extern int testThreads;
-extern int debugLevel;  //< 0 - no debug, 1 - basic test debug information, >1 - extra debug information
+extern int debugLevel;  ///< 0 - no debug, 1 - basic test debug information, >1 - extra debug information
 
 void testSetUp();
 void testTearDown();
@@ -31,6 +31,8 @@ bool checkBigDataTests();
 
 #define CV__TEST_INIT \
     CV__TEST_NAMESPACE_CHECK \
+    if (setUpSkipped) \
+        return; \
     ::cvtest::testSetUp();
 #define CV__TEST_CLEANUP ::cvtest::testTearDown();
 #define CV__TEST_BODY_IMPL(name) \
@@ -47,18 +49,49 @@ bool checkBigDataTests();
        } \
     } \
 
+#define CV__TEST_SETUP_IMPL(parent_class) { \
+  setUpSkipped = false; \
+  try { \
+    parent_class::SetUp(); \
+  } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+    setUpSkipped = true; \
+    printf("[     SKIP ] %s\n", e.what()); \
+  } \
+} \
+
+struct SkipThisTest : public ::testing::Test {
+  SkipThisTest(const std::string& msg_) : msg(msg_) {}
+
+  virtual void TestBody() CV_OVERRIDE {
+      printf("[     SKIP ] %s\n", msg.c_str());
+  }
+
+  std::string msg;
+};
 
 #undef TEST
-#define TEST_(test_case_name, test_name, parent_class, bodyMethodName, BODY_IMPL) \
+#define TEST_(test_case_name, test_name, parent_class, bodyMethodName, BODY_ATTR, BODY_IMPL) \
     class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {\
      public:\
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}\
      private:\
+      bool setUpSkipped = false; \
       virtual void TestBody() CV_OVERRIDE;\
-      virtual void bodyMethodName();\
+      virtual void bodyMethodName() BODY_ATTR;\
+      virtual void SetUp() CV_OVERRIDE; \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_case_name, test_name));\
+    };\
+    class test_case_name##test_name##_factory : public ::testing::internal::TestFactoryBase { \
+     public:\
+      virtual ::testing::Test* CreateTest() CV_OVERRIDE { \
+        try { \
+          return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name); \
+        } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+          return new SkipThisTest(e.what()); \
+        } \
+      } \
     };\
     \
     ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)\
@@ -69,12 +102,12 @@ bool checkBigDataTests();
             (::testing::internal::GetTestTypeId()), \
             parent_class::SetUpTestCase, \
             parent_class::TearDownTestCase, \
-            new ::testing::internal::TestFactoryImpl<\
-                GTEST_TEST_CLASS_NAME_(test_case_name, test_name)>);\
+            new test_case_name##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::SetUp() CV__TEST_SETUP_IMPL(parent_class) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
-#define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, ::testing::Test, Body, CV__TEST_BODY_IMPL)
+#define TEST(test_case_name, test_name) TEST_(test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BODY_IMPL)
 
 #define CV__TEST_BIGDATA_BODY_IMPL(name) \
     { \
@@ -96,9 +129,9 @@ bool checkBigDataTests();
 
 // Special type of tests which require / use or validate processing of huge amount of data (>= 2Gb)
 #if defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__) || defined(__aarch64__)
-#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
+#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BIGDATA_BODY_IMPL)
 #else
-#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body, CV__TEST_BIGDATA_BODY_IMPL)
+#define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body,, CV__TEST_BIGDATA_BODY_IMPL)
 #endif
 
 #undef TEST_F
@@ -107,11 +140,23 @@ bool checkBigDataTests();
      public:\
       GTEST_TEST_CLASS_NAME_(test_fixture, test_name)() {}\
      private:\
+      bool setUpSkipped = false; \
       virtual void TestBody() CV_OVERRIDE;\
       virtual void Body(); \
+      virtual void SetUp() CV_OVERRIDE; \
       static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;\
       GTEST_DISALLOW_COPY_AND_ASSIGN_(\
           GTEST_TEST_CLASS_NAME_(test_fixture, test_name));\
+    };\
+    class test_fixture##test_name##_factory : public ::testing::internal::TestFactoryBase { \
+     public:\
+      virtual ::testing::Test* CreateTest() CV_OVERRIDE { \
+        try { \
+          return new GTEST_TEST_CLASS_NAME_(test_fixture, test_name); \
+        } catch (const cvtest::details::SkipTestExceptionBase& e) { \
+          return new SkipThisTest(e.what()); \
+        } \
+      } \
     };\
     \
     ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_fixture, test_name)\
@@ -122,20 +167,22 @@ bool checkBigDataTests();
             (::testing::internal::GetTypeId<test_fixture>()), \
             test_fixture::SetUpTestCase, \
             test_fixture::TearDownTestCase, \
-            new ::testing::internal::TestFactoryImpl<\
-                GTEST_TEST_CLASS_NAME_(test_fixture, test_name)>);\
+            new test_fixture##test_name##_factory);\
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::TestBody() CV__TEST_BODY_IMPL( #test_fixture "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::SetUp() CV__TEST_SETUP_IMPL(test_fixture) \
     void GTEST_TEST_CLASS_NAME_(test_fixture, test_name)::Body()
 
 // Don't use directly
-#define CV__TEST_P(test_case_name, test_name, bodyMethodName, BODY_IMPL/*(name_str)*/) \
+#define CV__TEST_P(test_case_name, test_name, bodyMethodName, BODY_ATTR, BODY_IMPL/*(name_str)*/) \
   class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) \
       : public test_case_name { \
    public: \
     GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {} \
    private: \
-    virtual void bodyMethodName(); \
+    bool setUpSkipped = false; \
+    virtual void bodyMethodName() BODY_ATTR; \
     virtual void TestBody() CV_OVERRIDE; \
+    virtual void SetUp() CV_OVERRIDE; \
     static int AddToRegistry() { \
       ::testing::UnitTest::GetInstance()->parameterized_test_registry(). \
           GetTestCasePatternHolder<test_case_name>(\
@@ -157,10 +204,11 @@ bool checkBigDataTests();
                              test_name)::gtest_registering_dummy_ = \
       GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::AddToRegistry(); \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody() BODY_IMPL( #test_case_name "_" #test_name ) \
+    void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::SetUp() CV__TEST_SETUP_IMPL(test_case_name) \
     void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::bodyMethodName()
 
 #undef TEST_P
-#define TEST_P(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, Body, CV__TEST_BODY_IMPL)
+#define TEST_P(test_case_name, test_name) CV__TEST_P(test_case_name, test_name, Body,, CV__TEST_BODY_IMPL)
 
 
 #define CV_TEST_EXPECT_EXCEPTION_MESSAGE(statement, msg) \

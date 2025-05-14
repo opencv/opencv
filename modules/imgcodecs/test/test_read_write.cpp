@@ -157,6 +157,9 @@ const string exts[] = {
 #ifdef HAVE_JPEG
     "jpg",
 #endif
+#ifdef HAVE_JPEGXL
+    "jxl",
+#endif
 #if (defined(HAVE_JASPER) && defined(OPENCV_IMGCODECS_ENABLE_JASPER_TESTS)) \
     || defined(HAVE_OPENJPEG)
     "jp2",
@@ -196,8 +199,18 @@ void test_image_io(const Mat& image, const std::string& fname, const std::string
     Mat buf_loaded = imdecode(Mat(buf), imreadFlag);
     EXPECT_FALSE(buf_loaded.empty());
 
+    if (imreadFlag & IMREAD_COLOR_RGB && imreadFlag != -1)
+    {
+        cvtColor(buf_loaded, buf_loaded, COLOR_RGB2BGR);
+    }
+
     Mat loaded = imread(fname, imreadFlag);
     EXPECT_FALSE(loaded.empty());
+
+    if (imreadFlag & IMREAD_COLOR_RGB && imreadFlag != -1)
+    {
+        cvtColor(loaded, loaded, COLOR_RGB2BGR);
+    }
 
     EXPECT_EQ(0, cv::norm(loaded, buf_loaded, NORM_INF)) << "imread() and imdecode() calls must provide the same result (bit-exact)";
 
@@ -228,6 +241,8 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
     double psnrThreshold = 100;
     if (ext == "jpg")
         psnrThreshold = 32;
+    if (ext == "jxl")
+        psnrThreshold = 30;
 #if defined(HAVE_JASPER)
     if (ext == "jp2")
         psnrThreshold = 95;
@@ -238,6 +253,7 @@ TEST_P(Imgcodecs_Image, read_write_BGR)
 
     Mat image = generateTestImageBGR();
     EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_COLOR, psnrThreshold));
+    EXPECT_NO_THROW(test_image_io(image, fname, ext, IMREAD_COLOR_RGB, psnrThreshold));
 
     EXPECT_EQ(0, remove(fname.c_str()));
 }
@@ -256,6 +272,8 @@ TEST_P(Imgcodecs_Image, read_write_GRAYSCALE)
 
     double psnrThreshold = 100;
     if (ext == "jpg")
+        psnrThreshold = 40;
+    if (ext == "jxl")
         psnrThreshold = 40;
 #if defined(HAVE_JASPER)
     if (ext == "jp2")
@@ -282,6 +300,35 @@ TEST(Imgcodecs_Image, regression_9376)
     EXPECT_EQ(32, m.rows);
 }
 
+TEST(Imgcodecs_Image, imread_overload)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string imgName = findDataFile("../highgui/readwrite/ordinary.bmp");
+
+    Mat ref = imread(imgName);
+    ASSERT_FALSE(ref.empty());
+    {
+        Mat img(ref.size(), ref.type(), Scalar::all(0)); // existing image
+        void * ptr = img.data;
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+        EXPECT_EQ(img.data, ptr); // no reallocation
+    }
+    {
+        Mat img; // empty image
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+    {
+        UMat img; // empty UMat
+        imread(imgName, img);
+        ASSERT_FALSE(img.empty());
+        EXPECT_EQ(cv::norm(ref, img, NORM_INF), 0);
+    }
+}
+
 //==================================================================================================
 
 TEST(Imgcodecs_Image, write_umat)
@@ -303,6 +350,7 @@ TEST(Imgcodecs_Image, write_umat)
     EXPECT_EQ(0, remove(dst_name.c_str()));
 }
 
+#ifdef HAVE_TIFF
 TEST(Imgcodecs_Image, multipage_collection_size)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
@@ -480,6 +528,77 @@ TEST(ImgCodecs, multipage_collection_two_iterator_operatorpp)
     }
 }
 
+// See https://github.com/opencv/opencv/issues/26207
+TEST(Imgcodecs, imencodemulti_regression_26207)
+{
+    vector<Mat> imgs;
+    const cv::Mat img(100, 100, CV_8UC1, cv::Scalar::all(0));
+    imgs.push_back(img);
+    std::vector<uchar> buf;
+    bool ret = false;
+
+    // Encode single image
+    EXPECT_NO_THROW(ret = imencode(".tiff", img, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+
+    // Encode multiple images
+    imgs.push_back(img.clone());
+    EXPECT_NO_THROW(ret = imencode(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+    EXPECT_NO_THROW(ret = imencodemulti(".tiff", imgs, buf));
+    EXPECT_TRUE(ret);
+
+    // Count stored images from buffer.
+    // imcount() doesn't support buffer, so encoded buffer outputs to file temporary.
+    const size_t len = buf.size();
+    const string filename = cv::tempfile(".tiff");
+    FILE *f = fopen(filename.c_str(), "wb");
+    EXPECT_NE(f, nullptr);
+    EXPECT_EQ(len, fwrite(&buf[0], 1, len, f));
+    fclose(f);
+
+    EXPECT_EQ(2, (int)imcount(filename));
+    EXPECT_EQ(0, remove(filename.c_str()));
+}
+#endif
+
+// See https://github.com/opencv/opencv/pull/26211
+// ( related with https://github.com/opencv/opencv/issues/26207 )
+TEST(Imgcodecs, imencode_regression_26207_extra)
+{
+    // CV_32F is not supported depth for BMP Encoder.
+    // Encoded buffer contains CV_8U image which is fallbacked.
+    const cv::Mat src(100, 100, CV_32FC1, cv::Scalar::all(0));
+    std::vector<uchar> buf;
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".bmp", src, buf));
+    EXPECT_TRUE(ret);
+
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = imdecode(buf, IMREAD_GRAYSCALE));
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(CV_8UC1, dst.type());
+}
+TEST(Imgcodecs, imwrite_regression_26207_extra)
+{
+    // CV_32F is not supported depth for BMP Encoder.
+    // Encoded buffer contains CV_8U image which is fallbacked.
+    const cv::Mat src(100, 100, CV_32FC1, cv::Scalar::all(0));
+    const string filename = cv::tempfile(".bmp");
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imwrite(filename, src));
+    EXPECT_TRUE(ret);
+
+    cv::Mat dst;
+    EXPECT_NO_THROW(dst = imread(filename, IMREAD_GRAYSCALE));
+    EXPECT_FALSE(dst.empty());
+    EXPECT_EQ(CV_8UC1, dst.type());
+    EXPECT_EQ(0, remove(filename.c_str()));
+}
 
 TEST(Imgcodecs_Params, imwrite_regression_22752)
 {

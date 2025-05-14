@@ -10,28 +10,7 @@
 namespace cv {
 namespace aruco {
 
-/** @defgroup aruco ArUco Marker Detection
- * Square fiducial markers (also known as Augmented Reality Markers) are useful for easy,
- * fast and robust camera pose estimation.
- *
- * The main functionality of ArucoDetector class is detection of markers in an image. There are even more
- * functionalities implemented in the aruco contrib module (files aruco.hpp, charuco.hpp, aruco_calib.hpp):
- * - Pose estimation from a single marker or from a board/set of markers
- * - Detection of ChArUco board for high subpixel accuracy
- * - Camera calibration from both, ArUco boards and ChArUco boards.
- * - Detection of ChArUco diamond markers
- * The functionalities from the aruco contrib module is planned to be transferred to the main repository.
- *
- * The implementation is based on the ArUco Library by R. Muñoz-Salinas and S. Garrido-Jurado @cite Aruco2014.
- *
- * Markers can also be detected based on the AprilTag 2 @cite wang2016iros fiducial detection method.
- *
- * @sa @cite Aruco2014
- * This code has been originally developed by Sergio Garrido-Jurado as a project
- * for Google Summer of Code 2015 (GSoC 15).
- */
-
-//! @addtogroup aruco
+//! @addtogroup objdetect_aruco
 //! @{
 
 enum CornerRefineMethod{
@@ -54,9 +33,10 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         polygonalApproxAccuracyRate = 0.03;
         minCornerDistanceRate = 0.05;
         minDistanceToBorder = 3;
-        minMarkerDistanceRate = 0.05;
-        cornerRefinementMethod = CORNER_REFINE_NONE;
+        minMarkerDistanceRate = 0.125;
+        cornerRefinementMethod = (int)CORNER_REFINE_NONE;
         cornerRefinementWinSize = 5;
+        relativeCornerRefinmentWinSize = 0.3f;
         cornerRefinementMaxIterations = 30;
         cornerRefinementMinAccuracy = 0.1;
         markerBorderBits = 1;
@@ -77,7 +57,7 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
         useAruco3Detection = false;
         minSideLengthCanonicalImg = 32;
         minMarkerLengthRatioOriginalImg = 0.0;
-    };
+    }
 
     /** @brief Read a new set of DetectorParameters from FileNode (use FileStorage.root()).
      */
@@ -120,17 +100,49 @@ struct CV_EXPORTS_W_SIMPLE DetectorParameters {
     /// minimum distance of any corner to the image border for detected markers (in pixels) (default 3)
     CV_PROP_RW int minDistanceToBorder;
 
-    /** @brief minimum mean distance beetween two marker corners to be considered imilar, so that the smaller one is removed.
+    /** @brief minimum average distance between the corners of the two markers to be grouped (default 0.125).
      *
-     * The rate is relative to the smaller perimeter of the two markers (default 0.05).
+     * The rate is relative to the smaller perimeter of the two markers.
+     * Two markers are grouped if average distance between the corners of the two markers is less than
+     * min(MarkerPerimeter1, MarkerPerimeter2)*minMarkerDistanceRate.
+     *
+     * default value is 0.125 because 0.125*MarkerPerimeter = (MarkerPerimeter / 4) * 0.5 = half the side of the marker.
+     *
+     * @note default value was changed from 0.05 after 4.8.1 release, because the filtering algorithm has been changed.
+     * Now a few candidates from the same group can be added to the list of candidates if they are far from each other.
+     * @sa minGroupDistance.
      */
     CV_PROP_RW double minMarkerDistanceRate;
 
-    /** @brief default value CORNER_REFINE_NONE */
-    CV_PROP_RW CornerRefineMethod cornerRefinementMethod;
+    /** @brief minimum average distance between the corners of the two markers in group to add them to the list of candidates
+     *
+     * The average distance between the corners of the two markers is calculated relative to its module size (default 0.21).
+     */
+    CV_PROP_RW float minGroupDistance = 0.21f;
 
-    /// window size for the corner refinement process (in pixels) (default 5).
+    /** @brief default value CORNER_REFINE_NONE */
+    CV_PROP_RW int cornerRefinementMethod;
+
+    /** @brief maximum window size for the corner refinement process (in pixels) (default 5).
+     *
+     * The window size may decrease if the ArUco marker is too small, check relativeCornerRefinmentWinSize.
+     * The final window size is calculated as:
+     * min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
+     * where averageArucoModuleSize is average module size of ArUco marker in pixels.
+     * (ArUco marker is composed of black and white modules)
+     */
     CV_PROP_RW int cornerRefinementWinSize;
+
+    /** @brief Dynamic window size for corner refinement relative to Aruco module size (default 0.3).
+     *
+     * The final window size is calculated as:
+     * min(cornerRefinementWinSize, averageArucoModuleSize*relativeCornerRefinmentWinSize),
+     * where averageArucoModuleSize is average module size of ArUco marker in pixels.
+     * (ArUco marker is composed of black and white modules)
+     * In the case of markers located far from each other, it may be useful to increase the value of the parameter to 0.4-0.5.
+     * In the case of markers located close to each other, it may be useful to decrease the parameter value to 0.1-0.2.
+     */
+    CV_PROP_RW float relativeCornerRefinmentWinSize;
 
     /// maximum number of iterations for stop criteria of the corner refinement process (default 30).
     CV_PROP_RW int cornerRefinementMaxIterations;
@@ -240,7 +252,7 @@ struct CV_EXPORTS_W_SIMPLE RefineParameters {
      */
     CV_PROP_RW float minRepDistance;
 
-    /** @brief minRepDistance rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
+    /** @brief errorCorrectionRate rate of allowed erroneous bits respect to the error correction capability of the used dictionary.
      *
      * -1 ignores the error correction step.
      */
@@ -273,6 +285,16 @@ public:
                           const DetectorParameters &detectorParams = DetectorParameters(),
                           const RefineParameters& refineParams = RefineParameters());
 
+    /** @brief ArucoDetector constructor for multiple dictionaries
+     *
+     * @param dictionaries indicates the type of markers that will be searched. Empty dictionaries will throw an error.
+     * @param detectorParams marker detection parameters
+     * @param refineParams marker refine detection parameters
+     */
+    CV_WRAP ArucoDetector(const std::vector<Dictionary> &dictionaries,
+                          const DetectorParameters &detectorParams = DetectorParameters(),
+                          const RefineParameters& refineParams = RefineParameters());
+
     /** @brief Basic marker detection
      *
      * @param image input image
@@ -285,18 +307,18 @@ public:
      * @param rejectedImgPoints contains the imgPoints of those squares whose inner code has not a
      * correct codification. Useful for debugging purposes.
      *
-     * Performs marker detection in the input image. Only markers included in the specific dictionary
+     * Performs marker detection in the input image. Only markers included in the first specified dictionary
      * are searched. For each detected marker, it returns the 2D position of its corner in the image
      * and its corresponding identifier.
      * Note that this function does not perform pose estimation.
      * @note The function does not correct lens distortion or takes it into account. It's recommended to undistort
-     * input image with corresponging camera model, if camera parameters are known
+     * input image with corresponding camera model, if camera parameters are known
      * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
      */
     CV_WRAP void detectMarkers(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
-                               OutputArrayOfArrays rejectedImgPoints = noArray());
+                               OutputArrayOfArrays rejectedImgPoints = noArray()) const;
 
-    /** @brief Refind not detected markers based on the already detected and the board layout
+    /** @brief Refine not detected markers based on the already detected and the board layout
      *
      * @param image input image
      * @param board layout of markers in the board.
@@ -317,15 +339,67 @@ public:
      * If camera parameters and distortion coefficients are provided, missing markers are reprojected
      * using projectPoint function. If not, missing marker projections are interpolated using global
      * homography, and all the marker corners in the board must have the same Z coordinate.
+     * @note This function assumes that the board only contains markers from one dictionary, so only the
+     * first configured dictionary is used. It has to match the dictionary of the board to work properly.
      */
-    CV_WRAP void refineDetectedMarkers(InputArray image, const Ptr<Board> &board,
+    CV_WRAP void refineDetectedMarkers(InputArray image, const Board &board,
                                        InputOutputArrayOfArrays detectedCorners,
                                        InputOutputArray detectedIds, InputOutputArrayOfArrays rejectedCorners,
                                        InputArray cameraMatrix = noArray(), InputArray distCoeffs = noArray(),
-                                       OutputArray recoveredIdxs = noArray());
+                                       OutputArray recoveredIdxs = noArray()) const;
 
+    /** @brief Basic marker detection
+     *
+     * @param image input image
+     * @param corners vector of detected marker corners. For each marker, its four corners
+     * are provided, (e.g std::vector<std::vector<cv::Point2f> > ). For N detected markers,
+     * the dimensions of this array is Nx4. The order of the corners is clockwise.
+     * @param ids vector of identifiers of the detected markers. The identifier is of type int
+     * (e.g. std::vector<int>). For N detected markers, the size of ids is also N.
+     * The identifiers have the same order than the markers in the imgPoints array.
+     * @param rejectedImgPoints contains the imgPoints of those squares whose inner code has not a
+     * correct codification. Useful for debugging purposes.
+     * @param dictIndices vector of dictionary indices for each detected marker. Use getDictionaries() to get the
+     * list of corresponding dictionaries.
+     *
+     * Performs marker detection in the input image. Only markers included in the specific dictionaries
+     * are searched. For each detected marker, it returns the 2D position of its corner in the image
+     * and its corresponding identifier.
+     * Note that this function does not perform pose estimation.
+     * @note The function does not correct lens distortion or takes it into account. It's recommended to undistort
+     * input image with corresponding camera model, if camera parameters are known
+     * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
+     */
+    CV_WRAP void detectMarkersMultiDict(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
+                               OutputArrayOfArrays rejectedImgPoints = noArray(), OutputArray dictIndices = noArray()) const;
+
+    /** @brief Returns first dictionary from internal list used for marker detection.
+     *
+     * @return The first dictionary from the configured ArucoDetector.
+     */
     CV_WRAP const Dictionary& getDictionary() const;
+
+    /** @brief Sets and replaces the first dictionary in internal list to be used for marker detection.
+     *
+     * @param dictionary The new dictionary that will replace the first dictionary in the internal list.
+     */
     CV_WRAP void setDictionary(const Dictionary& dictionary);
+
+    /** @brief Returns all dictionaries currently used for marker detection as a vector.
+     *
+     * @return A std::vector<Dictionary> containing all dictionaries used by the ArucoDetector.
+     */
+    CV_WRAP std::vector<Dictionary> getDictionaries() const;
+
+    /** @brief Sets the entire collection of dictionaries to be used for marker detection, replacing any existing dictionaries.
+     *
+     * @param dictionaries A std::vector<Dictionary> containing the new set of dictionaries to be used.
+     *
+     * Configures the ArucoDetector to use the provided vector of dictionaries for marker detection.
+     * This method replaces any dictionaries that were previously set.
+     * @note Setting an empty vector of dictionaries will throw an error.
+     */
+    CV_WRAP void setDictionaries(const std::vector<Dictionary>& dictionaries);
 
     CV_WRAP const DetectorParameters& getDetectorParameters() const;
     CV_WRAP void setDetectorParameters(const DetectorParameters& detectorParameters);

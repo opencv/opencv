@@ -4,6 +4,7 @@ Interactive camera calibration application {#tutorial_interactive_calibration}
 @tableofcontents
 
 @prev_tutorial{tutorial_real_time_pose}
+@next_tutorial{tutorial_usac}
 
 |    |    |
 | -: | :- |
@@ -11,7 +12,7 @@ Interactive camera calibration application {#tutorial_interactive_calibration}
 | Compatibility | OpenCV >= 3.1 |
 
 
-According to classical calibration technique user must collect all data first and when run @ref cv::calibrateCamera function
+According to classical calibration technique user must collect all data first and then run @ref cv::calibrateCamera function
 to obtain camera parameters. If average re-projection error is huge or if estimated parameters seems to be wrong, process of
 selection or collecting data and starting of @ref cv::calibrateCamera repeats.
 
@@ -95,9 +96,9 @@ By default values of advanced parameters are stored in defaultConfig.xml
 -  *charuco_square_length*: size of square on chAruco board (in pixels)
 -  *charuco_marker_size*: size of Aruco markers on chAruco board (in pixels)
 -  *calibration_step*: interval in frames between launches of @ref cv::calibrateCamera
--  *max_frames_num*: if number of frames for calibration is greater then this value frames filter starts working.
+-  *max_frames_num*: if number of frames for calibration is greater than this value frames filter starts working.
 After filtration size of calibration dataset is equals to *max_frames_num*
--  *min_frames_num*: if number of frames is greater then this value turns on auto flags tuning, undistorted view and quality evaluation
+-  *min_frames_num*: if number of frames is greater than this value turns on auto flags tuning, undistorted view and quality evaluation
 -  *solver_eps*: precision of Levenberg-Marquardt solver in @ref cv::calibrateCamera
 -  *solver_max_iters*: iterations limit of solver
 -  *fast_solver*: if this value is nonzero and Lapack is found QR decomposition is used instead of SVD in solver.
@@ -128,7 +129,7 @@ This pattern is very sensitive to quality of production and measurements.
 
 Data filtration
 ------
-When size of calibration dataset is greater then *max_frames_num* starts working
+When size of calibration dataset is greater than *max_frames_num* starts working
 data filter. It tries to remove "bad" frames from dataset. Filter removes the frame
  on which \f$loss\_function\f$ takes maximum.
 

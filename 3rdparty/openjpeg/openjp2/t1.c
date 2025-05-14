@@ -47,6 +47,9 @@
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
+#if (defined(__AVX2__) || defined(__AVX512F__))
+#include <immintrin.h>
+#endif
 
 #if defined(__GNUC__)
 #pragma GCC poison malloc calloc realloc free
@@ -216,6 +219,27 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
                                    opj_event_mgr_t *p_manager,
                                    opj_mutex_t* p_manager_mutex,
                                    OPJ_BOOL check_pterm);
+
+/**
+Decode 1 HT code-block
+@param t1 T1 handle
+@param cblk Code-block coding parameters
+@param orient
+@param roishift Region of interest shifting value
+@param cblksty Code-block style
+@param p_manager the event manager
+@param p_manager_mutex mutex for the event manager
+@param check_pterm whether PTERM correct termination should be checked
+*/
+OPJ_BOOL opj_t1_ht_decode_cblk(opj_t1_t *t1,
+                               opj_tcd_cblk_dec_t* cblk,
+                               OPJ_UINT32 orient,
+                               OPJ_UINT32 roishift,
+                               OPJ_UINT32 cblksty,
+                               opj_event_mgr_t *p_manager,
+                               opj_mutex_t* p_manager_mutex,
+                               OPJ_BOOL check_pterm);
+
 
 static OPJ_BOOL opj_t1_allocate_buffers(opj_t1_t *t1,
                                         OPJ_UINT32 w,
@@ -1389,7 +1413,6 @@ static void opj_t1_dec_clnpass(
 }
 
 
-/** mod fixed_quality */
 static OPJ_FLOAT64 opj_t1_getwmsedec(
     OPJ_INT32 nmsedec,
     OPJ_UINT32 compno,
@@ -1665,18 +1688,34 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
     }
     t1->mustuse_cblkdatabuffer = job->mustuse_cblkdatabuffer;
 
-    if (OPJ_FALSE == opj_t1_decode_cblk(
-                t1,
-                cblk,
-                band->bandno,
-                (OPJ_UINT32)tccp->roishift,
-                tccp->cblksty,
-                job->p_manager,
-                job->p_manager_mutex,
-                job->check_pterm)) {
-        *(job->pret) = OPJ_FALSE;
-        opj_free(job);
-        return;
+    if ((tccp->cblksty & J2K_CCP_CBLKSTY_HT) != 0) {
+        if (OPJ_FALSE == opj_t1_ht_decode_cblk(
+                    t1,
+                    cblk,
+                    band->bandno,
+                    (OPJ_UINT32)tccp->roishift,
+                    tccp->cblksty,
+                    job->p_manager,
+                    job->p_manager_mutex,
+                    job->check_pterm)) {
+            *(job->pret) = OPJ_FALSE;
+            opj_free(job);
+            return;
+        }
+    } else {
+        if (OPJ_FALSE == opj_t1_decode_cblk(
+                    t1,
+                    cblk,
+                    band->bandno,
+                    (OPJ_UINT32)tccp->roishift,
+                    tccp->cblksty,
+                    job->p_manager,
+                    job->p_manager_mutex,
+                    job->check_pterm)) {
+            *(job->pret) = OPJ_FALSE;
+            opj_free(job);
+            return;
+        }
     }
 
     x = cblk->x0 - band->x0;
@@ -1760,6 +1799,39 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
         OPJ_INT32* OPJ_RESTRICT tiledp = &tilec->data[(OPJ_SIZE_T)y * tile_w +
                                                        (OPJ_SIZE_T)x];
         for (j = 0; j < cblk_h; ++j) {
+            //positive -> round down aka.  (83)/2 =  41.5 ->  41
+            //negative -> round up   aka. (-83)/2 = -41.5 -> -41
+#if defined(__AVX512F__)
+            OPJ_INT32* ptr_in = datap + (j * cblk_w);
+            OPJ_INT32* ptr_out = tiledp + (j * (OPJ_SIZE_T)tile_w);
+            for (i = 0; i < cblk_w / 16; ++i) {
+                __m512i in_avx = _mm512_loadu_si512((__m512i*)(ptr_in));
+                const __m512i add_avx = _mm512_srli_epi32(in_avx, 31);
+                in_avx = _mm512_add_epi32(in_avx, add_avx);
+                _mm512_storeu_si512((__m512i*)(ptr_out), _mm512_srai_epi32(in_avx, 1));
+                ptr_in += 16;
+                ptr_out += 16;
+            }
+
+            for (i = 0; i < cblk_w % 16; ++i) {
+                ptr_out[i] = ptr_in[i] / 2;
+            }
+#elif defined(__AVX2__)
+            OPJ_INT32* ptr_in = datap + (j * cblk_w);
+            OPJ_INT32* ptr_out = tiledp + (j * (OPJ_SIZE_T)tile_w);
+            for (i = 0; i < cblk_w / 8; ++i) {
+                __m256i in_avx = _mm256_loadu_si256((__m256i*)(ptr_in));
+                const __m256i add_avx = _mm256_srli_epi32(in_avx, 31);
+                in_avx = _mm256_add_epi32(in_avx, add_avx);
+                _mm256_storeu_si256((__m256i*)(ptr_out), _mm256_srai_epi32(in_avx, 1));
+                ptr_in += 8;
+                ptr_out += 8;
+            }
+
+            for (i = 0; i < cblk_w % 8; ++i) {
+                ptr_out[i] = ptr_in[i] / 2;
+            }
+#else
             i = 0;
             for (; i < (cblk_w & ~(OPJ_UINT32)3U); i += 4U) {
                 OPJ_INT32 tmp0 = datap[(j * cblk_w) + i + 0U];
@@ -1775,6 +1847,7 @@ static void opj_t1_clbl_decode_processor(void* user_data, opj_tls_t* tls)
                 OPJ_INT32 tmp = datap[(j * cblk_w) + i];
                 ((OPJ_INT32*)tiledp)[(j * (OPJ_SIZE_T)tile_w) + i] = tmp / 2;
             }
+#endif
         }
     } else {        /* if (tccp->qmfbid == 0) */
         const float stepsize = 0.5f * band->stepsize;
@@ -1970,10 +2043,16 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
     opj_mqc_setstate(mqc, T1_CTXNO_AGG, 0, 3);
     opj_mqc_setstate(mqc, T1_CTXNO_ZC, 0, 4);
 
+    if (cblk->corrupted) {
+        assert(cblk->numchunks == 0);
+        return OPJ_TRUE;
+    }
+
     /* Even if we have a single chunk, in multi-threaded decoding */
     /* the insertion of our synthetic marker might potentially override */
     /* valid codestream of other codeblocks decoded in parallel. */
-    if (cblk->numchunks > 1 || t1->mustuse_cblkdatabuffer) {
+    if (cblk->numchunks > 1 || (t1->mustuse_cblkdatabuffer &&
+                                cblk->numchunks > 0)) {
         OPJ_UINT32 i;
         OPJ_UINT32 cblk_len;
 
@@ -2088,7 +2167,7 @@ static OPJ_BOOL opj_t1_decode_cblk(opj_t1_t *t1,
                 opj_mutex_lock(p_manager_mutex);
             }
             opj_event_msg(p_manager, EVT_WARNING,
-                          "PTERM check failure: %d synthetized 0xFF markers read\n",
+                          "PTERM check failure: %d synthesized 0xFF markers read\n",
                           mqc->end_of_byte_stream_counter);
             if (p_manager_mutex) {
                 opj_mutex_unlock(p_manager_mutex);
@@ -2191,6 +2270,111 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
         OPJ_UINT32* OPJ_RESTRICT t1data = (OPJ_UINT32*) t1->data;
         /* Change from "natural" order to "zigzag" order of T1 passes */
         for (j = 0; j < (cblk_h & ~3U); j += 4) {
+#if defined(__AVX512F__)
+            const __m512i perm1 = _mm512_setr_epi64(2, 3, 10, 11, 4, 5, 12, 13);
+            const __m512i perm2 = _mm512_setr_epi64(6, 7, 14, 15, 0, 0, 0, 0);
+            OPJ_UINT32* ptr = tiledp_u;
+            for (i = 0; i < cblk_w / 16; ++i) {
+                //                      INPUT                                        OUTPUT
+                // 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F   00 10 20 30 01 11 21 31 02 12 22 32 03 13 23 33
+                // 10 11 12 13 14 15 16 17 18 19 1A 1B 1C 1D 1E 1F   04 14 24 34 05 15 25 35 06 16 26 36 07 17 27 37
+                // 20 21 22 23 24 25 26 27 28 29 2A 2B 2C 2D 2E 2F   08 18 28 38 09 19 29 39 0A 1A 2A 3A 0B 1B 2B 3B
+                // 30 31 32 33 34 35 36 37 38 39 3A 3B 3C 3D 3E 3F   0C 1C 2C 3C 0D 1D 2D 3D 0E 1E 2E 3E 0F 1F 2F 3F
+                __m512i in1 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
+                                                (j + 0) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in2 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
+                                                (j + 1) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in3 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
+                                                (j + 2) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m512i in4 = _mm512_slli_epi32(_mm512_loadu_si512((__m512i*)(ptr +
+                                                (j + 3) * tile_w)), T1_NMSEDEC_FRACBITS);
+
+                __m512i tmp1 = _mm512_unpacklo_epi32(in1, in2);
+                __m512i tmp2 = _mm512_unpacklo_epi32(in3, in4);
+                __m512i tmp3 = _mm512_unpackhi_epi32(in1, in2);
+                __m512i tmp4 = _mm512_unpackhi_epi32(in3, in4);
+
+                in1 = _mm512_unpacklo_epi64(tmp1, tmp2);
+                in2 = _mm512_unpacklo_epi64(tmp3, tmp4);
+                in3 = _mm512_unpackhi_epi64(tmp1, tmp2);
+                in4 = _mm512_unpackhi_epi64(tmp3, tmp4);
+
+                _mm_storeu_si128((__m128i*)(t1data + 0), _mm512_castsi512_si128(in1));
+                _mm_storeu_si128((__m128i*)(t1data + 4), _mm512_castsi512_si128(in3));
+                _mm_storeu_si128((__m128i*)(t1data + 8), _mm512_castsi512_si128(in2));
+                _mm_storeu_si128((__m128i*)(t1data + 12), _mm512_castsi512_si128(in4));
+
+                tmp1 = _mm512_permutex2var_epi64(in1, perm1, in3);
+                tmp2 = _mm512_permutex2var_epi64(in2, perm1, in4);
+
+                _mm256_storeu_si256((__m256i*)(t1data + 16), _mm512_castsi512_si256(tmp1));
+                _mm256_storeu_si256((__m256i*)(t1data + 24), _mm512_castsi512_si256(tmp2));
+                _mm256_storeu_si256((__m256i*)(t1data + 32), _mm512_extracti64x4_epi64(tmp1,
+                                    0x1));
+                _mm256_storeu_si256((__m256i*)(t1data + 40), _mm512_extracti64x4_epi64(tmp2,
+                                    0x1));
+                _mm256_storeu_si256((__m256i*)(t1data + 48),
+                                    _mm512_castsi512_si256(_mm512_permutex2var_epi64(in1, perm2, in3)));
+                _mm256_storeu_si256((__m256i*)(t1data + 56),
+                                    _mm512_castsi512_si256(_mm512_permutex2var_epi64(in2, perm2, in4)));
+                t1data += 64;
+                ptr += 16;
+            }
+            for (i = 0; i < cblk_w % 16; ++i) {
+                t1data[0] = ptr[(j + 0) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data[1] = ptr[(j + 1) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data[2] = ptr[(j + 2) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data[3] = ptr[(j + 3) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data += 4;
+                ptr += 1;
+            }
+#elif defined(__AVX2__)
+            OPJ_UINT32* ptr = tiledp_u;
+            for (i = 0; i < cblk_w / 8; ++i) {
+                //          INPUT                  OUTPUT
+                // 00 01 02 03 04 05 06 07   00 10 20 30 01 11 21 31
+                // 10 11 12 13 14 15 16 17   02 12 22 32 03 13 23 33
+                // 20 21 22 23 24 25 26 27   04 14 24 34 05 15 25 35
+                // 30 31 32 33 34 35 36 37   06 16 26 36 07 17 27 37
+                __m256i in1 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
+                                                (j + 0) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in2 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
+                                                (j + 1) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in3 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
+                                                (j + 2) * tile_w)), T1_NMSEDEC_FRACBITS);
+                __m256i in4 = _mm256_slli_epi32(_mm256_loadu_si256((__m256i*)(ptr +
+                                                (j + 3) * tile_w)), T1_NMSEDEC_FRACBITS);
+
+                __m256i tmp1 = _mm256_unpacklo_epi32(in1, in2);
+                __m256i tmp2 = _mm256_unpacklo_epi32(in3, in4);
+                __m256i tmp3 = _mm256_unpackhi_epi32(in1, in2);
+                __m256i tmp4 = _mm256_unpackhi_epi32(in3, in4);
+
+                in1 = _mm256_unpacklo_epi64(tmp1, tmp2);
+                in2 = _mm256_unpacklo_epi64(tmp3, tmp4);
+                in3 = _mm256_unpackhi_epi64(tmp1, tmp2);
+                in4 = _mm256_unpackhi_epi64(tmp3, tmp4);
+
+                _mm_storeu_si128((__m128i*)(t1data + 0), _mm256_castsi256_si128(in1));
+                _mm_storeu_si128((__m128i*)(t1data + 4), _mm256_castsi256_si128(in3));
+                _mm_storeu_si128((__m128i*)(t1data + 8), _mm256_castsi256_si128(in2));
+                _mm_storeu_si128((__m128i*)(t1data + 12), _mm256_castsi256_si128(in4));
+                _mm256_storeu_si256((__m256i*)(t1data + 16), _mm256_permute2x128_si256(in1, in3,
+                                    0x31));
+                _mm256_storeu_si256((__m256i*)(t1data + 24), _mm256_permute2x128_si256(in2, in4,
+                                    0x31));
+                t1data += 32;
+                ptr += 8;
+            }
+            for (i = 0; i < cblk_w % 8; ++i) {
+                t1data[0] = ptr[(j + 0) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data[1] = ptr[(j + 1) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data[2] = ptr[(j + 2) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data[3] = ptr[(j + 3) * tile_w] << T1_NMSEDEC_FRACBITS;
+                t1data += 4;
+                ptr += 1;
+            }
+#else
             for (i = 0; i < cblk_w; ++i) {
                 t1data[0] = tiledp_u[(j + 0) * tile_w + i] << T1_NMSEDEC_FRACBITS;
                 t1data[1] = tiledp_u[(j + 1) * tile_w + i] << T1_NMSEDEC_FRACBITS;
@@ -2198,6 +2382,7 @@ static void opj_t1_cblk_encode_processor(void* user_data, opj_tls_t* tls)
                 t1data[3] = tiledp_u[(j + 3) * tile_w + i] << T1_NMSEDEC_FRACBITS;
                 t1data += 4;
             }
+#endif
         }
         if (j < cblk_h) {
             for (i = 0; i < cblk_w; ++i) {
@@ -2276,7 +2461,7 @@ OPJ_BOOL opj_t1_encode_cblks(opj_tcd_t* tcd,
     OPJ_UINT32 compno, resno, bandno, precno, cblkno;
     opj_mutex_t* mutex = opj_mutex_create();
 
-    tile->distotile = 0;        /* fixed_quality */
+    tile->distotile = 0;
 
     for (compno = 0; compno < tile->numcomps; ++compno) {
         opj_tcd_tilecomp_t* tilec = &tile->comps[compno];
@@ -2364,7 +2549,6 @@ static int opj_t1_enc_is_term_pass(opj_tcd_cblk_enc_t* cblk,
 }
 
 
-/** mod fixed_quality */
 static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
                                       opj_tcd_cblk_enc_t* cblk,
                                       OPJ_UINT32 orient,
@@ -2406,6 +2590,13 @@ static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
             OPJ_INT32 tmp = *datap;
             if (tmp < 0) {
                 OPJ_UINT32 tmp_unsigned;
+                if (tmp == INT_MIN) {
+                    /* To avoid undefined behaviour when negating INT_MIN */
+                    /* but if we go here, it means we have supplied an input */
+                    /* with more bit depth than we we can really support. */
+                    /* Cf https://github.com/uclouvain/openjpeg/issues/1432 */
+                    tmp = INT_MIN + 1;
+                }
                 max = opj_int_max(max, -tmp);
                 tmp_unsigned = opj_to_smr(tmp);
                 memcpy(datap, &tmp_unsigned, sizeof(OPJ_INT32));
@@ -2461,7 +2652,6 @@ static OPJ_FLOAT64 opj_t1_encode_cblk(opj_t1_t *t1,
             break;
         }
 
-        /* fixed_quality */
         tempwmsedec = opj_t1_getwmsedec(nmsedec, compno, level, orient, bpno, qmfbid,
                                         stepsize, numcomps, mct_norms, mct_numcomps) ;
         cumwmsedec += tempwmsedec;

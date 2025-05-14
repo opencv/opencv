@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.6)
+
+project("opencv")
+
+add_library(${LIB_NAME} ${LIB_TYPE} native-lib.cpp)

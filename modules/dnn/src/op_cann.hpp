@@ -10,7 +10,11 @@
 #include "graph/graph.h" // ge::Graph; ge::Operator from operator.h
 #include "graph/ge_error_codes.h" // GRAPH_SUCCESS, ...
 
-#include "op_proto/built-in/inc/all_ops.h" // ge::Conv2D, ...
+#ifdef CANN_VERSION_BELOW_6_3_ALPHA002
+    #include "op_proto/built-in/inc/all_ops.h" // ge::Conv2D, ...
+#else
+    #include "built-in/op_proto/inc/all_ops.h" // ge::Conv2D, ...
+#endif
 #include "graph/tensor.h" // ge::Shape, ge::Tensor, ge::TensorDesc
 #include "graph/types.h" // DT_FLOAT, ... ; FORMAT_NCHW, ...
 
@@ -106,6 +110,7 @@ CV__DNN_INLINE_NS_END
 
         Mat* host;
         std::shared_ptr<ge::TensorDesc> desc_;
+        std::string name;
     };
 
     class CannNet

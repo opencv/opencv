@@ -27,7 +27,8 @@
 namespace cv {
 namespace obsensor {
 #define XU_MAX_DATA_LENGTH 1024
-#define XU_UNIT_ID 4
+#define XU_UNIT_ID_COMMON 4
+#define XU_UNIT_ID_G330 3
 
 struct UvcDeviceInfo
 {
@@ -45,6 +46,16 @@ enum StreamState
     STREAM_STARTING = 1,
     STREAM_STARTED = 2,
     STREAM_STOPPING = 3,
+};
+struct Guid {
+    uint32_t data1;
+    uint16_t data2, data3;
+    uint8_t  data4[8];
+};
+
+struct ObExtensionUnit {
+    uint8_t unit;
+    Guid id;
 };
 
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName);
@@ -67,7 +78,7 @@ public:
 class DepthFrameProcessor: public IFrameProcessor {
 public:
     DepthFrameProcessor(const OBExtensionParam& parma);
-    virtual ~DepthFrameProcessor() noexcept;
+    virtual ~DepthFrameProcessor();
     virtual void process(Frame* frame) override;
 
 private:
@@ -78,7 +89,7 @@ private:
 class DepthFrameUnpacker: public IFrameProcessor {
 public:
     DepthFrameUnpacker();
-    virtual ~DepthFrameUnpacker() noexcept;
+    virtual ~DepthFrameUnpacker();
     virtual void process(Frame* frame) override;
 private:
     const uint32_t OUT_DATA_SIZE = 1280*800*2;
@@ -104,6 +115,7 @@ protected:
 
 protected:
     const UvcDeviceInfo devInfo_;
+    const ObExtensionUnit xuUnit_;
     StreamType streamType_;
     Ptr<IFrameProcessor> depthFrameProcessor_;
 };

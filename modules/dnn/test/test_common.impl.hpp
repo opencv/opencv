@@ -15,6 +15,14 @@
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <psapi.h>
+#endif  // _WIN32
+
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
@@ -49,6 +57,7 @@ void PrintTo(const cv::dnn::Target& v, std::ostream* os)
     case DNN_TARGET_CUDA: *os << "CUDA"; return;
     case DNN_TARGET_CUDA_FP16: *os << "CUDA_FP16"; return;
     case DNN_TARGET_NPU: *os << "NPU"; return;
+    case DNN_TARGET_CPU_FP16: *os << "CPU_FP16"; return;
     } // don't use "default:" to emit compiler warnings
     *os << "DNN_TARGET_UNKNOWN(" << (int)v << ")";
 }
@@ -428,18 +437,11 @@ bool validateVPUType()
 
 void initDNNTests()
 {
-    const char* extraTestDataPath =
-#ifdef WINRT
-        NULL;
-#else
-        getenv("OPENCV_DNN_TEST_DATA_PATH");
-#endif
-    if (extraTestDataPath)
-        cvtest::addDataSearchPath(extraTestDataPath);
+    cvtest::addDataSearchEnv("OPENCV_DNN_TEST_DATA_PATH");
 
     registerGlobalSkipTag(
         CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND,
-        CV_TEST_TAG_DNN_SKIP_CPU,
+        CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_CPU_FP16,
         CV_TEST_TAG_DNN_SKIP_OPENCL, CV_TEST_TAG_DNN_SKIP_OPENCL_FP16
     );
 #if defined(HAVE_HALIDE)
@@ -499,6 +501,30 @@ void initDNNTests()
         CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE,
         CV_TEST_TAG_DNN_SKIP_PARSER
     );
+}
+
+size_t DNNTestLayer::getTopMemoryUsageMB()
+{
+#ifdef _WIN32
+    PROCESS_MEMORY_COUNTERS proc;
+    GetProcessMemoryInfo(GetCurrentProcess(), &proc, sizeof(proc));
+    return proc.PeakWorkingSetSize / pow(1024, 2);  // bytes to megabytes
+#else
+    std::ifstream status("/proc/self/status");
+    std::string line, title;
+    while (std::getline(status, line))
+    {
+        std::istringstream iss(line);
+        iss >> title;
+        if (title == "VmHWM:")
+        {
+            size_t mem;
+            iss >> mem;
+            return mem / 1024;
+        }
+    }
+    return 0l;
+#endif
 }
 
 } // namespace

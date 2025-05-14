@@ -9,8 +9,6 @@
 
 //#define OPENCV_DISABLE_ALLOCATOR_STATS
 
-#ifdef CV_CXX11
-
 #include <atomic>
 
 #ifndef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE
@@ -25,14 +23,6 @@
 #ifndef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE
 #define OPENCV_ALLOCATOR_STATS_COUNTER_TYPE long long
 #endif
-
-#else  // CV_CXX11
-
-#ifndef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE
-#define OPENCV_ALLOCATOR_STATS_COUNTER_TYPE int  // CV_XADD supports int only
-#endif
-
-#endif  // CV_CXX11
 
 namespace cv { namespace utils {
 
@@ -59,7 +49,7 @@ public:
     void onAllocate(size_t /*sz*/) {}
     void onFree(size_t /*sz*/) {}
 
-#elif defined(CV_CXX11)
+#else
 
 protected:
     typedef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE counter_t;
@@ -104,49 +94,7 @@ public:
 #endif
         curr -= (counter_t)sz;
     }
-
-#else  // non C++11
-
-protected:
-    typedef OPENCV_ALLOCATOR_STATS_COUNTER_TYPE counter_t;
-    volatile counter_t curr, total, total_allocs, peak;  // overflow is possible, CV_XADD operates with 'int' only
-public:
-    AllocatorStatistics()
-        : curr(0), total(0), total_allocs(0), peak(0)
-    {}
-    ~AllocatorStatistics() CV_OVERRIDE {}
-
-    uint64_t getCurrentUsage() const CV_OVERRIDE { return (uint64_t)curr; }
-    uint64_t getTotalUsage() const CV_OVERRIDE { return (uint64_t)total; }
-    uint64_t getNumberOfAllocations() const CV_OVERRIDE { return (uint64_t)total_allocs; }
-    uint64_t getPeakUsage() const CV_OVERRIDE { return (uint64_t)peak; }
-
-    void resetPeakUsage() CV_OVERRIDE { peak = curr; }
-
-    // Controller interface
-    void onAllocate(size_t sz)
-    {
-#ifdef CV__ALLOCATOR_STATS_LOG
-        CV__ALLOCATOR_STATS_LOG(cv::format("allocate: %lld (curr=%lld)", (long long int)sz, (long long int)curr));
-#endif
-
-        counter_t new_curr = (counter_t)CV_XADD(&curr, (counter_t)sz) + (counter_t)sz;
-
-        peak = std::max((counter_t)peak, new_curr);  // non-thread safe
-
-        //CV_XADD(&total, (uint64_t)sz);  // overflow with int, non-reliable...
-        total += sz;
-
-        CV_XADD(&total_allocs, (counter_t)1);
-    }
-    void onFree(size_t sz)
-    {
-#ifdef CV__ALLOCATOR_STATS_LOG
-        CV__ALLOCATOR_STATS_LOG(cv::format("free: %lld (curr=%lld)", (long long int)sz, (long long int)curr));
-#endif
-        CV_XADD(&curr, (counter_t)-sz);
-    }
-#endif
+#endif // OPENCV_DISABLE_ALLOCATOR_STATS
 };
 
 #ifdef CV__ALLOCATOR_STATS_LOG

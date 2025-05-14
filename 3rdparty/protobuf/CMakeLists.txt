@@ -26,6 +26,9 @@ else()
                                        -Wsuggest-override -Winconsistent-missing-override
                                        -Wimplicit-fallthrough
                                        -Warray-bounds  # GCC 9+
+                                       -Wstringop-overflow -Wstringop-overread # GCC 11-12
+                                       -Wextra-semi # clang
+                                       -Wcomma # clang
   )
 endif()
 if(CV_ICC)

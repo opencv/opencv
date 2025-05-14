@@ -18,8 +18,6 @@ Implementation of Batch Normalization layer.
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 
-#include <opencv2/dnn/shape_utils.hpp>
-
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
 #endif
@@ -192,7 +190,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inputs_.depth() == CV_16S);
+        bool use_half = (inputs_.depth() == CV_16F);
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
 
@@ -266,7 +264,7 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                    forward_ocl(inputs_arr, outputs_arr, internals_arr))
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -392,17 +390,18 @@ public:
 #endif  // HAVE_HALIDE
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         CV_Assert(nodes.size() == 1);
         CV_Assert(blobs.size() == 4); // must have scale, offset, mean and variance
 
-        auto x = inputsWrapper[0].dynamicCast<CannBackendWrapper>();
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
         auto channel = x->host->size[1];
 
         // create operator
-        std::string op_name = cv::format("bn_%d", index);
-        auto op = std::make_shared<ge::op::BatchNorm>(op_name);
+        auto op = std::make_shared<ge::op::BatchNorm>(name);
 
         // set attributes
         op->set_attr_epsilon(epsilon);
@@ -412,24 +411,24 @@ public:
         // set inputs
         // set inputs : x
         auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, "y");
+        op->set_input_x_by_name(*op_x, x->name.c_str());
         auto x_desc = x->getTensorDesc();
         op->update_input_desc_x(*x_desc);
         // set inputs : scale (blobs[2])
         std::vector<int> shape_{channel};
-        auto op_const_scale = std::make_shared<CannConstOp>(blobs[2].data, blobs[2].type(), shape_, cv::format("%s_scale", op_name.c_str()));
+        auto op_const_scale = std::make_shared<CannConstOp>(blobs[2].data, blobs[2].type(), shape_, cv::format("%s_scale", name.c_str()));
         op->set_input_scale(*(op_const_scale->getOp()));
         op->update_input_desc_scale(*(op_const_scale->getTensorDesc()));
         // set inputs : offset (blobs[3])
-        auto op_const_offset = std::make_shared<CannConstOp>(blobs[3].data, blobs[3].type(), shape_, cv::format("%s_offset", op_name.c_str()));
+        auto op_const_offset = std::make_shared<CannConstOp>(blobs[3].data, blobs[3].type(), shape_, cv::format("%s_offset", name.c_str()));
         op->set_input_offset(*(op_const_offset->getOp()));
         op->update_input_desc_offset(*(op_const_offset->getTensorDesc()));
         // set inputs : mean (blobs[0])
-        auto op_const_mean = std::make_shared<CannConstOp>(blobs[0].data, blobs[0].type(), shape_, cv::format("%s_mean", op_name.c_str()));
+        auto op_const_mean = std::make_shared<CannConstOp>(blobs[0].data, blobs[0].type(), shape_, cv::format("%s_mean", name.c_str()));
         op->set_input_mean(*(op_const_mean->getOp()));
         op->update_input_desc_mean(*(op_const_mean->getTensorDesc()));
         // set inputs : variance (blobs[1])
-        auto op_const_var = std::make_shared<CannConstOp>(blobs[1].data, blobs[1].type(), shape_, cv::format("%s_var", op_name.c_str()));
+        auto op_const_var = std::make_shared<CannConstOp>(blobs[1].data, blobs[1].type(), shape_, cv::format("%s_var", name.c_str()));
         op->set_input_variance(*(op_const_var->getOp()));
         op->update_input_desc_variance(*(op_const_var->getTensorDesc()));
 
@@ -456,16 +455,12 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
         auto ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
-        std::vector<size_t> shape(ieInpNode->get_shape().size(), 1);
+        std::vector<size_t> shape(ieInpNode.get_shape().size(), 1);
         shape[1] = weights_.total();
-        auto weight = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), weights_.data);
-        auto bias = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape(shape), bias_.data);
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2021_2)
-        auto scale_node = std::make_shared<ngraph::op::v1::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#else
-        auto scale_node = std::make_shared<ngraph::op::v0::Multiply>(ieInpNode, weight, ngraph::op::AutoBroadcastType::NUMPY);
-#endif
-        auto scale_shift = std::make_shared<ngraph::op::v1::Add>(scale_node, bias, ngraph::op::AutoBroadcastType::NUMPY);
+        auto weight = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape), weights_.data);
+        auto bias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape(shape), bias_.data);
+        auto scale_node = std::make_shared<ov::op::v1::Multiply>(ieInpNode, weight, ov::op::AutoBroadcastType::NUMPY);
+        auto scale_shift = std::make_shared<ov::op::v1::Add>(scale_node, bias, ov::op::AutoBroadcastType::NUMPY);
         return Ptr<BackendNode>(new InfEngineNgraphNode(scale_shift));
     }
 #endif  // HAVE_DNN_NGRAPH

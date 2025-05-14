@@ -15,6 +15,7 @@ using gapi_GKernelPackage           = cv::GKernelPackage;
 using gapi_GNetPackage              = cv::gapi::GNetPackage;
 using gapi_ie_PyParams              = cv::gapi::ie::PyParams;
 using gapi_onnx_PyParams            = cv::gapi::onnx::PyParams;
+using gapi_ov_PyParams              = cv::gapi::ov::PyParams;
 using gapi_wip_IStreamSource_Ptr    = cv::Ptr<cv::gapi::wip::IStreamSource>;
 using detail_ExtractArgsCallback    = cv::detail::ExtractArgsCallback;
 using detail_ExtractMetaCallback    = cv::detail::ExtractMetaCallback;
@@ -22,6 +23,17 @@ using vector_GNetParam              = std::vector<cv::gapi::GNetParam>;
 using vector_GMat                   = std::vector<cv::GMat>;
 using gapi_streaming_queue_capacity = cv::gapi::streaming::queue_capacity;
 using GStreamerSource_OutputType    = cv::gapi::wip::GStreamerSource::OutputType;
+using map_string_and_int            = std::map<std::string, int>;
+using map_string_and_string         = std::map<std::string, std::string>;
+using map_string_and_string         = std::map<std::string, std::string>;
+using map_string_and_vector_size_t  = std::map<std::string, std::vector<size_t>>;
+using map_string_and_vector_float   = std::map<std::string, std::vector<float>>;
+using map_int_and_double            = std::map<int, double>;
+using ep_OpenVINO                   = cv::gapi::onnx::ep::OpenVINO;
+using ep_DirectML                   = cv::gapi::onnx::ep::DirectML;
+using ep_CoreML                     = cv::gapi::onnx::ep::CoreML;
+using ep_CUDA                       = cv::gapi::onnx::ep::CUDA;
+using ep_TensorRT                   = cv::gapi::onnx::ep::TensorRT;
 
 // NB: Python wrapper generate T_U for T<U>
 // This behavior is only observed for inputs
@@ -235,6 +247,7 @@ PyObject* pyopencv_from(const cv::GArg& value)
         HANDLE_CASE(BOOL,      bool);
         HANDLE_CASE(INT,       int);
         HANDLE_CASE(INT64,     int64_t);
+        HANDLE_CASE(UINT64,    uint64_t);
         HANDLE_CASE(DOUBLE,    double);
         HANDLE_CASE(FLOAT,     float);
         HANDLE_CASE(STRING,    std::string);
@@ -247,7 +260,6 @@ PyObject* pyopencv_from(const cv::GArg& value)
         HANDLE_CASE(MAT,       cv::Mat);
         HANDLE_CASE(UNKNOWN,   cv::detail::PyObjectHolder);
         HANDLE_CASE(DRAW_PRIM, cv::gapi::wip::draw::Prim);
-        UNSUPPORTED(UINT64);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
     }
@@ -293,6 +305,7 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_BOOL      : return pyopencv_from(o.rref<bool>());
         case cv::detail::OpaqueKind::CV_INT       : return pyopencv_from(o.rref<int>());
         case cv::detail::OpaqueKind::CV_INT64     : return pyopencv_from(o.rref<int64_t>());
+        case cv::detail::OpaqueKind::CV_UINT64    : return pyopencv_from(o.rref<uint64_t>());
         case cv::detail::OpaqueKind::CV_DOUBLE    : return pyopencv_from(o.rref<double>());
         case cv::detail::OpaqueKind::CV_FLOAT     : return pyopencv_from(o.rref<float>());
         case cv::detail::OpaqueKind::CV_STRING    : return pyopencv_from(o.rref<std::string>());
@@ -303,14 +316,13 @@ PyObject* pyopencv_from(const cv::detail::OpaqueRef& o)
         case cv::detail::OpaqueKind::CV_RECT      : return pyopencv_from(o.rref<cv::Rect>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from(o.rref<cv::GArg>());
         case cv::detail::OpaqueKind::CV_DRAW_PRIM : return pyopencv_from(o.rref<cv::gapi::wip::draw::Prim>());
-        case cv::detail::OpaqueKind::CV_UINT64    : break;
         case cv::detail::OpaqueKind::CV_SCALAR    : break;
         case cv::detail::OpaqueKind::CV_MAT       : break;
     }
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GOpaque type");
     return NULL;
-};
+}
 
 template <>
 PyObject* pyopencv_from(const cv::detail::VectorRef& v)
@@ -320,6 +332,7 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_BOOL      : return pyopencv_from_generic_vec(v.rref<bool>());
         case cv::detail::OpaqueKind::CV_INT       : return pyopencv_from_generic_vec(v.rref<int>());
         case cv::detail::OpaqueKind::CV_INT64     : return pyopencv_from_generic_vec(v.rref<int64_t>());
+        case cv::detail::OpaqueKind::CV_UINT64    : return pyopencv_from_generic_vec(v.rref<uint64_t>());
         case cv::detail::OpaqueKind::CV_DOUBLE    : return pyopencv_from_generic_vec(v.rref<double>());
         case cv::detail::OpaqueKind::CV_FLOAT     : return pyopencv_from_generic_vec(v.rref<float>());
         case cv::detail::OpaqueKind::CV_STRING    : return pyopencv_from_generic_vec(v.rref<std::string>());
@@ -332,7 +345,6 @@ PyObject* pyopencv_from(const cv::detail::VectorRef& v)
         case cv::detail::OpaqueKind::CV_MAT       : return pyopencv_from_generic_vec(v.rref<cv::Mat>());
         case cv::detail::OpaqueKind::CV_UNKNOWN   : return pyopencv_from_generic_vec(v.rref<cv::GArg>());
         case cv::detail::OpaqueKind::CV_DRAW_PRIM : return pyopencv_from_generic_vec(v.rref<cv::gapi::wip::draw::Prim>());
-        case cv::detail::OpaqueKind::CV_UINT64    : break;
     }
 
     PyErr_SetString(PyExc_TypeError, "Unsupported GArray type");
@@ -491,6 +503,8 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
     {
         HANDLE_CASE(BOOL,    bool);
         HANDLE_CASE(INT,     int);
+        HANDLE_CASE(INT64,   int64_t);
+        HANDLE_CASE(UINT64,  uint64_t);
         HANDLE_CASE(DOUBLE,  double);
         HANDLE_CASE(FLOAT,   float);
         HANDLE_CASE(STRING,  std::string);
@@ -500,8 +514,6 @@ static cv::detail::OpaqueRef extract_opaque_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(SIZE,    cv::Size);
         HANDLE_CASE(RECT,    cv::Rect);
         HANDLE_CASE(UNKNOWN, cv::GArg);
-        UNSUPPORTED(UINT64);
-        UNSUPPORTED(INT64);
         UNSUPPORTED(SCALAR);
         UNSUPPORTED(MAT);
         UNSUPPORTED(DRAW_PRIM);
@@ -524,6 +536,8 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
     {
         HANDLE_CASE(BOOL,      bool);
         HANDLE_CASE(INT,       int);
+        HANDLE_CASE(INT64,     int64_t);
+        HANDLE_CASE(UINT64,    uint64_t);
         HANDLE_CASE(DOUBLE,    double);
         HANDLE_CASE(FLOAT,     float);
         HANDLE_CASE(STRING,    std::string);
@@ -536,8 +550,6 @@ static cv::detail::VectorRef extract_vector_ref(PyObject* from, cv::detail::Opaq
         HANDLE_CASE(MAT,       cv::Mat);
         HANDLE_CASE(UNKNOWN,   cv::GArg);
         HANDLE_CASE(DRAW_PRIM, cv::gapi::wip::draw::Prim);
-        UNSUPPORTED(UINT64);
-        UNSUPPORTED(INT64);
 #undef HANDLE_CASE
 #undef UNSUPPORTED
     }
@@ -664,7 +676,6 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
     cv::GRunArgs outs;
     try
     {
-        int in_idx = 0;
         // NB: Doesn't increase reference counter (false),
         // because PyObject already have ownership.
         // In case exception decrement reference counter.
@@ -697,7 +708,6 @@ static cv::GRunArgs run_py_kernel(cv::detail::PyObjectHolder kernel,
                     util::throw_error(std::logic_error("GFrame isn't supported for custom operation"));
                     break;
             }
-            ++in_idx;
         }
 
         if (ctx.m_state.has_value())
@@ -787,15 +797,14 @@ static void unpackMetasToTuple(const cv::GMetaArgs&        meta,
     }
 }
 
-static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
-                         const cv::GMetaArgs&       meta,
-                         const cv::GArgs&           gargs)
+static cv::GArg run_py_setup(cv::detail::PyObjectHolder setup,
+                             const cv::GMetaArgs        &meta,
+                             const cv::GArgs            &gargs)
 {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
-    cv::GArg out;
-
+    cv::GArg state;
     try
     {
         // NB: Doesn't increase reference counter (false),
@@ -803,23 +812,20 @@ static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
         // In case exception decrement reference counter.
         cv::detail::PyObjectHolder args(PyTuple_New(meta.size()), false);
         unpackMetasToTuple(meta, gargs, args);
-        // NB: Take an onwership because this state is "Python" type so it will be wrapped as-is
-        // into cv::GArg and stored in GPythonBackend. Object without ownership can't
-        // be dealocated outside this function.
-        cv::detail::PyObjectHolder result(PyObject_CallObject(setup.get(), args.get()), true);
 
+        PyObject *py_kernel_state = PyObject_CallObject(setup.get(), args.get());
         if (PyErr_Occurred())
         {
             PyErr_PrintEx(0);
             PyErr_Clear();
-            throw std::logic_error("Python kernel failed with error!");
+            throw std::logic_error("Python kernel setup failed with error!");
         }
         // NB: In fact it's impossible situation, because errors were handled above.
-        GAPI_Assert(result.get() && "Python kernel returned NULL!");
+        GAPI_Assert(py_kernel_state && "Python kernel setup returned NULL!");
 
-        if (!pyopencv_to(result.get(), out, ArgInfo("arg", false)))
+        if (!pyopencv_to(py_kernel_state, state, ArgInfo("arg", false)))
         {
-            util::throw_error(std::logic_error("Unsupported output meta type"));
+            util::throw_error(std::logic_error("Failed to convert python state"));
         }
     }
     catch (...)
@@ -828,7 +834,7 @@ static cv::GArg setup_py(cv::detail::PyObjectHolder setup,
         throw;
     }
     PyGILState_Release(gstate);
-    return out;
+    return state;
 }
 
 static GMetaArg get_meta_arg(PyObject* obj)
@@ -949,7 +955,7 @@ static PyObject* pyopencv_cv_gapi_kernels(PyObject* , PyObject* py_args, PyObjec
             gapi::python::GPythonFunctor f(
                 id.c_str(), std::bind(run_py_meta, cv::detail::PyObjectHolder{out_meta}, _1, _2),
                 std::bind(run_py_kernel, cv::detail::PyObjectHolder{run}, _1),
-                std::bind(setup_py, cv::detail::PyObjectHolder{setup}, _1, _2));
+                std::bind(run_py_setup, cv::detail::PyObjectHolder{setup}, _1, _2));
             pkg.include(f);
         }
         else

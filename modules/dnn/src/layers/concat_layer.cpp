@@ -59,7 +59,6 @@
 #include "../cuda4dnn/primitives/concat.hpp"
 using namespace cv::dnn::cuda4dnn;
 #endif
-
 namespace cv
 {
 namespace dnn
@@ -141,7 +140,6 @@ public:
                backendId == DNN_BACKEND_CUDA ||
                (backendId == DNN_BACKEND_HALIDE && haveHalide() && axis == 1 && !padding) ||  // By channels
                (backendId == DNN_BACKEND_WEBNN && !padding) ||
-               (backendId == DNN_BACKEND_VKCOM && haveVulkan() && !padding) ||
                (backendId == DNN_BACKEND_CANN && !padding);
     }
 
@@ -166,14 +164,14 @@ public:
             for( i = 0; i < ninputs; i++ )
             {
                 Mat& inp = inputs[i];
-                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16S || inp.type() == CV_8S) &&
+                CV_Assert( inp.isContinuous() && (inp.type() == CV_32F || inp.type() == CV_16F || inp.type() == CV_8S) &&
                            inp.dims == 4 && inp.size[0] == output.size[0] &&
                            inp.size[2] == output.size[2] &&
                            inp.size[3] == output.size[3] );
                 nchannels += inp.size[1];
             }
             CV_Assert( nchannels == output.size[1] );
-            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16S || output.type() == CV_8S) );
+            CV_Assert( output.isContinuous() && (output.type() == CV_32F || output.type() == CV_16F || output.type() == CV_8S) );
 
             cc.chptrs.resize(nchannels*batchsz);
 
@@ -224,7 +222,7 @@ public:
         std::vector<UMat> inputs;
         std::vector<UMat> outputs;
 
-        bool use_half = (inps.depth() == CV_16S);
+        bool use_half = (inps.depth() == CV_16F);
         inps.getUMatVector(inputs);
         outs.getUMatVector(outputs);
 
@@ -304,6 +302,8 @@ public:
             ranges[cAxis].start = 0;
             for (size_t i = 0; i < inputs.size(); i++)
             {
+                if (inputs[i].empty())
+                    continue;
                 ranges[cAxis].end = ranges[cAxis].start + inputs[i].size[cAxis];
                 for (int j = 0; j < outMat.dims; ++j)
                 {
@@ -332,17 +332,6 @@ public:
     }
 #endif
 
-    virtual Ptr<BackendNode> initVkCom(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
-    {
-#ifdef HAVE_VULKAN
-        vkcom::Tensor in = VkComTensor(input[0]);
-        int cAxis = normalize_axis(axis, in.dimNum());
-        std::shared_ptr<vkcom::OpBase> op(new vkcom::OpConcat(cAxis));
-        return Ptr<BackendNode>(new VkComBackendNode(input, op));
-#endif // HAVE_VULKAN
-        return Ptr<BackendNode>();
-    }
-
     virtual Ptr<BackendNode> initHalide(const std::vector<Ptr<BackendWrapper> > &input) CV_OVERRIDE
     {
 #ifdef HAVE_HALIDE
@@ -367,16 +356,17 @@ public:
     }
 
 #ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputsWrapper, const int index, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        CV_Assert(inputsWrapper.size() == nodes.size());
+        CV_Assert(inputs.size() == nodes.size());
 
         // create operator
-        std::string op_name = cv::format("concat_%d", index);
-        auto op = std::make_shared<ge::op::ConcatD>(op_name);
+        auto op = std::make_shared<ge::op::ConcatD>(name);
 
         // set attributes
-        int N = inputsWrapper.size();
+        int N = inputs.size();
         op->set_attr_concat_dim(axis);
         op->set_attr_N(N);
 
@@ -384,10 +374,10 @@ public:
         op->create_dynamic_input_x(N);
         for (int i = 0; i < N; i++)
         {
-            auto x_i = inputsWrapper[i].dynamicCast<CannBackendWrapper>();
+            auto x_i = inputs[i].dynamicCast<CannBackendWrapper>();
             auto x_i_desc = x_i->getTensorDesc();
             auto op_x_i = nodes[i].dynamicCast<CannBackendNode>()->getOp();
-            op->set_dynamic_input_x(i, *op_x_i, "y");
+            op->set_dynamic_input_x(i, *op_x_i, x_i->name.c_str());
             op->update_dynamic_input_desc_x(i, *x_i_desc);
         }
 
@@ -403,18 +393,18 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node->get_shape().size();
+        const int numDims = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_shape().size();
         const int cAxis = normalize_axis(axis, numDims);
         std::vector<size_t> maxDims(numDims, 0);
 
         CV_Assert(inputs.size() == nodes.size());
-        ngraph::OutputVector inp_nodes;
+        ov::OutputVector inp_nodes;
         for (int i = 0; i < nodes.size(); ++i)
         {
             auto inp = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
             inp_nodes.push_back(inp);
 
-            std::vector<size_t> inpShape = inp->get_shape();
+            std::vector<size_t> inpShape = inp.get_shape();
             for (int i = 0; i < numDims; ++i)
                 maxDims[i] = std::max(maxDims[i], inpShape[i]);
         }
@@ -434,14 +424,14 @@ public:
             }
             if (needPadding)
             {
-                inp_nodes[i] = std::make_shared<ngraph::op::v1::Pad>(
+                inp_nodes[i] = std::make_shared<ov::op::v1::Pad>(
                     inp_nodes[i],
-                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{begins.size()}, begins.data()),
-                    std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{ends.size()}, ends.data()),
-                    ngraph::op::PadMode::CONSTANT);
+                    std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{begins.size()}, begins.data()),
+                    std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{ends.size()}, ends.data()),
+                    ov::op::PadMode::CONSTANT);
             }
         }
-        auto concat = std::make_shared<ngraph::op::Concat>(inp_nodes, cAxis);
+        auto concat = std::make_shared<ov::op::v0::Concat>(inp_nodes, cAxis);
         return Ptr<BackendNode>(new InfEngineNgraphNode(concat));
     }
 #endif  // HAVE_DNN_NGRAPH

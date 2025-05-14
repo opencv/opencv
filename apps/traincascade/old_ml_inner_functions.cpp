@@ -60,63 +60,59 @@ void CvStatModel::clear()
 
 void CvStatModel::save( const char* filename, const char* name ) const
 {
-    CvFileStorage* fs = 0;
+    cv::FileStorage fs;
 
     CV_FUNCNAME( "CvStatModel::save" );
 
     __BEGIN__;
 
-    CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_WRITE ));
-    if( !fs )
-        CV_ERROR( CV_StsError, "Could not open the file storage. Check the path and permissions" );
+    if( !fs.open( filename, cv::FileStorage::WRITE ))
+        CV_ERROR( cv::Error::StsError, "Could not open the file storage. Check the path and permissions" );
 
     write( fs, name ? name : default_model_name );
 
     __END__;
 
-    cvReleaseFileStorage( &fs );
 }
 
 
 void CvStatModel::load( const char* filename, const char* name )
 {
-    CvFileStorage* fs = 0;
+    cv::FileStorage fs;
 
-    CV_FUNCNAME( "CvAlgorithm::load" );
+    CV_FUNCNAME( "CvStatModel::load" );
 
     __BEGIN__;
 
-    CvFileNode* model_node = 0;
+    cv::FileNode model_node;
 
-    CV_CALL( fs = cvOpenFileStorage( filename, 0, CV_STORAGE_READ ));
-    if( !fs )
-        EXIT;
+    if( !fs.open(filename, cv::FileStorage::READ) )
+        CV_ERROR( cv::Error::StsError, "Could not open the file storage. Check the path and permissions" );
 
     if( name )
-        model_node = cvGetFileNodeByName( fs, 0, name );
+        model_node = fs[ name ];
     else
     {
-        CvFileNode* root = cvGetRootFileNode( fs );
-        if( root->data.seq->total > 0 )
-            model_node = (CvFileNode*)cvGetSeqElem( root->data.seq, 0 );
+        auto root = fs.root();
+        if ( root.size() > 0 )
+            model_node = fs[0];
     }
 
-    read( fs, model_node );
+    read( model_node );
 
     __END__;
 
-    cvReleaseFileStorage( &fs );
 }
 
 
-void CvStatModel::write( CvFileStorage*, const char* ) const
+void CvStatModel::write( cv::FileStorage&, const char* ) const
 {
-    OPENCV_ERROR( CV_StsNotImplemented, "CvStatModel::write", "" );
+    OPENCV_ERROR( cv::Error::StsNotImplemented, "CvStatModel::write", "" );
 }
 
-void CvStatModel::read( CvFileStorage*, CvFileNode* )
+void CvStatModel::read( const cv::FileNode& )
 {
-    OPENCV_ERROR( CV_StsNotImplemented, "CvStatModel::read", "" );
+    OPENCV_ERROR( cv::Error::StsNotImplemented, "CvStatModel::read", "" );
 }
 
 CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
@@ -138,7 +134,7 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
     {
         if( _centers && !ICV_IS_MAT_OF_TYPE (_centers, CV_32FC1) )
         {
-            CV_ERROR(CV_StsBadArg,"");
+            CV_ERROR(cv::Error::StsBadArg,"");
         }
         else if( !_centers )
             CV_CALL(centers = cvCreateMat (num_of_clusters, dim, CV_32FC1));
@@ -147,16 +143,16 @@ CvMat* icvGenerateRandomClusterCenters ( int seed, const CvMat* data,
     {
         if( _centers && !ICV_IS_MAT_OF_TYPE (_centers, CV_64FC1) )
         {
-            CV_ERROR(CV_StsBadArg,"");
+            CV_ERROR(cv::Error::StsBadArg,"");
         }
         else if( !_centers )
             CV_CALL(centers = cvCreateMat (num_of_clusters, dim, CV_64FC1));
     }
     else
-        CV_ERROR (CV_StsBadArg,"");
+        CV_ERROR (cv::Error::StsBadArg,"");
 
     if( num_of_clusters < 1 )
-        CV_ERROR (CV_StsBadArg,"");
+        CV_ERROR (cv::Error::StsBadArg,"");
 
     rng = cvRNG(seed);
     for (i = 0; i < dim; i++)
@@ -212,10 +208,10 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
     int* dsti;
 
     if( !CV_IS_MAT(idx_arr) )
-        CV_ERROR( CV_StsBadArg, "Invalid index array" );
+        CV_ERROR( cv::Error::StsBadArg, "Invalid index array" );
 
     if( idx_arr->rows != 1 && idx_arr->cols != 1 )
-        CV_ERROR( CV_StsBadSize, "the index array must be 1-dimensional" );
+        CV_ERROR( cv::Error::StsBadSize, "the index array must be 1-dimensional" );
 
     idx_total = idx_arr->rows + idx_arr->cols - 1;
     srcb = idx_arr->data.ptr;
@@ -231,20 +227,20 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
         // idx_arr is array of 1's and 0's -
         // i.e. it is a mask of the selected components
         if( idx_total != data_arr_size )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "Component mask should contain as many elements as the total number of input variables" );
 
         for( i = 0; i < idx_total; i++ )
             idx_selected += srcb[i*step] != 0;
 
         if( idx_selected == 0 )
-            CV_ERROR( CV_StsOutOfRange, "No components/input_variables is selected!" );
+            CV_ERROR( cv::Error::StsOutOfRange, "No components/input_variables is selected!" );
 
         break;
     case CV_32SC1:
         // idx_arr is array of integer indices of selected components
         if( idx_total > data_arr_size )
-            CV_ERROR( CV_StsOutOfRange,
+            CV_ERROR( cv::Error::StsOutOfRange,
             "index array may not contain more elements than the total number of input variables" );
         idx_selected = idx_total;
         // check if sorted already
@@ -260,7 +256,7 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
         }
         break;
     default:
-        CV_ERROR( CV_StsUnsupportedFormat, "Unsupported index array data type "
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "Unsupported index array data type "
                                            "(it should be 8uC1, 8sC1 or 32sC1)" );
     }
 
@@ -282,13 +278,13 @@ cvPreprocessIndexArray( const CvMat* idx_arr, int data_arr_size, bool check_for_
             qsort( dsti, idx_total, sizeof(dsti[0]), icvCmpIntegers );
 
         if( dsti[0] < 0 || dsti[idx_total-1] >= data_arr_size )
-            CV_ERROR( CV_StsOutOfRange, "the index array elements are out of range" );
+            CV_ERROR( cv::Error::StsOutOfRange, "the index array elements are out of range" );
 
         if( check_for_duplicates )
         {
             for( i = 1; i < idx_total; i++ )
                 if( dsti[i] <= dsti[i-1] )
-                    CV_ERROR( CV_StsBadArg, "There are duplicated index array elements" );
+                    CV_ERROR( cv::Error::StsBadArg, "There are duplicated index array elements" );
         }
     }
 
@@ -319,19 +315,19 @@ cvPreprocessVarType( const CvMat* var_type, const CvMat* var_idx,
     uchar* dst;
 
     if( !CV_IS_MAT(var_type) )
-        CV_ERROR( var_type ? CV_StsBadArg : CV_StsNullPtr, "Invalid or absent var_type array" );
+        CV_ERROR( var_type ? cv::Error::StsBadArg : cv::Error::StsNullPtr, "Invalid or absent var_type array" );
 
     if( var_type->rows != 1 && var_type->cols != 1 )
-        CV_ERROR( CV_StsBadSize, "var_type array must be 1-dimensional" );
+        CV_ERROR( cv::Error::StsBadSize, "var_type array must be 1-dimensional" );
 
     if( !CV_IS_MASK_ARR(var_type))
-        CV_ERROR( CV_StsUnsupportedFormat, "type mask must be 8uC1 or 8sC1 array" );
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "type mask must be 8uC1 or 8sC1 array" );
 
     tm_size = var_type->rows + var_type->cols - 1;
     tm_step = var_type->rows == 1 ? 1 : var_type->step/CV_ELEM_SIZE(var_type->type);
 
     if( /*tm_size != var_count &&*/ tm_size != var_count + 1 )
-        CV_ERROR( CV_StsBadArg,
+        CV_ERROR( cv::Error::StsBadArg,
         "type mask must be of <input var count> + 1 size" );
 
     if( response_type && tm_size > var_count )
@@ -341,9 +337,9 @@ cvPreprocessVarType( const CvMat* var_type, const CvMat* var_idx,
     {
         if( !CV_IS_MAT(var_idx) || CV_MAT_TYPE(var_idx->type) != CV_32SC1 ||
             (var_idx->rows != 1 && var_idx->cols != 1) || !CV_IS_MAT_CONT(var_idx->type) )
-            CV_ERROR( CV_StsBadArg, "var index array should be continuous 1-dimensional integer vector" );
+            CV_ERROR( cv::Error::StsBadArg, "var index array should be continuous 1-dimensional integer vector" );
         if( var_idx->rows + var_idx->cols - 1 > var_count )
-            CV_ERROR( CV_StsBadSize, "var index array is too large" );
+            CV_ERROR( cv::Error::StsBadSize, "var index array is too large" );
         //map = var_idx->data.i;
         var_count = var_idx->rows + var_idx->cols - 1;
     }
@@ -380,18 +376,18 @@ cvPreprocessOrderedResponses( const CvMat* responses, const CvMat* sample_idx, i
     int sample_count = sample_all;
 
     if( !CV_IS_MAT(responses) )
-        CV_ERROR( CV_StsBadArg, "Invalid response array" );
+        CV_ERROR( cv::Error::StsBadArg, "Invalid response array" );
 
     if( responses->rows != 1 && responses->cols != 1 )
-        CV_ERROR( CV_StsBadSize, "Response array must be 1-dimensional" );
+        CV_ERROR( cv::Error::StsBadSize, "Response array must be 1-dimensional" );
 
     if( responses->rows + responses->cols - 1 != sample_count )
-        CV_ERROR( CV_StsUnmatchedSizes,
+        CV_ERROR( cv::Error::StsUnmatchedSizes,
         "Response array must contain as many elements as the total number of samples" );
 
     r_type = CV_MAT_TYPE(responses->type);
     if( r_type != CV_32FC1 && r_type != CV_32SC1 )
-        CV_ERROR( CV_StsUnsupportedFormat, "Unsupported response type" );
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "Unsupported response type" );
 
     r_step = responses->step ? responses->step / CV_ELEM_SIZE(responses->type) : 1;
 
@@ -405,9 +401,9 @@ cvPreprocessOrderedResponses( const CvMat* responses, const CvMat* sample_idx, i
     {
         if( !CV_IS_MAT(sample_idx) || CV_MAT_TYPE(sample_idx->type) != CV_32SC1 ||
             (sample_idx->rows != 1 && sample_idx->cols != 1) || !CV_IS_MAT_CONT(sample_idx->type) )
-            CV_ERROR( CV_StsBadArg, "sample index array should be continuous 1-dimensional integer vector" );
+            CV_ERROR( cv::Error::StsBadArg, "sample index array should be continuous 1-dimensional integer vector" );
         if( sample_idx->rows + sample_idx->cols - 1 > sample_count )
-            CV_ERROR( CV_StsBadSize, "sample index array is too large" );
+            CV_ERROR( cv::Error::StsBadSize, "sample index array is too large" );
         map = sample_idx->data.i;
         sample_count = sample_idx->rows + sample_idx->cols - 1;
     }
@@ -470,18 +466,18 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
     int sample_count = sample_all;
 
     if( !CV_IS_MAT(responses) )
-        CV_ERROR( CV_StsBadArg, "Invalid response array" );
+        CV_ERROR( cv::Error::StsBadArg, "Invalid response array" );
 
     if( responses->rows != 1 && responses->cols != 1 )
-        CV_ERROR( CV_StsBadSize, "Response array must be 1-dimensional" );
+        CV_ERROR( cv::Error::StsBadSize, "Response array must be 1-dimensional" );
 
     if( responses->rows + responses->cols - 1 != sample_count )
-        CV_ERROR( CV_StsUnmatchedSizes,
+        CV_ERROR( cv::Error::StsUnmatchedSizes,
         "Response array must contain as many elements as the total number of samples" );
 
     r_type = CV_MAT_TYPE(responses->type);
     if( r_type != CV_32FC1 && r_type != CV_32SC1 )
-        CV_ERROR( CV_StsUnsupportedFormat, "Unsupported response type" );
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "Unsupported response type" );
 
     r_step = responses->rows == 1 ? 1 : responses->step / CV_ELEM_SIZE(responses->type);
 
@@ -489,9 +485,9 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
     {
         if( !CV_IS_MAT(sample_idx) || CV_MAT_TYPE(sample_idx->type) != CV_32SC1 ||
             (sample_idx->rows != 1 && sample_idx->cols != 1) || !CV_IS_MAT_CONT(sample_idx->type) )
-            CV_ERROR( CV_StsBadArg, "sample index array should be continuous 1-dimensional integer vector" );
+            CV_ERROR( cv::Error::StsBadArg, "sample index array should be continuous 1-dimensional integer vector" );
         if( sample_idx->rows + sample_idx->cols - 1 > sample_count )
-            CV_ERROR( CV_StsBadSize, "sample index array is too large" );
+            CV_ERROR( cv::Error::StsBadSize, "sample index array is too large" );
         map = sample_idx->data.i;
         sample_count = sample_idx->rows + sample_idx->cols - 1;
     }
@@ -499,7 +495,7 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
     CV_CALL( out_responses = cvCreateMat( 1, sample_count, CV_32SC1 ));
 
     if( !out_response_map )
-        CV_ERROR( CV_StsNullPtr, "out_response_map pointer is NULL" );
+        CV_ERROR( cv::Error::StsNullPtr, "out_response_map pointer is NULL" );
 
     CV_CALL( response_ptr = (int**)cvAlloc( sample_count*sizeof(response_ptr[0])));
 
@@ -521,7 +517,7 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
             {
                 char buf[100];
                 snprintf( buf, sizeof(buf), "response #%d is not integral", idx );
-                CV_ERROR( CV_StsBadArg, buf );
+                CV_ERROR( cv::Error::StsBadArg, buf );
             }
             dst[i] = ri;
         }
@@ -535,7 +531,7 @@ cvPreprocessCategoricalResponses( const CvMat* responses,
         cls_count += *response_ptr[i] != *response_ptr[i-1];
 
     if( cls_count < 2 )
-        CV_ERROR( CV_StsBadArg, "There is only a single class" );
+        CV_ERROR( cv::Error::StsBadArg, "There is only a single class" );
 
     CV_CALL( *out_response_map = cvCreateMat( 1, cls_count, CV_32SC1 ));
 
@@ -592,7 +588,7 @@ cvGetTrainSamples( const CvMat* train_data, int tflag,
     const int *s_idx, *v_idx;
 
     if( !CV_IS_MAT(train_data) )
-        CV_ERROR( CV_StsBadArg, "Invalid or NULL training data matrix" );
+        CV_ERROR( cv::Error::StsBadArg, "Invalid or NULL training data matrix" );
 
     var_count = var_idx ? var_idx->cols + var_idx->rows - 1 :
                 tflag == CV_ROW_SAMPLE ? train_data->cols : train_data->rows;
@@ -663,18 +659,18 @@ cvCheckTrainData( const CvMat* train_data, int tflag,
 
     // check parameter types and sizes
     if( !CV_IS_MAT(train_data) || CV_MAT_TYPE(train_data->type) != CV_32FC1 )
-        CV_ERROR( CV_StsBadArg, "train data must be floating-point matrix" );
+        CV_ERROR( cv::Error::StsBadArg, "train data must be floating-point matrix" );
 
     if( missing_mask )
     {
         if( !CV_IS_MAT(missing_mask) || !CV_IS_MASK_ARR(missing_mask) ||
             !CV_ARE_SIZES_EQ(train_data, missing_mask) )
-            CV_ERROR( CV_StsBadArg,
+            CV_ERROR( cv::Error::StsBadArg,
             "missing value mask must be 8-bit matrix of the same size as training data" );
     }
 
     if( tflag != CV_ROW_SAMPLE && tflag != CV_COL_SAMPLE )
-        CV_ERROR( CV_StsBadArg,
+        CV_ERROR( cv::Error::StsBadArg,
         "Unknown training data layout (must be CV_ROW_SAMPLE or CV_COL_SAMPLE)" );
 
     if( var_all )
@@ -740,7 +736,7 @@ cvPrepareTrainData( const char* /*funcname*/,
     __BEGIN__;
 
     if( !out_train_samples )
-        CV_ERROR( CV_StsBadArg, "output pointer to train samples is NULL" );
+        CV_ERROR( cv::Error::StsBadArg, "output pointer to train samples is NULL" );
 
     CV_CALL( cvCheckTrainData( train_data, tflag, 0, &var_all, &sample_all ));
 
@@ -752,7 +748,7 @@ cvPrepareTrainData( const char* /*funcname*/,
     if( responses )
     {
         if( !out_responses )
-            CV_ERROR( CV_StsNullPtr, "output response pointer is NULL" );
+            CV_ERROR( cv::Error::StsNullPtr, "output response pointer is NULL" );
 
         if( response_type == CV_VAR_NUMERICAL )
         {
@@ -845,10 +841,10 @@ cvSortSamplesByClasses( const float** samples, const CvMat* classes,
     int i, k = 0, sample_count;
 
     if( !samples || !classes || !class_ranges )
-        CV_ERROR( CV_StsNullPtr, "INTERNAL ERROR: some of the args are NULL pointers" );
+        CV_ERROR( cv::Error::StsNullPtr, "INTERNAL ERROR: some of the args are NULL pointers" );
 
     if( classes->rows != 1 || CV_MAT_TYPE(classes->type) != CV_32SC1 )
-        CV_ERROR( CV_StsBadArg, "classes array must be a single row of integers" );
+        CV_ERROR( cv::Error::StsBadArg, "classes array must be a single row of integers" );
 
     sample_count = classes->cols;
     CV_CALL( pairs = (CvSampleResponsePair*)cvAlloc( (sample_count+1)*sizeof(pairs[0])));
@@ -905,45 +901,45 @@ cvPreparePredictData( const CvArr* _sample, int dims_all,
     int vec_size;
 
     if( !is_sparse && !CV_IS_MAT(sample) )
-        CV_ERROR( !sample ? CV_StsNullPtr : CV_StsBadArg, "The sample is not a valid vector" );
+        CV_ERROR( !sample ? cv::Error::StsNullPtr : cv::Error::StsBadArg, "The sample is not a valid vector" );
 
     if( cvGetElemType( sample ) != CV_32FC1 )
-        CV_ERROR( CV_StsUnsupportedFormat, "Input sample must have 32fC1 type" );
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "Input sample must have 32fC1 type" );
 
     CV_CALL( d = cvGetDims( sample, sizes ));
 
     if( !((is_sparse && d == 1) || (!is_sparse && d == 2 && (sample->rows == 1 || sample->cols == 1))) )
-        CV_ERROR( CV_StsBadSize, "Input sample must be 1-dimensional vector" );
+        CV_ERROR( cv::Error::StsBadSize, "Input sample must be 1-dimensional vector" );
 
     if( d == 1 )
         sizes[1] = 1;
 
     if( sizes[0] + sizes[1] - 1 != dims_all )
-        CV_ERROR( CV_StsUnmatchedSizes,
+        CV_ERROR( cv::Error::StsUnmatchedSizes,
         "The sample size is different from what has been used for training" );
 
     if( !_row_sample )
-        CV_ERROR( CV_StsNullPtr, "INTERNAL ERROR: The row_sample pointer is NULL" );
+        CV_ERROR( cv::Error::StsNullPtr, "INTERNAL ERROR: The row_sample pointer is NULL" );
 
     if( comp_idx && (!CV_IS_MAT(comp_idx) || comp_idx->rows != 1 ||
         CV_MAT_TYPE(comp_idx->type) != CV_32SC1) )
-        CV_ERROR( CV_StsBadArg, "INTERNAL ERROR: invalid comp_idx" );
+        CV_ERROR( cv::Error::StsBadArg, "INTERNAL ERROR: invalid comp_idx" );
 
     dims_selected = comp_idx ? comp_idx->cols : dims_all;
 
     if( prob )
     {
         if( !CV_IS_MAT(prob) )
-            CV_ERROR( CV_StsBadArg, "The output matrix of probabilities is invalid" );
+            CV_ERROR( cv::Error::StsBadArg, "The output matrix of probabilities is invalid" );
 
         if( (prob->rows != 1 && prob->cols != 1) ||
             (CV_MAT_TYPE(prob->type) != CV_32FC1 &&
             CV_MAT_TYPE(prob->type) != CV_64FC1) )
-            CV_ERROR( CV_StsBadSize,
+            CV_ERROR( cv::Error::StsBadSize,
             "The matrix of probabilities must be 1-dimensional vector of 32fC1 type" );
 
         if( prob->rows + prob->cols - 1 != class_count )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "The vector of probabilities must contain as many elements as "
             "the number of classes in the training set" );
     }
@@ -1075,7 +1071,7 @@ icvConvertDataToSparse( const uchar* src, int src_step, int src_type,
     dst_type = CV_MAT_TYPE(dst_type);
 
     if( CV_MAT_CN(src_type) != 1 || CV_MAT_CN(dst_type) != 1 )
-        CV_ERROR( CV_StsUnsupportedFormat, "The function supports only single-channel arrays" );
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "The function supports only single-channel arrays" );
 
     if( src_step == 0 )
         src_step = CV_ELEM_SIZE(src_type);
@@ -1138,7 +1134,7 @@ icvConvertDataToSparse( const uchar* src, int src_step, int src_type,
                     ((float*)_dst)[j] = (float)((double*)src)[j];
         }
     else
-        CV_ERROR( CV_StsUnsupportedFormat, "Unsupported combination of input and output vectors" );
+        CV_ERROR( cv::Error::StsUnsupportedFormat, "Unsupported combination of input and output vectors" );
 
     __END__;
 }
@@ -1158,15 +1154,15 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
     int samples_selected = samples_all, dims_selected = dims_all;
 
     if( dst_labels && !CV_IS_MAT(dst_labels) )
-        CV_ERROR( CV_StsBadArg, "Array of output labels is not a valid matrix" );
+        CV_ERROR( cv::Error::StsBadArg, "Array of output labels is not a valid matrix" );
 
     if( dst_centers )
         if( !ICV_IS_MAT_OF_TYPE(dst_centers, CV_32FC1) &&
             !ICV_IS_MAT_OF_TYPE(dst_centers, CV_64FC1) )
-            CV_ERROR( CV_StsBadArg, "Array of cluster centers is not a valid matrix" );
+            CV_ERROR( cv::Error::StsBadArg, "Array of cluster centers is not a valid matrix" );
 
     if( dst_probs && !CV_IS_MAT(dst_probs) )
-        CV_ERROR( CV_StsBadArg, "Probability matrix is not valid" );
+        CV_ERROR( cv::Error::StsBadArg, "Probability matrix is not valid" );
 
     if( sample_idx )
     {
@@ -1183,15 +1179,15 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
     if( dst_labels && (!labels || labels->data.ptr != dst_labels->data.ptr) )
     {
         if( !labels )
-            CV_ERROR( CV_StsNullPtr, "NULL labels" );
+            CV_ERROR( cv::Error::StsNullPtr, "NULL labels" );
 
         CV_ASSERT( labels->rows == 1 );
 
         if( dst_labels->rows != 1 && dst_labels->cols != 1 )
-            CV_ERROR( CV_StsBadSize, "Array of output labels should be 1d vector" );
+            CV_ERROR( cv::Error::StsBadSize, "Array of output labels should be 1d vector" );
 
         if( dst_labels->rows + dst_labels->cols - 1 != samples_all )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "Size of vector of output labels is not equal to the total number of input samples" );
 
         CV_ASSERT( labels->cols == samples_selected );
@@ -1206,13 +1202,13 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
         int i;
 
         if( !centers )
-            CV_ERROR( CV_StsNullPtr, "NULL centers" );
+            CV_ERROR( cv::Error::StsNullPtr, "NULL centers" );
 
         if( centers->rows != dst_centers->rows )
-            CV_ERROR( CV_StsUnmatchedSizes, "Invalid number of rows in matrix of output centers" );
+            CV_ERROR( cv::Error::StsUnmatchedSizes, "Invalid number of rows in matrix of output centers" );
 
         if( dst_centers->cols != dims_all )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "Number of columns in matrix of output centers is "
             "not equal to the total number of components in the input samples" );
 
@@ -1227,13 +1223,13 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
     if( dst_probs && (!probs || probs->data.ptr != dst_probs->data.ptr) )
     {
         if( !probs )
-            CV_ERROR( CV_StsNullPtr, "NULL probs" );
+            CV_ERROR( cv::Error::StsNullPtr, "NULL probs" );
 
         if( probs->cols != dst_probs->cols )
-            CV_ERROR( CV_StsUnmatchedSizes, "Invalid number of columns in output probability matrix" );
+            CV_ERROR( cv::Error::StsUnmatchedSizes, "Invalid number of columns in output probability matrix" );
 
         if( dst_probs->rows != samples_all )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "Number of rows in output probability matrix is "
             "not equal to the total number of input samples" );
 
@@ -1277,29 +1273,29 @@ cvStatModelMultiPredict( const CvStatModel* stat_model,
     CvMat* probs1 = probs ? &probs_part : 0;
 
     if( !CV_IS_STAT_MODEL(stat_model) )
-        CV_ERROR( !stat_model ? CV_StsNullPtr : CV_StsBadArg, "Invalid statistical model" );
+        CV_ERROR( !stat_model ? cv::Error::StsNullPtr : cv::Error::StsBadArg, "Invalid statistical model" );
 
     if( !stat_model->predict )
-        CV_ERROR( CV_StsNotImplemented, "There is no \"predict\" method" );
+        CV_ERROR( cv::Error::StsNotImplemented, "There is no \"predict\" method" );
 
     if( !predict_input || !predict_output )
-        CV_ERROR( CV_StsNullPtr, "NULL input or output matrices" );
+        CV_ERROR( cv::Error::StsNullPtr, "NULL input or output matrices" );
 
     if( !is_sparse && !CV_IS_MAT(predict_input) )
-        CV_ERROR( CV_StsBadArg, "predict_input should be a matrix or a sparse matrix" );
+        CV_ERROR( cv::Error::StsBadArg, "predict_input should be a matrix or a sparse matrix" );
 
     if( !CV_IS_MAT(predict_output) )
-        CV_ERROR( CV_StsBadArg, "predict_output should be a matrix" );
+        CV_ERROR( cv::Error::StsBadArg, "predict_output should be a matrix" );
 
     type = cvGetElemType( predict_input );
     if( type != CV_32FC1 ||
         (CV_MAT_TYPE(predict_output->type) != CV_32FC1 &&
          CV_MAT_TYPE(predict_output->type) != CV_32SC1 ))
-         CV_ERROR( CV_StsUnsupportedFormat, "The input or output matrix has unsupported format" );
+         CV_ERROR( cv::Error::StsUnsupportedFormat, "The input or output matrix has unsupported format" );
 
     CV_CALL( d = cvGetDims( predict_input, sizes ));
     if( d > 2 )
-        CV_ERROR( CV_StsBadSize, "The input matrix should be 1- or 2-dimensional" );
+        CV_ERROR( cv::Error::StsBadSize, "The input matrix should be 1- or 2-dimensional" );
 
     if( !tflag )
     {
@@ -1315,30 +1311,30 @@ cvStatModelMultiPredict( const CvStatModel* stat_model,
     if( sample_idx )
     {
         if( !CV_IS_MAT(sample_idx) )
-            CV_ERROR( CV_StsBadArg, "Invalid sample_idx matrix" );
+            CV_ERROR( cv::Error::StsBadArg, "Invalid sample_idx matrix" );
 
         if( sample_idx->cols != 1 && sample_idx->rows != 1 )
-            CV_ERROR( CV_StsBadSize, "sample_idx must be 1-dimensional matrix" );
+            CV_ERROR( cv::Error::StsBadSize, "sample_idx must be 1-dimensional matrix" );
 
         samples_selected = sample_idx->rows + sample_idx->cols - 1;
 
         if( CV_MAT_TYPE(sample_idx->type) == CV_32SC1 )
         {
             if( samples_selected > samples_all )
-                CV_ERROR( CV_StsBadSize, "sample_idx is too large vector" );
+                CV_ERROR( cv::Error::StsBadSize, "sample_idx is too large vector" );
         }
         else if( samples_selected != samples_all )
-            CV_ERROR( CV_StsUnmatchedSizes, "sample_idx has incorrect size" );
+            CV_ERROR( cv::Error::StsUnmatchedSizes, "sample_idx has incorrect size" );
 
         sample_idx_step = sample_idx->step ?
             sample_idx->step / CV_ELEM_SIZE(sample_idx->type) : 1;
     }
 
     if( predict_output->rows != 1 && predict_output->cols != 1 )
-        CV_ERROR( CV_StsBadSize, "predict_output should be a 1-dimensional matrix" );
+        CV_ERROR( cv::Error::StsBadSize, "predict_output should be a 1-dimensional matrix" );
 
     if( predict_output->rows + predict_output->cols - 1 != samples_all )
-        CV_ERROR( CV_StsUnmatchedSizes, "predict_output and predict_input have uncoordinated sizes" );
+        CV_ERROR( cv::Error::StsUnmatchedSizes, "predict_output and predict_input have uncoordinated sizes" );
 
     predict_output_step = predict_output->step ?
         predict_output->step / CV_ELEM_SIZE(predict_output->type) : 1;
@@ -1346,14 +1342,14 @@ cvStatModelMultiPredict( const CvStatModel* stat_model,
     if( probs )
     {
         if( !CV_IS_MAT(probs) )
-            CV_ERROR( CV_StsBadArg, "Invalid matrix of probabilities" );
+            CV_ERROR( cv::Error::StsBadArg, "Invalid matrix of probabilities" );
 
         if( probs->rows != samples_all )
-            CV_ERROR( CV_StsUnmatchedSizes,
+            CV_ERROR( cv::Error::StsUnmatchedSizes,
             "matrix of probabilities must have as many rows as the total number of samples" );
 
         if( CV_MAT_TYPE(probs->type) != CV_32FC1 )
-            CV_ERROR( CV_StsUnsupportedFormat, "matrix of probabilities must have 32fC1 type" );
+            CV_ERROR( cv::Error::StsUnsupportedFormat, "matrix of probabilities must have 32fC1 type" );
     }
 
     if( is_sparse )
@@ -1418,7 +1414,7 @@ cvStatModelMultiPredict( const CvStatModel* stat_model,
             {
                 idx = sample_idx->data.i[i*sample_idx_step];
                 if( (unsigned)idx >= (unsigned)samples_all )
-                    CV_ERROR( CV_StsOutOfRange, "Some of sample_idx elements are out of range" );
+                    CV_ERROR( cv::Error::StsOutOfRange, "Some of sample_idx elements are out of range" );
             }
             else if( CV_MAT_TYPE(sample_idx->type) == CV_8UC1 &&
                      sample_idx->data.ptr[i*sample_idx_step] == 0 )
@@ -1498,7 +1494,7 @@ void cvCombineResponseMaps (CvMat*  _responses,
         (!ICV_IS_MAT_OF_TYPE (old_response_map, CV_32SC1)) ||
         (!ICV_IS_MAT_OF_TYPE (new_response_map, CV_32SC1)))
     {
-        CV_ERROR (CV_StsBadArg, "Some of input arguments is not the CvMat")
+        CV_ERROR (cv::Error::StsBadArg, "Some of input arguments is not the CvMat")
     }
 
 // Prepare sorted responses.
