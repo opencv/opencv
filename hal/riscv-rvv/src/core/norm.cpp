@@ -999,15 +999,8 @@ int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
         },
     };
 
-    static const size_t elem_size_tab[CV_DEPTH_MAX] = {
-        sizeof(uchar),   sizeof(schar),
-        sizeof(ushort),  sizeof(short),
-        sizeof(int),     sizeof(float),
-        sizeof(int64_t), 0,
-    };
-    CV_Assert(elem_size_tab[depth]);
-
-    bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
+    int elem_size1 = CV_ELEM_SIZE1(type);
+    bool src_continuous = (src_step == width * elem_size1 * cn || (src_step != width * elem_size1 * cn && height == 1));
     bool mask_continuous = (mask_step == static_cast<size_t>(width));
     size_t nplanes = 1;
     size_t size = width * height;
@@ -1030,7 +1023,7 @@ int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
     res.d = 0;
     if ((norm_type == NORM_L1 && depth <= CV_16S) ||
         ((norm_type == NORM_L2 || norm_type == NORM_L2SQR) && depth <= CV_8S)) {
-        const size_t esz = elem_size_tab[depth] * cn;
+        const size_t esz = elem_size1 * cn;
         const int total = (int)size;
         const int intSumBlockSize = (norm_type == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, intSumBlockSize);
