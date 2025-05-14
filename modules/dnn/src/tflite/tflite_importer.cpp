@@ -736,12 +736,13 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
     }
     layerParams.set("axis", axis);
 
+    // Force all inputs to be in graph, not as blobs
     for (int idx : *op.inputs()) {
         if (layerIds.find(idx) != layerIds.end()) {
             continue;  // Output from a different layer
         }
         Mat blob = allTensors[idx];
-        if (hasNHWCInput && layouts[idx] == DNN_LAYOUT_UNKNOWN && blob.dims == 4)
+        if (hasNHWCInput && blob.dims == 4)
         {
             Mat nchwBlob;
             transposeND(blob, {0, 3, 1, 2}, nchwBlob);
@@ -1040,8 +1041,7 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
     int endMask = options->end_mask();
     if (options->new_axis_mask())
         CV_Error(Error::StsNotImplemented, "New axis during StridedSlice");
-    // if (options->shrink_axis_mask())
-    //     CV_Error(Error::StsNotImplemented, "Shrink axis during StridedSlice");
+    int shrinkMask = options->shrink_axis_mask();
 
     Mat begins = allTensors[op.inputs()->Get(1)];
     Mat ends = allTensors[op.inputs()->Get(2)];
@@ -1070,7 +1070,30 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
     layerParams.set("begin", DictValue::arrayInt((int*)begins.data, begins.total()));
     layerParams.set("end", DictValue::arrayInt((int*)ends.data, ends.total()));
     layerParams.set("steps", DictValue::arrayInt((int*)strides.data, strides.total()));
+
+    int lastShrinkAxis = -1;
+    for (int axis = 0; axis < num; ++axis)
+    {
+        if (shrinkMask & (1 << axis))
+            lastShrinkAxis = axis;
+    }
+    std::string layerName = layerParams.name;
+    if (lastShrinkAxis != -1)
+    {
+        layerParams.name += "/slice";
+    }
+
     addLayer(layerParams, op);
+
+    for (int axis = 0; axis < num; ++axis)
+    {
+        if (!(shrinkMask & (1 << axis)))
+            continue;
+        std::string name = (axis == lastShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
+        int layerId = addFlattenLayer(axis, axis + 1, name,
+            layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F);
+        layerIds[op.inputs()->Get(0)] = std::make_pair(layerId, 0);
+    }
 }
 
 void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
