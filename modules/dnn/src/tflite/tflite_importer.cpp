@@ -125,7 +125,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     }
     Mat res = Mat(shape, dtype, const_cast<void*>(data));
     // workaround for scalars support
-    if (!tensor_shape)
+    if (!tensor_shape || shape.size() == 1)
         res.dims = 1;
     return res;
 }
@@ -303,9 +303,9 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["CAST"] = &TFLiteImporter::parseCast;
     dispatch["TFLite_Detection_PostProcess"] = &TFLiteImporter::parseDetectionPostProcess;
     dispatch["TRANSPOSE"] = &TFLiteImporter::parseTranspose;
-    dispatch["MEAN"] = dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
+    dispatch["REDUCE_MAX"] = &TFLiteImporter::parseGlobalPooling;
     dispatch["STRIDED_SLICE"] = &TFLiteImporter::parseStridedSlice;
-    dispatch["SUM"] = &TFLiteImporter::parseReduce;
+    dispatch["MEAN"] = dispatch["SUM"] = &TFLiteImporter::parseReduce;
     return dispatch;
 }
 
@@ -533,7 +533,7 @@ void TFLiteImporter::parsePadding(const Operator& op, const std::string& opcode,
 void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     ActivationFunctionType activ = ActivationFunctionType_NONE;
     layerParams.type = "NaryEltwise";
-    if (opcode == "ADD" || opcode == "SUM") {
+    if (opcode == "ADD") {
         auto options = reinterpret_cast<const AddOptions*>(op.builtin_options());
         activ = options->fused_activation_function();
         layerParams.set("operation", "sum");
@@ -596,6 +596,26 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         layerParams.set("scales", outScale);
         layerParams.set("zeropoints", outZero);
     }
+
+    // Force all inputs to be in graph, not as blobs
+    for (int idx : *op.inputs()) {
+        if (layerIds.find(idx) != layerIds.end()) {
+            continue;  // Output from a different layer
+        }
+        Mat blob = allTensors[idx];
+        if (layouts[op.inputs()->Get(0)] == DNN_LAYOUT_NHWC && blob.dims != 4) {
+            MatShape sz = shape(blob);
+            for (int i = blob.dims; i < 4; ++i)
+                sz.insert(sz.begin(), 1);
+            blob = blob.reshape(1, sz);
+            Mat blobNCHW;
+            transposeND(blob, {0, 3, 1, 2}, blobNCHW);
+            blob = blobNCHW;
+        }
+        int constId = addConstLayer(blob, modelTensors->Get(idx)->name()->str());
+        layerIds[idx] = std::make_pair(constId, 0);
+    }
+
     addLayer(layerParams, op);
     parseFusedActivation(op, activ);
 
@@ -859,10 +879,7 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
 void TFLiteImporter::parseGlobalPooling(const Operator& op, const std::string& opcode, LayerParams& layerParams)
 {
     layerParams.type = "Pooling";
-    if(opcode == "MEAN") {
-        layerParams.set("pool", "ave");
-    }
-    else if (opcode == "REDUCE_MAX") {
+    if (opcode == "REDUCE_MAX") {
         layerParams.set("pool", "max");
     }
     else {
@@ -893,14 +910,27 @@ void TFLiteImporter::parseReduce(const Operator& op, const std::string& opcode, 
     if (opcode == "SUM") {
         layerParams.set("reduce", "sum");
     }
+    else if (opcode == "MEAN") {
+        layerParams.set("reduce", "mean");
+    }
     else {
         CV_Error(Error::StsNotImplemented, "Unsupported reducing " + opcode);
     }
     auto options = op.builtin_options_as_ReducerOptions();
     layerParams.set("keepdims", options->keep_dims());
 
-    Mat axes = allTensors[op.inputs()->Get(1)];
+    Mat axes = allTensors[op.inputs()->Get(1)].clone();
     CV_CheckTypeEQ(axes.type(), CV_32S, "");
+
+    DataLayout inpLayout = layouts[op.inputs()->Get(0)];
+    if (inpLayout == DNN_LAYOUT_NHWC) {
+        static const int remap[] = {0, 2, 3, 1};
+        // OpenCV works in NCHW data layout. So change the axis correspondingly.
+        for (int i = 0; i < axes.total(); ++i) {
+            axes.at<int>(i) = remap[normalize_axis(axes.at<int>(i), 4)];
+        }
+    }
+
     layerParams.set("axes", DictValue::arrayInt(axes.ptr<int>(), axes.total()));
     addLayer(layerParams, op);
 }
@@ -941,6 +971,7 @@ int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
 {
     LayerParams lp;
     lp.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+    CV_Assert(blob.dims == lp.blobs[0].dims);
     return dstNet.addLayer(name, "Const", lp);
 }
 
