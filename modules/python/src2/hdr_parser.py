@@ -190,6 +190,8 @@ class CppHeaderParser(object):
                 angle_stack[-1] += 1
             elif arg_type == "struct":
                 arg_type += " " + w
+            elif prev_w in ["signed", "unsigned", "short", "long"] and w in ["char", "short", "int", "long"]:
+                arg_type += " " + w
             elif arg_type and arg_type != "~":
                 arg_name = " ".join(word_list[wi:])
                 break
