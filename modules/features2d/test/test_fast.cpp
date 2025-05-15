@@ -146,7 +146,6 @@ TEST(Features2d_FAST, noNMS)
     vector<KeyPoint> keypoints;
     FAST(img, keypoints, 100, false, FastFeatureDetector::DetectorType::TYPE_9_16);
     Mat kps(1, (int)(keypoints.size() * sizeof(KeyPoint)), CV_8U, &keypoints[0]);
-    std::cout << "Keypoints.size() = " << keypoints.size() << ", sizeof(KeyPoint) = " << sizeof(KeyPoint) << std::endl;
 
     Mat gt_kps;
     FileStorage fs(xml, FileStorage::READ);

@@ -10,6 +10,7 @@
 #define OPENCV_HAL_RVV_FEATURES2D_COMMON_HPP_INCLUDED
 
 #include <riscv_vector.h>
+#include "opencv2/features2d/hal/interface.h"
 
 namespace cv { namespace rvv_hal { namespace features2d { namespace common {
 
