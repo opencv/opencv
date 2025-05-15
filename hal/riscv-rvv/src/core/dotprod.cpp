@@ -190,16 +190,9 @@ int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size_t b_st
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    static const size_t elem_size_tab[CV_DEPTH_MAX] = {
-        sizeof(uchar),   sizeof(schar),
-        sizeof(ushort),  sizeof(short),
-        sizeof(int),     sizeof(float),
-        sizeof(int64_t), 0,
-    };
-    CV_Assert(elem_size_tab[depth]);
-
-    bool a_continuous = (a_step == width * elem_size_tab[depth] * cn);
-    bool b_continuous = (b_step == width * elem_size_tab[depth] * cn);
+    int elem_size1 = CV_ELEM_SIZE1(type);
+    bool a_continuous = (a_step == width * elem_size1 * cn);
+    bool b_continuous = (b_step == width * elem_size1 * cn);
     size_t nplanes = 1;
     size_t len = width * height;
     if (!a_continuous || !b_continuous) {

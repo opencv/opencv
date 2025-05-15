@@ -105,62 +105,25 @@ int copyToMasked(const uchar *src_data, size_t src_step, uchar *dst_data, size_t
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    CopyToMaskedFunc func = nullptr;
-    switch (depth) {
-        case CV_8U: {}
-        case CV_8S: switch (cn) {
-            case 1: func = copyToMasked_e8c1;  break;
-            case 2: func = copyToMasked_e16c1; break;
-            case 3: func = copyToMasked_e8c3;  break;
-            case 4: func = copyToMasked_e32c1; break;
-            case 6: func = copyToMasked_e16c3; break;
-            case 8: func = copyToMasked_e64c1; break;
-            default: func = nullptr;
-        }; break;
-        case CV_16U: {}
-        case CV_16S: switch (cn) {
-            case 1: func = copyToMasked_e16c1; break;
-            case 2: func = copyToMasked_e32c1; break;
-            case 3: func = copyToMasked_e16c3; break;
-            case 4: func = copyToMasked_e64c1; break;
-            case 6: func = copyToMasked_e32c3; break;
-            case 8: func = copyToMasked_e64c2; break;
-            default: func = nullptr; break;
-        }; break;
-        case CV_32S: {}
-        case CV_32F: switch (cn) {
-            case 1: func = copyToMasked_e32c1; break;
-            case 2: func = copyToMasked_e64c1; break;
-            case 3: func = copyToMasked_e32c3; break;
-            case 4: func = copyToMasked_e64c2; break;
-            case 6: func = copyToMasked_e64c3; break;
-            case 8: func = copyToMasked_e64c4; break;
-            default: func = nullptr; break;
-        }; break;
-        case CV_64F: switch (cn) {
-            case 1: func = copyToMasked_e64c1; break;
-            case 2: func = copyToMasked_e64c2; break;
-            case 3: func = copyToMasked_e64c3; break;
-            case 4: func = copyToMasked_e64c4; break;
-            default: func = nullptr; break;
-        }; break;
-        default: func = nullptr;
-    }
-
+    static CopyToMaskedFunc tab[] = {
+        0, copyToMasked_e8c1, copyToMasked_e16c1, copyToMasked_e8c3,
+        copyToMasked_e32c1, 0, copyToMasked_e16c3, 0,
+        copyToMasked_e64c1, 0, 0, 0,
+        copyToMasked_e32c3, 0, 0, 0,
+        copyToMasked_e64c2, 0, 0, 0,
+        0, 0, 0, 0,
+        copyToMasked_e64c3, 0, 0, 0,
+        0, 0, 0, 0,
+        copyToMasked_e64c4
+    };
+    CopyToMaskedFunc func = tab[CV_ELEM_SIZE(type)];
     if (func == nullptr) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    static const size_t elem_size_tab[CV_DEPTH_MAX] = {
-        sizeof(uchar),   sizeof(schar),
-        sizeof(ushort),  sizeof(short),
-        sizeof(int),     sizeof(float),
-        sizeof(int64_t), 0,
-    };
-    CV_Assert(elem_size_tab[depth]);
-
-    bool src_continuous = (src_step == width * elem_size_tab[depth] * cn || (src_step != width * elem_size_tab[depth] * cn && height == 1));
-    bool dst_continuous = (dst_step == width * elem_size_tab[depth] * cn || (dst_step != width * elem_size_tab[depth] * cn && height == 1));
+    int elem_size1 = CV_ELEM_SIZE1(type);
+    bool src_continuous = (src_step == width * elem_size1 * cn || (src_step != width * elem_size1 * cn && height == 1));
+    bool dst_continuous = (dst_step == width * elem_size1 * cn || (dst_step != width * elem_size1 * cn && height == 1));
     bool mask_continuous = (mask_step == static_cast<size_t>(width));
     size_t nplanes = 1;
     int _width = width, _height = height;
