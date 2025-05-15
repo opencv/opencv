@@ -91,7 +91,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
 {
     std::vector<int> shape;
     const auto tensor_shape = tensor.shape();
-    if (tensor_shape)
+    if (tensor_shape && tensor_shape->size())
         shape.assign(tensor_shape->begin(), tensor_shape->end());
     else
         shape.resize(1, 1);

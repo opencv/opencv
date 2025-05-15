@@ -279,7 +279,8 @@ TEST_P(Test_TFLite, StridedSlice) {
 
 TEST_P(Test_TFLite, face_blendshapes)
 {
-    testLayer("face_blendshapes");
+    Mat inp = blobFromNPY(findDataFile("dnn/tflite/face_blendshapes_inp.npy"));
+    testModel("face_blendshapes", inp);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
