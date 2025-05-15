@@ -47,7 +47,7 @@ public:
         @param save when save if True, get data from history first.
         @return Color.
     */
-    Color to(const ColorSpaceBase& other, CAM method = BRADFORD, bool save = true);
+    Color to(const ColorSpaceBase& other, ChromaticAdaptationType method = BRADFORD, bool save = true);
 
     /** @brief Convert color to another color space using ColorSpace enum.
         @param other type of ColorSpace.
@@ -55,7 +55,7 @@ public:
         @param save whether to save the conversion history.
         @return the output array, type of Color.
     */
-    Color to(ColorSpace other, CAM method = BRADFORD, bool save = true);
+    Color to(ColorSpace other, ChromaticAdaptationType method = BRADFORD, bool save = true);
 
     /** @brief Channels split.
        @return each channel.
@@ -64,11 +64,11 @@ public:
 
     /** @brief To Gray.
     */
-    Mat toGray(const IllumObserver& illumobserver, CAM method = BRADFORD, bool save = true);
+    Mat toGray(const IllumObserver& illumobserver, ChromaticAdaptationType method = BRADFORD, bool save = true);
 
     /** @brief To Luminant.
     */
-    Mat toLuminant(const IllumObserver& illumobserver, CAM method = BRADFORD, bool save = true);
+    Mat toLuminant(const IllumObserver& illumobserver, ChromaticAdaptationType method = BRADFORD, bool save = true);
 
     /** @brief Diff without IllumObserver.
         @param other type of Color.

@@ -331,14 +331,14 @@ void REC_2020_RGB_::setParameter()
     gamma = 1 / 0.45;
 }
 
-Operations XYZ::cam(IllumObserver dio, CAM method)
+Operations XYZ::cam(IllumObserver dio, ChromaticAdaptationType method)
 {
     return (illumobserver == dio) ? Operations()
                        : Operations({ Operation(cam_(illumobserver, dio, method).t()) });
 }
-Mat XYZ::cam_(IllumObserver sio, IllumObserver dio, CAM method) const
+Mat XYZ::cam_(IllumObserver sio, IllumObserver dio, ChromaticAdaptationType method) const
 {
-    static std::map<std::tuple<IllumObserver, IllumObserver, CAM>, Mat> cams;
+    static std::map<std::tuple<IllumObserver, IllumObserver, ChromaticAdaptationType>, Mat> cams;
 
     if (sio == dio)
     {
@@ -354,7 +354,7 @@ Mat XYZ::cam_(IllumObserver sio, IllumObserver dio, CAM method) const
 
     static const Mat Von_Kries = (Mat_<double>(3, 3) << 0.40024, 0.7076, -0.08081, -0.2263, 1.16532, 0.0457, 0., 0., 0.91822);
     static const Mat Bradford = (Mat_<double>(3, 3) << 0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296);
-    static const std::map<CAM, std::vector<Mat>> MAs = {
+    static const std::map<ChromaticAdaptationType, std::vector<Mat>> MAs = {
         { IDENTITY, { Mat::eye(Size(3, 3), CV_64FC1), Mat::eye(Size(3, 3), CV_64FC1) } },
         { VON_KRIES, { Von_Kries, Von_Kries.inv() } },
         { BRADFORD, { Bradford, Bradford.inv() } }

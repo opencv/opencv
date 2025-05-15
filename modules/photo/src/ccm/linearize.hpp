@@ -154,7 +154,10 @@ public:
         Mat lear_gray_mask = mask & dst.grays;
 
         // the grayscale function is approximate for src is in relative color space.
-        src = rgb2gray(maskCopyTo(src, lear_gray_mask));
+        Mat gray;
+        cvtColor(src, gray, COLOR_RGB2GRAY);
+        gray.copyTo(src);
+
         Mat dst_ = maskCopyTo(dst.toGray(cs.illumobserver), lear_gray_mask);
         calc(src, dst_);
     }

@@ -262,9 +262,9 @@ private:
     void setParameter() CV_OVERRIDE;
 };
 
-/** @brief Enum of the possible types of CAMs.
+/** @brief Enum of the possible types of Chromatic Adaptation Models.
 */
-enum CAM
+enum ChromaticAdaptationType
 {
     IDENTITY,
     VON_KRIES,
@@ -280,17 +280,17 @@ class XYZ : public ColorSpaceBase
 public:
     XYZ(IllumObserver illumobserver_)
         : ColorSpaceBase(illumobserver_, "XYZ", true) {};
-    Operations cam(IllumObserver dio, CAM method = BRADFORD);
+    Operations cam(IllumObserver dio, ChromaticAdaptationType method = BRADFORD);
     static std::shared_ptr<XYZ> get(IllumObserver illumobserver);
 
 private:
     /** @brief Get cam.
         @param sio the input IllumObserver of src.
         @param dio the input IllumObserver of dst.
-        @param method type of CAM.
+        @param method type of Chromatic Adaptation Model.
         @return the output array, type of cv::Mat.
     */
-    Mat cam_(IllumObserver sio, IllumObserver dio, CAM method = BRADFORD) const;
+    Mat cam_(IllumObserver sio, IllumObserver dio, ChromaticAdaptationType method = BRADFORD) const;
 };
 
 /** @brief Lab color space.

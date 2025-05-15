@@ -46,12 +46,6 @@ Mat multiple(const Mat& xyz, const Mat& ccm);
 */
 Mat saturate(Mat& src, double low, double up);
 
-/** @brief rgb2gray it is an approximation grayscale function for relative RGB
-           color space
-    @param  rgb the input array,type of Mat.
- */
-Mat rgb2gray(const Mat& rgb);
-
 /** @brief function for elementWise operation
     @param src the input array, type of Mat
     @param lambda a for operation

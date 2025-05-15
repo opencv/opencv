@@ -109,12 +109,5 @@ Mat saturate(Mat& src, double low, double up)
 
     return mask;
 }
-
-Mat rgb2gray(const Mat& rgb)
-{
-    Mat gray;
-    cv::cvtColor(rgb, gray, cv::COLOR_RGB2GRAY);
-    return gray;
-}
 }
 }  // namespace cv::ccm

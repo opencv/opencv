@@ -129,6 +129,14 @@ enum DistanceType
     DISTANCE_RGBL                        ///<Euclidean distance of rgbl color space
 };
 
+/**
+ * @brief Applies gamma correction to the input image.
+ * @param src Input image.
+ * @param dst Output image.
+ * @param gamma Gamma correction greater than zero.
+ */
+CV_EXPORTS_W void gammaCorrection(InputArray src, OutputArray dst, double gamma);
+
 /** @brief Core class of ccm model
 
 Produce a ColorCorrectionModel instance for inference

@@ -15,7 +15,7 @@
 namespace cv {
 namespace ccm {
 
-enum IllumObserver_TYPE
+enum IllumObserverType
 {
     A_2,
     A_10,
@@ -43,7 +43,7 @@ public:
     virtual ~IllumObserver() {};
     bool operator<(const IllumObserver& other) const;
     bool operator==(const IllumObserver& other) const;
-    static IllumObserver getIllumObservers(IllumObserver_TYPE illumobserver);
+    static IllumObserver getIllumObservers(IllumObserverType illumobserver);
 };
 std::vector<double> xyY2XYZ(const std::vector<double>& xyY);
 

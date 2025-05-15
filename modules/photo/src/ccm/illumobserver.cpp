@@ -23,7 +23,7 @@ bool IllumObserver::operator==(const IllumObserver& other) const
     return illuminant == other.illuminant && observer == other.observer;
 };
 
-IllumObserver IllumObserver::getIllumObservers(IllumObserver_TYPE illumobserver)
+IllumObserver IllumObserver::getIllumObservers(IllumObserverType illumobserver)
 {
     switch (illumobserver)
     {

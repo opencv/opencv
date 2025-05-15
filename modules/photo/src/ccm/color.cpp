@@ -44,7 +44,7 @@ Color::Color(Mat colors_, std::shared_ptr<ColorSpaceBase> cs_)
     , cs(cs_)
 {}
 
-Color Color::to(const ColorSpaceBase& other, CAM method, bool save)
+Color Color::to(const ColorSpaceBase& other, ChromaticAdaptationType method, bool save)
 {
     auto it = history.find(other);
     if ( it != history.end() )
@@ -70,7 +70,7 @@ Color Color::to(const ColorSpaceBase& other, CAM method, bool save)
     }
 }
 
-Color Color::to(ColorSpace other, CAM method, bool save)
+Color Color::to(ColorSpace other, ChromaticAdaptationType method, bool save)
 {
     return to(*GetCS::getInstance().getCS(other), method, save);
 }
@@ -82,13 +82,13 @@ Mat Color::channel(Mat m, int i)
     return dchannels[i];
 }
 
-Mat Color::toGray(const IllumObserver& illumobserver, CAM method, bool save)
+Mat Color::toGray(const IllumObserver& illumobserver, ChromaticAdaptationType method, bool save)
 {
     XYZ xyz = *XYZ::get(illumobserver);
     return channel(this->to(xyz, method, save).colors, 1);
 }
 
-Mat Color::toLuminant(const IllumObserver& illumobserver, CAM method, bool save)
+Mat Color::toLuminant(const IllumObserver& illumobserver, ChromaticAdaptationType method, bool save)
 {
     Lab lab = *Lab::get(illumobserver);
     return channel(this->to(lab, method, save).colors, 0);
