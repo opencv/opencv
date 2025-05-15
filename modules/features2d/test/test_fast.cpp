@@ -145,6 +145,7 @@ TEST(Features2d_FAST, noNMS)
     vector<KeyPoint> keypoints;
     FAST(img, keypoints, 100, false, FastFeatureDetector::DetectorType::TYPE_9_16);
     Mat kps(1, (int)(keypoints.size() * sizeof(KeyPoint)), CV_8U, &keypoints[0]);
+    // std::cout << "Keypoints.size() = " << keypoints.size() << ", sizeof(KeyPoint) = " << sizeof(KeyPoint) << std::endl;
 
     Mat gt_kps;
     FileStorage fs(xml, FileStorage::READ);
@@ -161,7 +162,10 @@ TEST(Features2d_FAST, noNMS)
     fs["exp_kps"] >> gt_kps;
     fs.release();
     ASSERT_GT(gt_kps.total(), size_t(0));
-
+    // std::cout << "Ground truth keypoints (gt_kps):\n" << cv::format(gt_kps, cv::Formatter::FMT_DEFAULT) << "\n"
+    //           << "Computed keypoints (kps):\n" << cv::format(kps, cv::Formatter::FMT_DEFAULT) << std::endl;
+    // std::cout << "Ground truth keypoints (gt_kps):\n" << gt_kps << "\n"
+    //           << "Computed keypoints (kps):\n" << kps << std::endl;
     ASSERT_EQ( 0, cvtest::norm(gt_kps, kps, NORM_L2));
 }
 

@@ -17,7 +17,8 @@ endif()
 target_include_directories(${HAL_LIB_NAME} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}/modules/core/include
-  ${CMAKE_SOURCE_DIR}/modules/imgproc/include) #   ${CMAKE_SOURCE_DIR}/modules/features2d/include
+  ${CMAKE_SOURCE_DIR}/modules/imgproc/include 
+  ${CMAKE_SOURCE_DIR}/modules/features2d/include)
 
 set(RVV_HAL_FOUND TRUE CACHE INTERNAL "")
 set(RVV_HAL_VERSION "0.0.1" CACHE INTERNAL "")
