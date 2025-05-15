@@ -11,13 +11,34 @@
 namespace cv
 {
 
-enum GifOpMode
-{
-    GRFMT_GIF_Nothing = 0,
-    GRFMT_GIF_PreviousImage = 1,
-    GRFMT_GIF_Background = 2,
-    GRFMT_GIF_Cover = 3
+// See https://www.w3.org/Graphics/GIF/spec-gif89a.txt
+// 23. Graphic Control Extension.
+// <Packed Fields>
+//  Reserved               : 3 bits
+//  Disposal Method        : 3 bits
+//  User Input Flag        : 1 bit
+//  Transparent Color Flag : 1 bit
+constexpr int GIF_DISPOSE_METHOD_SHIFT = 2;
+constexpr int GIF_DISPOSE_METHOD_MASK  = 7; // 0b111
+constexpr int GIF_TRANS_COLOR_FLAG_MASK  = 1; // 0b1
+
+enum GifDisposeMethod {
+    GIF_DISPOSE_NA                 = 0,
+    GIF_DISPOSE_NONE               = 1,
+    GIF_DISPOSE_RESTORE_BACKGROUND = 2,
+    GIF_DISPOSE_RESTORE_PREVIOUS   = 3,
+    // 4-7 are reserved/undefined.
+
+    GIF_DISPOSE_MAX                = GIF_DISPOSE_RESTORE_PREVIOUS,
 };
+
+enum GifTransparentColorFlag {
+    GIF_TRANSPARENT_INDEX_NOT_GIVEN = 0,
+    GIF_TRANSPARENT_INDEX_GIVEN     = 1,
+
+    GIF_TRANSPARENT_INDEX_MAX       = GIF_TRANSPARENT_INDEX_GIVEN,
+};
+
 
 //////////////////////////////////////////////////////////////////////
 ////                        GIF Decoder                           ////
@@ -43,7 +64,6 @@ protected:
     int                 depth;
     int                 idx;
 
-    GifOpMode           opMode;
     bool                hasTransparentColor;
     uchar               transparentColor;
     int                 top, left, width, height;
@@ -66,7 +86,7 @@ protected:
         std::vector<uchar> prefix;
     };
 
-    void readExtensions();
+    GifDisposeMethod readExtensions();
     void code2pixel(Mat& img, int start, int k);
     bool lzwDecode();
     bool getFrameCount_();
@@ -137,7 +157,6 @@ private:
     int             globalColorTableSize;
     int             localColorTableSize;
 
-    uchar           opMode;
     uchar           criticalTransparency;
     uchar           transparentColor;
     Vec3b           transparentRGB;
@@ -153,8 +172,6 @@ private:
     std::vector<uchar> localColorTable;
 
     // params
-    int             loopCount;
-    int             frameDelay;
     int             colorNum;
     int             bitDepth;
     int             dithering;
@@ -162,8 +179,8 @@ private:
     bool            fast;
 
     bool writeFrames(const std::vector<Mat>& img_vec, const std::vector<int>& params);
-    bool writeHeader(const std::vector<Mat>& img_vec);
-    bool writeFrame(const Mat& img);
+    bool writeHeader(const std::vector<Mat>& img_vec, const int loopCount);
+    bool writeFrame(const Mat& img, const int frameDelay);
     bool pixel2code(const Mat& img);
     void getColorTable(const std::vector<Mat>& img_vec, bool isGlobal);
     static int ditheringKernel(const Mat &img, Mat &img_, int depth, uchar transparency);

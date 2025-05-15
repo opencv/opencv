@@ -397,7 +397,9 @@ void QRCodeEncoderImpl::generateQR(const std::string &input)
         original = Mat(Size(version_size, version_size), CV_8UC1, Scalar(255));
         masked_data = original.clone();
         Mat qrcode = masked_data.clone();
+        std::swap(version_level, tmp_version_level);
         generatingProcess(input_info, qrcode);
+        std::swap(version_level, tmp_version_level);
         final_qrcodes.push_back(qrcode);
     }
 }

@@ -9,6 +9,8 @@ Using OpenCV with gcc and CMake {#tutorial_linux_gcc_cmake}
 | Original author | Ana Huamán |
 | Compatibility | OpenCV >= 3.0 |
 
+@tableofcontents
+
 @warning
 This tutorial can contain obsolete information.
 
@@ -61,7 +63,7 @@ int main(int argc, char** argv )
 
 Now you have to create your CMakeLists.txt file. It should look like this:
 @code{.cmake}
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.5)
 project( DisplayImage )
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )

@@ -590,4 +590,39 @@ INSTANTIATE_TEST_CASE_P(/**/, Objdetect_QRCode_decoding, testing::ValuesIn(std::
     {"err_correct_2L.png", "Version 2 QR Code Test Image"},
 }));
 
+TEST(Objdetect_QRCode_Encode_Decode_Long_Text, regression_issue27183)
+{
+    const int len = 135;
+    Ptr<QRCodeEncoder> encoder = QRCodeEncoder::create();
+
+    std::string input;
+    input.resize(len);
+    cv::randu(Mat(1, len, CV_8U, &input[0]), 'a', 'z' + 1);
+    Mat qrcode;
+    encoder->encode(input, qrcode);
+
+    std::vector<Point2f> corners(4);
+    corners[0] = Point2f(border_width, border_width);
+    corners[1] = Point2f(qrcode.cols * 1.0f - border_width, border_width);
+    corners[2] = Point2f(qrcode.cols * 1.0f - border_width, qrcode.rows * 1.0f - border_width);
+    corners[3] = Point2f(border_width, qrcode.rows * 1.0f - border_width);
+
+    Mat resized_src;
+    resize(qrcode, resized_src, fixed_size, 0, 0, INTER_AREA);
+    float width_ratio =  resized_src.cols * 1.0f / qrcode.cols;
+    float height_ratio = resized_src.rows * 1.0f / qrcode.rows;
+    for(size_t j = 0; j < corners.size(); j++)
+    {
+        corners[j].x = corners[j].x * width_ratio;
+        corners[j].y = corners[j].y * height_ratio;
+    }
+
+    QRCodeDetector detector;
+    cv::String decoded_msg;
+    Mat straight_barcode;
+    EXPECT_NO_THROW(decoded_msg = detector.decode(resized_src, corners, straight_barcode));
+    ASSERT_FALSE(straight_barcode.empty());
+    EXPECT_EQ(input, decoded_msg);
+}
+
 }} // namespace
