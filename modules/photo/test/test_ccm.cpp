@@ -256,14 +256,11 @@ TEST(Photo_ColorCorrection, correct_image)
     // compute CCM
     cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
     Mat colorCorrectionMat = model.compute();
+    model.setRGB(true);
 
     // compute calibrate image
-    Mat image, calibratedImage;
-    cvtColor(img, image, COLOR_BGR2RGB);
-    image.convertTo(image, CV_64F, 1. / 255.);
-    model.correctImage(image, calibratedImage);
-    calibratedImage.convertTo(calibratedImage, CV_8UC3, 255.);
-    cvtColor(calibratedImage, calibratedImage, COLOR_RGB2BGR);
+    Mat calibratedImage;
+    model.correctImage(img, calibratedImage);
     // check calibrated image
     EXPECT_MAT_NEAR(gold_img, calibratedImage, 0.1);
 }
