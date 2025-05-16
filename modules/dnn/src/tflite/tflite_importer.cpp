@@ -391,6 +391,14 @@ void TFLiteImporter::addLayer(LayerParams& layerParams, const Operator& op) {
 void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
     layerParams.type = "Convolution";
 
+    int inpId = op.inputs()->Get(0);
+    if (layouts[inpId] == DNN_LAYOUT_UNKNOWN && modelTensors->Get(inpId)->shape()->size() == 4)
+    {
+        int permId = addPermuteLayer({0, 3, 1, 2}, layerParams.name + "/permute_input", layerIds[inpId], isInt8(op) ? CV_8S : CV_32F);  // NHWC -> NCHW
+        layerIds[inpId] = std::make_pair(permId, 0);
+        layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NHWC;
+    }
+
     auto options = reinterpret_cast<const Conv2DOptions*>(op.builtin_options());
     layerParams.set("pad_mode", EnumNamePadding(options->padding()));
     layerParams.set("stride_w", options->stride_w());
@@ -851,20 +859,6 @@ void TFLiteImporter::parseTranspose(const Operator& op, const std::string& opcod
             layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
         }
 
-    }
-    else if (inpLayout == DNN_LAYOUT_UNKNOWN && perm.size() == 4) {
-        if (perm[0] != 0) {
-            CV_Error(Error::StsParseError, "The first axis should not be permuted.");
-        }
-        if (perm[1] == 1 && perm[2] == 3 && perm[3] == 2) {
-            std::vector<int> orderLP = {0, 2, 1, 3};
-            layerParams.set("order", DictValue::arrayInt<int*>(orderLP.data(), orderLP.size()));
-            layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NHWC;
-        }
-        else
-        {
-            layerParams.set("order", DictValue::arrayInt<int*>(perm.data(), perm.size()));
-        }
     }
     else {
         layerParams.set("order", DictValue::arrayInt<int*>(perm.data(), perm.size()));
