@@ -1238,12 +1238,12 @@ public:
     When the operation mask is specified, if the Mat::create call shown above reallocates the matrix,
     the newly allocated matrix is initialized with all zeros before copying the data.
 
-    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use overwriteTo() .
+    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use writeTo() .
 
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
 
-    @sa overwriteTo
+    @sa writeTo
      */
     void copyTo( OutputArray m ) const;
 
@@ -1257,7 +1257,7 @@ public:
 
     /** @brief Overwrites the existing matrix
 
-    This method overwrites existing matrix data, just like copyTo().
+    This method writes existing matrix data, just like copyTo().
     But if it does not have a proper size or type before the operation, an exception is thrown.
     This function is helpful to update ROI in an existing matrix.
 
@@ -1269,7 +1269,7 @@ public:
     @sa copyTo
 
      */
-    void overwriteTo( OutputArray m ) const;
+    void writeTo( OutputArray m ) const;
 
     /** @overload
     @param m Destination matrix.
@@ -1277,7 +1277,7 @@ public:
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
     */
-    void overwriteTo( OutputArray m, InputArray mask ) const;
+    void writeTo( OutputArray m, InputArray mask ) const;
 
     /** @brief Converts an array to another data type with optional scaling.
 
