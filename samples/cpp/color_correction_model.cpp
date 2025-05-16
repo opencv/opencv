@@ -212,16 +212,9 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Apply correction to query image
-    Mat calibratedImage, normalizedImage;
-    cvtColor(queryImage, normalizedImage, COLOR_BGR2RGB);
-    normalizedImage.convertTo(normalizedImage, CV_64F, 1.0/255.0);  // Convert to double and normalize
-    model.correctImage(normalizedImage, calibratedImage);
-
-    // Convert back to 8-bit
-    calibratedImage *= 255.0;
-    calibratedImage.convertTo(calibratedImage, CV_8UC3);
-    cvtColor(calibratedImage, calibratedImage, COLOR_RGB2BGR);
+    model.setRGB(true);
+    Mat calibratedImage;
+    model.correctImage(queryImage, calibratedImage);
 
     imshow("Original Image", queryImage);
     imshow("Corrected Image", calibratedImage);

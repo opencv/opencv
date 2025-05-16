@@ -50,6 +50,7 @@ public:
     double loss;
     int maxCount;
     double epsilon;
+    bool rgb;
     Impl();
 
     /** @brief Make no change for CCM_LINEAR.
@@ -136,6 +137,7 @@ ColorCorrectionModel::Impl::Impl()
     , weightsCoeff(0)
     , maxCount(5000)
     , epsilon(1.e-4)
+    , rgb(false)
 {}
 
 Mat ColorCorrectionModel::Impl::prepare(const Mat& inp)
@@ -294,7 +296,14 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool is
     {
         CV_Error(Error::StsBadArg, "No CCM values!" );
     }
-    Mat linearImg = (p->linear)->linearize(src.getMat());
+    Mat img, normImg;
+    if (p->rgb){
+        cvtColor(src.getMat(), img, COLOR_BGR2RGB);
+    } else {
+        img = src.getMat();
+    }
+    img.convertTo(normImg, CV_64F, 1.0/255.0);
+    Mat linearImg = (p->linear)->linearize(normImg);
     Mat ccm = p->ccm.reshape(0, p->shape / 3);
     Mat imgCcm = multiple(p->prepare(linearImg), ccm);
     if (islinear == true)
@@ -302,6 +311,10 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool is
         imgCcm.copyTo(ref);
     }
     Mat imgCorrected = p->cs.fromLFunc(imgCcm, linearImg);
+    imgCorrected *= 255.0;
+    imgCorrected.convertTo(imgCorrected, CV_8UC3);
+    if (p->rgb)
+        cvtColor(imgCorrected, imgCorrected, COLOR_RGB2BGR);
     imgCorrected.copyTo(ref);
 }
 
@@ -385,6 +398,10 @@ void ColorCorrectionModel::setMaxCount(int maxCount_)
 void ColorCorrectionModel::setEpsilon(double epsilon_)
 {
     p->epsilon = epsilon_;
+}
+void ColorCorrectionModel::setRGB(bool rgb_)
+{
+    p->rgb = rgb_;
 }
 Mat ColorCorrectionModel::compute()
 {

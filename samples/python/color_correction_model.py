@@ -172,13 +172,8 @@ def main(func_args=None):
             query_image = image.copy()
 
     # Apply correction to query image
-    normalized_image = cv.cvtColor(query_image, cv.COLOR_BGR2RGB).astype(np.float64) / 255.0
-    calibrated_image = np.empty_like(normalized_image, dtype=np.float64)
-    model.correctImage(normalized_image, calibrated_image)
-
-    calibrated_image = np.clip(calibrated_image, 0.0, 1.0)
-    calibrated_image = (calibrated_image * 255.0).astype(np.uint8)
-    calibrated_image = cv.cvtColor(calibrated_image, cv.COLOR_RGB2BGR)
+    calibrated_image = np.empty_like(query_image, dtype=np.float64)
+    model.correctImage(query_image, calibrated_image)
 
     cv.imshow("Original Image", query_image)
     cv.imshow("Corrected Image", calibrated_image)

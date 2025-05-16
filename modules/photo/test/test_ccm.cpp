@@ -214,6 +214,7 @@ TEST(Photo_ColorCorrection, compute_color_correction_matrix)
     Mat chartsRGB;
     FileNode node = fs["chartsRGB"];
     node >> chartsRGB;
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     // compute CCM
     cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
@@ -250,6 +251,7 @@ TEST(Photo_ColorCorrection, correct_image)
     FileNode node = fs["chartsRGB"];
     node >> chartsRGB;
     fs.release();
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     // compute CCM
     cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
@@ -268,12 +270,13 @@ TEST(Photo_ColorCorrection, correct_image)
 
 TEST(Photo_ColorCorrection, serialization)
 {
-    auto path1 = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
-    FileStorage fs(path1, FileStorage::READ);
+    auto path = cvtest::findDataFile("mcc/mcc_ccm_test.yml");
+    FileStorage fs(path, FileStorage::READ);
     Mat chartsRGB;
     FileNode node = fs["chartsRGB"];
     node >> chartsRGB;
     fs.release();
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     // compute CCM
     cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);

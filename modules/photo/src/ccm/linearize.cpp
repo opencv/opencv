@@ -256,22 +256,22 @@ std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat
     switch (linearizationType)
     {
     case cv::ccm::LINEARIZATION_IDENTITY:
-        p.reset(new LinearIdentity());
+        p = std::make_shared<LinearIdentity>();
         break;
     case cv::ccm::LINEARIZATION_GAMMA:
-        p.reset(new LinearGamma(gamma));
+        p = std::make_shared<LinearGamma>(gamma);
         break;
     case cv::ccm::LINEARIZATION_COLORPOLYFIT:
-        p.reset(new LinearColor<Polyfit>(deg, src, dst, mask, cs));
+        p = std::make_shared<LinearColor<Polyfit>>(deg, src, dst, mask, cs);
         break;
     case cv::ccm::LINEARIZATION_COLORLOGPOLYFIT:
-        p.reset(new LinearColor<LogPolyfit>(deg, src, dst, mask, cs));
+        p = std::make_shared<LinearColor<LogPolyfit>>(deg, src, dst, mask, cs);
         break;
     case cv::ccm::LINEARIZATION_GRAYPOLYFIT:
-        p.reset(new LinearGray<Polyfit>(deg, src, dst, mask, cs));
+        p = std::make_shared<LinearGray<Polyfit>>(deg, src, dst, mask, cs);
         break;
     case cv::ccm::LINEARIZATION_GRAYLOGPOLYFIT:
-        p.reset(new LinearGray<LogPolyfit>(deg, src, dst, mask, cs));
+        p = std::make_shared<LinearGray<LogPolyfit>>(deg, src, dst, mask, cs);
         break;
     default:
         CV_Error(Error::StsBadArg, "Wrong linearizationType!" );

@@ -260,12 +260,8 @@ class photo_test(NewOpenCVTests):
         model = cv.ccm.ColorCorrectionModel(src, cv.ccm.COLORCHECKER_MACBETH)
         _ = model.compute()
 
-        image = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        image = image.astype(np.float64) / 255.
-        calibratedImage = np.zeros_like(image)
-        model.correctImage(image, calibratedImage)
-        calibratedImage = np.clip(np.rint(calibratedImage * 255), 0, 255).astype(np.uint8)
-        calibratedImage = cv.cvtColor(calibratedImage, cv.COLOR_RGB2BGR)
+        calibratedImage = np.zeros_like(img)
+        model.correctImage(img, calibratedImage)
 
         np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
 
@@ -300,19 +296,11 @@ class photo_test(NewOpenCVTests):
         model = cv.ccm.ColorCorrectionModel(ref_src, cv.ccm.COLORCHECKER_MACBETH)
         _ = model.compute()
 
-        # Convert image to float64 and normalize
-        image = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-        image = image.astype(np.float64) / 255.
-        calibratedImage = np.zeros_like(image)
-        model.correctImage(image, calibratedImage)
+        calibratedImage = np.zeros_like(img)
+        model.correctImage(img, calibratedImage)
 
         # Ensure values are in valid range before conversion
         calibratedImage = np.clip(calibratedImage, 0.0, 1.0)
-
-        # Convert to uint8 with explicit rounding
-        calibratedImage = (calibratedImage * 255.0).astype(np.float64)
-        calibratedImage = np.rint(calibratedImage).astype(np.uint8)
-        calibratedImage = cv.cvtColor(calibratedImage, cv.COLOR_RGB2BGR)
 
         np.testing.assert_allclose(gold_img, calibratedImage, rtol=0.1, atol=0.1)
 

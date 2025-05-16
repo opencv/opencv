@@ -18,6 +18,7 @@ PERF_TEST(CV_ccm_perf_480_640, correctImage)
     Mat chartsRGB;
     fs["chartsRGB"] >> chartsRGB;
     fs.release();
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     cv::ccm::ColorCorrectionModel model(
         chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
@@ -40,6 +41,7 @@ PERF_TEST(CV_ccm_perf_720_1280, correctImage)
     Mat chartsRGB;
     fs["chartsRGB"] >> chartsRGB;
     fs.release();
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     cv::ccm::ColorCorrectionModel model(
         chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
@@ -62,6 +64,7 @@ PERF_TEST(CV_ccm_perf_1080_1920, correctImage)
     Mat chartsRGB;
     fs["chartsRGB"] >> chartsRGB;
     fs.release();
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     cv::ccm::ColorCorrectionModel model(
         chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,
@@ -84,6 +87,7 @@ PERF_TEST(CV_ccm_perf_2160_3840, correctImage)
     Mat chartsRGB;
     fs["chartsRGB"] >> chartsRGB;
     fs.release();
+    ASSERT_FALSE(chartsRGB.empty()) << "chartsRGB is empty after loading from: " << path;
 
     cv::ccm::ColorCorrectionModel model(
         chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255.0,

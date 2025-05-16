@@ -153,23 +153,23 @@ public:
         - @ref COLORCHECKER_VINYL, the DKK ColorChecker
         - @ref COLORCHECKER_DIGITAL_SG, the DigitalSG ColorChecker with 140 squares
 
-        @param src detected colors of ColorChecker patches;\n
+        @param src detected colors of ColorChecker patches;
                     the color type is RGB not BGR, and the color values are in [0, 1];
         @param constColor the Built-in color card
     */
     CV_WRAP ColorCorrectionModel(InputArray src, int constColor);
 
     /** @brief Color Correction Model
-        @param src detected colors of ColorChecker patches;\n
+        @param src detected colors of ColorChecker patches;
                 the color type is RGB not BGR, and the color values are in [0, 1];
-        @param colors the reference color values, the color values are in [0, 1].\n
+        @param colors the reference color values, the color values are in [0, 1].
         @param refColorSpace the corresponding color space
-                If the color type is some RGB, the format is RGB not BGR;\n
+                If the color type is some RGB, the format is RGB not BGR;
     */
     CV_WRAP ColorCorrectionModel(InputArray src, InputArray colors, ColorSpace refColorSpace);
 
     /** @brief Color Correction Model
-        @param src detected colors of ColorChecker patches;\n
+        @param src detected colors of ColorChecker patches;
                     the color type is RGB not BGR, and the color values are in [0, 1];
         @param colors the reference color values, the color values are in [0, 1].
         @param refColorSpace the corresponding color space
@@ -189,34 +189,34 @@ public:
         - @ref COLOR_SPACE_APPLE_RGB
         - @ref COLOR_SPACE_REC_709_RGB
         - @ref COLOR_SPACE_REC_2020_RGB
-        @param cs the absolute color space that detected colors convert to;\n
+        @param cs the absolute color space that detected colors convert to;
               default: @ref COLOR_SPACE_SRGB
     */
     CV_WRAP void setColorSpace(ColorSpace cs);
 
     /** @brief set ccmType
-    @param ccmType the shape of color correction matrix(CCM);\n
+    @param ccmType the shape of color correction matrix(CCM);
                     default: @ref CCM_LINEAR
     */
     CV_WRAP void setCcmType(CcmType ccmType);
 
     /** @brief set Distance
-    @param distance the type of color distance;\n
+    @param distance the type of color distance;
                     default: @ref DISTANCE_CIE2000
     */
     CV_WRAP void setDistance(DistanceType distance);
 
     /** @brief set Linear
-    @param linearizationType the method of linearization;\n
+    @param linearizationType the method of linearization;
                        default: @ref LINEARIZATION_GAMMA
     */
     CV_WRAP void setLinearization(LinearizationType linearizationType);
 
     /** @brief set Gamma
 
-    @note only valid when linear is set to "gamma";\n
+    @note only valid when linear is set to "gamma";
 
-    @param gamma the gamma value of gamma correction;\n
+    @param gamma the gamma value of gamma correction;
                  default: 2.2;
     */
     CV_WRAP void setLinearizationGamma(double gamma);
@@ -228,7 +228,7 @@ public:
         - @ref LINEARIZATION_COLORLOGPOLYFIT
         - @ref LINEARIZATION_GRAYLOGPOLYFIT
 
-        @param deg the degree of linearization polynomial;\n
+        @param deg the degree of linearization polynomial
             default: 3
 
     */
@@ -237,44 +237,50 @@ public:
     /** @brief set SaturatedThreshold.
                 The colors in the closed interval [lower, upper] are reserved to participate
                 in the calculation of the loss function and initialization parameters
-        @param lower the lower threshold to determine saturation;\n
+        @param lower the lower threshold to determine saturation;
                 default: 0;
-        @param upper the upper threshold to determine saturation;\n
+        @param upper the upper threshold to determine saturation;
                 default: 0
     */
     CV_WRAP void setSaturatedThreshold(double lower, double upper);
 
     /** @brief set WeightsList
-    @param weightsList the list of weight of each color;\n
+    @param weightsList the list of weight of each color;
                         default: empty array
     */
     CV_WRAP void setWeightsList(const Mat& weightsList);
 
     /** @brief set WeightCoeff
-    @param weightsCoeff the exponent number of L* component of the reference color in CIE Lab color space;\n
+    @param weightsCoeff the exponent number of L* component of the reference color in CIE Lab color space;
                          default: 0
     */
     CV_WRAP void setWeightCoeff(double weightsCoeff);
 
     /** @brief set InitialMethod
-    @param initialMethodType the method of calculating CCM initial value;\n
+    @param initialMethodType the method of calculating CCM initial value;
             default: INITIAL_METHOD_LEAST_SQUARE
     */
     CV_WRAP void setInitialMethod(InitialMethodType initialMethodType);
 
     /** @brief set MaxCount
-    @param maxCount used in MinProblemSolver-DownhillSolver;\n
-        Terminal criteria to the algorithm;\n
+    @param maxCount used in MinProblemSolver-DownhillSolver;
+        Terminal criteria to the algorithm;
                      default: 5000;
     */
     CV_WRAP void setMaxCount(int maxCount);
 
     /** @brief set Epsilon
-    @param epsilon used in MinProblemSolver-DownhillSolver;\n
-        Terminal criteria to the algorithm;\n
+    @param epsilon used in MinProblemSolver-DownhillSolver;
+        Terminal criteria to the algorithm;
                    default: 1e-4;
     */
     CV_WRAP void setEpsilon(double epsilon);
+
+    /** @brief Set whether the input image is in RGB color space
+    @param rgb If true, the model expects input images in RGB format.
+                 If false, input is assumed to be in BGR (default).
+    */
+    CV_WRAP void setRGB(bool rgb);
 
     /** @brief make color correction */
     CV_WRAP Mat compute();
