@@ -212,7 +212,7 @@ bool GifDecoder::readData(Mat &img) {
     if(!restore.empty())
     {
         Mat roi = Mat(lastImage, cv::Rect(left,top,width,height));
-        restore.copyTo(roi);
+        restore.overwriteTo(roi);
     }
 
     return hasRead;

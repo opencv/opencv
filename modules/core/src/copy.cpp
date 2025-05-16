@@ -614,6 +614,27 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
         copymask(ptrs[0], 0, ptrs[2], 0, ptrs[1], 0, sz, &esz);
 }
 
+/* dst = src */
+void Mat::overwriteTo( OutputArray _dst ) const
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat dst = _dst.getMat();
+    CV_CheckTrue( !dst.empty(), "dst must not be empty" );
+    CV_CheckEQ(type(), dst.type(), "Make the type of dst the same as src");
+    CV_CheckEQ(size(), dst.size(), "Make the size of dst the same as src");
+    copyTo(_dst);
+}
+void Mat::overwriteTo( OutputArray _dst, InputArray _mask ) const
+{
+    CV_INSTRUMENT_REGION();
+
+    Mat dst = _dst.getMat();
+    CV_CheckTrue( !dst.empty(), "dst must not be empty" );
+    CV_CheckEQ(type(), dst.type(), "Make the type of dst the same as src");
+    CV_CheckEQ(size(), dst.size(), "Make the size of dst the same as src");
+    copyTo(_dst, _mask);
+}
 
 static bool can_apply_memset(const Mat &mat, const Scalar &s, int &fill_value)
 {

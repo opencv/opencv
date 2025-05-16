@@ -2670,4 +2670,70 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     EXPECT_NO_THROW(m.create(dims, depth));
 }
 
+// see https://github.com/opencv/opencv/issues/27298
+TEST(Mat, overwriteTo_regression27298)
+{
+    cv::Mat src(40/*height*/, 30/*width*/, CV_8UC1, Scalar(255));
+    // Normal
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_EQ(roi.data, roiData);
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.overwriteTo(roi));
+        EXPECT_EQ(roi.data, roiData);
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+
+    // Empty
+    {
+        cv::Mat roi; // empty
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_NE(roi.data, nullptr); // Allocated
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat roi; // empty
+        EXPECT_ANY_THROW(src.overwriteTo(roi));
+    }
+
+    // Different Type
+    {
+        cv::Mat dst(100, 100, CV_16UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_NE(roi.data, roiData); // Reallocated
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat dst(100, 100, CV_16UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
+        EXPECT_ANY_THROW(src.overwriteTo(roi));
+    }
+
+    // Different Size
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 40/*width*/, 30/*height*/));
+        void* roiData = roi.data;
+        EXPECT_NO_THROW(src.copyTo(roi));
+        EXPECT_NE(roi.data, roiData); // Reallocated
+        EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
+    }
+    {
+        cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
+        cv::Mat roi(dst, cv::Rect(0, 0, 40/*width*/, 30/*height*/));
+        EXPECT_ANY_THROW(src.overwriteTo(roi));
+    }
+}
+
+
 }} // namespace
