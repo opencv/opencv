@@ -138,7 +138,7 @@ class ABI:
     def __str__(self):
         return "%s (%s)" % (self.name, self.toolchain)
     def haveIPP(self):
-        return self.name == "x86" or self.name == "x86_64"
+        return self.name == "x86_64"
     def haveKleidiCV(self):
         return self.name == "arm64-v8a"
 
