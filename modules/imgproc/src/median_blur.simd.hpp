@@ -694,38 +694,27 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 #else
                 int nlanes = 1;
 #endif
-                if(_dst.cols > 2*nlanes) //minimum size to safely allow extra vectorized store into next row.
+                for (; j < size.width - cn; j += nlanes)
                 {
-                    /* Reducing bottleneck in non-vectorized path beyond (size.width - nlanes - cn)
-                    /* In the last iteration of the loop below, even if residue is less than nlanes, we allow it to be completed in vectorized path.
-                    /* Though we do additional store in every row, it will be overwritten by correct value in the next row. */
-                    for( ; j < size.width - cn ; )
-                    {
-                        VT p0 = vop.load(row0+j-cn), p1 = vop.load(row0+j), p2 = vop.load(row0+j+cn);
-                        VT p3 = vop.load(row1+j-cn), p4 = vop.load(row1+j), p5 = vop.load(row1+j+cn);
-                        VT p6 = vop.load(row2+j-cn), p7 = vop.load(row2+j), p8 = vop.load(row2+j+cn);
-
-                        vop(p1, p2); vop(p4, p5); vop(p7, p8); vop(p0, p1);
-                        vop(p3, p4); vop(p6, p7); vop(p1, p2); vop(p4, p5);
-                        vop(p7, p8); vop(p0, p3); vop(p5, p8); vop(p4, p7);
-                        vop(p3, p6); vop(p1, p4); vop(p2, p5); vop(p4, p7);
-                        vop(p4, p2); vop(p6, p4); vop(p4, p2);
-                        vop.store(dst+j, p4);
-
-                        int offset = nlanes;
-                        if( j > (size.width - nlanes - cn) )
-                        {
-                            offset = size.width - j - cn;
-                        }
-                        j += offset;
-
-                        /*In the last row(height-1) processing, additional store would overwrite outside output buffer.
-                        Its avoided with below check. */
-                        if((i == size.height-1) && ( j >= size.width - cn - nlanes))
-                        {
+                    //handling tail in vectorized path itself
+                    if ( j > size.width - cn - nlanes ) {
+                        if (j == cn || src == dst) {
                             break;
                         }
+                        j = size.width - cn - nlanes;
                     }
+
+                    VT p0 = vop.load(row0+j-cn), p1 = vop.load(row0+j), p2 = vop.load(row0+j+cn);
+                    VT p3 = vop.load(row1+j-cn), p4 = vop.load(row1+j), p5 = vop.load(row1+j+cn);
+                    VT p6 = vop.load(row2+j-cn), p7 = vop.load(row2+j), p8 = vop.load(row2+j+cn);
+
+                    vop(p1, p2); vop(p4, p5); vop(p7, p8); vop(p0, p1);
+                    vop(p3, p4); vop(p6, p7); vop(p1, p2); vop(p4, p5);
+                    vop(p7, p8); vop(p0, p3); vop(p5, p8); vop(p4, p7);
+                    vop(p3, p6); vop(p1, p4); vop(p2, p5); vop(p4, p7);
+                    vop(p4, p2); vop(p6, p4); vop(p4, p2);
+                    vop.store(dst+j, p4);
+
                 }
 
                 limit = size.width;
@@ -819,58 +808,45 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
 #else
                 int nlanes = 1;
 #endif
-                if((_dst.cols > 2*nlanes))
+                for( ; j < size.width - cn*2; j += nlanes)
                 {
-                    for( ; j < size.width - cn*2; )
-                    {
-                        /* In the last iteration of the loop below, even if residue is less than nlanes, we allow it to be processed in vectorized path.
-                        /* Though we do additional store in every row, it will be overwritten by correct value in next row.
-                        /* Reduction of residue processing in non-vectorized path, reduces bottleneck in non-vectorized path. */
-                        VT p0 = vop.load(row[0]+j-cn*2), p5 = vop.load(row[1]+j-cn*2), p10 = vop.load(row[2]+j-cn*2), p15 = vop.load(row[3]+j-cn*2), p20 = vop.load(row[4]+j-cn*2);
-                        VT p1 = vop.load(row[0]+j-cn*1), p6 = vop.load(row[1]+j-cn*1), p11 = vop.load(row[2]+j-cn*1), p16 = vop.load(row[3]+j-cn*1), p21 = vop.load(row[4]+j-cn*1);
-                        VT p2 = vop.load(row[0]+j-cn*0), p7 = vop.load(row[1]+j-cn*0), p12 = vop.load(row[2]+j-cn*0), p17 = vop.load(row[3]+j-cn*0), p22 = vop.load(row[4]+j-cn*0);
-                        VT p3 = vop.load(row[0]+j+cn*1), p8 = vop.load(row[1]+j+cn*1), p13 = vop.load(row[2]+j+cn*1), p18 = vop.load(row[3]+j+cn*1), p23 = vop.load(row[4]+j+cn*1);
-                        VT p4 = vop.load(row[0]+j+cn*2), p9 = vop.load(row[1]+j+cn*2), p14 = vop.load(row[2]+j+cn*2), p19 = vop.load(row[3]+j+cn*2), p24 = vop.load(row[4]+j+cn*2);
-
-                        vop(p1, p2); vop(p0, p1); vop(p1, p2); vop(p4, p5); vop(p3, p4);
-                        vop(p4, p5); vop(p0, p3); vop(p2, p5); vop(p2, p3); vop(p1, p4);
-                        vop(p1, p2); vop(p3, p4); vop(p7, p8); vop(p6, p7); vop(p7, p8);
-                        vop(p10, p11); vop(p9, p10); vop(p10, p11); vop(p6, p9); vop(p8, p11);
-                        vop(p8, p9); vop(p7, p10); vop(p7, p8); vop(p9, p10); vop(p0, p6);
-                        vop(p4, p10); vop(p4, p6); vop(p2, p8); vop(p2, p4); vop(p6, p8);
-                        vop(p1, p7); vop(p5, p11); vop(p5, p7); vop(p3, p9); vop(p3, p5);
-                        vop(p7, p9); vop(p1, p2); vop(p3, p4); vop(p5, p6); vop(p7, p8);
-                        vop(p9, p10); vop(p13, p14); vop(p12, p13); vop(p13, p14); vop(p16, p17);
-                        vop(p15, p16); vop(p16, p17); vop(p12, p15); vop(p14, p17); vop(p14, p15);
-                        vop(p13, p16); vop(p13, p14); vop(p15, p16); vop(p19, p20); vop(p18, p19);
-                        vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p21, p23); vop(p22, p24);
-                        vop(p22, p23); vop(p18, p21); vop(p20, p23); vop(p20, p21); vop(p19, p22);
-                        vop(p22, p24); vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p12, p18);
-                        vop(p16, p22); vop(p16, p18); vop(p14, p20); vop(p20, p24); vop(p14, p16);
-                        vop(p18, p20); vop(p22, p24); vop(p13, p19); vop(p17, p23); vop(p17, p19);
-                        vop(p15, p21); vop(p15, p17); vop(p19, p21); vop(p13, p14); vop(p15, p16);
-                        vop(p17, p18); vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p0, p12);
-                        vop(p8, p20); vop(p8, p12); vop(p4, p16); vop(p16, p24); vop(p12, p16);
-                        vop(p2, p14); vop(p10, p22); vop(p10, p14); vop(p6, p18); vop(p6, p10);
-                        vop(p10, p12); vop(p1, p13); vop(p9, p21); vop(p9, p13); vop(p5, p17);
-                        vop(p13, p17); vop(p3, p15); vop(p11, p23); vop(p11, p15); vop(p7, p19);
-                        vop(p7, p11); vop(p11, p13); vop(p11, p12);
-                        vop.store(dst+j, p12);
-
-                        int offset = nlanes;
-                        if( j > (size.width - nlanes - cn*2) )
-                        {
-                            offset = size.width - j - cn*2;
-                        }
-                        j += offset;
-
-                        /*In the last row(height-1) processing, additional store would overwrite outside output buffer.
-                        Its avoided with below check. */
-                        if((i == size.height-1) && ( j >= size.width - cn*2 -nlanes))
-                        {
+                    if ( j > size.width - cn*2 - nlanes ) {
+                        if (j == cn*2 || src == dst) {
                             break;
                         }
+                        j = size.width - cn*2 - nlanes;
                     }
+                    VT p0 = vop.load(row[0]+j-cn*2), p5 = vop.load(row[1]+j-cn*2), p10 = vop.load(row[2]+j-cn*2), p15 = vop.load(row[3]+j-cn*2), p20 = vop.load(row[4]+j-cn*2);
+                    VT p1 = vop.load(row[0]+j-cn*1), p6 = vop.load(row[1]+j-cn*1), p11 = vop.load(row[2]+j-cn*1), p16 = vop.load(row[3]+j-cn*1), p21 = vop.load(row[4]+j-cn*1);
+                    VT p2 = vop.load(row[0]+j-cn*0), p7 = vop.load(row[1]+j-cn*0), p12 = vop.load(row[2]+j-cn*0), p17 = vop.load(row[3]+j-cn*0), p22 = vop.load(row[4]+j-cn*0);
+                    VT p3 = vop.load(row[0]+j+cn*1), p8 = vop.load(row[1]+j+cn*1), p13 = vop.load(row[2]+j+cn*1), p18 = vop.load(row[3]+j+cn*1), p23 = vop.load(row[4]+j+cn*1);
+                    VT p4 = vop.load(row[0]+j+cn*2), p9 = vop.load(row[1]+j+cn*2), p14 = vop.load(row[2]+j+cn*2), p19 = vop.load(row[3]+j+cn*2), p24 = vop.load(row[4]+j+cn*2);
+
+                    vop(p1, p2); vop(p0, p1); vop(p1, p2); vop(p4, p5); vop(p3, p4);
+                    vop(p4, p5); vop(p0, p3); vop(p2, p5); vop(p2, p3); vop(p1, p4);
+                    vop(p1, p2); vop(p3, p4); vop(p7, p8); vop(p6, p7); vop(p7, p8);
+                    vop(p10, p11); vop(p9, p10); vop(p10, p11); vop(p6, p9); vop(p8, p11);
+                    vop(p8, p9); vop(p7, p10); vop(p7, p8); vop(p9, p10); vop(p0, p6);
+                    vop(p4, p10); vop(p4, p6); vop(p2, p8); vop(p2, p4); vop(p6, p8);
+                    vop(p1, p7); vop(p5, p11); vop(p5, p7); vop(p3, p9); vop(p3, p5);
+                    vop(p7, p9); vop(p1, p2); vop(p3, p4); vop(p5, p6); vop(p7, p8);
+                    vop(p9, p10); vop(p13, p14); vop(p12, p13); vop(p13, p14); vop(p16, p17);
+                    vop(p15, p16); vop(p16, p17); vop(p12, p15); vop(p14, p17); vop(p14, p15);
+                    vop(p13, p16); vop(p13, p14); vop(p15, p16); vop(p19, p20); vop(p18, p19);
+                    vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p21, p23); vop(p22, p24);
+                    vop(p22, p23); vop(p18, p21); vop(p20, p23); vop(p20, p21); vop(p19, p22);
+                    vop(p22, p24); vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p12, p18);
+                    vop(p16, p22); vop(p16, p18); vop(p14, p20); vop(p20, p24); vop(p14, p16);
+                    vop(p18, p20); vop(p22, p24); vop(p13, p19); vop(p17, p23); vop(p17, p19);
+                    vop(p15, p21); vop(p15, p17); vop(p19, p21); vop(p13, p14); vop(p15, p16);
+                    vop(p17, p18); vop(p19, p20); vop(p21, p22); vop(p23, p24); vop(p0, p12);
+                    vop(p8, p20); vop(p8, p12); vop(p4, p16); vop(p16, p24); vop(p12, p16);
+                    vop(p2, p14); vop(p10, p22); vop(p10, p14); vop(p6, p18); vop(p6, p10);
+                    vop(p10, p12); vop(p1, p13); vop(p9, p21); vop(p9, p13); vop(p5, p17);
+                    vop(p13, p17); vop(p3, p15); vop(p11, p23); vop(p11, p15); vop(p7, p19);
+                    vop(p7, p11); vop(p11, p13); vop(p11, p12);
+                    vop.store(dst+j, p12);
+
                 }
 
                 limit = size.width;
