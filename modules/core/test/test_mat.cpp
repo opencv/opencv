@@ -1418,6 +1418,13 @@ TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
     EXPECT_EQ(0, cv::norm(src.col(2), dst(Rect(5,1,1,4))));
 }
 
+TEST(Core_Mat, zeros)
+{
+  // Should not fail during linkage.
+  const int dims[] = {2, 2, 4};
+  cv::Mat1f mat = cv::Mat1f::zeros(3, dims);
+}
+
 TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
