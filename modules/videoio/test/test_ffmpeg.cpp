@@ -953,4 +953,79 @@ inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestP
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
 
+typedef tuple<int /*inputType*/, int /*targetType*/, bool /*isColor*/, string /*description*/> ConversionTestParams;
+typedef testing::TestWithParam< ConversionTestParams > videoio_ffmpeg_conversion;
+
+TEST_P(videoio_ffmpeg_conversion, handle_conversion)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = "conversion_video.mp4";
+    int input_type = get<0>(GetParam());
+    int target_type = get<1>(GetParam());
+    bool isColor = get<2>(GetParam());
+    const string description = get<3>(GetParam());
+
+    const double fps = 30.0;
+    const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
+    const Mat frame(480, 640, input_type, Scalar::all(0));
+
+    VideoWriter writer(filename, fourcc, fps, frame.size(), isColor);
+    writer.set(VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(target_type));
+
+    ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer for: " << description;
+
+    for (int i = 1; i <= 90; i++)
+    {
+        // Conversion happens internally
+        // as ffmpeg doesn't handle itself.
+        // If conversion fails, FFmpeg won't write any frames
+        writer.write(frame);
+    }
+
+    writer.release();
+
+    EXPECT_GT(getFileSize(filename), 0) << "Output file is empty for: " << description;
+
+    VideoCapture cap(filename, CAP_FFMPEG);
+    if (!cap.isOpened())
+        throw SkipTestException("Failed to open video file, stream not supported or invalid");
+
+    Mat readFrame;
+    int frameCount = 0;
+    while (cap.read(readFrame))
+        frameCount++;
+
+    // Checking if all 90 frames can be read is enough, if no conversion is done 0 frames will be written.
+    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description << "(expected 90, got " << frameCount << ")";
+
+    std::remove(filename.c_str());
+}
+
+const ConversionTestParams conversion_cases[] =
+{
+    // converting to 8UC3
+    make_tuple(CV_8UC1, CV_8UC3, true, "CV_8UC1_to_CV_8UC3"),
+    make_tuple(CV_16UC1, CV_8UC3, true, "CV_16UC1_to_CV_8UC3"),
+
+    // converting to 8UC1
+    make_tuple(CV_8UC3, CV_8UC1, false, "CV_8UC3_to_CV_8UC1"),
+    make_tuple(CV_16UC1, CV_8UC1, false, "CV_16UC1_to_CV_8UC1"),
+
+    // converting to 16UC1
+    make_tuple(CV_8UC3, CV_16UC1, false, "CV_8UC3_to_CV_16UC1"),
+    make_tuple(CV_8UC1, CV_16UC1, false, "CV_8UC1_to_CV_16UC1"),
+};
+
+inline static std::string videoio_ffmpeg_conversion_name_printer(const testing::TestParamInfo<videoio_ffmpeg_conversion::ParamType>& info)
+{
+    std::ostringstream os;
+    os << get<3>(info.param) << "_"
+        << "isColor_" << (get<2>(info.param) ? "true" : "false");
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_conversion, testing::ValuesIn(conversion_cases), videoio_ffmpeg_conversion_name_printer);
+
 }} // namespace
