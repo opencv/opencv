@@ -493,7 +493,7 @@ void Subdiv2D::initDelaunay( Rect rect )
 {
     CV_INSTRUMENT_REGION();
 
-    float big_coord = 3.f * MAX( rect.width, rect.height );
+    float big_coord = 6.f * MAX( rect.width, rect.height );
     float rx = (float)rect.x;
     float ry = (float)rect.y;
 
