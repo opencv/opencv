@@ -38,10 +38,22 @@ TEST_P(DistanceAndOverlap, MIL)
     test.run(numFramesLimit);
 }
 
+TEST_P(DistanceAndOverlap, CSRT)
+{
+  TrackerTest<Tracker, Rect> test(TrackerCSRT::create(), dataset, 22, .7f, NoTransform);
+  test.run();
+}
+
 TEST_P(DistanceAndOverlap, Shifted_Data_MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .6f, CenterShiftLeft);
     test.run(numFramesLimit);
+}
+
+TEST_P(DistanceAndOverlap, Shifted_Data_CSRT)
+{
+  TrackerTest<Tracker, Rect> test(TrackerCSRT::create(), dataset, 13, .69f, CenterShiftLeft);
+  test.run();
 }
 
 /***************************************************************************************/
@@ -51,6 +63,12 @@ TEST_P(DistanceAndOverlap, Scaled_Data_MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .7f, Scale_1_1);
     test.run(numFramesLimit);
+}
+
+TEST_P(DistanceAndOverlap, Scaled_Data_CSRT)
+{
+  TrackerTest<Tracker, Rect> test(TrackerCSRT::create(), dataset, 22, 0.69f, Scale_1_1, 1);
+  test.run();
 }
 
 TEST_P(DistanceAndOverlap, GOTURN)
