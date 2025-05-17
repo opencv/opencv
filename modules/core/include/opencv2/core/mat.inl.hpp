@@ -3025,6 +3025,12 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const MatExpr& e)
 }
 
 template<typename _Tp> inline
+MatExpr Mat_<_Tp>::zeros(int _ndims, const int* _sizes)
+{
+    return Mat::zeros(_ndims, _sizes, traits::Type<_Tp>::value);
+}
+
+template<typename _Tp> inline
 MatExpr Mat_<_Tp>::zeros(int rows, int cols)
 {
     return Mat::zeros(rows, cols, traits::Type<_Tp>::value);
