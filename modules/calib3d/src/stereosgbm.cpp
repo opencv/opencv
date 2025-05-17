@@ -508,6 +508,9 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int SW2 = params.calcSADWindowSize().width/2, SH2 = params.calcSADWindowSize().height/2;
     int npasses = params.isFullDP() ? 2 : 1;
 
+    CV_CheckGT(width - (params.minDisparity + params.numDisparities), params.calcSADWindowSize().width/2,
+     "Your input images are too small for your window size and max disparity, and will result in non-deterministic SGBM results");
+
     if( minX1 >= maxX1 )
     {
         disp1 = Scalar::all(INVALID_DISP_SCALED);
