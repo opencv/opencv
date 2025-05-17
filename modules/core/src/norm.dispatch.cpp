@@ -571,7 +571,7 @@ double norm( InputArray _src1, InputArray _src2, int normType, InputArray _mask 
               ((normType == NORM_HAMMING || normType == NORM_HAMMING2) && src1.type() == CV_8U) );
 
     NormDiffFunc func = getNormDiffFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
-    CV_Assert( func != 0 );
+    CV_Assert( (normType >> 1) >= 3 || func != 0 );
 
     if( src1.isContinuous() && src2.isContinuous() && mask.empty() )
     {
