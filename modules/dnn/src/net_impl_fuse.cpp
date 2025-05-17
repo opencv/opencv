@@ -370,6 +370,7 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                 Ptr<NaryEltwiseLayer> nextNaryEltwiseLayer = nextData->layerInstance.dynamicCast<NaryEltwiseLayer>();
                 if (nextEltwiseLayer.empty() && nextNaryEltwiseLayer.empty())
                     break;
+                LayerData *naryOrEltwiseData = nextData;
 
                 // TODO: fused the Conv+NaryEltwise on OpenCL backend. At present, we can only support it at CUDA backend.
                 if (IS_DNN_OPENCL_TARGET(preferableTarget) && nextNaryEltwiseLayer)
@@ -605,8 +606,17 @@ void Net::Impl::fuseLayers(const std::vector<LayerPin>& blobsToKeep_)
                             else if (fuse_eltwise) // conv + eltwise/naryEltwise (note: conv could have fused activations before eltwise)
                             {
                                 CV_Assert(IS_DNN_CUDA_TARGET(preferableTarget));
-                                CV_Assert_N(biasLayerData->outputBlobsWrappers.size() == 1, ld.inputBlobsWrappers.size() == 1);
-                                ld.inputBlobsWrappers.push_back(biasLayerData->outputBlobsWrappers[0]);
+                                CV_Assert_N(biasLayerData->outputBlobsWrappers.size() >= 1, ld.inputBlobsWrappers.size() == 1);
+                                // Iterate over eltwise inputs to find exact output id
+                                for (const auto& pin : naryOrEltwiseData->inputBlobsId)
+                                {
+                                    if (pin.lid == biasLayerData->id)
+                                    {
+                                        ld.inputBlobsWrappers.push_back(biasLayerData->outputBlobsWrappers[pin.oid]);
+                                        break;
+                                    }
+                                }
+                                CV_Assert(ld.inputBlobsWrappers.size() == 2);  // Check input was found
 
                                 if (nextEltwiseLayer)
                                     printf_(("\tfused with %s\n", nextEltwiseLayer->name.c_str()));
