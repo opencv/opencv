@@ -953,40 +953,36 @@ inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestP
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
 
-typedef tuple<int /*inputType*/, int /*targetType*/, bool /*isColor*/, string /*description*/> ConversionTestParams;
-typedef testing::TestWithParam< ConversionTestParams > videoio_ffmpeg_conversion;
+typedef tuple<int /*inputType*/, int /*expectedType*/, bool /*isColor*/, string /*description*/> MismatchTestParams;
+typedef testing::TestWithParam< MismatchTestParams > videoio_ffmpeg_type_mismatch;
 
-TEST_P(videoio_ffmpeg_conversion, handle_conversion)
+TEST_P(videoio_ffmpeg_type_mismatch, type_mismatch)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
 
-    const string filename = "conversion_video.mp4";
+    const string filename = "type_mismatch_video.mp4";
     int input_type = get<0>(GetParam());
-    int target_type = get<1>(GetParam());
-    bool isColor = get<2>(GetParam());
+    int expected_type = get<1>(GetParam());
+    bool is_Color = get<2>(GetParam());
     const string description = get<3>(GetParam());
 
     const double fps = 30.0;
     const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
     const Mat frame(480, 640, input_type, Scalar::all(0));
 
-    VideoWriter writer(filename, fourcc, fps, frame.size(), isColor);
-    writer.set(VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(target_type));
+    VideoWriter writer(filename, fourcc, fps, frame.size(), {cv::VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(expected_type), VIDEOWRITER_PROP_IS_COLOR, is_Color});
 
     ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer for: " << description;
 
     for (int i = 1; i <= 90; i++)
     {
-        // Conversion happens internally
-        // as ffmpeg doesn't handle itself.
-        // If conversion fails, FFmpeg won't write any frames
+        // There's a mismatch between the given and expected types. Writer
+        // should produce a warning communicating it to the user.
         writer.write(frame);
     }
 
     writer.release();
-
-    EXPECT_GT(getFileSize(filename), 0) << "Output file is empty for: " << description;
 
     VideoCapture cap(filename, CAP_FFMPEG);
     if (!cap.isOpened())
@@ -997,28 +993,25 @@ TEST_P(videoio_ffmpeg_conversion, handle_conversion)
     while (cap.read(readFrame))
         frameCount++;
 
-    // Checking if all 90 frames can be read is enough, if no conversion is done 0 frames will be written.
-    EXPECT_EQ(frameCount, 90) << "Not all frames were read for: " << description << "(expected 90, got " << frameCount << ")";
+    // Since there's a mismatch, no frames should have been written.
+    EXPECT_EQ(frameCount, 0) << "Although there was a mismatch between given and expected types, " << frameCount << " frames were written for: " << description;
 
     std::remove(filename.c_str());
 }
 
-const ConversionTestParams conversion_cases[] =
+const MismatchTestParams mismatch_cases[] =
 {
-    // converting to 8UC3
-    make_tuple(CV_8UC1, CV_8UC3, true, "CV_8UC1_to_CV_8UC3"),
-    make_tuple(CV_16UC1, CV_8UC3, true, "CV_16UC1_to_CV_8UC3"),
+    // expected type CV_8UC3
+    make_tuple(CV_16UC1, CV_8UC3, true, "input_CV_16UC1_expected_CV_8UC3"),
 
-    // converting to 8UC1
-    make_tuple(CV_8UC3, CV_8UC1, false, "CV_8UC3_to_CV_8UC1"),
-    make_tuple(CV_16UC1, CV_8UC1, false, "CV_16UC1_to_CV_8UC1"),
+    // expected type 8UC1
+    make_tuple(CV_8UC3, CV_8UC1, false, "input_CV_8UC3_expected_CV_8UC1"),
 
-    // converting to 16UC1
-    make_tuple(CV_8UC3, CV_16UC1, false, "CV_8UC3_to_CV_16UC1"),
-    make_tuple(CV_8UC1, CV_16UC1, false, "CV_8UC1_to_CV_16UC1"),
+    // expected type 16UC1
+    make_tuple(CV_8UC1, CV_16UC1, false, "input_CV_8UC1_expected_CV_16UC1"),
 };
 
-inline static std::string videoio_ffmpeg_conversion_name_printer(const testing::TestParamInfo<videoio_ffmpeg_conversion::ParamType>& info)
+inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::TestParamInfo<videoio_ffmpeg_type_mismatch::ParamType>& info)
 {
     std::ostringstream os;
     os << get<3>(info.param) << "_"
@@ -1026,6 +1019,6 @@ inline static std::string videoio_ffmpeg_conversion_name_printer(const testing::
     return os.str();
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_conversion, testing::ValuesIn(conversion_cases), videoio_ffmpeg_conversion_name_printer);
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_type_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
 }} // namespace

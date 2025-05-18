@@ -2515,53 +2515,38 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int type, int origin )
 {
     if (!encode_video) {
-        CV_Assert((type == CV_16UC1 || type == CV_8UC1) && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
+        CV_Assert(type == CV_8UC1 && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
         const bool set_key_frame = key_frame ? key_frame : idr_period ? frame_idx % idr_period == 0 : 1;
         bool ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, pts_index, b_frame_dts_delay, set_key_frame);
         frame_idx++;
         return ret;
     }
 
-    // check parameters and do conversions if needed
-    cv::Mat inputMat(height, width, type, (void*)data, step);
-    cv::Mat convertedMat;
-    switch (input_pix_fmt) {
-        case AV_PIX_FMT_BGR24: // expected CV_8UC3
-            if (type == CV_8UC3)
-                convertedMat = inputMat;
-            else {
-                if (type == CV_16UC1) // CV_16UC1 -> CV_8UC1
-                    inputMat.convertTo(inputMat, CV_8UC1, 1.0 / 256);
-                cv::cvtColor(inputMat, convertedMat, cv::COLOR_GRAY2BGR); // CV_8UC1 -> CV_8UC3
-            }
-            break;
-        case AV_PIX_FMT_GRAY8: // expected CV_8UC1
-            if (type == CV_8UC1)
-                convertedMat = inputMat;
-            else if (type == CV_8UC3) // CV_8UC3 -> CV_8UC1
-                cv::cvtColor(inputMat, convertedMat, COLOR_BGR2GRAY);
-            else // CV_16UC1 -> CV_8UC1
-                inputMat.convertTo(convertedMat, CV_8UC1, 1.0 / 256);
-            break;
-        case AV_PIX_FMT_GRAY16LE: // expected CV_16UC1
-            if (type == CV_16UC1)
-                convertedMat = inputMat;
-            else {
-                if (type == CV_8UC3)
-                    cv::cvtColor(inputMat, inputMat, COLOR_BGR2GRAY);  // CV_8UC3 -> CV_8UC1
-                inputMat.convertTo(convertedMat, CV_16UC1, 256.0);  // CV_8UC1 -> CV_16UC1
-            }
-            break;
-
-        default:
-            CV_LOG_WARNING(NULL, "Unknown pixel format: " << av_get_pix_fmt_name(input_pix_fmt));
-            CV_Assert(false);
-            break;
+    // check parameters
+    if (input_pix_fmt == AV_PIX_FMT_BGR24) {
+        if (type != CV_8UC3) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected frame with depth of CV_8UC3");
+            return false;
+        }
     }
-
-    data = convertedMat.data;
-    step = (int)convertedMat.step;
-    type = convertedMat.type();
+    else if (input_pix_fmt == AV_PIX_FMT_GRAY8) {
+        if (type != CV_8UC1) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected frame with depth of CV_8UC1");
+            return false;
+        }
+    }
+    else if (input_pix_fmt == AV_PIX_FMT_GRAY16LE) {
+        if (type != CV_16UC1) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected frame with depth of CV_16UC1");
+            return false;
+        }
+    }
+    else {
+        CV_LOG_WARNING(NULL, "Input data does not match selected pixel format: "
+                       << av_get_pix_fmt_name(input_pix_fmt)
+                       << ", only CV_8UC1, CV_8UC3, and CV_16UC1 are supported");
+        CV_Assert(false);
+    }
 
     if( (width & -2) != frame_width || (height & -2) != frame_height || !data )
         return false;
