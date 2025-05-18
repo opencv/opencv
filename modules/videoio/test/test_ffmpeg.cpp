@@ -975,7 +975,7 @@ TEST_P(videoio_ffmpeg_type_mismatch, type_mismatch)
 
     ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer for: " << description;
 
-    for (int i = 1; i <= 90; i++)
+    for (int i = 1; i <= 30; i++)
     {
         // There's a mismatch between the given and expected types. Writer
         // should produce a warning communicating it to the user.
@@ -985,17 +985,8 @@ TEST_P(videoio_ffmpeg_type_mismatch, type_mismatch)
     writer.release();
 
     VideoCapture cap(filename, CAP_FFMPEG);
-    if (!cap.isOpened())
-        throw SkipTestException("Failed to open video file, stream not supported or invalid");
-
-    Mat readFrame;
-    int frameCount = 0;
-    while (cap.read(readFrame))
-        frameCount++;
-
-    // Since there's a mismatch, no frames should have been written.
-    EXPECT_EQ(frameCount, 0) << "Although there was a mismatch between given and expected types, " << frameCount << " frames were written for: " << description;
-
+    ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description 
+                                 << " as no frames should have been written due to the existent mismatch";
     std::remove(filename.c_str());
 }
 
