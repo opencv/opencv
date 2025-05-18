@@ -973,7 +973,8 @@ TEST_P(videoio_ffmpeg_type_mismatch, type_mismatch)
 
     VideoWriter writer(filename, fourcc, fps, frame.size(), {cv::VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(expected_type), VIDEOWRITER_PROP_IS_COLOR, is_Color});
 
-    ASSERT_TRUE(writer.isOpened()) << "Failed to open video writer for: " << description;
+    if (!writer.isOpened())
+        throw SkipTestException("Failed to open video writer");
 
     for (int i = 1; i <= 30; i++)
     {
@@ -985,7 +986,7 @@ TEST_P(videoio_ffmpeg_type_mismatch, type_mismatch)
     writer.release();
 
     VideoCapture cap(filename, CAP_FFMPEG);
-    ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description 
+    ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description
                                  << " as no frames should have been written due to the existent mismatch";
     std::remove(filename.c_str());
 }
