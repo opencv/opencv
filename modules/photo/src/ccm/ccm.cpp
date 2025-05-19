@@ -304,19 +304,19 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool is
     }
 
     double scale;
-    int depth = img.depth();
-    switch (depth) {
-        case CV_8U:
+    int type = img.type();
+    switch (type) {
+        case CV_8UC3:
             scale = 1.0 / 255.0;
             break;
-        case CV_16U:
+        case CV_16UC3:
             scale = 1.0 / 65535.0;
             break;
-        case CV_32F:
+        case CV_32FC3:
             scale = 1.0;  // Already in [0,1] range
             break;
         default:
-            throw std::runtime_error("Unsupported image type for normalization");
+            CV_Error( cv::Error::StsUnsupportedFormat, "8-bit, 16-bit unsigned or 32-bit float 3-channel input images are supported");
     }
 
     img.convertTo(normImg, CV_64F, scale);
@@ -329,22 +329,8 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool is
     }
     Mat imgCorrected = p->cs.fromLFunc(imgCcm, linearImg);
 
-    switch (depth) {
-        case CV_8U:
-        scale = 255.0;
-        break;
-        case CV_16U:
-        scale = 65535.0;
-        break;
-        case CV_32F:
-        scale = 1.0;
-        break;
-        default:
-        throw std::runtime_error("Unsupported image type for normalization");
-    }
-
-    imgCorrected *= scale;
-    imgCorrected.convertTo(imgCorrected, depth);
+    imgCorrected *= 1.0/scale;
+    imgCorrected.convertTo(imgCorrected, type);
 
     if (p->rgb)
         cvtColor(imgCorrected, imgCorrected, COLOR_RGB2BGR);

@@ -293,8 +293,13 @@ public:
     CV_WRAP Mat getWeights() const;
 
     /** @brief Applies color correction to the input image using a fitted color correction matrix.
-        @param src the input image.
-        @param dst the output array.
+     *
+     * The conventional ranges for R, G, and B channel values are:
+     -   0 to 255 for CV_8U images
+     -   0 to 65535 for CV_16U images
+     -   0 to 1 for CV_32F images
+        @param src Input 8-bit, 16-bit unsigned or 32-bit float 3-channel image..
+        @param dst Output image of the same size and datatype as src.
         @param islinear default false.
     */
     CV_WRAP void correctImage(InputArray src, OutputArray dst, bool islinear = false);
