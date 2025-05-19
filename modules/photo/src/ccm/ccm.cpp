@@ -137,7 +137,7 @@ ColorCorrectionModel::Impl::Impl()
     , weightsCoeff(0)
     , maxCount(5000)
     , epsilon(1.e-4)
-    , rgb(false)
+    , rgb(true)
 {}
 
 Mat ColorCorrectionModel::Impl::prepare(const Mat& inp)
@@ -302,7 +302,24 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool is
     } else {
         img = src.getMat();
     }
-    img.convertTo(normImg, CV_64F, 1.0/255.0);
+
+    double scale;
+    int depth = img.depth();
+    switch (depth) {
+        case CV_8U:
+            scale = 1.0 / 255.0;
+            break;
+        case CV_16U:
+            scale = 1.0 / 65535.0;
+            break;
+        case CV_32F:
+            scale = 1.0;  // Already in [0,1] range
+            break;
+        default:
+            throw std::runtime_error("Unsupported image type for normalization");
+    }
+
+    img.convertTo(normImg, CV_64F, scale);
     Mat linearImg = (p->linear)->linearize(normImg);
     Mat ccm = p->ccm.reshape(0, p->shape / 3);
     Mat imgCcm = multiple(p->prepare(linearImg), ccm);
@@ -311,8 +328,24 @@ void ColorCorrectionModel::correctImage(InputArray src, OutputArray ref, bool is
         imgCcm.copyTo(ref);
     }
     Mat imgCorrected = p->cs.fromLFunc(imgCcm, linearImg);
-    imgCorrected *= 255.0;
-    imgCorrected.convertTo(imgCorrected, CV_8UC3);
+
+    switch (depth) {
+        case CV_8U:
+        scale = 255.0;
+        break;
+        case CV_16U:
+        scale = 65535.0;
+        break;
+        case CV_32F:
+        scale = 1.0;
+        break;
+        default:
+        throw std::runtime_error("Unsupported image type for normalization");
+    }
+
+    imgCorrected *= scale;
+    imgCorrected.convertTo(imgCorrected, depth);
+
     if (p->rgb)
         cvtColor(imgCorrected, imgCorrected, COLOR_RGB2BGR);
     imgCorrected.copyTo(ref);

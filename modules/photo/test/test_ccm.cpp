@@ -256,7 +256,6 @@ TEST(Photo_ColorCorrection, correct_image)
     // compute CCM
     cv::ccm::ColorCorrectionModel model(chartsRGB.col(1).clone().reshape(3, chartsRGB.rows/3) / 255., cv::ccm::COLORCHECKER_MACBETH);
     Mat colorCorrectionMat = model.compute();
-    model.setRGB(true);
 
     // compute calibrate image
     Mat calibratedImage;

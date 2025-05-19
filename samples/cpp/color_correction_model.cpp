@@ -212,7 +212,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    model.setRGB(true);
     Mat calibratedImage;
     model.correctImage(queryImage, calibratedImage);
 

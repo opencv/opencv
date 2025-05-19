@@ -258,7 +258,6 @@ class photo_test(NewOpenCVTests):
 
         np.savetxt('src_test_correct.txt',src.reshape(-1,3),fmt="%.2f")
         model = cv.ccm.ColorCorrectionModel(src, cv.ccm.COLORCHECKER_MACBETH)
-        model.setRGB(True)
         _ = model.compute()
 
         calibratedImage = np.zeros_like(img)
@@ -297,7 +296,6 @@ class photo_test(NewOpenCVTests):
         model = cv.ccm.ColorCorrectionModel(ref_src, cv.ccm.COLORCHECKER_MACBETH)
         _ = model.compute()
 
-        model.setRGB(True)
         calibratedImage = np.zeros_like(img)
         model.correctImage(img, calibratedImage)
 
