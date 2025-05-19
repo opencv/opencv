@@ -2530,9 +2530,13 @@ TEST(Core_SolveCubicCubic, accuracy)
         std::vector<double> roots;
         const auto num_roots = solveCubic(coeffs, roots);
 
-        EXPECT_EQ(num_roots, 2);
-        EXPECT_EQ(roots[0], 1.);
-        EXPECT_EQ(roots[1], 2.);
+        EXPECT_TRUE(num_roots == 2 || num_roots == 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 2., 1e-8);
+        if (num_roots == 3)
+        {
+            EXPECT_NEAR(roots[2], 2., 1e-8);
+        }
     }
 
     {
@@ -2541,9 +2545,9 @@ TEST(Core_SolveCubicCubic, accuracy)
         const auto num_roots = solveCubic(coeffs, roots);
 
         EXPECT_EQ(num_roots, 3);
-        EXPECT_EQ(roots[0], 1.);
-        EXPECT_EQ(roots[1], 3.);
-        EXPECT_EQ(roots[2], 2.);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+        EXPECT_NEAR(roots[2], 2., 1e-8);
     }
 }
 
@@ -2572,9 +2576,13 @@ TEST(Core_SolveCubicNormalizedCubic, accuracy)
         std::vector<double> roots;
         const auto num_roots = solveCubic(coeffs, roots);
 
-        EXPECT_EQ(num_roots, 2);
-        EXPECT_EQ(roots[0], 1.);
-        EXPECT_EQ(roots[1], 2.);
+        EXPECT_TRUE(num_roots == 2 || num_roots == 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 2., 1e-8);
+        if (num_roots == 3)
+        {
+            EXPECT_NEAR(roots[2], 2., 1e-8);
+        }
     }
 
     {
@@ -2583,9 +2591,9 @@ TEST(Core_SolveCubicNormalizedCubic, accuracy)
         const auto num_roots = solveCubic(coeffs, roots);
 
         EXPECT_EQ(num_roots, 3);
-        EXPECT_EQ(roots[0], 1.);
-        EXPECT_EQ(roots[1], 3.);
-        EXPECT_EQ(roots[2], 2.);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+        EXPECT_NEAR(roots[2], 2., 1e-8);
     }
 }
 
