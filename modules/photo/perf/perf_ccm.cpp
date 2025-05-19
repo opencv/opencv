@@ -27,7 +27,6 @@ PERF_TEST(CV_ccm_perf_480_640, correctImage)
     model.compute();
     Mat img(480, 640, CV_8UC3);
     randu(img, 0, 255);
-    img.convertTo(img, CV_64F, 1.0/255.0);
 
     Mat correctedImage;
     TEST_CYCLE() { model.correctImage(img, correctedImage); }
@@ -50,7 +49,6 @@ PERF_TEST(CV_ccm_perf_720_1280, correctImage)
     model.compute();
     Mat img(720, 1280, CV_8UC3);
     randu(img, 0, 255);
-    img.convertTo(img, CV_64F, 1.0/255.0);
 
     Mat correctedImage;
     TEST_CYCLE() { model.correctImage(img, correctedImage); }
@@ -73,7 +71,6 @@ PERF_TEST(CV_ccm_perf_1080_1920, correctImage)
     model.compute();
     Mat img(1080, 1920, CV_8UC3);
     randu(img, 0, 255);
-    img.convertTo(img, CV_64F, 1.0/255.0);
 
     Mat correctedImage;
     TEST_CYCLE() { model.correctImage(img, correctedImage); }
@@ -96,7 +93,6 @@ PERF_TEST(CV_ccm_perf_2160_3840, correctImage)
     model.compute();
     Mat img(2160, 3840, CV_8UC3);
     randu(img, 0, 255);
-    img.convertTo(img, CV_64F, 1.0/255.0);
 
     Mat correctedImage;
     TEST_CYCLE() { model.correctImage(img, correctedImage); }
