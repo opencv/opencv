@@ -591,12 +591,16 @@ class JavaWrapperGenerator(object):
             f.write(buf)
         updated_files += 1
 
-    def gen(self, srcfiles, module, output_path, output_jni_path, output_java_path, common_headers):
+    def gen(self, srcfiles, module, output_path, output_jni_path, output_java_path, common_headers,
+            preprocessor_definitions=None):
         self.clear()
         self.module = module
         self.Module = module.capitalize()
         # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
-        parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
+        parser = hdr_parser.CppHeaderParser(
+            generate_umat_decls=False,
+            preprocessor_definitions=preprocessor_definitions
+        )
 
         self.add_class( ['class cv.' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
@@ -1444,6 +1448,7 @@ if __name__ == "__main__":
     gen_dict_files = []
 
     print("JAVA: Processing OpenCV modules: %d" % len(config['modules']))
+    preprocessor_definitions = config.get('preprocessor_definitions', None)
     for e in config['modules']:
         (module, module_location) = (e['name'], os.path.join(ROOT_DIR, e['location']))
         logging.info("\n=== MODULE: %s (%s) ===\n" % (module, module_location))
@@ -1508,7 +1513,8 @@ if __name__ == "__main__":
             copy_java_files(java_test_files_dir, java_test_base_path, 'org/opencv/test/' + module)
 
         if len(srcfiles) > 0:
-            generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers)
+            generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers,
+                          preprocessor_definitions)
         else:
             logging.info("No generated code for module: %s", module)
     generator.finalize(jni_path)
