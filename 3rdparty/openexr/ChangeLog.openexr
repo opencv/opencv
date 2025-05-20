@@ -45,7 +45,7 @@ Version 1.7.0:
 	  number of compiler warnings on Windows. Thanks to Ger Hobbelt for his
 	  contributions to CreateDLL.
 	  (Ji Hun Yu)
-	* Added new atttribute types:
+	* Added new attribute types:
 	  M33dAttribute   3x3 double-precision matrix
 	  M44dAttribute   4x4 double-precision matrix
 	  V2d             2D double-precision vector

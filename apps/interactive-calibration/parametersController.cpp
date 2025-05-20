@@ -37,8 +37,8 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
         return true;
     }
 
-    if (readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLength)) {
-        std::cout << "DEPRECATION: Parameter 'charuco_square_lenght' has been deprecated (typo). Use 'charuco_square_length' instead." << std::endl;
+    if (readFromNode(reader["charuco_square_length"], mCapParams.charucoSquareLength)) {
+        std::cout << "DEPRECATION: Parameter 'charuco_square_length' has been deprecated (typo). Use 'charuco_square_length' instead." << std::endl;
     }
     readFromNode(reader["charuco_square_length"], mCapParams.charucoSquareLength);
     readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);

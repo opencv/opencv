@@ -277,7 +277,7 @@ bool Kernel::runTask(bool sync, const Queue& q) { OCL_NOT_AVAILABLE(); }
 int64 Kernel::runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q) { OCL_NOT_AVAILABLE(); }
 
 size_t Kernel::workGroupSize() const { OCL_NOT_AVAILABLE(); }
-size_t Kernel::preferedWorkGroupSizeMultiple() const { OCL_NOT_AVAILABLE(); }
+size_t Kernel::preferredWorkGroupSizeMultiple() const { OCL_NOT_AVAILABLE(); }
 bool Kernel::compileWorkGroupSize(size_t wsz[]) const { OCL_NOT_AVAILABLE(); }
 size_t Kernel::localMemSize() const { OCL_NOT_AVAILABLE(); }
 
