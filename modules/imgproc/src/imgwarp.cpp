@@ -60,7 +60,7 @@ using namespace cv;
 namespace cv
 {
 
-#if defined (HAVE_IPP) && (!IPP_DISABLE_WARPAFFINE || !IPP_DISABLE_WARPPERSPECTIVE || !IPP_DISABLE_REMAP)
+#if defined (HAVE_IPP) && (!IPP_DISABLE_WARPPERSPECTIVE || !IPP_DISABLE_REMAP)
 typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
 
 template <int channels, typename Type>
@@ -2207,62 +2207,6 @@ private:
     const double *M;
 };
 
-
-#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPAFFINE
-typedef IppStatus (CV_STDCALL* ippiWarpAffineBackFunc)(const void*, IppiSize, int, IppiRect, void *, int, IppiRect, double [2][3], int);
-
-class IPPWarpAffineInvoker :
-    public ParallelLoopBody
-{
-public:
-    IPPWarpAffineInvoker(Mat &_src, Mat &_dst, double (&_coeffs)[2][3], int &_interpolation, int _borderType,
-                         const Scalar &_borderValue, ippiWarpAffineBackFunc _func, bool *_ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), mode(_interpolation), coeffs(_coeffs),
-        borderType(_borderType), borderValue(_borderValue), func(_func), ok(_ok)
-    {
-        *ok = true;
-    }
-
-    virtual void operator() (const Range& range) const CV_OVERRIDE
-    {
-        IppiSize srcsize = { src.cols, src.rows };
-        IppiRect srcroi = { 0, 0, src.cols, src.rows };
-        IppiRect dstroi = { 0, range.start, dst.cols, range.end - range.start };
-        int cnn = src.channels();
-        if( borderType == BORDER_CONSTANT )
-        {
-            IppiSize setSize = { dst.cols, range.end - range.start };
-            void *dataPointer = dst.ptr(range.start);
-            if( !IPPSet( borderValue, dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
-            {
-                *ok = false;
-                return;
-            }
-        }
-
-        // Aug 2013: problem in IPP 7.1, 8.0 : sometimes function return ippStsCoeffErr
-        IppStatus status = CV_INSTRUMENT_FUN_IPP(func,( src.ptr(), srcsize, (int)src.step[0], srcroi, dst.ptr(),
-                                (int)dst.step[0], dstroi, coeffs, mode ));
-        if( status < 0)
-            *ok = false;
-        else
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-        }
-    }
-private:
-    Mat &src;
-    Mat &dst;
-    int mode;
-    double (&coeffs)[2][3];
-    int borderType;
-    Scalar borderValue;
-    ippiWarpAffineBackFunc func;
-    bool *ok;
-    const IPPWarpAffineInvoker& operator= (const IPPWarpAffineInvoker&);
-};
-#endif
-
 #ifdef HAVE_OPENCL
 
 enum { OCL_OP_PERSPECTIVE = 1, OCL_OP_AFFINE = 0 };
@@ -2603,8 +2547,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-    CV_IPP_RUN_FAST(ipp_warpAffine(src, dst, interpolation, borderType, borderValue, matM, flags));
-
     if( !(flags & WARP_INVERSE_MAP) )
     {
         double D = M[0]*M[4] - M[1]*M[3];
@@ -2616,70 +2558,6 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         double b2 = -M[3]*M[2] - M[4]*M[5];
         M[2] = b1; M[5] = b2;
     }
-
-#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPAFFINE
-    CV_IPP_CHECK()
-    {
-        int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-        if( ( depth == CV_8U || depth == CV_16U || depth == CV_32F ) &&
-           ( cn == 1 || cn == 3 || cn == 4 ) &&
-           ( interpolation == INTER_NEAREST || interpolation == INTER_LINEAR || interpolation == INTER_CUBIC) &&
-           ( borderType == cv::BORDER_TRANSPARENT || borderType == cv::BORDER_CONSTANT) )
-        {
-            ippiWarpAffineBackFunc ippFunc = 0;
-            if ((flags & WARP_INVERSE_MAP) != 0)
-            {
-                ippFunc =
-                type == CV_8UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C1R :
-                type == CV_8UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C3R :
-                type == CV_8UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_8u_C4R :
-                type == CV_16UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C1R :
-                type == CV_16UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C3R :
-                type == CV_16UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_16u_C4R :
-                type == CV_32FC1 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C1R :
-                type == CV_32FC3 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C3R :
-                type == CV_32FC4 ? (ippiWarpAffineBackFunc)ippiWarpAffineBack_32f_C4R :
-                0;
-            }
-            else
-            {
-                ippFunc =
-                type == CV_8UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffine_8u_C1R :
-                type == CV_8UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffine_8u_C3R :
-                type == CV_8UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffine_8u_C4R :
-                type == CV_16UC1 ? (ippiWarpAffineBackFunc)ippiWarpAffine_16u_C1R :
-                type == CV_16UC3 ? (ippiWarpAffineBackFunc)ippiWarpAffine_16u_C3R :
-                type == CV_16UC4 ? (ippiWarpAffineBackFunc)ippiWarpAffine_16u_C4R :
-                type == CV_32FC1 ? (ippiWarpAffineBackFunc)ippiWarpAffine_32f_C1R :
-                type == CV_32FC3 ? (ippiWarpAffineBackFunc)ippiWarpAffine_32f_C3R :
-                type == CV_32FC4 ? (ippiWarpAffineBackFunc)ippiWarpAffine_32f_C4R :
-                0;
-            }
-            int mode =
-            interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR :
-            interpolation == INTER_NEAREST ? IPPI_INTER_NN :
-            interpolation == INTER_CUBIC ? IPPI_INTER_CUBIC :
-            0;
-            CV_Assert(mode && ippFunc);
-
-            double coeffs[2][3];
-            for( int i = 0; i < 2; i++ )
-                for( int j = 0; j < 3; j++ )
-                    coeffs[i][j] = matM.at<double>(i, j);
-
-            bool ok;
-            Range range(0, dst.rows);
-            IPPWarpAffineInvoker invoker(src, dst, coeffs, mode, borderType, borderValue, ippFunc, &ok);
-            parallel_for_(range, invoker, dst.total()/(double)(1<<16));
-            if( ok )
-            {
-                CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-                return;
-            }
-            setIppErrorStatus();
-        }
-    }
-#endif
 
     hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                     M, interpolation, borderType, borderValue.val);
