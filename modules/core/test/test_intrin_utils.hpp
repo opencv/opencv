@@ -24,6 +24,11 @@ void test_hal_intrin_float16();
 
 //==================================================================================================
 
+#if defined (__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 template <typename R> struct Data
 {
     typedef typename VTraits<R>::lane_type LaneType;
@@ -2408,6 +2413,10 @@ void test_hal_intrin_float16()
         ;
 }
 #endif*/
+
+#if defined (__GNUC__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif //CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
