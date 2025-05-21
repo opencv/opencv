@@ -140,7 +140,7 @@ int calc_hist(const uchar* src_data, size_t src_step, int src_type, int src_widt
 
     // [TODO] support non-uniform
     // In case of CV_8U, it is already fast enough with lut
-    if (depth == CV_8U || !uniform) {
+    if ((depth != CV_16U && depth != CV_32F) || !uniform) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
