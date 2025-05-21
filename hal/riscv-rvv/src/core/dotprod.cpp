@@ -190,7 +190,7 @@ int dotprod(const uchar *a_data, size_t a_step, const uchar *b_data, size_t b_st
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    int elem_size1 = CV_ELEM_SIZE1(type);
+    size_t elem_size1 = static_cast<size_t>(CV_ELEM_SIZE1(type));
     bool a_continuous = (a_step == width * elem_size1 * cn);
     bool b_continuous = (b_step == width * elem_size1 * cn);
     size_t nplanes = 1;

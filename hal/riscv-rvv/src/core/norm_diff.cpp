@@ -1111,7 +1111,7 @@ int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size_t src2
         },
     };
 
-    int elem_size1 = CV_ELEM_SIZE1(type);
+    size_t elem_size1 = static_cast<size_t>(CV_ELEM_SIZE1(type));
     bool src_continuous = (src1_step == width * elem_size1 * cn || (src1_step != width * elem_size1 * cn && height == 1));
     src_continuous &= (src2_step == width * elem_size1 * cn || (src2_step != width * elem_size1 * cn && height == 1));
     bool mask_continuous = (mask_step == static_cast<size_t>(width));

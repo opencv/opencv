@@ -999,7 +999,7 @@ int norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
         },
     };
 
-    int elem_size1 = CV_ELEM_SIZE1(type);
+    size_t elem_size1 = static_cast<size_t>(CV_ELEM_SIZE1(type));
     bool src_continuous = (src_step == width * elem_size1 * cn || (src_step != width * elem_size1 * cn && height == 1));
     bool mask_continuous = (mask_step == static_cast<size_t>(width));
     size_t nplanes = 1;
