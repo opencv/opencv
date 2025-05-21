@@ -2435,7 +2435,7 @@ static void checkRoot(Mat& r, T re, T im)
 {
     for (int i = 0; i < r.cols*r.rows; i++)
     {
-        Vec<T, 2> v = *(Vec<T, 2>*)r.ptr(i);
+        Vec<T, 2>& v = *(Vec<T, 2>*)r.ptr(i);
         if (fabs(re - v[0]) < 1e-6 && fabs(im - v[1]) < 1e-6)
         {
             v[0] = std::numeric_limits<T>::quiet_NaN();
