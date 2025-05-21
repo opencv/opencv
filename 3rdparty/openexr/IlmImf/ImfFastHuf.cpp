@@ -92,7 +92,7 @@ FastHufDecoder::FastHufDecoder
 
     //
     // The 'offset' table is the position (in sorted order) of the first id
-    // of a given code length. Array is indexed by code length, like base.  
+    // of a given code lenght. Array is indexed by code length, like base.  
     //
 
     Int64 offset[MAX_CODE_LEN + 1];   

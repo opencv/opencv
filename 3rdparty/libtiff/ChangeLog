@@ -2662,7 +2662,7 @@
 
 2022-04-22  Even Rouault  <even.rouault@spatialys.com>
 
-	tif_lzw.c: fix potential out-of-bounds error when trying to read in the same tile/strip after an error has occurred (fixes #410)
+	tif_lzw.c: fix potential out-of-bounds error when trying to read in the same tile/strip after an error has occured (fixes #410)
 
 2022-04-06  Su_Laus  <sulau@freenet.de>
 
