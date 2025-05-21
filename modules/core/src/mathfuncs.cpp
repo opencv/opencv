@@ -1633,7 +1633,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (2 * a1 * a1 * a1 - 9 * a1 * a2 + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
-        double d = Qcubed - R * R;
+        double d = (a1 * a1 * a2 * a2 - 4 * a2 * a2 * a2 - 4 * a1 * a1 * a1 * a3 + 18 * a1 * a2 * a3 - 27 * a3 * a3) * (1./108);
 
         if( d > 0 )
         {
