@@ -98,7 +98,7 @@ static int copyToMasked_e64c4(const uchar *src_data, size_t src_step,
 using CopyToMaskedFunc = int (*)(const uchar*, size_t, const uchar*, size_t, uchar*, size_t, int, int);
 int copyToMasked(const uchar *src_data, size_t src_step, uchar *dst_data, size_t dst_step, int width, int height,
                  int type, const uchar *mask_data, size_t mask_step, int mask_type) {
-    int depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
+    int cn = CV_MAT_CN(type);
     int mdepth = CV_MAT_DEPTH(mask_type), mcn = CV_MAT_CN(mask_type);
 
     if (mcn > 1 || mdepth != CV_8U) {
@@ -121,7 +121,7 @@ int copyToMasked(const uchar *src_data, size_t src_step, uchar *dst_data, size_t
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-    int elem_size1 = CV_ELEM_SIZE1(type);
+    size_t elem_size1 = static_cast<size_t>(CV_ELEM_SIZE1(type));
     bool src_continuous = (src_step == width * elem_size1 * cn || (src_step != width * elem_size1 * cn && height == 1));
     bool dst_continuous = (dst_step == width * elem_size1 * cn || (dst_step != width * elem_size1 * cn && height == 1));
     bool mask_continuous = (mask_step == static_cast<size_t>(width));
