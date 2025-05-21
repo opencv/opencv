@@ -199,7 +199,7 @@ if(WITH_FASTCV)
       ocv_install_3rdparty_licenses(FastCV "${OpenCV_BINARY_DIR}/3rdparty/fastcv/LICENSE")
       add_library(fastcv STATIC IMPORTED)
       set_target_properties(fastcv PROPERTIES
-          IMPORTED_LINK_INTERFACE_LIBRARIES ""
+          IMPORTED_LINK_INTERFACE_LIBRARIES "dl"
           IMPORTED_LOCATION "${FastCV_LIB_PATH}/libfastcv.a"
       )
       if (NOT BUILD_SHARED_LIBS)
