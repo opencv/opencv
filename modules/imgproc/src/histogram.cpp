@@ -978,6 +978,11 @@ void cv::calcHist( const Mat* images, int nimages, const int* channels,
             && _mask.empty() && images[0].dims <= 2 && ranges && ranges[0],
         ipp_calchist(images[0], hist, histSize[0], ranges, uniform, accumulate));
 
+    if (nimages == 1 && dims == 1 && channels && channels[0] == 0 && _mask.empty() && images[0].dims <= 2 && ranges && ranges[0]) {
+        CALL_HAL(calcHist, cv_hal_calcHist, images[0].data, images[0].step, images[0].type(), images[0].cols, images[0].rows,
+                                            hist.ptr<float>(), histSize[0], ranges, uniform, accumulate);
+    }
+
     Mat ihist = hist;
     ihist.flags = (ihist.flags & ~CV_MAT_TYPE_MASK)|CV_32S;
 

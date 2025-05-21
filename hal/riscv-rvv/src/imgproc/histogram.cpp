@@ -3,8 +3,12 @@
 // of this distribution and at http://opencv.org/license.html.
 
 // Copyright (C) 2025, Institute of Software, Chinese Academy of Sciences.
+// Copyright (C) 2025, SpaceMIT Inc., all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "rvv_hal.hpp"
+#include <cstring>
+#include <vector>
 
 namespace cv { namespace rvv_hal { namespace imgproc {
 
@@ -97,6 +101,178 @@ int equalize_hist(const uchar* src_data, size_t src_step, uchar* dst_data, size_
         lut[i] = std::min(std::max(static_cast<int>(std::round(sum * scale)), 0), HIST_SZ - 1);
     }
     cv::parallel_for_(Range(0, height), HistogramInvoker({lut_invoke}, src_data, src_step, dst_data, dst_step, width, reinterpret_cast<const uchar*>(lut)), static_cast<double>(width * height) / (1 << 15));
+
+    return CV_HAL_ERROR_OK;
+}
+
+// ############ calc_hist ############
+
+namespace {
+
+constexpr int MAX_VLEN = 1024;
+constexpr int MAX_E8M1 = MAX_VLEN / 8;
+
+inline void cvt_32s32f(const int* ihist, float* fhist, int hist_size) {
+    int vl;
+    for (int i = 0; i < hist_size; i += vl) {
+        vl = __riscv_vsetvl_e32m8(hist_size - i);
+        auto iv = __riscv_vle32_v_i32m8(ihist + i, vl);
+        __riscv_vse32(fhist + i, __riscv_vfcvt_f(iv, vl), vl);
+    }
+}
+
+inline void cvt32s32f_add32f(const int* ihist, float* fhist, int hist_size) {
+    int vl;
+    for (int i = 0; i < hist_size; i += vl) {
+        vl = __riscv_vsetvl_e32m8(hist_size - i);
+        auto iv = __riscv_vle32_v_i32m8(ihist + i, vl);
+        auto fv = __riscv_vle32_v_f32m8(fhist + i, vl);
+        auto s = __riscv_vfadd(__riscv_vfcvt_f(iv, vl), fv, vl);
+        __riscv_vse32(fhist + i, s, vl);
+    }
+}
+
+}
+
+int calc_hist(const uchar* src_data, size_t src_step, int src_type, int src_width, int src_height,
+              float* hist_data, int hist_size, const float** ranges, bool uniform, bool accumulate) {
+    int depth = CV_MAT_DEPTH(src_type), cn = CV_MAT_CN(src_type);
+
+    // [TODO] support non-uniform
+    // In case of CV_8U, it is already fast enough with lut
+    if ((depth != CV_16U && depth != CV_32F) || !uniform) {
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    }
+
+    std::vector<int> buf_ihist(hist_size+1, 0);
+    int* ihist = buf_ihist.data();
+
+    double low = ranges[0][0], high = ranges[0][1];
+    double t = hist_size / (high - low);
+    double a = t, b = -t * low;
+    double v0_lo = low, v0_hi = high;
+
+    int sz = hist_size, d0 = cn, step0 = (int)(src_step / CV_ELEM_SIZE1(src_type));
+    int buf_idx[MAX_E8M1];
+
+    if (depth == CV_16U) {
+        const ushort* p0 = (const ushort*)src_data;
+        if (d0 == 1) {
+            while (src_height--) {
+                int vl;
+                for (int x = 0; x < src_width; x += vl) {
+                    vl = __riscv_vsetvl_e16m2(src_width - x);
+
+                    auto v = __riscv_vfcvt_f(__riscv_vwcvtu_x(__riscv_vwcvtu_x(__riscv_vle16_v_u16m2(p0 + x, vl), vl), vl), vl);
+
+                    auto m0 = __riscv_vmflt(v, v0_lo, vl);
+                    auto m1 = __riscv_vmfge(v, v0_hi, vl);
+                    auto m = __riscv_vmor(m0, m1, vl);
+
+                    auto fidx = __riscv_vfadd(__riscv_vfmul(v, a, vl), b, vl);
+                    auto idx = __riscv_vfncvt_x(__riscv_vfsub(fidx, 0.5f - 1e-6, vl), vl);
+                    idx = __riscv_vmerge(idx, 0, __riscv_vmslt(idx, 0, vl), vl);
+                    idx = __riscv_vmerge(idx, sz-1, __riscv_vmsgt(idx, sz-1, vl), vl);
+                    idx = __riscv_vmerge(idx, -1, m, vl);
+                    __riscv_vse32(buf_idx, idx, vl);
+
+                    for (int i = 0; i < vl; i++) {
+                        int _idx = buf_idx[i] + 1;
+                        ihist[_idx]++;
+                    }
+                }
+                p0 += step0;
+            }
+        } else {
+            while (src_height--) {
+                int vl;
+                for (int x = 0; x < src_width; x += vl) {
+                    vl = __riscv_vsetvl_e16m2(src_width - x);
+
+                    auto v = __riscv_vfcvt_f(__riscv_vwcvtu_x(__riscv_vwcvtu_x(__riscv_vlse16_v_u16m2(p0 + x*d0, sizeof(ushort)*d0, vl), vl), vl), vl);
+
+                    auto m0 = __riscv_vmflt(v, v0_lo, vl);
+                    auto m1 = __riscv_vmfge(v, v0_hi, vl);
+                    auto m = __riscv_vmor(m0, m1, vl);
+
+                    auto fidx = __riscv_vfadd(__riscv_vfmul(v, a, vl), b, vl);
+                    auto idx = __riscv_vfncvt_x(__riscv_vfsub(fidx, 0.5f - 1e-6, vl), vl);
+                    idx = __riscv_vmerge(idx, 0, __riscv_vmslt(idx, 0, vl), vl);
+                    idx = __riscv_vmerge(idx, sz-1, __riscv_vmsgt(idx, sz-1, vl), vl);
+                    idx = __riscv_vmerge(idx, -1, m, vl);
+                    __riscv_vse32(buf_idx, idx, vl);
+
+                    for (int i = 0; i < vl; i++) {
+                        int _idx = buf_idx[i] + 1;
+                        ihist[_idx]++;
+                    }
+                }
+                p0 += step0;
+            }
+        }
+    } else if (depth == CV_32F) {
+        const float* p0 = (const float*)src_data;
+        if (d0 == 1) {
+            while (src_height--) {
+                int vl;
+                for (int x = 0; x < src_width; x += vl) {
+                    vl = __riscv_vsetvl_e32m4(src_width - x);
+
+                    auto v = __riscv_vfwcvt_f(__riscv_vle32_v_f32m4(p0 + x, vl), vl);
+
+                    auto m0 = __riscv_vmflt(v, v0_lo, vl);
+                    auto m1 = __riscv_vmfge(v, v0_hi, vl);
+                    auto m = __riscv_vmor(m0, m1, vl);
+
+                    auto fidx = __riscv_vfadd(__riscv_vfmul(v, a, vl), b, vl);
+                    auto idx = __riscv_vfncvt_x(__riscv_vfsub(fidx, 0.5f - 1e-6, vl), vl);
+                    idx = __riscv_vmerge(idx, 0, __riscv_vmslt(idx, 0, vl), vl);
+                    idx = __riscv_vmerge(idx, sz-1, __riscv_vmsgt(idx, sz-1, vl), vl);
+                    idx = __riscv_vmerge(idx, -1, m, vl);
+                    __riscv_vse32(buf_idx, idx, vl);
+
+                    for (int i = 0; i < vl; i++) {
+                        int _idx = buf_idx[i] + 1;
+                        ihist[_idx]++;
+                    }
+                }
+                p0 += step0;
+            }
+        } else {
+            while (src_height--) {
+                int vl;
+                for (int x = 0; x < src_width; x += vl) {
+                    vl = __riscv_vsetvl_e32m4(src_width - x);
+
+                    auto v = __riscv_vfwcvt_f(__riscv_vlse32_v_f32m4(p0 + x*d0, sizeof(float)*d0, vl), vl);
+
+                    auto m0 = __riscv_vmflt(v, v0_lo, vl);
+                    auto m1 = __riscv_vmfge(v, v0_hi, vl);
+                    auto m = __riscv_vmor(m0, m1, vl);
+
+                    auto fidx = __riscv_vfadd(__riscv_vfmul(v, a, vl), b, vl);
+                    auto idx = __riscv_vfncvt_x(__riscv_vfsub(fidx, 0.5f - 1e-6, vl), vl);
+                    idx = __riscv_vmerge(idx, 0, __riscv_vmslt(idx, 0, vl), vl);
+                    idx = __riscv_vmerge(idx, sz-1, __riscv_vmsgt(idx, sz-1, vl), vl);
+                    idx = __riscv_vmerge(idx, -1, m, vl);
+                    __riscv_vse32(buf_idx, idx, vl);
+
+                    for (int i = 0; i < vl; i++) {
+                        int _idx = buf_idx[i] + 1;
+                        ihist[_idx]++;
+                    }
+                }
+                p0 += step0;
+            }
+        }
+    }
+
+    if (accumulate) {
+        cvt32s32f_add32f(ihist+1, hist_data, hist_size);
+    } else {
+        std::memset(hist_data, 0, sizeof(float)*hist_size);
+        cvt_32s32f(ihist+1, hist_data, hist_size);
+    }
 
     return CV_HAL_ERROR_OK;
 }

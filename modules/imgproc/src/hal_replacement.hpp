@@ -1395,6 +1395,26 @@ inline int hal_ni_polygonMoments(const uchar* src_data, size_t src_size, int src
 #define cv_hal_polygonMoments hal_ni_polygonMoments
 //! @endcond
 
+/**
+   @brief Calculates a histogram of a set of arrays
+   @param src_data Source imgage data
+   @param src_step Source image step
+   @param src_type Source image type
+   @param src_width Source image width
+   @param src_height Source image height
+   @param hist_data Histogram data
+   @param hist_size Histogram size
+   @param ranges Array of dims arrays of the histogram bin boundaries
+   @param uniform Flag indicating whether the histogram is uniform or not
+   @param accumulate Accumulation flag
+*/
+inline int hal_ni_calcHist(const uchar* src_data, size_t src_step, int src_type, int src_width, int src_height, float* hist_data, int hist_size, const float** ranges, bool uniform, bool accumulate)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_calcHist hal_ni_calcHist
+//! @endcond
+
 //! @}
 
 #if defined(__clang__)

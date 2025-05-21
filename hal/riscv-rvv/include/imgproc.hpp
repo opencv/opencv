@@ -215,6 +215,11 @@ int equalize_hist(const uchar* src_data, size_t src_step, uchar* dst_data, size_
 #undef cv_hal_equalize_hist
 #define cv_hal_equalize_hist cv::rvv_hal::imgproc::equalize_hist
 
+int calc_hist(const uchar* src_data, size_t src_step, int src_type, int src_width, int src_height, float* hist_data, int hist_size, const float** ranges, bool uniform, bool accumulate);
+
+#undef cv_hal_calcHist
+#define cv_hal_calcHist cv::rvv_hal::imgproc::calc_hist
+
 /* ############ resize ############ */
 
 int resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, double inv_scale_x, double inv_scale_y, int interpolation);
