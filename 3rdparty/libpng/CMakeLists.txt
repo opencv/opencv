@@ -16,7 +16,7 @@ else()
   # libm is not available or not needed.
 endif()
 
-ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}" ${ZLIB_INCLUDE_DIRS})
+ocv_include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 file(GLOB lib_srcs *.c)
 file(GLOB lib_hdrs *.h)
@@ -216,7 +216,7 @@ if(MSVC)
 endif(MSVC)
 
 add_library(${PNG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${lib_srcs} ${lib_hdrs})
-target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARIES})
+target_link_libraries(${PNG_LIBRARY} ${ZLIB_LIBRARY})
 
 ocv_warnings_disable(CMAKE_C_FLAGS -Wundef -Wcast-align -Wimplicit-fallthrough -Wunused-parameter -Wsign-compare
     -Wmaybe-uninitialized
