@@ -116,7 +116,8 @@ int copyToMasked(const uchar *src_data, size_t src_step, uchar *dst_data, size_t
         0, 0, 0, 0,
         copyToMasked_e64c4
     };
-    CopyToMaskedFunc func = tab[CV_ELEM_SIZE(type)];
+    size_t elem_size = CV_ELEM_SIZE(type);
+    CopyToMaskedFunc func = elem_size <= 32 ? tab[elem_size] : nullptr;
     if (func == nullptr) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }

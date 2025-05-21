@@ -201,7 +201,7 @@ int transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data, size_t 
         0, 0, 0, 0,
         0
     };
-    Transpose2dFunc func = tab[element_size];
+    Transpose2dFunc func = element_size <= 32 ? tab[element_size] : nullptr;
     if (!func) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
