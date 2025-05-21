@@ -256,7 +256,7 @@ public:
 
     @param filename The input file name
     @param headerLineCount The number of lines in the beginning to skip; besides the header, the
-        function also skips empty lines and lines staring with `#`
+        function also skips empty lines and lines starting with `#`
     @param responseStartIdx Index of the first output variable. If -1, the function considers the
         last variable as the response
     @param responseEndIdx Index of the last output variable + 1. If -1, then there is single

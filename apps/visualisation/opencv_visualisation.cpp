@@ -113,7 +113,7 @@ int main( int argc, const char** argv )
     int timing = 1;
 
     // Value for cols of storing elements
-    int cols_prefered = 5;
+    int cols_preferred = 5;
 
     // Open the XML model
     FileStorage fs;
@@ -218,7 +218,7 @@ int main( int argc, const char** argv )
         for(int sid = 0; sid < (int)stage_features.size(); sid ++){
             if(draw_planes){
                 int features_nmbr = (int)stage_features[sid].size();
-                int cols = cols_prefered;
+                int cols = cols_preferred;
                 int rows = features_nmbr / cols;
                 if( (features_nmbr % cols) > 0){
                     rows++;
@@ -257,7 +257,7 @@ int main( int argc, const char** argv )
                 result_video.write(temp_window);
                 // Copy the feature image if needed
                 if(draw_planes){
-                    single_feature.copyTo(image_plane(Rect(0 + (fid%cols_prefered)*single_feature.cols, 0 + (fid/cols_prefered) * single_feature.rows, single_feature.cols, single_feature.rows)));
+                    single_feature.copyTo(image_plane(Rect(0 + (fid%cols_preferred)*single_feature.cols, 0 + (fid/cols_preferred) * single_feature.rows, single_feature.cols, single_feature.rows)));
                 }
                 putText(temp_metadata, meta1.str(), Point(15,15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
                 putText(temp_metadata, meta2.str(), Point(15,40), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
@@ -291,7 +291,7 @@ int main( int argc, const char** argv )
         for(int sid = 0; sid < (int)stage_features.size(); sid ++){
             if(draw_planes){
                 int features_nmbr = (int)stage_features[sid].size();
-                int cols = cols_prefered;
+                int cols = cols_preferred;
                 int rows = features_nmbr / cols;
                 if( (features_nmbr % cols) > 0){
                     rows++;
@@ -353,7 +353,7 @@ int main( int argc, const char** argv )
                     // Bottom right
                     rectangle(single_feature, Rect(resized_inner.x + 2*resized_inner.width, resized_inner.y + 2*resized_inner.height, resized_inner.width, resized_inner.height), Scalar(255), 1);
 
-                    single_feature.copyTo(image_plane(Rect(0 + (fid%cols_prefered)*single_feature.cols, 0 + (fid/cols_prefered) * single_feature.rows, single_feature.cols, single_feature.rows)));
+                    single_feature.copyTo(image_plane(Rect(0 + (fid%cols_preferred)*single_feature.cols, 0 + (fid/cols_preferred) * single_feature.rows, single_feature.cols, single_feature.rows)));
                 }
 
                 putText(temp_metadata, meta1.str(), Point(15,15), FONT_HERSHEY_SIMPLEX, 0.5, Scalar(255));
