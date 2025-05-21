@@ -2004,8 +2004,8 @@ The function solveCubic finds the real roots of a cubic equation:
 
 The roots are stored in the roots array.
 @param coeffs equation coefficients, an array of 3 or 4 elements.
-@param roots output array of real roots that has 1 or 3 elements.
-@return number of real roots. It can be 0, 1 or 2.
+@param roots output array of real roots that has 0, 1, 2 or 3 elements.
+@return number of real roots. It can be -1 (all real numbers), 0, 1, 2 or 3.
 */
 CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 
