@@ -2048,6 +2048,46 @@ double cv::compareHist( InputArray _H1, InputArray _H2, int method )
 
         if( (method == CV_COMP_CHISQR) || (method == CV_COMP_CHISQR_ALT))
         {
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+            v_float64 v_eps = vx_setall_f64(DBL_EPSILON);
+            v_float64 v_one = vx_setall_f64(1.f);
+            v_float64 v_zero = vx_setzero_f64();
+            v_float64 v_res = vx_setzero_f64();
+            for ( ; j <= len - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
+            {
+                v_float32 v_h1 = vx_load(h1 + j), v_h2 = vx_load(h2 + j);
+                v_float64 v_h1_l = v_cvt_f64(v_h1), v_h1_h = v_cvt_f64_high(v_h1);
+                v_float64 v_h2_l = v_cvt_f64(v_h2), v_h2_h = v_cvt_f64_high(v_h2);
+
+                v_float64 v_a_l, v_a_h;
+                v_a_l = v_sub(v_h1_l, v_h2_l);
+                v_a_h = v_sub(v_h1_h, v_h2_h);
+
+                v_float64 v_b_l, v_b_h;
+                if (method == CV_COMP_CHISQR)
+                {
+                    v_b_l = v_h1_l;
+                    v_b_h = v_h1_h;
+                }
+                else
+                {
+                    v_b_l = v_add(v_h1_l, v_h2_l);
+                    v_b_h = v_add(v_h1_h, v_h2_h);
+                }
+
+                // low part
+                auto v_res_l = v_mul(v_mul(v_a_l, v_a_l), v_div(v_one, v_b_l));
+                auto mask = v_gt(v_abs(v_b_l), v_eps);
+                v_res_l = v_select(mask, v_res_l, v_zero);
+                v_res = v_add(v_res, v_res_l);
+                // high part
+                auto v_res_h = v_mul(v_mul(v_a_h, v_a_h), v_div(v_one, v_b_h));
+                mask = v_gt(v_abs(v_b_h), v_eps);
+                v_res_h = v_select(mask, v_res_h, v_zero);
+                v_res = v_add(v_res, v_res_h);
+            }
+            result += v_reduce_sum(v_res);
+#endif
             for( ; j < len; j++ )
             {
                 double a = h1[j] - h2[j];
