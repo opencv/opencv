@@ -540,7 +540,7 @@ public:
     int64 runProfiling(int dims, size_t globalsize[], size_t localsize[], const Queue& q=Queue());
 
     size_t workGroupSize() const;
-    size_t preferredWorkGroupSizeMultiple() const;
+    size_t preferedWorkGroupSizeMultiple() const;
     bool compileWorkGroupSize(size_t wsz[]) const;
     size_t localMemSize() const;
 

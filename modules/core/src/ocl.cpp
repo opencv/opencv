@@ -4031,7 +4031,7 @@ size_t Kernel::workGroupSize() const
     return status == CL_SUCCESS ? val : 0;
 }
 
-size_t Kernel::preferredWorkGroupSizeMultiple() const
+size_t Kernel::preferedWorkGroupSizeMultiple() const
 {
     if(!p || !p->handle)
         return 0;
