@@ -25,7 +25,7 @@ void test_hal_intrin_float16();
 //==================================================================================================
 
 #if defined (__GNUC__) && defined(__has_warning)
-    #if __has_warning("-Wmaybe-uninitialized") && __has_warning("-Wmaybe-uninitialized")
+    #if __has_warning("-Wmaybe-uninitialized")
         #define CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS
     #endif
 #endif
