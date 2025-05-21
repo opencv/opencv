@@ -1590,7 +1590,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     {
         if( a1 == 0 )
         {
-            if( a2 == 0 )
+            if( a2 == 0 ) // constant
                 n = a3 == 0 ? -1 : 0;
             else
             {
@@ -1624,6 +1624,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     }
     else
     {
+        // cubic equation
         a0 = 1./a0;
         a1 *= a0;
         a2 *= a0;
