@@ -18,7 +18,7 @@ How to use:
       Github: https://github.com/megvii-research/NAFNet
       PyTorch model: https://drive.google.com/file/d/14D4V4raNYIOhETfcuuLI3bGLB-OYIv6X/view
 
-      PyTorch model was converted to ONNX and then ONNX model was further quantized using block quantization from [opencv_zoo](https://github.com/opencv/opencv_zoo)
+      PyTorch model was converted to ONNX and then ONNX model was further quantized using block quantization from [opencv_zoo](https://github.com/opencv/opencv_zoo/blob/main/tools/quantize/block_quantize.py)
 
     Set environment variable OPENCV_DOWNLOAD_CACHE_DIR to point to the directory where models are downloaded. Also, point OPENCV_SAMPLES_DATA_PATH to opencv/samples/data.
 */
