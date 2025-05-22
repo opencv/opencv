@@ -17,8 +17,8 @@
 #warning "Operators might conflict with built-in functions on RISC-V platform"
 #endif
 
-#if defined(CV_VERSION) && CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 11
-#warning "Older versions of OpenCV (<4.11) already have Universal Intrinscs operators"
+#if defined(CV_VERSION) && CV_VERSION_MAJOR == 4 && CV_VERSION_MINOR < 9
+#warning "Older versions of OpenCV (<4.9) already have Universal Intrinscs operators"
 #endif
 
 
