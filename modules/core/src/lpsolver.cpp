@@ -299,7 +299,6 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
         min_var=INT_MAX;
         double min=DBL_MAX;
         int row_it=0;
-        MatIterator_<double> min_row_ptr=b.begin();
         for(MatIterator_<double> it=b.begin();it!=b.end();it+=b.cols,row_it++){
             double myite=0;
             //check constraints, select the tightest one, reinforcing Bland's rule
@@ -307,7 +306,6 @@ static int inner_simplex(Mat_<double>& c, Mat_<double>& b,double& v,vector<int>&
                 double val=it[b.cols-1]/myite;
                 if(val<min || (val==min && B[row_it]<min_var)){
                     min_var=B[row_it];
-                    min_row_ptr=it;
                     min=val;
                     l=row_it;
                 }

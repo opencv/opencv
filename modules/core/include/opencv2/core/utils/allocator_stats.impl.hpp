@@ -58,10 +58,10 @@ public:
     AllocatorStatistics() {}
     ~AllocatorStatistics() CV_OVERRIDE {}
 
-    uint64_t getCurrentUsage() const CV_OVERRIDE { return (uint64_t)curr.load(); }
-    uint64_t getTotalUsage() const CV_OVERRIDE { return (uint64_t)total.load(); }
-    uint64_t getNumberOfAllocations() const CV_OVERRIDE { return (uint64_t)total_allocs.load(); }
-    uint64_t getPeakUsage() const CV_OVERRIDE { return (uint64_t)peak.load(); }
+    uint64_t getCurrentUsage() const CV_OVERRIDE { return static_cast<uint64_t>(curr.load()); }
+    uint64_t getTotalUsage() const CV_OVERRIDE { return static_cast<uint64_t>(total.load()); }
+    uint64_t getNumberOfAllocations() const CV_OVERRIDE { return static_cast<uint64_t>(total_allocs.load()); }
+    uint64_t getPeakUsage() const CV_OVERRIDE { return static_cast<uint64_t>(peak.load()); }
 
     /** set peak usage = current usage */
     void resetPeakUsage() CV_OVERRIDE { peak.store(curr.load()); }
