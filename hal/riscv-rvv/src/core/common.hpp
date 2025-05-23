@@ -56,6 +56,18 @@ CV_HAL_RVV_COMMON_CUSTOM_INTRIN_ABSDIFF(vint16m8_t, vuint16m8_t, __riscv_vreinte
 CV_HAL_RVV_COMMON_CUSTOM_INTRIN_ABSDIFF(vint32m4_t, vuint32m4_t, __riscv_vreinterpret_u32m4, vsub, vmax, vmin)
 CV_HAL_RVV_COMMON_CUSTOM_INTRIN_ABSDIFF(vint32m8_t, vuint32m8_t, __riscv_vreinterpret_u32m8, vsub, vmax, vmin)
 
+// ############ reciprocal ############
+
+inline vfloat32m4_t __riscv_vfrec(const vfloat32m4_t &x, const int vl) {
+    auto rec = __riscv_vfrec7(x, vl);
+    auto cls = __riscv_vfclass(rec, vl);
+    auto m = __riscv_vmseq(__riscv_vand(cls, 0b10111000, vl), 0, vl);
+    auto two = __riscv_vfmv_v_f_f32m4(2.f, vl);
+    rec = __riscv_vfmul_mu(m, rec, __riscv_vfnmsac(two, x, rec, vl), rec, vl);
+    rec = __riscv_vfmul_mu(m, rec, __riscv_vfnmsac(two, x, rec, vl), rec, vl);
+    return rec;
+}
+
 // ############ atan ############
 
 // ref: mathfuncs_core.simd.hpp
