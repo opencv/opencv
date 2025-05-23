@@ -17,8 +17,6 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 #undef cv_hal_minMaxIdxMaskStep
 #define cv_hal_minMaxIdxMaskStep ipp_hal_minMaxIdxMaskStep
 
-#define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
-
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result);
 
