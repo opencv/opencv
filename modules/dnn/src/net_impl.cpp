@@ -1316,6 +1316,8 @@ void Net::Impl::updateLayersShapes()
 
 LayerPin Net::Impl::getLatestLayerPin(const std::vector<LayerPin>& pins) const
 {
+    if (pins.empty())
+        CV_Error(Error::StsBadArg, "Cannot get latest layer pin from empty vector of pins");
     return *std::max_element(pins.begin(), pins.end());
 }
 
