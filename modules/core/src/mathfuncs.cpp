@@ -1633,6 +1633,13 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
+        /*
+          Here we expand expression `Qcubed - R * R` for `d` variable
+          to reduce common terms `a1^6 / 729` and `-a1^4 * a2 / 81`
+          and thus decrease rounding error (in case of quite big coefficients).
+
+          And then we additionally group terms to further reduce rounding error.
+        */
         double d = (a1 * a1 * (a2 * a2 - 4 * a1 * a3) + 2 * a2 * (9 * a1 * a3 - 2 * a2 * a2) - 27 * a3 * a3) * (1./108);
 
         if( d > 0 )
