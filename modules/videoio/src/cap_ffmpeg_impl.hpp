@@ -2139,7 +2139,7 @@ struct CvVideoWriter_FFMPEG
     bool open( const char* filename, int fourcc,
                double fps, int width, int height, const VideoWriterParameters& params );
     void close();
-    bool writeFrame( const unsigned char* data, int step, int width, int height, int type, int origin );
+    bool writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin );
     bool writeHWFrame(cv::InputArray input);
     double getProperty(int propId) const;
     bool setProperty(int, double);
@@ -2512,10 +2512,10 @@ static int icv_av_write_frame_FFMPEG( AVFormatContext * oc, AVStream * video_st,
 }
 
 /// write a frame with FFMPEG
-bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int type, int origin )
+bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int width, int height, int cn, int origin )
 {
     if (!encode_video) {
-        CV_Assert(type == CV_8UC1 && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
+        CV_Assert(cn == 1 && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
         const bool set_key_frame = key_frame ? key_frame : idr_period ? frame_idx % idr_period == 0 : 1;
         bool ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, pts_index, b_frame_dts_delay, set_key_frame);
         frame_idx++;
@@ -2524,27 +2524,21 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
 
     // check parameters
     if (input_pix_fmt == AV_PIX_FMT_BGR24) {
-        if (type != CV_8UC3) {
-            CV_LOG_WARNING(NULL, "write frame skipped - expected frame with depth of CV_8UC3");
+        if (cn != 3) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected 3 channels but got " << cn);
             return false;
         }
     }
-    else if (input_pix_fmt == AV_PIX_FMT_GRAY8) {
-        if (type != CV_8UC1) {
-            CV_LOG_WARNING(NULL, "write frame skipped - expected frame with depth of CV_8UC1");
-            return false;
-        }
-    }
-    else if (input_pix_fmt == AV_PIX_FMT_GRAY16LE) {
-        if (type != CV_16UC1) {
-            CV_LOG_WARNING(NULL, "write frame skipped - expected frame with depth of CV_16UC1");
+    else if (input_pix_fmt == AV_PIX_FMT_GRAY8 || input_pix_fmt == AV_PIX_FMT_GRAY16LE) {
+        if (cn != 1) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected 1 channel but got " << cn);
             return false;
         }
     }
     else {
         CV_LOG_WARNING(NULL, "Input data does not match selected pixel format: "
                        << av_get_pix_fmt_name(input_pix_fmt)
-                       << ", only CV_8UC1, CV_8UC3, and CV_16UC1 are supported");
+                       << ", number of channels: " << cn);
         CV_Assert(false);
     }
 
@@ -2648,7 +2642,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         }
         hw_frame->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
-        // AVERROR(EAGAIN) means the encoder needs more input, not an error
+        // AVERROR(EAGAIN): continue sending input, not an error
         ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
         av_frame_free(&hw_frame);
     } else
@@ -2656,7 +2650,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     {
         picture->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, picture, frame_idx);
-        // AVERROR(EAGAIN) means the encoder needs more input, not an error
+        // AVERROR(EAGAIN): continue sending input, not an error
         ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
     }
 
@@ -3466,7 +3460,7 @@ void cvReleaseVideoWriter_FFMPEG( CvVideoWriter_FFMPEG** writer )
 
 int cvWriteFrame_FFMPEG( CvVideoWriter_FFMPEG* writer,
                          const unsigned char* data, int step,
-                         int width, int height, int type, int origin)
+                         int width, int height, int cn, int origin)
 {
-    return writer->writeFrame(data, step, width, height, type, origin);
+    return writer->writeFrame(data, step, width, height, cn, origin);
 }

@@ -953,64 +953,81 @@ inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestP
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
 
-typedef tuple<int /*inputType*/, int /*expectedType*/, bool /*isColor*/, string /*description*/> MismatchTestParams;
-typedef testing::TestWithParam< MismatchTestParams > videoio_ffmpeg_type_mismatch;
+typedef tuple<int /*inputType*/, int /*Depth*/, bool /*isColor*/, bool /*isValid*/, string /*description*/> ChannelMismatchTestParams;
+typedef testing::TestWithParam< ChannelMismatchTestParams > videoio_ffmpeg_channel_mismatch;
 
-TEST_P(videoio_ffmpeg_type_mismatch, type_mismatch)
+TEST_P(videoio_ffmpeg_channel_mismatch, basic)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
 
-    const string filename = "type_mismatch_video.mp4";
+    const string filename = "mismatch_video.mp4";
     int input_type = get<0>(GetParam());
-    int expected_type = get<1>(GetParam());
+    int depth = get<1>(GetParam());
     bool is_Color = get<2>(GetParam());
-    const string description = get<3>(GetParam());
+    bool is_valid = get<3>(GetParam());
+    const string description = get<4>(GetParam());
 
-    const double fps = 30.0;
+    const double fps = 15.0;
     const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
     const Mat frame(480, 640, input_type, Scalar::all(0));
 
-    VideoWriter writer(filename, fourcc, fps, frame.size(), {cv::VIDEOWRITER_PROP_DEPTH, CV_MAT_DEPTH(expected_type), VIDEOWRITER_PROP_IS_COLOR, is_Color});
+    VideoWriter writer(filename, fourcc, fps, frame.size(),
+                                {
+                                    cv::VIDEOWRITER_PROP_DEPTH, depth,
+                                    VIDEOWRITER_PROP_IS_COLOR, is_Color
+                                });
 
     if (!writer.isOpened())
         throw SkipTestException("Failed to open video writer");
 
-    for (int i = 1; i <= 30; i++)
+    for (int i = 1; i <= 15; i++)
     {
-        // There's a mismatch between the given and expected types. Writer
-        // should produce a warning communicating it to the user.
+        // In case of mismatch between input frame channels and
+        // expected depth/isColor configuration a warning  should be printed communicating it
         writer.write(frame);
     }
 
     writer.release();
 
-    VideoCapture cap(filename, CAP_FFMPEG);
-    ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description
-                                 << " as no frames should have been written due to the existent mismatch";
+    VideoCapture cap(filename, CAP_FFMPEG);       
+
+    if (is_valid) {
+        ASSERT_TRUE(cap.isOpened()) << "Can't open written video " << description;
+        EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 15) << "Video capture should be able to read all frames for: " << description;
+    } else {
+        ASSERT_FALSE(cap.isOpened()) << "Video capture should not be able to read any frames for: " << description;
+    }
+
     std::remove(filename.c_str());
 }
 
-const MismatchTestParams mismatch_cases[] =
+const ChannelMismatchTestParams mismatch_cases[] =
 {
-    // expected type CV_8UC3
-    make_tuple(CV_16UC1, CV_8UC3, true, "input_CV_16UC1_expected_CV_8UC3"),
+    // Testing input frame channels and expected depth/isColor combinations
 
-    // expected type 8UC1
-    make_tuple(CV_8UC3, CV_8UC1, false, "input_CV_8UC3_expected_CV_8UC1"),
+    // Open VideoWriter depth/isColor combination: CV_8U/true, everything with 3 channels should be valid
+    make_tuple(CV_16UC1, CV_8U, true, false, "input_CV_16UC1_expected_CV_8U_isColor_true"),
+    make_tuple(CV_8UC1, CV_8U, true, false, "input_CV_8UC1_expected_CV_8U_isColor_true"),
+    make_tuple(CV_8UC3, CV_8U, true, true, "input_CV_8UC3_expected_CV_8U_isColor_true_valid"),
+    make_tuple(CV_16UC3, CV_8U, true, true, "input_CV_16UC3_expected_CV_8U_isColor_true_valid"),
 
-    // expected type 16UC1
-    make_tuple(CV_8UC1, CV_16UC1, false, "input_CV_8UC1_expected_CV_16UC1"),
+    // Open VideoWriter depth/isColor combination: 16U,8U/false, everything with 1 channel should be valid
+    make_tuple(CV_8UC3, CV_8U, false, false, "input_CV_8UC3_expected_CV_8U_isColor_false"),
+    make_tuple(CV_16UC3, CV_8U, false, false, "input_CV_16UC3_expected_CV_8U_isColor_false"),
+    make_tuple(CV_8UC3, CV_16U, false, false, "input_CV_8UC3_expected_CV_16U_isColor_false"),
+    make_tuple(CV_16UC3, CV_16U, false, false, "input_CV_16UC3_expected_CV_16U_isColor_false"),
+    make_tuple(CV_8UC1, CV_16U, false, true, "input_CV_8UC1_expected_CV_16U_isColor_false_valid"),
+    make_tuple(CV_16UC1, CV_8U, false, true, "input_CV_16UC1_expected_CV_8U_isColor_false_valid"),
 };
 
-inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::TestParamInfo<videoio_ffmpeg_type_mismatch::ParamType>& info)
+inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::TestParamInfo<videoio_ffmpeg_channel_mismatch::ParamType>& info)
 {
     std::ostringstream os;
-    os << get<3>(info.param) << "_"
-        << "isColor_" << (get<2>(info.param) ? "true" : "false");
+    os << get<4>(info.param);
     return os.str();
 }
 
-INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_type_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
 }} // namespace
