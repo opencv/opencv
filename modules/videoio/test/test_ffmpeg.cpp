@@ -990,13 +990,13 @@ TEST_P(videoio_ffmpeg_channel_mismatch, basic)
 
     writer.release();
 
-    VideoCapture cap(filename, CAP_FFMPEG);       
+    VideoCapture cap(filename, CAP_FFMPEG);
 
     if (is_valid) {
-        ASSERT_TRUE(cap.isOpened()) << "Can't open written video " << description;
-        EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 15) << "Video capture should be able to read all frames for: " << description;
+        ASSERT_TRUE(cap.isOpened()) << "Can't open video for " << description;
+        EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 15) << "All frames should be written for: " << description;
     } else {
-        ASSERT_FALSE(cap.isOpened()) << "Video capture should not be able to read any frames for: " << description;
+        ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description;
     }
 
     std::remove(filename.c_str());
