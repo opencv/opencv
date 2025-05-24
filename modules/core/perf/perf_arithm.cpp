@@ -447,7 +447,7 @@ PERF_TEST_P_(BinaryOpTest, transposeND)
     std::reverse(order.begin(), order.end());
 
     std::vector<int> new_sz(a.dims);
-    std::copy(a.size.p, a.size.p + a.dims, new_sz.begin());
+    std::copy_n(a.size.p, a.dims, new_sz.begin());
     std::reverse(new_sz.begin(), new_sz.end());
     cv::Mat b = Mat(new_sz, type);
 

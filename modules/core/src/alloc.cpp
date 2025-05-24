@@ -133,9 +133,9 @@ void* fastMalloc(size_t size)
 #ifdef HAVE_POSIX_MEMALIGN
     if (isAlignedAllocationEnabled())
     {
-        void* ptr = NULL;
+        void* ptr = nullptr;
         if(posix_memalign(&ptr, CV_MALLOC_ALIGN, size))
-            ptr = NULL;
+            ptr = nullptr;
         if(!ptr)
             return OutOfMemoryError(size);
         return ptr;

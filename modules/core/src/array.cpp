@@ -75,8 +75,8 @@ cvSetIPLAllocators( Cv_iplCreateImageHeader createHeader,
                     Cv_iplCreateROI createROI,
                     Cv_iplCloneImage cloneImage )
 {
-    int count = (createHeader != 0) + (allocateData != 0) + (deallocate != 0) +
-        (createROI != 0) + (cloneImage != 0);
+    int count = (createHeader != nullptr) + (allocateData != 0) + (deallocate != 0) +
+        (createROI != nullptr) + (cloneImage != nullptr);
 
     if( count != 0 && count != 5 )
         CV_Error( cv::Error::StsBadArg, "Either all the pointers should be null or "
@@ -125,14 +125,14 @@ cvCreateMatHeader( int rows, int cols, int type )
         CV_Error( cv::Error::StsUnsupportedFormat, "Invalid matrix type" );
     min_step *= cols;
 
-    CvMat* arr = (CvMat*)cvAlloc( sizeof(*arr));
+    CvMat* arr = static_cast<CvMat*>(cvAlloc( sizeof(*arr)));
 
     arr->step = min_step;
     arr->type = CV_MAT_MAGIC_VAL | type | CV_MAT_CONT_FLAG;
     arr->rows = rows;
     arr->cols = cols;
-    arr->data.ptr = 0;
-    arr->refcount = 0;
+    arr->data.ptr = nullptr;
+    arr->refcount = nullptr;
     arr->hdr_refcount = 1;
 
     icvCheckHuge( arr );

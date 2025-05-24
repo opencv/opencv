@@ -90,7 +90,7 @@ static bool hasNonZero8u( const uchar* src, size_t len )
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_uint8 v_type;
     const v_type v_zero = vx_setzero_u8();
-    constexpr const int unrollCount = 2;
+    constexpr int unrollCount = 2;
     int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const uchar* srcSimdEnd = src+len0;
@@ -117,7 +117,7 @@ static bool hasNonZero16u( const ushort* src, size_t len )
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_uint16 v_type;
     const v_type v_zero = vx_setzero_u16();
-    constexpr const int unrollCount = 4;
+    constexpr int unrollCount = 4;
     int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const ushort* srcSimdEnd = src+len0;
@@ -150,7 +150,7 @@ static bool hasNonZero32s( const int* src, size_t len )
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_int32 v_type;
     const v_type v_zero = vx_setzero_s32();
-    constexpr const int unrollCount = 8;
+    constexpr int unrollCount = 8;
     int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const int* srcSimdEnd = src+len0;
@@ -196,7 +196,7 @@ static bool hasNonZero32f( const float* src, size_t len )
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     typedef v_float32 v_type;
     const v_type v_zero = vx_setzero_f32();
-    constexpr const int unrollCount = 8;
+    constexpr int unrollCount = 8;
     int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const float* srcSimdEnd = src+len0;
@@ -243,7 +243,7 @@ static bool hasNonZero64f( const double* src, size_t len )
 #if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     typedef v_float64 v_type;
     const v_type v_zero = vx_setzero_f64();
-    constexpr const int unrollCount = 16;
+    constexpr int unrollCount = 16;
     int step = VTraits<v_type>::vlanes() * unrollCount;
     int len0 = len & -step;
     const double* srcSimdEnd = src+len0;
