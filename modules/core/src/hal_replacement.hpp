@@ -1123,8 +1123,22 @@ inline int hal_ni_copyToMasked(const uchar* src_data, size_t src_step, uchar* ds
 #define cv_hal_copyToMasked hal_ni_copyToMasked
 //! @endcond
 
-//! @}
+/**
+ @ brief sum
+ @param src_data Source image data
+ @param src_step Source image step
+ @param src_type Source image type
+ @param width, height Source image dimensions
+ @param result Pointer to save the sum result to.
+ */
+inline int hal_ni_sum(const uchar *src_data, size_t src_step, int src_type, int width, int height, double *result)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+//! @cond IGNORED
+#define cv_hal_sum hal_ni_sum
+//! @endcond
+
+//! @}
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
