@@ -369,7 +369,7 @@ OCV_OPTION(WITH_V4L "Include Video 4 Linux support" ON
 OCV_OPTION(WITH_DSHOW "Build VideoIO with DirectShow support" ON
   VISIBLE_IF WIN32 AND NOT ARM AND NOT WINRT
   VERIFY HAVE_DSHOW)
-OCV_OPTION(WITH_MSMF "Build VideoIO with Media Foundation support" NOT MINGW
+OCV_OPTION(WITH_MSMF "Build VideoIO with Media Foundation support" OFF # NOT MINGW
   VISIBLE_IF WIN32
   VERIFY HAVE_MSMF)
 OCV_OPTION(WITH_MSMF_DXVA "Enable hardware acceleration in Media Foundation backend" WITH_MSMF
