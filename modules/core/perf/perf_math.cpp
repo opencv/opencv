@@ -152,14 +152,14 @@ Mat buildRandomMat(int rows, int cols, int mtype, RNG& rng, int rank, bool symme
     {
         return buildRandomMat<float>(rows, cols, rng, rank, symmetrical);
     }
-    else if (mtype == CV_64F)
+
+    if (mtype == CV_64F)
     {
         return buildRandomMat<double>(rows, cols, rng, rank, symmetrical);
     }
-    else
-    {
-        CV_Error(cv::Error::StsBadArg, "This type is not supported");
-    }
+
+    CV_Error(cv::Error::StsBadArg, "This type is not supported");
+
 }
 
 CV_ENUM(SolveDecompEnum, DECOMP_LU, DECOMP_SVD, DECOMP_EIG, DECOMP_CHOLESKY, DECOMP_QR)
