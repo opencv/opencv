@@ -2322,12 +2322,13 @@ FileNode::operator int() const
     {
         return readInt(p);
     }
-    else if( type == REAL )
+
+    if( type == REAL )
     {
         return cvRound(readReal(p));
     }
-    else
-        return 0x7fffffff;
+
+    return 0x7fffffff;
 }
 
 FileNode::operator int64_t() const
@@ -2343,12 +2344,13 @@ FileNode::operator int64_t() const
     {
         return readLong(p);
     }
-    else if( type == REAL )
+
+    if( type == REAL )
     {
         return cvRound(readReal(p));
     }
-    else
-        return 0x7fffffff;
+
+    return 0x7fffffff;
 }
 
 FileNode::operator float() const
@@ -2364,12 +2366,13 @@ FileNode::operator float() const
     {
         return (float)readInt(p);
     }
-    else if( type == REAL )
+
+    if( type == REAL )
     {
         return (float)readReal(p);
     }
-    else
-        return FLT_MAX;
+
+    return FLT_MAX;
 }
 
 FileNode::operator double() const
@@ -2385,12 +2388,13 @@ FileNode::operator double() const
     {
         return (double)readInt(p);
     }
-    else if( type == REAL )
+
+    if( type == REAL )
     {
         return readReal(p);
     }
-    else
-        return DBL_MAX;
+
+    return DBL_MAX;
 }
 
 double FileNode::real() const  { return double(*this); }
