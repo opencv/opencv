@@ -112,15 +112,6 @@ In this case the function requires exactly four object and image points.
 In this case the function requires exactly four object and image points.
 -   cv::SOLVEPNP_EPNP Method has been introduced by F. Moreno-Noguer, V. Lepetit and P. Fua in the
 paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation" (@cite lepetit2009epnp).
--   cv::SOLVEPNP_DLS **Broken implementation. Using this flag will fallback to EPnP.** \n
-Method is based on the paper of J. Hesch and S. Roumeliotis.
-"A Direct Least-Squares (DLS) Method for PnP" (@cite hesch2011direct).
--   cv::SOLVEPNP_UPNP **Broken implementation. Using this flag will fallback to EPnP.** \n
-Method is based on the paper of A. Penate-Sanchez, J. Andrade-Cetto,
-F. Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length
-Estimation" (@cite penate2013exhaustive). In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
-assuming that both have the same value. Then the cameraMatrix is updated with the estimated
-focal length.
 -   cv::SOLVEPNP_IPPE Method is based on the paper of T. Collins and A. Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method requires coplanar object points.
 -   cv::SOLVEPNP_IPPE_SQUARE Method is based on the paper of Toby Collins and Adrien Bartoli.
