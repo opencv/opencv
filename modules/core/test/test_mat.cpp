@@ -1446,6 +1446,14 @@ TEST(Core_Mat, regression_9507)
     EXPECT_EQ(25u, m2.total());
 }
 
+TEST(Core_Mat, empty)
+{
+    // Should not crash.
+    uint8_t data[2] = {0, 1};
+    cv::Mat mat_nd(/*ndims=*/0, /*sizes=*/nullptr, CV_8UC1, /*data=*/data);
+    cv::Mat1b mat(0, 0, /*data=*/data, /*steps=*/1);
+}
+
 TEST(Core_InputArray, empty)
 {
     vector<vector<Point> > data;
