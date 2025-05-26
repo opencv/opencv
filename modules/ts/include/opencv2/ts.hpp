@@ -87,6 +87,7 @@
 
 // Other tests categories
 #define CV_TEST_TAG_OPENCL "opencl"              // Tests with OpenCL
+#define CV_TEST_TAG_DSP "dsp"                    // Tests with Qualcomm DSP
 
 
 

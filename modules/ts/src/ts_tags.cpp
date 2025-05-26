@@ -55,6 +55,7 @@ static std::vector<std::string>& getTestTagsSkipList()
 #if defined(_DEBUG)
         testSkipWithTags.push_back(CV_TEST_TAG_DEBUG_VERYLONG);
 #endif
+        testSkipWithTags.push_back(CV_TEST_TAG_DSP);
         initialized = true;
     }
     return testSkipWithTags;
