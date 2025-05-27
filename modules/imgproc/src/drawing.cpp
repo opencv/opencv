@@ -1647,7 +1647,7 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
     static const double INV_XY_ONE = 1./static_cast<double>(XY_ONE);
 
     Rect_<int64> boundingRect(Point2l(0, 0), (Size2l)img.size());
-    if( (thickness > 1) && ( !boundingRect.contains(p0) || !boundingRect.contains(p1) ) )
+    if( (thickness > 1) && (shift == 0) && ( !boundingRect.contains(p0) || !boundingRect.contains(p1) ) )
     {
         const int margin = thickness;
         const Point2l offset(margin, margin);
