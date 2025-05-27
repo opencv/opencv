@@ -80,6 +80,10 @@
 #error "Kernel configuration error: ambiguous 'depth' value is defined, use 'DEPTH_dst' instead"
 #endif
 
+#define CAT__(x, y) x ## y
+#define CAT_(x, y) CAT__(x, y)
+#define CAT(x, y) CAT_(x, y)
+
 
 #if DEPTH_dst < 5 /* CV_32F */
 #define CV_DST_TYPE_IS_INTEGER
@@ -325,9 +329,12 @@
 #define PROCESS_ELEM storedst(pow(srcelem1, srcelem2))
 
 #elif defined OP_POWN
-#undef workT
-#define workT int
-#define PROCESS_ELEM storedst(pown(srcelem1, srcelem2))
+#if cn > 1
+#define PROCESS_INIT CAT(int, cn) powi = (CAT(int, cn))srcelem2;
+#else // cn
+#define PROCESS_INIT int powi = srcelem2;
+#endif
+#define PROCESS_ELEM storedst(convertToDT(pown(srcelem1, powi)))
 
 #elif defined OP_SQRT
 #if CV_DST_TYPE_FIT_32F
@@ -469,7 +476,7 @@
     #define srcelem2 srcelem2_
 #endif
 
-#if cn == 3
+#if !defined(PROCESS_INIT) && cn == 3
 #undef srcelem2
 #define srcelem2 (workT)(srcelem2_.x, srcelem2_.y, srcelem2_.z)
 #endif
@@ -517,6 +524,10 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
     int x = get_global_id(0);
     int y0 = get_global_id(1) * rowsPerWI;
 
+#ifdef PROCESS_INIT
+    PROCESS_INIT
+#endif
+
     if (x < cols)
     {
         int mask_index = mad24(y0, maskstep, x + maskoffset);
@@ -542,6 +553,10 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
     int x = get_global_id(0);
     int y0 = get_global_id(1) * rowsPerWI;
 
+#ifdef PROCESS_INIT
+    PROCESS_INIT
+#endif
+
     if (x < cols)
     {
         int src1_index = mad24(y0, srcstep1, mad24(x, (int)sizeof(srcT1_C1) * cn, srcoffset1));
@@ -563,6 +578,10 @@ __kernel void KF(__global const uchar * srcptr1, int srcstep1, int srcoffset1,
 {
     int x = get_global_id(0);
     int y0 = get_global_id(1) * rowsPerWI;
+
+#ifdef PROCESS_INIT
+    PROCESS_INIT
+#endif
 
     if (x < cols)
     {

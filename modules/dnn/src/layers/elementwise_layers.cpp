@@ -224,8 +224,8 @@ public:
         {
             const Mat &src = inputs[i];
             Mat &dst = outputs[i];
-            CV_Assert(src.size == dst.size && src.type() == dst.type() &&
-                      src.isContinuous() && dst.isContinuous() && src.type() == CV_32F);
+            CV_Assert_N(src.size == dst.size, src.type() == dst.type(),
+                      src.isContinuous(), dst.isContinuous(), src.type() == CV_32F);
 
             const int nstripes = getNumThreads();
             PBody body(func, src, dst, nstripes);
