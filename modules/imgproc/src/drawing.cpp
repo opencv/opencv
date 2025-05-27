@@ -1646,16 +1646,16 @@ ThickLine( Mat& img, Point2l p0, Point2l p1, const void* color,
 {
     static const double INV_XY_ONE = 1./static_cast<double>(XY_ONE);
 
-    Rect boundingRect = Rect(Point(0, 0), img.size());
-    if (!boundingRect.contains(p0) || !boundingRect.contains(p1))
+    Rect_<int64> boundingRect(Point2l(0, 0), (Size2l)img.size());
+    if( (thickness > 1) && ( !boundingRect.contains(p0) || !boundingRect.contains(p1) ) )
     {
-      const int margin = thickness;
-      const Point2l offset(margin, margin);
-      p0 += offset;
-      p1 += offset;
-      clipLine(Size2l(boundingRect.width+2*margin, boundingRect.height+2*margin), p0, p1);
-      p0 -= offset;
-      p1 -= offset;
+        const int margin = thickness;
+        const Point2l offset(margin, margin);
+        p0 += offset;
+        p1 += offset;
+        clipLine(Size2l(boundingRect.width+2*margin, boundingRect.height+2*margin), p0, p1);
+        p0 -= offset;
+        p1 -= offset;
     }
 
     p0.x <<= XY_SHIFT - shift;
