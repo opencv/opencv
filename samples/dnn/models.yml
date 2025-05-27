@@ -499,7 +499,7 @@ mcc:
 
 NAFNet:
   load_info:
-    url: "https://github.com/abhishek-gola/opencv_zoo/raw/62782c92ebdd270143c71053270f4c4b96ac457e/models/deblurring_nafnet/deblurring_nafnet_2025may.onnx"
+    url: "https://drive.google.com/uc?export=dowload&id=1ZLRhkpCekNruJZggVpBgSoCx3k7bJ-5v"
     sha1: "7dabf3d4ede0770ef326afc4511f7e67a791286d"
   model: "deblurring_nafnet_2025may.onnx"
   mean: [0, 0, 0]
