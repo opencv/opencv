@@ -492,3 +492,17 @@ mcc:
     sha1: "8350cb8f078ecefa1cd566e89930ede25a192310"
   config: "graph.pbtxt"
   sample: "mcc"
+
+################################################################################
+# Deblurring model.
+################################################################################
+
+NAFNet:
+  load_info:
+    url: "https://drive.google.com/uc?export=dowload&id=1ZLRhkpCekNruJZggVpBgSoCx3k7bJ-5v"
+    sha1: "7dabf3d4ede0770ef326afc4511f7e67a791286d"
+  model: "deblurring_nafnet_2025may.onnx"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  rgb: true
+  sample: "deblurring"
