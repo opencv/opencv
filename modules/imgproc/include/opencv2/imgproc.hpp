@@ -4234,6 +4234,28 @@ of the OutputArray must be CV_32F.
  */
 CV_EXPORTS_W double minEnclosingTriangle( InputArray points, CV_OUT OutputArray triangle );
 
+/**
+@brief Finds a convex polygon of minimum area enclosing a 2D point set and returns its area.
+
+This function takes a given set of 2D points and finds the enclosing polygon with k vertices and minimal
+area. It takes the set of points and the parameter k as input and returns the area of the minimal
+enclosing polygon.
+
+The Implementation is based on a paper by Aggarwal, Chang and Yap @cite AggarwalChangYap85. They
+provide a \f$\theta(n²log(n)log(k))\f$ algorighm for finding the minimal convex polygon with k
+vertices enclosing a 2D convex polygon with n vertices (k < n). Since the #minEnclosingConvexPolygon
+function takes a 2D point set as input, an additional preprocessing step of computing the convex hull
+of the 2D point set is required. The complexity of the #convexHull function is \f$O(n log(n))\f$ which
+is lower than \f$\theta(n²log(n)log(k))\f$. Thus the overall complexity of the function is
+\f$O(n²log(n)log(k))\f$.
+
+@param points   Input vector of 2D points, stored in std::vector\<\> or Mat
+@param polygon  Output vector of 2D points defining the vertices of the enclosing polygon
+@param k        Number of vertices of the output polygon
+ */
+
+CV_EXPORTS_W double minEnclosingConvexPolygon ( InputArray points, OutputArray polygon, int k );
+
 /** @brief Compares two shapes.
 
 The function compares two shapes. All three implemented methods use the Hu invariants (see #HuMoments)
