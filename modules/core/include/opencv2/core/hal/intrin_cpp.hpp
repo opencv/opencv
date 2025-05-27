@@ -225,32 +225,30 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 Element-wise binary and unary operations.
 
 - Arithmetics:
-@ref v_add(const v_reg &a, const v_reg &b) "+",
-@ref v_sub(const v_reg &a, const v_reg &b) "-",
-@ref v_mul(const v_reg &a, const v_reg &b) "*",
-@ref v_div(const v_reg &a, const v_reg &b) "/",
+@ref v_add,
+@ref v_sub,
+@ref v_mul,
+@ref v_div,
 @ref v_mul_expand
 
 - Non-saturating arithmetics: @ref v_add_wrap, @ref v_sub_wrap
 
 - Bitwise shifts:
-@ref v_shl(const v_reg &a, int s) "<<",
-@ref v_shr(const v_reg &a, int s) ">>",
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref v_and(const v_reg &a, const v_reg &b) "&",
-@ref v_or(const v_reg &a, const v_reg &b) "|",
-@ref v_xor(const v_reg &a, const v_reg &b) "^",
-@ref v_not(const v_reg &a) "~"
+@ref v_and,
+@ref v_or,
+@ref v_xor,
+@ref v_not
 
 - Comparison:
-@ref v_gt(const v_reg &a, const v_reg &b) ">",
-@ref v_ge(const v_reg &a, const v_reg &b) ">=",
-@ref v_lt(const v_reg &a, const v_reg &b) "<",
-@ref v_le(const v_reg &a, const v_reg &b) "<=",
-@ref v_eq(const v_reg &a, const v_reg &b) "==",
-@ref v_ne(const v_reg &a, const v_reg &b) "!="
+@ref v_gt,
+@ref v_ge,
+@ref v_lt,
+@ref v_le,
+@ref v_eq,
+@ref v_ne
 
 - min/max: @ref v_min, @ref v_max
 

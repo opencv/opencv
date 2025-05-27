@@ -175,7 +175,7 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 
-    // ensure that CALIB_FIX_FOCAL_LENGTH works and focal lenght has not changed
+    // ensure that CALIB_FIX_FOCAL_LENGTH works and focal length has not changed
     EXPECT_EQ(theK(0,0), K(0,0));
     EXPECT_EQ(theK(1,1), K(1,1));
 
