@@ -275,6 +275,8 @@ bool checkTarget(Target target)
             return true;
         else if (std::string::npos != i->find("GPU") && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
             return true;
+        else if (std::string::npos != i->find("NPU") && target == DNN_TARGET_NPU)
+            return true;
     }
     return false;
 }
