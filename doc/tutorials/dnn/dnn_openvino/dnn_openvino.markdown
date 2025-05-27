@@ -33,7 +33,7 @@ OpenVINO backend (DNN_BACKEND_INFERENCE_ENGINE) supports the following [targets]
 
 - **DNN_TARGET_CPU:** Runs on the CPU, no additional dependencies required.
 - **DNN_TARGET_OPENCL, DNN_TARGET_OPENCL_FP16:** Runs on the iGPU, requires OpenCL drivers. Install [intel-opencl-icd](https://launchpad.net/ubuntu/jammy/+package/intel-opencl-icd) on Ubuntu.
-- **DNN_TARGET_MYRIAD:** Runs on Intel® VPU like the [Neural Compute Stick](https://www.intel.com/content/www/us/en/products/sku/140109/intel-neural-compute-stick-2/specifications.html), to set up [see](https://www.intel.com/content/www/us/en/developer/archive/tools/neural-compute-stick.html).
-- **DNN_TARGET_HDDL:** Runs on the Intel® Movidius™ Myriad™ X High Density Deep Learning VPU, for details [see](https://intelsmartedge.github.io/ido-specs/doc/building-blocks/enhanced-platform-awareness/smartedge-open_hddl/).
-- **DNN_TARGET_FPGA:** Runs on Intel® Altera® series FPGAs [see](https://www.intel.com/content/www/us/en/docs/programmable/768970/2025-1/getting-started-guide.html).
-- **DNN_TARGET_NPU:** Runs on the integrated Intel® AI Boost processor, requires [Linux drivers](https://github.com/intel/linux-npu-driver/releases/tag/v1.17.0) OR [Windows drivers](https://www.intel.com/content/www/us/en/download/794734/intel-npu-driver-windows.html).
+- **DNN_TARGET_MYRIAD:** Runs on Intel&reg; VPU like the [Neural Compute Stick](https://www.intel.com/content/www/us/en/products/sku/140109/intel-neural-compute-stick-2/specifications.html), to set up [see](https://www.intel.com/content/www/us/en/developer/archive/tools/neural-compute-stick.html).
+- **DNN_TARGET_HDDL:** Runs on the Intel&reg; Movidius&trade; Myriad&trade; X High Density Deep Learning VPU, for details [see](https://intelsmartedge.github.io/ido-specs/doc/building-blocks/enhanced-platform-awareness/smartedge-open_hddl/).
+- **DNN_TARGET_FPGA:** Runs on Intel&reg; Altera&reg; series FPGAs [see](https://www.intel.com/content/www/us/en/docs/programmable/768970/2025-1/getting-started-guide.html).
+- **DNN_TARGET_NPU:** Runs on the integrated Intel&reg; AI Boost processor, requires [Linux drivers](https://github.com/intel/linux-npu-driver/releases/tag/v1.17.0) OR [Windows drivers](https://www.intel.com/content/www/us/en/download/794734/intel-npu-driver-windows.html).
