@@ -1649,16 +1649,18 @@ CvWindow::CvWindow(QString name, int arg2)
         createStatusBar();
     }
 
+    myView->getWidget()->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     //Now attach everything
     if (myToolBar)
-        myGlobalLayout->addWidget(myToolBar, 0, Qt::AlignLeft);
+        myGlobalLayout->addWidget(myToolBar);
 
-    myGlobalLayout->addWidget(myView->getWidget(), 0, Qt::AlignCenter);
+    myGlobalLayout->addWidget(myView->getWidget());
 
     myGlobalLayout->addLayout(myBarLayout);
 
     if (myStatusBar)
-        myGlobalLayout->addWidget(myStatusBar, 0, Qt::AlignLeft);
+        myGlobalLayout->addWidget(myStatusBar);
 
     setLayout(myGlobalLayout);
     show();

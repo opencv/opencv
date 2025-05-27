@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #ifndef __IPP_HAL_CORE_HPP__
 #define __IPP_HAL_CORE_HPP__
 
@@ -32,6 +36,11 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
 #undef cv_hal_normDiff
 #define cv_hal_normDiff ipp_hal_normDiff
 
+int ipp_hal_sum(const uchar *src_data, size_t src_step, int src_type, int width, int height, double *result);
+
+#undef cv_hal_sum
+#define cv_hal_sum ipp_hal_sum
+
 #endif
 
 int ipp_hal_polarToCart32f(const float* mag, const float* angle, float* x, float* y, int len, bool angleInDegrees);
@@ -55,5 +64,7 @@ int ipp_hal_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data,
 
 #undef cv_hal_transpose2d
 #define cv_hal_transpose2d ipp_hal_transpose2d
+
+//! @endcond
 
 #endif

@@ -81,7 +81,6 @@ public:
     bool fusedWeights, fusedBias;
     std::vector<double> weightsMultipliers;
     int groups;
-
     BaseConvolutionLayerImpl(const LayerParams &params)
     {
         setParamsFrom(params);

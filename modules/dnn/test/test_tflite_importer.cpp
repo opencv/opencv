@@ -57,6 +57,7 @@ void Test_TFLite::testModel(Net& net, const std::string& modelName, const Mat& i
 
     ASSERT_EQ(outs.size(), outNames.size());
     for (int i = 0; i < outNames.size(); ++i) {
+        std::replace(outNames[i].begin(), outNames[i].end(), ':', '_');
         Mat ref = blobFromNPY(findDataFile(format("dnn/tflite/%s_out_%s.npy", modelName.c_str(), outNames[i].c_str())));
         // A workaround solution for the following cases due to inconsistent shape definitions.
         // The details please see: https://github.com/opencv/opencv/pull/25297#issuecomment-2039081369
@@ -276,6 +277,16 @@ TEST_P(Test_TFLite, global_max_pooling_2d) {
 
 TEST_P(Test_TFLite, leakyRelu) {
     testLayer("leakyRelu");
+}
+
+TEST_P(Test_TFLite, StridedSlice) {
+    testLayer("strided_slice");
+}
+
+TEST_P(Test_TFLite, DISABLED_face_blendshapes)
+{
+    Mat inp = blobFromNPY(findDataFile("dnn/tflite/face_blendshapes_inp.npy"));
+    testModel("face_blendshapes", inp);
 }
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());

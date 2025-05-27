@@ -72,8 +72,8 @@ CV__DNN_INLINE_NS_BEGIN
     {
         //! DNN_BACKEND_DEFAULT equals to OPENCV_DNN_BACKEND_DEFAULT, which can be defined using CMake or a configuration parameter
         DNN_BACKEND_DEFAULT = 0,
-        DNN_BACKEND_INFERENCE_ENGINE = 2,            //!< Intel OpenVINO computational backend
-                                                     //!< @note Tutorial how to build OpenCV with OpenVINO: @ref tutorial_dnn_openvino
+        DNN_BACKEND_INFERENCE_ENGINE = 2,        //!< Intel OpenVINO computational backend, supported targets: CPU, OPENCL, OPENCL_FP16, MYRIAD, HDDL, NPU
+                                                 //!< @note Tutorial how to build OpenCV with OpenVINO: @ref tutorial_dnn_openvino
         DNN_BACKEND_OPENCV,
         DNN_BACKEND_VKCOM,
         DNN_BACKEND_CUDA,

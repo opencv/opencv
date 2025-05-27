@@ -1742,9 +1742,6 @@ void TFImporter::parseStridedSlice(tensorflow::GraphDef& net, const tensorflow::
     {
         if (end_mask & (1 << i))
             ends.at<int>(i) = INT_MAX;
-        if (strides.at<int>(i) != 1)
-            CV_Error(Error::StsNotImplemented,
-                     format("StridedSlice with stride %d", strides.at<int>(i)));
     }
     if (begins.total() == 4 && getDataLayout(name, data_layouts) == DNN_LAYOUT_NHWC)
     {
@@ -1753,9 +1750,12 @@ void TFImporter::parseStridedSlice(tensorflow::GraphDef& net, const tensorflow::
         std::swap(begins.at<int>(1), begins.at<int>(2));
         std::swap(ends.at<int>(2), ends.at<int>(3));
         std::swap(ends.at<int>(1), ends.at<int>(2));
+        std::swap(strides.at<int>(2), strides.at<int>(3));
+        std::swap(strides.at<int>(1), strides.at<int>(2));
     }
     layerParams.set("begin", DictValue::arrayInt((int*)begins.data, begins.total()));
     layerParams.set("end", DictValue::arrayInt((int*)ends.data, ends.total()));
+    layerParams.set("steps", DictValue::arrayInt((int*)strides.data, strides.total()));
 
     Pin inp = parsePin(layer.input(0));
     if (value_id.find(inp.name) != value_id.end())
@@ -2571,7 +2571,7 @@ void TFImporter::parsePReLU(tensorflow::GraphDef& net, const tensorflow::NodeDef
     layerParams.blobs.resize(1);
 
     if (scales.dims == 3) {
-        // Considering scales from Keras wih HWC layout;
+        // Considering scales from Keras with HWC layout;
         transposeND(scales, {2, 0, 1}, layerParams.blobs[0]);
     } else {
         layerParams.blobs[0] = scales;

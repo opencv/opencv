@@ -1581,6 +1581,7 @@ NormDiffFunc getNormDiffFunc(int normType, int depth)
             0
         },
     };
+    if (normType >= 3 || normType < 0) return nullptr;
 
     return normDiffTab[normType][depth];
 }

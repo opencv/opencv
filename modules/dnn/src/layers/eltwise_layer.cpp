@@ -105,7 +105,7 @@ public:
         if (params.has("operation"))
         {
             String operation = toLowerCase(params.get<String>("operation"));
-            if (operation == "prod")
+            if (operation == "prod" || operation == "mul")
                 op = PROD;
             else if (operation == "sum")
                 op = SUM;

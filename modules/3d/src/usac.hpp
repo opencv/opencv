@@ -17,7 +17,7 @@ class Error : public Algorithm {
 public:
     // set model to use getError() function
     virtual void setModelParameters (const Mat &model) = 0;
-    // returns error of point wih @point_idx w.r.t. model
+    // returns error of point with @point_idx w.r.t. model
     virtual float getError (int point_idx) const = 0;
     virtual const std::vector<float> &getErrors (const Mat &model) = 0;
 };

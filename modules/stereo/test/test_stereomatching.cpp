@@ -920,6 +920,38 @@ protected:
 
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
 
+TEST(Calib3d_StereoSGBM, deterministic) {
+    cv::Ptr<cv::StereoSGBM> matcher = cv::StereoSGBM::create(16, 11);
+
+    // Expect throw error (non-determinism case)
+    int widthNarrow = 28;
+    int height = 15;
+
+    cv::Mat leftNarrow(height, widthNarrow, CV_8UC1);
+    cv::Mat rightNarrow(height, widthNarrow, CV_8UC1);
+    randu(leftNarrow, cv::Scalar(0), cv::Scalar(255));
+    randu(rightNarrow, cv::Scalar(0), cv::Scalar(255));
+    cv::Mat disp;
+
+    EXPECT_THROW(matcher->compute(leftNarrow, rightNarrow, disp), cv::Exception);
+
+    // Deterministic case, image is sufficiently large for StereSGBM parameters
+    int widthWide = 40;
+    cv::Mat leftWide(height, widthWide, CV_8UC1);
+    cv::Mat rightWide(height, widthWide, CV_8UC1);
+    randu(leftWide, cv::Scalar(0), cv::Scalar(255));
+    randu(rightWide, cv::Scalar(0), cv::Scalar(255));
+    cv::Mat disp1, disp2;
+    for (int i = 0; i < 10; i++) {
+        matcher->compute(leftWide, rightWide, disp1);
+        matcher->compute(leftWide, rightWide, disp2);
+        cv::Mat dst;
+        cv::bitwise_xor(disp1, disp2, dst);
+        EXPECT_EQ(cv::countNonZero(dst), 0);
+    }
+
+}
+
 TEST(Calib3d_StereoSGBM_HH4, regression)
 {
     String path = cvtest::TS::ptr()->get_data_path() + "cv/stereomatching/datasets/teddy/";

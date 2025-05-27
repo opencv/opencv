@@ -1142,6 +1142,8 @@ void Net::Impl::forward(OutputArrayOfArrays outputBlobs,
         const std::vector<String>& outBlobNames)
 {
     CV_Assert(!empty());
+    if (outBlobNames.empty())
+        CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph) {
@@ -1176,6 +1178,8 @@ void Net::Impl::forward(std::vector<std::vector<Mat>>& outputBlobs,
         const std::vector<String>& outBlobNames)
 {
     CV_Assert(!empty());
+    if (outBlobNames.empty())
+        CV_Error(Error::StsBadArg, "in Net::forward(), outBlobNames cannot be empty");
     FPDenormalsIgnoreHintScope fp_denormals_ignore_scope;
 
     if (mainGraph)
@@ -1467,6 +1471,9 @@ void Net::Impl::updateLayersShapes()
 
 LayerPin Net::Impl::getLatestLayerPin(const std::vector<LayerPin>& pins) const
 {
+    if (pins.empty())
+        CV_Error(Error::StsBadArg,
+                 "Cannot Net::Impl::getLatestLayerPin() from empty vector of pins");
     return *std::max_element(pins.begin(), pins.end());
 }
 

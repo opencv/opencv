@@ -83,11 +83,9 @@ public class DnnListRegressionTest extends OpenCVTestCase {
     }*/
 
     public void testForward() {
-        List<Mat> outs = new ArrayList();
-        List<String> outNames = new ArrayList();
-        //outNames.add("");
+        Mat out;
         try {
-            net.forward(outs,outNames);
+            out = net.forward();
         } catch(Exception e) {
             fail("Net forward failed: " + e.getMessage());
         }
