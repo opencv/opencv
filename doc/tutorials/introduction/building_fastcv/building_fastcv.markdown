@@ -144,9 +144,9 @@ HAL and Extension list of APIs
 |               |pyrUp & pyrDown   |fcvPyramidCreateu8_v4                          |
 |               |cvtColor          |fcvColorRGB888toYCrCbu8_v3                     |
 |               |                  |fcvColorRGB888ToHSV888u8                       |
-|               |GaussianBlur      |fcvFilterGaussian5x5u8_v3                      |
+|               |gaussianBlur      |fcvFilterGaussian5x5u8_v3                      |
 |               |                  |fcvFilterGaussian3x3u8_v4                      |
-|               |cvWarpPerspective |fcvWarpPerspectiveu8_v5                        |
+|               |warpPerspective   |fcvWarpPerspectiveu8_v5                        |
 |               |Canny             |fcvFilterCannyu8                               |
 |               |                  |                                               |
 |CORE           |lut               | fcvTableLookupu8                              |
@@ -166,6 +166,7 @@ HAL and Extension list of APIs
 |               |                  |fcvElementMultiplyf32                          |
 |               |addWeighted       |fcvAddWeightedu8_v2                            |
 |               |subtract          |fcvImageDiffu8f32_v2                           |
+|               |SVD & solve       |fcvSVDf32_v2                                   |
 
 
 **FastCV based OpenCV Extensions APIs list :**
@@ -221,10 +222,10 @@ HAL and Extension list of APIs
 |                      |fcvFilterCorrSep17x17s16_v2                   |
 |                      |fcvFilterCorrSepNxNs16                        |
 |sobel3x3u8            |fcvImageGradientSobelPlanars8_v2              |
-|sobel3x3u9            |fcvImageGradientSobelPlanars16_v2             |
-|sobel3x3u10           |fcvImageGradientSobelPlanars16_v3             |
-|sobel3x3u11           |fcvImageGradientSobelPlanarf32_v2             |
-|sobel3x3u12           |fcvImageGradientSobelPlanarf32_v3             |
+|sobel3x3u8            |fcvImageGradientSobelPlanars16_v2             |
+|sobel3x3u8            |fcvImageGradientSobelPlanars16_v3             |
+|sobel3x3u8            |fcvImageGradientSobelPlanarf32_v2             |
+|sobel3x3u8            |fcvImageGradientSobelPlanarf32_v3             |
 |sobel                 |fcvFilterSobel3x3u8_v2                        |
 |                      |fcvFilterSobel3x3u8s16                        |
 |                      |fcvFilterSobel5x5u8s16                        |
@@ -244,3 +245,4 @@ HAL and Extension list of APIs
 |trackOpticalFlowLK    |fcvTrackLKOpticalFlowu8_v3                    |
 |                      |fcvTrackLKOpticalFlowu8                       |
 |warpPerspective2Plane |fcv2PlaneWarpPerspectiveu8                    |
+|warpPerspective       |fcvWarpPerspectiveu8_v5                       |

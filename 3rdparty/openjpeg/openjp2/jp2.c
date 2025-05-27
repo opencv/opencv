@@ -2873,7 +2873,7 @@ OPJ_BOOL opj_jp2_read_header(opj_stream_private_t *p_stream,
                               p_image,
                               p_manager);
 
-    if (p_image && *p_image) {
+    if (ret && p_image && *p_image) {
         /* Set Image Color Space */
         if (jp2->enumcs == 16) {
             (*p_image)->color_space = OPJ_CLRSPC_SRGB;
