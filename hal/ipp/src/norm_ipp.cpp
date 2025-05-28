@@ -100,7 +100,7 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
         0) :
         norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
         (
-            #if (!IPP_DISABLE_NORM_8U)
+            #ifndef IPP_DISABLE_NORM_8U
             type == CV_8UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_8u_C1R :
             #endif
             type == CV_16UC1 ? (ippiNormFuncNoHint)ippiNorm_L2_16u_C1R :
@@ -178,7 +178,7 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
             ippiNormRelFuncNoHint ippiNormRel =
             norm_type == cv::NORM_INF ?
             (
-                #if (!IPP_DISABLE_NORM_8U)
+                #ifndef IPP_DISABLE_NORM_8U
                 type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_8u_C1R :
                 #endif
                 type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_Inf_16u_C1R :
@@ -187,7 +187,7 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
                 0) :
                 norm_type == cv::NORM_L1 ?
                 (
-                    #if (!IPP_DISABLE_NORM_8U)
+                    #ifndef IPP_DISABLE_NORM_8U
                     type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_8u_C1R :
                     #endif
                     type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L1_16u_C1R :
@@ -195,7 +195,7 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
                     0) :
                     norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
                     (
-                        #if (!IPP_DISABLE_NORM_8U)
+                        #ifndef IPP_DISABLE_NORM_8U
                         type == CV_8U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_8u_C1R :
                         #endif
                         type == CV_16U ? (ippiNormRelFuncNoHint)ippiNormRel_L2_16u_C1R :
@@ -300,7 +300,7 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
         ippiNormDiffFuncNoHint ippiNormDiff =
         norm_type == cv::NORM_INF ?
         (
-            #if (!IPP_DISABLE_NORM_8U)
+            #ifndef IPP_DISABLE_NORM_8U
             type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_8u_C1R :
             #endif
             type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_Inf_16u_C1R :
@@ -309,7 +309,7 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
             0) :
             norm_type == cv::NORM_L1 ?
             (
-                #if (!IPP_DISABLE_NORM_8U)
+                #ifndef IPP_DISABLE_NORM_8U
                 type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_8u_C1R :
                 #endif
                 type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L1_16u_C1R :
@@ -317,7 +317,7 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
                 0) :
                 norm_type == cv::NORM_L2 || norm_type == cv::NORM_L2SQR ?
                 (
-                    #if (!IPP_DISABLE_NORM_8U)
+                    #ifndef IPP_DISABLE_NORM_8U
                     type == CV_8U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_8u_C1R :
                     #endif
                     type == CV_16U ? (ippiNormDiffFuncNoHint)ippiNormDiff_L2_16u_C1R :
