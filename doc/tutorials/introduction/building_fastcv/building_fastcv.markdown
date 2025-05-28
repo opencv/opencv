@@ -137,11 +137,12 @@ HAL and Extension list of APIs
 |               |                  |fcvFilterSobel7x7u8s16                         |
 |               |boxFilter         |fcvBoxFilter3x3u8_v3                           |
 |               |                  |fcvBoxFilter5x5u8_v2                           |
+|               |                  |fcvBoxFilterNxNf32                             |
 |               |adaptiveThreshold |fcvAdaptiveThresholdGaussian3x3u8_v2           |
 |               |                  |fcvAdaptiveThresholdGaussian5x5u8_v2           |
 |               |                  |fcvAdaptiveThresholdMean3x3u8_v2               |
 |               |                  |fcvAdaptiveThresholdMean5x5u8_v2               |
-|               |pyrUp & pyrDown   |fcvPyramidCreateu8_v4                          |
+|               |pyrDown           |fcvPyramidCreateu8_v4                          |
 |               |cvtColor          |fcvColorRGB888toYCrCbu8_v3                     |
 |               |                  |fcvColorRGB888ToHSV888u8                       |
 |               |gaussianBlur      |fcvFilterGaussian5x5u8_v3                      |
@@ -167,6 +168,8 @@ HAL and Extension list of APIs
 |               |addWeighted       |fcvAddWeightedu8_v2                            |
 |               |subtract          |fcvImageDiffu8f32_v2                           |
 |               |SVD & solve       |fcvSVDf32_v2                                   |
+|               |gemm              |fcvMatrixMultiplyf32_v2                        |
+|               |                  |fcvMultiplyScalarf32                           |
 
 
 **FastCV based OpenCV Extensions APIs list :**
@@ -246,3 +249,16 @@ HAL and Extension list of APIs
 |                      |fcvTrackLKOpticalFlowu8                       |
 |warpPerspective2Plane |fcv2PlaneWarpPerspectiveu8                    |
 |warpPerspective       |fcvWarpPerspectiveu8_v5                       |
+|arithmetic_op         |fcvAddu8                                      |
+|                      |fcvAdds16_v2                                  |
+|                      |fcvAddf32                                     |
+|                      |fcvSubtractu8                                 |
+|                      |fcvSubtracts16                                |
+|integrateYUV          |fcvIntegrateImageYCbCr420PseudoPlanaru8       |
+|normalizeLocalBox     |fcvNormalizeLocalBoxu8                        |
+|                      |fcvNormalizeLocalBoxf32                       |
+|merge                 |fcvChannelCombine2Planesu8                    |
+|                      |fcvChannelCombine3Planesu8                    |
+|                      |fcvChannelCombine4Planesu8                    |
+|split                 |fcvDeinterleaveu8                             |
+|                      |fcvChannelExtractu8                           |
