@@ -239,6 +239,29 @@ int integral(int depth, int sdepth, int sqdepth,
 #undef cv_hal_integral
 #define cv_hal_integral cv::rvv_hal::imgproc::integral
 
+/* ############ scharr ############ */
+int scharr(const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type);
+
+#undef cv_hal_scharr
+#define cv_hal_scharr cv::rvv_hal::imgproc::scharr
+
+/* ############ sobel ############ */
+
+int sobel(const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, int ksize, double scale, double delta, int border_type);
+
+#undef cv_hal_sobel
+#define cv_hal_sobel cv::rvv_hal::imgproc::sobel
+
+/* ############ canny ############ */
+int canny(const uint8_t *src_data, size_t src_step,
+         uint8_t *dst_data, size_t dst_step,
+         int width, int height, int cn,
+         double low_thresh, double high_thresh,
+         int ksize, bool L2gradient);
+
+#undef cv_hal_canny
+#define cv_hal_canny cv::rvv_hal::imgproc::canny
+
 #endif // CV_HAL_RVV_1P0_ENABLED
 
 #if CV_HAL_RVV_071_ENABLED
