@@ -240,6 +240,10 @@ public:
 
     //! converts GpuMat to another datatype (Blocking call)
     void convertTo(OutputArray dst, int rtype) const;
+    //! bindings overload which converts GpuMat to another datatype (Blocking call)
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype) const {
+        convertTo(static_cast<OutputArray>(dst), rtype);
+    }
 
     //! converts GpuMat to another datatype (Non-Blocking call)
     void convertTo(OutputArray dst, int rtype, Stream& stream) const;
@@ -251,7 +255,7 @@ public:
     //! converts GpuMat to another datatype with scaling (Blocking call)
     void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
     //! bindings overload which converts GpuMat to another datatype with scaling(Blocking call)
-    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha = 1.0, double beta = 0.0) const {
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha, double beta = 0.0) const {
         convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta);
     }
 
