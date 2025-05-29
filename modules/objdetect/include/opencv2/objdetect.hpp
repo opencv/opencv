@@ -702,6 +702,19 @@ public:
 };
 //! @}
 
+//! @addtogroup objdetect_colornames
+//! @{
+class CV_EXPORTS_W ColorNamesFeatures
+{
+public:
+    typedef Vec<uchar, 3> PixType;
+    typedef Vec<float, 10> FeatureType;
+    virtual ~ColorNamesFeatures() {}
+    CV_WRAP virtual void compute(InputArray image_patch, OutputArray feature_vector) = 0;
+    static Ptr<ColorNamesFeatures> create(const std::string & table_file);
+};
+//! @}
+
 //! @addtogroup objdetect_qrcode
 //! @{
 
