@@ -72,6 +72,14 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
     bool res = false;
     if (PyUnicode_Check(obj))
     {
+#if PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 3
+        const char * raw = PyUnicode_AsUTF8(obj);
+        if (raw)
+        {
+            str = std::string(raw);
+            res = true;
+        }
+#else
         PyObject * bytes = PyUnicode_AsUTF8String(obj);
         if (PyBytes_Check(bytes))
         {
@@ -83,6 +91,7 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
             }
         }
         Py_XDECREF(bytes);
+#endif  // Python >= 3.3
     }
 #if PY_MAJOR_VERSION < 3
     else if (PyString_Check(obj))
