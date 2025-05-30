@@ -384,9 +384,6 @@ OCV_OPTION(WITH_IMGCODEC_PXM "Include PNM (PBM,PGM,PPM) and PAM formats support"
 OCV_OPTION(WITH_IMGCODEC_PFM "Include PFM formats support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_IMGCODEC_PFM)
-OCV_OPTION(WITH_QUIRC "Include library QR-code decoding" OFF
-  VISIBLE_IF TRUE
-  VERIFY HAVE_QUIRC)
 OCV_OPTION(WITH_ANDROID_MEDIANDK "Use Android Media NDK for Video I/O (Android)" (ANDROID_NATIVE_API_LEVEL GREATER 20)
   VISIBLE_IF ANDROID
   VERIFY HAVE_ANDROID_MEDIANDK)
@@ -849,11 +846,6 @@ endif()
 
 if(WITH_VTK)
   include(cmake/OpenCVDetectVTK.cmake)
-endif()
-
-if(WITH_QUIRC)
-  add_subdirectory(3rdparty/quirc)
-  set(HAVE_QUIRC TRUE)
 endif()
 
 if(WITH_ONNX)

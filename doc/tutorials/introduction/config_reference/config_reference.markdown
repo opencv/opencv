@@ -654,7 +654,6 @@ Following build options are utilized in `opencv_contrib` modules, as stated [pre
 `WITH_DIRECTX`
 `WITH_VA`
 `WITH_LAPACK`
-`WITH_QUIRC`
 `BUILD_ZLIB`
 `BUILD_ITT`
 `WITH_IPP`

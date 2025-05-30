@@ -143,9 +143,6 @@
 /* OpenCV trace utilities */
 #cmakedefine OPENCV_TRACE
 
-/* Library QR-code decoding */
-#cmakedefine HAVE_QUIRC
-
 /* The font "uni" (WQY MicroHei) is available */
 #cmakedefine HAVE_UNIFONT
 
