@@ -739,14 +739,16 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
 template<>
 PyObject* pyopencv_from(const String& value)
 {
-    return PyString_FromString(value.empty() ? "" : value.c_str());
+    PyObject* ret = PyString_FromString(value.empty() ? "" : value.c_str());
+    return ret ? ret : Py_None;
 }
 
 #if CV_VERSION_MAJOR == 3
 template<>
 PyObject* pyopencv_from(const std::string& value)
 {
-    return PyString_FromString(value.empty() ? "" : value.c_str());
+    PyObject* ret = PyString_FromString(value.empty() ? "" : value.c_str());
+    return ret ? ret : Py_None;
 }
 #endif
 

@@ -729,7 +729,8 @@ public:
     };
 
     enum ECIEncodings {
-        ECI_UTF8 = 26
+        ECI_SHIFT_JIS = 20,
+        ECI_UTF8 = 26,
     };
 
     /** @brief QR code encoder parameters. */
@@ -808,6 +809,13 @@ public:
      */
     CV_WRAP std::string detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
                                               OutputArray straight_qrcode = noArray());
+
+    /** @brief Returns a kid of encoding for the decoded info from the latest QR codes
+    @param codeIdx an index of the previously decoded QR code.
+                   When @ref decode or @ref detectAndDecode is used, valid value is zero.
+                   For @ref decodeMulti or @ref detectAndDecodeMulti use indices corresponding to the output order.
+    */
+    CV_WRAP QRCodeEncoder::ECIEncodings getEncoding(size_t codeIdx = 0);
 };
 
 class CV_EXPORTS_W_SIMPLE QRCodeDetectorAruco : public GraphicalCodeDetector {
