@@ -305,6 +305,50 @@ TEST(Imgcodecs_JpegXL, imread_truncated_stream)
     remove(tmp_fname.c_str());
 }
 
+// See https://github.com/opencv/opencv/issues/27382
+TEST(Imgcodecs_JpegXL, imencode_regression27382)
+{
+    cv::Mat image(1024, 1024, CV_16U);
+    cv::RNG rng(1024);
+    rng.fill(image, cv::RNG::NORMAL, 0, 65535);
+
+    std::vector<unsigned char> buffer;
+    std::vector<int> params = {cv::IMWRITE_JPEGXL_DISTANCE, 0}; // lossless
+
+    EXPECT_NO_THROW(cv::imencode(".jxl", image, buffer, params));
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buffer, cv::IMREAD_UNCHANGED));
+    EXPECT_FALSE(decoded.empty());
+
+    cv::Mat diff;
+    cv::absdiff(image, decoded, diff);
+    double max_diff = 0.0;
+    cv::minMaxLoc(diff, nullptr, &max_diff);
+    EXPECT_EQ(max_diff, 0 );
+}
+TEST(Imgcodecs_JpegXL, imencode_regression27382_2)
+{
+    cv::Mat image(1024, 1024, CV_16U);
+    cv::RNG rng(1024);
+    rng.fill(image, cv::RNG::NORMAL, 0, 65535);
+
+    std::vector<unsigned char> buffer;
+    std::vector<int> params = {cv::IMWRITE_JPEGXL_QUALITY, 100}; // lossless
+
+    EXPECT_NO_THROW(cv::imencode(".jxl", image, buffer, params));
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buffer, cv::IMREAD_UNCHANGED));
+    EXPECT_FALSE(decoded.empty());
+
+    cv::Mat diff;
+    cv::absdiff(image, decoded, diff);
+    double max_diff = 0.0;
+    cv::minMaxLoc(diff, nullptr, &max_diff);
+    EXPECT_EQ(max_diff, 0 );
+}
+
 
 #endif  // HAVE_JPEGXL
 
