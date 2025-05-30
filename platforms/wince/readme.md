@@ -46,7 +46,6 @@ For headless WEC2013, this configuration may not be limited to but is known to w
 -DHAVE_OPENCL=OFF `
 -DWITH_QT=OFF `
 -DWITH_GTK=OFF `
--DWITH_QUIRC=OFF `
 -DWITH_JASPER=OFF `
 -DWITH_WEBP=OFF `
 -DWITH_PROTOBUF=OFF `
