@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 '''
 ===============================================================================
@@ -51,7 +52,7 @@ class qrcode_detector_test(NewOpenCVTests):
         self.assertTrue("QUESTION" in decoded_data)
         self.assertEqual(points.shape, (6, 4, 2))
 
-    def test_decode_non_utf8(self):
+    def test_decode_non_ascii(self):
         import sys
         if sys.version_info[0] < 3:
             raise unittest.SkipTest('Python 2.x is not supported')
@@ -59,6 +60,21 @@ class qrcode_detector_test(NewOpenCVTests):
         img = cv.imread(os.path.join(self.extraTestDataPath, 'cv/qrcode/umlaut.png'))
         self.assertFalse(img is None)
         detector = cv.QRCodeDetector()
-        decoded_data, _, _ = detector.detectAndDecodeBytes(img)
-        self.assertTrue(isinstance(decoded_data, bytes))
-        self.assertTrue(u"M\u00FCllheimstrasse" in decoded_data.decode('utf-8'))
+        decoded_data, _, _ = detector.detectAndDecode(img)
+        self.assertTrue(isinstance(decoded_data, str))
+        self.assertTrue("Müllheimstrasse" in decoded_data)
+
+    def test_kanji(self):
+        inp = b"\x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd\x90\xa2\x8a\x45"
+
+        params = cv.QRCodeEncoder_Params()
+        params.mode = cv.QRCodeEncoder_MODE_KANJI
+        encoder = cv.QRCodeEncoder_create(params)
+        qrcode = encoder.encode(inp)
+        qrcode = cv.resize(qrcode, (0, 0), fx=2, fy=2, interpolation=cv.INTER_NEAREST)
+
+        detector = cv.QRCodeDetector()
+        data, _, _ = detector.detectAndDecodeBytes(qrcode)
+        self.assertEqual(data, inp)
+        self.assertEqual(detector.getEncoding(), cv.QRCodeEncoder_ECI_SHIFT_JIS)
+        self.assertEqual(data.decode("shift-jis"), "こんにちは世界")
