@@ -170,6 +170,7 @@ HAL and Extension list of APIs
 |               |SVD & solve       |fcvSVDf32_v2                                   |
 |               |gemm              |fcvMatrixMultiplyf32_v2                        |
 |               |                  |fcvMultiplyScalarf32                           |
+|               |                  |fcvAddf32_v2                                   |
 
 
 **FastCV based OpenCV Extensions APIs list :**
