@@ -7,6 +7,8 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_JPEGXL
 
+#include <jxl/version.h> // For JPEGXL_MAJOR_VERSION and JPEGXL_MINOR_VERSION
+
 typedef tuple<perf::MatType, int> MatType_and_Distance;
 typedef testing::TestWithParam<MatType_and_Distance> Imgcodecs_JpegXL_MatType;
 
@@ -327,6 +329,7 @@ TEST(Imgcodecs_JpegXL, imencode_regression27382)
     cv::minMaxLoc(diff, nullptr, &max_diff);
     EXPECT_EQ(max_diff, 0 );
 }
+
 TEST(Imgcodecs_JpegXL, imencode_regression27382_2)
 {
     cv::Mat image(1024, 1024, CV_16U);
@@ -346,7 +349,12 @@ TEST(Imgcodecs_JpegXL, imencode_regression27382_2)
     cv::absdiff(image, decoded, diff);
     double max_diff = 0.0;
     cv::minMaxLoc(diff, nullptr, &max_diff);
-    EXPECT_EQ(max_diff, 0 );
+#if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
+    // Quality parameter is supported with libjxl v0.10.0 or later
+    EXPECT_EQ(max_diff, 0); // Lossless
+#else
+    EXPECT_NE(max_diff, 0); // Lossy
+#endif
 }
 
 
