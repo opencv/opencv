@@ -13,133 +13,6 @@
 
 #include <cfloat>
 
-
-#define CV_HAL_RVV_FAST_DEBUG
-#ifdef CV_HAL_RVV_FAST_DEBUG
-#include <iostream>
-#include <cstdio>
-template <typename T>
-void printVectorUint8(T vec, int vl, std::string name) {
-    uint8_t* data = (uint8_t*)malloc(vl * sizeof(uint8_t));
-    __riscv_vse8(data, vec, vl);
-    std::cout << name << ": ";
-    for (int i = 0; i < vl; i++) {
-        std::cout << (int)data[i] << " ";
-    }
-    std::cout << std::endl;
-    free(data);
-}
-template <typename T>
-void printVectorInt8(T vec, int vl, std::string name) {
-    int8_t* data = (int8_t*)malloc(vl * sizeof(int8_t));
-    __riscv_vse8(data, vec, vl);
-    std::cout << name << ": ";
-    for (int i = 0; i < vl; i++) {
-        std::cout << (int)data[i] << " ";
-    }
-    std::cout << std::endl;
-    free(data);
-}
-template <typename T>
-void printVectorUint16(T vec, int vl, std::string name) {
-    uint16_t* data = (uint16_t*)malloc(vl * sizeof(uint16_t));
-    __riscv_vse16(data, vec, vl);
-    std::cout << name << ": ";
-    for (int i = 0; i < vl; i++) {
-        std::cout << data[i] << " ";
-    }
-    std::cout << std::endl;
-    free(data);
-}
-template <typename T>
-void printVectorInt16(T vec, int vl, std::string name) {
-    int16_t* data = (int16_t*)malloc(vl * sizeof(int16_t));
-    __riscv_vse16(data, vec, vl);
-    std::cout << name << ": ";
-    for (int i = 0; i < vl; i++) {
-        std::cout << data[i] << " ";
-    }
-    std::cout << std::endl;
-    free(data);
-}
-template <typename T>
-void printVectorUint32(T vec, int vl, std::string name) {
-    uint32_t* data = (uint32_t*)malloc(vl * sizeof(uint32_t));
-    __riscv_vse32(data, vec, vl);
-    std::cout << name << ": ";
-    for (int i = 0; i < vl; i++) {
-        std::cout << data[i] << " ";
-    }
-    std::cout << std::endl;
-    free(data);
-}
-void printVectorBool2(vbool2_t vec, int vl, std::string name) {
-    vuint8m1_t tmp = __riscv_vreinterpret_u8m1(vec);
-    uint8_t* data = (uint8_t*)malloc(vl * sizeof(uint8_t));
-    __riscv_vse8(data, tmp, vl);
-    std::cout << name << ": " << std::endl;
-    unsigned long mask_cnt = __riscv_vcpop(vec, vl);
-    std::cout << "mask_cnt: " << mask_cnt << std::endl;
-    int j = 0, k = 0;
-    for (int i = 0; i < vl; i++) {
-        std::cout << (int)((data[j] >> k) & 1) << " ";
-        k++;
-        if (k > 7) {
-            j++;
-            k = 0;
-        }
-    }
-    std::cout << std::endl;
-    free(data);    
-}
-
-template <typename T>
-void printVector(T vec, int vl, std::string name) {
-    if constexpr (std::is_same<T, vuint8m1_t>::value) {
-        printVectorUint8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint8m2_t>::value) {
-        printVectorUint8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint8m4_t>::value) {
-        printVectorUint8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint8m8_t>::value) {
-        printVectorUint8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint8m1_t>::value) {
-        printVectorInt8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint8m2_t>::value) {
-        printVectorInt8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint8m4_t>::value) {
-        printVectorInt8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint8m8_t>::value) {
-        printVectorInt8(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint16m1_t>::value) {
-        printVectorUint16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint16m2_t>::value) {
-        printVectorUint16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint16m4_t>::value) {
-        printVectorUint16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint16m8_t>::value) {
-        printVectorUint16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint16m1_t>::value) {
-        printVectorInt16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint16m2_t>::value) {
-        printVectorInt16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint16m4_t>::value) {
-        printVectorInt16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vint16m8_t>::value) {
-        printVectorInt16(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint32m1_t>::value) {
-        printVectorUint32(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint32m2_t>::value) {
-        printVectorUint32(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint32m4_t>::value) {
-        printVectorUint32(vec, vl, name);
-    } else if constexpr (std::is_same<T, vuint32m8_t>::value) {
-        printVectorUint32(vec, vl, name);
-    }
-}
-#endif // CV_HAL_RVV_FAST_DEBUG
-
-
 namespace cv { namespace rvv_hal { namespace features2d {
 
 using RVV_VECTOR_TYPE = vuint8m4_t;
@@ -149,24 +22,6 @@ using RVV_VECTOR_TYPE = vuint8m4_t;
 inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stride, int patternSize)
 {
     uint16_t pixel_u[25];
-
-    // set min element (pixel[8] = 0 + row_stride * -3) as the base addr
-    // pixel_u[0] = row_stride * 6;
-    // pixel_u[1] = 1 + row_stride * 6;
-    // pixel_u[2] = 2 + row_stride * 5;
-    // pixel_u[3] = 3 + row_stride * 4;
-    // pixel_u[4] = 3 + row_stride * 3;
-    // pixel_u[5] = 3 + row_stride * 2;
-    // pixel_u[6] = 2 + row_stride * 1;
-    // pixel_u[7] = 1 + row_stride * 0;
-    // pixel_u[8] = 0 + row_stride * 0;
-    // pixel_u[9] = -1 + row_stride * 0;
-    // pixel_u[10] = -2 + row_stride * 1;
-    // pixel_u[11] = -3 + row_stride * 2;
-    // pixel_u[12] = -3 + row_stride * 3;
-    // pixel_u[13] = -3 + row_stride * 4;
-    // pixel_u[14] = -2 + row_stride * 5;
-    // pixel_u[15] = -1 + row_stride * 6;
 
     // set min element (pixel[9] = -1 + row_stride * -3) as the base addr
     pixel_u[0] = 1 + row_stride * 6;
@@ -202,32 +57,12 @@ template<typename T> inline T* alignPtr(T* ptr, size_t n=sizeof(T))
     return (T*)(((size_t)ptr + n-1) & -n);
 }
 
-inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int64_t row_stride, bool debug = false) 
+inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int64_t row_stride) 
 {
     const uint32_t K = 8, N = 16 + K + 1;
     uint32_t k, v = ptr[0];
     
     int vl = __riscv_vsetvl_e16m2(N);
-    std::string msg;
-    if (debug)
-    {
-        msg = cv::format("riscv fast_16: vl=%d, N=%d", vl, N);
-        CV_LOG_INFO(NULL, msg);
-        // std::cout<<"vanilla offset";
-        // uint16_t pixel[25] = {
-        //     3073, 3074, 2563, 2052, 1540, 1028, 515, 2,
-        //     1, 0, 511, 1022, 1534, 2046, 2559, 3072,
-        //     3073, 3074, 2563, 2052, 1540, 1028, 515, 2,
-        //     1
-        // };
-        // uint8_t* shift_ptr;
-        // shift_ptr = ((uint8_t*)ptr) - 3 * row_stride - 1;
-        // for (int i = 0; i < 25; i++)
-        // {   
-        //     std::cout << (int)(shift_ptr[pixel[i]]) << " ";
-        // }
-        // std::cout << std::endl;
-    }
     // use vloxei16_v to indexed ordered load
     vint16m2_t v_c_pixel = __riscv_vmv_v_x_i16m2((int16_t)v, vl);
     // vloxei only support positive offset
@@ -237,11 +72,6 @@ inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int6
     // for( k = 0; k < N; k++ )
     //     d[k] = (uint16_t)(v - ptr[pixel[k]]);
     d = __riscv_vsub_vv_i16m2(v_c_pixel, d, vl);
-    if (debug) {
-        std::cout << "row_stride: " << row_stride << std::endl;
-        printVector(d, vl, "d");
-    }
-
     vint16m2_t d_slide = __riscv_vmv_v(d, vl);
     
     vint16m2_t q0 = __riscv_vmv_v_x_i16m2((int16_t)(-1000), vl);
@@ -254,47 +84,21 @@ inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int6
     for (int i = 0; i < 8; i++)
     {
         d_slide = __riscv_vslide1down(d_slide, (int16_t)0, vl);
-        if (debug) {
-            std::cout << "d_slide after slide: " << i << std::endl;
-            printVector(d_slide, vl, "d_slide");
-        }
         ak0 = __riscv_vmin(ak0, d_slide, vl);
         bk0 = __riscv_vmax(bk0, d_slide, vl);
-        if (debug) {
-            printVector(ak0, vl, "ak0 after slide");
-            printVector(bk0, vl, "bk0 after slide");
-        }
-    }
-    if(debug) {
-        printVector(ak0, vl, "ak0");
-        printVector(bk0, vl, "bk0");
     }
 
     q0 = __riscv_vmax(q0, __riscv_vmin(ak0, d, vl), vl);
     q1 = __riscv_vmin(q1, __riscv_vmax(bk0, d, vl), vl);
 
-    if (debug) {
-        printVector(q0, vl, "q0");
-        printVector(q1, vl, "q1");
-    }
-
     d_slide = __riscv_vslide1down(d_slide, (int16_t)0, vl);
     q0 = __riscv_vmax(q0, __riscv_vmin(ak0, d_slide, vl), vl);
     q1 = __riscv_vmin(q1, __riscv_vmax(bk0, d_slide, vl), vl);
-
-    if (debug) {
-        printVector(q0, vl, "q0 after slide");
-        printVector(q1, vl, "q1 after slide");
-    }
 
     q1 = __riscv_vrsub(q1, (int16_t)0, vl);
     q0 = __riscv_vmax(q0, q1, vl);
 
     vint16m1_t res = __riscv_vredmax(q0, __riscv_vmv_s_x_i16m1((int16_t)0, vl), vl);
-
-    if (debug) {
-        printVector(res, vl, "res");
-    }
 
     uint8_t result = (uint8_t)__riscv_vmv_x(res);
     return result - 1;
@@ -307,13 +111,6 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
     const int patternSize = 16;
     const int K = patternSize/2, N = patternSize + K + 1;
     const int quarterPatternSize = patternSize/4;
-
-
-
-
-    std::string msg;
-    msg = cv::format("riscv fast_16: patternSize=%d, K=%d, N=%d, quarterPatternSize=%d", patternSize, K, N, quarterPatternSize);
-    CV_LOG_INFO(NULL, msg);
 
     int i, j, k;
     int16_t pixel[25];
@@ -416,9 +213,6 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
                         c0 = __riscv_vmerge(v_c_zero, c0, m0, vl);
                         c1 = __riscv_vmerge(v_c_zero, c1, m1, vl);
 
-                        // printVectorUint8(c0, vl, cv::format("c0 k = %d", k));
-                        // printVectorUint8(c1, vl, cv::format("c1 k = %d", k));
-
                         max0 = __riscv_vmaxu(max0, c0, vl);
                         max1 = __riscv_vmaxu(max1, c1, vl);
                     }
@@ -436,10 +230,7 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
                                 bool debug = false;
                                 int debug_x = -1;
                                 int debug_y = -1;
-                                debug = (debug_x == i && debug_y == j + k);
-                                curr[j + k] = (uchar)cornerScore(ptr + k, v_offset, (int64_t)src_step, debug);
-                                // msg = cv::format("keypoint = (%d, %d, %f, %f, %d), debug = %d", j + k, i, 7.f, -1.f, curr[j + k], debug);
-                                // CV_LOG_INFO(NULL, msg);
+                                curr[j + k] = (uchar)cornerScore(ptr + k, v_offset, (int64_t)src_step);
                             }
                         }
                     }
@@ -467,8 +258,6 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
                 score > curr[j-1] && score > curr[j] && score > curr[j+1]) )
             {
                 KeyPoint kp((float)j, (float)(i-1), 7.f, -1, (float)score);
-                msg = cv::format("keypoint = (%f, %f, %f, %f, %f)", kp.pt.x, kp.pt.y, kp.size, kp.angle, kp.response);
-                CV_LOG_INFO(NULL, msg);
                 keypoints.push_back(kp);
             }
         }
@@ -480,10 +269,6 @@ int FAST(const uchar* src_data, size_t src_step, int width, int height,
           std::vector<KeyPoint>& keypoints,
           int threshold, bool nonmax_suppression, int detector_type)
 {
-    std::string msg;
-    msg = cv::format("riscv fast: src_step=%zu, width=%d, height=%d, threshold=%d, nonmax_suppression=%d, detector_type=%d", 
-        src_step, width, height, threshold, nonmax_suppression, detector_type);
-    CV_LOG_INFO(NULL, msg);
     int res = CV_HAL_ERROR_UNKNOWN;
     switch(detector_type) {
         case CV_HAL_TYPE_5_8:
@@ -495,7 +280,6 @@ int FAST(const uchar* src_data, size_t src_step, int width, int height,
         default:
             return res;
     }
-    std::cout << "In fast.cpp keypoints.size()" << keypoints.size() << std::endl; 
 }
 
 }}} // namespace cv::rvv_hal::features2d
