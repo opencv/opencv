@@ -59,6 +59,6 @@ class qrcode_detector_test(NewOpenCVTests):
         img = cv.imread(os.path.join(self.extraTestDataPath, 'cv/qrcode/umlaut.png'))
         self.assertFalse(img is None)
         detector = cv.QRCodeDetector()
-        decoded_data, _, _ = detector.detectAndDecode(img)
+        decoded_data, _, _ = detector.detectAndDecodeBytes(img)
         self.assertTrue(isinstance(decoded_data, bytes))
-        self.assertTrue(u"M\u00FCllheimstrasse" in decoded_data.decode('ISO-8859-1'))
+        self.assertTrue(u"M\u00FCllheimstrasse" in decoded_data.decode('utf-8'))
