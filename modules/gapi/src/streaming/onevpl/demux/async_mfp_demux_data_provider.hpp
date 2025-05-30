@@ -16,7 +16,7 @@
 #include "streaming/onevpl/onevpl_export.hpp"
 #include <opencv2/gapi/streaming/onevpl/data_provider_interface.hpp>
 
-#ifdef HAVE_MSMF
+#ifdef HAVE_GAPI_MSMF
 #define NOMINMAX
 #include <mfapi.h>
 #include <mfidl.h>
@@ -104,7 +104,7 @@ private:
 } // namespace gapi
 } // namespace cv
 
-#else // HAVE_MSMF
+#else // HAVE_GAPI_MSMF
 namespace cv {
 namespace gapi {
 namespace wip {
@@ -121,6 +121,6 @@ struct GAPI_EXPORTS MFPAsyncDemuxDataProvider : public IDataProvider {
 } // namespace gapi
 } // namespace cv
 
-#endif // HAVE_MSMF
+#endif // HAVE_GAPI_MSMF
 #endif // HAVE_ONEVPL
 #endif // GAPI_STREAMING_ONEVPL_DEMUX_ASYNC_MFP_DEMUX_DATA_PROVIDER_HPP
