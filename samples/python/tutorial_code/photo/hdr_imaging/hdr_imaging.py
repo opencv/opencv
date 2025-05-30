@@ -51,6 +51,6 @@ fusion = merge_mertens.process(images)
 
 ## [Write results]
 cv.imwrite('fusion.png', fusion * 255)
-cv.imwrite('ldr.png', ldr * 255)
+cv.imwrite('ldr.png', np.clip(ldr * 255, 0, 255).astype('uint8'))
 cv.imwrite('hdr.hdr', hdr)
 ## [Write results]
