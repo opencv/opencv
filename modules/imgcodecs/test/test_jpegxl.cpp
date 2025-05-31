@@ -18,8 +18,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     const int distanceParam = get<1>(GetParam());
 
     cv::Scalar col;
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compressions.
+    // Lossy compression may be small differences in decoding results by environments.
     double th;
 
     switch( CV_MAT_DEPTH(matType) )
@@ -40,7 +40,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : (distanceParam > 2) ? 3 : distanceParam;
 
     bool ret = false;
     string tmp_fname = cv::tempfile(".jxl");
@@ -65,8 +65,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     const int distanceParam  = get<1>(GetParam());
 
     cv::Scalar col;
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compressions.
+    // Lossy compression may be small differences in decoding results by environments.
     double th;
 
     // If alpha=0, libjxl modify color channels(BGR). So do not set it.
@@ -88,7 +88,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : (distanceParam > 2) ? 3 : distanceParam;
 
     bool ret = false;
     vector<uchar> buff;
@@ -132,8 +132,8 @@ TEST_P(Imgcodecs_JpegXL_Effort_DecodingSpeed, encode_decode)
     const int speed  = get<1>(GetParam());
 
     cv::Scalar col = cv::Scalar(124,76,42);
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compression.
+    // Lossy compression may be small differences in decoding results by environments.
     double th = 3; // = 255 / 100 (1%);
 
     bool ret = false;
