@@ -108,6 +108,11 @@ if(TARGET ocv.3rdparty.dshow)
   list(APPEND tgts ocv.3rdparty.dshow)
 endif()
 
+if(TARGET ocv.3rdparty.libcamera)
+  list(APPEND videoio_srcs ${CMAKE_CURRENT_LIST_DIR}/src/cap_libcamera.cpp)
+  list(APPEND tgts ocv.3rdparty.libcamera)
+endif()
+
 if(TARGET ocv.3rdparty.msmf)
   if("msmf" IN_LIST VIDEOIO_PLUGIN_LIST OR VIDEOIO_PLUGIN_LIST STREQUAL "all")
     ocv_create_builtin_videoio_plugin("opencv_videoio_msmf" ocv.3rdparty.msmf "cap_msmf.cpp")
