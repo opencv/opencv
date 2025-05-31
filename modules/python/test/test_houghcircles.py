@@ -79,6 +79,20 @@ class houghcircles_test(NewOpenCVTests):
         self.assertGreater(float(matches_counter) / len(testCircles), .5)
         self.assertLess(float(len(circles) - matches_counter) / len(circles), .75)
 
+        circles_acc = cv.HoughCirclesWithAccumulator(
+            image=img,
+            method=cv.HOUGH_GRADIENT,
+            dp=1,
+            minDist=10,
+            circles=np.array([]),
+            param1=150,
+            param2=45,
+            minRadius=1,
+            maxRadius=30)
+
+        self.assertEqual(circles_acc.shape, (1, 2, 4))
+        self.assertEqual(circles_acc[0, 0, 3], 66.)
+        self.assertEqual(circles_acc[0, 1, 3], 62.)
 
     def test_houghcircles_alt(self):
 
@@ -126,6 +140,22 @@ class houghcircles_test(NewOpenCVTests):
 
         self.assertGreater(float(matches_counter) / len(testCircles), .5)
         self.assertLess(float(len(circles) - matches_counter) / len(circles), .75)
+
+        circles_acc = cv.HoughCirclesWithAccumulator(
+            image=img,
+            method=cv.HOUGH_GRADIENT_ALT,
+            dp=1,
+            minDist=10,
+            circles=np.array([]),
+            param1=300,
+            param2=0.9,
+            minRadius=13,
+            maxRadius=15)
+
+        self.assertEqual(circles_acc.shape, (1, 3, 4))
+        self.assertEqual(circles_acc[0, 0, 3], 62.)
+        self.assertEqual(circles_acc[0, 1, 3], 59.)
+        self.assertEqual(circles_acc[0, 2, 3], 47.)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
