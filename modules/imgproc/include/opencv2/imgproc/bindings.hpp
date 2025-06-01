@@ -45,7 +45,7 @@ void HoughCirclesWithAccumulator(
 {
     std::vector<Vec4f> circles_acc;
     HoughCircles(image, circles_acc, method, dp, minDist, param1, param2, minRadius, maxRadius);
-    Mat(1, circles_acc.size(), CV_32FC4, &circles_acc.front()).copyTo(circles);
+    Mat(1, static_cast<int>(circles_acc.size()), CV_32FC4, &circles_acc.front()).copyTo(circles);
 }
 
 }  // namespace
