@@ -21,11 +21,12 @@ void HoughLinesWithAccumulator(
         InputArray image, OutputArray lines,
         double rho, double theta, int threshold,
         double srn = 0, double stn = 0,
-        double min_theta = 0, double max_theta = CV_PI
+        double min_theta = 0, double max_theta = CV_PI,
+        bool use_edgeval = false
 )
 {
     std::vector<Vec3f> lines_acc;
-    HoughLines(image, lines_acc, rho, theta, threshold, srn, stn, min_theta, max_theta);
+    HoughLines(image, lines_acc, rho, theta, threshold, srn, stn, min_theta, max_theta, use_edgeval);
     Mat(lines_acc).copyTo(lines);
 }
 
