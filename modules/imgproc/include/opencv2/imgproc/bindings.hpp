@@ -30,6 +30,25 @@ void HoughLinesWithAccumulator(
     Mat(lines_acc).copyTo(lines);
 }
 
+/** @brief Finds circles in a grayscale image using the Hough transform and get accumulator.
+ *
+ * @note This function is for bindings use only. Use original function in C++ code
+ *
+ * @sa HoughCircles
+ */
+CV_WRAP static inline
+void HoughCirclesWithAccumulator(
+        InputArray image, OutputArray circles,
+        int method, double dp, double minDist,
+        double param1 = 100, double param2 = 100,
+        int minRadius = 0, int maxRadius = 0
+)
+{
+    std::vector<Vec4f> circles_acc;
+    HoughCircles(image, circles_acc, method, dp, minDist, param1, param2, minRadius, maxRadius);
+    Mat(1, static_cast<int>(circles_acc.size()), CV_32FC4, &circles_acc.front()).copyTo(circles);
+}
+
 }  // namespace
 
 #endif  // OPENCV_IMGPROC_BINDINGS_HPP
