@@ -133,9 +133,6 @@ static PyGetSetDef pyopencv_${name}_getseters[] =
 
 static PyMethodDef pyopencv_${name}_methods[] =
 {
-#ifdef PYOPENCV_EXTRA_METHODS_${name}
-    PYOPENCV_EXTRA_METHODS_${name}
-#endif
 ${methods_inits}
     {NULL,          NULL}
 };

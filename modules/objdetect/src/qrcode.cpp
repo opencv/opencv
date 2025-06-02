@@ -1000,7 +1000,7 @@ QRCodeDetector& QRCodeDetector::setEpsY(double epsY) {
 QRCodeEncoder::ECIEncodings QRCodeDetector::getEncoding(int codeIdx) {
     auto& encodings = std::dynamic_pointer_cast<ImplContour>(p)->encodings;
     CV_Assert(codeIdx >= 0);
-    CV_Assert(codeIdx < encodings.size());
+    CV_Assert(codeIdx < static_cast<int>(encodings.size()));
     return encodings[codeIdx];
 }
 
