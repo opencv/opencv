@@ -254,7 +254,7 @@ TEST(Imgproc_getClosestEllipsePoints, ellipse_mse_2) {
     const float tol = 1e-3f;
 
     // bb height > width
-    // Chech correctness of the minor/major axes swapping and updated angle in getClosestEllipsePoints
+    // Check correctness of the minor/major axes swapping and updated angle in getClosestEllipsePoints
     {
         RotatedRect ellipse_params(
             Point2f(-142.97f, -662.1878f),

@@ -937,7 +937,7 @@ void cv::getClosestEllipsePoints( const RotatedRect& ellipse_params, InputArray 
     CV_Assert(depth == CV_32F || depth == CV_32S);
     CV_Assert(n > 0);
 
-    bool is_float = depth == CV_32F;
+    bool is_float = (depth == CV_32F);
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
@@ -973,22 +973,20 @@ void cv::getClosestEllipsePoints( const RotatedRect& ellipse_params, InputArray 
     ori_T_align_f32(1,2) = shift_y;
 
     std::vector<Point2f> closest_pts_list;
+    closest_pts_list.reserve(n);
     for (int i = 0; i < n; i++)
     {
         Point2f p = is_float ? ptsf[i] : Point2f((float)ptsi[i].x, (float)ptsi[i].y);
-        Matx31f pmat;
-        pmat(0,0) = p.x;
-        pmat(1,0) = p.y;
-        pmat(2,0) = 1;
+        Matx31f pmat(p.x, p.y, 1);
 
-        Mat X_align = Mat(align_T_ori_f32) * pmat;
+        Matx21f X_align = align_T_ori_f32 * pmat;
         Point2f closest_pt;
-        solveFast(semi_major, semi_minor, Point2f(X_align.at<float>(0,0), X_align.at<float>(1,0)), closest_pt);
+        solveFast(semi_major, semi_minor, Point2f(X_align(0,0), X_align(1,0)), closest_pt);
 
         pmat(0,0) = closest_pt.x;
         pmat(1,0) = closest_pt.y;
-        Mat closest_pt_ori = Mat(ori_T_align_f32) * pmat;
-        closest_pts_list.push_back(Point2f(closest_pt_ori.at<float>(0,0), closest_pt_ori.at<float>(1,0)));
+        Matx21f closest_pt_ori = ori_T_align_f32 * pmat;
+        closest_pts_list.push_back(Point2f(closest_pt_ori(0,0), closest_pt_ori(1,0)));
     }
 
     cv::Mat(closest_pts_list).convertTo(closest_pts, CV_32F);
