@@ -47,6 +47,7 @@ endforeach(m)
 
 # header blacklist
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.h$")
+ocv_list_filterout(opencv_hdrs "modules/core/include/opencv2/core/fast_math.hpp")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/opencl/")
