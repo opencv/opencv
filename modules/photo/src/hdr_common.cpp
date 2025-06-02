@@ -65,10 +65,15 @@ Mat triangleWeights()
     Mat w(LDR_SIZE, 1, CV_32F);
     int half   = LDR_SIZE / 2;
     int maxVal = LDR_SIZE - 1;
-    for (int i = 0; i < LDR_SIZE; i++)
-        w.at<float>(i) = (i < half)
+    float epsilon = 1e-6f;
+    for (int i = 0; i < LDR_SIZE; i++){
+        float val = (i < half)
             ? static_cast<float>(i)
             : static_cast<float>(maxVal - i);
+        if (val < epsilon)
+            val = epsilon;
+        w.at<float>(i) = val;
+    }
     return w;
 }
 

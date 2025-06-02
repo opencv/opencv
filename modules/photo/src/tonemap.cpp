@@ -65,6 +65,7 @@ public:
         CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
+        max(src, Scalar::all(1e-6), src);
         CV_Assert(!src.empty());
         CV_Assert(_src.dims() == 2 && _src.type() == CV_32FC3);
         _dst.create(src.size(), CV_32FC3);
