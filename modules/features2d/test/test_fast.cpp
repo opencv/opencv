@@ -41,7 +41,6 @@
 //M*/
 
 #include "test_precomp.hpp"
-#include "opencv2/core/utils/logger.hpp"
 
 namespace opencv_test { namespace {
 
@@ -162,10 +161,7 @@ TEST(Features2d_FAST, noNMS)
     fs["exp_kps"] >> gt_kps;
     fs.release();
     ASSERT_GT(gt_kps.total(), size_t(0));
-    // std::cout << "Ground truth keypoints (gt_kps):\n" << cv::format(gt_kps, cv::Formatter::FMT_DEFAULT) << "\n"
-    //           << "Computed keypoints (kps):\n" << cv::format(kps, cv::Formatter::FMT_DEFAULT) << std::endl;
-    // std::cout << "Ground truth keypoints (gt_kps):\n" << gt_kps << "\n"
-    //           << "Computed keypoints (kps):\n" << kps << std::endl;
+
     ASSERT_EQ( 0, cvtest::norm(gt_kps, kps, NORM_L2));
 }
 
