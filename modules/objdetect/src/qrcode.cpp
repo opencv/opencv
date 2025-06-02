@@ -980,7 +980,7 @@ public:
 
     std::string detectAndDecodeCurved(InputArray in, OutputArray points, OutputArray straight_qrcode);
 
-    QRCodeEncoder::ECIEncodings getEncoding(size_t codeIdx);
+    QRCodeEncoder::ECIEncodings getEncoding(int codeIdx);
 };
 
 QRCodeDetector::QRCodeDetector() {
@@ -997,8 +997,9 @@ QRCodeDetector& QRCodeDetector::setEpsY(double epsY) {
     return *this;
 }
 
-QRCodeEncoder::ECIEncodings QRCodeDetector::getEncoding(size_t codeIdx) {
+QRCodeEncoder::ECIEncodings QRCodeDetector::getEncoding(int codeIdx) {
     auto& encodings = std::dynamic_pointer_cast<ImplContour>(p)->encodings;
+    CV_Assert(codeIdx >= 0);
     CV_Assert(codeIdx < encodings.size());
     return encodings[codeIdx];
 }
