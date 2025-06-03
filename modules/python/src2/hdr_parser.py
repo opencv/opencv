@@ -1061,9 +1061,6 @@ class CppHeaderParser(object):
                         ):
                             depth_if_0 = 0
                             state = SCAN
-                        else:
-                            depth_if_0 += 1
-                            continue
                     elif l.startswith("#endif"):
                         depth_if_0 -= 1
                         if depth_if_0 == 0:
