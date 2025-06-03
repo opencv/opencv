@@ -65,7 +65,6 @@ public:
         CV_INSTRUMENT_REGION();
 
         Mat src = _src.getMat();
-        max(src, Scalar::all(1e-6), src);
         CV_Assert(!src.empty());
         CV_Assert(_src.dims() == 2 && _src.type() == CV_32FC3);
         _dst.create(src.size(), CV_32FC3);
@@ -73,8 +72,10 @@ public:
 
         double min, max;
         minMaxLoc(src, &min, &max);
+        float fmin = static_cast<float>(min);
+        float fmax = static_cast<float>(max);
         if(max - min > DBL_EPSILON) {
-            dst = (src - min) / (max - min);
+            dst = (src - fmin) / (fmax - fmin);
         } else {
             src.copyTo(dst);
         }
@@ -140,8 +141,9 @@ public:
         gray_img /= mean;
         log_img.release();
 
-        double max;
-        minMaxLoc(gray_img, NULL, &max);
+        double dmax;
+        minMaxLoc(gray_img, NULL, &dmax);
+        float max = static_cast<float>(dmax);
         CV_Assert(max > 0);
 
         Mat map;
@@ -151,7 +153,7 @@ public:
         log(2.0f + 8.0f * div, div);
         map = map.mul(1.0f / div);
         div.release();
-
+        
         mapLuminance(img, img, gray_img, map, saturation);
 
         linear->setGamma(gamma);
@@ -224,8 +226,10 @@ public:
         log_(gray_img, log_img);
 
         float log_mean = static_cast<float>(sum(log_img)[0] / log_img.total());
-        double log_min, log_max;
-        minMaxLoc(log_img, &log_min, &log_max);
+        double dlog_min, dlog_max;
+        minMaxLoc(log_img, &dlog_min, &dlog_max);
+        float log_max = static_cast<float>(dlog_max);
+        float log_min = static_cast<float>(dlog_min);
         log_img.release();
 
         double key = static_cast<float>((log_max - log_mean) / (log_max - log_min));
