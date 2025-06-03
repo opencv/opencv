@@ -254,68 +254,132 @@ thresh_8u( const Mat& _src, Mat& _dst, uchar thresh, uchar maxval, int type )
     switch( type )
     {
     case THRESH_BINARY:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for (int i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            j = 0;
+            for (; j <= roi.width - 2*VTraits<v_uint8>::vlanes(); j += 2*VTraits<v_uint8>::vlanes())
+            {
+                v_uint8 v0, v1;
+                v0 = vx_load(src + j);
+                v1 = vx_load(src + j + VTraits<v_uint8>::vlanes());
+                v0 = v_lt(thresh_u, v0);
+                v1 = v_lt(thresh_u, v1);
+                v0 = v_and(v0, maxval16);
+                v1 = v_and(v1, maxval16);
+                v_store(dst + j, v0);
+                v_store(dst + j + VTraits<v_uint8>::vlanes(), v1);
+            }
+            if (j <= roi.width - VTraits<v_uint8>::vlanes())
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
                 v0 = v_lt(thresh_u, v0);
                 v0 = v_and(v0, maxval16);
                 v_store( dst + j, v0 );
+                j += VTraits<v_uint8>::vlanes();
             }
         }
         break;
 
     case THRESH_BINARY_INV:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for (int i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            j = 0;
+            for (; j <= roi.width - 2*VTraits<v_uint8>::vlanes(); j += 2*VTraits<v_uint8>::vlanes())
+            {
+                v_uint8 v0, v1;
+                v0 = vx_load(src + j);
+                v1 = vx_load(src + j + VTraits<v_uint8>::vlanes());
+                v0 = v_le(v0, thresh_u);
+                v1 = v_le(v1, thresh_u);
+                v0 = v_and(v0, maxval16);
+                v1 = v_and(v1, maxval16);
+                v_store(dst + j, v0);
+                v_store(dst + j + VTraits<v_uint8>::vlanes(), v1);
+            }
+            if (j <= roi.width - VTraits<v_uint8>::vlanes())
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
                 v0 = v_le(v0, thresh_u);
                 v0 = v_and(v0, maxval16);
                 v_store( dst + j, v0 );
+                j += VTraits<v_uint8>::vlanes();
             }
         }
         break;
 
     case THRESH_TRUNC:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for (int i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            j = 0;
+            for (; j <= roi.width - 2*VTraits<v_uint8>::vlanes(); j += 2*VTraits<v_uint8>::vlanes())
+            {
+                v_uint8 v0, v1;
+                v0 = vx_load(src + j);
+                v1 = vx_load(src + j + VTraits<v_uint8>::vlanes());
+                v0 = v_sub(v0, v_sub(v0, thresh_u));
+                v1 = v_sub(v1, v_sub(v1, thresh_u));
+                v_store(dst + j, v0);
+                v_store(dst + j + VTraits<v_uint8>::vlanes(), v1);
+            }
+            if (j <= roi.width - VTraits<v_uint8>::vlanes())
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
                 v0 = v_sub(v0, v_sub(v0, thresh_u));
                 v_store( dst + j, v0 );
+                j += VTraits<v_uint8>::vlanes();
             }
         }
         break;
 
     case THRESH_TOZERO:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for (int i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            j = 0;
+            for (; j <= roi.width - 2*VTraits<v_uint8>::vlanes(); j += 2*VTraits<v_uint8>::vlanes())
+            {
+                v_uint8 v0, v1;
+                v0 = vx_load(src + j);
+                v1 = vx_load(src + j + VTraits<v_uint8>::vlanes());
+                v0 = v_and(v_lt(thresh_u, v0), v0);
+                v1 = v_and(v_lt(thresh_u, v1), v1);
+                v_store(dst + j, v0);
+                v_store(dst + j + VTraits<v_uint8>::vlanes(), v1);
+            }
+            if (j <= roi.width - VTraits<v_uint8>::vlanes())
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
                 v0 = v_and(v_lt(thresh_u, v0), v0);
                 v_store( dst + j, v0 );
+                j += VTraits<v_uint8>::vlanes();
             }
         }
         break;
 
     case THRESH_TOZERO_INV:
-        for( int i = 0; i < roi.height; i++, src += src_step, dst += dst_step )
+        for (int i = 0; i < roi.height; i++, src += src_step, dst += dst_step)
         {
-            for( j = 0; j <= roi.width - VTraits<v_uint8>::vlanes(); j += VTraits<v_uint8>::vlanes())
+            j = 0;
+            for (; j <= roi.width - 2*VTraits<v_uint8>::vlanes(); j += 2*VTraits<v_uint8>::vlanes())
+            {
+                v_uint8 v0, v1;
+                v0 = vx_load(src + j);
+                v1 = vx_load(src + j + VTraits<v_uint8>::vlanes());
+                v0 = v_and(v_le(v0, thresh_u), v0);
+                v1 = v_and(v_le(v1, thresh_u), v1);
+                v_store(dst + j, v0);
+                v_store(dst + j + VTraits<v_uint8>::vlanes(), v1);
+            }
+            if (j <= roi.width - VTraits<v_uint8>::vlanes())
             {
                 v_uint8 v0;
                 v0 = vx_load( src + j );
                 v0 = v_and(v_le(v0, thresh_u), v0);
                 v_store( dst + j, v0 );
+                j += VTraits<v_uint8>::vlanes();
             }
         }
         break;
