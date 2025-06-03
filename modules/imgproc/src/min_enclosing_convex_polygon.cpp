@@ -1,12 +1,3 @@
-/*
-
-All the functionality must be put into cv:: namespace, or nested namespace, e.g. cv::vslam::
-
-*/
-
-
-
-
 /*M///////////////////////////////////////////////////////////////////////////////////////
  //
  //  This file is part of OpenCV project.
@@ -139,7 +130,7 @@ struct IntersectionPoint
 struct FlushIntersect
 {
     IntersectionPoint intersection = {};
-    float extra_area = std::numeric_limits<float>::max();
+    double extra_area = std::numeric_limits<double>::max();
     bool done = false;
 };
 
@@ -156,7 +147,7 @@ struct BalancedIntersect
 {
     cv::Point2f pi = {-1, -1};
     cv::Point2f pj = {-1, -1};
-    float extra_area = std::numeric_limits<float>::max();
+    double extra_area = std::numeric_limits<double>::max();
     int flush = -1;
     bool position = false;
     bool done = false;
@@ -172,7 +163,7 @@ struct BalancedIntersect
  */
 struct Segment
 {
-    float extra_area = std::numeric_limits<float>::max();
+    double extra_area = std::numeric_limits<double>::max();
     int side = -1;
     bool flush = false;
     bool exists = false;
@@ -187,7 +178,7 @@ struct Segment
  */
 struct Minimum
 {
-    float area = std::numeric_limits<float>::max();
+    double area = std::numeric_limits<double>::max();
     int i = -1;
     int j = -1;
 };
@@ -217,7 +208,7 @@ struct Kgon
 {
     std::vector<Side> sides;
     std::vector<cv::Point2f> vertices;
-    float extra_area = std::numeric_limits<float>::max();
+    double extra_area = std::numeric_limits<double>::max();
     int i = -1;
     int j = -1;
 };
@@ -253,8 +244,7 @@ private:
     std::vector<std::vector<BalancedIntersect>> balanced_intersections;
     std::vector<cv::Point2f> area_edges;
 
-    float extraArea(int first, int last, const cv::Point2f& extra1,
-                    const cv::Point2f& extra2);
+    double extraArea ( int first, int last, const cv::Point2f& extra1, const cv::Point2f& extra2 );
 
     BalancedIntersect flush(int i, int j, int e);
 
@@ -415,7 +405,7 @@ const FlushIntersect& FlushIntersections::lineIntersect(int i, int j)
     if(itr.done)
         return itr;
 
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     if((i + 1) % n == j)
     {
         itr.intersection.point = ngon[j];
@@ -438,7 +428,7 @@ const FlushIntersect& FlushIntersections::lineIntersect(int i, int j)
     }
     else
     {
-        itr.extra_area = std::numeric_limits<float>::max();
+        itr.extra_area = std::numeric_limits<double>::max();
         itr.intersection.position = false;
         itr.done = true;
     }
@@ -452,7 +442,7 @@ const FlushIntersect& FlushIntersections::lineIntersect(int i, int j)
  * @param extra1        Last point of the sequence
  * @param extra2        Intersection point
  */
-float BalancedIntersections::extraArea(int first, int last,
+double BalancedIntersections::extraArea(int first, int last,
                                        const cv::Point2f& extra1,
                                        const cv::Point2f& extra2)
 {
@@ -480,7 +470,7 @@ BalancedIntersect BalancedIntersections::flush(int i, int j, int e)
     if(j == e)
         std::logic_error("");
 
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     const int before = (e - 1 + n) % n;
     BalancedIntersect bi = balanced_intersections[i][j];
 
@@ -541,7 +531,7 @@ BalancedIntersect BalancedIntersections::balancedIntersect(int i, int j, int e)
     if(balanced_intersections[i][j].done)
         return balanced_intersections[i][j];
 
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     if((i + 2) % n == j)
     {
         BalancedIntersect& bi = balanced_intersections[i][j];
@@ -646,12 +636,12 @@ const std::vector<BalancedIntersect>& BalancedIntersections::operator[](
  */
 void Chains::findSingleE(int i, int j, int l, int r)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     Segment& one = single_sides[i][j];
     if (one.done)
         return;
 
-    float min_area = std::numeric_limits<float>::max();
+    double min_area = std::numeric_limits<double>::max();
     for (int e = l; e != r + 1 && e != j; e = (e + 1) %n)
     {
         BalancedIntersect candidate = balanced_inters.balancedIntersect(i, j, e);
@@ -676,7 +666,7 @@ void Chains::findSingleE(int i, int j, int l, int r)
  */
 void Chains::singleSideImpl(int i, int j1, int j2)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     if((j1 + 1) %n == j2)
     {
         return;
@@ -702,12 +692,12 @@ void Chains::singleSideImpl(int i, int j1, int j2)
  */
 void Chains::findMiddleE1(int i, int j, int l, int r)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     Segment& one = middle_sides[1][i][j];
     if (one.done)
         return;
 
-    float min_area = std::numeric_limits<float>::max();
+    double min_area = std::numeric_limits<double>::max();
     for (int e = l; e != r + 1 && e != j; e = (e + 1) %n)
     {
         const FlushIntersect& before = intersections.lineIntersect(i, e);
@@ -717,7 +707,7 @@ void Chains::findMiddleE1(int i, int j, int l, int r)
         if(!after.intersection.position)
             continue;
 
-        float tmp_area = before.extra_area + after.extra_area;
+        double tmp_area = before.extra_area + after.extra_area;
         if(tmp_area < min_area)
         {
             min_area = tmp_area;
@@ -738,7 +728,7 @@ void Chains::findMiddleE1(int i, int j, int l, int r)
  */
 void Chains::middleSideImpl1(int i, int j1, int j2)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     if((j1 + 1) %n == j2)
     {
         return;
@@ -765,7 +755,7 @@ void Chains::middleSideImpl1(int i, int j1, int j2)
  */
 void Chains::findMiddleE(int h, int i, int j, int l, int r)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     Segment& one = middle_sides[h][i][j];
     if (one.done)
         return;
@@ -791,17 +781,17 @@ void Chains::findMiddleE(int h, int i, int j, int l, int r)
         return;
     }
 
-    float min_area = std::numeric_limits<float>::max();
+    double min_area = std::numeric_limits<double>::max();
     for (int e = l; e != r + 1 && e != j; e = (e + 1) %n)
     {
         const Segment& before = middle_sides[h_floor][i][e];
-        if (before.extra_area == std::numeric_limits<float>::max())
+        if (before.extra_area == std::numeric_limits<double>::max())
             continue;
         const Segment& after = middle_sides[h_ceil][e][j];
-        if(after.extra_area == std::numeric_limits<float>::max())
+        if(after.extra_area == std::numeric_limits<double>::max())
             continue;
 
-        float tmp_area = before.extra_area + after.extra_area;
+        double tmp_area = before.extra_area + after.extra_area;
         if(tmp_area < min_area)
         {
             min_area = tmp_area;
@@ -823,7 +813,7 @@ void Chains::findMiddleE(int h, int i, int j, int l, int r)
  */
 void Chains::middleSideImpl(int h, int i, int j1, int j2)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     if((j1 + 1) %n == j2)
     {
         return;
@@ -869,8 +859,8 @@ std::set<int> Chains::relevantChainLengths(int h)
  */
 void Chains::calcOneSidedChains()
 {
-    const int n = ngon.size();
-    for(int i = 0; i < n; i++)
+    const size_t n = ngon.size();
+    for(size_t i = 0; i < n; i++)
     {
         int j1 = (i + 2) %n, j2 = (i - 2 + n) %n;
 
@@ -886,12 +876,12 @@ void Chains::calcOneSidedChains()
  */
 void Chains::calcMiddleChains(int h)
 {
-    const int n = ngon.size();
+    const size_t n = ngon.size();
     if (h == 0)
     {
-        for (int i = 0; i < n; i++)
+        for (size_t i = 0; i < n; i++)
         {
-            for (int j = 0; j < n; j++)
+            for (size_t j = 0; j < n; j++)
             {
                 Segment& one = middle_sides[h][i][j];
                 const FlushIntersect itrs = intersections.lineIntersect(i, j);
@@ -907,7 +897,7 @@ void Chains::calcMiddleChains(int h)
     }
     if (h == 1)
     {
-        for (int i = 0; i < n; i++)
+        for (size_t i = 0; i < n; i++)
         {
             int j1 = (i + 2) %n, j2 = (i - 2 + n) %n;
 
@@ -918,7 +908,7 @@ void Chains::calcMiddleChains(int h)
         return;
     }
 
-    for (int i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {
         int j1 = (i + 2) %n, j2 = (i - 2 + n) %n;
 
@@ -943,7 +933,7 @@ Minimum Chains::minimumArea(int n, int k)
             if(!single_sides[i][j].exists || !middle_sides[k - 3][j][i].exists)
                 continue;
 
-            float tmp_area =
+            double tmp_area =
             single_sides[i][j].extra_area + middle_sides[k - 3][j][i].extra_area;
             if(tmp_area < min.area)
             {
@@ -1096,22 +1086,22 @@ static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon,
         {
             throw std::invalid_argument( "k must be 3 or higher" );
         }
-        const int n = ngon.size();
-        if (n == k)
+        const size_t n = ngon.size();
+        if ((const int)n == k)
         {
             throw std::runtime_error ("(n = k)");
         }
-        if (n < k)
+        if ((const int)n < k)
         {
             throw std::runtime_error ("(n < k)");
         }
     }
-    catch (std::invalid_argument message)
+    catch (std::invalid_argument &message)
     {
         std::cout << "invalid argument: " << message.what() << std::endl;
         return;
     }
-    catch (std::runtime_error message)
+    catch (std::runtime_error &message)
     {
         std::cout << "Warning: no minimum area polygon calculated " << message.what() << std::endl;
         cv::Mat(ngon).copyTo(minPolygon);
@@ -1149,7 +1139,7 @@ static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
                                double &area,
                                int k) {
 
-    const int n = ngon.size();
+    const size_t n = ngon.size();
 
     Chains chains(ngon, k);
     chains.calcOneSidedChains();
