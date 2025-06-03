@@ -1040,7 +1040,7 @@ namespace CAROTENE_NS {
                         s32 maxVal, size_t * maxLocPtr, s32 & maxLocCount, s32 maxLocCapacity);
 
     /*
-        Among each pixel `p` within `src` find min and max values and its first occurences
+        Among each pixel `p` within `src` find min and max values and its first occurrences
     */
     void minMaxLoc(const Size2D &size,
                    const s8 * srcBase, ptrdiff_t srcStride,

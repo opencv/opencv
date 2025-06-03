@@ -33,11 +33,160 @@ where the list of modifiers is yet another nested list of strings
 original_return_type is None if the original_return_type is the same as return_value_type
 """
 
+def evaluate_conditional_inclusion_directive(directive, preprocessor_definitions):
+    """Evaluates C++ conditional inclusion directive.
+    Reference: https://en.cppreference.com/w/cpp/preprocessor/conditional
+
+    Args:
+        directive(str): input C++ conditional directive.
+        preprocessor_definitions(dict[str, int]): defined preprocessor identifiers.
+
+    Returns:
+        bool: True, if directive is evaluated to 1, False otherwise.
+
+    >>> evaluate_conditional_inclusion_directive("#ifdef    A", {"A": 0})
+    True
+
+    >>> evaluate_conditional_inclusion_directive("#ifdef A", {"B": 0})
+    False
+
+    >>> evaluate_conditional_inclusion_directive("#ifndef    A", {})
+    True
+
+    >>> evaluate_conditional_inclusion_directive("#ifndef A", {"A": 1})
+    False
+
+    >>> evaluate_conditional_inclusion_directive("#if 0", {})
+    False
+
+    >>> evaluate_conditional_inclusion_directive("#if 1", {})
+    True
+
+    >>> evaluate_conditional_inclusion_directive("#if    VAR", {"VAR": 0})
+    False
+
+    >>> evaluate_conditional_inclusion_directive("#if  VAR  ", {"VAR": 1})
+    True
+
+    >>> evaluate_conditional_inclusion_directive("#if defined(VAR)", {"VAR": 0})
+    True
+
+    >>> evaluate_conditional_inclusion_directive("#if !defined(VAR)", {"VAR": 0})
+    False
+
+    >>> evaluate_conditional_inclusion_directive("#if defined(VAR_1)", {"VAR_2": 0})
+    False
+
+    >>> evaluate_conditional_inclusion_directive(
+    ...     "#if defined(VAR) && VAR", {"VAR": 0}
+    ... )
+    False
+
+    >>> evaluate_conditional_inclusion_directive(
+    ...     "#if VAR_1 || VAR_2", {"VAR_1": 1, "VAR_2": 0}
+    ... )
+    True
+
+    >>> evaluate_conditional_inclusion_directive(
+    ...     "#if defined VAR && defined   (VAR)", {"VAR": 1}
+    ... )
+    True
+
+    >>> evaluate_conditional_inclusion_directive(
+    ...     "#if strangedefinedvar", {}
+    ... )
+    Traceback (most recent call last):
+        ...
+    ValueError: Failed to evaluate '#if strangedefinedvar' directive, stripped down to 'strangedefinedvar'
+    """
+    OPERATORS = { "!": "not ", "&&": "and", "&": "and", "||": "or", "|": "or" }
+
+    input_directive = directive
+
+    # Ignore all directives if they contain __cplusplus check
+    if "__cplusplus" in directive:
+        return True
+
+    directive = directive.strip()
+    if directive.startswith("#ifdef "):
+        var = directive[len("#ifdef "):].strip()
+        return var in preprocessor_definitions
+    if directive.startswith("#ifndef "):
+        var = directive[len("#ifndef "):].strip()
+        return var not in preprocessor_definitions
+
+    if directive.startswith("#if "):
+        directive = directive[len("#if "):].strip()
+    elif directive.startswith("#elif "):
+        directive = directive[len("#elif "):].strip()
+    else:
+        raise ValueError("{} is not known conditional directive".format(directive))
+
+    if directive.isdigit():
+        return int(directive) != 0
+
+    if directive in preprocessor_definitions:
+        return bool(preprocessor_definitions[directive])
+
+    # Converting all `defined` directives to their boolean representations
+    # they have 2 forms: `defined identifier` and `defined(identifier)`
+    directive = re.sub(
+        r"\bdefined\s*(\w+|\(\w+\))",
+        lambda m: "True" if m.group(1).strip("() ") in preprocessor_definitions else "False",
+        directive
+    )
+
+    for src_op, dst_op in OPERATORS.items():
+        directive = directive.replace(src_op, dst_op)
+
+    try:
+        if sys.version_info >= (3, 13):
+            eval_directive = eval(directive,
+                                  globals={"__builtins__": {}},
+                                  locals=preprocessor_definitions)
+        else:
+            eval_directive = eval(directive,
+                                  {"__builtins__": {}},
+                                  preprocessor_definitions)
+    except Exception as e:
+        raise ValueError(
+            "Failed to evaluate '{}' directive, stripped down to '{}'".format(
+                input_directive, directive
+            )
+        ) from e
+
+    if not isinstance(eval_directive, (bool, int)):
+        raise TypeError(
+            "'{}' directive is evaluated to unexpected type: {}".format(
+                input_directive, type(eval_directive).__name__
+            )
+        )
+    if isinstance(eval_directive, bool):
+        return eval_directive
+
+    return eval_directive != 0
+
+
 class CppHeaderParser(object):
 
-    def __init__(self, generate_umat_decls=False, generate_gpumat_decls=False):
+    def __init__(self, generate_umat_decls = False, generate_gpumat_decls = False,
+                 preprocessor_definitions = None):
         self._generate_umat_decls = generate_umat_decls
         self._generate_gpumat_decls = generate_gpumat_decls
+        if preprocessor_definitions is None:
+            preprocessor_definitions = {}
+        elif not isinstance(preprocessor_definitions, dict):
+            raise TypeError(
+                "preprocessor_definitions should rather dictionary or None. "
+                "Got: {}".format(type(preprocessor_definitions).__name__)
+            )
+        self.preprocessor_definitions = preprocessor_definitions
+        if "__OPENCV_BUILD" not in self.preprocessor_definitions:
+            self.preprocessor_definitions["__OPENCV_BUILD"] = 0
+        if "OPENCV_BINDING_PARSER" not in self.preprocessor_definitions:
+            self.preprocessor_definitions["OPENCV_BINDING_PARSER"] = 1
+        if "OPENCV_BINDINGS_PARSER" not in self.preprocessor_definitions:
+            self.preprocessor_definitions["OPENCV_BINDINGS_PARSER"] = 1
 
         self.BLOCK_TYPE = 0
         self.BLOCK_NAME = 1
@@ -191,6 +340,8 @@ class CppHeaderParser(object):
                 arg_type += w
                 angle_stack[-1] += 1
             elif arg_type == "struct":
+                arg_type += " " + w
+            elif prev_w in ["signed", "unsigned", "short", "long"] and w in ["char", "short", "int", "long"]:
                 arg_type += " " + w
             elif arg_type and arg_type != "~":
                 arg_name = " ".join(word_list[wi:])
@@ -839,9 +990,8 @@ class CppHeaderParser(object):
         """
         self.hname = hname
         decls = []
-        f = io.open(hname, 'rt', encoding='utf-8')
-        linelist = list(f.readlines())
-        f.close()
+        with io.open(hname, 'rt', encoding='utf-8') as f:
+            linelist = list(f.readlines())
 
         # states:
         SCAN = 0 # outside of a comment or preprocessor directive
@@ -859,7 +1009,6 @@ class CppHeaderParser(object):
         self.wrap_mode = wmode
 
         depth_if_0 = 0
-
         for l0 in linelist:
             self.lineno += 1
             #print(state, self.lineno, l0)
@@ -886,22 +1035,35 @@ class CppHeaderParser(object):
                     continue
                 state = SCAN
                 l = re.sub(r'//(.+)?', '', l).strip()  # drop // comment
-                if l in [
-                    '#if 0',
-                    '#if defined(__OPENCV_BUILD)', '#ifdef __OPENCV_BUILD',
-                    '#if !defined(OPENCV_BINDING_PARSER)', '#ifndef OPENCV_BINDING_PARSER',
-                ]:
+                if l.startswith("#if") or l.startswith("#elif"):
+                    if not evaluate_conditional_inclusion_directive(
+                        l, self.preprocessor_definitions
+                    ):
+                        # Condition evaluated to false
+                        state = DIRECTIVE_IF_0
+                        depth_if_0 = 1
+                elif l.startswith("#else"):
+                    # else in state == DIRECTIVE may occur only if previous
+                    # conditional inclusion directive was evaluated to True
                     state = DIRECTIVE_IF_0
                     depth_if_0 = 1
                 continue
 
             if state == DIRECTIVE_IF_0:
-                if l.startswith('#'):
-                    l = l[1:].strip()
-                    if l.startswith("if"):
+                if l.startswith("#"):
+                    if l.startswith("#if"):
                         depth_if_0 += 1
                         continue
-                    if l.startswith("endif"):
+                    elif l.startswith("#else") and depth_if_0 == 1:
+                        depth_if_0 = 0
+                        state = SCAN
+                    elif l.startswith("#elif") and depth_if_0 == 1:
+                        if evaluate_conditional_inclusion_directive(
+                            l, self.preprocessor_definitions
+                        ):
+                            depth_if_0 = 0
+                            state = SCAN
+                    elif l.startswith("#endif"):
                         depth_if_0 -= 1
                         if depth_if_0 == 0:
                             state = SCAN
@@ -1075,6 +1237,9 @@ class CppHeaderParser(object):
                     print()
 
 if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+
     parser = CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
     decls = []
     for hname in opencv_hdr_list:

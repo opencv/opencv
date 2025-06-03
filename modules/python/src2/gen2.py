@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import hdr_parser, sys, re
+import json
 from string import Template
 from pprint import pprint
 from collections import namedtuple
@@ -1109,6 +1110,18 @@ class Namespace(object):
 
 
 class PythonWrapperGenerator(object):
+    class Config:
+        def __init__(self, headers, preprocessor_definitions = None):
+            self.headers = headers
+            if preprocessor_definitions is None:
+                preprocessor_definitions = {}
+            elif not isinstance(preprocessor_definitions, dict):
+                raise TypeError(
+                    "preprocessor_definitions should rather dictionary or None. "
+                    "Got: {}".format(type(preprocessor_definitions).__name__)
+                )
+            self.preprocessor_definitions = preprocessor_definitions
+
     def __init__(self):
         self.clear()
 
@@ -1327,13 +1340,16 @@ class PythonWrapperGenerator(object):
             f.write(buf.getvalue())
 
     def save_json(self, path, name, value):
-        import json
         with open(path + "/" + name, "wt") as f:
             json.dump(value, f)
 
-    def gen(self, srcfiles, output_path):
+    def gen(self, srcfiles, output_path, preprocessor_definitions = None):
         self.clear()
-        self.parser = hdr_parser.CppHeaderParser(generate_umat_decls=True, generate_gpumat_decls=True)
+        self.parser = hdr_parser.CppHeaderParser(
+            generate_umat_decls=True,
+            generate_gpumat_decls=True,
+            preprocessor_definitions=preprocessor_definitions
+        )
 
         # step 1: scan the headers and build more descriptive maps of classes, consts, functions
         for hdr in srcfiles:
@@ -1504,12 +1520,36 @@ class PythonWrapperGenerator(object):
         self.save_json(output_path, "pyopencv_signatures.json", self.py_signatures)
 
 if __name__ == "__main__":
-    srcfiles = hdr_parser.opencv_hdr_list
-    dstdir = "/Users/vp/tmp"
-    if len(sys.argv) > 1:
-        dstdir = sys.argv[1]
-    if len(sys.argv) > 2:
-        with open(sys.argv[2], 'r') as f:
-            srcfiles = [l.strip() for l in f.readlines()]
+    import argparse
+    import tempfile
+
+    arg_parser = argparse.ArgumentParser(
+        description="OpenCV Python bindings generator"
+    )
+    arg_parser.add_argument(
+        "-c", "--config",
+        dest="config_json_path",
+        required=False,
+        help="Generator configuration file in .json format"
+        "Refer to PythonWrapperGenerator.Config for available "
+        "configuration keys"
+    )
+    arg_parser.add_argument(
+        "-o", "--output_dir",
+        dest="output_dir",
+        default=tempfile.gettempdir(),
+        help="Generated bindings output directory"
+    )
+    args = arg_parser.parse_args()
+    if args.config_json_path is not None:
+        with open(args.config_json_path, "r") as fh:
+            config_json = json.load(fh)
+        config = PythonWrapperGenerator.Config(**config_json)
+    else:
+        config = PythonWrapperGenerator.Config(
+            headers=hdr_parser.opencv_hdr_list
+        )
+
     generator = PythonWrapperGenerator()
-    generator.gen(srcfiles, dstdir)
+
+    generator.gen(config.headers, args.output_dir, config.preprocessor_definitions)

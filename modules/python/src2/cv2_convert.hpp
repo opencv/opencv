@@ -182,6 +182,29 @@ struct PyOpenCV_Converter
     }
 };
 
+// There is conflict between "long long" and "int64".
+// They are the same type on some 32-bit platforms.
+template<typename T>
+struct PyOpenCV_Converter
+    < T, typename std::enable_if< std::is_same<long long, T>::value && !std::is_same<long long, int64>::value >::type >
+{
+    static inline PyObject* from(const long long& value)
+    {
+        return PyLong_FromLongLong(value);
+    }
+
+    static inline bool to(PyObject* obj, long long& value, const ArgInfo& info)
+    {
+        CV_UNUSED(info);
+        if(!obj || obj == Py_None)
+            return true;
+        else if(PyLong_Check(obj))
+            value = PyLong_AsLongLong(obj);
+        else
+            return false;
+        return value != (long long)-1 || !PyErr_Occurred();
+    }
+};
 
 // --- uchar
 template<> bool pyopencv_to(PyObject* obj, uchar& value, const ArgInfo& info);

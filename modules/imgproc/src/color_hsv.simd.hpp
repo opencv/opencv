@@ -850,7 +850,7 @@ struct RGB2HLS_b
                 for ( ; j <= dn*bufChannels - nBlock*bufChannels;
                       j += nBlock*bufChannels, src += nBlock*4)
                 {
-                    v_uint8 rgb0, rgb1, rgb2, rgb3, dummy;
+                    v_uint8 rgb0, rgb1, rgb2, dummy;
                     v_load_deinterleave(src, rgb0, rgb1, rgb2, dummy);
 
                     v_uint16 d0,d1,d2,d3,d4,d5;

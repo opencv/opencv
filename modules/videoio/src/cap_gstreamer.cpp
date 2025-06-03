@@ -1162,7 +1162,7 @@ bool GStreamerCapture::retrieveFrame(int index, OutputArray dst)
         }
     }
 
-    CV_LOG_ERROR(NULL, "GStreamer(retrive): unrecognized index=" << index);
+    CV_LOG_ERROR(NULL, "GStreamer(retrieve): unrecognized index=" << index);
     return false;
 }
 
