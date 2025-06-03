@@ -57,7 +57,7 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
     }
 
     public void testKanji() throws UnsupportedEncodingException {
-        String inp = new String("こんにちは世界");
+        String inp = new String("\u3053\u3093\u306B\u3061\u306F\u4E16\u754C");
 
         QRCodeEncoder_Params params = new QRCodeEncoder_Params();
         params.set_mode(QRCodeEncoder.MODE_KANJI);
