@@ -78,10 +78,6 @@ public:
     CV_WRAP_AS(detectAndDecodeBytes) NativeByteArray detectAndDecode(InputArray img, OutputArray points = noArray(),
                                                                      OutputArray straight_code = noArray()) const;
     CV_WRAP_AS(decodeBytes) NativeByteArray decode(InputArray img, InputArray points, OutputArray straight_code = noArray()) const;
-    // CV_WRAP_AS(decodeBytesMulti) bool decodeMulti(InputArray img, InputArray points, CV_OUT std::vector<NativeByteArray>& decoded_info,
-    //                                               OutputArrayOfArrays straight_code = noArray()) const;
-    // CV_WRAP_AS(detectAndDecodeBytesMulti) bool detectAndDecodeMulti(InputArray img, CV_OUT std::vector<NativeByteArray>& decoded_info, OutputArray points = noArray(),
-    //                                                                 OutputArrayOfArrays straight_code = noArray()) const;
 #endif
 
     struct Impl;

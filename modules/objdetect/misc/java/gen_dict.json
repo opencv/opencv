@@ -4,9 +4,9 @@
             "QRCodeEncoder" : {
                 "j_code"   : [
                     "\n",
-                    "/**",
-                    " * Constructor of streaming callback object with abstract 'read' and 'seek' methods that should be implemented in Java code.<br>",
-                    " * <b>NOTE</b>: Implemented callbacks should be called from the creation thread to avoid JNI performance degradation",
+                    "/** Generates QR code from input string.",
+                    "@param encoded_info Input bytes to encode.",
+                    "@param qrcode Generated QR code.",
                     "*/",
                     "public void encode(byte[] encoded_info, Mat qrcode) {",
                     "    encode_1(nativeObj, encoded_info, qrcode.nativeObj);",
@@ -45,48 +45,16 @@
                     "\n"
                 ]
             }
-        },
-        "GraphicalCodeDetector" : {
-            "GraphicalCodeDetector" : {
-                "j_code"   : [
-                    "\n",
-                    "public byte[] detectAndDecodeBytes(Mat img) {",
-                    "    return detectAndDecodeBytes_0(nativeObj, img.nativeObj);",
-                    "}",
-                    "\n"
-                ],
-                "jn_code": [
-                    "\n",
-                    "private static native byte[] detectAndDecodeBytes_0(long nativeObj, long img_nativeObj);",
-                    "\n"
-                ],
-                "cpp_code": [
-                    "JNIEXPORT jbyteArray JNICALL Java_org_opencv_objdetect_GraphicalCodeDetector_detectAndDecodeBytes_10 (JNIEnv*, jclass, jlong, jlong);",
-                    "\n",
-                    "JNIEXPORT jbyteArray JNICALL Java_org_opencv_objdetect_GraphicalCodeDetector_detectAndDecodeBytes_10",
-                    "  (JNIEnv* env, jclass , jlong self, jlong img_nativeObj)",
-                    "{",
-                    "    ",
-                    "    static const char method_name[] = \"objdetect::detectAndDecodeBytes_10()\";",
-                    "    try {",
-                    "        LOGD(\"%s\", method_name);",
-                    "        cv::GraphicalCodeDetector* me = (cv::GraphicalCodeDetector*) self; //TODO: check for NULL",
-                    "        Mat& img = *((Mat*)img_nativeObj);",
-                    "        std::string result = me->detectAndDecode( img );",
-                    "        jsize sz = result.size();",
-                    "        jbyteArray _retval_ = env->NewByteArray(static_cast<jsize>(sz));",
-                    "        env->SetByteArrayRegion(_retval_, 0, sz, reinterpret_cast<jbyte*>(&result[0]));",
-                    "        return _retval_;",
-                    "    } catch(const std::exception &e) {",
-                    "        throwJavaException(env, &e, method_name);",
-                    "    } catch (...) {",
-                    "        throwJavaException(env, 0, method_name);",
-                    "    }",
-                    "    return 0;",
-                    "}",
-                    "\n"
-                ]
-            }
+        }
+    },
+    "type_dict": {
+        "NativeByteArray": {
+            "j_type" : "byte[]",
+            "jn_type": "byte[]",
+            "jni_type": "jbyteArray",
+            "jni_name": "n_%(n)s",
+            "jni_var": "jbyteArray n_%(n)s = env->NewByteArray(static_cast<jsize>(%(n)s.size())); env->SetByteArrayRegion(n_%(n)s, 0, %(n)s.size(), reinterpret_cast<jbyte*>(&%(n)s[0]));",
+            "cast_from": "std::string"
         }
     }
 }
