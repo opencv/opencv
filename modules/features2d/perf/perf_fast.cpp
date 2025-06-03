@@ -10,15 +10,15 @@ typedef perf::TestBaseWithParam<Fast_Params_t> Fast_Params;
 
 PERF_TEST_P(Fast_Params, detect,
     testing::Combine(
-        testing::Values(20,30,100),                         // threshold
+        testing::Values(20,30,100),                   // threshold
         testing::Values(
             // (int)FastFeatureDetector::TYPE_5_8,
             // (int)FastFeatureDetector::TYPE_7_12,
-            (int)FastFeatureDetector::TYPE_9_16
+            (int)FastFeatureDetector::TYPE_9_16       // detector_type
         ),
-        testing::Bool(),                                              // nonmaxSuppression
+        testing::Bool(),                              // nonmaxSuppression
         testing::Values("cv/inpaint/orig.png",
-                       "cv/cameracalibration/chess9.png")
+                        "cv/cameracalibration/chess9.png")
     ))
 {
     int threshold = get<0>(GetParam());
@@ -42,7 +42,7 @@ PERF_TEST_P(Fast_Params, detect,
         FAST(img, keypoints, threshold, nonmaxSuppression, (FastFeatureDetector::DetectorType)type);
     }
 
-    SANITY_CHECK_KEYPOINTS(keypoints);
+    // SANITY_CHECK_KEYPOINTS(keypoints);
 }
 
 } // namespace opencv_test

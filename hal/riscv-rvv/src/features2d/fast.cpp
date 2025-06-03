@@ -1,14 +1,6 @@
-// This file is part of OpenCV project.
-// It is subject to the license terms in the LICENSE file found in the top-level
-// directory of this distribution and at http://opencv.org/license.html.
-#pragma once
-
-
-
 #include "rvv_hal.hpp"
 #include "common.hpp"
 
-#include "include/buffer_area.hpp"
 #include "opencv2/core/utils/logger.hpp"
 
 #include <cfloat>
@@ -52,16 +44,12 @@ inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stri
     }
 }
 
-template<typename T> inline T* alignPtr(T* ptr, size_t n=sizeof(T))
-{
-    return (T*)(((size_t)ptr + n-1) & -n);
-}
 
-inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int64_t row_stride) 
+inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int64_t row_stride)
 {
     const uint32_t K = 8, N = 16 + K + 1;
     uint32_t k, v = ptr[0];
-    
+
     int vl = __riscv_vsetvl_e16m2(N);
     // use vloxei16_v to indexed ordered load
     vint16m2_t v_c_pixel = __riscv_vmv_v_x_i16m2((int16_t)v, vl);
@@ -69,15 +57,12 @@ inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int6
     vuint8m1_t v_d_u8 = __riscv_vloxei16(ptr - 3 * row_stride - 1, v_offset, vl);
     vuint16m2_t v_d_u16 = __riscv_vzext_vf2(v_d_u8, vl);
     vint16m2_t d = __riscv_vreinterpret_i16m2(v_d_u16);
-    // for( k = 0; k < N; k++ )
-    //     d[k] = (uint16_t)(v - ptr[pixel[k]]);
     d = __riscv_vsub_vv_i16m2(v_c_pixel, d, vl);
     vint16m2_t d_slide = __riscv_vmv_v(d, vl);
-    
+
     vint16m2_t q0 = __riscv_vmv_v_x_i16m2((int16_t)(-1000), vl);
     vint16m2_t q1 = __riscv_vmv_v_x_i16m2((int16_t)(1000), vl);
 
-    //k == 0
     vint16m2_t ak0 = __riscv_vmv_v(d, vl);
     vint16m2_t bk0 = __riscv_vmv_v(d, vl);
 
@@ -105,7 +90,7 @@ inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int6
 }
 
 
-inline int fast_16(const uchar* src_data, size_t src_step, int width, int height, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression) 
+inline int fast_16(const uchar* src_data, size_t src_step, int width, int height, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
 
     const int patternSize = 16;
@@ -117,22 +102,31 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
     vuint16m2_t v_offset;
     makeOffsets(pixel, v_offset, (int)src_step, patternSize);
 
-    uchar* buf[3] = { 0 };
-    int* cpbuf[3] = { 0 };
-    utils::BufferArea area;
-    for (unsigned idx = 0; idx < 3; ++idx)
-    {
-        area.allocate(buf[idx], width);
-        area.allocate(cpbuf[idx], width + 1);
-    }
-    area.commit();
+    // uchar* buf[3] = { 0 };
+    // int* cpbuf[3] = { 0 };
+    // common::BufferArea area;
+    // for (unsigned idx = 0; idx < 3; ++idx)
+    // {
+    //     area.allocate(buf[idx], width);
+    //     area.allocate(cpbuf[idx], width + 1);
+    // }
+    // area.commit();
 
-    for (unsigned idx = 0; idx < 3; ++idx)
-    {
-        memset(buf[idx], 0, width);
-    }
+    // for (unsigned idx = 0; idx < 3; ++idx)
+    // {
+    //     memset(buf[idx], 0, width);
+    // }
 
-    int vlmax = __riscv_vsetvlmax_e8m4 ();
+    std::vector<uchar> _buf((width+16)*3*(sizeof(ptrdiff_t) + sizeof(uchar)) + 128);
+    uchar* buf[3];
+    buf[0] = &_buf[0]; buf[1] = buf[0] + width; buf[2] = buf[1] + width;
+    ptrdiff_t* cpbuf[3];
+    cpbuf[0] = (ptrdiff_t*)alignPtr(buf[2] + width, sizeof(ptrdiff_t)) + 1;
+    cpbuf[1] = cpbuf[0] + width + 1;
+    cpbuf[2] = cpbuf[1] + width + 1;
+    memset(buf[0], 0, width*3);
+
+    int vlmax = __riscv_vsetvlmax_e8m4();
     vuint8m4_t v_c_delta = __riscv_vmv_v_x_u8m4(0x80, vlmax);
     vuint8m4_t v_c_threshold = __riscv_vmv_v_x_u8m4((char) threshold, vlmax);
     vuint8m4_t v_c_k = __riscv_vmv_v_x_u8m4((uint8_t)K, vlmax);
@@ -143,9 +137,9 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
 
         const uchar* ptr = src_data + i * src_step + 3;
         uchar* curr = buf[(i - 3)%3];
-        int* cornerpos = cpbuf[(i - 3)%3] + 1;
+        ptrdiff_t* cornerpos = cpbuf[(i - 3)%3];
         memset(curr, 0, width);
-        int ncorners = 0;
+        ptrdiff_t ncorners = 0;
 
         if( i < height - 3 )
         {
@@ -187,7 +181,7 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
                     unsigned long mask_cnt = __riscv_vcpop(m0, vl);
                     if(!mask_cnt)
                         continue;
-                    
+
                     // TODO: Test if skipping to the first possible key point pixel if faster
                     // Memory access maybe expensive since the data is not aligned
                     // long first_set = __riscv_vfirst(m0, vl);
@@ -204,7 +198,7 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
                     for( k = 0; k < N; k++ )
                     {
                         vint8m4_t x = __riscv_vreinterpret_i8m4(__riscv_vxor(__riscv_vle8_v_u8m4(ptr + pixel[k], vl), v_c_delta, vl));
-                        
+
                         m0 = __riscv_vmslt(v0, x, vl);
                         m1 = __riscv_vmslt(x, v1, vl);
 
@@ -240,12 +234,11 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
 
         cornerpos[-1] = ncorners;
 
-        if( i == 3 )
-            continue;
+        if( i == 3 )            continue;
 
         const uchar* prev = buf[(i - 4 + 3)%3];
         const uchar* pprev = buf[(i - 5 + 3)%3];
-        cornerpos = cpbuf[(i - 4 + 3)%3] + 1; // cornerpos[-1] is used to store a value
+        cornerpos = cpbuf[(i - 4 + 3)%3]; // cornerpos[-1] is used to store a value
         ncorners = cornerpos[-1];
 
         for( k = 0; k < ncorners; k++ )

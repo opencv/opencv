@@ -10,6 +10,7 @@ struct cvhalFilter2D;
 namespace cv { namespace rvv_hal { namespace features2d {
 
 #if CV_HAL_RVV_1P0_ENABLED
+
 int FAST(const uchar* src_data, size_t src_step, int width, int height,
           std::vector<KeyPoint>& keypoints,
           int threshold, bool nonmax_suppression, int detector_type);
