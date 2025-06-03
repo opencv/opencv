@@ -1077,32 +1077,43 @@ TEST(minEnclosingPolygon, input_errors)
     std::vector<cv::Point2f> kgon;
     std::vector<cv::Point2f> ngon;
 
-    std::cout << "Four lines of \'invalid argument: ...\' expected:" << std::endl;
+    std::cout << "Four lines of \'invalid argument: ...\' are expected:" << std::endl;
+
     ngon = {{0.0, 0.0}, {1.0, 1.0}};
     EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
     << "unexpected exception: not enough points in input ngon (n < 3)";
+
     ngon = {{0.0, 0.0}, {0.0, 0.0}, {1.0, 1.0}, {1.0, 1.0}};
     EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
     << "unexpected exception: not enough different points in input ngon (double points)";
+
     ngon = {{0.0, 0.0}, {1.0, 1.0}, {2.0, 2.0}, {3.0, 3.0}, {4.0, 4.0}};
     EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
     << "unexpected exception: all points on line";
+
     ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
     EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 2)) << "unexpected exception: k < 3";
+}
 
+TEST(minEnclosingPolygon, input_warnings)
+{
     double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon;
 
-    std::cout << "Two lines of \'Warning: ...\' expected:" << std::endl;
+    std::cout << "Two lines of \'Warning: ...\' are expected:" << std::endl;
+
     ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
     EXPECT_NO_THROW({
         area = minEnclosingConvexPolygon(ngon, kgon, 4);
     }) << "unexpected exception: n = k failed";
-    EXPECT_NEAR(area, 1, 1e-4) << "n = k: area not equal " << ngon;
+    EXPECT_NEAR(area, 1.0, 1e-4) << "n = k: area not equal " << ngon;
+
     ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
     EXPECT_NO_THROW({
         area = minEnclosingConvexPolygon(ngon, kgon, 5);
     }) << "unexpected exception: n < k failed";
-    EXPECT_NEAR(area, 1, 1e-4) << "n < k: area not equal " << ngon;
+    EXPECT_NEAR(area, 1.0, 1e-4) << "n < k: area not equal " << ngon;
 }
 
 TEST(minEnclosingPolygon, unit_circle)
@@ -1182,6 +1193,6 @@ TEST(minEnclosingPolygon, pentagon)
     }
 }
 
-
 }} // namespace
+
 /* End of file. */
