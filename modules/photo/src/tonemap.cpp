@@ -153,7 +153,6 @@ public:
         log(2.0f + 8.0f * div, div);
         map = map.mul(1.0f / div);
         div.release();
-        
         mapLuminance(img, img, gray_img, map, saturation);
 
         linear->setGamma(gamma);
@@ -292,9 +291,9 @@ protected:
     float gamma, intensity, light_adapt, color_adapt;
 };
 
-Ptr<TonemapReinhard> createTonemapReinhard(float gamma, float contrast, float sigma_color, float sigma_space)
+Ptr<TonemapReinhard> createTonemapReinhard(float gamma, float intensity, float light_adapt, float color_adapt)
 {
-    return makePtr<TonemapReinhardImpl>(gamma, contrast, sigma_color, sigma_space);
+    return makePtr<TonemapReinhardImpl>(gamma, intensity, light_adapt, color_adapt);
 }
 
 class TonemapMantiukImpl CV_FINAL : public TonemapMantiuk
@@ -413,6 +412,7 @@ protected:
 
     void mapContrast(Mat& contrast)
     {
+        contrast += 1e-6f;
         const float response_power = 0.4185f;
         signedPow(contrast, response_power, contrast);
         contrast *= scale;
