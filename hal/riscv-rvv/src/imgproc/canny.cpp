@@ -24,6 +24,12 @@ namespace cv
                 size_t size;
             } LineBuffer;
 
+            LineBuffer *createLineBuffer(size_t width, size_t align);
+
+            void rotateLineBuffer(LineBuffer *buf);
+
+            void freeLineBuffer(LineBuffer *buf);
+
             LineBuffer *createLineBuffer(size_t width, size_t align)
             {
                 LineBuffer *buf = (LineBuffer *)malloc(sizeof(LineBuffer));
@@ -69,6 +75,11 @@ namespace cv
                 int capacity;
                 int size;
             } Stack;
+
+            static Stack *createStack(int capacity);
+            static void push(Stack *stack, uint8_t *item);
+            static uint8_t *pop(Stack *stack);
+            static void freeStack(Stack *stack);
 
             static Stack *createStack(int capacity)
             {
@@ -126,10 +137,10 @@ namespace cv
                         high_thresh *= high_thresh;
                 }
 
-                int i = (int)low_thresh;
-                low_thresh = i - (i > low_thresh);
-                i = (int)high_thresh;
-                high_thresh = i - (i > high_thresh);
+                int low = (int)low_thresh;
+                low_thresh = low - (low > low_thresh);
+                int high = (int)high_thresh;
+                high_thresh = high - (high > high_thresh);
 
                 int16_t *dx_data = (int16_t *)malloc(height * width * sizeof(int16_t));
                 int16_t *dy_data = (int16_t *)malloc(height * width * sizeof(int16_t));
@@ -254,37 +265,85 @@ namespace cv
 
                         vbool4_t mask_dx = __riscv_vmslt_vx_i32m8_b4(vdx, 0, vl);
                         vbool4_t mask_dy = __riscv_vmslt_vx_i32m8_b4(vdy, 0, vl);
-                        vdx = __riscv_vmul_vx_i32m8_m(mask_dx, vdx, -1, vl);
-                        vdy = __riscv_vmul_vx_i32m8_m(mask_dy, vdy, -1, vl);
+                        vint32m8_t vdx_abs = __riscv_vmul_vx_i32m8_m(mask_dx, vdx, -1, vl);
+                        vint32m8_t vdy_abs = __riscv_vmul_vx_i32m8_m(mask_dy, vdy, -1, vl);
 
-                        vint32m8_t vy = __riscv_vsll_vx_i32m8(vdy, 15, vl);
-                        vint32m8_t vtg22x = __riscv_vmul_vx_i32m8(vdx, TG22, vl);
+                        vdy_abs = __riscv_vsll_vx_i32m8(vdy_abs, 15, vl);
 
-                        vbool4_t vcmp_tg22 = __riscv_vmslt_vv_i32m8_b4(vy, vtg22x, vl);
+                        // Calculate threshold values
+                        vint32m8_t vtg22x = __riscv_vmul_vx_i32m8(vdx_abs, TG22, vl);
+                        vint32m8_t vtg67x = __riscv_vadd_vv_i32m8(vtg22x, __riscv_vsll_vx_i32m8(vdx_abs, 16, vl), vl);
 
-                        vint32m8_t vprev = __riscv_vle32_v_i32m8(lineBuf->curr + j - 1, vl);
-                        vint32m8_t vnext = __riscv_vle32_v_i32m8(lineBuf->curr + j + 1, vl);
+                        // Create masks for different angle ranges
+                        vbool4_t mask1 = __riscv_vmslt_vv_i32m8_b4(vdy_abs, vtg22x, vl);
+                        vbool4_t mask2 = __riscv_vmsgt_vv_i32m8_b4(vdy_abs, vtg67x, vl);
+                        vbool4_t mask3 = __riscv_vmnot_m_b4(__riscv_vmor_mm_b4(mask1, mask2, vl), vl);
 
-                        vbool4_t vmax_h = __riscv_vmsgt_vv_i32m8_b4(vm, vprev, vl);
-                        vbool4_t vmax_ge = __riscv_vmsge_vv_i32m8_b4(vm, vnext, vl);
-                        vbool4_t vmax = __riscv_vmand_mm_b4(vmax_h, vmax_ge, vl);
+                        // Load neighbor pixels for all conditions
+                        vint32m8_t prev_curr = __riscv_vle32_v_i32m8(lineBuf->curr + (j > 0 ? j - 1 : j), vl);
+                        vint32m8_t next_curr = __riscv_vle32_v_i32m8(lineBuf->curr + j + 1, vl);
+                        vint32m8_t prev_line = __riscv_vle32_v_i32m8(lineBuf->prev + j, vl);
+                        vint32m8_t next_line = __riscv_vle32_v_i32m8(lineBuf->next + j, vl);
 
-                        vbool4_t vhigh = __riscv_vmsgt_vx_i32m8_b4(vm, high_thresh, vl);
+                        // Condition 1: Horizontal/Vertical edges (compare left/right)
+                        vbool4_t cond1_max = __riscv_vmand_mm_b4(
+                            __riscv_vmsgt_vv_i32m8_b4(vm, prev_curr, vl),
+                            __riscv_vmsge_vv_i32m8_b4(vm, next_curr, vl),
+                            vl);
+
+                        // Condition 2: Diagonal edges (compare top/bottom)
+                        vbool4_t cond2_max = __riscv_vmand_mm_b4(
+                            __riscv_vmsgt_vv_i32m8_b4(vm, prev_line, vl),
+                            __riscv_vmsge_vv_i32m8_b4(vm, next_line, vl),
+                            vl);
+
+                        // Condition 3: Other diagonals (calculate s)
+                        vint32m8_t vxor = __riscv_vxor_vv_i32m8(vdx, vdy, vl);
+                        vbool4_t s_mask = __riscv_vmslt_vx_i32m8_b4(vxor, 0, vl);
+
+                        vint32m8_t prev_s1 = __riscv_vle32_v_i32m8(lineBuf->prev + (j > 0 ? j - 1 : j), vl);
+                        vint32m8_t prev_s2 = __riscv_vle32_v_i32m8(lineBuf->prev + j + 1, vl);
+                        vint32m8_t next_s1 = __riscv_vle32_v_i32m8(lineBuf->next + j + 1, vl);
+                        vint32m8_t next_s2 = __riscv_vle32_v_i32m8(lineBuf->next + (j > 0 ? j - 1 : j), vl);
+
+                        vint32m8_t prev_sel = __riscv_vmerge_vvm_i32m8(prev_s1, prev_s2, s_mask, vl);
+                        vint32m8_t next_sel = __riscv_vmerge_vvm_i32m8(next_s1, next_s2, s_mask, vl);
+
+                        vbool4_t cond3_max = __riscv_vmand_mm_b4(
+                            __riscv_vmsgt_vv_i32m8_b4(vm, prev_sel, vl),
+                            __riscv_vmsgt_vv_i32m8_b4(vm, next_sel, vl),
+                            vl);
+
+                        // Combine results from all conditions
+                        vbool4_t vmax = __riscv_vmor_mm_b4(
+                            __riscv_vmand_mm_b4(mask1, cond1_max, vl),
+                            __riscv_vmand_mm_b4(mask2, cond2_max, vl),
+                            vl);
+                        vmax = __riscv_vmor_mm_b4(
+                            vmax,
+                            __riscv_vmand_mm_b4(mask3, cond3_max, vl),
+                            vl);
+
+                        // Threshold checks
                         vbool4_t vlow = __riscv_vmsgt_vx_i32m8_b4(vm, low_thresh, vl);
+                        vbool4_t vhigh = __riscv_vmsgt_vx_i32m8_b4(vm, high_thresh, vl);
+                        vbool4_t valid_edges = __riscv_vmand_mm_b4(vmax, vlow, vl);
+                        vbool4_t strong_edges = __riscv_vmand_mm_b4(valid_edges, vhigh, vl);
 
+                        // Generate result map
                         vuint8m2_t vres = __riscv_vmv_v_x_u8m2(1, vl);
-                        vres = __riscv_vmerge_vxm_u8m2(vres, 0, vlow, vl);
-                        vres = __riscv_vmerge_vxm_u8m2(vres, 2, vhigh, vl);
-
+                        vres = __riscv_vmerge_vxm_u8m2(vres, 0, valid_edges, vl);
+                        vres = __riscv_vmerge_vxm_u8m2(vres, 2, strong_edges, vl);
                         __riscv_vse8_v_u8m2(pmap + j, vres, vl);
 
-                        vbool4_t vstrong = __riscv_vmand_mm_b4(vhigh, vmax, vl);
-                        int32_t vidx = __riscv_vfirst_m_b4(vstrong, vl);
+                        // Push strong edges to stack
+                        int32_t vidx = __riscv_vfirst_m_b4(strong_edges, vl);
                         while (vidx >= 0)
                         {
                             push(stack, pmap + j + vidx);
-                            vstrong = __riscv_vmand_mm_b4(vstrong, __riscv_vmclr_m_b4(vl), vl);
-                            vidx = __riscv_vfirst_m_b4(vstrong, vl);
+                            strong_edges = __riscv_vmand_mm_b4(strong_edges,
+                                                               __riscv_vmclr_m_b4(vl), vl);
+                            vidx = __riscv_vfirst_m_b4(strong_edges, vl);
                         }
                     }
 
@@ -390,7 +449,7 @@ namespace cv
                         vl = __riscv_vsetvl_e8m8(width - j);
                         vuint8m8_t vres = __riscv_vle8_v_u8m8(pmap + j, vl);
                         vres = __riscv_vsrl_vx_u8m8(vres, 1, vl);
-                        vres = __riscv_vneg_v_u8m8(vres, vl);
+                        vres = __riscv_vsub_vv_u8m8(__riscv_vmv_v_x_u8m8(0, vl), vres, vl);
                         __riscv_vse8_v_u8m8(pdst + j, vres, vl);
                     }
                 }

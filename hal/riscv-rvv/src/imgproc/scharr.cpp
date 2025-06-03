@@ -19,10 +19,8 @@ namespace cv
 #define borderValue 0
 
             static int scharr_border(const uint8_t *src_data, size_t src_step,
-                                     uint8_t *dst_data, size_t dst_step,
-                                     int width, int height, int src_depth, int dst_depth,
-                                     int cn, int dx, int dy,
-                                     double scale, double delta, int border_type,
+                                     int width, int height,
+                                     int border_type,
                                      int margin_left, int margin_top,
                                      int margin_right, int margin_bottom)
             {
@@ -261,10 +259,9 @@ namespace cv
 
                 if (margin_left != 0 || margin_right != 0 || margin_top != 0 || margin_bottom != 0)
                 {
-                    int ret = scharr_border(src_data, src_step, dst_data, dst_step,
-                                            width, height, src_depth, dst_depth,
-                                            cn, dx, dy,
-                                            scale, delta, border_type,
+                    int ret = scharr_border(src_data, src_step,
+                                            width, height,
+                                            border_type,
                                             margin_left, margin_top,
                                             margin_right, margin_bottom);
                     if (ret != CV_HAL_ERROR_OK)
@@ -283,7 +280,7 @@ namespace cv
                         (reinterpret_cast<uintptr_t>(_tempBuf) + alignment - 1) & ~(alignment - 1));
                     uint8_t *trow1 = trow0 + align_size;
 
-                    for (size_t y = 0; y < height; y++)
+                    for (int y = 0; y < height; y++)
                     {
                         const uint8_t *srow1 = src_data + y * src_step;
                         const uint8_t *srow0, *srow2;
@@ -311,7 +308,6 @@ namespace cv
                         uint8_t *trow = (y % 2) ? trow1 : trow0;
 
                         size_t vl = __riscv_vsetvl_e8m4(width - 1);
-                        size_t x = 0;
                         int16_t prevx = 0, rowx = 0, nextx = 0, res = 0;
                         if (border_type == BORDER_REPLICATE)
                         {
@@ -384,7 +380,7 @@ namespace cv
                         vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                         vprevx = vrowx;
 
-                        for (size_t x = 0; x < width - 1; x += vl)
+                        for (int x = 1; x < width - 1; x += vl)
                         {
                             vl = __riscv_vsetvl_e8m4(width - x - 1);
                             vint16m8_t vsrow0, vsrow1, vsrow2;
@@ -433,8 +429,14 @@ namespace cv
                                 grad = __riscv_vsub_vv_i16m8(__riscv_vmul_vx_i16m8(__riscv_vadd_vv_i16m8(vprevx, vnextx, vl), 3, vl), __riscv_vmul_vx_i16m8(vrowx, 3, vl), vl);
                             }
 
+                            vrowx = __riscv_vslidedown_vx_i16m8(vrowx, vl - 1, vl);
+                            vprevx = __riscv_vslidedown_vx_i16m8(vprevx, vl - 1, vl);
+
                             vprevx = vrowx;
                             vrowx = vnextx;
+
+                            vrowx = __riscv_vslidedown_vx_i16m8(vrowx, vl - 1, vl);
+                            vprevx = __riscv_vslidedown_vx_i16m8(vprevx, vl - 1, vl);
 
                             vuint8m4_t vres = __riscv_vncvt_x_x_w_u8m4(__riscv_vreinterpret_v_i16m8_u16m8(__riscv_vmax_vx_i16m8(__riscv_vmin_vx_i16m8(grad, 255, vl), 0, vl)), vl);
                             __riscv_vse8_v_u8m4(trow + x, vres, vl);
@@ -506,22 +508,22 @@ namespace cv
 
                         if (y > 0)
                         {
-                            uint8_t *trow = (y % 2) ? trow0 : trow1;
-                            for (size_t x = 0; x < width; x += vl)
+                            uint8_t *trow_res = (y % 2) ? trow0 : trow1;
+                            for (int x = 0; x < width; x += vl)
                             {
                                 vl = __riscv_vsetvl_e8m8(width - x);
-                                vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow + x, vl);
+                                vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow_res + x, vl);
                                 __riscv_vse8_v_u8m8(drow0 + x, vdata, vl);
                             }
                         }
 
                         if (y == height - 1)
                         {
-                            uint8_t *trow = (!(y % 2)) ? trow0 : trow1;
-                            for (size_t x = 0; x < width; x += vl)
+                            uint8_t *trow_res = (!(y % 2)) ? trow0 : trow1;
+                            for (int x = 0; x < width; x += vl)
                             {
                                 vl = __riscv_vsetvl_e8m8(width - x);
-                                vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow + x, vl);
+                                vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow_res + x, vl);
                                 __riscv_vse8_v_u8m8(drow1 + x, vdata, vl);
                             }
                         }
@@ -542,7 +544,7 @@ namespace cv
                         (reinterpret_cast<uintptr_t>(_tempBuf) + alignment - 1) & ~(alignment - 1));
                     int16_t *trow1 = trow0 + align_size;
 
-                    for (size_t y = 0; y < height; y++)
+                    for (int y = 0; y < height; y++)
                     {
                         const uint8_t *srow1 = src_data + y * src_step;
                         const uint8_t *srow0, *srow2;
@@ -571,7 +573,7 @@ namespace cv
 
                         size_t vl = __riscv_vsetvl_e8m4(width - 1);
 
-                        size_t x = 0;
+                        int x = 0;
                         int16_t prevx = 0, rowx = 0, nextx = 0, res = 0;
                         if (border_type == BORDER_REPLICATE)
                         {
@@ -639,7 +641,7 @@ namespace cv
                         vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                         vprevx = vrowx;
 
-                        for (size_t x = 0; x < width - 1; x += vl)
+                        for (x = 1; x < width - 1; x += vl)
                         {
                             vl = __riscv_vsetvl_e8m4(width - x - 1);
                             vint16m8_t vsrow0, vsrow1, vsrow2;
@@ -674,6 +676,9 @@ namespace cv
                                 vnextx = __riscv_vmul_vx_i16m8(__riscv_vsub_vv_i16m8(vsrow2, vsrow0, vl), 3, vl);
                             }
 
+                            vrowx = __riscv_vslideup_vx_i16m8(vrowx, vnextx, 1, vl);
+                            vprevx = __riscv_vslideup_vx_i16m8(vprevx, vrowx, 1, vl);
+
                             vint16m8_t grad;
                             if (dx == 1)
                             {
@@ -690,6 +695,9 @@ namespace cv
 
                             vprevx = vrowx;
                             vrowx = vnextx;
+
+                            vrowx = __riscv_vslidedown_vx_i16m8(vrowx, vl - 1, vl);
+                            vprevx = __riscv_vslidedown_vx_i16m8(vprevx, vl - 1, vl);
 
                             __riscv_vse16_v_i16m8(trow + x, grad, vl);
                         }
@@ -731,22 +739,22 @@ namespace cv
 
                         if (y > 0)
                         {
-                            int16_t *trow = (y % 2) ? trow0 : trow1;
-                            for (size_t x = 0; x < width; x += vl)
+                            int16_t *trow_res = (y % 2) ? trow0 : trow1;
+                            for (x = 0; x < width; x += vl)
                             {
                                 vl = __riscv_vsetvl_e16m8(width - x);
-                                vint16m8_t vdata = __riscv_vle16_v_i16m8(trow + x, vl);
+                                vint16m8_t vdata = __riscv_vle16_v_i16m8(trow_res + x, vl);
                                 __riscv_vse16_v_i16m8(drow0 + x, vdata, vl);
                             }
                         }
 
                         if (y == height - 1)
                         {
-                            int16_t *trow = (!(y % 2)) ? trow0 : trow1;
-                            for (size_t x = 0; x < width; x += vl)
+                            int16_t *trow_res = (!(y % 2)) ? trow0 : trow1;
+                            for (x = 0; x < width; x += vl)
                             {
                                 vl = __riscv_vsetvl_e16m8(width - x);
-                                vint16m8_t vdata = __riscv_vle16_v_i16m8(trow + x, vl);
+                                vint16m8_t vdata = __riscv_vle16_v_i16m8(trow_res + x, vl);
                                 __riscv_vse16_v_i16m8(drow1 + x, vdata, vl);
                             }
                         }
@@ -767,7 +775,7 @@ namespace cv
                         (reinterpret_cast<uintptr_t>(_tempBuf) + alignment - 1) & ~(alignment - 1));
                     float *trow1 = trow0 + align_size;
 
-                    for (size_t y = 0; y < height; y++)
+                    for (int y = 0; y < height; y++)
                     {
                         const uint8_t *srow0, *srow1, *srow2;
                         if (border_type == BORDER_REPLICATE)
@@ -866,7 +874,7 @@ namespace cv
                         vfloat32m8_t vprevx = vrowx;
                         vfloat32m8_t vnextx;
 
-                        for (size_t x = 0; x < width - 1; x += vl)
+                        for (int x = 1; x < width - 1; x += vl)
                         {
 
                             vl = __riscv_vsetvl_e8m2(width - x - 1);
@@ -907,8 +915,8 @@ namespace cv
                                     __riscv_vfsub_vv_f32m8(vsrow2, vsrow0, vl), 3.0f, vl);
                             }
 
-                            // vrowx = __riscv_vslideup_vx_f32m8(vrowx, vnextx, 1, vl);
-                            // vprevx = __riscv_vslideup_vx_f32m8(vprevx, vrowx, 1, vl);
+                            vrowx = __riscv_vslideup_vx_f32m8(vrowx, vnextx, 1, vl);
+                            vprevx = __riscv_vslideup_vx_f32m8(vprevx, vrowx, 1, vl);
 
                             vfloat32m8_t grad;
                             if (dx == 1)
@@ -932,6 +940,9 @@ namespace cv
 
                             vprevx = vrowx;
                             vrowx = vnextx;
+
+                            vrowx = __riscv_vslidedown_vx_f32m8(vrowx, vl - 1, vl);
+                            vprevx = __riscv_vslidedown_vx_f32m8(vprevx, vl - 1, vl);
                         }
 
                         // Last pixel
@@ -995,22 +1006,22 @@ namespace cv
 
                         if (y > 0)
                         {
-                            float *trow = (y % 2) ? trow0 : trow1;
-                            for (size_t x = 0; x < width; x += vl)
+                            float *trow_res = (y % 2) ? trow0 : trow1;
+                            for (int x = 0; x < width; x += vl)
                             {
                                 vl = __riscv_vsetvl_e32m8(width - x);
-                                vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow + x, vl);
+                                vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow_res + x, vl);
                                 __riscv_vse32_v_f32m8(drow0 + x, vdata, vl);
                             }
                         }
 
                         if (y == height - 1)
                         {
-                            float *trow = (!(y % 2)) ? trow0 : trow1;
-                            for (size_t x = 0; x < width; x += vl)
+                            float *trow_res = (!(y % 2)) ? trow0 : trow1;
+                            for (int x = 0; x < width; x += vl)
                             {
                                 vl = __riscv_vsetvl_e32m8(width - x);
-                                vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow + x, vl);
+                                vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow_res + x, vl);
                                 __riscv_vse32_v_f32m8(drow1 + x, vdata, vl);
                             }
                         }

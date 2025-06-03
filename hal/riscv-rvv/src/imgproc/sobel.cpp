@@ -19,10 +19,9 @@ namespace cv
 #define borderValue 0
 
             static int sobel_border(const uint8_t *src_data, size_t src_step,
-                                    uint8_t *dst_data, size_t dst_step,
-                                    int width, int height, int src_depth, int dst_depth,
-                                    int cn, int dx, int dy, int ksize,
-                                    double scale, double delta, int border_type,
+                                    int width, int height,
+                                    int ksize,
+                                    int border_type,
                                     int margin_left, int margin_top,
                                     int margin_right, int margin_bottom)
             {
@@ -264,7 +263,7 @@ namespace cv
 
                 if (margin_left != 0 || margin_right != 0 || margin_top != 0 || margin_bottom != 0)
                 {
-                    int ret = sobel_border(src_data, src_step, dst_data, dst_step, width, height, src_depth, dst_depth, cn, dx, dy, ksize, scale, delta, border_type, margin_left, margin_top, margin_right, margin_bottom);
+                    int ret = sobel_border(src_data, src_step, width, height, ksize, border_type, margin_left, margin_top, margin_right, margin_bottom);
                     if (ret != CV_HAL_ERROR_OK)
                     {
                         return ret;
@@ -287,7 +286,7 @@ namespace cv
                                 (reinterpret_cast<uintptr_t>(_tempBuf) + alignment - 1) & ~(alignment - 1));
                             uint8_t *trow1 = trow0 + align_size;
 
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 const uint8_t *srow1 = src_data + y * src_step;
                                 const uint8_t *srow0 = src_data + (y > 0 ? y - 1 : 0) * src_step;
@@ -300,7 +299,7 @@ namespace cv
 
                                 size_t vl = __riscv_vsetvl_e8m4(width - 1);
 
-                                size_t x = 0;
+                                int x = 0;
                                 int16_t prevx = 0, rowx = 0, nextx = 0, res = 0;
                                 if (dy == 0)
                                 {
@@ -340,7 +339,7 @@ namespace cv
                                 vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vprevx = vrowx;
 
-                                for (size_t x = 0; x < width - 1; x += vl)
+                                for (x = 1; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -435,22 +434,22 @@ namespace cv
 
                                 if (y > 0)
                                 {
-                                    uint8_t *trow = (y % 2) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    uint8_t *trow_res = (y % 2) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x);
-                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow + x, vl);
+                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow_res + x, vl);
                                         __riscv_vse8_v_u8m8(drow0 + x, vdata, vl);
                                     }
                                 }
 
                                 if (y == height - 1)
                                 {
-                                    uint8_t *trow = (!(y % 2)) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    uint8_t *trow_res = (!(y % 2)) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x);
-                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow + x, vl);
+                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow_res + x, vl);
                                         __riscv_vse8_v_u8m8(drow1 + x, vdata, vl);
                                     }
                                 }
@@ -473,7 +472,7 @@ namespace cv
 
                             vint16m8_t vborder = __riscv_vmv_v_x_i16m8(borderValue, __riscv_vsetvlmax_e16m8());
 
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 const uint8_t *srow1 = src_data + y * src_step;
                                 const uint8_t *srow0 = nullptr;
@@ -489,7 +488,7 @@ namespace cv
                                 uint8_t *trow = (y % 2) ? trow1 : trow0;
 
                                 size_t vl = __riscv_vsetvl_e8m4(width - 1);
-                                size_t x = 0;
+                                int x = 0;
                                 int16_t prevx = 0, rowx = 0, nextx = 0, res = 0;
 
                                 if (dy == 0)
@@ -545,7 +544,7 @@ namespace cv
                                 vint16m8_t vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vint16m8_t vprevx = vrowx, vnextx;
 
-                                for (size_t x = 0; x < width - 1; x += vl)
+                                for (x = 1; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -652,22 +651,22 @@ namespace cv
 
                                 if (y > 0)
                                 {
-                                    uint8_t *trow = (y % 2) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    uint8_t *trow_res = (y % 2) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x);
-                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow + x, vl);
+                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow_res + x, vl);
                                         __riscv_vse8_v_u8m8(drow0 + x, vdata, vl);
                                     }
                                 }
 
                                 if (y == height - 1)
                                 {
-                                    uint8_t *trow = (!(y % 2)) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    uint8_t *trow_res = (!(y % 2)) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x);
-                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow + x, vl);
+                                        vuint8m8_t vdata = __riscv_vle8_v_u8m8(trow_res + x, vl);
                                         __riscv_vse8_v_u8m8(drow1 + x, vdata, vl);
                                     }
                                 }
@@ -698,8 +697,7 @@ namespace cv
                             uint8_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            uint8_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = src_data + (y > 2 ? y - 2 : 0) * src_step;
                                 srowm1 = src_data + (y > 1 ? y - 1 : 0) * src_step;
@@ -707,13 +705,9 @@ namespace cv
                                 srowp1 = src_data + (y + 1 < height - 1 ? y + 1 : height - 1) * src_step;
                                 srowp2 = src_data + (y + 2 < height - 1 ? y + 2 : height - 1) * src_step;
 
-                                drowm2 = (uint8_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (uint8_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (uint8_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     prevxm2 = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -1016,8 +1010,7 @@ namespace cv
 
                                     uint8_t *drow_target = dst_data + target_y * dst_step;
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x1);
                                         vuint8m8_t vdata = __riscv_vle8_v_u8m8(target_trow + x1, vl);
@@ -1038,7 +1031,7 @@ namespace cv
 
                                 uint8_t *drow_current = dst_data + remaining_y * dst_step;
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m8(width - x1);
                                     vuint8m8_t vdata = __riscv_vle8_v_u8m8(current_trow + x1, vl);
@@ -1063,8 +1056,7 @@ namespace cv
                             uint8_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            uint8_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : nullptr;
                                 srowm1 = y > 1 ? (src_data + (y - 1) * src_step) : nullptr;
@@ -1072,13 +1064,9 @@ namespace cv
                                 srowp1 = y + 1 < height - 1 ? (src_data + (y + 1) * src_step) : nullptr;
                                 srowp2 = y + 2 < height - 1 ? (src_data + (y + 2) * src_step) : nullptr;
 
-                                drowm2 = (uint8_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (uint8_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (uint8_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -1380,8 +1368,7 @@ namespace cv
 
                                     uint8_t *drow_target = dst_data + target_y * dst_step;
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x1);
                                         vuint8m8_t vdata = __riscv_vle8_v_u8m8(target_trow + x1, vl);
@@ -1402,7 +1389,7 @@ namespace cv
 
                                 uint8_t *drow_current = dst_data + remaining_y * dst_step;
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m8(width - x1);
                                     vuint8m8_t vdata = __riscv_vle8_v_u8m8(current_trow + x1, vl);
@@ -1427,8 +1414,7 @@ namespace cv
                             uint8_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            uint8_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y >= 2 ? (src_data + (y - 2) * src_step) : (y == 1 ? src_data : (src_data + src_step));
                                 srowm1 = y >= 1 ? (src_data + (y - 1) * src_step) : src_data;
@@ -1436,13 +1422,9 @@ namespace cv
                                 srowp1 = y + 1 <= height - 1 ? (src_data + (y + 1) * src_step) : src_data + y * src_step;
                                 srowp2 = y + 2 <= height - 1 ? (src_data + (y + 2) * src_step) : (y == height - 2 ? (src_data + (y - 1) * src_step) : (src_data + y * src_step));
 
-                                drowm2 = (uint8_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (uint8_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (uint8_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -1748,8 +1730,7 @@ namespace cv
 
                                     uint8_t *drow_target = dst_data + target_y * dst_step;
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x1);
                                         vuint8m8_t vdata = __riscv_vle8_v_u8m8(target_trow + x1, vl);
@@ -1770,7 +1751,7 @@ namespace cv
 
                                 uint8_t *drow_current = dst_data + remaining_y * dst_step;
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m8(width - x1);
                                     vuint8m8_t vdata = __riscv_vle8_v_u8m8(current_trow + x1, vl);
@@ -1795,8 +1776,7 @@ namespace cv
                             uint8_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            uint8_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : (src_data + 2 * src_step);
                                 srowm1 = y >= 1 ? (src_data + (y - 1) * src_step) : (src_data + src_step);
@@ -1804,13 +1784,9 @@ namespace cv
                                 srowp1 = y + 1 <= height - 1 ? (src_data + (y + 1) * src_step) : (src_data + (y - 1) * src_step);
                                 srowp2 = y + 2 <= height - 1 ? (src_data + (y + 2) * src_step) : (y == height - 2 ? (src_data + (y - 2) * src_step) : (src_data + y * src_step));
 
-                                drowm2 = (uint8_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (uint8_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (uint8_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -2118,8 +2094,7 @@ namespace cv
 
                                     uint8_t *drow_target = dst_data + target_y * dst_step;
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e8m8(width - x1);
                                         vuint8m8_t vdata = __riscv_vle8_v_u8m8(target_trow + x1, vl);
@@ -2140,7 +2115,7 @@ namespace cv
 
                                 uint8_t *drow_current = dst_data + remaining_y * dst_step;
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m8(width - x1);
                                     vuint8m8_t vdata = __riscv_vle8_v_u8m8(current_trow + x1, vl);
@@ -2179,7 +2154,7 @@ namespace cv
                                 (reinterpret_cast<uintptr_t>(_tempBuf) + alignment - 1) & ~(alignment - 1));
                             int16_t *trow1 = trow0 + align_size;
 
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 const uint8_t *srow1 = src_data + y * src_step;
                                 const uint8_t *srow0 = src_data + (y > 0 ? y - 1 : 0) * src_step;
@@ -2192,7 +2167,7 @@ namespace cv
 
                                 size_t vl = __riscv_vsetvl_e8m4(width - 1);
 
-                                size_t x = 0;
+                                int x = 0;
                                 int16_t prevx = 0, rowx = 0, nextx = 0, res = 0;
                                 if (dy == 0)
                                 {
@@ -2227,7 +2202,7 @@ namespace cv
                                 vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vprevx = vrowx;
 
-                                for (size_t x = 0; x < width - 1; x += vl)
+                                for (x = 1; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -2317,22 +2292,22 @@ namespace cv
 
                                 if (y > 0)
                                 {
-                                    int16_t *trow = (y % 2) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    int16_t *trow_res = (y % 2) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x);
-                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow + x, vl);
+                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow_res + x, vl);
                                         __riscv_vse16_v_i16m8(drow0 + x, vdata, vl);
                                     }
                                 }
 
                                 if (y == height - 1)
                                 {
-                                    int16_t *trow = (!(y % 2)) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    int16_t *trow_res = (!(y % 2)) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x);
-                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow + x, vl);
+                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow_res + x, vl);
                                         __riscv_vse16_v_i16m8(drow1 + x, vdata, vl);
                                     }
                                 }
@@ -2355,7 +2330,7 @@ namespace cv
 
                             vint16m8_t vborder = __riscv_vmv_v_x_i16m8(borderValue, __riscv_vsetvlmax_e16m8());
 
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 const uint8_t *srow1 = src_data + y * src_step;
                                 const uint8_t *srow0 = nullptr;
@@ -2371,7 +2346,7 @@ namespace cv
                                 int16_t *trow = (y % 2) ? trow1 : trow0;
 
                                 size_t vl = __riscv_vsetvl_e8m4(width - 1);
-                                size_t x = 0;
+                                int x = 0;
                                 int16_t prevx = 0, rowx = 0, nextx = 0, res = 0;
 
                                 if (dy == 0)
@@ -2422,7 +2397,7 @@ namespace cv
                                 vint16m8_t vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vint16m8_t vprevx = vrowx, vnextx;
 
-                                for (size_t x = 0; x < width - 1; x += vl)
+                                for (x = 1; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -2514,22 +2489,22 @@ namespace cv
 
                                 if (y > 0)
                                 {
-                                    int16_t *trow = (y % 2) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    int16_t *trow_res = (y % 2) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x);
-                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow + x, vl);
+                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow_res + x, vl);
                                         __riscv_vse16_v_i16m8(drow0 + x, vdata, vl);
                                     }
                                 }
 
                                 if (y == height - 1)
                                 {
-                                    int16_t *trow = (!(y % 2)) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    int16_t *trow_res = (!(y % 2)) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x);
-                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow + x, vl);
+                                        vint16m8_t vdata = __riscv_vle16_v_i16m8(trow_res + x, vl);
                                         __riscv_vse16_v_i16m8(drow1 + x, vdata, vl);
                                     }
                                 }
@@ -2560,8 +2535,7 @@ namespace cv
                             int16_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            int16_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = src_data + (y > 2 ? y - 2 : 0) * src_step;
                                 srowm1 = src_data + (y > 1 ? y - 1 : 0) * src_step;
@@ -2569,13 +2543,9 @@ namespace cv
                                 srowp1 = src_data + (y + 1 < height - 1 ? y + 1 : height - 1) * src_step;
                                 srowp2 = src_data + (y + 2 < height - 1 ? y + 2 : height - 1) * src_step;
 
-                                drowm2 = (int16_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (int16_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (int16_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     prevxm2 = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -2861,8 +2831,7 @@ namespace cv
 
                                     int16_t *drow_target = (int16_t *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x1);
                                         vint16m8_t vdata = __riscv_vle16_v_i16m8(target_trow + x1, vl);
@@ -2883,7 +2852,7 @@ namespace cv
 
                                 int16_t *drow_current = (int16_t *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e16m8(width - x1);
                                     vint16m8_t vdata = __riscv_vle16_v_i16m8(current_trow + x1, vl);
@@ -2907,9 +2876,8 @@ namespace cv
                             int16_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            int16_t *drowm2, *drowm1, *drow0;
-                            uint8_t zero_row[width] = {0};
-                            for (size_t y = 0; y < height; y++)
+                            uint8_t *zero_row = (uint8_t *)malloc(width * sizeof(uint8_t));
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : zero_row;
                                 srowm1 = y > 1 ? (src_data + (y - 1) * src_step) : zero_row;
@@ -2917,13 +2885,9 @@ namespace cv
                                 srowp1 = y + 1 < height - 1 ? (src_data + (y + 1) * src_step) : zero_row;
                                 srowp2 = y + 2 < height - 1 ? (src_data + (y + 2) * src_step) : zero_row;
 
-                                drowm2 = (int16_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (int16_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (int16_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -3210,8 +3174,7 @@ namespace cv
 
                                     int16_t *drow_target = (int16_t *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x1);
                                         vint16m8_t vdata = __riscv_vle16_v_i16m8(target_trow + x1, vl);
@@ -3232,7 +3195,7 @@ namespace cv
 
                                 int16_t *drow_current = (int16_t *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e16m8(width - x1);
                                     vint16m8_t vdata = __riscv_vle16_v_i16m8(current_trow + x1, vl);
@@ -3256,8 +3219,7 @@ namespace cv
                             int16_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            int16_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y >= 2 ? (src_data + (y - 2) * src_step) : (y == 1 ? src_data : (src_data + src_step));
                                 srowm1 = y >= 1 ? (src_data + (y - 1) * src_step) : src_data;
@@ -3265,13 +3227,9 @@ namespace cv
                                 srowp1 = y + 1 <= height - 1 ? (src_data + (y + 1) * src_step) : src_data + y * src_step;
                                 srowp2 = y + 2 <= height - 1 ? (src_data + (y + 2) * src_step) : (y == height - 2 ? (src_data + (y - 1) * src_step) : (src_data + y * src_step));
 
-                                drowm2 = (int16_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (int16_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (int16_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -3562,8 +3520,7 @@ namespace cv
 
                                     int16_t *drow_target = (int16_t *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x1);
                                         vint16m8_t vdata = __riscv_vle16_v_i16m8(target_trow + x1, vl);
@@ -3584,7 +3541,7 @@ namespace cv
 
                                 int16_t *drow_current = (int16_t *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e16m8(width - x1);
                                     vint16m8_t vdata = __riscv_vle16_v_i16m8(current_trow + x1, vl);
@@ -3608,8 +3565,7 @@ namespace cv
                             int16_t *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            int16_t *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : (src_data + 2 * src_step);
                                 srowm1 = y >= 1 ? (src_data + (y - 1) * src_step) : (src_data + src_step);
@@ -3617,13 +3573,9 @@ namespace cv
                                 srowp1 = y + 1 <= height - 1 ? (src_data + (y + 1) * src_step) : (src_data + (y - 1) * src_step);
                                 srowp2 = y + 2 <= height - 1 ? (src_data + (y + 2) * src_step) : (y == height - 2 ? (src_data + (y - 2) * src_step) : (src_data + y * src_step));
 
-                                drowm2 = (int16_t *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (int16_t *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (int16_t *)(dst_data + y * dst_step);
-
                                 int16_t prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -3916,8 +3868,7 @@ namespace cv
 
                                     int16_t *drow_target = (int16_t *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e16m8(width - x1);
                                         vint16m8_t vdata = __riscv_vle16_v_i16m8(target_trow + x1, vl);
@@ -3938,7 +3889,7 @@ namespace cv
 
                                 int16_t *drow_current = (int16_t *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e16m8(width - x1);
                                     vint16m8_t vdata = __riscv_vle16_v_i16m8(current_trow + x1, vl);
@@ -3977,7 +3928,7 @@ namespace cv
                                 (reinterpret_cast<uintptr_t>(_tempBuf) + alignment - 1) & ~(alignment - 1));
                             float *trow1 = trow0 + align_size;
 
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 const uint8_t *srow1 = src_data + y * src_step;
                                 const uint8_t *srow0 = src_data + (y > 0 ? y - 1 : 0) * src_step;
@@ -3986,6 +3937,8 @@ namespace cv
                                 float *drow0 = (float *)(dst_data + (y > 0 ? y - 1 : 0) * dst_step);
                                 float *drow1 = (float *)(dst_data + y * dst_step);
                                 float *trow = (y % 2) ? trow1 : trow0;
+
+                                int x = 0;
 
                                 size_t vl = __riscv_vsetvl_e8m2(width - 1);
                                 float prevx = 0, rowx = 0, nextx = 0;
@@ -4020,7 +3973,7 @@ namespace cv
                                 vfloat32m8_t vprevx = vrowx;
                                 vfloat32m8_t vnextx;
 
-                                for (size_t x = 0; x < width - 1; x += vl)
+                                for (x = 1; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m2(width - x - 1);
 
@@ -4097,22 +4050,22 @@ namespace cv
 
                                 if (y > 0)
                                 {
-                                    float *trow = (y % 2) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    float *trow_res = (y % 2) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x);
-                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow + x, vl);
+                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow_res + x, vl);
                                         __riscv_vse32_v_f32m8(drow0 + x, vdata, vl);
                                     }
                                 }
 
                                 if (y == height - 1)
                                 {
-                                    float *trow = (!(y % 2)) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    float *trow_res = (!(y % 2)) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x);
-                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow + x, vl);
+                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow_res + x, vl);
                                         __riscv_vse32_v_f32m8(drow1 + x, vdata, vl);
                                     }
                                 }
@@ -4135,7 +4088,7 @@ namespace cv
 
                             vfloat32m8_t vborder = __riscv_vfmv_v_f_f32m8(borderValue, __riscv_vsetvlmax_e32m8());
 
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 const uint8_t *srow1 = src_data + y * src_step;
                                 const uint8_t *srow0 = nullptr;
@@ -4152,6 +4105,8 @@ namespace cv
 
                                 size_t vl = __riscv_vsetvl_e8m2(width - 1);
                                 float prevx = 0, rowx = 0, nextx = 0;
+
+                                int x = 0;
 
                                 if (dy == 0)
                                 {
@@ -4203,7 +4158,7 @@ namespace cv
                                 vfloat32m8_t vprevx = vrowx;
                                 vfloat32m8_t vnextx;
 
-                                for (size_t x = 0; x < width - 1; x += vl)
+                                for (x = 1; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m2(width - x - 1);
 
@@ -4304,22 +4259,22 @@ namespace cv
 
                                 if (y > 0)
                                 {
-                                    float *trow = (y % 2) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    float *trow_res = (y % 2) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x);
-                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow + x, vl);
+                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow_res + x, vl);
                                         __riscv_vse32_v_f32m8(drow0 + x, vdata, vl);
                                     }
                                 }
 
                                 if (y == height - 1)
                                 {
-                                    float *trow = (!(y % 2)) ? trow0 : trow1;
-                                    for (size_t x = 0; x < width; x += vl)
+                                    float *trow_res = (!(y % 2)) ? trow0 : trow1;
+                                    for (x = 0; x < width; x += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x);
-                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow + x, vl);
+                                        vfloat32m8_t vdata = __riscv_vle32_v_f32m8(trow_res + x, vl);
                                         __riscv_vse32_v_f32m8(drow1 + x, vdata, vl);
                                     }
                                 }
@@ -4350,8 +4305,7 @@ namespace cv
                             float *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            float *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = src_data + (y > 2 ? y - 2 : 0) * src_step;
                                 srowm1 = src_data + (y > 1 ? y - 1 : 0) * src_step;
@@ -4359,13 +4313,9 @@ namespace cv
                                 srowp1 = src_data + (y + 1 < height - 1 ? y + 1 : height - 1) * src_step;
                                 srowp2 = src_data + (y + 2 < height - 1 ? y + 2 : height - 1) * src_step;
 
-                                drowm2 = (float *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (float *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (float *)(dst_data + y * dst_step);
-
                                 float prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     prevxm2 = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -4651,8 +4601,7 @@ namespace cv
 
                                     float *drow_target = (float *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x1);
                                         vfloat32m8_t vdata = __riscv_vle32_v_f32m8(target_trow + x1, vl);
@@ -4673,7 +4622,7 @@ namespace cv
 
                                 float *drow_current = (float *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e32m8(width - x1);
                                     vfloat32m8_t vdata = __riscv_vle32_v_f32m8(current_trow + x1, vl);
@@ -4697,9 +4646,8 @@ namespace cv
                             float *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            float *drowm2, *drowm1, *drow0;
-                            uint8_t zero_row[width] = {0};
-                            for (size_t y = 0; y < height; y++)
+                            uint8_t *zero_row = (uint8_t *)malloc(width * sizeof(uint8_t));
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : zero_row;
                                 srowm1 = y > 1 ? (src_data + (y - 1) * src_step) : zero_row;
@@ -4707,13 +4655,9 @@ namespace cv
                                 srowp1 = y + 1 < height - 1 ? (src_data + (y + 1) * src_step) : zero_row;
                                 srowp2 = y + 2 < height - 1 ? (src_data + (y + 2) * src_step) : zero_row;
 
-                                drowm2 = (float *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (float *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (float *)(dst_data + y * dst_step);
-
                                 float prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -5000,8 +4944,7 @@ namespace cv
 
                                     float *drow_target = (float *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x1);
                                         vfloat32m8_t vdata = __riscv_vle32_v_f32m8(target_trow + x1, vl);
@@ -5022,7 +4965,7 @@ namespace cv
 
                                 float *drow_current = (float *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e32m8(width - x1);
                                     vfloat32m8_t vdata = __riscv_vle32_v_f32m8(current_trow + x1, vl);
@@ -5046,8 +4989,7 @@ namespace cv
                             float *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            float *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y >= 2 ? (src_data + (y - 2) * src_step) : (y == 1 ? src_data : (src_data + src_step));
                                 srowm1 = y >= 1 ? (src_data + (y - 1) * src_step) : src_data;
@@ -5055,13 +4997,9 @@ namespace cv
                                 srowp1 = y + 1 <= height - 1 ? (src_data + (y + 1) * src_step) : src_data + y * src_step;
                                 srowp2 = y + 2 <= height - 1 ? (src_data + (y + 2) * src_step) : (y == height - 2 ? (src_data + (y - 1) * src_step) : (src_data + y * src_step));
 
-                                drowm2 = (float *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (float *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (float *)(dst_data + y * dst_step);
-
                                 float prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -5352,8 +5290,7 @@ namespace cv
 
                                     float *drow_target = (float *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x1);
                                         vfloat32m8_t vdata = __riscv_vle32_v_f32m8(target_trow + x1, vl);
@@ -5374,7 +5311,7 @@ namespace cv
 
                                 float *drow_current = (float *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e32m8(width - x1);
                                     vfloat32m8_t vdata = __riscv_vle32_v_f32m8(current_trow + x1, vl);
@@ -5398,8 +5335,7 @@ namespace cv
                             float *trow2 = trow1 + align_size;
 
                             const uint8_t *srowm2, *srowm1, *srow0, *srowp1, *srowp2;
-                            float *drowm2, *drowm1, *drow0;
-                            for (size_t y = 0; y < height; y++)
+                            for (int y = 0; y < height; y++)
                             {
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : (src_data + 2 * src_step);
                                 srowm1 = y >= 1 ? (src_data + (y - 1) * src_step) : (src_data + src_step);
@@ -5407,13 +5343,9 @@ namespace cv
                                 srowp1 = y + 1 <= height - 1 ? (src_data + (y + 1) * src_step) : (src_data + (y - 1) * src_step);
                                 srowp2 = y + 2 <= height - 1 ? (src_data + (y + 2) * src_step) : (y == height - 2 ? (src_data + (y - 2) * src_step) : (src_data + y * src_step));
 
-                                drowm2 = (float *)(dst_data + (y > 2 ? y - 2 : 0) * dst_step);
-                                drowm1 = (float *)(dst_data + (y > 1 ? y - 1 : 0) * dst_step);
-                                drow0 = (float *)(dst_data + y * dst_step);
-
                                 float prevxm2 = 0, prevxm1 = 0, rowx = 0, nextxp1 = 0, nextxp2 = 0;
 
-                                size_t x = 0;
+                                int x = 0;
                                 if (dy == 0)
                                 {
                                     rowx = srowm2[0] + 4 * srowm1[0] + 6 * srow0[0] + 4 * srowp1[0] + srowp2[0];
@@ -5706,8 +5638,7 @@ namespace cv
 
                                     float *drow_target = (float *)(dst_data + target_y * dst_step);
 
-                                    size_t vl = 0;
-                                    for (size_t x1 = 0; x1 < width; x1 += vl)
+                                    for (int x1 = 0; x1 < width; x1 += vl)
                                     {
                                         vl = __riscv_vsetvl_e32m8(width - x1);
                                         vfloat32m8_t vdata = __riscv_vle32_v_f32m8(target_trow + x1, vl);
@@ -5728,7 +5659,7 @@ namespace cv
 
                                 float *drow_current = (float *)(dst_data + remaining_y * dst_step);
                                 size_t vl = 0;
-                                for (size_t x1 = 0; x1 < width; x1 += vl)
+                                for (int x1 = 0; x1 < width; x1 += vl)
                                 {
                                     vl = __riscv_vsetvl_e32m8(width - x1);
                                     vfloat32m8_t vdata = __riscv_vle32_v_f32m8(current_trow + x1, vl);
