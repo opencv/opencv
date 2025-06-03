@@ -500,10 +500,10 @@ PARAM_TEST_CASE(RemapRelative, MatDepth, Channels, Interpolation, BorderType, bo
         data64FC1.reshape(nChannels, size.height).convertTo(src, srcType);
 
         cv::Mat mapRelativeX32F(size, CV_32FC1);
-        mapRelativeX32F.setTo(cv::Scalar::all(-0.33));
+        mapRelativeX32F.setTo(cv::Scalar::all(-0.25));
 
         cv::Mat mapRelativeY32F(size, CV_32FC1);
-        mapRelativeY32F.setTo(cv::Scalar::all(-0.33));
+        mapRelativeY32F.setTo(cv::Scalar::all(-0.25));
 
         cv::Mat mapAbsoluteX32F = mapRelativeX32F.clone();
         mapAbsoluteX32F.forEach<float>([&](float& pixel, const int* position) {
