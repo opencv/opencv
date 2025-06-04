@@ -43,6 +43,7 @@ PERF_TEST_P(Fast_Params, detect,
     }
 
     // SANITY_CHECK_KEYPOINTS(keypoints);
+    SANITY_CHECK_NOTHING();
 }
 
 } // namespace opencv_test
