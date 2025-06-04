@@ -231,8 +231,8 @@ public:
         float log_min = static_cast<float>(dlog_min);
         log_img.release();
 
-        double key = static_cast<float>((log_max - log_mean) / (log_max - log_min));
-        float map_key = 0.3f + 0.7f * pow(static_cast<float>(key), 1.4f);
+        float key = (log_max - log_mean) / (log_max - log_min);
+        float map_key = 0.3f + 0.7f * pow(key, 1.4f);
         intensity = exp(-intensity);
         Scalar chan_mean = mean(img);
         float gray_mean = static_cast<float>(mean(gray_img)[0]);
@@ -412,7 +412,6 @@ protected:
 
     void mapContrast(Mat& contrast)
     {
-        contrast += 1e-6f;
         const float response_power = 0.4185f;
         signedPow(contrast, response_power, contrast);
         contrast *= scale;
