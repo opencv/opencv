@@ -66,6 +66,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/onevpl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/pysrc/*.hpp"
     )
 
 set(gapi_srcs
@@ -241,6 +242,9 @@ set(gapi_srcs
     src/streaming/gstreamer/gstreamer_buffer_utils.cpp
     src/streaming/gstreamer/gstreamer_media_adapter.cpp
     src/streaming/gstreamer/gstreamerenv.cpp
+
+    # Python Custom Stream source
+    src/pysrc/python_stream_source.cpp
 
     # Utils (ITT tracing)
     src/utils/itt.cpp
