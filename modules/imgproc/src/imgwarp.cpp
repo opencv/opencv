@@ -60,7 +60,7 @@ using namespace cv;
 namespace cv
 {
 
-#if defined (HAVE_IPP) && (!IPP_DISABLE_WARPPERSPECTIVE || !IPP_DISABLE_REMAP)
+#if defined (HAVE_IPP) && (!IPP_DISABLE_REMAP)
 typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
 
 template <int channels, typename Type>
