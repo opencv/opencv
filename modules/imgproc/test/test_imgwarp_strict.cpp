@@ -146,13 +146,11 @@ void CV_ImageWarpBaseTest::generate_test_data()
     // generating the src matrix structure
     Size ssize = randSize(rng), dsize;
 
-    int depth = CV_16U;
-    // int depth = rng.uniform(0, CV_64F);
+    int depth = rng.uniform(0, CV_64F);
     while (depth == CV_8S || depth == CV_32S)
         depth = rng.uniform(0, CV_64F);
 
-    int cn = 4;
-    // int cn = rng.uniform(1, 4);
+    int cn = rng.uniform(1, 4);
 
     src.create(ssize, CV_MAKE_TYPE(depth, cn));
 
@@ -175,8 +173,7 @@ void CV_ImageWarpBaseTest::generate_test_data()
     }
 
     // generating an interpolation type
-    interpolation = cv::INTER_NEAREST;
-    // interpolation = rng.uniform(0, cv::INTER_LANCZOS4 + 1);
+    interpolation = rng.uniform(0, cv::INTER_LANCZOS4 + 1);
 
     // generating the dst matrix structure
     double scale_x, scale_y;
@@ -737,7 +734,6 @@ void CV_Remap_Test::generate_test_data()
     CV_ImageWarpBaseTest::generate_test_data();
 
     RNG& rng = ts->get_rng();
-    // borderType = BORDER_TRANSPARENT;
     borderType = rng.uniform(1, BORDER_WRAP);
     borderValue = Scalar::all(rng.uniform(0, 255));
 
