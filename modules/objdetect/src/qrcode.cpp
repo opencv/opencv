@@ -4124,22 +4124,22 @@ bool ImplContour::decodeMulti(
         straight_qrcode.assign(tmp_straight_qrcodes);
     }
 
-    decoded_info.clear();
-    encodings.clear();
+    decoded_info.resize(info.size());
+    encodings.resize(info.size());
     for (size_t i = 0; i < info.size(); i++)
     {
         auto& decoder = qrdec[i];
-        encodings.push_back(decoder.eci);
+        encodings[i] = decoder.eci;
         if (!decoder.isStructured())
         {
-            decoded_info.push_back(info[i]);
+            decoded_info[i] = info[i];
             continue;
         }
 
         // Store final message corresponding to 0-th code in a sequence.
         if (decoder.structure_info.sequence_num != 0)
         {
-            decoded_info.push_back("");
+            decoded_info[i] = "";
             continue;
         }
 
@@ -4160,7 +4160,7 @@ bool ImplContour::decodeMulti(
                 break;
             }
         }
-        decoded_info.push_back(decoded);
+        decoded_info[i] = decoded;
     }
 
     alignmentMarkers.resize(src_points.size());

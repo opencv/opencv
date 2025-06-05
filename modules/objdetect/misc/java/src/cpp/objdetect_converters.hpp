@@ -11,4 +11,4 @@
 
 void Copy_vector_NativeByteArray_to_List(JNIEnv* env, std::vector<std::string>& vs, jobject list);
 
-#endif	/* DNN_CONVERTERS_HPP */
+#endif	/* OBJDETECT_CONVERTERS_HPP */

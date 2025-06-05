@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 
 public class QRCodeDetectorTest extends OpenCVTestCase {
 
@@ -57,6 +58,9 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
     }
 
     public void testKanji() throws UnsupportedEncodingException {
+        if (!Charset.isSupported("Shift_JIS"))
+            throw new TestSkipException();
+
         String inp = new String("\u3053\u3093\u306B\u3061\u306F\u4E16\u754C");
 
         QRCodeEncoder_Params params = new QRCodeEncoder_Params();
