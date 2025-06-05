@@ -53,7 +53,7 @@
             "jn_type": "byte[]",
             "jni_type": "jbyteArray",
             "jni_name": "n_%(n)s",
-            "jni_var": "jbyteArray n_%(n)s = env->NewByteArray(static_cast<jsize>(%(n)s.size())); env->SetByteArrayRegion(n_%(n)s, 0, %(n)s.size(), reinterpret_cast<jbyte*>(&%(n)s[0]));",
+            "jni_var": "jbyteArray n_%(n)s = env->NewByteArray(static_cast<jsize>(%(n)s.size())); env->SetByteArrayRegion(n_%(n)s, 0, static_cast<jsize>(%(n)s.size()), reinterpret_cast<jbyte*>(&%(n)s[0]));",
             "cast_from": "std::string"
         }
     }

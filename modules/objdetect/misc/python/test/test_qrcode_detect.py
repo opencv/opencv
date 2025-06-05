@@ -65,16 +65,22 @@ class qrcode_detector_test(NewOpenCVTests):
         self.assertTrue("Müllheimstrasse" in decoded_data)
 
     def test_kanji(self):
-        inp = b"\x82\xb1\x82\xf1\x82\xc9\x82\xbf\x82\xcd\x90\xa2\x8a\x45"
+        inp = "こんにちは世界"
+        inp_bytes = inp.encode("shift-jis")
 
         params = cv.QRCodeEncoder_Params()
         params.mode = cv.QRCodeEncoder_MODE_KANJI
         encoder = cv.QRCodeEncoder_create(params)
-        qrcode = encoder.encode(inp)
+        qrcode = encoder.encode(inp_bytes)
         qrcode = cv.resize(qrcode, (0, 0), fx=2, fy=2, interpolation=cv.INTER_NEAREST)
 
         detector = cv.QRCodeDetector()
         data, _, _ = detector.detectAndDecodeBytes(qrcode)
-        self.assertEqual(data, inp)
+        self.assertEqual(data, inp_bytes)
         self.assertEqual(detector.getEncoding(), cv.QRCodeEncoder_ECI_SHIFT_JIS)
-        self.assertEqual(data.decode("shift-jis"), "こんにちは世界")
+        self.assertEqual(data.decode("shift-jis"), inp)
+
+        _, data, _, _ = detector.detectAndDecodeBytesMulti(qrcode)
+        self.assertEqual(data[0], inp_bytes)
+        self.assertEqual(detector.getEncoding(0), cv.QRCodeEncoder_ECI_SHIFT_JIS)
+        self.assertEqual(data[0].decode("shift-jis"), inp)

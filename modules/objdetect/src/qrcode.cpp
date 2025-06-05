@@ -4125,9 +4125,11 @@ bool ImplContour::decodeMulti(
     }
 
     decoded_info.clear();
+    encodings.clear();
     for (size_t i = 0; i < info.size(); i++)
     {
         auto& decoder = qrdec[i];
+        encodings.push_back(decoder.eci);
         if (!decoder.isStructured())
         {
             decoded_info.push_back(info[i]);
