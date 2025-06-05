@@ -199,11 +199,13 @@ if(WITH_FASTCV)
       ocv_install_3rdparty_licenses(FastCV "${OpenCV_BINARY_DIR}/3rdparty/fastcv/LICENSE")
       add_library(fastcv STATIC IMPORTED)
       set_target_properties(fastcv PROPERTIES
-          IMPORTED_LINK_INTERFACE_LIBRARIES ""
+          IMPORTED_LINK_INTERFACE_LIBRARIES "dl"
           IMPORTED_LOCATION "${FastCV_LIB_PATH}/libfastcv.a"
       )
       if (NOT BUILD_SHARED_LIBS)
         install(FILES "${FastCV_LIB_PATH}/libfastcv.a" DESTINATION "${OPENCV_3P_LIB_INSTALL_PATH}" COMPONENT "dev")
+        set(FASTCV_LOCATION_PATH "${FastCV_LIB_PATH}/libfastcv.a" CACHE INTERNAL "" FORCE)
+        set(FASTCV_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/libfastcv.a" CACHE INTERNAL "" FORCE)
       endif()
       set(FASTCV_LIBRARY "fastcv" CACHE PATH "FastCV library")
       list(APPEND OPENCV_LINKER_LIBS ${FASTCV_LIBRARY})

@@ -1111,16 +1111,9 @@ int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size_t src2
         },
     };
 
-    static const size_t elem_size_tab[CV_DEPTH_MAX] = {
-        sizeof(uchar),   sizeof(schar),
-        sizeof(ushort),  sizeof(short),
-        sizeof(int),     sizeof(float),
-        sizeof(int64_t), 0,
-    };
-    CV_Assert(elem_size_tab[depth]);
-
-    bool src_continuous = (src1_step == width * elem_size_tab[depth] * cn || (src1_step != width * elem_size_tab[depth] * cn && height == 1));
-    src_continuous &= (src2_step == width * elem_size_tab[depth] * cn || (src2_step != width * elem_size_tab[depth] * cn && height == 1));
+    size_t elem_size1 = static_cast<size_t>(CV_ELEM_SIZE1(type));
+    bool src_continuous = (src1_step == width * elem_size1 * cn || (src1_step != width * elem_size1 * cn && height == 1));
+    src_continuous &= (src2_step == width * elem_size1 * cn || (src2_step != width * elem_size1 * cn && height == 1));
     bool mask_continuous = (mask_step == static_cast<size_t>(width));
     size_t nplanes = 1;
     size_t size = width * height;
@@ -1143,7 +1136,7 @@ int normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size_t src2
     res.d = 0;
     if ((norm_type == NORM_L1 && depth <= CV_16S) ||
         ((norm_type == NORM_L2 || norm_type == NORM_L2SQR) && depth <= CV_8S)) {
-        const size_t esz = elem_size_tab[depth] * cn;
+        const size_t esz = elem_size1 * cn;
         const int total = (int)size;
         const int intSumBlockSize = (norm_type == NORM_L1 && depth <= CV_8S ? (1 << 23) : (1 << 15))/cn;
         const int blockSize = std::min(total, intSumBlockSize);

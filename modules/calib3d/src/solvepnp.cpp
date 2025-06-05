@@ -98,7 +98,8 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
     CV_CheckType(type, cn == 1 || cn == 3 || cn == 4,
                  "Number of channels must be 1, 3 or 4" );
 
-    CV_Assert(image.getMat().total() > 0);
+    cv::Mat img = image.getMat();
+    CV_Assert(img.total() > 0);
     CV_Assert(length > 0);
 
     // project axes points
@@ -109,6 +110,18 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
     axesPoints.push_back(Point3f(0, 0, length));
     std::vector<Point2f> imagePoints;
     projectPoints(axesPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints);
+
+    cv::Rect imageRect(0, 0, img.cols, img.rows);
+    bool allIn = true;
+    for (size_t i = 0; i < imagePoints.size(); i++)
+    {
+        allIn &= imageRect.contains(imagePoints[i]);
+    }
+
+    if (!allIn)
+    {
+        CV_LOG_WARNING(NULL, "Some of projected axes endpoints are out of frame. The drawn axes may be not relaible.");
+    }
 
     // draw axes lines
     line(image, imagePoints[0], imagePoints[1], Scalar(0, 0, 255), thickness);
