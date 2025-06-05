@@ -339,7 +339,7 @@ namespace cv
                                 vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vprevx = vrowx;
 
-                                for (x = 1; x < width - 1; x += vl)
+                                for (x = 0; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -544,7 +544,7 @@ namespace cv
                                 vint16m8_t vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vint16m8_t vprevx = vrowx, vnextx;
 
-                                for (x = 1; x < width - 1; x += vl)
+                                for (x = 0; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -2202,7 +2202,7 @@ namespace cv
                                 vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vprevx = vrowx;
 
-                                for (x = 1; x < width - 1; x += vl)
+                                for (x = 0; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -2397,7 +2397,7 @@ namespace cv
                                 vint16m8_t vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
                                 vint16m8_t vprevx = vrowx, vnextx;
 
-                                for (x = 1; x < width - 1; x += vl)
+                                for (x = 0; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m4(width - x - 1);
 
@@ -3973,7 +3973,7 @@ namespace cv
                                 vfloat32m8_t vprevx = vrowx;
                                 vfloat32m8_t vnextx;
 
-                                for (x = 1; x < width - 1; x += vl)
+                                for (x = 0; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m2(width - x - 1);
 
@@ -4158,7 +4158,7 @@ namespace cv
                                 vfloat32m8_t vprevx = vrowx;
                                 vfloat32m8_t vnextx;
 
-                                for (x = 1; x < width - 1; x += vl)
+                                for (x = 0; x < width - 1; x += vl)
                                 {
                                     vl = __riscv_vsetvl_e8m2(width - x - 1);
 
