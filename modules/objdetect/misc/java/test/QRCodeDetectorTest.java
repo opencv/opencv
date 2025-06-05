@@ -71,5 +71,10 @@ public class QRCodeDetectorTest extends OpenCVTestCase {
         byte[] output = detector.detectAndDecodeBytes(qrcode);
         assertEquals(detector.getEncoding(), QRCodeEncoder.ECI_SHIFT_JIS);
         assertEquals(inp, new String(output, "Shift_JIS"));
+
+        List < byte[] > outputs = new ArrayList< byte[] >();
+        assertTrue(detector.detectAndDecodeBytesMulti(qrcode, outputs));
+        assertEquals(detector.getEncoding(0), QRCodeEncoder.ECI_SHIFT_JIS);
+        assertEquals(inp, new String(outputs.get(0), "Shift_JIS"));
     }
 }

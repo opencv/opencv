@@ -53,8 +53,16 @@
             "jn_type": "byte[]",
             "jni_type": "jbyteArray",
             "jni_name": "n_%(n)s",
-            "jni_var": "jbyteArray n_%(n)s = env->NewByteArray(static_cast<jsize>(%(n)s.size())); env->SetByteArrayRegion(n_%(n)s, 0, static_cast<jsize>(%(n)s.size()), reinterpret_cast<jbyte*>(&%(n)s[0]));",
+            "jni_var": "jbyteArray n_%(n)s = env->NewByteArray(static_cast<jsize>(%(n)s.size())); env->SetByteArrayRegion(n_%(n)s, 0, static_cast<jsize>(%(n)s.size()), reinterpret_cast<const jbyte*>(%(n)s.c_str()));",
             "cast_from": "std::string"
+        },
+        "vector_NativeByteArray": {
+            "j_type": "List<byte[]>",
+            "jn_type": "List<byte[]>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< std::string > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_NativeByteArray"
         }
     }
 }
