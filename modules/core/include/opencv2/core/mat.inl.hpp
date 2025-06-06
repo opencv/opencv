@@ -3254,18 +3254,13 @@ const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
 
 template<typename _Tp> inline
 UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
-: flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
+    : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+      cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
+    CV_UNUSED(copyData); // parameter kept for backward compatibility
     if(vec.empty())
         return;
-    if( !copyData )
-    {
-        // !!!TODO!!!
-        CV_Error(Error::StsNotImplemented, "");
-    }
-    else
-        Mat((int)vec.size(), 1, traits::Type<_Tp>::value, (uchar*)&vec[0]).copyTo(*this);
+    Mat((int)vec.size(), 1, traits::Type<_Tp>::value, (uchar*)&vec[0]).copyTo(*this);
 }
 
 inline
