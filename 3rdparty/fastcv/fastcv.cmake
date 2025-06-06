@@ -1,7 +1,7 @@
 function(download_fastcv root_dir)
 
   # Commit SHA in the opencv_3rdparty repo
-  set(FASTCV_COMMIT "abe340d0fb7f19fa9315080e3c8616642e98a296")
+  set(FASTCV_COMMIT "2265e79b3b9a8512a9c615b8c4d0244e88f45a9d")
 
   # Define actual FastCV versions
   if(ANDROID)
@@ -16,8 +16,8 @@ function(download_fastcv root_dir)
     endif()
   elseif(UNIX AND NOT APPLE AND NOT IOS AND NOT XROS)
     if(AARCH64)
-      set(FCV_PACKAGE_NAME  "fastcv_linux_aarch64_2025_04_29.tgz")
-      set(FCV_PACKAGE_HASH  "e2ce60e25c8e4113a7af2bd243118f4c")
+      set(FCV_PACKAGE_NAME  "fastcv_linux_aarch64_2025_05_29.tgz")
+      set(FCV_PACKAGE_HASH  "decd490524f786e103125b8b948151f3")
     else()
       message("FastCV: fastcv lib for 32-bit Linux is not supported for now!")
     endif()
