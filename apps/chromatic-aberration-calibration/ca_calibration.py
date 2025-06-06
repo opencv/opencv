@@ -311,15 +311,6 @@ def _calibrate_from_image(
     )
 
 
-def _save_polynomials_to_yaml(red_poly: Polynomial2D, blue_poly: Polynomial2D, path: str):
-    data = {
-        "red": red_poly.to_serializable_dict(),
-        "blue": blue_poly.to_serializable_dict()
-    }
-    with open(path, "w") as f:
-        yaml.dump(data, f)
-
-
 def _build_remap(
     h: int,
     w: int,
@@ -421,7 +412,7 @@ def _cmd_full(args: argparse.Namespace) -> None:
     print(f"Corrected image written to {args.output}")
 
 
-def main() -> None:
+if __name__ == "__main__":
     args = _parse_args()
     if args.cmd == "calibrate":
         _cmd_calibrate(args)
@@ -429,7 +420,3 @@ def main() -> None:
         _cmd_correct(args)
     elif args.cmd == "full":
         _cmd_full(args)
-
-
-if __name__ == "__main__":
-    main()
