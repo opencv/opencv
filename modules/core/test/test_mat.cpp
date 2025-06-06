@@ -1446,6 +1446,25 @@ TEST(Core_Mat, regression_9507)
     EXPECT_EQ(25u, m2.total());
 }
 
+TEST(Core_Mat, empty)
+{
+    // Should not crash.
+    uint8_t data[2] = {0, 1};
+    cv::Mat mat_nd(/*ndims=*/0, /*sizes=*/nullptr, CV_8UC1, /*data=*/data);
+    cv::Mat1b mat(0, 0, /*data=*/data, /*steps=*/1);
+    EXPECT_EQ(mat_nd.dims, 0);
+    EXPECT_EQ(mat.dims, 2);
+#if CV_VERSION_MAJOR < 5
+    EXPECT_LE(mat_nd.total(), 0u);
+    EXPECT_TRUE(mat_nd.empty());
+#else
+    EXPECT_LE(mat_nd.total(), 1u);
+    EXPECT_FALSE(mat_nd.empty());
+#endif
+    EXPECT_EQ(mat.total(), 0u);
+    EXPECT_TRUE(mat.empty());
+}
+
 TEST(Core_InputArray, empty)
 {
     vector<vector<Point> > data;
