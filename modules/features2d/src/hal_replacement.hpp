@@ -43,7 +43,6 @@
 #define OPENCV_FEATURES2D_HAL_REPLACEMENT_HPP
 
 #include "opencv2/core/hal/interface.h"
-#include "opencv2/core/types.hpp"
 
 #if defined(__clang__)  // clang or MSVC clang
 #pragma clang diagnostic push
@@ -97,12 +96,13 @@ inline int hal_ni_FAST_NMS(const uchar* src_data, size_t src_step, uchar* dst_da
    @param src_step Source image step
    @param width Source image width
    @param height Source image height
-   @param keypoints std::vector of KeyPoint
+   @param keypoints_data Pointer to keypoints
+   @param keypoints_count Count of keypoints
    @param threshold Threshold for keypoint
    @param nonmax_suppression Indicates if make nonmaxima suppression or not.
    @param type FAST type
 */
-inline int hal_ni_FAST(const uchar* src_data, size_t src_step, int width, int height, std::vector<cv::KeyPoint>& keypoints, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_FAST(const uchar* src_data, size_t src_step, int width, int height, uchar* keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_FAST hal_ni_FAST

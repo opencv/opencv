@@ -1,8 +1,5 @@
 #include "rvv_hal.hpp"
 #include "common.hpp"
-
-#include "opencv2/core/utils/logger.hpp"
-
 #include <cfloat>
 
 namespace cv { namespace rvv_hal { namespace features2d {
@@ -90,32 +87,22 @@ inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int6
 }
 
 
-inline int fast_16(const uchar* src_data, size_t src_step, int width, int height, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
+inline int fast_16(const uchar* src_data, size_t src_step,
+                   int width, int height,
+                   uchar* keypoints_data, size_t* keypoints_count,
+                   int threshold, bool nonmax_suppression)
 {
 
     const int patternSize = 16;
     const int K = patternSize/2, N = patternSize + K + 1;
     const int quarterPatternSize = patternSize/4;
 
+    KeyPoint* _keypoints_data = (KeyPoint*)keypoints_data;
+
     int i, j, k;
     int16_t pixel[25];
     vuint16m2_t v_offset;
     makeOffsets(pixel, v_offset, (int)src_step, patternSize);
-
-    // uchar* buf[3] = { 0 };
-    // int* cpbuf[3] = { 0 };
-    // common::BufferArea area;
-    // for (unsigned idx = 0; idx < 3; ++idx)
-    // {
-    //     area.allocate(buf[idx], width);
-    //     area.allocate(cpbuf[idx], width + 1);
-    // }
-    // area.commit();
-
-    // for (unsigned idx = 0; idx < 3; ++idx)
-    // {
-    //     memset(buf[idx], 0, width);
-    // }
 
     std::vector<uchar> _buf((width+16)*3*(sizeof(ptrdiff_t) + sizeof(uchar)) + 128);
     uchar* buf[3];
@@ -240,7 +227,6 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
         const uchar* pprev = buf[(i - 5 + 3)%3];
         cornerpos = cpbuf[(i - 4 + 3)%3]; // cornerpos[-1] is used to store a value
         ncorners = cornerpos[-1];
-
         for( k = 0; k < ncorners; k++ )
         {
             j = cornerpos[k];
@@ -250,17 +236,25 @@ inline int fast_16(const uchar* src_data, size_t src_step, int width, int height
                 score > pprev[j-1] && score > pprev[j] && score > pprev[j+1] &&
                 score > curr[j-1] && score > curr[j] && score > curr[j+1]) )
             {
-                KeyPoint kp((float)j, (float)(i-1), 7.f, -1, (float)score);
-                keypoints.push_back(kp);
+                _keypoints_data[*keypoints_count].pt.x = (float)j;
+                _keypoints_data[*keypoints_count].pt.y = (float)(i-1);
+                _keypoints_data[*keypoints_count].size = 7.f;
+                _keypoints_data[*keypoints_count].angle = -1.f;
+                _keypoints_data[*keypoints_count].response = (float)score;
+                _keypoints_data[*keypoints_count].octave = 0; // Not used in FAST
+                _keypoints_data[*keypoints_count].class_id = -1; // Not used in FAST
+
+                (*keypoints_count)++;
             }
         }
     }
     return CV_HAL_ERROR_OK;
 }
 
-int FAST(const uchar* src_data, size_t src_step, int width, int height,
-          std::vector<KeyPoint>& keypoints,
-          int threshold, bool nonmax_suppression, int detector_type)
+int FAST(const uchar* src_data, size_t src_step,
+         int width, int height, uchar* keypoints_data,
+         size_t* keypoints_count, int threshold,
+         bool nonmax_suppression, int detector_type)
 {
     int res = CV_HAL_ERROR_UNKNOWN;
     switch(detector_type) {
@@ -269,7 +263,7 @@ int FAST(const uchar* src_data, size_t src_step, int width, int height,
         case CV_HAL_TYPE_7_12:
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
         case CV_HAL_TYPE_9_16:
-            return fast_16(src_data, src_step, width, height, keypoints, threshold, nonmax_suppression);
+            return fast_16(src_data, src_step, width, height, keypoints_data, keypoints_count, threshold, nonmax_suppression);
         default:
             return res;
     }

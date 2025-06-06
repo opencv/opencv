@@ -21,9 +21,9 @@ PERF_TEST_P(Fast_Params, detect,
                         "cv/cameracalibration/chess9.png")
     ))
 {
-    int threshold = get<0>(GetParam());
-    int type = get<1>(GetParam());
-    bool nonmaxSuppression = get<2>(GetParam());
+    int threshold_p = get<0>(GetParam());
+    int type_p = get<1>(GetParam());
+    bool nonmaxSuppression_p = get<2>(GetParam());
     string filename = getDataPath(get<3>(GetParam()));
 
     Mat img = imread(filename, IMREAD_GRAYSCALE);
@@ -33,13 +33,13 @@ PERF_TEST_P(Fast_Params, detect,
 
     int64 t1 = cv::getTickCount();
     for(int i = 0; i < 10; i++) {
-        FAST(img, keypoints, threshold, nonmaxSuppression, (FastFeatureDetector::DetectorType)type);
+        FAST(img, keypoints, threshold_p, nonmaxSuppression_p, (FastFeatureDetector::DetectorType)type_p);
     }
     int64 t2 = cv::getTickCount();
     declare.in(img);
     TEST_CYCLE()
     {
-        FAST(img, keypoints, threshold, nonmaxSuppression, (FastFeatureDetector::DetectorType)type);
+        FAST(img, keypoints, threshold_p, nonmaxSuppression_p, (FastFeatureDetector::DetectorType)type_p);
     }
 
     // SANITY_CHECK_KEYPOINTS(keypoints);
