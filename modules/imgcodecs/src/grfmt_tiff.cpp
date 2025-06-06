@@ -269,12 +269,8 @@ bool TiffDecoder::readHeader()
 
         {
             bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-            uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
-            if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
-            {
-                // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
-                bpp = 1;
-            }
+            uint16_t bpp = 1, ncn =  photometric == PHOTOMETRIC_RGB ? 3 : 1;
+            CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
             CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
 
             m_width = wdth;
@@ -607,13 +603,8 @@ bool  TiffDecoder::readData( Mat& img )
     if (m_width && m_height)
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
-        bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-        uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
-        if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
-        {
-            // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
-            bpp = 1;
-        }
+        uint16_t bpp = 1, ncn =  photometric == PHOTOMETRIC_RGB ? 3 : 1;
+        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16_t img_orientation = ORIENTATION_TOPLEFT;
         CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
