@@ -3,8 +3,9 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "../precomp.hpp"
-#include "sparse_block_matrix.hpp"
+#include "opencv2/3d/detail/mst.hpp"
 #include "opencv2/3d/detail/optimizer.hpp"
+#include "sparse_block_matrix.hpp"
 
 namespace cv
 {
@@ -331,6 +332,8 @@ public:
     // calculate cost function based on provided nodes parameters
     double calcEnergyNodes(const std::map<size_t, Node>& newNodes) const;
 
+    void initializePosesWithMST() CV_OVERRIDE;
+
     // creates an optimizer
     virtual Ptr<LevMarqBase> createOptimizer(const LevMarq::Settings& settings) CV_OVERRIDE
     {
@@ -358,6 +361,10 @@ public:
     std::vector<Edge> edges;
 
     Ptr<PoseGraphLevMarq> lm;
+
+private:
+    double calculateWeight(const PoseGraphImpl::Edge& e) const;
+    void applyMST(const std::vector<cv::detail::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode);
 };
 
 
@@ -472,6 +479,107 @@ bool PoseGraphImpl::isValid() const
     return isGraphConnected && !invalidEdgeNode;
 }
 
+double PoseGraphImpl::calculateWeight(const PoseGraphImpl::Edge& e) const
+{
+    double translationNorm = cv::norm(e.pose.t);
+
+    cv::Matx33d R = e.pose.q.toRotMat3x3(cv::QUAT_ASSUME_UNIT);
+    cv::Vec3d rvec;
+    cv::Rodrigues(R, rvec);
+    double rotationAngle = cv::norm(rvec);
+
+    // empirically determined
+    double lambda = 0.485;
+    double weight = translationNorm + lambda * rotationAngle;
+
+    return weight;
+}
+
+void PoseGraphImpl::applyMST(const std::vector<cv::detail::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode)
+{
+    std::unordered_map<size_t, std::vector<std::pair<size_t, PoseGraphImpl::Pose3d>>> adj;
+    for (const auto& e: resultingEdges)
+    {
+        auto it = std::find_if(edges.begin(), edges.end(), [&](const PoseGraphImpl::Edge& edge)
+        {
+            return (edge.sourceNodeId == e.source && edge.targetNodeId == e.target) ||
+                   (edge.sourceNodeId == e.target && edge.targetNodeId == e.source);
+        });
+        if (it != edges.end())
+        {
+            size_t src = it->sourceNodeId;
+            size_t tgt = it->targetNodeId;
+            const PoseGraphImpl::Pose3d& relPose = it->pose;
+
+            adj[src].emplace_back(tgt, relPose);
+            adj[tgt].emplace_back(src, relPose.inverse());
+        }
+    }
+
+    std::unordered_map<size_t, PoseGraphImpl::Pose3d> newPoses;
+    std::stack<size_t> toVisit;
+    std::unordered_set<size_t> visited;
+
+    newPoses[rootNode.id] = rootNode.pose;
+    toVisit.push(rootNode.id);
+
+    while (!toVisit.empty())
+    {
+        size_t current = toVisit.top();
+        toVisit.pop();
+        visited.insert(current);
+
+        const auto& currentPose = newPoses[current];
+
+        auto it = adj.find(current);
+        if (it == adj.end())
+            continue;
+
+        for (const auto& [neighbor, relativePose] : it->second)
+        {
+            if (visited.count(neighbor))
+                continue;
+            newPoses[neighbor] = currentPose * relativePose;
+            toVisit.push(neighbor);
+        }
+    }
+
+    // Apply the new poses
+    for (const auto& [nodeId, pose] : newPoses)
+    {
+        if (!nodes.at(nodeId).isFixed)
+            nodes.at(nodeId).setPose(pose.getAffine());
+    }
+}
+
+void PoseGraphImpl::initializePosesWithMST()
+{
+    size_t numNodes = getNumNodes();
+
+    std::vector<MSTEdge> MSTedges;
+    for (const auto& e: edges)
+    {
+        double weight = calculateWeight(e);
+        MSTedges.push_back({e.sourceNodeId, e.targetNodeId, weight});
+    }
+
+    size_t rootId = 0;
+    PoseGraphImpl::Node rootNode = nodes.begin()->second;
+
+    for (const auto& n: nodes)
+    {
+        if (isNodeFixed(n.second.id))
+        {
+            rootNode = n.second;
+            rootId = n.second.id;
+            break;
+        }
+    }
+
+    std::vector<MSTEdge> resultingEdges = cv::detail::buildMSTPrim(numNodes, MSTedges, rootId);
+
+    applyMST(resultingEdges, rootNode);
+}
 
 //////////////////////////
 // Optimization itself //
