@@ -265,6 +265,7 @@ _PREDEFINED_TYPES = (
         export_name="ExtractMetaCallback",
         required_modules=("gapi",)
     ),
+    PrimitiveTypeNode("NativeByteArray", "bytes"),
 )
 
 PREDEFINED_TYPES = dict(
