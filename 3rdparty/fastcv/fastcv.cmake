@@ -1,7 +1,7 @@
 function(download_fastcv root_dir)
 
   # Commit SHA in the opencv_3rdparty repo
-  set(FASTCV_COMMIT "8b2f8b77a3557b413e3b25cff4fae6f12b48094b")
+  set(FASTCV_COMMIT "2265e79b3b9a8512a9c615b8c4d0244e88f45a9d")
 
   # Define actual FastCV versions
   if(ANDROID)
