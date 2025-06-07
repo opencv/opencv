@@ -1146,7 +1146,7 @@ int remap16s(int src_type, const uchar *src_data, size_t src_step, int src_width
              short* mapx, size_t mapx_step, ushort* mapy, size_t mapy_step,
              int interpolation, int border_type, const double border_value[4])
 {
-    if (CV_MAKETYPE(src_type, 1) != src_type)
+    if (CV_MAKETYPE(src_type, 1) != src_type || interpolation == CV_HAL_INTER_LANCZOS4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return remap32f<true>(src_type, src_data, src_step, src_width, src_height, dst_data, dst_step, dst_width, dst_height, reinterpret_cast<float*>(mapx), mapx_step, reinterpret_cast<float*>(mapy), mapy_step, interpolation, border_type, border_value);
 }
