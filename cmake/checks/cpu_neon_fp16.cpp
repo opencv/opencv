@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#if (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) || (defined _MSC_VER && defined _M_ARM64)
+#if (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) || (defined _MSC_VER && (defined _M_ARM64 || defined _M_ARM64EC)
 #include "arm_neon.h"
 
 float16x8_t vld1q_as_f16(const float* src)
