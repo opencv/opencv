@@ -20,11 +20,14 @@ using Merges = std::vector<std::pair<std::string, std::string>>;
 // Two consecutive token-ids 
 using Pair = std::pair<std::uint32_t, std::uint32_t>;
 
+//Utility hash for Pair so that it can be used as a key in unordered_map
 struct PairHash {
-    std::size_t operator()(const Pair& p) const noexcept {
-        // cheap 64-bit hash: a << 32 | b
-        return (static_cast<std::size_t>(p.first) << 32) ^ 
-            static_cast<std::size_t>(p.second);
+    std::size_t operator()(const Pair &p) const noexcept {
+        // Simple combination hash (splitmix64 inspired)
+        // https://rosettacode.org/wiki/Pseudo-random_numbers/Splitmix64
+        std::size_t h1 = static_cast<std::size_t>(p.first);
+        std::size_t h2 = static_cast<std::size_t>(p.second);
+        return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
     }
 };
 /*
