@@ -365,7 +365,7 @@ cv::String getInferenceEngineCPUType()
     {
         auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
         CV_UNUSED(networkBackend);
-#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
         return CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE;
 #else
         return CV_DNN_INFERENCE_ENGINE_CPU_TYPE_X86;

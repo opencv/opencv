@@ -368,7 +368,7 @@ enum CpuFeatures {
 
 #include "cv_cpu_dispatch.h"
 
-#if !defined(CV_STRONG_ALIGNMENT) && defined(__arm__) && !(defined(__aarch64__) || defined(_M_ARM64))
+#if !defined(CV_STRONG_ALIGNMENT) && defined(__arm__) && !(defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC))
 // int*, int64* should be propertly aligned pointers on ARMv7
 #define CV_STRONG_ALIGNMENT 1
 #endif

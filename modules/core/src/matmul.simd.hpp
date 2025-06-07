@@ -1598,7 +1598,7 @@ transform_32f( const float* src, float* dst, const float* m, int len, int scn, i
 // Disabled for RISC-V Vector (scalable), because of:
 // 1. v_matmuladd for RVV is 128-bit only but not scalable, this will fail the test `Core_Transform.accuracy`.
 // 2. Both gcc and clang can autovectorize this, with better performance than using Universal intrinsic.
-#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64) && !(CV_TRY_RVV && CV_RVV)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__aarch64__) && !defined(_M_ARM64) && !defined(_M_ARM64EC) && !(CV_TRY_RVV && CV_RVV)
     int x = 0;
     if( scn == 3 && dcn == 3 )
     {
