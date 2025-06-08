@@ -231,7 +231,7 @@ private:
                 for (int i = 0; i < 8; i++)
                     coeffs[t*8+i] = 0;
                 coeffs[t*8+3] = 1;
-                return;
+                continue;
             }
 
             float sum = 0;
