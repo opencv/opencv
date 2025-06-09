@@ -163,7 +163,7 @@ public:
     enum KindFlag {
         KIND_SHIFT = 16,
         FIXED_TYPE = 0x8000 << KIND_SHIFT,
-        FIXED_SIZE = 0x4000 << KIND_SHIFT,
+        FIXED_SIZE = 0x4000U << KIND_SHIFT,
         KIND_MASK = 31 << KIND_SHIFT,
 
         NONE              = 0 << KIND_SHIFT,

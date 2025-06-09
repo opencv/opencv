@@ -1577,7 +1577,7 @@ CvSet;
 
 
 #define CV_SET_ELEM_IDX_MASK   ((1 << 26) - 1)
-#define CV_SET_ELEM_FREE_FLAG  (1 << (sizeof(int)*8-1))
+#define CV_SET_ELEM_FREE_FLAG  (1U << (sizeof(int)*8-1))
 
 /** Checks whether the element pointed by ptr belongs to a set or not */
 #define CV_IS_SET_ELEM( ptr )  (((CvSetElem*)(ptr))->flags >= 0)
