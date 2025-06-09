@@ -123,6 +123,10 @@ public class VideoCaptureTest extends OpenCVTestCase {
                 {
                     if (origin == 0)
                         f.seek(offset);
+                    else if (origin == 1)
+                        f.seek(f.getFilePointer() + offset);
+                    else if (origin == 2)
+                        f.seek(f.length() - 1 + offset);
                     return f.getFilePointer();
                 }
                 catch (IOException e)
