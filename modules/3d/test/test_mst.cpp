@@ -93,7 +93,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Fully Disconnected
-    MSTParamType(0, 6, 
+    MSTParamType(0, 6,
         {
 
         },
@@ -130,7 +130,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    // Dense graph (clique) 
+    // Dense graph (clique)
     MSTParamType(0, 4,
         {
             {0, 1, 1.0}, {0, 2, 2.0}, {0, 3, 3.0},
