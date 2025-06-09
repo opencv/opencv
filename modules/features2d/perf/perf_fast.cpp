@@ -31,18 +31,12 @@ PERF_TEST_P(Fast_Params, detect,
 
     vector<KeyPoint> keypoints;
 
-    int64 t1 = cv::getTickCount();
-    for(int i = 0; i < 10; i++) {
-        FAST(img, keypoints, threshold_p, nonmaxSuppression_p, (FastFeatureDetector::DetectorType)type_p);
-    }
-    int64 t2 = cv::getTickCount();
     declare.in(img);
     TEST_CYCLE()
     {
         FAST(img, keypoints, threshold_p, nonmaxSuppression_p, (FastFeatureDetector::DetectorType)type_p);
     }
 
-    // SANITY_CHECK_KEYPOINTS(keypoints);
     SANITY_CHECK_NOTHING();
 }
 
