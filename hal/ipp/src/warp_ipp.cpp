@@ -78,7 +78,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
                         {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}},   //16U
                         {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
                         {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
-                        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}},   //32F
+                        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32F
                         {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}}};  //64F
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
@@ -94,7 +94,7 @@ int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int
         ::ipp::IwiImage        iwDst({dst_width, dst_height}, ippiGetDataType(src_type), CV_MAT_CN(src_type), NULL, dst_data, dst_step);
         ::ipp::IwiBorderType   ippBorder(ippiGetBorderType(borderType), {borderValue[0], borderValue[1], borderValue[2], borderValue[3]});
         IwTransDirection       iwTransDirection = iwTransForward;
-        
+
         if((int)ippBorder == -1)
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
@@ -224,7 +224,7 @@ public:
 
         pSpec = (IppiWarpSpec*)ippMalloc_L(specSize);
 
-        if (inter == IPPI_INTER_LINEAR)
+        if (inter == ippLinear)
         {
             status = ippiWarpPerspectiveLinearInit(srcsize, srcroi, dstsize, ippiGetDataType(src_type), coeffs, direction, numChannels, ippiGetBorderType(borderType),
                                             borderValue, 0, pSpec);
@@ -251,7 +251,7 @@ public:
             }
         }
 
-        status = CV_INSTRUMENT_FUN_IPP(func, src.ptr(), src_step, dst.ptr(), dst_step, dstRoiOffset, dstRoiSize, pSpec, pBuffer);
+        status = CV_INSTRUMENT_FUN_IPP(func, src.ptr(), (int)src_step, dst.ptr(), (int)dst_step, dstRoiOffset, dstRoiSize, pSpec, pBuffer);
         if (status != ippStsNoErr)
             *ok = false;
         else
@@ -332,8 +332,8 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //8S
                         {{0, 0}, {1, 1}, {0, 1}, {0, 1}},   //16U
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //16S
-                        {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //32S
-                        {{1, 0}, {1, 1}, {0, 1}, {1, 1}},   //32F
+                        {{1, 1}, {1, 1}, {1, 0}, {1, 1}},   //32S
+                        {{1, 0}, {1, 1}, {0, 0}, {1, 1}},   //32F
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}}};  //64F
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
