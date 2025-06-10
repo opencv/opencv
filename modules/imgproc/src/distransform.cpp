@@ -46,6 +46,7 @@ namespace cv
 
 static const int DIST_SHIFT = 16;
 #define  CV_FLT_TO_FIX(x,n)  cvRound((x)*(1<<(n)))
+#define  FLT_SCALE  1.f/(1 << 20)
 
 static void
 initTopBottom( Mat& temp, int border, unsigned int value )
@@ -796,6 +797,16 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                     ippFree( pBuffer );
                     if (status>=0)
                     {
+                        for (int i = 0; i < dst.rows; ++i)
+                        {
+                            float* row = dst.ptr<float>(i);
+                            for (int j = 0; j < dst.cols; ++j)
+                            {
+                                float rounded = std::floor(row[j]);
+                                if (row[j] > rounded && row[j] - rounded <= FLT_SCALE)
+                                    row[j] = rounded;
+                            }
+                        }
                         CV_IMPL_ADD(CV_IMPL_IPP);
                         return;
                     }
