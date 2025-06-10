@@ -175,7 +175,7 @@ HAL and Extension list of APIs
 
 **FastCV based OpenCV Extensions APIs list :**
 
-These OpenCV extension APIs are implemented under the **cv::fastcv** namespace. 
+These OpenCV extension APIs are implemented under the **cv::fastcv** namespace.
 
 |OpenCV Extension APIs |Underlying FastCV API for OpenCV acceleration |
 |----------------------|----------------------------------------------|
