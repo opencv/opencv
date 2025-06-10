@@ -119,15 +119,15 @@ int main(int argc, char **argv)
     // Post Processing
     Mat output_transposed(3, &output.size[1], CV_32F, output.ptr<float>());
 
-    vector<Mat> channels;
-    for (int i = 0; i < 3; ++i) {
-        channels.push_back(Mat(output_transposed.size[1], output_transposed.size[2], CV_32F,
-                                    output_transposed.ptr<float>(i)));
-    }
+    vector<Mat> channels = {
+        Mat(output_transposed.size[1], output_transposed.size[2], CV_32F, output_transposed.ptr<float>(2)),
+        Mat(output_transposed.size[1], output_transposed.size[2], CV_32F, output_transposed.ptr<float>(1)),
+        Mat(output_transposed.size[1], output_transposed.size[2], CV_32F, output_transposed.ptr<float>(0))
+    };
+
     Mat outputImage;
     merge(channels, outputImage);
     outputImage.convertTo(outputImage, CV_8UC3, 255.0);
-    cvtColor(outputImage, outputImage, COLOR_RGB2BGR);
 
     imshow("Input Image", inputImage);
     imshow("Output Image", outputImage);
