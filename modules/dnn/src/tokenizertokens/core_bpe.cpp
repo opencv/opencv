@@ -399,4 +399,8 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
     return { tokens, completions };
 }   
 
+int main() {
+    
+}
+
 }}}
