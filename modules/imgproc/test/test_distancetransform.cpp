@@ -416,16 +416,17 @@ TEST(Imgproc_DistanceTransform, precise_long_dist)
     EXPECT_EQ(cv::norm(expected, dist, NORM_INF), 0);
 }
 
-TEST(Imgproc_DistanceTransform, ipp_deterministic)
+TEST(Imgproc_DistanceTransform, ipp_deterministic_corner)
 {
     setNumThreads(1);
-    Mat src(10, 10, CV_8U, Scalar(255)), dist;
+
+    Mat src(1, 4096, CV_8U, Scalar(255)), dist;
     src.at<uint8_t>(0, 0) = 0;
     distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE);
-    for (int i = 0; i < src.rows; ++i)
+    for (int i = 0; i < src.cols; ++i)
     {
-        ASSERT_EQ(dist.at<float>(i, 0), static_cast<float>(i));
-        ASSERT_EQ(dist.at<float>(0, i), static_cast<float>(i));
+        float expected = i;
+        ASSERT_EQ(expected, dist.at<float>(0, i)) << cv::format("diff: %e", expected - dist.at<float>(0, i));
     }
 }
 
