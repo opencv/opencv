@@ -2699,7 +2699,7 @@ void CvVideoWriter_GStreamer::write(InputArray image)
     }
     else if (input_pix_fmt == GST_VIDEO_FORMAT_GRAY16_LE) {
         if (image.type() != CV_16UC1) {
-            CV_WARN("write frame skipped - expected CV_16UC3");
+            CV_WARN("write frame skipped - expected CV_16UC1");
             return;
         }
     }
