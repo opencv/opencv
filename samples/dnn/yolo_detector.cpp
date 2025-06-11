@@ -125,7 +125,7 @@ void yoloPostProcessing(
 
     if (model_name == "yolonas")
     {
-        // outs contains 2 elemets of shape [1, 8400, nc] and [1, 8400, 4]. Concat them to get [1, 8400, nc+4]
+        // outs contains 2 elements of shape [1, 8400, nc] and [1, 8400, 4]. Concat them to get [1, 8400, nc+4]
         Mat concat_out;
         // squeeze the first dimension
         outs[0] = outs[0].reshape(1, outs[0].size[1]);
