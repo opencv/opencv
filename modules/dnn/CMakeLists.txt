@@ -221,6 +221,7 @@ set(dnn_runtime_libs "")
 file(GLOB_RECURSE dnn_srcs
      "${CMAKE_CURRENT_LIST_DIR}/src/*.cpp"
 )
+
 file(GLOB_RECURSE dnn_int_hdrs
      "${CMAKE_CURRENT_LIST_DIR}/src/*.hpp"
      "${CMAKE_CURRENT_LIST_DIR}/src/*.h"
@@ -255,7 +256,11 @@ endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
 
-ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs})
+# Added extra build for tokenizer fix later if there is a better method
+set(extra_tokenizer_src
+    "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/core_bpe.cpp"
+)
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})

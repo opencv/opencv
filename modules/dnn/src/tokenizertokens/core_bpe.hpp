@@ -1,5 +1,7 @@
 #pragma once
 
+#include <opencv2/core.hpp>
+
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -12,7 +14,12 @@
 #include <unordered_set>
 #include <algorithm>
 
+
+#ifndef __OPENCV_DNN_SRC_TOKENIZERTOKENS_CORE_BPE_HPP__
+#define __OPENCV_DNN_SRC_TOKENIZERTOKENS_CORE_BPE_HPP__
+
 namespace cv { namespace dnn {namespace tokenizer {
+
     
 using Rank = std::uint32_t;
 using ByteVec = std::vector<std::uint8_t>;
@@ -35,7 +42,7 @@ std::vector<std::pair<std::size_t, Rank>> bytePairMerge(const ByteVecRankMap& ra
 std::vector<Rank> bytePairEncode(const ByteVec& piece, 
                                  const ByteVecRankMap& ranks);
 
-std::vector<ByteVec> bytePairSplit(const ByteVec& piece, 
+CV_EXPORTS std::vector<ByteVec> bytePairSplit(const ByteVec& piece, 
                                    const ByteVecRankMap& ranks);
 
 class DecoderKeyError : public std::runtime_error {
@@ -135,6 +142,39 @@ extern const std::vector<uint8_t> STATE_FORWARD{
 };
 
 /**
+ * @brief Returns true if `b` is a valid leading UTF-8 byte, or an invalid byte
+ *        that can never appear in a multi-byte sequence.
+ */
+inline bool isLeadningOrInvalidUft8Byte(std::uint8_t b) {
+    // Leading bytes (ASCII or start of 2/3/4-byte seq) and invalid bytes
+    // all have their top two bits != 10xxxxxx.
+    return (b & 0b1100'0000u) != 0b1000'0000u;
+}
+
+/**
+ * @brief Perform one step of UTF-8 decoding as in Rust's bstr::decode_step
+ *
+ * @param state Current DFA state; should be ACCEPT (12) at start of a new codepoint
+ * @param cp    Accumulated codepoint value; updated in-place
+ * @param b     Next input byte
+ */
+inline void decodeStepUnicode(std::size_t& state, std::uint32_t& cp, std::uint8_t b) {
+    std::uint8_t cls = CLASSES[b];
+    std::uint8_t bb = static_cast<std::uint32_t>(b);
+
+    if (state == ACCEPT) {
+        // On the first byte of a sequence, mask out the class bits
+        cp = (0xFFu >> cls) & bb;
+    } else {
+        // on continuation bytes, take 6 bits and shift prior cp left
+        cp = (bb & 0b0011'1111u) | (cp << 6);
+    }
+
+    // Transition to the next state based on current state and class 
+    state = static_cast<std::size_t>(STATE_FORWARD[state + cls]);
+}
+
+/**
  * @brief Decode the first UTF-8 scalar from the front of a byte slice.
  *
  * @param slice  Byte sequence to decode from.
@@ -177,32 +217,11 @@ inline std::pair<std::optional<char>, std::size_t> decodeUnicode(const std::vect
     return {std::nullopt, i};
 }
 
-/**
- * @brief Perform one step of UTF-8 decoding as in Rust's bstr::decode_step
- *
- * @param state Current DFA state; should be ACCEPT (12) at start of a new codepoint
- * @param cp    Accumulated codepoint value; updated in-place
- * @param b     Next input byte
- */
-inline void decodeStepUnicode(std::size_t& state, std::uint32_t& cp, std::uint8_t b) {
-    std::uint8_t cls = CLASSES[b];
-    std::uint8_t bb = static_cast<std::uint32_t>(b);
 
-    if (state == ACCEPT) {
-        // On the first byte of a sequence, mask out the class bits
-        cp = (0xFFu >> cls) & bb;
-    } else {
-        // on continuation bytes, take 6 bits and shift prior cp left
-        cp = (bb & 0b0011'1111u) | (cp << 6);
-    }
-
-    // Transition to the next state based on current state and class 
-    state = static_cast<std::size_t>(STATE_FORWARD[state + cls]);
-}
 
 
 /// UTF-8 decode a single Unicode scalar value from the end of a slice.
-inline std::pair<std::optional<char>, std::size_t> decodeLastUtf8(std::vector<std::uint8_t>& slice) {
+inline std::pair<std::optional<char>, std::size_t> decodeLastUtf8(const std::vector<std::uint8_t>& slice) {
     const auto len = slice.size();
     if (len == 0) {
         return {std::nullopt, 0};
@@ -227,15 +246,8 @@ inline std::pair<std::optional<char>, std::size_t> decodeLastUtf8(std::vector<st
     return {ch, size};
 }
 
-/**
- * @brief Returns true if `b` is a valid leading UTF-8 byte, or an invalid byte
- *        that can never appear in a multi-byte sequence.
- */
-inline bool isLeadningOrInvalidUft8Byte(std::uint8_t b) {
-    // Leading bytes (ASCII or start of 2/3/4-byte seq) and invalid bytes
-    // all have their top two bits != 10xxxxxx.
-    return (b & 0b1100'0000u) != 0b1000'0000u;
-}
 
 }}}
+
+#endif
 
