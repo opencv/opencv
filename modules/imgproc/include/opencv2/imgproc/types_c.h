@@ -389,6 +389,7 @@ enum MorphShapes_c
     CV_SHAPE_RECT      =0,
     CV_SHAPE_CROSS     =1,
     CV_SHAPE_ELLIPSE   =2,
+    CV_SHAPE_DIAMOND   =3,
     CV_SHAPE_CUSTOM    =100 //!< custom structuring element
 };
 
