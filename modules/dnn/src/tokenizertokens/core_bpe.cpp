@@ -95,6 +95,7 @@ std::vector<ByteVec> bytePairSplit(const ByteVec& piece,
         std::size_t s = merged[i].first, e = merged[i+1].first;
         out.emplace_back(piece.begin()+s, piece.begin()+e);
     }
+    return out;
 }
 
 // Errors for debugging 
@@ -120,7 +121,7 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
 
     std::regex mainRe(pattern, std::regex::optimize|std::regex::ECMAScript);
     std::string spPattern;
-    for (auto it=specialEncoder_.begin(); it!=specialEncoder.end(); ++it) {
+    for (auto it=specialEncoder_.begin(); it!=specialEncoder_.end(); ++it) {
         if (it!=specialEncoder_.begin()) spPattern += "|";
         spPattern += std::regex_replace(it->first, std::regex(R"([.^$|()\[\]{}*+?\\])"), R"(\\$&)");
     }
@@ -156,7 +157,7 @@ const std::regex& CoreBPE::threadLocalRegex() const {
 }
 
 const std::regex& CoreBPE::threadLocalSpecialRegex() const {
-    return specialRegexTLS_[hashCurrentThread()*MAX_NUM_THREADS];
+    return specialRegexTLS_[hashCurrentThread()%MAX_NUM_THREADS];
 }
 
 
@@ -383,7 +384,7 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
     if (unstableBytes.size() > 1) {
         // TODO: Implement the decodeLastUtf8
         auto [last_char, byte_len] = decodeLastUtf8(unstableBytes);
-        if (unstableBytes.size() > byte_len && std::isspace(static_cast<unsigned char>(last_char))) {
+        if (unstableBytes.size() > byte_len && std::isspace(static_cast<unsigned char>(*last_char))) {
             // re-encode in two parts
             ByteVec part1(unstableBytes.begin(), unstableBytes.end() - byte_len);
             ByteVec part2(unstableBytes.end() - byte_len, unstableBytes.end());
@@ -398,9 +399,5 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
 
     return { tokens, completions };
 }   
-
-int main() {
-    
-}
 
 }}}
