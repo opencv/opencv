@@ -801,7 +801,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                         // between runs on positions closer to zeros by x-axis in straight direction.
                         // As a workaround, we detect the distances that expected to be exact
                         // number of pixels and round manually.
-                        static const float correctionDiff = 1.0f / (1 << 12);
+                        static const float correctionDiff = 1.0f / (1 << 11);
                         for (int i = 0; i < dst.rows; ++i)
                         {
                             float* row = dst.ptr<float>(i);
