@@ -278,7 +278,7 @@ struct CV_EXPORTS_W_SIMPLE Animation
     //! Vector of frames, where each Mat represents a single frame.
     CV_PROP_RW std::vector<Mat> frames;
     //! image that can be used for the format in addition to the animation or if animation is not supported in the reader (like in PNG).
-    CV_PROP_RW cv::Mat still_image;
+    CV_PROP_RW Mat still_image;
 
     /** @brief Constructs an Animation object with optional loop count and background color.
 
