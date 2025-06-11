@@ -175,6 +175,8 @@ HAL and Extension list of APIs
 
 **FastCV based OpenCV Extensions APIs list :**
 
+These OpenCV extension APIs are implemented under the **cv::fastcv** namespace.
+
 |OpenCV Extension APIs |Underlying FastCV API for OpenCV acceleration |
 |----------------------|----------------------------------------------|
 |matmuls8s32           |fcvMatrixMultiplys8s32                        |
@@ -199,8 +201,10 @@ HAL and Extension list of APIs
 |remap                 |fcvRemapu8_v2                                 |
 |remapRGBA             |fcvRemapRGBA8888BLu8                          |
 |                      |fcvRemapRGBA8888NNu8                          |
-|resizeDownBy2         |fcvScaleDownBy2u8_v2                          |
-|resizeDownBy4         |fcvScaleDownBy4u8_v2                          |
+|resizeDown            |fcvScaleDownBy2u8_v2                          |
+|                      |fcvScaleDownBy4u8_v2                          |
+|                      |fcvScaleDownMNInterleaveu8                    |
+|                      |fcvScaleDownMNu8                              |
 |meanShift             |fcvMeanShiftu8                                |
 |                      |fcvMeanShifts32                               |
 |                      |fcvMeanShiftf32                               |
@@ -263,3 +267,52 @@ HAL and Extension list of APIs
 |                      |fcvChannelCombine4Planesu8                    |
 |split                 |fcvDeinterleaveu8                             |
 |                      |fcvChannelExtractu8                           |
+|warpAffine            |fcvTransformAffineu8_v2                       |
+|                      |fcvTransformAffineClippedu8_v3                |
+|                      |fcv3ChannelTransformAffineClippedBCu8         |
+
+
+**FastCV QDSP based OpenCV Extension APIs list :**
+These OpenCV extension APIs are implemented under the **cv::fastcv::dsp** namespace.
+This namespace provides optimized implementations that leverage QDSP (**Qualcomm's Digital Signal Processor**) acceleration using FastCV's Q-suffixed APIs. These functions require DSP initialization (fcvQ6Init).
+
+|OpenCV Extension APIs |Underlying FastCV API for OpenCV acceleration |
+|----------------------|----------------------------------------------|
+|filter2D              |fcvFilterCorr3x3s8_v2Q                        |
+|                      |fcvFilterCorrNxNu8Q                           |
+|                      |fcvFilterCorrNxNu8s16Q                        |
+|                      |fcvFilterCorrNxNu8f32Q                        |
+|FFT                   |fcvFFTu8Q                                     |
+|IFFT                  |fcvIFFTf32Q                                   |
+|fcvdspinit            |fcvQ6Init                                     |
+|fcvdspdeinit          |fcvQ6DeInit                                   |
+|Canny                 |fcvFilterCannyu8Q                             |
+|sumOfAbsoluteDiffs    |fcvSumOfAbsoluteDiffs8x8u8_v2Q                |
+|thresholdOtsu         |fcvFilterThresholdOtsuu8Q                     |
+
+**How to Use FastCV QDSP based OpenCV Extension APIs**
+
+This section outlines the essential steps required to use OpenCV Extension APIs that are accelerated using FastCV on QDSP(**Qualcomm's Digital Signal Processor**).
+
+1. Initialize QDSP:
+    - Call **cv::fastcv::dsp::fcvdspinit()** to initialize the QDSP.
+
+2. Allocate memory using **Qualcomm's memory allocator** for all buffers that are being fed to the OpenCV extension API.:
+    - Use **cv::fastcv::getQcAllocator()** to assign the allocator to the buffers.
+    - Example:
+      cv::Mat src;
+      src.allocator = cv::fastcv::getQcAllocator(); **// Set Qualcomm's memory allocator**
+      \
+      After setting Qualcomm's memory allocator, any buffer created using methods like src.create(...), cv::imread(...) etc., will have its memory allocated using Qualcomm's memory allocator.
+
+3. Call the OpenCV extension API from 'cv::fastcv::dsp':
+    - Example: **cv::fastcv::dsp::thresholdOtsu(src, dst, binaryType);**
+      where 'src' and 'dst' are 'cv::Mat' objects with the Qualcomm's memory allocator,
+      and 'binaryType' is a boolean indicating the thresholding mode.
+
+4. Deinitialize QDSP:
+    - Call **cv::fastcv::dsp::fcvdspdeinit()** to deinitialize the QDSP.
+
+
+**Reference Example**:
+Refer to a working test case using the OpenCV Extension APIs in the opencv_contrib repository:[opencv_contrib/modules/fastcv/test/test_thresh_dsp.cpp](https://github.com/opencv/opencv_contrib/blob/4.x/modules/fastcv/test/test_thresh_dsp.cpp)
