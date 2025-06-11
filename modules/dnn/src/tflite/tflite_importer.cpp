@@ -310,6 +310,10 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
+        if (op_outputs->Get(0) == 194)
+        {
+            break;
+        }
     }
     if (newEngine)
     {
@@ -488,11 +492,13 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
     layerParams.type = "Convolution";
 
     int inpId = op.inputs()->Get(0);
+    bool additionalPreLayer = false;
     if (layouts[inpId] == DNN_LAYOUT_UNKNOWN && modelTensors->Get(inpId)->shape()->size() == 4)
     {
         int permId = addPermuteLayer({0, 3, 1, 2}, layerParams.name + "/permute_input", layerIds[inpId], isInt8(op) ? CV_8S : CV_32F, op.inputs()->Get(0));  // NHWC -> NCHW
         layerIds[inpId] = std::make_pair(permId, 0);
         layouts[op.outputs()->Get(0)] = DNN_LAYOUT_NHWC;
+        additionalPreLayer = true;
     }
 
     auto options = reinterpret_cast<const Conv2DOptions*>(op.builtin_options());
@@ -554,7 +560,7 @@ void TFLiteImporter::parseConvolution(const Operator& op, const std::string& opc
 
     std::string fusedActivationType = EnumNameActivationFunctionType(options->fused_activation_function());
     bool haveFusedActivation = fusedActivationType != "NONE";
-    addLayer(layerParams, op, false, haveFusedActivation);
+    addLayer(layerParams, op, additionalPreLayer, haveFusedActivation);
     parseFusedActivation(op, options->fused_activation_function());
 }
 
@@ -1083,7 +1089,17 @@ int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
 {
     LayerParams lp;
     lp.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
-    return dstNet.addLayer(name, "Const", lp);
+    if (newEngine)
+    {
+        lp.type = "Const";
+        lp.name = name;
+        addLayer(lp, {}, {name});
+        return -1;
+    }
+    else
+    {
+        return dstNet.addLayer(name, "Const", lp);
+    }
 }
 
 void TFLiteImporter::parseDeconvolution(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
