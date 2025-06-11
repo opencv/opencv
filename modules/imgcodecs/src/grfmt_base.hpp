@@ -58,11 +58,6 @@ public:
      */
     size_t getFrameCount() const { return m_frame_count; }
 
-     /**
-     * @brief Set the internal m_frame_count variable to 1.
-     */
-    void resetFrameCount() { m_frame_count = 1; }
-
     /**
      * @brief Get the type of the image (e.g., color format, depth).
      * @return The type of the image.
