@@ -18,7 +18,9 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 #define cv_hal_minMaxIdxMaskStep ipp_hal_minMaxIdxMaskStep
 
 #if (IPP_VERSION_X100 == 202200)
-#define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
+# define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
+# else
+# define IPP_DISABLE_NORM_8U             0
 #endif
 
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
