@@ -807,7 +807,7 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                             float* row = dst.ptr<float>(i);
                             for (int j = 0; j < dst.cols; ++j)
                             {
-                                float rounded = cvRound(row[j]);
+                                float rounded = static_cast<float>(cvRound(row[j]));
                                 if (fabs(row[j] - rounded) <= correctionDiff)
                                     row[j] = rounded;
                             }

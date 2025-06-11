@@ -425,7 +425,7 @@ TEST(Imgproc_DistanceTransform, ipp_deterministic_corner)
     distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE);
     for (int i = 0; i < src.cols; ++i)
     {
-        float expected = i;
+        float expected = static_cast<float>(i);
         ASSERT_EQ(expected, dist.at<float>(0, i)) << cv::format("diff: %e", expected - dist.at<float>(0, i));
     }
 }
@@ -444,7 +444,7 @@ TEST(Imgproc_DistanceTransform, ipp_deterministic)
     distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE);
     for (int i = 0; i < src.cols; ++i)
     {
-        float expected = min(min(abs(i - p1), abs(i - p2)), abs(i - p3));
+        float expected = static_cast<float>(min(min(abs(i - p1), abs(i - p2)), abs(i - p3)));
         ASSERT_EQ(expected, dist.at<float>(0, i)) << cv::format("diff: %e", expected - dist.at<float>(0, i));
     }
 }
