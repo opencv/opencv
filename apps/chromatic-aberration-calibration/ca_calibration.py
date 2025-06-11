@@ -20,7 +20,6 @@ usage example:
 default values:
     --degree: 11
     -o, --output: corrected.png
-    
 '''
 
 from __future__ import annotations
@@ -104,7 +103,7 @@ class CalibrationResult:
             if path.suffix.lower() in {".yaml", ".yml"}:
                 data = yaml.safe_load(fh)
             else:
-                data = json.load(fh)
+                raise ValueError("YAML file expected as input for CalibrationResult")
         deg = data["degree"]
         poly_r = Polynomial2D(
             np.asarray(data["poly_red"]["coeffs_x"]),
@@ -170,7 +169,6 @@ def _detect_disk_centres(
     cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     centres: list[tuple[float, float]] = []
-    dbg = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
 
     for c in cnts:
         if len(c) < 5:
