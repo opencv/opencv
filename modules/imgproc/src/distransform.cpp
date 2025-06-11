@@ -796,6 +796,11 @@ void cv::distanceTransform( InputArray _src, OutputArray _dst, OutputArray _labe
                     ippFree( pBuffer );
                     if (status>=0)
                     {
+                        // https://github.com/opencv/opencv/issues/24082
+                        // There is probably a rounding issue that leads to non-deterministic behavior
+                        // between runs on positions closer to zeros by x-axis in straight direction.
+                        // As a workaround, we detect the distances that expected to be exact
+                        // number of pixels and round manually.
                         static const float correctionDiff = 1.0f / (1 << 12);
                         for (int i = 0; i < dst.rows; ++i)
                         {
