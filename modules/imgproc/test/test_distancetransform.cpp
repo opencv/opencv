@@ -430,4 +430,23 @@ TEST(Imgproc_DistanceTransform, ipp_deterministic_corner)
     }
 }
 
+TEST(Imgproc_DistanceTransform, ipp_deterministic)
+{
+    setNumThreads(1);
+    RNG& rng = TS::ptr()->get_rng();
+    Mat src(1, 800, CV_8U, Scalar(255)), dist;
+    int p1 = cvtest::randInt(rng) % src.cols;
+    int p2 = cvtest::randInt(rng) % src.cols;
+    int p3 = cvtest::randInt(rng) % src.cols;
+    src.at<uint8_t>(0, p1) = 0;
+    src.at<uint8_t>(0, p2) = 0;
+    src.at<uint8_t>(0, p3) = 0;
+    distanceTransform(src, dist, DIST_L2, DIST_MASK_PRECISE);
+    for (int i = 0; i < src.cols; ++i)
+    {
+        float expected = min(min(abs(i - p1), abs(i - p2)), abs(i - p3));
+        ASSERT_EQ(expected, dist.at<float>(0, i)) << cv::format("diff: %e", expected - dist.at<float>(0, i));
+    }
+}
+
 }} // namespace
