@@ -732,6 +732,8 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     parseFusedActivation(op, activ);
 
     if (opcode == "SQUARED_DIFFERENCE" || opcode == "RSQRT") {
+        if (haveFusedActivation)
+            CV_LOG_WARNING(NULL, format("%s with fused activation on new engine is not tested", opcode.c_str()));
         LayerParams lp;
         if (opcode == "RSQRT")
             lp.type = "Reciprocal";
@@ -1249,7 +1251,7 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
         if (newEngine)
         {
             if (axis != lastShrinkAxis)
-                CV_Error(Error::StsNotImplemented, "Multiple axes shrink in new engine");
+                CV_LOG_WARNING(NULL, "StridedSlice with multiple axes shrink in new engine is not tested");
             addFlattenLayer(axis, axis + 1, layerName,
                 layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.outputs()->Get(0));
         }
