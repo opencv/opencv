@@ -746,7 +746,7 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
             addLayer(lp, {tensorName + "_additional_post_layer"}, {tensorName});
             layerIds[op.outputs()->Get(0)] = std::make_pair(-1, -1);
         } else {
-            int id = dstNet.addLayerToPrev(layerParams.name + "/post", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
+            int id = dstNet.addLayerToPrev(layerParams.name + "/post", lp.type, isOpInt8 ? CV_8S : CV_32F, lp);
             layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
         }
     }
