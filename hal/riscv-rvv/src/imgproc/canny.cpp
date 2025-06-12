@@ -76,12 +76,12 @@ namespace cv
                 int size;
             } Stack;
 
-            static Stack *createStack(int capacity);
-            static void push(Stack *stack, uint8_t *item);
-            static uint8_t *pop(Stack *stack);
+            static Stack *canny_createStack(int capacity);
+            static void canny_push(Stack *stack, uint8_t *item);
+            static uint8_t *canny_pop(Stack *stack);
             static void freeStack(Stack *stack);
 
-            static Stack *createStack(int capacity)
+            static Stack *canny_createStack(int capacity)
             {
                 Stack *stack = (Stack *)malloc(sizeof(Stack));
                 stack->data = (uint8_t **)malloc(capacity * sizeof(uint8_t *));
@@ -90,7 +90,7 @@ namespace cv
                 return stack;
             }
 
-            static void push(Stack *stack, uint8_t *item)
+            static void canny_push(Stack *stack, uint8_t *item)
             {
                 if (stack->size < stack->capacity)
                 {
@@ -98,7 +98,7 @@ namespace cv
                 }
             }
 
-            static uint8_t *pop(Stack *stack)
+            static uint8_t *canny_pop(Stack *stack)
             {
                 if (stack->size > 0)
                 {
@@ -121,6 +121,7 @@ namespace cv
                       double low_thresh, double high_thresh,
                       int ksize, bool L2gradient)
             {
+                return CV_HAL_ERROR_NOT_IMPLEMENTED;
                 if (cn != 1 || (ksize != 3 && ksize != 5))
                 {
                     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -151,22 +152,22 @@ namespace cv
 
                 int ret = sobel(src_data, src_step, (uint8_t *)dx_data, grad_step,
                                 width, height, CV_8U, CV_16S, 1,
-                                0, 0, 0, 0, 1, 0, ksize, 0.0, 0.0, BORDER_REPLICATE);
+                                0, 0, 0, 0, 1, 0, ksize, 1.0, 0.0, BORDER_REPLICATE);
                 if (ret != CV_HAL_ERROR_OK)
                 {
                     free(dx_data);
                     free(dy_data);
-                    return ret;
+                    return CV_HAL_ERROR_NOT_IMPLEMENTED;
                 }
 
                 ret = sobel(src_data, src_step, (uint8_t *)dy_data, grad_step,
                             width, height, CV_8U, CV_16S, 1,
-                            0, 0, 0, 0, 0, 1, ksize, 0.0, 0.0, BORDER_REPLICATE);
+                            0, 0, 0, 0, 0, 1, ksize, 1.0, 0.0, BORDER_REPLICATE);
                 if (ret != CV_HAL_ERROR_OK)
                 {
                     free(dx_data);
                     free(dy_data);
-                    return ret;
+                    return CV_HAL_ERROR_NOT_IMPLEMENTED;
                 }
 
                 const int mapstep = width + 2;
@@ -179,8 +180,8 @@ namespace cv
                     return CV_HAL_ERROR_NOT_IMPLEMENTED;
                 }
 
-                Stack *stack = createStack(width * height);
-                Stack *borderPeaksLocal = createStack(width * height);
+                Stack *stack = canny_createStack(width * height);
+                Stack *borderPeaksLocal = canny_createStack(width * height);
                 if (!stack || !borderPeaksLocal)
                 {
                     free(dx_data);
@@ -191,6 +192,13 @@ namespace cv
 
                 memset(edge_map, 1, mapstep);
                 memset(edge_map + (height + 1) * mapstep, 1, mapstep);
+
+                for (int i = 1; i <= height; i++)
+                {
+                    edge_map[i * mapstep] = 1;
+                    edge_map[i * mapstep + width + 1] = 1;
+                }
+
                 uint8_t *map = edge_map + mapstep + 1;
 
                 const int simd_align = 16;
@@ -336,11 +344,11 @@ namespace cv
                         vres = __riscv_vmerge_vxm_u8m2(vres, 2, strong_edges, vl);
                         __riscv_vse8_v_u8m2(pmap + j, vres, vl);
 
-                        // Push strong edges to stack
+                        // canny_Push strong edges to stack
                         int32_t vidx = __riscv_vfirst_m_b4(strong_edges, vl);
                         while (vidx >= 0)
                         {
-                            push(stack, pmap + j + vidx);
+                            canny_push(stack, pmap + j + vidx);
                             strong_edges = __riscv_vmand_mm_b4(strong_edges,
                                                                __riscv_vmclr_m_b4(vl), vl);
                             vidx = __riscv_vfirst_m_b4(strong_edges, vl);
@@ -355,78 +363,27 @@ namespace cv
 
                 while (stack->size > 0)
                 {
-                    uint8_t *m = pop(stack);
-                    if ((uint32_t)(m - pmapLower) < pmapDiff)
+                    uint8_t *m = canny_pop(stack);
+
+                    if ((uint64_t)m < (uint64_t)pmapLower || (uint64_t)m >= (uint64_t)(pmapLower + pmapDiff))
+                        continue;
+
+                    const int offsets[8] = {
+                        -mapstep - 1, -mapstep, -mapstep + 1,
+                        -1, +1,
+                        +mapstep - 1, +mapstep, +mapstep + 1};
+
+                    for (int k = 0; k < 8; k++)
                     {
-                        if (!m[-mapstep - 1])
+                        uint8_t *neighbor = m + offsets[k];
+                        if ((uint64_t)neighbor < (uint64_t)edge_map ||
+                            (uint64_t)neighbor >= (uint64_t)(edge_map + mapsize))
+                            continue;
+
+                        if (*neighbor == 0)
                         {
-                            *(m - mapstep - 1) = 2;
-                            push(stack, m - mapstep - 1);
-                        }
-                        if (!m[-mapstep])
-                        {
-                            *(m - mapstep) = 2;
-                            push(stack, m - mapstep);
-                        }
-                        if (!m[-mapstep + 1])
-                        {
-                            *(m - mapstep + 1) = 2;
-                            push(stack, m - mapstep + 1);
-                        }
-                        if (!m[-1])
-                        {
-                            *(m - 1) = 2;
-                            push(stack, m - 1);
-                        }
-                        if (!m[1])
-                        {
-                            *(m + 1) = 2;
-                            push(stack, m + 1);
-                        }
-                        if (!m[mapstep - 1])
-                        {
-                            *(m + mapstep - 1) = 2;
-                            push(stack, m + mapstep - 1);
-                        }
-                        if (!m[mapstep])
-                        {
-                            *(m + mapstep) = 2;
-                            push(stack, m + mapstep);
-                        }
-                        if (!m[mapstep + 1])
-                        {
-                            *(m + mapstep + 1) = 2;
-                            push(stack, m + mapstep + 1);
-                        }
-                    }
-                    else
-                    {
-                        push(borderPeaksLocal, m);
-                        ptrdiff_t mapstep2 = m < pmapLower ? mapstep : -mapstep;
-                        if (!m[-1])
-                        {
-                            *(m - 1) = 2;
-                            push(stack, m - 1);
-                        }
-                        if (!m[1])
-                        {
-                            *(m + 1) = 2;
-                            push(stack, m + 1);
-                        }
-                        if (!m[mapstep2 - 1])
-                        {
-                            *(m + mapstep2 - 1) = 2;
-                            push(stack, m + mapstep2 - 1);
-                        }
-                        if (!m[mapstep2])
-                        {
-                            *(m + mapstep2) = 2;
-                            push(stack, m + mapstep2);
-                        }
-                        if (!m[mapstep2 + 1])
-                        {
-                            *(m + mapstep2 + 1) = 2;
-                            push(stack, m + mapstep2 + 1);
+                            *neighbor = 2;
+                            canny_push(stack, neighbor);
                         }
                     }
                 }
@@ -435,7 +392,7 @@ namespace cv
                 {
                     for (int i = 0; i < borderPeaksLocal->size; i++)
                     {
-                        push(stack, borderPeaksLocal->data[i]);
+                        canny_push(stack, borderPeaksLocal->data[i]);
                     }
                 }
 
