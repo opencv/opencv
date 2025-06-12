@@ -728,21 +728,26 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
 
     std::string fusedActivationType = EnumNameActivationFunctionType(activ);
     bool haveFusedActivation = fusedActivationType != "NONE";
-    addLayer(layerParams, op, false, haveFusedActivation);
+    addLayer(layerParams, op, false, haveFusedActivation || opcode == "SQUARED_DIFFERENCE" || opcode == "RSQRT");
     parseFusedActivation(op, activ);
 
-    // // Layers that split on multiple operations
-    // if (opcode == "SQUARED_DIFFERENCE") {
-    //     LayerParams lp;
-    //     lp.set("power", 2);
-    //     int id = dstNet.addLayerToPrev(layerParams.name + "/square", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
-    //     layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
-    // }
-    // else if (opcode == "RSQRT") {
-    //     LayerParams lp;
-    //     int id = dstNet.addLayerToPrev(layerParams.name + "/inv", "Reciprocal", isOpInt8 ? CV_8S : CV_32F, lp);
-    //     layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
-    // }
+    if (opcode == "SQUARED_DIFFERENCE" || opcode == "RSQRT") {
+        LayerParams lp;
+        if (opcode == "RSQRT")
+            lp.type = "Reciprocal";
+        else {
+            lp.type = "Power";
+            lp.set("power", 2);
+        }
+        if (newEngine) {
+            std::string tensorName = modelTensors->Get(op.outputs()->Get(0))->name()->str();
+            addLayer(lp, {tensorName + "_additional_post_layer"}, {tensorName});
+            layerIds[op.outputs()->Get(0)] = std::make_pair(-1, -1);
+        } else {
+            int id = dstNet.addLayerToPrev(layerParams.name + "/post", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
+            layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
+        }
+    }
 }
 
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
