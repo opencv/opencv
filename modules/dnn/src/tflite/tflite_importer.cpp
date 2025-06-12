@@ -86,7 +86,7 @@ private:
     int addReshapeLayer(const std::vector<int>& shape, int axis, int num_axes,
                         const std::string& name, const std::pair<int, int>& inpId, int dtype, int inpTensorId);
     int addFlattenLayer(int axis, int end_axis, const std::string& name, const std::pair<int, int>& inpId, int dtype, int outTensorId);
-    int addConstLayer(const Mat& data, const std::string& name);
+    void addConstLayer(const Mat& data, int tensorIdx);
 
     inline bool isInt8(const Operator& op);
     inline void getQuantParams(const Operator& op, float& inpScale, int& inpZero, float& outScale, int& outZero);
@@ -310,10 +310,10 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
-        if (op_outputs->Get(0) == 194)
-        {
-            break;
-        }
+        // if (op_outputs->Get(0) == 71)
+        // {
+        //     break;
+        // }
     }
     if (newEngine)
     {
@@ -726,8 +726,7 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
         if (layouts[op.inputs()->Get(0)] == DNN_LAYOUT_NHWC && blob.dims == 1) {
             blob = blob.reshape(1, {1, (int)blob.total(), 1, 1});
         }
-        int constId = addConstLayer(blob, modelTensors->Get(idx)->name()->str());
-        layerIds[idx] = std::make_pair(constId, 0);
+        addConstLayer(blob, idx);
     }
 
 
@@ -736,18 +735,18 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     addLayer(layerParams, op, false, haveFusedActivation);
     parseFusedActivation(op, activ);
 
-    // Layers that split on multiple operations
-    if (opcode == "SQUARED_DIFFERENCE") {
-        LayerParams lp;
-        lp.set("power", 2);
-        int id = dstNet.addLayerToPrev(layerParams.name + "/square", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
-        layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
-    }
-    else if (opcode == "RSQRT") {
-        LayerParams lp;
-        int id = dstNet.addLayerToPrev(layerParams.name + "/inv", "Reciprocal", isOpInt8 ? CV_8S : CV_32F, lp);
-        layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
-    }
+    // // Layers that split on multiple operations
+    // if (opcode == "SQUARED_DIFFERENCE") {
+    //     LayerParams lp;
+    //     lp.set("power", 2);
+    //     int id = dstNet.addLayerToPrev(layerParams.name + "/square", "Power", isOpInt8 ? CV_8S : CV_32F, lp);
+    //     layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
+    // }
+    // else if (opcode == "RSQRT") {
+    //     LayerParams lp;
+    //     int id = dstNet.addLayerToPrev(layerParams.name + "/inv", "Reciprocal", isOpInt8 ? CV_8S : CV_32F, lp);
+    //     layerIds[op.outputs()->Get(0)] = std::make_pair(id, 0);
+    // }
 }
 
 void TFLiteImporter::parsePooling(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -872,8 +871,7 @@ void TFLiteImporter::parseConcat(const Operator& op, const std::string& opcode, 
             transposeND(blob, {0, 3, 1, 2}, nchwBlob);
             blob = nchwBlob;
         }
-        int constId = addConstLayer(blob, modelTensors->Get(idx)->name()->str());
-        layerIds[idx] = std::make_pair(constId, 0);
+        addConstLayer(blob, idx);
     }
 
     std::string fusedActivationType = EnumNameActivationFunctionType(options->fused_activation_function());
@@ -1085,20 +1083,23 @@ int TFLiteImporter::addFlattenLayer(int axis, int end_axis, const std::string& n
     }
 }
 
-int TFLiteImporter::addConstLayer(const Mat& blob, const std::string& name)
+void TFLiteImporter::addConstLayer(const Mat& blob, int tensorIdx)
 {
+    const std::string& name = modelTensors->Get(tensorIdx)->name()->str();
     LayerParams lp;
     lp.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
+    std::cout << "add const " << name << std::endl;
     if (newEngine)
     {
         lp.type = "Const";
         lp.name = name;
         addLayer(lp, {}, {name});
-        return -1;
+        layerIds[tensorIdx] = std::make_pair(-1, -1);
     }
     else
     {
-        return dstNet.addLayer(name, "Const", lp);
+        int constId = dstNet.addLayer(name, "Const", lp);
+        layerIds[tensorIdx] = std::make_pair(constId, 0);
     }
 }
 
@@ -1239,17 +1240,17 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
         layerParams.name += "/slice";
     }
 
-    addLayer(layerParams, op);
+    addLayer(layerParams, op, false, false);
 
-    for (int axis = 0; axis < num; ++axis)
-    {
-        if (!(shrinkMask & (1 << axis)))
-            continue;
-        std::string name = (axis == lastShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
-        int layerId = addFlattenLayer(axis, axis + 1, name,
-            layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.inputs()->Get(0));
-        layerIds[op.inputs()->Get(0)] = std::make_pair(layerId, 0);
-    }
+    // for (int axis = 0; axis < num; ++axis)
+    // {
+    //     if (!(shrinkMask & (1 << axis)))
+    //         continue;
+    //     std::string name = (axis == lastShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
+    //     int layerId = addFlattenLayer(axis, axis + 1, name,
+    //         layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.inputs()->Get(0));
+    //     layerIds[op.inputs()->Get(0)] = std::make_pair(layerId, 0);
+    // }
 }
 
 void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
@@ -1344,22 +1345,7 @@ void TFLiteImporter::parseDetectionPostProcess(const Operator& op, const std::st
         layerParams.set("variance_encoded_in_target", true);
     }
 
-    LayerParams priorsLP;
-    priorsLP.name = layerParams.name + "/priors";
-    priorsLP.type = "Const";
-    priorsLP.blobs.resize(1, priors);
-
-    if (newEngine)
-    {
-        std::string outTensorName = modelTensors->Get(op.inputs()->Get(2))->name()->str();
-        addLayer(priorsLP, {}, {outTensorName});
-        layerIds[op.inputs()->Get(2)] = std::make_pair(-1, -1);
-    }
-    else
-    {
-        int priorsId = dstNet.addLayer(priorsLP.name, priorsLP.type, priorsLP);
-        layerIds[op.inputs()->Get(2)] = std::make_pair(priorsId, 0);
-    }
+    addConstLayer(priors, op.inputs()->Get(2));
     addLayer(layerParams, op);
 }
 

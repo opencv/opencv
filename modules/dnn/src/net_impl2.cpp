@@ -333,7 +333,12 @@ void Net::Impl::allocateLayerOutputs(
     tempShapes.clear();
     tempTypes.clear();
     layer->getMemoryShapes(inpShapes, (int)noutputs, outShapes, tempShapes);
+    std::cout << layer->name << " " << layer->type << std::endl;
+    if (inpTypes.size() > 0)
+        std::cout << " in " << inpTypes[0] << std::endl;
     layer->getTypes(inpTypes, (int)noutputs, (int)tempShapes.size(), outTypes, tempTypes);
+    if (outTypes.size() > 0)
+        std::cout << " out " << outTypes[0] << std::endl;
     CV_Assert(tempShapes.size() == tempTypes.size());
     CV_Assert(outShapes.size() == outTypes.size());
     CV_Assert(outShapes.size() == noutputs);
