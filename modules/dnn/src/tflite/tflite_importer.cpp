@@ -310,10 +310,6 @@ void TFLiteImporter::populateNet()
             }
             throw;
         }
-        // if (op_outputs->Get(0) == 71)
-        // {
-        //     break;
-        // }
     }
     if (newEngine)
     {
@@ -1088,7 +1084,6 @@ void TFLiteImporter::addConstLayer(const Mat& blob, int tensorIdx)
     const std::string& name = modelTensors->Get(tensorIdx)->name()->str();
     LayerParams lp;
     lp.blobs.push_back(blob.u ? blob : blob.clone());  // some tensors are owned by OpenCV
-    std::cout << "add const " << name << std::endl;
     if (newEngine)
     {
         lp.type = "Const";
@@ -1235,22 +1230,32 @@ void TFLiteImporter::parseStridedSlice(const Operator& op, const std::string& op
             lastShrinkAxis = axis;
     }
     std::string layerName = layerParams.name;
-    if (lastShrinkAxis != -1)
+    if (!newEngine && lastShrinkAxis != -1)
     {
         layerParams.name += "/slice";
     }
 
-    addLayer(layerParams, op, false, false);
+    addLayer(layerParams, op, false, lastShrinkAxis != -1);
 
-    // for (int axis = 0; axis < num; ++axis)
-    // {
-    //     if (!(shrinkMask & (1 << axis)))
-    //         continue;
-    //     std::string name = (axis == lastShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
-    //     int layerId = addFlattenLayer(axis, axis + 1, name,
-    //         layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.inputs()->Get(0));
-    //     layerIds[op.inputs()->Get(0)] = std::make_pair(layerId, 0);
-    // }
+    for (int axis = 0; axis < num; ++axis)
+    {
+        if (!(shrinkMask & (1 << axis)))
+            continue;
+        if (newEngine)
+        {
+            if (axis != lastShrinkAxis)
+                CV_Error(Error::StsNotImplemented, "Multiple axes shrink in new engine");
+            addFlattenLayer(axis, axis + 1, layerName,
+                layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.outputs()->Get(0));
+        }
+        else
+        {
+            std::string name = (axis == lastShrinkAxis) ? layerName : format("%s/shrink_axis_%d", layerName.c_str(), axis);
+            int layerId = addFlattenLayer(axis, axis + 1, name,
+                layerIds[op.outputs()->Get(0)], isInt8(op) ? CV_8S : CV_32F, op.inputs()->Get(0));
+            layerIds[op.inputs()->Get(0)] = std::make_pair(layerId, 0);
+        }
+    }
 }
 
 void TFLiteImporter::parseFullyConnected(const Operator& op, const std::string& opcode, LayerParams& layerParams) {
