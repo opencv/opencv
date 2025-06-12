@@ -842,7 +842,7 @@ void PngDecoder::row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_
 
 PngEncoder::PngEncoder()
 {
-    m_description = "Portable Network Graphics files (*.png)";
+    m_description = "Portable Network Graphics files (*.png;*.apng)";
     m_buf_supported = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
