@@ -15,6 +15,8 @@ import java.util.List;
 public class ImgcodecsTest extends OpenCVTestCase {
 
     public void testAnimation() {
+        assumeTrue(Imgcodecs.haveImageWriter("*.apng"));
+
         Mat src = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_REDUCED_COLOR_4);
         assertFalse(src.empty());
 
