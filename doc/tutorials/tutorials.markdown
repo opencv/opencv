@@ -9,9 +9,10 @@ OpenCV Tutorials {#tutorial_root}
 - @subpage tutorial_table_of_content_objdetect - INSERT OBJDETECT MODULE INFO
 - @subpage tutorial_table_of_content_features - feature detectors, descriptors and matching framework
 - @subpage tutorial_table_of_content_dnn - infer neural networks using built-in _dnn_ module
-- @subpage tutorial_table_of_content_other - other modules (stitching, video, photo)
+- @subpage tutorial_table_of_content_other - other modules (stitching, video)
 - @subpage tutorial_table_of_content_ios - running OpenCV on an iDevice
 - @subpage tutorial_table_of_content_3d - 3d objects processing and visualisation
+- @subpage tutorial_table_of_content_photo - photo module functions (hdr_image, ccm)
 @cond CUDA_MODULES
 - @subpage tutorial_table_of_content_gpu - utilizing power of video card to run CV algorithms
 @endcond

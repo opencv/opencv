@@ -1,0 +1,260 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+//
+// Author: Longbu Wang <wanglongbu@huawei.com.com>
+//         Jinheng Zhang <zhangjinheng1@huawei.com>
+//         Chenqi Shan <shanchenqi@huawei.com>
+
+#ifndef __OPENCV_CCM_LINEARIZE_HPP__
+#define __OPENCV_CCM_LINEARIZE_HPP__
+
+#include <opencv2/core.hpp>
+#include <map>
+#include "color.hpp"
+#include "opencv2/photo.hpp"
+namespace cv {
+namespace ccm {
+
+/** @brief Polyfit model.
+*/
+class Polyfit
+{
+public:
+    int deg;
+    Mat p;
+    Polyfit();
+
+    /** @brief Polyfit method.
+    https://en.wikipedia.org/wiki/Polynomial_regression
+    polynomial: yi = a0 + a1*xi + a2*xi^2 + ... + an*xi^deg (i = 1,2,...,n)
+    and deduct: Ax = y
+    */
+    Polyfit(Mat x, Mat y, int deg);
+    virtual ~Polyfit() {};
+    Mat operator()(const Mat& inp);
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const;
+    void read(const cv::FileNode& node);
+
+private:
+    double fromEW(double x);
+};
+
+// Global functions for FileStorage for Polyfit
+void write(cv::FileStorage& fs, const std::string&, const Polyfit& polyfit);
+void read(const cv::FileNode& node, Polyfit& polyfit, const Polyfit& defaultValue = Polyfit());
+
+/** @brief Logpolyfit model.
+*/
+class LogPolyfit
+{
+public:
+    int deg;
+    Polyfit p;
+
+    LogPolyfit();
+
+    /** @brief Logpolyfit method.
+    */
+    LogPolyfit(Mat x, Mat y, int deg);
+    virtual ~LogPolyfit() {};
+    Mat operator()(const Mat& inp);
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const;
+    void read(const cv::FileNode& node);
+};
+
+// Global functions for FileStorage for LogPolyfit
+void write(cv::FileStorage& fs, const std::string&, const LogPolyfit& logpolyfit);
+void read(const cv::FileNode& node, LogPolyfit& logpolyfit, const LogPolyfit& defaultValue = LogPolyfit());
+
+/** @brief Linearization base.
+*/
+
+class Linear
+{
+public:
+    Linear() {};
+    virtual ~Linear() {};
+
+    /** @brief Inference.
+        @param inp the input array, type of cv::Mat.
+    */
+    virtual Mat linearize(Mat inp);
+    /** @brief Evaluate linearization model.
+    */
+    virtual void value(void) {};
+
+    // Serialization support
+    virtual void write(cv::FileStorage& fs) const;
+    virtual void read(const cv::FileNode& node);
+};
+
+// Global functions for FileStorage for Linear
+void write(cv::FileStorage& fs, const std::string&, const Linear& linear);
+void read(const cv::FileNode& node, Linear& linear, const Linear& defaultValue = Linear());
+
+/** @brief Linearization identity.
+           make no change.
+*/
+class LinearIdentity : public Linear
+{
+    public:
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
+};
+
+// Global functions for FileStorage for LinearIdentity
+void write(cv::FileStorage& fs, const std::string&, const LinearIdentity& linearidentity);
+void read(const cv::FileNode& node, LinearIdentity& linearidentity, const LinearIdentity& defaultValue = LinearIdentity());
+
+/** @brief Linearization gamma correction.
+*/
+class LinearGamma : public Linear
+{
+public:
+    double gamma;
+
+    LinearGamma()
+        : gamma(1.0) {};
+
+    LinearGamma(double gamma_)
+        : gamma(gamma_) {};
+
+    Mat linearize(Mat inp) CV_OVERRIDE;
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
+};
+
+// Global functions for FileStorage for LinearGamma
+void write(cv::FileStorage& fs, const std::string&, const LinearGamma& lineargamma);
+void read(const cv::FileNode& node, LinearGamma& lineargamma, const LinearGamma& defaultValue = LinearGamma());
+
+/** @brief Linearization.
+           Grayscale polynomial fitting.
+*/
+template <class T>
+class LinearGray : public Linear
+{
+public:
+    int deg;
+    T p;
+
+    LinearGray(): deg(3) {};
+
+    LinearGray(int deg_, Mat src, Color dst, Mat mask, RGBBase_ cs)
+        : deg(deg_)
+    {
+        dst.getGray();
+        Mat lear_gray_mask = mask & dst.grays;
+
+        // the grayscale function is approximate for src is in relative color space.
+        Mat gray;
+        cvtColor(src, gray, COLOR_RGB2GRAY);
+        gray.copyTo(src);
+
+        Mat dst_ = maskCopyTo(dst.toGray(cs.illumobserver), lear_gray_mask);
+        calc(src, dst_);
+    }
+
+    /** @brief monotonically increase is not guaranteed.
+        @param src the input array, type of cv::Mat.
+        @param dst the input array, type of cv::Mat.
+    */
+    void calc(const Mat& src, const Mat& dst)
+    {
+        p = T(src, dst, deg);
+    };
+
+    Mat linearize(Mat inp) CV_OVERRIDE
+    {
+        return p(inp);
+    };
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
+};
+
+// Global functions for FileStorage for LinearGray
+template <typename T>
+void write(cv::FileStorage& fs, const std::string&, const LinearGray<T>& lineargray);
+template <typename T>
+void read(const cv::FileNode& node, LinearGray<T>& lineargray, const LinearGray<T>& defaultValue = LinearGray<T>());
+
+/** @brief Linearization.
+           Fitting channels respectively.
+*/
+template <class T>
+class LinearColor : public Linear
+{
+public:
+    int deg;
+    T pr;
+    T pg;
+    T pb;
+
+    LinearColor(): deg(3) {};
+
+    LinearColor(int deg_, Mat src_, Color dst, Mat mask, RGBBase_ cs)
+        : deg(deg_)
+    {
+        Mat src = maskCopyTo(src_, mask);
+        Mat dst_ = maskCopyTo(dst.to(*cs.l).colors, mask);
+        calc(src, dst_);
+    }
+
+    void calc(const Mat& src, const Mat& dst)
+    {
+        Mat schannels[3];
+        Mat dchannels[3];
+        split(src, schannels);
+        split(dst, dchannels);
+        pr = T(schannels[0], dchannels[0], deg);
+        pg = T(schannels[1], dchannels[1], deg);
+        pb = T(schannels[2], dchannels[2], deg);
+    };
+
+    Mat linearize(Mat inp) CV_OVERRIDE
+    {
+        Mat channels[3];
+        split(inp, channels);
+        std::vector<Mat> channel;
+        Mat res;
+        merge(std::vector<Mat> { pr(channels[0]), pg(channels[1]), pb(channels[2]) }, res);
+        return res;
+    };
+
+    // Serialization support
+    void write(cv::FileStorage& fs) const CV_OVERRIDE;
+    void read(const cv::FileNode& node) CV_OVERRIDE;
+};
+
+// Global functions for FileStorage for LinearColor
+template <typename T>
+void write(cv::FileStorage& fs, const std::string&, const LinearColor<T>& linearcolor);
+template <typename T>
+void read(const cv::FileNode& node, LinearColor<T>& linearcolor, const LinearColor<T>& defaultValue = LinearColor<T>());
+
+/** @brief Get linearization method.
+           used in ccm model.
+    @param gamma used in LinearGamma.
+    @param deg degrees.
+    @param src the input array, type of cv::Mat.
+    @param dst the input array, type of cv::Mat.
+    @param mask the input array, type of cv::Mat.
+    @param cs type of RGBBase_.
+    @param linearizationType type of linear.
+*/
+
+std::shared_ptr<Linear> getLinear(double gamma, int deg, Mat src, Color dst, Mat mask, RGBBase_ cs, LinearizationType linearizationType);
+
+}
+}  // namespace cv::ccm
+
+#endif

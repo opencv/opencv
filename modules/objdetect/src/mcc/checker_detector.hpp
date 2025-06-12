@@ -161,7 +161,8 @@ protected: // methods pipeline
                     const Mat &img_rgb_org,
                     const Mat &img_ycbcr_org,
                     std::vector<Mat> &rgb_planes,
-                    std::vector<Mat> &ycbcr_planes);
+                    std::vector<Mat> &ycbcr_planes,
+                    const Point2f& offset);
 
     virtual void
     removeTooCloseDetections();
