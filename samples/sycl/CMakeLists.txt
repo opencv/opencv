@@ -30,7 +30,7 @@ if(NOT SYCL_FOUND AND NOT OPENCV_SKIP_SAMPLES_SYCL_ONEDNN)
   if(NOT DEFINED DNNLROOT AND DEFINED ENV{DNNLROOT})
     set(DNNLROOT "$ENV{DNNLROOT}")
   endif()
-  # Some verions of called script violate CMake policy and may emit unrecoverable CMake errors
+  # Some versions of called script violate CMake policy and may emit unrecoverable CMake errors
   # Use OPENCV_SKIP_SAMPLES_SYCL=1 / OPENCV_SKIP_SAMPLES_SYCL_ONEDNN to bypass this
   find_package(dnnl CONFIG QUIET HINTS "${DNNLROOT}")
 endif()
