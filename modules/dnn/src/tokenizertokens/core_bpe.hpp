@@ -60,6 +60,10 @@ public:
 
 class CoreBPE {
 public:
+    explicit CoreBPE(ByteVecRankMap encoder,
+            std::unordered_map<std::string, Rank> specialEncoder, 
+            const std::string& pattern);
+
     template<typename EncIter, typename SpecIter>
     static CoreBPE create(EncIter encFist, EncIter encLast, 
                           SpecIter specFirst, SpecIter specLast,
@@ -83,9 +87,6 @@ public:
     std::set<std::string> specialTokens() const;
 
 private:
-    CoreBPE(ByteVecRankMap encoder,
-            std::unordered_map<std::string, Rank> specialEncoder, 
-            const std::string& pattern);
 
     const std::regex& threadLocalRegex() const;
     const std::regex& threadLocalSpecialRegex() const;
