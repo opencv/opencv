@@ -11,12 +11,13 @@ import org.opencv.test.OpenCVTestRunner;
 
 import java.util.ArrayList;
 import java.util.List;
-import static org.junit.Assume.assumeTrue;
 
 public class ImgcodecsTest extends OpenCVTestCase {
 
     public void testAnimation() {
-        assumeTrue(Imgcodecs.haveImageWriter("*.apng"));
+        if (!Imgcodecs.haveImageWriter("*.apng")) {
+           return;
+        }
 
         Mat src = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_REDUCED_COLOR_4);
         assertFalse(src.empty());
