@@ -11,6 +11,7 @@ import org.opencv.test.OpenCVTestRunner;
 
 import java.util.ArrayList;
 import java.util.List;
+import static org.junit.Assume.assumeTrue;
 
 public class ImgcodecsTest extends OpenCVTestCase {
 
