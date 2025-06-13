@@ -19,17 +19,61 @@ public:
                      const std::unordered_map<std::string, Rank>& specialTokens, 
                      int explicitNvocab=-1);
 
+    /* --------------------- Encoding ----------------------------------*/
     CV_WRAP std::vector<Rank> encodeOrdinary(const std::string& text) const;
     CV_WRAP std::vector<Rank> encode(const std::string& text,
                                      const std::unordered_set<std::string>& allowedSpecial={},
-                                     const std::unordered_set<std::string>& isallowedSpecial={}) const;
-    CV_WRAP std::string decode(const std::vector<Rank>& tokens, const std::string& errors="replace") const;
+                                     const std::unordered_set<std::string>& disallowedSpecial={}) const;
+    /*---------------------------------------------------------------------------*/ 
+    // Might not need these functionality but we declare them here in case we do.
+    CV_WRAP std::vector<std::vector<Rank>> encodeOrdinaryBatch(const std::vector<std::string>& textsm, int numThreads=8) const; 
+    CV_WRAP std::vector<std::vector<Rank>> encodeBatch(const std::vector<std::string>& texts,
+                                                       int numThreads=8,
+                                                       const std::unordered_set<std::string>& allowedSpecial={},
+                                                       const std::unordered_set<std::string>& disallowedSpecial={}) const;
+    CV_WRAP std::pair<std::vector<Rank>, std::vector<std::vector<Rank>>> encodeWithUnstable(const std::string& text, 
+                                                                                            const std::unordered_set<std::string>& allowedSpecial = {},
+                                                                                            const std::unordered_set<std::string>& disallowedSpecial = {}) const;
+    /*---------------------------------------------------------------------------*/ 
     CV_WRAP Rank encodeSingleToken(const std::vector<std::uint8_t>& bytes) const;
+
+    /* --------------------- Decoding ----------------------------------*/
+    CV_WRAP std::vector<std::uint8_t> decodeBytes(const std::vector<Rank>& tokens) const;
+    CV_WRAP std::string decode(const std::vector<Rank>& tokens, const std::string& errors="replace") const;
     CV_WRAP std::vector<std::uint8_t> decodeSingleTokenBytes(Rank token) const;
     CV_WRAP std::vector<std::vector<std::uint8_t>> decodeTokensBytes(const std::vector<Rank>& tokens) const;
+    // Might used these extra functions keep for now
+    CV_EXPORTS std::pair<std::string, std::vector<int>> decodeWithOffsets(const std::vector<Rank>& tokens) const;
+    CV_EXPORTS std::vector<std::string> decodeBatch(const std::vector<std::vector<Rank>>& tokenBatches, 
+                                                    const std::string& errors ="replace",
+                                                    int numThreads=8) const;
+    CV_EXPORTS std::vector<std::vector<std::uint8_t>> decodeBytesBatch(const std::vector<std::vector<Rank>>& tokenBatches) const;
+
+
+    /*Declare extra functionality similar to tiktoken which we might use*/
+    CV_PROP std::vector<std::vector<std::uint8_t>> tokenBytesValues() const;
+    CV_PROP std::uint32_t eotToken() const;
+    CV_PROP std::unordered_set<std::string> specialTokens() const;
+    CV_PROP bool isSpecialToken(int token) const;
+    CV_PROP int nVocab() const { return maxTokenValue_ + 1; }
+
+
+
 
     // Get the highest token ID present.
     CV_PROP Rank maxTokenValue() const;
+
+     // Escape regex meta-characters in a string
+    static std::string escape_regex(const std::string &s) {
+        static const std::string meta = R"(.^$|()[]*+?{}\")";
+        std::string out;
+        out.reserve(s.size() * 2);
+        for (char c : s) {
+            if (meta.find(c) != std::string::npos) out.push_back('\\');
+            out.push_back(c);
+        }
+        return out;
+    }
 
 private:
     std::string name_;
@@ -41,6 +85,14 @@ private:
     Rank maxTokenValue_;
 
     CoreBPE coreBPE_;
+
+    // Might need these functions for testing 
+    std::vector<Rank> encodeSinglePiece(const std::string& text) const;
+    std::vector<Rank> encodeBytes(const std::vector<std::uint8_t>& bytes) const;
+    CV_WRAP std::vector<Rank> _encodeSinglePieceBytes(const std::vector<uint8_t>& bytes) const;
+    CV_WRAP std::vector<Rank> _encodeOnlyNativeBpe(const std::string& text) const;
+    CV_WRAP std::vector<Rank> _encodeBytesLower(const std::vector<uint8_t>& bytes) const;
 };
+
 
 }}}

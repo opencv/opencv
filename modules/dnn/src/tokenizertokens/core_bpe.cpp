@@ -194,6 +194,7 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
             tokens.insert(tokens.end(), sub.begin(), sub.end());
         }
     }
+    return tokens;
 }
 
 std::pair<std::vector<Rank>, std::size_t>
@@ -382,7 +383,7 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
 
     // whitespace regex fix for last code point 
     if (unstableBytes.size() > 1) {
-        // TODO: Implement the decodeLastUtf8
+        // TODO: Implement the decodeLastUtf8 [DONE] -> [TESTING PROCESS]
         auto [last_char, byte_len] = decodeLastUtf8(unstableBytes);
         if (unstableBytes.size() > byte_len && std::isspace(static_cast<unsigned char>(*last_char))) {
             // re-encode in two parts
