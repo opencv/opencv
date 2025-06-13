@@ -52,12 +52,17 @@
 
 #include "grfmt_tiff.hpp"
 #include <limits>
+#include <sstream>
 
 #include "tiff.h"
 #include "tiffio.h"
 
 namespace cv
 {
+// https://libtiff.gitlab.io/libtiff/specification/index.html
+// TIFF-Spec 6.0
+#define TIFFTAG_BITSPERSAMPLE_DEFAULT 1
+#define TIFFTAG_SAMPLESPERPIXEL_DEFAULT 1
 
 // to extend cvtColor() to support CV_8S, CV_16S, CV_32S and CV_64F.
 static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
@@ -72,6 +77,14 @@ static void extend_cvtColor( InputArray _src, OutputArray _dst, int code );
     if (0 == (call)) { \
         CV_LOG_DEBUG(NULL, "OpenCV TIFF(line " << __LINE__ << "): failed optional call: " #call ", ignoring"); \
     }
+
+// restore *valuePtr if TIFFGetField() failes
+template<class T> inline int tiffGetFieldOrRestore(TIFF *const tif, const ttag_t tag, T *const valuePtr) {
+    const T dflt = *valuePtr;
+    const int status = TIFFGetField(tif, tag, valuePtr);
+    if (0 == status) *valuePtr = dflt;
+    return status;
+}
 
 static void cv_tiffCloseHandle(void* handle)
 {
@@ -141,10 +154,10 @@ bool TiffDecoder::checkSignature( const String& signature ) const
         memcmp(signature.c_str(), fmtSignBigTiffMM, 4) == 0);
 }
 
-int TiffDecoder::normalizeChannelsNumber(int channels) const
-{
-    CV_Check(channels, channels >= 1 && channels <= 4, "Unsupported number of channels");
-    return channels;
+template<class T> String toString(const T &x) {
+    std::stringstream str;
+    str << x;
+    return str.str();
 }
 
 ImageDecoder TiffDecoder::newDecoder() const
@@ -229,6 +242,47 @@ public:
     }
 };
 
+static void checkCompatibility(const uint16_t photometric, const uint16_t channels, const uint16_t bpp)
+{
+#define UNSUP_CHANNELS "Unsupported number of channels"
+#define UNSUP_BPP "Unsupported bits per pixel"
+    // see `readHeader()`
+    CV_Check(bpp, bpp == 1 || bpp == 4 || bpp == 8 || bpp == 10 || bpp == 12 || bpp == 14 || bpp == 16 || bpp == 32 || bpp == 64, UNSUP_BPP);
+
+    // there might be additional channels (e.g. alpha), so `channels >= ...`
+    switch (photometric)
+    {
+        case PHOTOMETRIC_MINISBLACK:
+        case PHOTOMETRIC_MINISWHITE:
+        case PHOTOMETRIC_MASK:
+            CV_Check(channels, channels >= 1, UNSUP_CHANNELS);
+            break;
+        case PHOTOMETRIC_PALETTE:
+            CV_Check(channels, channels >= 1, UNSUP_CHANNELS);
+            CV_Check(bpp, bpp == 4 || bpp == 8, UNSUP_BPP); // see `readHeader()`
+            break;
+        case PHOTOMETRIC_RGB:
+        case PHOTOMETRIC_YCBCR:
+        case PHOTOMETRIC_LOGLUV:
+        case PHOTOMETRIC_CIELAB:
+        case PHOTOMETRIC_ICCLAB:
+        case PHOTOMETRIC_ITULAB:
+            CV_Check(channels, channels >= 3, UNSUP_CHANNELS);
+            break;
+        case PHOTOMETRIC_SEPARATED:
+            CV_Check(channels, channels >= 4, UNSUP_CHANNELS);
+            break;
+        case PHOTOMETRIC_CFA: // not supported by libtiff: tif_dirread.c: _TIFFGetMaxColorChannels()
+        case PHOTOMETRIC_LOGL: // not supported by libtiff: tif_dirread.c: _TIFFGetMaxColorChannels()
+        default:
+            CV_Error(cv::Error::StsBadFunc, "TIFF-PhotometricInterpretation " + toString(photometric) + " not supported");
+            break;
+    }
+#undef UNSUP_BPP
+#undef UNSUP_CHANNELS
+}
+
+
 bool TiffDecoder::readHeader()
 {
     bool result = false;
@@ -268,14 +322,9 @@ bool TiffDecoder::readHeader()
         CV_TIFF_CHECK_CALL(TIFFGetField(tif, TIFFTAG_PHOTOMETRIC, &photometric));
 
         {
-            bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-            uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
-            if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
-            {
-                // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
-                bpp = 1;
-            }
-            CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
+            uint16_t bpp = TIFFTAG_BITSPERSAMPLE_DEFAULT, ncn = TIFFTAG_SAMPLESPERPIXEL_DEFAULT;
+            CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+            CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
 
             m_width = wdth;
             m_height = hght;
@@ -289,20 +338,21 @@ bool TiffDecoder::readHeader()
             m_hdr = false;
 
             if( bpp > 8 &&
-               ((photometric > 2) ||
+               ((photometric > PHOTOMETRIC_RGB) ||
                 (ncn != 1 && ncn != 3 && ncn != 4)))
                 bpp = 8;
 
             uint16_t sample_format = SAMPLEFORMAT_UINT;
-            TIFFGetField(tif, TIFFTAG_SAMPLEFORMAT, &sample_format);
-            int wanted_channels = normalizeChannelsNumber(ncn);
+            CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_SAMPLEFORMAT, &sample_format));
+            checkCompatibility(photometric, ncn, bpp);
+            const int wanted_channels = ncn;
             switch (bpp)
             {
             case 1:
             {
                 CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
                 int depth = sample_format == SAMPLEFORMAT_INT ? CV_8S : CV_8U;
-                m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
+                m_type = CV_MAKETYPE(depth, wanted_channels);
                 result = true;
                 break;
             }
@@ -327,7 +377,7 @@ bool TiffDecoder::readHeader()
                 if (photometric == PHOTOMETRIC_PALETTE)
                     m_type = CV_MAKETYPE(depth, 3);
                 else
-                    m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
+                    m_type = CV_MAKETYPE(depth, wanted_channels);
                 result = true;
                 break;
             }
@@ -338,7 +388,7 @@ bool TiffDecoder::readHeader()
             {
                 CV_Check((int)sample_format, sample_format == SAMPLEFORMAT_UINT || sample_format == SAMPLEFORMAT_INT, "");
                 int depth = sample_format == SAMPLEFORMAT_INT ? CV_16S : CV_16U;
-                m_type = CV_MAKETYPE(depth, !isGrayScale ? wanted_channels : 1);
+                m_type = CV_MAKETYPE(depth, wanted_channels);
                 result = true;
                 break;
             }
@@ -356,7 +406,7 @@ bool TiffDecoder::readHeader()
                 result = true;
                 break;
             default:
-                CV_Error(cv::Error::StsError, "Invalid bitsperpixel value read from TIFF header! Must be 1, 8, 10, 12, 14, 16, 32 or 64.");
+                CV_Error(cv::Error::StsBadFunc, "OpenCV TIFF: unsupported depth");
             }
         }
     }
@@ -607,22 +657,18 @@ bool  TiffDecoder::readData( Mat& img )
     if (m_width && m_height)
     {
         int is_tiled = TIFFIsTiled(tif) != 0;
-        bool isGrayScale = photometric == PHOTOMETRIC_MINISWHITE || photometric == PHOTOMETRIC_MINISBLACK;
-        uint16_t bpp = 8, ncn = isGrayScale ? 1 : 3;
-        if (0 == TIFFGetField(tif, TIFFTAG_BITSPERSAMPLE, &bpp))
-        {
-            // TIFF bi-level images don't require TIFFTAG_BITSPERSAMPLE tag
-            bpp = 1;
-        }
-        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
+        uint16_t bpp = TIFFTAG_BITSPERSAMPLE_DEFAULT, ncn = TIFFTAG_SAMPLESPERPIXEL_DEFAULT;
+        CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_BITSPERSAMPLE, &bpp));
+        CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_SAMPLESPERPIXEL, &ncn));
         uint16_t img_orientation = ORIENTATION_TOPLEFT;
-        CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ORIENTATION, &img_orientation));
+        CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_ORIENTATION, &img_orientation));
         constexpr const int bitsPerByte = 8;
         int dst_bpp = (int)(img.elemSize1() * bitsPerByte);
         bool vert_flip = dst_bpp == 8 &&
                         (img_orientation == ORIENTATION_BOTRIGHT || img_orientation == ORIENTATION_RIGHTBOT ||
                          img_orientation == ORIENTATION_BOTLEFT || img_orientation == ORIENTATION_LEFTBOT);
-        int wanted_channels = normalizeChannelsNumber(img.channels());
+        checkCompatibility(photometric, ncn, bpp);
+        const int wanted_channels = img.channels();
         bool doReadScanline = false;
 
         uint32_t tile_width0 = m_width, tile_height0 = 0;
@@ -635,7 +681,7 @@ bool  TiffDecoder::readData( Mat& img )
         else
         {
             // optional
-            CV_TIFF_CHECK_CALL_DEBUG(TIFFGetField(tif, TIFFTAG_ROWSPERSTRIP, &tile_height0));
+            CV_TIFF_CHECK_CALL_DEBUG(tiffGetFieldOrRestore(tif, TIFFTAG_ROWSPERSTRIP, &tile_height0));
         }
 
         {
@@ -651,8 +697,6 @@ bool  TiffDecoder::readData( Mat& img )
             CV_Assert((int)tile_width0 > 0 && (int)tile_width0 <= TILE_MAX_WIDTH);
             CV_Assert((int)tile_height0 > 0 && (int)tile_height0 <= TILE_MAX_HEIGHT);
             const uint64_t MAX_TILE_SIZE = (CV_BIG_UINT(1) << 30);
-            CV_CheckLE((int)ncn, 4, "");
-            CV_CheckLE((int)bpp, 64, "");
 
             if (dst_bpp == 8)
             {

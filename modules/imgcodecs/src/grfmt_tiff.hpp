@@ -107,7 +107,6 @@ public:
 
 protected:
     cv::Ptr<void> m_tif;
-    int normalizeChannelsNumber(int channels) const;
     bool m_hdr;
     size_t m_buf_pos;
 
