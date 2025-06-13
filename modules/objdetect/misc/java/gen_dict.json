@@ -1,0 +1,68 @@
+{
+    "ManualFuncs" : {
+        "QRCodeEncoder" : {
+            "QRCodeEncoder" : {
+                "j_code"   : [
+                    "\n",
+                    "/** Generates QR code from input string.",
+                    "@param encoded_info Input bytes to encode.",
+                    "@param qrcode Generated QR code.",
+                    "*/",
+                    "public void encode(byte[] encoded_info, Mat qrcode) {",
+                    "    encode_1(nativeObj, encoded_info, qrcode.nativeObj);",
+                    "}",
+                    "\n"
+                ],
+                "jn_code": [
+                    "\n",
+                    "private static native void encode_1(long nativeObj, byte[] encoded_info, long qrcode_nativeObj);",
+                    "\n"
+                ],
+                "cpp_code": [
+                    "//",
+                    "//  void cv::QRCodeEncoder::encode(String encoded_info, Mat& qrcode)",
+                    "//",
+                    "\n",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_QRCodeEncoder_encode_11 (JNIEnv*, jclass, jlong, jbyteArray, jlong);",
+                    "\n",
+                    "JNIEXPORT void JNICALL Java_org_opencv_objdetect_QRCodeEncoder_encode_11",
+                    "(JNIEnv* env, jclass , jlong self, jbyteArray encoded_info, jlong qrcode_nativeObj)",
+                    "{",
+                    "",
+                    "    static const char method_name[] = \"objdetect::encode_11()\";",
+                    "    try {",
+                    "        LOGD(\"%s\", method_name);",
+                    "        Ptr<cv::QRCodeEncoder>* me = (Ptr<cv::QRCodeEncoder>*) self; //TODO: check for NULL",
+                    "        const char* n_encoded_info = reinterpret_cast<char*>(env->GetByteArrayElements(encoded_info, NULL));",
+                    "        Mat& qrcode = *((Mat*)qrcode_nativeObj);",
+                    "        (*me)->encode( n_encoded_info, qrcode );",
+                    "    } catch(const std::exception &e) {",
+                    "        throwJavaException(env, &e, method_name);",
+                    "    } catch (...) {",
+                    "        throwJavaException(env, 0, method_name);",
+                    "    }",
+                    "}",
+                    "\n"
+                ]
+            }
+        }
+    },
+    "type_dict": {
+        "NativeByteArray": {
+            "j_type" : "byte[]",
+            "jn_type": "byte[]",
+            "jni_type": "jbyteArray",
+            "jni_name": "n_%(n)s",
+            "jni_var": "jbyteArray n_%(n)s = env->NewByteArray(static_cast<jsize>(%(n)s.size())); env->SetByteArrayRegion(n_%(n)s, 0, static_cast<jsize>(%(n)s.size()), reinterpret_cast<const jbyte*>(%(n)s.c_str()));",
+            "cast_from": "std::string"
+        },
+        "vector_NativeByteArray": {
+            "j_type": "List<byte[]>",
+            "jn_type": "List<byte[]>",
+            "jni_type": "jobject",
+            "jni_var": "std::vector< std::string > %(n)s",
+            "suffix": "Ljava_util_List",
+            "v_type": "vector_NativeByteArray"
+        }
+    }
+}
