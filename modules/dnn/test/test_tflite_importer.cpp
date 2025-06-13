@@ -283,7 +283,7 @@ TEST_P(Test_TFLite, StridedSlice) {
     testLayer("strided_slice");
 }
 
-TEST_P(Test_TFLite, DISABLED_face_blendshapes)
+TEST_P(Test_TFLite, face_blendshapes)
 {
     Mat inp = blobFromNPY(findDataFile("dnn/tflite/face_blendshapes_inp.npy"));
     testModel("face_blendshapes", inp);
