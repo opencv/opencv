@@ -11,33 +11,38 @@ using RVV_VECTOR_TYPE = vuint8m4_t;
 inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stride, int patternSize)
 {
     uint16_t pixel_u[25];
+    memset(pixel_u, 0, sizeof(uint16_t) * 25);
 
-    // set min element (pixel[9] = -1 + row_stride * -3) as the base addr
-    pixel_u[0] = 1 + row_stride * 6;
-    pixel_u[1] = 2 + row_stride * 6;
-    pixel_u[2] = 3 + row_stride * 5;
-    pixel_u[3] = 4 + row_stride * 4;
-    pixel_u[4] = 4 + row_stride * 3;
-    pixel_u[5] = 4 + row_stride * 2;
-    pixel_u[6] = 3 + row_stride * 1;
-    pixel_u[7] = 2 + row_stride * 0;
-    pixel_u[8] = 1 + row_stride * 0;
-    pixel_u[9] = 0 + row_stride * 0;
-    pixel_u[10] = -1 + row_stride * 1;
-    pixel_u[11] = -2 + row_stride * 2;
-    pixel_u[12] = -2 + row_stride * 3;
-    pixel_u[13] = -2 + row_stride * 4;
-    pixel_u[14] = -1 + row_stride * 5;
-    pixel_u[15] = 0 + row_stride * 6;
+    switch(patternSize) {
+    case 16:
+        // set min element (pixel[9] = -1 + row_stride * -3) as the base addr
+        pixel_u[0] = 1 + row_stride * 6;
+        pixel_u[1] = 2 + row_stride * 6;
+        pixel_u[2] = 3 + row_stride * 5;
+        pixel_u[3] = 4 + row_stride * 4;
+        pixel_u[4] = 4 + row_stride * 3;
+        pixel_u[5] = 4 + row_stride * 2;
+        pixel_u[6] = 3 + row_stride * 1;
+        pixel_u[7] = 2 + row_stride * 0;
+        pixel_u[8] = 1 + row_stride * 0;
+        pixel_u[9] = 0 + row_stride * 0;
+        pixel_u[10] = -1 + row_stride * 1;
+        pixel_u[11] = -2 + row_stride * 2;
+        pixel_u[12] = -2 + row_stride * 3;
+        pixel_u[13] = -2 + row_stride * 4;
+        pixel_u[14] = -1 + row_stride * 5;
+        pixel_u[15] = 0 + row_stride * 6;
 
-    for (int i = 16; i < 25; i++)
-    {
-        pixel_u[i] = pixel_u[i - 16];
-    }
-    v_offset = __riscv_vle16_v_u16m2(pixel_u, 25);
-    for (int i = 0; i < 25; i++)
-    {
-        pixel[i] = pixel_u[i] - 3 * row_stride - 1;
+        for (int i = 16; i < 25; i++)
+        {
+            pixel_u[i] = pixel_u[i - 16];
+        }
+        v_offset = __riscv_vle16_v_u16m2(pixel_u, 25);
+        for (int i = 0; i < 25; i++)
+        {
+            pixel[i] = pixel_u[i] - 3 * row_stride - 1;
+        }
+        break;
     }
 }
 
@@ -45,7 +50,7 @@ inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stri
 inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int64_t row_stride)
 {
     const uint32_t K = 8, N = 16 + K + 1;
-    uint32_t k, v = ptr[0];
+    uint32_t v = ptr[0];
 
     int vl = __riscv_vsetvl_e16m2(N);
     // use vloxei16_v to indexed ordered load
@@ -208,9 +213,6 @@ inline int fast_16(const uchar* src_data, size_t src_step,
                         {
                             cornerpos[ncorners++] = j + k;
                             if(nonmax_suppression) {
-                                bool debug = false;
-                                int debug_x = -1;
-                                int debug_y = -1;
                                 curr[j + k] = (uchar)cornerScore(ptr + k, v_offset, (int64_t)src_step);
                             }
                         }
