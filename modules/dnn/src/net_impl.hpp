@@ -87,6 +87,16 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<Mat> scratchBufs;
     std::vector<Ptr<Graph> > allgraphs;
 
+    struct PageInfo {
+        // Cache pages
+        std::vector<cv::Mat> pages;
+        int curIdx = -1;            // index of last filled block
+        MatShape shape;        // shape of a single block (without the batch dim)
+        MatType dtype;
+        // int size; // may need this later
+    };
+    std::unordered_map<int, PageInfo> cache;
+
     Ptr<Graph> mainGraph;
     int globGraphIdx;
 
@@ -107,9 +117,7 @@ struct Net::Impl : public detail::NetImplBase
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
 
-
     virtual void clear();
-
 
     virtual void validateBackendAndTarget();
 
@@ -335,6 +343,7 @@ struct Net::Impl : public detail::NetImplBase
     Arg getArg(const std::string& name);
     bool haveArg(const std::string& name) const;
 
+    Arg newCachedArg(const std::string& name, bool allowEmptyName);
     Arg newConstArg(const std::string& name, const Mat& m);
     Arg newConstScalarArg(const std::string& name, int type, const void* value);
     Arg newArg(const std::string& name, ArgKind kind, bool allowEmptyName=false);
@@ -347,6 +356,11 @@ struct Net::Impl : public detail::NetImplBase
     int findDim(const std::string& name, bool insert=false);
 
     void prepareForInference();
+
+    // @TODO
+    void allocateCache(Arg arg, const MatShape& shape, MatType dtype);
+    void growCache(Arg arg);
+    const std::vector<Mat>& getCache(Arg arg) const;
 
     // pre-allocates memory for output tensors.
     // if useBufferPool==true, the method uses 'buffers'
@@ -424,6 +438,8 @@ inline Net::Impl* getNetImpl(const Layer* layer)
 {
     return reinterpret_cast<Net::Impl*>(layer->netimpl);
 }
+
+
 
 Net readNetFromONNX2(const String&);
 Net readNetFromONNX2(const char*, size_t);

@@ -27,7 +27,7 @@ std::string argKindToString(ArgKind kind)
         kind == DNN_ARG_OUTPUT ? "Output" :
         kind == DNN_ARG_TEMP ? "Temp" :
         kind == DNN_ARG_PATTERN ? "Pattern" : "???";
-}
+    }
 
 ArgData::ArgData()
 {
@@ -236,6 +236,8 @@ Arg Net::Impl::newConstArg(const std::string& name, const Mat& m)
 Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName)
 {
     CV_Assert(allowEmptyName || !name.empty());
+    CV_Assert(kind != DNN_ARG_CACHED); // use newCachedArg instead
+
     int idx = (int)args.size();
 
     if (!name.empty()) {
@@ -253,6 +255,27 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     return Arg(idx);
 }
 
+// add new cache Arg
+// ArgData for cached args does not hold type and shape for now
+// this is held by `PageInfo`
+Arg Net::Impl::newCachedArg(const std::string& name, bool allowEmptyName)
+{
+    CV_Assert(allowEmptyName || !name.empty());
+    int idx = (int)args.size();
+    argnames.insert(std::make_pair(name, (int64_t)idx));
+
+    if (!name.empty()) {
+        CV_Assert(argnames.find(name) == argnames.end());
+        argnames.insert(std::make_pair(name, (int64_t)idx));
+    }
+
+    ArgData adata;
+    adata.name = name;
+    adata.kind = DNN_ARG_CACHED;
+    args.push_back(adata);
+
+    return Arg(idx);
+}
 
 int Net::Impl::findDim(const std::string& dimname, bool insert)
 {
@@ -302,6 +325,44 @@ void Net::Impl::prepareForInference()
         prepared = true;
         finalizeLayers = true;
     }
+}
+
+// This is called from a Layer, eg on forward pass,
+// when the shape of allocation is known.
+// General procedure:
+// 1. finds the page list in cache
+// 2. `pages`should be empty
+// 3. create the first page - a Mat of given type and shape
+void Net::Impl::allocateCache(Arg arg, const MatShape& shape, MatType dtype){
+    auto it = cache.find(arg.idx);
+    CV_Assert(it != cache.end());
+    CV_Assert(it->second.pages.empty());
+    Mat page(shape, dtype);
+    PageInfo pageInfo;
+    pageInfo.pages = {page};
+    pageInfo.curIdx = -1;
+    pageInfo.shape = shape;
+    pageInfo.dtype = dtype;
+    cache[arg.idx] = pageInfo;
+}
+
+// add a single page to cache
+void Net::Impl::growCache(Arg arg){
+    auto it = cache.find(arg.idx);
+    CV_Assert(it != cache.end());
+    CV_Assert(!it->second.pages.empty());
+    PageInfo& pageInfo = it->second;
+
+    Mat newPage(pageInfo.shape, pageInfo.dtype);
+    pageInfo.pages.push_back(newPage);
+}
+
+// get all pages from cache
+const std::vector<Mat>& Net::Impl::getCache(Arg arg) const {
+    auto it = cache.find(arg.idx);
+    CV_Assert(it != cache.end());
+    CV_Assert(!it->second.pages.empty());
+    return it->second.pages;
 }
 
 void Net::Impl::allocateLayerOutputs(
