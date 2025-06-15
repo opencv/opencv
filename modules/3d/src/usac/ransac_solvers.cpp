@@ -372,8 +372,8 @@ void UniversalRANSAC::initialize (int state, Ptr<MinimalSolver> &min_solver, Ptr
     } else if (params->isPnP()) {
         degeneracy = makePtr<Degeneracy>();
         if (min_sample_size == 3) {
-            min_solver = P3PSolver::create(points, calib_points, K1);
-            non_min_solver = DLSPnP::create(points, calib_points, K1);
+            min_solver = P3PSolver::create(points, calib_points, K1);   // -->
+            non_min_solver = DLSPnP::create(points, calib_points, K1);  // -->
         } else {
             if (is_ge_solver)
                 min_solver = PnPMinimalSolver6Pts::create(points);
