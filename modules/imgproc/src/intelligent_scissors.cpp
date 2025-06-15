@@ -61,7 +61,7 @@ float* getAcosTable()
 
 } // namespace anon
 
-struct IntelligentScissorsMB::Impl
+struct CV_IMPL_HIDDEN IntelligentScissorsMB::Impl
 {
     // proposed weights from the article (sum = 1.0)
     float weight_non_edge = 0.43f;
