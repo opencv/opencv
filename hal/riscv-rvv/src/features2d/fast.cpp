@@ -11,7 +11,6 @@ using RVV_VECTOR_TYPE = vuint8m4_t;
 inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stride, int patternSize)
 {
     uint16_t pixel_u[25];
-    memset(pixel_u, 0, sizeof(uint16_t) * 25);
 
     switch(patternSize) {
     case 16:
@@ -43,6 +42,10 @@ inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stri
             pixel[i] = pixel_u[i] - 3 * row_stride - 1;
         }
         break;
+
+    default:
+        memset(pixel_u, 0, sizeof(uint16_t) * 25);
+
     }
 }
 
@@ -258,6 +261,7 @@ int FAST(const uchar* src_data, size_t src_step,
          size_t* keypoints_count, int threshold,
          bool nonmax_suppression, int detector_type)
 {
+    (*keypoints_count) = 0;
     int res = CV_HAL_ERROR_UNKNOWN;
     switch(detector_type) {
         case CV_HAL_TYPE_5_8:
