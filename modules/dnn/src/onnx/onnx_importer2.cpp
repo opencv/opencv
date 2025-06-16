@@ -25,6 +25,7 @@
 #include <limits>
 #include <set>
 #include <string>
+#include <filesystem>  // C++17
 
 #if defined _MSC_VER && _MSC_VER < 1910/*MSVS 2017*/
 #pragma warning(push)
@@ -77,7 +78,50 @@ static int dataType2cv(opencv_onnx::TensorProto_DataType dt)
         dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
 }
 
-static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
+static int dataType2cv(int dt)
+{
+    return
+        dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
+        dt == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S :
+        dt == opencv_onnx::TensorProto_DataType_UINT16 ? CV_16U :
+        dt == opencv_onnx::TensorProto_DataType_INT16 ? CV_16S :
+        dt == opencv_onnx::TensorProto_DataType_UINT32 ? CV_32U :
+        dt == opencv_onnx::TensorProto_DataType_INT32 ? CV_32S :
+        dt == opencv_onnx::TensorProto_DataType_UINT64 ? CV_64U :
+        dt == opencv_onnx::TensorProto_DataType_INT64 ? CV_64S :
+        dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
+        dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
+        dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
+        dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
+        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
+}
+
+
+// static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
+// {
+//     const char* str =
+//     dt == opencv_onnx::TensorProto_DataType_UNDEFINED ? "UNDEFINED" :
+//     dt == opencv_onnx::TensorProto_DataType_STRING ? "STRING" :
+//     dt == opencv_onnx::TensorProto_DataType_UINT8 ? "UINT8" :
+//     dt == opencv_onnx::TensorProto_DataType_INT8 ? "INT8" :
+//     dt == opencv_onnx::TensorProto_DataType_UINT16 ? "UINT16" :
+//     dt == opencv_onnx::TensorProto_DataType_INT16 ? "INT16" :
+//     dt == opencv_onnx::TensorProto_DataType_UINT32 ? "UINT32" :
+//     dt == opencv_onnx::TensorProto_DataType_INT32 ? "INT32" :
+//     dt == opencv_onnx::TensorProto_DataType_UINT64 ? "UINT64" :
+//     dt == opencv_onnx::TensorProto_DataType_INT64 ? "INT64" :
+//     dt == opencv_onnx::TensorProto_DataType_FLOAT ? "FLOAT" :
+//     dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? "FLOAT16" :
+//     dt == opencv_onnx::TensorProto_DataType_BOOL ? "BOOL" :
+//     dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? "COMPLEX64" :
+//     dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? "COMPLEX128" : nullptr;
+//     if (!str)
+//         return format("<unknown_type #%d>", (int)dt);
+//     return std::string(str);
+// }
+
+static std::string dataType2str(int dt)
 {
     const char* str =
     dt == opencv_onnx::TensorProto_DataType_UNDEFINED ? "UNDEFINED" :
@@ -100,9 +144,9 @@ static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto)
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
 {
-    Mat m = getMatFromTensor(tensor_proto, false);
+    Mat m = getMatFromTensor(tensor_proto, false, base_path);
     m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -140,6 +184,7 @@ protected:
     Net net;
     Net::Impl* netimpl;
     std::string onnxFilename;
+    std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     std::vector<Ptr<Layer> > curr_prog;
@@ -262,6 +307,8 @@ Net ONNXImporter2::parseFile(const char *onnxFilename_)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
+    onnxBasePath = std::filesystem::path(onnxFilename_).parent_path().string();
+
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFilename);
 
     std::fstream input(onnxFilename, std::ios::in | std::ios::binary);
@@ -705,7 +752,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto);
+    return getMatFromTensor2(tensor_proto, onnxBasePath);
 }
 
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)

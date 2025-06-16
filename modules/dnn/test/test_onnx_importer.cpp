@@ -2085,6 +2085,12 @@ TEST_P(Test_ONNX_layers, Quantized_Gemm)
     testONNXModels("quantized_gemm", npy);
 }
 
+TEST_P(Test_ONNX_layers, Gemm_External_Data)
+{
+    testONNXModels("gemm_external_data", npy);
+}
+
+
 TEST_P(Test_ONNX_layers, Quantized_MatMul_Variable_Weights)
 {
     // Unsupported
