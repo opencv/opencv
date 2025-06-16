@@ -86,7 +86,7 @@ def extract_feature(img_dir, model_path, batch_size = 32, resize_h = 384, resize
 
 def run_net(inputs, model_path, backend=cv.dnn.DNN_BACKEND_OPENCV, target=cv.dnn.DNN_TARGET_CPU):
     """
-    Forword propagation for a batch of images.
+    Forward propagation for a batch of images.
     :param inputs: input batch of images
     :param model_path: path to ReID model
     :param backend: name of computation backend
