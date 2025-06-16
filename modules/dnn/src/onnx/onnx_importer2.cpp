@@ -7,7 +7,7 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
-
+#include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
@@ -25,7 +25,6 @@
 #include <limits>
 #include <set>
 #include <string>
-#include <filesystem>  // C++17
 
 #if defined _MSC_VER && _MSC_VER < 1910/*MSVS 2017*/
 #pragma warning(push)
@@ -307,7 +306,8 @@ Net ONNXImporter2::parseFile(const char *onnxFilename_)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
-    onnxBasePath = std::filesystem::path(onnxFilename_).parent_path().string();
+
+    onnxBasePath = utils::fs::getParent(onnxFilename_);
 
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFilename);
 

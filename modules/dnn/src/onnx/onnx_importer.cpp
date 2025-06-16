@@ -10,6 +10,7 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
@@ -52,6 +53,8 @@ namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
+
+using namespace cv;
 
 #ifdef HAVE_PROTOBUF
 class ONNXLayerHandler;
@@ -288,7 +291,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
     {
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX model: %s", onnxFile));
     }
-    onnxBasePath = std::filesystem::path(onnxFile).parent_path().string();
+    onnxBasePath = utils::fs::getParent(onnxFile);
     populateNet();
 }
 
