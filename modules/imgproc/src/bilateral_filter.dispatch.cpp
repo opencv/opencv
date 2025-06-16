@@ -194,17 +194,20 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
                        8., 9., 10., 11., 12., 13., 14., 15.};
 
     // initialize color-related bilateral filter coefficients
+    i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     int nlanes = VTraits<v_float32>::vlanes();
     v_float32 v_gauss_color_coeff = vx_setall_f32(gauss_color_coeff);
     v_float32 v_i = vx_load(counter);
     v_float32 v_inc = vx_setall_f32(float(nlanes));
 
-    for( i = 0; i < (256*cn) - nlanes; i += nlanes )
+    for( ; i < (256*cn) - nlanes; i += nlanes )
     {
         v_float32 v_color_weight = v_mul(v_mul(v_i,v_i), v_gauss_color_coeff);
         v_store(color_weight + i, v_exp(v_color_weight));
         v_i = v_add(v_i, v_inc);
     }
+#endif
     for(; i < 256*cn; i++ )
     {
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);

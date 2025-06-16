@@ -74,6 +74,7 @@ public:
     {
     }
 
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     static void inline expand(const v_uint8& v_input, v_uint32& v_out0, v_uint32& v_out1, v_uint32& v_out2, v_uint32& v_out3)
     {
         v_uint16 d0, d1;
@@ -125,6 +126,7 @@ public:
         v_wsum3 = v_add(v_wsum3, w3);
         v_sum3 = v_muladd(v_cvt_f32(v_reinterpret_as_s32(val3)), w3, v_sum3);
     }
+#endif
 
     virtual void operator() (const Range& range) const CV_OVERRIDE
     {
@@ -132,10 +134,11 @@ public:
 
         int i, j, cn = dest->channels(), k;
         Size size = dest->size();
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         int nlanes = VTraits<v_float32>::vlanes();
         int nlanes_2 = 2*nlanes;
         int nlanes_4 = 4*nlanes;
-
+#endif
         for( i = range.start; i < range.end; i++ )
         {
             const uchar* sptr = temp->ptr(i+radius) + radius*cn;
@@ -158,7 +161,7 @@ public:
                     v_float32 v_sum2 = vx_setzero_f32();
                     v_float32 v_sum3 = vx_setzero_f32();
                     v_uint8 v_sptr8 = vx_load(sptr_j);
-                    
+
                     k=0;
                     if(maxk==5)
                     {
@@ -268,7 +271,7 @@ public:
                                           v_wsum0, v_sum0, v_wsum1, v_sum1, v_wsum2, v_sum2, v_wsum3, v_sum3);
                         computeBilateral( v_val_u8_line3_4, v_abs_diff_line3_4, kweight, color_weight,
                                           v_wsum0, v_sum0, v_wsum1, v_sum1, v_wsum2, v_sum2, v_wsum3, v_sum3);
-                        
+
                         k = maxk;
                     }
 
@@ -336,10 +339,10 @@ public:
             else
             {
                 CV_Assert( cn == 3 );
-                int n_8_lanes = VTraits<v_uint8>::vlanes();
                 j = 0;
                 const uchar* sptr_j = sptr;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
+                int n_8_lanes = VTraits<v_uint8>::vlanes();
                 for (; j <= size.width - n_8_lanes; j += n_8_lanes, sptr_j += 3*n_8_lanes, dptr += 3*n_8_lanes)
                 {
                     const uchar* rsptr = sptr_j;
