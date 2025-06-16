@@ -146,7 +146,7 @@ public:
 
             if( cn == 1 )
             {
-                k = 0;j=0;
+                k = 0; j=0;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 for ( ;j <= size.width - nlanes_4; j += nlanes_4)
@@ -442,23 +442,23 @@ public:
                 for(; j < size.width; j++, sptr_j += 3)
                 {
                     const uchar* rsptr = sptr_j;
-                    float wsum_j = 0.f;
-                    float sum_b_j = 0.f, sum_g_j = 0.f, sum_r_j = 0.f;
+                    float wsum = 0.f;
+                    float sum_b = 0.f, sum_g = 0.f, sum_r = 0.f;
                     for(k=0; k < maxk; k++)
                     {
                         const uchar* ksptr = sptr_j + space_ofs[k];
 
                         int b = ksptr[0], g = ksptr[1], r = ksptr[2];
                         float w = space_weight[k]*color_weight[std::abs(b - rsptr[0]) + std::abs(g - rsptr[1]) + std::abs(r - rsptr[2])];
-                        wsum_j += w;
-                        sum_b_j += b*w; sum_g_j += g*w; sum_r_j += r*w;
+                        wsum += w;
+                        sum_b += b*w; sum_g += g*w; sum_r += r*w;
                     }
 
-                    CV_DbgAssert(fabs(wsum_j) > 0);
-                    wsum_j = 1.f/wsum_j;
-                    *(dptr++) = (uchar)cvRound(sum_b_j*wsum_j);
-                    *(dptr++) = (uchar)cvRound(sum_g_j*wsum_j);
-                    *(dptr++) = (uchar)cvRound(sum_r_j*wsum_j);
+                    CV_DbgAssert(fabs(wsum) > 0);
+                    wsum = 1.f/wsum;
+                    *(dptr++) = (uchar)cvRound(sum_b*wsum);
+                    *(dptr++) = (uchar)cvRound(sum_g*wsum);
+                    *(dptr++) = (uchar)cvRound(sum_r*wsum);
                 }
             }
         }
@@ -630,38 +630,12 @@ public:
                     v_store(dptr, v_div(v_add(v_sum0, v_and(rval0, rval0_not_nan)), v_add(v_wsum0, v_and(v_one, rval0_not_nan))));
                     v_store(dptr + nlanes, v_div(v_add(v_sum1, v_and(rval1, rval1_not_nan)), v_add(v_wsum1, v_and(v_one, rval1_not_nan))));
                 }
-
-                for (; j <= size.width - nlanes; j += nlanes, sptr_j += nlanes, dptr += nlanes)
-                {
-                    v_float32 v_wsum0 = vx_setzero_f32();
-                    v_float32 v_sum0 = vx_setzero_f32();
-                    v_float32 rval0 = vx_load(sptr_j);
-                    v_float32 rval0_not_nan = v_not_nan(rval0);
-                    k = 0;
-                    for (; k < maxk; k++)
-                    {
-                        v_float32 kweight = vx_setall_f32(space_weight[k]);
-                        const float* ksptr = sptr_j + space_ofs[k];
-
-                        v_float32 val0 = vx_load(ksptr);
-                        v_float32 knan0 = v_not_nan(val0);
-                        v_float32 alpha0 = v_and(v_and(v_mul(v_absdiff(val0, rval0), sindex), rval0_not_nan), knan0);
-                        v_int32 idx0 = v_trunc(alpha0);
-                        alpha0 = v_sub(alpha0, v_cvt_f32(idx0));
-                        v_float32 w0 = v_and(v_mul(kweight, v_muladd(v_lut(this->expLUT + 1, idx0), alpha0, v_mul(v_lut(this->expLUT, idx0), v_sub(v_one, alpha0)))), knan0);
-                        v_wsum0 = v_add(v_wsum0, w0);
-                        v_sum0 = v_muladd(v_and(val0, knan0), w0, v_sum0);
-
-                    }
-                    v_store(dptr, v_div(v_add(v_sum0, v_and(rval0, rval0_not_nan)), v_add(v_wsum0, v_and(v_one, rval0_not_nan))));
-                }
 #endif
-
                 for (; j < size.width; j++, sptr_j++, dptr++)
                 {
                     float rval = *sptr_j;
-                    float wsum_j = 0.f;
-                    float sum_j = 0.f;
+                    float wsum = 0.f;
+                    float sum = 0.f;
                     for (k = 0; k < maxk; k++)
                     {
                         const float* ksptr = sptr_j + space_ofs[k];
@@ -672,12 +646,12 @@ public:
                         if (!cvIsNaN(val))
                         {
                             float w = space_weight[k] * (cvIsNaN(rval) ? 1.f : (expLUT[idx] + alpha * (expLUT[idx + 1] - expLUT[idx])));
-                            wsum_j += w;
-                            sum_j += val * w;
+                            wsum += w;
+                            sum += val * w;
                         }
                     }
-                    CV_DbgAssert(fabs(wsum_j) >= 0);
-                    *dptr = cvIsNaN(rval) ? sum_j / wsum_j : (sum_j + rval) / (wsum_j + 1.f);
+                    CV_DbgAssert(fabs(wsum) >= 0);
+                    *dptr = cvIsNaN(rval) ? sum / wsum : (sum + rval) / (wsum + 1.f);
                 }
             }
             else
@@ -727,7 +701,7 @@ public:
                 for (; j < size.width; j++, sptr_j += 3)
                 {
                     const float* rsptr = sptr_j;
-                    float wsum_j = 0.f, sum_b_j = 0.f, sum_g_j = 0.f, sum_r_j = 0.f;
+                    float wsum = 0.f, sum_b = 0.f, sum_g = 0.f, sum_r = 0.f;
                     for (k = 0; k < maxk; k++)
                     {
                         const float* ksptr = sptr_j + space_ofs[k];
@@ -741,30 +715,30 @@ public:
                         if (!v_NAN)
                         {
                             float w = space_weight[k] * (r_NAN ? 1.f : (expLUT[idx] + alpha * (expLUT[idx + 1] - expLUT[idx])));
-                            wsum_j += w;
-                            sum_b_j += b * w;
-                            sum_g_j += g * w;
-                            sum_r_j += r * w;
+                            wsum += w;
+                            sum_b += b * w;
+                            sum_g += g * w;
+                            sum_r += r * w;
                         }
                     }
 
-                    CV_DbgAssert(fabs(wsum_j) >= 0);
+                    CV_DbgAssert(fabs(wsum) >= 0);
                     float b = *(sptr_j);
                     float g = *(sptr_j+1);
                     float r = *(sptr_j+2);
                     if (cvIsNaN(b) || cvIsNaN(g) || cvIsNaN(r))
                     {
-                        wsum_j = 1.f / wsum_j;
-                        *(dptr++) = sum_b_j * wsum_j;
-                        *(dptr++) = sum_g_j * wsum_j;
-                        *(dptr++) = sum_r_j * wsum_j;
+                        wsum = 1.f / wsum;
+                        *(dptr++) = sum_b * wsum;
+                        *(dptr++) = sum_g * wsum;
+                        *(dptr++) = sum_r * wsum;
                     }
                     else
                     {
-                        wsum_j = 1.f / (wsum_j + 1.f);
-                        *(dptr++) = (sum_b_j + b) * wsum_j;
-                        *(dptr++) = (sum_g_j + g) * wsum_j;
-                        *(dptr++) = (sum_r_j + r) * wsum_j;
+                        wsum = 1.f / (wsum + 1.f);
+                        *(dptr++) = (sum_b + b) * wsum;
+                        *(dptr++) = (sum_g + g) * wsum;
+                        *(dptr++) = (sum_r + r) * wsum;
                     }
                 }
             }
