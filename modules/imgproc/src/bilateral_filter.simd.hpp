@@ -521,11 +521,11 @@ public:
             if( cn == 1 )
             {
                 j = 0;
+                const float* sptr_j = sptr;
 #if (CV_SIMD || CV_SIMD_SCALABLE)
                 v_float32 v_one = vx_setall_f32(1.f);
                 v_float32 sindex = vx_setall_f32(scale_index);
 
-                const float* sptr_j = sptr + j;
                 for(; j <= size.width - nlanes_4; j += nlanes_4, sptr_j += nlanes_4, dptr += nlanes_4)
                 {
                     v_float32 v_wsum0 = vx_setzero_f32();
