@@ -163,6 +163,7 @@ std::string getEncoderConfiguration(VideoAccelerationType va_type, AVDictionary 
     case VIDEO_ACCELERATION_D3D11: return "";
     case VIDEO_ACCELERATION_VAAPI: return "vaapi.iHD";
     case VIDEO_ACCELERATION_MFX: return "qsv.iHD";
+    case VIDEO_ACCELERATION_DRM: return "";
     // Raspberry Pi 5 has no encoders, so we don't support it
     }
     return "unknown";
