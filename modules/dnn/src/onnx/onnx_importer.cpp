@@ -29,6 +29,7 @@
 #include <limits>
 #include <algorithm>
 
+
 #if defined _MSC_VER && _MSC_VER < 1910/*MSVS 2017*/
 #pragma warning(push)
 #pragma warning(disable: 4503)  // decorated name length exceeded, name was truncated
@@ -232,6 +233,8 @@ private:
         return param;
     }
     std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
+    std::string onnxBasePath;
+
 };
 
 
@@ -285,7 +288,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
     {
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX model: %s", onnxFile));
     }
-
+    onnxBasePath = std::filesystem::path(onnxFile).parent_path().string();
     populateNet();
 }
 
@@ -418,7 +421,7 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
     {
         const opencv_onnx::TensorProto& tensor_proto = graph_proto.initializer(i);
         dumpTensorProto(i, tensor_proto, "initializer");
-        Mat mat = getMatFromTensor(tensor_proto);
+        Mat mat = getMatFromTensor(tensor_proto, true, onnxBasePath);
         releaseONNXTensor(const_cast<opencv_onnx::TensorProto&>(tensor_proto));  // drop already loaded data
 
         if (DNN_DIAGNOSTICS_RUN && mat.empty())
