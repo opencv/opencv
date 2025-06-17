@@ -665,6 +665,22 @@ TEST(Imgcodecs_APNG, animation_has_hidden_frame)
     EXPECT_EQ((size_t)1, animation3.frames.size());
 }
 
+TEST(Imgcodecs_APNG, animation_imread_preview)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/033.png";
+    cv::Mat imread_result;
+    cv::imread(filename, imread_result, cv::IMREAD_UNCHANGED);
+    EXPECT_FALSE(imread_result.empty());
+
+    Animation animation;
+    imreadanimation(filename, animation);
+    EXPECT_FALSE(animation.still_image.empty());
+
+    EXPECT_EQ(0, cv::norm(animation.still_image, imread_result, cv::NORM_INF));
+}
+
 #endif // HAVE_PNG
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)

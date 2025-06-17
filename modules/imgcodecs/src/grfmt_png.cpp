@@ -452,6 +452,7 @@ bool  PngDecoder::readData( Mat& img )
                     m_mat_raw.copyTo(m_animation.still_image);
                 }
                 else
+                {
                     if (processing_finish())
                     {
                         if (dop == 2)
@@ -495,6 +496,7 @@ bool  PngDecoder::readData( Mat& img )
                     {
                         return false;
                     }
+                }
 
                 w0 = png_get_uint_32(&chunk.p[12]);
                 h0 = png_get_uint_32(&chunk.p[16]);
