@@ -718,6 +718,7 @@ namespace cv
                             else if (border_type == BORDER_CONSTANT)
                             {
                                 uint8_t *zero_row = (uint8_t *)malloc(width * sizeof(uint8_t));
+                                memset(zero_row, 0, width * sizeof(uint8_t));
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : zero_row;
                                 srowm1 = y > 1 ? (src_data + (y - 1) * src_step) : zero_row;
                                 srow0 = src_data + y * src_step;
@@ -1555,6 +1556,7 @@ namespace cv
                             else if (border_type == BORDER_CONSTANT)
                             {
                                 uint8_t *zero_row = (uint8_t *)malloc(width * sizeof(uint8_t));
+                                memset(zero_row, 0, width * sizeof(uint8_t));
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : zero_row;
                                 srowm1 = y > 1 ? (src_data + (y - 1) * src_step) : zero_row;
                                 srow0 = src_data + y * src_step;
@@ -2363,6 +2365,7 @@ namespace cv
                             else if (border_type == BORDER_CONSTANT)
                             {
                                 uint8_t *zero_row = (uint8_t *)malloc(width * sizeof(uint8_t));
+                                memset(zero_row, 0, width * sizeof(uint8_t));
                                 srowm2 = y > 2 ? (src_data + (y - 2) * src_step) : zero_row;
                                 srowm1 = y > 1 ? (src_data + (y - 1) * src_step) : zero_row;
                                 srow0 = src_data + y * src_step;
