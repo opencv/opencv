@@ -1,4 +1,5 @@
 #include "encoding.hpp"
+#include "encoding_registry.hpp"
 
 #include <mutex>
 #include <stdexcept>
@@ -9,13 +10,6 @@
 
 namespace cv {namespace dnn { namespace tokenizer {
 
-using EncodingCtor = std::function<Encoding()>;
-
-namespace {
-    static std::mutex mtx;
-    static std::unordered_map<std::string, EncodingCtor> ctors;
-    static std::unordered_map<std::string, Encoding> instances;
-}
 
 CV_EXPORTS void registerEncoding(const std::string &name, EncodingCtor ctor) {
     std::lock_guard<std::mutex> lock(mtx);
