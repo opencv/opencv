@@ -216,7 +216,8 @@ bool WebPDecoder::readData(Mat &img)
         uint8_t* buf;
         int timestamp;
 
-        WebPAnimDecoderGetNext(anim_decoder.get(), &buf, &timestamp);
+        if (!WebPAnimDecoderGetNext(anim_decoder.get(), &buf, &timestamp))
+            CV_Error(Error::StsInternal, "Failed to decode animated WebP frame");
         Mat tmp(Size(m_width, m_height), CV_8UC4, buf);
 
         if (img.type() == CV_8UC1)
