@@ -156,7 +156,7 @@ bool WebPDecoder::readHeader()
 
         WebPAnimDecoderOptions dec_options;
         if (!WebPAnimDecoderOptionsInit(&dec_options))
-            CV_Error(Error::StsInternal, "Failed to initialize decoding options.");
+            CV_Error(Error::StsInternal, "Failed to initialize animated WebP decoding options");
 
         dec_options.color_mode = m_use_rgb ? MODE_RGBA : MODE_BGRA;
         anim_decoder.reset(WebPAnimDecoderNew(&webp_data, &dec_options));
@@ -164,7 +164,7 @@ bool WebPDecoder::readHeader()
 
         WebPAnimInfo anim_info;
         if (!WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info))
-            CV_Error(Error::StsInternal, "Failed to get animated WebP information.");        
+            CV_Error(Error::StsInternal, "Failed to get animated WebP information");
         m_animation.loop_count = anim_info.loop_count;
 
         m_animation.bgcolor[0] = (anim_info.bgcolor >> 24) & 0xFF;
