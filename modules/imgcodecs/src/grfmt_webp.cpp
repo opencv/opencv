@@ -449,8 +449,6 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     pic.height = height;
     pic.use_argb = 1;
     pic.argb_stride = width;
-    if (!WebPEncode(&config, &pic))
-        CV_Error(Error::StsInternal, "Failed to encode animated WebP frame");
 
     bool is_input_rgba = animation.frames[0].channels() == 4;
     Size canvas_size = Size(animation.frames[0].cols,animation.frames[0].rows);
