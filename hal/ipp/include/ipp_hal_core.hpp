@@ -27,6 +27,12 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 # define IPP_DISABLE_NORM_8U             0
 #endif
 
+#if (IPP_VERSION_X100 >= 202200 && IPP_VERSION_X100 < 202220)
+# define IPP_DISABLE_NORM_INF_16U_C1MR   1 // segmentation fault in accuracy test
+# else
+# define IPP_DISABLE_NORM_INF_16U_C1MR   0
+#endif
+
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result);
 
