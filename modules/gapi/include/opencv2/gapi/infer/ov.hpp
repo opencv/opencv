@@ -691,6 +691,29 @@ namespace wip { namespace ov {
  */
 struct benchmark_mode { };
 
+struct workload_type {
+    using callback = std::function<void(const unsigned int)>;
+
+    std::shared_ptr<void> addListener(callback cb){
+        int id = nextId++;
+        listeners.emplace_back(id, std::move(cb));
+
+        auto remover = [this, id](void*){ removeListener(id);};
+
+        return std::shared_ptr<void>(nullptr, remover);
+    }
+    void setWorkloadType(const unsigned int type) {
+        for(const auto& [id, cb] : listeners) {
+            cb(type);
+        }
+    }
+ private:
+    std::vector<std::pair<int, callback>> listeners;
+    int nextId = 0;
+    void removeListener(int id) {
+        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](auto& pair){return pair.first == id;}), listeners.end());
+    }
+};
 } // namespace ov
 } // namespace wip
 
@@ -701,6 +724,14 @@ namespace detail
     template<> struct CompileArgTag<cv::gapi::wip::ov::benchmark_mode>
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
+    };
+    template<> struct CompileArgTag<cv::gapi::wip::ov::workload_type>
+    {
+        static const char* tag() { return "gapi.wip.ov.workload_type"; }
+    };
+    template<> struct CompileArgTag<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>
+    {
+        static const char* tag() { return "gapi.wip.ov.workload_type_ref"; }
     };
 }
 
