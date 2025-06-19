@@ -693,7 +693,7 @@ struct benchmark_mode { };
 
 struct workload_type {
     using callback = std::function<void(const unsigned int)>;
-
+    using listener = std::pair<int, callback>;
     std::shared_ptr<void> addListener(callback cb){
         int id = nextId++;
         listeners.emplace_back(id, std::move(cb));
@@ -703,15 +703,15 @@ struct workload_type {
         return std::shared_ptr<void>(nullptr, remover);
     }
     void setWorkloadType(const unsigned int type) {
-        for(const auto& [id, cb] : listeners) {
-            cb(type);
+        for(const listener& l : listeners) {
+            l.second(type);
         }
     }
  private:
-    std::vector<std::pair<int, callback>> listeners;
+    std::vector<listener> listeners;
     int nextId = 0;
     void removeListener(int id) {
-        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](auto& pair){return pair.first == id;}), listeners.end());
+        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
     }
 };
 } // namespace ov
