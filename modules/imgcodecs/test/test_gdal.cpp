@@ -15,7 +15,7 @@ static void test_gdal_read(const string filename) {
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(3, img.cols);
     EXPECT_EQ(5, img.rows);
-    EXPECT_EQ(7, img.channels());
+    EXPECT_EQ(CV_MAKETYPE(CV_32F, 7), img.type());
     EXPECT_EQ(101.125, (img.at<Vec<float, 7>>(0, 0)[0]));
     EXPECT_EQ(203.500, (img.at<Vec<float, 7>>(2, 1)[3]));
     EXPECT_EQ(305.875, (img.at<Vec<float, 7>>(4, 2)[6]));
