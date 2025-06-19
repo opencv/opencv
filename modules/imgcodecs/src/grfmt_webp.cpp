@@ -155,14 +155,16 @@ bool WebPDecoder::readHeader()
         webp_data.size = data.total();
 
         WebPAnimDecoderOptions dec_options;
-        WebPAnimDecoderOptionsInit(&dec_options);
+        if (!WebPAnimDecoderOptionsInit(&dec_options))
+            CV_Error(Error::StsInternal, "Failed to initialize decoding options.");
 
         dec_options.color_mode = m_use_rgb ? MODE_RGBA : MODE_BGRA;
         anim_decoder.reset(WebPAnimDecoderNew(&webp_data, &dec_options));
         CV_Assert(anim_decoder.get() && "Error parsing image");
 
         WebPAnimInfo anim_info;
-        WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info);
+        if (!WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info))
+            CV_Error(Error::StsInternal, "Failed to get animated WebP information.");        
         m_animation.loop_count = anim_info.loop_count;
 
         m_animation.bgcolor[0] = (anim_info.bgcolor >> 24) & 0xFF;
@@ -447,7 +449,8 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     pic.height = height;
     pic.use_argb = 1;
     pic.argb_stride = width;
-    WebPEncode(&config, &pic);
+    if (!WebPEncode(&config, &pic))
+        CV_Error(Error::StsInternal, "Failed to encode animated WebP frame");
 
     bool is_input_rgba = animation.frames[0].channels() == 4;
     Size canvas_size = Size(animation.frames[0].cols,animation.frames[0].rows);
