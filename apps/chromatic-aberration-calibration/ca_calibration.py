@@ -44,12 +44,8 @@ except ModuleNotFoundError:
 
 __all__ = [
     "CalibrationResult",
-    "_detect_disk_centres",
     "detect_circles",
-    "_pair_keypoints",
     "fit_polynomials",
-    "_calibrate_from_image",
-    "_correct_image",
 ]
 
 @dataclass
@@ -57,11 +53,14 @@ class Polynomial2D:
     coeffs_x: np.ndarray
     coeffs_y: np.ndarray
     degree: int
-    means: List
+    mean_x: float
+    mean_y: float
+    std_x: float
+    std_y: float
 
     def delta(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        x_n = (x - self.means[0]) / self.means[1]
-        y_n = (y - self.means[2]) / self.means[3]
+        x_n = (x - self.mean_x) / self.std_x
+        y_n = (y - self.mean_y) / self.std_y
         terms = _monomial_terms(x_n, y_n, self.degree)
         dx = terms @ self.coeffs_x
         dy = terms @ self.coeffs_y
@@ -72,28 +71,46 @@ class CalibrationResult:
     degree: int
     poly_red: Polynomial2D
     poly_blue: Polynomial2D
-    means_red: List[float]
-    means_blue: List[float]
+    mean_x_red: float
+    std_x_red: float  
+    mean_y_red: float
+    std_y_red: float
+    mean_x_blue: float
+    std_x_blue: float
+    mean_y_blue: float
+    std_y_blue: float
+    image_width: int
+    image_height: int
     rms_red: Optional[float] = None
     rms_blue: Optional[float] = None
 
     def to_dict(self) -> Dict:
         d = {
             "degree": self.degree,
-            "poly_red": {
+            "image_resolution": {
+                "width": int(self.image_width),
+                "height": int(self.image_height)
+            },
+            "red_channel": {
                 "coeffs_x": self.poly_red.coeffs_x.tolist(),
                 "coeffs_y": self.poly_red.coeffs_y.tolist(),
+                "mean_x": float(self.mean_x_red),
+                "std_x": float(self.std_x_red),
+                "mean_y": float(self.mean_y_red),
+                "std_y": float(self.std_y_red)
             },
-            "means_red": [float(x) for x in self.means_red],
-            "poly_blue": {
+            "blue_channel": {
                 "coeffs_x": self.poly_blue.coeffs_x.tolist(),
                 "coeffs_y": self.poly_blue.coeffs_y.tolist(),
-            },
-            "means_blue": [float(x) for x in self.means_blue]
+                "mean_x": float(self.mean_x_blue),
+                "std_x": float(self.std_x_blue),
+                "mean_y": float(self.mean_y_blue),
+                "std_y": float(self.std_y_blue)
+            }
         }
         if self.rms_red is not None:
-            d["rms_red"] = self.rms_red
-            d["rms_blue"] = self.rms_blue
+            d["red_channel"]["rms"] = float(self.rms_red)
+            d["blue_channel"]["rms"] = float(self.rms_blue)
         return d
 
     @classmethod
@@ -104,29 +121,41 @@ class CalibrationResult:
                 data = yaml.safe_load(fh)
             else:
                 raise ValueError("YAML file expected as input for CalibrationResult")
+        
         deg = data["degree"]
+        red_data = data["red_channel"]
+        blue_data = data["blue_channel"]
+        resolution = data["image_resolution"]
+        
         poly_r = Polynomial2D(
-            np.asarray(data["poly_red"]["coeffs_x"]),
-            np.asarray(data["poly_red"]["coeffs_y"]),
+            np.asarray(red_data["coeffs_x"]),
+            np.asarray(red_data["coeffs_y"]),
             deg,
-            data["means_red"]
+            red_data["mean_x"], red_data["std_x"], red_data["mean_y"], red_data["std_y"]
         )
         poly_b = Polynomial2D(
-            np.asarray(data["poly_blue"]["coeffs_x"]),
-            np.asarray(data["poly_blue"]["coeffs_y"]),
+            np.asarray(blue_data["coeffs_x"]),
+            np.asarray(blue_data["coeffs_y"]),
             deg,
-            data["means_blue"]
+            blue_data["mean_x"], blue_data["std_x"], blue_data["mean_y"], blue_data["std_y"]
         )
-        means_r = data["means_red"]
-        means_b = data["means_blue"]
+        
         return cls(
             degree=deg,
             poly_red=poly_r,
             poly_blue=poly_b,
-            means_red=means_r,
-            means_blue=means_b,
-            rms_red=data.get("rms_red"),
-            rms_blue=data.get("rms_blue"),
+            mean_x_red=red_data["mean_x"],
+            std_x_red=red_data["std_x"],
+            mean_y_red=red_data["mean_y"],
+            std_y_red=red_data["std_y"],
+            mean_x_blue=blue_data["mean_x"],
+            std_x_blue=blue_data["std_x"],
+            mean_y_blue=blue_data["mean_y"],
+            std_y_blue=blue_data["std_y"],
+            image_width=resolution["width"],
+            image_height=resolution["height"],
+            rms_red=red_data.get("rms"),
+            rms_blue=blue_data.get("rms"),
         )
 
     def save(self, path: str | None = None):
@@ -232,7 +261,7 @@ def _fit_channel(
     degree: int,
     method: str = "L-BFGS-B",
 ) -> Tuple[np.ndarray, np.ndarray, float]:
-    x_mean, x_std, y_mean, y_std = x.mean(), x.std(), y.mean(), y.std()
+    mean_x, std_x, mean_y, std_y = x.mean(), x.std(), y.mean(), y.std()
     x = (x - x.mean()) / x.std()
     y = (y - y.mean()) / y.std()
     terms = _monomial_terms(x, y, degree)
@@ -256,7 +285,7 @@ def _fit_channel(
     coeffs_x = res.x[:m]
     coeffs_y = res.x[m:]
     rms = math.sqrt(res.fun / disp.size)
-    return coeffs_x, coeffs_y, rms, [x_mean, x_std, y_mean, y_std]
+    return coeffs_x, coeffs_y, rms, mean_x, mean_y, std_x, std_y
 
 
 def fit_polynomials(
@@ -268,17 +297,18 @@ def fit_polynomials(
     disp_b: np.ndarray,
     degree: int,
 ) -> Tuple[Polynomial2D, Polynomial2D, float, float]:
-    crx, cry, rms_r, means1= _fit_channel(x_r, y_r, disp_r, degree)
-    cbx, cby, rms_b, means2 = _fit_channel(x_b, y_b, disp_b, degree)
-    poly_r = Polynomial2D(crx, cry, 11, means1)
-    poly_b = Polynomial2D(cbx, cby, 11, means2)
-    return poly_r, poly_b, rms_r, rms_b, means1, means2
+    crx, cry, rms_r, mean_x_red, mean_y_red, std_x_red, std_y_red = _fit_channel(x_r, y_r, disp_r, degree)
+    cbx, cby, rms_b, mean_x_blue, mean_y_blue, std_x_blue, std_y_blue = _fit_channel(x_b, y_b, disp_b, degree)
+    poly_r = Polynomial2D(crx, cry, 11, mean_x_red, mean_y_red, std_x_red, std_y_red)
+    poly_b = Polynomial2D(cbx, cby, 11, mean_x_blue, mean_y_blue, std_x_blue, std_y_blue)
+    return poly_r, poly_b, rms_r, rms_b, (mean_x_red, mean_y_red, std_x_red, std_y_red), (mean_x_blue, mean_y_blue, std_x_blue, std_y_blue)
 
 
 def _calibrate_from_image(
     img: np.ndarray,
     degree: int = 11,
 ) -> CalibrationResult:
+    h, w = img.shape[:2]
     b, g, r = cv2.split(img)
 
     pts_g = _detect_disk_centres(g)
@@ -288,7 +318,7 @@ def _calibrate_from_image(
     xr, yr, disp_r = _pair_keypoints(pts_g, pts_r)
     xb, yb, disp_b = _pair_keypoints(pts_g, pts_b)
 
-    poly_r, poly_b, rms_r, rms_b, means_r, means_b = fit_polynomials(
+    poly_r, poly_b, rms_r, rms_b, stats_r, stats_b = fit_polynomials(
         xr,
         yr,
         disp_r,
@@ -302,8 +332,16 @@ def _calibrate_from_image(
         degree=degree,
         poly_red=poly_r,
         poly_blue=poly_b,
-        means_red=means_r,
-        means_blue=means_b,
+        mean_x_red=stats_r[0],
+        std_x_red=stats_r[1],
+        mean_y_red=stats_r[2],
+        std_y_red=stats_r[3],
+        mean_x_blue=stats_b[0],
+        std_x_blue=stats_b[1],
+        mean_y_blue=stats_b[2],
+        std_y_blue=stats_b[3],
+        image_width=w,
+        image_height=h,
         rms_red=rms_r,
         rms_blue=rms_b,
     )
@@ -359,17 +397,17 @@ def _parse_args() -> argparse.Namespace:
     sc = sub.add_parser("calibrate", help="Calibrate from calibration target image")
     sc.add_argument("image", help="Image of black‑disk calibration target")
     sc.add_argument("--degree", type=int, default=11, help="Polynomial degree")
-    sc.add_argument("--yaml", required=True, help="Save coefficients to YAML file")
+    sc.add_argument("--coeffs", required=True, help="Save coefficients to YAML file")
 
     sr = sub.add_parser("correct", help="Correct a photograph using saved coefficients")
     sr.add_argument("image", help="Input image to be corrected")
-    sr.add_argument("--coeff", required=True, help="Calibration coefficient file (.json/.yaml)")
+    sr.add_argument("--coeffs", required=True, help="Calibration coefficient file (.json/.yaml)")
     sr.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
     sf = sub.add_parser("full", help="Calibrate from calibration target image and correct the calibration target")
     sf.add_argument("image", help="Image of black‑disk calibration target")
     sf.add_argument("--degree", type=int, default=11, help="Polynomial degree")
-    sf.add_argument("--yaml", required=True, help="Save coefficients to YAML file")
+    sf.add_argument("--coeffs", required=True, help="Save coefficients to YAML file")
     sf.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
     return p.parse_args()
@@ -381,15 +419,15 @@ def _cmd_calibrate(args: argparse.Namespace) -> None:
         f"Calibrated polynomial degree {calib.degree}: RMS red={calib.rms_red:.3f} px, "
         f"blue={calib.rms_blue:.3f} px"
     )
-    calib.save(path=args.yaml)
-    print("Saved coefficients to", args.yaml)
+    calib.save(path=args.coeffs)
+    print("Saved coefficients to", args.coeffs)
 
 
 def _cmd_correct(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
     if img is None:
         raise FileNotFoundError(args.image)
-    calib = CalibrationResult.from_file(args.coeff)
+    calib = CalibrationResult.from_file(args.coeffs)
     fixed = _correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
@@ -403,8 +441,8 @@ def _cmd_full(args: argparse.Namespace) -> None:
         f"Calibrated polynomial degree {calib.degree}: RMS red={calib.rms_red:.3f} px, "
         f"blue={calib.rms_blue:.3f} px"
     )
-    calib.save(path=args.yaml)
-    print("Saved coefficients to", args.yaml)
+    calib.save(path=args.coeffs)
+    print("Saved coefficients to", args.coeffs)
     fixed = _correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
