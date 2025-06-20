@@ -895,6 +895,19 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 
 //! @} photo_render
 
+//! @addtogroup photo_ca_correction Chromatic Aberration Correction
+//! @{
+
+/** @brief Corrects chromatic aberration in an image using polynomial distortion model.
+
+@param image Input BGR image to correct
+@param calibration_file Path to calibration file containing polynomial coefficients
+@return Corrected BGR image
+*/
+CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
+
+//! @} photo_ca_correction
+
 //! @} photo
 
 } // cv
