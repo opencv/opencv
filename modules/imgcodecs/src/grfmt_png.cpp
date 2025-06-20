@@ -436,9 +436,6 @@ bool  PngDecoder::readData( Mat& img )
         if (!processing_start((void*)&frameRaw, mat_cur))
             return false;
 
-        if(setjmp(png_jmpbuf(m_png_ptr)))
-            return false;
-
         while (true)
         {
             id = read_chunk(chunk);
