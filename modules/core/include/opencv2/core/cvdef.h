@@ -697,7 +697,7 @@ __CV_ENUM_FLAGS_BITWISE_XOR_EQ   (EnumType, EnumType)                           
 #ifdef CV_XADD
   // allow to use user-defined macro
 #elif defined __GNUC__ || defined __clang__
-#  if defined __clang__ && __clang_major__ >= 3 && !defined __ANDROID__ && !defined __EMSCRIPTEN__ && !defined(__CUDACC__)  && !defined __INTEL_COMPILER
+#  if defined __clang__ && __clang_major__ >= 3 && !defined __EMSCRIPTEN__ && !defined __INTEL_COMPILER
 #    ifdef __ATOMIC_ACQ_REL
 #      define CV_XADD(addr, delta) __c11_atomic_fetch_add((_Atomic(int)*)(addr), delta, __ATOMIC_ACQ_REL)
 #    else
