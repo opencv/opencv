@@ -524,7 +524,9 @@ bool  PngDecoder::readData( Mat& img )
                 else
                 {
                     m_is_fcTL_loaded = true;
-                    return readData(img);
+                    ClearPngPtr();
+                    if (!processing_start((void*)&frameRaw, mat_cur))
+                        return false;
                 }
             }
             else if (id == id_IDAT)
