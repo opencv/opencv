@@ -646,15 +646,8 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
             int j = 0;
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
             v_float64 vwr = vx_setall_f64(wr);
-            for (; j < cols; j += nlanes32)
+            for (; j <= cols - nlanes32; j += nlanes32)
             {
-                if (j > cols - nlanes32)
-                {
-                    if (j == 0)
-                        break;
-                    j = cols - nlanes32;
-                }
-
                 v_float64 v0 = v_mul(vwr, vx_load(wc + j));
                 v_float64 v1 = v_mul(vwr, vx_load(wc + j + nlanes64));
                 vx_store(dstData + j, v_cvt_f32(v0, v1));
@@ -673,15 +666,8 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
             int j = 0;
 #if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
             v_float64 vwr = vx_setall_f64(wr);
-            for (; j < cols; j += nlanes64)
+            for (; j <= cols - nlanes64; j += nlanes64)
             {
-                if (j > cols - nlanes64)
-                {
-                    if (j == 0)
-                        break;
-                    j = cols - nlanes64;
-                }
-
                 v_float64 v = v_mul(vwr, vx_load(wc + j));
                 vx_store(dstData + j, v);
             }
