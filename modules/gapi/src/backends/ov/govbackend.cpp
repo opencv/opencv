@@ -1542,6 +1542,10 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
 
+    if(cv::gapi::getCompileArg<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>(compileArgs).has_value()) {
+        auto workload_type = cv::gapi::getCompileArg<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>(compileArgs).value();
+        listenerRemover = workload_type.get().addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
+    }
     m_options.inference_only =
         cv::gapi::getCompileArg<cv::gapi::wip::ov::benchmark_mode>(compileArgs).has_value();
     // FIXME: Currently this backend is capable to run a single inference node only.
@@ -1578,6 +1582,10 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
     }
 }
 
+void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const unsigned int type)
+{
+    compiled.compiled_model.set_property({{"WorkLoadType", type}});
+}
 void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
     std::vector<InObj>  input_objs;
