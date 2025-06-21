@@ -58,24 +58,7 @@ static T getScalarFromMat(Mat m)
     return m.at<T>(0);
 }
 
-static int dataType2cv(opencv_onnx::TensorProto_DataType dt)
-{
-    return
-        dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
-        dt == opencv_onnx::TensorProto_DataType_INT8 ? CV_8S :
-        dt == opencv_onnx::TensorProto_DataType_UINT16 ? CV_16U :
-        dt == opencv_onnx::TensorProto_DataType_INT16 ? CV_16S :
-        dt == opencv_onnx::TensorProto_DataType_UINT32 ? CV_32U :
-        dt == opencv_onnx::TensorProto_DataType_INT32 ? CV_32S :
-        dt == opencv_onnx::TensorProto_DataType_UINT64 ? CV_64U :
-        dt == opencv_onnx::TensorProto_DataType_INT64 ? CV_64S :
-        dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
-        dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
-        dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
-        dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
-        dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
-        dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
-}
+
 
 static int dataType2cv(int dt)
 {
@@ -96,29 +79,6 @@ static int dataType2cv(int dt)
         dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
 }
 
-
-// static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
-// {
-//     const char* str =
-//     dt == opencv_onnx::TensorProto_DataType_UNDEFINED ? "UNDEFINED" :
-//     dt == opencv_onnx::TensorProto_DataType_STRING ? "STRING" :
-//     dt == opencv_onnx::TensorProto_DataType_UINT8 ? "UINT8" :
-//     dt == opencv_onnx::TensorProto_DataType_INT8 ? "INT8" :
-//     dt == opencv_onnx::TensorProto_DataType_UINT16 ? "UINT16" :
-//     dt == opencv_onnx::TensorProto_DataType_INT16 ? "INT16" :
-//     dt == opencv_onnx::TensorProto_DataType_UINT32 ? "UINT32" :
-//     dt == opencv_onnx::TensorProto_DataType_INT32 ? "INT32" :
-//     dt == opencv_onnx::TensorProto_DataType_UINT64 ? "UINT64" :
-//     dt == opencv_onnx::TensorProto_DataType_INT64 ? "INT64" :
-//     dt == opencv_onnx::TensorProto_DataType_FLOAT ? "FLOAT" :
-//     dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? "FLOAT16" :
-//     dt == opencv_onnx::TensorProto_DataType_BOOL ? "BOOL" :
-//     dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? "COMPLEX64" :
-//     dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? "COMPLEX128" : nullptr;
-//     if (!str)
-//         return format("<unknown_type #%d>", (int)dt);
-//     return std::string(str);
-// }
 
 static std::string dataType2str(int dt)
 {
