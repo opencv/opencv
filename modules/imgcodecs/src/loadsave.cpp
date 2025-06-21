@@ -501,11 +501,12 @@ imread_( const String& filename, int flags, OutputArray mat )
     Mat real_mat = mat.getMat();
     const void * original_ptr = real_mat.data;
     bool success = false;
+    decoder->resetFrameCount(); // this is needed for PngDecoder. it should be called before decoder->readData()
     try
     {
         if (decoder->readData(real_mat))
         {
-            CV_CheckTrue((decoder->getFrameCount() > 1) || original_ptr == real_mat.data, "Internal imread issue");
+            CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
             success = true;
         }
     }
@@ -800,6 +801,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -910,6 +912,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
