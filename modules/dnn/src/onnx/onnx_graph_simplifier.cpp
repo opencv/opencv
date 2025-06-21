@@ -1708,7 +1708,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
 
 
 
-void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::vector<char>& tensor_data, const std::string base_path = ""){
+void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::vector<char>& tensor_data, const std::string& base_path = ""){
     CV_Assert(tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL);
     auto it_begin = tensor_proto.external_data().begin();
     auto it_end = tensor_proto.external_data().end();
