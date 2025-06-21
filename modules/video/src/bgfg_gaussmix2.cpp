@@ -178,6 +178,8 @@ public:
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 
+    void apply(InputArray image, OutputArray fgmask,InputArray knownForegroundMask, double learningRate) CV_OVERRIDE;
+
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
 
@@ -546,7 +548,7 @@ public:
                 float _Tb, float _TB, float _Tg,
                 float _varInit, float _varMin, float _varMax,
                 float _prune, float _tau, bool _detectShadows,
-                uchar _shadowVal)
+                uchar _shadowVal, const Mat *_knownForegroundMask)
     {
         src = &_src;
         dst = &_dst;
@@ -565,6 +567,7 @@ public:
         tau = _tau;
         detectShadows = _detectShadows;
         shadowVal = _shadowVal;
+        knownForegroundMask = _knownForegroundMask;
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -590,6 +593,16 @@ public:
 
             for( int x = 0; x < ncols; x++, data += nchannels, gmm += nmixtures, mean += nmixtures*nchannels )
             {
+
+                // Check that foreground mask exists
+                if (knownForegroundMask && !knownForegroundMask->empty()) {
+                    // If input mask states pixel is foreground
+                    if (knownForegroundMask->at<uchar>(y, x) > 0) {
+                        mask[x] = 255; // ensure output mask marks this pixel as FG
+                        continue;
+                    }
+                }
+
                 //calculate distances to the modes (+ sort)
                 //here we need to go in descending order!!!
                 bool background = false;//return value -> true - the pixel classified as background
@@ -766,6 +779,7 @@ public:
 
     bool detectShadows;
     uchar shadowVal;
+    const Mat *knownForegroundMask;
 };
 
 #ifdef HAVE_OPENCL
@@ -844,7 +858,12 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 
 #endif
 
-void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
+// Base 3 version class
+void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate) {
+    apply(_image, _fgmask, noArray(), learningRate);
+}
+
+void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,InputArray _knownForegroundMask, double learningRate)
 {
     CV_INSTRUMENT_REGION();
 
@@ -867,6 +886,13 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
+    const Mat *knownMaskPtr = nullptr;
+    if (!_knownForegroundMask.empty()) {
+        // store a local Mat so the pointer stays alive for the parallel_for_
+        Mat tmp = _knownForegroundMask.getMat();
+        knownMaskPtr = &tmp;
+    }
+
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
     CV_Assert(learningRate >= 0);
@@ -879,7 +905,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
                               (float)varThreshold,
                               backgroundRatio, varThresholdGen,
                               fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                              bShadowDetection, nShadowDetection),
+                              bShadowDetection, nShadowDetection, knownMaskPtr),
                               image.total()/(double)(1 << 16));
 }
 
