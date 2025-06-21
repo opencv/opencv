@@ -1704,14 +1704,52 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
     simplifySubgraphs(Ptr<ImportGraphWrapper>(new ONNXGraphWrapper(net)), subgraphs);
 }
 
-Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8)
+
+
+
+
+void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::vector<char>& tensor_data, const std::string& base_path = ""){
+    CV_Assert(tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL);
+    auto it_begin = tensor_proto.external_data().begin();
+    auto it_end = tensor_proto.external_data().end();
+    // file path
+    auto it = std::find_if(it_begin, it_end,[](const auto& entry) { return entry.key() == "location"; });
+    CV_Assert(it != it_end);
+
+    std::string location_path = it->value();
+    std::string full_path = base_path.empty() ? location_path : (base_path + "/" + location_path);
+
+    std::ifstream file(full_path, std::ios::binary | std::ios::ate);
+    CV_Assert(file.is_open());
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    tensor_data.resize(size);
+
+    CV_Assert(file.read(tensor_data.data(), size));
+}
+
+
+Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8, const std::string base_path)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
         tensor_proto.double_data().empty() && tensor_proto.int64_data().empty() &&
-        tensor_proto.int32_data().empty())
+        tensor_proto.int32_data().empty() &&
+        (!tensor_proto.has_data_location() || tensor_proto.data_location() != opencv_onnx::TensorProto::EXTERNAL)
+    )
         return Mat();
 
-    opencv_onnx::TensorProto_DataType datatype = tensor_proto.data_type();
+    // read binary data, should be just empty in case it is set in <DTYPE>_data field
+    std::vector<char> external_tensor_data;
+    char* val;
+    if (tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL){
+        getExternalTensorData(tensor_proto, external_tensor_data, base_path);
+        val = external_tensor_data.data();
+    }
+    else
+        val = const_cast<char*>(tensor_proto.raw_data().c_str());
+
+    int datatype = tensor_proto.data_type();
     Mat blob;
     std::vector<int> sizes;
     for (int i = 0; i < tensor_proto.dims_size(); i++) {
@@ -1719,14 +1757,14 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     if (sizes.empty())
         sizes.assign(1, 1);
-    if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
 
+
+    if (datatype == opencv_onnx::TensorProto_DataType_FLOAT) {
         if (!tensor_proto.float_data().empty()) {
             const ::google::protobuf::RepeatedField<float> field = tensor_proto.float_data();
             Mat(sizes, CV_32FC1, (void*)field.data()).copyTo(blob);
         }
         else {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
             Mat(sizes, CV_32FC1, val).copyTo(blob);
         }
     }
@@ -1759,7 +1797,6 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         }
         else
         {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
 #if CV_STRONG_ALIGNMENT
             // Aligned pointer is required.
             AutoBuffer<hfloat, 16> aligned_val;
@@ -1781,20 +1818,20 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         if (!field.empty())
             val = (char *)field.data();
         else
-            val = const_cast<char*>(tensor_proto.raw_data().c_str()); // sometime, the double will be stored at raw_data.
-
-#if CV_STRONG_ALIGNMENT
-        // Aligned pointer is required.
-        AutoBuffer<double, 16> aligned_val;
-        if (!isAligned<sizeof(double)>(val))
         {
-            size_t sz = tensor_proto.raw_data().size();
-            aligned_val.allocate(divUp(sz, sizeof(double)));
-            memcpy(aligned_val.data(), val, sz);
-            val = (char*)aligned_val.data();
-        }
+#if CV_STRONG_ALIGNMENT
+            // Aligned pointer is required.
+            AutoBuffer<double, 16> aligned_val;
+            if (!isAligned<sizeof(double)>(val))
+            {
+                size_t sz = tensor_proto.raw_data().size();
+                aligned_val.allocate(divUp(sz, sizeof(double)));
+                memcpy(aligned_val.data(), val, sz);
+                val = (char*)aligned_val.data();
+            }
 #endif
-        Mat(sizes, CV_64FC1, val).convertTo(blob, CV_32FC1);
+            Mat(sizes, CV_64FC1, val).convertTo(blob, CV_32FC1);
+        }
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT32)
     {
@@ -1805,7 +1842,6 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         }
         else
         {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
             Mat(sizes, CV_32SC1, val).copyTo(blob);
         }
     }
@@ -1817,7 +1853,6 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         }
         else
         {
-            const char* val = tensor_proto.raw_data().c_str();
 #if CV_STRONG_ALIGNMENT
             // Aligned pointer is required: https://github.com/opencv/opencv/issues/16373
             // this doesn't work: typedef int64_t CV_DECL_ALIGNED(1) unaligned_int64_t;
@@ -1843,7 +1878,6 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         }
         else
         {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
             Mat(sizes, CV_8S, val).copyTo(blob);
         }
     }
@@ -1861,7 +1895,6 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
         }
         else
         {
-            char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
             if (uint8ToInt8)
                 Mat(sizes, CV_8U, val).convertTo(blob, CV_8S, 1, -128);  // handle as ONNX quantized weight
             else
@@ -1870,13 +1903,13 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_BOOL)
     {
-        char* val = const_cast<char*>(tensor_proto.raw_data().c_str());
         Mat(sizes, CV_Bool, val).copyTo(blob);
     }
     else
     {
-        std::string errorMsg = "Unsupported data type: " +
-                            opencv_onnx::TensorProto_DataType_Name(datatype);
+        // @TODO: refactor the error handling
+        std::string errorMsg = "Unsupported data type: "; /* +
+                            opencv_onnx::TensorProto_DataType_Name(datatype);*/
 
         if (!DNN_DIAGNOSTICS_RUN)
         {
