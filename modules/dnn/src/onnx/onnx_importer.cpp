@@ -54,8 +54,6 @@ CV__DNN_INLINE_NS_BEGIN
 
 extern bool DNN_DIAGNOSTICS_RUN;
 
-using namespace cv;
-
 #ifdef HAVE_PROTOBUF
 class ONNXLayerHandler;
 
