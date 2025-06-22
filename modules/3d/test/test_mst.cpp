@@ -3,37 +3,37 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "test_precomp.hpp"
-#include <opencv2/3d/detail/mst.hpp>
+#include <opencv2/3d/mst.hpp>
 
 namespace opencv_test {
 namespace {
 
 using namespace cv;
 
-typedef tuple<size_t /*MSTalgorithm*/,
-              size_t /*numNodes*/,
-              std::vector<detail::MSTEdge>/*edges*/,
-              std::vector<detail::MSTEdge>/*expectedEdges*/
+typedef tuple<MSTAlgorithm /*MSTalgorithm*/,
+              int /*numNodes*/,
+              std::vector<MSTEdge>/*edges*/,
+              std::vector<MSTEdge>/*expectedEdges*/
              > MSTParamType;
 typedef testing::TestWithParam<MSTParamType> MST;
 
 TEST_P(MST, checkCorrectness)
 {
-    const size_t algorithm = get<0>(GetParam());
-    const size_t numNodes = get<1>(GetParam());
-    const std::vector<detail::MSTEdge>& edges = get<2>(GetParam());
-    const std::vector<detail::MSTEdge>& expectedEdges = get<3>(GetParam());
+    const int algorithm = get<0>(GetParam());
+    const int numNodes = get<1>(GetParam());
+    const std::vector<MSTEdge>& edges = get<2>(GetParam());
+    const std::vector<MSTEdge>& expectedEdges = get<3>(GetParam());
 
-    std::vector<detail::MSTEdge> mstEdges;
+    std::vector<MSTEdge> mstEdges;
 
     switch (algorithm) {
-        case 0: /* Prim */
+        case MST_PRIM:
             // Select first node for root
-            mstEdges = detail::buildMSTPrim(numNodes, edges, 0);
+            mstEdges = buildMST(numNodes, edges, MST_PRIM, 0);
             break;
 
-        case 1: /* Kruskal*/
-            mstEdges = detail::buildMSTKruskal(numNodes, edges);
+        case MST_KRUSKAL: /* Kruskal*/
+            mstEdges = buildMST(numNodes, edges, MST_KRUSKAL, 0);
             break;
 
         default:
@@ -43,7 +43,7 @@ TEST_P(MST, checkCorrectness)
     EXPECT_EQ(mstEdges.size(), expectedEdges.size());
     for (const auto& edge : expectedEdges)
     {
-        auto it = std::find_if(mstEdges.begin(), mstEdges.end(), [&edge](const detail::MSTEdge& e) {
+        auto it = std::find_if(mstEdges.begin(), mstEdges.end(), [&edge](const MSTEdge& e) {
             return (e.source == edge.source && e.target == edge.target) ||
                     (e.source == edge.target && e.target == edge.source);
         });
@@ -55,7 +55,7 @@ TEST_P(MST, checkCorrectness)
 const MSTParamType mst_graphs[] =
 {
     // Small Graph
-    MSTParamType(0, 4,
+    MSTParamType(MST_PRIM, 4,
         {
             {0, 1, 1.0}, {0, 2, 2.0}, {1, 2, 1.5}, {1, 3, 2.5}, {2, 3, 1.0}
         },
@@ -64,7 +64,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 4,
+    MSTParamType(MST_KRUSKAL, 4,
         {
             {0, 1, 1.0}, {0, 2, 2.0}, {1, 2, 1.5}, {1, 3, 2.5}, {2, 3, 1.0}
         },
@@ -74,7 +74,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Disconnected Graph
-    MSTParamType(0, 4,
+    MSTParamType(MST_PRIM, 4,
         {
             {0, 1, 1.0}, {2, 3, 2.0}
         },
@@ -83,7 +83,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 4,
+    MSTParamType(MST_KRUSKAL, 4,
         {
             {0, 1, 1.0}, {2, 3, 2.0}
         },
@@ -93,7 +93,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Fully Disconnected
-    MSTParamType(0, 6,
+    MSTParamType(MST_PRIM, 6,
         {
 
         },
@@ -102,7 +102,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 6,
+    MSTParamType(MST_KRUSKAL, 6,
         {
 
         },
@@ -112,7 +112,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // 2 Nodes, 1 Edge
-    MSTParamType(0, 2,
+    MSTParamType(MST_PRIM, 2,
         {
             {0, 1, 42.0}
         },
@@ -121,7 +121,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 2,
+    MSTParamType(MST_KRUSKAL, 2,
         {
             {0, 1, 42.0}
         },
@@ -131,7 +131,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Dense graph (clique)
-    MSTParamType(0, 4,
+    MSTParamType(MST_PRIM, 4,
         {
             {0, 1, 1.0}, {0, 2, 2.0}, {0, 3, 3.0},
             {1, 2, 1.5}, {1, 3, 2.5}, {2, 3, 1.0}
@@ -141,7 +141,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 4,
+    MSTParamType(MST_KRUSKAL, 4,
         {
             {0, 1, 1.0}, {0, 2, 2.0}, {0, 3, 3.0},
             {1, 2, 1.5}, {1, 3, 2.5}, {2, 3, 1.0}
@@ -152,7 +152,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Sparse
-    MSTParamType(0, 4,
+    MSTParamType(MST_PRIM, 4,
         {
             {0, 1, 1.0}, {1, 2, 2.0}, {1, 3, 3.0}
         },
@@ -161,7 +161,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 4,
+    MSTParamType(MST_KRUSKAL, 4,
         {
             {0, 1, 1.0}, {1, 2, 2.0}, {1, 3, 3.0}
         },
@@ -171,7 +171,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Weight Floating point check
-    MSTParamType(0, 3,
+    MSTParamType(MST_PRIM, 3,
         {
             {0, 1, 1.000001}, {1, 2, 1.000002}, {0, 2, 1.000003}
         },
@@ -180,7 +180,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 3,
+    MSTParamType(MST_KRUSKAL, 3,
         {
             {0, 1, 1.000001}, {1, 2, 1.000002}, {0, 2, 1.000003}
         },
@@ -190,7 +190,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // 0 or ~0 weight valuess
-    MSTParamType(0, 3,
+    MSTParamType(MST_PRIM, 3,
         {
             {0, 1, 0.0}, {1, 2, 1e-9}, {0, 2, 1.0}
         },
@@ -199,7 +199,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(0, 3,
+    MSTParamType(MST_KRUSKAL, 3,
         {
             {0, 1, 0.0}, {1, 2, 1e-9}, {0, 2, 1.0}
         },
@@ -209,7 +209,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Duplicate edges (picks the one with the smallest weight)
-    MSTParamType(0, 3,
+    MSTParamType(MST_PRIM, 3,
         {
             {0, 1, 3.0}, {0, 1, 1.0}, {1, 2, 2.0}
         },
@@ -218,7 +218,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 3,
+    MSTParamType(MST_KRUSKAL, 3,
         {
             {0, 1, 3.0}, {0, 1, 1.0}, {1, 2, 2.0}
         },
@@ -228,7 +228,7 @@ const MSTParamType mst_graphs[] =
     ),
 
     // Negative weights
-    MSTParamType(0, 3,
+    MSTParamType(MST_PRIM, 3,
         {
             {0, 1, -1.0}, {1, 2, -2.0}, {0, 2, -3.0}
         },
@@ -237,7 +237,7 @@ const MSTParamType mst_graphs[] =
         }
     ),
 
-    MSTParamType(1, 3,
+    MSTParamType(MST_KRUSKAL, 3,
         {
             {0, 1, -1.0}, {1, 2, -2.0}, {0, 2, -3.0}
         },
@@ -258,8 +258,8 @@ inline static std::string MST_name_printer(const testing::TestParamInfo<MST::Par
     os << "TestCase_" << info.index << "_";
     switch (algorithm)
     {
-    case 0: os << "Prim"; break;
-    case 1: os << "Kruskal"; break;
+    case MST_PRIM: os << "Prim"; break;
+    case MST_KRUSKAL: os << "Kruskal"; break;
     default: os << "Unknown algorithm"; break;
     }
     os << "_Nodes_" << numNodes;
@@ -273,28 +273,28 @@ INSTANTIATE_TEST_CASE_P(/**/, MST, testing::ValuesIn(mst_graphs), MST_name_print
 
 TEST(MSTstress, LargeGraph)
 {
-    const size_t numNodes = 100000;
+    const int numNodes = 100000;
 
-    std::vector<detail::MSTEdge> edges;
+    std::vector<MSTEdge> edges;
 
-    for (size_t i = 0; i < numNodes - 1; ++i)
+    for (int i = 0; i < numNodes - 1; ++i)
         edges.push_back({i, i + 1, static_cast<double>(i + 1)});
 
     // Add extra edges for complexity
-    for (size_t i = 0; i < numNodes - 10; i += 10)
+    for (int i = 0; i < numNodes - 10; i += 10)
         edges.push_back({i, i + 10,  static_cast<double>(i)});
-    for (size_t i = 0; i + 20 < numNodes; i += 5)
+    for (int i = 0; i + 20 < numNodes; i += 5)
         edges.push_back({i, i + 20, static_cast<double>(i + 1)});
-    for (size_t i = 0; i + 30 < numNodes; i += 3)
+    for (int i = 0; i + 30 < numNodes; i += 3)
         edges.push_back({i, i + 30, static_cast<double>(i % 50 + 1)});
-    for (size_t i = 50; i < numNodes; i += 10)
+    for (int i = 50; i < numNodes; i += 10)
         edges.push_back({i, i - 25, static_cast<double>(i % 100 + 2)});
 
-    std::vector<detail::MSTEdge> primMST = detail::buildMSTPrim(numNodes, edges, 0);
-    std::vector<detail::MSTEdge> kruskalMST = detail::buildMSTKruskal(numNodes, edges);
+    std::vector<MSTEdge> primMST = buildMST(numNodes, edges, MST_PRIM, 0);
+    std::vector<MSTEdge> kruskalMST = buildMST(numNodes, edges, MST_KRUSKAL, 0);
 
-    EXPECT_EQ(primMST.size(), numNodes - 1);
-    EXPECT_EQ(kruskalMST.size(), numNodes - 1);
+    EXPECT_EQ(primMST.size(), static_cast<size_t>(numNodes - 1));
+    EXPECT_EQ(kruskalMST.size(), static_cast<size_t>(numNodes - 1));
 }
 
 }} // namespace
