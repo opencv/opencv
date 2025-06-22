@@ -1649,7 +1649,8 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
             else
                 tmp = animation.still_image;
 
-            cvtColor(tmp, tmp, COLOR_BGRA2RGBA);
+            if (tmp.channels() > 2)
+                cvtColor(tmp, tmp, COLOR_BGRA2RGBA);
             apngFrame.setMat(tmp);
 
             deflateRectOp(apngFrame.getPixels(), x0, y0, w0, h0, bpp, rowbytes, zbuf_size, 0);
