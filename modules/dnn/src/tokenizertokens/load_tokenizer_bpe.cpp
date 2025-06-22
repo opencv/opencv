@@ -38,12 +38,12 @@
 namespace cv { namespace dnn { namespace tokenizer {
 
 static inline bool isUrl(const std::string &s) {
-    return s.rfind("http://", 0) == 0 || s.rfind("https://", 0) == 0:
+    return s.rfind("http://", 0) == 0 || s.rfind("https://", 0) == 0;
 }
 
-static std::string sha256(const std::stirng& data) {
+static std::string sha256(const std::string& data) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256(reinterpret_cast<const unsigned char*>)(data.data(), data.size(), hash);
+    SHA256(reinterpret_cast<const unsigned char*>(data.data()), data.size(), hash);
     std::ostringstream oss;
     for (unsigned char b : hash) oss << std::hex << std::setw(2) << std::setfill('0') << (int)b;
     return oss.str();
@@ -55,7 +55,7 @@ static size_t curlWrite(void *ptr, size_t size, size_t nmemb, void *userData) {
     return size * nmemb;
 }
 
-std::stirng readFileOrUrl(const std::string& pathOrUrl,
+std::string readFileOrUrl(const std::string& pathOrUrl,
                           const std::string& expextedHash) {
                             
     std::string contents;
@@ -80,7 +80,7 @@ std::stirng readFileOrUrl(const std::string& pathOrUrl,
 
     if (!expextedHash.empty()) {
         std::string got = sha256(contents);
-        for (auto &c got) c = static_cast<char>(std::tolower(c));
+        for (auto &c : got) c = static_cast<char>(std::tolower(c));
         std::string expect = expextedHash;
         for (auto& c : expect) c = static_cast<char>(std::tolower(c));
         if (got != expect)
@@ -119,10 +119,10 @@ static ByteVec base64Decode(const std::string& in) {
 
 // Parse a “.tiktoken” BPE file into mergeable_ranks.
 ByteVecRankMap loadTokenizerBPE(const std::string& filePath,
-                                const std::string& expectedHash="") {
+                                const std::string& expectedHash) {
 
     std::string contents = readFileOrUrl(filePath, expectedHash);
-    std::istringstream ls(contens);
+    std::istringstream ls(contents);
     std::string line;
 
     if (std::getline(ls, line) && line.rfind("#", 0) != 0) {
@@ -138,7 +138,7 @@ ByteVecRankMap loadTokenizerBPE(const std::string& filePath,
             throw std::runtime_error("Malformed .bpe line: " + line);
         std::string tokenB64 = line.substr(0, sep);
         int rank = std::stoi(line.substr(sep + 1));
-        ranks.emplace(base64Decode(tokenB64), static_cast<Ranks>(rank));
+        ranks.emplace(base64Decode(tokenB64), static_cast<Rank>(rank));
     }
     return ranks;
 }
@@ -160,7 +160,7 @@ ByteVecRankMap dataGymToMergeableBpeRanks(const std::string& vocabBpeFile,
     //    Build reverse map token string -> ByteVec (using Data‑Gym escaping)
     //    GPT‑2 training treated bytes 0‑255 as 512 printable chars.  First 188 are
     //    printable ASCII (minus space), the rest are mapped to U+0100‑U+01FF.
-    std::unordered_map<std::stirng, ByteVec> str2bytes;
+    std::unordered_map<std::string, ByteVec> str2bytes;
     for (int b = 0; b < 256; ++b) {
         if (std::isprint(static_cast<unsigned char>(b)) && b != ' ') {
             str2bytes[std::string(1, static_cast<char>(b))] = { static_cast<uint8_t>(b) };
@@ -196,7 +196,7 @@ ByteVecRankMap dataGymToMergeableBpeRanks(const std::string& vocabBpeFile,
         if (line.empty()) continue;
         std::istringstream pairStream(line);
         std::string s1, s2;
-        pairStream >> s1 > >s2;
+        pairStream >> s1 >> s2;
         if (s1.empty() || s2.empty()) 
             throw std::runtime_error("Malformed merge line: " + line);
         ByteVec bytes;

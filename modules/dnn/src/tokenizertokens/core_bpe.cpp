@@ -98,6 +98,13 @@ std::vector<ByteVec> bytePairSplit(const ByteVec& piece,
     return out;
 }
 
+std::vector<ByteVec> bytePairSplit(std::string& s,
+                                   const ByteVecRankMap& ranks)
+{
+    ByteVec bytes(s.begin(), s.end());
+    return bytePairSplit(bytes, ranks);
+}
+
 // Errors for debugging 
 DecoderKeyError::DecoderKeyError(Rank t)
     : std::runtime_error("Invalid token for decoding: " + std::to_string(t)), token_(t) {}
@@ -364,7 +371,7 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
                 std::string s(reinterpret_cast<char*>(candidate.data()), candidate.size());
                 encoded = encodeOrdinary(s);
             } catch(...) {
-                // fallbacj to byte-pair
+                // fallback to byte-pair
                 encoded = bytePairEncode(candidate, encoder_);
             }
             // truncate encoded to unstable length 

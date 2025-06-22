@@ -255,12 +255,34 @@ if(OPENCV_DNN_BACKEND_DEFAULT)
 endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
-
+# ----------------------------------------------------------------------------------
 # Added extra build for tokenizer fix later if there is a better method
 set(extra_tokenizer_src
     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/core_bpe.cpp"
 )
+file(GLOB extra_tokenizer_src
+     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/*.cpp"
+)
+list(APPEND include_dirs
+     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens"
+)
+
+# OpenSSL
+find_package(OpenSSL REQUIRED)
+list(APPEND include_dirs ${OPENSSL_INCLUDE_DIR})
+list(APPEND libs OpenSSL::Crypto)
+
+# nlohmann_json
+find_package(nlohmann_json REQUIRED)
+list(APPEND libs nlohmann_json::nlohmann_json)
+
+# libcurl
+find_package(CURL REQUIRED)
+list(APPEND include_dirs ${CURL_INCLUDE_DIRS})
+list(APPEND libs CURL::libcurl)
+
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
+# ----------------------------------------------------------------------------------
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})

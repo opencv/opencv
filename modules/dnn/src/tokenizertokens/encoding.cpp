@@ -7,7 +7,7 @@ Encoding::Encoding(const std::string &name,
                      const std::string &patStr,
                      const ByteVecRankMap &mergeableRanks,
                      const std::unordered_map<std::string, Rank>& specialTokens, 
-                     int explicitNvocab=-1) 
+                     int explicitNvocab) 
     : name_(name)
     , patStr_(patStr)
     , patRegex_(patStr)
@@ -41,8 +41,8 @@ std::vector<Rank> Encoding::encodeOrdinary(const std::string& text) const {
 
 
 std::vector<Rank> Encoding::encode(const std::string& text,
-                                     const std::unordered_set<std::string>& allowedSpecial={},
-                                     const std::unordered_set<std::string>& disallowedSpecial={}) const {
+                                     const std::unordered_set<std::string>& allowedSpecial,
+                                     const std::unordered_set<std::string>& disallowedSpecial) const {
     
     // Determine actual allowed/disallowed sets
     std::unordered_set<std::string> allowed = allowedSpecial;
