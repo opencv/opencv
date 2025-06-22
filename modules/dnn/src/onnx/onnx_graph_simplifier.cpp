@@ -10,6 +10,8 @@
 #ifdef HAVE_PROTOBUF
 #include "../graph_simplifier.hpp"
 #include "onnx_graph_simplifier.hpp"
+#include <opencv2/core/utils/filesystem.hpp>
+#include "opencv2/core/utils/filesystem.private.hpp"
 
 #include <opencv2/core/utils/logger.hpp>
 #include <queue>
@@ -1709,6 +1711,7 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
 
 
 void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::vector<char>& tensor_data, const std::string& base_path = ""){
+#if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_Assert(tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL);
     auto it_begin = tensor_proto.external_data().begin();
     auto it_end = tensor_proto.external_data().end();
@@ -1717,7 +1720,7 @@ void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::ve
     CV_Assert(it != it_end);
 
     std::string location_path = it->value();
-    std::string full_path = base_path.empty() ? location_path : (base_path + "/" + location_path);
+    std::string full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
 
     std::ifstream file(full_path, std::ios::binary | std::ios::ate);
     CV_Assert(file.is_open());
@@ -1727,6 +1730,9 @@ void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::ve
     tensor_data.resize(size);
 
     CV_Assert(file.read(tensor_data.data(), size));
+#else
+    CV_Error(Error::StsNotImplemented, "External tensor data is not supported without filesystem support");
+#endif
 }
 
 
