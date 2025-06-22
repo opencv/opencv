@@ -3,8 +3,8 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "../precomp.hpp"
-#include "opencv2/3d/detail/mst.hpp"
 #include "opencv2/3d/detail/optimizer.hpp"
+#include <opencv2/3d/mst.hpp>
 #include "sparse_block_matrix.hpp"
 
 namespace cv
@@ -364,7 +364,7 @@ public:
 
 private:
     double calculateWeight(const PoseGraphImpl::Edge& e) const;
-    void applyMST(const std::vector<cv::detail::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode);
+    void applyMST(const std::vector<cv::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode);
 };
 
 
@@ -495,15 +495,15 @@ double PoseGraphImpl::calculateWeight(const PoseGraphImpl::Edge& e) const
     return weight;
 }
 
-void PoseGraphImpl::applyMST(const std::vector<cv::detail::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode)
+void PoseGraphImpl::applyMST(const std::vector<cv::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode)
 {
     std::unordered_map<size_t, std::vector<std::pair<size_t, PoseGraphImpl::Pose3d>>> adj;
     for (const auto& e: resultingEdges)
     {
         auto it = std::find_if(edges.begin(), edges.end(), [&](const PoseGraphImpl::Edge& edge)
         {
-            return (edge.sourceNodeId == e.source && edge.targetNodeId == e.target) ||
-                   (edge.sourceNodeId == e.target && edge.targetNodeId == e.source);
+            return (edge.sourceNodeId == static_cast<size_t>(e.source) && edge.targetNodeId == static_cast<size_t>(e.target)) ||
+                   (edge.sourceNodeId == static_cast<size_t>(e.target) && edge.targetNodeId == static_cast<size_t>(e.source));
         });
         if (it != edges.end())
         {
@@ -560,7 +560,7 @@ void PoseGraphImpl::initializePosesWithMST()
     for (const auto& e: edges)
     {
         double weight = calculateWeight(e);
-        MSTedges.push_back({e.sourceNodeId, e.targetNodeId, weight});
+        MSTedges.push_back({static_cast<int>(e.sourceNodeId), static_cast<int>(e.targetNodeId), weight});
     }
 
     size_t rootId = 0;
@@ -576,7 +576,7 @@ void PoseGraphImpl::initializePosesWithMST()
         }
     }
 
-    std::vector<MSTEdge> resultingEdges = cv::detail::buildMSTPrim(numNodes, MSTedges, rootId);
+    std::vector<MSTEdge> resultingEdges = cv::buildMST(numNodes, MSTedges, MST_PRIM, static_cast<int>(rootId));
 
     applyMST(resultingEdges, rootNode);
 }
