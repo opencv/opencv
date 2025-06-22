@@ -34,15 +34,25 @@ struct ByteVecHash {
 
 using ByteVecRankMap = std::unordered_map<ByteVec, Rank, ByteVecHash>;
 
+// hash the OS thread ID, mod by a fixed size, and pick a pre-compiled regex 
+// to avoid cross-thread contention
 std::size_t hashCurrentThread();
 
+// scan adjacent byte-pairs to find the lowest-rank merge, splice them out, 
+// update neighboring ranks, and repeat until no mergeable pair remains
 std::vector<std::pair<std::size_t, Rank>> bytePairMerge(const ByteVecRankMap& ranks, 
                                                         const ByteVec& piece);
 
+// map a single-byte slice directly to its rank if present, or else call the merge loop 
+// and then translate each resulting segment into its rank
 std::vector<Rank> bytePairEncode(const ByteVec& piece, 
                                  const ByteVecRankMap& ranks);
 
+// return the raw byte-sequence segments before ranking by using the same merge boundaries
 CV_EXPORTS std::vector<ByteVec> bytePairSplit(const ByteVec& piece, 
+                                   const ByteVecRankMap& ranks);
+
+CV_EXPORTS std::vector<ByteVec> bytePairSplit(std::string& s,
                                    const ByteVecRankMap& ranks);
 
 class DecoderKeyError : public std::runtime_error {
@@ -57,6 +67,8 @@ class DecodeError : public std::runtime_error {
 public: 
     explicit DecodeError(std::string message);
 };
+
+
 
 class CoreBPE {
 public:
@@ -119,7 +131,7 @@ private:
 const std::size_t ACCEPT = 12;
 const std::size_t REJECT = 0;
 
-extern const std::vector<uint8_t> CLASSES{
+inline const std::vector<uint8_t> CLASSES{
    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
@@ -130,7 +142,7 @@ extern const std::vector<uint8_t> CLASSES{
   10,3,3,3,3,3,3,3,3,3,3,3,3,4,3,3, 11,6,6,6,5,8,8,8,8,8,8,8,8,8,8,8,
 };
 
-extern const std::vector<uint8_t> STATE_FORWARD{
+inline const std::vector<uint8_t> STATE_FORWARD{
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
   12, 0, 24, 36, 60, 96, 84, 0, 0, 0, 48, 72,
   0, 12, 0, 0, 0, 0, 0, 12, 0, 12, 0, 0,
@@ -246,7 +258,6 @@ inline std::pair<std::optional<char>, std::size_t> decodeLastUtf8(const std::vec
     }
     return {ch, size};
 }
-
 
 }}}
 

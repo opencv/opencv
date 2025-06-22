@@ -1,5 +1,6 @@
 #include "encoding.hpp"
 #include "encoding_registry.hpp"
+#include "encoding_init.hpp"
 
 #include <mutex>
 #include <stdexcept>
