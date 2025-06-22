@@ -508,11 +508,6 @@ bool  PngDecoder::readData( Mat& img )
                 {
                     return false;
                 }
-                // Asking for blend over with no alpha is invalid.
-                if (bop == 1 && mat_cur.channels() != 4)
-                {
-                    return false;
-                }
 
                 memcpy(&m_chunkIHDR.p[8], &chunk.p[12], 8);
 
