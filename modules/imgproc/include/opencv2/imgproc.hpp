@@ -3074,7 +3074,8 @@ or Triangle algorithm and uses it instead of the specified thresh.
 and the Triangle's method is implemented only for CV_8UC1 images.
 
 @param src input array (multiple-channel, CV_8U, CV_16S, CV_16U, CV_32F or CV_64F).
-@param dst output array of the same size  and type and the same number of channels as src.
+@param dst Optional output array of the same size  and type and the same number of channels as src.
+The dst is not filled if array is not provided or #THRESH_DRYRUN flag is set.
 @param thresh threshold value.
 @param maxval maximum value to use with the #THRESH_BINARY and #THRESH_BINARY_INV thresholding
 types.

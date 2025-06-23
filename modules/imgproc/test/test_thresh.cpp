@@ -513,9 +513,14 @@ TEST(Imgproc_Threshold, threshold_dryrun)
     {
         for(int threshFlag : threshFlags)
         {
-            const int _threshType = threshType | threshFlag | THRESH_DRYRUN;
-            cv::threshold(input, input, 2.0, 0.0, _threshType);
-            EXPECT_MAT_NEAR(input, input_original, 0);
+            const int _threshType = threshType | threshFlag;
+            double gt = cv::threshold(input, input, 2.0, 0.0, _threshType);
+            double dry = cv::threshold(input, input, 2.0, 0.0, _threshType | THRESH_DRYRUN);
+            if (_threshType != 0)
+                EXPECT_MAT_NEAR(input, input_original, 0);
+            EXPECT_NEAR(gt, dry, 1e-6);
+            double no_out = cv::threshold(input, cv::noArray(), 2.0, 0.0, _threshType);
+            EXPECT_NEAR(gt, no_out, 1e-6);
         }
     }
 }
