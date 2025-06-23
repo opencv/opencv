@@ -97,15 +97,13 @@ inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int6
 
 inline int fast_16(const uchar* src_data, size_t src_step,
                    int width, int height,
-                   uchar* keypoints_data, size_t* keypoints_count,
+                   std::vector<cvhalKeyPoint> &keypoints,
                    int threshold, bool nonmax_suppression)
 {
 
     const int patternSize = 16;
     const int K = patternSize/2, N = patternSize + K + 1;
     const int quarterPatternSize = patternSize/4;
-
-    KeyPoint* _keypoints_data = (KeyPoint*)keypoints_data;
 
     int i, j, k;
     int16_t pixel[25];
@@ -241,15 +239,15 @@ inline int fast_16(const uchar* src_data, size_t src_step,
                 score > pprev[j-1] && score > pprev[j] && score > pprev[j+1] &&
                 score > curr[j-1] && score > curr[j] && score > curr[j+1]) )
             {
-                _keypoints_data[*keypoints_count].pt.x = (float)j;
-                _keypoints_data[*keypoints_count].pt.y = (float)(i-1);
-                _keypoints_data[*keypoints_count].size = 7.f;
-                _keypoints_data[*keypoints_count].angle = -1.f;
-                _keypoints_data[*keypoints_count].response = (float)score;
-                _keypoints_data[*keypoints_count].octave = 0; // Not used in FAST
-                _keypoints_data[*keypoints_count].class_id = -1; // Not used in FAST
-
-                (*keypoints_count)++;
+                cvhalKeyPoint kp;
+                kp.x = (float)j;
+                kp.y = (float)(i-1);
+                kp.size = 7.f;
+                kp.angle = -1.f;
+                kp.response = (float)score;
+                kp.octave = 0; // Not used in FAST
+                kp.class_id = -1; // Not used in FAST
+                keypoints.push_back(kp);
             }
         }
     }
@@ -257,9 +255,9 @@ inline int fast_16(const uchar* src_data, size_t src_step,
 }
 
 int FAST(const uchar* src_data, size_t src_step,
-         int width, int height, uchar* keypoints_data,
+         int width, int height, uchar** keypoints_data,
          size_t* keypoints_count, int threshold,
-         bool nonmax_suppression, int detector_type)
+         bool nonmax_suppression, int detector_type, realloc_func f)
 {
     (*keypoints_count) = 0;
     int res = CV_HAL_ERROR_UNKNOWN;
@@ -268,8 +266,17 @@ int FAST(const uchar* src_data, size_t src_step,
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
         case CV_HAL_TYPE_7_12:
             return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        case CV_HAL_TYPE_9_16:
-            return fast_16(src_data, src_step, width, height, keypoints_data, keypoints_count, threshold, nonmax_suppression);
+        case CV_HAL_TYPE_9_16: {
+            std::vector<cvhalKeyPoint> keypoints;
+            res = fast_16(src_data, src_step, width, height, keypoints, threshold, nonmax_suppression);
+            if (res == CV_HAL_ERROR_OK) {
+                *keypoints_count = keypoints.size();
+                uchar *tmp = (uchar*)f(*keypoints_data, sizeof(cvhalKeyPoint)*(*keypoints_count));
+                memcpy(tmp, (uchar*)keypoints.data(), sizeof(cvhalKeyPoint)*(*keypoints_count));
+                keypoints_data = &tmp;
+            }
+            return res;
+        }
         default:
             return res;
     }

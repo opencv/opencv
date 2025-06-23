@@ -437,13 +437,15 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 
     size_t keypoints_count = 10000;
     keypoints.clear();
-    keypoints.resize(keypoints_count); // reserve space for keypoints
-    int hal_ret = cv_hal_FAST(img.data, img.step, img.cols, img.rows, (uchar *)(keypoints.data()),
-                              &keypoints_count, threshold, nonmax_suppression, type);
+    uchar* kps = (uchar*)malloc(sizeof(KeyPoint) * 1);
+    uchar** _kps = &kps;
+    int hal_ret = cv_hal_FAST(img.data, img.step, img.cols, img.rows, _kps,
+                              &keypoints_count, threshold, nonmax_suppression, type, realloc);
     if (hal_ret == CV_HAL_ERROR_OK) {
-        keypoints.resize(keypoints_count);
+        keypoints.assign(reinterpret_cast<KeyPoint*>(kps), reinterpret_cast<KeyPoint*>(kps) + keypoints_count);
         return;
     }
+    free(kps);
 
     switch(type) {
     case FastFeatureDetector::TYPE_5_8:
