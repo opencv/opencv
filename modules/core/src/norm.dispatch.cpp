@@ -316,7 +316,7 @@ double norm( InputArray _src, int normType, InputArray _mask )
     }
 
     NormFunc func = getNormFunc(normType >> 1, depth == CV_16F ? CV_32F : depth);
-    CV_Assert( func != 0 );
+    CV_Assert( (normType >> 1) >= 3 || func != 0 );
 
     if( src.isContinuous() && mask.empty() )
     {
