@@ -259,7 +259,6 @@ int FAST(const uchar* src_data, size_t src_step,
          size_t* keypoints_count, int threshold,
          bool nonmax_suppression, int detector_type, realloc_func f)
 {
-    (*keypoints_count) = 0;
     int res = CV_HAL_ERROR_UNKNOWN;
     switch(detector_type) {
         case CV_HAL_TYPE_5_8:
@@ -270,10 +269,15 @@ int FAST(const uchar* src_data, size_t src_step,
             std::vector<cvhalKeyPoint> keypoints;
             res = fast_16(src_data, src_step, width, height, keypoints, threshold, nonmax_suppression);
             if (res == CV_HAL_ERROR_OK) {
-                *keypoints_count = keypoints.size();
-                uchar *tmp = (uchar*)f(*keypoints_data, sizeof(cvhalKeyPoint)*(*keypoints_count));
-                memcpy(tmp, (uchar*)keypoints.data(), sizeof(cvhalKeyPoint)*(*keypoints_count));
-                keypoints_data = &tmp;
+                if (keypoints.size() > *keypoints_count) {
+                    *keypoints_count = keypoints.size();
+                    uchar *tmp = (uchar*)f(*keypoints_data, sizeof(cvhalKeyPoint)*(*keypoints_count));
+                    memcpy(tmp, (uchar*)keypoints.data(), sizeof(cvhalKeyPoint)*(*keypoints_count));
+                    *keypoints_data = tmp;
+                } else {
+                    *keypoints_count = keypoints.size();
+                    memcpy(*keypoints_data, (uchar*)keypoints.data(), sizeof(cvhalKeyPoint)*(*keypoints_count));
+                }
             }
             return res;
         }
