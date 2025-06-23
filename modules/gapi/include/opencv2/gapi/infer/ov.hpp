@@ -692,7 +692,7 @@ namespace wip { namespace ov {
 struct benchmark_mode { };
 
 struct workload_type {
-    using callback = std::function<void(const unsigned int)>;
+    using callback = std::function<void(const std::string &type)>;
     using listener = std::pair<int, callback>;
     std::shared_ptr<void> addListener(callback cb){
         int id = nextId++;
@@ -702,7 +702,7 @@ struct workload_type {
 
         return std::shared_ptr<void>(nullptr, remover);
     }
-    void setWorkloadType(const unsigned int type) {
+    void setWorkloadType(const std::string &type) {
         for(const listener& l : listeners) {
             l.second(type);
         }

@@ -1582,9 +1582,9 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
     }
 }
 
-void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const unsigned int type)
+void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const std::string &type)
 {
-    compiled.compiled_model.set_property({{"WorkLoadType", type}});
+    compiled.compiled_model.set_property({{"WORKLOAD_TYPE", type}});
 }
 void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
