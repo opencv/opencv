@@ -1,5 +1,7 @@
 #include "test_precomp.hpp"
 #include "../src/tokenizertokens/core_bpe.hpp"
+// #include "../src/tokenizertokens/encoding_registry.hpp"
+// #include "../src/tokenizertokens/encoding.cpp"
 
 namespace opencv_test { namespace  {
 
@@ -15,6 +17,7 @@ public:
     }
 };
 
+// Both following test cases bytePairSplit_Simple and BytePairSplit_Repeated are taken from the lib.rs file in tiktoken 
 TEST_F(Test_CoreBPE, bytePairSplit_Simple) {
     auto ranks = makeRanks();
     ByteVec piece = {'a', 'b', 'c', 'd'};
@@ -24,6 +27,7 @@ TEST_F(Test_CoreBPE, bytePairSplit_Simple) {
         ByteVec{'c', 'd'}
     };
     EXPECT_EQ(parts, expected) << "bytePairSplit should split \"abcd\" into [\"ab\",\"cd\"]";
+    // [PASSED]
 }   
 
 /*
@@ -98,5 +102,133 @@ Note: Google Test filter = Test_CoreBPE.*
 [==========] 1 test from 1 test case ran. (1 ms total)
 [  PASSED  ] 1 test.
 */
+
+TEST_F(Test_CoreBPE, BytePairSplit_Repeated) {
+    auto ranks = makeRanks();
+    ByteVec piece = {'a', 'b', 'a', 'b'};
+    auto parts = bytePairSplit(piece, ranks);
+    std::vector<ByteVec> expected = {
+        ByteVec{'a', 'b'},
+        ByteVec{'a', 'b'}
+    };
+    EXPECT_EQ(parts, expected) << "bytePairEncode(\"abcd\") should yield [0,1]";
+    // [PASSED]
+}
+
+/*
+[Outputs the same above information as the above test case but omitted here]
+
+Note: Google Test filter = Test_CoreBPE.*
+[==========] Running 2 tests from 1 test case.
+[----------] Global test environment set-up.
+[----------] 2 tests from Test_CoreBPE
+[ RUN      ] Test_CoreBPE.bytePairSplit_Simple
+[       OK ] Test_CoreBPE.bytePairSplit_Simple (0 ms)
+[ RUN      ] Test_CoreBPE.BytePairSplit_Repeated
+[       OK ] Test_CoreBPE.BytePairSplit_Repeated (0 ms)
+[----------] 2 tests from Test_CoreBPE (0 ms total)
+
+[----------] Global test environment tear-down
+[==========] 2 tests from 1 test case ran. (0 ms total)
+[  PASSED  ] 2 tests.
+*/
+
+
+TEST_F(Test_CoreBPE, EncodeOrdinary_Simple) {
+    auto ranks = makeRanks();
+    std::unordered_map<std::string, Rank> special;
+
+    auto bpe = CoreBPE::create(
+        ranks.begin(), ranks.end(),
+        special.begin(), special.end(),
+        CoreBPE::patternString()
+    );
+
+    auto tokens = bpe.encodeOrdinary("abcd");
+    std::vector<Rank> expected{0, 1};
+    EXPECT_EQ(tokens, expected) << "encodeOrdinary(\"abcd\") should yield ranks [0,1]";
+    // [PASSED]
+}
+
+TEST_F(Test_CoreBPE, EncodeOrdinary_RepeatedPairs) {
+    auto ranks = makeRanks();  
+    std::unordered_map<std::string, Rank> special;
+
+    auto bpe = CoreBPE::create(
+        ranks.begin(), ranks.end(),
+        special.begin(), special.end(),
+        CoreBPE::patternString() 
+    );
+
+    auto tokens = bpe.encodeOrdinary("abab");
+    std::vector<Rank> expected{0, 0};
+    EXPECT_EQ(tokens, expected)
+        << "encodeOrdinary(\"abab\") should yield [0,0] because it byte-pairs into [\"ab\",\"ab\"]";
+
+    // [PASSED]
+}
+
+TEST_F(Test_CoreBPE, EncodeOrdinary_MixedOverlap) {
+    auto ranks = makeRanks();  // { "ab":0, "cd":1 } 
+    std::unordered_map<std::string, Rank> special;
+
+    auto bpe = CoreBPE::create(
+        ranks.begin(), ranks.end(),
+        special.begin(), special.end(),
+        CoreBPE::patternString()  
+    );
+
+    auto tokens = bpe.encodeOrdinary("abcdab");
+    std::vector<Rank> expected{0, 1, 0};
+    EXPECT_EQ(tokens, expected)
+        << "encodeOrdinary(\"abcdab\") should yield [0,1,0] because it byte-pairs into [\"ab\",\"cd\",\"ab\"]";
+}
+
+TEST_F(Test_CoreBPE, EncodeUnstableNative_Compile) {
+    auto ranks = makeRanks();
+    std::unordered_map<std::string, Rank> special;
+    auto bpe = CoreBPE::create(
+        ranks.begin(), ranks.end(),
+        special.begin(), special.end(),
+        CoreBPE::patternString()
+    );
+
+    std::unordered_set<std::string> allowedSpecial;
+    auto result = bpe.encodeUnstableNative("abcd", allowedSpecial);
+    SUCCEED() << "Just checking that encodeUnstableNative(...) compiles and links";
+    // [PASSED]
+}
+
+
+TEST_F(Test_CoreBPE, EncodeUnstableNative_Fallback) {
+    auto ranks = makeRanks(); // { "ab":0, "cd":1 }
+    std::unordered_map<std::string, Rank> special;   // no special tokens
+    auto bpe = CoreBPE::create(
+        ranks.begin(), ranks.end(),
+        special.begin(), special.end(),
+        CoreBPE::patternString()
+    );
+    std::unordered_set<std::string> allowedSpecial; 
+
+    auto [ordinary, completions] =
+        bpe.encodeUnstableNative("abcd", allowedSpecial);
+
+    // 3) Rust behavior the last fallback piece (“cd”) is treated as unstable,
+    // so ordinary tokens get truncated away, and the only completion is [0,1].
+    EXPECT_TRUE(ordinary.empty())
+        << "Rust logic returns no ‘ordinary’ tokens when the final BPE fallback is treated as unstable";
+
+    ASSERT_EQ(completions.size(), 1u)
+        << "Expect exactly one completion sequence";
+
+    EXPECT_EQ(*completions.begin(), (std::vector<Rank>{0,1}))
+        << "That completion must be the full BPE fallback for \"abcd\": [0,1]";
+}
+
+// TEST(Tokenizer, SimpleEncodeDecode) {
+//     auto& enc = getEncoding("gpt2");
+//     auto toks = enc.encode("hello world");
+//     EXPECT_EQ(toks, (std::vector<Rank>{31373, 995}));
+// }
 
 }}
