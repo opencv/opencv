@@ -246,6 +246,11 @@ namespace cv
                     return CV_HAL_ERROR_NOT_IMPLEMENTED;
                 }
 
+                if ((dx != 0 && dx != 1) || (dy != 0 && dy != 1))
+                {
+                    return CV_HAL_ERROR_NOT_IMPLEMENTED;
+                }
+
                 if (scale != 1 || delta != 0)
                 {
                     return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -259,6 +264,7 @@ namespace cv
 
                 if (margin_left != 0 || margin_right != 0 || margin_top != 0 || margin_bottom != 0)
                 {
+                    return CV_HAL_ERROR_NOT_IMPLEMENTED;
                     int ret = scharr_border(src_data, src_step,
                                             width, height,
                                             border_type,
@@ -323,8 +329,8 @@ namespace cv
                             }
                             else
                             {
-                                prevx = 3 * srow2[0] - 3 * srow0[0];
-                                nextx = 3 * srow2[1] - 3 * srow0[1];
+                                prevx = srow2[0] - srow0[0];
+                                nextx = srow2[1] - srow0[1];
                             }
                             rowx = prevx;
                         }
@@ -351,16 +357,16 @@ namespace cv
                             }
                             else
                             {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) -
-                                        3 * (srow0 ? srow0[0] : borderValue);
-                                nextx = 3 * (srow2 ? srow2[1] : borderValue) -
-                                        3 * (srow0 ? srow0[1] : borderValue);
+                                prevx = (srow2 ? srow2[0] : borderValue) -
+                                        (srow0 ? srow0[0] : borderValue);
+                                nextx = (srow2 ? srow2[1] : borderValue) -
+                                        (srow0 ? srow0[1] : borderValue);
                             }
                         }
 
                         if (dx == 1)
                         {
-                            res = 3 * nextx - 3 * prevx;
+                            res = nextx - prevx;
                         }
                         else if (dx == 0)
                         {
@@ -393,9 +399,9 @@ namespace cv
 
                             else if (border_type == BORDER_CONSTANT)
                             {
-                                vsrow0 = srow0 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow0 + x, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
-                                vsrow1 = __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow1 + x, vl), vl));
-                                vsrow2 = srow2 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow2 + x, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
+                                vsrow0 = srow0 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow0 + x + 1, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
+                                vsrow1 = __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow1 + x + 1, vl), vl));
+                                vsrow2 = srow2 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow2 + x + 1, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
                             }
 
                             if (dy == 0)
@@ -412,13 +418,13 @@ namespace cv
                             }
                             else
                             {
-                                vnextx = __riscv_vmul_vx_i16m8(__riscv_vsub_vv_i16m8(vsrow2, vsrow0, vl), 3, vl);
+                                vnextx = __riscv_vsub_vv_i16m8(vsrow2, vsrow0, vl);
                             }
 
                             vint16m8_t grad;
                             if (dx == 1)
                             {
-                                grad = __riscv_vmul_vx_i16m8(__riscv_vsub_vv_i16m8(vnextx, vprevx, vl), 3, vl);
+                                grad = __riscv_vsub_vv_i16m8(vnextx, vprevx, vl);
                             }
                             else if (dx == 0)
                             {
@@ -449,15 +455,10 @@ namespace cv
                                 prevx = 3 * srow2[width - 2] + 10 * srow1[width - 2] + 3 * srow0[width - 2];
                                 rowx = 3 * srow2[width - 1] + 10 * srow1[width - 1] + 3 * srow0[width - 1];
                             }
-                            else if (dy == 2)
-                            {
-                                prevx = 3 * srow2[width - 2] - 10 * srow1[width - 2] + 3 * srow0[width - 2];
-                                rowx = 3 * srow2[width - 1] - 10 * srow1[width - 1] + 3 * srow0[width - 1];
-                            }
                             else
                             {
-                                prevx = 3 * srow2[width - 2] - 3 * srow0[width - 2];
-                                rowx = 3 * srow2[width - 1] - 3 * srow0[width - 1];
+                                prevx = srow2[width - 2] - srow0[width - 2];
+                                rowx = srow2[width - 1] - srow0[width - 1];
                             }
                             nextx = rowx;
                         }
@@ -482,14 +483,14 @@ namespace cv
                             {
                                 uint8_t s0 = srow0 ? srow0[width - 1] : borderValue;
                                 uint8_t s2 = srow2 ? srow2[width - 1] : borderValue;
-                                rowx = 3 * s2 - 3 * s0;
+                                rowx = s2 - s0;
                             }
                             nextx = rowx;
                         }
 
                         if (dx == 1)
                         {
-                            res = 3 * nextx - 3 * prevx;
+                            res = nextx - prevx;
                         }
                         else if (dx == 0)
                         {
@@ -579,67 +580,60 @@ namespace cv
                         {
                             if (dy == 0)
                             {
-                                prevx = 3 * srow2[0] + 10 * srow1[0] + 3 * srow0[0];
+                                rowx = 3 * srow2[0] + 10 * srow1[0] + 3 * srow0[0];
                                 nextx = 3 * srow2[1] + 10 * srow1[1] + 3 * srow0[1];
-                            }
-                            else if (dy == 2)
-                            {
-                                prevx = 3 * srow2[0] - 10 * srow1[0] + 3 * srow0[0];
-                                nextx = 3 * srow2[1] - 10 * srow1[1] + 3 * srow0[1];
                             }
                             else
                             {
-                                prevx = 3 * srow2[0] - 3 * srow0[0];
-                                nextx = 3 * srow2[1] - 3 * srow0[1];
+                                rowx = srow2[0] - srow0[0];
+                                nextx = srow2[1] - srow0[1];
                             }
-                            rowx = prevx;
+                            prevx = rowx;
                         }
 
                         else if (border_type == BORDER_CONSTANT)
                         {
                             if (dy == 0)
                             {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) +
+                                rowx = 3 * (srow2 ? srow2[0] : borderValue) +
                                         10 * srow1[0] +
                                         3 * (srow0 ? srow0[0] : borderValue);
                                 nextx = 3 * (srow2 ? srow2[1] : borderValue) +
                                         10 * srow1[1] +
                                         3 * (srow0 ? srow0[1] : borderValue);
                             }
-                            else if (dy == 2)
-                            {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) -
-                                        10 * srow1[0] +
-                                        3 * (srow0 ? srow0[0] : borderValue);
-                                nextx = 3 * (srow2 ? srow2[1] : borderValue) -
-                                        10 * srow1[1] +
-                                        3 * (srow0 ? srow0[1] : borderValue);
-                            }
                             else
                             {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) -
-                                        3 * (srow0 ? srow0[0] : borderValue);
-                                nextx = 3 * (srow2 ? srow2[1] : borderValue) -
-                                        3 * (srow0 ? srow0[1] : borderValue);
+                                rowx = (srow2 ? srow2[0] : borderValue) -
+                                        (srow0 ? srow0[0] : borderValue);
+                                nextx = (srow2 ? srow2[1] : borderValue) -
+                                        (srow0 ? srow0[1] : borderValue);
                             }
+                            prevx = borderValue;
                         }
 
                         if (dx == 1)
                         {
-                            res = 3 * nextx - 3 * prevx;
+                            res = nextx - prevx;
                         }
                         else if (dx == 0)
                         {
                             res = 3 * prevx + 10 * rowx + 3 * nextx;
                         }
-                        else
-                        {
-                            res = 3 * prevx - 10 * rowx + 3 * nextx;
-                        }
+
+                        trow[0] = res;
 
                         vint16m8_t vrowx, vprevx, vnextx;
-                        vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
-                        vprevx = vrowx;
+                        if (border_type == BORDER_REPLICATE)
+                        {
+                            vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
+                            vprevx = vrowx;
+                        }
+                        else if (border_type == BORDER_CONSTANT)
+                        {
+                            vrowx = __riscv_vmv_v_x_i16m8(rowx, vl);
+                            vprevx = __riscv_vmv_v_x_i16m8(prevx, vl);
+                        }
 
                         for (x = 0; x < width - 1; x += vl)
                         {
@@ -654,26 +648,20 @@ namespace cv
 
                             else if (border_type == BORDER_CONSTANT)
                             {
-                                vsrow0 = srow0 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow0 + x, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
-                                vsrow1 = __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow1 + x, vl), vl));
-                                vsrow2 = srow2 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow2 + x, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
+                                vsrow0 = srow0 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow0 + x + 1, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
+                                vsrow1 = __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow1 + x + 1, vl), vl));
+                                vsrow2 = srow2 ? __riscv_vreinterpret_v_u16m8_i16m8(__riscv_vwcvtu_x_x_v_u16m8(__riscv_vle8_v_u8m4(srow2 + x + 1, vl), vl)) : __riscv_vmv_v_x_i16m8(borderValue, vl);
                             }
 
                             if (dy == 0)
                             {
-                                vint16m8_t vsrow2_vsrow0 = __riscv_vmul_vx_i16m8(__riscv_vadd_vv_i16m8(vsrow2, vsrow0, vl), 3, vl);
-                                vint16m8_t vsrow1_2x = __riscv_vmul_vx_i16m8(vsrow1, 10, vl);
-                                vnextx = __riscv_vadd_vv_i16m8(vsrow2_vsrow0, vsrow1_2x, vl);
-                            }
-                            else if (dy == 2)
-                            {
-                                vint16m8_t vsrow2_vsrow0 = __riscv_vmul_vx_i16m8(__riscv_vadd_vv_i16m8(vsrow2, vsrow0, vl), 3, vl);
-                                vint16m8_t vsrow1_2x = __riscv_vmul_vx_i16m8(vsrow1, 10, vl);
-                                vnextx = __riscv_vsub_vv_i16m8(vsrow2_vsrow0, vsrow1_2x, vl);
+                                vnextx = __riscv_vmul_vx_i16m8(vsrow0, 3, vl);
+                                vnextx = __riscv_vmacc_vx_i16m8(vnextx, 10, vsrow1, vl);
+                                vnextx = __riscv_vmacc_vx_i16m8(vnextx, 3, vsrow2, vl);
                             }
                             else
                             {
-                                vnextx = __riscv_vmul_vx_i16m8(__riscv_vsub_vv_i16m8(vsrow2, vsrow0, vl), 3, vl);
+                                vnextx = __riscv_vsub_vv_i16m8(vsrow2, vsrow0, vl);
                             }
 
                             vrowx = __riscv_vslideup_vx_i16m8(vrowx, vnextx, 1, vl);
@@ -686,11 +674,9 @@ namespace cv
                             }
                             else if (dx == 0)
                             {
-                                grad = __riscv_vadd_vv_i16m8(__riscv_vmul_vx_i16m8(__riscv_vadd_vv_i16m8(vprevx, vnextx, vl), 3, vl), __riscv_vmul_vx_i16m8(vrowx, 10, vl), vl);
-                            }
-                            else
-                            {
-                                grad = __riscv_vsub_vv_i16m8(__riscv_vmul_vx_i16m8(__riscv_vadd_vv_i16m8(vprevx, vnextx, vl), 3, vl), __riscv_vmul_vx_i16m8(vrowx, 10, vl), vl);
+                                grad = __riscv_vmul_vx_i16m8(vprevx, 3, vl);
+                                grad = __riscv_vmacc_vx_i16m8(grad, 10, vrowx, vl);
+                                grad = __riscv_vmacc_vx_i16m8(grad, 3, vnextx, vl);
                             }
 
                             vprevx = vrowx;
@@ -709,30 +695,48 @@ namespace cv
                                 prevx = 3 * srow2[width - 2] + 10 * srow1[width - 2] + 3 * srow0[width - 2];
                                 rowx = 3 * srow2[width - 1] + 10 * srow1[width - 1] + 3 * srow0[width - 1];
                             }
-                            else if (dy == 2)
-                            {
-                                prevx = 3 * srow2[width - 2] - 10 * srow1[width - 2] + 3 * srow0[width - 2];
-                                rowx = 3 * srow2[width - 1] - 10 * srow1[width - 1] + 3 * srow0[width - 1];
-                            }
                             else
                             {
-                                prevx = 3 * srow2[width - 2] - 3 * srow0[width - 2];
-                                rowx = 3 * srow2[width - 1] - 3 * srow0[width - 1];
+                                prevx = srow2[width - 2] - srow0[width - 2];
+                                rowx = srow2[width - 1] - srow0[width - 1];
                             }
                             nextx = rowx;
                         }
 
+                        else if (border_type == BORDER_CONSTANT)
+                        {
+                            if (dy == 0)
+                            {
+                                int16_t s0 = srow0 ? srow0[width - 2] : borderValue;
+                                int16_t s1 = srow1[width - 2];
+                                int16_t s2 = srow2 ? srow2[width - 2] : borderValue;
+                                prevx = 3 * s2 + 10 * s1 + 3 * s0;
+
+                                s0 = srow0 ? srow0[width - 1] : borderValue;
+                                s1 = srow1[width - 1];
+                                s2 = srow2 ? srow2[width - 1] : borderValue;
+                                rowx = 3 * s2 + 10 * s1 + 3 * s0;
+                            }
+                            else
+                            {
+                                int16_t s0 = srow0 ? srow0[width - 2] : borderValue;
+                                int16_t s2 = srow2 ? srow2[width - 2] : borderValue;
+                                prevx = s2 - s0;
+
+                                s0 = srow0 ? srow0[width - 1] : borderValue;
+                                s2 = srow2 ? srow2[width - 1] : borderValue;
+                                rowx = s2 - s0;
+                            }
+                            nextx = borderValue;
+                        }
+
                         if (dx == 1)
                         {
-                            res = 3 * nextx - 3 * prevx;
+                            res = nextx - prevx;
                         }
                         else if (dx == 0)
                         {
                             res = 3 * prevx + 10 * rowx + 3 * nextx;
-                        }
-                        else
-                        {
-                            res = 3 * prevx - 10 * rowx + 3 * nextx;
                         }
 
                         trow[width - 1] = res;
@@ -803,71 +807,52 @@ namespace cv
 
                         float *trow = (y % 2) ? trow1 : trow0;
 
-                        size_t vl = __riscv_vsetvl_e8m4(width - 1);
+                        size_t vl = __riscv_vsetvl_e8m2(width - 1);
 
                         float prevx = 0, rowx = 0, nextx = 0, res = 0;
                         if (border_type == BORDER_REPLICATE)
                         {
                             if (dy == 0)
                             {
-                                prevx = 3 * srow2[0] + 10 * srow1[0] + 3 * srow0[0];
+                                rowx = 3 * srow2[0] + 10 * srow1[0] + 3 * srow0[0];
                                 nextx = 3 * srow2[1] + 10 * srow1[1] + 3 * srow0[1];
                             }
-                            else if (dy == 2)
+                            else if (dy == 1)
                             {
-                                prevx = 3 * srow2[0] - 10 * srow1[0] + 3 * srow0[0];
-                                nextx = 3 * srow2[1] - 10 * srow1[1] + 3 * srow0[1];
+                                rowx = srow2[0] - srow0[0];
+                                nextx = srow2[1] - srow0[1];
                             }
-                            else
-                            {
-                                prevx = 3 * srow2[0] - 3 * srow0[0];
-                                nextx = 3 * srow2[1] - 3 * srow0[1];
-                            }
+                            prevx = rowx;
                         }
                         else if (border_type == BORDER_CONSTANT)
                         {
                             if (dy == 0)
                             {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) +
-                                        10 * srow1[0] +
-                                        3 * (srow0 ? srow0[0] : borderValue);
+                                rowx = 3 * (srow2 ? srow2[0] : borderValue) +
+                                       10 * srow1[0] +
+                                       3 * (srow0 ? srow0[0] : borderValue);
                                 nextx = 3 * (srow2 ? srow2[1] : borderValue) +
                                         10 * srow1[1] +
                                         3 * (srow0 ? srow0[1] : borderValue);
                             }
-                            else if (dy == 2)
+                            else if (dy == 1)
                             {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) -
-                                        10 * srow1[0] +
-                                        3 * (srow0 ? srow0[0] : borderValue);
-                                nextx = 3 * (srow2 ? srow2[1] : borderValue) -
-                                        10 * srow1[1] +
-                                        3 * (srow0 ? srow0[1] : borderValue);
+                                rowx = (srow2 ? srow2[0] : borderValue) -
+                                       (srow0 ? srow0[0] : borderValue);
+                                nextx = (srow2 ? srow2[1] : borderValue) -
+                                        (srow0 ? srow0[1] : borderValue);
                             }
-                            else
-                            {
-                                prevx = 3 * (srow2 ? srow2[0] : borderValue) -
-                                        3 * (srow0 ? srow0[0] : borderValue);
-                                nextx = 3 * (srow2 ? srow2[1] : borderValue) -
-                                        3 * (srow0 ? srow0[1] : borderValue);
-                            }
+                            prevx = borderValue;
                         }
-                        rowx = prevx;
 
                         if (dx == 1)
                         {
-                            res = 3 * nextx - 3 * prevx;
+                            res = nextx - prevx;
                         }
                         else if (dx == 0)
                         {
                             res = 3 * prevx + 10 * rowx + 3 * nextx;
                         }
-                        else
-                        {
-                            res = 3 * prevx - 10 * rowx + 3 * nextx;
-                        }
-
-                        trow[0] = res;
 
                         // Vector processing
                         vfloat32m8_t vrowx = __riscv_vfmv_v_f_f32m8(rowx, vl);
@@ -889,9 +874,9 @@ namespace cv
                             }
                             else if (border_type == BORDER_CONSTANT)
                             {
-                                vsrow0_u8 = srow0 ? __riscv_vle8_v_u8m2(srow0 + x, vl) : __riscv_vmv_v_x_u8m2(borderValue, vl);
-                                vsrow1_u8 = __riscv_vle8_v_u8m2(srow1 + x, vl);
-                                vsrow2_u8 = srow2 ? __riscv_vle8_v_u8m2(srow2 + x, vl) : __riscv_vmv_v_x_u8m2(borderValue, vl);
+                                vsrow0_u8 = srow0 ? __riscv_vle8_v_u8m2(srow0 + x + 1, vl) : __riscv_vmv_v_x_u8m2(borderValue, vl);
+                                vsrow1_u8 = __riscv_vle8_v_u8m2(srow1 + x + 1, vl);
+                                vsrow2_u8 = srow2 ? __riscv_vle8_v_u8m2(srow2 + x + 1, vl) : __riscv_vmv_v_x_u8m2(borderValue, vl);
                             }
                             vfloat32m8_t vsrow0 = __riscv_vfwcvt_f_xu_v_f32m8(__riscv_vwcvtu_x_x_v_u16m4(vsrow0_u8, vl), vl);
                             vfloat32m8_t vsrow1 = __riscv_vfwcvt_f_xu_v_f32m8(__riscv_vwcvtu_x_x_v_u16m4(vsrow1_u8, vl), vl);
@@ -903,16 +888,9 @@ namespace cv
                                 vnextx = __riscv_vfmacc_vf_f32m8(vnextx, 3.0f, vsrow0, vl);
                                 vnextx = __riscv_vfmacc_vf_f32m8(vnextx, 3.0f, vsrow2, vl);
                             }
-                            else if (dy == 2)
+                            else if (dy == 1)
                             {
-                                vnextx = __riscv_vfmul_vf_f32m8(vsrow1, -10.0f, vl);
-                                vnextx = __riscv_vfmacc_vf_f32m8(vnextx, 3.0f, vsrow0, vl);
-                                vnextx = __riscv_vfmacc_vf_f32m8(vnextx, 3.0f, vsrow2, vl);
-                            }
-                            else
-                            {
-                                vnextx = __riscv_vfmul_vf_f32m8(
-                                    __riscv_vfsub_vv_f32m8(vsrow2, vsrow0, vl), 3.0f, vl);
+                                vnextx = __riscv_vfsub_vv_f32m8(vsrow2, vsrow0, vl);
                             }
 
                             vrowx = __riscv_vslideup_vx_f32m8(vrowx, vnextx, 1, vl);
@@ -929,12 +907,6 @@ namespace cv
                                 grad = __riscv_vfmacc_vf_f32m8(grad, 3.0f, vprevx, vl);
                                 grad = __riscv_vfmacc_vf_f32m8(grad, 3.0f, vnextx, vl);
                             }
-                            else
-                            {
-                                grad = __riscv_vfmul_vf_f32m8(vrowx, -10.0f, vl);
-                                grad = __riscv_vfmacc_vf_f32m8(grad, 3.0f, vprevx, vl);
-                                grad = __riscv_vfmacc_vf_f32m8(grad, 3.0f, vnextx, vl);
-                            }
 
                             __riscv_vse32_v_f32m8(trow + x, grad, vl);
 
@@ -945,6 +917,8 @@ namespace cv
                             vprevx = __riscv_vslidedown_vx_f32m8(vprevx, vl - 1, vl);
                         }
 
+                        trow[0] = res;
+
                         // Last pixel
                         if (border_type == BORDER_REPLICATE)
                         {
@@ -953,53 +927,47 @@ namespace cv
                                 prevx = 3 * srow2[width - 2] + 10 * srow1[width - 2] + 3 * srow0[width - 2];
                                 rowx = 3 * srow2[width - 1] + 10 * srow1[width - 1] + 3 * srow0[width - 1];
                             }
-                            else if (dy == 2)
-                            {
-                                prevx = 3 * srow2[width - 2] - 10 * srow1[width - 2] + 3 * srow0[width - 2];
-                                rowx = 3 * srow2[width - 1] - 10 * srow1[width - 1] + 3 * srow0[width - 1];
-                            }
                             else
                             {
-                                prevx = 3 * srow2[width - 2] - 3 * srow0[width - 2];
-                                rowx = 3 * srow2[width - 1] - 3 * srow0[width - 1];
+                                prevx = srow2[width - 2] - srow0[width - 2];
+                                rowx = srow2[width - 1] - srow0[width - 1];
                             }
+                            nextx = rowx;
                         }
                         else if (border_type == BORDER_CONSTANT)
                         {
                             if (dy == 0)
                             {
-                                float s0 = srow0 ? srow0[width - 1] : borderValue;
-                                float s1 = srow1[width - 1];
-                                float s2 = srow2 ? srow2[width - 1] : borderValue;
+                                float s0 = srow0 ? srow0[width - 2] : borderValue;
+                                float s1 = srow1[width - 2];
+                                float s2 = srow2 ? srow2[width - 2] : borderValue;
+                                prevx = 3 * s2 + 10 * s1 + 3 * s0;
+
+                                s0 = srow0 ? srow0[width - 1] : borderValue;
+                                s1 = srow1[width - 1];
+                                s2 = srow2 ? srow2[width - 1] : borderValue;
                                 rowx = 3 * s2 + 10 * s1 + 3 * s0;
-                            }
-                            else if (dy == 2)
-                            {
-                                float s0 = srow0 ? srow0[width - 1] : borderValue;
-                                float s1 = srow1[width - 1];
-                                float s2 = srow2 ? srow2[width - 1] : borderValue;
-                                rowx = 3 * s2 - 10 * s1 + 3 * s0;
                             }
                             else
                             {
-                                float s0 = srow0 ? srow0[width - 1] : borderValue;
-                                float s2 = srow2 ? srow2[width - 1] : borderValue;
-                                rowx = 3 * s2 - 3 * s0;
+                                float s0 = srow0 ? srow0[width - 2] : borderValue;
+                                float s2 = srow2 ? srow2[width - 2] : borderValue;
+                                prevx = s2 - s0;
+
+                                s0 = srow0 ? srow0[width - 1] : borderValue;
+                                s2 = srow2 ? srow2[width - 1] : borderValue;
+                                rowx = s2 - s0;
                             }
+                            nextx = borderValue;
                         }
-                        nextx = rowx;
 
                         if (dx == 1)
                         {
-                            res = 3 * nextx - 3 * prevx;
+                            res = nextx - prevx;
                         }
                         else if (dx == 0)
                         {
                             res = 3 * prevx + 10 * rowx + 3 * nextx;
-                        }
-                        else
-                        {
-                            res = 3 * prevx - 10 * rowx + 3 * nextx;
                         }
 
                         trow[width - 1] = res;
