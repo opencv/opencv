@@ -1,5 +1,4 @@
 #include "core_bpe.hpp"
-#include <boost/regex.hpp>
 
 #include <cstdint>
 #include <string>
@@ -129,7 +128,7 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
 
 
     regexTLS_.assign(MAX_NUM_THREADS, mainRegex());
-    boost::regex spRe = makeSpecialRegex(specialEncoder);
+    std::regex spRe = makeSpecialRegex(specialEncoder_);
     specialRegexTLS_.assign(MAX_NUM_THREADS, spRe);
 
     sortedTokenBytes_.reserve(encoder_.size());
@@ -138,11 +137,11 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
 }
 
 
-const boost::regex& CoreBPE::threadLocalRegex() const {
+const std::regex& CoreBPE::threadLocalRegex() const {
     return regexTLS_[hashCurrentThread()%MAX_NUM_THREADS];
 }
 
-const boost::regex& CoreBPE::threadLocalSpecialRegex() const {
+const std::regex& CoreBPE::threadLocalSpecialRegex() const {
     return specialRegexTLS_[hashCurrentThread()%MAX_NUM_THREADS];
 }
 
@@ -168,11 +167,11 @@ CoreBPE::decodeBytes(const std::vector<Rank>& tokens) const {
 
 
 std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
-    const boost::regex& re = threadLocalRegex();
+    const std::regex& re = threadLocalRegex();
     std::vector<Rank> tokens;
-    for (boost::sregex_iterator it(txt.begin(), txt.end(), re), end; it != end; it++) {
-        const std::string& match(it->str());
-        ByteVec piece(match.begin(), match.end());
+    for (auto it=std::sregex_iterator(txt.begin(), txt.end(), re); it!=std::sregex_iterator(); ++it) {
+        std::string_view sv(it->str());
+        ByteVec piece(sv.begin(), sv.end());
         auto eIt = encoder_.find(piece);
         if (eIt!=encoder_.end()) tokens.push_back(eIt->second);
         else {
@@ -187,8 +186,8 @@ std::pair<std::vector<Rank>, std::size_t>
 CoreBPE::encode(const std::string& text,
                 const std::unordered_set<std::string>& allowedSpecial) const
 {
-    const boost::regex& specialRe = threadLocalSpecialRegex();
-    const boost::regex& mainRe    = threadLocalRegex();
+    const std::regex& specialRe = threadLocalSpecialRegex();
+    const std::regex& mainRe    = threadLocalRegex();
 
     std::vector<Rank> ret;
     std::size_t       lastPieceTokenLen = 0;
@@ -196,16 +195,16 @@ CoreBPE::encode(const std::string& text,
 
     while (true) {
         // Find next allowed special token
-        boost::smatch m;
+        std::cmatch m;
         std::size_t nextPos = std::string::npos;
         std::size_t nextEnd = std::string::npos;
         std::string nextText;
 
         std::size_t searchPos = start;
         while (searchPos < text.size()) {
-            auto beginIt = text.cbegin() + searchPos;
-            auto endIt   = text.cend();
-            if (!boost::regex_search(beginIt, endIt, m, specialRe)) break;
+            const char* begin = text.data() + searchPos;
+            const char* end   = text.data() + text.size();
+            if (!std::regex_search(begin, end, m, specialRe)) break;
 
             std::size_t matchStart = searchPos + static_cast<std::size_t>(m.position());
             std::size_t matchEnd   = matchStart + static_cast<std::size_t>(m.length());
@@ -224,7 +223,7 @@ CoreBPE::encode(const std::string& text,
         std::size_t segmentEnd = (nextPos == std::string::npos) ? text.size() : nextPos;
         if (segmentEnd > start) {
             std::string segment = text.substr(start, segmentEnd - start);
-            for (boost::sregex_iterator it(segment.begin(), segment.end(), mainRe), e;
+            for (std::sregex_iterator it(segment.begin(), segment.end(), mainRe), e;
                  it != e; ++it) {
                 std::string_view sv(it->str());
                 ByteVec piece(sv.begin(), sv.end());

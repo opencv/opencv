@@ -1,7 +1,6 @@
 #pragma once
 
 #include <opencv2/core.hpp>
-#include <boost/regex.hpp>
 
 #include <cstdint>
 #include <cstddef>
@@ -94,17 +93,16 @@ public:
     }
 
     static const std::string& patternString() {
-        static const std::string pat = 
-            R"('(?:[sdmt]|ll|ve|re)| ?[A-Za-z]+| ?\d+| ?[^\sA-Za-z0-9]+|\s+)";
+        static const std::string pat =
+            R"('([sdmt]|ll|ve|re)| ?[A-Za-z]+| ?\d+| ?[^\sA-Za-z0-9]+|\s+)";
         return pat;
     }
 
-
-
-    static const boost::regex& mainRegex() {
-        static const boost::regex re(
+    static const std::regex& mainRegex() {
+        static const std::regex re(
             patternString(),
-            boost::regex::perl | boost::regex::optimize
+            std::regex_constants::ECMAScript 
+        | std::regex_constants::optimize
         );
         return re;
     }
@@ -128,30 +126,34 @@ public:
 
 private:
 
-    const boost::regex& threadLocalRegex() const;
-    const boost::regex& threadLocalSpecialRegex() const;
+    const std::regex& threadLocalRegex() const;
+    const std::regex& threadLocalSpecialRegex() const;
 
     static std::string buildSpecialPattern(
         const std::unordered_map<std::string,Rank>& special
     ) {
+        static const std::regex esc(R"([.^$|()\[\]{}*+?\\])");
+
         std::string pat;
         for (auto it = special.begin(); it != special.end(); ++it) {
-            if (it != special.begin()) pat += "|";
-            // escape any regex metacharacters in the key
-            pat += boost::regex_replace(
+            if (it != special.begin()) 
+                pat += '|';
+            pat += std::regex_replace(
                 it->first,
-                boost::regex(R"([.^$|()\[\]{}*+?\\])"),
-                R"(\\$&)");  
+                esc,
+                R"(\\$&)"          
+            );
         }
         return pat;
     }
 
-    static boost::regex makeSpecialRegex(
+    static std::regex makeSpecialRegex(
         const std::unordered_map<std::string,Rank>& special
     ) {
-        return boost::regex(
+        return std::regex(
             buildSpecialPattern(special),
-            boost::regex::perl | boost::regex::optimize
+            std::regex_constants::ECMAScript 
+        | std::regex_constants::optimize
         );
     }
 
@@ -164,8 +166,8 @@ private:
     std::unordered_map<Rank, ByteVec>  decoder_;          
     std::unordered_map<Rank, ByteVec>  specialDecoder_;   
 
-    std::vector<boost::regex> regexTLS_; 
-    std::vector<boost::regex> specialRegexTLS_;
+    std::vector<std::regex> regexTLS_; 
+    std::vector<std::regex> specialRegexTLS_;
 
     std::vector<ByteVec> sortedTokenBytes_;
 
