@@ -281,11 +281,21 @@ find_package(CURL REQUIRED)
 list(APPEND include_dirs ${CURL_INCLUDE_DIRS})
 list(APPEND libs CURL::libcurl)
 
+# Boost.Regex
+find_package(Boost REQUIRED COMPONENTS regex)
+list(APPEND include_dirs ${Boost_INCLUDE_DIRS})
+list(APPEND libs Boost::regex)
+
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
 # ----------------------------------------------------------------------------------
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
+
+# Ensure Boost include dirs are available for test target (fix for boost/regex.hpp not found) -----------[ADDED
+if(TARGET opencv_test_dnn)
+  target_include_directories(opencv_test_dnn PRIVATE ${Boost_INCLUDE_DIRS})
+endif()
 
 if(NOT BUILD_PROTOBUF)
   if(TARGET opencv_test_dnn)

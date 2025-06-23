@@ -1,13 +1,14 @@
 #pragma once
 
 #include <opencv2/core.hpp>
+#include <boost/regex.hpp>
 
 #include <cstdint>
 #include <cstddef>
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <regex>
+#include <regex> // Not enough functionality as the Rust/Python version
 #include <set>
 #include <stdexcept>
 #include <thread>
@@ -68,18 +69,45 @@ public:
     explicit DecodeError(std::string message);
 };
 
-
-
-class CoreBPE {
+class CV_EXPORTS CoreBPE {
 public:
+    
     explicit CoreBPE(ByteVecRankMap encoder,
             std::unordered_map<std::string, Rank> specialEncoder, 
             const std::string& pattern);
 
     template<typename EncIter, typename SpecIter>
-    static CoreBPE create(EncIter encFist, EncIter encLast, 
-                          SpecIter specFirst, SpecIter specLast,
-                          const std::string& pattern);
+    static inline CoreBPE create(EncIter encFirst,
+                                 EncIter encLast,
+                                 SpecIter specFirst,
+                                 SpecIter specLast,
+                                 const std::string& pat) {
+        ByteVecRankMap encMap;
+        for (auto it = encFirst; it != encLast; ++it)
+            encMap[it->first] = it->second;
+
+        std::unordered_map<std::string,Rank> specMap;
+        for (auto it = specFirst; it != specLast; ++it)
+            specMap[it->first] = it->second;
+
+        return CoreBPE(std::move(encMap), std::move(specMap), pat);
+    }
+
+    static const std::string& patternString() {
+        static const std::string pat = 
+            R"('(?:[sdmt]|ll|ve|re)| ?[A-Za-z]+| ?\d+| ?[^\sA-Za-z0-9]+|\s+)";
+        return pat;
+    }
+
+
+
+    static const boost::regex& mainRegex() {
+        static const boost::regex re(
+            patternString(),
+            boost::regex::perl | boost::regex::optimize
+        );
+        return re;
+    }
 
     // Encoding 
     std::vector<Rank> encodeOrdinary(const std::string& text) const;
@@ -100,8 +128,32 @@ public:
 
 private:
 
-    const std::regex& threadLocalRegex() const;
-    const std::regex& threadLocalSpecialRegex() const;
+    const boost::regex& threadLocalRegex() const;
+    const boost::regex& threadLocalSpecialRegex() const;
+
+    static std::string buildSpecialPattern(
+        const std::unordered_map<std::string,Rank>& special
+    ) {
+        std::string pat;
+        for (auto it = special.begin(); it != special.end(); ++it) {
+            if (it != special.begin()) pat += "|";
+            // escape any regex metacharacters in the key
+            pat += boost::regex_replace(
+                it->first,
+                boost::regex(R"([.^$|()\[\]{}*+?\\])"),
+                R"(\\$&)");  
+        }
+        return pat;
+    }
+
+    static boost::regex makeSpecialRegex(
+        const std::unordered_map<std::string,Rank>& special
+    ) {
+        return boost::regex(
+            buildSpecialPattern(special),
+            boost::regex::perl | boost::regex::optimize
+        );
+    }
 
     std::pair<std::vector<Rank>, std::size_t> increaseLastPieceTokenLen(std::vector<Rank> token,
                                                                         std::size_t lastPieceTokenLen) const;
@@ -112,8 +164,8 @@ private:
     std::unordered_map<Rank, ByteVec>  decoder_;          
     std::unordered_map<Rank, ByteVec>  specialDecoder_;   
 
-    std::vector<std::regex> regexTLS_; 
-    std::vector<std::regex> specialRegexTLS_;
+    std::vector<boost::regex> regexTLS_; 
+    std::vector<boost::regex> specialRegexTLS_;
 
     std::vector<ByteVec> sortedTokenBytes_;
 
