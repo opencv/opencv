@@ -2992,9 +2992,9 @@ Calculates the cross-power spectrum of two supplied source arrays. The arrays ar
 with getOptimalDFTSize.
 
 The function performs the following equations:
-- First it applies a Hanning window (see <https://en.wikipedia.org/wiki/Hann_function>) to each
-image to remove possible edge effects. This window is cached until the array size changes to speed
-up processing time.
+- First it applies a Hanning window to each image to remove possible edge effects, if it's provided
+by user. See @ref createHanningWindow and <https://en.wikipedia.org/wiki/Hann_function>. This window may
+be cached until the array size changes to speed up processing time.
 - Next it computes the forward DFTs of each source array:
 \f[\mathbf{G}_a = \mathcal{F}\{src_1\}, \; \mathbf{G}_b = \mathcal{F}\{src_2\}\f]
 where \f$\mathcal{F}\f$ is the forward DFT.
