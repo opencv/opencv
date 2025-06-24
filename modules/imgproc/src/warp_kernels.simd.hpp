@@ -1088,7 +1088,6 @@ void warpAffineNearestInvoker_32FC3(const float *src_data, size_t src_step, int 
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                bool rightmost = x + uf >= dstcols;
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
@@ -1953,7 +1952,6 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                bool rightmost = x + uf >= dstcols;
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
@@ -2942,7 +2940,6 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                bool rightmost = x + uf >= dstcols;
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C3);
                 if (v_reduce_min(inner_mask) != 0) {
     #if CV_SIMD256
@@ -3317,7 +3314,8 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
         }
     };
 
-    parallel_for_(Range(0, dst_rows), worker);
+    // parallel_for_(Range(0, dst_rows), worker);
+    worker(Range(0, dst_rows));
 }
 
 void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_rows, int src_cols,
@@ -3901,7 +3899,6 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                bool rightmost = x + uf >= dstcols;
                 CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
@@ -5166,7 +5163,6 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                bool rightmost = x + uf >= dstcols;
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
@@ -6555,7 +6551,6 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
-                bool rightmost = x + uf >= dstcols;
                 CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C3);
                 if (v_reduce_min(inner_mask) != 0) {
                     float valpha[max_uf], vbeta[max_uf];
@@ -7095,3 +7090,4 @@ void remapLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src_step, int
 
 CV_CPU_OPTIMIZATION_NAMESPACE_END
 } // cv
+ 
