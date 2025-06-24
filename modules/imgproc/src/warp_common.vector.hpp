@@ -873,16 +873,6 @@
 #define CV_WARP_SIMD128_NEAREST_SHUFFLE_INTER_32FC3_I(ofs) \
     const float *srcptr##ofs = src + addr[ofs]; \
   v_float32 i##ofs##_pix0 = vx_load(srcptr##ofs);
-// #define CV_WARP_SIMD128_NEAREST_STORE_8UC3_I() \
-//     v_pack_store(dstptr + 3*(x), v_rotate_right<1>(v_pack(v_rotate_left<1>(i0_pix0), i1_pix0))); \
-//     v_pack_store(dstptr + 3*(x+2), v_rotate_right<1>(v_pack(v_rotate_left<1>(i2_pix0), i3_pix0))); \
-//     v_pack_store(dstptr + 3*(x+4), v_rotate_right<1>(v_pack(v_rotate_left<1>(i4_pix0), i5_pix0))); \
-//     v_pack_store(dstptr + 3*(x+6), v_rotate_right<1>(v_pack(v_rotate_left<1>(i6_pix0), i7_pix0)));
-// #define CV_WARP_SIMD128_NEAREST_STORE_16UC3_I() \
-//     vx_store(dstptr + 3*(x), v_rotate_right<1>(v_pack(v_rotate_left<1>(i0_pix0), i1_pix0))); \
-//     vx_store(dstptr + 3*(x+2), v_rotate_right<1>(v_pack(v_rotate_left<1>(i2_pix0), i3_pix0))); \
-//     vx_store(dstptr + 3*(x+4), v_rotate_right<1>(v_pack(v_rotate_left<1>(i4_pix0), i5_pix0))); \
-//     vx_store(dstptr + 3*(x+6), v_rotate_right<1>(v_pack(v_rotate_left<1>(i6_pix0), i7_pix0)));
 #define CV_WARP_SIMD128_NEAREST_STORE_8UC3_I() \
     uint32_t tmp_buf[max_vlanes_16*4]; \
     vx_store(tmp_buf,       i0_pix0); \
@@ -978,24 +968,6 @@
     i##ofs##_pix0 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix1, i##ofs##_pix0), i##ofs##_pix0); \
     i##ofs##_pix2 = v_fma(i##ofs##_alpha, v_sub(i##ofs##_pix3, i##ofs##_pix2), i##ofs##_pix2); \
     i##ofs##_pix0 = v_fma(i##ofs##_beta,  v_sub(i##ofs##_pix2, i##ofs##_pix0), i##ofs##_pix0);
-// #define CV_WARP_SIMD128_LINEAR_STORE_8UC3_I() \
-//     v_uint16 i01_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(i0_pix0), i1_pix0)); \
-//     v_uint16 i23_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(i2_pix0), i3_pix0)); \
-//     v_uint16 i45_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(i4_pix0), i5_pix0)); \
-//     v_uint16 i67_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(i6_pix0), i7_pix0)); \
-//     v_pack_store(dstptr + 3*(x),   i01_pix); \
-//     v_pack_store(dstptr + 3*(x+2), i23_pix); \
-//     v_pack_store(dstptr + 3*(x+4), i45_pix); \
-//     v_pack_store(dstptr + 3*(x+6), i67_pix);
-// #define CV_WARP_SIMD128_LINEAR_STORE_16UC3_I() \
-//     v_uint16 i01_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(v_round(i0_pix0)), v_round(i1_pix0))); \
-//     v_uint16 i23_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(v_round(i2_pix0)), v_round(i3_pix0))); \
-//     v_uint16 i45_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(v_round(i4_pix0)), v_round(i5_pix0))); \
-//     v_uint16 i67_pix = v_rotate_right<1>(v_pack_u(v_rotate_left<1>(v_round(i6_pix0)), v_round(i7_pix0))); \
-//     vx_store(dstptr + 3*(x),   i01_pix); \
-//     vx_store(dstptr + 3*(x+2), i23_pix); \
-//     vx_store(dstptr + 3*(x+4), i45_pix); \
-//     vx_store(dstptr + 3*(x+6), i67_pix);
 #define CV_WARP_SIMD128_LINEAR_STORE_8UC3_I() \
     int32_t tmp_buf[max_vlanes_16*4]; \
     vx_store(tmp_buf,       i0_pix0); \
