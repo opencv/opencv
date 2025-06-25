@@ -590,7 +590,7 @@ This can be useful for verifying support for a given image format before attempt
 @return true if an image reader for the specified file is available and the file can be opened, false otherwise.
 
 @note The function checks the availability of image codecs that are either built into OpenCV or dynamically loaded.
-It does not check for the actual existence of the file but rather the ability to read the specified file type.
+It does not load the image codec implementation and decode data, but uses signature check.
 If the file cannot be opened or the format is unsupported, the function will return false.
 
 @sa cv::haveImageWriter, cv::imread, cv::imdecode
