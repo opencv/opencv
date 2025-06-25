@@ -97,7 +97,8 @@ def evaluate_conditional_inclusion_directive(directive, preprocessor_definitions
         ...
     ValueError: Failed to evaluate '#if strangedefinedvar' directive, stripped down to 'strangedefinedvar'
     """
-    OPERATORS = { "!": "not ", "&&": "and", "&": "and", "||": "or", "|": "or" }
+    OPERATORS1 = {"&&": "and", "||": "or"}
+    OPERATORS2 = { "!": "not ", "&": "and", "|": "or" }
 
     input_directive = directive
 
@@ -134,7 +135,10 @@ def evaluate_conditional_inclusion_directive(directive, preprocessor_definitions
         directive
     )
 
-    for src_op, dst_op in OPERATORS.items():
+    for src_op, dst_op in OPERATORS1.items():
+        directive = directive.replace(src_op, dst_op)
+
+    for src_op, dst_op in OPERATORS2.items():
         directive = directive.replace(src_op, dst_op)
 
     try:
