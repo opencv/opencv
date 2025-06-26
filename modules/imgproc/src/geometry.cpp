@@ -772,8 +772,8 @@ static Rect pointSetBoundingRect( const Mat& points )
     else
     {
         const float* pts = points.ptr<float>();
-	xmin = xmax = cvFloor(pts[0]);
-	ymin = ymax = cvFloor(pts[1]);
+        xmin = xmax = cvFloor(pts[0]);
+        ymin = ymax = cvFloor(pts[1]);
 #if CV_SIMD || CV_SIMD_SCALABLE
         int64_t firstval = 0;
         std::memcpy(&firstval, pts, sizeof(float) * 2);
