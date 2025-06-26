@@ -68,6 +68,32 @@ TEST(Imgcodecs_EXR, readWrite_32FC3)
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
 }
 
+TEST(Imgcodecs_EXR, readWrite_32FC7)
+{ // 0-6 channels (nultispectral)
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filenameInput = root + "readwrite/test32FC7.exr";
+    const string filenameOutput = cv::tempfile(".exr");
+#ifndef GENERATE_DATA
+    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+#else
+    const Size sz(3, 5);
+    Mat img(sz, CV_32FC7);
+    img.at<cv::Vec<float, 7>>(0, 0)[0] = 101.125;
+    img.at<cv::Vec<float, 7>>(2, 1)[3] = 203.500;
+    img.at<cv::Vec<float, 7>>(4, 2)[6] = 305.875;
+    ASSERT_TRUE(cv::imwrite(filenameInput, img));
+#endif
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_MAKETYPE(CV_32F, 7), img.type());
+
+    ASSERT_TRUE(cv::imwrite(filenameOutput, img));
+    const Mat img2 = cv::imread(filenameOutput, IMREAD_UNCHANGED);
+    ASSERT_EQ(img2.type(), img.type());
+    ASSERT_EQ(img2.size(), img.size());
+    EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
+    EXPECT_EQ(0, remove(filenameOutput.c_str()));
+}
+
 
 TEST(Imgcodecs_EXR, readWrite_32FC1_half)
 {

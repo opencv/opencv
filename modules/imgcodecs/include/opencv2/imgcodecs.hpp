@@ -464,7 +464,7 @@ filename extension (see cv::imread for the list of extensions). In general, only
 single-channel or 3-channel (with 'BGR' channel order) images
 can be saved using this function, with these exceptions:
 
-- With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved.
+- With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved. More than 4 channels can be saved. (imread can load it then.)
   - 8-bit unsigned (CV_8U) images are not supported.
 - With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
   - All images will be converted to 32-bit float (CV_32F).

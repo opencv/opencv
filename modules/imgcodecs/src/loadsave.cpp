@@ -960,7 +960,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         Mat image = img_vec[page];
         CV_Assert(!image.empty());
 
+#ifdef HAVE_OPENEXR
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+#endif
+
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
@@ -1473,7 +1478,11 @@ bool imencode( const String& ext, InputArray _img,
         CV_Assert(!image.empty());
 
         const int channels = image.channels();
+#ifdef HAVE_OPENEXR
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+#endif
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
