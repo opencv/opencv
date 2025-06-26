@@ -1,4 +1,5 @@
 #include "precomp.hpp"
+
 #include <iostream>
 
 namespace cv {
@@ -40,39 +41,63 @@ bool CalibrationResult::loadFromFile(const String& filename) {
 }
 
 void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) const {
-    dx = Mat::zeros(X.size(), CV_32F);
-    dy = Mat::zeros(Y.size(), CV_32F);
-    
-    const int height = X.rows;
-    const int width = X.cols;
-    
-    for (int y = 0; y < height; ++y) {
-        const float* x_row = X.ptr<float>(y);
-        const float* y_row = Y.ptr<float>(y);
-        float* dx_row = dx.ptr<float>(y);
-        float* dy_row = dy.ptr<float>(y);
-        
-        for (int x = 0; x < width; ++x) {
-            double x_norm = (x_row[x] - mean_x) / std_x;
-            double y_norm = (y_row[x] - mean_y) / std_y;
-            
-            double delta_x = 0.0, delta_y = 0.0;
-            size_t term_idx = 0;
-            
-            for (int total = 0; total <= degree && term_idx < coeffs_x.size(); ++total){
-                for (int i = 0; i <= total && term_idx < coeffs_x.size(); ++i) {
-                    int  j    = total - i;
-                    double t  = std::pow(x_norm, i) * std::pow(y_norm, j);
-                    delta_x  += coeffs_x[term_idx] * t;
-                    delta_y  += coeffs_y[term_idx] * t;
-                    ++term_idx;
+    CV_Assert(X.type() == CV_32F && Y.type() == CV_32F && X.size() == Y.size());
+
+    const int h = X.rows, w = X.cols, D = degree;
+    dx.create(X.size(), CV_32F);
+    dy.create(Y.size(), CV_32F);
+
+    const double inv_std_x = 1.0 / std_x;
+    const double inv_std_y = 1.0 / std_y;
+
+    parallel_for_( Range(0, h),
+        [&](const Range& rows)
+    {
+        std::vector<double> x_pow(D + 1);
+        std::vector<double> y_pow(D + 1);
+
+        for (int y = rows.start; y < rows.end; ++y)
+        {
+            const float* XR = X.ptr<float>(y);
+            const float* YR = Y.ptr<float>(y);
+            float* DX = dx.ptr<float>(y);
+            float* DY = dy.ptr<float>(y);
+
+            for (int x = 0; x < w; ++x)
+            {
+                const double xn = (XR[x] - mean_x) * inv_std_x;
+                const double yn = (YR[x] - mean_y) * inv_std_y;
+
+                x_pow[0] = y_pow[0] = 1.0;
+                for (int k = 1; k <= D; ++k)
+                {
+                    x_pow[k] = x_pow[k - 1] * xn;
+                    y_pow[k] = y_pow[k - 1] * yn;
                 }
+
+                double dx_val = 0.0, dy_val = 0.0;
+                std::size_t idx = 0;
+
+                for (int total = 0; total <= D; ++total)
+                {
+                    for (int i = 0; i <= total; ++i)
+                    {
+                        const int j = total - i;
+                        const double term = x_pow[i] * y_pow[j];
+                        dx_val += coeffs_x[idx] * term;
+                        dy_val += coeffs_y[idx] * term;
+                        ++idx;
+                    }
+                }
+
+                DX[x] = static_cast<float>(dx_val);
+                DY[x] = static_cast<float>(dy_val);
             }
-            dx_row[x] = static_cast<float>(delta_x);
-            dy_row[x] = static_cast<float>(delta_y);
         }
-    }
+    } );
 }
+
+
 
 std::vector<double> ChromaticAberrationCorrector::computeMonomialTerms(double x, double y, int degree) const {
     std::vector<double> terms;
