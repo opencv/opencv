@@ -743,11 +743,7 @@ static Rect pointSetBoundingRect( const Mat& points )
         int arr_minval[max_nlanes], arr_maxval[max_nlanes];
         vx_store(arr_minval, minval);
         vx_store(arr_maxval, maxval);
-        xmin = arr_minval[0];
-        ymin = arr_minval[1];
-        xmax = arr_maxval[0];
-        ymax = arr_maxval[1];
-        for (int j = 1; j < nlanes; j++)
+        for (int j = 0; j < nlanes; j++)
         {
             if (xmin > arr_minval[2*j])   xmin = arr_minval[2*j];
             if (ymin > arr_minval[2*j+1]) ymin = arr_minval[2*j+1];
@@ -776,11 +772,14 @@ static Rect pointSetBoundingRect( const Mat& points )
     else
     {
         const float* pts = points.ptr<float>();
-#if CV_SIMD || CV_SIMD_SCALABLE
+	xmin = xmax = cvFloor(pts[0]);
+	ymin = ymax = cvFloor(pts[1]);
+#if CV_SIMD || CV_SIMD_SCALABLE && 0 // TODO: fix accuracy
         int64_t firstval = 0;
         std::memcpy(&firstval, pts, sizeof(float) * 2);
-        v_float32 minval, maxval;
-        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        v_float32 minfval, maxfval;
+        minfval = maxfval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+	v_int32 minval = v_floor(minfval), maxval = v_floor(maxfval);
         const int nlanes = VTraits<v_float32>::vlanes()/2;
         for (; i < npoints; i += nlanes)
         {
@@ -790,19 +789,15 @@ static Rect pointSetBoundingRect( const Mat& points )
                     break;
                 i = npoints - nlanes;
             }
-            v_float32 ptXY2 = vx_load(pts + 2 * i);
+            v_int32 ptXY2 = v_floor(vx_load(pts + 2 * i));
             minval = v_min(ptXY2, minval);
             maxval = v_max(ptXY2, maxval);
         }
         constexpr int max_nlanes = VTraits<v_int32>::max_nlanes;
         int arr_minval[max_nlanes], arr_maxval[max_nlanes];
-        vx_store(arr_minval, v_floor(minval));
-        vx_store(arr_maxval, v_floor(maxval));
-        xmin = arr_minval[0];
-        ymin = arr_minval[1];
-        xmax = arr_maxval[0];
-        ymax = arr_maxval[1];
-        for (int j = 1; j < nlanes; j++)
+        vx_store(arr_minval, minval);
+        vx_store(arr_maxval, maxval);
+        for (int j = 0; j < nlanes; j++)
         {
             if (xmin > arr_minval[2*j])   xmin = arr_minval[2*j];
             if (ymin > arr_minval[2*j+1]) ymin = arr_minval[2*j+1];
