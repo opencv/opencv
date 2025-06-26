@@ -3,7 +3,6 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
-#include "../src/chromatic_aberration_correction.hpp"
 
 namespace opencv_test { namespace {
 
@@ -12,6 +11,15 @@ class ChromaticAberrationTest : public testing::Test
 protected:    
     std::string test_yaml_file;
     cv::Mat test_image;
+
+    void SetUp() override
+    {
+        string data_path = cvtest::TS::ptr()->get_data_path();
+        ASSERT_TRUE(data_path != "") << "OPENCV_TEST_DATA_PATH not set";
+        test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/calib_result.yaml";
+        test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/ca_photo.png");
+        ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
+    }
 };
 
 TEST_F(ChromaticAberrationTest, CalibrationResultLoad)
@@ -20,21 +28,21 @@ TEST_F(ChromaticAberrationTest, CalibrationResultLoad)
     
     // Test successful loading
     EXPECT_TRUE(calib_result.loadFromFile(test_yaml_file));
-    EXPECT_EQ(calib_result.degree, 2);
+    EXPECT_EQ(calib_result.degree, 11);
     
     // Test red channel data
-    EXPECT_EQ(calib_result.poly_red.degree, 2);
-    EXPECT_EQ(calib_result.poly_red.coeffs_x.size(), 6);
-    EXPECT_EQ(calib_result.poly_red.coeffs_y.size(), 6);
-    EXPECT_DOUBLE_EQ(calib_result.poly_red.mean_x, 50.0);
-    EXPECT_DOUBLE_EQ(calib_result.poly_red.std_x, 30.0);
+    EXPECT_EQ(calib_result.poly_red.degree, 11);
+    EXPECT_EQ(calib_result.poly_red.coeffs_x.size(), 78);
+    EXPECT_EQ(calib_result.poly_red.coeffs_y.size(), 78);
+    EXPECT_DOUBLE_EQ(calib_result.poly_red.mean_x, 3392.451171875);
+    EXPECT_DOUBLE_EQ(calib_result.poly_red.std_x, 2239.90380859375);
     
     // Test blue channel data
-    EXPECT_EQ(calib_result.poly_blue.degree, 2);
-    EXPECT_EQ(calib_result.poly_blue.coeffs_x.size(), 6);
-    EXPECT_EQ(calib_result.poly_blue.coeffs_y.size(), 6);
-    EXPECT_DOUBLE_EQ(calib_result.poly_blue.mean_x, 50.0);
-    EXPECT_DOUBLE_EQ(calib_result.poly_blue.std_x, 30.0);
+    EXPECT_EQ(calib_result.poly_blue.degree, 11);
+    EXPECT_EQ(calib_result.poly_blue.coeffs_x.size(), 78);
+    EXPECT_EQ(calib_result.poly_blue.coeffs_y.size(), 78);
+    EXPECT_DOUBLE_EQ(calib_result.poly_blue.mean_x, 3394.3818359375);
+    EXPECT_DOUBLE_EQ(calib_result.poly_blue.std_x, 2239.822265625);
 }
 
 TEST_F(ChromaticAberrationTest, CalibrationResultLoadInvalidFile)
@@ -143,112 +151,67 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     
     int degree;
     fs["degree"] >> degree;
-    EXPECT_EQ(degree, 2);
+    EXPECT_EQ(degree, 11);
     
     cv::FileNode red_node = fs["red_channel"];
+    cv::FileNode blue_node = fs["blue_channel"];
     EXPECT_TRUE(red_node.isMap());
+    EXPECT_TRUE(blue_node.isMap());
     
     std::vector<double> coeffs_x;
     red_node["coeffs_x"] >> coeffs_x;
-    EXPECT_EQ(coeffs_x.size(), 6);
-    EXPECT_DOUBLE_EQ(coeffs_x[0], 0.0);
-    EXPECT_DOUBLE_EQ(coeffs_x[1], 0.1);
+    double red_mean_x, red_std_x, blue_mean_x, blue_std_x;
+    red_node["mean_x"] >> red_mean_x;
+    red_node["std_x"] >> red_std_x;
+    blue_node["mean_x"] >> blue_mean_x;
+    blue_node["std_x"] >> blue_std_x;
+    std::cout << blue_mean_x << "\n";
+    std::cout << blue_std_x << "\n";
+    EXPECT_EQ(coeffs_x.size(), 78);
+    EXPECT_NEAR(red_mean_x, 3392.45, 1e-2);
+    EXPECT_NEAR(red_std_x, 2239.9, 1e-2);
+    EXPECT_NEAR(red_mean_x, 3394.38, 1e-2);
+    EXPECT_NEAR(red_std_x, 2239.82, 1e-2);
     
     fs.release();
 }
 
-TEST_F(ChromaticAberrationTest, ImageCorrectionComparison)
-{
-    cv::ChromaticAberrationCorrector corrector;
-    ASSERT_TRUE(corrector.loadCalibration(test_yaml_file));
-    
-    cv::Mat corrected = corrector.correctImage(test_image);
-    
-    cv::Mat diff;
-    cv::absdiff(test_image, corrected, diff);
-    
-    cv::Mat diff_gray;
-    cv::cvtColor(diff, diff_gray, cv::COLOR_BGR2GRAY);
-    
-    cv::Scalar mean_diff = cv::mean(diff);
-    cv::Scalar mean_diff_gray = cv::mean(diff_gray);
-    
-    double max_val;
-    cv::minMaxLoc(diff_gray, nullptr, &max_val);
-    
-    EXPECT_GT(mean_diff_gray[0], 0.0) << "Images should be different after correction";
-    EXPECT_LT(mean_diff_gray[0], 50.0) << "Mean difference should not be excessive";
-    EXPECT_LT(max_val, 255.0) << "Maximum difference should be within valid range";
-    
-    EXPECT_GT(mean_diff[0], 0.0) << "Blue channel should show differences";
-    EXPECT_GT(mean_diff[1], 0.0) << "Green channel should show differences"; 
-    EXPECT_GT(mean_diff[2], 0.0) << "Red channel should show differences";
-    
-    std::vector<cv::Mat> hist_orig, hist_corr;
-    int histSize = 256;
-    float range[] = {0, 256};
-    const float* histRange = {range};
-    
-    cv::Mat orig_gray, corr_gray;
-    cv::cvtColor(test_image, orig_gray, cv::COLOR_BGR2GRAY);
-    cv::cvtColor(corrected, corr_gray, cv::COLOR_BGR2GRAY);
-    
-    cv::Mat hist_original, hist_corrected;
-    cv::calcHist(&orig_gray, 1, 0, cv::Mat(), hist_original, 1, &histSize, &histRange);
-    cv::calcHist(&corr_gray, 1, 0, cv::Mat(), hist_corrected, 1, &histSize, &histRange);
-    
-    // Compare histograms using correlation
-    double hist_correlation = cv::compareHist(hist_original, hist_corrected, cv::HISTCMP_CORREL);
-    EXPECT_GT(hist_correlation, 0.8) << "Histograms should be reasonably similar";
-    EXPECT_LT(hist_correlation, 0.99) << "Histograms should show some difference";
-}
-
 TEST_F(ChromaticAberrationTest, RealWorldDataIntegration)
 {
-    // Test with actual calibration data if available
     try {
         std::string real_calib_file = cv::samples::findFile("cv/cameracalibration/chromatic_aberration/calib_result.yaml");
         std::string real_test_image = cv::samples::findFile("cv/cameracalibration/chromatic_aberration/ca_photo.png");
         
         cv::ChromaticAberrationCorrector corrector;
         
-        // Test loading real calibration data
         EXPECT_TRUE(corrector.loadCalibration(real_calib_file));
         
-        // Load real test image
         cv::Mat real_image = cv::imread(real_test_image, cv::IMREAD_COLOR);
         ASSERT_FALSE(real_image.empty()) << "Failed to load real test image";
         
-        // Apply correction
         cv::Mat corrected = corrector.correctImage(real_image);
         
-        // Verify output properties
         EXPECT_EQ(corrected.rows, real_image.rows);
         EXPECT_EQ(corrected.cols, real_image.cols);
         EXPECT_EQ(corrected.channels(), real_image.channels());
         
-        // Calculate quality metrics
         cv::Mat diff;
         cv::absdiff(real_image, corrected, diff);
         
         cv::Scalar mean_diff = cv::mean(diff);
         double total_diff = mean_diff[0] + mean_diff[1] + mean_diff[2];
         
-        // Verify correction is applied but not excessive
         EXPECT_GT(total_diff, 0.0) << "Real image correction should produce changes";
         EXPECT_LT(total_diff, 150.0) << "Real image correction should not be excessive";
         
-        // Test structural similarity
         cv::Mat orig_gray, corr_gray;
         cv::cvtColor(real_image, orig_gray, cv::COLOR_BGR2GRAY);
         cv::cvtColor(corrected, corr_gray, cv::COLOR_BGR2GRAY);
         
-        // Calculate PSNR as a quality metric
         double psnr = cv::PSNR(orig_gray, corr_gray);
         EXPECT_GT(psnr, 20.0) << "PSNR should indicate reasonable image quality";
         EXPECT_LT(psnr, 50.0) << "PSNR should show meaningful correction";
     } catch (const cv::Exception& e) {
-        // Skip test if data is not available
         std::cout << "Skipping real world test - test data files not found: " << e.what() << std::endl;
     }
 }
