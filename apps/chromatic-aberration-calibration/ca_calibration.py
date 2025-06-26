@@ -65,14 +65,12 @@ class Polynomial2D:
         dy = terms @ self.coeffs_y
         return dx.reshape(x.shape), dy.reshape(y.shape)
 
-# Register a representer that forces flow-style for every list
 def _repr_flow_seq(dumper, data):
     return dumper.represent_sequence('tag:yaml.org,2002:seq',
                                      data,
                                      flow_style=True)
 
 yaml.SafeDumper.add_representer(list, _repr_flow_seq)
-
 @dataclass
 class CalibrationResult:
     degree: int
@@ -138,13 +136,13 @@ class CalibrationResult:
             np.asarray(red_data["coeffs_x"]),
             np.asarray(red_data["coeffs_y"]),
             deg,
-            red_data["mean_x"], red_data["std_x"], red_data["mean_y"], red_data["std_y"]
+            red_data["mean_x"], red_data["mean_y"], red_data["std_x"], red_data["std_y"]
         )
         poly_b = Polynomial2D(
             np.asarray(blue_data["coeffs_x"]),
             np.asarray(blue_data["coeffs_y"]),
             deg,
-            blue_data["mean_x"], blue_data["std_x"], blue_data["mean_y"], blue_data["std_y"]
+            blue_data["mean_x"], blue_data["mean_y"], blue_data["std_x"], blue_data["std_y"]
         )
         
         return cls(
@@ -169,9 +167,9 @@ class CalibrationResult:
         d = self.to_dict()
         if path is not None:
             with open(path, "w") as fh:
-                fh.write("%YAML:1.0\n")
                 yaml.safe_dump(d, 
-                               fh, 
+                               fh,
+                               version=(1, 2),
                                default_flow_style=False,
                                sort_keys=False)
 
@@ -344,12 +342,12 @@ def _calibrate_from_image(
         poly_red=poly_r,
         poly_blue=poly_b,
         mean_x_red=stats_r[0],
-        std_x_red=stats_r[1],
-        mean_y_red=stats_r[2],
+        mean_y_red=stats_r[1],
+        std_x_red=stats_r[2],
         std_y_red=stats_r[3],
         mean_x_blue=stats_b[0],
-        std_x_blue=stats_b[1],
-        mean_y_blue=stats_b[2],
+        mean_y_blue=stats_b[1],
+        std_x_blue=stats_b[2],
         std_y_blue=stats_b[3],
         image_width=w,
         image_height=h,
