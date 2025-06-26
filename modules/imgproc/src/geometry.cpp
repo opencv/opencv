@@ -774,12 +774,11 @@ static Rect pointSetBoundingRect( const Mat& points )
         const float* pts = points.ptr<float>();
 	xmin = xmax = cvFloor(pts[0]);
 	ymin = ymax = cvFloor(pts[1]);
-#if CV_SIMD || CV_SIMD_SCALABLE && 0 // TODO: fix accuracy
+#if CV_SIMD || CV_SIMD_SCALABLE
         int64_t firstval = 0;
         std::memcpy(&firstval, pts, sizeof(float) * 2);
-        v_float32 minfval, maxfval;
-        minfval = maxfval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
-	v_int32 minval = v_floor(minfval), maxval = v_floor(maxfval);
+        v_float32 minval, maxval;
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
         const int nlanes = VTraits<v_float32>::vlanes()/2;
         for (; i < npoints; i += nlanes)
         {
@@ -789,20 +788,22 @@ static Rect pointSetBoundingRect( const Mat& points )
                     break;
                 i = npoints - nlanes;
             }
-            v_int32 ptXY2 = v_floor(vx_load(pts + 2 * i));
+            v_float32 ptXY2 = vx_load(pts + 2 * i);
             minval = v_min(ptXY2, minval);
             maxval = v_max(ptXY2, maxval);
         }
         constexpr int max_nlanes = VTraits<v_int32>::max_nlanes;
-        int arr_minval[max_nlanes], arr_maxval[max_nlanes];
+        float arr_minval[max_nlanes], arr_maxval[max_nlanes];
         vx_store(arr_minval, minval);
         vx_store(arr_maxval, maxval);
         for (int j = 0; j < nlanes; j++)
         {
-            if (xmin > arr_minval[2*j])   xmin = arr_minval[2*j];
-            if (ymin > arr_minval[2*j+1]) ymin = arr_minval[2*j+1];
-            if (xmax < arr_maxval[2*j])   xmax = arr_maxval[2*j];
-            if (ymax < arr_maxval[2*j+1]) ymax = arr_maxval[2*j+1];
+            int _xmin = cvFloor(arr_minval[2*j]), _ymin = cvFloor(arr_minval[2*j+1]);
+            int _xmax = cvFloor(arr_maxval[2*j]), _ymax = cvFloor(arr_maxval[2*j+1]);
+            if (xmin > _xmin) xmin = _xmin;
+            if (ymin > _ymin) ymin = _ymin;
+            if (xmax < _xmax) xmax = _xmax;
+            if (ymax < _ymax) ymax = _ymax;
         }
 #endif
         for( ; i < npoints; i++ )
