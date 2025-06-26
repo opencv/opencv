@@ -328,7 +328,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
     }
 
                        /* C1      C2      C3      C4 */ //to add borders
-    char impl[7][4][2]={{{1, 1}, {1, 1}, {0, 0}, {1, 1}},   //8U
+    char impl[7][4][2]={{{0, 0}, {1, 1}, {0, 0}, {0, 0}},   //8U
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //8S
                         {{0, 0}, {1, 1}, {0, 1}, {0, 1}},   //16U
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //16S
