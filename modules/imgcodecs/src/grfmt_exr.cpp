@@ -170,7 +170,7 @@ bool  ExrDecoder::readHeader()
     m_green = channels.findChannel( "G" );
     m_blue = channels.findChannel( "B" );
     m_alpha = channels.findChannel( "A" );
-    m_multispectral = channels.findChannel( "0" );
+    m_multispectral = channels.findChannel( "0" ) != nullptr;
 
     if( m_alpha ) // alpha channel supported in RGB, Y, and YC scenarios
         m_hasalpha = true;
