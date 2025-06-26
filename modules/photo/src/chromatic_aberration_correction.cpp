@@ -12,7 +12,7 @@ bool CalibrationResult::loadFromFile(const String& filename) {
         }
         
         fs["degree"] >> degree;
-        FileNode red_node = fs["red_channel"];\
+        FileNode red_node = fs["red_channel"];
         poly_red.degree = degree;
         red_node["coeffs_x"] >> poly_red.coeffs_x;
         red_node["coeffs_y"] >> poly_red.coeffs_y;
@@ -45,6 +45,8 @@ void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) c
     
     const int height = X.rows;
     const int width = X.cols;
+
+    // std::cout << height << " " << width << "\n";
     
     for (int y = 0; y < height; ++y) {
         const float* x_row = X.ptr<float>(y);
@@ -60,17 +62,15 @@ void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) c
             double delta_x = 0.0, delta_y = 0.0;
             size_t term_idx = 0;
             
-            for (int total = 0; total <= degree && term_idx < coeffs_x.size(); ++total) {
-                for (int i = 0; i <= total && term_idx < coeffs_x.size(); ++i) {
-                    int j = total - i;
-                    double term = std::pow(x_norm, i) * std::pow(y_norm, j);
-                    
-                    delta_x += coeffs_x[term_idx] * term;
-                    delta_y += coeffs_y[term_idx] * term;
-                    term_idx++;
+            for (int total = 0; total <= degree && term_idx < coeffs_x.size(); ++total){
+                for (int i = 0; i <= total && term_idx < coeffs_x.size(); ++i) { // i grows first
+                    int  j    = total - i;
+                    double t  = std::pow(x_norm, i) * std::pow(y_norm, j);
+                    delta_x  += coeffs_x[term_idx] * t;
+                    delta_y  += coeffs_y[term_idx] * t;
+                    ++term_idx;
                 }
             }
-            
             dx_row[x] = static_cast<float>(delta_x);
             dy_row[x] = static_cast<float>(delta_y);
         }
@@ -157,8 +157,8 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
     repeat(x_coords, height, 1, map_x_g);
     repeat(y_coords, 1, width, map_y_g);
     
-    remap(g, g_corr, map_x_g, map_y_g, INTER_LINEAR, BORDER_REPLICATE);
-    
+    g_corr = g;
+
     std::vector<Mat> corrected_channels = {b_corr, g_corr, r_corr};
     Mat corrected_image;
     merge(corrected_channels, corrected_image);

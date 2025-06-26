@@ -6,6 +6,8 @@
 
 namespace opencv_test { namespace {
 
+const unsigned long EXPECTED_COEFFS_SIZE = 78;
+
 class ChromaticAberrationTest : public testing::Test
 {
 protected:    
@@ -32,15 +34,15 @@ TEST_F(ChromaticAberrationTest, CalibrationResultLoad)
     
     // Test red channel data
     EXPECT_EQ(calib_result.poly_red.degree, 11);
-    EXPECT_EQ(calib_result.poly_red.coeffs_x.size(), 78);
-    EXPECT_EQ(calib_result.poly_red.coeffs_y.size(), 78);
+    EXPECT_EQ(calib_result.poly_red.coeffs_x.size(), EXPECTED_COEFFS_SIZE);
+    EXPECT_EQ(calib_result.poly_red.coeffs_y.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_DOUBLE_EQ(calib_result.poly_red.mean_x, 3392.451171875);
     EXPECT_DOUBLE_EQ(calib_result.poly_red.std_x, 2239.90380859375);
     
     // Test blue channel data
     EXPECT_EQ(calib_result.poly_blue.degree, 11);
-    EXPECT_EQ(calib_result.poly_blue.coeffs_x.size(), 78);
-    EXPECT_EQ(calib_result.poly_blue.coeffs_y.size(), 78);
+    EXPECT_EQ(calib_result.poly_blue.coeffs_x.size(), EXPECTED_COEFFS_SIZE);
+    EXPECT_EQ(calib_result.poly_blue.coeffs_y.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_DOUBLE_EQ(calib_result.poly_blue.mean_x, 3394.3818359375);
     EXPECT_DOUBLE_EQ(calib_result.poly_blue.std_x, 2239.822265625);
 }
@@ -165,13 +167,11 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     red_node["std_x"] >> red_std_x;
     blue_node["mean_x"] >> blue_mean_x;
     blue_node["std_x"] >> blue_std_x;
-    std::cout << blue_mean_x << "\n";
-    std::cout << blue_std_x << "\n";
-    EXPECT_EQ(coeffs_x.size(), 78);
+    EXPECT_EQ(coeffs_x.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_NEAR(red_mean_x, 3392.45, 1e-2);
     EXPECT_NEAR(red_std_x, 2239.9, 1e-2);
-    EXPECT_NEAR(red_mean_x, 3394.38, 1e-2);
-    EXPECT_NEAR(red_std_x, 2239.82, 1e-2);
+    EXPECT_NEAR(blue_mean_x, 3394.38, 1e-2);
+    EXPECT_NEAR(blue_std_x, 2239.82, 1e-2);
     
     fs.release();
 }
