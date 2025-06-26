@@ -25,7 +25,6 @@ default values:
 from __future__ import annotations
 
 import argparse
-import json
 import math
 import pathlib
 from dataclasses import dataclass
@@ -65,6 +64,14 @@ class Polynomial2D:
         dx = terms @ self.coeffs_x
         dy = terms @ self.coeffs_y
         return dx.reshape(x.shape), dy.reshape(y.shape)
+
+# Register a representer that forces flow-style for every list
+def _repr_flow_seq(dumper, data):
+    return dumper.represent_sequence('tag:yaml.org,2002:seq',
+                                     data,
+                                     flow_style=True)
+
+yaml.SafeDumper.add_representer(list, _repr_flow_seq)
 
 @dataclass
 class CalibrationResult:
@@ -162,7 +169,11 @@ class CalibrationResult:
         d = self.to_dict()
         if path is not None:
             with open(path, "w") as fh:
-                yaml.safe_dump(d, fh)
+                fh.write("%YAML:1.0\n")
+                yaml.safe_dump(d, 
+                               fh, 
+                               default_flow_style=False,
+                               sort_keys=False)
 
 
 
