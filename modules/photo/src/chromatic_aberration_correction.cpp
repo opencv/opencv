@@ -1,6 +1,4 @@
 #include "precomp.hpp"
-#include "chromatic_aberration_correction.hpp"
-#include "opencv2/highgui.hpp"
 #include <iostream>
 
 namespace cv {
@@ -9,12 +7,12 @@ bool CalibrationResult::loadFromFile(const String& filename) {
     try {
         FileStorage fs(filename, FileStorage::READ);
         if (!fs.isOpened()) {
+            std::cerr << "Trying to open: " << filename << std::endl;
             return false;
         }
         
         fs["degree"] >> degree;
-        
-        FileNode red_node = fs["red_channel"];
+        FileNode red_node = fs["red_channel"];\
         poly_red.degree = degree;
         red_node["coeffs_x"] >> poly_red.coeffs_x;
         red_node["coeffs_y"] >> poly_red.coeffs_y;
@@ -35,6 +33,7 @@ bool CalibrationResult::loadFromFile(const String& filename) {
         fs.release();
         return true;
     } catch (const Exception& e) {
+        std::cerr << "Trying to open: " << filename << std::endl;
         std::cout << "Error loading calibration file: " << e.what() << "\n";
         return false;
     }
@@ -173,11 +172,4 @@ Mat correctChromaticAberration(InputArray image, const String& calibration_file)
     return corrector.correctImage(image);
 }
 
-}
-
-int main() {
-    cv::Mat image = cv::imread("big.JPG");
-    cv::Mat corrected = cv::correctChromaticAberration(image, "res.yaml");
-    cv::imwrite("corrected_output.jpg", corrected);
-    return 0;
 }
