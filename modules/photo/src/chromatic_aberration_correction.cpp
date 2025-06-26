@@ -45,8 +45,6 @@ void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) c
     
     const int height = X.rows;
     const int width = X.cols;
-
-    // std::cout << height << " " << width << "\n";
     
     for (int y = 0; y < height; ++y) {
         const float* x_row = X.ptr<float>(y);
@@ -58,12 +56,11 @@ void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) c
             double x_norm = (x_row[x] - mean_x) / std_x;
             double y_norm = (y_row[x] - mean_y) / std_y;
             
-            // Compute monomial terms and polynomial evaluation
             double delta_x = 0.0, delta_y = 0.0;
             size_t term_idx = 0;
             
             for (int total = 0; total <= degree && term_idx < coeffs_x.size(); ++total){
-                for (int i = 0; i <= total && term_idx < coeffs_x.size(); ++i) { // i grows first
+                for (int i = 0; i <= total && term_idx < coeffs_x.size(); ++i) {
                     int  j    = total - i;
                     double t  = std::pow(x_norm, i) * std::pow(y_norm, j);
                     delta_x  += coeffs_x[term_idx] * t;
@@ -92,7 +89,6 @@ std::vector<double> ChromaticAberrationCorrector::computeMonomialTerms(double x,
 
 void ChromaticAberrationCorrector::buildRemaps(int height, int width, const Polynomial2D& poly, 
                                                  Mat& map_x, Mat& map_y) {
-    // Create coordinate grids
     Mat X, Y;
     Mat x_coords = Mat::zeros(1, width, CV_32F);
     Mat y_coords = Mat::zeros(height, 1, CV_32F);
@@ -107,11 +103,9 @@ void ChromaticAberrationCorrector::buildRemaps(int height, int width, const Poly
     repeat(x_coords, height, 1, X);
     repeat(y_coords, 1, width, Y);
     
-    // Compute polynomial deltas
     Mat dx, dy;
     poly.computeDeltas(X, Y, dx, dy);
     
-    // Build remap matrices
     map_x = X - dx;
     map_y = Y - dy;
 }
@@ -127,22 +121,18 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
     const int height = image.rows;
     const int width = image.cols;
     
-    // Split channels
     std::vector<Mat> channels;
     split(image, channels);
     Mat b = channels[0], g = channels[1], r = channels[2];
     
-    // Build remap maps for red and blue channels
     Mat map_x_r, map_y_r, map_x_b, map_y_b;
     buildRemaps(height, width, calib_result_.poly_red, map_x_r, map_y_r);
     buildRemaps(height, width, calib_result_.poly_blue, map_x_b, map_y_b);
     
-    // Apply corrections
     Mat r_corr, b_corr, g_corr;
     remap(r, r_corr, map_x_r, map_y_r, INTER_LINEAR, BORDER_REPLICATE);
     remap(b, b_corr, map_x_b, map_y_b, INTER_LINEAR, BORDER_REPLICATE);
     
-    // Green channel - identity mapping (no correction needed)
     Mat map_x_g, map_y_g;
     Mat x_coords = Mat::zeros(1, width, CV_32F);
     Mat y_coords = Mat::zeros(height, 1, CV_32F);
