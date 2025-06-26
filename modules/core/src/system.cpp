@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include <atomic>
+#include <exception>
 #include <iostream>
 #include <ostream>
 
@@ -125,7 +126,6 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #endif
 
 #ifdef CV_ERROR_SET_TERMINATE_HANDLER
-#include <exception>      // std::set_terminate
 #include <cstdlib>        // std::abort
 #endif
 
