@@ -619,4 +619,46 @@ TEST(Imgcodecs_Params, imencode_regression_22752)
     EXPECT_ANY_THROW(cv::imencode("test.jpg", img, buf, params));  // parameters size or missing JPEG codec
 }
 
+TEST(Imgcodecs, imwriteWithExif)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    string filename = root + "readwrite/testExifOrientation_6.jpg";
+
+    std::vector<std::vector<ExifTag> > exif;
+    imreadWithExif(filename, IMREAD_UNCHANGED, exif);
+    dumpExif(std::cout, exif);
+
+    const Mat src(32, 32, CV_8UC3);
+    line(src,Point(5,5),Point(25,25),Scalar(255,0,255),2);
+    filename = "test.jpg";//cv::tempfile("test.jpg");
+    //imwriteWithExif(filename, src, exif);
+    //imreadWithExif(filename, IMREAD_UNCHANGED, exif);
+    //dumpExif(std::cout, exif);
+
+    ExifTag exifTag0, exifTag1, exifTag2;
+    exifTag0.tagid = TAG_IMAGEDESCRIPTION;
+    exifTag0.type = TAG_TYPE_ASCII;
+    exifTag0.value = "Writing Exif Test";
+
+    exifTag1.tagid = TAG_SOFTWARE;
+    exifTag1.type = TAG_TYPE_ASCII;
+    exifTag1.value = "OpenCV 5.0";
+
+    exifTag2.tagid = TAG_ORIENTATION;
+    exifTag2.type = TAG_TYPE_SHORT;
+    exifTag2.value = 7;
+
+    std::vector<ExifTag> exiftags;
+    exiftags.push_back(exifTag0);
+    exiftags.push_back(exifTag1);
+    exiftags.push_back(exifTag2);
+    exif.clear();
+    exif.push_back(exiftags);
+    dumpExif(std::cout, exif);
+    bool ret = false;
+   // EXPECT_NO_THROW(ret = imwriteWithExif(filename, src, exif));
+   // EXPECT_TRUE(ret);
+
+    //EXPECT_EQ(0, remove(filename.c_str()));
+}
 }} // namespace

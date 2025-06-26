@@ -700,6 +700,36 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
     return imreadmulti_(filename, flags, mats, start, count);
 }
 
+Mat imreadWithExif(const std::string& filename, int flags,
+    std::vector<std::vector<ExifTag> >& exif)
+{
+    constexpr size_t MIN_FILE_SIZE = 1 << 5;
+    constexpr size_t MAX_FILE_SIZE = 250 * (1 << 20);
+    std::vector<uchar> data;
+
+    // open the file:
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open())
+        return Mat();
+
+    // get its size:
+    file.seekg(0, std::ios::end);
+    size_t fileSize = (size_t)file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    if (fileSize < MIN_FILE_SIZE || fileSize > MAX_FILE_SIZE)
+        return Mat();
+
+    data.resize(fileSize);
+    file.read((char*)data.data(), fileSize);
+    file.close();
+
+    if (data.size() != fileSize)
+        return Mat();
+
+    return imdecodeWithExif(data, flags, exif);
+}
+
 static bool
 imreadanimation_(const String& filename, int flags, int start, int count, Animation& animation)
 {
@@ -1035,6 +1065,26 @@ bool imwrite( const String& filename, InputArray _img,
 
     CV_Assert(!img_vec.empty());
     return imwrite_(filename, img_vec, params, false);
+}
+
+bool imwriteWithExif( const String& filename, InputArrayOfArrays imgs,
+                      const std::vector<std::vector<ExifTag> >& exif,
+                      const std::vector<int>& params)
+{
+    std::vector<uchar> buf;
+    const char* filename_ = filename.c_str();
+    const char* pos = strrchr(filename_, '.');
+    if (!pos)
+        return false;
+    bool ok = imencodeWithExif(pos, imgs, exif, buf, params);
+    if (ok) {
+        std::ofstream file(filename, std::ios::binary);
+        if (!file.is_open())
+            return false;
+        file.write((const char*)buf.data(), buf.size());
+        file.close();
+    }
+    return ok;
 }
 
 static bool imwriteanimation_(const String& filename, const Animation& animation, const std::vector<int>& params)
@@ -1517,6 +1567,1169 @@ bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
                     std::vector<uchar>& buf, const std::vector<int>& params)
 {
     return imencode(ext, imgs, buf, params);
+}
+
+typedef std::unordered_map<int, int> intmap_t;
+
+std::string tagTypeToString(ExifTagType type)
+{
+    const char* typestr =
+        type == TAG_TYPE_NOTYPE ? "NoType" :
+        type == TAG_TYPE_BYTE ? "Byte" :
+        type == TAG_TYPE_ASCII ? "ASCII" :
+        type == TAG_TYPE_SHORT ? "Short" :
+        type == TAG_TYPE_LONG ? "Long" :
+        type == TAG_TYPE_RATIONAL ? "Rational" :
+        type == TAG_TYPE_SBYTE ? "SByte" :
+        type == TAG_TYPE_UNDEFINED ? "Undefined" :
+        type == TAG_TYPE_SSHORT ? "SShort" :
+        type == TAG_TYPE_SLONG ? "SLong" :
+        type == TAG_TYPE_SRATIONAL ? "SRational" :
+        type == TAG_TYPE_FLOAT ? "Float" :
+        type == TAG_TYPE_DOUBLE ? "Double" :
+        type == TAG_TYPE_IFD ? "IFD" :
+        type == TAG_TYPE_LONG8 ? "Long8" :
+        type == TAG_TYPE_SLONG8 ? "SLong8" :
+        type == TAG_TYPE_IFD8 ? "IFD8" : nullptr;
+    return typestr ? std::string(typestr) : cv::format("Unkhown type <%d>", (int)type);
+}
+
+size_t tagTypeSize(ExifTagType type)
+{
+    return
+        type == TAG_TYPE_NOTYPE ? 0 :
+        type == TAG_TYPE_BYTE ? 1 :
+        type == TAG_TYPE_ASCII ? 1 :
+        type == TAG_TYPE_SHORT ? 2 :
+        type == TAG_TYPE_LONG ? 4 :
+        type == TAG_TYPE_RATIONAL ? 8 :
+        type == TAG_TYPE_SBYTE ? 1 :
+        type == TAG_TYPE_UNDEFINED ? 1 :
+        type == TAG_TYPE_SSHORT ? 2 :
+        type == TAG_TYPE_SLONG ? 4 :
+        type == TAG_TYPE_SRATIONAL ? 8 :
+        type == TAG_TYPE_FLOAT ? 4 :
+        type == TAG_TYPE_DOUBLE ? 8 :
+        type == TAG_TYPE_IFD ? 0 :
+        type == TAG_TYPE_LONG8 ? 8 :
+        type == TAG_TYPE_SLONG8 ? 8 :
+        type == TAG_TYPE_IFD8 ? 0 : 0;
+}
+
+std::string exifTagIdToString(ExifTagId tag)
+{
+    const char* tagstr =
+        tag == TAG_EMPTY ? "<empty>" :
+        tag == TAG_SUB_FILETYPE ? "SubFileType" :
+        tag == TAG_IMAGE_WIDTH ? "ImageWidth" :
+        tag == TAG_IMAGE_LENGTH ? "ImageLength" :
+        tag == TAG_BITS_PER_SAMPLE ? "BitsPerSample" :
+        tag == TAG_COMPRESSION ? "Compression" :
+        tag == TAG_PHOTOMETRIC ? "Photometric" :
+        tag == TAG_IMAGEDESCRIPTION ? "ImageDescription" :
+        tag == TAG_MAKE ? "Make" :
+        tag == TAG_MODEL ? "Model" :
+        tag == TAG_STRIP_OFFSET ? "StripOffset" :
+        tag == TAG_SAMPLES_PER_PIXEL ? "SamplesPerPixel" :
+        tag == TAG_ROWS_PER_STRIP ? "RowsPerStrip" :
+        tag == TAG_STRIP_BYTE_COUNTS ? "StripByteCounts" :
+        tag == TAG_PLANAR_CONFIG ? "PlanarConfig" :
+        tag == TAG_ORIENTATION ? "Orientation" :
+        tag == TAG_XRESOLUTION ? "XResolution" :
+        tag == TAG_YRESOLUTION ? "YResolution" :
+        tag == TAG_RESOLUTION_UNIT ? "ResolutionUnit" :
+        tag == TAG_SOFTWARE ? "Software" :
+        tag == TAG_MODIFYDATE ? "ModifyDate" :
+        tag == TAG_SAMPLEFORMAT ? "SampleFormat" :
+        tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFARepeatPatternDim" :
+        tag == TAG_CFA_PATTERN ? "CFAPattern" :
+
+        tag == TAG_COPYRIGHT ? "Copyright" :
+        tag == TAG_EXPOSURE_TIME ? "ExposureTime" :
+        tag == TAG_FNUMBER ? "FNumber" :
+
+        tag == TAG_EXIF_TAGS ? "ExifTags" :
+        tag == TAG_ISOSPEED ? "ISOSpeed" :
+        tag == TAG_DATETIME_CREATE ? "CreateDate" :
+        tag == TAG_DATETIME_ORIGINAL ? "DateTimeOriginal" :
+
+        tag == TAG_FLASH ? "Flash" :
+        tag == TAG_FOCALLENGTH ? "FocalLength" :
+        tag == TAG_EP_STANDARD_ID ? "TIFF/EPStandardID" :
+
+        tag == TAG_SHUTTER_SPEED ? "Shutter Speed" :
+        tag == TAG_APERTURE_VALUE ? "Aperture Value" :
+
+        tag == TAG_SUBSECTIME ? "SubSec Time" :
+        tag == TAG_SUBSECTIME_ORIGINAL ? "SubSec Original Time" :
+        tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
+
+        tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
+        tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
+        tag == TAG_WHITE_BALANCE ? "White Balance" :
+
+        tag == TAG_EXIF_VERSION ? "Exif Version" :
+
+        tag == TAG_DNG_VERSION ? "DNGVersion" :
+        tag == TAG_DNG_BACKWARD_VERSION ? "DNGBackwardVersion" :
+        tag == TAG_UNIQUE_CAMERA_MODEL ? "UniqueCameraModel" :
+        tag == TAG_CHROMA_BLUR_RADIUS ? "ChromaBlurRadius" :
+        tag == TAG_CFA_PLANECOLOR ? "CFAPlaneColor" :
+        tag == TAG_CFA_LAYOUT ? "CFALayout" :
+        tag == TAG_BLACK_LEVEL_REPEAT_DIM ? "BlackLevelRepeatDim" :
+        tag == TAG_BLACK_LEVEL ? "BlackLevel" :
+        tag == TAG_WHITE_LEVEL ? "WhiteLevel" :
+        tag == TAG_DEFAULT_SCALE ? "DefaultScale" :
+        tag == TAG_DEFAULT_CROP_ORIGIN ? "DefaultCropOrigin" :
+        tag == TAG_DEFAULT_CROP_SIZE ? "DefaultCropSize" :
+        tag == TAG_COLOR_MATRIX1 ? "ColorMatrix1" :
+        tag == TAG_COLOR_MATRIX2 ? "ColorMatrix2" :
+        tag == TAG_CAMERA_CALIBRATION1 ? "CameraCalibration1" :
+        tag == TAG_CAMERA_CALIBRATION2 ? "CameraCalibration2" :
+        tag == TAG_ANALOG_BALANCE ? "AnalogBalance" :
+        tag == TAG_AS_SHOT_NEUTRAL ? "AsShotNeutral" :
+        tag == TAG_AS_SHOT_WHITE_XY ? "AsShotWhiteXY" :
+        tag == TAG_BASELINE_EXPOSURE ? "BaselineExposure" :
+        tag == TAG_CALIBRATION_ILLUMINANT1 ? "CalibrationIlluminant1" :
+        tag == TAG_CALIBRATION_ILLUMINANT2 ? "CalibrationIlluminant2" :
+        tag == TAG_EXTRA_CAMERA_PROFILES ? "ExtraCameraProfiles" :
+        tag == TAG_PROFILE_NAME ? "ProfileName" :
+        tag == TAG_AS_SHOT_PROFILE_NAME ? "AsShotProfileName" :
+        tag == TAG_PREVIEW_COLORSPACE ? "PreviewColorspace" :
+        tag == TAG_OPCODE_LIST2 ? "OpCodeList2" :
+        tag == TAG_NOISE_PROFILE ? "NoiseProfile" :
+        tag == TAG_DEFAULT_BLACK_RENDER ? "BlackRender" :
+        tag == TAG_ACTIVE_AREA ? "ActiveArea" :
+        tag == TAG_FORWARD_MATRIX1 ? "ForwardMatrix1" :
+        tag == TAG_FORWARD_MATRIX2 ? "ForwardMatrix2" : nullptr;
+    return tagstr ? std::string(tagstr) : cv::format("<unknown tag>(%d)", (int)tag);
+};
+
+template<typename _Tp> void dumpScalar(std::ostream& strm, _Tp v)
+{
+    strm << v;
+}
+
+template<> void dumpScalar(std::ostream& strm, int64_t v)
+{
+    strm << v;
+}
+
+template<> void dumpScalar(std::ostream& strm, double v)
+{
+    strm << cv::format("%.8g", v);
+}
+
+template<> void dumpScalar(std::ostream& strm, srational64_t v)
+{
+    strm << cv::format("%.4f", (double)v.num / v.denom);
+}
+
+template <typename _Tp> void dumpVector(std::ostream& strm, const std::vector<_Tp>& v)
+{
+    size_t i, nvalues = v.size();
+    strm << '[';
+    for (i = 0; i < nvalues; i++) {
+        if (i > 0)
+            strm << ", ";
+        if (i >= 3 && i + 6 < nvalues) {
+            strm << "... ";
+            i = nvalues - 3;
+        }
+        dumpScalar(strm, v[i]);
+    }
+    strm << ']';
+}
+
+std::ostream& ExifTag::dump(std::ostream& strm) const
+{
+    if (empty()) {
+        strm << "<empty>";
+        return strm;
+    }
+    strm << exifTagIdToString(tagid) << ": ";
+    if (std::holds_alternative<std::string>(value)) {
+        strm << '\"' << std::get<std::string>(value) << '\"';
+    }
+    else if (tagid == TAG_APERTURE_VALUE) {
+        srational64_t r = std::get<srational64_t>(value);
+        strm << "f/" << pow(2., r.num * 0.5 / r.denom);
+    }
+    else if (tagid == TAG_SHUTTER_SPEED) {
+        srational64_t r = std::get<srational64_t>(value);
+        double ss = pow(2., -(double)r.num / r.denom);
+        if (ss < 1) {
+            ss = 1. / ss;
+            strm << "1/";
+        }
+        strm << cv::format("%.1fs", ss);
+    }
+    else if (tagid == TAG_EXIF_VERSION) {
+        const std::vector<int64_t>& ver = std::get<std::vector<int64_t> >(value);
+        CV_Assert(ver.size() == 4u);
+        strm << cv::format("%d.%d.%d",
+            (int)((ver[0] - '0') * 10 + (ver[1] - '0')),
+            (int)(ver[2] - '0'), int(ver[3] - '0'));
+    }
+    else if (std::holds_alternative<int64_t>(value)) {
+        dumpScalar(strm, std::get<int64_t>(value));
+    }
+    else if (std::holds_alternative<srational64_t>(value)) {
+        dumpScalar(strm, std::get<srational64_t>(value));
+    }
+    else if (std::holds_alternative<double>(value)) {
+        dumpScalar(strm, std::get<double>(value));
+    }
+    else if (std::holds_alternative<std::vector<int64_t> >(value)) {
+        dumpVector(strm, std::get<std::vector<int64_t> >(value));
+    }
+    else if (std::holds_alternative<std::vector<srational64_t> >(value)) {
+        dumpVector(strm, std::get<std::vector<srational64_t> >(value));
+    }
+    else if (std::holds_alternative<std::vector<double> >(value)) {
+        dumpVector(strm, std::get<std::vector<double> >(value));
+    }
+    else {
+        CV_Error(Error::StsNotImplemented, "");
+    }
+    return strm;
+}
+
+size_t ExifTag::nvalues() const
+{
+    return empty() ? 0u :
+        std::holds_alternative<std::string>(value) ?
+        std::get<std::string>(value).size() + 1 :
+        std::holds_alternative<std::vector<int64_t> >(value) ?
+        std::get<std::vector<int64_t> >(value).size() :
+        std::holds_alternative<std::vector<srational64_t> >(value) ?
+        std::get<std::vector<srational64_t> >(value).size() :
+        std::holds_alternative<std::vector<double> >(value) ?
+        std::get<std::vector<double> >(value).size() : 1u;
+}
+
+static srational64_t doubleToRational(double v, int maxbits = 31)
+{
+    srational64_t r = { 1, 0 };
+    if (std::isfinite(v)) {
+        int e = 0;
+        double m = frexp(v, &e);
+        if (e >= maxbits)
+            return r;
+
+        double iv = round(v);
+        if (iv == v) {
+            r.denom = 1;
+            r.num = (int64_t)iv;
+        }
+        else {
+            r.denom = (int64_t)1 << (maxbits - std::max(e, 0));
+            r.num = (int64_t)round(v * r.denom);
+            while ((r.denom & 1) == 0 && (r.num & 1) == 0) {
+                r.num >>= 1;
+                r.denom >>= 1;
+            }
+        }
+    }
+    return r;
+}
+
+static srational64_t doubleToSRational(double v)
+{
+    srational64_t r = doubleToRational(fabs(v), 30);
+    r.num *= (v < 0 ? -1 : 1);
+    return r;
+}
+
+constexpr size_t EXIF_HDR_SIZE = 8; // ('II' or 'MM'), (0x2A 0x00), (IFD0 offset: 4 bytes)
+constexpr size_t IFD_ENTRY_SIZE = 12;
+constexpr size_t IFD_MAX_INLINE_SIZE = 4;
+constexpr size_t IFD_HDR_SIZE = 6;
+
+size_t tagValueSize(ExifTagType type, size_t nvalues)
+{
+    size_t size = tagTypeSize(type) * nvalues;
+    return (size + 1u) & ~1u;
+}
+
+static size_t computeOpcodeListSize(ExifTagId tagid, const std::vector<double>& v)
+{
+    constexpr size_t GAINMAP_HDR_SIZE = 18;
+    constexpr size_t GAINMAP_HDR_BYTES = 92;
+
+    CV_Assert(tagid == TAG_OPCODE_LIST2);
+
+    size_t idx = 1, v_size = v.size();
+    uint32_t i, ngainmaps = v_size > 0 ? (uint32_t)v[0] : 0u;
+    size_t size = sizeof(uint32_t);
+    for (i = 0; i < ngainmaps; i++) {
+        if (idx + GAINMAP_HDR_SIZE > v_size)
+            break;
+        size_t gainmap_size = (size_t)v[idx + 2];
+        size_t gainmap_nitems = gainmap_size - GAINMAP_HDR_SIZE;
+        size += gainmap_nitems * sizeof(float) + GAINMAP_HDR_BYTES;
+        idx += gainmap_size;
+    }
+    return size;
+}
+
+static size_t computeIFDSize(const std::vector<ExifTag>* ifds,
+    size_t nifds, size_t idx, size_t& values_size)
+{
+    CV_Assert(idx < nifds);
+    const std::vector<ExifTag>& ifd = ifds[idx];
+    size_t i, ntags = ifd.size(), size = IFD_HDR_SIZE + IFD_ENTRY_SIZE * ntags;
+    for (i = 0; i < ntags; i++) {
+        const ExifTag& tag = ifd[i];
+        if (tag.tagid == TAG_NEXT_IFD) {
+            size -= IFD_ENTRY_SIZE;
+        }
+        else if (tag.tagid == TAG_OPCODE_LIST2) {
+            const std::vector<double>& v = std::get<std::vector<double> >(tag.value);
+            values_size += computeOpcodeListSize(tag.tagid, v);
+        }
+        else if (tag.type == TAG_TYPE_IFD) {
+            int64_t subifd_idx = std::get<int64_t>(tag.value);
+            CV_Assert_N(0 <= subifd_idx, (size_t)subifd_idx < nifds);
+            size += computeIFDSize(ifds, nifds, (size_t)subifd_idx, values_size);
+        }
+        else {
+            size_t tag_values_size = tagValueSize(tag.type, tag.nvalues());
+            if (tag_values_size > IFD_MAX_INLINE_SIZE)
+                values_size += tag_values_size;
+        }
+    }
+    return size;
+}
+
+static size_t nextIFD(const std::vector<ExifTag>& ifd)
+{
+    for (const ExifTag& tag : ifd) {
+        if (tag.tagid == TAG_NEXT_IFD) {
+            return (size_t)std::get<int64_t>(tag.value);
+        }
+    }
+    return 0u;
+}
+
+static void pack1(std::vector<uchar>& data, size_t& offset, uint8_t value)
+{
+    data.resize(std::max(data.size(), offset + 1));
+    data[offset++] = (char)value;
+}
+
+static void pack2(std::vector<uchar>& data, size_t& offset,
+    uint16_t value, bool bigendian_)
+{
+    size_t ofs = offset, bigendian = (size_t)bigendian_;
+    data.resize(std::max(data.size(), ofs + sizeof(uint16_t)));
+    uchar* ptr = data.data();
+    ptr[ofs + bigendian] = (uchar)value;
+    ptr[ofs + 1 - bigendian] = (uchar)(value >> 8);
+    offset = ofs + sizeof(uint16_t);
+}
+
+static void pack4(std::vector<uchar>& data, size_t& offset,
+    uint32_t value, bool bigendian_)
+{
+    size_t ofs = offset, bigendian = (size_t)bigendian_;
+    data.resize(std::max(data.size(), ofs + sizeof(uint32_t)));
+    uchar* ptr = data.data();
+    ptr[ofs + bigendian * 3] = (uchar)value;
+    ptr[ofs + 1 + bigendian] = (uchar)(value >> 8);
+    ptr[ofs + 2 - bigendian] = (uchar)(value >> 16);
+    ptr[ofs + 3 - bigendian * 3] = (uchar)(value >> 24);
+    offset = ofs + sizeof(uint32_t);
+}
+
+static void pack8(std::vector<uchar>& data, size_t& offset,
+    uint64_t value, bool bigendian_)
+{
+    size_t ofs = offset, bigendian = (size_t)bigendian_;
+    data.resize(std::max(data.size(), ofs + sizeof(uint64_t)));
+    uchar* ptr = data.data();
+    uint32_t lo = (uint32_t)value, hi = (uint32_t)(value >> 32);
+    ptr[ofs + bigendian * 7] = (uchar)lo;
+    ptr[ofs + 1 + bigendian * 5] = (uchar)(lo >> 8);
+    ptr[ofs + 2 + bigendian * 3] = (uchar)(lo >> 16);
+    ptr[ofs + 3 + bigendian] = (uchar)(lo >> 24);
+    ptr[ofs + 4 - bigendian] = (uchar)hi;
+    ptr[ofs + 5 - bigendian * 3] = (uchar)(hi >> 8);
+    ptr[ofs + 6 - bigendian * 5] = (uchar)(hi >> 16);
+    ptr[ofs + 7 - bigendian * 7] = (uchar)(hi >> 24);
+    offset = ofs + sizeof(uint64_t);
+}
+
+static void packFloat(std::vector<uchar>& data, size_t& offset,
+    float value, bool bigendian_)
+{
+    Cv32suf u;
+    u.f = value;
+    pack4(data, offset, u.u, bigendian_);
+}
+
+static void packDouble(std::vector<uchar>& data, size_t& offset,
+    double value, bool bigendian_)
+{
+    Cv64suf u;
+    u.f = value;
+    pack8(data, offset, u.u, bigendian_);
+}
+
+static bool packGainMaps(std::vector<uchar>& data, size_t& offset,
+    const std::vector<double>& gainmaps,
+    bool bigendian)
+{
+    constexpr uint32_t OPCODE_LIST_GAIN_MAP = 9;
+
+    constexpr size_t GAINMAP_HDR_SIZE = 18;
+    constexpr size_t MAP_POINTS_V = 11;
+    constexpr size_t MAP_POINTS_H = 12;
+    constexpr size_t MAP_NPLANES = 17;
+
+    size_t idx = 1, total = gainmaps.size();
+    uint32_t nopcodes = (uint32_t)gainmaps[0];
+    pack4(data, offset, nopcodes, bigendian);
+
+    for (uint32_t i = 0; i < nopcodes; i++) {
+        if (idx + GAINMAP_HDR_SIZE > total)
+            return false;
+
+        size_t start = idx;
+        uint32_t gainmap_size = gainmaps[idx + 2];
+
+        uint32_t map_points_v = (uint32_t)gainmaps[idx + MAP_POINTS_V];
+        uint32_t map_points_h = (uint32_t)gainmaps[idx + MAP_POINTS_H];
+        uint32_t map_nplanes = (uint32_t)gainmaps[idx + MAP_NPLANES];
+        size_t nitems = map_points_v * map_points_h * map_nplanes;
+        size_t gainmap_end = idx + gainmap_size;
+
+        if (gainmap_size != nitems + GAINMAP_HDR_SIZE ||
+            gainmap_end > total)
+            return false;
+
+        pack4(data, offset, OPCODE_LIST_GAIN_MAP, bigendian);
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // dng_version
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // flags
+        size_t nbytes_offset = offset;
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // nbytes: to be updated later
+
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // top
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // left
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // bottom
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // right
+
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // plane
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // planes
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // row_pitch
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // col_pitch
+
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // map_points_v
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // map_points_h
+
+        packDouble(data, offset, gainmaps[idx++], bigendian); // map_spacing_v
+        packDouble(data, offset, gainmaps[idx++], bigendian); // map_spacing_h
+        packDouble(data, offset, gainmaps[idx++], bigendian); // map_offset_v
+        packDouble(data, offset, gainmaps[idx++], bigendian); // map_offset_h
+
+        pack4(data, offset, (uint32_t)gainmaps[idx++], bigendian); // map_nplanes
+
+        for (uint32_t p = 0; p < map_nplanes; p++) {
+            for (uint32_t y = 0; y < map_points_v; y++) {
+                for (uint32_t x = 0; x < map_points_h; x++)
+                    packFloat(data, offset, (float)gainmaps[idx++], bigendian);
+            }
+        }
+
+        uint32_t nbytes = (uint32_t)(offset - nbytes_offset - 4);
+        //printf("wrote: opcode_id=%u, dng_version=%u, flags=%u, nbytes=%u\n",
+        //       OPCODE_LIST_GAIN_MAP, (uint64_t)gainmaps[start], (uint64_t)gainmaps[start+1], nbytes);
+        pack4(data, nbytes_offset, nbytes, bigendian); // store the actual size of gainmap in bytes
+        idx = gainmap_end;
+    }
+    CV_Assert(idx == gainmaps.size());
+    return true;
+}
+
+static void packIFD(const std::vector<ExifTag>* ifds, size_t nifds, size_t idx,
+    std::vector<uchar>& data, size_t& offset,
+    size_t& values_offset, size_t& image_data_offset,
+    bool bigendian, bool sorttags, bool adjust_stripe_offsets)
+{
+    CV_Assert(idx < nifds);
+    const std::vector<ExifTag>& ifd = ifds[idx];
+    std::vector<int> sortedtags;
+    std::vector<std::pair<size_t, size_t> > subifds;
+    size_t ntags = ifd.size(), ntags_real = ntags - (nextIFD(ifd) > 0u);
+    size_t datasize = 0;
+    sortedtags.resize(ntags);
+
+    for (size_t i = 0; i < ntags; i++)
+        sortedtags[i] = (int)i;
+
+    if (sorttags) {
+        std::sort(sortedtags.begin(), sortedtags.end(), [&](int a, int b) {
+            auto tag_a = ifd[a].tagid, tag_b = ifd[b].tagid;
+            return tag_a < tag_b || (tag_a == tag_b && a < b);
+            });
+    }
+    size_t subifd_offset0 = offset + IFD_HDR_SIZE + ntags_real * IFD_ENTRY_SIZE;
+    size_t subifd_offset = subifd_offset0;
+    size_t next_offset = 0;
+    pack2(data, offset, (uint16_t)ntags_real, bigendian);
+
+    // first, pack the specified (by idx) IFD without subdirectories
+    for (int tagidx : sortedtags) {
+        const ExifTag& tag = ifd[tagidx];
+        if (tag.tagid == TAG_NEXT_IFD) {
+            CV_Assert(next_offset == 0u); // there can be only one "next" IFD.
+            next_offset = subifd_offset;
+            int64_t next_idx = std::get<int64_t>(tag.value);
+            CV_Assert_N(next_idx >= 0, (size_t)next_idx < nifds);
+            subifds.push_back({ (size_t)next_idx, subifd_offset });
+            continue;
+        }
+
+        pack2(data, offset, (uint16_t)tag.tagid, bigendian);
+
+        if (tag.tagid == TAG_OPCODE_LIST2) {
+            const std::vector<double>& v = std::get<std::vector<double> >(tag.value);
+            size_t nbytes = computeOpcodeListSize(tag.tagid, v);
+            pack2(data, offset, (uint16_t)TAG_TYPE_UNDEFINED, bigendian);
+            pack4(data, offset, (uint32_t)nbytes, bigendian);
+            pack4(data, offset, (uint32_t)values_offset, bigendian);
+            packGainMaps(data, values_offset, v, true);
+            continue;
+        }
+
+        ExifTagType type = tag.type == TAG_TYPE_IFD ? TAG_TYPE_LONG : tag.type;
+        pack2(data, offset, (uint16_t)type, bigendian);
+        size_t nvalues = tag.nvalues();
+
+        pack4(data, offset, (uint32_t)nvalues, bigendian);
+        if (tag.type == TAG_TYPE_IFD) {
+            int64_t sub_idx = std::get<int64_t>(tag.value);
+            CV_Assert_N(sub_idx >= 0, (size_t)sub_idx < nifds);
+            subifds.push_back({ (size_t)sub_idx, subifd_offset });
+            pack4(data, offset, (uint32_t)subifd_offset, bigendian);
+            const std::vector<ExifTag>& subifd = ifds[sub_idx];
+            size_t subifd_ntags = subifd.size() - (nextIFD(subifd) > 0u);
+            subifd_offset += IFD_HDR_SIZE + subifd_ntags * IFD_ENTRY_SIZE;
+            continue;
+        }
+        size_t tag_values_size = tagValueSize(type, nvalues);
+        int inline_values = tag_values_size <= 4u;
+        size_t tag_values_offset = inline_values ? offset : values_offset;
+        if (!inline_values) {
+            pack4(data, offset, (uint32_t)values_offset, bigendian);
+            data.resize(std::max(data.size(), tag_values_offset + tag_values_size));
+        }
+        else {
+            pack4(data, offset, 0u, bigendian);
+        }
+
+        if (tag.tagid == TAG_STRIP_BYTE_COUNTS && adjust_stripe_offsets) {
+            const int64_t* vptr = std::holds_alternative<int64_t>(tag.value) ?
+                &std::get<int64_t>(tag.value) :
+                std::holds_alternative<std::vector<int64_t> >(tag.value) ?
+                std::get<std::vector<int64_t> >(tag.value).data() : nullptr;
+            if (!vptr) {
+                CV_Error(Error::StsBadArg, "TAG_STRIPE_SIZE value must be int64_t or vector<int64_t>");
+            }
+            for (size_t i = 0; i < nvalues; i++)
+                datasize += (size_t)vptr[i];
+            // fall through, we need to store the stripe sizes
+        }
+
+        if (tag.tagid == TAG_STRIP_OFFSET && adjust_stripe_offsets) {
+            const int64_t* vptr = std::holds_alternative<int64_t>(tag.value) ?
+                &std::get<int64_t>(tag.value) :
+                std::holds_alternative<std::vector<int64_t> >(tag.value) ?
+                std::get<std::vector<int64_t> >(tag.value).data() : nullptr;
+            if (!vptr || (tag.type != TAG_TYPE_LONG && tag.type != TAG_TYPE_SLONG)) {
+                CV_Error(Error::StsBadArg, "TAG_STRIP_OFFSET value have type LONG and be represented by int64_t or vector<int64_t>");
+            }
+            int64_t offset_delta = (int64_t)image_data_offset - vptr[0];
+            for (size_t i = 0; i < nvalues; i++) {
+                int64_t new_offset = vptr[i] + offset_delta;
+                pack4(data, tag_values_offset, (uint32_t)new_offset, bigendian);
+            }
+        }
+        else if (type == TAG_TYPE_ASCII) {
+            const std::string& v = std::get<std::string>(tag.value);
+            size_t v_size = v.size();
+            memcpy(&data[tag_values_offset], v.data(), v_size);
+            data[tag_values_offset + v_size] = '\0';
+            if (((v_size + 1) & 1u) != 0) {
+                data[tag_values_offset + v_size + 1] = '\0';
+            }
+            tag_values_offset += tag_values_size;
+        }
+        else if (type == TAG_TYPE_BYTE || type == TAG_TYPE_SBYTE || type == TAG_TYPE_UNDEFINED ||
+            type == TAG_TYPE_SHORT || type == TAG_TYPE_SSHORT ||
+            type == TAG_TYPE_LONG || type == TAG_TYPE_SLONG) {
+            const int64_t* vptr = std::holds_alternative<int64_t>(tag.value) ?
+                &std::get<int64_t>(tag.value) :
+                std::holds_alternative<std::vector<int64_t> >(tag.value) ?
+                std::get<std::vector<int64_t> >(tag.value).data() : nullptr;
+            if (!vptr) {
+                CV_Error_(Error::StsBadArg, ("value variant of type int64_t or vector<int64_t> "
+                    "is expected for tag type %s",
+                    tagTypeToString(type).c_str()));
+            }
+            int64_t minval =
+                type == TAG_TYPE_SBYTE ? INT8_MIN :
+                type == TAG_TYPE_SSHORT ? INT16_MIN :
+                type == TAG_TYPE_SLONG ? INT32_MIN : 0;
+            int64_t maxval =
+                type == TAG_TYPE_BYTE || type == TAG_TYPE_UNDEFINED ? UINT8_MAX :
+                type == TAG_TYPE_SBYTE ? INT8_MAX :
+                type == TAG_TYPE_SHORT ? UINT16_MAX :
+                type == TAG_TYPE_SSHORT ? INT16_MAX :
+                type == TAG_TYPE_LONG ? UINT32_MAX :
+                type == TAG_TYPE_SLONG ? INT32_MAX : INT64_MAX;
+            for (size_t i = 0; i < nvalues; i++) {
+                int64_t v = std::min(std::max(vptr[i], minval), maxval);
+                if (type == TAG_TYPE_LONG || type == TAG_TYPE_SLONG)
+                    pack4(data, tag_values_offset, (uint32_t)v, bigendian);
+                else if (type == TAG_TYPE_SHORT || type == TAG_TYPE_SSHORT)
+                    pack2(data, tag_values_offset, (uint16_t)v, bigendian);
+                else
+                    pack1(data, tag_values_offset, (uint8_t)v);
+            }
+            if ((type == TAG_TYPE_BYTE || type == TAG_TYPE_SBYTE ||
+                type == TAG_TYPE_UNDEFINED) && (nvalues & 1) != 0)
+                pack1(data, tag_values_offset, (uint8_t)0);
+        }
+        else if (type == TAG_TYPE_RATIONAL || type == TAG_TYPE_SRATIONAL) {
+            const srational64_t* vptr = std::holds_alternative<srational64_t>(tag.value) ?
+                &std::get<srational64_t>(tag.value) :
+                std::holds_alternative<std::vector<srational64_t> >(tag.value) ?
+                std::get<std::vector<srational64_t> >(tag.value).data() : nullptr;
+            const double* vdbptr = std::holds_alternative<double>(tag.value) ?
+                &std::get<double>(tag.value) :
+                std::holds_alternative<std::vector<double> >(tag.value) ?
+                std::get<std::vector<double> >(tag.value).data() : nullptr;
+            if (!vptr && !vdbptr) {
+                CV_Error_(Error::StsBadArg, ("value variant of type srational64_t or vector<srational64_t> "
+                    "is expected for tag type %s",
+                    tagTypeToString(type).c_str()));
+            }
+            int64_t minval = type == TAG_TYPE_SRATIONAL ? INT32_MIN : 0;
+            int64_t maxval = type == TAG_TYPE_SRATIONAL ? INT32_MAX : UINT32_MAX;
+            for (size_t i = 0; i < nvalues; i++) {
+                srational64_t r = vptr ? vptr[i] :
+                    type == TAG_TYPE_RATIONAL ? doubleToRational(vdbptr[i]) :
+                    doubleToSRational(vdbptr[i]);
+                int64_t num = std::min(std::max(r.num, minval), maxval);
+                int64_t denom = std::min(std::max(r.denom, minval), maxval);
+                pack4(data, tag_values_offset, (uint32_t)num, bigendian);
+                pack4(data, tag_values_offset, (uint32_t)denom, bigendian);
+            }
+        }
+        else if (type == TAG_TYPE_FLOAT || type == TAG_TYPE_DOUBLE) {
+            const double* vptr = std::holds_alternative<double>(tag.value) ?
+                &std::get<double>(tag.value) :
+                std::holds_alternative<std::vector<double> >(tag.value) ?
+                std::get<std::vector<double> >(tag.value).data() : nullptr;
+            if (!vptr) {
+                CV_Error_(Error::StsBadArg, ("value variant of type double or vector<double> "
+                    "is expected for tag type %s",
+                    tagTypeToString(type).c_str()));
+            }
+            for (size_t i = 0; i < nvalues; i++) {
+                double v = vptr[i];
+                if (type == TAG_TYPE_FLOAT)
+                    packFloat(data, tag_values_offset, (float)v, bigendian);
+                else
+                    packDouble(data, tag_values_offset, v, bigendian);
+            }
+        }
+        else {
+            CV_Error_(Error::StsBadArg, ("unsupported tag type %s",
+                tagTypeToString(type).c_str()));
+        }
+
+        if (!inline_values)
+            values_offset = tag_values_offset;
+    }
+
+    pack4(data, offset, (uint32_t)next_offset, bigendian);
+    image_data_offset += datasize;
+
+    // now pack all sub-IFDs and the next one, if any
+    for (auto sub : subifds) {
+        size_t subofs = sub.second;
+        packIFD(ifds, nifds, sub.first, data, subofs, values_offset, image_data_offset,
+            bigendian, sorttags, adjust_stripe_offsets);
+    }
+}
+
+static bool encodeExif(const std::vector<std::vector<ExifTag> >& exif,
+    std::vector<uchar>& data,
+    bool bigendian, bool sorttags,
+    bool adjust_stripe_offsets)
+{
+    data.clear();
+    size_t values_size = 0;
+    size_t ifd_size = computeIFDSize(exif.data(), exif.size(), 0u, values_size) + EXIF_HDR_SIZE;
+    data.resize(ifd_size + values_size);
+
+    char signature = bigendian ? 'M' : 'I';
+    size_t offset = 0;
+    pack1(data, offset, (uint8_t)signature);
+    pack1(data, offset, (uint8_t)signature);
+    pack2(data, offset, 42u, bigendian);
+    pack4(data, offset, 8u, bigendian);
+
+    size_t image_data_offset0 = ifd_size + values_size, image_data_offset = image_data_offset0;
+    packIFD(exif.data(), exif.size(), 0u, data, offset, ifd_size, image_data_offset,
+        bigendian, sorttags, adjust_stripe_offsets);
+    return data.size() == image_data_offset0;
+}
+
+static uint8_t unpack1(const std::vector<uchar>& data, size_t& offset)
+{
+    CV_Assert(offset + 1 <= data.size());
+    return (uint8_t)data[offset++];
+}
+
+static uint16_t unpack2(const std::vector<uchar>& data, size_t& offset, bool bigendian_)
+{
+    size_t ofs = offset, bigendian = (size_t)bigendian_;
+    CV_Assert(offset + sizeof(uint16_t) <= data.size());
+    const uint8_t* ptr = (const uint8_t*)data.data();
+    unsigned value = ptr[ofs + bigendian] | (ptr[ofs + 1 - bigendian] << 8);
+    offset = ofs + sizeof(uint16_t);
+    return (uint16_t)value;
+}
+
+static uint32_t unpack4(const std::vector<uchar>& data, size_t& offset, bool bigendian_)
+{
+    size_t ofs = offset, bigendian = (size_t)bigendian_;
+    CV_Assert(offset + sizeof(uint32_t) <= data.size());
+    const uint8_t* ptr = (const uint8_t*)data.data();
+    unsigned value = ptr[ofs + bigendian * 3] |
+        (ptr[ofs + 1 + bigendian] << 8) |
+        (ptr[ofs + 2 - bigendian] << 16) |
+        (ptr[ofs + 3 - bigendian * 3] << 24);
+    offset = ofs + sizeof(uint32_t);
+    return (uint32_t)value;
+}
+
+static uint64_t unpack8(const std::vector<uchar>& data, size_t& offset, bool bigendian_)
+{
+    size_t ofs = offset, bigendian = (size_t)bigendian_;
+    CV_Assert(offset + sizeof(uint64_t) <= data.size());
+    const uint8_t* ptr = (const uint8_t*)data.data();
+    unsigned lo = ptr[ofs + bigendian * 7] |
+        (ptr[ofs + 1 + bigendian * 5] << 8) |
+        (ptr[ofs + 2 + bigendian * 3] << 16) |
+        (ptr[ofs + 3 + bigendian] << 24);
+    unsigned hi = ptr[ofs + 4 - bigendian] |
+        (ptr[ofs + 5 - bigendian * 3] << 8) |
+        (ptr[ofs + 6 - bigendian * 5] << 16) |
+        (ptr[ofs + 7 - bigendian * 7] << 24);
+    offset = ofs + sizeof(uint64_t);
+    return ((uint64_t)hi << 32) | lo;
+}
+
+static float unpackFloat(const std::vector<uchar>& data, size_t& offset, bool bigendian_)
+{
+    Cv32suf u;
+    u.u = unpack4(data, offset, bigendian_);
+    return u.f;
+}
+
+static double unpackDouble(const std::vector<uchar>& data, size_t& offset, bool bigendian_)
+{
+    Cv64suf u;
+    u.u = unpack8(data, offset, bigendian_);
+    return u.f;
+}
+
+static bool unpackGainMap(const std::vector<uchar>& data, size_t& offset,
+    size_t nbytes, std::vector<double>& gainmaps,
+    bool bigendian)
+{
+    size_t limit = offset + nbytes;
+    if (nbytes < 16 * sizeof(uint32_t))
+        return false;
+
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // top
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // left
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // bottom
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // right
+
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // plane
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // planes
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // row_pitch
+    gainmaps.push_back(unpack4(data, offset, bigendian)); // col_pitch
+
+    uint32_t map_points_v = unpack4(data, offset, bigendian);
+    uint32_t map_points_h = unpack4(data, offset, bigendian);
+    gainmaps.push_back(map_points_v); // map_points_v
+    gainmaps.push_back(map_points_h); // map_points_h
+
+    gainmaps.push_back(unpackDouble(data, offset, bigendian)); // map_spacing_v
+    gainmaps.push_back(unpackDouble(data, offset, bigendian)); // map_spacing_h
+    gainmaps.push_back(unpackDouble(data, offset, bigendian)); // map_origin_v
+    gainmaps.push_back(unpackDouble(data, offset, bigendian)); // map_origin_h
+
+    uint32_t map_nplanes = unpack4(data, offset, bigendian);
+    gainmaps.push_back(map_nplanes);
+
+    size_t nitems = map_points_v * map_points_h * map_nplanes;
+
+    if (offset + nitems * sizeof(float) > limit)
+        return false;
+
+    for (uint32_t p = 0; p < map_nplanes; p++) {
+        for (uint32_t y = 0; y < map_points_v; y++) {
+            for (uint32_t x = 0; x < map_points_h; x++)
+                gainmaps.push_back(unpackFloat(data, offset, bigendian));
+        }
+    }
+    return true;
+}
+
+static bool unpackOpcodeList(ExifTagId tagid, const std::vector<uchar>& data, size_t& offset,
+    std::vector<double>& gainmaps, bool bigendian)
+{
+    constexpr uint32_t OPCODE_LIST_GAIN_MAP = 9;
+    uint32_t nopcodes = unpack4(data, offset, bigendian);
+    uint32_t ngainmaps = 0;
+    bool ok = true;
+    gainmaps.clear();
+    gainmaps.push_back(nopcodes);
+
+    for (uint32_t i = 0; i < nopcodes; i++) {
+        uint32_t opcode_id = unpack4(data, offset, bigendian);
+        uint32_t dng_version = unpack4(data, offset, bigendian);
+        uint32_t flags = unpack4(data, offset, bigendian);
+        uint32_t nbytes = unpack4(data, offset, bigendian);
+        //printf("read: opcode_id=%u, dng_version=%u, flags=%u, nbytes=%u\n", opcode_id, dng_version, flags, nbytes);
+
+        if (opcode_id == OPCODE_LIST_GAIN_MAP) {
+            size_t gainmapOffset = offset;
+            size_t gainmapStart = gainmaps.size();
+            gainmaps.push_back(dng_version);
+            gainmaps.push_back(flags);
+            gainmaps.push_back(0);
+
+            if (!unpackGainMap(data, gainmapOffset, nbytes, gainmaps, bigendian)) {
+                gainmaps.clear();
+                return false;
+            }
+
+            ngainmaps++;
+            gainmaps[gainmapStart + 2] = gainmaps.size() - gainmapStart;
+            CV_Assert(gainmapOffset <= offset + nbytes);
+        }
+        offset += nbytes;
+    }
+    gainmaps[0] = ngainmaps;
+    return ngainmaps > 0;
+}
+
+static bool unpackIFD(const std::vector<uchar>& data, size_t offset, size_t offset0,
+    std::vector<std::vector<ExifTag> >& ifds, size_t idx, bool bigendian)
+{
+    std::vector<int64_t> vll;
+    std::vector<srational64_t> vr;
+    std::vector<double> vd;
+    std::vector<ExifTag> ifd;
+
+    ifds.resize(std::max(ifds.size(), idx + 1));
+    offset += offset0;
+    size_t ntags = unpack2(data, offset, bigendian);
+    if (offset + ntags * IFD_ENTRY_SIZE + sizeof(uint32_t) > data.size())
+        return false;
+
+    ifd.resize(ntags);
+
+    for (ExifTag& tag : ifd) {
+        tag.tagid = (ExifTagId)unpack2(data, offset, bigendian);
+        ExifTagType type = tag.type = (ExifTagType)unpack2(data, offset, bigendian);
+        size_t nvalues = unpack4(data, offset, bigendian);
+        size_t inline_offset = offset;
+        size_t values_offset = unpack4(data, offset, bigendian) + offset0;
+        size_t values_size = tagValueSize(type, nvalues);
+        bool inline_values = values_size <= 4;
+        if (inline_values)
+            values_offset = inline_offset;
+        if (tag.tagid == TAG_OPCODE_LIST2) {
+            std::vector<double> gainmaps;
+            if (!unpackOpcodeList(tag.tagid, data, values_offset, gainmaps, true))
+                return false;
+            tag.type = TAG_TYPE_DOUBLE;
+            tag.value = gainmaps;
+        }
+        else if (type == TAG_TYPE_ASCII) {
+            tag.value = std::string((char*)&data[values_offset], nvalues - 1);
+        }
+        else if (type == TAG_TYPE_BYTE || type == TAG_TYPE_SBYTE ||
+            type == TAG_TYPE_UNDEFINED ||
+            type == TAG_TYPE_SHORT || type == TAG_TYPE_SSHORT ||
+            type == TAG_TYPE_LONG || type == TAG_TYPE_SLONG) {
+            vll.resize(nvalues);
+            for (size_t i = 0; i < nvalues; i++) {
+                int64_t v{};
+                if (type == TAG_TYPE_BYTE ||
+                    type == TAG_TYPE_UNDEFINED ||
+                    type == TAG_TYPE_SBYTE) {
+                    v = unpack1(data, values_offset);
+                    if (type == TAG_TYPE_SBYTE)
+                        v = (int8_t)v;
+                }
+                else if (type == TAG_TYPE_SHORT || type == TAG_TYPE_SSHORT) {
+                    v = unpack2(data, values_offset, bigendian);
+                    if (type == TAG_TYPE_SSHORT)
+                        v = (int16_t)v;
+                }
+                else if (type == TAG_TYPE_LONG || type == TAG_TYPE_SLONG) {
+                    v = unpack4(data, values_offset, bigendian);
+                    if (type == TAG_TYPE_SLONG)
+                        v = (int32_t)v;
+                }
+                vll[i] = v;
+            }
+            if (nvalues == 1)
+                tag.value = vll[0];
+            else
+                tag.value = vll;
+        }
+        else if (type == TAG_TYPE_RATIONAL ||
+            type == TAG_TYPE_SRATIONAL) {
+            vr.resize(nvalues);
+            for (size_t i = 0; i < nvalues; i++) {
+                srational64_t v;
+                v.num = unpack4(data, values_offset, bigendian);
+                v.denom = unpack4(data, values_offset, bigendian);
+                if (type == TAG_TYPE_RATIONAL) {
+                    v.num = (int32_t)v.num;
+                    v.denom = (int32_t)v.denom;
+                }
+                vr[i] = v;
+            }
+            if (nvalues == 1)
+                tag.value = vr[0];
+            else
+                tag.value = vr;
+        }
+        else if (type == TAG_TYPE_FLOAT || type == TAG_TYPE_DOUBLE) {
+            vd.resize(nvalues);
+            for (size_t i = 0; i < nvalues; i++) {
+                double v;
+                if (type == TAG_TYPE_FLOAT)
+                    v = unpackFloat(data, values_offset, bigendian);
+                else
+                    v = unpackDouble(data, values_offset, bigendian);
+                vd[i] = v;
+            }
+            if (nvalues == 1)
+                tag.value = vd[0];
+            else
+                tag.value = vd;
+        }
+        else {
+            CV_Error_(Error::StsBadArg, ("unsupported tag type %s",
+                tagTypeToString(type).c_str()));
+        }
+        // [TODO] add support for other sub-IFDs
+        if (tag.tagid == TAG_EXIF_TAGS) {
+            tag.type = TAG_TYPE_IFD;
+        }
+        if (tag.type == TAG_TYPE_IFD) {
+            CV_Assert(nvalues == 1 && type == TAG_TYPE_LONG);
+            size_t subifd_offset = (size_t)std::get<int64_t>(tag.value);
+            size_t sub_idx = ifds.size();
+            tag.value = (int64_t)sub_idx;
+            bool ok = unpackIFD(data, subifd_offset, offset0, ifds, sub_idx, bigendian);
+            if (!ok)
+                return ok;
+        }
+    }
+    size_t next_offset = unpack4(data, offset, bigendian);
+    if (next_offset > 0) {
+        ExifTag tag;
+        size_t next_idx = ifds.size();
+        tag.tagid = TAG_NEXT_IFD;
+        tag.type = TAG_TYPE_IFD;
+        tag.value = (int64_t)next_idx;
+        ifd.push_back(tag);
+        bool ok = unpackIFD(data, next_offset, offset0, ifds, next_idx, bigendian);
+        if (!ok)
+            return ok;
+    }
+    ifds[idx] = ifd; // we copy the decoded IFD to the destination container in the very end,
+    // because by that time the whole subtree of IFDs and all subsequent IFDs
+    // have been decoded and stored. This way we reduce the number of
+    // std::vector<> copy operations.
+    return true;
+}
+
+bool decodeExif(const std::vector<uchar>& data, size_t offset0,
+    std::vector<std::vector<ExifTag> >& exif)
+{
+    exif.clear();
+    size_t offset = offset0;
+    char s1 = (char)unpack1(data, offset);
+    char s2 = (char)unpack1(data, offset);
+    if (s1 != s2 || (s1 != 'I' && s1 != 'M'))
+        return false;
+    bool bigendian = s1 == 'M';
+    uint16_t ver = unpack2(data, offset, bigendian);
+    if (ver != 42u)
+        return false;
+    size_t ifd0offset = unpack4(data, offset, bigendian);
+    return unpackIFD(data, ifd0offset, offset0, exif, 0u, bigendian);
+}
+
+static bool locateExif(const std::vector<uchar>& data, size_t& exifOffset)
+{
+    size_t imageBytes = data.size();
+    constexpr size_t MIN_APP1_EXIF_SIZE = 36;
+    constexpr size_t MAX_APP1_EXIF_OFFSET = 1 << 20;
+    exifOffset = 0;
+    if ((data[0] == 'I' && data[1] == 'I') ||
+        (data[0] == 'M' && data[1] == 'M')) {
+        return true;
+    }
+    else if (data[0] == 0xff && data[1] == 0xd8) {
+        size_t offset = 2;
+        for (;;) {
+            if (offset + MIN_APP1_EXIF_SIZE > imageBytes ||
+                offset > MAX_APP1_EXIF_OFFSET ||
+                data[offset] != 0xff || data[offset + 1] == 0xda)
+                return false;
+            unsigned c = data[offset + 1];
+            if (c == 0xe1 && memcmp(&data[offset + 4], "Exif\0\0", 6) == 0) {
+                exifOffset = offset + 10;
+                return true;
+            }
+            if (c == 0xff) {
+                offset++;
+                continue;
+            }
+            if (c <= 0x01 || (0xd0 <= c && c <= 0xd9)) {
+                offset += 2;
+                continue;
+            }
+            unsigned length = (uint8_t)data[offset + 2] * 256 + (uint8_t)data[offset + 3];
+            offset += 2 + length;
+        }
+    }
+    return false;
+}
+
+static void dumpIFD(std::ostream& strm, int indent,
+    const std::vector<std::vector<ExifTag> >& exif, size_t idx)
+{
+    CV_Assert(idx < exif.size());
+    const std::vector<ExifTag>& ifd = exif[idx];
+    size_t i, ntags = ifd.size();
+    std::string subindent = std::string(indent + 3, ' ');
+    strm << "{\n";
+    for (i = 0; i < ntags; i++) {
+        const ExifTag& tag = ifd[i];
+        strm << subindent;
+        if (tag.type == TAG_TYPE_IFD) {
+            int64_t sub_idx = std::get<int64_t>(tag.value);
+            strm << exifTagIdToString(tag.tagid) << ": ";
+            dumpIFD(strm, indent + 3, exif, (size_t)sub_idx);
+        }
+        else {
+            tag.dump(strm);
+        }
+        if (i + 1 < ntags)
+            strm << ",";
+        strm << "\n";
+    }
+    strm << std::string(indent, ' ') << "}";
+}
+
+void dumpExif(std::ostream& strm, const std::vector<std::vector<ExifTag> >& exif)
+{
+    if (exif.empty()) {
+        strm << "{}";
+    }
+    else {
+        dumpIFD(strm, 0, exif, 0);
+    }
+}
+
+Mat imdecodeWithExif(const std::vector<uchar>& data, int flags,
+    std::vector<std::vector<ExifTag> >& exif)
+{
+    exif.clear();
+    Mat img = imdecode(data, flags);
+    size_t exifOffset = 0;
+    if (locateExif(data, exifOffset))
+        decodeExif(data, (size_t)exifOffset, exif);
+    return img;
+}
+
+bool imencodeWithExif( const String& ext, InputArrayOfArrays imgs,
+                       const std::vector<std::vector<ExifTag> >& exif,
+                       std::vector<uchar>& buf,
+                       const std::vector<int>& params)
+{
+    const char* exifSignature = "Exif\0\0";
+    char exifStartSymbol = 'I';
+    constexpr size_t MIN_FILE_SIZE = 36;
+    constexpr size_t EXIF_SIGNATURE_LENGTH = 6;
+    constexpr size_t EXIF_DELTA = 2 + EXIF_SIGNATURE_LENGTH;
+    size_t nparams = params.size();
+    for (size_t i = 0; i + 1 < nparams; i += 2) {
+        if (params[i] == IMWRITE_TIFF_ENDIANNESS) {
+            CV_Assert(params[i + 1] == 'M' || params[i + 1] == 'I');
+            exifStartSymbol = (char)params[i + 1];
+        }
+    }
+    bool ok = imencodemulti(ext, imgs, buf, params);
+    size_t bufsize = buf.size();
+    if (ok && !exif.empty() && bufsize >= MIN_FILE_SIZE) {
+        if (buf[0] != 0xff || buf[1] != 0xd8) {
+            CV_Error(Error::StsNotImplemented, "currently OpenCV can add exif to jpeg files only");
+        }
+        std::vector<uchar> exifData;
+        encodeExif(exif, exifData, exifStartSymbol == 'M', false, false);
+        const size_t minExifOffset = 12;
+        size_t exifSize = exifData.size();
+        if (exifSize + EXIF_DELTA > UINT16_MAX) {
+            CV_Error(Error::StsBadSize, "packed exif is too big (it must be 65526 bytes long or smaller)");
+        }
+        size_t exifOffset;
+        size_t oldExifSize = 0;
+        size_t jfifTail = 2;
+        bool haveExif = locateExif(buf, exifOffset);
+        if (haveExif) {
+            CV_Assert(exifOffset >= minExifOffset);
+            exifOffset -= EXIF_DELTA;
+            oldExifSize = unpack2(buf, exifOffset, true);
+            exifOffset -= 4;
+            jfifTail = exifOffset + 2 + oldExifSize;
+        }
+        else {
+            exifOffset = jfifTail;
+        }
+
+        std::vector<uchar> newbuf(bufsize + exifSize + EXIF_DELTA - oldExifSize);
+        const uchar* bufdata = buf.data();
+        uchar* newdata = newbuf.data();
+
+        memcpy(newdata, bufdata, exifOffset);
+        newdata[exifOffset++] = 0xff;
+        newdata[exifOffset++] = 0xe1;
+        pack2(newbuf, exifOffset, (uint16_t)(exifSize + EXIF_DELTA), true);
+        memcpy(newdata + exifOffset, exifSignature, EXIF_SIGNATURE_LENGTH);
+        exifOffset += EXIF_SIGNATURE_LENGTH;
+        memcpy(newdata + exifOffset, exifData.data(), exifSize);
+        memcpy(newdata + exifOffset + exifSize, bufdata + jfifTail, buf.size() - jfifTail);
+        std::swap(buf, newbuf);
+    }
+    return ok;
 }
 
 bool haveImageReader( const String& filename )
