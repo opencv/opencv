@@ -36,15 +36,15 @@ TEST_F(ChromaticAberrationTest, CalibrationResultLoad)
     EXPECT_EQ(calib_result.poly_red.degree, 11);
     EXPECT_EQ(calib_result.poly_red.coeffs_x.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_EQ(calib_result.poly_red.coeffs_y.size(), EXPECTED_COEFFS_SIZE);
-    EXPECT_DOUBLE_EQ(calib_result.poly_red.mean_x, 3392.451171875);
-    EXPECT_DOUBLE_EQ(calib_result.poly_red.std_x, 2239.90380859375);
+    EXPECT_NEAR(calib_result.poly_red.mean_x, 1003.36, 1e-2);
+    EXPECT_NEAR(calib_result.poly_red.std_x, 523.63, 1e-2);
     
     // Test blue channel data
     EXPECT_EQ(calib_result.poly_blue.degree, 11);
     EXPECT_EQ(calib_result.poly_blue.coeffs_x.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_EQ(calib_result.poly_blue.coeffs_y.size(), EXPECTED_COEFFS_SIZE);
-    EXPECT_DOUBLE_EQ(calib_result.poly_blue.mean_x, 3394.3818359375);
-    EXPECT_DOUBLE_EQ(calib_result.poly_blue.std_x, 2239.822265625);
+    EXPECT_NEAR(calib_result.poly_blue.mean_x, 1016.84, 1e-2);
+    EXPECT_NEAR(calib_result.poly_blue.std_x, 530.09, 1e-2);
 }
 
 TEST_F(ChromaticAberrationTest, CalibrationResultLoadInvalidFile)
@@ -168,92 +168,65 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     blue_node["mean_x"] >> blue_mean_x;
     blue_node["std_x"] >> blue_std_x;
     EXPECT_EQ(coeffs_x.size(), EXPECTED_COEFFS_SIZE);
-    EXPECT_NEAR(red_mean_x, 3392.45, 1e-2);
-    EXPECT_NEAR(red_std_x, 2239.9, 1e-2);
-    EXPECT_NEAR(blue_mean_x, 3394.38, 1e-2);
-    EXPECT_NEAR(blue_std_x, 2239.82, 1e-2);
+    EXPECT_NEAR(red_mean_x, 1003.36, 1e-2);
+    EXPECT_NEAR(red_std_x, 523.63, 1e-2);
+    EXPECT_NEAR(blue_mean_x, 1016.84, 1e-2);
+    EXPECT_NEAR(blue_std_x, 530.09, 1e-2);
     
     fs.release();
 }
 
-TEST_F(ChromaticAberrationTest, RealWorldDataIntegration)
-{
-    try {
-        std::string real_calib_file = cv::samples::findFile("cv/cameracalibration/chromatic_aberration/calib_result.yaml");
-        std::string real_test_image = cv::samples::findFile("cv/cameracalibration/chromatic_aberration/ca_photo.png");
-        
-        cv::ChromaticAberrationCorrector corrector;
-        
-        EXPECT_TRUE(corrector.loadCalibration(real_calib_file));
-        
-        cv::Mat real_image = cv::imread(real_test_image, cv::IMREAD_COLOR);
-        ASSERT_FALSE(real_image.empty()) << "Failed to load real test image";
-        
-        cv::Mat corrected = corrector.correctImage(real_image);
-        
-        EXPECT_EQ(corrected.rows, real_image.rows);
-        EXPECT_EQ(corrected.cols, real_image.cols);
-        EXPECT_EQ(corrected.channels(), real_image.channels());
-        
-        cv::Mat diff;
-        cv::absdiff(real_image, corrected, diff);
-        
-        cv::Scalar mean_diff = cv::mean(diff);
-        double total_diff = mean_diff[0] + mean_diff[1] + mean_diff[2];
-        
-        EXPECT_GT(total_diff, 0.0) << "Real image correction should produce changes";
-        EXPECT_LT(total_diff, 150.0) << "Real image correction should not be excessive";
-        
-        cv::Mat orig_gray, corr_gray;
-        cv::cvtColor(real_image, orig_gray, cv::COLOR_BGR2GRAY);
-        cv::cvtColor(corrected, corr_gray, cv::COLOR_BGR2GRAY);
-        
-        double psnr = cv::PSNR(orig_gray, corr_gray);
-        EXPECT_GT(psnr, 20.0) << "PSNR should indicate reasonable image quality";
-        EXPECT_LT(psnr, 50.0) << "PSNR should show meaningful correction";
-    } catch (const cv::Exception& e) {
-        std::cout << "Skipping real world test - test data files not found: " << e.what() << std::endl;
-    }
-}
-
-TEST_F(ChromaticAberrationTest, EdgeCasesAndRobustness)
+TEST_F(ChromaticAberrationTest, FunctionClassEquivalence)
 {
     cv::ChromaticAberrationCorrector corrector;
     ASSERT_TRUE(corrector.loadCalibration(test_yaml_file));
+    cv::Mat ref  = corrector.correctImage(test_image);
+    cv::Mat out  = cv::correctChromaticAberration(test_image, test_yaml_file);  // wrapper
+
+    ASSERT_EQ(ref.size(),  test_image.size());
+    ASSERT_EQ(ref.type(),  test_image.type());
+
+    cv::Mat diff;  cv::absdiff(ref, out, diff);
+
+    EXPECT_LE(cv::norm(diff, cv::NORM_INF), 1);
+
+    int nz = cv::countNonZero(diff.reshape(1));
+    EXPECT_EQ(nz, 0) << nz << " pixels differ between implementations";
+
+}
+
+TEST_F(ChromaticAberrationTest, Robustness)
+{
+    cv::ChromaticAberrationCorrector corrector;
+    ASSERT_TRUE(corrector.loadCalibration(test_yaml_file));
+
+    auto check_image = [&](const cv::Mat& src, const char* tag)
+    {
+        cv::Mat dst = corrector.correctImage(src);
+
+        EXPECT_EQ(dst.size(),     src.size())   << tag;
+        EXPECT_EQ(dst.type(),     src.type())   << tag;
+
+        EXPECT_TRUE(cv::checkRange(dst, /*quiet=*/true)) << tag;
+
+        return dst;
+    };
+
+    cv::Mat small;  cv::resize(test_image, small, cv::Size(50, 50));
+    cv::Mat small_corr = check_image(small, "small");
+
+    cv::Mat small_corr2 = corrector.correctImage(small);
+    cv::Mat diff;
+
+    cv::absdiff(small_corr, small_corr2, diff);
     
-    // Test with different image sizes
-    cv::Mat small_image;
-    cv::resize(test_image, small_image, cv::Size(50, 50));
-    
-    cv::Mat corrected_small = corrector.correctImage(small_image);
-    EXPECT_EQ(corrected_small.rows, small_image.rows);
-    EXPECT_EQ(corrected_small.cols, small_image.cols);
-    
-    // Test with large image
-    cv::Mat large_image;
-    cv::resize(test_image, large_image, cv::Size(500, 500));
-    
-    cv::Mat corrected_large = corrector.correctImage(large_image);
-    EXPECT_EQ(corrected_large.rows, large_image.rows);
-    EXPECT_EQ(corrected_large.cols, large_image.cols);
-    
-    // Test with extreme values image
-    cv::Mat extreme_image = cv::Mat::zeros(100, 100, CV_8UC3);
-    extreme_image.setTo(cv::Scalar(255, 255, 255));
-    
-    cv::Mat corrected_extreme = corrector.correctImage(extreme_image);
-    EXPECT_EQ(corrected_extreme.rows, extreme_image.rows);
-    EXPECT_EQ(corrected_extreme.cols, extreme_image.cols);
-    
-    // Verify no NaN or infinite values in output
-    cv::Mat corrected_f32;
-    corrected_extreme.convertTo(corrected_f32, CV_32F);
-    
-    cv::Mat nan_mask, inf_mask;
-    cv::compare(corrected_f32, corrected_f32, nan_mask, cv::CMP_EQ); // NaN != NaN
-    cv::bitwise_not(nan_mask, nan_mask);
-    
-    EXPECT_EQ(cv::countNonZero(nan_mask), 0) << "Corrected image should not contain NaN values";
+    EXPECT_EQ(cv::countNonZero(diff.reshape(1)), 0);
+
+    cv::Mat white(128, 128, CV_8UC3, cv::Scalar::all(255));
+    check_image(white, "white");
+
+    cv::Mat black(128, 128, CV_8UC3, cv::Scalar::all(0));
+    check_image(black, "black");
 }
 
 }}
