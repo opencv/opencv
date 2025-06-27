@@ -115,7 +115,10 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
     {
         return false;
     }
-
+    printf("---------------------- test %d ----------------------", 0);
+    std::vector<std::vector<ExifTag> > exif;
+    decodeExif(m_data, 0, exif);
+    dumpExif(std::cout, exif);
     try {
         parseExif();
         if( !m_exif.empty() )
