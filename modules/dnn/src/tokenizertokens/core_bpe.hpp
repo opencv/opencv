@@ -32,7 +32,7 @@ struct ByteVecHash {
     }
 };
 
-using ByteVecRankMap = std::unordered_map<ByteVec, Rank, ByteVecHash>;
+using ByteVecRankMap = std::unordered_map<ByteVec, Rank>;
 
 // hash the OS thread ID, mod by a fixed size, and pick a pre-compiled regex 
 // to avoid cross-thread contention

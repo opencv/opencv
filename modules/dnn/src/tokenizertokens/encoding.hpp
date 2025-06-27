@@ -2,10 +2,15 @@
 
 #include <opencv2/core.hpp>
 #include "core_bpe.hpp"
+#include <boost/regex/icu.hpp>
 
 #include <string>
 #include <vector>
 #include <regex>
+#include <locale>
+#include <codecvt>
+#include <vector>
+#include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -18,6 +23,9 @@ public:
                      const ByteVecRankMap &mergeableRanks,
                      const std::unordered_map<std::string, Rank>& specialTokens, 
                      int explicitNvocab=-1);
+
+    /* --------------------- Training ----------------------------------*/
+    CV_EXPORTS void train(const std::string& text, int vocabSize, bool verbose=false);
 
     /* --------------------- Encoding ----------------------------------*/
     CV_WRAP std::vector<Rank> encodeOrdinary(const std::string& text) const;
@@ -60,6 +68,7 @@ public:
 
 
 
+
     // Get the highest token ID present.
     CV_PROP Rank maxTokenValue() const;
 
@@ -75,16 +84,37 @@ public:
         return out;
     }
 
+
+    // 1) a converter from wchar_t → UTF-8
+    static std::wstring_convert<std::codecvt_utf8<wchar_t>,wchar_t> utf8conv;
+
+    // 2) encodeUTF8 now takes a wstring, converts it, then emits ints
+    std::vector<int> encodeUTF8(const std::wstring &w) {
+        std::string utf8 = utf8conv.to_bytes(w);
+        std::vector<int> out;
+        out.reserve(utf8.size());
+        for (unsigned char c : utf8) {
+            out.push_back(static_cast<int>(c));
+        }
+        return out;
+    }
+
 private:
     std::string name_;
     std::string patStr_;
-    std::regex patRegex_;
+    boost::wregex patRegex_;
+    boost::wregex compiledPattern;
     
     ByteVecRankMap mergeableRanks_;
     std::unordered_map<std::string, Rank> specialTokens_;
     Rank maxTokenValue_;
 
     CoreBPE coreBPE_;
+    // CoreSentencePiece sentencepiece;
+  
+    std::map<std::pair<int,int>,int> merges_;
+    std::map<int, std::vector<uint8_t>> vocab_;
+    
 
     // Might need these functions for testing 
     std::vector<Rank> encodeSinglePiece(const std::string& text) const;
