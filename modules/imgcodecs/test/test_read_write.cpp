@@ -655,7 +655,7 @@ TEST(Imgcodecs, imwriteWithExif)
     exif.clear();
     exif.push_back(exiftags);
     dumpExif(std::cout, exif);
-    bool ret = false;
+    //bool ret = false;
    // EXPECT_NO_THROW(ret = imwriteWithExif(filename, src, exif));
    // EXPECT_TRUE(ret);
 

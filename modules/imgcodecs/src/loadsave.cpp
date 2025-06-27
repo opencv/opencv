@@ -1818,7 +1818,7 @@ static srational64_t doubleToRational(double v, int maxbits = 31)
     srational64_t r = { 1, 0 };
     if (std::isfinite(v)) {
         int e = 0;
-        double m = frexp(v, &e);
+        //double m = frexp(v, &e);
         if (e >= maxbits)
             return r;
 
@@ -2000,7 +2000,7 @@ static bool packGainMaps(std::vector<uchar>& data, size_t& offset,
         if (idx + GAINMAP_HDR_SIZE > total)
             return false;
 
-        size_t start = idx;
+        //size_t start = idx;
         uint32_t gainmap_size = gainmaps[idx + 2];
 
         uint32_t map_points_v = (uint32_t)gainmaps[idx + MAP_POINTS_V];
@@ -2401,10 +2401,11 @@ static bool unpackGainMap(const std::vector<uchar>& data, size_t& offset,
 static bool unpackOpcodeList(ExifTagId tagid, const std::vector<uchar>& data, size_t& offset,
     std::vector<double>& gainmaps, bool bigendian)
 {
+    CV_UNUSED(tagid);
     constexpr uint32_t OPCODE_LIST_GAIN_MAP = 9;
     uint32_t nopcodes = unpack4(data, offset, bigendian);
     uint32_t ngainmaps = 0;
-    bool ok = true;
+    //bool ok = true;
     gainmaps.clear();
     gainmaps.push_back(nopcodes);
 
