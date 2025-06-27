@@ -255,9 +255,9 @@ inline int fast_16(const uchar* src_data, size_t src_step,
 }
 
 int FAST(const uchar* src_data, size_t src_step,
-         int width, int height, uchar** keypoints_data,
+         int width, int height, void** keypoints_data,
          size_t* keypoints_count, int threshold,
-         bool nonmax_suppression, int detector_type, realloc_func f)
+         bool nonmax_suppression, int detector_type, void *realloc_func(void*, size_t))
 {
     int res = CV_HAL_ERROR_UNKNOWN;
     switch(detector_type) {
@@ -271,7 +271,7 @@ int FAST(const uchar* src_data, size_t src_step,
             if (res == CV_HAL_ERROR_OK) {
                 if (keypoints.size() > *keypoints_count) {
                     *keypoints_count = keypoints.size();
-                    uchar *tmp = (uchar*)f(*keypoints_data, sizeof(cvhalKeyPoint)*(*keypoints_count));
+                    uchar *tmp = (uchar*)realloc_func(*keypoints_data, sizeof(cvhalKeyPoint)*(*keypoints_count));
                     memcpy(tmp, (uchar*)keypoints.data(), sizeof(cvhalKeyPoint)*(*keypoints_count));
                     *keypoints_data = tmp;
                 } else {

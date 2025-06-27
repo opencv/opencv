@@ -11,10 +11,9 @@ namespace cv { namespace rvv_hal { namespace features2d {
 
 #if CV_HAL_RVV_1P0_ENABLED
 
-using realloc_func = void* (*)(void*, size_t);
 int FAST(const uchar* src_data, size_t src_step, int width, int height,
-          uchar** keypoints_data, size_t* keypoints_count,
-          int threshold, bool nonmax_suppression, int detector_type, realloc_func f);
+          void** keypoints_data, size_t* keypoints_count,
+          int threshold, bool nonmax_suppression, int detector_type, void *realloc_func(void*, size_t));
 
 #undef cv_hal_FAST
 #define cv_hal_FAST cv::rvv_hal::features2d::FAST

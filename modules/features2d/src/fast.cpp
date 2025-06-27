@@ -437,14 +437,13 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 
     size_t keypoints_count = 1;
     keypoints.clear();
-    uchar* kps = (uchar*)malloc(sizeof(KeyPoint) * keypoints_count);
-    uchar** _kps = &kps;
-    int hal_ret = cv_hal_FAST(img.data, img.step, img.cols, img.rows, _kps,
+    KeyPoint* kps = (KeyPoint*)malloc(sizeof(KeyPoint) * keypoints_count);
+    int hal_ret = cv_hal_FAST(img.data, img.step, img.cols, img.rows, (void**)&kps,
                               &keypoints_count, threshold, nonmax_suppression, type, realloc);
     if (hal_ret == CV_HAL_ERROR_OK) {
-        keypoints.assign(reinterpret_cast<KeyPoint*>(*_kps), reinterpret_cast<KeyPoint*>(*_kps) + keypoints_count);
+        keypoints.assign(kps, kps + keypoints_count);
     }
-    free(*_kps);
+    free(kps);
     if (hal_ret == CV_HAL_ERROR_OK) {
         return;
     }
