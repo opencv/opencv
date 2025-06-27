@@ -101,6 +101,7 @@ inline int hal_ni_FAST_NMS(const uchar* src_data, size_t src_step, uchar* dst_da
    @param threshold Threshold for keypoint
    @param nonmax_suppression Indicates if make nonmaxima suppression or not.
    @param type FAST type
+   @param realloc_func function for reallocation
 */
 inline int hal_ni_FAST(const uchar* src_data, size_t src_step, int width, int height, void** keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type, void* (*realloc_func)(void*, size_t)) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
