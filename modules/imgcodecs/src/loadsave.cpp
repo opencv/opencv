@@ -2001,7 +2001,7 @@ static bool packGainMaps(std::vector<uchar>& data, size_t& offset,
             return false;
 
         //size_t start = idx;
-        uint32_t gainmap_size = gainmaps[idx + 2];
+        uint32_t gainmap_size = (uint32_t)gainmaps[idx + 2];
 
         uint32_t map_points_v = (uint32_t)gainmaps[idx + MAP_POINTS_V];
         uint32_t map_points_h = (uint32_t)gainmaps[idx + MAP_POINTS_H];
@@ -2429,7 +2429,7 @@ static bool unpackOpcodeList(ExifTagId tagid, const std::vector<uchar>& data, si
             }
 
             ngainmaps++;
-            gainmaps[gainmapStart + 2] = gainmaps.size() - gainmapStart;
+            gainmaps[gainmapStart + 2] = (double)gainmaps.size() - gainmapStart;
             CV_Assert(gainmapOffset <= offset + nbytes);
         }
         offset += nbytes;
