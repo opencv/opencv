@@ -257,7 +257,7 @@ inline int fast_16(const uchar* src_data, size_t src_step,
 int FAST(const uchar* src_data, size_t src_step,
          int width, int height, void** keypoints_data,
          size_t* keypoints_count, int threshold,
-         bool nonmax_suppression, int detector_type, void *realloc_func(void*, size_t))
+         bool nonmax_suppression, int detector_type, void* (*realloc_func)(void*, size_t))
 {
     int res = CV_HAL_ERROR_UNKNOWN;
     switch(detector_type) {
