@@ -255,8 +255,12 @@ bool  ExrDecoder::readData( Mat& img )
                                 ( (m_iscolor && !m_ischroma) || color) ? 3 : alphasupported ? 2 : 1 ); // number of channels to read may exceed channels in output img
     size_t xStride = floatsize * channelstoread;
 
-    CV_Assert( m_multispectral == multispectral );
-    CV_Assert( justcopy || !multispectral );  // multispectral needs justcopy
+    if ( m_multispectral )  // possible gray/RGB conversions
+    {
+        CV_CheckChannelsEQ(CV_MAT_CN(type()), img.channels(), "OpenCV EXR decoder needs more number of channels for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYCOLOR needed
+        CV_CheckDepthEQ(CV_MAT_DEPTH(type()), img.depth(), "OpenCV EXR decoder supports CV_32F depth only for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYDEPTH needed
+    }
+    CV_Assert( multispectral == m_multispectral && (!multispectral || justcopy) );  // should be true after previous checks
 
     // See https://github.com/opencv/opencv/issues/26705
     // If ALGO_HINT_ACCURATE is set, read BGR and swap to RGB.
@@ -414,8 +418,10 @@ bool  ExrDecoder::readData( Mat& img )
     {
         m_file->readPixels( m_datawindow.min.y, m_datawindow.max.y );
 
-        if( m_iscolor && !m_multispectral )
+        if( !m_multispectral )
         {
+            if( m_iscolor )
+            {
             if (doReadRGB)
             {
                 if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
@@ -446,7 +452,8 @@ bool  ExrDecoder::readData( Mat& img )
                 ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
         }
     }
-    else
+    }
+    else  // m_multispectral should be false
     {
         uchar *out = data;
         int x, y;
