@@ -64,6 +64,11 @@
 
 namespace cv {
 
+std::string tagTypeToString(ExifTagType type);
+size_t tagTypeSize(cv::ExifTagType);
+std::string exifTagIdToString(cv::ExifTagId);
+size_t tagValueSize(cv::ExifTagType, size_t);
+
 static const size_t CV_IO_MAX_IMAGE_PARAMS = cv::utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_PARAMS", 50);
 static const size_t CV_IO_MAX_IMAGE_WIDTH = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_WIDTH", 1 << 20);
 static const size_t CV_IO_MAX_IMAGE_HEIGHT = utils::getConfigurationParameterSizeT("OPENCV_IO_MAX_IMAGE_HEIGHT", 1 << 20);
