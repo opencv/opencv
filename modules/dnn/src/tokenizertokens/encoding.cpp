@@ -1,8 +1,11 @@
+#include <opencv2/core.hpp>
+
 #include "encoding.hpp"
 #include <cassert>
 #include <regex>
-#include <boost/regex/icu.hpp>
 #include <functional>
+#include <unicode/unistr.h>
+#include <unicode/regex.h>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -13,15 +16,25 @@ Encoding::Encoding(const std::string &name,
                      int explicitNvocab) 
     : name_(name)
     , patStr_(patStr)
-    , patRegex_(patStr, boost::regex_constants::perl 
-                     | boost::regex_constants::mod_x     // allow whitespace/comments
-                     | boost::regex_constants::icase     // case-insensitive if needed
-                     | boost::regex_constants::unicode)  // Unicode property support
     , mergeableRanks_(mergeableRanks)
     , specialTokens_(specialTokens)
     , coreBPE_(mergeableRanks_, specialTokens_, patStr_) {
 
-    compiledPattern = patRegx;
+    UErrorCode status = U_ZERO_ERROR;
+    patReg_.reset(
+        RegexPattern::compile(
+            UnicodeString::fromUTF8(patStr),
+            UREGEX_CASE_INSENSITIVE |
+            UREGEX_COMMENTS        |
+            UREGEX_UWORD           ,
+            status
+        )
+    );
+
+    if (U_FAILURE(status)) {
+        CV_Error(Error::StsError, "Failed to compile regex: " + std::string(u_errorName(status)));
+    }
+
     // compute max token value
     Rank mrMax = 0;
     for (auto& kv : mergeableRanks_) 
@@ -69,16 +82,25 @@ void Encoding::train(const std::string& text, int vocabSize, bool verbose) {
 
     int numMerges = vocabSize - 256;
 
-    std::function<std::vector<std::wstring>(const std::wstring&)> findChunks = [&](const std::wstring& text) {
-        std::vector<std::wstring> chunks;
-        auto it = boost::wsregex_iterator(text.begin(), text.end(), compiledPattern);
-        auto end = boost::wregex_iterator{};
-        for (; it != end; ++it) 
-            chunks.push_back(it->str());
-        return chunks;
-    };
+    UnicodeString utext = UnicodeString::fromUTF8(text);
+    UErrorCode status = U_ZERO_ERROR;
+    std::unique_ptr<RegexMatcher> matcher(patRegex_->matcher(utext, status));
+    if (U_FAILURE(status)) {
+        CV_Error(Error::StsError, "Failed to create regex matcher: " + std::string(u_errorName(status)));
+    }
 
-    auto textChunks = findChunks(text);
+    std::vector<std::string> textChunks;
+    while (matcher->find(status) && U_SUCCESS(status)) {
+        UnicodeString piece = mathcer->group(status);
+        std::string utf8;
+        piece.toUFT8String(utf8);
+        textChunks.push_back(std::move(utf8));
+    }
+    
+    if (U_FAILURE(status)) {
+        CV_Error(Error::StsError, "Error during regex matching: " + std::string(u_errorName(status)));
+    }
+
 
     std::vector<std::vector<int>> ids;
     ids.reserve(textChunks.size());
