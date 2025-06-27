@@ -40,7 +40,7 @@ def main():
     cv.imshow('original', img)
 
     modes = cycle(['erode/dilate', 'open/close', 'blackhat/tophat', 'gradient'])
-    str_modes = cycle(['ellipse', 'rect', 'cross'])
+    str_modes = cycle(['ellipse', 'rect', 'cross', 'diamond'])
 
     if PY3:
         cur_mode = next(modes)
