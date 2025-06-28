@@ -292,5 +292,27 @@ TEST(Imgproc_IntersectConvexConvex, not_convex)
     EXPECT_LE(area, 0.f);
 }
 
+// The intersection was not properly detected when one line sneaked its way in through an edge point
+TEST(Imgproc_IntersectConvexConvex, intersection_at_line_transition)
+{
+    std::vector<cv::Point2f> convex1 = {
+        {  -1.7604526f,  -0.00028443217f },
+        {1276.5778f   ,   0.2091252f},
+        {1276.4617f   , 719.27f},
+        {  -1.8754264f, 719.06866f}
+
+    };
+    std::vector<cv::Point2f> convex2 = {
+        {   0.f ,   0.f },
+        {1280.f ,   0.f },
+        {1280.f , 720.f},
+        {   0.f , 720.f }
+    };
+    std::vector<cv::Point> intersection;
+
+    float area = cv::intersectConvexConvex(convex1, convex2, intersection, false);
+    EXPECT_GE(cv::contourArea(convex1), area);
+    EXPECT_GE(cv::contourArea(convex2), area);
+}
 } // namespace
 } // opencv_test
