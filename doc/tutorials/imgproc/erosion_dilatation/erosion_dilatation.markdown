@@ -129,6 +129,7 @@ receives three arguments:
     -   Rectangular box: MORPH_RECT
     -   Cross: MORPH_CROSS
     -   Ellipse: MORPH_ELLIPSE
+    -   Diamond: MORPH_DIAMOND
 
     Then, we just have to specify the size of our kernel and the *anchor point*. If not
     specified, it is assumed to be in the center.
@@ -256,6 +257,7 @@ receives two arguments and returns the processed image:
     -   Rectangular box: MORPH_RECT
     -   Cross: MORPH_CROSS
     -   Ellipse: MORPH_ELLIPSE
+    -   Diamond: MORPH_DIAMOND
 
 Then, we just have to specify the size of our kernel and the *anchor point*. If the anchor point not
 specified, it is assumed to be in the center.
