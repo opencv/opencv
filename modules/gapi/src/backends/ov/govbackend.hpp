@@ -50,6 +50,8 @@ class GOVExecutable final: public GIslandExecutable
 
     // To manage additional execution options
     Options m_options;
+    std::shared_ptr<void> listenerRemover;
+    void setWorkLoadType(const std::string &type);
 
 public:
     GOVExecutable(const ade::Graph                   &graph,
