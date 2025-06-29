@@ -47,8 +47,8 @@ int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, siz
 
 int ipp_hal_sum(const uchar *src_data, size_t src_step, int src_type, int width, int height, double *result);
 
-#undef cv_hal_sum
-#define cv_hal_sum ipp_hal_sum
+//#undef cv_hal_sum
+//#define cv_hal_sum ipp_hal_sum
 
 #endif
 

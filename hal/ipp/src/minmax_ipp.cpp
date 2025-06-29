@@ -160,6 +160,7 @@ typedef IppStatus (*IppMinMaxSelector)(const void* pSrc, int srcStep, IppiSize s
 int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width, int height, int depth,
                               double* _minVal, double* _maxVal, int* _minIdx, int* _maxIdx, uchar* mask, size_t mask_step)
 {
+    printf("ipp_hal_minMaxIdxMaskStep call\n");
 #if IPP_VERSION_X100 < 201800
     // cv::minMaxIdx problem with NaN input
     // Disable 32F processing only

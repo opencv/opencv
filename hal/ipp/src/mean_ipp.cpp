@@ -12,6 +12,7 @@
 static int ipp_mean(const uchar* src_data, size_t src_step, int width, int height,
                     int src_type, double* mean_val, uchar* mask, size_t mask_step)
 {
+    printf("ipp_mean call\n");
     int cn = CV_MAT_CN(src_type);
     if (cn > 4)
     {
@@ -95,6 +96,7 @@ static int ipp_mean(const uchar* src_data, size_t src_step, int width, int heigh
 static int ipp_meanStdDev(const uchar* src_data, size_t src_step, int width, int height,
                           int src_type, double* mean_val, double* stddev_val, uchar* mask, size_t mask_step)
 {
+    printf("ipp_meanStdDev call\n");
     int cn = CV_MAT_CN(src_type);
 
     if((src_step == 1 || src_step == static_cast<size_t>(width)) && (mask_step == 1 || mask_step == static_cast<size_t>(width)))

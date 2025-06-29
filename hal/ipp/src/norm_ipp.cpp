@@ -12,6 +12,7 @@
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result)
 {
+    printf("ipp_hal_norm call\n");
     if( mask )
     {
         IppiSize sz = { width, height };
@@ -131,6 +132,7 @@ int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t ma
 int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size_t src2_step, const uchar* mask,
                      size_t mask_step, int width, int height, int type, int norm_type, double* result)
 {
+    printf("ipp_hal_normDiff call\n");
     if( norm_type & cv::NORM_RELATIVE )
     {
         norm_type &= cv::NORM_TYPE_MASK;
