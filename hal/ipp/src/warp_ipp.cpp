@@ -333,7 +333,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
                         {{0, 0}, {1, 1}, {0, 1}, {0, 1}},   //16U
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //16S
                         {{1, 1}, {1, 1}, {1, 0}, {1, 1}},   //32S
-                        {{1, 0}, {1, 1}, {0, 0}, {1, 1}},   //32F
+                        {{1, 0}, {1, 0}, {0, 0}, {1, 0}},   //32F
                         {{1, 1}, {1, 1}, {1, 1}, {1, 1}}};  //64F
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
