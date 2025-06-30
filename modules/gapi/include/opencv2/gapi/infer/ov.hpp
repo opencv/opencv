@@ -13,7 +13,10 @@
 #include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp>     // GKernelType[M], GBackend
 #include <opencv2/gapi/infer.hpp>       // Generic
+
+#ifdef HAVE_INF_ENGINE
 #include <openvino/openvino.hpp>        // WorkloadType
+#endif
 
 #include <map>
 
@@ -692,6 +695,7 @@ namespace wip { namespace ov {
  */
 struct benchmark_mode { };
 
+#ifdef HAVE_INF_ENGINE
 struct workload_type {
     using callback = std::function<void(const ::ov::WorkloadType &type)>;
     using listener = std::pair<int, callback>;
@@ -712,6 +716,7 @@ struct workload_type {
     std::vector<listener> listeners;
     int nextId = 0;
 };
+#endif
 } // namespace ov
 } // namespace wip
 
@@ -723,10 +728,12 @@ namespace detail
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
+#ifdef HAVE_INF_ENGINE
     template<> struct CompileArgTag<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>
     {
         static const char* tag() { return "gapi.wip.ov.workload_type_ref"; }
     };
+#endif
 }
 
 } // namespace cv
