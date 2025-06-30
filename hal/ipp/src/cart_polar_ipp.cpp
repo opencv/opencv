@@ -9,6 +9,7 @@
 
 int ipp_hal_polarToCart32f(const float* mag, const float* angle, float* x, float* y, int len, bool angleInDegrees)
 {
+    printf("ipp_hal_polarToCart32f call\n");
     const bool isInPlace = (x == mag) || (x == angle) || (y == mag) || (y == angle);
     if (isInPlace || angleInDegrees)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
@@ -21,6 +22,7 @@ int ipp_hal_polarToCart32f(const float* mag, const float* angle, float* x, float
 
 int ipp_hal_polarToCart64f(const double* mag, const double* angle, double* x, double* y, int len, bool angleInDegrees)
 {
+    printf("ipp_hal_polarToCart64f call\n");
     const bool isInPlace = (x == mag) || (x == angle) || (y == mag) || (y == angle);
     if (isInPlace || angleInDegrees)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;

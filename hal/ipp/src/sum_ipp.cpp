@@ -11,6 +11,7 @@
 
 int ipp_hal_sum(const uchar *src_data, size_t src_step, int src_type, int width, int height, double *result)
 {
+    printf("ipp_hal_sum call\n");
     int cn = CV_MAT_CN(src_type);
     if (cn > 4)
     {
