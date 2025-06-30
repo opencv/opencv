@@ -18,7 +18,7 @@ int erosion_elem = 0;
 int erosion_size = 0;
 int dilation_elem = 0;
 int dilation_size = 0;
-int const max_elem = 2;
+int const max_elem = 3;
 int const max_kernel_size = 21;
 
 /** Function Headers */
@@ -47,7 +47,7 @@ int main( int argc, char** argv )
   moveWindow( "Dilation Demo", src.cols, 0 );
 
   /// Create Erosion Trackbar
-  createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Erosion Demo",
+  createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse \n 3: Diamond", "Erosion Demo",
           &erosion_elem, max_elem,
           Erosion );
 
@@ -56,7 +56,7 @@ int main( int argc, char** argv )
           Erosion );
 
   /// Create Dilation Trackbar
-  createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse", "Dilation Demo",
+  createTrackbar( "Element:\n 0: Rect \n 1: Cross \n 2: Ellipse \n 3: Diamond", "Dilation Demo",
           &dilation_elem, max_elem,
           Dilation );
 
@@ -83,6 +83,7 @@ void Erosion( int, void* )
   if( erosion_elem == 0 ){ erosion_type = MORPH_RECT; }
   else if( erosion_elem == 1 ){ erosion_type = MORPH_CROSS; }
   else if( erosion_elem == 2) { erosion_type = MORPH_ELLIPSE; }
+  else if( erosion_elem == 3) { erosion_type = MORPH_DIAMOND; }
 
   //![kernel]
   Mat element = getStructuringElement( erosion_type,
@@ -106,6 +107,7 @@ void Dilation( int, void* )
   if( dilation_elem == 0 ){ dilation_type = MORPH_RECT; }
   else if( dilation_elem == 1 ){ dilation_type = MORPH_CROSS; }
   else if( dilation_elem == 2) { dilation_type = MORPH_ELLIPSE; }
+  else if( dilation_elem == 3) { dilation_type = MORPH_DIAMOND; }
 
   Mat element = getStructuringElement( dilation_type,
                        Size( 2*dilation_size + 1, 2*dilation_size+1 ),

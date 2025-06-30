@@ -147,6 +147,14 @@ array([[0, 0, 1, 0, 0],
        [1, 1, 1, 1, 1],
        [0, 0, 1, 0, 0],
        [0, 0, 1, 0, 0]], dtype=uint8)
+
+# Diamond-shaped Kernel
+>>> cv.getStructuringElement(cv.MORPH_DIAMOND,(5,5))
+array([[0, 0, 1, 0, 0],
+       [0, 1, 1, 1, 0],
+       [1, 1, 1, 1, 1],
+       [0, 1, 1, 1, 0],
+       [0, 0, 1, 0, 0]], dtype=uint8)
 @endcode
 Additional Resources
 --------------------
