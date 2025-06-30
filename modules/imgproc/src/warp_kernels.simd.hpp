@@ -476,7 +476,9 @@ void warpAffineNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -764,7 +766,9 @@ void warpAffineNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, i
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -1347,7 +1351,9 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -1632,7 +1638,9 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -2234,7 +2242,9 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -2570,7 +2580,9 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -3302,6 +3314,25 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE(SIMD128, LINEAR, 8U, C3);
     #elif CV_SIMD_SCALABLE
                     CV_WARP_VECTOR_SHUFFLE_INTER_STORE(SIMDX, LINEAR, 8U, C3);
+                    // int32_t tmp_buf[max_vlanes_16 * 4];
+                    // for (int k = 0; k < uf; k++) {
+                    //     const uint8_t *srcptrk = src + addr[k];
+                    //     v_float32 ik_fpix0 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptrk)));
+                    //     v_float32 ik_fpix1 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptrk + 3)));
+                    //     v_float32 ik_fpix2 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptrk + srcstep)));
+                    //     v_float32 ik_fpix3 = v_cvt_f32(v_reinterpret_as_s32(v_load_expand_q<4>(srcptrk + srcstep + 3)));
+                    //     v_float32 ik_alpha = vx_setall_f32(valpha[k]);
+                    //     v_float32 ik_beta = vx_setall_f32(vbeta[k]);
+
+                    //     ik_fpix0 = v_fma(ik_alpha, v_sub(ik_fpix1, ik_fpix0), ik_fpix0);
+                    //     ik_fpix2 = v_fma(ik_alpha, v_sub(ik_fpix3, ik_fpix2), ik_fpix2);
+                    //     ik_fpix0 = v_fma(ik_beta,  v_sub(ik_fpix2, ik_fpix0), ik_fpix0);
+                    //     auto ik_pix0 = v_round(ik_fpix0);
+                    //     v_store<4>(tmp_buf + 3 * k, ik_pix0);
+                    // }
+                    // for (int k = 0; k < uf * 3; k++) {
+                    //     dstptr[3 * x + k] = saturate_cast<uchar>(tmp_buf[k]);
+                    // };
     #endif
                 } else {
                     uint8_t pixbuf[max_uf*4*3];
@@ -3562,7 +3593,9 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -4827,7 +4860,9 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
@@ -6165,7 +6200,9 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
+    #if CV_SIMD
         int vlanes_16 = VTraits<v_uint16>::vlanes();
+    #endif
         int vlanes_32 = VTraits<v_float32>::vlanes();
         // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
