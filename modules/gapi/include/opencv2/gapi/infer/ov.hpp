@@ -13,6 +13,7 @@
 #include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp>     // GKernelType[M], GBackend
 #include <opencv2/gapi/infer.hpp>       // Generic
+#include <openvino/openvino.hpp>        // WorkloadType
 
 #include <map>
 
@@ -692,17 +693,17 @@ namespace wip { namespace ov {
 struct benchmark_mode { };
 
 struct workload_type {
-    using callback = std::function<void(const std::string &type)>;
+    using callback = std::function<void(const ::ov::WorkloadType &type)>;
     using listener = std::pair<int, callback>;
-    std::shared_ptr<void> addListener(callback cb){
+    int addListener(callback cb){
         int id = nextId++;
         listeners.emplace_back(id, std::move(cb));
-
-        auto remover = [this, id](void*){ removeListener(id);};
-
-        return std::shared_ptr<void>(nullptr, remover);
+        return id;
     }
-    void setWorkloadType(const std::string &type) {
+    void removeListener(int id) {
+        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
+    }
+    void setWorkloadType(const ::ov::WorkloadType &type) {
         for(const listener& l : listeners) {
             l.second(type);
         }
@@ -710,9 +711,6 @@ struct workload_type {
  private:
     std::vector<listener> listeners;
     int nextId = 0;
-    void removeListener(int id) {
-        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
-    }
 };
 } // namespace ov
 } // namespace wip
@@ -724,10 +722,6 @@ namespace detail
     template<> struct CompileArgTag<cv::gapi::wip::ov::benchmark_mode>
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
-    };
-    template<> struct CompileArgTag<cv::gapi::wip::ov::workload_type>
-    {
-        static const char* tag() { return "gapi.wip.ov.workload_type"; }
     };
     template<> struct CompileArgTag<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>
     {

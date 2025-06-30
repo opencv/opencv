@@ -1541,10 +1541,10 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const cv::GCompileArgs &compileArgs,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
-
-    if(cv::gapi::getCompileArg<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>(compileArgs).has_value()) {
-        auto workload_type = cv::gapi::getCompileArg<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>(compileArgs).value();
-        listenerRemover = workload_type.get().addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
+    auto workload_arg = cv::gapi::getCompileArg<WorkloadTypeRef>(compileArgs);
+    if(workload_arg.has_value()) {
+        m_workload = workload_arg;
+        m_workloadId = m_workload.value().get().addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
     }
     m_options.inference_only =
         cv::gapi::getCompileArg<cv::gapi::wip::ov::benchmark_mode>(compileArgs).has_value();
@@ -1581,8 +1581,12 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
         }
     }
 }
+cv::gimpl::ov::GOVExecutable::~GOVExecutable() {
+    if(m_workload.has_value())
+        m_workload.value().get().removeListener(m_workloadId);
+}
 
-void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const std::string &type)
+void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const ::ov::WorkloadType &type)
 {
     compiled.compiled_model.set_property({{"WORKLOAD_TYPE", type}});
 }
