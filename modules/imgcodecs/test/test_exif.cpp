@@ -241,7 +241,7 @@ struct ExifTag
     std::string str;
     rational64_t n={0, 1};
     std::vector<rational64_t> v;
-    
+
     bool empty() const { return id == 0; }
     size_t nvalues() const;
 };
@@ -345,19 +345,19 @@ static void packIFD(const std::vector<ExifTag>* ifds, size_t nifds, size_t idx,
     const std::vector<ExifTag>& ifd = ifds[idx];
     std::vector<std::pair<size_t, size_t> > subifds;
     size_t ntags = ifd.size();
-    
+
     size_t subifd_offset0 = offset + IFD_HDR_SIZE + ntags*IFD_ENTRY_SIZE;
     size_t subifd_offset = subifd_offset0;
     pack2(data, offset, (uint16_t)ntags, bigendian);
-    
+
     // first, pack the specified (by idx) IFD without subdirectories
     for (const ExifTag& tag: ifd) {
         pack2(data, offset, (uint16_t)tag.id, bigendian);
-        
+
         ExifTagType type = tag.type == TAG_TYPE_IFD ? TAG_TYPE_LONG : tag.type;
         pack2(data, offset, (uint16_t)type, bigendian);
         size_t nvalues = tag.nvalues();
-        
+
         pack4(data, offset, (uint32_t)nvalues, bigendian);
         if (tag.type == TAG_TYPE_IFD) {
             int64_t sub_idx = tag.n.num;
@@ -378,7 +378,7 @@ static void packIFD(const std::vector<ExifTag>* ifds, size_t nifds, size_t idx,
         } else {
             pack4(data, offset, 0u, bigendian);
         }
-        
+
         if (type == TAG_TYPE_ASCII || type == TAG_TYPE_UNDEFINED) {
             size_t v_size = tag.str.size();
             memcpy(&data[tag_values_offset], tag.str.c_str(), v_size);
@@ -426,13 +426,13 @@ static void packIFD(const std::vector<ExifTag>* ifds, size_t nifds, size_t idx,
         } else {
             CV_Error_(Error::StsBadArg, ("unsupported tag type %d", tag.type));
         }
-        
+
         if (!inline_values)
             values_offset = tag_values_offset;
     }
-    
+
     pack4(data, offset, 0u, bigendian);
-    
+
     // now pack all sub-IFDs and the next one, if any
     for (auto sub: subifds) {
         size_t subofs = sub.second;
@@ -447,14 +447,14 @@ static bool packExif(const std::vector<std::vector<ExifTag> >& exif,
     size_t values_size = 0;
     size_t ifd_size = computeIFDSize(exif.data(), exif.size(), 0u, values_size) + EXIF_HDR_SIZE;
     data.resize(ifd_size + values_size);
-    
+
     char signature = bigendian ? 'M' : 'I';
     size_t offset = 0;
     pack1(data, offset, (uint8_t)signature);
     pack1(data, offset, (uint8_t)signature);
     pack2(data, offset, 42u, bigendian);
     pack4(data, offset, 8u, bigendian);
-    
+
     packIFD(exif.data(), exif.size(), 0u, data, offset, ifd_size, bigendian);
     return true;
 }
@@ -580,22 +580,22 @@ TEST(Imgcodecs_Avif, ReadWriteWithExif)
     int imgtype = CV_MAKETYPE(imgdepth, 3);
     const string outputname = cv::tempfile(".avif");
     Mat img = makeCirclesImage(Size(1280, 720), imgtype, avif_nbits);
-    
+
     std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
     std::vector<std::vector<uchar> > metadata(1);
     std::vector<std::vector<ExifTag> > exif = makeTestExif(img.size(), avif_nbits);
     packExif(exif, metadata[0], true);
-    
+
     std::vector<int> write_params = {
         IMWRITE_AVIF_DEPTH, avif_nbits,
         IMWRITE_AVIF_SPEED, avif_speed,
         IMWRITE_AVIF_QUALITY, avif_quality
     };
-    
+
     imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
     std::vector<uchar> compressed;
     imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);
-    
+
     std::vector<int> read_metadata_types, read_metadata_types2;
     std::vector<std::vector<uchar> > read_metadata, read_metadata2;
     Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, IMREAD_UNCHANGED);
@@ -622,16 +622,16 @@ TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
     int imgtype = CV_MAKETYPE(CV_8U, 3);
     const string outputname = cv::tempfile(".jpeg");
     Mat img = makeCirclesImage(Size(1280, 720), imgtype, 8);
-    
+
     std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
     std::vector<std::vector<uchar> > metadata(1);
     std::vector<std::vector<ExifTag> > exif = makeTestExif(img.size(), 8);
     packExif(exif, metadata[0], true);
-    
+
     std::vector<int> write_params = {
         IMWRITE_JPEG_QUALITY, jpeg_quality
     };
-    
+
     imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
     std::vector<uchar> compressed;
     imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);

@@ -111,7 +111,7 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
     result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT601;
     result->yuvRange = AVIF_RANGE_FULL;
   }
-    
+
   if (!metadata.empty()) {
     const std::vector<uchar>& metadata_exif = metadata[IMAGE_METADATA_EXIF];
     const std::vector<uchar>& metadata_xmp = metadata[IMAGE_METADATA_XMP];

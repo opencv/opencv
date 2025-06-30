@@ -480,7 +480,7 @@ imread_( const String& filename, int flags, OutputArray mat,
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
-    
+
     if (metadata_types)
         metadata_types->clear();
 
@@ -569,7 +569,7 @@ imread_( const String& filename, int flags, OutputArray mat,
             CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
             success = true;
         }
-        
+
         readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
@@ -1063,7 +1063,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
     encoder->setDestination( filename );
     addMetadata(encoder, metadata_types, metadata);
-    
+
 #if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
     bool fixed = false;
     std::vector<int> params_pair(2);
@@ -1248,7 +1248,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
 {
     if (metadata_types)
         metadata_types->clear();
-    
+
     CV_Assert(!buf.empty());
     CV_Assert(buf.isContinuous());
     CV_Assert(buf.checkVector(1, CV_8U) > 0);
