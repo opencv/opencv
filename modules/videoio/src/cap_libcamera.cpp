@@ -558,7 +558,6 @@ namespace cv
         Options *options;
 
         bool startVideo();
-        bool getVideoFrame(cv::Mat &frame, unsigned int timeout);
         void stopVideo();
 
         bool open(int _index);
@@ -579,24 +578,19 @@ namespace cv
 
     protected:
         LibcameraApp *app;
-        static void *videoThreadFunc(void *p);
-        pthread_t videothread;
         unsigned int still_flags;
         unsigned int vw, vh, vstr;
-        std::atomic<bool> running, frameready;
-        uint8_t *framebuffer;
-        std::mutex mtx;
-        std::condition_variable cv;
-
-        // bool isFramePending;
-        // bool needsReconfigure;
-        std::atomic<bool> isFramePending, needsReconfigure;
+        std::atomic<bool> needsReconfigure;
         bool camerastarted;
+        
+        // Store the current completed request for retrieve
+        CompletedRequestPtr current_request_;
+        std::mutex request_mutex_;
     };
 
     LibcameraCapture::LibcameraCapture()
     {
-        app = new LibcameraApp(std::make_unique<Options>());
+        app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
         options = static_cast<Options *>(app->GetOptions());
         still_flags = LibcameraApp::FLAG_STILL_NONE;
         options->photo_width = 4056;
@@ -612,15 +606,9 @@ namespace cv
         options->contrast = 1.0f;
         options->saturation = 1.0f;
         still_flags |= LibcameraApp::FLAG_STILL_RGB;
-        running.store(false, std::memory_order_release);
-        ;
-        frameready.store(false, std::memory_order_release);
-        ;
-        framebuffer = nullptr;
-        // isFramePending=false;
-        isFramePending.store(false, std::memory_order_release);
         needsReconfigure.store(false, std::memory_order_release);
         camerastarted = false;
+        current_request_ = nullptr;
     }
 
     LibcameraCapture::~LibcameraCapture()
@@ -630,228 +618,166 @@ namespace cv
         std::cerr << "End of ~LibcameraCapture() call" << std::endl;
     }
 
-    // using namespace LibcameraApp;
-
-    void *LibcameraCapture::videoThreadFunc(void *p) // not resolved
-    {
-        LibcameraCapture *t = (LibcameraCapture *)p;
-        t->running.store(true, std::memory_order_release);
-        // allocate framebuffer
-        // unsigned int vw,vh,vstr;
-        libcamera::Stream *stream = t->app->ViewfinderStream(&t->vw, &t->vh, &t->vstr);
-        int buffersize = t->vh * t->vstr;
-        if (t->framebuffer)
-            delete[] t->framebuffer;
-        t->framebuffer = new uint8_t[buffersize];
-        std::vector<libcamera::Span<uint8_t>> mem;
-        std::cerr << "Time to start video thread loop" << std::endl;
-        // main loop
-        while (t->running.load(std::memory_order_acquire))
-        {
-            // std::cerr << "Wating for msg..."  << std::endl;
-            LibcameraApp::Msg msg = t->app->Wait();
-            // std::cerr<<"msg get"<<std::endl;
-            if (msg.type == LibcameraApp::MsgType::Quit)
-            {
-                std::cerr << "Quit message received" << std::endl;
-                t->running.store(false, std::memory_order_release);
-            }
-            else if (msg.type != LibcameraApp::MsgType::RequestComplete)
-                throw std::runtime_error("unrecognised message!");
-
-            CompletedRequestPtr payload = std::get<CompletedRequestPtr>(msg.payload);
-            mem = t->app->Mmap(payload->buffers[stream]);
-            t->mtx.lock();
-            memcpy(t->framebuffer, mem[0].data(), buffersize);
-            t->mtx.unlock();
-            t->frameready.store(true, std::memory_order_release);
-        }
-        std::cerr << "Thread finished" << std::endl;
-        if (t->framebuffer)
-        {
-            delete[] t->framebuffer;
-            t->framebuffer = nullptr;
-        }
-        return NULL;
-    }
-
     bool LibcameraCapture::startVideo() // not resolved
     {
-        // if(camerastarted) stopPhoto();
-        if (running.load(std::memory_order_relaxed))
+        if (camerastarted)
         {
-            std::cerr << "Video thread already running";
+            std::cerr << "Camera already started";
             return false;
         }
-        frameready.store(false, std::memory_order_release);
+        
         LibcameraCapture::app->OpenCamera();
         LibcameraCapture::app->ConfigureViewfinder();
         LibcameraCapture::app->StartCamera();
-
-        int ret = pthread_create(&videothread, NULL, &videoThreadFunc, this);
-        if (ret != 0)
+        
+        // Get stream dimensions for later use
+        libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
+        if (!stream)
         {
-            std::cerr << "Error starting video thread" << std::endl;
+            std::cerr << "Error getting viewfinder stream" << std::endl;
             return false;
         }
+        
+        camerastarted = true;
         return true;
     }
 
     void LibcameraCapture::stopVideo() // not resolved
     {
-        if (!running)
+        if (!camerastarted)
             return;
-
-        running.store(false, std::memory_order_release);
-        ;
-
-        // join thread
-        void *status;
-        int ret = pthread_join(videothread, &status);
-        if (ret < 0)
-            std::cerr << "Error joining thread" << std::endl;
 
         LibcameraCapture::app->StopCamera();
         LibcameraCapture::app->Teardown();
         LibcameraCapture::app->CloseCamera();
-        frameready.store(false, std::memory_order_release);
-        ;
-    }
-
-    bool LibcameraCapture::getVideoFrame(cv::Mat &frame, unsigned int timeout)
-    {
-        auto start_time = std::chrono::high_resolution_clock::now();
-        bool timeout_reached = false;
-        timespec req;
-        req.tv_sec = 0;
-        req.tv_nsec = 1000000; // 1ms
-        while ((!frameready.load(std::memory_order_acquire)) && (!timeout_reached))
+        
+        // Clear any pending request
         {
-            nanosleep(&req, NULL);
-            timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(timeout));
+            std::lock_guard<std::mutex> lock(request_mutex_);
+            current_request_ = nullptr;
         }
-        if (frameready.load(std::memory_order_acquire))
-        {
-            frame.create(vh, vw, CV_8UC3);
-            uint ls = vw * 3;
-            mtx.lock();
-            uint8_t *ptr = framebuffer;
-            for (unsigned int i = 0; i < vh; i++, ptr += vstr)
-                memcpy(frame.ptr(i), ptr, ls);
-            mtx.unlock();
-            frameready.store(false, std::memory_order_release);
-            ;
-            return true;
-        }
-        else
-        {
-            std::cerr << "ERROR: frameready status: " << frameready.load(std::memory_order_acquire) << std::endl;
-            return false;
-        }
+        
+        camerastarted = false;
     }
 
     /**
-     * @brief Attempt to start the camera and ensure a frame is pending for capture.
+     * @brief Check if a frame is available and ready for retrieval.
      *
-     * This function checks whether a frame is already pending. If a frame is pending,
-     * it returns immediately with `true`. If no frame is pending, the function attempts
-     * to configure the camera, start the camera stream, and create a video thread
-     * to handle video capturing. The `isFramePending` flag is updated accordingly.
+     * This function checks if libcamera has a completed request ready.
+     * If the camera is not started, it will start the camera first.
+     * It uses libcamera's asynchronous message system to check for available frames.
      *
-     * @return `true` if a frame is pending for capture.
-     *         `false` if an error occurs while starting the video thread or configuring the camera.
+     * @return `true` if a frame is ready for retrieval.
+     *         `false` if no frame is available or camera failed to start.
      */
     bool LibcameraCapture::grabFrame()
     {
-        if (camerastarted)
+        if (!camerastarted)
         {
-            // if (needsReconfigure)
-            // {
-            //     // restart the camera
-            //     stopVideo();
-            //     startVideo();
-            //     // needsReconfigure = false;
-            //     needsReconfigure.store(false, std::memory_order_release);
-            // }
-            return true;
+            if (!startVideo())
+            {
+                std::cerr << "Failed to start camera" << std::endl;
+                return false;
+            }
         }
-        else
+        
+        // Check if we need to reconfigure
+        // if (needsReconfigure.load(std::memory_order_acquire))
+        // {
+        //     stopVideo();
+        //     if (!startVideo())
+        //     {
+        //         std::cerr << "Failed to restart camera after reconfiguration" << std::endl;
+        //         return false;
+        //     }
+        //     needsReconfigure.store(false, std::memory_order_release);
+        // }
+        
+        // Try to get a message from libcamera (non-blocking check)
+        try 
         {
-            Mat frame;
-            if (!getVideoFrame(frame, 5000))
+            // Use Wait() with short timeout to check for available messages
+            LibcameraApp::Msg msg = app->Wait();
+            
+            if (msg.type == LibcameraApp::MsgType::RequestComplete)
             {
-                std::cerr << "Timeout error" << std::endl;
+                CompletedRequestPtr payload = std::get<CompletedRequestPtr>(msg.payload);
+                {
+                    std::lock_guard<std::mutex> lock(request_mutex_);
+                    current_request_ = payload;
+                }
+                return true;
             }
-            else
+            else if (msg.type == LibcameraApp::MsgType::Quit)
             {
-                // std::cerr << "Frame grabbed successfully" << std::endl;
-                camerastarted = true;
+                std::cerr << "Quit message received" << std::endl;
+                return false;
             }
-            // std::cerr << "Error grabbing video frame!" << std::endl;
         }
-        return camerastarted;
+        catch (const std::exception& e)
+        {
+            // No message available or error occurred
+            return false;
+        }
+        
+        return false;
     }
 
     /**
-     * @brief Retrieve a single frame from the video stream and copy it to the destination.
+     * @brief Retrieve the frame data from the current completed request.
      *
-     * This function waits for a frame to be ready in the framebuffer, extracts the frame data,
-     * and copies it to the provided OpenCV `OutputArray`. It uses a timeout mechanism to avoid
-     * indefinite blocking if no frame becomes available.
+     * This function extracts frame data directly from libcamera's memory-mapped buffers
+     * without additional copying. It uses the completed request obtained in grabFrame().
      *
      * @param int Unused parameter.
      * @param dst An OpenCV `OutputArray` where the retrieved frame will be stored.
      *            The frame is stored in RGB format (8-bit, 3 channels, CV_8UC3).
      *
      * @return `true` if a frame is successfully retrieved and copied to `dst`.
-     *         `false` if no frame is ready (e.g., due to timeout or video not running).
+     *         `false` if no frame is ready or an error occurred.
      */
     bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     {
-        // if (needsReconfigure)
-        // {
-        //     // restart the camera
-        //     stopVideo();
-        //     startVideo();
-        //     // needsReconfigure = false;
-        //     needsReconfigure.store(false, std::memory_order_release);
-        // }
-
-        if (!running.load(std::memory_order_acquire))
-            return false;
-        auto start_time = std::chrono::high_resolution_clock::now();
-        bool timeout_reached = false;
-        timespec req;
-        req.tv_sec = 0;
-        req.tv_nsec = 1000000; // 1ms
-
-        uint64_t timeout_lim = options->timeout;
-        while ((!frameready.load(std::memory_order_acquire)) && (!timeout_reached))
+        CompletedRequestPtr request;
         {
-            nanosleep(&req, NULL);
-            timeout_reached = (std::chrono::high_resolution_clock::now() - start_time > std::chrono::milliseconds(timeout_lim));
-            // timeout=1000. Need to be modified in this class.
-        }
-        if (frameready.load(std::memory_order_acquire))
-        {
-            Mat frame(vh, vw, CV_8UC3);
-            uint ls = vw * 3;
-            mtx.lock();
-            uint8_t *ptr = framebuffer;
-            for (unsigned int i = 0; i < vh; i++, ptr += vstr)
+            std::lock_guard<std::mutex> lock(request_mutex_);
+            if (!current_request_)
             {
-                memcpy(frame.ptr(i), ptr, ls);
+                return false;
             }
-            mtx.unlock();
-            frameready.store(false, std::memory_order_release);
-            frame.copyTo(dst);
-            return true;
+            request = current_request_;
+            current_request_ = nullptr; // Clear after use
         }
-        else
+        
+        // Get the viewfinder stream
+        libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
+        if (!stream)
         {
-            // std::cerr << "frame NOT ready!" << std::endl;
+            std::cerr << "Error getting viewfinder stream" << std::endl;
             return false;
         }
+        
+        // Get memory mapped buffer directly from libcamera
+        std::vector<libcamera::Span<uint8_t>> mem = app->Mmap(request->buffers[stream]);
+        if (mem.empty())
+        {
+            std::cerr << "Error getting memory mapped buffer" << std::endl;
+            return false;
+        }
+        
+        // Create OpenCV Mat directly from libcamera buffer
+        Mat frame(vh, vw, CV_8UC3);
+        uint8_t *src_ptr = mem[0].data();
+        uint line_size = vw * 3;
+        
+        // Copy line by line to handle stride correctly
+        for (unsigned int i = 0; i < vh; i++, src_ptr += vstr)
+        {
+            memcpy(frame.ptr(i), src_ptr, line_size);
+        }
+        
+        frame.copyTo(dst);
+        return true;
     }
 
     double LibcameraCapture::getProperty(int propId) const
