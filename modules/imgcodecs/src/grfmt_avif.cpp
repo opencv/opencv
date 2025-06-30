@@ -112,18 +112,16 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
     result->yuvRange = AVIF_RANGE_FULL;
   }
     
-  avifResult status = AVIF_RESULT_OK;
-    
   if (!metadata.empty()) {
     const std::vector<uchar>& metadata_exif = metadata[IMAGE_METADATA_EXIF];
     const std::vector<uchar>& metadata_xmp = metadata[IMAGE_METADATA_XMP];
     const std::vector<uchar>& metadata_iccp = metadata[IMAGE_METADATA_ICCP];
     if (!metadata_exif.empty())
-      status = avifImageSetMetadataExif(result, (const uint8_t*)metadata_exif.data(), metadata_exif.size());
-    if (!metadata_exif.empty() && status == AVIF_RESULT_OK)
-      status = avifImageSetMetadataXMP(result, (const uint8_t*)metadata_xmp.data(), metadata_xmp.size());
-    if (!metadata_iccp.empty() && status == AVIF_RESULT_OK)
-      status = avifImageSetProfileICC(result, (const uint8_t*)metadata_iccp.data(), metadata_iccp.size());
+      avifImageSetMetadataExif(result, (const uint8_t*)metadata_exif.data(), metadata_exif.size());
+    if (!metadata_exif.empty())
+      avifImageSetMetadataXMP(result, (const uint8_t*)metadata_xmp.data(), metadata_xmp.size());
+    if (!metadata_iccp.empty())
+      avifImageSetProfileICC(result, (const uint8_t*)metadata_iccp.data(), metadata_iccp.size());
   }
 
   avifRGBImage rgba;
@@ -139,7 +137,7 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
   rgba.pixels =
       const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
 
-  if (status != AVIF_RESULT_OK || avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
+  if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
     avifImageDestroy(result);
     return nullptr;
   }

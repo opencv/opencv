@@ -570,6 +570,7 @@ static std::vector<std::vector<ExifTag> > makeTestExif(Size imgsize, int nbits, 
     return exif;
 }
 
+#ifdef HAVE_AVIF
 TEST(Imgcodecs_Avif, ReadWriteWithExif)
 {
     int avif_nbits = 10;
@@ -613,6 +614,7 @@ TEST(Imgcodecs_Avif, ReadWriteWithExif)
     EXPECT_LT(mse, 1500);
     remove(outputname.c_str());
 }
+#endif // HAVE_AVIF
 
 TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
 {
