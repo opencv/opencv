@@ -174,7 +174,11 @@ public:
      * @return ExifEntru_t structure. Caller has to know what tag it calls in order to extract proper field from the structure ExifEntry_t
      */
     ExifEntry_t getTag( const ExifTagName tag ) const;
-
+    
+    /**
+     * @brief Get the whole exif buffer
+     */
+    const std::vector<unsigned char>& getData() const;
 
 private:
     std::vector<unsigned char> m_data;

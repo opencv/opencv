@@ -58,11 +58,30 @@ BaseImageDecoder::BaseImageDecoder()
     m_frame_count = 1;
 }
 
+bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
+{
+    if (type == IMAGE_METADATA_EXIF)
+        return !m_exif.getData().empty();
+    return false;
+}
+
+Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
+{
+    if (type == IMAGE_METADATA_EXIF) {
+        const std::vector<unsigned char>& exif = m_exif.getData();
+        if (!exif.empty()) {
+            Mat exifmat(1, (int)exif.size(), CV_8U, (void*)exif.data());
+            return exifmat;
+        }
+    }
+    return Mat();
+}
 
 ExifEntry_t BaseImageDecoder::getExifTag(const ExifTagName tag) const
 {
     return m_exif.getTag(tag);
 }
+
 bool BaseImageDecoder::setSource( const String& filename )
 {
     m_filename = filename;
@@ -137,6 +156,20 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     m_buf = &buf;
     m_buf->clear();
     m_filename = String();
+    return true;
+}
+
+bool BaseImageEncoder::addMetadata(ImageMetadataType type, const Mat& metadata)
+{
+    CV_Assert_N(type >= IMAGE_METADATA_EXIF, type <= IMAGE_METADATA_MAX);
+    if (metadata.empty())
+        return true;
+    if (m_metadata.empty())
+        m_metadata.resize((int)IMAGE_METADATA_MAX+1);
+    CV_Assert(metadata.elemSize() == 1);
+    CV_Assert(metadata.isContinuous());
+    const unsigned char* data = metadata.ptr<unsigned char>();
+    m_metadata[(int)type].assign(data, data + metadata.total());
     return true;
 }
 

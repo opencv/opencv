@@ -68,6 +68,20 @@ public:
      * @return The type of the image.
      */
     virtual int type() const { return m_type; }
+    
+    /**
+     * @brief Checks whether file contains metadata of the certain type.
+     * @param type The type of metadata to look for
+     */
+    virtual bool haveMetadata(ImageMetadataType type) const;
+    
+    /**
+     * @brief Retrieves metadata (if any) of the certain kind.
+     * If there is no such metadata, the method returns empty array.
+     *
+     * @param type The type of metadata to look for
+     */
+    virtual Mat getMetadata(ImageMetadataType type) const;
 
     /**
      * @brief Fetch a specific EXIF tag from the image's metadata.
@@ -204,6 +218,13 @@ public:
      * @return true if the destination was successfully set, false otherwise.
      */
     virtual bool setDestination(std::vector<uchar>& buf);
+    
+    /**
+     * @brief Sets the metadata to write together with the image data
+     * @param type The type of metadata to add
+     * @param metadata The packed metadata (Exif, XMP, ...)
+     */
+    virtual bool addMetadata(ImageMetadataType type, const Mat& metadata);
 
     /**
      * @brief Encode and write the image data.
@@ -243,6 +264,7 @@ public:
     virtual void throwOnError() const;
 
 protected:
+    std::vector<std::vector<unsigned char> > m_metadata; // see IMAGE_METADATA_...
     String m_description;    ///< Description of the encoder (e.g., format name, capabilities).
     String m_filename;       ///< Destination file name for encoded data.
     std::vector<uchar>* m_buf; ///< Pointer to the buffer for encoded data if using memory-based destination.

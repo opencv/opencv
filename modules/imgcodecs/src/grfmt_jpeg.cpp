@@ -814,6 +814,22 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
         }
 
         jpeg_start_compress( &cinfo, TRUE );
+        
+        if (!m_metadata.empty()) {
+            const std::vector<uchar>& metadata_exif = m_metadata[IMAGE_METADATA_EXIF];
+            size_t exif_size = metadata_exif.size();
+            if (exif_size > 0u) {
+                const char app1_exif_prefix[] = {'E', 'x', 'i', 'f', '\0', '\0'};
+                size_t app1_exif_prefix_size = sizeof(app1_exif_prefix);
+                size_t data_size = exif_size + app1_exif_prefix_size;
+                
+                std::vector<uchar> metadata_app1(data_size);
+                uchar* data = metadata_app1.data();
+                memcpy(data, app1_exif_prefix, app1_exif_prefix_size);
+                memcpy(data + app1_exif_prefix_size, metadata_exif.data(), exif_size);
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 1, data, (unsigned)data_size);
+            }
+        }
 
         if( doDirectWrite )
         {

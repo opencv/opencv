@@ -68,8 +68,8 @@ avifResult CopyToMat(const avifImage *image, int channels, bool useRGB , Mat *ma
   return avifImageYUVToRGB(image, &rgba);
 }
 
-AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
-                                 int bit_depth) {
+AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_depth,
+                                 const std::vector<std::vector<uchar> >& metadata) {
   CV_Assert(img.depth() == CV_8U || img.depth() == CV_16U);
 
   const int width = img.cols;
@@ -111,6 +111,20 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
     result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_BT601;
     result->yuvRange = AVIF_RANGE_FULL;
   }
+    
+  avifResult status = AVIF_RESULT_OK;
+    
+  if (!metadata.empty()) {
+    const std::vector<uchar>& metadata_exif = metadata[IMAGE_METADATA_EXIF];
+    const std::vector<uchar>& metadata_xmp = metadata[IMAGE_METADATA_XMP];
+    const std::vector<uchar>& metadata_iccp = metadata[IMAGE_METADATA_ICCP];
+    if (!metadata_exif.empty())
+      status = avifImageSetMetadataExif(result, (const uint8_t*)metadata_exif.data(), metadata_exif.size());
+    if (!metadata_exif.empty() && status == AVIF_RESULT_OK)
+      status = avifImageSetMetadataXMP(result, (const uint8_t*)metadata_xmp.data(), metadata_xmp.size());
+    if (!metadata_iccp.empty() && status == AVIF_RESULT_OK)
+      status = avifImageSetProfileICC(result, (const uint8_t*)metadata_iccp.data(), metadata_iccp.size());
+  }
 
   avifRGBImage rgba;
   avifRGBImageSetDefaults(&rgba, result);
@@ -120,12 +134,12 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
     CV_Assert(img.channels() == 4);
     rgba.format = AVIF_RGB_FORMAT_BGRA;
   }
-  rgba.rowBytes = img.step[0];
+  rgba.rowBytes = (uint32_t)img.step[0];
   rgba.depth = bit_depth;
   rgba.pixels =
       const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
 
-  if (avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
+  if (status != AVIF_RESULT_OK || avifImageRGBToYUV(result, &rgba) != AVIF_RESULT_OK) {
     avifImageDestroy(result);
     return nullptr;
   }
@@ -349,7 +363,7 @@ bool AvifEncoder::writeanimation(const Animation& animation,
              img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
              "AVIF only supports 1, 3, 4 channels");
 
-    images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth));
+    images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth, m_metadata));
   }
 
   for (size_t i = 0; i < images.size(); i++)
