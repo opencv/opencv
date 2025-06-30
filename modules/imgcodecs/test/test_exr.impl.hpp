@@ -69,7 +69,7 @@ TEST(Imgcodecs_EXR, readWrite_32FC3)
 }
 
 TEST(Imgcodecs_EXR, readWrite_32FC7)
-{ // 0-6 channels (nultispectral)
+{ // 0-6 channels (multispectral)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test32FC7.exr";
     const string filenameOutput = cv::tempfile(".exr");
@@ -92,6 +92,8 @@ TEST(Imgcodecs_EXR, readWrite_32FC7)
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
+    EXPECT_THROW(cv::imread(filenameOutput, IMREAD_GRAYSCALE));
+    EXPECT_THROW(cv::imread(filenameOutput, IMREAD_COLOR));
 }
 
 
