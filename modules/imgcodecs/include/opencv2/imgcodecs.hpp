@@ -694,7 +694,7 @@ After decoding the one page, it is stored inside the collection cache. Hence, tr
 If you need memory, you can use .releaseCache() method to release cached index.
 The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.
 */
-class CV_EXPORTS ImageCollection {
+class CV_EXPORTS_W ImageCollection {
 public:
     struct CV_EXPORTS iterator {
         iterator(ImageCollection* col);
@@ -711,13 +711,15 @@ public:
         int m_curr;
     };
 
-    ImageCollection();
-    ImageCollection(const String& filename, int flags);
-    void init(const String& img, int flags);
-    size_t size() const;
-    const Mat& at(int index);
+    CV_WRAP ImageCollection();
+    CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
+    CV_WRAP void init(const String& img, int flags);
+    CV_WRAP size_t size() const;
+    CV_WRAP int width() const;
+    CV_WRAP int height() const;
+    CV_WRAP const Mat& at(int index);
     const Mat& operator[](int index);
-    void releaseCache(int index);
+    CV_WRAP void releaseCache(int index);
     iterator begin();
     iterator end();
 

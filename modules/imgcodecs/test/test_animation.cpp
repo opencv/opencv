@@ -574,6 +574,9 @@ TEST_P(Imgcodecs_ImageCollection, animations)
     {
         ImageCollection collection(output, IMREAD_UNCHANGED);
         EXPECT_EQ(read_frames.size(), collection.size());
+        EXPECT_EQ(32, collection.width());
+        EXPECT_EQ(32, collection.height());
+
         int i = 0;
         for (auto&& frame : collection)
         {
@@ -581,6 +584,20 @@ TEST_P(Imgcodecs_ImageCollection, animations)
             ++i;
         }
     }
+
+    {
+        ImageCollection collection(output, IMREAD_UNCHANGED);
+        EXPECT_EQ(read_frames.size(), collection.size());
+        EXPECT_EQ(read_frames[0].rows, collection.width());
+        EXPECT_EQ(read_frames[0].cols, collection.height());
+
+        for (int i = 0; i < (int)collection.size(); i++)
+        {
+            Mat frame = collection.at(i);
+            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+        }
+    }
+
     EXPECT_EQ(0, remove(output.c_str()));
 }
 

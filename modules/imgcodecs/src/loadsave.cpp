@@ -1764,20 +1764,20 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 #endif
 
-
     CV_Assert(m_decoder);
     m_decoder->setSource(filename);
     CV_Assert(m_decoder->readHeader());
 
     m_size = m_decoder->getFrameCount();
+    m_width = m_decoder->width();
+    m_height = m_decoder->height();
     m_pages.resize(m_size);
 }
 
 size_t ImageCollection::Impl::size() const { return m_size; }
 
 Mat ImageCollection::Impl::read() {
-    auto result = this->readHeader();
-    if(!result) {
+    if(!this->readHeader()) {
         return {};
     }
     return this->readData();
@@ -1866,6 +1866,7 @@ Mat& ImageCollection::Impl::operator[](int index) {
             for(int i = 0; i != index && advance(); ++i) {}
         }
         m_pages[index] = read();
+        advance();
     }
     return m_pages[index];
 }
@@ -1884,6 +1885,10 @@ ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl
 void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
+
+int ImageCollection::width() const { return pImpl->width(); }
+
+int ImageCollection::height() const { return pImpl->height(); }
 
 const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 
