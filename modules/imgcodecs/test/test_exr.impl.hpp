@@ -92,8 +92,10 @@ TEST(Imgcodecs_EXR, readWrite_32FC7)
     ASSERT_EQ(img2.size(), img.size());
     EXPECT_LE(cvtest::norm(img, img2, NORM_INF | NORM_RELATIVE), 1e-3);
     EXPECT_EQ(0, remove(filenameOutput.c_str()));
-    EXPECT_THROW(cv::imread(filenameOutput, IMREAD_GRAYSCALE));
-    EXPECT_THROW(cv::imread(filenameOutput, IMREAD_COLOR));
+    const Mat img3 = cv::imread(filenameInput, IMREAD_GRAYSCALE);
+    ASSERT_TRUE(img3.empty());
+    const Mat img4 = cv::imread(filenameInput, IMREAD_COLOR);
+    ASSERT_TRUE(img4.empty());
 }
 
 

@@ -257,8 +257,8 @@ bool  ExrDecoder::readData( Mat& img )
 
     if ( m_multispectral )  // possible gray/RGB conversions
     {
-        CV_CheckChannelsEQ(CV_MAT_CN(type()), img.channels(), "OpenCV EXR decoder needs more number of channels for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYCOLOR needed
-        CV_CheckDepthEQ(CV_MAT_DEPTH(type()), img.depth(), "OpenCV EXR decoder supports CV_32F depth only for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYDEPTH needed
+        CV_CheckChannelsEQ(img.channels(), CV_MAT_CN(type()), "OpenCV EXR decoder needs more number of channels for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYCOLOR needed
+        CV_CheckDepthEQ(img.depth(), CV_MAT_DEPTH(type()), "OpenCV EXR decoder supports CV_32F depth only for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYDEPTH needed
     }
     CV_Assert( multispectral == m_multispectral && (!multispectral || justcopy) );  // should be true after previous checks
 
