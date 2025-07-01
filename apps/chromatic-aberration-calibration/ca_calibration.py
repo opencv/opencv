@@ -41,11 +41,6 @@ try:
 except ModuleNotFoundError:
     MatLike = np.ndarray
 
-__all__ = [
-    "CalibrationResult",
-    "detect_circles",
-    "fit_polynomials",
-]
 
 @dataclass
 class Polynomial2D:
@@ -60,98 +55,71 @@ class Polynomial2D:
         inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
         x_n = (x - mean_x) * inv_std_x
         y_n = (y - mean_y) * inv_std_y
-        terms = _monomial_terms(x_n, y_n, self.degree)
+        terms = monomial_terms(x_n, y_n, self.degree)
         dx = terms @ self.coeffs_x
         dy = terms @ self.coeffs_y
         return dx.reshape(x.shape), dy.reshape(y.shape)
 
-def _repr_flow_seq(dumper, data):
+
+def load_calib_result(path: str | None = None) -> Dict:
+    path = pathlib.Path(path)
+    with path.open("r") as fh:
+        if path.suffix.lower() in {".yaml", ".yml"}:
+            data = yaml.safe_load(fh)
+        else:
+            raise ValueError("YAML file expected as input for the calibration result")
+    
+    red_data = data["red_channel"]
+    blue_data = data["blue_channel"]
+    width = data["image_width"]
+    height = data["image_height"]
+    deg = int(-3 + math.sqrt(1 + 8*len(red_data["coeffs_x"]))) // 2
+    
+    poly_r = Polynomial2D(
+        np.asarray(red_data["coeffs_x"]),
+        np.asarray(red_data["coeffs_y"]),
+        deg,
+        height,
+        width
+    )
+    poly_b = Polynomial2D(
+        np.asarray(blue_data["coeffs_x"]),
+        np.asarray(blue_data["coeffs_y"]),
+        deg,
+        height,
+        width
+    )
+    
+    return {
+        "poly_red": poly_r,
+        "poly_blue": poly_b,
+        "image_height": height,
+        "image_width": width
+    }
+
+
+def repr_flow_seq(dumper, data):
     return dumper.represent_sequence('tag:yaml.org,2002:seq',
                                      data,
                                      flow_style=True)
 
-yaml.SafeDumper.add_representer(list, _repr_flow_seq)
-@dataclass
-class CalibrationResult:
-    degree: int
-    poly_red: Polynomial2D
-    poly_blue: Polynomial2D
-    image_width: int
-    image_height: int
-    rms_red: Optional[float] = None
-    rms_blue: Optional[float] = None
 
-    def to_dict(self) -> Dict:
-        d = {
-            "degree": self.degree,
-            "image_resolution": {
-                "width": int(self.image_width),
-                "height": int(self.image_height)
-            },
-            "red_channel": {
-                "coeffs_x": self.poly_red.coeffs_x.tolist(),
-                "coeffs_y": self.poly_red.coeffs_y.tolist(),
-            },
-            "blue_channel": {
-                "coeffs_x": self.poly_blue.coeffs_x.tolist(),
-                "coeffs_y": self.poly_blue.coeffs_y.tolist(),
-            }
-        }
-        if self.rms_red is not None:
-            d["red_channel"]["rms"] = float(self.rms_red)
-            d["blue_channel"]["rms"] = float(self.rms_blue)
-        return d
+yaml.SafeDumper.add_representer(list, repr_flow_seq)
 
-    @classmethod
-    def from_file(cls, path: str | pathlib.Path):
-        path = pathlib.Path(path)
-        with path.open("r") as fh:
-            if path.suffix.lower() in {".yaml", ".yml"}:
-                data = yaml.safe_load(fh)
-            else:
-                raise ValueError("YAML file expected as input for CalibrationResult")
-        
-        deg = data["degree"]
-        red_data = data["red_channel"]
-        blue_data = data["blue_channel"]
-        resolution = data["image_resolution"]
-        
-        poly_r = Polynomial2D(
-            np.asarray(red_data["coeffs_x"]),
-            np.asarray(red_data["coeffs_y"]),
-            deg,
-            resolution["height"],
-            resolution["width"]
-        )
-        poly_b = Polynomial2D(
-            np.asarray(blue_data["coeffs_x"]),
-            np.asarray(blue_data["coeffs_y"]),
-            deg,
-            resolution["height"],
-            resolution["width"]
-        )
-        
-        return cls(
-            degree=deg,
-            poly_red=poly_r,
-            poly_blue=poly_b,
-            image_width=resolution["width"],
-            image_height=resolution["height"],
-            rms_red=red_data.get("rms"),
-            rms_blue=blue_data.get("rms"),
-        )
 
-    def save(self, path: str | None = None):
-        d = self.to_dict()
-        if path is not None:
-            with open(path, "w") as fh:
-                yaml.safe_dump(d, 
-                               fh,
-                               version=(1, 2),
-                               default_flow_style=False,
-                               sort_keys=False)
-
-def save_calib_result(d, path: str | None = None):
+def save_calib_result(calib, path: str | None = None) -> None:
+    d = {
+        "blue_channel": {
+            "coeffs_x": calib["poly_blue"].coeffs_x.tolist(),
+            "coeffs_y": calib["poly_blue"].coeffs_y.tolist(),
+        },
+        "red_channel": {
+            "coeffs_x": calib["poly_red"].coeffs_x.tolist(),
+            "coeffs_y": calib["poly_red"].coeffs_y.tolist(),
+        },
+        "image_width": calib["image_width"],
+        "image_height": calib["image_height"]
+    }
     if path is not None:
         with open(path, "w") as fh:
             yaml.safe_dump(d, 
@@ -160,7 +128,7 @@ def save_calib_result(d, path: str | None = None):
                             default_flow_style=False,
                             sort_keys=False)
 
-def _monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
+def monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
     x = x.flatten()
     y = y.flatten()
     terms: List[np.ndarray] = []
@@ -173,7 +141,7 @@ def _monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
     return np.vstack(terms).T
 
 
-def _detect_disk_centres(
+def detect_disk_centres(
     img: MatLike,
     *,
     min_area: int = 50,
@@ -234,7 +202,7 @@ def _detect_disk_centres(
     return np.asarray(centres, dtype=np.float32)
 
 
-def _pair_keypoints(
+def pair_keypoints(
     ref: np.ndarray,
     target: np.ndarray,
     max_error: float = 5.0,
@@ -248,7 +216,7 @@ def _pair_keypoints(
     return target_valid[:, 0], target_valid[:, 1], disp
 
 
-def _fit_channel(
+def fit_channel(
     x: np.ndarray,
     y: np.ndarray,
     disp: np.ndarray,
@@ -262,7 +230,7 @@ def _fit_channel(
     x = (x - mean_x) * inv_std_x
     y = (y - mean_y) * inv_std_y
 
-    terms = _monomial_terms(x, y, degree)
+    terms = monomial_terms(x, y, degree)
     m = terms.shape[1]
 
     def objective(c: np.ndarray) -> float:
@@ -297,26 +265,26 @@ def fit_polynomials(
     height: int,
     width: int
 ) -> Tuple[Polynomial2D, Polynomial2D, float, float]:
-    crx, cry, rms_r = _fit_channel(x_r, y_r, disp_r, degree, height, width)
-    cbx, cby, rms_b = _fit_channel(x_b, y_b, disp_b, degree, height, width)
+    crx, cry, rms_r = fit_channel(x_r, y_r, disp_r, degree, height, width)
+    cbx, cby, rms_b = fit_channel(x_b, y_b, disp_b, degree, height, width)
     poly_r = Polynomial2D(crx, cry, 11, height, width)
     poly_b = Polynomial2D(cbx, cby, 11, height, width)
     return poly_r, poly_b, rms_r, rms_b
 
 
-def _calibrate_from_image(
+def calibrate_from_image(
     img: np.ndarray,
     degree: int = 11,
-) -> CalibrationResult:
+):
     h, w = img.shape[:2]
     b, g, r = cv2.split(img)
 
-    pts_g = _detect_disk_centres(g)
-    pts_r = _detect_disk_centres(r)
-    pts_b = _detect_disk_centres(b)
+    pts_g = detect_disk_centres(g)
+    pts_r = detect_disk_centres(r)
+    pts_b = detect_disk_centres(b)
 
-    xr, yr, disp_r = _pair_keypoints(pts_g, pts_r)
-    xb, yb, disp_b = _pair_keypoints(pts_g, pts_b)
+    xr, yr, disp_r = pair_keypoints(pts_g, pts_r)
+    xb, yb, disp_b = pair_keypoints(pts_g, pts_b)
 
     poly_r, poly_b, rms_r, rms_b = fit_polynomials(
         xr,
@@ -333,20 +301,14 @@ def _calibrate_from_image(
     print(f"Calibrated polynomial with degree {degree}, RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
 
     return {
-        "blue_channel": {
-            "blue_coeffs_x": poly_b.coeffs_x.tolist(),
-            "blue_coeffs_y": poly_b.coeffs_y.tolist(),
-        },
-        "red_channel": {
-            "red_coeffs_x": poly_r.coeffs_x.tolist(),
-            "red_coeffs_y": poly_r.coeffs_y.tolist(),
-        },
+        "poly_red": poly_r, 
+        "poly_blue": poly_b,
         "image_width": w,
         "image_height": h
     }
 
 
-def _build_remap(
+def build_remap(
     h: int,
     w: int,
     poly: Polynomial2D,
@@ -358,17 +320,17 @@ def _build_remap(
     return map_x, map_y
 
 
-def _correct_image(
+def correct_image(
     img: np.ndarray,
-    calib: CalibrationResult,
+    calib: Dict,
 ) -> np.ndarray:
     if img.ndim != 3 or img.shape[2] != 3:
         raise ValueError("correct_image expects a BGR colour image")
 
     h, w = img.shape[:2]
     b, g, r = cv2.split(img)
-    map_x_r, map_y_r = _build_remap(h, w, calib.poly_red)
-    map_x_b, map_y_b = _build_remap(h, w, calib.poly_blue)
+    map_x_r, map_y_r = build_remap(h, w, calib["poly_red"])
+    map_x_b, map_y_b = build_remap(h, w, calib["poly_blue"])
 
     r_corr = cv2.remap(r, map_x_r, map_y_r, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
     b_corr = cv2.remap(b, map_x_b, map_y_b, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
@@ -386,7 +348,7 @@ def _correct_image(
     return corrected
 
 
-def _parse_args() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Chromatic‑aberration calibration and correction tool",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -412,38 +374,38 @@ def _parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _cmd_calibrate(args: argparse.Namespace) -> None:
-    calib = _calibrate_from_image(cv2.imread(args.image, cv2.IMREAD_COLOR), degree=args.degree)
+def cmd_calibrate(args: argparse.Namespace) -> None:
+    calib = calibrate_from_image(cv2.imread(args.image, cv2.IMREAD_COLOR), degree=args.degree)
     save_calib_result(calib, path=args.coeffs)
     print("Saved coefficients to", args.coeffs)
 
 
-def _cmd_correct(args: argparse.Namespace) -> None:
+def cmd_correct(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
     if img is None:
         raise FileNotFoundError(args.image)
-    calib = CalibrationResult.from_file(args.coeffs)
-    fixed = _correct_image(img, calib)
+    calib = load_calib_result(args.coeffs)
+    fixed = correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
 
-def _cmd_full(args: argparse.Namespace) -> None:
+def cmd_full(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
     if img is None:
         raise FileNotFoundError(args.image)
-    calib = _calibrate_from_image(img, degree=args.degree)
+    calib = calibrate_from_image(img, degree=args.degree)
     save_calib_result(calib, path=args.coeffs)
     print("Saved coefficients to", args.coeffs)
-    fixed = _correct_image(img, calib)
+    fixed = correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
 
 
 if __name__ == "__main__":
-    args = _parse_args()
+    args = parse_args()
     if args.cmd == "calibrate":
-        _cmd_calibrate(args)
+        cmd_calibrate(args)
     elif args.cmd == "correct":
-        _cmd_correct(args)
+        cmd_correct(args)
     elif args.cmd == "full":
-        _cmd_full(args)
+        cmd_full(args)
