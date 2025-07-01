@@ -3309,7 +3309,7 @@ void cv::warpPerspective( InputArray _src, OutputArray _dst, InputArray _M0,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 3 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
-#if defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPPERSPECTIVE
+#if 0 // defined (HAVE_IPP) && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_WARPPERSPECTIVE
     CV_IPP_CHECK()
     {
         int type = src.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
