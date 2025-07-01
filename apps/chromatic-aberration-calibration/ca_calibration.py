@@ -151,7 +151,14 @@ class CalibrationResult:
                                default_flow_style=False,
                                sort_keys=False)
 
-
+def save_calib_result(d, path: str | None = None):
+    if path is not None:
+        with open(path, "w") as fh:
+            yaml.safe_dump(d, 
+                            fh,
+                            version=(1, 2),
+                            default_flow_style=False,
+                            sort_keys=False)
 
 def _monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
     x = x.flatten()
@@ -323,15 +330,20 @@ def _calibrate_from_image(
         w
     )
 
-    return CalibrationResult(
-        degree=degree,
-        poly_red=poly_r,
-        poly_blue=poly_b,
-        image_width=w,
-        image_height=h,
-        rms_red=rms_r,
-        rms_blue=rms_b,
-    )
+    print(f"Calibrated polynomial with degree {degree}, RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
+
+    return {
+        "blue_channel": {
+            "blue_coeffs_x": poly_b.coeffs_x.tolist(),
+            "blue_coeffs_y": poly_b.coeffs_y.tolist(),
+        },
+        "red_channel": {
+            "red_coeffs_x": poly_r.coeffs_x.tolist(),
+            "red_coeffs_y": poly_r.coeffs_y.tolist(),
+        },
+        "image_width": w,
+        "image_height": h
+    }
 
 
 def _build_remap(
@@ -402,11 +414,7 @@ def _parse_args() -> argparse.Namespace:
 
 def _cmd_calibrate(args: argparse.Namespace) -> None:
     calib = _calibrate_from_image(cv2.imread(args.image, cv2.IMREAD_COLOR), degree=args.degree)
-    print(
-        f"Calibrated polynomial degree {calib.degree}: RMS red={calib.rms_red:.3f} px, "
-        f"blue={calib.rms_blue:.3f} px"
-    )
-    calib.save(path=args.coeffs)
+    save_calib_result(calib, path=args.coeffs)
     print("Saved coefficients to", args.coeffs)
 
 
@@ -424,11 +432,7 @@ def _cmd_full(args: argparse.Namespace) -> None:
     if img is None:
         raise FileNotFoundError(args.image)
     calib = _calibrate_from_image(img, degree=args.degree)
-    print(
-        f"Calibrated polynomial degree {calib.degree}: RMS red={calib.rms_red:.3f} px, "
-        f"blue={calib.rms_blue:.3f} px"
-    )
-    calib.save(path=args.coeffs)
+    save_calib_result(calib, path=args.coeffs)
     print("Saved coefficients to", args.coeffs)
     fixed = _correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
