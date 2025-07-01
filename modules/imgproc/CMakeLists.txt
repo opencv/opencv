@@ -6,11 +6,15 @@ ocv_add_dispatched_file(filter SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(color_hsv SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(color_rgb SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(color_yuv SSE2 SSE4_1 AVX2)
-ocv_add_dispatched_file(median_blur SSE2 SSE4_1 AVX2)
+ocv_add_dispatched_file(median_blur SSE2 SSE4_1 AVX2 AVX512_SKX)
 ocv_add_dispatched_file(morph SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(smooth SSE2 SSE4_1 AVX2)
 ocv_add_dispatched_file(sumpixels SSE2 AVX2 AVX512_SKX)
 ocv_define_module(imgproc opencv_core WRAP java objc python js)
+
+if(OPENCV_CORE_EXCLUDE_C_API)
+  ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
+endif()
 
 if(HAVE_IPP)
   # OPENCV_IPP_ENABLE_ALL is defined in modules/core/CMakeList.txt

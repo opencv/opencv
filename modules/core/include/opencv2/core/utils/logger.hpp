@@ -43,6 +43,44 @@ CV_EXPORTS void writeLogMessage(LogLevel logLevel, const char* message);
 /** Write log message */
 CV_EXPORTS void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message);
 
+/**
+ * @brief Function pointer type for writeLogMessage. Used by replaceWriteLogMessage.
+ */
+typedef void (*WriteLogMessageFuncType)(LogLevel, const char*);
+
+/**
+ * @brief Function pointer type for writeLogMessageEx. Used by replaceWriteLogMessageEx.
+ */
+typedef void (*WriteLogMessageExFuncType)(LogLevel, const char*, const char*, int, const char*, const char*);
+
+/**
+ * @brief Replaces the OpenCV writeLogMessage function with a user-defined function.
+ * @note The user-defined function must have the same signature as writeLogMessage.
+ * @note The user-defined function must accept arguments that can be potentially null.
+ * @note The user-defined function must be thread-safe, as OpenCV logging may be called
+ *       from multiple threads.
+ * @note The user-defined function must not perform any action that can trigger
+ *       deadlocks or infinite loop. Many OpenCV functions are not re-entrant.
+ * @note Once replaced, logs will not go through the OpenCV writeLogMessage function.
+ * @note To restore, call this function with a nullptr.
+ */
+CV_EXPORTS void replaceWriteLogMessage(WriteLogMessageFuncType f);
+
+/**
+ * @brief Replaces the OpenCV writeLogMessageEx function with a user-defined function.
+ * @note The user-defined function must have the same signature as writeLogMessage.
+ * @note The user-defined function must accept arguments that can be potentially null.
+ * @note The user-defined function must be thread-safe, as OpenCV logging may be called
+ *       from multiple threads.
+ * @note The user-defined function must not perform any action that can trigger
+ *       deadlocks or infinite loop. Many OpenCV functions are not re-entrant.
+ * @note Once replaced, logs will not go through any of the OpenCV logging functions
+ *       such as writeLogMessage or writeLogMessageEx, until their respective restore
+ *       methods are called.
+ * @note To restore, call this function with a nullptr.
+ */
+CV_EXPORTS void replaceWriteLogMessageEx(WriteLogMessageExFuncType f);
+
 } // namespace
 
 struct LogTagAuto

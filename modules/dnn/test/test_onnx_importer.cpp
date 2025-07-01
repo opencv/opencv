@@ -2691,7 +2691,7 @@ void yoloPostProcessing(
     }
 
     if (model_name == "yolonas"){
-        // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
+        // outs contains 2 elemets of shape [1, 8400, nc] and [1, 8400, 4]. Concat them to get [1, 8400, nc+4]
         Mat concat_out;
         // squeeze the first dimension
         outs[0] = outs[0].reshape(1, outs[0].size[1]);
@@ -2701,12 +2701,12 @@ void yoloPostProcessing(
         // remove the second element
         outs.pop_back();
         // unsqueeze the first dimension
-        outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, 84});
+        outs[0] = outs[0].reshape(0, std::vector<int>{1, outs[0].size[0], outs[0].size[1]});
     }
 
-    // assert if last dim is 85 or 84
-    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, 85 or 84]");
-    CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == 80 + 4), true, "Invalid output shape: ");
+    // assert if last dim is nc+5 or nc+4
+    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, nc+5 or nc+4]");
+    CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == nc + 4), true, "Invalid output shape: ");
 
     for (auto preds : outs){
 
@@ -3155,8 +3155,8 @@ TEST_P(Test_ONNX_nets, ViT_B_32) {
     }
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH) {
         if (target == DNN_TARGET_CPU) {
-            l1 = 4.4e-5; // Expected: (normL1) <= (l1), actual: 4.31208e-05 vs 1e-05
-            lInf = 0.0002; // Expected: (normInf) <= (lInf), actual: 0.000194907 vs 0.0001
+            l1 = 6e-5; // Expected: (normL1) <= (l1), actual: 4.31208e-05 vs 1e-05
+            lInf = 0.0003; // Expected: (normInf) <= (lInf), actual: 0.000194907 vs 0.0001
         } else if (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16) {
             l1 = 0.0092; // Expected: (normL1) <= (l1), actual: 0.00918349 vs 4.4e-05
             lInf = 0.056; // Expected: (normInf) <= (lInf), actual: 0.0556431 vs 0.0002

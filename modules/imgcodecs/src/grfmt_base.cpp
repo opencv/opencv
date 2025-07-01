@@ -43,6 +43,7 @@
 
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv
 {
@@ -57,11 +58,30 @@ BaseImageDecoder::BaseImageDecoder()
     m_frame_count = 1;
 }
 
+bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
+{
+    if (type == IMAGE_METADATA_EXIF)
+        return !m_exif.getData().empty();
+    return false;
+}
+
+Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
+{
+    if (type == IMAGE_METADATA_EXIF) {
+        const std::vector<unsigned char>& exif = m_exif.getData();
+        if (!exif.empty()) {
+            Mat exifmat(1, (int)exif.size(), CV_8U, (void*)exif.data());
+            return exifmat;
+        }
+    }
+    return Mat();
+}
 
 ExifEntry_t BaseImageDecoder::getExifTag(const ExifTagName tag) const
 {
     return m_exif.getTag(tag);
 }
+
 bool BaseImageDecoder::setSource( const String& filename )
 {
     m_filename = filename;
@@ -139,8 +159,46 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
-bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
+bool BaseImageEncoder::addMetadata(ImageMetadataType type, const Mat& metadata)
 {
+    CV_Assert_N(type >= IMAGE_METADATA_EXIF, type <= IMAGE_METADATA_MAX);
+    if (metadata.empty())
+        return true;
+    size_t itype = (size_t)type;
+    if (itype >= m_support_metadata.size() || !m_support_metadata[itype])
+        return false;
+    if (m_metadata.empty())
+        m_metadata.resize((size_t)IMAGE_METADATA_MAX+1);
+    CV_Assert(metadata.elemSize() == 1);
+    CV_Assert(metadata.isContinuous());
+    const unsigned char* data = metadata.ptr<unsigned char>();
+    m_metadata[itype].assign(data, data + metadata.total());
+    return true;
+}
+
+bool BaseImageEncoder::write(const Mat &img, const std::vector<int> &params) {
+    std::vector<Mat> img_vec(1, img);
+    return writemulti(img_vec, params);
+}
+
+bool BaseImageEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
+{
+    if(img_vec.size() > 1)
+        CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
+
+    Animation animation;
+    animation.frames = img_vec;
+
+    for (size_t i = 0; i < animation.frames.size(); i++)
+    {
+        animation.durations.push_back(1000);
+    }
+    return writeanimation(animation, params);
+}
+
+bool BaseImageEncoder::writeanimation(const Animation&, const std::vector<int>& )
+{
+    CV_LOG_WARNING(NULL, "No Animation encoder for specified file extension");
     return false;
 }
 
@@ -149,7 +207,7 @@ ImageEncoder BaseImageEncoder::newEncoder() const
     return ImageEncoder();
 }
 
-void BaseImageEncoder::throwOnEror() const
+void BaseImageEncoder::throwOnError() const
 {
     if(!m_last_error.empty())
     {

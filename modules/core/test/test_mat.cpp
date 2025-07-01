@@ -650,8 +650,8 @@ void Core_ArrayOpTest::run( int /* start_from */)
         MatND A(3, sz3, CV_32F), B(3, sz3, CV_16SC4);
         CvMatND matA = cvMatND(A), matB = cvMatND(B);
         RNG rng;
-        rng.fill(A, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
-        rng.fill(B, CV_RAND_UNI, Scalar::all(-10), Scalar::all(10));
+        rng.fill(A, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
+        rng.fill(B, RNG::UNIFORM, Scalar::all(-10), Scalar::all(10));
 
         int idx0[] = {3,4,5}, idx1[] = {0, 9, 7};
         float val0 = 130;
@@ -807,7 +807,7 @@ void Core_ArrayOpTest::run( int /* start_from */)
         all_vals.resize(nz0);
         all_vals2.resize(nz0);
         Mat_<double> _all_vals(all_vals), _all_vals2(all_vals2);
-        rng.fill(_all_vals, CV_RAND_UNI, Scalar(-1000), Scalar(1000));
+        rng.fill(_all_vals, RNG::UNIFORM, Scalar(-1000), Scalar(1000));
         if( depth == CV_32F )
         {
             Mat _all_vals_f;
@@ -1303,6 +1303,42 @@ TEST(Core_Mat, reshape_ndims_4)
     }
 }
 
+TEST(Core_Mat, reinterpret_Mat_8UC3_8SC3)
+{
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    cv::Mat B = A.reinterpret(CV_8SC3);
+
+    EXPECT_EQ(A.data, B.data);
+    EXPECT_EQ(B.type(), CV_8SC3);
+}
+
+TEST(Core_Mat, reinterpret_Mat_8UC4_32FC1)
+{
+    cv::Mat A(8, 16, CV_8UC4, cv::Scalar(1, 2, 3, 4));
+    cv::Mat B = A.reinterpret(CV_32FC1);
+
+    EXPECT_EQ(A.data, B.data);
+    EXPECT_EQ(B.type(), CV_32FC1);
+}
+
+TEST(Core_Mat, reinterpret_OutputArray_8UC3_8SC3) {
+    cv::Mat A(8, 16, CV_8UC3, cv::Scalar(1, 2, 3));
+    cv::OutputArray C(A);
+    cv::Mat B = C.reinterpret(CV_8SC3);
+
+    EXPECT_EQ(A.data, B.data);
+    EXPECT_EQ(B.type(), CV_8SC3);
+}
+
+TEST(Core_Mat, reinterpret_OutputArray_8UC4_32FC1) {
+    cv::Mat A(8, 16, CV_8UC4, cv::Scalar(1, 2, 3, 4));
+    cv::OutputArray C(A);
+    cv::Mat B = C.reinterpret(CV_32FC1);
+
+    EXPECT_EQ(A.data, B.data);
+    EXPECT_EQ(B.type(), CV_32FC1);
+}
+
 TEST(Core_Mat, push_back)
 {
     Mat a = (Mat_<float>(1,2) << 3.4884074f, 1.4159607f);
@@ -1382,6 +1418,13 @@ TEST(Core_Mat, copyMakeBoderUndefinedBehavior)
     EXPECT_EQ(0, cv::norm(src.col(2), dst(Rect(5,1,1,4))));
 }
 
+TEST(Core_Mat, zeros)
+{
+  // Should not fail during linkage.
+  const int dims[] = {2, 2, 4};
+  cv::Mat1f mat = cv::Mat1f::zeros(3, dims);
+}
+
 TEST(Core_Matx, fromMat_)
 {
     Mat_<double> a = (Mat_<double>(2,2) << 10, 11, 12, 13);
@@ -1401,6 +1444,25 @@ TEST(Core_Mat, regression_9507)
     cv::Mat m = Mat::zeros(5, 5, CV_8UC3);
     cv::Mat m2{m};
     EXPECT_EQ(25u, m2.total());
+}
+
+TEST(Core_Mat, empty)
+{
+    // Should not crash.
+    uint8_t data[2] = {0, 1};
+    cv::Mat mat_nd(/*ndims=*/0, /*sizes=*/nullptr, CV_8UC1, /*data=*/data);
+    cv::Mat1b mat(0, 0, /*data=*/data, /*steps=*/1);
+    EXPECT_EQ(mat_nd.dims, 0);
+    EXPECT_EQ(mat.dims, 2);
+#if CV_VERSION_MAJOR < 5
+    EXPECT_LE(mat_nd.total(), 0u);
+    EXPECT_TRUE(mat_nd.empty());
+#else
+    EXPECT_LE(mat_nd.total(), 1u);
+    EXPECT_FALSE(mat_nd.empty());
+#endif
+    EXPECT_EQ(mat.total(), 0u);
+    EXPECT_TRUE(mat.empty());
 }
 
 TEST(Core_InputArray, empty)
@@ -1749,18 +1811,22 @@ TEST(Core_Mat_array, copyTo_roi_row)
     EXPECT_EQ(5, (int)dst2[4]);
 }
 
-TEST(Core_Mat_array, SplitMerge)
+typedef testing::TestWithParam< tuple<int, perf::MatType> > Core_Mat_arrays;
+
+TEST_P(Core_Mat_arrays, SplitMerge)
 {
-    std::array<cv::Mat, 3> src;
+    int cn =  get<0>(GetParam());
+    int type =  get<1>(GetParam());
+    std::vector<cv::Mat> src(cn);
     for (size_t i = 0; i < src.size(); ++i)
     {
-        src[i] = Mat(10, 10, CV_8U, Scalar((double)(16 * (i + 1))));
+        src[i] = Mat(10, 10, type, Scalar((double)(16 * (i + 1))));
     }
 
     Mat merged;
     merge(src, merged);
 
-    std::array<cv::Mat, 3> dst;
+    std::vector<cv::Mat> dst(cn);
     split(merged, dst);
 
     for (size_t i = 0; i < dst.size(); ++i)
@@ -1768,6 +1834,17 @@ TEST(Core_Mat_array, SplitMerge)
         EXPECT_EQ(0, cvtest::norm(src[i], dst[i], NORM_INF));
     }
 }
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Core_Mat_arrays, testing::Combine(
+    testing::Range(1, 9),
+    testing::Values(
+        perf::MatType(CV_8U),
+        perf::MatType(CV_16U),
+        perf::MatType(CV_32S),
+        perf::MatType(CV_64F)
+    )
+)
+);
 
 TEST(Mat, regression_8680)
 {

@@ -4,7 +4,7 @@
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1992-1996, Thomas G. Lane.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2017-2018, D. R. Commander.
+ * Copyright (C) 2017-2018, 2024, D. R. Commander.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
@@ -31,7 +31,7 @@
 GLOBAL(void *)
 jpeg_get_small(j_common_ptr cinfo, size_t sizeofobject)
 {
-  return (void *)malloc(sizeofobject);
+  return (void *)MALLOC(sizeofobject);
 }
 
 GLOBAL(void)
@@ -48,7 +48,7 @@ jpeg_free_small(j_common_ptr cinfo, void *object, size_t sizeofobject)
 GLOBAL(void *)
 jpeg_get_large(j_common_ptr cinfo, size_t sizeofobject)
 {
-  return (void *)malloc(sizeofobject);
+  return (void *)MALLOC(sizeofobject);
 }
 
 GLOBAL(void)

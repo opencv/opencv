@@ -275,6 +275,8 @@ bool checkTarget(Target target)
             return true;
         else if (std::string::npos != i->find("GPU") && (target == DNN_TARGET_OPENCL || target == DNN_TARGET_OPENCL_FP16))
             return true;
+        else if (std::string::npos != i->find("NPU") && target == DNN_TARGET_NPU)
+            return true;
     }
     return false;
 }
@@ -363,7 +365,7 @@ cv::String getInferenceEngineCPUType()
     {
         auto& networkBackend = dnn_backend::createPluginDNNNetworkBackend("openvino");
         CV_UNUSED(networkBackend);
-#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64)
+#if defined(__arm__) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC)
         return CV_DNN_INFERENCE_ENGINE_CPU_TYPE_ARM_COMPUTE;
 #else
         return CV_DNN_INFERENCE_ENGINE_CPU_TYPE_X86;

@@ -81,20 +81,17 @@ PFMDecoder::~PFMDecoder()
 
 PFMDecoder::PFMDecoder() : m_scale_factor(0), m_swap_byte_order(false)
 {
-  m_strm.close();
+  m_buf_supported = true;
 }
 
 bool PFMDecoder::readHeader()
 {
-  if (m_buf.empty()) {
-    if (!m_strm.open(m_filename)) {
-      return false;
-    }
-  } else {
-    if (!m_strm.open(m_buf)) {
-      return false;
-    }
-  }
+  if (!m_buf.empty())
+    m_strm.open(m_buf);
+  else
+    m_strm.open(m_filename);
+
+  if( !m_strm.isOpened()) return false;
 
   if (m_strm.getByte() != 'P') {
     CV_Error(Error::StsError, "Unexpected file type (expected P)");
@@ -177,6 +174,7 @@ void PFMDecoder::close()
 PFMEncoder::PFMEncoder()
 {
   m_description = "Portable image format - float (*.pfm)";
+  m_buf_supported = true;
 }
 
 PFMEncoder::~PFMEncoder()

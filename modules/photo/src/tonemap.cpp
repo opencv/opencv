@@ -72,8 +72,10 @@ public:
 
         double min, max;
         minMaxLoc(src, &min, &max);
+        float fmin = static_cast<float>(min);
+        float fmax = static_cast<float>(max);
         if(max - min > DBL_EPSILON) {
-            dst = (src - min) / (max - min);
+            dst = (src - fmin) / (fmax - fmin);
         } else {
             src.copyTo(dst);
         }
@@ -139,8 +141,9 @@ public:
         gray_img /= mean;
         log_img.release();
 
-        double max;
-        minMaxLoc(gray_img, NULL, &max);
+        double dmax;
+        minMaxLoc(gray_img, NULL, &dmax);
+        float max = static_cast<float>(dmax);
         CV_Assert(max > 0);
 
         Mat map;
@@ -150,7 +153,6 @@ public:
         log(2.0f + 8.0f * div, div);
         map = map.mul(1.0f / div);
         div.release();
-
         mapLuminance(img, img, gray_img, map, saturation);
 
         linear->setGamma(gamma);
@@ -223,12 +225,14 @@ public:
         log_(gray_img, log_img);
 
         float log_mean = static_cast<float>(sum(log_img)[0] / log_img.total());
-        double log_min, log_max;
-        minMaxLoc(log_img, &log_min, &log_max);
+        double dlog_min, dlog_max;
+        minMaxLoc(log_img, &dlog_min, &dlog_max);
+        float log_max = static_cast<float>(dlog_max);
+        float log_min = static_cast<float>(dlog_min);
         log_img.release();
 
-        double key = static_cast<float>((log_max - log_mean) / (log_max - log_min));
-        float map_key = 0.3f + 0.7f * pow(static_cast<float>(key), 1.4f);
+        float key = (log_max - log_mean) / (log_max - log_min);
+        float map_key = 0.3f + 0.7f * pow(key, 1.4f);
         intensity = exp(-intensity);
         Scalar chan_mean = mean(img);
         float gray_mean = static_cast<float>(mean(gray_img)[0]);
@@ -287,9 +291,9 @@ protected:
     float gamma, intensity, light_adapt, color_adapt;
 };
 
-Ptr<TonemapReinhard> createTonemapReinhard(float gamma, float contrast, float sigma_color, float sigma_space)
+Ptr<TonemapReinhard> createTonemapReinhard(float gamma, float intensity, float light_adapt, float color_adapt)
 {
-    return makePtr<TonemapReinhardImpl>(gamma, contrast, sigma_color, sigma_space);
+    return makePtr<TonemapReinhardImpl>(gamma, intensity, light_adapt, color_adapt);
 }
 
 class TonemapMantiukImpl CV_FINAL : public TonemapMantiuk

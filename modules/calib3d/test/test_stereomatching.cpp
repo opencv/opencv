@@ -789,7 +789,7 @@ protected:
         calcROI = getValidDisparityROI(cROI, cROI, params.mindisp, params.ndisp, params.winSize);
 
         bm->compute( leftImg, rightImg, tempDisp );
-        tempDisp.convertTo(leftDisp, CV_32F, 1./StereoMatcher::DISP_SCALE);
+        tempDisp.convertTo(leftDisp, CV_32F, 1./static_cast<double>(StereoMatcher::DISP_SCALE));
 
         //check for fixed-type disparity data type
         Mat_<float> fixedFloatDisp;
@@ -802,7 +802,7 @@ protected:
                 for (int x = 0; x < leftDisp.cols; x++)
                 {
                     if (leftDisp.at<float>(y, x) < params.mindisp)
-                        leftDisp.at<float>(y, x) = -1./StereoMatcher::DISP_SCALE; // treat disparity < mindisp as no disparity
+                        leftDisp.at<float>(y, x) = -1./static_cast<double>(StereoMatcher::DISP_SCALE); // treat disparity < mindisp as no disparity
                 }
 
         return params.winSize/2;
@@ -919,6 +919,38 @@ protected:
 };
 
 TEST(Calib3d_StereoSGBM, regression) { CV_StereoSGBMTest test; test.safe_run(); }
+
+TEST(Calib3d_StereoSGBM, deterministic) {
+    cv::Ptr<cv::StereoSGBM> matcher = cv::StereoSGBM::create(16, 11);
+
+    // Expect throw error (non-determinism case)
+    int widthNarrow = 28;
+    int height = 15;
+
+    cv::Mat leftNarrow(height, widthNarrow, CV_8UC1);
+    cv::Mat rightNarrow(height, widthNarrow, CV_8UC1);
+    randu(leftNarrow, cv::Scalar(0), cv::Scalar(255));
+    randu(rightNarrow, cv::Scalar(0), cv::Scalar(255));
+    cv::Mat disp;
+
+    EXPECT_THROW(matcher->compute(leftNarrow, rightNarrow, disp), cv::Exception);
+
+    // Deterministic case, image is sufficiently large for StereSGBM parameters
+    int widthWide = 40;
+    cv::Mat leftWide(height, widthWide, CV_8UC1);
+    cv::Mat rightWide(height, widthWide, CV_8UC1);
+    randu(leftWide, cv::Scalar(0), cv::Scalar(255));
+    randu(rightWide, cv::Scalar(0), cv::Scalar(255));
+    cv::Mat disp1, disp2;
+    for (int i = 0; i < 10; i++) {
+        matcher->compute(leftWide, rightWide, disp1);
+        matcher->compute(leftWide, rightWide, disp2);
+        cv::Mat dst;
+        cv::bitwise_xor(disp1, disp2, dst);
+        EXPECT_EQ(cv::countNonZero(dst), 0);
+    }
+
+}
 
 TEST(Calib3d_StereoSGBM_HH4, regression)
 {

@@ -62,7 +62,7 @@ struct KMeansIndexParams : public IndexParams
 {
     KMeansIndexParams(int branching = 32, int iterations = 11,
                       flann_centers_init_t centers_init = FLANN_CENTERS_RANDOM,
-                      float cb_index = 0.2, int trees = 1 )
+                      float cb_index = 0.2f, int trees = 1 )
     {
         (*this)["algorithm"] = FLANN_INDEX_KMEANS;
         // branching factor

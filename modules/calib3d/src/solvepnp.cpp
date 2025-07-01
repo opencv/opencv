@@ -48,7 +48,6 @@
 #include "ap3p.h"
 #include "ippe.hpp"
 #include "sqpnp.hpp"
-#include "calib3d_c_api.h"
 
 #include "usac.hpp"
 
@@ -56,7 +55,7 @@
 
 namespace cv
 {
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 static bool isPlanarObjectPoints(InputArray _objectPoints, double threshold)
 {
     CV_CheckType(_objectPoints.type(), _objectPoints.type() == CV_32FC3 || _objectPoints.type() == CV_64FC3,
@@ -99,7 +98,8 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
     CV_CheckType(type, cn == 1 || cn == 3 || cn == 4,
                  "Number of channels must be 1, 3 or 4" );
 
-    CV_Assert(image.getMat().total() > 0);
+    cv::Mat img = image.getMat();
+    CV_Assert(img.total() > 0);
     CV_Assert(length > 0);
 
     // project axes points
@@ -110,6 +110,18 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
     axesPoints.push_back(Point3f(0, 0, length));
     std::vector<Point2f> imagePoints;
     projectPoints(axesPoints, rvec, tvec, cameraMatrix, distCoeffs, imagePoints);
+
+    cv::Rect imageRect(0, 0, img.cols, img.rows);
+    bool allIn = true;
+    for (size_t i = 0; i < imagePoints.size(); i++)
+    {
+        allIn &= imageRect.contains(imagePoints[i]);
+    }
+
+    if (!allIn)
+    {
+        CV_LOG_WARNING(NULL, "Some of projected axes endpoints are out of frame. The drawn axes may be not reliable.");
+    }
 
     // draw axes lines
     line(image, imagePoints[0], imagePoints[1], Scalar(0, 0, 255), thickness);
@@ -892,12 +904,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
             tvec.create(3, 1, CV_64FC1);
         }
 
-        CvMat c_objectPoints = cvMat(opoints), c_imagePoints = cvMat(ipoints);
-        CvMat c_cameraMatrix = cvMat(cameraMatrix), c_distCoeffs = cvMat(distCoeffs);
-        CvMat c_rvec = cvMat(rvec), c_tvec = cvMat(tvec);
-        cvFindExtrinsicCameraParams2(&c_objectPoints, &c_imagePoints, &c_cameraMatrix,
-                                     (c_distCoeffs.rows && c_distCoeffs.cols) ? &c_distCoeffs : 0,
-                                     &c_rvec, &c_tvec, useExtrinsicGuess );
+        findExtrinsicCameraParams2(opoints, ipoints, cameraMatrix, distCoeffs, rvec, tvec, useExtrinsicGuess);
 
         vec_rvecs.push_back(rvec);
         vec_tvecs.push_back(tvec);
@@ -938,7 +945,7 @@ int solvePnPGeneric( InputArray _opoints, InputArray _ipoints,
     {
         CV_Assert(npoints == 4);
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
         double Xs[4][3];
         if (opoints.depth() == CV_32F)
         {

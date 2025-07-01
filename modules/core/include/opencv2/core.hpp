@@ -60,11 +60,16 @@
 
 /**
 @defgroup core Core functionality
+
+The Core module is the backbone of OpenCV, offering fundamental data structures, matrix operations,
+and utility functions that other modules depend on. It’s essential for handling image data,
+performing mathematical computations, and managing memory efficiently within the OpenCV ecosystem.
+
 @{
     @defgroup core_basic Basic structures
     @defgroup core_array Operations on arrays
     @defgroup core_async Asynchronous API
-    @defgroup core_xml XML/YAML Persistence
+    @defgroup core_xml XML/YAML/JSON Persistence
     @defgroup core_cluster Clustering
     @defgroup core_utils Utility and system functions and macros
     @{
@@ -76,7 +81,6 @@
         @defgroup core_utils_samples Utility functions for OpenCV samples
     @}
     @defgroup core_opengl OpenGL interoperability
-    @defgroup core_ipp Intel IPP Asynchronous C/C++ Converters
     @defgroup core_optim Optimization Algorithms
     @defgroup core_directx DirectX interoperability
     @defgroup core_eigen Eigen support
@@ -96,6 +100,7 @@
     @{
         @defgroup core_parallel_backend Parallel backends API
     @}
+    @defgroup core_quaternion Quaternion
 @}
  */
 
@@ -163,7 +168,7 @@ enum SortFlags { SORT_EVERY_ROW    = 0, //!< each matrix row is sorted independe
 
 //! @} core_utils
 
-//! @addtogroup core
+//! @addtogroup core_array
 //! @{
 
 //! Covariation flags
@@ -202,27 +207,6 @@ enum CovarFlags {
     COVAR_COLS      = 16
 };
 
-//! @addtogroup core_cluster
-//!  @{
-
-//! k-Means flags
-enum KmeansFlags {
-    /** Select random initial centers in each attempt.*/
-    KMEANS_RANDOM_CENTERS     = 0,
-    /** Use kmeans++ center initialization by Arthur and Vassilvitskii [Arthur2007].*/
-    KMEANS_PP_CENTERS         = 2,
-    /** During the first (and possibly the only) attempt, use the
-        user-supplied labels instead of computing them from the initial centers. For the second and
-        further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
-        to specify the exact method.*/
-    KMEANS_USE_INITIAL_LABELS = 1
-};
-
-//! @} core_cluster
-
-//! @addtogroup core_array
-//! @{
-
 enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/columns of the matrix.
                    REDUCE_AVG = 1, //!< the output is the mean vector of all rows/columns of the matrix.
                    REDUCE_MAX = 2, //!< the output is the maximum (column/row-wise) of all rows/columns of the matrix.
@@ -230,18 +214,11 @@ enum ReduceTypes { REDUCE_SUM = 0, //!< the output is the sum of all rows/column
                    REDUCE_SUM2 = 4  //!< the output is the sum of all squared rows/columns of the matrix.
                  };
 
-//! @} core_array
-
 /** @brief Swaps two matrices
 */
 CV_EXPORTS void swap(Mat& a, Mat& b);
 /** @overload */
 CV_EXPORTS void swap( UMat& a, UMat& b );
-
-//! @} core
-
-//! @addtogroup core_array
-//! @{
 
 /** @brief Computes the source location of an extrapolated pixel.
 
@@ -486,10 +463,6 @@ The function can also be emulated with a matrix expression, for example:
 */
 CV_EXPORTS_W void scaleAdd(InputArray src1, double alpha, InputArray src2, OutputArray dst);
 
-/** @example samples/cpp/tutorial_code/HighGUI/AddingImagesTrackbar.cpp
-Check @ref tutorial_trackbar "the corresponding tutorial" for more details
-*/
-
 /** @brief Calculates the weighted sum of two arrays.
 
 The function addWeighted calculates the weighted sum of two arrays as follows:
@@ -556,6 +529,10 @@ The format of half precision floating point is defined in IEEE 754-2008.
 @deprecated Use Mat::convertTo with CV_16F instead.
 */
 CV_EXPORTS_W void convertFp16(InputArray src, OutputArray dst);
+
+/** @example samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
+Check @ref tutorial_how_to_scan_images "the corresponding tutorial" for more details
+*/
 
 /** @brief Performs a look-up table transform of an array.
 
@@ -827,6 +804,11 @@ Possible usage with some positive example data:
     // 10.0     1.0     (shift to right border)
     normalize(positiveData, normalizedData_minmax, 1.0, 0.0, NORM_MINMAX);
 @endcode
+
+@note Due to rounding issues, min-max normalization can result in values outside provided boundaries.
+If exact range conformity is needed, following workarounds can be used:
+- use double floating point precision (dtype = CV_64F)
+- manually clip values (`cv::max(res, left_bound, res)`, `cv::min(res, right_bound, res)` or `np.clip`)
 
 @param src input array.
 @param dst output array of the same size as src .
@@ -2027,8 +2009,8 @@ The function solveCubic finds the real roots of a cubic equation:
 
 The roots are stored in the roots array.
 @param coeffs equation coefficients, an array of 3 or 4 elements.
-@param roots output array of real roots that has 1 or 3 elements.
-@return number of real roots. It can be 0, 1 or 2.
+@param roots output array of real roots that has 0, 1, 2 or 3 elements.
+@return number of real roots. It can be -1 (all real numbers), 0, 1, 2 or 3.
 */
 CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 
@@ -3085,8 +3067,21 @@ private:
 //! @addtogroup core_cluster
 //!  @{
 
+//! k-means flags
+enum KmeansFlags {
+    /** Select random initial centers in each attempt.*/
+    KMEANS_RANDOM_CENTERS     = 0,
+    /** Use kmeans++ center initialization by Arthur and Vassilvitskii [Arthur2007].*/
+    KMEANS_PP_CENTERS         = 2,
+    /** During the first (and possibly the only) attempt, use the
+        user-supplied labels instead of computing them from the initial centers. For the second and
+        further attempts, use the random or semi-random centers. Use one of KMEANS_\*_CENTERS flag
+        to specify the exact method.*/
+    KMEANS_USE_INITIAL_LABELS = 1
+};
+
 /** @example samples/cpp/kmeans.cpp
-An example on K-means clustering
+An example on k-means clustering
 */
 
 /** @brief Finds centers of clusters and groups input samples around the clusters.
@@ -3096,7 +3091,7 @@ and groups the input samples around the clusters. As an output, \f$\texttt{bestL
 0-based cluster index for the sample stored in the \f$i^{th}\f$ row of the samples matrix.
 
 @note
--   (Python) An example on K-means clustering can be found at
+-   (Python) An example on k-means clustering can be found at
     opencv_source_code/samples/python/kmeans.py
 @param data Data for clustering. An array of N-Dimensional points with float coordinates is needed.
 Examples of this array can be:

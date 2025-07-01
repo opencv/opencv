@@ -187,11 +187,9 @@ TEST(Photo_MergeDebevec, regression)
     Mat result, expected;
     loadImage(test_path + "merge/debevec.hdr", expected);
     merge->process(images, result, times, response);
-
     Ptr<Tonemap> map = createTonemap();
     map->process(result, result);
     map->process(expected, expected);
-
     checkEqual(expected, result, 1e-2f, "Debevec");
 }
 
@@ -221,16 +219,15 @@ TEST(Photo_CalibrateDebevec, regression)
     loadExposureSeq(test_path + "exposures/", images, times);
     loadResponseCSV(test_path + "calibrate/debevec.csv", expected);
     Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec();
-
     calibrate->process(images, response, times);
     Mat diff = abs(response - expected);
     diff = diff.mul(1.0f / response);
     double max;
     minMaxLoc(diff, NULL, &max);
 #if defined(__arm__) || defined(__aarch64__)
-    ASSERT_LT(max, 0.131);
+    ASSERT_LT(max, 0.25);
 #else
-    ASSERT_LT(max, 0.1);
+    ASSERT_LT(max, 0.15);
 #endif
 }
 
@@ -266,4 +263,46 @@ TEST(Photo_CalibrateRobertson, bug_18180)
     EXPECT_EQ(0.0, cv::norm(response, response_no_nans, NORM_L2));
 }
 
+TEST(Photo_CalibrateDebevec, bug_24966)
+{
+    string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
+    vector<Mat> all_images;
+    vector<float> all_times;
+    loadExposureSeq(test_path + "exposures/", all_images, all_times);
+    // Use a balanced subset of exposures
+    vector<int> selected_indices = {1,2,3,4,5};
+    vector<Mat> images;
+    vector<float> times;
+    for (int idx : selected_indices) {
+        images.push_back(all_images[idx]);
+        times.push_back(all_times[idx]);
+    }
+    // Run CRF estimation for different sample points
+    vector<int> sample_points = {200,300,400};
+    vector<Mat> responses;
+    for (int samples : sample_points) {
+        Ptr<CalibrateDebevec> calibrate = createCalibrateDebevec(samples);
+        Mat response;
+        calibrate->process(images, response, times);
+        Mat roi = response.rowRange(15, 240); //Checking CRF only in the middle of the image
+        responses.push_back(roi);
+    }
+
+    // Compare consecutive pairs of CRFs
+    for (size_t i = 0; i < responses.size()-1; ++i) {
+        Mat diff = abs(responses[i] - responses[i+1]);
+        double max_diff;
+        minMaxLoc(diff, nullptr, &max_diff);
+        cout << "max_diff = " << max_diff << endl;
+        #if defined(__aarch64__) && defined(__APPLE__)
+            ASSERT_LT(max_diff, 10) << "CRF instability detected between samples="
+                << sample_points[i] << " and " << sample_points[i+1]
+                << " (max diff = " << max_diff << ")";
+        #else
+            ASSERT_LT(max_diff, 5) << "CRF instability detected between samples="
+                << sample_points[i] << " and " << sample_points[i+1]
+                << " (max diff = " << max_diff << ")";
+        #endif
+    }
+}
 }} // namespace

@@ -1684,19 +1684,34 @@ void CV_IntegralTest::get_test_array_types_and_sizes( int test_case_idx,
                                                 vector<vector<Size> >& sizes, vector<vector<int> >& types )
 {
     RNG& rng = ts->get_rng();
-    int depth = cvtest::randInt(rng) % 2, sum_depth;
     int cn = cvtest::randInt(rng) % 4 + 1;
     cvtest::ArrayTest::get_test_array_types_and_sizes( test_case_idx, sizes, types );
     Size sum_size;
 
-    depth = depth == 0 ? CV_8U : CV_32F;
-    int b = (cvtest::randInt(rng) & 1) != 0;
-    sum_depth = depth == CV_8U && b ? CV_32S : b ? CV_32F : CV_64F;
+    const int depths[12][3] = {
+        {CV_8U, CV_32S, CV_64F},
+        {CV_8U, CV_32S, CV_32F},
+        {CV_8U, CV_32S, CV_32S},
+        {CV_8U, CV_32F, CV_64F},
+        {CV_8U, CV_32F, CV_32F},
+        {CV_8U, CV_64F, CV_64F},
+        {CV_16U, CV_64F, CV_64F},
+        {CV_16S, CV_64F, CV_64F},
+        {CV_32F, CV_32F, CV_64F},
+        {CV_32F, CV_32F, CV_32F},
+        {CV_32F, CV_64F, CV_64F},
+        {CV_64F, CV_64F, CV_64F},
+    };
 
-    types[INPUT][0] = CV_MAKETYPE(depth,cn);
+    int random_choice = cvtest::randInt(rng) % 12;
+    int depth = depths[random_choice][0];
+    int sum_depth = depths[random_choice][1];
+    int sqsum_depth = depths[random_choice][2];
+
+    types[INPUT][0] = CV_MAKETYPE(depth, cn);
     types[OUTPUT][0] = types[REF_OUTPUT][0] =
         types[OUTPUT][2] = types[REF_OUTPUT][2] = CV_MAKETYPE(sum_depth, cn);
-    types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_MAKETYPE(CV_64F, cn);
+    types[OUTPUT][1] = types[REF_OUTPUT][1] = CV_MAKETYPE(sqsum_depth, cn);
 
     sum_size.width = sizes[INPUT][0].width + 1;
     sum_size.height = sizes[INPUT][0].height + 1;
@@ -1738,7 +1753,7 @@ void CV_IntegralTest::run_func()
 
 static void test_integral( const Mat& img, Mat* sum, Mat* sqsum, Mat* tilted )
 {
-    CV_Assert( img.depth() == CV_32F );
+    CV_Assert( img.depth() == CV_64F );
 
     sum->create(img.rows+1, img.cols+1, CV_64F);
     if( sqsum )
@@ -1746,7 +1761,7 @@ static void test_integral( const Mat& img, Mat* sum, Mat* sqsum, Mat* tilted )
     if( tilted )
         tilted->create(img.rows+1, img.cols+1, CV_64F);
 
-    const float* data = img.ptr<float>();
+    const double* data = img.ptr<double>();
     double* sdata = sum->ptr<double>();
     double* sqdata = sqsum ? sqsum->ptr<double>() : 0;
     double* tdata = tilted ? tilted->ptr<double>() : 0;
@@ -1788,7 +1803,7 @@ static void test_integral( const Mat& img, Mat* sum, Mat* sqsum, Mat* tilted )
             else
             {
                 ts += tdata[x-tstep-1];
-                if( data > img.ptr<float>() )
+                if( data > img.ptr<double>() )
                 {
                     ts += data[x-step-1];
                     if( x < size.width )
@@ -1824,7 +1839,7 @@ void CV_IntegralTest::prepare_to_validation( int /*test_case_idx*/ )
     {
         if( cn > 1 )
             cvtest::extract(src, plane, i);
-        plane.convertTo(srcf, CV_32F);
+        plane.convertTo(srcf, CV_64F);
 
         test_integral( srcf, &psum, sqsum0 ? &psqsum : 0, tsum0 ? &ptsum : 0 );
         psum.convertTo(psum2, sum0->depth());
@@ -1865,107 +1880,65 @@ TEST(Imgproc_PreCornerDetect, accuracy) { CV_PreCornerDetectTest test; test.safe
 TEST(Imgproc_Integral, accuracy) { CV_IntegralTest test; test.safe_run(); }
 
 //////////////////////////////////////////////////////////////////////////////////
+typedef std::pair<perf::MatDepth, perf::MatDepth> Imgproc_DepthAndDepth;
+typedef testing::TestWithParam< Imgproc_DepthAndDepth> Imgproc_FilterSupportedFormats;
 
-class CV_FilterSupportedFormatsTest : public cvtest::BaseTest
+TEST_P(Imgproc_FilterSupportedFormats, normal)
 {
-public:
-    CV_FilterSupportedFormatsTest() {}
-    ~CV_FilterSupportedFormatsTest() {}
-protected:
-    void run(int)
-    {
-        const int depths[][2] =
-        {
-            {CV_8U, CV_8U},
-            {CV_8U, CV_16U},
-            {CV_8U, CV_16S},
-            {CV_8U, CV_32F},
-            {CV_8U, CV_64F},
-            {CV_16U, CV_16U},
-            {CV_16U, CV_32F},
-            {CV_16U, CV_64F},
-            {CV_16S, CV_16S},
-            {CV_16S, CV_32F},
-            {CV_16S, CV_64F},
-            {CV_32F, CV_32F},
-            {CV_64F, CV_64F},
-            {-1, -1}
-        };
+    // use some "odd" size to do yet another smoke
+    // testing of the non-SIMD loop tails
+    Size sz(163, 117);
+    Mat small_kernel(5, 5, CV_32F), big_kernel(21, 21, CV_32F);
+    Mat kernelX(11, 1, CV_32F), kernelY(7, 1, CV_32F);
+    Mat symkernelX(11, 1, CV_32F), symkernelY(7, 1, CV_32F);
+    randu(small_kernel, -10, 10);
+    randu(big_kernel, -1, 1);
+    randu(kernelX, -1, 1);
+    randu(kernelY, -1, 1);
+    flip(kernelX, symkernelX, 0);
+    symkernelX += kernelX;
+    flip(kernelY, symkernelY, 0);
+    symkernelY += kernelY;
 
-        int i = 0;
-        volatile int fidx = -1;
-        try
-        {
-            // use some "odd" size to do yet another smoke
-            // testing of the non-SIMD loop tails
-            Size sz(163, 117);
-            Mat small_kernel(5, 5, CV_32F), big_kernel(21, 21, CV_32F);
-            Mat kernelX(11, 1, CV_32F), kernelY(7, 1, CV_32F);
-            Mat symkernelX(11, 1, CV_32F), symkernelY(7, 1, CV_32F);
-            randu(small_kernel, -10, 10);
-            randu(big_kernel, -1, 1);
-            randu(kernelX, -1, 1);
-            randu(kernelY, -1, 1);
-            flip(kernelX, symkernelX, 0);
-            symkernelX += kernelX;
-            flip(kernelY, symkernelY, 0);
-            symkernelY += kernelY;
+    Mat elem_ellipse = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
+    Mat elem_rect = getStructuringElement(MORPH_RECT, Size(7, 7));
 
-            Mat elem_ellipse = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
-            Mat elem_rect = getStructuringElement(MORPH_RECT, Size(7, 7));
+    int sdepth = std::get<0>(GetParam());
+    int ddepth = std::get<1>(GetParam());
+    Mat src(sz, CV_MAKETYPE(sdepth, 5)), dst;
+    randu(src, 0, 100);
+    // non-separable filtering with a small kernel
+    EXPECT_NO_THROW(cv::filter2D(src, dst, ddepth, small_kernel));
+    EXPECT_NO_THROW(cv::filter2D(src, dst, ddepth, big_kernel));
+    EXPECT_NO_THROW(cv::sepFilter2D(src, dst, ddepth, kernelX, kernelY));
+    EXPECT_NO_THROW(cv::sepFilter2D(src, dst, ddepth, symkernelX, symkernelY));
+    EXPECT_NO_THROW(cv::Sobel(src, dst, ddepth, 2, 0, 5));
+    EXPECT_NO_THROW(cv::Scharr(src, dst, ddepth, 0, 1));
+    if( sdepth != ddepth )
+        return;
+    EXPECT_NO_THROW(cv::GaussianBlur(src, dst, Size(5, 5), 1.2, 1.2));
+    EXPECT_NO_THROW(cv::blur(src, dst, Size(11, 11)));
+    EXPECT_NO_THROW(cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_ellipse));
+    EXPECT_NO_THROW(cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_rect));
+}
 
-            for( i = 0; depths[i][0] >= 0; i++ )
-            {
-                int sdepth = depths[i][0];
-                int ddepth = depths[i][1];
-                Mat src(sz, CV_MAKETYPE(sdepth, 5)), dst;
-                randu(src, 0, 100);
-                // non-separable filtering with a small kernel
-                fidx = 0;
-                cv::filter2D(src, dst, ddepth, small_kernel);
-                fidx++;
-                cv::filter2D(src, dst, ddepth, big_kernel);
-                fidx++;
-                cv::sepFilter2D(src, dst, ddepth, kernelX, kernelY);
-                fidx++;
-                cv::sepFilter2D(src, dst, ddepth, symkernelX, symkernelY);
-                fidx++;
-                cv::Sobel(src, dst, ddepth, 2, 0, 5);
-                fidx++;
-                cv::Scharr(src, dst, ddepth, 0, 1);
-                if( sdepth != ddepth )
-                    continue;
-                fidx++;
-                cv::GaussianBlur(src, dst, Size(5, 5), 1.2, 1.2);
-                fidx++;
-                cv::blur(src, dst, Size(11, 11));
-                fidx++;
-                cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_ellipse);
-                fidx++;
-                cv::morphologyEx(src, dst, MORPH_GRADIENT, elem_rect);
-            }
-        }
-        catch(...)
-        {
-            ts->printf(cvtest::TS::LOG, "Combination of depths %d => %d in %s is not supported (yet it should be)",
-                       depths[i][0], depths[i][1],
-                       fidx == 0 ? "filter2D (small kernel)" :
-                       fidx == 1 ? "filter2D (large kernel)" :
-                       fidx == 2 ? "sepFilter2D" :
-                       fidx == 3 ? "sepFilter2D (symmetrical/asymmetrical kernel)" :
-                       fidx == 4 ? "Sobel" :
-                       fidx == 5 ? "Scharr" :
-                       fidx == 6 ? "GaussianBlur" :
-                       fidx == 7 ? "blur" :
-                       fidx == 8 || fidx == 9 ? "morphologyEx" :
-                       "unknown???");
-
-            ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-        }
-    }
-};
-
-TEST(Imgproc_Filtering, supportedFormats) { CV_FilterSupportedFormatsTest test; test.safe_run(); }
+INSTANTIATE_TEST_CASE_P(/**/, Imgproc_FilterSupportedFormats,
+    testing::Values(
+        make_pair( CV_8U, CV_8U ),
+        make_pair( CV_8U, CV_16U ),
+        make_pair( CV_8U, CV_16S ),
+        make_pair( CV_8U, CV_32F),
+        make_pair( CV_8U, CV_64F),
+        make_pair( CV_16U, CV_16U),
+        make_pair( CV_16U, CV_32F),
+        make_pair( CV_16U, CV_64F),
+        make_pair( CV_16S, CV_16S),
+        make_pair( CV_16S, CV_32F),
+        make_pair( CV_16S, CV_64F),
+        make_pair( CV_32F, CV_32F),
+        make_pair( CV_64F, CV_64F)
+    )
+);
 
 TEST(Imgproc_Blur, borderTypes)
 {

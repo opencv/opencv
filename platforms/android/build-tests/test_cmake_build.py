@@ -7,7 +7,7 @@ import logging as log
 log.basicConfig(format='%(message)s', level=log.DEBUG)
 
 CMAKE_TEMPLATE='''\
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 
 # Enable C++11
 set(CMAKE_CXX_STANDARD 11)

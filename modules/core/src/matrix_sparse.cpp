@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
-#include "opencv2/core/types_c.h"
 
 namespace cv {
 
@@ -171,7 +170,14 @@ void SparseMat::Hdr::clear()
     hashtab.clear();
     hashtab.resize(HASH_SIZE0);
     pool.clear();
+#if defined(__GNUC__)  && (__GNUC__ == 13) && !defined(__clang__) && (__cplusplus >= 202002L)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
     pool.resize(nodeSize);
+#if defined(__GNUC__)  && (__GNUC__ == 13) && !defined(__clang__) && (__cplusplus >= 202002L)
+#pragma GCC diagnostic pop
+#endif
     nodeCount = freeList = 0;
 }
 

@@ -8,7 +8,7 @@ ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV
 ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
-ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON_FP16)
+ocv_add_dispatched_file("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX2 NEON LASX)
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
@@ -115,8 +115,22 @@ if(HAVE_PROTOBUF)
 
   if(PROTOBUF_UPDATE_FILES)
     file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
-    set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
-    protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
+    if(CMAKE_VERSION VERSION_LESS "3.13.0")
+      set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
+      protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
+    else()
+      protobuf_generate(
+        APPEND_PATH # required for tensorflow
+        LANGUAGE cpp
+        IMPORT_DIRS ${Protobuf_IMPORT_DIRS}
+        OUT_VAR fw_srcs
+        PROTOC_EXE ${Protobuf_PROTOC_EXECUTABLE}
+        PROTOS ${proto_files})
+      set(fw_hdrs "${fw_srcs}")
+      # separate the header files and source files
+      list(FILTER fw_srcs EXCLUDE REGEX ".+\.h$")
+      list(FILTER fw_hdrs INCLUDE REGEX ".+\.h$")
+    endif()
   else()
     file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.cc")
     file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.h" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.h")

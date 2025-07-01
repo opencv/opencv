@@ -1099,7 +1099,7 @@ struct ExpOp : public BaseElemWiseOp
     }
     void getValueRange(int depth, double& minval, double& maxval)
     {
-        maxval = depth == CV_32F ? 50 : 100;
+        maxval = depth == CV_32F ? 80 : 700;
         minval = -maxval;
     }
     void op(const vector<Mat>& src, Mat& dst, const Mat&)
@@ -2814,6 +2814,19 @@ TEST(Core_MeanStdDev, regression_multichannel)
     }
 }
 
+// Related issue : https://github.com/opencv/opencv/issues/26861
+TEST(Core_MeanStdDevTest, LargeImage)
+{
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+    applyTestTag(CV_TEST_TAG_MEMORY_14GB);
+    // (1<<16) * ((1<<15)+10) = ~2.147 billion
+    cv::Mat largeImage = cv::Mat::ones((1 << 16), ((1 << 15) + 10), CV_8U);
+    cv::Scalar mean, stddev;
+    cv::meanStdDev(largeImage, mean, stddev);
+    EXPECT_NEAR(mean[0], 1.0, 1e-5);
+    EXPECT_NEAR(stddev[0], 0.0, 1e-5);
+}
+
 template <typename T> static inline
 void testDivideInitData(Mat& src1, Mat& src2)
 {
@@ -3212,10 +3225,10 @@ CV_ENUM(LutMatType, CV_8U, CV_16U, CV_16F, CV_32S, CV_32F, CV_64F)
 
 struct Core_LUT: public testing::TestWithParam<LutMatType>
 {
-    template<typename T, int ch>
+    template<typename T, int ch, bool same_cn>
     cv::Mat referenceWithType(cv::Mat input, cv::Mat table)
     {
-        cv::Mat ref(input.size(), CV_MAKE_TYPE(table.type(), ch));
+        cv::Mat ref(input.size(), CV_MAKE_TYPE(table.depth(), ch));
         for (int i = 0; i < input.rows; i++)
         {
             for (int j = 0; j < input.cols; j++)
@@ -3229,7 +3242,14 @@ struct Core_LUT: public testing::TestWithParam<LutMatType>
                     Vec<T, ch> val;
                     for (int k = 0; k < ch; k++)
                     {
-                       val[k] = table.at<T>(input.at<Vec<uchar, ch>>(i, j)[k]);
+                        if (same_cn)
+                        {
+                            val[k] = table.at<Vec<T, ch>>(input.at<Vec<uchar, ch>>(i, j)[k])[k];
+                        }
+                        else
+                        {
+                            val[k] = table.at<T>(input.at<Vec<uchar, ch>>(i, j)[k]);
+                        }
                     }
                     ref.at<Vec<T, ch>>(i, j) = val;
                 }
@@ -3238,32 +3258,32 @@ struct Core_LUT: public testing::TestWithParam<LutMatType>
         return ref;
     }
 
-    template<int ch = 1>
+    template<int ch = 1, bool same_cn = false>
     cv::Mat reference(cv::Mat input, cv::Mat table)
     {
-        if (table.type() == CV_8U)
+        if (table.depth() == CV_8U)
         {
-            return referenceWithType<uchar, ch>(input, table);
+            return referenceWithType<uchar, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_16U)
+        else if (table.depth() == CV_16U)
         {
-            return referenceWithType<ushort, ch>(input, table);
+            return referenceWithType<ushort, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_16F)
+        else if (table.depth() == CV_16F)
         {
-            return referenceWithType<ushort, ch>(input, table);
+            return referenceWithType<ushort, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_32S)
+        else if (table.depth() == CV_32S)
         {
-            return referenceWithType<int, ch>(input, table);
+            return referenceWithType<int, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_32F)
+        else if (table.depth() == CV_32F)
         {
-            return referenceWithType<float, ch>(input, table);
+            return referenceWithType<float, ch, same_cn>(input, table);
         }
-        else if (table.type() == CV_64F)
+        else if (table.depth() == CV_64F)
         {
-            return referenceWithType<double, ch>(input, table);
+            return referenceWithType<double, ch, same_cn>(input, table);
         }
 
         return cv::Mat();
@@ -3277,7 +3297,7 @@ TEST_P(Core_LUT, accuracy)
     randu(input, 0, 256);
 
     cv::Mat table(1, 256, CV_MAKE_TYPE(type, 1));
-    randu(table, 0, 127);
+    randu(table, 0, getMaxVal(type));
 
     cv::Mat output;
     cv::LUT(input, table, output);
@@ -3294,7 +3314,7 @@ TEST_P(Core_LUT, accuracy_multi)
     randu(input, 0, 256);
 
     cv::Mat table(1, 256, CV_MAKE_TYPE(type, 1));
-    randu(table, 0, 127);
+    randu(table, 0, getMaxVal(type));
 
     cv::Mat output;
     cv::LUT(input, table, output);
@@ -3304,6 +3324,22 @@ TEST_P(Core_LUT, accuracy_multi)
     ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
 }
 
+TEST_P(Core_LUT, accuracy_multi2)
+{
+    int type = (int)GetParam();
+    cv::Mat input(117, 113, CV_8UC3);
+    randu(input, 0, 256);
+
+    cv::Mat table(1, 256, CV_MAKE_TYPE(type, 3));
+    randu(table, 0, getMaxVal(type));
+
+    cv::Mat output;
+    cv::LUT(input, table, output);
+
+    cv::Mat gt = reference<3, true>(input, table);
+
+    ASSERT_EQ(0, cv::norm(output, gt, cv::NORM_INF));
+}
 
 INSTANTIATE_TEST_CASE_P(/**/, Core_LUT, LutMatType::all());
 

@@ -240,6 +240,10 @@ public:
 
     //! converts GpuMat to another datatype (Blocking call)
     void convertTo(OutputArray dst, int rtype) const;
+    //! bindings overload which converts GpuMat to another datatype (Blocking call)
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype) const {
+        convertTo(static_cast<OutputArray>(dst), rtype);
+    }
 
     //! converts GpuMat to another datatype (Non-Blocking call)
     void convertTo(OutputArray dst, int rtype, Stream& stream) const;
@@ -250,10 +254,13 @@ public:
 
     //! converts GpuMat to another datatype with scaling (Blocking call)
     void convertTo(OutputArray dst, int rtype, double alpha, double beta = 0.0) const;
+
     //! bindings overload which converts GpuMat to another datatype with scaling(Blocking call)
-    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha = 1.0, double beta = 0.0) const {
+#ifdef OPENCV_BINDINGS_PARSER
+    CV_WRAP void convertTo(CV_OUT GpuMat& dst, int rtype, double alpha=1.0, double beta = 0.0) const {
         convertTo(static_cast<OutputArray>(dst), rtype, alpha, beta);
     }
+#endif
 
     //! converts GpuMat to another datatype with scaling (Non-Blocking call)
     void convertTo(OutputArray dst, int rtype, double alpha, Stream& stream) const;
@@ -413,8 +420,9 @@ public:
     data, which means that no data is copied. This operation is very efficient and can be used to
     process external data using OpenCV functions. The external data is not automatically deallocated, so
     you should take care of it.
-    @param step Array of _size.size()-1 steps in case of a multi-dimensional array (the last step is always
-    set to the element size). If not specified, the matrix is assumed to be continuous.
+    @param step Array of _size.size() or _size.size()-1 steps in case of a multi-dimensional array
+    (if specified, the last step must be equal to the element size, otherwise it will be added as such).
+    If not specified, the matrix is assumed to be continuous.
     */
     GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
 

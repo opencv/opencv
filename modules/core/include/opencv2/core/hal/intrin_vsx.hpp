@@ -261,6 +261,8 @@ OPENCV_HAL_IMPL_VSX_EXTRACT_N(v_float64x2, double)
 #define OPENCV_HAL_IMPL_VSX_INITVEC(_Tpvec, _Tp, suffix, cast)                        \
 inline _Tpvec v_setzero_##suffix() { return _Tpvec(vec_splats((_Tp)0)); }             \
 inline _Tpvec v_setall_##suffix(_Tp v) { return _Tpvec(vec_splats((_Tp)v));}          \
+template <> inline _Tpvec v_setzero_() { return v_setzero_##suffix(); }               \
+template <> inline _Tpvec v_setall_(_Tp v) { return v_setall_##suffix(v); }       \
 template<typename _Tpvec0> inline _Tpvec v_reinterpret_as_##suffix(const _Tpvec0 &a)  \
 { return _Tpvec((cast)a.val); }
 
@@ -648,11 +650,11 @@ OPENCV_HAL_IMPL_VSX_SELECT(v_float64x2, vec_bdword2_c)
 #define OPENCV_HAL_IMPL_VSX_INT_CMP_OP(_Tpvec)                 \
 inline _Tpvec v_eq(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpeq(a.val, b.val)); }                    \
-inline _Tpvec V_ne(const _Tpvec& a, const _Tpvec& b)           \
+inline _Tpvec v_ne(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpne(a.val, b.val)); }                    \
 inline _Tpvec v_lt(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmplt(a.val, b.val)); }                    \
-inline _Tpvec V_gt(const _Tpvec& a, const _Tpvec& b)           \
+inline _Tpvec v_gt(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmpgt(a.val, b.val)); }                    \
 inline _Tpvec v_le(const _Tpvec& a, const _Tpvec& b)           \
 { return _Tpvec(vec_cmple(a.val, b.val)); }                    \
@@ -1505,7 +1507,7 @@ inline v_float64x2 v_dotprod_expand(const v_int32x4& a, const v_int32x4& b, cons
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b)
 { return v_dotprod(a, b); }
 inline v_int32x4 v_dotprod_fast(const v_int16x8& a, const v_int16x8& b, const v_int32x4& c)
-{ return v_int32x4(vec_msum(a.val, b.val, vec_int4_z)) + c; }
+{ return v_add(v_int32x4(vec_msum(a.val, b.val, vec_int4_z)), c); }
 // 32 >> 64
 inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b)
 { return v_dotprod(a, b); }
@@ -1516,7 +1518,7 @@ inline v_int64x2 v_dotprod_fast(const v_int32x4& a, const v_int32x4& b, const v_
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b)
 { return v_dotprod_expand(a, b); }
 inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b, const v_uint32x4& c)
-{ return v_uint32x4(vec_msum(a.val, b.val, vec_uint4_z)) + c; }
+{ return v_add(v_uint32x4(vec_msum(a.val, b.val, vec_uint4_z)), c); }
 
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 {
@@ -1594,6 +1596,19 @@ template<int i, typename Tvec>
 inline Tvec v_broadcast_element(const Tvec& v)
 { return Tvec(vec_splat(v.val, i)); }
 
+#include "intrin_math.hpp"
+inline v_float32x4 v_exp(const v_float32x4& x) { return v_exp_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_log(const v_float32x4& x) { return v_log_default_32f<v_float32x4, v_int32x4>(x); }
+inline void v_sincos(const v_float32x4& x, v_float32x4& s, v_float32x4& c) { v_sincos_default_32f<v_float32x4, v_int32x4>(x, s, c); }
+inline v_float32x4 v_sin(const v_float32x4& x) { return v_sin_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_cos(const v_float32x4& x) { return v_cos_default_32f<v_float32x4, v_int32x4>(x); }
+inline v_float32x4 v_erf(const v_float32x4& x) { return v_erf_default_32f<v_float32x4, v_int32x4>(x); }
+
+inline v_float64x2 v_exp(const v_float64x2& x) { return v_exp_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_log(const v_float64x2& x) { return v_log_default_64f<v_float64x2, v_int64x2>(x); }
+inline void v_sincos(const v_float64x2& x, v_float64x2& s, v_float64x2& c) { v_sincos_default_64f<v_float64x2, v_int64x2>(x, s, c); }
+inline v_float64x2 v_sin(const v_float64x2& x) { return v_sin_default_64f<v_float64x2, v_int64x2>(x); }
+inline v_float64x2 v_cos(const v_float64x2& x) { return v_cos_default_64f<v_float64x2, v_int64x2>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

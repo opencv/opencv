@@ -190,13 +190,19 @@ initial_setup(j_compress_ptr cinfo, boolean transcode_only)
   if ((long)jd_samplesperrow != samplesperrow)
     ERREXIT(cinfo, JERR_WIDTH_OVERFLOW);
 
+  /* Lossy JPEG images must have 8 or 12 bits per sample.  Lossless JPEG images
+   * can have 2 to 16 bits per sample.
+   */
 #ifdef C_LOSSLESS_SUPPORTED
-  if (cinfo->data_precision != 8 && cinfo->data_precision != 12 &&
-      cinfo->data_precision != 16)
-#else
-  if (cinfo->data_precision != 8 && cinfo->data_precision != 12)
+  if (cinfo->master->lossless) {
+    if (cinfo->data_precision < 2 || cinfo->data_precision > 16)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  } else
 #endif
-    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  {
+    if (cinfo->data_precision != 8 && cinfo->data_precision != 12)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  }
 
   /* Check that number of components won't exceed internal array sizes */
   if (cinfo->num_components > MAX_COMPONENTS)
@@ -731,6 +737,7 @@ jinit_c_master_control(j_compress_ptr cinfo, boolean transcode_only)
     cinfo->num_scans = 1;
   }
 
+#ifdef C_LOSSLESS_SUPPORTED
   /* Disable smoothing and subsampling in lossless mode, since those are lossy
    * algorithms.  Set the JPEG colorspace to the input colorspace.  Disable raw
    * (downsampled) data input, because it isn't particularly useful without
@@ -747,26 +754,30 @@ jinit_c_master_control(j_compress_ptr cinfo, boolean transcode_only)
          ci++, compptr++)
       compptr->h_samp_factor = compptr->v_samp_factor = 1;
   }
+#endif
 
   /* Validate parameters, determine derived values */
   initial_setup(cinfo, transcode_only);
 
-  if (cinfo->master->lossless ||        /*  TEMPORARY HACK ??? */
-      (cinfo->progressive_mode && !cinfo->arith_code))
-    cinfo->optimize_coding = TRUE; /* assume default tables no good for
-                                      progressive mode or lossless mode */
-  for (i = 0; i < NUM_HUFF_TBLS; i++) {
-    if (cinfo->dc_huff_tbl_ptrs[i] != NULL ||
-        cinfo->ac_huff_tbl_ptrs[i] != NULL) {
-      empty_huff_tables = FALSE;
-      break;
+  if (cinfo->arith_code)
+    cinfo->optimize_coding = FALSE;
+  else {
+    if (cinfo->master->lossless ||      /*  TEMPORARY HACK ??? */
+        cinfo->progressive_mode)
+      cinfo->optimize_coding = TRUE; /* assume default tables no good for
+                                        progressive mode or lossless mode */
+    for (i = 0; i < NUM_HUFF_TBLS; i++) {
+      if (cinfo->dc_huff_tbl_ptrs[i] != NULL ||
+          cinfo->ac_huff_tbl_ptrs[i] != NULL) {
+        empty_huff_tables = FALSE;
+        break;
+      }
     }
+    if (cinfo->data_precision == 12 && !cinfo->optimize_coding &&
+        (empty_huff_tables || using_std_huff_tables(cinfo)))
+      cinfo->optimize_coding = TRUE; /* assume default tables no good for
+                                        12-bit data precision */
   }
-  if (cinfo->data_precision == 12 && !cinfo->arith_code &&
-      !cinfo->optimize_coding &&
-      (empty_huff_tables || using_std_huff_tables(cinfo)))
-    cinfo->optimize_coding = TRUE; /* assume default tables no good for 12-bit
-                                      data precision */
 
   /* Initialize my private state */
   if (transcode_only) {

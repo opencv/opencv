@@ -78,7 +78,16 @@ const FourCC_Ext_Size entries[] =
     make_tuple("FFV1", "mkv", bigSize)
 };
 
-INSTANTIATE_TEST_CASE_P(videoio, videoio_ffmpeg, testing::ValuesIn(entries));
+inline static std::string videoio_ffmpeg_name_printer(const testing::TestParamInfo<videoio_ffmpeg::ParamType>& info)
+{
+    std::ostringstream os;
+    const string & fourcc = get<0>(info.param);
+    const Size sz = get<2>(info.param);
+    os << (fourcc.size() == 0 ? "NONE" : fourcc) << "_" << get<1>(info.param) << "_" << sz.height << "p";
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, videoio_ffmpeg, testing::ValuesIn(entries), videoio_ffmpeg_name_printer);
 
 //==========================================================================
 
@@ -143,9 +152,19 @@ const videoio_read_params_t videoio_read_params[] =
     //videoio_read_params_t("video/big_buck_bunny.wmv", 125, true),
 };
 
+inline static std::string videoio_read_name_printer(const testing::TestParamInfo<videoio_read::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getExtensionSafe(get<0>(get<0>(info.param))) << "_"
+        << get<1>(info.param) << "_"
+        << (get<2>(info.param) ? "RAW" : "ENC");
+    return out.str();
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, videoio_read, testing::Combine(testing::ValuesIn(videoio_read_params),
                                                              testing::Values(0, 1, 2, 50),
-                                                             testing::Values(true, false)));
+                                                             testing::Values(true, false)),
+                        videoio_read_name_printer);
 
 //==========================================================================
 
@@ -296,10 +315,6 @@ INSTANTIATE_TEST_CASE_P(/**/, videoio_container_get, testing::ValuesIn(videoio_c
 typedef tuple<string, string, int, int, bool, bool> videoio_encapsulate_params_t;
 typedef testing::TestWithParam< videoio_encapsulate_params_t > videoio_encapsulate;
 
-#if defined(WIN32)  // remove when FFmpeg wrapper includes PR25874
-#define WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE
-#endif
-
 TEST_P(videoio_encapsulate, write)
 {
     const VideoCaptureAPIs api = CAP_FFMPEG;
@@ -331,11 +346,10 @@ TEST_P(videoio_encapsulate, write)
         Mat rawFrame;
         for (int i = 0; i < nFrames; i++) {
             ASSERT_TRUE(capRaw.read(rawFrame));
-#if !defined(WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE)
             if (setPts && i == 0) {
-                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_DTS_DELAY, capRaw.get(CAP_PROP_DTS_DELAY)));
+                double dts = capRaw.get(CAP_PROP_DTS_DELAY);
+                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_DTS_DELAY, dts)) << "dts=" << dts;
             }
-#endif
             ASSERT_FALSE(rawFrame.empty());
             if (i == 0 && mpeg4) {
                 Mat tmp = rawFrame.clone();
@@ -346,11 +360,10 @@ TEST_P(videoio_encapsulate, write)
                 memcpy(rawFrame.data, extraData.data, extraData.total());
                 memcpy(rawFrame.data + extraData.total(), tmp.data, tmp.total());
             }
-#if !defined(WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE)
             if (setPts) {
-                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_PTS, capRaw.get(CAP_PROP_PTS)));
+                double pts = capRaw.get(CAP_PROP_PTS);
+                ASSERT_TRUE(container.set(VIDEOWRITER_PROP_PTS, pts)) << "pts=" << pts;
             }
-#endif
             container.write(rawFrame);
         }
         container.release();
@@ -381,11 +394,9 @@ TEST_P(videoio_encapsulate, write)
             const bool keyFrameActual = capActualRaw.get(CAP_PROP_LRF_HAS_KEY_FRAME) == 1.;
             const bool keyFrameReference = idrPeriod ? i % idrPeriod == 0 : 1;
             ASSERT_EQ(keyFrameReference, keyFrameActual);
-#if !defined(WIN32_WAIT_FOR_FFMPEG_WRAPPER_UPDATE)
             if (tsWorking) {
                 ASSERT_EQ(round(capReference.get(CAP_PROP_POS_MSEC)), round(capActual.get(CAP_PROP_POS_MSEC)));
             }
-#endif
         }
     }
 
@@ -728,7 +739,15 @@ const ffmpeg_get_fourcc_param_t ffmpeg_get_fourcc_param[] =
     ffmpeg_get_fourcc_param_t("video/sample_322x242_15frames.yuv420p.libx264.mp4", "h264")
 };
 
-INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_get_fourcc, testing::ValuesIn(ffmpeg_get_fourcc_param));
+inline static std::string ffmpeg_get_fourcc_name_printer(const testing::TestParamInfo<ffmpeg_get_fourcc::ParamType>& info)
+{
+    std::ostringstream os;
+    const string & fourcc = get<1>(info.param);
+    os << info.index << "_" << (fourcc.size() == 0 ? "NONE" : fourcc);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, ffmpeg_get_fourcc, testing::ValuesIn(ffmpeg_get_fourcc_param), ffmpeg_get_fourcc_name_printer);
 
 static void ffmpeg_check_read_raw(VideoCapture& cap)
 {
@@ -922,6 +941,93 @@ const FourCC_Ext_Color_Support sixteen_bit_modes[] =
 
 };
 
-INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes));
+inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestParamInfo<videoio_ffmpeg_16bit::ParamType>& info)
+{
+    std::ostringstream os;
+    os << get<0>(info.param) << "_"
+        << get<1>(info.param) << "_"
+        << (get<2>(info.param) ? "COLOR" : "GRAY") << "_"
+        << (get<3>(info.param) ? "SUP" : "NOT");
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
+
+typedef tuple<int /*inputType*/, int /*Depth*/, bool /*isColor*/, bool /*isValid*/, string /*description*/> ChannelMismatchTestParams;
+typedef testing::TestWithParam< ChannelMismatchTestParams > videoio_ffmpeg_channel_mismatch;
+
+TEST_P(videoio_ffmpeg_channel_mismatch, basic)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = "mismatch_video.mp4";
+    int input_type = get<0>(GetParam());
+    int depth = get<1>(GetParam());
+    bool is_Color = get<2>(GetParam());
+    bool is_valid = get<3>(GetParam());
+    const string description = get<4>(GetParam());
+
+    const double fps = 15.0;
+    const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
+    const Mat frame(480, 640, input_type, Scalar::all(0));
+
+    VideoWriter writer(filename, fourcc, fps, frame.size(),
+                                {
+                                    cv::VIDEOWRITER_PROP_DEPTH, depth,
+                                    VIDEOWRITER_PROP_IS_COLOR, is_Color
+                                });
+
+    if (!writer.isOpened())
+        throw SkipTestException("Failed to open video writer");
+
+    for (int i = 1; i <= 15; i++)
+    {
+        // In case of mismatch between input frame channels and
+        // expected depth/isColor configuration a warning  should be printed communicating it
+        writer.write(frame);
+    }
+
+    writer.release();
+
+    VideoCapture cap(filename, CAP_FFMPEG);
+
+    if (is_valid) {
+        ASSERT_TRUE(cap.isOpened()) << "Can't open video for " << description;
+        EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 15) << "All frames should be written for: " << description;
+    } else {
+        ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description;
+    }
+
+    std::remove(filename.c_str());
+}
+
+const ChannelMismatchTestParams mismatch_cases[] =
+{
+    // Testing input frame channels and expected depth/isColor combinations
+
+    // Open VideoWriter depth/isColor combination: CV_8U/true, everything with 3 channels should be valid
+    make_tuple(CV_16UC1, CV_8U, true, false, "input_CV_16UC1_expected_CV_8U_isColor_true"),
+    make_tuple(CV_8UC1, CV_8U, true, false, "input_CV_8UC1_expected_CV_8U_isColor_true"),
+    make_tuple(CV_8UC3, CV_8U, true, true, "input_CV_8UC3_expected_CV_8U_isColor_true_valid"),
+    make_tuple(CV_16UC3, CV_8U, true, true, "input_CV_16UC3_expected_CV_8U_isColor_true_valid"),
+
+    // Open VideoWriter depth/isColor combination: 16U,8U/false, everything with 1 channel should be valid
+    make_tuple(CV_8UC3, CV_8U, false, false, "input_CV_8UC3_expected_CV_8U_isColor_false"),
+    make_tuple(CV_16UC3, CV_8U, false, false, "input_CV_16UC3_expected_CV_8U_isColor_false"),
+    make_tuple(CV_8UC3, CV_16U, false, false, "input_CV_8UC3_expected_CV_16U_isColor_false"),
+    make_tuple(CV_16UC3, CV_16U, false, false, "input_CV_16UC3_expected_CV_16U_isColor_false"),
+    make_tuple(CV_8UC1, CV_16U, false, true, "input_CV_8UC1_expected_CV_16U_isColor_false_valid"),
+    make_tuple(CV_16UC1, CV_8U, false, true, "input_CV_16UC1_expected_CV_8U_isColor_false_valid"),
+};
+
+inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::TestParamInfo<videoio_ffmpeg_channel_mismatch::ParamType>& info)
+{
+    std::ostringstream os;
+    os << get<4>(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
 }} // namespace

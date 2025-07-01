@@ -44,8 +44,8 @@ std::string keys =
     "{ nc          | 80 | Number of classes. Default is 80 (coming from COCO dataset). }"
     "{ thr         | .5 | Confidence threshold. }"
     "{ nms         | .4 | Non-maximum suppression threshold. }"
-    "{ mean        | 0.0 | Normalization constant. }"
-    "{ scale       | 1.0 | Preprocess input image by multiplying on a scale factor. }"
+    "{ mean        | 0.0 0.0 0.0 | Normalization constant. }"
+    "{ scale       | 1.0 1.0 1.0 | Preprocess input image by multiplying on a scale factor. }"
     "{ width       | 640 | Preprocess input image by resizing to a specific width. }"
     "{ height      | 640 | Preprocess input image by resizing to a specific height. }"
     "{ rgb         | 1 | Indicate that model works with RGB input images instead BGR ones. }"
@@ -125,7 +125,7 @@ void yoloPostProcessing(
 
     if (model_name == "yolonas")
     {
-        // outs contains 2 elemets of shape [1, 8400, 80] and [1, 8400, 4]. Concat them to get [1, 8400, 84]
+        // outs contains 2 elements of shape [1, 8400, nc] and [1, 8400, 4]. Concat them to get [1, 8400, nc+4]
         Mat concat_out;
         // squeeze the first dimension
         outs[0] = outs[0].reshape(1, outs[0].size[1]);
@@ -135,12 +135,12 @@ void yoloPostProcessing(
         // remove the second element
         outs.pop_back();
         // unsqueeze the first dimension
-        outs[0] = outs[0].reshape(0, std::vector<int>{1, 8400, nc + 4});
+        outs[0] = outs[0].reshape(0, std::vector<int>{1, outs[0].size[0], outs[0].size[1]});
     }
 
-    // assert if last dim is 85 or 84
-    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, 85 or 84]");
-    CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == 80 + 4), true, "Invalid output shape: ");
+    // assert if last dim is nc+5 or nc+4
+    CV_CheckEQ(outs[0].dims, 3, "Invalid output shape. The shape should be [1, #anchors, nc+5 or nc+4]");
+    CV_CheckEQ((outs[0].size[2] == nc + 5 || outs[0].size[2] == nc + 4), true, "Invalid output shape: ");
 
     for (auto preds : outs)
     {
@@ -221,7 +221,7 @@ int main(int argc, char** argv)
     bool swapRB = parser.get<bool>("rgb");
     int inpWidth = parser.get<int>("width");
     int inpHeight = parser.get<int>("height");
-    Scalar scale = parser.get<float>("scale");
+    Scalar scale = parser.get<Scalar>("scale");
     Scalar mean = parser.get<Scalar>("mean");
     ImagePaddingMode paddingMode = static_cast<ImagePaddingMode>(parser.get<int>("paddingmode"));
     //![preprocess_params]

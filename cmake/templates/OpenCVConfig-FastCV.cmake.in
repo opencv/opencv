@@ -1,0 +1,7 @@
+if(NOT TARGET fastcv)
+  add_library(fastcv STATIC IMPORTED)
+  set_target_properties(fastcv PROPERTIES
+    IMPORTED_LINK_INTERFACE_LIBRARIES ""
+    IMPORTED_LOCATION "${OpenCV_INSTALL_PATH}/@FASTCV_INSTALL_PATH_RELATIVE_CONFIGCMAKE@"
+  )
+endif()

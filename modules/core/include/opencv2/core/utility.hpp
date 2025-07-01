@@ -176,7 +176,38 @@ extern "C" typedef int (*ErrorCallback)( int status, const char* func_name,
 */
 CV_EXPORTS ErrorCallback redirectError( ErrorCallback errCallback, void* userdata=0, void** prevUserdata=0);
 
+/** @brief Generates a unique temporary file name.
+
+This function generates a full, unique file path for a temporary file,
+which can be used to create temporary files for various purposes.
+
+@param suffix (optional) The desired file extension or suffix for the temporary file (e.g., ".png", ".txt").
+If no suffix is provided (suffix = 0), the file will not have a specific extension.
+
+@return cv::String A full unique path for the temporary file.
+
+@note
+- The function does not create the file, it only generates the name.
+- The file name is unique for the system session.
+- Works cross-platform (Windows, Linux, macOS).
+ */
 CV_EXPORTS String tempfile( const char* suffix = 0);
+
+/** @brief Searches for files matching the specified pattern in a directory.
+
+This function searches for files that match a given pattern (e.g., `*.jpg`)
+in the specified directory. The search can be limited to the directory itself
+or be recursive, including subdirectories.
+
+@param pattern The file search pattern, which can include wildcards like `*`
+(for matching multiple characters) or `?` (for matching a single character).
+
+@param result  Output vector where the file paths matching the search
+pattern will be stored.
+@param recursive (optional) Boolean flag indicating whether to search
+subdirectories recursively. If true, the search will include all subdirectories.
+The default value is `false`.
+ */
 CV_EXPORTS void glob(String pattern, std::vector<String>& result, bool recursive = false);
 
 /** @brief OpenCV will try to set the number of threads for subsequent parallel regions.
@@ -309,11 +340,12 @@ public:
     //! stops counting ticks.
     CV_WRAP void stop()
     {
-        int64 time = cv::getTickCount();
+        const int64 time = cv::getTickCount();
         if (startTime == 0)
             return;
         ++counter;
-        sumTime += (time - startTime);
+        lastTime = time - startTime;
+        sumTime += lastTime;
         startTime = 0;
     }
 
@@ -336,9 +368,33 @@ public:
     }
 
     //! returns passed time in seconds.
-    CV_WRAP double getTimeSec()   const
+    CV_WRAP double getTimeSec() const
     {
         return (double)getTimeTicks() / getTickFrequency();
+    }
+
+    //! returns counted ticks of the last iteration.
+    CV_WRAP int64 getLastTimeTicks() const
+    {
+        return lastTime;
+    }
+
+    //! returns passed time of the last iteration in microseconds.
+    CV_WRAP double getLastTimeMicro() const
+    {
+        return getLastTimeMilli()*1e3;
+    }
+
+    //! returns passed time of the last iteration in milliseconds.
+    CV_WRAP double getLastTimeMilli() const
+    {
+        return getLastTimeSec()*1e3;
+    }
+
+    //! returns passed time of the last iteration in seconds.
+    CV_WRAP double getLastTimeSec() const
+    {
+        return (double)getLastTimeTicks() / getTickFrequency();
     }
 
     //! returns internal counter value.
@@ -373,15 +429,17 @@ public:
     //! resets internal values.
     CV_WRAP void reset()
     {
-        startTime = 0;
-        sumTime = 0;
         counter = 0;
+        sumTime = 0;
+        startTime = 0;
+        lastTime = 0;
     }
 
 private:
     int64 counter;
     int64 sumTime;
     int64 startTime;
+    int64 lastTime;
 };
 
 /** @brief output operator

@@ -557,6 +557,10 @@ inline __m256i _lasx_256_castpd_si256(const __m256d& v)
     { return _Tpvec(__lasx_xvreplgr2vr_d(0)); }                                   \
     inline _Tpvec v256_setall_##suffix(_Tp v)                                     \
     { return _Tpvec(__lasx_xvreplgr2vr_##ssuffix((ctype_s)v)); }                  \
+    template <> inline _Tpvec v_setzero_()                                        \
+    { return v256_setzero_##suffix(); }                                           \
+    template <> inline _Tpvec v_setall_(_Tp v)                                    \
+    { return v256_setall_##suffix(v); }                                           \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint8x32,  suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_int8x32,   suffix, OPENCV_HAL_NOP)        \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint16x16, suffix, OPENCV_HAL_NOP)        \
@@ -588,7 +592,11 @@ inline __m256d _lasx_256_castsi256_pd(const __m256i &v)
     inline _Tpvec v256_setzero_##suffix()                                 \
     { return _Tpvec(__lasx_xvreplgr2vr_d(0)); }                           \
     inline _Tpvec v256_setall_##suffix(_Tp v)                             \
-    { return _Tpvec(_v256_setall_##zsuffix(v)); }                   \
+    { return _Tpvec(_v256_setall_##zsuffix(v)); }                         \
+    template <> inline _Tpvec v_setzero_()                                \
+    { return v256_setzero_##suffix(); }                                   \
+    template <> inline _Tpvec v_setall_(_Tp v)                            \
+    { return v256_setall_##suffix(v); }                                   \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint8x32,  suffix, cast)          \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_int8x32,   suffix, cast)          \
     OPENCV_HAL_IMPL_LASX_CAST(_Tpvec, v_uint16x16, suffix, cast)          \
@@ -898,7 +906,7 @@ inline v_uint16x16 v_mul_hi(const v_uint16x16& a, const v_uint16x16& b) { return
     { return _Tpuvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
     inline _Tpsvec v_shl(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(__lasx_xvsll_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
-    inline _Tpuvec V_shr(const _Tpuvec& a, int imm)                                               \
+    inline _Tpuvec v_shr(const _Tpuvec& a, int imm)                                               \
     { return _Tpuvec(__lasx_xvsrl_##suffix(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }           \
     inline _Tpsvec v_shr(const _Tpsvec& a, int imm)                                               \
     { return _Tpsvec(srai(a.val, __lasx_xvreplgr2vr_##suffix(imm))); }                            \
@@ -3004,6 +3012,20 @@ inline void v_pack_store(hfloat* ptr, const v_float32x8& a)
 //
 
 inline void v256_cleanup() {}
+
+#include "intrin_math.hpp"
+inline v_float32x8 v_exp(const v_float32x8& x) { return v_exp_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_log(const v_float32x8& x) { return v_log_default_32f<v_float32x8, v_int32x8>(x); }
+inline void v_sincos(const v_float32x8& x, v_float32x8& s, v_float32x8& c) { v_sincos_default_32f<v_float32x8, v_int32x8>(x, s, c); }
+inline v_float32x8 v_sin(const v_float32x8& x) { return v_sin_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_cos(const v_float32x8& x) { return v_cos_default_32f<v_float32x8, v_int32x8>(x); }
+inline v_float32x8 v_erf(const v_float32x8& x) { return v_erf_default_32f<v_float32x8, v_int32x8>(x); }
+
+inline v_float64x4 v_exp(const v_float64x4& x) { return v_exp_default_64f<v_float64x4, v_int64x4>(x); }
+inline v_float64x4 v_log(const v_float64x4& x) { return v_log_default_64f<v_float64x4, v_int64x4>(x); }
+inline void v_sincos(const v_float64x4& x, v_float64x4& s, v_float64x4& c) { v_sincos_default_64f<v_float64x4, v_int64x4>(x, s, c); }
+inline v_float64x4 v_sin(const v_float64x4& x) { return v_sin_default_64f<v_float64x4, v_int64x4>(x); }
+inline v_float64x4 v_cos(const v_float64x4& x) { return v_cos_default_64f<v_float64x4, v_int64x4>(x); }
 
 CV_CPU_OPTIMIZATION_HAL_NAMESPACE_END
 

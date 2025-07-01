@@ -11,6 +11,7 @@
 #include <memory>
 
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <opencv2/core/utils/logger.hpp>
 #include "opencv2/imgproc.hpp"
 #include "grfmt_avif.hpp"
 
@@ -67,8 +68,8 @@ avifResult CopyToMat(const avifImage *image, int channels, bool useRGB , Mat *ma
   return avifImageYUVToRGB(image, &rgba);
 }
 
-AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
-                                 int bit_depth) {
+AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_depth,
+                                 const std::vector<std::vector<uchar> >& metadata) {
   CV_Assert(img.depth() == CV_8U || img.depth() == CV_16U);
 
   const int width = img.cols;
@@ -111,6 +112,18 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
     result->yuvRange = AVIF_RANGE_FULL;
   }
 
+  if (!metadata.empty()) {
+    const std::vector<uchar>& metadata_exif = metadata[IMAGE_METADATA_EXIF];
+    const std::vector<uchar>& metadata_xmp = metadata[IMAGE_METADATA_XMP];
+    const std::vector<uchar>& metadata_iccp = metadata[IMAGE_METADATA_ICCP];
+    if (!metadata_exif.empty())
+      avifImageSetMetadataExif(result, (const uint8_t*)metadata_exif.data(), metadata_exif.size());
+    if (!metadata_exif.empty())
+      avifImageSetMetadataXMP(result, (const uint8_t*)metadata_xmp.data(), metadata_xmp.size());
+    if (!metadata_iccp.empty())
+      avifImageSetProfileICC(result, (const uint8_t*)metadata_iccp.data(), metadata_iccp.size());
+  }
+
   avifRGBImage rgba;
   avifRGBImageSetDefaults(&rgba, result);
   if (img.channels() == 3) {
@@ -119,7 +132,7 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless,
     CV_Assert(img.channels() == 4);
     rgba.format = AVIF_RGB_FORMAT_BGRA;
   }
-  rgba.rowBytes = img.step[0];
+  rgba.rowBytes = (uint32_t)img.step[0];
   rgba.depth = bit_depth;
   rgba.pixels =
       const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(img.data));
@@ -142,8 +155,7 @@ static constexpr size_t kAvifSignatureSize = 500;
 AvifDecoder::AvifDecoder() {
   m_buf_supported = true;
   channels_ = 0;
-  decoder_ = avifDecoderCreate();
-  decoder_->strictFlags = AVIF_STRICT_DISABLED;
+  decoder_ = nullptr;
 }
 
 AvifDecoder::~AvifDecoder() {
@@ -181,6 +193,11 @@ bool AvifDecoder::checkSignature(const String &signature) const {
 ImageDecoder AvifDecoder::newDecoder() const { return makePtr<AvifDecoder>(); }
 
 bool AvifDecoder::readHeader() {
+  if (decoder_)
+    return true;
+
+  decoder_ = avifDecoderCreate();
+  decoder_->strictFlags = AVIF_STRICT_DISABLED;
   if (!m_buf.empty()) {
     CV_Assert(m_buf.type() == CV_8UC1);
     CV_Assert(m_buf.rows == 1);
@@ -238,6 +255,8 @@ bool AvifDecoder::readData(Mat &img) {
     return false;
   }
 
+  m_animation.durations.push_back(decoder_->imageTiming.duration * 1000);
+
   if (decoder_->image->exif.size > 0) {
     m_exif.parseExif(decoder_->image->exif.data, decoder_->image->exif.size);
   }
@@ -280,6 +299,10 @@ bool AvifDecoder::nextPage() {
 AvifEncoder::AvifEncoder() {
   m_description = "AVIF files (*.avif)";
   m_buf_supported = true;
+  m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+  m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
+  m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
+  m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
   encoder_ = avifEncoderCreate();
 }
 
@@ -291,18 +314,8 @@ bool AvifEncoder::isFormatSupported(int depth) const {
   return (depth == CV_8U || depth == CV_16U);
 }
 
-bool AvifEncoder::write(const Mat &img, const std::vector<int> &params) {
-  std::vector<Mat> img_vec(1, img);
-  return writeToOutput(img_vec, params);
-}
-
-bool AvifEncoder::writemulti(const std::vector<Mat> &img_vec,
-                             const std::vector<int> &params) {
-  return writeToOutput(img_vec, params);
-}
-
-bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
-                                const std::vector<int> &params) {
+bool AvifEncoder::writeanimation(const Animation& animation,
+                                 const std::vector<int> &params) {
   int bit_depth = 8;
   int speed = AVIF_SPEED_FASTEST;
   for (size_t i = 0; i < params.size(); i += 2) {
@@ -336,12 +349,12 @@ bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
 #endif
   encoder_->speed = speed;
 
-  const avifAddImageFlags flag = (img_vec.size() == 1)
+  const avifAddImageFlags flag = (animation.frames.size() == 1)
                                      ? AVIF_ADD_IMAGE_FLAG_SINGLE
                                      : AVIF_ADD_IMAGE_FLAG_NONE;
   std::vector<AvifImageUniquePtr> images;
   std::vector<cv::Mat> imgs_scaled;
-  for (const cv::Mat &img : img_vec) {
+  for (const cv::Mat &img : animation.frames) {
     CV_CheckType(
         img.type(),
         (bit_depth == 8 && img.depth() == CV_8U) ||
@@ -352,15 +365,17 @@ bool AvifEncoder::writeToOutput(const std::vector<Mat> &img_vec,
              img.channels() == 1 || img.channels() == 3 || img.channels() == 4,
              "AVIF only supports 1, 3, 4 channels");
 
-    images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth));
+    images.emplace_back(ConvertToAvif(img, do_lossless, bit_depth, m_metadata));
   }
-  for (const AvifImageUniquePtr &image : images) {
+
+  for (size_t i = 0; i < images.size(); i++)
+  {
     OPENCV_AVIF_CHECK_STATUS(
-        avifEncoderAddImage(encoder_, image.get(), /*durationInTimescale=*/1,
-                            flag),
+        avifEncoderAddImage(encoder_, images[i].get(), animation.durations[i], flag),
         encoder_);
   }
 
+  encoder_->timescale = 1000;
   OPENCV_AVIF_CHECK_STATUS(avifEncoderFinish(encoder_, output.get()), encoder_);
 
   if (m_buf) {

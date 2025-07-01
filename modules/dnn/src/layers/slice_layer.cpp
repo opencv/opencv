@@ -228,7 +228,7 @@ public:
     {
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
-            return sliceRanges.size() == 1 && !hasSteps && neg_step_dims.empty();
+            return sliceRanges.size() == 1 && neg_step_dims.empty();
 #endif
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
@@ -651,7 +651,7 @@ public:
             auto op = std::make_shared<ge::op::SplitV>(name);
 
             // set attr
-            int n_split = static_cast<int>(sliceRanges[0].size());
+            int n_split = static_cast<int>(outputs.size());
             op->set_attr_num_split(n_split);
 
             // set inputs
@@ -765,19 +765,23 @@ public:
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
         CV_Assert(finalSliceRanges[0].size() == ieInpNode.get_shape().size());
 
-        std::vector<int64_t> offsets, dims;
+        std::vector<int64_t> offsets, dims, steps;
         for (int i = 0; i < finalSliceRanges[0].size(); ++i)
         {
             offsets.push_back(finalSliceRanges[0][i].start);
             dims.push_back(finalSliceRanges[0][i].end);
         }
+        if (hasSteps)
+            steps = std::vector<int64_t>(sliceSteps[0].begin(), sliceSteps[0].end());
+        else
+            steps = std::vector<int64_t>((int64_t)dims.size(), 1);
 
         auto lower_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
                                              ov::Shape{offsets.size()}, offsets.data());
         auto upper_bounds = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
                                              ov::Shape{dims.size()}, dims.data());
         auto strides = std::make_shared<ov::op::v0::Constant>(ov::element::i64,
-                                        ov::Shape{dims.size()}, std::vector<int64_t>((int64_t)dims.size(), 1));
+                                        ov::Shape{dims.size()}, steps);
 
         auto slice = std::make_shared<ov::op::v1::StridedSlice>(ieInpNode,
                                       lower_bounds, upper_bounds, strides, std::vector<int64_t>{}, std::vector<int64_t>{});

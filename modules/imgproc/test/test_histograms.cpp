@@ -1078,6 +1078,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             i == CV_COMP_BHATTACHARYYA ? "Bhattacharyya" :
             i == CV_COMP_KL_DIV ? "Kullback-Leibler" : "Unknown";
 
+        const auto thresh = FLT_EPSILON*14*MAX(fabs(v0),0.17);
         if( cvIsNaN(v) || cvIsInf(v) )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s) is invalid (=%g)\n",
@@ -1085,7 +1086,7 @@ int CV_CompareHistTest::validate_test_results( int /*test_case_idx*/ )
             code = cvtest::TS::FAIL_INVALID_OUTPUT;
             break;
         }
-        else if( fabs(v0 - v) > FLT_EPSILON*14*MAX(fabs(v0),0.1) )
+        else if( fabs(v0 - v) > thresh )
         {
             ts->printf( cvtest::TS::LOG, "The comparison result using the method #%d (%s)\n\tis inaccurate (=%g, should be =%g)\n",
                 i, method_name, v, v0 );
@@ -2094,6 +2095,21 @@ TEST_P(Imgproc_Equalize_Hist, accuracy)
 INSTANTIATE_TEST_CASE_P(Imgproc_Hist, Imgproc_Equalize_Hist, ::testing::Combine(
                         ::testing::Values(cv::Size(123, 321), cv::Size(256, 256), cv::Size(1024, 768)),
                         ::testing::Range(0, 10)));
+
+// See https://github.com/opencv/opencv/issues/24757
+TEST(Imgproc_Hist_Compare, intersect_regression_24757)
+{
+    cv::Mat src1 = cv::Mat::zeros(128,1, CV_32FC1);
+    cv::Mat src2 = cv::Mat(128,1, CV_32FC1, cv::Scalar(std::numeric_limits<double>::max()));
+
+                                             // Ideal result        Wrong result
+    src1.at<float>(32 * 0,0) = +1.0f;        // work = +1.0         +1.0
+    src1.at<float>(32 * 1,0) = +55555555.5f; // work = +55555556.5  +55555555.5
+    src1.at<float>(32 * 2,0) = -55555555.5f; // work = +1.0         0.0
+    src1.at<float>(32 * 3,0) = -1.0f;        // work = 0.0          -1.0
+
+    EXPECT_DOUBLE_EQ(compareHist(src1, src2, cv::HISTCMP_INTERSECT), 0.0);
+}
 
 }} // namespace
 /* End Of File */

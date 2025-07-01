@@ -225,32 +225,30 @@ These operations allow to reorder or recombine elements in one or multiple vecto
 Element-wise binary and unary operations.
 
 - Arithmetics:
-@ref v_add(const v_reg &a, const v_reg &b) "+",
-@ref v_sub(const v_reg &a, const v_reg &b) "-",
-@ref v_mul(const v_reg &a, const v_reg &b) "*",
-@ref v_div(const v_reg &a, const v_reg &b) "/",
+@ref v_add,
+@ref v_sub,
+@ref v_mul,
+@ref v_div,
 @ref v_mul_expand
 
 - Non-saturating arithmetics: @ref v_add_wrap, @ref v_sub_wrap
 
 - Bitwise shifts:
-@ref v_shl(const v_reg &a, int s) "<<",
-@ref v_shr(const v_reg &a, int s) ">>",
 @ref v_shl, @ref v_shr
 
 - Bitwise logic:
-@ref v_and(const v_reg &a, const v_reg &b) "&",
-@ref v_or(const v_reg &a, const v_reg &b) "|",
-@ref v_xor(const v_reg &a, const v_reg &b) "^",
-@ref v_not(const v_reg &a) "~"
+@ref v_and,
+@ref v_or,
+@ref v_xor,
+@ref v_not
 
 - Comparison:
-@ref v_gt(const v_reg &a, const v_reg &b) ">",
-@ref v_ge(const v_reg &a, const v_reg &b) ">=",
-@ref v_lt(const v_reg &a, const v_reg &b) "<",
-@ref v_le(const v_reg &a, const v_reg &b) "<=",
-@ref v_eq(const v_reg &a, const v_reg &b) "==",
-@ref v_ne(const v_reg &a, const v_reg &b) "!="
+@ref v_gt,
+@ref v_ge,
+@ref v_lt,
+@ref v_le,
+@ref v_eq,
+@ref v_ne
 
 - min/max: @ref v_min, @ref v_max
 
@@ -263,8 +261,8 @@ Most of these operations return only one value.
 
 ### Other math
 
-- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp,
-                            @ref v_erf
+- Some frequent operations: @ref v_sqrt, @ref v_invsqrt, @ref v_magnitude, @ref v_sqr_magnitude, @ref v_exp, @ref v_log,
+                            @ref v_erf, @ref v_sin, @ref v_cos
 - Absolute values: @ref v_abs, @ref v_absdiff, @ref v_absdiffs
 
 ### Conversions
@@ -366,6 +364,7 @@ Floating point:
 |broadcast_element  | x |   |
 |exp                | x | x |
 |log                | x | x |
+|sin, cos           | x | x |
 
  @{ */
 
@@ -745,10 +744,41 @@ OPENCV_HAL_IMPL_MATH_FUNC(v_log, std::log, _Tp)
  */
 OPENCV_HAL_IMPL_MATH_FUNC(v_erf, std::erf, _Tp)
 
-//! @cond IGNORED
+/**
+ * @brief Compute sine \f$ sin(x) \f$ and cosine \f$ cos(x) \f$ of elements at the same time
+ *
+ * Only for floating point types. Core implementation steps:
+ * 1. Input Normalization: Scale the periodicity from 2π to 4 and reduce the angle to the range \f$ [0, \frac{\pi}{4}] \f$ using periodicity and trigonometric identities.
+ * 2. Polynomial Approximation for \f$ sin(x) \f$ and \f$ cos(x) \f$:
+ *   - For float16 and float32, use a Taylor series with 4 terms for sine and 5 terms for cosine.
+ *   - For float64, use a Taylor series with 7 terms for sine and 8 terms for cosine.
+ * 3. Select Results: select and convert the final sine and cosine values for the original input angle.
+ *
+ * @note The precision of the calculation depends on the implementation and the data type of the input vector.
+ */
+template<typename _Tp, int n>
+inline void v_sincos(const v_reg<_Tp, n>& x, v_reg<_Tp, n>& s, v_reg<_Tp, n>& c)
+{
+    for( int i = 0; i < n; i++ )
+    {
+        s.s[i] = std::sin(x.s[i]);
+        c.s[i] = std::cos(x.s[i]);
+    }
+}
+
+/**
+ * @brief Sine \f$ sin(x) \f$ of elements
+ *
+ * Only for floating point types. Core implementation the same as @ref v_sincos.
+ */
 OPENCV_HAL_IMPL_MATH_FUNC(v_sin, std::sin, _Tp)
+
+/**
+ * @brief Cosine \f$ cos(x) \f$ of elements
+ *
+ * Only for floating point types. Core implementation the same as @ref v_sincos.
+ */
 OPENCV_HAL_IMPL_MATH_FUNC(v_cos, std::cos, _Tp)
-//! @endcond
 
 /** @brief Absolute value of elements
 
@@ -2801,7 +2831,8 @@ inline void v_transpose4x4( v_reg<_Tp, n>& a0, const v_reg<_Tp, n>& a1,
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_INIT_ZERO(_Tpvec, prefix, suffix) \
-inline _Tpvec prefix##_setzero_##suffix() { return _Tpvec::zero(); }
+inline _Tpvec prefix##_setzero_##suffix() { return _Tpvec::zero(); } \
+template <> inline _Tpvec v_setzero_() { return _Tpvec::zero(); }
 
 //! @name Init with zero
 //! @{
@@ -2847,7 +2878,8 @@ OPENCV_HAL_IMPL_C_INIT_ZERO(v_int64x8, v512, s64)
 //! @brief Helper macro
 //! @ingroup core_hal_intrin_impl
 #define OPENCV_HAL_IMPL_C_INIT_VAL(_Tpvec, _Tp, prefix, suffix) \
-inline _Tpvec prefix##_setall_##suffix(_Tp val) { return _Tpvec::all(val); }
+inline _Tpvec prefix##_setall_##suffix(_Tp val) { return _Tpvec::all(val); } \
+template <> inline _Tpvec v_setall_(_Tp val) { return _Tpvec::all(val); }
 
 //! @name Init with value
 //! @{

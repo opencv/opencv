@@ -746,7 +746,7 @@ public:
     virtual ~CvCapture_MSMF();
     bool configureHW(const cv::VideoCaptureParameters& params);
     virtual bool open(int, const cv::VideoCaptureParameters* params);
-    virtual bool open(const cv::String&, const cv::VideoCaptureParameters* params);
+    virtual bool open(const cv::String&, const Ptr<IStreamReader>&, const cv::VideoCaptureParameters* params);
     virtual void close();
     virtual double getProperty(int) const CV_OVERRIDE;
     virtual bool setProperty(int, double) CV_OVERRIDE;
@@ -758,7 +758,7 @@ public:
     bool retrieveVideoFrame(OutputArray);
     virtual bool retrieveFrame(int, cv::OutputArray) CV_OVERRIDE;
     virtual bool isOpened() const CV_OVERRIDE { return isOpen; }
-    virtual int getCaptureDomain() CV_OVERRIDE { return CV_CAP_MSMF; }
+    virtual int getCaptureDomain() CV_OVERRIDE { return CAP_MSMF; }
 protected:
     bool configureOutput();
     bool configureAudioOutput(MediaType newType);
@@ -789,6 +789,7 @@ protected:
     _ComPtr<ID3D11Device> D3DDev;
     _ComPtr<IMFDXGIDeviceManager> D3DMgr;
 #endif
+    _ComPtr<IMFByteStream> byteStream;
     _ComPtr<IMFSourceReader> videoFileSource;
     _ComPtr<IMFSourceReaderCallback> readCallback;  // non-NULL for "live" streams (camera capture)
     std::vector<DWORD> dwStreamIndices;
@@ -1034,7 +1035,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
                             }
                         }
                         // Reopen if needed
-                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL)) : true;
+                        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), nullptr, NULL)) : true;
                     }
                     D3DMgr.Release();
                 }
@@ -1050,7 +1051,7 @@ bool CvCapture_MSMF::configureHW(bool enable)
         if (D3DDev)
             D3DDev.Release();
         captureMode = MODE_SW;
-        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), NULL)) : true;
+        return reopen ? (prevcam >= 0 ? open(prevcam, NULL) : open(prevfile.c_str(), nullptr, NULL)) : true;
     }
 #else
     return !enable;
@@ -1249,10 +1250,10 @@ bool CvCapture_MSMF::open(int index, const cv::VideoCaptureParameters* params)
     return isOpen;
 }
 
-bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCaptureParameters* params)
+bool CvCapture_MSMF::open(const cv::String& _filename, const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters* params)
 {
     close();
-    if (_filename.empty())
+    if (_filename.empty() && !stream)
         return false;
 
     if (params)
@@ -1263,9 +1264,34 @@ bool CvCapture_MSMF::open(const cv::String& _filename, const cv::VideoCapturePar
     }
     // Set source reader parameters
     _ComPtr<IMFAttributes> attr = getDefaultSourceConfig();
-    cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
-    MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
-    if (SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource)))
+    bool succeeded = false;
+    if (!_filename.empty())
+    {
+        cv::AutoBuffer<wchar_t> unicodeFileName(_filename.length() + 1);
+        MultiByteToWideChar(CP_ACP, 0, _filename.c_str(), -1, unicodeFileName.data(), (int)_filename.length() + 1);
+        succeeded = SUCCEEDED(MFCreateSourceReaderFromURL(unicodeFileName.data(), attr.Get(), &videoFileSource));
+    }
+    else if (stream)
+    {
+        // TODO: implement read by chunks
+        // FIXIT: save stream in field
+        std::vector<char> data;
+        data.resize((size_t)stream->seek(0, SEEK_END));
+        stream->seek(0, SEEK_SET);
+        stream->read(data.data(), data.size());
+        IStream* s = SHCreateMemStream(reinterpret_cast<const BYTE*>(data.data()), static_cast<UINT32>(data.size()));
+        if (!s)
+            return false;
+
+        succeeded = SUCCEEDED(MFCreateMFByteStreamOnStream(s, &byteStream));
+        if (!succeeded)
+            return false;
+        if (!SUCCEEDED(MFStartup(MF_VERSION)))
+            return false;
+        succeeded = SUCCEEDED(MFCreateSourceReaderFromByteStream(byteStream.Get(), attr.Get(), &videoFileSource));
+    }
+
+    if (succeeded)
     {
         isOpen = true;
         usedVideoSampleTime = 0;
@@ -2080,131 +2106,131 @@ double CvCapture_MSMF::getProperty( int property_id ) const
     if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_MODE:
+        case CAP_PROP_MODE:
             return captureMode;
         case cv::CAP_PROP_HW_DEVICE:
             return hwDeviceIndex;
         case cv::CAP_PROP_HW_ACCELERATION:
             return static_cast<double>(va_type);
-        case CV_CAP_PROP_CONVERT_RGB:
+        case CAP_PROP_CONVERT_RGB:
                 return convertFormat ? 1 : 0;
-        case CV_CAP_PROP_SAR_NUM:
+        case CAP_PROP_SAR_NUM:
                 return captureVideoFormat.aspectRatioNum;
-        case CV_CAP_PROP_SAR_DEN:
+        case CAP_PROP_SAR_DEN:
                 return captureVideoFormat.aspectRatioDenom;
-        case CV_CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_WIDTH:
             return captureVideoFormat.width;
-        case CV_CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FRAME_HEIGHT:
             return captureVideoFormat.height;
-        case CV_CAP_PROP_FOURCC:
+        case CAP_PROP_FOURCC:
             return captureVideoFormat.subType.Data1;
-        case CV_CAP_PROP_FPS:
+        case CAP_PROP_FPS:
             return captureVideoFormat.getFramerate();
-        case CV_CAP_PROP_FRAME_COUNT:
+        case CAP_PROP_FRAME_COUNT:
             if (duration != 0)
                 return floor(((double)duration / 1e7)* captureVideoFormat.getFramerate() + 0.5);
             else
                 break;
-        case CV_CAP_PROP_POS_FRAMES:
+        case CAP_PROP_POS_FRAMES:
             return (double)nFrame;
-        case CV_CAP_PROP_POS_MSEC:
+        case CAP_PROP_POS_MSEC:
             return (double)usedVideoSampleTime / 1e4;
         case CAP_PROP_AUDIO_POS:
             return (double)audioSamplePos;
-        case CV_CAP_PROP_POS_AVI_RATIO:
+        case CAP_PROP_POS_AVI_RATIO:
             if (duration != 0)
                 return (double)usedVideoSampleTime / duration;
             else
                 break;
-        case CV_CAP_PROP_BRIGHTNESS:
+        case CAP_PROP_BRIGHTNESS:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Brightness, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_CONTRAST:
+        case CAP_PROP_CONTRAST:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Contrast, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_SATURATION:
+        case CAP_PROP_SATURATION:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Saturation, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_HUE:
+        case CAP_PROP_HUE:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Hue, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_GAIN:
+        case CAP_PROP_GAIN:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gain, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_SHARPNESS:
+        case CAP_PROP_SHARPNESS:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Sharpness, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_GAMMA:
+        case CAP_PROP_GAMMA:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_Gamma, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_BACKLIGHT:
+        case CAP_PROP_BACKLIGHT:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_MONOCHROME:
+        case CAP_PROP_MONOCHROME:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, cVal))
                 return cVal == 0 ? 1 : 0;
             break;
-        case CV_CAP_PROP_TEMPERATURE:
+        case CAP_PROP_TEMPERATURE:
             if (readComplexPropery<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_PAN:
+        case CAP_PROP_PAN:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Pan, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_TILT:
+        case CAP_PROP_TILT:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Tilt, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_ROLL:
+        case CAP_PROP_ROLL:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Roll, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_IRIS:
+        case CAP_PROP_IRIS:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Iris, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_EXPOSURE:
-        case CV_CAP_PROP_AUTO_EXPOSURE:
+        case CAP_PROP_EXPOSURE:
+        case CAP_PROP_AUTO_EXPOSURE:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Exposure, cVal))
             {
-                if (property_id == CV_CAP_PROP_EXPOSURE)
+                if (property_id == CAP_PROP_EXPOSURE)
                     return cVal;
                 else
                     return cVal == VideoProcAmp_Flags_Auto;
             }
             break;
-        case CV_CAP_PROP_ZOOM:
+        case CAP_PROP_ZOOM:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Zoom, cVal))
                 return cVal;
             break;
-        case CV_CAP_PROP_FOCUS:
-        case CV_CAP_PROP_AUTOFOCUS:
+        case CAP_PROP_FOCUS:
+        case CAP_PROP_AUTOFOCUS:
             if (readComplexPropery<IAMCameraControl>(CameraControl_Focus, cVal))
             {
-                if (property_id == CV_CAP_PROP_FOCUS)
+                if (property_id == CAP_PROP_FOCUS)
                     return cVal;
                 else
                     return cVal == VideoProcAmp_Flags_Auto;
             }
             break;
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-        case CV_CAP_PROP_WHITE_BALANCE_RED_V:
-        case CV_CAP_PROP_RECTIFICATION:
-        case CV_CAP_PROP_TRIGGER:
-        case CV_CAP_PROP_TRIGGER_DELAY:
-        case CV_CAP_PROP_GUID:
-        case CV_CAP_PROP_ISO_SPEED:
-        case CV_CAP_PROP_SETTINGS:
-        case CV_CAP_PROP_BUFFERSIZE:
+        case CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case CAP_PROP_WHITE_BALANCE_RED_V:
+        case CAP_PROP_RECTIFICATION:
+        case CAP_PROP_TRIGGER:
+        case CAP_PROP_TRIGGER_DELAY:
+        case CAP_PROP_GUID:
+        case CAP_PROP_ISO_SPEED:
+        case CAP_PROP_SETTINGS:
+        case CAP_PROP_BUFFERSIZE:
         case CAP_PROP_AUDIO_BASE_INDEX:
             return audioBaseIndex;
         case CAP_PROP_AUDIO_TOTAL_STREAMS:
@@ -2246,7 +2272,7 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
     if (isOpen)
         switch (property_id)
         {
-        case CV_CAP_PROP_MODE:
+        case CAP_PROP_MODE:
             switch ((MSMFCapture_Mode)((int)value))
             {
             case MODE_SW:
@@ -2256,107 +2282,107 @@ bool CvCapture_MSMF::setProperty( int property_id, double value )
             default:
                 return false;
             }
-        case CV_CAP_PROP_FOURCC:
+        case CAP_PROP_FOURCC:
             return configureVideoOutput(newFormat, (int)cvRound(value));
-        case CV_CAP_PROP_FORMAT:
+        case CAP_PROP_FORMAT:
             return configureVideoOutput(newFormat, (int)cvRound(value));
-        case CV_CAP_PROP_CONVERT_RGB:
+        case CAP_PROP_CONVERT_RGB:
             convertFormat = (value != 0);
             return configureVideoOutput(newFormat, outputVideoFormat);
-        case CV_CAP_PROP_SAR_NUM:
+        case CAP_PROP_SAR_NUM:
             if (value > 0)
             {
                 newFormat.aspectRatioNum = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_SAR_DEN:
+        case CAP_PROP_SAR_DEN:
             if (value > 0)
             {
                 newFormat.aspectRatioDenom = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_WIDTH:
             if (value >= 0)
             {
                 newFormat.width = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FRAME_HEIGHT:
             if (value >= 0)
             {
                 newFormat.height = (UINT32)cvRound(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FPS:
+        case CAP_PROP_FPS:
             if (value >= 0)
             {
                 newFormat.setFramerate(value);
                 return configureVideoOutput(newFormat, outputVideoFormat);
             }
             break;
-        case CV_CAP_PROP_FRAME_COUNT:
+        case CAP_PROP_FRAME_COUNT:
             break;
-        case CV_CAP_PROP_POS_AVI_RATIO:
+        case CAP_PROP_POS_AVI_RATIO:
             if (duration != 0)
                 return setTime(duration * value, true);
             break;
-        case CV_CAP_PROP_POS_FRAMES:
+        case CAP_PROP_POS_FRAMES:
             if (std::fabs(captureVideoFormat.getFramerate()) > 0)
                 return setTime((int)value);
             break;
-        case CV_CAP_PROP_POS_MSEC:
+        case CAP_PROP_POS_MSEC:
                 return setTime(value  * 1e4, false);
-        case CV_CAP_PROP_BRIGHTNESS:
+        case CAP_PROP_BRIGHTNESS:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Brightness, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_CONTRAST:
+        case CAP_PROP_CONTRAST:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Contrast, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_SATURATION:
+        case CAP_PROP_SATURATION:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Saturation, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_HUE:
+        case CAP_PROP_HUE:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Hue, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_GAIN:
+        case CAP_PROP_GAIN:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gain, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_SHARPNESS:
+        case CAP_PROP_SHARPNESS:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Sharpness, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_GAMMA:
+        case CAP_PROP_GAMMA:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_Gamma, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_BACKLIGHT:
+        case CAP_PROP_BACKLIGHT:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_BacklightCompensation, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_MONOCHROME:
+        case CAP_PROP_MONOCHROME:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_ColorEnable, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_TEMPERATURE:
+        case CAP_PROP_TEMPERATURE:
             return writeComplexProperty<IAMVideoProcAmp>(VideoProcAmp_WhiteBalance, value, VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_PAN:
+        case CAP_PROP_PAN:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Pan, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_TILT:
+        case CAP_PROP_TILT:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Tilt, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_ROLL:
+        case CAP_PROP_ROLL:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Roll, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_IRIS:
+        case CAP_PROP_IRIS:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Iris, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_EXPOSURE:
+        case CAP_PROP_EXPOSURE:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Exposure, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_AUTO_EXPOSURE:
+        case CAP_PROP_AUTO_EXPOSURE:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Exposure, value, value != 0 ? VideoProcAmp_Flags_Auto : VideoProcAmp_Flags_Manual);
-        case CV_CAP_PROP_ZOOM:
+        case CAP_PROP_ZOOM:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Zoom, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_FOCUS:
+        case CAP_PROP_FOCUS:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Focus, value, CameraControl_Flags_Manual);
-        case CV_CAP_PROP_AUTOFOCUS:
+        case CAP_PROP_AUTOFOCUS:
             return writeComplexProperty<IAMCameraControl>(CameraControl_Focus, value, value != 0 ? CameraControl_Flags_Auto : CameraControl_Flags_Manual);
-        case CV_CAP_PROP_WHITE_BALANCE_BLUE_U:
-        case CV_CAP_PROP_WHITE_BALANCE_RED_V:
-        case CV_CAP_PROP_RECTIFICATION:
-        case CV_CAP_PROP_TRIGGER:
-        case CV_CAP_PROP_TRIGGER_DELAY:
-        case CV_CAP_PROP_GUID:
-        case CV_CAP_PROP_ISO_SPEED:
-        case CV_CAP_PROP_SETTINGS:
-        case CV_CAP_PROP_BUFFERSIZE:
+        case CAP_PROP_WHITE_BALANCE_BLUE_U:
+        case CAP_PROP_WHITE_BALANCE_RED_V:
+        case CAP_PROP_RECTIFICATION:
+        case CAP_PROP_TRIGGER:
+        case CAP_PROP_TRIGGER_DELAY:
+        case CAP_PROP_GUID:
+        case CAP_PROP_ISO_SPEED:
+        case CAP_PROP_SETTINGS:
+        case CAP_PROP_BUFFERSIZE:
         default:
             break;
         }
@@ -2375,12 +2401,24 @@ cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF( int index, const cv::VideoC
     return cv::Ptr<cv::IVideoCapture>();
 }
 
-cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF (const cv::String& filename, const cv::VideoCaptureParameters& params)
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const cv::String& filename, const cv::VideoCaptureParameters& params)
 {
     cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
     if (capture)
     {
-        capture->open(filename, &params);
+        capture->open(filename, nullptr, &params);
+        if (capture->isOpened())
+            return capture;
+    }
+    return cv::Ptr<cv::IVideoCapture>();
+}
+
+cv::Ptr<cv::IVideoCapture> cv::cvCreateCapture_MSMF(const Ptr<IStreamReader>& stream, const cv::VideoCaptureParameters& params)
+{
+    cv::Ptr<CvCapture_MSMF> capture = cv::makePtr<CvCapture_MSMF>();
+    if (capture)
+    {
+        capture->open(std::string(), stream, &params);
         if (capture->isOpened())
             return capture;
     }
@@ -2707,7 +2745,7 @@ cv::Ptr<cv::IVideoWriter> cv::cvCreateVideoWriter_MSMF( const std::string& filen
 #include "plugin_api.hpp"
 #else
 #define CAPTURE_ABI_VERSION 1
-#define CAPTURE_API_VERSION 1
+#define CAPTURE_API_VERSION 2
 #include "plugin_capture_api.hpp"
 #define WRITER_ABI_VERSION 1
 #define WRITER_API_VERSION 1
@@ -2736,9 +2774,49 @@ CvResult CV_API_CALL cv_capture_open_with_params(
         cap = new CaptureT();
         bool res;
         if (filename)
-            res = cap->open(std::string(filename), &parameters);
+        {
+            res = cap->open(std::string(filename), nullptr, &parameters);
+        }
         else
             res = cap->open(camera_index, &parameters);
+        if (res)
+        {
+            *handle = (CvPluginCapture)cap;
+            return CV_ERROR_OK;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Exception is raised: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "MSMF: Unknown C++ exception is raised");
+    }
+    if (cap)
+        delete cap;
+    return CV_ERROR_FAIL;
+}
+
+static
+CvResult CV_API_CALL cv_capture_open_buffer(
+    void* opaque,
+    long long(*read)(void* opaque, char* buffer, long long size),
+    long long(*seek)(void* opaque, long long offset, int way),
+    int* params, unsigned n_params,
+    CV_OUT CvPluginCapture* handle
+)
+{
+    if (!handle)
+        return CV_ERROR_FAIL;
+
+    *handle = NULL;
+    CaptureT* cap = 0;
+    try
+    {
+        cv::VideoCaptureParameters parameters(params, n_params);
+        cap = new CaptureT();
+        bool res = cap->open(std::string(), makePtr<PluginStreamReader>(opaque, read, seek), &parameters);
         if (res)
         {
             *handle = (CvPluginCapture)cap;
@@ -3027,6 +3105,9 @@ static const OpenCV_VideoIO_Capture_Plugin_API capture_plugin_api =
     },
     {
         /*  8*/cv::cv_capture_open_with_params,
+    },
+    {
+        /*  9*/cv::cv_capture_open_buffer,
     }
 };
 

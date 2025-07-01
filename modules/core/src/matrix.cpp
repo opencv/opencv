@@ -315,7 +315,7 @@ void finalizeHdr(Mat& m)
         m.rows = m.cols = -1;
     if(m.u)
         m.datastart = m.data = m.u->data;
-    if( m.data )
+    if( m.data && d > 0 )
     {
         m.datalimit = m.datastart + m.size[0]*m.step[0];
         if( m.size[0] > 0 )
@@ -328,7 +328,7 @@ void finalizeHdr(Mat& m)
             m.dataend = m.datalimit;
     }
     else
-        m.dataend = m.datalimit = 0;
+        m.dataend = m.datalimit = m.data;
 }
 
 //======================================= Mat ======================================================
@@ -1257,6 +1257,16 @@ Mat Mat::reshape(int _cn, const std::vector<int>& _newshape) const
     }
 
     return reshape(_cn, (int)_newshape.size(), &_newshape[0]);
+}
+
+Mat Mat::reinterpret(int type) const
+{
+    type = CV_MAT_TYPE(type);
+    CV_Assert(CV_ELEM_SIZE(this->type()) == CV_ELEM_SIZE(type));
+    Mat m = *this;
+    m.flags = (m.flags & ~CV_MAT_TYPE_MASK) | type;
+    m.updateContinuityFlag();
+    return m;
 }
 
 Mat Mat::diag(const Mat& d)

@@ -16,7 +16,7 @@ endif()
 include(cmake/OpenCVMinDepVersions.cmake)
 
 if(CMAKE_SYSTEM_NAME MATCHES WindowsPhone OR CMAKE_SYSTEM_NAME MATCHES WindowsStore)
-  cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+  cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
   #Required to resolve linker error issues due to incompatibility with CMake v3.0+ policies.
   #CMake fails to find _fseeko() which leads to subsequent linker error.
   #See details here: http://www.cmake.org/Wiki/CMake/Policies
@@ -50,6 +50,10 @@ endif()
 
 if(POLICY CMP0056)
   cmake_policy(SET CMP0056 NEW)  # try_compile(): link flags
+endif()
+
+if(POLICY CMP0057)
+  cmake_policy(SET CMP0057 NEW)  # CMake 3.3: if(IN_LIST) support
 endif()
 
 if(POLICY CMP0066)
@@ -216,7 +220,7 @@ OCV_OPTION(WITH_1394 "Include IEEE1394 support" OFF
 OCV_OPTION(WITH_AVFOUNDATION "Use AVFoundation for Video I/O (iOS/visionOS/Mac)" ON
   VISIBLE_IF APPLE
   VERIFY HAVE_AVFOUNDATION)
-OCV_OPTION(WITH_AVIF "Enable AVIF support" OFF
+OCV_OPTION(WITH_AVIF "Enable AVIF support" ON
   VERIFY HAVE_AVIF)
 OCV_OPTION(WITH_CAP_IOS "Enable iOS video capture" ON
   VISIBLE_IF IOS
@@ -229,6 +233,8 @@ OCV_OPTION(WITH_NDSRVP "Use Andes RVP extension" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
 OCV_OPTION(WITH_HAL_RVV "Use HAL RVV optimizations" (NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF RISCV)
+OCV_OPTION(WITH_FASTCV "Use Qualcomm FastCV acceleration library for ARM platform" OFF
+  VISIBLE_IF ((ARM OR AARCH64) AND (ANDROID OR (UNIX AND NOT APPLE AND NOT IOS AND NOT XROS))))
 OCV_OPTION(WITH_CPUFEATURES "Use cpufeatures Android library" ON
   VISIBLE_IF ANDROID
   VERIFY HAVE_CPUFEATURES)
@@ -300,6 +306,9 @@ OCV_OPTION(WITH_OPENJPEG "Include JPEG2K support (OpenJPEG)" ON
 OCV_OPTION(WITH_JPEG "Include JPEG support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_JPEG)
+OCV_OPTION(WITH_JPEGXL "Include JPEG XL support" OFF
+  VISIBLE_IF TRUE
+  VERIFY HAVE_JPEGXL)
 OCV_OPTION(WITH_WEBP "Include WebP support" ON
   VISIBLE_IF NOT WINRT
   VERIFY HAVE_WEBP)
@@ -426,6 +435,9 @@ OCV_OPTION(WITH_ITT "Include Intel ITT support" ON
 OCV_OPTION(WITH_PROTOBUF "Enable libprotobuf" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_PROTOBUF)
+OCV_OPTION(WITH_IMGCODEC_GIF "Include GIF support" ON
+  VISIBLE_IF TRUE
+  VERIFY HAVE_IMGCODEC_GIF)
 OCV_OPTION(WITH_IMGCODEC_HDR "Include HDR support" ON
   VISIBLE_IF TRUE
   VERIFY HAVE_IMGCODEC_HDR)
@@ -532,6 +544,7 @@ OCV_OPTION(ENABLE_CONFIG_VERIFICATION "Fail build if actual configuration doesn'
 OCV_OPTION(OPENCV_ENABLE_MEMALIGN     "Enable posix_memalign or memalign usage" ON)
 OCV_OPTION(OPENCV_DISABLE_FILESYSTEM_SUPPORT "Disable filesystem support" OFF)
 OCV_OPTION(OPENCV_DISABLE_THREAD_SUPPORT "Build the library without multi-threaded code." OFF)
+OCV_OPTION(OPENCV_DISABLE_ENV_SUPPORT "Disable environment variables access (getenv)" (CMAKE_SYSTEM_NAME MATCHES "Windows(CE|Phone|Store)"))
 OCV_OPTION(OPENCV_SEMIHOSTING         "Build the library for semihosting target (Arm). See https://developer.arm.com/documentation/100863/latest." OFF)
 OCV_OPTION(ENABLE_CUDA_FIRST_CLASS_LANGUAGE "Enable CUDA as a first class language, if enabled dependant projects will need to use CMake >= 3.18" OFF
   VISIBLE_IF (WITH_CUDA AND NOT CMAKE_VERSION VERSION_LESS 3.18)
@@ -671,6 +684,7 @@ if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
 
     cmake_policy(SET CMP0092 NEW) # CMake 3.15+: leave warning flags out of default CMAKE_<LANG>_FLAGS flags.
     if(CMAKE_CUDA_COMPILER)
+      #  CMake 3.18+: if CMAKE_CUDA_ARCHITECTURES is empty enable_language(CUDA) sets it to the default architecture chosen by the compiler, to trigger the OpenCV custom CUDA architecture search an empty value needs to be respected see https://github.com/opencv/opencv/pull/25941.
       if(CMAKE_CUDA_ARCHITECTURES)
         set(USER_DEFINED_CMAKE_CUDA_ARCHITECTURES TRUE)
       endif()
@@ -707,6 +721,7 @@ if(UNIX OR MINGW)
   endif()
   include(CheckFunctionExists)
   include(CheckIncludeFile)
+  include(CheckLibraryExists)
   include(CheckSymbolExists)
 
   if(NOT APPLE)
@@ -718,7 +733,11 @@ if(UNIX OR MINGW)
     elseif(EMSCRIPTEN)
       # no need to link to system libs with emscripten
     elseif(QNXNTO)
-      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m regex)
+      set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} m)
+      CHECK_LIBRARY_EXISTS(regex regexec "" HAVE_REGEX_LIBRARY)
+      if(HAVE_REGEX_LIBRARY)
+        set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} regex)
+      endif()
     elseif(MINGW)
       set(OPENCV_LINKER_LIBS ${OPENCV_LINKER_LIBS} pthread)
     else()
@@ -742,6 +761,9 @@ if(UNIX OR MINGW)
     # TODO:
     # - std::aligned_alloc() C++17 / C11
   endif()
+
+  CHECK_SYMBOL_EXISTS(getauxval sys/auxv.h HAVE_GETAUXVAL)
+  CHECK_SYMBOL_EXISTS(elf_aux_info sys/auxv.h HAVE_ELF_AUX_INFO)
 elseif(WIN32)
   include(CheckIncludeFile)
   include(CheckSymbolExists)
@@ -751,6 +773,13 @@ elseif(WIN32)
     if(HAVE_MALLOC_H)
       CHECK_SYMBOL_EXISTS(_aligned_malloc malloc.h HAVE_WIN32_ALIGNED_MALLOC)
     endif()
+  endif()
+endif()
+
+if(DEFINED OPENCV_ALGO_HINT_DEFAULT)
+  if(NOT OPENCV_ALGO_HINT_DEFAULT STREQUAL "ALGO_HINT_ACCURATE" AND
+     NOT OPENCV_ALGO_HINT_DEFAULT STREQUAL "ALGO_HINT_APPROX")
+    message(FATAL_ERROR "OPENCV_ALGO_HINT_DEFAULT should be one of ALGO_HINT_ACCURATE or ALGO_HINT_APPROX.")
   endif()
 endif()
 
@@ -924,13 +953,28 @@ if(NOT DEFINED OpenCV_HAL)
   set(OpenCV_HAL "OpenCV_HAL")
 endif()
 
+if(HAVE_IPP)
+  ocv_debug_message(STATUS "Enable IPP acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";ipp;")
+    set(OpenCV_HAL "ipp;${OpenCV_HAL}")
+  endif()
+endif()
+
 if(HAVE_OPENVX)
+  ocv_debug_message(STATUS "Enable OpenVX acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";openvx;")
     set(OpenCV_HAL "openvx;${OpenCV_HAL}")
   endif()
 endif()
 
-if(WITH_KLEIDICV)
+if(HAVE_FASTCV)
+  ocv_debug_message(STATUS "Enable FastCV acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";fastcv;")
+    set(OpenCV_HAL "fastcv;${OpenCV_HAL}")
+  endif()
+endif()
+
+if(HAVE_KLEIDICV)
   ocv_debug_message(STATUS "Enable KleidiCV acceleration")
   if(NOT ";${OpenCV_HAL};" MATCHES ";kleidicv;")
     set(OpenCV_HAL "kleidicv;${OpenCV_HAL}")
@@ -952,43 +996,55 @@ if(WITH_NDSRVP)
 endif()
 
 if(WITH_HAL_RVV)
-  ocv_debug_message(STATUS "Enable HAL RVV acceleration")
-  if(NOT ";${OpenCV_HAL};" MATCHES ";halrvv;")
-    set(OpenCV_HAL "halrvv;${OpenCV_HAL}")
+  ocv_debug_message(STATUS "Enable RVV HAL acceleration")
+  if(NOT ";${OpenCV_HAL};" MATCHES ";rvvhal;")
+    set(OpenCV_HAL "rvvhal;${OpenCV_HAL}")
   endif()
 endif()
 
 foreach(hal ${OpenCV_HAL})
   if(hal STREQUAL "carotene")
     if(";${CPU_BASELINE_FINAL};" MATCHES ";NEON;")
-      add_subdirectory(3rdparty/carotene/hal)
+      add_subdirectory(hal/carotene/hal)
       ocv_hal_register(CAROTENE_HAL_LIBRARIES CAROTENE_HAL_HEADERS CAROTENE_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "carotene (ver ${CAROTENE_HAL_VERSION})")
     else()
       message(STATUS "Carotene: NEON is not available, disabling carotene...")
     endif()
+  elseif(hal STREQUAL "fastcv")
+    if((ARM OR AARCH64) AND (ANDROID OR (UNIX AND NOT APPLE AND NOT IOS AND NOT XROS)))
+      add_subdirectory(hal/fastcv)
+      ocv_hal_register(FASTCV_HAL_LIBRARIES FASTCV_HAL_HEADERS FASTCV_HAL_INCLUDE_DIRS)
+      list(APPEND OpenCV_USED_HAL "fastcv (ver ${FASTCV_HAL_VERSION})")
+    else()
+      message(STATUS "FastCV: fastcv is not available, disabling fastcv...")
+    endif()
   elseif(hal STREQUAL "kleidicv")
-    add_subdirectory(3rdparty/kleidicv)
+    add_subdirectory(hal/kleidicv)
     ocv_hal_register(KLEIDICV_HAL_LIBRARIES KLEIDICV_HAL_HEADERS KLEIDICV_HAL_INCLUDE_DIRS)
     list(APPEND OpenCV_USED_HAL "KleidiCV (ver ${KLEIDICV_HAL_VERSION})")
   elseif(hal STREQUAL "ndsrvp")
     if(CMAKE_C_FLAGS MATCHES "-mext-dsp" AND CMAKE_CXX_FLAGS MATCHES "-mext-dsp" AND NOT ";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
-      add_subdirectory(3rdparty/ndsrvp)
+      add_subdirectory(hal/ndsrvp)
       ocv_hal_register(NDSRVP_HAL_LIBRARIES NDSRVP_HAL_HEADERS NDSRVP_HAL_INCLUDE_DIRS)
       list(APPEND OpenCV_USED_HAL "ndsrvp (ver ${NDSRVP_HAL_VERSION})")
     else()
       message(STATUS "NDSRVP: Andes GNU Toolchain DSP extension is not enabled, disabling ndsrvp...")
     endif()
-  elseif(hal STREQUAL "halrvv")
+  elseif(hal STREQUAL "rvvhal")
     if(";${CPU_BASELINE_FINAL};" MATCHES ";RVV;")
-      add_subdirectory(3rdparty/hal_rvv/)
+      add_subdirectory(hal/riscv-rvv)
       ocv_hal_register(RVV_HAL_LIBRARIES RVV_HAL_HEADERS RVV_HAL_INCLUDE_DIRS)
-      list(APPEND OpenCV_USED_HAL "HAL RVV (ver ${RVV_HAL_VERSION})")
+      list(APPEND OpenCV_USED_HAL "RVV HAL (ver ${RVV_HAL_VERSION})")
     else()
-      message(STATUS "HAL RVV: RVV is not available, disabling halrvv...")
+      message(STATUS "RVV HAL: RVV is not available, disabling RVV HAL...")
     endif()
+  elseif(hal STREQUAL "ipp")
+    add_subdirectory(hal/ipp)
+    ocv_hal_register(IPP_HAL_LIBRARIES IPP_HAL_HEADERS IPP_HAL_INCLUDE_DIRS)
+    list(APPEND OpenCV_USED_HAL "ipp (ver ${IPP_HAL_VERSION})")
   elseif(hal STREQUAL "openvx")
-    add_subdirectory(3rdparty/openvx)
+    add_subdirectory(hal/openvx)
     ocv_hal_register(OPENVX_HAL_LIBRARIES OPENVX_HAL_HEADERS OPENVX_HAL_INCLUDE_DIRS)
     list(APPEND OpenCV_USED_HAL "openvx (ver ${OPENVX_HAL_VERSION})")
   else()
@@ -1508,6 +1564,10 @@ if(WITH_TIFF OR HAVE_TIFF)
   status("    TIFF:" TIFF_FOUND THEN "${TIFF_LIBRARY} (ver ${TIFF_VERSION} / ${TIFF_VERSION_STRING})" ELSE "build (ver ${TIFF_VERSION} - ${TIFF_VERSION_STRING})")
 endif()
 
+if(WITH_JPEGXL OR HAVE_JPEGXL)
+  status("    JPEG XL:" JPEGXL_FOUND THEN "${JPEGXL_LIBRARY} (ver ${JPEGXL_VERSION})" ELSE "NO")
+endif()
+
 if(HAVE_OPENJPEG)
   status("    JPEG 2000:" OpenJPEG_FOUND
       THEN "OpenJPEG (ver ${OPENJPEG_VERSION})"
@@ -1533,6 +1593,10 @@ endif()
 
 if(WITH_GDCM OR HAVE_GDCM)
   status("    GDCM:" HAVE_GDCM THEN "YES (${GDCM_VERSION})" ELSE "NO")
+endif()
+
+if(WITH_IMGCODEC_GIF OR DEFINED HAVE_IMGCODEC_GIF)
+  status("    GIF:" HAVE_IMGCODEC_GIF THEN "YES" ELSE "NO")
 endif()
 
 if(WITH_IMGCODEC_HDR OR DEFINED HAVE_IMGCODEC_HDR)
@@ -1679,7 +1743,7 @@ endif()
 
 if(CV_TRACE OR OPENCV_TRACE)
   ocv_build_features_string(trace_status EXCLUSIVE
-    IF HAVE_ITT THEN "with Intel ITT"
+    IF HAVE_ITT THEN "with Intel ITT(${ITTNOTIFY_VERSION})"
     ELSE "built-in")
   status("")
   status("  Trace: " OPENCV_TRACE THEN "YES (${trace_status})" ELSE NO)
@@ -1787,6 +1851,9 @@ endif()
 
 if(WITH_OPENVX OR HAVE_OPENVX)
   status("    OpenVX:"     HAVE_OPENVX      THEN "YES (${OPENVX_LIBRARIES})" ELSE "NO")
+endif()
+if(WITH_FASTCV OR HAVE_FASTCV)
+  status("    FastCV:"     HAVE_FASTCV      THEN "YES (${FASTCV_LIBRARY})" ELSE "NO")
 endif()
 
 status("    Custom HAL:" OpenCV_USED_HAL  THEN "YES (${OpenCV_USED_HAL})" ELSE "NO")

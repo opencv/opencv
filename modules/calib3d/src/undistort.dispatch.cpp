@@ -40,11 +40,10 @@
 //
 //M*/
 
+#include "opencv2/core/core_c.h"
 #include "opencv2/core/types.hpp"
 #include "precomp.hpp"
 #include "distortion_model.hpp"
-
-#include "calib3d_c_api.h"
 
 #include "undistort.simd.hpp"
 #include "undistort.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
@@ -334,54 +333,6 @@ void undistort( InputArray _src, OutputArray _dst, InputArray _cameraMatrix,
 
 }
 
-CV_IMPL void
-cvUndistort2( const CvArr* srcarr, CvArr* dstarr, const CvMat* Aarr, const CvMat* dist_coeffs, const CvMat* newAarr )
-{
-    cv::Mat src = cv::cvarrToMat(srcarr), dst = cv::cvarrToMat(dstarr), dst0 = dst;
-    cv::Mat A = cv::cvarrToMat(Aarr), distCoeffs = cv::cvarrToMat(dist_coeffs), newA;
-    if( newAarr )
-        newA = cv::cvarrToMat(newAarr);
-
-    CV_Assert( src.size() == dst.size() && src.type() == dst.type() );
-    cv::undistort( src, dst, A, distCoeffs, newA );
-}
-
-
-CV_IMPL void cvInitUndistortMap( const CvMat* Aarr, const CvMat* dist_coeffs,
-                                 CvArr* mapxarr, CvArr* mapyarr )
-{
-    cv::Mat A = cv::cvarrToMat(Aarr), distCoeffs = cv::cvarrToMat(dist_coeffs);
-    cv::Mat mapx = cv::cvarrToMat(mapxarr), mapy, mapx0 = mapx, mapy0;
-
-    if( mapyarr )
-        mapy0 = mapy = cv::cvarrToMat(mapyarr);
-
-    cv::initUndistortRectifyMap( A, distCoeffs, cv::Mat(), A,
-                                 mapx.size(), mapx.type(), mapx, mapy );
-    CV_Assert( mapx0.data == mapx.data && mapy0.data == mapy.data );
-}
-
-void
-cvInitUndistortRectifyMap( const CvMat* Aarr, const CvMat* dist_coeffs,
-    const CvMat *Rarr, const CvMat* ArArr, CvArr* mapxarr, CvArr* mapyarr )
-{
-    cv::Mat A = cv::cvarrToMat(Aarr), distCoeffs, R, Ar;
-    cv::Mat mapx = cv::cvarrToMat(mapxarr), mapy, mapx0 = mapx, mapy0;
-
-    if( mapyarr )
-        mapy0 = mapy = cv::cvarrToMat(mapyarr);
-
-    if( dist_coeffs )
-        distCoeffs = cv::cvarrToMat(dist_coeffs);
-    if( Rarr )
-        R = cv::cvarrToMat(Rarr);
-    if( ArArr )
-        Ar = cv::cvarrToMat(ArArr);
-
-    cv::initUndistortRectifyMap( A, distCoeffs, R, Ar, mapx.size(), mapx.type(), mapx, mapy );
-    CV_Assert( mapx0.data == mapx.data && mapy0.data == mapy.data );
-}
-
 static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
                    const CvMat* _distCoeffs,
                    const CvMat* matR, const CvMat* matP, cv::TermCriteria criteria)
@@ -537,11 +488,14 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
             }
         }
 
-        double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
-        double yy = RR[1][0]*x + RR[1][1]*y + RR[1][2];
-        double ww = 1./(RR[2][0]*x + RR[2][1]*y + RR[2][2]);
-        x = xx*ww;
-        y = yy*ww;
+        if( matR || matP )
+        {
+            double xx = RR[0][0]*x + RR[0][1]*y + RR[0][2];
+            double yy = RR[1][0]*x + RR[1][1]*y + RR[1][2];
+            double ww = 1./(RR[2][0]*x + RR[2][1]*y + RR[2][2]);
+            x = xx*ww;
+            y = yy*ww;
+        }
 
         if( dtype == CV_32FC2 )
         {
@@ -554,14 +508,6 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
             dstd[i*dstep].y = y;
         }
     }
-}
-
-void cvUndistortPoints(const CvMat* _src, CvMat* _dst, const CvMat* _cameraMatrix,
-                       const CvMat* _distCoeffs,
-                       const CvMat* matR, const CvMat* matP)
-{
-    cvUndistortPointsInternal(_src, _dst, _cameraMatrix, _distCoeffs, matR, matP,
-                              cv::TermCriteria(cv::TermCriteria::COUNT, 5, 0.01));
 }
 
 namespace cv {
