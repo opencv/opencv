@@ -313,6 +313,10 @@ TEST_P(ReadExif_Sanity, Check)
     EXPECT_EQ(metadata_types.size(), metadata.size());
     const std::vector<uchar>& exif = metadata[IMAGE_METADATA_EXIF];
     EXPECT_EQ(exif.size(), exif_size);
+    ASSERT_GE(exif.size(), 26u); // minimal exif should take at least 26 bytes
+                                 // (the header + IDF0 with at least 1 entry).
+    EXPECT_TRUE(exif[0] == 'I' || exif[0] == 'M');
+    EXPECT_EQ(exif[0], exif[1]);
     EXPECT_EQ(locateString(exif, pattern), ploc);
 }
 
