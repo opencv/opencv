@@ -52,14 +52,14 @@ class Polynomial2D:
     coeffs_x: np.ndarray
     coeffs_y: np.ndarray
     degree: int
-    mean_x: float
-    mean_y: float
-    std_x: float
-    std_y: float
+    height: int
+    width: int
 
     def delta(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        x_n = (x - self.mean_x) / self.std_x
-        y_n = (y - self.mean_y) / self.std_y
+        mean_x, mean_y = self.width * 0.5, self.height * 0.5
+        inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
+        x_n = (x - mean_x) * inv_std_x
+        y_n = (y - mean_y) * inv_std_y
         terms = _monomial_terms(x_n, y_n, self.degree)
         dx = terms @ self.coeffs_x
         dy = terms @ self.coeffs_y
@@ -76,14 +76,6 @@ class CalibrationResult:
     degree: int
     poly_red: Polynomial2D
     poly_blue: Polynomial2D
-    mean_x_red: float
-    std_x_red: float  
-    mean_y_red: float
-    std_y_red: float
-    mean_x_blue: float
-    std_x_blue: float
-    mean_y_blue: float
-    std_y_blue: float
     image_width: int
     image_height: int
     rms_red: Optional[float] = None
@@ -99,18 +91,10 @@ class CalibrationResult:
             "red_channel": {
                 "coeffs_x": self.poly_red.coeffs_x.tolist(),
                 "coeffs_y": self.poly_red.coeffs_y.tolist(),
-                "mean_x": float(self.mean_x_red),
-                "std_x": float(self.std_x_red),
-                "mean_y": float(self.mean_y_red),
-                "std_y": float(self.std_y_red)
             },
             "blue_channel": {
                 "coeffs_x": self.poly_blue.coeffs_x.tolist(),
                 "coeffs_y": self.poly_blue.coeffs_y.tolist(),
-                "mean_x": float(self.mean_x_blue),
-                "std_x": float(self.std_x_blue),
-                "mean_y": float(self.mean_y_blue),
-                "std_y": float(self.std_y_blue)
             }
         }
         if self.rms_red is not None:
@@ -136,27 +120,21 @@ class CalibrationResult:
             np.asarray(red_data["coeffs_x"]),
             np.asarray(red_data["coeffs_y"]),
             deg,
-            red_data["mean_x"], red_data["mean_y"], red_data["std_x"], red_data["std_y"]
+            resolution["height"],
+            resolution["width"]
         )
         poly_b = Polynomial2D(
             np.asarray(blue_data["coeffs_x"]),
             np.asarray(blue_data["coeffs_y"]),
             deg,
-            blue_data["mean_x"], blue_data["mean_y"], blue_data["std_x"], blue_data["std_y"]
+            resolution["height"],
+            resolution["width"]
         )
         
         return cls(
             degree=deg,
             poly_red=poly_r,
             poly_blue=poly_b,
-            mean_x_red=red_data["mean_x"],
-            std_x_red=red_data["std_x"],
-            mean_y_red=red_data["mean_y"],
-            std_y_red=red_data["std_y"],
-            mean_x_blue=blue_data["mean_x"],
-            std_x_blue=blue_data["std_x"],
-            mean_y_blue=blue_data["mean_y"],
-            std_y_blue=blue_data["std_y"],
             image_width=resolution["width"],
             image_height=resolution["height"],
             rms_red=red_data.get("rms"),
@@ -268,11 +246,15 @@ def _fit_channel(
     y: np.ndarray,
     disp: np.ndarray,
     degree: int,
+    height: int,
+    width: int,
     method: str = "L-BFGS-B",
 ) -> Tuple[np.ndarray, np.ndarray, float]:
-    mean_x, std_x, mean_y, std_y = x.mean(), x.std(), y.mean(), y.std()
-    x = (x - x.mean()) / x.std()
-    y = (y - y.mean()) / y.std()
+    mean_x, mean_y = width * 0.5, height * 0.5
+    inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
+    x = (x - mean_x) * inv_std_x
+    y = (y - mean_y) * inv_std_y
+
     terms = _monomial_terms(x, y, degree)
     m = terms.shape[1]
 
@@ -294,7 +276,7 @@ def _fit_channel(
     coeffs_x = res.x[:m]
     coeffs_y = res.x[m:]
     rms = math.sqrt(res.fun / disp.size)
-    return coeffs_x, coeffs_y, rms, mean_x, mean_y, std_x, std_y
+    return coeffs_x, coeffs_y, rms
 
 
 def fit_polynomials(
@@ -305,12 +287,14 @@ def fit_polynomials(
     y_b: np.ndarray,
     disp_b: np.ndarray,
     degree: int,
+    height: int,
+    width: int
 ) -> Tuple[Polynomial2D, Polynomial2D, float, float]:
-    crx, cry, rms_r, mean_x_red, mean_y_red, std_x_red, std_y_red = _fit_channel(x_r, y_r, disp_r, degree)
-    cbx, cby, rms_b, mean_x_blue, mean_y_blue, std_x_blue, std_y_blue = _fit_channel(x_b, y_b, disp_b, degree)
-    poly_r = Polynomial2D(crx, cry, 11, mean_x_red, mean_y_red, std_x_red, std_y_red)
-    poly_b = Polynomial2D(cbx, cby, 11, mean_x_blue, mean_y_blue, std_x_blue, std_y_blue)
-    return poly_r, poly_b, rms_r, rms_b, (mean_x_red, mean_y_red, std_x_red, std_y_red), (mean_x_blue, mean_y_blue, std_x_blue, std_y_blue)
+    crx, cry, rms_r = _fit_channel(x_r, y_r, disp_r, degree, height, width)
+    cbx, cby, rms_b = _fit_channel(x_b, y_b, disp_b, degree, height, width)
+    poly_r = Polynomial2D(crx, cry, 11, height, width)
+    poly_b = Polynomial2D(cbx, cby, 11, height, width)
+    return poly_r, poly_b, rms_r, rms_b
 
 
 def _calibrate_from_image(
@@ -327,7 +311,7 @@ def _calibrate_from_image(
     xr, yr, disp_r = _pair_keypoints(pts_g, pts_r)
     xb, yb, disp_b = _pair_keypoints(pts_g, pts_b)
 
-    poly_r, poly_b, rms_r, rms_b, stats_r, stats_b = fit_polynomials(
+    poly_r, poly_b, rms_r, rms_b = fit_polynomials(
         xr,
         yr,
         disp_r,
@@ -335,20 +319,14 @@ def _calibrate_from_image(
         yb,
         disp_b,
         degree,
+        h,
+        w
     )
 
     return CalibrationResult(
         degree=degree,
         poly_red=poly_r,
         poly_blue=poly_b,
-        mean_x_red=stats_r[0],
-        mean_y_red=stats_r[1],
-        std_x_red=stats_r[2],
-        std_y_red=stats_r[3],
-        mean_x_blue=stats_b[0],
-        mean_y_blue=stats_b[1],
-        std_x_blue=stats_b[2],
-        std_y_blue=stats_b[3],
         image_width=w,
         image_height=h,
         rms_red=rms_r,
