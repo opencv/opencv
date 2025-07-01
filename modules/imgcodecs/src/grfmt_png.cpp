@@ -858,6 +858,8 @@ PngEncoder::PngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png;*.apng)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX+1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -988,6 +990,16 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     buffer.allocate(height);
                     for( y = 0; y < height; y++ )
                         buffer[y] = img.data + y*img.step;
+
+                    if (!m_metadata.empty()) {
+                        std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                        if (!exif.empty()) {
+                            writeChunk(f, "eXIf", exif.data(), (uint32_t)exif.size());
+                        }
+                        // [TODO] add xmp and icc. They need special handling,
+                        // see https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_PNG_files and
+                        // https://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html.
+                    }
 
                     png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );
