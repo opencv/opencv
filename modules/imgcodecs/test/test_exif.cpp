@@ -281,6 +281,59 @@ TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
+TEST(Imgcodecs_Png, ReadWriteWithExif)
+{
+    static const uchar exif_data[] = {
+        'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
+        0, 1, 1, 0, 4, 0, 0, 0, 1, 0, 0, 2, 208, 1, 2, 0, 3, 0, 0, 0, 1,
+        0, 8, 0, 0, 1, 18, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 1, 14, 0, 2, 0, 0,
+        0, '!', 0, 0, 0, 176, 1, '1', 0, 2, 0, 0, 0, 7, 0, 0, 0, 210, 1, 26,
+        0, 5, 0, 0, 0, 1, 0, 0, 0, 218, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
+        226, 1, '(', 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 135, 'i', 0, 4, 0, 0, 0,
+        1, 0, 0, 0, 134, 0, 0, 0, 0, 0, 3, 144, 0, 0, 7, 0, 0, 0, 4, '0', '2',
+        '2', '1', 160, 2, 0, 4, 0, 0, 0, 1, 0, 0, 5, 0, 160, 3, 0, 4, 0, 0,
+        0, 1, 0, 0, 2, 208, 0, 0, 0, 0, 'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-',
+        'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ', 'm',
+        'e', 't', 'a', 'd', 'a', 't', 'a', 0, 0, 'O', 'p', 'e', 'n', 'C', 'V', 0, 0,
+        0, 0, 0, 'H', 0, 0, 0, 1, 0, 0, 0, 'H', 0, 0, 0, 1
+    };
+
+    int png_compression = 3;
+    int imgtype = CV_MAKETYPE(CV_8U, 3);
+    const string outputname = cv::tempfile(".png");
+    Mat img = makeCirclesImage(Size(1280, 720), imgtype, 8);
+
+    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
+    std::vector<std::vector<uchar> > metadata(1);
+    metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
+
+    std::vector<int> write_params = {
+        IMWRITE_PNG_COMPRESSION, png_compression
+    };
+
+    imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
+    std::vector<uchar> compressed;
+    imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);
+
+    std::vector<int> read_metadata_types, read_metadata_types2;
+    std::vector<std::vector<uchar> > read_metadata, read_metadata2;
+    Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, IMREAD_UNCHANGED);
+    Mat img3 = imdecodeWithMetadata(compressed, read_metadata_types2, read_metadata2, IMREAD_UNCHANGED);
+    EXPECT_EQ(img2.cols, img.cols);
+    EXPECT_EQ(img2.rows, img.rows);
+    EXPECT_EQ(img2.type(), imgtype);
+    EXPECT_EQ(read_metadata_types, read_metadata_types2);
+    EXPECT_GE(read_metadata_types.size(), 1u);
+    EXPECT_EQ(read_metadata, read_metadata2);
+    EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
+    EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
+    EXPECT_EQ(read_metadata[0], metadata[0]);
+    EXPECT_EQ(cv::norm(img2, img3, NORM_INF), 0.);
+    double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
+    EXPECT_EQ(mse, 0); // png is lossless
+    remove(outputname.c_str());
+}
+
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
 {
     size_t plen = pattern.size();
