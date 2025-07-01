@@ -19,7 +19,6 @@
 namespace cv {
 namespace gimpl {
 namespace ov {
-using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
 
 struct OVCompiled {
     ::ov::CompiledModel compiled_model;
@@ -51,14 +50,19 @@ class GOVExecutable final: public GIslandExecutable
 
     // To manage additional execution options
     Options m_options;
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
+    using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
     cv::util::optional<WorkloadTypeRef> m_workload;
     int m_workloadId;
     void setWorkLoadType(const ::ov::WorkloadType &type);
+#endif
 public:
     GOVExecutable(const ade::Graph                   &graph,
                   const cv::GCompileArgs             &compileArgs,
                   const std::vector<ade::NodeHandle> &nodes);
+#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
     ~GOVExecutable();
+#endif
     virtual inline bool canReshape() const override { return false; }
     virtual inline void reshape(ade::Graph&, const GCompileArgs&) override {
         GAPI_Error("InternalError"); // Not implemented yet
