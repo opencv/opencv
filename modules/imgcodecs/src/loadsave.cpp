@@ -444,7 +444,7 @@ static void readMetadata(ImageDecoder& decoder,
     if (matvector) {
         matvector->resize(nmetadata);
         for (size_t m = 0; m < nmetadata; m++)
-            matvector->at(m) = src_metadata[m];
+            src_metadata[m].copyTo(matvector->at(m));
     } else {
         vecvector->resize(nmetadata);
         for (size_t m = 0; m < nmetadata; m++) {

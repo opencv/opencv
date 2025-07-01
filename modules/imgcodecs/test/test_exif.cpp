@@ -281,10 +281,10 @@ TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
-static size_t locateString(const std::vector<uchar>& exif, const std::string& pattern)
+static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
 {
-    size_t plen = pattern.size(), size = exif.size();
-    for (size_t i = 0; i + plen <= size; i++) {
+    size_t plen = pattern.size();
+    for (size_t i = 0; i + plen <= exif_size; i++) {
         if (exif[i] == pattern[0] && memcmp(&exif[i], pattern.c_str(), plen) == 0)
             return i;
     }
@@ -305,19 +305,20 @@ TEST_P(ReadExif_Sanity, Check)
     filename = root + filename;
 
     std::vector<int> metadata_types;
-    std::vector<std::vector<uchar> > metadata;
+    std::vector<Mat> metadata;
     Mat img = imreadWithMetadata(filename, metadata_types, metadata, 1);
 
     EXPECT_EQ(img.type(), CV_8UC3);
     ASSERT_GE(metadata_types.size(), 1u);
     EXPECT_EQ(metadata_types.size(), metadata.size());
-    const std::vector<uchar>& exif = metadata[IMAGE_METADATA_EXIF];
-    EXPECT_EQ(exif.size(), exif_size);
-    ASSERT_GE(exif.size(), 26u); // minimal exif should take at least 26 bytes
+    const Mat& exif = metadata[IMAGE_METADATA_EXIF];
+    EXPECT_EQ(exif.type(), CV_8U);
+    EXPECT_EQ(exif.total(), exif_size);
+    ASSERT_GE(exif_size, 26u); // minimal exif should take at least 26 bytes
                                  // (the header + IDF0 with at least 1 entry).
-    EXPECT_TRUE(exif[0] == 'I' || exif[0] == 'M');
-    EXPECT_EQ(exif[0], exif[1]);
-    EXPECT_EQ(locateString(exif, pattern), ploc);
+    EXPECT_TRUE(exif.data[0] == 'I' || exif.data[0] == 'M');
+    EXPECT_EQ(exif.data[0], exif.data[1]);
+    EXPECT_EQ(locateString(exif.data, exif_size, pattern), ploc);
 }
 
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
