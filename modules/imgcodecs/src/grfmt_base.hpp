@@ -265,6 +265,7 @@ public:
 
 protected:
     std::vector<std::vector<unsigned char> > m_metadata; // see IMAGE_METADATA_...
+    std::vector<bool> m_support_metadata;
     String m_description;    ///< Description of the encoder (e.g., format name, capabilities).
     String m_filename;       ///< Destination file name for encoded data.
     std::vector<uchar>* m_buf; ///< Pointer to the buffer for encoded data if using memory-based destination.

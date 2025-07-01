@@ -299,6 +299,10 @@ bool AvifDecoder::nextPage() {
 AvifEncoder::AvifEncoder() {
   m_description = "AVIF files (*.avif)";
   m_buf_supported = true;
+  m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+  m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
+  m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
+  m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
   encoder_ = avifEncoderCreate();
 }
 

@@ -455,6 +455,13 @@ static void readMetadata(ImageDecoder& decoder,
     }
 }
 
+static const char* metadataTypeToString(ImageMetadataType type)
+{
+    return type == IMAGE_METADATA_EXIF ? "Exif" :
+           type == IMAGE_METADATA_XMP ? "XMP" :
+           type == IMAGE_METADATA_ICCP ? "ICC Profile" : "???";
+}
+
 static void addMetadata(ImageEncoder& encoder,
                         const std::vector<int>& metadata_types,
                         InputArrayOfArrays metadata)
@@ -462,7 +469,14 @@ static void addMetadata(ImageEncoder& encoder,
     size_t nmetadata_chunks = metadata_types.size();
     for (size_t i = 0; i < nmetadata_chunks; i++) {
         ImageMetadataType metadata_type = (ImageMetadataType)metadata_types[i];
-        encoder->addMetadata(metadata_type, metadata.getMat((int)i));
+        bool ok = encoder->addMetadata(metadata_type, metadata.getMat((int)i));
+        if (!ok) {
+            std::string desc = encoder->getDescription();
+            CV_LOG_WARNING(NULL, "Imgcodecs: metadata of type '"
+                           << metadataTypeToString(metadata_type)
+                           << "' is not supported when encoding '"
+                           << desc << "'");
+        }
     }
 }
 

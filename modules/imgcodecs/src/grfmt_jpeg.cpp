@@ -600,6 +600,8 @@ JpegEncoder::JpegEncoder()
 {
     m_description = "JPEG files (*.jpeg;*.jpg;*.jpe)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
 }
 
 

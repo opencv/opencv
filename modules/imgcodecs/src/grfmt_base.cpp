@@ -164,12 +164,15 @@ bool BaseImageEncoder::addMetadata(ImageMetadataType type, const Mat& metadata)
     CV_Assert_N(type >= IMAGE_METADATA_EXIF, type <= IMAGE_METADATA_MAX);
     if (metadata.empty())
         return true;
+    size_t itype = (size_t)type;
+    if (itype >= m_support_metadata.size() || !m_support_metadata[itype])
+        return false;
     if (m_metadata.empty())
-        m_metadata.resize((int)IMAGE_METADATA_MAX+1);
+        m_metadata.resize((size_t)IMAGE_METADATA_MAX+1);
     CV_Assert(metadata.elemSize() == 1);
     CV_Assert(metadata.isContinuous());
     const unsigned char* data = metadata.ptr<unsigned char>();
-    m_metadata[(int)type].assign(data, data + metadata.total());
+    m_metadata[itype].assign(data, data + metadata.total());
     return true;
 }
 
