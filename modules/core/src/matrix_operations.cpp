@@ -341,6 +341,258 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
+struct OpAdd_8U
+{
+    using stype = uchar;
+    using v_stype = uchar;
+    v_stype load(const stype *ptr) { return *ptr; }
+    void store(int *ptr, const int &val) { *ptr = val; }
+    void store(float *ptr, const int &val) { *ptr = (float)val; }
+    void store(double *ptr, const int &val) { *ptr = (double)val; }
+    int operator()(const v_stype &a, const v_stype &b) const { return (int)a + (int)b; }
+};
+
+struct OpAdd_16U
+{
+    using stype = ushort;
+    using v_stype = ushort;
+    v_stype load(const stype *ptr) { return *ptr; }
+    void store(float *ptr, const float &val) { *ptr = val; }
+    void store(double *ptr, const float &val) { *ptr = (double)val; }
+    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b; }
+};
+
+struct OpAdd_16S
+{
+    using stype = short;
+    using v_stype = short;
+    v_stype load(const stype *ptr) { return *ptr; }
+    void store(float *ptr, const float &val) { *ptr = val; }
+    void store(double *ptr, const float &val) { *ptr = (double)val; }
+    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b; }
+};
+
+struct OpAdd_32F
+{
+    using stype = float;
+    using v_stype = float;
+    v_stype load(const stype *ptr) { return *ptr; }
+    void store(float *ptr, const float &val) { *ptr = val; }
+    void store(double *ptr, const float &val) { *ptr = (double)val; }
+    float operator()(const v_stype &a, const v_stype &b) const { return a + b; }
+};
+
+struct OpAdd_64F
+{
+    using stype = double;
+    using v_stype = double;
+    v_stype load(const stype *ptr) { return *ptr; }
+    void store(double *ptr, const float &val) { *ptr = val; }
+    double operator()(const v_stype &a, const v_stype &b) const { return a + b; }
+};
+
+struct OpAddSqr_8U : public OpAdd_8U
+{
+    int operator()(const v_stype &a, const v_stype &b) const { return (int)a + (int)b * (int)b; }
+};
+
+struct OpAddSqr_16U : public OpAdd_16U
+{
+    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b * (float)b; }
+};
+
+struct OpAddSqr_16S : public OpAdd_16S
+{
+    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b * (float)b; }
+};
+
+struct OpAddSqr_32F : public OpAdd_32F
+{
+    float operator()(const v_stype &a, const v_stype &b) const { return a + b * b; }
+};
+
+struct OpAddSqr_64F : public OpAdd_64F
+{
+    double operator()(const v_stype &a, const v_stype &b) const { return a + b * b; }
+};
+
+#define CV_REDUCE_OP_DEF_MAX(Tp, vTp, Tpname) \
+struct OpMax_##Tpname \
+{ \
+    using stype = Tp; \
+    using v_stype = vTp; \
+    v_stype load(const stype *ptr) { return *ptr; } \
+    void store(stype *ptr, const v_stype &val) { *ptr = val; } \
+    v_stype operator()(const v_stype &a, const v_stype &b) const { return std::max(a, b); } \
+};
+CV_REDUCE_OP_DEF_MAX(uchar,  uchar,  8U);
+CV_REDUCE_OP_DEF_MAX(ushort, ushort, 16U);
+CV_REDUCE_OP_DEF_MAX(short,  short,  16S);
+CV_REDUCE_OP_DEF_MAX(float,  float,  32F);
+CV_REDUCE_OP_DEF_MAX(double, double, 64F);
+
+#define CV_REDUCE_OP_DEF_MIN(Tp, vTp, Tpname) \
+struct OpMin_##Tpname \
+{ \
+    using stype = Tp; \
+    using v_stype = vTp; \
+    v_stype load(const stype *ptr) { return *ptr; } \
+    void store(stype *ptr, const v_stype &val) { *ptr = val; } \
+    v_stype operator()(const v_stype &a, const v_stype &b) const { return std::max(a, b); } \
+};
+CV_REDUCE_OP_DEF_MIN(uchar,  uchar,  8U);
+CV_REDUCE_OP_DEF_MIN(ushort, ushort, 16U);
+CV_REDUCE_OP_DEF_MIN(short,  short,  16S);
+CV_REDUCE_OP_DEF_MIN(float,  float,  32F);
+CV_REDUCE_OP_DEF_MIN(double, double, 64F);
+
+#if (CV_SIMD || CV_SIMD_SCALABLE) && 0
+
+struct VecOpAdd_8U
+{
+    using stype = uchar;
+    using v_stype = v_uint8;
+    v_stype load(const stype *ptr) { return vx_load(ptr); }
+    void store(int *ptr, const v_int32 &val) { vx_store(ptr, val); }
+    void store(float *ptr, const v_int32 &val) { vx_store(ptr, v_cvt_f32(val)); }
+    void store(double *ptr, const v_int32 &val)
+    {
+        v_float64 val0 = v_cvt_f64(val);
+        v_float64 val1 = v_cvt_f64_high(val);
+        vx_store(ptr, val0);
+        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
+    }
+    v_int32 operator()(const v_stype &a, const v_stype &b) const
+    {
+        v_uint16 a0, a1;
+        v_expand(a, a0, a1);
+        v_int16 sa = v_add(v_reinterpret_as_s16(a0), v_reinterpret_as_s16(a1));
+
+        v_uint16 b0, b1;
+        v_expand(b, b0, b1);
+        v_int16 sb = v_add(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(b1));
+
+        v_int16 s = v_add(sa, sb);
+
+        v_int32 s0, s1;
+        v_expand(s, s0, s1);
+        return v_add(s0, s1);
+    }
+};
+
+struct VecOpAdd_16U
+{
+    using stype = ushort;
+    using v_stype = v_uint16;
+    v_stype load(const stype *ptr) { return vx_load(ptr); }
+    void store(float *ptr, const v_float32 &val) { vx_store(ptr, val); }
+    void store(double *ptr, const v_float32 &val)
+    {
+        v_float64 val0 = v_cvt_f64(val);
+        v_float64 val1 = v_cvt_f64_high(val);
+        vx_store(ptr, val0);
+        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
+    }
+    v_float32 operator()(const v_stype &a, const v_stype &b) const
+    {
+        v_uint32 a0, a1;
+        v_expand(a, a0, a1);
+        v_int32 sa = v_add(v_reinterpret_as_s32(a0), v_reinterpret_as_s32(a1));
+
+        v_uint32 b0, b1;
+        v_expand(b, b0, b1);
+        v_int32 sb = v_add(v_reinterpret_as_s32(b0), v_reinterpret_as_s32(b1));
+
+        v_int32 s = v_add(sa, sb);
+        return v_cvt_f32(s);
+    }
+};
+
+struct VecOpAdd_16S
+{
+    using stype = short;
+    using v_stype = v_int16;
+    v_stype load(const stype *ptr) { return vx_load(ptr); }
+    void store(float *ptr, const v_float32 &val) { vx_store(ptr, val); }
+    void store(double *ptr, const v_float32 &val)
+    {
+        v_float64 val0 = v_cvt_f64(val);
+        v_float64 val1 = v_cvt_f64_high(val);
+        vx_store(ptr, val0);
+        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
+    }
+    v_float32 operator()(const v_stype &a, const v_stype &b) const
+    {
+        v_int32 a0, a1;
+        v_expand(a, a0, a1);
+        v_int32 sa = v_add(a0, a1);
+
+        v_int32 b0, b1;
+        v_expand(b, b0, b1);
+        v_int32 sb = v_add(b0, b1);
+
+        v_int32 s = v_add(sa, sb);
+        return v_cvt_f32(s);
+    }
+};
+
+struct VecOpAdd_32F
+{
+    using stype = float;
+    using v_stype = v_float32;
+    v_stype load(const stype *ptr) { return vx_load(ptr); }
+    void store(float *ptr, const v_float32 &val) { vx_store(ptr, val); }
+    void store(double *ptr, const v_float32 &val)
+    {
+        v_float64 val0 = v_cvt_f64(val);
+        v_float64 val1 = v_cvt_f64_high(val);
+        vx_store(ptr, val0);
+        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
+    }
+    v_float32 operator()(const v_stype &a, const v_stype &b) const { return v_add(a, b); }
+};
+
+#else
+
+using VecOpAdd_8U  = OpAdd_8U;
+using VecOpAdd_16U = OpAdd_16U;
+using VecOpAdd_16S = OpAdd_16S;
+using VecOpAdd_32F = OpAdd_32F;
+using VecOpAddSqr_8U  = OpAddSqr_8U;
+using VecOpAddSqr_16U = OpAddSqr_16U;
+using VecOpAddSqr_16S = OpAddSqr_16S;
+using VecOpAddSqr_32F = OpAddSqr_32F;
+using VecOpMax_8U  = OpMax_8U;
+using VecOpMax_16U = OpMax_16U;
+using VecOpMax_16S = OpMax_16S;
+using VecOpMax_32F = OpMax_32F;
+using VecOpMin_8U  = OpMin_8U;
+using VecOpMin_16U = OpMin_16U;
+using VecOpMin_16S = OpMin_16S;
+using VecOpMin_32F = OpMin_32F;
+
+#endif
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F) && 0
+
+struct VecOpAdd_64F
+{
+    using stype = double;
+    using v_stype = v_float64;
+    v_stype load(const stype *ptr) { return vx_load(ptr); }
+    void store(double *ptr, const v_float64 &val) { vx_store(ptr, val); }
+    v_float64 operator()(const v_stype &a, const v_stype &b) const { return v_add(a, b); }
+};
+
+#else
+
+using VecOpAdd_64F = OpAdd_64F;
+using VecOpAddSqr_64F = OpAddSqr_64F;
+using VecOpMax_64F = OpMax_64F;
+using VecOpMin_64F = OpMin_64F;
+
+#endif
+
 template<typename T, typename ST, typename WT, class Op, class OpInit>
 class ReduceR_Invoker : public ParallelLoopBody
 {
@@ -352,38 +604,17 @@ public:
   void operator()(const Range& range) const CV_OVERRIDE
   {
     const T* src = srcmat.ptr<T>();
-    const size_t srcstep = srcmat.step/sizeof(src[0]);
-    WT* buf = buffer.data();
-    ST* dst = dstmat.ptr<ST>();
-    int i = 0;
-
-    for( i = range.start ; i < range.end; i++ )
-        buf[i] = opInit(src[i]);
-
+    const size_t srcstep = srcmat.step / sizeof(T);
+    ST *dst = dstmat.ptr<ST>();
     int height = srcmat.size().height;
-    for( ; --height; )
-    {
-        src += srcstep;
-        i = range.start;
-        #if CV_ENABLE_UNROLLED
-        for(; i <= range.end - 4; i += 4 )
-        {
-            WT s0, s1;
-            s0 = op(buf[i], (WT)src[i]);
-            s1 = op(buf[i+1], (WT)src[i+1]);
-            buf[i] = s0; buf[i+1] = s1;
 
-            s0 = op(buf[i+2], (WT)src[i+2]);
-            s1 = op(buf[i+3], (WT)src[i+3]);
-            buf[i+2] = s0; buf[i+3] = s1;
+    for (int i = range.start; i < range.end; i++) {
+        WT buf = opInit(src[i]);
+        for (int h = 1; h < height; h++) {
+            buf = op(buf, (WT)src[h*srcstep+i]);
         }
-        #endif
-        for( ; i < range.end; i++ )
-            buf[i] = op(buf[i], (WT)src[i]);
+        dst[i] = (ST)buf;
     }
-
-    for( i = range.start ; i < range.end; i++ )
-        dst[i] = (ST)buf[i];
   }
 private:
   const Mat& srcmat;
@@ -415,29 +646,17 @@ public:
   }
   void operator()(const Range& range) const CV_OVERRIDE
   {
-    const int cn = srcmat.channels();
-    const int width = srcmat.size().width*cn;
-    AutoBuffer<WT> cumul(cn);
-    for( int y = range.start; y < range.end; y++ )
-    {
-        const T* src = srcmat.ptr<T>(y);
-        ST* dst = dstmat.ptr<ST>(y);
-        if( width == cn )
-        {
-          for( int k = 0; k < cn; k++ )
-              dst[k] = (ST)opInit(src[k]);
-        }
-        else
-        {
-            for(int k = 0; k < cn ; ++k )
-              cumul[k] = opInit(src[k]);
-            for(int k = cn ; k < width ; k += cn )
-            {
-                for (int c = 0 ; c < cn ; ++c)
-                  cumul[c] = op(cumul[c], src[k+c]);
+    int channels = srcmat.channels();
+    int width = srcmat.cols;
+    for (int cn = 0; cn < channels; cn++) {
+        for (int h = range.start; h < range.end; h++) {
+            const T *src = srcmat.ptr<T>(h);
+            ST *dst = dstmat.ptr<ST>(h);
+            WT buf = opInit(src[cn]);
+            for (int w = 1; w < width; w++) {
+                buf = op(buf, src[w*channels+cn]);
             }
-            for(int k = 0 ; k < cn ; ++k )
-              dst[k] = (ST)cumul[k];
+            dst[cn] = (ST)buf;
         }
     }
   }
