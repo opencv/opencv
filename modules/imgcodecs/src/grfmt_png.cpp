@@ -994,11 +994,21 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     if (!m_metadata.empty()) {
                         std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
                         if (!exif.empty()) {
-                            writeChunk(f, "eXIf", exif.data(), (uint32_t)exif.size());
+                            png_set_eXIf_1(png_ptr, info_ptr, static_cast<png_uint_32>(exif.size()), exif.data());
                         }
                         // [TODO] add xmp and icc. They need special handling,
                         // see https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_PNG_files and
                         // https://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html.
+                        std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        if (!xmp.empty()) {
+                            png_text text_chunk;
+                            text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
+                            text_chunk.key = const_cast<char*>("XML:com.adobe.xmp");
+                            text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                            text_chunk.text_length = static_cast<png_size_t>(xmp.size());
+
+                            png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+                        }
                     }
 
                     png_write_image( png_ptr, buffer.data() );
