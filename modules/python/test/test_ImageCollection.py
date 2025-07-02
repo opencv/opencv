@@ -21,10 +21,11 @@ class imread_test(NewOpenCVTests):
         self.assertTrue(success)
 
         ic = cv.ImageCollection(path, cv.IMREAD_UNCHANGED)
-        img = ic.at(0)
-        self.assertEqual(cv.norm(animation.frames[0], img, cv.NORM_INF), 0.0)
-        img = ic.at(1)
-        self.assertEqual(cv.norm(animation.frames[1], img, cv.NORM_INF), 0.0)
+        self.assertEqual(2, ic.size32())
+        self.assertEqual(128, ic.width())
+        self.assertEqual(64, height())
+        self.assertEqual(cv.norm(animation.frames[0], ic.at(0), cv.NORM_INF), 0.0)
+        self.assertEqual(cv.norm(animation.frames[1], ic.at(1), cv.NORM_INF), 0.0)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

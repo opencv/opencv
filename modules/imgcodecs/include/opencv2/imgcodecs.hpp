@@ -714,7 +714,8 @@ public:
     CV_WRAP ImageCollection();
     CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
     CV_WRAP void init(const String& img, int flags);
-    CV_WRAP size_t size() const;
+    size_t size() const;
+    CV_WRAP int size32() const { return (int)size(); }
     CV_WRAP int width() const;
     CV_WRAP int height() const;
     CV_WRAP const Mat& at(int index);
