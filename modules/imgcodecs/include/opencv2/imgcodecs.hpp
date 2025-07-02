@@ -718,6 +718,7 @@ public:
     CV_WRAP int size32() const { return (int)size(); }
     CV_WRAP int width() const;
     CV_WRAP int height() const;
+    CV_WRAP Mat getMetadata(ImageMetadataType type) const;
     CV_WRAP const Mat& at(int index);
     const Mat& operator[](int index);
     CV_WRAP void releaseCache(int index);
