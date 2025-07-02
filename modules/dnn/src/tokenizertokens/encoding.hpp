@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include <map>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -64,10 +65,6 @@ public:
     CV_PROP bool isSpecialToken(int token) const;
     CV_PROP int nVocab() const { return maxTokenValue_ + 1; }
 
-
-
-
-
     // Get the highest token ID present.
     CV_PROP Rank maxTokenValue() const;
 
@@ -84,7 +81,7 @@ public:
     }
 
     // 2) encodeUTF8 now takes a wstring, converts it, then emits ints
-    std::vector<int> encodeUTF8(const std::string &uf8) {
+    std::vector<int> encodeUTF8(const std::string &utf8) {
         std::vector<int> out;
         out.reserve(utf8.size());
         for (unsigned char c : utf8) {
@@ -92,6 +89,10 @@ public:
         }
         return out;
     }
+
+    /* --------------------- Load/Save ----------------------------------*/
+    void save();
+    void load();
 
 private:
     std::string name_;

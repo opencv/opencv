@@ -7,13 +7,15 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <regex> // Not enough functionality as the Rust/Python version
+#include <regex> // Not enough functionality as the Rust/Python version -> change to icu 
 #include <set>
 #include <stdexcept>
 #include <thread>
 #include <unordered_set>
 #include <algorithm>
-
+// ICU regex to work with unicode UTF-8
+#include <unicode/unistr.h>
+#include <unicode/regex.h>
 
 #ifndef __OPENCV_DNN_SRC_TOKENIZERTOKENS_CORE_BPE_HPP__
 #define __OPENCV_DNN_SRC_TOKENIZERTOKENS_CORE_BPE_HPP__
@@ -32,11 +34,13 @@ struct ByteVecHash {
     }
 };
 
-using ByteVecRankMap = std::unordered_map<ByteVec, Rank>;
+using ByteVecRankMap = std::unordered_map<ByteVec, Rank, ByteVecHash>;
 
 // hash the OS thread ID, mod by a fixed size, and pick a pre-compiled regex 
 // to avoid cross-thread contention
 std::size_t hashCurrentThread();
+
+static constexpr std::size_t MAX_NUM_THREADS = 128;
 
 // scan adjacent byte-pairs to find the lowest-rank merge, splice them out, 
 // update neighboring ranks, and repeat until no mergeable pair remains
@@ -92,21 +96,6 @@ public:
         return CoreBPE(std::move(encMap), std::move(specMap), pat);
     }
 
-    static const std::string& patternString() {
-        static const std::string pat =
-            R"('([sdmt]|ll|ve|re)| ?[A-Za-z]+| ?\d+| ?[^\sA-Za-z0-9]+|\s+)";
-        return pat;
-    }
-
-    static const std::regex& mainRegex() {
-        static const std::regex re(
-            patternString(),
-            std::regex_constants::ECMAScript 
-        | std::regex_constants::optimize
-        );
-        return re;
-    }
-
     // Encoding 
     std::vector<Rank> encodeOrdinary(const std::string& text) const;
 
@@ -126,36 +115,38 @@ public:
 
 private:
 
-    const std::regex& threadLocalRegex() const;
-    const std::regex& threadLocalSpecialRegex() const;
+    const icu::RegexPattern* threadLocalRegex() const;
+    const icu::RegexPattern* threadLocalSpecialRegex() const;
 
-    static std::string buildSpecialPattern(
-        const std::unordered_map<std::string,Rank>& special
-    ) {
-        static const std::regex esc(R"([.^$|()\[\]{}*+?\\])");
-
+    static std::string makeSpecialPattern(const std::unordered_map<std::string, Rank>& special) {
+        static const std::string meta = R"([.^$|()\[\]{}*+?\\])";
         std::string pat;
-        for (auto it = special.begin(); it != special.end(); ++it) {
-            if (it != special.begin()) 
-                pat += '|';
-            pat += std::regex_replace(
-                it->first,
-                esc,
-                R"(\\$&)"          
-            );
+        pat.reserve(special.size() * 10);
+        bool first = true;
+        for (auto const& kv : special) {
+            if (!first) pat.push_back('|');
+            first = false;
+            // Escape each character in the token 
+            for (char c : kv.first) {
+                if (meta.find(c) != std::string::npos) 
+                    pat.push_back('\\');
+                pat.push_back(c);
+            }
         }
         return pat;
     }
 
-    static std::regex makeSpecialRegex(
-        const std::unordered_map<std::string,Rank>& special
-    ) {
-        return std::regex(
-            buildSpecialPattern(special),
-            std::regex_constants::ECMAScript 
-        | std::regex_constants::optimize
-        );
+    static std::unique_ptr<icu::RegexPattern> compilePattern(const std::string& patStr) {
+        UErrorCode status = U_ZERO_ERROR;
+        auto uPat = icu::UnicodeString::fromUTF8(patStr);
+        auto pattern = std::unique_ptr<icu::RegexPattern>(
+            icu::RegexPattern::compile(uPat,0,status));
+        if (U_FAILURE(status)) {
+            throw std::runtime_error("ICU RegexPattern compile error: " + std::string(u_errorName(status)));
+        }
+        return pattern;
     }
+    
 
     std::pair<std::vector<Rank>, std::size_t> increaseLastPieceTokenLen(std::vector<Rank> token,
                                                                         std::size_t lastPieceTokenLen) const;
@@ -166,12 +157,13 @@ private:
     std::unordered_map<Rank, ByteVec>  decoder_;          
     std::unordered_map<Rank, ByteVec>  specialDecoder_;   
 
-    std::vector<std::regex> regexTLS_; 
-    std::vector<std::regex> specialRegexTLS_;
+    // std::vector<std::regex> regexTLS_; 
+    // std::vector<std::regex> specialRegexTLS_;
+
+    mutable std::vector<std::shared_ptr<icu::RegexPattern>> regexTLS_;
+    mutable std::vector<std::shared_ptr<icu::RegexPattern>> specialRegexTLS_;
 
     std::vector<ByteVec> sortedTokenBytes_;
-
-    static constexpr std::size_t MAX_NUM_THREADS = 128;
 };
 
 
@@ -283,8 +275,6 @@ inline std::pair<std::optional<char>, std::size_t> decodeUnicode(const std::vect
     // Ran out of input bytes before completing a sequence 
     return {std::nullopt, i};
 }
-
-
 
 
 /// UTF-8 decode a single Unicode scalar value from the end of a slice.
