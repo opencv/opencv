@@ -51,6 +51,7 @@
 namespace cv {
 namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
+
 //! @addtogroup dnn
 //! @{
 

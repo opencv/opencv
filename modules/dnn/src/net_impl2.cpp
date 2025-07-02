@@ -3,7 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "precomp.hpp"
-
+#include<iostream>
 #include "net_impl.hpp"
 
 namespace cv {
@@ -239,7 +239,7 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     int idx = (int)args.size();
 
     if (!name.empty()) {
-        CV_Assert(argnames.find(name) == argnames.end());
+        // CV_Assert(argnames.find(name) == argnames.end());
         argnames.insert(std::make_pair(name, (int64_t)idx));
     }
 
@@ -595,7 +595,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     if (graphofs_it == graphofs.end()) {
         CV_Error_(Error::StsObjectNotFound, ("graph '%s' does not belong to the model", graph->name().c_str()));
     }
-
     std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
     const std::vector<Ptr<Layer> >& prog = graph->prog();
     size_t i, nops = prog.size();
@@ -611,7 +610,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
     size_t graph_ofs = (size_t)graphofs_it->second;
     CV_Assert(graph_ofs + nops <= totalLayers);
-
     if (inputs_.empty()) {
         // inputs are already set; it's only possible to do with the main graph
         CV_Assert(isMainGraph);
@@ -660,7 +658,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 traceArg(strm_, "Input", i, inp, false);
             }
         }
-
         bool dynamicOutShapes = layer->dynamicOutputShapes();
         if (!dynamicOutShapes) {
             allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
@@ -677,9 +674,19 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         timestamp = getTickCount();
 
         // [TODO] handle If/Loop/...
-        CV_Assert(!layer->subgraphs());
-        if (finalizeLayers)
-            layer->finalize(inpMats, outMats);
+        Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
+        if (iflayer){ //i.e if cast is successful then
+            Mat inp0 = inpMats[0];
+            CV_Assert(inp0.dims == 0);
+            bool flag = inp0.at<bool>(0);
+            // forwardGraph(iflayer->then_else(flag));
+            auto subgraph = iflayer->then_else(flag);
+            forwardGraph(subgraph, inputs_, outputs_, mainGraph);
+        } else {
+            CV_Assert(!layer->subgraphs());
+            if (finalizeLayers)
+                layer->finalize(inpMats, outMats);
+        }
         layer->forward(inpMats, outMats, tempMats);
         CV_Assert(outMats.size() == noutputs);
 

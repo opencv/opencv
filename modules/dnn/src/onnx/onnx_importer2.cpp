@@ -172,6 +172,7 @@ protected:
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantOfShape      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConv                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -468,7 +469,18 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if (attribute_proto.has_g())
             {
-                CV_Error(Error::StsNotImplemented, format("DNN/ONNX/Attribute[%s]: 'Graph' is not supported", attribute_name.c_str()));
+                // CV_Error(Error::StsNotImplemented, format("DNN/ONNX/Attribute[%s]: 'Graph' is not supported", attribute_name.c_str()));
+
+                //                 // ---- NEW: support sub-graph attributes ----
+                const opencv_onnx::GraphProto& subGProto = attribute_proto.g();
+                // parse it into an OpenCV DNN Graph (not the main graph)
+                Ptr<Graph> subGraph = parseGraph(
+                    const_cast<opencv_onnx::GraphProto*>(&subGProto),
+                    /*isMain*/ false
+                );
+                // store the parsed sub-graph in LayerParams
+                lp.set<Ptr<Graph>>(attribute_name, subGraph);
+
             }
             else if (attribute_proto.graphs_size() > 0)
             {
@@ -907,6 +919,7 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
                              int max_inputs)
 {
     Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
+
     if (!layer) {
         rememberMissingOp(layerParams.type);
         return;
@@ -916,6 +929,7 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
     layer->inputs.resize(actual_inputs);
     layer->outputs = node_outputs;
     layer->netimpl = netimpl;
+
     CV_Assert(netimpl->dump_indent == 3);
     curr_prog.push_back(layer);
 }
@@ -1485,6 +1499,61 @@ void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::Nod
 {
     CV_CheckEQ(node_proto.output_size(), 1, "");
     layerParams.type = "Concat2";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseIf(LayerParams& layerParams,
+                            const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Assert(node_proto.input_size() >= 1);
+    layerParams.type = "If";
+
+    // 1 strip off the cond input
+    int condIdx = node_inputs[0].idx;
+    std::vector<Arg> savedInputs(node_inputs.begin() + 1, node_inputs.end());
+
+    // 2 find then/else attributes
+    const opencv_onnx::AttributeProto* then_attr = nullptr;
+    const opencv_onnx::AttributeProto* else_attr = nullptr;
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& A = node_proto.attribute(i);
+        if (A.name() == "then_branch") then_attr = &A;
+        else if (A.name() == "else_branch") else_attr = &A;
+    }
+    CV_Assert(then_attr && else_attr);
+
+    opencv_onnx::GraphProto then_graph = then_attr->g();
+    Ptr<Graph> thenG = parseGraph(&then_graph, false);
+
+    // Restore inputs to original graph and parse else_branch
+    node_inputs.assign(savedInputs.begin(), savedInputs.end());
+    opencv_onnx::GraphProto else_graph = else_attr->g();
+    Ptr<Graph> elseG = parseGraph(&else_graph, false);
+
+
+    // layerParams.set("then_graph", thenG);
+    // layerParams.set("else_graph", elseG);
+
+    constexpr int PTR_BYTES = int(sizeof(cv::Ptr<cv::dnn::Graph>));
+    int ptrType = CV_MAKETYPE(CV_8U, PTR_BYTES);
+
+    // then-branch
+    cv::Mat thenBlob(1, 1, ptrType);
+    std::memcpy(thenBlob.data, &thenG, PTR_BYTES);
+    layerParams.blobs.push_back(thenBlob);
+
+    // else-branch
+    cv::Mat elseBlob(1, 1, ptrType);
+    std::memcpy(elseBlob.data, &elseG, PTR_BYTES);
+    layerParams.blobs.push_back(elseBlob);
+
+
+    // 5 store the condition index and restore inputs
+    layerParams.set("cond", condIdx);
+    node_inputs = savedInputs;
+
+    // 6 finally add the layer
     addLayer(layerParams, node_proto);
 }
 
@@ -2363,6 +2432,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Gather"] = &ONNXImporter2::parseGather;
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
+    dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
