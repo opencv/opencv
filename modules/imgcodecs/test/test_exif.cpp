@@ -334,6 +334,51 @@ TEST(Imgcodecs_Png, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
+TEST(Imgcodecs_Png, ReadWriteWithText)
+{
+    static const uchar text_data[] = {
+        'O', 'p', 'e', 'n', 'C', 'V', 0,'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-',
+        'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ', 'm',
+        'e', 't', 'a', 'd', 'a', 't', 'a', 0
+    };
+
+    int png_compression = 3;
+    int imgtype = CV_MAKETYPE(CV_8U, 3);
+    const string outputname = "ReadWriteWithText.png";
+    //const string outputname = cv::tempfile(".png");
+    Mat img = makeCirclesImage(Size(1280, 720), imgtype, 8);
+
+    std::vector<int> metadata_types = {IMAGE_METADATA_TEXT};
+    std::vector<std::vector<uchar> > metadata(1);
+    metadata[0].assign(text_data, text_data + sizeof(text_data));
+
+    std::vector<int> write_params = {
+        IMWRITE_PNG_COMPRESSION, png_compression
+    };
+
+    imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
+    std::vector<uchar> compressed;
+    imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);
+
+    std::vector<int> read_metadata_types, read_metadata_types2;
+    std::vector<std::vector<uchar> > read_metadata, read_metadata2;
+    Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, IMREAD_UNCHANGED);
+    Mat img3 = imdecodeWithMetadata(compressed, read_metadata_types2, read_metadata2, IMREAD_UNCHANGED);
+    EXPECT_EQ(img2.cols, img.cols);
+    EXPECT_EQ(img2.rows, img.rows);
+    EXPECT_EQ(img2.type(), imgtype);
+    EXPECT_EQ(read_metadata_types, read_metadata_types2);
+    EXPECT_GE(read_metadata_types.size(), 1u);
+    EXPECT_EQ(read_metadata, read_metadata2);
+    EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_TEXT);
+    EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
+    EXPECT_EQ(read_metadata[0], metadata[0]);
+    EXPECT_EQ(cv::norm(img2, img3, NORM_INF), 0.);
+    double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
+    EXPECT_EQ(mse, 0); // png is lossless
+    remove(outputname.c_str());
+}
+
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
 {
     size_t plen = pattern.size();
