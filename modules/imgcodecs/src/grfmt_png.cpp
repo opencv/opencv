@@ -860,9 +860,9 @@ PngEncoder::PngEncoder()
     m_buf_supported = true;
     m_support_metadata.assign((size_t)IMAGE_METADATA_MAX+1, false);
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
-    m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
-    m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
-    m_support_metadata[(size_t)IMAGE_METADATA_TEXT] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_support_metadata[IMAGE_METADATA_TEXT] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
