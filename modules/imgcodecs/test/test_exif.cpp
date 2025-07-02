@@ -63,8 +63,13 @@ TEST_P(Exif, exif_orientation)
     const int colorThresholdHigh = 250;
     const int colorThresholdLow = 5;
 
-    // Refer to the note in the explanation above.
-    Mat m_img = imread(filename, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+
+    std::vector<int> read_metadata_types;
+    std::vector<std::vector<uchar> > read_metadata;
+    Mat m_img = imreadWithMetadata(filename, read_metadata_types, read_metadata, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+    std::vector<uchar> buf;
+    imencodeWithMetadata(".png", m_img, read_metadata_types, read_metadata, buf);
+
     ASSERT_FALSE(m_img.empty());
 
     if (m_img.channels() == 3)

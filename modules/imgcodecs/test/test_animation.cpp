@@ -597,7 +597,14 @@ TEST_P(Imgcodecs_ImageCollection, animations)
             EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
         }
     }
-
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/testExifOrientation_5.jpg";
+    ImageCollection collection(filename, IMREAD_UNCHANGED);
+    Mat exif = collection.getMetadata(IMAGE_METADATA_EXIF);
+    EXPECT_TRUE(exif.empty());
+    Mat m = collection.at(0);
+    exif = collection.getMetadata(IMAGE_METADATA_EXIF);
+    EXPECT_FALSE(exif.empty());
     EXPECT_EQ(0, remove(output.c_str()));
 }
 

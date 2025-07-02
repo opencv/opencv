@@ -67,10 +67,16 @@ bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
 
 Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
 {
+    printf("\nBaseImageDecoder::getMetadata :%d\n ", type);
     if (type == IMAGE_METADATA_EXIF) {
         const std::vector<unsigned char>& exif = m_exif.getData();
         if (!exif.empty()) {
             Mat exifmat(1, (int)exif.size(), CV_8U, (void*)exif.data());
+            printf("\nSize :%u\n ", exif.size());
+            for (int j = 0; j < (int)exif.size(); j++)
+            {
+                printf("%02X ", exif[j]);
+            }
             return exifmat;
         }
     }
@@ -173,6 +179,15 @@ bool BaseImageEncoder::addMetadata(ImageMetadataType type, const Mat& metadata)
     CV_Assert(metadata.isContinuous());
     const unsigned char* data = metadata.ptr<unsigned char>();
     m_metadata[itype].assign(data, data + metadata.total());
+    for (int i = 0; i < m_metadata.size(); i++)
+    {
+        printf("\nSize :%u (addMetadata)\n ", m_metadata[i].size());
+        for (int j = 0; j < m_metadata[i].size(); j++)
+        {
+            printf("%02X ", m_metadata[i][j]);
+        }
+
+    }
     return true;
 }
 
