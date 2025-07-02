@@ -23,7 +23,7 @@ class imread_test(NewOpenCVTests):
         ic = cv.ImageCollection(path, cv.IMREAD_UNCHANGED)
         self.assertEqual(2, ic.size32())
         self.assertEqual(128, ic.width())
-        self.assertEqual(64, height())
+        self.assertEqual(64, ic.height())
         self.assertEqual(cv.norm(animation.frames[0], ic.at(0), cv.NORM_INF), 0.0)
         self.assertEqual(cv.norm(animation.frames[1], ic.at(1), cv.NORM_INF), 0.0)
 
