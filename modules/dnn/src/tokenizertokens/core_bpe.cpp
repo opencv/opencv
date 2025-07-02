@@ -213,154 +213,53 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
     }
 
     return tokens;
-    // const std::regex& re = threadLocalRegex();
-    // std::vector<Rank> tokens;
-    // for (auto it=std::sregex_iterator(txt.begin(), txt.end(), re); it!=std::sregex_iterator(); ++it) {
-    //     std::string_view sv(it->str());
-    //     ByteVec piece(sv.begin(), sv.end());
-    //     auto eIt = encoder_.find(piece);
-    //     if (eIt!=encoder_.end()) tokens.push_back(eIt->second);
-    //     else {
-    //         auto sub = bytePairEncode(piece, encoder_);
-    //         tokens.insert(tokens.end(), sub.begin(), sub.end());
-    //     }
-    // }
-    // return tokens;
 }
 
-// std::pair<std::vector<Rank>, std::size_t>
-// CoreBPE::encode(const std::string& text,
-//                 const std::unordered_set<std::string>& allowedSpecial) const
-// {
-//     const std::regex& specialRe = threadLocalSpecialRegex();
-//     const std::regex& mainRe    = threadLocalRegex();
 
-//     std::vector<Rank> ret;
-//     std::size_t       lastPieceTokenLen = 0;
-//     std::size_t       start = 0;
-
-//     while (true) {
-//         // Find next allowed special token
-//         std::cmatch m;
-//         std::size_t nextPos = std::string::npos;
-//         std::size_t nextEnd = std::string::npos;
-//         std::string nextText;
-
-//         std::size_t searchPos = start;
-//         while (searchPos < text.size()) {
-//             const char* begin = text.data() + searchPos;
-//             const char* end   = text.data() + text.size();
-//             if (!std::regex_search(begin, end, m, specialRe)) break;
-
-//             std::size_t matchStart = searchPos + static_cast<std::size_t>(m.position());
-//             std::size_t matchEnd   = matchStart + static_cast<std::size_t>(m.length());
-//             std::string candidate  = text.substr(matchStart, matchEnd - matchStart);
-
-//             if (allowedSpecial.count(candidate)) {
-//                 nextPos  = matchStart;
-//                 nextEnd  = matchEnd;
-//                 nextText = std::move(candidate);
-//                 break;
-//             }
-//             searchPos = matchStart + 1;  // skip past rejected match
-//         }
-
-//         // Encode ordinary segment [start, segmentEnd)
-//         std::size_t segmentEnd = (nextPos == std::string::npos) ? text.size() : nextPos;
-//         if (segmentEnd > start) {
-//             std::string segment = text.substr(start, segmentEnd - start);
-//             for (std::sregex_iterator it(segment.begin(), segment.end(), mainRe), e;
-//                  it != e; ++it) {
-//                 std::string_view sv(it->str());
-//                 ByteVec piece(sv.begin(), sv.end());
-
-//                 auto encIt = encoder_.find(piece);
-//                 if (encIt != encoder_.end()) {
-//                     lastPieceTokenLen = 1;
-//                     ret.push_back(encIt->second);
-//                 } else {
-//                     auto toks = bytePairEncode(piece, encoder_);
-//                     lastPieceTokenLen = toks.size();
-//                     ret.insert(ret.end(), toks.begin(), toks.end());
-//                 }
-//             }
-//         }
-
-//         // If a special token was found, append it and continue; else break
-//         if (nextPos != std::string::npos) {
-//             Rank tok = specialEncoder_.at(nextText);
-//             ret.push_back(tok);
-//             start = nextEnd;
-//             lastPieceTokenLen = 0;
-//         } else {
-//             break; // no more specials
-//         }
-//     }
-
-//     return { ret, lastPieceTokenLen };
-// }
 
 std::pair<std::vector<Rank>, std::size_t>
 CoreBPE::encode(const std::string& text,
                 const std::unordered_set<std::string>& allowedSpecial) const
 {
-    // 1) Convert the entire input to ICU’s UnicodeString (UTF-16)
     icu::UnicodeString utext = icu::UnicodeString::fromUTF8(text);
     int32_t ulen = utext.length();
 
-    // 2) Grab our compiled ICU patterns
     const icu::RegexPattern* mainPat    = threadLocalRegex();
     const icu::RegexPattern* specialPat = threadLocalSpecialRegex();
 
     std::vector<Rank>      ret;
     std::size_t            lastPieceTokenLen = 0;
-    int32_t                startCU = 0;  // index in UTF-16 code units
+    int32_t                startCU = 0;  
 
     UErrorCode status = U_ZERO_ERROR;
     while (startCU < ulen) {
-        // ────────────────────────────────────────────────────────
-        // 3) Find the *next* allowed special token (if any)
         int32_t matchStartCU = -1, matchEndCU = -1;
         std::string matchedUTF8;
 
         {
-            // Create a matcher over the full `utext`
             auto m = specialPat->matcher(utext, status);
             if (U_FAILURE(status)) {
                 CV_Error(cv::Error::StsError,
                          "ICU special matcher creation failed: " + std::string(u_errorName(status)));
             }
-
-            // Restrict to region [startCU, ulen)
             m->region(startCU, ulen, status);
             while (m->find(status) && U_SUCCESS(status)) {
-                // Candidate span in code units:
                 int32_t s = m->start(status);
                 int32_t e = m->end(status);
-
-                // Extract that substring and convert to UTF-8
                 icu::UnicodeString slice = m->group(status);
                 slice.toUTF8String(matchedUTF8);
-
-                // Check if it’s in allowedSpecial
                 if (allowedSpecial.count(matchedUTF8)) {
                     matchStartCU = s;
                     matchEndCU   = e;
                     break;
                 }
-                // Otherwise, bump the region forward one code unit and retry
                 m->region(s + 1, ulen, status);
             }
         }
 
-        // ────────────────────────────────────────────────────────
-        // 4) Encode the “ordinary” segment [startCU .. segmentEndCU)
         int32_t segmentEndCU = (matchStartCU >= 0 ? matchStartCU : ulen);
         if (segmentEndCU > startCU) {
-            // Extract that slice
             icu::UnicodeString seg = utext.tempSubStringBetween(startCU, segmentEndCU);
-
-            // Now run the main pattern on `seg`
             auto m2 = mainPat->matcher(seg, status);
             if (U_FAILURE(status)) {
                 CV_Error(cv::Error::StsError,
@@ -368,7 +267,6 @@ CoreBPE::encode(const std::string& text,
             }
 
             while (m2->find(status) && U_SUCCESS(status)) {
-                // UTF-16 slice → UTF-8 bytes
                 icu::UnicodeString subUS = m2->group(status);
                 std::string        sub8;
                 subUS.toUTF8String(sub8);
@@ -386,19 +284,13 @@ CoreBPE::encode(const std::string& text,
             }
         }
 
-        // ────────────────────────────────────────────────────────
-        // 5) If we found a special token, emit it and continue; else break
         if (matchStartCU >= 0) {
-            // lookup its rank
             Rank tok = specialEncoder_.at(matchedUTF8);
             ret.push_back(tok);
-
-            // advance `startCU` to just after the matched special
             startCU = matchEndCU;
             lastPieceTokenLen = 0;
         }
         else {
-            // no more specials in the remainder
             break;
         }
     }
