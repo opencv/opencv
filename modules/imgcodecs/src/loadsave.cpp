@@ -1863,10 +1863,12 @@ Mat& ImageCollection::Impl::operator[](int index) {
         // go back to first page and advance until the desired page and read it into memory
         if(m_current != index) {
             reset();
-            for(int i = 0; i != index && advance(); ++i) {}
+            for (int i = 0; i != index; ++i) {
+                m_pages[index] = read();
+                advance();
+            }
         }
         m_pages[index] = read();
-        advance();
     }
     return m_pages[index];
 }
