@@ -43,6 +43,13 @@ public class ImgcodecsTest extends OpenCVTestCase {
 
         List<Mat> readFrames = readAnimation.get_frames();
         assertTrue(readFrames.size() == 2);
+		
+		ImageCollection ic = new ImageCollection(filename, Imgcodecs.IMREAD_UNCHANGED);
+		assertEquals(2, ic.size32());
+		assertEquals(128, ic.width());
+		
+		rgb = ic.at(1);
+		assertFalse(rgb.empty());
     }
 
     public void testImdecode() {
