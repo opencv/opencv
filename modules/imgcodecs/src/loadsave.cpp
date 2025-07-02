@@ -1869,6 +1869,7 @@ Mat& ImageCollection::Impl::operator[](int index) {
             }
         }
         m_pages[index] = read();
+        advance();
     }
     return m_pages[index];
 }
