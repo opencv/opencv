@@ -6,6 +6,7 @@ import org.opencv.core.MatOfInt;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgcodecs.Animation;
+import org.opencv.imgcodecs.ImageCollection;
 import org.opencv.test.OpenCVTestCase;
 import org.opencv.test.OpenCVTestRunner;
 
@@ -44,10 +45,10 @@ public class ImgcodecsTest extends OpenCVTestCase {
         List<Mat> readFrames = readAnimation.get_frames();
         assertTrue(readFrames.size() == 2);
 
-        ImageCollection ic = new ImageCollection();
-        ic.init(filename, Imgcodecs.IMREAD_UNCHANGED);
+        ImageCollection ic = new ImageCollection(filename, Imgcodecs.IMREAD_UNCHANGED);
         assertEquals(2, ic.size32());
         assertEquals(128, ic.width());
+        assertEquals(64, ic.height());
 
         rgb = ic.at(1);
         assertFalse(rgb.empty());
