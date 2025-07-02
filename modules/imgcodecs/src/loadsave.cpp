@@ -1728,6 +1728,7 @@ public:
     Mat read();
     int width() const;
     int height() const;
+    Mat getMetadata(ImageMetadataType type) const;
     bool readHeader();
     Mat readData();
     bool advance();
@@ -1789,6 +1790,10 @@ int ImageCollection::Impl::width() const {
 
 int ImageCollection::Impl::height() const {
     return m_height;
+}
+
+Mat ImageCollection::Impl::getMetadata(ImageMetadataType type) const {
+    return m_decoder->getMetadata(type);
 }
 
 bool ImageCollection::Impl::readHeader() {
@@ -1892,6 +1897,8 @@ size_t ImageCollection::size() const { return pImpl->size(); }
 int ImageCollection::width() const { return pImpl->width(); }
 
 int ImageCollection::height() const { return pImpl->height(); }
+
+Mat ImageCollection::getMetadata(ImageMetadataType type) const { return pImpl->getMetadata(type); }
 
 const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 
