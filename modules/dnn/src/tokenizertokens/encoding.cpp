@@ -6,6 +6,7 @@
 #include <functional>
 #include <unicode/unistr.h>
 #include <unicode/regex.h>
+#include <iostream>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -21,9 +22,9 @@ Encoding::Encoding(const std::string &name,
     , coreBPE_(mergeableRanks_, specialTokens_, patStr_) {
 
     UErrorCode status = U_ZERO_ERROR;
-    patReg_.reset(
-        RegexPattern::compile(
-            UnicodeString::fromUTF8(patStr),
+    patRegex_.reset(
+        icu::RegexPattern::compile(
+            icu::UnicodeString::fromUTF8(patStr),
             UREGEX_CASE_INSENSITIVE |
             UREGEX_COMMENTS        |
             UREGEX_UWORD           ,
@@ -51,10 +52,9 @@ Encoding::Encoding(const std::string &name,
 
 void getStats(const std::vector<int>& ids, std::map<std::pair<int,int>,int>& counts) {
     for (int i = 0; i + 1 < ids.size(); i++) {
-        auto p = make_pair(ids[i], ids[i+1]);
+        auto p = std::make_pair(ids[i], ids[i+1]);
         counts[p]++;
     }
-    return counts;
 }
 
 std::vector<int> merge(const std::vector<int>& ids, const std::pair<int,int>& p, int idx) {
@@ -82,21 +82,21 @@ void Encoding::train(const std::string& text, int vocabSize, bool verbose) {
 
     int numMerges = vocabSize - 256;
 
-    UnicodeString utext = UnicodeString::fromUTF8(text);
+    icu::UnicodeString utext = icu::UnicodeString::fromUTF8(text);
     UErrorCode status = U_ZERO_ERROR;
-    std::unique_ptr<RegexMatcher> matcher(patRegex_->matcher(utext, status));
+    std::unique_ptr<icu::RegexMatcher> matcher(patRegex_->matcher(utext, status));
     if (U_FAILURE(status)) {
         CV_Error(Error::StsError, "Failed to create regex matcher: " + std::string(u_errorName(status)));
     }
 
     std::vector<std::string> textChunks;
     while (matcher->find(status) && U_SUCCESS(status)) {
-        UnicodeString piece = mathcer->group(status);
+        icu::UnicodeString piece = matcher->group(status);
         std::string utf8;
-        piece.toUFT8String(utf8);
+        piece.toUTF8String(utf8);
         textChunks.push_back(std::move(utf8));
     }
-    
+
     if (U_FAILURE(status)) {
         CV_Error(Error::StsError, "Error during regex matching: " + std::string(u_errorName(status)));
     }
@@ -110,7 +110,7 @@ void Encoding::train(const std::string& text, int vocabSize, bool verbose) {
 
     // iteratively merge the most common pairs to create new tokens
     std::map<std::pair<int,int>,int> merges;
-    std::map<int, std::vector<uint8_t>> vocab(vocabSize);
+    std::map<int, std::vector<uint8_t>> vocab;
     for (int idx = 0; idx < 256; ++idx) {
         vocab[idx] = std::vector<uint8_t>{static_cast<uint8_t>(idx)};
     }
@@ -132,7 +132,7 @@ void Encoding::train(const std::string& text, int vocabSize, bool verbose) {
         int idx = 256 + i;
         // now replace all the occurances of the pair in ids with idx
         std::vector<std::vector<int>> ids_;
-        ids_reverse(ids.size());
+        ids_.reserve(ids.size());
         for (auto &chunkIDS : ids) {
             ids_.push_back(merge(chunkIDS, top_pair, idx));
         }
@@ -145,14 +145,14 @@ void Encoding::train(const std::string& text, int vocabSize, bool verbose) {
         v.reserve(A.size() + B.size());
         v.insert(v.end(), A.begin(), A.end());
         v.insert(v.end(), B.begin(), B.end());
-        voacb[idx] = std::move(v);
+        vocab[idx] = std::move(v);
 
         if (verbose) {
-            std::wcout
-                << L"merge " << (i+1) << L"/" << numMerges
-                << L": (" << bestPair.first << L"," << bestPair.second << L")"
-                << L" -> " << newId
-                << L" had " << maxIt->second << L" occurrences\n";
+            std::cout
+                << "merge " << (i+1) << L"/" << numMerges
+                << ": (" << top_pair.first << L"," << top_pair.second << L")"
+                << " -> " << idx
+                << " had " << max_it->second << L" occurrences\n";
         }
     }
     merges_ = std::move(merges);
@@ -222,8 +222,5 @@ Rank Encoding:: encodeSingleToken(const std::vector<std::uint8_t>& bytes) const 
     // Not found 
     throw std::out_of_range("Token not found in mergeable or special token maps");
 }
-
-
-
 
 }}}

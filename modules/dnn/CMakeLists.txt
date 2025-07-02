@@ -208,6 +208,73 @@ if(NOT EMSCRIPTEN)
   endif()
 endif()
 
+# ------------------------------- [ADDED] ---------------------------------------
+# ----------------------------------------------------------------------------------
+# Added extra build for tokenizer fix later if there is a better method
+set(extra_tokenizer_src
+    "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/core_bpe.cpp"
+)
+file(GLOB extra_tokenizer_src
+     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/*.cpp"
+)
+list(APPEND include_dirs
+     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens"
+)
+
+# OpenSSL
+find_package(OpenSSL REQUIRED)
+list(APPEND include_dirs ${OPENSSL_INCLUDE_DIR})
+list(APPEND libs OpenSSL::Crypto)
+
+# nlohmann_json
+find_package(nlohmann_json REQUIRED)
+list(APPEND libs nlohmann_json::nlohmann_json)
+
+# libcurl
+find_package(CURL REQUIRED)
+list(APPEND include_dirs ${CURL_INCLUDE_DIRS})
+list(APPEND libs CURL::libcurl)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ICU (Unicode & Regex for tokenizer)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# If you didn’t already, point CMake at your Homebrew ICU prefix:
+#   cmake .. \
+#     -DICU_ROOT=$(brew --prefix icu4c@77) \
+#     -DCMAKE_PREFIX_PATH=$(brew --prefix icu4c@77)
+#
+# (You can also hard-code ICU_ROOT here, but passing it on the command line
+#  is generally more portable.)
+
+# 1) Make sure CMake will look in ICU_ROOT for its cmake/ICU files
+set(CMAKE_PREFIX_PATH "${ICU_ROOT};${CMAKE_PREFIX_PATH}")
+
+# 2) Find exactly the ICU components we need
+find_package(ICU 74 REQUIRED COMPONENTS uc i18n io)
+message(STATUS "ICU_INCLUDE_DIRS: ${ICU_INCLUDE_DIRS}")
+if (NOT ICU_FOUND)
+  message(FATAL_ERROR "Couldn’t find ICU (set ICU_ROOT or add it to CMAKE_PREFIX_PATH)")
+endif()
+include_directories(SYSTEM ${ICU_INCLUDE_DIRS})
+# 3) Append the include-paths and libraries into our module’s lists
+list(APPEND include_dirs ${ICU_INCLUDE_DIRS})
+list(APPEND libs       ICU::uc ICU::i18n ICU::io)
+
+# 4) Let your code #ifdef around it if you like
+ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ICU=1)
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
+# ----------------------------------------------------------------------------------
+# list(APPEND include_dirs "/opt/homebrew/opt/icu4c@77/include")
+# ------------------------------- [ADDED] ---------------------------------------
+
+
+
 ocv_module_include_directories(${include_dirs})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   ocv_append_source_files_cxx_compiler_options(fw_srcs "-Wno-suggest-override")  # GCC
@@ -255,37 +322,66 @@ if(OPENCV_DNN_BACKEND_DEFAULT)
 endif()
 
 ocv_install_used_external_targets(${libs} ${dnn_runtime_libs})
-# ----------------------------------------------------------------------------------
-# Added extra build for tokenizer fix later if there is a better method
-set(extra_tokenizer_src
-    "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/core_bpe.cpp"
-)
-file(GLOB extra_tokenizer_src
-     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/*.cpp"
-)
-list(APPEND include_dirs
-     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens"
-)
+# # ----------------------------------------------------------------------------------
+# # Added extra build for tokenizer fix later if there is a better method
+# set(extra_tokenizer_src
+#     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/core_bpe.cpp"
+# )
+# file(GLOB extra_tokenizer_src
+#      "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens/*.cpp"
+# )
+# list(APPEND include_dirs
+#      "${CMAKE_CURRENT_LIST_DIR}/src/tokenizertokens"
+# )
 
-# OpenSSL
-find_package(OpenSSL REQUIRED)
-list(APPEND include_dirs ${OPENSSL_INCLUDE_DIR})
-list(APPEND libs OpenSSL::Crypto)
+# # OpenSSL
+# find_package(OpenSSL REQUIRED)
+# list(APPEND include_dirs ${OPENSSL_INCLUDE_DIR})
+# list(APPEND libs OpenSSL::Crypto)
 
-# nlohmann_json
-find_package(nlohmann_json REQUIRED)
-list(APPEND libs nlohmann_json::nlohmann_json)
+# # nlohmann_json
+# find_package(nlohmann_json REQUIRED)
+# list(APPEND libs nlohmann_json::nlohmann_json)
 
-# libcurl
-find_package(CURL REQUIRED)
-list(APPEND include_dirs ${CURL_INCLUDE_DIRS})
-list(APPEND libs CURL::libcurl)
+# # libcurl
+# find_package(CURL REQUIRED)
+# list(APPEND include_dirs ${CURL_INCLUDE_DIRS})
+# list(APPEND libs CURL::libcurl)
 
-ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
-# ----------------------------------------------------------------------------------
+# # ICU (Unicode & Regex for tokenizer)
+# find_package(ICU 74 REQUIRED COMPONENTS uc i18n io)
+# list(APPEND include_dirs ${ICU_INCLUDE_DIRS})
+# list(APPEND libs ICU::uc ICU::i18n ICU::io)
+# ocv_target_compile_definitions(${the_module} PRIVATE HAVE_ICU=1)
+
+# ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
+# # ----------------------------------------------------------------------------------
 ocv_create_module(${libs} ${dnn_runtime_libs})
 ocv_add_samples()
 ocv_add_accuracy_tests(${dnn_runtime_libs})
+
+# ----------------------------------------- [ADDED] ----------------------------------
+if(TARGET opencv_test_dnn)
+    # 1) ICU headers for test
+    target_include_directories(opencv_test_dnn
+        SYSTEM PRIVATE
+            ${ICU_INCLUDE_DIRS}
+    )
+
+    # 2) ICU libraries for test
+    target_link_libraries(opencv_test_dnn
+        PRIVATE
+            ICU::uc
+            ICU::i18n
+            ICU::io
+    )
+
+    # 3) (optional) same macro guard in test
+    target_compile_definitions(opencv_test_dnn
+        PRIVATE HAVE_ICU=1
+    )
+endif()
+# ----------------------------------------- [ADDED] ----------------------------------
 
 if(NOT BUILD_PROTOBUF)
   if(TARGET opencv_test_dnn)
