@@ -681,19 +681,51 @@ It does not check for the actual existence of the file but rather the ability to
 */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/** @brief To read multi-page images on demand
-
-The ImageCollection class provides iterator API to read multi-page images on demand. Create iterator
-to the collection of the images and iterate over the collection. Decode the necessary page with operator*.
-
-The performance of page decoding is O(1) if collection is increment sequentially. If the user wants to access random page,
-then the time Complexity is O(n) because the collection has to be reinitialized every time in order to go to the correct page.
-However, the intermediate pages are not decoded during the process, so typically it's quite fast.
-This is required because multi-page codecs does not support going backwards.
-After decoding the one page, it is stored inside the collection cache. Hence, trying to get Mat object from already decoded page is O(1).
-If you need memory, you can use .releaseCache() method to release cached index.
-The space complexity is O(n) if all pages are decoded into memory. The user is able to decode and release images on demand.
-*/
+/**
+ * @brief Iterator-based API for reading multi-page and animated images on demand.
+ *
+ * The `ImageCollection` class provides an interface for iterating over frames or pages in
+ * multi-page and animated image files (such as TIFF, animated WebP, GIF, etc.). It supports
+ * the OpenCV `Animation` class internally for handling animated formats.
+ *
+ * Pages are decoded lazily: only the current page accessed via `operator*()` is decoded.
+ *
+ * ### Performance
+ *
+ * - **Sequential Access**:
+ *   Iterating through pages in order (e.g., using a loop) has constant time complexity, O(1),
+ *   due to internal iterator state tracking.
+ *
+ * - **Random Access**:
+ *   Accessing a specific page out of order has linear time complexity, O(n), since the collection
+ *   must be reinitialized from the beginning. However, intermediate pages are skipped (not decoded),
+ *   so this operation is still typically fast.
+ *
+ * - **Caching**:
+ *   Decoded pages are stored in memory. Re-accessing a previously decoded page is O(1).
+ *   Use `releaseCache(index)` to manually free memory for a specific page.
+ *
+ * - **Memory Usage**:
+ *   If all pages are decoded and cached, memory usage is O(n).
+ *
+ * ### Features
+ *
+ * - Supports multi-page image formats (e.g., TIFF, PDF).
+ * - Supports animated image formats via the OpenCV `Animation` class (e.g., WebP, GIF).
+ * - On-demand decoding and memory management.
+ * - Fast sequential access and reasonably efficient random access.
+ *
+ * ### Example
+ * @code
+ * ImageCollection collection("animated.webp");
+ * for (auto it = collection.begin(); it != collection.end(); ++it)
+ * {
+ *     Mat frame = *it;
+ *     imshow("Frame", frame);
+ *     waitKey(100);
+ * }
+ * @endcode
+ */
 class CV_EXPORTS_W ImageCollection {
 public:
     struct CV_EXPORTS iterator {
