@@ -860,6 +860,9 @@ PngEncoder::PngEncoder()
     m_buf_supported = true;
     m_support_metadata.assign((size_t)IMAGE_METADATA_MAX+1, false);
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_TEXT] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -999,6 +1002,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         // [TODO] add xmp and icc. They need special handling,
                         // see https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_PNG_files and
                         // https://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html.
+
                         std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
                         if (!xmp.empty()) {
                             png_text text_chunk;
@@ -1008,6 +1012,29 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             text_chunk.text_length = static_cast<png_size_t>(xmp.size());
 
                             png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+                        }
+
+                        std::vector<uchar>& text = m_metadata[IMAGE_METADATA_TEXT];
+                        if (!text.empty()) {
+                            auto it = std::find(text.begin(), text.end(), 0);
+                            if (it != text.end() && (it + 1) != text.end()) {
+                                size_t key_len = std::distance(text.begin(), it);
+                                size_t text_len = text.size() - key_len - 1;
+
+                                // Temporaries to hold null-terminated strings
+                                std::string key(reinterpret_cast<char*>(text.data()), key_len);
+                                uchar* text_ptr = text.data() + key_len + 1;
+
+                                png_text text_chunk;
+                                text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
+                                text_chunk.key = const_cast<char*>(key.c_str()); // valid since key outlives the function
+                                text_chunk.text = reinterpret_cast<char*>(text_ptr);
+                                text_chunk.text_length = static_cast<png_size_t>(text_len);
+                                text_chunk.lang = nullptr;
+                                text_chunk.lang_key = nullptr;
+
+                                png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+                            }
                         }
                     }
 
