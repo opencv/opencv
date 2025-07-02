@@ -286,7 +286,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
     ippiWarpPerspectiveFunc ippFunc = 0;
     if (interpolation == cv::InterpolationFlags::INTER_NEAREST)
     {
-        ippFunc = src_type == CV_8UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C1R :    
+        ippFunc = src_type == CV_8UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C1R :
         src_type == CV_8UC3 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C3R :
         src_type == CV_8UC4 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C4R :
         src_type == CV_16UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_16u_C1R :
