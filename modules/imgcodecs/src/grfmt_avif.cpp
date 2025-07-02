@@ -116,12 +116,27 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
     const std::vector<uchar>& metadata_exif = metadata[IMAGE_METADATA_EXIF];
     const std::vector<uchar>& metadata_xmp = metadata[IMAGE_METADATA_XMP];
     const std::vector<uchar>& metadata_iccp = metadata[IMAGE_METADATA_ICCP];
+#if AVIF_VERSION_MAJOR >= 1
+    if ((!metadata_exif.empty() &&
+         avifImageSetMetadataExif(result, (const uint8_t *)metadata_exif.data(),
+                                  metadata_exif.size()) != AVIF_RESULT_OK) ||
+        (!metadata_xmp.empty() &&
+         avifImageSetMetadataXMP(result, (const uint8_t *)metadata_xmp.data(),
+                                 metadata_xmp.size()) != AVIF_RESULT_OK) ||
+        (!metadata_iccp.empty() &&
+         avifImageSetProfileICC(result, (const uint8_t *)metadata_iccp.data(),
+                                 metadata_iccp.size()) != AVIF_RESULT_OK)) {
+      avifImageDestroy(result);
+      return nullptr;
+    }
+#else
     if (!metadata_exif.empty())
       avifImageSetMetadataExif(result, (const uint8_t*)metadata_exif.data(), metadata_exif.size());
-    if (!metadata_exif.empty())
+    if (!metadata_xmp.empty())
       avifImageSetMetadataXMP(result, (const uint8_t*)metadata_xmp.data(), metadata_xmp.size());
     if (!metadata_iccp.empty())
       avifImageSetProfileICC(result, (const uint8_t*)metadata_iccp.data(), metadata_iccp.size());
+#endif
   }
 
   avifRGBImage rgba;
