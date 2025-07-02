@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #include "ipp_hal_imgproc.hpp"
 
 #include <opencv2/core.hpp>
@@ -33,7 +37,7 @@ public:
 
     virtual void operator() (const cv::Range& range) const CV_OVERRIDE
     {
-        //CV_INSTRUMENT_REGION_IPP(); //better to keep
+        //CV_INSTRUMENT_REGION_IPP();
 
         if(*pOk == false)
             return;
@@ -66,20 +70,20 @@ private:
 int ipp_hal_warpAffine(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width,
                               int dst_height, const double M[6], int interpolation, int borderType, const double borderValue[4])
 {
-    //CV_INSTRUMENT_REGION_IPP(); //better to keep
+    //CV_INSTRUMENT_REGION_IPP();
 
     IppiInterpolationType ippInter    = ippiGetInterpolation(interpolation);
     if((int)ippInter < 0 || interpolation > 2)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-                          /* C1         C2         C3         C4 */
-    char impl[7][4][3]={{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8U
-                        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
-                        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}},   //16U
-                        {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
-                        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
-                        {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32F
-                        {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}}};  //64F
+                                     /* C1         C2         C3         C4 */
+    char impl[CV_DEPTH_MAX][4][3]={{{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8U
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //8S
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {1, 0, 0}},   //16U
+                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}},   //16S
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32S
+                                   {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}},   //32F
+                                   {{1, 0, 0}, {0, 0, 0}, {1, 0, 0}, {1, 0, 0}}};  //64F
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
     {
@@ -282,7 +286,7 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
     ippiWarpPerspectiveFunc ippFunc = 0;
     if (interpolation == cv::InterpolationFlags::INTER_NEAREST)
     {
-        ippFunc = src_type == CV_8UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C1R :
+        ippFunc = src_type == CV_8UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C1R :    
         src_type == CV_8UC3 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C3R :
         src_type == CV_8UC4 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_8u_C4R :
         src_type == CV_16UC1 ? (ippiWarpPerspectiveFunc)ippiWarpPerspectiveNearest_16u_C1R :
@@ -319,22 +323,21 @@ int ipp_hal_warpPerspective(int src_type, const uchar *src_data, size_t src_step
 
     int mode =
     interpolation == cv::InterpolationFlags::INTER_NEAREST ? IPPI_INTER_NN :
-    interpolation == cv::InterpolationFlags::INTER_LINEAR ? IPPI_INTER_LINEAR :
-    interpolation == cv::InterpolationFlags::INTER_CUBIC ? IPPI_INTER_CUBIC : 0;    //to delete cubic
-    // CV_Assert(mode && ippFunc);
+    interpolation == cv::InterpolationFlags::INTER_LINEAR ? IPPI_INTER_LINEAR : 0;
+
     if (mode == 0 || ippFunc == 0)
     {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
 
-                       /* C1      C2      C3      C4 */ //to add borders
-    char impl[7][4][2]={{{0, 0}, {1, 1}, {0, 0}, {0, 0}},   //8U
-                        {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //8S
-                        {{0, 0}, {1, 1}, {0, 1}, {0, 1}},   //16U
-                        {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //16S
-                        {{1, 1}, {1, 1}, {1, 0}, {1, 1}},   //32S
-                        {{1, 0}, {1, 0}, {0, 0}, {1, 0}},   //32F
-                        {{1, 1}, {1, 1}, {1, 1}, {1, 1}}};  //64F
+                                    /* C1      C2      C3      C4 */
+    char impl[CV_DEPTH_MAX][4][2]={{{0, 0}, {1, 1}, {0, 0}, {0, 0}},   //8U
+                                   {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //8S
+                                   {{0, 0}, {1, 1}, {0, 1}, {0, 1}},   //16U
+                                   {{1, 1}, {1, 1}, {1, 1}, {1, 1}},   //16S
+                                   {{1, 1}, {1, 1}, {1, 0}, {1, 1}},   //32S
+                                   {{1, 0}, {1, 0}, {0, 0}, {1, 0}},   //32F
+                                   {{1, 1}, {1, 1}, {1, 1}, {1, 1}}};  //64F
 
     if(impl[CV_TYPE(src_type)][CV_MAT_CN(src_type)-1][interpolation] == 0)
     {
