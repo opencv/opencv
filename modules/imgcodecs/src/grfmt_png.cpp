@@ -1016,24 +1016,40 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                         std::vector<uchar>& text = m_metadata[IMAGE_METADATA_TEXT];
                         if (!text.empty()) {
-                            auto it = std::find(text.begin(), text.end(), 0);
-                            if (it != text.end() && (it + 1) != text.end()) {
-                                size_t key_len = std::distance(text.begin(), it);
-                                size_t text_len = text.size() - key_len - 1;
+                            std::vector<png_text> text_chunks;
 
-                                // Temporaries to hold null-terminated strings
-                                std::string key(reinterpret_cast<char*>(text.data()), key_len);
-                                uchar* text_ptr = text.data() + key_len + 1;
+                            const uchar* ptr = text.data();
+                            const uchar* end = ptr + text.size();
 
+                            while (ptr < end) {
+                                // Find null terminator for key
+                                const uchar* key_end = std::find(ptr, end, 0);
+                                if (key_end == end) break;
+                                std::string key(reinterpret_cast<const char*>(ptr), key_end - ptr);
+
+                                ptr = key_end + 1;
+                                if (ptr >= end) break;
+
+                                // Find null terminator for value
+                                const uchar* val_end = std::find(ptr, end, 0);
+                                size_t val_len = val_end - ptr;
+
+                                // Prepare text chunk
                                 png_text text_chunk;
                                 text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
-                                text_chunk.key = const_cast<char*>(key.c_str()); // valid since key outlives the function
-                                text_chunk.text = reinterpret_cast<char*>(text_ptr);
-                                text_chunk.text_length = static_cast<png_size_t>(text_len);
-                                text_chunk.lang = nullptr;
-                                text_chunk.lang_key = nullptr;
+
+                                // We store key and value in temporary buffers to ensure lifetime
+                                static std::vector<std::string> keys, values;
+                                keys.push_back(key);
+                                values.emplace_back(reinterpret_cast<const char*>(ptr), val_len);
+
+                                text_chunk.key = const_cast<char*>(keys.back().c_str());
+                                text_chunk.text = const_cast<char*>(values.back().c_str());
+                                text_chunk.text_length = static_cast<png_size_t>(val_len);
 
                                 png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+
+                                ptr = val_end + 1;
                             }
                         }
                     }

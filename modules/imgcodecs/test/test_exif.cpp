@@ -337,9 +337,9 @@ TEST(Imgcodecs_Png, ReadWriteWithExif)
 TEST(Imgcodecs_Png, ReadWriteWithText)
 {
     static const uchar text_data[] = {
-        'O', 'p', 'e', 'n', 'C', 'V', 0,'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-',
-        'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ', 'm',
-        'e', 't', 'a', 'd', 'a', 't', 'a', 0
+        'S', 'o', 'f', 't', 'w', 'a', 'r', 'e',0,'O', 'p', 'e', 'n', 'C', 'V', 0, 'C', 'o', 'm', 'm', 'e', 'n', 't', 0,
+        'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-','b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ',
+         'w', 'i', 't', 'h', ' ', 'm','e', 't', 'a', 'd', 'a', 't', 'a'
     };
 
     int png_compression = 3;
