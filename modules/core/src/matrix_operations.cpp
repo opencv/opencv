@@ -341,264 +341,693 @@ cv::Mat cv::Mat::cross(InputArray _m) const
 namespace cv
 {
 
-struct OpAdd_8U
+template<typename stype, typename itype>
+struct ReduceOpAdd
 {
-    using stype = uchar;
-    using v_stype = uchar;
-    v_stype load(const stype *ptr) { return *ptr; }
-    void store(int *ptr, const int &val) { *ptr = val; }
-    void store(float *ptr, const int &val) { *ptr = (float)val; }
-    void store(double *ptr, const int &val) { *ptr = (double)val; }
-    int operator()(const v_stype &a, const v_stype &b) const { return (int)a + (int)b; }
+    using v_stype = stype;
+    using v_itype = itype;
+    static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
+    static inline itype init() { return (itype)0; }
+    static inline itype reduce(const itype &val) { return val; }
+    inline itype operator()(const itype &a, const stype &b) const { return a + (itype)b; }
 };
 
-struct OpAdd_16U
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+template<typename T, typename VT>
+static inline VT vx_load(const T *ptr, size_t step)
 {
-    using stype = ushort;
-    using v_stype = ushort;
-    v_stype load(const stype *ptr) { return *ptr; }
-    void store(float *ptr, const float &val) { *ptr = val; }
-    void store(double *ptr, const float &val) { *ptr = (double)val; }
-    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b; }
-};
-
-struct OpAdd_16S
-{
-    using stype = short;
-    using v_stype = short;
-    v_stype load(const stype *ptr) { return *ptr; }
-    void store(float *ptr, const float &val) { *ptr = val; }
-    void store(double *ptr, const float &val) { *ptr = (double)val; }
-    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b; }
-};
-
-struct OpAdd_32F
-{
-    using stype = float;
-    using v_stype = float;
-    v_stype load(const stype *ptr) { return *ptr; }
-    void store(float *ptr, const float &val) { *ptr = val; }
-    void store(double *ptr, const float &val) { *ptr = (double)val; }
-    float operator()(const v_stype &a, const v_stype &b) const { return a + b; }
-};
-
-struct OpAdd_64F
-{
-    using stype = double;
-    using v_stype = double;
-    v_stype load(const stype *ptr) { return *ptr; }
-    void store(double *ptr, const float &val) { *ptr = val; }
-    double operator()(const v_stype &a, const v_stype &b) const { return a + b; }
-};
-
-struct OpAddSqr_8U : public OpAdd_8U
-{
-    int operator()(const v_stype &a, const v_stype &b) const { return (int)a + (int)b * (int)b; }
-};
-
-struct OpAddSqr_16U : public OpAdd_16U
-{
-    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b * (float)b; }
-};
-
-struct OpAddSqr_16S : public OpAdd_16S
-{
-    float operator()(const v_stype &a, const v_stype &b) const { return (float)a + (float)b * (float)b; }
-};
-
-struct OpAddSqr_32F : public OpAdd_32F
-{
-    float operator()(const v_stype &a, const v_stype &b) const { return a + b * b; }
-};
-
-struct OpAddSqr_64F : public OpAdd_64F
-{
-    double operator()(const v_stype &a, const v_stype &b) const { return a + b * b; }
-};
-
-#define CV_REDUCE_OP_DEF_MAX(Tp, vTp, Tpname) \
-struct OpMax_##Tpname \
-{ \
-    using stype = Tp; \
-    using v_stype = vTp; \
-    v_stype load(const stype *ptr) { return *ptr; } \
-    void store(stype *ptr, const v_stype &val) { *ptr = val; } \
-    v_stype operator()(const v_stype &a, const v_stype &b) const { return std::max(a, b); } \
-};
-CV_REDUCE_OP_DEF_MAX(uchar,  uchar,  8U);
-CV_REDUCE_OP_DEF_MAX(ushort, ushort, 16U);
-CV_REDUCE_OP_DEF_MAX(short,  short,  16S);
-CV_REDUCE_OP_DEF_MAX(float,  float,  32F);
-CV_REDUCE_OP_DEF_MAX(double, double, 64F);
-
-#define CV_REDUCE_OP_DEF_MIN(Tp, vTp, Tpname) \
-struct OpMin_##Tpname \
-{ \
-    using stype = Tp; \
-    using v_stype = vTp; \
-    v_stype load(const stype *ptr) { return *ptr; } \
-    void store(stype *ptr, const v_stype &val) { *ptr = val; } \
-    v_stype operator()(const v_stype &a, const v_stype &b) const { return std::max(a, b); } \
-};
-CV_REDUCE_OP_DEF_MIN(uchar,  uchar,  8U);
-CV_REDUCE_OP_DEF_MIN(ushort, ushort, 16U);
-CV_REDUCE_OP_DEF_MIN(short,  short,  16S);
-CV_REDUCE_OP_DEF_MIN(float,  float,  32F);
-CV_REDUCE_OP_DEF_MIN(double, double, 64F);
-
-#if (CV_SIMD || CV_SIMD_SCALABLE) && 0
-
-struct VecOpAdd_8U
-{
-    using stype = uchar;
-    using v_stype = v_uint8;
-    v_stype load(const stype *ptr) { return vx_load(ptr); }
-    void store(int *ptr, const v_int32 &val) { vx_store(ptr, val); }
-    void store(float *ptr, const v_int32 &val) { vx_store(ptr, v_cvt_f32(val)); }
-    void store(double *ptr, const v_int32 &val)
+    constexpr int nlanes = VTraits<VT>::max_nlanes;
+    T buf[nlanes];
+    for (int i = 0; i < VTraits<VT>::vlanes(); i++)
     {
-        v_float64 val0 = v_cvt_f64(val);
-        v_float64 val1 = v_cvt_f64_high(val);
-        vx_store(ptr, val0);
-        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
+        buf[i] = *ptr;
+        ptr += step;
     }
-    v_int32 operator()(const v_stype &a, const v_stype &b) const
-    {
-        v_uint16 a0, a1;
-        v_expand(a, a0, a1);
-        v_int16 sa = v_add(v_reinterpret_as_s16(a0), v_reinterpret_as_s16(a1));
+    return vx_load(buf);
+}
 
+#if CV_RVV
+template<>
+inline v_uint8 vx_load(const uchar *ptr, size_t step)
+{
+    return __riscv_vlse8_v_u8m2(ptr, step * sizeof(uchar), __riscv_vsetvlmax_e8m2());
+}
+template<>
+inline v_uint16 vx_load(const ushort *ptr, size_t step)
+{
+    return __riscv_vlse16_v_u16m2(ptr, step * sizeof(ushort), __riscv_vsetvlmax_e16m2());
+}
+template<>
+inline v_int16 vx_load(const short *ptr, size_t step)
+{
+    return __riscv_vlse16_v_i16m2(ptr, step * sizeof(short), __riscv_vsetvlmax_e16m2());
+}
+template<>
+inline v_int32 vx_load(const int *ptr, size_t step)
+{
+    return __riscv_vlse32_v_i32m2(ptr, step * sizeof(int), __riscv_vsetvlmax_e32m2());
+}
+template<>
+inline v_float32 vx_load(const float *ptr, size_t step)
+{
+    return __riscv_vlse32_v_f32m2(ptr, step * sizeof(float), __riscv_vsetvlmax_e32m2());
+}
+template<>
+inline v_float64 vx_load(const double *ptr, size_t step)
+{
+    return __riscv_vlse64_v_f64m2(ptr, step * sizeof(double), __riscv_vsetvlmax_e64m2());
+}
+#endif
+
+template<typename stype, typename itype>
+struct ReduceVecOpAdd;
+
+template<>
+struct ReduceVecOpAdd<uchar, int>
+{
+    using stype = uchar;
+    using itype = int;
+    using v_stype = v_uint8;
+    using v_itype = v_int32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_s32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
         v_uint16 b0, b1;
         v_expand(b, b0, b1);
         v_int16 sb = v_add(v_reinterpret_as_s16(b0), v_reinterpret_as_s16(b1));
-
-        v_int16 s = v_add(sa, sb);
-
-        v_int32 s0, s1;
-        v_expand(s, s0, s1);
-        return v_add(s0, s1);
+        v_int32 sb0, sb1;
+        v_expand(sb, sb0, sb1);
+        return v_add(a, v_add(sb0, sb1));
     }
 };
 
-struct VecOpAdd_16U
+template<>
+struct ReduceVecOpAdd<ushort, float>
 {
     using stype = ushort;
+    using itype = float;
     using v_stype = v_uint16;
-    v_stype load(const stype *ptr) { return vx_load(ptr); }
-    void store(float *ptr, const v_float32 &val) { vx_store(ptr, val); }
-    void store(double *ptr, const v_float32 &val)
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
     {
-        v_float64 val0 = v_cvt_f64(val);
-        v_float64 val1 = v_cvt_f64_high(val);
-        vx_store(ptr, val0);
-        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
-    }
-    v_float32 operator()(const v_stype &a, const v_stype &b) const
-    {
-        v_uint32 a0, a1;
-        v_expand(a, a0, a1);
-        v_int32 sa = v_add(v_reinterpret_as_s32(a0), v_reinterpret_as_s32(a1));
-
         v_uint32 b0, b1;
         v_expand(b, b0, b1);
-        v_int32 sb = v_add(v_reinterpret_as_s32(b0), v_reinterpret_as_s32(b1));
-
-        v_int32 s = v_add(sa, sb);
-        return v_cvt_f32(s);
+        v_int32 sb = v_reinterpret_as_s32(v_add(b0, b1));
+        return v_add(a, v_cvt_f32(sb));
     }
 };
 
-struct VecOpAdd_16S
+template<>
+struct ReduceVecOpAdd<short, float>
 {
     using stype = short;
+    using itype = float;
     using v_stype = v_int16;
-    v_stype load(const stype *ptr) { return vx_load(ptr); }
-    void store(float *ptr, const v_float32 &val) { vx_store(ptr, val); }
-    void store(double *ptr, const v_float32 &val)
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
     {
-        v_float64 val0 = v_cvt_f64(val);
-        v_float64 val1 = v_cvt_f64_high(val);
-        vx_store(ptr, val0);
-        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
-    }
-    v_float32 operator()(const v_stype &a, const v_stype &b) const
-    {
-        v_int32 a0, a1;
-        v_expand(a, a0, a1);
-        v_int32 sa = v_add(a0, a1);
-
         v_int32 b0, b1;
         v_expand(b, b0, b1);
         v_int32 sb = v_add(b0, b1);
-
-        v_int32 s = v_add(sa, sb);
-        return v_cvt_f32(s);
+        return v_add(a, v_cvt_f32(sb));
     }
 };
 
-struct VecOpAdd_32F
+template<>
+struct ReduceVecOpAdd<float, float>
 {
     using stype = float;
+    using itype = float;
     using v_stype = v_float32;
-    v_stype load(const stype *ptr) { return vx_load(ptr); }
-    void store(float *ptr, const v_float32 &val) { vx_store(ptr, val); }
-    void store(double *ptr, const v_float32 &val)
-    {
-        v_float64 val0 = v_cvt_f64(val);
-        v_float64 val1 = v_cvt_f64_high(val);
-        vx_store(ptr, val0);
-        vx_store(ptr+VTraits<v_float64>::vlanes(), val1);
-    }
-    v_float32 operator()(const v_stype &a, const v_stype &b) const { return v_add(a, b); }
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_stype &a, const v_stype &b) const { return v_add(a, b); }
 };
-
-#else
-
-using VecOpAdd_8U  = OpAdd_8U;
-using VecOpAdd_16U = OpAdd_16U;
-using VecOpAdd_16S = OpAdd_16S;
-using VecOpAdd_32F = OpAdd_32F;
-using VecOpAddSqr_8U  = OpAddSqr_8U;
-using VecOpAddSqr_16U = OpAddSqr_16U;
-using VecOpAddSqr_16S = OpAddSqr_16S;
-using VecOpAddSqr_32F = OpAddSqr_32F;
-using VecOpMax_8U  = OpMax_8U;
-using VecOpMax_16U = OpMax_16U;
-using VecOpMax_16S = OpMax_16S;
-using VecOpMax_32F = OpMax_32F;
-using VecOpMin_8U  = OpMin_8U;
-using VecOpMin_16U = OpMin_16U;
-using VecOpMin_16S = OpMin_16S;
-using VecOpMin_32F = OpMin_32F;
 
 #endif
 
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F) && 0
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 
-struct VecOpAdd_64F
+template<>
+struct ReduceVecOpAdd<short, double>
+{
+    using stype = short;
+    using itype = double;
+    using v_stype = v_int16;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_int32 b0, b1;
+        v_expand(b, b0, b1);
+        v_int32 sb = v_add(b0, b1);
+        return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
+    }
+};
+
+template<>
+struct ReduceVecOpAdd<ushort, double>
+{
+    using stype = ushort;
+    using itype = double;
+    using v_stype = v_uint16;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_uint32 b0, b1;
+        v_expand(b, b0, b1);
+        v_int32 sb = v_reinterpret_as_s32(v_add(b0, b1));
+        return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
+    }
+};
+
+template<>
+struct ReduceVecOpAdd<float, double>
+{
+    using stype = float;
+    using itype = double;
+    using v_stype = v_float32;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        return v_add(a, v_add(v_cvt_f64(b), v_cvt_f64_high(b)));
+    }
+};
+
+template<>
+struct ReduceVecOpAdd<double, double>
 {
     using stype = double;
+    using itype = double;
     using v_stype = v_float64;
-    v_stype load(const stype *ptr) { return vx_load(ptr); }
-    void store(double *ptr, const v_float64 &val) { vx_store(ptr, val); }
-    v_float64 operator()(const v_stype &a, const v_stype &b) const { return v_add(a, b); }
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_add(a, b); }
 };
-
-#else
-
-using VecOpAdd_64F = OpAdd_64F;
-using VecOpAddSqr_64F = OpAddSqr_64F;
-using VecOpMax_64F = OpMax_64F;
-using VecOpMin_64F = OpMin_64F;
 
 #endif
 
-template<typename T, typename ST, typename WT, class Op, class OpInit>
+template<typename stype, typename itype>
+struct ReduceOpAddSqr
+{
+    using v_stype = stype;
+    using v_itype = itype;
+    static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
+    static inline itype init() { return (itype)0; }
+    static inline itype reduce(const itype &val) { return val; }
+    inline itype operator()(const itype &a, const stype &b) const { return a + (itype)b * (itype)b; }
+};
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+template<typename stype, typename itype>
+struct ReduceVecOpAddSqr;
+
+template<>
+struct ReduceVecOpAddSqr<uchar, int>
+{
+    using stype = uchar;
+    using itype = int;
+    using v_stype = v_uint8;
+    using v_itype = v_int32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_s32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_uint16 b0, b1;
+        v_mul_expand(b, b, b0, b1);
+
+        v_uint32 s00, s01;
+        v_expand(b0, s00, s01);
+        s00 = v_add(s00, s01);
+        v_uint32 s10, s11;
+        v_expand(b1, s10, s11);
+        s10 = v_add(s10, s11);
+        return v_add(a, v_reinterpret_as_s32(v_add(s00, s10)));
+    }
+};
+
+template<>
+struct ReduceVecOpAddSqr<ushort, float>
+{
+    using stype = ushort;
+    using itype = float;
+    using v_stype = v_uint16;
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_uint32 b0, b1;
+        v_mul_expand(b, b, b0, b1);
+        v_int32 sb = v_reinterpret_as_s32(v_add(b0, b1));
+        return v_add(a, v_cvt_f32(sb));
+    }
+};
+
+template<>
+struct ReduceVecOpAddSqr<short, float>
+{
+    using stype = short;
+    using itype = float;
+    using v_stype = v_int16;
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_int32 b0, b1;
+        v_mul_expand(b, b, b0, b1);
+        v_int32 sb = v_add(b0, b1);
+        return v_add(a, v_cvt_f32(sb));
+    }
+};
+
+template<>
+struct ReduceVecOpAddSqr<float, float>
+{
+    using stype = float;
+    using itype = float;
+    using v_stype = v_float32;
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f32(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_stype &a, const v_stype &b) const { return v_add(a, v_mul(b, b)); }
+};
+
+#endif
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+
+template<>
+struct ReduceVecOpAddSqr<short, double>
+{
+    using stype = short;
+    using itype = double;
+    using v_stype = v_int16;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_int32 b0, b1;
+        v_mul_expand(b, b, b0, b1);
+        v_int32 sb = v_add(b0, b1);
+        return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
+    }
+};
+
+template<>
+struct ReduceVecOpAddSqr<ushort, double>
+{
+    using stype = ushort;
+    using itype = double;
+    using v_stype = v_uint16;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_uint32 b0, b1;
+        v_mul_expand(b, b,  b0, b1);
+        v_int32 sb = v_reinterpret_as_s32(v_add(b0, b1));
+        return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
+    }
+};
+
+template<>
+struct ReduceVecOpAddSqr<float, double>
+{
+    using stype = float;
+    using itype = double;
+    using v_stype = v_float32;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const
+    {
+        v_stype b0 = v_mul(b, b);
+        return v_add(a, v_add(v_cvt_f64(b0), v_cvt_f64_high(b0)));
+    }
+};
+
+template<>
+struct ReduceVecOpAddSqr<double, double>
+{
+    using stype = double;
+    using itype = double;
+    using v_stype = v_float64;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setzero_f64(); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_add(a, v_mul(b, b)); }
+};
+
+#endif
+
+template<typename stype>
+struct ReduceOpMax
+{
+    using v_stype = stype;
+    using v_itype = stype;
+    static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
+    static inline stype init() { return std::numeric_limits<stype>::lowest(); }
+    static inline stype reduce(const stype &val) { return val; }
+    inline stype operator()(const stype &a, const stype &b) const { return std::max(a, b); }
+};
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+template<typename stype>
+struct ReduceVecOpMax;
+
+template<>
+struct ReduceVecOpMax<uchar>
+{
+    using stype = uchar;
+    using itype = uchar;
+    using v_stype = v_uint8;
+    using v_itype = v_uint8;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_u8(std::numeric_limits<itype>::lowest()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
+};
+
+template<>
+struct ReduceVecOpMax<ushort>
+{
+    using stype = ushort;
+    using itype = ushort;
+    using v_stype = v_uint16;
+    using v_itype = v_uint16;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_u16(std::numeric_limits<itype>::lowest()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
+};
+
+template<>
+struct ReduceVecOpMax<short>
+{
+    using stype = short;
+    using itype = short;
+    using v_stype = v_int16;
+    using v_itype = v_int16;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_s16(std::numeric_limits<itype>::lowest()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
+};
+
+template<>
+struct ReduceVecOpMax<float>
+{
+    using stype = float;
+    using itype = float;
+    using v_stype = v_float32;
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_f32(std::numeric_limits<itype>::lowest()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
+};
+
+#endif
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+
+template<>
+struct ReduceVecOpMax<double>
+{
+    using stype = double;
+    using itype = double;
+    using v_stype = v_float64;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_f64(std::numeric_limits<itype>::lowest()); }
+    static inline itype reduce(const v_itype &val)
+    {
+        constexpr int nlanes = VTraits<v_itype>::max_nlanes;
+        itype buf[nlanes];
+        vx_store(buf, val);
+        itype m = buf[0];
+        for (int i = 1; i < VTraits<v_itype>::vlanes(); i++)
+        {
+            if (m < buf[i]) m = buf[i];
+        }
+        return m;
+    }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
+};
+
+#endif
+
+template<typename stype>
+struct ReduceOpMin
+{
+    using v_stype = stype;
+    using v_itype = stype;
+    static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
+    static inline stype init() { return std::numeric_limits<stype>::max(); }
+    static inline stype reduce(const stype &val) { return (stype)val; }
+    inline stype operator()(const stype &a, const stype &b) const { return std::min(a, b); }
+};
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+template<typename stype>
+struct ReduceVecOpMin;
+
+template<>
+struct ReduceVecOpMin<uchar>
+{
+    using stype = uchar;
+    using itype = uchar;
+    using v_stype = v_uint8;
+    using v_itype = v_uint8;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_u8(std::numeric_limits<itype>::max()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
+};
+
+template<>
+struct ReduceVecOpMin<ushort>
+{
+    using stype = ushort;
+    using itype = ushort;
+    using v_stype = v_uint16;
+    using v_itype = v_uint16;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_u16(std::numeric_limits<itype>::max()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
+};
+
+template<>
+struct ReduceVecOpMin<short>
+{
+    using stype = short;
+    using itype = short;
+    using v_stype = v_int16;
+    using v_itype = v_int16;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_s16(std::numeric_limits<itype>::max()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
+};
+
+template<>
+struct ReduceVecOpMin<float>
+{
+    using stype = float;
+    using itype = float;
+    using v_stype = v_float32;
+    using v_itype = v_float32;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_f32(std::numeric_limits<itype>::max()); }
+    static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
+};
+
+#endif
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+
+template<>
+struct ReduceVecOpMin<double>
+{
+    using stype = double;
+    using itype = double;
+    using v_stype = v_float64;
+    using v_itype = v_float64;
+    static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
+    static inline v_itype init() { return vx_setall_f64(std::numeric_limits<itype>::max()); }
+    static inline itype reduce(const v_itype &val)
+    {
+        constexpr int nlanes = VTraits<v_itype>::max_nlanes;
+        itype buf[nlanes];
+        vx_store(buf, val);
+        itype m = buf[0];
+        for (int i = 1; i < VTraits<v_itype>::vlanes(); i++)
+        {
+            if (m > buf[i]) m = buf[i];
+        }
+        return m;
+    }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
+};
+
+#endif
+
+using ReduceOpAdd_8U32S  = ReduceOpAdd<uchar, int>;
+using ReduceOpAdd_8U32F  = ReduceOpAdd<uchar, int>;
+using ReduceOpAdd_8U64F  = ReduceOpAdd<uchar, int>;
+using ReduceOpAdd_16U32F = ReduceOpAdd<ushort, float>;
+using ReduceOpAdd_16U64F = ReduceOpAdd<ushort, double>;
+using ReduceOpAdd_16S32F = ReduceOpAdd<short, float>;
+using ReduceOpAdd_16S64F = ReduceOpAdd<short, double>;
+using ReduceOpAdd_32F32F = ReduceOpAdd<float, float>;
+using ReduceOpAdd_32F64F = ReduceOpAdd<float, double>;
+using ReduceOpAdd_64F64F = ReduceOpAdd<double, double>;
+
+using ReduceOpAddSqr_8U32S  = ReduceOpAddSqr<uchar, int>;
+using ReduceOpAddSqr_8U32F  = ReduceOpAddSqr<uchar, int>;
+using ReduceOpAddSqr_8U64F  = ReduceOpAddSqr<uchar, int>;
+using ReduceOpAddSqr_16U32F = ReduceOpAddSqr<ushort, float>;
+using ReduceOpAddSqr_16U64F = ReduceOpAddSqr<ushort, double>;
+using ReduceOpAddSqr_16S32F = ReduceOpAddSqr<short, float>;
+using ReduceOpAddSqr_16S64F = ReduceOpAddSqr<short, double>;
+using ReduceOpAddSqr_32F32F = ReduceOpAddSqr<float, float>;
+using ReduceOpAddSqr_32F64F = ReduceOpAddSqr<float, double>;
+using ReduceOpAddSqr_64F64F = ReduceOpAddSqr<double, double>;
+
+using ReduceOpMax_8U  = ReduceOpMax<uchar>;
+using ReduceOpMax_16U = ReduceOpMax<ushort>;
+using ReduceOpMax_16S = ReduceOpMax<short>;
+using ReduceOpMax_32F = ReduceOpMax<float>;
+using ReduceOpMax_64F = ReduceOpMax<double>;
+
+using ReduceOpMin_8U  = ReduceOpMin<uchar>;
+using ReduceOpMin_16U = ReduceOpMin<ushort>;
+using ReduceOpMin_16S = ReduceOpMin<short>;
+using ReduceOpMin_32F = ReduceOpMin<float>;
+using ReduceOpMin_64F = ReduceOpMin<double>;
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+
+using ReduceVecOpAdd_8U32S  = ReduceVecOpAdd<uchar, int>;
+using ReduceVecOpAdd_8U32F  = ReduceVecOpAdd<uchar, int>;
+using ReduceVecOpAdd_8U64F  = ReduceVecOpAdd<uchar, int>;
+using ReduceVecOpAdd_16U32F = ReduceVecOpAdd<ushort, float>;
+using ReduceVecOpAdd_16S32F = ReduceVecOpAdd<short, float>;
+using ReduceVecOpAdd_32F32F = ReduceVecOpAdd<float, float>;
+using ReduceVecOpAddSqr_8U32S  = ReduceVecOpAddSqr<uchar, int>;
+using ReduceVecOpAddSqr_8U32F  = ReduceVecOpAddSqr<uchar, int>;
+using ReduceVecOpAddSqr_8U64F  = ReduceVecOpAddSqr<uchar, int>;
+using ReduceVecOpAddSqr_16U32F = ReduceVecOpAddSqr<ushort, float>;
+using ReduceVecOpAddSqr_16S32F = ReduceVecOpAddSqr<short, float>;
+using ReduceVecOpAddSqr_32F32F = ReduceVecOpAddSqr<float, float>;
+using ReduceVecOpMax_8U  = ReduceVecOpMax<uchar>;
+using ReduceVecOpMax_16U = ReduceVecOpMax<ushort>;
+using ReduceVecOpMax_16S = ReduceVecOpMax<short>;
+using ReduceVecOpMax_32F = ReduceVecOpMax<float>;
+using ReduceVecOpMin_8U  = ReduceVecOpMin<uchar>;
+using ReduceVecOpMin_16U = ReduceVecOpMin<ushort>;
+using ReduceVecOpMin_16S = ReduceVecOpMin<short>;
+using ReduceVecOpMin_32F = ReduceVecOpMin<float>;
+
+#else
+
+using ReduceVecOpAdd_8U32S  = ReduceOpAdd<uchar, int>;
+using ReduceVecOpAdd_8U32F  = ReduceOpAdd<uchar, int>;
+using ReduceVecOpAdd_8U64F  = ReduceOpAdd<uchar, int>;
+using ReduceVecOpAdd_16U32F = ReduceOpAdd<ushort, float>;
+using ReduceVecOpAdd_16S32F = ReduceOpAdd<short, float>;
+using ReduceVecOpAdd_32F32F = ReduceOpAdd<float, float>;
+using ReduceVecOpAddSqr_8U32S  = ReduceOpAddSqr<uchar, int>;
+using ReduceVecOpAddSqr_8U32F  = ReduceOpAddSqr<uchar, int>;
+using ReduceVecOpAddSqr_8U64F  = ReduceOpAddSqr<uchar, int>;
+using ReduceVecOpAddSqr_16U32F = ReduceOpAddSqr<ushort, float>;
+using ReduceVecOpAddSqr_16S32F = ReduceOpAddSqr<short, float>;
+using ReduceVecOpAddSqr_32F32F = ReduceOpAddSqr<float, float>;
+using ReduceVecOpMax_8U  = ReduceOpMax<uchar>;
+using ReduceVecOpMax_16U = ReduceOpMax<ushort>;
+using ReduceVecOpMax_16S = ReduceOpMax<short>;
+using ReduceVecOpMax_32F = ReduceOpMax<float>;
+using ReduceVecOpMin_8U  = ReduceOpMin<uchar>;
+using ReduceVecOpMin_16U = ReduceOpMin<ushort>;
+using ReduceVecOpMin_16S = ReduceOpMin<short>;
+using ReduceVecOpMin_32F = ReduceOpMin<float>;
+
+#endif
+
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+
+using ReduceVecOpAdd_16U64F = ReduceVecOpAdd<ushort, double>;
+using ReduceVecOpAdd_16S64F = ReduceVecOpAdd<short, double>;
+using ReduceVecOpAdd_32F64F = ReduceVecOpAdd<float, double>;
+using ReduceVecOpAdd_64F64F = ReduceVecOpAdd<double, double>;
+using ReduceVecOpAddSqr_16U64F = ReduceVecOpAddSqr<ushort, double>;
+using ReduceVecOpAddSqr_16S64F = ReduceVecOpAddSqr<short, double>;
+using ReduceVecOpAddSqr_32F64F = ReduceVecOpAddSqr<float, double>;
+using ReduceVecOpAddSqr_64F64F = ReduceVecOpAddSqr<double, double>;
+using ReduceVecOpMax_64F = ReduceVecOpMax<double>;
+using ReduceVecOpMin_64F = ReduceVecOpMin<double>;
+
+#else
+
+using ReduceVecOpAdd_16U64F = ReduceOpAdd<ushort, double>;
+using ReduceVecOpAdd_16S64F = ReduceOpAdd<short, double>;
+using ReduceVecOpAdd_32F64F = ReduceOpAdd<float, double>;
+using ReduceVecOpAdd_64F64F = ReduceOpAdd<double, double>;
+using ReduceVecOpAddSqr_16U64F = ReduceOpAddSqr<ushort, double>;
+using ReduceVecOpAddSqr_16S64F = ReduceOpAddSqr<short, double>;
+using ReduceVecOpAddSqr_32F64F = ReduceOpAddSqr<float, double>;
+using ReduceVecOpAddSqr_64F64F = ReduceOpAddSqr<double, double>;
+using ReduceVecOpMax_64F = ReduceOpMax<double>;
+using ReduceVecOpMin_64F = ReduceOpMin<double>;
+
+#endif
+
+template<typename T, typename ST, class Op, class VecOp>
 class ReduceR_Invoker : public ParallelLoopBody
 {
+  using WT = typename Op::v_itype;
+  using VT = typename VecOp::v_itype;
 public:
-  ReduceR_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, OpInit& aOpInit)
-                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit),buffer(srcmat.size().width*srcmat.channels())
+  ReduceR_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, VecOp& aVop)
+                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),vop(aVop)
   {
   }
   void operator()(const Range& range) const CV_OVERRIDE
@@ -608,55 +1037,86 @@ public:
     ST *dst = dstmat.ptr<ST>();
     int height = srcmat.size().height;
 
-    for (int i = range.start; i < range.end; i++) {
-        WT buf = opInit(src[i]);
-        for (int h = 1; h < height; h++) {
-            buf = op(buf, (WT)src[h*srcstep+i]);
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int nlanes = VTraits<typename VecOp::v_stype>::vlanes();
+#else
+    int nlanes = 1;
+#endif
+
+    for (int i = range.start; i < range.end; i++)
+    {
+        const T* _src = src+i;
+        VT vbuf = vop.init();
+        int h = 0;
+        for (; h <= height - nlanes; h += nlanes)
+        {
+            vbuf = vop(vbuf, vop.load(_src+h*srcstep, srcstep));
         }
-        dst[i] = (ST)buf;
+        WT wbuf = vop.reduce(vbuf);
+        for (; h < height; h++)
+        {
+            wbuf = op(wbuf, op.load(_src+h*srcstep, srcstep));
+        }
+        dst[i] = (ST)op.reduce(wbuf);
     }
   }
 private:
   const Mat& srcmat;
   Mat& dstmat;
   Op& op;
-  OpInit& opInit;
-  mutable AutoBuffer<WT> buffer;
+  VecOp& vop;
 };
 
-template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
+template<typename T, typename ST, class Op, class VecOp> static void
 reduceR_( const Mat& srcmat, Mat& dstmat)
 {
-    typedef typename Op::rtype WT;
     Op op;
-    OpInit opInit;
+    VecOp vop;
 
-    ReduceR_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
+    ReduceR_Invoker<T, ST, Op, VecOp> body(srcmat, dstmat, op, vop);
     //group columns by 64 bytes for data locality
-    parallel_for_(Range(0, srcmat.size().width*srcmat.channels()), body, srcmat.size().width*CV_ELEM_SIZE(srcmat.depth())/64);
+    parallel_for_(Range(0, srcmat.size().width*srcmat.channels()), body, srcmat.size().width*CV_ELEM_SIZE(srcmat.depth())/128.0);
 }
 
-template<typename T, typename ST, typename WT, class Op, class OpInit>
+template<typename T, typename ST, class Op, class VecOp>
 class ReduceC_Invoker : public ParallelLoopBody
 {
+  using WT = typename Op::v_itype;
+  using VT = typename VecOp::v_itype;
 public:
-  ReduceC_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, OpInit& aOpInit)
-                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit)
+  ReduceC_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, VecOp& aVop)
+                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),vop(aVop)
   {
   }
   void operator()(const Range& range) const CV_OVERRIDE
   {
     int channels = srcmat.channels();
     int width = srcmat.cols;
-    for (int cn = 0; cn < channels; cn++) {
-        for (int h = range.start; h < range.end; h++) {
-            const T *src = srcmat.ptr<T>(h);
+
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int nlanes = VTraits<typename VecOp::v_stype>::vlanes();
+#else
+    int nlanes = 1;
+#endif
+
+    for (int cn = 0; cn < channels; cn++)
+    {
+        for (int h = range.start; h < range.end; h++)
+        {
+            const T *src = srcmat.ptr<T>(h)+cn;
             ST *dst = dstmat.ptr<ST>(h);
-            WT buf = opInit(src[cn]);
-            for (int w = 1; w < width; w++) {
-                buf = op(buf, src[w*channels+cn]);
+            VT vbuf = vop.init();
+            int w = 0;
+            for (; w <= width - nlanes; w += nlanes)
+            {
+                vbuf = vop(vbuf, vop.load(src+w*channels, channels));
             }
-            dst[cn] = (ST)buf;
+            WT wbuf = vop.reduce(vbuf);
+            for (; w < width; w++)
+            {
+                wbuf = op(wbuf, op.load(src+w*channels, channels));
+            }
+            dst[cn] = (ST)op.reduce(wbuf);
         }
     }
   }
@@ -664,17 +1124,16 @@ private:
   const Mat& srcmat;
   Mat& dstmat;
   Op& op;
-  OpInit& opInit;
+  VecOp& vop;
 };
 
-template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
+template<typename T, typename ST, class Op, class VecOp> static void
 reduceC_( const Mat& srcmat, Mat& dstmat)
 {
-    typedef typename Op::rtype WT;
     Op op;
-    OpInit opInit;
+    VecOp vop;
 
-    ReduceC_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
+    ReduceC_Invoker<T, ST, Op, VecOp> body(srcmat, dstmat, op, vop);
     parallel_for_(Range(0, srcmat.size().height), body);
 }
 
@@ -682,39 +1141,39 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
 
-#define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int>, OpNop<int> >
-#define reduceSumR8u32f  reduceR_<uchar, float, OpAdd<int>, OpNop<int> >
-#define reduceSumR8u64f  reduceR_<uchar, double,OpAdd<int>, OpNop<int> >
-#define reduceSumR16u32f reduceR_<ushort,float, OpAdd<float> >
-#define reduceSumR16u64f reduceR_<ushort,double,OpAdd<double> >
-#define reduceSumR16s32f reduceR_<short, float, OpAdd<float> >
-#define reduceSumR16s64f reduceR_<short, double,OpAdd<double> >
-#define reduceSumR32f32f reduceR_<float, float, OpAdd<float> >
-#define reduceSumR32f64f reduceR_<float, double,OpAdd<double> >
-#define reduceSumR64f64f reduceR_<double,double,OpAdd<double> >
+#define reduceSumR8u32s  reduceR_<uchar, int,   ReduceOpAdd_8U32S,  ReduceVecOpAdd_8U32S  >
+#define reduceSumR8u32f  reduceR_<uchar, float, ReduceOpAdd_8U32F,  ReduceVecOpAdd_8U32F  >
+#define reduceSumR8u64f  reduceR_<uchar, double,ReduceOpAdd_8U64F,  ReduceVecOpAdd_8U64F  >
+#define reduceSumR16u32f reduceR_<ushort,float, ReduceOpAdd_16U32F, ReduceVecOpAdd_16U32F >
+#define reduceSumR16u64f reduceR_<ushort,double,ReduceOpAdd_16U64F, ReduceVecOpAdd_16U64F >
+#define reduceSumR16s32f reduceR_<short, float, ReduceOpAdd_16S32F, ReduceVecOpAdd_16S32F >
+#define reduceSumR16s64f reduceR_<short, double,ReduceOpAdd_16S64F, ReduceVecOpAdd_16S64F >
+#define reduceSumR32f32f reduceR_<float, float, ReduceOpAdd_32F32F, ReduceVecOpAdd_32F32F >
+#define reduceSumR32f64f reduceR_<float, double,ReduceOpAdd_32F64F, ReduceVecOpAdd_32F64F >
+#define reduceSumR64f64f reduceR_<double,double,ReduceOpAdd_64F64F, ReduceVecOpAdd_64F64F >
 
-#define reduceSum2R8u32s  reduceR_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
-#define reduceSum2R8u32f  reduceR_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
-#define reduceSum2R8u64f  reduceR_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
-#define reduceSum2R16u32f reduceR_<ushort,float, OpAddSqr<float>, OpSqr<float> >
-#define reduceSum2R16u64f reduceR_<ushort,double,OpAddSqr<double>,OpSqr<double> >
-#define reduceSum2R16s32f reduceR_<short, float, OpAddSqr<float>, OpSqr<float> >
-#define reduceSum2R16s64f reduceR_<short, double,OpAddSqr<double>,OpSqr<double> >
-#define reduceSum2R32f32f reduceR_<float, float, OpAddSqr<float>, OpSqr<float> >
-#define reduceSum2R32f64f reduceR_<float, double,OpAddSqr<double>,OpSqr<double> >
-#define reduceSum2R64f64f reduceR_<double,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R8u32s  reduceR_<uchar, int,   ReduceOpAddSqr_8U32S,  ReduceVecOpAddSqr_8U32S  >
+#define reduceSum2R8u32f  reduceR_<uchar, float, ReduceOpAddSqr_8U32F,  ReduceVecOpAddSqr_8U32F  >
+#define reduceSum2R8u64f  reduceR_<uchar, double,ReduceOpAddSqr_8U64F,  ReduceVecOpAddSqr_8U64F  >
+#define reduceSum2R16u32f reduceR_<ushort,float, ReduceOpAddSqr_16U32F, ReduceVecOpAddSqr_16U32F >
+#define reduceSum2R16u64f reduceR_<ushort,double,ReduceOpAddSqr_16U64F, ReduceVecOpAddSqr_16U64F >
+#define reduceSum2R16s32f reduceR_<short, float, ReduceOpAddSqr_16S32F, ReduceVecOpAddSqr_16S32F >
+#define reduceSum2R16s64f reduceR_<short, double,ReduceOpAddSqr_16S64F, ReduceVecOpAddSqr_16S64F >
+#define reduceSum2R32f32f reduceR_<float, float, ReduceOpAddSqr_32F32F, ReduceVecOpAddSqr_32F32F >
+#define reduceSum2R32f64f reduceR_<float, double,ReduceOpAddSqr_32F64F, ReduceVecOpAddSqr_32F64F >
+#define reduceSum2R64f64f reduceR_<double,double,ReduceOpAddSqr_64F64F, ReduceVecOpAddSqr_64F64F >
 
-#define reduceMaxR8u  reduceR_<uchar, uchar, OpMax<uchar> >
-#define reduceMaxR16u reduceR_<ushort,ushort,OpMax<ushort> >
-#define reduceMaxR16s reduceR_<short, short, OpMax<short> >
-#define reduceMaxR32f reduceR_<float, float, OpMax<float> >
-#define reduceMaxR64f reduceR_<double,double,OpMax<double> >
+#define reduceMaxR8u  reduceR_<uchar, uchar, ReduceOpMax_8U,  ReduceVecOpMax_8U  >
+#define reduceMaxR16u reduceR_<ushort,ushort,ReduceOpMax_16U, ReduceVecOpMax_16U >
+#define reduceMaxR16s reduceR_<short, short, ReduceOpMax_16S, ReduceVecOpMax_16S >
+#define reduceMaxR32f reduceR_<float, float, ReduceOpMax_32F, ReduceVecOpMax_32F >
+#define reduceMaxR64f reduceR_<double,double,ReduceOpMax_64F, ReduceVecOpMax_64F >
 
-#define reduceMinR8u  reduceR_<uchar, uchar, OpMin<uchar> >
-#define reduceMinR16u reduceR_<ushort,ushort,OpMin<ushort> >
-#define reduceMinR16s reduceR_<short, short, OpMin<short> >
-#define reduceMinR32f reduceR_<float, float, OpMin<float> >
-#define reduceMinR64f reduceR_<double,double,OpMin<double> >
+#define reduceMinR8u  reduceR_<uchar, uchar, ReduceOpMin_8U,  ReduceVecOpMin_8U  >
+#define reduceMinR16u reduceR_<ushort,ushort,ReduceOpMin_16U, ReduceVecOpMin_16U >
+#define reduceMinR16s reduceR_<short, short, ReduceOpMin_16S, ReduceVecOpMin_16S >
+#define reduceMinR32f reduceR_<float, float, ReduceOpMin_32F, ReduceVecOpMin_32F >
+#define reduceMinR64f reduceR_<double,double,ReduceOpMin_64F, ReduceVecOpMin_64F >
 
 #ifdef HAVE_IPP
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
@@ -791,19 +1250,19 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 
 #endif
 
-#define reduceSumC8u32s  reduceC_<uchar, int,   OpAdd<int>, OpNop<int> >
-#define reduceSumC8u32f  reduceC_<uchar, float, OpAdd<int>, OpNop<int> >
-#define reduceSumC16u32f reduceC_<ushort,float, OpAdd<float> >
-#define reduceSumC16s32f reduceC_<short, float, OpAdd<float> >
-#define reduceSumC32f32f reduceC_<float, float, OpAdd<float> >
-#define reduceSumC64f64f reduceC_<double,double,OpAdd<double> >
+#define reduceSumC8u32s  reduceC_<uchar, int,   ReduceOpAdd_8U32S,  ReduceVecOpAdd_8U32S  >
+#define reduceSumC8u32f  reduceC_<uchar, float, ReduceOpAdd_8U32F,  ReduceVecOpAdd_8U32F  >
+#define reduceSumC16u32f reduceC_<ushort,float, ReduceOpAdd_16U32F, ReduceVecOpAdd_16U32F >
+#define reduceSumC16s32f reduceC_<short, float, ReduceOpAdd_16S32F, ReduceVecOpAdd_16S32F >
+#define reduceSumC32f32f reduceC_<float, float, ReduceOpAdd_32F32F, ReduceVecOpAdd_32F32F >
+#define reduceSumC64f64f reduceC_<double,double,ReduceOpAdd_64F64F, ReduceVecOpAdd_64F64F >
 
-#define reduceSum2C8u32s  reduceC_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
-#define reduceSum2C8u32f  reduceC_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
-#define reduceSum2C16u32f reduceC_<ushort,float, OpAddSqr<float>, OpSqr<float> >
-#define reduceSum2C16s32f reduceC_<short, float, OpAddSqr<float>, OpSqr<float> >
-#define reduceSum2C32f32f reduceC_<float, float, OpAddSqr<float>, OpSqr<float> >
-#define reduceSum2C64f64f reduceC_<double,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C8u32s  reduceC_<uchar, int,   ReduceOpAddSqr_8U32S,  ReduceVecOpAddSqr_8U32S  >
+#define reduceSum2C8u32f  reduceC_<uchar, float, ReduceOpAddSqr_8U32F,  ReduceVecOpAddSqr_8U32F  >
+#define reduceSum2C16u32f reduceC_<ushort,float, ReduceOpAddSqr_16U32F, ReduceVecOpAddSqr_16U32F >
+#define reduceSum2C16s32f reduceC_<short, float, ReduceOpAddSqr_16S32F, ReduceVecOpAddSqr_16S32F >
+#define reduceSum2C32f32f reduceC_<float, float, ReduceOpAddSqr_32F32F, ReduceVecOpAddSqr_32F32F >
+#define reduceSum2C64f64f reduceC_<double,double,ReduceOpAddSqr_64F64F, ReduceVecOpAddSqr_64F64F >
 
 #ifdef HAVE_IPP
 #define reduceSumC8u64f  reduceSumC_8u16u16s32f_64f
@@ -811,15 +1270,15 @@ static inline void reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& ds
 #define reduceSumC16s64f reduceSumC_8u16u16s32f_64f
 #define reduceSumC32f64f reduceSumC_8u16u16s32f_64f
 #else
-#define reduceSumC8u64f  reduceC_<uchar, double,OpAdd<int>, OpNop<int> >
-#define reduceSumC16u64f reduceC_<ushort,double,OpAdd<double> >
-#define reduceSumC16s64f reduceC_<short, double,OpAdd<double> >
-#define reduceSumC32f64f reduceC_<float, double,OpAdd<double> >
+#define reduceSumC8u64f  reduceC_<uchar, double,ReduceOpAdd_8U64F,  ReduceVecOpAdd_8U64F  >
+#define reduceSumC16u64f reduceC_<ushort,double,ReduceOpAdd_16U64F, ReduceVecOpAdd_16U64F >
+#define reduceSumC16s64f reduceC_<short, double,ReduceOpAdd_16S64F, ReduceVecOpAdd_16S64F >
+#define reduceSumC32f64f reduceC_<float, double,ReduceOpAdd_32F64F, ReduceVecOpAdd_32F64F >
 
-#define reduceSum2C8u64f  reduceC_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
-#define reduceSum2C16u64f reduceC_<ushort,double,OpAddSqr<double>,OpSqr<double> >
-#define reduceSum2C16s64f reduceC_<short, double,OpAddSqr<double>,OpSqr<double> >
-#define reduceSum2C32f64f reduceC_<float, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2C8u64f  reduceC_<uchar, double,ReduceOpAddSqr_8U64F,  ReduceVecOpAddSqr_8U64F  >
+#define reduceSum2C16u64f reduceC_<ushort,double,ReduceOpAddSqr_16U64F, ReduceVecOpAddSqr_16U64F >
+#define reduceSum2C16s64f reduceC_<short, double,ReduceOpAddSqr_16S64F, ReduceVecOpAddSqr_16S64F >
+#define reduceSum2C32f64f reduceC_<float, double,ReduceOpAddSqr_32F64F, ReduceVecOpAddSqr_32F64F >
 #endif
 
 #ifdef HAVE_IPP
@@ -853,12 +1312,12 @@ REDUCE_OP(16u, Max, ushort, ushort)
 REDUCE_OP(16s, Max, short, short)
 REDUCE_OP(32f, Max, float, float)
 #else
-#define reduceMaxC8u  reduceC_<uchar, uchar, OpMax<uchar> >
-#define reduceMaxC16u reduceC_<ushort,ushort,OpMax<ushort> >
-#define reduceMaxC16s reduceC_<short, short, OpMax<short> >
-#define reduceMaxC32f reduceC_<float, float, OpMax<float> >
+#define reduceMaxC8u  reduceC_<uchar, uchar, ReduceOpMax_8U,  ReduceVecOpMax_8U  >
+#define reduceMaxC16u reduceC_<ushort,ushort,ReduceOpMax_16U, ReduceVecOpMax_16U >
+#define reduceMaxC16s reduceC_<short, short, ReduceOpMax_16S, ReduceVecOpMax_16S >
+#define reduceMaxC32f reduceC_<float, float, ReduceOpMax_32F, ReduceVecOpMax_32F >
 #endif
-#define reduceMaxC64f reduceC_<double,double,OpMax<double> >
+#define reduceMaxC64f reduceC_<double,double,ReduceOpMax_64F, ReduceVecOpMax_64F >
 
 #ifdef HAVE_IPP
 REDUCE_OP(8u, Min, uchar, uchar)
@@ -866,12 +1325,12 @@ REDUCE_OP(16u, Min, ushort, ushort)
 REDUCE_OP(16s, Min, short, short)
 REDUCE_OP(32f, Min, float, float)
 #else
-#define reduceMinC8u  reduceC_<uchar, uchar, OpMin<uchar> >
-#define reduceMinC16u reduceC_<ushort,ushort,OpMin<ushort> >
-#define reduceMinC16s reduceC_<short, short, OpMin<short> >
-#define reduceMinC32f reduceC_<float, float, OpMin<float> >
+#define reduceMinC8u  reduceC_<uchar, uchar, ReduceOpMin_8U,  ReduceVecOpMin_8U  >
+#define reduceMinC16u reduceC_<ushort,ushort,ReduceOpMin_16U, ReduceVecOpMin_16U >
+#define reduceMinC16s reduceC_<short, short, ReduceOpMin_16S, ReduceVecOpMin_16S >
+#define reduceMinC32f reduceC_<float, float, ReduceOpMin_32F, ReduceVecOpMin_32F >
 #endif
-#define reduceMinC64f reduceC_<double,double,OpMin<double> >
+#define reduceMinC64f reduceC_<double,double,ReduceOpMin_64F, ReduceVecOpMin_64F >
 
 #ifdef HAVE_OPENCL
 
