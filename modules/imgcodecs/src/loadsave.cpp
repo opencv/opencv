@@ -1729,7 +1729,7 @@ public:
     int width() const;
     int height() const;
     int type() const;
-    Animation getAnimation(int start = 0, int count = INT16_MAX) const;
+    const Animation& getAnimation();
     Mat getMetadata(ImageMetadataType type) const;
     bool readHeader();
     Mat readData();
@@ -1797,7 +1797,7 @@ Mat ImageCollection::Impl::getMetadata(ImageMetadataType type) const {
     return m_decoder->getMetadata(type);
 }
 
-Animation ImageCollection::Impl::getAnimation(int start, int count) const { return {}; }
+const Animation& ImageCollection::Impl::getAnimation() { return m_decoder->animation(); }
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
@@ -1901,7 +1901,7 @@ int ImageCollection::getHeight() const { return pImpl->height(); }
 
 int ImageCollection::getType() const { return pImpl->type(); }
 
-Animation ImageCollection::getAnimation(int start, int count) const { return pImpl->getAnimation(start, count); }
+const Animation& ImageCollection::getAnimation() { return pImpl->getAnimation(); }
 
 Mat ImageCollection::getMetadata(ImageMetadataType type) const { return pImpl->getMetadata(type); }
 

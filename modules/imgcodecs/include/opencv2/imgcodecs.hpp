@@ -754,7 +754,7 @@ public:
     CV_WRAP Mat getMetadata(ImageMetadataType type) const;
     CV_WRAP const Mat& at(int index);
     const Mat& operator[](int index);
-    CV_WRAP Animation getAnimation(int start = 0, int count = INT16_MAX) const;
+    CV_WRAP const Animation& getAnimation();
     CV_WRAP void releaseCache(int index);
     iterator begin();
     iterator end();
