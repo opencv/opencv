@@ -10,7 +10,7 @@
 #include <thread>
 #include <cassert>
 #include <optional>
-
+#include <iostream>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -188,20 +188,23 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
 
     std::vector<Rank> tokens;
     while (matcher->find(status) && U_SUCCESS(status)) {
-        // 4) Extract the match as UTF-8 bytes
         icu::UnicodeString usub = matcher->group(status);
         std::string subUtf8;
         usub.toUTF8String(subUtf8);
+        // Replace leading space with U+0120 (Ġ) as in OpenAI encoder.json
+        // [TODO]: not sure if this should be the case for all 
+        // cases of space in the json? 
+        if (!subUtf8.empty() && subUtf8[0] == ' ') {
+            subUtf8.replace(0, 1, "\xC4\xA0");
+        }
+        std::cout << "[" << subUtf8 << "]" << std::endl; 
 
-        // 5) Turn that into a ByteVec (vector<uint8_t>)
         ByteVec piece(subUtf8.begin(), subUtf8.end());
 
-        // 6) Look up in the encoder map
         auto it = encoder_.find(piece);
         if (it != encoder_.end()) {
             tokens.push_back(it->second);
         } else {
-            // fallback to byte-pair encode
             auto subTokens = bytePairEncode(piece, encoder_);
             tokens.insert(tokens.end(),
                           subTokens.begin(), subTokens.end());

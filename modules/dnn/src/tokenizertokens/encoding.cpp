@@ -4,9 +4,11 @@
 #include <cassert>
 #include <regex>
 #include <functional>
+#include <iostream>
 #include <unicode/unistr.h>
 #include <unicode/regex.h>
-#include <iostream>
+#include <unicode/ustring.h> 
+#include "nlohmann/json.hpp"
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -23,13 +25,7 @@ Encoding::Encoding(const std::string &name,
 
     UErrorCode status = U_ZERO_ERROR;
     patRegex_.reset(
-        icu::RegexPattern::compile(
-            icu::UnicodeString::fromUTF8(patStr),
-            UREGEX_CASE_INSENSITIVE |
-            UREGEX_COMMENTS        |
-            UREGEX_UWORD           ,
-            status
-        )
+        icu::RegexPattern::compile(icu::UnicodeString::fromUTF8(patStr), 0, status)
     );
 
     if (U_FAILURE(status)) {
@@ -45,6 +41,9 @@ Encoding::Encoding(const std::string &name,
         stMax = std::max(stMax, kv.second);
     maxTokenValue_ = std::max(mrMax, stMax);
     if (explicitNvocab > 0) {
+        std::cout << "mergeableRanks_.size(): " << mergeableRanks_.size() << std::endl;
+        std::cout << "specialTokens_.size(): " << specialTokens_.size() << std::endl;
+        std::cout << "explicitNvocab: " << explicitNvocab << std::endl;
         assert(static_cast<int>(mergeableRanks_.size() + specialTokens_.size()) == explicitNvocab);
         assert(maxTokenValue_ == static_cast<Rank>(explicitNvocab-1));
     }
@@ -164,7 +163,11 @@ std::vector<Rank> Encoding::encodeOrdinary(const std::string& text) const {
         return coreBPE_.encodeOrdinary(text);
     } catch(const std::exception &e) {
         // TODO: handle UTF-16 surrogate workaround
-        std::string fixed = text; // placeholder
+        UErrorCode status = U_ZERO_ERROR;
+        icu::UnicodeString ustr = icu::UnicodeString::fromUTF8(text);
+        // convert back to UTF-8, replcaing invalud sequences
+        std::string fixed;
+        ustr.toUTF8String(fixed);
         return coreBPE_.encodeOrdinary(fixed);
     }
 }
@@ -221,6 +224,101 @@ Rank Encoding:: encodeSingleToken(const std::vector<std::uint8_t>& bytes) const 
     }
     // Not found 
     throw std::out_of_range("Token not found in mergeable or special token maps");
+}
+
+
+Encoding getEncodingForGPT2(const std::string &name) {
+    // load encoder.json
+    std::ifstream enc_f("../modules/dnn/src/tokenizertokens/encoder.json");
+    if (!enc_f) throw std::runtime_error("Failed to open encoder.json");
+    nlohmann::json enc_j;
+    enc_f >> enc_j;
+    
+    // load vocab.bpe
+    std::ifstream bpe_f("../modules/dnn/src/tokenizertokens/vocab.bpe");
+    if (!bpe_f) throw std::runtime_error("Failed to open vocab.bpe");
+    std::string line;
+    std::getline(bpe_f, line); // skip first line (#version)
+    std::vector<std::pair<std::string, std::string>> merges;
+    while (std::getline(bpe_f, line)) {
+        if (line.empty()) continue;
+        std::istringstream iss(line);
+        std::string lhs, rhs;
+        if (!(iss >> lhs >> rhs)) continue;
+        merges.emplace_back(lhs, rhs);
+    }
+
+    // Build rank to int bytes and data gym to byte to byte 
+    std::vector<uint8_t> rank_to_intbyte(256);
+    std::unordered_map<char, uint8_t> data_gym_byte_to_byte;
+    for (int b = 0; b < 256; ++b) {
+        rank_to_intbyte[b] = static_cast<uint8_t>(b);
+    }
+    int n = 0;
+    for (int b = 0; b < 256; ++b) {
+        if (std::find(rank_to_intbyte.begin(), rank_to_intbyte.end(), b) == rank_to_intbyte.end()) {
+            rank_to_intbyte.push_back(static_cast<uint8_t>(b));
+            data_gym_byte_to_byte[static_cast<char>(256+n)] = static_cast<uint8_t>(b);
+            ++n;
+        }
+    }
+
+    // Build mergeablerRanks (BPE ranks)
+    ByteVecRankMap mergeableRanks;
+    for (size_t i = 0; i < rank_to_intbyte.size(); ++i) {
+        mergeableRanks[{rank_to_intbyte[i]}] = static_cast<int>(i);
+    }
+    n = static_cast<int>(mergeableRanks.size());
+    for (const auto& p : merges) {
+        auto first = decodeDataGym(p.first);
+        auto second = decodeDataGym(p.second);
+        std::vector<uint8_t> merged = first;
+        merged.insert(merged.end(), second.begin(), second.end());
+        mergeableRanks[merged] = n++;
+    }
+    // Build specialTokens map (from encoder.json only special tokens)
+    std::unordered_map<std::string, Rank> specialTokens = {
+        {"<|endoftext|>", 50256}
+    };
+    int explicitNvocab = 50257;
+    return Encoding(name, R50K_UTF8, mergeableRanks, specialTokens, explicitNvocab);
+}
+
+std::string Encoding::decode(const std::vector<Rank>& tokens, const std::string& errors) const {
+    auto opt_bytes = coreBPE_.decodeBytes(tokens);
+    if (!opt_bytes) throw std::runtime_error("Invalid decode.");
+    const ByteVec& bytes = *opt_bytes;
+    if (errors == "strict") {
+        // Validate UTF-8 
+        UErrorCode status = U_ZERO_ERROR;
+        int32_t outLen = 0;
+        u_strFromUTF8(
+            nullptr, 
+            0, 
+            &outLen, 
+            reinterpret_cast<const char*>(bytes.data()), bytes.size(), 
+            &status
+        );
+        if (status == U_INVALID_CHAR_FOUND || status == U_TRUNCATED_CHAR_FOUND) {
+            throw std::runtime_error("Invalid UTF-8 sequence in decoded bytes");
+        }
+        status = U_ZERO_ERROR; // Reset status for conversion
+    }
+    // Always use ICU to convert, which will replace invalid sequences with U+FFFD
+    icu::UnicodeString ustr = icu::UnicodeString::fromUTF8(
+        std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size())
+    );
+    std::string result;
+    ustr.toUTF8String(result);
+    // Replace U+0120 (Ġ, "\xC4\xA0") with space
+    // works for now but need to check if this works for all 
+    // cases
+    size_t pos = 0;
+    while ((pos = result.find("\xC4\xA0", pos)) != std::string::npos) {
+        result.replace(pos, 2, " ");
+        pos += 1;
+    }
+    return result;
 }
 
 }}}

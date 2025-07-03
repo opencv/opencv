@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
+#include <fstream>
+#include <sstream>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -47,7 +49,7 @@ public:
 
     /* --------------------- Decoding ----------------------------------*/
     CV_WRAP std::vector<std::uint8_t> decodeBytes(const std::vector<Rank>& tokens) const;
-    CV_WRAP std::string decode(const std::vector<Rank>& tokens, const std::string& errors="replace") const;
+    CV_EXPORTS std::string decode(const std::vector<Rank>& tokens, const std::string& errors="replace") const;
     CV_WRAP std::vector<std::uint8_t> decodeSingleTokenBytes(Rank token) const;
     CV_WRAP std::vector<std::vector<std::uint8_t>> decodeTokensBytes(const std::vector<Rank>& tokens) const;
     // Might used these extra functions keep for now
@@ -119,5 +121,21 @@ private:
     CV_WRAP std::vector<Rank> _encodeBytesLower(const std::vector<uint8_t>& bytes) const;
 };
 
+
+// GPT2 for Testing this function should be moved into registry later
+// Or, to have it as a std::string:
+static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
+
+
+// decode a string as a byte string 
+inline std::vector<uint8_t> decodeDataGym(const std::string& s) {
+    std::vector<uint8_t> out;
+    out.reserve(s.size());
+    for (unsigned char c : s) out.push_back(static_cast<uint8_t>(c));
+    return out;
+    // return std::vector<uint8_t>(s.begin(), s.end());
+}
+
+CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name);
 
 }}}
