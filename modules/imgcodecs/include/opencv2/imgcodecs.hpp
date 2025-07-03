@@ -710,8 +710,8 @@ CV_EXPORTS_W bool haveImageWriter( const String& filename );
  *
  * ### Features
  *
- * - Supports multi-page image formats (e.g., TIFF, PDF).
- * - Supports animated image formats via the OpenCV `Animation` class (e.g., WebP, GIF).
+ * - Supports multi-page image formats (e.g., TIFF).
+ * - Supports animated image formats via the OpenCV `Animation` class (e.g., APNG, WebP, GIF).
  * - On-demand decoding and memory management.
  * - Fast sequential access and reasonably efficient random access.
  *
@@ -748,11 +748,13 @@ public:
     CV_WRAP void init(const String& img, int flags);
     size_t size() const;
     CV_WRAP int size32() const { return (int)size(); }
-    CV_WRAP int width() const;
-    CV_WRAP int height() const;
+    CV_WRAP int getWidth() const;
+    CV_WRAP int getHeight() const;
+    CV_WRAP int getType() const;
     CV_WRAP Mat getMetadata(ImageMetadataType type) const;
     CV_WRAP const Mat& at(int index);
     const Mat& operator[](int index);
+    CV_WRAP Animation getAnimation(int start = 0, int count = INT16_MAX) const;
     CV_WRAP void releaseCache(int index);
     iterator begin();
     iterator end();

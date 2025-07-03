@@ -574,8 +574,8 @@ TEST_P(Imgcodecs_ImageCollection, animations)
     {
         ImageCollection collection(output, IMREAD_UNCHANGED);
         EXPECT_EQ(read_frames.size(), collection.size());
-        EXPECT_EQ(32, collection.width());
-        EXPECT_EQ(32, collection.height());
+        EXPECT_EQ(32, collection.getWidth());
+        EXPECT_EQ(32, collection.getHeight());
 
         int i = 0;
         for (auto&& frame : collection)
@@ -588,8 +588,9 @@ TEST_P(Imgcodecs_ImageCollection, animations)
     {
         ImageCollection collection(output, IMREAD_UNCHANGED);
         EXPECT_EQ(read_frames.size(), collection.size());
-        EXPECT_EQ(read_frames[0].rows, collection.width());
-        EXPECT_EQ(read_frames[0].cols, collection.height());
+        EXPECT_EQ(read_frames[0].rows, collection.getWidth());
+        EXPECT_EQ(read_frames[0].cols, collection.getHeight());
+        EXPECT_EQ(read_frames[0].type(), collection.getType());
 
         for (int i = 10; i < (int)collection.size(); i++)
         {

@@ -1728,6 +1728,8 @@ public:
     Mat read();
     int width() const;
     int height() const;
+    int type() const;
+    Animation getAnimation(int start = 0, int count = INT16_MAX) const;
     Mat getMetadata(ImageMetadataType type) const;
     bool readHeader();
     Mat readData();
@@ -1741,6 +1743,7 @@ private:
     std::size_t m_size{};
     int m_width{};
     int m_height{};
+    int m_type{};
     int m_current{};
     std::vector<cv::Mat> m_pages;
     ImageDecoder m_decoder;
@@ -1775,8 +1778,6 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     m_pages.resize(m_size);
 }
 
-size_t ImageCollection::Impl::size() const { return m_size; }
-
 Mat ImageCollection::Impl::read() {
     if(!this->readHeader()) {
         return {};
@@ -1784,22 +1785,22 @@ Mat ImageCollection::Impl::read() {
     return this->readData();
 }
 
-int ImageCollection::Impl::width() const {
-    return m_width;
-}
+size_t ImageCollection::Impl::size() const { return m_size; }
 
-int ImageCollection::Impl::height() const {
-    return m_height;
-}
+int ImageCollection::Impl::width() const { return m_decoder->width(); }
+
+int ImageCollection::Impl::height() const { return m_decoder->height(); }
+
+int ImageCollection::Impl::type() const { return m_decoder->type(); }
 
 Mat ImageCollection::Impl::getMetadata(ImageMetadataType type) const {
     return m_decoder->getMetadata(type);
 }
 
+Animation ImageCollection::Impl::getAnimation(int start, int count) const { return {}; }
+
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
-    m_width = m_decoder->width();
-    m_height = m_decoder->height();
     return status;
 }
 
@@ -1894,9 +1895,13 @@ void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flag
 
 size_t ImageCollection::size() const { return pImpl->size(); }
 
-int ImageCollection::width() const { return pImpl->width(); }
+int ImageCollection::getWidth() const { return pImpl->width(); }
 
-int ImageCollection::height() const { return pImpl->height(); }
+int ImageCollection::getHeight() const { return pImpl->height(); }
+
+int ImageCollection::getType() const { return pImpl->type(); }
+
+Animation ImageCollection::getAnimation(int start, int count) const { return pImpl->getAnimation(start, count); }
 
 Mat ImageCollection::getMetadata(ImageMetadataType type) const { return pImpl->getMetadata(type); }
 
