@@ -585,6 +585,16 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RequantizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS IfLayer : public Layer
+    {
+    public:
+        /** Factory: creates an IfLayer implementation. */
+        static Ptr<IfLayer> create(const LayerParams& params);
+
+        /** Returns the selected subgraph based on the boolean flag. */
+        virtual Ptr<Graph> then_else(bool flag) const = 0;
+    };
+
     class CV_EXPORTS ConcatLayer : public Layer
     {
     public:
