@@ -4,7 +4,7 @@
 #include <jni.h>
 #include "opencv_java.hpp"
 #include "opencv2/core.hpp"
-#include "opencv2/videoio/videoio.hpp"
+#include "opencv2/videoio.hpp"
 
 class JavaStreamReader : public cv::IStreamReader
 {
