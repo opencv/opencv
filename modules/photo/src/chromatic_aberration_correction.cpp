@@ -97,21 +97,6 @@ void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) c
     } );
 }
 
-
-
-std::vector<double> ChromaticAberrationCorrector::computeMonomialTerms(double x, double y, int degree) const {
-    std::vector<double> terms;
-    terms.reserve((degree + 1) * (degree + 2) / 2);
-    
-    for (int total = 0; total <= degree; ++total) {
-        for (int i = 0; i <= total; ++i) {
-            int j = total - i;
-            terms.push_back(std::pow(x, i) * std::pow(y, j));
-        }
-    }
-    return terms;
-}
-
 void ChromaticAberrationCorrector::buildRemaps(int height, int width, const Polynomial2D& poly, 
                                                  Mat& map_x, Mat& map_y) {
     Mat X, Y;

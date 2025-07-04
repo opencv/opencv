@@ -947,7 +947,6 @@ private:
     
     void buildRemaps(int height, int width, const Polynomial2D& poly, 
                        Mat& map_x, Mat& map_y);
-    std::vector<double> computeMonomialTerms(double x, double y, int degree) const;
 };
 
 //! @} photo_ca_correction
