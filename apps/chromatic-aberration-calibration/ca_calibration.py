@@ -28,18 +28,13 @@ import argparse
 import math
 import pathlib
 from dataclasses import dataclass
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple
 
 import cv2
 import numpy as np
 import yaml
 from scipy.optimize import minimize
 from scipy.spatial import cKDTree
-
-try:
-    from cv2.typing import MatLike
-except ModuleNotFoundError:
-    MatLike = np.ndarray
 
 
 @dataclass
@@ -62,7 +57,7 @@ class Polynomial2D:
 
 
 
-def validate_calibration_dict(data: dict) -> tuple[int, int, int]:
+def validate_calibration_dict(data: dict) -> Tuple[int, int, int]:
     required_keys = {
         "red_channel", "blue_channel", "image_width", "image_height"
     }
@@ -195,7 +190,7 @@ def save_calib_result(calib, path: str | None = None) -> None:
 def monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
     x = x.flatten()
     y = y.flatten()
-    terms: List[np.ndarray] = []
+    terms = []
     cnt = 0
     for total in range(degree + 1):
         for i in range(total + 1):
@@ -206,7 +201,7 @@ def monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
 
 
 def detect_disk_centres(
-    img: MatLike,
+    img: np.ndarray,
     *,
     min_area: int = 50,
     max_area: int | None = None,
@@ -223,7 +218,7 @@ def detect_disk_centres(
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
     cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-    centres: list[tuple[float, float]] = []
+    centres = []
 
     for c in cnts:
         if len(c) < 5:
