@@ -395,7 +395,20 @@ bool  PngDecoder::readHeader()
         if (bit_depth == 16)
             m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
     }
+    // Get tEXt chunks
+    png_textp text_ptr;
+    int num_text = 0;
 
+    png_get_text(m_png_ptr, m_info_ptr, &text_ptr, &num_text);
+    if (num_text)
+        std::cout << "\nreadHeader() Found " << num_text << " text entries:\n";
+
+    for (int i = 0; i < num_text; ++i) {
+        std::cout << "  compression:   " << text_ptr[i].compression << "\n";
+        std::cout << "  itxt_length:   " << text_ptr[i].itxt_length << "\n";
+        std::cout << "  Key:   " << text_ptr[i].key << "\n";
+        std::cout << "  Value: " << text_ptr[i].text << "\n\n";
+    }
     return true;
 }
 
@@ -637,7 +650,20 @@ bool  PngDecoder::readData( Mat& img )
                 m_exif.parseExif(exif, num_exif);
             }
 #endif
+            // Get tEXt chunks
+            png_textp text_ptr;
+            int num_text = 0;
 
+            png_get_text(m_png_ptr, m_end_info, &text_ptr, &num_text);
+            if (num_text)
+                std::cout << "\nreadData() Found " << num_text << " text entries:\n";
+
+            for (int i = 0; i < num_text; ++i) {
+                std::cout << "  compression:   " << text_ptr[i].compression << "\n";
+                std::cout << "  itxt_length:   " << text_ptr[i].itxt_length << "\n";
+                std::cout << "  Key:   " << text_ptr[i].key << "\n";
+                std::cout << "  Value: " << text_ptr[i].text << "\n\n";
+            }
             result = true;
         }
     }
@@ -981,27 +1007,11 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
 
-                    png_write_info( png_ptr, info_ptr );
-
-                    if (m_isBilevel)
-                        png_set_packing(png_ptr);
-
-                    png_set_bgr( png_ptr );
-                    if( !isBigEndian() )
-                        png_set_swap( png_ptr );
-
-                    buffer.allocate(height);
-                    for( y = 0; y < height; y++ )
-                        buffer[y] = img.data + y*img.step;
-
                     if (!m_metadata.empty()) {
                         std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
                         if (!exif.empty()) {
                             png_set_eXIf_1(png_ptr, info_ptr, static_cast<png_uint_32>(exif.size()), exif.data());
                         }
-                        // [TODO] add xmp and icc. They need special handling,
-                        // see https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_PNG_files and
-                        // https://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html.
 
                         std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
                         if (!xmp.empty()) {
@@ -1021,6 +1031,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             const uchar* ptr = text.data();
                             const uchar* end = ptr + text.size();
 
+                            // [TODO] The idea of zero separator is experimental. Find the best way to store when reading
                             while (ptr < end) {
                                 // Find null terminator for key
                                 const uchar* key_end = std::find(ptr, end, 0);
@@ -1053,6 +1064,19 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             }
                         }
                     }
+
+                    png_write_info( png_ptr, info_ptr );
+
+                    if (m_isBilevel)
+                        png_set_packing(png_ptr);
+
+                    png_set_bgr( png_ptr );
+                    if( !isBigEndian() )
+                        png_set_swap( png_ptr );
+
+                    buffer.allocate(height);
+                    for( y = 0; y < height; y++ )
+                        buffer[y] = img.data + y*img.step;
 
                     png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );
