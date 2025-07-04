@@ -2,23 +2,15 @@
 
 #include <fstream>
 #include <iostream>
-#include <queue>
-#include <condition_variable>
-#include <atomic>
-#include <memory>
-#include <functional>
 
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
 #include <libcamera/control_ids.h>
 #include <libcamera/property_ids.h>
 #include <libcamera/transform.h>
+// #include <libcamera/libcamera.hpp>
 #include <mutex>
-
-// 前向声明 OpenCV 类型
-namespace cv {
-    class OutputArray;
-}
+// #include <queue>
 
 namespace cv
 {
@@ -116,10 +108,8 @@ namespace cv
 
     private:
     };
-    class LibcameraCapture;
-    
     struct CompletedRequest;
-    using CompletedRequestPtr = std::unique_ptr<CompletedRequest, std::function<void(CompletedRequest*)>>;
+    using CompletedRequestPtr = std::shared_ptr<CompletedRequest>;
 
     namespace controls = libcamera::controls;
     namespace properties = libcamera::properties;
@@ -176,8 +166,6 @@ namespace cv
         virtual ~LibcameraApp();
 
         Options *GetOptions() const { return options_.get(); }
-        
-        void SetCaptureInstance(LibcameraCapture* capture) { capture_instance_ = capture; }
 
         std::string const &CameraId() const;
         void OpenCamera();
@@ -212,9 +200,6 @@ namespace cv
 
     protected:
         std::unique_ptr<Options> options_;
-        
-        // LibcameraCapture 实例的引用，用于直接回调而非消息队列
-        LibcameraCapture* capture_instance_;
 
     private:
         static std::shared_ptr<CameraManager> getCameraManager()
@@ -283,7 +268,7 @@ namespace cv
         std::queue<Request *> free_requests_;
         std::vector<std::unique_ptr<Request>> requests_;
         std::mutex completed_requests_mutex_;
-        std::set<CompletedRequest *> active_requests_;  // 重命名：活跃请求集合
+        std::set<CompletedRequest *> completed_requests_;
         bool camera_started_ = false;
         std::mutex camera_stop_mutex_;
         MessageQueue<Msg> msg_queue_;
@@ -406,53 +391,6 @@ namespace cv
         Metadata post_process_metadata;
     };
 
-    class LibcameraCapture
-    {
-    public:
-        LibcameraCapture();
-        virtual ~LibcameraCapture();
-
-        Options *options;
-
-        bool startVideo();
-        void stopVideo();
-
-        bool open(int _index);
-        bool open(const std::string &filename);
-
-        virtual bool grabFrame();
-        virtual bool retrieveFrame(int /*unused*/, cv::OutputArray dst);
-        virtual double getProperty(int propId) const;
-        virtual bool setProperty(int propId, double value);
-        virtual int getCaptureDomain() { return cv::CAP_LIBCAMERA; }
-        bool isOpened() const { return camera_started_.load(std::memory_order_acquire); }
-
-        // 新的回调接口，由 LibcameraApp 调用
-        void onRequestComplete(CompletedRequestPtr completed_request);
-
-    protected:
-        LibcameraApp *app;
-        unsigned int still_flags;
-        unsigned int vw, vh, vstr;
-        std::atomic<bool> camera_started_;
-        std::atomic<bool> needsReconfigure;
-        
-        // 线程安全的完成队列，替代原来的视频线程机制
-        std::queue<CompletedRequestPtr> completed_requests_;
-        mutable std::mutex completed_requests_mutex_;
-        std::condition_variable completed_requests_cv_;
-        
-        // 队列管理参数
-        static constexpr size_t MAX_QUEUE_SIZE = 3;
-        
-        // 统计信息（可选）
-        std::atomic<uint64_t> frames_produced_{0};
-        std::atomic<uint64_t> frames_consumed_{0};
-        std::atomic<uint64_t> frames_dropped_{0};
-        
-        // 内部方法
-        bool waitForFrame(unsigned int timeout_ms);
-        CompletedRequestPtr getCompletedRequest();
-    };
+    class LibcameraCapture;
 
 };

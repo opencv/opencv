@@ -20,6 +20,7 @@
 #include <atomic>
 #include <fcntl.h>
 #include <fstream>
+#include <chrono>
 
 #include <libcamera/base/span.h>
 #include <libcamera/camera.h>
@@ -31,23 +32,14 @@
 #include <libcamera/property_ids.h>
 #include <libcamera/stream.h>
 #include "cap_libcamera.hpp"
-#include <mutex>
 
-/**
- * @brief implementation of the LibcameraApp class and LibcameraCapture
-    * The LibcameraApp implements is from LCCV
-    * Source: https://github.com/kbarni/LCCV
-
-
-
-*/
 
 namespace cv
 {
+    class LibcameraCapture;
 
     LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
-        : options_(std::move(opts)), controls_(controls::controls)
-
+        : options_(std::move(opts)), capture_instance_(nullptr), controls_(controls::controls)
     {
         if (!options_)
             options_ = std::make_unique<Options>();
@@ -63,6 +55,8 @@ namespace cv
         std::cerr << "End of ~LibcameraApp() call" << std::endl;
     }
 
+    // 获取当前摄像头的设备ID字符串
+    // Get the current camera's device ID string
     std::string const &LibcameraApp::CameraId() const
     {
         return camera_->id();
@@ -104,19 +98,6 @@ namespace cv
             std::cerr << "Camera closed" << std::endl;
     }
 
-    // void LibcameraApp::CloseCamera() {
-    //     std::lock_guard<std::mutex> lock(camera_stop_mutex_);
-    //     if (camera_acquired_) {
-    //         try {
-    //             camera_->release();
-    //             camera_acquired_ = false;
-    //             camera_.reset();
-    //         } catch (const std::exception& e) {
-    //             std::cerr << "Error releasing camera: " << e.what() << std::endl;
-    //         }
-    //     }
-    // }
-
     void LibcameraApp::ConfigureViewfinder()
     {
         if (options_->verbose)
@@ -144,6 +125,8 @@ namespace cv
             std::cerr << "Viewfinder setup complete" << std::endl;
     }
 
+    // 清理所有已分配的资源：内存映射、缓冲区分配器、配置等
+    // Teardown all allocated resources: memory mappings, buffer allocator, configuration, etc.
     void LibcameraApp::Teardown()
     {
         if (options_->verbose && !options_->help)
@@ -168,6 +151,8 @@ namespace cv
         streams_.clear();
     }
 
+    // 启动摄像头：创建请求、设置控制参数、连接回调、开始捕获
+    // Start the camera: create requests, set control parameters, connect callbacks, and start capturing
     void LibcameraApp::StartCamera()
     {
         // This makes all the Request objects that we shall need.
@@ -257,10 +242,6 @@ namespace cv
 
                 camera_started_ = false;
             }
-            // camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete);
-            // if (!camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete)) {
-            //     throw std::runtime_error("failed to disconnect camera callbacks");
-            // }
         }
 
         if (camera_)
@@ -268,7 +249,7 @@ namespace cv
 
         // An application might be holding a CompletedRequest, so queueRequest will get
         // called to delete it later, but we need to know not to try and re-queue it.
-        completed_requests_.clear();
+        active_requests_.clear();
 
         msg_queue_.Clear();
 
@@ -300,11 +281,15 @@ namespace cv
         }
     }
 
+    // 等待并返回消息队列中的下一个消息 (requestComplete 的传统模式)
+    // Wait and return the next message from the message queue (for traditional requestComplete mode)
     LibcameraApp::Msg LibcameraApp::Wait()
     {
         return msg_queue_.Wait();
     }
 
+    // 归还已完成的请求给libcamera
+    // Give back a completed request to libcamera, allowing for resource reuse.
     void LibcameraApp::queueRequest(CompletedRequest *completed_request)
     {
         BufferMap buffers(std::move(completed_request->buffers));
@@ -312,21 +297,17 @@ namespace cv
         Request *request = completed_request->request;
         assert(request);
 
-        // This function may run asynchronously so needs protection from the
-        // camera stopping at the same time.
         std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
         if (!camera_started_)
             return;
 
-        // An application could be holding a CompletedRequest while it stops and re-starts
-        // the camera, after which we don't want to queue another request now.
         {
             std::lock_guard<std::mutex> lock(completed_requests_mutex_);
-            auto it = completed_requests_.find(completed_request);
+            auto it = active_requests_.find(completed_request);
             delete completed_request;
-            if (it == completed_requests_.end())
+            if (it == active_requests_.end())
                 return;
-            completed_requests_.erase(it);
+            active_requests_.erase(it);
         }
 
         for (auto const &p : buffers)
@@ -344,10 +325,13 @@ namespace cv
             throw std::runtime_error("failed to queue request");
     }
 
+    // 向消息队列投递消息 (requestComplete 的传统模式)
+    // Post a message to the message queue (for traditional requestComplete mode)
     void LibcameraApp::PostMessage(MsgType &t, MsgPayload &p)
     {
         msg_queue_.Post(Msg(t, std::move(p)));
     }
+
 
     libcamera::Stream *LibcameraApp::GetStream(std::string const &name, unsigned int *w, unsigned int *h,
                                                unsigned int *stride) const
@@ -374,6 +358,7 @@ namespace cv
         return GetStream("raw", w, h, stride);
     }
 
+
     libcamera::Stream *LibcameraApp::VideoStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
     {
         return GetStream("video", w, h, stride);
@@ -395,6 +380,8 @@ namespace cv
         return nullptr;
     }
 
+    // 返回可访问的内存区域列表
+    // Return the list of accessible memory regions
     std::vector<libcamera::Span<uint8_t>> LibcameraApp::Mmap(FrameBuffer *buffer) const
     {
         auto item = mapped_buffers_.find(buffer);
@@ -420,6 +407,8 @@ namespace cv
             *stride = cfg.stride;
     }
 
+    // 设置捕获参数：验证配置、配置摄像头、分配缓冲区、建立内存映射
+    // Setup capture parameters: validate configuration, configure camera, allocate buffers, establish memory mappings
     void LibcameraApp::setupCapture()
     {
         // First finish setting up the configuration.
@@ -436,7 +425,6 @@ namespace cv
         if (options_->verbose)
             std::cerr << "Camera streams configured" << std::endl;
 
-        // Next allocate all the buffers we need, mmap them and store them on a free list.
 
         allocator_ = new FrameBufferAllocator(camera_);
         for (StreamConfiguration &config : *configuration_)
@@ -448,8 +436,6 @@ namespace cv
 
             for (const std::unique_ptr<FrameBuffer> &buffer : allocator_->buffers(stream))
             {
-                // "Single plane" buffers appear as multi-plane here, but we can spot them because then
-                // planes all share the same fd. We accumulate them so as to mmap the buffer only once.
                 size_t buffer_size = 0;
                 for (unsigned i = 0; i < buffer->planes().size(); i++)
                 {
@@ -472,6 +458,8 @@ namespace cv
         // The requests will be made when StartCamera() is called.
     }
 
+    // 创建所有需要的请求对象，为每个流分配缓冲区
+    // Create all the required request objects and allocate buffers for each stream
     void LibcameraApp::makeRequests()
     {
         auto free_buffers(frame_buffers_);
@@ -504,6 +492,8 @@ namespace cv
         }
     }
 
+    // 回调函数：处理完成的请求，计算帧率，分发给消费者
+    // Callback function to handle completed requests, calculate framerate, and dispatch to consumers
     void LibcameraApp::requestComplete(Request *request)
     {
         if (request->status() == Request::RequestCancelled)
@@ -514,10 +504,9 @@ namespace cv
                                     { this->queueRequest(cr); });
         {
             std::lock_guard<std::mutex> lock(completed_requests_mutex_);
-            completed_requests_.insert(r);
+            active_requests_.insert(r);
         }
 
-        // We calculate the instantaneous framerate in case anyone wants it.
         uint64_t timestamp = payload->buffers.begin()->second->metadata().timestamp;
         if (last_timestamp_ == 0 || last_timestamp_ == timestamp)
             payload->framerate = 0;
@@ -525,9 +514,15 @@ namespace cv
             payload->framerate = 1e9 / (timestamp - last_timestamp_);
         last_timestamp_ = timestamp;
 
-        msg_queue_.Post(Msg(MsgType::RequestComplete, std::move(payload)));
+        // 如果有 LibcameraCapture 实例，直接回调；否则使用消息队列
+        if (capture_instance_) {
+            capture_instance_->onRequestComplete(std::move(payload));
+        } else {
+            msg_queue_.Post(Msg(MsgType::RequestComplete, std::move(payload)));
+        }
     }
 
+    // 配置降噪模式
     void LibcameraApp::configureDenoise(const std::string &denoise_mode)
     {
         using namespace libcamera::controls::draft;
@@ -548,50 +543,17 @@ namespace cv
     }
 
     /* ******************************************************************* */
-    class LibcameraCapture CV_FINAL : public IVideoCapture
-    {
-    private:
-    public:
-        LibcameraCapture();
-        virtual ~LibcameraCapture() CV_OVERRIDE;
-
-        Options *options;
-
-        bool startVideo();
-        void stopVideo();
-
-        bool open(int _index);
-        bool open(const std::string &filename);
-
-        virtual bool grabFrame() CV_OVERRIDE;
-        virtual bool retrieveFrame(int /*unused*/, OutputArray dst) CV_OVERRIDE;
-        virtual double getProperty(int propId) const CV_OVERRIDE;
-        virtual bool setProperty(int propId, double value) CV_OVERRIDE;
-        // virtual bool isOpened() const CV_OVERRIDE { return (bool)pipeline; }
-        virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; } // Need to modify videoio.hpp/enum VideoCaptureAPIs
-        // bool configureHW(const cv::VideoCaptureParameters&);
-        // bool configureStreamsProperty(const cv::VideoCaptureParameters&);
-        bool isOpened() const CV_OVERRIDE
-        {
-            return true;
-        } // camerastarted
-
-    protected:
-        LibcameraApp *app;
-        unsigned int still_flags;
-        unsigned int vw, vh, vstr;
-        std::atomic<bool> needsReconfigure;
-        bool camerastarted;
-        
-        // Store the current completed request for retrieve
-        CompletedRequestPtr current_request_;
-        std::mutex request_mutex_;
-    };
+    
+    // LibcameraCapture 实现
 
     LibcameraCapture::LibcameraCapture()
     {
-        app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
+        app = new LibcameraApp(std::make_unique<Options>());
         options = static_cast<Options *>(app->GetOptions());
+        
+        // 建立 LibcameraApp 到 LibcameraCapture 的引用
+        app->SetCaptureInstance(this);
+        
         still_flags = LibcameraApp::FLAG_STILL_NONE;
         options->photo_width = 4056;
         options->photo_height = 3040;
@@ -606,178 +568,296 @@ namespace cv
         options->contrast = 1.0f;
         options->saturation = 1.0f;
         still_flags |= LibcameraApp::FLAG_STILL_RGB;
+        camera_started_.store(false, std::memory_order_release);
         needsReconfigure.store(false, std::memory_order_release);
-        camerastarted = false;
-        current_request_ = nullptr;
+        vw = vh = vstr = 0;
     }
 
     LibcameraCapture::~LibcameraCapture()
     {
         stopVideo();
-        // delete app;
+        
+        if (app) {
+            app->SetCaptureInstance(nullptr);
+            delete app;
+            app = nullptr;
+        }
+        
         std::cerr << "End of ~LibcameraCapture() call" << std::endl;
     }
 
-    bool LibcameraCapture::startVideo() // not resolved
+
+    // 打开摄像头、配置流、获取流信息、启动捕获
+    // Open the camera, configure the stream, get stream information, and start capturing
+    bool LibcameraCapture::startVideo()
     {
-        if (camerastarted)
+        if (camera_started_.load(std::memory_order_relaxed))
         {
-            std::cerr << "Camera already started";
+            std::cerr << "Camera already started" << std::endl;
+            return true;
+        }
+
+        try {
+            app->OpenCamera();
+            app->ConfigureViewfinder();
+            
+            // 获取流信息
+            libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
+            if (!stream) {
+                std::cerr << "Failed to get viewfinder stream" << std::endl;
+                return false;
+            }
+            
+            app->StartCamera();
+            camera_started_.store(true, std::memory_order_release);
+            
+            std::cerr << "Camera started successfully" << std::endl;
+            return true;
+        } catch (const std::exception& e) {
+            std::cerr << "Error starting camera: " << e.what() << std::endl;
             return false;
         }
-        
-        LibcameraCapture::app->OpenCamera();
-        LibcameraCapture::app->ConfigureViewfinder();
-        LibcameraCapture::app->StartCamera();
-        
-        // Get stream dimensions for later use
-        libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
-        if (!stream)
-        {
-            std::cerr << "Error getting viewfinder stream" << std::endl;
-            return false;
-        }
-        
-        camerastarted = true;
-        return true;
     }
 
-    void LibcameraCapture::stopVideo() // not resolved
+    // 停止视频捕获
+    // Stop video capture
+    void LibcameraCapture::stopVideo()
     {
-        if (!camerastarted)
+        if (!camera_started_.load(std::memory_order_relaxed))
             return;
 
-        LibcameraCapture::app->StopCamera();
-        LibcameraCapture::app->Teardown();
-        LibcameraCapture::app->CloseCamera();
-        
-        // Clear any pending request
+        camera_started_.store(false, std::memory_order_release);
+
+        // 清空完成队列并通知等待的线程
         {
-            std::lock_guard<std::mutex> lock(request_mutex_);
-            current_request_ = nullptr;
+            std::lock_guard<std::mutex> lock(completed_requests_mutex_);
+            while (!completed_requests_.empty()) {
+                completed_requests_.pop();
+            }
+        }
+        completed_requests_cv_.notify_all();
+
+        try {
+            app->StopCamera();
+            app->Teardown();
+            app->CloseCamera();
+        } catch (const std::exception& e) {
+            std::cerr << "Error stopping camera: " << e.what() << std::endl;
         }
         
-        camerastarted = false;
+        std::cerr << "Camera stopped" << std::endl;
     }
 
+    // 作为生产者接收完成的请求
+    // Receive completed requests as a producer
+    void LibcameraCapture::onRequestComplete(CompletedRequestPtr completed_request)
+    {
+        CompletedRequestPtr old_request_to_be_discarded;  // 在锁外管理旧请求的析构
+        
+        {
+            std::lock_guard<std::mutex> lock(completed_requests_mutex_);
+            
+            frames_produced_.fetch_add(1, std::memory_order_relaxed);
+            
+            // ( AI 说，可以在锁外析构 )
+            if (completed_requests_.size() >= MAX_QUEUE_SIZE) {
+                old_request_to_be_discarded = std::move(completed_requests_.front());
+                completed_requests_.pop();
+                frames_dropped_.fetch_add(1, std::memory_order_relaxed);
+                
+                // 可选：打印统计信息
+                if (options && options->verbose) {
+                    uint64_t dropped = frames_dropped_.load(std::memory_order_relaxed);
+                    if (dropped % 30 == 0) {  // 每30帧打印一次
+                        std::cerr << "Frames dropped: " << dropped << std::endl;
+                    }
+                }
+            }
+            
+            completed_requests_.push(std::move(completed_request));
+        }
+        
+        completed_requests_cv_.notify_one();
+    }
+
+    // 等待帧数据可用，支持超时等待
+    // Wait for frame data to be available, supporting timeout waiting
+    bool LibcameraCapture::waitForFrame(unsigned int timeout_ms)
+    {
+        std::unique_lock<std::mutex> lock(completed_requests_mutex_);
+        
+        if (timeout_ms == 0) {
+            // 无限等待
+            completed_requests_cv_.wait(lock, [this] { 
+                return !completed_requests_.empty() || !camera_started_.load(std::memory_order_acquire); 
+            });
+        } else {
+            // 超时等待
+            auto timeout = std::chrono::milliseconds(timeout_ms);
+            if (!completed_requests_cv_.wait_for(lock, timeout, [this] { 
+                return !completed_requests_.empty() || !camera_started_.load(std::memory_order_acquire); 
+            })) {
+                return false; // 超时
+            }
+        }
+        
+        return !completed_requests_.empty();
+    }
+
+    // 从队列中获取一个完成的请求
+    // Get a completed request from the queue
+
+    // CompletedRequestPtr LibcameraCapture::getCompletedRequest()
+    // {
+    //     std::lock_guard<std::mutex> lock(completed_requests_mutex_);
+    //     if (completed_requests_.empty()) {
+    //         return nullptr;
+    //     }
+        
+    //     CompletedRequestPtr request = completed_requests_.front();
+    //     completed_requests_.pop();
+    //     frames_consumed_.fetch_add(1, std::memory_order_relaxed);
+        
+    //     return request;
+    // }
+    CompletedRequestPtr LibcameraCapture::getCompletedRequest()
+    {
+        CompletedRequestPtr request;
+        
+        {
+            std::lock_guard<std::mutex> lock(completed_requests_mutex_);
+            if (completed_requests_.empty()) {
+                return nullptr;
+            }
+            request = std::move(completed_requests_.front());
+            completed_requests_.pop();
+            frames_consumed_.fetch_add(1, std::memory_order_relaxed);
+        } 
+        return request;
+    }
+
+    // getVideoFrame 方法已被移除，功能集成到 retrieveFrame 中
+
     /**
-     * @brief Check if a frame is available and ready for retrieval.
-     *
-     * This function checks if libcamera has a completed request ready.
-     * If the camera is not started, it will start the camera first.
-     * It uses libcamera's asynchronous message system to check for available frames.
-     *
-     * @return `true` if a frame is ready for retrieval.
-     *         `false` if no frame is available or camera failed to start.
+     * @brief 确保摄像头已启动并准备捕获帧
+     * 
+     * 在新的重构版本中，grabFrame 只负责确保摄像头处于运行状态，
+     * 并处理可能的重新配置需求。
+     * 
+     * @return true 如果摄像头已准备好捕获帧
+     * @return false 如果启动摄像头失败
      */
     bool LibcameraCapture::grabFrame()
     {
-        if (!camerastarted)
+        // 检查是否需要重新配置
+        if (needsReconfigure.load(std::memory_order_acquire))
         {
-            if (!startVideo())
-            {
+            std::cerr << "Reconfiguring camera..." << std::endl;
+            stopVideo();
+            if (!startVideo()) {
+                std::cerr << "Failed to restart camera after reconfiguration" << std::endl;
+                return false;
+            }
+            needsReconfigure.store(false, std::memory_order_release);
+        }
+        
+        // 如果摄像头未启动，尝试启动
+        if (!camera_started_.load(std::memory_order_acquire))
+        {
+            if (!startVideo()) {
                 std::cerr << "Failed to start camera" << std::endl;
                 return false;
             }
         }
         
-        // Check if we need to reconfigure
-        // if (needsReconfigure.load(std::memory_order_acquire))
-        // {
-        //     stopVideo();
-        //     if (!startVideo())
-        //     {
-        //         std::cerr << "Failed to restart camera after reconfiguration" << std::endl;
-        //         return false;
-        //     }
-        //     needsReconfigure.store(false, std::memory_order_release);
-        // }
-        
-        // Try to get a message from libcamera (non-blocking check)
-        try 
-        {
-            // Use Wait() with short timeout to check for available messages
-            LibcameraApp::Msg msg = app->Wait();
-            
-            if (msg.type == LibcameraApp::MsgType::RequestComplete)
-            {
-                CompletedRequestPtr payload = std::get<CompletedRequestPtr>(msg.payload);
-                {
-                    std::lock_guard<std::mutex> lock(request_mutex_);
-                    current_request_ = payload;
-                }
-                return true;
-            }
-            else if (msg.type == LibcameraApp::MsgType::Quit)
-            {
-                std::cerr << "Quit message received" << std::endl;
-                return false;
-            }
-        }
-        catch (const std::exception& e)
-        {
-            // No message available or error occurred
-            return false;
-        }
-        
-        return false;
+        return camera_started_.load(std::memory_order_acquire);
     }
 
     /**
-     * @brief Retrieve the frame data from the current completed request.
+     * @brief 从完成队列中检索一帧并复制到目标输出（优化版本）
      *
-     * This function extracts frame data directly from libcamera's memory-mapped buffers
-     * without additional copying. It uses the completed request obtained in grabFrame().
+     * 数据流程：
+     * 1. LibcameraApp::requestComplete() -> onRequestComplete() -> 队列
+     * 2. waitForFrame() 等待帧可用
+     * 3. getCompletedRequest() 从队列取出 CompletedRequestPtr
+     * 4. 通过内存映射访问 libcamera 缓冲区数据
+     * 5. 智能处理 stride 差异，减少不必要的内存拷贝
      *
-     * @param int Unused parameter.
-     * @param dst An OpenCV `OutputArray` where the retrieved frame will be stored.
-     *            The frame is stored in RGB format (8-bit, 3 channels, CV_8UC3).
-     *
-     * @return `true` if a frame is successfully retrieved and copied to `dst`.
-     *         `false` if no frame is ready or an error occurred.
+     * @param int 未使用的参数
+     * @param dst 输出数组，用于存储检索到的帧
+     * @return true 如果成功检索到帧
+     * @return false 如果没有帧可用或发生错误
      */
     bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     {
-        CompletedRequestPtr request;
-        {
-            std::lock_guard<std::mutex> lock(request_mutex_);
-            if (!current_request_)
-            {
+        if (!camera_started_.load(std::memory_order_acquire))
+            return false;
+            
+        // 等待帧可用
+        if (!waitForFrame(options->timeout)) {
+            return false;
+        }
+        
+        // 获取完成的请求
+        CompletedRequestPtr completed_request = getCompletedRequest();
+        if (!completed_request) {
+            return false;
+        }
+        
+        try {
+            // 获取流信息
+            auto stream = app->ViewfinderStream(&vw, &vh, &vstr);
+            if (!stream) {
+                std::cerr << "Failed to get viewfinder stream" << std::endl;
                 return false;
             }
-            request = current_request_;
-            current_request_ = nullptr; // Clear after use
-        }
-        
-        // Get the viewfinder stream
-        libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
-        if (!stream)
-        {
-            std::cerr << "Error getting viewfinder stream" << std::endl;
+            
+            auto mem = app->Mmap(completed_request->buffers[stream]);
+            if (mem.empty()) {
+                std::cerr << "Failed to get memory mapping" << std::endl;
+                return false;
+            }
+            
+            Mat frame(vh, vw, CV_8UC3);
+            uint32_t ls = vw * 3; // RGB888 每像素3字节
+            
+            uint8_t *src_ptr = mem[0].data();
+            for (unsigned int i = 0; i < vh; i++, src_ptr += vstr) {
+                memcpy(frame.ptr(i), src_ptr, ls);
+            }
+            
+            frame.copyTo(dst);
+            return true;
+
+            // const uint32_t pixel_bytes = 3;  // RGB888 每像素3字节
+            // const uint32_t row_bytes = vw * pixel_bytes;  // 每行实际数据字节数
+            // const uint8_t *src_data = mem[0].data();
+            
+            // // 优化：检查是否需要逐行拷贝
+            // if (vstr == row_bytes) {
+            //     // 内存连续，可以一次性拷贝（最优情况）
+            //     Mat frame(vh, vw, CV_8UC3, const_cast<uint8_t*>(src_data), vstr);
+            //     frame.copyTo(dst);  // 只有一次拷贝
+            // } else {
+            //     // stride 不匹配，需要逐行拷贝（处理内存对齐）
+            //     // 直接在目标 Mat 上分配内存，减少一次拷贝
+            //     dst.create(vh, vw, CV_8UC3);
+            //     Mat frame = dst.getMat();
+                
+            //     const uint8_t *src_ptr = src_data;
+            //     for (unsigned int row = 0; row < vh; row++) {
+            //         // 拷贝一行的有效数据，跳过填充字节
+            //         memcpy(frame.ptr(row), src_ptr, row_bytes);
+            //         src_ptr += vstr;  // 移动到下一行（包含stride）
+            //     }
+            // }
+            
+            // return true;
+            
+        } catch (const std::exception& e) {
+            std::cerr << "Error in retrieveFrame: " << e.what() << std::endl;
             return false;
         }
-        
-        // Get memory mapped buffer directly from libcamera
-        std::vector<libcamera::Span<uint8_t>> mem = app->Mmap(request->buffers[stream]);
-        if (mem.empty())
-        {
-            std::cerr << "Error getting memory mapped buffer" << std::endl;
-            return false;
-        }
-        
-        // Create OpenCV Mat directly from libcamera buffer
-        Mat frame(vh, vw, CV_8UC3);
-        uint8_t *src_ptr = mem[0].data();
-        uint line_size = vw * 3;
-        
-        // Copy line by line to handle stride correctly
-        for (unsigned int i = 0; i < vh; i++, src_ptr += vstr)
-        {
-            memcpy(frame.ptr(i), src_ptr, line_size);
-        }
-        
-        frame.copyTo(dst);
-        return true;
     }
 
     double LibcameraCapture::getProperty(int propId) const
@@ -1085,28 +1165,29 @@ namespace cv
     bool LibcameraCapture::open(const std::string &_deviceName)
     {
         CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera:" << _deviceName << "): opening...");
-        // Some parameters initialization here, maybe more needed.
+        
         options->video_width = 1280;
         options->video_height = 720;
         options->framerate = 30;
         options->verbose = true;
+        
         return startVideo();
     }
 
     Ptr<IVideoCapture> createLibcameraCapture_file(const std::string &filename)
     {
-        auto ret = makePtr<LibcameraCapture>();
-        if (ret->open(filename))
-            return ret;
-        return NULL;
+        Ptr<LibcameraCapture> cap = makePtr<LibcameraCapture>();
+        if (cap && cap->open(filename))
+            return cap.staticCast<IVideoCapture>();
+        return Ptr<IVideoCapture>();
     }
 
     Ptr<IVideoCapture> createLibcameraCapture_cam(int index)
     {
         Ptr<LibcameraCapture> cap = makePtr<LibcameraCapture>();
         if (cap && cap->open(index))
-            return cap;
+            return cap.staticCast<IVideoCapture>();
         return Ptr<IVideoCapture>();
     }
 
-} // namespace
+}
