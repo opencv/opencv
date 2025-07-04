@@ -754,7 +754,7 @@ public:
     CV_WRAP int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     CV_WRAP const Mat& at(int index);
     const Mat& operator[](int index);
-    CV_WRAP const Animation& getAnimation();
+    CV_WRAP const Animation& getAnimation() const;
     CV_WRAP void releaseCache(int index);
     iterator begin();
     iterator end();

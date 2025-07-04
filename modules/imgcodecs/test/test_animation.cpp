@@ -585,6 +585,7 @@ TEST_P(Imgcodecs_ImageCollection, animations)
         }
     }
 
+    Animation animation;
     {
         ImageCollection collection(output, IMREAD_UNCHANGED);
         EXPECT_EQ(read_frames.size(), collection.size());
@@ -594,10 +595,13 @@ TEST_P(Imgcodecs_ImageCollection, animations)
 
         for (int i = 10; i < (int)collection.size(); i++)
         {
+            animation = collection.getAnimation();
+            cout << animation.durations.size() << " " << animation.frames.size() << endl;
             Mat frame = collection.at(i);
             EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
         }
     }
+    cout << "ImageCollection freed " << animation.durations.size() << endl;
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/testExifOrientation_5.jpg";
     ImageCollection collection(filename, IMREAD_UNCHANGED);

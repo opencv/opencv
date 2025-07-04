@@ -1730,7 +1730,7 @@ public:
     int width() const;
     int height() const;
     int type() const;
-    const Animation& getAnimation();
+    const Animation& getAnimation() const;
     int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
     Mat readData();
@@ -1797,7 +1797,7 @@ int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputA
     return readMetadata(m_decoder, &metadata_types, metadata);
 }
 
-const Animation& ImageCollection::Impl::getAnimation() { return m_decoder->animation(); }
+const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder->animation(); }
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
@@ -1901,7 +1901,7 @@ int ImageCollection::getHeight() const { return pImpl->height(); }
 
 int ImageCollection::getType() const { return pImpl->type(); }
 
-const Animation& ImageCollection::getAnimation() { return pImpl->getAnimation(); }
+const Animation& ImageCollection::getAnimation() const { return pImpl->getAnimation(); }
 
 int ImageCollection::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) { return pImpl->getMetadata(metadata_types, metadata); }
 
