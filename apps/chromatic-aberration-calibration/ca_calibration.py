@@ -61,6 +61,68 @@ class Polynomial2D:
         return dx.reshape(x.shape), dy.reshape(y.shape)
 
 
+
+def validate_calibration_dict(data: dict) -> tuple[int, int, int]:
+    required_keys = {
+        "red_channel", "blue_channel", "image_width", "image_height"
+    }
+    missing = required_keys - data.keys()
+    if missing:
+        raise ValueError(f"Missing keys in YAML: {', '.join(missing)}")
+
+    width  = int(data["image_width"])
+    height = int(data["image_height"])
+    if width <= 0 or height <= 0:
+        raise ValueError("Image width and height must be positive integers")
+
+    def _get_coeffs(channel: str, axis: str) -> np.ndarray:
+        try:
+            coeffs = np.asarray(data[channel][f"coeffs_{axis}"], dtype=float)
+        except KeyError as e:
+            raise ValueError(f"Missing {axis} coefficients for {channel}") from e
+        if coeffs.ndim != 1:
+            raise ValueError(f"{channel} {axis} coefficients must be a 1‑D list/array")
+        if not np.all(np.isfinite(coeffs)):
+            raise ValueError(f"{channel} {axis} coefficients contain NaN or Inf")
+        return coeffs
+
+    rx = _get_coeffs("red_channel",  "x")
+    ry = _get_coeffs("red_channel",  "y")
+    bx = _get_coeffs("blue_channel", "x")
+    by = _get_coeffs("blue_channel", "y")
+
+    for channel in ["red_channel", "blue_channel"]:
+        try:
+            rms = data[channel]["rms"]
+        except KeyError as e:
+            raise ValueError(f"Missing rms for {channel}") from e
+
+    for name, cx, cy in [("red", rx, ry), ("blue", bx, by)]:
+        if cx.size != cy.size:
+            raise ValueError(
+                f"{name} channel: coeffs_x ({cx.size}) and coeffs_y "
+                f"({cy.size}) lengths differ"
+            )
+
+    if rx.size != bx.size:
+        raise ValueError(
+            f"Red and blue channels use different polynomial sizes "
+            f"({rx.size} vs {bx.size})"
+        )
+
+    m = rx.size
+    n_float = (math.sqrt(1 + 8*m) - 3) / 2
+    degree  = int(round(n_float))
+    expected_m = (degree + 1) * (degree + 2) // 2
+    if expected_m != m:
+        raise ValueError(
+            f"Coefficient count {m} is not triangular (n != (deg+1)*(deg+2)/2); "
+            f"nearest degree would be {degree} (needs {expected_m})"
+        )
+
+    return degree, height, width
+
+
 def load_calib_result(path: str | None = None) -> Dict:
     path = pathlib.Path(path)
     with path.open("r") as fh:
@@ -69,11 +131,10 @@ def load_calib_result(path: str | None = None) -> Dict:
         else:
             raise ValueError("YAML file expected as input for the calibration result")
     
+    deg, height, width = validate_calibration_dict(data)
+    
     red_data = data["red_channel"]
     blue_data = data["blue_channel"]
-    width = data["image_width"]
-    height = data["image_height"]
-    deg = int(-3 + math.sqrt(1 + 8*len(red_data["coeffs_x"]))) // 2
     
     poly_r = Polynomial2D(
         np.asarray(red_data["coeffs_x"]),
@@ -94,7 +155,7 @@ def load_calib_result(path: str | None = None) -> Dict:
         "poly_red": poly_r,
         "poly_blue": poly_b,
         "image_height": height,
-        "image_width": width
+        "image_width": width,
     }
 
 
@@ -112,10 +173,12 @@ def save_calib_result(calib, path: str | None = None) -> None:
         "blue_channel": {
             "coeffs_x": calib["poly_blue"].coeffs_x.tolist(),
             "coeffs_y": calib["poly_blue"].coeffs_y.tolist(),
+            "rms": calib["rms_red"]
         },
         "red_channel": {
             "coeffs_x": calib["poly_red"].coeffs_x.tolist(),
             "coeffs_y": calib["poly_red"].coeffs_y.tolist(),
+            "rms": calib["rms_blue"]
         },
         "image_width": calib["image_width"],
         "image_height": calib["image_height"]
@@ -127,6 +190,7 @@ def save_calib_result(calib, path: str | None = None) -> None:
                             version=(1, 2),
                             default_flow_style=False,
                             sort_keys=False)
+
 
 def monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
     x = x.flatten()
@@ -313,7 +377,9 @@ def calibrate_from_image(
         "poly_red": poly_r, 
         "poly_blue": poly_b,
         "image_width": w,
-        "image_height": h
+        "image_height": h,
+        "rms_red": rms_r,
+        "rms_blue": rms_b
     }
 
 
