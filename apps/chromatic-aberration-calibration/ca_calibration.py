@@ -28,7 +28,7 @@ import argparse
 import math
 import pathlib
 from dataclasses import dataclass
-from typing import Dict, Tuple, List, TYPE_CHECKING, Optional
+from typing import Dict, Tuple, List
 
 import cv2
 import numpy as np
