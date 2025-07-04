@@ -895,6 +895,62 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 
 //! @} photo_render
 
+//! @addtogroup photo_ca_correction Chromatic Aberration Correction
+//! @{
+
+/** @brief Corrects chromatic aberration in an image using polynomial distortion model.
+
+@param image Input BGR image to correct
+@param calibration_file Path to calibration file containing polynomial coefficients
+@return Corrected BGR image
+*/
+CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
+
+struct CV_EXPORTS_W Polynomial2D {
+    std::vector<double> coeffs_x;
+    std::vector<double> coeffs_y;
+    int degree;
+    double mean_x;
+    double mean_y;
+    double std_x;
+    double std_y;
+
+    
+    Polynomial2D() : degree(0) {}
+    
+    void computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) const;
+};
+
+struct CV_EXPORTS_W CalibrationResult {
+    int degree;
+    Polynomial2D poly_red;
+    Polynomial2D poly_blue;
+    int width;
+    int height;
+    double rms_red;
+    double rms_blue;
+    
+    CalibrationResult() : degree(0) {}
+    
+    bool loadFromFile(const String& filename);
+};
+
+class CV_EXPORTS_W ChromaticAberrationCorrector {
+public:
+    ChromaticAberrationCorrector() = default;
+    
+    bool loadCalibration(const String& calibration_file);
+    Mat correctImage(InputArray input_image);
+    
+private:
+    CalibrationResult calib_result_;
+    
+    void buildRemaps(int height, int width, const Polynomial2D& poly, 
+                       Mat& map_x, Mat& map_y);
+};
+
+//! @} photo_ca_correction
+
 //! @} photo
 
 } // cv
