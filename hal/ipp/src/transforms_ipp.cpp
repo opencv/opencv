@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 
 #include "ipp_hal_core.hpp"
+#include "precomp_ipp.hpp"
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/base.hpp>
@@ -71,19 +72,6 @@ int ipp_hal_transpose2d(const uchar* src_data, size_t src_step, uchar* dst_data,
 }
 
 #ifdef HAVE_IPP_IW
-
-static inline IppDataType ippiGetDataType(int depth)
-{
-    depth = CV_MAT_DEPTH(depth);
-    return depth == CV_8U ? ipp8u :
-    depth == CV_8S ? ipp8s :
-    depth == CV_16U ? ipp16u :
-    depth == CV_16S ? ipp16s :
-    depth == CV_32S ? ipp32s :
-    depth == CV_32F ? ipp32f :
-    depth == CV_64F ? ipp64f :
-    (IppDataType)-1;
-}
 
 static inline ::ipp::IwiImage ippiGetImage(int src_type, const uchar* src_data, size_t src_step, int src_width, int src_height)
 {
