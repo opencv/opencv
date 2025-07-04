@@ -355,7 +355,7 @@ def correct_image(
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Chromatic‑aberration calibration and correction tool",
+        description="Chromatic aberration calibration and correction tool",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     sub = p.add_subparsers(dest="cmd", required=True)
