@@ -191,7 +191,8 @@ def detect_disk_centres(
         )
 
         # solve least squares to get delta of centers
-        delta, *_ = np.linalg.lstsq(J, f, rcond=None)
+        delta, *_ = np.linalg.lstsq(J, -f, rcond=None)
+        delta_img = R.T @ delta  
         cx -= delta[0]
         cy -= delta[1]
         centres.append((cx, cy))
@@ -223,7 +224,7 @@ def fit_channel(
     degree: int,
     height: int,
     width: int,
-    method: str = "L-BFGS-B",
+    method: str = "POWELL",
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     mean_x, mean_y = width * 0.5, height * 0.5
     inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
@@ -248,9 +249,13 @@ def fit_channel(
     c0 = np.hstack([cx_ls, cy_ls])
 
     res = minimize(objective, c0, method=method)
+
+    if not res.success:
+        raise RuntimeError(f"Optimiser failed: {res.message}")
+
     coeffs_x = res.x[:m]
     coeffs_y = res.x[m:]
-    rms = math.sqrt(res.fun / disp.size)
+    rms = math.sqrt(res.fun / disp.shape[0])
     return coeffs_x, coeffs_y, rms
 
 
@@ -267,8 +272,8 @@ def fit_polynomials(
 ) -> Tuple[Polynomial2D, Polynomial2D, float, float]:
     crx, cry, rms_r = fit_channel(x_r, y_r, disp_r, degree, height, width)
     cbx, cby, rms_b = fit_channel(x_b, y_b, disp_b, degree, height, width)
-    poly_r = Polynomial2D(crx, cry, 11, height, width)
-    poly_b = Polynomial2D(cbx, cby, 11, height, width)
+    poly_r = Polynomial2D(crx, cry, degree, height, width)
+    poly_b = Polynomial2D(cbx, cby, degree, height, width)
     return poly_r, poly_b, rms_r, rms_b
 
 
