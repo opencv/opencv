@@ -211,6 +211,10 @@ def pair_keypoints(
     tree = cKDTree(ref)
     dists, idx = tree.query(target, distance_upper_bound=max_error)
     mask = np.isfinite(dists)
+    if not np.any(mask):
+        raise RuntimeError(
+            f"No valid keypoint matches were created"
+        )
     target_valid = target[mask]
     ref_valid = ref[idx[mask]]
     disp = ref_valid - target_valid
