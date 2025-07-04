@@ -574,6 +574,9 @@ TEST_P(Imgcodecs_ImageCollection, animations)
     {
         ImageCollection collection(output, IMREAD_UNCHANGED);
         EXPECT_EQ(read_frames.size(), collection.size());
+        EXPECT_EQ(32, collection.getWidth());
+        EXPECT_EQ(32, collection.getHeight());
+
         int i = 0;
         for (auto&& frame : collection)
         {
@@ -581,6 +584,34 @@ TEST_P(Imgcodecs_ImageCollection, animations)
             ++i;
         }
     }
+
+    Animation animation;
+    {
+        ImageCollection collection(output, IMREAD_UNCHANGED);
+        EXPECT_EQ(read_frames.size(), collection.size());
+        EXPECT_EQ(read_frames[0].rows, collection.getWidth());
+        EXPECT_EQ(read_frames[0].cols, collection.getHeight());
+        EXPECT_EQ(read_frames[0].type(), collection.getType());
+
+        for (int i = 10; i < (int)collection.size(); i++)
+        {
+            animation = collection.getAnimation();
+            cout << animation.durations.size() << " " << animation.frames.size() << endl;
+            Mat frame = collection.at(i);
+            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+        }
+    }
+    cout << "ImageCollection freed " << animation.durations.size() << endl;
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/testExifOrientation_5.jpg";
+    ImageCollection collection(filename, IMREAD_UNCHANGED);
+    std::vector<int> metadata_types;
+    std::vector<Mat> metadata;
+    collection.getMetadata(metadata_types, metadata);
+    EXPECT_TRUE(metadata.empty());
+    Mat m = collection.at(0);
+    collection.getMetadata(metadata_types, metadata);
+    EXPECT_FALSE(metadata.empty());
     EXPECT_EQ(0, remove(output.c_str()));
 }
 

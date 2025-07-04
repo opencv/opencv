@@ -410,12 +410,12 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
     }
 }
 
-static void readMetadata(ImageDecoder& decoder,
+static int readMetadata(ImageDecoder& decoder,
                          std::vector<int>* metadata_types,
                          OutputArrayOfArrays metadata)
 {
     if (!metadata_types)
-        return;
+        return 0;
     int kind = metadata.kind();
     void* obj = metadata.getObj();
     std::vector<Mat>* matvector = nullptr;
@@ -453,6 +453,7 @@ static void readMetadata(ImageDecoder& decoder,
             vecvector->at(m).assign(data, data + mm.total());
         }
     }
+    return (int)metadata_types->size();
 }
 
 static const char* metadataTypeToString(ImageMetadataType type)
@@ -1728,6 +1729,9 @@ public:
     Mat read();
     int width() const;
     int height() const;
+    int type() const;
+    const Animation& getAnimation() const;
+    int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
     Mat readData();
     bool advance();
@@ -1764,37 +1768,39 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 #endif
 
-
     CV_Assert(m_decoder);
     m_decoder->setSource(filename);
     CV_Assert(m_decoder->readHeader());
 
     m_size = m_decoder->getFrameCount();
+    m_width = m_decoder->width();
+    m_height = m_decoder->height();
     m_pages.resize(m_size);
 }
 
-size_t ImageCollection::Impl::size() const { return m_size; }
-
 Mat ImageCollection::Impl::read() {
-    auto result = this->readHeader();
-    if(!result) {
+    if(!this->readHeader()) {
         return {};
     }
     return this->readData();
 }
 
-int ImageCollection::Impl::width() const {
-    return m_width;
+size_t ImageCollection::Impl::size() const { return m_size; }
+
+int ImageCollection::Impl::width() const { return m_decoder->width(); }
+
+int ImageCollection::Impl::height() const { return m_decoder->height(); }
+
+int ImageCollection::Impl::type() const { return m_decoder->type(); }
+
+int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) {
+    return readMetadata(m_decoder, &metadata_types, metadata);
 }
 
-int ImageCollection::Impl::height() const {
-    return m_height;
-}
+const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder->animation(); }
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
-    m_width = m_decoder->width();
-    m_height = m_decoder->height();
     return status;
 }
 
@@ -1863,9 +1869,13 @@ Mat& ImageCollection::Impl::operator[](int index) {
         // go back to first page and advance until the desired page and read it into memory
         if(m_current != index) {
             reset();
-            for(int i = 0; i != index && advance(); ++i) {}
+            for (int i = 0; i != index; ++i) {
+                m_pages[index] = read();
+                advance();
+            }
         }
         m_pages[index] = read();
+        advance();
     }
     return m_pages[index];
 }
@@ -1884,6 +1894,16 @@ ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl
 void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
+
+int ImageCollection::getWidth() const { return pImpl->width(); }
+
+int ImageCollection::getHeight() const { return pImpl->height(); }
+
+int ImageCollection::getType() const { return pImpl->type(); }
+
+const Animation& ImageCollection::getAnimation() const { return pImpl->getAnimation(); }
+
+int ImageCollection::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) { return pImpl->getMetadata(metadata_types, metadata); }
 
 const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 
