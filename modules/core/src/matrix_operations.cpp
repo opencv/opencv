@@ -1020,62 +1020,68 @@ using ReduceVecOpMin_64F = ReduceOpMin<double>;
 
 #endif
 
-template<typename T, typename ST, class Op, class VecOp>
+template<typename T, typename ST, typename WT, class Op, class OpInit>
 class ReduceR_Invoker : public ParallelLoopBody
 {
-  using WT = typename Op::v_itype;
-  using VT = typename VecOp::v_itype;
 public:
-  ReduceR_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, VecOp& aVop)
-                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),vop(aVop)
+  ReduceR_Invoker(const Mat& aSrcmat, Mat& aDstmat, Op& aOp, OpInit& aOpInit)
+                 :srcmat(aSrcmat),dstmat(aDstmat),op(aOp),opInit(aOpInit),buffer(srcmat.size().width*srcmat.channels())
   {
   }
   void operator()(const Range& range) const CV_OVERRIDE
   {
     const T* src = srcmat.ptr<T>();
-    const size_t srcstep = srcmat.step / sizeof(T);
-    ST *dst = dstmat.ptr<ST>();
+    const size_t srcstep = srcmat.step/sizeof(src[0]);
+    WT* buf = buffer.data();
+    ST* dst = dstmat.ptr<ST>();
+    int i = 0;
+
+    for( i = range.start ; i < range.end; i++ )
+        buf[i] = opInit(src[i]);
+
     int height = srcmat.size().height;
-
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    int nlanes = VTraits<typename VecOp::v_stype>::vlanes();
-#else
-    int nlanes = 1;
-#endif
-
-    for (int i = range.start; i < range.end; i++)
+    for( ; --height; )
     {
-        const T* _src = src+i;
-        VT vbuf = vop.init();
-        int h = 0;
-        for (; h <= height - nlanes; h += nlanes)
+        src += srcstep;
+        i = range.start;
+        #if CV_ENABLE_UNROLLED
+        for(; i <= range.end - 4; i += 4 )
         {
-            vbuf = vop(vbuf, vop.load(_src+h*srcstep, srcstep));
+            WT s0, s1;
+            s0 = op(buf[i], (WT)src[i]);
+            s1 = op(buf[i+1], (WT)src[i+1]);
+            buf[i] = s0; buf[i+1] = s1;
+
+            s0 = op(buf[i+2], (WT)src[i+2]);
+            s1 = op(buf[i+3], (WT)src[i+3]);
+            buf[i+2] = s0; buf[i+3] = s1;
         }
-        WT wbuf = vop.reduce(vbuf);
-        for (; h < height; h++)
-        {
-            wbuf = op(wbuf, op.load(_src+h*srcstep, srcstep));
-        }
-        dst[i] = (ST)op.reduce(wbuf);
+        #endif
+        for( ; i < range.end; i++ )
+            buf[i] = op(buf[i], (WT)src[i]);
     }
+
+    for( i = range.start ; i < range.end; i++ )
+        dst[i] = (ST)buf[i];
   }
 private:
   const Mat& srcmat;
   Mat& dstmat;
   Op& op;
-  VecOp& vop;
+  OpInit& opInit;
+  mutable AutoBuffer<WT> buffer;
 };
 
-template<typename T, typename ST, class Op, class VecOp> static void
+template<typename T, typename ST, class Op, class OpInit = OpNop<ST> > static void
 reduceR_( const Mat& srcmat, Mat& dstmat)
 {
+    typedef typename Op::rtype WT;
     Op op;
-    VecOp vop;
+    OpInit opInit;
 
-    ReduceR_Invoker<T, ST, Op, VecOp> body(srcmat, dstmat, op, vop);
+    ReduceR_Invoker<T, ST, WT, Op, OpInit> body(srcmat, dstmat, op, opInit);
     //group columns by 64 bytes for data locality
-    parallel_for_(Range(0, srcmat.size().width*srcmat.channels()), body, srcmat.size().width*CV_ELEM_SIZE(srcmat.depth())/128.0);
+    parallel_for_(Range(0, srcmat.size().width*srcmat.channels()), body, srcmat.size().width*CV_ELEM_SIZE(srcmat.depth())/64.0);
 }
 
 template<typename T, typename ST, class Op, class VecOp>
@@ -1141,39 +1147,39 @@ typedef void (*ReduceFunc)( const Mat& src, Mat& dst );
 
 }
 
-#define reduceSumR8u32s  reduceR_<uchar, int,   ReduceOpAdd_8U32S,  ReduceVecOpAdd_8U32S  >
-#define reduceSumR8u32f  reduceR_<uchar, float, ReduceOpAdd_8U32F,  ReduceVecOpAdd_8U32F  >
-#define reduceSumR8u64f  reduceR_<uchar, double,ReduceOpAdd_8U64F,  ReduceVecOpAdd_8U64F  >
-#define reduceSumR16u32f reduceR_<ushort,float, ReduceOpAdd_16U32F, ReduceVecOpAdd_16U32F >
-#define reduceSumR16u64f reduceR_<ushort,double,ReduceOpAdd_16U64F, ReduceVecOpAdd_16U64F >
-#define reduceSumR16s32f reduceR_<short, float, ReduceOpAdd_16S32F, ReduceVecOpAdd_16S32F >
-#define reduceSumR16s64f reduceR_<short, double,ReduceOpAdd_16S64F, ReduceVecOpAdd_16S64F >
-#define reduceSumR32f32f reduceR_<float, float, ReduceOpAdd_32F32F, ReduceVecOpAdd_32F32F >
-#define reduceSumR32f64f reduceR_<float, double,ReduceOpAdd_32F64F, ReduceVecOpAdd_32F64F >
-#define reduceSumR64f64f reduceR_<double,double,ReduceOpAdd_64F64F, ReduceVecOpAdd_64F64F >
+#define reduceSumR8u32s  reduceR_<uchar, int,   OpAdd<int>, OpNop<int> >
+#define reduceSumR8u32f  reduceR_<uchar, float, OpAdd<int>, OpNop<int> >
+#define reduceSumR8u64f  reduceR_<uchar, double,OpAdd<int>, OpNop<int> >
+#define reduceSumR16u32f reduceR_<ushort,float, OpAdd<float> >
+#define reduceSumR16u64f reduceR_<ushort,double,OpAdd<double> >
+#define reduceSumR16s32f reduceR_<short, float, OpAdd<float> >
+#define reduceSumR16s64f reduceR_<short, double,OpAdd<double> >
+#define reduceSumR32f32f reduceR_<float, float, OpAdd<float> >
+#define reduceSumR32f64f reduceR_<float, double,OpAdd<double> >
+#define reduceSumR64f64f reduceR_<double,double,OpAdd<double> >
 
-#define reduceSum2R8u32s  reduceR_<uchar, int,   ReduceOpAddSqr_8U32S,  ReduceVecOpAddSqr_8U32S  >
-#define reduceSum2R8u32f  reduceR_<uchar, float, ReduceOpAddSqr_8U32F,  ReduceVecOpAddSqr_8U32F  >
-#define reduceSum2R8u64f  reduceR_<uchar, double,ReduceOpAddSqr_8U64F,  ReduceVecOpAddSqr_8U64F  >
-#define reduceSum2R16u32f reduceR_<ushort,float, ReduceOpAddSqr_16U32F, ReduceVecOpAddSqr_16U32F >
-#define reduceSum2R16u64f reduceR_<ushort,double,ReduceOpAddSqr_16U64F, ReduceVecOpAddSqr_16U64F >
-#define reduceSum2R16s32f reduceR_<short, float, ReduceOpAddSqr_16S32F, ReduceVecOpAddSqr_16S32F >
-#define reduceSum2R16s64f reduceR_<short, double,ReduceOpAddSqr_16S64F, ReduceVecOpAddSqr_16S64F >
-#define reduceSum2R32f32f reduceR_<float, float, ReduceOpAddSqr_32F32F, ReduceVecOpAddSqr_32F32F >
-#define reduceSum2R32f64f reduceR_<float, double,ReduceOpAddSqr_32F64F, ReduceVecOpAddSqr_32F64F >
-#define reduceSum2R64f64f reduceR_<double,double,ReduceOpAddSqr_64F64F, ReduceVecOpAddSqr_64F64F >
+#define reduceSum2R8u32s  reduceR_<uchar, int,   OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8u32f  reduceR_<uchar, float, OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R8u64f  reduceR_<uchar, double,OpAddSqr<int>,   OpSqr<int> >
+#define reduceSum2R16u32f reduceR_<ushort,float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R16u64f reduceR_<ushort,double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R16s32f reduceR_<short, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R16s64f reduceR_<short, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R32f32f reduceR_<float, float, OpAddSqr<float>, OpSqr<float> >
+#define reduceSum2R32f64f reduceR_<float, double,OpAddSqr<double>,OpSqr<double> >
+#define reduceSum2R64f64f reduceR_<double,double,OpAddSqr<double>,OpSqr<double> >
 
-#define reduceMaxR8u  reduceR_<uchar, uchar, ReduceOpMax_8U,  ReduceVecOpMax_8U  >
-#define reduceMaxR16u reduceR_<ushort,ushort,ReduceOpMax_16U, ReduceVecOpMax_16U >
-#define reduceMaxR16s reduceR_<short, short, ReduceOpMax_16S, ReduceVecOpMax_16S >
-#define reduceMaxR32f reduceR_<float, float, ReduceOpMax_32F, ReduceVecOpMax_32F >
-#define reduceMaxR64f reduceR_<double,double,ReduceOpMax_64F, ReduceVecOpMax_64F >
+#define reduceMaxR8u  reduceR_<uchar, uchar, OpMax<uchar> >
+#define reduceMaxR16u reduceR_<ushort,ushort,OpMax<ushort> >
+#define reduceMaxR16s reduceR_<short, short, OpMax<short> >
+#define reduceMaxR32f reduceR_<float, float, OpMax<float> >
+#define reduceMaxR64f reduceR_<double,double,OpMax<double> >
 
-#define reduceMinR8u  reduceR_<uchar, uchar, ReduceOpMin_8U,  ReduceVecOpMin_8U  >
-#define reduceMinR16u reduceR_<ushort,ushort,ReduceOpMin_16U, ReduceVecOpMin_16U >
-#define reduceMinR16s reduceR_<short, short, ReduceOpMin_16S, ReduceVecOpMin_16S >
-#define reduceMinR32f reduceR_<float, float, ReduceOpMin_32F, ReduceVecOpMin_32F >
-#define reduceMinR64f reduceR_<double,double,ReduceOpMin_64F, ReduceVecOpMin_64F >
+#define reduceMinR8u  reduceR_<uchar, uchar, OpMin<uchar> >
+#define reduceMinR16u reduceR_<ushort,ushort,OpMin<ushort> >
+#define reduceMinR16s reduceR_<short, short, OpMin<short> >
+#define reduceMinR32f reduceR_<float, float, OpMin<float> >
+#define reduceMinR64f reduceR_<double,double,OpMin<double> >
 
 #ifdef HAVE_IPP
 static inline bool ipp_reduceSumC_8u16u16s32f_64f(const cv::Mat& srcmat, cv::Mat& dstmat)
