@@ -410,12 +410,12 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
     }
 }
 
-static void readMetadata(ImageDecoder& decoder,
+static int readMetadata(ImageDecoder& decoder,
                          std::vector<int>* metadata_types,
                          OutputArrayOfArrays metadata)
 {
     if (!metadata_types)
-        return;
+        return 0;
     int kind = metadata.kind();
     void* obj = metadata.getObj();
     std::vector<Mat>* matvector = nullptr;
@@ -453,6 +453,7 @@ static void readMetadata(ImageDecoder& decoder,
             vecvector->at(m).assign(data, data + mm.total());
         }
     }
+    return (int)metadata_types->size();
 }
 
 static const char* metadataTypeToString(ImageMetadataType type)
@@ -1730,7 +1731,7 @@ public:
     int height() const;
     int type() const;
     const Animation& getAnimation();
-    Mat getMetadata(ImageMetadataType type) const;
+    int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
     Mat readData();
     bool advance();
@@ -1743,7 +1744,6 @@ private:
     std::size_t m_size{};
     int m_width{};
     int m_height{};
-    int m_type{};
     int m_current{};
     std::vector<cv::Mat> m_pages;
     ImageDecoder m_decoder;
@@ -1793,8 +1793,8 @@ int ImageCollection::Impl::height() const { return m_decoder->height(); }
 
 int ImageCollection::Impl::type() const { return m_decoder->type(); }
 
-Mat ImageCollection::Impl::getMetadata(ImageMetadataType type) const {
-    return m_decoder->getMetadata(type);
+int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) {
+    return readMetadata(m_decoder, &metadata_types, metadata);
 }
 
 const Animation& ImageCollection::Impl::getAnimation() { return m_decoder->animation(); }
@@ -1903,7 +1903,7 @@ int ImageCollection::getType() const { return pImpl->type(); }
 
 const Animation& ImageCollection::getAnimation() { return pImpl->getAnimation(); }
 
-Mat ImageCollection::getMetadata(ImageMetadataType type) const { return pImpl->getMetadata(type); }
+int ImageCollection::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) { return pImpl->getMetadata(metadata_types, metadata); }
 
 const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 

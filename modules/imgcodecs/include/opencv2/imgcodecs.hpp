@@ -751,7 +751,7 @@ public:
     CV_WRAP int getWidth() const;
     CV_WRAP int getHeight() const;
     CV_WRAP int getType() const;
-    CV_WRAP Mat getMetadata(ImageMetadataType type) const;
+    CV_WRAP int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     CV_WRAP const Mat& at(int index);
     const Mat& operator[](int index);
     CV_WRAP const Animation& getAnimation();
