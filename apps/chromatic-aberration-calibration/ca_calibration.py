@@ -10,12 +10,12 @@ Then, a polynomial model of degree 11 is fit onto the image, minimizing the diff
 The coefficients are then saved in yaml format and can be used in this sample to correct images of the same camera, lens and settings.
 
 usage:
-    ca_calibration.py calibrate [-h] [--degree DEGREE] --yaml YAML image
-    ca_calibration.py correct [-h] --coeff COEFF [-o OUTPUT] image
-    ca_calibration.py full [-h] [--degree DEGREE] --yaml YAML [-o OUTPUT] image
+    ca_calibration.py calibrate [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH image
+    ca_calibration.py correct [-h] --coeffs_file YAML_FILE_PATH [-o OUTPUT] image
+    ca_calibration.py full [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH [-o OUTPUT] image
 
 usage example:
-    ca_calibration.py calibrate pattern_aberrated.png --yaml poly.yaml
+    ca_calibration.py calibrate pattern_aberrated.png --coeffs_file calib_result.yaml
 
 default values:
     --degree: 11
@@ -363,17 +363,17 @@ def parse_args() -> argparse.Namespace:
     sc = sub.add_parser("calibrate", help="Calibrate from calibration target image")
     sc.add_argument("image", help="Image of black‑disk calibration target")
     sc.add_argument("--degree", type=int, default=11, help="Polynomial degree")
-    sc.add_argument("--coeffs", required=True, help="Save coefficients to YAML file")
+    sc.add_argument("--coeffs_file", required=True, help="Save coefficients to YAML file")
 
     sr = sub.add_parser("correct", help="Correct a photograph using saved coefficients")
     sr.add_argument("image", help="Input image to be corrected")
-    sr.add_argument("--coeffs", required=True, help="Calibration coefficient file (.json/.yaml)")
+    sr.add_argument("--coeffs_file", required=True, help="Calibration coefficient file (.json/.yaml)")
     sr.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
     sf = sub.add_parser("full", help="Calibrate from calibration target image and correct the calibration target")
     sf.add_argument("image", help="Image of black‑disk calibration target")
     sf.add_argument("--degree", type=int, default=11, help="Polynomial degree")
-    sf.add_argument("--coeffs", required=True, help="Save coefficients to YAML file")
+    sf.add_argument("--coeffs_file", required=True, help="Save coefficients to YAML file")
     sf.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
     return p.parse_args()
@@ -381,15 +381,15 @@ def parse_args() -> argparse.Namespace:
 
 def cmd_calibrate(args: argparse.Namespace) -> None:
     calib = calibrate_from_image(cv2.imread(args.image, cv2.IMREAD_COLOR), degree=args.degree)
-    save_calib_result(calib, path=args.coeffs)
-    print("Saved coefficients to", args.coeffs)
+    save_calib_result(calib, path=args.coeffs_file)
+    print("Saved coefficients to", args.coeffs_file)
 
 
 def cmd_correct(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
     if img is None:
         raise FileNotFoundError(args.image)
-    calib = load_calib_result(args.coeffs)
+    calib = load_calib_result(args.coeffs_file)
     fixed = correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
@@ -399,8 +399,8 @@ def cmd_full(args: argparse.Namespace) -> None:
     if img is None:
         raise FileNotFoundError(args.image)
     calib = calibrate_from_image(img, degree=args.degree)
-    save_calib_result(calib, path=args.coeffs)
-    print("Saved coefficients to", args.coeffs)
+    save_calib_result(calib, path=args.coeffs_file)
+    print("Saved coefficients to", args.coeffs_file)
     fixed = correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
