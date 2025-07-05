@@ -162,7 +162,7 @@ class CV_EXPORTS _InputArray
 public:
     enum KindFlag {
         KIND_SHIFT = 16,
-        FIXED_TYPE = 0x8000 << KIND_SHIFT,
+        FIXED_TYPE = 0x8000U << KIND_SHIFT,
         FIXED_SIZE = 0x4000 << KIND_SHIFT,
         KIND_MASK = 31 << KIND_SHIFT,
 

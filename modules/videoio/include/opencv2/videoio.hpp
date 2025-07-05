@@ -294,7 +294,7 @@ enum { CAP_PROP_DC1394_OFF                = -4, //!< turn the feature off (not c
 */
 
 //! OpenNI map generators
-enum { CAP_OPENNI_DEPTH_GENERATOR = 1 << 31,
+enum { CAP_OPENNI_DEPTH_GENERATOR = 1U << 31,
        CAP_OPENNI_IMAGE_GENERATOR = 1 << 30,
        CAP_OPENNI_IR_GENERATOR    = 1 << 29,
        CAP_OPENNI_GENERATORS_MASK = CAP_OPENNI_DEPTH_GENERATOR + CAP_OPENNI_IMAGE_GENERATOR + CAP_OPENNI_IR_GENERATOR
