@@ -886,11 +886,12 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
+    Mat tmpKnownMask;
     const Mat *knownMaskPtr = nullptr;
     if (!_knownForegroundMask.empty()) {
         // store a local Mat so the pointer stays alive for the parallel_for_
-        Mat tmp = _knownForegroundMask.getMat();
-        knownMaskPtr = &tmp;
+        tmpKnownMask = _knownForegroundMask.getMat();
+        knownMaskPtr = &tmpKnownMask;
     }
 
     ++nframes;

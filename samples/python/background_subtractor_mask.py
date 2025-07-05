@@ -12,10 +12,12 @@ if not cap.isOpened:
 
 # Create background subtractor
 bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=50, detectShadows=False)
+#bg_subtractor = cv2.createBackgroundSubtractorKNN(history=300, detectShadows=False)
+
 
 frame_count = 0
 # Allows for a frame buffer for the mask to learn pre known foreground
-show_count = 200
+show_count = 0
 
 while True:
     ret, frame = cap.read()
@@ -34,10 +36,8 @@ while True:
     with_mask = bg_subtractor.apply(frame,knownForegroundMask=aKnownForegroundMask)
     without_mask = bg_subtractor.apply(frame)
 
-
-    cv2.imshow("Actual FG Mask", with_mask)
+    cv2.imshow("With FG Mask", with_mask)
     cv2.imshow("Without FG Mask", without_mask)
-
 
     key = cv2.waitKey(30)
     if key == 27:  # ESC

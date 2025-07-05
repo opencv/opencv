@@ -596,6 +596,8 @@ public:
                     // If input mask states pixel is foreground
                     if (knownForegroundMask->at<uchar>(y, x) > 0) {
                         mask[x] = 255; // ensure output mask marks this pixel as FG
+                        data += nchannels;
+                        m_aModel += m_nN*3*ndata;
                         continue;
                     }
                 }
@@ -775,11 +777,12 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask,I
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
+    Mat tmpKnownMask;
     const Mat *knownMaskPtr = nullptr;
     if (!_knownForegroundMask.empty()) {
         // store a local Mat so the pointer stays alive for the parallel_for_
-        Mat tmp = _knownForegroundMask.getMat();
-        knownMaskPtr = &tmp;
+        tmpKnownMask = _knownForegroundMask.getMat();
+        knownMaskPtr = &tmpKnownMask;
     }
 
     ++nframes;
