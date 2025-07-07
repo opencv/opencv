@@ -637,7 +637,7 @@ struct ReduceVecOpAddSqr<float, float>
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
-    inline v_itype operator()(const v_stype &a, const v_stype &b) const { return v_add(a, v_mul(b, b)); }
+    inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_add(a, v_mul(b, b)); }
 };
 
 #endif
@@ -694,8 +694,8 @@ struct ReduceVecOpAddSqr<float, double>
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const
     {
-        v_stype b0 = v_mul(b, b);
-        return v_add(a, v_add(v_cvt_f64(b0), v_cvt_f64_high(b0)));
+        v_itype b0 = v_cvt_f64(b), b1 = v_cvt_f64_high(b);
+        return v_add(a, v_add(v_mul(b0, b0), v_mul(b1, b1)));
     }
 };
 
@@ -1099,7 +1099,7 @@ public:
     int channels = srcmat.channels();
     int width = srcmat.cols;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) || (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
     int nlanes = VTraits<typename VecOp::v_stype>::vlanes();
 #else
     int nlanes = 1;
