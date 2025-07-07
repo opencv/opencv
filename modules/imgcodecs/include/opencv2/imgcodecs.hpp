@@ -705,9 +705,6 @@ CV_EXPORTS_W bool haveImageWriter( const String& filename );
  *   Decoded pages are stored in memory. Re-accessing a previously decoded page is O(1).
  *   Use `releaseCache(index)` to manually free memory for a specific page.
  *
- * - **Memory Usage**:
- *   If all pages are decoded and cached, memory usage is O(n).
- *
  * ### Features
  *
  * - Supports multi-page image formats (e.g., TIFF).
@@ -718,6 +715,9 @@ CV_EXPORTS_W bool haveImageWriter( const String& filename );
  * ### Example
  * @code
  * ImageCollection collection("animated.webp");
+ * // You can query image properties before loading image data
+ * int width = collection.getWidth();
+ * int height = collection.getHeight();
  * for (auto it = collection.begin(); it != collection.end(); ++it)
  * {
  *     Mat frame = *it;
