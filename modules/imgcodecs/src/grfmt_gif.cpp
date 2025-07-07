@@ -215,6 +215,8 @@ bool GifDecoder::readData(Mat &img) {
         restore.copyTo(roi);
     }
 
+    m_animation.frames.push_back(img);
+
     return hasRead;
 }
 
