@@ -46,7 +46,7 @@ Theory
         \f[d(H_1,H_2) =  2 * \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)+H_2(I)}\f]
 
     -#  **Kullback-Leibler divergence ( cv::HISTCMP_KL_DIV )**
-        \f[d(H_1,H_2) =  \sum _I H_1(I) \log \left(\frac{H_1(I)}{H_2(I)}\right)\f] */
+        \f[d(H_1,H_2) =  \sum _I H_1(I) \log \left(\frac{H_1(I)}{H_2(I)}\right)\f]
 
 Code
 ----
