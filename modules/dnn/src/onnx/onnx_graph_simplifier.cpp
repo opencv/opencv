@@ -1708,34 +1708,6 @@ void simplifySubgraphs(opencv_onnx::GraphProto& net)
 
 
 
-
-
-// void getExternalTensorData(const opencv_onnx::TensorProto& tensor_proto, std::vector<char>& tensor_data, const std::string& base_path = ""){
-// #if OPENCV_HAVE_FILESYSTEM_SUPPORT
-//     CV_Assert(tensor_proto.has_data_location() && tensor_proto.data_location() == opencv_onnx::TensorProto::EXTERNAL);
-//     auto it_begin = tensor_proto.external_data().begin();
-//     auto it_end = tensor_proto.external_data().end();
-//     // file path
-//     auto it = std::find_if(it_begin, it_end,[](const auto& entry) { return entry.key() == "location"; });
-//     CV_Assert(it != it_end);
-
-//     std::string location_path = it->value();
-//     std::string full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
-
-//     std::ifstream file(full_path, std::ios::binary | std::ios::ate);
-//     CV_Assert(file.is_open());
-
-//     std::streamsize size = file.tellg();
-//     file.seekg(0, std::ios::beg);
-//     tensor_data.resize(size);
-
-//     CV_Assert(file.read(tensor_data.data(), size));
-// #else
-//     CV_Error(Error::StsNotImplemented, "External tensor data is not supported without filesystem support");
-// #endif
-// }
-
-
 static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
                               std::vector<int64_t>& tensor_data, const std::string& base_path = "")
 {
