@@ -1718,8 +1718,8 @@ bool haveImageWriter( const String& filename )
 class ImageCollection::Impl {
 public:
     Impl() = default;
-    Impl(const std::string&  filename, int flags);
-    void init(String const& filename, int flags);
+    Impl(const std::string& filename, InputArray buffer, int flags);
+    void init(String const& filename, InputArray buffer, int flags);
     size_t size() const;
     Mat& at(int index);
     Mat& operator[](int index);
@@ -1749,11 +1749,11 @@ private:
     ImageDecoder m_decoder;
 };
 
-ImageCollection::Impl::Impl(std::string const& filename, int flags) {
-    this->init(filename, flags);
+ImageCollection::Impl::Impl(std::string const& filename, InputArray buffer, int flags) {
+    this->init(filename, buffer, flags);
 }
 
-void ImageCollection::Impl::init(String const& filename, int flags) {
+void ImageCollection::Impl::init(String const& filename, InputArray buffer, int flags) {
     m_filename = filename;
     m_flags = flags;
 
@@ -1763,13 +1763,19 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
     else {
 #endif
-    m_decoder = findDecoder(filename);
+    if (!filename.empty())
+        m_decoder = findDecoder(filename);
+    else
+        m_decoder = findDecoder(buffer.getMat());
 #ifdef HAVE_GDAL
     }
 #endif
 
     CV_Assert(m_decoder);
-    m_decoder->setSource(filename);
+    if (!filename.empty())
+        m_decoder->setSource(filename);
+    else
+        m_decoder->setSource(buffer.getMat());
     CV_Assert(m_decoder->readHeader());
 
     m_size = m_decoder->getFrameCount();
@@ -1889,9 +1895,13 @@ void ImageCollection::Impl::releaseCache(int index) {
 
 ImageCollection::ImageCollection() : pImpl(new Impl()) {}
 
-ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
+ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, noArray(), flags)) {}
 
-void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
+ImageCollection::ImageCollection(InputArray buf, int flags) : pImpl(new Impl(std::string(), buf, flags)) {}
+
+void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, noArray(), flags); }
+
+void ImageCollection::init(InputArray buf, int flags) { pImpl->init(std::string(), buf, flags); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
 

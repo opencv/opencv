@@ -762,14 +762,38 @@ public:
     CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
 
     /**
+     * @brief Constructs an ImageCollection from an in-memory image buffer.
+     *
+     * @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
+     *            This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
+     * @param flags Flag specifying the color type of the image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+     *
+     * This constructor enables reading multi-page or animated images directly from memory,
+     * without the need to write them to disk. The buffer is parsed, and frame metadata is loaded,
+     * but no frame is decoded until accessed.
+     */
+    CV_WRAP ImageCollection(InputArray buffer, int flags = IMREAD_UNCHANGED);
+
+    /**
      * @brief Initializes the ImageCollection with a new file.
      *
      * @param filename Path to the multi-page or animated image file.
-     * @param flags Flag for image reading mode (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+     * @param flags Flag that can take values of cv::ImreadModes
      *
      * Clears any existing data and loads the specified image.
      */
-    CV_WRAP void init(const String& filename, int flags);
+    CV_WRAP void init(const String& filename, int flags = IMREAD_UNCHANGED);
+
+    /**
+     * @brief Initializes the ImageCollection with a new file.
+     *
+     * @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
+     *            This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
+     * @param flags Flag that can take values of cv::ImreadModes
+     *
+     * Clears any existing data and loads the specified image.
+     */
+    CV_WRAP void init(InputArray buffer, int flags = IMREAD_UNCHANGED);
 
     /**
      * @brief Returns the number of pages/frames in the image collection.
