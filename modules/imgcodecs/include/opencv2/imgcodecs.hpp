@@ -44,6 +44,7 @@
 #define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
+#include <variant>
 
 /**
   @defgroup imgcodecs Image file reading and writing
@@ -110,6 +111,7 @@ enum ImwriteFlags {
        IMWRITE_TIFF_COMPRESSION    = 259,//!< For TIFF, use to specify the image compression scheme. See cv::ImwriteTiffCompressionFlags. Note, for images whose depth is CV_32F, only libtiff's SGILOG compression scheme is used. For other supported depths, the compression scheme can be specified by this flag; LZW compression is the default.
        IMWRITE_TIFF_ROWSPERSTRIP   = 278,//!< For TIFF, use to specify the number of rows per strip.
        IMWRITE_TIFF_PREDICTOR      = 317,//!< For TIFF, use to specify predictor. See cv::ImwriteTiffPredictorFlags.
+       IMWRITE_TIFF_ENDIANNESS     = 318,
        IMWRITE_JPEG2000_COMPRESSION_X1000 = 272,//!< For JPEG2000, use to specify the target compression rate (multiplied by 1000). The value can be from 0 to 1000. Default is 1000.
        IMWRITE_AVIF_QUALITY        = 512,//!< For AVIF, it can be a quality between 0 and 100 (the higher the better). Default is 95.
        IMWRITE_AVIF_DEPTH          = 513,//!< For AVIF, it can be 8, 10 or 12. If >8, it is stored/read as CV_32F. Default is 8.
@@ -253,6 +255,142 @@ enum ImwriteGIFCompressionFlags {
 
 //! @} imgcodecs_flags
 
+enum ExifTagType
+{
+    TAG_TYPE_NOTYPE     = 0,  // Invalid or undefined type
+    TAG_TYPE_BYTE       = 1,  // 8-bit unsigned integer
+    TAG_TYPE_ASCII      = 2,  // 8-bit ASCII string, null-terminated
+    TAG_TYPE_SHORT      = 3,  // 16-bit unsigned integer
+    TAG_TYPE_LONG       = 4,  // 32-bit unsigned integer
+    TAG_TYPE_RATIONAL   = 5,  // Two LONGs: numerator and denominator (64-bit unsigned fraction)
+    TAG_TYPE_SBYTE      = 6,  // 8-bit signed integer
+    TAG_TYPE_UNDEFINED  = 7,  // 8-bit untyped data
+    TAG_TYPE_SSHORT     = 8,  // 16-bit signed integer
+    TAG_TYPE_SLONG      = 9,  // 32-bit signed integer
+    TAG_TYPE_SRATIONAL  = 10, // Two SLONGs: signed 64-bit fraction
+    TAG_TYPE_FLOAT      = 11, // IEEE 32-bit float
+    TAG_TYPE_DOUBLE     = 12, // IEEE 64-bit float
+    TAG_TYPE_IFD        = 13, // 32-bit offset to IFD
+    TAG_TYPE_LONG8      = 16, // BigTIFF: 64-bit unsigned integer
+    TAG_TYPE_SLONG8     = 17, // BigTIFF: 64-bit signed integer
+    TAG_TYPE_IFD8       = 18  // BigTIFF: 64-bit offset to IFD
+};
+
+enum ExifTagId
+{
+    TAG_EMPTY = 0,
+    TAG_SUB_FILETYPE = 254,
+    TAG_IMAGE_WIDTH = 256,
+    TAG_IMAGE_LENGTH = 257,
+    TAG_BITS_PER_SAMPLE = 258,
+    TAG_COMPRESSION = 259,
+    TAG_PHOTOMETRIC = 262,
+    TAG_IMAGEDESCRIPTION = 270,
+    TAG_MAKE = 271,
+    TAG_MODEL = 272,
+    TAG_STRIP_OFFSET = 273,
+    TAG_SAMPLES_PER_PIXEL = 277,
+    TAG_ROWS_PER_STRIP = 278,
+    TAG_STRIP_BYTE_COUNTS = 279,
+    TAG_PLANAR_CONFIG = 284,
+    TAG_ORIENTATION = 274,
+
+    TAG_XRESOLUTION = 282,
+    TAG_YRESOLUTION = 283,
+    TAG_RESOLUTION_UNIT = 296,
+
+    TAG_SOFTWARE = 305,
+    TAG_MODIFYDATE = 306,
+
+    TAG_SAMPLEFORMAT = 339,
+
+    // DNG extension
+    TAG_CFA_REPEAT_PATTERN_DIM = 33421,
+    TAG_CFA_PATTERN = 33422,
+
+    TAG_COPYRIGHT = 33432,
+    TAG_EXPOSURE_TIME = 33434,
+    TAG_FNUMBER = 33437,
+
+    TAG_EXIF_TAGS = 34665,
+    TAG_ISOSPEED = 34855,
+
+    TAG_EXIF_VERSION = 36864,
+    TAG_DATETIME_ORIGINAL = 36867,
+    TAG_DATETIME_CREATE = 36868,
+
+    TAG_SHUTTER_SPEED = 37377,
+    TAG_APERTURE_VALUE = 37378,
+    TAG_FLASH = 37385,
+    TAG_FOCALLENGTH = 37386,
+    TAG_EP_STANDARD_ID = 37398,
+
+    TAG_SUBSECTIME = 37520,
+    TAG_SUBSECTIME_ORIGINAL = 37521,
+    TAG_SUBSECTIME_DIGITIZED = 37522,
+
+    TAG_EXIF_IMAGE_WIDTH = 40962,
+    TAG_EXIF_IMAGE_HEIGHT = 40963,
+    TAG_WHITE_BALANCE = 41987,
+
+    TAG_DNG_VERSION = 50706,
+    TAG_DNG_BACKWARD_VERSION = 50707,
+    TAG_UNIQUE_CAMERA_MODEL = 50708,
+    TAG_CHROMA_BLUR_RADIUS = 50703,
+    TAG_CFA_PLANECOLOR = 50710,
+    TAG_CFA_LAYOUT = 50711,
+    TAG_BLACK_LEVEL_REPEAT_DIM = 50713,
+    TAG_BLACK_LEVEL = 50714,
+    TAG_WHITE_LEVEL = 50717,
+    TAG_DEFAULT_SCALE = 50718,
+    TAG_DEFAULT_CROP_ORIGIN = 50719,
+    TAG_DEFAULT_CROP_SIZE = 50720,
+    TAG_COLOR_MATRIX1 = 50721,
+    TAG_COLOR_MATRIX2 = 50722,
+    TAG_CAMERA_CALIBRATION1 = 50723,
+    TAG_CAMERA_CALIBRATION2 = 50724,
+    TAG_ANALOG_BALANCE = 50727,
+    TAG_AS_SHOT_NEUTRAL = 50728,
+    TAG_AS_SHOT_WHITE_XY = 50729,
+    TAG_BASELINE_EXPOSURE = 50730,
+    TAG_CALIBRATION_ILLUMINANT1 = 50778,
+    TAG_CALIBRATION_ILLUMINANT2 = 50779,
+    TAG_EXTRA_CAMERA_PROFILES = 50933,
+    TAG_PROFILE_NAME = 50936,
+    TAG_AS_SHOT_PROFILE_NAME = 50934,
+    TAG_PREVIEW_COLORSPACE = 50970,
+    TAG_OPCODE_LIST2 = 51009,
+    TAG_NOISE_PROFILE = 51041,
+    TAG_DEFAULT_BLACK_RENDER = 51110,
+    TAG_ACTIVE_AREA = 50829,
+    TAG_FORWARD_MATRIX1 = 50964,
+    TAG_FORWARD_MATRIX2 = 50965,
+
+    TAG_NEXT_IFD = 65535,
+};
+
+struct srational64_t
+{
+    int64_t num = 0, denom = 1;
+};
+
+typedef std::variant<int64_t, srational64_t, double, std::string, std::vector<int64_t>,
+    std::vector<srational64_t>, std::vector<double> > ExifTagValue;
+
+struct CV_EXPORTS_W_SIMPLE ExifTag
+{
+    ExifTagId tagid = TAG_EMPTY;
+    ExifTagType type = TAG_TYPE_NOTYPE;
+    ExifTagValue value;
+
+    bool empty() const {
+        return tagid == TAG_EMPTY;
+    }
+    std::ostream& dump(std::ostream& strm) const;
+    size_t nvalues() const;
+};
+
+
 /** @brief Represents an animation with multiple frames.
 The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, AVIF, APNG, WebP).
 It provides support for looping, background color settings, frame timing, and frame storage.
@@ -379,6 +517,13 @@ The function imreadmulti loads a specified range from a multi-page image from th
 @sa cv::imread
 */
 CV_EXPORTS_W bool imreadmulti(const String& filename, CV_OUT std::vector<Mat>& mats, int start, int count, int flags = IMREAD_ANYCOLOR);
+
+CV_EXPORTS_W Mat imreadWithExif( const std::string& filename, int flags,
+                                 std::vector<std::vector<ExifTag> >& exif);
+CV_EXPORTS_W bool decodeExif(const std::vector<uchar>& data, size_t offset0,
+    std::vector<std::vector<ExifTag> >& exif);
+
+CV_EXPORTS void dumpExif(std::ostream& strm, const std::vector<std::vector<ExifTag> >& exif);
 
 /** @example samples/cpp/tutorial_code/imgcodecs/animations.cpp
 An example to show usage of cv::imreadanimation and cv::imwriteanimation functions.
@@ -515,6 +660,10 @@ bool imwritemulti(const String& filename, InputArrayOfArrays img,
     return imwrite(filename, img, params);
 }
 
+CV_EXPORTS_W bool imwriteWithExif( const String& filename, InputArrayOfArrays imgs,
+                                   const std::vector<std::vector<ExifTag> >& exif,
+                                   const std::vector<int>& params = std::vector<int>());
+
 /** @brief Reads an image from a buffer in memory.
 
 The function imdecode reads an image from the specified buffer in the memory. If the buffer is too short or
@@ -552,6 +701,9 @@ See cv::imreadmulti for the list of supported formats and flags description.
 */
 CV_EXPORTS_W bool imdecodemulti(InputArray buf, int flags, CV_OUT std::vector<Mat>& mats, const cv::Range& range = Range::all());
 
+CV_EXPORTS_W Mat imdecodeWithExif( const std::vector<uchar>& data, int flags,
+                           std::vector<std::vector<ExifTag> >& exif);
+
 /** @brief Encodes an image into a memory buffer.
 
 The function imencode compresses the image and stores it in the memory buffer that is resized to fit the
@@ -579,6 +731,12 @@ See cv::imwrite for the list of supported formats and flags description.
 CV_EXPORTS_W bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
                                  CV_OUT std::vector<uchar>& buf,
                                  const std::vector<int>& params = std::vector<int>());
+
+
+CV_EXPORTS_W bool imencodeWithExif( const String& ext, InputArrayOfArrays imgs,
+                                    const std::vector<std::vector<ExifTag> >& exif,
+                                    CV_OUT std::vector<uchar>& buf,
+                                    const std::vector<int>& params = std::vector<int>());
 
 /** @brief Checks if the specified image file can be decoded by OpenCV.
 
