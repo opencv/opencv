@@ -1542,7 +1542,7 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
 #if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
-    auto workload_arg = cv::gapi::getCompileArg<WorkloadTypeRef>(compileArgs);
+    auto workload_arg = cv::gapi::getCompileArg<cv::gapi::wip::ov::WorkloadTypeRef>(compileArgs);
     if(workload_arg.has_value()) {
         m_workload = workload_arg;
         m_workloadId = m_workload.value().get().addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
@@ -1589,9 +1589,16 @@ cv::gimpl::ov::GOVExecutable::~GOVExecutable() {
         m_workload.value().get().removeListener(m_workloadId);
 }
 
-void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const ::ov::WorkloadType &type)
+void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const std::string &type)
 {
-    compiled.compiled_model.set_property({{"WORKLOAD_TYPE", type}});
+    if(type == "Default")
+    {
+        compiled.compiled_model.set_property({{"WORKLOAD_TYPE", ::ov::WorkloadType::DEFAULT}});
+    }
+    else if(type == "Efficient")
+    {
+        compiled.compiled_model.set_property({{"WORKLOAD_TYPE", ::ov::WorkloadType::EFFICIENT}});
+    }
 }
 #endif
 void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,

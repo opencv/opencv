@@ -51,10 +51,9 @@ class GOVExecutable final: public GIslandExecutable
     // To manage additional execution options
     Options m_options;
 #if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
-    using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
-    cv::util::optional<WorkloadTypeRef> m_workload;
+    cv::util::optional<cv::gapi::wip::ov::WorkloadTypeRef> m_workload;
     int m_workloadId;
-    void setWorkLoadType(const ::ov::WorkloadType &type);
+    void setWorkLoadType(const std::string &type);
 #endif
 public:
     GOVExecutable(const ade::Graph                   &graph,

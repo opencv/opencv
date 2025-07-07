@@ -14,10 +14,6 @@
 #include <opencv2/gapi/gkernel.hpp>     // GKernelType[M], GBackend
 #include <opencv2/gapi/infer.hpp>       // Generic
 
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
-#include <openvino/openvino.hpp>        // WorkloadType
-#endif
-
 #include <map>
 
 namespace cv {
@@ -694,10 +690,8 @@ namespace wip { namespace ov {
  * taking into account the i/o data transfer.
  */
 struct benchmark_mode { };
-
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
 struct workload_type {
-    using callback = std::function<void(const ::ov::WorkloadType &type)>;
+    using callback = std::function<void(const std::string &type)>;
     using listener = std::pair<int, callback>;
     int addListener(callback cb){
         int id = nextId++;
@@ -707,7 +701,7 @@ struct workload_type {
     void removeListener(int id) {
         listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
     }
-    void setWorkloadType(const ::ov::WorkloadType &type) {
+    void setWorkloadType(const std::string &type) {
         for(const listener& l : listeners) {
             l.second(type);
         }
@@ -716,7 +710,9 @@ struct workload_type {
     std::vector<listener> listeners;
     int nextId = 0;
 };
-#endif
+    using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
+
+// #endif
 } // namespace ov
 } // namespace wip
 
@@ -728,12 +724,11 @@ namespace detail
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
     template<> struct CompileArgTag<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>
     {
         static const char* tag() { return "gapi.wip.ov.workload_type_ref"; }
     };
-#endif
+// #endif
 }
 
 } // namespace cv
