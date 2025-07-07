@@ -1,56 +1,60 @@
+// Running method:
+// g++ -std=c++17 -o detect_backend detect_backend.cpp $(pkg-config --cflags --libs opencv4) && ./detect_backend
+
 #include <opencv2/opencv.hpp>
 #include <iostream>
+#include <string>
+#include <vector>
+#include <thread>   
+#include <chrono>   
 
 int main() {
-    std::cout << "=== OpenCV VideoIO Backend Detection ===" << std::endl;
-    
-    std::cout << "OpenCV version: " << CV_VERSION << std::endl;
-    std::cout << "Build information:" << std::endl;
-    std::cout << cv::getBuildInformation() << std::endl;
-    
-    cv::VideoCapture cap;
-    
-    std::cout << "\n=== Testing LIBCAMERA Backend ===" << std::endl;
-    bool libcamera_available = cap.open(0, cv::CAP_LIBCAMERA);
-    if (libcamera_available) {
-        std::cout << "✅ LIBCAMERA backend is available and working" << std::endl;
-        std::cout << "Backend name: " << cap.getBackendName() << std::endl;
+    std::cout << "=== Direct Test of OpenCV LIBCAMERA Backend ===" << std::endl;
 
-        double width = cap.get(cv::CAP_PROP_FRAME_WIDTH);
-        double height = cap.get(cv::CAP_PROP_FRAME_HEIGHT);
-        double fps = cap.get(cv::CAP_PROP_FPS);
-        
-        std::cout << "Default resolution: " << width << "x" << height << std::endl;
-        std::cout << "Default FPS: " << fps << std::endl;
-        
-        cap.release();
-    } else {
-        std::cout << "❌ LIBCAMERA backend is NOT available" << std::endl;
-    }
-    
-    std::cout << "\n=== Testing Default Backend ===" << std::endl;
-    bool default_available = cap.open(0);
-    if (default_available) {
-        std::cout << "✅ Default backend is working" << std::endl;
-        std::cout << "Backend name: " << cap.getBackendName() << std::endl;
-        cv::Mat dummy_frame;
-        for (int i = 0; i < 30; ++i) {
-            cap.read(dummy_frame);
-        }
-        
-        cv::Mat frame;
-        cap >> frame;
-        if (!frame.empty()) {
-            cv::imwrite("test_frame.jpg", frame);
-            std::cout << "Captured a test frame and saved as test_frame.jpg" << std::endl;
-        } else {
-            std::cout << "❌ Failed to capture a frame" << std::endl;
-        }
+    // --- Step 1: Open ---
+    std::cout << "\nAttempting to open camera with cv::CAP_LIBCAMERA..." << std::endl;
+    cv::VideoCapture cap(0, cv::CAP_LIBCAMERA);
 
-        cap.release();
-    } else {
-        std::cout << "❌ No working backend found" << std::endl;
+    // --- Step 2: Check if the camera was opened successfully ---
+    if (!cap.isOpened()) {
+        std::cout << "❌ FAILED: cap.isOpened() returned false." << std::endl;
+        std::cout << "   This means OpenCV could not open the camera using the LIBCAMERA backend." << std::endl;
+        std::cout << "   Possible reasons: Plugin not found, camera not connected, permissions error, etc." << std::endl;
+        return -1;
     }
-    
+
+    // --- Step 3: Check the actual backend used ---
+    std::string backend_name = cap.getBackendName();
+    std::cout << "✅ SUCCESS: cap.isOpened() returned true." << std::endl;
+    std::cout << "   Actual backend in use: " << backend_name << std::endl;
+
+    if (backend_name == "LIBCAMERA") {
+        std::cout << "   ✅ VERIFIED: The LIBCAMERA backend is confirmed to be working!" << std::endl;
+    } else {
+        std::cout << "   ⚠️ WARNING: A camera was opened, but it used the '" << backend_name << "' backend, not LIBCAMERA." << std::endl;
+        std::cout << "   This means the LIBCAMERA plugin is likely not working correctly or has a lower priority." << std::endl;
+        cap.release();
+        return -1;
+    }
+
+    std::cout << "\nAttempting to capture a single frame..." << std::endl;
+    cv::Mat frame;
+
+    // 热身用，让自动曝光正常运行
+    // Warming up to allow auto-exposure to stabilize
+    std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
+
+    if (cap.read(frame) && !frame.empty()) {
+        std::cout << "✅ SUCCESS: A frame was captured." << std::endl;
+        std::cout << "   Frame size: " << frame.cols << "x" << frame.rows << std::endl;
+        cv::imwrite("libcamera_test_frame.jpg", frame);
+        std::cout << "   Frame saved as 'libcamera_test_frame.jpg'." << std::endl;
+    } else {
+        std::cout << "❌ FAILED: Could not read a valid frame from the camera." << std::endl;
+        cap.release();
+        return -1;
+    }
+
+    cap.release();
     return 0;
 }
