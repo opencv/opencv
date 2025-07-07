@@ -1074,6 +1074,9 @@ bool  TiffDecoder::readData( Mat& img )
         else
             cvtColor(img, img, COLOR_XYZ2BGR);
     }
+
+    m_animation.frames.push_back(img);
+
     return true;
 }
 

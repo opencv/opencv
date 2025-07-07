@@ -743,20 +743,141 @@ public:
         int m_curr;
     };
 
+    /**
+     * @brief Default constructor. Creates an uninitialized ImageCollection.
+     *
+     * Use `init()` or assignment to load image data before use.
+     */
     CV_WRAP ImageCollection();
+
+    /**
+     * @brief Constructs an ImageCollection from a file.
+     *
+     * @param filename Path to the multi-page or animated image file.
+     * @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+     *
+     * This constructor initializes the collection and prepares the internal iterator.
+     * Only metadata is read initially; individual pages are decoded on access.
+     */
     CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
-    CV_WRAP void init(const String& img, int flags);
+
+    /**
+     * @brief Initializes the ImageCollection with a new file.
+     *
+     * @param filename Path to the multi-page or animated image file.
+     * @param flags Flag for image reading mode (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+     *
+     * Clears any existing data and loads the specified image.
+     */
+    CV_WRAP void init(const String& filename, int flags);
+
+    /**
+     * @brief Returns the number of pages/frames in the image collection.
+     *
+     * @return Total number of frames.
+     */
     size_t size() const;
+
+    /**
+     * @brief Returns the number of frames as a 32-bit integer.
+     *
+     * @return Number of frames, cast to `int`. Useful for bindings with languages that don't support `size_t`.
+     */
     CV_WRAP int size32() const { return (int)size(); }
+
+    /**
+     * @brief Returns the width of frames in the collection.
+     *
+     * @return Width in pixels.
+     *
+     * Assumes all frames have consistent dimensions except TIFF files.
+     */
     CV_WRAP int getWidth() const;
+
+    /**
+     * @brief Returns the height of frames in the collection.
+     *
+     * @return Height in pixels.
+     *
+     * Assumes all frames have consistent dimensions except TIFF files.
+     */
     CV_WRAP int getHeight() const;
+
+    /**
+     * @brief Returns the OpenCV type (`CV_8UC3`, etc.) of the frames.
+     *
+     * @return OpenCV matrix type.
+     *
+     * This is determined from the first frame and assumed consistent across all frames except TIFF files.
+     */
     CV_WRAP int getType() const;
+
+    /**
+     * @brief Extracts metadata for each frame, if available.
+     *
+     * @param metadata_types Output vector of metadata type codes.
+     * @param metadata Output array containing metadata items (EXIF, XMP, TEXT etc.).
+     *
+     * @return Number of metadata items extracted.
+     */
     CV_WRAP int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
+
+    /**
+     * @brief Returns a reference to the decoded frame at the given index.
+     *
+     * @param index Zero-based frame index.
+     * @return Constant reference to the decoded frame (`cv::Mat`).
+     *
+     * If the frame is not already decoded, it is loaded and cached.
+     * Throws an exception if the index is out of range.
+     */
     CV_WRAP const Mat& at(int index);
+
+    /**
+     * @brief Returns a reference to the decoded frame at the given index.
+     *
+     * @param index Zero-based frame index.
+     * @return Constant reference to the decoded frame.
+     *
+     * Equivalent to `at(index)`. Provided for convenience.
+     */
     const Mat& operator[](int index);
+
+    /**
+     * @brief Returns the internal `Animation` object for animated formats.
+     *
+     * @return Const reference to the `Animation` object.
+     *
+     * Useful for advanced use cases, such as precise timing or loop mode control.
+     * For non-animated formats, the behavior is undefined.
+     */
     CV_WRAP const Animation& getAnimation() const;
+
+    /**
+     * @brief Releases the cached frame at the specified index.
+     *
+     * @param index Index of the frame to remove from the cache.
+     *
+     * Frees memory for the specified frame without affecting other cached pages.
+     */
     CV_WRAP void releaseCache(int index);
+
+    /**
+     * @brief Returns an iterator to the first frame in the collection.
+     *
+     * @return Iterator pointing to the beginning of the collection.
+     *
+     * Can be used in range-based or manual loops.
+     */
     iterator begin();
+
+    /**
+     * @brief Returns an iterator to one past the last frame.
+     *
+     * @return Iterator pointing past the end of the collection.
+     *
+     * Used for terminating iterator-based loops.
+     */
     iterator end();
 
     class Impl;

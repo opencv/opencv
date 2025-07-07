@@ -1891,7 +1891,7 @@ ImageCollection::ImageCollection() : pImpl(new Impl()) {}
 
 ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
 
-void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
+void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
 
