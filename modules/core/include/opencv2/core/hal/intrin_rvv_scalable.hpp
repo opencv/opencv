@@ -931,7 +931,7 @@ inline scalartype v_reduce_sum(const _Tpvec& a)  \
 }
 OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float32, v_float32, vfloat32m1_t, float, f32, VTraits<v_float32>::vlanes())
 #if CV_SIMD_SCALABLE_64F
-OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, float, f64, VTraits<v_float64>::vlanes())
+OPENCV_HAL_IMPL_RVV_REDUCE_SUM_FP(v_float64, v_float64, vfloat64m1_t, double, f64, VTraits<v_float64>::vlanes())
 #endif
 
 #define OPENCV_HAL_IMPL_RVV_REDUCE(_Tpvec, _nTpvec, func, scalartype, suffix, vl, red) \
