@@ -107,6 +107,8 @@ static const struct VideoBackendInfo builtin_backends[] =
 
 #ifdef HAVE_LIBCAMERA
     DECLARE_STATIC_BACKEND(CAP_LIBCAMERA, "LIBCAMERA", MODE_CAPTURE_ALL, createLibcameraCapture_file, createLibcameraCapture_cam, 0)
+#elif defined(ENABLE_PLUGINS)
+    DECLARE_DYNAMIC_BACKEND(CAP_LIBCAMERA, "LIBCAMERA", MODE_CAPTURE_ALL)
 #endif
 
     // Linux, some Unix

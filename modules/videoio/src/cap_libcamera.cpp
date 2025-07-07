@@ -567,10 +567,17 @@ namespace cv
         options->setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
         options->contrast = 1.0f;
         options->saturation = 1.0f;
-        still_flags |= LibcameraApp::FLAG_STILL_RGB;
+        still_flags |= LibcameraApp::FLAG_STILL_BGR;
         camera_started_.store(false, std::memory_order_release);
         needsReconfigure.store(false, std::memory_order_release);
         vw = vh = vstr = 0;
+    }
+
+    LibcameraCapture::LibcameraCapture(int camera_index) : LibcameraCapture()
+    {
+        // 设置摄像头索引并尝试打开
+        options->camera = camera_index;
+        open(camera_index);
     }
 
     LibcameraCapture::~LibcameraCapture()

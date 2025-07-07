@@ -7,6 +7,8 @@
 #include <atomic>
 #include <memory>
 #include <functional>
+#include <variant>
+#include <any>
 
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
@@ -409,6 +411,7 @@ namespace cv
     {
     public:
         LibcameraCapture();
+        LibcameraCapture(int camera_index);
         virtual ~LibcameraCapture() CV_OVERRIDE;
 
         Options *options;
@@ -421,6 +424,14 @@ namespace cv
 
         virtual bool grabFrame() CV_OVERRIDE;
         virtual bool retrieveFrame(int /*unused*/, OutputArray dst) CV_OVERRIDE;
+        
+        // 兼容性方法，供插件使用
+        bool grab() { return grabFrame(); }
+        bool retrieve(cv::Mat& frame, int stream_idx = 0) 
+        { 
+            return retrieveFrame(stream_idx, frame); 
+        }
+        
         virtual double getProperty(int propId) const CV_OVERRIDE;
         virtual bool setProperty(int propId, double value) CV_OVERRIDE;
         virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
