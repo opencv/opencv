@@ -257,23 +257,23 @@ enum ImwriteGIFCompressionFlags {
 
 enum ExifTagType
 {
-    TAG_TYPE_NOTYPE = 0,
-    TAG_TYPE_BYTE = 1,
-    TAG_TYPE_ASCII = 2,  // null-terminated string
-    TAG_TYPE_SHORT = 3,
-    TAG_TYPE_LONG = 4,
-    TAG_TYPE_RATIONAL = 5,  // 64-bit unsigned fraction
-    TAG_TYPE_SBYTE = 6,
-    TAG_TYPE_UNDEFINED = 7,  // 8-bit untyped data */
-    TAG_TYPE_SSHORT = 8,
-    TAG_TYPE_SLONG = 9,
-    TAG_TYPE_SRATIONAL = 10,  // 64-bit signed fraction
-    TAG_TYPE_FLOAT = 11,
-    TAG_TYPE_DOUBLE = 12,
-    TAG_TYPE_IFD = 13,     // 32-bit unsigned integer (offset)
-    TAG_TYPE_LONG8 = 16,   // BigTIFF 64-bit unsigned
-    TAG_TYPE_SLONG8 = 17,  // BigTIFF 64-bit signed
-    TAG_TYPE_IFD8 = 18     // BigTIFF 64-bit unsigned integer (offset)
+    TAG_TYPE_NOTYPE     = 0,  // Invalid or undefined type
+    TAG_TYPE_BYTE       = 1,  // 8-bit unsigned integer
+    TAG_TYPE_ASCII      = 2,  // 8-bit ASCII string, null-terminated
+    TAG_TYPE_SHORT      = 3,  // 16-bit unsigned integer
+    TAG_TYPE_LONG       = 4,  // 32-bit unsigned integer
+    TAG_TYPE_RATIONAL   = 5,  // Two LONGs: numerator and denominator (64-bit unsigned fraction)
+    TAG_TYPE_SBYTE      = 6,  // 8-bit signed integer
+    TAG_TYPE_UNDEFINED  = 7,  // 8-bit untyped data
+    TAG_TYPE_SSHORT     = 8,  // 16-bit signed integer
+    TAG_TYPE_SLONG      = 9,  // 32-bit signed integer
+    TAG_TYPE_SRATIONAL  = 10, // Two SLONGs: signed 64-bit fraction
+    TAG_TYPE_FLOAT      = 11, // IEEE 32-bit float
+    TAG_TYPE_DOUBLE     = 12, // IEEE 64-bit float
+    TAG_TYPE_IFD        = 13, // 32-bit offset to IFD
+    TAG_TYPE_LONG8      = 16, // BigTIFF: 64-bit unsigned integer
+    TAG_TYPE_SLONG8     = 17, // BigTIFF: 64-bit signed integer
+    TAG_TYPE_IFD8       = 18  // BigTIFF: 64-bit offset to IFD
 };
 
 enum ExifTagId
