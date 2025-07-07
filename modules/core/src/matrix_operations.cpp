@@ -343,11 +343,14 @@ struct ReduceOpAdd
 {
     using v_stype = stype;
     using v_itype = itype;
+    static const int vlanes;
     static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
     static inline itype init() { return (itype)0; }
     static inline itype reduce(const itype &val) { return val; }
     inline itype operator()(const itype &a, const stype &b) const { return a + (itype)b; }
 };
+template<typename stype, typename itype>
+const int ReduceOpAdd<stype, itype>::vlanes = 1;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -407,6 +410,7 @@ struct ReduceVecOpAdd<uchar, int>
     using itype = int;
     using v_stype = v_uint8;
     using v_itype = v_int32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_s32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -420,6 +424,7 @@ struct ReduceVecOpAdd<uchar, int>
         return v_add(a, v_add(sb0, sb1));
     }
 };
+const int ReduceVecOpAdd<uchar, int>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAdd<ushort, float>
@@ -428,6 +433,7 @@ struct ReduceVecOpAdd<ushort, float>
     using itype = float;
     using v_stype = v_uint16;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -439,6 +445,7 @@ struct ReduceVecOpAdd<ushort, float>
         return v_add(a, v_cvt_f32(sb));
     }
 };
+const int ReduceVecOpAdd<ushort, float>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAdd<short, float>
@@ -447,6 +454,7 @@ struct ReduceVecOpAdd<short, float>
     using itype = float;
     using v_stype = v_int16;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -458,6 +466,7 @@ struct ReduceVecOpAdd<short, float>
         return v_add(a, v_cvt_f32(sb));
     }
 };
+const int ReduceVecOpAdd<short, float>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAdd<float, float>
@@ -466,11 +475,13 @@ struct ReduceVecOpAdd<float, float>
     using itype = float;
     using v_stype = v_float32;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
     inline v_itype operator()(const v_stype &a, const v_stype &b) const { return v_add(a, b); }
 };
+const int ReduceVecOpAdd<float, float>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -483,6 +494,7 @@ struct ReduceVecOpAdd<short, double>
     using itype = double;
     using v_stype = v_int16;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -494,6 +506,7 @@ struct ReduceVecOpAdd<short, double>
         return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
     }
 };
+const int ReduceVecOpAdd<short, double>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAdd<ushort, double>
@@ -502,6 +515,7 @@ struct ReduceVecOpAdd<ushort, double>
     using itype = double;
     using v_stype = v_uint16;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -513,6 +527,7 @@ struct ReduceVecOpAdd<ushort, double>
         return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
     }
 };
+const int ReduceVecOpAdd<ushort, double>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAdd<float, double>
@@ -521,6 +536,7 @@ struct ReduceVecOpAdd<float, double>
     using itype = double;
     using v_stype = v_float32;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -529,6 +545,7 @@ struct ReduceVecOpAdd<float, double>
         return v_add(a, v_add(v_cvt_f64(b), v_cvt_f64_high(b)));
     }
 };
+const int ReduceVecOpAdd<float, double>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAdd<double, double>
@@ -537,11 +554,13 @@ struct ReduceVecOpAdd<double, double>
     using itype = double;
     using v_stype = v_float64;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_add(a, b); }
 };
+const int ReduceVecOpAdd<double, double>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -550,11 +569,14 @@ struct ReduceOpAddSqr
 {
     using v_stype = stype;
     using v_itype = itype;
+    static const int vlanes;
     static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
     static inline itype init() { return (itype)0; }
     static inline itype reduce(const itype &val) { return val; }
     inline itype operator()(const itype &a, const stype &b) const { return a + (itype)b * (itype)b; }
 };
+template<typename stype, typename itype>
+const int ReduceOpAddSqr<stype, itype>::vlanes = 1;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -568,6 +590,7 @@ struct ReduceVecOpAddSqr<uchar, int>
     using itype = int;
     using v_stype = v_uint8;
     using v_itype = v_int32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_s32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -585,6 +608,7 @@ struct ReduceVecOpAddSqr<uchar, int>
         return v_add(a, v_reinterpret_as_s32(v_add(s00, s10)));
     }
 };
+const int ReduceVecOpAddSqr<uchar, int>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAddSqr<ushort, float>
@@ -593,6 +617,7 @@ struct ReduceVecOpAddSqr<ushort, float>
     using itype = float;
     using v_stype = v_uint16;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -604,6 +629,7 @@ struct ReduceVecOpAddSqr<ushort, float>
         return v_add(a, v_cvt_f32(sb));
     }
 };
+const int ReduceVecOpAddSqr<ushort, float>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAddSqr<short, float>
@@ -612,6 +638,7 @@ struct ReduceVecOpAddSqr<short, float>
     using itype = float;
     using v_stype = v_int16;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -623,6 +650,7 @@ struct ReduceVecOpAddSqr<short, float>
         return v_add(a, v_cvt_f32(sb));
     }
 };
+const int ReduceVecOpAddSqr<short, float>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAddSqr<float, float>
@@ -631,11 +659,13 @@ struct ReduceVecOpAddSqr<float, float>
     using itype = float;
     using v_stype = v_float32;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f32(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_add(a, v_mul(b, b)); }
 };
+const int ReduceVecOpAddSqr<float, float>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -648,6 +678,7 @@ struct ReduceVecOpAddSqr<short, double>
     using itype = double;
     using v_stype = v_int16;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -659,6 +690,7 @@ struct ReduceVecOpAddSqr<short, double>
         return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
     }
 };
+const int ReduceVecOpAddSqr<short, double>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAddSqr<ushort, double>
@@ -667,6 +699,7 @@ struct ReduceVecOpAddSqr<ushort, double>
     using itype = double;
     using v_stype = v_uint16;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -678,6 +711,7 @@ struct ReduceVecOpAddSqr<ushort, double>
         return v_add(a, v_add(v_cvt_f64(sb), v_cvt_f64_high(sb)));
     }
 };
+const int ReduceVecOpAddSqr<ushort, double>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAddSqr<float, double>
@@ -686,6 +720,7 @@ struct ReduceVecOpAddSqr<float, double>
     using itype = double;
     using v_stype = v_float32;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
@@ -695,6 +730,7 @@ struct ReduceVecOpAddSqr<float, double>
         return v_add(a, v_add(v_mul(b0, b0), v_mul(b1, b1)));
     }
 };
+const int ReduceVecOpAddSqr<float, double>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpAddSqr<double, double>
@@ -703,11 +739,13 @@ struct ReduceVecOpAddSqr<double, double>
     using itype = double;
     using v_stype = v_float64;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setzero_f64(); }
     static inline itype reduce(const v_itype &val) { return v_reduce_sum(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_add(a, v_mul(b, b)); }
 };
+const int ReduceVecOpAddSqr<double, double>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -716,11 +754,14 @@ struct ReduceOpMax
 {
     using v_stype = stype;
     using v_itype = stype;
+    static const int vlanes;
     static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
     static inline stype init() { return std::numeric_limits<stype>::lowest(); }
     static inline stype reduce(const stype &val) { return val; }
     inline stype operator()(const stype &a, const stype &b) const { return std::max(a, b); }
 };
+template<typename stype>
+const int ReduceOpMax<stype>::vlanes = 1;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -734,11 +775,13 @@ struct ReduceVecOpMax<uchar>
     using itype = uchar;
     using v_stype = v_uint8;
     using v_itype = v_uint8;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_u8(std::numeric_limits<itype>::lowest()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
 };
+const int ReduceVecOpMax<uchar>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpMax<ushort>
@@ -747,11 +790,13 @@ struct ReduceVecOpMax<ushort>
     using itype = ushort;
     using v_stype = v_uint16;
     using v_itype = v_uint16;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_u16(std::numeric_limits<itype>::lowest()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
 };
+const int ReduceVecOpMax<ushort>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpMax<short>
@@ -760,11 +805,13 @@ struct ReduceVecOpMax<short>
     using itype = short;
     using v_stype = v_int16;
     using v_itype = v_int16;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_s16(std::numeric_limits<itype>::lowest()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
 };
+const int ReduceVecOpMax<short>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpMax<float>
@@ -773,11 +820,13 @@ struct ReduceVecOpMax<float>
     using itype = float;
     using v_stype = v_float32;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_f32(std::numeric_limits<itype>::lowest()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_max(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
 };
+const int ReduceVecOpMax<float>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -790,6 +839,7 @@ struct ReduceVecOpMax<double>
     using itype = double;
     using v_stype = v_float64;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_f64(std::numeric_limits<itype>::lowest()); }
     static inline itype reduce(const v_itype &val)
@@ -806,6 +856,7 @@ struct ReduceVecOpMax<double>
     }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_max(a, b); }
 };
+const int ReduceVecOpMax<double>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -814,11 +865,14 @@ struct ReduceOpMin
 {
     using v_stype = stype;
     using v_itype = stype;
+    static const int vlanes;
     static inline stype load(const stype *ptr, size_t step) { (void)step; return *ptr; }
     static inline stype init() { return std::numeric_limits<stype>::max(); }
     static inline stype reduce(const stype &val) { return (stype)val; }
     inline stype operator()(const stype &a, const stype &b) const { return std::min(a, b); }
 };
+template<typename stype>
+const int ReduceOpMin<stype>::vlanes = 1;
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
 
@@ -832,11 +886,13 @@ struct ReduceVecOpMin<uchar>
     using itype = uchar;
     using v_stype = v_uint8;
     using v_itype = v_uint8;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_u8(std::numeric_limits<itype>::max()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
 };
+const int ReduceVecOpMin<uchar>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpMin<ushort>
@@ -845,11 +901,13 @@ struct ReduceVecOpMin<ushort>
     using itype = ushort;
     using v_stype = v_uint16;
     using v_itype = v_uint16;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_u16(std::numeric_limits<itype>::max()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
 };
+const int ReduceVecOpMin<ushort>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpMin<short>
@@ -858,11 +916,13 @@ struct ReduceVecOpMin<short>
     using itype = short;
     using v_stype = v_int16;
     using v_itype = v_int16;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_s16(std::numeric_limits<itype>::max()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
 };
+const int ReduceVecOpMin<short>::vlanes = VTraits<v_stype>::vlanes();
 
 template<>
 struct ReduceVecOpMin<float>
@@ -871,11 +931,13 @@ struct ReduceVecOpMin<float>
     using itype = float;
     using v_stype = v_float32;
     using v_itype = v_float32;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_f32(std::numeric_limits<itype>::max()); }
     static inline itype reduce(const v_itype &val) { return v_reduce_min(val); }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
 };
+const int ReduceVecOpMin<float>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -888,6 +950,7 @@ struct ReduceVecOpMin<double>
     using itype = double;
     using v_stype = v_float64;
     using v_itype = v_float64;
+    static const int vlanes;
     static inline v_stype load(const stype *ptr, size_t step) { return vx_load<stype, v_stype>(ptr, step); }
     static inline v_itype init() { return vx_setall_f64(std::numeric_limits<itype>::max()); }
     static inline itype reduce(const v_itype &val)
@@ -904,6 +967,7 @@ struct ReduceVecOpMin<double>
     }
     inline v_itype operator()(const v_itype &a, const v_stype &b) const { return v_min(a, b); }
 };
+const int ReduceVecOpMin<double>::vlanes = VTraits<v_stype>::vlanes();
 
 #endif
 
@@ -1096,11 +1160,7 @@ public:
     int channels = srcmat.channels();
     int width = srcmat.cols;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE) || (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-    int nlanes = VTraits<typename VecOp::v_stype>::vlanes();
-#else
-    int nlanes = 1;
-#endif
+    const int nlanes = VecOp::vlanes;
 
     for (int cn = 0; cn < channels; cn++)
     {
