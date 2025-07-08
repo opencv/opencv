@@ -692,23 +692,23 @@ namespace wip { namespace ov {
 struct benchmark_mode { };
 struct workload_type {
     using callback = std::function<void(const std::string &type)>;
-    using listener = std::pair<int, callback>;
-    int addListener(callback cb){
-        int id = nextId++;
+    using listener = std::pair<unsigned int, callback>;
+    unsigned int addListener(callback cb){
+        unsigned int id = nextId++;
         listeners.emplace_back(id, std::move(cb));
         return id;
     }
-    void removeListener(int id) {
+    void removeListener(unsigned int id) {
         listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
     }
     void setWorkloadType(const std::string &type) {
-        for(const listener& l : listeners) {
+        for(const listener &l : listeners) {
             l.second(type);
         }
     }
  private:
     std::vector<listener> listeners;
-    int nextId = 0;
+    unsigned int nextId = 0;
 };
     using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
 

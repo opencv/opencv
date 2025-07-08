@@ -128,8 +128,8 @@ class ONNXCompiled {
     std::vector<std::string> in_names_without_const;
 
     cv::util::optional<cv::gapi::wip::ov::WorkloadTypeRef> workload_type;
-    int workloadId;
-    void setWorkLoadType(const std::string& type);
+    unsigned int workloadId;
+    void setWorkLoadType(const std::string &type);
 public:
     explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
     ~ONNXCompiled();
@@ -847,22 +847,21 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
     in_data.resize(params.num_in);
     out_data.resize(params.num_out);
 }
-ONNXCompiled::~ONNXCompiled()
-{
+
+ONNXCompiled::~ONNXCompiled() {
     if(workload_type.has_value())
     {
         workload_type.value().get().removeListener(workloadId);
     }
 }
-void ONNXCompiled::setWorkLoadType(const std::string& type)
-{
+
+void ONNXCompiled::setWorkLoadType(const std::string &type) {
     const char* keys[] = {"ep.dynamic.workload_type"};
     const char* values[] = {type.c_str()};
     this_session.SetEpDynamicOptions(keys, values, 1);
 }
 
-void ONNXCompiled::setWorkLoadRef(cv::gapi::wip::ov::WorkloadTypeRef workload)
-{
+void ONNXCompiled::setWorkLoadRef(cv::gapi::wip::ov::WorkloadTypeRef workload) {
     workload_type = cv::util::make_optional(workload);
     workloadId = workload_type.value().get().addListener(std::bind(&ONNXCompiled::setWorkLoadType, this, std::placeholders::_1));
 }

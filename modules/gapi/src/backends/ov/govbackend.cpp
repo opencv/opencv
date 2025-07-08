@@ -1589,8 +1589,7 @@ cv::gimpl::ov::GOVExecutable::~GOVExecutable() {
         m_workload.value().get().removeListener(m_workloadId);
 }
 
-void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const std::string &type)
-{
+void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const std::string &type) {
     if(type == "Default")
     {
         compiled.compiled_model.set_property({{"WORKLOAD_TYPE", ::ov::WorkloadType::DEFAULT}});

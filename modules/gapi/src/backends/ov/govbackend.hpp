@@ -52,7 +52,7 @@ class GOVExecutable final: public GIslandExecutable
     Options m_options;
 #if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
     cv::util::optional<cv::gapi::wip::ov::WorkloadTypeRef> m_workload;
-    int m_workloadId;
+    unsigned int m_workloadId;
     void setWorkLoadType(const std::string &type);
 #endif
 public:
