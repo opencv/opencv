@@ -1755,7 +1755,7 @@ ImageCollection::Impl::Impl(std::string const& filename, int flags) {
 }
 
 ImageCollection::Impl::Impl(InputArray buffer, int flags) {
-    this->init(buffer, flags);
+    this->initFromMemory(buffer, flags);
 }
 
 void ImageCollection::Impl::init(String const& filename, int flags) {
