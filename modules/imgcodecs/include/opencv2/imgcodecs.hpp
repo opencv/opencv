@@ -688,7 +688,8 @@ CV_EXPORTS_W bool haveImageWriter( const String& filename );
  * multi-page and animated image files (such as TIFF, animated WebP, GIF, etc.). It supports
  * the OpenCV `Animation` class internally for handling animated formats.
  *
- * Pages are decoded lazily: only the current page accessed via `operator*()` is decoded.
+ * Pages are decoded lazily as much as possible. Only the current page requested from decoder via operator*().
+ * The Actual behaviour depends on the decoder implementation.
  *
  * ### Performance
  *
