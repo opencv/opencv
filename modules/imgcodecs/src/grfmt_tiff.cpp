@@ -1074,7 +1074,6 @@ bool  TiffDecoder::readData( Mat& img )
         else
             cvtColor(img, img, COLOR_XYZ2BGR);
     }
-
     return true;
 }
 

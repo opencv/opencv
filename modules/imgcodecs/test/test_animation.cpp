@@ -543,7 +543,7 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
-typedef testing::TestWithParam<string> Imgcodecs_ImageCollection;
+typedef testing::TestWithParam<string> Imgcodecs_ImageCollection_WithParam;
 
 const string exts_multi[] = {
 #ifdef HAVE_AVIF
@@ -561,7 +561,7 @@ const string exts_multi[] = {
 #endif
 };
 
-TEST_P(Imgcodecs_ImageCollection, animations)
+TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
 {
     Animation s_animation;
     EXPECT_TRUE(fillFrames(s_animation, false));
@@ -585,7 +585,6 @@ TEST_P(Imgcodecs_ImageCollection, animations)
         }
     }
 
-    Animation animation;
     {
         ImageCollection collection(output, IMREAD_UNCHANGED);
         EXPECT_EQ(read_frames.size(), collection.size());
@@ -596,9 +595,11 @@ TEST_P(Imgcodecs_ImageCollection, animations)
         for (int i = 10; i < (int)collection.size(); i++)
         {
             Mat frame = collection.at(i);
-            animation = collection.getAnimation();
-            EXPECT_EQ(0, cvtest::norm(frame, animation.frames[i], NORM_INF));
             EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+
+            Animation animation = collection.getAnimation();
+            if (animation.frames.size() > 0)
+                EXPECT_EQ(0, cvtest::norm(frame, animation.frames[i], NORM_INF));
         }
     }
 
@@ -616,8 +617,27 @@ TEST_P(Imgcodecs_ImageCollection, animations)
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
-    Imgcodecs_ImageCollection,
+    Imgcodecs_ImageCollection_WithParam,
     testing::ValuesIn(exts_multi));
+
+TEST(Imgcodecs_ImageCollection, Metadata)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/testExifOrientation_5.jpg";
+
+    ImageCollection collection(filename, IMREAD_UNCHANGED);
+    std::vector<int> metadata_types;
+    std::vector<Mat> metadata;
+    collection.getMetadata(metadata_types, metadata);
+
+    EXPECT_TRUE(metadata.empty());
+
+    Mat m = collection.at(0);
+
+    collection.getMetadata(metadata_types, metadata);
+
+    EXPECT_FALSE(metadata.empty());
+}
 
 TEST(Imgcodecs_APNG, imdecode_animation)
 {
