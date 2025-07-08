@@ -794,7 +794,7 @@ public:
      *
      * Clears any existing data and loads the specified image.
      */
-    CV_WRAP void init(InputArray buffer, int flags = IMREAD_UNCHANGED);
+    CV_WRAP void initFromMemory(InputArray buffer, int flags = IMREAD_UNCHANGED);
 
     /**
      * @brief Closes the ImageCollection and releases internal resources.
