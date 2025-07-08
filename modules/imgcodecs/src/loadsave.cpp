@@ -1718,8 +1718,10 @@ bool haveImageWriter( const String& filename )
 class ImageCollection::Impl {
 public:
     Impl() = default;
-    Impl(const std::string& filename, InputArray buffer, int flags);
-    void init(String const& filename, InputArray buffer, int flags);
+    Impl(const std::string& filename, int flags);
+    Impl(InputArray buffer, int flags);
+    void init(String const& filename, int flags);
+    void init(InputArray buffer, int flags);
     size_t size() const;
     Mat& at(int index);
     Mat& operator[](int index);
@@ -1742,18 +1744,20 @@ private:
     String m_filename;
     int m_flags{};
     std::size_t m_size{};
-    int m_width{};
-    int m_height{};
     int m_current{};
     std::vector<cv::Mat> m_pages;
     ImageDecoder m_decoder;
 };
 
-ImageCollection::Impl::Impl(std::string const& filename, InputArray buffer, int flags) {
-    this->init(filename, buffer, flags);
+ImageCollection::Impl::Impl(std::string const& filename, int flags) {
+    this->init(filename, flags);
 }
 
-void ImageCollection::Impl::init(String const& filename, InputArray buffer, int flags) {
+ImageCollection::Impl::Impl(InputArray buffer, int flags) {
+    this->init(buffer, flags);
+}
+
+void ImageCollection::Impl::init(String const& filename, int flags) {
     m_filename = filename;
     m_flags = flags;
 
@@ -1763,24 +1767,38 @@ void ImageCollection::Impl::init(String const& filename, InputArray buffer, int 
     }
     else {
 #endif
-    if (!filename.empty())
-        m_decoder = findDecoder(filename);
-    else
+    m_decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    CV_Assert(m_decoder);
+    m_decoder->setSource(filename);
+    CV_Assert(m_decoder->readHeader());
+
+    m_size = m_decoder->getFrameCount();
+    m_pages.resize(m_size);
+}
+
+void ImageCollection::Impl::init(InputArray buffer, int flags) {
+    m_flags = flags;
+
+#ifdef HAVE_GDAL
+    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        m_decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#endif
         m_decoder = findDecoder(buffer.getMat());
 #ifdef HAVE_GDAL
     }
 #endif
 
     CV_Assert(m_decoder);
-    if (!filename.empty())
-        m_decoder->setSource(filename);
-    else
-        m_decoder->setSource(buffer.getMat());
+    m_decoder->setSource(buffer.getMat());
     CV_Assert(m_decoder->readHeader());
 
     m_size = m_decoder->getFrameCount();
-    m_width = m_decoder->width();
-    m_height = m_decoder->height();
     m_pages.resize(m_size);
 }
 
@@ -1815,7 +1833,7 @@ Mat ImageCollection::Impl::readData() {
     const int type = calcType(m_decoder->type(), m_flags);
 
     // established the required input image size
-    Size size = validateInputImageSize(Size(m_width, m_height));
+    Size size = validateInputImageSize(Size(m_decoder->width(), m_decoder->height()));
 
     Mat mat(size.height, size.width, type);
     bool success = false;
@@ -1895,13 +1913,13 @@ void ImageCollection::Impl::releaseCache(int index) {
 
 ImageCollection::ImageCollection() : pImpl(new Impl()) {}
 
-ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, noArray(), flags)) {}
+ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
 
-ImageCollection::ImageCollection(InputArray buf, int flags) : pImpl(new Impl(std::string(), buf, flags)) {}
+ImageCollection::ImageCollection(InputArray buffer, int flags) : pImpl(new Impl(buffer, flags)) {}
 
-void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, noArray(), flags); }
+void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
 
-void ImageCollection::init(InputArray buf, int flags) { pImpl->init(std::string(), buf, flags); }
+void ImageCollection::init(InputArray buffer, int flags) { pImpl->init(buffer, flags); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
 
