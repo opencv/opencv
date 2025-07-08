@@ -598,8 +598,9 @@ TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
             EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
 
             Animation animation = collection.getAnimation();
-            if (animation.frames.size() > 0)
+            if (animation.frames.size() > 0) {
                 EXPECT_EQ(0, cvtest::norm(frame, animation.frames[i], NORM_INF));
+            }
         }
     }
 
