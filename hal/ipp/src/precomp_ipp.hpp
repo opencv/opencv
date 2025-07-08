@@ -11,6 +11,18 @@
 #include "iw++/iw.hpp"
 #endif
 
+static inline IppiSize ippiSize(size_t width, size_t height)
+{
+    IppiSize size = { (int)width, (int)height };
+    return size;
+}
+
+static inline IppiSize ippiSize(const cv::Size & _size)
+{
+    IppiSize size = { _size.width, _size.height };
+    return size;
+}
+
 static inline IppDataType ippiGetDataType(int depth)
 {
     depth = CV_MAT_DEPTH(depth);
