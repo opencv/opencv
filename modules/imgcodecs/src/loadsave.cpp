@@ -1721,7 +1721,7 @@ public:
     Impl(const std::string& filename, int flags);
     Impl(InputArray buffer, int flags);
     void init(String const& filename, int flags);
-    void init(InputArray buffer, int flags);
+    void initFromMemory(InputArray buffer, int flags);
     void close();
     size_t size() const;
     Mat& at(int index);
@@ -1781,7 +1781,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     m_pages.resize(m_size);
 }
 
-void ImageCollection::Impl::init(InputArray buffer, int flags) {
+void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     m_flags = flags;
 
 #ifdef HAVE_GDAL
@@ -1924,7 +1924,7 @@ ImageCollection::ImageCollection(InputArray buffer, int flags) : pImpl(new Impl(
 
 void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
 
-void ImageCollection::init(InputArray buffer, int flags) { pImpl->init(buffer, flags); }
+void ImageCollection::initFromMemory(InputArray buffer, int flags) { pImpl->initFromMemory(buffer, flags); }
 
 void ImageCollection::close() { pImpl->close(); }
 
