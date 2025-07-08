@@ -2,6 +2,7 @@
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/videoio.hpp>
+#include "cap_interface.hpp"
 
 #include <sys/mman.h>
 
@@ -346,7 +347,9 @@ namespace cv
 
     void LibcameraApp::PostMessage(MsgType &t, MsgPayload &p)
     {
-        msg_queue_.Post(Msg(t, std::move(p)));
+        Msg msg(t);
+        msg.payload = p;
+        msg_queue_.Post(std::move(msg));
     }
 
     libcamera::Stream *LibcameraApp::GetStream(std::string const &name, unsigned int *w, unsigned int *h,
@@ -548,45 +551,6 @@ namespace cv
     }
 
     /* ******************************************************************* */
-    class LibcameraCapture CV_FINAL : public IVideoCapture
-    {
-    private:
-    public:
-        LibcameraCapture();
-        virtual ~LibcameraCapture() CV_OVERRIDE;
-
-        Options *options;
-
-        bool startVideo();
-        void stopVideo();
-
-        bool open(int _index);
-        bool open(const std::string &filename);
-
-        virtual bool grabFrame() CV_OVERRIDE;
-        virtual bool retrieveFrame(int /*unused*/, OutputArray dst) CV_OVERRIDE;
-        virtual double getProperty(int propId) const CV_OVERRIDE;
-        virtual bool setProperty(int propId, double value) CV_OVERRIDE;
-        // virtual bool isOpened() const CV_OVERRIDE { return (bool)pipeline; }
-        virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; } // Need to modify videoio.hpp/enum VideoCaptureAPIs
-        // bool configureHW(const cv::VideoCaptureParameters&);
-        // bool configureStreamsProperty(const cv::VideoCaptureParameters&);
-        bool isOpened() const CV_OVERRIDE
-        {
-            return true;
-        } // camerastarted
-
-    protected:
-        LibcameraApp *app;
-        unsigned int still_flags;
-        unsigned int vw, vh, vstr;
-        std::atomic<bool> needsReconfigure;
-        bool camerastarted;
-        
-        // Store the current completed request for retrieve
-        CompletedRequestPtr current_request_;
-        std::mutex request_mutex_;
-    };
 
     LibcameraCapture::LibcameraCapture()
     {
@@ -605,10 +569,39 @@ namespace cv
         options->setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
         options->contrast = 1.0f;
         options->saturation = 1.0f;
-        still_flags |= LibcameraApp::FLAG_STILL_RGB;
+        // still_flags |= LibcameraApp::FLAG_STILL_RGB;
+        still_flags |= LibcameraApp::FLAG_STILL_BGR;
         needsReconfigure.store(false, std::memory_order_release);
         camerastarted = false;
         current_request_ = nullptr;
+    }
+
+    LibcameraCapture::LibcameraCapture(int camera_index)
+    {
+        app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
+        options = static_cast<Options *>(app->GetOptions());
+        still_flags = LibcameraApp::FLAG_STILL_NONE;
+        options->photo_width = 4056;
+        options->photo_height = 3040;
+        options->video_width = 640;
+        options->video_height = 480;
+        options->framerate = 30;
+        options->denoise = "auto";
+        options->timeout = 1000;
+        options->camera = camera_index;
+        options->setMetering(Metering_Modes::METERING_MATRIX);
+        options->setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
+        options->setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
+        options->contrast = 1.0f;
+        options->saturation = 1.0f;
+        // still_flags |= LibcameraApp::FLAG_STILL_RGB;
+        still_flags |= LibcameraApp::FLAG_STILL_BGR;
+        needsReconfigure.store(false, std::memory_order_release);
+        camerastarted = false;
+        current_request_ = nullptr;
+        
+        // Automatically open the camera
+        open(camera_index);
     }
 
     LibcameraCapture::~LibcameraCapture()
@@ -701,7 +694,7 @@ namespace cv
             
             if (msg.type == LibcameraApp::MsgType::RequestComplete)
             {
-                CompletedRequestPtr payload = std::get<CompletedRequestPtr>(msg.payload);
+                CompletedRequestPtr payload = msg.getCompletedRequest();
                 {
                     std::lock_guard<std::mutex> lock(request_mutex_);
                     current_request_ = payload;
@@ -778,6 +771,12 @@ namespace cv
         
         frame.copyTo(dst);
         return true;
+    }
+
+    bool LibcameraCapture::retrieve(cv::Mat& frame, int stream_idx)
+    {
+        cv::OutputArray dst(frame);
+        return retrieveFrame(stream_idx, dst);
     }
 
     double LibcameraCapture::getProperty(int propId) const
@@ -1091,6 +1090,11 @@ namespace cv
         options->framerate = 30;
         options->verbose = true;
         return startVideo();
+    }
+
+    bool LibcameraCapture::isOpened() const
+    {
+        return camerastarted;
     }
 
     Ptr<IVideoCapture> createLibcameraCapture_file(const std::string &filename)

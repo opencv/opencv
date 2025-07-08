@@ -2,15 +2,26 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <queue>
+#include <condition_variable>
+#include <atomic>
+#include <map>
+#include <string>
 
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
 #include <libcamera/control_ids.h>
 #include <libcamera/property_ids.h>
 #include <libcamera/transform.h>
-// #include <libcamera/libcamera.hpp>
 #include <mutex>
-// #include <queue>
+
+// Forward declaration or include for IVideoCapture
+namespace cv {
+    class IVideoCapture;
+}
+
+#include "cap_interface.hpp"
 
 namespace cv
 {
@@ -137,16 +148,87 @@ namespace cv
             RequestComplete,
             Quit
         };
-        typedef std::variant<CompletedRequestPtr> MsgPayload;
+        typedef void* MsgPayload;
         struct Msg
         {
-            Msg(MsgType const &t) : type(t) {}
-            template <typename T>
-            Msg(MsgType const &t, T p) : type(t), payload(std::forward<T>(p))
+            Msg(MsgType const &t) : type(t), payload(nullptr) {}
+            
+            // Specialized constructor for CompletedRequestPtr
+            Msg(MsgType const &t, CompletedRequestPtr p) : type(t) 
             {
+                payload = new CompletedRequestPtr(std::move(p));
             }
+            
+            // Destructor to clean up allocated memory
+            ~Msg() 
+            {
+                if (payload && type == MsgType::RequestComplete) {
+                    delete static_cast<CompletedRequestPtr*>(payload);
+                }
+            }
+            
+            // Copy constructor
+            Msg(const Msg& other) : type(other.type), payload(nullptr) 
+            {
+                if (other.payload && other.type == MsgType::RequestComplete) {
+                    CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
+                    payload = new CompletedRequestPtr(*ptr);
+                }
+            }
+            
+            // Move constructor  
+            Msg(Msg&& other) noexcept : type(other.type), payload(other.payload) 
+            {
+                other.payload = nullptr;
+            }
+            
+            // Copy assignment
+            Msg& operator=(const Msg& other) 
+            {
+                if (this != &other) {
+                    // Clean up current payload
+                    if (payload && type == MsgType::RequestComplete) {
+                        delete static_cast<CompletedRequestPtr*>(payload);
+                    }
+                    
+                    type = other.type;
+                    payload = nullptr;
+                    if (other.payload && other.type == MsgType::RequestComplete) {
+                        CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
+                        payload = new CompletedRequestPtr(*ptr);
+                    }
+                }
+                return *this;
+            }
+            
+            // Move assignment
+            Msg& operator=(Msg&& other) noexcept 
+            {
+                if (this != &other) {
+                    // Clean up current payload
+                    if (payload && type == MsgType::RequestComplete) {
+                        delete static_cast<CompletedRequestPtr*>(payload);
+                    }
+                    
+                    type = other.type;
+                    payload = other.payload;
+                    other.payload = nullptr;
+                }
+                return *this;
+            }
+            
             MsgType type;
             MsgPayload payload;
+            
+            // Helper to get CompletedRequestPtr back
+            CompletedRequestPtr getCompletedRequest() const 
+            {
+                if (payload && type == MsgType::RequestComplete) {
+                    CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(payload);
+                    return *ptr;
+                }
+                return nullptr;
+            }
         };
 
         // Some flags that can be used to give hints to the camera configuration.
@@ -287,13 +369,13 @@ namespace cv
 
         Metadata(Metadata const &other)
         {
-            std::scoped_lock other_lock(other.mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
             data_ = other.data_;
         }
 
         Metadata(Metadata &&other)
         {
-            std::scoped_lock other_lock(other.mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
             data_ = std::move(other.data_);
             other.data_.clear();
         }
@@ -301,46 +383,65 @@ namespace cv
         template <typename T>
         void Set(std::string const &tag, T &&value)
         {
-            std::scoped_lock lock(mutex_);
-            data_.insert_or_assign(tag, std::forward<T>(value));
+            std::lock_guard<std::mutex> lock(mutex_);
+            T* stored_value = new T(std::forward<T>(value));
+            data_[tag] = static_cast<void*>(stored_value);
         }
 
         template <typename T>
         int Get(std::string const &tag, T &value) const
         {
-            std::scoped_lock lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             auto it = data_.find(tag);
             if (it == data_.end())
                 return -1;
-            value = std::any_cast<T>(it->second);
-            return 0;
+            T* stored_value = static_cast<T*>(it->second);
+            if (stored_value) {
+                value = *stored_value;
+                return 0;
+            }
+            return -1;
         }
 
         void Clear()
         {
-            std::scoped_lock lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             data_.clear();
         }
 
         Metadata &operator=(Metadata const &other)
         {
-            std::scoped_lock lock(mutex_, other.mutex_);
-            data_ = other.data_;
+            if (this != &other) {
+                std::lock(mutex_, other.mutex_);
+                std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
+                std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
+                data_ = other.data_;
+            }
             return *this;
         }
 
         Metadata &operator=(Metadata &&other)
         {
-            std::scoped_lock lock(mutex_, other.mutex_);
-            data_ = std::move(other.data_);
-            other.data_.clear();
+            if (this != &other) {
+                std::lock(mutex_, other.mutex_);
+                std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
+                std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
+                data_ = std::move(other.data_);
+                other.data_.clear();
+            }
             return *this;
         }
 
         void Merge(Metadata &other)
         {
-            std::scoped_lock lock(mutex_, other.mutex_);
-            data_.merge(other.data_);
+            std::lock(mutex_, other.mutex_);
+            std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
+            std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
+            // For C++14 compatibility, manually merge
+            for (auto& item : other.data_) {
+                data_[item.first] = std::move(item.second);
+            }
+            other.data_.clear();
         }
 
         template <typename T>
@@ -351,7 +452,7 @@ namespace cv
             auto it = data_.find(tag);
             if (it == data_.end())
                 return nullptr;
-            return std::any_cast<T>(&it->second);
+            return static_cast<T*>(it->second);
         }
 
         template <typename T>
@@ -369,7 +470,7 @@ namespace cv
 
     private:
         mutable std::mutex mutex_;
-        std::map<std::string, std::any> data_;
+        std::map<std::string, void*> data_;
     };
 
     struct CompletedRequest
@@ -391,6 +492,41 @@ namespace cv
         Metadata post_process_metadata;
     };
 
-    class LibcameraCapture;
+    class LibcameraCapture : public IVideoCapture
+    {
+    public:
+        LibcameraCapture();
+        LibcameraCapture(int camera_index);
+        virtual ~LibcameraCapture();
+
+        bool startVideo();
+        void stopVideo();
+
+        bool open(int _index);
+        bool open(const std::string &filename);
+
+        virtual bool grabFrame() CV_OVERRIDE;
+        virtual bool retrieveFrame(int stream_idx, OutputArray dst) CV_OVERRIDE;
+        virtual double getProperty(int propId) const CV_OVERRIDE;
+        virtual bool setProperty(int propId, double value) CV_OVERRIDE;
+        virtual bool isOpened() const CV_OVERRIDE;
+        virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
+
+        // Additional convenience methods for plugin
+        bool grab() { return grabFrame(); }
+        bool retrieve(cv::Mat& frame, int stream_idx = 0);
+
+    protected:
+        LibcameraApp *app;
+        Options *options;
+        unsigned int still_flags;
+        unsigned int vw, vh, vstr;
+        std::atomic<bool> needsReconfigure;
+        bool camerastarted;
+        
+        // Store the current completed request for retrieve
+        CompletedRequestPtr current_request_;
+        std::mutex request_mutex_;
+    };
 
 };
