@@ -758,7 +758,7 @@ public:
      * @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
      *
      * This constructor initializes the collection and prepares the internal iterator.
-     * Only metadata is read initially; individual pages are decoded on access.
+     * Only image header read initially; individual pages or frames are decoded on access.
      */
     CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
 
@@ -770,7 +770,7 @@ public:
      * @param flags Flag specifying the color type of the image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
      *
      * This constructor enables reading multi-page or animated images directly from memory,
-     * without the need to write them to disk. The buffer is parsed, and frame metadata is loaded,
+     * without the need to write them to disk. The buffer header is parsed,
      * but no frame is decoded until accessed.
      */
     CV_WRAP ImageCollection(InputArray buffer, int flags = IMREAD_UNCHANGED);
@@ -785,9 +785,8 @@ public:
      */
     CV_WRAP void init(const String& filename, int flags = IMREAD_UNCHANGED);
 
-    CV_WRAP void close();
     /**
-     * @brief Initializes the ImageCollection with a new file.
+     * @brief Initializes the ImageCollection with a new in-memory image buffer.
      *
      * @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
      *            This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
@@ -796,6 +795,13 @@ public:
      * Clears any existing data and loads the specified image.
      */
     CV_WRAP void init(InputArray buffer, int flags = IMREAD_UNCHANGED);
+
+    /**
+     * @brief Closes the ImageCollection and releases internal resources.
+     *
+     * After calling this, the ImageCollection becomes uninitialized.
+     */
+    CV_WRAP void close();
 
     /**
      * @brief Returns the number of pages/frames in the image collection.
@@ -839,7 +845,7 @@ public:
     CV_WRAP int getType() const;
 
     /**
-     * @brief Extracts metadata for each frame, if available.
+     * @brief Extracts metadata if available.
      *
      * @param metadata_types Output vector of metadata type codes.
      * @param metadata Output array containing metadata items (EXIF, XMP, TEXT etc.).
@@ -873,9 +879,6 @@ public:
      * @brief Returns the internal `Animation` object for animated formats.
      *
      * @return Const reference to the `Animation` object.
-     *
-     * Useful for advanced use cases, such as precise timing or loop mode control.
-     * For non-animated formats, the behavior is undefined.
      */
     CV_WRAP const Animation& getAnimation() const;
 
