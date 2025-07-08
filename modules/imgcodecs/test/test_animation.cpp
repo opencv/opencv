@@ -587,7 +587,7 @@ TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
     collection.close();
     collection.init(output, IMREAD_UNCHANGED);
 
-    for (int i = 10; i < (int)collection.size(); i++)
+    for (i = 10; i < (int)collection.size(); i++)
     {
         Mat frame = collection.at(i);
         EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
