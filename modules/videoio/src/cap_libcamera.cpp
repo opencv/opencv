@@ -219,10 +219,20 @@ namespace cv
 
         camera_->requestCompleted.connect(this, &LibcameraApp::requestComplete);
 
-        for (std::unique_ptr<Request> &request : requests_)
-        {
-            if (camera_->queueRequest(request.get()) < 0)
-                throw std::runtime_error("Failed to queue request");
+        // 按需模式：将请求放入 free_requests_ 队列而不提交
+        if (capture_instance_ && capture_instance_->getMaxQueueSize() == 0) {
+            for (std::unique_ptr<Request> &request : requests_) {
+                free_requests_.push(request.get());
+            }
+            if (options_->verbose)
+                std::cerr << "On-demand mode: " << free_requests_.size() << " requests available" << std::endl;
+        } else {
+            // 正常模式：直接提交所有请求
+            for (std::unique_ptr<Request> &request : requests_)
+            {
+                if (camera_->queueRequest(request.get()) < 0)
+                    throw std::runtime_error("Failed to queue request");
+            }
         }
 
         if (options_->verbose)
@@ -323,6 +333,67 @@ namespace cv
 
         if (camera_->queueRequest(request) < 0)
             throw std::runtime_error("failed to queue request");
+    }
+
+    bool LibcameraApp::submitSingleRequest()
+    {
+        std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
+        if (!camera_started_)
+            return false;
+
+        if (free_requests_.empty()) {
+            std::cerr << "ERROR: No free requests available for single request" << std::endl;
+            return false;
+        }
+
+        Request* request = free_requests_.front();
+        free_requests_.pop();
+
+        // 检查并清除任何现有的缓冲区绑定
+
+        if (!request->buffers().empty()) {
+            request->reuse();
+        }
+
+        // 重新为请求绑定缓冲区
+        for (StreamConfiguration &config : *configuration_) {
+            Stream *stream = config.stream();
+            if (frame_buffers_[stream].empty()) {
+                std::cerr << "ERROR: No free buffers available for stream" << std::endl;
+                free_requests_.push(request);
+                return false;
+            }
+            
+            FrameBuffer *buffer = frame_buffers_[stream].front();
+            frame_buffers_[stream].pop();
+            if (request->addBuffer(stream, buffer) < 0) {
+                std::cerr << "ERROR: Failed to add buffer to request" << std::endl;
+                // 归还缓冲区
+                frame_buffers_[stream].push(buffer);
+                free_requests_.push(request);
+                return false;
+            }
+            // 立即将缓冲区放回队列，因为请求会保持对它的引用
+            frame_buffers_[stream].push(buffer);
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(control_mutex_);
+            if (!controls_.empty()) {
+                request->controls() = std::move(controls_);
+            }
+        }
+
+        if (camera_->queueRequest(request) < 0) {
+            std::cerr << "ERROR: Failed to queue single request" << std::endl;
+            free_requests_.push(request);
+            return false;
+        }
+
+        if (options_->verbose)
+            std::cerr << "SUCCESS: Single request submitted, remaining free requests: " << free_requests_.size() << std::endl;
+
+        return true;
     }
 
     // 向消息队列投递消息 (requestComplete 的传统模式)
@@ -500,8 +571,20 @@ namespace cv
             return;
 
         CompletedRequest *r = new CompletedRequest(sequence_++, request);
-        CompletedRequestPtr payload(r, [this](CompletedRequest *cr)
-                                    { this->queueRequest(cr); });
+        
+        // 按需模式：不自动重新提交请求
+        CompletedRequestPtr payload;
+        if (capture_instance_ && capture_instance_->getMaxQueueSize() == 0) {
+            // 在按需模式下，不设置自动重新提交的析构函数
+            // 但需要将请求归还到 free_requests_ 队列中
+            payload = CompletedRequestPtr(r, [this](CompletedRequest *cr) { 
+                free_requests_.push(cr->request);
+                delete cr; 
+            });
+        } else {
+            // 正常模式：自动重新提交请求
+            payload = CompletedRequestPtr(r, [this](CompletedRequest *cr) { this->queueRequest(cr); });
+        }
         {
             std::lock_guard<std::mutex> lock(completed_requests_mutex_);
             active_requests_.insert(r);
@@ -666,22 +749,28 @@ namespace cv
             
             frames_produced_.fetch_add(1, std::memory_order_relaxed);
             
-            // ( AI 说，可以在锁外析构 )
-            if (completed_requests_.size() >= MAX_QUEUE_SIZE) {
-                old_request_to_be_discarded = std::move(completed_requests_.front());
-                completed_requests_.pop();
-                frames_dropped_.fetch_add(1, std::memory_order_relaxed);
-                
-                // 可选：打印统计信息
-                if (options && options->verbose) {
-                    uint64_t dropped = frames_dropped_.load(std::memory_order_relaxed);
-                    if (dropped % 30 == 0) {  // 每30帧打印一次
-                        std::cerr << "Frames dropped: " << dropped << std::endl;
+            // 按需模式下，直接保存请求，不限制队列大小
+            if (MAX_QUEUE_SIZE == 0) {
+                // 按需模式：始终保存帧，不丢弃
+                completed_requests_.push(std::move(completed_request));
+            } else {
+                // 正常模式：限制队列大小
+                if (completed_requests_.size() >= MAX_QUEUE_SIZE) {
+                    old_request_to_be_discarded = std::move(completed_requests_.front());
+                    completed_requests_.pop();
+                    frames_dropped_.fetch_add(1, std::memory_order_relaxed);
+                    
+                    // 可选：打印统计信息
+                    if (options && options->verbose) {
+                        uint64_t dropped = frames_dropped_.load(std::memory_order_relaxed);
+                        if (dropped % 30 == 0) {  // 每30帧打印一次
+                            std::cerr << "Frames dropped: " << dropped << std::endl;
+                        }
                     }
                 }
+                
+                completed_requests_.push(std::move(completed_request));
             }
-            
-            completed_requests_.push(std::move(completed_request));
         }
         
         completed_requests_cv_.notify_one();
@@ -777,6 +866,14 @@ namespace cv
             }
         }
         
+        // 按需模式：手动提交一个请求
+        if (MAX_QUEUE_SIZE == 0) {
+            if (app && !app->submitSingleRequest()) {
+                std::cerr << "Failed to submit single request in on-demand mode" << std::endl;
+                return false;
+            }
+        }
+        
         return camera_started_.load(std::memory_order_acquire);
     }
 
@@ -797,17 +894,23 @@ namespace cv
      */
     bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     {
-        if (!camera_started_.load(std::memory_order_acquire))
+        if (!camera_started_.load(std::memory_order_acquire)) {
+            std::cerr << "ERROR: Camera not started in retrieveFrame" << std::endl;
             return false;
+        }
             
+        std::cerr << "DEBUG: Waiting for frame..." << std::endl;
         // 等待帧可用
         if (!waitForFrame(options->timeout)) {
+            std::cerr << "ERROR: waitForFrame timed out" << std::endl;
             return false;
         }
         
+        std::cerr << "DEBUG: Getting completed request..." << std::endl;
         // 获取完成的请求
         CompletedRequestPtr completed_request = getCompletedRequest();
         if (!completed_request) {
+            std::cerr << "ERROR: No completed request available" << std::endl;
             return false;
         }
         
@@ -1120,14 +1223,6 @@ namespace cv
             return false;
         }
 
-        // if (needsReconfigure)
-        // {
-        //     if (isFramePending)
-        //     {
-        //         stopVideo();
-        //         startVideo();
-        //     }
-        // }
         return true;
     }
 

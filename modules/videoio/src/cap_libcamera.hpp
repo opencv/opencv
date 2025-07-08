@@ -190,6 +190,9 @@ namespace cv
         void Teardown();
         void StartCamera();
         void StopCamera();
+        
+        // 按需模式：手动提交一个请求
+        bool submitSingleRequest();
 
         void ApplyRoiSettings();
 
@@ -435,6 +438,7 @@ namespace cv
         virtual double getProperty(int propId) const CV_OVERRIDE;
         virtual bool setProperty(int propId, double value) CV_OVERRIDE;
         virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
+        
         bool isOpened() const CV_OVERRIDE
         {
             return camera_started_.load(std::memory_order_acquire);
@@ -442,6 +446,7 @@ namespace cv
 
         // 新的回调接口，由 LibcameraApp 调用
         void onRequestComplete(CompletedRequestPtr completed_request);
+        size_t getMaxQueueSize() const { return MAX_QUEUE_SIZE; }
 
     protected:
         LibcameraApp *app;
@@ -456,7 +461,8 @@ namespace cv
         std::condition_variable completed_requests_cv_;
         
         // 队列管理参数
-        static constexpr size_t MAX_QUEUE_SIZE = 3;
+        // static constexpr size_t MAX_QUEUE_SIZE = 3;
+        static constexpr size_t MAX_QUEUE_SIZE = 0;
         
         // 统计信息（可选）
         std::atomic<uint64_t> frames_produced_{0};
