@@ -690,7 +690,29 @@ namespace wip { namespace ov {
  * taking into account the i/o data transfer.
  */
 struct benchmark_mode { };
+struct workload_type {
+    using callback = std::function<void(const std::string &type)>;
+    using listener = std::pair<unsigned int, callback>;
+    unsigned int addListener(callback cb){
+        unsigned int id = nextId++;
+        listeners.emplace_back(id, std::move(cb));
+        return id;
+    }
+    void removeListener(unsigned int id) {
+        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
+    }
+    void setWorkloadType(const std::string &type) {
+        for(const listener &l : listeners) {
+            l.second(type);
+        }
+    }
+ private:
+    std::vector<listener> listeners;
+    unsigned int nextId = 0;
+};
+    using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
 
+// #endif
 } // namespace ov
 } // namespace wip
 
@@ -702,6 +724,11 @@ namespace detail
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
+    template<> struct CompileArgTag<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>
+    {
+        static const char* tag() { return "gapi.wip.ov.workload_type_ref"; }
+    };
+// #endif
 }
 
 } // namespace cv
