@@ -785,6 +785,7 @@ public:
      */
     CV_WRAP void init(const String& filename, int flags = IMREAD_UNCHANGED);
 
+    CV_WRAP void close();
     /**
      * @brief Initializes the ImageCollection with a new file.
      *

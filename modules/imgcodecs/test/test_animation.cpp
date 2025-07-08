@@ -571,39 +571,34 @@ TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
     vector<Mat> read_frames;
     ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
 
-    {
-        ImageCollection collection(output, IMREAD_UNCHANGED);
-        EXPECT_EQ(read_frames.size(), collection.size());
-        EXPECT_EQ(32, collection.getWidth());
-        EXPECT_EQ(32, collection.getHeight());
+    ImageCollection collection(output, IMREAD_UNCHANGED);
+    EXPECT_EQ(read_frames.size(), collection.size());
+    EXPECT_EQ(read_frames[0].rows, collection.getWidth());
+    EXPECT_EQ(read_frames[0].cols, collection.getHeight());
+    EXPECT_EQ(read_frames[0].type(), collection.getType());
 
-        int i = 0;
-        for (auto&& frame : collection)
-        {
-            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
-            ++i;
+    int i = 0;
+    for (auto&& frame : collection)
+    {
+        EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+        ++i;
+    }
+
+    collection.close();
+    collection.init(output, IMREAD_UNCHANGED);
+
+    for (int i = 10; i < (int)collection.size(); i++)
+    {
+        Mat frame = collection.at(i);
+        EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+
+        s_animation = collection.getAnimation();
+        if (s_animation.frames.size() > 0) {
+            EXPECT_EQ(0, cvtest::norm(frame, s_animation.frames[i], NORM_INF));
         }
     }
 
-    {
-        ImageCollection collection(output, IMREAD_UNCHANGED);
-        EXPECT_EQ(read_frames.size(), collection.size());
-        EXPECT_EQ(read_frames[0].rows, collection.getWidth());
-        EXPECT_EQ(read_frames[0].cols, collection.getHeight());
-        EXPECT_EQ(read_frames[0].type(), collection.getType());
-
-        for (int i = 10; i < (int)collection.size(); i++)
-        {
-            Mat frame = collection.at(i);
-            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
-
-            Animation animation = collection.getAnimation();
-            if (animation.frames.size() > 0) {
-                EXPECT_EQ(0, cvtest::norm(frame, animation.frames[i], NORM_INF));
-            }
-        }
-    }
-
+    collection.close();
     EXPECT_EQ(0, remove(output.c_str()));
 }
 

@@ -1722,6 +1722,7 @@ public:
     Impl(InputArray buffer, int flags);
     void init(String const& filename, int flags);
     void init(InputArray buffer, int flags);
+    void close();
     size_t size() const;
     Mat& at(int index);
     Mat& operator[](int index);
@@ -1800,6 +1801,10 @@ void ImageCollection::Impl::init(InputArray buffer, int flags) {
 
     m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
+}
+
+void ImageCollection::Impl::close() {
+    m_decoder.release();
 }
 
 Mat ImageCollection::Impl::read() {
@@ -1920,6 +1925,8 @@ ImageCollection::ImageCollection(InputArray buffer, int flags) : pImpl(new Impl(
 void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
 
 void ImageCollection::init(InputArray buffer, int flags) { pImpl->init(buffer, flags); }
+
+void ImageCollection::close() { pImpl->close(); }
 
 size_t ImageCollection::size() const { return pImpl->size(); }
 
