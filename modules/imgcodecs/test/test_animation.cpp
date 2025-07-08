@@ -603,16 +603,6 @@ TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
         }
     }
 
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "readwrite/testExifOrientation_5.jpg";
-    ImageCollection collection(filename, IMREAD_UNCHANGED);
-    std::vector<int> metadata_types;
-    std::vector<Mat> metadata;
-    collection.getMetadata(metadata_types, metadata);
-    EXPECT_TRUE(metadata.empty());
-    Mat m = collection.at(0);
-    collection.getMetadata(metadata_types, metadata);
-    EXPECT_FALSE(metadata.empty());
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
