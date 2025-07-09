@@ -21,7 +21,7 @@ class imread_test(NewOpenCVTests):
         self.assertTrue(success)
 
         ic = cv.ImageCollection(path, cv.IMREAD_UNCHANGED)
-        self.assertEqual(2, ic.size32())
+        self.assertEqual(2, ic.size())
         self.assertEqual(128, ic.getWidth())
         self.assertEqual(64, ic.getHeight())
         self.assertEqual(cv.CV_16UC4, ic.getType())
