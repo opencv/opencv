@@ -58,7 +58,7 @@ struct ConstFolding
         for (i = 0; i < nops; i++) {
             const Ptr<Layer>& layer = prog[i];
             std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
-            if (subgraphs) {
+            if (subgraphs &&  layer->type != "If") {
                 for (Ptr<Graph>& g: *subgraphs) {
                     if (processGraph(g))
                         modified = true;

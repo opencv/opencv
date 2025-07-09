@@ -239,7 +239,7 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     int idx = (int)args.size();
 
     if (!name.empty()) {
-        // CV_Assert(argnames.find(name) == argnames.end());
+        CV_Assert(argnames.find(name) == argnames.end());
         argnames.insert(std::make_pair(name, (int64_t)idx));
     }
 
@@ -673,21 +673,43 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
-        // [TODO] handle If/Loop/...
-        Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
-        if (iflayer){ //i.e if cast is successful then
-            Mat inp0 = inpMats[0];
-            CV_Assert(inp0.dims == 0);
-            bool flag = inp0.at<bool>(0);
-            // forwardGraph(iflayer->then_else(flag));
-            auto subgraph = iflayer->then_else(flag);
-            forwardGraph(subgraph, inputs_, outputs_, mainGraph);
-        } else {
-            CV_Assert(!layer->subgraphs());
+        std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        if (!subgraphs) {
+            // Regular layer – no subgraphs attached
             if (finalizeLayers)
                 layer->finalize(inpMats, outMats);
+            layer->forward(inpMats, outMats, tempMats);
         }
-        layer->forward(inpMats, outMats, tempMats);
+        else {
+            // The layer contains subgraphs (e.g. If/Loop)
+            Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
+            if (iflayer) {
+                // subgraphs[0] corresponds to the "then" branch, subgraphs[1] – to the "else" branch
+                Mat inp0 = inpMats[0];
+                CV_Assert(inp0.total() == 1u);
+                bool flag;
+                switch (inp0.depth())
+                {
+                case CV_8U:        flag = inp0.at<uchar>(0) != 0;  break;   // unsigned byte
+                case CV_Bool:      flag = inp0.at<bool>(0);        break;   // CV_BoolC1
+                case CV_32F:       flag = inp0.at<float>(0) != 0;  break;   // float32
+                case CV_32S:       flag = inp0.at<int>(0)   != 0;  break;   // int32
+                default:
+                    CV_Error_(Error::StsBadArg,
+                            ("If-layer condition: unsupported tensor type %s",
+                            typeToString(inp0.type()).c_str()));
+                }
+                Ptr<Graph> subgraph = subgraphs->at((int)(!flag));
+                std::vector<Mat> branchInputs;
+                if (inpMats.size() > 1)
+                    branchInputs.assign(inpMats.begin() + 1, inpMats.end());
+                forwardGraph(subgraph, branchInputs, outMats, false);
+            }
+            else {
+                CV_Error_(Error::StsNotImplemented,
+                          ("unknown layer type '%s' with subgraphs", layer->type.c_str()));
+            }
+        }
         CV_Assert(outMats.size() == noutputs);
 
         for (i = 0; i < noutputs; i++) {

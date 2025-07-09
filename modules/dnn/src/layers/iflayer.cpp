@@ -1,3 +1,6 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 #include "../precomp.hpp"
 #include "../net_impl.hpp"
 #include "layers_common.hpp"
@@ -9,31 +12,42 @@ namespace cv { namespace dnn {
 class IfLayerImpl CV_FINAL : public IfLayer
 {
 public:
-    IfLayerImpl(const LayerParams& params)
+    explicit IfLayerImpl(const LayerParams& params)
     {
-        // pull cond
-        condIndex = params.get<int>("cond");
-
-        // unpack then/else from blobs[0] & blobs[1]
-        constexpr int PTR_BYTES = int(sizeof(Ptr<Graph>));
-        thenGraph = *reinterpret_cast<const Ptr<Graph>*>(params.blobs[0].ptr());
-        elseGraph = *reinterpret_cast<const Ptr<Graph>*>(params.blobs[1].ptr());
-
-        // now that all the pieces are set, you can do the usual
+        // Generic layer parameters (no sub-graphs here)
         setParamsFrom(params);
     }
 
-
-    Ptr<Graph> then_else(bool flag) const CV_OVERRIDE
+    // Inject pre-parsed sub-graphs (then = 0, else = 1)
+    void setSubgraphs(const std::vector<Ptr<Graph>>& graphs) CV_OVERRIDE
     {
-        std::cout<<"got the call in then_else function, flag: "<<flag<<std::endl;
-        return flag ? thenGraph : elseGraph;
+        std::cout<<"In the setSubgraphs function"<<std::endl;
+        thenelse = graphs;
     }
 
+    // Provide access to the sub-graphs for the Net executor
+    std::vector<Ptr<Graph>>* subgraphs() const CV_OVERRIDE { return &thenelse; }
+
+    // For control-flow layers the shapes of the outputs are defined by the
+    // executed branch and therefore cannot be known up-front.  Return the
+    // requested number of outputs with unspecified (empty) shapes so that
+    // the network can be successfully initialized.
+    bool getMemoryShapes(const std::vector<MatShape>& /*inputs*/,
+                         const int requiredOutputs,
+                         std::vector<MatShape>& outputs,
+                         std::vector<MatShape>& internals) const CV_OVERRIDE
+    {
+        std::cout<<"In the getMemoryShapes function"<<std::endl;
+        outputs.assign(std::max(1, requiredOutputs), MatShape());
+        internals.clear();
+        return false; // shapes are dynamic and will be resolved at runtime
+    }
+
+    // Explicitly mark that the layer produces dynamic output shapes.
+    bool dynamicOutputShapes() const CV_OVERRIDE { return true; }
+
 private:
-    Ptr<Graph> thenGraph;
-    Ptr<Graph> elseGraph;
-    int condIndex;
+    mutable std::vector<Ptr<Graph>> thenelse;
 };
 
 Ptr<IfLayer> IfLayer::create(const LayerParams& params)
