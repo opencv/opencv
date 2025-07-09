@@ -46,7 +46,7 @@ public class ImgcodecsTest extends OpenCVTestCase {
         assertTrue(readFrames.size() == 2);
 
         ImageCollection ic = new ImageCollection(filename, Imgcodecs.IMREAD_UNCHANGED);
-        assertEquals(2, ic.size32());
+        assertEquals(2, ic.size());
         assertEquals(128, ic.getWidth());
         assertEquals(128, ic.getHeight());
         assertEquals(rgb.type(), ic.getType());
