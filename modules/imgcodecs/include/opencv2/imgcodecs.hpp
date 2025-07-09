@@ -808,14 +808,14 @@ public:
      *
      * @return Total number of frames.
      */
-    size_t size() const;
+    CV_WRAP size_t size() const;
 
     /**
      * @brief Returns the number of frames as a 32-bit integer.
      *
      * @return Number of frames, cast to `int`. Useful for bindings with languages that don't support `size_t`.
      */
-    CV_WRAP int size32() const { return (int)size(); }
+    int size32() const { return (int)size(); }
 
     /**
      * @brief Returns the width of frames in the collection.
