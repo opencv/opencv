@@ -1030,4 +1030,25 @@ inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::Te
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
+// related issue: https://github.com/opencv/opencv/issues/23088
+TEST(ffmpeg_cap_properties, set_pos_get_msec)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = findDataFile("video/big_buck_bunny.mp4");
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video";
+
+    cap.set(CAP_PROP_POS_FRAMES, 25);
+    EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 1000.0);
+
+    cap.set(CAP_PROP_POS_MSEC, 525);
+    EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 500.0);
+
+    cap.set(CAP_PROP_POS_AVI_RATIO, 0);
+    EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 0.0);
+}
+
 }} // namespace
