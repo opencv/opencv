@@ -1745,7 +1745,7 @@ public:
 private:
     String m_filename;
     int m_flags{};
-    int m_error{};
+    int m_error = ImageCollection::Error::UNINITIALIZED;
     std::size_t m_size{};
     int m_current{};
     std::vector<cv::Mat> m_pages;
@@ -1791,6 +1791,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
 
     m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
+    m_error = ImageCollection::Error::OK;
 }
 
 void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
@@ -1815,9 +1816,23 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
 
     m_decoder->setSource(buffer.getMat());
 
-    if (!m_decoder->readHeader())
+    try
     {
-        m_error = ImageCollection::Error::READ_HEADER_ERROR;
+        // read the header to make sure it succeeds
+        if (!m_decoder->readHeader())
+        {
+            m_error = ImageCollection::Error::READ_HEADER_ERROR;
+            return;
+        }
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "ImageCollection can't read header: " << e.what());
+        return;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "ImageCollection can't read header: unknown exception");
         return;
     }
 
@@ -1827,6 +1842,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
 }
 
 void ImageCollection::Impl::close() {
+    m_error = ImageCollection::Error::UNINITIALIZED;
     m_decoder.release();
 }
 
@@ -1855,7 +1871,7 @@ const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder-
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
-    m_error = status ? ImageCollection::Error::READ_HEADER_ERROR : ImageCollection::Error::OK;
+    m_error = status ? ImageCollection::Error::OK : ImageCollection::Error::READ_HEADER_ERROR;
     return status;
 }
 

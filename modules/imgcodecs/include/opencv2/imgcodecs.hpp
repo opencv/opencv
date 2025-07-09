@@ -715,10 +715,22 @@ CV_EXPORTS_W bool haveImageWriter( const String& filename );
  *
  * ### Example
  * @code
+ * // Load a multi-frame or animated image
  * ImageCollection collection("animated.webp");
+ *
+ * // Check if initialization succeeded
+ * if (collection.getLastError() != ImageCollection::OK)
+ * {
+ *     std::cerr << "Failed to initialize ImageCollection"
+ *     return;
+ * }
+ *
  * // You can query image properties before loading image data
  * int width = collection.getWidth();
  * int height = collection.getHeight();
+ * std::cout << "Image size: " << width << "x" << height << std::endl;
+ *
+ * // Iterate through frames and display them
  * for (auto it = collection.begin(); it != collection.end(); ++it)
  * {
  *     Mat frame = *it;
@@ -820,9 +832,18 @@ public:
     CV_WRAP size_t size() const;
 
     /**
-     * @brief Returns an enum code explaining error state
+     * @brief Returns an error code representing the last failure that occurred.
+     *
+     * This function provides diagnostic information when an operation fails,
+     * such as loading an image, accessing a frame, or decoding metadata.
+     * If no error has occurred since the last successful operation, the return
+     * value is `Error::OK`.
      *
      * @return One of the `ImageCollection::Error` enum values.
+     *
+     * The error state is updated internally when operations fail.
+     *
+     * @note The error code is preserved until the next API call.
      */
     CV_WRAP int getLastError() const;
 
