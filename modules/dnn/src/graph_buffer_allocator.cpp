@@ -118,8 +118,6 @@ struct BufferAllocator
     void releaseBuffer(int bufidx)
     {
         if (bufidx >= 0) {
-            if(buf_usecounts[bufidx] == 0)
-                return;
             CV_Assert(buf_usecounts[bufidx] > 0);
             if (--buf_usecounts[bufidx] == 0)
                 freebufs.push_back(bufidx);
@@ -154,6 +152,22 @@ struct BufferAllocator
     {
         if (!graph)
             return;
+        // Pre-assign buffers for *sub-graph* TEMP inputs/outputs only.
+        // (The main graph has already been handled by regular allocation logic.)
+        bool isSubGraph = graph.get() != netimpl->mainGraph.get();
+        if (isSubGraph)
+        {
+            const std::vector<Arg>& gr_inputs = graph->inputs();
+            for (const Arg& inarg : gr_inputs)
+            {
+                if (netimpl->argKind(inarg) == DNN_ARG_TEMP &&
+                    !netimpl->isConstArg(inarg) &&
+                    bufidxs.at(inarg.idx) < 0)
+                {
+                    bufidxs.at(inarg.idx) = getFreeBuffer();
+                }
+            }
+        }
         const std::vector<Ptr<Layer> >& prog = graph->prog();
         for (const auto& layer: prog) {
             bool inplace = false;
@@ -253,12 +267,6 @@ struct BufferAllocator
                 assign(thenBranch);
                 assign(elseBranch);
 
-                for (size_t i = 0; i < noutputs; i++) {
-                    Arg thenOutarg = thenOutargs[i];
-                    Arg elseOutarg = elseOutargs[i];
-                    releaseBuffer(bufidxs[thenOutarg.idx]);
-                    releaseBuffer(bufidxs[elseOutarg.idx]);
-                }
             } else if (opname == "Loop") {
                 /*
                  In the case of loop we try to alias t_v_in[i] and t_v_out[i] so that
@@ -307,8 +315,6 @@ struct BufferAllocator
                 }
 
                 assign(body);
-                for (auto body_out: body_outputs)
-                    releaseBuffer(bufidxs.at(body_out.idx));
             }
 
             for (auto out: outputs) {

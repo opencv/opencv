@@ -910,7 +910,6 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
                              int max_inputs)
 {
     Ptr<Layer> layer = LayerFactory::createLayerInstance(layerParams.type, layerParams);
-
     if (!layer) {
         rememberMissingOp(layerParams.type);
         return;
@@ -920,7 +919,6 @@ void ONNXImporter2::addLayer(LayerParams& layerParams,
     layer->inputs.resize(actual_inputs);
     layer->outputs = node_outputs;
     layer->netimpl = netimpl;
-
     CV_Assert(netimpl->dump_indent == 3);
     curr_prog.push_back(layer);
 }

@@ -5,7 +5,6 @@
 #include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn.hpp>
-#include<iostream>
 
 namespace cv { namespace dnn {
 
@@ -14,36 +13,26 @@ class IfLayerImpl CV_FINAL : public IfLayer
 public:
     explicit IfLayerImpl(const LayerParams& params)
     {
-        // Generic layer parameters (no sub-graphs here)
         setParamsFrom(params);
     }
 
-    // Inject pre-parsed sub-graphs (then = 0, else = 1)
     void setSubgraphs(const std::vector<Ptr<Graph>>& graphs) CV_OVERRIDE
     {
-        std::cout<<"In the setSubgraphs function"<<std::endl;
         thenelse = graphs;
     }
 
-    // Provide access to the sub-graphs for the Net executor
     std::vector<Ptr<Graph>>* subgraphs() const CV_OVERRIDE { return &thenelse; }
 
-    // For control-flow layers the shapes of the outputs are defined by the
-    // executed branch and therefore cannot be known up-front.  Return the
-    // requested number of outputs with unspecified (empty) shapes so that
-    // the network can be successfully initialized.
     bool getMemoryShapes(const std::vector<MatShape>& /*inputs*/,
                          const int requiredOutputs,
                          std::vector<MatShape>& outputs,
                          std::vector<MatShape>& internals) const CV_OVERRIDE
     {
-        std::cout<<"In the getMemoryShapes function"<<std::endl;
         outputs.assign(std::max(1, requiredOutputs), MatShape());
         internals.clear();
-        return false; // shapes are dynamic and will be resolved at runtime
+        return false;
     }
 
-    // Explicitly mark that the layer produces dynamic output shapes.
     bool dynamicOutputShapes() const CV_OVERRIDE { return true; }
 
 private:
