@@ -253,7 +253,6 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     return Arg(idx);
 }
 
-
 int Net::Impl::findDim(const std::string& dimname, bool insert)
 {
     if (!dimname.empty()) {
@@ -578,6 +577,12 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         m.convertTo(inp_t, adata_type);
     } else if (adata.kind == DNN_ARG_TEMP) {
         int bufidx = bufidxs.at(inp.idx);
+        if (bufidx < 0)
+        {
+            bufidx = static_cast<int>(buffers.size());
+            bufidxs[inp.idx] = bufidx;
+            buffers.push_back(Mat());
+        }
         Mat& buf = buffers.at(bufidx);
         buf.fit(mshape, mtype); // minimize reallocations
         m.copyTo(buf);
@@ -684,7 +689,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             // The layer contains subgraphs (e.g. If/Loop)
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
             if (iflayer) {
-                // subgraphs[0] corresponds to the "then" branch, subgraphs[1] – to the "else" branch
                 Mat inp0 = inpMats[0];
                 CV_Assert(inp0.total() == 1u);
                 bool flag;

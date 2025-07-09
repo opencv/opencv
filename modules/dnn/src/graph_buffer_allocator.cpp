@@ -118,6 +118,8 @@ struct BufferAllocator
     void releaseBuffer(int bufidx)
     {
         if (bufidx >= 0) {
+            if(buf_usecounts[bufidx] == 0)
+                return;
             CV_Assert(buf_usecounts[bufidx] > 0);
             if (--buf_usecounts[bufidx] == 0)
                 freebufs.push_back(bufidx);

@@ -1499,7 +1499,30 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
     CV_Assert(node_proto.input_size() >= 1);
     layerParams.set("cond", node_inputs[0].idx);
     layerParams.type = "If";
+
     addLayer(layerParams, node_proto);
+
+    const opencv_onnx::AttributeProto* thenAttr = nullptr;
+    const opencv_onnx::AttributeProto* elseAttr = nullptr;
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& A = node_proto.attribute(i);
+        if (A.name() == "then_branch")
+            thenAttr = &A;
+        else if (A.name() == "else_branch")
+            elseAttr = &A;
+    }
+    CV_Assert(thenAttr && elseAttr);
+
+    opencv_onnx::GraphProto then_graph = thenAttr->g();
+    Ptr<Graph> thenGraph = parseGraph(&then_graph, false);
+    opencv_onnx::GraphProto else_graph = elseAttr->g();
+    Ptr<Graph> elseGraph = parseGraph(&else_graph, false);
+
+    Ptr<Layer> lastLayer = curr_prog.back();
+    Ptr<IfLayer> ifLayer = lastLayer.dynamicCast<IfLayer>();
+    CV_Assert(!ifLayer.empty());
+    ifLayer->setSubgraphs({thenGraph, elseGraph});
 }
 
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
