@@ -1733,6 +1733,7 @@ public:
     int width() const;
     int height() const;
     int type() const;
+    int error() const;
     const Animation& getAnimation() const;
     int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
@@ -1744,6 +1745,7 @@ public:
 private:
     String m_filename;
     int m_flags{};
+    int m_error{};
     std::size_t m_size{};
     int m_current{};
     std::vector<cv::Mat> m_pages;
@@ -1773,9 +1775,19 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 #endif
 
-    CV_Assert(m_decoder);
+    if (!m_decoder)
+    {
+        m_error = ImageCollection::Error::UNINITIALIZED;
+        return;
+    }
+
     m_decoder->setSource(filename);
-    CV_Assert(m_decoder->readHeader());
+
+    if (!m_decoder->readHeader())
+    {
+        m_error = ImageCollection::Error::READ_HEADER_ERROR;
+        return;
+    }
 
     m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
@@ -1795,12 +1807,23 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     }
 #endif
 
-    CV_Assert(m_decoder);
+    if (!m_decoder)
+    {
+        m_error = ImageCollection::Error::UNINITIALIZED;
+        return;
+    }
+
     m_decoder->setSource(buffer.getMat());
-    CV_Assert(m_decoder->readHeader());
+
+    if (!m_decoder->readHeader())
+    {
+        m_error = ImageCollection::Error::READ_HEADER_ERROR;
+        return;
+    }
 
     m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
+    m_error = ImageCollection::Error::OK;
 }
 
 void ImageCollection::Impl::close() {
@@ -1822,6 +1845,8 @@ int ImageCollection::Impl::height() const { return m_decoder->height(); }
 
 int ImageCollection::Impl::type() const { return m_decoder->type(); }
 
+int ImageCollection::Impl::error() const { return m_error; }
+
 int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) {
     return readMetadata(m_decoder, &metadata_types, metadata);
 }
@@ -1830,12 +1855,14 @@ const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder-
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
+    m_error = status ? ImageCollection::Error::READ_HEADER_ERROR : ImageCollection::Error::OK;
     return status;
 }
 
 // readHeader must be called before calling this method
 Mat ImageCollection::Impl::readData() {
     const int type = calcType(m_decoder->type(), m_flags);
+    m_error = ImageCollection::Error::READ_DATA_ERROR;
 
     // established the required input image size
     Size size = validateInputImageSize(Size(m_decoder->width(), m_decoder->height()));
@@ -1859,6 +1886,7 @@ Mat ImageCollection::Impl::readData() {
         ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
     }
 
+    m_error = ImageCollection::Error::OK;
     return mat;
 }
 
@@ -1935,6 +1963,8 @@ int ImageCollection::getWidth() const { return pImpl->width(); }
 int ImageCollection::getHeight() const { return pImpl->height(); }
 
 int ImageCollection::getType() const { return pImpl->type(); }
+
+int ImageCollection::getLastError() const { return pImpl->error(); }
 
 const Animation& ImageCollection::getAnimation() const { return pImpl->getAnimation(); }
 

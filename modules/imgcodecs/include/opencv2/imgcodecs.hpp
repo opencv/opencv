@@ -744,6 +744,15 @@ public:
         int m_curr;
     };
 
+    enum Error {
+        OK = 0,
+        UNINITIALIZED = 1,
+        FILE_NOT_OPENED = 2,
+        UNKNOWN_FILE_TYPE = 3,
+        READ_HEADER_ERROR = 4,
+        READ_DATA_ERROR = 5
+    };
+
     /**
      * @brief Default constructor. Creates an uninitialized ImageCollection.
      *
@@ -809,6 +818,13 @@ public:
      * @return Total number of frames.
      */
     CV_WRAP size_t size() const;
+
+    /**
+     * @brief Returns an enum code explaining error state
+     *
+     * @return One of the `ImageCollection::Error` enum values.
+     */
+    CV_WRAP int getLastError() const;
 
     /**
      * @brief Returns the width of frames in the collection.
