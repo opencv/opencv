@@ -521,3 +521,20 @@ modnet:
   height: 512
   rgb: true
   sample: "alpha_matting"
+
+################################################################################
+# Super-resolution models.
+################################################################################
+
+seemoredetails:
+  load_info:
+    url: "https://github.com/Naresh-19/opencv-superres-models/raw/main/seemore_x4v2_static512.onnx"
+    sha1: "584467bd36f5715aa12c3203bba16e4de6392034"
+  model: "seemore_x4v2_static512.onnx"
+  mean: [0.0, 0.0, 0.0]
+  scale: 0.00392
+  rgb: true
+  width: 512
+  height: 512
+  sample: "seemore_superres"
+  input: true
