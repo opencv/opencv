@@ -743,10 +743,10 @@ static Rect pointSetBoundingRect( const Mat& points )
         vx_store(arr_maxval, maxval);
         for (int j = 0; j < nlanes; j++)
         {
-            if (xmin > arr_minval[2*j])   xmin = arr_minval[2*j];
-            if (ymin > arr_minval[2*j+1]) ymin = arr_minval[2*j+1];
-            if (xmax < arr_maxval[2*j])   xmax = arr_maxval[2*j];
-            if (ymax < arr_maxval[2*j+1]) ymax = arr_maxval[2*j+1];
+            xmin = std::min(xmin, arr_minval[2*j]);
+            ymin = std::min(ymin, arr_minval[2*j+1]);
+            xmax = std::max(xmax, arr_maxval[2*j]);
+            ymax = std::max(ymax, arr_maxval[2*j+1]);
         }
 #endif
         for( ; i < npoints; i++ )
@@ -754,17 +754,10 @@ static Rect pointSetBoundingRect( const Mat& points )
             int pt_x = pts[2*i];
             int pt_y = pts[2*i+1];
 
-            if( xmin > pt_x )
-                xmin = pt_x;
-
-            if( xmax < pt_x )
-                xmax = pt_x;
-
-            if( ymin > pt_y )
-                ymin = pt_y;
-
-            if( ymax < pt_y )
-                ymax = pt_y;
+            xmin = std::min(xmin, pt_x);
+            xmax = std::max(xmax, pt_x);
+            ymin = std::min(ymin, pt_y);
+            ymax = std::max(ymax, pt_y);
         }
     }
     else
@@ -796,10 +789,10 @@ static Rect pointSetBoundingRect( const Mat& points )
         {
             int _xmin = cvFloor(arr_minval[2*j]), _ymin = cvFloor(arr_minval[2*j+1]);
             int _xmax = cvFloor(arr_maxval[2*j]), _ymax = cvFloor(arr_maxval[2*j+1]);
-            if (xmin > _xmin) xmin = _xmin;
-            if (ymin > _ymin) ymin = _ymin;
-            if (xmax < _xmax) xmax = _xmax;
-            if (ymax < _ymax) ymax = _ymax;
+            xmin = std::min(xmin, _xmin);
+            ymin = std::min(ymin, _ymin);
+            xmax = std::max(xmax, _xmax);
+            ymax = std::max(ymax, _ymax);
         }
 #endif
         for( ; i < npoints; i++ )
@@ -809,17 +802,10 @@ static Rect pointSetBoundingRect( const Mat& points )
             int pt_x = cvFloor(pts[2*i]);
             int pt_y = cvFloor(pts[2*i+1]);
 
-            if( xmin > pt_x )
-                xmin = pt_x;
-
-            if( xmax < pt_x )
-                xmax = pt_x;
-
-            if( ymin > pt_y )
-                ymin = pt_y;
-
-            if( ymax < pt_y )
-                ymax = pt_y;
+            xmin = std::min(xmin, pt_x);
+            xmax = std::max(xmax, pt_x);
+            ymin = std::min(ymin, pt_y);
+            ymax = std::max(ymax, pt_y);
         }
     }
 
