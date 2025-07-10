@@ -455,6 +455,9 @@ bool  PngDecoder::readData( Mat& img )
                         if (dop == 2)
                             memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
 
+                        if (x0 + w0 > frameCur.getWidth() || y0 + h0 > frameCur.getHeight())
+                           return false;
+
                         compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
                         if (!delay_den)
                             delay_den = 100;
@@ -849,6 +852,8 @@ void PngDecoder::row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_
 {
     CV_UNUSED(pass);
     APNGFrame* frame = (APNGFrame*)png_get_progressive_ptr(png_ptr);
+    if(row_num >= frame->getHeight())
+        return;
     png_progressive_combine_row(png_ptr, frame->getRows()[row_num], new_row);
 }
 
