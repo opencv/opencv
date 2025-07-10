@@ -576,7 +576,12 @@ void PoseGraphImpl::initializePosesWithMST()
         }
     }
 
-    std::vector<MSTEdge> resultingEdges = cv::buildMST(numNodes, MSTedges, MST_PRIM, static_cast<int>(rootId));
+    std::vector<MSTEdge> resultingEdges;
+    if (!cv::buildMST(numNodes, MSTedges, resultingEdges, MST_PRIM, static_cast<int>(rootId)))
+    {
+        CV_LOG_INFO(NULL, "Failed to build MST: graph may be disconnected.");
+        return;
+    }
 
     applyMST(resultingEdges, rootNode);
 }

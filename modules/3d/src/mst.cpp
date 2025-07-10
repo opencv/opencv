@@ -55,12 +55,10 @@ bool weightComparator(const cv::MSTEdge& a, const cv::MSTEdge& b)
     return a.target < b.target;
 }
 
-std::vector<cv::MSTEdge> buildMSTKruskal(int numNodes,
-                                         const std::vector<cv::MSTEdge>& edges)
+bool buildMSTKruskal(int numNodes,
+                    const std::vector<cv::MSTEdge>& edges,
+                    std::vector<cv::MSTEdge>& resultingEdges)
 {
-    std::vector<cv::MSTEdge> mst;
-    CV_Assert(numNodes > 0 || !edges.empty());
-
     std::vector<cv::MSTEdge> sortedEdges = edges;
     std::sort(sortedEdges.begin(), sortedEdges.end(), weightComparator);
     DSU dsu(numNodes);
@@ -68,30 +66,30 @@ std::vector<cv::MSTEdge> buildMSTKruskal(int numNodes,
     for (const auto &e : sortedEdges)
     {
         int u = e.source, v = e.target;
-        CV_Assert(u < numNodes && v < numNodes);
+        if (u >= numNodes || v >= numNodes)
+            return false;
         if (dsu.find(u) != dsu.find(v))
         {
-            mst.push_back(e);
+            resultingEdges.push_back(e);
             dsu.unite(u, v);
         }
     }
 
-    return mst;
+    return true;
 }
 
-std::vector<cv::MSTEdge> buildMSTPrim(int numNodes,
-                                      const std::vector<cv::MSTEdge>& edges,
-                                      int root)
+bool buildMSTPrim(int numNodes,
+                  const std::vector<cv::MSTEdge>& edges,
+                  std::vector<cv::MSTEdge>& resultingEdges,
+                  int root)
 {
-    std::vector<cv::MSTEdge> mst;
-    CV_Assert(numNodes > 0 || !edges.empty() || root < numNodes);
-
     std::vector<bool> inMST(numNodes, false);
     std::vector<std::vector<cv::MSTEdge>> adj(numNodes);
     for (const auto& e : edges)
     {
         int u = e.source, v = e.target;
-        CV_Assert(u < numNodes && v < numNodes);
+        if (u >= numNodes || v >= numNodes)
+            return false;
         adj[u].push_back({u, v, e.weight});
         adj[v].push_back({v, u, e.weight});
     }
@@ -114,7 +112,7 @@ std::vector<cv::MSTEdge> buildMSTPrim(int numNodes,
             continue;
 
         inMST[v] = true;
-        mst.push_back({u, v, w});
+        resultingEdges.push_back({u, v, w});
         for (const auto& e : adj[v])
         {
             if (!inMST[e.target])
@@ -122,7 +120,7 @@ std::vector<cv::MSTEdge> buildMSTPrim(int numNodes,
         }
     }
 
-    return mst;
+    return true;
 }
 
 } // unamed namespace
@@ -130,20 +128,33 @@ std::vector<cv::MSTEdge> buildMSTPrim(int numNodes,
 namespace cv
 {
 
-std::vector<cv::MSTEdge> buildMST(int numNodes,
-                                  const std::vector<cv::MSTEdge>& edges,
-                                  MSTAlgorithm algorithm,
-                                  int root)
+bool buildMST(int numNodes,
+              const std::vector<cv::MSTEdge>& inputEdges,
+              std::vector<cv::MSTEdge>& resultingEdges,
+              MSTAlgorithm algorithm,
+              int root)
 {
+    CV_TRACE_FUNCTION();
+
+    resultingEdges.clear();
+    if (numNodes <= 0 || inputEdges.empty() || root >= numNodes)
+        return false;
+
+    bool result = false;
     switch (algorithm)
     {
         case MST_PRIM:
-            return buildMSTPrim(numNodes, edges, root);
+            result = buildMSTPrim(numNodes, inputEdges, resultingEdges, root);
+            break;
         case MST_KRUSKAL:
-            return buildMSTKruskal(numNodes, edges);
+            result = buildMSTKruskal(numNodes, inputEdges, resultingEdges);
+            break;
         default:
-            CV_Error(cv::Error::Code::StsBadArg, "Invalid MST algorithm specified");
+            CV_LOG_INFO(NULL, "Invalid MST algorithm specified");
+            result = false;
     }
+
+    return (result && resultingEdges.size() >= static_cast<size_t>(numNodes - 1));
 }
 
 } // namespace cv

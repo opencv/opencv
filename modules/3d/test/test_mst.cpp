@@ -25,21 +25,23 @@ TEST_P(MST, checkCorrectness)
     const std::vector<MSTEdge>& expectedEdges = get<3>(GetParam());
 
     std::vector<MSTEdge> mstEdges;
+    bool result = false;
 
     switch (algorithm) {
         case MST_PRIM:
             // Select first node for root
-            mstEdges = buildMST(numNodes, edges, MST_PRIM, 0);
+            result = buildMST(numNodes, edges, mstEdges, MST_PRIM, 0);
             break;
 
-        case MST_KRUSKAL: /* Kruskal*/
-            mstEdges = buildMST(numNodes, edges, MST_KRUSKAL, 0);
+        case MST_KRUSKAL:
+            result = buildMST(numNodes, edges, mstEdges, MST_KRUSKAL, 0);
             break;
 
         default:
             FAIL() << "Unknown selected MST algorithm: " << algorithm;
     }
 
+    EXPECT_TRUE(result);
     EXPECT_EQ(mstEdges.size(), expectedEdges.size());
     for (const auto& edge : expectedEdges)
     {
@@ -70,44 +72,6 @@ const MSTParamType mst_graphs[] =
         },
         {
             {0, 1, 1.0}, {1, 2, 1.5}, {2, 3, 1.0}
-        }
-    ),
-
-    // Disconnected Graph
-    MSTParamType(MST_PRIM, 4,
-        {
-            {0, 1, 1.0}, {2, 3, 2.0}
-        },
-        {
-            {0, 1, 1.0}
-        }
-    ),
-
-    MSTParamType(MST_KRUSKAL, 4,
-        {
-            {0, 1, 1.0}, {2, 3, 2.0}
-        },
-        {
-            {0, 1, 1.0}, {2, 3, 2.0}
-        }
-    ),
-
-    // Fully Disconnected
-    MSTParamType(MST_PRIM, 6,
-        {
-
-        },
-        {
-
-        }
-    ),
-
-    MSTParamType(MST_KRUSKAL, 6,
-        {
-
-        },
-        {
-
         }
     ),
 
@@ -290,9 +254,12 @@ TEST(MSTstress, LargeGraph)
     for (int i = 50; i < numNodes; i += 10)
         edges.push_back({i, i - 25, static_cast<double>(i % 100 + 2)});
 
-    std::vector<MSTEdge> primMST = buildMST(numNodes, edges, MST_PRIM, 0);
-    std::vector<MSTEdge> kruskalMST = buildMST(numNodes, edges, MST_KRUSKAL, 0);
+    std::vector<MSTEdge> primMST, kruskalMST;
+    bool resultPrim = buildMST(numNodes, edges, primMST, MST_PRIM, 0);
+    bool resultKruskal = buildMST(numNodes, edges, kruskalMST, MST_KRUSKAL, 0);
 
+    EXPECT_TRUE(resultPrim);
+    EXPECT_TRUE(resultKruskal);
     EXPECT_EQ(primMST.size(), static_cast<size_t>(numNodes - 1));
     EXPECT_EQ(kruskalMST.size(), static_cast<size_t>(numNodes - 1));
 }
