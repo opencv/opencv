@@ -1375,13 +1375,13 @@ TEST_P(Test_ONNX_layers, trilu_triu_pos)
 {
     testONNXModels("trilu_triu_pos", npy, 0,0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, triu_square)
+TEST_P(Test_ONNX_layers, trilu_triu_square)
 {
-    testONNXModels("triu_square", npy, 0,0,false, true, 2);
+    testONNXModels("trilu_triu_square", npy, 0,0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, triu_square_neg)
+TEST_P(Test_ONNX_layers, trilu_triu_square_neg)
 {
-    testONNXModels("triu_square_neg", npy, 0,0,false, true, 2);
+    testONNXModels("trilu_triu_square_neg", npy, 0,0,false, true, 2);
 }
 
 // Fails with the new engine. Output shape [?, N, OutputSize] not supported by new graph engine
