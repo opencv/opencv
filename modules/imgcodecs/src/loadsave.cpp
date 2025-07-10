@@ -1743,7 +1743,8 @@ public:
     void reset();
 
 private:
-    String m_filename;
+    std::string m_filename;
+    Mat m_data;
     int m_flags{};
     int m_error = ImageCollection::Error::UNINITIALIZED;
     std::size_t m_size{};
@@ -1795,6 +1796,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
 }
 
 void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
+    m_data = buffer.getMat();
     m_flags = flags;
 
 #ifdef HAVE_GDAL
@@ -1803,7 +1805,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     }
     else {
 #endif
-        m_decoder = findDecoder(buffer.getMat());
+        m_decoder = findDecoder(m_data);
 #ifdef HAVE_GDAL
     }
 #endif
@@ -1916,19 +1918,10 @@ ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { ret
 
 void ImageCollection::Impl::reset() {
     m_current = 0;
-#ifdef HAVE_GDAL
-    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        m_decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-    m_decoder = findDecoder(m_filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    m_decoder->setSource(m_filename);
-    m_decoder->readHeader();
+    if (m_data.empty())
+        init(m_filename, m_flags);
+    else
+        initFromMemory(m_data, m_flags);
 }
 
 Mat& ImageCollection::Impl::at(int index) {
