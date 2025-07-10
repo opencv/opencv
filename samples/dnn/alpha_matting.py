@@ -1,14 +1,21 @@
 """
+This file is part of OpenCV project.
+It is subject to the license terms in the LICENSE file found in the top-level directory
+of this distribution and at http://opencv.org/license.html.
+
+Copyright (C) 2025, Bigvision LLC.
+
 MODNet Alpha Matting with OpenCV DNN
 
 This sample demonstrates human portrait alpha matting using MODNet model.
 MODNet is a trimap-free portrait matting method that can produce high-quality
 alpha mattes for portrait images in real-time.
 
+To download the MODNet model, run:
+    python download_models.py modnet
+
 Usage: 
     python alpha_matting.py --input=image.jpg
-    python alpha_matting.py --input=video.mp4
-    python alpha_matting.py (uses webcam)
 """
 
 import cv2 as cv
@@ -24,7 +31,8 @@ def get_args_parser(func_args):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
                         help='An optional path to file with preprocessing parameters.')
-    parser.add_argument('--input', help='Path to input image or video file. Skip this argument to capture frames from a camera.', default=0, required=False)
+    parser.add_argument('--input', default=cv.samples.findFile("samples/data/messi5.jpg"),
+                    help='Path to input image or video file. Defaults to messi5.jpg in samples/data.')
     parser.add_argument('--backend', default="default", type=str, choices=backends,
                     help="Choose one of computation backends: "
                          "default: automatically (by default), "
@@ -48,8 +56,7 @@ def get_args_parser(func_args):
     parser = argparse.ArgumentParser(parents=[parser],
                                      description='''
         To run:
-            python alpha_matting.py --input=path/to/your/input/image/or/video
-            python alpha_matting.py (uses webcam)
+            python alpha_matting.py --input=path/to/your/input/image
 
         Model path can also be specified using --model argument
         ''', formatter_class=argparse.RawTextHelpFormatter)
@@ -81,9 +88,21 @@ def apply_modnet(model, image):
     alpha_mask, composite = postprocess_output(image, out)
     t, _ = model.getPerfProfile()
     label = 'Inference time: %.2f ms' % (t * 1000.0 / cv.getTickFrequency())
-    cv.putText(image, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-    cv.putText(alpha_mask, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
-    cv.putText(composite, label, (0, 15), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+
+    def draw_label(img, text, color):
+        h, w = img.shape[:2]
+        font_scale = max(h, w) / 1000.0
+        thickness = 1
+        text_size, _ = cv.getTextSize(text, cv.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+        x = 10 
+        y = text_size[1] + 10
+        cv.putText(img, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, font_scale, color, thickness)
+
+    draw_label(image, label, (0, 255, 0))
+    draw_label(alpha_mask, label, (255, 255, 255))
+    draw_label(composite, label, (0, 255, 0))
+
+    cv.imshow("Input", image)
     cv.imshow("Alpha Mask", alpha_mask)
     cv.imshow("Composite", composite)
 
@@ -93,44 +112,28 @@ def main(func_args=None):
     if args.backend != "default" or args.target != "cpu":
         engine = cv.dnn.ENGINE_CLASSIC
 
-    cap = cv.VideoCapture(cv.samples.findFile(args.input) if args.input else 0)
-    if not cap.isOpened():
-        print("Failed to open the input video")
+    image = cv.imread(cv.samples.findFile(args.input))
+    if image is None:
+        print("Failed to load the input image")
         exit(-1)
+
     cv.namedWindow('Input', cv.WINDOW_AUTOSIZE)
     cv.namedWindow('Alpha Mask', cv.WINDOW_AUTOSIZE)
     cv.namedWindow('Composite', cv.WINDOW_AUTOSIZE)
     cv.moveWindow('Alpha Mask', 200, 50)
     cv.moveWindow('Composite', 400, 50)
 
-    net = None
-    if os.getenv('OPENCV_SAMPLES_DATA_PATH') is not None or hasattr(args, 'model'):
-        try:
-            args.model = findModel(args.model, args.sha1)
-            net = loadModel(args, engine)
-        except Exception as e:
-            print("[WARN] Model file not provided or not found. Pass model using --model=/path/to/modnet.onnx")
-            exit(-1)
-    else:
-        print("[WARN] Model file not provided. Pass model using --model=/path/to/modnet.onnx")
-        exit(-1)
+    args.model = findModel(args.model, args.sha1)
+    net = loadModel(args, engine)
 
-    while True:
-        hasFrame, image = cap.read()
-        if not hasFrame:
-            print("Press any key to exit")
-            cv.waitKey(0)
-            break
-        
-        inp = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb)
-        net.setInput(inp)
-        apply_modnet(net, image)
+    inp = cv.dnn.blobFromImage(image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb)
+    net.setInput(inp)
+    apply_modnet(net, image)
 
-        cv.imshow("Input", image)
-        key = cv.waitKey(1)
-        if key == 27 or key == ord('q'):
-            break
+    print("Press any key to exit")
+    cv.waitKey(0)
     cv.destroyAllWindows()
 
 if __name__ == '__main__':
     main()
+

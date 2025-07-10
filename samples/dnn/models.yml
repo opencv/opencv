@@ -506,3 +506,18 @@ NAFNet:
   scale: 0.00392
   rgb: true
   sample: "deblurring"
+
+################################################################################
+# Alpha Matting model.
+################################################################################
+modnet:
+  load_info:
+    url: "https://github.com/HarxSan/Modnet/raw/main/modnet.onnx"
+    sha1: "40eebf4387ea86c982bf6e363a7f84b659b145a0"
+  model: "modnet.onnx"
+  mean: [0.0, 0.0, 0.0]
+  scale: 0.00784313725
+  width: 512
+  height: 512
+  rgb: true
+  sample: "alpha_matting"
