@@ -267,6 +267,12 @@ struct BufferAllocator
                 assign(thenBranch);
                 assign(elseBranch);
 
+                for (size_t i = 0; i < noutputs; i++) {
+                    Arg thenOutarg = thenOutargs[i];
+                    Arg elseOutarg = elseOutargs[i];
+                    releaseBuffer(bufidxs[thenOutarg.idx]);
+                    releaseBuffer(bufidxs[elseOutarg.idx]);
+                }
             } else if (opname == "Loop") {
                 /*
                  In the case of loop we try to alias t_v_in[i] and t_v_out[i] so that
@@ -315,6 +321,8 @@ struct BufferAllocator
                 }
 
                 assign(body);
+                for (auto body_out: body_outputs)
+                    releaseBuffer(bufidxs.at(body_out.idx));
             }
 
             for (auto out: outputs) {

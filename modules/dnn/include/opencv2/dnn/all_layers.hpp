@@ -593,9 +593,6 @@ CV__DNN_INLINE_NS_BEGIN
     public:
         /** Factory: creates an IfLayer implementation. */
         static Ptr<IfLayer> create(const LayerParams& params);
-
-        /** Injects sub-graphs into the IfLayer. */
-        virtual void setSubgraphs(const std::vector<Ptr<Graph>>& subGraphs) = 0;
     };
 
     class CV_EXPORTS ConcatLayer : public Layer

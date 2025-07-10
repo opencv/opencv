@@ -1500,27 +1500,21 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 
     addLayer(layerParams, node_proto);
 
-    const opencv_onnx::AttributeProto* thenAttr = nullptr;
-    const opencv_onnx::AttributeProto* elseAttr = nullptr;
+    std::vector<Ptr<Graph> > thenelse(2);
     for (int i = 0; i < node_proto.attribute_size(); ++i)
     {
-        const auto& A = node_proto.attribute(i);
-        if (A.name() == "then_branch")
-            thenAttr = &A;
-        else if (A.name() == "else_branch")
-            elseAttr = &A;
+        const auto& attr = node_proto.attribute(i);
+        if (attr.name() == "then_branch" || attr.name() == "else_branch") {
+            opencv_onnx::GraphProto branch = attr.g();
+            Ptr<Graph> graph = parseGraph(&branch, false);
+            thenelse[(int)(attr.name() == "else_branch")] = graph;
+        }
     }
-    CV_Assert(thenAttr && elseAttr);
 
-    opencv_onnx::GraphProto then_graph = thenAttr->g();
-    Ptr<Graph> thenGraph = parseGraph(&then_graph, false);
-    opencv_onnx::GraphProto else_graph = elseAttr->g();
-    Ptr<Graph> elseGraph = parseGraph(&else_graph, false);
+    CV_Assert_N(!thenelse[0].empty(), !thenelse[1].empty());
 
-    Ptr<Layer> lastLayer = curr_prog.back();
-    Ptr<IfLayer> ifLayer = lastLayer.dynamicCast<IfLayer>();
-    CV_Assert(!ifLayer.empty());
-    ifLayer->setSubgraphs({thenGraph, elseGraph});
+    Ptr<Layer>& ifLayer = curr_prog.back();
+    *ifLayer->subgraphs() = thenelse;
 }
 
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize

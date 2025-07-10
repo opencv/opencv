@@ -16,11 +16,6 @@ public:
         setParamsFrom(params);
     }
 
-    void setSubgraphs(const std::vector<Ptr<Graph>>& graphs) CV_OVERRIDE
-    {
-        thenelse = graphs;
-    }
-
     std::vector<Ptr<Graph>>* subgraphs() const CV_OVERRIDE { return &thenelse; }
 
     bool getMemoryShapes(const std::vector<MatShape>& /*inputs*/,
@@ -41,7 +36,6 @@ private:
 
 Ptr<IfLayer> IfLayer::create(const LayerParams& params)
 {
-    std::cout<<"In the if create function"<<std::endl;
     return makePtr<IfLayerImpl>(params);
 }
 
