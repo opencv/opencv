@@ -543,7 +543,7 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
-typedef testing::TestWithParam<string> Imgcodecs_ImageCollection;
+typedef testing::TestWithParam<string> Imgcodecs_ImageCollection_WithParam;
 
 const string exts_multi[] = {
 #ifdef HAVE_AVIF
@@ -561,7 +561,7 @@ const string exts_multi[] = {
 #endif
 };
 
-TEST_P(Imgcodecs_ImageCollection, animations)
+TEST_P(Imgcodecs_ImageCollection_WithParam, animations)
 {
     Animation s_animation;
     EXPECT_TRUE(fillFrames(s_animation, false));
@@ -571,22 +571,59 @@ TEST_P(Imgcodecs_ImageCollection, animations)
     vector<Mat> read_frames;
     ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
 
+    ImageCollection collection(output, IMREAD_UNCHANGED);
+    EXPECT_EQ(read_frames.size(), collection.size());
+    EXPECT_EQ(read_frames[0].rows, collection.getWidth());
+    EXPECT_EQ(read_frames[0].cols, collection.getHeight());
+    EXPECT_EQ(read_frames[0].type(), collection.getType());
+
+    int i = 0;
+    for (auto&& frame : collection)
     {
-        ImageCollection collection(output, IMREAD_UNCHANGED);
-        EXPECT_EQ(read_frames.size(), collection.size());
-        int i = 0;
-        for (auto&& frame : collection)
-        {
-            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
-            ++i;
+        EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+        ++i;
+    }
+
+    collection.close();
+    collection.init(output, IMREAD_UNCHANGED);
+
+    for (i = 10; i < (int)collection.size(); i++)
+    {
+        Mat frame = collection.at(i);
+        EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+
+        s_animation = collection.getAnimation();
+        if (s_animation.frames.size() > 0) {
+            EXPECT_EQ(0, cvtest::norm(frame, s_animation.frames[i], NORM_INF));
         }
     }
+
+    collection.close();
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
 INSTANTIATE_TEST_CASE_P(/**/,
-    Imgcodecs_ImageCollection,
+    Imgcodecs_ImageCollection_WithParam,
     testing::ValuesIn(exts_multi));
+
+TEST(Imgcodecs_ImageCollection, Metadata)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/testExifOrientation_5.jpg";
+
+    ImageCollection collection(filename, IMREAD_UNCHANGED);
+    std::vector<int> metadata_types;
+    std::vector<Mat> metadata;
+    collection.getMetadata(metadata_types, metadata);
+
+    EXPECT_TRUE(metadata.empty());
+
+    Mat m = collection.at(0);
+
+    collection.getMetadata(metadata_types, metadata);
+
+    EXPECT_FALSE(metadata.empty());
+}
 
 TEST(Imgcodecs_APNG, imdecode_animation)
 {
