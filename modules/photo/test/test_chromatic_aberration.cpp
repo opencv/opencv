@@ -18,8 +18,8 @@ protected:
     {
         string data_path = cvtest::TS::ptr()->get_data_path();
         ASSERT_TRUE(data_path != "") << "OPENCV_TEST_DATA_PATH not set";
-        test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/calib_result.yaml";
-        test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/ca_photo.png");
+        test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/calib_result_tablet.yaml";
+        test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/tablet_circles_.png");
         ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
     }
 };
@@ -36,15 +36,11 @@ TEST_F(ChromaticAberrationTest, CalibrationResultLoad)
     EXPECT_EQ(calib_result.poly_red.degree, 11);
     EXPECT_EQ(calib_result.poly_red.coeffs_x.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_EQ(calib_result.poly_red.coeffs_y.size(), EXPECTED_COEFFS_SIZE);
-    EXPECT_NEAR(calib_result.poly_red.mean_x, 1003.36, 1e-2);
-    EXPECT_NEAR(calib_result.poly_red.std_x, 523.63, 1e-2);
     
     // Test blue channel data
     EXPECT_EQ(calib_result.poly_blue.degree, 11);
     EXPECT_EQ(calib_result.poly_blue.coeffs_x.size(), EXPECTED_COEFFS_SIZE);
     EXPECT_EQ(calib_result.poly_blue.coeffs_y.size(), EXPECTED_COEFFS_SIZE);
-    EXPECT_NEAR(calib_result.poly_blue.mean_x, 1016.84, 1e-2);
-    EXPECT_NEAR(calib_result.poly_blue.std_x, 530.09, 1e-2);
 }
 
 TEST_F(ChromaticAberrationTest, CalibrationResultLoadInvalidFile)
@@ -52,7 +48,10 @@ TEST_F(ChromaticAberrationTest, CalibrationResultLoadInvalidFile)
     cv::CalibrationResult calib_result;
     
     // Test loading non-existent file
-    EXPECT_FALSE(calib_result.loadFromFile("non_existent_file.yaml"));
+    EXPECT_THROW(
+        calib_result.loadFromFile("non_existent_file.yaml"),
+        cv::Exception
+    );
 }
 
 TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectorLoadCalibration)
@@ -61,9 +60,12 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectorLoadCalibration)
     
     // Test successful calibration loading
     EXPECT_TRUE(corrector.loadCalibration(test_yaml_file));
-    
-    // Test loading non-existent file
-    EXPECT_FALSE(corrector.loadCalibration("non_existent_file.yaml"));
+
+    EXPECT_THROW(
+        corrector.loadCalibration("non_existent_file.yaml"),
+        cv::Exception
+    );
+
 }
 
 TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrection)
@@ -105,10 +107,6 @@ TEST_F(ChromaticAberrationTest, Polynomial2DComputeDeltas)
     poly.degree = 1;
     poly.coeffs_x = {0.0, 0.1, 0.05};
     poly.coeffs_y = {0.0, -0.1, -0.05};
-    poly.mean_x = 50.0;
-    poly.std_x = 30.0;
-    poly.mean_y = 50.0;
-    poly.std_y = 30.0;
     
     // Create coordinate matrices
     cv::Mat X = cv::Mat::zeros(3, 3, CV_32F);
@@ -151,9 +149,6 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     cv::FileStorage fs(test_yaml_file, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
     
-    int degree;
-    fs["degree"] >> degree;
-    EXPECT_EQ(degree, 11);
     
     cv::FileNode red_node = fs["red_channel"];
     cv::FileNode blue_node = fs["blue_channel"];
@@ -162,16 +157,7 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     
     std::vector<double> coeffs_x;
     red_node["coeffs_x"] >> coeffs_x;
-    double red_mean_x, red_std_x, blue_mean_x, blue_std_x;
-    red_node["mean_x"] >> red_mean_x;
-    red_node["std_x"] >> red_std_x;
-    blue_node["mean_x"] >> blue_mean_x;
-    blue_node["std_x"] >> blue_std_x;
     EXPECT_EQ(coeffs_x.size(), EXPECTED_COEFFS_SIZE);
-    EXPECT_NEAR(red_mean_x, 1003.36, 1e-2);
-    EXPECT_NEAR(red_std_x, 523.63, 1e-2);
-    EXPECT_NEAR(blue_mean_x, 1016.84, 1e-2);
-    EXPECT_NEAR(blue_std_x, 530.09, 1e-2);
     
     fs.release();
 }

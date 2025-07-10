@@ -4,40 +4,78 @@
 
 namespace cv {
 
-bool CalibrationResult::loadFromFile(const String& filename) {
-    try {
-        FileStorage fs(filename, FileStorage::READ);
-        if (!fs.isOpened()) {
-            std::cerr << "Trying to open: " << filename << std::endl;
-            return false;
-        }
-        
-        fs["degree"] >> degree;
-        FileNode red_node = fs["red_channel"];
-        poly_red.degree = degree;
-        red_node["coeffs_x"] >> poly_red.coeffs_x;
-        red_node["coeffs_y"] >> poly_red.coeffs_y;
-        red_node["mean_x"] >> poly_red.mean_x;
-        red_node["mean_y"] >> poly_red.mean_y;
-        red_node["std_x"] >> poly_red.std_x;
-        red_node["std_y"] >> poly_red.std_y;
-        
-        FileNode blue_node = fs["blue_channel"];
-        poly_blue.degree = degree;
-        blue_node["coeffs_x"] >> poly_blue.coeffs_x;
-        blue_node["coeffs_y"] >> poly_blue.coeffs_y;
-        blue_node["mean_x"] >> poly_blue.mean_x;
-        blue_node["mean_y"] >> poly_blue.mean_y;
-        blue_node["std_x"] >> poly_blue.std_x;
-        blue_node["std_y"] >> poly_blue.std_y;
-        
-        fs.release();
-        return true;
-    } catch (const Exception& e) {
-        std::cerr << "Trying to open: " << filename << std::endl;
-        std::cout << "Error loading calibration file: " << e.what() << "\n";
+bool CalibrationResult::loadFromFile(const String& filename)
+{
+
+    FileStorage fs(filename, FileStorage::READ);
+    if (!fs.isOpened()){
+        CV_Error_(Error::StsError,
+                    ("Cannot open calibration file: %s", filename.c_str()));
         return false;
     }
+
+
+    int imgW = 0, imgH = 0;
+    fs["image_width"]  >> imgW;
+    fs["image_height"] >> imgH;
+    if (imgW <= 0 || imgH <= 0) {
+        CV_Error(cv::Error::StsBadArg,
+                    "image_width and image_height must be positive");
+        return false;
+    }
+    auto readChannel = [&](const char* key, Polynomial2D& poly)
+    {
+        FileNode ch = fs[key];
+        if (ch.empty())
+            CV_Error_(cv::Error::StsParseError,
+                        ("Missing channel \"%s\"", key));
+
+        ch["coeffs_x"] >> poly.coeffs_x;
+        ch["coeffs_y"] >> poly.coeffs_y;
+
+        if (poly.coeffs_x.empty() || poly.coeffs_y.empty())
+            CV_Error_(Error::StsParseError,
+                        ("%s: coeffs_x/coeffs_y missing", key));
+
+        if (poly.coeffs_x.size() != poly.coeffs_y.size())
+            CV_Error_(Error::StsBadSize,
+                        ("%s: coeffs_x (%zu) vs coeffs_y (%zu)",
+                        key, poly.coeffs_x.size(), poly.coeffs_y.size()));
+
+        if (!cv::checkRange(poly.coeffs_x, true) ||
+            !cv::checkRange(poly.coeffs_y, true))
+            CV_Error_(Error::StsBadArg,
+                        ("%s: coefficient array contains NaN/Inf", key));
+        size_t m = poly.coeffs_x.size();
+        double n_float = (std::sqrt(1.0 + 8.0 * m) - 3.0) / 2.0;
+        int deg = static_cast<int>(std::round(n_float));
+        size_t expected_m = static_cast<size_t>((deg + 1) * (deg + 2) / 2);
+        if (m != expected_m){
+            CV_Error_(Error::StsBadArg,
+                    ("Coefficient count %zu is not triangular for degree %d "
+                    "(expected %zu)", m, deg, expected_m));
+        }
+        poly.degree = deg;
+    };
+
+    readChannel("red_channel",  poly_red);
+    readChannel("blue_channel", poly_blue);
+
+    fs["red_channel"]["rms"] >> rms_red;
+    fs["blue_channel"]["rms"] >> rms_blue;
+    if (poly_red.coeffs_x.size() != poly_blue.coeffs_x.size()){
+        CV_Error_(cv::Error::StsBadSize,
+                    ("Red (%zu) and blue (%zu) coefficient counts differ",
+                    poly_red.coeffs_x.size(), poly_blue.coeffs_x.size()));
+        return false;
+    }
+
+    width = imgW;
+    height = imgH;
+    degree = poly_red.degree;
+
+    return true;
+
 }
 
 void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) const {
@@ -47,8 +85,10 @@ void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) c
     dx.create(X.size(), CV_32F);
     dy.create(Y.size(), CV_32F);
 
-    const double inv_std_x = 1.0 / std_x;
-    const double inv_std_y = 1.0 / std_y;
+    const double mean_x = w * 0.5;
+    const double mean_y = h * 0.5;
+    const double inv_std_x = 1.0 / mean_x;
+    const double inv_std_y = 1.0 / mean_y;
 
     parallel_for_( Range(0, h),
         [&](const Range& rows)
@@ -168,7 +208,9 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
 
 Mat correctChromaticAberration(InputArray image, const String& calibration_file) {
     ChromaticAberrationCorrector corrector;
-    CV_Assert(corrector.loadCalibration(calibration_file));
+    if (!corrector.loadCalibration(calibration_file)) {
+        CV_Error_(Error::StsError, ("Failed to load chromatic-aberration calibration file: %s", calibration_file.c_str()));
+    }
     return corrector.correctImage(image);
 }
 

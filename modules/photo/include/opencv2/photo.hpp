@@ -910,11 +910,6 @@ struct CV_EXPORTS_W Polynomial2D {
     std::vector<double> coeffs_x;
     std::vector<double> coeffs_y;
     int degree;
-    double mean_x;
-    double mean_y;
-    double std_x;
-    double std_y;
-
     
     Polynomial2D() : degree(0) {}
     
@@ -922,15 +917,15 @@ struct CV_EXPORTS_W Polynomial2D {
 };
 
 struct CV_EXPORTS_W CalibrationResult {
-    int degree;
     Polynomial2D poly_red;
     Polynomial2D poly_blue;
+    int degree;
     int width;
     int height;
     double rms_red;
     double rms_blue;
     
-    CalibrationResult() : degree(0) {}
+    CalibrationResult() {}
     
     bool loadFromFile(const String& filename);
 };
