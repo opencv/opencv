@@ -40,7 +40,6 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
                 loops *= shape_input[i];
 
             float *dst = outputs[0].ptr<float>();
-            auto r = Range(0, static_cast<int>(loops));
             auto fn = [&](const Range &r) {
 
                 for (int i = r.start; i < r.end; i++) {
