@@ -186,6 +186,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(DepthToSpaceInt8, DepthToSpaceLayer)
     CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepthInt8, SpaceToDepthLayer)
 
+    CV_DNN_REGISTER_LAYER_CLASS(Trilu,          TriluLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Crop,           CropLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Eltwise,        EltwiseLayer);
     CV_DNN_REGISTER_LAYER_CLASS(NaryEltwise,    NaryEltwiseLayer);
@@ -261,6 +262,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(PermuteInt8,      PermuteLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ReorgInt8,        ReorgLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ShuffleChannelInt8, ShuffleChannelLayer);
+
 }
 
 CV__DNN_INLINE_NS_END
