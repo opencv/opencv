@@ -68,7 +68,6 @@ WebPDecoder::WebPDecoder()
     fs_size = 0;
     m_has_animation = false;
     m_previous_timestamp = 0;
-    m_read_metadata = 1;
 }
 
 WebPDecoder::~WebPDecoder() {}
@@ -198,7 +197,7 @@ bool WebPDecoder::readData(Mat &img)
     }
     CV_Assert(data.type() == CV_8UC1); CV_Assert(data.rows == 1);
 
-    if (m_read_metadata) {
+    if (m_metadata_reading_flag) {
         WebPData webp_data;
         webp_data.bytes = (const uint8_t*)data.ptr();
         webp_data.size = data.total();
@@ -233,7 +232,7 @@ bool WebPDecoder::readData(Mat &img)
             }
 #endif
             WebPDemuxDelete(demux);
-            m_read_metadata = 0;
+            m_metadata_reading_flag = 0;
         }
     }
 

@@ -81,7 +81,6 @@ protected:
     std::unique_ptr<WebPAnimDecoder, UniquePtrDeleter> anim_decoder;
     bool m_has_animation;
     int m_previous_timestamp;
-    int m_read_metadata;
 };
 
 class WebPEncoder CV_FINAL : public BaseImageEncoder

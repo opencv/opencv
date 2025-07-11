@@ -253,12 +253,14 @@ enum ImwriteGIFCompressionFlags {
 
 enum ImageMetadataType
 {
-    IMAGE_METADATA_UNKNOWN = -1,
-    IMAGE_METADATA_EXIF = 0,
-    IMAGE_METADATA_XMP = 1,
-    IMAGE_METADATA_ICCP = 2,
-    IMAGE_METADATA_TEXT = 3,
-    IMAGE_METADATA_MAX = 3
+    IMAGE_METADATA_UNKNOWN = -1, // Used when metadata type is unrecognized or not set
+
+    IMAGE_METADATA_EXIF = 0,     // EXIF metadata (e.g., camera info, GPS, orientation)
+    IMAGE_METADATA_XMP = 1,      // XMP metadata (eXtensible Metadata Platform - Adobe format)
+    IMAGE_METADATA_ICCP = 2,     // ICC Profile (color profile for color management)
+    IMAGE_METADATA_TEXT = 3,     // General text metadata (e.g., PNG tEXt, tIME, etc.)
+
+    IMAGE_METADATA_MAX = 3       // Highest valid index (usually used for bounds checking)
 };
 
 //! @} imgcodecs_flags

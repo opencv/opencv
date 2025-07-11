@@ -622,6 +622,29 @@ bool  PngDecoder::readData( Mat& img )
             png_read_image( m_png_ptr, buffer );
             png_read_end( m_png_ptr, m_end_info );
 
+            if (m_metadata_reading_flag) {
+                // Get tEXt chunks
+                png_textp text_ptr1, text_ptr2;
+                int num_text1 = 0;
+                int num_text2 = 0;
+
+                png_get_text(m_png_ptr, m_info_ptr, &text_ptr1, &num_text1);
+                png_get_text(m_png_ptr, m_end_info, &text_ptr2, &num_text2);
+
+                for (int i = 0; i < num_text1; i++) {
+                    std::vector<unsigned char> exif_data;
+                    if (!strcmp(text_ptr1[i].key, "Raw profile type exif")) {
+                        m_exif.processRawProfile(text_ptr1[i].text, text_ptr1[i].text_length);
+                    }
+                }
+
+                for (int i = 0; i < num_text2; i++) {
+                    std::vector<unsigned char> exif_data;
+                    if (!strcmp(text_ptr2[i].key, "Raw profile type exif")) {
+                        m_exif.processRawProfile(text_ptr2[i].text, text_ptr2[i].text_length);
+                    }
+                }
+            }
 #ifdef PNG_eXIf_SUPPORTED
             png_uint_32 num_exif = 0;
             png_bytep exif = 0;
@@ -637,27 +660,6 @@ bool  PngDecoder::readData( Mat& img )
                 m_exif.parseExif(exif, num_exif);
             }
 #endif
-            // Get tEXt chunks
-            png_textp text_ptr1, text_ptr2;
-            int num_text1 = 0;
-            int num_text2 = 0;
-
-            png_get_text(m_png_ptr, m_info_ptr, &text_ptr1, &num_text1);
-            png_get_text(m_png_ptr, m_end_info, &text_ptr2, &num_text2);
-
-            for (int i = 0; i < num_text1; i++) {
-                std::vector<unsigned char> exif_data;
-                if (!strcmp(text_ptr1[i].key, "Raw profile type exif")) {
-                    m_exif.processRawProfile(text_ptr1[i].text, text_ptr1[i].text_length);
-                }
-            }
-
-            for (int i = 0; i < num_text2; i++) {
-                std::vector<unsigned char> exif_data;
-                if (!strcmp(text_ptr2[i].key, "Raw profile type exif")) {
-                    m_exif.processRawProfile(text_ptr2[i].text, text_ptr2[i].text_length);
-                }
-            }
             result = true;
         }
     }
