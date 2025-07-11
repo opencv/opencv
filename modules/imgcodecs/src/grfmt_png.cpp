@@ -637,7 +637,27 @@ bool  PngDecoder::readData( Mat& img )
                 m_exif.parseExif(exif, num_exif);
             }
 #endif
+            // Get tEXt chunks
+            png_textp text_ptr1, text_ptr2;
+            int num_text1 = 0;
+            int num_text2 = 0;
 
+            png_get_text(m_png_ptr, m_info_ptr, &text_ptr1, &num_text1);
+            png_get_text(m_png_ptr, m_end_info, &text_ptr2, &num_text2);
+
+            for (int i = 0; i < num_text1; i++) {
+                std::vector<unsigned char> exif_data;
+                if (!strcmp(text_ptr1[i].key, "Raw profile type exif")) {
+                    m_exif.processRawProfile(text_ptr1[i].text, text_ptr1[i].text_length);
+                }
+            }
+
+            for (int i = 0; i < num_text2; i++) {
+                std::vector<unsigned char> exif_data;
+                if (!strcmp(text_ptr2[i].key, "Raw profile type exif")) {
+                    m_exif.processRawProfile(text_ptr2[i].text, text_ptr2[i].text_length);
+                }
+            }
             result = true;
         }
     }
@@ -860,6 +880,9 @@ PngEncoder::PngEncoder()
     m_buf_supported = true;
     m_support_metadata.assign((size_t)IMAGE_METADATA_MAX+1, false);
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_support_metadata[IMAGE_METADATA_TEXT] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -978,6 +1001,64 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
 
+                    if (!m_metadata.empty()) {
+                        std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                        if (!exif.empty()) {
+                            png_set_eXIf_1(png_ptr, info_ptr, static_cast<png_uint_32>(exif.size()), exif.data());
+                        }
+
+                        std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        if (!xmp.empty()) {
+                            png_text text_chunk;
+                            text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
+                            text_chunk.key = const_cast<char*>("XML:com.adobe.xmp");
+                            text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                            text_chunk.text_length = static_cast<png_size_t>(xmp.size());
+
+                            png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+                        }
+
+                        std::vector<uchar>& text = m_metadata[IMAGE_METADATA_TEXT];
+                        if (!text.empty()) {
+                            std::vector<png_text> text_chunks;
+
+                            const uchar* ptr = text.data();
+                            const uchar* end = ptr + text.size();
+
+                            // [TODO] The idea of zero separator is experimental. Find the best way to store when reading
+                            while (ptr < end) {
+                                // Find null terminator for key
+                                const uchar* key_end = std::find(ptr, end, 0);
+                                if (key_end == end) break;
+                                std::string key(reinterpret_cast<const char*>(ptr), key_end - ptr);
+
+                                ptr = key_end + 1;
+                                if (ptr >= end) break;
+
+                                // Find null terminator for value
+                                const uchar* val_end = std::find(ptr, end, 0);
+                                size_t val_len = val_end - ptr;
+
+                                // Prepare text chunk
+                                png_text text_chunk;
+                                text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
+
+                                // We store key and value in temporary buffers to ensure lifetime
+                                static std::vector<std::string> keys, values;
+                                keys.push_back(key);
+                                values.emplace_back(reinterpret_cast<const char*>(ptr), val_len);
+
+                                text_chunk.key = const_cast<char*>(keys.back().c_str());
+                                text_chunk.text = const_cast<char*>(values.back().c_str());
+                                text_chunk.text_length = static_cast<png_size_t>(val_len);
+
+                                png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+
+                                ptr = val_end + 1;
+                            }
+                        }
+                    }
+
                     png_write_info( png_ptr, info_ptr );
 
                     if (m_isBilevel)
@@ -990,16 +1071,6 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     buffer.allocate(height);
                     for( y = 0; y < height; y++ )
                         buffer[y] = img.data + y*img.step;
-
-                    if (!m_metadata.empty()) {
-                        std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
-                        if (!exif.empty()) {
-                            writeChunk(f, "eXIf", exif.data(), (uint32_t)exif.size());
-                        }
-                        // [TODO] add xmp and icc. They need special handling,
-                        // see https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_PNG_files and
-                        // https://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html.
-                    }
 
                     png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );
