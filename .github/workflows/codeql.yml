@@ -89,16 +89,14 @@ jobs:
       if: ${{ matrix.language == 'c-cpp' && matrix.build-mode == 'manual' }}
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake clang libobjc-dev
+        sudo apt-get install -y build-essential cmake clang
 
     - name: Build OpenCV (C++ & Obj-C)
       if: ${{ matrix.language == 'c-cpp' && matrix.build-mode == 'manual' }}
       run: |
         mkdir -p build
         cd build
-        cmake -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_opencv_objc=ON \
-              ..
+        cmake -DCMAKE_BUILD_TYPE=Release ..
         cmake --build . -- -j$(nproc)
 
     - name: Perform CodeQL Analysis
