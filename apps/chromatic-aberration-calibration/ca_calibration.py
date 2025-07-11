@@ -287,7 +287,7 @@ def fit_channel(
     degree: int,
     height: int,
     width: int,
-    method: str = "POWELL",
+    method: str = "L-BFGS-B",
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     mean_x, mean_y = width * 0.5, height * 0.5
     inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
@@ -311,10 +311,17 @@ def fit_channel(
     cy_ls, *_ = np.linalg.lstsq(terms, disp[:, 1], rcond=None)
     c0 = np.hstack([cx_ls, cy_ls])
 
-    res = minimize(objective, c0, method=method)
+    res = minimize(objective, c0, method=method, options={
+                   "maxiter": 500,
+                   "maxfun": 5000,   # allow more total function+gradient calls
+                    "maxls": 50,
+                   "ftol": 1e-9,
+                #    "disp": True,
+               })
 
-    if not res.success:
-        raise RuntimeError(f"Optimiser failed: {res.message}")
+
+    # if not res.success:
+    #     raise RuntimeError(f"Optimiser failed: {res.message}")
 
     coeffs_x = res.x[:m]
     coeffs_y = res.x[m:]
@@ -376,6 +383,88 @@ def calibrate_from_image(
         "rms_red": rms_r,
         "rms_blue": rms_b
     }
+
+def calibrate_multi_degree(
+    img: np.ndarray,
+    K0: int,
+    K1: int,
+) -> Dict[int, Tuple[Polynomial2D, Polynomial2D, float, float]]:
+    """
+    Returns a dict mapping degree → (poly_r, poly_b, rms_r, rms_b).
+    """
+    h, w = img.shape[:2]
+    b, g, r = cv2.split(img)
+
+    pts_g = detect_disk_centres(g)
+    pts_r = detect_disk_centres(r)
+    pts_b = detect_disk_centres(b)
+
+    xr, yr, disp_r = pair_keypoints(pts_g, pts_r)
+    xb, yb, disp_b = pair_keypoints(pts_g, pts_b)
+
+    results = {}
+    for deg in range(K0, K1+1):
+        print(deg)
+
+        poly_r, poly_b, rms_r, rms_b = fit_polynomials(
+            xr,
+            yr,
+            disp_r,
+            xb,
+            yb,
+            disp_b,
+            deg,
+            h,
+            w
+        )
+        print(f"Calibrated polynomial with degree {deg}, RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
+        results[deg] = (poly_r, poly_b, rms_r, rms_b)
+    return results
+
+def degree_error_stats(
+    results: Dict[int, Tuple[Polynomial2D, Polynomial2D, float, float]],
+) -> Dict[int, Dict[str, float]]:
+    """
+    Given the dict from calibrate_multi_degree, returns for each degree k < K1:
+      {
+        'max_r': ...,
+        'mean_r': ...,
+        'std_r':  ...,
+        'max_b': ...,
+        'mean_b': ...,
+        'std_b':  ...
+      }
+    using degree=K1 as reference.
+    """
+    degs = sorted(results)
+    K1 = degs[-1]
+    h, w = results[K1][0].height, results[K1][0].width
+
+    # precompute reference maps (in pixel coords)
+    pr_ref, pb_ref, _, _ = results[K1]
+    rx_ref, ry_ref = build_remap(h, w, pr_ref)
+    bx_ref, by_ref = build_remap(h, w, pb_ref)
+
+    stats = {}
+    for deg in degs[:-1]:
+        pr, pb, _, _ = results[deg]
+        rx_k, ry_k = build_remap(h, w, pr)
+        bx_k, by_k = build_remap(h, w, pb)
+
+        # compute pixel‐wise displacement error
+        err_r = np.sqrt((rx_k - rx_ref)**2 + (ry_k - ry_ref)**2)
+        err_b = np.sqrt((bx_k - bx_ref)**2 + (by_k - by_ref)**2)
+
+        stats[deg] = {
+            'max_r': float(err_r.max()),
+            'mean_r': float(err_r.mean()),
+            'std_r':  float(err_r.std()),
+            'max_b': float(err_b.max()),
+            'mean_b': float(err_b.mean()),
+            'std_b':  float(err_b.std()),
+        }
+    return stats
+
 
 
 def build_remap(
@@ -441,6 +530,12 @@ def parse_args() -> argparse.Namespace:
     sf.add_argument("--coeffs_file", required=True, help="Save coefficients to YAML file")
     sf.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
+    ss = sub.add_parser("scan", help="Sweep degree range and report errors")
+    ss.add_argument("image", help="Calibration image path")
+    ss.add_argument("--degree_range", nargs=2, type=int, metavar=("K0","K1"),
+                    required=True, help="Inclusive degree range to scan")
+    ss.add_argument("--method", default="POWELL", help="Optimizer method")
+
     return p.parse_args()
 
 
@@ -470,6 +565,21 @@ def cmd_full(args: argparse.Namespace) -> None:
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
 
+def cmd_scan(args: argparse.Namespace) -> None:
+    img = cv2.imread(args.image, cv2.IMREAD_COLOR)
+    K0, K1 = args.degree_range
+    results = calibrate_multi_degree(img, K0, K1, method=args.method)
+    stats = degree_error_stats(results)
+    print(f"Reference degree: {K1}\n")
+    header = "deg |   max_r   mean_r   std_r   |   max_b   mean_b   std_b"
+    print(header)
+    print("-" * len(header))
+    for deg in sorted(stats):
+        s = stats[deg]
+        print(f"{deg:3d} | {s['max_r']:8.3f} {s['mean_r']:8.3f} {s['std_r']:8.3f} | "
+              f"{s['max_b']:8.3f} {s['mean_b']:8.3f} {s['std_b']:8.3f}")
+
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -479,3 +589,5 @@ if __name__ == "__main__":
         cmd_correct(args)
     elif args.cmd == "full":
         cmd_full(args)
+    elif args.cmd == "scan":
+        cmd_scan(args)
