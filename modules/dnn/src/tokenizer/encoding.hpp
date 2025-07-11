@@ -138,6 +138,10 @@ private:
 static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
 
 
+std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
+                                        const std::string& vocabBpePath,
+                                        const std::string& encoderJsonPath);
+
 CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name);
 
 CV_EXPORTS static std::string replaceGWithSpace(const std::string& input) {

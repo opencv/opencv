@@ -1,5 +1,6 @@
 #include "core_bpe.hpp"
 #include "unicode.hpp"
+#include "utils.hpp"
 
 #include <cstdint>
 #include <string>
@@ -197,12 +198,13 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
         // Replace leading space with U+0120 (Ġ) as in OpenAI encoder.json
         // [TODO]: not sure if this should be the case for all 
         // cases of space in the json? 
-        if (!subUtf8.empty() && subUtf8[0] == ' ') {
-            subUtf8.replace(0, 1, "\xC4\xA0");
-        }
+        // if (!subUtf8.empty() && subUtf8[0] == ' ') {
+        //     subUtf8.replace(0, 1, "\xC4\xA0");
+        // }
         std::cout << "[" << subUtf8 << "]" << std::endl; 
 
-        ByteVec piece(subUtf8.begin(), subUtf8.end());
+        // ByteVec piece(subUtf8.begin(), subUtf8.end());
+        ByteVec piece = textToBytes(subUtf8);
 
         // for (const auto& kv : encoder_) {
         //     if (kv.first.size() > 2) {
