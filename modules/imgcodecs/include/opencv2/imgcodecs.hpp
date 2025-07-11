@@ -257,7 +257,8 @@ enum ImageMetadataType
     IMAGE_METADATA_EXIF = 0,
     IMAGE_METADATA_XMP = 1,
     IMAGE_METADATA_ICCP = 2,
-    IMAGE_METADATA_MAX = 2
+    IMAGE_METADATA_TEXT = 3,
+    IMAGE_METADATA_MAX = 3
 };
 
 //! @} imgcodecs_flags
