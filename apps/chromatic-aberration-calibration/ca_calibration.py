@@ -203,9 +203,9 @@ def monomial_terms(x: np.ndarray, y: np.ndarray, degree: int) -> np.ndarray:
 def detect_disk_centres(
     img: np.ndarray,
     *,
-    min_area: int = 50,
+    min_area: int = 20,
     max_area: int | None = None,
-    circularity_thresh: float = 0.75,
+    circularity_thresh: float = 0.7,
     morph_kernel: int = 3,
 ) -> np.ndarray:
     if img.ndim != 2:
@@ -265,7 +265,7 @@ def detect_disk_centres(
 def pair_keypoints(
     ref: np.ndarray,
     target: np.ndarray,
-    max_error: float = 5.0,
+    max_error: float = 30.0,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     tree = cKDTree(ref)
     dists, idx = tree.query(target, distance_upper_bound=max_error)
