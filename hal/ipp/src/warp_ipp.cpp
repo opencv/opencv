@@ -251,6 +251,8 @@ public:
             if( !IPPSet( cv::Scalar(borderValue[0], borderValue[1], borderValue[2], borderValue[3]), dataPointer, (int)dst.step[0], setSize, cnn, src.depth() ) )
             {
                 *ok = false;
+                ippsFree(pBuffer);
+                ippsFree(pSpec);
                 return;
             }
         }
@@ -262,6 +264,8 @@ public:
         {
             CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
         }
+        ippsFree(pBuffer);
+        ippsFree(pSpec);
     }
 private:
     int src_type;
