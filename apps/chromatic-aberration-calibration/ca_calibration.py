@@ -540,9 +540,61 @@ def parse_args() -> argparse.Namespace:
 
 
 def cmd_calibrate(args: argparse.Namespace) -> None:
-    calib = calibrate_from_image(cv2.imread(args.image, cv2.IMREAD_COLOR), degree=args.degree)
+    calib = calibrate_from_image(
+        cv2.imread(args.image, cv2.IMREAD_COLOR),
+        degree=args.degree
+    )
     save_calib_result(calib, path=args.coeffs_file)
     print("Saved coefficients to", args.coeffs_file)
+
+    # img = cv2.imread(args.image, cv2.IMREAD_COLOR)
+    # b, g, r = cv2.split(img)
+
+    # pts_g = detect_disk_centres(g)
+    # pts_r = detect_disk_centres(r)
+    # pts_b = detect_disk_centres(b)
+
+    # xr, yr, disp_r = pair_keypoints(pts_g, pts_r, max_error=30.0)
+    # xb, yb, disp_b = pair_keypoints(pts_g, pts_b, max_error=30.0)
+
+    # mag_r = np.hypot(disp_r[:,0], disp_r[:,1])
+    # thr_r = mag_r.mean() + 2.0 * mag_r.std()
+    # out_r = mag_r > thr_r
+
+    # mag_b = np.hypot(disp_b[:,0], disp_b[:,1])
+    # thr_b = mag_b.mean() + 2.0 * mag_b.std()
+    # out_b = mag_b > thr_b
+
+    # print(f"Red matches: {len(mag_r)}, outliers: {out_r.sum()} (thr={thr_r:.2f}px)")
+    # print(f"Blue matches: {len(mag_b)}, outliers: {out_b.sum()} (thr={thr_b:.2f}px)")
+
+    # vis = img.copy()
+    # for x, y, (dx, dy) in zip(xr, yr, disp_r):
+    #     end = (int(x+dx), int(y+dy))
+    #     cv2.arrowedLine(vis, (int(x), int(y)), end,
+    #                     color=(0,0,255), thickness=1, tipLength=0.2)
+    # for x, y, (dx, dy) in zip(xb, yb, disp_b):
+    #     end = (int(x+dx), int(y+dy))
+    #     cv2.arrowedLine(vis, (int(x), int(y)), end,
+    #                     color=(255,0,0), thickness=1, tipLength=0.2)
+
+    # for idx in np.where(out_r)[0]:
+    #     x, y = xr[idx], yr[idx]
+    #     dx, dy = disp_r[idx]
+    #     cv2.arrowedLine(vis, (int(x), int(y)),
+    #                     (int(x+dx), int(y+dy)),
+    #                     color=(255,0,255), thickness=2, tipLength=0.3)
+    # for idx in np.where(out_b)[0]:
+    #     x, y = xb[idx], yb[idx]
+    #     dx, dy = disp_b[idx]
+    #     cv2.arrowedLine(vis, (int(x), int(y)),
+    #                     (int(x+dx), int(y+dy)),
+    #                     color=(255,255,0), thickness=2, tipLength=0.3)
+
+    # out_path = 'pairing_outliers.png'
+    # cv2.imwrite(out_path, vis)
+    # print(f"Written visualization to {out_path}")
+
 
 
 def cmd_correct(args: argparse.Namespace) -> None:
