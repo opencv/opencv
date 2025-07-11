@@ -88,6 +88,83 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrection)
     cv::Scalar sum_diff = cv::sum(diff);
     EXPECT_GT(sum_diff[0] + sum_diff[1] + sum_diff[2], 0.0);
 }
+TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionTablet)
+{
+    string data_path = cvtest::TS::ptr()->get_data_path();
+    ASSERT_TRUE(data_path != "") << "OPENCV_TEST_DATA_PATH not set";
+    test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/calib_result_tablet.yaml";
+    test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/tablet_circles_.png");
+    ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
+
+    cv::ChromaticAberrationCorrector corrector;
+    ASSERT_TRUE(corrector.loadCalibration(test_yaml_file));
+    
+    // Test image correction
+    cv::Mat corrected = corrector.correctImage(test_image);
+    
+    // Verify output properties
+    EXPECT_EQ(corrected.rows, test_image.rows);
+    EXPECT_EQ(corrected.cols, test_image.cols);
+    EXPECT_EQ(corrected.channels(), test_image.channels());
+    EXPECT_EQ(corrected.type(), test_image.type());
+    
+    // Verify the image was actually processed (should be different)
+    cv::Mat diff;
+    cv::absdiff(test_image, corrected, diff);
+    cv::Scalar sum_diff = cv::sum(diff);
+    EXPECT_GT(sum_diff[0] + sum_diff[1] + sum_diff[2], 0.0);
+}
+TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionSyntheticSimpleWarp)
+{
+    string data_path = cvtest::TS::ptr()->get_data_path();
+    ASSERT_TRUE(data_path != "") << "OPENCV_TEST_DATA_PATH not set";
+    test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/simple_warp.yaml";
+    test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/synthetic_simple_warp.png");
+    ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
+
+    cv::ChromaticAberrationCorrector corrector;
+    ASSERT_TRUE(corrector.loadCalibration(test_yaml_file));
+    
+    // Test image correction
+    cv::Mat corrected = corrector.correctImage(test_image);
+    
+    // Verify output properties
+    EXPECT_EQ(corrected.rows, test_image.rows);
+    EXPECT_EQ(corrected.cols, test_image.cols);
+    EXPECT_EQ(corrected.channels(), test_image.channels());
+    EXPECT_EQ(corrected.type(), test_image.type());
+    
+    // Verify the image was actually processed (should be different)
+    cv::Mat diff;
+    cv::absdiff(test_image, corrected, diff);
+    cv::Scalar sum_diff = cv::sum(diff);
+    EXPECT_GT(sum_diff[0] + sum_diff[1] + sum_diff[2], 0.0);
+}
+TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionSyntheticRadial)
+{
+    string data_path = cvtest::TS::ptr()->get_data_path();
+    ASSERT_TRUE(data_path != "") << "OPENCV_TEST_DATA_PATH not set";
+    test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/radial.yaml";
+    test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/synthetic_radial.png");
+    ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
+    cv::ChromaticAberrationCorrector corrector;
+    ASSERT_TRUE(corrector.loadCalibration(test_yaml_file));
+    
+    // Test image correction
+    cv::Mat corrected = corrector.correctImage(test_image);
+    
+    // Verify output properties
+    EXPECT_EQ(corrected.rows, test_image.rows);
+    EXPECT_EQ(corrected.cols, test_image.cols);
+    EXPECT_EQ(corrected.channels(), test_image.channels());
+    EXPECT_EQ(corrected.type(), test_image.type());
+    
+    // Verify the image was actually processed (should be different)
+    cv::Mat diff;
+    cv::absdiff(test_image, corrected, diff);
+    cv::Scalar sum_diff = cv::sum(diff);
+    EXPECT_GT(sum_diff[0] + sum_diff[1] + sum_diff[2], 0.0);
+}
 
 TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionInvalidInput)
 {
