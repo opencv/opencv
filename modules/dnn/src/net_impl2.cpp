@@ -680,21 +680,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
             if (iflayer) {
-                Mat inp0 = inpMats[0];
-                CV_Assert(inp0.total() == 1u);
-                bool flag;
-                switch (inp0.depth())
-                {
-                case CV_8U:        flag = inp0.at<uchar>(0) != 0;  break;   // unsigned byte
-                case CV_Bool:      flag = inp0.at<bool>(0);        break;   // CV_BoolC1
-                case CV_32F:       flag = inp0.at<float>(0) != 0;  break;   // float32
-                case CV_32S:       flag = inp0.at<int>(0)   != 0;  break;   // int32
-                default:
-                    CV_Error_(Error::StsBadArg,
-                            ("If-layer condition: unsupported tensor type %s",
-                            typeToString(inp0.type()).c_str()));
-                }
-                Ptr<Graph> subgraph = subgraphs->at((int)(!flag));
+                int branch = iflayer->branch(inpMats[0]);
+                Ptr<Graph> subgraph = subgraphs->at(branch);
                 std::vector<Mat> branchInputs;
                 if (inpMats.size() > 1)
                     branchInputs.assign(inpMats.begin() + 1, inpMats.end());

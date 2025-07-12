@@ -15,6 +15,7 @@ public:
     {
         setParamsFrom(params);
     }
+    virtual ~IfLayerImpl() = default;
 
     std::vector<Ptr<Graph>>* subgraphs() const CV_OVERRIDE { return &thenelse; }
 
@@ -29,6 +30,43 @@ public:
     }
 
     bool dynamicOutputShapes() const CV_OVERRIDE { return true; }
+
+    int branch(InputArray arr) const CV_OVERRIDE
+    {
+        Mat buf, *inp;
+        if (arr.kind() == _InputArray::MAT) {
+            inp = (Mat*)arr.getObj();
+        } else {
+            buf = arr.getMat();
+            inp = &buf;
+        }
+        CV_Assert(inp->total() == 1u);
+        bool flag;
+        switch (inp->depth())
+        {
+        case CV_8U: case CV_8S: case CV_Bool:
+            flag = *inp->ptr<char>() != 0; break;
+        case CV_16U: case CV_16S:
+            flag = *inp->ptr<short>() != 0; break;
+        case CV_16F:
+            flag = *inp->ptr<hfloat>() != 0; break;
+        case CV_16BF:
+            flag = *inp->ptr<hfloat>() != 0; break;
+        case CV_32U: case CV_32S:
+            flag = *inp->ptr<int>() != 0; break;
+        case CV_32F:
+            flag = *inp->ptr<float>() != 0; break;
+        case CV_64U: case CV_64S:
+            flag = *inp->ptr<long long>() != 0; break;
+        case CV_64F:
+            flag = *inp->ptr<double>() != 0; break;
+        default:
+            CV_Error_(Error::StsBadArg,
+                    ("If-layer condition: unsupported tensor type %s",
+                    typeToString(inp->type()).c_str()));
+        }
+        return (int)!flag;
+    }
 
 private:
     mutable std::vector<Ptr<Graph>> thenelse;
