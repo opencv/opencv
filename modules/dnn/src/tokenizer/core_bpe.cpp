@@ -280,10 +280,11 @@ CoreBPE::encode(const std::string& text,
             auto splits = unicode_regex_split(segment, regexes);
 
             for (auto& subUtf8 : splits) {
-                if (!subUtf8.empty() && subUtf8[0] == ' ') {
-                    subUtf8.replace(0, 1, "\xC4\xA0");
-                }
-                ByteVec piece(subUtf8.begin(), subUtf8.end());
+                // if (!subUtf8.empty() && subUtf8[0] == ' ') {
+                //     subUtf8.replace(0, 1, "\xC4\xA0");
+                // }
+                // ByteVec piece(subUtf8.begin(), subUtf8.end());
+                ByteVec piece = textToBytes(subUtf8);
                 auto it = encoder_.find(piece);
                 if (it != encoder_.end()) {
                     last_piece_token_len = 1;
@@ -309,6 +310,23 @@ CoreBPE::encode(const std::string& text,
     }
 
     return { ret, last_piece_token_len };
+}
+
+Rank CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
+    auto it = encoder_.find(piece);
+    if (it != encoder_.end()) {
+        return it->second;
+    }
+
+    try {
+        std::string piece_str(piece.begin(), piece.end());
+        auto sit = specialEncoder_.find(piece_str);
+        if (sit != specialEncoder_.end()) {
+            return sit->second;
+        }
+    } catch (...) {
+        throw std::runtime_error("Failed to encode single token: not found in encoder or specialEncoder");
+    }
 }
 
 
