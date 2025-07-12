@@ -135,6 +135,19 @@ struct BufferAllocator
             releaseBuffer(toBuf);
     }
 
+    template<typename _Tp> std::ostream&
+    dumpArgVec(std::ostream& strm, const std::string& name, const vector<_Tp>& vec) const
+    {
+        CV_Assert(vec.size() == netimpl->args.size());
+        strm << name << ": [";
+        size_t i, sz = vec.size();
+        for (i = 0; i < sz; i++) {
+            strm << "\n\t" << netimpl->args[i].name << ": " << vec[i];
+        }
+        strm << "]";
+        return strm;
+    }
+
     void assign()
     {
         netimpl->useCounts(usecounts);
@@ -179,6 +192,13 @@ struct BufferAllocator
             const std::vector<Arg>& outputs = layer->outputs;
             size_t ninputs = inputs.size();
             size_t noutputs = outputs.size();
+
+            //std::cout << "graph '" << graph->name() << "', op '" << layer->name << "' (" << layer->type << ")\n";
+            //std::cout << "usecounts: " << usecounts << "\n";
+            //dumpArgVec(std::cout, "usecounts", usecounts) << "\n";
+            //std::cout << "freebufs: " << freebufs << "\n";
+            //std::cout << "buf_usecounts: " << buf_usecounts << "\n";
+            //dumpArgVec(std::cout, "bufidxs", bufidxs) << "\n";
 
             /*
              Determine if we can possibly re-use some of the input buffers for the output as well,
@@ -258,20 +278,26 @@ struct BufferAllocator
                     Arg thenOutarg = thenOutargs[i];
                     Arg elseOutarg = elseOutargs[i];
 
-                    if (!netimpl->isConstArg(thenOutarg) && usecounts[thenOutarg.idx] == 1)
+                    if (!netimpl->isConstArg(thenOutarg) &&
+                        usecounts[thenOutarg.idx] == 1 &&
+                        bufidxs[thenOutarg.idx] >= 0)
                         shareBuffer(outarg, thenOutarg);
-                    if (!netimpl->isConstArg(elseOutarg) && usecounts[elseOutarg.idx] == 1)
+                    if (!netimpl->isConstArg(elseOutarg) &&
+                        usecounts[elseOutarg.idx] == 1 &&
+                        bufidxs[thenOutarg.idx] >= 0)
                         shareBuffer(outarg, elseOutarg);
                 }
 
                 assign(thenBranch);
                 assign(elseBranch);
-
                 for (size_t i = 0; i < noutputs; i++) {
                     Arg thenOutarg = thenOutargs[i];
                     Arg elseOutarg = elseOutargs[i];
-                    releaseBuffer(bufidxs[thenOutarg.idx]);
-                    releaseBuffer(bufidxs[elseOutarg.idx]);
+                    if (!netimpl->isConstArg(thenOutarg) &&
+                        bufidxs[thenOutarg.idx] >= 0 &&
+                        !netimpl->isConstArg(elseOutarg) &&
+                        bufidxs[elseOutarg.idx] >= 0)
+                        shareBuffer(thenOutarg, elseOutarg);
                 }
             } else if (opname == "Loop") {
                 /*

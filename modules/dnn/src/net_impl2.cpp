@@ -772,6 +772,11 @@ void Net::Impl::updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& useco
 {
     if (!graph)
         return;
+    const std::vector<Arg>& gr_outputs = graph->outputs();
+    for (const Arg& output: gr_outputs) {
+        CV_Assert(output.idx < (int)usecounts.size());
+        usecounts[output.idx]++;
+    }
     const std::vector<Ptr<Layer> >& prog = graph->prog();
     for (const Ptr<Layer>& layer: prog) {
         const std::vector<Arg>& inputs = layer->inputs;
