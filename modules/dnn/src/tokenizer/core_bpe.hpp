@@ -141,18 +141,6 @@ private:
         return pat;
     }
 
-    // static std::unique_ptr<icu::RegexPattern> compilePattern(const std::string& patStr) {
-    //     UErrorCode status = U_ZERO_ERROR;
-    //     auto uPat = icu::UnicodeString::fromUTF8(patStr);
-    //     auto pattern = std::unique_ptr<icu::RegexPattern>(
-    //         icu::RegexPattern::compile(uPat,0,status));
-    //     if (U_FAILURE(status)) {
-    //         throw std::runtime_error("ICU RegexPattern compile error: " + std::string(u_errorName(status)));
-    //     }
-    //     return pattern;
-    // }
-    
-
     std::pair<std::vector<Rank>, std::size_t> increaseLastPieceTokenLen(std::vector<Rank> token,
                                                                         std::size_t lastPieceTokenLen) const;
 
