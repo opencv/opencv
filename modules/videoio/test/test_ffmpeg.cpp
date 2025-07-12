@@ -1030,6 +1030,10 @@ inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::Te
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
 
+// PR: https://github.com/opencv/opencv/pull/27523
+// TODO: Enable the tests back on Windows after FFmpeg plugin rebuild
+#ifndef _WIN32
+
 // related issue: https://github.com/opencv/opencv/issues/23088
 TEST(ffmpeg_cap_properties, set_pos_get_msec)
 {
@@ -1050,5 +1054,7 @@ TEST(ffmpeg_cap_properties, set_pos_get_msec)
     cap.set(CAP_PROP_POS_AVI_RATIO, 0);
     EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 0.0);
 }
+
+#endif // WIN32
 
 }} // namespace
