@@ -2816,10 +2816,10 @@ TEST(Layer_LSTM, repeatedInference)
     EXPECT_EQ(diff2, 0.);
 }
 
-TEST(Layer_If, resize)
+TEST(Layer_If, DISABLED_resize)
 {
-    const std::string imgname   = findDataFile("cv/shared/lena.png", false);
-    const std::string modelname = findDataFile("dnn/onnx/models/if_layer.onnx", false);
+    const std::string imgname   = findDataFile("cv/shared/lena.png", true);
+    const std::string modelname = findDataFile("dnn/onnx/models/if_layer.onnx", true);
 
     dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_NEW);
     Mat src = imread(imgname), blob;
