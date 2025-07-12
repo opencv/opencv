@@ -9,6 +9,9 @@
 namespace cv { namespace dnn { namespace tokenizer {
     
 // ------------------------------- JSON Parsing --------------------------------
+// The Json functions are not working correctly 
+// TODO: Fix errors in reading the GPT2 encoder.json file. 
+// currently relyung on nlohmann
 void append_utf8(uint32_t codepoint, std::string& out) {
     if (codepoint <= 0x7F)          out.push_back(char(codepoint));
     else if (codepoint <= 0x7FF)    { out.push_back(char(0xC0 | (codepoint>>6)));
@@ -88,6 +91,8 @@ read_encoder_json(const std::string& path) {
     return table;
 }
 
+// ---------------------------------------------------------------------------
+
 
 ByteVec textToBytes(const std::string& txt) {
     ByteVec bytes;
@@ -99,16 +104,32 @@ ByteVec textToBytes(const std::string& txt) {
             ++i;
         }
         else if ((c & 0xE0) == 0xC0 && i + 1 < txt.size()) {
-            // two-byte sequence: maybe U+0120?
+            // two-byte UTF-8
             uint32_t cp = ((c & 0x1F) << 6) | (static_cast<unsigned char>(txt[i+1]) & 0x3F);
             if (cp == 0x0120) {
                 // U+0120 → single space byte in GPT-2
                 bytes.push_back(static_cast<uint8_t>(' '));
-            }
-            else {
-                throw std::runtime_error("Unsupported UTF-8 codepoint in BPE prefix");
+            } else {
+                // Just append the raw bytes for any other 2-byte UTF-8
+                bytes.push_back(c);
+                bytes.push_back(static_cast<unsigned char>(txt[i+1]));
             }
             i += 2;
+        }
+        else if ((c & 0xF0) == 0xE0 && i + 2 < txt.size()) {
+            // three-byte UTF-8
+            bytes.push_back(c);
+            bytes.push_back(static_cast<unsigned char>(txt[i+1]));
+            bytes.push_back(static_cast<unsigned char>(txt[i+2]));
+            i += 3;
+        }
+        else if ((c & 0xF8) == 0xF0 && i + 3 < txt.size()) {
+            // four-byte UTF-8
+            bytes.push_back(c);
+            bytes.push_back(static_cast<unsigned char>(txt[i+1]));
+            bytes.push_back(static_cast<unsigned char>(txt[i+2]));
+            bytes.push_back(static_cast<unsigned char>(txt[i+3]));
+            i += 4;
         }
         else {
             throw std::runtime_error("Unsupported UTF-8 sequence in BPE token");

@@ -108,6 +108,10 @@ public:
     std::pair<std::vector<Rank>, std::set<std::vector<Rank>>> 
     encodeUnstableNative(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const;
 
+    Rank encodeSingleToken(std::vector<uint8_t>& piece) const;
+
+    
+
     // Decode
     std::optional<ByteVec> decodeBytes(const std::vector<Rank>& tokens) const;
 

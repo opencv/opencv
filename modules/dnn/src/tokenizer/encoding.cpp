@@ -151,53 +151,58 @@ std::vector<Rank> Encoding::encode(const std::string& text,
                                      const std::unordered_set<std::string>& allowedSpecial,
                                      const std::unordered_set<std::string>& disallowedSpecial) const {
     
-    // Determine actual allowed/disallowed sets
+    // 1. Handle "all" for allowed/disallowed (simulate with a special value or overload)
     std::unordered_set<std::string> allowed = allowedSpecial;
     std::unordered_set<std::string> disallowed = disallowedSpecial;
+
+    // If allowedSpecial is "all", allow all special tokens
+    // (You may want to overload or use a different API for this in C++)
+    // Example: if allowedSpecial contains "__ALL__", treat as "all"
+    if (allowed.size() == 1 && allowed.count("__ALL__")) {
+        for (const auto& kv : specialTokens_)
+            allowed.insert(kv.first);
+        allowed.erase("__ALL__");
+    }
+
+    // If disallowedSpecial is "all", disallow all except allowed
+    if (disallowed.size() == 1 && disallowed.count("__ALL__")) {
+        for (const auto& kv : specialTokens_) {
+            if (!allowed.count(kv.first))
+                disallowed.insert(kv.first);
+        }
+        disallowed.erase("__ALL__");
+    }
+
+    // 2. Default: disallow all special tokens if both sets are empty
     if (allowed.empty() && disallowed.empty()) {
-        // Default: disallow all special tokens
-        for (auto& kv : specialTokens_)
+        for (const auto& kv : specialTokens_)
             disallowed.insert(kv.first);
     }
 
-    // check for disallowed special substrings 
-    if (!disallowed.empty()) {
-        std::string pattern;
-        for (auto it=disallowed.begin(); it!=disallowed.end(); ++it) {
-            if (it!=disallowed.begin()) pattern += "|";
-            pattern += escape_regex(*it);
-        }
-        std::regex spec_re(pattern);
-        std::smatch m;
-        if (std::regex_search(text, m, spec_re)) {
-            throw std::invalid_argument("Encountered disallowed special token: " + m.str());
-        }
+    // 3. If disallowed is empty, allow all text (even if it matches a special token)
+    if (disallowed.empty()) {
         return coreBPE_.encode(text, allowed).first;
     }
+
+    // 4. Regex check for disallowed special tokens
+    std::string pattern;
+    for (auto it = disallowed.begin(); it != disallowed.end(); ++it) {
+        if (it != disallowed.begin()) pattern += "|";
+        pattern += escape_regex(*it);
+    }
+    std::regex spec_re(pattern);
+    std::smatch m;
+    if (std::regex_search(text, m, spec_re)) {
+        throw std::invalid_argument("Encountered disallowed special token: " + m.str());
+    }
+
+    // 5. Call core BPE
+    return coreBPE_.encode(text, allowed).first;
 }
 
 
 Rank Encoding:: encodeSingleToken(const std::vector<std::uint8_t>& bytes) const {
-    // TODO: deal with text_or_bytes = text_or_bytes.encode("utf-8") 
-    // how python runs the encode("uft-8). We skip this part for now
-    
-
-    // call directly no need to call python back end since we wont use that
-
-    // try mergeable token lookup
-    auto it = mergeableRanks_.find(bytes);
-    if (it != mergeableRanks_.end()) {
-        return it->second;
-    }
-
-    // try special tokens by UFT-8 string 
-    std::string token_str(bytes.begin(), bytes.end());
-    auto st_it = specialTokens_.find(token_str);
-    if (st_it != specialTokens_.end()) {
-        return st_it->second;
-    }
-    // Not found 
-    throw std::out_of_range("Token not found in mergeable or special token maps");
+    return coreBPE_.encodeSingleToken(const_cast<std::vector<std::uint8_t>&>(bytes));
 }
 
 
@@ -232,11 +237,11 @@ std::string Encoding::decode(const std::vector<Rank>& tokens, const std::string&
     }
 
     // Replace U+0120 (Ġ, "\xC4\xA0") with space
-    size_t pos = 0;
-    while ((pos = result.find("\xC4\xA0", pos)) != std::string::npos) {
-        result.replace(pos, 2, " ");
-        pos += 1;
-    }
+    // size_t pos = 0;
+    // while ((pos = result.find("\xC4\xA0", pos)) != std::string::npos) {
+    //     result.replace(pos, 2, " ");
+    //     pos += 1;
+    // }
     return result;
 }
 
