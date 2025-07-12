@@ -127,7 +127,6 @@
 "test_gru_with_initial_bias", // ---- same as above ---
 "test_identity_opt", //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
-"test_if", // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_if_opt", // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
 "test_if_seq", // Issue::typeProto.has_tensor_type() in function 'dumpValueInfoProto'
 "test_isinf", // Issue::Can't create layer "onnx_node_output_0!y" of type "IsInf" in function 'getLayerInstance'

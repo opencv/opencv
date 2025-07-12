@@ -26,7 +26,6 @@ struct ConstFolding
         size_t nargs = netimpl->args.size();
         netimpl->__tensors__.resize(nargs);
         netimpl->useCounts(usecounts);
-        netimpl->scratchBufs.clear();
         processGraph(netimpl->mainGraph);
         netimpl->scratchBufs.clear();
     }
@@ -46,6 +45,7 @@ struct ConstFolding
 
     bool processGraph(Ptr<Graph>& graph)
     {
+        netimpl->scratchBufs.clear();
         bool modified = false;
         const std::vector<Ptr<Layer> >& prog = graph->prog();
         size_t i, nops = prog.size();
@@ -63,6 +63,7 @@ struct ConstFolding
                     if (processGraph(g))
                         modified = true;
                 }
+                continue;
             }
             const std::vector<Arg>& inputs = layer->inputs;
             const std::vector<Arg>& outputs = layer->outputs;

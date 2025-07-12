@@ -172,6 +172,7 @@ protected:
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantOfShape      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConv                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -468,7 +469,9 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if (attribute_proto.has_g())
             {
-                CV_Error(Error::StsNotImplemented, format("DNN/ONNX/Attribute[%s]: 'Graph' is not supported", attribute_name.c_str()));
+                // CV_Error(Error::StsNotImplemented, format("DNN/ONNX/Attribute[%s]: 'Graph' is not supported", attribute_name.c_str()));
+                continue;
+
             }
             else if (attribute_proto.graphs_size() > 0)
             {
@@ -1488,6 +1491,31 @@ void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseIf(LayerParams& layerParams,
+                            const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Assert(node_proto.input_size() >= 1);
+    layerParams.type = "If";
+
+    addLayer(layerParams, node_proto);
+
+    std::vector<Ptr<Graph> > thenelse(2);
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& attr = node_proto.attribute(i);
+        if (attr.name() == "then_branch" || attr.name() == "else_branch") {
+            opencv_onnx::GraphProto branch = attr.g();
+            Ptr<Graph> graph = parseGraph(&branch, false);
+            thenelse[(int)(attr.name() == "else_branch")] = graph;
+        }
+    }
+
+    CV_Assert_N(!thenelse[0].empty(), !thenelse[1].empty());
+
+    Ptr<Layer>& ifLayer = curr_prog.back();
+    *ifLayer->subgraphs() = thenelse;
+}
+
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
 void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
@@ -2363,6 +2391,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Gather"] = &ONNXImporter2::parseGather;
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
+    dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;

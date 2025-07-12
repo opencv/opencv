@@ -980,6 +980,7 @@ public:
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
+    static std::set<std::string> classic_deny_list;
 #ifdef HAVE_HALIDE
     static std::set<std::string> halide_deny_list;
 #endif
@@ -1058,6 +1059,18 @@ public:
             #include "test_onnx_conformance_layer_filter_opencv_cpu_denylist.inl.hpp"
         };
 
+        EngineType engine_forced =
+            (EngineType)utils::getConfigurationParameterSizeT(
+                "OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+
+        if (engine_forced == ENGINE_CLASSIC) {
+            classic_deny_list = {
+#include "test_onnx_conformance_layer_filter_opencv_classic_denylist.inl.hpp"
+            };
+        } else {
+            classic_deny_list = {};
+        }
+
 #ifdef HAVE_HALIDE
         halide_deny_list = {
             #include "test_onnx_conformance_layer_filter__halide_denylist.inl.hpp"
@@ -1088,6 +1101,7 @@ std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
+std::set<std::string> Test_ONNX_conformance::classic_deny_list;
 #ifdef HAVE_HALIDE
 std::set<std::string> Test_ONNX_conformance::halide_deny_list;
 #endif
@@ -1109,6 +1123,12 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
 
     // SKIP when the test case is in the parser deny list.
     if (parser_deny_list.find(name) != parser_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
+    // SKIP some more if we are in the 'classic engine' mode, where we don't support certain layers.
+    if (classic_deny_list.find(name) != classic_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
