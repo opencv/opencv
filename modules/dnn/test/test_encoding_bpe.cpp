@@ -104,6 +104,29 @@ TEST(EncodingBPE, TrainAndEncodeDecode_Simple) {
 }
 
 
+TEST(EncodingBPE, TrainOnTaylorSwiftAndEncodeDecode) {
+    std::string gpt2_pattern =
+        "'s|'t|'re|'ve|'m|'ll|'d| ?[\\p{L}]+| ?[\\p{N}]+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+";
+
+    // Read the Taylor Swift Wikipedia article as training data
+    std::ifstream f("../modules/dnn/src/tokenizer/taylorswift.txt");
+    ASSERT_TRUE(f.is_open());
+    std::stringstream buffer;
+    buffer << f.rdbuf();
+    std::string data = buffer.str();
+
+    int vocab_size = 512;
+    Encoding enc(data, vocab_size, gpt2_pattern);
+
+    std::string test_str = "hello world";
+    std::vector<Rank> tokens = enc.encode(test_str);
+    std::string decoded = enc.decode(tokens);
+
+    EXPECT_EQ(decoded, test_str);
+}
+
+
+
 
 
 }}
