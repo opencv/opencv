@@ -68,6 +68,7 @@ WebPDecoder::WebPDecoder()
     fs_size = 0;
     m_has_animation = false;
     m_previous_timestamp = 0;
+    m_metadata_reading_flag = 1;
 }
 
 WebPDecoder::~WebPDecoder() {}

@@ -56,7 +56,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
     m_use_rgb = false;
     m_frame_count = 1;
-    m_metadata_reading_flag = 1;
+    m_metadata_reading_flag = 0;
     m_metadata.resize(IMAGE_METADATA_MAX + 1);
 }
 
@@ -123,6 +123,13 @@ int BaseImageDecoder::setScale( const int& scale_denom )
 {
     int temp = m_scale_denom;
     m_scale_denom = scale_denom;
+    return temp;
+}
+
+int BaseImageDecoder::setMetadataReadingFlag(int flag)
+{
+    int temp = m_metadata_reading_flag;
+    m_metadata_reading_flag = flag;
     return temp;
 }
 
