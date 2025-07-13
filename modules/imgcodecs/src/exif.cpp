@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "exif.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace {
 
@@ -145,9 +146,9 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
 
     // ImageMagick formats 'raw profiles' as
     // '\n<name>\n<length>(%8lu)\n<hex payload>\n'.
+    CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
     if (*src != '\n') {
-        fprintf(stderr, "Malformed raw profile, expected '\\n' got '\\x%.2X'\n",
-            *src);
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
         return false;
     }
     ++src;
@@ -155,8 +156,7 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
     while (*src != '\0' && *src++ != '\n') {}
     expected_length = static_cast<int>(strtol(src, &end, 10));
     if (*end != '\n') {
-        fprintf(stderr, "Malformed raw profile, expected '\\n' got '\\x%.2X'\n",
-            *end);
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
         return false;
     }
     ++end;
