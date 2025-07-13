@@ -403,7 +403,7 @@ TEST(Imgcodecs_Png, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
-TEST(Imgcodecs_Png, ReadWriteWithText) // still experimental
+TEST(Imgcodecs_Png, ReadWriteWithText)
 {
     static const uchar exif_data[] = {
         'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
@@ -452,7 +452,7 @@ TEST(Imgcodecs_Png, ReadWriteWithText) // still experimental
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
-    EXPECT_GE(read_metadata_types.size(), 2u);
+    EXPECT_EQ(read_metadata_types.size(), 2u);
     EXPECT_EQ(read_metadata, read_metadata2);
     EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
     EXPECT_EQ(read_metadata_types[1], IMAGE_METADATA_TEXT);
@@ -462,27 +462,38 @@ TEST(Imgcodecs_Png, ReadWriteWithText) // still experimental
     remove(outputname.c_str());
 }
 
-TEST(Imgcodecs_Png, ReadExifFromText)  // still experimental
+TEST(Imgcodecs_Png, ReadExifFromText)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "../perf/320x260.png";
     const string dst_file = cv::tempfile(".png");
 
-    std::vector<std::vector<uchar> > exif_data =
-    {
+    std::vector<uchar> exif_data =
     { 'M' , 'M' , 0, '*' , 0, 0, 0, 8, 0, 4, 1,
         26, 0, 5, 0, 0, 0, 1, 0, 0, 0, 62, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
         70, 1, 40, 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 1, 49, 0, 2, 0, 0, 0, 18, 0,
         0, 0, 78, 0, 0, 0, 0, 0, 0, 0, 96, 0, 0, 0, 1, 0, 0, 0, 96, 0, 0, 0,
-        1, 80, 97, 105, 110, 116, 46, 78, 69, 84, 32, 118, 51, 46, 53, 46, 49, 48, 0 }
+        1, 80, 97, 105, 110, 116, 46, 78, 69, 84, 32, 118, 51, 46, 53, 46, 49, 48, 0
     };
 
+    std::vector<uchar> texts_data =
+    { 'd', 'a', 't', 'e', ':', 'c', 'r', 'e', 'a', 't', 'e', 0, '2', '0', '1', '2',
+        '-', '0', '9', '-', '0', '3', 'T', '1', '6', ':', '3', '8', ':', '0', '9', '+',
+        '0', '4', ':', '0', '0', 0, 'd', 'a', 't', 'e', ':', 'm', 'o', 'd', 'i', 'f', 'y',
+        0, '2', '0', '1', '2', '-', '0', '9', '-', '0', '3','T', '1','6', ':', '3', '8',
+        ':', '0', '9', '+', '0', '4', ':', '0', '0', 0, 'j', 'p', 'e', 'g', ':', 'c', 'o',
+        'l', 'o', 'r', 's','p', 'a', 'c', 'e', 0, '2', 0, 'j', 'p', 'e', 'g', ':', 's', 'a',
+        'm', 'p', 'l', 'i', 'n', 'g', '-', 'f', 'a', 'c', 't', 'o', 'r', 0, '2', 'x', '2',
+        ',', '1', 'x', '1', ',', '1', 'x', '1', 0
+    };
     std::vector<int> read_metadata_types;
     std::vector<std::vector<uchar> > read_metadata;
     Mat img = imreadWithMetadata(filename, read_metadata_types, read_metadata, IMREAD_GRAYSCALE);
 
-    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF };
-    EXPECT_EQ(read_metadata, exif_data);
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_TEXT };
+    EXPECT_EQ(read_metadata_types, metadata_types);
+    EXPECT_EQ(read_metadata[0], exif_data);
+    EXPECT_EQ(read_metadata[1], texts_data);
 }
 
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
