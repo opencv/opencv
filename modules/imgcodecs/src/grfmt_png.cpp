@@ -679,6 +679,7 @@ bool  PngDecoder::readData( Mat& img )
                 m_exif.parseExif(exif, num_exif);
             }
 #endif
+
             result = true;
         }
     }

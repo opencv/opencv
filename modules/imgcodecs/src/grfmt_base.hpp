@@ -112,9 +112,13 @@ public:
     int setScale(const int& scale_denom);
 
     /**
-     * @brief
-     * @param
-     * @return
+     * @brief Enable or disable metadata reading during image decoding.
+     *
+     * This function sets an internal flag that controls whether metadata (such as XMP, ICC, or text chunks)
+     * should be read and stored during image decoding operations.
+     *
+     * @param flag Non-zero to enable metadata reading, 0 to disable it.
+     * @return Previous value of the metadata reading flag.
      */
     int setMetadataReadingFlag(int flag);
 
