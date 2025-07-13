@@ -23,7 +23,6 @@ TEST(EncodingBPE, EncodingDecode_GPT2) {
     EXPECT_EQ(sent, expected);
 }
 
-
 TEST(EncodingBPE, EncodeWithAllowedSpecial_ALL) {
     Encoding enc = getEncodingForGPT2("gpr2");
     // "__ALL__" is  sentinel for all special tokens
@@ -70,8 +69,6 @@ TEST(EncodingBPE, CatastrophicallyRepetitive_GPT2) {
     }
 }
 
-
-
 TEST(EncodingBPE, TrainAndEncodeDecode_Simple) {
     // Pattern string (same as your Python example)
     std::string gpt2_pattern = 
@@ -86,6 +83,12 @@ TEST(EncodingBPE, TrainAndEncodeDecode_Simple) {
 
     // Train encoding
     int vocab_size = 600;
+    // When calling this constructor to create an Encoding 
+    // internally it calls the train_bpe(text, vocabSize, /*verbose=*/false)
+    // For now this is how we call an Encoder to train the tokenizer bpe.
+    // TODO:
+    // Might be more helpful to just create a default Encoder than call 
+    // the a train function such as Encoding enc() then enc.train_bpe();
     Encoding enc(data, vocab_size, gpt2_pattern);
 
     // Encode and decode "hello world"
@@ -126,7 +129,97 @@ TEST(EncodingBPE, TrainOnTaylorSwiftAndEncodeDecode) {
 }
 
 
+TEST(EncodingBPE, TrainHuggingFaceStyle) {
+    std::unordered_map<std::string, int> word_counts = {
+        {"roses", 1},
+        {"are", 2},
+        {"red", 1},
+        {"voilets", 1},
+        {"blue", 1},
+        {"BERT", 1},
+        {"is", 2},
+        {"big", 1},
+        {"and", 1},
+        {"so", 1},
+        {"GPT-2", 1},
+    };
+    std::vector<std::string> words;
+    for (const auto& kv : word_counts) {
+        for (int i = 0; i < kv.second; ++i)
+            words.push_back(kv.first);
+    }
 
+    Encoding enc(words, 30, R50K_UTF8, 2, std::numeric_limits<int>::max(), true);
 
+    std::unordered_map<std::string, int> expected_vocab = {
+        {"-", 0}, {"2", 1}, {"B", 2}, {"E", 3}, {"G", 4}, {"P", 5}, {"R", 6},
+        {"T", 7}, {"a", 8}, {"b", 9}, {"d", 10}, {"e", 11}, {"g", 12},
+        {"i", 13}, {"l", 14}, {"n", 15}, {"o", 16}, {"r", 17}, {"s", 18},
+        {"t", 19}, {"u", 20}, {"v", 21}, {"re", 22}, {"are", 23}, {"is", 24}
+    };
+
+    std::unordered_map<std::string, int> actual_vocab;
+    for (const auto& kv : enc.getVocab()) {
+        std::string s(kv.second.begin(), kv.second.end());
+        actual_vocab[s] = kv.first;
+    }
+    EXPECT_EQ(actual_vocab, expected_vocab);
+
+    std::map<std::pair<int,int>, int> expected_merges = {
+        {{17, 11}, 22}, // 'r' + 'e'  -> 're'
+        {{8, 22}, 23},  // 'a' + 're' -> 'are'
+        {{13, 18}, 24}, // 'i' + 's'  -> 'is'
+    };
+
+    // 6. Check merges
+    const auto& merges = enc.getMerges();
+    for (const auto& kv : expected_merges) {
+        auto it = merges.find(kv.first);
+        ASSERT_TRUE(it != merges.end());
+        EXPECT_EQ(it->second, kv.second);
+    }
+}
+
+TEST(EncodingBPE, MaxTokenLengthDirectAssert) {
+    std::unordered_map<std::string, int> word_counts = {
+        {"sin", 2},
+        {"Sin", 2},
+        {"Lon", 2},
+        {"Ano", 2},
+        {"짧은한", 2},
+        {"긴한글", 2},
+        {"短字符", 2},
+        {"长字符", 2},
+        {"短い文", 2},
+        {"長い文", 2},
+        {"so", 2},
+        {"GP", 2},
+    };
+    std::vector<std::string> words;
+    for (const auto& kv : word_counts) {
+        for (int i = 0; i < kv.second; ++i)
+            words.push_back(kv.first);
+    }
+
+    int vocab_size = 40;
+    int min_freq = 0;
+
+    Encoding enc(words, vocab_size, CL100K_BASE, min_freq, 2, true);
+
+    std::unordered_map<std::string, int> expected_vocab = {
+        {"短", 12}, {"n", 6}, {"i", 5}, {"s", 8}, {"字符", 23}, {"長", 14}, {"긴", 17},
+        {"い文", 22}, {"L", 2}, {"in", 21}, {"o", 7}, {"은한", 29}, {"S", 4}, {"P", 3},
+        {"so", 27}, {"符", 13}, {"文", 11}, {"字", 10}, {"짧", 19}, {"GP", 25}, {"글", 16},
+        {"G", 1}, {"An", 24}, {"长", 15}, {"A", 0}, {"Lo", 26}, {"긴한", 28}, {"い", 9},
+        {"한", 20}, {"은", 18},
+    };
+
+    std::unordered_map<std::string, int> actual_vocab;
+    for (const auto& kv : enc.getVocab()) {
+        std::string s(kv.second.begin(), kv.second.end());
+        actual_vocab[s] = kv.first;
+    }
+    EXPECT_EQ(actual_vocab, expected_vocab);
+}
 
 }}
