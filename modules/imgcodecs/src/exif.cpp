@@ -146,7 +146,6 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
 
     // ImageMagick formats 'raw profiles' as
     // '\n<name>\n<length>(%8lu)\n<hex payload>\n'.
-    CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
     if (*src != '\n') {
         CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
         return false;
