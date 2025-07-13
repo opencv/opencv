@@ -423,7 +423,7 @@ TEST(Imgcodecs_Png, ReadWriteWithText) // still experimental
     static const uchar text_data[] = {
         'S', 'o', 'f', 't', 'w', 'a', 'r', 'e',0,'O', 'p', 'e', 'n', 'C', 'V', 0, 'C', 'o', 'm', 'm', 'e', 'n', 't', 0,
         'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-','b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ',
-         'w', 'i', 't', 'h', ' ', 'm','e', 't', 'a', 'd', 'a', 't', 'a'
+         'w', 'i', 't', 'h', ' ', 'm','e', 't', 'a', 'd', 'a', 't', 'a', 0
     };
 
     int png_compression = 3;
@@ -452,11 +452,13 @@ TEST(Imgcodecs_Png, ReadWriteWithText) // still experimental
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
-    EXPECT_GE(read_metadata_types.size(), 1u);
+    EXPECT_GE(read_metadata_types.size(), 2u);
     EXPECT_EQ(read_metadata, read_metadata2);
     EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
+    EXPECT_EQ(read_metadata_types[1], IMAGE_METADATA_TEXT);
     EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
     EXPECT_EQ(read_metadata[0], metadata[0]);
+    EXPECT_EQ(read_metadata[1], metadata[1]);
     remove(outputname.c_str());
 }
 

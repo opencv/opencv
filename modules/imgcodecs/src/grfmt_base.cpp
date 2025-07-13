@@ -57,6 +57,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_use_rgb = false;
     m_frame_count = 1;
     m_metadata_reading_flag = 1;
+    m_metadata.resize(IMAGE_METADATA_MAX + 1);
 }
 
 bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
@@ -73,6 +74,14 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
         if (!exif.empty()) {
             Mat exifmat(1, (int)exif.size(), CV_8U, (void*)exif.data());
             return exifmat;
+        }
+    }
+
+    if (type == IMAGE_METADATA_TEXT) {
+        const std::vector<unsigned char>& texts = m_metadata[IMAGE_METADATA_TEXT];
+        if (!texts.empty()) {
+            Mat textsmat(1, (int)texts.size(), CV_8U, (void*)texts.data());
+            return textsmat;
         }
     }
     return Mat();

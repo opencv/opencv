@@ -174,6 +174,7 @@ protected:
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
     Animation m_animation;
     int m_metadata_reading_flag;
+    std::vector<std::vector<unsigned char> > m_metadata; // see IMAGE_METADATA_...
 };
 
 

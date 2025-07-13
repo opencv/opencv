@@ -632,9 +632,18 @@ bool  PngDecoder::readData( Mat& img )
                 png_get_text(m_png_ptr, m_end_info, &text_ptr2, &num_text2);
 
                 for (int i = 0; i < num_text1; i++) {
+                    const char* key = text_ptr1[i].key;
+                    const char* value = text_ptr1[i].text;
+                    int length = text_ptr1[i].text_length;
+
                     std::vector<unsigned char> exif_data;
-                    if (!strcmp(text_ptr1[i].key, "Raw profile type exif")) {
-                        m_exif.processRawProfile(text_ptr1[i].text, text_ptr1[i].text_length);
+                    if (!strcmp(key, "Raw profile type exif")) {
+                        m_exif.processRawProfile(value, length);
+                    }
+                    else
+                    {
+                        m_metadata[IMAGE_METADATA_TEXT].insert(m_metadata[IMAGE_METADATA_TEXT].end(), key, key + strlen(key) + 1);
+                        m_metadata[IMAGE_METADATA_TEXT].insert(m_metadata[IMAGE_METADATA_TEXT].end(), value, value + strlen(value) + 1);
                     }
                 }
 
