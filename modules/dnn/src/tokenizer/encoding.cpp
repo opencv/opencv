@@ -142,6 +142,192 @@ void Encoding::train_bpe(const std::string& text, int vocabSize, bool verbose) {
     }
 }
 
+
+void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int vocabSize, int minFreq,  int max_token_length, bool verbose) {
+    std::unordered_map<std::string, int> word_to_id;
+    std::vector<std::string> id_to_word;
+    int next_id = 0;
+    for (const auto& kv : specialTokens_) {
+        word_to_id[kv.first] = next_id++;
+        id_to_word.push_back(kv.first);
+    }
+
+    // 2. Compute initial alphabet
+    // std::unordered_set<uint8_t> alphabet;
+    std::unordered_map<std::string, int> word_counts;
+    // for (const auto& text : texts) {
+    //     word_counts[text]++;
+    //     for (unsigned char c : text) alphabet.insert(c);
+    // }
+    // std::vector<uint8_t> sorted_alphabet(alphabet.begin(), alphabet.end());
+    // std::sort(sorted_alphabet.begin(), sorted_alphabet.end());
+    // for (uint8_t c : sorted_alphabet) {
+    //     std::string s(1, c);
+    //     if (word_to_id.count(s) == 0) {
+    //         word_to_id[s] = next_id++;
+    //         id_to_word.push_back(s);
+    //     }
+    // }
+    std::unordered_set<std::string> alphabet;
+    for (const auto& text : texts) {
+        word_counts[text]++;
+        // Split text into Unicode codepoints
+        std::vector<uint32_t> cps = unicode_cpts_from_utf8(text);
+        for (uint32_t cp : cps) {
+            std::string utf8 = unicode_cpt_to_utf8(cp);
+            alphabet.insert(utf8);
+        }
+    }
+    // std::vector<std::string> sorted_alphabet(alphabet.begin(), alphabet.end());
+    // std::sort(sorted_alphabet.begin(), sorted_alphabet.end());
+    std::vector<std::string> sorted_alphabet(alphabet.begin(), alphabet.end());
+    std::sort(sorted_alphabet.begin(), sorted_alphabet.end(), [](const std::string& a, const std::string& b) {
+        uint32_t ca = unicode_cpts_from_utf8(a)[0];
+        uint32_t cb = unicode_cpts_from_utf8(b)[0];
+        return ca < cb;
+    });
+    for (const std::string& s : sorted_alphabet) {
+        if (word_to_id.count(s) == 0) {
+            word_to_id[s] = next_id++;
+            id_to_word.push_back(s);
+        }
+    }
+
+    // Tokenize words (each word as vector of token ids)
+    std::vector<std::vector<int>> words;
+    std::vector<int> counts;
+    // for (const auto& kv : word_counts) {
+    //     std::vector<int> ids;
+    //     for (unsigned char c : kv.first) {
+    //         ids.push_back(word_to_id[std::string(1, c)]);
+    //     }
+    //     words.push_back(ids);
+    //     counts.push_back(kv.second);
+    // }
+    for (const auto& kv : word_counts) {
+        std::vector<int> ids;
+        std::vector<uint32_t> cps = unicode_cpts_from_utf8(kv.first);
+        for (uint32_t cp : cps) {
+            std::string utf8 = unicode_cpt_to_utf8(cp);
+            ids.push_back(word_to_id[utf8]);
+        }
+        words.push_back(ids);
+        counts.push_back(kv.second);
+    }
+
+    // Count pairs
+    using Pair = std::pair<int, int>;
+    std::map<Pair, int> pair_counts;
+    std::map<Pair, std::unordered_set<int>> where_to_update;
+    for (int i = 0; i < words.size(); ++i) {
+        const auto& ids = words[i];
+        for (int j = 0; j + 1 < ids.size(); ++j) {
+            Pair p = {ids[j], ids[j+1]};
+            pair_counts[p] += counts[i];
+            where_to_update[p].insert(i);
+        }
+    }
+
+    // Merge loop
+    struct Merge {
+        Pair pair;
+        int count;
+        int pos;
+        bool operator<(const Merge& other) const { 
+            if (count != other.count)
+                return count < other.count; // higher count first
+            return pair > other.pair; //lex smallest first (priority_queue is max-heap)
+        }
+    };
+    std::priority_queue<Merge> queue;
+    for (const auto& kv : pair_counts) {
+        if (kv.second > 0) {
+            queue.push(Merge{kv.first, kv.second, 0});
+        }
+    }
+
+    std::vector<std::pair<Pair, int>> merges;
+    while (word_to_id.size() < vocabSize && !queue.empty()) {
+        Merge top = queue.top(); queue.pop();
+        if (top.count < minFreq) break;
+        // Build new token
+        std::string new_token = id_to_word[top.pair.first] + id_to_word[top.pair.second];
+         // --- ADD THIS BLOCK ---
+        // std::vector<uint32_t> cps = unicode_cpts_from_utf8(new_token);
+        // if (cps.size() > max_token_length) {
+        //     continue; // skip this merge
+        // }
+        int new_token_id = next_id++;
+        id_to_word.push_back(new_token);
+        word_to_id[new_token] = new_token_id;
+        merges.push_back({top.pair, new_token_id});
+
+        // Merge in all words
+        for (int idx : where_to_update[top.pair]) {
+            auto& ids = words[idx];
+            std::vector<int> new_ids;
+            for (int j = 0; j < ids.size(); ) {
+                if (j + 1 < ids.size() && ids[j] == top.pair.first && ids[j+1] == top.pair.second) {
+                    new_ids.push_back(new_token_id);
+                    j += 2;
+                } else {
+                    new_ids.push_back(ids[j]);
+                    j += 1;
+                }
+            }
+            ids = std::move(new_ids);
+        }
+        // Re-count pairs 
+        pair_counts.clear();
+        where_to_update.clear();
+        for (int i = 0; i < words.size(); ++i) {
+            const auto& ids = words[i];
+            for (int j = 0; j + 1 < ids.size(); ++j) {
+                Pair p = {ids[j], ids[j+1]};
+                pair_counts[p] += counts[i];
+                where_to_update[p].insert(i);
+            }
+        }
+        // Rebuild queue
+        queue = std::priority_queue<Merge>();
+        for (const auto& kv : pair_counts) {
+            if (kv.second > 0) {
+                queue.push(Merge{kv.first, kv.second, 0});
+            }
+        }
+        if (verbose) {
+            std::cout << "Merge " << (word_to_id.size() - id_to_word.size() + merges.size())
+                    << "/" << (vocabSize - (int)id_to_word.size())
+                    << ": (" << top.pair.first << "," << top.pair.second << ") -> " << new_token_id
+                    << " freq=" << top.count << "\n";
+        }
+    }
+
+    vocab_.clear();
+    merges_.clear();
+
+    // Build vocab_: map token id to its byte sequence
+    for (int id = 0; id < (int)id_to_word.size(); ++id) {
+        const std::string& token_str = id_to_word[id];
+        std::vector<uint8_t> bytes(token_str.begin(), token_str.end());
+        vocab_[id] = std::move(bytes);
+    }
+
+    // Build merges_: map pair (token id, token id) -> new token id
+    for (const auto& merge : merges) {
+        merges_[merge.first] = merge.second;
+    }
+
+    // mergeableRanks_: map ByteVec -> token id
+    mergeableRanks_.clear();
+    for (int id = 0; id < (int)id_to_word.size(); ++id) {
+        ByteVec bv(id_to_word[id].begin(), id_to_word[id].end());
+        mergeableRanks_[bv] = static_cast<Rank>(id);
+    }
+    
+    coreBPE_ = CoreBPE(mergeableRanks_, specialTokens_, patStr_);
+}
+
 std::vector<Rank> Encoding::encodeOrdinary(const std::string& text) const {
     return coreBPE_.encodeOrdinary(text);
 }
@@ -164,7 +350,6 @@ std::vector<Rank> Encoding::encode(const std::string& text,
         allowed.erase("__ALL__");
     }
 
-    // If disallowedSpecial is "all", disallow all except allowed
     if (disallowed.size() == 1 && disallowed.count("__ALL__")) {
         for (const auto& kv : specialTokens_) {
             if (!allowed.count(kv.first))
@@ -173,18 +358,18 @@ std::vector<Rank> Encoding::encode(const std::string& text,
         disallowed.erase("__ALL__");
     }
 
-    // 2. Default: disallow all special tokens if both sets are empty
+    // disallow all special tokens if both sets are empty
     if (allowed.empty() && disallowed.empty()) {
         for (const auto& kv : specialTokens_)
             disallowed.insert(kv.first);
     }
 
-    // 3. If disallowed is empty, allow all text (even if it matches a special token)
+    // If disallowed is empty, allow all text (even if it matches a special token)
     if (disallowed.empty()) {
         return coreBPE_.encode(text, allowed).first;
     }
 
-    // 4. Regex check for disallowed special tokens
+    //  Regex check for disallowed special tokens
     std::string pattern;
     for (auto it = disallowed.begin(); it != disallowed.end(); ++it) {
         if (it != disallowed.begin()) pattern += "|";
@@ -195,8 +380,7 @@ std::vector<Rank> Encoding::encode(const std::string& text,
     if (std::regex_search(text, m, spec_re)) {
         throw std::invalid_argument("Encountered disallowed special token: " + m.str());
     }
-
-    // 5. Call core BPE
+    
     return coreBPE_.encode(text, allowed).first;
 }
 

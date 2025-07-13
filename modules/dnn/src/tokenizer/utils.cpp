@@ -67,8 +67,7 @@ std::string unescape_json(const std::string& s) {
 }
 
 /* Return mapping: token string (raw bytes)  -> rank */
-std::unordered_map<std::string,int>
-read_encoder_json(const std::string& path) {
+std::unordered_map<std::string,int> read_encoder_json(const std::string& path) {
     std::ifstream ifs(path, std::ios::binary);
     if (!ifs) throw std::runtime_error("cannot open " + path);
 

@@ -16,6 +16,7 @@
 #include <map>
 #include <fstream>
 #include <sstream>
+#include <queue>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -38,7 +39,17 @@ public:
         coreBPE_ = CoreBPE(mergeableRanks_, specialTokens_, patStr_);
     }
 
+    CV_EXPORTS Encoding(const std::vector<std::string>& texts, int vocabSize, const std::string& patStr, int minFreq=2, int max_token_length=std::numeric_limits<int>::max(), bool verbose=false)
+        : name_("trained_encoding_hugface"),
+           patStr_(patStr),
+           mergeableRanks_(),
+           specialTokens_() {
+        train_bpe_hugface(texts, vocabSize, minFreq, max_token_length, verbose);
+    }
+
     CV_EXPORTS void train_bpe(const std::string& text, int vocabSize, bool verbose=false);
+    CV_EXPORTS void train_bpe_hugface(const std::vector<std::string>& texts, int vocabSize, int minFreq,  
+                                      int max_token_length=std::numeric_limits<int>::max(), bool verbose=false);
 
     /* --------------------- Encoding ----------------------------------*/
     CV_WRAP std::vector<Rank> encodeOrdinary(const std::string& text) const;
@@ -107,6 +118,10 @@ public:
     void save();
     void load();
 
+    // Accessors 
+    const std::map<std::pair<int,int>, int>& getMerges() const { return merges_; }
+    const std::map<int, std::vector<uint8_t>>& getVocab() const { return vocab_; }
+
 private:
     std::string name_;
     std::string patStr_;
@@ -136,6 +151,8 @@ private:
 // GPT2 for Testing this function should be moved into registry later
 // Or, to have it as a std::string:
 static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
+// GPT-4’s cl100k_base split pattern
+static const std::string CL100K_BASE = R"CL100K('(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}++|\p{N}{1,3}+| ?[^\s\p{L}\p{N}]++[\r\n]*+|\s++$|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
 
 std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
