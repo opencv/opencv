@@ -72,7 +72,8 @@ TEST_P(Exif, exif_orientation)
     img = imreadWithMetadata(outputname, metadata_types2, metadata2, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
     remove(outputname.c_str());
 
-    EXPECT_EQ(metadata_types1, metadata_types2);
+    std::vector<int> expected_metadata_types = { IMAGE_METADATA_EXIF };
+    EXPECT_EQ(expected_metadata_types, metadata_types2);
     EXPECT_EQ(metadata1[0], metadata2[0]);
 
     // Refer to the note in the explanation above.

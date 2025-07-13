@@ -634,7 +634,7 @@ bool  PngDecoder::readData( Mat& img )
                 for (int i = 0; i < num_text1; i++) {
                     const char* key = text_ptr1[i].key;
                     const char* value = text_ptr1[i].text;
-                    int length = text_ptr1[i].text_length;
+                    size_t length = text_ptr1[i].text_length;
 
                     std::vector<unsigned char> exif_data;
                     if (!strcmp(key, "Raw profile type exif")) {
@@ -650,7 +650,7 @@ bool  PngDecoder::readData( Mat& img )
                 for (int i = 0; i < num_text2; i++) {
                     const char* key = text_ptr2[i].key;
                     const char* value = text_ptr2[i].text;
-                    int length = text_ptr2[i].text_length;
+                    size_t length = text_ptr2[i].text_length;
 
                     std::vector<unsigned char> exif_data;
                     if (!strcmp(key, "Raw profile type exif")) {
