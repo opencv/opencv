@@ -153,21 +153,7 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
     }
 
     // 2. Compute initial alphabet
-    // std::unordered_set<uint8_t> alphabet;
     std::unordered_map<std::string, int> word_counts;
-    // for (const auto& text : texts) {
-    //     word_counts[text]++;
-    //     for (unsigned char c : text) alphabet.insert(c);
-    // }
-    // std::vector<uint8_t> sorted_alphabet(alphabet.begin(), alphabet.end());
-    // std::sort(sorted_alphabet.begin(), sorted_alphabet.end());
-    // for (uint8_t c : sorted_alphabet) {
-    //     std::string s(1, c);
-    //     if (word_to_id.count(s) == 0) {
-    //         word_to_id[s] = next_id++;
-    //         id_to_word.push_back(s);
-    //     }
-    // }
     std::unordered_set<std::string> alphabet;
     for (const auto& text : texts) {
         word_counts[text]++;
@@ -178,8 +164,7 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
             alphabet.insert(utf8);
         }
     }
-    // std::vector<std::string> sorted_alphabet(alphabet.begin(), alphabet.end());
-    // std::sort(sorted_alphabet.begin(), sorted_alphabet.end());
+
     std::vector<std::string> sorted_alphabet(alphabet.begin(), alphabet.end());
     std::sort(sorted_alphabet.begin(), sorted_alphabet.end(), [](const std::string& a, const std::string& b) {
         uint32_t ca = unicode_cpts_from_utf8(a)[0];
@@ -196,14 +181,6 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
     // Tokenize words (each word as vector of token ids)
     std::vector<std::vector<int>> words;
     std::vector<int> counts;
-    // for (const auto& kv : word_counts) {
-    //     std::vector<int> ids;
-    //     for (unsigned char c : kv.first) {
-    //         ids.push_back(word_to_id[std::string(1, c)]);
-    //     }
-    //     words.push_back(ids);
-    //     counts.push_back(kv.second);
-    // }
     for (const auto& kv : word_counts) {
         std::vector<int> ids;
         std::vector<uint32_t> cps = unicode_cpts_from_utf8(kv.first);
@@ -252,11 +229,10 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
         if (top.count < minFreq) break;
         // Build new token
         std::string new_token = id_to_word[top.pair.first] + id_to_word[top.pair.second];
-         // --- ADD THIS BLOCK ---
-        // std::vector<uint32_t> cps = unicode_cpts_from_utf8(new_token);
-        // if (cps.size() > max_token_length) {
-        //     continue; // skip this merge
-        // }
+        std::vector<uint32_t> cps = unicode_cpts_from_utf8(new_token);
+        if (cps.size() > max_token_length) {
+            continue; // skip this merge
+        }
         int new_token_id = next_id++;
         id_to_word.push_back(new_token);
         word_to_id[new_token] = new_token_id;
