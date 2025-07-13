@@ -9,6 +9,7 @@
 #include <functional>
 #include <variant>
 #include <any>
+#include <map>
 
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
@@ -16,14 +17,18 @@
 #include <libcamera/property_ids.h>
 #include <libcamera/transform.h>
 #include <mutex>
-
-
+#include <opencv2/core/mat.hpp>
 
 #include "cap_interface.hpp"
 
 namespace cv
 {
-
+    // Forward declarations
+    class LibcameraApp;
+    struct CompletedRequest;
+    using CompletedRequestPtr = std::shared_ptr<CompletedRequest>;
+    
+    // Enumerations for camera settings
     enum Exposure_Modes
     {
         EXPOSURE_NORMAL = libcamera::controls::ExposureNormal,
@@ -74,6 +79,7 @@ namespace cv
             verbose = false;
             transform = libcamera::Transform::Identity;
             camera = 0;
+            buffer_count = 4;
         }
 
         ~Options() {}
@@ -109,6 +115,7 @@ namespace cv
         std::string denoise;
         std::string info_text;
         unsigned int camera;
+        unsigned int buffer_count;  // Number of buffers to allocate per stream
 
     protected:
         int metering_index;
@@ -117,10 +124,25 @@ namespace cv
 
     private:
     };
+
     class LibcameraCapture;
     
-    struct CompletedRequest;
-    using CompletedRequestPtr = std::unique_ptr<CompletedRequest, std::function<void(CompletedRequest*)>>;
+    class LibcameraFrameAllocator : public cv::MatAllocator
+    {
+    private:
+        LibcameraApp* app_;                          // 指向App实例，用于归还请求
+        mutable libcamera::Request* request_to_recycle_; // 需要回收的请求（mutable允许在const方法中修改）
+        
+    public:
+        LibcameraFrameAllocator(LibcameraApp* app, libcamera::Request* request);
+        virtual ~LibcameraFrameAllocator();
+        
+        // MatAllocator interface
+        cv::UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step, 
+                               cv::AccessFlag flags, cv::UMatUsageFlags usageFlags) const override;
+        bool allocate(cv::UMatData* data, cv::AccessFlag accessFlags, cv::UMatUsageFlags usageFlags) const override;
+        void deallocate(cv::UMatData* data) const override;
+    };
 
     namespace controls = libcamera::controls;
     namespace properties = libcamera::properties;
@@ -173,7 +195,7 @@ namespace cv
         static constexpr unsigned int FLAG_VIDEO_RAW = 1;              // request raw image stream
         static constexpr unsigned int FLAG_VIDEO_JPEG_COLOURSPACE = 2; // force JPEG colour space
 
-        LibcameraApp(std::unique_ptr<Options> const opts = nullptr);
+        LibcameraApp(std::unique_ptr<Options> opts = nullptr);
         virtual ~LibcameraApp();
 
         Options *GetOptions() const { return options_.get(); }
@@ -193,6 +215,15 @@ namespace cv
         
         // 按需模式：手动提交一个请求
         bool submitSingleRequest();
+        
+        // 按需模式：手动归还请求到队列
+        void returnRequestToQueue(libcamera::Request* request);
+        
+        // 获取当前空闲请求数量
+        size_t getFreeRequestsCount() const;
+        
+        // 请求回收：将已使用的请求重新提交给libcamera
+        void recycleRequest(libcamera::Request* request);
 
         void ApplyRoiSettings();
 
@@ -289,7 +320,7 @@ namespace cv
         std::mutex completed_requests_mutex_;
         std::set<CompletedRequest *> active_requests_;  // 重命名：活跃请求集合
         bool camera_started_ = false;
-        std::mutex camera_stop_mutex_;
+        mutable std::mutex camera_stop_mutex_;
         MessageQueue<Msg> msg_queue_;
         // For setting camera controls.
         std::mutex control_mutex_;
@@ -306,13 +337,13 @@ namespace cv
 
         Metadata(Metadata const &other)
         {
-            std::scoped_lock other_lock(other.mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
             data_ = other.data_;
         }
 
         Metadata(Metadata &&other)
         {
-            std::scoped_lock other_lock(other.mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
             data_ = std::move(other.data_);
             other.data_.clear();
         }
@@ -320,7 +351,7 @@ namespace cv
         template <typename T>
         void Set(std::string const &tag, T &&value)
         {
-            std::scoped_lock lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
             data_.insert_or_assign(tag, std::forward<T>(value));
         }
 
@@ -343,14 +374,16 @@ namespace cv
 
         Metadata &operator=(Metadata const &other)
         {
-            std::scoped_lock lock(mutex_, other.mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
             data_ = other.data_;
             return *this;
         }
 
         Metadata &operator=(Metadata &&other)
         {
-            std::scoped_lock lock(mutex_, other.mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
             data_ = std::move(other.data_);
             other.data_.clear();
             return *this;
@@ -358,8 +391,13 @@ namespace cv
 
         void Merge(Metadata &other)
         {
-            std::scoped_lock lock(mutex_, other.mutex_);
-            data_.merge(other.data_);
+            std::lock_guard<std::mutex> lock(mutex_);
+            std::lock_guard<std::mutex> other_lock(other.mutex_);
+            // 手动合并，因为 C++14 没有 merge
+            for (auto& pair : other.data_) {
+                data_[pair.first] = std::move(pair.second);
+            }
+            other.data_.clear();
         }
 
         template <typename T>
@@ -454,24 +492,16 @@ namespace cv
         unsigned int vw, vh, vstr;
         std::atomic<bool> camera_started_;
         std::atomic<bool> needsReconfigure;
-        
-        // 线程安全的完成队列，替代原来的视频线程机制
+
         std::queue<CompletedRequestPtr> completed_requests_;
         mutable std::mutex completed_requests_mutex_;
         std::condition_variable completed_requests_cv_;
         
-        // 队列管理参数
-        // static constexpr size_t MAX_QUEUE_SIZE = 3;
+
         static constexpr size_t MAX_QUEUE_SIZE = 0;
-        
-        // 统计信息（可选）
-        std::atomic<uint64_t> frames_produced_{0};
-        std::atomic<uint64_t> frames_consumed_{0};
-        std::atomic<uint64_t> frames_dropped_{0};
-        
-        // 内部方法
+                
         bool waitForFrame(unsigned int timeout_ms);
-        CompletedRequestPtr getCompletedRequest();
+        CompletedRequestPtr getCompletedRequest(); 
     };
 
 };

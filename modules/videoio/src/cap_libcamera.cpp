@@ -36,13 +36,91 @@
 
 namespace cv
 {
+    // Forward declaration
     class LibcameraCapture;
+
+    /* ******************************************************************* */
+    // LibcameraFrameAllocator implementation
+    
+    LibcameraFrameAllocator::LibcameraFrameAllocator(LibcameraApp* app, libcamera::Request* request)
+        : app_(app), request_to_recycle_(request)
+    {
+        if (!app_) {
+            CV_LOG_ERROR(NULL, "LibcameraFrameAllocator constructed with null app");
+            throw std::invalid_argument("Cannot create LibcameraFrameAllocator with null app");
+        }
+        if (!request_to_recycle_) {
+            CV_LOG_ERROR(NULL, "LibcameraFrameAllocator constructed with null request");
+            throw std::invalid_argument("Cannot create LibcameraFrameAllocator with null request");
+        }
+    }
+    
+    LibcameraFrameAllocator::~LibcameraFrameAllocator()
+    {
+        // 在析构函数中确保回收请求
+        if (app_ && request_to_recycle_) {
+            app_->recycleRequest(request_to_recycle_);
+        }
+    }
+    
+    cv::UMatData* LibcameraFrameAllocator::allocate(int dims, const int* sizes, int type, void* data, 
+                                                     size_t* step, cv::AccessFlag flags, cv::UMatUsageFlags usageFlags) const
+    {
+        (void)step;     // Suppress unused parameter warning
+        (void)flags;    // Suppress unused parameter warning  
+        (void)usageFlags; // Suppress unused parameter warning
+        
+        if (!data) {
+            return nullptr;
+        }
+        
+        // Create UMatData that points to the existing buffer
+        cv::UMatData* u = new cv::UMatData(this);
+        u->data = u->origdata = static_cast<uchar*>(data);
+        u->flags = cv::UMatData::USER_ALLOCATED;
+        u->handle = 0;
+        u->userdata = 0;
+        
+        // Calculate total size
+        size_t total_size = CV_ELEM_SIZE(type);
+        for (int i = 0; i < dims; i++) {
+            total_size *= sizes[i];
+        }
+        u->size = total_size;
+        
+        return u;
+    }
+    
+    bool LibcameraFrameAllocator::allocate(cv::UMatData* data, cv::AccessFlag accessFlags, cv::UMatUsageFlags usageFlags) const
+    {
+        (void)data;         
+        (void)accessFlags;  
+        (void)usageFlags;   
+        
+        return false;
+    }
+    
+    void LibcameraFrameAllocator::deallocate(cv::UMatData* data) const
+    {
+        if (data) {
+            delete data;
+        }
+        
+        // 将请求回收给libcamera
+        if (app_ && request_to_recycle_) {
+            app_->recycleRequest(request_to_recycle_);
+            request_to_recycle_ = nullptr;
+        }
+    }
+
+    /* ******************************************************************* */
+    // LibcameraApp implementation
 
     LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
         : options_(std::move(opts)), capture_instance_(nullptr), controls_(controls::controls)
     {
         if (!options_)
-            options_ = std::make_unique<Options>();
+            options_ = std::unique_ptr<Options>(new Options());
         controls_.clear();
     }
 
@@ -112,7 +190,22 @@ namespace cv
         configuration_->at(0).pixelFormat = libcamera::formats::RGB888;
         configuration_->at(0).size.width = options_->video_width;
         configuration_->at(0).size.height = options_->video_height;
-        configuration_->at(0).bufferCount = 4;
+        
+        // 自动确保缓冲区数量足够，对任何 MAX_QUEUE_SIZE 都安全
+        if (capture_instance_) {
+            size_t queue_size = capture_instance_->getMaxQueueSize();
+            unsigned int min_safe_buffers = (queue_size == 0) ? 4 : static_cast<unsigned int>(queue_size + 3);
+            
+            if (options_->buffer_count < min_safe_buffers) {
+                options_->buffer_count = min_safe_buffers;
+                if (options_->verbose) {
+                    std::cerr << "Auto-adjusted buffer count to " << options_->buffer_count 
+                              << " for safe operation" << std::endl;
+                }
+            }
+        }
+        
+        configuration_->at(0).bufferCount = options_->buffer_count;
 
         //    configuration_->transform = options_->transform;
 
@@ -396,6 +489,93 @@ namespace cv
         return true;
     }
 
+    void LibcameraApp::returnRequestToQueue(libcamera::Request* request)
+    {
+        if (!request) {
+            return;
+        }
+        
+        std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
+        
+        // 将请求归还到 free_requests_ 队列
+        free_requests_.push(request);
+        
+        if (options_->verbose) {
+            std::cerr << "SUCCESS: Request returned to queue, free requests: " << free_requests_.size() << std::endl;
+        }
+    }
+
+    size_t LibcameraApp::getFreeRequestsCount() const
+    {
+        std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
+        return free_requests_.size();
+    }
+
+    void LibcameraApp::recycleRequest(libcamera::Request* request)
+    {
+        if (!request) {
+            CV_LOG_WARNING(NULL, "Attempted to recycle null request");
+            return;
+        }
+
+        std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
+        if (!camera_started_) {
+            return;
+        }
+
+        
+        bool is_on_demand_mode = (capture_instance_ && capture_instance_->getMaxQueueSize() == 0);
+
+        if (is_on_demand_mode) {
+            request->reuse();  
+            free_requests_.push(request);
+            return;
+        }
+
+        // 正常模式：重用请求并重新提交给libcamera
+        request->reuse(Request::ReuseBuffers);
+
+        // 为请求重新绑定缓冲区
+        bool all_buffers_bound = true;
+        for (StreamConfiguration &config : *configuration_) {
+            Stream *stream = config.stream();
+            if (frame_buffers_[stream].empty()) {
+                CV_LOG_ERROR(NULL, cv::format("No free buffers available for stream %p during recycle", stream));
+                all_buffers_bound = false;
+                break;
+            }
+            
+            FrameBuffer *buffer = frame_buffers_[stream].front();
+            frame_buffers_[stream].pop();
+            if (request->addBuffer(stream, buffer) < 0) {
+                CV_LOG_ERROR(NULL, cv::format("Failed to add buffer %p to recycled request for stream %p", buffer, stream));
+                frame_buffers_[stream].push(buffer);
+                all_buffers_bound = false;
+                break;
+            }
+            // 立即将缓冲区放回队列，因为请求会保持对它的引用
+            frame_buffers_[stream].push(buffer);
+        }
+
+        if (!all_buffers_bound) {
+            CV_LOG_ERROR(NULL, cv::format("Failed to bind all buffers to recycled request %p", request));
+            return;
+        }
+
+        // 应用当前控制参数（如果有的话）
+        {
+            std::lock_guard<std::mutex> lock(control_mutex_);
+            if (!controls_.empty()) {
+                request->controls() = std::move(controls_);
+            }
+        }
+
+        // 重新提交请求给libcamera
+        if (camera_->queueRequest(request) < 0) {
+            CV_LOG_ERROR(NULL, "Failed to re-queue recycled request");
+        }
+    }
+
     // 向消息队列投递消息 (requestComplete 的传统模式)
     // Post a message to the message queue (for traditional requestComplete mode)
     void LibcameraApp::PostMessage(MsgType &t, MsgPayload &p)
@@ -502,8 +682,15 @@ namespace cv
         {
             Stream *stream = config.stream();
 
+            // Allocate buffers for this stream (count was set in ConfigureViewfinder)
             if (allocator_->allocate(stream) < 0)
                 throw std::runtime_error("failed to allocate capture buffers");
+
+            if (options_->verbose)
+            {
+                std::cerr << "Allocated " << allocator_->buffers(stream).size() 
+                          << " buffers for stream (requested: " << options_->buffer_count << ")" << std::endl;
+            }
 
             for (const std::unique_ptr<FrameBuffer> &buffer : allocator_->buffers(stream))
             {
@@ -572,23 +759,10 @@ namespace cv
 
         CompletedRequest *r = new CompletedRequest(sequence_++, request);
         
-        // 按需模式：不自动重新提交请求
-        CompletedRequestPtr payload;
-        if (capture_instance_ && capture_instance_->getMaxQueueSize() == 0) {
-            // 在按需模式下，不设置自动重新提交的析构函数
-            // 但需要将请求归还到 free_requests_ 队列中
-            payload = CompletedRequestPtr(r, [this](CompletedRequest *cr) { 
-                free_requests_.push(cr->request);
-                delete cr; 
-            });
-        } else {
-            // 正常模式：自动重新提交请求
-            payload = CompletedRequestPtr(r, [this](CompletedRequest *cr) { this->queueRequest(cr); });
-        }
-        {
-            std::lock_guard<std::mutex> lock(completed_requests_mutex_);
-            active_requests_.insert(r);
-        }
+        // 统一策略：所有模式都使用简单的 shared_ptr，不设置自动删除器
+        // 数据给用户后，由用户侧的逻辑负责创建新request，老request自然释放
+        CompletedRequestPtr payload = std::make_shared<CompletedRequest>(*r);
+        delete r; // 删除临时对象，使用 shared_ptr 管理
 
         uint64_t timestamp = payload->buffers.begin()->second->metadata().timestamp;
         if (last_timestamp_ == 0 || last_timestamp_ == timestamp)
@@ -631,7 +805,7 @@ namespace cv
 
     LibcameraCapture::LibcameraCapture()
     {
-        app = new LibcameraApp(std::make_unique<Options>());
+        app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
         options = static_cast<Options *>(app->GetOptions());
         
         // 建立 LibcameraApp 到 LibcameraCapture 的引用
@@ -747,8 +921,6 @@ namespace cv
         {
             std::lock_guard<std::mutex> lock(completed_requests_mutex_);
             
-            frames_produced_.fetch_add(1, std::memory_order_relaxed);
-            
             // 按需模式下，直接保存请求，不限制队列大小
             if (MAX_QUEUE_SIZE == 0) {
                 // 按需模式：始终保存帧，不丢弃
@@ -758,11 +930,11 @@ namespace cv
                 if (completed_requests_.size() >= MAX_QUEUE_SIZE) {
                     old_request_to_be_discarded = std::move(completed_requests_.front());
                     completed_requests_.pop();
-                    frames_dropped_.fetch_add(1, std::memory_order_relaxed);
                     
                     // 可选：打印统计信息
                     if (options && options->verbose) {
-                        uint64_t dropped = frames_dropped_.load(std::memory_order_relaxed);
+                        static uint64_t dropped = 0;
+                        dropped++;
                         if (dropped % 30 == 0) {  // 每30帧打印一次
                             std::cerr << "Frames dropped: " << dropped << std::endl;
                         }
@@ -827,12 +999,9 @@ namespace cv
             }
             request = std::move(completed_requests_.front());
             completed_requests_.pop();
-            frames_consumed_.fetch_add(1, std::memory_order_relaxed);
         } 
         return request;
     }
-
-    // getVideoFrame 方法已被移除，功能集成到 retrieveFrame 中
 
     /**
      * @brief 确保摄像头已启动并准备捕获帧
@@ -878,14 +1047,13 @@ namespace cv
     }
 
     /**
-     * @brief 从完成队列中检索一帧并复制到目标输出（优化版本）
+     * @brief 从完成队列中检索一帧并实现零拷贝优化（Zero-Copy Optimized Version）
      *
-     * 数据流程：
-     * 1. LibcameraApp::requestComplete() -> onRequestComplete() -> 队列
-     * 2. waitForFrame() 等待帧可用
-     * 3. getCompletedRequest() 从队列取出 CompletedRequestPtr
-     * 4. 通过内存映射访问 libcamera 缓冲区数据
-     * 5. 智能处理 stride 差异，减少不必要的内存拷贝
+     * 零拷贝优化策略：
+     * 1. 检查 libcamera stride 与 cv::Mat 期望 stride 的兼容性
+     * 2. 兼容时：使用自定义 LibcameraFrameAllocator 创建零拷贝 cv::Mat
+     * 3. 不兼容时：回退到优化的单次拷贝模式
+     * 4. 通过 RAII 机制自动管理 libcamera 缓冲区生命周期
      *
      * @param int 未使用的参数
      * @param dst 输出数组，用于存储检索到的帧
@@ -899,14 +1067,12 @@ namespace cv
             return false;
         }
             
-        std::cerr << "DEBUG: Waiting for frame..." << std::endl;
         // 等待帧可用
         if (!waitForFrame(options->timeout)) {
             std::cerr << "ERROR: waitForFrame timed out" << std::endl;
             return false;
         }
         
-        std::cerr << "DEBUG: Getting completed request..." << std::endl;
         // 获取完成的请求
         CompletedRequestPtr completed_request = getCompletedRequest();
         if (!completed_request) {
@@ -915,7 +1081,6 @@ namespace cv
         }
         
         try {
-            // 获取流信息
             auto stream = app->ViewfinderStream(&vw, &vh, &vstr);
             if (!stream) {
                 std::cerr << "Failed to get viewfinder stream" << std::endl;
@@ -928,41 +1093,60 @@ namespace cv
                 return false;
             }
             
-            Mat frame(vh, vw, CV_8UC3);
-            uint32_t ls = vw * 3; // RGB888 每像素3字节
+            const uint32_t pixel_bytes = 3;  // RGB888 每像素3字节
+            const uint32_t expected_row_bytes = vw * pixel_bytes;  // cv::Mat 期望的每行字节数
+            uint8_t *libcamera_buffer_ptr = mem[0].data();
             
-            uint8_t *src_ptr = mem[0].data();
-            for (unsigned int i = 0; i < vh; i++, src_ptr += vstr) {
-                memcpy(frame.ptr(i), src_ptr, ls);
-            }
-            
-            frame.copyTo(dst);
-            return true;
-
-            // const uint32_t pixel_bytes = 3;  // RGB888 每像素3字节
-            // const uint32_t row_bytes = vw * pixel_bytes;  // 每行实际数据字节数
-            // const uint8_t *src_data = mem[0].data();
-            
-            // // 优化：检查是否需要逐行拷贝
-            // if (vstr == row_bytes) {
-            //     // 内存连续，可以一次性拷贝（最优情况）
-            //     Mat frame(vh, vw, CV_8UC3, const_cast<uint8_t*>(src_data), vstr);
-            //     frame.copyTo(dst);  // 只有一次拷贝
-            // } else {
-            //     // stride 不匹配，需要逐行拷贝（处理内存对齐）
-            //     // 直接在目标 Mat 上分配内存，减少一次拷贝
-            //     dst.create(vh, vw, CV_8UC3);
-            //     Mat frame = dst.getMat();
+            // 检查步长兼容性
+            if (vstr == expected_row_bytes) {
+                LibcameraFrameAllocator* allocator = new LibcameraFrameAllocator(app, completed_request->request);
                 
-            //     const uint8_t *src_ptr = src_data;
-            //     for (unsigned int row = 0; row < vh; row++) {
-            //         // 拷贝一行的有效数据，跳过填充字节
-            //         memcpy(frame.ptr(row), src_ptr, row_bytes);
-            //         src_ptr += vstr;  // 移动到下一行（包含stride）
-            //     }
-            // }
-            
-            // return true;
+                // 直接创建UMatData，避免经过Mat和assign
+                cv::UMatData* u = allocator->allocate(2, new int[2]{(int)vh, (int)vw}, CV_8UC3, 
+                                                      libcamera_buffer_ptr, nullptr, cv::ACCESS_READ, cv::USAGE_DEFAULT);
+                if (!u) {
+                    CV_LOG_ERROR(NULL, "Failed to allocate UMatData via LibcameraFrameAllocator");
+                    delete allocator;
+                    return false;
+                }
+                
+                // 创建零拷贝Mat，然后通过assign传递给dst
+                // 使用Mat而不是UMat，因为我们有具体的内存指针
+                int sizes[] = {(int)vh, (int)vw};
+                size_t steps[] = {vstr, pixel_bytes};
+                
+                Mat zero_copy_mat(2, sizes, CV_8UC3, libcamera_buffer_ptr, steps);
+                zero_copy_mat.allocator = allocator;  // 设置自定义分配器
+                
+                // 手动设置UMatData，确保分配器正确绑定
+                if (!zero_copy_mat.u) {
+                    zero_copy_mat.u = u;
+                    u->refcount = 1;  // 设置初始引用计数
+                }
+                
+                dst.assign(zero_copy_mat);
+                
+                return true;
+                
+            } else {
+                CV_LOG_WARNING(NULL, cv::format("FALLBACK: Stride mismatch detected"));
+                CV_LOG_WARNING(NULL, cv::format("   libcamera stride: %d bytes", vstr));
+                CV_LOG_WARNING(NULL, cv::format("   Expected stride:  %d bytes", expected_row_bytes));
+                CV_LOG_WARNING(NULL, cv::format("   Extra padding:    %d bytes per row", (int)vstr - (int)expected_row_bytes));
+                
+                // 直接在目标上创建，避免中间临时 Mat
+                dst.create(vh, vw, CV_8UC3);
+                Mat target_frame = dst.getMat();
+                
+                // 优化的逐行拷贝，只拷贝有效数据
+                const uint8_t *src_ptr = libcamera_buffer_ptr;
+                for (unsigned int row = 0; row < vh; row++) {
+                    memcpy(target_frame.ptr(row), src_ptr, expected_row_bytes);
+                    src_ptr += vstr;  
+                }
+
+                return true;
+            }
             
         } catch (const std::exception& e) {
             std::cerr << "Error in retrieveFrame: " << e.what() << std::endl;
@@ -1207,10 +1391,10 @@ namespace cv
             needsReconfigure.store(true, std::memory_order_release);
             break;
         case cv::CAP_PROP_AUTOFOCUS:  // Not implemented
-        case cv::CAP_PROP_BUFFERSIZE: // Not implemented
+        case cv::CAP_PROP_BUFFERSIZE: // Not implemented 
         case cv::CAP_PROP_PAN:        // Not implemented
         case cv::CAP_PROP_TILT:       // Not implemented
-        case cv::CAP_PROP_ROLL:       // Not implemen ted
+        case cv::CAP_PROP_ROLL:       // Not implemented
         case cv::CAP_PROP_IRIS:       // Not implemented
             // These properties might need to trigger a re-configuration of the camera.
             // You can handle them here if you want to support changing resolution or framerate on-the-fly.
@@ -1266,12 +1450,10 @@ namespace cv
 
     bool LibcameraCapture::open(const std::string &_deviceName)
     {
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera:" << _deviceName << "): opening...");
-        
         options->video_width = 1280;
         options->video_height = 720;
         options->framerate = 30;
-        options->verbose = true;
+        options->verbose = false;
         
         return startVideo();
     }
