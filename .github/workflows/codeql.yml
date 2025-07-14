@@ -13,9 +13,9 @@ name: "CodeQL Advanced"
 
 on:
   push:
-    branches: [ "4.x", "*", "2.4", "3.4", "5.x", "master", "next" ]
+    branches: [ "4.x", "5.x" ]
   pull_request:
-    branches: [ "4.x", "*", "2.4", "3.4", "5.x", "master", "next" ]
+    branches: [ "4.x", "5.x" ]
   schedule:
     - cron: '44 13 * * 6'
 
@@ -91,7 +91,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential cmake clang
 
-    - name: Build OpenCV (C++ & Obj-C)
+    - name: Build OpenCV
       if: ${{ matrix.language == 'c-cpp' && matrix.build-mode == 'manual' }}
       run: |
         mkdir -p build
