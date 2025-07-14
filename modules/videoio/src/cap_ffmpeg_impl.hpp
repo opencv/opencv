@@ -2080,6 +2080,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         else
         {
             frame_number = 0;
+            picture_pts = AV_NOPTS_VALUE_;
             break;
         }
     }
@@ -2097,27 +2098,14 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     switch( property_id )
     {
     case CAP_PROP_POS_MSEC:
+        seek(value/1000.0);
+        return true;
     case CAP_PROP_POS_FRAMES:
+        seek((int64_t)value);
+        return true;
     case CAP_PROP_POS_AVI_RATIO:
-        {
-            switch( property_id )
-            {
-            case CAP_PROP_POS_FRAMES:
-                seek((int64_t)value);
-                break;
-
-            case CAP_PROP_POS_MSEC:
-                seek(value/1000.0);
-                break;
-
-            case CAP_PROP_POS_AVI_RATIO:
-                seek((int64_t)(value*ic->duration));
-                break;
-            }
-
-            picture_pts=(int64_t)value;
-        }
-        break;
+        seek((int64_t)(value*ic->duration));
+        return true;
     case CAP_PROP_FORMAT:
         if (value == -1)
             return setRaw();
