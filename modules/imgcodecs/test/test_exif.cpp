@@ -318,7 +318,7 @@ TEST(Imgcodecs_WebP, ReadWriteWithExifXmpIccp)
     const std::string outputname = cv::tempfile(".webp");
     cv::Mat img = makeCirclesImage(cv::Size(160, 120), imgtype, 8);
 
-    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICC};
+    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICCP};
     std::vector<std::vector<uchar>> metadata(3);
     metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
     metadata[1].assign(xmp_data, xmp_data + sizeof(xmp_data));
