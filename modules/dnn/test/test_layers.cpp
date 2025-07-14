@@ -2816,7 +2816,7 @@ TEST(Layer_LSTM, repeatedInference)
     EXPECT_EQ(diff2, 0.);
 }
 
-TEST(Layer_If, DISABLED_resize)
+TEST(Layer_If, resize)
 {
     const std::string imgname   = findDataFile("cv/shared/lena.png", true);
     const std::string modelname = findDataFile("dnn/onnx/models/if_layer.onnx", true);
