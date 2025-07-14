@@ -19,10 +19,6 @@ namespace cv { namespace dnn { namespace tokenizer {
 static constexpr Rank RANK_MAX  = std::numeric_limits<Rank>::max();
 static constexpr std::size_t SZ_MAX = std::numeric_limits<std::size_t>::max();
 
-std::size_t hashCurrentThread() {
-    return std::hash<std::thread::id>{}(std::this_thread::get_id());
-}
-
 static Rank maybeGetRank(const ByteVecRankMap& ranks, const ByteVec& key) {
     auto it = ranks.find(key);
     return it == ranks.end() ? RANK_MAX : it->second;
@@ -107,7 +103,24 @@ std::vector<ByteVec> bytePairSplit(std::string& s,
     return bytePairSplit(bytes, ranks);
 }
 
-// Errors for debugging 
+std::string CoreBPE::makeSpecialPattern(const std::unordered_map<std::string, Rank>& special) {
+    static const std::string meta = R"([.^$|()\[\]{}*+?\\])";
+    std::string pat;
+    pat.reserve(special.size() * 10);
+    bool first = true;
+    for (auto const& kv : special) {
+        if (!first) pat.push_back('|');
+        first = false;
+        // Escape each character in the token 
+        for (char c : kv.first) {
+            if (meta.find(c) != std::string::npos) 
+                pat.push_back('\\');
+            pat.push_back(c);
+        }
+    }
+    return pat;
+}
+
 DecoderKeyError::DecoderKeyError(Rank t)
     : std::runtime_error("Invalid token for decoding: " + std::to_string(t)), token_(t) {}
 
@@ -138,29 +151,10 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
     for (auto& kv : specialEncoder_) 
         specialDecoder_.emplace(kv.second, ByteVec(kv.first.begin(), kv.first.end()));
 
-    // auto pat = compilePattern(pattern); 
-    // std::shared_ptr<icu::RegexPattern> sharedPat{ pat.release() };
-    // regexTLS_.assign(MAX_NUM_THREADS, sharedPat);
-
-    // std::string speicalPat = makeSpecialPattern(specialEncoder_);
-    // auto spPat = compilePattern(speicalPat);
-    // std::shared_ptr<icu::RegexPattern> sharedSp{ spPat.release() };
-    // specialRegexTLS_.assign(MAX_NUM_THREADS, sharedSp);
-
     sortedTokenBytes_.reserve(encoder_.size());
     for (auto& kv : encoder_) sortedTokenBytes_.push_back(kv.first);
     std::sort(sortedTokenBytes_.begin(), sortedTokenBytes_.end());
 }
-
-
-// const icu::RegexPattern* CoreBPE::threadLocalRegex() const {
-//     return regexTLS_[hashCurrentThread()%MAX_NUM_THREADS].get();
-// }
-
-// const icu::RegexPattern* CoreBPE::threadLocalSpecialRegex() const {
-//     return specialRegexTLS_[hashCurrentThread()%MAX_NUM_THREADS].get();
-// }
-
 
 std::optional<ByteVec>
 CoreBPE::decodeBytes(const std::vector<Rank>& tokens) const {
@@ -187,7 +181,6 @@ CoreBPE::decodeBytes(const std::vector<Rank>& tokens) const {
     return out;
 }
 
-
 std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
 
     std::vector<std::string> regexes{ pattern_ };
@@ -202,17 +195,7 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
         //     subUtf8.replace(0, 1, "\xC4\xA0");
         // }
         std::cout << "[" << subUtf8 << "]" << std::endl; 
-
-        // ByteVec piece(subUtf8.begin(), subUtf8.end());
         ByteVec piece = textToBytes(subUtf8);
-
-        // for (const auto& kv : encoder_) {
-        //     if (kv.first.size() > 2) {
-        //         std::cout << "Token: ";
-        //         for (auto b : kv.first) std::cout << std::hex << (int)b << " ";
-        //         std::cout << " -> id: " << kv.second << std::endl;
-        //     }
-        // }
 
         auto it = encoder_.find(piece);
         if (it != encoder_.end()) {
@@ -329,7 +312,6 @@ Rank CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
     }
 }
 
-
 std::pair<std::vector<Rank>, std::size_t> 
 CoreBPE::increaseLastPieceTokenLen(std::vector<Rank> tokens,
                                    std::size_t lastPieceTokenLen) const {
@@ -440,7 +422,6 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
         }
     }
 
-
     // whitespace regex fix for last code point 
     if (unstableBytes.size() > 1) {
         // TODO: Implement the decodeLastUtf8 [DONE] -> [TESTING PROCESS]
@@ -460,5 +441,6 @@ CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<
 
     return { tokens, completions };
 }   
+
 
 }}}

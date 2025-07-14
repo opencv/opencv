@@ -8,12 +8,7 @@
 #include "unicode.hpp"
 #include "utils.hpp"
 
-#include <nlohmann/json.hpp>
-
-using json = nlohmann::json;
-
 namespace cv { namespace dnn { namespace tokenizer {
-
 
 Encoding::Encoding(const std::string &name, 
                      const std::string &patStr,
@@ -25,8 +20,6 @@ Encoding::Encoding(const std::string &name,
     , mergeableRanks_(mergeableRanks)
     , specialTokens_(specialTokens)
     , coreBPE_(mergeableRanks_, specialTokens_, patStr_) {
-
- 
     // compute max token value
     Rank mrMax = 0;
     for (auto& kv : mergeableRanks_) 
@@ -73,12 +66,9 @@ void Encoding::train_bpe(const std::string& text, int vocabSize, bool verbose) {
             std::string{"train(): vocab size must be >= 256, got"} + std::to_string(vocabSize)
         );
     }
-
     int numMerges = vocabSize - 256;
-
     std::vector<std::string> regexes = { patStr_}; 
     std::vector<std::string> textChunks = unicode_regex_split(text, regexes);
-
     std::vector<std::vector<int>> ids;
     ids.reserve(textChunks.size());
 
@@ -142,7 +132,6 @@ void Encoding::train_bpe(const std::string& text, int vocabSize, bool verbose) {
     }
 }
 
-
 void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int vocabSize, int minFreq,  int max_token_length, bool verbose) {
     std::unordered_map<std::string, int> word_to_id;
     std::vector<std::string> id_to_word;
@@ -152,7 +141,7 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
         id_to_word.push_back(kv.first);
     }
 
-    // 2. Compute initial alphabet
+    // Compute initial alphabet
     std::unordered_map<std::string, int> word_counts;
     std::unordered_set<std::string> alphabet;
     for (const auto& text : texts) {
@@ -177,7 +166,6 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
             id_to_word.push_back(s);
         }
     }
-
     // Tokenize words (each word as vector of token ids)
     std::vector<std::vector<int>> words;
     std::vector<int> counts;
@@ -191,7 +179,6 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
         words.push_back(ids);
         counts.push_back(kv.second);
     }
-
     // Count pairs
     using Pair = std::pair<int, int>;
     std::map<Pair, int> pair_counts;
@@ -204,7 +191,6 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
             where_to_update[p].insert(i);
         }
     }
-
     // Merge loop
     struct Merge {
         Pair pair;
@@ -288,26 +274,22 @@ void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int voca
         std::vector<uint8_t> bytes(token_str.begin(), token_str.end());
         vocab_[id] = std::move(bytes);
     }
-
     // Build merges_: map pair (token id, token id) -> new token id
     for (const auto& merge : merges) {
         merges_[merge.first] = merge.second;
     }
-
     // mergeableRanks_: map ByteVec -> token id
     mergeableRanks_.clear();
     for (int id = 0; id < (int)id_to_word.size(); ++id) {
         ByteVec bv(id_to_word[id].begin(), id_to_word[id].end());
         mergeableRanks_[bv] = static_cast<Rank>(id);
     }
-    
     coreBPE_ = CoreBPE(mergeableRanks_, specialTokens_, patStr_);
 }
 
 std::vector<Rank> Encoding::encodeOrdinary(const std::string& text) const {
     return coreBPE_.encodeOrdinary(text);
 }
-
 
 std::vector<Rank> Encoding::encode(const std::string& text,
                                      const std::unordered_set<std::string>& allowedSpecial,
@@ -318,8 +300,7 @@ std::vector<Rank> Encoding::encode(const std::string& text,
     std::unordered_set<std::string> disallowed = disallowedSpecial;
 
     // If allowedSpecial is "all", allow all special tokens
-    // (You may want to overload or use a different API for this in C++)
-    // Example: if allowedSpecial contains "__ALL__", treat as "all"
+    // Example: if allowedSpecial contains "__ALL__", treat as all
     if (allowed.size() == 1 && allowed.count("__ALL__")) {
         for (const auto& kv : specialTokens_)
             allowed.insert(kv.first);
@@ -360,11 +341,9 @@ std::vector<Rank> Encoding::encode(const std::string& text,
     return coreBPE_.encode(text, allowed).first;
 }
 
-
 Rank Encoding:: encodeSingleToken(const std::vector<std::uint8_t>& bytes) const {
     return coreBPE_.encodeSingleToken(const_cast<std::vector<std::uint8_t>&>(bytes));
 }
-
 
 std::string Encoding::decode(const std::vector<Rank>& tokens, const std::string& errors) const {
     auto opt_bytes = coreBPE_.decodeBytes(tokens);
@@ -395,13 +374,7 @@ std::string Encoding::decode(const std::vector<Rank>& tokens, const std::string&
             i += len;
         }
     }
-
-    // Replace U+0120 (Ġ, "\xC4\xA0") with space
-    // size_t pos = 0;
-    // while ((pos = result.find("\xC4\xA0", pos)) != std::string::npos) {
-    //     result.replace(pos, 2, " ");
-    //     pos += 1;
-    // }
+    // Replace U+0120 (Ġ, "\xC4\xA0") with space 
     return result;
 }
 
@@ -410,7 +383,6 @@ std::vector<std::uint8_t> Encoding::decodeBytes(const std::vector<Rank>& tokens)
     if (!opt_bytes) throw std::runtime_error("Invalid decode.");
     return *opt_bytes;
 }
-
 
 // Read entire file into a string
 static std::string readFile(const std::string& path) {
@@ -510,46 +482,41 @@ std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
         bpe_ranks[a + b] = nextRank++;
     }
 
-    // load encoder.json and sanity-check
-    auto encText = readFile(encoderJsonPath);
-    auto encJson = json::parse(encText);
+    // // load encoder.json and sanity-check
+    // auto encText = readFile(encoderJsonPath);
+    // auto encJson = json::parse(encText);
 
-    // decode all keys into a temp map
-    std::unordered_map<std::string,int> encMap;
-    for (auto& [k,v] : encJson.items()) {
-        auto raw = decodeDataGym(k, data_gym_byte_to_byte);
-        // drop special tokens if present
-        if (raw == "<|endoftext|>" || raw == "<|startoftext|>")
-            continue;
-        encMap[raw] = v.get<int>();
-    }
-    if (encMap != bpe_ranks)
-        throw std::runtime_error("BPE ranks do not match encoder.json");
+    // // decode all keys into a temp map
+    // std::unordered_map<std::string,int> encMap;
+    // for (auto& [k,v] : encJson.items()) {
+    //     auto raw = decodeDataGym(k, data_gym_byte_to_byte);
+    //     // drop special tokens if present
+    //     if (raw == "<|endoftext|>" || raw == "<|startoftext|>")
+    //         continue;
+    //     encMap[raw] = v.get<int>();
+    // }
+    // if (encMap != bpe_ranks)
+    //     throw std::runtime_error("BPE ranks do not match encoder.json");
 
     return bpe_ranks;
 }
 
 Encoding getEncodingForGPT2(const std::string& name) {
-
     std::unordered_map<std::string, Rank> specialTokens = {
         {"<|endoftext|>", 50256}
     };
     int explicitNvocab = 50257;
-
     auto bpe_ranks = dataGymToMergeableBpeRanks(
         "../modules/dnn/src/tokenizer/vocab.bpe",
         "../modules/dnn/src/tokenizer/encoder.json"
     );
-
     ByteVecRankMap mergeableRanks;
-        mergeableRanks.reserve(bpe_ranks.size());
-        for (auto& [tok, rank] : bpe_ranks) {
-            // copy each std::string into a ByteVec
-            ByteVec v(tok.begin(), tok.end());
-            mergeableRanks.emplace(std::move(v), static_cast<Rank>(rank));
-        }
-
-
+    mergeableRanks.reserve(bpe_ranks.size());
+    for (auto& [tok, rank] : bpe_ranks) {
+        // copy each std::string into a ByteVec
+        ByteVec v(tok.begin(), tok.end());
+        mergeableRanks.emplace(std::move(v), static_cast<Rank>(rank));
+    }
     return Encoding(name, R50K_UTF8, std::move(mergeableRanks), std::move(specialTokens), explicitNvocab);
 }
 

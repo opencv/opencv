@@ -207,27 +207,15 @@ if(NOT EMSCRIPTEN)
     list(APPEND webnn_srcs $ENV{WEBNN_NATIVE_DIR}/gen/src/webnn/webnn_cpp.cpp)
   endif()
 endif()
-
 # ------------------------------- [ADDED] ---------------------------------------
 # Added extra build for tokenizer fix later if there is a better method
-set(extra_tokenizer_src
-    "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer/core_bpe.cpp"
-)
 file(GLOB extra_tokenizer_src
      "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer/*.cpp"
 )
 list(APPEND include_dirs
      "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer"
 )
-
-
-# nlohmann_json
-find_package(nlohmann_json REQUIRED)
-list(APPEND libs nlohmann_json::nlohmann_json)
-
-
 ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
-
 # ----------------------------------------------------------------------------------
 
 ocv_module_include_directories(${include_dirs})

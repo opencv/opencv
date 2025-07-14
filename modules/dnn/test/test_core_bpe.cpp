@@ -25,10 +25,7 @@ TEST_F(Test_CoreBPE, bytePairSplit_Simple) {
         ByteVec{'c', 'd'}
     };
     EXPECT_EQ(parts, expected) << "bytePairSplit should split \"abcd\" into [\"ab\",\"cd\"]";
-    // [PASSED]
 }   
-
-
 
 TEST_F(Test_CoreBPE, BytePairSplit_Repeated) {
     auto ranks = makeRanks();
@@ -39,9 +36,7 @@ TEST_F(Test_CoreBPE, BytePairSplit_Repeated) {
         ByteVec{'a', 'b'}
     };
     EXPECT_EQ(parts, expected) << "bytePairEncode(\"abcd\") should yield [0,1]";
-    // [PASSED]
 }
-
 
 TEST_F(Test_CoreBPE, EncodeOrdinary_Simple) {
     auto ranks = makeRanks();
@@ -56,7 +51,6 @@ TEST_F(Test_CoreBPE, EncodeOrdinary_Simple) {
         PAT
     );
     std::vector<Rank> out = bpe.encodeOrdinary("abcd");
-    // 3) Verify: we should get exactly two tokens [0,1]
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0], 0u);  // "ab" → token 0
     EXPECT_EQ(out[1], 1u);  // "cd" → token 1
