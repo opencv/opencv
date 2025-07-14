@@ -85,6 +85,14 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
         }
     }
 
+    if (type == IMAGE_METADATA_ICCP) {
+        const std::vector<unsigned char>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+        if (!iccp.empty()) {
+            Mat iccpmat(1, (int)iccp.size(), CV_8U, (void*)iccp.data());
+            return iccpmat;
+        }
+    }
+
     if (type == IMAGE_METADATA_TEXT) {
         const std::vector<unsigned char>& texts = m_metadata[IMAGE_METADATA_TEXT];
         if (!texts.empty()) {
