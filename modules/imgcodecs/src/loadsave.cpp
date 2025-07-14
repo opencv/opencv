@@ -98,6 +98,9 @@ static inline int calcType(int type, int flags)
         if( (flags & IMREAD_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
+        //if( (flags & IMREAD_ANYCOLOR) != 0 /*&& CV_MAT_CN(type) > 1*/ )
+        //    type = CV_MAKETYPE(CV_MAT_DEPTH(type), CV_MAT_CN(type));
+        //else if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 )
         if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 ||
            ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
@@ -1055,7 +1058,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         Mat image = img_vec[page];
         CV_Assert(!image.empty());
 
+#ifdef HAVE_OPENEXR
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+#endif
+
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
@@ -1609,7 +1617,11 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
         CV_Assert(!image.empty());
 
         const int channels = image.channels();
+#ifdef HAVE_OPENEXR
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+#endif
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
