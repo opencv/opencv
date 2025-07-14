@@ -64,13 +64,18 @@ TEST_P(Exif, exif_orientation)
     const int colorThresholdLow = 5;
     const string outputname = cv::tempfile(".webp");
 
+    // Refer to the note in the explanation above.
+    Mat m_img = imread(filename, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
+    ASSERT_FALSE(m_img.empty());
+
+#ifdef HAVE_WEBP
     std::vector<int> metadata_types1, metadata_types2;
     std::vector<std::vector<uchar> > metadata1, metadata2;
     Mat img = imreadWithMetadata(filename, metadata_types1, metadata1, IMREAD_UNCHANGED);
 
     metadata_types2 = { IMAGE_METADATA_EXIF };
-    metadata2 = { metadata1[0] };
-    // we want to write just exit metadata
+    metadata2 = { metadata1[0] }; // we want to write just EXIF metadata to test rotation
+
     imwriteWithMetadata(outputname, img, metadata_types2, metadata2);
 
     img = imreadWithMetadata(outputname, metadata_types2, metadata2, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
@@ -79,12 +84,8 @@ TEST_P(Exif, exif_orientation)
     std::vector<int> expected_metadata_types = { IMAGE_METADATA_EXIF };
     EXPECT_EQ(expected_metadata_types, metadata_types2);
     EXPECT_EQ(metadata1[0], metadata2[0]);
-
-    // Refer to the note in the explanation above.
-    Mat m_img = imread(filename, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-    ASSERT_FALSE(m_img.empty());
-
     EXPECT_EQ(cv::norm(img, m_img, NORM_INF), 0.);
+#endif // HAVE_WEBP
 
     if (m_img.channels() == 3)
     {
