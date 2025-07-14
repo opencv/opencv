@@ -1380,9 +1380,19 @@ void cv::pyrUp( InputArray _src, OutputArray _dst, const Size& _dsz, int borderT
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat(),
                ocl_pyrUp(_src, _dst, _dsz, borderType))
 
+    // Define maximum allowable image dimensions to prevent memory overflow
+    const int MAX_IMAGE_SIZE = 32768; // 32K pixels per dimension
+    const size_t MAX_TOTAL_PIXELS = static_cast<size_t>(1024) * 1024 * 1024; // 1 billion pixels max
 
     Mat src = _src.getMat();
     Size dsz = _dsz.empty() ? Size(src.cols*2, src.rows*2) : _dsz;
+    
+    // Check for potential memory overflow before allocation
+    if (dsz.width > MAX_IMAGE_SIZE || dsz.height > MAX_IMAGE_SIZE ||
+        static_cast<size_t>(dsz.width) * dsz.height > MAX_TOTAL_PIXELS) {
+        CV_Error(CV_StsNoMem, "pyrUp: Destination image size is too large and may cause memory overflow");
+    }
+    
     _dst.create( dsz, src.type() );
     Mat dst = _dst.getMat();
     int depth = src.depth();
