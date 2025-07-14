@@ -1,6 +1,7 @@
 #include "test_precomp.hpp"
 #include "../src/tokenizer/core_bpe.hpp"
 #include "../src/tokenizer/encoding.hpp"
+#include "../src/tokenizer/utils.hpp"
 #include <fstream>
 #include <sstream>
 #include <unordered_set>

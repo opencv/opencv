@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <regex> // Not enough functionality as the Rust/Python version -> change to icu 
+#include <regex> 
 #include <set>
 #include <stdexcept>
 #include <thread>
@@ -20,7 +20,6 @@
 #define __OPENCV_DNN_SRC_TOKENIZERTOKENS_CORE_BPE_HPP__
 
 namespace cv { namespace dnn {namespace tokenizer {
-
     
 using Rank = std::uint32_t;
 using ByteVec = std::vector<std::uint8_t>;
@@ -34,12 +33,6 @@ struct ByteVecHash {
 };
 
 using ByteVecRankMap = std::unordered_map<ByteVec, Rank, ByteVecHash>;
-
-// hash the OS thread ID, mod by a fixed size, and pick a pre-compiled regex 
-// to avoid cross-thread contention
-std::size_t hashCurrentThread();
-
-static constexpr std::size_t MAX_NUM_THREADS = 128;
 
 // scan adjacent byte-pairs to find the lowest-rank merge, splice them out, 
 // update neighboring ranks, and repeat until no mergeable pair remains
@@ -73,9 +66,7 @@ public:
 
 class CV_EXPORTS CoreBPE {
 public:
-    
     CoreBPE(); 
-    
     explicit CoreBPE(ByteVecRankMap encoder,
             std::unordered_map<std::string, Rank> specialEncoder, 
             const std::string& pattern);
@@ -96,71 +87,32 @@ public:
 
         return CoreBPE(std::move(encMap), std::move(specMap), pat);
     }
-
     // Encoding 
     std::vector<Rank> encodeOrdinary(const std::string& text) const;
-
     std::pair<std::vector<Rank>, std::size_t> encode(const std::string& text,
                                                      const std::unordered_set<std::string>& allowedSpecial) const;
-
     std::vector<Rank> enocodeWithSpecialTokens(const std::string& text) const;
-
     std::pair<std::vector<Rank>, std::set<std::vector<Rank>>> 
     encodeUnstableNative(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const;
-
     Rank encodeSingleToken(std::vector<uint8_t>& piece) const;
-
-    
-
     // Decode
     std::optional<ByteVec> decodeBytes(const std::vector<Rank>& tokens) const;
-
     // Metadata
     std::set<std::string> specialTokens() const;
 
 private:
-
-    // const icu::RegexPattern* threadLocalRegex() const;
-    // const icu::RegexPattern* threadLocalSpecialRegex() const;
-
-    static std::string makeSpecialPattern(const std::unordered_map<std::string, Rank>& special) {
-        static const std::string meta = R"([.^$|()\[\]{}*+?\\])";
-        std::string pat;
-        pat.reserve(special.size() * 10);
-        bool first = true;
-        for (auto const& kv : special) {
-            if (!first) pat.push_back('|');
-            first = false;
-            // Escape each character in the token 
-            for (char c : kv.first) {
-                if (meta.find(c) != std::string::npos) 
-                    pat.push_back('\\');
-                pat.push_back(c);
-            }
-        }
-        return pat;
-    }
-
-    std::pair<std::vector<Rank>, std::size_t> increaseLastPieceTokenLen(std::vector<Rank> token,
-                                                                        std::size_t lastPieceTokenLen) const;
-
     ByteVecRankMap encoder_;
     std::unordered_map<std::string, Rank> specialEncoder_;
-
     std::unordered_map<Rank, ByteVec>  decoder_;          
     std::unordered_map<Rank, ByteVec>  specialDecoder_;   
-
-    // std::vector<std::regex> regexTLS_; 
-    // std::vector<std::regex> specialRegexTLS_;
-
     std::string pattern_;
     std::string specialPattern_;
-    // mutable std::vector<std::shared_ptr<icu::RegexPattern>> regexTLS_;
-    // mutable std::vector<std::shared_ptr<icu::RegexPattern>> specialRegexTLS_;
-
     std::vector<ByteVec> sortedTokenBytes_;
-};
 
+    std::string makeSpecialPattern(const std::unordered_map<std::string, Rank>& special);
+    std::pair<std::vector<Rank>, std::size_t> increaseLastPieceTokenLen(std::vector<Rank> token,
+                                                                        std::size_t lastPieceTokenLen) const;
+};
 
 }}}
 

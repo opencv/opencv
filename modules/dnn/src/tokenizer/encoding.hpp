@@ -2,8 +2,6 @@
 
 #include <opencv2/core.hpp>
 #include "core_bpe.hpp"
-// #include <unicode/unistr.h>
-// #include <unicode/regex.h>
 #include "unicode.hpp"
 
 #include <string>
@@ -39,7 +37,8 @@ public:
         coreBPE_ = CoreBPE(mergeableRanks_, specialTokens_, patStr_);
     }
 
-    CV_EXPORTS Encoding(const std::vector<std::string>& texts, int vocabSize, const std::string& patStr, int minFreq=2, int max_token_length=std::numeric_limits<int>::max(), bool verbose=false)
+    CV_EXPORTS Encoding(const std::vector<std::string>& texts, int vocabSize, const std::string& patStr, 
+                        int minFreq=2, int max_token_length=std::numeric_limits<int>::max(), bool verbose=false)
         : name_("trained_encoding_hugface"),
            patStr_(patStr),
            mergeableRanks_(),
@@ -88,23 +87,8 @@ public:
     CV_PROP std::unordered_set<std::string> specialTokens() const;
     CV_PROP bool isSpecialToken(int token) const;
     CV_PROP int nVocab() const { return maxTokenValue_ + 1; }
-
-    // Get the highest token ID present.
     CV_PROP Rank maxTokenValue() const;
 
-     // Escape regex meta-characters in a string
-    static std::string escape_regex(const std::string &s) {
-        static const std::string meta = R"(.^$|()[]*+?{}\")";
-        std::string out;
-        out.reserve(s.size() * 2);
-        for (char c : s) {
-            if (meta.find(c) != std::string::npos) out.push_back('\\');
-            out.push_back(c);
-        }
-        return out;
-    }
-
-    // 2) encodeUTF8 now takes a wstring, converts it, then emits ints
     std::vector<int> encodeUTF8(const std::string &utf8) {
         std::vector<int> out;
         out.reserve(utf8.size());
@@ -113,7 +97,6 @@ public:
         }
         return out;
     }
-
     /* --------------------- Load/Save ----------------------------------*/
     void save();
     void load();
@@ -125,20 +108,13 @@ public:
 private:
     std::string name_;
     std::string patStr_;
-    // std::unique_ptr<icu::RegexPattern> patRegex_;
-    // std::unique_ptr<icu::RegexPattern> compiledPattern;
-    
     ByteVecRankMap mergeableRanks_;
     std::unordered_map<std::string, Rank> specialTokens_;
     Rank maxTokenValue_;
-
     CoreBPE coreBPE_;
     // CoreSentencePiece sentencepiece;
-  
     std::map<std::pair<int,int>,int> merges_;
     std::map<int, std::vector<uint8_t>> vocab_;
-    
-
     // Might need these functions for testing 
     std::vector<Rank> encodeSinglePiece(const std::string& text) const;
     std::vector<Rank> encodeBytes(const std::vector<std::uint8_t>& bytes) const;
@@ -147,28 +123,9 @@ private:
     CV_WRAP std::vector<Rank> _encodeBytesLower(const std::vector<uint8_t>& bytes) const;
 };
 
-
-// GPT2 for Testing this function should be moved into registry later
-// Or, to have it as a std::string:
-static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
-// GPT-4’s cl100k_base split pattern
-static const std::string CL100K_BASE = R"CL100K('(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}++|\p{N}{1,3}+| ?[^\s\p{L}\p{N}]++[\r\n]*+|\s++$|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
-
-
 std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
                                         const std::string& vocabBpePath,
                                         const std::string& encoderJsonPath);
-
 CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name);
-
-CV_EXPORTS static std::string replaceGWithSpace(const std::string& input) {
-    std::string result = input;
-    size_t pos = 0;
-    while ((pos = result.find("\xC4\xA0", pos)) != std::string::npos) {
-        result.replace(pos, 2, " ");
-        pos += 1;
-    }
-    return result;
-}
 
 }}}

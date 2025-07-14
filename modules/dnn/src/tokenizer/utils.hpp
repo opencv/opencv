@@ -1,5 +1,4 @@
-// Helpers for reading and interpreting GPT-2 encoder JSON, handling
-//  UTF-8/Unicode, and other small utilities used by the DNN tokenizer.
+//Helper UTF-8/Unicode, and other small utilities used by the DNN tokenizer.
  #pragma once
 
  #include "core_bpe.hpp"
@@ -7,19 +6,13 @@
 #include <string>
 #include <vector>
 
-
-
 namespace cv { namespace dnn { namespace tokenizer {
-    
-// ------------------------------ JSON parsing -----------------------------------
-void append_utf8(uint32_t codepoint, std::string& out);
 
-std::string unescape_json(const std::string& s);
-
-// Return a mapping: token string (raw bytes) -> rank
-std::unordered_map<std::string, int> read_encoder_json(const std::string& path);
-
-// ---------------------------------------------------------------------------------
+// GPT2 for Testing this function should be moved into registry later
+// Or, to have it as a std::string:
+static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
+// GPT-4’s cl100k_base split pattern
+static const std::string CL100K_BASE = R"CL100K('(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}++|\p{N}{1,3}+| ?[^\s\p{L}\p{N}]++[\r\n]*+|\s++$|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
 //---------------------------------  UTF-8 functionality -> Rust bstr -------------------------------------
 
@@ -162,6 +155,70 @@ inline std::pair<std::optional<char>, std::size_t> decodeLastUtf8(const std::vec
 // -----------------------------------------------------------------------------------------------------------------------
 
 // helper to turn the UTF-8 text-token back into GPT-2’s single-byte form
-ByteVec textToBytes(const std::string& txt);
+inline ByteVec textToBytes(const std::string& txt) {
+    ByteVec bytes;
+    for (size_t i = 0; i < txt.size();) {
+        unsigned char c = txt[i];
+        if (c < 128) {
+            // ASCII
+            bytes.push_back(c);
+            ++i;
+        }
+        else if ((c & 0xE0) == 0xC0 && i + 1 < txt.size()) {
+            // two-byte UTF-8
+            uint32_t cp = ((c & 0x1F) << 6) | (static_cast<unsigned char>(txt[i+1]) & 0x3F);
+            if (cp == 0x0120) {
+                // U+0120 → single space byte in GPT-2
+                bytes.push_back(static_cast<uint8_t>(' '));
+            } else {
+                // Just append the raw bytes for any other 2-byte UTF-8
+                bytes.push_back(c);
+                bytes.push_back(static_cast<unsigned char>(txt[i+1]));
+            }
+            i += 2;
+        }
+        else if ((c & 0xF0) == 0xE0 && i + 2 < txt.size()) {
+            // three-byte UTF-8
+            bytes.push_back(c);
+            bytes.push_back(static_cast<unsigned char>(txt[i+1]));
+            bytes.push_back(static_cast<unsigned char>(txt[i+2]));
+            i += 3;
+        }
+        else if ((c & 0xF8) == 0xF0 && i + 3 < txt.size()) {
+            // four-byte UTF-8
+            bytes.push_back(c);
+            bytes.push_back(static_cast<unsigned char>(txt[i+1]));
+            bytes.push_back(static_cast<unsigned char>(txt[i+2]));
+            bytes.push_back(static_cast<unsigned char>(txt[i+3]));
+            i += 4;
+        }
+        else {
+            throw std::runtime_error("Unsupported UTF-8 sequence in BPE token");
+        }
+    }
+    return bytes;
+}
+
+// Escape regex meta-characters in a string
+static std::string escape_regex(const std::string &s) {
+    static const std::string meta = R"(.^$|()[]*+?{}\")";
+    std::string out;
+    out.reserve(s.size() * 2);
+    for (char c : s) {
+        if (meta.find(c) != std::string::npos) out.push_back('\\');
+        out.push_back(c);
+    }
+    return out;
+}
+
+inline std::string replaceGWithSpace(const std::string& input) {
+    std::string result = input;
+    size_t pos = 0;
+    while ((pos = result.find("\xC4\xA0", pos)) != std::string::npos) {
+        result.replace(pos, 2, " ");
+        pos += 1;
+    }
+    return result;
+}
 
 }}} // namespace cv namespace dnn namespace tokenizer
