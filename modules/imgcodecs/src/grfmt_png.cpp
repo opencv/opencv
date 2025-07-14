@@ -631,38 +631,35 @@ bool  PngDecoder::readData( Mat& img )
                 png_get_text(m_png_ptr, m_info_ptr, &text_ptr1, &num_text1);
                 png_get_text(m_png_ptr, m_end_info, &text_ptr2, &num_text2);
 
-                for (int i = 0; i < num_text1; i++) {
-                    const char* key = text_ptr1[i].key;
-                    const char* value = text_ptr1[i].text;
-                    size_t length = text_ptr1[i].text_length;
+                auto processTexts = [&](png_textp txt, int n) {
+                    for (size_t i = 0; i < static_cast<size_t>(n); ++i) {
+                        const char* key = txt[i].key;
+                        const char* value = txt[i].text;
+                        size_t      len = txt[i].text_length;
 
-                    std::vector<unsigned char> exif_data;
-                    if (!strcmp(key, "Raw profile type exif")) {
-                        m_exif.processRawProfile(value, length);
+                        if (key && !std::strcmp(key, "Raw profile type exif")) {
+                            m_exif.processRawProfile(value, len);
+                        }
+                        else if (key && !std::strcmp(key, "XML:com.adobe.xmp")) {
+                            auto& out = m_metadata[IMAGE_METADATA_XMP];
+                            out.insert(out.end(),
+                                reinterpret_cast<const unsigned char*>(value),
+                                reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
+                        }
+                        else {
+                            auto& out = m_metadata[IMAGE_METADATA_TEXT];
+                            out.insert(out.end(),
+                                reinterpret_cast<const unsigned char*>(key),
+                                reinterpret_cast<const unsigned char*>(key) + std::strlen(key) + 1);
+                            out.insert(out.end(),
+                                reinterpret_cast<const unsigned char*>(value),
+                                reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
+                        }
                     }
-                    else
-                    {
-                        m_metadata[IMAGE_METADATA_TEXT].insert(m_metadata[IMAGE_METADATA_TEXT].end(), key, key + strlen(key) + 1);
-                        m_metadata[IMAGE_METADATA_TEXT].insert(m_metadata[IMAGE_METADATA_TEXT].end(), value, value + strlen(value) + 1);
-                    }
-                }
+                    };
 
-                for (int i = 0; i < num_text2; i++) {
-                    const char* key = text_ptr2[i].key;
-                    const char* value = text_ptr2[i].text;
-                    size_t length = text_ptr2[i].text_length;
-
-                    std::vector<unsigned char> exif_data;
-                    if (!strcmp(key, "Raw profile type exif")) {
-                        m_exif.processRawProfile(value, length);
-                    }
-                    else
-                    {
-                        m_metadata[IMAGE_METADATA_TEXT].insert(m_metadata[IMAGE_METADATA_TEXT].end(), key, key + strlen(key) + 1);
-                        m_metadata[IMAGE_METADATA_TEXT].insert(m_metadata[IMAGE_METADATA_TEXT].end(), value, value + strlen(value) + 1);
-                    }
-                }
-
+                processTexts(text_ptr1, num_text1);
+                processTexts(text_ptr2, num_text2);
             }
 #ifdef PNG_eXIf_SUPPORTED
             png_uint_32 num_exif = 0;

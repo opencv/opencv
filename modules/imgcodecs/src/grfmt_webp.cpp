@@ -217,12 +217,13 @@ bool WebPDecoder::readData(Mat &img)
                 WebPDemuxReleaseChunkIterator(&chunk_iter);
                 m_exif.parseExif(metadata.data(), metadata.size());
             }
-#if 0
+
             if (WebPDemuxGetChunk(demux, "ICCP", 1, &chunk_iter))
             {
                 metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
                     chunk_iter.chunk.bytes + chunk_iter.chunk.size);
                 WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_ICCP] = metadata;
             }
 
             if (WebPDemuxGetChunk(demux, "XMP ", 1, &chunk_iter))  // note the space in "XMP "
@@ -230,8 +231,9 @@ bool WebPDecoder::readData(Mat &img)
                 metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
                     chunk_iter.chunk.bytes + chunk_iter.chunk.size);
                 WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_XMP] = metadata;
             }
-#endif
+
             WebPDemuxDelete(demux);
             m_metadata_reading_flag = 0;
         }
@@ -411,23 +413,39 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 
     WebPData finalData = { out, size };
     if (!m_metadata.empty()) {
-        const std::vector<uchar>& metadata_exif = m_metadata[IMAGE_METADATA_EXIF];
-        if (metadata_exif.size() > 0u) {
-            WebPMux* mux = WebPMuxNew();
-            WebPData imageData = { out, size };
-            WebPMuxSetImage(mux, &imageData, 0);
 
-            WebPData exifData = { metadata_exif.data(), metadata_exif.size() };
-            WebPMuxSetChunk(mux, "EXIF", &exifData, 1);
+        WebPMux* mux = WebPMuxNew();
+        WebPData imageData = { out, size };
+        WebPMuxSetImage(mux, &imageData, 0);
 
-            if (WebPMuxAssemble(mux, &finalData) == WEBP_MUX_OK) {
-                size = finalData.size;
-                WebPMuxDelete(mux);
-            }
-            else {
-                WebPMuxDelete(mux);
-                CV_Error(Error::StsError, "Failed to assemble WebP with EXIF");
-            }
+        WebPData metadata;
+        if (m_metadata[IMAGE_METADATA_EXIF].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_EXIF].data();
+            metadata.size = m_metadata[IMAGE_METADATA_EXIF].size();
+            WebPMuxSetChunk(mux, "EXIF", &metadata, 1);
+        }
+        if (m_metadata[IMAGE_METADATA_XMP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_XMP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_XMP].size();
+            WebPMuxSetChunk(mux, "XMP ", &metadata, 1);
+        }
+
+        if (m_metadata[IMAGE_METADATA_ICCP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_ICCP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_ICCP].size();
+            WebPMuxSetChunk(mux, "ICCP", &metadata, 1);
+        }
+
+        if (WebPMuxAssemble(mux, &finalData) == WEBP_MUX_OK) {
+            size = finalData.size;
+            WebPMuxDelete(mux);
+        }
+        else {
+            WebPMuxDelete(mux);
+            CV_Error(Error::StsError, "Failed to assemble WebP with EXIF");
         }
     }
 

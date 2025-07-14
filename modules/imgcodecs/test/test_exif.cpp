@@ -265,14 +265,25 @@ TEST(Imgcodecs_WebP, ReadWriteWithExif)
         0, 0, 0, 'H', 0, 0, 0, 1, 0, 0, 0, 'H', 0, 0, 0, 1
     };
 
+    static const uchar xmp_data[] = {
+    '<','x',':','x','m','p','m','e','t','a',' ','x','m','l','n','s',':','x','=',
+    '"','a','d','o','b','e',':','x','m','p','"','>',
+    '<','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+    'O','p','e','n','C','V',
+    '<','/','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+    '<','/','x',':','x','m','p','m','e','t','a','>',
+    0
+    };
+
     int webp_quality = 101; // 101 is the value to compress with lossless mode
     int imgtype = CV_MAKETYPE(CV_8U, 3);
     const string outputname = cv::tempfile(".webp");
     Mat img = makeCirclesImage(Size(160, 120), imgtype, 8);
 
-    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
-    std::vector<std::vector<uchar> > metadata(1);
+    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP};
+    std::vector<std::vector<uchar> > metadata(2);
     metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
+    metadata[1].assign(xmp_data, xmp_data + sizeof(xmp_data));
 
     std::vector<int> write_params = {
         IMWRITE_WEBP_QUALITY, webp_quality
@@ -290,11 +301,9 @@ TEST(Imgcodecs_WebP, ReadWriteWithExif)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
-    EXPECT_GE(read_metadata_types.size(), 1u);
+    EXPECT_EQ(read_metadata_types.size(), 2u);
     EXPECT_EQ(read_metadata, read_metadata2);
-    EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
-    EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
-    EXPECT_EQ(read_metadata[0], metadata[0]);
+    EXPECT_EQ(read_metadata, metadata);
     EXPECT_EQ(cv::norm(img2, img3, NORM_INF), 0.);
     double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
     EXPECT_EQ(mse, 0);
@@ -428,18 +437,30 @@ TEST(Imgcodecs_Png, ReadWriteWithText)
     static const uchar text_data[] = {
         'S', 'o', 'f', 't', 'w', 'a', 'r', 'e',0,'O', 'p', 'e', 'n', 'C', 'V', 0, 'C', 'o', 'm', 'm', 'e', 'n', 't', 0,
         'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-','b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ',
-         'w', 'i', 't', 'h', ' ', 'm','e', 't', 'a', 'd', 'a', 't', 'a', 0
+        'w', 'i', 't', 'h', ' ', 'm','e', 't', 'a', 'd', 'a', 't', 'a', 0
     };
+
+static const uchar xmp_data[] = {
+    '<','x',':','x','m','p','m','e','t','a',' ','x','m','l','n','s',':','x','=',
+    '"','a','d','o','b','e',':','x','m','p','"','>',
+    '<','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+    'O','p','e','n','C','V',
+    '<','/','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+    '<','/','x',':','x','m','p','m','e','t','a','>',
+    0
+};
 
     int png_compression = 3;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
     const string outputname = cv::tempfile(".png");
     Mat img = makeCirclesImage(Size(1280, 720), imgtype, 8);
 
-    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_TEXT};
-    std::vector<std::vector<uchar> > metadata(2);
-    metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
-    metadata[1].assign(text_data, text_data + sizeof(text_data));
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_TEXT};
+    std::vector<std::vector<uchar>> metadata = {
+        std::vector<uchar>(exif_data, exif_data + sizeof(exif_data)),
+        std::vector<uchar>(xmp_data, xmp_data + sizeof(xmp_data)),
+        std::vector<uchar>(text_data, text_data + sizeof(text_data)),
+    };
 
     std::vector<int> write_params = {
         IMWRITE_PNG_COMPRESSION, png_compression
@@ -457,13 +478,14 @@ TEST(Imgcodecs_Png, ReadWriteWithText)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
-    EXPECT_EQ(read_metadata_types.size(), 2u);
-    EXPECT_EQ(read_metadata, read_metadata2);
+    EXPECT_EQ(read_metadata_types.size(), 3u);
     EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
-    EXPECT_EQ(read_metadata_types[1], IMAGE_METADATA_TEXT);
-    EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
+    EXPECT_EQ(read_metadata_types[1], IMAGE_METADATA_XMP);
+    EXPECT_EQ(read_metadata_types[2], IMAGE_METADATA_TEXT);
+
     EXPECT_EQ(read_metadata[0], metadata[0]);
     EXPECT_EQ(read_metadata[1], metadata[1]);
+    EXPECT_EQ(read_metadata[2], metadata[2]);
     remove(outputname.c_str());
 }
 

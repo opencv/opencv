@@ -77,6 +77,14 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
         }
     }
 
+    if (type == IMAGE_METADATA_XMP) {
+        const std::vector<unsigned char>& xmp = m_metadata[IMAGE_METADATA_XMP];
+        if (!xmp.empty()) {
+            Mat xmpmat(1, (int)xmp.size(), CV_8U, (void*)xmp.data());
+            return xmpmat;
+        }
+    }
+
     if (type == IMAGE_METADATA_TEXT) {
         const std::vector<unsigned char>& texts = m_metadata[IMAGE_METADATA_TEXT];
         if (!texts.empty()) {
