@@ -2818,6 +2818,17 @@ TEST(Layer_LSTM, repeatedInference)
 
 TEST(Layer_If, resize)
 {
+    // Skip this test when the classic DNN engine is explicitly requested. The
+    // "if" layer is supported only by the new engine.
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        // Mark the test as skipped and exit early.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
     const std::string imgname   = findDataFile("cv/shared/lena.png", true);
     const std::string modelname = findDataFile("dnn/onnx/models/if_layer.onnx", true);
 
