@@ -397,7 +397,7 @@ CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = I
  *
  * @note Not all image formats support embedded metadata. If the format does not support it, @p metadata will be empty.
  *       This function is useful when working with image formats that include auxiliary metadata
- *       such as JPEG (EXIF), PNG (tEXt/zTXt), TIFF (tags), or WebP (XMP/EXIF).
+ *       such as JPEG (EXIF), PNG (EXIF/XMP/ICCP/TEXT), Avif (EXIF/XMP/ICCP) or WebP (EXIF/XMP/ICCP).
  */
 CV_EXPORTS_W Mat imreadWithMetadata( const String& filename, CV_OUT std::vector<int>& metadataTypes,
                                      OutputArrayOfArrays metadata, int flags = IMREAD_ANYCOLOR);
