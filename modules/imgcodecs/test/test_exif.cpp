@@ -62,7 +62,6 @@ TEST_P(Exif, exif_orientation)
     const string filename = root + GetParam();
     const int colorThresholdHigh = 250;
     const int colorThresholdLow = 5;
-    const string outputname = cv::tempfile(".webp");
 
     // Refer to the note in the explanation above.
     Mat m_img = imread(filename, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
@@ -76,10 +75,12 @@ TEST_P(Exif, exif_orientation)
     metadata_types2 = { IMAGE_METADATA_EXIF };
     metadata2 = { metadata1[0] }; // we want to write just EXIF metadata to test rotation
 
-    imwriteWithMetadata(outputname, img, metadata_types2, metadata2);
+    std::vector<uchar> buffer;
+    imencodeWithMetadata(".webp", img, metadata_types2, metadata2, buffer);
 
-    img = imreadWithMetadata(outputname, metadata_types2, metadata2, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
-    remove(outputname.c_str());
+    // Decode image and metadata back from buffer
+    img = imdecodeWithMetadata(buffer, metadata_types2, metadata2,
+        cv::IMREAD_COLOR | cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
 
     std::vector<int> expected_metadata_types = { IMAGE_METADATA_EXIF };
     EXPECT_EQ(expected_metadata_types, metadata_types2);
