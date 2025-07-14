@@ -69,37 +69,25 @@ bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
 
 Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
 {
-    if (type == IMAGE_METADATA_EXIF) {
-        const std::vector<unsigned char>& exif = m_exif.getData();
-        if (!exif.empty()) {
-            Mat exifmat(1, (int)exif.size(), CV_8U, (void*)exif.data());
-            return exifmat;
-        }
+    auto makeMat = [](const std::vector<unsigned char>& data) -> Mat {
+        return !data.empty() ? Mat(1, (int)data.size(), CV_8U, (void*)data.data()) : Mat();
+        };
+
+    switch (type) {
+    case IMAGE_METADATA_EXIF:
+        return makeMat(m_exif.getData());
+
+    case IMAGE_METADATA_XMP:
+    case IMAGE_METADATA_ICCP:
+    case IMAGE_METADATA_TEXT:
+        if (type < m_metadata.size())
+            return makeMat(m_metadata[type]);
+        break;
+
+    default:
+        break;
     }
 
-    if (type == IMAGE_METADATA_XMP) {
-        const std::vector<unsigned char>& xmp = m_metadata[IMAGE_METADATA_XMP];
-        if (!xmp.empty()) {
-            Mat xmpmat(1, (int)xmp.size(), CV_8U, (void*)xmp.data());
-            return xmpmat;
-        }
-    }
-
-    if (type == IMAGE_METADATA_ICCP) {
-        const std::vector<unsigned char>& iccp = m_metadata[IMAGE_METADATA_ICCP];
-        if (!iccp.empty()) {
-            Mat iccpmat(1, (int)iccp.size(), CV_8U, (void*)iccp.data());
-            return iccpmat;
-        }
-    }
-
-    if (type == IMAGE_METADATA_TEXT) {
-        const std::vector<unsigned char>& texts = m_metadata[IMAGE_METADATA_TEXT];
-        if (!texts.empty()) {
-            Mat textsmat(1, (int)texts.size(), CV_8U, (void*)texts.data());
-            return textsmat;
-        }
-    }
     return Mat();
 }
 
