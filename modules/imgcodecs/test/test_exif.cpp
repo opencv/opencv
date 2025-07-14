@@ -248,7 +248,7 @@ TEST(Imgcodecs_Avif, ReadWriteWithExif)
 #endif // HAVE_AVIF
 
 #ifdef HAVE_WEBP
-TEST(Imgcodecs_WebP, ReadWriteWithExif)
+TEST(Imgcodecs_WebP, ReadWriteWithExifXmpIccp)
 {
     static const uchar exif_data[] = {
         'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
@@ -266,47 +266,92 @@ TEST(Imgcodecs_WebP, ReadWriteWithExif)
     };
 
     static const uchar xmp_data[] = {
-    '<','x',':','x','m','p','m','e','t','a',' ','x','m','l','n','s',':','x','=',
-    '"','a','d','o','b','e',':','x','m','p','"','>',
-    '<','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
-    'O','p','e','n','C','V',
-    '<','/','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
-    '<','/','x',':','x','m','p','m','e','t','a','>',
-    0
+        '<','x',':','x','m','p','m','e','t','a',' ','x','m','l','n','s',':','x','=',
+        '"','a','d','o','b','e',':','x','m','p','"','>',
+        '<','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+        'O','p','e','n','C','V',
+        '<','/','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+        '<','/','x',':','x','m','p','m','e','t','a','>',
+        0
     };
 
-    int webp_quality = 101; // 101 is the value to compress with lossless mode
-    int imgtype = CV_MAKETYPE(CV_8U, 3);
-    const string outputname = cv::tempfile(".webp");
-    Mat img = makeCirclesImage(Size(160, 120), imgtype, 8);
+    static const uchar iccp_data[] = {
+        0x00, 0x00, 0x02, 0x10,  // Profile size: 528 bytes
+        0x61, 0x63, 0x73, 0x70,  // 'acsp' (magic number)
+        0x00, 0x00, 0x00, 0x00,  // Preferred CMM (none)
+        0x02, 0x10, 0x00, 0x00,  // Version 2.1.0
+        0x6D, 0x6E, 0x74, 0x72,  // Profile/device class: 'mntr' (monitor)
+        0x52, 0x47, 0x42, 0x20,  // Color space: 'RGB '
+        0x58, 0x59, 0x5A, 0x20,  // PCS: 'XYZ '
+        0x00, 0x00, 0x00, 0x00,  // Creation date/time (ignored)
+        0x61, 0x63, 0x73, 0x70,  // 'acsp' again
+        0x00, 0x00, 0x00, 0x00,  // Platform (unspecified)
+        0x00, 0x00, 0x00, 0x00,  // Flags
+        0x00, 0x00, 0x00, 0x00,  // Manufacturer
+        0x00, 0x00, 0x00, 0x00,  // Model
+        0x00, 0x00, 0x00, 0x00,  // Attributes (MSB)
+        0x00, 0x00, 0x00, 0x00,  // Attributes (LSB)
+        0x00, 0x00, 0xF6, 0xD6,  // Rendering intent (0: perceptual)
+        0x00, 0x01, 0x00, 0x00,  // Illuminant X (D50)
+        0x00, 0x00, 0x00, 0x00,  // Illuminant Y
+        0x00, 0x00, 0x00, 0x00,  // Illuminant Z
+        0x00, 0x00, 0x00, 0x00,  // Creator (unspecified)
 
-    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP};
-    std::vector<std::vector<uchar> > metadata(2);
+        // Tag Table (simplified: 1 tag: 'desc' profile description)
+        0x00, 0x00, 0x00, 0x01,  // 1 tag
+        'd', 'e', 's', 'c',      // Tag signature: 'desc'
+        0x00, 0x00, 0x00, 0x80,  // Offset to tag data (128)
+        0x00, 0x00, 0x00, 0x48,  // Size of tag data (72 bytes)
+
+        // 'desc' Tag data (profile description)
+        'd', 'e', 's', 'c',      // Type signature: 'desc'
+        0x00, 0x00, 0x00, 0x00,  // Reserved
+        0x00, 0x00, 0x00, 0x12,  // ASCII length: 18
+        's', 'R', 'G', 'B', ' ', 'I', 'E', 'C', '6', '1', '9', '6', '6', '-', '2', '.', '1', 0x00,
+        // Padding to 72 bytes total
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    };
+
+    int webp_quality = 101; // 101 is lossless compression
+    int imgtype = CV_MAKETYPE(CV_8U, 3);
+    const std::string outputname = cv::tempfile(".webp");
+    cv::Mat img = makeCirclesImage(cv::Size(160, 120), imgtype, 8);
+
+    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICC};
+    std::vector<std::vector<uchar>> metadata(3);
     metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
     metadata[1].assign(xmp_data, xmp_data + sizeof(xmp_data));
+    metadata[2].assign(iccp_data, iccp_data + sizeof(iccp_data));
 
-    std::vector<int> write_params = {
-        IMWRITE_WEBP_QUALITY, webp_quality
-    };
+    std::vector<int> write_params = {IMWRITE_WEBP_QUALITY, webp_quality};
 
     imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
+
     std::vector<uchar> compressed;
     imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);
 
     std::vector<int> read_metadata_types, read_metadata_types2;
-    std::vector<std::vector<uchar> > read_metadata, read_metadata2;
-    Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, IMREAD_UNCHANGED);
-    Mat img3 = imdecodeWithMetadata(compressed, read_metadata_types2, read_metadata2, IMREAD_UNCHANGED);
+    std::vector<std::vector<uchar>> read_metadata, read_metadata2;
+
+    cv::Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, cv::IMREAD_UNCHANGED);
+    cv::Mat img3 = imdecodeWithMetadata(compressed, read_metadata_types2, read_metadata2, cv::IMREAD_UNCHANGED);
+
     EXPECT_EQ(img2.cols, img.cols);
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
+
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
-    EXPECT_EQ(read_metadata_types.size(), 2u);
+    EXPECT_EQ(read_metadata_types.size(), 3u);
+
     EXPECT_EQ(read_metadata, read_metadata2);
     EXPECT_EQ(read_metadata, metadata);
-    EXPECT_EQ(cv::norm(img2, img3, NORM_INF), 0.);
-    double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
+
+    EXPECT_EQ(cv::norm(img2, img3, cv::NORM_INF), 0.0);
+
+    double mse = cv::norm(img, img2, cv::NORM_L2SQR) / (img.rows * img.cols);
     EXPECT_EQ(mse, 0);
+
     remove(outputname.c_str());
 }
 #endif // HAVE_WEBP
