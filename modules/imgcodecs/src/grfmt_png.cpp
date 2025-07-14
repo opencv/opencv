@@ -128,6 +128,7 @@ const uint32_t id_acTL = 0x6163544C; // Animation control chunk
 const uint32_t id_fcTL = 0x6663544C; // Frame control chunk
 const uint32_t id_IDAT = 0x49444154; // first frame and/or default image
 const uint32_t id_fdAT = 0x66644154; // Frame data chunk
+const uint32_t id_cICP = 0x63494350; // cICP chunk
 const uint32_t id_PLTE = 0x504C5445; // The PLTE chunk contains a color palette for indexed-color images
 const uint32_t id_bKGD = 0x624B4744; // The bKGD chunk specifies a default background color for the image
 const uint32_t id_tRNS = 0x74524E53; // The tRNS chunk provides transparency information
@@ -307,6 +308,12 @@ bool  PngDecoder::readHeader()
         if (!id || (m_f && feof(m_f)) || (!m_buf.empty() && m_buf_pos > m_buf.total()))
         {
             return false;
+        }
+
+        if (id == id_cICP && m_metadata_reading_flag)
+        {
+            auto& out = m_metadata[IMAGE_METADATA_ICCP];
+            out.insert(out.end(), chunk.p.begin() + 8, chunk.p.begin() + 12);
         }
 
         if (id == id_IDAT)
@@ -660,6 +667,18 @@ bool  PngDecoder::readData( Mat& img )
 
                 processTexts(text_ptr1, num_text1);
                 processTexts(text_ptr2, num_text2);
+
+                png_charp icc_name;
+                int compression_type;
+                png_bytep icc_profile;
+                png_uint_32 icc_length;
+
+                if (png_get_iCCP(m_png_ptr, m_info_ptr, &icc_name, &compression_type, &icc_profile, &icc_length)) {
+                    auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                    out.insert(out.end(),
+                        reinterpret_cast<const unsigned char*>(icc_profile),
+                        reinterpret_cast<const unsigned char*>(icc_profile) + icc_length);
+                }
             }
 #ifdef PNG_eXIf_SUPPORTED
             png_uint_32 num_exif = 0;
@@ -1020,6 +1039,9 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
 
+                    bool writecICP = false;
+                    std::vector<uchar> icp_iccp;
+
                     if (!m_metadata.empty()) {
                         std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
                         if (!exif.empty()) {
@@ -1035,6 +1057,31 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             text_chunk.text_length = static_cast<png_size_t>(xmp.size());
 
                             png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+                        }
+
+                        icp_iccp = m_metadata[IMAGE_METADATA_ICCP];
+                        if (!icp_iccp.empty()) {
+                            if (icp_iccp.size() == 4)
+                            {
+                                writecICP = true;
+                            }
+                            else
+                            {
+                                // PNG standard requires a profile name (null-terminated, max 79 characters, printable Latin-1)
+                                const char* iccp_profile_name = "ICC Profile";
+
+                                // Compression type must be 0 (deflate) as per libpng docs
+                                int compression_type = PNG_COMPRESSION_TYPE_BASE;
+
+                                // Some ICC profiles are already compressed (e.g., if saved from Photoshop),
+                                // but png_set_iCCP still expects uncompressed input, and it compresses it internally.
+
+                                png_set_iCCP(png_ptr, info_ptr,
+                                    iccp_profile_name,
+                                    compression_type,
+                                    reinterpret_cast<png_const_bytep>(icp_iccp.data()),
+                                    static_cast<png_uint_32>(icp_iccp.size()));
+                            }
                         }
 
                         std::vector<uchar>& text = m_metadata[IMAGE_METADATA_TEXT];
@@ -1079,6 +1126,9 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     }
 
                     png_write_info( png_ptr, info_ptr );
+
+                    if (writecICP)
+                        writeChunk(f, "cICP", icp_iccp.data(), 4);
 
                     if (m_isBilevel)
                         png_set_packing(png_ptr);
