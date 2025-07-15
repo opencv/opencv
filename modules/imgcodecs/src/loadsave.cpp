@@ -2642,29 +2642,6 @@ static void packIFD(const std::vector<ExifTag>* ifds, size_t nifds, size_t idx,
     }
 }
 
-static bool encodeExif(const std::vector<std::vector<ExifTag> >& exif,
-    std::vector<uchar>& data,
-    bool bigendian, bool sorttags,
-    bool adjust_stripe_offsets)
-{
-    data.clear();
-    size_t values_size = 0;
-    size_t ifd_size = computeIFDSize(exif.data(), exif.size(), 0u, values_size) + EXIF_HDR_SIZE;
-    data.resize(ifd_size + values_size);
-
-    char signature = bigendian ? 'M' : 'I';
-    size_t offset = 0;
-    pack1(data, offset, (uint8_t)signature);
-    pack1(data, offset, (uint8_t)signature);
-    pack2(data, offset, 42u, bigendian);
-    pack4(data, offset, 8u, bigendian);
-
-    size_t image_data_offset0 = ifd_size + values_size, image_data_offset = image_data_offset0;
-    packIFD(exif.data(), exif.size(), 0u, data, offset, ifd_size, image_data_offset,
-        bigendian, sorttags, adjust_stripe_offsets);
-    return data.size() == image_data_offset0;
-}
-
 static uint8_t unpack1(const std::vector<uchar>& data, size_t& offset)
 {
     CV_Assert(offset + 1 <= data.size());
@@ -2962,43 +2939,6 @@ bool decodeExif(const std::vector<uchar>& data, size_t offset0,
         return false;
     size_t ifd0offset = unpack4(data, offset, bigendian);
     return unpackIFD(data, ifd0offset, offset0, exif, 0u, bigendian);
-}
-
-static bool locateExif(const std::vector<uchar>& data, size_t& exifOffset)
-{
-    size_t imageBytes = data.size();
-    constexpr size_t MIN_APP1_EXIF_SIZE = 36;
-    constexpr size_t MAX_APP1_EXIF_OFFSET = 1 << 20;
-    exifOffset = 0;
-    if ((data[0] == 'I' && data[1] == 'I') ||
-        (data[0] == 'M' && data[1] == 'M')) {
-        return true;
-    }
-    else if (data[0] == 0xff && data[1] == 0xd8) {
-        size_t offset = 2;
-        for (;;) {
-            if (offset + MIN_APP1_EXIF_SIZE > imageBytes ||
-                offset > MAX_APP1_EXIF_OFFSET ||
-                data[offset] != 0xff || data[offset + 1] == 0xda)
-                return false;
-            unsigned c = data[offset + 1];
-            if (c == 0xe1 && memcmp(&data[offset + 4], "Exif\0\0", 6) == 0) {
-                exifOffset = offset + 10;
-                return true;
-            }
-            if (c == 0xff) {
-                offset++;
-                continue;
-            }
-            if (c <= 0x01 || (0xd0 <= c && c <= 0xd9)) {
-                offset += 2;
-                continue;
-            }
-            unsigned length = (uint8_t)data[offset + 2] * 256 + (uint8_t)data[offset + 3];
-            offset += 2 + length;
-        }
-    }
-    return false;
 }
 
 static void dumpIFD(std::ostream& strm, int indent,
