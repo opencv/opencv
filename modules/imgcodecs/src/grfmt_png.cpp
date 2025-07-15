@@ -637,7 +637,7 @@ bool  PngDecoder::readData( Mat& img )
                         const char* value = txt[i].text;
                         size_t      len = txt[i].text_length;
 
-                        if (key && !std::strcmp(key, "Raw profile type exif")) {
+                        if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP12"))) {
                             m_exif.processRawProfile(value, len);
                         }
                         else if (key && !std::strcmp(key, "XML:com.adobe.xmp")) {
