@@ -706,8 +706,8 @@ class WorkloadType {
         listeners.erase(id);
     }
     void set(const std::string &type) {
-        for(const auto &[_, cb] : listeners) {
-            cb(type);
+        for(const auto &listener : listeners) {
+            listener.second(type);
         }
     }
 };
