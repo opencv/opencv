@@ -978,8 +978,69 @@ public:
     // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
+
+/** @brief the CSRT tracker
+
+The implementation is based on @cite Lukezic_IJCV2018 Discriminative Correlation Filter with Channel and Spatial Reliability
+*/
+class CV_EXPORTS_W TrackerCSRT : public Tracker
+{
+protected:
+    TrackerCSRT();  // use ::create()
+public:
+    virtual ~TrackerCSRT() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+
+        CV_PROP_RW bool use_hog;
+        CV_PROP_RW bool use_color_names;
+        CV_PROP_RW bool use_gray;
+        CV_PROP_RW bool use_rgb;
+        CV_PROP_RW bool use_channel_weights;
+        CV_PROP_RW bool use_segmentation;
+
+        CV_PROP_RW std::string window_function; //!<  Window function: "hann", "cheb", "kaiser"
+        CV_PROP_RW float kaiser_alpha;
+        CV_PROP_RW float cheb_attenuation;
+
+        CV_PROP_RW float template_size;
+        CV_PROP_RW float gsl_sigma;
+        CV_PROP_RW float hog_orientations;
+        CV_PROP_RW float hog_clip;
+        CV_PROP_RW float padding;
+        CV_PROP_RW float filter_lr;
+        CV_PROP_RW float weights_lr;
+        CV_PROP_RW int num_hog_channels_used;
+        CV_PROP_RW int admm_iterations;
+        CV_PROP_RW int histogram_bins;
+        CV_PROP_RW float histogram_lr;
+        CV_PROP_RW int background_ratio;
+        CV_PROP_RW int number_of_scales;
+        CV_PROP_RW float scale_sigma_factor;
+        CV_PROP_RW float scale_model_max_area;
+        CV_PROP_RW float scale_lr;
+        CV_PROP_RW float scale_step;
+
+        CV_PROP_RW float psr_threshold; //!< we lost the target, if the psr is lower than this.
+    };
+
+    /** @brief Create CSRT tracker instance
+    @param parameters CSRT parameters TrackerCSRT::Params
+    */
+    static CV_WRAP Ptr<TrackerCSRT> create(const TrackerCSRT::Params &parameters = TrackerCSRT::Params());
+
+    CV_WRAP virtual void setInitialMask(InputArray mask) = 0;
+
+    //! Return estimated tracking confidence
+    CV_WRAP virtual float getTrackingScore() const = 0;
+};
+
+
 //! @} video_track
 
 } // cv
+
 
 #endif
