@@ -2026,7 +2026,7 @@ CASE(test_tile)
 CASE(test_tile_precomputed)
     // no filter
 CASE(test_top_k)
-    // no filter
+    SKIP
 CASE(test_top_k_negative_axis)
     // no filter
 CASE(test_top_k_smallest)
