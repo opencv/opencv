@@ -2,12 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#include <algorithm>
-#include <numeric>
-
 #include "../precomp.hpp"
-#include "../net_impl.hpp"
-#include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
