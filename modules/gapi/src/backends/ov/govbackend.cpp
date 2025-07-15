@@ -1542,10 +1542,10 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
 #if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
-    auto workload_arg = cv::gapi::getCompileArg<cv::gapi::wip::ov::WorkloadTypeRef>(compileArgs);
+    auto workload_arg = cv::gapi::getCompileArg<cv::gapi::wip::ov::WorkloadTypePtr>(compileArgs);
     if(workload_arg.has_value()) {
-        m_workload = workload_arg;
-        m_workloadId = m_workload.value().get().addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
+        m_workload_type = workload_arg.value();
+        m_workload_listener_id = m_workload_type->addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
     }
 #endif
     m_options.inference_only =
@@ -1583,23 +1583,26 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
         }
     }
 }
+
 #if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
 cv::gimpl::ov::GOVExecutable::~GOVExecutable() {
-    if(m_workload.has_value())
-        m_workload.value().get().removeListener(m_workloadId);
+    if(m_workload_type)
+        m_workload_type->removeListener(m_workload_listener_id);
 }
 
 void cv::gimpl::ov::GOVExecutable::setWorkLoadType(const std::string &type) {
-    if(type == "Default")
-    {
+    if(type == "Default") {
         compiled.compiled_model.set_property({{"WORKLOAD_TYPE", ::ov::WorkloadType::DEFAULT}});
     }
-    else if(type == "Efficient")
-    {
+    else if(type == "Efficient") {
         compiled.compiled_model.set_property({{"WORKLOAD_TYPE", ::ov::WorkloadType::EFFICIENT}});
+    }
+    else {
+        GAPI_LOG_WARNING(NULL, "Unknown value for WORKLOAD_TYPE");
     }
 }
 #endif
+
 void cv::gimpl::ov::GOVExecutable::run(cv::gimpl::GIslandExecutable::IInput  &in,
                                        cv::gimpl::GIslandExecutable::IOutput &out) {
     std::vector<InObj>  input_objs;

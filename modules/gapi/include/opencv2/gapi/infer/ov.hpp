@@ -7,6 +7,7 @@
 #ifndef OPENCV_GAPI_INFER_OV_HPP
 #define OPENCV_GAPI_INFER_OV_HPP
 
+#include <memory>
 #include <string>
 
 #include <opencv2/gapi/util/any.hpp>
@@ -15,6 +16,7 @@
 #include <opencv2/gapi/infer.hpp>       // Generic
 
 #include <map>
+#include <unordered_map>
 
 namespace cv {
 namespace gapi {
@@ -690,29 +692,27 @@ namespace wip { namespace ov {
  * taking into account the i/o data transfer.
  */
 struct benchmark_mode { };
-struct workload_type {
-    using callback = std::function<void(const std::string &type)>;
-    using listener = std::pair<unsigned int, callback>;
-    unsigned int addListener(callback cb){
-        unsigned int id = nextId++;
-        listeners.emplace_back(id, std::move(cb));
+class WorkloadType {
+    using Callback = std::function<void(const std::string &type)>;
+    std::unordered_map<unsigned int, Callback> listeners;
+    unsigned int next_id = 0;
+ public:
+    unsigned int addListener(Callback cb) {
+        unsigned int id = next_id++;
+        listeners.emplace(id, std::move(cb));
         return id;
     }
     void removeListener(unsigned int id) {
-        listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [=](listener& pair){return pair.first == id;}), listeners.end());
+        listeners.erase(id);
     }
-    void setWorkloadType(const std::string &type) {
-        for(const listener &l : listeners) {
-            l.second(type);
+    void set(const std::string &type) {
+        for(const auto &[_, cb] : listeners) {
+            cb(type);
         }
     }
- private:
-    std::vector<listener> listeners;
-    unsigned int nextId = 0;
 };
-    using WorkloadTypeRef = std::reference_wrapper<cv::gapi::wip::ov::workload_type>;
+using WorkloadTypePtr = std::shared_ptr<cv::gapi::wip::ov::WorkloadType>;
 
-// #endif
 } // namespace ov
 } // namespace wip
 
@@ -724,11 +724,10 @@ namespace detail
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
-    template<> struct CompileArgTag<std::reference_wrapper<cv::gapi::wip::ov::workload_type>>
+    template<> struct CompileArgTag<std::shared_ptr<cv::gapi::wip::ov::WorkloadType>>
     {
         static const char* tag() { return "gapi.wip.ov.workload_type_ref"; }
     };
-// #endif
 }
 
 } // namespace cv
