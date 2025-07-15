@@ -43,11 +43,11 @@ public:
            patStr_(patStr),
            mergeableRanks_(),
            specialTokens_() {
-        train_bpe_hugface(texts, vocabSize, minFreq, max_token_length, verbose);
+        train_bpe_v2(texts, vocabSize, minFreq, max_token_length, verbose);
     }
 
     CV_EXPORTS void train_bpe(const std::string& text, int vocabSize, bool verbose=false);
-    CV_EXPORTS void train_bpe_hugface(const std::vector<std::string>& texts, int vocabSize, int minFreq,  
+    CV_EXPORTS void train_bpe_v2(const std::vector<std::string>& texts, int vocabSize, int minFreq,  
                                       int max_token_length=std::numeric_limits<int>::max(), bool verbose=false);
 
     /* --------------------- Encoding ----------------------------------*/

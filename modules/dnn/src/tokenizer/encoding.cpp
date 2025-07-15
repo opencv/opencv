@@ -1,3 +1,40 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Portions of this file are inspired by or adapted from:
+//      • tiktoken (Python) implementation:
+//          https://github.com/openai/tiktoken/blob/main/tiktoken/core.py
+//      • minbpe by Andrej Karpathy:
+//          https://github.com/karpathy/minbpe/blob/master/minbpe/regex.py
+//
+//  This file is part of the OpenCV DNN module for tokenization.
+//
+////////////////////////////////////////////////////////////////////////////////////////*/
+
+/*M///////////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2022 OpenAI, Shantanu Jain
+// Copyright (c) 2024 Andrej Karpathy
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////////////*/
 #include <opencv2/core.hpp>
 
 #include "encoding.hpp"
@@ -132,7 +169,7 @@ void Encoding::train_bpe(const std::string& text, int vocabSize, bool verbose) {
     }
 }
 
-void Encoding::train_bpe_hugface(const std::vector<std::string>& texts, int vocabSize, int minFreq,  int max_token_length, bool verbose) {
+void Encoding::train_bpe_v2(const std::vector<std::string>& texts, int vocabSize, int minFreq,  int max_token_length, bool verbose) {
     std::unordered_map<std::string, int> word_to_id;
     std::vector<std::string> id_to_word;
     int next_id = 0;

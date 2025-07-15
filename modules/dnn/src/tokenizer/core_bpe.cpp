@@ -1,3 +1,37 @@
+/*M///////////////////////////////////////////////////////////////////////////////////////
+//
+//  Portions of this file are inspired by or adapted from the tiktoken Rust
+//  implementation:
+//      https://github.com/openai/tiktoken/blob/main/src/lib.rs
+//
+//  This file is part of the OpenCV DNN module for tokenization.
+//
+////////////////////////////////////////////////////////////////////////////////////////*/
+
+/*M///////////////////////////////////////////////////////////////////////////////////////
+// MIT License
+//
+// Copyright (c) 2022 OpenAI, Shantanu Jain
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
+////////////////////////////////////////////////////////////////////////////////////////*/
 #include "core_bpe.hpp"
 #include "unicode.hpp"
 #include "utils.hpp"
@@ -23,7 +57,17 @@ static Rank maybeGetRank(const ByteVecRankMap& ranks, const ByteVec& key) {
     auto it = ranks.find(key);
     return it == ranks.end() ? RANK_MAX : it->second;
 }
-
+/*
+ * This function takes a sequence of bytes and a map of
+ * mergeable byte pairs (with associated ranks/merge priority), and repeatedly merges the
+ * lowest-ranked adjacent pairs until no further merges are possible. The result is a vector
+ * describing the split points and ranks of the final token boundaries.
+ *
+ * This function is closely modeled after the original Rust implementation in OpenAI's tiktoken
+ * library, which can be found here:
+ * https://github.com/openai/tiktoken/blob/4560a8896f5fb1d35c6f8fd6eee0399f9a1a27ca/src/lib.rs#L17-L73
+ *
+ */
 std::vector<std::pair<std::size_t, Rank>> bytePairMerge(const ByteVecRankMap& ranks, 
                                                         const ByteVec& piece) {
     std::vector<std::pair<std::size_t, Rank>> parts;
@@ -209,7 +253,16 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
 
     return tokens;
 }
-
+/*
+ * This function tokenizes input text by handling special tokens and applying Byte Pair Encoding (BPE)
+ * to ordinary text segments. It searches for allowed special tokens, processes ordinary text with BPE,
+ * and emits a sequence of token IDs along with the count of tokens in the final processed segment.
+ *
+ * The logic and structure of this function are closely modeled after the original Rust implementation
+ * in OpenAI's tiktoken library, which can be found here:
+ * https://github.com/openai/tiktoken/blob/4560a8896f5fb1d35c6f8fd6eee0399f9a1a27ca/src/lib.rs#L234-L288
+ *
+ */
 std::pair<std::vector<Rank>, std::size_t>
 CoreBPE::encode(const std::string& text,
                 const std::unordered_set<std::string>& allowedSpecial) const
