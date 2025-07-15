@@ -191,7 +191,7 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
 
     std::vector<std::vector<ExifTag> > exif;
     decodeExif(m_data, 0, exif);
-    printf("----------------------%lu EXIF metadata found ----------------------", exif.size());
+    printf("**----------------------%lu EXIF metadata found ----------------------", exif.size());
     dumpExif(std::cout, exif);
 
     try {
