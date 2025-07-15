@@ -415,6 +415,77 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
     }
 }
 
+static void readMetadata(ImageDecoder& decoder,
+                         std::vector<int>* metadata_types,
+                         OutputArrayOfArrays metadata)
+{
+    if (!metadata_types)
+        return;
+    int kind = metadata.kind();
+    void* obj = metadata.getObj();
+    std::vector<Mat>* matvector = nullptr;
+    std::vector<std::vector<uchar> >* vecvector = nullptr;
+    if (kind == _InputArray::STD_VECTOR_MAT) {
+        matvector = (std::vector<Mat>*)obj;
+    } else if (kind == _InputArray::STD_VECTOR_VECTOR) {
+        int elemtype = metadata.type(0);
+        CV_Assert(elemtype == CV_8UC1 || elemtype == CV_8SC1);
+        vecvector = (std::vector<std::vector<uint8_t> >*)obj;
+    } else {
+        CV_Error(Error::StsBadArg,
+                 "unsupported metadata type, should be a vector of matrices or vector of byte vectors");
+    }
+    std::vector<Mat> src_metadata;
+    for (int m = (int)IMAGE_METADATA_EXIF; m <= (int)IMAGE_METADATA_MAX; m++) {
+        Mat mm = decoder->getMetadata((ImageMetadataType)m);
+        if (!mm.empty()) {
+            CV_Assert(mm.isContinuous());
+            CV_Assert(mm.elemSize() == 1u);
+            metadata_types->push_back(m);
+            src_metadata.push_back(mm);
+        }
+    }
+    size_t nmetadata = metadata_types->size();
+    if (matvector) {
+        matvector->resize(nmetadata);
+        for (size_t m = 0; m < nmetadata; m++)
+            src_metadata[m].copyTo(matvector->at(m));
+    } else {
+        vecvector->resize(nmetadata);
+        for (size_t m = 0; m < nmetadata; m++) {
+            const Mat& mm = src_metadata[m];
+            const uchar* data = (uchar*)mm.data;
+            vecvector->at(m).assign(data, data + mm.total());
+        }
+    }
+}
+
+static const char* metadataTypeToString(ImageMetadataType type)
+{
+    return type == IMAGE_METADATA_EXIF ? "Exif" :
+           type == IMAGE_METADATA_XMP ? "XMP" :
+           type == IMAGE_METADATA_ICCP ? "ICC Profile" :
+           type == IMAGE_METADATA_TEXT ? "Text" : "???";
+}
+
+static void addMetadata(ImageEncoder& encoder,
+                        const std::vector<int>& metadata_types,
+                        InputArrayOfArrays metadata)
+{
+    size_t nmetadata_chunks = metadata_types.size();
+    for (size_t i = 0; i < nmetadata_chunks; i++) {
+        ImageMetadataType metadata_type = (ImageMetadataType)metadata_types[i];
+        bool ok = encoder->addMetadata(metadata_type, metadata.getMat((int)i));
+        if (!ok) {
+            std::string desc = encoder->getDescription();
+            CV_LOG_WARNING(NULL, "Imgcodecs: metadata of type '"
+                           << metadataTypeToString(metadata_type)
+                           << "' is not supported when encoding '"
+                           << desc << "'");
+        }
+    }
+}
+
 /**
  * Read an image into memory and return the information
  *
@@ -424,7 +495,8 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
  *
 */
 static bool
-imread_( const String& filename, int flags, OutputArray mat )
+imread_( const String& filename, int flags, OutputArray mat,
+         std::vector<int>* metadata_types, OutputArrayOfArrays metadata)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -467,6 +539,12 @@ imread_( const String& filename, int flags, OutputArray mat )
     /// set the filename in the driver
     decoder->setSource( filename );
 
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setMetadataReadingFlag(1);
+    }
+
     try
     {
         // read the header to make sure it succeeds
@@ -506,13 +584,16 @@ imread_( const String& filename, int flags, OutputArray mat )
     Mat real_mat = mat.getMat();
     const void * original_ptr = real_mat.data;
     bool success = false;
+    decoder->resetFrameCount(); // this is needed for PngDecoder. it should be called before decoder->readData()
     try
     {
         if (decoder->readData(real_mat))
         {
-            CV_CheckTrue((decoder->getFrameCount() > 1) || original_ptr == real_mat.data, "Internal imread issue");
+            CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
             success = true;
         }
+
+        readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
     {
@@ -666,7 +747,24 @@ Mat imread( const String& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img );
+    imread_( filename, flags, img, nullptr, noArray() );
+
+    /// return a reference to the data
+    return img;
+}
+
+Mat imreadWithMetadata( const String& filename,
+                        std::vector<int>& metadata_types,
+                        OutputArrayOfArrays metadata,
+                        int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    /// create the basic container
+    Mat img;
+
+    /// load the data
+    imread_( filename, flags, img, &metadata_types, metadata );
 
     /// return a reference to the data
     return img;
@@ -677,7 +775,7 @@ void imread( const String& filename, OutputArray dst, int flags )
     CV_TRACE_FUNCTION();
 
     /// load the data
-    imread_(filename, flags, dst);
+    imread_(filename, flags, dst, nullptr, noArray());
 }
 
 /**
@@ -703,36 +801,6 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
     CV_TRACE_FUNCTION();
 
     return imreadmulti_(filename, flags, mats, start, count);
-}
-
-Mat imreadWithExif(const std::string& filename, int flags,
-    std::vector<std::vector<ExifTag> >& exif)
-{
-    constexpr size_t MIN_FILE_SIZE = 1 << 5;
-    constexpr size_t MAX_FILE_SIZE = 250 * (1 << 20);
-    std::vector<uchar> data;
-
-    // open the file:
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open())
-        return Mat();
-
-    // get its size:
-    file.seekg(0, std::ios::end);
-    size_t fileSize = (size_t)file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    if (fileSize < MIN_FILE_SIZE || fileSize > MAX_FILE_SIZE)
-        return Mat();
-
-    data.resize(fileSize);
-    file.read((char*)data.data(), fileSize);
-    file.close();
-
-    if (data.size() != fileSize)
-        return Mat();
-
-    return imdecodeWithExif(data, flags, exif);
 }
 
 static bool
@@ -835,6 +903,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -945,6 +1014,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -978,7 +1048,9 @@ size_t imcount(const String& filename, int flags)
 
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
-                      const std::vector<int>& params, bool flipv )
+                      const std::vector<int>& metadata_types,
+                      InputArrayOfArrays metadata,
+                      const std::vector<int>& params_, bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
     std::vector<Mat> write_vec;
@@ -1013,6 +1085,26 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
 
     encoder->setDestination( filename );
+    addMetadata(encoder, metadata_types, metadata);
+
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
@@ -1069,27 +1161,26 @@ bool imwrite( const String& filename, InputArray _img,
         img_vec.push_back(_img.getMat());
 
     CV_Assert(!img_vec.empty());
-    return imwrite_(filename, img_vec, params, false);
+    return imwrite_(filename, img_vec, {}, noArray(), params, false);
 }
 
-bool imwriteWithExif( const String& filename, InputArrayOfArrays imgs,
-                      const std::vector<std::vector<ExifTag> >& exif,
-                      const std::vector<int>& params)
+bool imwriteWithMetadata( const String& filename, InputArray _img,
+                          const std::vector<int>& metadata_types,
+                          InputArrayOfArrays metadata,
+                          const std::vector<int>& params )
 {
-    std::vector<uchar> buf;
-    const char* filename_ = filename.c_str();
-    const char* pos = strrchr(filename_, '.');
-    if (!pos)
-        return false;
-    bool ok = imencodeWithExif(pos, imgs, exif, buf, params);
-    if (ok) {
-        std::ofstream file(filename, std::ios::binary);
-        if (!file.is_open())
-            return false;
-        file.write((const char*)buf.data(), buf.size());
-        file.close();
-    }
-    return ok;
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(!_img.empty());
+
+    std::vector<Mat> img_vec;
+    if (_img.isMatVector() || _img.isUMatVector())
+        _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
+
+    CV_Assert(!img_vec.empty());
+    return imwrite_(filename, img_vec, metadata_types, metadata, params, false);
 }
 
 static bool imwriteanimation_(const String& filename, const Animation& animation, const std::vector<int>& params)
@@ -1174,7 +1265,9 @@ bool imencodeanimation(const String& ext, const Animation& animation, std::vecto
 }
 
 static bool
-imdecode_( const Mat& buf, int flags, Mat& mat )
+imdecode_( const Mat& buf, int flags, Mat& mat,
+           std::vector<int>* metadata_types,
+           OutputArrayOfArrays metadata )
 {
     CV_Assert(!buf.empty());
     CV_Assert(buf.isContinuous());
@@ -1226,6 +1319,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         decoder->setSource(filename);
     }
 
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setMetadataReadingFlag(1);
+    }
+
     bool success = false;
     try
     {
@@ -1265,6 +1364,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     {
         if (decoder->readData(mat))
             success = true;
+        readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
     {
@@ -1308,7 +1408,7 @@ Mat imdecode( InputArray _buf, int flags )
     CV_TRACE_FUNCTION();
 
     Mat buf = _buf.getMat(), img;
-    if (!imdecode_(buf, flags, img))
+    if (!imdecode_(buf, flags, img, nullptr, noArray()))
         img.release();
 
     return img;
@@ -1320,10 +1420,22 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
-    if (imdecode_(buf, flags, *dst))
+    if (imdecode_(buf, flags, *dst, nullptr, noArray()))
         return *dst;
     else
         return cv::Mat();
+}
+
+Mat imdecodeWithMetadata( InputArray _buf, std::vector<int>& metadata_types,
+                          OutputArrayOfArrays metadata, int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    Mat buf = _buf.getMat(), img;
+    if (!imdecode_(buf, flags, img, &metadata_types, metadata))
+        img.release();
+
+    return img;
 }
 
 static bool
@@ -1481,8 +1593,10 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, co
     }
 }
 
-bool imencode( const String& ext, InputArray _img,
-               std::vector<uchar>& buf, const std::vector<int>& params )
+bool imencodeWithMetadata( const String& ext, InputArray _img,
+                           const std::vector<int>& metadata_types,
+                           InputArrayOfArrays metadata,
+                           std::vector<uchar>& buf, const std::vector<int>& params_ )
 {
     CV_TRACE_FUNCTION();
 
@@ -1521,6 +1635,25 @@ bool imencode( const String& ext, InputArray _img,
         write_vec.push_back(image);
     }
 
+#if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
+    bool fixed = false;
+    std::vector<int> params_pair(2);
+    if (dynamic_cast<HdrEncoder*>(encoder.get()))
+    {
+        if (params_.size() == 1)
+        {
+            CV_LOG_WARNING(NULL, "imwrite() accepts key-value pair of parameters, but single value is passed. "
+                                 "HDR encoder behavior has been changed, please use IMWRITE_HDR_COMPRESSION key.");
+            params_pair[0] = IMWRITE_HDR_COMPRESSION;
+            params_pair[1] = params_[0];
+            fixed = true;
+        }
+    }
+    const std::vector<int>& params = fixed ? params_pair : params_;
+#else
+    const std::vector<int>& params = params_;
+#endif
+
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
@@ -1532,6 +1665,7 @@ bool imencode( const String& ext, InputArray _img,
         code = encoder->setDestination(filename);
         CV_Assert( code );
     }
+    addMetadata(encoder, metadata_types, metadata);
 
     try {
         if (!isMultiImg)
@@ -1568,10 +1702,248 @@ bool imencode( const String& ext, InputArray _img,
     return code;
 }
 
+bool imencode( const String& ext, InputArray img,
+               std::vector<uchar>& buf, const std::vector<int>& params_ )
+{
+    return imencodeWithMetadata(ext, img, {}, noArray(), buf, params_);
+}
+
 bool imencodemulti( const String& ext, InputArrayOfArrays imgs,
                     std::vector<uchar>& buf, const std::vector<int>& params)
 {
     return imencode(ext, imgs, buf, params);
+}
+
+bool haveImageReader( const String& filename )
+{
+    ImageDecoder decoder = cv::findDecoder(filename);
+    return !decoder.empty();
+}
+
+bool haveImageWriter( const String& filename )
+{
+    cv::ImageEncoder encoder = cv::findEncoder(filename);
+    return !encoder.empty();
+}
+
+class ImageCollection::Impl {
+public:
+    Impl() = default;
+    Impl(const std::string&  filename, int flags);
+    void init(String const& filename, int flags);
+    size_t size() const;
+    Mat& at(int index);
+    Mat& operator[](int index);
+    void releaseCache(int index);
+    ImageCollection::iterator begin(ImageCollection* ptr);
+    ImageCollection::iterator end(ImageCollection* ptr);
+    Mat read();
+    int width() const;
+    int height() const;
+    bool readHeader();
+    Mat readData();
+    bool advance();
+    int currentIndex() const;
+    void reset();
+
+private:
+    String m_filename;
+    int m_flags{};
+    std::size_t m_size{};
+    int m_width{};
+    int m_height{};
+    int m_current{};
+    std::vector<cv::Mat> m_pages;
+    ImageDecoder m_decoder;
+};
+
+ImageCollection::Impl::Impl(std::string const& filename, int flags) {
+    this->init(filename, flags);
+}
+
+void ImageCollection::Impl::init(String const& filename, int flags) {
+    m_filename = filename;
+    m_flags = flags;
+
+#ifdef HAVE_GDAL
+    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        m_decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#endif
+    m_decoder = findDecoder(filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+
+    CV_Assert(m_decoder);
+    m_decoder->setSource(filename);
+    CV_Assert(m_decoder->readHeader());
+
+    m_size = m_decoder->getFrameCount();
+    m_pages.resize(m_size);
+}
+
+size_t ImageCollection::Impl::size() const { return m_size; }
+
+Mat ImageCollection::Impl::read() {
+    auto result = this->readHeader();
+    if(!result) {
+        return {};
+    }
+    return this->readData();
+}
+
+int ImageCollection::Impl::width() const {
+    return m_width;
+}
+
+int ImageCollection::Impl::height() const {
+    return m_height;
+}
+
+bool ImageCollection::Impl::readHeader() {
+    bool status = m_decoder->readHeader();
+    m_width = m_decoder->width();
+    m_height = m_decoder->height();
+    return status;
+}
+
+// readHeader must be called before calling this method
+Mat ImageCollection::Impl::readData() {
+    const int type = calcType(m_decoder->type(), m_flags);
+
+    // established the required input image size
+    Size size = validateInputImageSize(Size(m_width, m_height));
+
+    Mat mat(size.height, size.width, type);
+    bool success = false;
+    try {
+        if (m_decoder->readData(mat))
+            success = true;
+    }
+    catch (const cv::Exception &e) {
+        CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
+    }
+    catch (...) {
+        CV_LOG_ERROR(NULL, "ImageCollection class:: can't read data: unknown exception");
+    }
+    if (!success)
+        return cv::Mat();
+
+    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED) {
+        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
+    }
+
+    return mat;
+}
+
+bool ImageCollection::Impl::advance() {  ++m_current; return m_decoder->nextPage(); }
+
+int ImageCollection::Impl::currentIndex() const { return m_current; }
+
+ImageCollection::iterator ImageCollection::Impl::begin(ImageCollection* ptr) { return ImageCollection::iterator(ptr); }
+
+ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { return ImageCollection::iterator(ptr, static_cast<int>(this->size())); }
+
+void ImageCollection::Impl::reset() {
+    m_current = 0;
+#ifdef HAVE_GDAL
+    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
+        m_decoder = GdalDecoder().newDecoder();
+    }
+    else {
+#endif
+    m_decoder = findDecoder(m_filename);
+#ifdef HAVE_GDAL
+    }
+#endif
+
+    m_decoder->setSource(m_filename);
+    m_decoder->readHeader();
+}
+
+Mat& ImageCollection::Impl::at(int index) {
+    CV_Assert(index >= 0 && size_t(index) < m_size);
+    return operator[](index);
+}
+
+Mat& ImageCollection::Impl::operator[](int index) {
+    if(m_pages.at(index).empty()) {
+        // We can't go backward in multi images. If the page is not in vector yet,
+        // go back to first page and advance until the desired page and read it into memory
+        if(m_current != index) {
+            reset();
+            for(int i = 0; i != index && advance(); ++i) {}
+        }
+        m_pages[index] = read();
+    }
+    return m_pages[index];
+}
+
+void ImageCollection::Impl::releaseCache(int index) {
+    CV_Assert(index >= 0 && size_t(index) < m_size);
+    m_pages[index].release();
+}
+
+/* ImageCollection API*/
+
+ImageCollection::ImageCollection() : pImpl(new Impl()) {}
+
+ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
+
+void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
+
+size_t ImageCollection::size() const { return pImpl->size(); }
+
+const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
+
+const Mat& ImageCollection::operator[](int index) { return pImpl->operator[](index); }
+
+void ImageCollection::releaseCache(int index) { pImpl->releaseCache(index); }
+
+Ptr<ImageCollection::Impl> ImageCollection::getImpl() { return pImpl; }
+
+/* Iterator API */
+
+ImageCollection::iterator ImageCollection::begin() { return pImpl->begin(this); }
+
+ImageCollection::iterator ImageCollection::end() { return pImpl->end(this); }
+
+ImageCollection::iterator::iterator(ImageCollection* col) : m_pCollection(col), m_curr(0) {}
+
+ImageCollection::iterator::iterator(ImageCollection* col, int end) : m_pCollection(col), m_curr(end) {}
+
+Mat& ImageCollection::iterator::operator*() {
+    CV_Assert(m_pCollection);
+    return m_pCollection->getImpl()->operator[](m_curr);
+}
+
+Mat* ImageCollection::iterator::operator->() {
+    CV_Assert(m_pCollection);
+    return &m_pCollection->getImpl()->operator[](m_curr);
+}
+
+ImageCollection::iterator& ImageCollection::iterator::operator++() {
+    if(m_pCollection->pImpl->currentIndex() == m_curr) {
+        m_pCollection->pImpl->advance();
+    }
+    m_curr++;
+    return *this;
+}
+
+ImageCollection::iterator ImageCollection::iterator::operator++(int) {
+    iterator tmp = *this;
+    ++(*this);
+    return tmp;
+}
+
+Animation::Animation(int loopCount, Scalar bgColor)
+    : loop_count(loopCount), bgcolor(bgColor)
+{
+    if (loopCount < 0 || loopCount > 0xffff)
+        this->loop_count = 0; // loop_count should be non-negative
 }
 
 typedef std::unordered_map<int, int> intmap_t;
@@ -2736,238 +3108,6 @@ bool imencodeWithExif( const String& ext, InputArrayOfArrays imgs,
         std::swap(buf, newbuf);
     }
     return ok;
-}
-
-bool haveImageReader( const String& filename )
-{
-    ImageDecoder decoder = cv::findDecoder(filename);
-    return !decoder.empty();
-}
-
-bool haveImageWriter( const String& filename )
-{
-    cv::ImageEncoder encoder = cv::findEncoder(filename);
-    return !encoder.empty();
-}
-
-class ImageCollection::Impl {
-public:
-    Impl() = default;
-    Impl(const std::string&  filename, int flags);
-    void init(String const& filename, int flags);
-    size_t size() const;
-    Mat& at(int index);
-    Mat& operator[](int index);
-    void releaseCache(int index);
-    ImageCollection::iterator begin(ImageCollection* ptr);
-    ImageCollection::iterator end(ImageCollection* ptr);
-    Mat read();
-    int width() const;
-    int height() const;
-    bool readHeader();
-    Mat readData();
-    bool advance();
-    int currentIndex() const;
-    void reset();
-
-private:
-    String m_filename;
-    int m_flags{};
-    std::size_t m_size{};
-    int m_width{};
-    int m_height{};
-    int m_current{};
-    std::vector<cv::Mat> m_pages;
-    ImageDecoder m_decoder;
-};
-
-ImageCollection::Impl::Impl(std::string const& filename, int flags) {
-    this->init(filename, flags);
-}
-
-void ImageCollection::Impl::init(String const& filename, int flags) {
-    m_filename = filename;
-    m_flags = flags;
-
-#ifdef HAVE_GDAL
-    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        m_decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-    m_decoder = findDecoder(filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-
-    CV_Assert(m_decoder);
-    m_decoder->setSource(filename);
-    CV_Assert(m_decoder->readHeader());
-
-    m_size = m_decoder->getFrameCount();
-    m_pages.resize(m_size);
-}
-
-size_t ImageCollection::Impl::size() const { return m_size; }
-
-Mat ImageCollection::Impl::read() {
-    auto result = this->readHeader();
-    if(!result) {
-        return {};
-    }
-    return this->readData();
-}
-
-int ImageCollection::Impl::width() const {
-    return m_width;
-}
-
-int ImageCollection::Impl::height() const {
-    return m_height;
-}
-
-bool ImageCollection::Impl::readHeader() {
-    bool status = m_decoder->readHeader();
-    m_width = m_decoder->width();
-    m_height = m_decoder->height();
-    return status;
-}
-
-// readHeader must be called before calling this method
-Mat ImageCollection::Impl::readData() {
-    const int type = calcType(m_decoder->type(), m_flags);
-
-    // established the required input image size
-    Size size = validateInputImageSize(Size(m_width, m_height));
-
-    Mat mat(size.height, size.width, type);
-    bool success = false;
-    try {
-        if (m_decoder->readData(mat))
-            success = true;
-    }
-    catch (const cv::Exception &e) {
-        CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
-    }
-    catch (...) {
-        CV_LOG_ERROR(NULL, "ImageCollection class:: can't read data: unknown exception");
-    }
-    if (!success)
-        return cv::Mat();
-
-    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED) {
-        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
-    }
-
-    return mat;
-}
-
-bool ImageCollection::Impl::advance() {  ++m_current; return m_decoder->nextPage(); }
-
-int ImageCollection::Impl::currentIndex() const { return m_current; }
-
-ImageCollection::iterator ImageCollection::Impl::begin(ImageCollection* ptr) { return ImageCollection::iterator(ptr); }
-
-ImageCollection::iterator ImageCollection::Impl::end(ImageCollection* ptr) { return ImageCollection::iterator(ptr, static_cast<int>(this->size())); }
-
-void ImageCollection::Impl::reset() {
-    m_current = 0;
-#ifdef HAVE_GDAL
-    if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
-        m_decoder = GdalDecoder().newDecoder();
-    }
-    else {
-#endif
-    m_decoder = findDecoder(m_filename);
-#ifdef HAVE_GDAL
-    }
-#endif
-
-    m_decoder->setSource(m_filename);
-    m_decoder->readHeader();
-}
-
-Mat& ImageCollection::Impl::at(int index) {
-    CV_Assert(index >= 0 && size_t(index) < m_size);
-    return operator[](index);
-}
-
-Mat& ImageCollection::Impl::operator[](int index) {
-    if(m_pages.at(index).empty()) {
-        // We can't go backward in multi images. If the page is not in vector yet,
-        // go back to first page and advance until the desired page and read it into memory
-        if(m_current != index) {
-            reset();
-            for(int i = 0; i != index && advance(); ++i) {}
-        }
-        m_pages[index] = read();
-    }
-    return m_pages[index];
-}
-
-void ImageCollection::Impl::releaseCache(int index) {
-    CV_Assert(index >= 0 && size_t(index) < m_size);
-    m_pages[index].release();
-}
-
-/* ImageCollection API*/
-
-ImageCollection::ImageCollection() : pImpl(new Impl()) {}
-
-ImageCollection::ImageCollection(const std::string& filename, int flags) : pImpl(new Impl(filename, flags)) {}
-
-void ImageCollection::init(const String& img, int flags) { pImpl->init(img, flags); }
-
-size_t ImageCollection::size() const { return pImpl->size(); }
-
-const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
-
-const Mat& ImageCollection::operator[](int index) { return pImpl->operator[](index); }
-
-void ImageCollection::releaseCache(int index) { pImpl->releaseCache(index); }
-
-Ptr<ImageCollection::Impl> ImageCollection::getImpl() { return pImpl; }
-
-/* Iterator API */
-
-ImageCollection::iterator ImageCollection::begin() { return pImpl->begin(this); }
-
-ImageCollection::iterator ImageCollection::end() { return pImpl->end(this); }
-
-ImageCollection::iterator::iterator(ImageCollection* col) : m_pCollection(col), m_curr(0) {}
-
-ImageCollection::iterator::iterator(ImageCollection* col, int end) : m_pCollection(col), m_curr(end) {}
-
-Mat& ImageCollection::iterator::operator*() {
-    CV_Assert(m_pCollection);
-    return m_pCollection->getImpl()->operator[](m_curr);
-}
-
-Mat* ImageCollection::iterator::operator->() {
-    CV_Assert(m_pCollection);
-    return &m_pCollection->getImpl()->operator[](m_curr);
-}
-
-ImageCollection::iterator& ImageCollection::iterator::operator++() {
-    if(m_pCollection->pImpl->currentIndex() == m_curr) {
-        m_pCollection->pImpl->advance();
-    }
-    m_curr++;
-    return *this;
-}
-
-ImageCollection::iterator ImageCollection::iterator::operator++(int) {
-    iterator tmp = *this;
-    ++(*this);
-    return tmp;
-}
-
-Animation::Animation(int loopCount, Scalar bgColor)
-    : loop_count(loopCount), bgcolor(bgColor)
-{
-    if (loopCount < 0 || loopCount > 0xffff)
-        this->loop_count = 0; // loop_count should be non-negative
 }
 
 }
