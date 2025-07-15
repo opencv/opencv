@@ -340,6 +340,7 @@ NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
     SymbolName(("cv", ), (), "floodFill"): make_optional_arg("mask"),
+    SymbolName(("cv", ), ("Feature2D", ), "detectAndCompute"): make_optional_arg("mask"),
     SymbolName(("cv", ), (), "imread"): make_optional_none_return,
     SymbolName(("cv", ), (), "imdecode"): make_optional_none_return,
 }
