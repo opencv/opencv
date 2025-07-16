@@ -87,7 +87,6 @@ public:
     CV_PROP std::unordered_set<std::string> specialTokens() const;
     CV_PROP bool isSpecialToken(int token) const;
     CV_PROP int nVocab() const { return maxTokenValue_ + 1; }
-    CV_PROP Rank maxTokenValue() const;
 
     std::vector<int> encodeUTF8(const std::string &utf8) {
         std::vector<int> out;
@@ -104,6 +103,7 @@ public:
     // Accessors 
     const std::map<std::pair<int,int>, int>& getMerges() const { return merges_; }
     const std::map<int, std::vector<uint8_t>>& getVocab() const { return vocab_; }
+    Rank maxTokenValue() const { return maxTokenValue_; }
 
 private:
     std::string name_;

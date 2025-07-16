@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
+#include <algorithm>
 
 namespace opencv_test { namespace  {
 
@@ -220,7 +221,35 @@ TEST(EncodingBPE, MaxTokenLengthDirectAssert) {
         std::string s(kv.second.begin(), kv.second.end());
         actual_vocab[s] = kv.first;
     }
+
     EXPECT_EQ(actual_vocab, expected_vocab);
+}
+
+TEST(EncodingBPE, Encoding_GPT4) {
+    Encoding enc = getEncodingForCl100k_base("cl100k_base");
+    std::vector<Rank> tokens = enc.encode("hello world");
+    std::vector<Rank> expected = {15339, 1917};
+    EXPECT_EQ(tokens, expected);
+
+    std::string sent = enc.decode({15339, 1917});
+    std::string expec_str = "hello world";
+    EXPECT_EQ(sent, expec_str);
+
+    std::unordered_set<std::string> allowedSpecial = {"__ALL__"};
+    std::vector<Rank> spec_tokens = enc.encode("hello <|endoftext|>", allowedSpecial);
+    std::vector<Rank> expected_special = {15339, 220, 100257};
+    EXPECT_EQ(spec_tokens, expected_special);
+
+    Rank min = std::min(10000u, enc.maxTokenValue() - 1);
+    for (Rank _token = 0; _token < min; _token++) {
+        if (_token < 10) {
+            std::vector<std::uint8_t> token_bytes = enc.decodeSingleTokenBytes(_token);
+            std::string token_str(token_bytes.begin(), token_bytes.end());
+            std::cout << "Token: " << _token << " | Decoded: " << token_str << std::endl;
+        }
+        Rank rank = enc.encodeSingleToken(enc.decodeSingleTokenBytes(_token));
+        EXPECT_EQ(rank, _token);
+    }
 }
 
 }}

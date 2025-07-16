@@ -195,9 +195,16 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
     for (auto& kv : specialEncoder_) 
         specialDecoder_.emplace(kv.second, ByteVec(kv.first.begin(), kv.first.end()));
 
+    for (const auto& kv : specialDecoder_) {
+        std::string str(kv.second.begin(), kv.second.end());
+        specialStringDecoder_.emplace(str, kv.first);
+    }
+
     sortedTokenBytes_.reserve(encoder_.size());
     for (auto& kv : encoder_) sortedTokenBytes_.push_back(kv.first);
     std::sort(sortedTokenBytes_.begin(), sortedTokenBytes_.end());
+
+
 }
 
 std::optional<ByteVec>
@@ -223,6 +230,18 @@ CoreBPE::decodeBytes(const std::vector<Rank>& tokens) const {
     }
 
     return out;
+}
+
+std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const Rank token) const {
+    auto it = decoder_.find(token);
+    if (it != decoder_.end()) {
+        return it->second;
+    }
+    auto it_spec = specialDecoder_.find(token);
+    if (it_spec != specialDecoder_.end()) {
+        return it_spec->second;
+    } 
+    throw DecodeError(std::to_string(token));
 }
 
 std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
