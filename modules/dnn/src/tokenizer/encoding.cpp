@@ -390,7 +390,7 @@ std::string Encoding::decode(const std::vector<Rank>& tokens, const std::string&
     // Convert bytes to std::string (UTF-8)
     std::string result(reinterpret_cast<const char*>(bytes.data()), bytes.size());
 
-    // If strict, validate UTF-8 (replace with your own validator if needed)
+    // If strict, validate UTF-8
     if (errors == "strict") {
         // Simple UTF-8 validation
         size_t i = 0;
@@ -556,5 +556,39 @@ Encoding getEncodingForGPT2(const std::string& name) {
     }
     return Encoding(name, R50K_UTF8, std::move(mergeableRanks), std::move(specialTokens), explicitNvocab);
 }
+
+CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name) {
+    if (name != "cl100k_base")
+        throw std::runtime_error("Wrong model name. This model is cl100k_base");
+    
+    auto bpeText = readFile("../modules/dnn/src/tokenizer/cl100k_base.tiktoken");
+    ByteVecRankMap mergeableRanks;
+
+    std::istringstream lines(bpeText);
+    std::string line;
+    while (std::getline(lines, line)) {
+        if (line.empty()) continue;
+        std::istringstream iss(line);
+        std::string token_b64;
+        int rank;
+        if (!(iss >> token_b64 >> rank)) {
+            throw std::runtime_error("Error parsing line: " + line);
+        }
+        // Decode base64 token 
+        auto bytes = base64_decode(token_b64);
+        ByteVec bv(bytes.begin(), bytes.end());
+        mergeableRanks.emplace(std::move(bv), static_cast<Rank>(rank));
+    }
+    // Special tokens for cl100k_base
+    std::unordered_map<std::string, Rank> specialTokens = {
+        {"<|endoftext|>", 100257},
+        {"<|fim_prefix|>", 100258},
+        {"<|fim_middle|>", 100259},
+        {"<|fim_suffix|>", 100260},
+        {"<|endofprompt|>", 100276}
+    };
+
+    return Encoding(name, CL100K_BASE, std::move(mergeableRanks), std::move(specialTokens), -1);
+}   
 
 }}}
