@@ -11,6 +11,7 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
+#include <unordered_map>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 

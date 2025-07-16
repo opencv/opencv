@@ -7,7 +7,6 @@
 #ifndef OPENCV_GAPI_INFER_OV_HPP
 #define OPENCV_GAPI_INFER_OV_HPP
 
-#include <memory>
 #include <string>
 
 #include <opencv2/gapi/util/any.hpp>
@@ -16,7 +15,6 @@
 #include <opencv2/gapi/infer.hpp>       // Generic
 
 #include <map>
-#include <unordered_map>
 
 namespace cv {
 namespace gapi {
