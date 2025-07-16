@@ -497,7 +497,8 @@ namespace cv
         mutable std::mutex completed_requests_mutex_;
         std::condition_variable completed_requests_cv_;
         
-
+        // MAX_QUEUE_SIZE == 0: On demand mode, sending a request when user needs a img
+        // MAX_QUEUE_SIZE > 0: Producer-consumer queue. 
         static constexpr size_t MAX_QUEUE_SIZE = 0;
                 
         bool waitForFrame(unsigned int timeout_ms);

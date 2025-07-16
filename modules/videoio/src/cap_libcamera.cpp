@@ -57,7 +57,7 @@ namespace cv
     
     LibcameraFrameAllocator::~LibcameraFrameAllocator()
     {
-        // 在析构函数中确保回收请求
+        // 只有当 deallocate 未被调用时才回收（兜底机制）
         if (app_ && request_to_recycle_) {
             app_->recycleRequest(request_to_recycle_);
         }
@@ -106,7 +106,6 @@ namespace cv
             delete data;
         }
         
-        // 将请求回收给libcamera
         if (app_ && request_to_recycle_) {
             app_->recycleRequest(request_to_recycle_);
             request_to_recycle_ = nullptr;
@@ -1069,15 +1068,13 @@ namespace cv
             
         // 等待帧可用
         if (!waitForFrame(options->timeout)) {
-            std::cerr << "ERROR: waitForFrame timed out" << std::endl;
-            return false;
+            return false;  // 超时
         }
         
         // 获取完成的请求
         CompletedRequestPtr completed_request = getCompletedRequest();
         if (!completed_request) {
-            std::cerr << "ERROR: No completed request available" << std::endl;
-            return false;
+            return false;  // 无可用请求
         }
         
         try {
@@ -1093,11 +1090,23 @@ namespace cv
                 return false;
             }
             
-            const uint32_t pixel_bytes = 3;  // RGB888 每像素3字节
-            const uint32_t expected_row_bytes = vw * pixel_bytes;  // cv::Mat 期望的每行字节数
+            const uint32_t pixel_bytes = 3;  // RGB888
+            const uint32_t expected_row_bytes = vw * pixel_bytes;
             uint8_t *libcamera_buffer_ptr = mem[0].data();
             
             // 检查步长兼容性
+            // if (vstr == expected_row_bytes) {
+            //     // 零拷贝模式：直接使用 libcamera 缓冲区
+            //     LibcameraFrameAllocator* allocator = new LibcameraFrameAllocator(app, completed_request->request);
+                
+            //     int sizes[] = {(int)vh, (int)vw};
+            //     size_t steps[] = {vstr, pixel_bytes};
+                
+            //     Mat zero_copy_mat(2, sizes, CV_8UC3, libcamera_buffer_ptr, steps);
+            //     zero_copy_mat.allocator = allocator;  // 绑定自定义分配器
+                
+            //     dst.assign(zero_copy_mat);
+
             if (vstr == expected_row_bytes) {
                 LibcameraFrameAllocator* allocator = new LibcameraFrameAllocator(app, completed_request->request);
                 
@@ -1125,14 +1134,13 @@ namespace cv
                 }
                 
                 dst.assign(zero_copy_mat);
-                
                 return true;
-                
             } else {
-                CV_LOG_WARNING(NULL, cv::format("FALLBACK: Stride mismatch detected"));
-                CV_LOG_WARNING(NULL, cv::format("   libcamera stride: %d bytes", vstr));
-                CV_LOG_WARNING(NULL, cv::format("   Expected stride:  %d bytes", expected_row_bytes));
-                CV_LOG_WARNING(NULL, cv::format("   Extra padding:    %d bytes per row", (int)vstr - (int)expected_row_bytes));
+                // 回退模式：步长不兼容，使用优化拷贝
+                if (options->verbose) {
+                    CV_LOG_WARNING(NULL, cv::format("Stride mismatch: libcamera=%d, expected=%d", 
+                                                   vstr, expected_row_bytes));
+                }
                 
                 // 直接在目标上创建，避免中间临时 Mat
                 dst.create(vh, vw, CV_8UC3);
@@ -1144,7 +1152,6 @@ namespace cv
                     memcpy(target_frame.ptr(row), src_ptr, expected_row_bytes);
                     src_ptr += vstr;  
                 }
-
                 return true;
             }
             
@@ -1450,6 +1457,8 @@ namespace cv
 
     bool LibcameraCapture::open(const std::string &_deviceName)
     {
+        (void)_deviceName;  // Suppress unused parameter warning
+        
         options->video_width = 1280;
         options->video_height = 720;
         options->framerate = 30;

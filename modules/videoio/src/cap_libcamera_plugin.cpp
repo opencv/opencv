@@ -28,6 +28,8 @@ struct LibcameraPluginCapture
 
 static CvResult CV_API_CALL libcamera_capture_open(const char* filename, int camera_index, CV_OUT CvPluginCapture* handle)
 {
+    (void)filename;  // Suppress unused parameter warning
+    
     if (!handle)
         return CV_ERROR_FAIL;
     
@@ -64,6 +66,8 @@ static CvResult CV_API_CALL libcamera_capture_open_with_params(
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle)
 {
+    (void)filename;  // Suppress unused parameter warning
+    
     if (!handle)
         return CV_ERROR_FAIL;
     
@@ -246,6 +250,13 @@ static CvResult CV_API_CALL libcamera_capture_open_stream(
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle)
 {
+    (void)opaque;   // Suppress unused parameter warning
+    (void)read;     // Suppress unused parameter warning
+    (void)seek;     // Suppress unused parameter warning
+    (void)params;   // Suppress unused parameter warning
+    (void)n_params; // Suppress unused parameter warning
+    (void)handle;   // Suppress unused parameter warning
+    
     // Libcamera doesn't support stream-based input
     return CV_ERROR_FAIL;
 }
