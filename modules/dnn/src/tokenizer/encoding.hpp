@@ -104,6 +104,7 @@ public:
     const std::map<std::pair<int,int>, int>& getMerges() const { return merges_; }
     const std::map<int, std::vector<uint8_t>>& getVocab() const { return vocab_; }
     Rank maxTokenValue() const { return maxTokenValue_; }
+    std::string getName() const { return name_; }
 
 private:
     std::string name_;
