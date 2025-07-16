@@ -134,6 +134,76 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     compareEncodings("antidisestablishmentarianism");
     compareEncodings("2 + 2 = 4");
     compareEncodings("お誕生日おめでとう");
+
+    auto get_trained_taylor_encoding = []() -> tokenizer::Encoding {
+        std::ifstream f("../modules/dnn/src/tokenizer/taylorswift.txt");
+        std::stringstream buffer;
+        buffer << f.rdbuf();
+        std::string data = buffer.str();
+
+        int vocab_size = 512;
+        tokenizer::Encoding enc_trained(data, vocab_size, tokenizer::R50K_UTF8);
+        return enc_trained;
+    };
+
+    using Message = std::map<std::string, std::string>;
+    auto num_of_tokens_from_prompts = [&](const std::vector<Message>& messages,
+                                         const std::string& model) -> int {
+        tokenizer::Encoding encoding = (model == "gpt2")
+                            ? tokenizer::getEncodingForGPT2("gpt2")
+                            : (model == "train_taylor")
+                            ? get_trained_taylor_encoding()
+                            : tokenizer::getEncodingForCl100k_base("cl100k_base");
+        int tokens_per_message = 3;
+        int tokens_per_name = 1;
+        if (model == "gpt2") {
+            tokens_per_message = 2;
+            tokens_per_name = 1;
+        }
+        int num_tokens = 0;
+        for (const auto& message : messages) {
+            num_tokens += tokens_per_message;
+            for (const auto& kv : message) {
+                num_tokens += encoding.encode(kv.second).size();
+                if (kv.first == "name") {
+                    num_tokens += tokens_per_name;
+                }
+            }
+        }
+        num_tokens += 3; // every reply is primed
+        return num_tokens;
+    };
+
+    std::vector<Message> example_messages = {
+        {{"role", "system"}, {"content", "You are a helpful, pattern-following assistant that translates corporate jargon into plain English."}},
+        {{"role", "system"}, {"name", "example_user"}, {"content", "New synergies will help drive top-line growth."}},
+        {{"role", "system"}, {"name", "example_assistant"}, {"content", "Things working well together will increase revenue."}},
+        {{"role", "system"}, {"name", "example_user"}, {"content", "Let's circle back when we have more bandwidth to touch base on opportunities for increased leverage."}},
+        {{"role", "system"}, {"name", "example_assistant"}, {"content", "Let's talk later when we're less busy about how to do better."}},
+        {{"role", "user"}, {"content", "This late pivot means we don't have time to boil the ocean for the client deliverable."}}
+    };
+
+    std::vector<std::string> models = {
+        "gtp2",
+        "cl100_base", 
+        "train_taylor"
+    };
+    std::cout << std::endl;
+    for (const auto& model : models) {
+        int cpp_token_count = num_of_tokens_from_prompts(example_messages, model);
+        std::cout << model << std::endl;
+        std::cout << cpp_token_count << " prompt tokens counted by num_of_tokens_from_prompts()." << std::endl;
+    }
+
+    /*
+        gtp2
+        129 prompt tokens counted by num_of_tokens_from_prompts().
+        cl100_base
+        129 prompt tokens counted by num_of_tokens_from_prompts().
+        train_taylor
+        348 prompt tokens counted by num_of_tokens_from_prompts().
+    */
+
 }
 
 }}
