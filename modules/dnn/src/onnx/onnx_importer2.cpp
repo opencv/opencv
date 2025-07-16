@@ -7,7 +7,7 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
-
+#include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
@@ -58,7 +58,9 @@ static T getScalarFromMat(Mat m)
     return m.at<T>(0);
 }
 
-static int dataType2cv(opencv_onnx::TensorProto_DataType dt)
+
+
+static int dataType2cv(int dt)
 {
     return
         dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
@@ -77,7 +79,8 @@ static int dataType2cv(opencv_onnx::TensorProto_DataType dt)
         dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
 }
 
-static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
+
+static std::string dataType2str(int dt)
 {
     const char* str =
     dt == opencv_onnx::TensorProto_DataType_UNDEFINED ? "UNDEFINED" :
@@ -100,9 +103,9 @@ static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto)
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
 {
-    Mat m = getMatFromTensor(tensor_proto, false);
+    Mat m = getMatFromTensor(tensor_proto, false, base_path);
     m.dims = (int)tensor_proto.dims_size();
     return m;
 }
@@ -140,6 +143,7 @@ protected:
     Net net;
     Net::Impl* netimpl;
     std::string onnxFilename;
+    std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     std::vector<Ptr<Layer> > curr_prog;
@@ -263,6 +267,9 @@ Net ONNXImporter2::parseFile(const char *onnxFilename_)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
+
+    onnxBasePath = utils::fs::getParent(onnxFilename_);
+
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFilename);
 
     std::fstream input(onnxFilename, std::ios::in | std::ios::binary);
@@ -708,7 +715,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto);
+    return getMatFromTensor2(tensor_proto, onnxBasePath);
 }
 
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)

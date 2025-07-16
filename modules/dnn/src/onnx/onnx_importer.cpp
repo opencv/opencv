@@ -10,6 +10,7 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
+#include <opencv2/core/utils/filesystem.hpp>
 
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
@@ -28,6 +29,7 @@
 #include <string>
 #include <limits>
 #include <algorithm>
+
 
 #if defined _MSC_VER && _MSC_VER < 1910/*MSVS 2017*/
 #pragma warning(push)
@@ -232,6 +234,8 @@ private:
         return param;
     }
     std::string extractNodeName(const opencv_onnx::NodeProto& node_proto);
+    std::string onnxBasePath;
+
 };
 
 
@@ -285,7 +289,7 @@ ONNXImporter::ONNXImporter(Net& net, const char *onnxFile)
     {
         CV_Error(Error::StsUnsupportedFormat, cv::format("Failed to parse ONNX model: %s", onnxFile));
     }
-
+    onnxBasePath = utils::fs::getParent(onnxFile);
     populateNet();
 }
 
@@ -418,7 +422,7 @@ std::map<std::string, Mat> ONNXImporter::getGraphTensors(
     {
         const opencv_onnx::TensorProto& tensor_proto = graph_proto.initializer(i);
         dumpTensorProto(i, tensor_proto, "initializer");
-        Mat mat = getMatFromTensor(tensor_proto);
+        Mat mat = getMatFromTensor(tensor_proto, true, onnxBasePath);
         releaseONNXTensor(const_cast<opencv_onnx::TensorProto&>(tensor_proto));  // drop already loaded data
 
         if (DNN_DIAGNOSTICS_RUN && mat.empty())

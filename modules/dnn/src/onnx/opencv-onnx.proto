@@ -3,8 +3,8 @@
 //
 
 
-// Copyright (c) Facebook Inc. and Microsoft Corporation.
-// Licensed under the MIT license.
+// SPDX-License-Identifier: Apache-2.0
+
 
 syntax = "proto2";
 
@@ -26,13 +26,6 @@ package opencv_onnx;
 // Definitions of the built-in neural network operators may be found in docs/Operators.md.
 
 // Notes
-//
-// Release
-//
-// We are still in the very early stage of defining ONNX. The current
-// version of ONNX is a starting point. While we are actively working
-// towards a complete spec, we would like to get the community involved
-// by sharing our working version of ONNX.
 //
 // Protobuf compatibility
 //
@@ -74,7 +67,54 @@ enum Version {
   //    - Added new message OperatorSetIdProto
   //    - Added opset_import in ModelProto
   // - For vendor extensions, added domain in NodeProto
-  IR_VERSION = 0x0000000000000003;
+  IR_VERSION_2017_11_3 = 0x0000000000000003;
+
+  // IR VERSION 4 published on Jan 22, 2019
+  // - Relax constraint that initializers should be a subset of graph inputs
+  // - Add type BFLOAT16
+  IR_VERSION_2019_1_22 = 0x0000000000000004;
+
+  // IR VERSION 5 published on March 18, 2019
+  // - Add message TensorAnnotation.
+  // - Add quantization annotation in GraphProto to map tensor with its scale and zero point quantization parameters.
+  IR_VERSION_2019_3_18 = 0x0000000000000005;
+
+  // IR VERSION 6 published on Sep 19, 2019
+  // - Add support for sparse tensor constants stored in model.
+  //   - Add message SparseTensorProto
+  //   - Add sparse initializers
+  IR_VERSION_2019_9_19 = 0x0000000000000006;
+
+  // IR VERSION 7 published on May 8, 2020
+  // - Add support to allow function body graph to rely on multiple external opreator sets.
+  // - Add a list to promote inference graph's initializers to global and
+  //   mutable variables. Global variables are visible in all graphs of the
+  //   stored models.
+  // - Add message TrainingInfoProto to store initialization
+  //   method and training algorithm. The execution of TrainingInfoProto
+  //   can modify the values of mutable variables.
+  // - Implicitly add inference graph into each TrainingInfoProto's algorithm.
+  IR_VERSION_2020_5_8 = 0x0000000000000007;
+
+  // IR VERSION 8 published on July 30, 2021
+  // Introduce TypeProto.SparseTensor
+  // Introduce TypeProto.Optional
+  // Added a list of FunctionProtos local to the model
+  // Deprecated since_version and operator status from FunctionProto
+  IR_VERSION_2021_7_30 = 0x0000000000000008;
+
+  // IR VERSION 9 published on May 5, 2023
+  // Added AttributeProto to FunctionProto so that default attribute values can be set.
+  // Added FLOAT8E4M3FN, FLOAT8E4M3FNUZ, FLOAT8E5M2, FLOAT8E5M2FNUZ.
+  IR_VERSION_2023_5_5 = 0x0000000000000009;
+
+  // IR VERSION 10 published on March 25, 2024
+  // Added UINT4, INT4.
+  IR_VERSION_2024_3_25 = 0x000000000000000A;
+
+  // IR VERSION 11 published on TBD
+  // Added FLOAT4E2M1, multi-device protobuf classes.
+  IR_VERSION = 0x000000000000000B;
 }
 
 // Attributes
@@ -84,6 +124,8 @@ enum Version {
 // An AttributeProto MUST contain the name field, and *only one* of the
 // following content fields, effectively enforcing a C/C++ union equivalent.
 message AttributeProto {
+  reserved 12, 16 to 19;
+  reserved "v";
 
   // Note: this enum is structurally identical to the OpSchema::AttrType
   // enum defined in schema.h.  If you rev one, you likely need to rev the other.
@@ -94,12 +136,16 @@ message AttributeProto {
     STRING = 3;
     TENSOR = 4;
     GRAPH = 5;
+    SPARSE_TENSOR = 11;
+    TYPE_PROTO = 13;
 
     FLOATS = 6;
     INTS = 7;
     STRINGS = 8;
     TENSORS = 9;
     GRAPHS = 10;
+    SPARSE_TENSORS = 12;
+    TYPE_PROTOS = 14;
   }
 
   // The name field MUST be present for this version of the IR.
@@ -128,14 +174,18 @@ message AttributeProto {
   optional bytes s = 4;               // UTF-8 string
   optional TensorProto t = 5;         // tensor value
   optional GraphProto g = 6;          // graph
+  optional SparseTensorProto sparse_tensor = 22;  // sparse tensor value
   // Do not use field below, it's deprecated.
   // optional ValueProto v = 12;         // value - subsumes everything but graph
+  optional TypeProto tp = 14;          // type proto
 
   repeated float floats = 7;          // list of floats
   repeated int64 ints = 8;            // list of ints
   repeated bytes strings = 9;         // list of UTF-8 strings
   repeated TensorProto tensors = 10;  // list of tensors
   repeated GraphProto graphs = 11;    // list of graph
+  repeated SparseTensorProto sparse_tensors = 23; // list of sparse tensors
+  repeated TypeProto type_protos = 15;// list of type protos
 }
 
 // Defines information on value, including the name, the type, and
@@ -143,10 +193,13 @@ message AttributeProto {
 message ValueInfoProto {
   // This field MUST be present in this version of the IR.
   optional string name = 1;     // namespace Value
-  // This field MUST be present in this version of the IR.
+  // This field MUST be present in this version of the IR for
+  // inputs and outputs of the top-level graph.
   optional TypeProto type = 2;
   // A human-readable documentation for this value. Markdown is allowed.
   optional string doc_string = 3;
+  // Named metadata values; keys should be distinct.
+  repeated StringStringEntryProto metadata_props = 4;
 }
 
 // Nodes
@@ -168,12 +221,212 @@ message NodeProto {
   optional string op_type = 4;  // namespace Operator
   // The domain of the OperatorSet that specifies the operator named by op_type.
   optional string domain = 7;   // namespace Domain
+  // Overload identifier, used only to map this to a model-local function.
+  optional string overload = 8;
 
   // Additional named attributes.
   repeated AttributeProto attribute = 5;
 
   // A human-readable documentation for this node. Markdown is allowed.
   optional string doc_string = 6;
+
+  // Named metadata values; keys should be distinct.
+  repeated StringStringEntryProto metadata_props = 9;
+
+  // Configuration of multi-device annotations.
+  repeated NodeDeviceConfigurationProto device_configurations = 10;
+}
+
+// IntIntListEntryProto follows the pattern for cross-proto-version maps.
+// See https://developers.google.com/protocol-buffers/docs/proto3#maps
+message IntIntListEntryProto {
+  optional int64 key = 1;
+  repeated int64 value = 2;
+};
+
+// Multi-device configuration proto for NodeProto.
+message NodeDeviceConfigurationProto {
+    // This field MUST be present for this version of the IR.
+    // ID of the configuration. MUST match the name of a DeviceConfigurationProto.
+    optional string configuration_id = 1;
+    // Sharding spec for the node.
+    repeated ShardingSpecProto sharding_spec = 2;
+    // Pipeline stage of this node.
+    optional int32 pipeline_stage = 3;
+}
+
+// ShardingSpecProto: This describes the sharding spec for a specific
+// input or output tensor of a node.
+message ShardingSpecProto {
+  // This field MUST be present for this version of the IR.
+  // Identifies the input or output of the node that is being sharded.
+  // Required to match a name specified in the node's input or output list of ValueInfoProtos.
+  // It is called `logical tensor` in subsequent descriptions.
+  optional string tensor_name = 1;
+
+  // The following is the list of devices across which the logical
+  // tensor is sharded or replicated.
+  repeated int64 device = 2;
+
+  // Each element v in above field devices may represent either a
+  // device or a set of devices (when we want the same shard/tensor
+  // to be replicated across a subset of devices), as indicated by
+  // the following optional map. If the map contains an entry for v,
+  // then v represents a device group, and the map indicates the set
+  // of devices in that group.
+  repeated IntIntListEntryProto index_to_device_group_map = 3;
+
+  // The following is the sharded-shape of the tensor, consisting of
+  // the sharding-spec for each axis of the tensor.
+  repeated ShardedDimProto sharded_dim = 4;
+}
+
+// ShardedDimProto: This describes the sharding spec for a single
+// axis of a sharded tensor.
+message ShardedDimProto {
+  // This field MUST be present for this version of the IR.
+  // The axis this sharding corresponds to. Must be in the range of
+  // [-r, r - 1], where r is the rank of the tensor. Negative axis values means
+  // counting from the back.
+  optional int64 axis = 1;
+
+  // Describes how the tensor on the provided axis is sharded.
+  // The common-case is described by a single instance of SimpleShardedDimProto.
+  // Multiple instances can be used to handle cases where a sharded
+  // tensor is reshaped, fusing multiple axes into one.
+  repeated SimpleShardedDimProto simple_sharding = 2;
+}
+
+// SimpleShardedDimProto: Indicates that N blocks are divided into M shards.
+// N is allowed to be symbolic where M is required to be a constant.
+message SimpleShardedDimProto {
+    // Dimension value to be sharded.
+    oneof dim {
+        int64 dim_value = 1;
+        string dim_param = 2;
+    }
+
+    // This field MUST be present for this version of the IR.
+    // Number of shards to split dim into.
+    optional int64 num_shards = 3;
+}
+
+// Training information
+// TrainingInfoProto stores information for training a model.
+// In particular, this defines two functionalities: an initialization-step
+// and a training-algorithm-step. Initialization resets the model
+// back to its original state as if no training has been performed.
+// Training algorithm improves the model based on input data.
+//
+// The semantics of the initialization-step is that the initializers
+// in ModelProto.graph and in TrainingInfoProto.algorithm are first
+// initialized as specified by the initializers in the graph, and then
+// updated by the "initialization_binding" in every instance in
+// ModelProto.training_info.
+//
+// The field "algorithm" defines a computation graph which represents a
+// training algorithm's step. After the execution of a
+// TrainingInfoProto.algorithm, the initializers specified by "update_binding"
+// may be immediately updated. If the targeted training algorithm contains
+// consecutive update steps (such as block coordinate descent methods),
+// the user needs to create a TrainingInfoProto for each step.
+message TrainingInfoProto {
+  // This field describes a graph to compute the initial tensors
+  // upon starting the training process. Initialization graph has no input
+  // and can have multiple outputs. Usually, trainable tensors in neural
+  // networks are randomly initialized. To achieve that, for each tensor,
+  // the user can put a random number operator such as RandomNormal or
+  // RandomUniform in TrainingInfoProto.initialization.node and assign its
+  // random output to the specific tensor using "initialization_binding".
+  // This graph can also set the initializers in "algorithm" in the same
+  // TrainingInfoProto; a use case is resetting the number of training
+  // iteration to zero.
+  //
+  // By default, this field is an empty graph and its evaluation does not
+  // produce any output. Thus, no initializer would be changed by default.
+  optional GraphProto initialization = 1;
+
+  // This field represents a training algorithm step. Given required inputs,
+  // it computes outputs to update initializers in its own or inference graph's
+  // initializer lists. In general, this field contains loss node, gradient node,
+  // optimizer node, increment of iteration count.
+  //
+  // An execution of the training algorithm step is performed by executing the
+  // graph obtained by combining the inference graph (namely "ModelProto.graph")
+  // and the "algorithm" graph. That is, the actual
+  // input/initializer/output/node/value_info/sparse_initializer list of
+  // the training graph is the concatenation of
+  // "ModelProto.graph.input/initializer/output/node/value_info/sparse_initializer"
+  // and "algorithm.input/initializer/output/node/value_info/sparse_initializer"
+  // in that order. This combined graph must satisfy the normal ONNX conditions.
+  // Now, let's provide a visualization of graph combination for clarity.
+  // Let the inference graph (i.e., "ModelProto.graph") be
+  //    tensor_a, tensor_b -> MatMul -> tensor_c -> Sigmoid -> tensor_d
+  // and the "algorithm" graph be
+  //    tensor_d -> Add -> tensor_e
+  // The combination process results
+  //    tensor_a, tensor_b -> MatMul -> tensor_c -> Sigmoid -> tensor_d -> Add -> tensor_e
+  //
+  // Notice that an input of a node in the "algorithm" graph may reference the
+  // output of a node in the inference graph (but not the other way round). Also, inference
+  // node cannot reference inputs of "algorithm". With these restrictions, inference graph
+  // can always be run independently without training information.
+  //
+  // By default, this field is an empty graph and its evaluation does not
+  // produce any output. Evaluating the default training step never
+  // update any initializers.
+  optional GraphProto algorithm = 2;
+
+  // This field specifies the bindings from the outputs of "initialization" to
+  // some initializers in "ModelProto.graph.initializer" and
+  // the "algorithm.initializer" in the same TrainingInfoProto.
+  // See "update_binding" below for details.
+  //
+  // By default, this field is empty and no initializer would be changed
+  // by the execution of "initialization".
+  repeated StringStringEntryProto initialization_binding = 3;
+
+  // Gradient-based training is usually an iterative procedure. In one gradient
+  // descent iteration, we apply
+  //
+  // x = x - r * g
+  //
+  // where "x" is the optimized tensor, "r" stands for learning rate, and "g" is
+  // gradient of "x" with respect to a chosen loss. To avoid adding assignments
+  // into the training graph, we split the update equation into
+  //
+  // y = x - r * g
+  // x = y
+  //
+  // The user needs to save "y = x - r * g" into TrainingInfoProto.algorithm. To
+  // tell that "y" should be assigned to "x", the field "update_binding" may
+  // contain a key-value pair of strings, "x" (key of StringStringEntryProto)
+  // and "y" (value of StringStringEntryProto).
+  // For a neural network with multiple trainable (mutable) tensors, there can
+  // be multiple key-value pairs in "update_binding".
+  //
+  // The initializers appears as keys in "update_binding" are considered
+  // mutable variables. This implies some behaviors
+  // as described below.
+  //
+  //  1. We have only unique keys in all "update_binding"s so that two
+  //     variables may not have the same name. This ensures that one
+  //     variable is assigned up to once.
+  //  2. The keys must appear in names of "ModelProto.graph.initializer" or
+  //     "TrainingInfoProto.algorithm.initializer".
+  //  3. The values must be output names of "algorithm" or "ModelProto.graph.output".
+  //  4. Mutable variables are initialized to the value specified by the
+  //     corresponding initializer, and then potentially updated by
+  //     "initializer_binding"s and "update_binding"s in "TrainingInfoProto"s.
+  //
+  // This field usually contains names of trainable tensors
+  // (in ModelProto.graph), optimizer states such as momentums in advanced
+  // stochastic gradient methods (in TrainingInfoProto.graph),
+  // and number of training iterations (in TrainingInfoProto.graph).
+  //
+  // By default, this field is empty and no initializer would be changed
+  // by the execution of "algorithm".
+  repeated StringStringEntryProto update_binding = 4;
 }
 
 // Models
@@ -181,7 +434,7 @@ message NodeProto {
 // ModelProto is a top-level file/container format for bundling a ML model and
 // associating its computation graph with metadata.
 //
-// The semantics of the model are described by the associated GraphProto.
+// The semantics of the model are described by the associated GraphProto's.
 message ModelProto {
   // The version of the IR this model targets. See Version enum above.
   // This field MUST be present.
@@ -226,14 +479,70 @@ message ModelProto {
 
   // Named metadata values; keys should be distinct.
   repeated StringStringEntryProto metadata_props = 14;
+
+  // Training-specific information. Sequentially executing all stored
+  // `TrainingInfoProto.algorithm`s and assigning their outputs following
+  // the corresponding `TrainingInfoProto.update_binding`s is one training
+  // iteration. Similarly, to initialize the model
+  // (as if training hasn't happened), the user should sequentially execute
+  // all stored `TrainingInfoProto.initialization`s and assigns their outputs
+  // using `TrainingInfoProto.initialization_binding`s.
+  //
+  // If this field is empty, the training behavior of the model is undefined.
+  repeated TrainingInfoProto training_info = 20;
+
+  // A list of function protos local to the model.
+  //
+  // The (domain, name, overload) tuple must be unique across the function protos in this list.
+  // In case of any conflicts the behavior (whether the model local functions are given higher priority,
+  // or standard operator sets are given higher priotity or this is treated as error) is defined by
+  // the runtimes.
+  //
+  // The operator sets imported by FunctionProto should be compatible with the ones
+  // imported by ModelProto and other model local FunctionProtos.
+  // Example, if same operator set say 'A' is imported by a FunctionProto and ModelProto
+  // or by 2 FunctionProtos then versions for the operator set may be different but,
+  // the operator schema returned for op_type, domain, version combination
+  // for both the versions should be same for every node in the function body.
+  //
+  // One FunctionProto can reference other FunctionProto in the model, however, recursive reference
+  // is not allowed.
+  repeated FunctionProto functions = 25;
+
+  // Describes different target configurations for a multi-device use case.
+  // A model MAY describe multiple multi-device configurations for execution.
+  repeated DeviceConfigurationProto configuration = 26;
 };
+
+// DeviceConfigurationProto describes a multi-device configuration for a model.
+message DeviceConfigurationProto {
+    // This field MUST be present for this version of the IR.
+    // Name of the configuration.
+    optional string name = 1;
+    // This field MUST be present for this version of the IR.
+    // Number of devices inside this configuration.
+    optional int32 num_devices = 2;
+    // Optional names of the devices. MUST be length of num_devices if provided.
+    repeated string device = 3;
+}
 
 // StringStringEntryProto follows the pattern for cross-proto-version maps.
 // See https://developers.google.com/protocol-buffers/docs/proto3#maps
 message StringStringEntryProto {
   optional string key = 1;
-  optional string value= 2;
+  optional string value = 2;
 };
+
+message TensorAnnotation {
+  optional string tensor_name = 1;
+  // <key, value> pairs to annotate tensor specified by <tensor_name> above.
+  // The keys used in the mapping below must be pre-defined in ONNX spec.
+  // For example, for 8-bit linear quantization case, 'SCALE_TENSOR', 'ZERO_POINT_TENSOR' will be pre-defined as
+  // quantization parameter keys.
+  repeated StringStringEntryProto quant_parameter_tensor_names = 2;
+}
+
+
 
 // Graphs
 //
@@ -249,9 +558,13 @@ message GraphProto {
   optional string name = 2;   // namespace Graph
 
   // A list of named tensor values, used to specify constant inputs of the graph.
-  // Each TensorProto entry must have a distinct name (within the list) that
-  // also appears in the input list.
+  // Each initializer (both TensorProto as well SparseTensorProto) MUST have a name.
+  // The name MUST be unique across both initializer and sparse_initializer,
+  // but the name MAY also appear in the input list.
   repeated TensorProto initializer = 5;
+
+  // Initializers (see above) stored in sparse format.
+  repeated SparseTensorProto sparse_initializer = 15;
 
   // A human-readable documentation for this graph. Markdown is allowed.
   optional string doc_string = 10;
@@ -264,13 +577,17 @@ message GraphProto {
   // must be distinct. It is optional for a value to appear in value_info list.
   repeated ValueInfoProto value_info = 13;
 
-  // DO NOT USE the following fields, they were deprecated from earlier versions.
-  // repeated string input = 3;
-  // repeated string output = 4;
-  // optional int64 ir_version = 6;
-  // optional int64 producer_version = 7;
-  // optional string producer_tag = 8;
-  // optional string domain = 9;
+  // This field carries information to indicate the mapping among a tensor and its
+  // quantization parameter tensors. For example:
+  // For tensor 'a', it may have {'SCALE_TENSOR', 'a_scale'} and {'ZERO_POINT_TENSOR', 'a_zero_point'} annotated,
+  // which means, tensor 'a_scale' and tensor 'a_zero_point' are scale and zero point of tensor 'a' in the model.
+  repeated TensorAnnotation quantization_annotation = 14;
+
+  // Named metadata values; keys should be distinct.
+  repeated StringStringEntryProto metadata_props = 16;
+
+  reserved 3, 4, 6 to 9;
+  reserved "ir_version", "producer_version", "producer_tag", "domain";
 }
 
 // Tensors
@@ -290,13 +607,39 @@ message TensorProto {
     STRING = 8;  // string
     BOOL = 9;    // bool
 
-    // Advanced types
+    // IEEE754 half-precision floating-point format (16 bits wide).
+    // This format has 1 sign bit, 5 exponent bits, and 10 mantissa bits.
     FLOAT16 = 10;
+
     DOUBLE = 11;
     UINT32 = 12;
     UINT64 = 13;
     COMPLEX64 = 14;     // complex with float32 real and imaginary components
     COMPLEX128 = 15;    // complex with float64 real and imaginary components
+
+    // Non-IEEE floating-point format based on IEEE754 single-precision
+    // floating-point number truncated to 16 bits.
+    // This format has 1 sign bit, 8 exponent bits, and 7 mantissa bits.
+    BFLOAT16 = 16;
+
+    // Non-IEEE floating-point format based on papers
+    // FP8 Formats for Deep Learning, https://arxiv.org/abs/2209.05433,
+    // 8-bit Numerical Formats For Deep Neural Networks, https://arxiv.org/pdf/2206.02915.pdf.
+    // Operators supported FP8 are Cast, CastLike, QuantizeLinear, DequantizeLinear.
+    // The computation usually happens inside a block quantize / dequantize
+    // fused by the runtime.
+    FLOAT8E4M3FN = 17;    // float 8, mostly used for coefficients, supports nan, not inf
+    FLOAT8E4M3FNUZ = 18;  // float 8, mostly used for coefficients, supports nan, not inf, no negative zero
+    FLOAT8E5M2 = 19;      // follows IEEE 754, supports nan, inf, mostly used for gradients
+    FLOAT8E5M2FNUZ = 20;  // follows IEEE 754, supports nan, not inf, mostly used for gradients, no negative zero
+
+    // 4-bit integer data types
+    UINT4 = 21;  // Unsigned integer in range [0, 15]
+    INT4 = 22;   // Signed integer in range [-8, 7], using two's-complement representation
+
+    // 4-bit floating point data types
+    FLOAT4E2M1 = 23;
+
     // Future extensions go here.
   }
 
@@ -304,7 +647,8 @@ message TensorProto {
   repeated int64 dims = 1;
 
   // The data type of the tensor.
-  optional DataType data_type = 2;
+  // This field MUST have a valid TensorProto.DataType value
+  optional int32 data_type = 2;
 
   // For very large tensors, we may want to store them in chunks, in which
   // case the following fields will specify the segment that is stored in
@@ -329,11 +673,19 @@ message TensorProto {
   // When this field is present, the data_type field MUST be FLOAT or COMPLEX64.
   repeated float float_data = 4 [packed = true];
 
-  // For int32, uint8, int8, uint16, int16, bool, and float16 values
-  // float16 values must be bit-wise converted to an uint16_t prior
-  // to writing to the buffer.
+  // For int32, uint8, int8, uint16, int16, uint4, int4, bool, (b)float16, float8, and float4:
+  // - (b)float16 and float8 values MUST be converted bit-wise into an unsigned integer
+  //   representation before being written to the buffer.
+  // - Each pair of uint4, int4, and float4 values MUST be packed as two 4-bit elements into a single byte.
+  //   The first element is stored in the 4 least significant bits (LSB),
+  //   and the second element is stored in the 4 most significant bits (MSB).
+  //
+  // Consequently:
+  // - For data types with a bit-width of 8 or greater, each `int32_data` stores one element.
+  // - For 4-bit data types, each `int32_data` stores two elements.
+  //
   // When this field is present, the data_type field MUST be
-  // INT32, INT16, INT8, UINT16, INT8, BOOL, or FLOAT16
+  // INT32, INT16, INT8, INT4, UINT16, UINT8, UINT4, BOOL, FLOAT16, BFLOAT16, FLOAT8E4M3FN, FLOAT8E4M3FNUZ, FLOAT8E5M2, FLOAT8E5M2FNUZ, FLOAT4E2M1
   repeated int32 int32_data = 5 [packed = true];
 
   // For strings.
@@ -363,6 +715,7 @@ message TensorProto {
   // Complex64 elements must be written as two consecutive FLOAT values, real component first.
   // Complex128 elements must be written as two consecutive DOUBLE values, real component first.
   // Boolean type MUST be written one byte per tensor element (00000001 for true, 00000000 for false).
+  // uint4 and int4 values must be packed to 4bitx2, the first element is stored in the 4 LSB and the second element is stored in the 4 MSB.
   //
   // Note: the advantage of specific field rather than the raw_data field is
   // that in some cases (e.g. int data), protobuf does a better packing via
@@ -370,8 +723,30 @@ message TensorProto {
   // When this field is present, the data_type field MUST NOT be STRING or UNDEFINED
   optional bytes raw_data = 9;
 
+  // Data can be stored inside the protobuf file using type-specific fields or raw_data.
+  // Alternatively, raw bytes data can be stored in an external file, using the external_data field.
+  // external_data stores key-value pairs describing data location. Recognized keys are:
+  // - "location" (required) - POSIX filesystem path relative to the directory where the ONNX
+  //                           protobuf model was stored
+  // - "offset" (optional) - position of byte at which stored data begins. Integer stored as string.
+  //                         Offset values SHOULD be multiples 4096 (page size) to enable mmap support.
+  // - "length" (optional) - number of bytes containing data. Integer stored as string.
+  // - "checksum" (optional) - SHA1 digest of file specified in under 'location' key.
+  repeated StringStringEntryProto external_data = 13;
+
+  // Location of the data for this tensor. MUST be one of:
+  // - DEFAULT - data stored inside the protobuf message. Data is stored in raw_data (if set) otherwise in type-specified field.
+  // - EXTERNAL - data stored in an external location as described by external_data field.
+  enum DataLocation {
+    DEFAULT = 0;
+    EXTERNAL = 1;
+  }
+
+  // If value not set, data is stored in raw_data (if set) otherwise in type-specified field.
+  optional DataLocation data_location = 14;
+
   // For double
-  // Complex64 tensors are encoded as a single array of doubles,
+  // Complex128 tensors are encoded as a single array of doubles,
   // with the real components appearing in odd numbered positions,
   // and the corresponding imaginary component appearing in the
   // subsequent even numbered position. (e.g., [1.0 + 2.0i, 3.0 + 4.0i]
@@ -383,6 +758,33 @@ message TensorProto {
   // When this field is present, the data_type field MUST be
   // UINT32 or UINT64
   repeated uint64 uint64_data = 11 [packed = true];
+
+  // Named metadata values; keys should be distinct.
+  repeated StringStringEntryProto metadata_props = 16;
+}
+
+// A serialized sparse-tensor value
+message SparseTensorProto {
+  // The sequence of non-default values are encoded as a tensor of shape [NNZ].
+  // The default-value is zero for numeric tensors, and empty-string for string tensors.
+  // values must have a non-empty name present which serves as a name for SparseTensorProto
+  // when used in sparse_initializer list.
+  optional TensorProto values = 1;
+
+  // The indices of the non-default values, which may be stored in one of two formats.
+  // (a) Indices can be a tensor of shape [NNZ, rank] with the [i,j]-th value
+  // corresponding to the j-th index of the i-th value (in the values tensor).
+  // (b) Indices can be a tensor of shape [NNZ], in which case the i-th value
+  // must be the linearized-index of the i-th value (in the values tensor).
+  // The linearized-index can be converted into an index tuple (k_1,...,k_rank)
+  // using the shape provided below.
+  // The indices must appear in ascending order without duplication.
+  // In the first format, the ordering is lexicographic-ordering:
+  // e.g., index-value [1,4] must appear before [2,1]
+  optional TensorProto indices = 2;
+
+  // The shape of the underlying dense-tensor: [dim_1, dim_2, ... dim_rank]
+  repeated int64 dims = 3;
 }
 
 // Defines a tensor shape. A dimension can be either an integer value
@@ -397,7 +799,7 @@ message TensorShapeProto {
     // Standard denotation can optionally be used to denote tensor
     // dimensions with standard semantic descriptions to ensure
     // that operations are applied to the correct axis of a tensor.
-    // Refer to https://github.com/onnx/onnx/blob/master/docs/DimensionDenotation.md#denotation-definition
+    // Refer to https://github.com/onnx/onnx/blob/main/docs/DimensionDenotation.md#denotation-definition
     // for pre-defined dimension denotations.
     optional string denotation = 3;
   };
@@ -411,8 +813,43 @@ message TypeProto {
 
   message Tensor {
     // This field MUST NOT have the value of UNDEFINED
+    // This field MUST have a valid TensorProto.DataType value
     // This field MUST be present for this version of the IR.
-    optional TensorProto.DataType elem_type = 1;
+    optional int32 elem_type = 1;
+    optional TensorShapeProto shape = 2;
+  }
+
+  // repeated T
+  message Sequence {
+    // The type and optional shape of each element of the sequence.
+    // This field MUST be present for this version of the IR.
+    optional TypeProto elem_type = 1;
+  };
+
+  // map<K,V>
+  message Map {
+    // This field MUST have a valid TensorProto.DataType value
+    // This field MUST be present for this version of the IR.
+    // This field MUST refer to an integral type ([U]INT{8|16|32|64}) or STRING
+    optional int32 key_type = 1;
+    // This field MUST be present for this version of the IR.
+    optional TypeProto value_type = 2;
+  };
+
+  // wrapper for Tensor, Sequence, or Map
+  message Optional {
+    // The type and optional shape of the element wrapped.
+    // This field MUST be present for this version of the IR.
+    // Possible values correspond to OptionalProto.DataType enum
+    optional TypeProto elem_type = 1;
+  };
+
+
+  message SparseTensor {
+    // This field MUST NOT have the value of UNDEFINED
+    // This field MUST have a valid TensorProto.DataType value
+    // This field MUST be present for this version of the IR.
+    optional int32 elem_type = 1;
     optional TensorShapeProto shape = 2;
   }
 
@@ -421,11 +858,29 @@ message TypeProto {
     // The type of a tensor.
     Tensor tensor_type = 1;
 
+    // NOTE:  DNN-only implementations of ONNX MAY elect to not support non-tensor values
+    //        as input and output to graphs and nodes. These types are needed to naturally
+    //        support classical ML operators.  DNN operators SHOULD restrict their input
+    //        and output types to tensors.
+
+    // The type of a sequence.
+    Sequence sequence_type = 4;
+
+    // The type of a map.
+    Map map_type = 5;
+
+    // The type of an optional.
+    Optional optional_type = 9;
+
+
+    // Type of the sparse tensor
+    SparseTensor sparse_tensor_type = 8;
+
   }
 
   // An optional denotation can be used to denote the whole
   // type with a standard semantic description as to what is
-  // stored inside. Refer to https://github.com/onnx/onnx/blob/master/docs/TypeDenotation.md#type-denotation-definition
+  // stored inside. Refer to https://github.com/onnx/onnx/blob/main/docs/TypeDenotation.md#type-denotation-definition
   // for pre-defined type denotations.
   optional string denotation = 6;
 }
@@ -444,3 +899,79 @@ message OperatorSetIdProto {
   // This field MUST be present in this version of the IR.
   optional int64 version = 2;
 }
+
+// Operator/function status.
+enum OperatorStatus {
+    EXPERIMENTAL = 0;
+    STABLE = 1;
+}
+
+message FunctionProto {
+  // The name of the function, similar to op_type in NodeProto.
+  // This is part of the unique-id (domain, name, overload) of FunctionProtos in a model.
+  optional string name = 1;
+
+  // Deprecated since IR Version 8
+  // optional int64 since_version = 2;
+  reserved 2;
+  reserved "since_version";
+
+  // Deprecated since IR Version 8
+  // optional OperatorStatus status = 3;
+  reserved 3;
+  reserved "status";
+
+  // The inputs and outputs of the function.
+  repeated string input = 4;
+  repeated string output = 5;
+
+  // The attribute parameters of the function.
+  // It is for function parameters without default values.
+  repeated string attribute = 6;
+
+  // The attribute protos of the function.
+  // It is for function attributes with default values.
+  // A function attribute shall be represented either as
+  // a string attribute or an AttributeProto, not both.
+  repeated AttributeProto attribute_proto = 11;
+
+  // The nodes in the function.
+  repeated NodeProto node = 7;
+  // A human-readable documentation for this function. Markdown is allowed.
+  optional string doc_string = 8;
+
+  // The OperatorSets this function body (graph) relies on.
+  //
+  // All nodes in the function body (graph) will bind against the operator
+  // with the same-domain/same-op_type operator with the HIGHEST version
+  // in the referenced operator sets. This means at most one version can be relied
+  // for one domain.
+  //
+  // The operator sets imported by FunctionProto should be compatible with the ones
+  // imported by ModelProto. Example, if same operator set say 'A' is imported by FunctionProto
+  // and ModelProto then versions for the operator set may be different but,
+  // the operator schema returned for op_type, domain, version combination
+  // for both the versions should be same.
+
+  repeated OperatorSetIdProto opset_import = 9;
+
+  // The domain which this function belongs to.
+  // This is part of the unique-id (domain, name, overload) of FunctionProtos in a model.
+  optional string domain = 10;
+
+  // The overload identifier of the function.
+  // This is part of the unique-id (domain, name, overload) of FunctionProtos in a model.
+  optional string overload = 13;
+
+  // Information for the values in the function. The ValueInfoProto.name's
+  // must be distinct and refer to names in the function (including inputs,
+  // outputs, and intermediate values). It is optional for a value to appear
+  // in value_info list.
+  repeated ValueInfoProto value_info = 12;
+
+  // Named metadata values; keys should be distinct.
+  repeated StringStringEntryProto metadata_props = 14;
+}
+
+// For using protobuf-lite
+option optimize_for = LITE_RUNTIME;
