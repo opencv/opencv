@@ -692,26 +692,9 @@ namespace wip { namespace ov {
  * taking into account the i/o data transfer.
  */
 struct benchmark_mode { };
-class WorkloadType {
-    using Callback = std::function<void(const std::string &type)>;
-    std::unordered_map<unsigned int, Callback> listeners;
-    unsigned int next_id = 0;
- public:
-    unsigned int addListener(Callback cb) {
-        unsigned int id = next_id++;
-        listeners.emplace(id, std::move(cb));
-        return id;
-    }
-    void removeListener(unsigned int id) {
-        listeners.erase(id);
-    }
-    void set(const std::string &type) {
-        for(const auto &listener : listeners) {
-            listener.second(type);
-        }
-    }
-};
-using WorkloadTypePtr = std::shared_ptr<cv::gapi::wip::ov::WorkloadType>;
+
+class WorkloadTypeOV : public WorkloadType {};
+using WorkloadTypeOvPtr = std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>;
 
 } // namespace ov
 } // namespace wip
@@ -724,9 +707,9 @@ namespace detail
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
-    template<> struct CompileArgTag<std::shared_ptr<cv::gapi::wip::ov::WorkloadType>>
+    template<> struct CompileArgTag<std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>>
     {
-        static const char* tag() { return "gapi.wip.ov.workload_type_ref"; }
+        static const char* tag() { return "gapi.wip.ov.workload_type_ov_ptr"; }
     };
 }
 

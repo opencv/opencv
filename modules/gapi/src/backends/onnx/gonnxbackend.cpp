@@ -127,13 +127,13 @@ class ONNXCompiled {
 
     std::vector<std::string> in_names_without_const;
 
-    cv::gapi::wip::ov::WorkloadTypePtr workload_type;
+    cv::gapi::onnx::WorkloadTypeOnnxPtr workload_type;
     unsigned int workload_listener_id = 0;
     void setWorkLoadType(const std::string &type);
 public:
     explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
     ~ONNXCompiled();
-    void configureWorkloadType(cv::gapi::wip::ov::WorkloadTypePtr workload);
+    void configureWorkloadType(cv::gapi::onnx::WorkloadTypeOnnxPtr workload);
 
     // Extract the information about output layer #i
     cv::GMatDesc outMeta(int i) const;
@@ -597,7 +597,7 @@ cv::gimpl::onnx::GONNXExecutable::GONNXExecutable(const ade::Graph              
         case NodeType::OP:
             if (this_nh == nullptr) {
                 this_nh = nh;
-                auto workload_arg = cv::gapi::getCompileArg<cv::gapi::wip::ov::WorkloadTypePtr>(compileArgs);
+                auto workload_arg = cv::gapi::getCompileArg<cv::gapi::onnx::WorkloadTypeOnnxPtr>(compileArgs);
                 if(workload_arg.has_value()) {
                     auto workload = workload_arg.value();
                     const auto &onnx_unit = iem.metadata(nh).get<ONNXUnit>();
@@ -860,7 +860,7 @@ void ONNXCompiled::setWorkLoadType(const std::string &type) {
     this_session.SetEpDynamicOptions(keys, values, 1);
 }
 
-void ONNXCompiled::configureWorkloadType(cv::gapi::wip::ov::WorkloadTypePtr workload) {
+void ONNXCompiled::configureWorkloadType(cv::gapi::onnx::WorkloadTypeOnnxPtr workload) {
     workload_type = workload;
     workload_listener_id = workload_type->addListener(std::bind(&ONNXCompiled::setWorkLoadType, this, std::placeholders::_1));
 }

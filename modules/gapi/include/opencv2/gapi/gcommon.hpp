@@ -291,6 +291,26 @@ namespace detail
     };
 }
 
+class WorkloadType {
+    using Callback = std::function<void(const std::string &type)>;
+    std::unordered_map<unsigned int, Callback> listeners;
+    unsigned int next_id = 0;
+ public:
+    unsigned int addListener(Callback cb) {
+        unsigned int id = next_id++;
+        listeners.emplace(id, std::move(cb));
+        return id;
+    }
+    void removeListener(unsigned int id) {
+        listeners.erase(id);
+    }
+    void set(const std::string &type) {
+        for(const auto &listener : listeners) {
+            listener.second(type);
+        }
+    }
+};
+
 } // namespace cv
 
 // std::hash overload for GShape

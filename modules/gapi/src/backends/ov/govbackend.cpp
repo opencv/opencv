@@ -1542,7 +1542,7 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
                                             const std::vector<ade::NodeHandle> &nodes)
     : m_g(g), m_gm(m_g) {
 #if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
-    auto workload_arg = cv::gapi::getCompileArg<cv::gapi::wip::ov::WorkloadTypePtr>(compileArgs);
+    auto workload_arg = cv::gapi::getCompileArg<cv::gapi::wip::ov::WorkloadTypeOvPtr>(compileArgs);
     if(workload_arg.has_value()) {
         m_workload_type = workload_arg.value();
         m_workload_listener_id = m_workload_type->addListener(std::bind(&GOVExecutable::setWorkLoadType, this, std::placeholders::_1));
