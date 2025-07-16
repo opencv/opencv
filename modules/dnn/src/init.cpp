@@ -262,7 +262,6 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(PermuteInt8,      PermuteLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ReorgInt8,        ReorgLayer);
     CV_DNN_REGISTER_LAYER_CLASS(ShuffleChannelInt8, ShuffleChannelLayer);
-
 }
 
 CV__DNN_INLINE_NS_END

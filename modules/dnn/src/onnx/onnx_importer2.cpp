@@ -1555,7 +1555,6 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto, ninputs);
 }
 
-
 void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
@@ -1563,7 +1562,6 @@ void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto, ninputs);
 
 }
-
 
 void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {

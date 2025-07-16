@@ -11,8 +11,7 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
     public:
         TriluLayerImpl(const LayerParams &params) {
             setParamsFrom(params);
-            uppertri = params.get<bool>("upper", true);
-
+            upperTri = params.get<bool>("upper", true);
         }
 
         virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -44,9 +43,9 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
 
                 for (int i = r.start; i < r.end; i++) {
                     for(int l=0; l < m; l+=1) {
-                        int cmin = uppertri ? 0 : (l + k + 1);
+                        int cmin = upperTri ? 0 : (l + k + 1);
                         cmin = std::max(cmin, 0);
-                        const int cmax = uppertri ? min(l+ k -1, w-1) : w-1;
+                        const int cmax = upperTri ? min(l+ k -1, w-1) : w-1;
                         const int num_zeros = cmax - cmin + 1;
                         auto *cur_dst = dst + ((w * h) * i + (w * l + cmin));
                         if (cmin < w && num_zeros > 0)
@@ -67,11 +66,10 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
             std::vector<MatType>& internals) const CV_OVERRIDE
         {
             outputs.assign(1, CV_32F);
-            // outputs.assign(2, CV_64SC1);
         }
-    private:
-        bool uppertri;
 
+    private:
+        bool upperTri;
 };
 
 

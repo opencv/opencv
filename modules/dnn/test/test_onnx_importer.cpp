@@ -1328,57 +1328,76 @@ TEST_P(Test_ONNX_layers, Split_EltwiseMax)
     testONNXModels("split_max");
 }
 
-
 TEST_P(Test_ONNX_layers, trilu_tril)
 {
     testONNXModels("trilu_tril", npy, 0, 0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_tril_neg)
 {
     testONNXModels("trilu_tril_neg", npy, 0, 0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, trilu_tril_one_row){
+
+TEST_P(Test_ONNX_layers, trilu_tril_one_row)
+{
     testONNXModels("trilu_tril_one_row", npy, 0, 0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, trilu_tril_out_neg){
+
+TEST_P(Test_ONNX_layers, trilu_tril_out_neg)
+{
     testONNXModels("trilu_tril_out_neg", npy, 0, 0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, trilu_tril_out_pos){
+
+TEST_P(Test_ONNX_layers, trilu_tril_out_pos)
+{
     testONNXModels("trilu_tril_out_pos", npy, 0, 0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, trilu_tril_pos){
+
+TEST_P(Test_ONNX_layers, trilu_tril_pos)
+{
     testONNXModels("trilu_tril_pos", npy, 0, 0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, trilu_tril_square){
+
+TEST_P(Test_ONNX_layers, trilu_tril_square)
+{
     testONNXModels("trilu_tril_square", npy, 0, 0,false, true, 2);
 }
-TEST_P(Test_ONNX_layers, trilu_tril_square_neg){
+
+TEST_P(Test_ONNX_layers, trilu_tril_square_neg)
+{
     testONNXModels("trilu_tril_square_neg", npy, 0, 0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu)
 {
     testONNXModels("trilu_triu", npy, 0, 0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu_one_row)
 {
     testONNXModels("trilu_triu_one_row", npy, 0,0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu_out_neg)
 {
     testONNXModels("trilu_triu_out_neg_out", npy, 0,0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu_out_pos)
 {
    testONNXModels("trilu_triu_out_pos", npy, 0,0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu_pos)
 {
     testONNXModels("trilu_triu_pos", npy, 0,0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu_square)
 {
     testONNXModels("trilu_triu_square", npy, 0,0,false, true, 2);
 }
+
 TEST_P(Test_ONNX_layers, trilu_triu_square_neg)
 {
     testONNXModels("trilu_triu_square_neg", npy, 0,0,false, true, 2);
