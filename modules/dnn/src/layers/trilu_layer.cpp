@@ -28,11 +28,15 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
             inputs_arr.getMatVector(inputs);
             outputs_arr.getMatVector(outputs);
             inputs[0].copyTo(outputs[0]);
+            if (inputs[0].empty())
+                return;
+
             int k = inputs.size() > 1 ? inputs[1].at<int64>(0,0) : 0;
             const auto shape_input = shape(inputs[0]);
             const int cdims = std::max(int(shape_input.size()) - 2, 0);
-            const int h = inputs[0].size[shape_input.size() - 2];
             const int w = inputs[0].size[shape_input.size() - 1];
+            const int h = shape_input.size() >= 2 ? inputs[0].size[shape_input.size() - 2] : 1;
+
             const int m = std::min(h,w);
             int loops = 1;
             for (int i = 0; i < cdims; ++i)
@@ -45,7 +49,7 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
                     for(int l=0; l < m; l+=1) {
                         int cmin = upperTri ? 0 : (l + k + 1);
                         cmin = std::max(cmin, 0);
-                        const int cmax = upperTri ? min(l+ k -1, w-1) : w-1;
+                        const int cmax = upperTri ? min(l + k -1, w-1) : w-1;
                         const int num_zeros = cmax - cmin + 1;
                         auto *cur_dst = dst + ((w * h) * i + (w * l + cmin));
                         if (cmin < w && num_zeros > 0)

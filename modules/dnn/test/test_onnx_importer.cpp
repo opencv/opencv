@@ -1343,6 +1343,11 @@ TEST_P(Test_ONNX_layers, trilu_tril_one_row)
     testONNXModels("trilu_tril_one_row", npy, 0, 0,false, true, 2);
 }
 
+TEST_P(Test_ONNX_layers, trilu_tril_one_row1D)
+{
+    testONNXModels("trilu_tril_one_row1D", npy, 0, 0,false, true, 2);
+}
+
 TEST_P(Test_ONNX_layers, trilu_tril_out_neg)
 {
     testONNXModels("trilu_tril_out_neg", npy, 0, 0,false, true, 2);
