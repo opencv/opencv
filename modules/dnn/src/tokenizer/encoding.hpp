@@ -126,6 +126,8 @@ private:
 std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
                                         const std::string& vocabBpePath,
                                         const std::string& encoderJsonPath);
+
 CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name);
+CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name);
 
 }}}

@@ -232,15 +232,9 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
 
     std::vector<Rank> tokens;
     for (auto& subUtf8 : splits) {
-        // Replace leading space with U+0120 (Ġ) as in OpenAI encoder.json
-        // [TODO]: not sure if this should be the case for all 
-        // cases of space in the json? 
-        // if (!subUtf8.empty() && subUtf8[0] == ' ') {
-        //     subUtf8.replace(0, 1, "\xC4\xA0");
-        // }
         std::cout << "[" << subUtf8 << "]" << std::endl; 
-        ByteVec piece = textToBytes(subUtf8);
-
+        // ByteVec piece = textToBytes(subUtf8);
+        ByteVec piece(subUtf8.begin(), subUtf8.end());
         auto it = encoder_.find(piece);
         if (it != encoder_.end()) {
             tokens.push_back(it->second);
@@ -250,7 +244,6 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
                           subTokens.begin(), subTokens.end());
         }
     }
-
     return tokens;
 }
 /*
@@ -316,11 +309,8 @@ CoreBPE::encode(const std::string& text,
             auto splits = unicode_regex_split(segment, regexes);
 
             for (auto& subUtf8 : splits) {
-                // if (!subUtf8.empty() && subUtf8[0] == ' ') {
-                //     subUtf8.replace(0, 1, "\xC4\xA0");
-                // }
-                // ByteVec piece(subUtf8.begin(), subUtf8.end());
-                ByteVec piece = textToBytes(subUtf8);
+                ByteVec piece(subUtf8.begin(), subUtf8.end());
+                // ByteVec piece = textToBytes(subUtf8);
                 auto it = encoder_.find(piece);
                 if (it != encoder_.end()) {
                     last_piece_token_len = 1;
