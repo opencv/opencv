@@ -50,7 +50,7 @@ def _one_run(img_pts, obj_pts, img_size, subset_size):
     sub_obj = [obj_pts for _ in sel]
     # run calibration on subset
     ret = cv.calibrateCamera(sub_obj, sub_img, tuple(img_size), None, None)
-    rms, K, dist, rvecs, tvecs = ret
+    rms, K, dist, _rvecs, _tvecs = ret
     return {"K": K, "dist": dist.flatten(), "rms": rms}
 
 
