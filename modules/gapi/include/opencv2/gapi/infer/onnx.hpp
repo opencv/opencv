@@ -758,7 +758,7 @@ using WorkloadTypeOnnxPtr = std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>;
 } // namespace onnx
 } // namespace gapi
 namespace detail {
-template<> struct cv::detail::CompileArgTag<std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>> {
+template<> struct CompileArgTag<std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>> {
     static const char* tag() { return "gapi.wip.ov.workload_type_onnx_ptr"; }
 };
 } // namespace detail
