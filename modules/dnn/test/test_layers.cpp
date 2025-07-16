@@ -2816,4 +2816,41 @@ TEST(Layer_LSTM, repeatedInference)
     EXPECT_EQ(diff2, 0.);
 }
 
+TEST(Layer_If, resize)
+{
+    // Skip this test when the classic DNN engine is explicitly requested. The
+    // "if" layer is supported only by the new engine.
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+            cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        // Mark the test as skipped and exit early.
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string imgname   = findDataFile("cv/shared/lena.png", true);
+    const std::string modelname = findDataFile("dnn/onnx/models/if_layer.onnx", true);
+
+    dnn::Net net = dnn::readNetFromONNX(modelname, ENGINE_NEW);
+    Mat src = imread(imgname), blob;
+    dnn::blobFromImage(src, blob, 1.0, cv::Size(), cv::Scalar(), false, false);
+
+    for (int f = 0; f <= 1; f++) {
+        Mat cond(1, 1, CV_BoolC1, cv::Scalar(f));
+
+        net.setInput(cond, "cond");
+        net.setInput(blob, "image");
+
+        std::vector<Mat> outs;
+        net.forward(outs);
+
+        std::vector<Mat> images;
+        dnn::imagesFromBlob(outs[0], images);
+        EXPECT_EQ(images.size(), 1u);
+        EXPECT_EQ(images[0].rows*(4 >> f), src.rows);
+        EXPECT_EQ(images[0].cols*(4 >> f), src.cols);
+    }
+}
+
 }} // namespace

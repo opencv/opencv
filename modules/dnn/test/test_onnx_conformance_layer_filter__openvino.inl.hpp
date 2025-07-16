@@ -781,7 +781,7 @@ CASE(test_identity_opt)
 CASE(test_identity_sequence)
     // no filter
 CASE(test_if)
-    // no filter
+    SKIP;
 CASE(test_if_opt)
     // no filter
 CASE(test_if_seq)

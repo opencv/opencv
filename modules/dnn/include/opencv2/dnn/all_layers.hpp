@@ -585,6 +585,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<RequantizeLayer> create(const LayerParams &params);
     };
 
+    // Forward declaration for computational Graph used by IfLayer
+    class Graph;
+
+    class CV_EXPORTS IfLayer : public Layer
+    {
+    public:
+        virtual int branch(InputArray arr) const = 0;
+
+        /** Factory: creates an IfLayer implementation. */
+        static Ptr<IfLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS ConcatLayer : public Layer
     {
     public:
