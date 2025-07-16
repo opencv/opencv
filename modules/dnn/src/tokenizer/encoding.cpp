@@ -421,6 +421,11 @@ std::vector<std::uint8_t> Encoding::decodeBytes(const std::vector<Rank>& tokens)
     return *opt_bytes;
 }
 
+std::vector<std::uint8_t> Encoding::decodeSingleTokenBytes(Rank token) const {
+    // Decodes a token into bytes
+    return coreBPE_.decodeSingleTokenBytes(token);
+}
+
 // Read entire file into a string
 static std::string readFile(const std::string& path) {
     std::ifstream in{path, std::ios::binary};

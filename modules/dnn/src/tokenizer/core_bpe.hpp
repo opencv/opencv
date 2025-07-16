@@ -97,6 +97,7 @@ public:
     Rank encodeSingleToken(std::vector<uint8_t>& piece) const;
     // Decode
     std::optional<ByteVec> decodeBytes(const std::vector<Rank>& tokens) const;
+    std::vector<uint8_t> decodeSingleTokenBytes(const Rank token) const;
     // Metadata
     std::set<std::string> specialTokens() const;
 
@@ -104,7 +105,8 @@ private:
     ByteVecRankMap encoder_;
     std::unordered_map<std::string, Rank> specialEncoder_;
     std::unordered_map<Rank, ByteVec>  decoder_;          
-    std::unordered_map<Rank, ByteVec>  specialDecoder_;   
+    std::unordered_map<Rank, ByteVec>  specialDecoder_;
+    std::unordered_map<std::string, Rank>  specialStringDecoder_;   
     std::string pattern_;
     std::string specialPattern_;
     std::vector<ByteVec> sortedTokenBytes_;
