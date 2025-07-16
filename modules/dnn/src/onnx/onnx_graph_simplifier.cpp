@@ -1718,13 +1718,14 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
         auto it_end = tensor_proto.external_data().end();
         // file path
         auto it = std::find_if(it_begin, it_end,[](const auto& entry) { return entry.key() == "location"; });
-        CV_Assert(it != it_end);
+        CV_Check(it != it_end, "External tensor data location is not specified");
+
 
         std::string location_path = it->value();
         std::string full_path = base_path.empty() ? location_path : utils::fs::join(base_path, location_path);
 
         std::ifstream file(full_path, std::ios::binary | std::ios::ate);
-        CV_Assert(file.is_open());
+        CV_Check(file.is_open(), "Failed to open external tensor data file");
 
         size_t size = file.tellg();
         file.seekg(0, std::ios::beg);
