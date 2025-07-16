@@ -1753,9 +1753,6 @@ static char* getTensorRAWData(const opencv_onnx::TensorProto& tensor_proto,
     }
 }
 
-
-
-
 Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToInt8, const std::string base_path)
 {
     if (tensor_proto.raw_data().empty() && tensor_proto.float_data().empty() &&
