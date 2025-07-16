@@ -34,7 +34,7 @@ PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > pr
     auto open_camera = [this] () {
         if(mCaptureParams.source == Camera)
         {
-            mCapture.open(mCaptureParams.camID);
+            mCapture.open(mCaptureParams.camID, mCaptureParams.camBackend);
             cv::Size maxRes = getCameraResolution();
             cv::Size neededRes = mCaptureParams.cameraResolution;
 
@@ -55,7 +55,7 @@ PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > pr
             mCapture.set(cv::CAP_PROP_AUTOFOCUS, 0);
         }
         else if (mCaptureParams.source == File)
-            mCapture.open(mCaptureParams.videoFileName);
+            mCapture.open(mCaptureParams.videoFileName, mCaptureParams.camBackend);
     };
 
     if(!mCapture.isOpened()) {
