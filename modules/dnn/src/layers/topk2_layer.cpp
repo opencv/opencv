@@ -7,25 +7,25 @@
 
 namespace cv { namespace dnn {
 
+/*
+    TopK layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__TopK.html
+
+    Opset’s 1, 10 and 11 are covered.
+*/
+
 namespace {
 
-template<typename T>
+template<typename T, typename WT = T>
 class ComparatorGreater {
 public:
     ComparatorGreater(const T* data, size_t step)
         : data_(data), step_(step) {}
 
-    void addOffset(size_t offset) {
-        data_ += offset;
-    }
-
-    void minusOffset(size_t offset) {
-        data_ -= offset;
-    }
 
     bool operator()(const size_t lhs_idx, const size_t rhs_idx) {
-        T lhs = *(data_ + lhs_idx * step_),
-          rhs = *(data_ + rhs_idx * step_);
+        WT lhs = static_cast<WT>(*(data_ + lhs_idx * step_));
+        WT rhs = static_cast<WT>(*(data_ + rhs_idx * step_));
         return (lhs > rhs || (lhs == rhs && lhs_idx < rhs_idx));
     }
 
@@ -34,23 +34,15 @@ private:
     size_t step_;
 };
 
-template<typename T>
+template<typename T, typename WT = T>
 class ComparatorLess {
 public:
     ComparatorLess(const T* data, size_t step)
         : data_(data), step_(step) {}
 
-    void addOffset(size_t offset) {
-        data_ += offset;
-    }
-
-    void minusOffset(size_t offset) {
-        data_ -= offset;
-    }
-
     bool operator()(const size_t lhs_idx, const size_t rhs_idx) {
-        T lhs = *(data_ + lhs_idx * step_),
-          rhs = *(data_ + rhs_idx * step_);
+        WT lhs = static_cast<WT>(*(data_ + lhs_idx * step_));
+        WT rhs = static_cast<WT>(*(data_ + rhs_idx * step_));
         return (lhs < rhs || (lhs == rhs && lhs_idx < rhs_idx));
     }
 
@@ -124,7 +116,7 @@ public:
     }
 
 private:
-    template<class Comparator, typename T>
+    template<typename T, typename WT = T>
     void FindTopK(const Mat &input, Mat &output_vals, Mat &output_idxs, int normalized_axis)
     {
         const auto inShape = shape(input);
@@ -136,23 +128,27 @@ private:
             const T* inPtr = input.ptr<T>();
             T* valPtr = output_vals.ptr<T>();
             int64_t* idxPtr = output_idxs.ptr<int64_t>();
-            Comparator cmp(inPtr, inner);
             AutoBuffer<size_t> indices(dimAxis);
             size_t* idxBuf = indices.data();
             for (size_t b = r.start; b < r.end; ++b) {
                 for (size_t j = 0; j < inner; ++j) {
                     size_t offset = b * dimAxis * inner + j;
-                    cmp.addOffset(offset);
-                    std::iota(idxBuf, idxBuf + dimAxis, 0);
-                    std::stable_sort(idxBuf, idxBuf + dimAxis, cmp);
-                    // By the time we reach here, 'K' has been resolved. Use it directly.
-                    int currentK = K;
-                    for (int i = 0; i < currentK; ++i) {
-                        size_t src = idxBuf[i];
-                        valPtr[b * currentK * inner + i * inner + j] = inPtr[offset + src * inner];
-                        idxPtr[b * currentK * inner + i * inner + j] = static_cast<int64_t>(src);
+                    if (largest){
+                        ComparatorGreater<T,WT> cmp(inPtr + offset, inner);
+                        std::iota(idxBuf, idxBuf + dimAxis, 0);
+                        std::partial_sort(idxBuf, idxBuf + K, idxBuf + dimAxis, cmp);
                     }
-                    cmp.minusOffset(offset);
+                    else{
+                        ComparatorLess<T,WT>    cmp(inPtr + offset, inner);
+                        std::iota(idxBuf, idxBuf + dimAxis, 0);
+                        std::partial_sort(idxBuf, idxBuf + K, idxBuf + dimAxis, cmp);
+                    }
+
+                    for (int i = 0; i < K; ++i) {
+                        size_t src = idxBuf[i];
+                        valPtr[b * K * inner + i * inner + j] = inPtr[offset + src * inner];
+                        idxPtr[b * K * inner + i * inner + j] = static_cast<int64_t>(src);
+                    }
                 }
             }
         };
@@ -207,37 +203,20 @@ public:
                 output_index.create(outShape, CV_64S);
             }
         }
-
-        if (largest) {
-            switch (input.depth()) {
-                case CV_8U: FindTopK<ComparatorGreater<uint8_t>, uint8_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_8S: FindTopK<ComparatorGreater<int8_t>, int8_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_16U: FindTopK<ComparatorGreater<uint16_t>, uint16_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_16S: FindTopK<ComparatorGreater<int16_t>, int16_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_16F: FindTopK<ComparatorGreater<hfloat>, hfloat>(input, output_value, output_index, normalized_axis); break;
-                case CV_32U: FindTopK<ComparatorGreater<unsigned>, unsigned>(input, output_value, output_index, normalized_axis); break;
-                case CV_32S: FindTopK<ComparatorGreater<int>, int>(input, output_value, output_index, normalized_axis); break;
-                case CV_32F: FindTopK<ComparatorGreater<float>, float>(input, output_value, output_index, normalized_axis); break;
-                case CV_64U: FindTopK<ComparatorGreater<uint64_t>, uint64_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_64S: FindTopK<ComparatorGreater<int64_t>, int64_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_64F: FindTopK<ComparatorGreater<double>, double>(input, output_value, output_index, normalized_axis); break;
-                default: CV_Error(Error::BadDepth, "Unsupported input data type");
-            }
-        } else {
-            switch (input.depth()) {
-                case CV_8U: FindTopK<ComparatorLess<uint8_t>, uint8_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_8S: FindTopK<ComparatorLess<int8_t>, int8_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_16U: FindTopK<ComparatorLess<uint16_t>, uint16_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_16S: FindTopK<ComparatorLess<int16_t>, int16_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_16F: FindTopK<ComparatorLess<hfloat>, hfloat>(input, output_value, output_index, normalized_axis); break;
-                case CV_32U: FindTopK<ComparatorLess<unsigned>, unsigned>(input, output_value, output_index, normalized_axis); break;
-                case CV_32S: FindTopK<ComparatorLess<int>, int>(input, output_value, output_index, normalized_axis); break;
-                case CV_32F: FindTopK<ComparatorLess<float>, float>(input, output_value, output_index, normalized_axis); break;
-                case CV_64U: FindTopK<ComparatorLess<uint64_t>, uint64_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_64S: FindTopK<ComparatorLess<int64_t>, int64_t>(input, output_value, output_index, normalized_axis); break;
-                case CV_64F: FindTopK<ComparatorLess<double>, double>(input, output_value, output_index, normalized_axis); break;
-                default: CV_Error(Error::BadDepth, "Unsupported input data type");
-            }
+        switch (input.depth()) {
+            case CV_8U:   FindTopK<uint8_t          >(input, output_value, output_index, normalized_axis); break;
+            case CV_8S:   FindTopK<int8_t           >(input, output_value, output_index, normalized_axis); break;
+            case CV_16U:  FindTopK<uint16_t         >(input, output_value, output_index, normalized_axis); break;
+            case CV_16S:  FindTopK<int16_t          >(input, output_value, output_index, normalized_axis); break;
+            case CV_16F:  FindTopK<hfloat,   float   >(input, output_value, output_index, normalized_axis); break;
+            case CV_16BF: FindTopK<bfloat, float   >(input, output_value, output_index, normalized_axis); break;
+            case CV_32U:  FindTopK<uint32_t         >(input, output_value, output_index, normalized_axis); break;
+            case CV_32S:  FindTopK<int32_t          >(input, output_value, output_index, normalized_axis); break;
+            case CV_32F:  FindTopK<float            >(input, output_value, output_index, normalized_axis); break;
+            case CV_64U:  FindTopK<uint64_t         >(input, output_value, output_index, normalized_axis); break;
+            case CV_64S:  FindTopK<int64_t          >(input, output_value, output_index, normalized_axis); break;
+            case CV_64F:  FindTopK<double           >(input, output_value, output_index, normalized_axis); break;
+            default: CV_Error(Error::BadDepth, "Unsupported input data type");
         }
     }
 };
