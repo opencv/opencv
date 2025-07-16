@@ -86,7 +86,7 @@ enum Version {
   IR_VERSION_2019_9_19 = 0x0000000000000006;
 
   // IR VERSION 7 published on May 8, 2020
-  // - Add support to allow function body graph to rely on multiple external operator sets.
+  // - Add support to allow function body graph to rely on multiple external opreator sets.
   // - Add a list to promote inference graph's initializers to global and
   //   mutable variables. Global variables are visible in all graphs of the
   //   stored models.
@@ -109,10 +109,10 @@ enum Version {
   IR_VERSION_2023_5_5 = 0x0000000000000009;
 
   // IR VERSION 10 published on March 25, 2024
-  // Added UINT4, INT4, overload field for functions and metadata_props on multiple proto definitions.
+  // Added UINT4, INT4.
   IR_VERSION_2024_3_25 = 0x000000000000000A;
 
-  // IR VERSION 11 published on May 12, 2025
+  // IR VERSION 11 published on TBD
   // Added FLOAT4E2M1, multi-device protobuf classes.
   IR_VERSION = 0x000000000000000B;
 }
@@ -495,7 +495,7 @@ message ModelProto {
   //
   // The (domain, name, overload) tuple must be unique across the function protos in this list.
   // In case of any conflicts the behavior (whether the model local functions are given higher priority,
-  // or standard operator sets are given higher priority or this is treated as error) is defined by
+  // or standard operator sets are given higher priotity or this is treated as error) is defined by
   // the runtimes.
   //
   // The operator sets imported by FunctionProto should be compatible with the ones
