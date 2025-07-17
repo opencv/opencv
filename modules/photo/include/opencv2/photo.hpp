@@ -906,42 +906,27 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 */
 CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
 
-struct CV_EXPORTS_W Polynomial2D {
-    std::vector<double> coeffs_x;
-    std::vector<double> coeffs_y;
-    int degree;
-    
-    Polynomial2D() : degree(0) {}
-    
-    void computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) const;
-};
-
-struct CV_EXPORTS_W CalibrationResult {
-    Polynomial2D poly_red;
-    Polynomial2D poly_blue;
-    int degree;
-    int width;
-    int height;
-    double rms_red;
-    double rms_blue;
-    
-    CalibrationResult() {}
-    
-    bool loadFromFile(const String& filename);
-};
+CV_EXPORTS_W bool loadCalibrationResultFromFile(const String& calibration_file, cv::Mat& coeffMat, // mterms x 4, [Bx,By,Rx,Ry]
+                                   int& degree,
+                                   int& width,
+                                   int& height);
 
 class CV_EXPORTS_W ChromaticAberrationCorrector {
 public:
-    ChromaticAberrationCorrector() = default;
-    
-    bool loadCalibration(const String& calibration_file);
+    explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
     Mat correctImage(InputArray input_image);
     
 private:
-    CalibrationResult calib_result_;
+    Mat coeffMat_;
+    int width_, height_, degree_;
     
-    void buildRemaps(int height, int width, const Polynomial2D& poly, 
-                       Mat& map_x, Mat& map_y);
+    void buildRemapsFromCoeffMat(int height, int width,
+                             const Mat& coeffs,
+                             int degree,
+                             int colX, int colY,
+                             Mat& map_x, Mat& map_y);
+
+    
 };
 
 //! @} photo_ca_correction

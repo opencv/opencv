@@ -12,8 +12,7 @@ PERF_TEST(Photo, ChromaticAberrationCorrector)
     Mat src = imread(image_file);
     ASSERT_FALSE(src.empty()) << "Could not load input image";
 
-    cv::ChromaticAberrationCorrector corrector;
-    ASSERT_TRUE(corrector.loadCalibration(calib_file));
+    cv::ChromaticAberrationCorrector corrector(calib_file);
 
     Mat dst;
 
