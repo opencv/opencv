@@ -1376,6 +1376,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TopKLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS TriluLayer : public Layer
+    {
+    public:
+        static Ptr<TriluLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
