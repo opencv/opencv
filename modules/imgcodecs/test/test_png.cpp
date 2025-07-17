@@ -19,8 +19,8 @@ TEST(Imgcodecs_Png, write_big)
     EXPECT_EQ(13917, img.rows);
 
     vector<uchar> buff;
-    ASSERT_NO_THROW(imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, 2 << 15 }));
-    EXPECT_EQ((size_t)816363, buff.size());
+    ASSERT_NO_THROW(imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, INT_MAX }));
+    EXPECT_EQ((size_t)816219, buff.size());
 }
 
 TEST(Imgcodecs_Png, encode)
