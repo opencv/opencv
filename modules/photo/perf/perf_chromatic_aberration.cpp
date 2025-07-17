@@ -26,7 +26,7 @@ PERF_TEST(Photo, ChromaticAberrationCorrector)
 
 PERF_TEST(Photo, CorrectChromaticAberrationFunction)
 {
-    std::string calib_file = getDataPath("cv/cameracalibration/chromatic_aberration/calib_result.yaml");
+    std::string calib_file = getDataPath("cv/cameracalibration/chromatic_aberration/ca_photo_calib.yaml");
     std::string image_file = getDataPath("cv/cameracalibration/chromatic_aberration/ca_photo.png");
 
     Mat src = imread(image_file);
