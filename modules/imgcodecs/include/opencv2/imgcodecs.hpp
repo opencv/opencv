@@ -585,28 +585,18 @@ See cv::imread for the list of supported formats and flags description.
 */
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 
-/**
-Brief: Decodes an image from a memory buffer and extracts associated metadata.
+/** @brief Reads an image from a memory buffer and extracts associated metadata.
 
-This function reads an image from a given memory buffer and optionally retrieves any embedded metadata
-(such as EXIF, XMP, or textual information). If the buffer is too short or contains invalid image data,
-the function returns an empty matrix (i.e., `Mat::data == NULL`).
+This function decodes an image from the specified memory buffer. If the buffer is too short or
+contains invalid data, the function returns an empty matrix ( Mat::data==NULL ).
 
-The supported image formats and decoding flags are the same as those listed in `cv::imread()`.
+See cv::imread for the list of supported formats and flags description.
 
-Note: For color images, the decoded image will have its channels in B G R order.
-
-Parameters:
-- buf: Input byte buffer containing the encoded image data. This can be a `cv::Mat`, `std::vector<uchar>`,
-       or any other compatible `cv::InputArray`.
-- metadataTypes: Output vector that specifies which metadata types to extract on input, and which were
-                 actually retrieved on output. Values are from the `ImageMetadataType` enum.
-- metadata: Output collection containing the extracted metadata chunks. Each entry corresponds to a
-            metadata type listed in `metadataTypes`.
-- flags: Flags for image decoding, identical to those used in `cv::imread()`. See `cv::ImreadModes`.
-
-Returns:
-- Decoded image as a `cv::Mat`. If decoding fails, the returned matrix is empty.
+@note In the case of color images, the decoded images will have the channels stored in **B G R** order.
+@param buf Input array or vector of bytes containing the encoded image data.
+@param metadataTypes Output vector with types of metadata chucks returned in metadata, see cv::ImageMetadataType
+@param metadata Output vector of vectors or vector of matrices to store the retrieved metadata
+@param flags The same flags as in cv::imread, see cv::ImreadModes.
 */
 CV_EXPORTS_W Mat imdecodeWithMetadata( InputArray buf, CV_OUT std::vector<int>& metadataTypes,
                                        OutputArrayOfArrays metadata, int flags = IMREAD_ANYCOLOR );
