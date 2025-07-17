@@ -251,7 +251,7 @@ def detect_disk_centres(
 
         # solve least squares to get delta of centers
         delta, *_ = np.linalg.lstsq(J, -f, rcond=None)
-        delta_img = R.T @ delta 
+        delta_img = R.T @ delta
         cx -= delta[0]
         cy -= delta[1]
         centres.append((cx, cy))
