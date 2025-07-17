@@ -4,10 +4,12 @@
 Camera calibration for chromatic aberration correction
 The calibration is done of a photo of black discs on white background.
 Calibration image is split into b,g,r, and g is used as reference channel.
-The centres of each circle in red and blue channels are found as centres of ellipses and then calculated on a subpixel level.
-Each centre in red or blue channel is paired to a respective centre in green channel.
-Then, a polynomial model of degree 11 is fit onto the image, minimizing the difference between the displacements between centres in green and red/blue and the actual delta computed with polynomial coefficients.
-The coefficients are then saved in yaml format and can be used in this sample to correct images of the same camera, lens and settings.
+The centres of each circle in red and blue channels are found as centres of ellipses
+and then calculated on a subpixel level. Each centre in red or blue channel is paired to
+a respective centre in green channel. Then, a polynomial model of degree 11 is fit onto the image,
+minimizing the difference between the displacements between centres in green and red/blue
+and the actual delta computed with polynomial coefficients. The coefficients are then saved in yaml
+format and can be used in this sample to correct images of the same camera, lens and settings.
 
 usage:
     ca_calibration.py calibrate [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH image
@@ -238,10 +240,10 @@ def detect_disk_centres(
         eps = 1e-6
         pts = c.reshape(-1, 2).astype(np.float64)
         ct, st = np.cos(np.radians(theta)), np.sin(np.radians(theta))
-        R = np.array([[ct, st], [-st, ct]])
+        r = np.array([[ct, st], [-st, ct]])
 
         # translate points so that they are centered around mean, and rotate them
-        p = (R @ (pts.T - np.array([[cx], [cy]]))).T
+        p = (r @ (pts.T - np.array([[cx], [cy]]))).T
         # ellipse equation
         f = (p[:, 0] / (a / 2 + eps)) ** 2 + (p[:, 1] / (b / 2 + eps)) ** 2 - 1
         # gradients of ellipse equation
@@ -251,7 +253,6 @@ def detect_disk_centres(
 
         # solve least squares to get delta of centers
         delta, *_ = np.linalg.lstsq(J, -f, rcond=None)
-        delta_img = R.T @ delta
         cx -= delta[0]
         cy -= delta[1]
         centres.append((cx, cy))
@@ -373,7 +374,8 @@ def calibrate_from_image(
         w
     )
 
-    print(f"Calibrated polynomial with degree {degree}, RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
+    print(f"Calibrated polynomial with degree {degree}, \
+          RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
 
     return {
         "poly_red": poly_r,
@@ -386,8 +388,8 @@ def calibrate_from_image(
 
 def calibrate_multi_degree(
     img: np.ndarray,
-    K0: int,
-    K1: int,
+    k0: int,
+    k1: int,
 ) -> Dict[int, Tuple[Polynomial2D, Polynomial2D, float, float]]:
     """
     Returns a dict mapping degree → (poly_r, poly_b, rms_r, rms_b).
@@ -403,7 +405,7 @@ def calibrate_multi_degree(
     xb, yb, disp_b = pair_keypoints(pts_g, pts_b)
 
     results = {}
-    for deg in range(K0, K1+1):
+    for deg in range(k0, k1+1):
         print(deg)
 
         poly_r, poly_b, rms_r, rms_b = fit_polynomials(
@@ -417,54 +419,10 @@ def calibrate_multi_degree(
             h,
             w
         )
-        print(f"Calibrated polynomial with degree {deg}, RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
+        print(f"Calibrated polynomial with degree {deg}, \
+              RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
         results[deg] = (poly_r, poly_b, rms_r, rms_b)
     return results
-
-def degree_error_stats(
-    results: Dict[int, Tuple[Polynomial2D, Polynomial2D, float, float]],
-) -> Dict[int, Dict[str, float]]:
-    """
-    Given the dict from calibrate_multi_degree, returns for each degree k < K1:
-      {
-        'max_r': ...,
-        'mean_r': ...,
-        'std_r':  ...,
-        'max_b': ...,
-        'mean_b': ...,
-        'std_b':  ...
-      }
-    using degree=K1 as reference.
-    """
-    degs = sorted(results)
-    K1 = degs[-1]
-    h, w = results[K1][0].height, results[K1][0].width
-
-    # precompute reference maps (in pixel coords)
-    pr_ref, pb_ref, _, _ = results[K1]
-    rx_ref, ry_ref = build_remap(h, w, pr_ref)
-    bx_ref, by_ref = build_remap(h, w, pb_ref)
-
-    stats = {}
-    for deg in degs[:-1]:
-        pr, pb, _, _ = results[deg]
-        rx_k, ry_k = build_remap(h, w, pr)
-        bx_k, by_k = build_remap(h, w, pb)
-
-        # compute pixel‐wise displacement error
-        err_r = np.sqrt((rx_k - rx_ref)**2 + (ry_k - ry_ref)**2)
-        err_b = np.sqrt((bx_k - bx_ref)**2 + (by_k - by_ref)**2)
-
-        stats[deg] = {
-            'max_r': float(err_r.max()),
-            'mean_r': float(err_r.mean()),
-            'std_r':  float(err_r.std()),
-            'max_b': float(err_b.max()),
-            'mean_b': float(err_b.mean()),
-            'std_b':  float(err_b.std()),
-        }
-    return stats
-
 
 
 def build_remap(
@@ -472,10 +430,10 @@ def build_remap(
     w: int,
     poly: Polynomial2D,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    X, Y = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
-    dx, dy = poly.delta(X, Y)
-    map_x = (X - dx).astype(np.float32)
-    map_y = (Y - dy).astype(np.float32)
+    x, y = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+    dx, dy = poly.delta(x, y)
+    map_x = (x - dx).astype(np.float32)
+    map_y = (y - dy).astype(np.float32)
     return map_x, map_y
 
 
@@ -506,6 +464,61 @@ def correct_image(
     corrected = cv2.merge((b_corr, g_corr, r_corr))
     return corrected
 
+def detect_disk_contours(
+    img: np.ndarray,
+    *,
+    min_area: int = 20,
+    max_area: int | None = None,
+    circularity_thresh: float = 0.7,
+    morph_kernel: int = 3,
+) -> list[np.ndarray]:
+    """
+    Find all external contours of “discs” in a binary mask of `img` and return
+    their raw point coordinates as a list of (N_i,2) float32 arrays.
+    """
+    if img.ndim != 2:
+        raise ValueError("detect_disk_contours expects a grayscale image")
+    blur = cv2.GaussianBlur(img, (5, 5), 0)
+    _, mask = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (morph_kernel,)*2)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+
+    cnts, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours = []
+    for c in cnts:
+        if len(c) < 5:
+            continue
+        area = cv2.contourArea(c)
+        if area < min_area or (max_area is not None and area > max_area):
+            continue
+        peri = cv2.arcLength(c, True)
+        circ = 4 * math.pi * area / (peri*peri + 1e-12)
+        if circ < circularity_thresh:
+            continue
+        # flatten to (N,2) float32
+        pts = c.reshape(-1, 2).astype(np.float32)
+        contours.append(pts)
+    if not contours:
+        raise RuntimeError("No valid disk contours found")
+    return contours
+
+def warp_and_compare(contours_src: list[np.ndarray],
+                     poly_src: Polynomial2D,
+                     pts_ref: np.ndarray) -> np.ndarray:
+    """
+    Warp src-channel contours through poly_src.delta,
+    then compute for each warped point its distance to the nearest
+    green contour point in pts_ref.
+    """
+    pts = np.vstack(contours_src)               # (N,2)
+    xs, ys = pts[:,0], pts[:,1]
+    dx, dy = poly_src.delta(xs, ys)             # (N,), (N,)
+    warped = np.column_stack([xs - dx, ys - dy])
+
+    tree = cKDTree(pts_ref)
+    dists, _ = tree.query(warped, k=1)
+    return dists
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -521,10 +534,11 @@ def parse_args() -> argparse.Namespace:
 
     sr = sub.add_parser("correct", help="Correct a photograph using saved coefficients")
     sr.add_argument("image", help="Input image to be corrected")
-    sr.add_argument("--coeffs_file", required=True, help="Calibration coefficient file (.json/.yaml)")
+    sr.add_argument("--coeffs_file", required=True,
+                    help="Calibration coefficient file (.json/.yaml)")
     sr.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
-    sf = sub.add_parser("full", help="Calibrate from calibration target image and correct the calibration target")
+    sf = sub.add_parser("full",help="Calibrate from calibration target image and correct the calibration target")
     sf.add_argument("image", help="Image of black‑disk calibration target")
     sf.add_argument("--degree", type=int, default=11, help="Polynomial degree")
     sf.add_argument("--coeffs_file", required=True, help="Save coefficients to YAML file")
@@ -532,7 +546,7 @@ def parse_args() -> argparse.Namespace:
 
     ss = sub.add_parser("scan", help="Sweep degree range and report errors")
     ss.add_argument("image", help="Calibration image path")
-    ss.add_argument("--degree_range", nargs=2, type=int, metavar=("K0","K1"),
+    ss.add_argument("--degree_range", nargs=2, type=int, metavar=("k0","k1"),
                     required=True, help="Inclusive degree range to scan")
     ss.add_argument("--method", default="POWELL", help="Optimizer method")
 
@@ -596,7 +610,6 @@ def cmd_calibrate(args: argparse.Namespace) -> None:
     # print(f"Written visualization to {out_path}")
 
 
-
 def cmd_correct(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
     if img is None:
@@ -605,6 +618,7 @@ def cmd_correct(args: argparse.Namespace) -> None:
     fixed = correct_image(img, calib)
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
+
 
 def cmd_full(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
@@ -617,20 +631,43 @@ def cmd_full(args: argparse.Namespace) -> None:
     cv2.imwrite(args.output, fixed)
     print(f"Corrected image written to {args.output}")
 
+
 def cmd_scan(args: argparse.Namespace) -> None:
     img = cv2.imread(args.image, cv2.IMREAD_COLOR)
-    K0, K1 = args.degree_range
-    results = calibrate_multi_degree(img, K0, K1, method=args.method)
-    stats = degree_error_stats(results)
-    print(f"Reference degree: {K1}\n")
+    k0, k1 = args.degree_range
+    results = calibrate_multi_degree(img, k0, k1)
+
+    b, g, r = cv2.split(img)
+    contours_g = detect_disk_contours(g)
+    contours_r = detect_disk_contours(r)
+    contours_b = detect_disk_contours(b)
+    pts_g = np.vstack(contours_g)  # (M,2)
+
+    print(f"Reference degree: {k1}\n")
     header = "deg |   max_r   mean_r   std_r   |   max_b   mean_b   std_b"
     print(header)
     print("-" * len(header))
-    for deg in sorted(stats):
-        s = stats[deg]
-        print(f"{deg:3d} | {s['max_r']:8.3f} {s['mean_r']:8.3f} {s['std_r']:8.3f} | "
-              f"{s['max_b']:8.3f} {s['mean_b']:8.3f} {s['std_b']:8.3f}")
 
+
+    # now for each lower degree, warp & compare
+    for deg in sorted(results):
+        if deg == k1:
+            continue
+        pr, pb, _, _ = results[deg]
+
+        # distances from warped red→green, blue→green
+        d_r = warp_and_compare(contours_r, pr, pts_g)
+        d_b = warp_and_compare(contours_b, pb, pts_g)
+
+        # stats
+        s = {
+            'max_r': d_r.max(), 'mean_r': d_r.mean(), 'std_r': d_r.std(),
+            'max_b': d_b.max(), 'mean_b': d_b.mean(), 'std_b': d_b.std()
+        }
+
+        print(f"{deg:3d} | "
+              f"{s['max_r']:8.3f} {s['mean_r']:8.3f} {s['std_r']:8.3f} | "
+              f"{s['max_b']:8.3f} {s['mean_b']:8.3f} {s['std_b']:8.3f}")
 
 
 if __name__ == "__main__":
