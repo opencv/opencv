@@ -975,7 +975,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         break;
 
                     default:
-                        CV_Error(cv::Error::StsBadArg, "Unknown or unsupported PNG write parameter flag");
+                        CV_LOG_WARNING(NULL, "Unknown or unsupported ImwriteFlags value ignored.");
                         break;
                     }
                 }
