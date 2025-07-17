@@ -906,7 +906,7 @@ If @p input_image has one channel, it is assumed to be a raw Bayer image and is
 first demosaiced using @p bayerPattern. If it has three channels, it is treated
 as a BGR image and @p bayerPattern is ignored.
 
-@param image Input BGR image to correct
+@param input_image Input BGR image to correct
 @param calibration_file Path to calibration file containing polynomial coefficients
 @return Corrected BGR image
 */
