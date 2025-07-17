@@ -357,7 +357,7 @@ Currently, the following file formats are supported:
     the environment variable `OPENCV_IO_MAX_IMAGE_PIXELS`. See @ref tutorial_env_reference.
 
 @param filename Name of the file to be loaded.
-@param flags Flag that can take values of `cv::ImreadModes`.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
 
@@ -366,7 +366,7 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
 This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts and the return value.
 @param filename Name of file to be loaded.
 @param dst object in which the image will be loaded.
-@param flags Flag that can take values of cv::ImreadModes
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
 @note
 The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
  */
@@ -382,7 +382,7 @@ embedded in the file (such as EXIF, XMP, etc.), depending on file format support
 @param filename Name of the file to be loaded.
 @param metadataTypes Output vector with types of metadata chunks returned in metadata, see ImageMetadataType.
 @param metadata Output vector of vectors or vector of matrices to store the retrieved metadata.
-@param flags Flag that can take values of cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
 
 @return The loaded image as a cv::Mat object. If the image cannot be read, the function returns an empty matrix.
 */
@@ -568,7 +568,7 @@ See cv::imread for the list of supported formats and flags description.
 
 @note In the case of color images, the decoded images will have the channels stored in **B G R** order.
 @param buf Input array or vector of bytes.
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes.
 */
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 
@@ -583,7 +583,7 @@ See cv::imread for the list of supported formats and flags description.
 @param buf Input array or vector of bytes containing the encoded image data.
 @param metadataTypes Output vector with types of metadata chucks returned in metadata, see cv::ImageMetadataType
 @param metadata Output vector of vectors or vector of matrices to store the retrieved metadata
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
 
 @return The decoded image as a cv::Mat object. If decoding fails, the function returns an empty matrix.
 */
@@ -592,7 +592,7 @@ CV_EXPORTS_W Mat imdecodeWithMetadata( InputArray buf, CV_OUT std::vector<int>& 
 
 /** @overload
 @param buf Input array or vector of bytes.
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
 reallocations when the function is called repeatedly for images of the same size. In case of decoder
 failure the function returns empty cv::Mat object, but does not release user-provided dst buffer.
@@ -608,7 +608,7 @@ See cv::imreadmulti for the list of supported formats and flags description.
 
 @note In the case of color images, the decoded images will have the channels stored in **B G R** order.
 @param buf Input array or vector of bytes.
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes.
 @param mats A vector of Mat objects holding each page, if more than one.
 @param range A continuous selection of pages.
 */
