@@ -372,33 +372,20 @@ The image passing through the img parameter can be pre-allocated. The memory is 
  */
 CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
 
-/**
- * @brief Reads an image from a file along with associated metadata.
- *
- * This function behaves similarly to cv::imread(), loading an image from the specified file.
- * In addition to the image pixel data, it also attempts to extract any available metadata
- * embedded in the file (such as EXIF, XMP, IPTC, etc.), depending on file format support.
- *
- * @param filename Name of the image file to be loaded.
- *
- * @param metadataTypes Output vector containing the types of metadata chunks found in the file.
- *                      Each entry corresponds to a metadata block stored in @p metadata.
- *                      The values are from the ImageMetadataType enumeration.
- *
- * @param metadata Output array of metadata containers.
- *                 Each element is typically a 1-row matrix (CV_8UC1) containing raw metadata bytes.
- *                 The number and type of metadata elements match the @p metadataTypes output.
- *
- * @param flags Flag that specifies the color type of the loaded image.
- *              Supported values are the same as for cv::imread(), such as IMREAD_COLOR, IMREAD_GRAYSCALE,
- *              IMREAD_UNCHANGED, etc. See cv::ImreadModes for details.
- *
- * @return The loaded image as a cv::Mat object. If the image cannot be read, the function returns an empty matrix.
- *
- * @note Not all image formats support embedded metadata. If the format does not support it, @p metadata will be empty.
- *       This function is useful when working with image formats that include auxiliary metadata
- *       such as JPEG (EXIF), PNG (EXIF/XMP/ICCP/TEXT), Avif (EXIF/XMP/ICCP) or WebP (EXIF/XMP/ICCP).
- */
+/** @brief Reads an image from a file along with associated metadata.
+
+This function behaves similarly to cv::imread(), loading an image from the specified file.
+In addition to the image pixel data, it also attempts to extract any available metadata
+embedded in the file (such as EXIF, XMP, etc.), depending on file format support.
+
+@note In the case of color images, the decoded images will have the channels stored in **B G R** order.
+@param filename Name of the file to be loaded.
+@param metadataTypes Output vector with types of metadata chunks returned in metadata, see ImageMetadataType.
+@param metadata Output vector of vectors or vector of matrices to store the retrieved metadata.
+@param flags Flag that can take values of cv::ImreadModes.
+
+@return The loaded image as a cv::Mat object. If the image cannot be read, the function returns an empty matrix.
+*/
 CV_EXPORTS_W Mat imreadWithMetadata( const String& filename, CV_OUT std::vector<int>& metadataTypes,
                                      OutputArrayOfArrays metadata, int flags = IMREAD_ANYCOLOR);
 
@@ -597,6 +584,8 @@ See cv::imread for the list of supported formats and flags description.
 @param metadataTypes Output vector with types of metadata chucks returned in metadata, see cv::ImageMetadataType
 @param metadata Output vector of vectors or vector of matrices to store the retrieved metadata
 @param flags The same flags as in cv::imread, see cv::ImreadModes.
+
+@return The decoded image as a cv::Mat object. If decoding fails, the function returns an empty matrix.
 */
 CV_EXPORTS_W Mat imdecodeWithMetadata( InputArray buf, CV_OUT std::vector<int>& metadataTypes,
                                        OutputArrayOfArrays metadata, int flags = IMREAD_ANYCOLOR );
