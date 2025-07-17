@@ -20,7 +20,7 @@ int main(int argc, const char** argv)
     }
     //! [init_imagecollection]
 
-    int size = collection.size();
+    size_t size = collection.size();
     int width = collection.getWidth();
     int height = collection.getHeight();
     int type = collection.getType();
