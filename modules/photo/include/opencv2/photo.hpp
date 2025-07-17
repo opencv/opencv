@@ -906,10 +906,12 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 */
 CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
 
-CV_EXPORTS_W bool loadCalibrationResultFromFile(const String& calibration_file, cv::Mat& coeffMat, // mterms x 4, [Bx,By,Rx,Ry]
-                                   int& degree,
-                                   int& width,
-                                   int& height);
+CV_EXPORTS_W bool loadCalibrationResultFromFile(
+    const String& calibration_file,
+    Mat& coeffMat,
+    CV_OUT int& degree,
+    CV_OUT int& width,
+    CV_OUT int& height);
 
 class CV_EXPORTS_W ChromaticAberrationCorrector {
 public:
