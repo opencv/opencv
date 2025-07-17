@@ -906,6 +906,22 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 */
 CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
 
+/** @brief Load chromatic-aberration calibration into a packed coefficient matrix.
+
+Reads the red and blue polynomial coefficients from the specified file and
+packs them into a 4×N CV_32F matrix:
+  row 0 = blue dx coefficients
+  row 1 = blue dy coefficients
+  row 2 = red  dx coefficients
+  row 3 = red  dy coefficients
+
+@param calibration_file  Path to YAML/XML calibration file.
+@param coeffMat          Output 4xN coefficient matrix (CV_32F).
+@param degree            [out] Polynomial degree inferred from N.
+@param width             [out] Image width read from file.
+@param height            [out] Image height read from file.
+@returns true on success; most failures throw cv::Exception.
+*/
 CV_EXPORTS_W bool loadCalibrationResultFromFile(
     const String& calibration_file,
     Mat& coeffMat,
@@ -913,15 +929,46 @@ CV_EXPORTS_W bool loadCalibrationResultFromFile(
     CV_OUT int& width,
     CV_OUT int& height);
 
+
+/** @brief Object-oriented chromatic aberration corrector.
+
+Loads calibration once in its constructor and then can repeatedly correct
+images of the same size and type.
+*/
 class CV_EXPORTS_W ChromaticAberrationCorrector {
 public:
+    /** @brief Construct from a calibration file.
+
+    @param calibration_file  Path to YAML/XML file with polynomial data.
+    @throws cv::Exception on load or parse failure.
+    */
     explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
+    /** @brief Apply correction to an input image.
+
+    @param input_image  3-channel BGR image matching the calibration size.
+    @returns Corrected BGR image.
+    @throws cv::Exception if channels ≠ 3 or size ≠ calibration.
+    */
     Mat correctImage(InputArray input_image);
 
 private:
     Mat coeffMat_;
     int width_, height_, degree_;
 
+    /** @brief Internal helper to build remap grids from packed coefficients.
+
+    Evaluates the 2D polynomial stored in @p coeffs at each pixel coordinate
+    to produce map_x/map_y for cv::remap().
+
+    @param height  Image height
+    @param width   Image width
+    @param coeffs  4×N coefficient matrix
+    @param degree  Polynomial degree (N = (degree+1)(degree+2)/2)
+    @param colX    Row index in @p coeffs for the dx terms (0…3)
+    @param colY    Row index in @p coeffs for the dy terms (0…3)
+    @param map_x   Output X-map (CV_32F)
+    @param map_y   Output Y-map (CV_32F)
+    */
     void buildRemapsFromCoeffMat(int height, int width,
                              const Mat& coeffs,
                              int degree,
