@@ -975,7 +975,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         break;
 
                     default:
-                        CV_LOG_WARNING(NULL, "Unknown or unsupported ImwriteFlags value ignored.");
+                        CV_LOG_WARNING(NULL, "An unknown or unsupported ImwriteFlags value was specified and has been ignored.");
                         break;
                     }
                 }
