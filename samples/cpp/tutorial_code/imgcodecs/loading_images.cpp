@@ -20,9 +20,16 @@ int main(int argc, const char** argv)
     }
     //! [init_imagecollection]
 
+    int size = collection.size();
     int width = collection.getWidth();
     int height = collection.getHeight();
+    int type = collection.getType();
 
+    std::cout << "size   : " << size << std::endl;
+    std::cout << "width  : " << width << std::endl;    
+    std::cout << "height : " << height << std::endl;
+    std::cout << "type   : " << type << std::endl;
+    
     //! [read_frames]
     // Iterate through frames and display them
     for (auto it = collection.begin(); it != collection.end(); ++it)
