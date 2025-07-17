@@ -10,7 +10,7 @@ const unsigned long EXPECTED_COEFFS_SIZE = 78;
 
 class ChromaticAberrationTest : public testing::Test
 {
-protected:    
+protected:
     std::string test_yaml_file;
     cv::Mat test_image;
 
@@ -41,14 +41,14 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectorLoadCalibration)
 TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrection)
 {
     cv::ChromaticAberrationCorrector corrector(test_yaml_file);
-    
+
     // Test image correction
     cv::Mat corrected = corrector.correctImage(test_image);
-    
+
     EXPECT_EQ(corrected.size(), test_image.size());
     EXPECT_EQ(corrected.channels(), test_image.channels());
     EXPECT_EQ(corrected.type(), test_image.type());
-    
+
     // Verify the image was actually processed (should be different)
     cv::Mat diff;
     cv::absdiff(test_image, corrected, diff);
@@ -64,14 +64,14 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionTablet)
     test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/tablet_circles_.png");
     ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
 
-    cv::ChromaticAberrationCorrector corrector(test_yaml_file);    
+    cv::ChromaticAberrationCorrector corrector(test_yaml_file);
     cv::Mat corrected = corrector.correctImage(test_image);
-    
+
     // Verify output properties
     EXPECT_EQ(corrected.size(), test_image.size());
     EXPECT_EQ(corrected.channels(), test_image.channels());
     EXPECT_EQ(corrected.type(), test_image.type());
-    
+
     // Verify the image was actually processed (should be different)
     cv::Mat diff;
     cv::absdiff(test_image, corrected, diff);
@@ -86,14 +86,14 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionSyntheticSimpleWarp
     test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/synthetic_simple_warp.png");
     ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
 
-    cv::ChromaticAberrationCorrector corrector(test_yaml_file);    
+    cv::ChromaticAberrationCorrector corrector(test_yaml_file);
     cv::Mat corrected = corrector.correctImage(test_image);
-    
+
     // Verify output properties
     EXPECT_EQ(corrected.size(), test_image.size());
     EXPECT_EQ(corrected.channels(), test_image.channels());
     EXPECT_EQ(corrected.type(), test_image.type());
-    
+
     // Verify the image was actually processed (should be different)
     cv::Mat diff;
     cv::absdiff(test_image, corrected, diff);
@@ -108,14 +108,14 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionSyntheticRadial)
     test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/synthetic_radial.png");
     ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
 
-    cv::ChromaticAberrationCorrector corrector(test_yaml_file);    
+    cv::ChromaticAberrationCorrector corrector(test_yaml_file);
     cv::Mat corrected = corrector.correctImage(test_image);
-    
+
     // Verify output properties
     EXPECT_EQ(corrected.size(), test_image.size());
     EXPECT_EQ(corrected.channels(), test_image.channels());
     EXPECT_EQ(corrected.type(), test_image.type());
-    
+
     // Verify the image was actually processed (should be different)
     cv::Mat diff;
     cv::absdiff(test_image, corrected, diff);
@@ -126,11 +126,11 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionSyntheticRadial)
 TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrectionInvalidInput)
 {
     cv::ChromaticAberrationCorrector corrector(test_yaml_file);
-    
+
     // Test with single channel image (should fail)
     cv::Mat gray_image;
     cv::cvtColor(test_image, gray_image, cv::COLOR_BGR2GRAY);
-    
+
     EXPECT_THROW(corrector.correctImage(gray_image), cv::Exception);
 }
 
@@ -138,7 +138,7 @@ TEST_F(ChromaticAberrationTest, CorrectChromaticAberrationFunction)
 {
     // Test the standalone function
     cv::Mat corrected = cv::correctChromaticAberration(test_image, test_yaml_file);
-    
+
     // Verify output properties
     EXPECT_EQ(corrected.rows, test_image.rows);
     EXPECT_EQ(corrected.cols, test_image.cols);
@@ -151,13 +151,13 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     // Test that FileStorage correctly reads YAML format
     cv::FileStorage fs(test_yaml_file, cv::FileStorage::READ);
     ASSERT_TRUE(fs.isOpened());
-    
-    
+
+
     cv::FileNode red_node = fs["red_channel"];
     cv::FileNode blue_node = fs["blue_channel"];
     EXPECT_TRUE(red_node.isMap());
     EXPECT_TRUE(blue_node.isMap());
-    
+
     std::vector<double> coeffs_x;
     red_node["coeffs_x"] >> coeffs_x;
     EXPECT_EQ(coeffs_x.size(), EXPECTED_COEFFS_SIZE);
@@ -169,7 +169,7 @@ TEST_F(ChromaticAberrationTest, YAMLReadingIntegration)
     EXPECT_EQ(coeffs_y.size(), EXPECTED_COEFFS_SIZE);
     blue_node["coeffs_y"] >> coeffs_y;
     EXPECT_EQ(coeffs_y.size(), EXPECTED_COEFFS_SIZE);
-    
+
     fs.release();
 }
 

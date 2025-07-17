@@ -21,7 +21,7 @@ bool loadCalibrationResultFromFile(const String& calibration_file, Mat& coeffMat
                     "image_width and image_height must be positive");
         return false;
     }
-    auto readChannel = [&](const char* key, 
+    auto readChannel = [&](const char* key,
                             std::vector<double>& coeffs_x,
                            std::vector<double>& coeffs_y,
                            int& deg_out)
@@ -210,23 +210,23 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
         CV_Error_(Error::StsBadArg,
                     ("images need to have 3 channels"));
     }
-    
+
     const int height = image.rows;
     const int width = image.cols;
 
     if (height != height_ || width != width_) {
         CV_Error_(Error::StsBadArg, ("Image size %dx%d does not match calibration %dx%d", width, height, width_, height_));
     }
-    
+
     std::vector<Mat> channels;
     split(image, channels);
     Mat b = channels[0], g = channels[1], r = channels[2];
-    
+
     Mat map_x_r, map_y_r, map_x_b, map_y_b;
 
     buildRemapsFromCoeffMat(height, width, coeffMat_, degree_, 2, 3, map_x_r, map_y_r);
     buildRemapsFromCoeffMat(height, width, coeffMat_, degree_, 0, 1, map_x_b, map_y_b);
-    
+
     Mat r_corr, b_corr;
     remap(r, r_corr, map_x_r, map_y_r, INTER_LINEAR, BORDER_REPLICATE);
     remap(b, b_corr, map_x_b, map_y_b, INTER_LINEAR, BORDER_REPLICATE);
@@ -234,7 +234,7 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
     std::vector<Mat> corrected_channels = {b_corr, g, r_corr};
     Mat corrected_image;
     merge(corrected_channels, corrected_image);
-    
+
     return corrected_image;
 }
 

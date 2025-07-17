@@ -917,18 +917,16 @@ class CV_EXPORTS_W ChromaticAberrationCorrector {
 public:
     explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
     Mat correctImage(InputArray input_image);
-    
+
 private:
     Mat coeffMat_;
     int width_, height_, degree_;
-    
+
     void buildRemapsFromCoeffMat(int height, int width,
                              const Mat& coeffs,
                              int degree,
                              int colX, int colY,
                              Mat& map_x, Mat& map_y);
-
-    
 };
 
 //! @} photo_ca_correction
