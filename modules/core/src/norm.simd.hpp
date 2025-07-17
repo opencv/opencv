@@ -1525,6 +1525,8 @@ NormFunc getNormFunc(int normType, int depth)
         }
     };
 
+    if (normType >= 3 || normType < 0) return nullptr;
+
     return normTab[normType][depth];
 }
 

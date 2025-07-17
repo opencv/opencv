@@ -548,7 +548,7 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
         return;
     }
 
-    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F );
+    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
 
     GpuMat src = *this;
 
@@ -579,6 +579,8 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
 
     const int sdepth = depth();
     const int ddepth = CV_MAT_DEPTH(rtype);
+
+    CV_Assert(sdepth <= CV_64F && ddepth <= CV_64F);
 
     GpuMat src = *this;
 

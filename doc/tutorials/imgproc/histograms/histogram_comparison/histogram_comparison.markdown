@@ -25,7 +25,7 @@ Theory
 
 -   To compare two histograms ( \f$H_{1}\f$ and \f$H_{2}\f$ ), first we have to choose a *metric*
     (\f$d(H_{1}, H_{2})\f$) to express how well both histograms match.
--   OpenCV implements the function @ref cv::compareHist to perform a comparison. It also offers 4
+-   OpenCV implements the function @ref cv::compareHist to perform a comparison. It also offers 6
     different metrics to compute the matching:
     -#  **Correlation ( cv::HISTCMP_CORREL )**
         \f[d(H_1,H_2) =  \frac{\sum_I (H_1(I) - \bar{H_1}) (H_2(I) - \bar{H_2})}{\sqrt{\sum_I(H_1(I) - \bar{H_1})^2 \sum_I(H_2(I) - \bar{H_2})^2}}\f]
@@ -36,11 +36,17 @@ Theory
     -#  **Chi-Square ( cv::HISTCMP_CHISQR )**
         \f[d(H_1,H_2) =  \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)}\f]
 
-    -#  **Intersection ( method=cv::HISTCMP_INTERSECT )**
+    -#  **Intersection ( cv::HISTCMP_INTERSECT )**
         \f[d(H_1,H_2) =  \sum _I  \min (H_1(I), H_2(I))\f]
 
     -#  **Bhattacharyya distance ( cv::HISTCMP_BHATTACHARYYA )**
         \f[d(H_1,H_2) =  \sqrt{1 - \frac{1}{\sqrt{\bar{H_1} \bar{H_2} N^2}} \sum_I \sqrt{H_1(I) \cdot H_2(I)}}\f]
+
+    -#  **Alternative Chi-Square ( cv::HISTCMP_CHISQR_ALT )**
+        \f[d(H_1,H_2) =  2 * \sum _I  \frac{\left(H_1(I)-H_2(I)\right)^2}{H_1(I)+H_2(I)}\f]
+
+    -#  **Kullback-Leibler divergence ( cv::HISTCMP_KL_DIV )**
+        \f[d(H_1,H_2) =  \sum _I H_1(I) \log \left(\frac{H_1(I)}{H_2(I)}\right)\f]
 
 Code
 ----
@@ -123,7 +129,7 @@ Explanation
     @snippet samples/python/tutorial_code/Histograms_Matching/histogram_comparison/compareHist_Demo.py Convert to HSV half
     @end_toggle
 
--   Initialize the arguments to calculate the histograms (bins, ranges and channels H and S ).
+-   Initialize the arguments to calculate the histograms (bins, ranges and channels H and S).
 
     @add_toggle_cpp
     @snippet samples/cpp/tutorial_code/Histograms_Matching/compareHist_Demo.cpp Using 50 bins for hue and 60 for saturation
@@ -151,7 +157,7 @@ Explanation
     @snippet samples/python/tutorial_code/Histograms_Matching/histogram_comparison/compareHist_Demo.py Calculate the histograms for the HSV images
     @end_toggle
 
--   Apply sequentially the 4 comparison methods between the histogram of the base image (hist_base)
+-   Apply sequentially the 6 comparison methods between the histogram of the base image (hist_base)
     and the other histograms:
 
     @add_toggle_cpp
@@ -182,15 +188,17 @@ Results
     are from the same source. For the other two test images, we can observe that they have very
     different lighting conditions, so the matching should not be very good:
 
--#  Here the numeric results we got with OpenCV 3.4.1:
-      *Method*        |  Base - Base |  Base - Half |  Base - Test 1 |  Base - Test 2
-    ----------------- | ------------ | ------------ | -------------- | ---------------
-      *Correlation*   |  1.000000    |  0.880438    |  0.20457       |  0.0664547
-      *Chi-square*    |  0.000000    |  4.6834      |  2697.98       |  4763.8
-      *Intersection*  |  18.8947     |  13.022      |  5.44085       |  2.58173
-      *Bhattacharyya* |  0.000000    |  0.237887    |  0.679826      |  0.874173
+-#  Here the numeric results we got with OpenCV 4.12.0:
+      *Method*          |  Base - Base |  Base - Half |  Base - Test 1 |  Base - Test 2
+    ------------------- | ------------ | ------------ | -------------- | ---------------
+      *Correlation*     |  1.000000    |  0.880438    |  0.20457       |  0.065752
+      *Chi-square*      |  0.000000    |  0.328307    |  181.674       |  80.1494
+      *Intersection*    |  1.000000    |  0.75005     |  0.315061      |  0.0908022
+      *Bhattacharyya*   |  0.000000    |  0.237866    |  0.679825      |  0.873709
+      *Chi-Square alt.* |  0.000000    |  0.395046    |  2.31572       |  3.41024
+      *KL divergence*   |  0.000000    |  0.321064    |  2.6616        |  9.55412
+
     For the *Correlation* and *Intersection* methods, the higher the metric, the more accurate the
     match. As we can see, the match *base-base* is the highest of all as expected. Also we can observe
-    that the match *base-half* is the second best match (as we predicted). For the other two metrics,
-    the less the result, the better the match. We can observe that the matches between the test 1 and
-    test 2 with respect to the base are worse, which again, was expected.
+    that the match *base-half* is the second best match (as we predicted). For the other four metrics,
+    the less the result, the better the match.

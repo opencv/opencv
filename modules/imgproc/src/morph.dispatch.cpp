@@ -138,7 +138,7 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
     int r = 0, c = 0;
     double inv_r2 = 0;
 
-    CV_Assert( shape == MORPH_RECT || shape == MORPH_CROSS || shape == MORPH_ELLIPSE );
+    CV_Assert( shape == MORPH_RECT || shape == MORPH_CROSS || shape == MORPH_ELLIPSE || shape == MORPH_DIAMOND );
 
     anchor = normalizeAnchor(anchor, ksize);
 
@@ -150,6 +150,11 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
         r = ksize.height/2;
         c = ksize.width/2;
         inv_r2 = r ? 1./((double)r*r) : 0;
+    }
+    else if( shape == MORPH_DIAMOND )
+    {
+        r = ksize.height/2;
+        c = ksize.width/2;
     }
 
     Mat elem(ksize, CV_8U);
@@ -163,6 +168,16 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
             j2 = ksize.width;
         else if( shape == MORPH_CROSS )
             j1 = anchor.x, j2 = j1 + 1;
+        else if( shape == MORPH_DIAMOND )
+        {
+            int dy = std::abs(i - r);
+            if( dy <= r )
+            {
+                int dx = r - dy;
+                j1 = std::max( c - dx, 0 );
+                j2 = std::min( c + dx + 1, ksize.width );
+            }
+        }
         else
         {
             int dy = i - r;

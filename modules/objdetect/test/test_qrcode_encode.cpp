@@ -343,9 +343,11 @@ TEST(Objdetect_QRCode_Encode_Kanji, regression)
         }
 
         Mat straight_barcode;
-        std::string decoded_info = QRCodeDetector().decode(resized_src, corners, straight_barcode);
+        QRCodeDetector detector;
+        std::string decoded_info = detector.decode(resized_src, corners, straight_barcode);
         EXPECT_FALSE(decoded_info.empty()) << "The generated QRcode cannot be decoded.";
         EXPECT_EQ(input_info, decoded_info);
+        EXPECT_EQ(detector.getEncoding(), QRCodeEncoder::ECIEncodings::ECI_SHIFT_JIS);
     }
 }
 

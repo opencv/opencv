@@ -128,7 +128,7 @@ struct SkipThisTest : public ::testing::Test {
     } \
 
 // Special type of tests which require / use or validate processing of huge amount of data (>= 2Gb)
-#if defined(_M_X64) || defined(_M_ARM64) || defined(__x86_64__) || defined(__aarch64__)
+#if defined(_M_X64) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__x86_64__) || defined(__aarch64__)
 #define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, test_name, ::testing::Test, Body,, CV__TEST_BIGDATA_BODY_IMPL)
 #else
 #define BIGDATA_TEST(test_case_name, test_name) TEST_(BigData_ ## test_case_name, DISABLED_ ## test_name, ::testing::Test, Body,, CV__TEST_BIGDATA_BODY_IMPL)

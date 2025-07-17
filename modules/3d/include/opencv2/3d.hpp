@@ -973,7 +973,9 @@ An example program about homography from the camera displacement
 Check @ref tutorial_homography "the corresponding tutorial" for more details
 */
 
-/** @brief Finds an object pose from 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences:
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1043,7 +1045,9 @@ CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             OutputArray rvec, OutputArray tvec,
                             bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
-/** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences using the RANSAC scheme to deal with bad matches.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1076,8 +1080,8 @@ projections imagePoints and the projected (using @ref projectPoints ) objectPoin
 makes the function resistant to outliers.
 
 @note
-   -   An example of how to use solvePNPRansac for object detection can be found at
-        opencv_source_code/samples/cpp/tutorial_code/3d/real_time_pose_estimation/
+   -   An example of how to use solvePnPRansac for object detection can be found at
+        @ref tutorial_real_time_pose
    -   The default method used to estimate the camera pose for the Minimal Sample Sets step
        is #SOLVEPNP_EPNP. Exceptions are:
          - if you choose #SOLVEPNP_P3P or #SOLVEPNP_AP3P, these methods will be used.
@@ -1102,7 +1106,9 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                      OutputArray rvec, OutputArray tvec, OutputArray inliers,
                      const UsacParams &params=UsacParams());
 
-/** @brief Finds an object pose from 3 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from **3** 3D-2D point correspondences.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1197,7 +1203,9 @@ CV_EXPORTS_W void solvePnPRefineVVS( InputArray objectPoints, InputArray imagePo
                                          TermCriteria::COUNT, 20, FLT_EPSILON),
                                      double VVSlambda = 1);
 
-/** @brief Finds an object pose from 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1268,6 +1276,7 @@ More information is described in @ref calib3d_solvePnP
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
+   -   With @ref SOLVEPNP_SQPNP input points must be >= 3
  */
 CV_EXPORTS_W int solvePnPGeneric( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
@@ -2615,9 +2624,9 @@ CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
 @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
-1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can also be passed here.
 @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-where N is the number of points. vector\<Point2d\> can be also passed here.
+where N is the number of points. vector\<Point2d\> can also be passed here.
 @param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 @param distCoeffs Input vector of distortion coefficients (4x1/1x4).
 @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
