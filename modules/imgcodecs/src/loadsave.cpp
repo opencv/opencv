@@ -1786,7 +1786,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
 
     if (!m_decoder->readHeader())
     {
-        m_error = ImageCollection::Error::READ_HEADER_ERROR;
+        m_error = ImageCollection::Error::READ_HEADER_FAILED;
         return;
     }
 
@@ -1823,7 +1823,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
         // read the header to make sure it succeeds
         if (!m_decoder->readHeader())
         {
-            m_error = ImageCollection::Error::READ_HEADER_ERROR;
+            m_error = ImageCollection::Error::READ_HEADER_FAILED;
             return;
         }
     }
@@ -1873,14 +1873,14 @@ const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder-
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
-    m_error = status ? ImageCollection::Error::OK : ImageCollection::Error::READ_HEADER_ERROR;
+    m_error = status ? ImageCollection::Error::OK : ImageCollection::Error::READ_HEADER_FAILED;
     return status;
 }
 
 // readHeader must be called before calling this method
 Mat ImageCollection::Impl::readData() {
     const int type = calcType(m_decoder->type(), m_flags);
-    m_error = ImageCollection::Error::READ_DATA_ERROR;
+    m_error = ImageCollection::Error::READ_DATA_FAILED;
 
     // established the required input image size
     Size size = validateInputImageSize(Size(m_decoder->width(), m_decoder->height()));
@@ -1961,7 +1961,7 @@ ImageCollection::ImageCollection(InputArray buffer, int flags) : pImpl(new Impl(
 
 void ImageCollection::init(const String& filename, int flags) { pImpl->init(filename, flags); }
 
-void ImageCollection::initFromMemory(InputArray buffer, int flags) { pImpl->initFromMemory(buffer, flags); }
+void ImageCollection::init(InputArray buffer, int flags) { pImpl->initFromMemory(buffer, flags); }
 
 void ImageCollection::close() { pImpl->close(); }
 

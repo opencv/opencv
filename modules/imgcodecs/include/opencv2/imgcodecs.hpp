@@ -681,64 +681,20 @@ It does not check for the actual existence of the file but rather the ability to
 */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/**
- * @brief Iterator-based API for reading multi-page and animated images on demand.
- *
- * The `ImageCollection` class provides an interface for iterating over frames or pages in
- * multi-page and animated image files (such as TIFF, animated WebP, GIF, etc.). It supports
- * the OpenCV `Animation` class internally for handling animated formats.
- *
- * Pages are decoded lazily as much as possible. Only the current page requested from decoder via operator*().
- * The Actual behaviour depends on the decoder implementation.
- *
- * ### Performance
- *
- * - **Sequential Access**:
- *   Iterating through pages in order (e.g., using a loop) has constant time complexity, O(1),
- *   due to internal iterator state tracking.
- *
- * - **Random Access**:
- *   Accessing a specific page out of order has linear time complexity, O(n), since the collection
- *   must be reinitialized from the beginning. However, intermediate pages are skipped (not decoded),
- *   so this operation is still typically fast.
- *
- * - **Caching**:
- *   Decoded pages are stored in memory. Re-accessing a previously decoded page is O(1).
- *   Use `releaseCache(index)` to manually free memory for a specific page.
- *
- * ### Features
- *
- * - Supports multi-page image formats (e.g., TIFF).
- * - Supports animated image formats via the OpenCV `Animation` class (e.g., APNG, WebP, GIF).
- * - On-demand decoding and memory management.
- * - Fast sequential access and reasonably efficient random access.
- *
- * ### Example
- * @code
- * // Load a multi-frame or animated image
- * ImageCollection collection("animated.webp");
- *
- * // Check if initialization succeeded
- * if (collection.getLastError() != ImageCollection::OK)
- * {
- *     std::cerr << "Failed to initialize ImageCollection"
- *     return;
- * }
- *
- * // You can query image properties before loading image data
- * int width = collection.getWidth();
- * int height = collection.getHeight();
- * std::cout << "Image size: " << width << "x" << height << std::endl;
- *
- * // Iterate through frames and display them
- * for (auto it = collection.begin(); it != collection.end(); ++it)
- * {
- *     Mat frame = *it;
- *     imshow("Frame", frame);
- *     waitKey(100);
- * }
- * @endcode
- */
+/** @brief Iterator - based interface for reading multi - page and animated images on demand.
+
+The `ImageCollection` class provides a lazy - decoding interface for accessing individual frames in
+multi - page or animated image formats(e.g., TIFF, animated WebP, GIF, APNG).Internally, animated
+formats are supported via the OpenCV `Animation` class.
+
+Only the currently accessed frame is decoded when needed.This enables efficient memory use and
+fast iteration without fully loading the image sequence.The actual decoding behavior may vary
+depending on the image decoder implementation.
+
+Sequential access via iterators is fast(O(1)), while random access(e.g., accessing frame N directly)
+has linear complexity(O(n)) due to the need to advance the decoder.Previously decoded frames
+are cached and can be released manually using `releaseCache()`.
+*/
 class CV_EXPORTS_W ImageCollection {
 public:
     struct CV_EXPORTS iterator {
@@ -757,12 +713,12 @@ public:
     };
 
     enum Error {
-        OK = 0,
-        UNINITIALIZED = 1,
-        FILE_NOT_OPENED = 2,
-        UNKNOWN_FILE_TYPE = 3,
-        READ_HEADER_ERROR = 4,
-        READ_DATA_ERROR = 5
+        OK = 0,                      ///< No error.
+        UNINITIALIZED = 1,           ///< The object has not been properly initialized.
+        SOURCE_NOT_OPENED = 2,       ///< Failed to open the input source (file, buffer, etc.).
+        UNKNOWN_SOURCE_FORMAT = 3,   ///< The source format could not be determined or is unsupported.
+        READ_HEADER_FAILED = 4,      ///< An error occurred while reading the data header.
+        READ_DATA_FAILED = 5         ///< An error occurred while reading the data content.
     };
 
     /**
@@ -815,7 +771,7 @@ public:
      *
      * Clears any existing data and loads the specified image.
      */
-    CV_WRAP void initFromMemory(InputArray buffer, int flags = IMREAD_UNCHANGED);
+    CV_WRAP void init(InputArray buffer, int flags = IMREAD_UNCHANGED);
 
     /**
      * @brief Closes the ImageCollection and releases internal resources.
