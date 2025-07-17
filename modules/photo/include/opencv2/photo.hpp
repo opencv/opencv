@@ -921,6 +921,8 @@ are then saved in a yaml file which can be used with this function to correct la
 
 @param input_image Input BGR image to correct
 @param calibration_file Path to calibration file containing polynomial coefficients
+@param bayerPattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
+                        demosaicing when @p input_image has one channel; ignored otherwise.
 @return Corrected BGR image
 */
 CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern = -1);
