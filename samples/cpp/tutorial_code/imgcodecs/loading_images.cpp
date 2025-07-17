@@ -29,7 +29,7 @@ int main(int argc, const char** argv)
     std::cout << "width  : " << width << std::endl;    
     std::cout << "height : " << height << std::endl;
     std::cout << "type   : " << type << std::endl;
-    
+
     //! [read_frames]
     // Iterate through frames and display them
     for (auto it = collection.begin(); it != collection.end(); ++it)
