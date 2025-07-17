@@ -47,7 +47,7 @@ class Polynomial2D:
 
     def delta(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         mean_x, mean_y = self.width * 0.5, self.height * 0.5
-        inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
+        inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y
         x_n = (x - mean_x) * inv_std_x
         y_n = (y - mean_y) * inv_std_y
         terms = monomial_terms(x_n, y_n, self.degree)
@@ -125,12 +125,12 @@ def load_calib_result(path: str | None = None) -> Dict:
             data = yaml.safe_load(fh)
         else:
             raise ValueError("YAML file expected as input for the calibration result")
-    
+
     deg, height, width = validate_calibration_dict(data)
-    
+
     red_data = data["red_channel"]
     blue_data = data["blue_channel"]
-    
+
     poly_r = Polynomial2D(
         np.asarray(red_data["coeffs_x"]),
         np.asarray(red_data["coeffs_y"]),
@@ -145,7 +145,7 @@ def load_calib_result(path: str | None = None) -> Dict:
         height,
         width
     )
-    
+
     return {
         "poly_red": poly_r,
         "poly_blue": poly_b,
@@ -180,7 +180,7 @@ def save_calib_result(calib, path: str | None = None) -> None:
     }
     if path is not None:
         with open(path, "w") as fh:
-            yaml.safe_dump(d, 
+            yaml.safe_dump(d,
                             fh,
                             version=(1, 2),
                             default_flow_style=False,
@@ -251,7 +251,7 @@ def detect_disk_centres(
 
         # solve least squares to get delta of centers
         delta, *_ = np.linalg.lstsq(J, -f, rcond=None)
-        delta_img = R.T @ delta  
+        delta_img = R.T @ delta 
         cx -= delta[0]
         cy -= delta[1]
         centres.append((cx, cy))
@@ -290,7 +290,7 @@ def fit_channel(
     method: str = "L-BFGS-B",
 ) -> Tuple[np.ndarray, np.ndarray, float]:
     mean_x, mean_y = width * 0.5, height * 0.5
-    inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y 
+    inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y
     x = (x - mean_x) * inv_std_x
     y = (y - mean_y) * inv_std_y
 
@@ -376,7 +376,7 @@ def calibrate_from_image(
     print(f"Calibrated polynomial with degree {degree}, RMS red: {rms_r:.3f} px; RMS blue: {rms_b:.3f} px")
 
     return {
-        "poly_red": poly_r, 
+        "poly_red": poly_r,
         "poly_blue": poly_b,
         "image_width": w,
         "image_height": h,
