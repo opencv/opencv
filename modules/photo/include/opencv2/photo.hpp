@@ -901,13 +901,23 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 /** @example samples/cpp/tutorial_code/photo/chromatic_aberration_correction/chromatic_aberration_correction.cpp
 An example correcting chromatic aberration
 */
-/** @brief Corrects chromatic aberration in an image using polynomial distortion model.
+/** @brief Corrects lateral chromatic aberration in an image using polynomial distortion model.
 
 This function loads polynomial calibration data from the specified file and applies
 a channel‐specific warp to remove chromatic aberration.
 If @p input_image has one channel, it is assumed to be a raw Bayer image and is
 first demosaiced using @p bayerPattern. If it has three channels, it is treated
 as a BGR image and @p bayerPattern is ignored.
+
+Firstly, calibration needs to be done using apps/chromatic-aberration-calibration/ca_calibration.py on a photo of
+a pattern of black discs on white background, included in opencv_extra/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png
+
+Calibration and correction are based on the algorithm described in the paper
+Rudakova, V., Monasse, P. (2014). Precise Correction of Lateral Chromatic Aberration in Images.
+The chromatic aberration is modeled as a polynomial of some degree in red and blue channels compared to green.
+In calibration, a photo of many black discs on white background is used, and the displacements
+between the centres of discs in red and blue channels compared to green are minimized. The coefficients
+are then saved in a yaml file which can be used with this function to correct lateral chromatic aberration.
 
 @param input_image Input BGR image to correct
 @param calibration_file Path to calibration file containing polynomial coefficients
