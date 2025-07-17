@@ -92,6 +92,7 @@ namespace calib
         std::string videoFileName;
         bool flipVertical;
         int camID;
+        int camBackend;
         int fps;
         cv::Size cameraResolution;
         int maxFramesNum;

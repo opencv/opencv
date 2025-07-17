@@ -100,6 +100,8 @@ protected:
     bool            m_iscolor;
     bool            m_isfloat;
     bool            m_hasalpha;
+    bool            m_multispectral;
+    int             m_channels;
 
 private:
     ExrDecoder(const ExrDecoder &); // copy disabled

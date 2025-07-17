@@ -47,6 +47,7 @@ endforeach(m)
 
 # header blacklist
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.h$")
+ocv_list_filterout(opencv_hdrs "modules/core/include/opencv2/core/fast_math.hpp")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/opencl/")
@@ -74,12 +75,50 @@ set(cv2_generated_files
     "${OPENCV_PYTHON_SIGNATURES_FILE}"
 )
 
-string(REPLACE ";" "\n" opencv_hdrs_ "${opencv_hdrs}")
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/headers.txt" "${opencv_hdrs_}")
+
+set(config_json_headers_list "")
+foreach(header IN LISTS opencv_hdrs)
+  if(NOT config_json_headers_list STREQUAL "")
+    set(config_json_headers_list "${config_json_headers_list},\n\"${header}\"")
+  else()
+    set(config_json_headers_list "\"${header}\"")
+  endif()
+endforeach()
+
+include("${OpenCV_SOURCE_DIR}/cmake/OpenCVBindingsPreprocessorDefinitions.cmake")
+
+ocv_bindings_generator_populate_preprocessor_definitions(
+  OPENCV_MODULES_BUILD
+  opencv_preprocessor_defs
+)
+
+set(__config_str
+"{
+  \"headers\": [
+${config_json_headers_list}
+  ],
+  \"preprocessor_definitions\": {
+${opencv_preprocessor_defs}
+  }
+}")
+
+set(JSON_CONFIG_FILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/gen_python_config.json")
+if(EXISTS "${JSON_CONFIG_FILE_PATH}")
+  file(READ "${JSON_CONFIG_FILE_PATH}" __content)
+else()
+  set(__content "")
+endif()
+if(NOT "${__content}" STREQUAL "${__config_str}")
+  file(WRITE "${JSON_CONFIG_FILE_PATH}" "${__config_str}")
+endif()
+unset(__config_str)
+
 file(GLOB_RECURSE typing_stubs_generation_files "${PYTHON_SOURCE_DIR}/src2/typing_stubs_generation/*.py")
 add_custom_command(
     OUTPUT ${cv2_generated_files}
-    COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" "${PYTHON_SOURCE_DIR}/src2/gen2.py" "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/headers.txt"
+    COMMAND "${PYTHON_DEFAULT_EXECUTABLE}" "${PYTHON_SOURCE_DIR}/src2/gen2.py"
+        "--config" "${JSON_CONFIG_FILE_PATH}"
+        "--output_dir" "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS "${PYTHON_SOURCE_DIR}/src2/gen2.py"
             "${PYTHON_SOURCE_DIR}/src2/hdr_parser.py"
             "${typing_stubs_generation_files}"

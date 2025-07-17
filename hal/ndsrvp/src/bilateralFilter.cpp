@@ -156,10 +156,12 @@ int bilateralFilter(const uchar* src_data, size_t src_step,
 
     int i, j, maxk, radius;
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return CV_HAL_ERROR_OK;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color * sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space * sigma_space);

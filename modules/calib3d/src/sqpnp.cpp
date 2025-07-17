@@ -65,21 +65,6 @@ const double PoseSolver::POINT_VARIANCE_THRESHOLD = 1e-5;
 const double PoseSolver::SQRT3 = std::sqrt(3);
 const int PoseSolver::SQP_MAX_ITERATION = 15;
 
-// No checking done here for overflow, since this is not public all call instances
-// are assumed to be valid
-template <typename tp, int snrows, int sncols,
-    int dnrows, int dncols>
-    void set(int row, int col, cv::Matx<tp, dnrows, dncols>& dest,
-        const cv::Matx<tp, snrows, sncols>& source)
-{
-    for (int y = 0; y < snrows; y++)
-    {
-        for (int x = 0; x < sncols; x++)
-        {
-            dest(row + y, col + x) = source(y, x);
-        }
-    }
-}
 
 PoseSolver::PoseSolver()
     : num_null_vectors_(-1),
@@ -280,7 +265,7 @@ void PoseSolver::computeOmega(InputArray objectPoints, InputArray imagePoints)
     // EVD equivalent of the SVD; less accurate
     cv::eigen(omega_, s_, u_);
     u_ = u_.t(); // eigenvectors were returned as rows
-#endif
+#endif // EVD
 
 #endif // HAVE_EIGEN
 
@@ -601,9 +586,10 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H(5, 4) = r(8) - dot_j5q2 * H(5, 1) - dot_j5q4 * H(5, 3);
     H(6, 4) = r(3) - dot_j5q3 * H(6, 2); H(7, 4) = r(4) - dot_j5q3 * H(7, 2); H(8, 4) = r(5) - dot_j5q3 * H(8, 2);
 
-    Matx<double, 9, 1> q4 = H.col(4);
-    q4 *= (1.0 / cv::norm(q4));
-    set<double, 9, 1, 9, 6>(0, 4, H, q4);
+    cv::Matx<double, 9, 1> q4 = H.col(4);
+    const double inv_norm_q4 = 1.0 / cv::norm(q4);
+    for (int i = 0; i < 9; ++i)
+        H(i, 4) = q4(i) * inv_norm_q4;
 
     K(4, 0) = 0;
     K(4, 1) = r(6) * H(3, 1) + r(7) * H(4, 1) + r(8) * H(5, 1);
@@ -630,9 +616,10 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
     H(7, 5) = r(1) - dot_j6q3 * H(7, 2) - dot_j6q5 * H(7, 4);
     H(8, 5) = r(2) - dot_j6q3 * H(8, 2) - dot_j6q5 * H(8, 4);
 
-    Matx<double, 9, 1> q5 = H.col(5);
-    q5 *= (1.0 / cv::norm(q5));
-    set<double, 9, 1, 9, 6>(0, 5, H, q5);
+    cv::Matx<double, 9, 1> q5 = H.col(5);
+    const double inv_norm_q5 = 1.0 / cv::norm(q5);
+    for (int i = 0; i < 9; ++i)
+        H(i, 5) = q5(i) * inv_norm_q5;
 
     K(5, 0) = r(6) * H(0, 0) + r(7) * H(1, 0) + r(8) * H(2, 0);
     K(5, 1) = 0; K(5, 2) = r(0) * H(6, 2) + r(1) * H(7, 2) + r(2) * H(8, 2);
@@ -670,9 +657,10 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
         }
     }
 
-    Matx<double, 9, 1> v1 = Pn.col(index1);
-    v1 /= max_norm1;
-    set<double, 9, 1, 9, 3>(0, 0, N, v1);
+    const cv::Matx<double, 9, 1>& v1 = Pn.col(index1);
+    const double inv_max_norm1 = 1.0 / max_norm1;
+    for (int i = 0; i < 9; ++i)
+        N(i, 0) = v1(i) * inv_max_norm1;
     col_norms[index1] = -1.0; // mark to avoid use in subsequent loops
 
     for (int i = 0; i < 9; i++)
@@ -690,11 +678,12 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
         }
     }
 
-    Matx<double, 9, 1> v2 = Pn.col(index2);
-    Matx<double, 9, 1> n0 = N.col(0);
-    v2 -= v2.dot(n0) * n0;
-    v2 *= (1.0 / cv::norm(v2));
-    set<double, 9, 1, 9, 3>(0, 1, N, v2);
+    const cv::Matx<double, 9, 1>& v2 = Pn.col(index2);
+    const cv::Matx<double, 9, 1>& n0 = N.col(0);
+    cv::Matx<double, 9, 1> u2 = v2 - v2.dot(n0) * n0;
+    const double inv_norm_u2 = 1.0 / cv::norm(u2);
+    for (int i = 0; i < 9; ++i)
+        N(i, 1) = u2(i) * inv_norm_u2;
     col_norms[index2] = -1.0; // mark to avoid use in subsequent loops
 
     for (int i = 0; i < 9; i++)
@@ -709,17 +698,17 @@ void PoseSolver::computeRowAndNullspace(const cv::Matx<double, 9, 1>& r,
             if (cos_v1_x_col + cos_v2_x_col <= min_dot1323)
             {
                 index3 = i;
-                min_dot1323 = cos_v2_x_col + cos_v2_x_col;
+                min_dot1323 = cos_v1_x_col + cos_v2_x_col;
             }
         }
     }
 
-    Matx<double, 9, 1> v3 = Pn.col(index3);
-    Matx<double, 9, 1> n1 = N.col(1);
-    v3 -= (v3.dot(n1)) * n1 - (v3.dot(n0)) * n0;
-    v3 *= (1.0 / cv::norm(v3));
-    set<double, 9, 1, 9, 3>(0, 2, N, v3);
-
+    const cv::Matx<double, 9, 1>& v3 = Pn.col(index3);
+    const cv::Matx<double, 9, 1>& n1 = N.col(1);
+    cv::Matx<double, 9, 1> u3 = v3 - (v3.dot(n1) * n1) - (v3.dot(n0) * n0);
+    const double inv_norm_u3 = 1.0 / cv::norm(u3);
+    for (int i = 0; i < 9; ++i)
+        N(i, 2) = u3(i) * inv_norm_u3;
 }
 
 // if e = u*w*vt then r=u*diag([1, 1, det(u)*det(v)])*vt

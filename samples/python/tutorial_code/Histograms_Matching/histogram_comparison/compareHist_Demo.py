@@ -45,20 +45,20 @@ channels = [0, 1]
 
 ## [Calculate the histograms for the HSV images]
 hist_base = cv.calcHist([hsv_base], channels, None, histSize, ranges, accumulate=False)
-cv.normalize(hist_base, hist_base, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+cv.normalize(hist_base, hist_base, alpha=1, beta=0, norm_type=cv.NORM_L1)
 
 hist_half_down = cv.calcHist([hsv_half_down], channels, None, histSize, ranges, accumulate=False)
-cv.normalize(hist_half_down, hist_half_down, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+cv.normalize(hist_half_down, hist_half_down, alpha=1, beta=0, norm_type=cv.NORM_L1)
 
 hist_test1 = cv.calcHist([hsv_test1], channels, None, histSize, ranges, accumulate=False)
-cv.normalize(hist_test1, hist_test1, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+cv.normalize(hist_test1, hist_test1, alpha=1, beta=0, norm_type=cv.NORM_L1)
 
 hist_test2 = cv.calcHist([hsv_test2], channels, None, histSize, ranges, accumulate=False)
-cv.normalize(hist_test2, hist_test2, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+cv.normalize(hist_test2, hist_test2, alpha=1, beta=0, norm_type=cv.NORM_L1)
 ## [Calculate the histograms for the HSV images]
 
 ## [Apply the histogram comparison methods]
-for compare_method in range(4):
+for compare_method in range(6):
     base_base = cv.compareHist(hist_base, hist_base, compare_method)
     base_half = cv.compareHist(hist_base, hist_half_down, compare_method)
     base_test1 = cv.compareHist(hist_base, hist_test1, compare_method)

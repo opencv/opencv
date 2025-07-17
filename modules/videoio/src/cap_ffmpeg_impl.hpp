@@ -2080,6 +2080,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         else
         {
             frame_number = 0;
+            picture_pts = AV_NOPTS_VALUE_;
             break;
         }
     }
@@ -2097,27 +2098,14 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     switch( property_id )
     {
     case CAP_PROP_POS_MSEC:
+        seek(value/1000.0);
+        return true;
     case CAP_PROP_POS_FRAMES:
+        seek((int64_t)value);
+        return true;
     case CAP_PROP_POS_AVI_RATIO:
-        {
-            switch( property_id )
-            {
-            case CAP_PROP_POS_FRAMES:
-                seek((int64_t)value);
-                break;
-
-            case CAP_PROP_POS_MSEC:
-                seek(value/1000.0);
-                break;
-
-            case CAP_PROP_POS_AVI_RATIO:
-                seek((int64_t)(value*ic->duration));
-                break;
-            }
-
-            picture_pts=(int64_t)value;
-        }
-        break;
+        seek((int64_t)(value*ic->duration));
+        return true;
     case CAP_PROP_FORMAT:
         if (value == -1)
             return setRaw();
@@ -2525,11 +2513,13 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     // check parameters
     if (input_pix_fmt == AV_PIX_FMT_BGR24) {
         if (cn != 3) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected 3 channels but got " << cn);
             return false;
         }
     }
     else if (input_pix_fmt == AV_PIX_FMT_GRAY8 || input_pix_fmt == AV_PIX_FMT_GRAY16LE) {
         if (cn != 1) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected 1 channel but got " << cn);
             return false;
         }
     }
@@ -2640,14 +2630,16 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         }
         hw_frame->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
-        ret = ret_write >= 0 ? true : false;
+        // AVERROR(EAGAIN): continue sending input, not an error
+        ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
         av_frame_free(&hw_frame);
     } else
 #endif
     {
         picture->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, picture, frame_idx);
-        ret = ret_write >= 0 ? true : false;
+        // AVERROR(EAGAIN): continue sending input, not an error
+        ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
     }
 
     frame_idx++;

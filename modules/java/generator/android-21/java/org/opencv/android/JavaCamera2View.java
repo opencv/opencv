@@ -96,8 +96,10 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                 Log.e(LOGTAG, "Error: camera isn't detected.");
                 return false;
             }
+            boolean chosen = false;  // remember whether the camera ID is set.
             if (mCameraIndex == CameraBridgeViewBase.CAMERA_ID_ANY) {
                 mCameraID = camList[0];
+                chosen = true;
             } else {
                 for (String cameraID : camList) {
                     CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraID);
@@ -107,11 +109,12 @@ public class JavaCamera2View extends CameraBridgeViewBase {
                             characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT)
                     ) {
                         mCameraID = cameraID;
+                        chosen = true;
                         break;
                     }
                 }
             }
-            if (mCameraID == null) { // make JavaCamera2View behaves in the same way as JavaCameraView
+            if (mCameraID == null || !chosen) { // make JavaCamera2View behaves in the same way as JavaCameraView
                 Log.i(LOGTAG, "Selecting camera by index (" + mCameraIndex + ")");
                 if (mCameraIndex < camList.length) {
                     mCameraID = camList[mCameraIndex];

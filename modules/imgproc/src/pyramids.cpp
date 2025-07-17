@@ -769,7 +769,6 @@ template <> int PyrUpVecVOneRow<int, uchar>(int** src, uchar* dst, int width)
             r20 = *(row2 + x);
         int _2r10 = r10 + r10;
         int d = r00 + r20 + (_2r10 + _2r10 + _2r10);
-        int d_shifted = (r10 + r20) << 2;
         // Similar to v_rshr_pack_u<6>(d, vx_setzero_s16()).get0()
         *(dst + x) = (int)((((unsigned int)d) + ((1 << (6 - 1)))) >> 6);
     }

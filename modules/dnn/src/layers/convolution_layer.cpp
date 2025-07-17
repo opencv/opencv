@@ -2015,7 +2015,7 @@ public:
         if( weightsMat.empty() )
         {
             transpose(blobs[0].reshape(1, inpCn), weightsMat);
-            biasesMat = hasBias() ? blobs[1].reshape(1, outCn) : Mat::zeros(outCn, 1, CV_32F);
+            biasesMat = hasBias() ? blobs[1] : Mat::zeros(outCn, 1, CV_32F);
         }
 
         for (size_t ii = 0; ii < outputs.size(); ii++)
@@ -2041,7 +2041,7 @@ public:
 
                     Mat convMat = convBlob.rowRange(_Range((g + n * ngroups) * inpGroupCn, inpGroupCn));
                     Mat wghtMat = weightsMat.colRange(_Range(g * inpGroupCn, inpGroupCn));
-                    Mat curBiasMat = biasesMat.rowRange(_Range(g * outGroupCn, outGroupCn));
+                    Mat curBiasMat = biasesMat.reshape(1, {outCn, 1}).rowRange(_Range(g * outGroupCn, outGroupCn));
 
                     //gemm(wghtMat, convMat, 1, colMat, 0, colMat, 0);
                     MatMulInvoker mminvoker(wghtMat, convMat, colMat, nstripes);
