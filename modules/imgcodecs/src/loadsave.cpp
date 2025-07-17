@@ -1882,6 +1882,24 @@ Mat ImageCollection::Impl::readData() {
     const int type = calcType(m_decoder->type(), m_flags);
     m_error = ImageCollection::Error::READ_DATA_FAILED;
 
+    int scale_denom = 1;
+    if (m_flags > IMREAD_LOAD_GDAL)
+    {
+        if (m_flags & IMREAD_REDUCED_GRAYSCALE_2)
+            scale_denom = 2;
+        else if (m_flags & IMREAD_REDUCED_GRAYSCALE_4)
+            scale_denom = 4;
+        else if (m_flags & IMREAD_REDUCED_GRAYSCALE_8)
+            scale_denom = 8;
+    }
+
+    /// set the scale_denom in the driver
+    m_decoder->setScale( scale_denom );
+
+    // Try to decode image by RGB instead of BGR.
+    if (m_flags & IMREAD_COLOR_RGB && m_flags != IMREAD_UNCHANGED)
+        m_decoder->setRGB(true);
+
     // established the required input image size
     Size size = validateInputImageSize(Size(m_decoder->width(), m_decoder->height()));
 
@@ -1891,7 +1909,7 @@ Mat ImageCollection::Impl::readData() {
         if (m_decoder->readData(mat))
             success = true;
     }
-    catch (const cv::Exception &e) {
+    catch (const cv::Exception& e) {
         CV_LOG_ERROR(NULL, "ImageCollection class: can't read data: " << e.what());
     }
     catch (...) {
@@ -1900,9 +1918,13 @@ Mat ImageCollection::Impl::readData() {
     if (!success)
         return cv::Mat();
 
-    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED) {
-        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
+    if (m_decoder->setScale(scale_denom) > 1) // if decoder is JpegDecoder then decoder->setScale always returns 1
+    {
+        resize(mat, mat, Size(size.width / scale_denom, size.height / scale_denom), 0, 0, INTER_LINEAR_EXACT);
     }
+
+    if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED)
+        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
 
     m_error = ImageCollection::Error::OK;
     return mat;
