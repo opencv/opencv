@@ -83,6 +83,11 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
+    virtual bool dynamicOutputShapes() const CV_OVERRIDE
+    {
+        return dynamicK;
+    }
+
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
                          const int requiredOutputs,
                          std::vector<MatShape>& outputs,
@@ -93,12 +98,10 @@ public:
         int inputDims = static_cast<int>(inShape.size());
         int a = normalize_axis(axis, inputDims);
         CV_Assert(a >= 0 && a < inputDims);
-
-        int outK = dynamicK ? inShape[a] : K;
-        CV_CheckLT(outK, inShape[a] + 1, "TopK2: K is out of range");
+        CV_CheckLT(K, inShape[a] + 1, "TopK2: K is out of range");
 
         MatShape outShape = inShape;
-        outShape[a] = outK;
+        outShape[a] = K;
         outputs.assign(2, outShape);
         internals.clear();
         return false;
