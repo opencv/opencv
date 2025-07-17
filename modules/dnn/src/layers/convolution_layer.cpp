@@ -1340,8 +1340,8 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            /* only deconvolution 2d and 3d supported */
-            if (kernel_size.size() == 2 || kernel_size.size() == 3)
+            /* deconvolution 1d, 2d and 3d supported */
+            if (kernel_size.size() > 0 && kernel_size.size() <= 3)
                 return true;
 
             return false;
@@ -1355,11 +1355,15 @@ public:
             return group == 1;
         }
 #endif  // HAVE_INF_ENGINE
+
+        // For CPU backend, support 1D, 2D, and 3D
+        if (backendId == DNN_BACKEND_OPENCV)
         {
-            return backendId == DNN_BACKEND_CUDA ||
-            (kernel_size.size() == 2 && backendId == DNN_BACKEND_OPENCV) ||
-            (kernel_size.size() == 2 && backendId == DNN_BACKEND_CANN);
+            return kernel_size.size() >= 1 && kernel_size.size() <= 3;
         }
+
+        return backendId == DNN_BACKEND_CUDA ||
+        (kernel_size.size() == 2 && backendId == DNN_BACKEND_CANN);
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1368,39 +1372,58 @@ public:
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() != 0);
+        CV_Assert(inputs.size() > 1 || !blobs.empty());
+        MatShape weightShape = blobs.empty() ? inputs[1] : blobs[0].shape();
 
         int outCn = numOutput;
         if (outCn < 0) {
-            CV_Assert(inputs.size() > 1 || !blobs.empty());
-            MatShape weightShape = blobs.empty() ? inputs[1] : blobs[0].shape();
             outCn = weightShape[1]*groups;
         }
         std::vector<int> outShape;
         outShape.push_back(inputs[0][0]);  // batch
         outShape.push_back(outCn);
+
+        int spatialDims = kernel_size.size();
+        CV_Assert(spatialDims >= 1 && spatialDims <= 3);
+
+        int expectedDims = inputs[0].size();
+
+        // If the network is effectively 1-D (input shape N x C x W) but the
+        // parser has duplicated the kernel/stride/etc. parameters so that
+        // `spatialDims == 2`, switch to the dedicated 1-D branch.
+        if (expectedDims == 3)
+            spatialDims = 1;
+
+        if (spatialDims == 1) {
+            CV_Assert(expectedDims == 3 || expectedDims == 4);
+        } else {
+            CV_Assert(expectedDims == 2 + spatialDims);
+        }
+
         if (padMode.empty())
         {
-            for (int i = 0; i < kernel_size.size(); i++)
-                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + kernel_size[i] - pads_begin[i] - pads_end[i] + adjust_pads[i]);
+            for (int i = 0; i < spatialDims; i++) {
+                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + ((kernel_size[i] - 1) * dilations[i] + 1) - pads_begin[i] - pads_end[i] + adjust_pads[i]);
+            }
         }
         else if (padMode == "VALID")
         {
-            for (int i = 0; i < kernel_size.size(); i++)
-                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + kernel_size[i] + adjust_pads[i]);
+            for (int i = 0; i < spatialDims; i++) {
+                outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + ((kernel_size[i] - 1) * dilations[i] + 1) + adjust_pads[i]);
+            }
         }
         else if (padMode == "SAME")
         {
-            for (int i = 0; i < kernel_size.size(); i++)
+            for (int i = 0; i < spatialDims; i++)
                 outShape.push_back(strides[i] * (inputs[0][2 + i] - 1) + 1 + adjust_pads[i]);
         }
         else
             CV_Error(Error::StsError, "Unsupported padding mode " + padMode);
-
-        CV_Assert(outCn % blobs[0].size[1] == 0);
+        CV_Assert(outCn % weightShape[1] == 0);
 
         int inpCn = inputs[0][1];
         CV_Assert(inpCn % groups == 0 && outCn % groups == 0);
-        CV_Assert(blobs[0].size[0] == inpCn);
+        CV_Assert(weightShape[0] == inpCn);
 
         outputs.resize(1, MatShape(outShape));
 
@@ -1653,27 +1676,30 @@ public:
     public:
         const float* data_col;
         const float* biasvec;
-        int channels, height, width;
-        int kernel_h, kernel_w;
-        int pad_h, pad_w;
-        int stride_h, stride_w;
+        int channels;
+        std::vector<int> output_shape;  // spatial dimensions only
+        std::vector<int> kernel_shape;
+        std::vector<int> pads;
+        std::vector<int> strides;
+        std::vector<int> dilations;
+        std::vector<int> input_shape;   // spatial dimensions only
         float* data_im;
-        int height_col, width_col;
         int nstripes;
         bool is1x1;
 
         Col2ImInvoker()
-            : data_col(0), biasvec(0), channels(0), height(0), width(0),
-              kernel_h(0), kernel_w(0), pad_h(0), pad_w(0), stride_h(0), stride_w(0), data_im(0),
-              height_col(0), width_col(0), nstripes(0), is1x1(0)
+            : data_col(0), biasvec(0), channels(0), data_im(0),
+              nstripes(0), is1x1(0)
         {}
 
         static void run(const float* data_col,
-                        int channels, int height, int width,
-                        int kernel_h, int kernel_w,
-                        int pad_h, int pad_w,
-                        int stride_h, int stride_w,
-                        int height_col, int width_col,
+                        int channels,
+                        const std::vector<int>& output_shape,
+                        const std::vector<int>& kernel_shape,
+                        const std::vector<int>& pads,
+                        const std::vector<int>& strides,
+                        const std::vector<int>& dilations,
+                        const std::vector<int>& input_shape,
                         float* data_im,
                         const float* biasvec,
                         bool is1x1)
@@ -1683,12 +1709,13 @@ public:
             Col2ImInvoker t;
             t.data_col = data_col;
             t.data_im = data_im;
-            t.channels = channels; t.height = height; t.width = width;
-            t.kernel_h = kernel_h; t.kernel_w = kernel_w;
-            t.pad_h = pad_h; t.pad_w = pad_w;
-            t.stride_h = stride_h; t.stride_w = stride_w;
-            t.height_col = height_col;
-            t.width_col = width_col;
+            t.channels = channels;
+            t.output_shape = output_shape;
+            t.kernel_shape = kernel_shape;
+            t.pads = pads;
+            t.strides = strides;
+            t.dilations = dilations;
+            t.input_shape = input_shape;
             t.nstripes = nstripes;
             t.is1x1 = is1x1;
             t.biasvec = biasvec;
@@ -1700,52 +1727,102 @@ public:
         {
             const float* data_col_ = data_col;
             float* data_im_ = data_im;
-            int coeff_h = (1 - stride_h * kernel_w * height_col) * width_col;
-            int coeff_w = (1 - stride_w * height_col * width_col);
-            size_t total = (size_t)channels * height * width;
-            size_t stripeSize = (total + nstripes - 1)/nstripes;
-            size_t startIndex = r.start*stripeSize;
-            size_t endIndex = std::min(r.end*stripeSize, total);
-            int w = (int)(startIndex % width + pad_w);
-            int h = (int)((startIndex / width) % height + pad_h);
-            int c = (int)(startIndex / (width * height));
-            int h_col_start = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
-            int h_col_end = std::min(h / stride_h + 1, height_col);
-            int plane_size_col = height_col * width_col;
-            int offset = (c * kernel_h * kernel_w + h * kernel_w + w) * plane_size_col;
             bool is1x1_ = is1x1;
             const float* biasvec_ = biasvec;
 
+            int ndims = output_shape.size();
+
+            // Calculate total output size
+            int total_output_size = channels;
+            for (int i = 0; i < ndims; i++) {
+                total_output_size *= output_shape[i];
+            }
+
+            // Calculate input spatial size for column matrix offset calculation
+            int input_spatial_size = 1;
+            for (int i = 0; i < ndims; i++) {
+                input_spatial_size *= input_shape[i];
+            }
+
+            // Calculate kernel size
+            int kernel_size = 1;
+            for (int i = 0; i < ndims; i++) {
+                kernel_size *= kernel_shape[i];
+            }
+
+            size_t stripeSize = (total_output_size + nstripes - 1) / nstripes;
+            size_t startIndex = r.start * stripeSize;
+            size_t endIndex = std::min(r.end * stripeSize, (size_t)total_output_size);
+
             for (size_t index = startIndex; index < endIndex; index++)
             {
-                // compute the start and end of the output
-                int w_col_start = (w < kernel_w) ? 0 : (w - kernel_w) / stride_w + 1;
-                int w_col_end = std::min(w / stride_w + 1, width_col);
-                float val;
+                // Convert linear index to multi-dimensional coordinates
+                std::vector<int> coords(ndims + 1);  // +1 for channel dimension
+                size_t idx = index;
 
-                if( is1x1_ )
+                // Extract spatial coordinates and channel
+                for (int i = ndims - 1; i >= 0; i--) {
+                    coords[i + 1] = idx % output_shape[i];
+                    idx /= output_shape[i];
+                }
+                coords[0] = idx;  // channel
+
+                float val = 0.0f;
+
+                if (is1x1_) {
                     val = data_im_[index];
-                else
-                {
-                    val = 0.f;
-                    for (int h_col = h_col_start; h_col < h_col_end; ++h_col) {
-                        for (int w_col = w_col_start; w_col < w_col_end; ++w_col) {
-                            val += data_col_[offset + h_col * coeff_h + w_col * coeff_w];
-                        }
-                    }
-                }
-                data_im_[index] = val + biasvec_[c];
+                } else {
+                    // For each kernel position
+                    std::vector<int> kernel_coords(ndims);
+                    std::function<void(int)> iterate_kernel = [&](int dim) {
+                        if (dim == ndims) {
+                            // Calculate input position
+                            std::vector<int> input_coords(ndims);
+                            bool valid = true;
 
-                offset += plane_size_col;
-                if( ++w >= width + pad_w )
-                {
-                    w = (int)((index + 1)% width + pad_w);
-                    h = (int)(((index + 1) / width) % height + pad_h);
-                    c = (int)((index + 1) / (width * height));
-                    h_col_start = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
-                    h_col_end = std::min(h / stride_h + 1, height_col);
-                    offset = (c * kernel_h * kernel_w + h * kernel_w + w) * plane_size_col;
+                            for (int i = 0; i < ndims; i++) {
+                                // Apply dilation to kernel coordinates
+                                int dilated_kernel_pos = kernel_coords[i] * dilations[i];
+                                input_coords[i] = coords[i + 1] + pads[i] - dilated_kernel_pos;
+                                if (input_coords[i] < 0 || input_coords[i] % strides[i] != 0) {
+                                    valid = false;
+                                    break;
+                                }
+                                input_coords[i] /= strides[i];
+                                if (input_coords[i] >= input_shape[i]) {
+                                    valid = false;
+                                    break;
+                                }
+                            }
+
+                            if (valid) {
+                                // Calculate offset in column matrix
+                                int col_offset = coords[0];  // channel
+                                for (int i = 0; i < ndims; i++) {
+                                    col_offset = col_offset * kernel_shape[i] + kernel_coords[i];
+                                }
+                                col_offset *= input_spatial_size;
+
+                                // Calculate input position in flattened input
+                                int input_pos = 0;
+                                for (int i = 0; i < ndims; i++) {
+                                    input_pos = input_pos * input_shape[i] + input_coords[i];
+                                }
+
+                                val += data_col_[col_offset + input_pos];
+                            }
+                        } else {
+                            for (int k = 0; k < kernel_shape[dim]; k++) {
+                                kernel_coords[dim] = k;
+                                iterate_kernel(dim + 1);
+                            }
+                        }
+                    };
+
+                    iterate_kernel(0);
                 }
+
+                data_im_[index] = val + biasvec_[coords[0]];
             }
         }
     };
@@ -1930,8 +2007,28 @@ public:
                 out.create(outshape, inp.type());
             }
             int numImg = inp.size[0];
-            int inpH = inp.size[2], inpW = inp.size[3];
-            int outH = out.size[2], outW = out.size[3];
+            int spatialDims = kernel_size.size();
+
+            std::vector<int> inpSpatialShape(spatialDims);
+            std::vector<int> outSpatialShape(spatialDims);
+
+            if (spatialDims == 1) {
+                // For 1D convolution, OpenCV can represent it as 3D (N, C, W) or 4D (N, C, 1, W)
+                if (inp.dims == 3) {
+                    // 3D case: (N, C, W)
+                    inpSpatialShape[0] = inp.size[2];
+                    outSpatialShape[0] = out.size[2];
+                } else {
+                    // 4D case: (N, C, 1, W)
+                    inpSpatialShape[0] = inp.size[3];
+                    outSpatialShape[0] = out.size[3];
+                }
+            } else {
+                for (int i = 0; i < spatialDims; i++) {
+                    inpSpatialShape[i] = inp.size[2 + i];
+                    outSpatialShape[i] = out.size[2 + i];
+                }
+            }
 
             Mat convBlob = inputs[ii].reshape(1, numImg*inpCn);
             Mat decnBlob = out.reshape(1, numImg*outCn);
@@ -1951,10 +2048,14 @@ public:
                     MatMulInvoker mminvoker(wghtMat, convMat, colMat, nstripes);
                     parallel_for_(Range(0, nstripes), mminvoker, nstripes);
 
-                    Col2ImInvoker::run(colMat.ptr<float>(), outGroupCn, outH, outW,
-                                       kernel.height, kernel.width, pad.height, pad.width,
-                                       stride.height, stride.width, inpH, inpW, dstMat.ptr<float>(),
-                                       curBiasMat.ptr<float>(), is1x1flag);
+                    std::vector<int> kernel_shape_int(kernel_size.begin(), kernel_size.end());
+                    std::vector<int> pads_int(pads_begin.begin(), pads_begin.end());
+                    std::vector<int> strides_int(strides.begin(), strides.end());
+                    std::vector<int> dilations_int(dilations.begin(), dilations.end());
+
+                    Col2ImInvoker::run(colMat.ptr<float>(), outGroupCn, outSpatialShape,
+                                       kernel_shape_int, pads_int, strides_int, dilations_int, inpSpatialShape,
+                                       dstMat.ptr<float>(), curBiasMat.ptr<float>(), is1x1flag);
                 }
             }
             if (kind == _InputArray::STD_VECTOR_UMAT) {
@@ -1971,10 +2072,10 @@ public:
         const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
-        CV_Assert(!blobs.empty());
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        CV_Assert(inputs.size() == 1);
+        // TODO: extract bias from inputs and pass it
+        CV_Assert(inputs.size() == 1 || inputs.size() == 2);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
 
@@ -1982,11 +2083,27 @@ public:
         auto output_wrapper = outputs[0].dynamicCast<CUDABackendWrapper>();
         auto output_shape = output_wrapper->getShape();
 
-        const auto output_feature_maps = numOutput;
-        const auto output_feature_maps_per_group = blobs[0].size[1];
-        const auto groups = output_feature_maps / output_feature_maps_per_group;
+        CV_Assert(!blobs.empty());
+        const auto output_feature_maps = blobs[0].size[0];
+        const auto input_feature_maps = input_shape[1];
+        const auto input_feature_maps_per_group = blobs[0].size[1];
+        const auto groups = input_feature_maps / input_feature_maps_per_group;
 
         TransposeConvolutionConfiguration config;
+
+        if (input_shape.size() == 3)
+        {
+            // We add an extra dim for input and output tensors, because CuDNN doesn't support convolution with 3D tensors
+            input_shape.insert(std::end(input_shape) - 1, 1);
+            output_shape.insert(std::end(output_shape) - 1, 1);
+
+            // Do the similar thing for the other parameters
+            pads_begin.insert(std::begin(pads_begin), 0);
+            pads_end.insert(std::begin(pads_end), 0);
+            strides.insert(std::begin(strides), 1);
+            dilations.insert(std::begin(dilations), 1);
+            kernel_size.insert(std::begin(kernel_size), 1);
+        }
         config.kernel_size.assign(std::begin(kernel_size), std::end(kernel_size));
         config.dilations.assign(std::begin(dilations), std::end(dilations));
         config.strides.assign(std::begin(strides), std::end(strides));
@@ -2003,7 +2120,7 @@ public:
         }
         else if (padMode == "SAME")
         {
-            config.padMode = TransposeConvolutionConfiguration::PaddingMode::SAME;
+            config.TransposeConvolutionConfiguration = ConvolutionConfiguration::PaddingMode::SAME;
         }
         else
         {
@@ -2014,10 +2131,17 @@ public:
         config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
         config.groups = groups;
 
-        CV_Assert(blobs.size() >= 1);
-        Mat filtersMat = fusedWeights ? weightsMat.t() : blobs[0];
+        config.fusion_mode = cudaFusionMode;
+        config.activation_type = cudaActType;
+        config.relu_negative_slope = cuda_relu_slope;
+        config.crelu_floor = cuda_crelu_floor;
+        config.crelu_ceil = cuda_crelu_ceil;
+        config.power_exp = cuda_power_exp;
+        config.power_scale = cuda_power_scale;
+        config.power_shift = cuda_power_shift;
 
-        Mat biasMat = (hasBias() || fusedBias) ? biasesMat : Mat();
+        Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
+        Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
         if (countNonZero(biasMat) == 0)
             biasMat = Mat();
 
