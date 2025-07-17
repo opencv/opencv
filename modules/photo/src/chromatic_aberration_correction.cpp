@@ -204,11 +204,16 @@ void ChromaticAberrationCorrector::buildRemapsFromCoeffMat(int height, int width
     map_y = Ygrid - dy;
 }
 
-Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
+Mat ChromaticAberrationCorrector::correctImage(InputArray input_image, int bayerPattern) {
     Mat image = input_image.getMat();
-    if(image.channels() != 3) {
-        CV_Error_(Error::StsBadArg,
-                    ("images need to have 3 channels"));
+    if (image.channels() == 1) {
+        if (bayerPattern < 0) {
+            CV_Error_(Error::StsBadArg,
+                      ("Single‐channel input detected: must pass a valid bayerPattern"));
+        }
+        Mat dem;
+        demosaicing(image, dem, bayerPattern);
+        image = dem;
     }
 
     const int height = image.rows;
@@ -244,9 +249,9 @@ ChromaticAberrationCorrector::ChromaticAberrationCorrector(const String& calibra
     }
 }
 
-Mat correctChromaticAberration(InputArray image, const String& calibration_file) {
+Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern) {
     ChromaticAberrationCorrector corrector(calibration_file);
-    return corrector.correctImage(image);
+    return corrector.correctImage(input_image, bayerPattern);
 }
 
 }

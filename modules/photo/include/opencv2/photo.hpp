@@ -900,11 +900,17 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 
 /** @brief Corrects chromatic aberration in an image using polynomial distortion model.
 
+This function loads polynomial calibration data from the specified file and applies
+a channel‐specific warp to remove chromatic aberration.
+If @p input_image has one channel, it is assumed to be a raw Bayer image and is
+first demosaiced using @p bayerPattern. If it has three channels, it is treated
+as a BGR image and @p bayerPattern is ignored.
+
 @param image Input BGR image to correct
 @param calibration_file Path to calibration file containing polynomial coefficients
 @return Corrected BGR image
 */
-CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
+CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern = -1);
 
 /** @brief Load chromatic-aberration calibration into a packed coefficient matrix.
 
@@ -943,13 +949,20 @@ public:
     @throws cv::Exception on load or parse failure.
     */
     explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
+
     /** @brief Apply correction to an input image.
 
-    @param input_image  3-channel BGR image matching the calibration size.
-    @returns Corrected BGR image.
-    @throws cv::Exception if channels ≠ 3 or size ≠ calibration.
+    If @p input_image is a single-channel raw Bayer image, @p bayerPattern needs to
+    be specified to demosaic it before applying the correction. For a 3-channel BGR image,
+    @p bayerPattern has the default value -1.
+
+    @param input_image  Image matching the calibration size.
+    @param bayerPattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
+                        demosaicing when @p input_image has one channel; ignored otherwise.
+    @returns Corrected image
+    @throws cv::Exception if size ≠ calibration.
     */
-    Mat correctImage(InputArray input_image);
+    Mat correctImage(InputArray input_image, int bayerPattern = -1);
 
 private:
     Mat coeffMat_;
