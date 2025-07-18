@@ -79,7 +79,6 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
 
     case IMAGE_METADATA_XMP:
     case IMAGE_METADATA_ICCP:
-    case IMAGE_METADATA_TEXT:
         return makeMat(m_metadata[type]);
         break;
 

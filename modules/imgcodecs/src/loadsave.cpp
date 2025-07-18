@@ -459,8 +459,7 @@ static const char* metadataTypeToString(ImageMetadataType type)
 {
     return type == IMAGE_METADATA_EXIF ? "Exif" :
            type == IMAGE_METADATA_XMP ? "XMP" :
-           type == IMAGE_METADATA_ICCP ? "ICC Profile" :
-           type == IMAGE_METADATA_TEXT ? "Text" : "???";
+           type == IMAGE_METADATA_ICCP ? "ICC Profile" : "???";
 }
 
 static void addMetadata(ImageEncoder& encoder,

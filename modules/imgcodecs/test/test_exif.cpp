@@ -144,13 +144,6 @@ namespace opencv_test { namespace {
         return iccp_data;
     }
 
-    static std::vector<uchar> getSampleTextData() {
-        return {
-            'S','o','f','t','w','a','r','e',0,'O','p','e','n','C','V', 0, 'C','o','m','m','e','n','t', 0,
-            'S','a','m','p','l','e', 'i','m','a','g','e',' ', 'w','i','t','h',' ','m','e','t','a','d','a','t','a', 0
-        };
-    }
-
  /**
  * Test to check whether the EXIF orientation tag was processed successfully or not.
  * The test uses a set of 8 images named testExifOrientation_{1 to 8}.(extension).
@@ -488,12 +481,11 @@ TEST(Imgcodecs_Png, ReadWriteWithExifXmpIccpText)
     const string outputname = cv::tempfile(".png");
     Mat img = makeCirclesImage(Size(160, 120), imgtype, 8);
 
-    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICCP, IMAGE_METADATA_TEXT };
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICCP };
     std::vector<std::vector<uchar>> metadata = {
         getSampleExifData(),
         getSampleXmpData(),
         getSampleIccpData(),
-        getSampleTextData()
     };
 
     std::vector<int> write_params = {
@@ -532,24 +524,13 @@ TEST(Imgcodecs_Png, ReadExifFromText)
         1, 80, 97, 105, 110, 116, 46, 78, 69, 84, 32, 118, 51, 46, 53, 46, 49, 48, 0
     };
 
-    std::vector<uchar> texts_data =
-    { 'd', 'a', 't', 'e', ':', 'c', 'r', 'e', 'a', 't', 'e', 0, '2', '0', '1', '2',
-        '-', '0', '9', '-', '0', '3', 'T', '1', '6', ':', '3', '8', ':', '0', '9', '+',
-        '0', '4', ':', '0', '0', 0, 'd', 'a', 't', 'e', ':', 'm', 'o', 'd', 'i', 'f', 'y',
-        0, '2', '0', '1', '2', '-', '0', '9', '-', '0', '3','T', '1','6', ':', '3', '8',
-        ':', '0', '9', '+', '0', '4', ':', '0', '0', 0, 'j', 'p', 'e', 'g', ':', 'c', 'o',
-        'l', 'o', 'r', 's','p', 'a', 'c', 'e', 0, '2', 0, 'j', 'p', 'e', 'g', ':', 's', 'a',
-        'm', 'p', 'l', 'i', 'n', 'g', '-', 'f', 'a', 'c', 't', 'o', 'r', 0, '2', 'x', '2',
-        ',', '1', 'x', '1', ',', '1', 'x', '1', 0
-    };
     std::vector<int> read_metadata_types;
     std::vector<std::vector<uchar> > read_metadata;
     Mat img = imreadWithMetadata(filename, read_metadata_types, read_metadata, IMREAD_GRAYSCALE);
 
-    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_TEXT };
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF };
     EXPECT_EQ(read_metadata_types, metadata_types);
     EXPECT_EQ(read_metadata[0], exif_data);
-    EXPECT_EQ(read_metadata[1], texts_data);
 }
 
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)

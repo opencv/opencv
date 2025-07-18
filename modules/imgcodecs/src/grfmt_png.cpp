@@ -641,15 +641,6 @@ bool  PngDecoder::readData( Mat& img )
                             reinterpret_cast<const unsigned char*>(value),
                             reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
                     }
-                    else {
-                        auto& out = m_metadata[IMAGE_METADATA_TEXT];
-                        out.insert(out.end(),
-                            reinterpret_cast<const unsigned char*>(key),
-                            reinterpret_cast<const unsigned char*>(key) + std::strlen(key) + 1);
-                        out.insert(out.end(),
-                            reinterpret_cast<const unsigned char*>(value),
-                            reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
-                    }
                 }
 
                 png_charp icc_name;
@@ -668,7 +659,6 @@ bool  PngDecoder::readData( Mat& img )
             png_uint_32 num_exif = 0;
             png_bytep exif = 0;
 
-            // Exif info could be in info_ptr (intro_info) or end_info per specification
             if( png_get_valid(m_png_ptr, m_info_ptr, PNG_INFO_eXIf) )
                 png_get_eXIf_1(m_png_ptr, m_info_ptr, &num_exif, &exif);
 
@@ -902,7 +892,6 @@ PngEncoder::PngEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
-    m_support_metadata[IMAGE_METADATA_TEXT] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -1054,46 +1043,6 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                                 compression_type,
                                 reinterpret_cast<png_const_bytep>(icp_iccp.data()),
                                 static_cast<png_uint_32>(icp_iccp.size()));
-                        }
-
-                        std::vector<uchar>& text = m_metadata[IMAGE_METADATA_TEXT];
-                        if (!text.empty()) {
-                            std::vector<png_text> text_chunks;
-
-                            const uchar* ptr = text.data();
-                            const uchar* end = ptr + text.size();
-
-                            // [TODO] The idea of zero separator is experimental. Find the best way to store when reading
-                            while (ptr < end) {
-                                // Find null terminator for key
-                                const uchar* key_end = std::find(ptr, end, 0);
-                                if (key_end == end) break;
-                                std::string key(reinterpret_cast<const char*>(ptr), key_end - ptr);
-
-                                ptr = key_end + 1;
-                                if (ptr >= end) break;
-
-                                // Find null terminator for value
-                                const uchar* val_end = std::find(ptr, end, 0);
-                                size_t val_len = val_end - ptr;
-
-                                // Prepare text chunk
-                                png_text text_chunk;
-                                text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
-
-                                // We store key and value in temporary buffers to ensure lifetime
-                                static std::vector<std::string> keys, values;
-                                keys.push_back(key);
-                                values.emplace_back(reinterpret_cast<const char*>(ptr), val_len);
-
-                                text_chunk.key = const_cast<char*>(keys.back().c_str());
-                                text_chunk.text = const_cast<char*>(values.back().c_str());
-                                text_chunk.text_length = static_cast<png_size_t>(val_len);
-
-                                png_set_text(png_ptr, info_ptr, &text_chunk, 1);
-
-                                ptr = val_end + 1;
-                            }
                         }
                     }
 
