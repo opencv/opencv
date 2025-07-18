@@ -435,6 +435,10 @@ SPngEncoder::SPngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
 }
 
 SPngEncoder::~SPngEncoder()
@@ -535,6 +539,36 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 spng_set_option(ctx, SPNG_FILTER_CHOICE, filter);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
+
+            if (!m_metadata.empty()) {
+                std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                if (!exif.empty()) {
+                    spng_exif s_exif;
+                    s_exif.data = reinterpret_cast<char*>(exif.data());
+                    s_exif.length = exif.size();
+                    spng_set_exif(ctx, &s_exif);
+                }
+
+                std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                if (!xmp.empty()) {
+                    spng_text text_chunk{};
+                    strncpy(text_chunk.keyword, "XML:com.adobe.xmp", sizeof(text_chunk.keyword) - 1);
+                    text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                    text_chunk.length = xmp.size();
+
+                    spng_set_text(ctx, &text_chunk, 1);
+                }
+
+                std::vector<uchar> icp_iccp = m_metadata[IMAGE_METADATA_ICCP];
+                if (!icp_iccp.empty()) {
+                    spng_iccp s_iccp;
+                    strncpy(s_iccp.profile_name, "ICC Profile", sizeof(s_iccp.profile_name) - 1);
+                    s_iccp.profile_len = icp_iccp.size();
+                    s_iccp.profile = reinterpret_cast<char*>(icp_iccp.data());
+
+                    spng_set_iccp(ctx, &s_iccp);
+                }
+            }
 
             int ret;
             spng_encode_chunks(ctx);
