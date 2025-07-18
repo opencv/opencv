@@ -1000,7 +1000,7 @@ private:
     void buildRemapsFromCoeffMat(int height, int width,
                              const Mat& coeffs,
                              int degree,
-                             int colX, int colY,
+                             int rowX, int rowY,
                              Mat& map_x, Mat& map_y);
 };
 
