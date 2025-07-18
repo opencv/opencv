@@ -352,7 +352,7 @@ TEST(Imgcodecs_Avif, ReadWriteWithExif)
 #endif // HAVE_AVIF
 
 #ifdef HAVE_WEBP
-TEST(Imgcodecs_WebP, ReadWriteWithExifXmpIccp)
+TEST(Imgcodecs_WebP, Read_Write_With_Exif_Xmp_Iccp)
 {
     int imgtype = CV_MAKETYPE(CV_8U, 3);
     const std::string outputname = cv::tempfile(".webp");
@@ -398,7 +398,7 @@ TEST(Imgcodecs_WebP, ReadWriteWithExifXmpIccp)
 }
 #endif // HAVE_WEBP
 
-TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
+TEST(Imgcodecs_Jpeg, Read_Write_With_Exif)
 {
     int jpeg_quality = 95;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
@@ -436,7 +436,7 @@ TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
-TEST(Imgcodecs_Png, ReadWriteWithExif)
+TEST(Imgcodecs_Png, Read_Write_With_Exif)
 {
     int png_compression = 3;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
@@ -474,7 +474,7 @@ TEST(Imgcodecs_Png, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
-TEST(Imgcodecs_Png, ReadWriteWithExifXmpIccpText)
+TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
 {
     int png_compression = 3;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
@@ -510,7 +510,7 @@ TEST(Imgcodecs_Png, ReadWriteWithExifXmpIccpText)
     remove(outputname.c_str());
 }
 
-TEST(Imgcodecs_Png, ReadExifFromText)
+TEST(Imgcodecs_Png, Read_Exif_From_Text)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "../perf/320x260.png";
