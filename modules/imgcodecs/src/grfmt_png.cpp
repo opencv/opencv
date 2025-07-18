@@ -218,7 +218,7 @@ bool PngDecoder::InitPngPtr() {
         return false;
 
     m_info_ptr = png_create_info_struct(m_png_ptr);
-    return (m_info_ptr);
+    return (m_info_ptr != nullptr);
 }
 
 void PngDecoder::ClearPngPtr() {
