@@ -268,7 +268,7 @@ TEST(Imgcodecs_Gif,write_gif_flags){
     param.push_back(7);
     param.push_back(IMWRITE_GIF_DITHER);
     param.push_back(2);
-    EXPECT_NO_THROW(imencode(".png", img_gt, buff, param));
+    EXPECT_NO_THROW(imencode(".gif", img_gt, buff, param));
     Mat img;
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
     EXPECT_FALSE(img.empty());
