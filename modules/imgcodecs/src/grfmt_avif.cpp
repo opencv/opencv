@@ -270,8 +270,6 @@ bool AvifDecoder::readData(Mat &img) {
     return false;
   }
 
-  m_animation.durations.push_back(decoder_->imageTiming.duration * 1000);
-
   if (decoder_->image->exif.size > 0) {
     m_exif.parseExif(decoder_->image->exif.data, decoder_->image->exif.size);
   }
@@ -295,6 +293,10 @@ bool AvifDecoder::readData(Mat &img) {
       CV_Error(Error::StsInternal, "");
     }
   }
+
+  m_animation.frames.push_back(img);
+  m_animation.durations.push_back(decoder_->imageTiming.duration * 1000);
+
   return true;
 }
 
