@@ -80,12 +80,11 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
     case IMAGE_METADATA_XMP:
     case IMAGE_METADATA_ICCP:
         return makeMat(m_metadata[type]);
-        break;
 
     default:
+        CV_LOG_WARNING(NULL, "Unknown metadata type requested: " << type);
         break;
     }
-
     return Mat();
 }
 
