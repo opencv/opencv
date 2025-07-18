@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     parser.about("Chromatic Aberration Correction Sample");
     if (parser.has("help") || argc < 3)
     {
-        parser.printMessage();
+        cout << usage << "\n";
         return 0;
     }
 
