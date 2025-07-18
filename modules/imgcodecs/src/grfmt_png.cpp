@@ -218,16 +218,14 @@ bool PngDecoder::InitPngPtr() {
         return false;
 
     m_info_ptr = png_create_info_struct(m_png_ptr);
-    m_end_info = png_create_info_struct(m_png_ptr);
-    return (m_info_ptr && m_end_info);
+    return (m_info_ptr);
 }
 
 void PngDecoder::ClearPngPtr() {
     if (m_png_ptr)
-        png_destroy_read_struct(&m_png_ptr, &m_info_ptr, &m_end_info);
+        png_destroy_read_struct(&m_png_ptr, &m_info_ptr, nullptr);
     m_png_ptr = nullptr;
     m_info_ptr = nullptr;
-    m_end_info = nullptr;
 }
 
 ImageDecoder PngDecoder::newDecoder() const
@@ -570,7 +568,7 @@ bool  PngDecoder::readData( Mat& img )
     volatile bool result = false;
     bool color = img.channels() > 1;
 
-    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
+    if( m_png_ptr && m_info_ptr && m_width && m_height )
     {
         if( setjmp( png_jmpbuf ( m_png_ptr ) ) == 0 )
         {
@@ -620,46 +618,39 @@ bool  PngDecoder::readData( Mat& img )
                 buffer[y] = img.data + y*img.step;
 
             png_read_image( m_png_ptr, buffer );
-            png_read_end( m_png_ptr, m_end_info );
+            png_read_end( m_png_ptr, m_info_ptr);
 
             if (m_metadata_reading_flag) {
                 // Get tEXt chunks
-                png_textp text_ptr1, text_ptr2;
-                int num_text1 = 0;
-                int num_text2 = 0;
+                png_textp text_ptr;
+                int num_text = 0;
 
-                png_get_text(m_png_ptr, m_info_ptr, &text_ptr1, &num_text1);
-                png_get_text(m_png_ptr, m_end_info, &text_ptr2, &num_text2);
+                png_get_text(m_png_ptr, m_info_ptr, &text_ptr, &num_text);
 
-                auto processTexts = [&](png_textp txt, int n) {
-                    for (size_t i = 0; i < static_cast<size_t>(n); ++i) {
-                        const char* key = txt[i].key;
-                        const char* value = txt[i].text;
-                        size_t      len = txt[i].text_length;
+                for (size_t i = 0; i < static_cast<size_t>(num_text); ++i) {
+                    const char* key = text_ptr[i].key;
+                    const char* value = text_ptr[i].text;
+                    size_t      len = text_ptr[i].text_length;
 
-                        if (key && !std::strcmp(key, "Raw profile type exif")) {
-                            m_exif.processRawProfile(value, len);
-                        }
-                        else if (key && !std::strcmp(key, "XML:com.adobe.xmp")) {
-                            auto& out = m_metadata[IMAGE_METADATA_XMP];
-                            out.insert(out.end(),
-                                reinterpret_cast<const unsigned char*>(value),
-                                reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
-                        }
-                        else {
-                            auto& out = m_metadata[IMAGE_METADATA_TEXT];
-                            out.insert(out.end(),
-                                reinterpret_cast<const unsigned char*>(key),
-                                reinterpret_cast<const unsigned char*>(key) + std::strlen(key) + 1);
-                            out.insert(out.end(),
-                                reinterpret_cast<const unsigned char*>(value),
-                                reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
-                        }
+                    if (key && !std::strcmp(key, "Raw profile type exif")) {
+                        m_exif.processRawProfile(value, len);
                     }
-                    };
-
-                processTexts(text_ptr1, num_text1);
-                processTexts(text_ptr2, num_text2);
+                    else if (key && !std::strcmp(key, "XML:com.adobe.xmp")) {
+                        auto& out = m_metadata[IMAGE_METADATA_XMP];
+                        out.insert(out.end(),
+                            reinterpret_cast<const unsigned char*>(value),
+                            reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
+                    }
+                    else {
+                        auto& out = m_metadata[IMAGE_METADATA_TEXT];
+                        out.insert(out.end(),
+                            reinterpret_cast<const unsigned char*>(key),
+                            reinterpret_cast<const unsigned char*>(key) + std::strlen(key) + 1);
+                        out.insert(out.end(),
+                            reinterpret_cast<const unsigned char*>(value),
+                            reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
+                    }
+                }
 
                 png_charp icc_name;
                 int compression_type;
@@ -680,8 +671,6 @@ bool  PngDecoder::readData( Mat& img )
             // Exif info could be in info_ptr (intro_info) or end_info per specification
             if( png_get_valid(m_png_ptr, m_info_ptr, PNG_INFO_eXIf) )
                 png_get_eXIf_1(m_png_ptr, m_info_ptr, &num_exif, &exif);
-            else if( png_get_valid(m_png_ptr, m_end_info, PNG_INFO_eXIf) )
-                png_get_eXIf_1(m_png_ptr, m_end_info, &num_exif, &exif);
 
             if( exif && num_exif > 0 )
             {
