@@ -947,26 +947,36 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
 
                 for( size_t i = 0; i < params.size(); i += 2 )
                 {
-                    if( params[i] == IMWRITE_PNG_COMPRESSION )
+                    switch (params[i])
                     {
+                    case IMWRITE_PNG_COMPRESSION:
                         m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                         m_compression_level = params[i+1];
                         m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
                         set_compression_level = true;
-                    }
-                    if( params[i] == IMWRITE_PNG_STRATEGY )
-                    {
+                        break;
+
+                    case IMWRITE_PNG_STRATEGY:
                         m_compression_strategy = params[i+1];
                         m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
-                    }
-                    if( params[i] == IMWRITE_PNG_BILEVEL )
-                    {
+                        break;
+
+                    case IMWRITE_PNG_BILEVEL:
                         m_isBilevel = params[i+1] != 0;
-                    }
-                    if( params[i] == IMWRITE_PNG_FILTER )
-                    {
+                        break;
+
+                    case IMWRITE_PNG_FILTER:
                         m_filter = params[i+1];
                         set_filter = true;
+                        break;
+
+                    case IMWRITE_PNG_ZLIBBUFFER_SIZE:
+                        png_set_compression_buffer_size(png_ptr, params[i+1]);
+                        break;
+
+                    default:
+                        CV_LOG_WARNING(NULL, "An unknown or unsupported ImwriteFlags value was specified and has been ignored.");
+                        break;
                     }
                 }
 
