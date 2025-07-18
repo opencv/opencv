@@ -422,6 +422,48 @@ bool SPngDecoder::readData(Mat &img)
                         result = m_exif.parseExif((unsigned char *)exif_s.data, exif_s.length);
                     }
                 }
+
+                if (m_metadata_reading_flag)
+                {
+                    spng_text text_chunk{};
+                    uint32_t text_count = 0;
+
+                    std::vector<spng_text> texts(text_count);
+
+                    // Retrieve all text chunks
+                    if (spng_get_text(png_ptr, texts.data(), &text_count) == SPNG_OK)
+                    {
+                        for (size_t i = 0; i < text_count; ++i)
+                        {
+                            const char* key = texts[i].keyword;
+                            const char* value = texts[i].text;
+                            size_t len = texts[i].length;
+
+                            if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP1")))
+                            {
+                                m_exif.processRawProfile(value, len);
+                            }
+                            else if (key && !std::strcmp(key, "XML:com.adobe.xmp"))
+                            {
+                                auto& out = m_metadata[IMAGE_METADATA_XMP];
+                                out.insert(out.end(),
+                                    reinterpret_cast<const unsigned char*>(value),
+                                    reinterpret_cast<const unsigned char*>(value) + len + 1); // include null terminator
+                            }
+                        }
+                    }
+
+                    // ICC Profile
+                    spng_iccp iccp_data{};
+
+                    if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
+                    {
+                        auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                        out.insert(out.end(),
+                            reinterpret_cast<const unsigned char*>(iccp_data.profile),
+                            reinterpret_cast<const unsigned char*>(iccp_data.profile) + iccp_data.profile_len);
+                    }
+                }
             }
         }
     }
