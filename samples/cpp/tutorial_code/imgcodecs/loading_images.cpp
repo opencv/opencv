@@ -26,7 +26,7 @@ int main(int argc, const char** argv)
     int type = collection.getType();
 
     std::cout << "size   : " << size << std::endl;
-    std::cout << "width  : " << width << std::endl;    
+    std::cout << "width  : " << width << std::endl;
     std::cout << "height : " << height << std::endl;
     std::cout << "type   : " << type << std::endl;
 
