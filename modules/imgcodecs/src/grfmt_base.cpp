@@ -70,7 +70,7 @@ bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
 Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
 {
     auto makeMat = [](const std::vector<unsigned char>& data) -> Mat {
-        return !data.empty() ? Mat(1, (int)data.size(), CV_8U, (void*)data.data()) : Mat();
+        return data.empty() ? Mat() : Mat(1, (int)data.size(), CV_8U, (void*)data.data());
         };
 
     switch (type) {
