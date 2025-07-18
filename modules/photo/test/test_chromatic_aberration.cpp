@@ -18,8 +18,8 @@ protected:
     {
         string data_path = cvtest::TS::ptr()->get_data_path();
         ASSERT_TRUE(!data_path.empty()) << "OPENCV_TEST_DATA_PATH not set";
-        test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/calib_result_tablet.yaml";
-        test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/tablet_circles_.png");
+        test_yaml_file = std::string(data_path) + "cameracalibration/chromatic_aberration/ca_photo_calib.yaml";
+        test_image = cv::imread(std::string(data_path) + "cameracalibration/chromatic_aberration/ca_photo.png");
         ASSERT_FALSE(test_image.empty()) << "Failed to load test image";
     }
 };
@@ -44,6 +44,7 @@ TEST_F(ChromaticAberrationTest, ChromaticAberrationCorrection)
 
     // Test image correction
     cv::Mat corrected = corrector.correctImage(test_image);
+    cv::imwrite("corrr_new.png", corrected);
 
     EXPECT_EQ(corrected.size(), test_image.size());
     EXPECT_EQ(corrected.channels(), test_image.channels());
