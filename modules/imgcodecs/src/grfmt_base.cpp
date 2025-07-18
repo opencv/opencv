@@ -82,7 +82,7 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
         return makeMat(m_metadata[type]);
 
     default:
-        CV_LOG_WARNING(NULL, "Unknown metadata type requested: " << type);
+        CV_LOG_WARNING(NULL, "Unknown metadata type requested: " << static_cast<int>(type));
         break;
     }
     return Mat();
