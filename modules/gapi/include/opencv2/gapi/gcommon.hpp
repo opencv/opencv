@@ -11,6 +11,7 @@
 #include <functional>   // std::hash
 #include <vector>       // std::vector
 #include <type_traits>  // decay
+#include <unordered_map>
 
 #include <opencv2/gapi/opencv_includes.hpp>
 
@@ -290,6 +291,26 @@ namespace detail
         static const char* tag() { return "gapi.threaded_executor"; }
     };
 }
+
+class WorkloadType {
+    using Callback = std::function<void(const std::string &type)>;
+    std::unordered_map<unsigned int, Callback> listeners;
+    unsigned int next_id = 0;
+ public:
+    unsigned int addListener(Callback cb) {
+        unsigned int id = next_id++;
+        listeners.emplace(id, std::move(cb));
+        return id;
+    }
+    void removeListener(unsigned int id) {
+        listeners.erase(id);
+    }
+    void set(const std::string &type) {
+        for(const auto &listener : listeners) {
+            listener.second(type);
+        }
+    }
+};
 
 } // namespace cv
 

@@ -691,6 +691,9 @@ namespace wip { namespace ov {
  */
 struct benchmark_mode { };
 
+class WorkloadTypeOV : public WorkloadType {};
+using WorkloadTypeOvPtr = std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>;
+
 } // namespace ov
 } // namespace wip
 
@@ -701,6 +704,10 @@ namespace detail
     template<> struct CompileArgTag<cv::gapi::wip::ov::benchmark_mode>
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
+    };
+    template<> struct CompileArgTag<std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>>
+    {
+        static const char* tag() { return "gapi.wip.ov.workload_type_ov_ptr"; }
     };
 }
 

@@ -752,8 +752,16 @@ protected:
     std::string m_tag;
 };
 
+class WorkloadTypeONNX : public WorkloadType {};
+using WorkloadTypeOnnxPtr = std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>;
+
 } // namespace onnx
 } // namespace gapi
+namespace detail {
+template<> struct CompileArgTag<std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>> {
+    static const char* tag() { return "gapi.wip.ov.workload_type_onnx_ptr"; }
+};
+} // namespace detail
 } // namespace cv
 
 #endif // OPENCV_GAPI_INFER_HPP
