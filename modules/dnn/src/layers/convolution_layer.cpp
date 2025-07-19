@@ -2125,7 +2125,7 @@ public:
         }
         else if (padMode == "SAME")
         {
-            config.TransposeConvolutionConfiguration = ConvolutionConfiguration::PaddingMode::SAME;
+            config.padMode = TransposeConvolutionConfiguration::PaddingMode::SAME;
         }
         else
         {
