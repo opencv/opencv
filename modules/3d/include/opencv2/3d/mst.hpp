@@ -24,7 +24,6 @@ struct CV_EXPORTS_W_SIMPLE MSTEdge
 /**
  * @brief Represents the algorithms available for building a Minimum Spanning Tree (MST).
  *
- * Currently supports Prim's and Kruskal's algorithms.
  * More algorithms may be added in the future.
  */
 enum MSTAlgorithm
@@ -34,16 +33,24 @@ enum MSTAlgorithm
 };
 
 /**
- * @brief Builds a Minimum Spanning Tree (MST) using the selected algorithm (Prim or Kruskal).
+ * @brief Builds a Minimum Spanning Tree (MST) using the specified algorithm (see @ref MSTAlgorithm).
  *
- * Additional algorithms may be supported in the future via the @p algorithm parameter.
+ * Supports graphs with negative edge weights. Self-loop edges (edges where source and target are the
+ * same) are ignored. If multiple edges exist between the same pair of nodes, only the one with the
+ * lowest weight is considered. If the graph is disconnected or input is invalid, the function
+ * returns false.
  *
- * @param numNodes Number of nodes in the graph.
+ * @note The @p root parameter is ignored for algorithms that do not require a starting node.
+ * @note Additional MST algorithms may be supported in the future via the @p algorithm parameter
+ * (see @ref MSTAlgorithm).
+ *
+ * @param numNodes Number of nodes in the graph (must be greater than 0).
  * @param inputEdges Input vector of edges representing the graph.
  * @param[out] resultingEdges Output vector to store the edges of the resulting MST.
- * @param algorithm Specifies which algorithm to use (e.g., MST_PRIM, MST_KRUSKAL).
- * @param root Root node for Prim's algorithm (ignored if Kruskal or other algorithms are selected).
- * @return true if the MST was successfully built, false otherwise.
+ * @param algorithm Specifies which algorithm to use to compute the MST (see @ref MSTAlgorithm).
+ * @param root Starting node for the MST algorithm (only used for certain algorithms).
+ * @return true if a valid MST was successfully built; false otherwise.
+ * @throws cv::Error (StsBadArg) if an invalid algorithm is specified.
  */
 CV_EXPORTS_W bool buildMST(
     int numNodes,

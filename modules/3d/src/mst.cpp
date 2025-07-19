@@ -68,6 +68,8 @@ bool buildMSTKruskal(int numNodes,
         int u = e.source, v = e.target;
         if (u >= numNodes || v >= numNodes)
             return false;
+        if (u == v)
+            continue;
         if (dsu.find(u) != dsu.find(v))
         {
             resultingEdges.push_back(e);
@@ -90,6 +92,8 @@ bool buildMSTPrim(int numNodes,
         int u = e.source, v = e.target;
         if (u >= numNodes || v >= numNodes)
             return false;
+        if (u == v)
+            continue;
         adj[u].push_back({u, v, e.weight});
         adj[v].push_back({v, u, e.weight});
     }
@@ -137,7 +141,7 @@ bool buildMST(int numNodes,
     CV_TRACE_FUNCTION();
 
     resultingEdges.clear();
-    if (numNodes <= 0 || inputEdges.empty() || root >= numNodes)
+    if (numNodes <= 0 || inputEdges.empty() || root < 0 || root >= numNodes)
         return false;
 
     bool result = false;
@@ -150,11 +154,10 @@ bool buildMST(int numNodes,
             result = buildMSTKruskal(numNodes, inputEdges, resultingEdges);
             break;
         default:
-            CV_LOG_INFO(NULL, "Invalid MST algorithm specified");
-            result = false;
+            CV_Error(cv::Error::Code::StsBadArg, "Invalid MST algorithm specified");
     }
 
-    return (result && resultingEdges.size() >= static_cast<size_t>(numNodes - 1));
+    return (result && resultingEdges.size() == static_cast<size_t>(numNodes - 1));
 }
 
 } // namespace cv
