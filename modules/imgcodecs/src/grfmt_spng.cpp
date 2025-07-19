@@ -425,18 +425,18 @@ bool SPngDecoder::readData(Mat &img)
 
                 if (m_metadata_reading_flag)
                 {
-                    spng_text text_chunk{};
-                    uint32_t text_count = 0;
-
-                    std::vector<spng_text> texts(text_count);
+                    uint32_t text_count;
 
                     // Retrieve all text chunks
-                    if (spng_get_text(png_ptr, texts.data(), &text_count) == SPNG_OK)
+                    if (spng_get_text(png_ptr, NULL, &text_count) == SPNG_OK)
                     {
+                        std::vector<spng_text> texts(text_count);
+                        spng_get_text(png_ptr, texts.data(), &text_count);
+
                         for (size_t i = 0; i < text_count; ++i)
                         {
-                            const char* key = texts[i].keyword;
-                            const char* value = texts[i].text;
+                            char* key = texts[i].keyword;
+                            char* value = texts[i].text;
                             size_t len = texts[i].length;
 
                             if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP1")))
@@ -447,11 +447,23 @@ bool SPngDecoder::readData(Mat &img)
                             {
                                 auto& out = m_metadata[IMAGE_METADATA_XMP];
                                 out.insert(out.end(),
-                                    reinterpret_cast<const unsigned char*>(value),
-                                    reinterpret_cast<const unsigned char*>(value) + len + 1); // include null terminator
+                                    value,
+                                    value + len + 1); // include null terminator
                             }
                         }
                     }
+
+                    // ICC Profile
+                    spng_iccp iccp_data{};
+
+                    if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
+                    {
+                        auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                        out.insert(out.end(),
+                            iccp_data.profile,
+                            iccp_data.profile + iccp_data.profile_len);
+                    }
+                }
 
                     // ICC Profile
                     spng_iccp iccp_data{};
@@ -595,6 +607,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 if (!xmp.empty()) {
                     spng_text text_chunk{};
                     strncpy(text_chunk.keyword, "XML:com.adobe.xmp", sizeof(text_chunk.keyword) - 1);
+                    text_chunk.type = SPNG_TEXT;
                     text_chunk.text = reinterpret_cast<char*>(xmp.data());
                     text_chunk.length = xmp.size();
 
