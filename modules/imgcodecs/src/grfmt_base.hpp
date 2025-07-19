@@ -109,7 +109,18 @@ public:
      * @param scale_denom The denominator of the scale factor (image is scaled down by 1/scale_denom).
      * @return The scale factor that was set.
      */
-    virtual int setScale(const int& scale_denom);
+    int setScale(const int& scale_denom);
+
+    /**
+     * @brief Enable or disable metadata reading during image decoding.
+     *
+     * This function sets an internal flag that controls whether metadata (such as XMP, ICC, or text chunks)
+     * should be read and stored during image decoding operations.
+     *
+     * @param flag Non-zero to enable metadata reading, 0 to disable it.
+     * @return Previous value of the metadata reading flag.
+     */
+    int setMetadataReadingFlag(int flag);
 
     /**
      * @brief Read the image header to extract basic properties (width, height, type).
@@ -173,6 +184,8 @@ protected:
     ExifReader m_exif;    ///< Object for reading EXIF metadata from the image.
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
     Animation m_animation;
+    int m_metadata_reading_flag;
+    std::vector<std::vector<unsigned char> > m_metadata; // see IMAGE_METADATA_...
 };
 
 
