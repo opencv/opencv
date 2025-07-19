@@ -454,7 +454,7 @@ bool SPngDecoder::readData(Mat &img)
                     }
 
                     // ICC Profile
-                    spng_iccp iccp_data{};
+                    spng_iccp iccp_data;
 
                     if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
                     {
