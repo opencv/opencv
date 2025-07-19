@@ -464,18 +464,6 @@ bool SPngDecoder::readData(Mat &img)
                             iccp_data.profile + iccp_data.profile_len);
                     }
                 }
-
-                    // ICC Profile
-                    spng_iccp iccp_data{};
-
-                    if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
-                    {
-                        auto& out = m_metadata[IMAGE_METADATA_ICCP];
-                        out.insert(out.end(),
-                            reinterpret_cast<const unsigned char*>(iccp_data.profile),
-                            reinterpret_cast<const unsigned char*>(iccp_data.profile) + iccp_data.profile_len);
-                    }
-                }
             }
         }
     }
