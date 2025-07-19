@@ -620,7 +620,7 @@ bool  PngDecoder::readData( Mat& img )
             png_read_image( m_png_ptr, buffer );
             png_read_end( m_png_ptr, m_info_ptr);
 
-            if (m_metadata_reading_flag) {
+            if (m_read_options) {
                 // Get tEXt chunks
                 png_textp text_ptr;
                 int num_text = 0;
@@ -1027,8 +1027,8 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             png_set_text(png_ptr, info_ptr, &text_chunk, 1);
                         }
 
-                        std::vector<uchar> icp_iccp = m_metadata[IMAGE_METADATA_ICCP];
-                        if (!icp_iccp.empty()) {
+                        std::vector<uchar> iccp = m_metadata[IMAGE_METADATA_ICCP];
+                        if (!iccp.empty()) {
                             // PNG standard requires a profile name (null-terminated, max 79 characters, printable Latin-1)
                             const char* iccp_profile_name = "ICC Profile";
 
@@ -1041,8 +1041,8 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             png_set_iCCP(png_ptr, info_ptr,
                                 iccp_profile_name,
                                 compression_type,
-                                reinterpret_cast<png_const_bytep>(icp_iccp.data()),
-                                static_cast<png_uint_32>(icp_iccp.size()));
+                                reinterpret_cast<png_const_bytep>(iccp.data()),
+                                static_cast<png_uint_32>(iccp.size()));
                         }
                     }
 

@@ -593,22 +593,22 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
                 std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
                 if (!xmp.empty()) {
-                    spng_text text_chunk{};
+                    spng_text text_chunk;
                     strncpy(text_chunk.keyword, "XML:com.adobe.xmp", sizeof(text_chunk.keyword) - 1);
+                    text_chunk.keyword[sizeof(text_chunk.keyword) - 1] = '\0';
                     text_chunk.type = SPNG_TEXT;
                     text_chunk.text = reinterpret_cast<char*>(xmp.data());
                     text_chunk.length = xmp.size();
-
                     spng_set_text(ctx, &text_chunk, 1);
                 }
 
-                std::vector<uchar> icp_iccp = m_metadata[IMAGE_METADATA_ICCP];
-                if (!icp_iccp.empty()) {
+                std::vector<uchar>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                if (!iccp.empty()) {
                     spng_iccp s_iccp;
                     strncpy(s_iccp.profile_name, "ICC Profile", sizeof(s_iccp.profile_name) - 1);
-                    s_iccp.profile_len = icp_iccp.size();
-                    s_iccp.profile = reinterpret_cast<char*>(icp_iccp.data());
-
+                    s_iccp.profile_name[sizeof(s_iccp.profile_name) - 1] = '\0';
+                    s_iccp.profile_len = iccp.size();
+                    s_iccp.profile = reinterpret_cast<char*>(iccp.data());
                     spng_set_iccp(ctx, &s_iccp);
                 }
             }

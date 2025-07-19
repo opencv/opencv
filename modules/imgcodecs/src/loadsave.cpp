@@ -536,7 +536,7 @@ imread_( const String& filename, int flags, OutputArray mat,
     if (metadata_types)
     {
         metadata_types->clear();
-        decoder->setMetadataReadingFlag(1);
+        decoder->setReadOptions(1);
     }
 
     try
@@ -1316,7 +1316,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
     if (metadata_types)
     {
         metadata_types->clear();
-        decoder->setMetadataReadingFlag(1);
+        decoder->setReadOptions(1);
     }
 
     bool success = false;

@@ -112,15 +112,21 @@ public:
     int setScale(const int& scale_denom);
 
     /**
-     * @brief Enable or disable metadata reading during image decoding.
+     * @brief Set read options for image decoding.
      *
-     * This function sets an internal flag that controls whether metadata (such as XMP, ICC, or text chunks)
-     * should be read and stored during image decoding operations.
+     * This function sets internal flags that control various read-time behaviors
+     * such as metadata extraction (e.g., XMP, ICC profiles, textual data) 
+     * during image decoding. The flags can be combined using bitwise OR to enable
+     * multiple options simultaneously.
      *
-     * @param flag Non-zero to enable metadata reading, 0 to disable it.
-     * @return Previous value of the metadata reading flag.
+     * @param options Bitwise OR of read option flags to enable.
+     *
+     * @return The previous value of the read options flags.
+     *
+     * @note Setting this has no effect unless the image format and decoder support
+     * the selected options. Unknown flags will be ignored.
      */
-    int setMetadataReadingFlag(int flag);
+    int setReadOptions(int read_options);
 
     /**
      * @brief Read the image header to extract basic properties (width, height, type).
@@ -184,8 +190,8 @@ protected:
     ExifReader m_exif;    ///< Object for reading EXIF metadata from the image.
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
     Animation m_animation;
-    int m_metadata_reading_flag;
-    std::vector<std::vector<unsigned char> > m_metadata; // see IMAGE_METADATA_...
+    int m_read_options;
+    std::vector<std::vector<unsigned char> > m_metadata;
 };
 
 
