@@ -607,7 +607,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                     spng_iccp s_iccp;
                     strncpy(s_iccp.profile_name, "ICC Profile", sizeof(s_iccp.profile_name) - 1);
                     s_iccp.profile_name[sizeof(s_iccp.profile_name) - 1] = '\0';
-                    s_iccp.profile_len = icp_iccp.size();
+                    s_iccp.profile_len = iccp.size();
                     s_iccp.profile = reinterpret_cast<char*>(iccp.data());
                     spng_set_iccp(ctx, &s_iccp);
                 }
