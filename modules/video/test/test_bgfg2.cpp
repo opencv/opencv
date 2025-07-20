@@ -31,31 +31,15 @@ TEST(BackgroundSubtractorMOG2, KnownForegroundMaskShadowsTrue)
     //White Rectangle
     Mat knownFG = Mat::zeros(input.size(), CV_8U);
 
-    rectangle(knownFG, Rect(3,3,6,6), Scalar(255,255,255), -1);
+    rectangle(knownFG, Rect(3,3,8,8), Scalar(255,255,255), -1);
 
     Mat output;
+    mog2->apply(input, output, knownFG);
 
-    int frames_remaining = 1000;
-
-    while(frames_remaining > 0){
-
-        mog2->apply(input, output, knownFG);
-
-        if(frames_remaining == 10){
-            for(int y = 3; y < 6; y++){
-                for (int x = 3; x < 6; x++){
-                    EXPECT_EQ(output.at<uchar>(y,x),255) << "Expected foreground at (" << x << "," << y << ")";
-                }
-            }
-        waitKey(0);
+    for(int y = 3; y < 8; y++){
+        for (int x = 3; x < 8; x++){
+            EXPECT_EQ(output.at<uchar>(y,x),255) << "Expected foreground at (" << x << "," << y << ")";
         }
-
-        imshow("In", input);
-        imshow("KnownFG", knownFG);
-        imshow("Out", output);
-
-        frames_remaining--;
-//        cout << frames_remaining << endl;
     }
 }
 
