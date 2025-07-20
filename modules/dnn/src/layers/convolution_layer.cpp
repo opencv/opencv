@@ -1734,19 +1734,11 @@ public:
 
             // Calculate total output size
             int total_output_size = channels;
-            for (int i = 0; i < ndims; i++) {
-                total_output_size *= output_shape[i];
-            }
-
-            // Calculate input spatial size for column matrix offset calculation
             int input_spatial_size = 1;
-            for (int i = 0; i < ndims; i++) {
-                input_spatial_size *= input_shape[i];
-            }
-
-            // Calculate kernel size
             int kernel_size = 1;
             for (int i = 0; i < ndims; i++) {
+                total_output_size *= output_shape[i];
+                input_spatial_size *= input_shape[i];
                 kernel_size *= kernel_shape[i];
             }
 
@@ -1769,14 +1761,12 @@ public:
 
                 float val = 0.0f;
 
-                if (is1x1_) {
+                if( is1x1_ )
                     val = data_im_[index];
-                } else {
-                    // For each kernel position
+                else {
                     std::vector<int> kernel_coords(ndims);
                     std::function<void(int)> iterate_kernel = [&](int dim) {
                         if (dim == ndims) {
-                            // Calculate input position
                             std::vector<int> input_coords(ndims);
                             bool valid = true;
 
@@ -1873,8 +1863,19 @@ public:
         }
 
         String buildopt = format("-DT=%s ", ocl::typeToStr(inputs[0].type()));
-        buildopt += format("-DPAD_H=%d -DPAD_W=%d -DKERNEL_H=%d -DKERNEL_W=%d -DSTRIDE_H=%d -DSTRIDE_W=%d ",
-                           pad.height, pad.width, kernel.height, kernel.width, stride.height, stride.width);
+        buildopt += format(
+            "-DPAD_TOP=%d -DPAD_BOTTOM=%d -DPAD_LEFT=%d -DPAD_RIGHT=%d "
+            "-DADJ_H=%d -DADJ_W=%d "
+            "-DKH=%d -DKW=%d "
+            "-DSH=%d -DSW=%d "
+            "-DDH=%d -DDW=%d",
+            pads_begin[0], pads_end[0], pads_begin[1], pads_end[1],
+            adjust_pads[0], adjust_pads[1],
+            kernel.height, kernel.width,
+            stride.height, stride.width,
+            dilations[0], dilations[1]
+        );
+
 
         //for (size_t ii = 0; ii < outputs.size(); ii++)
         {
@@ -1945,11 +1946,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        // For some reason, tests for deconvolution fail;
-        // Also, the current implementation is super-inefficient,
-        // Just disabled it. Need to rewrite it and then uncomment back these lines
-        //CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
-        //           forward_ocl(inputs_arr, outputs_arr, internals_arr));
+        CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
+                  forward_ocl(inputs_arr, outputs_arr, internals_arr));
 
         if (inputs_arr.depth(0) == CV_16F)
         {
