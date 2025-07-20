@@ -11,14 +11,12 @@ if not cap.isOpened:
     exit()
 
 # Create background subtractor
-bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=50, detectShadows=False)
-#bg_subtractor = cv2.createBackgroundSubtractorKNN(history=300, detectShadows=False)
-
+mog2_bg_subtractor = cv2.createBackgroundSubtractorMOG2(history=300, varThreshold=50, detectShadows=False)
+knn_bg_subtractor = cv2.createBackgroundSubtractorKNN(history=300, detectShadows=False)
 
 frame_count = 0
 # Allows for a frame buffer for the mask to learn pre known foreground
-show_count = 0
-
+show_count = 10
 
 while True:
     ret, frame = cap.read()
@@ -30,15 +28,22 @@ while True:
     frame = cv2.resize(frame, (640, 480))
     aKnownForegroundMask = np.zeros(frame.shape[:2], dtype=np.uint8)
 
+    # Allow for models to "settle"/learn
     if frame_count > show_count:
         cv2.rectangle(aKnownForegroundMask, (x,200), (x+50,300), 255, -1)
         cv2.rectangle(aKnownForegroundMask, (540,180), (640,480), 255, -1)
 
-    with_mask = bg_subtractor.apply(frame,knownForegroundMask=aKnownForegroundMask)
-    without_mask = bg_subtractor.apply(frame)
+    mog2_with_mask = mog2_bg_subtractor.apply(frame,knownForegroundMask=aKnownForegroundMask)
+    mog2_without_mask = mog2_bg_subtractor.apply(frame)
 
-    cv2.imshow("With FG Mask", with_mask)
-    cv2.imshow("Without FG Mask", without_mask)
+    knn_with_mask = knn_bg_subtractor.apply(frame,knownForegroundMask=aKnownForegroundMask)
+    knn_without_mask = knn_bg_subtractor.apply(frame)
+
+    # Display the 3 parameter apply and the 4 parameter apply for both subtractors
+    cv2.imshow("MOG2 With FG Mask", mog2_with_mask)
+    cv2.imshow("MOG2 Without FG Mask", mog2_without_mask)
+    cv2.imshow("KNN With FG Mask", knn_with_mask)
+    cv2.imshow("KNN Without FG Mask", knn_without_mask)
 
     key = cv2.waitKey(30)
     if key == 27:  # ESC
