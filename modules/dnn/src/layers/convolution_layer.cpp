@@ -1338,7 +1338,7 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-        if (backendId == DNN_BACKEND_CUDA)
+        if (backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN)
         {
             /* deconvolution 1d, 2d and 3d supported */
             if (kernel_size.size() > 0 && kernel_size.size() <= 3)
@@ -1356,14 +1356,7 @@ public:
         }
 #endif  // HAVE_INF_ENGINE
 
-        // For CPU backend, support 1D, 2D, and 3D
-        if (backendId == DNN_BACKEND_OPENCV)
-        {
-            return kernel_size.size() >= 1 && kernel_size.size() <= 3;
-        }
-
-        return backendId == DNN_BACKEND_CUDA ||
-        (kernel_size.size() == 2 && backendId == DNN_BACKEND_CANN);
+        return false;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -1735,11 +1728,9 @@ public:
             // Calculate total output size
             int total_output_size = channels;
             int input_spatial_size = 1;
-            int kernel_size = 1;
             for (int i = 0; i < ndims; i++) {
                 total_output_size *= output_shape[i];
                 input_spatial_size *= input_shape[i];
-                kernel_size *= kernel_shape[i];
             }
 
             size_t stripeSize = (total_output_size + nstripes - 1) / nstripes;
@@ -1811,7 +1802,6 @@ public:
 
                     iterate_kernel(0);
                 }
-
                 data_im_[index] = val + biasvec_[coords[0]];
             }
         }
@@ -1869,13 +1859,12 @@ public:
             "-DKH=%d -DKW=%d "
             "-DSH=%d -DSW=%d "
             "-DDH=%d -DDW=%d",
-            pads_begin[0], pads_end[0], pads_begin[1], pads_end[1],
-            adjust_pads[0], adjust_pads[1],
+            (int)pads_begin[0], (int)pads_end[0], (int)pads_begin[1], (int)pads_end[1],
+            (int)adjust_pads[0], (int)adjust_pads[1],
             kernel.height, kernel.width,
             stride.height, stride.width,
-            dilations[0], dilations[1]
+            (int)dilations[0], (int)dilations[1]
         );
-
 
         //for (size_t ii = 0; ii < outputs.size(); ii++)
         {
