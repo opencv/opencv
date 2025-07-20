@@ -19,6 +19,7 @@ frame_count = 0
 # Allows for a frame buffer for the mask to learn pre known foreground
 show_count = 0
 
+
 while True:
     ret, frame = cap.read()
     if not ret:
