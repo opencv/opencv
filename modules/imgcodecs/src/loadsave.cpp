@@ -1857,11 +1857,11 @@ Mat ImageCollection::Impl::read() {
 
 size_t ImageCollection::Impl::size() const { return m_size; }
 
-int ImageCollection::Impl::width() const { return m_decoder->width(); }
+int ImageCollection::Impl::width() const { return m_decoder ? m_decoder->width() : 0; }
 
-int ImageCollection::Impl::height() const { return m_decoder->height(); }
+int ImageCollection::Impl::height() const { return m_decoder ? m_decoder->height() : 0; }
 
-int ImageCollection::Impl::type() const { return m_decoder->type(); }
+int ImageCollection::Impl::type() const { return m_decoder ? m_decoder->type() : 0; }
 
 int ImageCollection::Impl::error() const { return m_error; }
 
