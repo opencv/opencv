@@ -423,7 +423,7 @@ bool SPngDecoder::readData(Mat &img)
                     }
                 }
 
-                if (m_metadata_reading_flag)
+                if (m_read_options)
                 {
                     uint32_t text_count;
 
