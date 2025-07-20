@@ -115,7 +115,7 @@ public:
      * @brief Set read options for image decoding.
      *
      * This function sets internal flags that control various read-time behaviors
-     * such as metadata extraction (e.g., XMP, ICC profiles, textual data) 
+     * such as metadata extraction (e.g., XMP, ICC profiles, textual data)
      * during image decoding. The flags can be combined using bitwise OR to enable
      * multiple options simultaneously.
      *
