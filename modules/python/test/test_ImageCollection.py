@@ -36,7 +36,7 @@ class imread_test(NewOpenCVTests):
         # Check width, height and type
         self.assertEqual(ic.getWidth(), animation.frames[0].shape[1])
         self.assertEqual(ic.getHeight(), animation.frames[0].shape[0])
-        self.assertEqual(ic.getType(), animation.frames[0].dtype)
+        self.assertEqual(ic.getType(), cv.CV_16UC4)
 
         # Compare frames pixel-wise
         for i in range(ic.size()):
