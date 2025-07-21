@@ -15,29 +15,29 @@
 using Callback = std::function<void(const std::string &type)>;
 
 class WorkloadListener {
-    Callback cb;
+    Callback callback;
 
 public:
-    WorkloadListener(const Callback &cb) : cb(cb) {}
+    WorkloadListener(const Callback &cb) : callback(cb) {}
 
     void operator()(const std::string &type) const {
-        if (cb) {
-            cb(type);
+        if (callback) {
+            callback(type);
         }
     }
 
     bool operator==(const WorkloadListener& other) const {
         // Compare function pointers if both are function pointers
-        auto thisPtr = cb.target<void(*)(const std::string&)>();
-        auto otherPtr = other.cb.target<void(*)(const std::string&)>();
-   
+        auto thisPtr = callback.target<void(*)(const std::string&)>();
+        auto otherPtr = other.callback.target<void(*)(const std::string&)>();
+
         if (thisPtr && otherPtr) {
             return *thisPtr == *otherPtr;
         }
-      
+
         // For lambdas and other callables, compare target type and address
-        return cb.target_type() == other.cb.target_type() &&
-               cb.target<void(*)(const std::string&)>() == other.cb.target<void(*)(const std::string&)>();
+        return callback.target_type() == other.callback.target_type() &&
+               callback.target<void(*)(const std::string&)>() == other.callback.target<void(*)(const std::string&)>();
     }
 };
 class WorkloadType {
