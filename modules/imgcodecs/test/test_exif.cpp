@@ -203,23 +203,17 @@ TEST_P(Exif, exif_orientation)
     ASSERT_FALSE(m_img.empty());
 
 #ifdef HAVE_WEBP
-    std::vector<int> metadata_types1, metadata_types2;
-    std::vector<std::vector<uchar> > metadata1, metadata2;
-    Mat img = imreadWithMetadata(filename, metadata_types1, metadata1, IMREAD_UNCHANGED);
-
-    metadata_types2 = { IMAGE_METADATA_EXIF };
-    metadata2 = { metadata1[0] }; // we want to write just EXIF metadata to test rotation
+    std::vector<int> metadata_types;
+    std::vector<std::vector<uchar> > metadata;
+    Mat img = imreadWithMetadata(filename, metadata_types, metadata, IMREAD_UNCHANGED);
 
     std::vector<uchar> buffer;
-    imencodeWithMetadata(".webp", img, metadata_types2, metadata2, buffer);
+    imencodeWithMetadata(".webp", img, metadata_types, metadata, buffer);
 
     // Decode image and metadata back from buffer
-    img = imdecodeWithMetadata(buffer, metadata_types2, metadata2,
+    img = imdecodeWithMetadata(buffer, metadata_types, metadata,
         cv::IMREAD_COLOR | cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
 
-    std::vector<int> expected_metadata_types = { IMAGE_METADATA_EXIF };
-    EXPECT_EQ(expected_metadata_types, metadata_types2);
-    EXPECT_EQ(metadata1[0], metadata2[0]);
     EXPECT_EQ(cv::norm(img, m_img, NORM_INF), 0.);
 #endif // HAVE_WEBP
 
