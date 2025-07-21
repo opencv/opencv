@@ -559,11 +559,11 @@ Encoding getEncodingForGPT2(const std::string& name, const std::string& vocab_fi
     return Encoding(name, R50K_UTF8, std::move(mergeableRanks), std::move(specialTokens), explicitNvocab);
 }
 
-CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name) {
+CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name, const std::string& cl00k_case_file) {
     if (name != "cl100k_base")
         throw std::runtime_error("Wrong model name. This model is cl100k_base");
     
-    auto bpeText = readFile("../modules/dnn/src/tokenizer/cl100k_base.tiktoken");
+    auto bpeText = readFile(cl00k_case_file);
     ByteVecRankMap mergeableRanks;
 
     std::istringstream lines(bpeText);

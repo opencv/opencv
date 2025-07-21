@@ -133,9 +133,9 @@ std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
                                        /*const std::string& encoderJsonPath*/);
 
 CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name, const std::string& vocab_file);
-CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name);
+CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name, const std::string& cl00k_case_file);
 
-CV_EXPORTS class Tokenizer {
+class CV_EXPORTS Tokenizer {
 public:
     CV_EXPORTS static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
     std::vector<Rank> encode(const std::string& text) { return encoder.encode(text); };
@@ -149,6 +149,3 @@ private:
 
 }}}
 
-
-// Tokenizer tokenizer = Tokenizer("vocab.bpe")
-// tokenizer.
