@@ -210,14 +210,14 @@ public:
     /** @brief Ensures the model has named tensors.
 
     This function is used to ensure that all tensors in the model have names.
-    It goes through all input and output nodes of the model and sets their names
+    It goes through all input and output nodes of the model and sets the names
     if they are not set. This is neccessary for models with nameless tensors.
 
     If a tensor does not have a name, it will be assigned a default name
     based on the node's friendly name. If the node has multiple outputs,
     the name will be in the form "node_name:N", where N is the output index.
 
-    @param flag If true, will ensure all the tensors are named.
+    @param flag If true, then it guarantees that all tensors will have names.
     @return reference to this parameter structure.
      */
     Params<Net>& cfgEnsureNamedTensors(bool flag = true) {
