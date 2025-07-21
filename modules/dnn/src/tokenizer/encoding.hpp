@@ -20,6 +20,10 @@ namespace cv { namespace dnn { namespace tokenizer {
 
 class CV_EXPORTS_W Encoding {
 public:
+    Encoding()
+        : name_(""), patStr_(""), mergeableRanks_(), specialTokens_(),
+          maxTokenValue_(0), coreBPE_(), merges_(), vocab_() {}
+
     CV_WRAP Encoding(const std::string &name, 
                      const std::string &patStr,
                      const ByteVecRankMap &mergeableRanks,
@@ -125,10 +129,26 @@ private:
 };
 
 std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
-                                        const std::string& vocabBpePath,
-                                        const std::string& encoderJsonPath);
+                                        const std::string& vocabBpePath
+                                       /*const std::string& encoderJsonPath*/);
 
-CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name);
+CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name, const std::string& vocab_file);
 CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name);
 
+CV_EXPORTS class Tokenizer {
+public:
+    CV_EXPORTS static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
+    std::vector<Rank> encode(const std::string& text) { return encoder.encode(text); };
+    std::string decode(const std::vector<Rank>& tokens) { return encoder.decode(tokens); };
+private:
+    Tokenizer() = default;
+    std::string tokenizer_name;
+    std::string file_path; // 
+    Encoding encoder; 
+};
+
 }}}
+
+
+// Tokenizer tokenizer = Tokenizer("vocab.bpe")
+// tokenizer.

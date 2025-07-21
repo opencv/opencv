@@ -36,7 +36,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
             std::vector<uint32_t> tokens = _encoding.encode(s);
             return tokens.size();
         } else if (encodingName == "gpt2") {
-            tokenizer::Encoding _encoding = tokenizer::getEncodingForGPT2("gpt2");
+            tokenizer::Encoding _encoding = tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/vocab.bpe");
             std::vector<uint32_t> tokens = _encoding.encode(s);
             return tokens.size();
         }
@@ -101,7 +101,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
         */
 
         // r50k_base -> gpt2
-        tokenizer::Encoding enc_gpt2 = tokenizer::getEncodingForGPT2("gpt2");
+        tokenizer::Encoding enc_gpt2 = tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/vocab.bpe");
         printEncodingInfo(enc_gpt2, sample);
         /*
             output;
@@ -150,7 +150,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     auto num_of_tokens_from_prompts = [&](const std::vector<Message>& messages,
                                          const std::string& model) -> int {
         tokenizer::Encoding encoding = (model == "gpt2")
-                            ? tokenizer::getEncodingForGPT2("gpt2")
+                            ? tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/vocab.bpe")
                             : (model == "train_taylor")
                             ? get_trained_taylor_encoding()
                             : tokenizer::getEncodingForCl100k_base("cl100k_base");

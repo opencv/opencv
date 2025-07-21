@@ -464,8 +464,8 @@ static std::string decodeDataGym(const std::string& s,
 }
 
 std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
-                                        const std::string& vocabBpePath,
-                                        const std::string& encoderJsonPath) {
+                                        const std::string& vocabBpePath
+                                        /*const std::string& encoderJsonPath*/) {
     std::vector<uint8_t> rank_to_intbyte;
     rank_to_intbyte.reserve(256);
     std::unordered_map<uint32_t,uint8_t> data_gym_byte_to_byte;
@@ -543,15 +543,12 @@ std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
     return bpe_ranks;
 }
 
-Encoding getEncodingForGPT2(const std::string& name) {
+Encoding getEncodingForGPT2(const std::string& name, const std::string& vocab_file) {
     std::unordered_map<std::string, Rank> specialTokens = {
         {"<|endoftext|>", 50256}
     };
     int explicitNvocab = 50257;
-    auto bpe_ranks = dataGymToMergeableBpeRanks(
-        "../modules/dnn/src/tokenizer/vocab.bpe",
-        "../modules/dnn/src/tokenizer/encoder.json"
-    );
+    auto bpe_ranks = dataGymToMergeableBpeRanks(vocab_file);
     ByteVecRankMap mergeableRanks;
     mergeableRanks.reserve(bpe_ranks.size());
     for (auto& [tok, rank] : bpe_ranks) {
@@ -594,6 +591,16 @@ CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name) {
     };
 
     return Encoding(name, CL100K_BASE, std::move(mergeableRanks), std::move(specialTokens), -1);
-}   
+}
+
+Tokenizer Tokenizer::from_pretrained(const std::string& name, const std::string& pretrained_model_path) {
+    Tokenizer tokenizer;
+    if (name == "gpt2") {
+        tokenizer.encoder = getEncodingForGPT2("gpt2", pretrained_model_path);
+    } else {
+        throw std::runtime_error("Unknown model name: " + name);
+    }
+    return tokenizer;
+}
 
 }}}
