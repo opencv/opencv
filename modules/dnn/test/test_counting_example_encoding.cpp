@@ -18,7 +18,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     // sequence of tokens.
 
     // Load an encoding 
-    tokenizer::Encoding encoding = tokenizer::getEncodingForCl100k_base("cl100k_base");
+    tokenizer::Encoding encoding = tokenizer::getEncodingForCl100k_base("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
 
     // Turn text into tokens with encoding.encode()
     std::vector<uint32_t> tokens = encoding.encode("tiktoken is great!");
@@ -32,11 +32,11 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     // we can count tokens by counting the length if the vector returned by .encode()
     auto numOfTokensFromString = [](const std::string s, const std::string encodingName) -> int {
         if (encodingName == "cl100k_base")  {
-            tokenizer::Encoding _encoding = tokenizer::getEncodingForCl100k_base("cl100k_base");
+            tokenizer::Encoding _encoding = tokenizer::getEncodingForCl100k_base("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
             std::vector<uint32_t> tokens = _encoding.encode(s);
             return tokens.size();
         } else if (encodingName == "gpt2") {
-            tokenizer::Encoding _encoding = tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/vocab.bpe");
+            tokenizer::Encoding _encoding = tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
             std::vector<uint32_t> tokens = _encoding.encode(s);
             return tokens.size();
         }
@@ -89,7 +89,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
             std::cout << std::endl;
         };
         // cl100k_base -> gpt4
-        tokenizer::Encoding enc = tokenizer::getEncodingForCl100k_base("cl100k_base");
+        tokenizer::Encoding enc = tokenizer::getEncodingForCl100k_base("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
         printEncodingInfo(enc, sample);
         /*
             output:
@@ -101,7 +101,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
         */
 
         // r50k_base -> gpt2
-        tokenizer::Encoding enc_gpt2 = tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/vocab.bpe");
+        tokenizer::Encoding enc_gpt2 = tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
         printEncodingInfo(enc_gpt2, sample);
         /*
             output;
@@ -113,7 +113,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
         */
 
         // train tokenizer on taylor swift text
-        std::ifstream f("../modules/dnn/src/tokenizer/taylorswift.txt");
+        std::ifstream f("/Users/jorgevelez/Desktop/data/taylorswift.txt");
         ASSERT_TRUE(f.is_open());
         std::stringstream buffer;
         buffer << f.rdbuf();
@@ -136,7 +136,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     compareEncodings("お誕生日おめでとう");
 
     auto get_trained_taylor_encoding = []() -> tokenizer::Encoding {
-        std::ifstream f("../modules/dnn/src/tokenizer/taylorswift.txt");
+        std::ifstream f("/Users/jorgevelez/Desktop/data/taylorswift.txt");
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string data = buffer.str();
@@ -150,10 +150,10 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     auto num_of_tokens_from_prompts = [&](const std::vector<Message>& messages,
                                          const std::string& model) -> int {
         tokenizer::Encoding encoding = (model == "gpt2")
-                            ? tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/vocab.bpe")
+                            ? tokenizer::getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe")
                             : (model == "train_taylor")
                             ? get_trained_taylor_encoding()
-                            : tokenizer::getEncodingForCl100k_base("cl100k_base");
+                            : tokenizer::getEncodingForCl100k_base("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
         int tokens_per_message = 3;
         int tokens_per_name = 1;
         if (model == "gpt2") {
