@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sstream>
 #include <queue>
+#include <memory>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -128,24 +129,7 @@ private:
     CV_WRAP std::vector<Rank> _encodeBytesLower(const std::vector<uint8_t>& bytes) const;
 };
 
-std::unordered_map<std::string,int> dataGymToMergeableBpeRanks(
-                                        const std::string& vocabBpePath
-                                       /*const std::string& encoderJsonPath*/);
-
-CV_EXPORTS Encoding getEncodingForGPT2(const std::string &name, const std::string& vocab_file);
 CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name, const std::string& cl00k_case_file);
-
-class CV_EXPORTS Tokenizer {
-public:
-    CV_EXPORTS static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
-    std::vector<Rank> encode(const std::string& text) { return encoder.encode(text); };
-    std::string decode(const std::vector<Rank>& tokens) { return encoder.decode(tokens); };
-private:
-    Tokenizer() = default;
-    std::string tokenizer_name;
-    std::string file_path; // 
-    Encoding encoder; 
-};
 
 }}}
 

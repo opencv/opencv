@@ -38,6 +38,7 @@
  #include <unordered_map>
 #include <string>
 #include <vector>
+#include <fstream>
 
 namespace cv { namespace dnn { namespace tokenizer {
 
@@ -285,6 +286,15 @@ inline std::vector<uint8_t> base64_decode(const std::string& in) {
         }
     }
     return out;
+}
+
+// Read entire file into a string
+static std::string readFile(const std::string& path) {
+    std::ifstream in{path, std::ios::binary};
+    if (!in) throw std::runtime_error("Failed to open " + path);
+    std::ostringstream buf;
+    buf << in.rdbuf();
+    return buf.str();
 }
 
 }}} // namespace cv namespace dnn namespace tokenizer
