@@ -14,27 +14,27 @@
 
 using Callback = std::function<void(const std::string &type)>;
 
-class WorkloadListener {    
+class WorkloadListener {
     Callback cb;
 
 public:
     WorkloadListener(const Callback &cb) : cb(cb) {}
-    
+
     void operator()(const std::string &type) const {
         if (cb) {
             cb(type);
         }
     }
-    
+
     bool operator==(const WorkloadListener& other) const {
         // Compare function pointers if both are function pointers
         auto thisPtr = cb.target<void(*)(const std::string&)>();
         auto otherPtr = other.cb.target<void(*)(const std::string&)>();
-        
+   
         if (thisPtr && otherPtr) {
             return *thisPtr == *otherPtr;
         }
-        
+      
         // For lambdas and other callables, compare target type and address
         return cb.target_type() == other.cb.target_type() &&
                cb.target<void(*)(const std::string&)>() == other.cb.target<void(*)(const std::string&)>();
@@ -42,12 +42,12 @@ public:
 };
 class WorkloadType {
     std::vector<WorkloadListener> listeners;
-    
+
 public:
     void addListener(const Callback &cb) {
         listeners.push_back(cb);
     }
-    
+
     void removeListener(const Callback& cb) {
         WorkloadListener toRemove(cb);
         listeners.erase(
@@ -55,7 +55,7 @@ public:
             listeners.end()
         );
     }
-    
+
     void notify(const std::string &type) {
         for (const auto &listener : listeners) {
             listener(type);
