@@ -224,7 +224,6 @@ static CvResult CV_API_CALL libcamera_capture_retrieve(CvPluginCapture handle, i
         if (!result || frame.empty())
             return CV_ERROR_FAIL;
         
-        // Call the callback with frame data
         int type = frame.type();
         CvResult res = callback(stream_idx, frame.ptr(), static_cast<int>(frame.step[0]), 
                                frame.cols, frame.rows, type, userdata);
@@ -250,14 +249,13 @@ static CvResult CV_API_CALL libcamera_capture_open_stream(
     int* params, unsigned n_params,
     CV_OUT CvPluginCapture* handle)
 {
-    (void)opaque;   // Suppress unused parameter warning
-    (void)read;     // Suppress unused parameter warning
-    (void)seek;     // Suppress unused parameter warning
-    (void)params;   // Suppress unused parameter warning
-    (void)n_params; // Suppress unused parameter warning
-    (void)handle;   // Suppress unused parameter warning
+    (void)opaque;   
+    (void)read;     
+    (void)seek;     
+    (void)params;   
+    (void)n_params; 
+    (void)handle;   
     
-    // Libcamera doesn't support stream-based input
     return CV_ERROR_FAIL;
 }
 
@@ -271,10 +269,10 @@ static const OpenCV_VideoIO_Capture_Plugin_API plugin_api =
         CV_VERSION_MINOR, // opencv_version_minor
         CV_VERSION_REVISION, // opencv_version_patch
         CV_VERSION_STATUS, // opencv_version_status
-        "libcamera OpenCV plugin v1.2" // api_description
+        "libcamera OpenCV plugin v1.2" 
     },
     {
-        CAP_LIBCAMERA, // id
+        CAP_LIBCAMERA, 
         libcamera_capture_open,
         libcamera_capture_release,
         libcamera_capture_get_property,
@@ -300,4 +298,4 @@ const OpenCV_VideoIO_Capture_Plugin_API* CV_API_CALL opencv_videoio_capture_plug
     return NULL;
 }
 
-} // extern "C"
+} 
