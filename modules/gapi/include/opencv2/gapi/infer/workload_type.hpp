@@ -40,7 +40,6 @@ public:
                cb.target<void(*)(const std::string&)>() == other.cb.target<void(*)(const std::string&)>();
     }
 };
-#include <iostream>
 class WorkloadType {
     std::vector<WorkloadListener> listeners;
     
@@ -50,14 +49,11 @@ public:
     }
     
     void removeListener(const Callback& cb) {
-        std::cout << "removeListener: " << listeners.size()  << std::endl;
         WorkloadListener toRemove(cb);
         listeners.erase(
             std::remove(listeners.begin(), listeners.end(), toRemove),
             listeners.end()
         );
-        std::cout << "after removeListener: " << listeners.size()  << std::endl;
-
     }
     
     void notify(const std::string &type) {
