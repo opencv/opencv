@@ -335,7 +335,6 @@ TEST_P(Test_ONNX_layers, Deconvolution)
         testONNXModels("deconv_adjpad_2d", npy, 0, 0, false, false);
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
 TEST_P(Test_ONNX_layers, Deconvolution3D)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -362,7 +361,6 @@ TEST_P(Test_ONNX_layers, Deconvolution3D)
     testONNXModels("deconv3d");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
 TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -389,7 +387,6 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_bias)
     testONNXModels("deconv3d_bias");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
 TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
@@ -416,7 +413,6 @@ TEST_P(Test_ONNX_layers, Deconvolution3D_pad)
     testONNXModels("deconv3d_pad");
 }
 
-// BUG: https://github.com/opencv/opencv/issues/26307
 TEST_P(Test_ONNX_layers, Deconvolution3D_adjpad)
 {
 #if defined(INF_ENGINE_RELEASE) && INF_ENGINE_VER_MAJOR_EQ(2022010000)
