@@ -681,11 +681,11 @@ It does not check for the actual existence of the file but rather the ability to
 */
 CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
-/** @brief Iterator - based interface for reading multi - page and animated images on demand.
+/** @brief Iterator-based interface for reading multi-page and animated images on demand.
 
-The `ImageCollection` class provides a lazy - decoding interface for accessing individual frames in
-multi - page or animated image formats(e.g., TIFF, animated WebP, GIF, APNG).Internally, animated
-formats are supported via the OpenCV `Animation` class.
+The `ImageCollection` class provides a lazy-decoding interface for accessing individual frames in
+multi-page or animated image formats(e.g., TIFF, animated WebP, GIF, APNG).Internally, animated
+formats are supported via the `Animation` class.
 
 Only the currently accessed frame is decoded when needed.This enables efficient memory use and
 fast iteration without fully loading the image sequence.The actual decoding behavior may vary
@@ -715,183 +715,164 @@ public:
     enum Error {
         OK = 0,                      ///< No error.
         UNINITIALIZED = 1,           ///< The object has not been properly initialized.
-        SOURCE_NOT_OPENED = 2,       ///< Failed to open the input source (file, buffer, etc.).
+        SOURCE_NOT_OPENED = 2,       ///< Failed to open the input source file or buffer.
         UNKNOWN_SOURCE_FORMAT = 3,   ///< The source format could not be determined or is unsupported.
         READ_HEADER_FAILED = 4,      ///< An error occurred while reading the data header.
         READ_DATA_FAILED = 5         ///< An error occurred while reading the data content.
     };
 
-    /**
-     * @brief Default constructor. Creates an uninitialized ImageCollection.
-     *
-     * Use `init()` or assignment to load image data before use.
+    /** @brief Default constructor. Creates an uninitialized ImageCollection.
+
+    Use `init()` or assignment to load image data before use.
      */
     CV_WRAP ImageCollection();
 
-    /**
-     * @brief Constructs an ImageCollection from a file.
-     *
-     * @param filename Path to the multi-page or animated image file.
-     * @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
-     *
-     * This constructor initializes the collection and prepares the internal iterator.
-     * Only image header read initially; individual pages or frames are decoded on access.
+    /** @brief Constructs an ImageCollection from a file.
+
+    @param filename Path to the multi-page or animated image file.
+    @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+
+    This constructor initializes the collection and prepares the internal iterator.
+    Only image header read initially; individual pages or frames are decoded on access.
      */
     CV_WRAP ImageCollection(const String& filename, int flags = IMREAD_UNCHANGED);
 
-    /**
-     * @brief Constructs an ImageCollection from an in-memory image buffer.
-     *
-     * @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
-     *            This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
-     * @param flags Flag specifying the color type of the image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
-     *
-     * This constructor enables reading multi-page or animated images directly from memory,
-     * without the need to write them to disk. The buffer header is parsed,
-     * but no frame is decoded until accessed.
+    /** @brief Constructs an ImageCollection from an in-memory image buffer.
+
+    @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
+           This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
+    @param flags Flag specifying the color type of the loaded image (e.g., IMREAD_COLOR, IMREAD_UNCHANGED).
+
+     This constructor enables reading multi-page or animated images directly from memory,
+     without the need to write them to disk. The buffer header is parsed, but no frame is decoded until accessed.
      */
     CV_WRAP ImageCollection(InputArray buffer, int flags = IMREAD_UNCHANGED);
 
-    /**
-     * @brief Initializes the ImageCollection with a new file.
-     *
-     * @param filename Path to the multi-page or animated image file.
-     * @param flags Flag that can take values of cv::ImreadModes
-     *
-     * Clears any existing data and loads the specified image.
+    /** @brief Initializes the ImageCollection with a new file.
+
+    @param filename Path to the multi-page or animated image file.
+    @param flags Flag that can take values of cv::ImreadModes
+
+    Clears any existing data and loads the specified image.
      */
     CV_WRAP void init(const String& filename, int flags = IMREAD_UNCHANGED);
 
-    /**
-     * @brief Initializes the ImageCollection with a new in-memory image buffer.
-     *
-     * @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
-     *            This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
-     * @param flags Flag that can take values of cv::ImreadModes
-     *
-     * Clears any existing data and loads the specified image.
+    /** @brief Initializes the ImageCollection with a new in-memory image buffer.
+
+    @param buffer Input buffer containing encoded image data (e.g., from a file or network stream).
+           This must be a 1D `cv::Mat`, `std::vector<uchar>`, or similar supported type.
+    @param flags Flag that can take values of cv::ImreadModes
+
+    Clears any existing data and loads the specified image.
      */
     CV_WRAP void init(InputArray buffer, int flags = IMREAD_UNCHANGED);
 
-    /**
-     * @brief Closes the ImageCollection and releases internal resources.
-     *
-     * After calling this, the ImageCollection becomes uninitialized.
+    /** @brief Closes the ImageCollection and releases internal resources.
+
+    After calling this, the ImageCollection becomes uninitialized.
      */
     CV_WRAP void close();
 
-    /**
-     * @brief Returns the number of pages/frames in the image collection.
-     *
-     * @return Total number of frames.
+    /** @brief Returns the number of pages/frames in the image collection.
+
+    @return Total number of frames.
      */
     CV_WRAP size_t size() const;
 
-    /**
-     * @brief Returns an error code representing the last failure that occurred.
-     *
-     * This function provides diagnostic information when an operation fails,
-     * such as loading an image, accessing a frame, or decoding metadata.
-     * If no error has occurred since the last successful operation, the return
-     * value is `Error::OK`.
-     *
-     * @return One of the `ImageCollection::Error` enum values.
-     *
-     * The error state is updated internally when operations fail.
-     *
-     * @note The error code is preserved until the next API call.
+    /** @brief Returns an error code representing the last failure that occurred.
+
+    This function provides diagnostic information when an operation fails,
+    such as loading an image, accessing a frame, or decoding metadata.
+    If no error has occurred since the last successful operation, the return
+    value is `Error::OK`.
+
+    @return One of the `ImageCollection::Error` enum values.
+
+    The error state is updated internally when operations fail.
+
+    @note The error code is preserved until the next API call.
      */
     CV_WRAP int getLastError() const;
 
-    /**
-     * @brief Returns the width of frames in the collection.
-     *
-     * @return Width in pixels.
-     *
-     * Assumes all frames have consistent dimensions except TIFF files.
+    /** @brief Returns the width of frames in the collection.
+
+    @return Width in pixels.
+
+    Assumes all frames have consistent dimensions except TIFF files.
      */
     CV_WRAP int getWidth() const;
 
-    /**
-     * @brief Returns the height of frames in the collection.
-     *
-     * @return Height in pixels.
-     *
-     * Assumes all frames have consistent dimensions except TIFF files.
+    /** @brief Returns the height of frames in the collection.
+
+    @return Height in pixels.
+
+    Assumes all frames have consistent dimensions except TIFF files.
      */
     CV_WRAP int getHeight() const;
 
-    /**
-     * @brief Returns the OpenCV type (`CV_8UC3`, etc.) of the frames.
-     *
-     * @return OpenCV matrix type.
-     *
-     * This is determined from the first frame and assumed consistent across all frames except TIFF files.
+    /** @brief Returns the OpenCV type (`CV_8UC3`, etc.) of the frames.
+
+    @return OpenCV matrix type.
+
+    This is determined from the first frame and assumed consistent across all frames except TIFF files.
      */
     CV_WRAP int getType() const;
 
-    /**
-     * @brief Extracts metadata if available.
-     *
-     * @param metadata_types Output vector of metadata type codes.
-     * @param metadata Output array containing metadata items (EXIF, XMP, TEXT etc.).
-     *
-     * @return Number of metadata items extracted.
+    /** @brief Extracts metadata if available.
+
+    @param metadata_types Output vector of metadata type codes.
+    @param metadata Output array containing metadata items (EXIF, XMP, ICCP).
+
+    @return Number of metadata items extracted.
      */
     CV_WRAP int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
 
-    /**
-     * @brief Returns a reference to the decoded frame at the given index.
-     *
-     * @param index Zero-based frame index.
-     * @return Constant reference to the decoded frame (`cv::Mat`).
-     *
-     * If the frame is not already decoded, it is loaded and cached.
-     * Throws an exception if the index is out of range.
+    /** @brief Returns a reference to the decoded frame at the given index.
+
+    @param index Zero-based frame index.
+    @return Constant reference to the decoded frame (`cv::Mat`).
+
+    If the frame is not already decoded, it is loaded and cached.
+    Throws an exception if the index is out of range.
      */
     CV_WRAP const Mat& at(int index);
 
-    /**
-     * @brief Returns a reference to the decoded frame at the given index.
-     *
-     * @param index Zero-based frame index.
-     * @return Constant reference to the decoded frame.
-     *
-     * Equivalent to `at(index)`. Provided for convenience.
+    /** @brief Returns a reference to the decoded frame at the given index.
+
+    @param index Zero-based frame index.
+    @return Constant reference to the decoded frame.
+
+    Equivalent to `at(index)`. Provided for convenience.
      */
     const Mat& operator[](int index);
 
-    /**
-     * @brief Returns the internal `Animation` object for animated formats.
-     *
-     * @return Const reference to the `Animation` object.
+    /** @brief Returns the internal `Animation` object for animated formats.
+
+    @return Const reference to the `Animation` object.
      */
     CV_WRAP const Animation& getAnimation() const;
 
-    /**
-     * @brief Releases the cached frame at the specified index.
-     *
-     * @param index Index of the frame to remove from the cache.
-     *
-     * Frees memory for the specified frame without affecting other cached pages.
+    /** @brief Releases the cached frame at the specified index.
+
+    @param index Index of the frame to remove from the cache.
+
+    Frees memory for the specified frame without affecting other cached pages.
      */
     CV_WRAP void releaseCache(int index);
 
-    /**
-     * @brief Returns an iterator to the first frame in the collection.
-     *
-     * @return Iterator pointing to the beginning of the collection.
-     *
-     * Can be used in range-based or manual loops.
+    /** @brief Returns an iterator to the first frame in the collection.
+
+    @return Iterator pointing to the beginning of the collection.
+
+    Can be used in range-based or manual loops.
      */
     iterator begin();
 
-    /**
-     * @brief Returns an iterator to one past the last frame.
-     *
-     * @return Iterator pointing past the end of the collection.
-     *
-     * Used for terminating iterator-based loops.
+    /** @brief Returns an iterator to one past the last frame.
+
+    @return Iterator pointing past the end of the collection.
+
+    Used for terminating iterator-based loops.
      */
     iterator end();
 
