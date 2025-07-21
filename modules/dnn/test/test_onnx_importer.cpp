@@ -482,6 +482,12 @@ TEST_P(Test_ONNX_layers, Clip_init)
     testONNXModels("clip_init_max");
 }
 
+TEST_P(Test_ONNX_layers, Clip13)
+{
+    testONNXModels("clip13", npy, 0, 0, false, true, 2);
+}
+
+
 TEST_P(Test_ONNX_layers, Shape)
 {
     testONNXModels("shape_of_constant");
