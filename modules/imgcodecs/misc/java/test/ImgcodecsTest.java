@@ -17,11 +17,11 @@ public class ImgcodecsTest extends OpenCVTestCase {
 
     public void testAnimation() {
         if (!Imgcodecs.haveImageWriter("*.apng")) {
-           return;
+            return;
         }
 
         Mat src = Imgcodecs.imread(OpenCVTestRunner.LENA_PATH, Imgcodecs.IMREAD_REDUCED_COLOR_4);
-        assertFalse(src.empty());
+        assertFalse("Source image is empty", src.empty());
 
         Mat rgb = new Mat();
         Imgproc.cvtColor(src, rgb, Imgproc.COLOR_BGR2RGB);
@@ -37,22 +37,30 @@ public class ImgcodecsTest extends OpenCVTestCase {
         animation.set_durations(durations);
 
         String filename = OpenCVTestRunner.getTempFileName("png");
-        assertTrue(Imgcodecs.imwriteanimation(filename, animation));
+        assertTrue("Failed to write animation", Imgcodecs.imwriteanimation(filename, animation));
 
+        // Read animation back
         Animation readAnimation = new Animation();
-        assertTrue(Imgcodecs.imreadanimation(filename, readAnimation));
+        assertTrue("Failed to read animation", Imgcodecs.imreadanimation(filename, readAnimation));
 
         List<Mat> readFrames = readAnimation.get_frames();
-        assertTrue(readFrames.size() == 2);
+        assertEquals("Frame count mismatch", 2, readFrames.size());
 
+        // Initialize ImageCollection and check properties
         ImageCollection ic = new ImageCollection(filename, Imgcodecs.IMREAD_UNCHANGED);
-        assertEquals(2, ic.size());
-        assertEquals(128, ic.getWidth());
-        assertEquals(128, ic.getHeight());
-        assertEquals(rgb.type(), ic.getType());
+        assertEquals("ImageCollection size mismatch", 2, ic.size());
+        assertEquals("ImageCollection width mismatch", readFrames.get(0).cols(), ic.getWidth());
+        assertEquals("ImageCollection height mismatch", readFrames.get(0).rows(), ic.getHeight());
+        assertEquals("ImageCollection type mismatch", readFrames.get(0).type(), ic.getType());
 
-        rgb = ic.at(1);
-        assertFalse(rgb.empty());
+        // Compare image data
+        for (int i = 0; i < ic.size(); i++) {
+            Mat expected = readFrames.get(i);
+            Mat actual = ic.at(i);
+            assertFalse("ImageCollection frame is empty", actual.empty());
+            double norm = Core.norm(expected, actual, Core.NORM_INF);
+            assertEquals("Pixel data mismatch at frame " + i, 0.0, norm, 1e-6);
+        }
     }
 
     public void testImdecode() {
