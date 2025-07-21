@@ -50,16 +50,15 @@ class GOVExecutable final: public GIslandExecutable
 
     // To manage additional execution options
     Options m_options;
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
-    cv::gapi::wip::ov::WorkloadTypeOvPtr m_workload_type;
-    unsigned int m_workload_listener_id = 0;
-    void setWorkLoadType(const std::string &type);
+#if INF_ENGINE_RELEASE >= 2024030000
+    cv::gapi::wip::ov::WorkloadTypeOVPtr m_workload_type;
+    void setWorkloadType(const std::string &type);
 #endif
 public:
     GOVExecutable(const ade::Graph                   &graph,
                   const cv::GCompileArgs             &compileArgs,
                   const std::vector<ade::NodeHandle> &nodes);
-#if defined HAVE_INF_ENGINE && INF_ENGINE_RELEASE >= 2024030000
+#if INF_ENGINE_RELEASE >= 2024030000
     ~GOVExecutable();
 #endif
     virtual inline bool canReshape() const override { return false; }

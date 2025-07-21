@@ -20,6 +20,7 @@
 #include <opencv2/core/cvdef.h>     // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp> // GKernelPackage
 #include <opencv2/gapi/infer.hpp>   // Generic
+#include <opencv2/gapi/infer/workload_type.hpp>
 
 namespace cv {
 namespace gapi {
@@ -753,13 +754,13 @@ protected:
 };
 
 class WorkloadTypeONNX : public WorkloadType {};
-using WorkloadTypeOnnxPtr = std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>;
+using WorkloadTypeONNXPtr = std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>;
 
 } // namespace onnx
 } // namespace gapi
 namespace detail {
-template<> struct CompileArgTag<std::shared_ptr<cv::gapi::onnx::WorkloadTypeONNX>> {
-    static const char* tag() { return "gapi.wip.ov.workload_type_onnx_ptr"; }
+template<> struct CompileArgTag<cv::gapi::onnx::WorkloadTypeONNXPtr> {
+    static const char* tag() { return "gapi.onnx.workload_type"; }
 };
 } // namespace detail
 } // namespace cv

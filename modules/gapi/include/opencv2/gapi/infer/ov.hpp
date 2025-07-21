@@ -13,6 +13,7 @@
 #include <opencv2/gapi/own/exports.hpp> // GAPI_EXPORTS
 #include <opencv2/gapi/gkernel.hpp>     // GKernelType[M], GBackend
 #include <opencv2/gapi/infer.hpp>       // Generic
+#include <opencv2/gapi/infer/workload_type.hpp>
 
 #include <map>
 
@@ -692,7 +693,7 @@ namespace wip { namespace ov {
 struct benchmark_mode { };
 
 class WorkloadTypeOV : public WorkloadType {};
-using WorkloadTypeOvPtr = std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>;
+using WorkloadTypeOVPtr = std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>;
 
 } // namespace ov
 } // namespace wip
@@ -705,9 +706,9 @@ namespace detail
     {
         static const char* tag() { return "gapi.wip.ov.benchmark_mode"; }
     };
-    template<> struct CompileArgTag<std::shared_ptr<cv::gapi::wip::ov::WorkloadTypeOV>>
+    template<> struct CompileArgTag<cv::gapi::wip::ov::WorkloadTypeOVPtr>
     {
-        static const char* tag() { return "gapi.wip.ov.workload_type_ov_ptr"; }
+        static const char* tag() { return "gapi.wip.ov.workload_type"; }
     };
 }
 
