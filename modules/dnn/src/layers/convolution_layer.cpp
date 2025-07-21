@@ -2059,9 +2059,9 @@ public:
         const std::vector<Ptr<BackendWrapper>>& outputs
     ) override
     {
+        CV_Assert(!blobs.empty());
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
-        // TODO: extract bias from inputs and pass it
         CV_Assert(inputs.size() == 1 || inputs.size() == 2);
         auto input_wrapper = inputs[0].dynamicCast<CUDABackendWrapper>();
         auto input_shape = input_wrapper->getShape();
@@ -2118,17 +2118,9 @@ public:
         config.output_shape.assign(std::begin(output_shape), std::end(output_shape));
         config.groups = groups;
 
-        config.fusion_mode = cudaFusionMode;
-        config.activation_type = cudaActType;
-        config.relu_negative_slope = cuda_relu_slope;
-        config.crelu_floor = cuda_crelu_floor;
-        config.crelu_ceil = cuda_crelu_ceil;
-        config.power_exp = cuda_power_exp;
-        config.power_scale = cuda_power_scale;
-        config.power_shift = cuda_power_shift;
-
-        Mat filtersMat = fusedWeights ? weightsMat : blobs[0];
-        Mat biasMat = (hasBias() || fusedBias) ? Mat(output_feature_maps, 1, CV_32F, biasvec.data()) : Mat();
+        CV_Assert(blobs.size() >= 1);
+        Mat filtersMat = fusedWeights ? weightsMat.t() : blobs[0];
+        Mat biasMat = (hasBias() || fusedBias) ? biasesMat : Mat();
         if (countNonZero(biasMat) == 0)
             biasMat = Mat();
 
