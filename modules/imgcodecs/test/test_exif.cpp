@@ -377,13 +377,13 @@ TEST_P(ReadExif_Sanity, Check)
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 {
 #ifdef HAVE_JPEG
-    {"readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120},
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120),
 #endif
 #ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
-    {"readwrite/testExifOrientation_5.png", 112, "ExifTool", 102},
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102),
 #endif
 #ifdef HAVE_AVIF
-    {"readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120},
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120),
 #endif
 };
 
