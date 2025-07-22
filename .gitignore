@@ -26,19 +26,8 @@ node_modules
 CMakeSettings.json
 xcuserdata/
 
-# Compiled executables and test files
-test/detect_backend
-test/test_libcamera
-test/test_libcamera2
-test/test_libcamera_plugin
-test/*.jpg
-test/*.png
-test/frame/
-test/test_results/
-test/libcamera_test_results/
-test/build_plugin/
+/test/
 
-# General compiled files
 *.exe
 *.out
 *.app
