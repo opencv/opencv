@@ -16,16 +16,33 @@ public:
       tokenizer_name(std::move(model_name)) {}
 
     CV_EXPORTS static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
-    static Tokenizer train_from_corpus(const std::vector<std::string>& corpus,
+    CV_EXPORTS static Tokenizer train_bpe_from_corpus(const std::string& corpus,
                                    int vocab_sz,
-                                   const std::string& pattern,
-                                   int min_freq = 2) {
-        auto enc = std::make_shared<Encoding>(corpus, vocab_sz, pattern, min_freq);
+                                   const std::string& pattern) {
+        auto enc = std::make_shared<Encoding>(corpus, vocab_sz, pattern);
         return Tokenizer(std::move(enc));
     }
-    std::vector<Rank> encode(const std::string& text) { return enc_->encode(text); }
+    CV_EXPORTS static Tokenizer train_bpe_from_corpus(const std::vector<std::string>& corpus,
+                                   int vocab_sz,
+                                   const std::string& pattern,
+                                   int min_freq=2, 
+                                   int max_token_length=std::numeric_limits<int>::max(),
+                                    bool verbose=false){
+        auto enc = std::make_shared<Encoding>(corpus, vocab_sz, pattern, min_freq, max_token_length, verbose);
+        return Tokenizer(std::move(enc));
+    }
+    // Encoding
+    std::vector<Rank> encode(const std::string& text,
+                                     const std::unordered_set<std::string>& allowedSpecial={},
+                                     const std::unordered_set<std::string>& disallowedSpecial={}) const {
+        return enc_->encode(text, allowedSpecial, disallowedSpecial);
+    };
     std::vector<Rank> encodeOrdinary(const std::string& text) const {return enc_->encodeOrdinary(text); }
+    // Decoding
     std::string decode(const std::vector<Rank>& tokens) { return enc_->decode(tokens); };
+    std::vector<std::uint8_t> decodeBytes(const std::vector<Rank>& tokens) const { return enc_->decodeBytes(tokens); } 
+
+    // Accessors
     Encoding& encoding() {return *enc_;}
 
 private:
@@ -35,3 +52,4 @@ private:
 };
 
 }}}
+

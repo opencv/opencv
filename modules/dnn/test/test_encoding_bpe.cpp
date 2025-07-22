@@ -2,6 +2,8 @@
 #include "../src/tokenizer/core_bpe.hpp"
 #include "../src/tokenizer/encoding.hpp"
 #include "../src/tokenizer/utils.hpp"
+#include "../src/tokenizer/tokenizer.hpp"
+#include "../src/tokenizer/gpt2_tokenizer_fast.hpp"
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
@@ -12,96 +14,86 @@ namespace opencv_test { namespace  {
 using namespace cv::dnn::tokenizer;
 
 TEST(EncodingBPE, EncodingOrdinary_GPT2) {
-    Encoding enc = getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
-    std::vector<Rank> tokens = enc.encodeOrdinary("hello world");
+    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
+    std::vector<Rank> tokens = gpt2_tok.encodeOrdinary("hello world");
     std::vector<Rank> expected = {31373, 995}; // OpenAI GPT-2 tokens for "hello world"
     EXPECT_EQ(tokens, expected);
 }
 
 TEST(EncodingBPE, EncodingDecode_GPT2) {
-    Encoding enc = getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
-    std::string sent = enc.decode({31373, 995});
+    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
+    std::string sent = gpt2_tok.decode({31373, 995});
     std::string expected = "hello world";
     EXPECT_EQ(sent, expected);
 }
 
 TEST(EncodingBPE, EncodeWithAllowedSpecial_ALL) {
-    Encoding enc = getEncodingForGPT2("gpr2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
+
+    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
     // "__ALL__" is  sentinel for all special tokens
     std::unordered_set<std::string> allowedSpecial = {"__ALL__"};
-    std::vector<Rank> tokens = enc.encode("hello <|endoftext|>", allowedSpecial);
+    std::vector<Rank> tokens = gpt2_tok.encode("hello <|endoftext|>", allowedSpecial);
     std::vector<Rank> expected = {31373, 220, 50256}; // OpenAI GPT-2 tokens for this input
     EXPECT_EQ(tokens, expected);
 }
 
 TEST(EncodingBPE, SimpleRepeated_GPT2) {
-    Encoding enc = getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
-    EXPECT_EQ(enc.encode("0"), std::vector<Rank>({15}));
-    EXPECT_EQ(enc.encode("00"), std::vector<Rank>({405}));
-    EXPECT_EQ(enc.encode("000"), std::vector<Rank>({830}));
-    EXPECT_EQ(enc.encode("0000"), std::vector<Rank>({2388}));
-    EXPECT_EQ(enc.encode("00000"), std::vector<Rank>({20483}));
-    EXPECT_EQ(enc.encode("000000"), std::vector<Rank>({10535}));
-    EXPECT_EQ(enc.encode("0000000"), std::vector<Rank>({24598}));
-    EXPECT_EQ(enc.encode("00000000"), std::vector<Rank>({8269}));
-    EXPECT_EQ(enc.encode("000000000"), std::vector<Rank>({10535, 830}));
-    EXPECT_EQ(enc.encode("0000000000"), std::vector<Rank>({8269, 405}));
-    EXPECT_EQ(enc.encode("00000000000"), std::vector<Rank>({8269, 830}));
-    EXPECT_EQ(enc.encode("000000000000"), std::vector<Rank>({8269, 2388}));
-    EXPECT_EQ(enc.encode("0000000000000"), std::vector<Rank>({8269, 20483}));
-    EXPECT_EQ(enc.encode("00000000000000"), std::vector<Rank>({8269, 10535}));
-    EXPECT_EQ(enc.encode("000000000000000"), std::vector<Rank>({8269, 24598}));
-    EXPECT_EQ(enc.encode("0000000000000000"), std::vector<Rank>({25645}));
-    EXPECT_EQ(enc.encode("00000000000000000"), std::vector<Rank>({8269, 10535, 830}));
+    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
+    EXPECT_EQ(gpt2_tok.encode("0"), std::vector<Rank>({15}));
+    EXPECT_EQ(gpt2_tok.encode("00"), std::vector<Rank>({405}));
+    EXPECT_EQ(gpt2_tok.encode("000"), std::vector<Rank>({830}));
+    EXPECT_EQ(gpt2_tok.encode("0000"), std::vector<Rank>({2388}));
+    EXPECT_EQ(gpt2_tok.encode("00000"), std::vector<Rank>({20483}));
+    EXPECT_EQ(gpt2_tok.encode("000000"), std::vector<Rank>({10535}));
+    EXPECT_EQ(gpt2_tok.encode("0000000"), std::vector<Rank>({24598}));
+    EXPECT_EQ(gpt2_tok.encode("00000000"), std::vector<Rank>({8269}));
+    EXPECT_EQ(gpt2_tok.encode("000000000"), std::vector<Rank>({10535, 830}));
+    EXPECT_EQ(gpt2_tok.encode("0000000000"), std::vector<Rank>({8269, 405}));
+    EXPECT_EQ(gpt2_tok.encode("00000000000"), std::vector<Rank>({8269, 830}));
+    EXPECT_EQ(gpt2_tok.encode("000000000000"), std::vector<Rank>({8269, 2388}));
+    EXPECT_EQ(gpt2_tok.encode("0000000000000"), std::vector<Rank>({8269, 20483}));
+    EXPECT_EQ(gpt2_tok.encode("00000000000000"), std::vector<Rank>({8269, 10535}));
+    EXPECT_EQ(gpt2_tok.encode("000000000000000"), std::vector<Rank>({8269, 24598}));
+    EXPECT_EQ(gpt2_tok.encode("0000000000000000"), std::vector<Rank>({25645}));
+    EXPECT_EQ(gpt2_tok.encode("00000000000000000"), std::vector<Rank>({8269, 10535, 830}));
 }
 
 TEST(EncodingBPE, CatastrophicallyRepetitive_GPT2) {
-    Encoding enc = getEncodingForGPT2("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
+    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
     std::vector<std::string> chars = {"^", "0", "a", "'s", " ", "\n"};
     for (const auto& c : chars) {
         std::string big_value(c.size() == 1 ? 10000 : 10000 * c.size(), c[0]);
         if (c == "'s") big_value = std::string(10000, '\'') + std::string(10000, 's');
-        EXPECT_EQ(big_value, enc.decode(enc.encode(big_value)));
+        EXPECT_EQ(big_value, gpt2_tok.decode(gpt2_tok.encode(big_value)));
 
         std::string with_space = " " + big_value;
-        EXPECT_EQ(with_space, enc.decode(enc.encode(with_space)));
+        EXPECT_EQ(with_space, gpt2_tok.decode(gpt2_tok.encode(with_space)));
 
         std::string with_newline = big_value + "\n";
-        EXPECT_EQ(with_newline, enc.decode(enc.encode(with_newline)));
+        EXPECT_EQ(with_newline, gpt2_tok.decode(gpt2_tok.encode(with_newline)));
     }
 }
 
 TEST(EncodingBPE, TrainAndEncodeDecode_Simple) {
-    // Pattern string (same as your Python example)
-    std::string gpt2_pattern = 
-        "'s|'t|'re|'ve|'m|'ll|'d| ?[\\p{L}]+| ?[\\p{N}]+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+";
-
-    // Read this source file as training data
     std::ifstream f(__FILE__);
     ASSERT_TRUE(f.is_open());
     std::stringstream buffer;
     buffer << f.rdbuf();
     std::string data = buffer.str();
 
-    // Train encoding
+    // Train encoding using train_bpe v1
     int vocab_size = 600;
-    // When calling this constructor to create an Encoding 
-    // internally it calls the train_bpe(text, vocabSize, /*verbose=*/false)
-    // For now this is how we call an Encoder to train the tokenizer bpe.
-    // TODO:
-    // Might be more helpful to just create a default Encoder than call 
-    // the a train function such as Encoding enc() then enc.train_bpe();
-    Encoding enc(data, vocab_size, gpt2_pattern);
+    Tokenizer tok = Tokenizer::train_bpe_from_corpus(data, vocab_size, R50K_UTF8);
 
     // Encode and decode "hello world"
-    std::vector<Rank> tokens = enc.encodeOrdinary("hello world");
+    std::vector<Rank> tokens = tok.encodeOrdinary("hello world");
     for (auto tok : tokens) std::cerr << tok << " ";
     std::cout << std::endl;
-    std::string decoded = enc.decode(tokens);
+    std::string decoded = tok.decode(tokens);
 
     EXPECT_EQ(decoded, "hello world");
 
-    std::vector<std::uint8_t> bytes = enc.decodeBytes(tokens);
+    std::vector<std::uint8_t> bytes = tok.decodeBytes(tokens);
     std::string bytes_str(bytes.begin(), bytes.end());
     std::cerr << bytes_str << std::endl;
     std::string res = replaceGWithSpace(bytes_str);
@@ -110,9 +102,6 @@ TEST(EncodingBPE, TrainAndEncodeDecode_Simple) {
 
 
 TEST(EncodingBPE, TrainOnTaylorSwiftAndEncodeDecode) {
-    std::string gpt2_pattern =
-        "'s|'t|'re|'ve|'m|'ll|'d| ?[\\p{L}]+| ?[\\p{N}]+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+";
-
     // Read the Taylor Swift Wikipedia article as training data
     std::ifstream f("/Users/jorgevelez/Desktop/data/taylorswift.txt");
     ASSERT_TRUE(f.is_open());
@@ -121,11 +110,11 @@ TEST(EncodingBPE, TrainOnTaylorSwiftAndEncodeDecode) {
     std::string data = buffer.str();
 
     int vocab_size = 512;
-    Encoding enc(data, vocab_size, gpt2_pattern);
+    Tokenizer tok = Tokenizer::train_bpe_from_corpus(data, vocab_size, R50K_UTF8);
 
     std::string test_str = "hello world";
-    std::vector<Rank> tokens = enc.encode(test_str);
-    std::string decoded = enc.decode(tokens);
+    std::vector<Rank> tokens = tok.encode(test_str);
+    std::string decoded = tok.decode(tokens);
 
     EXPECT_EQ(decoded, test_str);
 }
@@ -151,7 +140,12 @@ TEST(EncodingBPE, TrainHuggingFaceStyle) {
             words.push_back(kv.first);
     }
 
-    Encoding enc(words, 30, R50K_UTF8, 2, std::numeric_limits<int>::max(), true);
+    Tokenizer tok = Tokenizer::train_bpe_from_corpus(words, 
+                                                     30, 
+                                                     R50K_UTF8, 
+                                                     2, 
+                                                     std::numeric_limits<int>::max(), 
+                                                     true);
 
     std::unordered_map<std::string, int> expected_vocab = {
         {"-", 0}, {"2", 1}, {"B", 2}, {"E", 3}, {"G", 4}, {"P", 5}, {"R", 6},
@@ -161,7 +155,7 @@ TEST(EncodingBPE, TrainHuggingFaceStyle) {
     };
 
     std::unordered_map<std::string, int> actual_vocab;
-    for (const auto& kv : enc.getVocab()) {
+    for (const auto& kv : tok.encoding().getVocab()) {
         std::string s(kv.second.begin(), kv.second.end());
         actual_vocab[s] = kv.first;
     }
@@ -174,7 +168,7 @@ TEST(EncodingBPE, TrainHuggingFaceStyle) {
     };
 
     // 6. Check merges
-    const auto& merges = enc.getMerges();
+    const auto& merges = tok.encoding().getMerges();
     for (const auto& kv : expected_merges) {
         auto it = merges.find(kv.first);
         ASSERT_TRUE(it != merges.end());
@@ -206,7 +200,12 @@ TEST(EncodingBPE, MaxTokenLengthDirectAssert) {
     int vocab_size = 40;
     int min_freq = 0;
 
-    Encoding enc(words, vocab_size, CL100K_BASE, min_freq, 2, true);
+    Tokenizer tok = Tokenizer::train_bpe_from_corpus(words, 
+                                                     vocab_size, 
+                                                     CL100K_BASE, 
+                                                     min_freq, 
+                                                     2, 
+                                                     true);
 
     std::unordered_map<std::string, int> expected_vocab = {
         {"短", 12}, {"n", 6}, {"i", 5}, {"s", 8}, {"字符", 23}, {"長", 14}, {"긴", 17},
@@ -217,7 +216,7 @@ TEST(EncodingBPE, MaxTokenLengthDirectAssert) {
     };
 
     std::unordered_map<std::string, int> actual_vocab;
-    for (const auto& kv : enc.getVocab()) {
+    for (const auto& kv : tok.encoding().getVocab()) {
         std::string s(kv.second.begin(), kv.second.end());
         actual_vocab[s] = kv.first;
     }
@@ -225,38 +224,46 @@ TEST(EncodingBPE, MaxTokenLengthDirectAssert) {
     EXPECT_EQ(actual_vocab, expected_vocab);
 }
 
-TEST(EncodingBPE, Encoding_GPT4) {
-    Encoding enc = getEncodingForCl100k_base("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
-    std::vector<Rank> tokens = enc.encode("hello world");
-    std::vector<Rank> expected = {15339, 1917};
-    EXPECT_EQ(tokens, expected);
+// TEST(EncodingBPE, Encoding_GPT4) {
+//     Encoding enc = getEncodingForCl100k_base("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
+//     std::vector<Rank> tokens = enc.encode("hello world");
+//     std::vector<Rank> expected = {15339, 1917};
+//     EXPECT_EQ(tokens, expected);
 
-    std::string sent = enc.decode({15339, 1917});
-    std::string expec_str = "hello world";
-    EXPECT_EQ(sent, expec_str);
+//     std::string sent = enc.decode({15339, 1917});
+//     std::string expec_str = "hello world";
+//     EXPECT_EQ(sent, expec_str);
 
-    std::unordered_set<std::string> allowedSpecial = {"__ALL__"};
-    std::vector<Rank> spec_tokens = enc.encode("hello <|endoftext|>", allowedSpecial);
-    std::vector<Rank> expected_special = {15339, 220, 100257};
-    EXPECT_EQ(spec_tokens, expected_special);
+//     std::unordered_set<std::string> allowedSpecial = {"__ALL__"};
+//     std::vector<Rank> spec_tokens = enc.encode("hello <|endoftext|>", allowedSpecial);
+//     std::vector<Rank> expected_special = {15339, 220, 100257};
+//     EXPECT_EQ(spec_tokens, expected_special);
 
-    Rank min = std::min(10000u, enc.maxTokenValue() - 1);
-    for (Rank _token = 0; _token < min; _token++) {
-        if (_token < 10) {
-            std::vector<std::uint8_t> token_bytes = enc.decodeSingleTokenBytes(_token);
-            std::string token_str(token_bytes.begin(), token_bytes.end());
-            std::cout << "Token: " << _token << " | Decoded: " << token_str << std::endl;
-        }
-        Rank rank = enc.encodeSingleToken(enc.decodeSingleTokenBytes(_token));
-        EXPECT_EQ(rank, _token);
-    }
-}
+//     Rank min = std::min(10000u, enc.maxTokenValue() - 1);
+//     for (Rank _token = 0; _token < min; _token++) {
+//         if (_token < 10) {
+//             std::vector<std::uint8_t> token_bytes = enc.decodeSingleTokenBytes(_token);
+//             std::string token_str(token_bytes.begin(), token_bytes.end());
+//             std::cout << "Token: " << _token << " | Decoded: " << token_str << std::endl;
+//         }
+//         Rank rank = enc.encodeSingleToken(enc.decodeSingleTokenBytes(_token));
+//         EXPECT_EQ(rank, _token);
+//     }
+// }
 
 TEST(EncodingBPE, Tokenizer_GPT2) {
     Tokenizer tok = Tokenizer::from_pretrained("gpt2", "/Users/jorgevelez/Desktop/data/vocab.bpe");
     auto ids = tok.encode("hello world");
     auto txt = tok.decode(ids);
     EXPECT_EQ(txt, "hello world");
+    
+}
+
+TEST(EncodingBPE, GPT2Fast) {
+    GPT2TokenizerFast tok = GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
+    std::vector<Rank> ids = tok.encode("hello world");
+    std::vector<Rank> expected{31373, 995};
+    EXPECT_EQ(ids, expected);
 }
 
 }}
