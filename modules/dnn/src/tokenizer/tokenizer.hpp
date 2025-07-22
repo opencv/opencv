@@ -8,7 +8,7 @@
 
 namespace cv { namespace dnn { namespace tokenizer {
 
-class CV_EXPORTS Tokenizer {
+class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
     explicit Tokenizer(std::shared_ptr<Encoding> e,
                    std::string model_name = "")
@@ -38,9 +38,11 @@ public:
         return enc_->encode(text, allowedSpecial, disallowedSpecial);
     };
     std::vector<Rank> encodeOrdinary(const std::string& text) const {return enc_->encodeOrdinary(text); }
+    Rank encodeSingleToken(const std::vector<std::uint8_t>& bytes) const { return enc_->encodeSingleToken(bytes); }
     // Decoding
     std::string decode(const std::vector<Rank>& tokens) { return enc_->decode(tokens); };
     std::vector<std::uint8_t> decodeBytes(const std::vector<Rank>& tokens) const { return enc_->decodeBytes(tokens); } 
+    std::vector<std::uint8_t> decodeSingleTokenBytes(Rank token) const { return enc_->decodeSingleTokenBytes(token); }
 
     // Accessors
     Encoding& encoding() {return *enc_;}
