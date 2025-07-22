@@ -202,21 +202,6 @@ TEST_P(Exif, exif_orientation)
     Mat m_img = imread(filename, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH);
     ASSERT_FALSE(m_img.empty());
 
-#ifdef HAVE_WEBP
-    std::vector<int> metadata_types;
-    std::vector<std::vector<uchar> > metadata;
-    Mat img = imreadWithMetadata(filename, metadata_types, metadata, IMREAD_UNCHANGED);
-
-    std::vector<uchar> buffer;
-    imencodeWithMetadata(".webp", img, metadata_types, metadata, buffer);
-
-    // Decode image and metadata back from buffer
-    img = imdecodeWithMetadata(buffer, metadata_types, metadata,
-        cv::IMREAD_COLOR | cv::IMREAD_ANYCOLOR | cv::IMREAD_ANYDEPTH);
-
-    EXPECT_EQ(cv::norm(img, m_img, NORM_INF), 0.);
-#endif // HAVE_WEBP
-
     if (m_img.channels() == 3)
     {
         Vec3b vec;
@@ -294,6 +279,16 @@ const std::vector<std::string> exif_files
     "readwrite/testExifOrientation_6.avif",
     "readwrite/testExifOrientation_7.avif",
     "readwrite/testExifOrientation_8.avif",
+#endif
+#ifdef HAVE_WEBP
+    "readwrite/testExifOrientation_1.webp",
+    "readwrite/testExifOrientation_2.webp",
+    "readwrite/testExifOrientation_3.webp",
+    "readwrite/testExifOrientation_4.webp",
+    "readwrite/testExifOrientation_5.webp",
+    "readwrite/testExifOrientation_6.webp",
+    "readwrite/testExifOrientation_7.webp",
+    "readwrite/testExifOrientation_8.webp",
 #endif
 };
 
