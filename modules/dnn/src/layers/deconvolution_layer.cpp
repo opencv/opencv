@@ -107,56 +107,6 @@ public:
         fusedBias = false;
     }
 
-    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
-    {
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        CV_Assert((inputs.size() > outputs.size() && blobs.empty()) ||
-                  (!inputs.empty() && (blobs.size() == 1 || blobs.size() == 2)));
-        MatShape weightShape = blobs.empty() ? inputs[1].shape() : blobs[0].shape();
-        numOutput = weightShape[0];
-
-        CV_Assert(inputs[0].dims == outputs[0].dims);
-        if (weightShape.dims == 3)
-        {
-            kernel_size.resize(1, kernel_size[0]);
-            strides.resize(1, strides[0]);
-            dilations.resize(1, dilations[0]);
-            pads_begin.resize(1, pads_begin[0]);
-            pads_end.resize(1, pads_end[0]);
-        }
-        CV_Assert(weightShape.dims == kernel_size.size() + 2);
-        for (int i = 0; i < kernel_size.size(); i++) {
-            CV_Assert(weightShape[i + 2] == kernel_size[i]);
-        }
-
-        const Mat &input = inputs[0];
-        CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || input.dims == 4 || input.dims == 5) && (input.type() == CV_32F || input.type() == CV_16F));
-        for (size_t i = 0; i < outputs.size(); i++)
-        {
-            CV_Assert(inputs[i].type() == input.type());
-            CV_Assert(((input.dims == 3 && kernel_size.size() == 1) || inputs[i].dims == 4 || inputs[i].dims == 5) && inputs[i].size[1] == input.size[1]);
-            for (int j = 0; j < inputs[i].dims; j++) {
-                CV_Assert(inputs[i].size[j] == input.size[j]);
-            }
-        }
-
-        std::vector<int> inpShape;
-        std::vector<int> outShape;
-        for (int i = 2; i < inputs[0].dims; i++) {
-            inpShape.push_back(inputs[0].size[i]);
-            outShape.push_back(outputs[0].size[i]);
-        }
-        getConvPoolPaddings(inpShape, kernel_size, strides, padMode, pads_begin, pads_end);
-        if (pads_begin.size() == 2) {
-            pad = Size(pads_begin[1], pads_begin[0]);
-        }
-        fusedWeights = false;
-        fusedBias = false;
-    }
-
     bool hasBias() const
     {
         return blobs.size() >= 2;
@@ -320,47 +270,13 @@ public:
         internals.assign(requiredInternals, CV_32F);
     }
 
-    void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
-    {
-        BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
-
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
-        CV_Assert(inputs.size() > 1 || !blobs.empty());
-
-        MatShape weightShape = blobs.empty() ? inputs[1].shape() : blobs[0].shape();
-        numOutput = weightShape[1]*groups;
-
-        std::vector<int> inpShape;
-        std::vector<int> outShape;
-        for (int i = 2; i < inputs[0].dims; i++) {
-            inpShape.push_back(inputs[0].size[i]);
-            outShape.push_back(outputs[0].size[i]);
-        }
-        getConvPoolPaddings(outShape, kernel_size, strides, padMode, pads_begin, pads_end);
-        if (pads_begin.size() == 2) {
-            for (int i = 0; i < pads_begin.size(); i++) {
-                if (pads_begin[i] != pads_end[i])
-                    CV_Error(Error::StsNotImplemented, "Unsupported asymmetric padding in deconvolution layer");
-            }
-            pad = Size(pads_begin[1], pads_begin[0]);
-        }
-
-        weightsMultipliers.assign(numOutput, 1.0);
-
-        if (weightsMat.empty() && !blobs.empty()) {
-            transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
-        }
-
-        if (biasesMat.empty() && blobs.size() >= 2) {
-            biasesMat = blobs[1].reshape(1, numOutput);
-        }
-    }
-
     void fuseWeights(const Mat& w_, const Mat& b_) CV_OVERRIDE
     {
+        weightsMultipliers.assign(numOutput, 1.0);
+
+        if (weightsMat.empty() && !blobs.empty())
+            transpose(blobs[0].reshape(1, blobs[0].size[0]), weightsMat);
+
         Mat w = w_.total() == 1 ? Mat(1, numOutput, CV_32F, Scalar(w_.at<float>(0))) : w_;
         Mat b = b_.total() == 1 ? Mat(1, numOutput, CV_32F, Scalar(b_.at<float>(0))) : b_;
 
@@ -825,6 +741,19 @@ public:
         inputs_arr.getMatVector(inputs);
         internals_arr.getMatVector(internals);
 
+        MatShape weightShape = blobs.empty() ? inputs[1].shape() : blobs[0].shape();
+        numOutput = weightShape[1]*groups;
+        if (weightShape.dims == 3)
+        {
+            kernel_size.resize(1, kernel_size[0]);
+            strides.resize(1, strides[0]);
+            dilations.resize(1, dilations[0]);
+            pads_begin.resize(1, pads_begin[0]);
+            pads_end.resize(1, pads_end[0]);
+        }
+
+        weightsMultipliers.assign(numOutput, 1.0);
+
         int outCn = numOutput;
         int inpCn = inputs[0].size[1];
         bool is1x1flag = is1x1();
@@ -833,6 +762,7 @@ public:
         CV_Assert(inputs[0].size[0] == outputs[0].size[0]);
         CV_Assert(outCn == outputs[0].size[1]);*/
 
+        CV_Assert(inputs.size() > 1 || !blobs.empty());
         if (weightsMat.empty() || inputs.size() >= 2) {
             Mat inpWeights = !blobs.empty() ? blobs[0] : inputs[1];
             transpose(inpWeights.reshape(1, inpCn), weightsMat);
@@ -891,6 +821,13 @@ public:
                     inpSpatialShape[i] = inp.size[2 + i];
                     outSpatialShape[i] = out.size[2 + i];
                 }
+            }
+
+            getConvPoolPaddings(outSpatialShape, kernel_size, strides, padMode, pads_begin, pads_end);
+
+            if (pads_begin.size() == 2)
+            {
+                pad = Size(pads_begin[1], pads_begin[0]);
             }
 
             Mat convBlob = inputs[ii].reshape(1, numImg*inpCn);
