@@ -218,8 +218,9 @@ public:
                 std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to have backend implementation" << endl;
             }
         }
-        if (hasFallbacks && raiseError)
+        if (hasFallbacks && raiseError){
             CV_Error(Error::StsNotImplemented, "Implementation fallbacks are not expected in this test");
+        }
     }
 
     void expectNoFallbacksFromIE(Net& net)
