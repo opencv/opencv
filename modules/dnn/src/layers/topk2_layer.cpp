@@ -94,6 +94,7 @@ public:
                          std::vector<MatShape>& internals) const CV_OVERRIDE
     {
         CV_Assert(!inputs.empty());
+        CV_Assert(K > 0);
         const MatShape& inShape = inputs[0];
         int inputDims = static_cast<int>(inShape.size());
         int a = normalize_axis(axis, inputDims);
@@ -120,7 +121,7 @@ public:
 
 private:
     template<typename T, typename WT = T>
-    void FindTopK(const Mat &input, Mat &output_vals, Mat &output_idxs, int normalized_axis)
+    void FindTopK(const Mat &input, Mat &output_vals, Mat &output_idxs, int normalized_axis, int kVal)
     {
         const auto inShape = shape(input);
         size_t outer = std::accumulate(inShape.begin(), inShape.begin() + normalized_axis, 1, std::multiplies<int>());
@@ -131,26 +132,35 @@ private:
             const T* inPtr = input.ptr<T>();
             T* valPtr = output_vals.ptr<T>();
             int64_t* idxPtr = output_idxs.ptr<int64_t>();
-            AutoBuffer<size_t> indices(dimAxis);
-            size_t* idxBuf = indices.data();
+
+            std::vector<std::pair<uint32_t, T>> sortbuf(dimAxis);
             for (size_t b = r.start; b < r.end; ++b) {
                 for (size_t j = 0; j < inner; ++j) {
                     size_t offset = b * dimAxis * inner + j;
+                    for (uint32_t u = 0; u < (uint32_t)dimAxis; ++u) {
+                        sortbuf[u].first  = u;
+                        sortbuf[u].second = inPtr[offset + u * inner];
+                    }
                     if (largest){
                         ComparatorGreater<T,WT> cmp(inPtr + offset, inner);
-                        std::iota(idxBuf, idxBuf + dimAxis, 0);
-                        std::partial_sort(idxBuf, idxBuf + K, idxBuf + dimAxis, cmp);
+                        std::partial_sort(sortbuf.begin(), sortbuf.begin() + kVal, sortbuf.end(),
+                            [&](auto const &a, auto const &b) {
+                                return cmp(a.first, b.first);
+                            }
+                        );
                     }
                     else{
                         ComparatorLess<T,WT>    cmp(inPtr + offset, inner);
-                        std::iota(idxBuf, idxBuf + dimAxis, 0);
-                        std::partial_sort(idxBuf, idxBuf + K, idxBuf + dimAxis, cmp);
-                    }
+                        std::partial_sort(sortbuf.begin(), sortbuf.begin() + kVal, sortbuf.end(),
+                            [&](auto const &a, auto const &b) {
+                                return cmp(a.first, b.first);
+                            }
+                        );                    }
 
-                    for (int i = 0; i < K; ++i) {
-                        size_t src = idxBuf[i];
-                        valPtr[b * K * inner + i * inner + j] = inPtr[offset + src * inner];
-                        idxPtr[b * K * inner + i * inner + j] = static_cast<int64_t>(src);
+                    for (int i = 0; i < kVal; ++i) {
+                        auto &p = sortbuf[i];
+                        valPtr[b * kVal * inner + i * inner + j] = p.second;
+                        idxPtr[b * kVal * inner + i * inner + j] = p.first;
                     }
                 }
             }
@@ -169,56 +179,57 @@ public:
         outputs_arr.getMatVector(outputs);
 
         const auto &input = inputs.front();
-        auto &output_value = outputs.front();
-        auto &output_index = outputs.back();
+        Mat output_value, output_index;
 
         // Normalize axis to handle negative values
         int normalized_axis = normalize_axis(axis, input.dims);
 
+        int kVal = K;
         if (dynamicK) {
             CV_Assert(inputs.size() == 2);
-            int64_t kVal = inputs[1].at<int64_t>(0);
-            CV_CheckGT(kVal, 0, "TopK2: dynamic K must be > 0");
-            CV_CheckLT(kVal, input.size[normalized_axis] + 1, "TopK2: dynamic K is out of range");
-            K = static_cast<int>(kVal);
-
-            MatShape outShape = shape(input);
-            outShape[normalized_axis] = K;
-
-            auto kind = outputs_arr.kind();
-            if (kind == _InputArray::STD_VECTOR_MAT) {
-                std::vector<Mat>& outs = outputs_arr.getMatVecRef();
-                CV_Assert(outs.size() == 2);
-                outs[0].fit(outShape, input.type());
-                outs[1].fit(outShape, CV_64S);
-                output_value = outs[0];
-                output_index = outs[1];
-            } else if (kind == _InputArray::STD_VECTOR_UMAT) {
-                std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
-                CV_Assert(uouts.size() == 2);
-                uouts[0].fit(outShape, input.type());
-                uouts[1].fit(outShape, CV_64S);
-                output_value = uouts[0].getMat(ACCESS_WRITE);
-                output_index = uouts[1].getMat(ACCESS_WRITE);
-            } else {
-                // Fallback – recreate directly on provided Mat refs.
-                output_value.create(outShape, input.type());
-                output_index.create(outShape, CV_64S);
-            }
+            CV_Assert(inputs[1].type() == CV_64S);
+            CV_Assert(inputs[1].total() == 1);
+            int64_t kTemp = inputs[1].at<int64_t>(0);
+            CV_CheckGT(kTemp, 0, "TopK2: dynamic K must be > 0");
+            CV_CheckLT(kTemp, input.size[normalized_axis] + 1, "TopK2: dynamic K is out of range");
+            kVal = static_cast<int>(kTemp);
         }
+
+        MatShape outShape = shape(input);
+        outShape[normalized_axis] = kVal;
+
+        auto kind = outputs_arr.kind();
+        if (kind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outs = outputs_arr.getMatVecRef();
+            CV_Assert(outs.size() == 2);
+            outs[0].fit(outShape, input.type());
+            outs[1].fit(outShape, CV_64S);
+            output_value = outs[0];
+            output_index = outs[1];
+        } else if (kind == _InputArray::STD_VECTOR_UMAT) {
+            std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+            CV_Assert(uouts.size() == 2);
+            uouts[0].fit(outShape, input.type());
+            uouts[1].fit(outShape, CV_64S);
+            output_value = uouts[0].getMat(ACCESS_WRITE);
+            output_index = uouts[1].getMat(ACCESS_WRITE);
+        } else {
+            CV_Error(cv::Error::StsBadArg, cv::format("Unsupported output array kind: %d", kind));
+        }
+
         switch (input.depth()) {
-            case CV_8U:   FindTopK<uint8_t          >(input, output_value, output_index, normalized_axis); break;
-            case CV_8S:   FindTopK<int8_t           >(input, output_value, output_index, normalized_axis); break;
-            case CV_16U:  FindTopK<uint16_t         >(input, output_value, output_index, normalized_axis); break;
-            case CV_16S:  FindTopK<int16_t          >(input, output_value, output_index, normalized_axis); break;
-            case CV_16F:  FindTopK<hfloat,   float   >(input, output_value, output_index, normalized_axis); break;
-            case CV_16BF: FindTopK<bfloat, float   >(input, output_value, output_index, normalized_axis); break;
-            case CV_32U:  FindTopK<uint32_t         >(input, output_value, output_index, normalized_axis); break;
-            case CV_32S:  FindTopK<int32_t          >(input, output_value, output_index, normalized_axis); break;
-            case CV_32F:  FindTopK<float            >(input, output_value, output_index, normalized_axis); break;
-            case CV_64U:  FindTopK<uint64_t         >(input, output_value, output_index, normalized_axis); break;
-            case CV_64S:  FindTopK<int64_t          >(input, output_value, output_index, normalized_axis); break;
-            case CV_64F:  FindTopK<double           >(input, output_value, output_index, normalized_axis); break;
+            case CV_8U:   FindTopK<uint8_t          >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_8S:   FindTopK<int8_t           >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_16U:  FindTopK<uint16_t         >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_16S:  FindTopK<int16_t          >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_16F:  FindTopK<hfloat, float    >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_16BF: FindTopK<bfloat, float    >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_32U:  FindTopK<uint32_t         >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_32S:  FindTopK<int32_t          >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_32F:  FindTopK<float            >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_64U:  FindTopK<uint64_t         >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_64S:  FindTopK<int64_t          >(input, output_value, output_index, normalized_axis, kVal); break;
+            case CV_64F:  FindTopK<double           >(input, output_value, output_index, normalized_axis, kVal); break;
             default: CV_Error(Error::BadDepth, "Unsupported input data type");
         }
     }

@@ -1773,7 +1773,8 @@ void ONNXImporter2::parseTopK2(LayerParams& layerParams, const opencv_onnx::Node
     if (node_proto.input_size() >= 2 && net.isConstArg(node_inputs[1]))
     {
         Mat kMat = net.argTensor(node_inputs[1]);
-        int k = getScalarFromMat<int>(kMat);
+        CV_Assert(kMat.type() == CV_32S || kMat.type() == CV_64S);
+        int k = kMat.type() == CV_32S ? getScalarFromMat<int>(kMat):(int)getScalarFromMat<int64_t>(kMat);
         layerParams.set("k", k);
         addLayer(layerParams, node_proto, 1);
     }
