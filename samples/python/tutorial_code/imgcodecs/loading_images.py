@@ -39,10 +39,12 @@ def main(filename):
     ## [read_animation]
 
     ## [show_animation]
+    print(" 'press Esc' key to next step")
     escape = 0
     while escape < 1:
         for i, frame in enumerate(animation.frames):
             cv.imshow("Animation", frame)
+            cv.moveWindow("Animation", 200, 30)
             key_code = cv.waitKey(animation.durations[i])
             if key_code == 27:  # Exit if 'Esc' key is pressed
                 escape = 1
@@ -52,14 +54,14 @@ def main(filename):
 
     ## [init_imagecollection]
     collection1 = cv.ImageCollection(filename, cv.IMREAD_UNCHANGED)
-    collection2 = cv.ImageCollection(filename, cv.IMREAD_REDUCED_GRAYSCALE_2)
-    collection3 = cv.ImageCollection(filename, cv.IMREAD_REDUCED_COLOR_2)
+    collection2 = cv.ImageCollection(filename, cv.IMREAD_REDUCED_GRAYSCALE_2 | cv.IMREAD_COLOR_RGB)
+    collection3 = cv.ImageCollection(filename, cv.IMREAD_REDUCED_GRAYSCALE_2)
     collection4 = cv.ImageCollection(filename, cv.IMREAD_COLOR_RGB)
     ## [init_imagecollection]
 
     ## [imreadmulti]
-    success1, framesBGR = cv.imreadmulti(filename, flags=cv.IMREAD_COLOR_BGR)
-    success2, framesRGB = cv.imreadmulti(filename, flags=cv.IMREAD_COLOR_RGB)
+    _, framesBGR = cv.imreadmulti(filename, flags=cv.IMREAD_COLOR_BGR)
+    _, framesRGB = cv.imreadmulti(filename, flags=cv.IMREAD_COLOR_RGB)
     ## [imreadmulti]
 
     ## [check_error]
@@ -101,7 +103,6 @@ def main(filename):
         cv.imshow("framesRGB", framesRGB[idx1])
         cv.imshow("Animation", animation.frames[idx1])
 
-        cv.moveWindow("Animation", 200, 30)
         cv.moveWindow("Image 1", 200, 200)
         cv.moveWindow("Image 2", 500,200)
         cv.moveWindow("Image 3", 700, 200)
