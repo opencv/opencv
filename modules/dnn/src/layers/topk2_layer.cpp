@@ -155,8 +155,8 @@ private:
                             [&](auto const &a, auto const &b) {
                                 return cmp(a.first, b.first);
                             }
-                        );                    }
-
+                        );
+                    }
                     for (int i = 0; i < kVal; ++i) {
                         auto &p = sortbuf[i];
                         valPtr[b * kVal * inner + i * inner + j] = p.second;
