@@ -17,7 +17,7 @@ int main(int argc, const char** argv)
     ImageCollection collection5 = collection2; // Copy constructor
 
     // Check if initialization succeeded
-    if (collection1.getLastError() != ImageCollection::OK)
+    if (collection1.getStatus() != DECODER_OK)
     {
         std::cerr << "Failed to initialize ImageCollection";
         return -1;
