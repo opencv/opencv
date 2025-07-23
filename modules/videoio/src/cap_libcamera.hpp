@@ -134,8 +134,8 @@ class LibcameraCapture;
 class LibcameraFrameAllocator : public cv::MatAllocator
 {
 private:
-    LibcameraApp* app_;                          // 指向App实例，用于归还请求
-    mutable libcamera::Request* request_to_recycle_; // 需要回收的请求
+    LibcameraApp* app_;                          
+    mutable libcamera::Request* request_to_recycle_; 
     
 public:
     LibcameraFrameAllocator(LibcameraApp* app, libcamera::Request* request);
@@ -490,7 +490,6 @@ public:
 
     // 新的回调接口，由 LibcameraApp 调用
     void onRequestComplete(CompletedRequestPtr completed_request);
-    size_t getMaxQueueSize() const { return MAX_QUEUE_SIZE; }
     
     uint64_t getLastCaptureTimestamp() const { return last_capture_timestamp_ns_.load(); }
     
@@ -515,9 +514,7 @@ protected:
     mutable std::atomic<uint64_t> last_wait_start_time_ns_{0};
     mutable std::atomic<uint64_t> last_frame_complete_time_ns_{0};
     
-    // MAX_QUEUE_SIZE == 0: On demand mode, sending a request when user needs a img
-    // MAX_QUEUE_SIZE > 0: Producer-consumer queue. 
-    static constexpr size_t MAX_QUEUE_SIZE = 0;
+    // On-demand mode: send a request when user needs a frame
             
     bool waitForFrame(unsigned int timeout_ms);
     CompletedRequestPtr getCompletedRequest(); 
