@@ -260,6 +260,16 @@ enum ImageMetadataType
     IMAGE_METADATA_MAX = 2
 };
 
+enum DecoderStatus
+{
+    DECODER_OK = 0,                      ///< No error.
+    DECODER_UNINITIALIZED = 1,           ///< The object has not been properly initialized.
+    DECODER_SOURCE_NOT_OPENED = 2,       ///< Failed to open the input source file or buffer.
+    DECODER_UNKNOWN_SOURCE_FORMAT = 3,   ///< The source format could not be determined or is unsupported.
+    DECODER_READ_HEADER_FAILED = 4,      ///< An error occurred while reading the data header.
+    DECODER_READ_DATA_FAILED = 5         ///< An error occurred while reading the data content.
+};
+
 //! @} imgcodecs_flags
 
 /** @brief Represents an animation with multiple frames.
@@ -710,15 +720,6 @@ public:
     private:
         ImageCollection* m_pCollection;
         int m_curr;
-    };
-
-    enum Error {
-        OK = 0,                      ///< No error.
-        UNINITIALIZED = 1,           ///< The object has not been properly initialized.
-        SOURCE_NOT_OPENED = 2,       ///< Failed to open the input source file or buffer.
-        UNKNOWN_SOURCE_FORMAT = 3,   ///< The source format could not be determined or is unsupported.
-        READ_HEADER_FAILED = 4,      ///< An error occurred while reading the data header.
-        READ_DATA_FAILED = 5         ///< An error occurred while reading the data content.
     };
 
     /** @brief Default constructor. Creates an uninitialized ImageCollection.

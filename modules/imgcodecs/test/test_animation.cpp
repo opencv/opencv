@@ -609,20 +609,44 @@ INSTANTIATE_TEST_CASE_P(/**/,
 TEST(Imgcodecs_ImageCollection, Metadata)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
-    const string filename = root + "readwrite/testExifOrientation_5.jpg";
+    const string filename = root + "readwrite/testExifOrientation_5.png";
 
-    ImageCollection collection(filename, IMREAD_UNCHANGED);
+    ImageCollection collection;
+    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getLastError());
+
     std::vector<int> metadata_types;
     std::vector<Mat> metadata;
     collection.getMetadata(metadata_types, metadata);
-
     EXPECT_TRUE(metadata.empty());
+    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getLastError());
 
-    Mat m = collection.at(0);
+    collection.init(filename, IMREAD_UNCHANGED);
+    EXPECT_EQ(DECODER_OK, collection.getLastError());
+
+    Mat dummy = collection.at(0);
 
     collection.getMetadata(metadata_types, metadata);
-
     EXPECT_FALSE(metadata.empty());
+    EXPECT_EQ(DECODER_OK, collection.getLastError());
+
+    collection.init("non_exist_filename.ext");
+    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getLastError() );
+
+    std::vector<unsigned char> buffer;
+
+    collection.init(buffer);
+    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getLastError());
+
+    readFileBytes(filename, buffer);
+
+    buffer[12] = 255; // Corrupt header
+    collection.init(buffer);
+    EXPECT_EQ(DECODER_READ_HEADER_FAILED, collection.getLastError());
+
+    buffer[2] = 0;
+    collection.init(buffer);
+    EXPECT_EQ(DECODER_UNKNOWN_SOURCE_FORMAT, collection.getLastError());
+
 }
 
 TEST(Imgcodecs_APNG, imdecode_animation)
