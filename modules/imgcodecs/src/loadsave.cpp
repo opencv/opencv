@@ -1781,12 +1781,11 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         m_decoder = GdalDecoder().newDecoder();
     }
-    else {
+    else
 #endif
-    m_decoder = findDecoder(filename, m_error);
-#ifdef HAVE_GDAL
+    {
+        m_decoder = findDecoder(filename, m_error);
     }
-#endif
 
     if (!m_decoder)
     {
