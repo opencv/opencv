@@ -780,20 +780,7 @@ public:
      */
     CV_WRAP size_t size() const;
 
-    /** @brief Returns an error code representing the last failure that occurred.
-
-    This function provides diagnostic information when an operation fails,
-    such as loading an image, accessing a frame, or decoding metadata.
-    If no error has occurred since the last successful operation, the return
-    value is `Error::OK`.
-
-    @return One of the `ImageCollection::Error` enum values.
-
-    The error state is updated internally when operations fail.
-
-    @note The error code is preserved until the next API call.
-     */
-    CV_WRAP int getLastError() const;
+    CV_WRAP int getStatus() const;
 
     /** @brief Returns the width of frames in the collection.
 

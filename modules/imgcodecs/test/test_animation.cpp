@@ -612,40 +612,40 @@ TEST(Imgcodecs_ImageCollection, Metadata)
     const string filename = root + "readwrite/testExifOrientation_5.png";
 
     ImageCollection collection;
-    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getLastError());
+    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getStatus());
 
     std::vector<int> metadata_types;
     std::vector<Mat> metadata;
     collection.getMetadata(metadata_types, metadata);
     EXPECT_TRUE(metadata.empty());
-    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getLastError());
+    EXPECT_EQ(DECODER_UNINITIALIZED, collection.getStatus());
 
     collection.init(filename, IMREAD_UNCHANGED);
-    EXPECT_EQ(DECODER_OK, collection.getLastError());
+    EXPECT_EQ(DECODER_OK, collection.getStatus());
 
     Mat dummy = collection.at(0);
 
     collection.getMetadata(metadata_types, metadata);
     EXPECT_FALSE(metadata.empty());
-    EXPECT_EQ(DECODER_OK, collection.getLastError());
+    EXPECT_EQ(DECODER_OK, collection.getStatus());
 
     collection.init("non_exist_filename.ext");
-    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getLastError() );
+    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getStatus() );
 
     std::vector<unsigned char> buffer;
 
     collection.init(buffer);
-    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getLastError());
+    EXPECT_EQ(DECODER_SOURCE_NOT_OPENED, collection.getStatus());
 
     readFileBytes(filename, buffer);
 
     buffer[12] = 255; // Corrupt header
     collection.init(buffer);
-    EXPECT_EQ(DECODER_READ_HEADER_FAILED, collection.getLastError());
+    EXPECT_EQ(DECODER_READ_HEADER_FAILED, collection.getStatus());
 
     buffer[2] = 0;
     collection.init(buffer);
-    EXPECT_EQ(DECODER_UNKNOWN_SOURCE_FORMAT, collection.getLastError());
+    EXPECT_EQ(DECODER_UNKNOWN_SOURCE_FORMAT, collection.getStatus());
 
 }
 

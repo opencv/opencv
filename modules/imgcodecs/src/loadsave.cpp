@@ -1745,7 +1745,7 @@ public:
     int width() const;
     int height() const;
     int type() const;
-    int error() const;
+    int status() const;
     const Animation& getAnimation() const;
     int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
@@ -1758,7 +1758,7 @@ private:
     std::string m_filename;
     Mat m_data;
     int m_flags{};
-    int m_error = DECODER_UNINITIALIZED;
+    int m_status = DECODER_UNINITIALIZED;
     std::size_t m_size{};
     int m_current{};
     std::vector<cv::Mat> m_pages;
@@ -1784,7 +1784,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     else
 #endif
     {
-        m_decoder = findDecoder(filename, m_error);
+        m_decoder = findDecoder(filename, m_status);
     }
 
     if (!m_decoder)
@@ -1796,13 +1796,13 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
 
     if (!m_decoder->readHeader())
     {
-        m_error = DECODER_READ_HEADER_FAILED;
+        m_status = DECODER_READ_HEADER_FAILED;
         return;
     }
 
     m_size = m_decoder->getFrameCount();
     m_pages.resize(m_size);
-    m_error = DECODER_OK;
+    m_status = DECODER_OK;
 }
 
 void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
@@ -1815,7 +1815,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     }
     else {
 #endif
-        m_decoder = findDecoder(m_data, m_error);
+        m_decoder = findDecoder(m_data, m_status);
 #ifdef HAVE_GDAL
     }
 #endif
@@ -1832,7 +1832,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
         // read the header to make sure it succeeds
         if (!m_decoder->readHeader())
         {
-            m_error = DECODER_READ_HEADER_FAILED;
+            m_status = DECODER_READ_HEADER_FAILED;
             return;
         }
     }
@@ -1852,7 +1852,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
 }
 
 void ImageCollection::Impl::close() {
-    m_error = DECODER_UNINITIALIZED;
+    m_status = DECODER_UNINITIALIZED;
     m_decoder.release();
 }
 
@@ -1872,7 +1872,7 @@ int ImageCollection::Impl::height() const { return m_decoder ? m_decoder->height
 
 int ImageCollection::Impl::type() const { return m_decoder ? m_decoder->type() : 0; }
 
-int ImageCollection::Impl::error() const { return m_error; }
+int ImageCollection::Impl::status() const { return m_status; }
 
 int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) {
     return readMetadata(m_decoder, &metadata_types, metadata);
@@ -1882,7 +1882,7 @@ const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder-
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
-    m_error = status ? DECODER_OK : DECODER_READ_HEADER_FAILED;
+    m_status = status ? DECODER_OK : DECODER_READ_HEADER_FAILED;
     return status;
 }
 
@@ -1936,7 +1936,7 @@ Mat ImageCollection::Impl::readData() {
     if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED)
         ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
 
-    m_error = DECODER_OK;
+    m_status = DECODER_OK;
     return mat;
 }
 
@@ -2005,7 +2005,7 @@ int ImageCollection::getHeight() const { return pImpl->height(); }
 
 int ImageCollection::getType() const { return pImpl->type(); }
 
-int ImageCollection::getLastError() const { return pImpl->error(); }
+int ImageCollection::getStatus() const { return pImpl->status(); }
 
 const Animation& ImageCollection::getAnimation() const { return pImpl->getAnimation(); }
 
