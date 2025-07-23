@@ -443,6 +443,7 @@ struct CompletedRequest
         : sequence(seq), buffers(r->buffers()), metadata(r->metadata()), request(r)
     {
         r->reuse();
+        capture_timestamp_ns = buffers.begin()->second->metadata().timestamp;
     }
     unsigned int sequence;
     BufferMap buffers;
@@ -450,6 +451,7 @@ struct CompletedRequest
     Request *request;
     float framerate;
     Metadata post_process_metadata;
+    uint64_t capture_timestamp_ns; 
 };
 
 class LibcameraCapture CV_FINAL : public IVideoCapture
@@ -489,6 +491,12 @@ public:
     // 新的回调接口，由 LibcameraApp 调用
     void onRequestComplete(CompletedRequestPtr completed_request);
     size_t getMaxQueueSize() const { return MAX_QUEUE_SIZE; }
+    
+    uint64_t getLastCaptureTimestamp() const { return last_capture_timestamp_ns_.load(); }
+    
+    uint64_t getLastRequestSubmitTime() const { return last_request_submit_time_ns_.load(); }
+    uint64_t getLastFrameWaitStartTime() const { return last_wait_start_time_ns_.load(); }
+    uint64_t getLastFrameCompleteTime() const { return last_frame_complete_time_ns_.load(); }
 
 protected:
     LibcameraApp *app;
@@ -500,6 +508,12 @@ protected:
     std::queue<CompletedRequestPtr> completed_requests_;
     mutable std::mutex completed_requests_mutex_;
     std::condition_variable completed_requests_cv_;
+
+    mutable std::atomic<uint64_t> last_capture_timestamp_ns_{0};
+
+    mutable std::atomic<uint64_t> last_request_submit_time_ns_{0};
+    mutable std::atomic<uint64_t> last_wait_start_time_ns_{0};
+    mutable std::atomic<uint64_t> last_frame_complete_time_ns_{0};
     
     // MAX_QUEUE_SIZE == 0: On demand mode, sending a request when user needs a img
     // MAX_QUEUE_SIZE > 0: Producer-consumer queue. 

@@ -923,7 +923,6 @@ void LibcameraCapture::onRequestComplete(CompletedRequestPtr completed_request)
     {
         std::lock_guard<std::mutex> lock(completed_requests_mutex_);
         
-        // 按需模式下，直接保存请求，不限制队列大小
         if (MAX_QUEUE_SIZE == 0) {
             // 按需模式：始终保存帧，不丢弃
             completed_requests_.push(std::move(completed_request));
@@ -1039,6 +1038,11 @@ bool LibcameraCapture::grabFrame()
     
     // 按需模式：手动提交一个请求
     if (MAX_QUEUE_SIZE == 0) {
+        // 记录请求提交时间
+        auto now = std::chrono::steady_clock::now();
+        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+        last_request_submit_time_ns_.store(ns, std::memory_order_relaxed);
+        
         if (app && !app->submitSingleRequest()) {
             std::cerr << "Failed to submit single request in on-demand mode" << std::endl;
             return false;
@@ -1070,6 +1074,10 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     }
         
     // 等待帧可用
+    auto wait_start = std::chrono::steady_clock::now();
+    auto wait_start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(wait_start.time_since_epoch()).count();
+    last_wait_start_time_ns_.store(wait_start_ns, std::memory_order_relaxed);
+    
     if (!waitForFrame(options->timeout)) {
         return false;  // 超时
     }
@@ -1079,6 +1087,13 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     if (!completed_request) {
         return false;  // 无可用请求
     }
+    
+    // 记录帧完成时间
+    auto frame_complete = std::chrono::steady_clock::now();
+    auto frame_complete_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(frame_complete.time_since_epoch()).count();
+    last_frame_complete_time_ns_.store(frame_complete_ns, std::memory_order_relaxed);
+    
+    last_capture_timestamp_ns_.store(completed_request->capture_timestamp_ns, std::memory_order_relaxed);
     
     try {
         auto stream = app->ViewfinderStream(&vw, &vh, &vstr);
@@ -1249,6 +1264,12 @@ double LibcameraCapture::getProperty(int propId) const
 
     case cv::CAP_PROP_FPS:
         return options->framerate;
+
+    case cv::CAP_PROP_POS_MSEC:
+        {
+            uint64_t timestamp_ns = last_capture_timestamp_ns_.load(std::memory_order_relaxed);
+            return timestamp_ns / 1000000.0; 
+        }
 
     case cv::CAP_PROP_AUTOFOCUS:
     case cv::CAP_PROP_BUFFERSIZE:
