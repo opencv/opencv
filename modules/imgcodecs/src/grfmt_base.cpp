@@ -56,6 +56,8 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
     m_use_rgb = false;
     m_frame_count = 1;
+    m_read_options = 0;
+    m_metadata.resize(IMAGE_METADATA_MAX + 1);
 }
 
 bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
@@ -67,12 +69,21 @@ bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
 
 Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
 {
-    if (type == IMAGE_METADATA_EXIF) {
-        const std::vector<unsigned char>& exif = m_exif.getData();
-        if (!exif.empty()) {
-            Mat exifmat(1, (int)exif.size(), CV_8U, (void*)exif.data());
-            return exifmat;
-        }
+    auto makeMat = [](const std::vector<unsigned char>& data) -> Mat {
+        return data.empty() ? Mat() : Mat(1, (int)data.size(), CV_8U, (void*)data.data());
+        };
+
+    switch (type) {
+    case IMAGE_METADATA_EXIF:
+        return makeMat(m_exif.getData());
+
+    case IMAGE_METADATA_XMP:
+    case IMAGE_METADATA_ICCP:
+        return makeMat(m_metadata[type]);
+
+    default:
+        CV_LOG_WARNING(NULL, "Unknown metadata type requested: " << static_cast<int>(type));
+        break;
     }
     return Mat();
 }
@@ -113,6 +124,13 @@ int BaseImageDecoder::setScale( const int& scale_denom )
 {
     int temp = m_scale_denom;
     m_scale_denom = scale_denom;
+    return temp;
+}
+
+int BaseImageDecoder::setReadOptions(int read_options)
+{
+    int temp = m_read_options;
+    m_read_options = read_options;
     return temp;
 }
 

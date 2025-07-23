@@ -68,6 +68,7 @@ WebPDecoder::WebPDecoder()
     fs_size = 0;
     m_has_animation = false;
     m_previous_timestamp = 0;
+    m_read_options = 1;
 }
 
 WebPDecoder::~WebPDecoder() {}
@@ -197,6 +198,47 @@ bool WebPDecoder::readData(Mat &img)
     }
     CV_Assert(data.type() == CV_8UC1); CV_Assert(data.rows == 1);
 
+    if (m_read_options) {
+        WebPData webp_data;
+        webp_data.bytes = (const uint8_t*)data.ptr();
+        webp_data.size = data.total();
+
+        std::vector<uchar> metadata;
+        WebPDemuxer* demux = WebPDemux(&webp_data);
+
+        if (demux)
+        {
+            WebPChunkIterator chunk_iter;
+
+            if (WebPDemuxGetChunk(demux, "EXIF", 1, &chunk_iter))
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_exif.parseExif(metadata.data(), metadata.size());
+            }
+
+            if (WebPDemuxGetChunk(demux, "ICCP", 1, &chunk_iter))
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_ICCP] = metadata;
+            }
+
+            if (WebPDemuxGetChunk(demux, "XMP ", 1, &chunk_iter))  // note the space in "XMP "
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_XMP] = metadata;
+            }
+
+            WebPDemuxDelete(demux);
+            m_read_options = 0;
+        }
+    }
+
     Mat read_img;
     CV_CheckType(img.type(), img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4, "");
     if (img.type() != m_type || img.cols != m_width || img.rows != m_height)
@@ -292,6 +334,10 @@ WebPEncoder::WebPEncoder()
 {
     m_description = "WebP files (*.webp)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -364,6 +410,45 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
             size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &out);
         }
     }
+
+    WebPData finalData = { out, size };
+    if (!m_metadata.empty()) {
+
+        WebPMux* mux = WebPMuxNew();
+        WebPData imageData = { out, size };
+        WebPMuxSetImage(mux, &imageData, 0);
+
+        WebPData metadata;
+        if (m_metadata[IMAGE_METADATA_EXIF].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_EXIF].data();
+            metadata.size = m_metadata[IMAGE_METADATA_EXIF].size();
+            WebPMuxSetChunk(mux, "EXIF", &metadata, 1);
+        }
+        if (m_metadata[IMAGE_METADATA_XMP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_XMP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_XMP].size();
+            WebPMuxSetChunk(mux, "XMP ", &metadata, 1);
+        }
+
+        if (m_metadata[IMAGE_METADATA_ICCP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_ICCP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_ICCP].size();
+            WebPMuxSetChunk(mux, "ICCP", &metadata, 1);
+        }
+
+        if (WebPMuxAssemble(mux, &finalData) == WEBP_MUX_OK) {
+            size = finalData.size;
+            WebPMuxDelete(mux);
+        }
+        else {
+            WebPMuxDelete(mux);
+            CV_Error(Error::StsError, "Failed to assemble WebP with EXIF");
+        }
+    }
+
 #if WEBP_DECODER_ABI_VERSION >= 0x0206
     Ptr<uint8_t> out_cleaner(out, WebPFree);
 #else
@@ -375,7 +460,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     if (m_buf)
     {
         m_buf->resize(size);
-        memcpy(&(*m_buf)[0], out, size);
+        memcpy(&(*m_buf)[0], finalData.bytes, size);
         bytes_written = size;
     }
     else
@@ -383,7 +468,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         FILE *fd = fopen(m_filename.c_str(), "wb");
         if (fd != NULL)
         {
-            bytes_written = fwrite(out, sizeof(uint8_t), size, fd);
+            bytes_written = fwrite(finalData.bytes, sizeof(uint8_t), size, fd);
             if (size != bytes_written)
             {
                 CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, size));
