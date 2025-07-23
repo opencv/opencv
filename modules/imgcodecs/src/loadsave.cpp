@@ -1801,6 +1801,7 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
+    m_pages.clear();
     m_pages.resize(m_size);
     m_status = DECODER_OK;
 }
