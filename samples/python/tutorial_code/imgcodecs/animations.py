@@ -119,7 +119,7 @@ def main(filename):
             print("collection1 releaseCache(5) called")
             collection1.releaseCache(5)
         if key == ord('3'):
-            print("collection1 init called")
+            print("collection1 init called",collection1.size())
             collection1.init(filename, cv.IMREAD_REDUCED_GRAYSCALE_2)
         if key == ord('a'):
             idx1 -= 1
