@@ -16,517 +16,514 @@
 #include <libcamera/transform.h>
 #include <mutex>
 
-// Forward declaration or include for IVideoCapture
-namespace cv {
-    class IVideoCapture;
-}
-
 #include "cap_interface.hpp"
 
 namespace cv
 {
 
-    enum Exposure_Modes
-    {
-        EXPOSURE_NORMAL = libcamera::controls::ExposureNormal,
-        EXPOSURE_SHORT = libcamera::controls::ExposureShort,
-        EXPOSURE_CUSTOM = libcamera::controls::ExposureCustom
-    };
+class IVideoCapture;
 
-    enum Metering_Modes
-    {
-        METERING_CENTRE = libcamera::controls::MeteringCentreWeighted,
-        METERING_SPOT = libcamera::controls::MeteringSpot,
-        METERING_MATRIX = libcamera::controls::MeteringMatrix,
-        METERING_CUSTOM = libcamera::controls::MeteringCustom
-    };
+enum Exposure_Modes
+{
+    EXPOSURE_NORMAL = libcamera::controls::ExposureNormal,
+    EXPOSURE_SHORT = libcamera::controls::ExposureShort,
+    EXPOSURE_CUSTOM = libcamera::controls::ExposureCustom
+};
 
-    enum WhiteBalance_Modes
-    {
-        WB_AUTO = libcamera::controls::AwbAuto,
-        WB_NORMAL = libcamera::controls::AwbAuto,
-        WB_INCANDESCENT = libcamera::controls::AwbIncandescent,
-        WB_TUNGSTEN = libcamera::controls::AwbTungsten,
-        WB_FLUORESCENT = libcamera::controls::AwbFluorescent,
-        WB_INDOOR = libcamera::controls::AwbIndoor,
-        WB_DAYLIGHT = libcamera::controls::AwbDaylight,
-        WB_CLOUDY = libcamera::controls::AwbCloudy,
-        WB_CUSTOM = libcamera::controls::AwbAuto
-    };
+enum Metering_Modes
+{
+    METERING_CENTRE = libcamera::controls::MeteringCentreWeighted,
+    METERING_SPOT = libcamera::controls::MeteringSpot,
+    METERING_MATRIX = libcamera::controls::MeteringMatrix,
+    METERING_CUSTOM = libcamera::controls::MeteringCustom
+};
 
-    class Options
+enum WhiteBalance_Modes
+{
+    WB_AUTO = libcamera::controls::AwbAuto,
+    WB_NORMAL = libcamera::controls::AwbAuto,
+    WB_INCANDESCENT = libcamera::controls::AwbIncandescent,
+    WB_TUNGSTEN = libcamera::controls::AwbTungsten,
+    WB_FLUORESCENT = libcamera::controls::AwbFluorescent,
+    WB_INDOOR = libcamera::controls::AwbIndoor,
+    WB_DAYLIGHT = libcamera::controls::AwbDaylight,
+    WB_CLOUDY = libcamera::controls::AwbCloudy,
+    WB_CUSTOM = libcamera::controls::AwbAuto
+};
+
+class Options
+{
+public:
+    Options()
     {
-    public:
-        Options()
+        timeout = 1000;
+        metering_index = Metering_Modes::METERING_CENTRE;
+        exposure_index = Exposure_Modes::EXPOSURE_NORMAL;
+        awb_index = WhiteBalance_Modes::WB_AUTO;
+        saturation = 1.0f;
+        contrast = 1.0f;
+        sharpness = 1.0f;
+        brightness = 0.0f;
+        shutter = 0.0f;
+        gain = 0.0f;
+        ev = 0.0f;
+        roi_x = roi_y = roi_width = roi_height = 0;
+        awb_gain_r = awb_gain_b = 0;
+        denoise = "auto";
+        verbose = false;
+        transform = libcamera::Transform::Identity;
+        camera = 0;
+    }
+
+    ~Options() {}
+
+    void setMetering(Metering_Modes meteringmode) { metering_index = meteringmode; }
+    void setWhiteBalance(WhiteBalance_Modes wb) { awb_index = wb; }
+    void setExposureMode(Exposure_Modes exp) { exposure_index = exp; }
+
+    int getExposureMode() { return exposure_index; }
+    int getMeteringMode() { return metering_index; }
+    int getWhiteBalance() { return awb_index; }
+
+    bool help;
+    bool version;
+    bool list_cameras;
+    bool verbose;
+    uint64_t timeout; // in ms
+    unsigned int photo_width, photo_height;
+    unsigned int video_width, video_height;
+    bool rawfull;
+    libcamera::Transform transform;
+    float roi_x, roi_y, roi_width, roi_height;
+    float shutter;
+    float gain;
+    float ev;
+    float awb_gain_r;
+    float awb_gain_b;
+    float brightness;
+    float contrast;
+    float saturation;
+    float sharpness;
+    float framerate;
+    std::string denoise;
+    std::string info_text;
+    unsigned int camera;
+
+protected:
+    int metering_index;
+    int exposure_index;
+    int awb_index;
+
+private:
+};
+struct CompletedRequest;
+using CompletedRequestPtr = std::shared_ptr<CompletedRequest>;
+
+namespace controls = libcamera::controls;
+namespace properties = libcamera::properties;
+
+class LibcameraApp
+{
+public:
+    using Stream = libcamera::Stream;
+    using FrameBuffer = libcamera::FrameBuffer;
+    using ControlList = libcamera::ControlList;
+    using Request = libcamera::Request;
+    using CameraManager = libcamera::CameraManager;
+    using Camera = libcamera::Camera;
+    using CameraConfiguration = libcamera::CameraConfiguration;
+    using FrameBufferAllocator = libcamera::FrameBufferAllocator;
+    using StreamRole = libcamera::StreamRole;
+    using StreamRoles = std::vector<libcamera::StreamRole>;
+    using PixelFormat = libcamera::PixelFormat;
+    using StreamConfiguration = libcamera::StreamConfiguration;
+    using BufferMap = Request::BufferMap;
+    using Size = libcamera::Size;
+    using Rectangle = libcamera::Rectangle;
+    enum class MsgType
+    {
+        RequestComplete,
+        Quit
+    };
+    typedef void* MsgPayload;
+    struct Msg
+    {
+        Msg(MsgType const &t) : type(t), payload(nullptr) {}
+        
+        // Specialized constructor for CompletedRequestPtr
+        Msg(MsgType const &t, CompletedRequestPtr p) : type(t) 
         {
-            timeout = 1000;
-            metering_index = Metering_Modes::METERING_CENTRE;
-            exposure_index = Exposure_Modes::EXPOSURE_NORMAL;
-            awb_index = WhiteBalance_Modes::WB_AUTO;
-            saturation = 1.0f;
-            contrast = 1.0f;
-            sharpness = 1.0f;
-            brightness = 0.0f;
-            shutter = 0.0f;
-            gain = 0.0f;
-            ev = 0.0f;
-            roi_x = roi_y = roi_width = roi_height = 0;
-            awb_gain_r = awb_gain_b = 0;
-            denoise = "auto";
-            verbose = false;
-            transform = libcamera::Transform::Identity;
-            camera = 0;
+            payload = new CompletedRequestPtr(std::move(p));
         }
-
-        ~Options() {}
-
-        void setMetering(Metering_Modes meteringmode) { metering_index = meteringmode; }
-        void setWhiteBalance(WhiteBalance_Modes wb) { awb_index = wb; }
-        void setExposureMode(Exposure_Modes exp) { exposure_index = exp; }
-
-        int getExposureMode() { return exposure_index; }
-        int getMeteringMode() { return metering_index; }
-        int getWhiteBalance() { return awb_index; }
-
-        bool help;
-        bool version;
-        bool list_cameras;
-        bool verbose;
-        uint64_t timeout; // in ms
-        unsigned int photo_width, photo_height;
-        unsigned int video_width, video_height;
-        bool rawfull;
-        libcamera::Transform transform;
-        float roi_x, roi_y, roi_width, roi_height;
-        float shutter;
-        float gain;
-        float ev;
-        float awb_gain_r;
-        float awb_gain_b;
-        float brightness;
-        float contrast;
-        float saturation;
-        float sharpness;
-        float framerate;
-        std::string denoise;
-        std::string info_text;
-        unsigned int camera;
-
-    protected:
-        int metering_index;
-        int exposure_index;
-        int awb_index;
-
-    private:
-    };
-    struct CompletedRequest;
-    using CompletedRequestPtr = std::shared_ptr<CompletedRequest>;
-
-    namespace controls = libcamera::controls;
-    namespace properties = libcamera::properties;
-
-    class LibcameraApp
-    {
-    public:
-        using Stream = libcamera::Stream;
-        using FrameBuffer = libcamera::FrameBuffer;
-        using ControlList = libcamera::ControlList;
-        using Request = libcamera::Request;
-        using CameraManager = libcamera::CameraManager;
-        using Camera = libcamera::Camera;
-        using CameraConfiguration = libcamera::CameraConfiguration;
-        using FrameBufferAllocator = libcamera::FrameBufferAllocator;
-        using StreamRole = libcamera::StreamRole;
-        using StreamRoles = std::vector<libcamera::StreamRole>;
-        using PixelFormat = libcamera::PixelFormat;
-        using StreamConfiguration = libcamera::StreamConfiguration;
-        using BufferMap = Request::BufferMap;
-        using Size = libcamera::Size;
-        using Rectangle = libcamera::Rectangle;
-        enum class MsgType
+        
+        // Destructor to clean up allocated memory
+        ~Msg() 
         {
-            RequestComplete,
-            Quit
-        };
-        typedef void* MsgPayload;
-        struct Msg
-        {
-            Msg(MsgType const &t) : type(t), payload(nullptr) {}
-            
-            // Specialized constructor for CompletedRequestPtr
-            Msg(MsgType const &t, CompletedRequestPtr p) : type(t) 
-            {
-                payload = new CompletedRequestPtr(std::move(p));
+            if (payload && type == MsgType::RequestComplete) {
+                delete static_cast<CompletedRequestPtr*>(payload);
             }
-            
-            // Destructor to clean up allocated memory
-            ~Msg() 
-            {
+        }
+        
+        // Copy constructor
+        Msg(const Msg& other) : type(other.type), payload(nullptr) 
+        {
+            if (other.payload && other.type == MsgType::RequestComplete) {
+                CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
+                payload = new CompletedRequestPtr(*ptr);
+            }
+        }
+        
+        // Move constructor  
+        Msg(Msg&& other) noexcept : type(other.type), payload(other.payload) 
+        {
+            other.payload = nullptr;
+        }
+        
+        // Copy assignment
+        Msg& operator=(const Msg& other) 
+        {
+            if (this != &other) {
+                // Clean up current payload
                 if (payload && type == MsgType::RequestComplete) {
                     delete static_cast<CompletedRequestPtr*>(payload);
                 }
-            }
-            
-            // Copy constructor
-            Msg(const Msg& other) : type(other.type), payload(nullptr) 
-            {
+                
+                type = other.type;
+                payload = nullptr;
                 if (other.payload && other.type == MsgType::RequestComplete) {
                     CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
                     payload = new CompletedRequestPtr(*ptr);
                 }
             }
-            
-            // Move constructor  
-            Msg(Msg&& other) noexcept : type(other.type), payload(other.payload) 
-            {
+            return *this;
+        }
+        
+        // Move assignment
+        Msg& operator=(Msg&& other) noexcept 
+        {
+            if (this != &other) {
+                // Clean up current payload
+                if (payload && type == MsgType::RequestComplete) {
+                    delete static_cast<CompletedRequestPtr*>(payload);
+                }
+                
+                type = other.type;
+                payload = other.payload;
                 other.payload = nullptr;
             }
-            
-            // Copy assignment
-            Msg& operator=(const Msg& other) 
-            {
-                if (this != &other) {
-                    // Clean up current payload
-                    if (payload && type == MsgType::RequestComplete) {
-                        delete static_cast<CompletedRequestPtr*>(payload);
-                    }
-                    
-                    type = other.type;
-                    payload = nullptr;
-                    if (other.payload && other.type == MsgType::RequestComplete) {
-                        CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
-                        payload = new CompletedRequestPtr(*ptr);
-                    }
-                }
-                return *this;
-            }
-            
-            // Move assignment
-            Msg& operator=(Msg&& other) noexcept 
-            {
-                if (this != &other) {
-                    // Clean up current payload
-                    if (payload && type == MsgType::RequestComplete) {
-                        delete static_cast<CompletedRequestPtr*>(payload);
-                    }
-                    
-                    type = other.type;
-                    payload = other.payload;
-                    other.payload = nullptr;
-                }
-                return *this;
-            }
-            
-            MsgType type;
-            MsgPayload payload;
-            
-            // Helper to get CompletedRequestPtr back
-            CompletedRequestPtr getCompletedRequest() const 
-            {
-                if (payload && type == MsgType::RequestComplete) {
-                    CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(payload);
-                    return *ptr;
-                }
-                return nullptr;
-            }
-        };
-
-        // Some flags that can be used to give hints to the camera configuration.
-        static constexpr unsigned int FLAG_STILL_NONE = 0;
-        static constexpr unsigned int FLAG_STILL_BGR = 1;            // supply BGR images, not YUV
-        static constexpr unsigned int FLAG_STILL_RGB = 2;            // supply RGB images, not YUV
-        static constexpr unsigned int FLAG_STILL_RAW = 4;            // request raw image stream
-        static constexpr unsigned int FLAG_STILL_DOUBLE_BUFFER = 8;  // double-buffer stream
-        static constexpr unsigned int FLAG_STILL_TRIPLE_BUFFER = 16; // triple-buffer stream
-        static constexpr unsigned int FLAG_STILL_BUFFER_MASK = 24;   // mask for buffer flags
-
-        static constexpr unsigned int FLAG_VIDEO_NONE = 0;
-        static constexpr unsigned int FLAG_VIDEO_RAW = 1;              // request raw image stream
-        static constexpr unsigned int FLAG_VIDEO_JPEG_COLOURSPACE = 2; // force JPEG colour space
-
-        LibcameraApp(std::unique_ptr<Options> const opts = nullptr);
-        virtual ~LibcameraApp();
-
-        Options *GetOptions() const { return options_.get(); }
-
-        std::string const &CameraId() const;
-        void OpenCamera();
-        void CloseCamera();
-
-        void ConfigureStill(unsigned int flags = FLAG_STILL_NONE);
-        void ConfigureViewfinder();
-
-        void Teardown();
-        void StartCamera();
-        void StopCamera();
-
-        void ApplyRoiSettings();
-
-        Msg Wait();
-        void PostMessage(MsgType &t, MsgPayload &p);
-
-        Stream *GetStream(std::string const &name, unsigned int *w = nullptr, unsigned int *h = nullptr,
-                          unsigned int *stride = nullptr) const;
-        Stream *ViewfinderStream(unsigned int *w = nullptr, unsigned int *h = nullptr,
-                                 unsigned int *stride = nullptr) const;
-        Stream *StillStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-        Stream *RawStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-        Stream *VideoStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-        Stream *LoresStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-        Stream *GetMainStream() const;
-
-        std::vector<libcamera::Span<uint8_t>> Mmap(FrameBuffer *buffer) const;
-
-        void SetControls(ControlList &controls);
-        void StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const;
-
-    protected:
-        std::unique_ptr<Options> options_;
-
-    private:
-        static std::shared_ptr<CameraManager> getCameraManager()
-        {
-            static std::shared_ptr<CameraManager> camera_manager_;
-            if (!camera_manager_)
-            {
-                std::cerr << "creating manager" << std::endl;
-                camera_manager_ = std::make_shared<CameraManager>();
-                int ret = camera_manager_->start();
-                if (ret)
-                    throw std::runtime_error("camera manager failed to start,"
-                                             "code " +
-                                             std::to_string(-ret));
-            }
-
-            return camera_manager_;
+            return *this;
         }
-
-        template <typename T>
-        class MessageQueue
+        
+        MsgType type;
+        MsgPayload payload;
+        
+        // Helper to get CompletedRequestPtr back
+        CompletedRequestPtr getCompletedRequest() const 
         {
-        public:
-            template <typename U>
-            void Post(U &&msg)
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                queue_.push(std::forward<U>(msg));
-                cond_.notify_one();
+            if (payload && type == MsgType::RequestComplete) {
+                CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(payload);
+                return *ptr;
             }
-            T Wait()
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                cond_.wait(lock, [this]
-                           { return !queue_.empty(); });
-                T msg = std::move(queue_.front());
-                queue_.pop();
-                return msg;
-            }
-            void Clear()
-            {
-                std::unique_lock<std::mutex> lock(mutex_);
-                queue_ = {};
-            }
-
-        private:
-            std::queue<T> queue_;
-            std::mutex mutex_;
-            std::condition_variable cond_;
-        };
-
-        void setupCapture();
-        void makeRequests();
-        void queueRequest(CompletedRequest *completed_request);
-        void requestComplete(Request *request);
-        void configureDenoise(const std::string &denoise_mode);
-
-        // std::unique_ptr<CameraManager> camera_manager_;
-        std::shared_ptr<Camera> camera_;
-        bool camera_acquired_ = false;
-        std::unique_ptr<CameraConfiguration> configuration_;
-        std::map<FrameBuffer *, std::vector<libcamera::Span<uint8_t>>> mapped_buffers_;
-        std::map<std::string, Stream *> streams_;
-        FrameBufferAllocator *allocator_ = nullptr;
-        std::map<Stream *, std::queue<FrameBuffer *>> frame_buffers_;
-        std::queue<Request *> free_requests_;
-        std::vector<std::unique_ptr<Request>> requests_;
-        std::mutex completed_requests_mutex_;
-        std::set<CompletedRequest *> completed_requests_;
-        bool camera_started_ = false;
-        std::mutex camera_stop_mutex_;
-        MessageQueue<Msg> msg_queue_;
-        // For setting camera controls.
-        std::mutex control_mutex_;
-        ControlList controls_;
-        // Other:
-        uint64_t last_timestamp_;
-        uint64_t sequence_ = 0;
+            return nullptr;
+        }
     };
 
-    class Metadata
+    // Some flags that can be used to give hints to the camera configuration.
+    static constexpr unsigned int FLAG_STILL_NONE = 0;
+    static constexpr unsigned int FLAG_STILL_BGR = 1;            // supply BGR images, not YUV
+    static constexpr unsigned int FLAG_STILL_RGB = 2;            // supply RGB images, not YUV
+    static constexpr unsigned int FLAG_STILL_RAW = 4;            // request raw image stream
+    static constexpr unsigned int FLAG_STILL_DOUBLE_BUFFER = 8;  // double-buffer stream
+    static constexpr unsigned int FLAG_STILL_TRIPLE_BUFFER = 16; // triple-buffer stream
+    static constexpr unsigned int FLAG_STILL_BUFFER_MASK = 24;   // mask for buffer flags
+
+    static constexpr unsigned int FLAG_VIDEO_NONE = 0;
+    static constexpr unsigned int FLAG_VIDEO_RAW = 1;              // request raw image stream
+    static constexpr unsigned int FLAG_VIDEO_JPEG_COLOURSPACE = 2; // force JPEG colour space
+
+    LibcameraApp(std::unique_ptr<Options> const opts = nullptr);
+    virtual ~LibcameraApp();
+
+    Options *GetOptions() const { return options_.get(); }
+
+    std::string const &CameraId() const;
+    void OpenCamera();
+    void CloseCamera();
+
+    void ConfigureStill(unsigned int flags = FLAG_STILL_NONE);
+    void ConfigureViewfinder();
+
+    void Teardown();
+    void StartCamera();
+    void StopCamera();
+
+    void ApplyRoiSettings();
+
+    Msg Wait();
+    void PostMessage(MsgType &t, MsgPayload &p);
+
+    Stream *GetStream(std::string const &name, unsigned int *w = nullptr, unsigned int *h = nullptr,
+                        unsigned int *stride = nullptr) const;
+    Stream *ViewfinderStream(unsigned int *w = nullptr, unsigned int *h = nullptr,
+                                unsigned int *stride = nullptr) const;
+    Stream *StillStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *RawStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *VideoStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *LoresStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *GetMainStream() const;
+
+    std::vector<libcamera::Span<uint8_t>> Mmap(FrameBuffer *buffer) const;
+
+    void SetControls(ControlList &controls);
+    void StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const;
+
+protected:
+    std::unique_ptr<Options> options_;
+
+private:
+    static std::shared_ptr<CameraManager> getCameraManager()
+    {
+        static std::shared_ptr<CameraManager> camera_manager_;
+        if (!camera_manager_)
+        {
+            std::cerr << "creating manager" << std::endl;
+            camera_manager_ = std::make_shared<CameraManager>();
+            int ret = camera_manager_->start();
+            if (ret)
+                throw std::runtime_error("camera manager failed to start,"
+                                            "code " +
+                                            std::to_string(-ret));
+        }
+
+        return camera_manager_;
+    }
+
+    template <typename T>
+    class MessageQueue
     {
     public:
-        Metadata() = default;
-
-        Metadata(Metadata const &other)
+        template <typename U>
+        void Post(U &&msg)
         {
-            std::lock_guard<std::mutex> other_lock(other.mutex_);
-            data_ = other.data_;
+            std::unique_lock<std::mutex> lock(mutex_);
+            queue_.push(std::forward<U>(msg));
+            cond_.notify_one();
         }
-
-        Metadata(Metadata &&other)
+        T Wait()
         {
-            std::lock_guard<std::mutex> other_lock(other.mutex_);
-            data_ = std::move(other.data_);
-            other.data_.clear();
+            std::unique_lock<std::mutex> lock(mutex_);
+            cond_.wait(lock, [this]
+                        { return !queue_.empty(); });
+            T msg = std::move(queue_.front());
+            queue_.pop();
+            return msg;
         }
-
-        template <typename T>
-        void Set(std::string const &tag, T &&value)
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            T* stored_value = new T(std::forward<T>(value));
-            data_[tag] = static_cast<void*>(stored_value);
-        }
-
-        template <typename T>
-        int Get(std::string const &tag, T &value) const
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            auto it = data_.find(tag);
-            if (it == data_.end())
-                return -1;
-            T* stored_value = static_cast<T*>(it->second);
-            if (stored_value) {
-                value = *stored_value;
-                return 0;
-            }
-            return -1;
-        }
-
         void Clear()
         {
-            std::lock_guard<std::mutex> lock(mutex_);
-            data_.clear();
+            std::unique_lock<std::mutex> lock(mutex_);
+            queue_ = {};
         }
 
-        Metadata &operator=(Metadata const &other)
-        {
-            if (this != &other) {
-                std::lock(mutex_, other.mutex_);
-                std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
-                std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
-                data_ = other.data_;
-            }
-            return *this;
-        }
+    private:
+        std::queue<T> queue_;
+        std::mutex mutex_;
+        std::condition_variable cond_;
+    };
 
-        Metadata &operator=(Metadata &&other)
-        {
-            if (this != &other) {
-                std::lock(mutex_, other.mutex_);
-                std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
-                std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
-                data_ = std::move(other.data_);
-                other.data_.clear();
-            }
-            return *this;
-        }
+    void setupCapture();
+    void makeRequests();
+    void queueRequest(CompletedRequest *completed_request);
+    void requestComplete(Request *request);
+    void configureDenoise(const std::string &denoise_mode);
 
-        void Merge(Metadata &other)
-        {
+    // std::unique_ptr<CameraManager> camera_manager_;
+    std::shared_ptr<Camera> camera_;
+    bool camera_acquired_ = false;
+    std::unique_ptr<CameraConfiguration> configuration_;
+    std::map<FrameBuffer *, std::vector<libcamera::Span<uint8_t>>> mapped_buffers_;
+    std::map<std::string, Stream *> streams_;
+    FrameBufferAllocator *allocator_ = nullptr;
+    std::map<Stream *, std::queue<FrameBuffer *>> frame_buffers_;
+    std::queue<Request *> free_requests_;
+    std::vector<std::unique_ptr<Request>> requests_;
+    std::mutex completed_requests_mutex_;
+    std::set<CompletedRequest *> completed_requests_;
+    bool camera_started_ = false;
+    std::mutex camera_stop_mutex_;
+    MessageQueue<Msg> msg_queue_;
+    // For setting camera controls.
+    std::mutex control_mutex_;
+    ControlList controls_;
+    // Other:
+    uint64_t last_timestamp_;
+    uint64_t sequence_ = 0;
+};
+
+class Metadata
+{
+public:
+    Metadata() = default;
+
+    Metadata(Metadata const &other)
+    {
+        std::lock_guard<std::mutex> other_lock(other.mutex_);
+        data_ = other.data_;
+    }
+
+    Metadata(Metadata &&other)
+    {
+        std::lock_guard<std::mutex> other_lock(other.mutex_);
+        data_ = std::move(other.data_);
+        other.data_.clear();
+    }
+
+    template <typename T>
+    void Set(std::string const &tag, T &&value)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        T* stored_value = new T(std::forward<T>(value));
+        data_[tag] = static_cast<void*>(stored_value);
+    }
+
+    template <typename T>
+    int Get(std::string const &tag, T &value) const
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = data_.find(tag);
+        if (it == data_.end())
+            return -1;
+        T* stored_value = static_cast<T*>(it->second);
+        if (stored_value) {
+            value = *stored_value;
+            return 0;
+        }
+        return -1;
+    }
+
+    void Clear()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        data_.clear();
+    }
+
+    Metadata &operator=(Metadata const &other)
+    {
+        if (this != &other) {
             std::lock(mutex_, other.mutex_);
             std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
             std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
-            // For C++14 compatibility, manually merge
-            for (auto& item : other.data_) {
-                data_[item.first] = std::move(item.second);
-            }
+            data_ = other.data_;
+        }
+        return *this;
+    }
+
+    Metadata &operator=(Metadata &&other)
+    {
+        if (this != &other) {
+            std::lock(mutex_, other.mutex_);
+            std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
+            std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
+            data_ = std::move(other.data_);
             other.data_.clear();
         }
+        return *this;
+    }
 
-        template <typename T>
-        T *GetLocked(std::string const &tag)
-        {
-            // This allows in-place access to the Metadata contents,
-            // for which you should be holding the lock.
-            auto it = data_.find(tag);
-            if (it == data_.end())
-                return nullptr;
-            return static_cast<T*>(it->second);
-        }
-
-        template <typename T>
-        void SetLocked(std::string const &tag, T &&value)
-        {
-            // Use this only if you're holding the lock yourself.
-            data_.insert_or_assign(tag, std::forward<T>(value));
-        }
-
-        // Note: use of (lowercase) lock and unlock means you can create scoped
-        // locks with the standard lock classes.
-        // e.g. std::lock_guard<RPiController::Metadata> lock(metadata)
-        void lock() { mutex_.lock(); }
-        void unlock() { mutex_.unlock(); }
-
-    private:
-        mutable std::mutex mutex_;
-        std::map<std::string, void*> data_;
-    };
-
-    struct CompletedRequest
+    void Merge(Metadata &other)
     {
-        using BufferMap = libcamera::Request::BufferMap;
-        using ControlList = libcamera::ControlList;
-        using Request = libcamera::Request;
-
-        CompletedRequest(unsigned int seq, Request *r)
-            : sequence(seq), buffers(r->buffers()), metadata(r->metadata()), request(r)
-        {
-            r->reuse();
+        std::lock(mutex_, other.mutex_);
+        std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
+        std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
+        // For C++14 compatibility, manually merge
+        for (auto& item : other.data_) {
+            data_[item.first] = std::move(item.second);
         }
-        unsigned int sequence;
-        BufferMap buffers;
-        ControlList metadata;
-        Request *request;
-        float framerate;
-        Metadata post_process_metadata;
-    };
+        other.data_.clear();
+    }
 
-    class LibcameraCapture : public IVideoCapture
+    template <typename T>
+    T *GetLocked(std::string const &tag)
     {
-    public:
-        LibcameraCapture();
-        LibcameraCapture(int camera_index);
-        virtual ~LibcameraCapture();
+        // This allows in-place access to the Metadata contents,
+        // for which you should be holding the lock.
+        auto it = data_.find(tag);
+        if (it == data_.end())
+            return nullptr;
+        return static_cast<T*>(it->second);
+    }
 
-        bool startVideo();
-        void stopVideo();
+    template <typename T>
+    void SetLocked(std::string const &tag, T &&value)
+    {
+        // Use this only if you're holding the lock yourself.
+        data_.insert_or_assign(tag, std::forward<T>(value));
+    }
 
-        bool open(int _index);
-        bool open(const std::string &filename);
+    // Note: use of (lowercase) lock and unlock means you can create scoped
+    // locks with the standard lock classes.
+    // e.g. std::lock_guard<RPiController::Metadata> lock(metadata)
+    void lock() { mutex_.lock(); }
+    void unlock() { mutex_.unlock(); }
 
-        virtual bool grabFrame() CV_OVERRIDE;
-        virtual bool retrieveFrame(int stream_idx, OutputArray dst) CV_OVERRIDE;
-        virtual double getProperty(int propId) const CV_OVERRIDE;
-        virtual bool setProperty(int propId, double value) CV_OVERRIDE;
-        virtual bool isOpened() const CV_OVERRIDE;
-        virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
+private:
+    mutable std::mutex mutex_;
+    std::map<std::string, void*> data_;
+};
 
-        // Additional convenience methods for plugin
-        bool grab() { return grabFrame(); }
-        bool retrieve(cv::Mat& frame, int stream_idx = 0);
+struct CompletedRequest
+{
+    using BufferMap = libcamera::Request::BufferMap;
+    using ControlList = libcamera::ControlList;
+    using Request = libcamera::Request;
 
-    protected:
-        LibcameraApp *app;
-        Options *options;
-        unsigned int still_flags;
-        unsigned int vw, vh, vstr;
-        std::atomic<bool> needsReconfigure;
-        bool camerastarted;
-        
-        // Store the current completed request for retrieve
-        CompletedRequestPtr current_request_;
-        std::mutex request_mutex_;
-    };
+    CompletedRequest(unsigned int seq, Request *r)
+        : sequence(seq), buffers(r->buffers()), metadata(r->metadata()), request(r)
+    {
+        r->reuse();
+    }
+    unsigned int sequence;
+    BufferMap buffers;
+    ControlList metadata;
+    Request *request;
+    float framerate;
+    Metadata post_process_metadata;
+};
+
+class LibcameraCapture : public IVideoCapture
+{
+public:
+    LibcameraCapture();
+    LibcameraCapture(int camera_index);
+    virtual ~LibcameraCapture();
+
+    bool startVideo();
+    void stopVideo();
+
+    bool open(int _index);
+    bool open(const std::string &filename);
+
+    virtual bool grabFrame() CV_OVERRIDE;
+    virtual bool retrieveFrame(int stream_idx, OutputArray dst) CV_OVERRIDE;
+    virtual double getProperty(int propId) const CV_OVERRIDE;
+    virtual bool setProperty(int propId, double value) CV_OVERRIDE;
+    virtual bool isOpened() const CV_OVERRIDE;
+    virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
+
+    // Additional convenience methods for plugin
+    bool grab() { return grabFrame(); }
+    bool retrieve(cv::Mat& frame, int stream_idx = 0);
+
+protected:
+    LibcameraApp *app;
+    Options *options;
+    unsigned int still_flags;
+    unsigned int vw, vh, vstr;
+    std::atomic<bool> needsReconfigure;
+    bool camerastarted;
+    
+    // Store the current completed request for retrieve
+    CompletedRequestPtr current_request_;
+    std::mutex request_mutex_;
+};
 
 };
