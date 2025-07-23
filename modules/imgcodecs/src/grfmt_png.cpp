@@ -218,16 +218,14 @@ bool PngDecoder::InitPngPtr() {
         return false;
 
     m_info_ptr = png_create_info_struct(m_png_ptr);
-    m_end_info = png_create_info_struct(m_png_ptr);
-    return (m_info_ptr && m_end_info);
+    return (m_info_ptr != nullptr);
 }
 
 void PngDecoder::ClearPngPtr() {
     if (m_png_ptr)
-        png_destroy_read_struct(&m_png_ptr, &m_info_ptr, &m_end_info);
+        png_destroy_read_struct(&m_png_ptr, &m_info_ptr, nullptr);
     m_png_ptr = nullptr;
     m_info_ptr = nullptr;
-    m_end_info = nullptr;
 }
 
 ImageDecoder PngDecoder::newDecoder() const
@@ -573,7 +571,7 @@ bool  PngDecoder::readData( Mat& img )
     volatile bool result = false;
     bool color = img.channels() > 1;
 
-    if( m_png_ptr && m_info_ptr && m_end_info && m_width && m_height )
+    if( m_png_ptr && m_info_ptr && m_width && m_height )
     {
         if( setjmp( png_jmpbuf ( m_png_ptr ) ) == 0 )
         {
@@ -623,17 +621,49 @@ bool  PngDecoder::readData( Mat& img )
                 buffer[y] = img.data + y*img.step;
 
             png_read_image( m_png_ptr, buffer );
-            png_read_end( m_png_ptr, m_end_info );
+            png_read_end( m_png_ptr, m_info_ptr);
 
+            if (m_read_options) {
+                // Get tEXt chunks
+                png_textp text_ptr;
+                int num_text = 0;
+
+                png_get_text(m_png_ptr, m_info_ptr, &text_ptr, &num_text);
+
+                for (size_t i = 0; i < static_cast<size_t>(num_text); ++i) {
+                    const char* key = text_ptr[i].key;
+                    const char* value = text_ptr[i].text;
+                    size_t      len = text_ptr[i].text_length;
+
+                    if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP1"))) {
+                        m_exif.processRawProfile(value, len);
+                    }
+                    else if (key && !std::strcmp(key, "XML:com.adobe.xmp")) {
+                        auto& out = m_metadata[IMAGE_METADATA_XMP];
+                        out.insert(out.end(),
+                            reinterpret_cast<const unsigned char*>(value),
+                            reinterpret_cast<const unsigned char*>(value) + std::strlen(value) + 1);
+                    }
+                }
+
+                png_charp icc_name;
+                int compression_type;
+                png_bytep icc_profile;
+                png_uint_32 icc_length;
+
+                if (png_get_iCCP(m_png_ptr, m_info_ptr, &icc_name, &compression_type, &icc_profile, &icc_length)) {
+                    auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                    out.insert(out.end(),
+                        reinterpret_cast<const unsigned char*>(icc_profile),
+                        reinterpret_cast<const unsigned char*>(icc_profile) + icc_length);
+                }
+            }
 #ifdef PNG_eXIf_SUPPORTED
             png_uint_32 num_exif = 0;
             png_bytep exif = 0;
 
-            // Exif info could be in info_ptr (intro_info) or end_info per specification
             if( png_get_valid(m_png_ptr, m_info_ptr, PNG_INFO_eXIf) )
                 png_get_eXIf_1(m_png_ptr, m_info_ptr, &num_exif, &exif);
-            else if( png_get_valid(m_png_ptr, m_end_info, PNG_INFO_eXIf) )
-                png_get_eXIf_1(m_png_ptr, m_end_info, &num_exif, &exif);
 
             if( exif && num_exif > 0 )
             {
@@ -865,6 +895,8 @@ PngEncoder::PngEncoder()
     m_buf_supported = true;
     m_support_metadata.assign((size_t)IMAGE_METADATA_MAX+1, false);
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -993,6 +1025,42 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                         PNG_FILTER_TYPE_DEFAULT );
 
+                    if (!m_metadata.empty()) {
+                        std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                        if (!exif.empty()) {
+                            png_set_eXIf_1(png_ptr, info_ptr, static_cast<png_uint_32>(exif.size()), exif.data());
+                        }
+
+                        std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        if (!xmp.empty()) {
+                            png_text text_chunk;
+                            text_chunk.compression = PNG_TEXT_COMPRESSION_NONE;
+                            text_chunk.key = const_cast<char*>("XML:com.adobe.xmp");
+                            text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                            text_chunk.text_length = static_cast<png_size_t>(xmp.size());
+
+                            png_set_text(png_ptr, info_ptr, &text_chunk, 1);
+                        }
+
+                        std::vector<uchar> iccp = m_metadata[IMAGE_METADATA_ICCP];
+                        if (!iccp.empty()) {
+                            // PNG standard requires a profile name (null-terminated, max 79 characters, printable Latin-1)
+                            const char* iccp_profile_name = "ICC Profile";
+
+                            // Compression type must be 0 (deflate) as per libpng docs
+                            int compression_type = PNG_COMPRESSION_TYPE_BASE;
+
+                            // Some ICC profiles are already compressed (e.g., if saved from Photoshop),
+                            // but png_set_iCCP still expects uncompressed input, and it compresses it internally.
+
+                            png_set_iCCP(png_ptr, info_ptr,
+                                iccp_profile_name,
+                                compression_type,
+                                reinterpret_cast<png_const_bytep>(iccp.data()),
+                                static_cast<png_uint_32>(iccp.size()));
+                        }
+                    }
+
                     png_write_info( png_ptr, info_ptr );
 
                     if (m_isBilevel)
@@ -1005,16 +1073,6 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     buffer.allocate(height);
                     for( y = 0; y < height; y++ )
                         buffer[y] = img.data + y*img.step;
-
-                    if (!m_metadata.empty()) {
-                        std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
-                        if (!exif.empty()) {
-                            writeChunk(f, "eXIf", exif.data(), (uint32_t)exif.size());
-                        }
-                        // [TODO] add xmp and icc. They need special handling,
-                        // see https://dev.exiv2.org/projects/exiv2/wiki/The_Metadata_in_PNG_files and
-                        // https://www.libpng.org/pub/png/spec/1.2/PNG-Chunks.html.
-                    }
 
                     png_write_image( png_ptr, buffer.data() );
                     png_write_end( png_ptr, info_ptr );

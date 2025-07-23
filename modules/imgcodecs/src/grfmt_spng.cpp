@@ -422,6 +422,48 @@ bool SPngDecoder::readData(Mat &img)
                         result = m_exif.parseExif((unsigned char *)exif_s.data, exif_s.length);
                     }
                 }
+
+                if (m_read_options)
+                {
+                    uint32_t text_count;
+
+                    // Retrieve all text chunks
+                    if (spng_get_text(png_ptr, NULL, &text_count) == SPNG_OK)
+                    {
+                        std::vector<spng_text> texts(text_count);
+                        spng_get_text(png_ptr, texts.data(), &text_count);
+
+                        for (size_t i = 0; i < text_count; ++i)
+                        {
+                            char* key = texts[i].keyword;
+                            char* value = texts[i].text;
+                            size_t len = texts[i].length;
+
+                            if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP1")))
+                            {
+                                m_exif.processRawProfile(value, len);
+                            }
+                            else if (key && !std::strcmp(key, "XML:com.adobe.xmp"))
+                            {
+                                auto& out = m_metadata[IMAGE_METADATA_XMP];
+                                out.insert(out.end(),
+                                    value,
+                                    value + len + 1); // include null terminator
+                            }
+                        }
+                    }
+
+                    // ICC Profile
+                    spng_iccp iccp_data;
+
+                    if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
+                    {
+                        auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                        out.insert(out.end(),
+                            iccp_data.profile,
+                            iccp_data.profile + iccp_data.profile_len);
+                    }
+                }
             }
         }
     }
@@ -435,6 +477,10 @@ SPngEncoder::SPngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
 }
 
 SPngEncoder::~SPngEncoder()
@@ -535,6 +581,37 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 spng_set_option(ctx, SPNG_FILTER_CHOICE, filter);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
+
+            if (!m_metadata.empty()) {
+                std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                if (!exif.empty()) {
+                    spng_exif s_exif;
+                    s_exif.data = reinterpret_cast<char*>(exif.data());
+                    s_exif.length = exif.size();
+                    spng_set_exif(ctx, &s_exif);
+                }
+
+                std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                if (!xmp.empty()) {
+                    spng_text text_chunk;
+                    strncpy(text_chunk.keyword, "XML:com.adobe.xmp", sizeof(text_chunk.keyword) - 1);
+                    text_chunk.keyword[sizeof(text_chunk.keyword) - 1] = '\0';
+                    text_chunk.type = SPNG_TEXT;
+                    text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                    text_chunk.length = xmp.size();
+                    spng_set_text(ctx, &text_chunk, 1);
+                }
+
+                std::vector<uchar>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                if (!iccp.empty()) {
+                    spng_iccp s_iccp;
+                    strncpy(s_iccp.profile_name, "ICC Profile", sizeof(s_iccp.profile_name) - 1);
+                    s_iccp.profile_name[sizeof(s_iccp.profile_name) - 1] = '\0';
+                    s_iccp.profile_len = iccp.size();
+                    s_iccp.profile = reinterpret_cast<char*>(iccp.data());
+                    spng_set_iccp(ctx, &s_iccp);
+                }
+            }
 
             int ret;
             spng_encode_chunks(ctx);
