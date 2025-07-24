@@ -12,14 +12,15 @@ TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/read.png";
-    const string dst_file = cv::tempfile(".png");
     Mat img;
     ASSERT_NO_THROW(img = imread(filename));
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(13043, img.cols);
     EXPECT_EQ(13917, img.rows);
-    ASSERT_NO_THROW(imwrite(dst_file, img));
-    EXPECT_EQ(0, remove(dst_file.c_str()));
+
+    vector<uchar> buff;
+    ASSERT_NO_THROW(imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, INT_MAX }));
+    EXPECT_EQ((size_t)816219, buff.size());
 }
 
 TEST(Imgcodecs_Png, encode)

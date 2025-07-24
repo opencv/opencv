@@ -9,7 +9,142 @@
 
 namespace opencv_test { namespace {
 
-/**
+    static Mat makeCirclesImage(Size size, int type, int nbits)
+    {
+        Mat img(size, type);
+        img.setTo(Scalar::all(0));
+        RNG& rng = theRNG();
+        int maxval = (int)(1 << nbits);
+        for (int i = 0; i < 100; i++) {
+            int x = rng.uniform(0, img.cols);
+            int y = rng.uniform(0, img.rows);
+            int radius = rng.uniform(5, std::min(img.cols, img.rows) / 5);
+            int b = rng.uniform(0, maxval);
+            int g = rng.uniform(0, maxval);
+            int r = rng.uniform(0, maxval);
+            circle(img, Point(x, y), radius, Scalar(b, g, r), -1, LINE_AA);
+        }
+        return img;
+    }
+
+    static std::vector<uchar> getSampleExifData() {
+        return {
+            'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
+            0, 1, 1, 0, 4, 0, 0, 0, 1, 0, 0, 2, 208, 1, 2, 0, 3, 0, 0, 0, 1,
+            0, 10, 0, 0, 1, 18, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 1, 14, 0, 2, 0, 0,
+            0, '"', 0, 0, 0, 176, 1, '1', 0, 2, 0, 0, 0, 7, 0, 0, 0, 210, 1, 26,
+            0, 5, 0, 0, 0, 1, 0, 0, 0, 218, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
+            226, 1, '(', 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 135, 'i', 0, 4, 0, 0, 0,
+            1, 0, 0, 0, 134, 0, 0, 0, 0, 0, 3, 144, 0, 0, 7, 0, 0, 0, 4, '0', '2',
+            '2', '1', 160, 2, 0, 4, 0, 0, 0, 1, 0, 0, 5, 0, 160, 3, 0, 4, 0, 0,
+            0, 1, 0, 0, 2, 208, 0, 0, 0, 0, 'S', 'a', 'm', 'p', 'l', 'e', ' ', '1', '0',
+            '-', 'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ',
+            'm', 'e', 't', 'a', 'd', 'a', 't', 'a', 0, 'O', 'p', 'e', 'n', 'C', 'V', 0, 0,
+            0, 0, 0, 'H', 0, 0, 0, 1, 0, 0, 0, 'H', 0, 0, 0, 1
+        };
+    }
+
+    static std::vector<uchar> getSampleXmpData() {
+        return {
+            '<','x',':','x','m','p','m','e','t','a',' ','x','m','l','n','s',':','x','=',
+            '"','a','d','o','b','e',':','x','m','p','"','>',
+            '<','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+            'O','p','e','n','C','V',
+            '<','/','x','m','p',':','C','r','e','a','t','o','r','T','o','o','l','>',
+            '<','/','x',':','x','m','p','m','e','t','a','>',0
+        };
+    }
+
+    // Returns a Minimal ICC profile data (Generated with help from ChatGPT)
+    static std::vector<uchar> getSampleIccpData() {
+        std::vector<uchar> iccp_data(192, 0);
+
+        iccp_data[3] = 192; // Profile size: 192 bytes
+
+        iccp_data[12] = 'm';
+        iccp_data[13] = 'n';
+        iccp_data[14] = 't';
+        iccp_data[15] = 'r';
+
+        iccp_data[16] = 'R';
+        iccp_data[17] = 'G';
+        iccp_data[18] = 'B';
+        iccp_data[19] = ' ';
+
+        iccp_data[20] = 'X';
+        iccp_data[21] = 'Y';
+        iccp_data[22] = 'Z';
+        iccp_data[23] = ' ';
+
+        // File signature 'acsp' at offset 36 (0x24)
+        iccp_data[36] = 'a';
+        iccp_data[37] = 'c';
+        iccp_data[38] = 's';
+        iccp_data[39] = 'p';
+
+        // Illuminant D50 at offset 68 (0x44), example values:
+        iccp_data[68] = 0x00;
+        iccp_data[69] = 0x00;
+        iccp_data[70] = 0xF6;
+        iccp_data[71] = 0xD6; // 0.9642
+        iccp_data[72] = 0x00;
+        iccp_data[73] = 0x01;
+        iccp_data[74] = 0x00;
+        iccp_data[75] = 0x00; // 1.0
+        iccp_data[76] = 0x00;
+        iccp_data[77] = 0x00;
+        iccp_data[78] = 0xD3;
+        iccp_data[79] = 0x2D; // 0.8249
+
+        // Tag count at offset 128 (0x80) = 1
+        iccp_data[131] = 1;
+
+        // Tag record at offset 132 (0x84): signature 'desc', offset 128, size 64
+        iccp_data[132] = 'd';
+        iccp_data[133] = 'e';
+        iccp_data[134] = 's';
+        iccp_data[135] = 'c';
+
+        iccp_data[139] = 128;  // offset
+
+        iccp_data[143] = 64;   // size
+
+        // Tag data 'desc' at offset 128 (start of tag data)
+        // Set type 'desc' etc. here, for simplicity fill zeros
+
+        iccp_data[144] = 'd';
+        iccp_data[145] = 'e';
+        iccp_data[146] = 's';
+        iccp_data[147] = 'c';
+
+        // ASCII string length at offset 156
+        iccp_data[156] = 20; // length
+
+        // ASCII string "Minimal ICC Profile" starting at offset 160
+        iccp_data[160] = 'M';
+        iccp_data[161] = 'i';
+        iccp_data[162] = 'n';
+        iccp_data[163] = 'i';
+        iccp_data[164] = 'm';
+        iccp_data[165] = 'a';
+        iccp_data[166] = 'l';
+        iccp_data[167] = ' ';
+        iccp_data[168] = 'I';
+        iccp_data[169] = 'C';
+        iccp_data[170] = 'C';
+        iccp_data[171] = ' ';
+        iccp_data[172] = 'P';
+        iccp_data[173] = 'r';
+        iccp_data[174] = 'o';
+        iccp_data[175] = 'f';
+        iccp_data[176] = 'i';
+        iccp_data[177] = 'l';
+        iccp_data[178] = 'e';
+
+        return iccp_data;
+    }
+
+ /**
  * Test to check whether the EXIF orientation tag was processed successfully or not.
  * The test uses a set of 8 images named testExifOrientation_{1 to 8}.(extension).
  * Each test image is a 10x10 square, divided into four smaller sub-squares:
@@ -145,47 +280,24 @@ const std::vector<std::string> exif_files
     "readwrite/testExifOrientation_7.avif",
     "readwrite/testExifOrientation_8.avif",
 #endif
+#ifdef HAVE_WEBP
+    "readwrite/testExifOrientation_1.webp",
+    "readwrite/testExifOrientation_2.webp",
+    "readwrite/testExifOrientation_3.webp",
+    "readwrite/testExifOrientation_4.webp",
+    "readwrite/testExifOrientation_5.webp",
+    "readwrite/testExifOrientation_6.webp",
+    "readwrite/testExifOrientation_7.webp",
+    "readwrite/testExifOrientation_8.webp",
+#endif
 };
 
 INSTANTIATE_TEST_CASE_P(Imgcodecs, Exif,
                         testing::ValuesIn(exif_files));
 
-static Mat makeCirclesImage(Size size, int type, int nbits)
-{
-    Mat img(size, type);
-    img.setTo(Scalar::all(0));
-    RNG& rng = theRNG();
-    int maxval = (int)(1 << nbits);
-    for (int i = 0; i < 100; i++) {
-        int x = rng.uniform(0, img.cols);
-        int y = rng.uniform(0, img.rows);
-        int radius = rng.uniform(5, std::min(img.cols, img.rows)/5);
-        int b = rng.uniform(0, maxval);
-        int g = rng.uniform(0, maxval);
-        int r = rng.uniform(0, maxval);
-        circle(img, Point(x, y), radius, Scalar(b, g, r), -1, LINE_AA);
-    }
-    return img;
-}
-
 #ifdef HAVE_AVIF
 TEST(Imgcodecs_Avif, ReadWriteWithExif)
 {
-    static const uchar exif_data[] = {
-        'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
-        0, 1, 1, 0, 4, 0, 0, 0, 1, 0, 0, 2, 208, 1, 2, 0, 3, 0, 0, 0, 1,
-        0, 10, 0, 0, 1, 18, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 1, 14, 0, 2, 0, 0,
-        0, '"', 0, 0, 0, 176, 1, '1', 0, 2, 0, 0, 0, 7, 0, 0, 0, 210, 1, 26,
-        0, 5, 0, 0, 0, 1, 0, 0, 0, 218, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
-        226, 1, '(', 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 135, 'i', 0, 4, 0, 0, 0,
-        1, 0, 0, 0, 134, 0, 0, 0, 0, 0, 3, 144, 0, 0, 7, 0, 0, 0, 4, '0', '2',
-        '2', '1', 160, 2, 0, 4, 0, 0, 0, 1, 0, 0, 5, 0, 160, 3, 0, 4, 0, 0,
-        0, 1, 0, 0, 2, 208, 0, 0, 0, 0, 'S', 'a', 'm', 'p', 'l', 'e', ' ', '1', '0',
-        '-', 'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ',
-        'm', 'e', 't', 'a', 'd', 'a', 't', 'a', 0, 'O', 'p', 'e', 'n', 'C', 'V', 0, 0,
-        0, 0, 0, 'H', 0, 0, 0, 1, 0, 0, 0, 'H', 0, 0, 0, 1
-    };
-
     int avif_nbits = 10;
     int avif_speed = 10;
     int avif_quality = 85;
@@ -195,8 +307,8 @@ TEST(Imgcodecs_Avif, ReadWriteWithExif)
     Mat img = makeCirclesImage(Size(1280, 720), imgtype, avif_nbits);
 
     std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
-    std::vector<std::vector<uchar> > metadata(1);
-    metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
+    std::vector<std::vector<uchar>> metadata = {
+        getSampleExifData() };
 
     std::vector<int> write_params = {
         IMWRITE_AVIF_DEPTH, avif_nbits,
@@ -228,31 +340,63 @@ TEST(Imgcodecs_Avif, ReadWriteWithExif)
 }
 #endif // HAVE_AVIF
 
-TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
+#ifdef HAVE_WEBP
+TEST(Imgcodecs_WebP, Read_Write_With_Exif_Xmp_Iccp)
 {
-    static const uchar exif_data[] = {
-        'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
-        0, 1, 1, 0, 4, 0, 0, 0, 1, 0, 0, 2, 208, 1, 2, 0, 3, 0, 0, 0, 1,
-        0, 8, 0, 0, 1, 18, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 1, 14, 0, 2, 0, 0,
-        0, '!', 0, 0, 0, 176, 1, '1', 0, 2, 0, 0, 0, 7, 0, 0, 0, 210, 1, 26,
-        0, 5, 0, 0, 0, 1, 0, 0, 0, 218, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
-        226, 1, '(', 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 135, 'i', 0, 4, 0, 0, 0,
-        1, 0, 0, 0, 134, 0, 0, 0, 0, 0, 3, 144, 0, 0, 7, 0, 0, 0, 4, '0', '2',
-        '2', '1', 160, 2, 0, 4, 0, 0, 0, 1, 0, 0, 5, 0, 160, 3, 0, 4, 0, 0,
-        0, 1, 0, 0, 2, 208, 0, 0, 0, 0, 'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-',
-        'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ', 'm',
-        'e', 't', 'a', 'd', 'a', 't', 'a', 0, 0, 'O', 'p', 'e', 'n', 'C', 'V', 0, 0,
-        0, 0, 0, 'H', 0, 0, 0, 1, 0, 0, 0, 'H', 0, 0, 0, 1
+    int imgtype = CV_MAKETYPE(CV_8U, 3);
+    const std::string outputname = cv::tempfile(".webp");
+    cv::Mat img = makeCirclesImage(cv::Size(160, 120), imgtype, 8);
+
+    std::vector<int> metadata_types = {IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICCP};
+    std::vector<std::vector<uchar>> metadata = {
+        getSampleExifData(),
+        getSampleXmpData(),
+        getSampleIccpData()
     };
 
+    int webp_quality = 101; // 101 is lossless compression
+    std::vector<int> write_params = {IMWRITE_WEBP_QUALITY, webp_quality};
+
+    imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
+
+    std::vector<uchar> compressed;
+    imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);
+
+    std::vector<int> read_metadata_types, read_metadata_types2;
+    std::vector<std::vector<uchar>> read_metadata, read_metadata2;
+
+    cv::Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, cv::IMREAD_UNCHANGED);
+    cv::Mat img3 = imdecodeWithMetadata(compressed, read_metadata_types2, read_metadata2, cv::IMREAD_UNCHANGED);
+
+    EXPECT_EQ(img2.cols, img.cols);
+    EXPECT_EQ(img2.rows, img.rows);
+    EXPECT_EQ(img2.type(), imgtype);
+
+    EXPECT_EQ(read_metadata_types, read_metadata_types2);
+    EXPECT_EQ(read_metadata_types.size(), 3u);
+
+    EXPECT_EQ(read_metadata, read_metadata2);
+    EXPECT_EQ(read_metadata, metadata);
+
+    EXPECT_EQ(cv::norm(img2, img3, cv::NORM_INF), 0.0);
+
+    double mse = cv::norm(img, img2, cv::NORM_L2SQR) / (img.rows * img.cols);
+    EXPECT_EQ(mse, 0);
+
+    remove(outputname.c_str());
+}
+#endif // HAVE_WEBP
+
+TEST(Imgcodecs_Jpeg, Read_Write_With_Exif)
+{
     int jpeg_quality = 95;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
     const string outputname = cv::tempfile(".jpeg");
     Mat img = makeCirclesImage(Size(1280, 720), imgtype, 8);
 
     std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
-    std::vector<std::vector<uchar> > metadata(1);
-    metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
+    std::vector<std::vector<uchar>> metadata = {
+        getSampleExifData() };
 
     std::vector<int> write_params = {
         IMWRITE_JPEG_QUALITY, jpeg_quality
@@ -281,31 +425,16 @@ TEST(Imgcodecs_Jpeg, ReadWriteWithExif)
     remove(outputname.c_str());
 }
 
-TEST(Imgcodecs_Png, ReadWriteWithExif)
+TEST(Imgcodecs_Png, Read_Write_With_Exif)
 {
-    static const uchar exif_data[] = {
-        'M', 'M', 0, '*', 0, 0, 0, 8, 0, 10, 1, 0, 0, 4, 0, 0, 0, 1, 0, 0, 5,
-        0, 1, 1, 0, 4, 0, 0, 0, 1, 0, 0, 2, 208, 1, 2, 0, 3, 0, 0, 0, 1,
-        0, 8, 0, 0, 1, 18, 0, 3, 0, 0, 0, 1, 0, 1, 0, 0, 1, 14, 0, 2, 0, 0,
-        0, '!', 0, 0, 0, 176, 1, '1', 0, 2, 0, 0, 0, 7, 0, 0, 0, 210, 1, 26,
-        0, 5, 0, 0, 0, 1, 0, 0, 0, 218, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
-        226, 1, '(', 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 135, 'i', 0, 4, 0, 0, 0,
-        1, 0, 0, 0, 134, 0, 0, 0, 0, 0, 3, 144, 0, 0, 7, 0, 0, 0, 4, '0', '2',
-        '2', '1', 160, 2, 0, 4, 0, 0, 0, 1, 0, 0, 5, 0, 160, 3, 0, 4, 0, 0,
-        0, 1, 0, 0, 2, 208, 0, 0, 0, 0, 'S', 'a', 'm', 'p', 'l', 'e', ' ', '8', '-',
-        'b', 'i', 't', ' ', 'i', 'm', 'a', 'g', 'e', ' ', 'w', 'i', 't', 'h', ' ', 'm',
-        'e', 't', 'a', 'd', 'a', 't', 'a', 0, 0, 'O', 'p', 'e', 'n', 'C', 'V', 0, 0,
-        0, 0, 0, 'H', 0, 0, 0, 1, 0, 0, 0, 'H', 0, 0, 0, 1
-    };
-
     int png_compression = 3;
     int imgtype = CV_MAKETYPE(CV_8U, 3);
     const string outputname = cv::tempfile(".png");
-    Mat img = makeCirclesImage(Size(1280, 720), imgtype, 8);
+    Mat img = makeCirclesImage(Size(160, 120), imgtype, 8);
 
     std::vector<int> metadata_types = {IMAGE_METADATA_EXIF};
-    std::vector<std::vector<uchar> > metadata(1);
-    metadata[0].assign(exif_data, exif_data + sizeof(exif_data));
+    std::vector<std::vector<uchar>> metadata = {
+        getSampleExifData() };
 
     std::vector<int> write_params = {
         IMWRITE_PNG_COMPRESSION, png_compression
@@ -332,6 +461,65 @@ TEST(Imgcodecs_Png, ReadWriteWithExif)
     double mse = cv::norm(img, img2, NORM_L2SQR)/(img.rows*img.cols);
     EXPECT_EQ(mse, 0); // png is lossless
     remove(outputname.c_str());
+}
+
+TEST(Imgcodecs_Png, Read_Write_With_Exif_Xmp_Iccp)
+{
+    int png_compression = 3;
+    int imgtype = CV_MAKETYPE(CV_8U, 3);
+    const string outputname = cv::tempfile(".png");
+    Mat img = makeCirclesImage(Size(160, 120), imgtype, 8);
+
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF, IMAGE_METADATA_XMP, IMAGE_METADATA_ICCP };
+    std::vector<std::vector<uchar>> metadata = {
+        getSampleExifData(),
+        getSampleXmpData(),
+        getSampleIccpData(),
+    };
+
+    std::vector<int> write_params = {
+        IMWRITE_PNG_COMPRESSION, png_compression
+    };
+
+    imwriteWithMetadata(outputname, img, metadata_types, metadata, write_params);
+    std::vector<uchar> compressed;
+    imencodeWithMetadata(outputname, img, metadata_types, metadata, compressed, write_params);
+
+    std::vector<int> read_metadata_types, read_metadata_types2;
+    std::vector<std::vector<uchar> > read_metadata, read_metadata2;
+    Mat img2 = imreadWithMetadata(outputname, read_metadata_types, read_metadata, IMREAD_UNCHANGED);
+    Mat img3 = imdecodeWithMetadata(compressed, read_metadata_types2, read_metadata2, IMREAD_UNCHANGED);
+    EXPECT_EQ(img2.cols, img.cols);
+    EXPECT_EQ(img2.rows, img.rows);
+    EXPECT_EQ(img2.type(), imgtype);
+
+    EXPECT_EQ(metadata_types, read_metadata_types);
+    EXPECT_EQ(read_metadata_types, read_metadata_types2);
+    EXPECT_EQ(metadata, read_metadata);
+    remove(outputname.c_str());
+}
+
+TEST(Imgcodecs_Png, Read_Exif_From_Text)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "../perf/320x260.png";
+    const string dst_file = cv::tempfile(".png");
+
+    std::vector<uchar> exif_data =
+    { 'M' , 'M' , 0, '*' , 0, 0, 0, 8, 0, 4, 1,
+        26, 0, 5, 0, 0, 0, 1, 0, 0, 0, 62, 1, 27, 0, 5, 0, 0, 0, 1, 0, 0, 0,
+        70, 1, 40, 0, 3, 0, 0, 0, 1, 0, 2, 0, 0, 1, 49, 0, 2, 0, 0, 0, 18, 0,
+        0, 0, 78, 0, 0, 0, 0, 0, 0, 0, 96, 0, 0, 0, 1, 0, 0, 0, 96, 0, 0, 0,
+        1, 80, 97, 105, 110, 116, 46, 78, 69, 84, 32, 118, 51, 46, 53, 46, 49, 48, 0
+    };
+
+    std::vector<int> read_metadata_types;
+    std::vector<std::vector<uchar> > read_metadata;
+    Mat img = imreadWithMetadata(filename, read_metadata_types, read_metadata, IMREAD_GRAYSCALE);
+
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF };
+    EXPECT_EQ(read_metadata_types, metadata_types);
+    EXPECT_EQ(read_metadata[0], exif_data);
 }
 
 static size_t locateString(const uchar* exif, size_t exif_size, const std::string& pattern)
@@ -377,13 +565,13 @@ TEST_P(ReadExif_Sanity, Check)
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 {
 #ifdef HAVE_JPEG
-    {"readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120},
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120),
 #endif
 #ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
-    {"readwrite/testExifOrientation_5.png", 112, "ExifTool", 102},
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102),
 #endif
 #ifdef HAVE_AVIF
-    {"readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120},
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120),
 #endif
 };
 

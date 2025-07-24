@@ -109,7 +109,24 @@ public:
      * @param scale_denom The denominator of the scale factor (image is scaled down by 1/scale_denom).
      * @return The scale factor that was set.
      */
-    virtual int setScale(const int& scale_denom);
+    int setScale(const int& scale_denom);
+
+    /**
+     * @brief Set read options for image decoding.
+     *
+     * This function sets internal flags that control various read-time behaviors
+     * such as metadata extraction (e.g., XMP, ICC profiles, textual data)
+     * during image decoding. The flags can be combined using bitwise OR to enable
+     * multiple options simultaneously.
+     *
+     * @param options Bitwise OR of read option flags to enable.
+     *
+     * @return The previous value of the read options flags.
+     *
+     * @note Setting this has no effect unless the image format and decoder support
+     * the selected options. Unknown flags will be ignored.
+     */
+    int setReadOptions(int read_options);
 
     /**
      * @brief Read the image header to extract basic properties (width, height, type).

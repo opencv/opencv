@@ -154,6 +154,7 @@ public:
     ExifReader();
     ~ExifReader();
 
+    bool processRawProfile(const char* profile, size_t profile_len);
 
     /**
      * @brief Parse the file with exif info

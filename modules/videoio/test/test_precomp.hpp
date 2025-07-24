@@ -35,6 +35,7 @@ std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type
             {VIDEO_ACCELERATION_D3D11, "D3D11"},
             {VIDEO_ACCELERATION_VAAPI, "VAAPI"},
             {VIDEO_ACCELERATION_MFX,   "MFX"},
+            {VIDEO_ACCELERATION_DRM,   "DRM"},
     };
     for (const auto& va : va_types) {
         if (va_type == va.va_type) {

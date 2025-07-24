@@ -69,6 +69,27 @@ ov::Core cv::gapi::ov::wrap::getCore() {
         ? create_OV_Core_pointer() : create_OV_Core_instance();
 }
 
+static std::string make_default_tensor_name(const ov::Output<const ov::Node>& output) {
+    auto default_name = output.get_node()->get_friendly_name();
+    if (output.get_node()->get_output_size() > 1) {
+        default_name += ':' + std::to_string(output.get_index());
+    }
+    return default_name;
+}
+
+static void ensureNamedTensors(std::shared_ptr<ov::Model> model) {
+    for (auto& input : model->inputs()) {
+        if (input.get_names().empty()) {
+            input.set_names({make_default_tensor_name(input)});
+        }
+    }
+    for (auto& output : model->outputs()) {
+        if (output.get_names().empty()) {
+            output.set_names({make_default_tensor_name(output)});
+        }
+    }
+}
+
 static ov::AnyMap toOV(const ParamDesc::PluginConfigT &config) {
     return {config.begin(), config.end()};
 }
@@ -235,6 +256,10 @@ struct OVUnit {
             model = cv::gapi::ov::wrap::getCore()
                 .read_model(desc.model_path, desc.bin_path);
             GAPI_Assert(model);
+
+            if (params.ensure_named_tensors) {
+                ensureNamedTensors(model);
+            }
 
             if (params.num_in == 1u && params.input_names.empty()) {
                 params.input_names = { model->inputs().begin()->get_any_name() };

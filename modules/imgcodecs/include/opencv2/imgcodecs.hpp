@@ -94,9 +94,10 @@ enum ImwriteFlags {
        IMWRITE_JPEG_CHROMA_QUALITY = 6,  //!< Separate chroma quality level, 0 - 100, default is -1 - don't use. If JPEG_LIB_VERSION < 70, Not supported.
        IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
-       IMWRITE_PNG_STRATEGY        = 17, //!< One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
-       IMWRITE_PNG_BILEVEL         = 18, //!< Binary level PNG, 0 or 1, default is 0.
-       IMWRITE_PNG_FILTER          = 19, //!< One of cv::ImwritePNGFilterFlags, default is IMWRITE_PNG_FILTER_SUB.
+       IMWRITE_PNG_STRATEGY        = 17, //!< For PNG, One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
+       IMWRITE_PNG_BILEVEL         = 18, //!< For PNG, Binary level PNG, 0 or 1, default is 0.
+       IMWRITE_PNG_FILTER          = 19, //!< For PNG, One of cv::ImwritePNGFilterFlags, default is IMWRITE_PNG_FILTER_SUB.
+       IMWRITE_PNG_ZLIBBUFFER_SIZE = 20, //!< For PNG, sets the size of the internal zlib compression buffer in bytes.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
        IMWRITE_EXR_TYPE            = (3 << 4) + 0 /* 48 */, //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_EXR_COMPRESSION     = (3 << 4) + 1 /* 49 */, //!< override EXR compression type (ZIP_COMPRESSION = 3 is default)
@@ -253,11 +254,13 @@ enum ImwriteGIFCompressionFlags {
 
 enum ImageMetadataType
 {
-    IMAGE_METADATA_UNKNOWN = -1,
-    IMAGE_METADATA_EXIF = 0,
-    IMAGE_METADATA_XMP = 1,
-    IMAGE_METADATA_ICCP = 2,
-    IMAGE_METADATA_MAX = 2
+    IMAGE_METADATA_UNKNOWN = -1, // Used when metadata type is unrecognized or not set
+
+    IMAGE_METADATA_EXIF = 0,     // EXIF metadata (e.g., camera info, GPS, orientation)
+    IMAGE_METADATA_XMP = 1,      // XMP metadata (eXtensible Metadata Platform - Adobe format)
+    IMAGE_METADATA_ICCP = 2,     // ICC Profile (color profile for color management)
+
+    IMAGE_METADATA_MAX = 2       // Highest valid index (usually used for bounds checking)
 };
 
 enum DecoderStatus
@@ -364,7 +367,7 @@ Currently, the following file formats are supported:
     the environment variable `OPENCV_IO_MAX_IMAGE_PIXELS`. See @ref tutorial_env_reference.
 
 @param filename Name of the file to be loaded.
-@param flags Flag that can take values of `cv::ImreadModes`.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
 */
 CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
 
@@ -373,19 +376,25 @@ CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
 This is an overloaded member function, provided for convenience. It differs from the above function only in what argument(s) it accepts and the return value.
 @param filename Name of file to be loaded.
 @param dst object in which the image will be loaded.
-@param flags Flag that can take values of cv::ImreadModes
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
 @note
 The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
  */
 CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
 
-/** @brief Reads an image from a file together with associated metadata.
+/** @brief Reads an image from a file along with associated metadata.
 
-The function imreadWithMetadata reads image from the specified file. It does the same thing as imread, but additionally reads metadata if the corresponding file contains any.
+This function behaves similarly to cv::imread(), loading an image from the specified file.
+In addition to the image pixel data, it also attempts to extract any available metadata
+embedded in the file (such as EXIF, XMP, etc.), depending on file format support.
+
+@note In the case of color images, the decoded images will have the channels stored in **B G R** order.
 @param filename Name of the file to be loaded.
-@param metadataTypes Output vector with types of metadata chucks returned in metadata, see ImageMetadataType.
-@param metadata Output vector of vectors or vector of matrices to store the retrieved metadata
-@param flags Flag that can take values of cv::ImreadModes
+@param metadataTypes Output vector with types of metadata chunks returned in metadata, see ImageMetadataType.
+@param metadata Output vector of vectors or vector of matrices to store the retrieved metadata.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+
+@return The loaded image as a cv::Mat object. If the image cannot be read, the function returns an empty matrix.
 */
 CV_EXPORTS_W Mat imreadWithMetadata( const String& filename, CV_OUT std::vector<int>& metadataTypes,
                                      OutputArrayOfArrays metadata, int flags = IMREAD_ANYCOLOR);
@@ -494,7 +503,7 @@ filename extension (see cv::imread for the list of extensions). In general, only
 single-channel or 3-channel (with 'BGR' channel order) images
 can be saved using this function, with these exceptions:
 
-- With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved.
+- With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved. More than 4 channels can be saved. (imread can load it then.)
   - 8-bit unsigned (CV_8U) images are not supported.
 - With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.
   - All images will be converted to 32-bit float (CV_32F).
@@ -569,29 +578,31 @@ See cv::imread for the list of supported formats and flags description.
 
 @note In the case of color images, the decoded images will have the channels stored in **B G R** order.
 @param buf Input array or vector of bytes.
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes.
 */
 CV_EXPORTS_W Mat imdecode( InputArray buf, int flags );
 
-/** @brief Reads an image from a buffer in memory together with associated metadata.
+/** @brief Reads an image from a memory buffer and extracts associated metadata.
 
-The function imdecode reads an image from the specified buffer in the memory. If the buffer is too short or
+This function decodes an image from the specified memory buffer. If the buffer is too short or
 contains invalid data, the function returns an empty matrix ( Mat::data==NULL ).
 
 See cv::imread for the list of supported formats and flags description.
 
 @note In the case of color images, the decoded images will have the channels stored in **B G R** order.
-@param buf Input array or vector of bytes.
-@param metadataTypes Output vector with types of metadata chucks returned in metadata, see ImageMetadataType.
+@param buf Input array or vector of bytes containing the encoded image data.
+@param metadataTypes Output vector with types of metadata chucks returned in metadata, see cv::ImageMetadataType
 @param metadata Output vector of vectors or vector of matrices to store the retrieved metadata
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
+
+@return The decoded image as a cv::Mat object. If decoding fails, the function returns an empty matrix.
 */
 CV_EXPORTS_W Mat imdecodeWithMetadata( InputArray buf, CV_OUT std::vector<int>& metadataTypes,
                                        OutputArrayOfArrays metadata, int flags = IMREAD_ANYCOLOR );
 
 /** @overload
 @param buf Input array or vector of bytes.
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_ANYCOLOR.
 @param dst The optional output placeholder for the decoded matrix. It can save the image
 reallocations when the function is called repeatedly for images of the same size. In case of decoder
 failure the function returns empty cv::Mat object, but does not release user-provided dst buffer.
@@ -607,7 +618,7 @@ See cv::imreadmulti for the list of supported formats and flags description.
 
 @note In the case of color images, the decoded images will have the channels stored in **B G R** order.
 @param buf Input array or vector of bytes.
-@param flags The same flags as in cv::imread, see cv::ImreadModes.
+@param flags Flag that can take values of cv::ImreadModes.
 @param mats A vector of Mat objects holding each page, if more than one.
 @param range A continuous selection of pages.
 */
