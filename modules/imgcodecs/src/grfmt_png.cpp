@@ -368,14 +368,17 @@ bool  PngDecoder::readHeader()
     if (m_is_fcTL_loaded && ((long long int)x0 + w0 > m_width || (long long int)y0 + h0 > m_height || dop > 2 || bop > 1))
         return false;
 
-    png_color_16p background_color = nullptr;
-    if (m_animationp && png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
+    png_color_16p background_color;
+    if (m_animationp)
     {
-        m_animationp->bgcolor = cv::Scalar(
-            background_color->blue,
-            background_color->green,
-            background_color->red
-        );
+        if (png_get_bKGD(m_png_ptr, m_info_ptr, &background_color))
+            m_animationp->bgcolor = cv::Scalar(
+                background_color->blue,
+                background_color->green,
+                background_color->red
+            );
+        else
+            m_animationp->bgcolor = cv::Scalar();
     }
 
     if (bit_depth <= 8 || bit_depth == 16)
