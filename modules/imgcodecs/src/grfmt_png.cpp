@@ -512,10 +512,7 @@ bool  PngDecoder::readData( Mat& img )
                 memcpy(&m_chunkIHDR.p[8], &chunk.p[12], 8);
 
                 if (m_is_fcTL_loaded)
-                {
-                    m_animation.frames.push_back(img);
                     return true;
-                }
                 else
                 {
                     m_is_fcTL_loaded = true;
@@ -562,7 +559,6 @@ bool  PngDecoder::readData( Mat& img )
                 else
                     return false;
 
-                m_animation.frames.push_back(img);
                 return true;
             }
             else

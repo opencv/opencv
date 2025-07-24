@@ -834,12 +834,6 @@ public:
      */
     const Mat& operator[](int index);
 
-    /** @brief Returns the internal `Animation` object for animated formats.
-
-    @return Const reference to the `Animation` object.
-     */
-    CV_WRAP const Animation& getAnimation() const;
-
     /** @brief Releases the cached frame at the specified index.
 
     @param index Index of the frame to remove from the cache.

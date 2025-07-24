@@ -3,7 +3,7 @@ import numpy as np
 
 def main(filename):
     ## [write_animation]
-    if filename == "animated_image.webp":
+    if filename == "animated_image.png":
         # Create an Animation instance to save
         animation_to_save = cv.Animation()
 
@@ -77,16 +77,21 @@ def main(filename):
     height = collection1.getHeight()
     type_info = collection1.getType()
 
-    print(f"size   : {size}")
-    print(f"width  : {width}")
-    print(f"height : {height}")
-    print(f"type   : {type_info}")
+    print("\nBefore reading the image data the following information can be retrieved")
+    print(f"Total Frame count   : {size}")
+    print(f"Frame Width  : {width}")
+    print(f"Frame Height : {height}")
+    print(f"Frame Color Type   : {type_info}")
     ## [info]
 
     ## [controls]
     idx1 = idx2 = idx3 = 0
 
-    print("Controls:\n"
+    print("\nControls to navigation test:\n"
+          "  1: call ImageCollection1.close()\n"
+          "  2: call ImageCollection1.releaseCache(5)\n"
+          "  3: call ImageCollection.init(...GRAYSCALE_2))\n"
+          "  4: call ImageCollection.init(...RGB))\n"
           "  a/d: prev/next idx1\n"
           "  j/l: prev/next idx2\n"
           "  z/c: prev/next idx3\n"
@@ -121,6 +126,9 @@ def main(filename):
         if key == ord('3'):
             print("collection1 init called",collection1.size())
             collection1.init(filename, cv.IMREAD_REDUCED_GRAYSCALE_2)
+        if key == ord('4'):
+            print("collection1 init called",collection1.size())
+            collection1.init(filename, cv.IMREAD_COLOR_RGB)
         if key == ord('a'):
             idx1 -= 1
         elif key == ord('d'):
@@ -148,5 +156,6 @@ def main(filename):
 if __name__ == "__main__":
     ## [main_call]
     import sys
-    main(sys.argv[1] if len(sys.argv) > 1 else "animated_image.webp")
+    print("This is a sample script to test Animation and ImageCollection")
+    main(sys.argv[1] if len(sys.argv) > 1 else "animated_image.png")
     ## [main_call]

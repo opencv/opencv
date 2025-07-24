@@ -234,7 +234,6 @@ bool WebPDecoder::readData(Mat &img)
         else
             tmp.copyTo(img);
 
-        m_animation.frames.push_back(img);
         m_animation.durations.push_back(timestamp - m_previous_timestamp);
         m_previous_timestamp = timestamp;
         return true;

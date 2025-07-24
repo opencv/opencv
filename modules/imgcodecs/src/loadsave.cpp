@@ -1960,18 +1960,21 @@ Mat& ImageCollection::Impl::at(int index) {
 }
 
 Mat& ImageCollection::Impl::operator[](int index) {
-    if(m_pages.at(index).empty() && (m_status != DECODER_UNINITIALIZED)) {
-        // We can't go backward in multi images. If the page is not in vector yet,
-        // go back to first page and advance until the desired page and read it into memory
-        if(m_current != index) {
-            reset();
-            for (int i = 0; i != index; ++i) {
-                m_pages[index] = read();
-                advance();
+    if (m_pages.at(index).empty() && m_status != DECODER_UNINITIALIZED) {
+        // If the requested page hasn't been read yet, and we’re not at the correct page
+        if (m_current != index) {
+            reset();  // Go back to the first frame
+            for (int i = 0; i <= index; ++i) {
+                m_pages[i] = read();  // read current frame
+                if (i != index)
+                    advance();              // advance until the desired page
             }
+            m_current = index; // update current page
         }
-        m_pages[index] = read();
-        advance();
+        else {
+            m_pages[index] = read();  // just read current page if already positioned
+            advance();
+        }
     }
     return m_pages[index];
 }
@@ -2004,8 +2007,6 @@ int ImageCollection::getHeight() const { return pImpl->height(); }
 int ImageCollection::getType() const { return pImpl->type(); }
 
 int ImageCollection::getStatus() const { return pImpl->status(); }
-
-const Animation& ImageCollection::getAnimation() const { return pImpl->getAnimation(); }
 
 int ImageCollection::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) { return pImpl->getMetadata(metadata_types, metadata); }
 
