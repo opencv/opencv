@@ -280,7 +280,6 @@ bool AvifDecoder::readData(Mat &img) {
       CV_Error(Error::StsInternal, "");
     }
   }
-
   return true;
 }
 
