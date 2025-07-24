@@ -556,7 +556,7 @@ private:
         _rotations.swap(rotations);
         _normals.swap(normals);
 
-        _mask = Mat(514, 1, CV_8U, maskArray).clone();
+        _mask = Mat(514, 1, CV_8S, maskArray).clone();
     }
 
     bool isValidResult(const vector<int>& solutions)

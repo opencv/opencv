@@ -2118,7 +2118,8 @@ CV_EXPORTS_W int decomposeHomographyMat(InputArray H,
 @param beforePoints Vector of (rectified) visible reference points before the homography is applied
 @param afterPoints Vector of (rectified) visible reference points after the homography is applied
 @param possibleSolutions Vector of int indices representing the viable solution set after filtering
-@param pointsMask optional Mat/Vector of 8u type representing the mask for the inliers as given by the #findHomography function
+@param pointsMask optional Mat/Vector of CV_8U, CV_8S or CV_Bool type representing the mask for the inliers
+as given by the #findHomography function
 
 This function is intended to filter the output of the #decomposeHomographyMat based on additional
 information as described in @cite Malis2007 . The summary of the method: the #decomposeHomographyMat function
