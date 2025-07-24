@@ -1772,7 +1772,7 @@ private:
     std::size_t m_size{};
     int m_current{};
     ImageDecoder m_decoder;
-    Animation* m_animationp = nullptr;
+    Animation* m_animationRef = nullptr;
     Animation m_animation;
 };
 
@@ -1812,12 +1812,12 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
-    if (!m_animationp)
+    if (!m_animationRef)
     {
-        m_animationp = &m_animation;
+        m_animationRef = &m_animation;
     }
-    m_animationp->frames.clear();
-    m_animationp->frames.resize(m_size);
+    m_animationRef->frames.clear();
+    m_animationRef->frames.resize(m_size);
     m_status = DECODER_OK;
 }
 
@@ -1863,12 +1863,12 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
-    if (!m_animationp)
+    if (!m_animationRef)
     {
-        m_animationp = &m_animation;
+        m_animationRef = &m_animation;
     }
-    m_animationp->frames.clear();
-    m_animationp->frames.resize(m_size);
+    m_animationRef->frames.clear();
+    m_animationRef->frames.resize(m_size);
     m_status = DECODER_OK;
 }
 
@@ -1986,28 +1986,28 @@ Mat& ImageCollection::Impl::at(int index) {
 }
 
 Mat& ImageCollection::Impl::operator[](int index) {
-    if (m_animationp->frames.at(index).empty()) {
+    if (m_animationRef->frames.at(index).empty()) {
         // If the requested page hasn't been read yet, and we’re not at the correct page
         if (m_current != index) {
             reset();  // Go back to the first frame
             for (int i = 0; i <= index; ++i) {
-                m_animationp->frames[i] = read();  // read current frame
+                m_animationRef->frames[i] = read();  // read current frame
                 if (i != index)
                     advance();              // advance until the desired page
             }
             m_current = index; // update current page
         }
         else {
-            m_animationp->frames[index] = read();  // just read current page if already positioned
+            m_animationRef->frames[index] = read();  // just read current page if already positioned
             advance();
         }
     }
-    return m_animationp->frames[index];
+    return m_animationRef->frames[index];
 }
 
 void ImageCollection::Impl::releaseCache(int index) {
     CV_Assert(index >= 0 && size_t(index) < m_size);
-    m_animationp->frames[index].release();
+    m_animationRef->frames[index].release();
 }
 
 /* ImageCollection API*/
