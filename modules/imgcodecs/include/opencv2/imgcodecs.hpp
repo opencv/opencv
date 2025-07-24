@@ -834,6 +834,8 @@ public:
      */
     const Mat& operator[](int index);
 
+    CV_WRAP void setAnimation(Animation& animation);
+
     /** @brief Releases the cached frame at the specified index.
 
     @param index Index of the frame to remove from the cache.

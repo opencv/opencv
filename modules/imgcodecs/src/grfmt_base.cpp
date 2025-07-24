@@ -56,6 +56,7 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
     m_use_rgb = false;
     m_frame_count = 1;
+    m_animationp = nullptr;
 }
 
 bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const

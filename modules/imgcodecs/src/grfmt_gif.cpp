@@ -260,7 +260,10 @@ GifDisposeMethod GifDecoder::readExtensions() {
             CV_CheckLE(transColorFlag, GIF_TRANSPARENT_INDEX_MAX, "Unsupported Transparent Color Flag");
             hasTransparentColor = (transColorFlag == GIF_TRANSPARENT_INDEX_GIVEN);
 
-            m_animation.durations.push_back(m_strm.getWord() * 10); // delay time
+            if (m_animationp)
+                m_animationp->durations.push_back(m_strm.getWord() * 10); // delay time
+            else
+                m_strm.getWord();
             transparentColor = (uchar)m_strm.getByte();
         }
 
@@ -430,7 +433,8 @@ void GifDecoder::close() {
 
 bool GifDecoder::getFrameCount_() {
     m_frame_count = 0;
-    m_animation.loop_count = 1;
+    if (m_animationp)
+        m_animationp->loop_count = 1;
     auto type = (uchar)m_strm.getByte();
     while (type != 0x3B) {
         if (!(type ^ 0x21)) {
@@ -450,7 +454,8 @@ bool GifDecoder::getFrameCount_() {
                             int loop_count = m_strm.getWord();
                             // If loop_count == 0, it means loop forever.
                             // Otherwise, the loop is displayed extra one time than it is written in the data.
-                            m_animation.loop_count = (loop_count == 0) ? 0 : loop_count + 1;
+                            if (m_animationp)
+                                m_animationp->loop_count = (loop_count == 0) ? 0 : loop_count + 1;
                         } else {
                             // this branch should not be reached in normal cases
                             m_strm.skip(2);

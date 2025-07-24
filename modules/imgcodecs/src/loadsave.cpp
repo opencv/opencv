@@ -802,7 +802,7 @@ bool imreadmulti(const String& filename, std::vector<Mat>& mats, int start, int 
 }
 
 static bool
-imreadanimation_(const String& filename, int flags, int start, int count, Animation& animation)
+imreadanimation_(const String& filename, int flags, int start, int count, Animation* animation)
 {
     bool success = false;
     if (start < 0) {
@@ -821,6 +821,8 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         CV_LOG_WARNING(NULL, "Decoder for " << filename << " not found!\n");
         return false;
     }
+
+    decoder->setAnimation(animation);
 
     /// set the filename in the driver
     decoder->setSource(filename);
@@ -888,10 +890,10 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
 
         if (current >= start)
         {
-            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
-            animation.durations.push_back(duration);
-            animation.frames.push_back(mat);
+            animation->frames.push_back(mat);
         }
+        else
+            animation->durations.pop_back();
 
         if (!decoder->nextPage())
         {
@@ -899,9 +901,6 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         }
         ++current;
     }
-    animation.bgcolor = decoder->animation().bgcolor;
-    animation.loop_count = decoder->animation().loop_count;
-    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -910,10 +909,10 @@ bool imreadanimation(const String& filename, CV_OUT Animation& animation, int st
 {
     CV_TRACE_FUNCTION();
 
-    return imreadanimation_(filename, IMREAD_UNCHANGED, start, count, animation);
+    return imreadanimation_(filename, IMREAD_UNCHANGED, start, count, &animation);
 }
 
-static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, Animation& animation)
+static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, Animation* animation)
 {
     bool success = false;
     if (start < 0) {
@@ -933,6 +932,8 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         CV_LOG_WARNING(NULL, "Decoder for buffer not found!\n");
         return false;
     }
+
+    decoder->setAnimation(animation);
 
     /// set the filename in the driver
     decoder->setSource(buf.getMat());
@@ -1000,9 +1001,9 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
 
         if (current >= start)
         {
-            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
-            animation.durations.push_back(duration);
-            animation.frames.push_back(mat);
+            if (!animation->durations.size())
+                animation->durations.push_back(1000);
+            animation->frames.push_back(mat);
         }
 
         if (!decoder->nextPage())
@@ -1011,9 +1012,6 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         }
         ++current;
     }
-    animation.bgcolor = decoder->animation().bgcolor;
-    animation.loop_count = decoder->animation().loop_count;
-    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -1022,7 +1020,7 @@ bool imdecodeanimation(InputArray buf, Animation& animation, int start, int coun
 {
     CV_TRACE_FUNCTION();
 
-    return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, animation);
+    return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, &animation);
 }
 
 static
@@ -1744,7 +1742,7 @@ public:
     int height() const;
     int type() const;
     int status() const;
-    const Animation& getAnimation() const;
+    void setAnimation(Animation& animation);
     int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
     Mat readData();
@@ -1759,8 +1757,9 @@ private:
     int m_status = DECODER_UNINITIALIZED;
     std::size_t m_size{};
     int m_current{};
-    std::vector<cv::Mat> m_pages;
     ImageDecoder m_decoder;
+    Animation* m_animationp;
+    Animation m_animation;
 };
 
 ImageCollection::Impl::Impl(std::string const& filename, int flags) {
@@ -1799,8 +1798,12 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
-    m_pages.clear();
-    m_pages.resize(m_size);
+    if (!m_animationp)
+    {
+        m_animationp = &m_animation;
+    }
+    m_animationp->frames.clear();
+    m_animationp->frames.resize(m_size);
     m_status = DECODER_OK;
 }
 
@@ -1846,7 +1849,13 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
-    m_pages.resize(m_size);
+    if (!m_animationp)
+    {
+        m_animationp = &Animation();
+    }
+    m_animationp->frames.clear();
+    m_animationp->frames.resize(m_size);
+    m_status = DECODER_OK;
 }
 
 void ImageCollection::Impl::close() {
@@ -1876,7 +1885,10 @@ int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputA
     return readMetadata(m_decoder, &metadata_types, metadata);
 }
 
-const Animation& ImageCollection::Impl::getAnimation() const { return m_decoder->animation(); }
+void ImageCollection::Impl::setAnimation(Animation& animation)
+{
+    m_animation = animation;
+}
 
 bool ImageCollection::Impl::readHeader() {
     bool status = m_decoder->readHeader();
@@ -1960,28 +1972,31 @@ Mat& ImageCollection::Impl::at(int index) {
 }
 
 Mat& ImageCollection::Impl::operator[](int index) {
-    if (m_pages.at(index).empty() && m_status != DECODER_UNINITIALIZED) {
+    if (m_status == DECODER_UNINITIALIZED)
+        return Mat();
+
+    if (m_animationp->frames.at(index).empty()) {
         // If the requested page hasn't been read yet, and we’re not at the correct page
         if (m_current != index) {
             reset();  // Go back to the first frame
             for (int i = 0; i <= index; ++i) {
-                m_pages[i] = read();  // read current frame
+                m_animationp->frames[i] = read();  // read current frame
                 if (i != index)
                     advance();              // advance until the desired page
             }
             m_current = index; // update current page
         }
         else {
-            m_pages[index] = read();  // just read current page if already positioned
+            m_animationp->frames[index] = read();  // just read current page if already positioned
             advance();
         }
     }
-    return m_pages[index];
+    return m_animationp->frames[index];
 }
 
 void ImageCollection::Impl::releaseCache(int index) {
     CV_Assert(index >= 0 && size_t(index) < m_size);
-    m_pages[index].release();
+    m_animationp->frames[index].release();
 }
 
 /* ImageCollection API*/
@@ -2015,6 +2030,8 @@ const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 const Mat& ImageCollection::operator[](int index) { return pImpl->operator[](index); }
 
 void ImageCollection::releaseCache(int index) { pImpl->releaseCache(index); }
+
+void ImageCollection::setAnimation(Animation& animation) { pImpl->setAnimation(animation); }
 
 Ptr<ImageCollection::Impl> ImageCollection::getImpl() { return pImpl; }
 

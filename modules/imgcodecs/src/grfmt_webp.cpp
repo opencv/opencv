@@ -165,13 +165,17 @@ bool WebPDecoder::readHeader()
         WebPAnimInfo anim_info;
         if (!WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info))
             CV_Error(Error::StsInternal, "Failed to get animated WebP information");
-        m_animation.loop_count = anim_info.loop_count;
 
-        m_animation.bgcolor[0] = (anim_info.bgcolor >> 24) & 0xFF;
-        m_animation.bgcolor[1] = (anim_info.bgcolor >> 16) & 0xFF;
-        m_animation.bgcolor[2] = (anim_info.bgcolor >> 8) & 0xFF;
-        m_animation.bgcolor[3] = anim_info.bgcolor & 0xFF;
-        m_frame_count = anim_info.frame_count;
+        if (m_animationp)
+        {
+            m_animationp->loop_count = anim_info.loop_count;
+
+            m_animationp->bgcolor[0] = (anim_info.bgcolor >> 24) & 0xFF;
+            m_animationp->bgcolor[1] = (anim_info.bgcolor >> 16) & 0xFF;
+            m_animationp->bgcolor[2] = (anim_info.bgcolor >> 8) & 0xFF;
+            m_animationp->bgcolor[3] = anim_info.bgcolor & 0xFF;
+            m_frame_count = anim_info.frame_count;
+        }
     }
     m_width = features.width;
     m_height = features.height;
@@ -234,8 +238,12 @@ bool WebPDecoder::readData(Mat &img)
         else
             tmp.copyTo(img);
 
-        m_animation.durations.push_back(timestamp - m_previous_timestamp);
-        m_previous_timestamp = timestamp;
+        if (m_animationp)
+        {
+            m_animationp->durations.push_back(timestamp - m_previous_timestamp);
+            m_previous_timestamp = timestamp;
+        }
+
         return true;
     }
 
