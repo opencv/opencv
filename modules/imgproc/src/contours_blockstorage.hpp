@@ -26,14 +26,14 @@ class BlockStorage {
                 dynamicBlocks.push_back(new block_type);
         }
         BlockStorage(const BlockStorage&) = delete;
-        BlockStorage(BlockStorage&&) noexcept = default;
+        BlockStorage(BlockStorage&&) = default;
         ~BlockStorage() {
             for(const auto & block : dynamicBlocks) {
                 delete block;
             }
         }
         BlockStorage& operator=(const BlockStorage&) = delete;
-        BlockStorage& operator=(BlockStorage&&) noexcept = default;
+        BlockStorage& operator=(BlockStorage&&) = default;
 
         void clear(void) {
             const size_t minDynamicBlocks = !staticBlocksCount ? 1 : 0;
