@@ -889,9 +889,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         }
 
         if (current >= start)
-        {
             animation->frames.push_back(mat);
-        }
         else
             animation->durations.pop_back();
 
@@ -1000,11 +998,9 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         }
 
         if (current >= start)
-        {
-            if (!animation->durations.size())
-                animation->durations.push_back(1000);
             animation->frames.push_back(mat);
-        }
+        else
+            animation->durations.pop_back();
 
         if (!decoder->nextPage())
         {
@@ -1758,7 +1754,7 @@ private:
     std::size_t m_size{};
     int m_current{};
     ImageDecoder m_decoder;
-    Animation* m_animationp;
+    Animation* m_animationp = nullptr;
     Animation m_animation;
 };
 
@@ -1972,9 +1968,6 @@ Mat& ImageCollection::Impl::at(int index) {
 }
 
 Mat& ImageCollection::Impl::operator[](int index) {
-    if (m_status == DECODER_UNINITIALIZED)
-        return Mat();
-
     if (m_animationp->frames.at(index).empty()) {
         // If the requested page hasn't been read yet, and we’re not at the correct page
         if (m_current != index) {
