@@ -508,13 +508,12 @@ imread_( const String& filename, int flags, OutputArray mat,
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
-    }else{
+    }else
 #endif
+    {
         int result_code = 0;
         decoder = findDecoder( filename, result_code );
-#ifdef HAVE_GDAL
     }
-#endif
 
     /// if no decoder was found, return nothing.
     if( !decoder ){
@@ -635,13 +634,12 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
     if (flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         decoder = GdalDecoder().newDecoder();
     }
-    else {
+    else
 #endif
+    {
         int result_code = 0;
         decoder = findDecoder(filename, result_code);
-#ifdef HAVE_GDAL
     }
-#endif
 
     /// if no decoder was found, return nothing.
     if (!decoder) {
@@ -1814,12 +1812,11 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     if (m_flags != IMREAD_UNCHANGED && (m_flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL) {
         m_decoder = GdalDecoder().newDecoder();
     }
-    else {
+    else
 #endif
+    {
         m_decoder = findDecoder(m_data, m_status);
-#ifdef HAVE_GDAL
     }
-#endif
 
     if (!m_decoder)
     {
@@ -1963,7 +1960,7 @@ Mat& ImageCollection::Impl::at(int index) {
 }
 
 Mat& ImageCollection::Impl::operator[](int index) {
-    if(m_pages.at(index).empty()) {
+    if(m_pages.at(index).empty() && (m_status != DECODER_UNINITIALIZED)) {
         // We can't go backward in multi images. If the page is not in vector yet,
         // go back to first page and advance until the desired page and read it into memory
         if(m_current != index) {
