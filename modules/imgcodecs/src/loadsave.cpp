@@ -1865,7 +1865,7 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     m_size = m_decoder->getFrameCount();
     if (!m_animationp)
     {
-        m_animationp = &Animation();
+        m_animationp = m_animation;
     }
     m_animationp->frames.clear();
     m_animationp->frames.resize(m_size);
