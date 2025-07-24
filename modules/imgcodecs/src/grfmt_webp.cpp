@@ -175,8 +175,8 @@ bool WebPDecoder::readHeader()
             m_animationp->bgcolor[1] = (anim_info.bgcolor >> 16) & 0xFF;
             m_animationp->bgcolor[2] = (anim_info.bgcolor >> 8) & 0xFF;
             m_animationp->bgcolor[3] = anim_info.bgcolor & 0xFF;
-            m_frame_count = anim_info.frame_count;
         }
+        m_frame_count = anim_info.frame_count;
     }
     m_width = features.width;
     m_height = features.height;
