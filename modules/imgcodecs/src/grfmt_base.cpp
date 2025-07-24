@@ -56,6 +56,8 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
     m_use_rgb = false;
     m_frame_count = 1;
+    m_read_options = 0;
+    m_metadata.resize(IMAGE_METADATA_MAX + 1);
     m_animationp = nullptr;
 }
 

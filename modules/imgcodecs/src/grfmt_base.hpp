@@ -172,6 +172,8 @@ protected:
     bool m_use_rgb;       ///< Flag indicating whether to decode the image in RGB order.
     ExifReader m_exif;    ///< Object for reading EXIF metadata from the image.
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
+    int m_read_options;
+    std::vector<std::vector<unsigned char> > m_metadata;
     Animation* m_animationp;
 };
 
