@@ -169,7 +169,7 @@ public:
      */
     virtual bool checkSignature(const String& signature) const;
 
-    void setAnimation(Animation* animation) { m_animationp = animation; };
+    void setAnimation(Animation* animation) { m_animationRef = animation; };
 
     /**
      * @brief Create and return a new instance of the derived image decoder.
@@ -191,7 +191,7 @@ protected:
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
     int m_read_options;
     std::vector<std::vector<unsigned char> > m_metadata;
-    Animation* m_animationp;
+    Animation* m_animationRef = nullptr;
 };
 
 
