@@ -466,7 +466,7 @@ struct LevMarqDenseLinearBackend : public detail::LevMarqBackend
 
         if (!mask_.empty())
         {
-            CV_Assert(mask_.depth() == CV_8U);
+            CV_Assert(mask_.depth() == CV_8U || mask_.depth() == CV_8S || mask_.depth() == CV_Bool);
             CV_Assert(mask_.size() == currentX_.size());
             int maskSize = mask_.size().area();
             this->mask.create(maskSize, 1);

@@ -358,7 +358,7 @@ void warpFrame(InputArray depth, InputArray image, InputArray mask,
     Mat_<uchar> maskMat;
     if (!mask.empty())
     {
-        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.type() == CV_8UC1 || mask.type() == CV_8SC1 || mask.type() == CV_BoolC1);
         CV_Assert(mask.size() == sz);
         maskMat = mask.getMat();
     }
