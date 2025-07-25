@@ -132,6 +132,8 @@ public:
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 
+    void apply(InputArray image,OutputArray fgmask, InputArray knownForegroundMask,double learningRate) CV_OVERRIDE;
+
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
 
@@ -526,7 +528,8 @@ public:
                int _nkNN,
                float _fTau,
                bool _bShadowDetection,
-               uchar _nShadowDetection)
+               uchar _nShadowDetection,
+               const Mat *_knownForegroundMask)
     {
         src = &_src;
         dst = &_dst;
@@ -546,6 +549,7 @@ public:
         m_nkNN = _nkNN;
         m_bShadowDetection = _bShadowDetection;
         m_nShadowDetection = _nShadowDetection;
+        knownForegroundMask = _knownForegroundMask;
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -587,6 +591,16 @@ public:
                         m_nShortCounter,
                         include
                         );
+                // Check that foreground mask exists
+                if (knownForegroundMask && !knownForegroundMask->empty()) {
+                    // If input mask states pixel is foreground
+                    if (knownForegroundMask->at<uchar>(y, x) > 0) {
+                        mask[x] = 255; // ensure output mask marks this pixel as FG
+                        data += nchannels;
+                        m_aModel += m_nN*3*ndata;
+                        continue;
+                    }
+                }
                 switch (result)
                 {
                     case 0:
@@ -626,6 +640,7 @@ public:
     int m_nkNN;
     bool m_bShadowDetection;
     uchar m_nShadowDetection;
+    const Mat *knownForegroundMask;
 };
 
 #ifdef HAVE_OPENCL
@@ -728,7 +743,12 @@ void BackgroundSubtractorKNNImpl::create_ocl_apply_kernel()
 
 #endif
 
-void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate)
+// Base 3 version class
+void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, double learningRate) {
+    apply(_image, _fgmask, noArray(), learningRate);
+}
+
+void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask,InputArray _knownForegroundMask, double learningRate)
 {
     CV_INSTRUMENT_REGION();
 
@@ -756,6 +776,14 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
     Mat image = _image.getMat();
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
+
+    const Mat *knownMaskPtr = nullptr;
+    Mat tmpKnownMask;
+    if (!_knownForegroundMask.empty()) {
+        // store a local Mat so the pointer stays alive for the parallel_for_
+        tmpKnownMask = _knownForegroundMask.getMat();
+        knownMaskPtr = &tmpKnownMask;
+    }
 
     ++nframes;
     learningRate = learningRate >= 0 && nframes > 1 ? learningRate : 1./std::min( 2*nframes, history );
@@ -791,7 +819,8 @@ void BackgroundSubtractorKNNImpl::apply(InputArray _image, OutputArray _fgmask, 
                              nkNN,
                              fTau,
                              bShadowDetection,
-                             nShadowDetection),
+                             nShadowDetection,
+                             knownMaskPtr),
                              image.total()/(double)(1 << 16));
 
     nShortCounter++;//0,1,...,nShortUpdate-1
