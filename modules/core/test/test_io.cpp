@@ -1563,8 +1563,8 @@ TEST(Core_InputOutput, FileStorage_json_null_object)
     ASSERT_EQ(fs["truncation"].name(), "truncation");
     ASSERT_EQ(fs["version"].name(), "version");
 
-    ASSERT_EQ(fs["padding"].string(), "None");
-    ASSERT_EQ(fs["truncation"].string(), "None");
+    ASSERT_EQ(fs["padding"].string(), "");
+    ASSERT_EQ(fs["truncation"].string(), "");
     ASSERT_EQ(fs["version"].string(), "1.0");
     fs.release();
 }
