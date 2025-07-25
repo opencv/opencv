@@ -4,7 +4,7 @@
 
 int main() {
     try {
-        std::string imagePath = "distance_121.jpg";
+        std::string imagePath = "121.jpg";
         cv::Mat image = cv::imread(imagePath);
         if (image.empty()) {
             std::cerr << "Error: Cannot read image: " << imagePath << std::endl;
