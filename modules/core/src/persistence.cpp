@@ -2398,12 +2398,7 @@ std::string FileNode::string() const
 {
     const uchar* p = ptr();
     if( !p || (*p & TYPE_MASK) != STRING )
-    {
-        if ( (*p & TYPE_MASK) == NONE )
-            return std::string("None");
-        else
-            return std::string();
-    }
+        return std::string();
     p += (*p & NAMED) ? 5 : 1;
     size_t sz = (size_t)(unsigned)readInt(p);
     return std::string((const char*)(p + 4), sz - 1);
