@@ -775,7 +775,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
 def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
                         dist_m, winsize, points_json_file, debug_corners,
                         RESIZE_IMAGE, find_intrinsics_in_python,
-                        is_parallel_detection=True, cam_ids=None, intrinsics_dir='', board_dict_path=None):
+                        is_parallel_detection=True, cam_ids=None, files_with_intrinsics=[], board_dict_path=None):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
     grid_size: [width, height] -- size of grid pattern
@@ -894,15 +894,19 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
 
     Ks = None
     distortions = None
-    if intrinsics_dir:
+    if files_with_intrinsics:
         # Read camera instrinsic matrices (Ks) and dictortions
         Ks, distortions = [], []
-        for cam_id in cam_ids:
-            input_file = os.path.join(intrinsics_dir, f"cameraParameters_{cam_id}.xml")
-            print("Reading intrinsics from", input_file)
-            storage = cv.FileStorage(input_file, cv.FileStorage_READ)
+        for cam_idx, filename in enumerate(files_with_intrinsics):
+            print("Reading intrinsics from", filename)
+            storage = cv.FileStorage(filename, cv.FileStorage_READ)
+            # tries to read output of interactive-calibration tool (yaml) and camera calibration tutorial (xml)
             camera_matrix = storage.getNode('cameraMatrix').mat()
+            if camera_matrix is None:
+                camera_matrix = storage.getNode('camera_matrix').mat()
             dist_coeffs = storage.getNode('dist_coeffs').mat()
+            if dist_coeffs is None:
+                dist_coeffs = storage.getNode('distortion_coefficients').mat()
             Ks.append(camera_matrix)
             distortions.append(dist_coeffs)
         find_intrinsics_in_python = True
@@ -959,7 +963,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_visualize', type=str, default='', help='path to results pickle file needed to run visualization')
     parser.add_argument('--visualize', required=False, action='store_true', help='visualization flag. If set, only runs visualization but path_to_visualize must be provided')
     parser.add_argument('--resize_image_detection', required=False, action='store_true', help='If set, an image will be resized to speed-up corners detection')
-    parser.add_argument('--intrinsics_dir', type=str, default='', help='Path to measured intrinsics')
+    parser.add_argument('--intrinsics', type=str, default='', help='YAML or XML files with each camera intrinsics')
     parser.add_argument('--gt_file', type=str, default=None, help="ground truth")
     parser.add_argument('--board_dict_path', type=str, default=None, help="path to parameters of board dictionary")
 
@@ -1002,7 +1006,7 @@ if __name__ == '__main__':
             RESIZE_IMAGE=params.resize_image_detection,
             find_intrinsics_in_python=params.find_intrinsics_in_python,
             cam_ids=cam_ids,
-            intrinsics_dir=params.intrinsics_dir,
+            files_with_intrinsics=[x.strip() for x in params.intrinsics.split(',')],
             board_dict_path=params.board_dict_path,
         )
         output['cam_ids'] = cam_ids
