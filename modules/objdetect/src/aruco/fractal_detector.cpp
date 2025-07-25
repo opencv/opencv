@@ -4,8 +4,7 @@
 
 #include "../precomp.hpp"
 
-#include <opencv2/3d.hpp>
-#include <opencv2/calib.hpp>
+#include <opencv2/calib3d.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/flann.hpp>
 
@@ -19,7 +18,7 @@
 namespace cv {
 namespace aruco {
 
-// 设置参数
+
 void FractalMarkerDetector::setParams(const std::string& fractal_config, float markerSize) {
     fractalMarkerSet = FractalMarkerSet(fractal_config);
     if (markerSize != -1) {
@@ -27,7 +26,7 @@ void FractalMarkerDetector::setParams(const std::string& fractal_config, float m
     }
 }
 
-// 检测标记
+
 std::vector<FractalMarker>  FractalMarkerDetector::detect(const cv::Mat &img){
 
     cv::Mat bwimage,thresImage;
@@ -148,7 +147,7 @@ std::vector<FractalMarker>  FractalMarkerDetector::detect(const cv::Mat &img){
     return DetectedFractalMarkers;
 }
 
-// 检测标记并获取 2D/3D 对应关系
+
 std::vector<FractalMarker> FractalMarkerDetector::detect(const cv::Mat &img, std::vector<cv::Point3f>& p3d,
                                                   std::vector<cv::Point2f>& p2d)
 {
@@ -288,24 +287,24 @@ std::vector<FractalMarker> FractalMarkerDetector::detect(const cv::Mat &img, std
     return detected;
 }
 
-// 排序点
+
 std::vector<cv::Point2f> FractalMarkerDetector::sort(const std::vector<cv::Point2f>& marker) {
     std::vector<cv::Point2f> res_marker = marker;
 
-    // 按逆时针方向排序点
+
     double dx1 = res_marker[1].x - res_marker[0].x;
     double dy1 = res_marker[1].y - res_marker[0].y;
     double dx2 = res_marker[2].x - res_marker[0].x;
     double dy2 = res_marker[2].y - res_marker[0].y;
     double o = (dx1 * dy2) - (dy1 * dx2);
 
-    if (o < 0.0) { // 如果第三个点在左侧，则交换点以确保逆时针顺序
+    if (o < 0.0) {
         std::swap(res_marker[1], res_marker[3]);
     }
     return res_marker;
 }
 
-// 获取子像素值
+
 float FractalMarkerDetector::getSubpixelValue(const cv::Mat& im_grey, const cv::Point2f& p) {
     float intpartX, intpartY;
     float decpartX = std::modf(p.x, &intpartX);
@@ -331,7 +330,7 @@ float FractalMarkerDetector::getSubpixelValue(const cv::Mat& im_grey, const cv::
             decpartX*decpartY*float(im_grey.at<uchar>(tl.y+1,tl.x+1));
 }
 
-// 获取标记 ID
+
 int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet) {
     auto rotate = [](const cv::Mat& in) {
         cv::Mat out(in.size(), in.type());
@@ -343,7 +342,7 @@ int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, con
         return out;
     };
 
-    // 检查外边框是否全为黑色
+
     for (int x = 0; x < bits.cols; x++) {
         if (bits.at<uchar>(0, x) != 0 || bits.at<uchar>(bits.rows - 1, x) != 0 ||
             bits.at<uchar>(x, 0) != 0 || bits.at<uchar>(x, bits.cols - 1) != 0) {
@@ -351,7 +350,7 @@ int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, con
         }
     }
 
-    // 提取内部位图（去掉黑色边框）
+
     cv::Mat bit_inner(bits.rows - 2, bits.cols - 2, CV_8UC1);
     for (int r = 0; r < bit_inner.rows; r++) {
         for (int c = 0; c < bit_inner.cols; c++) {
@@ -364,11 +363,9 @@ int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, con
         for (auto idx : markersId) {
             FractalMarker fm = markerSet.fractalMarkerCollection.at(idx);
 
-            // 应用掩码以去除子标记
             cv::Mat masked;
             bit_inner.copyTo(masked, fm.mask());
 
-            // 如果掩码后的位图与标记矩阵匹配，则返回标记 ID
             if (cv::countNonZero(masked != fm.mat() * 255) == 0) {
                 return idx;
             }
@@ -380,7 +377,7 @@ int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, con
     return -1;
 }
 
-// 计算周长
+
 int FractalMarkerDetector::perimeter(const std::vector<cv::Point2f>& a) {
     int sum = 0;
     for (size_t i = 0; i < a.size(); i++) {
@@ -426,7 +423,7 @@ void FractalMarkerDetector::assignClass(const cv::Mat& im, std::vector<cv::KeyPo
     cv::Mat thresIm = cv::Mat(wsizeFull, wsizeFull, CV_8UC1);
 
     for (auto& kp : kpoints) {
-        float ptX = kp.pt.x; // 避免与内层变量冲突
+        float ptX = kp.pt.x;
         float ptY = kp.pt.y;
 
         if (sizeNorm > 0) {
