@@ -134,6 +134,10 @@ int main(int argc, char** argv)
 
     int calibrationFlags = 0;
     if(intParams.fastSolving) calibrationFlags |= cv::CALIB_USE_QR;
+    if(intParams.rationalModel) calibrationFlags |= cv::CALIB_RATIONAL_MODEL;
+    if(intParams.thinPrismModel) calibrationFlags |= cv::CALIB_THIN_PRISM_MODEL;
+    if(intParams.tiltedModel) calibrationFlags |= cv::CALIB_TILTED_MODEL;
+
     cv::Ptr<calibController> controller(new calibController(globalData, calibrationFlags,
                                                          parser.get<bool>("ft"), capParams.minFramesNum));
     cv::Ptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum,
