@@ -144,11 +144,18 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
     def test_cuda_dlpack(self):
-        ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
-        cuMat = cv.cuda_GpuMat()
-        cuMat.upload(ref)
+import numpy as np
+import cv2 as cv
+ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+cuMat = cv.cuda_GpuMat()
+cuMat.upload(ref)
 
-        arr = np.from_dlpack(cuMat)
+import torch
+arr = torch.from_dlpack(cuMat)
+print(arr[57][88][1])
+arr[57][88][1] += 1
+print(arr[57][88][1])
+print(cuMat.download()[57][88][1])
 
 
     #     # cuMat.to_dlpack()
