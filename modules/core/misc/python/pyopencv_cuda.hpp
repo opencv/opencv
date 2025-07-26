@@ -1,6 +1,7 @@
 #ifdef HAVE_OPENCV_CORE
 
 #include "opencv2/core/cuda.hpp"
+#include "dlpack/dlpack.h"
 
 typedef std::vector<cuda::GpuMat> vector_GpuMat;
 typedef cuda::GpuMat::Allocator GpuMat_Allocator;
@@ -56,7 +57,7 @@ static PyObject* pyGpuMatDLPack(PyObject* self, PyObject* py_args, PyObject* kw)
 
 static PyObject* pyGpuMatDLPackDevice() {
     printf("__dlpack_device__\n");
-    return nullptr;
+    return pyopencv_from(std::tuple<int, int>(kDLCUDA, 0));
 }
 
 #define PYOPENCV_EXTRA_METHODS_cuda_GpuMat \
