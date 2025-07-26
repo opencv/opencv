@@ -51,7 +51,6 @@ static DLDataType GetDLDataType(Ptr<cv::cuda::GpuMat> m) {
     return dtype;
 }
 
-
 static PyObject* pyGpuMatDLPack(PyObject* self, PyObject* py_args, PyObject* kw) {
     Ptr<cv::cuda::GpuMat> * self1 = 0;
     if (!pyopencv_cuda_GpuMat_getp(self, self1))
@@ -66,7 +65,10 @@ static PyObject* pyGpuMatDLPack(PyObject* self, PyObject* py_args, PyObject* kw)
     if (!PyArg_ParseTupleAndKeywords(py_args, kw, "|iOOp:cuda_GpuMat.__dlpack__", (char**)keywords, &stream, &maxVersion, &dlDevice, &copy))
         return nullptr;
 
-    // CV_Assert(dlDevice == Py_None);
+    if (dlDevice && dlDevice != Py_None && PyTuple_Check(dlDevice))
+    {
+        // TODO: check for device type
+    }
 
     void* ptr = PyMem_Malloc(sizeof(DLManagedTensor));
     if (!ptr) {

@@ -144,23 +144,19 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
     def test_cuda_dlpack(self):
-import numpy as np
-import cv2 as cv
-ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
-cuMat = cv.cuda_GpuMat()
-cuMat.upload(ref)
+        # TODO: test without torch
+        try:
+            import torch
+        except ImportError:
+            raise self.skipTest('No PyTorch library found')
 
-import torch
-arr = torch.from_dlpack(cuMat)
-print(arr[57][88][1])
-arr[57][88][1] += 1
-print(arr[57][88][1])
-print(cuMat.download()[57][88][1])
+        ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+        cuMat = cv.cuda_GpuMat()
+        cuMat.upload(ref)
 
-
-    #     # cuMat.to_dlpack()
-    #     cv.to_dlpack(cuMat)
-    #     pass
+        arr = torch.from_dlpack(cuMat)
+        arr[57][88][1] += 1
+        self.assertTrue(np.array_equal(arr.cpu().numpy(), cuMat.download()))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
