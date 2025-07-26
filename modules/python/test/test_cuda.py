@@ -143,5 +143,17 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
+    def test_cuda_dlpack(self):
+        ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+        cuMat = cv.cuda_GpuMat()
+        cuMat.upload(ref)
+
+        arr = np.from_dlpack(cuMat)
+
+
+    #     # cuMat.to_dlpack()
+    #     cv.to_dlpack(cuMat)
+    #     pass
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
