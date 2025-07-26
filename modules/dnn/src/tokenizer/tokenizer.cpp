@@ -1,9 +1,10 @@
-#include "tokenizer.hpp"
+#include "../../include/opencv2/dnn/tokenizer.hpp"
 #include "gpt2_tokenizer_fast.hpp"
 
 namespace cv { namespace dnn { namespace tokenizer {
 
 Tokenizer Tokenizer::from_pretrained(const std::string& name, const std::string& pretrained_model_path) {
+    // We most load files json into FileStorge
     std::shared_ptr<Encoding> enc;
     if (name == "gpt2") {
         enc = std::make_shared<Encoding>(GPT2TokenizerFast::from_pretrained(pretrained_model_path).encoding());

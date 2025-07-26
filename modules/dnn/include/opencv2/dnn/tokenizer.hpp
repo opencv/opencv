@@ -4,18 +4,21 @@
 #include <string>
 #include <vector>
 
-#include "encoding.hpp"
+// #include "../../src/tokenizer/encoding.hpp"
+#include "../../../src/tokenizer/encoding.hpp"
 
 namespace cv { namespace dnn { namespace tokenizer {
 
 class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
+
+    CV_WRAP Tokenizer() : enc_(nullptr), tokenizer_name("") {}
     explicit Tokenizer(std::shared_ptr<Encoding> e,
                    std::string model_name = "")
     : enc_(std::move(e)),
       tokenizer_name(std::move(model_name)) {}
 
-    CV_EXPORTS static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
+    CV_WRAP static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
     CV_EXPORTS static Tokenizer train_bpe_from_corpus(const std::string& corpus,
                                    int vocab_sz,
                                    const std::string& pattern) {
@@ -32,6 +35,14 @@ public:
         return Tokenizer(std::move(enc));
     }
     // Encoding
+    CV_WRAP std::vector<uint32_t> encode(const std::string& text,
+                            bool add_special_tokens=false) {
+        if (!add_special_tokens) {
+            return this->encode(text, {}, {});
+        }
+        std::unordered_set<std::string> allowedSpecial = {"__ALL__"};
+        return this->encode(text, allowedSpecial, {});
+    }
     std::vector<Rank> encode(const std::string& text,
                                      const std::unordered_set<std::string>& allowedSpecial={},
                                      const std::unordered_set<std::string>& disallowedSpecial={}) const {
