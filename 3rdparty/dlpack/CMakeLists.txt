@@ -1,0 +1,1 @@
+ocv_install_3rdparty_licenses(dlpack LICENSE README)
