@@ -247,6 +247,7 @@ bool  JpegDecoder::readHeader()
         if (state->cinfo.src != 0)
         {
             jpeg_save_markers(&state->cinfo, APP1, 0xffff);
+            jpeg_save_markers(&state->cinfo, APP2, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
 
             state->cinfo.scale_num=1;
@@ -472,12 +473,13 @@ bool  JpegDecoder::readData( Mat& img )
             // Check for Exif marker APP1
             jpeg_saved_marker_ptr exif_marker = NULL;
             jpeg_saved_marker_ptr cmarker = cinfo->marker_list;
-            while( cmarker && exif_marker == NULL )
+            for (; cmarker != NULL; cmarker = cmarker->next)
             {
                 if (cmarker->marker == APP1)
                     exif_marker = cmarker;
 
-                cmarker = cmarker->next;
+                if (cmarker->marker == APP2)
+                    iccp_marker = cmarker;
             }
 
             // Parse Exif data
