@@ -560,6 +560,15 @@ TEST_P(ReadExif_Sanity, Check)
     EXPECT_TRUE(exif.data[0] == 'I' || exif.data[0] == 'M');
     EXPECT_EQ(exif.data[0], exif.data[1]);
     EXPECT_EQ(locateString(exif.data, exif_size, pattern), ploc);
+
+    const Mat& iccp = metadata[IMAGE_METADATA_ICCP];
+    if (!iccp.empty())
+    {
+        EXPECT_EQ(iccp.type(), CV_8U);
+        EXPECT_GT(iccp.total(), 0u);
+        size_t iccp_size = iccp.total() * iccp.elemSize();
+        EXPECT_EQ(iccp_size, 954u);
+    }
 }
 
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
@@ -567,7 +576,7 @@ static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 #ifdef HAVE_JPEG
     ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120),
 #endif
-#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
+#ifdef HAVE_PNG
     ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102),
 #endif
 #ifdef HAVE_AVIF
