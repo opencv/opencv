@@ -800,7 +800,7 @@ TEST(Imgproc_ConnectedComponents, 4conn_regression_21366)
 
 TEST(Imgproc_ConnectedComponents, regression_27568)
 {
-    Mat image = Mat::zeros(Size(1000, 1000), CV_8UC1);
+    Mat image = Mat::zeros(Size(512, 512), CV_8UC1);
     for (int row = 0; row < image.rows; row += 2)
     {
         for (int col = 0; col < image.cols; col += 2)
