@@ -817,7 +817,8 @@ TEST(Imgproc_ConnectedComponents, regression_27568)
                 Mat labels, stats, centroids;
                 try
                 {
-                    connectedComponentsWithStats(image, labels, stats, centroids, connectivity, CV_16U, ccltype);
+                    connectedComponentsWithStats(
+                        image, labels, stats, centroids, connectivity, CV_16U, ccltype);
                     ADD_FAILURE();
                 }
                 catch (const Exception& exception)
@@ -831,7 +832,9 @@ TEST(Imgproc_ConnectedComponents, regression_27568)
 
             {
                 Mat labels, stats, centroids;
-                EXPECT_NO_THROW(connectedComponentsWithStats(image, labels, stats, centroids, connectivity, CV_32S, ccltype));
+                EXPECT_NO_THROW(
+                    connectedComponentsWithStats(
+                        image, labels, stats, centroids, connectivity, CV_32S, ccltype));
             }
         }
     }
