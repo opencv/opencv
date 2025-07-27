@@ -262,8 +262,8 @@ namespace cv{
     template<typename LabelT>
     inline static
     void checkLabelTypeOverflow(const LabelT numLabels) {
-        constexpr LabelT max_label_type_value = std::numeric_limits<LabelT>::max();
-        if (numLabels == max_label_type_value) {
+        constexpr LabelT maxLabelTypeValue = std::numeric_limits<LabelT>::max();
+        if (numLabels == maxLabelTypeValue) {
             CV_Error(
                 cv::Error::StsError,
                 "Total number of labels overflowed label type. Try using CV_32S instead of CV_16U as ltype");
