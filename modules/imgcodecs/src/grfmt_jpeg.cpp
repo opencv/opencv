@@ -470,29 +470,32 @@ bool  JpegDecoder::readData( Mat& img )
                 }
             }
 
-            // Check for Exif marker APP1
-            jpeg_saved_marker_ptr exif_marker = NULL;
-            jpeg_saved_marker_ptr cmarker = cinfo->marker_list;
-            for (; cmarker != NULL; cmarker = cmarker->next)
+            for (jpeg_saved_marker_ptr cmarker = cinfo->marker_list; cmarker != NULL; cmarker = cmarker->next)
             {
                 if (cmarker->marker == APP1)
-                    exif_marker = cmarker;
-
-                if (cmarker->marker == APP2)
-                    iccp_marker = cmarker;
-            }
-
-            // Parse Exif data
-            if( exif_marker )
-            {
-                const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
-
-                if (exif_marker->data_length > offsetToTiffHeader)
                 {
-                    m_exif.parseExif(exif_marker->data + offsetToTiffHeader, exif_marker->data_length - offsetToTiffHeader);
+                    const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
+
+                    if (cmarker->data_length > offsetToTiffHeader)
+                    {
+                        if (m_exif.getData().size())
+                        {
+                            auto& xmp = m_metadata[IMAGE_METADATA_XMP];
+                            xmp.insert(xmp.end(), cmarker->data, cmarker->data + cmarker->data_length);
+                        }
+                        else
+                        {
+                            m_exif.parseExif(cmarker->data + offsetToTiffHeader, cmarker->data_length - offsetToTiffHeader);
+                        }
+                    }
+                }
+
+                if (cmarker->marker == APP2) // Parse ICC profile
+                {
+                    auto& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                    iccp.insert(iccp.end(),cmarker->data,cmarker->data + cmarker->data_length);
                 }
             }
-
 
             jpeg_start_decompress( cinfo );
 
