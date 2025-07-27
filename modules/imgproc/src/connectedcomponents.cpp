@@ -261,13 +261,23 @@ namespace cv{
 
     template<typename LabelT>
     inline static
-    void flattenL(LabelT *P, const int start, const int nElem, LabelT& k){
+    void checkLabelTypeOverflow(const LabelT numLabels){
+        constexpr LabelT max_label_type_value = std::numeric_limits<LabelT>::max();
+        if (numLabels == max_label_type_value) {
+            CV_Error(cv::Error::StsError, "Total number of labels overflowed label type. Try using CV_32S instead of CV_16U as ltype");
+        }
+    }
+
+    template<typename LabelT>
+    inline static
+    void flattenLParallel(LabelT *P, const int start, const int nElem, LabelT& k){
         for (int i = start; i < start + nElem; ++i){
             if (P[i] < i){//node that point to root
                 P[i] = P[P[i]];
             }
             else{ //for root node
                 P[i] = k;
+                checkLabelTypeOverflow(k);
                 k = k + 1;
             }
         }
@@ -353,6 +363,7 @@ namespace cv{
 // Action 2: New label (the block has foreground pixels and is not connected to anything else)
 #define ACTION_2 img_labels_row[c] = label; \
                     P_[label] = label; \
+                    checkLabelTypeOverflow(label); \
                     label = label + 1;
 //Action 3: Assign label of block P
 #define ACTION_3 img_labels_row[c] = img_labels_row_prev_prev[c - 2];
@@ -1160,7 +1171,7 @@ namespace cv{
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]) {
                 CV_DbgAssert(i + 1 < chunksSizeAndLabelsSize);
-                flattenL(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+                flattenLParallel(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
@@ -1261,6 +1272,7 @@ namespace cv{
                 // Action 2: New label (the block has foreground pixels and is not connected to anything else)
                 #define ACTION_2 img_labels_row[c] = lunique; \
                                  P[lunique] = lunique;        \
+                                 checkLabelTypeOverflow(lunique); \
                                  lunique = lunique + 1;
                 //Action 3: Assign label of block P
                 #define ACTION_3 img_labels_row[c] = img_labels_row_prev_prev[c - 2];
@@ -1789,7 +1801,7 @@ namespace cv{
             mergeLabels(imgLabels, P, chunksSizeAndLabels.data());
 
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]) {
-                flattenL(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+                flattenLParallel(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics dataof threads
@@ -1854,6 +1866,7 @@ namespace cv{
 #define ACTION_1 img_labels_row[c] = 0;
 #define ACTION_2 img_labels_row[c] = lunique; \
                                      P[lunique] = lunique;        \
+                                     checkLabelTypeOverflow(lunique); \
                                      lunique = lunique + 1; // new label
 #define ACTION_3 img_labels_row[c] = img_labels_row_prev[c]; // x <- q
 #define ACTION_4 img_labels_row[c] = img_labels_row[c - 1]; // x <- s
@@ -2052,6 +2065,7 @@ namespace cv{
                                             //new label
                                             imgLabels_row[c] = label;
                                             P_[label] = label;
+                                            checkLabelTypeOverflow(label);
                                             label = label + 1;
                                         }
                                     }
@@ -2135,6 +2149,7 @@ namespace cv{
                                     //new label
                                     imgLabels_row[c] = label;
                                     P_[label] = label;
+                                    checkLabelTypeOverflow(label);
                                     label = label + 1;
                                 }
                             }
@@ -2320,7 +2335,7 @@ namespace cv{
                 mergeLabels8Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, stripeFirstLabel8Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+                    flattenLParallel(P, stripeFirstLabel8Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
             else{
@@ -2331,7 +2346,7 @@ namespace cv{
                 mergeLabels4Connectivity(imgLabels, P, chunksSizeAndLabels.data());
 
                 for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
-                    flattenL(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+                    flattenLParallel(P, stripeFirstLabel4Connectivity<int>(i, w), chunksSizeAndLabels[i + 1], nLabels);
                 }
             }
 
@@ -2433,6 +2448,7 @@ namespace cv{
                                             //new label
                                             imgLabels_row[c] = lunique;
                                             P[lunique] = lunique;
+                                            checkLabelTypeOverflow(lunique);
                                             lunique = lunique + 1;
                                         }
                                     }
@@ -2483,6 +2499,7 @@ namespace cv{
                                     //new label
                                     imgLabels_row[c] = lunique;
                                     P[lunique] = lunique;
+                                    checkLabelTypeOverflow(lunique);
                                     lunique = lunique + 1;
                                 }
                             }
@@ -3108,6 +3125,7 @@ namespace cv{
                                                         //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                         imgLabels_row[c] = label;
                                                         P_[label] = label;
+                                                        checkLabelTypeOverflow(label);
                                                         label = label + 1;
                                                         continue;
                                                     }
@@ -3130,6 +3148,7 @@ namespace cv{
                                                     //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                     imgLabels_row[c] = label;
                                                     P_[label] = label;
+                                                    checkLabelTypeOverflow(label);
                                                     label = label + 1;
                                                     continue;
                                                 }
@@ -3483,6 +3502,7 @@ namespace cv{
                                                         //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                         imgLabels_row[c] = label;
                                                         P_[label] = label;
+                                                        checkLabelTypeOverflow(label);
                                                         label = label + 1;
                                                         continue;
                                                     }
@@ -3507,6 +3527,7 @@ namespace cv{
                                             //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                             imgLabels_row[c] = label;
                                             P_[label] = label;
+                                            checkLabelTypeOverflow(label);
                                             label = label + 1;
                                             continue;
                                         }
@@ -3550,6 +3571,7 @@ namespace cv{
                                                 //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                 imgLabels_row[c] = label;
                                                 P_[label] = label;
+                                                checkLabelTypeOverflow(label);
                                                 label = label + 1;
                                                 continue;
                                             }
@@ -3561,6 +3583,7 @@ namespace cv{
                                         //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                         imgLabels_row[c] = label;
                                         P_[label] = label;
+                                        checkLabelTypeOverflow(label);
                                         label = label + 1;
                                         continue;
                                     }
@@ -4260,7 +4283,7 @@ namespace cv{
             LabelT nLabels = 1;
             for (int i = 0; i < h; i = chunksSizeAndLabels[i]){
                 CV_DbgAssert(i + 1 < chunksSizeAndLabelsSize);
-                flattenL(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
+                flattenLParallel(P.data(), stripeFirstLabel8Connectivity<LabelT>(i, w), chunksSizeAndLabels[i + 1], nLabels);
             }
 
             //Array for statistics data
@@ -4865,6 +4888,7 @@ namespace cv{
                                                     //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                     imgLabels_row[c] = lunique;
                                                     P[lunique] = lunique;
+                                                    checkLabelTypeOverflow(lunique);
                                                     lunique = lunique + 1;
                                                     continue;
                                                 }
@@ -4887,6 +4911,7 @@ namespace cv{
                                                 //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                 imgLabels_row[c] = lunique;
                                                 P[lunique] = lunique;
+                                                checkLabelTypeOverflow(lunique);
                                                 lunique = lunique + 1;
                                                 continue;
                                             }
@@ -5240,6 +5265,7 @@ namespace cv{
                                                     //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                                     imgLabels_row[c] = lunique;
                                                     P[lunique] = lunique;
+                                                    checkLabelTypeOverflow(lunique);
                                                     lunique = lunique + 1;
                                                     continue;
                                                 }
@@ -5264,6 +5290,7 @@ namespace cv{
                                         //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                         imgLabels_row[c] = lunique;
                                         P[lunique] = lunique;
+                                        checkLabelTypeOverflow(lunique);
                                         lunique = lunique + 1;
                                         continue;
                                     }
@@ -5307,6 +5334,7 @@ namespace cv{
                                             //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                             imgLabels_row[c] = lunique;
                                             P[lunique] = lunique;
+                                            checkLabelTypeOverflow(lunique);
                                             lunique = lunique + 1;
                                             continue;
                                         }
@@ -5318,6 +5346,7 @@ namespace cv{
                                     //Action_2: New label (the block has foreground pixels and is not connected to anything else)
                                     imgLabels_row[c] = lunique;
                                     P[lunique] = lunique;
+                                    checkLabelTypeOverflow(lunique);
                                     lunique = lunique + 1;
                                     continue;
                                 }
