@@ -532,7 +532,7 @@ static size_t locateString(const uchar* exif, size_t exif_size, const std::strin
     return 0xFFFFFFFFu;
 }
 
-typedef std::tuple<std::string, size_t, std::string, size_t> ReadExif_Sanity_Params;
+typedef std::tuple<std::string, size_t, std::string, size_t, size_t, size_t> ReadExif_Sanity_Params;
 typedef testing::TestWithParam<ReadExif_Sanity_Params> ReadExif_Sanity;
 
 TEST_P(ReadExif_Sanity, Check)
