@@ -250,6 +250,37 @@ bool  JpegDecoder::readHeader()
             jpeg_save_markers(&state->cinfo, APP2, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
 
+            const std::streamsize TIFF_HEADER_OFFSET = 6;   // "Exif\0\0"
+            const std::streamsize ICC_HEADER_OFFSET = 14;  // "ICC_PROFILE\0" + seq/total
+
+            for (jpeg_saved_marker_ptr cmarker = state->cinfo.marker_list; cmarker != nullptr; cmarker = cmarker->next)
+            {
+                if (cmarker->marker == APP1 && cmarker->data_length > TIFF_HEADER_OFFSET)
+                {
+                    unsigned char* data = cmarker->data;
+
+                    // Check if this is an Exif segment
+                    if (std::memcmp(data, "Exif\0\0", TIFF_HEADER_OFFSET) == 0)
+                    {
+                        m_exif.parseExif(data + TIFF_HEADER_OFFSET, cmarker->data_length - TIFF_HEADER_OFFSET);
+                    }
+                    // Check if this is an XMP segment (optional better detection)
+                    else if (m_read_options && cmarker->data_length >= 29 &&
+                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", 29) == 0)
+                    {
+                        auto& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        xmp.insert(xmp.end(), data, data + cmarker->data_length);
+                    }
+                }
+
+                if (m_read_options && cmarker->marker == APP2 && cmarker->data_length > ICC_HEADER_OFFSET)
+                {
+                    const unsigned char* data = cmarker->data;
+                    auto& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                    iccp.insert(iccp.end(), data + ICC_HEADER_OFFSET, data + cmarker->data_length);
+                }
+            }
+
             state->cinfo.scale_num=1;
             state->cinfo.scale_denom = m_scale_denom;
             m_scale_denom=1; // trick! to know which decoder used scale_denom see imread_
@@ -467,37 +498,6 @@ bool  JpegDecoder::readData( Mat& img )
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
                     doDirectRead = false; // CMYK -> GRAY
-                }
-            }
-
-            const std::streamsize TIFF_HEADER_OFFSET = 6;   // "Exif\0\0"
-            const std::streamsize ICC_HEADER_OFFSET = 14;  // "ICC_PROFILE\0" + seq/total
-
-            for (jpeg_saved_marker_ptr cmarker = cinfo->marker_list; cmarker != NULL; cmarker = cmarker->next)
-            {
-                if (cmarker->marker == APP1 && cmarker->data_length > TIFF_HEADER_OFFSET)
-                {
-                    unsigned char* data = cmarker->data;
-
-                    // Check if this is an Exif segment
-                    if (std::memcmp(data, "Exif\0\0", TIFF_HEADER_OFFSET) == 0)
-                    {
-                        m_exif.parseExif(data + TIFF_HEADER_OFFSET, cmarker->data_length - TIFF_HEADER_OFFSET);
-                    }
-                    // Check if this is an XMP segment (optional better detection)
-                    else if (m_read_options && cmarker->data_length >= 29 &&
-                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", 29) == 0)
-                    {
-                        auto& xmp = m_metadata[IMAGE_METADATA_XMP];
-                        xmp.insert(xmp.end(), data, data + cmarker->data_length);
-                    }
-                }
-
-                if (m_read_options && cmarker->marker == APP2 && cmarker->data_length > ICC_HEADER_OFFSET)
-                {
-                    const unsigned char* data = cmarker->data;
-                    auto& iccp = m_metadata[IMAGE_METADATA_ICCP];
-                    iccp.insert(iccp.end(), data + ICC_HEADER_OFFSET, data + cmarker->data_length);
                 }
             }
 
