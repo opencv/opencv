@@ -623,9 +623,7 @@ public:
             }
 
             if( len == 4 && memcmp( beg, "null", 4 ) == 0 )
-            {
-                CV_PARSE_ERROR_CPP( "Value 'null' is not supported by this parser" );
-            }
+                ;
             else if( (len == 4 && memcmp( beg, "true", 4 ) == 0) ||
                      (len == 5 && memcmp( beg, "false", 5 ) == 0) )
             {
