@@ -1571,7 +1571,7 @@ TEST(Core_InputOutput, FileStorage_json_null_object)
 
 TEST(Core_InputOutput, FileStorage_json_key_backslash)
 {
-     // equivalant to json {"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852}
+     // equivalant to json text {"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852}
     std::string test =
         "{ "
             "\"\\\"\":1,"
@@ -1581,17 +1581,20 @@ TEST(Core_InputOutput, FileStorage_json_key_backslash)
         "}";
     FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
 
-    ASSERT_TRUE(fs["\\\""].isNamed());
+    ASSERT_TRUE(fs["\""].isNamed());
     ASSERT_TRUE(fs["\\\\"].isNamed());
-    ASSERT_TRUE(fs["Ġ\\\""].isNamed());
+    ASSERT_TRUE(fs["Ġ\""].isNamed());
+    ASSERT_TRUE(fs["\\\\\\\\"].isNamed());
 
-    ASSERT_EQ(fs["\\\""].name(), "\\\"");
+    ASSERT_EQ(fs["\""].name(), "\"");
     ASSERT_EQ(fs["\\\\"].name(), "\\\\");
-    ASSERT_EQ(fs["Ġ\\\""].name(), "Ġ\\\"");
+    ASSERT_EQ(fs["Ġ\""].name(), "Ġ\"");
+    ASSERT_EQ(fs["\\\\\\\\"].name(), "\\\\\\\\");
 
-    ASSERT_EQ((int)fs["\\\""], 1);
+    ASSERT_EQ((int)fs["\""], 1);
     ASSERT_EQ((int)fs["\\\\"], 59);
-    ASSERT_EQ((int)fs["Ġ\\\""], 366);
+    ASSERT_EQ((int)fs["Ġ\""], 366);
+    ASSERT_EQ((int)fs["\\\\\\\\"], 6852);
     fs.release();
 }
 
