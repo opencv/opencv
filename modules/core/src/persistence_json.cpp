@@ -4,7 +4,6 @@
 
 #include "precomp.hpp"
 #include "persistence.hpp"
-// #include <regex>
 
 namespace cv
 {
@@ -425,12 +424,7 @@ public:
             if (*ptr == '\\') { // skip the next character if current is back slash
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                if (*ptr == '"')
-                    key_name += '"';
-                else {
-                    key_name += '\\';
-                    key_name += *ptr;
-                }
+                key_name += *ptr;
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
             } else {
@@ -446,7 +440,6 @@ public:
         if( ptr == beg )
             CV_PARSE_ERROR_CPP( "Key is empty" );
         value_placeholder = fs->addNode(collection, key_name, FileNode::NONE);
-        printf("%s\n", value_placeholder.name().c_str());
 
         ptr++;
         ptr = skipSpaces( ptr );
