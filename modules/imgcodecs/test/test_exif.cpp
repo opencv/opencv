@@ -541,6 +541,8 @@ TEST_P(ReadExif_Sanity, Check)
     size_t exif_size = get<1>(GetParam());
     std::string pattern = get<2>(GetParam());
     size_t ploc = get<3>(GetParam());
+    size_t expected_xmp_size = get<4>(GetParam());
+    size_t expected_iccp_size = get<5>(GetParam());
 
     const string root = cvtest::TS::ptr()->get_data_path();
     filename = root + filename;
@@ -561,26 +563,35 @@ TEST_P(ReadExif_Sanity, Check)
     EXPECT_EQ(exif.data[0], exif.data[1]);
     EXPECT_EQ(locateString(exif.data, exif_size, pattern), ploc);
 
+    const Mat& xmp = metadata[IMAGE_METADATA_XMP];
+    if (!xmp.empty())
+    {
+       EXPECT_EQ(xmp.type(), CV_8U);
+       EXPECT_GT(xmp.total(), 0u);
+       size_t xmp_size = xmp.total() * xmp.elemSize();
+       EXPECT_EQ(expected_xmp_size, xmp_size);
+    }
+
     const Mat& iccp = metadata[IMAGE_METADATA_ICCP];
     if (!iccp.empty())
     {
         EXPECT_EQ(iccp.type(), CV_8U);
         EXPECT_GT(iccp.total(), 0u);
         size_t iccp_size = iccp.total() * iccp.elemSize();
-        EXPECT_EQ(iccp_size, 954u);
+        EXPECT_EQ(expected_iccp_size, iccp_size);
     }
 }
 
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 {
 #ifdef HAVE_JPEG
-    ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120),
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120, 3597, 940),
 #endif
-#ifdef HAVE_PNG
-    ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102),
+#ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102, 505, 0),
 #endif
 #ifdef HAVE_AVIF
-    ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120),
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120, 3597, 940),
 #endif
 };
 
