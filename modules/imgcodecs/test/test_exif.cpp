@@ -563,18 +563,18 @@ TEST_P(ReadExif_Sanity, Check)
     EXPECT_EQ(exif.data[0], exif.data[1]);
     EXPECT_EQ(locateString(exif.data, exif_size, pattern), ploc);
 
-    const Mat& xmp = metadata[IMAGE_METADATA_XMP];
-    if (!xmp.empty())
+    if (metadata_types.size() > IMAGE_METADATA_XMP)
     {
+       const Mat& xmp = metadata[IMAGE_METADATA_XMP];
        EXPECT_EQ(xmp.type(), CV_8U);
        EXPECT_GT(xmp.total(), 0u);
        size_t xmp_size = xmp.total() * xmp.elemSize();
        EXPECT_EQ(expected_xmp_size, xmp_size);
     }
 
-    const Mat& iccp = metadata[IMAGE_METADATA_ICCP];
-    if (!iccp.empty())
+    if (metadata_types.size() > IMAGE_METADATA_ICCP)
     {
+        const Mat& iccp = metadata[IMAGE_METADATA_ICCP];
         EXPECT_EQ(iccp.type(), CV_8U);
         EXPECT_GT(iccp.total(), 0u);
         size_t iccp_size = iccp.total() * iccp.elemSize();
