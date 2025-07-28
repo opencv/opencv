@@ -498,9 +498,6 @@ imread_( const String& filename, int flags, OutputArray mat,
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
 
-    if (metadata_types)
-        metadata_types->clear();
-
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
@@ -538,6 +535,12 @@ imread_( const String& filename, int flags, OutputArray mat,
 
     /// set the filename in the driver
     decoder->setSource( filename );
+
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
+    }
 
     try
     {
@@ -1249,9 +1252,6 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
            std::vector<int>* metadata_types,
            OutputArrayOfArrays metadata )
 {
-    if (metadata_types)
-        metadata_types->clear();
-
     CV_Assert(!buf.empty());
     CV_Assert(buf.isContinuous());
     CV_Assert(buf.checkVector(1, CV_8U) > 0);
@@ -1300,6 +1300,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
             CV_Error( Error::StsError, "failed to write image data to temporary file" );
         }
         decoder->setSource(filename);
+    }
+
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
     }
 
     bool success = false;
