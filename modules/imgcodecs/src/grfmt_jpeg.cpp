@@ -470,29 +470,34 @@ bool  JpegDecoder::readData( Mat& img )
                 }
             }
 
+            const std::streamsize TIFF_HEADER_OFFSET = 6;   // "Exif\0\0"
+            const std::streamsize ICC_HEADER_OFFSET = 14;  // "ICC_PROFILE\0" + seq/total
+
             for (jpeg_saved_marker_ptr cmarker = cinfo->marker_list; cmarker != NULL; cmarker = cmarker->next)
             {
-                if (cmarker->marker == APP1)
+                if (cmarker->marker == APP1 && cmarker->data_length > TIFF_HEADER_OFFSET)
                 {
-                    const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
-                    if (cmarker->data_length > offsetToTiffHeader)
+                    unsigned char* data = cmarker->data;
+
+                    // Check if this is an Exif segment
+                    if (std::memcmp(data, "Exif\0\0", TIFF_HEADER_OFFSET) == 0)
                     {
-                        if (m_exif.getData().size())
-                        {
-                            auto& xmp = m_metadata[IMAGE_METADATA_XMP];
-                            xmp.insert(xmp.end(), cmarker->data, cmarker->data + cmarker->data_length);
-                        }
-                        else
-                        {
-                            m_exif.parseExif(cmarker->data + offsetToTiffHeader, cmarker->data_length - offsetToTiffHeader);
-                        }
+                        m_exif.parseExif(data + TIFF_HEADER_OFFSET, cmarker->data_length - TIFF_HEADER_OFFSET);
+                    }
+                    // Check if this is an XMP segment (optional better detection)
+                    else if (m_read_options && cmarker->data_length >= 29 &&
+                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", 29) == 0)
+                    {
+                        auto& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        xmp.insert(xmp.end(), data, data + cmarker->data_length);
                     }
                 }
 
-                if (cmarker->marker == APP2) // Parse ICC profile
+                if (m_read_options && cmarker->marker == APP2 && cmarker->data_length > ICC_HEADER_OFFSET)
                 {
+                    const unsigned char* data = cmarker->data;
                     auto& iccp = m_metadata[IMAGE_METADATA_ICCP];
-                    iccp.insert(iccp.end(),cmarker->data + 14, cmarker->data + cmarker->data_length);
+                    iccp.insert(iccp.end(), data + ICC_HEADER_OFFSET, data + cmarker->data_length);
                 }
             }
 
