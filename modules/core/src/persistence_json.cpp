@@ -419,10 +419,16 @@ public:
             CV_PARSE_ERROR_CPP( "Key must start with \'\"\'" );
 
         char * beg = ptr + 1;
-
         do {
-            ++ptr;
-            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            if (*ptr == '\\') { // skip the next character if current is back slash
+                ++ptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+                ++ptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            } else {
+                ++ptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            }
         } while( cv_isprint(*ptr) && *ptr != '"' );
 
         if( *ptr != '"' )
