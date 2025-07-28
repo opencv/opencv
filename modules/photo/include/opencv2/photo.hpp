@@ -898,7 +898,7 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 //! @addtogroup photo_ca_correction Chromatic Aberration Correction
 //! @{
 
-/** @example samples/cpp/tutorial_code/photo/chromatic_aberration_correction/chromatic_aberration_correction.cpp
+/** @example samples/cpp/chromatic_aberration_correction.cpp
 An example correcting chromatic aberration
 */
 /** @brief Corrects lateral chromatic aberration in an image using polynomial distortion model.
