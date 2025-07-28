@@ -19,36 +19,19 @@ namespace {
 template<typename T, typename WT = T>
 class ComparatorGreater {
 public:
-    ComparatorGreater(const T* data, size_t step)
-        : data_(data), step_(step) {}
-
-
-    bool operator()(const size_t lhs_idx, const size_t rhs_idx) {
-        WT lhs = static_cast<WT>(*(data_ + lhs_idx * step_));
-        WT rhs = static_cast<WT>(*(data_ + rhs_idx * step_));
-        return (lhs > rhs || (lhs == rhs && lhs_idx < rhs_idx));
+    using value_type = std::pair<T, WT>;
+    bool operator()(const value_type& a, const value_type& b) const {
+        return (a.second > b.second || (a.second == b.second && a.first < b.first));
     }
-
-private:
-    const T* data_;
-    size_t step_;
 };
 
 template<typename T, typename WT = T>
 class ComparatorLess {
 public:
-    ComparatorLess(const T* data, size_t step)
-        : data_(data), step_(step) {}
-
-    bool operator()(const size_t lhs_idx, const size_t rhs_idx) {
-        WT lhs = static_cast<WT>(*(data_ + lhs_idx * step_));
-        WT rhs = static_cast<WT>(*(data_ + rhs_idx * step_));
-        return (lhs < rhs || (lhs == rhs && lhs_idx < rhs_idx));
+    using value_type = std::pair<T, WT>;
+    bool operator()(const value_type& a, const value_type& b) const {
+        return (a.second < b.second || (a.second == b.second && a.first < b.first));
     }
-
-private:
-    const T* data_;
-    size_t step_;
 };
 }
 
@@ -133,33 +116,25 @@ private:
             T* valPtr = output_vals.ptr<T>();
             int64_t* idxPtr = output_idxs.ptr<int64_t>();
 
-            std::vector<std::pair<uint32_t, T>> sortbuf(dimAxis);
+            std::vector<std::pair<uint32_t, WT>> sortbuf(dimAxis);
             for (size_t b = r.start; b < r.end; ++b) {
                 for (size_t j = 0; j < inner; ++j) {
                     size_t offset = b * dimAxis * inner + j;
                     for (uint32_t u = 0; u < (uint32_t)dimAxis; ++u) {
                         sortbuf[u].first  = u;
-                        sortbuf[u].second = inPtr[offset + u * inner];
+                        sortbuf[u].second = WT(inPtr[offset + u * inner]);
                     }
                     if (largest){
-                        ComparatorGreater<T,WT> cmp(inPtr + offset, inner);
-                        std::partial_sort(sortbuf.begin(), sortbuf.begin() + kVal, sortbuf.end(),
-                            [&](auto const &a, auto const &b) {
-                                return cmp(a.first, b.first);
-                            }
-                        );
+                        ComparatorGreater<uint32_t,WT> cmp;
+                        std::partial_sort(sortbuf.begin(), sortbuf.begin() + kVal, sortbuf.end(), cmp);
                     }
                     else{
-                        ComparatorLess<T,WT>    cmp(inPtr + offset, inner);
-                        std::partial_sort(sortbuf.begin(), sortbuf.begin() + kVal, sortbuf.end(),
-                            [&](auto const &a, auto const &b) {
-                                return cmp(a.first, b.first);
-                            }
-                        );
+                        ComparatorLess<uint32_t,WT> cmp;
+                        std::partial_sort(sortbuf.begin(), sortbuf.begin() + kVal, sortbuf.end(), cmp);
                     }
                     for (int i = 0; i < kVal; ++i) {
                         auto &p = sortbuf[i];
-                        valPtr[b * kVal * inner + i * inner + j] = p.second;
+                        valPtr[b * kVal * inner + i * inner + j] = T(p.second);
                         idxPtr[b * kVal * inner + i * inner + j] = p.first;
                     }
                 }
