@@ -551,6 +551,9 @@ TEST_P(ReadExif_Sanity, Check)
     std::vector<Mat> metadata;
     Mat img = imreadWithMetadata(filename, metadata_types, metadata, 1);
 
+    std::vector<uchar> compressed;
+    EXPECT_TRUE(imencodeWithMetadata(".png", img, metadata_types, metadata, compressed));
+
     EXPECT_EQ(img.type(), CV_8UC3);
     ASSERT_GE(metadata_types.size(), 1u);
     EXPECT_EQ(metadata_types.size(), metadata.size());
