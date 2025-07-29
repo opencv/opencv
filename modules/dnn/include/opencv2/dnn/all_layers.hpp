@@ -1382,10 +1382,10 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TriluLayer> create(const LayerParams& params);
     };
 
-    class CV_EXPORTS Clip13Layer : public Layer
+    class CV_EXPORTS ClapLayer : public Layer
     {
     public:
-        static Ptr<Clip13Layer> create(const LayerParams& params);
+        static Ptr<ClapLayer> create(const LayerParams& params);
     };
 
 //! @}

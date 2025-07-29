@@ -12,9 +12,9 @@ namespace cv { namespace dnn {
 
 
 
-class Clip13LayerImpl CV_FINAL : public Clip13Layer {
+class ClapLayerImpl CV_FINAL : public ClapLayer {
     public:
-        Clip13LayerImpl(const LayerParams &params) {
+        ClapLayerImpl(const LayerParams &params) {
             setParamsFrom(params);
         }
 
@@ -87,9 +87,9 @@ class Clip13LayerImpl CV_FINAL : public Clip13Layer {
 };
 
 
-Ptr<Clip13Layer> Clip13Layer::create(const LayerParams& params)
+Ptr<ClapLayer> ClapLayer::create(const LayerParams& params)
 {
-    return makePtr<Clip13LayerImpl>(params);
+    return makePtr<ClapLayerImpl>(params);
 }
 
 }}
