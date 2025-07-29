@@ -235,7 +235,7 @@ inline static std::string MST_name_printer(const testing::TestParamInfo<MST::Par
 
 INSTANTIATE_TEST_CASE_P(/**/, MST, testing::ValuesIn(mst_graphs), MST_name_printer);
 
-TEST(MSTstress, LargeGraph)
+TEST(MSTStress, largeGraph)
 {
     const int numNodes = 100000;
 
@@ -258,10 +258,145 @@ TEST(MSTstress, LargeGraph)
     bool resultPrim = buildMST(numNodes, edges, primMST, MST_PRIM, 0);
     bool resultKruskal = buildMST(numNodes, edges, kruskalMST, MST_KRUSKAL, 0);
 
-    EXPECT_TRUE(resultPrim);
-    EXPECT_TRUE(resultKruskal);
-    EXPECT_EQ(primMST.size(), static_cast<size_t>(numNodes - 1));
-    EXPECT_EQ(kruskalMST.size(), static_cast<size_t>(numNodes - 1));
+    EXPECT_TRUE(resultPrim) << "Prim's algorithm failed for large graph ( "
+        << numNodes << " nodes & " << edges.size() << " edges)";
+    EXPECT_TRUE(resultKruskal) << "Kruskal's algorithm failed for large graph ( "
+        << numNodes << " nodes & " << edges.size() << " edges)";
+    EXPECT_EQ(primMST.size(), static_cast<size_t>(numNodes - 1))
+        << "Prim's MST size incorrect for large graph: expected "
+        << (numNodes - 1) << " edges, got " << primMST.size() << ".";
+    EXPECT_EQ(kruskalMST.size(), static_cast<size_t>(numNodes - 1))
+        << "Kruskal's MST size incorrect for large graph: expected "
+        << (numNodes - 1) << " edges, got " << kruskalMST.size() << ".";
 }
+
+typedef tuple<int /*numNodes*/,
+              std::vector<MSTEdge>/*edges*/
+             > MSTNegativeParamType;
+typedef testing::TestWithParam<MSTNegativeParamType> MSTNegative;
+
+TEST_P(MSTNegative, disconnectedGraphs)
+{
+    const int numNodes = get<0>(GetParam());
+    const std::vector<MSTEdge>& edges = get<1>(GetParam());
+
+    std::vector<MSTEdge> primMST, kruskalMST;
+    bool resultPrim = buildMST(numNodes, edges, primMST, MST_PRIM, 0);
+    bool resultKruskal = buildMST(numNodes, edges, kruskalMST, MST_KRUSKAL, 0);
+
+    EXPECT_FALSE(resultPrim) << "Prim's algorithm should fail for disconnected graphs ( "
+        << numNodes << " nodes & " << edges.size() << " edges)";
+    EXPECT_FALSE(resultKruskal) << "Kruskal's algorithm should fail for disconnected graphs ( "
+        << numNodes << " nodes & " << edges.size() << " edges)";
+    EXPECT_LT(primMST.size(), static_cast<size_t>(numNodes - 1))
+        << "Prim's MST should not contain " << numNodes - 1 << " edges for disconnected graphs";
+    EXPECT_LT(kruskalMST.size(), static_cast<size_t>(numNodes - 1))
+        << "Kruskal's MST should not contain " << numNodes - 1 << " edges for disconnected graphs";
+}
+
+const MSTNegativeParamType mst_negative[] =
+{
+    // Two disconnected subgraphs
+
+    MSTNegativeParamType(5,
+        {
+            // Subgraph 1: 0-1
+            {0, 1, 1.0},
+            // Subgraph 2: 2-3-4
+            {2, 3, 2.0}, {3, 4, 3.0}
+        }
+    ),
+
+    MSTNegativeParamType(8,
+        {
+            // Subgraph 1: 0-1-2-3
+            {0, 1, 1.0}, {1, 2, 2.0}, {2, 3, 3.0},
+            // Subgraph 2: 4-5-6-7
+            {4, 5, 4.0}, {5, 6, 5.0}, {6, 7, 6.0}
+        }
+    ),
+
+    MSTNegativeParamType(4,
+        {
+            // Subgraph 1: 0-1
+            {0, 1, 1.0},
+            // Subgraph 2: 2-3
+            {2, 3, 1.0},
+            // self-loop edges (should be ignored by the algorithms)
+            {0, 0, 1.0}, {1, 1, 1.0}, {2, 2, 1.0}, {3, 3, 1.0}
+        }
+    ),
+
+    // Three disconnected components
+
+    MSTNegativeParamType(6,
+        {
+            // Subgraph 1: 0-1
+            {0, 1, 1.0},
+            // Subgraph 2: 2-3
+            {2, 3, 1.0},
+            // Subgraph 3: 4-5
+            {4, 5, 1.0}
+        }
+    ),
+
+    MSTNegativeParamType(9,
+        {
+            // Subgraph 1: 0-1-2-3
+            {0, 1, 1.0}, {1, 2, 1.0}, {2, 3, 1.0},
+            // Subgraph 2: 4-5-6
+            {4, 5, 1.0}, {5, 6, 1.0},
+            // Subgraph 3: 7-8
+            {7, 8, 1.0}
+        }
+    ),
+
+    MSTNegativeParamType(8,
+        {
+            // Subgraph 1: 0-1-2
+            {0, 1, 1.0}, {1, 2, 1.0},
+            // Subgraph 2: 3-4-5
+            {3, 4, 1.0}, {4, 5, 1.0},
+            // Subgraph 3: 6-7
+            {6, 7, 1.0}
+        }
+    ),
+    
+    // Isolated nodes
+    MSTNegativeParamType(4,
+        {
+            // Subgraph 1: 0-1-2
+            {0, 1, 1.0}, {1, 2, 1.0},
+            // Isolated node: 3
+        }
+    ),
+
+    MSTNegativeParamType(5,
+        {
+            // Subgraph 1: 0-1-2
+            {0, 1, 1.0}, {1, 2, 1.0},
+            // Isolated nodes: 3, 4
+        }
+    ),
+
+    MSTNegativeParamType(3,
+        {
+            // Isolated node: 0, 1, 2 (no edges)
+        }
+    ),
+};
+
+inline static std::string MST_negative_name_printer(const testing::TestParamInfo<MSTNegative::ParamType>& info) {
+    std::ostringstream os;
+    const auto& numNodes = get<0>(info.param);
+    const auto& edges = get<1>(info.param);
+
+    os << "TestCase_" << info.index << "_Nodes_" << numNodes;
+    os << "_Edges_" << edges.size();
+
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, MSTNegative, testing::ValuesIn(mst_negative), MST_negative_name_printer);
 
 }} // namespace

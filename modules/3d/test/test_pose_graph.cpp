@@ -171,7 +171,8 @@ TEST(PoseGraphMST, optimization)
     Ptr<detail::PoseGraph> pgWithMSTAndOptimizer = readG2OFile(filename);
     Ptr<detail::PoseGraph> init = readG2OFile(filename);
 
-    pgWithMSTAndOptimizer->initializePosesWithMST();
+    double lambda = 0.485;
+    pgWithMSTAndOptimizer->initializePosesWithMST(lambda);
 
     // You may change logging level to view detailed optimization report
     // For example, set env. variable like this: OPENCV_LOG_LEVEL=INFO
@@ -203,58 +204,84 @@ TEST(PoseGraphMST, optimization)
     if (cvtest::debugLevel > 0)
     {
         // Write OBJ for MST-initialized pose graph with optimizer
+        std::string fname = "pg_with_mst_and_optimizer.obj";
+        std::fstream of(fname, std::fstream::out);
+        std::vector<size_t> ids = pgWithMSTAndOptimizer->getNodesIds();
+        for (const size_t& id : ids)
         {
-            std::string fname = "pg_with_mst_and_optimizer.obj";
-            std::fstream of(fname, std::fstream::out);
-            std::vector<size_t> ids = pgWithMSTAndOptimizer->getNodesIds();
-            for (const size_t& id : ids)
-            {
-                Point3d d = pgWithMSTAndOptimizer->getNodePose(id).translation();
-                of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
-            }
-            size_t esz = pgWithMSTAndOptimizer->getNumEdges();
-            for (size_t i = 0; i < esz; i++)
-            {
-                size_t sid = pgWithMSTAndOptimizer->getEdgeStart(i), tid = pgWithMSTAndOptimizer->getEdgeEnd(i);
-                of << "l " << sid + 1 << " " << tid + 1 << std::endl;
-            }
-            of.close();
+            Point3d d = pgWithMSTAndOptimizer->getNodePose(id).translation();
+            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
         }
+        size_t esz = pgWithMSTAndOptimizer->getNumEdges();
+        for (size_t i = 0; i < esz; i++)
+        {
+            size_t sid = pgWithMSTAndOptimizer->getEdgeStart(i), tid = pgWithMSTAndOptimizer->getEdgeEnd(i);
+            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+        }
+        of.close();
+
         // Write OBJ for optimizer-only pose graph
+        std::string fname = "pg_optimizer_only.obj";
+        std::fstream of(fname, std::fstream::out);
+        std::vector<size_t> ids = pgOptimizerOnly->getNodesIds();
+        for (const size_t& id : ids)
         {
-            std::string fname = "pg_optimizer_only.obj";
-            std::fstream of(fname, std::fstream::out);
-            std::vector<size_t> ids = pgOptimizerOnly->getNodesIds();
-            for (const size_t& id : ids)
+            Point3d d = pgOptimizerOnly->getNodePose(id).translation();
+            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+        }
+        size_t esz = pgOptimizerOnly->getNumEdges();
+        for (size_t i = 0; i < esz; i++)
+        {
+            size_t sid = pgOptimizerOnly->getEdgeStart(i), tid = pgOptimizerOnly->getEdgeEnd(i);
+            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+        }
+        of.close();
+
+        // Write OBJ for initial pose graph
+        std::string fname = "pg_init.obj";
+        std::fstream of(fname, std::fstream::out);
+        std::vector<size_t> ids = init->getNodesIds();
+        for (const size_t& id : ids)
+        {
+            Point3d d = init->getNodePose(id).translation();
+            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+        }
+        size_t esz = init->getNumEdges();
+        for (size_t i = 0; i < esz; i++)
+        {
+            size_t sid = init->getEdgeStart(i), tid = init->getEdgeEnd(i);
+            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+        }
+        of.close();
+
+        
+
+        auto extractVertices = [](const Ptr<detail::PoseGraph>& pg) -> std::vector<Point3f>
+        {
+            std::vector<Point3f> vertices;
+            for (const size_t& id : pg->getNodesIds())
             {
-                Point3d d = pgOptimizerOnly->getNodePose(id).translation();
-                of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+                Point3d d = pg->getNodePose(id).translation();
+                vertices.emplace_back(static_cast<float>(d.x), static_cast<float>(d.y), static_cast<float>(d.z));
             }
-            size_t esz = pgOptimizerOnly->getNumEdges();
+            return vertices;
+        };
+
+        auto extractIndexes = [](const Ptr<detail::PoseGraph>& pg) -> std::vector<Vec3i>
+        {
+            std::vector<Vec3i> indexes;
+            size_t esz = pg->getNumEdges();
             for (size_t i = 0; i < esz; i++)
             {
-                size_t sid = pgOptimizerOnly->getEdgeStart(i), tid = pgOptimizerOnly->getEdgeEnd(i);
-                of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+                size_t sid = pg->getEdgeStart(i), tid = pg->getEdgeEnd(i);
+                indexes.emplace_back(static_cast<int>(sid), static_cast<int>(tid));
             }
-            of.close();
-        }
-        {
-            std::string fname = "pg_init.obj";
-            std::fstream of(fname, std::fstream::out);
-            std::vector<size_t> ids = init->getNodesIds();
-            for (const size_t& id : ids)
-            {
-                Point3d d = init->getNodePose(id).translation();
-                of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
-            }
-            size_t esz = init->getNumEdges();
-            for (size_t i = 0; i < esz; i++)
-            {
-                size_t sid = init->getEdgeStart(i), tid = init->getEdgeEnd(i);
-                of << "l " << sid + 1 << " " << tid + 1 << std::endl;
-            }
-            of.close();
-        }
+            return indexes;
+        };
+
+        saveMesh("pg_with_mst_and_optimizer.obj", extractVertices(pgWithMSTAndOptimizer), extractIndexes(pgWithMSTAndOptimizer));
+        saveMesh("pg_optimizer_only.obj", extractVertices(pgOptimizerOnly), extractIndexes(pgOptimizerOnly));
+        saveMesh("pg_init2.obj", extractVertices(init), extractIndexes(init));
     }
 }
 

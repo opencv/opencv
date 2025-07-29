@@ -121,9 +121,13 @@ public:
     // checks if graph is connected and each edge connects exactly 2 nodes
     virtual bool isValid() const = 0;
 
-    // calculates an inital solution for poses using Minimum Spanning Tree ( Prim's MST) algorithm
-    // This solution should be used as a starting point for optimization
-    virtual void initializePosesWithMST() = 0;
+    // Calculates an initial pose estimate using the Minimum Spanning Tree (Prim's MST) algorithm.
+    // The result serves as a starting point for further optimization.
+    // Edge weights are calculated as:
+    //     weight = translationNorm + lambda * rotationAngle
+    // The default lambda value (0.485) was empirically chosen based on its impact on optimizer performance,
+    // but can/should be tuned for different datasets.
+    virtual void initializePosesWithMST(double lambda = 0.485) = 0;
 
     // creates an optimizer with user-defined settings and returns a pointer on it
     virtual Ptr<LevMarqBase> createOptimizer(const LevMarq::Settings& settings) = 0;

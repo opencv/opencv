@@ -332,7 +332,7 @@ public:
     // calculate cost function based on provided nodes parameters
     double calcEnergyNodes(const std::map<size_t, Node>& newNodes) const;
 
-    void initializePosesWithMST() CV_OVERRIDE;
+    void initializePosesWithMST(double lambda) CV_OVERRIDE;
 
     // creates an optimizer
     virtual Ptr<LevMarqBase> createOptimizer(const LevMarq::Settings& settings) CV_OVERRIDE
@@ -363,7 +363,7 @@ public:
     Ptr<PoseGraphLevMarq> lm;
 
 private:
-    double calculateWeight(const PoseGraphImpl::Edge& e) const;
+    double calculateWeight(const PoseGraphImpl::Edge& e, double lambda) const;
     void applyMST(const std::vector<cv::MSTEdge>& resultingEdges, const PoseGraphImpl::Node& rootNode);
 };
 
@@ -479,7 +479,7 @@ bool PoseGraphImpl::isValid() const
     return isGraphConnected && !invalidEdgeNode;
 }
 
-double PoseGraphImpl::calculateWeight(const PoseGraphImpl::Edge& e) const
+double PoseGraphImpl::calculateWeight(const PoseGraphImpl::Edge& e, double lambda) const
 {
     double translationNorm = cv::norm(e.pose.t);
 
@@ -488,8 +488,6 @@ double PoseGraphImpl::calculateWeight(const PoseGraphImpl::Edge& e) const
     cv::Rodrigues(R, rvec);
     double rotationAngle = cv::norm(rvec);
 
-    // empirically determined
-    double lambda = 0.485;
     double weight = translationNorm + lambda * rotationAngle;
 
     return weight;
@@ -552,14 +550,14 @@ void PoseGraphImpl::applyMST(const std::vector<cv::MSTEdge>& resultingEdges, con
     }
 }
 
-void PoseGraphImpl::initializePosesWithMST()
+void PoseGraphImpl::initializePosesWithMST(double lambda)
 {
     size_t numNodes = getNumNodes();
 
     std::vector<MSTEdge> MSTedges;
     for (const auto& e: edges)
     {
-        double weight = calculateWeight(e);
+        double weight = calculateWeight(e, lambda);
         MSTedges.push_back({static_cast<int>(e.sourceNodeId), static_cast<int>(e.targetNodeId), weight});
     }
 
