@@ -361,7 +361,7 @@ const MSTNegativeParamType mst_negative[] =
             {6, 7, 1.0}
         }
     ),
-    
+
     // Isolated nodes
     MSTNegativeParamType(4,
         {

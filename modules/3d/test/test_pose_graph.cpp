@@ -254,7 +254,7 @@ TEST(PoseGraphMST, optimization)
         }
         of.close();
 
-        
+
 
         auto extractVertices = [](const Ptr<detail::PoseGraph>& pg) -> std::vector<Point3f>
         {
