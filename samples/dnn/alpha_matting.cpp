@@ -1,8 +1,7 @@
 /*
  * This file is part of OpenCV project.
- * It is subject to the license terms in the LICENSE file found in the top-level directory
- * of this distribution and at http://opencv.org/license.html.
- * 
+ * It is subject to the license terms in the LICENSE file found in the top-level directory of this distribution and at http://opencv.org/license.html.
+ *
  * Copyright (C) 2025, Bigvision LLC.
  *
  * @file alpha_matting.cpp
@@ -34,28 +33,28 @@ using namespace cv::dnn;
 using namespace std;
 
 const string about =
-        "This sample demonstrates human portrait alpha matting using MODNet model.\n"
-        "MODNet is a trimap-free portrait matting method that can produce high-quality\n"
-        "alpha mattes for portrait images in real-time.\n\n"
-        "Usage examples:\n"
-        "\t./example_alpha_matting --input=image.jpg\n"
-        "\t./example_alpha_matting modnet (using config alias)\n\n"
-        "To download the MODNet model, run: python download_models.py modnet\n"
-        "Press any key to exit \n";
+    "This sample demonstrates human portrait alpha matting using MODNet model.\n"
+    "MODNet is a trimap-free portrait matting method that can produce high-quality\n"
+    "alpha mattes for portrait images in real-time.\n\n"
+    "Usage examples:\n"
+    "\t./example_alpha_matting --input=image.jpg\n"
+    "\t./example_alpha_matting modnet (using config alias)\n\n"
+    "To download the MODNet model, run: python download_models.py modnet\n"
+    "Press any key to exit \n";
 
 const string param_keys =
-"{ help h          |                   | Print help message }"
-"{ @alias          | modnet            | An alias name of model to extract preprocessing parameters from models.yml file }"
-"{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-"{ input i         | " + cv::samples::findFile("samples/data/messi5.jpg") + " | Path to input image file }"
-"{ model           |                   | Path to MODNet ONNX model file }";
+    "{ help h          |                   | Print help message }"
+    "{ @alias          | modnet            | An alias name of model to extract preprocessing parameters from models.yml file }"
+    "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
+    "{ input i         | " +    cv::samples::findFile("samples/data/messi5.jpg") + " | Path to input image file }"
+    "{ model           |                   | Path to MODNet ONNX model file }";
 
 const string backend_keys = format(
     "{ backend         | default | Choose one of computation backends: "
     "default: automatically (by default), "
     "openvino: Intel's Deep Learning Inference Engine, "
     "opencv: OpenCV implementation, "
-    "vkcom: VKCOM, "    
+    "vkcom: VKCOM, "
     "cuda: CUDA, "
     "webnn: WebNN }");
 
@@ -202,4 +201,3 @@ int main(int argc, char **argv)
     destroyAllWindows();
     return 0;
 }
-
