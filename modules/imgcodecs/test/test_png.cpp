@@ -20,7 +20,11 @@ TEST(Imgcodecs_Png, write_big)
 
     vector<uchar> buff;
     ASSERT_NO_THROW(imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, INT_MAX }));
+#ifdef HAVE_PNG
     EXPECT_EQ((size_t)816219, buff.size());
+#else
+    EXPECT_EQ((size_t)817407, buff.size());
+#endif
 }
 
 TEST(Imgcodecs_Png, encode)
