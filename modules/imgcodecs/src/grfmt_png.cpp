@@ -648,7 +648,11 @@ bool  PngDecoder::readData( Mat& img )
 
                 png_charp icc_name;
                 int compression_type;
+#if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10500)
                 png_bytep icc_profile;
+#else
+                png_charp icc_profile;
+#endif
                 png_uint_32 icc_length;
 
                 if (png_get_iCCP(m_png_ptr, m_info_ptr, &icc_name, &compression_type, &icc_profile, &icc_length)) {
@@ -1028,7 +1032,11 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                     if (!m_metadata.empty()) {
                         std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
                         if (!exif.empty()) {
+#ifdef PNG_eXIf_SUPPORTED
                             png_set_eXIf_1(png_ptr, info_ptr, static_cast<png_uint_32>(exif.size()), exif.data());
+#else
+                            CV_LOG_WARNING(NULL, "Libpng is too old and does not support EXIF.");
+#endif
                         }
 
                         std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
@@ -1045,7 +1053,7 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         std::vector<uchar> iccp = m_metadata[IMAGE_METADATA_ICCP];
                         if (!iccp.empty()) {
                             // PNG standard requires a profile name (null-terminated, max 79 characters, printable Latin-1)
-                            const char* iccp_profile_name = "ICC Profile";
+                            char iccp_profile_name[] = "ICC Profile";
 
                             // Compression type must be 0 (deflate) as per libpng docs
                             int compression_type = PNG_COMPRESSION_TYPE_BASE;
@@ -1056,7 +1064,11 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                             png_set_iCCP(png_ptr, info_ptr,
                                 iccp_profile_name,
                                 compression_type,
+#if (PNG_LIBPNG_VER_MAJOR*10000 + PNG_LIBPNG_VER_MINOR*100 + PNG_LIBPNG_VER_RELEASE >= 10500)
                                 reinterpret_cast<png_const_bytep>(iccp.data()),
+#else
+                                reinterpret_cast<png_charp>(iccp.data()),
+#endif
                                 static_cast<png_uint_32>(iccp.size()));
                         }
                     }
