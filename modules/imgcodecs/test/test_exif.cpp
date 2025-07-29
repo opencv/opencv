@@ -547,14 +547,21 @@ TEST_P(ReadExif_Sanity, Check)
     const string root = cvtest::TS::ptr()->get_data_path();
     filename = root + filename;
 
-    std::vector<int> metadata_types;
-    std::vector<Mat> metadata;
-    Mat img = imreadWithMetadata(filename, metadata_types, metadata, 1);
+    std::vector<int> metadata_types, metadata_types2;
+    std::vector<std::vector<uchar> >  metadata, metadata2;
+    Mat img = imreadWithMetadata(filename, metadata_types, metadata);
+
+    std::vector<uchar> compressed;
+    imencodeWithMetadata(".jpg", img, metadata_types, metadata, compressed);
+    img = imdecodeWithMetadata(compressed, metadata_types2, metadata2);
+
+    EXPECT_EQ(metadata_types, metadata_types2);
+    EXPECT_EQ(metadata, metadata2);
 
     EXPECT_EQ(img.type(), CV_8UC3);
     ASSERT_GE(metadata_types.size(), 1u);
     EXPECT_EQ(metadata_types.size(), metadata.size());
-    const Mat& exif = metadata[IMAGE_METADATA_EXIF];
+    const Mat exif = Mat(metadata[IMAGE_METADATA_EXIF]);
     EXPECT_EQ(exif.type(), CV_8U);
     EXPECT_EQ(exif.total(), exif_size);
     ASSERT_GE(exif_size, 26u); // minimal exif should take at least 26 bytes
@@ -565,7 +572,7 @@ TEST_P(ReadExif_Sanity, Check)
 
     if (metadata_types.size() > IMAGE_METADATA_XMP)
     {
-       const Mat& xmp = metadata[IMAGE_METADATA_XMP];
+       const Mat xmp = Mat(metadata[IMAGE_METADATA_XMP]);
        EXPECT_EQ(xmp.type(), CV_8U);
        EXPECT_GT(xmp.total(), 0u);
        size_t xmp_size = xmp.total() * xmp.elemSize();
@@ -574,7 +581,7 @@ TEST_P(ReadExif_Sanity, Check)
 
     if (metadata_types.size() > IMAGE_METADATA_ICCP)
     {
-        const Mat& iccp = metadata[IMAGE_METADATA_ICCP];
+        const Mat iccp = Mat(metadata[IMAGE_METADATA_ICCP]);
         EXPECT_EQ(iccp.type(), CV_8U);
         EXPECT_GT(iccp.total(), 0u);
         size_t iccp_size = iccp.total() * iccp.elemSize();
