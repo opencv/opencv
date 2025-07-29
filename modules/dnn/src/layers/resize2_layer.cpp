@@ -25,6 +25,295 @@ using namespace cv::dnn::cuda4dnn;
 
 namespace cv { namespace dnn {
 
+
+namespace {
+
+inline float computeSrcGeneric(int dst, float scale, int limit, int len,
+                               const String &coordTransMode, bool halfPixelCenters)
+{
+    if (coordTransMode == "pytorch_half_pixel")
+        return (len > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
+    if (coordTransMode == "half_pixel")
+        return (dst + 0.5f)*scale - 0.5f;
+    if (coordTransMode == "tf_half_pixel_for_nn")
+        return (dst + 0.5f)*scale;
+    return dst*scale;
+}
+
+template<typename T>
+void resizeNearest(const Mat &inp, Mat &out,
+                   float scaleH, float scaleW,
+                   int lenY, int lenX,
+                   const String &nearestMode,
+                   const String &coordTransMode,
+                   bool halfPixelCenters)
+{
+    int numPlanes = inp.size[0] * inp.size[1];
+    int inH       = inp.size[2], inW       = inp.size[3];
+    int outH      = out.size[2], outW      = out.size[3];
+    int inPlane   = inH * inW,    outPlane = outH * outW;
+    CV_Assert(inp.isContinuous() && out.isContinuous());
+
+    Mat inpP = inp.reshape(1, numPlanes * inH);
+    Mat outP = out.reshape(1, numPlanes * outH);
+
+    auto comp = [&](int dst, float scale, int limit, int len) {
+        float src = computeSrcGeneric(dst, scale, limit, len,
+                                      coordTransMode, halfPixelCenters);
+        return std::min(std::max(src, 0.f), float(limit));
+    };
+    auto nidx = [&](float src, int lim) {
+        float fv = std::floor(src), frac = src - fv;
+        int   idx;
+        if      (nearestMode == "floor")            idx = int(fv);
+        else if (nearestMode == "ceil")             idx = int(std::ceil(src));
+        else if (nearestMode == "round_prefer_ceil")
+            idx = (frac >= 0.5f ? int(fv+1) : int(fv));
+        else /* round_prefer_floor */               idx = (frac >  0.5f ? int(fv+1) : int(fv));
+        return std::clamp(idx, 0, lim);
+    };
+
+    std::vector<int> mapY(outH);
+    for (int y = 0; y < outH; ++y)
+    {
+        float yf       = comp(y, scaleH, inH - 1, lenY);
+        mapY[y]        = nidx(yf, inH - 1);
+    }
+
+    std::vector<int> mapX(outW);
+    for (int x = 0; x < outW; ++x)
+    {
+        float xf       = comp(x, scaleW, inW - 1, lenX);
+        mapX[x]        = nidx(xf, inW - 1);
+    }
+
+    for (int y = 0; y < outH; ++y)
+    {
+        const T* inpRow = inpP.ptr<T>( mapY[y] );
+        T*       outRow = outP.ptr<T>( y );
+        for (int x = 0; x < outW; ++x)
+        {
+            const T* srcPtr = inpRow + mapX[x];
+            T*       dst    = outRow + x;
+            for (int p = 0; p < numPlanes; ++p)
+            {
+                *dst      = *srcPtr;
+                srcPtr   += inPlane;
+                dst      += outPlane;
+            }
+        }
+    }
+}
+template<typename T>
+void resizeBilinear(const Mat &inp, Mat &out,
+                    float scaleH, float scaleW,
+                    int lenY, int lenX,
+                    const String &coordTransMode,
+                    bool halfPixelCenters)
+{
+    int numPlanes = inp.size[0]*inp.size[1];
+    int inH       = inp.size[2], inW = inp.size[3];
+    int outH      = out.size[2], outW = out.size[3];
+    int inPlane   = inH * inW, outPlane = outH * outW;
+    CV_Assert(inp.isContinuous() && out.isContinuous());
+
+    Mat inpP = inp.reshape(1, numPlanes*inH);
+    Mat outP = out.reshape(1, numPlanes*outH);
+
+    auto clampC = [&](int dst, float scale, int lim, int len) {
+        float src = computeSrcGeneric(dst, scale, lim, len,
+                                      coordTransMode, halfPixelCenters);
+        src = std::min(std::max(src, 0.f), float(lim-1) - 1e-6f);
+        int i0 = int(std::floor(src));
+        return std::make_pair(i0, src - float(i0));
+    };
+
+    std::vector<int>    x0(outW), x1(outW);
+    std::vector<float> lx(outW);
+    for (int x = 0; x < outW; ++x)
+    {
+        auto [xi, xfrac] = clampC(x, scaleW, inW, lenX);
+        x0[x] = xi;
+        x1[x] = std::clamp(xi + 1, 0, inW - 1);
+        lx[x] = xfrac;
+    }
+
+    std::vector<int>    y0(outH), y1(outH);
+    std::vector<float> ly(outH);
+    for (int y = 0; y < outH; ++y)
+    {
+        auto [yi, yfrac] = clampC(y, scaleH, inH, lenY);
+        y0[y] = yi;
+        y1[y] = std::clamp(yi + 1, 0, inH - 1);
+        ly[y] = yfrac;
+    }
+
+    for (int y = 0; y < outH; ++y)
+    {
+        const T* row0 = inpP.ptr<T>( y0[y] );
+        const T* row1 = inpP.ptr<T>( y1[y] );
+        float    fy   = ly[y];
+
+        T* outRowBase = outP.ptr<T>( y );
+
+        for (int x = 0; x < outW; ++x)
+        {
+            int   xi = x0[x], xi1 = x1[x];
+            float fx = lx[x];
+
+            T* dst = outRowBase + x;
+            for (int p = 0; p < numPlanes; ++p)
+            {
+                const T* c0 = row0 + p * inPlane + xi;
+                const T* c1 = row1 + p * inPlane + xi;
+                float top    = c0[0] + fx * (c0[1] - c0[0]);
+                float bottom = c1[0] + fx * (c1[1] - c1[0]);
+                *dst = T(top + fy * (bottom - top));
+                dst += outPlane;
+            }
+        }
+    }
+}
+
+template<typename T>
+void resizeCubic(const Mat &inp, Mat &out,
+                 float scaleH, float scaleW,
+                 int lenY, int lenX,
+                 float cubicA, bool excludeOutside,
+                 const String &coordTransMode, bool halfPixelCenters)
+{
+    CV_Assert(inp.depth() == CV_32F);
+    int numPlanes = inp.size[0] * inp.size[1];
+    int inH = inp.size[2], inW = inp.size[3];
+    int outH = out.size[2], outW = out.size[3];
+
+    Mat inpPlanes = inp.reshape(1, numPlanes * inH);
+    Mat outPlanes = out.reshape(1, numPlanes * outH);
+
+    auto clampInt = [](int v, int lo, int hi) {
+        return v < lo ? lo : (v > hi ? hi : v);
+    };
+    auto cubicWeight = [&](float x) {
+        float a = cubicA;
+        x = std::abs(x);
+        if (x < 1.f)
+            return (a + 2.f) * x*x*x - (a + 3.f) * x*x + 1.f;
+        else if (x < 2.f)
+            return a * x*x*x - 5.f*a * x*x + 8.f*a * x - 4.f*a;
+        return 0.f;
+    };
+
+    std::vector<std::array<int,4>> x_id(outW);
+    std::vector<std::array<float,4>> x_w (outW);
+    for (int ox = 0; ox < outW; ++ox)
+    {
+        float src_x = computeSrcGeneric(ox, scaleW, inW, lenX, coordTransMode, halfPixelCenters);
+        int ix = int(std::floor(src_x));
+        float dx = src_x - ix;
+        float sw = 0.f;
+        for (int k = -1; k <= 2; ++k)
+        {
+            float w = cubicWeight(k - dx);
+            int idx = ix + k;
+            if (idx < 0 || idx >= inW)
+            {
+                if (excludeOutside)
+                {
+                    x_id[ox][k+1] = -1;
+                    x_w [ox][k+1] = 0.f;
+                }
+                else
+                {
+                    idx = clampInt(idx, 0, inW - 1);
+                    x_id[ox][k+1] = idx;
+                    x_w [ox][k+1] = w;
+                    sw += w;
+                }
+            }
+            else
+            {
+                x_id[ox][k+1] = idx;
+                x_w [ox][k+1] = w;
+                sw += w;
+            }
+        }
+        if (sw != 0.f)
+            for (int k = 0; k < 4; ++k)
+                x_w[ox][k] /= sw;
+    }
+
+    std::vector<std::array<int,4>> y_id(outH);
+    std::vector<std::array<float,4>> y_w (outH);
+    for (int oy = 0; oy < outH; ++oy)
+    {
+        float src_y = computeSrcGeneric(oy, scaleH, inH, lenY, coordTransMode, halfPixelCenters);
+        int iy = int(std::floor(src_y));
+        float dy = src_y - iy;
+        float swy = 0.f;
+        for (int k = -1; k <= 2; ++k)
+        {
+            float w = cubicWeight(k - dy);
+            int idy = iy + k;
+            if (idy < 0 || idy >= inH)
+            {
+                if (excludeOutside)
+                {
+                    y_id[oy][k+1] = -1;
+                    y_w [oy][k+1] = 0.f;
+                }
+                else
+                {
+                    idy = clampInt(idy, 0, inH - 1);
+                    y_id[oy][k+1] = idy;
+                    y_w [oy][k+1] = w;
+                    swy += w;
+                }
+            }
+            else
+            {
+                y_id[oy][k+1] = idy;
+                y_w [oy][k+1] = w;
+                swy += w;
+            }
+        }
+        if (swy != 0.f)
+            for (int k = 0; k < 4; ++k)
+                y_w[oy][k] /= swy;
+    }
+
+    const int R = numPlanes * outH;
+    parallel_for_(Range(0, R), [&](const Range& range) {
+        for (int i = range.start; i < range.end; ++i)
+        {
+            int p  = i / outH;    // plane
+            int oy = i % outH;    // output row
+            const float* inpBase = inpPlanes.ptr<float>(p * inH);
+            float*       outRow  = outPlanes.ptr<float>(p * outH) + oy * outW;
+
+            for (int ox = 0; ox < outW; ++ox)
+            {
+                float val = 0.f;
+                bool  hasValid = false;
+                for (int ky = 0; ky < 4; ++ky)
+                {
+                    int yy = y_id[oy][ky];
+                    if (yy < 0) continue;
+                    const float* row = inpBase + yy * inW;
+                    for (int kx = 0; kx < 4; ++kx)
+                    {
+                        int xx = x_id[ox][kx];
+                        if (xx < 0) continue;
+                        val      += y_w[oy][ky] * x_w[ox][kx] * row[xx];
+                        hasValid  = true;
+                    }
+                }
+                outRow[ox] = hasValid ? val : 0.f;
+            }
+        }
+    });
+}
+}
+
 class Resize2LayerImpl : public Resize2Layer
 {
 public:
@@ -232,7 +521,7 @@ public:
         int length_resized_x = outShape[3];
         updateOutSizeAndScale(inpShape, outShape);
 
-        if (sizes.empty() && !scales.empty() && (coordTransMode == "half_pixel" || coordTransMode == "pytorch_half_pixel" || coordTransMode == "tf_half_pixel_for_nn"))
+        if (sizes.empty() && !scales.empty() && halfPixelCenters)
         {
             float sH = (scales.size() == 4) ? scales[2] : scales[0];
             float sW = (scales.size() == 4) ? scales[3] : scales[1];
@@ -279,356 +568,26 @@ public:
             out = out_;
         }
 
-        auto compute_src = [&](int dst, float scale, int limit, int length_resized) -> float {
-            if (coordTransMode == "pytorch_half_pixel") {
-                return (length_resized > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
-            }
-            else if (coordTransMode == "half_pixel")
-                return (dst + 0.5f)*scale - 0.5f;
-            else if (coordTransMode == "tf_half_pixel_for_nn")
-                return (dst + 0.5f) * scale;
-            return dst*scale;
-        };
-
-        if (interpolation == "nearest")
-        {
-            const int inpHeight = inp.size[2];
-            const int inpWidth = inp.size[3];
-            const int inpSpatialSize = inpHeight * inpWidth;
-            const int outSpatialSize = outHeight * outWidth;
-            const int numPlanes = inp.size[0] * inp.size[1];
-            CV_Assert_N(inp.isContinuous(), out.isContinuous());
-
-            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
-            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
-
-            auto compute_input_coord = [&](int dst, float scale, int limit, int length_resized) -> float {
-                float src = compute_src(dst, scale, limit+1, length_resized);
-                return std::min(std::max(src, 0.f), float(limit));
-            };
-
-            auto nearest_index = [&](float src, int limit) -> int {
-                int idx = 0;
-                if (nearestMode == "floor")
-                {
-                    idx = static_cast<int>(std::floor(src));
-                }
-                else if (nearestMode == "ceil")
-                {
-                    idx = static_cast<int>(std::ceil(src));
-                }
-                else if (nearestMode == "round_prefer_ceil")
-                {
-                    float floor_v = std::floor(src);
-                    float frac = src - floor_v;
-                    if (frac > 0.5f)
-                        idx = floor_v + 1;
-                    else if (frac < 0.5f)
-                        idx = static_cast<int>(floor_v);
-                    else  // exactly 0.5
-                        idx = static_cast<int>(floor_v + 1);
-                }
-                else /* round_prefer_floor (default) */
-                {
-                    float floor_v = std::floor(src);
-                    float frac = src - floor_v;
-                    if (frac > 0.5f)
-                        idx = floor_v + 1;
-                    else if (frac < 0.5f)
-                        idx = static_cast<int>(floor_v);
-                    else  // exactly 0.5, prefer floor
-                        idx = static_cast<int>(floor_v);
-                }
-                if (idx < 0) idx = 0;
-                if (idx > limit) idx = limit;
-                return idx;
-            };
-
-            if (depth == CV_8S)
-            {
-                for (int y = 0; y < outHeight; ++y)
-                {
-                    float input_y_f = compute_input_coord(y, scaleHeight, inpHeight - 1, length_resized_y);
-                    int y0 = nearest_index(input_y_f, inpHeight - 1);
-
-                    const int8_t* inpData_row = inpPlanes.ptr<int8_t>(y0);
-
-                    for (int x = 0; x < outWidth; ++x)
-                    {
-                        float input_x_f = compute_input_coord(x, scaleWidth, inpWidth - 1, length_resized_x);
-                        int x0 = nearest_index(input_x_f, inpWidth - 1);
-
-                        int8_t* outData = outPlanes.ptr<int8_t>(y, x);
-                        const int8_t* inpData_row_c = inpData_row;
-
-                        for (int c = 0; c < numPlanes; ++c)
-                        {
-                            *outData = inpData_row_c[x0];
-
-                            inpData_row_c += inpSpatialSize;
-                            outData += outSpatialSize;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int y = 0; y < outHeight; ++y)
-                {
-                    float input_y_f = compute_input_coord(y, scaleHeight, inpHeight - 1, length_resized_y);
-                    int y0 = nearest_index(input_y_f, inpHeight - 1);
-
-                    const float* inpData_row = inpPlanes.ptr<float>(y0);
-
-                    for (int x = 0; x < outWidth; ++x)
-                    {
-                        float input_x_f = compute_input_coord(x, scaleWidth, inpWidth - 1, length_resized_x);
-                        int x0 = nearest_index(input_x_f, inpWidth - 1);
-
-                        float* outData = outPlanes.ptr<float>(y, x);
-                        const float* inpData_row_c = inpData_row;
-
-                        for (int c = 0; c < numPlanes; ++c)
-                        {
-                            *outData = inpData_row_c[x0];
-
-                            inpData_row_c += inpSpatialSize;
-                            outData += outSpatialSize;
-                        }
-                    }
-                }
+        if(interpolation=="nearest"){
+            switch(depth){
+            case CV_8S:  resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters);break;
+            case CV_32F: resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters);break;
+            default: CV_Error(Error::StsUnsupportedFormat,"Nearest supports only CV_8S & CV_32F");
             }
         }
-        else if (interpolation == "bilinear" || interpolation == "opencv_linear")
-        {
-            const int inpHeight = inp.size[2];
-            const int inpWidth = inp.size[3];
-            const int inpSpatialSize = inpHeight * inpWidth;
-            const int outSpatialSize = outHeight * outWidth;
-            const int numPlanes = inp.size[0] * inp.size[1];
-            CV_Assert_N(inp.isContinuous(), out.isContinuous());
-
-            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
-            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
-            auto clampInt = [](int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); };
-            auto compute_input_coord_clamped = [&](int dst, float scale, int limit, int length_resized) -> std::pair<int,float> {
-                float src = compute_src(dst, scale, limit, length_resized);
-                src = std::min(std::max(src, 0.f), float(limit - 1) - 1e-6f);
-                int i0 = int(std::floor(src));
-                return { i0, src - float(i0) };
-            };
-
-            if (depth == CV_8S)
-            {
-                for (int y = 0; y < outHeight; ++y)
-                {
-                    auto cy = compute_input_coord_clamped(y, scaleHeight, inpHeight, length_resized_y);
-                    int y0 = cy.first;
-                    int y1 = clampInt(y0 + 1, 0, inpHeight - 1);
-                    float ly = cy.second;
-
-                    const int8_t* inpData_row0 = inpPlanes.ptr<int8_t>(y0);
-                    const int8_t* inpData_row1 = inpPlanes.ptr<int8_t>(y1);
-
-                    for (int x = 0; x < outWidth; ++x)
-                    {
-                        auto cx = compute_input_coord_clamped(x, scaleWidth, inpWidth, length_resized_x);
-                        int x0 = cx.first;
-                        int x1 = clampInt(x0 + 1, 0, inpWidth - 1);
-                        float lx = cx.second;
-
-                        int8_t* outData = outPlanes.ptr<int8_t>(y, x);
-                        const int8_t* inpData_row0_c = inpData_row0;
-                        const int8_t* inpData_row1_c = inpData_row1;
-                        for (int c = 0; c < numPlanes; ++c)
-                        {
-                            float top = inpData_row0_c[x0] + lx * (inpData_row0_c[x1] - inpData_row0_c[x0]);
-                            float bottom = inpData_row1_c[x0] + lx * (inpData_row1_c[x1] - inpData_row1_c[x0]);
-                            *outData = static_cast<int8_t>(top + ly * (bottom - top));
-
-                            inpData_row0_c += inpSpatialSize;
-                            inpData_row1_c += inpSpatialSize;
-                            outData += outSpatialSize;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (int y = 0; y < outHeight; ++y)
-                {
-                    auto cy = compute_input_coord_clamped(y, scaleHeight, inpHeight, length_resized_y);
-                    int y0 = cy.first;
-                    int y1 = clampInt(y0 + 1, 0, inpHeight - 1);
-                    float ly = cy.second;
-
-                    const float* inpData_row0 = inpPlanes.ptr<float>(y0);
-                    const float* inpData_row1 = inpPlanes.ptr<float>(y1);
-
-                    for (int x = 0; x < outWidth; ++x)
-                    {
-                        auto cx = compute_input_coord_clamped(x, scaleWidth, inpWidth, length_resized_x);
-                        int x0 = cx.first;
-                        int x1 = clampInt(x0 + 1, 0, inpWidth - 1);
-                        float lx = cx.second;
-
-                        float* outData = outPlanes.ptr<float>(y, x);
-                        const float* inpData_row0_c = inpData_row0;
-                        const float* inpData_row1_c = inpData_row1;
-                        for (int c = 0; c < numPlanes; ++c)
-                        {
-                            float top = inpData_row0_c[x0] + lx * (inpData_row0_c[x1] - inpData_row0_c[x0]);
-                            float bottom = inpData_row1_c[x0] + lx * (inpData_row1_c[x1] - inpData_row1_c[x0]);
-                            *outData = top + ly * (bottom - top);
-
-                            inpData_row0_c += inpSpatialSize;
-                            inpData_row1_c += inpSpatialSize;
-                            outData += outSpatialSize;
-                        }
-                    }
-                }
+        else if(interpolation=="bilinear"||interpolation=="opencv_linear"){
+            switch(depth){
+            case CV_8S:  resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters);break;
+            case CV_32F: resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters);break;
+            default: CV_Error(Error::StsUnsupportedFormat,"Bilinear supports only CV_8S & CV_32F");
             }
         }
-        else if (interpolation == "cubic")
-        {
-            if (depth == CV_8S)
-            {
-                inp.convertTo(inp, CV_32F);
-                out.convertTo(out, CV_32F);
-                depth = CV_32F;
-            }
-
-            CV_Assert(depth == CV_32F);
-
-            const int inpHeight = inp.size[2];
-            const int inpWidth = inp.size[3];
-            const int numPlanes = inp.size[0] * inp.size[1];
-
-            auto clampInt = [](int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); };
-
-            auto cubic = [this](float x) {
-                float a = cubicCoeffA;
-                x = std::abs(x);
-                if (x < 1.f)
-                    return (a + 2.f) * x * x * x - (a + 3.f) * x * x + 1.f;
-                else if (x < 2.f)
-                    return a * x * x * x - 5.f * a * x * x + 8.f * a * x - 4.f * a;
-                return 0.f;
-            };
-
-            std::vector<std::array<int, 4>> x_id(outWidth);
-            std::vector<std::array<float, 4>> x_w(outWidth);
-            for (int ox = 0; ox < outWidth; ++ox)
-            {
-                float src_x = compute_src(ox, scaleWidth, inpWidth, length_resized_x);
-                int ix = static_cast<int>(std::floor(src_x));
-                float dx = src_x - ix;
-                float sw = 0.f;
-                for (int k = -1; k <= 2; ++k)
-                {
-                    int src_idx = ix + k;
-                    float w = cubic(k - dx);
-                    if (src_idx < 0 || src_idx >= inpWidth)
-                    {
-                        if (excludeOutside)
-                        {
-                            x_id[ox][k + 1] = -1;
-                            x_w[ox][k + 1] = 0.f;
-                        }
-                        else
-                        {
-                            src_idx = clampInt(src_idx, 0, inpWidth - 1);
-                            x_id[ox][k + 1] = src_idx;
-                            x_w[ox][k + 1] = w;
-                            sw += w;
-                        }
-                    }
-                    else
-                    {
-                        x_id[ox][k + 1] = src_idx;
-                        x_w[ox][k + 1] = w;
-                        sw += w;
-                    }
-                }
-                if (sw != 0.f)
-                    for (int k = 0; k < 4; ++k)
-                        x_w[ox][k] /= sw;
-            }
-
-            std::vector<std::array<int, 4>> y_id(outHeight);
-            std::vector<std::array<float, 4>> y_w(outHeight);
-            for (int oy = 0; oy < outHeight; ++oy)
-            {
-                float src_y = compute_src(oy, scaleHeight, inpHeight, length_resized_y);
-                int iy = static_cast<int>(std::floor(src_y));
-                float dy = src_y - iy;
-                float swy = 0.f;
-                for (int k = -1; k <= 2; ++k)
-                {
-                    int src_idy = iy + k;
-                    float w = cubic(k - dy);
-                    if (src_idy < 0 || src_idy >= inpHeight)
-                    {
-                        if (excludeOutside)
-                        {
-                            y_id[oy][k + 1] = -1;
-                            y_w[oy][k + 1] = 0.f;
-                        }
-                        else
-                        {
-                            src_idy = clampInt(src_idy, 0, inpHeight - 1);
-                            y_id[oy][k + 1] = src_idy;
-                            y_w[oy][k + 1] = w;
-                            swy += w;
-                        }
-                    }
-                    else
-                    {
-                        y_id[oy][k + 1] = src_idy;
-                        y_w[oy][k + 1] = w;
-                        swy += w;
-                    }
-                }
-                if (swy != 0.f)
-                    for (int k = 0; k < 4; ++k)
-                        y_w[oy][k] /= swy;
-            }
-
-            Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
-            Mat outPlanes = out.reshape(1, numPlanes * outHeight);
-
-            for (int p = 0; p < numPlanes; ++p)
-            {
-                const float* inpBase = inpPlanes.ptr<float>(p * inpHeight);
-                float* outBase = outPlanes.ptr<float>(p * outHeight);
-                for (int oy = 0; oy < outHeight; ++oy)
-                {
-                    float* outRow = outBase + oy * outWidth;
-                    for (int ox = 0; ox < outWidth; ++ox)
-                    {
-                        float val = 0.f;
-                        bool hasValidContribution = false;
-                        for (int ky = 0; ky < 4; ++ky)
-                        {
-                            if (y_id[oy][ky] == -1) continue;
-                            const float* inRow = inpBase + y_id[oy][ky] * inpWidth;
-                            float sumx = 0.f;
-                            for (int kx = 0; kx < 4; ++kx)
-                            {
-                                if (x_id[ox][kx] == -1) continue;
-                                sumx += x_w[ox][kx] * inRow[x_id[ox][kx]];
-                                hasValidContribution = true;
-                            }
-                            val += y_w[oy][ky] * sumx;
-                        }
-                        outRow[ox] = hasValidContribution ? val : 0.f;
-                    }
-                }
-            }
+        else if(interpolation=="cubic"){
+            if(depth!=CV_32F){inp.convertTo(inp,CV_32F);out.convertTo(out,CV_32F);}
+            resizeCubic<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,cubicCoeffA,excludeOutside,coordTransMode,halfPixelCenters);
         }
-
         else
-            CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
+            CV_Error(Error::StsNotImplemented,"Unknown interpolation: "+interpolation);
 
         if (orig_depth != depth) {
             if (!uout_.empty())
