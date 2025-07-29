@@ -2,7 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 //
-// Copyright (C) 2019-2021 Intel Corporation
+// Copyright (C) 2019-2023 Intel Corporation
 
 #ifndef OPENCV_GAPI_INFER_IE_HPP
 #define OPENCV_GAPI_INFER_IE_HPP
@@ -55,6 +55,21 @@ using IEConfig = std::map<std::string, std::string>;
 enum InferMode {Sync, Async};
 
 namespace detail {
+
+template <typename T>
+using AttrMap = std::map<std::string, T>;
+// NB: This type is used to hold in/out layers
+// attributes such as precision, layout, shape etc.
+//
+// User can provide attributes either:
+// 1. cv::util::monostate - No value specified explicitly.
+// 2. Attr - value specified explicitly that should be broadcasted to all layers.
+// 3. AttrMap[str->T] - map specifies value for particular layer.
+template <typename Attr>
+using LayerVariantAttr = cv::util::variant< cv::util::monostate
+                                          , AttrMap<Attr>
+                                          , Attr>;
+
 struct ParamDesc {
     std::string model_path;
     std::string weights_path;
@@ -103,7 +118,11 @@ struct ParamDesc {
     using PrecisionVariantT = cv::util::variant<cv::util::monostate,
                                                 PrecisionT,
                                                 PrecisionMapT>;
+
     PrecisionVariantT output_precision;
+    LayerVariantAttr<std::string> input_layout;
+    LayerVariantAttr<std::string> output_layout;
+    LayerVariantAttr<int>         interpolation;
 };
 } // namespace detail
 
@@ -150,8 +169,11 @@ public:
               , {}
               , {}
               , InferMode::Async
+              , {}
+              , {}
+              , {}
               , {} } {
-    };
+    }
 
     /** @overload
     Use this constructor to work with pre-compiled network.
@@ -176,8 +198,11 @@ public:
               , {}
               , {}
               , InferMode::Async
+              , {}
+              , {}
+              , {}
               , {} } {
-    };
+    }
 
     /** @brief Specifies sequence of network input layers names for inference.
 
@@ -242,7 +267,7 @@ public:
     @param cfg Map of pairs: (config parameter name, config parameter value).
     @return reference to this parameter structure.
     */
-       Params& pluginConfig(const IEConfig& cfg) {
+    Params& pluginConfig(const IEConfig& cfg) {
         desc.config = cfg;
         return *this;
     }
@@ -412,6 +437,80 @@ public:
         return *this;
     }
 
+    /** @brief Specifies the input layout for model.
+
+    The function is used to set an input layout for model.
+
+    @param layout Layout in string representation ("NCHW", "NHWC", etc)
+    will be applied to all input layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgInputLayout(std::string layout) {
+        desc.input_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload
+
+    @param layout_map Map of pairs: name of corresponding input layer
+    and its layout in string representation ("NCHW", "NHWC", etc)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgInputLayout(detail::AttrMap<std::string> layout_map) {
+        desc.input_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @brief Specifies the output layout for model.
+
+    The function is used to set an output layout for model.
+
+    @param layout Layout in string representation ("NCHW", "NHWC", etc)
+    will be applied to all output layers.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgOutputLayout(std::string layout) {
+        desc.output_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload
+
+    @param layout_map Map of pairs: name of corresponding output layer
+    and its layout in string representation ("NCHW", "NHWC", etc)
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgOutputLayout(detail::AttrMap<std::string> layout_map) {
+        desc.output_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @brief Specifies resize interpolation algorithm.
+     *
+    The function is used to configure resize preprocessing for input layer.
+
+    @param interpolation Resize interpolation algorithm.
+    Supported algorithms: #INTER_LINEAR, #INTER_AREA.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgResize(int interpolation) {
+        desc.interpolation = interpolation;
+        return *this;
+    }
+
+    /** @overload
+
+    @param interpolation Map of pairs: name of corresponding input layer
+    and its resize algorithm.
+    @return reference to this parameter structure.
+    */
+    Params<Net>& cfgResize(detail::AttrMap<int> interpolation) {
+        desc.interpolation = std::move(interpolation);
+        return *this;
+    }
+
     // BEGIN(G-API's network parametrization API)
     GBackend      backend()    const { return cv::gapi::ie::backend();  }
     std::string   tag()        const { return Net::tag(); }
@@ -446,9 +545,9 @@ public:
            const std::string &device)
         : desc{ model, weights, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Load, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}, InferMode::Async, {} },
+                {}, {}, {}, {}, InferMode::Async, {}, {}, {}, {} },
           m_tag(tag) {
-    };
+    }
 
     /** @overload
 
@@ -464,9 +563,9 @@ public:
            const std::string &device)
         : desc{ model, {}, device, {}, {}, {}, 0u, 0u,
                 detail::ParamDesc::Kind::Import, true, {}, {}, {}, 1u,
-                {}, {}, {}, {}, InferMode::Async, {} },
+                {}, {}, {}, {}, InferMode::Async, {}, {}, {}, {} },
           m_tag(tag) {
-    };
+    }
 
     /** @see ie::Params::pluginConfig. */
     Params& pluginConfig(const IEConfig& cfg) {
@@ -553,6 +652,44 @@ public:
     Params&
     cfgOutputPrecision(detail::ParamDesc::PrecisionMapT precision_map) {
         desc.output_precision = precision_map;
+        return *this;
+    }
+
+    /** @see ie::Params::cfgInputLayout */
+    Params& cfgInputLayout(std::string layout) {
+        desc.input_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgInputLayout(detail::AttrMap<std::string> layout_map) {
+        desc.input_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgOutputLayout */
+    Params& cfgOutputLayout(std::string layout) {
+        desc.output_layout = std::move(layout);
+        return *this;
+    }
+
+    /** @overload */
+    Params&
+    cfgOutputLayout(detail::AttrMap<std::string> layout_map) {
+        desc.output_layout = std::move(layout_map);
+        return *this;
+    }
+
+    /** @see ie::Params::cfgResize */
+    Params& cfgResize(int interpolation) {
+        desc.interpolation = interpolation;
+        return *this;
+    }
+
+    /** @overload */
+    Params& cfgResize(detail::AttrMap<int> interpolation) {
+        desc.interpolation = std::move(interpolation);
         return *this;
     }
 

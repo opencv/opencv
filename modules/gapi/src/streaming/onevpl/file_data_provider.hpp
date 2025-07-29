@@ -18,6 +18,14 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
+
+// With gcc13, std::unique_ptr(FILE, decltype(&fclose)> causes ignored-attributes warning.
+// See https://stackoverflow.com/questions/76849365/can-we-add-attributes-to-standard-function-declarations-without-breaking-standar
+#if defined(__GNUC__) && (__GNUC__ >= 13)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-attributes"
+#endif
+
 struct GAPI_EXPORTS FileDataProvider : public IDataProvider {
 
     using file_ptr = std::unique_ptr<FILE, decltype(&fclose)>;
@@ -34,6 +42,11 @@ private:
     mfx_codec_id_type codec;
     const uint32_t bitstream_data_size;
 };
+
+#if defined(__GNUC__) && (__GNUC__ == 13)
+#pragma GCC diagnostic pop
+#endif
+
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi

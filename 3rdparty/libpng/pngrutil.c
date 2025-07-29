@@ -1,7 +1,7 @@
 
 /* pngrutil.c - utilities to read a PNG file
  *
- * Copyright (c) 2018 Cosmin Truta
+ * Copyright (c) 2018-2024 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -26,7 +26,7 @@ png_get_uint_31(png_const_structrp png_ptr, png_const_bytep buf)
    if (uval > PNG_UINT_31_MAX)
       png_error(png_ptr, "PNG unsigned integer out of range");
 
-   return (uval);
+   return uval;
 }
 
 #if defined(PNG_READ_gAMA_SUPPORTED) || defined(PNG_READ_cHRM_SUPPORTED)
@@ -140,7 +140,7 @@ png_read_sig(png_structrp png_ptr, png_inforp info_ptr)
    if (png_sig_cmp(info_ptr->signature, num_checked, num_to_check) != 0)
    {
       if (num_checked < 4 &&
-          png_sig_cmp(info_ptr->signature, num_checked, num_to_check - 4))
+          png_sig_cmp(info_ptr->signature, num_checked, num_to_check - 4) != 0)
          png_error(png_ptr, "Not a PNG file");
       else
          png_error(png_ptr, "PNG file corrupted by ASCII conversion");
@@ -171,7 +171,7 @@ png_read_chunk_header(png_structrp png_ptr)
    /* Put the chunk name into png_ptr->chunk_name. */
    png_ptr->chunk_name = PNG_CHUNK_FROM_STRING(buf+4);
 
-   png_debug2(0, "Reading %lx chunk, length = %lu",
+   png_debug2(0, "Reading chunk typeid = 0x%lx, length = %lu",
        (unsigned long)png_ptr->chunk_name, (unsigned long)length);
 
    /* Reset the crc and run it over the chunk name. */
@@ -238,10 +238,10 @@ png_crc_finish(png_structrp png_ptr, png_uint_32 skip)
       else
          png_chunk_error(png_ptr, "CRC error");
 
-      return (1);
+      return 1;
    }
 
-   return (0);
+   return 0;
 }
 
 /* Compare the CRC stored in the PNG file with that calculated by libpng from
@@ -277,11 +277,11 @@ png_crc_error(png_structrp png_ptr)
    if (need_crc != 0)
    {
       crc = png_get_uint_32(crc_bytes);
-      return ((int)(crc != png_ptr->crc));
+      return crc != png_ptr->crc;
    }
 
    else
-      return (0);
+      return 0;
 }
 
 #if defined(PNG_READ_iCCP_SUPPORTED) || defined(PNG_READ_iTXt_SUPPORTED) ||\
@@ -301,7 +301,6 @@ png_read_buffer(png_structrp png_ptr, png_alloc_size_t new_size, int warn)
 
    if (buffer != NULL && new_size > png_ptr->read_buffer_size)
    {
-      png_ptr->read_buffer = NULL;
       png_ptr->read_buffer = NULL;
       png_ptr->read_buffer_size = 0;
       png_free(png_ptr, buffer);
@@ -422,8 +421,7 @@ png_inflate_claim(png_structrp png_ptr, png_uint_32 owner)
             png_ptr->flags |= PNG_FLAG_ZSTREAM_INITIALIZED;
       }
 
-#if ZLIB_VERNUM >= 0x1290 && \
-   defined(PNG_SET_OPTION_SUPPORTED) && defined(PNG_IGNORE_ADLER32)
+#ifdef PNG_DISABLE_ADLER32_CHECK_SUPPORTED
       if (((png_ptr->options >> PNG_IGNORE_ADLER32) & 3) == PNG_OPTION_ON)
          /* Turn off validation of the ADLER32 checksum in IDAT chunks */
          ret = inflateValidate(&png_ptr->zstream, 0);
@@ -2076,14 +2074,17 @@ png_handle_eXIf(png_structrp png_ptr, png_inforp info_ptr, png_uint_32 length)
       png_byte buf[1];
       png_crc_read(png_ptr, buf, 1);
       info_ptr->eXIf_buf[i] = buf[0];
-      if (i == 1 && buf[0] != 'M' && buf[0] != 'I'
-                 && info_ptr->eXIf_buf[0] != buf[0])
+      if (i == 1)
       {
-         png_crc_finish(png_ptr, length);
-         png_chunk_benign_error(png_ptr, "incorrect byte-order specifier");
-         png_free(png_ptr, info_ptr->eXIf_buf);
-         info_ptr->eXIf_buf = NULL;
-         return;
+         if ((buf[0] != 'M' && buf[0] != 'I') ||
+             (info_ptr->eXIf_buf[0] != buf[0]))
+         {
+            png_crc_finish(png_ptr, length - 2);
+            png_chunk_benign_error(png_ptr, "incorrect byte-order specifier");
+            png_free(png_ptr, info_ptr->eXIf_buf);
+            info_ptr->eXIf_buf = NULL;
+            return;
+         }
       }
    }
 
@@ -2124,8 +2125,9 @@ png_handle_hIST(png_structrp png_ptr, png_inforp info_ptr, png_uint_32 length)
 
    num = length / 2 ;
 
-   if (num != (unsigned int) png_ptr->num_palette ||
-       num > (unsigned int) PNG_MAX_PALETTE_LENGTH)
+   if (length != num * 2 ||
+       num != (unsigned int)png_ptr->num_palette ||
+       num > (unsigned int)PNG_MAX_PALETTE_LENGTH)
    {
       png_crc_finish(png_ptr, length);
       png_chunk_benign_error(png_ptr, "invalid");
@@ -3183,7 +3185,7 @@ png_check_chunk_length(png_const_structrp png_ptr, png_uint_32 length)
    {
       png_debug2(0," length = %lu, limit = %lu",
          (unsigned long)length,(unsigned long)limit);
-      png_chunk_error(png_ptr, "chunk data is too large");
+      png_benign_error(png_ptr, "chunk data is too large");
    }
 }
 
@@ -4619,14 +4621,13 @@ defined(PNG_USER_TRANSFORM_PTR_SUPPORTED)
        */
       {
          png_bytep temp = png_ptr->big_row_buf + 32;
-         int extra = (int)((temp - (png_bytep)0) & 0x0f);
+         size_t extra = (size_t)temp & 0x0f;
          png_ptr->row_buf = temp - extra - 1/*filter byte*/;
 
          temp = png_ptr->big_prev_row + 32;
-         extra = (int)((temp - (png_bytep)0) & 0x0f);
+         extra = (size_t)temp & 0x0f;
          png_ptr->prev_row = temp - extra - 1/*filter byte*/;
       }
-
 #else
       /* Use 31 bytes of padding before and 17 bytes after row_buf. */
       png_ptr->row_buf = png_ptr->big_row_buf + 31;

@@ -21,25 +21,27 @@ const string FOLDER_OMIT_INIT = "initOmit";
 #include "test_trackers.impl.hpp"
 
 //[TESTDATA]
-PARAM_TEST_CASE(DistanceAndOverlap, string)
+PARAM_TEST_CASE(DistanceAndOverlap, string, int)
 {
     string dataset;
+    int numFramesLimit;
     virtual void SetUp()
     {
         dataset = GET_PARAM(0);
+        numFramesLimit = GET_PARAM(1);
     }
 };
 
 TEST_P(DistanceAndOverlap, MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .65f, NoTransform);
-    test.run();
+    test.run(numFramesLimit);
 }
 
 TEST_P(DistanceAndOverlap, Shifted_Data_MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .6f, CenterShiftLeft);
-    test.run();
+    test.run(numFramesLimit);
 }
 
 /***************************************************************************************/
@@ -48,7 +50,7 @@ TEST_P(DistanceAndOverlap, Shifted_Data_MIL)
 TEST_P(DistanceAndOverlap, Scaled_Data_MIL)
 {
     TrackerTest<Tracker, Rect> test(TrackerMIL::create(), dataset, 30, .7f, Scale_1_1);
-    test.run();
+    test.run(numFramesLimit);
 }
 
 TEST_P(DistanceAndOverlap, GOTURN)
@@ -59,45 +61,85 @@ TEST_P(DistanceAndOverlap, GOTURN)
     params.modelTxt = model;
     params.modelBin = weights;
     TrackerTest<Tracker, Rect> test(TrackerGOTURN::create(params), dataset, 35, .35f, NoTransform);
-    test.run();
+    test.run(numFramesLimit);
 }
 
-INSTANTIATE_TEST_CASE_P(Tracking, DistanceAndOverlap, TESTSET_NAMES);
+INSTANTIATE_TEST_CASE_P(Tracking, DistanceAndOverlap,
+    testing::Combine(
+        TESTSET_NAMES,
+        testing::Values(0)
+    )
+);
 
-TEST(GOTURN, memory_usage)
+INSTANTIATE_TEST_CASE_P(Tracking5Frames, DistanceAndOverlap,
+    testing::Combine(
+        TESTSET_NAMES,
+        testing::Values(5)
+    )
+);
+
+
+static bool checkIOU(const Rect& r0, const Rect& r1, double threshold)
 {
-    cv::Rect roi(145, 70, 85, 85);
+    int interArea = (r0 & r1).area();
+    double iouVal = (interArea * 1.0 )/ (r0.area() + r1.area() - interArea);;
 
+    if (iouVal > threshold)
+        return true;
+    else
+    {
+        std::cout <<"Unmatched IOU:  expect IOU val ("<<iouVal <<") > the IOU threadhold ("<<threshold<<")! Box 0 is "
+                                << r0 <<", and Box 1 is "<<r1<< std::endl;
+        return false;
+    }
+}
+
+static void checkTrackingAccuracy(cv::Ptr<Tracker>& tracker, double iouThreshold = 0.7)
+{
+    // Template image
+    Mat img0 = imread(findDataFile("tracking/bag/00000001.jpg"), 1);
+
+    // Tracking image sequence.
+    std::vector<Mat> imgs;
+    imgs.push_back(imread(findDataFile("tracking/bag/00000002.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000003.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000004.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000005.jpg"), 1));
+    imgs.push_back(imread(findDataFile("tracking/bag/00000006.jpg"), 1));
+
+    cv::Rect roi(325, 164, 100, 100);
+    std::vector<Rect> targetRois;
+    targetRois.push_back(cv::Rect(278, 133, 99, 104));
+    targetRois.push_back(cv::Rect(293, 88, 93, 110));
+    targetRois.push_back(cv::Rect(287, 76, 89, 116));
+    targetRois.push_back(cv::Rect(297, 74, 82, 122));
+    targetRois.push_back(cv::Rect(311, 83, 78, 125));
+
+    tracker->init(img0, roi);
+    CV_Assert(targetRois.size() == imgs.size());
+
+    for (int i = 0; i < (int)imgs.size(); i++)
+    {
+        bool res = tracker->update(imgs[i], roi);
+        ASSERT_TRUE(res);
+        ASSERT_TRUE(checkIOU(roi, targetRois[i], iouThreshold)) << cv::format("Fail at img %d.",i);
+    }
+}
+
+TEST(GOTURN, accuracy)
+{
     std::string model = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.prototxt");
     std::string weights = cvtest::findDataFile("dnn/gsoc2016-goturn/goturn.caffemodel", false);
     cv::TrackerGOTURN::Params params;
     params.modelTxt = model;
     params.modelBin = weights;
     cv::Ptr<Tracker> tracker = TrackerGOTURN::create(params);
-
-    string inputVideo = cvtest::findDataFile("tracking/david/data/david.webm");
-    cv::VideoCapture video(inputVideo);
-    ASSERT_TRUE(video.isOpened()) << inputVideo;
-
-    cv::Mat frame;
-    video >> frame;
-    ASSERT_FALSE(frame.empty()) << inputVideo;
-    tracker->init(frame, roi);
-    string ground_truth_bb;
-    for (int nframes = 0; nframes < 15; ++nframes)
-    {
-        std::cout << "Frame: " << nframes << std::endl;
-        video >> frame;
-        bool res = tracker->update(frame, roi);
-        ASSERT_TRUE(res);
-        std::cout << "Predicted ROI: " << roi << std::endl;
-    }
+    // TODO! GOTURN have low accuracy. Try to remove this api at 5.x.
+    checkTrackingAccuracy(tracker, 0.08);
 }
 
-TEST(DaSiamRPN, memory_usage)
+TEST(DaSiamRPN, accuracy)
 {
-    cv::Rect roi(145, 70, 85, 85);
-
     std::string model = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_model.onnx", false);
     std::string kernel_r1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_r1.onnx", false);
     std::string kernel_cls1 = cvtest::findDataFile("dnn/onnx/models/dasiamrpn_kernel_cls1.onnx", false);
@@ -106,24 +148,40 @@ TEST(DaSiamRPN, memory_usage)
     params.kernel_r1 = kernel_r1;
     params.kernel_cls1 = kernel_cls1;
     cv::Ptr<Tracker> tracker = TrackerDaSiamRPN::create(params);
+    checkTrackingAccuracy(tracker, 0.7);
+}
 
-    string inputVideo = cvtest::findDataFile("tracking/david/data/david.webm");
-    cv::VideoCapture video(inputVideo);
-    ASSERT_TRUE(video.isOpened()) << inputVideo;
+TEST(NanoTrack, accuracy_NanoTrack_V1)
+{
+    std::string backbonePath = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim.onnx", false);
+    std::string neckheadPath = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim.onnx", false);
 
-    cv::Mat frame;
-    video >> frame;
-    ASSERT_FALSE(frame.empty()) << inputVideo;
-    tracker->init(frame, roi);
-    string ground_truth_bb;
-    for (int nframes = 0; nframes < 15; ++nframes)
-    {
-        std::cout << "Frame: " << nframes << std::endl;
-        video >> frame;
-        bool res = tracker->update(frame, roi);
-        ASSERT_TRUE(res);
-        std::cout << "Predicted ROI: " << roi << std::endl;
-    }
+    cv::TrackerNano::Params params;
+    params.backbone = backbonePath;
+    params.neckhead = neckheadPath;
+    cv::Ptr<Tracker> tracker = TrackerNano::create(params);
+    checkTrackingAccuracy(tracker);
+}
+
+TEST(NanoTrack, accuracy_NanoTrack_V2)
+{
+    std::string backbonePath = cvtest::findDataFile("dnn/onnx/models/nanotrack_backbone_sim_v2.onnx", false);
+    std::string neckheadPath = cvtest::findDataFile("dnn/onnx/models/nanotrack_head_sim_v2.onnx", false);
+
+    cv::TrackerNano::Params params;
+    params.backbone = backbonePath;
+    params.neckhead = neckheadPath;
+    cv::Ptr<Tracker> tracker = TrackerNano::create(params);
+    checkTrackingAccuracy(tracker, 0.69);
+}
+
+TEST(vittrack, accuracy_vittrack)
+{
+    std::string model = cvtest::findDataFile("dnn/onnx/models/vitTracker.onnx");
+    cv::TrackerVit::Params params;
+    params.net = model;
+    cv::Ptr<Tracker> tracker = TrackerVit::create(params);
+    checkTrackingAccuracy(tracker, 0.64);
 }
 
 }}  // namespace opencv_test::

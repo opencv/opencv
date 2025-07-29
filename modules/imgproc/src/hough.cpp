@@ -120,7 +120,7 @@ static void
 HoughLinesStandard( InputArray src, OutputArray lines, int type,
                     float rho, float theta,
                     int threshold, int linesMax,
-                    double min_theta, double max_theta )
+                    double min_theta, double max_theta, bool use_edgeval = false )
 {
     CV_CheckType(type, type == CV_32FC2 || type == CV_32FC3, "Internal error");
 
@@ -184,17 +184,31 @@ HoughLinesStandard( InputArray src, OutputArray lines, int type,
                      irho, tabSin, tabCos);
 
     // stage 1. fill accumulator
-    for( i = 0; i < height; i++ )
-        for( j = 0; j < width; j++ )
-        {
-            if( image[i * step + j] != 0 )
-                for(int n = 0; n < numangle; n++ )
-                {
-                    int r = cvRound( j * tabCos[n] + i * tabSin[n] );
-                    r += (numrho - 1) / 2;
-                    accum[(n+1) * (numrho+2) + r+1]++;
-                }
-        }
+    if (use_edgeval) {
+        for( i = 0; i < height; i++ )
+            for( j = 0; j < width; j++ )
+            {
+                if( image[i * step + j] != 0 )
+                    for(int n = 0; n < numangle; n++ )
+                    {
+                        int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                        r += (numrho - 1) / 2;
+                        accum[(n + 1) * (numrho + 2) + r + 1] += image[i * step + j];
+                     }
+             }
+    } else {
+        for( i = 0; i < height; i++ )
+            for( j = 0; j < width; j++ )
+            {
+                if( image[i * step + j] != 0 )
+                    for(int n = 0; n < numangle; n++ )
+                    {
+                        int r = cvRound( j * tabCos[n] + i * tabSin[n] );
+                        r += (numrho - 1) / 2;
+                        accum[(n + 1) * (numrho + 2) + r + 1]++;
+                    }
+            }
+     }
 
     // stage 2. find local maximums
     findLocalMaximums( numrho, numangle, threshold, accum, _sort_buf );
@@ -561,7 +575,8 @@ HoughLinesProbabilistic( Mat& image,
         Point line_end[2];
         float a, b;
         int* adata = accum.ptr<int>();
-        int i = point.y, j = point.x, k, x0, y0, dx0, dy0, xflag;
+        int i = point.y, j = point.x, k,  xflag;
+        int64_t x0, y0, dx0, dy0;
         int good_line;
         const int shift = 16;
 
@@ -612,8 +627,8 @@ HoughLinesProbabilistic( Mat& image,
 
         for( k = 0; k < 2; k++ )
         {
-            int gap = 0, x = x0, y = y0, dx = dx0, dy = dy0;
-
+            int gap = 0;
+            int64_t x = x0, y = y0, dx = dx0, dy = dy0 ;
             if( k > 0 )
                 dx = -dx, dy = -dy;
 
@@ -622,7 +637,7 @@ HoughLinesProbabilistic( Mat& image,
             for( ;; x += dx, y += dy )
             {
                 uchar* mdata;
-                int i1, j1;
+                int64_t i1, j1;
 
                 if( xflag )
                 {
@@ -647,8 +662,8 @@ HoughLinesProbabilistic( Mat& image,
                 if( *mdata )
                 {
                     gap = 0;
-                    line_end[k].y = i1;
-                    line_end[k].x = j1;
+                    line_end[k].y = static_cast<int>(i1);
+                    line_end[k].x = static_cast<int>(j1);
                 }
                 else if( ++gap > lineGap )
                     break;
@@ -660,7 +675,7 @@ HoughLinesProbabilistic( Mat& image,
 
         for( k = 0; k < 2; k++ )
         {
-            int x = x0, y = y0, dx = dx0, dy = dy0;
+            int64_t x = x0, y = y0, dx = dx0, dy = dy0;
 
             if( k > 0 )
                 dx = -dx, dy = -dy;
@@ -670,7 +685,7 @@ HoughLinesProbabilistic( Mat& image,
             for( ;; x += dx, y += dy )
             {
                 uchar* mdata;
-                int i1, j1;
+                int64_t i1, j1;
 
                 if( xflag )
                 {
@@ -907,7 +922,7 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
 
 void HoughLines( InputArray _image, OutputArray lines,
                  double rho, double theta, int threshold,
-                 double srn, double stn, double min_theta, double max_theta )
+                 double srn, double stn, double min_theta, double max_theta, bool use_edgeval )
 {
     CV_INSTRUMENT_REGION();
 
@@ -922,7 +937,7 @@ void HoughLines( InputArray _image, OutputArray lines,
                ocl_HoughLines(_image, lines, rho, theta, threshold, min_theta, max_theta));
 
     if( srn == 0 && stn == 0 )
-        HoughLinesStandard(_image, lines, type, (float)rho, (float)theta, threshold, INT_MAX, min_theta, max_theta );
+        HoughLinesStandard(_image, lines, type, (float)rho, (float)theta, threshold, INT_MAX, min_theta, max_theta, use_edgeval );
     else
         HoughLinesSDiv(_image, lines, type, (float)rho, (float)theta, threshold, cvRound(srn), cvRound(stn), INT_MAX, min_theta, max_theta);
 }
@@ -1156,13 +1171,13 @@ public:
 
             for(; x < numCols; ++x )
             {
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 {
                     v_uint8 v_zero = vx_setzero_u8();
 
-                    for(; x <= numCols - 2*v_uint8::nlanes; x += 2*v_uint8::nlanes) {
-                        v_uint8 v_edge1 = (vx_load(edgeData + x                  ) != v_zero);
-                        v_uint8 v_edge2 = (vx_load(edgeData + x + v_uint8::nlanes) != v_zero);
+                    for(; x <= numCols - 2*VTraits<v_uint8>::vlanes(); x += 2*VTraits<v_uint8>::vlanes()) {
+                        v_uint8 v_edge1 = (v_ne(vx_load(edgeData + x), v_zero));
+                        v_uint8 v_edge2 = (v_ne(vx_load(edgeData + x + VTraits<v_uint8>::vlanes()), v_zero));
 
                         if(v_check_any(v_edge1))
                         {
@@ -1172,7 +1187,7 @@ public:
 
                         if(v_check_any(v_edge2))
                         {
-                            x += v_uint8::nlanes + v_scan_forward(v_edge2);
+                            x += VTraits<v_uint8>::vlanes() + v_scan_forward(v_edge2);
                             goto _next_step;
                         }
                     }
@@ -1183,7 +1198,7 @@ public:
 
                 if(x == numCols)
                     continue;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 _next_step:
 #endif
                 float vx, vy;
@@ -1514,7 +1529,7 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointList>::filterCircles(const Po
     int nzCount = 0;
     const Point* nz_ = &nz[0];
     int j = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
     {
         const v_float32 v_minRadius2 = vx_setall_f32(minRadius2);
         const v_float32 v_maxRadius2 = vx_setall_f32(maxRadius2);
@@ -1522,9 +1537,9 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointList>::filterCircles(const Po
         v_float32 v_curCenterX = vx_setall_f32(curCenter.x);
         v_float32 v_curCenterY = vx_setall_f32(curCenter.y);
 
-        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rbuf[v_float32::nlanes];
-        int CV_DECL_ALIGNED(CV_SIMD_WIDTH) rmask[v_int32::nlanes];
-        for(; j <= nzSz - v_float32::nlanes; j += v_float32::nlanes)
+        float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rbuf[VTraits<v_float32>::max_nlanes];
+        int CV_DECL_ALIGNED(CV_SIMD_WIDTH) rmask[VTraits<v_int32>::max_nlanes];
+        for(; j <= nzSz - VTraits<v_float32>::vlanes(); j += VTraits<v_float32>::vlanes())
         {
             v_float32 v_nzX, v_nzY;
             v_load_deinterleave((const float*)&nz_[j], v_nzX, v_nzY); // FIXIT use proper datatype
@@ -1532,16 +1547,16 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointList>::filterCircles(const Po
             v_float32 v_x = v_cvt_f32(v_reinterpret_as_s32(v_nzX));
             v_float32 v_y = v_cvt_f32(v_reinterpret_as_s32(v_nzY));
 
-            v_float32 v_dx = v_x - v_curCenterX;
-            v_float32 v_dy = v_y - v_curCenterY;
+            v_float32 v_dx = v_sub(v_x, v_curCenterX);
+            v_float32 v_dy = v_sub(v_y, v_curCenterY);
 
-            v_float32 v_r2 = (v_dx * v_dx) + (v_dy * v_dy);
-            v_float32 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2);
+            v_float32 v_r2 = v_add(v_mul(v_dx, v_dx), v_mul(v_dy, v_dy));
+            v_float32 vmask = v_and(v_le(v_minRadius2, v_r2), v_le(v_r2, v_maxRadius2));
             if (v_check_any(vmask))
             {
                 v_store_aligned(rmask, v_reinterpret_as_s32(vmask));
                 v_store_aligned(rbuf, v_r2);
-                for (int i = 0; i < v_int32::nlanes; ++i)
+                for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i)
                     if (rmask[i]) ddata[nzCount++] = rbuf[i];
             }
         }
@@ -1573,13 +1588,13 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointSet>::filterCircles(const Poi
     const Range xOuter = Range(std::max(int(curCenter.x - rOuter), 0), std::min(int(curCenter.x + rOuter), positions.cols));
     const Range yOuter = Range(std::max(int(curCenter.y - rOuter), 0), std::min(int(curCenter.y + rOuter), positions.rows));
 
-#if CV_SIMD
-    float v_seq[v_float32::nlanes];
-    for (int i = 0; i < v_float32::nlanes; ++i)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    float v_seq[VTraits<v_float32>::max_nlanes];
+    for (int i = 0; i < VTraits<v_float32>::vlanes(); ++i)
         v_seq[i] = (float)i;
     const v_float32 v_minRadius2 = vx_setall_f32(minRadius2);
     const v_float32 v_maxRadius2 = vx_setall_f32(maxRadius2);
-    const v_float32 v_curCenterX_0123 = vx_setall_f32(curCenter.x) - vx_load(v_seq);
+    const v_float32 v_curCenterX_0123 = v_sub(vx_setall_f32(curCenter.x), vx_load(v_seq));
 #endif
 
     for (int y = yOuter.start; y < yOuter.end; y++)
@@ -1589,27 +1604,27 @@ inline int HoughCircleEstimateRadiusInvoker<NZPointSet>::filterCircles(const Poi
         float dy2 = dy * dy;
 
         int x = xOuter.start;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             const v_float32 v_dy2 = vx_setall_f32(dy2);
             const v_uint32 v_zero_u32 = vx_setall_u32(0);
-            float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rbuf[v_float32::nlanes];
-            int CV_DECL_ALIGNED(CV_SIMD_WIDTH) rmask[v_int32::nlanes];
-            for (; x <= xOuter.end - v_float32::nlanes; x += v_float32::nlanes)
+            float CV_DECL_ALIGNED(CV_SIMD_WIDTH) rbuf[VTraits<v_float32>::max_nlanes];
+            int CV_DECL_ALIGNED(CV_SIMD_WIDTH) rmask[VTraits<v_int32>::max_nlanes];
+            for (; x <= xOuter.end - VTraits<v_float32>::vlanes(); x += VTraits<v_float32>::vlanes())
             {
                 v_uint32 v_mask = vx_load_expand_q(ptr + x);
-                v_mask = v_mask != v_zero_u32;
+                v_mask = v_ne(v_mask, v_zero_u32);
 
                 v_float32 v_x = v_cvt_f32(vx_setall_s32(x));
-                v_float32 v_dx = v_x - v_curCenterX_0123;
+                v_float32 v_dx = v_sub(v_x, v_curCenterX_0123);
 
-                v_float32 v_r2 = (v_dx * v_dx) + v_dy2;
-                v_float32 vmask = (v_minRadius2 <= v_r2) & (v_r2 <= v_maxRadius2) & v_reinterpret_as_f32(v_mask);
+                v_float32 v_r2 = v_add(v_mul(v_dx, v_dx), v_dy2);
+                v_float32 vmask = v_and(v_and(v_le(v_minRadius2, v_r2), v_le(v_r2, v_maxRadius2)), v_reinterpret_as_f32(v_mask));
                 if (v_check_any(vmask))
                 {
                     v_store_aligned(rmask, v_reinterpret_as_s32(vmask));
                     v_store_aligned(rbuf, v_r2);
-                    for (int i = 0; i < v_int32::nlanes; ++i)
+                    for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i)
                         if (rmask[i]) ddata[nzCount++] = rbuf[i];
                 }
             }
@@ -2396,11 +2411,11 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
         mat = (CvMat*)lineStorage;
 
         if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "The destination matrix should be continuous and have a single row or a single column" );
 
         if( CV_MAT_TYPE( mat->type ) != lineType )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
             "The destination matrix data type is inappropriate, see the manual" );
 
         lines = cvMakeSeqHeaderForArray( lineType, sizeof(CvSeq), elemSize, mat->data.ptr,
@@ -2427,7 +2442,7 @@ cvHoughLines2( CvArr* src_image, void* lineStorage, int method,
                 threshold, iparam1, iparam2, l4, linesMax );
         break;
     default:
-        CV_Error( CV_StsBadArg, "Unrecognized method id" );
+        CV_Error( cv::Error::StsBadArg, "Unrecognized method id" );
     }
 
     int nlines = (int)(l2.size() + l4.size());
@@ -2473,7 +2488,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
     cv::Mat src = cv::cvarrToMat(src_image), circles_mat;
 
     if( !circle_storage )
-        CV_Error( CV_StsNullPtr, "NULL destination" );
+        CV_Error( cv::Error::StsNullPtr, "NULL destination" );
 
     bool isStorage = isStorageOrMat(circle_storage);
 
@@ -2490,7 +2505,7 @@ cvHoughCircles( CvArr* src_image, void* circle_storage,
 
         if( !CV_IS_MAT_CONT( mat->type ) || (mat->rows != 1 && mat->cols != 1) ||
             CV_MAT_TYPE(mat->type) != CV_32FC3 )
-            CV_Error( CV_StsBadArg,
+            CV_Error( cv::Error::StsBadArg,
                       "The destination matrix should be continuous and have a single row or a single column" );
 
         circles = cvMakeSeqHeaderForArray( CV_32FC3, sizeof(CvSeq), sizeof(float)*3,

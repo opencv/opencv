@@ -44,17 +44,15 @@
 
 #include "precomp.hpp"
 
-#include <webp/decode.h>
-#include <webp/encode.h>
-
 #include <stdio.h>
 #include <limits.h>
-
 #include "grfmt_webp.hpp"
-
-#include "opencv2/imgproc.hpp"
-
+#include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
+#include <webp/decode.h>
+#include <webp/encode.h>
+#include <webp/demux.h>
+#include <webp/mux.h>
 
 namespace cv
 {
@@ -67,11 +65,18 @@ static const size_t WEBP_HEADER_SIZE = 32;
 WebPDecoder::WebPDecoder()
 {
     m_buf_supported = true;
-    channels = 0;
     fs_size = 0;
+    m_has_animation = false;
+    m_previous_timestamp = 0;
+    m_read_options = 1;
 }
 
 WebPDecoder::~WebPDecoder() {}
+
+void WebPDecoder::UniquePtrDeleter::operator()(WebPAnimDecoder* decoder) const
+{
+    WebPAnimDecoderDelete(decoder);
+}
 
 size_t WebPDecoder::signatureLength() const
 {
@@ -102,6 +107,11 @@ ImageDecoder WebPDecoder::newDecoder() const
 
 bool WebPDecoder::readHeader()
 {
+    if (m_has_animation)
+    {
+        return true;
+    }
+
     uint8_t header[WEBP_HEADER_SIZE] = { 0 };
     if (m_buf.empty())
     {
@@ -124,28 +134,51 @@ bool WebPDecoder::readHeader()
     }
 
     WebPBitstreamFeatures features;
-    if (VP8_STATUS_OK == WebPGetFeatures(header, sizeof(header), &features))
+    if (VP8_STATUS_OK < WebPGetFeatures(header, sizeof(header), &features)) return false;
+
+    m_has_animation = features.has_animation == 1;
+
+    if (m_has_animation)
     {
-        CV_CheckEQ(features.has_animation, false, "WebP backend does not support animated webp images");
-
-        m_width  = features.width;
-        m_height = features.height;
-
-        if (features.has_alpha)
+        if (m_buf.empty())
         {
-            m_type = CV_8UC4;
-            channels = 4;
-        }
-        else
-        {
-            m_type = CV_8UC3;
-            channels = 3;
+            fs.seekg(0, std::ios::beg); CV_Assert(fs && "File stream error");
+            data.create(1, validateToInt(fs_size), CV_8UC1);
+            fs.read((char*)data.ptr(), fs_size);
+            CV_Assert(fs && "Can't read file data");
+            fs.close();
         }
 
-        return true;
+        CV_Assert(data.type() == CV_8UC1); CV_Assert(data.rows == 1);
+
+        WebPData webp_data;
+        webp_data.bytes = (const uint8_t*)data.ptr();
+        webp_data.size = data.total();
+
+        WebPAnimDecoderOptions dec_options;
+        if (!WebPAnimDecoderOptionsInit(&dec_options))
+            CV_Error(Error::StsInternal, "Failed to initialize animated WebP decoding options");
+
+        dec_options.color_mode = m_use_rgb ? MODE_RGBA : MODE_BGRA;
+        anim_decoder.reset(WebPAnimDecoderNew(&webp_data, &dec_options));
+        CV_Assert(anim_decoder.get() && "Error parsing image");
+
+        WebPAnimInfo anim_info;
+        if (!WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info))
+            CV_Error(Error::StsInternal, "Failed to get animated WebP information");
+        m_animation.loop_count = anim_info.loop_count;
+
+        m_animation.bgcolor[0] = (anim_info.bgcolor >> 24) & 0xFF;
+        m_animation.bgcolor[1] = (anim_info.bgcolor >> 16) & 0xFF;
+        m_animation.bgcolor[2] = (anim_info.bgcolor >> 8) & 0xFF;
+        m_animation.bgcolor[3] = anim_info.bgcolor & 0xFF;
+        m_frame_count = anim_info.frame_count;
     }
+    m_width = features.width;
+    m_height = features.height;
+    m_type = features.has_alpha ? CV_8UC4 : CV_8UC3;
 
-    return false;
+    return true;
 }
 
 bool WebPDecoder::readData(Mat &img)
@@ -155,7 +188,7 @@ bool WebPDecoder::readData(Mat &img)
     CV_CheckEQ(img.cols, m_width, "");
     CV_CheckEQ(img.rows, m_height, "");
 
-    if (m_buf.empty())
+    if (data.empty())
     {
         fs.seekg(0, std::ios::beg); CV_Assert(fs && "File stream error");
         data.create(1, validateToInt(fs_size), CV_8UC1);
@@ -165,66 +198,146 @@ bool WebPDecoder::readData(Mat &img)
     }
     CV_Assert(data.type() == CV_8UC1); CV_Assert(data.rows == 1);
 
-    {
-        Mat read_img;
-        CV_CheckType(img.type(), img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4, "");
-        if (img.type() != m_type)
-        {
-            read_img.create(m_height, m_width, m_type);
-        }
-        else
-        {
-            read_img = img;  // copy header
-        }
+    if (m_read_options) {
+        WebPData webp_data;
+        webp_data.bytes = (const uint8_t*)data.ptr();
+        webp_data.size = data.total();
 
-        uchar* out_data = read_img.ptr();
-        size_t out_data_size = read_img.dataend - out_data;
+        std::vector<uchar> metadata;
+        WebPDemuxer* demux = WebPDemux(&webp_data);
 
-        uchar *res_ptr = NULL;
-        if (channels == 3)
+        if (demux)
         {
-            CV_CheckTypeEQ(read_img.type(), CV_8UC3, "");
-            res_ptr = WebPDecodeBGRInto(data.ptr(), data.total(), out_data,
-                                        (int)out_data_size, (int)read_img.step);
-        }
-        else if (channels == 4)
-        {
-            CV_CheckTypeEQ(read_img.type(), CV_8UC4, "");
-            res_ptr = WebPDecodeBGRAInto(data.ptr(), data.total(), out_data,
-                                         (int)out_data_size, (int)read_img.step);
-        }
+            WebPChunkIterator chunk_iter;
 
-        if (res_ptr != out_data)
-            return false;
+            if (WebPDemuxGetChunk(demux, "EXIF", 1, &chunk_iter))
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_exif.parseExif(metadata.data(), metadata.size());
+            }
 
-        if (read_img.data == img.data && img.type() == m_type)
-        {
-            // nothing
-        }
-        else if (img.type() == CV_8UC1)
-        {
-            cvtColor(read_img, img, COLOR_BGR2GRAY);
-        }
-        else if (img.type() == CV_8UC3 && m_type == CV_8UC4)
-        {
-            cvtColor(read_img, img, COLOR_BGRA2BGR);
-        }
-        else if (img.type() == CV_8UC4 && m_type == CV_8UC3)
-        {
-            cvtColor(read_img, img, COLOR_BGR2BGRA);
-        }
-        else
-        {
-            CV_Error(Error::StsInternal, "");
+            if (WebPDemuxGetChunk(demux, "ICCP", 1, &chunk_iter))
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_ICCP] = metadata;
+            }
+
+            if (WebPDemuxGetChunk(demux, "XMP ", 1, &chunk_iter))  // note the space in "XMP "
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_XMP] = metadata;
+            }
+
+            WebPDemuxDelete(demux);
+            m_read_options = 0;
         }
     }
+
+    Mat read_img;
+    CV_CheckType(img.type(), img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4, "");
+    if (img.type() != m_type || img.cols != m_width || img.rows != m_height)
+    {
+        read_img.create(m_height, m_width, m_type);
+    }
+    else
+    {
+        read_img = img;  // copy header
+    }
+
+    uchar* out_data = read_img.ptr();
+    size_t out_data_size = read_img.dataend - out_data;
+
+    uchar* res_ptr = NULL;
+
+    if (m_has_animation)
+    {
+        uint8_t* buf;
+        int timestamp;
+
+        if (!WebPAnimDecoderGetNext(anim_decoder.get(), &buf, &timestamp))
+            CV_Error(Error::StsInternal, "Failed to decode animated WebP frame");
+        Mat tmp(Size(m_width, m_height), CV_8UC4, buf);
+
+        if (img.type() == CV_8UC1)
+        {
+            cvtColor(tmp, img, COLOR_BGR2GRAY);
+        }
+        else
+        if (img.type() == CV_8UC3)
+        {
+            cvtColor(tmp, img, COLOR_BGRA2BGR);
+        }
+        else
+            tmp.copyTo(img);
+
+        m_animation.durations.push_back(timestamp - m_previous_timestamp);
+        m_previous_timestamp = timestamp;
+        return true;
+    }
+
+    if (m_type == CV_8UC3)
+    {
+        CV_CheckTypeEQ(read_img.type(), CV_8UC3, "");
+        if (m_use_rgb)
+            res_ptr = WebPDecodeRGBInto(data.ptr(), data.total(), out_data,
+                (int)out_data_size, (int)read_img.step);
+        else
+            res_ptr = WebPDecodeBGRInto(data.ptr(), data.total(), out_data,
+                (int)out_data_size, (int)read_img.step);
+    }
+    else if (m_type == CV_8UC4)
+    {
+        CV_CheckTypeEQ(read_img.type(), CV_8UC4, "");
+        if (m_use_rgb)
+            res_ptr = WebPDecodeRGBAInto(data.ptr(), data.total(), out_data,
+                (int)out_data_size, (int)read_img.step);
+        else
+            res_ptr = WebPDecodeBGRAInto(data.ptr(), data.total(), out_data,
+                (int)out_data_size, (int)read_img.step);
+    }
+
+    if (res_ptr != out_data)
+        return false;
+
+    if (read_img.data == img.data && img.type() == m_type)
+    {
+        // nothing
+    }
+    else if (img.type() == CV_8UC1)
+    {
+        cvtColor(read_img, img, COLOR_BGR2GRAY);
+    }
+    else if (img.type() == CV_8UC3 && m_type == CV_8UC4)
+    {
+        cvtColor(read_img, img, COLOR_BGRA2BGR);
+    }
+    else
+    {
+        CV_Error(Error::StsInternal, "");
+    }
     return true;
+}
+
+bool WebPDecoder::nextPage()
+{
+    // Prepare the next page, if any.
+    return WebPAnimDecoderHasMoreFrames(anim_decoder.get()) > 0;
 }
 
 WebPEncoder::WebPEncoder()
 {
     m_description = "WebP files (*.webp)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -297,6 +410,45 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
             size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &out);
         }
     }
+
+    WebPData finalData = { out, size };
+    if (!m_metadata.empty()) {
+
+        WebPMux* mux = WebPMuxNew();
+        WebPData imageData = { out, size };
+        WebPMuxSetImage(mux, &imageData, 0);
+
+        WebPData metadata;
+        if (m_metadata[IMAGE_METADATA_EXIF].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_EXIF].data();
+            metadata.size = m_metadata[IMAGE_METADATA_EXIF].size();
+            WebPMuxSetChunk(mux, "EXIF", &metadata, 1);
+        }
+        if (m_metadata[IMAGE_METADATA_XMP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_XMP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_XMP].size();
+            WebPMuxSetChunk(mux, "XMP ", &metadata, 1);
+        }
+
+        if (m_metadata[IMAGE_METADATA_ICCP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_ICCP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_ICCP].size();
+            WebPMuxSetChunk(mux, "ICCP", &metadata, 1);
+        }
+
+        if (WebPMuxAssemble(mux, &finalData) == WEBP_MUX_OK) {
+            size = finalData.size;
+            WebPMuxDelete(mux);
+        }
+        else {
+            WebPMuxDelete(mux);
+            CV_Error(Error::StsError, "Failed to assemble WebP with EXIF");
+        }
+    }
+
 #if WEBP_DECODER_ABI_VERSION >= 0x0206
     Ptr<uint8_t> out_cleaner(out, WebPFree);
 #else
@@ -304,23 +456,137 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
 #endif
 
     CV_Assert(size > 0);
-
+    size_t bytes_written = 0;
     if (m_buf)
     {
         m_buf->resize(size);
-        memcpy(&(*m_buf)[0], out, size);
+        memcpy(&(*m_buf)[0], finalData.bytes, size);
+        bytes_written = size;
     }
     else
     {
         FILE *fd = fopen(m_filename.c_str(), "wb");
         if (fd != NULL)
         {
-            fwrite(out, size, sizeof(uint8_t), fd);
+            bytes_written = fwrite(finalData.bytes, sizeof(uint8_t), size, fd);
+            if (size != bytes_written)
+            {
+                CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, size));
+            }
             fclose(fd); fd = NULL;
         }
     }
 
-    return size > 0;
+    return (size > 0) && (bytes_written == size);
+}
+
+bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
+{
+    CV_CheckDepthEQ(animation.frames[0].depth(), CV_8U, "WebP codec supports only 8-bit unsigned images");
+    int ok = 0;
+    int timestamp = 0;
+    const int width = animation.frames[0].cols, height = animation.frames[0].rows;
+
+    WebPAnimEncoderOptions anim_config;
+    WebPConfig config;
+    WebPPicture pic;
+    WebPData webp_data;
+
+    WebPDataInit(&webp_data);
+    if (!WebPAnimEncoderOptionsInit(&anim_config) ||
+        !WebPConfigInit(&config) ||
+        !WebPPictureInit(&pic)) {
+        CV_LOG_ERROR(NULL, "Library version mismatch!\n");
+        WebPDataClear(&webp_data);
+        return false;
+    }
+
+    int bgvalue = (static_cast<int>(animation.bgcolor[0]) & 0xFF) << 24 |
+        (static_cast<int>(animation.bgcolor[1]) & 0xFF) << 16 |
+        (static_cast<int>(animation.bgcolor[2]) & 0xFF) << 8 |
+        (static_cast<int>(animation.bgcolor[3]) & 0xFF);
+
+    anim_config.anim_params.bgcolor = bgvalue;
+    anim_config.anim_params.loop_count = animation.loop_count;
+
+    if (params.size() > 1)
+    {
+        if (params[0] == IMWRITE_WEBP_QUALITY)
+        {
+            config.lossless = 0;
+            config.quality = static_cast<float>(params[1]);
+            if (config.quality < 1.0f)
+            {
+                config.quality = 1.0f;
+            }
+            if (config.quality >= 100.0f)
+            {
+                config.lossless = 1;
+            }
+        }
+        anim_config.minimize_size = 0;
+    }
+
+    std::unique_ptr<WebPAnimEncoder, void (*)(WebPAnimEncoder*)> anim_encoder(
+        WebPAnimEncoderNew(width, height, &anim_config), WebPAnimEncoderDelete);
+
+    pic.width = width;
+    pic.height = height;
+    pic.use_argb = 1;
+    pic.argb_stride = width;
+
+    bool is_input_rgba = animation.frames[0].channels() == 4;
+    Size canvas_size = Size(animation.frames[0].cols,animation.frames[0].rows);
+
+    for (size_t i = 0; i < animation.frames.size(); i++)
+    {
+        Mat argb;
+        CV_Assert(canvas_size == Size(animation.frames[i].cols,animation.frames[i].rows));
+        if (is_input_rgba)
+            pic.argb = (uint32_t*)animation.frames[i].data;
+        else
+        {
+            cvtColor(animation.frames[i], argb, COLOR_BGR2BGRA);
+            pic.argb = (uint32_t*)argb.data;
+        }
+        ok = WebPAnimEncoderAdd(anim_encoder.get(), &pic, timestamp, &config);
+        timestamp += animation.durations[i];
+    }
+
+    // add a last fake frame to signal the last duration
+    ok = ok & WebPAnimEncoderAdd(anim_encoder.get(), NULL, timestamp, NULL);
+    ok = ok & WebPAnimEncoderAssemble(anim_encoder.get(), &webp_data);
+
+    size_t bytes_written = 0;
+    if (ok)
+    {
+        if (m_buf)
+        {
+            m_buf->resize(webp_data.size);
+            memcpy(&(*m_buf)[0], webp_data.bytes, webp_data.size);
+            bytes_written = webp_data.size;
+        }
+        else
+        {
+            FILE* fd = fopen(m_filename.c_str(), "wb");
+            if (fd != NULL)
+            {
+                bytes_written = fwrite(webp_data.bytes, sizeof(uint8_t), webp_data.size, fd);
+                if (webp_data.size != bytes_written)
+                {
+                    CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, webp_data.size));
+                }
+                fclose(fd); fd = NULL;
+            }
+        }
+    }
+
+    bool status = (ok > 0) && (webp_data.size == bytes_written);
+
+    // free resources
+    WebPDataClear(&webp_data);
+
+    return status;
 }
 
 }

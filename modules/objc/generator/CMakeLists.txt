@@ -9,6 +9,8 @@ file(REMOVE_RECURSE "${OPENCV_OBJC_BINDINGS_DIR}/osx")
 file(REMOVE "${OPENCV_DEPHELPER}/gen_opencv_objc_source_osx")  # force re-run after CMake
 file(REMOVE_RECURSE "${OPENCV_OBJC_BINDINGS_DIR}/ios")
 file(REMOVE "${OPENCV_DEPHELPER}/gen_opencv_objc_source_ios")  # force re-run after CMake
+file(REMOVE_RECURSE "${OPENCV_OBJC_BINDINGS_DIR}/visionos")
+file(REMOVE "${OPENCV_DEPHELPER}/gen_opencv_objc_source_visionos")  # force re-run after CMake
 
 # This file is included from a subdirectory
 set(OBJC_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
@@ -36,6 +38,13 @@ if(HAVE_opencv_objc)
   set(__objc_build_dir "\"objc_build_dir\": \"${CMAKE_CURRENT_BINARY_DIR}/../objc\",")
 endif()
 
+include("${OpenCV_SOURCE_DIR}/cmake/OpenCVBindingsPreprocessorDefinitions.cmake")
+
+ocv_bindings_generator_populate_preprocessor_definitions(
+  OPENCV_MODULES_BUILD
+  opencv_preprocessor_defs
+)
+
 set(CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/gen_objc.json")
 set(__config_str
 "{
@@ -43,7 +52,10 @@ set(__config_str
   ${__objc_build_dir}
   \"modules\": [
 ${__modules_config}
-  ]
+  ],
+  \"preprocessor_definitions\": {
+${opencv_preprocessor_defs}
+  }
 }
 ")
 #TODO: ocv_update_file("${CONFIG_FILE}" "${__config_str}" ON_CHANGE_REMOVE "${OPENCV_DEPHELPER}/gen_opencv_objc_source")
@@ -67,6 +79,8 @@ string(REPLACE "opencv_" "" MODULES "${OPENCV_OBJC_MODULES}")
 if(NOT DEFINED OPENCV_OBJC_TARGET AND APPLE_FRAMEWORK)
   if(IOS)
     set(OPENCV_OBJC_TARGET "ios")
+  elseif(XROS)
+    set(OPENCV_OBJC_TARGET "visionos")
   else()
     set(OPENCV_OBJC_TARGET "osx")
   endif()
@@ -117,6 +131,7 @@ if(OPENCV_OBJC_TARGET)
 else()
   ocv_add_objc_generated_target(osx)
   ocv_add_objc_generated_target(ios)
+  ocv_add_objc_generated_target(visionos)
 endif()
 
 add_custom_target(gen_opencv_objc_source

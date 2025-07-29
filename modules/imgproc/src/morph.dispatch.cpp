@@ -138,7 +138,7 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
     int r = 0, c = 0;
     double inv_r2 = 0;
 
-    CV_Assert( shape == MORPH_RECT || shape == MORPH_CROSS || shape == MORPH_ELLIPSE );
+    CV_Assert( shape == MORPH_RECT || shape == MORPH_CROSS || shape == MORPH_ELLIPSE || shape == MORPH_DIAMOND );
 
     anchor = normalizeAnchor(anchor, ksize);
 
@@ -150,6 +150,11 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
         r = ksize.height/2;
         c = ksize.width/2;
         inv_r2 = r ? 1./((double)r*r) : 0;
+    }
+    else if( shape == MORPH_DIAMOND )
+    {
+        r = ksize.height/2;
+        c = ksize.width/2;
     }
 
     Mat elem(ksize, CV_8U);
@@ -163,6 +168,16 @@ Mat getStructuringElement(int shape, Size ksize, Point anchor)
             j2 = ksize.width;
         else if( shape == MORPH_CROSS )
             j1 = anchor.x, j2 = j1 + 1;
+        else if( shape == MORPH_DIAMOND )
+        {
+            int dy = std::abs(i - r);
+            if( dy <= r )
+            {
+                int dx = r - dy;
+                j1 = std::max( c - dx, 0 );
+                j2 = std::min( c + dx + 1, ksize.width );
+            }
+        }
         else
         {
             int dy = i - r;
@@ -617,7 +632,7 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
         wdepth = CV_32S;
         wtype = CV_MAKETYPE(wdepth, cn);
     }
-    char cvt[2][40];
+    char cvt[2][50];
 
     const char * const borderMap[] = { "BORDER_CONSTANT", "BORDER_REPLICATE",
                                        "BORDER_REFLECT", 0, "BORDER_REFLECT_101" };
@@ -692,8 +707,8 @@ static bool ocl_morphSmall( InputArray _src, OutputArray _dst, InputArray _kerne
             ocl::typeToStr(type), ocl::typeToStr(depth),
             haveExtraMat ? ocl::typeToStr(wtype):"srcT",//to prevent overflow - WT
             haveExtraMat ? ocl::typeToStr(wdepth):"srcT1",//to prevent overflow - WT1
-            haveExtraMat ? ocl::convertTypeStr(depth, wdepth, cn, cvt[0]) : "noconvert",//to prevent overflow - src to WT
-            haveExtraMat ? ocl::convertTypeStr(wdepth, depth, cn, cvt[1]) : "noconvert",//to prevent overflow - WT to dst
+            haveExtraMat ? ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])) : "noconvert",//to prevent overflow - src to WT
+            haveExtraMat ? ocl::convertTypeStr(wdepth, depth, cn, cvt[1], sizeof(cvt[1])) : "noconvert",//to prevent overflow - WT to dst
             ocl::typeToStr(CV_MAKE_TYPE(haveExtraMat ? wdepth : depth, pxLoadVecSize)), //PX_LOAD_FLOAT_VEC_CONV
             processing.c_str(), op2str[op],
             actual_op == op ? "" : cv::format(" -D %s", op2str[actual_op]).c_str());
@@ -853,8 +868,8 @@ static bool ocl_morphOp(InputArray _src, OutputArray _dst, InputArray _kernel,
                                      anchor.x, anchor.y, (int)localThreads[0], (int)localThreads[1], op2str[op],
                                      doubleSupport ? " -D DOUBLE_SUPPORT" : "", processing.c_str(),
                                      ocl::typeToStr(type), depth, cn, ocl::typeToStr(depth),
-                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0]),
-                                     ocl::convertTypeStr(wdepth, depth, cn, cvt[1]),
+                                     ocl::convertTypeStr(depth, wdepth, cn, cvt[0], sizeof(cvt[0])),
+                                     ocl::convertTypeStr(wdepth, depth, cn, cvt[1], sizeof(cvt[1])),
                                      ocl::typeToStr(CV_MAKE_TYPE(depth, scalarcn)),
                                      current_op == op ? "" : cv::format(" -D %s", op2str[current_op]).c_str());
 
@@ -1076,7 +1091,7 @@ static bool ocl_morphologyEx(InputArray _src, OutputArray _dst, int op,
             return false;
         break;
     default:
-        CV_Error( CV_StsBadArg, "unknown morphological operation" );
+        CV_Error( cv::Error::StsBadArg, "unknown morphological operation" );
     }
 
     return true;
@@ -1249,7 +1264,7 @@ void morphologyEx( InputArray _src, OutputArray _dst, int op,
         }
         break;
     default:
-        CV_Error( CV_StsBadArg, "unknown morphological operation" );
+        CV_Error( cv::Error::StsBadArg, "unknown morphological operation" );
     }
 }
 
@@ -1296,7 +1311,7 @@ CV_IMPL void
 cvReleaseStructuringElement( IplConvKernel ** element )
 {
     if( !element )
-        CV_Error( CV_StsNullPtr, "" );
+        CV_Error( cv::Error::StsNullPtr, "" );
     cvFree( element );
 }
 

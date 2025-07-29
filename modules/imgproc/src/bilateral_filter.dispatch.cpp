@@ -75,10 +75,12 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     if (depth != CV_8U || cn > 4)
         return false;
 
-    if (sigma_color <= 0)
-        sigma_color = 1;
-    if (sigma_space <= 0)
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
     double gauss_color_coeff = -0.5 / (sigma_color * sigma_color);
     double gauss_space_coeff = -0.5 / (sigma_space * sigma_space);
@@ -111,7 +113,7 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             space_ofs[maxk++] = (int)(i * temp.step + j * cn);
         }
 
-    char cvt[3][40];
+    char cvt[3][50];
     String cnstr = cn > 1 ? format("%d", cn) : "";
     String kernelName("bilateral");
     size_t sizeDiv = 1;
@@ -129,10 +131,10 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
             format("-D radius=%d -D maxk=%d -D cn=%d -D int_t=%s -D uint_t=uint%s -D convert_int_t=%s"
             " -D uchar_t=%s -D float_t=%s -D convert_float_t=%s -D convert_uchar_t=%s -D gauss_color_coeff=(float)%f",
             radius, maxk, cn, ocl::typeToStr(CV_32SC(cn)), cnstr.c_str(),
-            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0]),
+            ocl::convertTypeStr(CV_8U, CV_32S, cn, cvt[0], sizeof(cvt[0])),
             ocl::typeToStr(type), ocl::typeToStr(CV_32FC(cn)),
-            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1]),
-            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2]), gauss_color_coeff));
+            ocl::convertTypeStr(CV_32S, CV_32F, cn, cvt[1], sizeof(cvt[1])),
+            ocl::convertTypeStr(CV_32F, CV_8U, cn, cvt[2], sizeof(cvt[2])), gauss_color_coeff));
     if (k.empty())
         return false;
 
@@ -165,10 +167,12 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -232,10 +236,12 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_32FC1 || src.type() == CV_32FC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -358,9 +364,16 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
 
+    constexpr double eps = 1e-6;
+    if( sigmaColor <= eps || sigmaSpace <= eps )
+    {
+        src.copyTo(dst);
+        return true;
+    }
+
     int         radius         = IPP_MAX(((d <= 0)?cvRound(sigmaSpace*1.5):d/2), 1);
-    Ipp32f      valSquareSigma = (Ipp32f)((sigmaColor <= 0)?1:sigmaColor*sigmaColor);
-    Ipp32f      posSquareSigma = (Ipp32f)((sigmaSpace <= 0)?1:sigmaSpace*sigmaSpace);
+    Ipp32f      valSquareSigma = (Ipp32f)(sigmaColor*sigmaColor);
+    Ipp32f      posSquareSigma = (Ipp32f)(sigmaSpace*sigmaSpace);
 
     // Acquire data and begin processing
     try
@@ -415,6 +428,9 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
 
     Mat src = _src.getMat(), dst = _dst.getMat();
 
+    CALL_HAL(bilateralFilter, cv_hal_bilateralFilter, src.data, src.step, dst.data, dst.step, src.cols, src.rows, src.depth(),
+             src.channels(), d, sigmaColor, sigmaSpace, borderType);
+
     CV_IPP_RUN_FAST(ipp_bilateralFilter(src, dst, d, sigmaColor, sigmaSpace, borderType));
 
     if( src.depth() == CV_8U )
@@ -422,7 +438,7 @@ void bilateralFilter( InputArray _src, OutputArray _dst, int d,
     else if( src.depth() == CV_32F )
         bilateralFilter_32f( src, dst, d, sigmaColor, sigmaSpace, borderType );
     else
-        CV_Error( CV_StsUnsupportedFormat,
+        CV_Error( cv::Error::StsUnsupportedFormat,
         "Bilateral filtering is only implemented for 8u and 32f images" );
 }
 

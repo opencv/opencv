@@ -122,8 +122,8 @@ struct RGB2RGB
         int i = 0;
         _Tp alphav = ColorChannel<_Tp>::max();
 
-#if CV_SIMD
-        const int vsize = vt::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<vt>::vlanes();
 
         for(; i <= n-vsize;
             i += vsize, src += vsize*scn, dst += vsize*dcn)
@@ -138,8 +138,13 @@ struct RGB2RGB
                 v_load_deinterleave(src, a, b, c);
                 d = v_set<_Tp>::set(alphav);
             }
-            if(bi == 2)
+            if(bi == 2) {
+                #if CV_SIMD_SCALABLE
+                auto t = a; a = c; c = t; // swap(a, c);
+                #else
                 swap(a, c);
+                #endif
+            }
 
             if(dcn == 4)
             {
@@ -185,53 +190,57 @@ struct RGB5x52RGB
         int dcn = dstcn, bidx = blueIdx, gb = greenBits;
         int i = 0;
 
-#if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint8>::vlanes();
         v_uint8 vz = vx_setzero_u8(), vn0 = vx_setall_u8(255);
         for(; i <= n-vsize;
             i += vsize, src += vsize*sizeof(ushort), dst += vsize*dcn)
         {
             v_uint16 t0 = v_reinterpret_as_u16(vx_load(src));
             v_uint16 t1 = v_reinterpret_as_u16(vx_load(src +
-                                                       sizeof(ushort)*v_uint16::nlanes));
+                                                       sizeof(ushort)*VTraits<v_uint16>::vlanes()));
 
             //TODO: shorten registers use when v_interleave is available
             v_uint8 r, g, b, a;
-            v_uint16 b0 = (t0 << 11) >> 8;
-            v_uint16 b1 = (t1 << 11) >> 8;
+            v_uint16 b0 = v_shr<8>(v_shl<11>(t0));
+            v_uint16 b1 = v_shr<8>(v_shl<11>(t1));
             b = v_pack(b0, b1);
 
             v_uint16 g0, g1, r0, r1, a0, a1;
 
             if( gb == 6 )
             {
-                g0 = ((t0 >> 5) << 10) >> 8;
-                g1 = ((t1 >> 5) << 10) >> 8;
+                g0 = v_shr<8>(v_shl<10>(v_shr<5>(t0)));
+                g1 = v_shr<8>(v_shl<10>(v_shr<5>(t1)));
 
-                r0 = (t0 >> 11) << 3;
-                r1 = (t1 >> 11) << 3;
+                r0 = v_shl<3>(v_shr<11>(t0));
+                r1 = v_shl<3>(v_shr<11>(t1));
 
                 a = vn0;
             }
             else
             {
-                g0 = ((t0 >> 5) << 11) >> 8;
-                g1 = ((t1 >> 5) << 11) >> 8;
+                g0 = v_shr<8>(v_shl<11>(v_shr<5>(t0)));
+                g1 = v_shr<8>(v_shl<11>(v_shr<5>(t1)));
 
-                r0 = ((t0 >> 10) << 11) >> 8;
-                r1 = ((t1 >> 10) << 11) >> 8;
+                r0 = v_shr<8>(v_shl<11>(v_shr<10>(t0)));
+                r1 = v_shr<8>(v_shl<11>(v_shr<10>(t1)));
 
-                a0 = t0 >> 15;
-                a1 = t1 >> 15;
+                a0 = v_shr<15>(t0);
+                a1 = v_shr<15>(t1);
                 a = v_pack(a0, a1);
-                a = a != vz;
+                a = v_ne(a, vz);
             }
             g = v_pack(g0, g1);
             r = v_pack(r0, r1);
 
-            if(bidx == 2)
+            if(bidx == 2) {
+                #if CV_SIMD_SCALABLE
+                auto t = r; r = b; b = t; // swap(b, r);
+                #else
                 swap(b, r);
-
+                #endif
+            }
             if(dcn == 4)
             {
                 v_store_interleave(dst, b, g, r, a);
@@ -289,8 +298,8 @@ struct RGB2RGB5x5
         int scn = srccn, bidx = blueIdx, gb = greenBits;
         int i = 0;
 
-#if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint8>::vlanes();
         v_uint16 vn3 = vx_setall_u16((ushort)(~3));
         v_uint16 vn7 = vx_setall_u16((ushort)(~7));
         v_uint16 vz = vx_setzero_u16();
@@ -308,10 +317,15 @@ struct RGB2RGB5x5
             {
                 v_load_deinterleave(src, b, g, r, a);
             }
-            if(bidx == 2)
+            if(bidx == 2){
+                #if CV_SIMD_SCALABLE
+                auto t = r; r = b; b = t; // swap(b, r);
+                #else
                 swap(b, r);
+                #endif
+            }
 
-            r = r & v7;
+            r = v_and(r, v7);
 
             //TODO: shorten registers use when v_deinterleave is available
             v_uint16 r0, r1, g0, g1, b0, b1, a0, a1;
@@ -322,20 +336,20 @@ struct RGB2RGB5x5
 
             v_uint16 d0, d1;
 
-            b0 = b0 >> 3;
-            b1 = b1 >> 3;
-            a0 = (a0 != vz) << 15;
-            a1 = (a1 != vz) << 15;
+            b0 = v_shr<3>(b0);
+            b1 = v_shr<3>(b1);
+            a0 = v_shl<15>(v_ne(a0, vz));
+            a1 = v_shl<15>(v_ne(a1, vz));
 
             if(gb == 6)
             {
-                d0 = b0 | ((g0 & vn3) << 3) | (r0 << 8);
-                d1 = b1 | ((g1 & vn3) << 3) | (r1 << 8);
+                d0 = v_or(v_or(b0, v_shl<3>(v_and(g0, vn3))), v_shl<8>(r0));
+                d1 = v_or(v_or(b1, v_shl<3>(v_and(g1, vn3))), v_shl<8>(r1));
             }
             else
             {
-                d0 = b0 | ((g0 & vn7) << 2) | (r0 << 7) | a0;
-                d1 = b1 | ((g1 & vn7) << 2) | (r1 << 7) | a1;
+                d0 = v_or(v_or(v_or(b0, v_shl<2>(v_and(g0, vn7))), v_shl<7>(r0)), a0);
+                d1 = v_or(v_or(v_or(b1, v_shl<2>(v_and(g1, vn7))), v_shl<7>(r1)), a1);
             }
 
             v_store((ushort*)dst, d0);
@@ -382,8 +396,8 @@ struct Gray2RGB
         int i = 0;
         _Tp alpha = ColorChannel<_Tp>::max();
 
-#if CV_SIMD
-        const int vsize = vt::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<vt>::vlanes();
         vt valpha = v_set<_Tp>::set(alpha);
         for(; i <= n-vsize;
             i += vsize, src += vsize, dst += vsize*dcn)
@@ -424,8 +438,8 @@ struct Gray2RGB5x5
     {
         int gb = greenBits;
         int i = 0;
-#if CV_SIMD
-        const int vsize = v_uint16::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint16>::vlanes();
         v_uint16 v3 = vx_setall_u16((ushort)(~3));
         for(; i <= n-vsize;
             i += vsize, src += vsize, dst += vsize*sizeof(ushort))
@@ -433,16 +447,16 @@ struct Gray2RGB5x5
             v_uint8 t8 = vx_load_low(src);
             v_uint16 t = v_expand_low(t8);
 
-            v_uint16 t3 = t >> 3;
+            v_uint16 t3 = v_shr<3>(t);
 
             v_uint16 d = t3;
             if(gb == 6)
             {
-                d |= ((t & v3) << 3) | (t3 << 11);
+                d = v_or(d, v_or(v_shl<3>(v_and(t, v3)), v_shl<11>(t3)));
             }
             else
             {
-                d |= (t3 << 5) | (t3 << 10);
+                d = v_or(d, v_or(v_shl<5>(t3), v_shl<10>(t3)));
             }
 
             v_store((ushort*)dst, d);
@@ -488,8 +502,8 @@ struct RGB5x52Gray
     {
         int gb = greenBits;
         int i = 0;
-#if CV_SIMD
-        const int vsize = v_uint16::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint16>::vlanes();
 
         v_int16 bg2y;
         v_int16 r12y;
@@ -504,17 +518,17 @@ struct RGB5x52Gray
             v_uint16 t = vx_load((ushort*)src);
 
             v_uint16 r, g, b;
-            b = (t << 11) >> 8;
+            b = v_shr<8>(v_shl<11>(t));
 
             if(gb == 5)
             {
-                g = ((t >> 5) << 11) >> 8;
-                r = ((t >> 10) << 11) >> 8;
+                g = v_shr<8>(v_shl<11>(v_shr<5>(t)));
+                r = v_shr<8>(v_shl<11>(v_shr<10>(t)));
             }
             else
             {
-                g = ((t >> 5) << 10) >> 8;
-                r = (t >> 11) << 3;
+                g = v_shr<8>(v_shl<10>(v_shr<5>(t)));
+                r = v_shl<3>(v_shr<11>(t));
             }
 
             v_uint8 d;
@@ -530,11 +544,11 @@ struct RGB5x52Gray
             v_zip(sr, delta, rd0, rd1);
 
             v_uint32 d0, d1;
-            d0 = v_reinterpret_as_u32(v_dotprod(bg0, bg2y) + v_dotprod(rd0, r12y));
-            d1 = v_reinterpret_as_u32(v_dotprod(bg1, bg2y) + v_dotprod(rd1, r12y));
+            d0 = v_reinterpret_as_u32(v_add(v_dotprod(bg0, bg2y), v_dotprod(rd0, r12y)));
+            d1 = v_reinterpret_as_u32(v_add(v_dotprod(bg1, bg2y), v_dotprod(rd1, r12y)));
 
-            d0 = d0 >> shift;
-            d1 = d1 >> shift;
+            d0 = v_shr<shift>(d0);
+            d1 = v_shr<shift>(d1);
 
             dx = v_pack(d0, d1);
             // high part isn't used
@@ -611,8 +625,8 @@ struct RGB2Gray<float>
         int scn = srccn, i = 0;
         float cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
 
-#if CV_SIMD
-        const int vsize = v_float32::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_float32>::vlanes();
         v_float32 rv = vx_setall_f32(cr), gv = vx_setall_f32(cg), bv = vx_setall_f32(cb);
         for(; i <= n-vsize;
             i += vsize, src += vsize*scn, dst += vsize)
@@ -627,7 +641,7 @@ struct RGB2Gray<float>
                 v_load_deinterleave(src, b, g, r, a);
             }
 
-            v_float32 d = v_fma(r, rv, v_fma(g, gv, b*bv));
+            v_float32 d = v_fma(r, rv, v_fma(g, gv, v_mul(b, bv)));
 
             v_store(dst, d);
         }
@@ -669,8 +683,8 @@ struct RGB2Gray<uchar>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
-#if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint8>::vlanes();
         v_int16 bg2y;
         v_int16 r12y;
         v_int16 dummy;
@@ -706,10 +720,10 @@ struct RGB2Gray<uchar>
             v_zip(v_reinterpret_as_s16(r1), delta, rd10, rd11);
 
             v_uint32 y00, y01, y10, y11;
-            y00 = v_reinterpret_as_u32(v_dotprod(bg00, bg2y) + v_dotprod(rd00, r12y)) >> shift;
-            y01 = v_reinterpret_as_u32(v_dotprod(bg01, bg2y) + v_dotprod(rd01, r12y)) >> shift;
-            y10 = v_reinterpret_as_u32(v_dotprod(bg10, bg2y) + v_dotprod(rd10, r12y)) >> shift;
-            y11 = v_reinterpret_as_u32(v_dotprod(bg11, bg2y) + v_dotprod(rd11, r12y)) >> shift;
+            y00 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg00, bg2y), v_dotprod(rd00, r12y))));
+            y01 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg01, bg2y), v_dotprod(rd01, r12y))));
+            y10 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg10, bg2y), v_dotprod(rd10, r12y))));
+            y11 = v_shr<shift>(v_reinterpret_as_u32(v_add(v_dotprod(bg11, bg2y), v_dotprod(rd11, r12y))));
 
             v_uint16 y0, y1;
             y0 = v_pack(y00, y01);
@@ -762,8 +776,8 @@ struct RGB2Gray<ushort>
         short cb = coeffs[0], cg = coeffs[1], cr = coeffs[2];
         int i = 0;
 
-#if CV_SIMD
-        const int vsize = v_uint16::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint16>::vlanes();
 
         v_int16 b2y = vx_setall_s16(cb);
         v_int16 g2y = vx_setall_s16(cg);
@@ -802,13 +816,13 @@ struct RGB2Gray<ushort>
 
             // fixing 16bit signed multiplication
             v_int16 mr, mg, mb;
-            mr = (sr < z) & r2y;
-            mg = (sg < z) & g2y;
-            mb = (sb < z) & b2y;
-            v_int16 fixmul = v_add_wrap(mr, v_add_wrap(mg, mb)) << fix_shift;
+            mr = v_and(v_lt(sr, z), r2y);
+            mg = v_and(v_lt(sg, z), g2y);
+            mb = v_and(v_lt(sb, z), b2y);
+            v_int16 fixmul = v_shl<fix_shift>(v_add_wrap(mr, v_add_wrap(mg, mb)));
 
-            v_int32 sy0 = (v_dotprod(bg0, bg2y) + v_dotprod(rd0, r12y)) >> shift;
-            v_int32 sy1 = (v_dotprod(bg1, bg2y) + v_dotprod(rd1, r12y)) >> shift;
+            v_int32 sy0 = v_shr<shift>(v_add(v_dotprod(bg0, bg2y), v_dotprod(rd0, r12y)));
+            v_int32 sy1 = v_shr<shift>(v_add(v_dotprod(bg1, bg2y), v_dotprod(rd1, r12y)));
 
             v_int16 y = v_add_wrap(v_pack(sy0, sy1), fixmul);
 
@@ -868,7 +882,7 @@ struct RGBA2mRGBA<uchar>
 
         int i = 0;
 #if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+        const int vsize = VTraits<v_uint8>::vlanes();
         v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
         v_uint16 vh = vx_setall_u16(half_val+1);
 
@@ -887,27 +901,27 @@ struct RGBA2mRGBA<uchar>
 
             v_uint16 a16[4];
             for(int j = 0; j < 4; j++)
-                a16[j] = v_reinterpret_as_u16(v[j] & amask);
+                a16[j] = v_reinterpret_as_u16(v_and(v[j], amask));
 
             v_uint32 a32[4];
             for(int j = 0; j < 4; j++)
-                a32[j] = v_reinterpret_as_u32(a16[j] | (a16[j] >> 8));
+                a32[j] = v_reinterpret_as_u32(v_or(a16[j], (v_shr(a16[j], 8))));
 
             v_uint8 a[4];
             for(int j = 0; j < 4; j++)
-                a[j] = v_reinterpret_as_u8(a32[j] | (a32[j] >> 16));
+                a[j] = v_reinterpret_as_u8(v_or(a32[j], (v_shr(a32[j], 16))));
 
             v_uint16 m[8];
             for(int j = 0; j < 4; j++)
                 v_mul_expand(v[j], a[j], m[j], m[j+4]);
 
             for(int j = 0; j < 8; j++)
-                m[j] += vh;
+                m[j] = v_add(m[j], vh);
 
             // div 255: (v+1+(v>>8))>8
             // +1 is in vh, has no effect on (v>>8)
             for(int j = 0; j < 8; j++)
-                m[j] = (m[j] + (m[j] >> 8)) >> 8;
+                m[j] = v_shr((v_add(m[j], (v_shr(m[j], 8)))), 8);
 
             v_uint8 d[4];
             for(int j = 0; j < 4; j++)
@@ -973,8 +987,8 @@ struct mRGBA2RGBA<uchar>
         uchar max_val = ColorChannel<uchar>::max();
         int i = 0;
 
-#if CV_SIMD
-        const int vsize = v_uint8::nlanes;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+        const int vsize = VTraits<v_uint8>::vlanes();
         v_uint8 amask = v_reinterpret_as_u8(vx_setall_u32(0xFF000000));
         v_uint8 vmax = vx_setall_u8(max_val);
 
@@ -989,9 +1003,9 @@ struct mRGBA2RGBA<uchar>
             v_uint8 a;
             v_uint16 a16;
             v_uint32 a32;
-            a16 = v_reinterpret_as_u16(s & amask);
-            a32 = v_reinterpret_as_u32(a16 | (a16 >> 8));
-            a = v_reinterpret_as_u8(a32 | (a32 >> 16));
+            a16 = v_reinterpret_as_u16(v_and(s, amask));
+            a32 = v_reinterpret_as_u32(v_or(a16, v_shr<8>(a16)));
+            a = v_reinterpret_as_u8(v_or(a32, v_shr<16>(a32)));
 
             // s *= max_val
             v_uint16 s0, s1;
@@ -1000,7 +1014,7 @@ struct mRGBA2RGBA<uchar>
             // s += a/2
             v_uint16 ae0, ae1;
             v_expand(a, ae0, ae1);
-            s0 += ae0 >> 1; s1 += ae1 >> 1;
+            s0 = v_add(s0, v_shr<1>(ae0)); s1 = v_add(s1, v_shr<1>(ae1));
 
             // s, a -> u32 -> float
             v_uint32 u00, u01, u10, u11;
@@ -1035,10 +1049,10 @@ struct mRGBA2RGBA<uchar>
 
             // float d = (float)s/(float)a
             v_float32 fd00, fd01, fd10, fd11;
-            fd00 = fs00/fa00;
-            fd01 = fs01/fa01;
-            fd10 = fs10/fa10;
-            fd11 = fs11/fa11;
+            fd00 = v_div(fs00, fa00);
+            fd01 = v_div(fs01, fa01);
+            fd10 = v_div(fs10, fa10);
+            fd11 = v_div(fs11, fa11);
 
             // d -> u32 -> u8
             v_uint32 ud00, ud01, ud10, ud11;
@@ -1054,8 +1068,8 @@ struct mRGBA2RGBA<uchar>
 
             // if a == 0 then d = 0
             v_uint8 am;
-            am = a != vx_setzero_u8();
-            d = d & am;
+            am = v_ne(a, vx_setzero_u8());
+            d = v_and(d, am);
 
             // put alpha values
             d = v_select(amask, a, d);
@@ -1073,11 +1087,6 @@ struct mRGBA2RGBA<uchar>
             uchar v3 = src[3];
 
             uchar v3_half = v3 / 2;
-
-            dst[0] = (v3==0)? 0 : (v0 * max_val + v3_half) / v3;
-            dst[1] = (v3==0)? 0 : (v1 * max_val + v3_half) / v3;
-            dst[2] = (v3==0)? 0 : (v2 * max_val + v3_half) / v3;
-            dst[3] = v3;
 
             dst[0] = (v3==0)? 0 : saturate_cast<uchar>((v0 * max_val + v3_half) / v3);
             dst[1] = (v3==0)? 0 : saturate_cast<uchar>((v1 * max_val + v3_half) / v3);

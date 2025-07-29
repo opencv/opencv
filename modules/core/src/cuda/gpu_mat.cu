@@ -135,6 +135,7 @@ namespace
 
     DefaultAllocator cudaDefaultAllocator;
     GpuMat::Allocator* g_defaultAllocator = &cudaDefaultAllocator;
+    GpuMat::Allocator* g_stdAllocator = &cudaDefaultAllocator;
 }
 
 GpuMat::Allocator* cv::cuda::GpuMat::defaultAllocator()
@@ -147,6 +148,12 @@ void cv::cuda::GpuMat::setDefaultAllocator(Allocator* allocator)
     CV_Assert( allocator != 0 );
     g_defaultAllocator = allocator;
 }
+
+GpuMat::Allocator* cv::cuda::GpuMat::getStdAllocator()
+{
+    return g_stdAllocator;
+}
+
 
 /////////////////////////////////////////////////////
 /// create
@@ -539,7 +546,7 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
         return;
     }
 
-    CV_DbgAssert( sdepth <= CV_64F && ddepth <= CV_64F );
+    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
 
     GpuMat src = *this;
 
@@ -570,6 +577,8 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
 
     const int sdepth = depth();
     const int ddepth = CV_MAT_DEPTH(rtype);
+
+    CV_Assert(sdepth <= CV_64F && ddepth <= CV_64F);
 
     GpuMat src = *this;
 

@@ -1,14 +1,24 @@
 package org.opencv.samples.tutorial3;
 
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.util.List;
+import java.util.Objects;
 
 import org.opencv.android.JavaCameraView;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.AttributeSet;
 import android.util.Log;
 
@@ -73,15 +83,36 @@ public class Tutorial3View extends JavaCameraView implements PictureCallback {
         mCamera.setPreviewCallback(this);
 
         // Write the image in a file (in jpeg format)
-        try {
-            FileOutputStream fos = new FileOutputStream(mPictureFileName);
-
-            fos.write(data);
-            fos.close();
-
-        } catch (java.io.IOException e) {
-            Log.e("PictureDemo", "Exception in photoCallback", e);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    ContentResolver resolver = getContext().getContentResolver();
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, mPictureFileName);
+                    contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpg");
+                    contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES);
+                    Uri imageUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+                    try {
+                        OutputStream fos = resolver.openOutputStream(Objects.requireNonNull(imageUri));
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+                        Objects.requireNonNull(fos).close();
+                    } catch (java.io.IOException e) {
+                        Log.e("PictureDemo", "Exception in photoCallback", e);
+                    }
+                }
+            }).start();
+        } else {
+            mPictureFileName = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).getPath()
+                               + "/" + mPictureFileName;
+            try {
+                FileOutputStream fos = new FileOutputStream(mPictureFileName);
+                fos.write(data);
+                fos.close();
+            } catch (java.io.IOException e) {
+                Log.e("PictureDemo", "Exception in photoCallback", e);
+            }
         }
-
     }
 }

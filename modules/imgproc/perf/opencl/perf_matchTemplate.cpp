@@ -60,7 +60,7 @@ OCL_PERF_TEST_P(CV_TM_CCORRFixture, matchTemplate,
 
     declare.in(src, templ, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR);
+    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, cv::TM_CCORR);
 
     SANITY_CHECK(dst, 1e-4);
 }
@@ -78,7 +78,7 @@ OCL_PERF_TEST_P(CV_TM_CCORR_NORMEDFixture, matchTemplate,
 
     declare.in(src, templ, WARMUP_RNG).out(dst);
 
-    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, CV_TM_CCORR_NORMED);
+    OCL_TEST_CYCLE() cv::matchTemplate(src, templ, dst, cv::TM_CCORR_NORMED);
 
     SANITY_CHECK(dst, 3e-2);
 }

@@ -43,6 +43,7 @@
 
 #include "grfmt_base.hpp"
 #include "bitstrm.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 namespace cv
 {
@@ -53,13 +54,45 @@ BaseImageDecoder::BaseImageDecoder()
     m_type = -1;
     m_buf_supported = false;
     m_scale_denom = 1;
+    m_use_rgb = false;
+    m_frame_count = 1;
+    m_read_options = 0;
+    m_metadata.resize(IMAGE_METADATA_MAX + 1);
 }
 
+bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
+{
+    if (type == IMAGE_METADATA_EXIF)
+        return !m_exif.getData().empty();
+    return false;
+}
+
+Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
+{
+    auto makeMat = [](const std::vector<unsigned char>& data) -> Mat {
+        return data.empty() ? Mat() : Mat(1, (int)data.size(), CV_8U, (void*)data.data());
+        };
+
+    switch (type) {
+    case IMAGE_METADATA_EXIF:
+        return makeMat(m_exif.getData());
+
+    case IMAGE_METADATA_XMP:
+    case IMAGE_METADATA_ICCP:
+        return makeMat(m_metadata[type]);
+
+    default:
+        CV_LOG_WARNING(NULL, "Unknown metadata type requested: " << static_cast<int>(type));
+        break;
+    }
+    return Mat();
+}
 
 ExifEntry_t BaseImageDecoder::getExifTag(const ExifTagName tag) const
 {
     return m_exif.getTag(tag);
 }
+
 bool BaseImageDecoder::setSource( const String& filename )
 {
     m_filename = filename;
@@ -92,6 +125,18 @@ int BaseImageDecoder::setScale( const int& scale_denom )
     int temp = m_scale_denom;
     m_scale_denom = scale_denom;
     return temp;
+}
+
+int BaseImageDecoder::setReadOptions(int read_options)
+{
+    int temp = m_read_options;
+    m_read_options = read_options;
+    return temp;
+}
+
+void BaseImageDecoder::setRGB(bool useRGB)
+{
+    m_use_rgb = useRGB;
 }
 
 ImageDecoder BaseImageDecoder::newDecoder() const
@@ -132,8 +177,46 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     return true;
 }
 
-bool BaseImageEncoder::writemulti(const std::vector<Mat>&, const std::vector<int>& )
+bool BaseImageEncoder::addMetadata(ImageMetadataType type, const Mat& metadata)
 {
+    CV_Assert_N(type >= IMAGE_METADATA_EXIF, type <= IMAGE_METADATA_MAX);
+    if (metadata.empty())
+        return true;
+    size_t itype = (size_t)type;
+    if (itype >= m_support_metadata.size() || !m_support_metadata[itype])
+        return false;
+    if (m_metadata.empty())
+        m_metadata.resize((size_t)IMAGE_METADATA_MAX+1);
+    CV_Assert(metadata.elemSize() == 1);
+    CV_Assert(metadata.isContinuous());
+    const unsigned char* data = metadata.ptr<unsigned char>();
+    m_metadata[itype].assign(data, data + metadata.total());
+    return true;
+}
+
+bool BaseImageEncoder::write(const Mat &img, const std::vector<int> &params) {
+    std::vector<Mat> img_vec(1, img);
+    return writemulti(img_vec, params);
+}
+
+bool BaseImageEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
+{
+    if(img_vec.size() > 1)
+        CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
+
+    Animation animation;
+    animation.frames = img_vec;
+
+    for (size_t i = 0; i < animation.frames.size(); i++)
+    {
+        animation.durations.push_back(1000);
+    }
+    return writeanimation(animation, params);
+}
+
+bool BaseImageEncoder::writeanimation(const Animation&, const std::vector<int>& )
+{
+    CV_LOG_WARNING(NULL, "No Animation encoder for specified file extension");
     return false;
 }
 
@@ -142,7 +225,7 @@ ImageEncoder BaseImageEncoder::newEncoder() const
     return ImageEncoder();
 }
 
-void BaseImageEncoder::throwOnEror() const
+void BaseImageEncoder::throwOnError() const
 {
     if(!m_last_error.empty())
     {

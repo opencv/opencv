@@ -15,7 +15,7 @@ void merge64s(const int64** src, int64* dst, int len, int cn);
 
 #ifndef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 /*
   The trick with STORE_UNALIGNED/STORE_ALIGNED_NOCACHE is the following:
   on IA there are instructions movntps and such to which
@@ -38,7 +38,7 @@ void merge64s(const int64** src, int64* dst, int len, int cn);
 template<typename T, typename VecT> static void
 vecmerge_( const T** src, T* dst, int len, int cn )
 {
-    const int VECSZ = VecT::nlanes;
+    const int VECSZ = VTraits<VecT>::vlanes();
     int i, i0 = 0;
     const T* src0 = src[0];
     const T* src1 = src[1];
@@ -173,8 +173,8 @@ merge_( const T** src, T* dst, int len, int cn )
 void merge8u(const uchar** src, uchar* dst, int len, int cn )
 {
     CV_INSTRUMENT_REGION();
-#if CV_SIMD
-    if( len >= v_uint8::nlanes && 2 <= cn && cn <= 4 )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if( len >= VTraits<v_uint8>::vlanes() && 2 <= cn && cn <= 4 )
         vecmerge_<uchar, v_uint8>(src, dst, len, cn);
     else
 #endif
@@ -184,8 +184,8 @@ void merge8u(const uchar** src, uchar* dst, int len, int cn )
 void merge16u(const ushort** src, ushort* dst, int len, int cn )
 {
     CV_INSTRUMENT_REGION();
-#if CV_SIMD
-    if( len >= v_uint16::nlanes && 2 <= cn && cn <= 4 )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if( len >= VTraits<v_uint16>::vlanes() && 2 <= cn && cn <= 4 )
         vecmerge_<ushort, v_uint16>(src, dst, len, cn);
     else
 #endif
@@ -195,8 +195,8 @@ void merge16u(const ushort** src, ushort* dst, int len, int cn )
 void merge32s(const int** src, int* dst, int len, int cn )
 {
     CV_INSTRUMENT_REGION();
-#if CV_SIMD
-    if( len >= v_int32::nlanes && 2 <= cn && cn <= 4 )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if( len >= VTraits<v_int32>::vlanes() && 2 <= cn && cn <= 4 )
         vecmerge_<int, v_int32>(src, dst, len, cn);
     else
 #endif
@@ -206,8 +206,8 @@ void merge32s(const int** src, int* dst, int len, int cn )
 void merge64s(const int64** src, int64* dst, int len, int cn )
 {
     CV_INSTRUMENT_REGION();
-#if CV_SIMD
-    if( len >= v_int64::nlanes && 2 <= cn && cn <= 4 )
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    if( len >= VTraits<v_int64>::vlanes() && 2 <= cn && cn <= 4 )
         vecmerge_<int64, v_int64>(src, dst, len, cn);
     else
 #endif

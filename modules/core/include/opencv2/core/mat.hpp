@@ -53,6 +53,7 @@
 
 #include "opencv2/core/bufferpool.hpp"
 
+#include <array>
 #include <type_traits>
 
 namespace cv
@@ -78,9 +79,10 @@ It is defined as:
 @code
     typedef const _InputArray& InputArray;
 @endcode
-where _InputArray is a class that can be constructed from `Mat`, `Mat_<T>`, `Matx<T, m, n>`,
-`std::vector<T>`, `std::vector<std::vector<T> >`, `std::vector<Mat>`, `std::vector<Mat_<T> >`,
-`UMat`, `std::vector<UMat>` or `double`. It can also be constructed from a matrix expression.
+where \ref cv::_InputArray is a class that can be constructed from \ref cv::Mat, \ref cv::Mat_<T>,
+\ref cv::Matx<T, m, n>, std::vector<T>, std::vector<std::vector<T>>, std::vector<Mat>,
+std::vector<Mat_<T>>, \ref cv::UMat, std::vector<UMat> or `double`. It can also be constructed from
+a matrix expression.
 
 Since this is mostly implementation-level class, and its interface may change in future versions, we
 do not describe it in details. There are a few key things, though, that should be kept in mind:
@@ -370,6 +372,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    Mat reinterpret( int type ) const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -445,6 +448,22 @@ typedef OutputArray OutputArrayOfArrays;
 typedef const _InputOutputArray& InputOutputArray;
 typedef InputOutputArray InputOutputArrayOfArrays;
 
+/** @brief Returns an empty InputArray or OutputArray.
+
+ This function is used to provide an "empty" or "null" array when certain functions
+ take optional input or output arrays that you don't want to provide.
+
+ Many OpenCV functions accept optional arguments as `cv::InputArray` or `cv::OutputArray`.
+ When you don't want to pass any data for these optional parameters, you can use `cv::noArray()`
+ to indicate that you are omitting them.
+
+ @return An empty `cv::InputArray` or `cv::OutputArray` that can be used as a placeholder.
+
+ @note This is often used when a function has optional arrays, and you do not want to
+ provide a specific input or output array.
+
+ @see cv::InputArray, cv::OutputArray
+ */
 CV_EXPORTS InputOutputArray noArray();
 
 /////////////////////////////////// MatAllocator //////////////////////////////////////
@@ -1289,16 +1308,46 @@ public:
                              t(); // finally, transpose the Nx3 matrix.
                                   // This involves copying all the elements
     @endcode
+    3-channel 2x2 matrix reshaped to 1-channel 4x3 matrix, each column has values from one of original channels:
+    @code
+    Mat m(Size(2, 2), CV_8UC3, Scalar(1, 2, 3));
+    vector<int> new_shape {4, 3};
+    m = m.reshape(1, new_shape);
+    @endcode
+    or:
+    @code
+    Mat m(Size(2, 2), CV_8UC3, Scalar(1, 2, 3));
+    const int new_shape[] = {4, 3};
+    m = m.reshape(1, 2, new_shape);
+    @endcode
     @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
     @param rows New number of rows. If the parameter is 0, the number of rows remains the same.
      */
     Mat reshape(int cn, int rows=0) const;
 
-    /** @overload */
+    /** @overload
+     * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
+     * @param newndims New number of dimentions.
+     * @param newsz Array with new matrix size by all dimentions. If some sizes are zero,
+     * the original sizes in those dimensions are presumed.
+     */
     Mat reshape(int cn, int newndims, const int* newsz) const;
 
-    /** @overload */
+    /** @overload
+     * @param cn New number of channels. If the parameter is 0, the number of channels remains the same.
+     * @param newshape Vector with new matrix size by all dimentions. If some sizes are zero,
+     * the original sizes in those dimensions are presumed.
+     */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
+
+    /** @brief Reset the type of matrix.
+
+    The methods reset the data type of matrix. If the new type and the old type of the matrix
+    have the same element size, the current buffer can be reused. The method needs to consider whether the
+    current mat is a submatrix or has any references.
+    @param type New data type.
+     */
+    Mat reinterpret( int type ) const;
 
     /** @brief Transposes a matrix.
 
@@ -2097,7 +2146,7 @@ public:
     /** @overload */
     template<typename _Tp, typename Functor> void forEach(const Functor& operation) const;
 
-    Mat(Mat&& m);
+    Mat(Mat&& m) CV_NOEXCEPT;
     Mat& operator = (Mat&& m);
 
     enum { MAGIC_VAL  = 0x42FF0000, AUTO_STEP = 0, CONTINUOUS_FLAG = CV_MAT_CONT_FLAG, SUBMATRIX_FLAG = CV_SUBMAT_FLAG };
@@ -2433,8 +2482,8 @@ public:
     UMat(const UMat& m, const Range* ranges);
     UMat(const UMat& m, const std::vector<Range>& ranges);
 
-    // FIXIT copyData=false is not implemented, drop this in favor of cv::Mat (OpenCV 5.0)
-    //! builds matrix from std::vector with or without copying the data
+    //! builds matrix from std::vector. The data is always copied. The copyData
+    //! parameter is deprecated and will be removed in OpenCV 5.0.
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
 
     //! destructor - calls release()
@@ -3517,7 +3566,7 @@ public:
 /** @brief Matrix expression representation
 @anchor MatrixExpressions
 This is a list of implemented matrix operations that can be combined in arbitrary complex
-expressions (here A, B stand for matrices ( Mat ), s for a scalar ( Scalar ), alpha for a
+expressions (here A, B stand for matrices ( cv::Mat ), s for a cv::Scalar, alpha for a
 real-valued scalar ( double )):
 -   Addition, subtraction, negation: `A+B`, `A-B`, `A+s`, `A-s`, `s+A`, `s-A`, `-A`
 -   Scaling: `A*alpha`
@@ -3532,13 +3581,13 @@ real-valued scalar ( double )):
     0.
 -   Bitwise logical operations: `A logicop B`, `A logicop s`, `s logicop A`, `~A`, where *logicop* is one of
   `&`, `|`, `^`.
--   Element-wise minimum and maximum: `min(A, B)`, `min(A, alpha)`, `max(A, B)`, `max(A, alpha)`
--   Element-wise absolute value: `abs(A)`
+-   Element-wise minimum and maximum: cv::min(A, B), cv::min(A, alpha), cv::max(A, B), cv::max(A, alpha)
+-   Element-wise absolute value: cv::abs(A)
 -   Cross-product, dot-product: `A.cross(B)`, `A.dot(B)`
--   Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as norm,
-    mean, sum, countNonZero, trace, determinant, repeat, and others.
+-   Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as cv::norm,
+    cv::mean, cv::sum, cv::countNonZero, cv::trace, cv::determinant, cv::repeat, and others.
 -   Matrix initializers ( Mat::eye(), Mat::zeros(), Mat::ones() ), matrix comma-separated
-    initializers, matrix constructors and operators that extract sub-matrices (see Mat description).
+    initializers, matrix constructors and operators that extract sub-matrices (see cv::Mat description).
 -   Mat_<destination_type>() constructors to cast the result to the proper type.
 @note Comma-separated initializers and probably some other operations may require additional
 explicit Mat() or Mat_<T>() constructor calls to resolve a possible ambiguity.

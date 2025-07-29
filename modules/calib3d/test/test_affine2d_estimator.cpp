@@ -115,8 +115,8 @@ TEST_P(EstimateAffine2D, testNPoints)
 
         EXPECT_NEAR(0., cvtest::norm(aff_est, aff, NORM_INF), 1e-4);
 
-        bool inliers_good = count(inliers.begin(), inliers.end(), 1) == m &&
-            m == accumulate(inliers.begin(), inliers.begin() + m, 0);
+        bool inliers_good = std::count(inliers.begin(), inliers.end(), 1) == m &&
+            m == std::accumulate(inliers.begin(), inliers.begin() + m, 0);
 
         EXPECT_TRUE(inliers_good);
     }

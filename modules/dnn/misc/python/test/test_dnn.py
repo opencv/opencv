@@ -119,13 +119,41 @@ class dnn_test(NewOpenCVTests):
             inp = np.random.standard_normal([1, 2, 10, 11]).astype(np.float32)
             net.setInput(inp)
             net.forward()
-        except BaseException as e:
+        except BaseException:
             return False
         return True
 
     def test_getAvailableTargets(self):
         targets = cv.dnn.getAvailableTargets(cv.dnn.DNN_BACKEND_OPENCV)
         self.assertTrue(cv.dnn.DNN_TARGET_CPU in targets)
+
+    def test_blobRectsToImageRects(self):
+        paramNet = cv.dnn.Image2BlobParams()
+        paramNet.size = (226, 226)
+        paramNet.ddepth = cv.CV_32F
+        paramNet.mean = [0.485, 0.456, 0.406]
+        paramNet.scalefactor = [0.229, 0.224, 0.225]
+        paramNet.swapRB = False
+        paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
+        paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
+        rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
+        rImg = paramNet.blobRectsToImageRects(rBlob, (356, 356))
+        self.assertTrue(type(rImg[0, 0])==np.int32)
+        self.assertTrue(rImg.shape==(20, 4))
+
+    def test_blobRectToImageRect(self):
+        paramNet = cv.dnn.Image2BlobParams()
+        paramNet.size = (226, 226)
+        paramNet.ddepth = cv.CV_32F
+        paramNet.mean = [0.485, 0.456, 0.406]
+        paramNet.scalefactor = [0.229, 0.224, 0.225]
+        paramNet.swapRB = False
+        paramNet.datalayout = cv.dnn.DNN_LAYOUT_NCHW
+        paramNet.paddingmode = cv.dnn.DNN_PMODE_LETTERBOX
+        rBlob = np.zeros(shape=(20, 4), dtype=np.int32)
+        rImg = paramNet.blobRectToImageRect((0, 0, 0, 0), (356, 356))
+        self.assertTrue(type(rImg[0])==int)
+
 
     def test_blobFromImage(self):
         np.random.seed(324)
@@ -153,13 +181,48 @@ class dnn_test(NewOpenCVTests):
         target = target.transpose(2, 0, 1).reshape(1, 3, height, width)  # to NCHW
         normAssert(self, blob, target)
 
+    def test_blobFromImageWithParams(self):
+        np.random.seed(324)
+
+        width = 6
+        height = 7
+        stddev = np.array([0.2, 0.3, 0.4])
+        scalefactor = 1.0/127.5 * stddev
+        mean = (10, 20, 30)
+
+        # Test arguments names.
+        img = np.random.randint(0, 255, [4, 5, 3]).astype(np.uint8)
+
+        param = cv.dnn.Image2BlobParams()
+        param.scalefactor = scalefactor
+        param.size = (6, 7)
+        param.mean = mean
+        param.swapRB=True
+        param.datalayout = cv.dnn.DNN_LAYOUT_NHWC
+
+        blob = cv.dnn.blobFromImageWithParams(img, param)
+        blob_args = cv.dnn.blobFromImageWithParams(img, cv.dnn.Image2BlobParams(scalefactor=scalefactor, size=(6, 7), mean=mean,
+                                                                      swapRB=True, datalayout=cv.dnn.DNN_LAYOUT_NHWC))
+        normAssert(self, blob, blob_args)
+
+        target2 = cv.resize(img, (width, height), interpolation=cv.INTER_LINEAR).astype(np.float32)
+        target2 = target2[:,:,[2, 1, 0]]  # BGR2RGB
+        target2[:,:,0] -= mean[0]
+        target2[:,:,1] -= mean[1]
+        target2[:,:,2] -= mean[2]
+
+        target2[:,:,0] *= scalefactor[0]
+        target2[:,:,1] *= scalefactor[1]
+        target2[:,:,2] *= scalefactor[2]
+        target2 = target2.reshape(1, height, width, 3)  # to NHWC
+        normAssert(self, blob, target2)
 
     def test_model(self):
         img_path = self.find_dnn_file("dnn/street.png")
-        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy.caffemodel", required=False)
-        config = self.find_dnn_file("dnn/MobileNetSSD_deploy.prototxt", required=False)
+        weights = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.caffemodel", required=False)
+        config = self.find_dnn_file("dnn/MobileNetSSD_deploy_19e3ec3.prototxt", required=False)
         if weights is None or config is None:
-            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
+            raise unittest.SkipTest("Missing DNN test files (dnn/MobileNetSSD_deploy_19e3ec3.{prototxt/caffemodel}). Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         frame = cv.imread(img_path)
         model = cv.dnn_DetectionModel(weights, config)
@@ -392,10 +455,6 @@ class dnn_test(NewOpenCVTests):
                                     "Verify OPENCV_DNN_TEST_DATA_PATH configuration parameter.")
 
         input = np.load(input_file)
-        # we have to expand the shape of input tensor because Python bindings cut 3D tensors to 2D
-        # it should be fixed in future. see : https://github.com/opencv/opencv/issues/19091
-        # please remove `expand_dims` after that
-        input = np.expand_dims(input, axis=3)
         gold_output = np.load(output_file)
 
         for backend, target in self.dnnBackendsAndTargets:
@@ -406,10 +465,85 @@ class dnn_test(NewOpenCVTests):
             net.setPreferableBackend(backend)
             net.setPreferableTarget(target)
 
+            # Check whether 3d shape is parsed correctly for setInput
             net.setInput(input)
-            real_output = net.forward()
 
-            normAssert(self, real_output, gold_output, "", getDefaultThreshold(target))
+            # Case 0: test API `forward(const String& outputName = String()`
+            real_output = net.forward() # Retval is a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 1", getDefaultThreshold(target))
+
+            '''
+            Pre-allocate output memory with correct shape.
+            Normally Python users do not use in this way,
+            but we have to test it since we design API in this way
+            '''
+            # Case 1: a np.array with a string of output name.
+            #         It tests API `forward(OutputArrayOfArrays outputBlobs, const String& outputName = String()`
+            #         when outputBlobs is a np.array and we expect it to be the only output.
+            real_output = np.empty([2, 5, 3], dtype=np.float32)
+            real_output = net.forward(real_output, "237") # Retval is a tuple with a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 1", getDefaultThreshold(target))
+
+            # Case 2: a tuple of np.array with a string of output name.
+            #         It tests API `forward(OutputArrayOfArrays outputBlobs, const String& outputName = String()`
+            #         when outputBlobs is a container of several np.array and we expect to save all outputs accordingly.
+            real_output = tuple(np.empty([2, 5, 3], dtype=np.float32))
+            real_output = net.forward(real_output, "237") # Retval is a tuple with a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 2", getDefaultThreshold(target))
+
+            # Case 3: a tuple of np.array with a string of output name.
+            #         It tests API `forward(OutputArrayOfArrays outputBlobs, const std::vector<String>& outBlobNames)`
+            real_output = tuple(np.empty([2, 5, 3], dtype=np.float32))
+            # Note that it does not support parsing a list , e.g. ["237"]
+            real_output = net.forward(real_output, ("237")) # Retval is a tuple with a np.array of shape [2, 5, 3]
+            normAssert(self, real_output, gold_output, "Case 3", getDefaultThreshold(target))
+
+    def test_set_param_3d(self):
+        model_path = self.find_dnn_file('dnn/onnx/models/matmul_3d_init.onnx')
+        input_file = self.find_dnn_file('dnn/onnx/data/input_matmul_3d_init.npy')
+        output_file = self.find_dnn_file('dnn/onnx/data/output_matmul_3d_init.npy')
+
+        input = np.load(input_file)
+        output = np.load(output_file)
+
+        for backend, target in self.dnnBackendsAndTargets:
+            printParams(backend, target)
+
+            net = cv.dnn.readNet(model_path)
+
+            node_name = net.getLayerNames()[0]
+            w = net.getParam(node_name, 0) # returns the original tensor of three-dimensional shape
+            net.setParam(node_name, 0, w)  # set param once again to see whether tensor is converted with correct shape
+
+            net.setPreferableBackend(backend)
+            net.setPreferableTarget(target)
+
+            net.setInput(input)
+            res_output = net.forward()
+
+            normAssert(self, output, res_output, "", getDefaultThreshold(target))
+
+    def test_scalefactor_assign(self):
+        params = cv.dnn.Image2BlobParams()
+        self.assertEqual(params.scalefactor, (1.0, 1.0, 1.0, 1.0))
+        params.scalefactor = 2.0
+        self.assertEqual(params.scalefactor, (2.0, 0.0, 0.0, 0.0))
+
+    def test_net_builder(self):
+        net = cv.dnn.Net()
+        params = {
+            "kernel_w": 3,
+            "kernel_h": 3,
+            "stride_w": 3,
+            "stride_h": 3,
+            "pool": "max",
+        }
+        net.addLayerToPrev("pool", "Pooling", cv.CV_32F, params)
+
+        inp = np.random.standard_normal([1, 2, 9, 12]).astype(np.float32)
+        net.setInput(inp)
+        out = net.forward()
+        self.assertEqual(out.shape, (1, 2, 3, 4))
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

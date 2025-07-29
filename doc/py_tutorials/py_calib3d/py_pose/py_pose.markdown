@@ -36,7 +36,8 @@ Now let's create a function, draw which takes the corners in the chessboard (obt
 **cv.findChessboardCorners()**) and **axis points** to draw a 3D axis.
 @code{.py}
 def draw(img, corners, imgpts):
-    corner = tuple(corners[0].ravel())
+    corner = tuple(corners[0].ravel().astype("int32"))
+    imgpts = imgpts.astype("int32")
     img = cv.line(img, corner, tuple(imgpts[0].ravel()), (255,0,0), 5)
     img = cv.line(img, corner, tuple(imgpts[1].ravel()), (0,255,0), 5)
     img = cv.line(img, corner, tuple(imgpts[2].ravel()), (0,0,255), 5)
@@ -59,7 +60,7 @@ pixels. Then to calculate the rotation and translation, we use the function,
 **cv.solvePnPRansac()**. Once we those transformation matrices, we use them to project our **axis
 points** to the image plane. In simple words, we find the points on image plane corresponding to
 each of (3,0,0),(0,3,0),(0,0,3) in 3D space. Once we get them, we draw lines from the first corner
-to each of these points using our draw() function. Done !!!
+to each of these points using our generateImage() function. Done !!!
 @code{.py}
 for fname in glob.glob('left*.jpg'):
     img = cv.imread(fname)
@@ -89,9 +90,9 @@ See some results below. Notice that each axis is 3 squares long.:
 
 ### Render a Cube
 
-If you want to draw a cube, modify the draw() function and axis points as follows.
+If you want to draw a cube, modify the generateImage() function and axis points as follows.
 
-Modified draw() function:
+Modified generateImage() function:
 @code{.py}
 def draw(img, corners, imgpts):
     imgpts = np.int32(imgpts).reshape(-1,2)
@@ -119,9 +120,3 @@ And look at the result below:
 
 If you are interested in graphics, augmented reality etc, you can use OpenGL to render more
 complicated figures.
-
-Additional Resources
---------------------
-
-Exercises
----------

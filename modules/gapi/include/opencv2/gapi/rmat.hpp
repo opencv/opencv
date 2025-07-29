@@ -112,11 +112,11 @@ public:
         // is transferred to the device when the view is destroyed
         virtual View access(Access) = 0;
         virtual void serialize(cv::gapi::s11n::IOStream&) {
-            GAPI_Assert(false && "Generic serialize method of RMat::IAdapter does nothing by default. "
+            GAPI_Error("Generic serialize method of RMat::IAdapter does nothing by default. "
                                  "Please, implement it in derived class to properly serialize the object.");
         }
         virtual void deserialize(cv::gapi::s11n::IIStream&) {
-            GAPI_Assert(false && "Generic deserialize method of RMat::IAdapter does nothing by default. "
+            GAPI_Error("Generic deserialize method of RMat::IAdapter does nothing by default. "
                                  "Please, implement it in derived class to properly deserialize the object.");
         }
     };

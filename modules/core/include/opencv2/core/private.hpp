@@ -197,8 +197,6 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_PYRAMIDS_UP         1 // Different results
 #define IPP_DISABLE_PYRAMIDS_DOWN       1 // Different results
 #define IPP_DISABLE_PYRAMIDS_BUILD      1 // Different results
-#define IPP_DISABLE_WARPAFFINE          1 // Different results
-#define IPP_DISABLE_WARPPERSPECTIVE     1 // Different results
 #define IPP_DISABLE_REMAP               1 // Different results
 #define IPP_DISABLE_YUV_RGB             1 // accuracy difference
 #define IPP_DISABLE_RGB_YUV             1 // breaks OCL accuracy tests
@@ -212,7 +210,6 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
-#define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
 #define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
 #define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
 
@@ -235,6 +232,10 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #include "ipp.h"
 #endif
 #ifdef HAVE_IPP_IW
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wstrict-prototypes"
+#  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Wsuggest-override"
@@ -245,6 +246,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #  endif
 #  if defined(__OPENCV_BUILD) && defined(__GNUC__) && __GNUC__ >= 5
 #  pragma GCC diagnostic pop
+#  endif
+#  if defined(__OPENCV_BUILD) && defined(__clang__)
+#  pragma clang diagnostic pop
 #  endif
 #endif
 

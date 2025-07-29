@@ -8,8 +8,11 @@
 #ifndef OPENCV_GAPI_GISLANDMODEL_HPP
 #define OPENCV_GAPI_GISLANDMODEL_HPP
 
-#include <unordered_set>
+#include <unordered_set> // unordered_map
 #include <memory>        // shared_ptr
+#include <exception>     // exception_ptr
+#include <string>        // string
+#include <cstddef>       // size_t
 
 #include <ade/graph.hpp>
 #include <ade/typed_graph.hpp>
@@ -122,7 +125,7 @@ public:
     virtual bool canReshape() const = 0;
     virtual void reshape(ade::Graph& g, const GCompileArgs& args) = 0;
     virtual bool allocatesOutputs() const { return false; }
-    virtual cv::RMat allocate(const cv::GMatDesc&) const { GAPI_Assert(false && "should never be called"); }
+    virtual cv::RMat allocate(const cv::GMatDesc&) const { GAPI_Error("should never be called"); }
 
     // This method is called when the GStreamingCompiled gets a new
     // input source to process. Normally this method is called once
@@ -192,6 +195,7 @@ class GIslandEmitter
 public:
     // Obtain next value from the emitter
     virtual bool pull(GRunArg &) = 0;
+    virtual void halt() = 0;
     virtual ~GIslandEmitter() = default;
 };
 

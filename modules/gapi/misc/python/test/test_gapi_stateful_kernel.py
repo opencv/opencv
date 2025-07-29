@@ -24,7 +24,7 @@ try:
                 in_types=[cv.GOpaque.Int],
                 out_types=[cv.GOpaque.Int])
     class GStatefulCounter:
-        """Accumulate state counter on every call"""
+        """Accumulates state counter on every call"""
 
         @staticmethod
         def outMeta(desc):
@@ -43,6 +43,22 @@ try:
         def run(value, state):
             state.counter += value
             return state.counter
+
+
+    class SumState:
+        def __init__(self):
+            self.sum = 0
+
+
+    @cv.gapi.op('stateful_sum',
+                in_types=[cv.GOpaque.Int, cv.GOpaque.Int],
+                out_types=[cv.GOpaque.Int])
+    class GStatefulSum:
+        """Accumulates sum on every call"""
+
+        @staticmethod
+        def outMeta(lhs_desc, rhs_desc):
+            return cv.empty_gopaque_desc()
 
 
     class gapi_sample_pipelines(NewOpenCVTests):
@@ -122,6 +138,64 @@ try:
                 _, actual = cc.pull()
                 self.assertEqual(i, actual)
             cc.stop()
+
+
+        def test_stateful_multiple_inputs(self):
+            @cv.gapi.kernel(GStatefulSum)
+            class GStatefulSumImpl:
+                """Implementation for GStatefulCounter operation."""
+
+                @staticmethod
+                def setup(lhs_desc, rhs_desc):
+                    return SumState()
+
+                @staticmethod
+                def run(lhs, rhs, state):
+                    state.sum+= lhs + rhs
+                    return state.sum
+
+
+            g_in1 = cv.GOpaque.Int()
+            g_in2 = cv.GOpaque.Int()
+            g_out = GStatefulSum.on(g_in1, g_in2)
+            comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
+            pkg  = cv.gapi.kernels(GStatefulSumImpl)
+
+            lhs_list = [1, 10, 15]
+            rhs_list = [2, 14, 32]
+
+            ref_out = 0
+            for lhs, rhs in zip(lhs_list, rhs_list):
+                ref_out += lhs + rhs
+                gapi_out = comp.apply(cv.gin(lhs, rhs), cv.gapi.compile_args(pkg))
+                self.assertEqual(ref_out, gapi_out)
+
+
+        def test_stateful_multiple_inputs_throw(self):
+            @cv.gapi.kernel(GStatefulSum)
+            class GStatefulSumImplIncorrect:
+                """Incorrect implementation for GStatefulCounter operation."""
+
+                # NB: setup methods is intentionally
+                # incorrect - accepts one meta arg instead of two
+                @staticmethod
+                def setup(desc):
+                    return SumState()
+
+                @staticmethod
+                def run(lhs, rhs, state):
+                    state.sum+= lhs + rhs
+                    return state.sum
+
+
+            g_in1 = cv.GOpaque.Int()
+            g_in2 = cv.GOpaque.Int()
+            g_out = GStatefulSum.on(g_in1, g_in2)
+            comp = cv.GComputation(cv.GIn(g_in1, g_in2), cv.GOut(g_out))
+            pkg  = cv.gapi.kernels(GStatefulSumImplIncorrect)
+
+            with self.assertRaises(Exception): comp.apply(cv.gin(42, 42),
+                                                          args=cv.gapi.compile_args(pkg))
 
 
 except unittest.SkipTest as e:

@@ -75,7 +75,7 @@ cv::gimpl::GExecutor::GExecutor(std::unique_ptr<ade::Graph> &&g_model)
             break;
 
         default:
-            GAPI_Assert(false);
+            GAPI_Error("InternalError");
             break;
         } // switch(kind)
     } // for(gim nodes)
@@ -208,6 +208,12 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
     switch (d.shape)
     {
     case GShape::GMAT:
+        if (d.storage == Data::Storage::CONST_VAL)
+        {
+            auto rc = RcDesc{d.rc, d.shape, d.ctor};
+            magazine::bindInArgExec(m_res, rc, m_gm.metadata(orig_nh).get<ConstValue>().arg);
+        }
+        else
         {
             // Let island allocate it's outputs if it can,
             // allocate cv::Mat and wrap it with RMat otherwise
@@ -248,7 +254,7 @@ void cv::gimpl::GExecutor::initResource(const ade::NodeHandle & nh, const ade::N
         break;
     }
     default:
-        GAPI_Assert(false);
+        GAPI_Error("InternalError");
     }
 }
 

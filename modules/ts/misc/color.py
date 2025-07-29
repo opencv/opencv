@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-
+""" Utility package used by other test result formatting scripts.
+"""
 import math, os, sys
 
 webcolors = {

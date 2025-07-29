@@ -21,7 +21,7 @@ class GAPI_EXPORTS Scalar
 {
 public:
     Scalar() = default;
-    explicit Scalar(double v0) { val[0] = v0; };
+    explicit Scalar(double v0) { val[0] = v0; }
     Scalar(double v0, double v1, double v2 = 0, double v3 = 0)
         : val{v0, v1, v2, v3}
     {

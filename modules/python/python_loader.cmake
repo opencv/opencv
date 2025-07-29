@@ -45,8 +45,6 @@ foreach(fname ${PYTHON_LOADER_FILES})
   endif()
 endforeach()
 
-
-
 if(WIN32)
   if(CMAKE_GENERATOR MATCHES "Visual Studio")
     list(APPEND CMAKE_PYTHON_BINARIES_PATH "'${EXECUTABLE_OUTPUT_PATH}/Release'")  # TODO: CMAKE_BUILD_TYPE is not defined
@@ -70,8 +68,14 @@ if(DEFINED OPENCV_PYTHON_INSTALL_PATH)
   endif()
   set(CMAKE_PYTHON_BINARIES_PATH "${CMAKE_PYTHON_BINARIES_INSTALL_PATH}")
   if (WIN32 AND HAVE_CUDA)
-    if (DEFINED CUDA_TOOLKIT_ROOT_DIR)
-      list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDA_TOOLKIT_ROOT_DIR}'), 'bin')")
+    if (ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+      if (DEFINED CUDAToolkit_LIBRARY_ROOT)
+        list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDAToolkit_LIBRARY_ROOT}'), 'bin')")
+      endif()
+    else()
+      if (DEFINED CUDA_TOOLKIT_ROOT_DIR)
+        list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDA_TOOLKIT_ROOT_DIR}'), 'bin')")
+      endif()
     endif()
   endif()
   string(REPLACE ";" ",\n    " CMAKE_PYTHON_BINARIES_PATH "${CMAKE_PYTHON_BINARIES_PATH}")
@@ -125,4 +129,22 @@ if(NOT "${OPENCV_PYTHON_EXTRA_MODULES_PATH}" STREQUAL "")
   foreach(extra_ocv_py_modules_path ${OPENCV_PYTHON_EXTRA_MODULES_PATH})
     ocv_add_python_files_from_path(${extra_ocv_py_modules_path})
   endforeach()
+endif()
+
+if(${PYTHON}_VERSION_STRING VERSION_GREATER "3.6" AND PYTHON_DEFAULT_VERSION VERSION_GREATER "3.6")
+  add_custom_target(copy_opencv_typing_stubs)
+  # Copy all generated stub files to python_loader directory only if
+  # generation succeeds, this behvoir can't be achieved with default
+  # CMake constructions, because failed generation produces a warning instead of
+  # halts on hard error.
+  add_custom_command(
+    TARGET copy_opencv_typing_stubs
+    POST_BUILD
+    COMMAND ${PYTHON_DEFAULT_EXECUTABLE} ${PYTHON_SOURCE_DIR}/src2/copy_typings_stubs_on_success.py
+            --stubs_dir ${OPENCV_PYTHON_BINDINGS_DIR}/cv2
+            --output_dir ${__loader_path}/cv2
+  )
+  if(DEFINED OPENCV_PYTHON_INSTALL_PATH)
+    install(DIRECTORY "${OPENCV_PYTHON_BINDINGS_DIR}/cv2" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}" COMPONENT python)
+  endif()
 endif()

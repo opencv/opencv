@@ -163,13 +163,10 @@ struct DummyCall {
                         cv::Mat&           out_mat,
                         DummyState&        state) {
             using namespace std::chrono;
-            double total = 0;
-            auto   start = high_resolution_clock::now();
+            auto start_ts = utils::timestamp<utils::double_ms_t>();
             state.mat.copyTo(out_mat);
-            while (total < time) {
-                total = duration_cast<duration<double, std::milli>>(
-                            high_resolution_clock::now() - start).count();
-            }
+            auto elapsed = utils::timestamp<utils::double_ms_t>() - start_ts;
+            utils::busyWait(duration_cast<microseconds>(utils::double_ms_t{time-elapsed}));
         }
     };
 
@@ -656,16 +653,16 @@ Pipeline::Ptr PipelineBuilder::construct() {
     }
 
     GAPI_Assert(m_state->stop_criterion);
-    if (m_state->mode == PLMode::STREAMING) {
-        GAPI_Assert(graph_inputs.size() == 1);
-        GAPI_Assert(cv::util::holds_alternative<cv::GMat>(graph_inputs[0]));
-        // FIXME: Handle GFrame when NV12 comes.
-        const auto& graph_input = cv::util::get<cv::GMat>(graph_inputs[0]);
-        // NB: In case streaming mode need to expose timestamp in order to
-        // calculate performance metrics.
-        graph_outputs.emplace_back(
-                cv::gapi::streaming::timestamp(graph_input).strip());
+    GAPI_Assert(graph_inputs.size() == 1);
+    GAPI_Assert(cv::util::holds_alternative<cv::GMat>(graph_inputs[0]));
+    // FIXME: Handle GFrame when NV12 comes.
+    const auto& graph_input = cv::util::get<cv::GMat>(graph_inputs[0]);
+    graph_outputs.emplace_back(
+            cv::gapi::streaming::timestamp(graph_input).strip());
+    graph_outputs.emplace_back(
+            cv::gapi::streaming::seq_id(graph_input).strip());
 
+    if (m_state->mode == PLMode::STREAMING) {
         return std::make_shared<StreamingPipeline>(std::move(m_state->name),
                                                    cv::GComputation(
                                                        cv::GProtoInputArgs{graph_inputs},

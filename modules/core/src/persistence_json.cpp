@@ -81,6 +81,12 @@ public:
         writeScalar( key, fs::itoa( value, buf, 10 ));
     }
 
+    void write(const char* key, int64_t value)
+    {
+        char buf[128];
+        writeScalar( key, fs::itoa( value, buf, 10, true ));
+    }
+
     void write( const char* key, double value )
     {
         char buf[128];
@@ -413,10 +419,19 @@ public:
             CV_PARSE_ERROR_CPP( "Key must start with \'\"\'" );
 
         char * beg = ptr + 1;
-
+        std::string key_name;
         do {
-            ++ptr;
-            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            if (*ptr == '\\') { // skip the next character if current is back slash
+                ++ptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+                key_name += *ptr;
+                ++ptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            } else {
+                ++ptr;
+                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+                if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
+            }
         } while( cv_isprint(*ptr) && *ptr != '"' );
 
         if( *ptr != '"' )
@@ -424,7 +439,7 @@ public:
 
         if( ptr == beg )
             CV_PARSE_ERROR_CPP( "Key is empty" );
-        value_placeholder = fs->addNode(collection, std::string(beg, (size_t)(ptr - beg)), FileNode::NONE);
+        value_placeholder = fs->addNode(collection, key_name, FileNode::NONE);
 
         ptr++;
         ptr = skipSpaces( ptr );
@@ -596,7 +611,7 @@ public:
             }
             else
             {
-                int ival = (int)strtol( beg, &ptr, 0 );
+                int64_t ival = strtoll( beg, &ptr, 0 );
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
 
                 node.setValue(FileNode::INT, &ival);
@@ -617,13 +632,11 @@ public:
             }
 
             if( len == 4 && memcmp( beg, "null", 4 ) == 0 )
-            {
-                CV_PARSE_ERROR_CPP( "Value 'null' is not supported by this parser" );
-            }
+                ;
             else if( (len == 4 && memcmp( beg, "true", 4 ) == 0) ||
                      (len == 5 && memcmp( beg, "false", 5 ) == 0) )
             {
-                int ival = *beg == 't' ? 1 : 0;
+                int64_t ival = *beg == 't' ? 1 : 0;
                 node.setValue(FileNode::INT, &ival);
             }
             else

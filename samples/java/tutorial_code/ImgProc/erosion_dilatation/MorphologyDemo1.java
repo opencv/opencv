@@ -23,12 +23,12 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 public class MorphologyDemo1 {
-    private static final String[] ELEMENT_TYPE = { "Rectangle", "Cross", "Ellipse" };
+    private static final String[] ELEMENT_TYPE = { "Rectangle", "Cross", "Ellipse", "Diamond" };
     private static final String[] MORPH_OP = { "Erosion", "Dilatation" };
     private static final int MAX_KERNEL_SIZE = 21;
     private Mat matImgSrc;
     private Mat matImgDst = new Mat();
-    private int elementType = Imgproc.CV_SHAPE_RECT;
+    private int elementType = Imgproc.MORPH_RECT;
     private int kernelSize = 0;
     private boolean doErosion = true;
     private JFrame frame;
@@ -74,11 +74,13 @@ public class MorphologyDemo1 {
                 @SuppressWarnings("unchecked")
                 JComboBox<String> cb = (JComboBox<String>)e.getSource();
                 if (cb.getSelectedIndex() == 0) {
-                    elementType = Imgproc.CV_SHAPE_RECT;
+                    elementType = Imgproc.MORPH_RECT;
                 } else if (cb.getSelectedIndex() == 1) {
-                    elementType = Imgproc.CV_SHAPE_CROSS;
+                    elementType = Imgproc.MORPH_CROSS;
                 } else if (cb.getSelectedIndex() == 2) {
-                    elementType = Imgproc.CV_SHAPE_ELLIPSE;
+                    elementType = Imgproc.MORPH_ELLIPSE;
+                } else if (cb.getSelectedIndex() == 3) {
+                    elementType = Imgproc.MORPH_DIAMOND;
                 }
                 update();
             }

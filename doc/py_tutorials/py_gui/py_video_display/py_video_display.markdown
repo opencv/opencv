@@ -111,7 +111,7 @@ frames per second (fps) and frame size should be passed. And the last one is the
 `True`, the encoder expect color frame, otherwise it works with grayscale frame.
 
 [FourCC](http://en.wikipedia.org/wiki/FourCC) is a 4-byte code used to specify the video codec. The
-list of available codes can be found in [fourcc.org](http://www.fourcc.org/codecs.php). It is
+list of available codes can be found in [fourcc.org](https://fourcc.org/codecs.php). It is
 platform dependent. The following codecs work fine for me.
 
 -   In Fedora: DIVX, XVID, MJPG, X264, WMV1, WMV2. (XVID is more preferable. MJPG results in high
@@ -152,9 +152,3 @@ cap.release()
 out.release()
 cv.destroyAllWindows()
 @endcode
-
-Additional Resources
---------------------
-
-Exercises
----------

@@ -8,15 +8,12 @@
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
+#include "../op_cann.hpp"
 #include <opencv2/imgproc.hpp>
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#if INF_ENGINE_VER_MAJOR_GT(INF_ENGINE_RELEASE_2020_4)
-#include <ngraph/op/interpolate.hpp>
-#else
-#include <ngraph/op/experimental/layers/interpolate.hpp>
-#endif
+#include <openvino/op/interpolate.hpp>
 #endif
 
 #ifdef HAVE_CUDA
@@ -77,6 +74,9 @@ public:
         if (backendId == DNN_BACKEND_CUDA)
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
 
+        if (backendId == DNN_BACKEND_CANN)
+            return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+
 #ifdef HAVE_INF_ENGINE
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
         {
@@ -111,7 +111,7 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16S)
+        if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
@@ -307,6 +307,64 @@ public:
             CV_Error(Error::StsNotImplemented, "Unknown interpolation: " + interpolation);
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto x_desc = x->getTensorDesc();
+        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        // create operator
+        if (interpolation == "nearest")
+        {
+            auto op = std::make_shared<ge::op::ResizeNearestNeighborV2>(name);
+
+            // set attributes
+            op->set_attr_align_corners(alignCorners);
+            op->set_attr_half_pixel_centers(halfPixelCenters);
+
+            // set inputs : x
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+            // set inputs : size
+            std::vector<int> shape_of_size_mat{2};
+            std::vector<int> size_vec{outHeight, outWidth};
+            Mat size_mat(shape_of_size_mat, CV_32S, size_vec.data());
+            auto op_const_size = std::make_shared<CannConstOp>(size_mat.data, size_mat.type(), shape_of_size_mat, cv::format("%s_size", name.c_str()));
+            op->set_input_size(*(op_const_size->getOp()));
+            op->update_input_desc_size(*(op_const_size->getTensorDesc()));
+
+            // set outputs
+            op->update_output_desc_y(*output_y_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else if (interpolation == "opencv_linear" || interpolation == "bilinear")
+        {
+            auto op = std::make_shared<ge::op::ResizeBilinearV2D>(name);
+
+            // set attributes
+            op->set_attr_align_corners(alignCorners);
+            op->set_attr_half_pixel_centers(halfPixelCenters);
+            std::vector<int64_t> taget_size{(int64_t)outHeight, (int64_t)outWidth};
+            op->set_attr_size(taget_size);
+
+            // set inputs : x
+            op->set_input_x_by_name(*op_x, x->name.c_str());
+            op->update_input_desc_x(*x_desc);
+
+            // set outputs
+            op->update_output_desc_y(*output_y_desc);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else
+            CV_Error(Error::StsNotImplemented, "Unsupported interpolation by CANN backend: " + interpolation);
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
@@ -314,56 +372,39 @@ public:
     {
         auto& ieInpNode = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
 
-#if INF_ENGINE_VER_MAJOR_LE(INF_ENGINE_RELEASE_2021_2)
-        ngraph::op::InterpolateAttrs attrs;
-        attrs.pads_begin.push_back(0);
-        attrs.pads_end.push_back(0);
-        attrs.axes = ngraph::AxisSet{2, 3};
-        attrs.align_corners = alignCorners;
+        ov::op::v4::Interpolate::InterpolateAttrs attrs;
 
         if (interpolation == "nearest") {
-            attrs.mode = "nearest";
-            attrs.antialias = false;
+            attrs.mode = ov::op::v4::Interpolate::InterpolateMode::NEAREST;
+            attrs.coordinate_transformation_mode = ov::op::v4::Interpolate::CoordinateTransformMode::HALF_PIXEL;
         } else if (interpolation == "bilinear") {
-            attrs.mode = "linear";
-        } else {
-            CV_Error(Error::StsNotImplemented, "Unsupported interpolation: " + interpolation);
-        }
-
-        std::vector<int64_t> shape = {outHeight, outWidth};
-        auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
-        auto interp = std::make_shared<ngraph::op::Interpolate>(ieInpNode, out_shape, attrs);
-#else
-        ngraph::op::v4::Interpolate::InterpolateAttrs attrs;
-
-        if (interpolation == "nearest") {
-            attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::nearest;
-            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::half_pixel;
-        } else if (interpolation == "bilinear") {
-            attrs.mode = ngraph::op::v4::Interpolate::InterpolateMode::linear_onnx;
-            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::asymmetric;
+            attrs.mode = ov::op::v4::Interpolate::InterpolateMode::LINEAR_ONNX;
+            attrs.coordinate_transformation_mode = ov::op::v4::Interpolate::CoordinateTransformMode::ASYMMETRIC;
         } else {
             CV_Error(Error::StsNotImplemented, format("Unsupported interpolation: %s", interpolation.c_str()));
         }
-        attrs.shape_calculation_mode = ngraph::op::v4::Interpolate::ShapeCalcMode::sizes;
+        attrs.shape_calculation_mode = ov::op::v4::Interpolate::ShapeCalcMode::SIZES;
 
-        if (alignCorners) {
-            attrs.coordinate_transformation_mode = ngraph::op::v4::Interpolate::CoordinateTransformMode::align_corners;
+        CV_Assert(!halfPixelCenters || !alignCorners);
+        if (halfPixelCenters) {
+            attrs.coordinate_transformation_mode = ov::op::v4::Interpolate::CoordinateTransformMode::HALF_PIXEL;
+        } else if (alignCorners) {
+            attrs.coordinate_transformation_mode = ov::op::v4::Interpolate::CoordinateTransformMode::ALIGN_CORNERS;
         }
 
-        attrs.nearest_mode = ngraph::op::v4::Interpolate::NearestMode::round_prefer_floor;
+        attrs.nearest_mode = ov::op::v4::Interpolate::NearestMode::ROUND_PREFER_FLOOR;
+
 
         std::vector<int64_t> shape = {outHeight, outWidth};
-        auto out_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, shape.data());
+        auto out_shape = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, shape.data());
 
-        auto& input_shape = ieInpNode->get_shape();
+        auto& input_shape = ieInpNode.get_shape();
         CV_Assert_N(input_shape[2] != 0, input_shape[3] != 0);
         std::vector<float> scales = {static_cast<float>(outHeight) / input_shape[2], static_cast<float>(outWidth) / input_shape[3]};
-        auto scales_shape = std::make_shared<ngraph::op::Constant>(ngraph::element::f32, ngraph::Shape{2}, scales.data());
+        auto scales_shape = std::make_shared<ov::op::v0::Constant>(ov::element::f32, ov::Shape{2}, scales.data());
 
-        auto axes = std::make_shared<ngraph::op::Constant>(ngraph::element::i64, ngraph::Shape{2}, std::vector<int64_t>{2, 3});
-        auto interp = std::make_shared<ngraph::op::v4::Interpolate>(ieInpNode, out_shape, scales_shape, axes, attrs);
-#endif
+        auto axes = std::make_shared<ov::op::v0::Constant>(ov::element::i64, ov::Shape{2}, std::vector<int64_t>{2, 3});
+        auto interp = std::make_shared<ov::op::v4::Interpolate>(ieInpNode, out_shape, scales_shape, axes, attrs);
         return Ptr<BackendNode>(new InfEngineNgraphNode(interp));
     }
 #endif  // HAVE_DNN_NGRAPH

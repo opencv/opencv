@@ -141,7 +141,7 @@ Additional Resources
 --------------------
 
 1.  [NPTEL notes on Pattern Recognition, Chapter
-    11](https://nptel.ac.in/courses/106/108/106108057/)
+    11](https://nptel.ac.in/courses/106108057)
 2.  [Wikipedia article on Nearest neighbor search](https://en.wikipedia.org/wiki/Nearest_neighbor_search)
 3.  [Wikipedia article on k-d tree](https://en.wikipedia.org/wiki/K-d_tree)
 

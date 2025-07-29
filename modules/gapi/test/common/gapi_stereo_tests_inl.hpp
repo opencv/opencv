@@ -25,7 +25,7 @@ TEST_P(TestGAPIStereo, DisparityDepthTest)
         case format::DEPTH_FLOAT16: dtype = CV_16FC1; break;
         case format::DEPTH_FLOAT32: dtype = CV_32FC1; break;
         case format::DISPARITY_FIXED16_12_4: dtype = CV_16SC1; break;
-        default: GAPI_Assert(false && "Unsupported format in test");
+        default: GAPI_Error("Unsupported format in test");
     }
     initOutMats(sz, dtype);
 
@@ -61,7 +61,7 @@ TEST_P(TestGAPIStereo, DisparityDepthTest)
         case format::DISPARITY_FIXED16_12_4:
             break;
         default:
-            GAPI_Assert(false && "Unsupported format in test");
+            GAPI_Error("Unsupported format in test");
     }
 
     EXPECT_TRUE(cmpF(out_mat_gapi, out_mat_ocv));

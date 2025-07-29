@@ -26,6 +26,37 @@ public:
     GAPI_WRAP
     PyParams(const std::string& tag, const std::string& model_path);
 
+    GAPI_WRAP
+    PyParams& cfgMeanStd(const std::string &layer_name,
+                         const cv::Scalar &m,
+                         const cv::Scalar &s);
+    GAPI_WRAP
+    PyParams& cfgNormalize(const std::string &layer_name, bool flag);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::OpenVINO ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::DirectML ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::CoreML ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::CUDA ep);
+
+    GAPI_WRAP
+    PyParams& cfgAddExecutionProvider(ep::TensorRT ep);
+
+    GAPI_WRAP
+    PyParams& cfgDisableMemPattern();
+
+    GAPI_WRAP
+    PyParams& cfgSessionOptions(const std::map<std::string, std::string>& options);
+
+    GAPI_WRAP
+    PyParams& cfgOptLevel(const int opt_level);
+
     GBackend backend() const;
     std::string tag() const;
     cv::util::any params() const;

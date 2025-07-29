@@ -118,12 +118,12 @@ protected:
             int cn = cvtest::randInt(rng) % 4 + 1;
             Mat test_mat(cvtest::randInt(rng)%30+1, cvtest::randInt(rng)%30+1, CV_MAKETYPE(depth, cn));
 
-            rng0.fill(test_mat, CV_RAND_UNI, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
+            rng0.fill(test_mat, RNG::UNIFORM, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
             if( depth >= CV_32F )
             {
                 exp(test_mat, test_mat);
                 Mat test_mat_scale(test_mat.size(), test_mat.type());
-                rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
+                rng0.fill(test_mat_scale, RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
                 cv::multiply(test_mat, test_mat_scale, test_mat);
             }
 
@@ -136,12 +136,12 @@ protected:
             };
             MatND test_mat_nd(3, sz, CV_MAKETYPE(depth, cn));
 
-            rng0.fill(test_mat_nd, CV_RAND_UNI, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
+            rng0.fill(test_mat_nd, RNG::UNIFORM, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
             if( depth >= CV_32F )
             {
                 exp(test_mat_nd, test_mat_nd);
                 MatND test_mat_scale(test_mat_nd.dims, test_mat_nd.size, test_mat_nd.type());
-                rng0.fill(test_mat_scale, CV_RAND_UNI, Scalar::all(-1), Scalar::all(1));
+                rng0.fill(test_mat_scale, RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
                 cv::multiply(test_mat_nd, test_mat_scale, test_mat_nd);
             }
 
@@ -435,6 +435,8 @@ protected:
                 CV_Assert( ov1 == v1 );
                 CV_Assert( osc1 == sc1 );
                 CV_Assert( og1 == g1 );
+                fs.release();
+                remove(fname.c_str());
             }
             catch(...)
             {
@@ -489,6 +491,7 @@ TEST(Core_InputOutput, FileStorage)
     char arr[66];
     snprintf(arr, sizeof(arr), "snprintf is hell %d", 666);
     EXPECT_NO_THROW(f << arr);
+    remove(file.c_str());
 }
 
 TEST(Core_InputOutput, FileStorageKey)
@@ -534,6 +537,7 @@ TEST(Core_InputOutput, FileStorageSpaces)
         ASSERT_STREQ(values[i].c_str(), valuesReadAppend[i].c_str());
     }
     g3.release();
+    EXPECT_EQ(0, remove(fileName.c_str()));
 }
 
 struct data_t
@@ -585,12 +589,15 @@ struct data_t
 
 static void test_filestorage_basic(int write_flags, const char* suffix_name, bool testReadWrite, bool useMemory = false)
 {
+    const bool generateTestData = false; // enable to regenerate reference in opencv_extra
     const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
     CV_Assert(test_info);
     std::string name = (std::string(test_info->test_case_name()) + "--" + test_info->name() + suffix_name);
     std::string name_34 = string(cvtest::TS::ptr()->get_data_path()) + "io/3_4/" + name;
-    if (!testReadWrite)
+    if (!testReadWrite || generateTestData)
         name = string(cvtest::TS::ptr()->get_data_path()) + "io/" + name;
+    else
+        name = cv::tempfile(name.c_str());
 
     {
         const size_t rawdata_N = 40;
@@ -604,10 +611,8 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {   /* init */
 
             /* a normal mat */
-            _2d_out = cv::Mat(10, 20, CV_8UC3, cvScalar(1U, 2U, 127U));
-            for (int i = 0; i < _2d_out.rows; ++i)
-                for (int j = 0; j < _2d_out.cols; ++j)
-                    _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+            _2d_out = Mat(10, 20, CV_8UC3);
+            cv::randu(_2d_out, 0U, 255U);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
@@ -636,10 +641,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
                 rawdata.push_back(tmp);
             }
         }
-#ifdef GENERATE_TEST_DATA
-#else
-        if (testReadWrite || useMemory)
-#endif
+        if (testReadWrite || useMemory || generateTestData)
         {
             cv::FileStorage fs(name, write_flags + (useMemory ? cv::FileStorage::MEMORY : 0));
             fs << "normal_2d_mat" << _2d_out;
@@ -684,6 +686,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
             }
             std::cout << "Storage size: " << sz << std::endl;
             EXPECT_LE(sz, (size_t)6000);
+
         }
         {   /* read */
             cv::FileStorage fs(name, cv::FileStorage::READ + (useMemory ? cv::FileStorage::MEMORY : 0));
@@ -726,29 +729,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        ASSERT_EQ(_2d_in.rows   , _2d_out.rows);
-        ASSERT_EQ(_2d_in.cols   , _2d_out.cols);
-        ASSERT_EQ(_2d_in.dims   , _2d_out.dims);
-        ASSERT_EQ(_2d_in.depth(), _2d_out.depth());
-
-        errors = 0;
-        for(int i = 0; i < _2d_out.rows; ++i)
-        {
-            for (int j = 0; j < _2d_out.cols; ++j)
-            {
-                EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
-                if (::testing::Test::HasNonfatalFailure())
-                {
-                    printf("i = %d, j = %d\n", i, j);
-                    errors++;
-                }
-                if (errors >= 3)
-                {
-                    i = _2d_out.rows;
-                    break;
-                }
-            }
-        }
+        EXPECT_MAT_NEAR(_2d_in, _2d_out, 0);
 
         ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
         ASSERT_EQ(_nd_in.cols   , _nd_out.cols);
@@ -761,6 +742,10 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         ASSERT_EQ(_rd_in.dims   , _rd_out.dims);
         ASSERT_EQ(_rd_in.depth(), _rd_out.depth());
         EXPECT_EQ(0, cv::norm(_rd_in, _rd_out, NORM_INF));
+        if (testReadWrite && !useMemory && !generateTestData)
+        {
+            EXPECT_EQ(0, remove(name.c_str()));
+        }
     }
 }
 
@@ -807,7 +792,7 @@ TEST(Core_InputOutput, filestorage_heap_overflow)
     const ::testing::TestInfo* const test_info = ::testing::UnitTest::GetInstance()->current_test_info();
     CV_Assert(test_info);
 
-    std::string name = std::string(test_info->test_case_name()) + "--" + test_info->name();
+    std::string name = cv::tempfile();
     const char data[] = {0x00, 0x2f, 0x4a, 0x4a, 0x50, 0x4a, 0x4a };
 
     std::ofstream file;
@@ -819,6 +804,7 @@ TEST(Core_InputOutput, filestorage_heap_overflow)
 
     // This just shouldn't segfault, otherwise it's fine
     EXPECT_ANY_THROW(FileStorage(name, FileStorage::READ));
+    EXPECT_EQ(0, remove(name.c_str()));
 }
 
 TEST(Core_InputOutput, filestorage_base64_valid_call)
@@ -832,18 +818,6 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
         "core_io_base64_other_test.yml",
         "core_io_base64_other_test.xml",
         "core_io_base64_other_test.json",
-        "core_io_base64_other_test.yml?base64",
-        "core_io_base64_other_test.xml?base64",
-        "core_io_base64_other_test.json?base64",
-        0
-    };
-    char const * real_name[] = {
-        "core_io_base64_other_test.yml",
-        "core_io_base64_other_test.xml",
-        "core_io_base64_other_test.json",
-        "core_io_base64_other_test.yml",
-        "core_io_base64_other_test.xml",
-        "core_io_base64_other_test.json",
         0
     };
 
@@ -852,14 +826,16 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
 
     for (int n = 0; n < 6; n++)
     {
-        char const* suffix_name = filenames[n];
-        SCOPED_TRACE(suffix_name);
-        std::string name = basename + '_' + suffix_name;
-        std::string file_name = basename + '_' + real_name[n];
+        const int idx = n / 2;
+        const std::string mode_suffix = (n % 2 == 0) ? "" : "?base64";
+        std::string suffix_name = basename + "_" + filenames[idx];
+        std::string file_name = cv::tempfile(suffix_name.c_str());
+        std::string mode_file_name = file_name + mode_suffix;
+        SCOPED_TRACE(mode_file_name);
 
         EXPECT_NO_THROW(
         {
-            cv::FileStorage fs(name, cv::FileStorage::WRITE_BASE64);
+            cv::FileStorage fs(mode_file_name, cv::FileStorage::WRITE_BASE64);
 
             fs << "manydata" << "[";
             fs << "[:";
@@ -887,7 +863,7 @@ TEST(Core_InputOutput, filestorage_base64_valid_call)
 
         EXPECT_NO_THROW(
         {
-            cv::FileStorage fs(name, cv::FileStorage::WRITE);
+            cv::FileStorage fs(mode_file_name, cv::FileStorage::WRITE);
 
             fs << "manydata" << "[";
             fs << str_out;
@@ -931,10 +907,10 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
         0
     };
 
-    for (char const ** ptr = filenames; *ptr; ptr++)
+    for (int idx = 0; idx < 3; ++idx)
     {
-        char const * suffix_name = *ptr;
-        std::string name = basename + '_' + suffix_name;
+        const string base_suffix = basename + '_' + filenames[idx];
+        std::string name = cv::tempfile(base_suffix.c_str());
 
         EXPECT_NO_THROW({
             cv::FileStorage fs(name, cv::FileStorage::WRITE);
@@ -955,7 +931,7 @@ TEST(Core_InputOutput, filestorage_base64_invalid_call)
 
 TEST(Core_InputOutput, filestorage_yml_vec2i)
 {
-    const std::string file_name = "vec2i.yml";
+    const std::string file_name = cv::tempfile("vec2i.yml");
     cv::Vec2i vec(2, 1), ovec;
 
     /* write */
@@ -1037,7 +1013,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         }
     }
 
-    String fileName = "vec_vec_io_test.";
+    String basename = "vec_vec_io_test.";
 
     std::vector<String> formats;
     formats.push_back("xml");
@@ -1046,11 +1022,13 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
 
     for(size_t i = 0; i < formats.size(); i++)
     {
-        FileStorage writer(fileName + formats[i], FileStorage::WRITE);
+        const String basename_plus(basename + formats[i]);
+        const String fileName = tempfile(basename_plus.c_str());
+        FileStorage writer(fileName, FileStorage::WRITE);
         writer << "vecVecMat" << outputMats;
         writer.release();
 
-        FileStorage reader(fileName + formats[i], FileStorage::READ);
+        FileStorage reader(fileName, FileStorage::READ);
         std::vector<std::vector<Mat> > testMats;
         reader["vecVecMat"] >> testMats;
 
@@ -1067,7 +1045,7 @@ TEST(Core_InputOutput, filestorage_vec_vec_io)
         }
 
         reader.release();
-        remove((fileName + formats[i]).c_str());
+        remove(fileName.c_str());
     }
 }
 
@@ -1187,11 +1165,7 @@ TEST(Core_InputOutput, FileStorage_DMatch)
 
     EXPECT_NO_THROW(fs << "d" << d);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
-    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+000 ]\n");
-#else
-    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5000000000000000e+00 ]\n");
-#endif
+    EXPECT_STREQ(fs_result.c_str(), "%YAML:1.0\n---\nd: [ 1, 2, 3, -1.5 ]\n");
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1218,25 +1192,14 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector)
 
     EXPECT_NO_THROW(fs << "dv" << dv);
     cv::String fs_result = fs.releaseAndGetString();
-#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
-"   - [ 2, 3, 4, 1.5000000000000000e+000 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"   - [ 1, 2, 3, -1.5 ]\n"
+"   - [ 2, 3, 4, 1.5 ]\n"
+"   - [ 3, 2, 1, 0.5 ]\n"
 );
-#else
-    EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
-"---\n"
-"dv:\n"
-"   - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-"   - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
-"   - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-);
-#endif
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
 
@@ -1276,33 +1239,18 @@ TEST(Core_InputOutput, FileStorage_DMatch_vector_vector)
     EXPECT_NO_THROW(fs << "dvv" << dvv);
     cv::String fs_result = fs.releaseAndGetString();
 #ifndef OPENCV_TRAITS_ENABLE_DEPRECATED
-#if defined _MSC_VER && _MSC_VER <= 1800 /* MSVC 2013 and older */
     EXPECT_STREQ(fs_result.c_str(),
 "%YAML:1.0\n"
 "---\n"
 "dvv:\n"
 "   -\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
-"      - [ 2, 3, 4, 1.5000000000000000e+000 ]\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
+"      - [ 1, 2, 3, -1.5 ]\n"
+"      - [ 2, 3, 4, 1.5 ]\n"
+"      - [ 3, 2, 1, 0.5 ]\n"
 "   -\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-001 ]\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+000 ]\n"
+"      - [ 3, 2, 1, 0.5 ]\n"
+"      - [ 1, 2, 3, -1.5 ]\n"
 );
-#else
-    EXPECT_STREQ(fs_result.c_str(),
-"%YAML:1.0\n"
-"---\n"
-"dvv:\n"
-"   -\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-"      - [ 2, 3, 4, 1.5000000000000000e+00 ]\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-"   -\n"
-"      - [ 3, 2, 1, 5.0000000000000000e-01 ]\n"
-"      - [ 1, 2, 3, -1.5000000000000000e+00 ]\n"
-);
-#endif
 #endif // OPENCV_TRAITS_ENABLE_DEPRECATED
 
     cv::FileStorage fs_read(fs_result, cv::FileStorage::READ | cv::FileStorage::MEMORY);
@@ -1597,6 +1545,53 @@ TEST(Core_InputOutput, FileStorage_format_yml_gz)
     EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
 }
 
+TEST(Core_InputOutput, FileStorage_json_null_object)
+{
+    std::string test =
+        "{ "
+            "\"padding\": null,"
+            "\"truncation\": null,"
+            "\"version\": \"1.0\""
+        "}";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs["padding"].isNone());
+    ASSERT_TRUE(fs["truncation"].isNone());
+    ASSERT_TRUE(fs["version"].isString());
+
+    ASSERT_EQ(fs["padding"].name(), "padding");
+    ASSERT_EQ(fs["truncation"].name(), "truncation");
+    ASSERT_EQ(fs["version"].name(), "version");
+
+    ASSERT_EQ(fs["padding"].string(), "");
+    ASSERT_EQ(fs["truncation"].string(), "");
+    ASSERT_EQ(fs["version"].string(), "1.0");
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_key_backslash)
+{
+    // equivalent to json text {"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852}
+    std::string test = R"({"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs[R"(")"].isNamed());  // = "\""
+    ASSERT_TRUE(fs[R"(\)"].isNamed());  // = "\\"
+    ASSERT_TRUE(fs[R"(Ġ")"].isNamed()); // = "Ġ\""
+    ASSERT_TRUE(fs[R"(\\)"].isNamed()); // = "\\\\"
+
+    ASSERT_EQ(fs[R"(")"].name(), R"(")");
+    ASSERT_EQ(fs[R"(\)"].name(), R"(\)");
+    ASSERT_EQ(fs[R"(Ġ")"].name(), R"(Ġ")");
+    ASSERT_EQ(fs[R"(\\)"].name(), R"(\\)");
+
+    ASSERT_EQ((int)fs[R"(")"], 1);
+    ASSERT_EQ((int)fs[R"(\)"], 59);
+    ASSERT_EQ((int)fs[R"(Ġ")"], 366);
+    ASSERT_EQ((int)fs[R"(\\)"], 6852);
+    fs.release();
+}
+
 TEST(Core_InputOutput, FileStorage_json_named_nodes)
 {
     std::string test =
@@ -1658,7 +1653,7 @@ TEST(Core_InputOutput, FileStorage_json_bool)
 
 TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 {
-    const std::string fileName = "FileStorage_free_file_after_exception_test.yml";
+    const std::string fileName = cv::tempfile("FileStorage_free_file_after_exception_test.yml");
     const std::string content = "%YAML:1.0\n cameraMatrix;:: !<tag:yaml.org,2002:opencv-matrix>\n";
 
     std::fstream testFile;
@@ -1681,11 +1676,11 @@ TEST(Core_InputOutput, FileStorage_free_file_after_exception)
 TEST(Core_InputOutput, FileStorage_write_to_sequence)
 {
     const std::vector<std::string> formatExts = { ".yml", ".json", ".xml" };
-    const std::string fileName = "FileStorage_write_to_sequence";
-
     for (const auto& ext : formatExts)
     {
-        FileStorage fs(fileName + ext, FileStorage::WRITE);
+        const std::string name = tempfile(ext.c_str());
+
+        FileStorage fs(name, FileStorage::WRITE);
         std::vector<int> in = { 23, 42 };
         fs.startWriteStruct("some_sequence", cv::FileNode::SEQ);
         for (int i : in)
@@ -1693,7 +1688,7 @@ TEST(Core_InputOutput, FileStorage_write_to_sequence)
         fs.endWriteStruct();
         fs.release();
 
-        FileStorage fsIn(fileName + ext, FileStorage::READ);
+        FileStorage fsIn(name, FileStorage::READ);
         FileNode seq = fsIn["some_sequence"];
         FileNodeIterator it = seq.begin(), it_end = seq.end();
         std::vector<int> out;
@@ -1701,12 +1696,13 @@ TEST(Core_InputOutput, FileStorage_write_to_sequence)
             out.push_back((int)*it);
 
         EXPECT_EQ(in, out);
+        EXPECT_EQ(0, remove(name.c_str()));
     }
 }
 
 TEST(Core_InputOutput, FileStorage_YAML_parse_multiple_documents)
 {
-    const std::string filename = "FileStorage_YAML_parse_multiple_documents.yml";
+    const std::string filename = cv::tempfile("FileStorage_YAML_parse_multiple_documents.yml");
     FileStorage fs;
 
     fs.open(filename, FileStorage::WRITE);
@@ -1963,5 +1959,176 @@ TEST(Core_InputOutput, FileStorage_invalid_path_regression_21448_JSON)
     fs.release();
 }
 
+// see https://github.com/opencv/opencv/issues/25073
+typedef testing::TestWithParam< std::string > Core_InputOutput_regression_25073;
+
+TEST_P(Core_InputOutput_regression_25073, my_double)
+{
+    cv::String res = "";
+    double my_double = 0.5;
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_double" << my_double );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5"
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.000000000000000000e-01"
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_regression_25073, my_float)
+{
+    cv::String res = "";
+    float my_float = 0.5;
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_float" << my_float );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5"
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.00000000e-01",
+    fs.release();
+}
+
+TEST_P(Core_InputOutput_regression_25073, my_hfloat)
+{
+    cv::String res = "";
+    cv::hfloat my_hfloat(0.5);
+
+    FileStorage fs( GetParam(), cv::FileStorage::WRITE | cv::FileStorage::MEMORY);
+    EXPECT_NO_THROW( fs << "my_hfloat" << my_hfloat );
+    EXPECT_NO_THROW( fs << "my_int" << 5 );
+    EXPECT_NO_THROW( res = fs.releaseAndGetString() );
+    EXPECT_NE( res.find("0.5"), String::npos ) << res; // Found "0.5".
+    EXPECT_EQ( res.find("5.0"), String::npos ) << res; // Not Found "5.0000e-01".
+    fs.release();
+}
+
+INSTANTIATE_TEST_CASE_P( /*nothing*/,
+    Core_InputOutput_regression_25073,
+    Values("test.json", "test.xml", "test.yml") );
+
+// see https://github.com/opencv/opencv/issues/25946
+TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
+{
+    const std::string fileName = cv::tempfile("FileStorage_invalid_attribute_value_exception_test.xml");
+    const std::string content = "<?xml \n_=";
+
+    std::fstream testFile;
+    testFile.open(fileName.c_str(), std::fstream::out);
+    if(!testFile.is_open()) FAIL();
+    testFile << content;
+    testFile.close();
+
+    FileStorage fs;
+    EXPECT_ANY_THROW( fs.open(fileName, FileStorage::READ + FileStorage::FORMAT_XML) );
+
+    ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
+// see https://github.com/opencv/opencv/issues/26829
+TEST(Core_InputOutput, FileStorage_int64_26829)
+{
+    String content =
+        "%YAML:1.0\n"
+        "String1: string1\n"
+        "IntMin: -2147483648\n"
+        "String2: string2\n"
+        "Int64Min: -9223372036854775808\n"
+        "String3: string3\n"
+        "IntMax: 2147483647\n"
+        "String4: string4\n"
+        "Int64Max: 9223372036854775807\n"
+        "String5: string5\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    {
+        std::string str;
+
+        fs["String1"] >> str;
+        EXPECT_EQ(str, "string1");
+
+        fs["String2"] >> str;
+        EXPECT_EQ(str, "string2");
+
+        fs["String3"] >> str;
+        EXPECT_EQ(str, "string3");
+
+        fs["String4"] >> str;
+        EXPECT_EQ(str, "string4");
+
+        fs["String5"] >> str;
+        EXPECT_EQ(str, "string5");
+    }
+
+    {
+        int value;
+
+        fs["IntMin"] >> value;
+        EXPECT_EQ(value, INT_MIN);
+
+        fs["IntMax"] >> value;
+        EXPECT_EQ(value, INT_MAX);
+    }
+
+
+    {
+        int64_t value;
+
+        fs["Int64Min"] >> value;
+        EXPECT_EQ(value, INT64_MIN);
+
+        fs["Int64Max"] >> value;
+        EXPECT_EQ(value, INT64_MAX);
+    }
+}
+
+template <typename T>
+T fsWriteRead(const T& expectedValue, const char* ext)
+{
+    std::string fname = cv::tempfile(ext);
+    FileStorage fs_w(fname, FileStorage::WRITE);
+    fs_w << "value" << expectedValue;
+    fs_w.release();
+
+    FileStorage fs_r(fname, FileStorage::READ);
+
+    T value;
+    fs_r["value"] >> value;
+    return value;
+}
+
+void testExactMat(const Mat& src, const char* ext)
+{
+    bool srcIsEmpty = src.empty();
+    Mat dst = fsWriteRead(src, ext);
+    EXPECT_EQ(dst.empty(), srcIsEmpty);
+    EXPECT_EQ(src.dims, dst.dims);
+    EXPECT_EQ(src.size, dst.size);
+    if (!srcIsEmpty)
+    {
+        EXPECT_EQ(0.0, cv::norm(src, dst, NORM_INF));
+    }
+}
+
+typedef testing::TestWithParam<const char*> FileStorage_exact_type;
+TEST_P(FileStorage_exact_type, empty_mat)
+{
+    testExactMat(Mat(), GetParam());
+}
+
+TEST_P(FileStorage_exact_type, long_int)
+{
+    for (const int64_t expected : std::vector<int64_t>{INT64_MAX, INT64_MIN, -1, 1, 0})
+    {
+        int64_t value = fsWriteRead(expected, GetParam());
+        EXPECT_EQ(value, expected);
+    }
+}
+
+INSTANTIATE_TEST_CASE_P(Core_InputOutput,
+    FileStorage_exact_type, Values(".yml", ".xml", ".json")
+);
 
 }} // namespace

@@ -1,5 +1,5 @@
 set(VULKAN_INCLUDE_DIRS "${OpenCV_SOURCE_DIR}/3rdparty/include" CACHE PATH "Vulkan include directory")
-set(VULKAN_LIBRARIES "")
+set(VULKAN_LIBRARIES "" CACHE PATH "Path to Vulkan Libraries.")
 
 try_compile(VALID_VULKAN
       "${OpenCV_BINARY_DIR}"

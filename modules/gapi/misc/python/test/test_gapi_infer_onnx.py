@@ -14,21 +14,14 @@ try:
     if sys.version_info[:2] < (3, 0):
         raise unittest.SkipTest('Python 2.x is not supported')
 
-    CLASSIFICATION_MODEL_PATH = "onnx_models/vision/classification/squeezenet/model/squeezenet1.0-9.onnx"
-
-    testdata_required = bool(os.environ.get('OPENCV_DNN_TEST_REQUIRE_TESTDATA', False))
+    CLASSIFICATION_MODEL_PATH = "vision/classification/squeezenet/model/squeezenet1.0-9.onnx"
 
     class test_gapi_infer(NewOpenCVTests):
-        def find_dnn_file(self, filename, required=None):
-            if not required:
-                required = testdata_required
-            return self.find_file(filename, [os.environ.get('OPENCV_DNN_TEST_DATA_PATH', os.getcwd()),
-                                            os.environ['OPENCV_TEST_DATA_PATH']],
-                                required=required)
+        def find_dnn_file(self, filename):
+            return self.find_file(filename, [os.environ.get('OPENCV_GAPI_ONNX_MODEL_PATH')], False)
 
         def test_onnx_classification(self):
             model_path = self.find_dnn_file(CLASSIFICATION_MODEL_PATH)
-
             if model_path is None:
                 raise unittest.SkipTest("Missing DNN test file")
 
@@ -45,6 +38,7 @@ try:
             comp = cv.GComputation(cv.GIn(g_in), cv.GOut(g_out))
 
             net = cv.gapi.onnx.params("squeeze-net", model_path)
+            net.cfgNormalize("data_0", False)
             try:
                 out_gapi = comp.apply(cv.gin(in_mat), cv.gapi.compile_args(cv.gapi.networks(net)))
             except cv.error as err:

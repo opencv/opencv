@@ -1,5 +1,8 @@
 #!/usr/bin/env python
+""" Parse XML test log file.
 
+This module serves as utility for other scripts.
+"""
 from __future__ import print_function
 import collections
 import re

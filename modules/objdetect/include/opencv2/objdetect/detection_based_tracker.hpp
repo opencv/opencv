@@ -192,7 +192,7 @@ class CV_EXPORTS DetectionBasedTracker
             {
                 lastPositions.push_back(rect);
                 id=getNextId();
-            };
+            }
 
             static int getNextId()
             {

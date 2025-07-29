@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "exif.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace {
 
@@ -52,6 +53,43 @@ namespace {
 
 namespace cv
 {
+
+static std::string HexStringToBytes(const char* hexstring, size_t expected_length);
+
+// Converts the NULL terminated 'hexstring' which contains 2-byte character
+// representations of hex values to raw data.
+// 'hexstring' may contain values consisting of [A-F][a-f][0-9] in pairs,
+// e.g., 7af2..., separated by any number of newlines.
+// 'expected_length' is the anticipated processed size.
+// On success the raw buffer is returned with its length equivalent to
+// 'expected_length'. NULL is returned if the processed length is less than
+// 'expected_length' or any character aside from those above is encountered.
+// The returned buffer must be freed by the caller.
+static std::string HexStringToBytes(const char* hexstring,
+    size_t expected_length) {
+    const char* src = hexstring;
+    size_t actual_length = 0;
+    std::string raw_data;
+    raw_data.resize(expected_length);
+    char* dst = const_cast<char*>(raw_data.data());
+
+    for (; actual_length < expected_length && *src != '\0'; ++src) {
+        char* end;
+        char val[3];
+        if (*src == '\n') continue;
+        val[0] = *src++;
+        val[1] = *src;
+        val[2] = '\0';
+        *dst++ = static_cast<uint8_t>(strtol(val, &end, 16));
+        if (end != val + 2) break;
+        ++actual_length;
+    }
+
+    if (actual_length != expected_length) {
+        raw_data.clear();
+    }
+    return raw_data;
+}
 
 ExifEntry_t::ExifEntry_t() :
     field_float(0), field_double(0), field_u32(0), field_s32(0),
@@ -94,6 +132,40 @@ ExifEntry_t ExifReader::getTag(const ExifTagName tag) const
     return entry;
 }
 
+const std::vector<unsigned char>& ExifReader::getData() const
+{
+    return m_data;
+}
+
+bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
+    const char* src = profile;
+    char* end;
+    int expected_length;
+
+    if (profile == nullptr || profile_len == 0) return false;
+
+    // ImageMagick formats 'raw profiles' as
+    // '\n<name>\n<length>(%8lu)\n<hex payload>\n'.
+    if (*src != '\n') {
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
+        return false;
+    }
+    ++src;
+    // skip the profile name and extract the length.
+    while (*src != '\0' && *src++ != '\n') {}
+    expected_length = static_cast<int>(strtol(src, &end, 10));
+    if (*end != '\n') {
+        CV_LOG_WARNING(NULL, cv::format("Malformed raw profile, expected '\\n' got '\\x%.2X'", *src));
+        return false;
+    }
+    ++end;
+
+    // 'end' now points to the profile payload.
+    std::string payload = HexStringToBytes(end, expected_length);
+    if (payload.size() == 0) return false;
+
+    return parseExif((unsigned char*)payload.c_str() + 6, expected_length - 6);
+}
 
 /**
  * @brief Parsing the exif data buffer and prepare (internal) exif directory
@@ -133,7 +205,7 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
  * @brief Filling m_exif member with exif directory elements
  *          This is internal function and is not exposed to client
  *
- *  @return The function doesn't return any value. In case of unsuccessful parsing
+ *  The function doesn't return any value. In case of unsuccessful parsing
  *      the m_exif member is not filled up
  */
 void ExifReader::parseExif()
@@ -165,7 +237,7 @@ void ExifReader::parseExif()
  *
  * @return INTEL, MOTO or NONE
  */
-Endianess_t ExifReader::getFormat() const
+Endianness_t ExifReader::getFormat() const
 {
     if (m_data.size() < 1)
         return NONE;

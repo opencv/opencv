@@ -19,11 +19,13 @@
 #include <opencv2/core/base.hpp>
 #define GAPI_Assert CV_Assert
 
-#if defined _DEBUG || defined CV_STATIC_ANALYSIS
+#if !defined(NDEBUG) || defined(CV_STATIC_ANALYSIS)
 #  define GAPI_DbgAssert CV_DbgAssert
 #else
 #  define GAPI_DbgAssert(expr) GAPI_DbgAssertNoOp(expr)
 #endif
+
+#define GAPI_Error(msg) CV_Error(cv::Error::StsError, msg)
 
 #else
 #include <stdexcept>
@@ -48,6 +50,10 @@ namespace detail
 #else
 #  define GAPI_DbgAssert(expr) GAPI_Assert(expr)
 #endif
+
+#define GAPI_Error(msg) { \
+    ::detail::assert_abort(msg, __LINE__, __FILE__, __func__); \
+}
 
 #endif // GAPI_STANDALONE
 

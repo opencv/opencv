@@ -10,7 +10,7 @@ using namespace std;
 // {
 //     cout << "\nThis program demonstrates kmeans clustering.\n"
 //             "It generates an image with random points, then assigns a random number of cluster\n"
-//             "centers and uses kmeans to move those cluster centers to their representitive location\n"
+//             "centers and uses kmeans to move those cluster centers to their representative location\n"
 //             "Call\n"
 //             "./kmeans\n" << endl;
 // }

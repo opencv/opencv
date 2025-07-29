@@ -85,7 +85,7 @@ void conv1dsimd(Mat src, Mat kernel, float *ans, int row = 0, int rowk = 0, int 
 
     //! [convolution-1D-main]
     //! [convolution-1D-main-h1]
-    int step = v_float32().nlanes;
+    int step = VTraits<v_float32x4>::vlanes();
     float *sptr = src_32.ptr<float>(row), *kptr = kernel.ptr<float>(rowk);
     for (int k = 0; k < ksize; k++)
     {
@@ -96,7 +96,7 @@ void conv1dsimd(Mat src, Mat kernel, float *ans, int row = 0, int rowk = 0, int 
         for (i = 0; i + step < len; i += step)
         {
             v_float32 window = vx_load(sptr + i + k);
-            v_float32 sum = vx_load(ans + i) + kernel_wide * window;
+            v_float32 sum = v_add(vx_load(ans + i), v_mul(kernel_wide, window));
             v_store(ans + i, sum);
         }
     //! [convolution-1D-main-h2]
@@ -122,7 +122,7 @@ void convolute_simd(Mat src, Mat &dst, Mat kernel)
 
     copyMakeBorder(src, src, sz, sz, 0, 0, BORDER_REPLICATE);
 
-    int step = v_float32().nlanes;
+    int step = VTraits<v_float32x4>::vlanes();
     //! [convolution-2D-init]
 
     //! [convolution-2D-main]
@@ -135,7 +135,7 @@ void convolute_simd(Mat src, Mat &dst, Mat kernel)
             int j;
             for (j = 0; j + step < cols; j += step)
             {
-                v_float32 sum = vx_load(&dst.ptr<float>(i)[j]) + vx_load(&ans[j]);
+                v_float32 sum = v_add(vx_load(&dst.ptr<float>(i)[j]), vx_load(&ans[j]));
                 v_store(&dst.ptr<float>(i)[j], sum);
             }
 

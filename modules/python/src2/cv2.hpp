@@ -13,7 +13,10 @@
 // #define Py_DEBUG
 
 #if defined(CVPY_DYNAMIC_INIT) && !defined(Py_DEBUG)
-#   define Py_LIMITED_API 0x03030000
+#   ifndef PYTHON3_LIMITED_API_VERSION
+#       define PYTHON3_LIMITED_API_VERSION 0x03060000
+#   endif
+#   define Py_LIMITED_API PYTHON3_LIMITED_API_VERSION
 #endif
 
 #include <cmath>
@@ -39,12 +42,26 @@
 
 class ArgInfo
 {
+private:
+    static const uint32_t arg_outputarg_flag     = 0x1;
+    static const uint32_t arg_arithm_op_src_flag = 0x2;
+    static const uint32_t arg_pathlike_flag      = 0x4;
+    static const uint32_t arg_nd_mat_flag        = 0x8;
+
 public:
     const char* name;
     bool outputarg;
+    bool arithm_op_src;
+    bool pathlike;
+    bool nd_mat;
     // more fields may be added if necessary
 
-    ArgInfo(const char* name_, bool outputarg_) : name(name_), outputarg(outputarg_) {}
+    ArgInfo(const char* name_, uint32_t arg_) :
+        name(name_),
+        outputarg((arg_ & arg_outputarg_flag) != 0),
+        arithm_op_src((arg_ & arg_arithm_op_src_flag) != 0),
+        pathlike((arg_ & arg_pathlike_flag) != 0),
+        nd_mat((arg_ & arg_nd_mat_flag) != 0) {}
 
 private:
     ArgInfo(const ArgInfo&) = delete;

@@ -1,3 +1,26 @@
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  set(_apple_device_min_target_os_version "13.3")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+  set(_apple_device_min_target_os_version "16.4")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "watchOS")
+  set(_apple_device_min_target_os_version "9.4")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "tvOS")
+  set(_apple_device_min_target_os_version "16.4")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "visionOS")
+  set(_apple_device_min_target_os_version "1.0")
+endif()
+
+if(DEFINED _apple_device_min_target_os_version AND
+   ("${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_GREATER "${_apple_device_min_target_os_version}" OR
+    "${CMAKE_OSX_DEPLOYMENT_TARGET}" VERSION_EQUAL "${_apple_device_min_target_os_version}"))
+  set(_apple_device_has_required_min_os_version ON)
+else()
+  set(_apple_device_has_required_min_os_version OFF)
+endif()
+
+OCV_OPTION(OPENCV_OSX_USE_ACCELERATE_NEW_LAPACK "Use new BLAS/LAPACK interfaces from Accelerate framework on Apple platform" _apple_device_has_required_min_os_version
+  VISIBLE_IF APPLE)
+
 macro(_find_header_file_in_dirs VAR NAME)
   unset(${VAR})
   unset(${VAR} CACHE)
@@ -21,6 +44,14 @@ macro(_find_header_file_in_dirs VAR NAME)
 endmacro()
 
 macro(ocv_lapack_check)
+  cmake_parse_arguments(LAPACK "" "IMPL;CBLAS_H;LAPACKE_H" "INCLUDE_DIR;LIBRARIES" ${ARGN})
+
+  ocv_debug_message("LAPACK_IMPL=${LAPACK_IMPL}")
+  ocv_debug_message("LAPACK_CBLAS_H=${LAPACK_CBLAS_H}")
+  ocv_debug_message("LAPACK_LAPACKE_H=${LAPACK_LAPACKE_H}")
+  ocv_debug_message("LAPACK_INCLUDE_DIR=${LAPACK_INCLUDE_DIR}")
+  ocv_debug_message("LAPACK_LIBRARIES=${LAPACK_LIBRARIES}")
+
   string(REGEX REPLACE "[^a-zA-Z0-9_]" "_" _lapack_impl "${LAPACK_IMPL}")
   message(STATUS "LAPACK(${LAPACK_IMPL}): LAPACK_LIBRARIES: ${LAPACK_LIBRARIES}")
   _find_header_file_in_dirs(OPENCV_CBLAS_H_PATH_${_lapack_impl} "${LAPACK_CBLAS_H}" "${LAPACK_INCLUDE_DIR}")
@@ -106,11 +137,20 @@ macro(ocv_lapack_check)
       list(APPEND __link_directories ${LAPACK_LINK_LIBRARIES})
     endif()
 
+    set(LAPACK_TRY_COMPILE_DEF "")
+    if(LAPACK_IMPL STREQUAL "LAPACK/Apple" AND OPENCV_OSX_USE_ACCELERATE_NEW_LAPACK)
+      message(STATUS "LAPACK(${LAPACK_IMPL}): Accelerate New LAPACK is enabled.")
+      set(LAPACK_TRY_COMPILE_DEF "-DACCELERATE_NEW_LAPACK")
+      add_compile_definitions(ACCELERATE_NEW_LAPACK)
+      add_compile_definitions(ACCELERATE_LAPACK_ILP64)
+    endif()
+
     try_compile(__VALID_LAPACK
         "${OpenCV_BINARY_DIR}"
         "${OpenCV_SOURCE_DIR}/cmake/checks/lapack_check.cpp"
         CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${LAPACK_INCLUDE_DIR}\;${CMAKE_BINARY_DIR}"
                     "-DLINK_DIRECTORIES:STRING=${__link_directories}"
+        COMPILE_DEFINITIONS ${LAPACK_TRY_COMPILE_DEF}
         LINK_LIBRARIES ${LAPACK_LIBRARIES}
         OUTPUT_VARIABLE TRY_OUT
     )
@@ -137,34 +177,31 @@ if(WITH_LAPACK)
     if(NOT LAPACK_LIBRARIES AND NOT OPENCV_LAPACK_DISABLE_MKL)
       include(cmake/OpenCVFindMKL.cmake)
       if(HAVE_MKL)
-        set(LAPACK_INCLUDE_DIR  ${MKL_INCLUDE_DIRS})
-        set(LAPACK_LIBRARIES    ${MKL_LIBRARIES})
-        set(LAPACK_CBLAS_H      "mkl_cblas.h")
-        set(LAPACK_LAPACKE_H    "mkl_lapack.h")
-        set(LAPACK_IMPL         "MKL")
-        ocv_lapack_check()
+        ocv_lapack_check(IMPL "MKL"
+          CBLAS_H "mkl_cblas.h"
+          LAPACKE_H "mkl_lapack.h"
+          INCLUDE_DIR "${MKL_INCLUDE_DIRS}"
+          LIBRARIES "${MKL_LIBRARIES}")
       endif()
     endif()
     if(NOT LAPACK_LIBRARIES)
       include(cmake/OpenCVFindOpenBLAS.cmake)
       if(OpenBLAS_FOUND)
-        set(LAPACK_INCLUDE_DIR  ${OpenBLAS_INCLUDE_DIR})
-        set(LAPACK_LIBRARIES    ${OpenBLAS_LIB})
-        set(LAPACK_CBLAS_H      "cblas.h")
-        set(LAPACK_LAPACKE_H    "lapacke.h")
-        set(LAPACK_IMPL         "OpenBLAS")
-        ocv_lapack_check()
+        ocv_lapack_check(IMPL "OpenBLAS"
+          CBLAS_H "cblas.h"
+          LAPACKE_H "lapacke.h"
+          INCLUDE_DIR "${OpenBLAS_INCLUDE_DIRS}"
+          LIBRARIES "${OpenBLAS_LIBRARIES}")
       endif()
     endif()
     if(NOT LAPACK_LIBRARIES AND UNIX)
       include(cmake/OpenCVFindAtlas.cmake)
       if(ATLAS_FOUND)
-        set(LAPACK_INCLUDE_DIR  ${Atlas_INCLUDE_DIR})
-        set(LAPACK_LIBRARIES    ${Atlas_LIBRARIES})
-        set(LAPACK_CBLAS_H      "cblas.h")
-        set(LAPACK_LAPACKE_H    "lapacke.h")
-        set(LAPACK_IMPL         "Atlas")
-        ocv_lapack_check()
+        ocv_lapack_check(IMPL "Atlas"
+          CBLAS_H "cblas.h"
+          LAPACKE_H "lapacke.h"
+          INCLUDE_DIR "${Atlas_INCLUDE_DIR}"
+          LIBRARIES "${Atlas_LIBRARIES}")
       endif()
     endif()
   endif()
@@ -182,24 +219,26 @@ if(WITH_LAPACK)
         find_path(MKL_LAPACKE_INCLUDE_DIR "mkl_lapack.h")
       endif()
       if(MKL_LAPACKE_INCLUDE_DIR AND NOT OPENCV_LAPACK_DISABLE_MKL)
-        set(LAPACK_INCLUDE_DIR  ${MKL_LAPACKE_INCLUDE_DIR})
-        set(LAPACK_CBLAS_H      "mkl_cblas.h")
-        set(LAPACK_LAPACKE_H    "mkl_lapack.h")
-        set(LAPACK_IMPL         "LAPACK/MKL")
-        ocv_lapack_check()
+        ocv_lapack_check(IMPL "LAPACK/MKL"
+          CBLAS_H "mkl_cblas.h"
+          LAPACKE_H "mkl_lapack.h"
+          INCLUDE_DIR "${MKL_LAPACKE_INCLUDE_DIR}"
+          LIBRARIES "${LAPACK_LIBRARIES}")
       endif()
       if(NOT HAVE_LAPACK)
-        if(LAPACKE_INCLUDE_DIR)
-          set(LAPACK_INCLUDE_DIR  ${LAPACKE_INCLUDE_DIR})
-          set(LAPACK_CBLAS_H      "cblas.h")
-          set(LAPACK_LAPACKE_H    "lapacke.h")
-          set(LAPACK_IMPL         "LAPACK/Generic")
-          ocv_lapack_check()
+        if(NOT DEFINED CBLAS_INCLUDE_DIR)
+          find_path(CBLAS_INCLUDE_DIR "cblas.h")
+        endif()
+        if(CBLAS_INCLUDE_DIR AND LAPACKE_INCLUDE_DIR)
+          ocv_lapack_check(IMPL "LAPACK/Generic"
+            CBLAS_H "cblas.h"
+            LAPACKE_H "lapacke.h"
+            INCLUDE_DIR "${CBLAS_INCLUDE_DIR}" "${LAPACKE_INCLUDE_DIR}"
+            LIBRARIES "${LAPACK_LIBRARIES}")
         elseif(APPLE)
-          set(LAPACK_CBLAS_H      "Accelerate/Accelerate.h")
-          set(LAPACK_LAPACKE_H    "Accelerate/Accelerate.h")
-          set(LAPACK_IMPL         "LAPACK/Apple")
-          ocv_lapack_check()
+          ocv_lapack_check(IMPL "LAPACK/Apple"
+            CBLAS_H "Accelerate/Accelerate.h"
+            LAPACKE_H "Accelerate/Accelerate.h")
         endif()
       endif()
     endif()
@@ -210,16 +249,17 @@ if(WITH_LAPACK)
   endif()
 
   if(NOT LAPACK_LIBRARIES AND APPLE AND NOT OPENCV_LAPACK_FIND_PACKAGE_ONLY)
-    set(LAPACK_INCLUDE_DIR  "")
-    set(LAPACK_LIBRARIES    "-framework Accelerate")
-    set(LAPACK_CBLAS_H      "Accelerate/Accelerate.h")
-    set(LAPACK_LAPACKE_H    "Accelerate/Accelerate.h")
-    set(LAPACK_IMPL         "Apple")
-    ocv_lapack_check()
+    ocv_lapack_check(IMPL "Apple"
+      CBLAS_H "Accelerate/Accelerate.h"
+      LAPACKE_H "Accelerate/Accelerate.h"
+      LIBRARIES "-framework Accelerate")
   endif()
 
   if(NOT HAVE_LAPACK AND LAPACK_LIBRARIES AND LAPACK_CBLAS_H AND LAPACK_LAPACKE_H)
-    ocv_lapack_check()
+    ocv_lapack_check(IMPL "Unknown"
+      CBLAS_H ${LAPACK_CBLAS_H}
+      LAPACKE_H ${LAPACK_LAPACKE_H}
+      LIBRARIES "${LAPACK_LIBRARIES}")
   endif()
 
   set(LAPACK_INCLUDE_DIR ${LAPACK_INCLUDE_DIR} CACHE PATH   "Path to BLAS include dir" FORCE)

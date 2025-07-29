@@ -282,10 +282,10 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
     int i, maxEdges = (int)(qedges.size() * 4);
 
     if( qedges.size() < (size_t)4 )
-        CV_Error( CV_StsError, "Subdivision is empty" );
+        CV_Error( cv::Error::StsError, "Subdivision is empty" );
 
     if( pt.x < topLeft.x || pt.y < topLeft.y || pt.x >= bottomRight.x || pt.y >= bottomRight.y )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     int edge = recentEdge;
     CV_Assert(edge > 0);
@@ -417,10 +417,10 @@ int Subdiv2D::insert(Point2f pt)
     int location = locate( pt, curr_edge, curr_point );
 
     if( location == PTLOC_ERROR )
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     if( location == PTLOC_OUTSIDE_RECT )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     if( location == PTLOC_VERTEX )
         return curr_point;
@@ -434,7 +434,7 @@ int Subdiv2D::insert(Point2f pt)
     else if( location == PTLOC_INSIDE )
         ;
     else
-        CV_Error_(CV_StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
+        CV_Error_(cv::Error::StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
 
     CV_Assert( curr_edge != 0 );
     validGeometry = false;
@@ -493,7 +493,7 @@ void Subdiv2D::initDelaunay( Rect rect )
 {
     CV_INSTRUMENT_REGION();
 
-    float big_coord = 3.f * MAX( rect.width, rect.height );
+    float big_coord = 6.f * MAX( rect.width, rect.height );
     float rx = (float)rect.x;
     float ry = (float)rect.y;
 

@@ -118,7 +118,8 @@ ExrDecoder::ExrDecoder()
     m_ischroma = false;
     m_hasalpha = false;
     m_native_depth = false;
-
+    m_multispectral = false;
+    m_channels = 0;
 }
 
 
@@ -140,7 +141,7 @@ void  ExrDecoder::close()
 
 int  ExrDecoder::type() const
 {
-    return CV_MAKETYPE((m_isfloat ? CV_32F : CV_32S), ((m_iscolor && m_hasalpha) ? 4 : m_iscolor ? 3 : m_hasalpha ? 2 : 1));
+    return CV_MAKETYPE((m_isfloat ? CV_32F : CV_32S), (m_multispectral ? m_channels : (m_iscolor && m_hasalpha) ? 4 : m_iscolor ? 3 : m_hasalpha ? 2 : 1));
 }
 
 
@@ -169,6 +170,7 @@ bool  ExrDecoder::readHeader()
     m_green = channels.findChannel( "G" );
     m_blue = channels.findChannel( "B" );
     m_alpha = channels.findChannel( "A" );
+    m_multispectral = channels.findChannel( "0" ) != nullptr;
 
     if( m_alpha ) // alpha channel supported in RGB, Y, and YC scenarios
         m_hasalpha = true;
@@ -178,6 +180,23 @@ bool  ExrDecoder::readHeader()
         m_iscolor = true;
         m_ischroma = false;
         result = true;
+    }
+    else if( m_multispectral )
+    {
+        m_channels = 0;
+        for( auto it = channels.begin(); it != channels.end(); it++ )
+            m_channels++;
+
+        m_iscolor = true; // ??? false
+        m_ischroma = false;
+        m_hasalpha = false;
+        result = m_channels <= CV_CN_MAX;
+
+        for ( int i = 1; result && i < m_channels; i++ )  // channel 0 was found previously
+        {
+            const Channel *ch = channels.findChannel( std::to_string(i) );
+            result = ch && ch->xSampling == 1 && ch->ySampling == 1;  // subsampling is not supported
+        }
     }
     else
     {
@@ -214,8 +233,9 @@ bool  ExrDecoder::readHeader()
 bool  ExrDecoder::readData( Mat& img )
 {
     m_native_depth = CV_MAT_DEPTH(type()) == img.depth();
+    bool multispectral = img.channels() > 4;
     bool color = img.channels() > 2; // output mat has 3+ channels; Y or YA are the 1 and 2 channel scenario
-    bool alphasupported = ( img.channels() % 2 == 0 );  // even number of channels indicates alpha
+    bool alphasupported = !multispectral && ( img.channels() % 2 == 0 );  // even number of channels indicates alpha
     int channels = 0;
     uchar* data = img.ptr();
     size_t step = img.step;
@@ -231,9 +251,27 @@ bool  ExrDecoder::readData( Mat& img )
     const size_t floatsize = sizeof(float);
     size_t xstep = m_native_depth ? floatsize : 1; // 4 bytes if native depth (FLOAT), otherwise converting to 1 byte U8 depth
     size_t ystep = 0;
-    const int channelstoread = ( (m_iscolor && alphasupported) ? 4 :
+    const int channelstoread = ( multispectral ? img.channels() : (m_iscolor && alphasupported) ? 4 :
                                 ( (m_iscolor && !m_ischroma) || color) ? 3 : alphasupported ? 2 : 1 ); // number of channels to read may exceed channels in output img
     size_t xStride = floatsize * channelstoread;
+
+    if ( m_multispectral )  // possible gray/RGB conversions
+    {
+        CV_CheckChannelsEQ(img.channels(), CV_MAT_CN(type()), "OpenCV EXR decoder needs more number of channels for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYCOLOR needed
+        CV_CheckDepthEQ(img.depth(), CV_MAT_DEPTH(type()), "OpenCV EXR decoder supports CV_32F depth only for multispectral images. Use cv::IMREAD_UNCHANGED mode for imread.");  // IMREAD_ANYDEPTH needed
+    }
+    CV_Assert( multispectral == m_multispectral && (!multispectral || justcopy) );  // should be true after previous checks
+
+    // See https://github.com/opencv/opencv/issues/26705
+    // If ALGO_HINT_ACCURATE is set, read BGR and swap to RGB.
+    // If ALGO_HINT_APPROX is set,   read RGB directly.
+    bool doReadRGB = m_use_rgb;
+    bool doPostColorSwap = false; // After decoding, swap BGR to RGB
+    if(m_use_rgb && (getDefaultAlgorithmHint() == ALGO_HINT_ACCURATE) )
+    {
+        doReadRGB = false;
+        doPostColorSwap = true;
+    }
 
     AutoBuffer<char> copy_buffer;
 
@@ -299,6 +337,15 @@ bool  ExrDecoder::readData( Mat& img )
                             buffer - m_datawindow.min.x * xStride - m_datawindow.min.y * ystep,
                             xStride, ystep, m_green->xSampling, m_green->ySampling, 0.0 ));
             xsample[0] = m_green->xSampling;
+        }
+    }
+    else if( m_multispectral )
+    {
+        for ( int i = 0; i < m_channels; i++ )
+        {
+            frame.insert( std::to_string(i), Slice( m_type,
+                            buffer - m_datawindow.min.x * xStride - m_datawindow.min.y * ystep + (floatsize * i),
+                            xStride, ystep, 1, 1, 0.0 ));
         }
     }
     else
@@ -371,22 +418,42 @@ bool  ExrDecoder::readData( Mat& img )
     {
         m_file->readPixels( m_datawindow.min.y, m_datawindow.max.y );
 
-        if( m_iscolor )
+        if( !m_multispectral )
         {
-            if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
-                UpSample( data, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
-            if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-                UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
-            if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
-                UpSample( data + 2 * xstep, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
-        }
-        else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-            UpSample( data, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+            if( m_iscolor )
+            {
+                if (doReadRGB)
+                {
+                    if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                        UpSample( data, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+                    if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                        UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+                    if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                        UpSample( data + 2 * xstep, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
+                }
+                else
+                {
+                    if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                        UpSample( data, channelstoread, step / xstep, m_blue->xSampling, m_blue->ySampling );
+                    if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                        UpSample( data + xstep, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
+                    if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                        UpSample( data + 2 * xstep, channelstoread, step / xstep, m_red->xSampling, m_red->ySampling );
+                }
+            }
+            else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                UpSample( data, channelstoread, step / xstep, m_green->xSampling, m_green->ySampling );
 
-        if( chromatorgb )
-            ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
+            if( chromatorgb )
+            {
+                if (doReadRGB)
+                    ChromaToRGB( (float *)data, m_height, channelstoread, step / xstep );
+                else
+                    ChromaToBGR( (float *)data, m_height, channelstoread, step / xstep );
+            }
+        }
     }
-    else
+    else  // m_multispectral should be false
     {
         uchar *out = data;
         int x, y;
@@ -406,7 +473,12 @@ bool  ExrDecoder::readData( Mat& img )
             else
             {
                 if( chromatorgb )
-                    ChromaToBGR( (float *)buffer, 1, defaultchannels, step );
+                {
+                    if (doReadRGB)
+                        ChromaToRGB( (float *)buffer, 1, defaultchannels, step );
+                    else
+                        ChromaToBGR( (float *)buffer, 1, defaultchannels, step );
+                }
 
                 if( m_type == FLOAT )
                 {
@@ -430,18 +502,35 @@ bool  ExrDecoder::readData( Mat& img )
         }
         if( color )
         {
-            if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
-                UpSampleY( data, defaultchannels, step / xstep, m_blue->ySampling );
-            if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
-                UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
-            if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
-                UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_red->ySampling );
+            if (doReadRGB)
+            {
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSampleY( data, defaultchannels, step / xstep, m_red->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_blue->ySampling );
+            }
+            else
+            {
+                if( m_blue && (m_blue->xSampling != 1 || m_blue->ySampling != 1) )
+                    UpSampleY( data, defaultchannels, step / xstep, m_blue->ySampling );
+                if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
+                    UpSampleY( data + xstep, defaultchannels, step / xstep, m_green->ySampling );
+                if( m_red && (m_red->xSampling != 1 || m_red->ySampling != 1) )
+                    UpSampleY( data + 2 * xstep, defaultchannels, step / xstep, m_red->ySampling );
+            }
         }
         else if( m_green && (m_green->xSampling != 1 || m_green->ySampling != 1) )
             UpSampleY( data, 1, step / xstep, m_green->ySampling );
     }
 
     close();
+
+    if(doPostColorSwap)
+    {
+        cvtColor( img, img, cv::COLOR_BGR2RGB );
+    }
 
     return result;
 }
@@ -558,6 +647,47 @@ void  ExrDecoder::ChromaToBGR( float *data, int numlines, int xstep, int ystep )
     }
 }
 
+void  ExrDecoder::ChromaToRGB(float *data, int numlines, int xstep, int ystep)
+{
+    for( int y = 0; y < numlines; y++ )
+    {
+        for( int x = 0; x < m_width; x++ )
+        {
+            double b, Y, r;
+            if( m_type == FLOAT )
+            {
+                b = data[y * ystep + x * xstep];
+                Y = data[y * ystep + x * xstep + 1];
+                r = data[y * ystep + x * xstep + 2];
+            }
+            else
+            {
+                b = ((unsigned *)data)[y * ystep + x * xstep];
+                Y = ((unsigned *)data)[y * ystep + x * xstep + 1];
+                r = ((unsigned *)data)[y * ystep + x * xstep + 2];
+            }
+            r = (r + 1) * Y;
+            b = (b + 1) * Y;
+            Y = (Y - b * m_chroma.blue[1] - r * m_chroma.red[1]) / m_chroma.green[1];
+
+            if( m_type == FLOAT )
+            {
+                data[y * ystep + x * xstep] = (float)r;
+                data[y * ystep + x * xstep + 1] = (float)Y;
+                data[y * ystep + x * xstep + 2] = (float)b;
+            }
+            else
+            {
+                int t = cvRound(r);
+                ((unsigned *)data)[y * ystep + x * xstep + 0] = (unsigned)MAX(t, 0);
+                t = cvRound(Y);
+                ((unsigned *)data)[y * ystep + x * xstep + 1] = (unsigned)MAX(t, 0);
+                t = cvRound(b);
+                ((unsigned *)data)[y * ystep + x * xstep + 2] = (unsigned)MAX(t, 0);
+            }
+        }
+    }
+}
 
 /**
 // convert one row to gray
@@ -679,7 +809,10 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
             case IMWRITE_EXR_COMPRESSION_B44A:
                 header.compression() = B44A_COMPRESSION;
                 break;
-#if ((OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR) >= (2 * 1000 + 2)) // available since version 2.2.0
+// version macros introduced in openexr 2.0.1.
+// - https://github.com/AcademySoftwareFoundation/openexr/commit/60cdff8a6f5c4e25a374e5f366d6e9b4efd869b3#diff-c4bae0726aebe410e407db9abd406d9cf2684f82dd8a08f46d84e8b7c35cf22aR67
+#if defined(OPENEXR_VERSION_MAJOR) && defined(OPENEXR_VERSION_MINOR) && OPENEXR_VERSION_MAJOR * 1000 + OPENEXR_VERSION_MINOR >= 2 * 1000 + 2
+            // available since version 2.2.0
             case IMWRITE_EXR_COMPRESSION_DWAA:
                 header.compression() = DWAA_COMPRESSION;
                 break;
@@ -691,6 +824,16 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
                 CV_Error(Error::StsBadArg, "IMWRITE_EXR_COMPRESSION is invalid or not supported");
             }
         }
+        if (params[i] == IMWRITE_EXR_DWA_COMPRESSION_LEVEL)
+        {
+#if !defined(OPENEXR_VERSION_MAJOR)
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in unknown OpenEXR version possibly prior to 2.0.1 (version 3 is required)");
+#elif OPENEXR_VERSION_MAJOR < 3
+            CV_LOG_ONCE_WARNING(NULL, "Setting `IMWRITE_EXR_DWA_COMPRESSION_LEVEL` not supported in OpenEXR version " + std::to_string(OPENEXR_VERSION_MAJOR) + " (version 3 is required)");
+#else
+            header.dwaCompressionLevel() = params[i + 1];
+#endif
+        }
     }
 
     if( channels == 3 || channels == 4 )
@@ -700,13 +843,19 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
         header.channels().insert( "B", Channel( type ) );
         //printf("bunt\n");
     }
-    else
+    else if( channels == 1 || channels == 2 )
     {
         header.channels().insert( "Y", Channel( type ) );
         //printf("gray\n");
     }
+    else if( channels > 4 )
+    {
+        for ( int i = 0; i < channels; i++ )
+            header.channels().insert( std::to_string(i), Channel( type ) );
+        //printf("multi-channel\n");
+    }
 
-    if( channels % 2 == 0 )
+    if( channels % 2 == 0 && channels <= 4)
     { // even number of channels indicates Alpha
         header.channels().insert( "A", Channel( type ) );
     }
@@ -721,7 +870,7 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
     Mat exrMat;
     if( type == HALF )
     {
-        convertFp16(img, exrMat);
+        img.convertTo(exrMat, CV_16F);
         buffer = (char *)const_cast<uchar *>( exrMat.ptr() );
         bufferstep = exrMat.step;
         size = 2;
@@ -739,10 +888,15 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
         frame.insert( "G", Slice( type, buffer + size, size * channels, bufferstep ));
         frame.insert( "R", Slice( type, buffer + size * 2, size * channels, bufferstep ));
     }
-    else
+    else if( channels == 1 || channels == 2 )
         frame.insert( "Y", Slice( type, buffer, size * channels, bufferstep ));
+    else if( channels > 4 )
+    {
+        for ( int i = 0; i < channels; i++ )
+            frame.insert( std::to_string(i), Slice( type, buffer + size * i, size * channels, bufferstep ));
+    }
 
-    if( channels % 2 == 0 )
+    if( channels % 2 == 0 && channels <= 4 )
     { // even channel count indicates Alpha channel
         frame.insert( "A", Slice( type, buffer + size * (channels - 1), size * channels, bufferstep ));
     }

@@ -59,7 +59,7 @@ static void read_imgList(const string& filename, vector<Mat>& images) {
     }
     string line;
     while (getline(file, line)) {
-        images.push_back(imread(line, 0));
+        images.push_back(imread(line, IMREAD_GRAYSCALE));
     }
 }
 

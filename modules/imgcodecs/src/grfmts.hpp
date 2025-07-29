@@ -43,9 +43,12 @@
 #define _GRFMTS_H_
 
 #include "grfmt_base.hpp"
+#include "grfmt_avif.hpp"
 #include "grfmt_bmp.hpp"
+#include "grfmt_gif.hpp"
 #include "grfmt_sunras.hpp"
 #include "grfmt_jpeg.hpp"
+#include "grfmt_jpegxl.hpp"
 #include "grfmt_pxm.hpp"
 #include "grfmt_pfm.hpp"
 #include "grfmt_tiff.hpp"

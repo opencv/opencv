@@ -48,6 +48,7 @@
 #include "opencv2/core/types.hpp"
 #include "opencv2/features2d.hpp"
 #include "opencv2/core/affine.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 /**
   @defgroup calib3d Camera Calibration and 3D Reconstruction
@@ -382,6 +383,110 @@ R & t \\
 0 & 1
 \end{bmatrix} P_{h_0}.\f]
 
+<B> Homogeneous Transformations, Object frame / Camera frame </B><br>
+Change of basis or computing the 3D coordinates from one frame to another frame can be achieved easily using
+the following notation:
+
+\f[
+\mathbf{X}_c = \hspace{0.2em}
+{}^{c}\mathbf{T}_o \hspace{0.2em} \mathbf{X}_o
+\f]
+
+\f[
+\begin{bmatrix}
+X_c \\
+Y_c \\
+Z_c \\
+1
+\end{bmatrix} =
+\begin{bmatrix}
+{}^{c}\mathbf{R}_o & {}^{c}\mathbf{t}_o \\
+0_{1 \times 3} & 1
+\end{bmatrix}
+\begin{bmatrix}
+X_o \\
+Y_o \\
+Z_o \\
+1
+\end{bmatrix}
+\f]
+
+For a 3D points (\f$ \mathbf{X}_o \f$) expressed in the object frame, the homogeneous transformation matrix
+\f$ {}^{c}\mathbf{T}_o \f$ allows computing the corresponding coordinate (\f$ \mathbf{X}_c \f$) in the camera frame.
+This transformation matrix is composed of a 3x3 rotation matrix \f$ {}^{c}\mathbf{R}_o \f$ and a 3x1 translation vector
+\f$ {}^{c}\mathbf{t}_o \f$.
+The 3x1 translation vector \f$ {}^{c}\mathbf{t}_o \f$ is the position of the object frame in the camera frame and the
+3x3 rotation matrix \f$ {}^{c}\mathbf{R}_o \f$ the orientation of the object frame in the camera frame.
+
+With this simple notation, it is easy to chain the transformations. For instance, to compute the 3D coordinates of a point
+expressed in the object frame in the world frame can be done with:
+
+\f[
+\mathbf{X}_w = \hspace{0.2em}
+{}^{w}\mathbf{T}_c \hspace{0.2em} {}^{c}\mathbf{T}_o \hspace{0.2em}
+\mathbf{X}_o =
+{}^{w}\mathbf{T}_o \hspace{0.2em} \mathbf{X}_o
+\f]
+
+Similarly, computing the inverse transformation can be done with:
+
+\f[
+\mathbf{X}_o = \hspace{0.2em}
+{}^{o}\mathbf{T}_c \hspace{0.2em} \mathbf{X}_c =
+\left( {}^{c}\mathbf{T}_o \right)^{-1} \hspace{0.2em} \mathbf{X}_c
+\f]
+
+The inverse of an homogeneous transformation matrix is then:
+
+\f[
+{}^{o}\mathbf{T}_c = \left( {}^{c}\mathbf{T}_o \right)^{-1} =
+\begin{bmatrix}
+{}^{c}\mathbf{R}^{\top}_o & - \hspace{0.2em} {}^{c}\mathbf{R}^{\top}_o \hspace{0.2em} {}^{c}\mathbf{t}_o \\
+0_{1 \times 3} & 1
+\end{bmatrix}
+\f]
+
+One can note that the inverse of a 3x3 rotation matrix is directly its matrix transpose.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png)
+
+This figure summarizes the whole process. The object pose returned for instance by the @ref solvePnP function
+or pose from fiducial marker detection is this \f$ {}^{c}\mathbf{T}_o \f$ transformation.
+
+The camera intrinsic matrix \f$ \mathbf{K} \f$ allows projecting the 3D point expressed in the camera frame onto the image plane
+assuming a perspective projection model (pinhole camera model). Image coordinates extracted from classical image processing functions
+assume a (u,v) top-left coordinates frame.
+
+\note
+- for an online video course on this topic, see for instance:
+  - ["3.3.1. Homogeneous Transformation Matrices", Modern Robotics, Kevin M. Lynch and Frank C. Park](https://modernrobotics.northwestern.edu/nu-gm-book-resource/3-3-1-homogeneous-transformation-matrices/)
+- the 3x3 rotation matrix is composed of 9 values but describes a 3 dof transformation
+- some additional properties of the 3x3 rotation matrix are:
+  - \f$ \mathrm{det} \left( \mathbf{R} \right) = 1 \f$
+  - \f$ \mathbf{R} \mathbf{R}^{\top} = \mathbf{R}^{\top} \mathbf{R} = \mathrm{I}_{3 \times 3} \f$
+  - interpolating rotation can be done using the [Slerp (spherical linear interpolation)](https://en.wikipedia.org/wiki/Slerp) method
+- quick conversions between the different rotation formalisms can be done using this [online tool](https://www.andre-gaschler.com/rotationconverter/)
+
+<B> Intrinsic parameters from camera lens specifications </B><br>
+When dealing with industrial cameras, the camera intrinsic matrix or more precisely \f$ \left(f_x, f_y \right) \f$
+can be deduced, approximated from the camera specifications:
+
+\f[
+f_x = \frac{f_{\text{mm}}}{\text{pixel_size_in_mm}} = \frac{f_{\text{mm}}}{\text{sensor_size_in_mm} / \text{nb_pixels}}
+\f]
+
+In a same way, the physical focal length can be deduced from the angular field of view:
+
+\f[
+f_{\text{mm}} = \frac{\text{sensor_size_in_mm}}{2 \times \tan{\frac{\text{fov}}{2}}}
+\f]
+
+This latter conversion can be useful when using a rendering software to mimic a physical camera device.
+
+@note
+    -    See also #calibrationMatrixValues
+
+<B> Additional references, notes </B><br>
 @note
     -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although all
         functions assume the same structure of this parameter, they may name it differently. The
@@ -411,11 +516,11 @@ R & t \\
     where R is the rotation matrix corresponding to the rotation vector om: R = rodrigues(om); call x, y
     and z the 3 coordinates of Xc:
 
-    \f[x = Xc_1 \\ y = Xc_2 \\ z = Xc_3\f]
+    \f[\begin{array}{l} x = Xc_1 \\ y = Xc_2 \\ z = Xc_3 \end{array} \f]
 
     The pinhole projection coordinates of P is [a; b] where
 
-    \f[a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r)\f]
+    \f[\begin{array}{l} a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r) \end{array} \f]
 
     Fisheye distortion:
 
@@ -423,17 +528,15 @@ R & t \\
 
     The distorted point coordinates are [x'; y'] where
 
-    \f[x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \f]
+    \f[\begin{array}{l} x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \end{array} \f]
 
     Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
-    \f[u = f_x (x' + \alpha y') + c_x \\
-    v = f_y y' + c_y\f]
+    \f[\begin{array}{l} u = f_x (x' + \alpha y') + c_x \\
+    v = f_y y' + c_y \end{array} \f]
 
     Summary:
     Generic camera model @cite Kannala2006 with perspective projection and without distortion correction
-
-    @defgroup calib3d_c C API
 
   @}
  */
@@ -490,7 +593,8 @@ enum { CALIB_CB_ADAPTIVE_THRESH = 1,
        CALIB_CB_EXHAUSTIVE      = 16,
        CALIB_CB_ACCURACY        = 32,
        CALIB_CB_LARGER          = 64,
-       CALIB_CB_MARKER          = 128
+       CALIB_CB_MARKER          = 128,
+       CALIB_CB_PLAIN           = 256
      };
 
 enum { CALIB_CB_SYMMETRIC_GRID  = 1,
@@ -548,12 +652,13 @@ enum RobotWorldHandEyeCalibrationMethod
     CALIB_ROBOT_WORLD_HAND_EYE_LI   = 1  //!< Simultaneous robot-world and hand-eye calibration using dual-quaternions and kronecker product @cite Li2010SimultaneousRA
 };
 
-enum SamplingMethod { SAMPLING_UNIFORM, SAMPLING_PROGRESSIVE_NAPSAC, SAMPLING_NAPSAC,
-        SAMPLING_PROSAC };
-enum LocalOptimMethod {LOCAL_OPTIM_NULL, LOCAL_OPTIM_INNER_LO, LOCAL_OPTIM_INNER_AND_ITER_LO,
-        LOCAL_OPTIM_GC, LOCAL_OPTIM_SIGMA};
-enum ScoreMethod {SCORE_METHOD_RANSAC, SCORE_METHOD_MSAC, SCORE_METHOD_MAGSAC, SCORE_METHOD_LMEDS};
-enum NeighborSearchMethod { NEIGH_FLANN_KNN, NEIGH_GRID, NEIGH_FLANN_RADIUS };
+enum SamplingMethod { SAMPLING_UNIFORM=0, SAMPLING_PROGRESSIVE_NAPSAC=1, SAMPLING_NAPSAC=2,
+        SAMPLING_PROSAC=3 };
+enum LocalOptimMethod {LOCAL_OPTIM_NULL=0, LOCAL_OPTIM_INNER_LO=1, LOCAL_OPTIM_INNER_AND_ITER_LO=2,
+        LOCAL_OPTIM_GC=3, LOCAL_OPTIM_SIGMA=4};
+enum ScoreMethod {SCORE_METHOD_RANSAC=0, SCORE_METHOD_MSAC=1, SCORE_METHOD_MAGSAC=2, SCORE_METHOD_LMEDS=3};
+enum NeighborSearchMethod { NEIGH_FLANN_KNN=0, NEIGH_GRID=1, NEIGH_FLANN_RADIUS=2 };
+enum PolishingMethod { NONE_POLISHER=0, LSQ_POLISHER=1, MAGSAC=2, COV_POLISHER=3 };
 
 struct CV_EXPORTS_W_SIMPLE UsacParams
 { // in alphabetical order
@@ -569,6 +674,8 @@ struct CV_EXPORTS_W_SIMPLE UsacParams
     CV_PROP_RW SamplingMethod sampler;
     CV_PROP_RW ScoreMethod score;
     CV_PROP_RW double threshold;
+    CV_PROP_RW PolishingMethod final_polisher;
+    CV_PROP_RW int final_polisher_iterations;
 };
 
 /** @brief Converts a rotation matrix to a rotation vector or vice versa.
@@ -724,8 +831,8 @@ correctly only when there are more than 50% of inliers. Finally, if there are no
 noise is rather small, use the default method (method=0).
 
 The function is used to find initial intrinsic and extrinsic matrices. Homography matrix is
-determined up to a scale. Thus, it is normalized so that \f$h_{33}=1\f$. Note that whenever an \f$H\f$ matrix
-cannot be estimated, an empty one will be returned.
+determined up to a scale. If \f$h_{33}\f$ is non-zero, the matrix is normalized so that \f$h_{33}=1\f$.
+@note Whenever an \f$H\f$ matrix cannot be estimated, an empty one will be returned.
 
 @sa
 getAffineTransform, estimateAffine2D, estimateAffinePartial2D, getPerspectiveTransform, warpPerspective,
@@ -760,7 +867,7 @@ and a rotation matrix.
 It optionally returns three rotation matrices, one for each axis, and the three Euler angles in
 degrees (as the return value) that could be used in OpenGL. Note, there is always more than one
 sequence of rotations about the three principal axes that results in the same orientation of an
-object, e.g. see @cite Slabaugh . Returned tree rotation matrices and corresponding three Euler angles
+object, e.g. see @cite Slabaugh . Returned three rotation matrices and corresponding three Euler angles
 are only one of the possible solutions.
  */
 CV_EXPORTS_W Vec3d RQDecomp3x3( InputArray src, OutputArray mtxR, OutputArray mtxQ,
@@ -786,7 +893,7 @@ matrix and the position of a camera.
 It optionally returns three rotation matrices, one for each axis, and three Euler angles that could
 be used in OpenGL. Note, there is always more than one sequence of rotations about the three
 principal axes that results in the same orientation of an object, e.g. see @cite Slabaugh . Returned
-tree rotation matrices and corresponding three Euler angles are only one of the possible solutions.
+three rotation matrices and corresponding three Euler angles are only one of the possible solutions.
 
 The function is based on #RQDecomp3x3 .
  */
@@ -895,7 +1002,9 @@ An example program about homography from the camera displacement
 Check @ref tutorial_homography "the corresponding tutorial" for more details
 */
 
-/** @brief Finds an object pose from 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences:
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -958,14 +1067,16 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
-    -  With @ref SOLVEPNP_SQPNP input points must be >= 3
+   -   With @ref SOLVEPNP_SQPNP input points must be >= 3
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
                             bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
-/** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences using the RANSAC scheme to deal with bad matches.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -998,8 +1109,8 @@ projections imagePoints and the projected (using @ref projectPoints ) objectPoin
 makes the function resistant to outliers.
 
 @note
-   -   An example of how to use solvePNPRansac for object detection can be found at
-        opencv_source_code/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/
+   -   An example of how to use solvePnPRansac for object detection can be found at
+        @ref tutorial_real_time_pose
    -   The default method used to estimate the camera pose for the Minimal Sample Sets step
        is #SOLVEPNP_EPNP. Exceptions are:
          - if you choose #SOLVEPNP_P3P or #SOLVEPNP_AP3P, these methods will be used.
@@ -1025,7 +1136,9 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                      OutputArray rvec, OutputArray tvec, OutputArray inliers,
                      const UsacParams &params=UsacParams());
 
-/** @brief Finds an object pose from 3 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from **3** 3D-2D point correspondences.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1118,7 +1231,9 @@ CV_EXPORTS_W void solvePnPRefineVVS( InputArray objectPoints, InputArray imagePo
                                      TermCriteria criteria = TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 20, FLT_EPSILON),
                                      double VVSlambda = 1);
 
-/** @brief Finds an object pose from 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1189,6 +1304,7 @@ More information is described in @ref calib3d_solvePnP
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
+   -   With @ref SOLVEPNP_SQPNP input points must be >= 3
  */
 CV_EXPORTS_W int solvePnPGeneric( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
@@ -1232,6 +1348,10 @@ square-like shape) to filter out false quads extracted at the contour retrieval 
 -   @ref CALIB_CB_FAST_CHECK Run a fast check on the image that looks for chessboard corners,
 and shortcut the call if none is found. This can drastically speed up the call in the
 degenerate condition when no chessboard is observed.
+-   @ref CALIB_CB_PLAIN All other flags are ignored. The input image is taken as is.
+No image processing is done to improve to find the checkerboard. This has the effect of speeding up the
+execution of the function but could lead to not recognizing the checkerboard if the image
+is not previously binarized in the appropriate manner.
 
 The function attempts to determine whether the input image is a view of the chessboard pattern and
 locate the internal chessboard corners. The function returns a non-zero value if all of the corners
@@ -1265,7 +1385,8 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
+Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+to create the desired checkerboard pattern.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
@@ -1323,8 +1444,9 @@ which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
 
-Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
-![Checkerboard](pics/checkerboard_radon.png)
+Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+to create the corresponding checkerboard pattern:
+\image html pics/checkerboard_radon.png width=60%
  */
 CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
 bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,
@@ -1591,6 +1713,10 @@ The algorithm performs the following steps:
     \f$c_y\f$ very far from the image center, and/or large differences between \f$f_x\f$ and
     \f$f_y\f$ (ratios of 10:1 or more)), then you are probably using patternSize=cvSize(rows,cols)
     instead of using patternSize=cvSize(cols,rows) in @ref findChessboardCorners.
+
+@note
+    The function may throw exceptions, if unsupported combination of parameters is provided or
+    the system is underconstrained.
 
 @sa
    calibrateCameraRO, findChessboardCorners, solvePnP, initCameraMatrix2D, stereoCalibrate,
@@ -2482,13 +2608,13 @@ CV_EXPORTS_W Mat findFundamentalMat( InputArray points1, InputArray points2,
 
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
-@param points2 Array of the second image points of the same size and format as points1 .
+@param points2 Array of the second image points of the same size and format as points1.
 @param cameraMatrix Camera intrinsic matrix \f$\cameramatrix{A}\f$ .
 Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera intrinsic matrix. If this assumption does not hold for your use case, use
-#undistortPoints with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera intrinsic matrix. When
-passing these coordinates, pass the identity matrix for this parameter.
+same camera intrinsic matrix. If this assumption does not hold for your use case, use another
+function overload or #undistortPoints with `P = cv::NoArray()` for both cameras to transform image
+points to normalized image coordinates, which are valid for the identity camera intrinsic matrix.
+When passing these coordinates, pass the identity matrix for this parameter.
 @param method Method for computing an essential matrix.
 -   @ref RANSAC for the RANSAC algorithm.
 -   @ref LMEDS for the LMedS algorithm.
@@ -2580,23 +2706,13 @@ Mat findEssentialMat(
 
 @param points1 Array of N (N \>= 5) 2D points from the first image. The point coordinates should
 be floating-point (single or double precision).
-@param points2 Array of the second image points of the same size and format as points1 .
-@param cameraMatrix1 Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix. If this assumption does not hold for your use case, use
-#undistortPoints with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera matrix. When
-passing these coordinates, pass the identity matrix for this parameter.
-@param cameraMatrix2 Camera matrix \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
-Note that this function assumes that points1 and points2 are feature points from cameras with the
-same camera matrix. If this assumption does not hold for your use case, use
-#undistortPoints with `P = cv::NoArray()` for both cameras to transform image points
-to normalized image coordinates, which are valid for the identity camera matrix. When
-passing these coordinates, pass the identity matrix for this parameter.
-@param distCoeffs1 Input vector of distortion coefficients
+@param points2 Array of the second image points of the same size and format as points1.
+@param cameraMatrix1 Camera matrix for the first camera \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param cameraMatrix2 Camera matrix for the second camera \f$K = \vecthreethree{f_x}{0}{c_x}{0}{f_y}{c_y}{0}{0}{1}\f$ .
+@param distCoeffs1 Input vector of distortion coefficients for the first camera
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
-@param distCoeffs2 Input vector of distortion coefficients
+@param distCoeffs2 Input vector of distortion coefficients for the second camera
 \f$(k_1, k_2, p_1, p_2[, k_3[, k_4, k_5, k_6[, s_1, s_2, s_3, s_4[, \tau_x, \tau_y]]]])\f$
 of 4, 5, 8, 12 or 14 elements. If the vector is NULL/empty, the zero distortion coefficients are assumed.
 @param method Method for computing an essential matrix.
@@ -2971,7 +3087,7 @@ W
 x \\
 y \\
 \texttt{disparity} (x,y) \\
-z
+1
 \end{bmatrix}.\f]
 
 @sa
@@ -3345,52 +3461,136 @@ public:
 };
 
 
-/** @brief Class for computing stereo correspondence using the block matching algorithm, introduced and
-contributed to OpenCV by K. Konolige.
+/**
+ * @brief Class for computing stereo correspondence using the block matching algorithm, introduced and contributed to OpenCV by K. Konolige.
+ * @details This class implements a block matching algorithm for stereo correspondence, which is used to compute disparity maps from stereo image pairs. It provides methods to fine-tune parameters such as pre-filtering, texture thresholds, uniqueness ratios, and regions of interest (ROIs) to optimize performance and accuracy.
  */
 class CV_EXPORTS_W StereoBM : public StereoMatcher
 {
 public:
-    enum { PREFILTER_NORMALIZED_RESPONSE = 0,
-           PREFILTER_XSOBEL              = 1
-         };
+    /**
+     * @brief Pre-filter types for the stereo matching algorithm.
+     * @details These constants define the type of pre-filtering applied to the images before computing the disparity map.
+     * - PREFILTER_NORMALIZED_RESPONSE: Uses normalized response for pre-filtering.
+     * - PREFILTER_XSOBEL: Uses the X-Sobel operator for pre-filtering.
+     */
+    enum {
+        PREFILTER_NORMALIZED_RESPONSE = 0,  ///< Normalized response pre-filter
+        PREFILTER_XSOBEL              = 1   ///< X-Sobel pre-filter
+    };
 
+    /**
+     * @brief Gets the type of pre-filtering currently used in the algorithm.
+     * @return The current pre-filter type: 0 for PREFILTER_NORMALIZED_RESPONSE or 1 for PREFILTER_XSOBEL.
+     */
     CV_WRAP virtual int getPreFilterType() const = 0;
+
+    /**
+     * @brief Sets the type of pre-filtering used in the algorithm.
+     * @param preFilterType The type of pre-filter to use. Possible values are:
+     * - PREFILTER_NORMALIZED_RESPONSE (0): Uses normalized response for pre-filtering.
+     * - PREFILTER_XSOBEL (1): Uses the X-Sobel operator for pre-filtering.
+     * @details The pre-filter type affects how the images are prepared before computing the disparity map. Different pre-filtering methods can enhance specific image features or reduce noise, influencing the quality of the disparity map.
+     */
     CV_WRAP virtual void setPreFilterType(int preFilterType) = 0;
 
+    /**
+     * @brief Gets the current size of the pre-filter kernel.
+     * @return The current pre-filter size.
+     */
     CV_WRAP virtual int getPreFilterSize() const = 0;
+
+    /**
+     * @brief Sets the size of the pre-filter kernel.
+     * @param preFilterSize The size of the pre-filter kernel. Must be an odd integer, typically between 5 and 255.
+     * @details The pre-filter size determines the spatial extent of the pre-filtering operation, which prepares the images for disparity computation by normalizing brightness and enhancing texture. Larger sizes reduce noise but may blur details, while smaller sizes preserve details but are more susceptible to noise.
+     */
     CV_WRAP virtual void setPreFilterSize(int preFilterSize) = 0;
 
+    /**
+     * @brief Gets the current truncation value for prefiltered pixels.
+     * @return The current pre-filter cap value.
+     */
     CV_WRAP virtual int getPreFilterCap() const = 0;
+
+    /**
+     * @brief Sets the truncation value for prefiltered pixels.
+     * @param preFilterCap The truncation value. Typically in the range [1, 63].
+     * @details This value caps the output of the pre-filter to [-preFilterCap, preFilterCap], helping to reduce the impact of noise and outliers in the pre-filtered image.
+     */
     CV_WRAP virtual void setPreFilterCap(int preFilterCap) = 0;
 
+    /**
+     * @brief Gets the current texture threshold value.
+     * @return The current texture threshold.
+     */
     CV_WRAP virtual int getTextureThreshold() const = 0;
+
+    /**
+     * @brief Sets the threshold for filtering low-texture regions.
+     * @param textureThreshold The threshold value. Must be non-negative.
+     * @details This parameter filters out regions with low texture, where establishing correspondences is difficult, thus reducing noise in the disparity map. Higher values filter more aggressively but may discard valid information.
+     */
     CV_WRAP virtual void setTextureThreshold(int textureThreshold) = 0;
 
+    /**
+     * @brief Gets the current uniqueness ratio value.
+     * @return The current uniqueness ratio.
+     */
     CV_WRAP virtual int getUniquenessRatio() const = 0;
+
+    /**
+     * @brief Sets the uniqueness ratio for filtering ambiguous matches.
+     * @param uniquenessRatio The uniqueness ratio value. Typically in the range [5, 15], but can be from 0 to 100.
+     * @details This parameter ensures that the best match is sufficiently better than the next best match, reducing false positives. Higher values are stricter but may filter out valid matches in difficult regions.
+     */
     CV_WRAP virtual void setUniquenessRatio(int uniquenessRatio) = 0;
 
+    /**
+     * @brief Gets the current size of the smaller block used for texture check.
+     * @return The current smaller block size.
+     */
     CV_WRAP virtual int getSmallerBlockSize() const = 0;
+
+    /**
+     * @brief Sets the size of the smaller block used for texture check.
+     * @param blockSize The size of the smaller block. Must be an odd integer between 5 and 255.
+     * @details This parameter determines the size of the block used to compute texture variance. Smaller blocks capture finer details but are more sensitive to noise, while larger blocks are more robust but may miss fine details.
+     */
     CV_WRAP virtual void setSmallerBlockSize(int blockSize) = 0;
 
+    /**
+     * @brief Gets the current Region of Interest (ROI) for the left image.
+     * @return The current ROI for the left image.
+     */
     CV_WRAP virtual Rect getROI1() const = 0;
+
+    /**
+     * @brief Sets the Region of Interest (ROI) for the left image.
+     * @param roi1 The ROI rectangle for the left image.
+     * @details By setting the ROI, the stereo matching computation is limited to the specified region, improving performance and potentially accuracy by focusing on relevant parts of the image.
+     */
     CV_WRAP virtual void setROI1(Rect roi1) = 0;
 
+    /**
+     * @brief Gets the current Region of Interest (ROI) for the right image.
+     * @return The current ROI for the right image.
+     */
     CV_WRAP virtual Rect getROI2() const = 0;
+
+    /**
+     * @brief Sets the Region of Interest (ROI) for the right image.
+     * @param roi2 The ROI rectangle for the right image.
+     * @details Similar to setROI1, this limits the computation to the specified region in the right image.
+     */
     CV_WRAP virtual void setROI2(Rect roi2) = 0;
 
-    /** @brief Creates StereoBM object
-
-    @param numDisparities the disparity search range. For each pixel algorithm will find the best
-    disparity from 0 (default minimum disparity) to numDisparities. The search range can then be
-    shifted by changing the minimum disparity.
-    @param blockSize the linear size of the blocks compared by the algorithm. The size should be odd
-    (as the block is centered at the current pixel). Larger block size implies smoother, though less
-    accurate disparity map. Smaller block size gives more detailed disparity map, but there is higher
-    chance for algorithm to find a wrong correspondence.
-
-    The function create StereoBM object. You can then call StereoBM::compute() to compute disparity for
-    a specific stereo pair.
+    /**
+     * @brief Creates StereoBM object
+     * @param numDisparities The disparity search range. For each pixel, the algorithm will find the best disparity from 0 (default minimum disparity) to numDisparities. The search range can be shifted by changing the minimum disparity.
+     * @param blockSize The linear size of the blocks compared by the algorithm. The size should be odd (as the block is centered at the current pixel). Larger block size implies smoother, though less accurate disparity map. Smaller block size gives more detailed disparity map, but there is a higher chance for the algorithm to find a wrong correspondence.
+     * @return A pointer to the created StereoBM object.
+     * @details The function creates a StereoBM object. You can then call StereoBM::compute() to compute disparity for a specific stereo pair.
      */
     CV_WRAP static Ptr<StereoBM> create(int numDisparities = 0, int blockSize = 21);
 };
@@ -3804,7 +4004,7 @@ namespace fisheye
     @param imagePoints Output array of image points, 2xN/Nx2 1-channel or 1xN/Nx1 2-channel, or
     vector\<Point2f\>.
     @param affine
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param jacobian Optional output 2Nx15 jacobian matrix of derivatives of image points with respect
@@ -3828,21 +4028,36 @@ namespace fisheye
 
     @param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
     the number of points in the view.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param alpha The skew coefficient.
     @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
 
     Note that the function assumes the camera intrinsic matrix of the undistorted points to be identity.
-    This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$.
+    This means if you want to distort image points you have to multiply them with \f$K^{-1}\f$ or
+    use another function overload.
      */
     CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray K, InputArray D, double alpha = 0);
+
+    /** @overload
+    Overload of distortPoints function to handle cases when undistorted points are obtained with non-identity
+    camera matrix, e.g. output of #estimateNewCameraMatrixForUndistortRectify.
+    @param undistorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is
+    the number of points in the view.
+    @param Kundistorted Camera intrinsic matrix used as new camera matrix for undistortion.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
+    @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
+    @param alpha The skew coefficient.
+    @param distorted Output array of image points, 1xN/Nx1 2-channel, or vector\<Point2f\> .
+    @sa estimateNewCameraMatrixForUndistortRectify
+    */
+    CV_EXPORTS_W void distortPoints(InputArray undistorted, OutputArray distorted, InputArray Kundistorted, InputArray K, InputArray D, double alpha = 0);
 
     /** @brief Undistorts 2D points using fisheye model
 
     @param distorted Array of object points, 1xN/Nx1 2-channel (or vector\<Point2f\> ), where N is the
     number of points in the view.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
@@ -3857,7 +4072,7 @@ namespace fisheye
     /** @brief Computes undistortion and rectification maps for image transform by #remap. If D is empty zero
     distortion is used, if R or P is empty identity matrixes are used.
 
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
     1-channel or 1x1 3-channel
@@ -3875,7 +4090,7 @@ namespace fisheye
 
     @param distorted image with fisheye lens distortion.
     @param undistorted Output image with compensated fisheye lens distortion.
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param Knew Camera intrinsic matrix of the distorted image. By default, it is the identity matrix but you
     may additionally scale and shift the result by using a different matrix.
@@ -3904,7 +4119,7 @@ namespace fisheye
 
     /** @brief Estimates new camera intrinsic matrix for undistortion or rectification.
 
-    @param K Camera intrinsic matrix \f$cameramatrix{K}\f$.
+    @param K Camera intrinsic matrix \f$\cameramatrix{K}\f$.
     @param image_size Size of the image
     @param D Input vector of distortion coefficients \f$\distcoeffsfisheye\f$.
     @param R Rectification transformation in the object space: 3x3 1-channel, or vector: 3x1/1x3
@@ -3931,7 +4146,7 @@ namespace fisheye
     @ref fisheye::CALIB_USE_INTRINSIC_GUESS is specified, some or all of fx, fy, cx, cy must be
     initialized before calling the function.
     @param D Output vector of distortion coefficients \f$\distcoeffsfisheye\f$.
-    @param rvecs Output vector of rotation vectors (see Rodrigues ) estimated for each pattern view.
+    @param rvecs Output vector of rotation vectors (see @ref Rodrigues ) estimated for each pattern view.
     That is, each k-th rotation vector together with the corresponding k-th translation vector (see
     the next output parameter description) brings the calibration pattern from the model coordinate
     space (in which object points are specified) to the world coordinate space, that is, a real
@@ -4042,6 +4257,81 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
                                   InputOutputArray K1, InputOutputArray D1, InputOutputArray K2, InputOutputArray D2, Size imageSize,
                                   OutputArray R, OutputArray T, int flags = fisheye::CALIB_FIX_INTRINSIC,
                                   TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
+
+    /**
+    @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+
+    @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+    1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can also be passed here.
+    @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+    where N is the number of points. vector\<Point2d\> can also be passed here.
+    @param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+    @param distCoeffs Input vector of distortion coefficients (4x1/1x4).
+    @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+    the model coordinate system to the camera coordinate system.
+    @param tvec Output translation vector.
+    @param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+    the provided rvec and tvec values as initial approximations of the rotation and translation
+    vectors, respectively, and further optimizes them.
+    @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
+    @param criteria Termination criteria for internal undistortPoints call.
+    The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+    thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
+    for more information.
+    */
+    CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
+                                InputArray cameraMatrix, InputArray distCoeffs,
+                                OutputArray rvec, OutputArray tvec,
+                                bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE,
+                                TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
+                              );
+
+    /**
+    @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme for fisheye camera moodel.
+
+    @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
+    1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+    @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
+    where N is the number of points. vector\<Point2d\> can be also passed here.
+    @param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
+    @param distCoeffs Input vector of distortion coefficients (4x1/1x4).
+    @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from
+    the model coordinate system to the camera coordinate system.
+    @param tvec Output translation vector.
+    @param useExtrinsicGuess Parameter used for #SOLVEPNP_ITERATIVE. If true (1), the function uses
+    the provided rvec and tvec values as initial approximations of the rotation and translation
+    vectors, respectively, and further optimizes them.
+    @param iterationsCount Number of iterations.
+    @param reprojectionError Inlier threshold value used by the RANSAC procedure. The parameter value
+    is the maximum allowed distance between the observed and computed point projections to consider it
+    an inlier.
+    @param confidence The probability that the algorithm produces a useful result.
+    @param inliers Output vector that contains indices of inliers in objectPoints and imagePoints .
+    @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
+    This function returns the rotation and the translation vectors that transform a 3D point expressed in the object
+    coordinate frame to the camera coordinate frame, using different methods:
+    - P3P methods (@ref SOLVEPNP_P3P, @ref SOLVEPNP_AP3P): need 4 input points to return a unique solution.
+    - @ref SOLVEPNP_IPPE Input points must be >= 4 and object points must be coplanar.
+    - @ref SOLVEPNP_IPPE_SQUARE Special case suitable for marker pose estimation.
+    Number of input points must be 4. Object points must be defined in the following order:
+    - point 0: [-squareLength / 2,  squareLength / 2, 0]
+    - point 1: [ squareLength / 2,  squareLength / 2, 0]
+    - point 2: [ squareLength / 2, -squareLength / 2, 0]
+    - point 3: [-squareLength / 2, -squareLength / 2, 0]
+    - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
+    @param criteria Termination criteria for internal undistortPoints call.
+    The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+    thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
+    for more information.
+    */
+    CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
+                                      InputArray cameraMatrix, InputArray distCoeffs,
+                                      OutputArray rvec, OutputArray tvec,
+                                      bool useExtrinsicGuess = false, int iterationsCount = 100,
+                                      float reprojectionError = 8.0, double confidence = 0.99,
+                                      OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE,
+                                      TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
+                                    );
 
 //! @} calib3d_fisheye
 } // end namespace fisheye
