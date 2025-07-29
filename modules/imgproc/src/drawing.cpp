@@ -2041,11 +2041,6 @@ void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int nc
             AutoBuffer<Point2l> _pts(currentContourLength);
             std::copy(currentContour, currentContour+currentContourLength, _pts.data());
             CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
-            if (npts[i] > 0 && pts[i])
-            {
-                std::vector<Point2l> _pts(pts[i], pts[i] + npts[i]);
-                CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
-            }
         }
     }
 
