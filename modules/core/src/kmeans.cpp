@@ -148,7 +148,9 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
             int i = 0;
         #if defined(_M_ARM64)
             for (; i + 1 < N; i += 2)
+            {
                 s += tdist2[i] + tdist2[i + 1];
+            }
         #endif
             for (; i < N; i++)
             {
