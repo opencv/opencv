@@ -147,6 +147,25 @@ static int toCV(const ov::element::Type &type) {
     return -1;
 }
 
+static inline std::pair<double, double> get_CV_type_range(int cv_type) {
+    switch (cv_type) {
+        case CV_8U:
+            return { static_cast<double>(std::numeric_limits<uint8_t>::min()),
+                     static_cast<double>(std::numeric_limits<uint8_t>::max()) };
+        case CV_32S:
+            return { static_cast<double>(std::numeric_limits<int32_t>::min()),
+                     static_cast<double>(std::numeric_limits<int32_t>::max()) };
+        case CV_32F:
+            return { static_cast<double>(std::numeric_limits<float>::lowest()),
+                     static_cast<double>(std::numeric_limits<float>::max()) };
+        case CV_16F:
+            return { -65504.0, 65504.0 };
+        default:
+            GAPI_Error("OV Backend: Unsupported data type");
+    }
+    return {0.0, 0.0};
+}
+
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
     const auto total = mat.total() * mat.channels();
     if (toCV(tensor.get_element_type()) != mat.depth() ||
@@ -1052,6 +1071,12 @@ public:
             if (explicit_out_tensor_prec) {
                 m_ppp.output(output_name).tensor()
                     .set_element_type(toOV(*explicit_out_tensor_prec));
+
+                if (m_model_info.clamp_outputs) {
+                    auto [min_val, max_val] = get_CV_type_range(*explicit_out_tensor_prec);
+                    m_ppp.output(output_name).postprocess()
+                        .clamp(min_val, max_val);
+                }
             }
         }
     }

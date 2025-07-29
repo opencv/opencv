@@ -66,6 +66,8 @@ struct ParamDesc {
         LayerVariantAttr<std::vector<float>> scale_values;
 
         LayerVariantAttr<int> interpolation;
+
+        bool clamp_outputs = false;
     };
 
     struct CompiledModel {
@@ -356,6 +358,22 @@ public:
         return *this;
     }
 
+    /** @brief Enables or disables clamping of model outputs in the PrePostProcessor.
+
+    By default, output values are clamped to the valid range for the output precision
+    by the device or plugin. Enabling this option moves clamping to the PrePostProcessor stage.
+
+    @param flag If true, clamping is performed in the PrePostProcessor;
+    otherwise, it is handled by the device or plugin.
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgClampOutputs(bool flag = true) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "clamp outputs")
+            .clamp_outputs = std::move(flag);
+        return *this;
+    }
+
     /** @brief Specifies the new shape for input layers.
 
     The function is used to set new shape for input layers.
@@ -622,6 +640,14 @@ public:
     cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
         detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
             .output_tensor_precision = std::move(precision_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgClampOutputs. */
+    Params&
+    cfgClampOutputs(bool flag = true) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "clamp outputs")
+            .clamp_outputs = std::move(flag);
         return *this;
     }
 
