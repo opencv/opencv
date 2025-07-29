@@ -1197,7 +1197,7 @@ void ONNXImporter2::parseClip(LayerParams& layerParams, const opencv_onnx::NodeP
     )
     {
         int n_inputs = node_proto.input_size();
-        layerParams.type = "Clip13";
+        layerParams.type = "Clap";
         addLayer(layerParams, node_proto, n_inputs);
     }
     else {
