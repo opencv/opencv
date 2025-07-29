@@ -203,6 +203,8 @@ TEST(PoseGraphMST, optimization)
     // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
     if (cvtest::debugLevel > 0)
     {
+        /* --- OLD VERSION ---
+
         // Write OBJ for MST-initialized pose graph with optimizer
         std::string fname = "pg_with_mst_and_optimizer.obj";
         std::fstream of(fname, std::fstream::out);
@@ -254,7 +256,7 @@ TEST(PoseGraphMST, optimization)
         }
         of.close();
 
-
+        --- OLD VERSION --- */
 
         auto extractVertices = [](const Ptr<detail::PoseGraph>& pg) -> std::vector<Point3f>
         {
