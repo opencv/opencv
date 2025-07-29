@@ -53,6 +53,8 @@ public:
 
         alignCorners = params.get<bool>("align_corners", false);
         halfPixelCenters = params.get<bool>("half_pixel_centers", false);
+        coordTransMode = params.get<String>("coordinate_transformation_mode", "half_pixel");
+
         if (interpolation == "opencv_linear")
             halfPixelCenters = true;
     }
@@ -97,11 +99,11 @@ public:
             }
         } else {
             if (scales.size() == 4) {
-                outShape[2] = (float)(inpShape[2] * scales[2]);
-                outShape[3] = (float)(inpShape[3] * scales[3]);
+                outShape[2] = cvFloor(inpShape[2] * scales[2]);
+                outShape[3] = cvFloor(inpShape[3] * scales[3]);
             } else /* scales.size() == 2 */ {
-                outShape[2] = (float)(inpShape[2] * scales[0]);
-                outShape[3] = (float)(inpShape[3] * scales[1]);
+                outShape[2] = cvFloor(inpShape[2] * scales[0]);
+                outShape[3] = cvFloor(inpShape[3] * scales[1]);
             }
         }
         return outShape;
@@ -196,6 +198,8 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
+        std::vector<int> sizes;
+        std::vector<float> scales;
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
         size_t ninputs = inputs.size();
@@ -215,8 +219,6 @@ public:
             outShape[2] = inputs[1].size[2];
             outShape[3] = inputs[1].size[3];
         } else {
-            std::vector<int> sizes;
-            std::vector<float> scales;
             if (ninputs >= 4) {
                 Mat sizesTensor = inputs[3];
                 tensorToIntVec(sizesTensor, sizes);
@@ -226,9 +228,17 @@ public:
             outShape = getOutShape(inpShape, sizes, scales);
         }
 
-        //printf("name: %s, outShape: %d x %d x %d x %d\n", name.c_str(), outShape[0], outShape[1], outShape[2], outShape[3]);
-
+        int length_resized_y = outShape[2];
+        int length_resized_x = outShape[3];
         updateOutSizeAndScale(inpShape, outShape);
+
+        if (sizes.empty() && !scales.empty() && (coordTransMode == "half_pixel" || coordTransMode == "pytorch_half_pixel" || coordTransMode == "tf_half_pixel_for_nn"))
+        {
+            float sH = (scales.size() == 4) ? scales[2] : scales[0];
+            float sW = (scales.size() == 4) ? scales[3] : scales[1];
+            scaleHeight = 1.f / sH;
+            scaleWidth  = 1.f / sW;
+        }
 
         auto kind = outputs_arr.kind();
         Mat out_;
@@ -269,6 +279,17 @@ public:
             out = out_;
         }
 
+        auto compute_src = [&](int dst, float scale, int limit, int length_resized) -> float {
+            if (coordTransMode == "pytorch_half_pixel") {
+                return (length_resized > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
+            }
+            else if (coordTransMode == "half_pixel")
+                return (dst + 0.5f)*scale - 0.5f;
+            else if (coordTransMode == "tf_half_pixel_for_nn")
+                return (dst + 0.5f) * scale;
+            return dst*scale;
+        };
+
         if (interpolation == "nearest")
         {
             const int inpHeight = inp.size[2];
@@ -281,10 +302,9 @@ public:
             Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
             Mat outPlanes = out.reshape(1, numPlanes * outHeight);
 
-            auto compute_input_coord = [&](int dst, float scale, int limit) -> float {
-                if (halfPixelCenters)
-                    return (dst + 0.5f) * scale - 0.5f;
-                return dst * scale;
+            auto compute_input_coord = [&](int dst, float scale, int limit, int length_resized) -> float {
+                float src = compute_src(dst, scale, limit+1, length_resized);
+                return std::min(std::max(src, 0.f), float(limit));
             };
 
             auto nearest_index = [&](float src, int limit) -> int {
@@ -328,14 +348,14 @@ public:
             {
                 for (int y = 0; y < outHeight; ++y)
                 {
-                    float input_y_f = compute_input_coord(y, scaleHeight, inpHeight - 1);
+                    float input_y_f = compute_input_coord(y, scaleHeight, inpHeight - 1, length_resized_y);
                     int y0 = nearest_index(input_y_f, inpHeight - 1);
 
                     const int8_t* inpData_row = inpPlanes.ptr<int8_t>(y0);
 
                     for (int x = 0; x < outWidth; ++x)
                     {
-                        float input_x_f = compute_input_coord(x, scaleWidth, inpWidth - 1);
+                        float input_x_f = compute_input_coord(x, scaleWidth, inpWidth - 1, length_resized_x);
                         int x0 = nearest_index(input_x_f, inpWidth - 1);
 
                         int8_t* outData = outPlanes.ptr<int8_t>(y, x);
@@ -355,14 +375,14 @@ public:
             {
                 for (int y = 0; y < outHeight; ++y)
                 {
-                    float input_y_f = compute_input_coord(y, scaleHeight, inpHeight - 1);
+                    float input_y_f = compute_input_coord(y, scaleHeight, inpHeight - 1, length_resized_y);
                     int y0 = nearest_index(input_y_f, inpHeight - 1);
 
                     const float* inpData_row = inpPlanes.ptr<float>(y0);
 
                     for (int x = 0; x < outWidth; ++x)
                     {
-                        float input_x_f = compute_input_coord(x, scaleWidth, inpWidth - 1);
+                        float input_x_f = compute_input_coord(x, scaleWidth, inpWidth - 1, length_resized_x);
                         int x0 = nearest_index(input_x_f, inpWidth - 1);
 
                         float* outData = outPlanes.ptr<float>(y, x);
@@ -391,20 +411,18 @@ public:
             Mat inpPlanes = inp.reshape(1, numPlanes * inpHeight);
             Mat outPlanes = out.reshape(1, numPlanes * outHeight);
             auto clampInt = [](int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); };
-            auto compute_input_coord_clamped = [&](int dst, float scale, int limit) -> std::pair<int,float> {
-                float src = halfPixelCenters ? (dst + 0.5f) * scale - 0.5f : dst * scale;
-                if (src < 0.f) src = 0.f;
-                if (src > limit - 1.f) src = limit - 1.f - 1e-6f; // keep within range so that x1/y1 exists
-                int i0 = static_cast<int>(std::floor(src));
-                float l = src - i0;
-                return {i0, l};
+            auto compute_input_coord_clamped = [&](int dst, float scale, int limit, int length_resized) -> std::pair<int,float> {
+                float src = compute_src(dst, scale, limit, length_resized);
+                src = std::min(std::max(src, 0.f), float(limit - 1) - 1e-6f);
+                int i0 = int(std::floor(src));
+                return { i0, src - float(i0) };
             };
 
             if (depth == CV_8S)
             {
                 for (int y = 0; y < outHeight; ++y)
                 {
-                    auto cy = compute_input_coord_clamped(y, scaleHeight, inpHeight);
+                    auto cy = compute_input_coord_clamped(y, scaleHeight, inpHeight, length_resized_y);
                     int y0 = cy.first;
                     int y1 = clampInt(y0 + 1, 0, inpHeight - 1);
                     float ly = cy.second;
@@ -414,7 +432,7 @@ public:
 
                     for (int x = 0; x < outWidth; ++x)
                     {
-                        auto cx = compute_input_coord_clamped(x, scaleWidth, inpWidth);
+                        auto cx = compute_input_coord_clamped(x, scaleWidth, inpWidth, length_resized_x);
                         int x0 = cx.first;
                         int x1 = clampInt(x0 + 1, 0, inpWidth - 1);
                         float lx = cx.second;
@@ -439,7 +457,7 @@ public:
             {
                 for (int y = 0; y < outHeight; ++y)
                 {
-                    auto cy = compute_input_coord_clamped(y, scaleHeight, inpHeight);
+                    auto cy = compute_input_coord_clamped(y, scaleHeight, inpHeight, length_resized_y);
                     int y0 = cy.first;
                     int y1 = clampInt(y0 + 1, 0, inpHeight - 1);
                     float ly = cy.second;
@@ -449,7 +467,7 @@ public:
 
                     for (int x = 0; x < outWidth; ++x)
                     {
-                        auto cx = compute_input_coord_clamped(x, scaleWidth, inpWidth);
+                        auto cx = compute_input_coord_clamped(x, scaleWidth, inpWidth, length_resized_x);
                         int x0 = cx.first;
                         int x1 = clampInt(x0 + 1, 0, inpWidth - 1);
                         float lx = cx.second;
@@ -502,7 +520,7 @@ public:
             std::vector<std::array<float, 4>> x_w(outWidth);
             for (int ox = 0; ox < outWidth; ++ox)
             {
-                float src_x = alignCorners ? ox * scaleWidth : (halfPixelCenters ? (ox + 0.5f) * scaleWidth - 0.5f : ox * scaleWidth);
+                float src_x = compute_src(ox, scaleWidth, inpWidth, length_resized_x);
                 int ix = static_cast<int>(std::floor(src_x));
                 float dx = src_x - ix;
                 float sw = 0.f;
@@ -541,7 +559,7 @@ public:
             std::vector<std::array<float, 4>> y_w(outHeight);
             for (int oy = 0; oy < outHeight; ++oy)
             {
-                float src_y = alignCorners ? oy * scaleHeight : (halfPixelCenters ? (oy + 0.5f) * scaleHeight - 0.5f : oy * scaleHeight);
+                float src_y = compute_src(oy, scaleHeight, inpHeight, length_resized_y);
                 int iy = static_cast<int>(std::floor(src_y));
                 float dy = src_y - iy;
                 float swy = 0.f;
@@ -767,6 +785,7 @@ protected:
     float scaleWidth, scaleHeight;
     bool alignCorners;
     bool halfPixelCenters;
+    String coordTransMode;
     String nearestMode;  // ONNX "nearest_mode" attribute
     bool excludeOutside; // ONNX attribute for cubic
     float cubicCoeffA;
