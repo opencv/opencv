@@ -158,7 +158,7 @@ void resizeBilinear(const Mat &inp, Mat &out,
 
         for (int x = 0; x < outW; ++x)
         {
-            int   xi = x0[x], xi1 = x1[x];
+            int   xi = x0[x];
             float fx = lx[x];
 
             T* dst = outRowBase + x;
