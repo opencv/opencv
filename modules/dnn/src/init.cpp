@@ -99,6 +99,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Reshape,        ReshapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape2,       Reshape2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Resize,         ResizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Resize2,        Resize2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Shape,          ShapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Slice,          SliceLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Slice2,         Slice2Layer);
