@@ -86,7 +86,7 @@ public:
         cb->computeError( m1, m2, model, err );
         mask.create(err.size(), CV_8U);
 
-        CV_Assert( err.isContinuous() && err.type() == CV_32F && mask.isContinuous() && mask.type() == CV_8U);
+        CV_Assert( err.isContinuous() && err.type() == CV_32F && mask.isContinuous() && (mask.type() == CV_8S || mask.type() == CV_8U || mask.type() == CV_Bool));
         const float* errptr = err.ptr<float>();
         uchar* maskptr = mask.ptr<uchar>();
         float t = (float)(thresh*thresh);

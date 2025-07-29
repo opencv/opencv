@@ -224,6 +224,7 @@ protected:
     void parseTranspose            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnsqueeze            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -1779,6 +1780,23 @@ void ONNXImporter2::parseEinsum(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseTopK2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "TopK2";
+    if (node_proto.input_size() >= 2 && net.isConstArg(node_inputs[1]))
+    {
+        Mat kMat = net.argTensor(node_inputs[1]);
+        CV_Assert(kMat.type() == CV_32S || kMat.type() == CV_64S);
+        int k = kMat.type() == CV_32S ? getScalarFromMat<int>(kMat):(int)getScalarFromMat<int64_t>(kMat);
+        layerParams.set("k", k);
+        addLayer(layerParams, node_proto, 1);
+    }
+    else //Dynamic K
+    {
+        addLayer(layerParams, node_proto);
+    }
+}
+
 void ONNXImporter2::parseDequantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     addLayer(layerParams, node_proto);
@@ -2441,6 +2459,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Where"] = &ONNXImporter2::parseElementWise;
     dispatch["Range"] = &ONNXImporter2::parseRange;
     dispatch["Einsum"] = &ONNXImporter2::parseEinsum;
+    dispatch["TopK"] = &ONNXImporter2::parseTopK2;
 
     std::vector<std::string> simpleLayers {
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",

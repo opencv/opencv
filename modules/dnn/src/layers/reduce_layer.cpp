@@ -5,6 +5,8 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
+#include "../op_cann.hpp"
+
 
 namespace cv { namespace dnn {
 
@@ -54,6 +56,13 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
+#ifdef HAVE_CANN
+        if (backendId == DNN_BACKEND_CANN)
+            return reduce_type == ReduceType::MAX  || reduce_type == ReduceType::MIN     ||
+                   reduce_type == ReduceType::MEAN || reduce_type == ReduceType::SUM     ||
+                   reduce_type == ReduceType::PROD || reduce_type == ReduceType::LOG_SUM ||
+                   reduce_type == ReduceType::LOG_SUM_EXP;
+#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -522,6 +531,53 @@ public:
             default: CV_Error(cv::Error::BadDepth, "DNN/Reduce: Unsupported type.");
         }
     }
+
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_CheckFalse(axes.empty(), "DNN/CANN: Reduce layers need axes to build CANN operators");
+
+        auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        auto input_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto input_desc = input_wrapper->getTensorDesc();
+
+        std::vector<int> axes_shape{(int)axes.size()};
+        Mat axes_mat(axes_shape, CV_32S, &axes[0]);
+        auto axes_node = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), axes_shape, cv::format("%s_axes", name.c_str()));
+        auto axes_desc = axes_node->getTensorDesc();
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+
+        std::shared_ptr<ge::Operator> reduce_op = nullptr;
+        switch (reduce_type)
+        {
+#define BUILD_CANN_REDUCE_OP(op_type, class_name, op_name)                         \
+            case op_type: {                                                        \
+                auto op = std::make_shared<ge::op::class_name>(op_name);           \
+                op->set_input_x_by_name(*input_node, input_wrapper->name.c_str()); \
+                op->set_input_axes(*(axes_node)->getOp());                         \
+                op->set_attr_keep_dims(keepdims);                                  \
+                op->update_input_desc_x(*input_desc);                              \
+                op->update_input_desc_axes(*axes_desc);                            \
+                op->update_output_desc_y(*output_desc);                            \
+                reduce_op = op;                                                    \
+            } break;
+            BUILD_CANN_REDUCE_OP(ReduceType::MAX,         ReduceMax,       name);
+            BUILD_CANN_REDUCE_OP(ReduceType::MIN,         ReduceMin,       name);
+            BUILD_CANN_REDUCE_OP(ReduceType::MEAN,        ReduceMean,      name);
+            BUILD_CANN_REDUCE_OP(ReduceType::SUM,         ReduceSum,       name);
+            BUILD_CANN_REDUCE_OP(ReduceType::PROD,        ReduceProd,      name);
+            BUILD_CANN_REDUCE_OP(ReduceType::LOG_SUM,     ReduceLogSum,    name);
+            BUILD_CANN_REDUCE_OP(ReduceType::LOG_SUM_EXP, ReduceLogSumExp, name);
+#undef BUILD_CANN_REDUCE_OP
+            default: CV_Error(Error::StsNotImplemented, "Unsupported reduce operation");
+        }
+
+        return Ptr<BackendNode>(new CannBackendNode(reduce_op));
+    }
+#endif // HAVE_CANN
 
 private:
     enum ReduceType

@@ -121,7 +121,7 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
 
     if (!allIn)
     {
-        CV_LOG_WARNING(NULL, "Some of projected axes endpoints are out of frame. The drawn axes may be not relaible.");
+        CV_LOG_WARNING(NULL, "Some of projected axes endpoints are out of frame. The drawn axes may be not reliable.");
     }
 
     // draw axes lines
