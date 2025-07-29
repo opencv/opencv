@@ -848,22 +848,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             const std::vector<uchar>& metadata_xmp = m_metadata[IMAGE_METADATA_XMP];
             size_t xmp_size = metadata_xmp.size();
             if (xmp_size > 0u) {
-                // XMP prefix required by spec
-                const char app1_xmp_prefix[] = "http://ns.adobe.com/xap/1.0/";
-                size_t app1_xmp_prefix_size = strlen(app1_xmp_prefix) + 1; // include null terminator
-                size_t data_size = xmp_size + app1_xmp_prefix_size;
-
-                std::vector<uchar> metadata_app1(data_size);
-                uchar* data = metadata_app1.data();
-
-                // Copy XMP header
-                memcpy(data, app1_xmp_prefix, app1_xmp_prefix_size);
-
-                // Copy actual XMP metadata (XML string)
-                memcpy(data + app1_xmp_prefix_size, metadata_xmp.data(), xmp_size);
-
-                // Write as APP1 marker (same as Exif, but with XMP header)
-                jpeg_write_marker(&cinfo, JPEG_APP0 + 1, data, (unsigned)data_size);
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 1, metadata_xmp.data(), (unsigned)xmp_size);
             }
 
             const std::vector<uchar>& metadata_iccp = m_metadata[IMAGE_METADATA_ICCP];
