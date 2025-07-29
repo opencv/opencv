@@ -2013,7 +2013,10 @@ void fillPoly( InputOutputArray _img, const Point** pts, const int* npts, int nc
     edges.reserve( total + 1 );
     for (i = 0; i < ncontours; i++)
     {
-        std::vector<Point2l> _pts(pts[i], pts[i] + npts[i]);
+        const Point* currentContour = pts[i];
+        const int currentContourLength = npts[i];
+        AutoBuffer<Point2l> _pts(currentContourLength);
+        std::copy(currentContour, currentContour+currentContourLength, _pts.data());
         CollectPolyEdges(img, _pts.data(), npts[i], edges, buf, line_type, shift, offset);
     }
 
@@ -2039,8 +2042,11 @@ void polylines( InputOutputArray _img, const Point* const* pts, const int* npts,
 
     for( int i = 0; i < ncontours; i++ )
     {
-        std::vector<Point2l> _pts(pts[i], pts[i]+npts[i]);
-        PolyLine( img, _pts.data(), npts[i], isClosed, buf, thickness, line_type, shift );
+        const Point* currentContour = pts[i];
+        const int currentContourLength = npts[i];
+        AutoBuffer<Point2l> _pts(currentContourLength);
+        std::copy(currentContour, currentContour+currentContourLength, _pts.data());
+        PolyLine( img, _pts.data(), currentContourLength, isClosed, buf, thickness, line_type, shift );
     }
 }
 
