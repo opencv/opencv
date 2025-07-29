@@ -1191,9 +1191,9 @@ void ONNXImporter2::parseClip(LayerParams& layerParams, const opencv_onnx::NodeP
     CV_Check(input_size, 1 <= input_size && input_size <= 3, "");
 
     if (
-        (input_size >= 1 &&
-        !node_proto.input(1).empty() && !net.isConstArg(node_inputs[1]) ) ||
         (input_size >= 2 &&
+        !node_proto.input(1).empty() && !net.isConstArg(node_inputs[1]) ) ||
+        (input_size >= 3 &&
         !node_proto.input(2).empty() && !net.isConstArg(node_inputs[1]) )
     )
     {
