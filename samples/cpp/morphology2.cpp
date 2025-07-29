@@ -12,12 +12,13 @@ static void help(char** argv)
 
 printf("\nShow off image morphology: erosion, dialation, open and close\n"
     "Call:\n   %s [image]\n"
-    "This program also shows use of rect, ellipse and cross kernels\n\n", argv[0]);
+    "This program also shows use of rect, ellipse, cross and diamond kernels\n\n", argv[0]);
 printf( "Hot keys: \n"
     "\tESC - quit the program\n"
     "\tr - use rectangle structuring element\n"
     "\te - use elliptic structuring element\n"
     "\tc - use cross-shaped structuring element\n"
+    "\td - use diamond-shaped structuring element\n"
     "\tSPACE - loop through all the options\n" );
 }
 
@@ -101,8 +102,10 @@ int main( int argc, char** argv )
             element_shape = MORPH_RECT;
         else if( c == 'c' )
             element_shape = MORPH_CROSS;
+        else if( c == 'd' )
+            element_shape = MORPH_DIAMOND;
         else if( c == ' ' )
-            element_shape = (element_shape + 1) % 3;
+            element_shape = (element_shape + 1) % 4;
     }
 
     return 0;

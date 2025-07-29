@@ -408,6 +408,9 @@ bool GdalDecoder::readData( Mat& img ){
         case GCI_AlphaBand:
             color = 3;
             break;
+        case GCI_Undefined:
+            color = c;
+            break;
         default:
             CV_Error(cv::Error::StsError, "Invalid/unsupported mode");
         }

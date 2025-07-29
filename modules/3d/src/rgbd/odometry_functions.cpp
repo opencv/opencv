@@ -273,7 +273,7 @@ static void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     }
     else
     {
-        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.type() == CV_8UC1 || mask.type() == CV_8SC1 || mask.type() == CV_BoolC1);
         CV_Assert(mask.size() == grayImage.size());
         cv::bitwise_and(mask, depthMask, frame.impl->mask);
     }
@@ -358,7 +358,7 @@ static void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     }
     else
     {
-        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.type() == CV_8UC1 || mask.type() == CV_8SC1 || mask.type() == CV_BoolC1);
         CV_Assert(mask.size() == scaledDepth.size());
         cv::bitwise_and(mask, depthMask, frame.impl->mask);
     }

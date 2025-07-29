@@ -81,7 +81,13 @@ if(WITH_EIGEN AND NOT HAVE_EIGEN)
         set(EIGEN_WORLD_VERSION ${EIGEN3_WORLD_VERSION})
         set(EIGEN_MAJOR_VERSION ${EIGEN3_MAJOR_VERSION})
         set(EIGEN_MINOR_VERSION ${EIGEN3_MINOR_VERSION})
-      else()  # Eigen config file
+      elseif(DEFINED Eigen3_VERSION_MAJOR) # Recommended package config variables
+        # see https://github.com/opencv/opencv/issues/27530
+        set(EIGEN_WORLD_VERSION ${Eigen3_VERSION_MAJOR})
+        set(EIGEN_MAJOR_VERSION ${Eigen3_VERSION_MINOR})
+        set(EIGEN_MINOR_VERSION ${Eigen3_VERSION_PATCH})
+      else()  # Deprecated package config variables
+        # Removed on master at https://gitlab.com/libeigen/eigen/-/commit/f2984cd0778dd0a1d7e74216d826eaff2bc6bfab
         set(EIGEN_WORLD_VERSION ${EIGEN3_VERSION_MAJOR})
         set(EIGEN_MAJOR_VERSION ${EIGEN3_VERSION_MINOR})
         set(EIGEN_MINOR_VERSION ${EIGEN3_VERSION_PATCH})

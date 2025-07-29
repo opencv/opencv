@@ -238,8 +238,10 @@ int integral(int depth, int sdepth, int sqdepth,
              uchar* tilted_data, [[maybe_unused]] size_t tilted_step,
              int width, int height, int cn);
 
-#undef cv_hal_integral
-#define cv_hal_integral cv::rvv_hal::imgproc::integral
+// Diasbled due to accuracy issue.
+// Details see https://github.com/opencv/opencv/issues/27407.
+//#undef cv_hal_integral
+//#define cv_hal_integral cv::rvv_hal::imgproc::integral
 
 #endif // CV_HAL_RVV_1P0_ENABLED
 

@@ -869,6 +869,7 @@ static const VideoAccelerationType hw_types[] = {
         VIDEO_ACCELERATION_D3D11,
 #else
         VIDEO_ACCELERATION_VAAPI,
+        VIDEO_ACCELERATION_DRM,
 #endif
 };
 

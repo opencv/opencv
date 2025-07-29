@@ -31,17 +31,17 @@
  * with these values. (png_set_rgb_to_gray( png_ptr, 1, 0.299, 0.587 );) For this codec implementation,
  * slightly modified versions are implemented in the below of this page.
 */
-void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
-                               uchar *gray, int gray_step,
-                               cv::Size size, int _swap_rb);
-
-void spngCvt_BGRA2Gray_8u_C4C1R(const uchar *bgra, int rgba_step,
+void spngCvt_BGRA2Gray_8u_CnC1R(const uchar *bgr, int bgr_step,
                                 uchar *gray, int gray_step,
-                                cv::Size size, int _swap_rb);
+                                cv::Size size, int ncn, int _swap_rb);
 
 void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
                                  ushort *gray, int gray_step,
                                  cv::Size size, int ncn, int _swap_rb);
+
+void spngCvt_BGRA2Gray_16u28u_CnC1R(const ushort *bgr, int bgr_step,
+                                    uchar *gray, int gray_step,
+                                    cv::Size size, int ncn, int _swap_rb);
 
 namespace cv
 {
@@ -109,7 +109,7 @@ int SPngDecoder::readDataFromBuf(void *sp_ctx, void *user, void *dst, size_t siz
 
 bool SPngDecoder::readHeader()
 {
-    volatile bool result = false;
+    bool result = false;
     close();
 
     spng_ctx *ctx = spng_ctx_new(SPNG_CTX_IGNORE_ADLER32);
@@ -136,40 +136,36 @@ bool SPngDecoder::readHeader()
     if (!m_buf.empty() || m_f)
     {
         struct spng_ihdr ihdr;
-        int ret = spng_get_ihdr(ctx, &ihdr);
 
-        if (ret == SPNG_OK)
+        if (spng_get_ihdr(ctx, &ihdr) == SPNG_OK)
         {
             m_width = static_cast<int>(ihdr.width);
             m_height = static_cast<int>(ihdr.height);
             m_color_type = ihdr.color_type;
             m_bit_depth = ihdr.bit_depth;
 
-            if (ihdr.bit_depth <= 8 || ihdr.bit_depth == 16)
+            int num_trans;
+            switch (ihdr.color_type)
             {
-                int num_trans;
-                switch (ihdr.color_type)
-                {
-                case SPNG_COLOR_TYPE_TRUECOLOR:
-                case SPNG_COLOR_TYPE_INDEXED:
-                    struct spng_trns trns;
-                    num_trans = !spng_get_trns(ctx, &trns);
-                    if (num_trans > 0)
-                        m_type = CV_8UC4;
-                    else
-                        m_type = CV_8UC3;
-                    break;
-                case SPNG_COLOR_TYPE_GRAYSCALE_ALPHA:
-                case SPNG_COLOR_TYPE_TRUECOLOR_ALPHA:
+            case SPNG_COLOR_TYPE_TRUECOLOR:
+            case SPNG_COLOR_TYPE_INDEXED:
+                struct spng_trns trns;
+                num_trans = !spng_get_trns(ctx, &trns);
+                if (num_trans > 0)
                     m_type = CV_8UC4;
-                    break;
-                default:
-                    m_type = CV_8UC1;
-                }
-                if (ihdr.bit_depth == 16)
-                    m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
-                result = true;
+                else
+                    m_type = CV_8UC3;
+                break;
+            case SPNG_COLOR_TYPE_GRAYSCALE_ALPHA:
+            case SPNG_COLOR_TYPE_TRUECOLOR_ALPHA:
+                m_type = CV_8UC4;
+                break;
+            default:
+                m_type = CV_8UC1;
             }
+            if (ihdr.bit_depth == 16)
+                m_type = CV_MAKETYPE(CV_16U, CV_MAT_CN(m_type));
+            result = true;
         }
     }
 
@@ -178,97 +174,85 @@ bool SPngDecoder::readHeader()
 
 bool SPngDecoder::readData(Mat &img)
 {
-    volatile bool result = false;
-    bool color = img.channels() > 1;
-
-    struct spng_ctx *png_ptr = (struct spng_ctx *)m_ctx;
+    bool result = false;
 
     if (m_ctx && m_width && m_height)
     {
-        int fmt = SPNG_FMT_PNG;
+        struct spng_ctx* png_ptr = (struct spng_ctx*)m_ctx;
+        bool color = img.channels() > 1;
+        int fmt = img.channels() == 4 ? m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8 : SPNG_FMT_PNG;
+        int decode_flags = img.channels() == 4 ? SPNG_DECODE_TRNS : 0;
 
-        struct spng_trns trns;
-        int have_trns = spng_get_trns((struct spng_ctx *)m_ctx, &trns);
-
-        int decode_flags = 0;
-        if (have_trns == SPNG_OK)
-        {
-            decode_flags = SPNG_DECODE_TRNS;
-        }
-        if (img.channels() == 4)
-        {
-            if (m_color_type == SPNG_COLOR_TYPE_TRUECOLOR ||
-                m_color_type == SPNG_COLOR_TYPE_INDEXED ||
-                m_color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
-                fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8;
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE)
-                fmt = m_bit_depth == 16 ? SPNG_FMT_GA16 : SPNG_FMT_GA8;
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA)
-            {
-                fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8;
-            }
-            else
-                fmt = SPNG_FMT_RGBA8;
-        }
-        if (img.channels() == 3)
+        if (img.type() == CV_8UC3)
         {
             fmt = SPNG_FMT_RGB8;
-            if ((m_color_type == SPNG_COLOR_TYPE_GRAYSCALE || m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA) &&
-                m_bit_depth == 16)
-                fmt = SPNG_FMT_RGB8;
-            else if (m_bit_depth == 16)
-                fmt = SPNG_FMT_PNG;
         }
         else if (img.channels() == 1)
         {
             if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && m_bit_depth <= 8)
                 fmt = SPNG_FMT_G8;
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE && m_bit_depth == 16)
-            {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = SPNG_FMT_PNG;
-                }
-            }
-            else if (m_color_type == SPNG_COLOR_TYPE_INDEXED ||
-                     m_color_type == SPNG_COLOR_TYPE_TRUECOLOR)
-            {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGB8;
-                }
-            }
-            else if (m_color_type == SPNG_COLOR_TYPE_GRAYSCALE_ALPHA || fmt == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA)
-            {
-                if (img.depth() == CV_8U || img.depth() == CV_8S)
-                {
-                    fmt = SPNG_FMT_RGB8;
-                }
-                else
-                {
-                    fmt = m_bit_depth == 16 ? SPNG_FMT_RGBA16 : SPNG_FMT_RGBA8;
-                }
-            }
             else
-                fmt = SPNG_FMT_RGB8;
+                fmt = img.depth() == CV_16U ? SPNG_FMT_RGBA16 : SPNG_FMT_RGB8;
         }
+
+        if (fmt == SPNG_FMT_PNG && m_bit_depth == 16 && m_color_type >= SPNG_COLOR_TYPE_GRAYSCALE_ALPHA)
+        {
+            Mat tmp(m_height, m_width, CV_16UC4);
+            if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
+                return false;
+            cvtColor(tmp, img, m_use_rgb ? COLOR_RGBA2RGB : COLOR_RGBA2BGR);
+            return true;
+        }
+
+        struct spng_ihdr ihdr;
+        spng_get_ihdr(png_ptr, &ihdr);
 
         size_t image_width, image_size = 0;
         int ret = spng_decoded_image_size(png_ptr, fmt, &image_size);
-        struct spng_ihdr ihdr;
-        spng_get_ihdr(png_ptr, &ihdr);
 
         if (ret == SPNG_OK)
         {
             image_width = image_size / m_height;
+
+            if (!color && fmt == SPNG_FMT_RGB8 && m_bit_depth == 16 && (m_color_type == SPNG_COLOR_TYPE_TRUECOLOR || m_color_type == SPNG_COLOR_TYPE_TRUECOLOR_ALPHA))
+            {
+                Mat tmp(m_height, m_width, CV_16UC4);
+                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), SPNG_FMT_RGBA16, 0))
+                    return false;
+                spngCvt_BGRA2Gray_16u28u_CnC1R(reinterpret_cast<const ushort*>(tmp.data), (int)tmp.step1(),
+                    img.data, (int)img.step1(), Size(m_width, m_height), 4, 2);
+                return true;
+            }
+
+            if (!color && ihdr.interlace_method && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA16))
+            {
+                if (fmt == SPNG_FMT_RGBA16)
+                {
+                    Mat tmp(m_height, m_width, CV_16UC4);
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, tmp.total() * tmp.elemSize(), fmt, 0))
+                        return false;
+                    spngCvt_BGRA2Gray_16u_CnC1R(reinterpret_cast<const ushort*>(tmp.data), (int)tmp.step1(),
+                        reinterpret_cast<ushort*>(img.data), (int)img.step1(), Size(m_width, m_height), 4, 2);
+                    return true;
+                }
+                else
+                {
+                    Mat tmp(m_height, m_width, CV_8UC3);
+                    if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, fmt, 0))
+                        return false;
+                    spngCvt_BGRA2Gray_8u_CnC1R(tmp.data, (int)tmp.step1(), img.data, (int)img.step1(), Size(m_width, m_height), 3, 2);
+                    return true;
+                }
+            }
+
+            if (fmt == SPNG_FMT_PNG && img.elemSize() * m_width / 3 == image_width)
+            {
+                Mat tmp(m_height, m_width, CV_16U);
+                if (SPNG_OK != spng_decode_image(png_ptr, tmp.data, image_size, SPNG_FMT_PNG, 0))
+                    return false;
+                cvtColor(tmp, img, COLOR_GRAY2BGR);
+                return true;
+            }
 
             ret = spng_decode_image(png_ptr, nullptr, 0, fmt, SPNG_DECODE_PROGRESSIVE | decode_flags);
             if (ret == SPNG_OK)
@@ -279,88 +263,46 @@ bool SPngDecoder::readData(Mat &img)
                 // decode image then convert to grayscale
                 if (!color && (fmt == SPNG_FMT_RGB8 || fmt == SPNG_FMT_RGBA8 || fmt == SPNG_FMT_RGBA16))
                 {
-                    if (ihdr.interlace_method == 0)
+                    AutoBuffer<unsigned char> buffer;
+                    buffer.allocate(image_width);
+                    if (fmt == SPNG_FMT_RGB8)
                     {
-                        AutoBuffer<unsigned char> buffer;
-                        buffer.allocate(image_width);
-                        if (fmt == SPNG_FMT_RGB8)
+                        do
                         {
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
 
-                                ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                                spngCvt_BGR2Gray_8u_C3C1R(
-                                    buffer.data(),
-                                    0,
-                                    img.data + row_info.row_num * img.step,
-                                    0, Size(m_width, 1), 2);
-                            } while (ret == SPNG_OK);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA8)
-                        {
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
-
-                                ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                                spngCvt_BGRA2Gray_8u_C4C1R(
-                                    buffer.data(),
-                                    0,
-                                    img.data + row_info.row_num * img.step,
-                                    0, Size(m_width, 1), 2);
-                            } while (ret == SPNG_OK);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA16)
-                        {
-                            do
-                            {
-                                ret = spng_get_row_info(png_ptr, &row_info);
-                                if (ret)
-                                    break;
-
-                                ret = spng_decode_row(png_ptr, buffer.data(), image_width);
-                                spngCvt_BGRA2Gray_16u_CnC1R(
-                                    reinterpret_cast<const ushort *>(buffer.data()), 0,
-                                    reinterpret_cast<ushort *>(img.data + row_info.row_num * img.step),
-                                    0, Size(m_width, 1),
-                                    4, 2);
-                            } while (ret == SPNG_OK);
-                        }
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
+                            spngCvt_BGRA2Gray_8u_CnC1R(buffer.data(), 0, img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 3, 2);
+                        } while (ret == SPNG_OK);
                     }
-                    else
+                    else if (fmt == SPNG_FMT_RGBA8)
                     {
-                        AutoBuffer<unsigned char> imageBuffer(image_size);
-                        ret = spng_decode_image(png_ptr, imageBuffer.data(), image_size, fmt, 0);
-                        int step = m_width * img.channels();
-                        if (fmt == SPNG_FMT_RGB8)
+                        do
                         {
-                            spngCvt_BGR2Gray_8u_C3C1R(
-                                imageBuffer.data(),
-                                step,
-                                img.data,
-                                step, Size(m_width, m_height), 2);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA8)
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
+                            spngCvt_BGRA2Gray_8u_CnC1R(buffer.data(), 0, img.data + row_info.row_num * img.step, 0, Size(m_width, 1), 4, 2);
+                        } while (ret == SPNG_OK);
+                    }
+                    else if (fmt == SPNG_FMT_RGBA16)
+                    {
+                        do
                         {
-                            spngCvt_BGRA2Gray_8u_C4C1R(
-                                imageBuffer.data(),
-                                step,
-                                img.data,
-                                step, Size(m_width, m_height), 2);
-                        }
-                        else if (fmt == SPNG_FMT_RGBA16)
-                        {
+                            ret = spng_get_row_info(png_ptr, &row_info);
+                            if (ret)
+                                break;
+
+                            ret = spng_decode_row(png_ptr, buffer.data(), image_width);
                             spngCvt_BGRA2Gray_16u_CnC1R(
-                                reinterpret_cast<const ushort *>(imageBuffer.data()), step / 3,
-                                reinterpret_cast<ushort *>(img.data),
-                                step / 3, Size(m_width, m_height),
-                                4, 2);
-                        }
+                                reinterpret_cast<const ushort*>(buffer.data()), 0,
+                                reinterpret_cast<ushort*>(img.data + row_info.row_num * img.step),
+                                0, Size(m_width, 1), 4, 2);
+                        } while (ret == SPNG_OK);
                     }
                 }
                 else if (color)
@@ -383,9 +325,8 @@ bool SPngDecoder::readData(Mat &img)
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
                             if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
-                                icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
-                                                         reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0,
-                                                         Size(m_width, 1));
+                                icvCvt_RGBA2BGRA_16u_C4R(reinterpret_cast<const ushort*>(buffer[row_info.row_num]), 0,
+                                    reinterpret_cast<ushort*>(buffer[row_info.row_num]), 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
                         if (ihdr.interlace_method && !m_use_rgb)
@@ -414,6 +355,8 @@ bool SPngDecoder::readData(Mat &img)
                     }
                     else if (fmt == SPNG_FMT_PNG)
                     {
+                        AutoBuffer<unsigned char> bufcn4;
+                        bufcn4.allocate(image_width);
                         do
                         {
                             ret = spng_get_row_info(png_ptr, &row_info);
@@ -421,16 +364,17 @@ bool SPngDecoder::readData(Mat &img)
                                 break;
 
                             ret = spng_decode_row(png_ptr, buffer[row_info.row_num], image_width);
+
                             if (ihdr.interlace_method == 0 && !m_use_rgb)
                             {
-                                icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(buffer[row_info.row_num]), 0,
-                                                       reinterpret_cast<ushort *>(buffer[row_info.row_num]), 0, Size(m_width, 1));
+                                icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort*>(buffer[row_info.row_num]), 0,
+                                    reinterpret_cast<ushort*>(buffer[row_info.row_num]), 0, Size(m_width, 1));
                             }
                         } while (ret == SPNG_OK);
                         if (ihdr.interlace_method && !m_use_rgb)
                         {
-                            icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort *>(img.data), step,
-                                                   reinterpret_cast<ushort *>(img.data), step, Size(m_width, m_height));
+                            icvCvt_RGB2BGR_16u_C3R(reinterpret_cast<const ushort*>(img.data), step,
+                                reinterpret_cast<ushort*>(img.data), step, Size(m_width, m_height));
                         }
                     }
                     else
@@ -454,7 +398,6 @@ bool SPngDecoder::readData(Mat &img)
                     }
                 }
                 else
-                {
                     do
                     {
                         ret = spng_get_row_info(png_ptr, &row_info);
@@ -462,8 +405,8 @@ bool SPngDecoder::readData(Mat &img)
                             break;
 
                         ret = spng_decode_row(png_ptr, img.data + row_info.row_num * image_width, image_width);
+
                     } while (ret == SPNG_OK);
-                }
             }
 
             if (ret == SPNG_EOI)
@@ -479,6 +422,48 @@ bool SPngDecoder::readData(Mat &img)
                         result = m_exif.parseExif((unsigned char *)exif_s.data, exif_s.length);
                     }
                 }
+
+                if (m_read_options)
+                {
+                    uint32_t text_count;
+
+                    // Retrieve all text chunks
+                    if (spng_get_text(png_ptr, NULL, &text_count) == SPNG_OK)
+                    {
+                        std::vector<spng_text> texts(text_count);
+                        spng_get_text(png_ptr, texts.data(), &text_count);
+
+                        for (size_t i = 0; i < text_count; ++i)
+                        {
+                            char* key = texts[i].keyword;
+                            char* value = texts[i].text;
+                            size_t len = texts[i].length;
+
+                            if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP1")))
+                            {
+                                m_exif.processRawProfile(value, len);
+                            }
+                            else if (key && !std::strcmp(key, "XML:com.adobe.xmp"))
+                            {
+                                auto& out = m_metadata[IMAGE_METADATA_XMP];
+                                out.insert(out.end(),
+                                    value,
+                                    value + len + 1); // include null terminator
+                            }
+                        }
+                    }
+
+                    // ICC Profile
+                    spng_iccp iccp_data;
+
+                    if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
+                    {
+                        auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                        out.insert(out.end(),
+                            iccp_data.profile,
+                            iccp_data.profile + iccp_data.profile_len);
+                    }
+                }
             }
         }
     }
@@ -492,6 +477,10 @@ SPngEncoder::SPngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
 }
 
 SPngEncoder::~SPngEncoder()
@@ -593,6 +582,37 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
 
+            if (!m_metadata.empty()) {
+                std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                if (!exif.empty()) {
+                    spng_exif s_exif;
+                    s_exif.data = reinterpret_cast<char*>(exif.data());
+                    s_exif.length = exif.size();
+                    spng_set_exif(ctx, &s_exif);
+                }
+
+                std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                if (!xmp.empty()) {
+                    spng_text text_chunk;
+                    strncpy(text_chunk.keyword, "XML:com.adobe.xmp", sizeof(text_chunk.keyword) - 1);
+                    text_chunk.keyword[sizeof(text_chunk.keyword) - 1] = '\0';
+                    text_chunk.type = SPNG_TEXT;
+                    text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                    text_chunk.length = xmp.size();
+                    spng_set_text(ctx, &text_chunk, 1);
+                }
+
+                std::vector<uchar>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                if (!iccp.empty()) {
+                    spng_iccp s_iccp;
+                    strncpy(s_iccp.profile_name, "ICC Profile", sizeof(s_iccp.profile_name) - 1);
+                    s_iccp.profile_name[sizeof(s_iccp.profile_name) - 1] = '\0';
+                    s_iccp.profile_len = iccp.size();
+                    s_iccp.profile = reinterpret_cast<char*>(iccp.data());
+                    spng_set_iccp(ctx, &s_iccp);
+                }
+            }
+
             int ret;
             spng_encode_chunks(ctx);
             ret = spng_encode_image(ctx, nullptr, 0, SPNG_FMT_PNG, SPNG_ENCODE_PROGRESSIVE);
@@ -687,45 +707,32 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
 }
 
-void spngCvt_BGR2Gray_8u_C3C1R(const uchar *bgr, int bgr_step,
-                               uchar *gray, int gray_step,
-                               cv::Size size, int _swap_rb)
+void spngCvt_BGRA2Gray_8u_CnC1R(const uchar *bgr, int bgr_step,
+                                uchar *gray, int gray_step,
+                                cv::Size size, int ncn, int _swap_rb)
 {
     int i;
     for (; size.height--; gray += gray_step)
     {
-        double cBGR0 = 0.1140441895;
-        double cBGR2 = 0.2989807129;
-        if (_swap_rb)
-            std::swap(cBGR0, cBGR2);
-        for (i = 0; i < size.width; i++, bgr += 3)
-        {
-            int t = static_cast<int>(cBGR0 * bgr[0] + 0.5869750977 * bgr[1] + cBGR2 * bgr[2]);
-            gray[i] = (uchar)t;
-        }
-
-        bgr += bgr_step - size.width * 3;
-    }
-}
-
-void spngCvt_BGRA2Gray_8u_C4C1R(const uchar *bgra, int rgba_step,
-                                uchar *gray, int gray_step,
-                                cv::Size size, int _swap_rb)
-{
-    for (; size.height--; gray += gray_step)
-    {
-        double cBGR0 = 0.1140441895;
-        double cBGR1 = 0.5869750977;
-        double cBGR2 = 0.2989807129;
+        int cBGR0 = 3737;
+        int cBGR1 = 19234;
+        int cBGR2 = 9797;
 
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
-        for (int i = 0; i < size.width; i++, bgra += 4)
+        for (i = 0; i < size.width; i++, bgr += ncn)
         {
-            gray[i] = cv::saturate_cast<uchar>(cBGR0 * bgra[0] + cBGR1 * bgra[1] + cBGR2 * bgra[2]);
+            if (bgr[0] != bgr[1] || bgr[0] != bgr[2])
+            {
+                gray[i] = (uchar)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2]) >> 15);
+            }
+            else
+            {
+                gray[i] = bgr[0];
+            }
         }
 
-        bgra += rgba_step - size.width * 4;
+        bgr += bgr_step - size.width * ncn;
     }
 }
 
@@ -735,15 +742,43 @@ void spngCvt_BGRA2Gray_16u_CnC1R(const ushort *bgr, int bgr_step,
 {
     for (; size.height--; gray += gray_step)
     {
-        double cBGR0 = 0.1140441895;
-        double cBGR1 = 0.5869750977;
-        double cBGR2 = 0.2989807129;
+        int cBGR0 = 3737;
+        int cBGR1 = 19234;
+        int cBGR2 = 9797;
 
         if (_swap_rb)
             std::swap(cBGR0, cBGR2);
         for (int i = 0; i < size.width; i++, bgr += ncn)
         {
-            gray[i] = (ushort)(cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2]);
+            if (bgr[0] != bgr[1] || bgr[0] != bgr[2])
+            {
+                gray[i] = (ushort)((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15);
+            }
+            else
+            {
+                gray[i] = bgr[0];
+            }
+        }
+
+        bgr += bgr_step - size.width * ncn;
+    }
+}
+
+void spngCvt_BGRA2Gray_16u28u_CnC1R(const ushort *bgr, int bgr_step,
+                                    uchar *gray, int gray_step,
+                                    cv::Size size, int ncn, int _swap_rb)
+{
+    int cBGR0 = 3737;
+    int cBGR1 = 19234;
+    int cBGR2 = 9797;
+    if (_swap_rb)
+        std::swap(cBGR0, cBGR2);
+
+    for (; size.height--; gray += gray_step)
+    {
+        for (int i = 0; i < size.width; i++, bgr += ncn)
+        {
+            gray[i] = static_cast<uchar>(((cBGR0 * bgr[0] + cBGR1 * bgr[1] + cBGR2 * bgr[2] + 16384) >> 15) >> 8);
         }
 
         bgr += bgr_step - size.width * ncn;

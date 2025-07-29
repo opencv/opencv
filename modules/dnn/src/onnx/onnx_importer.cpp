@@ -2312,6 +2312,8 @@ void ONNXImporter::parseUnsqueeze(LayerParams& layerParams, const opencv_onnx::N
     if (axes.size() != 1)
         CV_Error(Error::StsNotImplemented, "Multidimensional unsqueeze");
 
+    layerParams.set("unsqueeze_axes", axes);
+
     int depth = layerParams.get<int>("depth", CV_32F);
 
     MatShape inpShape = outShapes[node_proto.input(0)];
