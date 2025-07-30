@@ -203,7 +203,12 @@ TEST(PoseGraphMST, optimization)
     // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
     if (cvtest::debugLevel > 0)
     {
-        /* --- OLD VERSION ---
+        // Note:
+        // A custom .obj writer is used here instead of cv::saveMesh because saveMesh expects faces
+        // (i.e., polygons with 3 or more vertices) and writes them using the "f i j k..." syntax in
+        // the .obj file. Since pose graphs consist of edges rather than polygonal faces, we represent
+        // them using line segments ("l i j").
+        // As saveMesh does not support writing "l" lines, it is not suitable in this context.
 
         // Write OBJ for MST-initialized pose graph with optimizer
         std::string fname = "pg_with_mst_and_optimizer.obj";
@@ -255,35 +260,6 @@ TEST(PoseGraphMST, optimization)
             of << "l " << sid + 1 << " " << tid + 1 << std::endl;
         }
         of.close();
-
-        --- OLD VERSION --- */
-
-        auto extractVertices = [](const Ptr<detail::PoseGraph>& pg) -> std::vector<Point3f>
-        {
-            std::vector<Point3f> vertices;
-            for (const size_t& id : pg->getNodesIds())
-            {
-                Point3d d = pg->getNodePose(id).translation();
-                vertices.emplace_back(static_cast<float>(d.x), static_cast<float>(d.y), static_cast<float>(d.z));
-            }
-            return vertices;
-        };
-
-        auto extractIndexes = [](const Ptr<detail::PoseGraph>& pg) -> std::vector<Vec3i>
-        {
-            std::vector<Vec3i> indexes;
-            size_t esz = pg->getNumEdges();
-            for (size_t i = 0; i < esz; i++)
-            {
-                size_t sid = pg->getEdgeStart(i), tid = pg->getEdgeEnd(i);
-                indexes.emplace_back(static_cast<int>(sid), static_cast<int>(tid));
-            }
-            return indexes;
-        };
-
-        saveMesh("pg_with_mst_and_optimizer.obj", extractVertices(pgWithMSTAndOptimizer), extractIndexes(pgWithMSTAndOptimizer));
-        saveMesh("pg_optimizer_only.obj", extractVertices(pgOptimizerOnly), extractIndexes(pgOptimizerOnly));
-        saveMesh("pg_init2.obj", extractVertices(init), extractIndexes(init));
     }
 }
 
