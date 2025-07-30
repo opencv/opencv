@@ -210,16 +210,21 @@ TEST(PoseGraphMST, optimization)
         // them using line segments ("l i j").
         // As saveMesh does not support writing "l" lines, it is not suitable in this context.
 
+        std::string fname;
+        std::fstream of;
+        std::vector<size_t> ids;
+        size_t esz;
+
         // Write OBJ for MST-initialized pose graph with optimizer
-        std::string fname = "pg_with_mst_and_optimizer.obj";
-        std::fstream of(fname, std::fstream::out);
-        std::vector<size_t> ids = pgWithMSTAndOptimizer->getNodesIds();
+        fname = "pg_with_mst_and_optimizer.obj";
+        of.open(fname, std::fstream::out);
+        ids = pgWithMSTAndOptimizer->getNodesIds();
         for (const size_t& id : ids)
         {
             Point3d d = pgWithMSTAndOptimizer->getNodePose(id).translation();
             of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
         }
-        size_t esz = pgWithMSTAndOptimizer->getNumEdges();
+        esz = pgWithMSTAndOptimizer->getNumEdges();
         for (size_t i = 0; i < esz; i++)
         {
             size_t sid = pgWithMSTAndOptimizer->getEdgeStart(i), tid = pgWithMSTAndOptimizer->getEdgeEnd(i);
@@ -228,15 +233,15 @@ TEST(PoseGraphMST, optimization)
         of.close();
 
         // Write OBJ for optimizer-only pose graph
-        std::string fname = "pg_optimizer_only.obj";
-        std::fstream of(fname, std::fstream::out);
-        std::vector<size_t> ids = pgOptimizerOnly->getNodesIds();
+        fname = "pg_optimizer_only.obj";
+        of.open(fname, std::fstream::out);
+        ids = pgOptimizerOnly->getNodesIds();
         for (const size_t& id : ids)
         {
             Point3d d = pgOptimizerOnly->getNodePose(id).translation();
             of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
         }
-        size_t esz = pgOptimizerOnly->getNumEdges();
+        esz = pgOptimizerOnly->getNumEdges();
         for (size_t i = 0; i < esz; i++)
         {
             size_t sid = pgOptimizerOnly->getEdgeStart(i), tid = pgOptimizerOnly->getEdgeEnd(i);
@@ -245,15 +250,15 @@ TEST(PoseGraphMST, optimization)
         of.close();
 
         // Write OBJ for initial pose graph
-        std::string fname = "pg_init.obj";
-        std::fstream of(fname, std::fstream::out);
-        std::vector<size_t> ids = init->getNodesIds();
+        fname = "pg_init.obj";
+        of.open(fname, std::fstream::out);
+        ids = init->getNodesIds();
         for (const size_t& id : ids)
         {
             Point3d d = init->getNodePose(id).translation();
             of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
         }
-        size_t esz = init->getNumEdges();
+        esz = init->getNumEdges();
         for (size_t i = 0; i < esz; i++)
         {
             size_t sid = init->getEdgeStart(i), tid = init->getEdgeEnd(i);
