@@ -251,7 +251,8 @@ bool  JpegDecoder::readHeader()
             jpeg_read_header( &state->cinfo, TRUE );
 
             const std::streamsize EXIF_HEADER_SIZE = 6;   // "Exif\0\0"
-            const std::streamsize ICC_HEADER_SIZE = 14;  // "ICC_PROFILE\0" + seq/total
+            const std::streamsize XMP_HEADER_SIZE  = 29;  // "http://ns.adobe.com/xap/1.0/"
+            const std::streamsize ICC_HEADER_SIZE  = 14;  // "ICC_PROFILE\0" + seq/total
 
             for (jpeg_saved_marker_ptr cmarker = state->cinfo.marker_list; cmarker != nullptr; cmarker = cmarker->next)
             {
@@ -266,8 +267,8 @@ bool  JpegDecoder::readHeader()
                         m_exif.parseExif(data + EXIF_HEADER_SIZE, cmarker->data_length - EXIF_HEADER_SIZE);
                     }
                     // Check for XMP metadata
-                    else if (m_read_options && cmarker->data_length >= 29 &&
-                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", 29) == 0)
+                    else if (m_read_options && cmarker->data_length >= XMP_HEADER_SIZE &&
+                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", XMP_HEADER_SIZE) == 0)
                     {
                         std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
                         xmp.insert(xmp.end(), data, data + cmarker->data_length);
