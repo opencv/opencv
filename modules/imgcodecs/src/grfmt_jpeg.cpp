@@ -247,7 +247,42 @@ bool  JpegDecoder::readHeader()
         if (state->cinfo.src != 0)
         {
             jpeg_save_markers(&state->cinfo, APP1, 0xffff);
+            jpeg_save_markers(&state->cinfo, APP2, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
+
+            const std::streamsize EXIF_HEADER_SIZE = 6;   // "Exif\0\0"
+            const std::streamsize XMP_HEADER_SIZE  = 29;  // "http://ns.adobe.com/xap/1.0/"
+            const std::streamsize ICC_HEADER_SIZE  = 14;  // "ICC_PROFILE\0" + seq/total
+
+            for (jpeg_saved_marker_ptr cmarker = state->cinfo.marker_list; cmarker != nullptr; cmarker = cmarker->next)
+            {
+                // Handle APP1 marker: could be Exif or XMP
+                if (cmarker->marker == APP1 && cmarker->data_length > EXIF_HEADER_SIZE)
+                {
+                    unsigned char* data = cmarker->data;
+
+                    // Check for Exif data
+                    if (std::memcmp(data, "Exif\0\0", EXIF_HEADER_SIZE) == 0)
+                    {
+                        m_exif.parseExif(data + EXIF_HEADER_SIZE, cmarker->data_length - EXIF_HEADER_SIZE);
+                    }
+                    // Check for XMP metadata
+                    else if (m_read_options && cmarker->data_length >= XMP_HEADER_SIZE &&
+                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", XMP_HEADER_SIZE) == 0)
+                    {
+                        std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        xmp.insert(xmp.end(), data, data + cmarker->data_length);
+                    }
+                }
+
+                // Handle APP2 marker: typically contains ICC profile data
+                if (m_read_options && cmarker->marker == APP2 && cmarker->data_length > ICC_HEADER_SIZE)
+                {
+                    const unsigned char* data = cmarker->data;
+                    std::vector<uchar>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                    iccp.insert(iccp.end(), data + ICC_HEADER_SIZE, data + cmarker->data_length);
+                }
+            }
 
             state->cinfo.scale_num=1;
             state->cinfo.scale_denom = m_scale_denom;
@@ -469,29 +504,6 @@ bool  JpegDecoder::readData( Mat& img )
                 }
             }
 
-            // Check for Exif marker APP1
-            jpeg_saved_marker_ptr exif_marker = NULL;
-            jpeg_saved_marker_ptr cmarker = cinfo->marker_list;
-            while( cmarker && exif_marker == NULL )
-            {
-                if (cmarker->marker == APP1)
-                    exif_marker = cmarker;
-
-                cmarker = cmarker->next;
-            }
-
-            // Parse Exif data
-            if( exif_marker )
-            {
-                const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
-
-                if (exif_marker->data_length > offsetToTiffHeader)
-                {
-                    m_exif.parseExif(exif_marker->data + offsetToTiffHeader, exif_marker->data_length - offsetToTiffHeader);
-                }
-            }
-
-
             jpeg_start_decompress( cinfo );
 
             if( doDirectRead)
@@ -602,6 +614,8 @@ JpegEncoder::JpegEncoder()
     m_buf_supported = true;
     m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
     m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
 }
 
 
@@ -830,6 +844,26 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 memcpy(data, app1_exif_prefix, app1_exif_prefix_size);
                 memcpy(data + app1_exif_prefix_size, metadata_exif.data(), exif_size);
                 jpeg_write_marker(&cinfo, JPEG_APP0 + 1, data, (unsigned)data_size);
+            }
+
+            const std::vector<uchar>& metadata_xmp = m_metadata[IMAGE_METADATA_XMP];
+            size_t xmp_size = metadata_xmp.size();
+            if (xmp_size > 0u) {
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 1, metadata_xmp.data(), (unsigned)xmp_size);
+            }
+
+            const std::vector<uchar>& metadata_iccp = m_metadata[IMAGE_METADATA_ICCP];
+            size_t iccp_size = metadata_iccp.size();
+            if (iccp_size > 0u) {
+                const char app1_iccp_prefix[] = {'I','C','C','_','P','R','O','F','I','L','E','\0','\1','\1'};
+                size_t app1_iccp_prefix_size = sizeof(app1_iccp_prefix);
+                size_t data_size = iccp_size + app1_iccp_prefix_size;
+
+                std::vector<uchar> metadata_app1(data_size);
+                uchar* data = metadata_app1.data();
+                memcpy(data, app1_iccp_prefix, app1_iccp_prefix_size);
+                memcpy(data + app1_iccp_prefix_size, metadata_iccp.data(), iccp_size);
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 2, data, (unsigned)data_size);
             }
         }
 
