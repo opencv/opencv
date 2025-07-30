@@ -1545,7 +1545,6 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
     layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
-    CV_Assert(interp_mode != "tf_crop_and_resize");
     bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
     layerParams.set("align_corners", interp_mode == "align_corners");
@@ -1567,16 +1566,39 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
     if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
         scales = netimpl->argTensor(scalesArg);
 
-    if (ninputs >= 3 && interp_mode == "tf_crop_and_resize") {
-        int roiInputId = 1;
-        Arg roiArg = node_inputs[roiInputId];
-        if (!netimpl->isConstArg(roiArg)) {
-            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
+    if (interp_mode == "tf_crop_and_resize")
+    {
+        CV_Assert(ninputs >= 3);
+        Arg roiArg    = node_inputs[1];
+        bool hasSizes = (ninputs >= 4);
+        Arg sizesArg  = hasSizes ? node_inputs[3] : Arg();
+
+        bool staticRoi   = netimpl->isConstArg(roiArg);
+        bool staticSizes = hasSizes && netimpl->isConstArg(sizesArg);
+
+        if (staticRoi && (!hasSizes || staticSizes))
+        {
+            Mat roiMat = netimpl->argTensor(roiArg), roiF;
+            CV_CheckEQ(roiMat.total(), (size_t)4,
+                      "ONNX/Resize: ROI must have 4 values [y1,x1,y2,x2]");
+            roiMat.convertTo(roiF, CV_32F);
+            layerParams.set("y1", roiF.at<float>(0));
+            layerParams.set("x1", roiF.at<float>(1));
+            layerParams.set("y2", roiF.at<float>(2));
+            layerParams.set("x2", roiF.at<float>(3));
+
+            if (hasSizes && staticSizes)
+            {
+                Mat szMat = netimpl->argTensor(sizesArg), sz;
+                CV_CheckEQ(szMat.total(), (size_t)4,
+                          "ONNX/Resize: sizes must have 4 values [N,C,H,W]");
+                szMat.convertTo(sz, CV_32S);
+                layerParams.set("height", sz.at<int>(2));
+                layerParams.set("width",  sz.at<int>(3));
+            }
+            layerParams.set("dynamic_roi", false);
         }
-        Mat roi = netimpl->argTensor(roiArg);
-        if (!roi.empty()) {
-            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
-        }
+        else layerParams.set("dynamic_roi", true);
     }
 
     if (scales.total() == 4)
@@ -1610,6 +1632,8 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
             layerParams.set("exclude_outside", static_cast<int>(a.i()) != 0);
         else if (a.name() == "cubic_coeff_a" && a.has_f())
             layerParams.set("cubic_coeff_a", static_cast<float>(a.f()));
+        else if (a.name() == "extrapolation_value" && a.has_f())
+            layerParams.set("extrapolation_value", static_cast<float>(a.f()));
     }
 
     replaceLayerParam(layerParams, "mode", "interpolation");

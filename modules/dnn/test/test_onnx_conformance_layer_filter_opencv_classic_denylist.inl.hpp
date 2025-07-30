@@ -165,3 +165,4 @@
 "test_resize_downsample_scales_linear",
 "test_resize_downsample_sizes_linear_pytorch_half_pixel",
 "test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn",
+"test_resize_tf_crop_and_resize",
