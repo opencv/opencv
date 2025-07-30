@@ -3,11 +3,38 @@
 #include "../src/tokenizer/encoding.hpp"
 #include "../src/tokenizer/utils.hpp"
 #include "../src/tokenizer/gpt2_tokenizer_fast.hpp"
-#include "../src/tokenizer/tokenizer.hpp"
+#include "../include/opencv2/dnn/tokenizer.hpp"
 #include <fstream>
 #include <sstream>
 
 namespace opencv_test { namespace  {
+
+template<typename tstring>
+static std::string _tf_gpt2(tstring filename) {
+    std::string basetestdir = getOpenCVExtraDir();
+    size_t len = basetestdir.size();
+    if (len > 0 && basetestdir[len-1] != '/' && basetestdir[len-1] != '\\')
+        return (basetestdir + "/testdata/dnn/llm/gpt2") + filename;
+    return (basetestdir + "testdata/dnn/llm/gpt2/") + filename;
+}
+
+template<typename tstring>
+static std::string _tf_gpt4(tstring filename) {
+    std::string basetestdir = getOpenCVExtraDir();
+    size_t len = basetestdir.size();
+    if (len > 0 && basetestdir[len-1] != '/' && basetestdir[len-1] != '\\')
+        return (basetestdir + "/testdata/dnn/llm/gpt4") + filename;
+    return (basetestdir + "testdata/dnn/llm/gpt4/") + filename;
+}
+
+template<typename tstring>
+static std::string _tf_wikitext(tstring filename) {
+    std::string basetestdir = getOpenCVExtraDir();
+    size_t len = basetestdir.size();
+    if (len > 0 && basetestdir[len-1] != '/' && basetestdir[len-1] != '\\')
+        return (basetestdir + "/testdata/dnn/llm/wikitext") + filename;
+    return (basetestdir + "testdata/dnn/llm/wikitext/") + filename;
+}
 
 TEST(EncodingBPE_Example, CountingGPT4) {
     // Example: Using the CL100K_BASE encoding, the sentence
@@ -20,10 +47,11 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     // sequence of tokens.
 
     // Load an encoding 
-    tokenizer::Tokenizer tok = tokenizer::Tokenizer::from_pretrained("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
+    std::string cl100k_base = _tf_gpt4("cl100k_base.tiktoken");
+    tokenizer::Tokenizer tok = tokenizer::Tokenizer::from_pretrained("cl100k_base", cl100k_base);
 
     // Turn text into tokens with encoding.encode()
-    std::vector<uint32_t> tokens = tok.encode("tiktoken is great!");
+    std::vector<int> tokens = tok.encode("tiktoken is great!");
 
     for (auto token : tokens) {
         std::cout << token << " "; 
@@ -34,11 +62,13 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     // we can count tokens by counting the length if the vector returned by .encode()
     auto numOfTokensFromString = [](const std::string s, const std::string encodingName) -> int {
         if (encodingName == "cl100k_base")  {
-            tokenizer::Tokenizer _tok = tokenizer::Tokenizer::from_pretrained("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
-            std::vector<uint32_t> tokens = _tok.encode(s);
+            std::string cl100k_base = _tf_gpt4("cl100k_base.tiktoken");
+            tokenizer::Tokenizer _tok = tokenizer::Tokenizer::from_pretrained("cl100k_base", cl100k_base);
+            std::vector<int> tokens = _tok.encode(s);
             return tokens.size();
         } else if (encodingName == "gpt2") {
-            auto tokenizer = tokenizer::GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
+            std::string vocab_bpe = _tf_gpt2("vocab.bpe");
+            auto tokenizer = tokenizer::GPT2TokenizerFast::from_pretrained(vocab_bpe);
             tokenizer::Encoding _encoding = tokenizer.encoding();
             std::vector<uint32_t> tokens = _encoding.encode(s);
             return tokens.size();
@@ -92,7 +122,8 @@ TEST(EncodingBPE_Example, CountingGPT4) {
             std::cout << std::endl;
         };
         // cl100k_base -> gpt4
-        tokenizer::Tokenizer tok = tokenizer::Tokenizer::from_pretrained("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken");
+        std::string cl100k_base = _tf_gpt4("cl100k_base.tiktoken");
+        tokenizer::Tokenizer tok = tokenizer::Tokenizer::from_pretrained("cl100k_base", cl100k_base);
         printEncodingInfo(tok.encoding(), sample);
         /*
             output:
@@ -104,7 +135,8 @@ TEST(EncodingBPE_Example, CountingGPT4) {
         */
 
         // r50k_base -> gpt2
-        auto tokenizer_2 = tokenizer::GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe");
+        std::string vocab_bpe = _tf_gpt2("vocab.bpe");
+        auto tokenizer_2 = tokenizer::GPT2TokenizerFast::from_pretrained(vocab_bpe);
         tokenizer::Encoding enc_gpt2 = tokenizer_2.encoding();
         printEncodingInfo(enc_gpt2, sample);
         /*
@@ -117,13 +149,14 @@ TEST(EncodingBPE_Example, CountingGPT4) {
         */
 
         // train tokenizer on taylor swift text
-        std::ifstream f("/Users/jorgevelez/Desktop/data/taylorswift.txt");
+        std::string wikitext = _tf_wikitext("wiki.test.raw");
+        std::ifstream f(wikitext);
         ASSERT_TRUE(f.is_open());
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string data = buffer.str();
 
-        int vocab_size = 512;
+        int vocab_size = 50257;
         tokenizer::Encoding enc_trained(data, vocab_size, tokenizer::R50K_UTF8);
         printEncodingInfo(enc_trained, sample);
         /*
@@ -140,12 +173,13 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     compareEncodings("お誕生日おめでとう");
 
     auto get_trained_taylor_encoding = []() -> tokenizer::Encoding {
-        std::ifstream f("/Users/jorgevelez/Desktop/data/taylorswift.txt");
+        std::string wikitext = _tf_wikitext("wiki.test.raw");
+        std::ifstream f(wikitext);
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string data = buffer.str();
 
-        int vocab_size = 512;
+        int vocab_size = 50257;
         tokenizer::Encoding enc_trained(data, vocab_size, tokenizer::R50K_UTF8);
         return enc_trained;
     };
@@ -153,11 +187,13 @@ TEST(EncodingBPE_Example, CountingGPT4) {
     using Message = std::map<std::string, std::string>;
     auto num_of_tokens_from_prompts = [&](const std::vector<Message>& messages,
                                          const std::string& model) -> int {
+        std::string voacb_bpe = _tf_gpt2("vocab.bpe");
+        std::string cl100k_base = _tf_gpt4("cl100k_base.tiktoken");
         tokenizer::Encoding encoding = (model == "gpt2")
-                            ? tokenizer::GPT2TokenizerFast::from_pretrained("/Users/jorgevelez/Desktop/data/vocab.bpe").encoding()
+                            ? tokenizer::GPT2TokenizerFast::from_pretrained(voacb_bpe).encoding()
                             : (model == "train_taylor")
                             ? get_trained_taylor_encoding()
-                            : tokenizer::Tokenizer::from_pretrained("cl100k_base", "/Users/jorgevelez/Desktop/data/cl100k_base.tiktoken").encoding();
+                            : tokenizer::Tokenizer::from_pretrained("cl100k_base", cl100k_base).encoding();
         int tokens_per_message = 3;
         int tokens_per_name = 1;
         if (model == "gpt2") {
