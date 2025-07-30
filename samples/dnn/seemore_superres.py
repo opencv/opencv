@@ -17,7 +17,6 @@ import numpy as np
 import os
 from common import *
 
-
 def get_args_parser(func_args):
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = (
@@ -38,7 +37,7 @@ def get_args_parser(func_args):
         help="An optional path to file with preprocessing parameters.",
     )
     parser.add_argument(
-        "--input", help="Path to input image file.", default=None, required=False
+        "--input", help="Path to input image file.", default="chicky_512.png", required=False
     )
     parser.add_argument(
         "--backend",
@@ -89,7 +88,6 @@ def get_args_parser(func_args):
     )
     return parser.parse_args(func_args)
 
-
 def load_model(args):
     """Load the SeeMore super-resolution model"""
     try:
@@ -101,7 +99,6 @@ def load_model(args):
     except Exception as e:
         print(f"Error loading model: {e}")
         return None
-
 
 def postprocess_output(output, args, original_shape=None):
     """Postprocess model output to displayable image"""
@@ -119,7 +116,6 @@ def postprocess_output(output, args, original_shape=None):
         output = cv.resize(output, (upscaled_width, upscaled_height))
 
     return output
-
 
 def apply_super_resolution(net, image, args):
     """Apply super-resolution to a single image"""
@@ -145,17 +141,8 @@ def apply_super_resolution(net, image, args):
 
     return result
 
-
 def process_image(net, input_path, args):
     """Process a single image"""
-    if input_path is None:
-        default_image = cv.samples.findFile("chicky_512.png")
-        if default_image:
-            input_path = default_image
-        else:
-            print("Default image not found. Please provide --input parameter.")
-            return False
-
     image = cv.imread(input_path)
     if image is None:
         print(f"Cannot load image: {input_path}")
@@ -176,7 +163,6 @@ def process_image(net, input_path, args):
     cv.destroyAllWindows()
     return True
 
-
 def main(func_args=None):
     args = get_args_parser(func_args)
 
@@ -184,12 +170,11 @@ def main(func_args=None):
     if net is None:
         print("Failed to load model.")
         return -1
-    input_path = cv.samples.findFile(args.input) if args.input else None
+    input_path = cv.samples.findFile(args.input)
     if not process_image(net, input_path, args):
         return -1
 
     return 0
-
 
 if __name__ == "__main__":
     main()
