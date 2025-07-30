@@ -24,7 +24,7 @@ const string param_keys =
     "{ help h          |                   | Print help message }"
     "{ @alias          | seemoredetails    | Model alias from models.yml }"
     "{ zoo             | ../dnn/models.yml | Path to models.yml file }"
-    "{ input i         |                   | Path to input image/video, or camera index (0,1,2...) }"
+    "{ input i         |  chicky_512.png   | Path to input image/video, or camera index (0,1,2...) }"
     "{ model           |                   | Path to model file }";
 
 const string backend_keys = format(
@@ -135,15 +135,7 @@ static bool processImage(Net &net, const string &inputPath,
     moveWindow("Super-Resolution", WINDOW_OFFSET_X + image.cols + WINDOW_SPACING, WINDOW_OFFSET_Y);
 
     processFrame(net, image, scale, mean, swapRB, width, height);
-
-    cout << "Press 'q' to quit..." << endl;
-
-    int key = waitKey(0) & 0xFF;
-    if (key == 'q' || key == 27)
-    {
-        cout << "Exiting..." << endl;
-    }
-
+    waitKey(0);
     destroyAllWindows();
     return true;
 }
@@ -183,16 +175,7 @@ int main(int argc, char **argv)
     string model = findModel(parser.get<String>("model"), sha1);
     int width = parser.get<int>("width");
     int height = parser.get<int>("height");
-    string inputPath = parser.get<String>("input");
-    if (!inputPath.empty())
-    {
-        inputPath = samples::findFile(inputPath);
-    }
-
-    if (inputPath.empty())
-    {
-        inputPath = samples::findFile("chicky_512.png");
-    }
+    string inputPath = findFile(parser.get<String>("input"));
 
     if (model.empty())
     {
