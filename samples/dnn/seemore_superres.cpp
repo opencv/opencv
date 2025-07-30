@@ -24,7 +24,7 @@ const string param_keys =
     "{ help h          |                   | Print help message }"
     "{ @alias          | seemoredetails    | Model alias from models.yml }"
     "{ zoo             | ../dnn/models.yml | Path to models.yml file }"
-    "{ input i         |  chicky_512.png   | Path to input image/video, or camera index (0,1,2...) }"
+    "{ input i         |  chicky_512.png   | Path to input image }"
     "{ model           |                   | Path to model file }";
 
 const string backend_keys = format(
