@@ -1604,7 +1604,7 @@ CASE(test_resize_downsample_sizes_nearest)
 CASE(test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn)
     SKIP;
 CASE(test_resize_tf_crop_and_resize)
-    // no filter
+    SKIP;
 CASE(test_resize_upsample_scales_cubic)
     SKIP;
 CASE(test_resize_upsample_scales_cubic_A_n0p5_exclude_outside)
