@@ -45,7 +45,7 @@ def get_args_parser(func_args):
     )
     parser.add_argument(
         "--input",
-        default=cv.samples.findFile("samples/data/messi5.jpg"),
+        default="messi5.jpg",
         help="Path to input image or video file. Defaults to messi5.jpg in samples/data.",
     )
     parser.add_argument(

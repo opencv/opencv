@@ -46,7 +46,7 @@ const string param_keys =
     "{ help h          |                   | Print help message }"
     "{ @alias          | modnet            | An alias name of model to extract preprocessing parameters from models.yml file }"
     "{ zoo             | ../dnn/models.yml | An optional path to file with preprocessing parameters }"
-    "{ input i         | " +    cv::samples::findFile("samples/data/messi5.jpg") + " | Path to input image file }"
+    "{ input i         | messi5.jpg | Path to input image file }"
     "{ model           |                   | Path to MODNet ONNX model file }";
 
 const string backend_keys = format(
