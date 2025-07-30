@@ -168,7 +168,7 @@ def process_image(net, input_path, args):
     cv.namedWindow("Super-Resolution Result", cv.WINDOW_NORMAL)
     cv.imshow("Input", image)
     cv.imshow("Super-Resolution Result", result)
-    print("Press any key to continue, 'q' to quit...")
+    print("Press 'q' to quit...")
     while True:
         key = cv.waitKey(0) & 0xFF
         if key == ord("q"):
@@ -184,7 +184,8 @@ def main(func_args=None):
     if net is None:
         print("Failed to load model.")
         return -1
-    if not process_image(net, args.input, args):
+    input_path = cv.samples.findFile(args.input) if args.input else None
+    if not process_image(net, input_path, args):
         return -1
 
     return 0

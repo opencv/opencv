@@ -136,7 +136,7 @@ static bool processImage(Net &net, const string &inputPath,
 
     processFrame(net, image, scale, mean, swapRB, width, height);
 
-    cout << "Press any key to continue, 'q' to quit..." << endl;
+    cout << "Press 'q' to quit..." << endl;
 
     int key = waitKey(0) & 0xFF;
     if (key == 'q' || key == 27)
@@ -169,7 +169,7 @@ int main(int argc, char **argv)
     }
 
     string modelName = parser.get<String>("@alias");
-    string zooFile = parser.get<String>("zoo");
+    string zooFile = samples::findFile(parser.get<String>("zoo"));
 
     keys += genPreprocArguments(modelName, zooFile);
     parser = CommandLineParser(argc, argv, keys);
@@ -181,9 +181,13 @@ int main(int argc, char **argv)
     String target = parser.get<String>("target");
     String sha1 = parser.get<String>("sha1");
     string model = findModel(parser.get<String>("model"), sha1);
-    string inputPath = parser.get<String>("input");
     int width = parser.get<int>("width");
     int height = parser.get<int>("height");
+    string inputPath = parser.get<String>("input");
+    if (!inputPath.empty())
+    {
+        inputPath = samples::findFile(inputPath);
+    }
 
     if (inputPath.empty())
     {
