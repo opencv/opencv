@@ -25,7 +25,6 @@ using namespace cv::dnn::cuda4dnn;
 
 namespace cv { namespace dnn {
 
-
 namespace {
 
 inline float computeSrcGeneric(int dst, float scale, int limit, int len,
