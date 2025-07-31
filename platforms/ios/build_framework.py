@@ -50,7 +50,7 @@ CURRENT_FILE_DIR = os.path.dirname(__file__)
 
 
 class Builder:
-    def __init__(self, opencv, contrib, dynamic, bitcodedisabled, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs, swiftdisabled):
+    def __init__(self, opencv, contrib, dynamic, embed_bitcode, exclude, disable, enablenonfree, targets, debug, debug_info, framework_name, run_tests, build_docs, swiftdisabled):
         self.opencv = os.path.abspath(opencv)
         self.contrib = None
         if contrib:
@@ -60,7 +60,7 @@ class Builder:
             else:
                 print("Note: contrib repository is bad - modules subfolder not found", file=sys.stderr)
         self.dynamic = dynamic
-        self.bitcodedisabled = bitcodedisabled
+        self.embed_bitcode = embed_bitcode
         self.exclude = exclude
         self.build_objc_wrapper = not "objc" in self.exclude
         self.disable = disable
@@ -112,7 +112,7 @@ class Builder:
             cmake_flags = []
             if self.contrib:
                 cmake_flags.append("-DOPENCV_EXTRA_MODULES_PATH=%s" % self.contrib)
-            if xcode_ver >= 7 and target[1] == 'iPhoneOS' and self.bitcodedisabled == False:
+            if xcode_ver >= 7 and target[1] == 'iPhoneOS' and self.embed_bitcode:
                 cmake_flags.append("-DCMAKE_C_FLAGS=-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=-fembed-bitcode")
             if xcode_ver >= 7 and target[1] == 'Catalyst':
@@ -123,7 +123,7 @@ class Builder:
                     "-iframework %s/System/iOSSupport/System/Library/Frameworks" % sdk_path,
                     "-isystem %s/System/iOSSupport/usr/include" % sdk_path,
                 ]
-                if self.bitcodedisabled == False:
+                if self.embed_bitcode:
                     c_flags.append("-fembed-bitcode")
                 cmake_flags.append("-DCMAKE_C_FLAGS=" + " ".join(c_flags))
                 cmake_flags.append("-DCMAKE_CXX_FLAGS=" + " ".join(c_flags))
@@ -139,12 +139,20 @@ class Builder:
                 cmake_flags.append("-DCMAKE_OSX_SYSROOT=%s" % sdk_path)
                 cmake_flags.append("-DCMAKE_CXX_COMPILER_WORKS=TRUE")
                 cmake_flags.append("-DCMAKE_C_COMPILER_WORKS=TRUE")
+
+            print("::group::Building target", target[0], target[1], flush=True)
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
+            print("::endgroup::", flush=True)
 
             if not self.dynamic:
+                print("::group::Merge libs", target[0], target[1], flush=True)
                 self.mergeLibs(main_build_dir)
+                print("::endgroup::", flush=True)
             else:
+                print("::group::Make dynamic lib", target[0], target[1], flush=True)
                 self.makeDynamicLib(main_build_dir)
+                print("::endgroup::", flush=True)
+
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             if self.run_tests:
@@ -232,7 +240,7 @@ class Builder:
             "xcodebuild",
         ]
 
-        if (self.dynamic or self.build_objc_wrapper) and not self.bitcodedisabled and target == "iPhoneOS":
+        if (self.dynamic or self.build_objc_wrapper) and self.embed_bitcode and target == "iPhoneOS":
             buildcmd.append("BITCODE_GENERATION_MODE=bitcode")
 
         buildcmd += [
@@ -364,7 +372,7 @@ class Builder:
                 link_target = "%s-apple-ios14.0-macabi" % target[:target.find("-")]
             else:
                 link_target = "%s-apple-darwin" % target[:target.find("-")]
-        bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and not self.bitcodedisabled else []
+        bitcode_flags = ["-fembed-bitcode", "-Xlinker", "-bitcode_verify"] if is_device and self.embed_bitcode else []
         toolchain_dir = get_xcode_setting("TOOLCHAIN_DIR", builddir)
         sdk_dir = get_xcode_setting("SDK_DIR", builddir)
         framework_options = []
@@ -532,7 +540,7 @@ if __name__ == "__main__":
     parser.add_argument('--without', metavar='MODULE', default=[], action='append', help='OpenCV modules to exclude from the framework. To exclude multiple, specify this flag again, e.g. "--without video --without objc"')
     parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF). To disable multiple, specify this flag again, e.g. "--disable tbb --disable openmp"')
     parser.add_argument('--dynamic', default=False, action='store_true', help='build dynamic framework (default is "False" - builds static framework)')
-    parser.add_argument('--disable-bitcode', default=False, dest='bitcodedisabled', action='store_true', help='disable bitcode (enabled by default)')
+    parser.add_argument('--embed_bitcode', default=False, dest='embed_bitcode', action='store_true', help='disable bitcode (enabled by default)')
     parser.add_argument('--iphoneos_deployment_target', default=os.environ.get('IPHONEOS_DEPLOYMENT_TARGET', IPHONEOS_DEPLOYMENT_TARGET), help='specify IPHONEOS_DEPLOYMENT_TARGET')
     parser.add_argument('--build_only_specified_archs', default=False, action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
     parser.add_argument('--iphoneos_archs', default=None, help='select iPhoneOS target ARCHS. Default is "armv7,armv7s,arm64"')
@@ -598,6 +606,6 @@ if __name__ == "__main__":
         if iphonesimulator_archs:
             targets.append((iphonesimulator_archs, "iPhoneSimulator"))
 
-    b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.bitcodedisabled, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs, args.swiftdisabled)
+    b = iOSBuilder(args.opencv, args.contrib, args.dynamic, args.embed_bitcode, args.without, args.disable, args.enablenonfree, targets, args.debug, args.debug_info, args.framework_name, args.run_tests, args.build_docs, args.swiftdisabled)
 
     b.build(args.out)
