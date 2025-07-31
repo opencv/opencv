@@ -203,75 +203,50 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
 
 PERF_TEST_P(Encode, animation, testing::ValuesIn(exts_multi))
 {
-    const string filename = cv::tempfile(GetParam().c_str());
     Animation animation = makeCirclesAnimation();
 
-    int success;
-    TEST_CYCLE() success = imwriteanimation(filename, animation) ? 0 : -1;
+    TEST_CYCLE()
+    {
+        vector<uchar> buf;
+        EXPECT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
+    }
 
-    EXPECT_EQ(success, remove(filename.c_str()));
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Encode, multi_page, testing::ValuesIn(exts_multi))
 {
-    const string filename = cv::tempfile(GetParam().c_str());
     Animation animation = makeCirclesAnimation();
 
-    int success;
-    TEST_CYCLE() success = imwritemulti(filename, animation.frames) ? 0 : -1;
+    TEST_CYCLE()
+    {
+        vector<uchar> buf;
+        EXPECT_TRUE(imencodemulti(GetParam().c_str(), animation.frames, buf));
+    }
 
-    EXPECT_EQ(success, remove(filename.c_str()));
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Decode, animation, testing::ValuesIn(exts_multi))
 {
-    const string filename = cv::tempfile(GetParam().c_str());
     Animation animation = makeCirclesAnimation();
+    vector<uchar> buf;
+    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
 
-    int success = imwriteanimation(filename, animation) ? 0 : -1;
+    TEST_CYCLE() EXPECT_TRUE(imdecodeanimation(buf, animation));
 
-    TEST_CYCLE() imreadanimation(filename, animation);
-
-    EXPECT_EQ(success, remove(filename.c_str()));
     SANITY_CHECK_NOTHING();
 }
 
 PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_multi))
 {
-    const string filename = cv::tempfile(GetParam().c_str());
     Animation animation = makeCirclesAnimation();
+    vector<uchar> buf;
+    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
+    vector<Mat> frames;
 
-    imwritemulti(filename, animation.frames);
+    TEST_CYCLE() EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, frames));
 
-    TEST_CYCLE()
-    {
-        vector<Mat> vec;
-        imreadmulti(filename, vec, IMREAD_UNCHANGED);
-        vec.clear();
-    }
-
-    EXPECT_EQ(0, remove(filename.c_str()));
-    SANITY_CHECK_NOTHING();
-}
-
-PERF_TEST_P(Decode, imagecollection, testing::ValuesIn(exts_multi))
-{
-    const string filename = cv::tempfile(GetParam().c_str());
-    Animation animation = makeCirclesAnimation();
-
-    imwritemulti(filename, animation.frames);
-
-    TEST_CYCLE()
-    {
-        {
-            ImageCollection ic(filename, IMREAD_UNCHANGED);
-            Mat frame = ic[int(ic.size() - 1)];
-        }
-    }
-
-    EXPECT_EQ(0, remove(filename.c_str()));
     SANITY_CHECK_NOTHING();
 }
 
