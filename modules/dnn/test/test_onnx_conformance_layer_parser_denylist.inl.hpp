@@ -247,29 +247,9 @@
 "test_reshape_reordered_last_dims", // ---- same as above ---
 "test_reshape_zero_and_negative_dim", // ---- same as above ---
 "test_reshape_zero_dim", // ---- same as above ---
-"test_resize_downsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
-"test_resize_downsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
-"test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
-"test_resize_downsample_scales_linear", // ---- same as above ---
+"test_resize_downsample_scales_cubic_align_corners",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
 "test_resize_downsample_scales_linear_align_corners", // ---- same as above ---
-"test_resize_downsample_scales_nearest", // ---- same as above ---
-"test_resize_downsample_sizes_cubic", // ---- same as above ---
-"test_resize_downsample_sizes_linear_pytorch_half_pixel", // ---- same as above ---
-"test_resize_downsample_sizes_nearest", // ---- same as above ---
-"test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn", // ---- same as above ---
-"test_resize_tf_crop_and_resize", // ---- same as above ---
-"test_resize_upsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
-"test_resize_upsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
-"test_resize_upsample_scales_cubic_align_corners", // ---- same as above ---
-"test_resize_upsample_scales_cubic_asymmetric", // ---- same as above ---
-"test_resize_upsample_scales_linear", // ---- same as above ---
-"test_resize_upsample_scales_linear_align_corners", // ---- same as above ---
-"test_resize_upsample_scales_nearest", // ---- same as above ---
-"test_resize_upsample_sizes_cubic", // ---- same as above ---
-"test_resize_upsample_sizes_nearest", // ---- same as above ---
-"test_resize_upsample_sizes_nearest_ceil_half_pixel", // ---- same as above ---
-"test_resize_upsample_sizes_nearest_floor_align_corners", // ---- same as above ---
-"test_resize_upsample_sizes_nearest_round_prefer_ceil_asymmetric", // ---- same as above ---
+"test_resize_upsample_sizes_nearest", // Wrong output for few OS (such as ubuntu 24.04, RISC-V, etc)
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time", // ---- same as above ---
 "test_rnn_seq_length", // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
