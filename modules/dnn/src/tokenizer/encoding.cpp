@@ -105,11 +105,50 @@ void Encoding::train_bpe(const std::string& text, int vocabSize, bool verbose) {
     }
     int numMerges = vocabSize - 256;
     std::vector<std::string> regexes = { patStr_}; 
-    std::vector<std::string> textChunks = unicode_regex_split(text, regexes);
-    std::vector<std::vector<int>> ids;
-    ids.reserve(textChunks.size());
+    std::cout << "size of text: " << text.size() << std::endl;
+    // std::cout << "Before regex split new\n\n";
+    /*
+        Since we dont have a pre-tokenization step implemented yet 
+        the training for wiki text is roughly ~540MB which is much 
+        to large to process all of it at once in unicode_regex_split.
+        For now a practical method is to split it into smaller chuncks 
+        before processing. Later should add a pre-tokenization step for
+        training like hugginface does. 
+    // */
+    // // split text into chucks ~10MB
+    // const size_t chunck_size = 10 * 1024 * 1024; // 10MB
+    // std::vector<std::string> textChunks; 
+    // for (size_t i = 0; i < text.size(); i += chunck_size) {
+    //     textChunks.push_back(text.substr(i, std::min(chunck_size, text.size() - i)));
+    // }
+    // // Tokenize chunck
+    // std::vector<std::string> allTokens;
+    // for (const auto& chunck : textChunks) {
+    //     std::vector<std::string> tokens = unicode_regex_split(chunck, regexes);
+    //     allTokens.insert(allTokens.end(), tokens.begin(), tokens.end());
+    // }
+    // std::vector<std::string> textChunks = unicode_regex_split(text, regexes);
+    // std::cout << "After regex split\n\n";
 
-    for (auto &ch : textChunks) 
+    //[TODO] The above is still slow and wont compile 
+    // DEBUG: Use only the first 1MB for testing
+    // size_t sample_size = std::min<size_t>(text.size(), 1024 * 1024); // 1MB 
+    size_t sample_size = std::min<size_t>(text.size(), 10 * 1024); // 10KB
+    std::string sample_text = text.substr(0, sample_size);
+    std::cout << "Before regex split\n\n";
+
+    // Split sample_text into chunks (here, just one chunk for simplicity)
+    std::vector<std::string> textChunks = { sample_text };
+
+    std::vector<std::string> allTokens;
+    for (const auto& chunk : textChunks) {
+        std::vector<std::string> tokens = unicode_regex_split(chunk, regexes);
+        allTokens.insert(allTokens.end(), tokens.begin(), tokens.end());
+    }
+    std::vector<std::vector<int>> ids;
+    ids.reserve(allTokens.size());
+
+    for (auto &ch : allTokens) 
         ids.push_back(encodeUTF8(ch));
 
     // iteratively merge the most common pairs to create new tokens
