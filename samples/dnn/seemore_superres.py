@@ -9,6 +9,8 @@ Copyright (C) 2025, Bigvision LLC.
 This sample demonstrates super-resolution using the SeeMoreDetails model.
 The model upscales images by 4x while enhancing details and reducing noise.
 Supports image inputs only.
+
+SeeMoreDetails Repo: https://github.com/eduardzamfir/seemoredetails
 """
 
 import cv2 as cv
@@ -141,12 +143,19 @@ def apply_super_resolution(net, image, args):
 
     return result
 
-def process_image(net, input_path, args):
-    """Process a single image"""
+def main(func_args=None):
+    args = get_args_parser(func_args)
+
+    net = load_model(args)
+    if net is None:
+        print("Failed to load model.")
+        return -1
+
+    input_path = cv.samples.findFile(args.input)
     image = cv.imread(input_path)
     if image is None:
         print(f"Cannot load image: {input_path}")
-        return False
+        return -1
 
     print(f"Processing image: {input_path}")
     result = apply_super_resolution(net, image, args)
@@ -161,19 +170,6 @@ def process_image(net, input_path, args):
         if key == ord("q"):
             break
     cv.destroyAllWindows()
-    return True
-
-def main(func_args=None):
-    args = get_args_parser(func_args)
-
-    net = load_model(args)
-    if net is None:
-        print("Failed to load model.")
-        return -1
-    input_path = cv.samples.findFile(args.input)
-    if not process_image(net, input_path, args):
-        return -1
-
     return 0
 
 if __name__ == "__main__":

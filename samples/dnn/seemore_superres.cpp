@@ -4,6 +4,13 @@ It is subject to the license terms in the LICENSE file found in the top-level di
 of this distribution and at http://opencv.org/license.html.
 
 Copyright (C) 2025, Bigvision LLC.
+
+
+This sample demonstrates super-resolution using the SeeMoreDetails model.
+The model upscales images by 4x while enhancing details and reducing noise.
+Supports image inputs only.
+
+SeeMoreDetails Repo: https://github.com/eduardzamfir/seemoredetails
 */
 #include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
@@ -59,15 +66,16 @@ static Mat postprocessOutput(const Mat &output, const Size &originalSize)
         squeezed = output.clone();
     }
 
-    Mat channels[3];
+    Mat outputImage;
+    vector<Mat> channels(3);
     for (int i = 0; i < 3; i++)
     {
-        channels[2 - i] = Mat(squeezed.size[1], squeezed.size[2], CV_32F,
-                              squeezed.ptr<float>(i));
+        channels[i] = Mat(squeezed.size[1], squeezed.size[2], CV_32F,
+                        squeezed.ptr<float>(i));
     }
+    merge(channels, outputImage);
 
-    Mat outputImage;
-    merge(channels, 3, outputImage);
+    cvtColor(outputImage, outputImage, COLOR_RGB2BGR);
 
     outputImage = max(0.0, min(1.0, outputImage));
     outputImage.convertTo(outputImage, CV_8UC3, 255.0);
@@ -116,28 +124,6 @@ static void processFrame(Net &net, const Mat &frame, float scale, const Scalar &
 
     imshow("Input", frameWithText);
     imshow("Super-Resolution", resultWithText);
-}
-
-static bool processImage(Net &net, const string &inputPath,
-                         float scale, const Scalar &mean, bool swapRB, int width, int height)
-{
-    Mat image = imread(inputPath);
-    if (image.empty())
-    {
-        cerr << "Cannot load image: " << inputPath << endl;
-        return false;
-    }
-
-    namedWindow("Input", WINDOW_NORMAL);
-    namedWindow("Super-Resolution", WINDOW_NORMAL);
-
-    moveWindow("Input", WINDOW_OFFSET_X, WINDOW_OFFSET_Y);
-    moveWindow("Super-Resolution", WINDOW_OFFSET_X + image.cols + WINDOW_SPACING, WINDOW_OFFSET_Y);
-
-    processFrame(net, image, scale, mean, swapRB, width, height);
-    waitKey(0);
-    destroyAllWindows();
-    return true;
 }
 
 int main(int argc, char **argv)
@@ -197,18 +183,20 @@ int main(int argc, char **argv)
     }
 
     Mat testImage = imread(inputPath);
-    if (!testImage.empty())
-    {
-        if (!processImage(net, inputPath, scale, mean, swapRB, width, height))
-        {
-            return -1;
-        }
-    }
-    else
+    if (testImage.empty())
     {
         cerr << "Cannot load image: " << inputPath << endl;
         return -1;
     }
+
+    namedWindow("Input", WINDOW_NORMAL);
+    namedWindow("Super-Resolution", WINDOW_NORMAL);
+    moveWindow("Input", WINDOW_OFFSET_X, WINDOW_OFFSET_Y);
+    moveWindow("Super-Resolution", WINDOW_OFFSET_X + testImage.cols + WINDOW_SPACING, WINDOW_OFFSET_Y);
+
+    processFrame(net, testImage, scale, mean, swapRB, width, height);
+    waitKey(0);
+    destroyAllWindows();
 
     return 0;
 }
