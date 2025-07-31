@@ -74,7 +74,7 @@ static Animation makeCirclesAnimation(Size size = Size(320, 240), int type = CV_
             cv::circle(img, c.pos, (int)c.radius, c.border_color, 1, cv::LINE_AA);
         }
 
-        animation.frames.push_back(img.clone());
+        animation.frames.push_back(img);
         animation.durations.push_back(20); // milliseconds
     }
 
