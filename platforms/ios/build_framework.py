@@ -139,12 +139,16 @@ class Builder:
                 cmake_flags.append("-DCMAKE_OSX_SYSROOT=%s" % sdk_path)
                 cmake_flags.append("-DCMAKE_CXX_COMPILER_WORKS=TRUE")
                 cmake_flags.append("-DCMAKE_C_COMPILER_WORKS=TRUE")
+
+            print("::group::Building target " + target[0] + " " + target[1], flush=True)
             self.buildOne(target[0], target[1], main_build_dir, cmake_flags)
+            print("::endgroup::", flush=True)
 
             if not self.dynamic:
                 self.mergeLibs(main_build_dir)
             else:
                 self.makeDynamicLib(main_build_dir)
+
         self.makeFramework(outdir, dirs)
         if self.build_objc_wrapper:
             if self.run_tests:
