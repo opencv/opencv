@@ -1818,30 +1818,44 @@ void ONNXImporter::parseImageScaler(LayerParams& layerParams, const opencv_onnx:
 
 void ONNXImporter::parseClip(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "ReLU6";
-    float min_value = -FLT_MAX, max_value = FLT_MAX;
+
     int input_size = node_proto.input_size();
     CV_Check(input_size, 1 <= input_size && input_size <= 3, "");
-
-    if (input_size >= 2 && !node_proto.input(1).empty())
+    if (
+        (input_size >= 2 &&
+        !node_proto.input(1).empty() && constBlobs.find(node_proto.input(1)) == constBlobs.end()) ||
+        (input_size >= 3 &&
+        !node_proto.input(2).empty() && constBlobs.find(node_proto.input(2)) == constBlobs.end())
+    )
     {
-        if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
-            min_value = getBlob(node_proto, 1).at<float>(0);
-        else
-            CV_Error(Error::StsNotImplemented, "Non-constant min values in Clip are not supported");
+        int n_inputs = node_proto.input_size();
+        layerParams.type = "Clamp";
+        addLayer(layerParams, node_proto, n_inputs);
     }
+    else {
+        layerParams.type = "ReLU6";
+        float min_value = -FLT_MAX, max_value = FLT_MAX;
 
-    if (input_size == 3 && !node_proto.input(2).empty())
-    {
-        if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
-            max_value = getBlob(node_proto, 2).at<float>(0);
-        else
-            CV_Error(Error::StsNotImplemented, "Non-constant max values in Clip are not supported");
+        if (input_size >= 2 && !node_proto.input(1).empty())
+        {
+            if (constBlobs.find(node_proto.input(1)) != constBlobs.end())
+                min_value = getBlob(node_proto, 1).at<float>(0);
+            else
+                CV_Error(Error::StsNotImplemented, "Non-constant min values in Clip are not supported");
+        }
+
+        if (input_size == 3 && !node_proto.input(2).empty())
+        {
+            if (constBlobs.find(node_proto.input(2)) != constBlobs.end())
+                max_value = getBlob(node_proto, 2).at<float>(0);
+            else
+                CV_Error(Error::StsNotImplemented, "Non-constant max values in Clip are not supported");
+        }
+
+        layerParams.set("min_value", layerParams.get<float>("min", min_value));
+        layerParams.set("max_value", layerParams.get<float>("max", max_value));
+        addLayer(layerParams, node_proto, 1);
     }
-
-    layerParams.set("min_value", layerParams.get<float>("min", min_value));
-    layerParams.set("max_value", layerParams.get<float>("max", max_value));
-    addLayer(layerParams, node_proto, 1);
 }
 
 void ONNXImporter::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
