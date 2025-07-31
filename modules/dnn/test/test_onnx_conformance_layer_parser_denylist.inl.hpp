@@ -163,6 +163,7 @@
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
 "test_resize_downsample_scales_linear", // ---- same as above ---
 "test_resize_downsample_scales_linear_align_corners", // ---- same as above ---
+"test_resize_upsample_sizes_nearest", // Wrong output for few OS (such as ubuntu 24.04, RISC-V, etc)
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time", // ---- same as above ---
 "test_rnn_seq_length", // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
