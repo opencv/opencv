@@ -466,7 +466,7 @@ struct ExifEntry
     std::ostream& dump(std::ostream& strm) const;
 };
 
-CV_EXPORTS_W bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
+CV_EXPORTS bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
 CV_EXPORTS void dumpExif(std::ostream& strm, const std::vector< std::vector<ExifEntry> >& exif_entries);
 
 //! @} imgcodecs_flags
