@@ -1007,7 +1007,11 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                         break;
 
                     case IMWRITE_PNG_ZLIBBUFFER_SIZE:
-                        png_set_compression_buffer_size(png_ptr, params[i+1]);
+                        // The default value is 8 KiB.
+                        // The minimum limit is 6, which is from from https://github.com/opencv/opencv/blob/4.12.0/3rdparty/libpng/pngset.c#L1600 .
+                        // The maximum limit is 1 MiB, which has been provisionally set. libpng limitation is 2 GiB(INT32_MAX), but it is too large.
+                        // For normal use, 128 or 256 KiB may be sufficient. See https://zlib.net/zlib_how.html .
+                        png_set_compression_buffer_size(png_ptr, MIN(MAX(params[i+1],6), 1024*1024));
                         break;
 
                     default:
