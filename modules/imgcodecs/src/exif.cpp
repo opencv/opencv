@@ -53,6 +53,13 @@ namespace {
 
 namespace cv
 {
+bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries)
+{
+    ExifReader reader;
+    return reader.parseExif(data.data(), data.size(), exif_entries);
+}
+
+std::string exifTagIdToString(cv::ExifTagId);
 
 static std::string HexStringToBytes(const char* hexstring, size_t expected_length);
 
@@ -91,16 +98,10 @@ static std::string HexStringToBytes(const char* hexstring,
     return raw_data;
 }
 
-ExifEntry_t::ExifEntry_t() :
-    field_float(0), field_double(0), field_u32(0), field_s32(0),
-    tag(INVALID_TAG), field_u16(0), field_s16(0), field_u8(0), field_s8(0)
-{
-}
-
 /**
  * @brief ExifReader constructor
  */
-ExifReader::ExifReader() : m_format(NONE)
+ExifReader::ExifReader() : m_format(Endianness::NONE)
 {
 }
 
@@ -120,10 +121,10 @@ ExifReader::~ExifReader()
  *  @return ExifEntru_t structure. Caller has to know what tag it calls in order to extract proper field from the structure ExifEntry_t
  *
  */
-ExifEntry_t ExifReader::getTag(const ExifTagName tag) const
+ExifEntry ExifReader::getEntrybyTagId(const ExifTagId tag) const
 {
-    ExifEntry_t entry;
-    std::map<int, ExifEntry_t>::const_iterator it = m_exif.find(tag);
+    ExifEntry entry;
+    std::map<int, ExifEntry>::const_iterator it = m_exif.find(tag);
 
     if( it != m_exif.end() )
     {
@@ -176,7 +177,7 @@ bool ExifReader::processRawProfile(const char* profile, size_t profile_len) {
  * @return  true if parsing was successful
  *          false in case of unsuccessful parsing
  */
-bool ExifReader::parseExif(unsigned char* data, const size_t size)
+bool ExifReader::parseExif(const unsigned char* data, const size_t size)
 {
     // Populate m_data, then call parseExif() (private)
     if( data && size > 0 )
@@ -187,6 +188,10 @@ bool ExifReader::parseExif(unsigned char* data, const size_t size)
     {
         return false;
     }
+
+    std::vector< std::vector<ExifEntry> > exif_entries_vec;
+    decodeExif(m_data, exif_entries_vec);
+    std::cout << "------------------------ decoded exif ifd count : " << (int)exif_entries_vec.size() << std::endl;
 
     try {
         parseExif();
@@ -218,17 +223,71 @@ void ExifReader::parseExif()
     }
 
     uint32_t offset = getStartOffset();
-
     size_t numEntry = getNumDirEntry( offset );
 
     offset += 2; //go to start of tag fields
 
     for( size_t entry = 0; entry < numEntry; entry++ )
     {
-        ExifEntry_t exifEntry = parseExifEntry( offset );
-        m_exif.insert( std::make_pair( exifEntry.tag, exifEntry ) );
+        ExifEntry exifEntry = parseExifEntry( offset );
+        m_exif.insert( std::make_pair( exifEntry.tagId, exifEntry ) );
         offset += tiffFieldSize;
     }
+}
+
+bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::vector< std::vector<ExifEntry> >& exif_entries_vec)
+{
+    if (data && size > 0)
+    {
+        m_data.assign(data, data + size);
+    }
+    else
+    {
+        return false;
+    }
+
+    m_format = getFormat();
+
+    if (!checkTagMark())
+    {
+        return false;
+    }
+
+    std::vector<uint32_t> ifd_offsets;
+    ifd_offsets.push_back(getStartOffset());
+    size_t current_ifd = 0;
+    while (current_ifd < ifd_offsets.size())
+    {
+        uint32_t offset = ifd_offsets[current_ifd];
+
+        size_t numEntry = getNumDirEntry(offset);
+        offset += 2; //go to start of tag fields
+
+        std::vector<ExifEntry> exif_entries;
+        for (size_t i = 0; i < numEntry; ++i)
+        {
+            ExifEntry exifEntry = parseExifEntry(offset);
+            exifEntry.dump(std::cout);
+            exif_entries.push_back(exifEntry);
+            if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825) // Exif or GPS IFD pointer
+            {
+                uint32_t sub_ifd_offset = exifEntry.value.field_u32;
+                if (sub_ifd_offset < m_data.size())
+                    ifd_offsets.push_back(sub_ifd_offset);
+            }
+            offset += tiffFieldSize;
+        }
+        exif_entries_vec.push_back(exif_entries);
+        // Handle IFD1 (Next IFD offset at the end of current IFD)
+        if (offset + 4 <= m_data.size())
+        {
+            uint32_t next_ifd_offset = getU32(offset);
+            if (next_ifd_offset != 0 && next_ifd_offset < m_data.size())
+                ifd_offsets.push_back(next_ifd_offset);
+        }
+        current_ifd++;
+    }
+    return true;
 }
 
 /**
@@ -237,27 +296,27 @@ void ExifReader::parseExif()
  *
  * @return INTEL, MOTO or NONE
  */
-Endianness_t ExifReader::getFormat() const
+int ExifReader::getFormat() const
 {
     if (m_data.size() < 1)
-        return NONE;
+        return Endianness::NONE;
 
     if( m_data.size() > 1 && m_data[0] != m_data[1] )
     {
-        return NONE;
+        return Endianness::NONE;
     }
 
     if( m_data[0] == 'I' )
     {
-        return INTEL;
+        return Endianness::INTEL;
     }
 
     if( m_data[0] == 'M' )
     {
-        return MOTO;
+        return Endianness::MOTO;
     }
 
-    return NONE;
+    return Endianness::NONE;
 }
 
 /**
@@ -314,80 +373,56 @@ size_t ExifReader::getNumDirEntry(const size_t offsetNumDir) const
  *      Details can be found here: http://www.media.mit.edu/pia/Research/deepview/exif.html
  *
  * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return ExifEntry_t structure which corresponds to particular entry
+ * @return ExifEntry structure which corresponds to particular entry
  *
  */
-ExifEntry_t ExifReader::parseExifEntry(const size_t offset)
+ExifEntry ExifReader::parseExifEntry(const size_t offset)
 {
-    ExifEntry_t entry;
-    uint16_t tagNum = getExifTag( offset );
-    entry.tag = tagNum;
+    ExifEntry exifentry;
+    exifentry.tagId = ExifTagId(getU16(offset));
+    exifentry.type = ExifTagType(getU16(offset + 2));
+    exifentry.count = getU32(offset + 4);
 
-    switch( tagNum )
+    switch (exifentry.type)
     {
-        case IMAGE_DESCRIPTION:
-            entry.field_str = getString( offset );
-            break;
-        case MAKE:
-            entry.field_str = getString( offset );
-            break;
-        case MODEL:
-            entry.field_str = getString( offset );
-            break;
-        case ORIENTATION:
-            entry.field_u16 = getOrientation( offset );
-            break;
-        case XRESOLUTION:
-            entry.field_u_rational = getResolution( offset );
-            break;
-        case YRESOLUTION:
-            entry.field_u_rational = getResolution( offset );
-            break;
-        case RESOLUTION_UNIT:
-            entry.field_u16 = getResolutionUnit( offset );
-            break;
-        case SOFTWARE:
-            entry.field_str = getString( offset );
-            break;
-        case DATE_TIME:
-            entry.field_str = getString( offset );
-            break;
-        case WHITE_POINT:
-            entry.field_u_rational = getWhitePoint( offset );
-            break;
-        case PRIMARY_CHROMATICIES:
-            entry.field_u_rational = getPrimaryChromaticies( offset );
-            break;
-        case Y_CB_CR_COEFFICIENTS:
-            entry.field_u_rational = getYCbCrCoeffs( offset );
-            break;
-        case Y_CB_CR_POSITIONING:
-            entry.field_u16 = getYCbCrPos( offset );
-            break;
-        case REFERENCE_BLACK_WHITE:
-            entry.field_u_rational = getRefBW( offset );
-            break;
-        case COPYRIGHT:
-            entry.field_str = getString( offset );
-            break;
-        case EXIF_OFFSET:
-            break;
-        default:
-            entry.tag = INVALID_TAG;
-            break;
-    }
-    return entry;
-}
+    case TAG_TYPE_BYTE:
+    case TAG_TYPE_SBYTE:
+    case TAG_TYPE_UNDEFINED:
+        exifentry.value.field_u8 = m_data[offset + 8];
+        break;
 
-/**
- * @brief Get tag number from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return tag number
- */
-uint16_t ExifReader::getExifTag(const size_t offset) const
-{
-    return getU16( offset );
+    case TAG_TYPE_ASCII:
+        exifentry.value.field_str = getString(offset);
+        break;
+
+    case TAG_TYPE_SHORT:
+        exifentry.value.field_u16 = getU16(offset + 8);
+        break;
+
+    case TAG_TYPE_LONG:
+        exifentry.value.field_u32 = getU32(offset + 8);
+        break;
+
+    case TAG_TYPE_SSHORT:
+        exifentry.value.field_s16 = (int16_t)getU16(offset + 8);
+        break;
+
+    case TAG_TYPE_SLONG:
+        exifentry.value.field_s32 = (int32_t)getU32(offset + 8);
+        break;
+
+    case TAG_TYPE_RATIONAL:
+        exifentry.value.field_urational = getURational(offset);
+        break;
+    case TAG_TYPE_SRATIONAL:
+        exifentry.value.field_srational = getSRational(offset);
+        break;
+    default:
+        CV_LOG_WARNING(NULL, "Undefined ExifTagValue type " << exifentry.type);
+        break;
+    }
+
+    return exifentry;
 }
 
 /**
@@ -424,7 +459,7 @@ uint16_t ExifReader::getU16(const size_t offset) const
     if (offset + 1 >= m_data.size())
         throw ExifParsingError();
 
-    if( m_format == INTEL )
+    if( m_format == Endianness::INTEL )
     {
         return m_data[offset] + ( m_data[offset + 1] << 8 );
     }
@@ -442,7 +477,7 @@ uint32_t ExifReader::getU32(const size_t offset) const
     if (offset + 3 >= m_data.size())
         throw ExifParsingError();
 
-    if( m_format == INTEL )
+    if( m_format == Endianness::INTEL )
     {
         return m_data[offset] +
                 ( m_data[offset + 1] << 8 ) +
@@ -465,143 +500,190 @@ uint32_t ExifReader::getU32(const size_t offset) const
  * "rational" means a fractional value, it contains 2 signed/unsigned long integer value,
  *  and the first represents the numerator, the second, the denominator.
  */
-u_rational_t ExifReader::getURational(const size_t offset) const
+urational64_t ExifReader::getURational(const size_t offset) const
 {
-    uint32_t numerator = getU32( offset );
-    uint32_t denominator = getU32( offset + 4 );
-
-    return std::make_pair( numerator, denominator );
-
-}
-
-/**
- * @brief Get orientation information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return orientation number
- */
-uint16_t ExifReader::getOrientation(const size_t offset) const
-{
-    return getU16( offset + 8 );
-}
-
-/**
- * @brief Get resolution information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return resolution value
- */
-std::vector<u_rational_t> ExifReader::getResolution(const size_t offset) const
-{
-    std::vector<u_rational_t> result;
-    uint32_t rationalOffset = getU32( offset + 8 );
-    result.push_back( getURational( rationalOffset ) );
-
-    return result;
-}
-
-/**
- * @brief Get resolution unit from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return resolution unit value
- */
-uint16_t ExifReader::getResolutionUnit(const size_t offset) const
-{
-    return getU16( offset + 8 );
-}
-
-/**
- * @brief Get White Point information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return White Point value
- *
- * If the image uses CIE Standard Illumination D65(known as international
- * standard of 'daylight'), the values are '3127/10000,3290/10000'.
- */
-std::vector<u_rational_t> ExifReader::getWhitePoint(const size_t offset) const
-{
-    std::vector<u_rational_t> result;
-    uint32_t rationalOffset = getU32( offset + 8 );
-    result.push_back( getURational( rationalOffset ) );
-    result.push_back( getURational( rationalOffset + 8 ) );
-
-    return result;
-}
-
-/**
- * @brief Get Primary Chromaticies information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return vector with primary chromaticies values
- *
- */
-std::vector<u_rational_t> ExifReader::getPrimaryChromaticies(const size_t offset) const
-{
-    std::vector<u_rational_t> result;
-    uint32_t rationalOffset = getU32( offset + 8 );
-    for( size_t i = 0; i < primaryChromaticiesComponents; i++ )
-    {
-        result.push_back( getURational( rationalOffset ) );
-        rationalOffset += 8;
+    size_t dataOffset = getU32(offset + 8);
+    if (dataOffset > m_data.size() || dataOffset + 8 > m_data.size()) {
+        throw ExifParsingError();
     }
+    urational64_t result;
+    result.num = getU32(dataOffset);
+    result.denom = getU32(dataOffset + 4);
+
     return result;
 }
 
-/**
- * @brief Get YCbCr Coefficients information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return vector with YCbCr coefficients values
- *
- */
-std::vector<u_rational_t> ExifReader::getYCbCrCoeffs(const size_t offset) const
+srational64_t ExifReader::getSRational(const size_t offset) const
 {
-    std::vector<u_rational_t> result;
-    uint32_t rationalOffset = getU32( offset + 8 );
-    for( size_t i = 0; i < ycbcrCoeffs; i++ )
-    {
-        result.push_back( getURational( rationalOffset ) );
-        rationalOffset += 8;
+    size_t dataOffset = getU32(offset + 8);
+    if (dataOffset > m_data.size() || dataOffset + 8 > m_data.size()) {
+        throw ExifParsingError();
     }
+    srational64_t result;
+    result.num = getU32(dataOffset);
+    result.denom = getU32(dataOffset + 4);
+
     return result;
 }
 
-/**
- * @brief Get YCbCr Positioning information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return vector with YCbCr positioning value
- *
- */
-uint16_t ExifReader::getYCbCrPos(const size_t offset) const
+std::string tagTypeToString(ExifTagType type)
 {
-    return getU16( offset + 8 );
+    const char* typestr =
+        type == TAG_TYPE_NOTYPE ? "NoType" :
+        type == TAG_TYPE_BYTE ? "Byte" :
+        type == TAG_TYPE_ASCII ? "ASCII" :
+        type == TAG_TYPE_SHORT ? "Short" :
+        type == TAG_TYPE_LONG ? "Long" :
+        type == TAG_TYPE_RATIONAL ? "Rational" :
+        type == TAG_TYPE_SBYTE ? "SByte" :
+        type == TAG_TYPE_UNDEFINED ? "Undefined" :
+        type == TAG_TYPE_SSHORT ? "SShort" :
+        type == TAG_TYPE_SLONG ? "SLong" :
+        type == TAG_TYPE_SRATIONAL ? "SRational" :
+        type == TAG_TYPE_FLOAT ? "Float" :
+        type == TAG_TYPE_DOUBLE ? "Double" :
+        type == TAG_TYPE_IFD ? "IFD" :
+        type == TAG_TYPE_LONG8 ? "Long8" :
+        type == TAG_TYPE_SLONG8 ? "SLong8" :
+        type == TAG_TYPE_IFD8 ? "IFD8" : nullptr;
+    return typestr ? std::string(typestr) : cv::format("Unkhown type <%d>", (int)type);
 }
 
-/**
- * @brief Get Reference Black&White point information from raw exif data
- *          This is internal function and is not exposed to client
- * @param [in] offset Offset to entry in bytes inside raw exif data
- * @return vector with reference BW points
- *
- * In case of YCbCr format, first 2 show black/white of Y, next 2 are Cb,
- * last 2 are Cr. In case of RGB format, first 2 show black/white of R,
- * next 2 are G, last 2 are B.
- *
- */
-std::vector<u_rational_t> ExifReader::getRefBW(const size_t offset) const
+std::string exifTagIdToString(ExifTagId tag)
 {
-    const size_t rationalFieldSize = 8;
-    std::vector<u_rational_t> result;
-    uint32_t rationalOffset = getU32( offset + rationalFieldSize );
-    for( size_t i = 0; i < refBWComponents; i++ )
-    {
-        result.push_back( getURational( rationalOffset ) );
-        rationalOffset += rationalFieldSize;
+    const char* tagstr =
+        tag == TAG_EMPTY ? "<empty>" :
+        tag == TAG_SUB_FILETYPE ? "SubFileType" :
+        tag == TAG_IMAGE_WIDTH ? "ImageWidth" :
+        tag == TAG_IMAGE_LENGTH ? "ImageLength" :
+        tag == TAG_BITS_PER_SAMPLE ? "BitsPerSample" :
+        tag == TAG_COMPRESSION ? "Compression" :
+        tag == TAG_PHOTOMETRIC ? "Photometric" :
+        tag == TAG_IMAGEDESCRIPTION ? "ImageDescription" :
+        tag == TAG_MAKE ? "Make" :
+        tag == TAG_MODEL ? "Model" :
+        tag == TAG_STRIP_OFFSET ? "StripOffset" :
+        tag == TAG_SAMPLES_PER_PIXEL ? "SamplesPerPixel" :
+        tag == TAG_ROWS_PER_STRIP ? "RowsPerStrip" :
+        tag == TAG_STRIP_BYTE_COUNTS ? "StripByteCounts" :
+        tag == TAG_PLANAR_CONFIG ? "PlanarConfig" :
+        tag == TAG_ORIENTATION ? "Orientation" :
+        tag == TAG_XRESOLUTION ? "XResolution" :
+        tag == TAG_YRESOLUTION ? "YResolution" :
+        tag == TAG_RESOLUTION_UNIT ? "ResolutionUnit" :
+        tag == TAG_SOFTWARE ? "Software" :
+        tag == TAG_MODIFYDATE ? "ModifyDate" :
+        tag == TAG_SAMPLEFORMAT ? "SampleFormat" :
+        tag == TAG_YCBCRPOSITIONING ? "YCbCrPositioning" :
+        tag == TAG_JPGFROMRAWSTART ? "JpgFromRawStart " :
+        tag == TAG_JPGFROMRAWLENGTH ? "JpgFromRawLength" :
+        tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFARepeatPatternDim" :
+        tag == TAG_CFA_PATTERN ? "CFAPattern" :
+
+        tag == TAG_COPYRIGHT ? "Copyright" :
+        tag == TAG_EXPOSURE_TIME ? "ExposureTime" :
+        tag == TAG_FNUMBER ? "FNumber" :
+
+        tag == TAG_EXIF_OFFSET ? "ExifOffset" :
+        tag == TAG_GPSINFO ? "GPSInfo" :
+        tag == TAG_ISOSPEED ? "ISOSpeed" :
+
+        tag == TAG_DATETIME_CREATE ? "CreateDate" :
+        tag == TAG_DATETIME_ORIGINAL ? "DateTimeOriginal" :
+
+        tag == TAG_FLASH ? "Flash" :
+        tag == TAG_FOCALLENGTH ? "FocalLength" :
+        tag == TAG_EP_STANDARD_ID ? "TIFF/EPStandardID" :
+
+        tag == TAG_SHUTTER_SPEED ? "Shutter Speed" :
+        tag == TAG_APERTURE_VALUE ? "Aperture Value" :
+        tag == TAG_MAKERNOTE ? "MakerNote" :
+        tag == TAG_SUBSECTIME ? "SubSec Time" :
+        tag == TAG_SUBSECTIME_ORIGINAL ? "SubSec Original Time" :
+        tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
+
+        tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
+        tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
+        tag == TAG_WHITE_BALANCE ? "White Balance" :
+
+        tag == TAG_EXIF_VERSION ? "Exif Version" :
+
+        tag == TAG_DNG_VERSION ? "DNGVersion" :
+        tag == TAG_DNG_BACKWARD_VERSION ? "DNGBackwardVersion" :
+        tag == TAG_UNIQUE_CAMERA_MODEL ? "UniqueCameraModel" :
+        tag == TAG_CHROMA_BLUR_RADIUS ? "ChromaBlurRadius" :
+        tag == TAG_CFA_PLANECOLOR ? "CFAPlaneColor" :
+        tag == TAG_CFA_LAYOUT ? "CFALayout" :
+        tag == TAG_BLACK_LEVEL_REPEAT_DIM ? "BlackLevelRepeatDim" :
+        tag == TAG_BLACK_LEVEL ? "BlackLevel" :
+        tag == TAG_WHITE_LEVEL ? "WhiteLevel" :
+        tag == TAG_DEFAULT_SCALE ? "DefaultScale" :
+        tag == TAG_DEFAULT_CROP_ORIGIN ? "DefaultCropOrigin" :
+        tag == TAG_DEFAULT_CROP_SIZE ? "DefaultCropSize" :
+        tag == TAG_COLOR_MATRIX1 ? "ColorMatrix1" :
+        tag == TAG_COLOR_MATRIX2 ? "ColorMatrix2" :
+        tag == TAG_CAMERA_CALIBRATION1 ? "CameraCalibration1" :
+        tag == TAG_CAMERA_CALIBRATION2 ? "CameraCalibration2" :
+        tag == TAG_ANALOG_BALANCE ? "AnalogBalance" :
+        tag == TAG_AS_SHOT_NEUTRAL ? "AsShotNeutral" :
+        tag == TAG_AS_SHOT_WHITE_XY ? "AsShotWhiteXY" :
+        tag == TAG_BASELINE_EXPOSURE ? "BaselineExposure" :
+        tag == TAG_CALIBRATION_ILLUMINANT1 ? "CalibrationIlluminant1" :
+        tag == TAG_CALIBRATION_ILLUMINANT2 ? "CalibrationIlluminant2" :
+        tag == TAG_EXTRA_CAMERA_PROFILES ? "ExtraCameraProfiles" :
+        tag == TAG_PROFILE_NAME ? "ProfileName" :
+        tag == TAG_AS_SHOT_PROFILE_NAME ? "AsShotProfileName" :
+        tag == TAG_PREVIEW_COLORSPACE ? "PreviewColorspace" :
+        tag == TAG_OPCODE_LIST2 ? "OpCodeList2" :
+        tag == TAG_NOISE_PROFILE ? "NoiseProfile" :
+        tag == TAG_DEFAULT_BLACK_RENDER ? "BlackRender" :
+        tag == TAG_ACTIVE_AREA ? "ActiveArea" :
+        tag == TAG_FORWARD_MATRIX1 ? "ForwardMatrix1" :
+        tag == TAG_FORWARD_MATRIX2 ? "ForwardMatrix2" : nullptr;
+    return tagstr ? std::string(tagstr) : cv::format("<unknown tag>(%d)", (int)tag);
+};
+
+std::ostream& ExifEntry::dump(std::ostream& strm) const
+{
+    if (empty()) {
+        strm << "<empty>";
+        return strm;
     }
-    return result;
+
+    strm << exifTagIdToString(tagId) << ": ";
+
+    switch (type) {
+    case TAG_TYPE_ASCII:
+        strm << "\"" << value.field_str << "\"";
+        break;
+    case TAG_TYPE_BYTE:
+    case TAG_TYPE_UNDEFINED:
+        strm << static_cast<int>(value.field_u8);
+        break;
+    case TAG_TYPE_SHORT:
+        strm << value.field_u16;
+        break;
+    case TAG_TYPE_LONG:
+        strm << value.field_u32;
+        break;
+    case TAG_TYPE_FLOAT:
+        strm << value.field_float;
+        break;
+    case TAG_TYPE_DOUBLE:
+        strm << value.field_double;
+        break;
+    case TAG_TYPE_RATIONAL:
+        strm << value.field_urational.num << "/" << value.field_urational.denom;
+        break;
+    case TAG_TYPE_SRATIONAL:
+        strm << value.field_srational.num << "/" << value.field_srational.denom;
+        break;
+    default:
+        break;
+    }
+
+    strm << std::endl;
+    return strm;
 }
 
 } //namespace cv

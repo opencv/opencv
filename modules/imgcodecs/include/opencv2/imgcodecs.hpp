@@ -44,6 +44,7 @@
 #define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
+#include <map>
 
 /**
   @defgroup imgcodecs Image file reading and writing
@@ -262,6 +263,211 @@ enum ImageMetadataType
 
     IMAGE_METADATA_MAX = 2       // Highest valid index (usually used for bounds checking)
 };
+
+enum ExifTagType
+{
+    TAG_TYPE_NOTYPE = 0,  // Invalid or undefined type
+    TAG_TYPE_BYTE = 1,  // 8-bit unsigned integer
+    TAG_TYPE_ASCII = 2,  // 8-bit ASCII string, null-terminated
+    TAG_TYPE_SHORT = 3,  // 16-bit unsigned integer
+    TAG_TYPE_LONG = 4,  // 32-bit unsigned integer
+    TAG_TYPE_RATIONAL = 5,  // Two LONGs: numerator and denominator (64-bit unsigned fraction)
+    TAG_TYPE_SBYTE = 6,  // 8-bit signed integer
+    TAG_TYPE_UNDEFINED = 7,  // 8-bit untyped data
+    TAG_TYPE_SSHORT = 8,  // 16-bit signed integer
+    TAG_TYPE_SLONG = 9,  // 32-bit signed integer
+    TAG_TYPE_SRATIONAL = 10, // Two SLONGs: signed 64-bit fraction
+    TAG_TYPE_FLOAT = 11, // IEEE 32-bit float
+    TAG_TYPE_DOUBLE = 12, // IEEE 64-bit float
+    TAG_TYPE_IFD = 13, // 32-bit offset to IFD
+    TAG_TYPE_LONG8 = 16, // BigTIFF: 64-bit unsigned integer
+    TAG_TYPE_SLONG8 = 17, // BigTIFF: 64-bit signed integer
+    TAG_TYPE_IFD8 = 18  // BigTIFF: 64-bit offset to IFD
+};
+
+/**
+ * @brief Picture orientation which may be taken from EXIF
+ *      Orientation usually matters when the picture is taken by
+ *      smartphone or other camera with orientation sensor support
+ *      Corresponds to EXIF 2.3 Specification
+ */
+enum ImageOrientation
+{
+    IMAGE_ORIENTATION_TL = 1, ///< Horizontal (normal)
+    IMAGE_ORIENTATION_TR = 2, ///< Mirrored horizontal
+    IMAGE_ORIENTATION_BR = 3, ///< Rotate 180
+    IMAGE_ORIENTATION_BL = 4, ///< Mirrored vertical
+    IMAGE_ORIENTATION_LT = 5, ///< Mirrored horizontal & rotate 270 CW
+    IMAGE_ORIENTATION_RT = 6, ///< Rotate 90 CW
+    IMAGE_ORIENTATION_RB = 7, ///< Mirrored horizontal & rotate 90 CW
+    IMAGE_ORIENTATION_LB = 8  ///< Rotate 270 CW
+};
+
+/**
+ * @brief Base Exif tags used by IFD0 (main image)
+ */
+enum ExifTagId
+{
+    TAG_EMPTY = 0,
+    TAG_SUB_FILETYPE = 254,
+    TAG_IMAGE_WIDTH = 256,
+    TAG_IMAGE_LENGTH = 257,
+    TAG_BITS_PER_SAMPLE = 258,
+    TAG_COMPRESSION = 259,
+    TAG_PHOTOMETRIC = 262,
+    TAG_IMAGEDESCRIPTION = 270,
+    TAG_MAKE = 271,
+    TAG_MODEL = 272,
+    TAG_STRIP_OFFSET = 273,
+    TAG_SAMPLES_PER_PIXEL = 277,
+    TAG_ROWS_PER_STRIP = 278,
+    TAG_STRIP_BYTE_COUNTS = 279,
+    TAG_PLANAR_CONFIG = 284,
+    TAG_ORIENTATION = 274,
+
+    TAG_XRESOLUTION = 282,
+    TAG_YRESOLUTION = 283,
+    TAG_RESOLUTION_UNIT = 296,
+
+    TAG_SOFTWARE = 305,
+    TAG_MODIFYDATE = 306,
+
+    TAG_SAMPLEFORMAT = 339,
+    TAG_JPGFROMRAWSTART = 513,
+    TAG_JPGFROMRAWLENGTH = 514,
+    TAG_YCBCRPOSITIONING = 531,
+
+    // DNG extension
+    TAG_CFA_REPEAT_PATTERN_DIM = 33421,
+    TAG_CFA_PATTERN = 33422,
+
+    TAG_COPYRIGHT = 33432,
+    TAG_EXPOSURE_TIME = 33434,
+    TAG_FNUMBER = 33437,
+
+    TAG_EXIF_OFFSET = 34665,
+    TAG_GPSINFO = 34853,
+    TAG_ISOSPEED = 34855,
+
+    TAG_EXIF_VERSION = 36864,
+    TAG_DATETIME_ORIGINAL = 36867,
+    TAG_DATETIME_CREATE = 36868,
+
+    TAG_SHUTTER_SPEED = 37377,
+    TAG_APERTURE_VALUE = 37378,
+    TAG_FLASH = 37385,
+    TAG_FOCALLENGTH = 37386,
+    TAG_EP_STANDARD_ID = 37398,
+
+    TAG_MAKERNOTE = 37500,
+    TAG_SUBSECTIME = 37520,
+
+    TAG_SUBSECTIME_ORIGINAL = 37521,
+    TAG_SUBSECTIME_DIGITIZED = 37522,
+
+    TAG_EXIF_IMAGE_WIDTH = 40962,
+    TAG_EXIF_IMAGE_HEIGHT = 40963,
+    TAG_WHITE_BALANCE = 41987,
+
+    TAG_DNG_VERSION = 50706,
+    TAG_DNG_BACKWARD_VERSION = 50707,
+    TAG_UNIQUE_CAMERA_MODEL = 50708,
+    TAG_CHROMA_BLUR_RADIUS = 50703,
+    TAG_CFA_PLANECOLOR = 50710,
+    TAG_CFA_LAYOUT = 50711,
+    TAG_BLACK_LEVEL_REPEAT_DIM = 50713,
+    TAG_BLACK_LEVEL = 50714,
+    TAG_WHITE_LEVEL = 50717,
+    TAG_DEFAULT_SCALE = 50718,
+    TAG_DEFAULT_CROP_ORIGIN = 50719,
+    TAG_DEFAULT_CROP_SIZE = 50720,
+    TAG_COLOR_MATRIX1 = 50721,
+    TAG_COLOR_MATRIX2 = 50722,
+    TAG_CAMERA_CALIBRATION1 = 50723,
+    TAG_CAMERA_CALIBRATION2 = 50724,
+    TAG_ANALOG_BALANCE = 50727,
+    TAG_AS_SHOT_NEUTRAL = 50728,
+    TAG_AS_SHOT_WHITE_XY = 50729,
+    TAG_BASELINE_EXPOSURE = 50730,
+    TAG_CALIBRATION_ILLUMINANT1 = 50778,
+    TAG_CALIBRATION_ILLUMINANT2 = 50779,
+    TAG_EXTRA_CAMERA_PROFILES = 50933,
+    TAG_PROFILE_NAME = 50936,
+    TAG_AS_SHOT_PROFILE_NAME = 50934,
+    TAG_PREVIEW_COLORSPACE = 50970,
+    TAG_OPCODE_LIST2 = 51009,
+    TAG_NOISE_PROFILE = 51041,
+    TAG_DEFAULT_BLACK_RENDER = 51110,
+    TAG_ACTIVE_AREA = 50829,
+    TAG_FORWARD_MATRIX1 = 50964,
+    TAG_FORWARD_MATRIX2 = 50965,
+    TAG_INVALID_TAG = 65535
+};
+
+enum Endianness
+{
+    INTEL = 0x49,
+    MOTO = 0x4D,
+    NONE = 0x00
+};
+
+struct urational64_t
+{
+    uint32_t num = 0, denom = 1;
+};
+
+struct srational64_t
+{
+    int32_t num = 0, denom = 1;
+};
+
+/**
+ * @brief Entry which contains possible values for different EXIF tags.
+ * Only the field matching the `type` in ExifEntry should be considered valid.
+ */
+struct ExifTagValue
+{
+    ExifTagValue() :
+        field_float(0.0f), field_double(0.0),
+        field_u32(0), field_s32(0),
+        field_u16(0), field_s16(0),
+        field_u8(0), field_s8(0)
+    {}
+
+    srational64_t field_srational; ///< Signed rational (e.g., ShutterSpeedValue)
+    urational64_t field_urational; ///< Unsigned rational (e.g., ExposureTime)
+    std::string   field_str;       ///< ASCII string or undefined textual data (e.g., Make, Model)
+
+    float    field_float;   ///< Not commonly used in standard EXIF
+    double   field_double;  ///< Not commonly used in standard EXIF
+
+    uint32_t field_u32;     ///< Unsigned 32-bit integer (e.g., ImageWidth)
+    int32_t  field_s32;     ///< Signed 32-bit integer
+
+    uint16_t field_u16;     ///< Unsigned 16-bit integer (e.g., Orientation)
+    int16_t  field_s16;     ///< Signed 16-bit integer
+
+    uint8_t  field_u8;      ///< Unsigned 8-bit integer
+    int8_t   field_s8;      ///< Signed 8-bit integer
+};
+
+struct ExifEntry
+{
+    ExifEntry() {}
+
+    ExifTagId tagId = TAG_EMPTY;
+    ExifTagType type = TAG_TYPE_NOTYPE;
+    ExifTagValue value;
+    int32_t count = 1;
+
+    bool empty() const {
+        return tagId == TAG_EMPTY;
+    }
+    std::ostream& dump(std::ostream& strm) const;
+};
+
+CV_EXPORTS_W bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
+CV_EXPORTS void dumpExif(std::ostream& strm, const std::vector< std::vector<ExifEntry> >& exif_entries);
 
 //! @} imgcodecs_flags
 

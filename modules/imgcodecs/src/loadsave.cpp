@@ -402,13 +402,13 @@ static void ExifTransform(int orientation, OutputArray img)
     }
 }
 
-static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
+static void ApplyExifOrientation(ExifEntry orientationTag, OutputArray img)
 {
     int orientation = IMAGE_ORIENTATION_TL;
 
-    if (orientationTag.tag != INVALID_TAG)
+    if (orientationTag.tagId != TAG_INVALID_TAG)
     {
-        orientation = orientationTag.field_u16; //orientation is unsigned short, so check field_u16
+        orientation = orientationTag.value.field_u16; //orientation is unsigned short, so check field_u16
         ExifTransform(orientation, img);
     }
 }
@@ -614,7 +614,7 @@ imread_( const String& filename, int flags, OutputArray mat,
     /// optionally rotate the data if EXIF orientation flag says so
     if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED )
     {
-        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        ApplyExifOrientation(decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
     }
 
     return true;
@@ -714,7 +714,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
         // optionally rotate the data if EXIF' orientation flag says so
         if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
         {
-            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+            ApplyExifOrientation(decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
         }
 
         mats.push_back(mat);
@@ -882,7 +882,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
         // optionally rotate the data if EXIF' orientation flag says so
         if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
         {
-            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+            ApplyExifOrientation(decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
         }
 
         if (current >= start)
@@ -993,7 +993,7 @@ static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, 
         // optionally rotate the data if EXIF' orientation flag says so
         if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
         {
-            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+            ApplyExifOrientation(decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
         }
 
         if (current >= start)
@@ -1398,7 +1398,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
     /// optionally rotate the data if EXIF' orientation flag says so
     if (!mat.empty() && (flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
     {
-        ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        ApplyExifOrientation(decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
     }
 
     return true;
@@ -1554,7 +1554,7 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
         // optionally rotate the data if EXIF' orientation flag says so
         if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
         {
-            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+            ApplyExifOrientation(decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
         }
 
         mats.push_back(mat);
@@ -1839,7 +1839,7 @@ Mat ImageCollection::Impl::readData() {
         return cv::Mat();
 
     if ((m_flags & IMREAD_IGNORE_ORIENTATION) == 0 && m_flags != IMREAD_UNCHANGED) {
-        ApplyExifOrientation(m_decoder->getExifTag(ORIENTATION), mat);
+        ApplyExifOrientation(m_decoder->getExifEntrybyTagId(TAG_ORIENTATION), mat);
     }
 
     return mat;
