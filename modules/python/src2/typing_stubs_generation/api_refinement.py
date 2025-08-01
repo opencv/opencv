@@ -2,7 +2,7 @@ __all__ = [
     "apply_manual_api_refinement"
 ]
 
-from typing import cast, Sequence, Callable, Iterable
+from typing import cast, Sequence, Callable, Iterable, Optional
 
 from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
@@ -93,19 +93,35 @@ def export_matrix_type_constants(root: NamespaceNode) -> None:
     )
 
 
-def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], None]:
+def make_optional_arg(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], None]:
     def _make_optional_arg(root_node: NamespaceNode,
                            function_symbol_name: SymbolName) -> None:
         function = find_function_node(root_node, function_symbol_name)
-        for overload in function.overloads:
-            arg_idx = _find_argument_index(overload.arguments, arg_name)
-            # Avoid multiplying optional qualification
-            if isinstance(overload.arguments[arg_idx].type_node, OptionalTypeNode):
-                continue
+        for arg_name in arg_names:
+            found_overload_with_arg = False
 
-            overload.arguments[arg_idx].type_node = OptionalTypeNode(
-                cast(TypeNode, overload.arguments[arg_idx].type_node)
-            )
+            for overload in function.overloads:
+                arg_idx = _find_argument_index(overload.arguments, arg_name)
+
+                # skip overloads without this argument
+                if arg_idx is None:
+                    continue
+
+                # Avoid multiplying optional qualification
+                if isinstance(overload.arguments[arg_idx].type_node, OptionalTypeNode):
+                    continue
+
+                overload.arguments[arg_idx].type_node = OptionalTypeNode(
+                    cast(TypeNode, overload.arguments[arg_idx].type_node)
+                )
+
+                found_overload_with_arg = True
+
+            if not found_overload_with_arg:
+                raise RuntimeError(
+                    f"Failed to find argument with name: '{arg_name}'"
+                    f" in '{function_symbol_name.name}' overloads"
+                )
 
     return _make_optional_arg
 
@@ -327,13 +343,11 @@ def _trim_class_name_from_argument_types(
 
 
 def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
-                         name: str) -> int:
+                         name: str) -> Optional[int]:
     for i, arg in enumerate(arguments):
         if arg.name == name:
             return i
-    raise RuntimeError(
-        f"Failed to find argument with name: '{name}' in {arguments}"
-    )
+    return None
 
 
 NODES_TO_REFINE = {
@@ -341,6 +355,23 @@ NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
     SymbolName(("cv", ), (), "floodFill"): make_optional_arg("mask"),
     SymbolName(("cv", ), ("Feature2D", ), "detectAndCompute"): make_optional_arg("mask"),
+    SymbolName(("cv", ), (), "findEssentialMat"): make_optional_arg(
+        "distCoeffs1", "distCoeffs2", "dist_coeff1", "dist_coeff2"
+    ),
+    SymbolName(("cv", ), (), "drawFrameAxes"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "getOptimalNewCameraMatrix"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "initInverseRectificationMap"): make_optional_arg("distCoeffs", "R"),
+    SymbolName(("cv", ), (), "initUndistortRectifyMap"): make_optional_arg("distCoeffs", "R"),
+    SymbolName(("cv", ), (), "projectPoints"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solveP3P"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnP"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPGeneric"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPRansac"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPRefineLM"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPRefineVVS"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "undistort"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "undistortPoints"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", "fisheye"), (), "initUndistortRectifyMap"): make_optional_arg("D"),
     SymbolName(("cv", ), (), "imread"): make_optional_none_return,
     SymbolName(("cv", ), (), "imdecode"): make_optional_none_return,
 }
