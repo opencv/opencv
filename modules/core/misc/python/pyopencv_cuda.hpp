@@ -51,6 +51,38 @@ static DLDataType GetDLDataType(int elemSize1, int depth) {
     return dtype;
 }
 
+static int GetType(DLDataType dtype, int channels) {
+    if (dtype.code == kDLInt)
+    {
+        switch (dtype.bits)
+        {
+            case 8: return CV_8SC(channels);
+            case 16: return CV_16SC(channels);
+            case 32: return CV_32SC(channels);
+            default: return -1;
+        }
+    }
+    if (dtype.code == kDLUInt)
+    {
+        switch (dtype.bits)
+        {
+            case 8: return CV_8UC(channels);
+            case 16: return CV_16UC(channels);
+            default: return -1;
+        }
+    }
+    if (dtype.code == kDLFloat)
+    {
+        switch (dtype.bits)
+        {
+            case 32: return CV_32FC(channels);
+            case 64: return CV_64FC(channels);
+            default: return -1;
+        }
+    }
+    return -1;
+}
+
 static void buildTensor(Ptr<cv::cuda::GpuMat> src, DLManagedTensor* tensor)
 {
     tensor->manager_ctx = 0;
@@ -125,6 +157,64 @@ static PyObject* to_dlpack(const T& src, PyObject* self, PyObject* py_args, PyOb
     return capsule;
 }
 
+// This method calls __dlpack__ of the object X with requested parameters. Then converts PyCapsule to one of OpenCV methods
+template<typename T>
+static PyObject* from_dlpack(PyObject* py_args, PyObject* kw)
+{
+    printf("1\n");
+    PyObject* arr = nullptr;
+    PyObject* device = nullptr;
+    bool copy = false;
+    const char* keywords[] = { "device", "copy", NULL };
+    if (!PyArg_ParseTupleAndKeywords(py_args, kw, "O|Op:from_dlpack", (char**)keywords, &arr, &device, &copy))
+        return nullptr;
+    printf("2\n");
+
+    // if (device == Py_None)
+    // {
+    //     // Check for __dlpack_device__
+    //     // PyErr_SetString(PyExc_BufferError, "unimplemented");
+    // }
+
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+
+    // Check device of source array
+    // PyObject* res = PyObject_CallMethodNoArgs(arr, PyString_FromString("__dlpack_device__"));
+    // if (res && PyTuple_Check(res))
+    // {
+
+    // }
+
+    PyObject* res = PyObject_CallMethodNoArgs(arr, PyString_FromString("__dlpack__"));
+    DLManagedTensor* tensor = reinterpret_cast<DLManagedTensor*>(PyCapsule_GetPointer(res, "dltensor"));
+
+    // CV_CheckEQ((int)tensor->dl_tensor.byte_offset, 0, "");
+    if (tensor->dl_tensor.device.device_type != kDLCUDA || tensor->dl_tensor.ndim != 3)
+    {
+        PyErr_SetString(PyExc_BufferError,
+                        format("cuda_GpuMat.from_dlpack expects a 3D tensor on CUDA device, "
+                               "but received tensor on device (%d) with %d dimensions",
+                               tensor->dl_tensor.device.device_type, tensor->dl_tensor.ndim).c_str());
+        Py_DECREF(res);
+        PyGILState_Release(gstate);
+        return nullptr;
+    }
+        // CV_CheckEQ(tensor->dl_tensor.strides[1], tensor->dl_tensor.shape[2], "");
+        // CV_CheckEQ((int)tensor->dl_tensor.strides[2], 1, "");
+        // pyopencv_cuda_GpuMat_t* m;
+    T retval(
+        tensor->dl_tensor.shape[0],
+        tensor->dl_tensor.shape[1],
+        GetType(tensor->dl_tensor.dtype, tensor->dl_tensor.shape[2]),
+        tensor->dl_tensor.data,
+        tensor->dl_tensor.strides[0] * tensor->dl_tensor.dtype.bits / 8
+    );
+    Py_DECREF(res);
+    PyGILState_Release(gstate);
+    return pyopencv_from(retval);
+}
+
 static PyObject* pyDLPackGpuMat(PyObject* self, PyObject* py_args, PyObject* kw) {
     Ptr<cv::cuda::GpuMat> * self1 = 0;
     if (!pyopencv_cuda_GpuMat_getp(self, self1))
@@ -143,9 +233,14 @@ static PyObject* pyDLPackDeviceCUDA() {
     return pyopencv_from(std::tuple<int, int>(kDLCUDA, 0));
 }
 
+static PyObject* pyGpuMatFromDLPack(PyObject*, PyObject* py_args, PyObject* kw) {
+    return from_dlpack<cv::cuda::GpuMat>(py_args, kw);
+}
+
 #define PYOPENCV_EXTRA_METHODS_cuda_GpuMat \
   {"__dlpack__", CV_PY_FN_WITH_KW(pyDLPackGpuMat), ""}, \
   {"__dlpack_device__", CV_PY_FN_WITH_KW(pyDLPackDeviceCUDA), ""}, \
+  {"from_dlpack", CV_PY_FN_WITH_KW_(pyGpuMatFromDLPack, METH_STATIC), ""}, \
 
 #define PYOPENCV_EXTRA_METHODS_cuda_GpuMatND \
   {"__dlpack__", CV_PY_FN_WITH_KW(pyDLPackGpuMatND), ""}, \
