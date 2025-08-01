@@ -55,6 +55,13 @@
 namespace cv
 {
 
+enum ExifEndianness
+{
+    INTEL = 0x49,
+    MOTO = 0x4D,
+    NONE = 0x00
+};
+
 class ExifReader
 {
 public:

@@ -419,7 +419,7 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
         exifentry.value.field_srational = getSRational(offset);
         break;
     default:
-        CV_LOG_WARNING(NULL, "Undefined ExifTagValue type " << exifentry.type);
+        CV_LOG_WARNING(NULL, "Undefined ExifTagValue type " << (int)exifentry.type);
         break;
     }
 
