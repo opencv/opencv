@@ -8,7 +8,7 @@ from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
                     AggregatedTypeNode, CallableTypeNode, AnyTypeNode,
                     TupleTypeNode, UnionTypeNode, ProtocolClassNode,
-                    DictTypeNode, ClassTypeNode)
+                    DictTypeNode, ClassTypeNode, AliasRefTypeNode)
 from .ast_utils import (find_function_node, SymbolName,
                         for_each_function_overload)
 from .types_conversion import create_type_node
@@ -124,6 +124,39 @@ def make_optional_arg(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], 
                 )
 
     return _make_optional_arg
+
+
+def make_scalar_output_specific() -> Callable[[NamespaceNode, SymbolName], None]:
+    """Convert return type from generic Scalar to specific ScalarOutput for functions that return scalars."""
+    def _make_scalar_output_specific(root_node: NamespaceNode,
+                                   function_symbol_name: SymbolName) -> None:
+        function = find_function_node(root_node, function_symbol_name)
+        for overload in function.overloads:
+            # Check if return type is Scalar and convert to ScalarOutput
+            if (hasattr(overload, 'return_type') and
+                overload.return_type and
+                hasattr(overload.return_type.type_node, 'name') and
+                overload.return_type.type_node.name == 'Scalar'):
+                overload.return_type.type_node = AliasRefTypeNode("ScalarOutput")
+    
+    return _make_scalar_output_specific
+
+
+def make_scalar_input_specific(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], None]:
+    """Convert argument types from generic Scalar to specific ScalarInput for function parameters."""
+    def _make_scalar_input_specific(root_node: NamespaceNode,
+                                  function_symbol_name: SymbolName) -> None:
+        function = find_function_node(root_node, function_symbol_name)
+        for arg_name in arg_names:
+            for overload in function.overloads:
+                arg_idx = _find_argument_index(overload.arguments, arg_name)
+                if arg_idx is not None:
+                    # Check if argument type is Scalar and convert to ScalarInput
+                    if (hasattr(overload.arguments[arg_idx].type_node, 'name') and
+                        overload.arguments[arg_idx].type_node.name == 'Scalar'):
+                        overload.arguments[arg_idx].type_node = AliasRefTypeNode("ScalarInput")
+    
+    return _make_scalar_input_specific
 
 
 def refine_cuda_module(root: NamespaceNode) -> None:
@@ -374,6 +407,22 @@ NODES_TO_REFINE = {
     SymbolName(("cv", "fisheye"), (), "initUndistortRectifyMap"): make_optional_arg("D"),
     SymbolName(("cv", ), (), "imread"): make_optional_none_return,
     SymbolName(("cv", ), (), "imdecode"): make_optional_none_return,
+    
+    # Functions that return Scalar should return ScalarOutput
+    SymbolName(("cv", ), (), "mean"): make_scalar_output_specific(),
+    SymbolName(("cv", ), (), "sumElems"): make_scalar_output_specific(),
+    SymbolName(("cv", ), (), "trace"): make_scalar_output_specific(),
+
+    # Functions that take Scalar arguments should use ScalarInput
+    SymbolName(("cv", ), (), "line"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "rectangle"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "circle"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "ellipse"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "fillPoly"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "polylines"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "putText"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "drawContours"): make_scalar_input_specific("color"),
+    SymbolName(("cv", ), (), "floodFill"): make_scalar_input_specific("newVal", "loDiff", "upDiff"),
 }
 
 ERROR_CLASS_PROPERTIES = (
