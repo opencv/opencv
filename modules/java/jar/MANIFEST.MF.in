@@ -3,3 +3,4 @@ Specification-Version: @OPENCV_VERSION@
 Implementation-Title: OpenCV
 Implementation-Version: @OPENCV_VCSVERSION@
 Implementation-Date: @OPENCV_TIMESTAMP@
+Automatic-Module-Name: org.opencv

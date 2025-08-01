@@ -24,6 +24,7 @@
         <attribute name="Implementation-Title" value="OpenCV"/>
         <attribute name="Implementation-Version" value="@OPENCV_VCSVERSION@"/>
         <attribute name="Implementation-Date" value="${timestamp}"/>
+        <attribute name="Automatic-Module-Name" value="org.opencv"/>
       </manifest>
     </jar>
   </target>
