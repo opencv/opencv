@@ -66,7 +66,7 @@ As new modules are added to OpenCV-Python, this tutorial will have to be expande
 familiar with a particular algorithm and can write up a tutorial including basic theory of the
 algorithm and code showing example usage, please do so.
 
-Remember, we **together** can make this project a great success !!!
+Remember,**together** we can make this project a great success !!!
 
 Contributors
 ------------
