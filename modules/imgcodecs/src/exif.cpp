@@ -501,29 +501,39 @@ uint32_t ExifReader::getU32(const size_t offset) const
  * "rational" means a fractional value, it contains 2 signed/unsigned long integer value,
  *  and the first represents the numerator, the second, the denominator.
  */
-urational64_t ExifReader::getURational(const size_t offset) const
+std::vector<urational64_t> ExifReader::getURational(const size_t offset) const
 {
+    std::vector<urational64_t> result;
     size_t dataOffset = getU32(offset + 8);
     if (dataOffset > m_data.size() || dataOffset + 8 > m_data.size()) {
         throw ExifParsingError();
     }
-    urational64_t result;
-    result.num = getU32(dataOffset);
-    result.denom = getU32(dataOffset + 4);
-
+    for (uint32_t count = getU32(offset + 4); count > 0; count--)
+    {
+        urational64_t item;
+        item.num = getU32(dataOffset);
+        item.denom = getU32(dataOffset + 4);
+        result.push_back(item);
+        dataOffset += 8;
+    }
     return result;
 }
 
-srational64_t ExifReader::getSRational(const size_t offset) const
+std::vector<srational64_t> ExifReader::getSRational(const size_t offset) const
 {
+    std::vector<srational64_t> result;
     size_t dataOffset = getU32(offset + 8);
     if (dataOffset > m_data.size() || dataOffset + 8 > m_data.size()) {
         throw ExifParsingError();
     }
-    srational64_t result;
-    result.num = getU32(dataOffset);
-    result.denom = getU32(dataOffset + 4);
-
+    for (uint32_t count = getU32(offset + 4); count > 0; count--)
+    {
+        srational64_t item;
+        item.num = getU32(dataOffset);
+        item.denom = getU32(dataOffset + 4);
+        result.push_back(item);
+        dataOffset += 8;
+    }
     return result;
 }
 
@@ -675,10 +685,16 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         strm << value.field_double;
         break;
     case TAG_TYPE_RATIONAL:
-        strm << value.field_urational.num << "/" << value.field_urational.denom;
+        strm << "[ ";
+        for (size_t i = 0; i < value.field_urational.size(); i++)
+            strm << value.field_urational[i].num << "/" << value.field_urational[i].denom << ", ";
+        strm << "]";
         break;
     case TAG_TYPE_SRATIONAL:
-        strm << value.field_srational.num << "/" << value.field_srational.denom;
+        strm << "[ ";
+        for (size_t i = 0; i < value.field_urational.size(); i++)
+            strm << value.field_urational[i].num << "/" << value.field_urational[i].denom << ", ";
+        strm << "]";
         break;
     default:
         break;

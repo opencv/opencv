@@ -106,21 +106,23 @@ private:
     void parseExif();
     bool checkTagMark() const;
 
-    size_t        getNumDirEntry( const size_t offsetNumDir ) const;
-    uint32_t      getStartOffset() const;
-    ExifTagId     getExifTagId( const size_t offset ) const;
-    uint16_t      getU16( const size_t offset ) const;
-    uint32_t      getU32( const size_t offset ) const;
-    urational64_t getURational(const size_t offset) const;
-    srational64_t getSRational(const size_t offset) const;
-    std::string   getString(const size_t offset) const;
-    uint16_t      getOrientation( const size_t offset ) const;
-    int           getFormat() const;
-    ExifEntry     parseExifEntry( const size_t offset );
-
+    size_t      getNumDirEntry( const size_t offsetNumDir ) const;
+    uint32_t    getStartOffset() const;
+    ExifTagId   getExifTagId( const size_t offset ) const;
+    uint16_t    getU16( const size_t offset ) const;
+    uint32_t    getU32( const size_t offset ) const;
+    std::string getString(const size_t offset) const;
+    uint16_t    getOrientation( const size_t offset ) const;
+    int         getFormat() const;
+    ExifEntry   parseExifEntry( const size_t offset );
+    std::vector<urational64_t> getURational(const size_t offset) const;
+    std::vector<srational64_t> getSRational(const size_t offset) const;
 
 
 private:
+    template <typename RationalT, typename IntReader>
+    std::vector<RationalT> getRational(size_t offset, IntReader readInt32) const;
+
     static const uint16_t tagMarkRequired = 0x2A;
 
     //max size of data in tag.

@@ -432,8 +432,8 @@ struct ExifTagValue
         field_u8(0), field_s8(0)
     {}
 
-    srational64_t field_srational; ///< Signed rational (e.g., ShutterSpeedValue)
-    urational64_t field_urational; ///< Unsigned rational (e.g., ExposureTime)
+    std::vector<srational64_t> field_srational; ///< Signed rational (e.g., ShutterSpeedValue)
+    std::vector<urational64_t> field_urational; ///< Unsigned rational (e.g., ExposureTime)
     std::string   field_str;       ///< ASCII string or undefined textual data (e.g., Make, Model)
 
     float    field_float;   ///< Not commonly used in standard EXIF
