@@ -101,9 +101,23 @@ inline int hal_ni_FAST_NMS(const uchar* src_data, size_t src_step, uchar* dst_da
    @param threshold Threshold for keypoint
    @param nonmax_suppression Indicates if make nonmaxima suppression or not.
    @param type FAST type
+*/
+inline int hal_ni_FAST(const uchar* src_data, size_t src_step, int width, int height, uchar* keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
+   @brief Detects corners using the FAST algorithm.
+   @param src_data Source image data
+   @param src_step Source image step
+   @param width Source image width
+   @param height Source image height
+   @param keypoints_data Pointer to keypoints
+   @param keypoints_count Count of keypoints
+   @param threshold Threshold for keypoint
+   @param nonmax_suppression Indicates if make nonmaxima suppression or not.
+   @param type FAST type
    @param realloc_func function for reallocation
 */
-inline int hal_ni_FAST(const uchar* src_data, size_t src_step, int width, int height, void** keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type, void* (*realloc_func)(void*, size_t)) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+inline int hal_ni_FASTv2(const uchar* src_data, size_t src_step, int width, int height, void** keypoints_data, size_t* keypoints_count, int threshold, bool nonmax_suppression, int /*cv::FastFeatureDetector::DetectorType*/ type, void* (*realloc_func)(void*, size_t)) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 //! @cond IGNORED
 #define cv_hal_FAST hal_ni_FAST
