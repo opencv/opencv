@@ -77,7 +77,7 @@ elseif(QNX)
 else() # UNIX
 
   include(GNUInstallDirs)
-  ocv_update(OPENCV_BIN_INSTALL_PATH           "bin")
+  ocv_update(OPENCV_BIN_INSTALL_PATH           "bin/opencv")
   ocv_update(OPENCV_TEST_INSTALL_PATH          "${OPENCV_BIN_INSTALL_PATH}")
   ocv_update(OPENCV_SAMPLES_BIN_INSTALL_PATH   "${OPENCV_BIN_INSTALL_PATH}")
   ocv_update(OPENCV_LIB_INSTALL_PATH           "${CMAKE_INSTALL_LIBDIR}")
