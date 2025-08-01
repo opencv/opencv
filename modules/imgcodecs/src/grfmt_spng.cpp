@@ -23,6 +23,7 @@
 #include <zlib.h>
 
 #include "grfmt_spng.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 /*
  * libspng does not support RGB -> Gray conversion. In order to decode colorful images as grayscale
@@ -553,6 +554,11 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             {
                 filter = params[i+1];
                 set_filter = true;
+            }
+            if( params[i] == IMWRITE_PNG_ZLIBBUFFER_SIZE )
+            {
+                // See https://libspng.org/docs/migrate-libpng/#miscellaneous-functions
+                CV_LOG_WARNING(nullptr, "libspng does not support png_set_compression_buffer_size() which is required for IMWRITE_PNG_ZLIBBUFFER_SIZE");
             }
         }
 
