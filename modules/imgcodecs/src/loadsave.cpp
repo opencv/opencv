@@ -104,9 +104,7 @@ static const std::map<String, std::map<int, std::pair<int,int>>> s_formatParamRa
         {IMWRITE_PNG_STRATEGY, {0, 4}},
         {IMWRITE_PNG_BILEVEL, {0, 1}}
     }},
-    {"webp", {
-        {IMWRITE_WEBP_QUALITY, {1, 100}}
-    }},
+    {"webp", {}},
     {"tiff", {
         {IMWRITE_TIFF_RESUNIT, {1, 3}},
         {IMWRITE_TIFF_XDPI, {1, 65000}},
