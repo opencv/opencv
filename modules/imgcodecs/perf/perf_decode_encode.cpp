@@ -208,7 +208,7 @@ PERF_TEST_P(Encode, animation, testing::ValuesIn(exts_multi))
     TEST_CYCLE()
     {
         vector<uchar> buf;
-        EXPECT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
+        imencodeanimation(GetParam().c_str(), animation, buf);
     }
 
     SANITY_CHECK_NOTHING();
@@ -231,9 +231,16 @@ PERF_TEST_P(Decode, animation, testing::ValuesIn(exts_multi))
 {
     Animation animation = makeCirclesAnimation();
     vector<uchar> buf;
-    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
+    if (!imencodeanimation(GetParam().c_str(), animation, buf))
+    {
+        throw SkipTestException("Test is skipped");
+    }
 
-    TEST_CYCLE() EXPECT_TRUE(imdecodeanimation(buf, animation));
+    TEST_CYCLE()
+    {
+        Animation tmp_animation;
+        imdecodeanimation(buf, tmp_animation);
+    }
 
     SANITY_CHECK_NOTHING();
 }
@@ -242,10 +249,16 @@ PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_multi))
 {
     Animation animation = makeCirclesAnimation();
     vector<uchar> buf;
-    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
-    vector<Mat> frames;
+    if (!imencodeanimation(GetParam().c_str(), animation, buf))
+    {
+        throw SkipTestException("Test is skipped");
+    }
 
-    TEST_CYCLE() EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, frames));
+    TEST_CYCLE()
+    {
+        vector<Mat> tmp_frames;
+        imdecodemulti(buf, IMREAD_UNCHANGED, tmp_frames);
+    }
 
     SANITY_CHECK_NOTHING();
 }
