@@ -1380,7 +1380,6 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
 bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params)
 {
     CV_Assert(!animation.frames.empty());
-    validateEncodingParams(filename, params);
     CV_Assert(animation.frames.size() == animation.durations.size());
     return imwriteanimation_(filename, animation, params);
 }
@@ -1414,7 +1413,6 @@ bool imencodeanimation(const String& ext, const Animation& animation, std::vecto
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
-    validateEncodingParams(ext, params);
     return imencodeanimation_(ext, animation, buf, params);
 }
 
