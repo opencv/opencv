@@ -5,6 +5,7 @@
 // Author: abratchik
 
 #include "dnn_converters.hpp"
+#include "converters.h"
 
 #define LOG_TAG "org.opencv.dnn"
 
@@ -20,26 +21,61 @@ void MatShape_to_Mat(MatShape& matshape, cv::Mat& mat)
     mat = cv::Mat(matshape, true);
 }
 
-std::vector<MatShape> List_to_vector_MatShape(JNIEnv* env, jobject list)
+void Mat_to_vector_MatShape(cv::Mat& mat, std::vector<MatShape>& v_matshape)
 {
-    static jclass juArrayList       = ARRAYLIST(env);
-    jmethodID m_size       = LIST_SIZE(env, juArrayList);
-    jmethodID m_get        = LIST_GET(env, juArrayList);
-
-    static jclass jMatOfInt = MATOFINT(env);
-
-    jint len = env->CallIntMethod(list, m_size);
-    std::vector<MatShape> result;
-    result.reserve(len);
-    for (jint i=0; i<len; i++)
+    v_matshape.clear();
+    if(mat.type() == CV_32SC2 && mat.cols == 1)
     {
-        jobject element = static_cast<jobject>(env->CallObjectMethod(list, m_get, i));
-        cv::Mat& mat = *((cv::Mat*) GETNATIVEOBJ(env, jMatOfInt, element) );
-        MatShape matshape = (MatShape) mat;
-        result.push_back(matshape);
-        env->DeleteLocalRef(element);
+        v_matshape.reserve(mat.rows);
+        for(int i=0; i<mat.rows; i++)
+        {
+            cv::Vec<int, 2> a = mat.at< cv::Vec<int, 2> >(i, 0);
+            long long addr = (((long long)a[0])<<32) | (a[1]&0xffffffff);
+            cv::Mat& m = *( (cv::Mat*) addr );
+            MatShape matshape = (MatShape) m;
+            v_matshape.push_back(matshape);
+        }
+    } else {
+        LOGD("Mat_to_vector_MatShape() FAILED: mat.type() == CV_32SC2 && mat.cols == 1");
     }
-    return result;
+}
+
+void vector_MatShape_to_Mat(std::vector<MatShape>& v_matshape, cv::Mat& mat)
+{
+    int count = (int)v_matshape.size();
+    mat.create(count, 1, CV_32SC2);
+    for(int i=0; i<count; i++)
+    {
+        cv::Mat temp_mat = cv::Mat(v_matshape[i], true);
+        long long addr = (long long) new cv::Mat(temp_mat);
+        mat.at< cv::Vec<int, 2> >(i, 0) = cv::Vec<int, 2>(addr>>32, addr&0xffffffff);
+    }
+}
+
+void Mat_to_vector_vector_MatShape(cv::Mat& mat, std::vector< std::vector< MatShape > >& vv_matshape)
+{
+    std::vector<cv::Mat> vm;
+    vm.reserve( mat.rows );
+    Mat_to_vector_Mat(mat, vm);
+    for(size_t i=0; i<vm.size(); i++)
+    {
+        std::vector<MatShape> vmatshape;
+        Mat_to_vector_MatShape(vm[i], vmatshape);
+        vv_matshape.push_back(vmatshape);
+    }
+}
+
+void vector_vector_MatShape_to_Mat(std::vector< std::vector< MatShape > >& vv_matshape, cv::Mat& mat)
+{
+    std::vector<cv::Mat> vm;
+    vm.reserve( vv_matshape.size() );
+    for(size_t i=0; i<vv_matshape.size(); i++)
+    {
+        cv::Mat m;
+        vector_MatShape_to_Mat(vv_matshape[i], m);
+        vm.push_back(m);
+    }
+    vector_Mat_to_Mat(vm, mat);
 }
 
 jobject vector_Ptr_Layer_to_List(JNIEnv* env, std::vector<cv::Ptr<cv::dnn::Layer> >& vs)
