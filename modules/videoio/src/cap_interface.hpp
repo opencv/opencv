@@ -7,6 +7,7 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/core/core_c.h"
+#include "opencv2/core/utils/logger.hpp"
 #include "opencv2/videoio.hpp"
 #include "opencv2/videoio/videoio_c.h"
 #include "opencv2/videoio/utils.private.hpp"
@@ -188,6 +189,8 @@ public:
                 found = true;
                 CV_LOG_INFO(NULL, "VIDEOIO: unused parameter: [" << param.key << "]=" <<
                     cv::format("%lld / 0x%016llx", (long long)param.value, (long long)param.value));
+                CV_LOG_INFO(NULL, cv::format("VIDEOIO: unused parameter: [%d]=%lld / 0x%016llx", 
+                    param.key, (long long)param.value, (long long)param.value).c_str());
             }
         }
         return found;
@@ -401,6 +404,10 @@ Ptr<IVideoWriter> createAndroidVideoWriter(const std::string& filename, int four
                                            const VideoWriterParameters& params);
 
 Ptr<IVideoCapture> create_obsensor_capture(int index);
+
+Ptr<IVideoCapture> createLibcameraCapture_cam(int index);
+Ptr<IVideoCapture> createLibcameraCapture_file(const std::string &filename);
+
 
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,
