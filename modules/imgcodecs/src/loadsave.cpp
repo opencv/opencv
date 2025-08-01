@@ -137,17 +137,17 @@ static const std::map<String, std::map<int, std::pair<int,int>>> s_formatParamRa
 static String getCleanExtension(const String& filename_or_ext)
 {
     String ext = filename_or_ext;
-    
+
     // If it looks like a filename, extract extension
     // for an input image.png it will output png
     size_t dotPos = ext.rfind('.');
     if (dotPos != String::npos)
         ext = ext.substr(dotPos + 1);
-    
+
     // conversion to lowercase
-    std::transform(ext.begin(), ext.end(), ext.begin(), 
+    std::transform(ext.begin(), ext.end(), ext.begin(),
                    [](unsigned char c) { return std::tolower(c); });
-    
+
     return ext;
 };
 
@@ -155,24 +155,24 @@ static void validateEncodingParams(const String& ext, const std::vector<int>& pa
 {
     if (params.empty())
         return;
-    
+
     // check for odd number of parameters
     if (params.size() % 2 != 0)
     {
-        CV_Error(Error::StsBadArg, 
+        CV_Error(Error::StsBadArg,
                 "Encoding parameters must be provided in pairs (parameter_id, value)");
     }
-    
+
     // check if we exceed maximum allowed parameters
     if (params.size() > CV_IO_MAX_IMAGE_PARAMS * 2) // *2 because they come in pairs
     {
-        CV_Error_(Error::StsBadArg, 
-                 ("Too many encoding parameters (%zu). Maximum allowed: %zu pairs", 
+        CV_Error_(Error::StsBadArg,
+                 ("Too many encoding parameters (%zu). Maximum allowed: %zu pairs",
                   params.size() / 2, CV_IO_MAX_IMAGE_PARAMS));
     }
-    
+
     String cleanExt = getCleanExtension(ext);
-    
+
     // Find format parameters
     auto formatIt = s_formatParamRanges.find(cleanExt);
     if (formatIt == s_formatParamRanges.end())
@@ -182,28 +182,28 @@ static void validateEncodingParams(const String& ext, const std::vector<int>& pa
         {
             if (params[i] < 0)
             {
-                CV_Error_(Error::StsBadArg, 
+                CV_Error_(Error::StsBadArg,
                          ("Invalid parameter ID: %d. Parameter IDs must be non-negative.", params[i]));
             }
         }
         return;
     }
-    
+
     const auto& validParams = formatIt->second;
-    
+
     // Validate each parameter pair
     for (size_t i = 0; i < params.size(); i += 2)
     {
         int paramId = params[i];
         int paramValue = params[i + 1];
-        
+
         // Check for invalid parameter ID
         if (paramId < 0)
         {
-            CV_Error_(Error::StsBadArg, 
+            CV_Error_(Error::StsBadArg,
                      ("Invalid parameter ID: %d. Parameter IDs must be non-negative.", paramId));
         }
-        
+
         // check if parameter is supported for this format
         auto paramIt = validParams.find(paramId);
         if (paramIt == validParams.end())
@@ -211,19 +211,19 @@ static void validateEncodingParams(const String& ext, const std::vector<int>& pa
             // warn for formats that have defined parameters
             if (!validParams.empty())
             {
-                CV_LOG_WARNING(NULL, 
-                              cv::format("Parameter ID %d is not supported for format %s and will be ignored", 
+                CV_LOG_WARNING(NULL,
+                              cv::format("Parameter ID %d is not supported for format %s and will be ignored",
                                         paramId, cleanExt.c_str()));
             }
             continue;
         }
-        
+
         // Validate parameter value range
         const auto& range = paramIt->second;
         if (paramValue < range.first || paramValue > range.second)
         {
-            CV_Error_(Error::StsBadArg, 
-                     ("Parameter value %d for parameter ID %d is out of valid range [%d, %d] for format %s", 
+            CV_Error_(Error::StsBadArg,
+                     ("Parameter value %d for parameter ID %d is out of valid range [%d, %d] for format %s",
                       paramValue, paramId, range.first, range.second, cleanExt.c_str()));
         }
     }
