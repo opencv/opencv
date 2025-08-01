@@ -1196,7 +1196,7 @@ static bool readParam(const std::vector<int>& params, int key, int& value)
     return false;
 }
 
-bool TiffEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
+bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vector<int>& params)
 {
     // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
     // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
@@ -1229,7 +1229,6 @@ bool TiffEncoder::writeanimation(const Animation& animation, const std::vector<i
     readParam(params, IMWRITE_TIFF_YDPI, dpiY);
 
     //Iterate through each image in the vector and write them out as Tiff directories
-    const std::vector<Mat>& img_vec = animation.frames;
     for (size_t page = 0; page < img_vec.size(); page++)
     {
         const Mat& img = img_vec[page];
@@ -1414,6 +1413,11 @@ bool TiffEncoder::write_32FC3_SGILOG(const Mat& _img, void* tif_)
     return true;
 }
 
+bool TiffEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
+{
+    return writeLibTiff(img_vec, params);
+}
+
 bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 {
     int type = img.type();
@@ -1421,9 +1425,9 @@ bool  TiffEncoder::write( const Mat& img, const std::vector<int>& params)
 
     CV_CheckType(type, depth == CV_8U || depth == CV_8S || depth == CV_16U || depth == CV_16S || depth == CV_32S || depth == CV_32F || depth == CV_64F, "");
 
-    Animation animation;
-    animation.frames.push_back(img);
-    return writeanimation(animation, params);
+    std::vector<Mat> img_vec;
+    img_vec.push_back(img);
+    return writeLibTiff(img_vec, params);
 }
 
 static void extend_cvtColor( InputArray _src, OutputArray _dst, int code )
