@@ -51,6 +51,8 @@
 #undef max
 #include <iostream>
 #include <fstream>
+#include <map>
+#include <algorithm>
 #include <cerrno>
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/configuration.private.hpp>
@@ -80,6 +82,152 @@ static Size validateInputImageSize(const Size& size)
     return size;
 }
 
+static const std::map<String, std::map<int, std::pair<int,int>>> s_formatParamRanges = {
+     {"jpg", {
+        {IMWRITE_JPEG_QUALITY, {0, 100}},
+        {IMWRITE_JPEG_PROGRESSIVE, {0, 1}},
+        {IMWRITE_JPEG_OPTIMIZE, {0, 1}},
+        {IMWRITE_JPEG_RST_INTERVAL, {0, 65535}},
+        {IMWRITE_JPEG_LUMA_QUALITY, {0, 100}},
+        {IMWRITE_JPEG_CHROMA_QUALITY, {0, 100}}
+    }},
+    {"jpeg", {
+        {IMWRITE_JPEG_QUALITY, {0, 100}},
+        {IMWRITE_JPEG_PROGRESSIVE, {0, 1}},
+        {IMWRITE_JPEG_OPTIMIZE, {0, 1}},
+        {IMWRITE_JPEG_RST_INTERVAL, {0, 65535}},
+        {IMWRITE_JPEG_LUMA_QUALITY, {0, 100}},
+        {IMWRITE_JPEG_CHROMA_QUALITY, {0, 100}}
+    }},
+    {"png", {
+        {IMWRITE_PNG_COMPRESSION, {0, 9}},
+        {IMWRITE_PNG_STRATEGY, {0, 4}},
+        {IMWRITE_PNG_BILEVEL, {0, 1}}
+    }},
+    {"webp", {
+        {IMWRITE_WEBP_QUALITY, {1, 100}}
+    }},
+    {"tiff", {
+        {IMWRITE_TIFF_RESUNIT, {1, 3}},
+        {IMWRITE_TIFF_XDPI, {1, 65000}},
+        {IMWRITE_TIFF_YDPI, {1, 65000}},
+        {IMWRITE_TIFF_COMPRESSION, {1, 32946}}
+    }},
+    {"tif", {
+        {IMWRITE_TIFF_RESUNIT, {1, 3}},
+        {IMWRITE_TIFF_XDPI, {1, 65000}},
+        {IMWRITE_TIFF_YDPI, {1, 65000}},
+        {IMWRITE_TIFF_COMPRESSION, {1, 32946}}
+    }},
+    {"jp2", {
+        {IMWRITE_JPEG2000_COMPRESSION_X1000, {1, 1000000}}
+    }},
+    // These are the formats with no specific parameters, hence they are left empty
+    {"bmp", {}},
+    {"gif", {}},
+    {"ppm", {}},
+    {"pbm", {}},
+    {"pgm", {}},
+    {"ras", {}},
+    {"sr", {}},
+    {"exr", {}}
+};
+
+
+static String getCleanExtension(const String& filename_or_ext)
+{
+    String ext = filename_or_ext;
+    
+    // If it looks like a filename, extract extension
+    // for an input image.png it will output png
+    size_t dotPos = ext.rfind('.');
+    if (dotPos != String::npos)
+        ext = ext.substr(dotPos + 1);
+    
+    // conversion to lowercase
+    std::transform(ext.begin(), ext.end(), ext.begin(), 
+                   [](unsigned char c) { return std::tolower(c); });
+    
+    return ext;
+};
+
+static void validateEncodingParams(const String& ext, const std::vector<int>& params)
+{
+    if (params.empty())
+        return;
+    
+    // check for odd number of parameters
+    if (params.size() % 2 != 0)
+    {
+        CV_Error(Error::StsBadArg, 
+                "Encoding parameters must be provided in pairs (parameter_id, value)");
+    }
+    
+    // check if we exceed maximum allowed parameters
+    if (params.size() > CV_IO_MAX_IMAGE_PARAMS * 2) // *2 because they come in pairs
+    {
+        CV_Error_(Error::StsBadArg, 
+                 ("Too many encoding parameters (%zu). Maximum allowed: %zu pairs", 
+                  params.size() / 2, CV_IO_MAX_IMAGE_PARAMS));
+    }
+    
+    String cleanExt = getCleanExtension(ext);
+    
+    // Find format parameters
+    auto formatIt = s_formatParamRanges.find(cleanExt);
+    if (formatIt == s_formatParamRanges.end())
+    {
+        // For unknown formats, only check for obviously invalid parameter IDs
+        for (size_t i = 0; i < params.size(); i += 2)
+        {
+            if (params[i] < 0)
+            {
+                CV_Error_(Error::StsBadArg, 
+                         ("Invalid parameter ID: %d. Parameter IDs must be non-negative.", params[i]));
+            }
+        }
+        return;
+    }
+    
+    const auto& validParams = formatIt->second;
+    
+    // Validate each parameter pair
+    for (size_t i = 0; i < params.size(); i += 2)
+    {
+        int paramId = params[i];
+        int paramValue = params[i + 1];
+        
+        // Check for invalid parameter ID
+        if (paramId < 0)
+        {
+            CV_Error_(Error::StsBadArg, 
+                     ("Invalid parameter ID: %d. Parameter IDs must be non-negative.", paramId));
+        }
+        
+        // check if parameter is supported for this format
+        auto paramIt = validParams.find(paramId);
+        if (paramIt == validParams.end())
+        {
+            // warn for formats that have defined parameters
+            if (!validParams.empty())
+            {
+                CV_LOG_WARNING(NULL, 
+                              cv::format("Parameter ID %d is not supported for format %s and will be ignored", 
+                                        paramId, cleanExt.c_str()));
+            }
+            continue;
+        }
+        
+        // Validate parameter value range
+        const auto& range = paramIt->second;
+        if (paramValue < range.first || paramValue > range.second)
+        {
+            CV_Error_(Error::StsBadArg, 
+                     ("Parameter value %d for parameter ID %d is out of valid range [%d, %d] for format %s", 
+                      paramValue, paramId, range.first, range.second, cleanExt.c_str()));
+        }
+    }
+};
 
 static inline int calcType(int type, int flags)
 {
@@ -1156,6 +1304,8 @@ bool imwrite( const String& filename, InputArray _img,
 
     CV_Assert(!_img.empty());
 
+    validateEncodingParams(filename, params);
+
     std::vector<Mat> img_vec;
     if (_img.isMatVector() || _img.isUMatVector())
         _img.getMatVector(img_vec);
@@ -1174,6 +1324,8 @@ bool imwriteWithMetadata( const String& filename, InputArray _img,
     CV_TRACE_FUNCTION();
 
     CV_Assert(!_img.empty());
+
+    validateEncodingParams(filename, params);
 
     std::vector<Mat> img_vec;
     if (_img.isMatVector() || _img.isUMatVector())
@@ -1230,6 +1382,7 @@ static bool imwriteanimation_(const String& filename, const Animation& animation
 bool imwriteanimation(const String& filename, const Animation& animation, const std::vector<int>& params)
 {
     CV_Assert(!animation.frames.empty());
+    validateEncodingParams(filename, params);
     CV_Assert(animation.frames.size() == animation.durations.size());
     return imwriteanimation_(filename, animation, params);
 }
@@ -1263,6 +1416,7 @@ bool imencodeanimation(const String& ext, const Animation& animation, std::vecto
 {
     CV_Assert(!animation.frames.empty());
     CV_Assert(animation.frames.size() == animation.durations.size());
+    validateEncodingParams(ext, params);
     return imencodeanimation_(ext, animation, buf, params);
 }
 
@@ -1605,6 +1759,8 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
     ImageEncoder encoder = findEncoder( ext );
     if( !encoder )
         CV_Error( Error::StsError, "could not find encoder for the specified extension" );
+
+    validateEncodingParams(ext, params_);
 
     std::vector<Mat> img_vec;
     CV_Assert(!_img.empty());
