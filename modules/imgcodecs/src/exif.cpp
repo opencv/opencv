@@ -59,7 +59,8 @@ bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEnt
     return reader.parseExif(data.data(), data.size(), exif_entries);
 }
 
-std::string exifTagIdToString(cv::ExifTagId);
+std::string exifTagIdToString(ExifTagId tag);
+std::string tagTypeToString(ExifTagType type);
 
 static std::string HexStringToBytes(const char* hexstring, size_t expected_length);
 
@@ -602,6 +603,7 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_SUBSECTIME_ORIGINAL ? "SubSec Original Time" :
         tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
 
+        tag == TAG_COLORSPACE ? "ColorSpace" :
         tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
         tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
         tag == TAG_WHITE_BALANCE ? "White Balance" :
