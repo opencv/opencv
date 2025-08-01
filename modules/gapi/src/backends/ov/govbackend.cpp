@@ -1073,9 +1073,17 @@ public:
                     .set_element_type(toOV(*explicit_out_tensor_prec));
 
                 if (m_model_info.clamp_outputs) {
-                    auto [min_val, max_val] = get_CV_type_range(*explicit_out_tensor_prec);
+                    #if INF_ENGINE_RELEASE >= 2025020000
+                    auto clamp_range = get_CV_type_range(*explicit_out_tensor_prec);
                     m_ppp.output(output_name).postprocess()
-                        .clamp(min_val, max_val);
+                        .clamp(clamp_range.first, clamp_range.second);
+                    #else
+                    static bool warned = false;
+                    if (!warned) {
+                        GAPI_LOG_WARNING(NULL, "cfgClampOutputs is enabled, but not supported in this OpenVINO version. Clamping will be ignored.");
+                        warned = true;
+                    }
+                    #endif // INF_ENGINE_RELEASE >= 2025020000
                 }
             }
         }

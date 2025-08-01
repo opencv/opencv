@@ -363,6 +363,8 @@ public:
     By default, output values are clamped to the valid range for the output precision
     by the device or plugin. Enabling this option moves clamping to the PrePostProcessor stage.
 
+    @note This feature is only available with OpenVINO 2025.2 and newer.
+
     @param flag If true, clamping is performed in the PrePostProcessor;
     otherwise, it is handled by the device or plugin.
     @return reference to this parameter structure.
