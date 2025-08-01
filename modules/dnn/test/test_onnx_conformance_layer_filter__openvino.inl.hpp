@@ -355,27 +355,27 @@ CASE(test_celu)
 CASE(test_celu_expanded)
     // no filter
 CASE(test_clip)
-    // no filter
+    SKIP;
 CASE(test_clip_default_inbounds)
-    // no filter
+    SKIP;
 CASE(test_clip_default_int8_inbounds)
-    // no filter
+    SKIP;
 CASE(test_clip_default_int8_max)
-    // no filter
+    SKIP;
 CASE(test_clip_default_int8_min)
-    // no filter
+    SKIP;
 CASE(test_clip_default_max)
-    // no filter
+    SKIP;
 CASE(test_clip_default_min)
-    // no filter
+    SKIP;
 CASE(test_clip_example)
-    // no filter
+    SKIP;
 CASE(test_clip_inbounds)
-    // no filter
+    SKIP;
 CASE(test_clip_outbounds)
-    // no filter
+    SKIP;
 CASE(test_clip_splitbounds)
-    // no filter
+    SKIP;
 CASE(test_compress_0)
     // no filter
 CASE(test_compress_1)

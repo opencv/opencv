@@ -1360,6 +1360,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CastLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS ClipLayer : public Layer {
+    public:
+        static Ptr<ClipLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS DepthToSpaceLayer : public Layer {
     public:
         static Ptr<DepthToSpaceLayer> create(const LayerParams &params);

@@ -48,17 +48,6 @@
 "test_castlike_FLOAT_to_FLOAT16_expanded", // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
 "test_castlike_FLOAT_to_STRING",
 "test_castlike_STRING_to_FLOAT", // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_clip", // Issue:: Unkonwn error
-"test_clip_default_inbounds", // ---- same as above ---
-"test_clip_default_int8_inbounds",  // ---- same as above ---
-"test_clip_default_int8_max",  // ---- same as above ---
-"test_clip_default_int8_min",  // ---- same as above ---
-"test_clip_default_max",  // ---- same as above ---
-"test_clip_default_min",  // ---- same as above ---
-"test_clip_example",  // ---- same as above ---
-"test_clip_inbounds",  // ---- same as above ---
-"test_clip_outbounds",  // ---- same as above ---
-"test_clip_splitbounds",  // ---- same as above ---
 "test_compress_0", // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
 "test_compress_1", // ---- same as above ---
 "test_compress_default_axis", // ---- same as above ---
