@@ -224,6 +224,9 @@ public:
      */
     virtual bool isFormatSupported(int depth) const;
 
+
+    virtual bool isValidParam(const int key, const int value) const;
+
     /**
      * @brief Set the destination for encoding as a file.
      * @param filename The name of the file to which the image will be written.

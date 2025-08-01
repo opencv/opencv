@@ -103,6 +103,7 @@ public:
     GifEncoder();
     ~GifEncoder() CV_OVERRIDE;
 
+    bool isValidParam(const int key, const int value) const CV_OVERRIDE;
     bool writeanimation(const Animation& animation, const std::vector<int>& params) CV_OVERRIDE;
 
     ImageEncoder newEncoder() const CV_OVERRIDE;

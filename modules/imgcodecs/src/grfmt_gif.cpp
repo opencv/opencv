@@ -1223,5 +1223,26 @@ void GifEncoder::OctreeColorQuant::recurseReduce(const std::shared_ptr<OctreeNod
     node -> isLeaf = true;
 }
 
+bool GifEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_GIF_QUALITY:
+            ret = (1 <= value) && (value <= 8);
+            break;
+        case IMWRITE_GIF_DITHER:
+            ret = (-1 <= value) && (value <= 3);
+            break;
+        case IMWRITE_GIF_TRANSPARENCY:
+            ret = (0 <= value) && (value <= 255);
+            break;
+        case IMWRITE_GIF_COLORTABLE:
+            ret = (value == 0) || (value == 1);
+            break;
+    }
+    return ret;
+}
+
 } // namespace cv2
 #endif
