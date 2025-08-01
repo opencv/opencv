@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "exif.hpp"
 #include "opencv2/core/utils/logger.hpp"
+#include <iomanip>
 
 namespace {
 
@@ -388,10 +389,8 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
     {
     case TAG_TYPE_BYTE:
     case TAG_TYPE_SBYTE:
-    case TAG_TYPE_UNDEFINED:
         exifentry.value.field_u8 = m_data[offset + 8];
         break;
-
     case TAG_TYPE_ASCII:
         exifentry.value.field_str = getString(offset);
         break;
@@ -400,6 +399,7 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
         exifentry.value.field_u16 = getU16(offset + 8);
         break;
 
+    case TAG_TYPE_UNDEFINED:
     case TAG_TYPE_LONG:
         exifentry.value.field_u32 = getU32(offset + 8);
         break;
@@ -669,7 +669,6 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         strm << "\"" << value.field_str << "\"";
         break;
     case TAG_TYPE_BYTE:
-    case TAG_TYPE_UNDEFINED:
         strm << static_cast<int>(value.field_u8);
         break;
     case TAG_TYPE_SHORT:
@@ -693,9 +692,25 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
     case TAG_TYPE_SRATIONAL:
         strm << "[ ";
         for (size_t i = 0; i < value.field_urational.size(); i++)
-            strm << value.field_urational[i].num << "/" << value.field_urational[i].denom << ", ";
+            strm << value.field_srational[i].num << "/" << value.field_srational[i].denom << ", ";
         strm << "]";
         break;
+    case TAG_TYPE_UNDEFINED:
+    {
+        uint32_t raw = value.field_u32;
+        strm << "[ ";
+        for (int i = 3; i >= 0; --i) {
+            uint8_t byte = static_cast<uint8_t>((raw >> (i * 8)) & 0xFF);
+            strm << "0x" << std::hex << std::uppercase
+                << std::setw(2) << std::setfill('0')
+                << static_cast<int>(byte);
+            if (i > 0)
+                strm << ", ";
+        }
+        strm << " ]";
+        strm << std::dec; // restore decimal output
+        break;
+    }
     default:
         break;
     }
