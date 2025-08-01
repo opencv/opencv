@@ -404,7 +404,7 @@ enum ExifTagId
     TAG_INVALID_TAG = 65535
 };
 
-enum Endianness
+enum ExifEndianness
 {
     INTEL = 0x49,
     MOTO = 0x4D,
