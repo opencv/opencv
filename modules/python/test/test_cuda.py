@@ -143,5 +143,20 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
+    def test_cuda_dlpack(self):
+        # TODO: test without torch
+        try:
+            import torch
+        except ImportError:
+            raise self.skipTest('No PyTorch library found')
+
+        ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
+        cuMat = cv.cuda_GpuMat()
+        cuMat.upload(ref)
+
+        arr = torch.from_dlpack(cuMat)
+        arr[57][88][1] += 1
+        self.assertTrue(np.array_equal(arr.cpu().numpy(), cuMat.download()))
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
