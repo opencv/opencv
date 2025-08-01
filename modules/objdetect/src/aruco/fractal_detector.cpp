@@ -801,7 +801,7 @@ void FractalMarkerDetector::kfilter(std::vector<cv::KeyPoint>& kpoints) {
 }
 
 void FractalMarkerDetector::assignClass(const cv::Mat& im, std::vector<cv::KeyPoint>& kpoints, float sizeNorm, int wsize) {
-    CV_Assert(im.type() == CV_8UC1)
+    CV_Assert(im.type() == CV_8UC1);
 
     int wsizeFull = wsize * 2 + 1;
 
