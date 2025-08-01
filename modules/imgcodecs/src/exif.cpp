@@ -101,7 +101,7 @@ static std::string HexStringToBytes(const char* hexstring,
 /**
  * @brief ExifReader constructor
  */
-ExifReader::ExifReader() : m_format(Endianness::NONE)
+ExifReader::ExifReader() : m_format(ExifEndianness::NONE)
 {
 }
 
@@ -299,24 +299,24 @@ bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::ve
 int ExifReader::getFormat() const
 {
     if (m_data.size() < 1)
-        return Endianness::NONE;
+        return ExifEndianness::NONE;
 
     if( m_data.size() > 1 && m_data[0] != m_data[1] )
     {
-        return Endianness::NONE;
+        return ExifEndianness::NONE;
     }
 
     if( m_data[0] == 'I' )
     {
-        return Endianness::INTEL;
+        return ExifEndianness::INTEL;
     }
 
     if( m_data[0] == 'M' )
     {
-        return Endianness::MOTO;
+        return ExifEndianness::MOTO;
     }
 
-    return Endianness::NONE;
+    return ExifEndianness::NONE;
 }
 
 /**
@@ -459,7 +459,7 @@ uint16_t ExifReader::getU16(const size_t offset) const
     if (offset + 1 >= m_data.size())
         throw ExifParsingError();
 
-    if( m_format == Endianness::INTEL )
+    if( m_format == ExifEndianness::INTEL )
     {
         return m_data[offset] + ( m_data[offset + 1] << 8 );
     }
@@ -477,7 +477,7 @@ uint32_t ExifReader::getU32(const size_t offset) const
     if (offset + 3 >= m_data.size())
         throw ExifParsingError();
 
-    if( m_format == Endianness::INTEL )
+    if( m_format == ExifEndianness::INTEL )
     {
         return m_data[offset] +
                 ( m_data[offset + 1] << 8 ) +
