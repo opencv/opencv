@@ -137,6 +137,19 @@ const string exts_multi[] = {
 #endif
 };
 
+const string exts_anim[] = {
+#ifdef HAVE_AVIF
+    ".avif",
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+    ".gif",
+#endif
+    ".png",
+#ifdef HAVE_WEBP
+    ".webp",
+#endif
+};
+
 PERF_TEST_P(Decode, bgr, testing::ValuesIn(exts))
 {
     String filename = getDataPath("perf/1920x1080.png");
@@ -201,14 +214,14 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Encode, animation, testing::ValuesIn(exts_multi))
+PERF_TEST_P(Encode, animation, testing::ValuesIn(exts_anim))
 {
     Animation animation = makeCirclesAnimation();
 
     TEST_CYCLE()
     {
         vector<uchar> buf;
-        imencodeanimation(GetParam().c_str(), animation, buf);
+        EXPECT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
     }
 
     SANITY_CHECK_NOTHING();
@@ -227,37 +240,31 @@ PERF_TEST_P(Encode, multi_page, testing::ValuesIn(exts_multi))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Decode, animation, testing::ValuesIn(exts_multi))
+PERF_TEST_P(Decode, animation, testing::ValuesIn(exts_anim))
 {
     Animation animation = makeCirclesAnimation();
     vector<uchar> buf;
-    if (!imencodeanimation(GetParam().c_str(), animation, buf))
-    {
-        throw SkipTestException("Test is skipped");
-    }
+    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
 
     TEST_CYCLE()
     {
         Animation tmp_animation;
-        imdecodeanimation(buf, tmp_animation);
+        EXPECT_TRUE(imdecodeanimation(buf, tmp_animation));
     }
 
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_multi))
+PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_anim))
 {
     Animation animation = makeCirclesAnimation();
     vector<uchar> buf;
-    if (!imencodeanimation(GetParam().c_str(), animation, buf))
-    {
-        throw SkipTestException("Test is skipped");
-    }
+    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
 
     TEST_CYCLE()
     {
         vector<Mat> tmp_frames;
-        imdecodemulti(buf, IMREAD_UNCHANGED, tmp_frames);
+        EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, tmp_frames));
     }
 
     SANITY_CHECK_NOTHING();
