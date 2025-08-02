@@ -389,12 +389,8 @@ void CvVideoWriter_Images::write(InputArray image)
     cv::String filename = cv::format(filename_pattern.c_str(), (int)currentframe);
     CV_Assert(!filename.empty());
 
-    std::vector<int> image_params = params;
-    image_params.push_back(0); // append parameters 'stop' mark
-    image_params.push_back(0);
-
     cv::Mat img = image.getMat();
-    cv::imwrite(filename, img, image_params);
+    cv::imwrite(filename, img);
     currentframe++;
 }
 
