@@ -7,8 +7,6 @@
 namespace opencv_test
 {
 
-#ifdef HAVE_PNG
-
 using namespace perf;
 
 static Animation makeCirclesAnimation(Size size = Size(320, 240), int type = CV_8UC4, int nbits = 8, int frameCount = 40)
@@ -150,6 +148,8 @@ const string exts_anim[] = {
 #endif
 };
 
+#ifdef HAVE_PNG
+
 PERF_TEST_P(Decode, bgr, testing::ValuesIn(exts))
 {
     String filename = getDataPath("perf/1920x1080.png");
@@ -214,6 +214,8 @@ PERF_TEST_P(Encode, multi, testing::ValuesIn(exts_multi))
     SANITY_CHECK_NOTHING();
 }
 
+#endif // HAVE_PNG
+
 PERF_TEST_P(Encode, animation, testing::ValuesIn(exts_anim))
 {
     Animation animation = makeCirclesAnimation();
@@ -255,11 +257,11 @@ PERF_TEST_P(Decode, animation, testing::ValuesIn(exts_anim))
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_anim))
+PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_multi))
 {
     Animation animation = makeCirclesAnimation();
     vector<uchar> buf;
-    ASSERT_TRUE(imencodeanimation(GetParam().c_str(), animation, buf));
+    ASSERT_TRUE(imencodemulti(GetParam().c_str(), animation.frames, buf));
 
     TEST_CYCLE()
     {
@@ -269,7 +271,5 @@ PERF_TEST_P(Decode, multi_page, testing::ValuesIn(exts_anim))
 
     SANITY_CHECK_NOTHING();
 }
-
-#endif // HAVE_PNG
 
 } // namespace
