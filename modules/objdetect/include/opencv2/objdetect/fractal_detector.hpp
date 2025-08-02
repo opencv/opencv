@@ -146,9 +146,10 @@ public:
     /**
      * @brief Set parameters for the fractal marker detector.
      * @param fractal_config Possible values (FRACTAL_2L_6, FRACTAL_3L_6, FRACTAL_4L_6, FRACTAL_5L_6).
+     * @param minInternalDistSq The minimum squared distance between internal points (default 150).
      * @param markerSize The size of the marker in meters (optional).
      */
-    CV_WRAP void setParams(const std::string& fractal_config, float markerSize = -1);
+    CV_WRAP void setParams(const std::string& fractal_config, int minInternalDistSq = 150, float markerSize = -1);
 
     /**
      * @brief Detect fractal markers in the given image.
@@ -168,6 +169,7 @@ public:
 
 private:
     CV_PROP_RW FractalMarkerSet fractalMarkerSet;
+    CV_PROP_RW int minInternalDistSq;
 
     /**
      * @brief Sort the points of a marker in clockwise order.

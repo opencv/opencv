@@ -414,11 +414,12 @@ void FractalMarkerSet::convertToMeters(float size) {
     }
 }
 
-void FractalMarkerDetector::setParams(const std::string& fractal_config, float markerSize) {
+void FractalMarkerDetector::setParams(const std::string& fractal_config, int minInternalDistSq_, float markerSize) {
     fractalMarkerSet = FractalMarkerSet(fractal_config);
     if (markerSize != -1) {
         fractalMarkerSet.convertToMeters(markerSize);
     }
+    minInternalDistSq = minInternalDistSq_;
 }
 
 std::vector<FractalMarker>  FractalMarkerDetector::detect(const cv::Mat &img){
@@ -607,7 +608,7 @@ std::vector<FractalMarker> FractalMarkerDetector::detect(const cv::Mat &img, std
             bool consider = true;
             for (size_t i = 0; i < imgPoints.size() - 1 && consider; i++)
                 for (size_t j = i + 1; j < imgPoints.size() && consider; j++)
-                    if (pow(imgPoints[i].x - imgPoints[j].x, 2) + pow(imgPoints[i].y - imgPoints[j].y, 2) < 150)
+                    if (pow(imgPoints[i].x - imgPoints[j].x, 2) + pow(imgPoints[i].y - imgPoints[j].y, 2) < minInternalDistSq)
                         consider = false;
         
             if (consider) {
