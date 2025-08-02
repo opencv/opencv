@@ -704,16 +704,16 @@ CV_EXPORTS_W bool haveImageWriter( const String& filename );
 
 /** @brief Iterator-based interface for reading multi-page and animated images on demand.
 
-The `ImageCollection` class provides a lazy-decoding interface for accessing individual frames in
-multi-page or animated image formats(e.g., TIFF, animated WebP, GIF, APNG).Internally, animated
+The `ImageCollection` class provides a lazy-decoding (on-demand decoding) interface for accessing individual frames in
+multi-page or animated image formats (e.g., TIFF, animated WebP, GIF, APNG). Internally, animated
 formats are supported via the `Animation` class.
 
-Only the currently accessed frame is decoded when needed.This enables efficient memory use and
-fast iteration without fully loading the image sequence.The actual decoding behavior may vary
+Only the currently accessed frame is decoded when needed. This enables efficient memory use and
+fast iteration without fully loading the image sequence into memory. The actual decoding behavior may vary
 depending on the image decoder implementation.
 
-Sequential access via iterators is fast(O(1)), while random access(e.g., accessing frame N directly)
-has linear complexity(O(n)) due to the need to advance the decoder.Previously decoded frames
+Sequential access via iterators is fast (O(1)), while random access (e.g., accessing frame N directly)
+has linear complexity (O(n)) due to the need to advance the decoder sequentially. Previously decoded frames
 are cached and can be released manually using `releaseCache()`.
 */
 class CV_EXPORTS_W ImageCollection {
@@ -791,6 +791,13 @@ public:
      */
     CV_WRAP size_t size() const;
 
+    /** @brief Returns the current status of the ImageCollection.
+
+    @return A value from the cv::DecoderStatus enumeration indicating the current state of the ImageCollection:
+
+    This function can be used to verify whether the ImageCollection was opened successfully and
+    to diagnose initialization or decoding errors.
+*/
     CV_WRAP int getStatus() const;
 
     /** @brief Returns the width of frames in the collection.
@@ -817,10 +824,10 @@ public:
      */
     CV_WRAP int getType() const;
 
-    /** @brief Extracts metadata if available.
+    /** @brief Extracts metadata items if available (e.g., EXIF, XMP, ICCP).
 
-    @param metadata_types Output vector of metadata type codes.
-    @param metadata Output array containing metadata items (EXIF, XMP, ICCP).
+    @param metadata_types Output vector of metadata type identifiers.
+    @param metadata Output array containing the corresponding metadata entries.
 
     @return Number of metadata items extracted.
      */
@@ -845,6 +852,12 @@ public:
      */
     const Mat& operator[](int index);
 
+    /** @brief Sets a custom Animation for this ImageCollection.
+
+    @param animation Animation object containing frames and timing information.
+
+    This method overrides the internal decoder and uses the provided animation data.
+     */
     CV_WRAP void setAnimation(Animation& animation);
 
     /** @brief Releases the cached frame at the specified index.
