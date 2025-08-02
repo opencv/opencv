@@ -304,6 +304,17 @@ TODO: other options: `WITH_OPENCL_SVM`, `WITH_OPENCLAMDFFT`, `WITH_OPENCLAMDBLAS
 
 ## Image reading and writing (imgcodecs module)  {#tutorial_config_reference_func_imgcodecs}
 
+### Encode Parameter Validation
+
+`OPENCV_ENABLE_ENCODE_PARAM_VALIDATION` (default: _ON_) (Since 4.13.0)
+
+This option allows you to select whether to strictly validate encode parameters for imencode() and imwrite() family functions.
+
+- An error occurs if a non-existent key(e.g. -1) is specified.
+- An error occurs if an encoder key that is not enabled in the build options is specified.
+- An error occurs if a value is not set within the correct value range for the specified key.
+- No error occurs if all encode parameter are valid for all available encoders. You can contains the parameters for JPEG encoder and PNG encode at once.
+
 ### Built-in formats
 
 Following formats can be read by OpenCV without help of any third-party library:

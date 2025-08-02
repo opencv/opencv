@@ -72,7 +72,7 @@ TEST(Imgcodecs_WebP, encode_decode_lossy_webp)
     {
         std::vector<int> params;
         params.push_back(IMWRITE_WEBP_QUALITY);
-        params.push_back(q);
+        params.push_back(MAX(q,1));
         string output = cv::tempfile(".webp");
 
         EXPECT_NO_THROW(cv::imwrite(output, img, params));

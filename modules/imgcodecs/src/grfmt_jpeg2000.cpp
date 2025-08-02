@@ -636,6 +636,20 @@ bool  Jpeg2KEncoder::writeComponent16u( void *__img, const Mat& _img )
     return true;
 }
 
+bool Jpeg2KEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_JPEG2000_COMPRESSION_X1000:
+            ret = (0 <= value) && (value <= 1000);
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
 }
 
 #endif

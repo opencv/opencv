@@ -573,11 +573,19 @@ INSTANTIATE_TEST_CASE_P(/**/,
 typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
 TEST_P(Imgcodecs_Png_ZLIBBUFFER_SIZE, encode_regression_27614)
 {
+    int bufLen = GetParam();
     Mat img(320,240,CV_8UC3,cv::Scalar(64,76,43));
     vector<uint8_t> buff;
     bool status = false;
-    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, GetParam() }));
-    ASSERT_TRUE(status);
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, bufLen }));
+
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
+    bool expectedResult = ((6 <= bufLen) && (bufLen <= 1024*1024));
+#else
+    bool expectedResult = true;
+#endif // ENABLE_ENCODE_PARAM_VALIDATION
+
+    ASSERT_EQ(status, expectedResult);
 }
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,

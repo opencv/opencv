@@ -364,6 +364,23 @@ static ImageEncoder findEncoder( const String& _ext )
     return ImageEncoder();
 }
 
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
+static bool isValidParamAtAll(const int key, const int value)
+{
+    bool ret = false;
+    ImageCodecInitializer& codecs = getCodecs();
+    for( size_t i = 0; i < codecs.encoders.size(); i++ )
+    {
+        if( codecs.encoders[i]->isValidParam(key, value) == true )
+        {
+            ret = true;
+            break;
+        }
+    }
+    return ret;
+}
+#endif // ENABLE_ENCODE_PARAM_VALIDATION
+
 
 static void ExifTransform(int orientation, OutputArray img)
 {
@@ -1110,6 +1127,31 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        const int value = params[v+1];
+        if(encoder->isValidParam(key, value))
+        {
+            // (key,value) is valid for current encoder.
+            // Do nothing.
+        }
+        else if(isValidParamAtAll(key, value))
+        {
+            // (key,value) is valid for other encoders.
+            // Do nothing.
+        }
+        else
+        {
+            // (key,value) is invalid for all encoders.
+            CV_LOG_ERROR(nullptr, cv::format("(key = %d, value = %d) is invalid encoding param", key, value));
+            return false;
+        }
+    }
+#endif // ENABLE_ENCODE_PARAM_VALIDATION
+
     bool code = false;
     try
     {
@@ -1662,6 +1704,30 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        const int value = params[v+1];
+        if(encoder->isValidParam(key, value))
+        {
+            // (key,value) is valid for current encoder.
+            // Do nothing.
+        }
+        else if(isValidParamAtAll(key, value))
+        {
+            // (key,value) is valid for other encoders.
+            // Do nothing.
+        }
+        else
+        {
+            // (key,value) is invalid for all encoders.
+            CV_LOG_ERROR(nullptr, cv::format("(key = %d, value = %d) is invalid encoding param", key, value));
+            return false;
+        }
+    }
+#endif
 
     bool code = false;
     String filename;

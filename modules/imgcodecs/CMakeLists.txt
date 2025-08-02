@@ -9,6 +9,10 @@ ocv_add_module(imgcodecs opencv_imgproc WRAP java objc python)
 
 ocv_clear_vars(GRFMT_LIBS)
 
+if(OPENCV_ENABLE_ENCODE_PARAM_VALIDATION)
+    add_definitions(-DENABLE_ENCODE_PARAM_VALIDATION)
+endif()
+
 if(HAVE_WINRT_CX AND NOT WINRT)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /ZW")
 endif()

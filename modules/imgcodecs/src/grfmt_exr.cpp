@@ -916,6 +916,44 @@ bool  ExrEncoder::write( const Mat& img, const std::vector<int>& params )
     return result;
 }
 
+bool ExrEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_EXR_TYPE:
+            ret = (value == IMWRITE_EXR_TYPE_HALF) || (value == IMWRITE_EXR_TYPE_FLOAT);
+            break;
+        case IMWRITE_EXR_COMPRESSION:
+            {
+                switch(value)
+                {
+                    case IMWRITE_EXR_COMPRESSION_NO:
+                    case IMWRITE_EXR_COMPRESSION_RLE:
+                    case IMWRITE_EXR_COMPRESSION_ZIPS:
+                    case IMWRITE_EXR_COMPRESSION_ZIP:
+                    case IMWRITE_EXR_COMPRESSION_PIZ:
+                    case IMWRITE_EXR_COMPRESSION_PXR24:
+                    case IMWRITE_EXR_COMPRESSION_B44:
+                    case IMWRITE_EXR_COMPRESSION_B44A:
+                    case IMWRITE_EXR_COMPRESSION_DWAA:
+                    case IMWRITE_EXR_COMPRESSION_DWAB:
+                        ret = true;
+                        break;
+                    default:
+                        ret = false;
+                        break;
+                }
+            }
+            break;
+        case IMWRITE_EXR_DWA_COMPRESSION_LEVEL:
+            ret = (0 < value);
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
 
 ImageEncoder ExrEncoder::newEncoder() const
 {

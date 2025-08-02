@@ -750,6 +750,34 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     return true;
 }
 
+bool PAMEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_PAM_TUPLETYPE:
+            {
+                switch(value)
+                {
+                    case IMWRITE_PAM_FORMAT_NULL:
+                    case IMWRITE_PAM_FORMAT_BLACKANDWHITE:
+                    case IMWRITE_PAM_FORMAT_GRAYSCALE:
+                    case IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA:
+                    case IMWRITE_PAM_FORMAT_RGB:
+                    case IMWRITE_PAM_FORMAT_RGB_ALPHA:
+                        ret = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
 }
 
 #endif

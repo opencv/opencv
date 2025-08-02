@@ -225,6 +225,14 @@ public:
     virtual bool isFormatSupported(int depth) const;
 
     /**
+     * @brief Validates encode parameter.
+     * @param key The key of the encode parameter.
+     * @param value The value of the encode parameter.
+     * @return true if the encode parameter is valid for this encoder, false otherwise.
+     */
+    virtual bool isValidParam(const int key, const int value) const;
+
+    /**
      * @brief Set the destination for encoding as a file.
      * @param filename The name of the file to which the image will be written.
      * @return true if the destination was successfully set, false otherwise.

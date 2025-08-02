@@ -916,6 +916,47 @@ _exit_:
     return result;
 }
 
+bool JpegEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_JPEG_QUALITY:
+        case IMWRITE_JPEG_LUMA_QUALITY:
+        case IMWRITE_JPEG_CHROMA_QUALITY:
+            ret = (0 <= value) && (value <= 100);
+            break;
+        case IMWRITE_JPEG_PROGRESSIVE:
+        case IMWRITE_JPEG_OPTIMIZE:
+            ret = (value == 0) || (value == 1);
+            break;
+        case IMWRITE_JPEG_RST_INTERVAL:
+            ret = (0 <= value) && (value <= 65535);
+            break;
+        case IMWRITE_JPEG_SAMPLING_FACTOR:
+            {
+                switch(value)
+                {
+                    case IMWRITE_JPEG_SAMPLING_FACTOR_411:
+                    case IMWRITE_JPEG_SAMPLING_FACTOR_420:
+                    case IMWRITE_JPEG_SAMPLING_FACTOR_422:
+                    case IMWRITE_JPEG_SAMPLING_FACTOR_440:
+                    case IMWRITE_JPEG_SAMPLING_FACTOR_444:
+                    ret = true;
+                    break;
+
+                    default:
+                    ret = false;
+                    break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
 }
 
 #endif

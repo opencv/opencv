@@ -1872,6 +1872,47 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
     return true;
 }
 
+bool PngEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_PNG_COMPRESSION:
+            ret = (0 <= value) && (value <= 9);
+            break;
+        case IMWRITE_PNG_STRATEGY:
+            {
+                switch(value)
+                {
+                    case IMWRITE_PNG_STRATEGY_DEFAULT:
+                    case IMWRITE_PNG_STRATEGY_FILTERED:
+                    case IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY:
+                    case IMWRITE_PNG_STRATEGY_RLE:
+                    case IMWRITE_PNG_STRATEGY_FIXED:
+                        ret = true;
+                        break;
+                    default:
+                        ret = false;
+                        break;
+                }
+            }
+            break;
+        case IMWRITE_PNG_BILEVEL:
+            ret = (value == 0) || (value == 1);
+            return ret;
+        case IMWRITE_PNG_FILTER:
+            ret = (value & ~IMWRITE_PNG_ALL_FILTERS) == 0;
+            break;
+        case IMWRITE_PNG_ZLIBBUFFER_SIZE:
+            ret = (6 <= value) && (value <= 1024*1024);
+            break;
+        default:
+            break;
+    }
+
+    return ret;
+}
+
 }
 
 #endif
