@@ -224,7 +224,12 @@ public:
      */
     virtual bool isFormatSupported(int depth) const;
 
-
+    /**
+     * @brief Validates encode parameter.
+     * @param key The key of the encode parameter.
+     * @param value The value of the encode parameter.
+     * @return true if the encode parameter is valid for this encoder, false otherwise.
+     */
     virtual bool isValidParam(const int key, const int value) const;
 
     /**

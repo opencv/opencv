@@ -589,6 +589,20 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     return status;
 }
 
+bool WebPEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_WEBP_QUALITY:
+            ret = (1<=value); // Above 100 means lossless.
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
 }
 
 #endif

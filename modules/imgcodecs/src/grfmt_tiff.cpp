@@ -1481,6 +1481,83 @@ static void extend_cvtColor( InputArray _src, OutputArray _dst, int code )
     cv::mixChannels( src, dst, fromTo );
 }
 
+bool TiffEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_TIFF_RESUNIT:
+            ret = (value == RESUNIT_NONE) || (value == RESUNIT_INCH) || (value == RESUNIT_CENTIMETER);
+            break;
+        case IMWRITE_TIFF_XDPI:
+        case IMWRITE_TIFF_YDPI:
+            ret = (0 < value);
+            break;
+        case IMWRITE_TIFF_COMPRESSION:
+            {
+                switch(value)
+                {
+                    case IMWRITE_TIFF_COMPRESSION_NONE:
+                    case IMWRITE_TIFF_COMPRESSION_CCITTRLE:
+                    case IMWRITE_TIFF_COMPRESSION_CCITTFAX3: // IMWRITE_TIFF_COMPRESSION_CCITT_T4:
+                    case IMWRITE_TIFF_COMPRESSION_CCITTFAX4: // IMWRITE_TIFF_COMPRESSION_CCITT_T6:
+                    case IMWRITE_TIFF_COMPRESSION_LZW:
+                    case IMWRITE_TIFF_COMPRESSION_OJPEG:
+                    case IMWRITE_TIFF_COMPRESSION_JPEG:
+                    case IMWRITE_TIFF_COMPRESSION_T85:
+                    case IMWRITE_TIFF_COMPRESSION_T43:
+                    case IMWRITE_TIFF_COMPRESSION_NEXT:
+                    case IMWRITE_TIFF_COMPRESSION_CCITTRLEW:
+                    case IMWRITE_TIFF_COMPRESSION_PACKBITS:
+                    case IMWRITE_TIFF_COMPRESSION_THUNDERSCAN:
+                    case IMWRITE_TIFF_COMPRESSION_IT8CTPAD:
+                    case IMWRITE_TIFF_COMPRESSION_IT8LW:
+                    case IMWRITE_TIFF_COMPRESSION_IT8MP:
+                    case IMWRITE_TIFF_COMPRESSION_IT8BL:
+                    case IMWRITE_TIFF_COMPRESSION_PIXARFILM:
+                    case IMWRITE_TIFF_COMPRESSION_PIXARLOG:
+                    case IMWRITE_TIFF_COMPRESSION_DEFLATE:
+                    case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE:
+                    case IMWRITE_TIFF_COMPRESSION_DCS:
+                    case IMWRITE_TIFF_COMPRESSION_JBIG:
+                    case IMWRITE_TIFF_COMPRESSION_SGILOG:
+                    case IMWRITE_TIFF_COMPRESSION_SGILOG24:
+                    case IMWRITE_TIFF_COMPRESSION_JP2000:
+                    case IMWRITE_TIFF_COMPRESSION_LERC:
+                    case IMWRITE_TIFF_COMPRESSION_LZMA:
+                    case IMWRITE_TIFF_COMPRESSION_ZSTD:
+                    case IMWRITE_TIFF_COMPRESSION_WEBP:
+                    case IMWRITE_TIFF_COMPRESSION_JXL:
+                        ret = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        case IMWRITE_TIFF_ROWSPERSTRIP:
+            ret = (0 < value);
+            break;
+        case IMWRITE_TIFF_PREDICTOR:
+            {
+                switch(value)
+                {
+                    case IMWRITE_TIFF_PREDICTOR_NONE:
+                    case IMWRITE_TIFF_PREDICTOR_HORIZONTAL:
+                    case IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT:
+                        ret = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
 } // namespace
 
 #endif

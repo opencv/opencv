@@ -142,7 +142,7 @@ static uint32_t test_jpeg_subsampling( const Mat src, const vector<int> param )
 
     if ( cv::imencode(".jpg", src, jpeg, param ) == false )
     {
-        return 0;
+        return -1;
     }
 
     if ( src.channels() != 3 )
@@ -220,7 +220,12 @@ TEST(Imgcodecs_Jpeg, encode_subsamplingfactor_usersetting_invalid)
         vector<int> param;
         param.push_back( IMWRITE_JPEG_SAMPLING_FACTOR );
         param.push_back( sampling_factor_list[i] );
-        EXPECT_EQ( default_sampling_factor, test_jpeg_subsampling(src, param) );
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
+        uint32_t expectedResult = -1; // encoding is failed.
+#else
+        uint32_t expectedResult = default_sampling_factor;
+#endif // ENABLE_ENCODE_PARAM_VALIDATION
+        EXPECT_EQ( expectedResult, test_jpeg_subsampling(src, param) );
     }
 }
 

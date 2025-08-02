@@ -364,6 +364,7 @@ static ImageEncoder findEncoder( const String& _ext )
     return ImageEncoder();
 }
 
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
 static bool isValidParamAtAll(const int key, const int value)
 {
     bool ret = false;
@@ -378,6 +379,7 @@ static bool isValidParamAtAll(const int key, const int value)
     }
     return ret;
 }
+#endif // ENABLE_ENCODE_PARAM_VALIDATION
 
 
 static void ExifTransform(int orientation, OutputArray img)
@@ -1126,6 +1128,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
     for(size_t v = 0; v < params.size(); v+= 2)
     {
         const int key = params[v];
@@ -1133,12 +1136,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         if(encoder->isValidParam(key, value))
         {
             // (key,value) is valid for current encoder.
-            CV_LOG_WARNING(nullptr, cv::format("(key = %d, value = %d) is valid encoding param[1]", key, value));
+            // Do nothing.
         }
         else if(isValidParamAtAll(key, value))
         {
             // (key,value) is valid for other encoders.
-            CV_LOG_WARNING(nullptr, cv::format("(key = %d, value = %d) is valid encoding param[2]", key, value));
+            // Do nothing.
         }
         else
         {
@@ -1147,6 +1150,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
             return false;
         }
     }
+#endif // ENABLE_ENCODE_PARAM_VALIDATION
 
     bool code = false;
     try
@@ -1701,6 +1705,7 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
 
+#ifdef ENABLE_ENCODE_PARAM_VALIDATION
     for(size_t v = 0; v < params.size(); v+= 2)
     {
         const int key = params[v];
@@ -1708,12 +1713,12 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
         if(encoder->isValidParam(key, value))
         {
             // (key,value) is valid for current encoder.
-            CV_LOG_WARNING(nullptr, cv::format("(key = %d, value = %d) is valid encoding param[1]", key, value));
+            // Do nothing.
         }
         else if(isValidParamAtAll(key, value))
         {
             // (key,value) is valid for other encoders.
-            CV_LOG_WARNING(nullptr, cv::format("(key = %d, value = %d) is valid encoding param[2]", key, value));
+            // Do nothing.
         }
         else
         {
@@ -1722,6 +1727,7 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
             return false;
         }
     }
+#endif
 
     bool code = false;
     String filename;

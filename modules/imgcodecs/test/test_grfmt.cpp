@@ -166,6 +166,8 @@ TEST_P(Imgcodecs_ExtSize, write_imageseq)
             continue;
         if (cn == 1 && ext == ".gif")
             continue;
+        if (cn == 1 && ext == ".webp")
+            continue;
         string filename = cv::tempfile(format("%d%s", cn, ext.c_str()).c_str());
 
         Mat img_gt(size, CV_MAKETYPE(CV_8U, cn), Scalar::all(0));
@@ -257,6 +259,9 @@ const string all_exts[] =
 #ifdef HAVE_IMGCODEC_GIF
     ".gif",
 #endif
+#ifdef HAVE_WEBP
+    ".webp",
+#endif
 };
 
 vector<Size> all_sizes()
@@ -307,6 +312,34 @@ TEST_P(Imgcodecs_pbm, write_read)
 INSTANTIATE_TEST_CASE_P(All, Imgcodecs_pbm, testing::Bool());
 #endif
 
+// See https://github.com/opencv/opencv/issues/27557
+typedef testing::TestWithParam<string> Imgcodecs_invalid_key;
+
+TEST_P(Imgcodecs_invalid_key, encode_regression27557)
+{
+    const string ext = GetParam();
+
+    Mat src(100, 100, CV_8UC3, Scalar(0, 255, 0));
+    std::vector<uchar> buf;
+    bool status = false;
+    EXPECT_NO_THROW(status = imencode(ext, src, buf, { -1, -1 }));
+    EXPECT_FALSE(status);
+}
+
+TEST_P(Imgcodecs_invalid_key, write_regression27557)
+{
+    const string ext = GetParam();
+    string fname = tempfile(ext.c_str());
+
+    Mat src(100, 100, CV_8UC3, Scalar(0, 255, 0));
+    std::vector<uchar> buf;
+    bool status = false;
+    EXPECT_NO_THROW(status = imwrite(fname, src, { -1, -1 }));
+    EXPECT_FALSE(status);
+    remove(fname.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(All, Imgcodecs_invalid_key, testing::ValuesIn(all_exts));
 
 //==================================================================================================
 
@@ -524,6 +557,8 @@ TEST(Imgcodecs, imdecode_user_buffer)
     result = cv::imdecode(encoded, IMREAD_ANYCOLOR);
     EXPECT_TRUE(result.empty());
 }
+
+
 
 }} // namespace
 

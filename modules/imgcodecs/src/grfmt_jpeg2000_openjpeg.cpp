@@ -808,6 +808,20 @@ bool Jpeg2KOpjEncoder::write(const Mat& img, const std::vector<int>& params)
     return true;
 }
 
+bool Jpeg2KOpjEncoder::isValidParam(const int key, const int value) const
+{
+    bool ret = false;
+    switch(key)
+    {
+        case IMWRITE_JPEG2000_COMPRESSION_X1000:
+            ret = (0 <= value) && (value <= 1000);
+            break;
+        default:
+            break;
+    }
+    return ret;
+}
+
 
 } // namespace cv
 
