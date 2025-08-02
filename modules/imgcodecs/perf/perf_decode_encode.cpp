@@ -104,7 +104,9 @@ const string exts[] = {
 #ifdef HAVE_JPEGXL
     ".jxl",
 #endif
+#ifdef HAVE_PNG
     ".png",
+#endif
 #ifdef HAVE_IMGCODEC_PXM
     ".ppm",
 #endif
@@ -126,7 +128,9 @@ const string exts_multi[] = {
 #ifdef HAVE_IMGCODEC_GIF
     ".gif",
 #endif
+#ifdef HAVE_PNG
     ".png",
+#endif
 #ifdef HAVE_TIFF
     ".tiff",
 #endif
@@ -142,7 +146,9 @@ const string exts_anim[] = {
 #ifdef HAVE_IMGCODEC_GIF
     ".gif",
 #endif
+#ifdef HAVE_PNG
     ".png",
+#endif
 #ifdef HAVE_WEBP
     ".webp",
 #endif
