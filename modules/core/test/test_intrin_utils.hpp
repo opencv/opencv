@@ -24,6 +24,19 @@ void test_hal_intrin_float16();
 
 //==================================================================================================
 
+#if defined (__clang__) && defined(__has_warning)
+    #if __has_warning("-Wmaybe-uninitialized")
+        #define CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS
+    #endif
+#elif defined (__GNUC__) // in case of gcc, it does not have macro __has_warning
+    #define CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS
+#endif
+
+#if defined (CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 template <typename R> struct Data
 {
     typedef typename VTraits<R>::lane_type LaneType;
@@ -2408,6 +2421,10 @@ void test_hal_intrin_float16()
         ;
 }
 #endif*/
+
+#if defined (CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS)
+#pragma GCC diagnostic pop
+#endif
 
 #endif //CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

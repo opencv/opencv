@@ -383,6 +383,110 @@ R & t \\
 0 & 1
 \end{bmatrix} P_{h_0}.\f]
 
+<B> Homogeneous Transformations, Object frame / Camera frame </B><br>
+Change of basis or computing the 3D coordinates from one frame to another frame can be achieved easily using
+the following notation:
+
+\f[
+\mathbf{X}_c = \hspace{0.2em}
+{}^{c}\mathbf{T}_o \hspace{0.2em} \mathbf{X}_o
+\f]
+
+\f[
+\begin{bmatrix}
+X_c \\
+Y_c \\
+Z_c \\
+1
+\end{bmatrix} =
+\begin{bmatrix}
+{}^{c}\mathbf{R}_o & {}^{c}\mathbf{t}_o \\
+0_{1 \times 3} & 1
+\end{bmatrix}
+\begin{bmatrix}
+X_o \\
+Y_o \\
+Z_o \\
+1
+\end{bmatrix}
+\f]
+
+For a 3D points (\f$ \mathbf{X}_o \f$) expressed in the object frame, the homogeneous transformation matrix
+\f$ {}^{c}\mathbf{T}_o \f$ allows computing the corresponding coordinate (\f$ \mathbf{X}_c \f$) in the camera frame.
+This transformation matrix is composed of a 3x3 rotation matrix \f$ {}^{c}\mathbf{R}_o \f$ and a 3x1 translation vector
+\f$ {}^{c}\mathbf{t}_o \f$.
+The 3x1 translation vector \f$ {}^{c}\mathbf{t}_o \f$ is the position of the object frame in the camera frame and the
+3x3 rotation matrix \f$ {}^{c}\mathbf{R}_o \f$ the orientation of the object frame in the camera frame.
+
+With this simple notation, it is easy to chain the transformations. For instance, to compute the 3D coordinates of a point
+expressed in the object frame in the world frame can be done with:
+
+\f[
+\mathbf{X}_w = \hspace{0.2em}
+{}^{w}\mathbf{T}_c \hspace{0.2em} {}^{c}\mathbf{T}_o \hspace{0.2em}
+\mathbf{X}_o =
+{}^{w}\mathbf{T}_o \hspace{0.2em} \mathbf{X}_o
+\f]
+
+Similarly, computing the inverse transformation can be done with:
+
+\f[
+\mathbf{X}_o = \hspace{0.2em}
+{}^{o}\mathbf{T}_c \hspace{0.2em} \mathbf{X}_c =
+\left( {}^{c}\mathbf{T}_o \right)^{-1} \hspace{0.2em} \mathbf{X}_c
+\f]
+
+The inverse of an homogeneous transformation matrix is then:
+
+\f[
+{}^{o}\mathbf{T}_c = \left( {}^{c}\mathbf{T}_o \right)^{-1} =
+\begin{bmatrix}
+{}^{c}\mathbf{R}^{\top}_o & - \hspace{0.2em} {}^{c}\mathbf{R}^{\top}_o \hspace{0.2em} {}^{c}\mathbf{t}_o \\
+0_{1 \times 3} & 1
+\end{bmatrix}
+\f]
+
+One can note that the inverse of a 3x3 rotation matrix is directly its matrix transpose.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png)
+
+This figure summarizes the whole process. The object pose returned for instance by the @ref solvePnP function
+or pose from fiducial marker detection is this \f$ {}^{c}\mathbf{T}_o \f$ transformation.
+
+The camera intrinsic matrix \f$ \mathbf{K} \f$ allows projecting the 3D point expressed in the camera frame onto the image plane
+assuming a perspective projection model (pinhole camera model). Image coordinates extracted from classical image processing functions
+assume a (u,v) top-left coordinates frame.
+
+\note
+- for an online video course on this topic, see for instance:
+  - ["3.3.1. Homogeneous Transformation Matrices", Modern Robotics, Kevin M. Lynch and Frank C. Park](https://modernrobotics.northwestern.edu/nu-gm-book-resource/3-3-1-homogeneous-transformation-matrices/)
+- the 3x3 rotation matrix is composed of 9 values but describes a 3 dof transformation
+- some additional properties of the 3x3 rotation matrix are:
+  - \f$ \mathrm{det} \left( \mathbf{R} \right) = 1 \f$
+  - \f$ \mathbf{R} \mathbf{R}^{\top} = \mathbf{R}^{\top} \mathbf{R} = \mathrm{I}_{3 \times 3} \f$
+  - interpolating rotation can be done using the [Slerp (spherical linear interpolation)](https://en.wikipedia.org/wiki/Slerp) method
+- quick conversions between the different rotation formalisms can be done using this [online tool](https://www.andre-gaschler.com/rotationconverter/)
+
+<B> Intrinsic parameters from camera lens specifications </B><br>
+When dealing with industrial cameras, the camera intrinsic matrix or more precisely \f$ \left(f_x, f_y \right) \f$
+can be deduced, approximated from the camera specifications:
+
+\f[
+f_x = \frac{f_{\text{mm}}}{\text{pixel_size_in_mm}} = \frac{f_{\text{mm}}}{\text{sensor_size_in_mm} / \text{nb_pixels}}
+\f]
+
+In a same way, the physical focal length can be deduced from the angular field of view:
+
+\f[
+f_{\text{mm}} = \frac{\text{sensor_size_in_mm}}{2 \times \tan{\frac{\text{fov}}{2}}}
+\f]
+
+This latter conversion can be useful when using a rendering software to mimic a physical camera device.
+
+@note
+    -    See also #calibrationMatrixValues
+
+<B> Additional references, notes </B><br>
 @note
     -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although all
         functions assume the same structure of this parameter, they may name it differently. The
@@ -898,7 +1002,9 @@ An example program about homography from the camera displacement
 Check @ref tutorial_homography "the corresponding tutorial" for more details
 */
 
-/** @brief Finds an object pose from 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences:
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -961,14 +1067,16 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
-    -  With @ref SOLVEPNP_SQPNP input points must be >= 3
+   -   With @ref SOLVEPNP_SQPNP input points must be >= 3
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
                             OutputArray rvec, OutputArray tvec,
                             bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
-/** @brief Finds an object pose from 3D-2D point correspondences using the RANSAC scheme.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences using the RANSAC scheme to deal with bad matches.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1001,8 +1109,8 @@ projections imagePoints and the projected (using @ref projectPoints ) objectPoin
 makes the function resistant to outliers.
 
 @note
-   -   An example of how to use solvePNPRansac for object detection can be found at
-        opencv_source_code/samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/
+   -   An example of how to use solvePnPRansac for object detection can be found at
+        @ref tutorial_real_time_pose
    -   The default method used to estimate the camera pose for the Minimal Sample Sets step
        is #SOLVEPNP_EPNP. Exceptions are:
          - if you choose #SOLVEPNP_P3P or #SOLVEPNP_AP3P, these methods will be used.
@@ -1028,7 +1136,9 @@ CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoint
                      OutputArray rvec, OutputArray tvec, OutputArray inliers,
                      const UsacParams &params=UsacParams());
 
-/** @brief Finds an object pose from 3 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from **3** 3D-2D point correspondences.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1121,7 +1231,9 @@ CV_EXPORTS_W void solvePnPRefineVVS( InputArray objectPoints, InputArray imagePo
                                      TermCriteria criteria = TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 20, FLT_EPSILON),
                                      double VVSlambda = 1);
 
-/** @brief Finds an object pose from 3D-2D point correspondences.
+/** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences.
+
+![Perspective projection, from object to camera frame](pics/pinhole_homogeneous_transformation.png){ width=50% }
 
 @see @ref calib3d_solvePnP
 
@@ -1192,6 +1304,7 @@ More information is described in @ref calib3d_solvePnP
          - point 1: [ squareLength / 2,  squareLength / 2, 0]
          - point 2: [ squareLength / 2, -squareLength / 2, 0]
          - point 3: [-squareLength / 2, -squareLength / 2, 0]
+   -   With @ref SOLVEPNP_SQPNP input points must be >= 3
  */
 CV_EXPORTS_W int solvePnPGeneric( InputArray objectPoints, InputArray imagePoints,
                                   InputArray cameraMatrix, InputArray distCoeffs,
@@ -1272,7 +1385,8 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
+Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+to create the desired checkerboard pattern.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
@@ -1330,8 +1444,9 @@ which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
 
-Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
-![Checkerboard](pics/checkerboard_radon.png)
+Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+to create the corresponding checkerboard pattern:
+\image html pics/checkerboard_radon.png width=60%
  */
 CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
 bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,
@@ -4147,9 +4262,9 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
 
     @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
-    1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can be also passed here.
+    1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can also be passed here.
     @param imagePoints Array of corresponding image points, Nx2 1-channel or 1xN/Nx1 2-channel,
-    where N is the number of points. vector\<Point2d\> can be also passed here.
+    where N is the number of points. vector\<Point2d\> can also be passed here.
     @param cameraMatrix Input camera intrinsic matrix \f$\cameramatrix{A}\f$ .
     @param distCoeffs Input vector of distortion coefficients (4x1/1x4).
     @param rvec Output rotation vector (see @ref Rodrigues ) that, together with tvec, brings points from

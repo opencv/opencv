@@ -5,9 +5,9 @@ import argparse
 
 src = None
 erosion_size = 0
-max_elem = 2
+max_elem = 3
 max_kernel_size = 21
-title_trackbar_element_shape = 'Element:\n 0: Rect \n 1: Cross \n 2: Ellipse'
+title_trackbar_element_shape = 'Element:\n 0: Rect \n 1: Cross \n 2: Ellipse \n 3: Diamond'
 title_trackbar_kernel_size = 'Kernel size:\n 2n +1'
 title_erosion_window = 'Erosion Demo'
 title_dilation_window = 'Dilation Demo'
@@ -42,6 +42,8 @@ def morph_shape(val):
         return cv.MORPH_CROSS
     elif val == 2:
         return cv.MORPH_ELLIPSE
+    elif val == 3:
+        return cv.MORPH_DIAMOND
 
 
 ## [erosion]

@@ -128,7 +128,7 @@ enum VideoCaptureAPIs {
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
-       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Gemini330, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
      };
 
 
@@ -268,6 +268,7 @@ enum VideoAccelerationType
     VIDEO_ACCELERATION_D3D11    =  2,  //!< DirectX 11
     VIDEO_ACCELERATION_VAAPI    =  3,  //!< VAAPI
     VIDEO_ACCELERATION_MFX      =  4,  //!< libmfx (Intel MediaSDK/oneVPL)
+    VIDEO_ACCELERATION_DRM       =  5,  //!< Raspberry Pi V4
 };
 
 //! @} Hardware acceleration support
@@ -726,8 +727,14 @@ class CV_EXPORTS_W IStreamReader
 public:
     virtual ~IStreamReader();
 
-    /** @brief Read bytes from stream */
-    virtual long long read(char* buffer, long long size) = 0;
+    /** @brief Read bytes from stream
+     *
+     * @param buffer already allocated buffer of at least @p size bytes
+     * @param size maximum number of bytes to read
+     *
+     * @return actual number of read bytes
+     */
+    CV_WRAP virtual long long read(char* buffer, long long size) = 0;
 
     /** @brief Sets the stream position
      *
@@ -736,7 +743,7 @@ public:
      *
      * @see fseek
      */
-    virtual long long seek(long long offset, int origin) = 0;
+    CV_WRAP virtual long long seek(long long offset, int origin) = 0;
 };
 
 class IVideoCapture;

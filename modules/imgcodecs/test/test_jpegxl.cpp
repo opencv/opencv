@@ -7,6 +7,8 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_JPEGXL
 
+#include <jxl/version.h> // For JPEGXL_MAJOR_VERSION and JPEGXL_MINOR_VERSION
+
 typedef tuple<perf::MatType, int> MatType_and_Distance;
 typedef testing::TestWithParam<MatType_and_Distance> Imgcodecs_JpegXL_MatType;
 
@@ -16,8 +18,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     const int distanceParam = get<1>(GetParam());
 
     cv::Scalar col;
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compressions.
+    // Lossy compression may be small differences in decoding results by environments.
     double th;
 
     switch( CV_MAT_DEPTH(matType) )
@@ -38,7 +40,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : (distanceParam > 2) ? 3 : distanceParam;
 
     bool ret = false;
     string tmp_fname = cv::tempfile(".jxl");
@@ -63,8 +65,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     const int distanceParam  = get<1>(GetParam());
 
     cv::Scalar col;
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compressions.
+    // Lossy compression may be small differences in decoding results by environments.
     double th;
 
     // If alpha=0, libjxl modify color channels(BGR). So do not set it.
@@ -86,7 +88,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : (distanceParam > 2) ? 3 : distanceParam;
 
     bool ret = false;
     vector<uchar> buff;
@@ -130,8 +132,8 @@ TEST_P(Imgcodecs_JpegXL_Effort_DecodingSpeed, encode_decode)
     const int speed  = get<1>(GetParam());
 
     cv::Scalar col = cv::Scalar(124,76,42);
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compression.
+    // Lossy compression may be small differences in decoding results by environments.
     double th = 3; // = 255 / 100 (1%);
 
     bool ret = false;
@@ -303,6 +305,56 @@ TEST(Imgcodecs_JpegXL, imread_truncated_stream)
 
     // Delete temporary file
     remove(tmp_fname.c_str());
+}
+
+// See https://github.com/opencv/opencv/issues/27382
+TEST(Imgcodecs_JpegXL, imencode_regression27382)
+{
+    cv::Mat image(1024, 1024, CV_16U);
+    cv::RNG rng(1024);
+    rng.fill(image, cv::RNG::NORMAL, 0, 65535);
+
+    std::vector<unsigned char> buffer;
+    std::vector<int> params = {cv::IMWRITE_JPEGXL_DISTANCE, 0}; // lossless
+
+    EXPECT_NO_THROW(cv::imencode(".jxl", image, buffer, params));
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buffer, cv::IMREAD_UNCHANGED));
+    EXPECT_FALSE(decoded.empty());
+
+    cv::Mat diff;
+    cv::absdiff(image, decoded, diff);
+    double max_diff = 0.0;
+    cv::minMaxLoc(diff, nullptr, &max_diff);
+    EXPECT_EQ(max_diff, 0 );
+}
+
+TEST(Imgcodecs_JpegXL, imencode_regression27382_2)
+{
+    cv::Mat image(1024, 1024, CV_16U);
+    cv::RNG rng(1024);
+    rng.fill(image, cv::RNG::NORMAL, 0, 65535);
+
+    std::vector<unsigned char> buffer;
+    std::vector<int> params = {cv::IMWRITE_JPEGXL_QUALITY, 100}; // lossless
+
+    EXPECT_NO_THROW(cv::imencode(".jxl", image, buffer, params));
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buffer, cv::IMREAD_UNCHANGED));
+    EXPECT_FALSE(decoded.empty());
+
+    cv::Mat diff;
+    cv::absdiff(image, decoded, diff);
+    double max_diff = 0.0;
+    cv::minMaxLoc(diff, nullptr, &max_diff);
+#if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
+    // Quality parameter is supported with libjxl v0.10.0 or later
+    EXPECT_EQ(max_diff, 0); // Lossless
+#else
+    EXPECT_NE(max_diff, 0); // Lossy
+#endif
 }
 
 
