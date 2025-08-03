@@ -4,7 +4,7 @@
 
 #include "parametersController.hpp"
 #include <opencv2/objdetect/aruco_dictionary.hpp>
-
+#include <opencv2/videoio/registry.hpp>
 #include <iostream>
 
 template <typename T>
@@ -49,6 +49,9 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
     readFromNode(reader["solver_max_iters"], mInternalParameters.solverMaxIters);
     readFromNode(reader["fast_solver"], mInternalParameters.fastSolving);
+    readFromNode(reader["rational_model"], mInternalParameters.rationalModel);
+    readFromNode(reader["thin_prism_model"], mInternalParameters.thinPrismModel);
+    readFromNode(reader["tiltedModel"], mInternalParameters.tiltedModel);
     readFromNode(reader["frame_filter_conv_param"], mInternalParameters.filterAlpha);
 
     bool retValue =
@@ -104,6 +107,27 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     else {
         mCapParams.source = Camera;
         mCapParams.camID = parser.get<int>("ci");
+    }
+
+    mCapParams.camBackend = cv::CAP_ANY;
+    if (parser.has("vb"))
+    {
+        std::string backendName = parser.get<std::string>("vb");
+        auto backs = cv::videoio_registry::getBackends();
+        bool backendSet = false;
+        for (const auto& b: backs)
+        {
+            if (backendName == cv::videoio_registry::getBackendName(b))
+            {
+                mCapParams.camBackend = b;
+                backendSet = true;
+            }
+        }
+        if (!backendSet)
+        {
+            std::cout << "Unknown or unsupported backend " << backendName << std::endl;
+            return false;
+        }
     }
 
     std::string templateType = parser.get<std::string>("t");

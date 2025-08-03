@@ -21,14 +21,23 @@ int ipp_hal_minMaxIdxMaskStep(const uchar* src_data, size_t src_step, int width,
 #undef cv_hal_minMaxIdxMaskStep
 #define cv_hal_minMaxIdxMaskStep ipp_hal_minMaxIdxMaskStep
 
-#define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
+#if (IPP_VERSION_X100 == 202200)
+# define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
+# else
+# define IPP_DISABLE_NORM_8U             0
+#endif
+
+#if (IPP_VERSION_X100 >= 202200 && IPP_VERSION_X100 < 202220)
+# define IPP_DISABLE_NORM_INF_16U_C1MR   1 // segmentation fault in accuracy test
+# else
+# define IPP_DISABLE_NORM_INF_16U_C1MR   0
+#endif
 
 int ipp_hal_norm(const uchar* src, size_t src_step, const uchar* mask, size_t mask_step,
                  int width, int height, int type, int norm_type, double* result);
 
 #undef cv_hal_norm
 #define cv_hal_norm ipp_hal_norm
-
 
 int ipp_hal_normDiff(const uchar* src1, size_t src1_step, const uchar* src2, size_t src2_step, const uchar* mask,
                      size_t mask_step, int width, int height, int type, int norm_type, double* result);

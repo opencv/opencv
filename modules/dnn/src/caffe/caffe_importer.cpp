@@ -220,7 +220,7 @@ public:
 
             const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
             bool hasData =  fd->is_required() ||
-                            (fd->is_optional() && msgRefl->HasField(msg, fd)) ||
+                            (!fd->is_repeated() && !fd->is_required() && msgRefl->HasField(msg, fd)) ||
                             (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0) ||
                             !unknownFields.empty();
             if (!hasData)

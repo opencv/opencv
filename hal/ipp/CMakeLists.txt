@@ -5,6 +5,7 @@ set(IPP_HAL_LIBRARIES "ipphal" CACHE INTERNAL "")
 set(IPP_HAL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include" CACHE INTERNAL "")
 set(IPP_HAL_HEADERS
   "${CMAKE_CURRENT_SOURCE_DIR}/include/ipp_hal_core.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/ipp_hal_imgproc.hpp"
   CACHE INTERNAL "")
 
 add_library(ipphal STATIC
@@ -13,6 +14,7 @@ add_library(ipphal STATIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src/norm_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/cart_polar_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/transforms_ipp.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/warp_ipp.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/sum_ipp.cpp"
 )
 
@@ -34,6 +36,7 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-suggest-override)
 target_include_directories(ipphal PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   ${CMAKE_SOURCE_DIR}/modules/core/include
+  ${CMAKE_SOURCE_DIR}/modules/imgproc/include
   ${IPP_INCLUDE_DIRS}
 )
 

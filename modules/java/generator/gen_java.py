@@ -1015,6 +1015,9 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
+            elif "jni_var" in type_dict[ret_type]:
+                c_epilogue.append(type_dict[ret_type]["jni_var"] % {"n" : '_retval_'})
+                ret = f"return {type_dict[ret_type]['jni_name'] % {'n' : '_retval_'}};"
 
             # hack: replacing func call with property set/get
             name = fi.name

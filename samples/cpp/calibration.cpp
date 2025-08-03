@@ -179,8 +179,19 @@ static bool runCalibration( vector<vector<Point2f> > imagePoints,
 
     vector<vector<Point3f> > objectPoints(1);
     calcChessboardCorners(boardSize, squareSize, objectPoints[0], patternType);
-    int offset = patternType != CHARUCOBOARD ? boardSize.width - 1: boardSize.width - 2;
-    objectPoints[0][offset].x = objectPoints[0][0].x + grid_width;
+    // Board imperfectness correction introduced in PR #12772
+    // The correction does not make sense for asymmetric and assymetric circles grids
+    if (patternType == CHESSBOARD)
+    {
+        int offset = boardSize.width - 1;
+        objectPoints[0][offset].x = objectPoints[0][0].x + grid_width;
+    }
+    else if (patternType == CHARUCOBOARD)
+    {
+        int offset = boardSize.width - 2;
+        objectPoints[0][offset].x = objectPoints[0][0].x + grid_width;
+    }
+
     newObjPoints = objectPoints[0];
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);

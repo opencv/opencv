@@ -184,6 +184,16 @@ public:
             for (i = 0; i < dims; i++)
                 newShapeDesc[i] = paramShape.get<int>(i);
         }
+        if (params.has("unsqueeze_axes"))
+        {
+            const DictValue& param_unsqueeze_axes = params.get("unsqueeze_axes");
+            int len_axes = param_unsqueeze_axes.size();
+            unsqueeze_axes.resize(len_axes);
+            for (int i = 0; i < len_axes; ++i)
+            {
+                unsqueeze_axes[i] = (int64_t)param_unsqueeze_axes.get<int>(i);
+            }
+        }
         if (hasDynamicShapes)
         {
             dynamicShapes.clear();
@@ -349,33 +359,56 @@ public:
                                       const std::vector<Ptr<BackendWrapper> > &outputs,
                                       const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto x = inputs[0].dynamicCast<CannBackendWrapper>();
+        auto input_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
 
-        // create operator
-        auto op = std::make_shared<ge::op::Reshape>(name);
+        if (!unsqueeze_axes.empty())
+        {
+            auto op = std::make_shared<ge::op::Unsqueeze>(name);
 
-        // set attributes
-        op->set_attr_axis(axis);
-        op->set_attr_num_axes(numAxes);
+            // set attributes
+            op->set_attr_axes(unsqueeze_axes);
 
-        // set inputs
-        // set inputs : x
-        auto op_x = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        op->set_input_x_by_name(*op_x, x->name.c_str());
-        auto x_desc = x->getTensorDesc();
-        op->update_input_desc_x(*x_desc);
-        // set inputs : shape
-        std::vector<int> shape_of_shape{(int)newShapeDesc.size()};
-        Mat shape_mat(shape_of_shape, CV_32S, newShapeDesc.data());
-        auto op_const_shape = std::make_shared<CannConstOp>(shape_mat.data, shape_mat.type(), shape_of_shape, cv::format("%s_shape", name.c_str()));
-        op->set_input_shape(*(op_const_shape->getOp()));
-        op->update_input_desc_shape(*(op_const_shape->getTensorDesc()));
+            // set inputs
+            // set inputs : x
+            auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_x_by_name(*input_node, input_wrapper->name.c_str());
+            auto input_desc = input_wrapper->getTensorDesc();
+            op->update_input_desc_x(*input_desc);
 
-        // set outputs
-        auto output_y_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-        op->update_output_desc_y(*output_y_desc);
+            // set outputs
+            auto desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+            op->update_output_desc_y(*desc_y);
 
-        return Ptr<BackendNode>(new CannBackendNode(op));
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
+        else
+        {
+            // create operator
+            auto op = std::make_shared<ge::op::Reshape>(name);
+
+            // set attributes
+            op->set_attr_axis(axis);
+            op->set_attr_num_axes(numAxes);
+
+            // set inputs
+            // set inputs : x
+            auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+            op->set_input_x_by_name(*input_node, input_wrapper->name.c_str());
+            auto input_desc = input_wrapper->getTensorDesc();
+            op->update_input_desc_x(*input_desc);
+            // set inputs : shape
+            std::vector<int> shape_of_shape{(int)newShapeDesc.size()};
+            Mat shape_mat(shape_of_shape, CV_32S, newShapeDesc.data());
+            auto op_const_shape = std::make_shared<CannConstOp>(shape_mat.data, shape_mat.type(), shape_of_shape, cv::format("%s_shape", name.c_str()));
+            op->set_input_shape(*(op_const_shape->getOp()));
+            op->update_input_desc_shape(*(op_const_shape->getTensorDesc()));
+
+            // set outputs
+            auto desc_y = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+            op->update_output_desc_y(*desc_y);
+
+            return Ptr<BackendNode>(new CannBackendNode(op));
+        }
     }
 #endif // HAVE_CANN
 
@@ -524,6 +557,7 @@ private:
     bool shapesInitialized;
     float scale;
     int zeropoint;
+    std::vector<int64_t> unsqueeze_axes;
 };
 
 Ptr<ReshapeLayer> ReshapeLayer::create(const LayerParams& params)

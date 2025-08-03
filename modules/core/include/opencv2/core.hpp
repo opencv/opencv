@@ -749,6 +749,11 @@ Possible usage with some positive example data:
     normalize(positiveData, normalizedData_minmax, 1.0, 0.0, NORM_MINMAX);
 @endcode
 
+@note Due to rounding issues, min-max normalization can result in values outside provided boundaries.
+If exact range conformity is needed, following workarounds can be used:
+- use double floating point precision (dtype = CV_64F)
+- manually clip values (`cv::max(res, left_bound, res)`, `cv::min(res, right_bound, res)` or `np.clip`)
+
 @param src input array.
 @param dst output array of the same size as src .
 @param alpha norm value to normalize to or the lower range boundary in case of the range

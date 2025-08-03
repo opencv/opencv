@@ -641,10 +641,15 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
 
     vector<vector<Point3f> > objectPoints(1);
     calcBoardCornerPositions(s.boardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
-    if (s.calibrationPattern == Settings::Pattern::CHARUCOBOARD) {
+
+    // Board imperfectness correction introduced in PR #12772
+    // The correction does not make sense for asymmetric and assymetric circles grids
+    if (s.calibrationPattern == Settings::Pattern::CHARUCOBOARD)
+    {
         objectPoints[0][s.boardSize.width - 2].x = objectPoints[0][0].x + grid_width;
     }
-    else {
+    else if (s.calibrationPattern != Settings::Pattern::CHESSBOARD)
+    {
         objectPoints[0][s.boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
     }
     newObjPoints = objectPoints[0];

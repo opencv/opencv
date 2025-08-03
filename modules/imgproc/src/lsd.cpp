@@ -1076,6 +1076,10 @@ void LineSegmentDetectorImpl::drawSegments(InputOutputArray _image, InputArray l
     }
 
     Mat _lines = lines.getMat();
+    if (_lines.empty())
+    {
+        return;
+    }
     const int N = _lines.checkVector(4);
 
     CV_Assert(_lines.depth() == CV_32F || _lines.depth() == CV_32S);
