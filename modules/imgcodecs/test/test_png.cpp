@@ -19,8 +19,14 @@ TEST(Imgcodecs_Png, write_big)
     EXPECT_EQ(13917, img.rows);
 
     vector<uchar> buff;
-    ASSERT_NO_THROW(imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, INT_MAX }));
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, 1024*1024 }));
+    ASSERT_TRUE(status);
+#ifdef HAVE_PNG
     EXPECT_EQ((size_t)816219, buff.size());
+#else
+    EXPECT_EQ((size_t)817407, buff.size());
+#endif
 }
 
 TEST(Imgcodecs_Png, encode)
@@ -30,7 +36,9 @@ TEST(Imgcodecs_Png, encode)
     vector<int> param;
     param.push_back(IMWRITE_PNG_COMPRESSION);
     param.push_back(3); //default(3) 0-9.
-    EXPECT_NO_THROW(imencode(".png", img_gt, buff, param));
+    bool status = false;
+    EXPECT_NO_THROW(status = imencode(".png", img_gt, buff, param));
+    ASSERT_TRUE(status);
     Mat img;
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
     EXPECT_FALSE(img.empty());

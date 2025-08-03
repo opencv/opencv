@@ -1602,6 +1602,29 @@ TEST(Core_InputOutput, FileStorage_json_null_object)
     fs.release();
 }
 
+TEST(Core_InputOutput, FileStorage_json_key_backslash)
+{
+    // equivalent to json text {"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852}
+    std::string test = R"({"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs[R"(")"].isNamed());  // = "\""
+    ASSERT_TRUE(fs[R"(\)"].isNamed());  // = "\\"
+    ASSERT_TRUE(fs[R"(Ġ")"].isNamed()); // = "Ġ\""
+    ASSERT_TRUE(fs[R"(\\)"].isNamed()); // = "\\\\"
+
+    ASSERT_EQ(fs[R"(")"].name(), R"(")");
+    ASSERT_EQ(fs[R"(\)"].name(), R"(\)");
+    ASSERT_EQ(fs[R"(Ġ")"].name(), R"(Ġ")");
+    ASSERT_EQ(fs[R"(\\)"].name(), R"(\\)");
+
+    ASSERT_EQ((int)fs[R"(")"], 1);
+    ASSERT_EQ((int)fs[R"(\)"], 59);
+    ASSERT_EQ((int)fs[R"(Ġ")"], 366);
+    ASSERT_EQ((int)fs[R"(\\)"], 6852);
+    fs.release();
+}
+
 TEST(Core_InputOutput, FileStorage_json_named_nodes)
 {
     std::string test =

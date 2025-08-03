@@ -95,8 +95,6 @@
 "test_elu_default_expanded_ver18",
 "test_elu_example_expanded_ver18",
 "test_elu_expanded_ver18",
-"test_expand_dim_changed", // Issue:: Unkonwn error
-"test_expand_dim_unchanged", // Issue:: Unkonwn error
 "test_eyelike_populate_off_main_diagonal", // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
 "test_eyelike_with_dtype", // ---- same as above ---
 "test_eyelike_without_dtype", // ---- same as above ---
@@ -104,15 +102,6 @@
 "test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
-"test_gemm_all_attributes",  // Issue::Wrong output
-"test_gemm_alpha",  // Issue::Wrong output
-"test_gemm_beta",  // Issue::Wrong output
-"test_gemm_default_scalar_bias",  // Issue::Wrong output
-"test_gemm_default_single_elem_vector_bias",  // Issue::Wrong output
-"test_gemm_default_vector_bias",  // Issue::Wrong output
-"test_gemm_default_zero_bias",  // Issue::Wrong output
-"test_gemm_transposeA", // Issue::Wrong output
-"test_gemm_transposeB",  // Issue::Wrong output
 "test_gridsample", // Issues::Layer::Can't create layer "onnx_node_output_0!Y" of type "GridSample" in function 'getLayerInstance'
 "test_gridsample_aligncorners_true", // ---- same as above ---
 "test_gridsample_bicubic", // ---- same as above ---
@@ -222,9 +211,7 @@
 "test_qlinearconv", // Issue::Parser:  Blob x_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_qlinearmatmul_2D", // Issue:: Parser: Variable weights is not supported in function 'parseQMatMul'
 "test_qlinearmatmul_3D", // ---- same as above ---
-"test_range_float_type_positive_delta", // Issue:: Unsupported data type in function. Unsupported type in function 'parseCast'
-"test_range_float_type_positive_delta_expanded", // ---- same as above ---
-"test_range_int32_type_negative_delta", // Issue:: Unsupported data type: INT32 in function. Unsupported type in function 'parseCast'
+"test_range_float_type_positive_delta_expanded", // ---- Unsupported operations: Loop ---
 "test_range_int32_type_negative_delta_expanded", // ---- same as above ---
 "test_reduce_sum_default_axes_keepdims_example", // Issue:: Parser: Reduce layer doesn't support non contant axes: 'constBlobs.find(node_proto.input(1)) != constBlobs.end()' must be 'true' (layer does not support dynamic parameters)
 "test_reduce_sum_default_axes_keepdims_random",  // ---- same as above ---
@@ -237,16 +224,7 @@
 "test_reduce_sum_negative_axes_keepdims_example",
 "test_reduce_sum_negative_axes_keepdims_random", // ---- same as above ---
 "test_reflect_pad", // Issue:: Parser:  Blob shape not found in const blobs in function 'getBlob' (weights are required as inputs)
-"test_reshape_allowzero_reordered",
-"test_reshape_extended_dims", // ---- same as above ---
-"test_reshape_negative_dim", // ---- same as above ---
-"test_reshape_negative_extended_dims", // ---- same as above ---
-"test_reshape_one_dim", // ---- same as above ---
-"test_reshape_reduced_dims", // ---- same as above ---
-"test_reshape_reordered_all_dims", // ---- same as above ---
-"test_reshape_reordered_last_dims", // ---- same as above ---
-"test_reshape_zero_and_negative_dim", // ---- same as above ---
-"test_reshape_zero_dim", // ---- same as above ---
+"test_reshape_allowzero_reordered", // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 "test_resize_downsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
 "test_resize_downsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
@@ -350,35 +328,13 @@
 "test_selu_expanded_ver18",
 "test_sequence_insert_at_back", // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
 "test_sequence_insert_at_front", // ---- same as above ---
-"test_shape", // Issue:: Parser: DNN/ONNX: can't find layer for output name: 'y'. Does model imported properly?
-"test_shape_clip_end", // ---- same as above ---
-"test_shape_clip_start", // ---- same as above ---
-"test_shape_end_1", // ---- same as above ---
-"test_shape_end_negative_1", // ---- same as above ---
-"test_shape_example", // ---- same as above ---
-"test_shape_start_1", // ---- same as above ---
-"test_shape_start_1_end_2", // ---- same as above ---
-"test_shape_start_1_end_negative_1", // ---- same as above ---
-"test_shape_start_negative_1", // ---- same as above ---
 "test_simple_rnn_batchwise", // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_simple_rnn_defaults", // ---- same as above ---
 "test_simple_rnn_with_initial_bias", // ---- same as above ---
 "test_size", // Issue:: Parser:  Can't create layer "onnx_node_output_0!y" of type "Size" in function 'getLayerInstance'
 "test_size_example", // ---- same as above ---
-"test_slice", // Issue:: Parser: constBlobs.find(node_proto.input(i)) != constBlobs.end() in function 'parseSlice'
-"test_slice_default_axes",  // ---- same as above ---
-"test_slice_default_steps",  // ---- same as above ---
-"test_slice_end_out_of_bounds",  // ---- same as above ---
-"test_slice_neg",  // ---- same as above ---
-"test_slice_neg_steps",  // ---- same as above ---
-"test_slice_negative_axes",  // ---- same as above ---
-"test_slice_start_out_of_bounds",  // ---- same as above ---
-"test_split_variable_parts_1d",  // ---- same as above ---
-"test_split_variable_parts_2d",  // ---- same as above ---
-"test_split_variable_parts_default_axis",  // ---- same as above ---
-"test_split_zero_size_splits",  // ---- same as above ---
-"test_squeeze", // Issue:: Parser: ONNX/Squeeze: doesn't support non-constant 'axes' input in function 'parseSqueeze' (layer parameters are dynamic)
-"test_squeeze_negative_axes", // ---- same as above ---
+"test_slice_start_out_of_bounds",
+"test_split_zero_size_splits",  // ---- incompatible type of input tensor #0 'input': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput' ---
 "test_strnormalizer_export_monday_casesensintive_lower", // 'Strings' (1) are not supported in function 'getLayerParams'
 "test_strnormalizer_export_monday_casesensintive_nochangecase", // ---- same as above ---
 "test_strnormalizer_export_monday_casesensintive_upper", // ---- same as above ---
@@ -392,8 +348,6 @@
 "test_tfidfvectorizer_tf_onlybigrams_levelempty",  // ---- same as above ---
 "test_tfidfvectorizer_tf_onlybigrams_skip5",  // ---- same as above ---
 "test_tfidfvectorizer_tf_uniandbigrams_skip5", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
-"test_tile", // Issue:: Parser: ONNX/Tile: repeats being non-constant is not supported. in function 'parseTile' (layer parameters are dynamic)
-"test_tile_precomputed", //  // ---- same as above ---
 "test_training_dropout", // Issue::cvtest::norm::wrong data type
 "test_training_dropout_default",  // ---- same as above ---
 "test_training_dropout_default_mask",  // ---- same as above ---
@@ -423,10 +377,3 @@
 "test_unique_sorted_with_axis_3d",  // ---- same as above ---
 "test_unique_sorted_with_negative_axis",  // ---- same as above ---
 "test_unique_sorted_without_axis",  // ---- same as above ---
-"test_unsqueeze_axis_0", // Issue::(most probaly weights are required as inputs: Blob axes not found in const blobs in function 'getBlob'
-"test_unsqueeze_axis_1",  // ---- same as above ---
-"test_unsqueeze_axis_2",  // ---- same as above ---
-"test_unsqueeze_negative_axes",  // ---- same as above ---
-"test_unsqueeze_three_axes",  // ---- same as above ---
-"test_unsqueeze_two_axes",   // ---- same as above ---)
-"test_unsqueeze_unsorted_axes",  // ---- same as above ---)
