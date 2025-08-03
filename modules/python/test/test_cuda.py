@@ -143,20 +143,18 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
-    def test_cuda_dlpack(self):
-        # TODO: test without torch
-        try:
-            import torch
-        except ImportError:
-            raise self.skipTest('No PyTorch library found')
-
-        ref = (np.random.random((128, 128, 3)) * 255).astype(np.uint8)
-        cuMat = cv.cuda_GpuMat()
-        cuMat.upload(ref)
-
-        arr = torch.from_dlpack(cuMat)
-        arr[57][88][1] += 1
-        self.assertTrue(np.array_equal(arr.cpu().numpy(), cuMat.download()))
+    def test_dlpack_GpuMat(self):
+        for dtype in [np.int8, np.uint8, np.int16, np.uint16, np.float16, np.int32, np.float32, np.float64]:
+            for channels in [2, 3, 5]:
+                ref = (np.random.random((64, 128, channels)) * 255).astype(dtype)
+                src = cv.cuda_GpuMat()
+                src.upload(ref)
+                dst = cv.cuda_GpuMat.from_dlpack(src)
+                test = dst.download()
+                equal = np.array_equal(ref, test)
+                if not equal:
+                    print(f"Failed test with dtype {dtype} and {channels} channels")
+                self.assertTrue(equal)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

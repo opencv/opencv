@@ -3,6 +3,8 @@
 
 #ifdef HAVE_OPENCV_CORE
 
+#include "dlpack/dlpack.h"
+
 static PyObject* pycvMakeType(PyObject* , PyObject* args, PyObject* kw) {
     const char *keywords[] = { "depth", "channels", NULL };
 
@@ -18,6 +20,209 @@ template <int depth>
 static PyObject* pycvMakeTypeCh(PyObject*, PyObject *value) {
     int channels = (int)PyLong_AsLong(value);
     return PyInt_FromLong(CV_MAKETYPE(depth, channels));
+}
+
+#define CV_DLPACK_CAPSULE_NAME "dltensor"
+#define CV_DLPACK_USED_CAPSULE_NAME "used_dltensor"
+
+template<typename T>
+void fillDLPackTensor(const T& src, DLManagedTensor* tensor);
+
+template<typename T>
+bool parseDLPackTensor(DLManagedTensor* tensor, T& obj);
+
+template<typename T>
+int GetNumDims(const T& src);
+
+// source: https://github.com/dmlc/dlpack/blob/7f393bbb86a0ddd71fde3e700fc2affa5cdce72d/docs/source/python_spec.rst#L110
+static void dlpack_capsule_deleter(PyObject *self){
+   if (PyCapsule_IsValid(self, CV_DLPACK_USED_CAPSULE_NAME)) {
+      return;
+   }
+
+   DLManagedTensor *managed = (DLManagedTensor *)PyCapsule_GetPointer(self, CV_DLPACK_CAPSULE_NAME);
+   if (managed == NULL) {
+      PyErr_WriteUnraisable(self);
+      return;
+   }
+
+   if (managed->deleter) {
+      managed->deleter(managed);
+   }
+}
+
+static void array_dlpack_deleter(DLManagedTensor *self)
+{
+   if (!Py_IsInitialized()) {
+      return;
+   }
+
+   PyGILState_STATE state = PyGILState_Ensure();
+
+   PyObject *array = (PyObject *)self->manager_ctx;
+   PyMem_Free(self);
+   Py_XDECREF(array);
+
+   PyGILState_Release(state);
+}
+
+template<typename T>
+static PyObject* to_dlpack(const T& src, PyObject* self, PyObject* py_args, PyObject* kw)
+{
+    int stream = 0;
+    PyObject* maxVersion = nullptr;
+    PyObject* dlDevice = nullptr;
+    bool copy = false;
+    const char* keywords[] = { "stream", "max_version", "dl_device", "copy", NULL };
+    if (!PyArg_ParseTupleAndKeywords(py_args, kw, "|iOOp:__dlpack__", (char**)keywords, &stream, &maxVersion, &dlDevice, &copy))
+        return nullptr;
+
+    if (dlDevice && dlDevice != Py_None && PyTuple_Check(dlDevice))
+    {
+        // TODO: check for device type
+    }
+
+    int ndim = GetNumDims(src);
+    void* ptr = PyMem_Malloc(sizeof(DLManagedTensor) + sizeof(int64_t) * ndim * 2);
+    if (!ptr) {
+        PyErr_NoMemory();
+        return nullptr;
+    }
+    DLManagedTensor* tensor = reinterpret_cast<DLManagedTensor*>(ptr);
+    tensor->manager_ctx = self;
+    tensor->deleter = array_dlpack_deleter;
+    tensor->dl_tensor.ndim = ndim;
+    tensor->dl_tensor.shape = reinterpret_cast<int64_t*>(reinterpret_cast<char*>(ptr) + sizeof(DLManagedTensor));
+    tensor->dl_tensor.strides = tensor->dl_tensor.shape + ndim;
+    fillDLPackTensor(src, tensor);
+
+    PyObject* capsule = PyCapsule_New(ptr, CV_DLPACK_CAPSULE_NAME, dlpack_capsule_deleter);
+    if (!capsule) {
+        PyMem_Free(ptr);
+        return nullptr;
+    }
+
+    // the capsule holds a reference
+    // TODO: when decref?
+    Py_INCREF(self);
+
+    return capsule;
+}
+
+template<typename T>
+static PyObject* from_dlpack(PyObject* py_args, PyObject* kw)
+{
+    PyObject* arr = nullptr;
+    PyObject* device = nullptr;
+    bool copy = false;
+    const char* keywords[] = { "device", "copy", NULL };
+    if (!PyArg_ParseTupleAndKeywords(py_args, kw, "O|Op:from_dlpack", (char**)keywords, &arr, &device, &copy))
+        return nullptr;
+
+    PyObject* capsule = nullptr;
+    if (PyCapsule_CheckExact(arr))
+    {
+        capsule = arr;
+    }
+    else
+    {
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
+        capsule = PyObject_CallMethodObjArgs(arr, PyString_FromString("__dlpack__"), NULL);
+        PyGILState_Release(gstate);
+    }
+
+    DLManagedTensor* tensor = reinterpret_cast<DLManagedTensor*>(PyCapsule_GetPointer(capsule, CV_DLPACK_CAPSULE_NAME));
+    if (tensor == nullptr)
+    {
+        if (capsule != arr)
+            Py_DECREF(capsule);
+        return nullptr;
+    }
+
+    // if (device == Py_None)
+    // {
+    //     // Check for __dlpack_device__
+    //     // PyErr_SetString(PyExc_BufferError, "unimplemented");
+    // }
+
+    // Check device of source array
+    // PyObject* res = PyObject_CallMethodNoArgs(arr, PyString_FromString("__dlpack_device__"));
+    // if (res && PyTuple_Check(res))
+    // {
+
+    // }
+
+    T retval;
+    bool success = parseDLPackTensor(tensor, retval);
+    if (capsule != arr)
+        Py_DECREF(capsule);
+    return success ? pyopencv_from(retval) : nullptr;
+}
+
+static DLDataType GetDLPackType(int elemSize1, int depth) {
+    DLDataType dtype;
+    dtype.bits = 8 * elemSize1;
+    dtype.lanes = 1;
+    switch (depth)
+    {
+        case CV_8S: case CV_16S: case CV_32S: /*case CV_64S:*/ dtype.code = kDLInt; break;
+        case CV_8U: case CV_16U: /*case CV_32U: case CV_64U:*/ dtype.code = kDLUInt; break;
+        case CV_16F: case CV_32F: case CV_64F: dtype.code = kDLFloat; break;
+        default:
+            CV_Error(Error::StsNotImplemented, "__dlpack__ data type");
+        // TODO: bool
+    }
+    return dtype;
+}
+
+static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
+    if (dtype.code == kDLInt)
+    {
+        switch (dtype.bits)
+        {
+            case 8: return CV_8SC(channels);
+            case 16: return CV_16SC(channels);
+            case 32: return CV_32SC(channels);
+            default:
+            {
+                PyErr_SetString(PyExc_BufferError,
+                                format("Unsupported int dlpack depth: %d", dtype.bits).c_str());
+                return -1;
+            }
+        }
+    }
+    if (dtype.code == kDLUInt)
+    {
+        switch (dtype.bits)
+        {
+            case 8: return CV_8UC(channels);
+            case 16: return CV_16UC(channels);
+            default:
+            {
+                PyErr_SetString(PyExc_BufferError,
+                                format("Unsupported uint dlpack depth: %d", dtype.bits).c_str());
+                return -1;
+            }
+        }
+    }
+    if (dtype.code == kDLFloat)
+    {
+        switch (dtype.bits)
+        {
+            case 16: return CV_16FC(channels);
+            case 32: return CV_32FC(channels);
+            case 64: return CV_64FC(channels);
+            default:
+            {
+                PyErr_SetString(PyExc_BufferError,
+                                format("Unsupported float dlpack depth: %d", dtype.bits).c_str());
+                return -1;
+            }
+        }
+    }
+    PyErr_SetString(PyExc_BufferError, format("Unsupported dlpack data type: %d", dtype.code).c_str());
+    return -1;
 }
 
 #define PYOPENCV_EXTRA_METHODS_CV \
