@@ -1759,6 +1759,7 @@ public:
     void setAnimation(Animation& animation);
     int getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata);
     bool readHeader();
+    bool readFrames(int start, int count);
     Mat readData();
     bool advance();
     int currentIndex() const;
@@ -1805,6 +1806,12 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
 
     m_decoder->setSource(filename);
 
+    if (!m_animationRef)
+    {
+        m_animationRef = &m_animation;
+    }
+    m_decoder->setAnimation(m_animationRef);
+
     if (!m_decoder->readHeader())
     {
         m_status = DECODER_READ_HEADER_FAILED;
@@ -1812,12 +1819,8 @@ void ImageCollection::Impl::init(String const& filename, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
-    if (!m_animationRef)
-    {
-        m_animationRef = &m_animation;
-    }
-    m_animationRef->frames.clear();
-    m_animationRef->frames.resize(m_size);
+    if (!m_animationRef->frames.size())
+        m_animationRef->frames.resize(m_size);
     m_status = DECODER_OK;
 }
 
@@ -1842,6 +1845,12 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
 
     m_decoder->setSource(buffer.getMat());
 
+    if (!m_animationRef)
+    {
+        m_animationRef = &m_animation;
+    }
+    m_decoder->setAnimation(m_animationRef);
+
     try
     {
         // read the header to make sure it succeeds
@@ -1863,12 +1872,8 @@ void ImageCollection::Impl::initFromMemory(InputArray buffer, int flags) {
     }
 
     m_size = m_decoder->getFrameCount();
-    if (!m_animationRef)
-    {
-        m_animationRef = &m_animation;
-    }
-    m_animationRef->frames.clear();
-    m_animationRef->frames.resize(m_size);
+    if (!m_animationRef->frames.size())
+        m_animationRef->frames.resize(m_size);
     m_status = DECODER_OK;
 }
 
@@ -1901,7 +1906,7 @@ int ImageCollection::Impl::getMetadata(std::vector<int>& metadata_types, OutputA
 
 void ImageCollection::Impl::setAnimation(Animation& animation)
 {
-    m_animation = animation;
+    m_animationRef = &animation;
 }
 
 bool ImageCollection::Impl::readHeader() {
@@ -2005,6 +2010,11 @@ Mat& ImageCollection::Impl::operator[](int index) {
     return m_animationRef->frames[index];
 }
 
+bool ImageCollection::Impl::readFrames(int start, int count) {
+    Mat frame = this->at(start + count - 1);
+    return true;
+}
+
 void ImageCollection::Impl::releaseCache(int index) {
     CV_Assert(index >= 0 && size_t(index) < m_size);
     m_animationRef->frames[index].release();
@@ -2035,6 +2045,8 @@ int ImageCollection::getType() const { return pImpl->type(); }
 int ImageCollection::getStatus() const { return pImpl->status(); }
 
 int ImageCollection::getMetadata(std::vector<int>& metadata_types, OutputArrayOfArrays metadata) { return pImpl->getMetadata(metadata_types, metadata); }
+
+bool ImageCollection::readFrames(int start, int count) { return pImpl->readFrames(start, count); }
 
 const Mat& ImageCollection::at(int index) { return pImpl->at(index); }
 

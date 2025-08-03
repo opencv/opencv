@@ -860,6 +860,8 @@ public:
      */
     CV_WRAP void setAnimation(Animation& animation);
 
+    CV_WRAP bool readFrames(int start = 0, int count = INT16_MAX);
+
     /** @brief Releases the cached frame at the specified index.
 
     @param index Index of the frame to remove from the cache.
