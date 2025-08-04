@@ -558,7 +558,6 @@ TEST(Imgcodecs, imdecode_user_buffer)
     EXPECT_TRUE(result.empty());
 }
 
-
 }} // namespace
 
 #if defined(HAVE_OPENEXR) && defined(OPENCV_IMGCODECS_ENABLE_OPENEXR_TESTS)

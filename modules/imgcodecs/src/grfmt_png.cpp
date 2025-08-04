@@ -1899,7 +1899,7 @@ bool PngEncoder::isValidParam(const int key, const int value) const
             break;
         case IMWRITE_PNG_BILEVEL:
             ret = (value == 0) || (value == 1);
-            return ret;
+            break;
         case IMWRITE_PNG_FILTER:
             ret = (value & ~IMWRITE_PNG_ALL_FILTERS) == 0;
             break;
