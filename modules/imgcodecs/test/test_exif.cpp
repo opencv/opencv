@@ -425,6 +425,64 @@ TEST(Imgcodecs_Jpeg, Read_Write_With_Exif)
     remove(outputname.c_str());
 }
 
+TEST(Imgcodecs_Png, Write_Custom_Exif)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    string filename = root + "readwrite/testExifOrientation_7.jpg";
+
+    std::vector<std::vector<ExifEntry> > exif_entries_vec;
+
+    ExifEntry exifEntry0, exifEntry1, exifEntry2;
+    exifEntry0.tagId = TAG_IMAGEDESCRIPTION;
+    exifEntry0.type = TAG_TYPE_ASCII;
+    exifEntry0.value.field_str = "Test - Writing Custom Exif";
+    // TO DO : you should not set exifEntry.count
+    exifEntry0.count = (int)exifEntry0.value.field_str.size();
+
+    exifEntry1.tagId = TAG_SOFTWARE;
+    exifEntry1.type = TAG_TYPE_ASCII;
+    exifEntry1.value.field_str = "OpenCV 4.13";
+    // TO DO : you should not set exifEntry.count
+    exifEntry1.count = (int)exifEntry1.value.field_str.size();
+
+    exifEntry2.tagId = TAG_ORIENTATION;
+    exifEntry2.type = TAG_TYPE_SHORT;
+    exifEntry2.value.field_u16 = 7;
+
+    std::vector<ExifEntry> exifEntries;
+    exifEntries.push_back(exifEntry0);
+    exifEntries.push_back(exifEntry1);
+    exifEntries.push_back(exifEntry2);
+
+    exif_entries_vec.push_back(exifEntries);
+
+    std::vector<uchar> exif_data;
+    encodeExif(exif_entries_vec, exif_data);
+
+    std::vector<int> metadata_types = { IMAGE_METADATA_EXIF };
+    std::vector<std::vector<uchar>> metadata = { exif_data };
+
+    Mat img = imread(filename, IMREAD_UNCHANGED);
+    const string outputname = cv::tempfile(".png");
+    imwriteWithMetadata(outputname, img, metadata_types, metadata);
+
+
+    Mat img1 = imread(filename);
+    Mat img2 = imread(outputname);
+
+    EXPECT_EQ(0, cvtest::norm(img1, img2, NORM_INF));
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(outputname.c_str()));
+
+    std::cout << "\n------- decoded Exif IFD count : " << (int)exif_entries_vec.size() << std::endl;
+    for (size_t i = 0; i < exif_entries_vec.size(); i++)
+        for (size_t j = 0; j < exif_entries_vec[i].size(); j++)
+        {
+            exif_entries_vec[i][j].dump(std::cout);
+        }
+}
+
 TEST(Imgcodecs_Png, Read_Write_With_Exif)
 {
     int png_compression = 3;
@@ -592,8 +650,8 @@ TEST_P(ReadExif_Sanity, Check)
     decodeExif(metadata[IMAGE_METADATA_EXIF], exif_entries_vec);
 
     std::cout << "\n------- decoded Exif IFD count : " << (int)exif_entries_vec.size() << std::endl;
-    for (int i = 0; i < exif_entries_vec.size(); i++)
-        for (int j = 0; j < exif_entries_vec[i].size(); j++)
+    for (size_t i = 0; i < exif_entries_vec.size(); i++)
+        for (size_t j = 0; j < exif_entries_vec[i].size(); j++)
         {
             exif_entries_vec[i][j].dump(std::cout);
         }

@@ -55,6 +55,182 @@ namespace {
 namespace cv
 {
 
+static uint32_t getExifTagTypeSize(uint16_t type)
+{
+    return
+        type == TAG_TYPE_NOTYPE ? 0 :
+        type == TAG_TYPE_BYTE ? 1 :
+        type == TAG_TYPE_ASCII ? 1 :
+        type == TAG_TYPE_SHORT ? 2 :
+        type == TAG_TYPE_LONG ? 4 :
+        type == TAG_TYPE_RATIONAL ? 8 :
+        type == TAG_TYPE_SBYTE ? 1 :
+        type == TAG_TYPE_UNDEFINED ? 1 :
+        type == TAG_TYPE_SSHORT ? 2 :
+        type == TAG_TYPE_SLONG ? 4 :
+        type == TAG_TYPE_SRATIONAL ? 8 :
+        type == TAG_TYPE_FLOAT ? 4 :
+        type == TAG_TYPE_DOUBLE ? 8 :
+        type == TAG_TYPE_IFD ? 0 :
+        type == TAG_TYPE_LONG8 ? 8 :
+        type == TAG_TYPE_SLONG8 ? 8 :
+        type == TAG_TYPE_IFD8 ? 0 : 0;
+}
+
+static uint32_t exifEntryValuetoUInt32(ExifEntry entry)
+{
+    switch (entry.type)
+    {
+    case TAG_TYPE_BYTE:
+    case TAG_TYPE_UNDEFINED:
+        return (entry.count > 0) ? entry.value.field_u8 : 0;
+    case TAG_TYPE_SBYTE:
+        return (entry.count > 0) ? static_cast<uint32_t>(entry.value.field_s8) : 0;
+    case TAG_TYPE_SHORT:
+        return (entry.count > 0) ? entry.value.field_u16 : 0;
+    case TAG_TYPE_SSHORT:
+        return (entry.count > 0) ? static_cast<uint32_t>(entry.value.field_s16) : 0;
+    case TAG_TYPE_LONG:
+    case TAG_TYPE_SLONG:
+        return (entry.count > 0) ? entry.value.field_u32 : 0;
+    case TAG_TYPE_ASCII:
+        return 0;
+    case TAG_TYPE_RATIONAL:
+    case TAG_TYPE_SRATIONAL:
+        return 0;
+    default:
+        return 0;
+    }
+}
+
+static std::vector<uchar> exifEntryValuetoBytes(ExifEntry entry)
+{
+    std::vector<uchar> bytes;
+    switch (entry.type)
+    {
+    case TAG_TYPE_ASCII:
+    {
+        const char* str = entry.value.field_str.c_str();
+        size_t len = strlen(str);
+        bytes.insert(bytes.end(), str, str + len);
+        if (len < entry.count) // pad with nulls if needed
+            bytes.insert(bytes.end(), entry.count - len, 0x00);
+    }
+    break;
+    case TAG_TYPE_UNDEFINED:
+    {
+        bytes.insert(bytes.end(), entry.value.field_u8, entry.value.field_u8 + entry.count);
+    }
+    break;
+    case TAG_TYPE_RATIONAL:
+    {
+        for (int i = 0; i < entry.count; ++i)
+        {
+            uint32_t numerator = entry.value.field_urational[i].num;
+            uint32_t denominator = entry.value.field_urational[i].denom;
+            bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&numerator), reinterpret_cast<uchar*>(&numerator) + 4);
+            bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&denominator), reinterpret_cast<uchar*>(&denominator) + 4);
+            return bytes;
+        }
+    }
+    case TAG_TYPE_SRATIONAL:
+    {
+        for (int i = 0; i < entry.count; ++i)
+        {
+            uint32_t numerator = entry.value.field_srational[i].num;
+            uint32_t denominator = entry.value.field_srational[i].denom;
+            bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&numerator), reinterpret_cast<uchar*>(&numerator) + 4);
+            bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&denominator), reinterpret_cast<uchar*>(&denominator) + 4);
+        }
+    }
+    break;
+    default:
+        // other types are handled inline in toUInt32()
+        break;
+    }
+
+    return bytes;
+}
+
+bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::vector<uchar>& data)
+{
+    data.clear();
+
+    if (exif_entries.empty() || exif_entries[0].empty())
+        return false;
+
+    // TIFF Header
+    size_t tiffHeaderOffset = data.size();
+    data.push_back('I'); data.push_back('I'); // Little Endian
+    data.push_back(0x2A); data.push_back(0x00); // 0x002A
+    uint32_t firstIFDOffset = 8; // IFD starts after TIFF header
+    data.insert(data.end(), (uchar*)&firstIFDOffset, (uchar*)&firstIFDOffset + 4);
+
+
+    for (const auto& ifdEntries : exif_entries)
+    {
+        // Temporary buffer for Value Area (big data blocks)
+        std::vector<uchar> valueArea;
+
+        uint16_t entryCount = static_cast<uint16_t>(ifdEntries.size());
+        size_t ifdStartOffset = data.size() - tiffHeaderOffset;
+
+        // Entry count
+        data.insert(data.end(), (uchar*)&entryCount, (uchar*)&entryCount + 2);
+
+        // Placeholders for Entries
+        size_t entryStart = data.size();
+        data.resize(data.size() + entryCount * 12);
+
+        // Next IFD Offset (set to 0)
+        uint32_t nextIFDOffset = 0;
+        size_t nextIFDOffsetPos = data.size();
+        data.insert(data.end(), (uchar*)&nextIFDOffset, (uchar*)&nextIFDOffset + 4);
+
+        // Process Entries
+        size_t entryOffset = entryStart;
+        for (const auto& entry : ifdEntries)
+        {
+            uint16_t tagId = entry.tagId;
+            uint16_t type = entry.type;
+            uint32_t count = entry.count;
+
+            // Write Tag ID
+            std::memcpy(&data[entryOffset], &tagId, 2); entryOffset += 2;
+            // Write Type
+            std::memcpy(&data[entryOffset], &type, 2); entryOffset += 2;
+            // Write Count
+            std::memcpy(&data[entryOffset], &count, 4); entryOffset += 4;
+
+            uint32_t valueSize = count * getExifTagTypeSize(type);
+            if (valueSize <= 4)
+            {
+                uint32_t val = exifEntryValuetoUInt32(entry);
+                std::memcpy(&data[entryOffset], &val, 4);
+            }
+            else
+            {
+                uint32_t offset = static_cast<uint32_t>(tiffHeaderOffset + data.size() + valueArea.size());
+                std::memcpy(&data[entryOffset], &offset, 4);
+                std::vector<uchar> valData = exifEntryValuetoBytes(entry);
+                printf("_%lu\n", valData.size());
+                valueArea.insert(valueArea.end(), valData.begin(), valData.end());
+                if (valData.size() % 2 != 0) // Align to 2 bytes
+                    valueArea.push_back(0x00);
+            }
+            entryOffset += 4;
+
+        }
+
+        // Append Value Area after IFDs
+        data.insert(data.end(), valueArea.begin(), valueArea.end());
+    }
+
+
+    return true;
+}
+
+
 bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries)
 {
     ExifReader reader;
@@ -86,7 +262,11 @@ template<> void dumpScalar(std::ostream& strm, srational64_t v)
 
 template<> void dumpScalar(std::ostream& strm, urational64_t v)
 {
-    strm << v.num << "/" << v.denom << cv::format(" (%.4f)", (double)v.num / v.denom);
+    strm << v.num << "/" << v.denom;
+    if (v.denom != 0)
+        strm << cv::format(" (%.4f)", static_cast<double>(v.num) / v.denom);
+    else
+        strm << " (NaN)";
 }
 
 template <typename _Tp> void dumpVector(std::ostream& strm, const std::vector<_Tp>& v)
@@ -636,7 +816,7 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_FNUMBER ? "FNumber" :
 
         tag == TAG_EXIF_OFFSET ? "Exif Offset" :
-        
+
         tag == TAG_EXPOSUREPROGRAM ? "Exposure Program" :
         tag == TAG_GPSINFO ? "GPS Info" :
         tag == TAG_ISOSPEED ? "ISO Speed" :
@@ -660,11 +840,11 @@ std::string exifTagIdToString(ExifTagId tag)
 
         tag == TAG_MAKERNOTE ? "MakerNote" :
         tag == TAG_USERCOMMENT ? "User Comment" :
-        
+
         tag == TAG_SUBSECTIME ? "SubSec Time" :
         tag == TAG_SUBSECTIME_ORIGINAL ? "SubSec Original Time" :
         tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
-        
+
         tag == TAG_FLASHPIXVERSION ? "Flashpix Version" :
         tag == TAG_COLORSPACE ? "ColorSpace" :
         tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
@@ -684,7 +864,7 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_LENSSPECIFICATION ? "LensSpecification" :
         tag == TAG_LENSMODEL ? "LensModel" :
         tag == TAG_SCENECAPTURETYPE ? "SceneCaptureType" :
-        
+
         tag == TAG_DNG_VERSION ? "DNGVersion" :
         tag == TAG_DNG_BACKWARD_VERSION ? "DNGBackwardVersion" :
         tag == TAG_UNIQUE_CAMERA_MODEL ? "UniqueCameraModel" :

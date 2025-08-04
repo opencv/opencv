@@ -506,6 +506,7 @@ struct ExifEntry
 };
 
 CV_EXPORTS bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
+CV_EXPORTS bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::vector<uchar>& data);
 
 //! @} imgcodecs_metadata
 
