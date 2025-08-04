@@ -1601,7 +1601,6 @@ void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::No
         }
     }
 
-    // Handle optional attributes (must be applied before layer creation)
     for (int i_attr = 0; i_attr < node_proto.attribute_size(); ++i_attr)
     {
         const auto& a = node_proto.attribute(i_attr);

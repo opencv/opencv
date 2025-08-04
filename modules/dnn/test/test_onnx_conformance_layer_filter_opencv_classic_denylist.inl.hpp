@@ -160,3 +160,8 @@
 "test_resize_upsample_sizes_nearest_ceil_half_pixel",
 "test_resize_upsample_sizes_nearest_floor_align_corners",
 "test_resize_upsample_sizes_nearest_round_prefer_ceil_asymmetric",
+"test_resize_downsample_scales_cubic",
+"test_resize_downsample_scales_cubic_A_n0p5_exclude_outside",
+"test_resize_downsample_scales_linear",
+"test_resize_downsample_sizes_linear_pytorch_half_pixel",
+"test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn",

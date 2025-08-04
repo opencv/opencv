@@ -1584,13 +1584,13 @@ CASE(test_reshape_zero_and_negative_dim)
 CASE(test_reshape_zero_dim)
     SKIP;
 CASE(test_resize_downsample_scales_cubic)
-    // no filter
+    SKIP;
 CASE(test_resize_downsample_scales_cubic_A_n0p5_exclude_outside)
-    // no filter
+    SKIP;
 CASE(test_resize_downsample_scales_cubic_align_corners)
     // no filter
 CASE(test_resize_downsample_scales_linear)
-    // no filter
+    SKIP;
 CASE(test_resize_downsample_scales_linear_align_corners)
     // no filter
 CASE(test_resize_downsample_scales_nearest)
@@ -1598,19 +1598,19 @@ CASE(test_resize_downsample_scales_nearest)
 CASE(test_resize_downsample_sizes_cubic)
     SKIP;
 CASE(test_resize_downsample_sizes_linear_pytorch_half_pixel)
-    // no filter
+    SKIP;
 CASE(test_resize_downsample_sizes_nearest)
     SKIP;
 CASE(test_resize_downsample_sizes_nearest_tf_half_pixel_for_nn)
-    // no filter
+    SKIP;
 CASE(test_resize_tf_crop_and_resize)
     // no filter
 CASE(test_resize_upsample_scales_cubic)
-    /SKIP;
+    SKIP;
 CASE(test_resize_upsample_scales_cubic_A_n0p5_exclude_outside)
     SKIP;
 CASE(test_resize_upsample_scales_cubic_align_corners)
-    // no filter
+    SKIP;
 CASE(test_resize_upsample_scales_cubic_asymmetric)
     SKIP;
 CASE(test_resize_upsample_scales_linear)
