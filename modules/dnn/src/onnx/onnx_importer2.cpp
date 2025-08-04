@@ -210,7 +210,7 @@ protected:
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseResize2               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1526,10 +1526,10 @@ void ONNXImporter2::parseIf(LayerParams& layerParams,
 }
 
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
-void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
-    layerParams.type = "Resize";
+    layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
     CV_Assert(interp_mode != "tf_crop_and_resize");
@@ -1587,6 +1587,19 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
             ninputs = 1;
         }
     }
+
+    // Handle optional attributes (must be applied before layer creation)
+    for (int i_attr = 0; i_attr < node_proto.attribute_size(); ++i_attr)
+    {
+        const auto& a = node_proto.attribute(i_attr);
+        if (a.name() == "nearest_mode" && a.has_s())
+            layerParams.set("nearest_mode", String(a.s()));
+        else if (a.name() == "exclude_outside" && a.has_i())
+            layerParams.set("exclude_outside", static_cast<int>(a.i()) != 0);
+        else if (a.name() == "cubic_coeff_a" && a.has_f())
+            layerParams.set("cubic_coeff_a", static_cast<float>(a.f()));
+    }
+
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto, ninputs);
 }
@@ -2426,7 +2439,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
     dispatch["If"] = &ONNXImporter2::parseIf;
-    dispatch["Resize"] = &ONNXImporter2::parseResize;
+    dispatch["Resize"] = &ONNXImporter2::parseResize2;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
