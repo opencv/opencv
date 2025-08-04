@@ -36,8 +36,13 @@ CV_PY_FROM_CLASS(cuda::HostMem)
 CV_PY_FROM_CLASS_PTR(cuda::GpuMat::Allocator)
 
 template<>
-void fillDLPackTensor(const Ptr<cv::cuda::GpuMat>& src, DLManagedTensor* tensor)
+bool fillDLPackTensor(const Ptr<cv::cuda::GpuMat>& src, DLManagedTensor* tensor, const DLDevice& device)
 {
+    if ((device.device_type != -1 && device.device_type != kDLCUDA) || device.device_id != 0)
+    {
+        PyErr_SetString(PyExc_BufferError, "GpuMat can be exported only on GPU:0");
+        return false;
+    }
     tensor->dl_tensor.data = src->cudaPtr();
     tensor->dl_tensor.device.device_type = kDLCUDA;
     tensor->dl_tensor.device.device_id = 0;  // TODO: which id?
@@ -49,11 +54,17 @@ void fillDLPackTensor(const Ptr<cv::cuda::GpuMat>& src, DLManagedTensor* tensor)
     tensor->dl_tensor.strides[1] = src->channels();
     tensor->dl_tensor.strides[2] = 1;
     tensor->dl_tensor.byte_offset = 0;
+    return true;
 }
 
 template<>
-void fillDLPackTensor(const Ptr<cv::cuda::GpuMatND>& src, DLManagedTensor* tensor)
+bool fillDLPackTensor(const Ptr<cv::cuda::GpuMatND>& src, DLManagedTensor* tensor, const DLDevice& device)
 {
+    if ((device.device_type != -1 && device.device_type != kDLCUDA) || device.device_id != 0)
+    {
+        PyErr_SetString(PyExc_BufferError, "GpuMatND can be exported only on GPU:0");
+        return false;
+    }
     tensor->dl_tensor.data = src->getDevicePtr();
     tensor->dl_tensor.device.device_type = kDLCUDA;
     tensor->dl_tensor.device.device_id = 0;  // TODO: which id?
@@ -63,6 +74,7 @@ void fillDLPackTensor(const Ptr<cv::cuda::GpuMatND>& src, DLManagedTensor* tenso
     for (int i = 0; i < src->dims; ++i)
         tensor->dl_tensor.strides[i] = src->step[i];
     tensor->dl_tensor.byte_offset = 0;
+    return true;
 }
 
 template<>
@@ -94,8 +106,8 @@ bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMat& obj)
         return false;
 
     obj = cv::cuda::GpuMat(
-        tensor->dl_tensor.shape[0],
-        tensor->dl_tensor.shape[1],
+        static_cast<int>(tensor->dl_tensor.shape[0]),
+        static_cast<int>(tensor->dl_tensor.shape[1]),
         type,
         tensor->dl_tensor.data,
         tensor->dl_tensor.strides[0] * tensor->dl_tensor.dtype.bits / 8
@@ -152,7 +164,7 @@ static PyObject* pyDLPackGpuMatND(PyObject* self, PyObject* py_args, PyObject* k
     return to_dlpack(*(self1), self, py_args, kw);
 }
 
-static PyObject* pyDLPackDeviceCUDA(PyObject* , PyObject*, PyObject*) {
+static PyObject* pyDLPackDeviceCUDA(PyObject*, PyObject*, PyObject*) {
     return pyopencv_from(std::tuple<int, int>(kDLCUDA, 0));
 }
 

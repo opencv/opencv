@@ -10,7 +10,6 @@ include_directories(SYSTEM
 ocv_module_include_directories(
     "${PYTHON_SOURCE_DIR}/src2"
     "${OPENCV_PYTHON_BINDINGS_DIR}"
-    "${OpenCV_SOURCE_DIR}/3rdparty/dlpack/include"
 )
 
 # try to use dynamic symbols linking with libpython.so

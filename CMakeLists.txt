@@ -640,6 +640,7 @@ ocv_cmake_hook(POST_CMAKE_BUILD_OPTIONS)
 # --- Python Support ---
 if(NOT IOS AND NOT XROS)
   include(cmake/OpenCVDetectPython.cmake)
+  include(cmake/OpenCVDetectDLPack.cmake)
 endif()
 
 include(cmake/OpenCVCompilerOptions.cmake)

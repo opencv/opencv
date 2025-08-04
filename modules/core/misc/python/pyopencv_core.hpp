@@ -26,7 +26,7 @@ static PyObject* pycvMakeTypeCh(PyObject*, PyObject *value) {
 #define CV_DLPACK_USED_CAPSULE_NAME "used_dltensor"
 
 template<typename T>
-void fillDLPackTensor(const T& src, DLManagedTensor* tensor);
+bool fillDLPackTensor(const T& src, DLManagedTensor* tensor, const DLDevice& device);
 
 template<typename T>
 bool parseDLPackTensor(DLManagedTensor* tensor, T& obj);
@@ -77,9 +77,11 @@ static PyObject* to_dlpack(const T& src, PyObject* self, PyObject* py_args, PyOb
     if (!PyArg_ParseTupleAndKeywords(py_args, kw, "|iOOp:__dlpack__", (char**)keywords, &stream, &maxVersion, &dlDevice, &copy))
         return nullptr;
 
+    DLDevice device = {(DLDeviceType)-1, 0};
     if (dlDevice && dlDevice != Py_None && PyTuple_Check(dlDevice))
     {
-        // TODO: check for device type
+        device.device_type = static_cast<DLDeviceType>(PyLong_AsLong(PyTuple_GetItem(dlDevice, 0)));
+        device.device_id = PyLong_AsLong(PyTuple_GetItem(dlDevice, 1));
     }
 
     int ndim = GetNumDims(src);
@@ -94,7 +96,7 @@ static PyObject* to_dlpack(const T& src, PyObject* self, PyObject* py_args, PyOb
     tensor->dl_tensor.ndim = ndim;
     tensor->dl_tensor.shape = reinterpret_cast<int64_t*>(reinterpret_cast<char*>(ptr) + sizeof(DLManagedTensor));
     tensor->dl_tensor.strides = tensor->dl_tensor.shape + ndim;
-    fillDLPackTensor(src, tensor);
+    fillDLPackTensor(src, tensor, device);
 
     PyObject* capsule = PyCapsule_New(ptr, CV_DLPACK_CAPSULE_NAME, dlpack_capsule_deleter);
     if (!capsule) {
@@ -103,7 +105,6 @@ static PyObject* to_dlpack(const T& src, PyObject* self, PyObject* py_args, PyOb
     }
 
     // the capsule holds a reference
-    // TODO: when decref?
     Py_INCREF(self);
 
     return capsule;
@@ -140,43 +141,34 @@ static PyObject* from_dlpack(PyObject* py_args, PyObject* kw)
         return nullptr;
     }
 
-    // if (device == Py_None)
-    // {
-    //     // Check for __dlpack_device__
-    //     // PyErr_SetString(PyExc_BufferError, "unimplemented");
-    // }
-
-    // Check device of source array
-    // PyObject* res = PyObject_CallMethodNoArgs(arr, PyString_FromString("__dlpack_device__"));
-    // if (res && PyTuple_Check(res))
-    // {
-
-    // }
-
     T retval;
     bool success = parseDLPackTensor(tensor, retval);
+    if (success)
+    {
+        PyCapsule_SetName(capsule, CV_DLPACK_USED_CAPSULE_NAME);
+    }
     if (capsule != arr)
         Py_DECREF(capsule);
+
     return success ? pyopencv_from(retval) : nullptr;
 }
 
-static DLDataType GetDLPackType(int elemSize1, int depth) {
+static DLDataType GetDLPackType(size_t elemSize1, int depth) {
     DLDataType dtype;
     dtype.bits = 8 * elemSize1;
     dtype.lanes = 1;
     switch (depth)
     {
-        case CV_8S: case CV_16S: case CV_32S: /*case CV_64S:*/ dtype.code = kDLInt; break;
-        case CV_8U: case CV_16U: /*case CV_32U: case CV_64U:*/ dtype.code = kDLUInt; break;
+        case CV_8S: case CV_16S: case CV_32S: dtype.code = kDLInt; break;
+        case CV_8U: case CV_16U: dtype.code = kDLUInt; break;
         case CV_16F: case CV_32F: case CV_64F: dtype.code = kDLFloat; break;
         default:
             CV_Error(Error::StsNotImplemented, "__dlpack__ data type");
-        // TODO: bool
     }
     return dtype;
 }
 
-static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
+static int DLPackTypeToCVType(const DLDataType& dtype, int64_t channels) {
     if (dtype.code == kDLInt)
     {
         switch (dtype.bits)
