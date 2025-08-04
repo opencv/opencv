@@ -54,6 +54,7 @@ namespace {
 
 namespace cv
 {
+
 bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries)
 {
     ExifReader reader;
@@ -62,6 +63,42 @@ bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEnt
 
 std::string exifTagIdToString(ExifTagId tag);
 std::string tagTypeToString(ExifTagType type);
+
+template<typename _Tp> void dumpScalar(std::ostream& strm, _Tp v)
+{
+    strm << v;
+}
+
+template<> void dumpScalar(std::ostream& strm, int64_t v)
+{
+    strm << v;
+}
+
+template<> void dumpScalar(std::ostream& strm, double v)
+{
+    strm << cv::format("%.8g", v);
+}
+
+template<> void dumpScalar(std::ostream& strm, srational64_t v)
+{
+    strm << cv::format("%.4f", (double)v.num / v.denom);
+}
+
+template <typename _Tp> void dumpVector(std::ostream& strm, const std::vector<_Tp>& v)
+{
+    size_t i, nvalues = v.size();
+    strm << '[';
+    for (i = 0; i < nvalues; i++) {
+        if (i > 0)
+            strm << ", ";
+        if (i >= 3 && i + 6 < nvalues) {
+            strm << "... ";
+            i = nvalues - 3;
+        }
+        dumpScalar(strm, v[i]);
+    }
+    strm << ']';
+}
 
 static std::string HexStringToBytes(const char* hexstring, size_t expected_length);
 
@@ -684,16 +721,10 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         strm << value.field_double;
         break;
     case TAG_TYPE_RATIONAL:
-        strm << "[ ";
-        for (size_t i = 0; i < value.field_urational.size(); i++)
-            strm << value.field_urational[i].num << "/" << value.field_urational[i].denom << ", ";
-        strm << "]";
+        dumpVector(strm, value.field_srational);
         break;
     case TAG_TYPE_SRATIONAL:
-        strm << "[ ";
-        for (size_t i = 0; i < value.field_urational.size(); i++)
-            strm << value.field_srational[i].num << "/" << value.field_srational[i].denom << ", ";
-        strm << "]";
+        dumpVector(strm, value.field_srational);
         break;
     case TAG_TYPE_UNDEFINED:
     {
