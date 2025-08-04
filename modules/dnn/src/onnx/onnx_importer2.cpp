@@ -1194,7 +1194,7 @@ void ONNXImporter2::parseClip(LayerParams& layerParams, const opencv_onnx::NodeP
         (input_size >= 2 &&
         !node_proto.input(1).empty() && !net.isConstArg(node_inputs[1]) ) ||
         (input_size >= 3 &&
-        !node_proto.input(2).empty() && !net.isConstArg(node_inputs[1]) )
+        !node_proto.input(2).empty() && !net.isConstArg(node_inputs[2]) )
     )
     {
         int n_inputs = node_proto.input_size();
