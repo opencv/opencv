@@ -81,13 +81,19 @@ template<> void dumpScalar(std::ostream& strm, double v)
 
 template<> void dumpScalar(std::ostream& strm, srational64_t v)
 {
-    strm << cv::format("%.4f", (double)v.num / v.denom);
+    strm << v.num << "/" << v.denom << cv::format(" (%.4f)", (double)v.num / v.denom);
+}
+
+template<> void dumpScalar(std::ostream& strm, urational64_t v)
+{
+    strm << v.num << "/" << v.denom << cv::format(" (%.4f)", (double)v.num / v.denom);
 }
 
 template <typename _Tp> void dumpVector(std::ostream& strm, const std::vector<_Tp>& v)
 {
     size_t i, nvalues = v.size();
-    strm << '[';
+    if (nvalues > 1)
+        strm << '[';
     for (i = 0; i < nvalues; i++) {
         if (i > 0)
             strm << ", ";
@@ -97,7 +103,8 @@ template <typename _Tp> void dumpVector(std::ostream& strm, const std::vector<_T
         }
         dumpScalar(strm, v[i]);
     }
-    strm << ']';
+    if (nvalues > 1)
+        strm << ']';
 }
 
 static std::string HexStringToBytes(const char* hexstring, size_t expected_length);
@@ -228,10 +235,6 @@ bool ExifReader::parseExif(const unsigned char* data, const size_t size)
         return false;
     }
 
-    std::vector< std::vector<ExifEntry> > exif_entries_vec;
-    decodeExif(m_data, exif_entries_vec);
-    std::cout << "------------------------ decoded exif ifd count : " << (int)exif_entries_vec.size() << std::endl;
-
     try {
         parseExif();
         if( !m_exif.empty() )
@@ -306,7 +309,6 @@ bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::ve
         for (size_t i = 0; i < numEntry; ++i)
         {
             ExifEntry exifEntry = parseExifEntry(offset);
-            exifEntry.dump(std::cout);
             exif_entries.push_back(exifEntry);
             if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825) // Exif or GPS IFD pointer
             {
@@ -472,7 +474,7 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
 std::string ExifReader::getString(const size_t offset) const
 {
     size_t size = getU32( offset + 4 );
-    size_t dataOffset = 8; // position of data in the field
+    size_t dataOffset = offset + 8; // position of data in the field
     if( size > maxDataSize )
     {
         dataOffset = getU32( offset + 8 );
@@ -482,7 +484,6 @@ std::string ExifReader::getString(const size_t offset) const
     }
     std::vector<uint8_t>::const_iterator it = m_data.begin() + dataOffset;
     std::string result( it, it + size ); //copy vector content into result
-
     return result;
 }
 
@@ -602,12 +603,12 @@ std::string exifTagIdToString(ExifTagId tag)
     const char* tagstr =
         tag == TAG_EMPTY ? "<empty>" :
         tag == TAG_SUB_FILETYPE ? "SubFileType" :
-        tag == TAG_IMAGE_WIDTH ? "ImageWidth" :
-        tag == TAG_IMAGE_LENGTH ? "ImageLength" :
+        tag == TAG_IMAGE_WIDTH ? "Image Width" :
+        tag == TAG_IMAGE_LENGTH ? "Image Height" :
         tag == TAG_BITS_PER_SAMPLE ? "BitsPerSample" :
         tag == TAG_COMPRESSION ? "Compression" :
         tag == TAG_PHOTOMETRIC ? "Photometric" :
-        tag == TAG_IMAGEDESCRIPTION ? "ImageDescription" :
+        tag == TAG_IMAGEDESCRIPTION ? "Image Description" :
         tag == TAG_MAKE ? "Make" :
         tag == TAG_MODEL ? "Model" :
         tag == TAG_STRIP_OFFSET ? "StripOffset" :
@@ -628,13 +629,17 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFARepeatPatternDim" :
         tag == TAG_CFA_PATTERN ? "CFAPattern" :
 
+        tag == TAG_COMPONENTSCONFIGURATION ? "Components Configuration" :
+
         tag == TAG_COPYRIGHT ? "Copyright" :
-        tag == TAG_EXPOSURE_TIME ? "ExposureTime" :
+        tag == TAG_EXPOSURE_TIME ? "Exposure Time" :
         tag == TAG_FNUMBER ? "FNumber" :
 
-        tag == TAG_EXIF_OFFSET ? "ExifOffset" :
-        tag == TAG_GPSINFO ? "GPSInfo" :
-        tag == TAG_ISOSPEED ? "ISOSpeed" :
+        tag == TAG_EXIF_OFFSET ? "Exif Offset" :
+        
+        tag == TAG_EXPOSUREPROGRAM ? "Exposure Program" :
+        tag == TAG_GPSINFO ? "GPS Info" :
+        tag == TAG_ISOSPEED ? "ISO Speed" :
 
         tag == TAG_DATETIME_CREATE ? "CreateDate" :
         tag == TAG_DATETIME_ORIGINAL ? "DateTimeOriginal" :
@@ -645,11 +650,22 @@ std::string exifTagIdToString(ExifTagId tag)
 
         tag == TAG_SHUTTER_SPEED ? "Shutter Speed" :
         tag == TAG_APERTURE_VALUE ? "Aperture Value" :
+
+        tag == TAG_EXPOSUREBIASVALUE ? "ExposureBiasValue" :
+        tag == TAG_MAXAPERTUREVALUE ? "MaxApertureValue" :
+        tag == TAG_SUBJECTDISTANCE ? "SubjectDistance" :
+        tag == TAG_METERINGMODE ? "MeteringMode" :
+        tag == TAG_LIGHTSOURCE ? "Light Source" :
+        tag == TAG_FLASH ? "Flash" :
+
         tag == TAG_MAKERNOTE ? "MakerNote" :
+        tag == TAG_USERCOMMENT ? "User Comment" :
+        
         tag == TAG_SUBSECTIME ? "SubSec Time" :
         tag == TAG_SUBSECTIME_ORIGINAL ? "SubSec Original Time" :
         tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
-
+        
+        tag == TAG_FLASHPIXVERSION ? "Flashpix Version" :
         tag == TAG_COLORSPACE ? "ColorSpace" :
         tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
         tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
@@ -657,6 +673,18 @@ std::string exifTagIdToString(ExifTagId tag)
 
         tag == TAG_EXIF_VERSION ? "Exif Version" :
 
+        tag == TAG_FOCALPLANEXRESOLUTION ? "FocalPlaneXResolution" :
+        tag == TAG_FOCALPLANEYRESOLUTION ? "FocalPlaneYResolution" :
+        tag == TAG_FOCALPLANERESOLUTIONUNIT ? "FocalPlaneResolutionUnit" :
+
+        tag == TAG_CUSTOMRENDERED ? "CustomRendered" :
+        tag == TAG_EXPOSUREMODE ? "ExposureMode" :
+
+        tag == TAG_BODYSERIALNUMBER ? "BodySerialNumber" :
+        tag == TAG_LENSSPECIFICATION ? "LensSpecification" :
+        tag == TAG_LENSMODEL ? "LensModel" :
+        tag == TAG_SCENECAPTURETYPE ? "SceneCaptureType" :
+        
         tag == TAG_DNG_VERSION ? "DNGVersion" :
         tag == TAG_DNG_BACKWARD_VERSION ? "DNGBackwardVersion" :
         tag == TAG_UNIQUE_CAMERA_MODEL ? "UniqueCameraModel" :
@@ -721,7 +749,7 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         strm << value.field_double;
         break;
     case TAG_TYPE_RATIONAL:
-        dumpVector(strm, value.field_srational);
+        dumpVector(strm, value.field_urational);
         break;
     case TAG_TYPE_SRATIONAL:
         dumpVector(strm, value.field_srational);

@@ -587,12 +587,23 @@ TEST_P(ReadExif_Sanity, Check)
         size_t iccp_size = iccp.total() * iccp.elemSize();
         EXPECT_EQ(expected_iccp_size, iccp_size);
     }
+
+    std::vector< std::vector<ExifEntry> > exif_entries_vec;
+    decodeExif(metadata[IMAGE_METADATA_EXIF], exif_entries_vec);
+
+    std::cout << "\n------- decoded Exif IFD count : " << (int)exif_entries_vec.size() << std::endl;
+    for (int i = 0; i < exif_entries_vec.size(); i++)
+        for (int j = 0; j < exif_entries_vec[i].size(); j++)
+        {
+            exif_entries_vec[i][j].dump(std::cout);
+        }
 }
 
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 {
 #ifdef HAVE_JPEG
     ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120, 3597, 940),
+    ReadExif_Sanity_Params("../stitching/boat2.jpg", 10630, "Photoshop", 152, 9118, 3144),
 #endif
 #ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
     ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102, 505, 0),
