@@ -111,7 +111,7 @@ static std::vector<uchar> exifEntryValuetoBytes(ExifEntry entry)
     case TAG_TYPE_ASCII:
     {
         const char* str = entry.value.field_str.c_str();
-        size_t len = strlen(str);
+        int len = (int)strlen(str);
         bytes.insert(bytes.end(), str, str + len);
         if (len < entry.count) // pad with nulls if needed
             bytes.insert(bytes.end(), entry.count - len, 0x00);
@@ -130,9 +130,9 @@ static std::vector<uchar> exifEntryValuetoBytes(ExifEntry entry)
             uint32_t denominator = entry.value.field_urational[i].denom;
             bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&numerator), reinterpret_cast<uchar*>(&numerator) + 4);
             bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&denominator), reinterpret_cast<uchar*>(&denominator) + 4);
-            return bytes;
         }
     }
+    break;
     case TAG_TYPE_SRATIONAL:
     {
         for (int i = 0; i < entry.count; ++i)
@@ -173,7 +173,6 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
         std::vector<uchar> valueArea;
 
         uint16_t entryCount = static_cast<uint16_t>(ifdEntries.size());
-        size_t ifdStartOffset = data.size() - tiffHeaderOffset;
 
         // Entry count
         data.insert(data.end(), (uchar*)&entryCount, (uchar*)&entryCount + 2);
@@ -184,7 +183,6 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
 
         // Next IFD Offset (set to 0)
         uint32_t nextIFDOffset = 0;
-        size_t nextIFDOffsetPos = data.size();
         data.insert(data.end(), (uchar*)&nextIFDOffset, (uchar*)&nextIFDOffset + 4);
 
         // Process Entries
@@ -213,8 +211,9 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
                 uint32_t offset = static_cast<uint32_t>(tiffHeaderOffset + data.size() + valueArea.size());
                 std::memcpy(&data[entryOffset], &offset, 4);
                 std::vector<uchar> valData = exifEntryValuetoBytes(entry);
-                printf("_%lu\n", valData.size());
+
                 valueArea.insert(valueArea.end(), valData.begin(), valData.end());
+
                 if (valData.size() % 2 != 0) // Align to 2 bytes
                     valueArea.push_back(0x00);
             }
