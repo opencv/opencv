@@ -253,6 +253,10 @@ enum ImwriteGIFCompressionFlags {
     IMWRITE_GIF_COLORTABLE_SIZE_256  = 8
 };
 
+//! @} imgcodecs_flags
+
+//! @addtogroup imgcodecs_metadata
+//! @{
 enum ImageMetadataType
 {
     IMAGE_METADATA_UNKNOWN = -1, // Used when metadata type is unrecognized or not set
@@ -502,9 +506,8 @@ struct ExifEntry
 };
 
 CV_EXPORTS bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
-CV_EXPORTS void dumpExif(std::ostream& strm, const std::vector< std::vector<ExifEntry> >& exif_entries);
 
-//! @} imgcodecs_flags
+//! @} imgcodecs_metadata
 
 /** @brief Represents an animation with multiple frames.
 The `Animation` struct is designed to store and manage data for animated sequences such as those from animated formats (e.g., GIF, AVIF, APNG, WebP).
