@@ -8,10 +8,68 @@
 #include <iostream>
 
 using namespace cv;
-int main()
+int main(int argc, char** argv)
 {
-    VideoCapture obsensorCapture(0, CAP_OBSENSOR);
-    if(!obsensorCapture.isOpened()){
+    cv::CommandLineParser parser(argc, argv,
+                                 "{help h ? |  | help message}"
+                                 "{dw |  | depth width }"
+                                 "{dh |  | depth height }"
+                                 "{df |  | depth fps }"
+                                 "{cw |  | color width }"
+                                 "{ch |  | color height }"
+                                 "{cf |  | depth fps }"
+
+    );
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+
+    std::vector<int> params;
+    if (parser.has("dw"))
+    {
+        params.push_back(CAP_PROP_OBSENSOR_DEPTH_WIDTH);
+        params.push_back(parser.get<int>("dw"));
+    }
+
+    if (parser.has("dh"))
+    {
+        params.push_back(CAP_PROP_OBSENSOR_DEPTH_HEIGHT);
+        params.push_back(parser.get<int>("dh"));
+    }
+
+    if (parser.has("df"))
+    {
+        params.push_back(CAP_PROP_OBSENSOR_DEPTH_FPS);
+        params.push_back(parser.get<int>("df"));
+    }
+
+    if (parser.has("cw"))
+    {
+        params.push_back(CAP_PROP_FRAME_WIDTH);
+        params.push_back(parser.get<int>("cw"));
+    }
+
+    if (parser.has("ch"))
+    {
+        params.push_back(CAP_PROP_FRAME_HEIGHT);
+        params.push_back(parser.get<int>("ch"));
+    }
+
+    if (parser.has("cf"))
+    {
+        params.push_back(CAP_PROP_FPS);
+        params.push_back(parser.get<int>("cf"));
+    }
+
+    VideoCapture obsensorCapture;
+
+    if (params.empty())
+        obsensorCapture.open(0, CAP_OBSENSOR);
+    else
+        obsensorCapture.open(0, CAP_OBSENSOR, params);
+    if(!obsensorCapture.isOpened()) {
         std::cerr << "Failed to open obsensor capture! Index out of range or no response from device";
         return -1;
     }

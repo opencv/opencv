@@ -28,23 +28,52 @@
 
 namespace cv
 {
-Ptr<IVideoCapture> create_obsensor_capture(int index)
+Ptr<IVideoCapture> create_obsensor_capture(int index, const cv::VideoCaptureParameters& params)
 {
-    return makePtr<VideoCapture_obsensor>(index);
+    return makePtr<VideoCapture_obsensor>(index, params);
 }
 
-VideoCapture_obsensor::VideoCapture_obsensor(int)
+VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParameters& params)
 {
     ob::Context::setLoggerToFile(OB_LOG_SEVERITY_OFF, "");
     config = std::make_shared<ob::Config>();
     pipe = std::make_shared<ob::Pipeline>();
+
+    int color_width = params.get<double>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
+    int color_height = params.get<double>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
+    int color_fps = params.get<double>(CAP_PROP_FPS, OB_FPS_ANY);
+
     auto colorProfiles = pipe->getStreamProfileList(OB_SENSOR_COLOR);
-    auto colorProfile = colorProfiles->getProfile(OB_PROFILE_DEFAULT);
-    config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
+    if (color_width == OB_WIDTH_ANY && color_height == OB_HEIGHT_ANY && color_fps == OB_FPS_ANY)
+    {
+        CV_LOG_INFO(NULL, "Use default color stream profile");
+        auto colorProfile = colorProfiles->getProfile(OB_PROFILE_DEFAULT);
+        config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
+    }
+    else
+    {
+        CV_LOG_INFO(NULL, "Looking for custom color profile " << color_width << "x" << color_height << "@" << color_fps << " fps");
+        auto colorProfile = colorProfiles->getVideoStreamProfile(color_width, color_height, OB_FORMAT_MJPG, color_fps);
+        config->enableStream(colorProfile->as<ob::VideoStreamProfile>());
+    }
+
+    int depth_width = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
+    int depth_height = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
+    int depth_fps = params.get<double>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
 
     auto depthProfiles = pipe->getStreamProfileList(OB_SENSOR_DEPTH);
-    auto depthProfile = depthProfiles->getProfile(OB_PROFILE_DEFAULT);
-    config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
+    if (depth_width == OB_WIDTH_ANY && depth_height == OB_HEIGHT_ANY && depth_fps == OB_FPS_ANY)
+    {
+        CV_LOG_INFO(NULL, "Use default depth stream profile");
+        auto depthProfile = depthProfiles->getProfile(OB_PROFILE_DEFAULT);
+        config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
+    }
+    else
+    {
+        CV_LOG_INFO(NULL, "Looking for custom color profile " << depth_width << "x" << depth_height << "@" << depth_fps << " fps");
+        auto depthProfile = depthProfiles->getVideoStreamProfile(depth_width, depth_height, OB_FORMAT_Y14, depth_fps);
+        config->enableStream(depthProfile->as<ob::VideoStreamProfile>());
+    }
 
     config->setAlignMode(ALIGN_D2C_SW_MODE);
 
@@ -111,8 +140,22 @@ double VideoCapture_obsensor::getProperty(int propIdx) const
     return rst;
 }
 
-bool VideoCapture_obsensor::setProperty(int, double)
+bool VideoCapture_obsensor::setProperty(int prop, double)
 {
+    switch(prop)
+    {
+        case CAP_PROP_OBSENSOR_DEPTH_WIDTH:
+        case CAP_PROP_OBSENSOR_DEPTH_HEIGHT:
+        case CAP_PROP_OBSENSOR_DEPTH_FPS:
+            CV_LOG_WARNING(NULL, "CAP_PROP_OBSENSOR_DEPTH_WIDTH, CAP_PROP_OBSENSOR_DEPTH_HEIGHT, CAP_PROP_OBSENSOR_DEPTH_FPS options are supported during camera initialization only");
+            break;
+        case CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FPS:
+            CV_LOG_WARNING(NULL, "CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FPS options are supported during camera initialization only");
+            break;
+    }
+
     return false;
 }
 
