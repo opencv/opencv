@@ -83,7 +83,31 @@ double VideoCapture_obsensor::getProperty(int propIdx) const
     case CAP_PROP_OBSENSOR_INTRINSIC_CY:
         rst = camParam.p1[3];
         break;
+    case CAP_PROP_POS_MSEC:
+    case CAP_PROP_OBSENSOR_RGB_POS_MSEC:
+        if (grabbedColorFrame)
+        {
+            rst = grabbedColorFrame->globalTimeStampUs();
+            if (rst == 0.0)
+            {
+                CV_LOG_ONCE_WARNING(NULL, "Camera reports zero global timestamp. System timestamp is used instead.");
+                rst = grabbedColorFrame->systemTimeStamp();
+            }
+        }
+        break;
+    case CAP_PROP_OBSENSOR_DEPTH_POS_MSEC:
+        if (grabbedDepthFrame)
+        {
+            rst = grabbedDepthFrame->systemTimeStamp();
+            if (rst == 0.0)
+            {
+                CV_LOG_ONCE_WARNING(NULL, "Camera reports zero global timestamp. System timestamp is used instead.");
+                rst = grabbedDepthFrame->systemTimeStamp();
+            }
+        }
+        break;
     }
+
     return rst;
 }
 

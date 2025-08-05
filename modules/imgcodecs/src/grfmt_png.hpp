@@ -150,7 +150,6 @@ private:
 
     png_structp m_png_ptr = nullptr; // pointer to decompression structure
     png_infop m_info_ptr = nullptr; // pointer to image information structure
-    png_infop m_end_info = nullptr; // pointer to one more image information structure
     int   m_bit_depth;
     FILE* m_f;
     int   m_color_type;
@@ -232,6 +231,10 @@ private:
     unsigned char  trns[256];
     uint32_t       palsize, trnssize;
     uint32_t       next_seq_num;
+    int            m_compression_level;
+    int            m_compression_strategy;
+    int            m_filter;
+    bool           m_isBilevel;
 };
 
 }

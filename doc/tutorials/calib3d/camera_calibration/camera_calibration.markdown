@@ -129,9 +129,9 @@ Explanation
 -#  **Find the pattern in the current input**
 
     The formation of the equations I mentioned above aims
-    to finding major patterns in the input: in case of the chessboard this are corners of the
+    to finding major patterns in the input: in case of the chessboard these are corners of the
     squares and for the circles, well, the circles themselves. ChArUco board is equivalent to
-    chessboard, but corners are mached by ArUco markers. The position of these will form the
+    chessboard, but corners are matched by ArUco markers. The position of these will form the
     result which will be written into the *pointBuf* vector.
     @snippet samples/cpp/tutorial_code/calib3d/camera_calibration/camera_calibration.cpp find_pattern
     Depending on the type of the input pattern you use either the @ref cv::findChessboardCorners or
@@ -140,13 +140,13 @@ Explanation
     of the patterns. cv::findChessboardCorners and cv::findCirclesGrid return a boolean variable
     which states if the pattern was found in the input (we only need to take into account
     those images where this is true!). `CharucoDetector::detectBoard` may detect partially visible
-    pattern and returns coordunates and ids of visible inner corners.
+    pattern and returns coordinates and ids of visible inner corners.
 
     @note Board size and amount of matched points is different for chessboard, circles grid and ChArUco.
     All chessboard related algorithm expects amount of inner corners as board width and height.
-    Board size of circles grid is just amount of circles by both grid dimentions. ChArUco board size
+    Board size of circles grid is just amount of circles by both grid dimensions. ChArUco board size
     is defined in squares, but detection result is list of inner corners and that's why is smaller
-    by 1 in both dimentions.
+    by 1 in both dimensions.
 
     Then again in case of cameras we only take camera images when an input delay time is passed.
     This is done in order to allow user moving the chessboard around and getting different images.

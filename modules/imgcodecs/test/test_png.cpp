@@ -2,6 +2,7 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
+#include "test_common.hpp"
 
 namespace opencv_test { namespace {
 
@@ -11,14 +12,21 @@ TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/read.png";
-    const string dst_file = cv::tempfile(".png");
     Mat img;
     ASSERT_NO_THROW(img = imread(filename));
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(13043, img.cols);
     EXPECT_EQ(13917, img.rows);
-    ASSERT_NO_THROW(imwrite(dst_file, img));
-    EXPECT_EQ(0, remove(dst_file.c_str()));
+
+    vector<uchar> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, 1024*1024 }));
+    ASSERT_TRUE(status);
+#ifdef HAVE_PNG
+    EXPECT_EQ((size_t)816219, buff.size());
+#else
+    EXPECT_EQ((size_t)817407, buff.size());
+#endif
 }
 
 TEST(Imgcodecs_Png, encode)
@@ -28,7 +36,9 @@ TEST(Imgcodecs_Png, encode)
     vector<int> param;
     param.push_back(IMWRITE_PNG_COMPRESSION);
     param.push_back(3); //default(3) 0-9.
-    EXPECT_NO_THROW(imencode(".png", img_gt, buff, param));
+    bool status = false;
+    EXPECT_NO_THROW(status = imencode(".png", img_gt, buff, param));
+    ASSERT_TRUE(status);
     Mat img;
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
     EXPECT_FALSE(img.empty());
@@ -109,21 +119,147 @@ TEST(Imgcodecs_Png, read_color_palette_with_alpha)
     EXPECT_EQ(img.at<Vec3b>(0, 1), Vec3b(255, 0, 0));
 }
 
+// IHDR shall be first.
+// See https://github.com/opencv/opencv/issues/27295
+TEST(Imgcodecs_Png, decode_regression27295)
+{
+    vector<uchar> buff;
+    Mat src = Mat::zeros(240, 180, CV_8UC3);
+    vector<int> param;
+    EXPECT_NO_THROW(imencode(".png", src, buff, param));
+
+    Mat img;
+
+    // If IHDR chunk found as the first chunk, output shall not be empty.
+    // 8 means PNG signature length.
+    // 4 means length field(uint32_t).
+    EXPECT_EQ(buff[8+4+0], 'I');
+    EXPECT_EQ(buff[8+4+1], 'H');
+    EXPECT_EQ(buff[8+4+2], 'D');
+    EXPECT_EQ(buff[8+4+3], 'R');
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_FALSE(img.empty());
+
+    // If Non-IHDR chunk found as the first chunk, output shall be empty.
+    buff[8+4+0] = 'i'; // Not 'I'
+    buff[8+4+1] = 'H';
+    buff[8+4+2] = 'D';
+    buff[8+4+3] = 'R';
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_TRUE(img.empty());
+
+    // If CgBI chunk (Apple private) found as the first chunk, output shall be empty with special message.
+    buff[8+4+0] = 'C';
+    buff[8+4+1] = 'g';
+    buff[8+4+2] = 'B';
+    buff[8+4+3] = 'I';
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
+    EXPECT_TRUE(img.empty());
+}
+
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
 
+// Parameterized test for decoding PNG files from the PNGSuite test set
 TEST_P(Imgcodecs_Png_PngSuite, decode)
 {
+    // Construct full paths for the PNG image and corresponding ground truth XML file
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "pngsuite/" + GetParam() + ".png";
     const string xml_filename = root + "pngsuite/" + GetParam() + ".xml";
-    FileStorage fs(xml_filename, FileStorage::READ);
-    EXPECT_TRUE(fs.isOpened());
 
+    // Load the XML file containing the ground truth data
+    FileStorage fs(xml_filename, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened()); // Ensure the file was opened successfully
+
+    // Load the image using IMREAD_UNCHANGED to preserve original format
     Mat src = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(src.empty()); // Ensure the image was loaded successfully
+
+    // Load the ground truth matrix from XML
     Mat gt;
     fs.getFirstTopLevelNode() >> gt;
 
+    // Compare the image loaded with IMREAD_UNCHANGED to the ground truth
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
+
+    // Declare matrices for ground truth in different imread flag combinations
+    Mat gt_0, gt_1, gt_2, gt_3, gt_256, gt_258;
+
+    // Handle grayscale 8-bit and 16-bit images
+    if (gt.channels() == 1)
+    {
+        gt.copyTo(gt_2); // For IMREAD_ANYDEPTH
+        if (gt.depth() == CV_16U)
+            gt_2.convertTo(gt_0, CV_8U, 1. / 256);
+        else
+            gt_0 = gt_2; // For IMREAD_GRAYSCALE
+
+        cvtColor(gt_2, gt_3, COLOR_GRAY2BGR);  // For IMREAD_COLOR | IMREAD_ANYDEPTH
+
+        if (gt.depth() == CV_16U)
+            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+        else
+            gt_1 = gt_3; // For IMREAD_COLOR
+
+        gt_256 = gt_1; // For IMREAD_COLOR_RGB
+        gt_258 = gt_3; // For IMREAD_COLOR_RGB | IMREAD_ANYDEPTH
+    }
+
+    // Handle color images (3 or 4 channels) with 8-bit and 16-bit depth
+    if (gt.channels() > 1)
+    {
+        // Convert to grayscale
+        cvtColor(gt, gt_2, COLOR_BGRA2GRAY);
+        if (gt.depth() == CV_16U)
+            gt_2.convertTo(gt_0, CV_8U, 1. / 256);
+        else
+            gt_0 = gt_2;
+
+        // Convert to 3-channel BGR
+        if (gt.channels() == 3)
+            gt.copyTo(gt_3);
+        else
+            cvtColor(gt, gt_3, COLOR_BGRA2BGR);
+
+        if (gt.depth() == CV_16U)
+            gt_3.convertTo(gt_1, CV_8U, 1. / 256);
+        else
+            gt_1 = gt_3;
+
+        // Convert to RGB for IMREAD_COLOR_RGB variants
+        cvtColor(gt_1, gt_256, COLOR_BGR2RGB);
+        cvtColor(gt_3, gt_258, COLOR_BGR2RGB);
+    }
+
+    // Perform comparisons with different imread flags
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_GRAYSCALE), gt_0);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR), gt_1);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(4, 0), imread(filename, IMREAD_ANYDEPTH), gt_2);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), gt_3);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(1, 0), imread(filename, IMREAD_COLOR_RGB), gt_256);
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), gt_258);
+
+// Uncomment this block to write out the decoded images for visual/manual inspection
+// or for regenerating expected ground truth PNGs (for example, after changing decoder logic).
+#if 0
+    imwrite(filename + "_0.png", imread(filename, IMREAD_GRAYSCALE));
+    imwrite(filename + "_1.png", imread(filename, IMREAD_COLOR));
+    imwrite(filename + "_2.png", imread(filename, IMREAD_ANYDEPTH));
+    imwrite(filename + "_3.png", imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH));
+    imwrite(filename + "_256.png", imread(filename, IMREAD_COLOR_RGB));
+    imwrite(filename + "_258.png", imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH));
+#endif
+
+// Uncomment this block to verify that saved images (from above) load identically
+// when read back with IMREAD_UNCHANGED. Helps ensure write-read symmetry.
+#if 0
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_GRAYSCALE), imread(filename + "_0.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR), imread(filename + "_1.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_ANYDEPTH), imread(filename + "_2.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH), imread(filename + "_3.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB), imread(filename + "_256.png", IMREAD_UNCHANGED));
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH), imread(filename + "_258.png", IMREAD_UNCHANGED));
+#endif
 }
 
 const string pngsuite_files[] =
@@ -204,23 +340,13 @@ const string pngsuite_files[] =
     "f04n2c08",
     "f99n0g04",
     "g03n0g16",
-    "g03n2c08",
-    "g03n3p04",
     "g04n0g16",
-    "g04n2c08",
-    "g04n3p04",
     "g05n0g16",
-    "g05n2c08",
-    "g05n3p04",
     "g07n0g16",
-    "g07n2c08",
-    "g07n3p04",
     "g10n0g16",
     "g10n2c08",
     "g10n3p04",
     "g25n0g16",
-    "g25n2c08",
-    "g25n3p04",
     "oi1n0g16",
     "oi1n2c16",
     "oi2n0g16",
@@ -294,6 +420,49 @@ const string pngsuite_files[] =
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite,
                         testing::ValuesIn(pngsuite_files));
 
+typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite_Gamma;
+
+// Parameterized test for decoding PNG files from the PNGSuite test set
+TEST_P(Imgcodecs_Png_PngSuite_Gamma, decode)
+{
+    // Construct full paths for the PNG image and corresponding ground truth XML file
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/" + GetParam() + ".png";
+    const string xml_filename = root + "pngsuite/" + GetParam() + ".xml";
+
+    // Load the XML file containing the ground truth data
+    FileStorage fs(xml_filename, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened()); // Ensure the file was opened successfully
+
+    // Load the image using IMREAD_UNCHANGED to preserve original format
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(src.empty()); // Ensure the image was loaded successfully
+
+    // Load the ground truth matrix from XML
+    Mat gt;
+    fs.getFirstTopLevelNode() >> gt;
+
+    // Compare the image loaded with IMREAD_UNCHANGED to the ground truth
+    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, gt);
+}
+
+const string pngsuite_files_gamma[] =
+{
+    "g03n2c08",
+    "g03n3p04",
+    "g04n2c08",
+    "g04n3p04",
+    "g05n2c08",
+    "g05n3p04",
+    "g07n2c08",
+    "g07n3p04",
+    "g25n2c08",
+    "g25n3p04"
+};
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Gamma,
+                        testing::ValuesIn(pngsuite_files_gamma));
+
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite_Corrupted;
 
 TEST_P(Imgcodecs_Png_PngSuite_Corrupted, decode)
@@ -326,6 +495,99 @@ const string pngsuite_files_corrupted[] = {
 
 INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_PngSuite_Corrupted,
                         testing::ValuesIn(pngsuite_files_corrupted));
+
+CV_ENUM(PNGStrategy, IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY, IMWRITE_PNG_STRATEGY_RLE, IMWRITE_PNG_STRATEGY_FIXED);
+CV_ENUM(PNGFilters, IMWRITE_PNG_FILTER_NONE, IMWRITE_PNG_FILTER_SUB, IMWRITE_PNG_FILTER_UP, IMWRITE_PNG_FILTER_AVG, IMWRITE_PNG_FILTER_PAETH, IMWRITE_PNG_FAST_FILTERS, IMWRITE_PNG_ALL_FILTERS);
+
+typedef testing::TestWithParam<testing::tuple<string, PNGStrategy, PNGFilters, int>> Imgcodecs_Png_Encode;
+
+TEST_P(Imgcodecs_Png_Encode, params)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/" + get<0>(GetParam());
+
+    const int strategy = get<1>(GetParam());
+    const int filter = get<2>(GetParam());
+    const int compression_level = get<3>(GetParam());
+
+    std::vector<uchar> file_buf;
+    readFileBytes(filename, file_buf);
+    Mat src = imdecode(file_buf, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot decode test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level, IMWRITE_PNG_STRATEGY, strategy, IMWRITE_PNG_FILTER, filter });
+    EXPECT_EQ(buf.size(), file_buf.size());
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_Encode,
+    testing::Values(
+        make_tuple("f00n0g08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f00n2c08.png", IMWRITE_PNG_STRATEGY_DEFAULT, IMWRITE_PNG_FILTER_NONE, 6),
+        make_tuple("f01n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f01n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_SUB, 6),
+        make_tuple("f02n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f02n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_UP, 6),
+        make_tuple("f03n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_AVG, 6),
+        make_tuple("f04n0g08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("f04n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_FILTER_PAETH, 6),
+        make_tuple("z03n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 3),
+        make_tuple("z06n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 6),
+        make_tuple("z09n2c08.png", IMWRITE_PNG_STRATEGY_FILTERED, IMWRITE_PNG_ALL_FILTERS, 9)));
+
+typedef testing::TestWithParam<testing::tuple<string, int, size_t>> Imgcodecs_Png_ImwriteFlags;
+
+TEST_P(Imgcodecs_Png_ImwriteFlags, compression_level)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + get<0>(GetParam());
+
+    const int compression_level = get<1>(GetParam());
+    const size_t compression_level_output_size = get<2>(GetParam());
+
+    Mat src = imread(filename, IMREAD_UNCHANGED);
+    EXPECT_FALSE(src.empty()) << "Cannot read test image " << filename;
+
+    vector<uchar> buf;
+    imencode(".png", src, buf, { IMWRITE_PNG_COMPRESSION, compression_level });
+    EXPECT_EQ(buf.size(), compression_level_output_size);
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_Png_ImwriteFlags,
+    testing::Values(
+        make_tuple("../perf/512x512.png", 0, 788279),
+        make_tuple("../perf/512x512.png", 1, 179503),
+        make_tuple("../perf/512x512.png", 2, 176007),
+        make_tuple("../perf/512x512.png", 3, 170497),
+        make_tuple("../perf/512x512.png", 4, 163357),
+        make_tuple("../perf/512x512.png", 5, 159190),
+        make_tuple("../perf/512x512.png", 6, 156621),
+        make_tuple("../perf/512x512.png", 7, 155696),
+        make_tuple("../perf/512x512.png", 8, 153708),
+        make_tuple("../perf/512x512.png", 9, 152181)));
+
+// See https://github.com/opencv/opencv/issues/27614
+typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
+TEST_P(Imgcodecs_Png_ZLIBBUFFER_SIZE, encode_regression_27614)
+{
+    Mat img(320,240,CV_8UC3,cv::Scalar(64,76,43));
+    vector<uint8_t> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, GetParam() }));
+    ASSERT_TRUE(status);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,
+                        testing::Values(5,
+                                        6,         // Minimum limit
+                                        8192,      // Default value
+                                        131072,    // 128 KiB
+                                        262144,    // 256 KiB
+                                        1048576,   // Maximum limit
+                                        1048577));
 
 #endif // HAVE_PNG
 

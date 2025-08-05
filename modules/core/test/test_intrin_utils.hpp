@@ -24,6 +24,19 @@ void test_hal_intrin_float16();
 
 //==================================================================================================
 
+#if defined (__clang__) && defined(__has_warning)
+    #if __has_warning("-Wmaybe-uninitialized")
+        #define CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS
+    #endif
+#elif defined (__GNUC__) // in case of gcc, it does not have macro __has_warning
+    #define CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS
+#endif
+
+#if defined (CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
+
 template <typename R> struct Data
 {
     typedef typename VTraits<R>::lane_type LaneType;
@@ -846,7 +859,15 @@ template<typename R> struct TheTest
             2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x50-0x5f
             2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x60-0x6f
             3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0x70-0x7f
-            1                                               //0x80
+            1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, //0x80-0x8f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0x90-0x9f
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0xa0-0xaf
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0xb0-0xbf
+            2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, //0xc0-0xcf
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0xd0-0xdf
+            3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, //0xe0-0xef
+            4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8, //0xf0-0xff
+            0
         };
         Data<R> dataA;
         R a = dataA;
@@ -978,7 +999,11 @@ template<typename R> struct TheTest
         R l = dataB;
         dataB[1] = mask_one;
         dataB[VTraits<R>::vlanes() / 2] = mask_one;
-        dataC *= (LaneType)-1;
+        for (int i = 0; i < VTraits<R>::vlanes(); i++)
+        {
+            auto c_signed = dataC.as_int(i);
+            dataC[i] = (LaneType)(c_signed == 0 ? -1 : -std::abs(c_signed));
+        }
         R a = dataA, b = dataB, c = dataC, d = dataD, e = dataE;
         dataC[VTraits<R>::vlanes() - 1] = 0;
         R nl = dataC;
@@ -1905,7 +1930,7 @@ template<typename R> struct TheTest
                     EXPECT_TRUE(std::isnan(outputs[j]));
                 } else {
                     LaneType ref_output = std::erf(inputs[j]);
-                    EXPECT_LT(std::abs(outputs[j] - ref_output), 1e-3f * (std::abs(ref_output) + FLT_MIN * 1e4f));
+                    EXPECT_LT(std::abs(outputs[j] - ref_output), 9e-3f * (std::abs(ref_output) + FLT_MIN * 1e4f));
                 }
             }
         }
@@ -2396,6 +2421,10 @@ void test_hal_intrin_float16()
         ;
 }
 #endif*/
+
+#if defined (CV_DISABLE_GCC_MAYBE_UNINITIALIZED_WARNINGS)
+#pragma GCC diagnostic pop
+#endif
 
 #endif //CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 

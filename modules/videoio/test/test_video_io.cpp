@@ -383,10 +383,20 @@ TEST_P(videoio_bunny, frame_count) { doFrameCountTest(); }
 
 TEST_P(videoio_bunny, frame_timestamp) { doTimestampTest(); }
 
+inline static std::string videoio_bunny_name_printer(const testing::TestParamInfo<videoio_bunny::ParamType>& info)
+{
+    std::ostringstream os;
+    os << extToStringSafe(get<0>(info.param)) << "_"
+        << getBackendNameSafe(get<1>(info.param));
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videoio_bunny,
                           testing::Combine(
                               testing::ValuesIn(bunny_params),
-                              testing::ValuesIn(backend_params)));
+                              testing::ValuesIn(backend_params)),
+                          videoio_bunny_name_printer);
+
 
 
 inline static std::ostream &operator<<(std::ostream &out, const Ext_Fourcc_PSNR &p)
@@ -446,10 +456,23 @@ Size all_sizes[] = {
 
 TEST_P(videoio_synthetic, write_read_position) { doTest(); }
 
+inline static std::string videoio_synthetic_name_printer(const testing::TestParamInfo<videoio_synthetic::ParamType>& info)
+{
+    std::ostringstream os;
+    const Size sz = get<0>(info.param);
+    const Ext_Fourcc_PSNR & param = get<1>(info.param);
+    os << sz.height << "p" << "_"
+        << param.ext << "_"
+        << param.fourcc << "_"
+        << getBackendNameSafe(param.api);
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videoio_synthetic,
                         testing::Combine(
                             testing::ValuesIn(all_sizes),
-                            testing::ValuesIn(synthetic_params)));
+                            testing::ValuesIn(synthetic_params)),
+                        videoio_synthetic_name_printer);
 
 struct Ext_Fourcc_API
 {
@@ -531,7 +554,19 @@ static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API()
     return result;
 }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer, testing::ValuesIn(generate_Ext_Fourcc_API()));
+inline static std::string Videoio_Writer_name_printer(const testing::TestParamInfo<Videoio_Writer::ParamType>& info)
+{
+    std::ostringstream os;
+    std::string ext(info.param.ext);
+    if (info.param.api == CAP_GSTREAMER && info.param.fourcc[0] == '\0') // gstreamer pipeline instead of extension
+        os << getExtensionSafe(info.param.ext) << "_" << "NONE";
+    else
+        os << info.param.ext << "_" << info.param.fourcc;
+    os << "_" << getBackendNameSafe(info.param.api);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer, testing::ValuesIn(generate_Ext_Fourcc_API()), Videoio_Writer_name_printer);
 
 
 TEST(Videoio, exceptions)
@@ -610,7 +645,7 @@ static vector<Ext_Fourcc_API> generate_Ext_Fourcc_API_nocrash()
     return result;
 }
 
-INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()));
+INSTANTIATE_TEST_CASE_P(videoio, Videoio_Writer_bad_fourcc, testing::ValuesIn(generate_Ext_Fourcc_API_nocrash()), Videoio_Writer_name_printer);
 
 typedef testing::TestWithParam<VideoCaptureAPIs> safe_capture;
 
@@ -643,7 +678,15 @@ TEST_P(safe_capture, frames_independency)
 }
 
 static VideoCaptureAPIs safe_apis[] = {CAP_FFMPEG, CAP_GSTREAMER, CAP_MSMF,CAP_AVFOUNDATION};
-INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis));
+
+inline static std::string safe_capture_name_printer(const testing::TestParamInfo<safe_capture::ParamType>& info)
+{
+    std::ostringstream os;
+    os << getBackendNameSafe(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, safe_capture, testing::ValuesIn(safe_apis), safe_capture_name_printer);
 
 //==================================================================================================
 // TEST_P(videocapture_acceleration, ...)
@@ -828,6 +871,7 @@ static const VideoAccelerationType hw_types[] = {
         VIDEO_ACCELERATION_D3D11,
 #else
         VIDEO_ACCELERATION_VAAPI,
+        VIDEO_ACCELERATION_DRM,
 #endif
 };
 
@@ -836,12 +880,22 @@ static bool hw_use_umat[] = {
         true
 };
 
+inline static std::string videocapture_acceleration_name_printer(const testing::TestParamInfo<videocapture_acceleration::ParamType>& info)
+{
+    std::ostringstream os;
+    os << getExtensionSafe(get<0>(info.param).filename) << "_"
+        << getBackendNameSafe(get<1>(info.param)) << "_"
+        << get<2>(info.param) << "_"
+        << (get<3>(info.param) ? "UMAT" : "MAT");
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videocapture_acceleration, testing::Combine(
     testing::ValuesIn(hw_filename),
     testing::ValuesIn(hw_backends),
     testing::ValuesIn(hw_types),
     testing::ValuesIn(hw_use_umat)
-));
+), videocapture_acceleration_name_printer);
 
 ////////////////////////////////////////// TEST_P(video_acceleration, write_read)
 
@@ -1019,11 +1073,23 @@ static Ext_Fourcc_PSNR hw_codecs[] = {
 #endif
 };
 
+inline static std::string videowriter_acceleration_name_printer(const testing::TestParamInfo<videowriter_acceleration::ParamType>& info)
+{
+    std::ostringstream os;
+    const Ext_Fourcc_PSNR & param = get<0>(info.param);
+    os << extToStringSafe(param.ext) << "_"
+        << param.fourcc << "_"
+        << getBackendNameSafe(param.api) << "_"
+        << get<1>(info.param) << "_"
+        << (get<2>(info.param) ? "UMAT" : "MAT");
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, videowriter_acceleration, testing::Combine(
         testing::ValuesIn(hw_codecs),
         testing::ValuesIn(hw_types),
         testing::ValuesIn(hw_use_umat)
-));
+), videowriter_acceleration_name_printer);
 
 class BufferStream : public cv::IStreamReader
 {
@@ -1094,10 +1160,20 @@ TEST_P(stream_capture, read)
     for(int i = 0; i < numFrames; i++)
         EXPECT_EQ(0, cv::norm(frames[i], hardCopies[i], NORM_INF)) << i;
 }
+
+inline static std::string stream_capture_name_printer(const testing::TestParamInfo<stream_capture::ParamType>& info)
+{
+    std::ostringstream os;
+    os << extToStringSafe(get<0>(info.param)) << "_"
+        << getBackendNameSafe(get<1>(info.param));
+    return os.str();
+}
+
 INSTANTIATE_TEST_CASE_P(videoio, stream_capture,
                           testing::Combine(
                               testing::ValuesIn(bunny_params),
-                              testing::ValuesIn(backend_params)));
+                              testing::ValuesIn(backend_params)),
+                          stream_capture_name_printer);
 
 // This test for stream input for container format (See test_ffmpeg/videoio_container.read test)
 typedef testing::TestWithParam<std::string> stream_capture_ffmpeg;
@@ -1152,6 +1228,14 @@ TEST_P(stream_capture_ffmpeg, raw)
         EXPECT_EQ(0, cv::norm(frame, frameRef, NORM_INF)) << i;
     }
 }
-INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"));
+
+inline static std::string stream_capture_ffmpeg_name_printer(const testing::TestParamInfo<stream_capture_ffmpeg::ParamType>& info)
+{
+    std::ostringstream os;
+    os << extToStringSafe(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, stream_capture_ffmpeg, testing::Values("h264", "h265", "mjpg.avi"), stream_capture_ffmpeg_name_printer);
 
 } // namespace

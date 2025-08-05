@@ -98,6 +98,9 @@ static inline int calcType(int type, int flags)
         if( (flags & IMREAD_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
+        //if( (flags & IMREAD_ANYCOLOR) != 0 /*&& CV_MAT_CN(type) > 1*/ )
+        //    type = CV_MAKETYPE(CV_MAT_DEPTH(type), CV_MAT_CN(type));
+        //else if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 )
         if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 ||
            ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
@@ -410,6 +413,76 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
     }
 }
 
+static void readMetadata(ImageDecoder& decoder,
+                         std::vector<int>* metadata_types,
+                         OutputArrayOfArrays metadata)
+{
+    if (!metadata_types)
+        return;
+    int kind = metadata.kind();
+    void* obj = metadata.getObj();
+    std::vector<Mat>* matvector = nullptr;
+    std::vector<std::vector<uchar> >* vecvector = nullptr;
+    if (kind == _InputArray::STD_VECTOR_MAT) {
+        matvector = (std::vector<Mat>*)obj;
+    } else if (kind == _InputArray::STD_VECTOR_VECTOR) {
+        int elemtype = metadata.type(0);
+        CV_Assert(elemtype == CV_8UC1 || elemtype == CV_8SC1);
+        vecvector = (std::vector<std::vector<uint8_t> >*)obj;
+    } else {
+        CV_Error(Error::StsBadArg,
+                 "unsupported metadata type, should be a vector of matrices or vector of byte vectors");
+    }
+    std::vector<Mat> src_metadata;
+    for (int m = (int)IMAGE_METADATA_EXIF; m <= (int)IMAGE_METADATA_MAX; m++) {
+        Mat mm = decoder->getMetadata((ImageMetadataType)m);
+        if (!mm.empty()) {
+            CV_Assert(mm.isContinuous());
+            CV_Assert(mm.elemSize() == 1u);
+            metadata_types->push_back(m);
+            src_metadata.push_back(mm);
+        }
+    }
+    size_t nmetadata = metadata_types->size();
+    if (matvector) {
+        matvector->resize(nmetadata);
+        for (size_t m = 0; m < nmetadata; m++)
+            src_metadata[m].copyTo(matvector->at(m));
+    } else {
+        vecvector->resize(nmetadata);
+        for (size_t m = 0; m < nmetadata; m++) {
+            const Mat& mm = src_metadata[m];
+            const uchar* data = (uchar*)mm.data;
+            vecvector->at(m).assign(data, data + mm.total());
+        }
+    }
+}
+
+static const char* metadataTypeToString(ImageMetadataType type)
+{
+    return type == IMAGE_METADATA_EXIF ? "Exif" :
+           type == IMAGE_METADATA_XMP ? "XMP" :
+           type == IMAGE_METADATA_ICCP ? "ICC Profile" : "???";
+}
+
+static void addMetadata(ImageEncoder& encoder,
+                        const std::vector<int>& metadata_types,
+                        InputArrayOfArrays metadata)
+{
+    size_t nmetadata_chunks = metadata_types.size();
+    for (size_t i = 0; i < nmetadata_chunks; i++) {
+        ImageMetadataType metadata_type = (ImageMetadataType)metadata_types[i];
+        bool ok = encoder->addMetadata(metadata_type, metadata.getMat((int)i));
+        if (!ok) {
+            std::string desc = encoder->getDescription();
+            CV_LOG_WARNING(NULL, "Imgcodecs: metadata of type '"
+                           << metadataTypeToString(metadata_type)
+                           << "' is not supported when encoding '"
+                           << desc << "'");
+        }
+    }
+}
+
 /**
  * Read an image into memory and return the information
  *
@@ -419,7 +492,8 @@ static void ApplyExifOrientation(ExifEntry_t orientationTag, OutputArray img)
  *
 */
 static bool
-imread_( const String& filename, int flags, OutputArray mat )
+imread_( const String& filename, int flags, OutputArray mat,
+         std::vector<int>* metadata_types, OutputArrayOfArrays metadata)
 {
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
@@ -462,6 +536,12 @@ imread_( const String& filename, int flags, OutputArray mat )
     /// set the filename in the driver
     decoder->setSource( filename );
 
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
+    }
+
     try
     {
         // read the header to make sure it succeeds
@@ -501,6 +581,7 @@ imread_( const String& filename, int flags, OutputArray mat )
     Mat real_mat = mat.getMat();
     const void * original_ptr = real_mat.data;
     bool success = false;
+    decoder->resetFrameCount(); // this is needed for PngDecoder. it should be called before decoder->readData()
     try
     {
         if (decoder->readData(real_mat))
@@ -508,6 +589,8 @@ imread_( const String& filename, int flags, OutputArray mat )
             CV_CheckTrue(original_ptr == real_mat.data, "Internal imread issue");
             success = true;
         }
+
+        readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
     {
@@ -661,7 +744,24 @@ Mat imread( const String& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img );
+    imread_( filename, flags, img, nullptr, noArray() );
+
+    /// return a reference to the data
+    return img;
+}
+
+Mat imreadWithMetadata( const String& filename,
+                        std::vector<int>& metadata_types,
+                        OutputArrayOfArrays metadata,
+                        int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    /// create the basic container
+    Mat img;
+
+    /// load the data
+    imread_( filename, flags, img, &metadata_types, metadata );
 
     /// return a reference to the data
     return img;
@@ -672,7 +772,7 @@ void imread( const String& filename, OutputArray dst, int flags )
     CV_TRACE_FUNCTION();
 
     /// load the data
-    imread_(filename, flags, dst);
+    imread_(filename, flags, dst, nullptr, noArray());
 }
 
 /**
@@ -800,6 +900,7 @@ imreadanimation_(const String& filename, int flags, int start, int count, Animat
     }
     animation.bgcolor = decoder->animation().bgcolor;
     animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
 
     return success;
 }
@@ -809,6 +910,117 @@ bool imreadanimation(const String& filename, CV_OUT Animation& animation, int st
     CV_TRACE_FUNCTION();
 
     return imreadanimation_(filename, IMREAD_UNCHANGED, start, count, animation);
+}
+
+static bool imdecodeanimation_(InputArray buf, int flags, int start, int count, Animation& animation)
+{
+    bool success = false;
+    if (start < 0) {
+        start = 0;
+    }
+    if (count < 0) {
+        count = INT16_MAX;
+    }
+
+    /// Search for the relevant decoder to handle the imagery
+    ImageDecoder decoder;
+    decoder = findDecoder(buf.getMat());
+
+    /// if no decoder was found, return false.
+    if (!decoder) {
+        CV_LOG_WARNING(NULL, "Decoder for buffer not found!\n");
+        return false;
+    }
+
+    /// set the filename in the driver
+    decoder->setSource(buf.getMat());
+    // read the header to make sure it succeeds
+    try
+    {
+        // read the header to make sure it succeeds
+        if (!decoder->readHeader())
+            return false;
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imdecodeanimation_(): can't read header: " << e.what());
+        return false;
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imdecodeanimation_(): can't read header: unknown exception");
+        return false;
+    }
+
+    int current = 0;
+    int frame_count = (int)decoder->getFrameCount();
+    count = count + start > frame_count ? frame_count - start : count;
+
+    uint64 pixels = (uint64)decoder->width() * (uint64)decoder->height() * (uint64)(count + 4);
+    if (pixels > CV_IO_MAX_IMAGE_PIXELS) {
+        CV_LOG_WARNING(NULL, "\nyou are trying to read " << pixels <<
+            " bytes that exceed CV_IO_MAX_IMAGE_PIXELS.\n");
+        return false;
+    }
+
+    while (current < start + count)
+    {
+        // grab the decoded type
+        const int type = calcType(decoder->type(), flags);
+
+        // established the required input image size
+        Size size = validateInputImageSize(Size(decoder->width(), decoder->height()));
+
+        // read the image data
+        Mat mat(size.height, size.width, type);
+        success = false;
+        try
+        {
+            if (decoder->readData(mat))
+                success = true;
+        }
+        catch (const cv::Exception& e)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_: can't read data: " << e.what());
+        }
+        catch (...)
+        {
+            CV_LOG_ERROR(NULL, "imreadanimation_: can't read data: unknown exception");
+        }
+        if (!success)
+            break;
+
+        // optionally rotate the data if EXIF' orientation flag says so
+        if ((flags & IMREAD_IGNORE_ORIENTATION) == 0 && flags != IMREAD_UNCHANGED)
+        {
+            ApplyExifOrientation(decoder->getExifTag(ORIENTATION), mat);
+        }
+
+        if (current >= start)
+        {
+            int duration = decoder->animation().durations.size() > 0 ? decoder->animation().durations.back() : 1000;
+            animation.durations.push_back(duration);
+            animation.frames.push_back(mat);
+        }
+
+        if (!decoder->nextPage())
+        {
+            break;
+        }
+        ++current;
+    }
+    animation.bgcolor = decoder->animation().bgcolor;
+    animation.loop_count = decoder->animation().loop_count;
+    animation.still_image = decoder->animation().still_image;
+
+    return success;
+}
+
+bool imdecodeanimation(InputArray buf, Animation& animation, int start, int count)
+{
+    CV_TRACE_FUNCTION();
+
+    return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, animation);
 }
 
 static
@@ -833,6 +1045,8 @@ size_t imcount(const String& filename, int flags)
 
 
 static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
+                      const std::vector<int>& metadata_types,
+                      InputArrayOfArrays metadata,
                       const std::vector<int>& params_, bool flipv )
 {
     bool isMultiImg = img_vec.size() > 1;
@@ -847,7 +1061,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         Mat image = img_vec[page];
         CV_Assert(!image.empty());
 
+#ifdef HAVE_OPENEXR
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+#endif
+
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
@@ -868,6 +1087,8 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     }
 
     encoder->setDestination( filename );
+    addMetadata(encoder, metadata_types, metadata);
+
 #if CV_VERSION_MAJOR < 5 && defined(HAVE_IMGCODEC_HDR)
     bool fixed = false;
     std::vector<int> params_pair(2);
@@ -942,7 +1163,26 @@ bool imwrite( const String& filename, InputArray _img,
         img_vec.push_back(_img.getMat());
 
     CV_Assert(!img_vec.empty());
-    return imwrite_(filename, img_vec, params, false);
+    return imwrite_(filename, img_vec, {}, noArray(), params, false);
+}
+
+bool imwriteWithMetadata( const String& filename, InputArray _img,
+                          const std::vector<int>& metadata_types,
+                          InputArrayOfArrays metadata,
+                          const std::vector<int>& params )
+{
+    CV_TRACE_FUNCTION();
+
+    CV_Assert(!_img.empty());
+
+    std::vector<Mat> img_vec;
+    if (_img.isMatVector() || _img.isUMatVector())
+        _img.getMatVector(img_vec);
+    else
+        img_vec.push_back(_img.getMat());
+
+    CV_Assert(!img_vec.empty());
+    return imwrite_(filename, img_vec, metadata_types, metadata, params, false);
 }
 
 static bool imwriteanimation_(const String& filename, const Animation& animation, const std::vector<int>& params)
@@ -994,8 +1234,42 @@ bool imwriteanimation(const String& filename, const Animation& animation, const 
     return imwriteanimation_(filename, animation, params);
 }
 
+static bool imencodeanimation_(const String& ext, const Animation& animation, std::vector<uchar>& buf, const std::vector<int>& params)
+{
+    ImageEncoder encoder = findEncoder(ext);
+    if (!encoder)
+        CV_Error(Error::StsError, "could not find a writer for the specified extension");
+
+    encoder->setDestination(buf);
+
+    bool code = false;
+    try
+    {
+        code = encoder->writeanimation(animation, params);
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_ERROR(NULL, "imencodeanimation_('" << ext << "'): can't write data: " << e.what());
+    }
+    catch (...)
+    {
+        CV_LOG_ERROR(NULL, "imencodeanimation_('" << ext << "'): can't write data: unknown exception");
+    }
+
+    return code;
+}
+
+bool imencodeanimation(const String& ext, const Animation& animation, std::vector<uchar>& buf, const std::vector<int>& params)
+{
+    CV_Assert(!animation.frames.empty());
+    CV_Assert(animation.frames.size() == animation.durations.size());
+    return imencodeanimation_(ext, animation, buf, params);
+}
+
 static bool
-imdecode_( const Mat& buf, int flags, Mat& mat )
+imdecode_( const Mat& buf, int flags, Mat& mat,
+           std::vector<int>* metadata_types,
+           OutputArrayOfArrays metadata )
 {
     CV_Assert(!buf.empty());
     CV_Assert(buf.isContinuous());
@@ -1047,6 +1321,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
         decoder->setSource(filename);
     }
 
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
+    }
+
     bool success = false;
     try
     {
@@ -1086,6 +1366,7 @@ imdecode_( const Mat& buf, int flags, Mat& mat )
     {
         if (decoder->readData(mat))
             success = true;
+        readMetadata(decoder, metadata_types, metadata);
     }
     catch (const cv::Exception& e)
     {
@@ -1129,7 +1410,7 @@ Mat imdecode( InputArray _buf, int flags )
     CV_TRACE_FUNCTION();
 
     Mat buf = _buf.getMat(), img;
-    if (!imdecode_(buf, flags, img))
+    if (!imdecode_(buf, flags, img, nullptr, noArray()))
         img.release();
 
     return img;
@@ -1141,10 +1422,22 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
-    if (imdecode_(buf, flags, *dst))
+    if (imdecode_(buf, flags, *dst, nullptr, noArray()))
         return *dst;
     else
         return cv::Mat();
+}
+
+Mat imdecodeWithMetadata( InputArray _buf, std::vector<int>& metadata_types,
+                          OutputArrayOfArrays metadata, int flags )
+{
+    CV_TRACE_FUNCTION();
+
+    Mat buf = _buf.getMat(), img;
+    if (!imdecode_(buf, flags, img, &metadata_types, metadata))
+        img.release();
+
+    return img;
 }
 
 static bool
@@ -1302,8 +1595,10 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, co
     }
 }
 
-bool imencode( const String& ext, InputArray _img,
-               std::vector<uchar>& buf, const std::vector<int>& params_ )
+bool imencodeWithMetadata( const String& ext, InputArray _img,
+                           const std::vector<int>& metadata_types,
+                           InputArrayOfArrays metadata,
+                           std::vector<uchar>& buf, const std::vector<int>& params_ )
 {
     CV_TRACE_FUNCTION();
 
@@ -1328,7 +1623,11 @@ bool imencode( const String& ext, InputArray _img,
         CV_Assert(!image.empty());
 
         const int channels = image.channels();
+#ifdef HAVE_OPENEXR
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+#endif
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
@@ -1372,6 +1671,7 @@ bool imencode( const String& ext, InputArray _img,
         code = encoder->setDestination(filename);
         CV_Assert( code );
     }
+    addMetadata(encoder, metadata_types, metadata);
 
     try {
         if (!isMultiImg)
@@ -1406,6 +1706,12 @@ bool imencode( const String& ext, InputArray _img,
         remove(filename.c_str());
     }
     return code;
+}
+
+bool imencode( const String& ext, InputArray img,
+               std::vector<uchar>& buf, const std::vector<int>& params_ )
+{
+    return imencodeWithMetadata(ext, img, {}, noArray(), buf, params_);
 }
 
 bool imencodemulti( const String& ext, InputArrayOfArrays imgs,

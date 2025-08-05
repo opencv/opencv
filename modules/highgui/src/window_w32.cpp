@@ -78,7 +78,7 @@ using namespace cv;
 static const char* trackbar_text =
 "                                                                                             ";
 
-#if defined _M_X64 || defined __x86_64 || defined _M_ARM64
+#if defined _M_X64 || defined __x86_64 || defined _M_ARM64 || defined _M_ARM64EC
 
 #define icvGetWindowLongPtr GetWindowLongPtr
 #define icvSetWindowLongPtr(hwnd, id, ptr) SetWindowLongPtr(hwnd, id, (LONG_PTR)(ptr))
@@ -1624,13 +1624,13 @@ MainWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_MOUSEHWHEEL:
        if (window.on_mouse)
        {
-          int flags = (wParam & MK_LBUTTON      ? CV_EVENT_FLAG_LBUTTON  : 0)|
-                      (wParam & MK_RBUTTON      ? CV_EVENT_FLAG_RBUTTON  : 0)|
-                      (wParam & MK_MBUTTON      ? CV_EVENT_FLAG_MBUTTON  : 0)|
-                      (wParam & MK_CONTROL      ? CV_EVENT_FLAG_CTRLKEY  : 0)|
-                      (wParam & MK_SHIFT        ? CV_EVENT_FLAG_SHIFTKEY : 0)|
-                      (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY   : 0);
-          int event = (uMsg == WM_MOUSEWHEEL    ? CV_EVENT_MOUSEWHEEL    : CV_EVENT_MOUSEHWHEEL);
+          int flags = (wParam & MK_LBUTTON      ? cv::EVENT_FLAG_LBUTTON  : 0)|
+                      (wParam & MK_RBUTTON      ? cv::EVENT_FLAG_RBUTTON  : 0)|
+                      (wParam & MK_MBUTTON      ? cv::EVENT_FLAG_MBUTTON  : 0)|
+                      (wParam & MK_CONTROL      ? cv::EVENT_FLAG_CTRLKEY  : 0)|
+                      (wParam & MK_SHIFT        ? cv::EVENT_FLAG_SHIFTKEY : 0)|
+                      (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_ALTKEY   : 0);
+          int event = (uMsg == WM_MOUSEWHEEL    ? cv::EVENT_MOUSEWHEEL    : cv::EVENT_MOUSEHWHEEL);
 
           // Set the wheel delta of mouse wheel to be in the upper word of 'event'
           int delta = GET_WHEEL_DELTA_WPARAM(wParam);
@@ -1822,22 +1822,22 @@ static LRESULT CALLBACK HighGUIProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
         {
             POINT pt;
 
-            int flags = (wParam & MK_LBUTTON ? CV_EVENT_FLAG_LBUTTON : 0)|
-                        (wParam & MK_RBUTTON ? CV_EVENT_FLAG_RBUTTON : 0)|
-                        (wParam & MK_MBUTTON ? CV_EVENT_FLAG_MBUTTON : 0)|
-                        (wParam & MK_CONTROL ? CV_EVENT_FLAG_CTRLKEY : 0)|
-                        (wParam & MK_SHIFT ? CV_EVENT_FLAG_SHIFTKEY : 0)|
-                        (GetKeyState(VK_MENU) < 0 ? CV_EVENT_FLAG_ALTKEY : 0);
-            int event = uMsg == WM_LBUTTONDOWN ? CV_EVENT_LBUTTONDOWN :
-                        uMsg == WM_RBUTTONDOWN ? CV_EVENT_RBUTTONDOWN :
-                        uMsg == WM_MBUTTONDOWN ? CV_EVENT_MBUTTONDOWN :
-                        uMsg == WM_LBUTTONUP ? CV_EVENT_LBUTTONUP :
-                        uMsg == WM_RBUTTONUP ? CV_EVENT_RBUTTONUP :
-                        uMsg == WM_MBUTTONUP ? CV_EVENT_MBUTTONUP :
-                        uMsg == WM_LBUTTONDBLCLK ? CV_EVENT_LBUTTONDBLCLK :
-                        uMsg == WM_RBUTTONDBLCLK ? CV_EVENT_RBUTTONDBLCLK :
-                        uMsg == WM_MBUTTONDBLCLK ? CV_EVENT_MBUTTONDBLCLK :
-                                                   CV_EVENT_MOUSEMOVE;
+            int flags = (wParam & MK_LBUTTON ? cv::EVENT_FLAG_LBUTTON : 0)|
+                        (wParam & MK_RBUTTON ? cv::EVENT_FLAG_RBUTTON : 0)|
+                        (wParam & MK_MBUTTON ? cv::EVENT_FLAG_MBUTTON : 0)|
+                        (wParam & MK_CONTROL ? cv::EVENT_FLAG_CTRLKEY : 0)|
+                        (wParam & MK_SHIFT ? cv::EVENT_FLAG_SHIFTKEY : 0)|
+                        (GetKeyState(VK_MENU) < 0 ? cv::EVENT_FLAG_ALTKEY : 0);
+            int event = uMsg == WM_LBUTTONDOWN ? cv::EVENT_LBUTTONDOWN :
+                        uMsg == WM_RBUTTONDOWN ? cv::EVENT_RBUTTONDOWN :
+                        uMsg == WM_MBUTTONDOWN ? cv::EVENT_MBUTTONDOWN :
+                        uMsg == WM_LBUTTONUP ? cv::EVENT_LBUTTONUP :
+                        uMsg == WM_RBUTTONUP ? cv::EVENT_RBUTTONUP :
+                        uMsg == WM_MBUTTONUP ? cv::EVENT_MBUTTONUP :
+                        uMsg == WM_LBUTTONDBLCLK ? cv::EVENT_LBUTTONDBLCLK :
+                        uMsg == WM_RBUTTONDBLCLK ? cv::EVENT_RBUTTONDBLCLK :
+                        uMsg == WM_MBUTTONDBLCLK ? cv::EVENT_MBUTTONDBLCLK :
+                                                   cv::EVENT_MOUSEMOVE;
             if (uMsg == WM_LBUTTONDOWN || uMsg == WM_RBUTTONDOWN || uMsg == WM_MBUTTONDOWN)
                 SetCapture(hwnd);
             if (uMsg == WM_LBUTTONUP || uMsg == WM_RBUTTONUP || uMsg == WM_MBUTTONUP)

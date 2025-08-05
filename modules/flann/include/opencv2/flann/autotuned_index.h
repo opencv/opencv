@@ -54,7 +54,7 @@ NNIndex<Distance>* create_index_by_type(const Matrix<typename Distance::ElementT
 
 struct AutotunedIndexParams : public IndexParams
 {
-    AutotunedIndexParams(float target_precision = 0.8, float build_weight = 0.01, float memory_weight = 0, float sample_fraction = 0.1)
+    AutotunedIndexParams(float target_precision = 0.8f, float build_weight = 0.01f, float memory_weight = 0.f, float sample_fraction = 0.1f)
     {
         (*this)["algorithm"] = FLANN_INDEX_AUTOTUNED;
         // precision desired (used for autotuning, -1 otherwise)
