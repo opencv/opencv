@@ -4263,7 +4263,7 @@ useful links:
 
 https://www.learnopencv.com/convex-hull-using-opencv-in-python-and-c/
  */
-CV_EXPORTS_W void convexHull( InputArray points, OutputArray hull, bool clockwise = false, bool returnPoints = true );
+CV_EXPORTS_W void convexHull( InputArray points, Mat& hull, bool clockwise = false, bool returnPoints = true );
 CV_EXPORTS_W void convexHull( InputArray points, std::vector<int>& hull, bool clockwise = false, bool returnPoints = true );
 CV_EXPORTS_W void convexHull( InputArray points, std::vector<Point>& hull, bool clockwise = false, bool returnPoints = true );
 CV_EXPORTS_W void convexHull( InputArray points, std::vector<Point2f>& hull, bool clockwise = false, bool returnPoints = true );
