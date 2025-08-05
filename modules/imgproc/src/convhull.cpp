@@ -165,9 +165,6 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
     }
 
-    CV_Assert(points.size() == sz);
-    CV_Assert(pointsf.size() == sz);
-
     int nout = 0;
     int miny_ind = 0, maxy_ind = 0;
 
@@ -231,9 +228,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for(int i = 0; i < tl_count-1; i++ )
-            hullbuf[nout++] = int(&pointer[tl_stack[i]] - pointer);
+            hullbuf[nout++] = tl_stack[i];
         for(int i = tr_count - 1; i > 0; i-- )
-            hullbuf[nout++] = int(&pointer[tr_stack[i]] - pointer);
+            hullbuf[nout++] = tr_stack[i];
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
         // lower half
@@ -268,9 +265,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             }
         }
         for(int i = 0; i < bl_count-1; i++ )
-            hullbuf[nout++] = int(&pointer[bl_stack[i]] - pointer);
+            hullbuf[nout++] = bl_stack[i];
         for(int i = br_count-1; i > 0; i-- )
-            hullbuf[nout++] = int(&pointer[br_stack[i]] - pointer);
+            hullbuf[nout++] = br_stack[i];
 
         // try to make the convex hull indices form
         // an ascending or descending sequence by the cyclic
@@ -316,11 +313,19 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
-        std::vector<Point> sorted(nout);
-        for (int j = 0; j < nout; j++) {
-            sorted[j] = points[hullbuf[j]];
+        if(isFloat) {
+            std::vector<Point>& sorted = *static_cast<std::vector<Point>*>(_hull.getObj());
+            sorted.resize(nout);
+            for (int j = 0; j < nout; j++) {
+                sorted[j] = points[hullbuf[j]];
+            }
+        } else {
+            std::vector<Point2f>& sorted = *static_cast<std::vector<Point2f>*>(_hull.getObj());
+            sorted.resize(nout);
+            for (int j = 0; j < nout; j++) {
+                sorted[j] = pointsf[hullbuf[j]];
+            }
         }
-        _hull.setTo(sorted);
     }
 }
 
