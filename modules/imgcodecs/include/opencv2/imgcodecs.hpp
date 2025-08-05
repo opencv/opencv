@@ -505,7 +505,26 @@ struct ExifEntry
     CV_EXPORTS std::ostream& dump(std::ostream& strm) const;
 };
 
+/** @brief Decodes EXIF metadata from binary data into structured ExifEntry entries.
+
+This function parses raw EXIF binary data and extracts metadata tags as structured `ExifEntry` objects.
+The extracted entries are organized as a vector of IFD (Image File Directory) blocks, where each IFD is a vector of `ExifEntry`.
+
+@param data The input binary EXIF data buffer.
+@param exif_entries Output vector of IFD blocks. Each IFD block is a vector of `ExifEntry` objects containing decoded tag information (tag ID, type, count, and value).
+@return Returns `true` if decoding was successful, `false` otherwise.
+ */
 CV_EXPORTS bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
+
+/** @brief Encodes structured ExifEntry metadata into binary EXIF data.
+
+This function serializes a collection of ExifEntry objects into a binary EXIF data block.
+The input entries are expected to be organized as a vector of IFD blocks, matching the EXIF file structure (e.g., primary IFD, Exif IFD, GPS IFD).
+
+@param exif_entries Input vector of IFD blocks. Each IFD block is a vector of ExifEntry objects containing tag metadata to be encoded.
+@param data Output buffer where the encoded EXIF binary data will be stored.
+@return Returns `true` if decoding was successful, `false` otherwise.
+ */
 CV_EXPORTS bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::vector<uchar>& data);
 
 //! @} imgcodecs_metadata
