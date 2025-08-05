@@ -1113,7 +1113,7 @@ public:
     CV_WRAP Subdiv2D(Rect rect);
 
     /** @overload
-    
+
     @param rect Rectangle that includes all the 2D floating points that are to be added to the subdivision.
 
     The function creates an empty Delaunay subdivision where 2D points can be added using the function
@@ -1123,7 +1123,7 @@ public:
     CV_WRAP Subdiv2D(Rect2f rect);
 
     /** @overload
-    
+
     @brief Creates a new empty Delaunay subdivision
 
     @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
@@ -1132,9 +1132,9 @@ public:
     CV_WRAP void initDelaunay(Rect rect);
 
     /** @overload
-    
+
     @brief Creates a new empty Delaunay subdivision
-    
+
     @param rect Rectangle that includes all of the 2d points that are to be added to the subdivision.
 
      */
