@@ -29,7 +29,7 @@ template<typename T>
 bool fillDLPackTensor(const T& src, DLManagedTensor* tensor, const DLDevice& device);
 
 template<typename T>
-bool parseDLPackTensor(DLManagedTensor* tensor, T& obj);
+bool parseDLPackTensor(DLManagedTensor* tensor, T& obj, bool copy);
 
 template<typename T>
 int GetNumDims(const T& src);
@@ -142,7 +142,7 @@ static PyObject* from_dlpack(PyObject* py_args, PyObject* kw)
     }
 
     T retval;
-    bool success = parseDLPackTensor(tensor, retval);
+    bool success = parseDLPackTensor(tensor, retval, copy);
     if (success)
     {
         PyCapsule_SetName(capsule, CV_DLPACK_USED_CAPSULE_NAME);
@@ -155,7 +155,7 @@ static PyObject* from_dlpack(PyObject* py_args, PyObject* kw)
 
 static DLDataType GetDLPackType(size_t elemSize1, int depth) {
     DLDataType dtype;
-    dtype.bits = 8 * elemSize1;
+    dtype.bits = static_cast<uint8_t>(8 * elemSize1);
     dtype.lanes = 1;
     switch (depth)
     {
@@ -168,7 +168,7 @@ static DLDataType GetDLPackType(size_t elemSize1, int depth) {
     return dtype;
 }
 
-static int DLPackTypeToCVType(const DLDataType& dtype, int64_t channels) {
+static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
     if (dtype.code == kDLInt)
     {
         switch (dtype.bits)

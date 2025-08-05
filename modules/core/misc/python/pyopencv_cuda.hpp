@@ -1,7 +1,6 @@
 #ifdef HAVE_OPENCV_CORE
 
 #include "opencv2/core/cuda.hpp"
-#include "dlpack/dlpack.h"
 
 typedef std::vector<cuda::GpuMat> vector_GpuMat;
 typedef cuda::GpuMat::Allocator GpuMat_Allocator;
@@ -22,14 +21,17 @@ template<> struct pyopencvVecConverter<cuda::GpuMat>
 };
 
 CV_PY_TO_CLASS(cuda::GpuMat)
+CV_PY_TO_CLASS(cuda::GpuMatND)
 CV_PY_TO_CLASS(cuda::Stream)
 CV_PY_TO_CLASS(cuda::Event)
 CV_PY_TO_CLASS(cuda::HostMem)
 
 CV_PY_TO_CLASS_PTR(cuda::GpuMat)
+CV_PY_TO_CLASS_PTR(cuda::GpuMatND)
 CV_PY_TO_CLASS_PTR(cuda::GpuMat::Allocator)
 
 CV_PY_FROM_CLASS(cuda::GpuMat)
+CV_PY_FROM_CLASS(cuda::GpuMatND)
 CV_PY_FROM_CLASS(cuda::Stream)
 CV_PY_FROM_CLASS(cuda::HostMem)
 
@@ -45,7 +47,7 @@ bool fillDLPackTensor(const Ptr<cv::cuda::GpuMat>& src, DLManagedTensor* tensor,
     }
     tensor->dl_tensor.data = src->cudaPtr();
     tensor->dl_tensor.device.device_type = kDLCUDA;
-    tensor->dl_tensor.device.device_id = 0;  // TODO: which id?
+    tensor->dl_tensor.device.device_id = 0;
     tensor->dl_tensor.dtype = GetDLPackType(src->elemSize1(), src->depth());
     tensor->dl_tensor.shape[0] = src->rows;
     tensor->dl_tensor.shape[1] = src->cols;
@@ -67,7 +69,7 @@ bool fillDLPackTensor(const Ptr<cv::cuda::GpuMatND>& src, DLManagedTensor* tenso
     }
     tensor->dl_tensor.data = src->getDevicePtr();
     tensor->dl_tensor.device.device_type = kDLCUDA;
-    tensor->dl_tensor.device.device_id = 0;  // TODO: which id?
+    tensor->dl_tensor.device.device_id = 0;
     tensor->dl_tensor.dtype = GetDLPackType(src->elemSize1(), CV_MAT_DEPTH(src->flags));
     for (int i = 0; i < src->dims; ++i)
         tensor->dl_tensor.shape[i] = src->size[i];
@@ -78,7 +80,7 @@ bool fillDLPackTensor(const Ptr<cv::cuda::GpuMatND>& src, DLManagedTensor* tenso
 }
 
 template<>
-bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMat& obj)
+bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMat& obj, bool copy)
 {
     if (tensor->dl_tensor.byte_offset != 0)
     {
@@ -101,7 +103,7 @@ bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMat& obj)
         PyErr_SetString(PyExc_BufferError, "Unexpected strides for image. Try use GpuMatND");
         return false;
     }
-    int type = DLPackTypeToCVType(tensor->dl_tensor.dtype, tensor->dl_tensor.shape[2]);
+    int type = DLPackTypeToCVType(tensor->dl_tensor.dtype, (int)tensor->dl_tensor.shape[2]);
     if (type == -1)
         return false;
 
@@ -112,11 +114,13 @@ bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMat& obj)
         tensor->dl_tensor.data,
         tensor->dl_tensor.strides[0] * tensor->dl_tensor.dtype.bits / 8
     );
+    if (copy)
+        obj = obj.clone();
     return true;
 }
 
 template<>
-bool parseDLPackTensor(DLManagedTensor* tensor, Ptr<cv::cuda::GpuMatND>& obj)
+bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMatND& obj, bool copy)
 {
     if (tensor->dl_tensor.byte_offset != 0)
     {
@@ -128,19 +132,21 @@ bool parseDLPackTensor(DLManagedTensor* tensor, Ptr<cv::cuda::GpuMatND>& obj)
         PyErr_SetString(PyExc_BufferError, "cuda_GpuMat.from_dlpack expects a tensor on CUDA device");
         return false;
     }
-    int type = DLPackTypeToCVType(tensor->dl_tensor.dtype, tensor->dl_tensor.shape[2]);
+    int type = DLPackTypeToCVType(tensor->dl_tensor.dtype, (int)tensor->dl_tensor.shape[2]);
     if (type == -1)
         return false;
 
     std::vector<size_t> steps(tensor->dl_tensor.ndim - 1);
+    std::vector<int> sizes(tensor->dl_tensor.ndim);
     for (int i = 0; i < tensor->dl_tensor.ndim - 1; ++i)
     {
         steps[i] = tensor->dl_tensor.strides[i] * tensor->dl_tensor.dtype.bits / 8;
+        sizes[i] = static_cast<int>(tensor->dl_tensor.shape[i]);
     }
-    obj.reset(new cv::cuda::GpuMatND(
-        std::vector<int>(&tensor->dl_tensor.shape[0], tensor->dl_tensor.shape + tensor->dl_tensor.ndim),
-        type, tensor->dl_tensor.data, steps
-    ));
+    sizes.back() = tensor->dl_tensor.shape[tensor->dl_tensor.ndim - 1];
+    obj = cv::cuda::GpuMatND(sizes, type, tensor->dl_tensor.data, steps);
+    if (copy)
+        obj = obj.clone();
     return true;
 }
 
@@ -173,7 +179,7 @@ static PyObject* pyGpuMatFromDLPack(PyObject*, PyObject* py_args, PyObject* kw) 
 }
 
 static PyObject* pyGpuMatNDFromDLPack(PyObject*, PyObject* py_args, PyObject* kw) {
-    return from_dlpack<Ptr<cv::cuda::GpuMatND> >(py_args, kw);
+    return from_dlpack<cv::cuda::GpuMatND>(py_args, kw);
 }
 
 #define PYOPENCV_EXTRA_METHODS_cuda_GpuMat \
