@@ -65,7 +65,7 @@ static uint32_t exifEntryValuetoUInt32(ExifEntry entry)
     }
 }
 
-static std::vector<uchar> exifEntryValuetoBytes(ExifEntry entry)
+static std::vector<uchar> exifEntryValuetoBytes(const ExifEntry& entry)
 {
     std::vector<uchar> bytes;
     switch (entry.type)
@@ -73,15 +73,27 @@ static std::vector<uchar> exifEntryValuetoBytes(ExifEntry entry)
     case TAG_TYPE_ASCII:
     {
         const char* str = entry.value.field_str.c_str();
-        int len = (int)strlen(str);
-        bytes.insert(bytes.end(), str, str + len);
-        if (len < entry.count) // pad with nulls if needed
-            bytes.insert(bytes.end(), entry.count - len, 0x00);
+        size_t len = std::strlen(str);
+
+        // Insert string data
+        bytes.insert(bytes.end(), reinterpret_cast<const uchar*>(str),
+            reinterpret_cast<const uchar*>(str) + len);
+
+        // Pad with nulls if needed
+        if (len < entry.count)
+            bytes.insert(bytes.end(),
+                static_cast<size_t>(entry.count - len),
+                static_cast<uchar>(0x00));
     }
     break;
     case TAG_TYPE_UNDEFINED:
     {
-        bytes.insert(bytes.end(), entry.value.field_u8, entry.count);
+        if (entry.value.field_u8)
+        {
+            bytes.insert(bytes.end(),
+                entry.value.field_u8,
+                entry.value.field_u8 + static_cast<size_t>(entry.count));
+        }
     }
     break;
     case TAG_TYPE_RATIONAL:
@@ -743,32 +755,34 @@ std::string exifTagIdToString(ExifTagId tag)
 {
     const char* tagstr =
         tag == TAG_EMPTY ? "<empty>" :
-        tag == TAG_SUB_FILETYPE ? "SubFileType" :
+        tag == TAG_SUB_FILETYPE ? "Sub File Type" :
         tag == TAG_IMAGE_WIDTH ? "Image Width" :
         tag == TAG_IMAGE_LENGTH ? "Image Height" :
-        tag == TAG_BITS_PER_SAMPLE ? "BitsPerSample" :
+        tag == TAG_BITS_PER_SAMPLE ? "Bits Per Sample" :
         tag == TAG_COMPRESSION ? "Compression" :
         tag == TAG_PHOTOMETRIC ? "Photometric" :
         tag == TAG_IMAGEDESCRIPTION ? "Image Description" :
         tag == TAG_MAKE ? "Make" :
         tag == TAG_MODEL ? "Model" :
-        tag == TAG_STRIP_OFFSET ? "StripOffset" :
-        tag == TAG_SAMPLES_PER_PIXEL ? "SamplesPerPixel" :
-        tag == TAG_ROWS_PER_STRIP ? "RowsPerStrip" :
-        tag == TAG_STRIP_BYTE_COUNTS ? "StripByteCounts" :
-        tag == TAG_PLANAR_CONFIG ? "PlanarConfig" :
+        tag == TAG_STRIP_OFFSET ? "Strip Offset" :
+        tag == TAG_SAMPLES_PER_PIXEL ? "Samples Per Pixel" :
+        tag == TAG_ROWS_PER_STRIP ? "Rows Per Strip" :
+        tag == TAG_STRIP_BYTE_COUNTS ? "Strip Byte Counts" :
+        tag == TAG_PLANAR_CONFIG ? "Planar Config" :
         tag == TAG_ORIENTATION ? "Orientation" :
         tag == TAG_XRESOLUTION ? "XResolution" :
         tag == TAG_YRESOLUTION ? "YResolution" :
-        tag == TAG_RESOLUTION_UNIT ? "ResolutionUnit" :
+        tag == TAG_RESOLUTION_UNIT ? "Resolution Unit" :
         tag == TAG_SOFTWARE ? "Software" :
-        tag == TAG_MODIFYDATE ? "ModifyDate" :
-        tag == TAG_SAMPLEFORMAT ? "SampleFormat" :
-        tag == TAG_YCBCRPOSITIONING ? "YCbCrPositioning" :
-        tag == TAG_JPGFROMRAWSTART ? "JpgFromRawStart " :
-        tag == TAG_JPGFROMRAWLENGTH ? "JpgFromRawLength" :
-        tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFARepeatPatternDim" :
-        tag == TAG_CFA_PATTERN ? "CFAPattern" :
+        tag == TAG_MODIFYDATE ? "Modify Date" :
+        tag == TAG_HOST_COMPUTER ? "Host Computer" :
+        
+        tag == TAG_SAMPLEFORMAT ? "Sample Format" :
+        tag == TAG_YCBCRPOSITIONING ? "YCbCr Positioning" :
+        tag == TAG_JPGFROMRAWSTART ? "Jpg From Raw Start " :
+        tag == TAG_JPGFROMRAWLENGTH ? "Jpg From Raw Length" :
+        tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFA Repeat Pattern Dim" :
+        tag == TAG_CFA_PATTERN ? "CFA Pattern" :
 
         tag == TAG_COMPONENTSCONFIGURATION ? "Components Configuration" :
 
@@ -782,24 +796,28 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_GPSINFO ? "GPS Info" :
         tag == TAG_ISOSPEED ? "ISO Speed" :
 
-        tag == TAG_DATETIME_CREATE ? "CreateDate" :
-        tag == TAG_DATETIME_ORIGINAL ? "DateTimeOriginal" :
+        tag == TAG_DATETIME_CREATE ? "Create Date" :
+        tag == TAG_DATETIME_ORIGINAL ? "DateTime Original" :
+
+        tag == TAG_OFFSETTIME ? "Offset Time" :
+        tag == TAG_OFFSETTIME_ORIGINAL ? "Offset Time Original" :
+        tag == TAG_OFFSETTIME_DIGITIZED ? "Offset Time Digitized" :
 
         tag == TAG_FLASH ? "Flash" :
-        tag == TAG_FOCALLENGTH ? "FocalLength" :
+        tag == TAG_FOCALLENGTH ? "Focal Length" :
         tag == TAG_EP_STANDARD_ID ? "TIFF/EPStandardID" :
 
         tag == TAG_SHUTTER_SPEED ? "Shutter Speed" :
         tag == TAG_APERTURE_VALUE ? "Aperture Value" :
-
-        tag == TAG_EXPOSUREBIASVALUE ? "ExposureBiasValue" :
-        tag == TAG_MAXAPERTUREVALUE ? "MaxApertureValue" :
-        tag == TAG_SUBJECTDISTANCE ? "SubjectDistance" :
-        tag == TAG_METERINGMODE ? "MeteringMode" :
+        tag == TAG_BRIGHTNESS_VALUE ? "Brightness Value" :
+        tag == TAG_EXPOSUREBIASVALUE ? "Exposure Bias Value" :
+        tag == TAG_MAXAPERTUREVALUE ? "Max Aperture Value" :
+        tag == TAG_SUBJECTDISTANCE ? "Subject Distance" :
+        tag == TAG_METERINGMODE ? "Metering Mode" :
         tag == TAG_LIGHTSOURCE ? "Light Source" :
         tag == TAG_FLASH ? "Flash" :
-
-        tag == TAG_MAKERNOTE ? "MakerNote" :
+        tag == TAG_SUBJECT_AREA ? "Subject Area" :
+        tag == TAG_MAKERNOTE ? "Maker Note" :
         tag == TAG_USERCOMMENT ? "User Comment" :
 
         tag == TAG_SUBSECTIME ? "SubSec Time" :
@@ -814,50 +832,52 @@ std::string exifTagIdToString(ExifTagId tag)
 
         tag == TAG_EXIF_VERSION ? "Exif Version" :
 
-        tag == TAG_FOCALPLANEXRESOLUTION ? "FocalPlaneXResolution" :
-        tag == TAG_FOCALPLANEYRESOLUTION ? "FocalPlaneYResolution" :
-        tag == TAG_FOCALPLANERESOLUTIONUNIT ? "FocalPlaneResolutionUnit" :
+        tag == TAG_FOCALPLANEXRESOLUTION ? "Foca lPlane XResolution" :
+        tag == TAG_FOCALPLANEYRESOLUTION ? "Focal Plane YResolution" :
+        tag == TAG_FOCALPLANERESOLUTIONUNIT ? "Focal Plane Resolution Unit" :
+        
+        tag == TAG_SCENE_TYPE ? "Scene Type" :
 
-        tag == TAG_CUSTOMRENDERED ? "CustomRendered" :
-        tag == TAG_EXPOSUREMODE ? "ExposureMode" :
+        tag == TAG_CUSTOMRENDERED ? "Custom Rendered" :
+        tag == TAG_EXPOSUREMODE ? "Exposure Mode" :
 
-        tag == TAG_BODYSERIALNUMBER ? "BodySerialNumber" :
-        tag == TAG_LENSSPECIFICATION ? "LensSpecification" :
-        tag == TAG_LENSMODEL ? "LensModel" :
-        tag == TAG_SCENECAPTURETYPE ? "SceneCaptureType" :
+        tag == TAG_BODYSERIALNUMBER ? "Body Serial Number" :
+        tag == TAG_LENSSPECIFICATION ? "Lens Specification" :
+        tag == TAG_LENSMODEL ? "Lens Model" :
+        tag == TAG_SCENECAPTURETYPE ? "Scene Capture Type" :
 
-        tag == TAG_DNG_VERSION ? "DNGVersion" :
-        tag == TAG_DNG_BACKWARD_VERSION ? "DNGBackwardVersion" :
-        tag == TAG_UNIQUE_CAMERA_MODEL ? "UniqueCameraModel" :
+        tag == TAG_DNG_VERSION ? "DNG Version" :
+        tag == TAG_DNG_BACKWARD_VERSION ? "DNG Backward Version" :
+        tag == TAG_UNIQUE_CAMERA_MODEL ? "Unique Camera Model" :
         tag == TAG_CHROMA_BLUR_RADIUS ? "ChromaBlurRadius" :
         tag == TAG_CFA_PLANECOLOR ? "CFAPlaneColor" :
         tag == TAG_CFA_LAYOUT ? "CFALayout" :
-        tag == TAG_BLACK_LEVEL_REPEAT_DIM ? "BlackLevelRepeatDim" :
-        tag == TAG_BLACK_LEVEL ? "BlackLevel" :
-        tag == TAG_WHITE_LEVEL ? "WhiteLevel" :
-        tag == TAG_DEFAULT_SCALE ? "DefaultScale" :
-        tag == TAG_DEFAULT_CROP_ORIGIN ? "DefaultCropOrigin" :
-        tag == TAG_DEFAULT_CROP_SIZE ? "DefaultCropSize" :
-        tag == TAG_COLOR_MATRIX1 ? "ColorMatrix1" :
-        tag == TAG_COLOR_MATRIX2 ? "ColorMatrix2" :
-        tag == TAG_CAMERA_CALIBRATION1 ? "CameraCalibration1" :
-        tag == TAG_CAMERA_CALIBRATION2 ? "CameraCalibration2" :
-        tag == TAG_ANALOG_BALANCE ? "AnalogBalance" :
+        tag == TAG_BLACK_LEVEL_REPEAT_DIM ? "Black Level Repeat Dim" :
+        tag == TAG_BLACK_LEVEL ? "Black Level" :
+        tag == TAG_WHITE_LEVEL ? "White Level" :
+        tag == TAG_DEFAULT_SCALE ? "Default Scale" :
+        tag == TAG_DEFAULT_CROP_ORIGIN ? "Default Crop Origin" :
+        tag == TAG_DEFAULT_CROP_SIZE ? "Default Crop Size" :
+        tag == TAG_COLOR_MATRIX1 ? "Color Matrix1" :
+        tag == TAG_COLOR_MATRIX2 ? "Color Matrix2" :
+        tag == TAG_CAMERA_CALIBRATION1 ? "Camera Calibration1" :
+        tag == TAG_CAMERA_CALIBRATION2 ? "Camera Calibration2" :
+        tag == TAG_ANALOG_BALANCE ? "Analog Balance" :
         tag == TAG_AS_SHOT_NEUTRAL ? "AsShotNeutral" :
         tag == TAG_AS_SHOT_WHITE_XY ? "AsShotWhiteXY" :
-        tag == TAG_BASELINE_EXPOSURE ? "BaselineExposure" :
-        tag == TAG_CALIBRATION_ILLUMINANT1 ? "CalibrationIlluminant1" :
-        tag == TAG_CALIBRATION_ILLUMINANT2 ? "CalibrationIlluminant2" :
-        tag == TAG_EXTRA_CAMERA_PROFILES ? "ExtraCameraProfiles" :
-        tag == TAG_PROFILE_NAME ? "ProfileName" :
+        tag == TAG_BASELINE_EXPOSURE ? "Baseline Exposure" :
+        tag == TAG_CALIBRATION_ILLUMINANT1 ? "Calibration Illuminant1" :
+        tag == TAG_CALIBRATION_ILLUMINANT2 ? "Calibration Illuminant2" :
+        tag == TAG_EXTRA_CAMERA_PROFILES ? "Extra Camera Profiles" :
+        tag == TAG_PROFILE_NAME ? "Profile Name" :
         tag == TAG_AS_SHOT_PROFILE_NAME ? "AsShotProfileName" :
         tag == TAG_PREVIEW_COLORSPACE ? "PreviewColorspace" :
         tag == TAG_OPCODE_LIST2 ? "OpCodeList2" :
         tag == TAG_NOISE_PROFILE ? "NoiseProfile" :
-        tag == TAG_DEFAULT_BLACK_RENDER ? "BlackRender" :
-        tag == TAG_ACTIVE_AREA ? "ActiveArea" :
-        tag == TAG_FORWARD_MATRIX1 ? "ForwardMatrix1" :
-        tag == TAG_FORWARD_MATRIX2 ? "ForwardMatrix2" : nullptr;
+        tag == TAG_DEFAULT_BLACK_RENDER ? "Black Render" :
+        tag == TAG_ACTIVE_AREA ? "Active Area" :
+        tag == TAG_FORWARD_MATRIX1 ? "Forward Matrix1" :
+        tag == TAG_FORWARD_MATRIX2 ? "Forward Matrix2" : nullptr;
     return tagstr ? std::string(tagstr) : cv::format("<unknown tag>(%d)", (int)tag);
 };
 
