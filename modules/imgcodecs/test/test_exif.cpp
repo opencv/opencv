@@ -669,6 +669,9 @@ static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 #ifdef HAVE_AVIF
     ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120, 3597, 940),
 #endif
+#ifdef HAVE_WEBP
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_2.webp", 112, "ExifTool", 102, 3597, 940),
+#endif
 };
 
 INSTANTIATE_TEST_CASE_P(Imgcodecs, ReadExif_Sanity,
