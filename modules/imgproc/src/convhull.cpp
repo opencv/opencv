@@ -127,7 +127,7 @@ struct CHullCmpPoints
             return p1.x < p2.x;
         if( p1.y != p2.y )
             return p1.y < p2.y;
-        return &p1 < &p2;
+        return false;
     }
 };
 
@@ -149,25 +149,24 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         return;
     }
 
-    std::vector<Point> points;
-    std::vector<Point2f> pointsf;
+    std::vector<Point> points(sz);
+    std::vector<Point2f> pointsf(sz);
     if(depth == CV_32S) {
         _points.copyTo(points);
-        CV_Assert(points.size() == sz);
-        pointsf.resize(sz);
 
         for(size_t i = 0; i < sz; ++i) {
             pointsf[i] = points[i];
         }
     } else if (depth == CV_32F) {
         _points.copyTo(pointsf);
-        CV_Assert(pointsf.size() == sz);
-        points.resize(sz);
 
         for(size_t i = 0; i < sz; ++i) {
             points[i] = pointsf[i];
         }
     }
+
+    CV_Assert(points.size() == sz);
+    CV_Assert(pointsf.size() == sz);
 
     int nout = 0;
     int miny_ind = 0, maxy_ind = 0;
@@ -317,12 +316,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     if( !returnPoints ) {
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
     } else {
-        _hull.create(nout, 1, _hull.type());
-        Mat mHull =_hull.getMat();
-        auto* ptr = mHull.ptr<Point>();
+        std::vector<Point> sorted(nout);
         for (int j = 0; j < nout; j++) {
-            ptr[j] = points[hullbuf[j]];
+            sorted[j] = points[hullbuf[j]];
         }
+        _hull.setTo(sorted);
     }
 }
 
