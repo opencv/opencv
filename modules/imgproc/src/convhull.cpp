@@ -45,6 +45,7 @@
 
 namespace cv
 {
+
 template<typename _Tp, typename _DotTp>
 static int Sklansky_(const typename std::vector<Point_<_Tp>>& vec, int start, int end, int* stack, int nsign, int sign2 )
 {
@@ -144,7 +145,7 @@ void convexHullImpl( InputArray _points, std::vector<Thull>& hull, bool clockwis
     constexpr bool isIndex = std::is_same<int, Thull>::value;
     constexpr bool isFloatHull = std::is_same<Point2f, Thull>::value;
 
-    static_assert(isIndex  || isFloatHull  || std::is_same<Point, Thull>::value);
+//    static_assert(isIndex  || isFloatHull  || std::is_same<Point, Thull>::value);
 
     int depth = _points.depth();
     bool isFloat = depth == CV_32F;
@@ -317,17 +318,21 @@ void convexHullImpl( InputArray _points, std::vector<Thull>& hull, bool clockwis
 
     hull.resize(nout);
 
-    if constexpr(isIndex) {
+    //workaround due to missing "if constexpr"
+    if (isIndex) {
+        auto* container = (reinterpret_cast<std::vector<int>*>(&hull));
         for (int j = 0; j < nout; j++) {
-            hull[j] = hullbuf[j];
+            (*container)[j] = hullbuf[j];
         }
-    } else if constexpr(isFloatHull) {
+    } else if(isFloatHull) {
+        auto* container = (reinterpret_cast<std::vector<Point2f>*>(&hull));
         for (int j = 0; j < nout; j++) {
-            hull[j] = points[hullbuf[j]];
+            (*container)[j] = pointsf[hullbuf[j]];
         }
     } else {
+        auto* container = (reinterpret_cast<std::vector<Point>*>(&hull));
         for (int j = 0; j < nout; j++) {
-            hull[j] = pointsf[hullbuf[j]];
+            (*container)[j] = points[hullbuf[j]];
         }
     }
 }
@@ -356,11 +361,12 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
 //        _hull.create(index.size(), 0, CV_MAKE_TYPE(depth, 2));
         _hull.setTo(index);
     } else {
+        CV_Assert((depth == CV_32F || depth == CV_32S));
         if(depth == CV_32S) {
             std::vector<Point> points;
             convexHullImpl(_points, points, clockwise);
             _hull.setTo(points);
-        } else {
+        } else if(depth == CV_32F) {
             std::vector<Point2f> points;
             convexHullImpl(_points, points, clockwise);
             _hull.setTo(points);
