@@ -11,6 +11,9 @@
  * MODNet is a trimap-free portrait matting method that can produce high-quality
  * alpha mattes for portrait images in real-time.
  *
+ * Reference:
+ *      Github: https://github.com/ZHKKKe/MODNet
+ *
  * Usage:
  *   ./example_dnn_alpha_matting --input=image.jpg                      # Process image
  *
@@ -77,7 +80,7 @@ static void loadModel(const string modelPath, String backend, String target, Net
     net.setPreferableTarget(getTargetID(target));
 }
 
-static void postprocess(const Mat &image, const Mat &alpha_output, Mat &alpha_mask, Mat &composite)
+static void postprocess(const Mat &image, const Mat &alpha_output, Mat &alpha_mask)
 {
     int h = image.rows;
     int w = image.cols;
@@ -96,15 +99,6 @@ static void postprocess(const Mat &image, const Mat &alpha_output, Mat &alpha_ma
 
     alpha = cv::min(cv::max(alpha, 0.0), 1.0);
     alpha.convertTo(alpha_mask, CV_8U, 255.0);
-
-    Mat alpha_3ch;
-    cvtColor(alpha_mask, alpha_3ch, COLOR_GRAY2BGR);
-    alpha_3ch.convertTo(alpha_3ch, CV_32F, 1.0 / 255.0);
-
-    Mat image_f;
-    image.convertTo(image_f, CV_32F);
-    multiply(image_f, alpha_3ch, composite);
-    composite.convertTo(composite, CV_8U);
 }
 
 static void processImage(const Mat &image, Mat &alpha_mask, Mat &composite, Net &net,
@@ -122,7 +116,16 @@ static void processImage(const Mat &image, Mat &alpha_mask, Mat &composite, Net 
 
     net.setInput(blob);
     Mat output = net.forward();
-    postprocess(image, output, alpha_mask, composite);
+    postprocess(image, output, alpha_mask);
+
+    Mat alpha_3ch;
+    cvtColor(alpha_mask, alpha_3ch, COLOR_GRAY2BGR);
+    alpha_3ch.convertTo(alpha_3ch, CV_32F, 1.0 / 255.0);
+
+    Mat image_f;
+    image.convertTo(image_f, CV_32F);
+    multiply(image_f, alpha_3ch, composite);
+    composite.convertTo(composite, CV_8U);
 }
 
 static void setupWindows()
