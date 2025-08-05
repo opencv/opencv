@@ -119,7 +119,7 @@ static std::vector<uchar> exifEntryValuetoBytes(ExifEntry entry)
     break;
     case TAG_TYPE_UNDEFINED:
     {
-        bytes.insert(bytes.end(), entry.value.field_u8, entry.value.field_u8 + entry.count);
+        bytes.insert(bytes.end(), entry.value.field_u8, entry.count);
     }
     break;
     case TAG_TYPE_RATIONAL:
@@ -189,8 +189,8 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
         size_t entryOffset = entryStart;
         for (const auto& entry : ifdEntries)
         {
-            uint16_t tagId = entry.tagId;
-            uint16_t type = entry.type;
+            uint16_t tagId = (uint16_t)entry.tagId;
+            uint16_t type = (uint16_t)entry.type;
             uint32_t count = entry.count;
 
             // Write Tag ID
