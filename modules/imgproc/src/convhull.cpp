@@ -49,7 +49,7 @@ namespace cv
 template<typename _Tp, typename _DotTp>
 static int Sklansky_(const typename std::vector<Point_<_Tp>>& vec, int start, int end, int* stack, int nsign, int sign2 )
 {
-	int incr = end > start ? 1 : -1;
+    int incr = end > start ? 1 : -1;
     // prepare first triangle
     int pprev = start, pcur = pprev + incr, pnext = pcur + incr;
     int stacksize = 3;
@@ -142,8 +142,13 @@ void convexHullImpl( InputArray _points, std::vector<Thull>& hull, bool clockwis
     CV_Assert((_points.isMat() || _points.isVector()));
     CV_Assert(_points.isContinuous());
 
-    constexpr bool isIndex = std::is_same<int, Thull>::value;
-    constexpr bool isFloatHull = std::is_same<Point2f, Thull>::value;
+    //those could be constexpr but doesn't help us in this case
+    bool isIndex = std::is_same<int, Thull>::value;
+    bool isFloatHull = std::is_same<Point2f, Thull>::value;
+    bool isIntHull = std::is_same<Point, Thull>::value;
+
+    CV_Assert(!(isFloatHull && isIntHull));
+    CV_Assert(!((isFloatHull || isIntHull) && isIndex));
 
     int depth = _points.depth();
     bool isFloat = depth == CV_32F;
@@ -173,7 +178,6 @@ void convexHullImpl( InputArray _points, std::vector<Thull>& hull, bool clockwis
 
     int nout = 0;
     int miny_ind = 0, maxy_ind = 0;
-
 
     std::vector<int> _stack(sz + 2), _hullbuf(sz);
     int* stack = _stack.data();
@@ -327,7 +331,7 @@ void convexHullImpl( InputArray _points, std::vector<Thull>& hull, bool clockwis
         for (int j = 0; j < nout; j++) {
             (*container)[j] = pointsf[hullbuf[j]];
         }
-    } else {
+    } else if(isIntHull) {
         auto* container = (reinterpret_cast<std::vector<Point>*>(&hull));
         for (int j = 0; j < nout; j++) {
             (*container)[j] = points[hullbuf[j]];
@@ -594,15 +598,15 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     }
 
     cv::AutoBuffer<double> _ptbuf;
-    std::vector<int> h0;
+    cv::Mat h0;
     cv::convexHull(cv::cvarrToMat(ptseq, false, false, 0, &_ptbuf), h0,
                    orientation == CV_CLOCKWISE, CV_MAT_CN(hulltype) == 2);
 
 
     if( hulltype == CV_SEQ_ELTYPE_PPOINT )
     {
-        const int* idx = h0.data();
-        int ctotal = (int)h0.size();
+        const int* idx = h0.ptr<int>();
+        int ctotal = (int)h0.total();
         for( int i = 0; i < ctotal; i++ )
         {
             void* ptr = cvGetSeqElem(ptseq, idx[i]);
@@ -610,7 +614,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
         }
     }
     else
-        cvSeqPushMulti(hullseq, h0.data(), (int)h0.size());
+        cvSeqPushMulti(hullseq, h0.ptr(), (int)h0.total());
 
     if (isStorage)
     {
