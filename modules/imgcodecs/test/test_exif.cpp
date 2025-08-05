@@ -425,6 +425,48 @@ TEST(Imgcodecs_Jpeg, Read_Write_With_Exif)
     remove(outputname.c_str());
 }
 
+TEST(Imgcodecs_Png, encodeExif)
+{
+    const string root = cvtest::TS::ptr()->get_data_path();
+    //string filename = root + "../stitching/boat2.jpg";
+    string filename = root + "readwrite/testExifOrientation_7.png";
+    std::vector<int> metadata_types;
+    std::vector<std::vector<uchar>> metadata;
+
+    Mat img1 = imreadWithMetadata(filename, metadata_types, metadata, IMREAD_UNCHANGED);
+    std::vector<std::vector<ExifEntry> > exif_entries_vec;
+    decodeExif(metadata[0], exif_entries_vec);
+
+#if 0
+    ExifEntry exifEntry = exif_entries_vec[0][4];
+    exifEntry.dump(std::cout);
+    exif_entries_vec[0][4].type = TAG_TYPE_ASCII;
+    exif_entries_vec[0][4].count = 12;
+    exif_entries_vec[0][4].value.field_str = "OpenCV 4.13";
+    exifEntry = exif_entries_vec[0][4];
+    exifEntry.dump(std::cout);
+#endif
+
+    std::vector<uchar> exif_data;
+    encodeExif(exif_entries_vec, exif_data);
+
+    std::vector<int> metadata_types2 = { IMAGE_METADATA_EXIF };
+    std::vector<std::vector<uchar>> metadata2 = { exif_data };
+
+    const string outputname = cv::tempfile(".png");
+    imwriteWithMetadata(outputname, img1, metadata_types2, metadata2);
+
+    std::vector<int> metadata_types3;
+    std::vector<std::vector<uchar>> metadata3;
+    Mat img2 = imreadWithMetadata(outputname, metadata_types3, metadata3, IMREAD_UNCHANGED);
+
+    EXPECT_EQ(metadata[0].size(), metadata3[0].size());
+    EXPECT_EQ(0, cvtest::norm(img1, img2, NORM_INF));
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(outputname.c_str()));
+}
+
 TEST(Imgcodecs_Png, Write_Custom_Exif)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
