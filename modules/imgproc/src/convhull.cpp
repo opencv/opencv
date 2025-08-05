@@ -132,20 +132,27 @@ struct CHullCmpPoints
 };
 
 
-void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints )
+template<typename Thull>
+void convexHullImpl( InputArray _points, std::vector<Thull>& hull, bool clockwise)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_points.getObj() != _hull.getObj() && (_hull.isVector() || _hull.isMat()));
+    CV_Assert(_points.getObj() != &hull);
     CV_Assert((_points.isMat() || _points.isVector()));
     CV_Assert(_points.isContinuous());
+
+    constexpr bool isIndex = std::is_same<int, Thull>::value;
+    constexpr bool isFloatHull = std::is_same<Point2f, Thull>::value;
+
+    static_assert(isIndex  || isFloatHull  || std::is_same<Point, Thull>::value);
 
     int depth = _points.depth();
     bool isFloat = depth == CV_32F;
     size_t sz = _points.total();
     CV_Assert((depth == CV_32F || depth == CV_32S));
+
     if( sz == 0 ) {
-        _hull.release();
+        hull.clear();
         return;
     }
 
@@ -168,8 +175,6 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     int nout = 0;
     int miny_ind = 0, maxy_ind = 0;
 
-
-    returnPoints = !_hull.fixedType() ? returnPoints : _hull.type() != CV_32S;
 
     std::vector<int> _stack(sz + 2), _hullbuf(sz);
     int* stack = _stack.data();
@@ -310,21 +315,55 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
     }
 
-    if( !returnPoints ) {
-        Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
+    hull.resize(nout);
+
+    if constexpr(isIndex) {
+        for (int j = 0; j < nout; j++) {
+            hull[j] = hullbuf[j];
+        }
+    } else if constexpr(isFloatHull) {
+        for (int j = 0; j < nout; j++) {
+            hull[j] = points[hullbuf[j]];
+        }
     } else {
-        if(isFloat) {
-            std::vector<Point>& sorted = *static_cast<std::vector<Point>*>(_hull.getObj());
-            sorted.resize(nout);
-            for (int j = 0; j < nout; j++) {
-                sorted[j] = points[hullbuf[j]];
-            }
+        for (int j = 0; j < nout; j++) {
+            hull[j] = pointsf[hullbuf[j]];
+        }
+    }
+}
+
+
+void convexHull( InputArray _points, std::vector<int>& hull, bool clockwise, bool returnPoints) {
+    CV_Assert(!returnPoints);
+    convexHullImpl(_points, hull, clockwise);
+}
+
+void convexHull( InputArray _points, std::vector<Point>& hull, bool clockwise, bool returnPoints) {
+    CV_Assert(returnPoints);
+    convexHullImpl(_points, hull, clockwise);
+}
+
+void convexHull( InputArray _points, std::vector<Point2f>& hull, bool clockwise, bool returnPoints) {
+    CV_Assert(returnPoints);
+    convexHullImpl(_points, hull, clockwise);
+}
+
+void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool returnPoints) {
+    int depth = _points.depth();
+    if(!returnPoints) {
+        std::vector<int> index;
+        convexHullImpl(_points, index, clockwise);
+//        _hull.create(index.size(), 0, CV_MAKE_TYPE(depth, 2));
+        _hull.setTo(index);
+    } else {
+        if(depth == CV_32S) {
+            std::vector<Point> points;
+            convexHullImpl(_points, points, clockwise);
+            _hull.setTo(points);
         } else {
-            std::vector<Point2f>& sorted = *static_cast<std::vector<Point2f>*>(_hull.getObj());
-            sorted.resize(nout);
-            for (int j = 0; j < nout; j++) {
-                sorted[j] = pointsf[hullbuf[j]];
-            }
+            std::vector<Point2f> points;
+            convexHullImpl(_points, points, clockwise);
+            _hull.setTo(points);
         }
     }
 }
@@ -552,15 +591,15 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
     }
 
     cv::AutoBuffer<double> _ptbuf;
-    cv::Mat h0;
+    std::vector<int> h0;
     cv::convexHull(cv::cvarrToMat(ptseq, false, false, 0, &_ptbuf), h0,
                    orientation == CV_CLOCKWISE, CV_MAT_CN(hulltype) == 2);
 
 
     if( hulltype == CV_SEQ_ELTYPE_PPOINT )
     {
-        const int* idx = h0.ptr<int>();
-        int ctotal = (int)h0.total();
+        const int* idx = h0.data();
+        int ctotal = (int)h0.size();
         for( int i = 0; i < ctotal; i++ )
         {
             void* ptr = cvGetSeqElem(ptseq, idx[i]);
@@ -568,7 +607,7 @@ cvConvexHull2( const CvArr* array, void* hull_storage,
         }
     }
     else
-        cvSeqPushMulti(hullseq, h0.ptr(), (int)h0.total());
+        cvSeqPushMulti(hullseq, h0.data(), (int)h0.size());
 
     if (isStorage)
     {
