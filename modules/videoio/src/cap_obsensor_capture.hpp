@@ -34,7 +34,7 @@ namespace cv {
 class VideoCapture_obsensor : public IVideoCapture
 {
 public:
-    VideoCapture_obsensor(int index);
+    VideoCapture_obsensor(int index, const cv::VideoCaptureParameters& params);
     virtual ~VideoCapture_obsensor();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;

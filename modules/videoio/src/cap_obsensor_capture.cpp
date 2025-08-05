@@ -23,15 +23,20 @@
 
 #include "cap_obsensor_capture.hpp"
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
+#include <cstdint>
+
+#define OB_WIDTH_ANY 0
+#define OB_HEIGHT_ANY 0
+#define OB_FPS_ANY 0
 
 #if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK)
 namespace cv {
-Ptr<IVideoCapture> create_obsensor_capture(int index)
+Ptr<IVideoCapture> create_obsensor_capture(int index, const cv::VideoCaptureParameters& params)
 {
-    return makePtr<VideoCapture_obsensor>(index);
+    return makePtr<VideoCapture_obsensor>(index, params);
 }
 
-VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
+VideoCapture_obsensor::VideoCapture_obsensor(int index, const cv::VideoCaptureParameters& params) : isOpened_(false)
 {
     static const obsensor::StreamProfile colorProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_MJPG };
     static const obsensor::StreamProfile depthProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_Y16 };
@@ -55,15 +60,23 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
             {
             case obsensor::OBSENSOR_STREAM_COLOR:
             {
-                auto profile = colorProfile;
-                if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
-                    profile = megaColorProfile;
-                }else if(OBSENSOR_GEMINI2L_PID == channel->getPid()){
-                    profile = gemini2lColorProfile;
-                }else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
-                    profile = astra2ColorProfile;
-                }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
-                    profile = gemini2XlColorProfile;
+                uint32_t color_width = params.get<uint32_t>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
+                uint32_t color_height = params.get<uint32_t>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
+                uint32_t color_fps = params.get<uint32_t>(CAP_PROP_FPS, OB_FPS_ANY);
+
+                obsensor::StreamProfile profile = colorProfile;
+                if (color_width != OB_WIDTH_ANY || color_height != OB_HEIGHT_ANY || color_fps != OB_FPS_ANY) {
+                    profile = { color_width, color_height, color_fps, obsensor::FRAME_FORMAT_MJPG };
+                } else {
+                    if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
+                        profile = megaColorProfile;
+                    }else if(OBSENSOR_GEMINI2L_PID == channel->getPid()){
+                        profile = gemini2lColorProfile;
+                    }else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
+                        profile = astra2ColorProfile;
+                    }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
+                        profile = gemini2XlColorProfile;
+                    }
                 }
                 channel->start(profile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
@@ -77,17 +90,25 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
                 uint8_t data = 1;
                 channel->setProperty(obsensor::DEPTH_TO_COLOR_ALIGN, &data, 1);
 
+                uint32_t depth_width = params.get<uint32_t>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
+                uint32_t depth_height = params.get<uint32_t>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
+                uint32_t depth_fps = params.get<uint32_t>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
+
                 obsensor::StreamProfile profile = depthProfile;
-                if(OBSENSOR_GEMINI2_PID == channel->getPid()){
-                    profile = gemini2DepthProfile;
-                }else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
-                    profile = astra2DepthProfile;
-                }else if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
-                    profile = megaDepthProfile;
-                }else if(OBSENSOR_GEMINI2L_PID == channel->getPid()){
-                    profile = gemini2lDepthProfile;
-                }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
-                    profile = gemini2XlDepthProfile;
+                if (depth_width != OB_WIDTH_ANY || depth_height != OB_HEIGHT_ANY || depth_fps != OB_FPS_ANY) {
+                    profile = { depth_width, depth_height, depth_fps, obsensor::FRAME_FORMAT_Y16 };
+                } else {
+                    if(OBSENSOR_GEMINI2_PID == channel->getPid()){
+                        profile = gemini2DepthProfile;
+                    }else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
+                        profile = astra2DepthProfile;
+                    }else if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
+                        profile = megaDepthProfile;
+                    }else if(OBSENSOR_GEMINI2L_PID == channel->getPid()){
+                        profile = gemini2lDepthProfile;
+                    }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
+                        profile = gemini2XlDepthProfile;
+                    }
                 }
                 channel->start(profile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
@@ -218,7 +239,22 @@ double VideoCapture_obsensor::getProperty(int propIdx) const {
 
 bool VideoCapture_obsensor::setProperty(int propIdx, double /*propVal*/)
 {
-    CV_LOG_WARNING(NULL, "Unsupported or read only property, id=" << propIdx);
+    switch(propIdx)
+    {
+        case CAP_PROP_OBSENSOR_DEPTH_WIDTH:
+        case CAP_PROP_OBSENSOR_DEPTH_HEIGHT:
+        case CAP_PROP_OBSENSOR_DEPTH_FPS:
+            CV_LOG_WARNING(NULL, "CAP_PROP_OBSENSOR_DEPTH_WIDTH, CAP_PROP_OBSENSOR_DEPTH_HEIGHT, CAP_PROP_OBSENSOR_DEPTH_FPS options are supported during camera initialization only");
+            break;
+        case CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FPS:
+            CV_LOG_WARNING(NULL, "CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FPS options are supported during camera initialization only");
+            break;
+        default:
+            CV_LOG_WARNING(NULL, "Unsupported or read only property, id=" << propIdx);
+    }
+
     return false;
 }
 

@@ -400,7 +400,7 @@ Ptr<IVideoWriter> createAndroidVideoWriter(const std::string& filename, int four
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_obsensor_capture(int index);
+Ptr<IVideoCapture> create_obsensor_capture(int index, const cv::VideoCaptureParameters& params);
 
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,
