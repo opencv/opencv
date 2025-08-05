@@ -6,6 +6,7 @@
 #include "exif.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include <iomanip>
+#include <set>
 
 namespace {
 
@@ -430,56 +431,100 @@ void ExifReader::parseExif()
     }
 }
 
-bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::vector< std::vector<ExifEntry> >& exif_entries_vec)
+// Helper: endian-aware offset extraction
+uint32_t ExifReader::extractIFDOffset(const ExifEntry& entry) const
 {
-    if (data && size > 0)
+    uint32_t offsetVal = 0;
+
+    // If the type is LONG or SLONG, the offset is directly the 32-bit value
+    if (entry.type == TAG_TYPE_LONG || entry.type == TAG_TYPE_SLONG)
     {
-        m_data.assign(data, data + size);
+        if (entry.value.field_u32) // assuming field_u32 points to at least one element
+            offsetVal = entry.value.field_u32;
     }
     else
     {
-        return false;
+        // For other types, you may store offsets in a different union member
+        // or directly in a separate struct field when parsing
+        // This fallback assumes the offset fits in uint32_t
+        offsetVal = static_cast<uint32_t>(exifEntryValuetoUInt32(entry));
     }
 
+    // Apply endian conversion if needed
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    uint8_t tmp[4];
+    std::memcpy(tmp, &offsetVal, 4);
+    std::reverse(tmp, tmp + 4);
+    std::memcpy(&offsetVal, tmp, 4);
+#endif
+
+    return offsetVal;
+}
+
+bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::vector< std::vector<ExifEntry> >& exif_entries_vec)
+{
+    if (!data || size == 0)
+        return false;
+
+    m_data.assign(data, data + size);
     m_format = getFormat();
 
     if (!checkTagMark())
-    {
         return false;
-    }
 
     std::vector<uint32_t> ifd_offsets;
+    std::set<uint32_t> visited_offsets; // C++11-compatible
+
     ifd_offsets.push_back(getStartOffset());
     size_t current_ifd = 0;
+
     while (current_ifd < ifd_offsets.size())
     {
         uint32_t offset = ifd_offsets[current_ifd];
+        if (visited_offsets.count(offset) != 0)
+        {
+            ++current_ifd;
+            continue;
+        }
+        visited_offsets.insert(offset);
+
+        if (offset + 2 > m_data.size())
+            break;
 
         size_t numEntry = getNumDirEntry(offset);
-        offset += 2; //go to start of tag fields
+        offset += 2; // go to start of tag fields
 
         std::vector<ExifEntry> exif_entries;
         for (size_t i = 0; i < numEntry; ++i)
         {
+            if (offset + tiffFieldSize > m_data.size())
+                break; // prevent overflow
+
             ExifEntry exifEntry = parseExifEntry(offset);
             exif_entries.push_back(exifEntry);
-            if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825) // Exif or GPS IFD pointer
+
+            // Exif SubIFD pointer (0x8769) or GPS SubIFD pointer (0x8825)
+            if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825)
             {
-                uint32_t sub_ifd_offset = exifEntry.value.field_u32;
-                if (sub_ifd_offset < m_data.size())
+                uint32_t sub_ifd_offset = extractIFDOffset(exifEntry);
+                if (sub_ifd_offset != 0 && sub_ifd_offset < m_data.size())
                     ifd_offsets.push_back(sub_ifd_offset);
             }
+
             offset += tiffFieldSize;
         }
+
         exif_entries_vec.push_back(exif_entries);
-        // Handle IFD1 (Next IFD offset at the end of current IFD)
+
+        // Handle Next IFD pointer at the end of the directory
         if (offset + 4 <= m_data.size())
         {
-            uint32_t next_ifd_offset = getU32(offset);
+            uint32_t next_ifd_offset = getU32(offset); // should be endian-aware internally
             if (next_ifd_offset != 0 && next_ifd_offset < m_data.size())
                 ifd_offsets.push_back(next_ifd_offset);
         }
-        current_ifd++;
+
+        ++current_ifd;
     }
     return true;
 }
