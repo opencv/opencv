@@ -1104,7 +1104,7 @@ public:
 
     /** @overload
 
-    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
+    @param rect Rectangle that includes all of the 2D integer points that are to be added to the subdivision.
 
     The function creates an empty Delaunay subdivision where 2D points can be added using the function
     insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
@@ -1112,12 +1112,33 @@ public:
      */
     CV_WRAP Subdiv2D(Rect rect);
 
-    /** @brief Creates a new empty Delaunay subdivision
+    /** @overload
+    
+    @param rect Rectangle that includes all the 2D floating points that are to be added to the subdivision.
+
+    The function creates an empty Delaunay subdivision where 2D points can be added using the function
+    insert().  All the points to be added must be within the specified rectangle, otherwise a runtime
+    error is raised.
+     */
+    CV_WRAP Subdiv2D(Rect2f rect);
+
+    /** @overload
+    
+    @brief Creates a new empty Delaunay subdivision
 
     @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
      */
     CV_WRAP void initDelaunay(Rect rect);
+
+    /** @overload
+    
+    @brief Creates a new empty Delaunay subdivision
+    
+    @param rect Rectangle that includes all of the 2d points that are to be added to the subdivision.
+
+     */
+    CV_WRAP void initDelaunay(Rect2f rect);
 
     /** @brief Insert a single point into a Delaunay triangulation.
 
