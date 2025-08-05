@@ -35,77 +35,25 @@
  * \brief Use Libcamera to read/write video
  */
 #include "precomp.hpp"
-#include <opencv2/core/utils/logger.hpp>
-#include <opencv2/core/utils/filesystem.hpp>
-#include <opencv2/videoio.hpp>
-#include "cap_interface.hpp"
-
-#include <sys/mman.h>
-
-#include <condition_variable>
-#include <iostream>
-#include <memory>
-#include <mutex>
-#include <queue>
-#include <set>
-#include <string>
-#include <thread>
-#include <variant>
-#include <any>
-#include <map>
-#include <iomanip>
-#include <atomic>
-#include <fcntl.h>
-#include <fstream>
-
-#include <libcamera/base/span.h>
-#include <libcamera/camera.h>
-#include <libcamera/camera_manager.h>
-#include <libcamera/control_ids.h>
-#include <libcamera/controls.h>
-#include <libcamera/formats.h>
-#include <libcamera/framebuffer_allocator.h>
-#include <libcamera/property_ids.h>
-#include <libcamera/stream.h>
 #include "cap_libcamera.hpp"
 #include <mutex>
 
 /**
  * @brief implementation of the LibcameraApp class and LibcameraCapture
-* The LibcameraApp implements is from LCCV
-* Source: https://github.com/kbarni/LCCV
-
-
-
+ * The LibcameraApp implements is from LCCV
+ * Source: https://github.com/kbarni/LCCV
 */
 
 namespace cv
 {
 
-LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
-    : options_(std::move(opts)), controls_(controls::controls)
-
-{
-    if (!options_)
-        options_ = std::make_unique<Options>();
-    controls_.clear();
-}
-
-LibcameraApp::~LibcameraApp()
-{
-
-    StopCamera();
-    Teardown();
-    CloseCamera();
-    std::cerr << "End of ~LibcameraApp() call" << std::endl;
-}
-
-std::string const &LibcameraApp::CameraId() const
+/* ***************Start of methods from original LibcameraApp class*************** */
+std::string const &LibcameraCapture::CameraId() const
 {
     return camera_->id();
 }
 
-void LibcameraApp::OpenCamera()
+void LibcameraCapture::OpenCamera()
 {
 
     if (options_->verbose)
@@ -129,7 +77,8 @@ void LibcameraApp::OpenCamera()
         std::cerr << "Acquired camera " << cam_id << std::endl;
 }
 
-void LibcameraApp::CloseCamera()
+
+void LibcameraCapture::CloseCamera()
 {
     if (camera_acquired_)
         camera_->release();
@@ -141,20 +90,7 @@ void LibcameraApp::CloseCamera()
         std::cerr << "Camera closed" << std::endl;
 }
 
-// void LibcameraApp::CloseCamera() {
-//     std::lock_guard<std::mutex> lock(camera_stop_mutex_);
-//     if (camera_acquired_) {
-//         try {
-//             camera_->release();
-//             camera_acquired_ = false;
-//             camera_.reset();
-//         } catch (const std::exception& e) {
-//             std::cerr << "Error releasing camera: " << e.what() << std::endl;
-//         }
-//     }
-// }
-
-void LibcameraApp::ConfigureViewfinder()
+void LibcameraCapture::ConfigureViewfinder()
 {
     if (options_->verbose)
         std::cerr << "Configuring viewfinder..." << std::endl;
@@ -181,7 +117,7 @@ void LibcameraApp::ConfigureViewfinder()
         std::cerr << "Viewfinder setup complete" << std::endl;
 }
 
-void LibcameraApp::Teardown()
+void LibcameraCapture::Teardown()
 {
     if (options_->verbose && !options_->help)
         std::cerr << "Tearing down requests, buffers and configuration" << std::endl;
@@ -205,7 +141,7 @@ void LibcameraApp::Teardown()
     streams_.clear();
 }
 
-void LibcameraApp::StartCamera()
+void LibcameraCapture::StartCamera()
 {
     // This makes all the Request objects that we shall need.
     makeRequests();
@@ -269,7 +205,7 @@ void LibcameraApp::StartCamera()
     camera_started_ = true;
     last_timestamp_ = 0;
 
-    camera_->requestCompleted.connect(this, &LibcameraApp::requestComplete);
+    camera_->requestCompleted.connect(this, &LibcameraCapture::requestComplete);
 
     for (std::unique_ptr<Request> &request : requests_)
     {
@@ -281,7 +217,7 @@ void LibcameraApp::StartCamera()
         std::cerr << "Camera started!" << std::endl;
 }
 
-void LibcameraApp::StopCamera()
+void LibcameraCapture::StopCamera()
 {
     {
         // We don't want QueueRequest to run asynchronously while we stop the camera.
@@ -301,7 +237,7 @@ void LibcameraApp::StopCamera()
     }
 
     if (camera_)
-        camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete);
+        camera_->requestCompleted.disconnect(this, &LibcameraCapture::requestComplete);
 
     // An application might be holding a CompletedRequest, so queueRequest will get
     // called to delete it later, but we need to know not to try and re-queue it.
@@ -320,7 +256,7 @@ void LibcameraApp::StopCamera()
         std::cerr << "Camera stopped!" << std::endl;
 }
 
-void LibcameraApp::ApplyRoiSettings()
+void LibcameraCapture::ApplyRoiSettings()
 {
     if (!controls_.get(controls::ScalerCrop) && options_->roi_width != 0 && options_->roi_height != 0)
     {
@@ -337,12 +273,12 @@ void LibcameraApp::ApplyRoiSettings()
     }
 }
 
-LibcameraApp::Msg LibcameraApp::Wait()
+LibcameraCapture::Msg LibcameraCapture::Wait()
 {
     return msg_queue_.Wait();
 }
 
-void LibcameraApp::queueRequest(CompletedRequest *completed_request)
+void LibcameraCapture::queueRequest(CompletedRequest *completed_request)
 {
     BufferMap buffers(std::move(completed_request->buffers));
 
@@ -381,14 +317,14 @@ void LibcameraApp::queueRequest(CompletedRequest *completed_request)
         throw std::runtime_error("failed to queue request");
 }
 
-void LibcameraApp::PostMessage(MsgType &t, MsgPayload &p)
+void LibcameraCapture::PostMessage(MsgType &t, MsgPayload &p)
 {
     Msg msg(t);
     msg.payload = p;
     msg_queue_.Post(std::move(msg));
 }
 
-libcamera::Stream *LibcameraApp::GetStream(std::string const &name, unsigned int *w, unsigned int *h,
+libcamera::Stream *LibcameraCapture::GetStream(std::string const &name, unsigned int *w, unsigned int *h,
                                             unsigned int *stride) const
 {
     auto it = streams_.find(name);
@@ -398,32 +334,32 @@ libcamera::Stream *LibcameraApp::GetStream(std::string const &name, unsigned int
     return it->second;
 }
 
-libcamera::Stream *LibcameraApp::ViewfinderStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
+libcamera::Stream *LibcameraCapture::ViewfinderStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
 {
     return GetStream("viewfinder", w, h, stride);
 }
 
-libcamera::Stream *LibcameraApp::StillStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
+libcamera::Stream *LibcameraCapture::StillStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
 {
     return GetStream("still", w, h, stride);
 }
 
-libcamera::Stream *LibcameraApp::RawStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
+libcamera::Stream *LibcameraCapture::RawStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
 {
     return GetStream("raw", w, h, stride);
 }
 
-libcamera::Stream *LibcameraApp::VideoStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
+libcamera::Stream *LibcameraCapture::VideoStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
 {
     return GetStream("video", w, h, stride);
 }
 
-libcamera::Stream *LibcameraApp::LoresStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
+libcamera::Stream *LibcameraCapture::LoresStream(unsigned int *w, unsigned int *h, unsigned int *stride) const
 {
     return GetStream("lores", w, h, stride);
 }
 
-libcamera::Stream *LibcameraApp::GetMainStream() const
+libcamera::Stream *LibcameraCapture::GetMainStream() const
 {
     for (auto &p : streams_)
     {
@@ -434,7 +370,7 @@ libcamera::Stream *LibcameraApp::GetMainStream() const
     return nullptr;
 }
 
-std::vector<libcamera::Span<uint8_t>> LibcameraApp::Mmap(FrameBuffer *buffer) const
+std::vector<libcamera::Span<uint8_t>> LibcameraCapture::Mmap(FrameBuffer *buffer) const
 {
     auto item = mapped_buffers_.find(buffer);
     if (item == mapped_buffers_.end())
@@ -442,13 +378,14 @@ std::vector<libcamera::Span<uint8_t>> LibcameraApp::Mmap(FrameBuffer *buffer) co
     return item->second;
 }
 
-void LibcameraApp::SetControls(ControlList &controls)
+void LibcameraCapture::SetControls(ControlList &controls)
 {
     std::lock_guard<std::mutex> lock(control_mutex_);
     controls_ = std::move(controls);
 }
 
-void LibcameraApp::StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const
+
+void LibcameraCapture::StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const
 {
     StreamConfiguration const &cfg = stream->configuration();
     if (w)
@@ -459,7 +396,7 @@ void LibcameraApp::StreamDimensions(Stream const *stream, unsigned int *w, unsig
         *stride = cfg.stride;
 }
 
-void LibcameraApp::setupCapture()
+void LibcameraCapture::setupCapture()
 {
     // First finish setting up the configuration.
 
@@ -511,7 +448,7 @@ void LibcameraApp::setupCapture()
     // The requests will be made when StartCamera() is called.
 }
 
-void LibcameraApp::makeRequests()
+void LibcameraCapture::makeRequests()
 {
     auto free_buffers(frame_buffers_);
     while (true)
@@ -543,7 +480,7 @@ void LibcameraApp::makeRequests()
     }
 }
 
-void LibcameraApp::requestComplete(Request *request)
+void LibcameraCapture::requestComplete(Request *request)
 {
     if (request->status() == Request::RequestCancelled)
         return;
@@ -567,7 +504,7 @@ void LibcameraApp::requestComplete(Request *request)
     msg_queue_.Post(Msg(MsgType::RequestComplete, std::move(payload)));
 }
 
-void LibcameraApp::configureDenoise(const std::string &denoise_mode)
+void LibcameraCapture::configureDenoise(const std::string &denoise_mode)
 {
     using namespace libcamera::controls::draft;
 
@@ -586,15 +523,21 @@ void LibcameraApp::configureDenoise(const std::string &denoise_mode)
     controls_.set(NoiseReductionMode, denoise);
 }
 
-/* ******************************************************************* */
+/* ***************End of methods from original LibcameraApp class*************** */
 
 LibcameraCapture::LibcameraCapture()
 {
-    app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
-    options = static_cast<Options *>(app->GetOptions());
-    still_flags = LibcameraApp::FLAG_STILL_NONE;
-    options->photo_width = 4056;
-    options->photo_height = 3040;
+    // original libcamera_app constructor
+    options_ = std::unique_ptr<Options>(new Options());
+    controls_ = controls::controls;
+    if (!options_)
+        options_ = std::make_unique<Options>();
+    controls_.clear();
+    // original constructor ends
+    options = static_cast<Options *>(GetOptions());
+    still_flags = FLAG_STILL_NONE;
+    options->photo_width = 2560;
+    options->photo_height = 1440;
     options->video_width = 640;
     options->video_height = 480;
     options->framerate = 30;
@@ -606,7 +549,7 @@ LibcameraCapture::LibcameraCapture()
     options->contrast = 1.0f;
     options->saturation = 1.0f;
     // still_flags |= LibcameraApp::FLAG_STILL_RGB;
-    still_flags |= LibcameraApp::FLAG_STILL_BGR;
+    still_flags |= FLAG_STILL_BGR;
     needsReconfigure.store(false, std::memory_order_release);
     camerastarted = false;
     current_request_ = nullptr;
@@ -614,28 +557,33 @@ LibcameraCapture::LibcameraCapture()
 
 LibcameraCapture::LibcameraCapture(int camera_index)
 {
-    app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
-    options = static_cast<Options *>(app->GetOptions());
-    still_flags = LibcameraApp::FLAG_STILL_NONE;
-    options->photo_width = 4056;
-    options->photo_height = 3040;
+    // LibcameraCapture();
+    options_ = std::unique_ptr<Options>(new Options());
+    controls_ = controls::controls;
+    if (!options_)
+        options_ = std::make_unique<Options>();
+    controls_.clear();
+    // original constructor ends
+    options = static_cast<Options *>(GetOptions());
+    still_flags = FLAG_STILL_NONE;
+    options->photo_width = 2560;
+    options->photo_height = 1440;
     options->video_width = 640;
     options->video_height = 480;
     options->framerate = 30;
     options->denoise = "auto";
     options->timeout = 1000;
-    options->camera = camera_index;
     options->setMetering(Metering_Modes::METERING_MATRIX);
     options->setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
     options->setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
     options->contrast = 1.0f;
     options->saturation = 1.0f;
+    options->camera = camera_index;
     // still_flags |= LibcameraApp::FLAG_STILL_RGB;
-    still_flags |= LibcameraApp::FLAG_STILL_BGR;
+    still_flags |= FLAG_STILL_BGR;
     needsReconfigure.store(false, std::memory_order_release);
     camerastarted = false;
     current_request_ = nullptr;
-    
     // Automatically open the camera
     open(camera_index);
 }
@@ -655,12 +603,12 @@ bool LibcameraCapture::startVideo() // not resolved
         return false;
     }
     
-    LibcameraCapture::app->OpenCamera();
-    LibcameraCapture::app->ConfigureViewfinder();
-    LibcameraCapture::app->StartCamera();
+    LibcameraCapture::OpenCamera();
+    LibcameraCapture::ConfigureViewfinder();
+    LibcameraCapture::StartCamera();
     
     // Get stream dimensions for later use
-    libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
+    libcamera::Stream *stream = ViewfinderStream(&vw, &vh, &vstr);
     if (!stream)
     {
         std::cerr << "Error getting viewfinder stream" << std::endl;
@@ -676,9 +624,9 @@ void LibcameraCapture::stopVideo() // not resolved
     if (!camerastarted)
         return;
 
-    LibcameraCapture::app->StopCamera();
-    LibcameraCapture::app->Teardown();
-    LibcameraCapture::app->CloseCamera();
+    LibcameraCapture::StopCamera();
+    LibcameraCapture::Teardown();
+    LibcameraCapture::CloseCamera();
     
     // Clear any pending request
     {
@@ -726,9 +674,9 @@ bool LibcameraCapture::grabFrame()
     try 
     {
         // Use Wait() with short timeout to check for available messages
-        LibcameraApp::Msg msg = app->Wait();
-        
-        if (msg.type == LibcameraApp::MsgType::RequestComplete)
+        LibcameraCapture::Msg msg = Wait();
+
+        if (msg.type == LibcameraCapture::MsgType::RequestComplete)
         {
             CompletedRequestPtr payload = msg.getCompletedRequest();
             {
@@ -737,7 +685,7 @@ bool LibcameraCapture::grabFrame()
             }
             return true;
         }
-        else if (msg.type == LibcameraApp::MsgType::Quit)
+        else if (msg.type == LibcameraCapture::MsgType::Quit)
         {
             std::cerr << "Quit message received" << std::endl;
             return false;
@@ -779,7 +727,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     }
     
     // Get the viewfinder stream
-    libcamera::Stream *stream = app->ViewfinderStream(&vw, &vh, &vstr);
+    libcamera::Stream *stream = ViewfinderStream(&vw, &vh, &vstr);
     if (!stream)
     {
         std::cerr << "Error getting viewfinder stream" << std::endl;
@@ -787,7 +735,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     }
     
     // Get memory mapped buffer directly from libcamera
-    std::vector<libcamera::Span<uint8_t>> mem = app->Mmap(request->buffers[stream]);
+    std::vector<libcamera::Span<uint8_t>> mem = Mmap(request->buffers[stream]);
     if (mem.empty())
     {
         std::cerr << "Error getting memory mapped buffer" << std::endl;
@@ -993,22 +941,22 @@ bool LibcameraCapture::setProperty(int propId, double value)
 
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_X:
         options->roi_x = value;
-        app->ApplyRoiSettings();
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
         options->roi_y = value;
-        app->ApplyRoiSettings();
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_WIDTH:
         options->roi_width = value;
-        app->ApplyRoiSettings();
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_HEIGHT:
         options->roi_height = value;
-        app->ApplyRoiSettings();
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_FOURCC:
