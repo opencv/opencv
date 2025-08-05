@@ -79,6 +79,7 @@ private:
     ExifEntry   parseExifEntry( const size_t offset );
     std::vector<urational64_t> getURational(const size_t offset) const;
     std::vector<srational64_t> getSRational(const size_t offset) const;
+    uint32_t extractIFDOffset(const ExifEntry& entry) const;
 
 
 private:
