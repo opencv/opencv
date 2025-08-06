@@ -12,6 +12,7 @@
 #include "../net_impl.hpp"
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
+#include <cmath>
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -78,11 +79,16 @@ void resizeNearest(const Mat &inp, Mat &out,
     auto nidx = [&](float src, int lim) {
         float fv = std::floor(src), frac = src - fv;
         int   idx;
-        if      (nearestMode == "floor")            idx = int(fv);
-        else if (nearestMode == "ceil")             idx = int(std::ceil(src));
-        else if (nearestMode == "round_prefer_ceil")
-            idx = (frac >= 0.5f ? int(fv+1) : int(fv));
-        else /* round_prefer_floor */               idx = (frac >  0.5f ? int(fv+1) : int(fv));
+        const float eps = 1e-6f;
+        if      (nearestMode == "floor") {
+            idx = int(fv);
+        } else if (nearestMode == "ceil") {
+            idx = int(std::ceil(src));
+        } else if (nearestMode == "round_prefer_ceil") {
+            idx = ((frac > 0.5f + eps) || std::abs(frac - 0.5f) < eps) ? int(fv + 1) : int(fv);
+        } else {
+            idx = (frac > 0.5f + eps ? int(fv + 1) : int(fv));
+        }
         return std::clamp(idx, 0, lim);
     };
 
