@@ -158,12 +158,8 @@
 "test_reduce_sum_negative_axes_keepdims_example",
 "test_reduce_sum_negative_axes_keepdims_random", // ---- same as above ---
 "test_reshape_allowzero_reordered", // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
-"test_resize_downsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
-"test_resize_downsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
-"test_resize_downsample_scales_linear", // ---- same as above ---
 "test_resize_downsample_scales_linear_align_corners", // ---- same as above ---
-"test_resize_upsample_sizes_nearest", // Wrong output for few OS (such as ubuntu 24.04, RISC-V, etc)
 "test_reversesequence_batch",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "ReverseSequence" in function 'getLayerInstance'
 "test_reversesequence_time", // ---- same as above ---
 "test_rnn_seq_length", // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
