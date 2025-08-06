@@ -17,16 +17,17 @@
 namespace cv
 {
 
-enum ExifEndianness
-{
-    INTEL = 0x49,
-    MOTO = 0x4D,
-    NONE = 0x00
-};
-
 class ExifReader
 {
 public:
+
+    enum ExifEndianness
+    {
+        INTEL = 0x49,
+        MOTO = 0x4D,
+        NONE = 0x00
+    };
+
     /**
      * @brief ExifReader constructor. Constructs an object of exif reader
      */
@@ -76,11 +77,10 @@ private:
     std::string getString(const size_t offset) const;
     uint16_t    getOrientation( const size_t offset ) const;
     int         getFormat() const;
+    uint32_t    extractIFDOffset(const ExifEntry& entry) const;
     ExifEntry   parseExifEntry( const size_t offset );
     std::vector<urational64_t> getURational(const size_t offset) const;
     std::vector<srational64_t> getSRational(const size_t offset) const;
-    uint32_t extractIFDOffset(const ExifEntry& entry) const;
-
 
 private:
     template <typename RationalT, typename IntReader>

@@ -408,7 +408,7 @@ static void ApplyExifOrientation(ExifEntry orientationTag, OutputArray img)
 
     if (orientationTag.tagId != TAG_INVALID_TAG)
     {
-        orientation = orientationTag.value.field_u16; //orientation is unsigned short, so check field_u16
+        orientation = orientationTag.getValueAsInt();
         ExifTransform(orientation, img);
     }
 }

@@ -441,8 +441,7 @@ TEST(Imgcodecs_Png, encodeExif)
     ExifEntry exifEntry = exif_entries_vec[0][4];
     exifEntry.dump(std::cout);
     exif_entries_vec[0][4].type = TAG_TYPE_ASCII;
-    exif_entries_vec[0][4].count = 12;
-    exif_entries_vec[0][4].value.field_str = "OpenCV 4.13";
+    exif_entries_vec[0][4].setValueAsString("OpenCV 4.13");
     exifEntry = exif_entries_vec[0][4];
     exifEntry.dump(std::cout);
 #endif
@@ -467,37 +466,34 @@ TEST(Imgcodecs_Png, encodeExif)
     EXPECT_EQ(0, remove(outputname.c_str()));
 }
 
-TEST(Imgcodecs_Png, Write_Custom_Exif)
+TEST(Imgcodecs_Png, Write_And_Read_Custom_Exif)
 {
-    const string root = cvtest::TS::ptr()->get_data_path();
-    string filename = root + "readwrite/testExifOrientation_7.jpg";
+    const std::string root = cvtest::TS::ptr()->get_data_path();
+    const std::string filename = root + "readwrite/testExifOrientation_7.jpg";
 
-    std::vector<std::vector<ExifEntry> > exif_entries_vec;
-
+    // Create custom EXIF entries
     ExifEntry exifEntry0, exifEntry1, exifEntry2;
     exifEntry0.tagId = TAG_IMAGEDESCRIPTION;
     exifEntry0.type = TAG_TYPE_ASCII;
-    exifEntry0.value.field_str = "Test - Writing Custom Exif";
-    // TO DO : you should not set exifEntry.count
-    exifEntry0.count = (int)exifEntry0.value.field_str.size();
+    exifEntry0.setValueAsString("Test - Writing Custom Exif");
 
     exifEntry1.tagId = TAG_SOFTWARE;
     exifEntry1.type = TAG_TYPE_ASCII;
-    exifEntry1.value.field_str = "OpenCV 4.13";
-    // TO DO : you should not set exifEntry.count
-    exifEntry1.count = (int)exifEntry1.value.field_str.size();
+    exifEntry1.setValueAsString("OpenCV 4.13");
 
     exifEntry2.tagId = TAG_ORIENTATION;
     exifEntry2.type = TAG_TYPE_SHORT;
-    exifEntry2.value.field_u16 = 7;
+    exifEntry2.setValueAsInt(7); // orientation 7 expected
 
-    std::vector<ExifEntry> exifEntries;
-    exifEntries.push_back(exifEntry0);
-    exifEntries.push_back(exifEntry1);
-    exifEntries.push_back(exifEntry2);
+    std::vector<ExifEntry> ifd0;
+    ifd0.push_back(exifEntry0);
+    ifd0.push_back(exifEntry1);
+    ifd0.push_back(exifEntry2);
 
-    exif_entries_vec.push_back(exifEntries);
+    std::vector<std::vector<ExifEntry>> exif_entries_vec;
+    exif_entries_vec.push_back(ifd0);
 
+    // Encode to binary EXIF segment
     std::vector<uchar> exif_data;
     encodeExif(exif_entries_vec, exif_data);
 
@@ -505,24 +501,32 @@ TEST(Imgcodecs_Png, Write_Custom_Exif)
     std::vector<std::vector<uchar>> metadata = { exif_data };
 
     Mat img = imread(filename, IMREAD_UNCHANGED);
-    const string outputname = cv::tempfile(".png");
-    imwriteWithMetadata(outputname, img, metadata_types, metadata);
+    ASSERT_FALSE(img.empty());
 
+    const std::string outputname = cv::tempfile(".png");
+    imwriteWithMetadata(outputname, img, metadata_types, metadata);
 
     Mat img1 = imread(filename);
     Mat img2 = imread(outputname);
+    EXPECT_EQ(0, cvtest::norm(img1, img2, cv::NORM_INF));
 
-    EXPECT_EQ(0, cvtest::norm(img1, img2, NORM_INF));
+    // Read back and validate EXIF
+    std::vector<int> read_metadata_types;
+    std::vector<std::vector<uchar>> read_metadata;
+    imreadWithMetadata(outputname, read_metadata_types, read_metadata);
 
-    // Clean up by removing the temporary file.
+    ASSERT_FALSE(read_metadata.empty());
+    ASSERT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
+
+    std::vector<std::vector<ExifEntry>> read_exif_entries;
+    bool parse_result = decodeExif(read_metadata[0], read_exif_entries);
+    ASSERT_TRUE(parse_result);
+
+    EXPECT_EQ(read_exif_entries[0][0].getValueAsString(), "Test - Writing Custom Exif");
+    EXPECT_EQ(read_exif_entries[0][1].getValueAsString(), "OpenCV 4.13");
+    EXPECT_EQ(read_exif_entries[0][2].getValueAsInt(), 7);
+
     EXPECT_EQ(0, remove(outputname.c_str()));
-
-    std::cout << "\n------- decoded Exif IFD count : " << (int)exif_entries_vec.size() << std::endl;
-    for (size_t i = 0; i < exif_entries_vec.size(); i++)
-        for (size_t j = 0; j < exif_entries_vec[i].size(); j++)
-        {
-            exif_entries_vec[i][j].dump(std::cout);
-        }
 }
 
 TEST(Imgcodecs_Png, Read_Write_With_Exif)

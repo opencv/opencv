@@ -46,16 +46,16 @@ static uint32_t exifEntryValuetoUInt32(ExifEntry entry)
     {
     case TAG_TYPE_BYTE:
     case TAG_TYPE_UNDEFINED:
-        return (entry.count > 0) ? entry.value.field_u8 : 0;
+        return (entry.count > 0) ? entry.getValueAsInt() : 0;
     case TAG_TYPE_SBYTE:
-        return (entry.count > 0) ? static_cast<uint32_t>(entry.value.field_s8) : 0;
+        return (entry.count > 0) ? static_cast<uint32_t>(entry.getValueAsInt()) : 0;
     case TAG_TYPE_SHORT:
-        return (entry.count > 0) ? entry.value.field_u16 : 0;
+        return (entry.count > 0) ? entry.getValueAsInt() : 0;
     case TAG_TYPE_SSHORT:
-        return (entry.count > 0) ? static_cast<uint32_t>(entry.value.field_s16) : 0;
+        return (entry.count > 0) ? static_cast<uint32_t>(entry.getValueAsInt()) : 0;
     case TAG_TYPE_LONG:
     case TAG_TYPE_SLONG:
-        return (entry.count > 0) ? entry.value.field_u32 : 0;
+        return (entry.count > 0) ? entry.getValueAsInt() : 0;
     case TAG_TYPE_ASCII:
         return 0;
     case TAG_TYPE_RATIONAL:
@@ -73,47 +73,32 @@ static std::vector<uchar> exifEntryValuetoBytes(const ExifEntry& entry)
     {
     case TAG_TYPE_ASCII:
     {
-        const char* str = entry.value.field_str.c_str();
-        size_t len = std::strlen(str);
+        std::string str = entry.getValueAsString();
+        size_t len = str.size();
 
         // Insert string data
-        bytes.insert(bytes.end(), reinterpret_cast<const uchar*>(str),
-            reinterpret_cast<const uchar*>(str) + len);
+        bytes.insert(bytes.end(),
+            reinterpret_cast<const uchar*>(str.data()),
+            reinterpret_cast<const uchar*>(str.data()) + len);
 
         // Pad with nulls if needed
-        if (len < entry.count)
-            bytes.insert(bytes.end(),
-                static_cast<size_t>(entry.count - len),
-                static_cast<uchar>(0x00));
+        if (len < static_cast<size_t>(entry.count))
+            bytes.insert(bytes.end(), entry.count - len, 0x00);
     }
     break;
     case TAG_TYPE_UNDEFINED:
     {
-        if (entry.value.field_u8)
-        {
-            bytes.insert(bytes.end(),
-                entry.value.field_u8,
-                entry.value.field_u8 + static_cast<size_t>(entry.count));
-        }
-    }
-    break;
-    case TAG_TYPE_RATIONAL:
-    {
-        for (int i = 0; i < entry.count; ++i)
-        {
-            uint32_t numerator = entry.value.field_urational[i].num;
-            uint32_t denominator = entry.value.field_urational[i].denom;
-            bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&numerator), reinterpret_cast<uchar*>(&numerator) + 4);
-            bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&denominator), reinterpret_cast<uchar*>(&denominator) + 4);
-        }
+        return entry.getValueAsRaw();
     }
     break;
     case TAG_TYPE_SRATIONAL:
+    case TAG_TYPE_RATIONAL:
     {
-        for (int i = 0; i < entry.count; ++i)
+        std::vector<srational64_t> srational_vec = entry.getValueAsRational();
+        for (size_t i = 0; i < srational_vec.size(); ++i)
         {
-            uint32_t numerator = entry.value.field_srational[i].num;
-            uint32_t denominator = entry.value.field_srational[i].denom;
+            uint32_t numerator = srational_vec[i].num;
+            uint32_t denominator = srational_vec[i].denom;
             bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&numerator), reinterpret_cast<uchar*>(&numerator) + 4);
             bytes.insert(bytes.end(), reinterpret_cast<uchar*>(&denominator), reinterpret_cast<uchar*>(&denominator) + 4);
         }
@@ -178,8 +163,13 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
             uint32_t valueSize = count * getExifTagTypeSize(type);
             if (valueSize <= 4)
             {
-                uint32_t val = exifEntryValuetoUInt32(entry);
-                std::memcpy(&data[entryOffset], &val, 4);
+                if (entry.getValueAsString().size())
+                    std::memcpy(&data[entryOffset], entry.getValueAsString().c_str(), 4);
+                else
+                {
+                    uint32_t val = entry.getValueAsInt();
+                    std::memcpy(&data[entryOffset], &val, 4);
+                }
             }
             else
             {
@@ -210,9 +200,6 @@ bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEnt
     ExifReader reader;
     return reader.parseExif(data.data(), data.size(), exif_entries);
 }
-
-std::string exifTagIdToString(ExifTagId tag);
-std::string tagTypeToString(ExifTagType type);
 
 template<typename _Tp> void dumpScalar(std::ostream& strm, _Tp v)
 {
@@ -439,8 +426,7 @@ uint32_t ExifReader::extractIFDOffset(const ExifEntry& entry) const
     // If the type is LONG or SLONG, the offset is directly the 32-bit value
     if (entry.type == TAG_TYPE_LONG || entry.type == TAG_TYPE_SLONG)
     {
-        if (entry.value.field_u32) // assuming field_u32 points to at least one element
-            offsetVal = entry.value.field_u32;
+            offsetVal = static_cast<uint32_t>(entry.getValueAsInt());
     }
     else
     {
@@ -463,68 +449,54 @@ uint32_t ExifReader::extractIFDOffset(const ExifEntry& entry) const
 
 bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::vector< std::vector<ExifEntry> >& exif_entries_vec)
 {
-    if (!data || size == 0)
+    if (data && size > 0)
+    {
+        m_data.assign(data, data + size);
+    }
+    else
+    {
         return false;
+    }
 
-    m_data.assign(data, data + size);
     m_format = getFormat();
 
     if (!checkTagMark())
+    {
         return false;
+    }
 
     std::vector<uint32_t> ifd_offsets;
-    std::set<uint32_t> visited_offsets; // C++11-compatible
-
     ifd_offsets.push_back(getStartOffset());
     size_t current_ifd = 0;
-
     while (current_ifd < ifd_offsets.size())
     {
         uint32_t offset = ifd_offsets[current_ifd];
-        if (visited_offsets.count(offset) != 0)
-        {
-            ++current_ifd;
-            continue;
-        }
-        visited_offsets.insert(offset);
-
-        if (offset + 2 > m_data.size())
-            break;
 
         size_t numEntry = getNumDirEntry(offset);
-        offset += 2; // go to start of tag fields
+        offset += 2; //go to start of tag fields
 
         std::vector<ExifEntry> exif_entries;
         for (size_t i = 0; i < numEntry; ++i)
         {
-            if (offset + tiffFieldSize > m_data.size())
-                break; // prevent overflow
-
             ExifEntry exifEntry = parseExifEntry(offset);
             exif_entries.push_back(exifEntry);
-
-            // Exif SubIFD pointer (0x8769) or GPS SubIFD pointer (0x8825)
-            if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825)
+            if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825) // Exif or GPS IFD pointer
             {
-                uint32_t sub_ifd_offset = extractIFDOffset(exifEntry);
-                if (sub_ifd_offset != 0 && sub_ifd_offset < m_data.size())
+                uint32_t sub_ifd_offset = exifEntry.getValueAsInt();
+                if (sub_ifd_offset < m_data.size())
                     ifd_offsets.push_back(sub_ifd_offset);
             }
-
             offset += tiffFieldSize;
         }
-
         exif_entries_vec.push_back(exif_entries);
-
-        // Handle Next IFD pointer at the end of the directory
+        // Handle IFD1 (Next IFD offset at the end of current IFD)
         if (offset + 4 <= m_data.size())
         {
-            uint32_t next_ifd_offset = getU32(offset); // should be endian-aware internally
+            uint32_t next_ifd_offset = getU32(offset);
             if (next_ifd_offset != 0 && next_ifd_offset < m_data.size())
                 ifd_offsets.push_back(next_ifd_offset);
         }
-
-        ++current_ifd;
+        current_ifd++;
     }
     return true;
 }
@@ -626,34 +598,32 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
     {
     case TAG_TYPE_BYTE:
     case TAG_TYPE_SBYTE:
-        exifentry.value.field_u8 = m_data[offset + 8];
+        exifentry.setValueAsInt(m_data[offset + 8]);
         break;
     case TAG_TYPE_ASCII:
-        exifentry.value.field_str = getString(offset);
+        exifentry.setValueAsString(getString(offset));
         break;
 
     case TAG_TYPE_SHORT:
-        exifentry.value.field_u16 = getU16(offset + 8);
+        exifentry.setValueAsInt(getU16(offset + 8));
         break;
 
     case TAG_TYPE_UNDEFINED:
     case TAG_TYPE_LONG:
-        exifentry.value.field_u32 = getU32(offset + 8);
+        exifentry.setValueAsInt(getU32(offset + 8));
         break;
 
     case TAG_TYPE_SSHORT:
-        exifentry.value.field_s16 = (int16_t)getU16(offset + 8);
+        exifentry.setValueAsInt((int16_t)getU16(offset + 8));
         break;
 
     case TAG_TYPE_SLONG:
-        exifentry.value.field_s32 = (int32_t)getU32(offset + 8);
+        exifentry.setValueAsInt((int32_t)getU32(offset + 8));
         break;
 
     case TAG_TYPE_RATIONAL:
-        exifentry.value.field_urational = getURational(offset);
-        break;
     case TAG_TYPE_SRATIONAL:
-        exifentry.value.field_srational = getSRational(offset);
+        exifentry.setValueAsRational(getSRational(offset));
         break;
     default:
         CV_LOG_WARNING(NULL, "Undefined ExifTagValue type " << (int)exifentry.type);
@@ -773,7 +743,7 @@ std::vector<srational64_t> ExifReader::getSRational(const size_t offset) const
     return result;
 }
 
-std::string tagTypeToString(ExifTagType type)
+std::string ExifEntry::getTagTypeAsString() const
 {
     const char* typestr =
         type == TAG_TYPE_NOTYPE ? "NoType" :
@@ -796,8 +766,9 @@ std::string tagTypeToString(ExifTagType type)
     return typestr ? std::string(typestr) : cv::format("Unkhown type <%d>", (int)type);
 }
 
-std::string exifTagIdToString(ExifTagId tag)
+std::string ExifEntry::getTagIdAsString() const
 {
+    int tag = tagId;
     const char* tagstr =
         tag == TAG_EMPTY ? "<empty>" :
         tag == TAG_SUB_FILETYPE ? "Sub File Type" :
@@ -821,7 +792,7 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_SOFTWARE ? "Software" :
         tag == TAG_MODIFYDATE ? "Modify Date" :
         tag == TAG_HOST_COMPUTER ? "Host Computer" :
-        
+
         tag == TAG_SAMPLEFORMAT ? "Sample Format" :
         tag == TAG_YCBCRPOSITIONING ? "YCbCr Positioning" :
         tag == TAG_JPGFROMRAWSTART ? "Jpg From Raw Start " :
@@ -880,7 +851,7 @@ std::string exifTagIdToString(ExifTagId tag)
         tag == TAG_FOCALPLANEXRESOLUTION ? "Foca lPlane XResolution" :
         tag == TAG_FOCALPLANEYRESOLUTION ? "Focal Plane YResolution" :
         tag == TAG_FOCALPLANERESOLUTIONUNIT ? "Focal Plane Resolution Unit" :
-        
+
         tag == TAG_SCENE_TYPE ? "Scene Type" :
 
         tag == TAG_CUSTOMRENDERED ? "Custom Rendered" :
@@ -933,47 +904,37 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         return strm;
     }
 
-    strm << exifTagIdToString(tagId) << ": ";
+    strm << getTagIdAsString() << ": ";
 
     switch (type) {
     case TAG_TYPE_ASCII:
-        strm << "\"" << value.field_str << "\"";
+        strm << "\"" << getValueAsString() << "\"";
         break;
     case TAG_TYPE_BYTE:
-        strm << static_cast<int>(value.field_u8);
-        break;
     case TAG_TYPE_SHORT:
-        strm << value.field_u16;
-        break;
     case TAG_TYPE_LONG:
-        strm << value.field_u32;
+        strm << getValueAsInt();
         break;
     case TAG_TYPE_FLOAT:
-        strm << value.field_float;
+
+        strm << getValueAsInt();
         break;
     case TAG_TYPE_DOUBLE:
-        strm << value.field_double;
+        strm << getValueAsInt();
         break;
     case TAG_TYPE_RATIONAL:
-        dumpVector(strm, value.field_urational);
-        break;
     case TAG_TYPE_SRATIONAL:
-        dumpVector(strm, value.field_srational);
+        dumpVector(strm, getValueAsRational());
         break;
     case TAG_TYPE_UNDEFINED:
     {
-        uint32_t raw = value.field_u32;
-        strm << "[ ";
-        for (int i = 3; i >= 0; --i) {
-            uint8_t byte = static_cast<uint8_t>((raw >> (i * 8)) & 0xFF);
-            strm << "0x" << std::hex << std::uppercase
-                << std::setw(2) << std::setfill('0')
-                << static_cast<int>(byte);
-            if (i > 0)
-                strm << ", ";
+        strm << "[";
+        for (size_t i = 0; i < value_raw.size(); ++i) {
+            if (i) strm << " ";
+            strm << std::hex << std::setw(2) << std::setfill('0')
+                << static_cast<int>(value_raw[i]);
         }
-        strm << " ]";
-        strm << std::dec; // restore decimal output
+        strm << "]" << std::dec;
         break;
     }
     default:

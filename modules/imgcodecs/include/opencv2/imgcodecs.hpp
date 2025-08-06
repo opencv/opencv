@@ -460,59 +460,54 @@ enum ExifTagId
     TAG_INVALID_TAG = 65535
 };
 
-struct urational64_t
+struct CV_EXPORTS_W_SIMPLE urational64_t
 {
-    uint32_t num = 0, denom = 1;
+    CV_PROP_RW int num = 0;
+    CV_PROP_RW int denom = 1;
 };
 
-struct srational64_t
+struct CV_EXPORTS_W_SIMPLE srational64_t
 {
-    int32_t num = 0, denom = 1;
+    CV_PROP_RW int num = 0;
+    CV_PROP_RW int denom = 1;
 };
 
-/**
- * @brief Entry which contains possible values for different EXIF tags.
- * Only the field matching the `type` in ExifEntry should be considered valid.
- */
-struct ExifTagValue
+struct CV_EXPORTS_W_SIMPLE ExifEntry
 {
-    ExifTagValue() :
-        field_float(0.0f), field_double(0.0),
-        field_u32(0), field_s32(0),
-        field_u16(0), field_s16(0),
-        field_u8(0), field_s8(0)
-    {}
+public:
+    ExifEntry()
+        : tagId(TAG_EMPTY), type(TAG_TYPE_NOTYPE), count(1),
+        value_u32(0), value_str(), value_raw(), value_srational() {}
+    ~ExifEntry() = default;
 
-    std::vector<srational64_t> field_srational; ///< Signed rational (e.g., ShutterSpeedValue)
-    std::vector<urational64_t> field_urational; ///< Unsigned rational (e.g., ExposureTime)
-    std::string   field_str;       ///< ASCII string or undefined textual data (e.g., Make, Model)
+    CV_PROP_RW int tagId;
+    CV_PROP_RW int type;
+    CV_PROP_RW int count;
 
-    float    field_float;   ///< Not commonly used in standard EXIF
-    double   field_double;  ///< Not commonly used in standard EXIF
+    CV_WRAP int getValueAsInt() const { return value_u32; }
+    CV_WRAP std::string getValueAsString() const { return value_str; }
+    CV_WRAP std::vector<uchar> getValueAsRaw() const { return value_raw; }
+    CV_WRAP std::vector<srational64_t> getValueAsRational() const { return value_srational; }
 
-    uint32_t field_u32;     ///< Unsigned 32-bit integer (e.g., ImageWidth)
-    int32_t  field_s32;     ///< Signed 32-bit integer
-
-    uint16_t field_u16;     ///< Unsigned 16-bit integer (e.g., Orientation)
-    int16_t  field_s16;     ///< Signed 16-bit integer
-
-    uint8_t  field_u8;      ///< Unsigned 8-bit integer
-    int8_t   field_s8;      ///< Signed 8-bit integer
-};
-
-struct ExifEntry
-{
-    ExifEntry() {}
-
-    ExifTagId tagId = TAG_EMPTY;
-    ExifTagType type = TAG_TYPE_NOTYPE;
-    ExifTagValue value;
-    int32_t count = 1;
-
-    bool empty() const {
-        return tagId == TAG_EMPTY;
+    CV_WRAP void setValueAsString(const std::string& value) {
+        value_str = value;
+        count = static_cast<int>(value.size());
     }
-    CV_EXPORTS std::ostream& dump(std::ostream& strm) const;
+
+    CV_WRAP void setValueAsInt(int value) { value_u32 = value; }
+    CV_WRAP void setValueAsRaw(const std::vector<uchar>& value) { value_raw = value; }
+    CV_WRAP void setValueAsRational(const std::vector<srational64_t>& value) { value_srational = value; }
+
+    CV_WRAP bool empty() const { return tagId == TAG_EMPTY; }
+    CV_WRAP std::string getTagIdAsString() const;
+    CV_WRAP std::string getTagTypeAsString() const;
+    std::ostream& dump(std::ostream& strm) const;
+
+private:
+    int value_u32;
+    std::string value_str;
+    std::vector<uchar> value_raw;
+    std::vector<srational64_t> value_srational;
 };
 
 /** @brief Decodes EXIF metadata from binary data into structured ExifEntry entries.
@@ -524,7 +519,7 @@ The extracted entries are organized as a vector of IFD (Image File Directory) bl
 @param exif_entries Output vector of IFD blocks. Each IFD block is a vector of `ExifEntry` objects containing decoded tag information (tag ID, type, count, and value).
 @return Returns `true` if decoding was successful, `false` otherwise.
  */
-CV_EXPORTS bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries);
+CV_EXPORTS_W bool decodeExif(const std::vector<uchar>& data, CV_OUT std::vector< std::vector<ExifEntry> >& exif_entries);
 
 /** @brief Encodes structured ExifEntry metadata into binary EXIF data.
 
@@ -535,7 +530,7 @@ The input entries are expected to be organized as a vector of IFD blocks, matchi
 @param data Output buffer where the encoded EXIF binary data will be stored.
 @return Returns `true` if decoding was successful, `false` otherwise.
  */
-CV_EXPORTS bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::vector<uchar>& data);
+CV_EXPORTS_W bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, CV_OUT std::vector<uchar>& data);
 
 //! @} imgcodecs_metadata
 
