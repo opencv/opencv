@@ -569,6 +569,26 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("../perf/512x512.png", 8, 153708),
         make_tuple("../perf/512x512.png", 9, 152181)));
 
+// See https://github.com/opencv/opencv/issues/27614
+typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
+TEST_P(Imgcodecs_Png_ZLIBBUFFER_SIZE, encode_regression_27614)
+{
+    Mat img(320,240,CV_8UC3,cv::Scalar(64,76,43));
+    vector<uint8_t> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, GetParam() }));
+    ASSERT_TRUE(status);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,
+                        testing::Values(5,
+                                        6,         // Minimum limit
+                                        8192,      // Default value
+                                        131072,    // 128 KiB
+                                        262144,    // 256 KiB
+                                        1048576,   // Maximum limit
+                                        1048577));
+
 #endif // HAVE_PNG
 
 }} // namespace
