@@ -155,6 +155,119 @@ TEST(PoseGraph, sphereG2O)
     }
 }
 
+TEST(PoseGraphMST, optimization)
+{
+    applyTestTag(CV_TEST_TAG_LONG, CV_TEST_TAG_DEBUG_VERYLONG);
+
+    // The dataset was taken from here: https://lucacarlone.mit.edu/datasets/
+    // Connected paper:
+    // L.Carlone, R.Tron, K.Daniilidis, and F.Dellaert.
+    // Initialization Techniques for 3D SLAM : a Survey on Rotation Estimation and its Use in Pose Graph Optimization.
+    // In IEEE Intl.Conf.on Robotics and Automation(ICRA), pages 4597 - 4604, 2015.
+
+    std::string filename = cvtest::TS::ptr()->get_data_path() + "/cv/rgbd/sphere_bignoise_vertex3.g2o";
+
+    Ptr<detail::PoseGraph> pgOptimizerOnly = readG2OFile(filename);
+    Ptr<detail::PoseGraph> pgWithMSTAndOptimizer = readG2OFile(filename);
+    Ptr<detail::PoseGraph> init = readG2OFile(filename);
+
+    double lambda = 0.485;
+    pgWithMSTAndOptimizer->initializePosesWithMST(lambda);
+
+    // You may change logging level to view detailed optimization report
+    // For example, set env. variable like this: OPENCV_LOG_LEVEL=INFO
+
+    // geoScale=1 is experimental, not guaranteed to work on other problems
+    // the rest are default params
+    pgOptimizerOnly->createOptimizer(LevMarq::Settings().setGeoScale(1.0)
+                        .setMaxIterations(100)
+                        .setCheckRelEnergyChange(true)
+                        .setRelEnergyDeltaTolerance(1e-6)
+                        .setGeodesic(true));
+    pgWithMSTAndOptimizer->createOptimizer(LevMarq::Settings().setGeoScale(1.0)
+                        .setMaxIterations(100)
+                        .setCheckRelEnergyChange(true)
+                        .setRelEnergyDeltaTolerance(1e-6)
+                        .setGeodesic(true));
+
+    auto r1 = pgWithMSTAndOptimizer->optimize();
+    auto r2 = pgOptimizerOnly->optimize();
+
+    EXPECT_TRUE(r1.found);
+    EXPECT_TRUE(r2.found);
+    EXPECT_LE(r2.energy, 1.47723e+06);
+    // Allow small tolerance due to optimization differences; final energy/iterations are effectively the same
+    EXPECT_LE(std::abs(r1.energy - r2.energy), 1e-2);
+    ASSERT_LE(std::abs(r1.iters - r2.iters), 1);
+
+    // Add the "--test_debug" to arguments to see resulting pose graph nodes positions
+    if (cvtest::debugLevel > 0)
+    {
+        // Note:
+        // A custom .obj writer is used here instead of cv::saveMesh because saveMesh expects faces
+        // (i.e., polygons with 3 or more vertices) and writes them using the "f i j k..." syntax in
+        // the .obj file. Since pose graphs consist of edges rather than polygonal faces, we represent
+        // them using line segments ("l i j").
+        // As saveMesh does not support writing "l" lines, it is not suitable in this context.
+
+        std::string fname;
+        std::fstream of;
+        std::vector<size_t> ids;
+        size_t esz;
+
+        // Write OBJ for MST-initialized pose graph with optimizer
+        fname = "pg_with_mst_and_optimizer.obj";
+        of.open(fname, std::fstream::out);
+        ids = pgWithMSTAndOptimizer->getNodesIds();
+        for (const size_t& id : ids)
+        {
+            Point3d d = pgWithMSTAndOptimizer->getNodePose(id).translation();
+            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+        }
+        esz = pgWithMSTAndOptimizer->getNumEdges();
+        for (size_t i = 0; i < esz; i++)
+        {
+            size_t sid = pgWithMSTAndOptimizer->getEdgeStart(i), tid = pgWithMSTAndOptimizer->getEdgeEnd(i);
+            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+        }
+        of.close();
+
+        // Write OBJ for optimizer-only pose graph
+        fname = "pg_optimizer_only.obj";
+        of.open(fname, std::fstream::out);
+        ids = pgOptimizerOnly->getNodesIds();
+        for (const size_t& id : ids)
+        {
+            Point3d d = pgOptimizerOnly->getNodePose(id).translation();
+            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+        }
+        esz = pgOptimizerOnly->getNumEdges();
+        for (size_t i = 0; i < esz; i++)
+        {
+            size_t sid = pgOptimizerOnly->getEdgeStart(i), tid = pgOptimizerOnly->getEdgeEnd(i);
+            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+        }
+        of.close();
+
+        // Write OBJ for initial pose graph
+        fname = "pg_init.obj";
+        of.open(fname, std::fstream::out);
+        ids = init->getNodesIds();
+        for (const size_t& id : ids)
+        {
+            Point3d d = init->getNodePose(id).translation();
+            of << "v " << d.x << " " << d.y << " " << d.z << std::endl;
+        }
+        esz = init->getNumEdges();
+        for (size_t i = 0; i < esz; i++)
+        {
+            size_t sid = init->getEdgeStart(i), tid = init->getEdgeEnd(i);
+            of << "l " << sid + 1 << " " << tid + 1 << std::endl;
+        }
+        of.close();
+    }
+}
+
 // ------------------------------------------------------------------------------------------
 
 // Wireframe meshes for debugging visualization purposes
@@ -392,6 +505,11 @@ TEST(PoseGraph, simple)
 #else
 
 TEST(PoseGraph, sphereG2O)
+{
+    throw SkipTestException("Build with Eigen required for pose graph optimization");
+}
+
+TEST(PoseGraphMST, optimization)
 {
     throw SkipTestException("Build with Eigen required for pose graph optimization");
 }
