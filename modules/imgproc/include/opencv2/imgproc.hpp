@@ -1104,7 +1104,7 @@ public:
 
     /** @overload
 
-    @param rect Rectangle that includes all of the 2D integer points that are to be added to the subdivision.
+    @param rect Rectangle that includes all of the 2D points that are to be added to the subdivision.
 
     The function creates an empty Delaunay subdivision where 2D points can be added using the function
     insert() . All of the points to be added must be within the specified rectangle, otherwise a runtime
@@ -1112,14 +1112,7 @@ public:
      */
     CV_WRAP Subdiv2D(Rect rect);
 
-    /** @overload
-
-    @param rect Rectangle that includes all the 2D floating points that are to be added to the subdivision.
-
-    The function creates an empty Delaunay subdivision where 2D points can be added using the function
-    insert().  All the points to be added must be within the specified rectangle, otherwise a runtime
-    error is raised.
-     */
+    /** @overload */
     CV_WRAP Subdiv2D(Rect2f rect);
 
     /** @overload
