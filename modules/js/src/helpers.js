@@ -397,3 +397,16 @@ Module['matFromImageData'] = function(imageData) {
     mat.data.set(imageData.data);
     return mat;
 };
+// Add Symbol.dispose support for using declaration in TypeScript 5.2+ and future JS
+if (
+    typeof Symbol !== "undefined" &&
+    Symbol.dispose &&
+    typeof cv !== "undefined" &&
+    cv.Mat &&
+    typeof cv.Mat.prototype.delete === "function"
+) {
+    cv.Mat.prototype[Symbol.dispose] = cv.Mat.prototype.delete;
+    // Optionally repeat for other types that require manual cleanup:
+    if (cv.UMat) cv.UMat.prototype[Symbol.dispose] = cv.UMat.prototype.delete;
+    // Add more as OpenCV gains new manual-cleanup classes
+}
