@@ -4,94 +4,43 @@
 
 namespace cv { namespace rvv_hal { namespace features2d {
 
-using RVV_VECTOR_TYPE = vuint8m4_t;
-
-
-// Since uint16_t range is 0 to 65535, row stride should be less than 65535/6 = 10922
-inline void makeOffsets(int16_t pixel[], vuint16m2_t& v_offset, int64_t row_stride, int patternSize)
+static inline uint8_t cornerScore(const uint8_t* ptr, const int* pixel)
 {
-    uint16_t pixel_u[25];
-
-    switch(patternSize) {
-    case 16:
-        // set min element (pixel[9] = -1 + row_stride * -3) as the base addr
-        pixel_u[0] = 1 + row_stride * 6;
-        pixel_u[1] = 2 + row_stride * 6;
-        pixel_u[2] = 3 + row_stride * 5;
-        pixel_u[3] = 4 + row_stride * 4;
-        pixel_u[4] = 4 + row_stride * 3;
-        pixel_u[5] = 4 + row_stride * 2;
-        pixel_u[6] = 3 + row_stride * 1;
-        pixel_u[7] = 2 + row_stride * 0;
-        pixel_u[8] = 1 + row_stride * 0;
-        pixel_u[9] = 0 + row_stride * 0;
-        pixel_u[10] = -1 + row_stride * 1;
-        pixel_u[11] = -2 + row_stride * 2;
-        pixel_u[12] = -2 + row_stride * 3;
-        pixel_u[13] = -2 + row_stride * 4;
-        pixel_u[14] = -1 + row_stride * 5;
-        pixel_u[15] = 0 + row_stride * 6;
-
-        for (int i = 16; i < 25; i++)
-        {
-            pixel_u[i] = pixel_u[i - 16];
+    constexpr int K = 8, N = 16 + K + 1;
+    int v = ptr[0];
+    int16_t d[32] = {0};
+    for (int k = 0; k < N; k++)
+        d[k] = (int16_t)(v - ptr[pixel[k]]);
+    auto vlenb = __riscv_vlenb();
+    switch (vlenb) {
+        #define CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(lmul) \
+            size_t vl = __riscv_vsetvl_e16m##lmul(N); \
+            vint16m##lmul##_t vd = __riscv_vle16_v_i16m##lmul(d, vl); \
+            vint16m##lmul##_t q0 = __riscv_vmv_v_x_i16m##lmul((int16_t)(-1000), vl); \
+            vint16m##lmul##_t q1 = __riscv_vmv_v_x_i16m##lmul((int16_t)(1000), vl); \
+            vint16m##lmul##_t vds = vd, ak0 = vd, bk0 = vd; \
+            for (int i = 0; i < 8; i++) { \
+                vds = __riscv_vslide1down(vds, 0, vl); \
+                ak0 = __riscv_vmin(ak0, vds, vl); \
+                bk0 = __riscv_vmax(bk0, vds, vl); \
+            } \
+            q0 = __riscv_vmax(q0, __riscv_vmin(ak0, vd, vl), vl); \
+            q1 = __riscv_vmin(q1, __riscv_vmax(bk0, vd, vl), vl); \
+            vds = __riscv_vslide1down(vds, 0, vl); \
+            q0 = __riscv_vmax(q0, __riscv_vmin(ak0, vds, vl), vl); \
+            q1 = __riscv_vmin(q1, __riscv_vmax(bk0, vds, vl), vl); \
+            q0 = __riscv_vmax(q0, __riscv_vrsub(q1, 0, vl), vl); \
+            return (uint8_t)(__riscv_vmv_x(__riscv_vredmax(q0, __riscv_vmv_s_x_i16m1(0, vl), vl)) - 1);
+        case 16: { // 128-bit
+            CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(4)
+        } break;
+        case 32: { // 256-bit
+            CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(2)
+        } break;
+        default: { // >=512-bit
+            CV_RVV_HAL_FAST_CORNERSOCRE16_CASE(1)
         }
-        v_offset = __riscv_vle16_v_u16m2(pixel_u, 25);
-        for (int i = 0; i < 25; i++)
-        {
-            pixel[i] = pixel_u[i] - 3 * row_stride - 1;
-        }
-        break;
-
-    default:
-        memset(pixel_u, 0, sizeof(uint16_t) * 25);
-
     }
-}
-
-
-inline uint8_t cornerScore(const uint8_t* ptr, const vuint16m2_t& v_offset, int64_t row_stride)
-{
-    const uint32_t K = 8, N = 16 + K + 1;
-    uint32_t v = ptr[0];
-
-    int vl = __riscv_vsetvl_e16m2(N);
-    // use vloxei16_v to indexed ordered load
-    vint16m2_t v_c_pixel = __riscv_vmv_v_x_i16m2((int16_t)v, vl);
-    // vloxei only support positive offset
-    vuint8m1_t v_d_u8 = __riscv_vloxei16(ptr - 3 * row_stride - 1, v_offset, vl);
-    vuint16m2_t v_d_u16 = __riscv_vzext_vf2(v_d_u8, vl);
-    vint16m2_t d = __riscv_vreinterpret_i16m2(v_d_u16);
-    d = __riscv_vsub_vv_i16m2(v_c_pixel, d, vl);
-    vint16m2_t d_slide = __riscv_vmv_v(d, vl);
-
-    vint16m2_t q0 = __riscv_vmv_v_x_i16m2((int16_t)(-1000), vl);
-    vint16m2_t q1 = __riscv_vmv_v_x_i16m2((int16_t)(1000), vl);
-
-    vint16m2_t ak0 = __riscv_vmv_v(d, vl);
-    vint16m2_t bk0 = __riscv_vmv_v(d, vl);
-
-    for (int i = 0; i < 8; i++)
-    {
-        d_slide = __riscv_vslide1down(d_slide, (int16_t)0, vl);
-        ak0 = __riscv_vmin(ak0, d_slide, vl);
-        bk0 = __riscv_vmax(bk0, d_slide, vl);
-    }
-
-    q0 = __riscv_vmax(q0, __riscv_vmin(ak0, d, vl), vl);
-    q1 = __riscv_vmin(q1, __riscv_vmax(bk0, d, vl), vl);
-
-    d_slide = __riscv_vslide1down(d_slide, (int16_t)0, vl);
-    q0 = __riscv_vmax(q0, __riscv_vmin(ak0, d_slide, vl), vl);
-    q1 = __riscv_vmin(q1, __riscv_vmax(bk0, d_slide, vl), vl);
-
-    q1 = __riscv_vrsub(q1, (int16_t)0, vl);
-    q0 = __riscv_vmax(q0, q1, vl);
-
-    vint16m1_t res = __riscv_vredmax(q0, __riscv_vmv_s_x_i16m1((int16_t)0, vl), vl);
-
-    uint8_t result = (uint8_t)__riscv_vmv_x(res);
-    return result - 1;
 }
 
 
@@ -101,14 +50,32 @@ inline int fast_16(const uchar* src_data, size_t src_step,
                    int threshold, bool nonmax_suppression)
 {
 
-    const int patternSize = 16;
-    const int K = patternSize/2, N = patternSize + K + 1;
-    const int quarterPatternSize = patternSize/4;
+    constexpr int patternSize = 16;
+    constexpr int K = patternSize/2, N = patternSize + K + 1;
+    constexpr int quarterPatternSize = patternSize/4;
 
     int i, j, k;
-    int16_t pixel[25];
-    vuint16m2_t v_offset;
-    makeOffsets(pixel, v_offset, (int)src_step, patternSize);
+    int pixel[N] = {0};
+    pixel[0] = 0 + (int)src_step * 3;
+    pixel[1] = 1 + (int)src_step * 3;
+    pixel[2] = 2 + (int)src_step * 2;
+    pixel[3] = 3 + (int)src_step * 1;
+    pixel[4] = 3 + (int)src_step * 0;
+    pixel[5] = 3 + (int)src_step * -1;
+    pixel[6] = 2 + (int)src_step * -2;
+    pixel[7] = 1 + (int)src_step * -3;
+    pixel[8] = 0 + (int)src_step * -3;
+    pixel[9] = -1 + (int)src_step * -3;
+    pixel[10] = -2 + (int)src_step * -2;
+    pixel[11] = -3 + (int)src_step * -1;
+    pixel[12] = -3 + (int)src_step * 0;
+    pixel[13] = -3 + (int)src_step * 1;
+    pixel[14] = -2 + (int)src_step * 2;
+    pixel[15] = -1 + (int)src_step * 3;
+    for (k = 16; k < N; k++)
+    {
+        pixel[k] = pixel[k - 16];
+    }
 
     std::vector<uchar> _buf((width+16)*3*(sizeof(ptrdiff_t) + sizeof(uchar)) + 128);
     uchar* buf[3];
@@ -214,7 +181,7 @@ inline int fast_16(const uchar* src_data, size_t src_step,
                         {
                             cornerpos[ncorners++] = j + k;
                             if(nonmax_suppression) {
-                                curr[j + k] = (uchar)cornerScore(ptr + k, v_offset, (int64_t)src_step);
+                                curr[j + k] = (uchar)cornerScore(ptr + k, pixel);
                             }
                         }
                     }
