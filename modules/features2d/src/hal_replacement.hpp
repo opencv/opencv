@@ -121,6 +121,7 @@ inline int hal_ni_FASTv2(const uchar* src_data, size_t src_step, int width, int 
 
 //! @cond IGNORED
 #define cv_hal_FAST hal_ni_FAST
+#define cv_hal_FASTv2 hal_ni_FASTv2
 //! @endcond
 
 //! @}
