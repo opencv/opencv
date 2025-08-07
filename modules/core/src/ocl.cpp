@@ -3500,7 +3500,7 @@ struct Kernel::Impl
 
     void addUMat(const UMat& m, bool dst)
     {
-        CV_Assert(nu < MAX_ARRS && m.u && m.u->urefcount > 0);
+        CV_Assert(nu < MAX_ARRS && m.u);
         u[nu] = m.u;
         CV_XADD(&m.u->urefcount, 1);
         nu++;
@@ -5670,9 +5670,6 @@ public:
         if(!u)
             return;
 
-        CV_Assert(u->urefcount == 0);
-        CV_Assert(u->refcount == 0 && "UMat deallocation error: some derived Mat is still alive");
-
         CV_Assert(u->handle != 0);
         CV_Assert(u->mapcount == 0);
 
@@ -6602,17 +6599,16 @@ public:
 
     void flushCleanupQueue() const
     {
-        if (!cleanupQueue.empty())
+        std::deque<UMatData*> q;
+
         {
-            std::deque<UMatData*> q;
-            {
-                cv::AutoLock lock(cleanupQueueMutex);
-                q.swap(cleanupQueue);
-            }
-            for (std::deque<UMatData*>::const_iterator i = q.begin(); i != q.end(); ++i)
-            {
-                deallocate_(*i);
-            }
+            cv::AutoLock lock(cleanupQueueMutex);
+            q.swap(cleanupQueue);
+        }
+
+        for (std::deque<UMatData*>::const_iterator i = q.begin(); i != q.end(); ++i)
+        {
+            deallocate_(*i);
         }
     }
     void addToCleanupQueue(UMatData* u) const
