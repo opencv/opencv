@@ -537,10 +537,7 @@ int cv::cuda::DeviceInfo::maxTexture1D() const
 #ifndef HAVE_CUDA
     throw_no_cuda();
 #else
-    size_t maxWidthInElements;
-    cudaChannelFormatDesc fmtDesc = cudaCreateChannelDesc<float4>();
-    cudaDeviceGetTexture1DLinearMaxWidth(&maxWidthInElements, &fmtDesc, device_id_);
-    return maxWidthInElements;
+    return deviceProps().get(device_id_)->maxTexture1D;
 #endif
 }
 
@@ -563,7 +560,14 @@ int cv::cuda::DeviceInfo::maxTexture1DLinear() const
 #ifndef HAVE_CUDA
     throw_no_cuda();
 #else
-    return deviceProps().get(device_id_)->maxTexture1DLinear;
+    #if CUDA_VERSION >= 13000
+        size_t maxWidthInElements;
+        cudaChannelFormatDesc fmtDesc = cudaCreateChannelDesc<float4>();
+        cudaDeviceGetTexture1DLinearMaxWidth(&maxWidthInElements, &fmtDesc, device_id_);
+        return maxWidthInElements;
+    #else
+        return deviceProps().get(device_id_)->maxTexture1DLinear;
+    #endif
 #endif
 }
 
@@ -948,7 +952,7 @@ void cv::cuda::printCudaDeviceInfo(int device)
         cudaError_t clockRateErr = cudaDeviceGetAttribute(&clockRate, cudaDevAttrClockRate, dev);
         if (clockRateErr == cudaSuccess)
         {
-            printf("  GPU Clock Speed:                               %.2f GHz\n", prop.clockRate * 1e-6f);
+            printf("  GPU Clock Speed:                               %.2f GHz\n", clockRate * 1e-6f);
         }
 
         printf("  Max Texture Dimension Size (x,y,z)             1D=(%d), 2D=(%d,%d), 3D=(%d,%d,%d)\n",
