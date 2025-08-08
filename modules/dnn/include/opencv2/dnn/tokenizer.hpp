@@ -21,6 +21,7 @@ public:
                    std::string model_name = "");
 
     CV_WRAP static Tokenizer from_pretrained(const std::string& name, const std::string& pretrained_model_path); 
+    CV_WRAP static Tokenizer load(const std::string& model_dir); 
     CV_EXPORTS static Tokenizer train_bpe_from_corpus(const std::string& corpus,
                                    int vocab_sz,
                                    const std::string& pattern);

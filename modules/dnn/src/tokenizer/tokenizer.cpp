@@ -81,7 +81,7 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
     const std::string cfg_path = model_dir + "config.json";
     cv::FileStorage cfg(cfg_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!cfg.isOpened()) 
-        throw std::runtime_error("Could not open config.json at: " + cfg_path);
+        CV_Error(cv::Error::StsError, "Could not open config.json at: " + cfg_path);
 
     std::string model_type;
     cfg["model_type"] >> model_type;
@@ -97,7 +97,7 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
             getEncodingForCl100k_baseFromJSON_FS("cl100k_base", tok_json)
         );
     } else {
-        throw std::runtime_error("Unsupported model_type in config.json: " + model_type);
+        CV_Error(cv::Error::StsError, "Unsupported model_type in config.json: " + model_type);
     }
     return Tokenizer(std::move(enc), model_type);
 }
