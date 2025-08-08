@@ -4,28 +4,10 @@
 
 namespace cv { namespace dnn { namespace tokenizer {
 
-Tokenizer::Tokenizer() : enc_(nullptr), tokenizer_name("") {}
+Tokenizer::Tokenizer() : enc_(nullptr) {}
 
-Tokenizer::Tokenizer(std::shared_ptr<Encoding> e,
-                     std::string model_name)
-    : enc_(std::move(e)), tokenizer_name(std::move(model_name)) {
-}
-
-Tokenizer Tokenizer::train_bpe_from_corpus(const std::string& corpus,
-                                   int vocab_sz,
-                                   const std::string& pattern) {
-    auto enc = std::make_shared<Encoding>(corpus, vocab_sz, pattern);
-    return Tokenizer(std::move(enc));
-}
-
-Tokenizer Tokenizer::train_bpe_from_corpus(const std::vector<std::string>& corpus,
-                                   int vocab_sz,
-                                   const std::string& pattern,
-                                   int min_freq, 
-                                   int max_token_length,
-                                    bool verbose){
-    auto enc = std::make_shared<Encoding>(corpus, vocab_sz, pattern, min_freq, max_token_length, verbose);
-    return Tokenizer(std::move(enc));
+Tokenizer::Tokenizer(std::shared_ptr<Encoding> e)
+    : enc_(std::move(e)) {
 }
 
 std::vector<int> Tokenizer::encode(const std::string& text,
@@ -44,39 +26,11 @@ std::vector<int> Tokenizer::encode(const std::string& text,
     return std::vector<int>(tok.begin(), tok.end());
 };
 
-std::vector<uint32_t> Tokenizer::encodeOrdinary(const std::string& text) const {
-    return enc_->encodeOrdinary(text); 
-}
-
-uint32_t Tokenizer::encodeSingleToken(const std::vector<std::uint8_t>& bytes) const { 
-    return enc_->encodeSingleToken(bytes); 
-}
-
 std::string Tokenizer::decode(const std::vector<int>& tokens) { 
         std::vector<uint32_t> tokens32(tokens.begin(), tokens.end());
         return enc_->decode(tokens32); 
 };
 
-std::vector<std::uint8_t> Tokenizer::decodeBytes(const std::vector<uint32_t>& tokens) const { 
-    return enc_->decodeBytes(tokens); 
-} 
-
-std::vector<std::uint8_t> Tokenizer::decodeSingleTokenBytes(uint32_t token) const { 
-    return enc_->decodeSingleTokenBytes(token); 
-}
-
-Tokenizer Tokenizer::from_pretrained(const std::string& name, const std::string& pretrained_model_path) {
-    // We most load files json into FileStorge
-    std::shared_ptr<Encoding> enc;
-    if (name == "gpt2") {
-        enc = std::make_shared<Encoding>(GPT2TokenizerFast::from_pretrained(pretrained_model_path).encoding());
-    } else if (name == "cl100k_base") {
-      enc = std::make_shared<Encoding>(getEncodingForCl100k_baseFromJSON_FS(name, pretrained_model_path));  
-    } else {
-        throw std::runtime_error("Unknown model name: " + name);
-    }
-    return Tokenizer(std::move(enc), name);
-}
 Tokenizer Tokenizer::load(const std::string& model_dir) {
     const std::string cfg_path = model_dir + "config.json";
     cv::FileStorage cfg(cfg_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
@@ -99,7 +53,7 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
     } else {
         CV_Error(cv::Error::StsError, "Unsupported model_type in config.json: " + model_type);
     }
-    return Tokenizer(std::move(enc), model_type);
+    return Tokenizer(std::move(enc));
 }
 
 }}}

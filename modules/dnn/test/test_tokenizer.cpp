@@ -31,9 +31,8 @@ static std::string _tf_gpt4(tstring filename) {
 }
 
 TEST(Tokenizer_BPE, Encoding_GPT4) {
-    std::string cl100k_base = _tf_gpt4("cl100k_base.tiktoken");
-    std::string tokenizer_json = _tf_gpt4("tokenizer.json");
-    Tokenizer tok = Tokenizer::from_pretrained("cl100k_base", tokenizer_json);
+    std::string gpt4_dir = _tf_gpt4("");
+    Tokenizer tok = Tokenizer::load(gpt4_dir);
 
     std::vector<int> tokens = tok.encode("hello world");
     std::vector<int> expected = {15339, 1917};
@@ -47,8 +46,8 @@ TEST(Tokenizer_BPE, Encoding_GPT4) {
 
 TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     // std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-    std::string tokenizer_json = _tf_gpt2("tokenizer.json");
-    Tokenizer tok = Tokenizer::from_pretrained("gpt2", tokenizer_json);
+    std::string gpt2_dir = _tf_gpt2("");
+    Tokenizer tok = Tokenizer::load(gpt2_dir);
     auto ids = tok.encode("hello world");
     for (auto id : ids) std::cout << id << " ";
     auto txt = tok.decode(ids);
