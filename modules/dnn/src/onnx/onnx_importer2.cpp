@@ -1187,32 +1187,36 @@ void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx
 
 void ONNXImporter2::parseClip(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "ReLU6";
+    layerParams.type = "Clip";
     float min_value = -FLT_MAX, max_value = FLT_MAX;
     int input_size = node_proto.input_size();
     CV_Check(input_size, 1 <= input_size && input_size <= 3, "");
 
     if (input_size >= 2 && !node_proto.input(1).empty())
     {
-        Mat m;
-        CV_Assert(net.isConstArg(node_inputs[1]));
-        net.argTensor(node_inputs[1]).convertTo(m, CV_32F);
-        CV_Assert(m.total() == 1);
-        min_value = m.at<float>(0);
+        if (net.isConstArg(node_inputs[1]))
+        {
+            Mat m = net.argTensor(node_inputs[1]);
+            m.convertTo(m, CV_32F);
+            CV_Assert(m.total() == 1);
+            min_value = m.at<float>(0);
+            layerParams.set("min", min_value);
+        }
     }
 
     if (input_size == 3 && !node_proto.input(2).empty())
     {
-        Mat m;
-        CV_Assert(net.isConstArg(node_inputs[2]));
-        net.argTensor(node_inputs[2]).convertTo(m, CV_32F);
-        CV_Assert(m.total() == 1);
-        max_value = m.at<float>(0);
+        if (net.isConstArg(node_inputs[2]))
+        {
+            Mat m = net.argTensor(node_inputs[2]);
+            m.convertTo(m, CV_32F);
+            CV_Assert(m.total() == 1);
+            max_value = m.at<float>(0);
+            layerParams.set("max", max_value);
+        }
     }
 
-    layerParams.set("min_value", layerParams.get<float>("min", min_value));
-    layerParams.set("max_value", layerParams.get<float>("max", max_value));
-    addLayer(layerParams, node_proto, 1);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
