@@ -421,17 +421,27 @@ public:
         char * beg = ptr + 1;
         std::string key_name;
         do {
+            // if (*ptr == '\\') { // skip the next character if current is back slash
+            //     ++ptr;
+            //     CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            //     key_name += *ptr;
+            //     ++ptr;
+            //     CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            // } else {
+            //     ++ptr;
+            //     CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
+            //     if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
+            // }
             if (*ptr == '\\') { // skip the next character if current is back slash
                 ++ptr;
                 CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
                 key_name += *ptr;
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-            } else {
-                ++ptr;
-                CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
-                if (*ptr != '\\' && *ptr != '"') key_name += *ptr;
+            } else if (*ptr != '"') {
+                // normal byte: append current, do NOT skip ahead first
+                key_name += *ptr;
             }
+            ++ptr;
+            CV_PERSISTENCE_CHECK_END_OF_BUFFER_BUG_CPP();
         } while( cv_isprint(*ptr) && *ptr != '"' );
 
         if( *ptr != '"' )
