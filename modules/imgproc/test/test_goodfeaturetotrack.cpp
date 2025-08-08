@@ -521,6 +521,29 @@ int CV_GoodFeatureToTTest::validate_test_results( int test_case_idx )
 
 TEST(Imgproc_GoodFeatureToT, accuracy) { CV_GoodFeatureToTTest test; test.safe_run(); }
 
+TEST(Imgproc_GoodFeatureToT, mask)
+{
+    Mat gray = imread(cvtest::findDataFile("shared/baboon.png"), IMREAD_GRAYSCALE);
+    ASSERT_FALSE(gray.empty());
+
+    cv::Rect roi(gray.cols/4, gray.rows/4, gray.cols/2, gray.rows/2);
+    Mat mask = Mat::zeros(gray.size(), CV_8UC1);
+    mask(roi).setTo(255);
+
+    Mat mask_bool = Mat::zeros(gray.size(), CV_BoolC1);
+    mask_bool(roi).setTo(255);
+    Mat gray_roi = gray(roi);
+
+    Mat corners_mask, corners_bool, corners_ref;
+    vector<float> ref_quality;
+
+    test_goodFeaturesToTrack(gray, corners_ref, 100, 0.3, 3, mask, ref_quality, 3, 3, false, 0.04);
+    cv::goodFeaturesToTrack(gray, corners_mask, 100, 0.3, 3, mask);
+    cv::goodFeaturesToTrack(gray, corners_bool, 100, 0.3, 3, mask_bool);
+
+    EXPECT_MAT_NEAR(corners_mask, corners_ref.t(), 0.0);
+    EXPECT_MAT_NEAR(corners_mask, corners_bool, 0.0);
+}
 
 }} // namespace
 /* End of file. */
