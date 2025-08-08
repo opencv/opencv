@@ -270,7 +270,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             {
                 float resizeFactor = std::max(size.width / (float)imgSize.width,
                                               size.height / (float)imgSize.height);
-                resize(images[i], images[i], Size(), resizeFactor, resizeFactor, INTER_LINEAR_EXACT);
+                resize(images[i], images[i], Size(), resizeFactor, resizeFactor, INTER_LINEAR);
                 Rect crop(Point(0.5 * (images[i].cols - size.width),
                                 0.5 * (images[i].rows - size.height)),
                           size);
@@ -282,7 +282,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
                                               size.height / (float)imgSize.height);
                 int rh = int(imgSize.height * resizeFactor);
                 int rw = int(imgSize.width * resizeFactor);
-                resize(images[i], images[i], Size(rw, rh), INTER_LINEAR_EXACT);
+                resize(images[i], images[i], Size(rw, rh), INTER_LINEAR);
 
                 int top = (size.height - rh)/2;
                 int bottom = size.height - top - rh;
@@ -292,7 +292,7 @@ void blobFromImagesWithParamsImpl(InputArrayOfArrays images_, Tmat& blob_, const
             }
             else
             {
-                resize(images[i], images[i], size, 0, 0, INTER_LINEAR_EXACT);
+                resize(images[i], images[i], size, 0, 0, INTER_LINEAR);
             }
         }
     }
