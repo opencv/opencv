@@ -165,12 +165,6 @@ std::string CoreBPE::makeSpecialPattern(const std::unordered_map<std::string, Ra
     return pat;
 }
 
-DecoderKeyError::DecoderKeyError(Rank t)
-    : std::runtime_error("Invalid token for decoding: " + std::to_string(t)), token_(t) {}
-
-DecodeError::DecodeError(std::string msg) 
-    : std::runtime_error("Could not deocde tokens: " + std::move(msg)) {}
-
 CoreBPE::CoreBPE()
     : encoder_(),
       specialEncoder_(),
@@ -241,7 +235,7 @@ std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const Rank token) const {
     if (it_spec != specialDecoder_.end()) {
         return it_spec->second;
     } 
-    throw DecodeError(std::to_string(token));
+    throw std::runtime_error("Error in decode single token");
 }
 
 std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
@@ -252,7 +246,6 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
     std::vector<Rank> tokens;
     for (auto& subUtf8 : splits) {
         std::cout << "[" << subUtf8 << "]" << std::endl; 
-        // ByteVec piece = textToBytes(subUtf8);
         ByteVec piece(subUtf8.begin(), subUtf8.end());
         auto it = encoder_.find(piece);
         if (it != encoder_.end()) {
@@ -329,7 +322,6 @@ CoreBPE::encode(const std::string& text,
 
             for (auto& subUtf8 : splits) {
                 ByteVec piece(subUtf8.begin(), subUtf8.end());
-                // ByteVec piece = textToBytes(subUtf8);
                 auto it = encoder_.find(piece);
                 if (it != encoder_.end()) {
                     last_piece_token_len = 1;
@@ -373,136 +365,5 @@ Rank CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
         throw std::runtime_error("Failed to encode single token: not found in encoder or specialEncoder");
     }
 }
-
-std::pair<std::vector<Rank>, std::size_t> 
-CoreBPE::increaseLastPieceTokenLen(std::vector<Rank> tokens,
-                                   std::size_t lastPieceTokenLen) const {
-    // check if a token's byte sequence is all whitespace
-    auto tokenIsAllSpace = [&](Rank token) {
-        auto it = decoder_.find(token);
-        if (it!=decoder_.end()) {
-            const ByteVec& bytes = it->second;
-            return std::all_of(bytes.rbegin(), bytes.rend(), 
-                                [](uint8_t b) {
-                                    return b == ' ' || b == '\n' || b == '\t'; 
-                                });
-                                
-        }
-        return false;
-    };
-
-    if (lastPieceTokenLen > 0 && tokenIsAllSpace(tokens[tokens.size() - lastPieceTokenLen])) {
-        // extend to include any preceding all-space tokens 
-        while (lastPieceTokenLen < tokens.size() && 
-                tokenIsAllSpace(tokens[tokens.size() - lastPieceTokenLen - 1])) {
-            ++lastPieceTokenLen;
-        }
-    }
-
-    // sanity check: cannot exceed token count
-    assert(lastPieceTokenLen <= tokens.size());
-
-    return { std::move(tokens), lastPieceTokenLen};
-}
-
-
-std::pair<std::vector<Rank>, std::set<std::vector<Rank>>> 
-CoreBPE::encodeUnstableNative(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const {
-    // encoding + unstable length 
-    auto [tokens, lastPieceTokenLen] = encode(text, allowedSpecial);
-    // if the last piece was a special token (no unstable bytes)
-    if (lastPieceTokenLen == 0) {
-        return { tokens, {} };
-    }
-
-    // extend unstable region 
-    std::tie(tokens, lastPieceTokenLen) = increaseLastPieceTokenLen(tokens, lastPieceTokenLen);
-
-    // Decode unstable byte slice
-    std::vector<uint8_t> unstableBytes;
-    if (auto opt = decodeBytes(
-            std::vector<Rank>(tokens.end() - lastPieceTokenLen, tokens.end()))) {
-        unstableBytes = *opt;
-    } else {
-        unstableBytes.clear();
-    }
-
-    // remove unstable tokens from end
-    tokens.resize(tokens.size() - lastPieceTokenLen);
-
-    std::set<std::vector<Rank>> completions;
-    if (unstableBytes.empty()) {
-        return { tokens, completions };
-    }
-
-    // Single token completions starting with unstable bytes
-    auto cmp = [&](const ByteVec& b) {
-        return b < unstableBytes;
-    };
-    auto it = std::partition_point(
-        sortedTokenBytes_.begin(), sortedTokenBytes_.end(), cmp
-    );
-    for (; it!=sortedTokenBytes_.end() && 
-            std::equal(unstableBytes.begin(), unstableBytes.end(), it->begin()); ++it) {
-        // map bytes back to token id
-        Rank tok = encoder_.at(*it);
-        completions.insert({ tok });
-    }
-
-    // Brute-Force splitting unstable bytes
-    for (std::size_t i=1; i < unstableBytes.size(); ++i) {
-        ByteVec prefix(unstableBytes.begin(), unstableBytes.begin() + i);
-        ByteVec suffix(unstableBytes.begin() + i, unstableBytes.end());
-        // find suffix matches
-        auto cmp2 = [&](const ByteVec& b) {return b < suffix; };
-        auto it2 = std::partition_point(
-            sortedTokenBytes_.begin(), sortedTokenBytes_.end(), cmp2);
-        for (; it2!=sortedTokenBytes_.end() &&
-                std::equal(suffix.begin(), suffix.end(), it2->begin()); ++it2) {
-            // combine prefix + matching token bytes 
-            ByteVec candidate = prefix;
-            candidate.insert(candidate.end(), it2->begin(), it2->end());
-            // try to reinterpret as UTF-8
-            std::vector<Rank> encoded;
-            try {
-                std::string s(reinterpret_cast<char*>(candidate.data()), candidate.size());
-                encoded = encodeOrdinary(s);
-            } catch(...) {
-                // fallback to byte-pair
-                encoded = bytePairEncode(candidate, encoder_);
-            }
-            // truncate encoded to unstable length 
-            std::vector<Rank> seq;
-            std::size_t lenAcc = 0;
-            for (Rank id : encoded) {
-                seq.push_back(id);
-                lenAcc += decoder_.at(id).size();
-                if (lenAcc >= unstableBytes.size()) break;
-            }
-            completions.insert(seq);
-
-        }
-    }
-
-    // whitespace regex fix for last code point 
-    if (unstableBytes.size() > 1) {
-        // TODO: Implement the decodeLastUtf8 [DONE] -> [TESTING PROCESS]
-        auto [last_char, byte_len] = decodeLastUtf8(unstableBytes);
-        if (unstableBytes.size() > byte_len && std::isspace(static_cast<unsigned char>(*last_char))) {
-            // re-encode in two parts
-            ByteVec part1(unstableBytes.begin(), unstableBytes.end() - byte_len);
-            ByteVec part2(unstableBytes.end() - byte_len, unstableBytes.end());
-            auto r1 = bytePairEncode(part1, encoder_);
-            auto r2 = bytePairEncode(part2, encoder_);
-            std::vector<Rank> merged;
-            merged.insert(merged.end(), r1.begin(), r1.end());
-            merged.insert(merged.end(), r2.begin(), r2.end());
-            completions.insert(merged);
-        }
-    }
-
-    return { tokens, completions };
-}   
-
 
 }}}

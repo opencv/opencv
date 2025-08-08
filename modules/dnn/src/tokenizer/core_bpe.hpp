@@ -51,18 +51,6 @@ CV_EXPORTS std::vector<ByteVec> bytePairSplit(const ByteVec& piece,
 CV_EXPORTS std::vector<ByteVec> bytePairSplit(std::string& s,
                                    const ByteVecRankMap& ranks);
 
-class DecoderKeyError : public std::runtime_error {
-public: 
-    explicit DecoderKeyError(Rank token);
-    Rank token() const noexcept { return token_; }
-private:
-    Rank token_;
-};
-
-class DecodeError : public std::runtime_error {
-public: 
-    explicit DecodeError(std::string message);
-};
 
 class CV_EXPORTS CoreBPE {
 public:
@@ -91,16 +79,11 @@ public:
     std::vector<Rank> encodeOrdinary(const std::string& text) const;
     std::pair<std::vector<Rank>, std::size_t> encode(const std::string& text,
                                                      const std::unordered_set<std::string>& allowedSpecial) const;
-    std::vector<Rank> enocodeWithSpecialTokens(const std::string& text) const;
-    std::pair<std::vector<Rank>, std::set<std::vector<Rank>>> 
-    encodeUnstableNative(const std::string& text, const std::unordered_set<std::string>& allowedSpecial) const;
     Rank encodeSingleToken(std::vector<uint8_t>& piece) const;
     // Decode
     std::optional<ByteVec> decodeBytes(const std::vector<Rank>& tokens) const;
     std::vector<uint8_t> decodeSingleTokenBytes(const Rank token) const;
-    // Metadata
-    std::set<std::string> specialTokens() const;
-
+    
 private:
     ByteVecRankMap encoder_;
     std::unordered_map<std::string, Rank> specialEncoder_;
@@ -112,8 +95,6 @@ private:
     std::vector<ByteVec> sortedTokenBytes_;
 
     std::string makeSpecialPattern(const std::unordered_map<std::string, Rank>& special);
-    std::pair<std::vector<Rank>, std::size_t> increaseLastPieceTokenLen(std::vector<Rank> token,
-                                                                        std::size_t lastPieceTokenLen) const;
 };
 
 }}}
