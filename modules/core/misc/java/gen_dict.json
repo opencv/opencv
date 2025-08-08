@@ -615,16 +615,16 @@
             "jn_args": [
                 [
                     "double",
-                    ".val[0]"
+                    "[0]"
                 ],
                 [
                     "double",
-                    ".val[1]"
+                    "[1]"
                 ]
             ],
             "jn_type": "double[]",
             "jni_type": "jdoubleArray",
-            "jni_var": "Vec2d %(n)s(%(n)s_val0, %(n)s_val1)",
+            "jni_var": "Vec2d %(n)s(%(n)s0, %(n)s1)",
             "suffix": "DD"
         },
         "Vec3d": {
@@ -632,21 +632,46 @@
             "jn_args": [
                 [
                     "double",
-                    ".val[0]"
+                    "[0]"
                 ],
                 [
                     "double",
-                    ".val[1]"
+                    "[1]"
                 ],
                 [
                     "double",
-                    ".val[2]"
+                    "[2]"
                 ]
             ],
             "jn_type": "double[]",
             "jni_type": "jdoubleArray",
-            "jni_var": "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)",
+            "jni_var": "Vec3d %(n)s(%(n)s0, %(n)s1, %(n)s2)",
             "suffix": "DDD"
+        },
+        "Vec4i": {
+            "j_type": "int[]",
+            "jn_args": [
+                [
+                    "int",
+                    "[0]"
+                ],
+                [
+                    "int",
+                    "[1]"
+                ],
+                [
+                    "int",
+                    "[2]"
+                ],
+                [
+                    "int",
+                    "[3]"
+                ]
+            ],
+            "jn_type": "int[]",
+            "jni_type": "jintArray",
+            "jni_var": "Vec4i %(n)s(%(n)s0, %(n)s1, %(n)s2, %(n)s3)",
+            "suffix": "IIII"
         },
         "c_string": {
             "j_type": "String",

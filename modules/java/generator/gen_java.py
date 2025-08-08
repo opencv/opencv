@@ -743,6 +743,13 @@ class JavaWrapperGenerator(object):
                      "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; " +
                      "env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);") %
                     { "cnt" : len(fields), "args" : ", ".join(["(jdouble)_retval_" + f[1] for f in fields]) } )
+            elif type_dict[fi.ctype]["jni_type"] == "jintArray":
+                fields = type_dict[fi.ctype]["jn_args"]
+                c_epilogue.append(
+                    ("jintArray _ia_retval_ = env->NewIntArray(%(cnt)i);  " +
+                    "jint _tmp_retval_[%(cnt)i] = {%(args)s}; " +
+                    "env->SetIntArrayRegion(_ia_retval_, 0, %(cnt)i, _tmp_retval_);") %
+                    { "cnt" : len(fields), "args" : ", ".join(["(jint)_retval_" + f[1] for f in fields]) } )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -1002,6 +1009,8 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
+            elif type_dict[fi.ctype]["jni_type"] == "jintArray":
+                ret = "return _ia_retval_;"
             elif "jni_var" in type_dict[ret_type]:
                 c_epilogue.append(type_dict[ret_type]["jni_var"] % {"n" : '_retval_'})
                 ret = f"return {type_dict[ret_type]['jni_name'] % {'n' : '_retval_'}};"
