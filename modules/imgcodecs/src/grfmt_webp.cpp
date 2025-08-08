@@ -338,6 +338,7 @@ WebPEncoder::WebPEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_WEBP_QUALITY};
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -587,20 +588,6 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     WebPDataClear(&webp_data);
 
     return status;
-}
-
-bool WebPEncoder::isValidParam(const int key, const int value) const
-{
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_WEBP_QUALITY:
-            ret = (1<=value); // Above 100 means lossless.
-            break;
-        default:
-            break;
-    }
-    return ret;
 }
 
 }

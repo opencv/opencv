@@ -75,7 +75,6 @@ public:
     bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
     ImageEncoder newEncoder() const CV_OVERRIDE;
     bool isFormatSupported( int depth ) const CV_OVERRIDE;
-    bool isValidParam(const int key, const int value) const CV_OVERRIDE;
 protected:
 
 };

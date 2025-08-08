@@ -657,6 +657,7 @@ PAMEncoder::PAMEncoder()
 {
     m_description = "Portable arbitrary format (*.pam)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_PAM_TUPLETYPE};
 }
 
 
@@ -748,34 +749,6 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
 
     strm.close();
     return true;
-}
-
-bool PAMEncoder::isValidParam(const int key, const int value) const
-{
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_PAM_TUPLETYPE:
-            {
-                switch(value)
-                {
-                    case IMWRITE_PAM_FORMAT_NULL:
-                    case IMWRITE_PAM_FORMAT_BLACKANDWHITE:
-                    case IMWRITE_PAM_FORMAT_GRAYSCALE:
-                    case IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA:
-                    case IMWRITE_PAM_FORMAT_RGB:
-                    case IMWRITE_PAM_FORMAT_RGB_ALPHA:
-                        ret = true;
-                        break;
-                    default:
-                        break;
-                }
-            }
-            break;
-        default:
-            break;
-    }
-    return ret;
 }
 
 }

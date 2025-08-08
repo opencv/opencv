@@ -319,6 +319,7 @@ AvifEncoder::AvifEncoder() {
   m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
   m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
   encoder_ = avifEncoderCreate();
+  m_supported_encode_key = { IMWRITE_AVIF_QUALITY, IMWRITE_AVIF_DEPTH, IMWRITE_AVIF_SPEED };
 }
 
 AvifEncoder::~AvifEncoder() {
@@ -402,26 +403,6 @@ bool AvifEncoder::writeanimation(const Animation& animation,
   }
 
   return (output->size > 0);
-}
-
-bool AvifEncoder::isValidParam(const int key, const int value) const
-{
-  bool ret = false;
-  switch(key)
-  {
-    case IMWRITE_AVIF_QUALITY:
-      ret = (0 <= value) && (value <=100);
-      break;
-    case IMWRITE_AVIF_DEPTH:
-      ret = (value == 8) || (value == 10) || (value == 12);
-      break;
-    case IMWRITE_AVIF_SPEED:
-      ret = (0 <= value) && (value <= 10);
-      break;
-    default:
-      break;
-  }
-  return ret;
 }
 
 ImageEncoder AvifEncoder::newEncoder() const { return makePtr<AvifEncoder>(); }

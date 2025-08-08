@@ -493,6 +493,7 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
 Jpeg2KEncoder::Jpeg2KEncoder()
 {
     m_description = "JPEG-2000 files (*.jp2)";
+    m_supported_encode_key = {IMWRITE_JPEG2000_COMPRESSION_X1000};
 }
 
 
@@ -634,20 +635,6 @@ bool  Jpeg2KEncoder::writeComponent16u( void *__img, const Mat& _img )
     jas_matrix_destroy( row );
 
     return true;
-}
-
-bool Jpeg2KEncoder::isValidParam(const int key, const int value) const
-{
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_JPEG2000_COMPRESSION_X1000:
-            ret = (0 <= value) && (value <= 1000);
-            break;
-        default:
-            break;
-    }
-    return ret;
 }
 
 }

@@ -389,6 +389,7 @@ PxMEncoder::PxMEncoder(PxMMode mode) :
         CV_Error(Error::StsInternal, "");
     }
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_PXM_BINARY};
 }
 
 PxMEncoder::~PxMEncoder()
@@ -616,20 +617,6 @@ bool PxMEncoder::write(const Mat& img, const std::vector<int>& params)
 
     strm.close();
     return true;
-}
-
-bool PxMEncoder::isValidParam(const int key, const int value) const
-{
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_PXM_BINARY:
-            ret = (value == 0) || (value == 1);
-            break;
-        default:
-            break;
-    }
-    return ret;
 }
 
 }

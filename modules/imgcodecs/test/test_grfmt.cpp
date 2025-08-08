@@ -318,12 +318,12 @@ typedef testing::TestWithParam<string> Imgcodecs_invalid_key;
 TEST_P(Imgcodecs_invalid_key, encode_regression27557)
 {
     const string ext = GetParam();
-
-    Mat src(100, 100, CV_8UC3, Scalar(0, 255, 0));
+    const int matType = ((ext == ".pbm") || (ext == ".pgm"))? CV_8UC1 : CV_8UC3;
+    Mat src(100, 100, matType, Scalar(0, 255, 0));
     std::vector<uchar> buf;
     bool status = false;
     EXPECT_NO_THROW(status = imencode(ext, src, buf, { -1, -1 }));
-    EXPECT_FALSE(status);
+    EXPECT_TRUE(status);
 }
 
 TEST_P(Imgcodecs_invalid_key, write_regression27557)
@@ -331,11 +331,12 @@ TEST_P(Imgcodecs_invalid_key, write_regression27557)
     const string ext = GetParam();
     string fname = tempfile(ext.c_str());
 
-    Mat src(100, 100, CV_8UC3, Scalar(0, 255, 0));
+    const int matType = ((ext == ".pbm") || (ext == ".pgm"))? CV_8UC1 : CV_8UC3;
+    Mat src(100, 100, matType, Scalar(0, 255, 0));
     std::vector<uchar> buf;
     bool status = false;
     EXPECT_NO_THROW(status = imwrite(fname, src, { -1, -1 }));
-    EXPECT_FALSE(status);
+    EXPECT_TRUE(status);
     remove(fname.c_str());
 }
 

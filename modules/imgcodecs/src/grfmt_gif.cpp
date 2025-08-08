@@ -554,6 +554,8 @@ GifEncoder::GifEncoder() {
     colorNum = 256; // the number of colors in the color table, default 256
     dithering = 0; // the level dithering, default 0
     globalColorTableSize = 256, localColorTableSize = 0;
+
+    m_supported_encode_key = {IMWRITE_GIF_QUALITY, IMWRITE_GIF_DITHER, IMWRITE_GIF_TRANSPARENCY, IMWRITE_GIF_COLORTABLE};
 }
 
 GifEncoder::~GifEncoder() {
@@ -1221,27 +1223,6 @@ void GifEncoder::OctreeColorQuant::recurseReduce(const std::shared_ptr<OctreeNod
     }
     m_leafCount++;
     node -> isLeaf = true;
-}
-
-bool GifEncoder::isValidParam(const int key, const int value) const
-{
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_GIF_QUALITY:
-            ret = (1 <= value) && (value <= 8);
-            break;
-        case IMWRITE_GIF_DITHER:
-            ret = (-1 <= value) && (value <= 3);
-            break;
-        case IMWRITE_GIF_TRANSPARENCY:
-            ret = (0 <= value) && (value <= 255);
-            break;
-        case IMWRITE_GIF_COLORTABLE:
-            ret = (value == 0) || (value == 1);
-            break;
-    }
-    return ret;
 }
 
 } // namespace cv2

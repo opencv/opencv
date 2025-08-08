@@ -685,6 +685,7 @@ ImageDecoder Jpeg2KJ2KOpjDecoder::newDecoder() const
 Jpeg2KOpjEncoder::Jpeg2KOpjEncoder()
 {
     m_description = "JPEG-2000 files (*.jp2)";
+    m_supported_encode_key = {IMWRITE_JPEG2000_COMPRESSION_X1000};
 }
 
 ImageEncoder Jpeg2KOpjEncoder::newEncoder() const
@@ -806,20 +807,6 @@ bool Jpeg2KOpjEncoder::write(const Mat& img, const std::vector<int>& params)
     }
 
     return true;
-}
-
-bool Jpeg2KOpjEncoder::isValidParam(const int key, const int value) const
-{
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_JPEG2000_COMPRESSION_X1000:
-            ret = (0 <= value) && (value <= 1000);
-            break;
-        default:
-            break;
-    }
-    return ret;
 }
 
 

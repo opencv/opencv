@@ -139,6 +139,7 @@ ImageDecoder HdrDecoder::newDecoder() const
 HdrEncoder::HdrEncoder()
 {
     m_description = "Radiance HDR (*.hdr;*.pic)";
+    m_supported_encode_key = {IMWRITE_HDR_COMPRESSION};
 }
 
 HdrEncoder::~HdrEncoder()
@@ -196,19 +197,6 @@ ImageEncoder HdrEncoder::newEncoder() const
 
 bool HdrEncoder::isFormatSupported( int depth ) const {
     return depth != CV_64F;
-}
-
-bool HdrEncoder::isValidParam(const int key, const int value) const {
-    bool ret = false;
-    switch(key)
-    {
-        case IMWRITE_HDR_COMPRESSION:
-            ret = (value == IMWRITE_HDR_COMPRESSION_NONE) || (value == IMWRITE_HDR_COMPRESSION_RLE);
-            break;
-        default:
-            break;
-    }
-    return ret;
 }
 
 }
