@@ -71,11 +71,35 @@ Tokenizer Tokenizer::from_pretrained(const std::string& name, const std::string&
     if (name == "gpt2") {
         enc = std::make_shared<Encoding>(GPT2TokenizerFast::from_pretrained(pretrained_model_path).encoding());
     } else if (name == "cl100k_base") {
-      enc = std::make_shared<Encoding>(getEncodingForCl100k_base(name, pretrained_model_path));  
+      enc = std::make_shared<Encoding>(getEncodingForCl100k_baseFromJSON_FS(name, pretrained_model_path));  
     } else {
         throw std::runtime_error("Unknown model name: " + name);
     }
     return Tokenizer(std::move(enc), name);
+}
+Tokenizer Tokenizer::load(const std::string& model_dir) {
+    const std::string cfg_path = model_dir + "config.json";
+    cv::FileStorage cfg(cfg_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+    if (!cfg.isOpened()) 
+        throw std::runtime_error("Could not open config.json at: " + cfg_path);
+
+    std::string model_type;
+    cfg["model_type"] >> model_type;
+    const std::string tok_json = model_dir + "tokenizer.json";
+
+    std::shared_ptr<Encoding> enc;
+    if (model_type == "gpt2") {
+        enc = std::make_shared<Encoding>(
+            GPT2TokenizerFast::from_pretrained(tok_json).encoding()
+        );
+    } else if (model_type == "gpt4") {
+        enc = std::make_shared<Encoding>(
+            getEncodingForCl100k_baseFromJSON_FS("cl100k_base", tok_json)
+        );
+    } else {
+        throw std::runtime_error("Unsupported model_type in config.json: " + model_type);
+    }
+    return Tokenizer(std::move(enc), model_type);
 }
 
 }}}

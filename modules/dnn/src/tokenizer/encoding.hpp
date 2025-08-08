@@ -131,5 +131,9 @@ private:
 
 CV_EXPORTS Encoding getEncodingForCl100k_base(const std::string &name, const std::string& cl00k_case_file);
 
+CV_EXPORTS Encoding getEncodingForCl100k_baseFromJSON_FS(const std::string &name,
+                                                         const std::string &json_path);
+
+
 }}}
 
