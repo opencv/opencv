@@ -139,6 +139,7 @@ ImageDecoder HdrDecoder::newDecoder() const
 HdrEncoder::HdrEncoder()
 {
     m_description = "Radiance HDR (*.hdr;*.pic)";
+    m_supported_encode_key = {IMWRITE_HDR_COMPRESSION};
 }
 
 HdrEncoder::~HdrEncoder()

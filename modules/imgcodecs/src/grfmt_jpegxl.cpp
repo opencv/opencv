@@ -473,6 +473,7 @@ JpegXLEncoder::JpegXLEncoder()
 {
     m_description = "JPEG XL files (*.jxl)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_JPEGXL_QUALITY, IMWRITE_JPEGXL_EFFORT, IMWRITE_JPEGXL_DISTANCE, IMWRITE_JPEGXL_DECODING_SPEED};
 }
 
 JpegXLEncoder::~JpegXLEncoder()

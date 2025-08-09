@@ -338,6 +338,7 @@ WebPEncoder::WebPEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_WEBP_QUALITY};
 }
 
 WebPEncoder::~WebPEncoder() { }

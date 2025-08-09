@@ -741,6 +741,7 @@ ImageDecoder ExrDecoder::newDecoder() const
 ExrEncoder::ExrEncoder()
 {
     m_description = "OpenEXR Image files (*.exr)";
+    m_supported_encode_key = {IMWRITE_EXR_TYPE, IMWRITE_EXR_COMPRESSION, IMWRITE_EXR_DWA_COMPRESSION_LEVEL};
 }
 
 

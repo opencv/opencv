@@ -389,6 +389,7 @@ PxMEncoder::PxMEncoder(PxMMode mode) :
         CV_Error(Error::StsInternal, "");
     }
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_PXM_BINARY};
 }
 
 PxMEncoder::~PxMEncoder()

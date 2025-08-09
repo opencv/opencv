@@ -657,6 +657,7 @@ PAMEncoder::PAMEncoder()
 {
     m_description = "Portable arbitrary format (*.pam)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_PAM_TUPLETYPE};
 }
 
 

@@ -319,6 +319,7 @@ AvifEncoder::AvifEncoder() {
   m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
   m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
   encoder_ = avifEncoderCreate();
+  m_supported_encode_key = { IMWRITE_AVIF_QUALITY, IMWRITE_AVIF_DEPTH, IMWRITE_AVIF_SPEED };
 }
 
 AvifEncoder::~AvifEncoder() {

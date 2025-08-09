@@ -225,6 +225,13 @@ public:
     virtual bool isFormatSupported(int depth) const;
 
     /**
+     * @brief Validates if the encoder supports a specific key.
+     * @param key The key of the encode parameter.
+     * @return true if key is supported for this encoder, false otherwise.
+     */
+    virtual bool isValidEncodeKey(const int key) const;
+
+    /**
      * @brief Set the destination for encoding as a file.
      * @param filename The name of the file to which the image will be written.
      * @return true if the destination was successfully set, false otherwise.
@@ -290,6 +297,7 @@ protected:
     std::vector<uchar>* m_buf; ///< Pointer to the buffer for encoded data if using memory-based destination.
     bool m_buf_supported;    ///< Flag indicating whether buffer-based encoding is supported.
     String m_last_error;     ///< Stores the last error message encountered during encoding.
+    std::vector<int> m_supported_encode_key; ///< Supported encode key list
 };
 
 }

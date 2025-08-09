@@ -616,6 +616,7 @@ JpegEncoder::JpegEncoder()
     m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
     m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
     m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_JPEG_QUALITY, IMWRITE_JPEG_PROGRESSIVE, IMWRITE_JPEG_OPTIMIZE, IMWRITE_JPEG_RST_INTERVAL, IMWRITE_JPEG_LUMA_QUALITY, IMWRITE_JPEG_CHROMA_QUALITY, IMWRITE_JPEG_SAMPLING_FACTOR};
 }
 
 

@@ -554,6 +554,8 @@ GifEncoder::GifEncoder() {
     colorNum = 256; // the number of colors in the color table, default 256
     dithering = 0; // the level dithering, default 0
     globalColorTableSize = 256, localColorTableSize = 0;
+
+    m_supported_encode_key = {IMWRITE_GIF_QUALITY, IMWRITE_GIF_DITHER, IMWRITE_GIF_TRANSPARENCY, IMWRITE_GIF_COLORTABLE};
 }
 
 GifEncoder::~GifEncoder() {
