@@ -57,7 +57,7 @@ void LibcameraCapture::OpenCamera()
 {
 
     if (options_->verbose)
-        std::cerr << "Opening camera..." << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Opening camera...");
 
     if (getCameraManager()->cameras().size() == 0)
         throw std::runtime_error("no cameras available");
@@ -74,7 +74,7 @@ void LibcameraCapture::OpenCamera()
     camera_acquired_ = true;
 
     if (options_->verbose)
-        std::cerr << "Acquired camera " << cam_id << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Acquired camera " << cam_id);
 }
 
 
@@ -87,13 +87,13 @@ void LibcameraCapture::CloseCamera()
     camera_.reset();
 
     if (options_->verbose && !options_->help)
-        std::cerr << "Camera closed" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera closed");
 }
 
 void LibcameraCapture::ConfigureViewfinder()
 {
     if (options_->verbose)
-        std::cerr << "Configuring viewfinder..." << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Configuring viewfinder...");
 
     StreamRoles stream_roles = {StreamRole::Viewfinder};
     configuration_ = camera_->generateConfiguration(stream_roles);
@@ -114,13 +114,13 @@ void LibcameraCapture::ConfigureViewfinder()
     streams_["viewfinder"] = configuration_->at(0).stream();
 
     if (options_->verbose)
-        std::cerr << "Viewfinder setup complete" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Viewfinder setup complete");
 }
 
 void LibcameraCapture::Teardown()
 {
     if (options_->verbose && !options_->help)
-        std::cerr << "Tearing down requests, buffers and configuration" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Tearing down requests, buffers and configuration");
 
     for (auto &iter : mapped_buffers_)
     {
@@ -158,7 +158,7 @@ void LibcameraCapture::StartCamera()
         Rectangle crop(x, y, w, h);
         crop.translateBy(sensor_area.topLeft());
         if (options_->verbose)
-            std::cerr << "Using crop " << crop.toString() << std::endl;
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
 
@@ -214,7 +214,7 @@ void LibcameraCapture::StartCamera()
     }
 
     if (options_->verbose)
-        std::cerr << "Camera started!" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started!");
 }
 
 void LibcameraCapture::StopCamera()
@@ -224,7 +224,7 @@ void LibcameraCapture::StopCamera()
         std::lock_guard<std::mutex> lock(camera_stop_mutex_);
         if (camera_started_)
         {
-            std::cerr << "Camera tries to stop!!" << std::endl;
+            CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Camera tries to stop!");
             if (camera_->stop())
                 throw std::runtime_error("failed to stop camera");
 
@@ -253,7 +253,7 @@ void LibcameraCapture::StopCamera()
     controls_.clear(); // no need for mutex here
 
     if (options_->verbose && !options_->help)
-        std::cerr << "Camera stopped!" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera stopped!");
 }
 
 void LibcameraCapture::ApplyRoiSettings()
@@ -268,7 +268,7 @@ void LibcameraCapture::ApplyRoiSettings()
         Rectangle crop(x, y, w, h);
         crop.translateBy(sensor_area.topLeft());
         if (options_->verbose)
-            std::cerr << "Using crop " << crop.toString() << std::endl;
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
 }
@@ -404,13 +404,13 @@ void LibcameraCapture::setupCapture()
     if (validation == CameraConfiguration::Invalid)
         throw std::runtime_error("failed to valid stream configurations");
     else if (validation == CameraConfiguration::Adjusted)
-        std::cerr << "Stream configuration adjusted" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Stream configuration adjusted");
 
     if (camera_->configure(configuration_.get()) < 0)
         throw std::runtime_error("failed to configure streams");
 
     if (options_->verbose)
-        std::cerr << "Camera streams configured" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera streams configured");
 
     // Next allocate all the buffers we need, mmap them and store them on a free list.
 
@@ -443,7 +443,7 @@ void LibcameraCapture::setupCapture()
         }
     }
     if (options_->verbose)
-        std::cerr << "Buffers allocated and mapped" << std::endl;
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
 
     // The requests will be made when StartCamera() is called.
 }
@@ -461,7 +461,7 @@ void LibcameraCapture::makeRequests()
                 if (free_buffers[stream].empty())
                 {
                     if (options_->verbose)
-                        std::cerr << "Requests created" << std::endl;
+                        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Requests created");
                     return;
                 }
                 std::unique_ptr<Request> request = camera_->createRequest();
@@ -592,14 +592,14 @@ LibcameraCapture::~LibcameraCapture()
 {
     stopVideo();
     // delete app;
-    std::cerr << "End of ~LibcameraCapture() call" << std::endl;
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): End of ~LibcameraCapture() call");
 }
 
 bool LibcameraCapture::startVideo() // not resolved
 {
     if (camerastarted)
     {
-        std::cerr << "Camera already started";
+        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Camera already started");
         return false;
     }
     
@@ -611,7 +611,7 @@ bool LibcameraCapture::startVideo() // not resolved
     libcamera::Stream *stream = ViewfinderStream(&vw, &vh, &vstr);
     if (!stream)
     {
-        std::cerr << "Error getting viewfinder stream" << std::endl;
+        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error getting viewfinder stream");
         return false;
     }
     
@@ -653,7 +653,7 @@ bool LibcameraCapture::grabFrame()
     {
         if (!startVideo())
         {
-            std::cerr << "Failed to start camera" << std::endl;
+            CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Failed to start camera");
             return false;
         }
     }
@@ -687,7 +687,7 @@ bool LibcameraCapture::grabFrame()
         }
         else if (msg.type == LibcameraCapture::MsgType::Quit)
         {
-            std::cerr << "Quit message received" << std::endl;
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Quit message received");
             return false;
         }
     }
@@ -730,7 +730,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     libcamera::Stream *stream = ViewfinderStream(&vw, &vh, &vstr);
     if (!stream)
     {
-        std::cerr << "Error getting viewfinder stream" << std::endl;
+        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error getting viewfinder stream");
         return false;
     }
     
@@ -738,7 +738,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
     std::vector<libcamera::Span<uint8_t>> mem = Mmap(request->buffers[stream]);
     if (mem.empty())
     {
-        std::cerr << "Error getting memory mapped buffer" << std::endl;
+        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error getting memory mapped buffer");
         return false;
     }
     
@@ -822,7 +822,7 @@ double LibcameraCapture::getProperty(int propId) const
         // This is a placeholder. You should replace it with the actual FOURCC code.
         // return cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
         // return options->getFourCC();
-        std::cerr << "Warning: Not implemented yet" << std::endl;
+        CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Property FOURCC is not implemented yet");
         return 0;
     }
 
@@ -856,11 +856,11 @@ double LibcameraCapture::getProperty(int propId) const
     case cv::CAP_PROP_ROLL:
     case cv::CAP_PROP_IRIS:
         // Not implemented, return a default value or an error code
-        std::cerr << "Warning: Property " << propId << " is not supported." << std::endl;
+        CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Property " << propId << " is not supported.");
         return 0; // Or some other value indicating an error or not supported
 
     default:
-        std::cerr << "Warning: Unsupported property: " << propId << std::endl;
+        CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Unsupported property: " << propId);
         return 0;
     }
 }
@@ -1008,11 +1008,11 @@ bool LibcameraCapture::setProperty(int propId, double value)
         // These properties might need to trigger a re-configuration of the camera.
         // You can handle them here if you want to support changing resolution or framerate on-the-fly.
         // For now, we'll return false to indicate that these properties are not supported for dynamic changes.
-        std::cerr << "Warning: Property " << propId << " is not supported for dynamic changes." << std::endl;
+        CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Property " << propId << " is not supported for dynamic changes.");
         return false;
 
     default:
-        std::cerr << "Warning: Unsupported property: " << propId << std::endl;
+        CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Unsupported property: " << propId);
         return false;
     }
 

@@ -430,7 +430,7 @@ private:
         static std::shared_ptr<CameraManager> camera_manager_;
         if (!camera_manager_)
         {
-            std::cerr << "creating manager" << std::endl;
+            CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): creating manager");
             camera_manager_ = std::make_shared<CameraManager>();
             int ret = camera_manager_->start();
             if (ret)
