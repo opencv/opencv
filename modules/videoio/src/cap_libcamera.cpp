@@ -117,7 +117,10 @@ int CvCapture_libcamera_proxy::convertToRgb(Request *request, OutputArray &outIm
             fb = buffer;
         }
     }
-
+    if (!fb) {
+        CV_LOG_ERROR(NULL, "No FrameBuffer found for expected pixel format.");
+        return -EINVAL;
+    }
     int ret = mapFrameBuffer(fb);
     const FrameMetadata &metadata = fb->metadata();
     if (ret < 0 || !fb)
@@ -291,22 +294,29 @@ bool CvCapture_libcamera_proxy::grabFrame()
             return -1;
         }
 
-        // Update configuration
         CV_LOG_DEBUG(NULL, "Updating configuration.");
         StreamConfiguration &cfg = config_->at(0);
-        getLibcameraPixelFormat(pixFmt_);
-        cfg.size.width = width_;
+        cfg.size.width  = width_;
         cfg.size.height = height_;
+
+        pixFmtPtr_ = getLibcameraPixelFormat(pixFmt_);
+        if (pixFmtPtr_)
+        {
+            pixelFormat_ = *pixFmtPtr_;
+            cfg.pixelFormat = *pixFmtPtr_;
+        }
+        else
+            CV_LOG_INFO(NULL, "No pixel format set by user, using default.");
 
         // Validate config
         CameraConfiguration::Status status = config_->validate();
 
         if (status == CameraConfiguration::Invalid)
         {
-            CV_LOG_INFO(NULL, "Camera configuration is invalid!");
-            return -1;
+            CV_LOG_ERROR(NULL, "Camera configuration is invalid!");
+            return false;
         }
-        if (status == CameraConfiguration::Adjusted)
+        else if (status == CameraConfiguration::Adjusted)
         {
             CV_LOG_INFO(NULL, "Camera configuration was adjusted by libcamera!");
         }

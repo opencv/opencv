@@ -115,15 +115,14 @@ public:
         std::cout << "Closing the device" << std::endl;
     }
 
-    bool getLibcameraPixelFormat(int value = 0)
+    const libcamera::PixelFormat* getLibcameraPixelFormat(int value)
     {
         if (!config_)
         {
             CV_LOG_ERROR(NULL, "Camera configuration missing.");
-            return false;
+            return nullptr;
         }
 
-        // Retrieve supported formats
         const StreamConfiguration &cfg = config_->at(0);
         const StreamFormats &formats = cfg.formats();
         std::map<int, std::pair<libcamera::PixelFormat, int>> formatMap =
@@ -149,33 +148,31 @@ public:
             << formats.range(pixelformat).toString());
         }
 
-        // Ensure requested format is available
+        static libcamera::PixelFormat chosen;
         auto it = formatMap.find(value);
-        if (it != formatMap.end() && std::find(availableFormats.begin(),
-            availableFormats.end(), it->second.first) != availableFormats.end())
+        if (it != formatMap.end() &&
+            std::find(availableFormats.begin(), availableFormats.end(), it->second.first) != availableFormats.end())
         {
-            pixelFormat_ = it->second.first;
+            chosen = it->second.first;
             pixFmt_ = it->second.second;
-            CV_LOG_INFO(NULL, "Pixel format set to: " << pixelFormat_ << ", pixFmt_: " << pixFmt_);
-            return true;
+            CV_LOG_INFO(NULL, "Pixel format set to: " << chosen << ", pixFmt_: " << pixFmt_);
+            return &chosen;
         }
 
-        // If requested format isn't supported, fallback to supported format
         for (const auto &entry : formatMap)
         {
-            if (std::find(availableFormats.begin(), availableFormats.end(),
-                entry.second.first) != availableFormats.end())
+            if (std::find(availableFormats.begin(), availableFormats.end(), entry.second.first) != availableFormats.end())
             {
-                pixelFormat_ = entry.second.first;
+                chosen = entry.second.first;
                 pixFmt_ = entry.second.second;
                 CV_LOG_WARNING(NULL, "Requested format not supported. Defaulting to: "
-                    << pixelFormat_ << ", pixFmt_: " << pixFmt_);
-                return true;
+                << chosen << ", pixFmt_: " << pixFmt_);
+                return &chosen;
             }
         }
 
         CV_LOG_ERROR(NULL, "No OpenCV-supported pixel formats available.");
-        return false;
+        return nullptr;
     }
 
     bool getCameraConfiguration(int value)
@@ -220,6 +217,7 @@ public:
 
     int width_ = 480, height_ = 640;
     int pixFmt_;
+    const libcamera::PixelFormat *pixFmtPtr_ = nullptr;
     int propFmt_;
     int gc = 0;
     unsigned int allocated_;
