@@ -257,20 +257,16 @@ TEST(Imgcodecs_Gif, read_gif_special){
 }
 
 TEST(Imgcodecs_Gif,write_gif_flags){
-    const string root = cvtest::TS::ptr()->get_data_path();
-    const string png_filename = root + "gifsuite/special1.png";
     vector<uchar> buff;
     const int expected_rows=611;
     const int expected_cols=293;
-    Mat img_gt = Mat::ones(expected_rows, expected_cols, CV_8UC1);
-    vector<int> param;
-    param.push_back(IMWRITE_GIF_QUALITY);
-    param.push_back(7);
-    param.push_back(IMWRITE_GIF_DITHER);
-    param.push_back(2);
-    EXPECT_NO_THROW(imencode(".png", img_gt, buff, param));
+    Mat img_gt = Mat::ones(expected_rows, expected_cols, CV_8UC3);
+    const vector<int> param = { IMWRITE_GIF_QUALITY, IMWRITE_GIF_FAST_NO_DITHER, IMWRITE_GIF_DITHER, 3};
+    bool ret = false;
+    EXPECT_NO_THROW(ret = imencode(".gif", img_gt, buff, param));
+    EXPECT_TRUE(ret);
     Mat img;
-    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
+    EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
     EXPECT_FALSE(img.empty());
     EXPECT_EQ(img.cols, expected_cols);
     EXPECT_EQ(img.rows, expected_rows);
@@ -280,7 +276,7 @@ TEST(Imgcodecs_Gif,write_gif_flags){
 TEST(Imgcodecs_Gif, write_gif_big) {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string png_filename = root + "gifsuite/gif_big.png";
-    const string gif_filename = cv::tempfile(".png");
+    const string gif_filename = cv::tempfile(".gif");
     cv::Mat img;
     ASSERT_NO_THROW(img = cv::imread(png_filename, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
