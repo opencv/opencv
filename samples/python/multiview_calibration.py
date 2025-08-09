@@ -20,7 +20,7 @@ import yaml
 import math
 
 def insideImageMask(pts, w, h):
-    return np.logical_and(np.logical_and(pts[0] < w, pts[1] < h), np.logical_and(pts[0] > 0, pts[1] > 0))
+    return (pts[0] >= 0) & (pts[0] <= w - 1) & (pts[1] >= 0) & (pts[1] <= h - 1)
 
 def read_gt_rig(file, num_cameras, num_frames):
     Ks_gt = []
@@ -236,7 +236,7 @@ def plotDetection(image_sizes, image_points):
 
 # [plot_detection]
 
-def showUndistorted(image_points, Ks, distortions, image_names):
+def showUndistorted(image_points, Ks, distortions, image_names, cam_ids):
     detection_mask = getDetectionMask(image_points)
     for cam in range(len(image_points)):
         detected_imgs = np.where(detection_mask[cam])[0]
@@ -422,7 +422,7 @@ def calibrateFromPoints(
     start_time = time.time()
 #    try:
 # [multiview_calib]
-    rmse, Rs, Ts, Ks, distortions, rvecs0, tvecs0, errors_per_frame, output_pairs = \
+    rmse, Ks, distortions, Rs, Ts, rvecs0, tvecs0, errors_per_frame, output_pairs = \
             cv.calibrateMultiviewExtended(
                 objPoints=pattern_points_all,
                 imagePoints=image_points,
@@ -472,7 +472,10 @@ def calibrateFromPoints(
 def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
                      image_points, errors_per_frame, rvecs0, tvecs0,
                      pattern_points, image_sizes, output_pairs, image_names, cam_ids):
-    rvecs = [cv.Rodrigues(R)[0] for R in Rs]
+    def _as_rvec(x):
+        x = np.asarray(x)
+        return cv.Rodrigues(x)[0] if x.shape == (3, 3) else x.reshape(3, 1)
+    rvecs = [_as_rvec(R) for R in Rs]
     errors = errors_per_frame[errors_per_frame > 0]
     detection_mask_idxs = np.stack(np.where(detection_mask)) # 2 x M, first row is camera idx, second is frame idx
 
@@ -485,7 +488,9 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
 
     R_frame = cv.Rodrigues(rvecs0[frame_idx])[0]
     pattern_frame = (R_frame @ pattern_points.T + tvecs0[frame_idx]).T
-    plotCamerasPosition(Rs, Ts, image_sizes, output_pairs, pattern_frame, frame_idx, cam_ids, detection_mask)
+    R_mats = [cv.Rodrigues(rv)[0] for rv in rvecs]             # 3x3 each
+    T_cols = [np.asarray(t).reshape(3,1) for t in Ts]           # 3x1 each
+    plotCamerasPosition(R_mats, T_cols, image_sizes, output_pairs, pattern_frame, frame_idx, cam_ids, detection_mask)
 
     save_file = 'cam_poses.png'
     print('Saving:', save_file)
@@ -500,13 +505,14 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
             image = cv.cvtColor(cv.imread(image_names[cam_idx][frame_idx]), cv.COLOR_BGR2RGB)
         mask = insideImageMask(image_points[cam_idx][frame_idx].T,
                                image_sizes[cam_idx][0], image_sizes[cam_idx][1])
+        tvec_cam = np.asarray(Ts[cam_idx]).reshape(3,1)
         plotProjection(
             image_points[cam_idx][frame_idx][mask],
             pattern_points[mask],
             rvecs0[frame_idx],
             tvecs0[frame_idx],
             rvecs[cam_idx],
-            Ts[cam_idx],
+            tvec_cam,
             Ks[cam_idx],
             distortions[cam_idx],
             models[cam_idx],
@@ -517,7 +523,7 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
         )
 
     plot(detection_mask_idxs[0, pos], detection_mask_idxs[1, pos])
-    showUndistorted(image_points, Ks, distortions, image_names)
+    showUndistorted(image_points, Ks, distortions, image_names, cam_ids)
     # plt.show()
     plotDetection(image_sizes, image_points)
 
@@ -561,7 +567,7 @@ def saveToFile(path_to_save, **kwargs):
         if key == 'image_names':
             save_file.write('image_names', list(np.array(kwargs['image_names']).reshape(-1)))
         elif key == 'cam_ids':
-            save_file.write('cam_ids', ','.join(cam_ids))
+            save_file.write('cam_ids', list(kwargs['cam_ids']))
         elif key == 'distortions':
             value = kwargs[key]
             save_file.write('distortions', np.concatenate([x.reshape([-1,]) for x in value],axis=0))
@@ -896,20 +902,34 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
     distortions = None
     if files_with_intrinsics:
         # Read camera instrinsic matrices (Ks) and dictortions
-        Ks, distortions = [], []
-        for cam_idx, filename in enumerate(files_with_intrinsics):
-            print("Reading intrinsics from", filename)
-            storage = cv.FileStorage(filename, cv.FileStorage_READ)
-            # tries to read output of interactive-calibration tool (yaml) and camera calibration tutorial (xml)
-            camera_matrix = storage.getNode('cameraMatrix').mat()
-            if camera_matrix is None:
-                camera_matrix = storage.getNode('camera_matrix').mat()
-            dist_coeffs = storage.getNode('dist_coeffs').mat()
-            if dist_coeffs is None:
-                dist_coeffs = storage.getNode('distortion_coefficients').mat()
-            Ks.append(camera_matrix)
-            distortions.append(dist_coeffs)
-        find_intrinsics_in_python = True
+        files_with_intrinsics = [
+            f for f in files_with_intrinsics if isinstance(f, str) and f.strip()
+        ]
+
+        if files_with_intrinsics:
+            Ks, distortions = [], []
+            for filename in files_with_intrinsics:
+                print("Reading intrinsics from", filename)
+                storage = cv.FileStorage(filename, cv.FileStorage_READ)
+                camera_matrix = storage.getNode('cameraMatrix').mat()
+                if camera_matrix is None:
+                    camera_matrix = storage.getNode('camera_matrix').mat()
+                dist_coeffs = storage.getNode('dist_coeffs').mat()
+                if dist_coeffs is None:
+                    dist_coeffs = storage.getNode('distortion_coefficients').mat()
+                Ks.append(camera_matrix)
+                distortions.append(dist_coeffs)
+            num_cams = len(files_with_images)
+            if len(Ks) == 1 and num_cams > 1:
+                Ks = [Ks[0] for _ in range(num_cams)]
+                distortions = [distortions[0] for _ in range(num_cams)]
+            elif len(Ks) < num_cams:
+                Ks += [Ks[-1]] * (num_cams - len(Ks))
+                distortions += [distortions[-1]] * (num_cams - len(distortions))
+            elif len(Ks) > num_cams:
+                Ks = Ks[:num_cams]
+                distortions = distortions[:num_cams]
+            find_intrinsics_in_python = True
 
     return calibrateFromPoints(
         pattern,
@@ -963,7 +983,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_visualize', type=str, default='', help='path to results pickle file needed to run visualization')
     parser.add_argument('--visualize', required=False, action='store_true', help='visualization flag. If set, only runs visualization but path_to_visualize must be provided')
     parser.add_argument('--resize_image_detection', required=False, action='store_true', help='If set, an image will be resized to speed-up corners detection')
-    parser.add_argument('--intrinsics', type=str, default='', help='YAML or XML files with each camera intrinsics')
+    parser.add_argument('--intrinsics', type=str, default=None, help='YAML or XML files with each camera intrinsics')
     parser.add_argument('--gt_file', type=str, default=None, help="ground truth")
     parser.add_argument('--board_dict_path', type=str, default=None, help="path to parameters of board dictionary")
 
@@ -1006,7 +1026,7 @@ if __name__ == '__main__':
             RESIZE_IMAGE=params.resize_image_detection,
             find_intrinsics_in_python=params.find_intrinsics_in_python,
             cam_ids=cam_ids,
-            files_with_intrinsics=[x.strip() for x in params.intrinsics.split(',')],
+            files_with_intrinsics=[x.strip() for x in (params.intrinsics or "").split(',') if x.strip()],
             board_dict_path=params.board_dict_path,
         )
         output['cam_ids'] = cam_ids
