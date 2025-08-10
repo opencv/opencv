@@ -1778,14 +1778,27 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.step = rgb_picture.linesize[0];
     }
 
-    sws_scale(
-            img_convert_ctx,
-            sw_picture->data,
-            sw_picture->linesize,
-            0, sw_picture->height,
-            rgb_picture.data,
-            rgb_picture.linesize
-            );
+    if (sw_picture->format == AV_PIX_FMT_NV12 &&
+        sw_picture->height == frame.height && sw_picture->width == frame.width &&
+        (result_format == AV_PIX_FMT_BGR24 || result_format == AV_PIX_FMT_GRAY8))
+    {
+        Mat y(sw_picture->height, sw_picture->width, CV_8U, sw_picture->data[0], sw_picture->linesize[0]);
+        Mat uv(sw_picture->height / 2, sw_picture->width / 2, CV_8UC2, sw_picture->data[1], sw_picture->linesize[1]);
+        Mat res(frame.height, frame.width, CV_8UC(*cn), frame.data, frame.step);
+        if (result_format == AV_PIX_FMT_GRAY8)
+            cvtColorTwoPlane(y, uv, res, COLOR_YUV2GRAY_NV12);
+        else
+            cvtColorTwoPlane(y, uv, res, COLOR_YUV2BGR_NV12);
+    }
+    else
+        sws_scale(
+                img_convert_ctx,
+                sw_picture->data,
+                sw_picture->linesize,
+                0, sw_picture->height,
+                rgb_picture.data,
+                rgb_picture.linesize
+                );
 
     *data = frame.data;
     *step = frame.step;
