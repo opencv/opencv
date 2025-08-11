@@ -38,16 +38,9 @@
 #include "cap_libcamera.hpp"
 #include <mutex>
 
-/**
- * @brief implementation of the LibcameraApp class and LibcameraCapture
- * The LibcameraApp implements is from LCCV
- * Source: https://github.com/kbarni/LCCV
-*/
-
 namespace cv
 {
 
-/* ***************Start of methods from original LibcameraApp class*************** */
 std::string const &LibcameraCapture::CameraId() const
 {
     return camera_->id();
@@ -510,8 +503,6 @@ void LibcameraCapture::configureDenoise(const std::string &denoise_mode)
 
     controls_.set(NoiseReductionMode, denoise);
 }
-
-/* ***************End of methods from original LibcameraApp class*************** */
 
 LibcameraCapture::LibcameraCapture() : LibcameraCapture(-1) {}
 
