@@ -1245,6 +1245,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ResizeLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS SizeLayer : public Layer
+    {
+    public:
+        static Ptr<SizeLayer> create(const LayerParams &params);
+    };
+
     /**
      * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *

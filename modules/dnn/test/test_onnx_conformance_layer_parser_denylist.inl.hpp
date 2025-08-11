@@ -123,9 +123,6 @@
 "test_max_uint16", // Issue:: Unsupported data type
 "test_max_uint32", // Issue:: Unsupported data type
 "test_max_uint64", // Issue:: Unsupported data type
-"test_mean_example", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!result" of type "Mean" in function 'getLayerInstance'
-"test_mean_one_input",  // ---- same as above ---
-"test_mean_two_inputs",  // ---- same as above ---
 "test_min_int16",  // Issue:: Unsupported data type
 "test_min_uint16", // Issue:: Unsupported data type
 "test_min_uint32", // Issue:: Unkonwn error
@@ -320,8 +317,6 @@
 "test_simple_rnn_batchwise", // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_simple_rnn_defaults", // ---- same as above ---
 "test_simple_rnn_with_initial_bias", // ---- same as above ---
-"test_size", // Issue:: Parser:  Can't create layer "onnx_node_output_0!y" of type "Size" in function 'getLayerInstance'
-"test_size_example", // ---- same as above ---
 "test_slice_start_out_of_bounds",
 "test_split_zero_size_splits",  // ---- incompatible type of input tensor #0 'input': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput' ---
 "test_strnormalizer_export_monday_casesensintive_lower", // 'Strings' (1) are not supported in function 'getLayerParams'
