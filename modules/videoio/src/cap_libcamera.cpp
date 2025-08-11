@@ -58,21 +58,15 @@ void LibcameraCapture::OpenCamera()
 
     if (options_->verbose)
         CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Opening camera...");
-
-    if (getCameraManager()->cameras().size() == 0)
-        throw std::runtime_error("no cameras available");
-    if (options_->camera >= getCameraManager()->cameras().size())
-        throw std::runtime_error("selected camera is not available");
-
+    CV_Assert(getCameraManager()->cameras().size() != 0 && "no cameras available");
+    CV_Assert(options_->camera < getCameraManager()->cameras().size() && "camera index out of range");
     std::string const &cam_id = getCameraManager()->cameras()[options_->camera]->id();
     camera_ = getCameraManager()->get(cam_id);
     if (!camera_)
-        throw std::runtime_error("failed to find camera " + cam_id);
-
+        CV_Error(cv::Error::StsAssert, "failed to find camera " + cam_id);
     if (!camera_acquired_ && camera_->acquire())
-        throw std::runtime_error("failed to acquire camera " + cam_id);
+        CV_Error(cv::Error::StsAssert, "failed to acquire camera " + cam_id);
     camera_acquired_ = true;
-
     if (options_->verbose)
         CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Acquired camera " << cam_id);
 }
@@ -97,8 +91,7 @@ void LibcameraCapture::ConfigureViewfinder()
 
     StreamRoles stream_roles = {StreamRole::Viewfinder};
     configuration_ = camera_->generateConfiguration(stream_roles);
-    if (!configuration_)
-        throw std::runtime_error("failed to generate viewfinder configuration");
+    CV_Assert(configuration_ && "failed to generate viewfinder configuration");
 
     // Now we get to override any of the default settings from the options_->
     configuration_->at(0).pixelFormat = libcamera::formats::RGB888;
@@ -200,7 +193,7 @@ void LibcameraCapture::StartCamera()
         controls_.set(controls::Sharpness, options_->sharpness);
 
     if (camera_->start(&controls_))
-        throw std::runtime_error("failed to start camera");
+        CV_Error(cv::Error::StsAssert, "failed to start camera");
     controls_.clear();
     camera_started_ = true;
     last_timestamp_ = 0;
@@ -210,7 +203,7 @@ void LibcameraCapture::StartCamera()
     for (std::unique_ptr<Request> &request : requests_)
     {
         if (camera_->queueRequest(request.get()) < 0)
-            throw std::runtime_error("Failed to queue request");
+            CV_Error(cv::Error::StsAssert, "Failed to queue request");
     }
 
     if (options_->verbose)
@@ -226,14 +219,9 @@ void LibcameraCapture::StopCamera()
         {
             CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Camera tries to stop!");
             if (camera_->stop())
-                throw std::runtime_error("failed to stop camera");
-
+                CV_Error(cv::Error::StsAssert, "failed to stop camera");
             camera_started_ = false;
         }
-        // camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete);
-        // if (!camera_->requestCompleted.disconnect(this, &LibcameraApp::requestComplete)) {
-        //     throw std::runtime_error("failed to disconnect camera callbacks");
-        // }
     }
 
     if (camera_)
@@ -305,7 +293,7 @@ void LibcameraCapture::queueRequest(CompletedRequest *completed_request)
     for (auto const &p : buffers)
     {
         if (request->addBuffer(p.first, p.second) < 0)
-            throw std::runtime_error("failed to add buffer to request in QueueRequest");
+            CV_Error(cv::Error::StsAssert, "failed to add buffer to request in QueueRequest");
     }
 
     {
@@ -314,7 +302,7 @@ void LibcameraCapture::queueRequest(CompletedRequest *completed_request)
     }
 
     if (camera_->queueRequest(request) < 0)
-        throw std::runtime_error("failed to queue request");
+        CV_Error(cv::Error::StsAssert, "failed to queue request");
 }
 
 void LibcameraCapture::PostMessage(MsgType &t, MsgPayload &p)
@@ -402,12 +390,12 @@ void LibcameraCapture::setupCapture()
 
     CameraConfiguration::Status validation = configuration_->validate();
     if (validation == CameraConfiguration::Invalid)
-        throw std::runtime_error("failed to valid stream configurations");
+        CV_Error(cv::Error::StsAssert, "failed to valid stream configurations");
     else if (validation == CameraConfiguration::Adjusted)
         CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Stream configuration adjusted");
 
     if (camera_->configure(configuration_.get()) < 0)
-        throw std::runtime_error("failed to configure streams");
+        CV_Error(cv::Error::StsAssert, "failed to configure streams");
 
     if (options_->verbose)
         CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera streams configured");
@@ -420,7 +408,7 @@ void LibcameraCapture::setupCapture()
         Stream *stream = config.stream();
 
         if (allocator_->allocate(stream) < 0)
-            throw std::runtime_error("failed to allocate capture buffers");
+            CV_Error(cv::Error::StsAssert, "failed to allocate capture buffers");
 
         for (const std::unique_ptr<FrameBuffer> &buffer : allocator_->buffers(stream))
         {
@@ -466,16 +454,16 @@ void LibcameraCapture::makeRequests()
                 }
                 std::unique_ptr<Request> request = camera_->createRequest();
                 if (!request)
-                    throw std::runtime_error("failed to make request");
+                    CV_Error(cv::Error::StsAssert, "failed to make request");
                 requests_.push_back(std::move(request));
             }
             else if (free_buffers[stream].empty())
-                throw std::runtime_error("concurrent streams need matching numbers of buffers");
+                CV_Error(cv::Error::StsAssert, "concurrent streams need matching numbers of buffers");
 
             FrameBuffer *buffer = free_buffers[stream].front();
             free_buffers[stream].pop();
             if (requests_.back()->addBuffer(stream, buffer) < 0)
-                throw std::runtime_error("failed to add buffer to request");
+                CV_Error(cv::Error::StsAssert, "failed to add buffer to request");
         }
     }
 }
@@ -517,7 +505,7 @@ void LibcameraCapture::configureDenoise(const std::string &denoise_mode)
 
     auto const mode = denoise_table.find(denoise_mode);
     if (mode == denoise_table.end())
-        throw std::runtime_error("Invalid denoise mode " + denoise_mode);
+        CV_Error(cv::Error::StsAssert, "Invalid denoise mode " + denoise_mode);
     denoise = mode->second;
 
     controls_.set(NoiseReductionMode, denoise);

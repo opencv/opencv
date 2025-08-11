@@ -434,7 +434,7 @@ private:
             camera_manager_ = std::make_shared<CameraManager>();
             int ret = camera_manager_->start();
             if (ret)
-                throw std::runtime_error("camera manager failed to start,"
+                CV_Error(cv::Error::StsAssert, "camera manager failed to start,"
                                             "code " +
                                             std::to_string(-ret));
         }
