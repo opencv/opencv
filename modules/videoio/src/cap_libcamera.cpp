@@ -513,45 +513,15 @@ void LibcameraCapture::configureDenoise(const std::string &denoise_mode)
 
 /* ***************End of methods from original LibcameraApp class*************** */
 
-LibcameraCapture::LibcameraCapture()
-{
-    // original libcamera_app constructor
-    options_ = std::unique_ptr<Options>(new Options());
-    controls_ = controls::controls;
-    if (!options_)
-        options_ = std::make_unique<Options>();
-    controls_.clear();
-    // original constructor ends
-    options = static_cast<Options *>(GetOptions());
-    still_flags = FLAG_STILL_NONE;
-    options->photo_width = 2560;
-    options->photo_height = 1440;
-    options->video_width = 640;
-    options->video_height = 480;
-    options->framerate = 30;
-    options->denoise = "auto";
-    options->timeout = 1000;
-    options->setMetering(Metering_Modes::METERING_MATRIX);
-    options->setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
-    options->setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
-    options->contrast = 1.0f;
-    options->saturation = 1.0f;
-    // still_flags |= LibcameraApp::FLAG_STILL_RGB;
-    still_flags |= FLAG_STILL_BGR;
-    needsReconfigure.store(false, std::memory_order_release);
-    camerastarted = false;
-    current_request_ = nullptr;
-}
+LibcameraCapture::LibcameraCapture() : LibcameraCapture(-1) {}
 
 LibcameraCapture::LibcameraCapture(int camera_index)
 {
-    // LibcameraCapture();
     options_ = std::unique_ptr<Options>(new Options());
     controls_ = controls::controls;
     if (!options_)
         options_ = std::make_unique<Options>();
     controls_.clear();
-    // original constructor ends
     options = static_cast<Options *>(GetOptions());
     still_flags = FLAG_STILL_NONE;
     options->photo_width = 2560;
@@ -567,13 +537,15 @@ LibcameraCapture::LibcameraCapture(int camera_index)
     options->contrast = 1.0f;
     options->saturation = 1.0f;
     options->camera = camera_index;
-    // still_flags |= LibcameraApp::FLAG_STILL_RGB;
+    // still_flags |= FLAG_STILL_RGB;
     still_flags |= FLAG_STILL_BGR;
     needsReconfigure.store(false, std::memory_order_release);
     camerastarted = false;
     current_request_ = nullptr;
     // Automatically open the camera
-    open(camera_index);
+    if (camera_index >= 0) {
+        open(camera_index);
+    }
 }
 
 LibcameraCapture::~LibcameraCapture()
@@ -645,18 +617,6 @@ bool LibcameraCapture::grabFrame()
             return false;
         }
     }
-    
-    // Check if we need to reconfigure
-    // if (needsReconfigure.load(std::memory_order_acquire))
-    // {
-    //     stopVideo();
-    //     if (!startVideo())
-    //     {
-    //         std::cerr << "Failed to restart camera after reconfiguration" << std::endl;
-    //         return false;
-    //     }
-    //     needsReconfigure.store(false, std::memory_order_release);
-    // }
     
     // Try to get a message from libcamera (non-blocking check)
     try 
@@ -922,11 +882,6 @@ bool LibcameraCapture::setProperty(int propId, double value)
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
-        // case cv::CAP_PROP_ZOOM: // This is a custom property for ROI
-        //     options->roi_x = options->roi_y = (1.0 - value) / 2.0; // Assuming value is normalized zoom level (0.0 - 1.0)
-        //     options->roi_width = options->roi_height = value;
-        //     break;
-
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_X:
         options->roi_x = value;
         ApplyRoiSettings();
@@ -950,26 +905,6 @@ bool LibcameraCapture::setProperty(int propId, double value)
     case cv::CAP_PROP_FOURCC:
     {
         // Not implemented yet
-
-        // char fourcc[4];
-        // fourcc[0] = (char)((int)value & 0XFF);
-        // fourcc[1] = (char)(((int)value >> 8) & 0XFF);
-        // fourcc[2] = (char)(((int)value >> 16) & 0XFF);
-        // fourcc[3] = (char)(((int)value >> 24) & 0XFF);
-        // if(fourcc[0]=='M'&&fourcc[1]=='J'&&fourcc[2]=='P'&&fourcc[3]=='G'){
-
-        // }
-        // else if(fourcc[0]=='Y'&&fourcc[1]=='U'&&fourcc[2]=='Y'&&fourcc[3]=='V'){
-
-        // }
-        // else if(fourcc[0]=='R'&&fourcc[1]=='G'&&fourcc[2]=='B'&&fourcc[3]=='3'){
-        //     still_flags = LibcameraApp::FLAG_STILL_RGB;
-        // }
-        // else{
-        //     std::cerr << "Warning: FourCC code " << fourcc << " not supported." << std::endl;
-        //     return false;
-        // }
-        // // needsReconfigure.store(true, std::memory_order_release);
         break;
     }
 
@@ -1003,15 +938,6 @@ bool LibcameraCapture::setProperty(int propId, double value)
         CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Unsupported property: " << propId);
         return false;
     }
-
-    // if (needsReconfigure)
-    // {
-    //     if (isFramePending)
-    //     {
-    //         stopVideo();
-    //         startVideo();
-    //     }
-    // }
     return true;
 }
 
@@ -1057,8 +983,8 @@ bool LibcameraCapture::open(const std::string &_deviceName)
 {
     CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera:" << _deviceName << "): opening...");
     // Some parameters initialization here, maybe more needed.
-    options->video_width = 1280;
-    options->video_height = 720;
+    options->video_width = 640;
+    options->video_height = 480;
     options->framerate = 30;
     options->verbose = true;
     return startVideo();

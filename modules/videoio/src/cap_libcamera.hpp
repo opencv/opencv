@@ -506,7 +506,9 @@ public:
     LibcameraCapture();
     LibcameraCapture(int camera_index);
     virtual ~LibcameraCapture();
-
+private:
+    void initializeOptions();
+public:
     bool startVideo();
     void stopVideo();
 
