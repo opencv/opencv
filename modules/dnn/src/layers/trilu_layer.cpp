@@ -7,8 +7,6 @@
 using namespace std;
 namespace cv { namespace dnn {
 
-
-
 template <typename T>
 void trilu(
     Mat &input, Mat &output,
@@ -112,7 +110,6 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
         }
     private:
         bool uppertri;
-
 };
 
 
