@@ -97,9 +97,6 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
                 trilu<uint8_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
             else
                 CV_Error(Error::StsUnsupportedFormat, "Unsupported input type: " + cv::typeToString(inpMat.type()));
-
-            // double nstripes = loops * h * w / 1024.0;
-            // parallel_for_(Range(0, loops), fn, nstripes);
         }
 
 
