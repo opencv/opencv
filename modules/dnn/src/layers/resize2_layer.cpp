@@ -76,18 +76,19 @@ void resizeNearest(const Mat &inp, Mat &out,
         }
         return std::min(std::max(src, 0.f), float(limit));
     };
+
     auto nidx = [&](float src, int lim) {
-        float fv = std::floor(src), frac = src - fv;
-        int   idx;
+        const int f = cvFloor(src);
+        const float frac = src - f;
         const float eps = 1e-6f;
-        if      (nearestMode == "floor") {
-            idx = int(fv);
-        } else if (nearestMode == "ceil") {
-            idx = int(std::ceil(src));
-        } else if (nearestMode == "round_prefer_ceil") {
-            idx = ((frac > 0.5f + eps) || std::abs(frac - 0.5f) < eps) ? int(fv + 1) : int(fv);
+        int idx;
+
+        if (nearestMode == "floor") idx = cvFloor(src);
+        else if (nearestMode == "ceil")  idx = cvCeil(src);
+        else if (nearestMode == "round_prefer_ceil") {
+            idx = (abs(frac - 0.5f) <= eps) ? (f + 1) : cvRound(src);
         } else {
-            idx = (frac > 0.5f + eps ? int(fv + 1) : int(fv));
+            idx = (abs(frac - 0.5f) <= eps) ? f : cvRound(src);
         }
         return std::clamp(idx, 0, lim);
     };
