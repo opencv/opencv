@@ -829,6 +829,26 @@ inline int hal_ni_cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 inline int hal_ni_cvtThreePlaneYUVtoBGRApprox(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
 /**
+   @brief Analog of hal_cvtThreePlaneYUVtoBGR that allows approximations (not bit-exact)
+   @param y_data source image data (Y plane)
+   @param y_step Y plane step
+   @param u_data source image data (U plane)
+   @param u_step Y plane step
+   @param v_data source image data (V plane)
+   @param v_step Y plane step
+   @param dst_data destination image data
+   @param dst_step destination image step
+   @param dst_width destination image width
+   @param dst_height destination image height
+   @param dcn destination image channels (3 or 4)
+   @param swapBlue if set to true B and R destination channels will be swapped (write RGB)
+   Convert from YUV (YUV420p (or YV12/YV21) - Y plane followed by U and V planes) to BGR, RGB, BGRA or RGBA.
+   Only for CV_8U.
+   Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+ */
+inline int hal_ni_cvtThreePlaneYUVtoBGRApprox(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+/**
    @brief hal_cvtThreePlaneYUVtoBGR
    @param y_data source image data (Y plane)
    @param y_step Y plane step

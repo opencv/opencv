@@ -216,10 +216,10 @@ void cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step,
 {
     CV_INSTRUMENT_REGION();
 
-    // if (hint == ALGO_HINT_APPROX)
-    // {
-    //     CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGRApprox, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
-    // }
+    if (hint == ALGO_HINT_APPROX)
+    {
+        CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGRApprox, y_data, y_step, u_data, u_step, v_data, v_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue);
+    }
 
     CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGR, y_data, y_step, u_data, u_step, v_data, v_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue);
 

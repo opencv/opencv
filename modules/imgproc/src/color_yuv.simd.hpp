@@ -1337,17 +1337,21 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
 
+        size_t usteps[2] = {u_step, stride - u_step};
+        size_t vsteps[2] = {v_step, stride - v_step};
+        int usIdx = 0, vsIdx = 0;
+
         const uchar* y1 = my1 + rangeBegin * stride;
         const uchar* u1 = mu + (range.start / 2) * stride;
         const uchar* v1 = mv + (range.start / 2) * stride;
 
         if(range.start % 2 == 1)
         {
-            u1 += u_step;
-            v1 += v_step;
+            u1 += usteps[(usIdx++) & 1];
+            v1 += vsteps[(vsIdx++) & 1];
         }
 
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += u_step, v1 += v_step)
+        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += usteps[(usIdx++) & 1], v1 += vsteps[(vsIdx++) & 1])
         {
             uchar* row1 = dst_data + dst_step * j;
             uchar* row2 = dst_data + dst_step * (j + 1);
@@ -2067,7 +2071,12 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     const uchar* u = src_data + src_step * static_cast<size_t>(dst_height);
     const uchar* v = src_data + src_step * static_cast<size_t>(dst_height + dst_height/4) + (dst_width/2) * ((dst_height % 4)/2);
 
-    if(uIdx == 1) { std::swap(u, v); }
+    int ustepIdx = 0;
+    int vstepIdx = dst_height % 4 == 2 ? 1 : 0;
+
+    int uvsteps[2] = {dst_width/2, static_cast<int>(src_step) - dst_width/2};
+
+    if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
     int blueIdx = swapBlue ? 2 : 0;
 
     cvt_3plane_yuv_ptr_t cvtPtr;
@@ -2080,7 +2089,7 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
-    cvtPtr(dst_data, dst_step, dst_width, dst_height, src_data, u, v, src_step, dst_width/2, static_cast<int>(src_step) - dst_width/2);
+    cvtPtr(dst_data, dst_step, dst_width, dst_height, src_data, u, v, src_step, uvsteps[ustepIdx], uvsteps[vstepIdx]);
 }
 
 void cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step,

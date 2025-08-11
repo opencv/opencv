@@ -1736,6 +1736,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 
     if (!useSwscale && (
         (sw_picture->format == AV_PIX_FMT_YUV420P && result_format == AV_PIX_FMT_BGR24) ||
+        (sw_picture->format == AV_PIX_FMT_YUVJ420P && result_format == AV_PIX_FMT_BGR24) ||
         (sw_picture->format == AV_PIX_FMT_NV12 && (result_format == AV_PIX_FMT_BGR24 || result_format == AV_PIX_FMT_GRAY8))
     ))
     {
@@ -1752,7 +1753,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             frame.width = video_st->CV_FFMPEG_CODEC_FIELD->width;
             frame.height = video_st->CV_FFMPEG_CODEC_FIELD->height;
         }
-        if (sw_picture->format == AV_PIX_FMT_YUV420P)
+        if (sw_picture->format == AV_PIX_FMT_YUV420P || sw_picture->format == AV_PIX_FMT_YUVJ420P)
         {
             hal::cvtThreePlaneYUVtoBGR(sw_picture->data[0], sw_picture->linesize[0],
                                        sw_picture->data[1], sw_picture->linesize[1],
