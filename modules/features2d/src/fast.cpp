@@ -429,8 +429,10 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     CV_INSTRUMENT_REGION();
 
+    const size_t max_fast_features = std::max(_img.total()/100, size_t(1000)); // Simple heuristic that depends on resolution.
+
     CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
-               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
+               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, (int)max_fast_features));
 
     cv::Mat img = _img.getMat();
     CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
@@ -446,7 +448,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
         return;
     } else {
         free(kps);
-        keypoints_count = 10000;
+        keypoints_count = max_fast_features;
         keypoints.clear();
         keypoints.resize(keypoints_count);
         CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
