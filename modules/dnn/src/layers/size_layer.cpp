@@ -54,9 +54,7 @@ public:
         CV_Assert(inputs.size() == 1);
         const Mat& x = inputs[0];
 
-        size_t total = 1;
-        for (int i = 0; i < x.dims; ++i)
-            total *= static_cast<size_t>(x.size[i]);
+        size_t total = x.total()*x.channels();
 
         outputs[0].create(1, 1, CV_64S);
         outputs[0].at<int64_t>(0) = static_cast<int64_t>(total);
