@@ -207,6 +207,29 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
 // 4:2:0, three planes in one array: Y, U, V
 // Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
 // 20-bit fixed-point arithmetics
+void cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step,
+                           const uchar * u_data, size_t u_step,
+                           const uchar * v_data, size_t v_step,
+                           uchar * dst_data, size_t dst_step,
+                           int dst_width, int dst_height,
+                           int dcn, bool swapBlue, AlgorithmHint hint)
+{
+    CV_INSTRUMENT_REGION();
+
+    // if (hint == ALGO_HINT_APPROX)
+    // {
+    //     CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGRApprox, src_data, src_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue, uIdx);
+    // }
+
+    CALL_HAL(cvtThreePlaneYUVtoBGR, cv_hal_cvtThreePlaneYUVtoBGR, y_data, y_step, u_data, u_step, v_data, v_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue);
+
+    CV_CPU_DISPATCH(cvtThreePlaneYUVtoBGR, (y_data, y_step, u_data, u_step, v_data, v_step, dst_data, dst_step, dst_width, dst_height, dcn, swapBlue),
+        CV_CPU_DISPATCH_MODES_ALL);
+}
+
+// 4:2:0, three planes in one array: Y, U, V
+// Y : [16, 235]; Cb, Cr: [16, 240] centered at 128
+// 20-bit fixed-point arithmetics
 void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int width, int height,

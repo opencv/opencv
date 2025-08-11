@@ -223,6 +223,12 @@ CV_EXPORTS void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                       int dcn, bool swapBlue, int uIdx,
                                       AlgorithmHint hint = ALGO_HINT_DEFAULT);
 
+CV_EXPORTS void cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step,
+                                      uchar * dst_data, size_t dst_step,
+                                      int dst_width, int dst_height,
+                                      int dcn, bool swapBlue,
+                                      AlgorithmHint hint = ALGO_HINT_DEFAULT);
+
 CV_EXPORTS void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                                       uchar * dst_data, size_t dst_step,
                                       int width, int height,

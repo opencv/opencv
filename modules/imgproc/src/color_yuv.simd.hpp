@@ -25,6 +25,10 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int dst_width, int dst_height,
                            int dcn, bool swapBlue, int uIdx);
+void cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step,
+                           uchar * dst_data, size_t dst_step,
+                           int dst_width, int dst_height,
+                           int dcn, bool swapBlue);
 void cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step,
                            uchar * dst_data, size_t dst_step,
                            int width, int height,
@@ -1323,19 +1327,15 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
     size_t dst_step;
     int width;
     const uchar* my1, *mu, *mv;
-    size_t stride;
-    int ustepIdx, vstepIdx;
+    size_t stride, u_step, v_step;
 
-    YUV420p2RGB8Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int _ustepIdx, int _vstepIdx)
-        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_stride), ustepIdx(_ustepIdx), vstepIdx(_vstepIdx) {}
+    YUV420p2RGB8Invoker(uchar * _dst_data, size_t _dst_step, int _dst_width, const uchar* _y1, const uchar* _u, const uchar* _v, size_t _y1_step, size_t _u_step, size_t _v_step)
+        : dst_data(_dst_data), dst_step(_dst_step), width(_dst_width), my1(_y1), mu(_u), mv(_v), stride(_y1_step), u_step(_u_step), v_step(_v_step) {}
 
     void operator()(const Range& range) const CV_OVERRIDE
     {
         const int rangeBegin = range.start * 2;
         const int rangeEnd = range.end * 2;
-
-        int uvsteps[2] = {width/2, static_cast<int>(stride) - width/2};
-        int usIdx = ustepIdx, vsIdx = vstepIdx;
 
         const uchar* y1 = my1 + rangeBegin * stride;
         const uchar* u1 = mu + (range.start / 2) * stride;
@@ -1343,11 +1343,11 @@ struct YUV420p2RGB8Invoker : ParallelLoopBody
 
         if(range.start % 2 == 1)
         {
-            u1 += uvsteps[(usIdx++) & 1];
-            v1 += uvsteps[(vsIdx++) & 1];
+            u1 += u_step;
+            v1 += v_step;
         }
 
-        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
+        for (int j = rangeBegin; j < rangeEnd; j += 2, y1 += stride * 2, u1 += u_step, v1 += v_step)
         {
             uchar* row1 = dst_data + dst_step * j;
             uchar* row2 = dst_data + dst_step * (j + 1);
@@ -1459,9 +1459,9 @@ inline void cvtYUV420sp2RGB(uchar * dst_data, size_t dst_step, int dst_width, in
 }
 
 template<int bIdx, int dcn>
-inline void cvtYUV420p2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, size_t _stride, const uchar* _y1, const uchar* _u, const uchar* _v, int ustepIdx, int vstepIdx)
+inline void cvtYUV420p2RGB(uchar * dst_data, size_t dst_step, int dst_width, int dst_height, const uchar* y, const uchar* u, const uchar* v, size_t y_step, size_t u_step, size_t v_step)
 {
-    YUV420p2RGB8Invoker<bIdx, dcn> converter(dst_data, dst_step, dst_width, _stride, _y1,  _u, _v, ustepIdx, vstepIdx);
+    YUV420p2RGB8Invoker<bIdx, dcn> converter(dst_data, dst_step, dst_width, y, u, v, y_step, u_step, v_step);
     if (dst_width * dst_height >= MIN_SIZE_FOR_PARALLEL_YUV420_CONVERSION)
         parallel_for_(Range(0, dst_height/2), converter);
     else
@@ -2050,12 +2050,12 @@ typedef void (*cvt_3plane_yuv_ptr_t)(uchar *      /* dst_data   */,
                                      size_t       /* dst_step   */,
                                      int          /* dst_width  */,
                                      int          /* dst_height */,
-                                     size_t       /* _stride    */,
                                      const uchar* /* _y1        */,
                                      const uchar* /* _u         */,
                                      const uchar* /* _v         */,
-                                     int          /* ustepIdx   */,
-                                     int          /* vstepIdx   */);
+                                     size_t       /* y_step     */,
+                                     size_t       /* u_step     */,
+                                     size_t       /* v_step     */);
 
 void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
                                  uchar * dst_data, size_t dst_step,
@@ -2067,10 +2067,7 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     const uchar* u = src_data + src_step * static_cast<size_t>(dst_height);
     const uchar* v = src_data + src_step * static_cast<size_t>(dst_height + dst_height/4) + (dst_width/2) * ((dst_height % 4)/2);
 
-    int ustepIdx = 0;
-    int vstepIdx = dst_height % 4 == 2 ? 1 : 0;
-
-    if(uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
+    if(uIdx == 1) { std::swap(u, v); }
     int blueIdx = swapBlue ? 2 : 0;
 
     cvt_3plane_yuv_ptr_t cvtPtr;
@@ -2083,7 +2080,29 @@ void cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step,
     default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
     };
 
-    cvtPtr(dst_data, dst_step, dst_width, dst_height, src_step, src_data, u, v, ustepIdx, vstepIdx);
+    cvtPtr(dst_data, dst_step, dst_width, dst_height, src_data, u, v, src_step, dst_width/2, static_cast<int>(src_step) - dst_width/2);
+}
+
+void cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step,
+                           uchar * dst_data, size_t dst_step,
+                           int dst_width, int dst_height,
+                           int dcn, bool swapBlue)
+{
+    CV_INSTRUMENT_REGION();
+
+    int blueIdx = swapBlue ? 2 : 0;
+
+    cvt_3plane_yuv_ptr_t cvtPtr;
+    switch(dcn*10 + blueIdx)
+    {
+    case 30: cvtPtr = cvtYUV420p2RGB<0, 3>; break;
+    case 32: cvtPtr = cvtYUV420p2RGB<2, 3>; break;
+    case 40: cvtPtr = cvtYUV420p2RGB<0, 4>; break;
+    case 42: cvtPtr = cvtYUV420p2RGB<2, 4>; break;
+    default: CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" ); break;
+    };
+
+    cvtPtr(dst_data, dst_step, dst_width, dst_height, y_data, u_data, v_data, y_step, u_step, v_step);
 }
 
 // 4:2:0, three planes in one array: Y, U, V

@@ -44,6 +44,7 @@
 #include "cap_ffmpeg_legacy_api.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "cap_interface.hpp"
+#include "opencv2/imgproc/hal/hal.hpp"
 
 using namespace cv;
 
@@ -568,6 +569,7 @@ struct CvCapture_FFMPEG
     AVPacket          packet;
     Image_FFMPEG      frame;
     struct SwsContext *img_convert_ctx;
+    bool useSwscale;
 
     int64_t frame_number, first_frame_number;
 
@@ -1049,6 +1051,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
     close();
 
     readStream = stream;
+    useSwscale = utils::getConfigurationParameterBool("OPENCV_FFMPEG_USE_SWSCALE", false);
 
     if (!params.empty())
     {
@@ -1790,7 +1793,17 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         else
             cvtColorTwoPlane(y, uv, res, COLOR_YUV2BGR_NV12);
     }
+    else if (sw_picture->format == AV_PIX_FMT_YUV420P)
+    {
+        hal::cvtThreePlaneYUVtoBGR(sw_picture->data[0], sw_picture->linesize[0],
+                                   sw_picture->data[1], sw_picture->linesize[1],
+                                   sw_picture->data[2], sw_picture->linesize[2],
+                                   frame.data, frame.step,
+                                   frame.width, frame.height,
+                                   *cn, false);
+    }
     else
+    {
         sws_scale(
                 img_convert_ctx,
                 sw_picture->data,
@@ -1799,6 +1812,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 rgb_picture.data,
                 rgb_picture.linesize
                 );
+    }
 
     *data = frame.data;
     *step = frame.step;
