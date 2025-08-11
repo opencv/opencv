@@ -92,8 +92,6 @@ void LibcameraCapture::ConfigureViewfinder()
     configuration_->at(0).size.height = options_->video_height;
     configuration_->at(0).bufferCount = 4;
 
-    //    configuration_->transform = options_->transform;
-
     configureDenoise(options_->denoise == "auto" ? "cdn_off" : options_->denoise);
     setupCapture();
 
@@ -110,8 +108,6 @@ void LibcameraCapture::Teardown()
 
     for (auto &iter : mapped_buffers_)
     {
-        // assert(iter.first->planes().size() == iter.second.size());
-        // for (unsigned i = 0; i < iter.first->planes().size(); i++)
         for (auto &span : iter.second)
             munmap(span.data(), span.size());
     }
@@ -264,7 +260,7 @@ void LibcameraCapture::queueRequest(CompletedRequest *completed_request)
     BufferMap buffers(std::move(completed_request->buffers));
 
     Request *request = completed_request->request;
-    assert(request);
+    CV_Assert(request);
 
     // This function may run asynchronously so needs protection from the
     // camera stopping at the same time.
