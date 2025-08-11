@@ -141,6 +141,9 @@ public:
     LibcameraFrameAllocator(LibcameraApp* app, libcamera::Request* request);
     virtual ~LibcameraFrameAllocator();
     
+    // Reset the request for reuse in allocator pool
+    void resetRequest(libcamera::Request* request);
+    
     // MatAllocator interface
     cv::UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step, 
                            cv::AccessFlag flags, cv::UMatUsageFlags usageFlags) const override;
@@ -169,22 +172,6 @@ public:
     using BufferMap = Request::BufferMap;
     using Size = libcamera::Size;
     using Rectangle = libcamera::Rectangle;
-    enum class MsgType
-    {
-        RequestComplete,
-        Quit
-    };
-    typedef std::variant<CompletedRequestPtr> MsgPayload;
-    struct Msg
-    {
-        Msg(MsgType const &t) : type(t) {}
-        template <typename T>
-        Msg(MsgType const &t, T p) : type(t), payload(std::forward<T>(p))
-        {
-        }
-        MsgType type;
-        MsgPayload payload;
-    };
 
     // Some flags that can be used to give hints to the camera configuration.
     static constexpr unsigned int FLAG_STILL_NONE = 0;
@@ -231,9 +218,6 @@ public:
 
     void ApplyRoiSettings();
 
-    Msg Wait();
-    void PostMessage(MsgType &t, MsgPayload &p);
-
     Stream *GetStream(std::string const &name, unsigned int *w = nullptr, unsigned int *h = nullptr,
                       unsigned int *stride = nullptr) const;
     Stream *ViewfinderStream(unsigned int *w = nullptr, unsigned int *h = nullptr,
@@ -273,41 +257,8 @@ private:
         return camera_manager_;
     }
 
-    template <typename T>
-    class MessageQueue
-    {
-    public:
-        template <typename U>
-        void Post(U &&msg)
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            queue_.push(std::forward<U>(msg));
-            cond_.notify_one();
-        }
-        T Wait()
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            cond_.wait(lock, [this]
-                       { return !queue_.empty(); });
-            T msg = std::move(queue_.front());
-            queue_.pop();
-            return msg;
-        }
-        void Clear()
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            queue_ = {};
-        }
-
-    private:
-        std::queue<T> queue_;
-        std::mutex mutex_;
-        std::condition_variable cond_;
-    };
-
     void setupCapture();
     void makeRequests();
-    void queueRequest(CompletedRequest *completed_request);
     void requestComplete(Request *request);
     void configureDenoise(const std::string &denoise_mode);
 
@@ -321,11 +272,8 @@ private:
     std::map<Stream *, std::queue<FrameBuffer *>> frame_buffers_;
     std::queue<Request *> free_requests_;
     std::vector<std::unique_ptr<Request>> requests_;
-    std::mutex completed_requests_mutex_;
-    std::set<CompletedRequest *> active_requests_;
     bool camera_started_ = false;
     mutable std::mutex camera_stop_mutex_;
-    MessageQueue<Msg> msg_queue_;
     // For setting camera controls.
     std::mutex control_mutex_;
     ControlList controls_;
@@ -513,6 +461,9 @@ protected:
     mutable std::atomic<uint64_t> last_request_submit_time_ns_{0};
     mutable std::atomic<uint64_t> last_wait_start_time_ns_{0};
     mutable std::atomic<uint64_t> last_frame_complete_time_ns_{0};
+    
+    // Reuse dimensions array to avoid repeated allocations
+    mutable int reuse_dims_[2];
     
     // On-demand mode: send a request when user needs a frame
             

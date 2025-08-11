@@ -100,6 +100,14 @@ LibcameraFrameAllocator::~LibcameraFrameAllocator()
     }
 }
 
+void LibcameraFrameAllocator::resetRequest(libcamera::Request* request)
+{
+    if (app_ && request_to_recycle_) {
+        app_->recycleRequest(request_to_recycle_);
+    }
+    request_to_recycle_ = request;
+}
+
 cv::UMatData* LibcameraFrameAllocator::allocate(int dims, const int* sizes, int type, void* data, 
                                                  size_t* step, cv::AccessFlag flags, cv::UMatUsageFlags usageFlags) const
 {
@@ -152,7 +160,7 @@ LibcameraApp::LibcameraApp(std::unique_ptr<Options> opts)
     : options_(std::move(opts)), capture_instance_(nullptr), controls_(controls::controls)
 {
     if (!options_)
-        options_ = std::unique_ptr<Options>(new Options());
+        options_ = std::make_unique<Options>();
     controls_.clear();
 }
 
@@ -380,7 +388,6 @@ void LibcameraApp::StartCamera()
 void LibcameraApp::StopCamera()
 {
     {
-        // We don't want QueueRequest to run asynchronously while we stop the camera.
         std::lock_guard<std::mutex> lock(camera_stop_mutex_);
         if (camera_started_)
         {
@@ -395,10 +402,6 @@ void LibcameraApp::StopCamera()
             camera_started_ = false;
         }
     }
-
-    active_requests_.clear();
-
-    msg_queue_.Clear();
 
     while (!free_requests_.empty())
         free_requests_.pop();
@@ -426,49 +429,6 @@ void LibcameraApp::ApplyRoiSettings()
             CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
-}
-
-// 等待并返回消息队列中的下一个消息 (requestComplete 的传统模式)
-// Wait and return the next message from the message queue (for traditional requestComplete mode)
-LibcameraApp::Msg LibcameraApp::Wait()
-{
-    return msg_queue_.Wait();
-}
-
-// 向消息队列投递消息 (连续传统模式)
-void LibcameraApp::queueRequest(CompletedRequest *completed_request)
-{
-    BufferMap buffers(std::move(completed_request->buffers));
-
-    Request *request = completed_request->request;
-    CV_Assert(request);
-
-    std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
-    if (!camera_started_)
-        return;
-
-    {
-        std::lock_guard<std::mutex> lock(completed_requests_mutex_);
-        auto it = active_requests_.find(completed_request);
-        delete completed_request;
-        if (it == active_requests_.end())
-            return;
-        active_requests_.erase(it);
-    }
-
-    for (auto const &p : buffers)
-    {
-        if (request->addBuffer(p.first, p.second) < 0)
-            CV_Error(cv::Error::StsError, "failed to add buffer to request in QueueRequest");
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(control_mutex_);
-        request->controls() = std::move(controls_);
-    }
-
-    if (camera_->queueRequest(request) < 0)
-        CV_Error(cv::Error::StsError, "failed to queue request");
 }
 
 bool LibcameraApp::submitSingleRequest()
@@ -527,20 +487,6 @@ bool LibcameraApp::submitSingleRequest()
     return true;
 }
 
-void LibcameraApp::returnRequestToQueue(libcamera::Request* request)
-{
-    if (!request) {
-        return;
-    }
-    
-    std::lock_guard<std::mutex> stop_lock(camera_stop_mutex_);
-    
-    free_requests_.push(request);
-    
-    if (options_->verbose) {
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Request returned to queue, free requests: " << free_requests_.size());
-    }
-}
 
 size_t LibcameraApp::getFreeRequestsCount() const
 {
@@ -562,13 +508,6 @@ void LibcameraApp::recycleRequest(libcamera::Request* request)
 
     request->reuse();  
     free_requests_.push(request);
-}
-
-// 向消息队列投递消息 (requestComplete 的传统模式)
-// Post a message to the message queue (for traditional requestComplete mode)
-void LibcameraApp::PostMessage(MsgType &t, MsgPayload &p)
-{
-    msg_queue_.Post(Msg(t, std::move(p)));
 }
 
 
@@ -745,10 +684,8 @@ void LibcameraApp::requestComplete(Request *request)
     if (request->status() == Request::RequestCancelled)
         return;
 
-    CompletedRequest *r = new CompletedRequest(sequence_++, request);
-    
-    CompletedRequestPtr payload = std::make_shared<CompletedRequest>(*r);
-    delete r;
+    CompletedRequest completed_req(sequence_++, request);
+    CompletedRequestPtr payload = std::make_shared<CompletedRequest>(std::move(completed_req));
 
     uint64_t timestamp = payload->buffers.begin()->second->metadata().timestamp;
     if (last_timestamp_ == 0 || last_timestamp_ == timestamp)
@@ -759,12 +696,11 @@ void LibcameraApp::requestComplete(Request *request)
 
     if (capture_instance_) {
         capture_instance_->onRequestComplete(std::move(payload));
-    } else {
-        msg_queue_.Post(Msg(MsgType::RequestComplete, std::move(payload)));
     }
 }
 
 // 配置降噪模式
+// Configure the denoise mode
 void LibcameraApp::configureDenoise(const std::string &denoise_mode)
 {
     using namespace libcamera::controls::draft;
@@ -784,13 +720,10 @@ void LibcameraApp::configureDenoise(const std::string &denoise_mode)
     controls_.set(NoiseReductionMode, denoise);
 }
 
-/* ******************************************************************* */
-
-// LibcameraCapture 实现
-
 LibcameraCapture::LibcameraCapture()
 {
-    app = new LibcameraApp(std::unique_ptr<Options>(new Options()));
+    auto opts = std::make_unique<Options>();
+    app = new LibcameraApp(std::move(opts));
     options = static_cast<Options *>(app->GetOptions());
     
     app->SetCaptureInstance(this);
@@ -934,7 +867,6 @@ bool LibcameraCapture::waitForFrame(unsigned int timeout_ms)
 
 // 从队列中获取一个完成的请求
 // Get a completed request from the queue
-
 CompletedRequestPtr LibcameraCapture::getCompletedRequest()
 {
     CompletedRequestPtr request;
@@ -957,7 +889,6 @@ CompletedRequestPtr LibcameraCapture::getCompletedRequest()
  */
 bool LibcameraCapture::grabFrame()
 {
-    // 检查是否需要重新配置
     if (needsReconfigure.load(std::memory_order_acquire))
     {
         if (options->verbose)
@@ -970,7 +901,6 @@ bool LibcameraCapture::grabFrame()
         needsReconfigure.store(false, std::memory_order_release);
     }
     
-    // 如果摄像头未启动，尝试启动
     if (!camera_started_.load(std::memory_order_acquire))
     {
         if (!startVideo()) {
@@ -999,7 +929,6 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         return false;
     }
         
-    // 等待帧可用
     auto wait_start = std::chrono::steady_clock::now();
     auto wait_start_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(wait_start.time_since_epoch()).count();
     last_wait_start_time_ns_.store(wait_start_ns, std::memory_order_relaxed);
@@ -1008,7 +937,6 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         return false;  // 超时
     }
     
-    // 获取完成的请求
     CompletedRequestPtr completed_request = getCompletedRequest();
     if (!completed_request) {
         return false;  // 无可用请求
@@ -1038,14 +966,15 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         uint8_t *libcamera_buffer_ptr = mem[0].data();
         
         if (vstr == expected_row_bytes) {
-            LibcameraFrameAllocator* allocator = new LibcameraFrameAllocator(app, completed_request->request);
+            auto allocator = std::make_unique<LibcameraFrameAllocator>(app, completed_request->request);
             
-            // 直接创建UMatData，避免经过Mat和assign
-            cv::UMatData* u = allocator->allocate(2, new int[2]{(int)vh, (int)vw}, CV_8UC3, 
+            reuse_dims_[0] = (int)vh;
+            reuse_dims_[1] = (int)vw;
+            
+            cv::UMatData* u = allocator->allocate(2, reuse_dims_, CV_8UC3, 
                                                   libcamera_buffer_ptr, nullptr, cv::ACCESS_READ, cv::USAGE_DEFAULT);
             if (!u) {
                 CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Failed to allocate UMatData via LibcameraFrameAllocator");
-                delete allocator;
                 return false;
             }
             
@@ -1053,9 +982,8 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
             size_t steps[] = {vstr, pixel_bytes};
             
             Mat zero_copy_mat(2, sizes, CV_8UC3, libcamera_buffer_ptr, steps);
-            zero_copy_mat.allocator = allocator;
+            zero_copy_mat.allocator = allocator.release(); 
             
-            // 手动设置UMatData，确保分配器正确绑定
             if (!zero_copy_mat.u) {
                 zero_copy_mat.u = u;
                 u->refcount = 1;
@@ -1064,7 +992,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
             dst.assign(zero_copy_mat);
             return true;
         } else {
-            // (回退)步长不兼容，使用优化拷贝
+            // (回退)步长不兼容，使用拷贝
             if (options->verbose) {
                 CV_LOG_WARNING(NULL, cv::format("Stride mismatch: libcamera=%d, expected=%d", 
                                                vstr, expected_row_bytes));
@@ -1389,7 +1317,7 @@ bool LibcameraCapture::open(int _index)
 
 bool LibcameraCapture::open(const std::string &_deviceName)
 {
-    (void)_deviceName;  // Suppress unused parameter warning
+    (void)_deviceName;
     
     options->video_width = 1280;
     options->video_height = 720;
