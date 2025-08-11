@@ -42,7 +42,6 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
         TriluLayerImpl(const LayerParams &params) {
             setParamsFrom(params);
             uppertri = params.get<bool>("upper", true);
-
         }
 
         virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
