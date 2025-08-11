@@ -70,27 +70,30 @@ class TriluLayerImpl CV_FINAL : public TriluLayer {
 
             Mat inpMat = inputs[0];
             Mat outMat = outputs[0];
-            if (inpMat.type() == CV_32U)
+
+            size_t esz = inpMat.elemSize();
+
+            if (esz == sizeof(uint32_t))
                 trilu<uint32_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_64S)
+            else if (esz == sizeof(int64_t))
                 trilu<int64_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_64U)
+            else if (esz == sizeof(uint64_t))
                 trilu<uint64_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_Bool)
+            else if (esz == sizeof(bool))
                 trilu<bool>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_64F)
+            else if (esz == sizeof(double))
                 trilu<double>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_32F)
+            else if (esz == sizeof(float))
                 trilu<float>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_32S)
+            else if (esz == sizeof(int32_t))
                 trilu<int32_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_16S)
+            else if (esz == sizeof(int16_t))
                 trilu<int16_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_16U)
+            else if (esz == sizeof(uint16_t))
                 trilu<uint16_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_8S)
+            else if (esz == sizeof(int8_t))
                 trilu<int8_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
-            else if (inpMat.type() == CV_8U)
+            else if (esz == sizeof(uint8_t))
                 trilu<uint8_t>(inpMat, outMat, m, w, h, k, loops, uppertri);
             else
                 CV_Error(Error::StsUnsupportedFormat, "Unsupported input type: " + cv::typeToString(inpMat.type()));
