@@ -124,7 +124,11 @@ def draw_label(img, text, color):
     cv.putText(img, text, (x, y), cv.FONT_HERSHEY_SIMPLEX, font_scale, color, thickness)
 
 
-def apply_modnet(model, image):
+def apply_modnet(args, model, image):
+    inp = cv.dnn.blobFromImage(
+        image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb
+    )
+    model.setInput(inp)
     out = model.forward()
     alpha_mask = postprocess_output(image, out)
     alpha_3ch = cv.merge([alpha_mask / 255.0, alpha_mask / 255.0, alpha_mask / 255.0])
@@ -152,11 +156,7 @@ def main(func_args=None):
     args.model = findModel(args.model, args.sha1)
     net = loadModel(args, engine)
 
-    inp = cv.dnn.blobFromImage(
-        image, args.scale, (args.width, args.height), args.mean, swapRB=args.rgb
-    )
-    net.setInput(inp)
-    alpha_mask, composite = apply_modnet(net, image)
+    alpha_mask, composite = apply_modnet(args, net, image)
 
     t, _ = net.getPerfProfile()
     label = "Inference time: %.2f ms" % (t * 1000.0 / cv.getTickFrequency())

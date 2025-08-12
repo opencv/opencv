@@ -45,6 +45,7 @@ const string about =
     "To download the MODNet model, run: python download_models.py modnet\n"
     "Press any key to exit \n";
 
+
 const string param_keys =
     "{ help h          |                   | Print help message }"
     "{ @alias          | modnet            | An alias name of model to extract preprocessing parameters from models.yml file }"
@@ -108,12 +109,6 @@ static void processImage(const Mat &image, Mat &alpha_mask, Mat &composite, Net 
         return;
 
     Mat blob = blobFromImage(image, scale, Size(width, height), mean, swapRB, false, CV_32F);
-
-    if (abs(scale - 1.0f) < 1e-6)
-    {
-        blob = (blob / 127.5f) - 1.0f;
-    }
-
     net.setInput(blob);
     Mat output = net.forward();
     postprocess(image, output, alpha_mask);
