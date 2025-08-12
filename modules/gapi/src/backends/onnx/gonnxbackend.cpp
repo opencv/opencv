@@ -128,6 +128,7 @@ class ONNXCompiled {
     std::vector<std::string> in_names_without_const;
 
     cv::gapi::onnx::WorkloadTypeONNXPtr m_workload_type;
+    uint64_t m_workload_listener_id = 0;
     void setWorkloadType(const std::string &type);
 public:
     explicit ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp);
@@ -848,7 +849,7 @@ ONNXCompiled::ONNXCompiled(const gapi::onnx::detail::ParamDesc &pp)
 
 ONNXCompiled::~ONNXCompiled() {
     if (m_workload_type) {
-        m_workload_type->removeListener(std::bind(&ONNXCompiled::setWorkloadType, this, std::placeholders::_1));
+        m_workload_type->removeListener(m_workload_listener_id);
     }
 }
 
@@ -860,7 +861,7 @@ void ONNXCompiled::setWorkloadType(const std::string &type) {
 
 void ONNXCompiled::listenToWorkloadType(cv::gapi::onnx::WorkloadTypeONNXPtr workload) {
     m_workload_type = workload;
-    m_workload_type->addListener(std::bind(&ONNXCompiled::setWorkloadType, this, std::placeholders::_1));
+    m_workload_listener_id = m_workload_type->addListener(std::bind(&ONNXCompiled::setWorkloadType, this, std::placeholders::_1));
 }
 
 std::vector<TensorInfo> ONNXCompiled::getTensorInfo(TensorPosition pos) {

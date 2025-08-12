@@ -52,6 +52,7 @@ class GOVExecutable final: public GIslandExecutable
     Options m_options;
 #if INF_ENGINE_RELEASE >= 2024030000
     cv::gapi::wip::ov::WorkloadTypeOVPtr m_workload_type;
+    uint64_t m_workload_listener_id = 0;
     void setWorkloadType(const std::string &type);
 #endif
 public:

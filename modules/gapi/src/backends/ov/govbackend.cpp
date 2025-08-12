@@ -1545,7 +1545,7 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
     if(workload_arg.has_value()) {
 #if INF_ENGINE_RELEASE >= 2024030000
         m_workload_type = workload_arg.value();
-        m_workload_type->addListener(std::bind(&GOVExecutable::setWorkloadType, this, std::placeholders::_1));
+        m_workload_listener_id = m_workload_type->addListener(std::bind(&GOVExecutable::setWorkloadType, this, std::placeholders::_1));
 #else
         util::throw_error(std::logic_error("Workload type not supported in this version of OpenVINO, use >= 2024.3.0"));
 #endif
@@ -1590,7 +1590,7 @@ cv::gimpl::ov::GOVExecutable::GOVExecutable(const ade::Graph &g,
 #if INF_ENGINE_RELEASE >= 2024030000
 cv::gimpl::ov::GOVExecutable::~GOVExecutable() {
     if (m_workload_type)
-        m_workload_type->removeListener(std::bind(&GOVExecutable::setWorkloadType, this, std::placeholders::_1));
+        m_workload_type->removeListener(m_workload_listener_id);
 }
 
 void cv::gimpl::ov::GOVExecutable::setWorkloadType(const std::string &type) {

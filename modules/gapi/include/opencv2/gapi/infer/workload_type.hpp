@@ -16,9 +16,9 @@ using Callback = std::function<void(const std::string &type)>;
 
 class WorkloadListener {
     Callback callback;
-
 public:
-    WorkloadListener(const Callback &cb) : callback(cb) {}
+    uint64_t id;
+    WorkloadListener(const Callback &cb, uint64_t id) : callback(cb), id(id) {}
 
     void operator()(const std::string &type) const {
         if (callback) {
@@ -27,33 +27,25 @@ public:
     }
 
     bool operator==(const WorkloadListener& other) const {
-        // Compare function pointers if both are function pointers
-        auto thisPtr = callback.target<void(*)(const std::string&)>();
-        auto otherPtr = other.callback.target<void(*)(const std::string&)>();
-
-        if (thisPtr && otherPtr) {
-            return *thisPtr == *otherPtr;
-        }
-
-        // For lambdas and other callables, compare target type and address
-        return callback.target_type() == other.callback.target_type() &&
-               callback.target<void(*)(const std::string&)>() == other.callback.target<void(*)(const std::string&)>();
+        return id == other.id;
     }
 };
 class WorkloadType {
     std::vector<WorkloadListener> listeners;
-
+    uint64_t nextId = 1;
 public:
-    void addListener(const Callback &cb) {
-        listeners.push_back(cb);
+    uint64_t addListener(const Callback &cb) {
+        uint64_t id = nextId++;
+        listeners.emplace_back(cb, id);
+        return id;
     }
 
-    void removeListener(const Callback& cb) {
-        WorkloadListener toRemove(cb);
-        listeners.erase(
-            std::remove(listeners.begin(), listeners.end(), toRemove),
-            listeners.end()
-        );
+    void removeListener(uint64_t id) {
+        auto it = std::remove_if(listeners.begin(), listeners.end(),
+            [id](const WorkloadListener& entry) { return entry.id == id; });
+        if (it != listeners.end()) {
+            listeners.erase(it, listeners.end());
+        }
     }
 
     void notify(const std::string &type) {
