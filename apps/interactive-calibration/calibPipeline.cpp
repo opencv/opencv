@@ -31,6 +31,9 @@ CalibPipeline::CalibPipeline(captureParameters params) :
 
 PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > processors)
 {
+    const int allowedEmptyFrames = 5;
+    int emptyFrames = 0;
+
     auto open_camera = [this] () {
         if(mCaptureParams.source == Camera)
         {
@@ -87,6 +90,22 @@ PipelineExitStatus CalibPipeline::start(std::vector<cv::Ptr<FrameProcessor> > pr
             CV_CheckEQ(mImageSize, newSize, "Camera image size changed after reopening.");
         }
         mCapture.retrieve(frame);
+
+        if (frame.empty()) {
+            emptyFrames++;
+            if (emptyFrames >= allowedEmptyFrames) {
+                CV_LOG_ERROR(NULL, "VideoCapture error: grabbed sequence of empty frames. VideoCapture is not ready or broken.");
+                return Finished;
+            }
+
+            continue;
+        } else {
+            emptyFrames = 0;
+            if (mImageSize.width == 0 || mImageSize.height == 0) { // looks like VideoCapture does not support required properties
+                mImageSize = frame.size();
+            }
+        }
+
         if(mCaptureParams.flipVertical)
             cv::flip(frame, frame, -1);
 
