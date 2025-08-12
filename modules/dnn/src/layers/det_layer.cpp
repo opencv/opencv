@@ -100,17 +100,20 @@ public:
         const uchar* base = X.data;
         uchar* outp = outputs[0].ptr();
 
-        for (size_t b = 0; b < batch; ++b)
-        {
-            const uchar* p = base + b * matStrideBytes;
-            Mat A(m, n, type, const_cast<uchar*>(p));
+        cv::parallel_for_(cv::Range(0, static_cast<int>(batch)), [&](const cv::Range& r){
+            for (int bi = r.start; bi < r.end; ++bi)
+            {
+                size_t b = static_cast<size_t>(bi);
+                const uchar* p = base + b * matStrideBytes;
+                Mat A(m, n, type, const_cast<uchar*>(p));
 
-            double det = cv::determinant(A);
-            if (type == CV_32F)
-                reinterpret_cast<float*>(outp)[b] = static_cast<float>(det);
-            else // CV_64F
-                reinterpret_cast<double*>(outp)[b] = det;
-        }
+                double det = cv::determinant(A);
+                if (type == CV_32F)
+                    reinterpret_cast<float*>(outp)[b] = static_cast<float>(det);
+                else // CV_64F
+                    reinterpret_cast<double*>(outp)[b] = det;
+            }
+        });
     }
 };
 
