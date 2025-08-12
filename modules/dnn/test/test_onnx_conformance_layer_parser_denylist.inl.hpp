@@ -110,7 +110,6 @@
 "test_isinf", // Issue::Can't create layer "onnx_node_output_0!y" of type "IsInf" in function 'getLayerInstance'
 "test_isinf_negative", //-- same as above ---
 "test_isinf_positive", //-- same as above ---
-"test_isnan", // -- same as above ---
 "test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
