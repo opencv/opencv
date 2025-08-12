@@ -1380,8 +1380,34 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
     }
 
     if (!layerParams.has("kernel_size"))
-        CV_Error(Error::StsNotImplemented,
-                 "Required attribute 'kernel_size' is not present.");
+    {
+        std::vector<int> kshape;
+        if (!layerParams.blobs.empty())
+        {
+            const Mat& w = layerParams.blobs[0];
+            int kdims = w.dims - 2;
+            kshape.resize(kdims);
+            for (int i = 0; i < kdims; ++i)
+                kshape[i] = w.size[i + 2];
+        }
+        else if (node_inputs.size() >= 2)
+        {
+            const Arg& warg = node_inputs[1];
+            const ArgData& wdata = netimpl->args.at(warg.idx);
+            if (wdata.shape.size() >= 3)
+            {
+                int kdims = (int)wdata.shape.size() - 2;
+                kshape.resize(kdims);
+                for (int i = 0; i < kdims; ++i)
+                    kshape[i] = wdata.shape[2 + i];
+            }
+        }
+
+        if (!kshape.empty())
+        {
+            layerParams.set("kernel_size", DictValue::arrayInt(kshape.data(), (int)kshape.size()));
+        }
+    }
 
     if (layerParams.has("output_shape"))
     {
@@ -1403,6 +1429,14 @@ void ONNXImporter2::parseConvTranspose(LayerParams& layerParams, const opencv_on
                 int stride = strides.get<int>(i);
                 adjust_pads.push_back(padMode == "SAME"? (sz - 1) % stride :
                                                          (sz - kernel.get<int>(i)) % stride);
+            }
+            layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], (int)adjust_pads.size()));
+        }
+        else
+        {
+            for (int i = 0; i < strides.size(); i++)
+            {
+                adjust_pads.push_back(1);
             }
             layerParams.set("adj", DictValue::arrayInt(&adjust_pads[0], (int)adjust_pads.size()));
         }

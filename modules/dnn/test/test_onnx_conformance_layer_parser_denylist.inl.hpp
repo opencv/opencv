@@ -59,16 +59,7 @@
 "test_constantofshape_int_zeros", // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding", //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
-"test_convtranspose", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_1d", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_3d", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_autopad_same", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_dilations", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_kernel_shape", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_output_shape", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_pad", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_pads", // Issue::Parser::Weights are required as inputs
-"test_convtranspose_with_kernel", // Issue::Parser::Weights are required as inputs
 "test_det_2d", // Issue:: Unkonwn error
 "test_det_nd", // Issue:: Unkonwn error
 "test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
