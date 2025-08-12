@@ -364,6 +364,20 @@ static ImageEncoder findEncoder( const String& _ext )
     return ImageEncoder();
 }
 
+static bool isValidEncodeKeyAtAll(const int key)
+{
+    bool ret = false;
+    ImageCodecInitializer& codecs = getCodecs();
+    for( size_t i = 0; i < codecs.encoders.size(); i++ )
+    {
+        if( codecs.encoders[i]->isValidEncodeKey(key) == true )
+        {
+            ret = true;
+            break;
+        }
+    }
+    return ret;
+}
 
 static void ExifTransform(int orientation, OutputArray img)
 {
@@ -1110,6 +1124,27 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        if(encoder->isValidEncodeKey(key))
+        {
+            // Current encoder supports specified key.
+            // Do nothing.
+        }
+        else if(isValidEncodeKeyAtAll(key))
+        {
+            // Current encoder does not support specified key, but some encoder supports it.
+            CV_LOG_WARNING(nullptr, cv::format("An unsupported key(%d) was specified and has been ignored.", key));
+        }
+        else
+        {
+            // No encoder supports specified key.
+            CV_LOG_WARNING(nullptr, cv::format("An unknown key(%d) was specified and has been ignored.", key));
+        }
+    }
+
     bool code = false;
     try
     {
@@ -1662,6 +1697,26 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        if(encoder->isValidEncodeKey(key))
+        {
+            // Current encoder supports specified key.
+            // Do nothing.
+        }
+        else if(isValidEncodeKeyAtAll(key))
+        {
+            // Current encoder does not support specified key, but some encoder supports it.
+            CV_LOG_WARNING(nullptr, cv::format("An unsupported key(%d) was specified and has been ignored.", key));
+        }
+        else
+        {
+            // No encoder supports specified key.
+            CV_LOG_WARNING(nullptr, cv::format("An unknown key(%d) was specified and has been ignored.", key));
+        }
+    }
 
     bool code = false;
     String filename;

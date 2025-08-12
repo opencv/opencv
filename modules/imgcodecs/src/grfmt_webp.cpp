@@ -338,6 +338,7 @@ WebPEncoder::WebPEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_WEBP_QUALITY};
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -356,15 +357,17 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     bool comp_lossless = true;
     float quality = 100.0f;
 
-    if (params.size() > 1)
+    for(size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[0] == IMWRITE_WEBP_QUALITY)
+        const int value = params[i+1];
+        if (params[i] == IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
-            quality = static_cast<float>(params[1]);
+            quality = static_cast<float>(value);
             if (quality < 1.0f)
             {
                 quality = 1.0f;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
             }
             if (quality > 100.0f)
             {

@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "grfmt_hdr.hpp"
 #include "rgbe.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 #ifdef HAVE_IMGCODEC_HDR
 
@@ -139,6 +140,7 @@ ImageDecoder HdrDecoder::newDecoder() const
 HdrEncoder::HdrEncoder()
 {
     m_description = "Radiance HDR (*.hdr;*.pic)";
+    m_supported_encode_key = {IMWRITE_HDR_COMPRESSION};
 }
 
 HdrEncoder::~HdrEncoder()
@@ -162,10 +164,21 @@ bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
     int compression = IMWRITE_HDR_COMPRESSION_RLE;
     for (size_t i = 0; i + 1 < params.size(); i += 2)
     {
+        const int value = params[i+1];
         switch (params[i])
         {
         case IMWRITE_HDR_COMPRESSION:
-            compression = params[i + 1];
+            switch(value)
+            {
+                case IMWRITE_HDR_COMPRESSION_NONE:
+                case IMWRITE_HDR_COMPRESSION_RLE:
+                    compression = value;
+                    break;
+                default:
+                    compression = IMWRITE_HDR_COMPRESSION_RLE;
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_HDR_COMPRESSION must be one of ImwriteHDRCompressionFlags. It is fallbacked to IMWRITE_HDR_COMPRESSION_RLE", value));
+                    break;
+            }
             break;
         default:
             break;

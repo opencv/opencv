@@ -482,6 +482,7 @@ SPngEncoder::SPngEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_PNG_COMPRESSION, IMWRITE_PNG_STRATEGY, IMWRITE_PNG_BILEVEL, IMWRITE_PNG_FILTER, IMWRITE_PNG_ZLIBBUFFER_SIZE};
 }
 
 SPngEncoder::~SPngEncoder()
@@ -534,25 +535,56 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
         for (size_t i = 0; i < params.size(); i += 2)
         {
+            const int value = params[i+1];
             if (params[i] == IMWRITE_PNG_COMPRESSION)
             {
                 compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                compression_level = params[i + 1];
-                compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                compression_level = MIN(MAX(value, 0), Z_BEST_COMPRESSION);
+                if(value != m_compression_level) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, m_compression_level));
+                }
                 set_compression_level = true;
             }
             if (params[i] == IMWRITE_PNG_STRATEGY)
             {
-                compression_strategy = params[i + 1];
-                compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+                switch(value) {
+                    case IMWRITE_PNG_STRATEGY_DEFAULT:
+                    case IMWRITE_PNG_STRATEGY_FILTERED:
+                    case IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY:
+                    case IMWRITE_PNG_STRATEGY_RLE:
+                    case IMWRITE_PNG_STRATEGY_FIXED:
+                        compression_strategy = value;
+                        break;
+                    default:
+                        compression_strategy = IMWRITE_PNG_STRATEGY_RLE:
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_STRATEGY must be one of ImwritePNGFlags. It is fallbacked to IMWRITE_PNG_STRATEGY_RLE", value));
+                        break;
+                }
             }
             if (params[i] == IMWRITE_PNG_BILEVEL)
             {
-                isBilevel = params[i + 1] != 0;
+                isBilevel = value != 0;
+                if((value != 0) && (value != 1)) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_BILEVEL must be 0 or 1. It is fallbacked to 1", value ));
+                }
             }
             if( params[i] == IMWRITE_PNG_FILTER )
             {
-                filter = params[i+1];
+                switch(value) {
+                    case IMWRITE_PNG_FILTER_NONE:
+                    case IMWRITE_PNG_FILTER_SUB:
+                    case IMWRITE_PNG_FILTER_UP:
+                    case IMWRITE_PNG_FILTER_AVG:
+                    case IMWRITE_PNG_FILTER_PAETH:
+                    case IMWRITE_PNG_FAST_FILTERS:
+                    case IMWRITE_PNG_ALL_FILTERS:
+                        filter = value;
+                        break;
+                    default:
+                        filter = IMWRITE_PNG_FILTER_SUB;
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_FILTER must be one of ImwritePNGFilterFlags. It is fallbacked to IMWRITE_PNG_FILTER_SUB", value ));
+                        break;
+                }
                 set_filter = true;
             }
             if( params[i] == IMWRITE_PNG_ZLIBBUFFER_SIZE )

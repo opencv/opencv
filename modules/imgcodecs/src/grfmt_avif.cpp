@@ -319,6 +319,7 @@ AvifEncoder::AvifEncoder() {
   m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
   m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
   encoder_ = avifEncoderCreate();
+  m_supported_encode_key = { IMWRITE_AVIF_QUALITY, IMWRITE_AVIF_DEPTH, IMWRITE_AVIF_SPEED };
 }
 
 AvifEncoder::~AvifEncoder() {
@@ -334,9 +335,13 @@ bool AvifEncoder::writeanimation(const Animation& animation,
   int bit_depth = 8;
   int speed = AVIF_SPEED_FASTEST;
   for (size_t i = 0; i < params.size(); i += 2) {
+    const int value = params[i + 1];
     if (params[i] == IMWRITE_AVIF_QUALITY) {
-      const int quality = std::min(std::max(params[i + 1], AVIF_QUALITY_WORST),
+      const int quality = std::min(std::max(value, AVIF_QUALITY_WORST),
                                    AVIF_QUALITY_BEST);
+      if (value != quality) {
+        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_QUALITY must be between 0 to 100. It is fallbacked to %d", value, quality));
+      }
 #if CV_AVIF_USE_QUALITY
       encoder_->quality = quality;
 #else
@@ -346,9 +351,17 @@ bool AvifEncoder::writeanimation(const Animation& animation,
           AVIF_QUANTIZER_WORST_QUALITY;
 #endif
     } else if (params[i] == IMWRITE_AVIF_DEPTH) {
-      bit_depth = params[i + 1];
+      bit_depth = value;
+      if ((bit_depth != 8) && (bit_depth !=10) && (bit_depth !=12))
+      {
+        bit_depth = 8;
+        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_DEPTH must be 8, 10 or 12. It is fallbacked to %d", value, bit_depth));
+      }
     } else if (params[i] == IMWRITE_AVIF_SPEED) {
-      speed = params[i + 1];
+      speed = std::min(std::max(value,0),10);
+      if (value != speed) {
+        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_AVIF_SPEED must be between 0 to 10. It is fallbacked to %d", value, speed));
+      }
     }
   }
 

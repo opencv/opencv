@@ -616,6 +616,7 @@ JpegEncoder::JpegEncoder()
     m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
     m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
     m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_JPEG_QUALITY, IMWRITE_JPEG_PROGRESSIVE, IMWRITE_JPEG_OPTIMIZE, IMWRITE_JPEG_RST_INTERVAL, IMWRITE_JPEG_LUMA_QUALITY, IMWRITE_JPEG_CHROMA_QUALITY, IMWRITE_JPEG_SAMPLING_FACTOR};
 }
 
 
@@ -724,27 +725,39 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
+            const int value = params[i+1];
             if( params[i] == IMWRITE_JPEG_QUALITY )
             {
-                quality = params[i+1];
-                quality = MIN(MAX(quality, 0), 100);
+                quality = MIN(MAX(value, 0), 100);
+                if(value != quality) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_QUALITY must be between 0 to 100. It is fallbacked to %d", value, quality));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_PROGRESSIVE )
             {
-                progressive = params[i+1];
+                progressive = MIN(MAX(value,0), 1);
+                if(value != progressive) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_PROGRESSIVE must be 0 or 1. It is fallbacked to %d", value, progressive));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_OPTIMIZE )
             {
-                optimize = params[i+1];
+                optimize = MIN(MAX(value,0), 1);
+                if(value != optimize) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_OPTIMIZE must be 0 or 1. It is fallbacked to %d", value, optimize));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_LUMA_QUALITY )
             {
-                if (params[i+1] >= 0)
+                if (value >= 0)
                 {
-                    luma_quality = MIN(MAX(params[i+1], 0), 100);
+                    luma_quality = MIN(MAX(value, 0), 100);
+                    if(value != luma_quality) {
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_LUMA_QUALITY must be between 0 to 100. It is fallbacked to %d.", value, luma_quality));
+                    }
 
                     quality = luma_quality;
 
@@ -752,6 +765,8 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                     {
                         chroma_quality = luma_quality;
                     }
+                } else {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_LUMA_QUALITY must be between 0 to 100. It is ignored.", value));
                 }
             }
 
@@ -759,19 +774,26 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             {
                 if (params[i+1] >= 0)
                 {
-                    chroma_quality = MIN(MAX(params[i+1], 0), 100);
+                    chroma_quality = MIN(MAX(value, 0), 100);
+                    if(value != chroma_quality) {
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_CHROMA_QUALITY must be between 0 to 100. It is fallbacked to %d.", value, chroma_quality));
+                    }
+                } else {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_CHROMA_QUALITY must be between 0 to 100. It is ignored.", value));
                 }
             }
 
             if( params[i] == IMWRITE_JPEG_RST_INTERVAL )
             {
-                rst_interval = params[i+1];
-                rst_interval = MIN(MAX(rst_interval, 0), 65535L);
+                rst_interval = MIN(MAX(value, 0), 65535L);
+                if(value != rst_interval) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_RST_INTERVAL must be between 0 to 65535. It is fallbacked to %d.", value, rst_interval));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_SAMPLING_FACTOR )
             {
-                sampling_factor = static_cast<uint32_t>(params[i+1]);
+                sampling_factor = static_cast<uint32_t>(value);
 
                 switch ( sampling_factor )
                 {
@@ -784,7 +806,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                     break;
 
                     default:
-                    CV_LOG_WARNING(NULL, cv::format("Unknown value for IMWRITE_JPEG_SAMPLING_FACTOR: 0x%06x", sampling_factor ) );
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_SAMPLING_FACTOR must be one of ImwriteJPEGSamplingFactorParams. It is fallbacked to IMWRITE_JPEG_SAMPLING_FACTOR_420.", value));
                     sampling_factor = 0;
                     break;
                 }
