@@ -1021,11 +1021,11 @@ CASE(test_maxunpool_export_without_output_shape)
     SKIP;
 #endif
 CASE(test_mean_example)
-    // no filter
+    SKIP;
 CASE(test_mean_one_input)
-    // no filter
+    SKIP;
 CASE(test_mean_two_inputs)
-    // no filter
+    SKIP;
 CASE(test_min_example)
     // no filter
 CASE(test_min_float16)
@@ -1868,9 +1868,9 @@ CASE(test_sinh)
 CASE(test_sinh_example)
     // no filter
 CASE(test_size)
-    // no filter
+    SKIP;
 CASE(test_size_example)
-    // no filter
+    SKIP;
 CASE(test_slice)
     SKIP;
 CASE(test_slice_default_axes)

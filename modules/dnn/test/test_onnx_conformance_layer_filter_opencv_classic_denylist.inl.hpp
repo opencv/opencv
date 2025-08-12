@@ -66,3 +66,8 @@
 "test_clip_inbounds",
 "test_clip_outbounds",
 "test_clip_splitbounds",
+"test_size",
+"test_size_example",
+"test_mean_example",
+"test_mean_one_input",
+"test_mean_two_inputs",

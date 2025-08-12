@@ -211,6 +211,7 @@ protected:
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1595,6 +1596,12 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto, ninputs);
 }
 
+void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Size";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
@@ -2431,6 +2438,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize;
+    dispatch["Size"] = &ONNXImporter2::parseSize;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;

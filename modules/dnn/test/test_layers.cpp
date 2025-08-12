@@ -2853,4 +2853,57 @@ TEST(Layer_If, resize)
     }
 }
 
+TEST(Layer_Size, onnx_1d)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string modelname = findDataFile("dnn/onnx/models/test_size_1d_model.onnx", true);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_NEW);
+
+    int sz1d[1] = {7};
+    cv::Mat x(1, sz1d, CV_32F);
+    cv::randu(x, 0, 1);
+    net.setInput(x);
+
+    std::vector<cv::Mat> outs;
+    net.forward(outs);
+
+    ASSERT_EQ(outs.size(), 1u);
+    EXPECT_EQ(outs[0].total(), (size_t)1);
+    EXPECT_EQ(outs[0].type(), CV_64S);
+    EXPECT_EQ(outs[0].at<int64_t>(0), static_cast<int64_t>(sz1d[0]));
+}
+
+TEST(Layer_Size, onnx_0d_scalar)
+{
+    auto engine_forced = static_cast<cv::dnn::EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", cv::dnn::ENGINE_AUTO));
+    if (engine_forced == cv::dnn::ENGINE_CLASSIC)
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER);
+        return;
+    }
+
+    const std::string modelname = findDataFile("dnn/onnx/models/test_size_0d_model.onnx", true);
+    cv::dnn::Net net = cv::dnn::readNetFromONNX(modelname, ENGINE_NEW);
+
+    cv::Mat x(1, 1, CV_32F);
+    x.at<float>(0, 0) = 3.14f;
+    net.setInput(x);
+
+    std::vector<cv::Mat> outs;
+    net.forward(outs);
+
+    ASSERT_EQ(outs.size(), 1u);
+    EXPECT_EQ(outs[0].total(), (size_t)1);
+    EXPECT_EQ(outs[0].type(), CV_64S);
+    EXPECT_EQ(outs[0].at<int64_t>(0), 1);
+}
+
 }} // namespace
