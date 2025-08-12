@@ -112,6 +112,9 @@ int cvtBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_
 int cvtOnePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx, int yIdx);
 int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx);
 int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx);
+int cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step,
+                          uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                          int dcn, bool swapBlue);
 int cvtOnePlaneBGRtoYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx, int yIdx);
 int cvtBGRtoTwoPlaneYUV(const uchar * src_data, size_t src_step, uchar * y_data, size_t y_step, uchar * uv_data, size_t uv_step, int width, int height, int scn, bool swapBlue, int uIdx);
 int cvtBGRtoThreePlaneYUV(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int width, int height, int scn, bool swapBlue, int uIdx);

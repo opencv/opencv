@@ -1164,32 +1164,40 @@ static inline int cvtSinglePlaneYUVtoBGR(int start, int end, uchar * dst_data, s
 
 // the algorithm is copied from imgproc/src/color_yuv.simd.cpp,
 // in the functor struct YUV420sp2RGB8Invoker and YUV420p2RGB8Invoker
-static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, size_t dst_step, int dst_width, size_t stride, const uchar* y1, const uchar* u, const uchar* v, int ustepIdx, int vstepIdx, int dcn, bool swapBlue, int uIdx)
+static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, size_t dst_step, int dst_width, const uchar* y1, const uchar* u, const uchar* v, size_t stride, size_t u_step, size_t v_step, int dcn, bool swapBlue)
 {
     const int rangeBegin = start * 2;
     const int rangeEnd = end * 2;
     const uchar* my1 = y1 + rangeBegin * stride;
 
-    int uvsteps[2] = {dst_width/2, static_cast<int>(stride) - dst_width/2};
-    int usIdx = ustepIdx, vsIdx = vstepIdx;
+    size_t usteps[2] = {u_step, stride - u_step};
+    size_t vsteps[2] = {v_step, stride - v_step};
+    int usIdx = 0, vsIdx = 0;
 
     const uchar* u1 = u + (start / 2) * stride;
     const uchar* v1 = v + (start / 2) * stride;
 
     if (start % 2 == 1)
     {
-        u1 += uvsteps[(usIdx++) & 1];
-        v1 += uvsteps[(vsIdx++) & 1];
+        u1 += usteps[(usIdx++) & 1];
+        v1 += vsteps[(vsIdx++) & 1];
     }
 
-    if (uIdx != -1)
+    if (v == nullptr)
     {
         // Overwrite u1 as uv in TwoPlane mode
         u1 = u + rangeBegin * stride / 2;
-        uvsteps[0] = uvsteps[1] = stride;
+        usteps[0] = usteps[1] = stride;
     }
 
-    for (int j = rangeBegin; j < rangeEnd; j += 2, my1 += stride * 2, u1 += uvsteps[(usIdx++) & 1], v1 += uvsteps[(vsIdx++) & 1])
+    if (u == nullptr)
+    {
+        // Overwrite v1 as uv in TwoPlane mode
+        v1 = v + rangeBegin * stride / 2;
+        vsteps[0] = vsteps[1] = stride;
+    }
+
+    for (int j = rangeBegin; j < rangeEnd; j += 2, my1 += stride * 2, u1 += usteps[(usIdx++) & 1], v1 += vsteps[(vsIdx++) & 1])
     {
         uchar* row1 = dst_data + dst_step * j;
         uchar* row2 = dst_data + dst_step * (j + 1);
@@ -1205,17 +1213,18 @@ static inline int cvtMultiPlaneYUVtoBGR(int start, int end, uchar * dst_data, si
             auto vy02 = __riscv_vget_v_u8m1x2_u8m1(x, 0), vy12 = __riscv_vget_v_u8m1x2_u8m1(x, 1);
 
             vuint8m1_t uu, vv;
-            switch (uIdx)
+            if (v == nullptr)
             {
-            case 0:
                 x = __riscv_vlseg2e8_v_u8m1x2(u1 + 2 * i, vl);
                 uu = __riscv_vget_v_u8m1x2_u8m1(x, 0), vv = __riscv_vget_v_u8m1x2_u8m1(x, 1);
-                break;
-            case 1:
-                x = __riscv_vlseg2e8_v_u8m1x2(u1 + 2 * i, vl);
+            }
+            else if (u == nullptr)
+            {
+                x = __riscv_vlseg2e8_v_u8m1x2(v1 + 2 * i, vl);
                 uu = __riscv_vget_v_u8m1x2_u8m1(x, 1), vv = __riscv_vget_v_u8m1x2_u8m1(x, 0);
-                break;
-            default:
+            }
+            else
+            {
                 uu = __riscv_vle8_v_u8m1(u1 + i, vl), vv = __riscv_vle8_v_u8m1(v1 + i, vl);
             }
 
@@ -1240,7 +1249,10 @@ int cvtTwoPlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_dat
     if (dcn != 3 && dcn != 4)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     const uchar* uv = src_data + src_step * static_cast<size_t>(dst_height);
-    return color::invoke(dst_width, dst_height / 2, {PlaneYUVtoBGR::cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, uv, uv, 0, 0, dcn, swapBlue, uIdx);
+    const uchar* u_data = uIdx == 1 ? nullptr : uv;
+    const uchar* v_data = uIdx == 1 ? uv : nullptr;
+    size_t uv_step = dst_width / 2;
+    return color::invoke(dst_width, dst_height / 2, {PlaneYUVtoBGR::cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_data, u_data, v_data, src_step, uv_step, uv_step, dcn, swapBlue);
 }
 
 int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_data, size_t dst_step, int dst_width, int dst_height, int dcn, bool swapBlue, int uIdx)
@@ -1252,9 +1264,19 @@ int cvtThreePlaneYUVtoBGR(const uchar * src_data, size_t src_step, uchar * dst_d
 
     int ustepIdx = 0;
     int vstepIdx = dst_height % 4 == 2 ? 1 : 0;
+    int uvsteps[2] = {dst_width/2, static_cast<int>(src_step) - dst_width/2};
     if (uIdx == 1) { std::swap(u ,v), std::swap(ustepIdx, vstepIdx); }
 
-    return color::invoke(dst_width, dst_height / 2, {PlaneYUVtoBGR::cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_step, src_data, u, v, ustepIdx, vstepIdx, dcn, swapBlue, -1);
+    return color::invoke(dst_width, dst_height / 2, {PlaneYUVtoBGR::cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, src_data, u, v, src_step, uvsteps[ustepIdx], uvsteps[vstepIdx], dcn, swapBlue);
+}
+
+int cvtThreePlaneYUVtoBGR(const uchar * y_data, size_t y_step, const uchar * u_data, size_t u_step, const uchar * v_data, size_t v_step,
+                          uchar * dst_data, size_t dst_step, int dst_width, int dst_height,
+                          int dcn, bool swapBlue)
+{
+    if (dcn != 3 && dcn != 4)
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+    return color::invoke(dst_width, dst_height / 2, {PlaneYUVtoBGR::cvtMultiPlaneYUVtoBGR}, dst_data, dst_step, dst_width, y_data, u_data, v_data, y_step, u_step, v_step, dcn, swapBlue);
 }
 
 namespace PlaneBGRtoYUV {
