@@ -70,12 +70,10 @@ static Mat postprocessOutput(const Mat &output, const Size &originalSize)
     vector<Mat> channels(3);
     for (int i = 0; i < 3; i++)
     {
-        channels[i] = Mat(squeezed.size[1], squeezed.size[2], CV_32F,
+        channels[2-i] = Mat(squeezed.size[1], squeezed.size[2], CV_32F,
                         squeezed.ptr<float>(i));
     }
     merge(channels, outputImage);
-
-    cvtColor(outputImage, outputImage, COLOR_RGB2BGR);
 
     outputImage = max(0.0, min(1.0, outputImage));
     outputImage.convertTo(outputImage, CV_8UC3, 255.0);
@@ -104,26 +102,24 @@ static double calculateFontScale(const Mat &image)
     return max(0.5, baseScale);
 }
 
-static void processFrame(Net &net, const Mat &frame, float scale, const Scalar &mean, bool swapRB, int width, int height)
+static void processFrame(Net &net, Mat &frame, float scale, const Scalar &mean, bool swapRB, int width, int height)
 {
     Mat result = applySuperResolution(net, frame, scale, mean, swapRB, width, height);
-    Mat frameWithText = frame.clone();
-    Mat resultWithText = result.clone();
 
     double fontScale = calculateFontScale(frame);
     int thickness = max(1, (int)(fontScale * 2));
 
-    putText(frameWithText, "Original", Point(10, 30),
+    putText(frame, "Original", Point(10, 30),
             FONT_HERSHEY_SIMPLEX, fontScale, Scalar(0, 255, 0), thickness);
 
     double resultFontScale = calculateFontScale(result);
     int resultThickness = max(1, (int)(resultFontScale * 2));
 
-    putText(resultWithText, "Super-Resolution 4x", Point(20, 50),
+    putText(result, "Super-Resolution 4x", Point(20, 50),
             FONT_HERSHEY_SIMPLEX, resultFontScale, Scalar(0, 255, 0), resultThickness);
 
-    imshow("Input", frameWithText);
-    imshow("Super-Resolution", resultWithText);
+    imshow("Input", frame);
+    imshow("Super-Resolution", result);
 }
 
 int main(int argc, char **argv)
