@@ -80,7 +80,6 @@ public:
         roi_x = roi_y = roi_width = roi_height = 0;
         awb_gain_r = awb_gain_b = 0;
         denoise = "auto";
-        verbose = false;
         transform = libcamera::Transform::Identity;
         camera = 0;
         buffer_count = 4;
@@ -99,7 +98,6 @@ public:
     bool help;
     bool version;
     bool list_cameras;
-    bool verbose;
     uint64_t timeout; // in ms
     unsigned int photo_width, photo_height;
     unsigned int video_width, video_height;

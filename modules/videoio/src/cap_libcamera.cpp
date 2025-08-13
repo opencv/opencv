@@ -171,13 +171,10 @@ LibcameraApp::~LibcameraApp()
         Teardown();
         CloseCamera();
     } catch (const std::exception& e) {
-        if (options_ && options_->verbose) {
-            CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error in destructor: " << e.what());
-        }
+        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error in destructor: " << e.what());
     }
     
-    if (options_ && options_->verbose && !options_->help)
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): End of ~LibcameraApp() call");
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): End of ~LibcameraApp() call");
 }
 
 // 获取当前摄像头的设备ID字符串
@@ -190,8 +187,7 @@ std::string const &LibcameraApp::CameraId() const
 void LibcameraApp::OpenCamera()
 {
 
-    if (options_->verbose)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Opening camera...");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Opening camera...");
 
     if (camera_started_ || camera_acquired_ || camera_) {
         CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Camera not properly closed, forcing cleanup");
@@ -216,8 +212,7 @@ void LibcameraApp::OpenCamera()
         CV_Error(cv::Error::StsAssert, "failed to acquire camera " + cam_id);
     camera_acquired_ = true;
 
-    if (options_->verbose)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Acquired camera " << cam_id);
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Acquired camera " << cam_id);
 }
 
 void LibcameraApp::CloseCamera()
@@ -233,14 +228,12 @@ void LibcameraApp::CloseCamera()
 
     camera_.reset();
 
-    if (options_->verbose && !options_->help)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera closed");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera closed");
 }
 
 void LibcameraApp::ConfigureViewfinder()
 {
-    if (options_->verbose)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Configuring viewfinder...");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Configuring viewfinder...");
 
     StreamRoles stream_roles = {StreamRole::Viewfinder};
     configuration_ = camera_->generateConfiguration(stream_roles);
@@ -257,10 +250,8 @@ void LibcameraApp::ConfigureViewfinder()
         
         if (options_->buffer_count < min_safe_buffers) {
             options_->buffer_count = min_safe_buffers;
-            if (options_->verbose) {
-                CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Auto-adjusted buffer count to " << options_->buffer_count 
-                          << " for safe operation");
-            }
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Auto-adjusted buffer count to " << options_->buffer_count 
+                      << " for safe operation");
         }
     }
     
@@ -272,16 +263,14 @@ void LibcameraApp::ConfigureViewfinder()
 
     streams_["viewfinder"] = configuration_->at(0).stream();
 
-    if (options_->verbose)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Viewfinder setup complete");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Viewfinder setup complete");
 }
 
 // 清理所有已分配的资源：内存映射、缓冲区分配器、配置等
 // Teardown all allocated resources: memory mappings, buffer allocator, configuration, etc.
 void LibcameraApp::Teardown()
 {
-    if (options_->verbose && !options_->help)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Tearing down requests, buffers and configuration");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Tearing down requests, buffers and configuration");
 
     if (camera_started_) {
         StopCamera();
@@ -325,8 +314,7 @@ void LibcameraApp::StartCamera()
         int h = options_->roi_height * sensor_area.height;
         Rectangle crop(x, y, w, h);
         crop.translateBy(sensor_area.topLeft());
-        if (options_->verbose)
-            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
 
@@ -378,11 +366,9 @@ void LibcameraApp::StartCamera()
     for (std::unique_ptr<Request> &request : requests_) {
         free_requests_.push(request.get());
     }
-    if (options_->verbose)
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): On-demand mode: " << free_requests_.size() << " requests available");
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): On-demand mode: " << free_requests_.size() << " requests available");
 
-    if (options_->verbose)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started!");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started!");
 }
 
 void LibcameraApp::StopCamera()
@@ -410,8 +396,7 @@ void LibcameraApp::StopCamera()
 
     controls_.clear(); 
 
-    if (options_->verbose && !options_->help)
-         CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera stopped!");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera stopped!");
 }
 
 void LibcameraApp::ApplyRoiSettings()
@@ -425,8 +410,7 @@ void LibcameraApp::ApplyRoiSettings()
         int h = options_->roi_height * sensor_area.height;
         Rectangle crop(x, y, w, h);
         crop.translateBy(sensor_area.topLeft());
-        if (options_->verbose)
-            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
 }
@@ -480,9 +464,7 @@ bool LibcameraApp::submitSingleRequest()
         free_requests_.push(request);
         return false;
     }
-
-    if (options_->verbose)
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Single request submitted, remaining free requests: " << free_requests_.size());
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Single request submitted, remaining free requests: " << free_requests_.size());
 
     return true;
 }
@@ -600,8 +582,7 @@ void LibcameraApp::setupCapture()
     if (camera_->configure(configuration_.get()) < 0)
         CV_Error(cv::Error::StsError, "failed to configure streams");
 
-    if (options_->verbose)
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera streams configured");
+    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera streams configured");
 
 
     allocator_ = new FrameBufferAllocator(camera_);
@@ -613,11 +594,8 @@ void LibcameraApp::setupCapture()
         if (allocator_->allocate(stream) < 0)
             CV_Error(cv::Error::StsError, "failed to allocate capture buffers");
 
-        if (options_->verbose)
-        {
-            CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Allocated " << allocator_->buffers(stream).size() 
-                      << " buffers for stream (requested: " << options_->buffer_count << ")");
-        }
+        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Allocated " << allocator_->buffers(stream).size() 
+                  << " buffers for stream (requested: " << options_->buffer_count << ")");
 
         for (const std::unique_ptr<FrameBuffer> &buffer : allocator_->buffers(stream))
         {
@@ -637,8 +615,7 @@ void LibcameraApp::setupCapture()
             frame_buffers_[stream].push(buffer.get());
         }
     }
-    if (options_->verbose)
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
 
     // The requests will be made when StartCamera() is called.
 }
@@ -657,8 +634,7 @@ void LibcameraApp::makeRequests()
             {
                 if (free_buffers[stream].empty())
                 {
-                    if (options_->verbose)
-                        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
+                    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
                     return;
                 }
                 std::unique_ptr<Request> request = camera_->createRequest();
@@ -729,8 +705,8 @@ LibcameraCapture::LibcameraCapture()
     app->SetCaptureInstance(this);
     
     still_flags = LibcameraApp::FLAG_STILL_NONE;
-    options->photo_width = 4056;
-    options->photo_height = 3040;
+    options->photo_width = 640;
+    options->photo_height = 480;
     options->video_width = 640;
     options->video_height = 480;
     options->framerate = 30;
@@ -790,8 +766,7 @@ bool LibcameraCapture::startVideo()
         app->StartCamera();
         camera_started_.store(true, std::memory_order_release);
         
-        if (options->verbose)
-            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started successfully");
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started successfully");
         return true;
     } catch (const std::exception& e) {
         CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error starting camera: " << e.what());
@@ -826,8 +801,7 @@ void LibcameraCapture::stopVideo()
         CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error stopping camera: " << e.what());
     }
     
-    if (options && options->verbose)
-        CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Camera stopped");
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Camera stopped");
 }
 
 // 接收完成的请求
@@ -891,8 +865,7 @@ bool LibcameraCapture::grabFrame()
 {
     if (needsReconfigure.load(std::memory_order_acquire))
     {
-        if (options->verbose)
-            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Reconfiguring camera...");
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Reconfiguring camera...");
         stopVideo();
         if (!startVideo()) {
             CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Failed to restart camera after reconfiguration");
@@ -993,10 +966,8 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
             return true;
         } else {
             // (回退)步长不兼容，使用拷贝
-            if (options->verbose) {
-                CV_LOG_WARNING(NULL, cv::format("Stride mismatch: libcamera=%d, expected=%d", 
-                                               vstr, expected_row_bytes));
-            }
+            CV_LOG_WARNING(NULL, cv::format("Stride mismatch: libcamera=%d, expected=%d", 
+                                           vstr, expected_row_bytes));
             
             dst.create(vh, vw, CV_8UC3);
             Mat target_frame = dst.getMat();
@@ -1322,7 +1293,6 @@ bool LibcameraCapture::open(const std::string &_deviceName)
     options->video_width = 1280;
     options->video_height = 720;
     options->framerate = 30;
-    options->verbose = false;
     
     return startVideo();
 }
