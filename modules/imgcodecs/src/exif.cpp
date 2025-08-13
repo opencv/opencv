@@ -94,7 +94,7 @@ static std::vector<uchar> exifEntryValuetoBytes(const ExifEntry& entry)
     case TAG_TYPE_SRATIONAL:
     case TAG_TYPE_RATIONAL:
     {
-        std::vector<srational64_t> srational_vec = entry.getValueAsRational();
+        std::vector<SRational> srational_vec = entry.getValueAsRational();
         for (size_t i = 0; i < srational_vec.size(); ++i)
         {
             uint32_t numerator = srational_vec[i].num;
@@ -216,12 +216,12 @@ template<> void dumpScalar(std::ostream& strm, double v)
     strm << cv::format("%.8g", v);
 }
 
-template<> void dumpScalar(std::ostream& strm, srational64_t v)
+template<> void dumpScalar(std::ostream& strm, SRational v)
 {
     strm << v.num << "/" << v.denom << cv::format(" (%.4f)", (double)v.num / v.denom);
 }
 
-template<> void dumpScalar(std::ostream& strm, urational64_t v)
+template<> void dumpScalar(std::ostream& strm, Rational v)
 {
     strm << v.num << "/" << v.denom;
     if (v.denom != 0)
@@ -707,16 +707,16 @@ uint32_t ExifReader::getU32(const size_t offset) const
  * "rational" means a fractional value, it contains 2 signed/unsigned long integer value,
  *  and the first represents the numerator, the second, the denominator.
  */
-std::vector<urational64_t> ExifReader::getURational(const size_t offset) const
+std::vector<Rational> ExifReader::getRational(const size_t offset) const
 {
-    std::vector<urational64_t> result;
+    std::vector<Rational> result;
     size_t dataOffset = getU32(offset + 8);
     if (dataOffset > m_data.size() || dataOffset + 8 > m_data.size()) {
         throw ExifParsingError();
     }
     for (uint32_t count = getU32(offset + 4); count > 0; count--)
     {
-        urational64_t item;
+        Rational item;
         item.num = getU32(dataOffset);
         item.denom = getU32(dataOffset + 4);
         result.push_back(item);
@@ -725,16 +725,16 @@ std::vector<urational64_t> ExifReader::getURational(const size_t offset) const
     return result;
 }
 
-std::vector<srational64_t> ExifReader::getSRational(const size_t offset) const
+std::vector<SRational> ExifReader::getSRational(const size_t offset) const
 {
-    std::vector<srational64_t> result;
+    std::vector<SRational> result;
     size_t dataOffset = getU32(offset + 8);
     if (dataOffset > m_data.size() || dataOffset + 8 > m_data.size()) {
         throw ExifParsingError();
     }
     for (uint32_t count = getU32(offset + 4); count > 0; count--)
     {
-        srational64_t item;
+        SRational item;
         item.num = getU32(dataOffset);
         item.denom = getU32(dataOffset + 4);
         result.push_back(item);

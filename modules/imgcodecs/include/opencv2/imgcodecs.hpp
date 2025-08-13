@@ -460,16 +460,20 @@ enum ExifTagId
     TAG_INVALID_TAG = 65535
 };
 
-struct CV_EXPORTS_W_SIMPLE urational64_t
+struct CV_EXPORTS_W_SIMPLE Rational
 {
-    CV_PROP_RW int num = 0;
-    CV_PROP_RW int denom = 1;
+    CV_WRAP Rational() { num = 1; denom = 1; }
+    CV_WRAP Rational(int numerator, int denominator) { num = numerator; denom = denominator; }
+    CV_PROP_RW int num;
+    CV_PROP_RW int denom;
 };
 
-struct CV_EXPORTS_W_SIMPLE srational64_t
+struct CV_EXPORTS_W_SIMPLE SRational
 {
-    CV_PROP_RW int num = 0;
-    CV_PROP_RW int denom = 1;
+    CV_WRAP SRational() { num = 1; denom = 1; }
+    CV_WRAP SRational(int numerator, int denominator) { num = numerator; denom = denominator; }
+    CV_PROP_RW int num;
+    CV_PROP_RW int denom;
 };
 
 struct CV_EXPORTS_W_SIMPLE ExifEntry
@@ -487,7 +491,7 @@ public:
     CV_WRAP int getValueAsInt() const { return value_u32; }
     CV_WRAP std::string getValueAsString() const { return value_str; }
     CV_WRAP std::vector<uchar> getValueAsRaw() const { return value_raw; }
-    CV_WRAP std::vector<srational64_t> getValueAsRational() const { return value_srational; }
+    CV_WRAP std::vector<SRational> getValueAsRational() const { return value_srational; }
 
     CV_WRAP void setValueAsString(const std::string& value) {
         value_str = value;
@@ -496,7 +500,7 @@ public:
 
     CV_WRAP void setValueAsInt(int value) { value_u32 = value; }
     CV_WRAP void setValueAsRaw(const std::vector<uchar>& value) { value_raw = value; }
-    CV_WRAP void setValueAsRational(const std::vector<srational64_t>& value) { value_srational = value; }
+    CV_WRAP void setValueAsRational(const std::vector<SRational>& value) { value_srational = value; }
 
     CV_WRAP bool empty() const { return tagId == TAG_EMPTY; }
     CV_WRAP std::string getTagIdAsString() const;
@@ -507,7 +511,7 @@ private:
     int value_u32;
     std::string value_str;
     std::vector<uchar> value_raw;
-    std::vector<srational64_t> value_srational;
+    std::vector<SRational> value_srational;
 };
 
 /** @brief Decodes EXIF metadata from binary data into structured ExifEntry entries.
