@@ -11,11 +11,23 @@
 namespace cv {
 namespace dnn {
 
-template <typename T>
+/*
+    IsNaN layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__IsNaN.html
+
+    Opset's 9 to 20 are covered.
+*/
+
+template <typename T, typename WT = T>
 static inline void computeIsNaNMask(const T* src, uchar* dst, const size_t count)
 {
-    for (size_t i = 0; i < count; ++i)
-        dst[i] = static_cast<uchar>(cvIsNaN(src[i]));
+    parallel_for_(Range(0, (int)count), [&](const Range& r){
+        for (int i = r.start; i < r.end; ++i)
+        {
+            WT v = (WT)src[i];
+            dst[i] = static_cast<uchar>(cvIsNaN(v));
+        }
+    });
 }
 
 class IsNaNLayerImpl CV_FINAL : public IsNaNLayer
@@ -67,6 +79,8 @@ public:
         switch (depth) {
             case CV_32F: computeIsNaNMask<float>(X.ptr<float>(), dst, total);    break;
             case CV_64F: computeIsNaNMask<double>(X.ptr<double>(), dst, total);   break;
+            case CV_16F: computeIsNaNMask<hfloat, float>(X.ptr<hfloat>(), dst, total); break;
+            case CV_16BF: computeIsNaNMask<bfloat, float>(X.ptr<bfloat>(), dst, total); break;
             default: CV_Error_(Error::StsError, ("IsNaN: Unsupported type depth=%d", depth));
         }
     }
