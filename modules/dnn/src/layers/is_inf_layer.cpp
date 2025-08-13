@@ -11,15 +11,49 @@
 namespace cv {
 namespace dnn {
 
-template <typename T>
+/*
+    IsInf layer, as defined in ONNX specification:
+    https://onnx.ai/onnx/operators/onnx__IsInf.html
+
+    Opset's 10 to 20 are covered.
+*/
+
+template <typename T, typename WT = T>
 static inline void computeIsInfMask(const T* src, uchar* dst, const size_t count, const bool detectPositive, const bool detectNegative)
 {
-    for (size_t i = 0; i < count; ++i)
+    if (detectPositive && detectNegative)
     {
-        const T v = src[i];
-        const bool pos = cvIsInf(v) && (v > 0) && detectPositive;
-        const bool neg = cvIsInf(v) && (v < 0) && detectNegative;
-        dst[i] = static_cast<uchar>(pos || neg);
+        parallel_for_(Range(0, (int)count), [&](const Range& r){
+            for (int i = r.start; i < r.end; ++i)
+            {
+                WT v = (WT)src[i];
+                dst[i] = static_cast<uchar>(cvIsInf(v));
+            }
+        });
+    }
+    else if (detectPositive)
+    {
+        parallel_for_(Range(0, (int)count), [&](const Range& r){
+            for (int i = r.start; i < r.end; ++i)
+            {
+                WT v = (WT)src[i];
+                dst[i] = static_cast<uchar>(cvIsInf(v) && (v > 0));
+            }
+        });
+    }
+    else if (detectNegative)
+    {
+        parallel_for_(Range(0, (int)count), [&](const Range& r){
+            for (int i = r.start; i < r.end; ++i)
+            {
+                WT v = (WT)src[i];
+                dst[i] = static_cast<uchar>(cvIsInf(v) && (v < 0));
+            }
+        });
+    }
+    else
+    {
+        CV_Error_(Error::StsError, ("IsInf: Unsupported mode"));
     }
 }
 
@@ -76,6 +110,8 @@ public:
         switch (depth) {
             case CV_32F: computeIsInfMask<float>(X.ptr<float>(), dst, total, detect_pos, detect_neg);    break;
             case CV_64F: computeIsInfMask<double>(X.ptr<double>(), dst, total, detect_pos, detect_neg);   break;
+            case CV_16F: computeIsInfMask<hfloat, float>(X.ptr<hfloat>(), dst, total, detect_pos, detect_neg); break;
+            case CV_16BF: computeIsInfMask<bfloat, float>(X.ptr<bfloat>(), dst, total, detect_pos, detect_neg); break;
             default: CV_Error_(Error::StsError, ("IsInf: Unsupported type depth=%d", depth));
         }
     }
