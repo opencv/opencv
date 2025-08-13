@@ -1720,7 +1720,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         return false;
 
     CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format));
-    CV_LOG_DEBUG(NULL, "Input picture colorspace: " << av_get_colorspace_name(sw_picture->colorspace));
+    // TODO: av_color_space_name
+    // CV_LOG_DEBUG(NULL, "Input picture colorspace: " << av_get_colorspace_name((AVColorSpace)sw_picture->colorspace));
     const AVPixelFormat result_format = convertRGB ? AV_PIX_FMT_BGR24 : (AVPixelFormat)sw_picture->format;
     switch (result_format)
     {
@@ -1781,11 +1782,17 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
 
-        const int* colorspace_coeffs = sws_getCoefficients(sw_picture->colorspace);
-        sws_setColorspaceDetails(img_convert_ctx,
-                                 colorspace_coeffs, sw_picture->color_range,
-                                 colorspace_coeffs, convertRGB? 0: sw_picture->color_range,
-                                 0, 1<<16, 1<<16);
+        if (sw_picture->colorspace != AVCOL_SPC_UNSPECIFIED &&
+            (sw_picture->color_range == AVCOL_RANGE_MPEG || sw_picture->color_range == AVCOL_RANGE_JPEG))
+        {
+            // TODO: map AVColorSpace to SWS_CS_*
+            const int* colorspace_coeffs = sws_getCoefficients(sw_picture->colorspace);
+            int srcRange = sw_picture->color_range == AVCOL_RANGE_MPEG ? 0 : 1;
+            sws_setColorspaceDetails(img_convert_ctx,
+                                     colorspace_coeffs, srcRange,
+                                     colorspace_coeffs, convertRGB? 0 : srcRange,
+                                     0, 1<<16, 1<<16);
+        }
     }
 
     sws_scale(
