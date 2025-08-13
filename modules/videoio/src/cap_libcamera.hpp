@@ -15,19 +15,10 @@
 #include <any>
 #include <map>
 
-#include <opencv2/core/utils/logger.hpp>
-#include <opencv2/core/utils/filesystem.hpp>
-#include <opencv2/videoio.hpp>
-
-#include <libcamera/base/span.h>
 #include <libcamera/camera.h>
 #include <libcamera/camera_manager.h>
 #include <libcamera/control_ids.h>
-#include <libcamera/controls.h>
-#include <libcamera/formats.h>
-#include <libcamera/framebuffer_allocator.h>
 #include <libcamera/property_ids.h>
-#include <libcamera/stream.h>
 #include <libcamera/transform.h>
 #include <mutex>
 #include <opencv2/core/mat.hpp>

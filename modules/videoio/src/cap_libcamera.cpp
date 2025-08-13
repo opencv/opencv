@@ -343,7 +343,6 @@ void LibcameraApp::StartCamera()
             controls_.set(controls::FrameDurationLimits, libcamera::Span<const int64_t, 2>({frame_time, frame_time}));
         }
     }
-}
 
     if (!controls_.get(controls::ExposureTime) && options_->shutter)
         controls_.set(controls::ExposureTime, options_->shutter);
@@ -481,8 +480,6 @@ bool LibcameraApp::submitSingleRequest()
         free_requests_.push(request);
         return false;
     }
-    return res;
-}
 
     if (options_->verbose)
         CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Single request submitted, remaining free requests: " << free_requests_.size());
