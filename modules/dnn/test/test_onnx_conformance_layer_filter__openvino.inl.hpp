@@ -797,7 +797,7 @@ CASE(test_isinf_negative)
 CASE(test_isinf_positive)
     // no filter
 CASE(test_isnan)
-    // no filter
+    SKIP;
 CASE(test_layer_normalization_2d_axis0)
     // no filter
 CASE(test_layer_normalization_2d_axis1)

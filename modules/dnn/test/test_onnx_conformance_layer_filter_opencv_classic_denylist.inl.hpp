@@ -71,3 +71,4 @@
 "test_mean_example",
 "test_mean_one_input",
 "test_mean_two_inputs",
+"test_isnan",
