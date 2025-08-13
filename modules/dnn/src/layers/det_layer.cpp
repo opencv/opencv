@@ -11,6 +11,10 @@
 namespace cv {
 namespace dnn {
 
+// ONNX Det operator
+// Spec: https://onnx.ai/onnx/operators/onnx__Det.html
+// Supported opsets: 11-22
+
 class DetLayerImpl CV_FINAL : public DetLayer
 {
 public:
@@ -56,7 +60,7 @@ public:
         CV_Assert(!inputs.empty());
         int t = inputs[0];
 
-        CV_Assert(t == CV_32F || t == CV_64F);
+        CV_Assert(t == CV_32F || t == CV_64F || t == CV_16F || t == CV_16BF);
         outputs.assign(requiredOutputs, MatType(t));
         internals.assign(requiredInternals, MatType(t));
     }
@@ -100,18 +104,32 @@ public:
         const uchar* base = X.data;
         uchar* outp = outputs[0].ptr();
 
-        cv::parallel_for_(cv::Range(0, static_cast<int>(batch)), [&](const cv::Range& r){
+        parallel_for_(Range(0, static_cast<int>(batch)), [&](const Range& r){
+            Mat temp;
             for (int bi = r.start; bi < r.end; ++bi)
             {
                 size_t b = static_cast<size_t>(bi);
                 const uchar* p = base + b * matStrideBytes;
                 Mat A(m, n, type, const_cast<uchar*>(p));
 
-                double det = cv::determinant(A);
+                double det;
+                if (type == CV_32F || type == CV_64F) {
+                    det = determinant(A);
+                } else {
+                    A.convertTo(temp, CV_32F);
+                    det = determinant(temp);
+                }
+
                 if (type == CV_32F)
                     reinterpret_cast<float*>(outp)[b] = static_cast<float>(det);
-                else // CV_64F
+                else if (type == CV_64F)
                     reinterpret_cast<double*>(outp)[b] = det;
+                else if (type == CV_16F)
+                    reinterpret_cast<hfloat*>(outp)[b] = saturate_cast<hfloat>(det);
+                else if (type == CV_16BF)
+                    reinterpret_cast<bfloat*>(outp)[b] = saturate_cast<bfloat>(det);
+                else
+                    CV_Error(Error::BadDepth, "Unsupported input/output depth for DetLayer");
             }
         });
     }
