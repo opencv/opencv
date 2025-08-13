@@ -211,6 +211,7 @@ protected:
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1617,6 +1618,12 @@ void ONNXImporter2::parseIsNaN(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseIsInf(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "IsInf";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int n_inputs = node_proto.input_size();
@@ -2448,6 +2455,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Size"] = &ONNXImporter2::parseSize;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
+    dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;

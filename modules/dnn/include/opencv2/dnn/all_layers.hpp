@@ -520,6 +520,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<IsNaNLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS IsInfLayer : public Layer
+    {
+    public:
+        static Ptr<IsInfLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
