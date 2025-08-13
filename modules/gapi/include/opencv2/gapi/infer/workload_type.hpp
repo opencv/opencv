@@ -18,7 +18,7 @@ class WorkloadListener {
     Callback callback;
 public:
     uint64_t id;
-    WorkloadListener(const Callback &cb, uint64_t id) : callback(cb), id(id) {}
+    WorkloadListener(const Callback &cb, uint64_t listener_id) : callback(cb), id(listener_id) {}
 
     void operator()(const std::string &type) const {
         if (callback) {
