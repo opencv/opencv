@@ -1973,11 +1973,17 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
 
-        const int* colorspace_coeffs = sws_getCoefficients(sw_picture->colorspace);
-        sws_setColorspaceDetails(img_convert_ctx,
-                                 colorspace_coeffs, sw_picture->color_range,
-                                 colorspace_coeffs, convertRGB? 0: sw_picture->color_range,
-                                 0, 1<<16, 1<<16);
+        if (sw_picture->colorspace != AVCOL_SPC_UNSPECIFIED &&
+            (sw_picture->color_range == AVCOL_RANGE_MPEG || sw_picture->color_range == AVCOL_RANGE_JPEG))
+        {
+            // TODO: map AVColorSpace to SWS_CS_*
+            const int* colorspace_coeffs = sws_getCoefficients(sw_picture->colorspace);
+            int srcRange = sw_picture->color_range == AVCOL_RANGE_MPEG ? 0 : 1;
+            sws_setColorspaceDetails(img_convert_ctx,
+                                     colorspace_coeffs, srcRange,
+                                     colorspace_coeffs, convertRGB? 0 : srcRange,
+                                     0, 1<<16, 1<<16);
+        }
     }
 
 #if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
