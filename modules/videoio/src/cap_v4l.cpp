@@ -440,7 +440,7 @@ struct CvCaptureCAM_V4L CV_FINAL : public IVideoCapture
     bool convertableToRgb() const;
     void convertToRgb(const Buffer &currentBuffer);
 
-    bool havePendingFrame;  // true if next .grab() should be noop, .retrive() resets this flag
+    bool havePendingFrame;  // true if next .grab() should be noop, .retrieve() resets this flag
 };
 
 /***********************   Implementations  ***************************************/

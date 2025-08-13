@@ -75,10 +75,12 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     if (depth != CV_8U || cn > 4)
         return false;
 
-    if (sigma_color <= 0)
-        sigma_color = 1;
-    if (sigma_space <= 0)
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
     double gauss_color_coeff = -0.5 / (sigma_color * sigma_color);
     double gauss_space_coeff = -0.5 / (sigma_space * sigma_space);
@@ -165,10 +167,12 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -232,10 +236,12 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_32FC1 || src.type() == CV_32FC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -358,9 +364,16 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
 
+    constexpr double eps = 1e-6;
+    if( sigmaColor <= eps || sigmaSpace <= eps )
+    {
+        src.copyTo(dst);
+        return true;
+    }
+
     int         radius         = IPP_MAX(((d <= 0)?cvRound(sigmaSpace*1.5):d/2), 1);
-    Ipp32f      valSquareSigma = (Ipp32f)((sigmaColor <= 0)?1:sigmaColor*sigmaColor);
-    Ipp32f      posSquareSigma = (Ipp32f)((sigmaSpace <= 0)?1:sigmaSpace*sigmaSpace);
+    Ipp32f      valSquareSigma = (Ipp32f)(sigmaColor*sigmaColor);
+    Ipp32f      posSquareSigma = (Ipp32f)(sigmaSpace*sigmaSpace);
 
     // Acquire data and begin processing
     try

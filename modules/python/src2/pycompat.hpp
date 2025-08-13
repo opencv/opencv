@@ -84,6 +84,15 @@ static inline bool getUnicodeString(PyObject * obj, std::string &str)
         }
         Py_XDECREF(bytes);
     }
+    else if (PyBytes_Check(obj))
+    {
+        const char * raw = PyBytes_AsString(obj);
+        if (raw)
+        {
+            str = std::string(raw);
+            res = true;
+        }
+    }
 #if PY_MAJOR_VERSION < 3
     else if (PyString_Check(obj))
     {

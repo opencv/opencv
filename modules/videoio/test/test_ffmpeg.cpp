@@ -953,4 +953,108 @@ inline static std::string videoio_ffmpeg_16bit_name_printer(const testing::TestP
 
 INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_16bit, testing::ValuesIn(sixteen_bit_modes), videoio_ffmpeg_16bit_name_printer);
 
+typedef tuple<int /*inputType*/, int /*Depth*/, bool /*isColor*/, bool /*isValid*/, string /*description*/> ChannelMismatchTestParams;
+typedef testing::TestWithParam< ChannelMismatchTestParams > videoio_ffmpeg_channel_mismatch;
+
+TEST_P(videoio_ffmpeg_channel_mismatch, basic)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const string filename = "mismatch_video.mp4";
+    int input_type = get<0>(GetParam());
+    int depth = get<1>(GetParam());
+    bool is_Color = get<2>(GetParam());
+    bool is_valid = get<3>(GetParam());
+    const string description = get<4>(GetParam());
+
+    const double fps = 15.0;
+    const int fourcc = VideoWriter::fourcc('m', 'p', '4', 'v');
+    const Mat frame(480, 640, input_type, Scalar::all(0));
+
+    VideoWriter writer(filename, fourcc, fps, frame.size(),
+                                {
+                                    cv::VIDEOWRITER_PROP_DEPTH, depth,
+                                    VIDEOWRITER_PROP_IS_COLOR, is_Color
+                                });
+
+    if (!writer.isOpened())
+        throw SkipTestException("Failed to open video writer");
+
+    for (int i = 1; i <= 15; i++)
+    {
+        // In case of mismatch between input frame channels and
+        // expected depth/isColor configuration a warning  should be printed communicating it
+        writer.write(frame);
+    }
+
+    writer.release();
+
+    VideoCapture cap(filename, CAP_FFMPEG);
+
+    if (is_valid) {
+        ASSERT_TRUE(cap.isOpened()) << "Can't open video for " << description;
+        EXPECT_EQ(cap.get(CAP_PROP_FRAME_COUNT), 15) << "All frames should be written for: " << description;
+    } else {
+        ASSERT_FALSE(cap.isOpened()) << "Video capture should fail to open for: " << description;
+    }
+
+    std::remove(filename.c_str());
+}
+
+const ChannelMismatchTestParams mismatch_cases[] =
+{
+    // Testing input frame channels and expected depth/isColor combinations
+
+    // Open VideoWriter depth/isColor combination: CV_8U/true, everything with 3 channels should be valid
+    make_tuple(CV_16UC1, CV_8U, true, false, "input_CV_16UC1_expected_CV_8U_isColor_true"),
+    make_tuple(CV_8UC1, CV_8U, true, false, "input_CV_8UC1_expected_CV_8U_isColor_true"),
+    make_tuple(CV_8UC3, CV_8U, true, true, "input_CV_8UC3_expected_CV_8U_isColor_true_valid"),
+    make_tuple(CV_16UC3, CV_8U, true, true, "input_CV_16UC3_expected_CV_8U_isColor_true_valid"),
+
+    // Open VideoWriter depth/isColor combination: 16U,8U/false, everything with 1 channel should be valid
+    make_tuple(CV_8UC3, CV_8U, false, false, "input_CV_8UC3_expected_CV_8U_isColor_false"),
+    make_tuple(CV_16UC3, CV_8U, false, false, "input_CV_16UC3_expected_CV_8U_isColor_false"),
+    make_tuple(CV_8UC3, CV_16U, false, false, "input_CV_8UC3_expected_CV_16U_isColor_false"),
+    make_tuple(CV_16UC3, CV_16U, false, false, "input_CV_16UC3_expected_CV_16U_isColor_false"),
+    make_tuple(CV_8UC1, CV_16U, false, true, "input_CV_8UC1_expected_CV_16U_isColor_false_valid"),
+    make_tuple(CV_16UC1, CV_8U, false, true, "input_CV_16UC1_expected_CV_8U_isColor_false_valid"),
+};
+
+inline static std::string videoio_ffmpeg_mismatch_name_printer(const testing::TestParamInfo<videoio_ffmpeg_channel_mismatch::ParamType>& info)
+{
+    std::ostringstream os;
+    os << get<4>(info.param);
+    return os.str();
+}
+
+INSTANTIATE_TEST_CASE_P(/**/, videoio_ffmpeg_channel_mismatch, testing::ValuesIn(mismatch_cases), videoio_ffmpeg_mismatch_name_printer);
+
+// PR: https://github.com/opencv/opencv/pull/27523
+// TODO: Enable the tests back on Windows after FFmpeg plugin rebuild
+#ifndef _WIN32
+
+// related issue: https://github.com/opencv/opencv/issues/23088
+TEST(ffmpeg_cap_properties, set_pos_get_msec)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    string video_file = findDataFile("video/big_buck_bunny.mp4");
+    VideoCapture cap;
+    EXPECT_NO_THROW(cap.open(video_file, CAP_FFMPEG));
+    ASSERT_TRUE(cap.isOpened()) << "Can't open the video";
+
+    cap.set(CAP_PROP_POS_FRAMES, 25);
+    EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 1000.0);
+
+    cap.set(CAP_PROP_POS_MSEC, 525);
+    EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 500.0);
+
+    cap.set(CAP_PROP_POS_AVI_RATIO, 0);
+    EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 0.0);
+}
+
+#endif // WIN32
+
 }} // namespace

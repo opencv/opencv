@@ -146,7 +146,7 @@ public:
         return (ptr_ - other.ptr_) / step_;
     }
 
-    /* Comparision */
+    /* Comparison */
     bool operator==(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
     {
         return ptr_ == other.ptr_;

@@ -636,6 +636,52 @@ TEST(Imgcodecs_APNG, imencode_animation)
     }
 }
 
+TEST(Imgcodecs_APNG, animation_has_hidden_frame)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/033.png";
+    Animation animation1, animation2, animation3;
+
+    imreadanimation(filename, animation1);
+
+    EXPECT_FALSE(animation1.still_image.empty());
+    EXPECT_EQ((size_t)2, animation1.frames.size());
+
+    std::vector<unsigned char> buf;
+    EXPECT_TRUE(imencodeanimation(".png", animation1, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, animation2));
+
+    EXPECT_FALSE(animation2.still_image.empty());
+    EXPECT_EQ(animation1.frames.size(), animation2.frames.size());
+
+    animation1.frames.erase(animation1.frames.begin());
+    animation1.durations.erase(animation1.durations.begin());
+    EXPECT_TRUE(imencodeanimation(".png", animation1, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, animation3));
+
+    EXPECT_FALSE(animation1.still_image.empty());
+    EXPECT_TRUE(animation3.still_image.empty());
+    EXPECT_EQ((size_t)1, animation3.frames.size());
+}
+
+TEST(Imgcodecs_APNG, animation_imread_preview)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/034.png";
+    cv::Mat imread_result;
+    cv::imread(filename, imread_result, cv::IMREAD_UNCHANGED);
+    EXPECT_FALSE(imread_result.empty());
+
+    Animation animation;
+    ASSERT_TRUE(imreadanimation(filename, animation));
+    EXPECT_FALSE(animation.still_image.empty());
+    EXPECT_EQ((size_t)2, animation.frames.size());
+
+    EXPECT_EQ(0, cv::norm(animation.still_image, imread_result, cv::NORM_INF));
+}
+
 #endif // HAVE_PNG
 
 #if defined(HAVE_PNG) || defined(HAVE_SPNG)
@@ -676,7 +722,7 @@ TEST(Imgcodecs_APNG, imread_animation_16u)
     img = imread(filename, IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());
     EXPECT_TRUE(img.type() == CV_16UC1);
-    EXPECT_EQ(19519, img.at<ushort>(0, 0));
+    EXPECT_EQ(19517, img.at<ushort>(0, 0));
 
     img = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
     ASSERT_FALSE(img.empty());

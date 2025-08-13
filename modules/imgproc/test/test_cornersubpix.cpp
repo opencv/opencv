@@ -69,6 +69,8 @@ TEST(Imgproc_CornerSubPix, out_of_image_corners)
 TEST(Imgproc_CornerSubPix, corners_on_the_edge)
 {
     cv::Mat image(500, 500, CV_8UC1);
+    RNG& rng = TS::ptr()->get_rng();
+    cvtest::randUni(rng, image, 0, 255);
     cv::Size win(1, 1);
     cv::Size zeroZone(-1, -1);
     cv::TermCriteria criteria;

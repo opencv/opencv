@@ -125,7 +125,8 @@ public:
               preferableTarget == DNN_TARGET_OPENCL_FP16 ||
               preferableTarget == DNN_TARGET_MYRIAD ||
               preferableTarget == DNN_TARGET_HDDL ||
-              preferableTarget == DNN_TARGET_FPGA,
+              preferableTarget == DNN_TARGET_FPGA ||
+              preferableTarget == DNN_TARGET_NPU,
               "Unknown OpenVINO target"
         );
     }

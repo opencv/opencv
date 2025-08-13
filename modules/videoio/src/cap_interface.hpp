@@ -187,8 +187,6 @@ public:
             if (!param.isConsumed)
             {
                 found = true;
-                CV_LOG_INFO(NULL, "VIDEOIO: unused parameter: [" << param.key << "]=" <<
-                    cv::format("%lld / 0x%016llx", (long long)param.value, (long long)param.value));
                 CV_LOG_INFO(NULL, cv::format("VIDEOIO: unused parameter: [%d]=%lld / 0x%016llx", 
                     param.key, (long long)param.value, (long long)param.value).c_str());
             }

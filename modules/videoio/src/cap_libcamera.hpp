@@ -1,22 +1,19 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
 #pragma once
 
 #include <fstream>
 #include <iostream>
-#include <memory>
 #include <queue>
 #include <condition_variable>
 #include <atomic>
-#include <map>
-#include <string>
-#include <mutex>
-#include <set>
-#include <thread>
+#include <memory>
+#include <functional>
 #include <variant>
 #include <any>
 #include <map>
-#include <iomanip>
-#include <sys/mman.h>
-#include <fcntl.h>
 
 #include <opencv2/core/utils/logger.hpp>
 #include <opencv2/core/utils/filesystem.hpp>
@@ -32,14 +29,19 @@
 #include <libcamera/property_ids.h>
 #include <libcamera/stream.h>
 #include <libcamera/transform.h>
+#include <mutex>
+#include <opencv2/core/mat.hpp>
 
 #include "cap_interface.hpp"
 
 namespace cv
 {
+// Forward declarations
+class LibcameraApp;
+struct CompletedRequest;
+using CompletedRequestPtr = std::shared_ptr<CompletedRequest>;
 
-class LibcameraCapture;
-
+// Enumerations for camera settings
 enum Exposure_Modes
 {
     EXPOSURE_NORMAL = libcamera::controls::ExposureNormal,
@@ -90,6 +92,7 @@ public:
         verbose = false;
         transform = libcamera::Transform::Identity;
         camera = 0;
+        buffer_count = 4;
     }
 
     ~Options() {}
@@ -125,6 +128,7 @@ public:
     std::string denoise;
     std::string info_text;
     unsigned int camera;
+    unsigned int buffer_count;  // Number of buffers to allocate per stream
 
 protected:
     int metering_index;
@@ -133,11 +137,159 @@ protected:
 
 private:
 };
-struct CompletedRequest;
-using CompletedRequestPtr = std::shared_ptr<CompletedRequest>;
+
+class LibcameraCapture;
+
+class LibcameraFrameAllocator : public cv::MatAllocator
+{
+private:
+    LibcameraApp* app_;                          
+    mutable libcamera::Request* request_to_recycle_; 
+    
+public:
+    LibcameraFrameAllocator(LibcameraApp* app, libcamera::Request* request);
+    virtual ~LibcameraFrameAllocator();
+    
+    // Reset the request for reuse in allocator pool
+    void resetRequest(libcamera::Request* request);
+    
+    // MatAllocator interface
+    cv::UMatData* allocate(int dims, const int* sizes, int type, void* data, size_t* step, 
+                           cv::AccessFlag flags, cv::UMatUsageFlags usageFlags) const override;
+    bool allocate(cv::UMatData* data, cv::AccessFlag accessFlags, cv::UMatUsageFlags usageFlags) const override;
+    void deallocate(cv::UMatData* data) const override;
+};
 
 namespace controls = libcamera::controls;
 namespace properties = libcamera::properties;
+
+class LibcameraApp
+{
+public:
+    using Stream = libcamera::Stream;
+    using FrameBuffer = libcamera::FrameBuffer;
+    using ControlList = libcamera::ControlList;
+    using Request = libcamera::Request;
+    using CameraManager = libcamera::CameraManager;
+    using Camera = libcamera::Camera;
+    using CameraConfiguration = libcamera::CameraConfiguration;
+    using FrameBufferAllocator = libcamera::FrameBufferAllocator;
+    using StreamRole = libcamera::StreamRole;
+    using StreamRoles = std::vector<libcamera::StreamRole>;
+    using PixelFormat = libcamera::PixelFormat;
+    using StreamConfiguration = libcamera::StreamConfiguration;
+    using BufferMap = Request::BufferMap;
+    using Size = libcamera::Size;
+    using Rectangle = libcamera::Rectangle;
+
+    // Some flags that can be used to give hints to the camera configuration.
+    static constexpr unsigned int FLAG_STILL_NONE = 0;
+    static constexpr unsigned int FLAG_STILL_BGR = 1;           
+    static constexpr unsigned int FLAG_STILL_RGB = 2;           
+    static constexpr unsigned int FLAG_STILL_RAW = 4;            // request raw image stream
+    static constexpr unsigned int FLAG_STILL_DOUBLE_BUFFER = 8;  // double-buffer stream
+    static constexpr unsigned int FLAG_STILL_TRIPLE_BUFFER = 16; // triple-buffer stream
+    static constexpr unsigned int FLAG_STILL_BUFFER_MASK = 24;   // mask for buffer flags
+
+    static constexpr unsigned int FLAG_VIDEO_NONE = 0;
+    static constexpr unsigned int FLAG_VIDEO_RAW = 1;              // request raw image stream
+    static constexpr unsigned int FLAG_VIDEO_JPEG_COLOURSPACE = 2; // force JPEG colour space
+
+    LibcameraApp(std::unique_ptr<Options> opts = nullptr);
+    virtual ~LibcameraApp();
+
+    Options *GetOptions() const { return options_.get(); }
+    
+    void SetCaptureInstance(LibcameraCapture* capture) { capture_instance_ = capture; }
+
+    std::string const &CameraId() const;
+    void OpenCamera();
+    void CloseCamera();
+
+    void ConfigureStill(unsigned int flags = FLAG_STILL_NONE);
+    void ConfigureViewfinder();
+
+    void Teardown();
+    void StartCamera();
+    void StopCamera();
+    
+    // (按需模式)手动提交一个请求
+    bool submitSingleRequest();
+    
+    // (按需模式)手动归还请求到队列
+    void returnRequestToQueue(libcamera::Request* request);
+    
+    // 获取当前空闲请求数量
+    size_t getFreeRequestsCount() const;
+    
+    // 请求回收
+    void recycleRequest(libcamera::Request* request);
+
+    void ApplyRoiSettings();
+
+    Stream *GetStream(std::string const &name, unsigned int *w = nullptr, unsigned int *h = nullptr,
+                      unsigned int *stride = nullptr) const;
+    Stream *ViewfinderStream(unsigned int *w = nullptr, unsigned int *h = nullptr,
+                             unsigned int *stride = nullptr) const;
+    Stream *StillStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *RawStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *VideoStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *LoresStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
+    Stream *GetMainStream() const;
+
+    std::vector<libcamera::Span<uint8_t>> Mmap(FrameBuffer *buffer) const;
+
+    void SetControls(ControlList &controls);
+    void StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const;
+
+protected:
+    std::unique_ptr<Options> options_;
+    
+    // LibcameraCapture 实例的引用，用于直接回调
+    LibcameraCapture* capture_instance_;
+
+private:
+    static std::shared_ptr<CameraManager> getCameraManager()
+    {
+        static std::shared_ptr<CameraManager> camera_manager_;
+        if (!camera_manager_)
+        {
+            CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): creating manager");
+            camera_manager_ = std::make_shared<CameraManager>();
+            int ret = camera_manager_->start();
+            if (ret)
+                throw std::runtime_error("camera manager failed to start,"
+                                         "code " +
+                                         std::to_string(-ret));
+        }
+
+        return camera_manager_;
+    }
+
+    void setupCapture();
+    void makeRequests();
+    void requestComplete(Request *request);
+    void configureDenoise(const std::string &denoise_mode);
+
+    // std::unique_ptr<CameraManager> camera_manager_;
+    std::shared_ptr<Camera> camera_;
+    bool camera_acquired_ = false;
+    std::unique_ptr<CameraConfiguration> configuration_;
+    std::map<FrameBuffer *, std::vector<libcamera::Span<uint8_t>>> mapped_buffers_;
+    std::map<std::string, Stream *> streams_;
+    FrameBufferAllocator *allocator_ = nullptr;
+    std::map<Stream *, std::queue<FrameBuffer *>> frame_buffers_;
+    std::queue<Request *> free_requests_;
+    std::vector<std::unique_ptr<Request>> requests_;
+    bool camera_started_ = false;
+    mutable std::mutex camera_stop_mutex_;
+    // For setting camera controls.
+    std::mutex control_mutex_;
+    ControlList controls_;
+    // Other:
+    uint64_t last_timestamp_;
+    uint64_t sequence_ = 0;
+};
 
 class Metadata
 {
@@ -161,62 +313,50 @@ public:
     void Set(std::string const &tag, T &&value)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        T* stored_value = new T(std::forward<T>(value));
-        data_[tag] = static_cast<void*>(stored_value);
+        data_.insert_or_assign(tag, std::forward<T>(value));
     }
 
     template <typename T>
     int Get(std::string const &tag, T &value) const
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
         auto it = data_.find(tag);
         if (it == data_.end())
             return -1;
-        T* stored_value = static_cast<T*>(it->second);
-        if (stored_value) {
-            value = *stored_value;
-            return 0;
-        }
-        return -1;
+        value = std::any_cast<T>(it->second);
+        return 0;
     }
 
     void Clear()
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::scoped_lock lock(mutex_);
         data_.clear();
     }
 
     Metadata &operator=(Metadata const &other)
     {
-        if (this != &other) {
-            std::lock(mutex_, other.mutex_);
-            std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
-            std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
-            data_ = other.data_;
-        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> other_lock(other.mutex_);
+        data_ = other.data_;
         return *this;
     }
 
     Metadata &operator=(Metadata &&other)
     {
-        if (this != &other) {
-            std::lock(mutex_, other.mutex_);
-            std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
-            std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
-            data_ = std::move(other.data_);
-            other.data_.clear();
-        }
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> other_lock(other.mutex_);
+        data_ = std::move(other.data_);
+        other.data_.clear();
         return *this;
     }
 
     void Merge(Metadata &other)
     {
-        std::lock(mutex_, other.mutex_);
-        std::lock_guard<std::mutex> lock1(mutex_, std::adopt_lock);
-        std::lock_guard<std::mutex> lock2(other.mutex_, std::adopt_lock);
-        // For C++14 compatibility, manually merge
-        for (auto& item : other.data_) {
-            data_[item.first] = std::move(item.second);
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> other_lock(other.mutex_);
+        
+        for (auto& pair : other.data_) {
+            data_[pair.first] = std::move(pair.second);
         }
         other.data_.clear();
     }
@@ -229,7 +369,7 @@ public:
         auto it = data_.find(tag);
         if (it == data_.end())
             return nullptr;
-        return static_cast<T*>(it->second);
+        return std::any_cast<T>(&it->second);
     }
 
     template <typename T>
@@ -247,7 +387,7 @@ public:
 
 private:
     mutable std::mutex mutex_;
-    std::map<std::string, void*> data_;
+    std::map<std::string, std::any> data_;
 };
 
 struct CompletedRequest
@@ -260,6 +400,7 @@ struct CompletedRequest
         : sequence(seq), buffers(r->buffers()), metadata(r->metadata()), request(r)
     {
         r->reuse();
+        capture_timestamp_ns = buffers.begin()->second->metadata().timestamp;
     }
     unsigned int sequence;
     BufferMap buffers;
@@ -267,245 +408,17 @@ struct CompletedRequest
     Request *request;
     float framerate;
     Metadata post_process_metadata;
+    uint64_t capture_timestamp_ns; 
 };
 
-class LibcameraCapture : public IVideoCapture
+class LibcameraCapture CV_FINAL : public IVideoCapture
 {
-public:
-    using Stream = libcamera::Stream;
-    using FrameBuffer = libcamera::FrameBuffer;
-    using ControlList = libcamera::ControlList;
-    using Request = libcamera::Request;
-    using CameraManager = libcamera::CameraManager;
-    using Camera = libcamera::Camera;
-    using CameraConfiguration = libcamera::CameraConfiguration;
-    using FrameBufferAllocator = libcamera::FrameBufferAllocator;
-    using StreamRole = libcamera::StreamRole;
-    using StreamRoles = std::vector<libcamera::StreamRole>;
-    using PixelFormat = libcamera::PixelFormat;
-    using StreamConfiguration = libcamera::StreamConfiguration;
-    using BufferMap = Request::BufferMap;
-    using Size = libcamera::Size;
-    using Rectangle = libcamera::Rectangle;
-    enum class MsgType
-    {
-        RequestComplete,
-        Quit
-    };
-    typedef void* MsgPayload;
-    struct Msg
-    {
-        Msg(MsgType const &t) : type(t), payload(nullptr) {}
-        
-        // Specialized constructor for CompletedRequestPtr
-        Msg(MsgType const &t, CompletedRequestPtr p) : type(t) 
-        {
-            payload = new CompletedRequestPtr(std::move(p));
-        }
-        
-        // Destructor to clean up allocated memory
-        ~Msg() 
-        {
-            if (payload && type == MsgType::RequestComplete) {
-                delete static_cast<CompletedRequestPtr*>(payload);
-            }
-        }
-        
-        // Copy constructor
-        Msg(const Msg& other) : type(other.type), payload(nullptr) 
-        {
-            if (other.payload && other.type == MsgType::RequestComplete) {
-                CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
-                payload = new CompletedRequestPtr(*ptr);
-            }
-        }
-        
-        // Move constructor  
-        Msg(Msg&& other) noexcept : type(other.type), payload(other.payload) 
-        {
-            other.payload = nullptr;
-        }
-        
-        // Copy assignment
-        Msg& operator=(const Msg& other) 
-        {
-            if (this != &other) {
-                // Clean up current payload
-                if (payload && type == MsgType::RequestComplete) {
-                    delete static_cast<CompletedRequestPtr*>(payload);
-                }
-                
-                type = other.type;
-                payload = nullptr;
-                if (other.payload && other.type == MsgType::RequestComplete) {
-                    CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(other.payload);
-                    payload = new CompletedRequestPtr(*ptr);
-                }
-            }
-            return *this;
-        }
-        
-        // Move assignment
-        Msg& operator=(Msg&& other) noexcept 
-        {
-            if (this != &other) {
-                // Clean up current payload
-                if (payload && type == MsgType::RequestComplete) {
-                    delete static_cast<CompletedRequestPtr*>(payload);
-                }
-                
-                type = other.type;
-                payload = other.payload;
-                other.payload = nullptr;
-            }
-            return *this;
-        }
-        
-        MsgType type;
-        MsgPayload payload;
-        
-        // Helper to get CompletedRequestPtr back
-        CompletedRequestPtr getCompletedRequest() const 
-        {
-            if (payload && type == MsgType::RequestComplete) {
-                CompletedRequestPtr* ptr = static_cast<CompletedRequestPtr*>(payload);
-                return *ptr;
-            }
-            return nullptr;
-        }
-    };
-
-    // Some flags that can be used to give hints to the camera configuration.
-    static constexpr unsigned int FLAG_STILL_NONE = 0;
-    static constexpr unsigned int FLAG_STILL_BGR = 1;            // supply BGR images, not YUV
-    static constexpr unsigned int FLAG_STILL_RGB = 2;            // supply RGB images, not YUV
-    static constexpr unsigned int FLAG_STILL_RAW = 4;            // request raw image stream
-    static constexpr unsigned int FLAG_STILL_DOUBLE_BUFFER = 8;  // double-buffer stream
-    static constexpr unsigned int FLAG_STILL_TRIPLE_BUFFER = 16; // triple-buffer stream
-    static constexpr unsigned int FLAG_STILL_BUFFER_MASK = 24;   // mask for buffer flags
-
-    static constexpr unsigned int FLAG_VIDEO_NONE = 0;
-    static constexpr unsigned int FLAG_VIDEO_RAW = 1;              // request raw image stream
-    static constexpr unsigned int FLAG_VIDEO_JPEG_COLOURSPACE = 2; // force JPEG colour space
-
-    Options *GetOptions() const { return options_.get(); }
-
-    std::string const &CameraId() const;
-    void OpenCamera();
-    void CloseCamera();
-
-    void ConfigureStill(unsigned int flags = FLAG_STILL_NONE);
-    void ConfigureViewfinder();
-
-    void Teardown();
-    void StartCamera();
-    void StopCamera();
-
-    void ApplyRoiSettings();
-
-    Msg Wait();
-    void PostMessage(MsgType &t, MsgPayload &p);
-
-    Stream *GetStream(std::string const &name, unsigned int *w = nullptr, unsigned int *h = nullptr,
-                        unsigned int *stride = nullptr) const;
-    Stream *ViewfinderStream(unsigned int *w = nullptr, unsigned int *h = nullptr,
-                                unsigned int *stride = nullptr) const;
-    Stream *StillStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-    Stream *RawStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-    Stream *VideoStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-    Stream *LoresStream(unsigned int *w = nullptr, unsigned int *h = nullptr, unsigned int *stride = nullptr) const;
-    Stream *GetMainStream() const;
-
-    std::vector<libcamera::Span<uint8_t>> Mmap(FrameBuffer *buffer) const;
-
-    void SetControls(ControlList &controls);
-    void StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const;
-
-protected:
-    std::unique_ptr<Options> options_;
-
-private:
-    static std::shared_ptr<CameraManager> getCameraManager()
-    {
-        static std::shared_ptr<CameraManager> camera_manager_;
-        if (!camera_manager_)
-        {
-            CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): creating manager");
-            camera_manager_ = std::make_shared<CameraManager>();
-            int ret = camera_manager_->start();
-            if (ret)
-                throw std::runtime_error("camera manager failed to start,"
-                                            "code " +
-                                            std::to_string(-ret));
-        }
-
-        return camera_manager_;
-    }
-
-    template <typename T>
-    class MessageQueue
-    {
-    public:
-        template <typename U>
-        void Post(U &&msg)
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            queue_.push(std::forward<U>(msg));
-            cond_.notify_one();
-        }
-        T Wait()
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            cond_.wait(lock, [this]
-                        { return !queue_.empty(); });
-            T msg = std::move(queue_.front());
-            queue_.pop();
-            return msg;
-        }
-        void Clear()
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            queue_ = {};
-        }
-
-    private:
-        std::queue<T> queue_;
-        std::mutex mutex_;
-        std::condition_variable cond_;
-    };
-
-    void setupCapture();
-    void makeRequests();
-    void queueRequest(CompletedRequest *completed_request);
-    void requestComplete(Request *request);
-    void configureDenoise(const std::string &denoise_mode);
-
-    // std::unique_ptr<CameraManager> camera_manager_;
-    std::shared_ptr<Camera> camera_;
-    bool camera_acquired_ = false;
-    std::unique_ptr<CameraConfiguration> configuration_;
-    std::map<FrameBuffer *, std::vector<libcamera::Span<uint8_t>>> mapped_buffers_;
-    std::map<std::string, Stream *> streams_;
-    FrameBufferAllocator *allocator_ = nullptr;
-    std::map<Stream *, std::queue<FrameBuffer *>> frame_buffers_;
-    std::queue<Request *> free_requests_;
-    std::vector<std::unique_ptr<Request>> requests_;
-    std::mutex completed_requests_mutex_;
-    std::set<CompletedRequest *> completed_requests_;
-    bool camera_started_ = false;
-    std::mutex camera_stop_mutex_;
-    MessageQueue<Msg> msg_queue_;
-    // For setting camera controls.
-    std::mutex control_mutex_;
-    ControlList controls_;
-    // Other:
-    uint64_t last_timestamp_;
-    uint64_t sequence_ = 0;
-// Above is the former LibcameraCapture class
 public:
     LibcameraCapture();
     LibcameraCapture(int camera_index);
-    virtual ~LibcameraCapture();
+    virtual ~LibcameraCapture() CV_OVERRIDE;
+
+    Options *options;
 
     bool startVideo();
     void stopVideo();
@@ -514,26 +427,57 @@ public:
     bool open(const std::string &filename);
 
     virtual bool grabFrame() CV_OVERRIDE;
-    virtual bool retrieveFrame(int stream_idx, OutputArray dst) CV_OVERRIDE;
+    virtual bool retrieveFrame(int /*unused*/, OutputArray dst) CV_OVERRIDE;
+    
+    // 供插件使用
+    bool grab() { return grabFrame(); }
+    bool retrieve(cv::Mat& frame, int stream_idx = 0) 
+    { 
+        return retrieveFrame(stream_idx, frame); 
+    }
+    
     virtual double getProperty(int propId) const CV_OVERRIDE;
     virtual bool setProperty(int propId, double value) CV_OVERRIDE;
-    virtual bool isOpened() const CV_OVERRIDE;
     virtual int getCaptureDomain() CV_OVERRIDE { return cv::CAP_LIBCAMERA; }
+    
+    bool isOpened() const CV_OVERRIDE
+    {
+        return camera_started_.load(std::memory_order_acquire);
+    }
 
-    // Additional convenience methods for plugin
-    bool grab() { return grabFrame(); }
-    bool retrieve(cv::Mat& frame, int stream_idx = 0);
+    // 新的回调接口，由 LibcameraApp 调用
+    void onRequestComplete(CompletedRequestPtr completed_request);
+    
+    uint64_t getLastCaptureTimestamp() const { return last_capture_timestamp_ns_.load(); }
+    
+    uint64_t getLastRequestSubmitTime() const { return last_request_submit_time_ns_.load(); }
+    uint64_t getLastFrameWaitStartTime() const { return last_wait_start_time_ns_.load(); }
+    uint64_t getLastFrameCompleteTime() const { return last_frame_complete_time_ns_.load(); }
 
 protected:
-    Options *options;
+    LibcameraApp *app;
     unsigned int still_flags;
     unsigned int vw, vh, vstr;
+    std::atomic<bool> camera_started_;
     std::atomic<bool> needsReconfigure;
-    bool camerastarted;
+
+    std::queue<CompletedRequestPtr> completed_requests_;
+    mutable std::mutex completed_requests_mutex_;
+    std::condition_variable completed_requests_cv_;
+
+    mutable std::atomic<uint64_t> last_capture_timestamp_ns_{0};
+
+    mutable std::atomic<uint64_t> last_request_submit_time_ns_{0};
+    mutable std::atomic<uint64_t> last_wait_start_time_ns_{0};
+    mutable std::atomic<uint64_t> last_frame_complete_time_ns_{0};
     
-    // Store the current completed request for retrieve
-    CompletedRequestPtr current_request_;
-    std::mutex request_mutex_;
+    // Reuse dimensions array to avoid repeated allocations
+    mutable int reuse_dims_[2];
+    
+    // On-demand mode: send a request when user needs a frame
+            
+    bool waitForFrame(unsigned int timeout_ms);
+    CompletedRequestPtr getCompletedRequest(); 
 };
 
 };

@@ -38,7 +38,6 @@ function(ocv_create_builtin_videoio_plugin name target)
   endif()
 
   set_target_properties(${name} PROPERTIES
-    # CXX_STANDARD 11
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     CXX_VISIBILITY_PRESET hidden
