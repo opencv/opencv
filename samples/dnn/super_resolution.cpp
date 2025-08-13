@@ -128,9 +128,9 @@ int main(int argc, char **argv)
         "This sample demonstrates super-resolution using the SeeMore model.\n"
         "The model upscales images by 4x while enhancing details.\n\n"
         "Usage examples:\n"
-        "\t./seemore_superres\n"
-        "\t./seemore_superres --input=image.jpg\n"
-        "\t./seemore_superres --input=../data/chicky_512.png\n";
+        "\t./super_resolution\n"
+        "\t./super_resolution --input=image.jpg\n"
+        "\t./super_resolution --input=../data/chicky_512.png\n";
 
     string keys = param_keys + backend_keys + target_keys;
 

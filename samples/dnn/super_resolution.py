@@ -80,9 +80,9 @@ def get_args_parser(func_args):
         description="""
         To run:
             Default image:
-                python seemore_superres.py
+                python super_resolution.py
             Image processing:
-                python seemore_superres.py --input=path/to/your/input/image.jpg
+                python super_resolution.py --input=path/to/your/input/image.jpg
 
         The model performs 4x super-resolution on input images.
         """,
@@ -91,7 +91,7 @@ def get_args_parser(func_args):
     return parser.parse_args(func_args)
 
 def load_model(args):
-    """Load the SeeMore super-resolution model"""
+    """Load the super-resolution model"""
     try:
         model_path = findModel(args.model, args.sha1)
         net = cv.dnn.readNetFromONNX(model_path)
@@ -109,8 +109,7 @@ def postprocess_output(output, args, original_shape=None):
     output = np.transpose(output, (1, 2, 0))
     output = (output * 255).astype(np.uint8)
 
-    if args.rgb:
-        output = cv.cvtColor(output, cv.COLOR_RGB2BGR)
+    output = cv.cvtColor(output, cv.COLOR_RGB2BGR)
 
     if original_shape is not None:
         target_height, target_width = original_shape

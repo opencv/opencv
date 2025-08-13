@@ -536,5 +536,5 @@ seemoredetails:
   rgb: true
   width: 512
   height: 512
-  sample: "seemore_superres"
+  sample: "super_resolution"
   input: true
