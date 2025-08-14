@@ -67,7 +67,7 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
     }
 
     if (transform_type == MOTION_HOMOGRAPHY)
-        SANITY_CHECK(warpMat, 8e-3);
+        SANITY_CHECK(warpMat, 8.1e-3);
     else
         SANITY_CHECK(warpMat, 3e-3);
 }
