@@ -113,3 +113,4 @@
 "test_bitshift_right_uint32",
 "test_bitshift_right_uint64",
 "test_bitshift_right_uint8",
+"test_nonzero_example",
