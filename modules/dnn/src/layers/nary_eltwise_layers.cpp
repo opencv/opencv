@@ -375,9 +375,9 @@ public:
         {
             CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
             if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
 
         if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
@@ -943,6 +943,18 @@ public:
                 CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
                           op != OPERATION::OR && op != OPERATION::XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
+                break;
+            case CV_16S:
+                opDispatch<int16_t>(std::forward<Args>(args)...);
+                break;
+            case CV_16U:
+                opDispatch<uint16_t>(std::forward<Args>(args)...);
+                break;
+            case CV_32U:
+                opDispatch<uint32_t>(std::forward<Args>(args)...);
+                break;
+            case CV_64U:
+                opDispatch<uint64_t>(std::forward<Args>(args)...);
                 break;
             default:
                 CV_Error(cv::Error::BadDepth, "Unsupported type.");

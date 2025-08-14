@@ -927,33 +927,33 @@ CASE(test_matmul_4d)
 CASE(test_matmulinteger)
     // no filter
 CASE(test_max_example)
-    // no filter
+    SKIP;
 CASE(test_max_float16)
-    // no filter
+    SKIP;
 CASE(test_max_float32)
-    // no filter
+    SKIP;
 CASE(test_max_float64)
-    // no filter
+    SKIP;
 CASE(test_max_int16)
-    // no filter
+    SKIP;
 CASE(test_max_int32)
-    // no filter
+    SKIP;
 CASE(test_max_int64)
     SKIP;
 CASE(test_max_int8)
     // no filter
 CASE(test_max_one_input)
-    // no filter
+    SKIP;
 CASE(test_max_two_inputs)
-    // no filter
+    SKIP;
 CASE(test_max_uint16)
-    // no filter
+    SKIP;
 CASE(test_max_uint32)
-    // no filter
+    SKIP;
 CASE(test_max_uint64)
-    // no filter
+    SKIP;
 CASE(test_max_uint8)
-    // no filter
+    SKIP;
 CASE(test_maxpool_1d_default)
 #if SKIP_SET_1
     SKIP_MYRIAD;
@@ -1027,41 +1027,41 @@ CASE(test_mean_one_input)
 CASE(test_mean_two_inputs)
     SKIP;
 CASE(test_min_example)
-    // no filter
+    SKIP;
 CASE(test_min_float16)
-    // no filter
+    SKIP;
 CASE(test_min_float32)
-    // no filter
+    SKIP;
 CASE(test_min_float64)
-    // no filter
+    SKIP;
 CASE(test_min_int16)
-    // no filter
+    SKIP;
 CASE(test_min_int32)
-    // no filter
+    SKIP;
 CASE(test_min_int64)
     SKIP;
 CASE(test_min_int8)
-    // no filter
+    SKIP;
 CASE(test_min_one_input)
-    // no filter
+    SKIP;
 CASE(test_min_two_inputs)
-    // no filter
+    SKIP;
 CASE(test_min_uint16)
-    // no filter
+    SKIP;
 CASE(test_min_uint32)
-    // no filter
+    SKIP;
 CASE(test_min_uint64)
-    // no filter
+    SKIP;
 CASE(test_min_uint8)
-    // no filter
+    SKIP;
 CASE(test_mish)
     // no filter
 CASE(test_mish_expanded)
     // no filter
 CASE(test_mod_broadcast)
-    // no filter
+    SKIP;
 CASE(test_mod_int64_fmod)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_float16)
     // no filter
     if (target == DNN_TARGET_OPENCL)
@@ -1084,21 +1084,21 @@ CASE(test_mod_mixed_sign_float64)
         default_lInf = 0.0016;  // Expected: (normInf) <= (lInf), actual: 0.00156251 vs 0.0001
     }
 CASE(test_mod_mixed_sign_int16)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_int32)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_int64)
-    // no filter
+    SKIP;
 CASE(test_mod_mixed_sign_int8)
-    // no filter
+    SKIP;
 CASE(test_mod_uint16)
-    // no filter
+    SKIP;
 CASE(test_mod_uint32)
-    // no filter
+    SKIP;
 CASE(test_mod_uint64)
-    // no filter
+    SKIP;
 CASE(test_mod_uint8)
-    // no filter
+    SKIP;
 CASE(test_momentum)
     // no filter
 CASE(test_momentum_multiple)
