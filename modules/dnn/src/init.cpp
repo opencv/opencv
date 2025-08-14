@@ -111,6 +111,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Unsqueeze,      UnsqueezeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(IsNaN,          IsNaNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(IsInf,          IsInfLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Deconvolution,  DeconvolutionLayer);

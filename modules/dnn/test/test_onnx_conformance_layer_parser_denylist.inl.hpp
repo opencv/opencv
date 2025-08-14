@@ -69,8 +69,6 @@
 "test_convtranspose_pad", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_pads", // Issue::Parser::Weights are required as inputs
 "test_convtranspose_with_kernel", // Issue::Parser::Weights are required as inputs
-"test_det_2d", // Issue:: Unkonwn error
-"test_det_nd", // Issue:: Unkonwn error
 "test_dropout_default_mask", // Issue::cvtest::norm::wrong data type
 "test_dropout_default_mask_ratio", // ---- same as above ---
 "test_dynamicquantizelinear", // Issue:: Unkonwn error

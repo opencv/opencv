@@ -91,3 +91,5 @@
 "test_triu_pos",
 "test_triu_square",
 "test_triu_square_neg",
+"test_det_2d",
+"test_det_nd",
