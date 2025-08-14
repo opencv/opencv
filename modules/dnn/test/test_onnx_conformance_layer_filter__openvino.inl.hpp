@@ -2058,39 +2058,39 @@ CASE(test_transpose_all_permutations_5)
 CASE(test_transpose_default)
     // no filter
 CASE(test_tril)
-    // no filter
+    SKIP;
 CASE(test_tril_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_one_row_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_out_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_out_pos)
-    // no filter
+    SKIP;
 CASE(test_tril_pos)
-    // no filter
+    SKIP;
 CASE(test_tril_square)
-    // no filter
+    SKIP;
 CASE(test_tril_square_neg)
-    // no filter
+    SKIP;
 CASE(test_tril_zero)
     // no filter
 CASE(test_triu)
-    // no filter
+    SKIP;
 CASE(test_triu_neg)
-    // no filter
+    SKIP;
 CASE(test_triu_one_row)
-    // no filter
+    SKIP;
 CASE(test_triu_out_neg_out)
-    // no filter
+    SKIP;
 CASE(test_triu_out_pos)
-    // no filter
+    SKIP;
 CASE(test_triu_pos)
-    // no filter
+    SKIP;
 CASE(test_triu_square)
-    // no filter
+    SKIP;
 CASE(test_triu_square_neg)
-    // no filter
+    SKIP;
 CASE(test_triu_zero)
     // no filter
 CASE(test_unique_not_sorted_without_axis)

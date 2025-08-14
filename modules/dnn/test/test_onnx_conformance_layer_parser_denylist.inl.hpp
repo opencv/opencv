@@ -334,23 +334,7 @@
 "test_training_dropout_mask",  // ---- same as above ---
 "test_training_dropout_zero_ratio",  // ---- same as above ---
 "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
-"test_tril", // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "Trilu" in function 'getLayerInstance'
-"test_tril_neg",  // ---- same as above ---
-"test_tril_one_row_neg",  // ---- same as above ---
-"test_tril_out_neg",  // ---- same as above ---
-"test_tril_out_pos",  // ---- same as above ---
-"test_tril_pos",  // ---- same as above ---
-"test_tril_square",  // ---- same as above ---
-"test_tril_square_neg",  // ---- same as above ---
 "test_tril_zero",  // ---- same as above ---
-"test_triu",  // ---- same as above ---
-"test_triu_neg",  // ---- same as above ---
-"test_triu_one_row",  // ---- same as above ---
-"test_triu_out_neg_out",  // ---- same as above ---
-"test_triu_out_pos",  // ---- same as above ---
-"test_triu_pos",  // ---- same as above ---
-"test_triu_square",  // ---- same as above ---
-"test_triu_square_neg",  // ---- same as above ---
 "test_triu_zero",  // ---- same as above ---
 "test_unique_not_sorted_without_axis", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "Unique" in function 'getLayerInstance'
 "test_unique_sorted_with_axis",  // ---- same as above ---
