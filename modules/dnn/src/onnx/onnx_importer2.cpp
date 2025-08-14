@@ -214,7 +214,8 @@ protected:
     void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseSize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseUnique               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1599,6 +1600,12 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto, ninputs);
 }
 
+void ONNXImporter2::parseUnique(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Unique";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "Size";
@@ -2460,6 +2467,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["If"] = &ONNXImporter2::parseIf;
     dispatch["Resize"] = &ONNXImporter2::parseResize;
     dispatch["Size"] = &ONNXImporter2::parseSize;
+    dispatch["Unique"] = &ONNXImporter2::parseUnique;
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
