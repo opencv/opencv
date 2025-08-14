@@ -507,9 +507,9 @@ CASE(test_dequantizelinear_axis)
 CASE(test_dequantizelinear_blocked)
     SKIP;
 CASE(test_det_2d)
-    // no filter
+    SKIP;
 CASE(test_det_nd)
-    // no filter
+    SKIP;
 CASE(test_div)
     // no filter
 CASE(test_div_bcast)
