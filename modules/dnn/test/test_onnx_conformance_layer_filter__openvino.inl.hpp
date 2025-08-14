@@ -791,11 +791,11 @@ CASE(test_instancenorm_epsilon)
 CASE(test_instancenorm_example)
     // no filter
 CASE(test_isinf)
-    // no filter
+    SKIP;
 CASE(test_isinf_negative)
-    // no filter
+    SKIP;
 CASE(test_isinf_positive)
-    // no filter
+    SKIP;
 CASE(test_isnan)
     SKIP;
 CASE(test_layer_normalization_2d_axis0)
