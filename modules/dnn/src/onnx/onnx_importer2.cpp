@@ -228,6 +228,7 @@ protected:
     void parseTranspose            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnsqueeze            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNonMaxSuprression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
@@ -1631,6 +1632,12 @@ void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseNonMaxSuprression(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NonMaxSuprression";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int n_inputs = node_proto.input_size();
@@ -2465,6 +2472,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
+    dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;
