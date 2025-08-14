@@ -18,36 +18,6 @@ namespace dnn {
 // Inputs: boxes [B, N, 4], scores [B, C, N], (optional) max_output_boxes_per_class, iou_threshold, score_threshold
 // Output: selected_indices [K, 3] (int64): [batch_idx, class_idx, box_idx]
 
-template <typename T>
-static inline T readScalarAs(const cv::Mat& m, T def)
-{
-    if (m.empty())
-        return def;
-    CV_Assert(m.channels() == 1 && m.total() == 1);
-
-    switch (m.depth())
-    {
-    case CV_8U:  return static_cast<T>(m.at<uchar>(0));
-    case CV_8S:  return static_cast<T>(m.at<schar>(0));
-    case CV_16U: return static_cast<T>(m.at<unsigned short>(0));
-    case CV_16S: return static_cast<T>(m.at<short>(0));
-    case CV_32S: return static_cast<T>(m.at<int>(0));
-    case CV_64S: return static_cast<T>(m.at<long long>(0));
-    case CV_32F:
-        if (std::is_integral<T>::value)
-            return static_cast<T>(cvRound(m.at<float>(0)));
-        else
-            return static_cast<T>(m.at<float>(0));
-    case CV_64F:
-        if (std::is_integral<T>::value)
-            return static_cast<T>(cvRound(m.at<double>(0)));
-        else
-            return static_cast<T>(m.at<double>(0));
-    default:
-        return def;
-    }
-}
-
 class NonMaxSuppressionLayerImpl CV_FINAL : public NonMaxSuppressionLayer
 {
 public:
@@ -79,7 +49,6 @@ public:
     void getTypes(const std::vector<MatType>&, const int requiredOutputs, const int requiredInternals,
                    std::vector<MatType>& outputs, std::vector<MatType>& internals) const CV_OVERRIDE {
         outputs.assign(requiredOutputs, MatType(CV_64S));
-        internals.assign(requiredInternals, MatType(CV_32F));
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays) CV_OVERRIDE {
@@ -94,9 +63,24 @@ public:
         const int N = boxesBlob.size[1];
         const int C = scoresBlob.size[1];
 
-        int maxOut = (int)readScalarAs<long long>((inputs.size() >= 3 ? inputs[2] : Mat()), (long long)defaultMaxOut);
-        float iouThr = readScalarAs<float>((inputs.size() >= 4 ? inputs[3] : Mat()), defaultIouThr);
-        float scoreThr = readScalarAs<float>((inputs.size() >= 5 ? inputs[4] : Mat()), defaultScoreThr);
+        int maxOut = defaultMaxOut;
+        if (inputs.size() >= 3 && !inputs[2].empty())
+        {
+            CV_Assert(inputs[2].channels() == 1 && inputs[2].total() == 1);
+            inputs[2].convertTo(Mat(1, 1, CV_32S, &maxOut), CV_32S);
+        }
+        float iouThr = defaultIouThr;
+        if (inputs.size() >= 4 && !inputs[3].empty())
+        {
+            CV_Assert(inputs[3].channels() == 1 && inputs[3].total() == 1);
+            inputs[3].convertTo(Mat(1, 1, CV_32F, &iouThr), CV_32F);
+        }
+        float scoreThr = defaultScoreThr;
+        if (inputs.size() >= 5 && !inputs[4].empty())
+        {
+            CV_Assert(inputs[4].channels() == 1 && inputs[4].total() == 1);
+            inputs[4].convertTo(Mat(1, 1, CV_32F, &scoreThr), CV_32F);
+        }
 
         const int tasks = B * C;
         std::vector<std::vector<Vec<long long,3>>> tripletsPerBC(tasks);
@@ -135,19 +119,12 @@ public:
                 if (rects.empty())
                     continue;
 
-                std::vector<int> order(rects.size());
-                std::iota(order.begin(), order.end(), 0);
-                std::stable_sort(order.begin(), order.end(), [&](int i, int j){ return scores[i] > scores[j]; });
-
-                std::vector<Rect2d> rects2d; rects2d.reserve(order.size());
-                std::vector<float> sortedScores; sortedScores.reserve(order.size());
-                for (int idx : order) {
-                    const Rect2f& rf = rects[idx];
+                std::vector<Rect2d> rects2d; rects2d.reserve(rects.size());
+                for (const Rect2f& rf : rects) {
                     rects2d.emplace_back((double)rf.x, (double)rf.y, (double)rf.width, (double)rf.height);
-                    sortedScores.push_back(scores[idx]);
                 }
                 std::vector<int> keep;
-                cv::dnn::NMSBoxes(rects2d, sortedScores, /*score_threshold*/ scoreThr, /*nms_threshold*/ iouThr, keep, 1.f,
+                NMSBoxes(rects2d, scores, /*score_threshold*/ scoreThr, /*nms_threshold*/ iouThr, keep, 1.f,
                                   0);
                 if (maxOut > 0 && (int)keep.size() > maxOut)
                     keep.resize(maxOut);
@@ -155,8 +132,7 @@ public:
                 auto& local = tripletsPerBC[taskIdx];
                 local.reserve(keep.size());
                 for (int kept : keep) {
-                    const int filteredIdx = order[kept];
-                    const int globalIdx = globalIndices[filteredIdx];
+                    const int globalIdx = globalIndices[kept];
                     local.push_back({(long long)b, (long long)c, (long long)globalIdx});
                 }
             }
