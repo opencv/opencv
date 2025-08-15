@@ -18,8 +18,12 @@ double minPSNR(UMat src1, UMat src2)
     return std::min(psnr, cvtest::PSNR(src1_channels[2], src2_channels[2]));
 }
 
-TEST(ExposureCompensate, SimilarityThreshold)
+CV_ENUM(MaskType, CV_8U, CV_Bool);
+typedef testing::TestWithParam<MaskType> ExposureCompensate;
+
+TEST_P(ExposureCompensate, SimilarityThreshold)
 {
+    int mask_type = GetParam();
     UMat source;
     imread(cvtest::TS::ptr()->get_data_path() + "stitching/s1.jpg").copyTo(source);
 
@@ -29,8 +33,8 @@ TEST(ExposureCompensate, SimilarityThreshold)
     // Add a big artifact
     image2(Rect(150, 150, 100, 100)).setTo(Scalar(0, 0, 255));
 
-    UMat mask(image1.size(), CV_8U);
-    mask.setTo(255);
+    uchar xff = mask_type == CV_8U ? 255: 1;
+    UMat mask(image1.size(), mask_type, Scalar::all(xff));
 
     detail::BlocksChannelsCompensator compensator;
     compensator.setNrGainsFilteringIterations(0); // makes it more clear
@@ -39,7 +43,6 @@ TEST(ExposureCompensate, SimilarityThreshold)
     // identical, except for the red artifact in image 2
     // Apart from that artifact, there is no exposure to compensate
     compensator.setSimilarityThreshold(1);
-    uchar xff = 255;
     compensator.feed(
         {{}, {}},
         {image1, image2},
@@ -65,6 +68,8 @@ TEST(ExposureCompensate, SimilarityThreshold)
     double psnr_similarity_mask = minPSNR(image1, image1_result);
     EXPECT_GT(psnr_similarity_mask, 300);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, ExposureCompensate, MaskType::all());
 
 } // namespace
 } // namespace opencv_test
