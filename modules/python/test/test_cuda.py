@@ -145,5 +145,18 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'fastNlMeansDenoisingColored'))
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
+    def test_dlpack_GpuMat(self):
+        for dtype in [np.int8, np.uint8, np.int16, np.uint16, np.float16, np.int32, np.float32, np.float64]:
+            for channels in [2, 3, 5]:
+                ref = (np.random.random((64, 128, channels)) * 255).astype(dtype)
+                src = cv.cuda_GpuMat()
+                src.upload(ref)
+                dst = cv.cuda_GpuMat.from_dlpack(src)
+                test = dst.download()
+                equal = np.array_equal(ref, test)
+                if not equal:
+                    print(f"Failed test with dtype {dtype} and {channels} channels")
+                self.assertTrue(equal)
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
