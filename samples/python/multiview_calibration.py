@@ -961,7 +961,7 @@ def calibrateFromJSON(json_file, find_intrinsics_in_python):
     images_names = data['images_names'] if 'images_names' in data else None
 
     return calibrateFromPoints(
-        np.array(data['object_points'], dtype=np.float32).T,
+        np.array(data['object_points'], dtype=np.float32),
         data['image_points'],
         data['image_sizes'],
         data['models'],
