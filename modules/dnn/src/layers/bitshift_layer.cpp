@@ -11,6 +11,9 @@
 // ONNX reference: BitShift operator
 // Spec: https://onnx.ai/onnx/operators/onnx__BitShift.html
 // Supported opsets: ai.onnx opset 11 and newer
+// NOTE: Broadcasting is NOT fully supported. Only two cases are handled:
+// 1) array (input[0]) shifted by array (input[1]) of the SAME SHAPE
+// 2) array (input[0]) shifted by a SCALAR (0-D) shift amount
 
 namespace cv {
 namespace dnn {
@@ -20,7 +23,7 @@ static inline T doShift(T inputVal, U shiftVal, int direction, int bitWidth)
 {
     return (uint64_t)shiftVal >= (uint64_t)bitWidth
            ? T(0)
-           : T(direction ? (inputVal >> (U)shiftVal) : (inputVal << (U)shiftVal));
+           : T(direction ? (inputVal >> shiftVal) : (inputVal << shiftVal));
 }
 
 template<typename T, int CvTypeConst, int BitWidth>
@@ -44,15 +47,8 @@ void runBitShift(const Mat& input, const Mat& shift, Mat& output, int direction)
     else
     {
         CV_Assert(shift.size == input.size);
-        const T* shiftPtr = nullptr;
-        Mat shiftTmp;
-        if (shift.type() == CvTypeConst)
-            shiftPtr = shift.ptr<T>();
-        else
-        {
-            shift.convertTo(shiftTmp, CvTypeConst);
-            shiftPtr = shiftTmp.ptr<T>();
-        }
+        CV_Assert(shift.type() == CvTypeConst);
+        const T* shiftPtr = shift.ptr<T>();
         parallel_for_(Range(0, (int)numElements), [&](const Range& r){
             for (int i = r.start; i < r.end; ++i)
                 outputPtr[i] = doShift<T,T>(inputPtr[i], shiftPtr[i], direction, BitWidth);
@@ -79,7 +75,9 @@ public:
     bool getMemoryShapes(const std::vector<MatShape>& inputs, const int requiredOutputs,
                          std::vector<MatShape>& outputs, std::vector<MatShape>& internals) const CV_OVERRIDE
     {
-        CV_Assert(inputs.size() >= 1);
+        CV_Assert(inputs.size() >= 2);
+        bool isScalarShift = inputs[1].empty() || total(inputs[1]) == 1;
+        CV_Assert(isScalarShift || inputs[1] == inputs[0]);
         outputs.assign(1, inputs[0]);
         return false;
     }
@@ -87,9 +85,10 @@ public:
     void getTypes(const std::vector<MatType>& in, const int reqOut, const int reqInt,
                   std::vector<MatType>& out, std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_Assert(!in.empty());
+        CV_Assert(in.size() >= 2);
         int t = in[0];
         CV_Assert(t == CV_8U || t == CV_16U || t == CV_32U || t == CV_64U);
+        CV_Assert(in[1] == in[0]);
         out.assign(reqOut, MatType(t));
         internals.assign(reqInt, MatType(t));
     }
