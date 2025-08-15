@@ -113,18 +113,6 @@
 "test_lstm_with_initial_bias", // ---- same as above ---
 "test_lstm_with_peepholes", // ---- same as above ---
 "test_matmulinteger", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
-"test_max_int16", // Issue:: Unsupported data type
-"test_max_uint16", // Issue:: Unsupported data type
-"test_max_uint32", // Issue:: Unsupported data type
-"test_max_uint64", // Issue:: Unsupported data type
-"test_min_int16",  // Issue:: Unsupported data type
-"test_min_uint16", // Issue:: Unsupported data type
-"test_min_uint32", // Issue:: Unkonwn error
-"test_min_uint64", // Issue:: Unsupported data type
-"test_mod_mixed_sign_int16", // Issue:: Unkonwn error
-"test_mod_uint16", // Issue:: Unkonwn error
-"test_mod_uint32", // ---- same as above ---
-"test_mod_uint64", // ---- same as above ---
 "test_momentum", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple", // ---- same as above ---
 "test_mvn", // Issues::Wrong answer
