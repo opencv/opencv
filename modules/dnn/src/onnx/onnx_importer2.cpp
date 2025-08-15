@@ -229,6 +229,7 @@ protected:
     void parseUnsqueeze            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -1605,6 +1606,26 @@ void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeP
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseBitShift(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // ONNX spec: direction is required string attr: "LEFT" or "RIGHT"
+    // https://onnx.ai/onnx/operators/onnx__BitShift.html
+    layerParams.type = "BitShift";
+    String dir = layerParams.get<String>("direction", "");
+
+    CV_Assert(dir == "LEFT" || dir == "RIGHT");
+    CV_Assert(!dir.empty());
+
+    if (!dir.empty())
+    {
+        if (dir == "LEFT" || dir == "left")
+            layerParams.set("direction", 0);
+        else if (dir == "RIGHT" || dir == "right")
+            layerParams.set("direction", 1);
+    }
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
@@ -2465,6 +2486,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
+    dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;

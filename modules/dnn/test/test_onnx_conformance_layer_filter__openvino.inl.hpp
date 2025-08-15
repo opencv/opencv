@@ -263,21 +263,21 @@ CASE(test_bernoulli_seed)
 CASE(test_bernoulli_seed_expanded)
     // no filter
 CASE(test_bitshift_left_uint16)
-    // no filter
+    SKIP;
 CASE(test_bitshift_left_uint32)
-    // no filter
+    SKIP;
 CASE(test_bitshift_left_uint64)
-    // no filter
+    SKIP;
 CASE(test_bitshift_left_uint8)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint16)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint32)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint64)
-    // no filter
+    SKIP;
 CASE(test_bitshift_right_uint8)
-    // no filter
+    SKIP;
 CASE(test_cast_BFLOAT16_to_FLOAT)
     // no filter
 CASE(test_cast_DOUBLE_to_FLOAT)
