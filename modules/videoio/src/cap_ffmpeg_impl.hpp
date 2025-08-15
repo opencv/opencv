@@ -44,6 +44,7 @@
 #include "cap_ffmpeg_legacy_api.hpp"
 #include "opencv2/core/utils/logger.hpp"
 #include "cap_interface.hpp"
+#include "opencv2/imgproc/hal/hal.hpp"
 
 using namespace cv;
 
@@ -568,6 +569,7 @@ struct CvCapture_FFMPEG
     AVPacket          packet;
     Image_FFMPEG      frame;
     struct SwsContext *img_convert_ctx;
+    bool useSwscale;
 
     int64_t frame_number, first_frame_number;
 
@@ -1049,6 +1051,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
     close();
 
     readStream = stream;
+    useSwscale = utils::getConfigurationParameterBool("OPENCV_FFMPEG_USE_SWSCALE", false);
 
     if (!params.empty())
     {
@@ -1730,6 +1733,64 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         *cn = 1;
         break; // TODO: return false?
     }
+
+    if (!useSwscale && (
+        (sw_picture->format == AV_PIX_FMT_YUV420P && result_format == AV_PIX_FMT_BGR24) ||
+        (sw_picture->format == AV_PIX_FMT_YUVJ420P && result_format == AV_PIX_FMT_BGR24) ||
+        (sw_picture->format == AV_PIX_FMT_NV12 && (result_format == AV_PIX_FMT_BGR24 || result_format == AV_PIX_FMT_GRAY8))
+    ))
+    {
+        if (frame.width != video_st->CV_FFMPEG_CODEC_FIELD->width ||
+            frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
+            frame.data == NULL)
+        {
+#if USE_AV_FRAME_GET_BUFFER
+            av_frame_unref(&rgb_picture);
+#endif
+            rgb_picture.data[0] = (uint8_t*)realloc(rgb_picture.data[0], (*cn) * frame.width * frame.height);
+            frame.data = rgb_picture.data[0];
+            frame.step = (*cn) * frame.width;
+            frame.width = video_st->CV_FFMPEG_CODEC_FIELD->width;
+            frame.height = video_st->CV_FFMPEG_CODEC_FIELD->height;
+        }
+        if (sw_picture->format == AV_PIX_FMT_YUV420P || sw_picture->format == AV_PIX_FMT_YUVJ420P)
+        {
+            hal::cvtThreePlaneYUVtoBGR(sw_picture->data[0], sw_picture->linesize[0],
+                                       sw_picture->data[1], sw_picture->linesize[1],
+                                       sw_picture->data[2], sw_picture->linesize[2],
+                                       frame.data, frame.step,
+                                       frame.width, frame.height,
+                                       *cn, false);
+        }
+        else if (sw_picture->format == AV_PIX_FMT_NV12)
+        {
+            Mat y(sw_picture->height, sw_picture->width, CV_8U, sw_picture->data[0], sw_picture->linesize[0]);
+            Mat uv(sw_picture->height / 2, sw_picture->width / 2, CV_8UC2, sw_picture->data[1], sw_picture->linesize[1]);
+            Mat res(frame.height, frame.width, CV_8UC(*cn), frame.data, frame.step);
+            if (result_format == AV_PIX_FMT_GRAY8)
+                cvtColorTwoPlane(y, uv, res, COLOR_YUV2GRAY_NV12);
+            else
+                cvtColorTwoPlane(y, uv, res, COLOR_YUV2BGR_NV12);
+        }
+        *data = frame.data;
+        *step = frame.step;
+        *width = frame.width;
+        *height = frame.height;
+
+#if USE_AV_HW_CODECS
+        if (sw_picture != picture)
+        {
+            av_frame_free(&sw_picture);
+        }
+#endif
+        return true;
+    }
+    else if (!useSwscale)
+    {
+        CV_LOG_WARNING(NULL, format("VIDEOIO/FFMPEG: Unimplemented conversion from %s to %s. Fallback to libswscale",
+                       av_get_pix_fmt_name((AVPixelFormat)sw_picture->format), av_get_pix_fmt_name(result_format)));
+    }
+
 
     if( img_convert_ctx == NULL ||
         frame.width != video_st->CV_FFMPEG_CODEC_FIELD->width ||
