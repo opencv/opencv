@@ -118,6 +118,16 @@ Subdiv2D::Subdiv2D(Rect rect)
     initDelaunay(rect);
 }
 
+Subdiv2D::Subdiv2D(Rect2f rect)
+{
+    validGeometry = false;
+    freeQEdge = 0;
+    freePoint = 0;
+    recentEdge = 0;
+
+    initDelaunay(rect);
+}
+
 
 Subdiv2D::QuadEdge::QuadEdge()
 {
@@ -496,6 +506,52 @@ void Subdiv2D::initDelaunay( Rect rect )
     float big_coord = 6.f * MAX( rect.width, rect.height );
     float rx = (float)rect.x;
     float ry = (float)rect.y;
+
+    vtx.clear();
+    qedges.clear();
+
+    recentEdge = 0;
+    validGeometry = false;
+
+    topLeft = Point2f( rx, ry );
+    bottomRight = Point2f( rx + rect.width, ry + rect.height );
+
+    Point2f ppA( rx + big_coord, ry );
+    Point2f ppB( rx, ry + big_coord );
+    Point2f ppC( rx - big_coord, ry - big_coord );
+
+    vtx.push_back(Vertex());
+    qedges.push_back(QuadEdge());
+
+    freeQEdge = 0;
+    freePoint = 0;
+
+    int pA = newPoint(ppA, false);
+    int pB = newPoint(ppB, false);
+    int pC = newPoint(ppC, false);
+
+    int edge_AB = newEdge();
+    int edge_BC = newEdge();
+    int edge_CA = newEdge();
+
+    setEdgePoints( edge_AB, pA, pB );
+    setEdgePoints( edge_BC, pB, pC );
+    setEdgePoints( edge_CA, pC, pA );
+
+    splice( edge_AB, symEdge( edge_CA ));
+    splice( edge_BC, symEdge( edge_AB ));
+    splice( edge_CA, symEdge( edge_BC ));
+
+    recentEdge = edge_AB;
+}
+
+void Subdiv2D::initDelaunay( Rect2f rect )
+{
+        CV_INSTRUMENT_REGION();
+
+    float big_coord = 6.f * MAX( rect.width, rect.height );
+    float rx = rect.x;
+    float ry = rect.y;
 
     vtx.clear();
     qedges.clear();
