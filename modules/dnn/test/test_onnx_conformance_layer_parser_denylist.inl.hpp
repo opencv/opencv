@@ -15,14 +15,6 @@
 "test_bernoulli_expanded",  // ---- same as above ---
 "test_bernoulli_seed", // ---- same as above ---
 "test_bernoulli_seed_expanded",  // ---- same as above ---
-"test_bitshift_left_uint16", // Issue::Unsuppoted data type
-"test_bitshift_left_uint32", // Issue::Unsuppoted data type
-"test_bitshift_left_uint64", // Issue::Unsuppoted data type
-"test_bitshift_left_uint8", // Issues::Layer::Can't create layer "onnx_node_output_0!z" of type "BitShift" in function 'getLayerInstance'
-"test_bitshift_right_uint16", // Issue::Unsuppoted data type
-"test_bitshift_right_uint32", // Issue::Unsuppoted data type
-"test_bitshift_right_uint64", // Issue::Unsuppoted data type
-"test_bitshift_right_uint8", // Issues::Layer::Can't create layer "onnx_node_output_0!z" of type "BitShift" in function 'getLayerInstance'
 "test_cast_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
 "test_cast_DOUBLE_to_FLOAT16", // Issue::Unsuppoted data type
 "test_cast_FLOAT16_to_DOUBLE", // Issue::Unsuppoted data type
