@@ -78,7 +78,20 @@ int main(int argc, char** argv)
     double fy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_FY);
     double cx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CX);
     double cy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CY);
+
+    double k1 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K1);
+    double k2 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K2);
+    double k3 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K3);
+    double k4 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K4);
+    double k5 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K5);
+    double k6 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K6);
+    double p1 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1);
+    double p2 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1);
+
     std::cout << "obsensor camera intrinsic params: fx=" << fx << ", fy=" << fy << ", cx=" << cx << ", cy=" << cy << std::endl;
+    std::cout << "obsensor camera distortion params: k,p=" << k1 << ", " << k2 << ", " << k3 << ", "
+                                                           << k4 << ", " << k5 << ", " << k6 << ", "
+                                                           << p1 << ", " << p2 << std::endl;
 
     Mat image;
     Mat depthMap;

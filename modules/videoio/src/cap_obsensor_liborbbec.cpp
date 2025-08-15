@@ -84,10 +84,19 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
     });
 
     auto param = pipe->getCameraParam();
-    camParam.p1[0] = param.rgbIntrinsic.fx;
-    camParam.p1[1] = param.rgbIntrinsic.fy;
-    camParam.p1[2] = param.rgbIntrinsic.cx;
-    camParam.p1[3] = param.rgbIntrinsic.cy;
+    camParam.intrinsicColor[0] = param.rgbIntrinsic.fx;
+    camParam.intrinsicColor[1] = param.rgbIntrinsic.fy;
+    camParam.intrinsicColor[2] = param.rgbIntrinsic.cx;
+    camParam.intrinsicColor[3] = param.rgbIntrinsic.cy;
+
+    camParam.distortionColor[0] = param.depthDistortion.k1;
+    camParam.distortionColor[1] = param.depthDistortion.k2;
+    camParam.distortionColor[2] = param.depthDistortion.k3;
+    camParam.distortionColor[3] = param.depthDistortion.k4;
+    camParam.distortionColor[4] = param.depthDistortion.k5;
+    camParam.distortionColor[5] = param.depthDistortion.k6;
+    camParam.distortionColor[6] = param.depthDistortion.p1;
+    camParam.distortionColor[7] = param.depthDistortion.p2;
 }
 
 VideoCapture_obsensor::~VideoCapture_obsensor(){
@@ -101,17 +110,42 @@ double VideoCapture_obsensor::getProperty(int propIdx) const
     switch (propIdx)
     {
     case CAP_PROP_OBSENSOR_INTRINSIC_FX:
-        rst = camParam.p1[0];
+        rst = camParam.intrinsicColor[0];
         break;
     case CAP_PROP_OBSENSOR_INTRINSIC_FY:
-        rst = camParam.p1[1];
+        rst = camParam.intrinsicColor[1];
         break;
     case CAP_PROP_OBSENSOR_INTRINSIC_CX:
-        rst = camParam.p1[2];
+        rst = camParam.intrinsicColor[2];
         break;
     case CAP_PROP_OBSENSOR_INTRINSIC_CY:
-        rst = camParam.p1[3];
+        rst = camParam.intrinsicColor[3];
         break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_K1:
+        rst = camParam.distortionColor[0];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_K2:
+        rst = camParam.distortionColor[1];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_K3:
+        rst = camParam.distortionColor[2];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_K4:
+        rst = camParam.distortionColor[3];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_K5:
+        rst = camParam.distortionColor[4];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_K6:
+        rst = camParam.distortionColor[5];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1:
+        rst = camParam.distortionColor[6];
+        break;
+    case CAP_PROP_OBSENSOR_COLOR_DISTORTION_P2:
+        rst = camParam.distortionColor[7];
+        break;
+
     case CAP_PROP_POS_MSEC:
     case CAP_PROP_OBSENSOR_RGB_POS_MSEC:
         if (grabbedColorFrame)
