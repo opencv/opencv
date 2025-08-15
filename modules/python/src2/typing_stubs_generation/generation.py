@@ -117,7 +117,7 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
         output_stream, 0
     )
     # Collect all enums from class level and export them to module level
-    for class_node in root.classes.values():
+    for class_node in sorted(root.classes.values()):
         if _generate_enums_from_classes_tree(class_node, output_stream,
                                              indent=0):
             has_enums = True
@@ -131,7 +131,7 @@ def _generate_typing_stubs(root: NamespaceNode, output_path: Path) -> None:
     # Dump content to the output file
     (output_path / "__init__.pyi").write_text(output_stream.getvalue())
     # Process nested namespaces
-    for ns in root.namespaces.values():
+    for ns in sorted(root.namespaces.values()):
         _generate_typing_stubs(ns, output_path)
 
 
@@ -399,7 +399,7 @@ def _generate_enumeration_stub(enumeration_node: EnumerationNode,
     if enumeration_node.is_scoped:
         entries_extra_prefix += enumeration_node.export_name + "_"
     generated_constants_entries: List[str] = []
-    for entry in enumeration_node.constants.values():
+    for entry in sorted(enumeration_node.constants.values()):
         generated_constants_entries.extend(
             _generate_constant_stub(entry, output_stream, indent, entries_extra_prefix)
         )
@@ -525,10 +525,10 @@ def _generate_enums_from_classes_tree(class_node: ClassNode,
 
     class_name_prefix = class_node.export_name + "_" + class_name_prefix
     has_content = len(class_node.enumerations) > 0
-    for enum_node in class_node.enumerations.values():
+    for enum_node in sorted(class_node.enumerations.values()):
         _generate_enumeration_stub(enum_node, output_stream, indent,
                                    class_name_prefix)
-    for cls in class_node.classes.values():
+    for cls in sorted(class_node.classes.values()):
         if _generate_enums_from_classes_tree(cls, output_stream, indent,
                                              class_name_prefix):
             has_content = True
@@ -628,7 +628,7 @@ def _populate_reexported_symbols(root: NamespaceNode) -> None:
     # without submodule import. Example:
     # `cv2.aruco.ArucoDetector` should be accessible without `import cv2.aruco`
     def _reexport_submodule(ns: NamespaceNode) -> None:
-        for submodule in ns.namespaces.values():
+        for submodule in sorted(ns.namespaces.values()):
             ns.reexported_submodules.append(submodule.export_name)
             _reexport_submodule(submodule)
 
@@ -794,7 +794,7 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
 
     # Resolve each node and register aliases
     TypeNode.compatible_to_runtime_usage = True
-    for node in PREDEFINED_TYPES.values():
+    for node in sorted(PREDEFINED_TYPES.values()):
         # if node does not have at least one required module skip it
         # e.g. GArgs requires G-API module, so if build without G-API GArgs is not included
         if not has_all_required_modules(node):
@@ -805,7 +805,7 @@ def _generate_typing_module(root: NamespaceNode, output_path: Path) -> None:
         elif isinstance(node, ConditionalAliasTypeNode):
             conditional_type_nodes[node.ctype_name] = node
 
-    for node in conditional_type_nodes.values():
+    for node in sorted(conditional_type_nodes.values()):
         for required_import in node.required_definition_imports:
             required_imports.add(required_import)
 
