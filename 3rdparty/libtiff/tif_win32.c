@@ -27,6 +27,10 @@
  * Scott Wagner (wagner@itek.com), Itek Graphix, Rochester, NY USA
  */
 
+#ifdef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
+#undef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
+#endif
+
 #include "tiffiop.h"
 #include <stdlib.h>
 
