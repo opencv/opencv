@@ -797,7 +797,14 @@ class JavaWrapperGenerator(object):
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
                     if "I" in a.out or not a.out or self.isWrapped(a.ctype): # input arg, pass by primitive fields
                         for f in fields:
-                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            # Use array access format for Java code when jn_type is array type
+                            if type_dict[a.ctype].get("jn_type", "").endswith("[]"):
+                                # For Java code: convert .val[0] format to [0] format
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1].replace(".val[", "["), "", [], "" ]) )
+                            else:
+                                # For non-array types, use conventional format
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            # For C++ code: use conventional format as is
                             jni_args.append( ArgInfo([ f[0], a.name + normalize_field_name(f[1]), "", [], "" ]) )
                     if "O" in a.out and not self.isWrapped(a.ctype): # out arg, pass as double[]
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
@@ -812,9 +819,16 @@ class JavaWrapperGenerator(object):
                             set_vals = []
                             i = 0
                             for f in fields:
-                                set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
-                                    {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
-                                )
+                                # Use array access format for Java code when jn_type is array type
+                                if type_dict[a.ctype].get("jn_type", "").endswith("[]"):
+                                    # For Java code: convert .val[0] format to [0] format
+                                    set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                        {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1].replace(".val[", "["), "i" : i}
+                                    )
+                                else:
+                                    set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                        {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
+                                    )
                                 i += 1
                             j_epilogue.append( "if("+a.name+"!=null){ " + "; ".join(set_vals) + "; } ")
 

@@ -615,16 +615,16 @@
             "jn_args": [
                 [
                     "double",
-                    "[0]"
+                    ".val[0]"
                 ],
                 [
                     "double",
-                    "[1]"
+                    ".val[1]"
                 ]
             ],
             "jn_type": "double[]",
             "jni_type": "jdoubleArray",
-            "jni_var": "Vec2d %(n)s(%(n)s0, %(n)s1)",
+            "jni_var": "Vec2d %(n)s(%(n)s_val0, %(n)s_val1)",
             "suffix": "DD"
         },
         "Vec3d": {
@@ -632,20 +632,20 @@
             "jn_args": [
                 [
                     "double",
-                    "[0]"
+                    ".val[0]"
                 ],
                 [
                     "double",
-                    "[1]"
+                    ".val[1]"
                 ],
                 [
                     "double",
-                    "[2]"
+                    ".val[2]"
                 ]
             ],
             "jn_type": "double[]",
             "jni_type": "jdoubleArray",
-            "jni_var": "Vec3d %(n)s(%(n)s0, %(n)s1, %(n)s2)",
+            "jni_var": "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)",
             "suffix": "DDD"
         },
         "Vec4i": {
@@ -653,24 +653,24 @@
             "jn_args": [
                 [
                     "int",
-                    "[0]"
+                    ".val[0]"
                 ],
                 [
                     "int",
-                    "[1]"
+                    ".val[1]"
                 ],
                 [
                     "int",
-                    "[2]"
+                    ".val[2]"
                 ],
                 [
                     "int",
-                    "[3]"
+                    ".val[3]"
                 ]
             ],
             "jn_type": "int[]",
             "jni_type": "jintArray",
-            "jni_var": "Vec4i %(n)s(%(n)s0, %(n)s1, %(n)s2, %(n)s3)",
+            "jni_var": "Vec4i %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2, %(n)s_val3)",
             "suffix": "IIII"
         },
         "c_string": {
