@@ -743,6 +743,13 @@ class JavaWrapperGenerator(object):
                      "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; " +
                      "env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);") %
                     { "cnt" : len(fields), "args" : ", ".join(["(jdouble)_retval_" + f[1] for f in fields]) } )
+            elif type_dict[fi.ctype]["jni_type"] == "jintArray":
+                fields = type_dict[fi.ctype]["jn_args"]
+                c_epilogue.append(
+                    ("jintArray _ia_retval_ = env->NewIntArray(%(cnt)i);  " +
+                    "jint _tmp_retval_[%(cnt)i] = {%(args)s}; " +
+                    "env->SetIntArrayRegion(_ia_retval_, 0, %(cnt)i, _tmp_retval_);") %
+                    { "cnt" : len(fields), "args" : ", ".join(["(jint)_retval_" + f[1] for f in fields]) } )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -790,7 +797,14 @@ class JavaWrapperGenerator(object):
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
                     if "I" in a.out or not a.out or self.isWrapped(a.ctype): # input arg, pass by primitive fields
                         for f in fields:
-                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            # Use array access format for Java code when jn_type is array type
+                            if type_dict[a.ctype].get("jn_type", "").endswith("[]"):
+                                # For Java code: convert .val[0] format to [0] format
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1].replace(".val[", "["), "", [], "" ]) )
+                            else:
+                                # For non-array types, use conventional format
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            # For C++ code: use conventional format as is
                             jni_args.append( ArgInfo([ f[0], a.name + normalize_field_name(f[1]), "", [], "" ]) )
                     if "O" in a.out and not self.isWrapped(a.ctype): # out arg, pass as double[]
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
@@ -805,9 +819,16 @@ class JavaWrapperGenerator(object):
                             set_vals = []
                             i = 0
                             for f in fields:
-                                set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
-                                    {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
-                                )
+                                # Use array access format for Java code when jn_type is array type
+                                if type_dict[a.ctype].get("jn_type", "").endswith("[]"):
+                                    # For Java code: convert .val[0] format to [0] format
+                                    set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                        {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1].replace(".val[", "["), "i" : i}
+                                    )
+                                else:
+                                    set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                        {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
+                                    )
                                 i += 1
                             j_epilogue.append( "if("+a.name+"!=null){ " + "; ".join(set_vals) + "; } ")
 
@@ -1002,6 +1023,8 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
+            elif type_dict[fi.ctype]["jni_type"] == "jintArray":
+                ret = "return _ia_retval_;"
             elif "jni_var" in type_dict[ret_type]:
                 c_epilogue.append(type_dict[ret_type]["jni_var"] % {"n" : '_retval_'})
                 ret = f"return {type_dict[ret_type]['jni_name'] % {'n' : '_retval_'}};"
