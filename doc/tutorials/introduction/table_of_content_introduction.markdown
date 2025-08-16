@@ -1,4 +1,5 @@
-Introduction to OpenCV {#tutorial_table_of_content_introduction}
+Introduction to OpenCV \# Tutorial: Table of Contents (Introduction)
+
 ======================
 
 @tableofcontents
