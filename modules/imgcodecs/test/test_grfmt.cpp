@@ -437,25 +437,25 @@ TEST(Imgcodecs_Bmp, rgba_scale)
 }
 
 // See https://github.com/opencv/opencv/issues/27555
-TEST(Imgcodecs_Bmp, encode_decode_32bit_rgb_regression27555)
+typedef testing::TestWithParam<ImwriteBMPCompressionFlags> Imgcodecs_bmp_compress;
+TEST_P(Imgcodecs_bmp_compress, rgba32bpp_regression27555)
 {
-    RNG rng = theRNG();
+    const ImwriteBMPCompressionFlags comp = GetParam();
 
+    RNG rng = theRNG();
     Mat src(256, 256, CV_8UC4);
     rng.fill(src, RNG::UNIFORM, Scalar(0,0,0,0), Scalar(255,255,255,255));
 
     vector<uint8_t> buf;
-    vector<int> params;
     bool ret = false;
-
-    ASSERT_NO_THROW(ret = cv::imencode(".bmp", src, buf, params));
+    ASSERT_NO_THROW(ret = cv::imencode(".bmp", src, buf, {IMWRITE_BMP_COMPRESSION, static_cast<int>(comp)}));
     ASSERT_TRUE(ret);
 
-    ASSERT_EQ(buf[0x0e], 40); // the size of header = sizeof(BITMAPINFOHEADER)
+    ASSERT_EQ(buf[0x0e], comp == IMWRITE_BMP_COMPRESSION_RGB ? 40 : 124 ); // the size of header
     ASSERT_EQ(buf[0x0f],  0);
     ASSERT_EQ(buf[0x1c], 32); // the number of bits per pixel = 32
     ASSERT_EQ(buf[0x1d],  0);
-    ASSERT_EQ(buf[0x1e],  0); // the compression method = BI_RGB(0)
+    ASSERT_EQ(buf[0x1e], static_cast<int>(comp)); // the compression method
     ASSERT_EQ(buf[0x1f],  0);
     ASSERT_EQ(buf[0x20],  0);
     ASSERT_EQ(buf[0x21],  0);
@@ -467,6 +467,11 @@ TEST(Imgcodecs_Bmp, encode_decode_32bit_rgb_regression27555)
 
     EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
 }
+INSTANTIATE_TEST_CASE_P(All,
+    Imgcodecs_bmp_compress,
+    testing::Values(
+        IMWRITE_BMP_COMPRESSION_RGB,
+        IMWRITE_BMP_COMPRESSION_BITFIELDS));
 
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)
