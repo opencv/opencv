@@ -92,6 +92,7 @@ static int JBIGDecode(TIFF *tif, uint8_t *buffer, tmsize_t size, uint16_t s)
                       jbg_strerror(decodeStatus)
 #endif
         );
+        memset(buffer, 0, (size_t)size);
         jbg_dec_free(&decoder);
         return 0;
     }
@@ -99,6 +100,7 @@ static int JBIGDecode(TIFF *tif, uint8_t *buffer, tmsize_t size, uint16_t s)
     decodedSize = jbg_dec_getsize(&decoder);
     if ((tmsize_t)decodedSize < size)
     {
+        memset(buffer + decodedSize, 0, (size_t)(size - decodedSize));
         TIFFWarningExtR(tif, "JBIG",
                         "Only decoded %lu bytes, whereas %" TIFF_SSIZE_FORMAT
                         " requested",

@@ -110,6 +110,14 @@ void TIFFCleanup(TIFF *tif)
         _TIFFfreeExt(tif, tif->tif_fieldscompat);
     }
 
+    if (tif->tif_cur_cumulated_mem_alloc != 0)
+    {
+        TIFFErrorExtR(tif, "TIFFCleanup",
+                      "tif_cur_cumulated_mem_alloc = %" PRIu64 " whereas it "
+                      "should be 0",
+                      (uint64_t)tif->tif_cur_cumulated_mem_alloc);
+    }
+
     _TIFFfreeExt(NULL, tif);
 }
 

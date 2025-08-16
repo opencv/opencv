@@ -44,6 +44,8 @@
 typedef struct
 {
     TIFFPredictorState predict;
+    int read_error; /* whether a read error has occurred, and which should cause
+                       further reads in the same strip/tile to be aborted */
     lzma_stream stream;
     lzma_filter filters[LZMA_FILTERS_MAX + 1];
     lzma_options_delta opt_delta; /* delta filter options */
@@ -58,9 +60,9 @@ typedef struct
     TIFFVSetMethod vsetparent; /* super-class method */
 } LZMAState;
 
-#define LState(tif) ((LZMAState *)(tif)->tif_data)
-#define DecoderState(tif) LState(tif)
-#define EncoderState(tif) LState(tif)
+#define GetLZMAState(tif) ((LZMAState *)(tif)->tif_data)
+#define LZMADecoderState(tif) GetLZMAState(tif)
+#define LZMAEncoderState(tif) GetLZMAState(tif)
 
 static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s);
 static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s);
@@ -106,7 +108,7 @@ static int LZMAFixupTags(TIFF *tif)
 
 static int LZMASetupDecode(TIFF *tif)
 {
-    LZMAState *sp = DecoderState(tif);
+    LZMAState *sp = LZMADecoderState(tif);
 
     assert(sp != NULL);
 
@@ -127,7 +129,7 @@ static int LZMASetupDecode(TIFF *tif)
 static int LZMAPreDecode(TIFF *tif, uint16_t s)
 {
     static const char module[] = "LZMAPreDecode";
-    LZMAState *sp = DecoderState(tif);
+    LZMAState *sp = LZMADecoderState(tif);
     lzma_ret ret;
 
     (void)s;
@@ -156,17 +158,30 @@ static int LZMAPreDecode(TIFF *tif, uint16_t s)
                       LZMAStrerror(ret));
         return 0;
     }
+
+    sp->read_error = 0;
+
     return 1;
 }
 
 static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 {
     static const char module[] = "LZMADecode";
-    LZMAState *sp = DecoderState(tif);
+    LZMAState *sp = LZMADecoderState(tif);
 
     (void)s;
     assert(sp != NULL);
     assert(sp->state == LSTATE_INIT_DECODE);
+
+    if (sp->read_error)
+    {
+        memset(op, 0, (size_t)occ);
+        TIFFErrorExtR(tif, module,
+                      "LZMADecode: Scanline %" PRIu32 " cannot be read due to "
+                      "previous error",
+                      tif->tif_row);
+        return 0;
+    }
 
     sp->stream.next_in = tif->tif_rawcp;
     sp->stream.avail_in = (size_t)tif->tif_rawcc;
@@ -175,6 +190,9 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     sp->stream.avail_out = (size_t)occ;
     if ((tmsize_t)sp->stream.avail_out != occ)
     {
+        // read_error not set here as this is a usage issue that can be
+        // recovered in a following call.
+        memset(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module,
                       "Liblzma cannot deal with buffers this size");
         return 0;
@@ -198,6 +216,8 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                 lzma_stream_decoder(&sp->stream, lzma_memusage(&sp->stream), 0);
             if (r != LZMA_OK)
             {
+                sp->read_error = 1;
+                memset(op, 0, (size_t)occ);
                 TIFFErrorExtR(tif, module,
                               "Error initializing the stream decoder, %s",
                               LZMAStrerror(r));
@@ -217,6 +237,8 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     } while (sp->stream.avail_out > 0);
     if (sp->stream.avail_out != 0)
     {
+        sp->read_error = 1;
+        memset(sp->stream.next_out, 0, sp->stream.avail_out);
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %" PRIu32
                       " (short %" TIFF_SIZE_FORMAT " bytes)",
@@ -232,7 +254,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
 static int LZMASetupEncode(TIFF *tif)
 {
-    LZMAState *sp = EncoderState(tif);
+    LZMAState *sp = LZMAEncoderState(tif);
 
     assert(sp != NULL);
     if (sp->state & LSTATE_INIT_DECODE)
@@ -251,7 +273,7 @@ static int LZMASetupEncode(TIFF *tif)
 static int LZMAPreEncode(TIFF *tif, uint16_t s)
 {
     static const char module[] = "LZMAPreEncode";
-    LZMAState *sp = EncoderState(tif);
+    LZMAState *sp = LZMAEncoderState(tif);
     lzma_ret ret;
 
     (void)s;
@@ -283,7 +305,7 @@ static int LZMAPreEncode(TIFF *tif, uint16_t s)
 static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 {
     static const char module[] = "LZMAEncode";
-    LZMAState *sp = EncoderState(tif);
+    LZMAState *sp = LZMAEncoderState(tif);
 
     assert(sp != NULL);
     assert(sp->state == LSTATE_INIT_ENCODE);
@@ -329,7 +351,7 @@ static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 static int LZMAPostEncode(TIFF *tif)
 {
     static const char module[] = "LZMAPostEncode";
-    LZMAState *sp = EncoderState(tif);
+    LZMAState *sp = LZMAEncoderState(tif);
     lzma_ret ret;
 
     sp->stream.avail_in = 0;
@@ -365,7 +387,7 @@ static int LZMAPostEncode(TIFF *tif)
 
 static void LZMACleanup(TIFF *tif)
 {
-    LZMAState *sp = LState(tif);
+    LZMAState *sp = GetLZMAState(tif);
 
     assert(sp != 0);
 
@@ -388,7 +410,7 @@ static void LZMACleanup(TIFF *tif)
 static int LZMAVSetField(TIFF *tif, uint32_t tag, va_list ap)
 {
     static const char module[] = "LZMAVSetField";
-    LZMAState *sp = LState(tif);
+    LZMAState *sp = GetLZMAState(tif);
 
     switch (tag)
     {
@@ -414,7 +436,7 @@ static int LZMAVSetField(TIFF *tif, uint32_t tag, va_list ap)
 
 static int LZMAVGetField(TIFF *tif, uint32_t tag, va_list ap)
 {
-    LZMAState *sp = LState(tif);
+    LZMAState *sp = GetLZMAState(tif);
 
     switch (tag)
     {
@@ -457,7 +479,7 @@ int TIFFInitLZMA(TIFF *tif, int scheme)
     tif->tif_data = (uint8_t *)_TIFFmallocExt(tif, sizeof(LZMAState));
     if (tif->tif_data == NULL)
         goto bad;
-    sp = LState(tif);
+    sp = GetLZMAState(tif);
     memcpy(&sp->stream, &tmp_stream, sizeof(lzma_stream));
 
     /*
