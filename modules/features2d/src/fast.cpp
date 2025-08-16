@@ -429,17 +429,31 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     CV_INSTRUMENT_REGION();
 
+    const size_t max_fast_features = std::max(_img.total()/100, size_t(1000)); // Simple heuristic that depends on resolution.
+
     CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
-               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
+               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, (int)max_fast_features));
 
     cv::Mat img = _img.getMat();
     CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
 
-    size_t keypoints_count = 10000;
+    size_t keypoints_count = 1;
     keypoints.clear();
-    keypoints.resize(keypoints_count);
-    CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
-             (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
+    KeyPoint* kps = (KeyPoint*)malloc(sizeof(KeyPoint) * keypoints_count);
+    int hal_ret = cv_hal_FASTv2(img.data, img.step, img.cols, img.rows, (void**)&kps,
+                                &keypoints_count, threshold, nonmax_suppression, type, realloc);
+    if (hal_ret == CV_HAL_ERROR_OK) {
+        keypoints.assign(kps, kps + keypoints_count);
+        free(kps);
+        return;
+    } else {
+        free(kps);
+        keypoints_count = max_fast_features;
+        keypoints.clear();
+        keypoints.resize(keypoints_count);
+        CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
+                (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
+    }
 
     switch(type) {
     case FastFeatureDetector::TYPE_5_8:
