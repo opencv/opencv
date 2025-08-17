@@ -21,10 +21,10 @@ namespace cv
             static inline int scharr_dx0(int start, int end, const uint8_t *src_data, size_t src_step,
                                          uint8_t *dst_data, size_t dst_step,
                                          int width, int height,
-                                         int src_depth, int dst_depth, int cn,
-                                         int margin_left, int margin_top,
-                                         int margin_right, int margin_bottom,
-                                         double scale, double delta,
+                                         int src_depth  __attribute__((unused)), int dst_depth, int cn __attribute__((unused)),
+                                         int margin_left __attribute__((unused)), int margin_top __attribute__((unused)),
+                                         int margin_right __attribute__((unused)), int margin_bottom __attribute__((unused)),
+                                         double scale __attribute__((unused)), double delta __attribute__((unused)),
                                          int border_type)
             {
                 int dx0, dx1, dx2, dy0, dy1, dy2;
@@ -109,7 +109,7 @@ namespace cv
                             __riscv_vse16_v_i16m8(trow + x, vrowx, vl);
                         }
 
-                        size_t x = 0;
+                        int x = 0;
 
                         uint8_t *drow = (uint8_t *)(dst_data + y * dst_step);
 
@@ -233,7 +233,7 @@ namespace cv
                             __riscv_vse16_v_i16m8(trow + x, vrowx, vl);
                         }
 
-                        size_t x = 0;
+                        int x = 0;
 
                         int16_t *drow = (int16_t *)(dst_data + y * dst_step);
 
@@ -348,7 +348,7 @@ namespace cv
                             __riscv_vse16_v_i16m8(trow + x, vrowx, vl);
                         }
 
-                        size_t x = 0;
+                        int x = 0;
 
                         float *drow = (float *)(dst_data + y * dst_step);
 
@@ -391,10 +391,10 @@ namespace cv
             static inline int scharr_dx1(int start, int end, const uint8_t *src_data, size_t src_step,
                                          uint8_t *dst_data, size_t dst_step,
                                          int width, int height,
-                                         int src_depth, int dst_depth, int cn,
-                                         int margin_left, int margin_top,
-                                         int margin_right, int margin_bottom,
-                                         double scale, double delta,
+                                         int src_depth __attribute__((unused)), int dst_depth, int cn __attribute__((unused)),
+                                         int margin_left __attribute__((unused)), int margin_top __attribute__((unused)),
+                                         int margin_right __attribute__((unused)), int margin_bottom __attribute__((unused)),
+                                         double scale __attribute__((unused)), double delta __attribute__((unused)),
                                          int border_type)
             {
                 int dx0, dx1, dx2, dy0, dy1, dy2;
@@ -504,7 +504,7 @@ namespace cv
                             __riscv_vse16_v_i16m8(trow + x, __riscv_vreinterpret_v_u16m8_i16m8(vrowx), vl);
                         }
 
-                        size_t x = 0;
+                        int x = 0;
 
                         uint8_t *drow = (uint8_t *)(dst_data + y * dst_step);
 
@@ -628,7 +628,7 @@ namespace cv
                             __riscv_vse16_v_i16m8(trow + x, __riscv_vreinterpret_v_u16m8_i16m8(vrowx), vl);
                         }
 
-                        size_t x = 0;
+                        int x = 0;
 
                         int16_t *drow = (int16_t *)(dst_data + y * dst_step);
 
@@ -743,7 +743,7 @@ namespace cv
                             __riscv_vse16_v_i16m8(trow + x, __riscv_vreinterpret_v_u16m8_i16m8(vrowx), vl);
                         }
 
-                        size_t x = 0;
+                        int x = 0;
 
                         float *drow = (float *)(dst_data + y * dst_step);
 
@@ -813,7 +813,7 @@ namespace cv
                        int src_depth, int dst_depth, int cn,
                        int margin_left, int margin_top,
                        int margin_right, int margin_bottom,
-                       int dx, int dy,
+                       int dx, int dy __attribute__((unused)),
                        double scale, double delta,
                        int border_type)
             {

@@ -17,13 +17,14 @@ namespace cv
 #if CV_HAL_RVV_1P0_ENABLED
 
 #define borderValue 0
+            int sobel_3X3(int start, int end, const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth __attribute__((unused)), int dst_depth, int cn __attribute__((unused)), int margin_left __attribute__((unused)), int margin_top __attribute__((unused)), int margin_right __attribute__((unused)), int margin_bottom __attribute__((unused)), int dx, int dy, double scale __attribute__((unused)), double delta __attribute__((unused)), int border_type);
 
-            int sobel_3X3(int start, int end, const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type)
+            int sobel_3X3(int start, int end, const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth __attribute__((unused)), int dst_depth, int cn __attribute__((unused)), int margin_left __attribute__((unused)), int margin_top __attribute__((unused)), int margin_right __attribute__((unused)), int margin_bottom __attribute__((unused)), int dx, int dy, double scale __attribute__((unused)), double delta __attribute__((unused)), int border_type)
             {
                 if (border_type != BORDER_REPLICATE && border_type != BORDER_CONSTANT)
                     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-                int dx0, dx1, dx2, dy0, dy1, dy2;
+                int dx0, dx1, dx2, dy1;
 
                 if (dx == 0)
                 {
@@ -43,24 +44,29 @@ namespace cv
                     dx1 = -2;
                     dx2 = 1;
                 }
+                else
+                {
+                    dx0 = 1;
+                    dx1 = 1;
+                    dx2 = 1;
+
+                }
 
                 if (dy == 0)
                 {
-                    dy0 = 1;
                     dy1 = 2;
-                    dy2 = 1;
                 }
                 else if (dy == 1)
                 {
-                    dy0 = -1;
                     dy1 = 0;
-                    dy2 = 1;
                 }
                 else if (dy == 2)
                 {
-                    dy0 = 1;
                     dy1 = -2;
-                    dy2 = 1;
+                }
+                else
+                {
+                    dy1 = 0;
                 }
 
                 // int16_t trow[width];
@@ -150,7 +156,7 @@ namespace cv
 
                     if (dst_depth == CV_8U)
                     {
-                        size_t x = 0;
+                        int x = 0;
 
                         uint8_t *drow = (uint8_t *)(dst_data + y * dst_step);
 
@@ -214,7 +220,7 @@ namespace cv
 
                     else if (dst_depth == CV_16S)
                     {
-                        size_t x = 0;
+                        int x = 0;
 
                         int16_t *drow = (int16_t *)(dst_data + y * dst_step);
 
@@ -268,7 +274,7 @@ namespace cv
 
                     else if (dst_depth == CV_32F)
                     {
-                        size_t x = 0;
+                        int x = 0;
 
                         float *drow = (float *)(dst_data + y * dst_step);
 
@@ -325,13 +331,13 @@ namespace cv
 
                 return CV_HAL_ERROR_OK;
             }
-
-            int sobel_5X5(int start, int end, const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type)
+            int sobel_5X5(int start, int end, const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type);
+            int sobel_5X5(int start, int end, const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth __attribute__((unused)), int dst_depth, int cn __attribute__((unused)), int margin_left __attribute__((unused)), int margin_top __attribute__((unused)), int margin_right __attribute__((unused)), int margin_bottom __attribute__((unused)), int dx, int dy, double scale __attribute__((unused)), double delta __attribute__((unused)), int border_type)
             {
                 if (border_type != BORDER_REPLICATE && border_type != BORDER_CONSTANT && border_type != BORDER_REFLECT && border_type != BORDER_REFLECT_101)
                     return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-                int dx0, dx1, dx2, dx3, dx4, dy0, dy1, dy2, dy3, dy4, dy5;
+                int dx0, dx1, dx2, dx3, dx4,  dy1, dy2, dy3;
 
                 if (dx == 0)
                 {
@@ -357,30 +363,38 @@ namespace cv
                     dx3 = 0;
                     dx4 = 1;
                 }
+                else
+                {
+                    dx0 = 1;
+                    dx1 = 1;
+                    dx2 = 1;
+                    dx3 = 1;
+                    dx4 = 1;
+                }
 
                 if (dy == 0)
                 {
-                    dy0 = 1;
                     dy1 = 4;
                     dy2 = 6;
                     dy3 = 4;
-                    dy4 = 1;
                 }
                 else if (dy == 1)
                 {
-                    dy0 = -1;
                     dy1 = -2;
                     dy2 = 0;
                     dy3 = 2;
-                    dy4 = 1;
                 }
                 else if (dy == 2)
                 {
-                    dy0 = 1;
                     dy1 = 0;
                     dy2 = -2;
                     dy3 = 0;
-                    dy4 = 1;
+                }
+                else
+                {
+                    dy1 = 0;
+                    dy2 = 0;
+                    dy3 = 0;
                 }
 
                 // int16_t trow[width];
@@ -449,6 +463,10 @@ namespace cv
                         {
                             srowp1 = src_data + y * src_step;
                         }
+                        else
+                        {
+                            srowp1 = src_data;
+                        }
 
                         if (y + 2 <= height - 1) // height - 3
                         {
@@ -497,6 +515,10 @@ namespace cv
                         {
                             srowp1 = src_data + (y - 1) * src_step;
                         }
+                        else
+                        {
+                            srowp1 = src_data;
+                        }
 
                         if (y + 2 <= height - 1) // height - 3
                         {
@@ -510,6 +532,10 @@ namespace cv
                         {
                             srowp2 = src_data + (y - 2) * src_step;
                         }
+                    }
+                    else
+                    {
+                        srowm1 = src_data;
                     }
 
                     size_t vl = 0;
@@ -612,7 +638,7 @@ namespace cv
 
                         if (dx == 0)
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int x = 2; x < width - 2; x += vl)
                             {
                                 vl = __riscv_vsetvl_e16m8(width - x - 2);
                                 vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + x - 2, vl);
@@ -634,7 +660,7 @@ namespace cv
                         }
                         else if (dx == 1)
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int x = 2; x < width - 2; x += vl)
                             {
                                 vl = __riscv_vsetvl_e16m8(width - x - 2);
                                 vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + x - 2, vl);
@@ -654,7 +680,7 @@ namespace cv
                         }
                         else
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int x = 2; x < width - 2; x += vl)
                             {
                                 vl = __riscv_vsetvl_e16m8(width - x - 2);
                                 vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + x - 2, vl);
@@ -754,56 +780,55 @@ namespace cv
 
                         if (dx == 0)
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int xx = 2; xx < width - 2; xx += vl)
                             {
-                                vl = __riscv_vsetvl_e16m8(width - x - 2);
-                                vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + x - 2, vl);
-                                vint16m8_t vleft1 = __riscv_vle16_v_i16m8(trow + x - 1, vl);
-                                vint16m8_t vcenter = __riscv_vle16_v_i16m8(trow + x, vl);
-                                vint16m8_t vright1 = __riscv_vle16_v_i16m8(trow + x + 1, vl);
-                                vint16m8_t vright2 = __riscv_vle16_v_i16m8(trow + x + 2, vl);
+                                vl = __riscv_vsetvl_e16m8(width - xx - 2);
+                                vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + xx - 2, vl);
+                                vint16m8_t vleft1 = __riscv_vle16_v_i16m8(trow + xx - 1, vl);
+                                vint16m8_t vcenter = __riscv_vle16_v_i16m8(trow + xx, vl);
+                                vint16m8_t vright1 = __riscv_vle16_v_i16m8(trow + xx + 1, vl);
+                                vint16m8_t vright2 = __riscv_vle16_v_i16m8(trow + xx + 2, vl);
 
                                 vint16m8_t vres = __riscv_vadd_vv_i16m8(vright2, vleft2, vl);
                                 vres = __riscv_vmacc_vx_i16m8(vres, dx1, vleft1, vl);
                                 vres = __riscv_vmacc_vx_i16m8(vres, dx2, vcenter, vl);
                                 vres = __riscv_vmacc_vx_i16m8(vres, dx3, vright1, vl);
 
-                                __riscv_vse16_v_i16m8(drow + x, vres, vl);
+                                __riscv_vse16_v_i16m8(drow + xx, vres, vl);
                             }
                         }
                         else if (dx == 1)
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int xx = 2; xx < width - 2; xx += vl)
                             {
-                                vl = __riscv_vsetvl_e16m8(width - x - 2);
-                                vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + x - 2, vl);
-                                vint16m8_t vleft1 = __riscv_vle16_v_i16m8(trow + x - 1, vl);
-                                vint16m8_t vright1 = __riscv_vle16_v_i16m8(trow + x + 1, vl);
-                                vint16m8_t vright2 = __riscv_vle16_v_i16m8(trow + x + 2, vl);
+                                vl = __riscv_vsetvl_e16m8(width - xx - 2);
+                                vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + xx - 2, vl);
+                                vint16m8_t vleft1 = __riscv_vle16_v_i16m8(trow + xx - 1, vl);
+                                vint16m8_t vright1 = __riscv_vle16_v_i16m8(trow + xx + 1, vl);
+                                vint16m8_t vright2 = __riscv_vle16_v_i16m8(trow + xx + 2, vl);
 
                                 vint16m8_t vres = __riscv_vsub_vv_i16m8(vright2, vleft2, vl);
                                 vres = __riscv_vmacc_vx_i16m8(vres, dx1, vleft1, vl);
                                 vres = __riscv_vmacc_vx_i16m8(vres, dx3, vright1, vl);
 
-                                __riscv_vse16_v_i16m8(drow + x, vres, vl);
+                                __riscv_vse16_v_i16m8(drow + xx, vres, vl);
                             }
                         }
                         else
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int xx = 2; xx < width - 2; xx += vl)
                             {
-                                vl = __riscv_vsetvl_e16m8(width - x - 2);
-                                vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + x - 2, vl);
-                                vint16m8_t vcenter = __riscv_vle16_v_i16m8(trow + x, vl);
-                                vint16m8_t vright2 = __riscv_vle16_v_i16m8(trow + x + 2, vl);
+                                vl = __riscv_vsetvl_e16m8(width - xx - 2);
+                                vint16m8_t vleft2 = __riscv_vle16_v_i16m8(trow + xx - 2, vl);
+                                vint16m8_t vcenter = __riscv_vle16_v_i16m8(trow + xx, vl);
+                                vint16m8_t vright2 = __riscv_vle16_v_i16m8(trow + xx + 2, vl);
 
                                 vint16m8_t vres = __riscv_vadd_vv_i16m8(vright2, vleft2, vl);
                                 vres = __riscv_vmacc_vx_i16m8(vres, dx2, vcenter, vl);
 
-                                __riscv_vse16_v_i16m8(drow + x, vres, vl);
+                                __riscv_vse16_v_i16m8(drow + xx, vres, vl);
                             }
                         }
-
                         x = width - 2;
 
                         temp = trow[x - 2] * dx0 + trow[x - 1] * dx1 + trow[x] * dx2 + trow[x + 1] * dx3;
@@ -887,53 +912,53 @@ namespace cv
 
                         if (dx == 0)
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int xx = 2; xx < width - 2; xx += vl)
                             {
-                                vl = __riscv_vsetvl_e16m4(width - x - 2);
-                                vint16m4_t vleft2 = __riscv_vle16_v_i16m4(trow + x - 2, vl);
-                                vint16m4_t vleft1 = __riscv_vle16_v_i16m4(trow + x - 1, vl);
-                                vint16m4_t vcenter = __riscv_vle16_v_i16m4(trow + x, vl);
-                                vint16m4_t vright1 = __riscv_vle16_v_i16m4(trow + x + 1, vl);
-                                vint16m4_t vright2 = __riscv_vle16_v_i16m4(trow + x + 2, vl);
+                                vl = __riscv_vsetvl_e16m4(width - xx - 2);
+                                vint16m4_t vleft2 = __riscv_vle16_v_i16m4(trow + xx - 2, vl);
+                                vint16m4_t vleft1 = __riscv_vle16_v_i16m4(trow + xx - 1, vl);
+                                vint16m4_t vcenter = __riscv_vle16_v_i16m4(trow + xx, vl);
+                                vint16m4_t vright1 = __riscv_vle16_v_i16m4(trow + xx + 1, vl);
+                                vint16m4_t vright2 = __riscv_vle16_v_i16m4(trow + xx + 2, vl);
 
                                 vint16m4_t vres = __riscv_vadd_vv_i16m4(vright2, vleft2, vl);
                                 vres = __riscv_vmacc_vx_i16m4(vres, dx1, vleft1, vl);
                                 vres = __riscv_vmacc_vx_i16m4(vres, dx2, vcenter, vl);
                                 vres = __riscv_vmacc_vx_i16m4(vres, dx3, vright1, vl);
 
-                                __riscv_vse32_v_f32m8(drow + x, __riscv_vfwcvt_f_x_v_f32m8(vres, vl), vl);
+                                __riscv_vse32_v_f32m8(drow + xx, __riscv_vfwcvt_f_x_v_f32m8(vres, vl), vl);
                             }
                         }
                         else if (dx == 1)
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int xx = 2; xx < width - 2; xx += vl)
                             {
-                                vl = __riscv_vsetvl_e16m4(width - x - 2);
-                                vint16m4_t vleft2 = __riscv_vle16_v_i16m4(trow + x - 2, vl);
-                                vint16m4_t vleft1 = __riscv_vle16_v_i16m4(trow + x - 1, vl);
-                                vint16m4_t vright1 = __riscv_vle16_v_i16m4(trow + x + 1, vl);
-                                vint16m4_t vright2 = __riscv_vle16_v_i16m4(trow + x + 2, vl);
+                                vl = __riscv_vsetvl_e16m4(width - xx - 2);
+                                vint16m4_t vleft2 = __riscv_vle16_v_i16m4(trow + xx - 2, vl);
+                                vint16m4_t vleft1 = __riscv_vle16_v_i16m4(trow + xx - 1, vl);
+                                vint16m4_t vright1 = __riscv_vle16_v_i16m4(trow + xx + 1, vl);
+                                vint16m4_t vright2 = __riscv_vle16_v_i16m4(trow + xx + 2, vl);
 
                                 vint16m4_t vres = __riscv_vsub_vv_i16m4(vright2, vleft2, vl);
                                 vres = __riscv_vmacc_vx_i16m4(vres, dx1, vleft1, vl);
                                 vres = __riscv_vmacc_vx_i16m4(vres, dx3, vright1, vl);
 
-                                __riscv_vse32_v_f32m8(drow + x, __riscv_vfwcvt_f_x_v_f32m8(vres, vl), vl);
+                                __riscv_vse32_v_f32m8(drow + xx, __riscv_vfwcvt_f_x_v_f32m8(vres, vl), vl);
                             }
                         }
                         else
                         {
-                            for (size_t x = 2; x < width - 2; x += vl)
+                            for (int xx = 2; xx < width - 2; xx += vl)
                             {
-                                vl = __riscv_vsetvl_e16m4(width - x - 2);
-                                vint16m4_t vleft2 = __riscv_vle16_v_i16m4(trow + x - 2, vl);
-                                vint16m4_t vcenter = __riscv_vle16_v_i16m4(trow + x, vl);
-                                vint16m4_t vright2 = __riscv_vle16_v_i16m4(trow + x + 2, vl);
+                                vl = __riscv_vsetvl_e16m4(width - xx - 2);
+                                vint16m4_t vleft2 = __riscv_vle16_v_i16m4(trow + xx - 2, vl);
+                                vint16m4_t vcenter = __riscv_vle16_v_i16m4(trow + xx, vl);
+                                vint16m4_t vright2 = __riscv_vle16_v_i16m4(trow + xx + 2, vl);
 
                                 vint16m4_t vres = __riscv_vadd_vv_i16m4(vright2, vleft2, vl);
                                 vres = __riscv_vmacc_vx_i16m4(vres, dx2, vcenter, vl);
 
-                                __riscv_vse32_v_f32m8(drow + x, __riscv_vfwcvt_f_x_v_f32m8(vres, vl), vl);
+                                __riscv_vse32_v_f32m8(drow + xx, __riscv_vfwcvt_f_x_v_f32m8(vres, vl), vl);
                             }
                         }
 
