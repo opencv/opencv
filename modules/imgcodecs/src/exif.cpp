@@ -190,10 +190,8 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
         data.insert(data.end(), valueArea.begin(), valueArea.end());
     }
 
-
     return true;
 }
-
 
 bool decodeExif(const std::vector<uchar>& data, std::vector< std::vector<ExifEntry> >& exif_entries)
 {
@@ -598,7 +596,8 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
     {
     case TAG_TYPE_BYTE:
     case TAG_TYPE_SBYTE:
-        exifentry.setValueAsInt(m_data[offset + 8]);
+    case TAG_TYPE_UNDEFINED:
+        exifentry.setValueAsRaw(getRaw(offset));
         break;
     case TAG_TYPE_ASCII:
         exifentry.setValueAsString(getString(offset));
@@ -608,7 +607,6 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
         exifentry.setValueAsInt(getU16(offset + 8));
         break;
 
-    case TAG_TYPE_UNDEFINED:
     case TAG_TYPE_LONG:
         exifentry.setValueAsInt(getU32(offset + 8));
         break;
@@ -652,6 +650,23 @@ std::string ExifReader::getString(const size_t offset) const
     }
     std::vector<uint8_t>::const_iterator it = m_data.begin() + dataOffset;
     std::string result( it, it + size ); //copy vector content into result
+    return result;
+}
+
+std::vector<uchar> ExifReader::getRaw(const size_t offset) const
+{
+    size_t size = getU32(offset + 4);
+    size_t dataOffset = offset + 8; // position of data in the field
+    if (size > maxDataSize + 4)
+    {
+        dataOffset = getU32(offset + 8);
+    }
+
+    if (dataOffset > m_data.size() || dataOffset + size > m_data.size()) {
+        throw ExifParsingError();
+    }
+    std::vector<uchar>::const_iterator it = m_data.begin() + dataOffset;
+    std::vector<uchar> result(it, it + size); //copy vector content into result
     return result;
 }
 
@@ -791,6 +806,7 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_RESOLUTION_UNIT ? "Resolution Unit" :
         tag == TAG_SOFTWARE ? "Software" :
         tag == TAG_MODIFYDATE ? "Modify Date" :
+        tag == TAG_ARTIST ? "Artist" :
         tag == TAG_HOST_COMPUTER ? "Host Computer" :
 
         tag == TAG_SAMPLEFORMAT ? "Sample Format" :
