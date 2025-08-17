@@ -51,7 +51,7 @@ def print_exif(path):
     dump_exif(exif_entries, title="ORIGINAL EXIF")
 
     # Encode with original metadata
-    retval, buf = cv.imencodeWithMetadata(".jpg", img, metadata_types, metadata)
+    _, buf = cv.imencodeWithMetadata(".jpg", img, metadata_types, metadata)
 
     # Re-encode EXIF
     res, raw_exif_data = cv.encodeExif(exif_entries)
@@ -61,13 +61,13 @@ def print_exif(path):
 
     new_metadata = [np.frombuffer(raw_exif_data, dtype=np.uint8), metadata[1], metadata[2]]
 
-    retval, buf = cv.imencodeWithMetadata(".jpg", img, metadata_types, new_metadata)
+    _, buf = cv.imencodeWithMetadata(".jpg", img, metadata_types, new_metadata)
 
     # Reload and verify
-    img2, metadata_types2, metadata2 = cv.imdecodeWithMetadata(buf)
+    _, metadata_types2, metadata2 = cv.imdecodeWithMetadata(buf)
     raw_exif2 = get_exif_block(metadata_types2, metadata2)
 
-    result2, exif_entries2 = cv.decodeExif(raw_exif2)
+    _, exif_entries2 = cv.decodeExif(raw_exif2)
     print("*" * 60)
     dump_exif(exif_entries2, title="RELOADED EXIF")
 
