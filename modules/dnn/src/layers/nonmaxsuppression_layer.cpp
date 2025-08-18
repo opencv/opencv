@@ -9,6 +9,7 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include <limits>
 #include <numeric>
+#include <cstdint>
 
 namespace cv {
 namespace dnn {
@@ -83,7 +84,7 @@ public:
         }
 
         const int tasks = B * C;
-        std::vector<std::vector<Vec<long long,3>>> tripletsPerBC(tasks);
+        std::vector<std::vector<Vec<int64_t,3>>> tripletsPerBC(tasks);
 
         cv::parallel_for_(cv::Range(0, tasks), [&](const cv::Range& r){
             for (int taskIdx = r.start; taskIdx < r.end; ++taskIdx) {
@@ -133,21 +134,21 @@ public:
                 local.reserve(keep.size());
                 for (int kept : keep) {
                     const int globalIdx = globalIndices[kept];
-                    local.push_back({(long long)b, (long long)c, (long long)globalIdx});
+                    local.push_back({(int64_t)b, (int64_t)c, (int64_t)globalIdx});
                 }
             }
         });
 
         int K = 0;
         for (int t = 0; t < tasks; ++t) K += (int)tripletsPerBC[t].size();
-        outputs_arr.getMatRef(0).create(2, std::array<int,2>{K, 3}.data(), CV_64S);
-        auto* out = outputs_arr.getMatRef(0).ptr<long long>();
+        outputs_arr.getMatRef(0).create(K, 3, CV_64S);
+        auto* out = outputs_arr.getMatRef(0).ptr<int64_t>();
         std::vector<int> offsets(tasks + 1, 0);
         for (int t = 0; t < tasks; ++t)
             offsets[t + 1] = offsets[t] + (int)tripletsPerBC[t].size() * 3;
         cv::parallel_for_(cv::Range(0, tasks), [&](const cv::Range& r){
             for (int t = r.start; t < r.end; ++t) {
-                long long* dst = out + offsets[t];
+                int64_t* dst = out + offsets[t];
                 const auto& v = tripletsPerBC[t];
                 for (const auto& trip : v) {
                     *dst++ = trip[0]; *dst++ = trip[1]; *dst++ = trip[2];
