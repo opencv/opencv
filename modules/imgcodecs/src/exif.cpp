@@ -786,13 +786,13 @@ std::string ExifEntry::getTagIdAsString() const
     int tag = tagId;
     const char* tagstr =
         tag == TAG_EMPTY ? "<empty>" :
-        tag == TAG_SUB_FILETYPE ? "Sub File Type" :
+        tag == TAG_SUB_FILE_TYPE ? "Sub File Type" :
         tag == TAG_IMAGE_WIDTH ? "Image Width" :
         tag == TAG_IMAGE_LENGTH ? "Image Height" :
         tag == TAG_BITS_PER_SAMPLE ? "Bits Per Sample" :
         tag == TAG_COMPRESSION ? "Compression" :
         tag == TAG_PHOTOMETRIC ? "Photometric" :
-        tag == TAG_IMAGEDESCRIPTION ? "Image Description" :
+        tag == TAG_IMAGE_DESCRIPTION ? "Image Description" :
         tag == TAG_MAKE ? "Make" :
         tag == TAG_MODEL ? "Model" :
         tag == TAG_STRIP_OFFSET ? "Strip Offset" :
@@ -801,15 +801,15 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_STRIP_BYTE_COUNTS ? "Strip Byte Counts" :
         tag == TAG_PLANAR_CONFIG ? "Planar Config" :
         tag == TAG_ORIENTATION ? "Orientation" :
-        tag == TAG_XRESOLUTION ? "X Resolution" :
-        tag == TAG_YRESOLUTION ? "Y Resolution" :
+        tag == TAG_X_RESOLUTION ? "X Resolution" :
+        tag == TAG_Y_RESOLUTION ? "Y Resolution" :
         tag == TAG_RESOLUTION_UNIT ? "Resolution Unit" :
         tag == TAG_SOFTWARE ? "Software" :
-        tag == TAG_MODIFYDATE ? "Modify Date" :
+        tag == TAG_MODIFY_DATE ? "Modify Date" :
         tag == TAG_ARTIST ? "Artist" :
         tag == TAG_HOST_COMPUTER ? "Host Computer" :
 
-        tag == TAG_SAMPLEFORMAT ? "Sample Format" :
+        tag == TAG_SAMPLE_FORMAT ? "Sample Format" :
         tag == TAG_YCBCRPOSITIONING ? "YCbCr Positioning" :
         tag == TAG_JPGFROMRAWSTART ? "Jpg From Raw Start " :
         tag == TAG_JPGFROMRAWLENGTH ? "Jpg From Raw Length" :
@@ -820,7 +820,7 @@ std::string ExifEntry::getTagIdAsString() const
 
         tag == TAG_COPYRIGHT ? "Copyright" :
         tag == TAG_EXPOSURE_TIME ? "Exposure Time" :
-        tag == TAG_FNUMBER ? "F Number" :
+        tag == TAG_F_NUMBER ? "F Number" :
 
         tag == TAG_EXIF_OFFSET ? "Exif Offset" :
 
@@ -838,47 +838,48 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_COMPRESSED_BITS_PER_PIXEL ? "CompressedBitsPerPixel" :
 
         tag == TAG_FLASH ? "Flash" :
-        tag == TAG_FOCALLENGTH ? "Focal Length" :
+        tag == TAG_FOCAL_LENGTH ? "Focal Length" :
         tag == TAG_EP_STANDARD_ID ? "TIFF/EPStandard ID" :
 
         tag == TAG_SHUTTER_SPEED ? "Shutter Speed" :
         tag == TAG_APERTURE_VALUE ? "Aperture Value" :
         tag == TAG_BRIGHTNESS_VALUE ? "Brightness Value" :
-        tag == TAG_EXPOSUREBIASVALUE ? "Exposure Bias Value" :
-        tag == TAG_MAXAPERTUREVALUE ? "Max Aperture Value" :
-        tag == TAG_SUBJECTDISTANCE ? "Subject Distance" :
-        tag == TAG_METERINGMODE ? "Metering Mode" :
-        tag == TAG_LIGHTSOURCE ? "Light Source" :
+        tag == TAG_EXPOSURE_BIAS_VALUE ? "Exposure Bias Value" :
+        tag == TAG_MAX_APERTURE_VALUE ? "Max Aperture Value" :
+        tag == TAG_SUBJECT_DISTANCE ? "Subject Distance" :
+        tag == TAG_METERING_MODE ? "Metering Mode" :
+        tag == TAG_LIGHT_SOURCE ? "Light Source" :
         tag == TAG_FLASH ? "Flash" :
         tag == TAG_SUBJECT_AREA ? "Subject Area" :
-        tag == TAG_MAKERNOTE ? "Maker Note" :
-        tag == TAG_USERCOMMENT ? "User Comment" :
+        tag == TAG_MAKER_NOTE ? "Maker Note" :
+        tag == TAG_USER_COMMENT ? "User Comment" :
 
         tag == TAG_SUBSECTIME ? "SubSec Time" :
         tag == TAG_SUBSECTIME_ORIGINAL ? "SubSec Original Time" :
         tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
 
-        tag == TAG_FLASHPIXVERSION ? "Flashpix Version" :
-        tag == TAG_COLORSPACE ? "Color Space" :
+        tag == TAG_FLASH_PIX_VERSION ? "Flashpix Version" :
+        tag == TAG_COLOR_SPACE ? "Color Space" :
         tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
         tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
         tag == TAG_WHITE_BALANCE ? "White Balance" :
 
         tag == TAG_EXIF_VERSION ? "Exif Version" :
 
-        tag == TAG_FOCALPLANEXRESOLUTION ? "Focal Plane X Resolution" :
-        tag == TAG_FOCALPLANEYRESOLUTION ? "Focal Plane Y Resolution" :
-        tag == TAG_FOCALPLANERESOLUTIONUNIT ? "Focal Plane Resolution Unit" :
+        tag == TAG_FOCAL_PLANE_X_RESOLUTION ? "Focal Plane X Resolution" :
+        tag == TAG_FOCAL_PLANE_Y_RESOLUTION ? "Focal Plane Y Resolution" :
+        tag == TAG_FOCAL_PLANE_RESOLUTION_UNIT ? "Focal Plane Resolution Unit" :
 
         tag == TAG_SCENE_TYPE ? "Scene Type" :
 
-        tag == TAG_CUSTOMRENDERED ? "Custom Rendered" :
-        tag == TAG_EXPOSUREMODE ? "Exposure Mode" :
+        tag == TAG_CUSTOM_RENDERED ? "Custom Rendered" :
+        tag == TAG_EXPOSURE_MODE ? "Exposure Mode" :
 
-        tag == TAG_BODYSERIALNUMBER ? "Body Serial Number" :
-        tag == TAG_LENSSPECIFICATION ? "Lens Specification" :
-        tag == TAG_LENSMODEL ? "Lens Model" :
-        tag == TAG_SCENECAPTURETYPE ? "Scene Capture Type" :
+        tag == TAG_BODY_SERIAL_NUMBER ? "Body Serial Number" :
+        tag == TAG_LENS_SPECIFICATION ? "Lens Specification" :
+        tag == TAG_LENS_MAKE ? "Lens Make" :
+        tag == TAG_LENS_MODEL ? "Lens Model" :
+        tag == TAG_SCENE_CAPTURE_TYPE ? "Scene Capture Type" :
 
         tag == TAG_DNG_VERSION ? "DNG Version" :
         tag == TAG_DNG_BACKWARD_VERSION ? "DNG Backward Version" :

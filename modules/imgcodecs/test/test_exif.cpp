@@ -469,7 +469,7 @@ TEST(Imgcodecs_Png, encodeExif)
 TEST(Imgcodecs_Png, Write_And_Read_Custom_Exif)
 {
     const std::string root = cvtest::TS::ptr()->get_data_path();
-    const std::string filename = root + "readwrite/testExifOrientation_7.jpg";
+    const std::string filename = root + "readwrite/testExifOrientation_7.png";
 
     // Create custom EXIF entries
     ExifEntry exifEntry0, exifEntry1, exifEntry2;
