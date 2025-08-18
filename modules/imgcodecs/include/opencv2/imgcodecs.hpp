@@ -496,7 +496,7 @@ public:
 
     CV_WRAP void setValueAsString(const std::string& value) {
         value_str = value;
-        count = static_cast<int>(value.size());
+        count = static_cast<int>(value.size() + 1);
     }
 
     CV_WRAP void setValueAsInt(int value) { value_u32 = value; }
