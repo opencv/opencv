@@ -2,6 +2,17 @@
 #  Detect 3rd-party GUI libraries
 # ----------------------------------------------------------------------------
 
+if(WITH_OPENGL)
+  OCV_OPTION(OPENCV_ENABLE_EGL_INTEROP "Enable OpenGL/OpenCV interop via EGL" OFF
+    VISIBLE_IF WITH_OPENGL
+    VERIFY HAVE_EGL
+  )
+
+  OCV_OPTION(OPENCV_ENABLE_GLX_INTEROP "Enable OpenGL/OpenCV interop via GLX" OFF
+    VISIBLE_IF WITH_OPENGL
+    VERIFY HAVE_GLX
+  )
+endif()
 # --- QT4/5 ---
 ocv_clear_vars(HAVE_QT HAVE_QT5)
 
@@ -65,13 +76,14 @@ ocv_clear_vars(HAVE_OPENGL HAVE_QT_OPENGL)
 if(WITH_OPENGL)
   if(WITH_WIN32UI OR (HAVE_QT AND QT_QTOPENGL_FOUND) OR HAVE_GTK3 OR (HAVE_GTK AND NOT HAVE_GTK3 AND HAVE_GTKGLEXT))
     find_package (OpenGL QUIET)
-    if(OpenGL_EGL_FOUND)
-      set(HAVE_EGL TRUE AND OPENCV_ENABLE_EGL)
-    else()
+    if(OpenGL_EGL_FOUND AND OPENCV_ENABLE_EGL_INTEROP)
+      set(HAVE_EGL TRUE)
+    endif()
+    if(OpenGL_GLX_FOUND AND OPENCV_ENABLE_GLX_INTEROP)
       set(HAVE_GLX TRUE)
     endif()
 
-    if(OPENGL_FOUND)
+    if(OPENGL_FOUND AND (HAVE_GLX OR HAVE_EGL OR EMSCRIPTEN))
       set(HAVE_OPENGL TRUE)
       if(QT_QTOPENGL_FOUND)
         set(HAVE_QT_OPENGL TRUE)
@@ -79,7 +91,7 @@ if(WITH_OPENGL)
         ocv_include_directories(${OPENGL_INCLUDE_DIR})
       endif()
     endif()
-  endif()
+endif()
 endif(WITH_OPENGL)
 
 # --- Cocoa ---

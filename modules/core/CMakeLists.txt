@@ -180,6 +180,10 @@ if (OPENCV_ENABLE_EGL_INTEROP)
   ocv_target_link_libraries(${the_module} PRIVATE "${OPENGL_egl_LIBRARY}")
 endif()
 
+if (OPENCV_ENABLE_GLX_INTEROP)
+  ocv_target_link_libraries(${the_module} PRIVATE "${OPENGL_glx_LIBRARY}")
+endif()
+
 if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
 endif()
