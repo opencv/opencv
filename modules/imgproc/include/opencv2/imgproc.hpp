@@ -1113,7 +1113,7 @@ public:
     CV_WRAP Subdiv2D(Rect rect);
 
     /** @overload */
-    CV_WRAP Subdiv2D(Rect2f rect);
+    CV_WRAP_AS(Subdiv2D2f) Subdiv2D(Rect2f rect);
 
     /** @overload
 
@@ -1131,7 +1131,7 @@ public:
     @param rect Rectangle that includes all of the 2d points that are to be added to the subdivision.
 
      */
-    CV_WRAP void initDelaunay(Rect2f rect);
+    CV_WRAP_AS(initDelaunay2f) CV_WRAP void initDelaunay(Rect2f rect);
 
     /** @brief Insert a single point into a Delaunay triangulation.
 
