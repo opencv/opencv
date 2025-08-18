@@ -473,7 +473,7 @@ TEST(Imgcodecs_Png, Write_And_Read_Custom_Exif)
 
     // Create custom EXIF entries
     ExifEntry exifEntry0, exifEntry1, exifEntry2;
-    exifEntry0.tagId = TAG_IMAGEDESCRIPTION;
+    exifEntry0.tagId = TAG_IMAGE_DESCRIPTION;
     exifEntry0.type = TAG_TYPE_ASCII;
     exifEntry0.setValueAsString("Test - Writing Custom Exif");
 
