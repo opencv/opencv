@@ -649,7 +649,7 @@ std::string ExifReader::getString(const size_t offset) const
         throw ExifParsingError();
     }
     std::vector<uint8_t>::const_iterator it = m_data.begin() + dataOffset;
-    std::string result( it, it + size ); //copy vector content into result
+    std::string result( it, it + size - 1 ); //copy vector content into result
     return result;
 }
 
@@ -801,8 +801,8 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_STRIP_BYTE_COUNTS ? "Strip Byte Counts" :
         tag == TAG_PLANAR_CONFIG ? "Planar Config" :
         tag == TAG_ORIENTATION ? "Orientation" :
-        tag == TAG_XRESOLUTION ? "XResolution" :
-        tag == TAG_YRESOLUTION ? "YResolution" :
+        tag == TAG_XRESOLUTION ? "X Resolution" :
+        tag == TAG_YRESOLUTION ? "Y Resolution" :
         tag == TAG_RESOLUTION_UNIT ? "Resolution Unit" :
         tag == TAG_SOFTWARE ? "Software" :
         tag == TAG_MODIFYDATE ? "Modify Date" :
@@ -816,17 +816,17 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFA Repeat Pattern Dim" :
         tag == TAG_CFA_PATTERN ? "CFA Pattern" :
 
-        tag == TAG_COMPONENTSCONFIGURATION ? "Components Configuration" :
+        tag == TAG_COMPONENTS_CONFIGURATION ? "Components Configuration" :
 
         tag == TAG_COPYRIGHT ? "Copyright" :
         tag == TAG_EXPOSURE_TIME ? "Exposure Time" :
-        tag == TAG_FNUMBER ? "FNumber" :
+        tag == TAG_FNUMBER ? "F Number" :
 
         tag == TAG_EXIF_OFFSET ? "Exif Offset" :
 
-        tag == TAG_EXPOSUREPROGRAM ? "Exposure Program" :
-        tag == TAG_GPSINFO ? "GPS Info" :
-        tag == TAG_ISOSPEED ? "ISO Speed" :
+        tag == TAG_EXPOSURE_PROGRAM ? "Exposure Program" :
+        tag == TAG_GPS_INFO ? "GPS Info" :
+        tag == TAG_ISO_SPEED ? "ISO Speed" :
 
         tag == TAG_DATETIME_CREATE ? "Create Date" :
         tag == TAG_DATETIME_ORIGINAL ? "DateTime Original" :
@@ -835,9 +835,11 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_OFFSETTIME_ORIGINAL ? "Offset Time Original" :
         tag == TAG_OFFSETTIME_DIGITIZED ? "Offset Time Digitized" :
 
+        tag == TAG_COMPRESSED_BITS_PER_PIXEL ? "CompressedBitsPerPixel" :
+
         tag == TAG_FLASH ? "Flash" :
         tag == TAG_FOCALLENGTH ? "Focal Length" :
-        tag == TAG_EP_STANDARD_ID ? "TIFF/EPStandardID" :
+        tag == TAG_EP_STANDARD_ID ? "TIFF/EPStandard ID" :
 
         tag == TAG_SHUTTER_SPEED ? "Shutter Speed" :
         tag == TAG_APERTURE_VALUE ? "Aperture Value" :
@@ -857,15 +859,15 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_SUBSECTIME_DIGITIZED ? "SubSec Digitized Time" :
 
         tag == TAG_FLASHPIXVERSION ? "Flashpix Version" :
-        tag == TAG_COLORSPACE ? "ColorSpace" :
+        tag == TAG_COLORSPACE ? "Color Space" :
         tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
         tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
         tag == TAG_WHITE_BALANCE ? "White Balance" :
 
         tag == TAG_EXIF_VERSION ? "Exif Version" :
 
-        tag == TAG_FOCALPLANEXRESOLUTION ? "Foca lPlane XResolution" :
-        tag == TAG_FOCALPLANEYRESOLUTION ? "Focal Plane YResolution" :
+        tag == TAG_FOCALPLANEXRESOLUTION ? "Focal Plane X Resolution" :
+        tag == TAG_FOCALPLANEYRESOLUTION ? "Focal Plane Y Resolution" :
         tag == TAG_FOCALPLANERESOLUTIONUNIT ? "Focal Plane Resolution Unit" :
 
         tag == TAG_SCENE_TYPE ? "Scene Type" :
@@ -881,9 +883,9 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_DNG_VERSION ? "DNG Version" :
         tag == TAG_DNG_BACKWARD_VERSION ? "DNG Backward Version" :
         tag == TAG_UNIQUE_CAMERA_MODEL ? "Unique Camera Model" :
-        tag == TAG_CHROMA_BLUR_RADIUS ? "ChromaBlurRadius" :
-        tag == TAG_CFA_PLANECOLOR ? "CFAPlaneColor" :
-        tag == TAG_CFA_LAYOUT ? "CFALayout" :
+        tag == TAG_CHROMA_BLUR_RADIUS ? "Chroma Blur Radius" :
+        tag == TAG_CFA_PLANECOLOR ? "CFA Plane Color" :
+        tag == TAG_CFA_LAYOUT ? "CFA Layout" :
         tag == TAG_BLACK_LEVEL_REPEAT_DIM ? "Black Level Repeat Dim" :
         tag == TAG_BLACK_LEVEL ? "Black Level" :
         tag == TAG_WHITE_LEVEL ? "White Level" :
@@ -895,23 +897,29 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_CAMERA_CALIBRATION1 ? "Camera Calibration1" :
         tag == TAG_CAMERA_CALIBRATION2 ? "Camera Calibration2" :
         tag == TAG_ANALOG_BALANCE ? "Analog Balance" :
-        tag == TAG_AS_SHOT_NEUTRAL ? "AsShotNeutral" :
-        tag == TAG_AS_SHOT_WHITE_XY ? "AsShotWhiteXY" :
+        tag == TAG_AS_SHOT_NEUTRAL ? "As Shot Neutral" :
+        tag == TAG_AS_SHOT_WHITE_XY ? "As Shot White XY" :
         tag == TAG_BASELINE_EXPOSURE ? "Baseline Exposure" :
-        tag == TAG_CALIBRATION_ILLUMINANT1 ? "Calibration Illuminant1" :
-        tag == TAG_CALIBRATION_ILLUMINANT2 ? "Calibration Illuminant2" :
+        tag == TAG_CALIBRATION_ILLUMINANT1 ? "Calibration Illuminant 1" :
+        tag == TAG_CALIBRATION_ILLUMINANT2 ? "Calibration Illuminant 2" :
         tag == TAG_EXTRA_CAMERA_PROFILES ? "Extra Camera Profiles" :
         tag == TAG_PROFILE_NAME ? "Profile Name" :
-        tag == TAG_AS_SHOT_PROFILE_NAME ? "AsShotProfileName" :
-        tag == TAG_PREVIEW_COLORSPACE ? "PreviewColorspace" :
-        tag == TAG_OPCODE_LIST2 ? "OpCodeList2" :
-        tag == TAG_NOISE_PROFILE ? "NoiseProfile" :
+        tag == TAG_AS_SHOT_PROFILE_NAME ? "As Shot Profile Name" :
+        tag == TAG_PREVIEW_COLORSPACE ? "Preview Colorspace" :
+        tag == TAG_OPCODE_LIST2 ? "Op Code List 2" :
+        tag == TAG_NOISE_PROFILE ? "Noise Profile" :
         tag == TAG_DEFAULT_BLACK_RENDER ? "Black Render" :
         tag == TAG_ACTIVE_AREA ? "Active Area" :
-        tag == TAG_FORWARD_MATRIX1 ? "Forward Matrix1" :
-        tag == TAG_FORWARD_MATRIX2 ? "Forward Matrix2" : nullptr;
+        tag == TAG_FORWARD_MATRIX1 ? "Forward Matrix 1" :
+        tag == TAG_FORWARD_MATRIX2 ? "Forward Matrix 2" : nullptr;
     return tagstr ? std::string(tagstr) : cv::format("<unknown tag>(%d)", (int)tag);
 };
+
+std::string ExifEntry::dumpAsString() const {
+    std::ostringstream oss;
+    dump(oss);
+    return oss.str();
+}
 
 std::ostream& ExifEntry::dump(std::ostream& strm) const
 {
@@ -957,7 +965,6 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         break;
     }
 
-    strm << std::endl;
     return strm;
 }
 

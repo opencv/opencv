@@ -368,9 +368,9 @@ enum ExifTagId
     TAG_FNUMBER = 33437,
 
     TAG_EXIF_OFFSET = 34665,
-    TAG_EXPOSUREPROGRAM = 34850,
-    TAG_GPSINFO = 34853,
-    TAG_ISOSPEED = 34855,
+    TAG_EXPOSURE_PROGRAM = 34850,
+    TAG_GPS_INFO = 34853,
+    TAG_ISO_SPEED = 34855,
 
     TAG_EXIF_VERSION = 36864,
     TAG_DATETIME_ORIGINAL = 36867,
@@ -380,7 +380,8 @@ enum ExifTagId
     TAG_OFFSETTIME_ORIGINAL = 36881,
     TAG_OFFSETTIME_DIGITIZED = 36882,
 
-    TAG_COMPONENTSCONFIGURATION = 37121,
+    TAG_COMPONENTS_CONFIGURATION = 37121,
+    TAG_COMPRESSED_BITS_PER_PIXEL = 37122,
 
     TAG_SHUTTER_SPEED = 37377,
     TAG_APERTURE_VALUE = 37378,
@@ -505,6 +506,7 @@ public:
     CV_WRAP bool empty() const { return tagId == TAG_EMPTY; }
     CV_WRAP std::string getTagIdAsString() const;
     CV_WRAP std::string getTagTypeAsString() const;
+    CV_WRAP std::string dumpAsString() const;
     std::ostream& dump(std::ostream& strm) const;
 
 private:

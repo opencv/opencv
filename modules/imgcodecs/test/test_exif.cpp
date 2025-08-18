@@ -699,7 +699,7 @@ TEST_P(ReadExif_Sanity, Check)
     for (size_t i = 0; i < exif_entries_vec.size(); i++)
         for (size_t j = 0; j < exif_entries_vec[i].size(); j++)
         {
-            exif_entries_vec[i][j].dump(std::cout);
+            std::cout << exif_entries_vec[i][j].dumpAsString() << std::endl;
         }
 }
 

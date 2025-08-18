@@ -9,15 +9,7 @@ def dump_exif(exif_entries, title="EXIF DUMP"):
     for block in exif_entries:
         print('----------------------')
         for entry in block:
-            try:
-                val_str = entry.getValueAsString()
-            except Exception:
-                val_str = "N/A"
-            try:
-                val_int = entry.getValueAsInt()
-            except Exception:
-                val_int = "N/A"
-            print(f"  {entry.tagId:<6} {entry.getTagIdAsString():<20} : {val_str:<30} {val_int}")
+            print(entry.dumpAsString())
 
 def get_exif_block(metadata_types, metadata):
     """
