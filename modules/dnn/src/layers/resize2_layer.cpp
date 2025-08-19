@@ -11,8 +11,9 @@
 #include "../op_cann.hpp"
 #include "../net_impl.hpp"
 #include <opencv2/imgproc.hpp>
-#include <algorithm>
-#include <cmath>
+
+// Implements ONNX Resize operator semantics (ai.onnx) as per onnx.ai documentation.
+// See: https://onnx.ai/onnx/operators/onnx__Resize.html (opsets 10, 11, 13, 18 supported)
 
 #ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
@@ -48,6 +49,49 @@ inline float computeSrcGeneric(int dst, float scale, int limit, int len,
     return dst*scale;
 }
 
+static inline void buildNearestIndexMap(std::vector<int>& map,
+                                        int outLen,
+                                        int inLen,
+                                        float scale,
+                                        int len,
+                                        float start_coord,
+                                        float end_coord,
+                                        const String& coordTransMode,
+                                        const String& nearestMode,
+                                        bool halfPixelCenters)
+{
+    auto nearestIndex = [&](float src) {
+        const int f = cvFloor(src);
+        const float frac = src - f;
+        const float eps = 1e-6f;
+        int idx;
+        if (nearestMode == "floor") idx = cvFloor(src);
+        else if (nearestMode == "ceil")  idx = cvCeil(src);
+        else if (nearestMode == "round_prefer_ceil") {
+            idx = (abs(frac - 0.5f) <= eps) ? (f + 1) : cvRound(src);
+        } else {
+            idx = (abs(frac - 0.5f) <= eps) ? f : cvRound(src);
+        }
+        return std::clamp(idx, 0, inLen - 1);
+    };
+
+    map.resize(outLen);
+    for (int i = 0; i < outLen; ++i)
+    {
+        float src = computeSrcGeneric(i, scale, inLen - 1, len,
+                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
+        if (coordTransMode == "tf_crop_and_resize") {
+            if (src < 0.f || src >= float(inLen)) {
+                map[i] = -1; // out of bounds
+                continue;
+            }
+        } else {
+            src = std::min(std::max(src, 0.f), float(inLen - 1));
+        }
+        map[i] = nearestIndex(src);
+    }
+}
+
 template<typename T>
 void resizeNearest(const Mat &inp, Mat &out,
                    float scaleH, float scaleW,
@@ -62,79 +106,50 @@ void resizeNearest(const Mat &inp, Mat &out,
     int numPlanes = inp.size[0] * inp.size[1];
     int inH       = inp.size[2], inW       = inp.size[3];
     int outH      = out.size[2], outW      = out.size[3];
-    int inPlane   = inH * inW,    outPlane = outH * outW;
     CV_Assert(inp.isContinuous() && out.isContinuous());
 
     Mat inpP = inp.reshape(1, numPlanes * inH);
     Mat outP = out.reshape(1, numPlanes * outH);
 
-    auto comp = [&](int dst, float scale, int limit, int len, float start_coord, float end_coord) {
-        float src = computeSrcGeneric(dst, scale, limit, len,
-                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
-        if (coordTransMode == "tf_crop_and_resize") {
-            return src; // Don't clamp for tf_crop_and_resize
-        }
-        return std::min(std::max(src, 0.f), float(limit));
-    };
-
-    auto nidx = [&](float src, int lim) {
-        const int f = cvFloor(src);
-        const float frac = src - f;
-        const float eps = 1e-6f;
-        int idx;
-
-        if (nearestMode == "floor") idx = cvFloor(src);
-        else if (nearestMode == "ceil")  idx = cvCeil(src);
-        else if (nearestMode == "round_prefer_ceil") {
-            idx = (abs(frac - 0.5f) <= eps) ? (f + 1) : cvRound(src);
-        } else {
-            idx = (abs(frac - 0.5f) <= eps) ? f : cvRound(src);
-        }
-        return std::clamp(idx, 0, lim);
-    };
-
     std::vector<int> mapY(outH);
-    for (int y = 0; y < outH; ++y)
-    {
-        float yf = comp(y, scaleH, inH - 1, lenY, start_y, end_y);
-        if (coordTransMode == "tf_crop_and_resize" && (yf < 0.f || yf >= float(inH))) {
-            mapY[y] = -1; // Mark as out of bounds
-        } else {
-            mapY[y] = nidx(yf, inH - 1);
-        }
-    }
+    buildNearestIndexMap(mapY, outH, inH, scaleH, lenY, start_y, end_y,
+                         coordTransMode, nearestMode, halfPixelCenters);
 
     std::vector<int> mapX(outW);
-    for (int x = 0; x < outW; ++x)
-    {
-        float xf = comp(x, scaleW, inW - 1, lenX, start_x, end_x);
-        if (coordTransMode == "tf_crop_and_resize" && (xf < 0.f || xf >= float(inW))) {
-            mapX[x] = -1; // Mark as out of bounds
-        } else {
-            mapX[x] = nidx(xf, inW - 1);
-        }
-    }
+    buildNearestIndexMap(mapX, outW, inW, scaleW, lenX, start_x, end_x,
+                         coordTransMode, nearestMode, halfPixelCenters);
 
-    for (int y = 0; y < outH; ++y)
-    {
-        const T* inpRow = inpP.ptr<T>( mapY[y] );
-        T*       outRow = outP.ptr<T>( y );
-        for (int x = 0; x < outW; ++x)
-        {
-            const T* srcPtr = inpRow + mapX[x];
-            T*       dst    = outRow + x;
-            for (int p = 0; p < numPlanes; ++p)
-            {
-                if (coordTransMode == "tf_crop_and_resize" && (mapY[y] == -1 || mapX[x] == -1)) {
-                    *dst = T(extrapolation_value);
-                } else {
-                    *dst = *srcPtr;
+    const int nstripes = 16;
+    const bool tf_crop_and_resize_mode = (coordTransMode == "tf_crop_and_resize");
+    parallel_for_(Range(0, nstripes), [&](const Range& range) {
+        int row0 = range.start * (outH * numPlanes) / nstripes;
+        int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
+        int plane0 = row0 / outH, plane1 = row1 / outH;
+        row0 %= outH;
+        row1 %= outH;
+        for (int p = plane0; p <= plane1; p++) {
+            int y0 = p == plane0 ? row0 : 0;
+            int y1 = p == plane1 ? row1 : outH - 1;
+            for (int y = y0; y <= y1; y++) {
+                if (tf_crop_and_resize_mode && mapY[y] == -1) {
+                    T* outRowFill = outP.ptr<T>(p * outH + y);
+                    for (int x = 0; x < outW; ++x)
+                        outRowFill[x] = T(extrapolation_value);
+                    continue;
                 }
-                srcPtr += inPlane;
-                dst    += outPlane;
+                const T* inpRow = inpP.ptr<T>(p * inH + mapY[y]);
+                T*       outRow = outP.ptr<T>(p * outH + y);
+                for (int x = 0; x < outW; ++x)
+                {
+                    if (tf_crop_and_resize_mode && mapX[x] == -1) {
+                        outRow[x] = T(extrapolation_value);
+                    } else {
+                        outRow[x] = inpRow[ mapX[x] ];
+                    }
+                }
             }
         }
-    }
+    }, nstripes);
 }
 
 template<typename T>
@@ -150,16 +165,17 @@ void resizeBilinear(const Mat &inp, Mat &out,
     int numPlanes = inp.size[0]*inp.size[1];
     int inH       = inp.size[2], inW = inp.size[3];
     int outH      = out.size[2], outW = out.size[3];
-    int inPlane   = inH * inW, outPlane = outH * outW;
     CV_Assert(inp.isContinuous() && out.isContinuous());
 
     Mat inpP = inp.reshape(1, numPlanes*inH);
     Mat outP = out.reshape(1, numPlanes*outH);
 
+    const bool tf_crop_and_resize_mode = (coordTransMode == "tf_crop_and_resize");
+
     auto clampC = [&](int dst, float scale, int lim, int len, float start_coord, float end_coord) {
         float src = computeSrcGeneric(dst, scale, lim, len,
                                       coordTransMode, halfPixelCenters, start_coord, end_coord);
-        if (coordTransMode == "tf_crop_and_resize") {
+        if (tf_crop_and_resize_mode) {
             int i0 = int(std::floor(src));
             return std::make_pair(i0, src - float(i0));
         } else {
@@ -175,7 +191,7 @@ void resizeBilinear(const Mat &inp, Mat &out,
     for (int x = 0; x < outW; ++x)
     {
         auto [xi, xfrac] = clampC(x, scaleW, inW, lenX, start_x, end_x);
-        if (coordTransMode == "tf_crop_and_resize" && (xi < 0 || xi >= inW - 1)) {
+        if (tf_crop_and_resize_mode && (xi < 0 || xi >= inW - 1)) {
             outOfBoundsX[x] = true;
             x0[x] = 0;
             x1[x] = 0;
@@ -193,7 +209,7 @@ void resizeBilinear(const Mat &inp, Mat &out,
     for (int y = 0; y < outH; ++y)
     {
         auto [yi, yfrac] = clampC(y, scaleH, inH, lenY, start_y, end_y);
-        if (coordTransMode == "tf_crop_and_resize" && (yi < 0 || yi >= inH - 1)) {
+        if (tf_crop_and_resize_mode && (yi < 0 || yi >= inH - 1)) {
             outOfBoundsY[y] = true;
             y0[y] = 0;
             y1[y] = 0;
@@ -205,35 +221,51 @@ void resizeBilinear(const Mat &inp, Mat &out,
         }
     }
 
-    for (int y = 0; y < outH; ++y)
-    {
-        const T* row0 = inpP.ptr<T>( y0[y] );
-        const T* row1 = inpP.ptr<T>( y1[y] );
-        float    fy   = ly[y];
+    const int nstripes = 16;
+    parallel_for_(Range(0, nstripes), [&](const Range& range) {
+        int row0 = range.start * (outH * numPlanes) / nstripes;
+        int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
+        int plane0 = row0 / outH, plane1 = row1 / outH;
+        row0 %= outH;
+        row1 %= outH;
 
-        T* outRowBase = outP.ptr<T>( y );
-
-        for (int x = 0; x < outW; ++x)
+        for (int p = plane0; p <= plane1; ++p)
         {
-            int   xi = x0[x];
-            float fx = lx[x];
-
-            T* dst = outRowBase + x;
-            for (int p = 0; p < numPlanes; ++p)
+            int oy0 = (p == plane0) ? row0 : 0;
+            int oy1 = (p == plane1) ? row1 : outH - 1;
+            for (int oy = oy0; oy <= oy1; ++oy)
             {
-                if (coordTransMode == "tf_crop_and_resize" && (outOfBoundsY[y] || outOfBoundsX[x])) {
-                    *dst = T(extrapolation_value);
-                } else {
-                    const T* c0 = row0 + p * inPlane + xi;
-                    const T* c1 = row1 + p * inPlane + xi;
-                    float top    = c0[0] + fx * (c0[1] - c0[0]);
-                    float bottom = c1[0] + fx * (c1[1] - c1[0]);
-                    *dst = T(top + fy * (bottom - top));
+                if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                    T* outRowFill = outP.ptr<T>(p * outH + oy);
+                    for (int ox = 0; ox < outW; ++ox)
+                        outRowFill[ox] = T(extrapolation_value);
+                    continue;
                 }
-                dst += outPlane;
+
+                const T* row0ptr = inpP.ptr<T>( p * inH + y0[oy] );
+                const T* row1ptr = inpP.ptr<T>( p * inH + y1[oy] );
+                float    fy      = ly[oy];
+
+                T* outRowBase = outP.ptr<T>( p * outH + oy );
+
+                for (int ox = 0; ox < outW; ++ox)
+                {
+                    if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
+                        outRowBase[ox] = T(extrapolation_value);
+                    } else {
+                        int   xi = x0[ox];
+                        float fx = lx[ox];
+
+                        const T* c0 = row0ptr + xi;
+                        const T* c1 = row1ptr + xi;
+                        float top    = c0[0] + fx * (c0[1] - c0[0]);
+                        float bottom = c1[0] + fx * (c1[1] - c1[0]);
+                        outRowBase[ox] = T(top + fy * (bottom - top));
+                    }
+                }
             }
         }
-    }
+    }, nstripes);
 }
 
 template<typename T>
@@ -253,6 +285,8 @@ void resizeCubic(const Mat &inp, Mat &out,
 
     Mat inpPlanes = inp.reshape(1, numPlanes * inH);
     Mat outPlanes = out.reshape(1, numPlanes * outH);
+
+    const bool tf_crop_and_resize_mode = (coordTransMode == "tf_crop_and_resize");
 
     auto clampInt = [](int v, int lo, int hi) {
         return v < lo ? lo : (v > hi ? hi : v);
@@ -281,7 +315,7 @@ void resizeCubic(const Mat &inp, Mat &out,
         {
             float w = cubicWeight(k - dx);
             int idx = ix + k;
-            if (coordTransMode == "tf_crop_and_resize") {
+            if (tf_crop_and_resize_mode) {
                 if (idx < 0 || idx >= inW) {
                     hasOutOfBounds = true;
                     x_id[ox][k+1] = -1;
@@ -310,7 +344,7 @@ void resizeCubic(const Mat &inp, Mat &out,
         if (sw != 0.f)
             for (int k = 0; k < 4; ++k)
                 x_w[ox][k] /= sw;
-        if (coordTransMode == "tf_crop_and_resize" && hasOutOfBounds) {
+        if (tf_crop_and_resize_mode && hasOutOfBounds) {
             outOfBoundsX[ox] = true;
         }
     }
@@ -329,7 +363,7 @@ void resizeCubic(const Mat &inp, Mat &out,
         {
             float w = cubicWeight(k - dy);
             int idy = iy + k;
-            if (coordTransMode == "tf_crop_and_resize") {
+            if (tf_crop_and_resize_mode) {
                 if (idy < 0 || idy >= inH) {
                     hasOutOfBounds = true;
                     y_id[oy][k+1] = -1;
@@ -358,7 +392,7 @@ void resizeCubic(const Mat &inp, Mat &out,
         if (swy != 0.f)
             for (int k = 0; k < 4; ++k)
                 y_w[oy][k] /= swy;
-        if (coordTransMode == "tf_crop_and_resize" && hasOutOfBounds) {
+        if (tf_crop_and_resize_mode && hasOutOfBounds) {
             outOfBoundsY[oy] = true;
         }
     }
@@ -374,7 +408,7 @@ void resizeCubic(const Mat &inp, Mat &out,
 
             for (int ox = 0; ox < outW; ++ox)
             {
-                if (coordTransMode == "tf_crop_and_resize" && (outOfBoundsY[oy] || outOfBoundsX[ox])) {
+                if (tf_crop_and_resize_mode && (outOfBoundsY[oy] || outOfBoundsX[ox])) {
                     outRow[ox] = extrapolation_value;
                 } else {
                     float val = 0.f;
@@ -517,7 +551,6 @@ public:
             outputs[0][2] = zoomFactorHeight > 0 ? (int)(inputs[0][2] * zoomFactorHeight) : outHeight0;
             outputs[0][3] = zoomFactorWidth > 0 ? (int)(inputs[0][3] * zoomFactorWidth) : outWidth0;
         } else if (ninputs == 2 && inputs[1].dims == 4) {
-            // [TODO] this workaround needs to be removed
             outputs[0][2] = inputs[1][2];
             outputs[0][3] = inputs[1][3];
         } else {
