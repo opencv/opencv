@@ -89,7 +89,7 @@ void TIFFCIELab16ToXYZ(TIFFCIELabToRGB *cielab, uint32_t l, int32_t a,
 void TIFFXYZToRGB(TIFFCIELabToRGB *cielab, float X, float Y, float Z,
                   uint32_t *r, uint32_t *g, uint32_t *b)
 {
-    int i;
+    size_t i;
     float Yr, Yg, Yb;
     float *matrix = &cielab->display.d_mat[0][0];
 
@@ -109,16 +109,16 @@ void TIFFXYZToRGB(TIFFCIELabToRGB *cielab, float X, float Y, float Z,
     Yb = TIFFmin(Yb, cielab->display.d_YCB);
 
     /* Turn luminosity to colour value. */
-    i = (int)((Yr - cielab->display.d_Y0R) / cielab->rstep);
-    i = TIFFmin(cielab->range, i);
+    i = (size_t)((Yr - cielab->display.d_Y0R) / cielab->rstep);
+    i = TIFFmin((size_t)cielab->range, i);
     *r = RINT(cielab->Yr2r[i]);
 
-    i = (int)((Yg - cielab->display.d_Y0G) / cielab->gstep);
-    i = TIFFmin(cielab->range, i);
+    i = (size_t)((Yg - cielab->display.d_Y0G) / cielab->gstep);
+    i = TIFFmin((size_t)cielab->range, i);
     *g = RINT(cielab->Yg2g[i]);
 
-    i = (int)((Yb - cielab->display.d_Y0B) / cielab->bstep);
-    i = TIFFmin(cielab->range, i);
+    i = (size_t)((Yb - cielab->display.d_Y0B) / cielab->bstep);
+    i = TIFFmin((size_t)cielab->range, i);
     *b = RINT(cielab->Yb2b[i]);
 
     /* Clip output. */
@@ -135,7 +135,7 @@ void TIFFXYZToRGB(TIFFCIELabToRGB *cielab, float X, float Y, float Z,
 int TIFFCIELabToRGBInit(TIFFCIELabToRGB *cielab, const TIFFDisplay *display,
                         float *refWhite)
 {
-    int i;
+    size_t i;
     double dfGamma;
 
     cielab->range = CIELABTORGB_TABLE_RANGE;
@@ -146,7 +146,7 @@ int TIFFCIELabToRGBInit(TIFFCIELabToRGB *cielab, const TIFFDisplay *display,
     dfGamma = 1.0 / cielab->display.d_gammaR;
     cielab->rstep =
         (cielab->display.d_YCR - cielab->display.d_Y0R) / cielab->range;
-    for (i = 0; i <= cielab->range; i++)
+    for (i = 0; i <= (size_t)cielab->range; i++)
     {
         cielab->Yr2r[i] = cielab->display.d_Vrwr *
                           ((float)pow((double)i / cielab->range, dfGamma));
@@ -156,7 +156,7 @@ int TIFFCIELabToRGBInit(TIFFCIELabToRGB *cielab, const TIFFDisplay *display,
     dfGamma = 1.0 / cielab->display.d_gammaG;
     cielab->gstep =
         (cielab->display.d_YCR - cielab->display.d_Y0R) / cielab->range;
-    for (i = 0; i <= cielab->range; i++)
+    for (i = 0; i <= (size_t)cielab->range; i++)
     {
         cielab->Yg2g[i] = cielab->display.d_Vrwg *
                           ((float)pow((double)i / cielab->range, dfGamma));
@@ -166,7 +166,7 @@ int TIFFCIELabToRGBInit(TIFFCIELabToRGB *cielab, const TIFFDisplay *display,
     dfGamma = 1.0 / cielab->display.d_gammaB;
     cielab->bstep =
         (cielab->display.d_YCR - cielab->display.d_Y0R) / cielab->range;
-    for (i = 0; i <= cielab->range; i++)
+    for (i = 0; i <= (size_t)cielab->range; i++)
     {
         cielab->Yb2b[i] = cielab->display.d_Vrwb *
                           ((float)pow((double)i / cielab->range, dfGamma));
