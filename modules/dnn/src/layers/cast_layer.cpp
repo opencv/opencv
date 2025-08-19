@@ -7,8 +7,27 @@
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
 
-
 namespace cv { namespace dnn {
+
+namespace
+{
+    inline void convertToBF16(const Mat& src, Mat& dst)
+    {
+        const int ddepth = dst.depth();
+        if (ddepth == CV_16BF)
+        {
+            src.convertTo(dst, CV_16BF, 1, 0, Mat::BF16Policy_Truncate);
+            return;
+        }
+        if (ddepth == CV_16U)
+        {
+            Mat dst_bf16(dst.size(), CV_MAKETYPE(CV_16BF, dst.channels()), dst.data, dst.step);
+            src.convertTo(dst_bf16, CV_16BF, 1, 0, Mat::BF16Policy_Truncate);
+            return;
+        }
+        CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
+    }
+}
 
 class CastLayerImpl CV_FINAL : public CastLayer
 {
@@ -26,9 +45,9 @@ public:
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
-                                 const int requiredOutputs,
-                                 std::vector<MatShape> &outputs,
-                                 std::vector<MatShape> &internals) const CV_OVERRIDE
+                                const int requiredOutputs,
+                                std::vector<MatShape> &outputs,
+                                std::vector<MatShape> &internals) const CV_OVERRIDE
     {
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         outputs.assign(1, inputs[0]);
@@ -41,8 +60,10 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        if (preferableTarget == DNN_TARGET_OPENCL_FP16 && outputType == CV_32F)
-            outputs.assign(1, CV_16F);
+        if (outputType == CV_16F)
+            outputs.assign(1, CV_32F);
+        else if (outputType == CV_16BF)
+            outputs.assign(1, CV_16U);
         else
             outputs.assign(1, outputType);
     }
@@ -80,10 +101,46 @@ public:
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
-        if (inputs[0].depth() == outputs[0].depth())
-            inputs[0].copyTo(outputs[0]);
+        const Mat& src0 = inputs[0];
+        Mat& dst0 = outputs[0];
+
+        if (src0.type() == dst0.type())
+        {
+            if (!(outputType == CV_16F && dst0.depth() == CV_32F))
+            {
+                src0.copyTo(dst0);
+                return;
+            }
+        }
+
+        Mat src = src0.isContinuous() ? src0 : src0.clone();
+        Mat dst = dst0.isContinuous() ? dst0 : dst0.clone();
+
+        const int sdepth = src.depth();
+        const int ddepth = dst.depth();
+
+        if (outputType == CV_16BF && (ddepth == CV_16BF || ddepth == CV_16U))
+        {
+            convertToBF16(src, dst);
+        }
+        else if (sdepth == CV_16BF)
+        {
+            src.convertTo(dst, ddepth);
+        }
         else
-            inputs[0].convertTo(outputs[0], outputs[0].depth());
+        {
+            src.convertTo(dst, ddepth);
+        }
+
+        if (outputType == CV_16F && ddepth == CV_32F)
+        {
+            Mat tmp16;
+            src.convertTo(tmp16, CV_16F);
+            tmp16.convertTo(dst, CV_32F);
+        }
+
+        if (dst.data != dst0.data)
+            dst.copyTo(dst0);
     }
 
 #ifdef HAVE_DNN_NGRAPH
