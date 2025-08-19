@@ -51,7 +51,7 @@ def print_exif(path):
         print("Failed to encode EXIF")
         return
 
-    new_metadata = [np.frombuffer(raw_exif_data, dtype=np.uint8), metadata[1], metadata[2]]
+    new_metadata = (np.frombuffer(raw_exif_data, dtype=np.uint8),) + metadata[1:]
 
     _, buf = cv.imencodeWithMetadata(".jpg", img, metadata_types, new_metadata)
 
