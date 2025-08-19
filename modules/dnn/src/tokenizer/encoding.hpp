@@ -77,4 +77,3 @@ CV_EXPORTS Encoding getEncodingForCl100k_baseFromJSON_FS(const std::string &name
 
 
 }}}
-

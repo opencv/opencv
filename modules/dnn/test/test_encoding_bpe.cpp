@@ -3,7 +3,6 @@
 #include "../src/tokenizer/encoding.hpp"
 #include "../src/tokenizer/utils.hpp"
 #include "../include/opencv2/dnn/tokenizer.hpp"
-#include "../src/tokenizer/gpt2_tokenizer_fast.hpp"
 #include <fstream>
 #include <sstream>
 #include <unordered_set>
@@ -42,16 +41,14 @@ static std::string _tf_wikitext(tstring filename) {
 
 
 TEST(EncodingBPE, EncodingDecode_GPT2) {
-    std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained(vocab_bpe);
+   Tokenizer gpt2_tok = Tokenizer::load(_tf_gpt2(""));
     std::string sent = gpt2_tok.decode({31373, 995});
     std::string expected = "hello world";
     EXPECT_EQ(sent, expected);
 }
 
 TEST(EncodingBPE, EncodeWithAllowedSpecial_ALL) {
-    std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained(vocab_bpe);
+    Tokenizer gpt2_tok = Tokenizer::load(_tf_gpt2(""));
     // "__ALL__" is  sentinel for all special tokens
     std::unordered_set<std::string> allowedSpecial = {"__ALL__"};
     std::vector<int> tokens = gpt2_tok.encode("hello <|endoftext|>", allowedSpecial);
@@ -60,8 +57,7 @@ TEST(EncodingBPE, EncodeWithAllowedSpecial_ALL) {
 }
 
 TEST(EncodingBPE, SimpleRepeated_GPT2) {
-    std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained(vocab_bpe);
+    Tokenizer gpt2_tok = Tokenizer::load(_tf_gpt2(""));
     EXPECT_EQ(gpt2_tok.encode("0"), std::vector<int>({15}));
     EXPECT_EQ(gpt2_tok.encode("00"), std::vector<int>({405}));
     EXPECT_EQ(gpt2_tok.encode("000"), std::vector<int>({830}));
@@ -82,8 +78,7 @@ TEST(EncodingBPE, SimpleRepeated_GPT2) {
 }
 
 TEST(EncodingBPE, CatastrophicallyRepetitive_GPT2) {
-    std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-    GPT2TokenizerFast gpt2_tok = GPT2TokenizerFast::from_pretrained(vocab_bpe);
+    Tokenizer gpt2_tok = Tokenizer::load(_tf_gpt2(""));
     std::vector<std::string> chars = {"^", "0", "a", "'s", " ", "\n"};
     for (const auto& c : chars) {
         std::string big_value(c.size() == 1 ? 10000 : 10000 * c.size(), c[0]);
@@ -108,8 +103,7 @@ TEST(EncodingBPE, Tokenizer_GPT2) {
 }
 
 TEST(EncodingBPE, GPT2Fast) {
-    std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-    GPT2TokenizerFast tok = GPT2TokenizerFast::from_pretrained(vocab_bpe);
+    Tokenizer tok = Tokenizer::load(_tf_gpt2(""));
     std::vector<int> ids = tok.encode("hello world");
     std::vector<int> expected{31373, 995};
     EXPECT_EQ(ids, expected);

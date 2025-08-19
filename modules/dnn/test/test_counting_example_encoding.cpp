@@ -2,7 +2,6 @@
 #include "../src/tokenizer/core_bpe.hpp"
 #include "../src/tokenizer/encoding.hpp"
 #include "../src/tokenizer/utils.hpp"
-#include "../src/tokenizer/gpt2_tokenizer_fast.hpp"
 #include "../include/opencv2/dnn/tokenizer.hpp"
 #include <fstream>
 #include <sstream>
@@ -67,8 +66,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
             std::vector<int> tokens = _tok.encode(s);
             return tokens.size();
         } else if (encodingName == "gpt2") {
-            std::string vocab_bpe = _tf_gpt2("vocab.bpe");
-            auto tokenizer = tokenizer::GPT2TokenizerFast::from_pretrained(vocab_bpe);
+            auto tokenizer = tokenizer::Tokenizer::load(_tf_gpt2(""));
             tokenizer::Encoding _encoding = tokenizer.encoding();
             std::vector<uint32_t> tokens = _encoding.encode(s);
             return tokens.size();
@@ -91,7 +89,7 @@ TEST(EncodingBPE_Example, CountingGPT4) {
         std::string voacb_bpe = _tf_gpt2("vocab.bpe");
         std::string cl100k_base = _tf_gpt4("");
         tokenizer::Encoding encoding = (model == "gpt2")
-                            ? tokenizer::GPT2TokenizerFast::from_pretrained(voacb_bpe).encoding()
+                            ? tokenizer::Tokenizer::load(_tf_gpt2("")).encoding()
                             : tokenizer::Tokenizer::load(cl100k_base).encoding();
         int tokens_per_message = 3;
         int tokens_per_name = 1;

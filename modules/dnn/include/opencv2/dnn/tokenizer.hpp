@@ -26,7 +26,7 @@ public:
                                      const std::unordered_set<std::string>& allowedSpecial={},
                                      const std::unordered_set<std::string>& disallowedSpecial={}) const;
     // Decoding
-    std::string decode(const std::vector<int>& tokens);
+    CV_WRAP std::string decode(const std::vector<int>& tokens);
     // Accessors
     Encoding& encoding() {return *enc_;}
 

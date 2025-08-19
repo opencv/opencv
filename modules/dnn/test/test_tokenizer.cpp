@@ -29,7 +29,7 @@ static std::string _tf_gpt4(tstring filename) {
         return (basetestdir + "/testdata/dnn/llm/gpt4") + filename;
     return (basetestdir + "testdata/dnn/llm/gpt4/") + filename;
 }
-
+ 
 TEST(Tokenizer_BPE, Encoding_GPT4) {
     std::string gpt4_dir = _tf_gpt4("");
     Tokenizer tok = Tokenizer::load(gpt4_dir);
