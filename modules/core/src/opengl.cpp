@@ -1778,7 +1778,7 @@ Context& initializeContextFromGL()
 #  endif
                   0
                 };
-#  if defined(OPENCV_ENABLE_EGL_INTEROP && defined(OPENCV_ENABLE_GLX_INTEROP) //GLX fallback
+#  if defined(OPENCV_ENABLE_EGL_INTEROP) && defined(OPENCV_ENABLE_GLX_INTEROP) //GLX fallback
                 if(properties[4] == CL_EGL_DISPLAY_KHR && properties[3] == (cl_context_properties)EGL_NO_CONTEXT) {
                     properties[3] = (cl_context_properties)glXGetCurrentContext();
                     properties[4] = (cl_context_properties)CL_GLX_DISPLAY_KHR;
