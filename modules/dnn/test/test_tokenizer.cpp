@@ -1,7 +1,5 @@
 #include "test_precomp.hpp"
 #include "../src/tokenizer/core_bpe.hpp"
-#include "../src/tokenizer/encoding.hpp"
-#include "../src/tokenizer/utils.hpp"
 #include "../include/opencv2/dnn/tokenizer.hpp"
 #include <fstream>
 #include <sstream>
@@ -50,6 +48,7 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     Tokenizer tok = Tokenizer::load(gpt2_dir);
     auto ids = tok.encode("hello world");
     for (auto id : ids) std::cout << id << " ";
+    std::cout << std::endl;
     auto txt = tok.decode(ids);
     EXPECT_EQ(txt, "hello world");
 }
@@ -61,5 +60,43 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2_Model) {
     auto text = tok.decode(ids);
     EXPECT_EQ(text, "hello world");
 }
+
+TEST(Tokenizer_BPE, SimpleRepeated_GPT2) {
+    Tokenizer gpt2_tok = Tokenizer::load(_tf_gpt2(""));
+    EXPECT_EQ(gpt2_tok.encode("0"), std::vector<int>({15}));
+    EXPECT_EQ(gpt2_tok.encode("00"), std::vector<int>({405}));
+    EXPECT_EQ(gpt2_tok.encode("000"), std::vector<int>({830}));
+    EXPECT_EQ(gpt2_tok.encode("0000"), std::vector<int>({2388}));
+    EXPECT_EQ(gpt2_tok.encode("00000"), std::vector<int>({20483}));
+    EXPECT_EQ(gpt2_tok.encode("000000"), std::vector<int>({10535}));
+    EXPECT_EQ(gpt2_tok.encode("0000000"), std::vector<int>({24598}));
+    EXPECT_EQ(gpt2_tok.encode("00000000"), std::vector<int>({8269}));
+    EXPECT_EQ(gpt2_tok.encode("000000000"), std::vector<int>({10535, 830}));
+    EXPECT_EQ(gpt2_tok.encode("0000000000"), std::vector<int>({8269, 405}));
+    EXPECT_EQ(gpt2_tok.encode("00000000000"), std::vector<int>({8269, 830}));
+    EXPECT_EQ(gpt2_tok.encode("000000000000"), std::vector<int>({8269, 2388}));
+    EXPECT_EQ(gpt2_tok.encode("0000000000000"), std::vector<int>({8269, 20483}));
+    EXPECT_EQ(gpt2_tok.encode("00000000000000"), std::vector<int>({8269, 10535}));
+    EXPECT_EQ(gpt2_tok.encode("000000000000000"), std::vector<int>({8269, 24598}));
+    EXPECT_EQ(gpt2_tok.encode("0000000000000000"), std::vector<int>({25645}));
+    EXPECT_EQ(gpt2_tok.encode("00000000000000000"), std::vector<int>({8269, 10535, 830}));
+}
+
+TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
+    Tokenizer gpt2_tok = Tokenizer::load(_tf_gpt2(""));
+    std::vector<std::string> chars = {"^", "0", "a", "'s", " ", "\n"};
+    for (const auto& c : chars) {
+        std::string big_value(c.size() == 1 ? 10000 : 10000 * c.size(), c[0]);
+        if (c == "'s") big_value = std::string(10000, '\'') + std::string(10000, 's');
+        EXPECT_EQ(big_value, gpt2_tok.decode(gpt2_tok.encode(big_value)));
+
+        std::string with_space = " " + big_value;
+        EXPECT_EQ(with_space, gpt2_tok.decode(gpt2_tok.encode(with_space)));
+
+        std::string with_newline = big_value + "\n";
+        EXPECT_EQ(with_newline, gpt2_tok.decode(gpt2_tok.encode(with_newline)));
+    }
+}
+
 
 }}

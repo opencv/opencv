@@ -45,11 +45,7 @@ TEST_F(Test_CoreBPE, EncodeOrdinary_Simple) {
     // We choose a tiny regex that first matches "ab" or "cd" as whole,
     // falling back to matching any single char (.)
     static const std::string PAT = R"((?:ab|cd)|.)";
-    auto bpe = CoreBPE::create(
-        ranks.begin(), ranks.end(),
-        special.begin(), special.end(),
-        PAT
-    );
+    CoreBPE bpe = CoreBPE(ranks, special, PAT);
     std::vector<Rank> out = bpe.encodeOrdinary("abcd");
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[0], 0u);  // "ab" → token 0

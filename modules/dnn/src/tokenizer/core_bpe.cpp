@@ -1,3 +1,6 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 /*M///////////////////////////////////////////////////////////////////////////////////////
 //
 //  Portions of this file are inspired by or adapted from the tiktoken Rust
@@ -245,7 +248,7 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
 
     std::vector<Rank> tokens;
     for (auto& subUtf8 : splits) {
-        std::cout << "[" << subUtf8 << "]" << std::endl; 
+        // std::cout << "[" << subUtf8 << "]" << std::endl; 
         ByteVec piece(subUtf8.begin(), subUtf8.end());
         auto it = encoder_.find(piece);
         if (it != encoder_.end()) {
@@ -364,6 +367,7 @@ Rank CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
     } catch (...) {
         throw std::runtime_error("Failed to encode single token: not found in encoder or specialEncoder");
     }
+    return -1;
 }
 
 }}}

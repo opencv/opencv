@@ -1,5 +1,3 @@
-#pragma once
-
 #include <opencv2/core.hpp>
 
 #include <cstdint>
@@ -58,23 +56,6 @@ public:
     explicit CoreBPE(ByteVecRankMap encoder,
             std::unordered_map<std::string, Rank> specialEncoder, 
             const std::string& pattern);
-
-    template<typename EncIter, typename SpecIter>
-    static inline CoreBPE create(EncIter encFirst,
-                                 EncIter encLast,
-                                 SpecIter specFirst,
-                                 SpecIter specLast,
-                                 const std::string& pat) {
-        ByteVecRankMap encMap;
-        for (auto it = encFirst; it != encLast; ++it)
-            encMap[it->first] = it->second;
-
-        std::unordered_map<std::string,Rank> specMap;
-        for (auto it = specFirst; it != specLast; ++it)
-            specMap[it->first] = it->second;
-
-        return CoreBPE(std::move(encMap), std::move(specMap), pat);
-    }
     // Encoding 
     std::vector<Rank> encodeOrdinary(const std::string& text) const;
     std::pair<std::vector<Rank>, std::size_t> encode(const std::string& text,
