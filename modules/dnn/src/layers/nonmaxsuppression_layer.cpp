@@ -14,7 +14,7 @@
 namespace cv {
 namespace dnn {
 
-// ONNX NonMaxSuppression (opset >=10)
+// ONNX NonMaxSuppression (opset 10 and 11)
 // Spec: https://onnx.ai/onnx/operators/onnx__NonMaxSuppression.html
 // Inputs: boxes [B, N, 4], scores [B, C, N], (optional) max_output_boxes_per_class, iou_threshold, score_threshold
 // Output: selected_indices [K, 3] (int64): [batch_idx, class_idx, box_idx]
