@@ -8,7 +8,7 @@
 #include <vector>
 #include <fstream>
 
-namespace cv { namespace dnn { namespace tokenizer {
+namespace cv { namespace dnn { 
 
 static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
 // GPT-4’s cl100k_base split pattern
@@ -27,4 +27,4 @@ static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N
 // The resulting C++ pattern is compatible with std::regex and the tokenizer's Unicode handling logic.
 static const std::string CL100K_BASE = R"CL100K('(?:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
-}}} // namespace cv namespace dnn namespace tokenizer
+}}

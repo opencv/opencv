@@ -1,9 +1,6 @@
 #include "test_precomp.hpp"
-#include "../src/tokenizer/core_bpe.hpp"
 
 namespace opencv_test { namespace  {
-
-using namespace cv::dnn::tokenizer;
 
 class Test_CoreBPE : public ::testing::Test {
 public:

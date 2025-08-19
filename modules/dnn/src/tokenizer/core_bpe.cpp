@@ -35,7 +35,7 @@
 // SOFTWARE.
 //
 ////////////////////////////////////////////////////////////////////////////////////////*/
-#include "core_bpe.hpp"
+#include <opencv2/dnn/dnn.hpp>
 #include "unicode.hpp"
 #include "utils.hpp"
 
@@ -51,7 +51,8 @@
 #include <optional>
 #include <iostream>
 
-namespace cv { namespace dnn { namespace tokenizer {
+namespace cv { namespace dnn { 
+CV__DNN_INLINE_NS_BEGIN
 
 static constexpr Rank RANK_MAX  = std::numeric_limits<Rank>::max();
 static constexpr std::size_t SZ_MAX = std::numeric_limits<std::size_t>::max();
@@ -369,5 +370,5 @@ Rank CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
     }
     return -1;
 }
-
-}}}
+CV__DNN_INLINE_NS_END
+}}

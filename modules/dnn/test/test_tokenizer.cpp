@@ -1,5 +1,4 @@
 #include "test_precomp.hpp"
-#include "../src/tokenizer/core_bpe.hpp"
 #include "../include/opencv2/dnn/tokenizer.hpp"
 #include <fstream>
 #include <sstream>
@@ -7,8 +6,6 @@
 #include <algorithm>
 
 namespace opencv_test { namespace  {
-
-using namespace cv::dnn::tokenizer;
 
 template<typename tstring>
 static std::string _tf_gpt2(tstring filename) {

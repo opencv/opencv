@@ -5,16 +5,16 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <limits>
-#include "../../../src/tokenizer/core_bpe.hpp"
+#include <opencv2/dnn/dnn.hpp>
 
-namespace cv { namespace dnn { namespace tokenizer {
+namespace cv { namespace dnn { 
 
 class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
 
     CV_WRAP Tokenizer();
     Tokenizer(std::shared_ptr<CoreBPE> core);
-    CV_WRAP static Tokenizer load(const std::string& model_dir); 
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_dir); 
     // Encoding
     CV_WRAP std::vector<int> encode(const std::string& text);
     // Decoding
@@ -23,5 +23,5 @@ private:
     std::shared_ptr<CoreBPE> coreBPE_;
 };
 
-}}}
+}}
 

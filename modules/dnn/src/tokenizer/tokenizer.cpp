@@ -1,7 +1,8 @@
 #include "../../include/opencv2/dnn/tokenizer.hpp"
 #include "utils.hpp"
+#include "unicode.hpp"
 
-namespace cv { namespace dnn { namespace tokenizer {
+namespace cv { namespace dnn { 
 
 Tokenizer::Tokenizer() : coreBPE_(nullptr) {}
 
@@ -101,7 +102,7 @@ CoreBPE getEncodingForGPT2FromJSON(const std::string &name, const std::string& j
             }
         }
     }
-    
+
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), R50K_UTF8);
 }
 
@@ -189,4 +190,4 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
     return tok;
 }
 
-}}}
+}}
