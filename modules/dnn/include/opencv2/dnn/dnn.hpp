@@ -2077,34 +2077,32 @@ public:
     CV_WRAP int getMaxCandidates() const;
 };
 
-using Rank = std::uint32_t;
-using ByteVec = std::vector<std::uint8_t>;
 
 struct ByteVecHash {
-    std::size_t operator()(const ByteVec& v) const noexcept {
+    std::size_t operator()(const std::vector<std::uint8_t>& v) const noexcept {
         std::size_t h = 0;
         for (auto b : v) h = h * 31u + static_cast<std::size_t>(b);
         return h;
     }
 };
 
-using ByteVecRankMap = std::unordered_map<ByteVec, Rank, ByteVecHash>;
+using ByteVecRankMap = std::unordered_map<std::vector<std::uint8_t>, std::uint32_t, ByteVecHash>;
 
 // scan adjacent byte-pairs to find the lowest-rank merge, splice them out, 
 // update neighboring ranks, and repeat until no mergeable pair remains
-CV_EXPORTS std::vector<std::pair<std::size_t, Rank>> bytePairMerge(const ByteVecRankMap& ranks, 
-                                                        const ByteVec& piece);
+CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks, 
+                                                        const std::vector<std::uint8_t>& piece);
 
 // map a single-byte slice directly to its rank if present, or else call the merge loop 
 // and then translate each resulting segment into its rank
-CV_EXPORTS std::vector<Rank> bytePairEncode(const ByteVec& piece, 
+CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece, 
                                  const ByteVecRankMap& ranks);
 
 // return the raw byte-sequence segments before ranking by using the same merge boundaries
-CV_EXPORTS std::vector<ByteVec> bytePairSplit(const ByteVec& piece, 
+CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(const std::vector<std::uint8_t>& piece, 
                                    const ByteVecRankMap& ranks);
 
-CV_EXPORTS std::vector<ByteVec> bytePairSplit(std::string& s,
+CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(std::string& s,
                                    const ByteVecRankMap& ranks);
 
 
@@ -2112,29 +2110,43 @@ class CV_EXPORTS CoreBPE {
 public:
     CoreBPE(); 
     explicit CoreBPE(ByteVecRankMap encoder,
-            std::unordered_map<std::string, Rank> specialEncoder, 
+            std::unordered_map<std::string, std::uint32_t> specialEncoder, 
             const std::string& pattern);
     // Encoding 
-    std::vector<Rank> encodeOrdinary(const std::string& text) const;
-    std::pair<std::vector<Rank>, std::size_t> encode(const std::string& text,
+    std::vector<std::uint32_t> encodeOrdinary(const std::string& text) const;
+    std::pair<std::vector<std::uint32_t>, std::size_t> encode(const std::string& text,
                                                      const std::unordered_set<std::string>& allowedSpecial) const;
-    Rank encodeSingleToken(std::vector<uint8_t>& piece) const;
+    std::uint32_t encodeSingleToken(std::vector<uint8_t>& piece) const;
     // Decode
-    std::optional<ByteVec> decodeBytes(const std::vector<Rank>& tokens) const;
-    std::vector<uint8_t> decodeSingleTokenBytes(const Rank token) const;
+    std::optional<std::vector<std::uint8_t>> decodeBytes(const std::vector<std::uint32_t>& tokens) const;
+    std::vector<uint8_t> decodeSingleTokenBytes(const std::uint32_t token) const;
     
 private:
     ByteVecRankMap encoder_;
-    std::unordered_map<std::string, Rank> specialEncoder_;
-    std::unordered_map<Rank, ByteVec>  decoder_;          
-    std::unordered_map<Rank, ByteVec>  specialDecoder_;
-    std::unordered_map<std::string, Rank>  specialStringDecoder_;   
+    std::unordered_map<std::string, std::uint32_t> specialEncoder_;
+    std::unordered_map<std::uint32_t, std::vector<std::uint8_t>>  decoder_;          
+    std::unordered_map<std::uint32_t, std::vector<std::uint8_t>>  specialDecoder_;
+    std::unordered_map<std::string, std::uint32_t>  specialStringDecoder_;   
     std::string pattern_;
     std::string specialPattern_;
-    std::vector<ByteVec> sortedTokenBytes_;
-    std::string makeSpecialPattern(const std::unordered_map<std::string, Rank>& special);
+    std::vector<std::vector<std::uint8_t>> sortedTokenBytes_;
+    std::string makeSpecialPattern(const std::unordered_map<std::string, std::uint32_t>& special);
 };
 
+
+class CV_EXPORTS_W_SIMPLE Tokenizer {
+public:
+
+    CV_WRAP Tokenizer();
+    Tokenizer(std::shared_ptr<CoreBPE> core);
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_dir); 
+    // Encoding
+    CV_WRAP std::vector<int> encode(const std::string& text);
+    // Decoding
+    std::string decode(const std::vector<int>& tokens);
+private:
+    std::shared_ptr<CoreBPE> coreBPE_;
+};
 
 //! @}
 CV__DNN_INLINE_NS_END

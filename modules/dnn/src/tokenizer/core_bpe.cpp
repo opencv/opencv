@@ -54,10 +54,10 @@
 namespace cv { namespace dnn { 
 CV__DNN_INLINE_NS_BEGIN
 
-static constexpr Rank RANK_MAX  = std::numeric_limits<Rank>::max();
+static constexpr std::uint32_t RANK_MAX  = std::numeric_limits<std::uint32_t>::max();
 static constexpr std::size_t SZ_MAX = std::numeric_limits<std::size_t>::max();
 
-static Rank maybeGetRank(const ByteVecRankMap& ranks, const ByteVec& key) {
+static std::uint32_t maybeGetRank(const ByteVecRankMap& ranks, const std::vector<std::uint8_t>& key) {
     auto it = ranks.find(key);
     return it == ranks.end() ? RANK_MAX : it->second;
 }
@@ -72,28 +72,28 @@ static Rank maybeGetRank(const ByteVecRankMap& ranks, const ByteVec& key) {
  * https://github.com/openai/tiktoken/blob/4560a8896f5fb1d35c6f8fd6eee0399f9a1a27ca/src/lib.rs#L17-L73
  *
  */
-std::vector<std::pair<std::size_t, Rank>> bytePairMerge(const ByteVecRankMap& ranks, 
-                                                        const ByteVec& piece) {
-    std::vector<std::pair<std::size_t, Rank>> parts;
+std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks, 
+                                                        const std::vector<std::uint8_t>& piece) {
+    std::vector<std::pair<std::size_t, std::uint32_t>> parts;
     parts.reserve(piece.size() + 1);
 
-    std::pair<Rank, std::size_t> minRank{RANK_MAX, SZ_MAX};
+    std::pair<std::uint32_t, std::size_t> minRank{RANK_MAX, SZ_MAX};
     
     for (std::size_t i = 0; i+1 < piece.size(); ++i) {
-        ByteVec key(piece.begin() + i, piece.begin() + i + 2);
-        Rank r = maybeGetRank(ranks, key);
+        std::vector<std::uint8_t> key(piece.begin() + i, piece.begin() + i + 2);
+        std::uint32_t r = maybeGetRank(ranks, key);
         if (r < minRank.first) minRank = {r, i};
         parts.emplace_back(i, r);
     } 
     parts.emplace_back(piece.size() - 1, RANK_MAX);
     parts.emplace_back(piece.size(), RANK_MAX);
 
-    auto getRank = [&](const std::vector<std::pair<std::size_t, Rank>>& p, 
-                       std::size_t idx) -> Rank {
+    auto getRank = [&](const std::vector<std::pair<std::size_t, std::uint32_t>>& p, 
+                       std::size_t idx) -> std::uint32_t {
         if (idx + 3 < p.size()) {
             std::size_t s = p[idx].first;
             std::size_t e = p[idx+3].first;
-            ByteVec key(piece.begin()+s, piece.begin()+e);
+            std::vector<std::uint8_t> key(piece.begin()+s, piece.begin()+e);
             return maybeGetRank(ranks, key);
         }
         return RANK_MAX;
@@ -107,35 +107,35 @@ std::vector<std::pair<std::size_t, Rank>> bytePairMerge(const ByteVecRankMap& ra
 
         minRank = {RANK_MAX, SZ_MAX};
         for (std::size_t j = 0; j + 1 < parts.size(); ++j) {
-            Rank r = parts[j].second;
+            std::uint32_t r = parts[j].second;
             if (r < minRank.first) minRank = {r, j};
         }
     }
     return parts;
 }
 
-std::vector<Rank> bytePairEncode(const ByteVec& piece, 
+std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece, 
                                  const ByteVecRankMap& ranks) {
 
     if (piece.size() == 1) {
         auto it = ranks.find(piece);
-        return it == ranks.end() ? std::vector<Rank>{} : std::vector<Rank>{it->second};
+        return it == ranks.end() ? std::vector<std::uint32_t>{} : std::vector<std::uint32_t>{it->second};
     }
     auto merged = bytePairMerge(ranks, piece);
-    std::vector<Rank> out; 
+    std::vector<std::uint32_t> out; 
     out.reserve(merged.size()-1);
 
     for (std::size_t i = 0; i+1 <  merged.size(); ++i) {
         std::size_t s = merged[i].first, e = merged[i+1].first;
-        out.push_back(ranks.at(ByteVec(piece.begin()+s, piece.begin()+e)));
+        out.push_back(ranks.at(std::vector<std::uint8_t>(piece.begin()+s, piece.begin()+e)));
     }
     return out;
 }
 
-std::vector<ByteVec> bytePairSplit(const ByteVec& piece, 
+std::vector<std::vector<std::uint8_t>> bytePairSplit(const std::vector<std::uint8_t>& piece, 
                                    const ByteVecRankMap& ranks){
     auto merged = bytePairMerge(ranks, piece);
-    std::vector<ByteVec> out;
+    std::vector<std::vector<std::uint8_t>> out;
     out.reserve(merged.size()-1);
     for (std::size_t i = 0; i+1< merged.size(); ++i) {
         std::size_t s = merged[i].first, e = merged[i+1].first;
@@ -144,14 +144,14 @@ std::vector<ByteVec> bytePairSplit(const ByteVec& piece,
     return out;
 }
 
-std::vector<ByteVec> bytePairSplit(std::string& s,
+std::vector<std::vector<std::uint8_t>> bytePairSplit(std::string& s,
                                    const ByteVecRankMap& ranks)
 {
-    ByteVec bytes(s.begin(), s.end());
+    std::vector<std::uint8_t> bytes(s.begin(), s.end());
     return bytePairSplit(bytes, ranks);
 }
 
-std::string CoreBPE::makeSpecialPattern(const std::unordered_map<std::string, Rank>& special) {
+std::string CoreBPE::makeSpecialPattern(const std::unordered_map<std::string, std::uint32_t>& special) {
     static const std::string meta = R"([.^$|()\[\]{}*+?\\])";
     std::string pat;
     pat.reserve(special.size() * 10);
@@ -180,7 +180,7 @@ CoreBPE::CoreBPE()
 {}
 
 CoreBPE::CoreBPE(ByteVecRankMap encoder,
-            std::unordered_map<std::string, Rank> specialEncoder, 
+            std::unordered_map<std::string, std::uint32_t> specialEncoder, 
             const std::string& pattern) 
     : encoder_(std::move(encoder)),  
       specialEncoder_(std::move(specialEncoder)),
@@ -191,7 +191,7 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
     for (auto& kv : encoder_) 
         decoder_.emplace(kv.second, kv.first);
     for (auto& kv : specialEncoder_) 
-        specialDecoder_.emplace(kv.second, ByteVec(kv.first.begin(), kv.first.end()));
+        specialDecoder_.emplace(kv.second, std::vector<std::uint8_t>(kv.first.begin(), kv.first.end()));
 
     for (const auto& kv : specialDecoder_) {
         std::string str(kv.second.begin(), kv.second.end());
@@ -205,13 +205,13 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
 
 }
 
-std::optional<ByteVec>
-CoreBPE::decodeBytes(const std::vector<Rank>& tokens) const {
-    ByteVec out;
+std::optional<std::vector<std::uint8_t>>
+CoreBPE::decodeBytes(const std::vector<std::uint32_t>& tokens) const {
+    std::vector<std::uint8_t> out;
     out.reserve(tokens.size() * 2);
 
-    for (Rank t : tokens) {
-        const ByteVec* tokenBytes = nullptr;
+    for (std::uint32_t t : tokens) {
+        const std::vector<std::uint8_t>* tokenBytes = nullptr;
 
         auto it = decoder_.find(t);
         if (it != decoder_.end()) {
@@ -230,7 +230,7 @@ CoreBPE::decodeBytes(const std::vector<Rank>& tokens) const {
     return out;
 }
 
-std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const Rank token) const {
+std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const std::uint32_t token) const {
     auto it = decoder_.find(token);
     if (it != decoder_.end()) {
         return it->second;
@@ -242,15 +242,15 @@ std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const Rank token) const {
     throw std::runtime_error("Error in decode single token");
 }
 
-std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
+std::vector<std::uint32_t> CoreBPE::encodeOrdinary(const std::string& txt) const {
 
     std::vector<std::string> regexes{ pattern_ };
     auto splits = unicode_regex_split(txt, regexes);
 
-    std::vector<Rank> tokens;
+    std::vector<std::uint32_t> tokens;
     for (auto& subUtf8 : splits) {
         // std::cout << "[" << subUtf8 << "]" << std::endl; 
-        ByteVec piece(subUtf8.begin(), subUtf8.end());
+        std::vector<std::uint8_t> piece(subUtf8.begin(), subUtf8.end());
         auto it = encoder_.find(piece);
         if (it != encoder_.end()) {
             tokens.push_back(it->second);
@@ -272,11 +272,11 @@ std::vector<Rank> CoreBPE::encodeOrdinary(const std::string& txt) const {
  * https://github.com/openai/tiktoken/blob/4560a8896f5fb1d35c6f8fd6eee0399f9a1a27ca/src/lib.rs#L234-L288
  *
  */
-std::pair<std::vector<Rank>, std::size_t>
+std::pair<std::vector<std::uint32_t>, std::size_t>
 CoreBPE::encode(const std::string& text,
                 const std::unordered_set<std::string>& allowedSpecial) const
 {
-    std::vector<Rank> ret;
+    std::vector<std::uint32_t> ret;
     std::size_t last_piece_token_len = 0;
     size_t start = 0;
 
@@ -325,7 +325,7 @@ CoreBPE::encode(const std::string& text,
             auto splits = unicode_regex_split(segment, regexes);
 
             for (auto& subUtf8 : splits) {
-                ByteVec piece(subUtf8.begin(), subUtf8.end());
+                std::vector<std::uint8_t> piece(subUtf8.begin(), subUtf8.end());
                 auto it = encoder_.find(piece);
                 if (it != encoder_.end()) {
                     last_piece_token_len = 1;
@@ -340,7 +340,7 @@ CoreBPE::encode(const std::string& text,
 
         // If we found a special token, add it and advance
         if (next_special_start != std::string::npos) {
-            Rank token = specialEncoder_.at(matched_special);
+            std::uint32_t token = specialEncoder_.at(matched_special);
             ret.push_back(token);
             start = next_special_end;
             last_piece_token_len = 0;
@@ -353,7 +353,7 @@ CoreBPE::encode(const std::string& text,
     return { ret, last_piece_token_len };
 }
 
-Rank CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
+std::uint32_t CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
     auto it = encoder_.find(piece);
     if (it != encoder_.end()) {
         return it->second;

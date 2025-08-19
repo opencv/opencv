@@ -1,8 +1,9 @@
-#include "../../include/opencv2/dnn/tokenizer.hpp"
+#include <opencv2/dnn/dnn.hpp>
 #include "utils.hpp"
 #include "unicode.hpp"
 
 namespace cv { namespace dnn { 
+CV__DNN_INLINE_NS_BEGIN
 
 Tokenizer::Tokenizer() : coreBPE_(nullptr) {}
 
@@ -21,7 +22,7 @@ std::string Tokenizer::decode(const std::vector<int>& tokens) {
         std::vector<uint32_t> tokens32(tokens.begin(), tokens.end());
         auto opt_bytes = coreBPE_->decodeBytes(tokens32); 
         if (!opt_bytes) throw std::runtime_error("Invalid decode.");
-        const ByteVec& bytes = *opt_bytes;
+        const std::vector<std::uint8_t>& bytes = *opt_bytes;
 
         // Convert bytes to std::string (UTF-8)
         std::string result(reinterpret_cast<const char*>(bytes.data()), bytes.size());
@@ -41,7 +42,7 @@ CoreBPE getEncodingForGPT2FromJSON(const std::string &name, const std::string& j
     }
 
     auto token_to_bytes = [&](const std::string& token_utf8) -> std::vector<uint8_t> {
-        ByteVec out;
+        std::vector<std::uint8_t> out;
         auto cps = unicode_cpts_from_utf8(token_utf8);  
         out.reserve(cps.size());
         for (uint32_t cp : cps) {
@@ -61,7 +62,7 @@ CoreBPE getEncodingForGPT2FromJSON(const std::string &name, const std::string& j
         // std:: cout << key << " ";
         int id = (int)valNode;            // token id
         // std::cout << id << " ";
-        mergeableRanks.emplace(token_to_bytes(key), (Rank)id);
+        mergeableRanks.emplace(token_to_bytes(key), (uint32_t)id);
         max_id = std::max(max_id, id);
     }
 
@@ -76,7 +77,7 @@ CoreBPE getEncodingForGPT2FromJSON(const std::string &name, const std::string& j
 
     // every byte 0..255 must be present as a 1-byte token
     for (int b = 0; b < 256; ++b) {
-        ByteVec key{ (uint8_t)b };
+        std::vector<std::uint8_t> key{ (uint8_t)b };
         if (mergeableRanks.find(key) == mergeableRanks.end()) {
             std::ostringstream oss;
             oss << "Missing singleton byte token 0x" << std::hex << b;
@@ -84,7 +85,7 @@ CoreBPE getEncodingForGPT2FromJSON(const std::string &name, const std::string& j
         }
     }
 
-    std::unordered_map<std::string, Rank> specialTokens;
+    std::unordered_map<std::string, uint32_t> specialTokens;
     FileNode added = fs["added_tokens"];
     if (!added.empty()) {
         for (auto it = added.begin(); it != added.end(); it++) {
@@ -98,7 +99,7 @@ CoreBPE getEncodingForGPT2FromJSON(const std::string &name, const std::string& j
 
             if (id >= 0 && id > max_id) max_id = id;
             if (special && id >= 0 && !content.empty()) {
-                specialTokens.emplace(content, (Rank)id);
+                specialTokens.emplace(content, (uint32_t)id);
             }
         }
     }
@@ -127,7 +128,7 @@ CoreBPE getEncodingForCl100k_baseFromJSON_FS(const std::string &name,
     int max_id = -1;
 
     auto token_to_bytes = [&](const std::string& token_utf8) -> std::vector<uint8_t> {
-        ByteVec out;
+        std::vector<std::uint8_t> out;
         auto cps = unicode_cpts_from_utf8(token_utf8); 
         out.reserve(cps.size());
         for (uint32_t cp : cps) {
@@ -141,11 +142,11 @@ CoreBPE getEncodingForCl100k_baseFromJSON_FS(const std::string &name,
         cv::FileNode val = *it;
         std::string token = val.name();    
         int id = (int)val;
-        mergeableRanks.emplace(token_to_bytes(token), (Rank)id);
+        mergeableRanks.emplace(token_to_bytes(token), (uint32_t)id);
         if (id > max_id) max_id = id;
     }
 
-    std::unordered_map<std::string, Rank> specialTokens;
+    std::unordered_map<std::string, uint32_t> specialTokens;
     cv::FileNode added = fs["added_tokens"];
     if (!added.empty()) {
         for (auto it = added.begin(); it != added.end(); ++it) {
@@ -154,14 +155,14 @@ CoreBPE getEncodingForCl100k_baseFromJSON_FS(const std::string &name,
             int id = -1;          t["id"]      >> id;
             std::string content;  t["content"] >> content;
             if (special && id >= 0 && !content.empty()) {
-                specialTokens.emplace(content, (Rank)id);
+                specialTokens.emplace(content, (uint32_t)id);
                 if (id > max_id) max_id = id;
             }
         }
     }
 
     for (int b = 0; b < 256; ++b) {
-        ByteVec key{ (uint8_t)b };
+        std::vector<std::uint8_t> key{ (uint8_t)b };
         if (mergeableRanks.find(key) == mergeableRanks.end()) {
             std::ostringstream oss; oss << "Missing singleton byte token 0x" << std::hex << b;
             CV_Error(cv::Error::StsError, oss.str());
@@ -189,5 +190,5 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
     }
     return tok;
 }
-
+CV__DNN_INLINE_NS_END
 }}

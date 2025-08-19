@@ -1,9 +1,4 @@
 #include "test_precomp.hpp"
-#include "../include/opencv2/dnn/tokenizer.hpp"
-#include <fstream>
-#include <sstream>
-#include <unordered_set>
-#include <algorithm>
 
 namespace opencv_test { namespace  {
 
