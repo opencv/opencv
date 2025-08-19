@@ -163,8 +163,8 @@ bool encodeExif(const std::vector<std::vector<ExifEntry>>& exif_entries, std::ve
             uint32_t valueSize = count * getExifTagTypeSize(type);
             if (valueSize <= 4)
             {
-                if (entry.getValueAsString().size())
-                    std::memcpy(&data[entryOffset], entry.getValueAsString().c_str(), 4);
+                if (entry.type == TAG_TYPE_UNDEFINED || entry.type == TAG_TYPE_ASCII)
+                    std::memcpy(&data[entryOffset], exifEntryValuetoBytes(entry).data(), 4);
                 else
                 {
                     uint32_t val = entry.getValueAsInt();
