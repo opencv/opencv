@@ -60,66 +60,6 @@ using namespace cv;
 namespace cv
 {
 
-#if defined (HAVE_IPP) && (!IPP_DISABLE_REMAP)
-typedef IppStatus (CV_STDCALL* ippiSetFunc)(const void*, void *, int, IppiSize);
-
-template <int channels, typename Type>
-bool IPPSetSimple(cv::Scalar value, void *dataPointer, int step, IppiSize &size, ippiSetFunc func)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    Type values[channels];
-    for( int i = 0; i < channels; i++ )
-        values[i] = saturate_cast<Type>(value[i]);
-    return func(values, dataPointer, step, size) >= 0;
-}
-
-static bool IPPSet(const cv::Scalar &value, void *dataPointer, int step, IppiSize &size, int channels, int depth)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    if( channels == 1 )
-    {
-        switch( depth )
-        {
-        case CV_8U:
-            return CV_INSTRUMENT_FUN_IPP(ippiSet_8u_C1R, saturate_cast<Ipp8u>(value[0]), (Ipp8u *)dataPointer, step, size) >= 0;
-        case CV_16U:
-            return CV_INSTRUMENT_FUN_IPP(ippiSet_16u_C1R, saturate_cast<Ipp16u>(value[0]), (Ipp16u *)dataPointer, step, size) >= 0;
-        case CV_32F:
-            return CV_INSTRUMENT_FUN_IPP(ippiSet_32f_C1R, saturate_cast<Ipp32f>(value[0]), (Ipp32f *)dataPointer, step, size) >= 0;
-        }
-    }
-    else
-    {
-        if( channels == 3 )
-        {
-            switch( depth )
-            {
-            case CV_8U:
-                return IPPSetSimple<3, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C3R);
-            case CV_16U:
-                return IPPSetSimple<3, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C3R);
-            case CV_32F:
-                return IPPSetSimple<3, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C3R);
-            }
-        }
-        else if( channels == 4 )
-        {
-            switch( depth )
-            {
-            case CV_8U:
-                return IPPSetSimple<4, Ipp8u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_8u_C4R);
-            case CV_16U:
-                return IPPSetSimple<4, Ipp16u>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_16u_C4R);
-            case CV_32F:
-                return IPPSetSimple<4, Ipp32f>(value, dataPointer, step, size, (ippiSetFunc)ippiSet_32f_C4R);
-            }
-        }
-    }
-    return false;
-}
-#endif
 
 /************** interpolation formulas and tables ***************/
 
@@ -1572,57 +1512,7 @@ static bool ocl_logPolar(InputArray _src, OutputArray _dst,
 
 #endif
 
-#if defined HAVE_IPP && !IPP_DISABLE_REMAP
 
-typedef IppStatus (CV_STDCALL * ippiRemap)(const void * pSrc, IppiSize srcSize, int srcStep, IppiRect srcRoi,
-                                           const Ipp32f* pxMap, int xMapStep, const Ipp32f* pyMap, int yMapStep,
-                                           void * pDst, int dstStep, IppiSize dstRoiSize, int interpolation);
-
-class IPPRemapInvoker :
-        public ParallelLoopBody
-{
-public:
-    IPPRemapInvoker(Mat & _src, Mat & _dst, Mat & _xmap, Mat & _ymap, ippiRemap _ippFunc,
-                    int _ippInterpolation, int _borderType, const Scalar & _borderValue, bool * _ok) :
-        ParallelLoopBody(), src(_src), dst(_dst), map1(_xmap), map2(_ymap), ippFunc(_ippFunc),
-        ippInterpolation(_ippInterpolation), borderType(_borderType), borderValue(_borderValue), ok(_ok)
-    {
-        *ok = true;
-    }
-
-    virtual void operator() (const Range & range) const
-    {
-        IppiRect srcRoiRect = { 0, 0, src.cols, src.rows };
-        Mat dstRoi = dst.rowRange(range);
-        IppiSize dstRoiSize = ippiSize(dstRoi.size());
-        int type = dst.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
-
-        if (borderType == BORDER_CONSTANT &&
-                !IPPSet(borderValue, dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, cn, depth))
-        {
-            *ok = false;
-            return;
-        }
-
-        if (CV_INSTRUMENT_FUN_IPP(ippFunc, src.ptr(), ippiSize(src.size()), (int)src.step, srcRoiRect,
-                    map1.ptr<Ipp32f>(), (int)map1.step, map2.ptr<Ipp32f>(), (int)map2.step,
-                    dstRoi.ptr(), (int)dstRoi.step, dstRoiSize, ippInterpolation) < 0)
-            *ok = false;
-        else
-        {
-            CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-        }
-    }
-
-private:
-    Mat & src, & dst, & map1, & map2;
-    ippiRemap ippFunc;
-    int ippInterpolation, borderType;
-    Scalar borderValue;
-    bool * ok;
-};
-
-#endif
 
 }
 
@@ -1736,47 +1626,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
         interpolation = INTER_LINEAR;
 
     int type = src.type(), depth = CV_MAT_DEPTH(type);
-
-#if defined HAVE_IPP && !IPP_DISABLE_REMAP
-    CV_IPP_CHECK()
-    {
-        if ((interpolation == INTER_LINEAR || interpolation == INTER_CUBIC || interpolation == INTER_NEAREST) &&
-                map1.type() == CV_32FC1 && map2.type() == CV_32FC1 &&
-                (borderType == BORDER_CONSTANT || borderType == BORDER_TRANSPARENT))
-        {
-            int ippInterpolation =
-                interpolation == INTER_NEAREST ? IPPI_INTER_NN :
-                interpolation == INTER_LINEAR ? IPPI_INTER_LINEAR : IPPI_INTER_CUBIC;
-
-            ippiRemap ippFunc =
-                type == CV_8UC1 ? (ippiRemap)ippiRemap_8u_C1R :
-                type == CV_8UC3 ? (ippiRemap)ippiRemap_8u_C3R :
-                type == CV_8UC4 ? (ippiRemap)ippiRemap_8u_C4R :
-                type == CV_16UC1 ? (ippiRemap)ippiRemap_16u_C1R :
-                type == CV_16UC3 ? (ippiRemap)ippiRemap_16u_C3R :
-                type == CV_16UC4 ? (ippiRemap)ippiRemap_16u_C4R :
-                type == CV_32FC1 ? (ippiRemap)ippiRemap_32f_C1R :
-                type == CV_32FC3 ? (ippiRemap)ippiRemap_32f_C3R :
-                type == CV_32FC4 ? (ippiRemap)ippiRemap_32f_C4R : 0;
-
-            if (ippFunc)
-            {
-                bool ok;
-                IPPRemapInvoker invoker(src, dst, map1, map2, ippFunc, ippInterpolation,
-                                        borderType, borderValue, &ok);
-                Range range(0, dst.rows);
-                parallel_for_(range, invoker, dst.total() / (double)(1 << 16));
-
-                if (ok)
-                {
-                    CV_IMPL_ADD(CV_IMPL_IPP|CV_IMPL_MT);
-                    return;
-                }
-                setIppErrorStatus();
-            }
-        }
-    }
-#endif
 
     RemapNNFunc nnfunc = 0;
     RemapFunc ifunc = 0;

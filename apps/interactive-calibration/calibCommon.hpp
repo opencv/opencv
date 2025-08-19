@@ -92,6 +92,7 @@ namespace calib
         std::string videoFileName;
         bool flipVertical;
         int camID;
+        int camBackend;
         int fps;
         cv::Size cameraResolution;
         int maxFramesNum;
@@ -117,6 +118,9 @@ namespace calib
         double solverEps;
         int solverMaxIters;
         bool fastSolving;
+        bool rationalModel;
+        bool thinPrismModel;
+        bool tiltedModel;
         double filterAlpha;
 
         internalParameters()
@@ -124,6 +128,9 @@ namespace calib
             solverEps = 1e-7;
             solverMaxIters = 30;
             fastSolving = false;
+            rationalModel = false;
+            thinPrismModel = false;
+            tiltedModel = false;
             filterAlpha = 0.1;
         }
     };
