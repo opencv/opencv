@@ -11,7 +11,7 @@
 
 // ONNX operator: Unique
 // Spec: https://onnx.ai/onnx/operators/onnx__Unique.html
-// Supported opsets: 11+ (axis attribute introduced in opset 11)
+// Supported opsets: 11 (axis attribute introduced in opset 11)
 
 namespace cv {
 namespace dnn {
@@ -49,13 +49,13 @@ public:
 
     void getTypes(const std::vector<MatType>& inputs,
                   const int requiredOutputs,
-                  const int requiredInternals,
+                  const int /*requiredInternals*/,
                   std::vector<MatType>& outputs,
-                  std::vector<MatType>& internals) const CV_OVERRIDE
+                  std::vector<MatType>& /*internals*/) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == 1);
         outputs.resize(requiredOutputs);
-        outputs[0] = MatType(CV_32F);
+        outputs[0] = inputs[0];
         for (int i = 1; i < requiredOutputs; ++i)
             outputs[i] = MatType(CV_64S);
     }
@@ -71,31 +71,21 @@ public:
         const Mat& Xin = inputs[0];
         CV_Assert(Xin.dims >= 1);
 
-        int ax = axis_;
-        if (hasAxis_) {
-            if (ax < 0) ax += Xin.dims;
-            CV_Assert(0 <= ax && ax < Xin.dims);
-        } else {
-            ax = -1;
-        }
-
-        Mat X;
-        if (Xin.depth() == CV_32F) X = Xin;
-        else Xin.convertTo(X, CV_32F);
+        int ax = hasAxis_ ? normalize_axis(axis_, Xin.dims) : -1;
 
         auto kind = outputs_arr.kind();
         if (kind == _InputArray::STD_VECTOR_MAT)
         {
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             CV_Assert(!outs.empty());
-            uniqueAxisBytes(X, outs, ax, sorted_);
+            dispatchByDepth(Xin, outs, ax, sorted_);
         }
         else if (kind == _InputArray::STD_VECTOR_UMAT)
         {
             std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
             CV_Assert(!uouts.empty());
             std::vector<Mat> tmp(uouts.size());
-            uniqueAxisBytes(X, tmp, ax, sorted_);
+            dispatchByDepth(Xin, tmp, ax, sorted_);
             for (size_t i = 0; i < uouts.size(); ++i)
             {
                 if (tmp[i].empty())
@@ -112,116 +102,101 @@ public:
     }
 
 private:
-    void uniqueAxisBytes(const Mat& X, std::vector<Mat>& outs, int ax, bool sorted) const
+    template<typename T, typename WT = T>
+    void uniqueAxisImpl(const Mat& X, std::vector<Mat>& outs, int ax, bool sorted) const
     {
         const int r = X.dims;
 
-        int A = 0;
-        int64 sliceElems = 0;
-        if (ax < 0)
-        {
-            A = (int)X.total();
-            sliceElems = 1;
-        }
-        else
-        {
-            A = X.size[ax];
-            sliceElems = 1;
-            for (int k = 0; k < r; ++k) if (k != ax) sliceElems *= X.size[k];
+        MatShape inShape = shape(X);
+        int dimAxis;
+        size_t outer = 1, inner = 1;
+        if (ax < 0) {
+            dimAxis = (int)X.total();
+        } else {
+            dimAxis = inShape[ax];
+            outer = std::accumulate(inShape.begin(), inShape.begin() + ax, (size_t)1, std::multiplies<int>());
+            inner = std::accumulate(inShape.begin() + ax + 1, inShape.end(), (size_t)1, std::multiplies<int>());
         }
 
-        const size_t elemSz = X.elemSize();
+        const int A = dimAxis;
+        const int64 sliceElems = (ax < 0) ? 1 : (int64)outer * (int64)inner;
 
-        std::vector<std::vector<uchar>> keys(A);
-        keys.assign(A, std::vector<uchar>( (size_t)sliceElems * elemSz ));
+        const T* inPtr = X.ptr<const T>();
 
-        if (ax < 0)
-        {
-            const uchar* base = X.ptr();
-            for (int j = 0; j < A; ++j)
-            {
-                std::memcpy(keys[j].data(), base + (size_t)j * elemSz, elemSz);
+        auto getVal = [&](int u, size_t ob, size_t ij)->WT {
+            if (ax < 0)
+                return static_cast<WT>(inPtr[(size_t)u]);
+            size_t off = ob * (size_t)dimAxis * inner + (size_t)u * inner + ij;
+            return static_cast<WT>(inPtr[off]);
+        };
+
+        std::vector<int> perm(A);
+        std::iota(perm.begin(), perm.end(), 0);
+        auto lessIdx = [&](int ua, int ub){
+            if (ax < 0) {
+                WT va = getVal(ua, 0, 0);
+                WT vb = getVal(ub, 0, 0);
+                if (va < vb) return true;
+                if (va > vb) return false;
+                return ua < ub;
             }
-        }
-        else
-        {
-            std::vector<int> idx(r, 0);
-            std::vector<size_t> stepB(r);
-            for (int k = 0; k < r; ++k) stepB[k] = X.step[k];
-
-            std::vector<int64> mult(r, 0);
-            {
-                int64 m = 1;
-                for (int k = r - 1; k >= 0; --k) {
-                    if (k == ax) continue;
-                    mult[k] = m;
-                    m *= X.size[k];
+            for (size_t ob = 0; ob < outer; ++ob) {
+                for (size_t ij = 0; ij < inner; ++ij) {
+                    WT va = getVal(ua, ob, ij);
+                    WT vb = getVal(ub, ob, ij);
+                    if (va < vb) return true;
+                    if (va > vb) return false;
                 }
             }
+            return false;
+        };
+        std::sort(perm.begin(), perm.end(), lessIdx);
 
-            const uchar* base = X.ptr();
-            int64 total = X.total();
-            for (int64 t = 0; t < total; ++t)
-            {
-                int j = idx[ax];
-                int64 lin = 0;
-                for (int k = 0; k < r; ++k) if (k != ax) lin += (int64)idx[k] * mult[k];
-                uchar* dst = keys[j].data() + (size_t)lin * elemSz;
-                size_t off = 0;
-                for (int k = 0; k < r; ++k) off += (size_t)idx[k] * stepB[k];
-                const uchar* src = base + off;
-                std::memcpy(dst, src, elemSz);
-                for (int k = r - 1; k >= 0; --k) {
-                    if (++idx[k] < X.size[k]) break;
-                    idx[k] = 0;
+        auto eqIdx = [&](int ua, int ub){
+            if (ax < 0)
+                return getVal(ua, 0, 0) == getVal(ub, 0, 0);
+            for (size_t ob = 0; ob < outer; ++ob) {
+                for (size_t ij = 0; ij < inner; ++ij) {
+                    if (getVal(ua, ob, ij) != getVal(ub, ob, ij))
+                        return false;
                 }
             }
-        }
+            return true;
+        };
 
-        std::unordered_map<std::string, int> where; where.reserve(A*2+1);
-        std::vector<std::string> uniqKeyStr; uniqKeyStr.reserve(A);
+        std::vector<int> groupRepIndex; groupRepIndex.reserve(A);
         std::vector<int> firstJ; firstJ.reserve(A);
         std::vector<int64> counts; counts.reserve(A);
         std::vector<int> inv(A, -1);
 
-        auto keyToStr = [](const std::vector<uchar>& v)->std::string {
-            return std::string(reinterpret_cast<const char*>(v.data()), v.size());
-        };
-
-        for (int j = 0; j < A; ++j) {
-            std::string s = keyToStr(keys[j]);
-            auto it = where.find(s);
-            if (it == where.end()) {
-                int yi = (int)uniqKeyStr.size();
-                where.emplace(s, yi);
-                uniqKeyStr.push_back(std::move(s));
-                firstJ.push_back(j);
-                counts.push_back(1);
-                inv[j] = yi;
-            } else {
-                counts[it->second] += 1;
-                inv[j] = it->second;
+        int g = 0;
+        for (int pos = 0; pos < A; )
+        {
+            int start = pos;
+            int minJ = perm[pos];
+            int64 cnt = 0;
+            while (pos < A && eqIdx(perm[start], perm[pos])) {
+                inv[ perm[pos] ] = g;
+                minJ = std::min(minJ, perm[pos]);
+                ++cnt;
+                ++pos;
             }
+            groupRepIndex.push_back(perm[start]);
+            firstJ.push_back(minJ);
+            counts.push_back(cnt);
+            ++g;
         }
 
-        std::vector<int> order(uniqKeyStr.size());
+        std::vector<int> order((int)groupRepIndex.size());
         std::iota(order.begin(), order.end(), 0);
         if (sorted) {
-            const size_t elemSzBytes = elemSz;
-            const size_t elemsPerSlice = (size_t)sliceElems;
-            auto numericLess = [&](int a, int b){
-                const std::string& sa = uniqKeyStr[a];
-                const std::string& sb = uniqKeyStr[b];
-                for (size_t i = 0; i < elemsPerSlice; ++i) {
-                    float va, vb;
-                    std::memcpy(&va, sa.data() + i * elemSzBytes, sizeof(float));
-                    std::memcpy(&vb, sb.data() + i * elemSzBytes, sizeof(float));
-                    if (va < vb) return true;
-                    if (va > vb) return false;
-                }
-                return false;
+            auto lessRep = [&](int ga, int gb){
+                return lessIdx(groupRepIndex[ga], groupRepIndex[gb]);
             };
-            std::sort(order.begin(), order.end(), numericLess);
+            std::sort(order.begin(), order.end(), lessRep);
+        } else {
+            auto firstOccurLess = [&](int ga, int gb){ return firstJ[ga] < firstJ[gb]; };
+            std::sort(order.begin(), order.end(), firstOccurLess);
         }
 
         std::vector<int> remap(order.size());
@@ -231,13 +206,12 @@ private:
         if (ax < 0)
         {
             MatShape yshape(1); yshape[0] = (int)order.size();
-            outs[0].fit(yshape, CV_32F);
-            float* yp = outs[0].ptr<float>();
+            outs[0].fit(yshape, X.type());
+            T* yp = outs[0].ptr<T>();
             for (int yi = 0; yi < (int)order.size(); ++yi)
             {
-                float v;
-                std::memcpy(&v, uniqKeyStr[ order[yi] ].data(), sizeof(float));
-                yp[yi] = v;
+                int u = groupRepIndex[ order[yi] ];
+                yp[yi] = inPtr[(size_t)u];
             }
         }
         else
@@ -246,17 +220,16 @@ private:
             for (int k = 0; k < r; ++k) ysz[k] = X.size[k];
             ysz[ax] = (int)order.size();
             MatShape yshape(ysz);
-            outs[0].fit(yshape, CV_32F);
+            outs[0].fit(yshape, X.type());
 
             parallel_for_(Range(0, (int)order.size()), [&](const Range& rq){
                 std::vector<int> yidx(r, 0);
-                const size_t outElemSz = outs[0].elemSize();
                 std::vector<size_t> ystepB(r);
                 for (int k = 0; k < r; ++k) ystepB[k] = outs[0].step[k];
 
                 for (int q = rq.start; q < rq.end; ++q) {
                     int oldq = order[q];
-                    const std::string& blob = uniqKeyStr[oldq];
+                    int oldu = groupRepIndex[oldq];
 
                     std::fill(yidx.begin(), yidx.end(), 0);
                     int64 wrote = 0;
@@ -265,9 +238,13 @@ private:
                         yidx[ax] = q;
                         size_t yoff = 0;
                         for (int k = 0; k < r; ++k) yoff += (size_t)yidx[k] * ystepB[k];
-                        uchar* yptr = outs[0].ptr() + yoff;
-                        const uchar* sp = reinterpret_cast<const uchar*>(blob.data()) + (size_t)wrote * outElemSz;
-                        std::memcpy(yptr, sp, outElemSz);
+                        T* yptrT = reinterpret_cast<T*>(outs[0].ptr() + yoff);
+
+                        size_t ob = (size_t)(wrote / (int64)inner);
+                        size_t ij = (size_t)(wrote % (int64)inner);
+                        size_t srcOff = ob * (size_t)dimAxis * inner + (size_t)oldu * inner + ij;
+                        const T vs = inPtr[srcOff];
+                        *yptrT = vs;
                         wrote++;
 
                         for (int k = r - 1; k >= 0; --k) {
@@ -289,7 +266,7 @@ private:
         }
 
         if (outs.size() > 2) {
-            MatShape invshape(1); invshape[0] = (ax < 0 ? A : A);
+            MatShape invshape(1); invshape[0] = A;
             outs[2].fit(invshape, CV_64S);
             auto invp = outs[2].ptr<int64_t>();
             for (int j = 0; j < A; ++j)
@@ -302,6 +279,27 @@ private:
             auto cp = outs[3].ptr<int64_t>();
             for (int yi = 0; yi < (int)order.size(); ++yi)
                 cp[yi] = counts[ order[yi] ];
+        }
+    }
+
+    void dispatchByDepth(const Mat& X, std::vector<Mat>& outs, int ax, bool sorted) const
+    {
+        switch (X.depth())
+        {
+        case CV_8U:   uniqueAxisImpl<uint8_t          >(X, outs, ax, sorted); break;
+        case CV_8S:   uniqueAxisImpl<int8_t           >(X, outs, ax, sorted); break;
+        case CV_16U:  uniqueAxisImpl<uint16_t         >(X, outs, ax, sorted); break;
+        case CV_16S:  uniqueAxisImpl<int16_t          >(X, outs, ax, sorted); break;
+        case CV_16F:  uniqueAxisImpl<hfloat, float    >(X, outs, ax, sorted); break;
+        case CV_16BF: uniqueAxisImpl<bfloat, float    >(X, outs, ax, sorted); break;
+        case CV_32U:  uniqueAxisImpl<uint32_t         >(X, outs, ax, sorted); break;
+        case CV_32S:  uniqueAxisImpl<int32_t          >(X, outs, ax, sorted); break;
+        case CV_32F:  uniqueAxisImpl<float            >(X, outs, ax, sorted); break;
+        case CV_64U:  uniqueAxisImpl<uint64_t         >(X, outs, ax, sorted); break;
+        case CV_64S:  uniqueAxisImpl<int64_t          >(X, outs, ax, sorted); break;
+        case CV_64F:  uniqueAxisImpl<double           >(X, outs, ax, sorted); break;
+        default:
+            CV_Error(Error::StsUnsupportedFormat, "Unsupported data type for Unique");
         }
     }
 
