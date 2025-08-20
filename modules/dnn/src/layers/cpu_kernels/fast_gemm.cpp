@@ -62,60 +62,60 @@ void fastGemmPackB(const Mat &B, std::vector<float> &packed_B, bool trans, FastG
 
 #if CV_TRY_NEON
     if (opt.use_neon) {
-        int size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
+        size_t size_packed_B = opt_NEON::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B * batch);
         auto *packed_b = (char*)packed_B.data();
         for (int i = 0; i < batch; i++) {
             opt_NEON::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += N * K * esz;
-            packed_b += size_packed_B * esz;
+            b += (size_t)N * (size_t)K * (size_t)esz;
+            packed_b += size_packed_B * (size_t)esz;
         }
     } else
 #endif
 #if CV_TRY_AVX2
     if (opt.use_avx2) {
-        int size_packed_B = opt_AVX2::fastGemmPackBSize(N, K);
+        size_t size_packed_B = opt_AVX2::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B * batch);
         auto *packed_b = (char*)packed_B.data();
         for (int i = 0; i < batch; i++) {
             opt_AVX2::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += N * K * esz;
-            packed_b += size_packed_B * esz;
+            b += (size_t)N * (size_t)K * (size_t)esz;
+            packed_b += size_packed_B * (size_t)esz;
         }
     } else
 #endif
 #if CV_TRY_AVX
     if (opt.use_avx) {
-        int size_packed_B = opt_AVX::fastGemmPackBSize(N, K);
+        size_t size_packed_B = opt_AVX::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B * batch);
         auto *packed_b = (char*)packed_B.data();
         for (int i = 0; i < batch; i++) {
             opt_AVX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += N * K * esz;
-            packed_b += size_packed_B * esz;
+            b += (size_t)N * (size_t)K * (size_t)esz;
+            packed_b += size_packed_B * (size_t)esz;
         }
     } else
 #endif
 #if CV_TRY_LASX
     if (opt.use_lasx) {
-        int size_packed_B = opt_LASX::fastGemmPackBSize(N, K);
+        size_t size_packed_B = opt_LASX::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B * batch);
         auto *packed_b = (char*)packed_B.data();
         for (int i = 0; i < batch; i++) {
             opt_LASX::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += N * K * esz;
-            packed_b += size_packed_B * esz;
+            b += (size_t)N * (size_t)K * (size_t)esz;
+            packed_b += size_packed_B * (size_t)esz;
         }
     } else
 #endif
     {
-        int size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
+        size_t size_packed_B = cpu_baseline::fastGemmPackBSize(N, K);
         packed_B.resize(size_packed_B * batch);
         auto *packed_b = (char*)packed_B.data();
         for (int i = 0; i < batch; i++) {
             cpu_baseline::fastGemmPackBKernel(b, packed_b, N, K, ldb0, ldb1, esz);
-            b += N * K * esz;
-            packed_b += size_packed_B * esz;
+            b += (size_t)N * (size_t)K * (size_t)esz;
+            packed_b += size_packed_B * (size_t)esz;
         }
     }
 }
