@@ -21,7 +21,9 @@ std::vector<int> Tokenizer::encode(const std::string& text) {
 std::string Tokenizer::decode(const std::vector<int>& tokens) { 
         std::vector<uint32_t> tokens32(tokens.begin(), tokens.end());
         auto opt_bytes = coreBPE_->decodeBytes(tokens32); 
-        if (!opt_bytes) throw std::runtime_error("Invalid decode.");
+        if (!opt_bytes) {
+            CV_Error(cv::Error::StsError, "Invalid decode.");
+        }
         const std::vector<std::uint8_t>& bytes = *opt_bytes;
 
         // Convert bytes to std::string (UTF-8)
@@ -107,7 +109,7 @@ CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& 
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), R50K_UTF8);
 }
 
-CoreBPE getTokenizerForCl100k_baseFromJSON_FS(const std::string &name,
+CoreBPE getTokenizerForCl100kBaseFromJSON_FS(const std::string &name,
                                                          const std::string &json_path)
 {
     if (name != "cl100k_base")
@@ -184,7 +186,7 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
     if (model_type == "gpt2") {
         tok.coreBPE_ = std::make_shared<CoreBPE>(getTokenizerForGPT2FromJSON("gpt2", tok_json));
     } else if (model_type == "gpt4") {
-        tok.coreBPE_ = std::make_shared<CoreBPE>(getTokenizerForCl100k_baseFromJSON_FS("cl100k_base", tok_json));
+        tok.coreBPE_ = std::make_shared<CoreBPE>(getTokenizerForCl100kBaseFromJSON_FS("cl100k_base", tok_json));
     } else {
         CV_Error(cv::Error::StsError, "Unsupported model_type in config.json: " + model_type);
     }

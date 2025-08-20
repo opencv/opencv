@@ -2078,6 +2078,13 @@ public:
 };
 
 
+/** 
+ * @brief Hasher for byte vectors to enable use in unordered_map.
+ *
+ * Computes a simple rolling hash over the bytes.
+ *
+ * @note Intended for internal use with Byte Pair Encoding (BPE) maps.
+ */
 struct ByteVecHash {
     std::size_t operator()(const std::vector<std::uint8_t>& v) const noexcept {
         std::size_t h = 0;
@@ -2086,38 +2093,128 @@ struct ByteVecHash {
     }
 };
 
+/** 
+ * @brief Map from raw byte-sequence tokens to their merge rank / token id.
+ *
+ * Keys are byte sequences (not Unicode code points). Values are the
+ * token ids/ranks used by the BPE encoder/decoder.
+ */
 using ByteVecRankMap = std::unordered_map<std::vector<std::uint8_t>, std::uint32_t, ByteVecHash>;
 
-// scan adjacent byte-pairs to find the lowest-rank merge, splice them out, 
-// update neighboring ranks, and repeat until no mergeable pair remains
+/** 
+ * @brief Merge-adjacent byte pairs by increasing rank until no mergeable pair remains.
+ *
+ * Scans adjacent byte pairs in @p piece, repeatedly splicing out the minimal-rank
+ * pair (highest merge priority) and updating neighboring ranks, until no pair
+ * appears in @p ranks. Returns the final segmentation as a list of split
+ * boundaries and their ranks.
+ *
+ * @param ranks  Map of mergeable byte pairs (key = 2+ byte token, value = rank/id).
+ * @param piece  Input bytes for a single text span (UTF-8 already flattened to bytes).
+ * @return Vector of (start_index, rank) pairs describing token boundaries after merging.
+ *         The last element is a sentinel boundary at @c piece.size().
+ *
+ * @note This is the low-level merge routine used by BPE; it does not translate
+ *       segments into ids. For that, see bytePairEncode().
+ * @see bytePairEncode, bytePairSplit
+ */
 CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks, 
                                                         const std::vector<std::uint8_t>& piece);
 
-// map a single-byte slice directly to its rank if present, or else call the merge loop 
-// and then translate each resulting segment into its rank
+/** 
+ * @brief Encode a byte sequence into token ids using BPE merge rules.
+ *
+ * If @p piece is a single byte present in @p ranks, returns that id directly.
+ * Otherwise, runs the merge loop (bytePairMerge) and maps each resulting segment
+ * to its id via @p ranks.
+ *
+ * @param piece  Input bytes (one text span already split by regex).
+ * @param ranks  Map from byte-sequence tokens to ids (includes all singletons 0..255).
+ * @return Token ids produced by BPE for the given @p piece.
+ *
+ * @see bytePairMerge, bytePairSplit
+ */
 CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece, 
                                  const ByteVecRankMap& ranks);
 
-// return the raw byte-sequence segments before ranking by using the same merge boundaries
+/** 
+ * @brief Split a byte sequence into BPE token byte-spans (no id translation).
+ *
+ * Applies the same merge boundaries as bytePairEncode(), but returns the raw
+ * byte segments instead of ids.
+ *
+ * @param piece  Input bytes.
+ * @param ranks  Map from byte-sequence tokens to ids (used only to test mergeability).
+ * @return Vector of byte slices corresponding to final BPE tokens.
+ *
+ * @see bytePairEncode
+ */
 CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(const std::vector<std::uint8_t>& piece, 
                                    const ByteVecRankMap& ranks);
 
+/** 
+ * @overload
+ * @brief Split a UTF-8 string into BPE token byte-spans (no id translation).
+ *
+ * Converts @p s to bytes and calls the byte-vector overload.
+ *
+ * @param s      UTF-8 string (will be copied to bytes).
+ * @param ranks  Map used to determine mergeability.
+ * @return Vector of byte slices corresponding to final BPE tokens.
+ */
 CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(std::string& s,
                                    const ByteVecRankMap& ranks);
 
-
+/** 
+ * @brief Core Byte Pair Encoding (BPE) engine (mergeable-ranks model).
+ *
+ * Encodes and decodes tokens at the byte level (UTF-8 input is split to bytes),
+ * with optional support for special tokens that are matched by a separate regex.
+ *
+ * The implementation follows the structure of OpenAI’s tiktoken encoders.
+ */
 class CV_EXPORTS CoreBPE {
 public:
     CoreBPE(); 
     explicit CoreBPE(ByteVecRankMap encoder,
             std::unordered_map<std::string, std::uint32_t> specialEncoder, 
             const std::string& pattern);
-    // Encoding 
+
+    /** 
+     * @brief Encode text with ordinary BPE (no special tokens).
+     *
+     * Splits @p text using @c pattern_ and applies BPE over each split.
+     *
+     * @param text  UTF-8 input.
+     * @return Vector of token ids.
+     */
     std::vector<std::uint32_t> encodeOrdinary(const std::string& text) const;
+
+    /** 
+     * @brief Encode text with optional special tokens.
+     *
+     * Scans @p text for allowed special tokens, emits them as single ids,
+     * and BPE-encodes the intervening ordinary segments.
+     *
+     * @param text            UTF-8 input.
+     * @param allowedSpecial  Set of literal special-token strings that may appear and be emitted.
+     * @return Pair @c (tokens, last_piece_token_len) where:
+     *         - @c tokens is the full token sequence,
+     *         - @c last_piece_token_len is the number of tokens produced by the final ordinary segment
+     *           (0 if the text ended with a special token).
+     */
     std::pair<std::vector<std::uint32_t>, std::size_t> encode(const std::string& text,
                                                      const std::unordered_set<std::string>& allowedSpecial) const;
     std::uint32_t encodeSingleToken(std::vector<uint8_t>& piece) const;
-    // Decode
+    
+     /** 
+      * @brief Decode a sequence of token ids into raw bytes.
+     *
+     * Looks up ids in either the mergeable-token or special-token decoders.
+     *
+     * @param tokens  Token ids.
+     * @return Decoded bytes on success, or @c std::nullopt if any id is unknown.
+     */
     std::optional<std::vector<std::uint8_t>> decodeBytes(const std::vector<std::uint32_t>& tokens) const;
     std::vector<uint8_t> decodeSingleTokenBytes(const std::uint32_t token) const;
     
@@ -2133,16 +2230,52 @@ private:
     std::string makeSpecialPattern(const std::unordered_map<std::string, std::uint32_t>& special);
 };
 
-
+/** 
+ * @brief High-level tokenizer wrapper for DNN usage.
+ *
+ * Provides a simple API to @c encode and @c decode text using a @c CoreBPE instance.
+ * Models are loaded via Tokenizer::load().
+ *
+ * @par Example
+ * @code
+ * using namespace cv::dnn;
+ * Tokenizer tok = Tokenizer::load("/path/to/model/"); 
+ * std::vector<int> ids = tok.encode("hello world");
+ * std::string text = tok.decode(ids);
+ * @endcode
+ */
 class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
-
     CV_WRAP Tokenizer();
     Tokenizer(std::shared_ptr<CoreBPE> core);
+
+    /** 
+     * @brief Load a tokenizer from a model directory.
+     *
+     * Expects the directory to contain:
+     *  - @c config.json with field @c "model_type" in {\c "gpt2", @c "gpt4"}
+     *  - @c tokenizer.json produced by the corresponding model family.
+     *
+     * @attention The argument is a path prefix; this function concatenates file
+     * names directly (e.g. @c model_dir + "config.json"), so @p model_dir must
+     * end with an appropriate path separator.
+     *
+     * @param model_dir  Directory path prefix to model files.
+     * @return A @c Tokenizer ready for use.
+     * @throw cv::Exception if files are missing or @c model_type is unsupported.
+     */
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_dir); 
-    // Encoding
+
+    /** 
+     * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
+     *
+     * Calls the underlying @c CoreBPE::encode with an empty allowed-special set.
+     *
+     * @param text  UTF-8 input string.
+     * @return Vector of token ids (32-bit ids narrowed to @c int for convenience).
+     */
     CV_WRAP std::vector<int> encode(const std::string& text);
-    // Decoding
+    
     CV_WRAP std::string decode(const std::vector<int>& tokens);
 private:
     std::shared_ptr<CoreBPE> coreBPE_;

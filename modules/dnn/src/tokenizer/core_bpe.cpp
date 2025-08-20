@@ -239,7 +239,7 @@ std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const std::uint32_t token) 
     if (it_spec != specialDecoder_.end()) {
         return it_spec->second;
     } 
-    throw std::runtime_error("Error in decode single token");
+    CV_Error(cv::Error::StsError, "Error in decode single token");
 }
 
 std::vector<std::uint32_t> CoreBPE::encodeOrdinary(const std::string& txt) const {
@@ -366,7 +366,7 @@ std::uint32_t CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
             return sit->second;
         }
     } catch (...) {
-        throw std::runtime_error("Failed to encode single token: not found in encoder or specialEncoder");
+        CV_Error(cv::Error::StsError, "Failed to encode single token: not found in encoder or specialEncoder");
     }
     return -1;
 }
