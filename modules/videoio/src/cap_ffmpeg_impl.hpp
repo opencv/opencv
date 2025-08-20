@@ -685,7 +685,7 @@ void CvCapture_FFMPEG::close()
     if( video_st )
     {
 #ifdef CV_FFMPEG_CODECPAR
-        avcodec_close( context );
+        avcodec_free_context(&context);
 #endif
         video_st = NULL;
     }
@@ -2005,7 +2005,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
     rotation_angle = 0;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
-    data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+    data = av_packet_get_side_data(&packet, AV_PKT_DATA_DISPLAYMATRIX, NULL);
     if (data)
     {
         rotation_angle = -cvRound(av_display_rotation_get((const int32_t*)data));
@@ -2773,7 +2773,7 @@ void CvVideoWriter_FFMPEG::close()
 #else
     /* close codec */
     if (context)  // fixed after https://github.com/FFmpeg/FFmpeg/commit/3e1f507f3e8f16b716aa115552d243b48ae809bd
-        avcodec_close(context);
+        avcodec_free_context(&context);
     context = NULL;
 #endif
 
