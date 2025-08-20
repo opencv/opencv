@@ -5,7 +5,7 @@ RUN apt-get update && apt-get --no-install-recommends install -y \
         libavcodec-dev \
         libavfilter-dev \
         libavformat-dev \
-        libavresample-dev \
+        libswresample-dev \
         libavutil-dev \
         pkg-config \
         cmake \
