@@ -647,7 +647,7 @@ static bool runCalibration( Settings& s, Size& imageSize, Mat& cameraMatrix, Mat
     {
         objectPoints[0][s.boardSize.width - 2].x = objectPoints[0][0].x + grid_width;
     }
-    else if (s.calibrationPattern != Settings::Pattern::CHESSBOARD)
+    else if (s.calibrationPattern == Settings::Pattern::CHESSBOARD)
     {
         objectPoints[0][s.boardSize.width - 1].x = objectPoints[0][0].x + grid_width;
     }

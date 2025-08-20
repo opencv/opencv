@@ -648,6 +648,31 @@
             "jni_var": "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)",
             "suffix": "DDD"
         },
+        "Vec4i": {
+            "j_type": "int[]",
+            "jn_args": [
+                [
+                    "int",
+                    ".val[0]"
+                ],
+                [
+                    "int",
+                    ".val[1]"
+                ],
+                [
+                    "int",
+                    ".val[2]"
+                ],
+                [
+                    "int",
+                    ".val[3]"
+                ]
+            ],
+            "jn_type": "int[]",
+            "jni_type": "jintArray",
+            "jni_var": "Vec4i %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2, %(n)s_val3)",
+            "suffix": "IIII"
+        },
         "c_string": {
             "j_type": "String",
             "jn_type": "String",

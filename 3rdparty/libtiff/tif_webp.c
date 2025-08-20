@@ -47,7 +47,9 @@ typedef struct
 {
     uint16_t nSamples; /* number of samples per pixel */
 
-    int lossless;         /* lossy/lossless compression */
+    int read_error; /* whether a read error has occurred, and which should cause
+                       further reads in the same strip/tile to be aborted */
+    int lossless;   /* lossy/lossless compression */
     int lossless_exact;   /* lossless exact mode. If TRUE, R,G,B values in areas
                              with alpha = 0 will be preserved */
     int quality_level;    /* compression level */
@@ -133,6 +135,16 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     assert(sp != NULL);
     assert(sp->state == LSTATE_INIT_DECODE);
 
+    if (sp->read_error)
+    {
+        memset(op, 0, (size_t)occ);
+        TIFFErrorExtR(tif, module,
+                      "ZIPDecode: Scanline %" PRIu32 " cannot be read due to "
+                      "previous error",
+                      tif->tif_row);
+        return 0;
+    }
+
     if (sp->psDecoder == NULL)
     {
         TIFFDirectory *td = &tif->tif_dir;
@@ -158,12 +170,16 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                              : (uint32_t)tif->tif_rawcc,
                          &webp_width, &webp_height))
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(tif, module, "WebPGetInfo() failed");
             return 0;
         }
         if ((uint32_t)webp_width != segment_width ||
             (uint32_t)webp_height != segment_height)
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(
                 tif, module, "WebP blob dimension is %dx%d. Expected %ux%u",
                 webp_width, webp_height, segment_width, segment_height);
@@ -174,6 +190,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         WebPDecoderConfig config;
         if (!WebPInitDecoderConfig(&config))
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(tif, module, "WebPInitDecoderConfig() failed");
             return 0;
         }
@@ -189,6 +207,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
         if (!bWebPGetFeaturesOK)
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(tif, module, "WebPInitDecoderConfig() failed");
             return 0;
         }
@@ -202,6 +222,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
              */
             !(webp_bands == 3 && sp->nSamples == 4))
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(tif, module,
                           "WebP blob band count is %d. Expected %d", webp_bands,
                           sp->nSamples);
@@ -228,6 +250,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             if (!sp->pBuffer)
             {
                 TIFFErrorExtR(tif, module, "Cannot allocate buffer");
+                memset(op, 0, (size_t)occ);
+                sp->read_error = 1;
                 return 0;
             }
             sp->buffer_size = buffer_size;
@@ -257,6 +281,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
         if (sp->psDecoder == NULL)
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(tif, module, "Unable to allocate WebP decoder.");
             return 0;
         }
@@ -264,6 +290,10 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
     if (occ % sp->sDecBuffer.u.RGBA.stride)
     {
+        // read_error not set here as this is a usage issue that can be
+        // recovered in a following call.
+        memset(op, 0, (size_t)occ);
+        /* Do not set read_error as could potentially be recovered */
         TIFFErrorExtR(tif, module, "Fractional scanlines cannot be read");
         return 0;
     }
@@ -284,6 +314,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         {
             TIFFErrorExtR(tif, module, "Unrecognized error.");
         }
+        memset(op, 0, (size_t)occ);
+        sp->read_error = 1;
         return 0;
     }
     else
@@ -303,6 +335,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             {
                 if (current_y != numberOfExpectedLines)
                 {
+                    memset(op, 0, (size_t)occ);
+                    sp->read_error = 1;
                     TIFFErrorExtR(tif, module,
                                   "Unable to decode WebP data: less lines than "
                                   "expected.");
@@ -332,6 +366,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         }
         else
         {
+            memset(op, 0, (size_t)occ);
+            sp->read_error = 1;
             TIFFErrorExtR(tif, module, "Unable to decode WebP data.");
             return 0;
         }
@@ -450,6 +486,8 @@ static int TWebPPreDecode(TIFF *tif, uint16_t s)
         WebPFreeDecBuffer(&sp->sDecBuffer);
         sp->psDecoder = NULL;
     }
+
+    sp->read_error = 0;
 
     return 1;
 }
