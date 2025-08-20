@@ -2143,7 +2143,7 @@ public:
     // Encoding
     CV_WRAP std::vector<int> encode(const std::string& text);
     // Decoding
-    std::string decode(const std::vector<int>& tokens);
+    CV_WRAP std::string decode(const std::vector<int>& tokens);
 private:
     std::shared_ptr<CoreBPE> coreBPE_;
 };
@@ -2160,3 +2160,5 @@ CV__DNN_INLINE_NS_END
 #include <opencv2/dnn/utils/inference_engine.hpp>
 
 #endif  /* OPENCV_DNN_DNN_HPP */
+
+

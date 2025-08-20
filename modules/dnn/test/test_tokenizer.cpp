@@ -37,6 +37,7 @@ TEST(Tokenizer_BPE, Encoding_GPT4) {
 TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     // std::string vocab_bpe = _tf_gpt2("vocab.bpe");
     std::string gpt2_dir = _tf_gpt2("");
+    std::cout << getOpenCVExtraDir() << std::endl;
     Tokenizer tok = Tokenizer::load(gpt2_dir);
     auto ids = tok.encode("hello world");
     for (auto id : ids) std::cout << id << " ";
