@@ -816,7 +816,7 @@ std::vector<std::string> unicode_regex_split(const std::string & text, const std
 
     return bpe_words;
 
-    // return unicode_byte_encoding_process(bpe_words);
+    return unicode_byte_encoding_process(bpe_words);
 }
 
 }}

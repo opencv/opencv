@@ -1,6 +1,10 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+
+#ifndef __OPENCV_DNN_TOKENIZER_UTILS_HPP__
+#define __OPENCV_DNN_TOKENIZER_UTILS_HPP__
+
 #include <string>
 
 namespace cv { namespace dnn { 
@@ -23,3 +27,5 @@ static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N
 static const std::string CL100K_BASE = R"CL100K('(?:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s)CL100K";
 
 }}
+
+#endif 

@@ -48,6 +48,10 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     std::cout << std::endl;
     auto txt = tok.decode(ids);
     EXPECT_EQ(txt, "hello world");
+
+    auto ids_j = tok.encode("长字符");
+    std::string word = tok.decode(ids_j);
+    std::cout << word << std::endl;
 }
 
 TEST(Tokenizer_BPE, Tokenizer_GPT2_Model) {
@@ -94,6 +98,8 @@ TEST(Tokenizer_BPE, CatastrophicallyRepetitive_GPT2) {
         EXPECT_EQ(with_newline, gpt2_tok.decode(gpt2_tok.encode(with_newline)));
     }
 }
+
+
 
 
 }}
