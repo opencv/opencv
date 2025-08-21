@@ -1,36 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  Adapted from the llama.cpp Unicode functionality:
-//      https://github.com/ggml-org/llama.cpp/blob/master/src/unicode.cpp
-//
-//  This file is part of the OpenCV DNN module for tokenization.
-//
-////////////////////////////////////////////////////////////////////////////////////////*/
-
-/*M///////////////////////////////////////////////////////////////////////////////////////
-// MIT License
-//
-// Copyright (c) 2023‑2024 The ggml authors
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//
-////////////////////////////////////////////////////////////////////////////////////////*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #if defined(_MSC_VER)
 #define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
@@ -59,6 +29,8 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+namespace cv { namespace dnn {
 
 size_t unicode_len_utf8(char src) {
     const size_t lookup[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4 };
@@ -846,3 +818,5 @@ std::vector<std::string> unicode_regex_split(const std::string & text, const std
 
     // return unicode_byte_encoding_process(bpe_words);
 }
+
+}}

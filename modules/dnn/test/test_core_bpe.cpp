@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #include "test_precomp.hpp"
 
 namespace opencv_test { namespace  {
@@ -45,8 +49,8 @@ TEST_F(Test_CoreBPE, EncodeOrdinary_Simple) {
     CoreBPE bpe = CoreBPE(ranks, special, PAT);
     std::vector<uint32_t> out = bpe.encodeOrdinary("abcd");
     ASSERT_EQ(out.size(), 2u);
-    EXPECT_EQ(out[0], 0u);  // "ab" → token 0
-    EXPECT_EQ(out[1], 1u);  // "cd" → token 1
+    EXPECT_EQ(out[0], 0u);  // "ab" to token 0
+    EXPECT_EQ(out[1], 1u);  // "cd" to token 1
 }
 
 }}
