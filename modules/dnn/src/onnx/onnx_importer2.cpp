@@ -216,7 +216,6 @@ protected:
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize2              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
