@@ -158,13 +158,13 @@ def load_calib_result(path: str | None = None) -> dict[str, Any]:
     }
 
 
-# def repr_flow_seq(dumper, data):
-#     return dumper.represent_sequence('tag:yaml.org,2002:seq',
-#                                      data,
-#                                      flow_style=True)
+def repr_flow_seq(dumper, data):
+    return dumper.represent_sequence('tag:yaml.org,2002:seq',
+                                     data,
+                                     flow_style=True)
 
 
-# yaml.SafeDumper.add_representer(list, repr_flow_seq)
+yaml.SafeDumper.add_representer(list, repr_flow_seq)
 
 
 def save_calib_result(calib, path: str | None = None) -> None:
