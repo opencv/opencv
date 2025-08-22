@@ -685,7 +685,7 @@ void CvCapture_FFMPEG::close()
     if( video_st )
     {
 #ifdef CV_FFMPEG_CODECPAR
-        avcodec_close( context );
+        avcodec_free_context(&context);
 #endif
         video_st = NULL;
     }
@@ -1716,7 +1716,16 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     if (!sw_picture || !sw_picture->data[0])
         return false;
 
-    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format));
+    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format) << ", colorspace: "
+#if LIBAVUTIL_VERSION_MAJOR > 56 || (LIBAVUTIL_VERSION_MAJOR == 56 && LIBAVUTIL_VERSION_MINOR >= 72)
+        << av_color_space_name(sw_picture->colorspace)
+#else
+        << av_get_colorspace_name(sw_picture->colorspace)
+#endif
+        << ", range: " << av_color_range_name(sw_picture->color_range)
+        << ", primaries: " << av_color_primaries_name(sw_picture->color_primaries)
+        << ", transfer: " << av_color_transfer_name(sw_picture->color_trc)
+    );
     const AVPixelFormat result_format = convertRGB ? AV_PIX_FMT_BGR24 : (AVPixelFormat)sw_picture->format;
     switch (result_format)
     {
@@ -1740,6 +1749,9 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = context->coded_width, buffer_height = context->coded_height;
 
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
+        img_convert_ctx = sws_alloc_context();
+#else
         img_convert_ctx = sws_getCachedContext(
                 img_convert_ctx,
                 buffer_width, buffer_height,
@@ -1749,6 +1761,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 SWS_BICUBIC,
                 NULL, NULL, NULL
                 );
+#endif
 
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
@@ -1758,6 +1771,9 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         rgb_picture.format = result_format;
         rgb_picture.width = buffer_width;
         rgb_picture.height = buffer_height;
+        // rgb_picture.color_range = AVCOL_RANGE_JPEG;
+        // rgb_picture.color_primaries = sw_picture->color_primaries;
+        // rgb_picture.color_trc = sw_picture->color_trc;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
         {
             CV_WARN("OutOfMemory");
@@ -1777,7 +1793,9 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
-
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
+    sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
+#else
     sws_scale(
             img_convert_ctx,
             sw_picture->data,
@@ -1786,6 +1804,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             rgb_picture.data,
             rgb_picture.linesize
             );
+#endif
 
     *data = frame.data;
     *step = frame.step;
@@ -2005,7 +2024,13 @@ void CvCapture_FFMPEG::get_rotation_angle()
     rotation_angle = 0;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
+    data = av_packet_side_data_get(video_st->codecpar->coded_side_data,
+                                   video_st->codecpar->nb_coded_side_data,
+                                   AV_PKT_DATA_DISPLAYMATRIX)->data;
+#else
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+#endif
     if (data)
     {
         rotation_angle = -cvRound(av_display_rotation_get((const int32_t*)data));
