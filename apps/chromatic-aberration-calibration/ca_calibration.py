@@ -32,7 +32,7 @@ import argparse
 import math
 import pathlib
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Any
 
 import cv2
 import numpy as np
@@ -49,7 +49,7 @@ class Polynomial2D:
     height: int
     width: int
 
-    def delta(self, x: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def delta(self, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         mean_x, mean_y = self.width * 0.5, self.height * 0.5
         inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y
         x_n = (x - mean_x) * inv_std_x
@@ -61,7 +61,7 @@ class Polynomial2D:
 
 
 
-def validate_calibration_dict(data: dict) -> Tuple[int, int, int]:
+def validate_calibration_dict(data: dict) -> tuple[int, int, int]:
     required_keys = {
         "red_channel", "blue_channel", "image_width", "image_height"
     }
@@ -122,7 +122,7 @@ def validate_calibration_dict(data: dict) -> Tuple[int, int, int]:
     return degree, height, width
 
 
-def load_calib_result(path: str | None = None) -> Dict:
+def load_calib_result(path: str | None = None) -> dict[str, Any]:
     path = pathlib.Path(path)
     with path.open("r") as fh:
         if path.suffix.lower() in {".yaml", ".yml"}:
@@ -269,7 +269,7 @@ def pair_keypoints(
     ref: np.ndarray,
     target: np.ndarray,
     max_error: float = 30.0,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     tree = cKDTree(ref)
     dists, idx = tree.query(target, distance_upper_bound=max_error)
     mask = np.isfinite(dists)
@@ -289,7 +289,7 @@ def fit_channel(
     height: int,
     width: int,
     method: str = "L-BFGS-B",
-) -> Tuple[np.ndarray, np.ndarray, float]:
+) -> tuple[np.ndarray, np.ndarray, float]:
     mean_x, mean_y = width * 0.5, height * 0.5
     inv_std_x, inv_std_y = 1.0 / mean_x, 1.0 / mean_y
     x = (x - mean_x) * inv_std_x
@@ -335,7 +335,7 @@ def fit_polynomials(
     degree: int,
     height: int,
     width: int
-) -> Tuple[Polynomial2D, Polynomial2D, float, float]:
+) -> tuple[Polynomial2D, Polynomial2D, float, float]:
     crx, cry, rms_r = fit_channel(x_r, y_r, disp_r, degree, height, width)
     cbx, cby, rms_b = fit_channel(x_b, y_b, disp_b, degree, height, width)
     poly_r = Polynomial2D(crx, cry, degree, height, width)
@@ -385,7 +385,7 @@ def calibrate_multi_degree(
     img: np.ndarray,
     k0: int,
     k1: int,
-) -> Dict[int, Tuple[Polynomial2D, Polynomial2D, float, float]]:
+) -> dict[int, tuple[Polynomial2D, Polynomial2D, float, float]]:
     """
     Returns a dict mapping degree → (poly_r, poly_b, rms_r, rms_b).
     """
@@ -424,7 +424,7 @@ def build_remap(
     h: int,
     w: int,
     poly: Polynomial2D,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     x, y = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
     dx, dy = poly.delta(x, y)
     map_x = (x - dx).astype(np.float32)
@@ -434,7 +434,7 @@ def build_remap(
 
 def correct_image(
     img: np.ndarray,
-    calib: Dict,
+    calib: dict[str, Any],
 ) -> np.ndarray:
     if img.ndim != 3 or img.shape[2] != 3:
         raise ValueError("correct_image expects a BGR colour image")
