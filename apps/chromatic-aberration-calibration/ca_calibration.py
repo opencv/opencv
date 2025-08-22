@@ -158,13 +158,13 @@ def load_calib_result(path: str | None = None) -> Dict:
     }
 
 
-def repr_flow_seq(dumper, data):
-    return dumper.represent_sequence('tag:yaml.org,2002:seq',
-                                     data,
-                                     flow_style=True)
+# def repr_flow_seq(dumper, data):
+#     return dumper.represent_sequence('tag:yaml.org,2002:seq',
+#                                      data,
+#                                      flow_style=True)
 
 
-yaml.SafeDumper.add_representer(list, repr_flow_seq)
+# yaml.SafeDumper.add_representer(list, repr_flow_seq)
 
 
 def save_calib_result(calib, path: str | None = None) -> None:
@@ -249,12 +249,12 @@ def detect_disk_centres(
         # ellipse equation
         f = (p[:, 0] / (a / 2 + eps)) ** 2 + (p[:, 1] / (b / 2 + eps)) ** 2 - 1
         # gradients of ellipse equation
-        J = np.column_stack(
+        j = np.column_stack(
             [2 * p[:, 0] / ((a / 2 + eps) ** 2), 2 * p[:, 1] / ((b / 2 + eps) ** 2)]
         )
 
         # solve least squares to get delta of centers
-        delta, *_ = np.linalg.lstsq(J, -f, rcond=None)
+        delta, *_ = np.linalg.lstsq(j, -f, rcond=None)
         cx -= delta[0]
         cy -= delta[1]
         centres.append((cx, cy))
@@ -274,9 +274,7 @@ def pair_keypoints(
     dists, idx = tree.query(target, distance_upper_bound=max_error)
     mask = np.isfinite(dists)
     if not np.any(mask):
-        raise RuntimeError(
-            f"No valid keypoint matches were created"
-        )
+        raise RuntimeError("No valid keypoint matches were created")
     target_valid = target[mask]
     ref_valid = ref[idx[mask]]
     disp = ref_valid - target_valid
@@ -315,16 +313,11 @@ def fit_channel(
     c0 = np.hstack([cx_ls, cy_ls])
 
     res = minimize(objective, c0, method=method, options={
-                   "maxiter": 500,
-                   "maxfun": 5000,   # allow more total function+gradient calls
+                    "maxiter": 500,
+                    "maxfun": 5000,
                     "maxls": 50,
-                   "ftol": 1e-9,
-                #    "disp": True,
+                    "ftol": 1e-9,
                })
-
-
-    # if not res.success:
-    #     raise RuntimeError(f"Optimiser failed: {res.message}")
 
     coeffs_x = res.x[:m]
     coeffs_y = res.x[m:]
@@ -540,7 +533,8 @@ def parse_args() -> argparse.Namespace:
                     help="Calibration coefficient file (.json/.yaml)")
     sr.add_argument("-o", "--output", default="corrected.png", help="Output filename")
 
-    sf = sub.add_parser("full",help="Calibrate from calibration target image and correct the calibration target")
+    sf = sub.add_parser("full",help="Calibrate from calibration target image and \
+                        correct the calibration target")
     sf.add_argument("image", help="Image of black‑disk calibration target")
     sf.add_argument("--degree", type=int, default=11, help="Polynomial degree")
     sf.add_argument("--coeffs_file", required=True, help="Save coefficients to YAML file")
@@ -555,88 +549,40 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def cmd_calibrate(args: argparse.Namespace) -> None:
+def cmd_calibrate(parsed_args: argparse.Namespace) -> None:
     calib = calibrate_from_image(
-        cv2.imread(args.image, cv2.IMREAD_COLOR),
-        degree=args.degree
+        cv2.imread(parsed_args.image, cv2.IMREAD_COLOR),
+        degree=parsed_args.degree
     )
-    save_calib_result(calib, path=args.coeffs_file)
-    print("Saved coefficients to", args.coeffs_file)
-
-    # img = cv2.imread(args.image, cv2.IMREAD_COLOR)
-    # b, g, r = cv2.split(img)
-
-    # pts_g = detect_disk_centres(g)
-    # pts_r = detect_disk_centres(r)
-    # pts_b = detect_disk_centres(b)
-
-    # xr, yr, disp_r = pair_keypoints(pts_g, pts_r, max_error=30.0)
-    # xb, yb, disp_b = pair_keypoints(pts_g, pts_b, max_error=30.0)
-
-    # mag_r = np.hypot(disp_r[:,0], disp_r[:,1])
-    # thr_r = mag_r.mean() + 2.0 * mag_r.std()
-    # out_r = mag_r > thr_r
-
-    # mag_b = np.hypot(disp_b[:,0], disp_b[:,1])
-    # thr_b = mag_b.mean() + 2.0 * mag_b.std()
-    # out_b = mag_b > thr_b
-
-    # print(f"Red matches: {len(mag_r)}, outliers: {out_r.sum()} (thr={thr_r:.2f}px)")
-    # print(f"Blue matches: {len(mag_b)}, outliers: {out_b.sum()} (thr={thr_b:.2f}px)")
-
-    # vis = img.copy()
-    # for x, y, (dx, dy) in zip(xr, yr, disp_r):
-    #     end = (int(x+dx), int(y+dy))
-    #     cv2.arrowedLine(vis, (int(x), int(y)), end,
-    #                     color=(0,0,255), thickness=1, tipLength=0.2)
-    # for x, y, (dx, dy) in zip(xb, yb, disp_b):
-    #     end = (int(x+dx), int(y+dy))
-    #     cv2.arrowedLine(vis, (int(x), int(y)), end,
-    #                     color=(255,0,0), thickness=1, tipLength=0.2)
-
-    # for idx in np.where(out_r)[0]:
-    #     x, y = xr[idx], yr[idx]
-    #     dx, dy = disp_r[idx]
-    #     cv2.arrowedLine(vis, (int(x), int(y)),
-    #                     (int(x+dx), int(y+dy)),
-    #                     color=(255,0,255), thickness=2, tipLength=0.3)
-    # for idx in np.where(out_b)[0]:
-    #     x, y = xb[idx], yb[idx]
-    #     dx, dy = disp_b[idx]
-    #     cv2.arrowedLine(vis, (int(x), int(y)),
-    #                     (int(x+dx), int(y+dy)),
-    #                     color=(255,255,0), thickness=2, tipLength=0.3)
-
-    # out_path = 'pairing_outliers.png'
-    # cv2.imwrite(out_path, vis)
-    # print(f"Written visualization to {out_path}")
+    save_calib_result(calib, path=parsed_args.coeffs_file)
+    print("Saved coefficients to", parsed_args.coeffs_file)
 
 
-def cmd_correct(args: argparse.Namespace) -> None:
-    img = cv2.imread(args.image, cv2.IMREAD_COLOR)
+def cmd_correct(parsed_args: argparse.Namespace) -> None:
+    img = cv2.imread(parsed_args.image, cv2.IMREAD_COLOR)
     if img is None:
-        raise FileNotFoundError(args.image)
-    calib = load_calib_result(args.coeffs_file)
+        raise FileNotFoundError(parsed_args.image)
+    calib = load_calib_result(parsed_args.coeffs_file)
     fixed = correct_image(img, calib)
-    cv2.imwrite(args.output, fixed)
-    print(f"Corrected image written to {args.output}")
+    cv2.imwrite(parsed_args.output, fixed)
+    print(f"Corrected image written to {parsed_args.output}")
 
 
-def cmd_full(args: argparse.Namespace) -> None:
-    img = cv2.imread(args.image, cv2.IMREAD_COLOR)
+def cmd_full(parsed_args: argparse.Namespace) -> None:
+    img = cv2.imread(parsed_args.image, cv2.IMREAD_COLOR)
     if img is None:
-        raise FileNotFoundError(args.image)
-    calib = calibrate_from_image(img, degree=args.degree)
-    save_calib_result(calib, path=args.coeffs_file)
-    print("Saved coefficients to", args.coeffs_file)
+        raise FileNotFoundError(parsed_args.image)
+    calib = calibrate_from_image(img, degree=parsed_args.degree)
+    save_calib_result(calib, path=parsed_args.coeffs_file)
+    print("Saved coefficients to", parsed_args.coeffs_file)
     fixed = correct_image(img, calib)
-    cv2.imwrite(args.output, fixed)
-    print(f"Corrected image written to {args.output}")
+    cv2.imwrite(parsed_args.output, fixed)
+    print(f"Corrected image written to {parsed_args.output}")
 
 
-def cmd_scan(args: argparse.Namespace) -> None:
-    img = cv2.imread(args.image, cv2.IMREAD_COLOR)
-    k0, k1 = args.degree_range
+def cmd_scan(parsed_args: argparse.Namespace) -> None:
+    img = cv2.imread(parsed_args.image, cv2.IMREAD_COLOR)
+    k0, k1 = parsed_args.degree_range
     results = calibrate_multi_degree(img, k0, k1)
 
     b, g, r = cv2.split(img)
