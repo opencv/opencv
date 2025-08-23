@@ -1668,9 +1668,16 @@ public:
             Size sz(cvRound(img.cols/scale), cvRound(img.rows/scale));
             Mat smallerImg(sz, img.type(), smallerImgBuf.ptr());
             if( sz == img.size() )
+            {
                 smallerImg = Mat(sz, img.type(), img.data, img.step);
+            }
             else
-                resize(img, smallerImg, sz, 0, 0, INTER_LINEAR_EXACT);
+            {
+                if(getDefaultAlgorithmHint() == ALGO_HINT_APPROX)
+                    resize(img, smallerImg, sz, 0, 0, INTER_LINEAR);
+                else
+                    resize(img, smallerImg, sz, 0, 0, INTER_LINEAR_EXACT);
+            }
             hog->detect(smallerImg, locations, hitsWeights, hitThreshold, winStride, padding);
             Size scaledWinSize = Size(cvRound(hog->winSize.width*scale), cvRound(hog->winSize.height*scale));
 
