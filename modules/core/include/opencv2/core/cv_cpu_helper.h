@@ -441,7 +441,7 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_NEON_DOTPROD(fn, args, mode, ...)  CV_CPU_CALL_NEON_DOTPROD(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
-#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON_FP16
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON_FP16 && !defined(_MSC_VER)
 #  define CV_TRY_NEON_FP16 1
 #  define CV_CPU_FORCE_NEON_FP16 1
 #  define CV_CPU_HAS_SUPPORT_NEON_FP16 1
