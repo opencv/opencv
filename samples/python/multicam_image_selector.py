@@ -8,27 +8,29 @@ import argparse
 import csv
 import glob
 import hashlib
+import itertools
 import os
 import pickle
 import re
 import sys
 import time
 import warnings
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
 import cv2 as cv
 import numpy as np
 import yaml
-import itertools
 
 try:
     from tqdm import tqdm as _tqdm
+
     _HAS_TQDM = True
 except ImportError:
     _HAS_TQDM = False
+
 
 def _pbar(iterable: Iterable, total: Optional[int] = None, desc: str = "") -> Iterable:
     if _HAS_TQDM:
@@ -36,22 +38,37 @@ def _pbar(iterable: Iterable, total: Optional[int] = None, desc: str = "") -> It
     else:
         return iterable
 
+
 def _warn(msg: str) -> None:
     warnings.warn(msg)
+
 
 def _err(msg: str) -> None:
     print(f"Error: {msg}", file=sys.stderr)
 
-IMG_EXTS = ("*.png", "*.jpg", "*.jpeg", "*.bmp", "*.tiff",
-            "*.PNG", "*.JPG", "*.JPEG", "*.BMP", "*.TIFF" )
+
+IMG_EXTS = (
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.bmp",
+    "*.tiff",
+    "*.PNG",
+    "*.JPG",
+    "*.JPEG",
+    "*.BMP",
+    "*.TIFF",
+)
 
 FRAME_ID_REGEXES = [
     re.compile(r"(\d{6,})"),
     re.compile(r"(?:frame|img|f|i)[^0-9]*(\d{1,5})", re.IGNORECASE),
 ]
 
+
 def _nat_key(s: str) -> List[object]:
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", s)]
+
 
 @dataclass
 class DetectResult:
@@ -64,9 +81,10 @@ class DetectResult:
         return {
             "found": bool(self.found),
             "score": float(self.score),
-            "features": None if self.features is None else [float(x) for x in self.features.ravel().tolist()],
+            "features": (None if self.features is None else [float(x) for x in self.features.ravel().tolist()]),
             "details": {k: float(v) for k, v in self.details.items()},
         }
+
     @staticmethod
     def from_light(d: Dict) -> "DetectResult":
         feats = d.get("features")
@@ -77,26 +95,28 @@ class DetectResult:
             {str(k): float(v) for k, v in d.get("details", {}).items()},
         )
 
+
 def list_cameras(root: str) -> Dict[str, List[str]]:
-        cams: Dict[str, List[str]] = {}
-        for name in sorted(os.listdir(root), key=_nat_key):
-            dpath = os.path.join(root, name)
-            if not os.path.isdir(dpath):
-                continue
-            imgs: List[str] = []
-            for ext in IMG_EXTS:
-                imgs.extend(glob.glob(os.path.join(dpath, ext)))
-            if imgs:
-                cams[name] = sorted(imgs, key=_nat_key)
-        if not cams:
-            imgs: List[str] = []
-            for ext in IMG_EXTS:
-                imgs.extend(glob.glob(os.path.join(root, ext)))
-            if imgs:
-                cams["mono"] = sorted(imgs, key=_nat_key)
-        if not cams:
-            raise RuntimeError(f"No camera folders with images found under: {root}")
-        return cams
+    cams: Dict[str, List[str]] = {}
+    for name in sorted(os.listdir(root), key=_nat_key):
+        dpath = os.path.join(root, name)
+        if not os.path.isdir(dpath):
+            continue
+        imgs: List[str] = []
+        for ext in IMG_EXTS:
+            imgs.extend(glob.glob(os.path.join(dpath, ext)))
+        if imgs:
+            cams[name] = sorted(imgs, key=_nat_key)
+    if not cams:
+        imgs: List[str] = []
+        for ext in IMG_EXTS:
+            imgs.extend(glob.glob(os.path.join(root, ext)))
+        if imgs:
+            cams["mono"] = sorted(imgs, key=_nat_key)
+    if not cams:
+        raise RuntimeError(f"No camera folders with images found under: {root}")
+    return cams
+
 
 def parse_frame_id(path: str) -> Optional[str]:
     base = os.path.basename(path)
@@ -111,6 +131,7 @@ def parse_frame_id(path: str) -> Optional[str]:
         if m:
             return m.group(1)
     return None
+
 
 def _fingerprint_file(path: str) -> Tuple[float, int, str]:
     try:
@@ -127,6 +148,7 @@ def _fingerprint_file(path: str) -> Tuple[float, int, str]:
             return (st.st_mtime, st.st_size, content_hash)
     except Exception:
         return (0.0, -1, "")
+
 
 def _load_image_bgr(path: str, max_size: Optional[int] = None) -> Optional[np.ndarray]:
     try:
@@ -159,11 +181,13 @@ def _load_image_bgr(path: str, max_size: Optional[int] = None) -> Optional[np.nd
         _warn(f"Error reading image: {path}")
         return None
 
+
 def _sharpness(gray: np.ndarray) -> float:
     lap = cv.Laplacian(gray, cv.CV_64F)
     var = lap.var() if lap.size > 0 else 0.0
     area = float(gray.shape[0] * gray.shape[1])
     return float(var / (area + 1e-6))
+
 
 def _exposure_penalty(gray: np.ndarray) -> float:
     hist = cv.calcHist([gray], [0], None, [256], [0, 256]).ravel()
@@ -171,6 +195,7 @@ def _exposure_penalty(gray: np.ndarray) -> float:
     bright = hist[240:256].sum() / total
     dark = hist[0:16].sum() / total
     return float(np.clip(1.0 - (bright + dark), 0.0, 1.0))
+
 
 def _centre_scale_angle(corners: np.ndarray, h: int, w: int) -> Tuple[float, float, float, float]:
     pts = corners.reshape(-1, 2).astype(np.float32)
@@ -188,43 +213,52 @@ def _centre_scale_angle(corners: np.ndarray, h: int, w: int) -> Tuple[float, flo
         angle = 0.0
     return cx / w, cy / h, float(np.log(area + 1e-6)), angle
 
+
 def pattern_score(
-    n_corners: int, pattern: str, rows: int, cols: int,
-    sharp: float, exp_ok: float,
+    n_corners: int,
+    pattern: str,
+    rows: int,
+    cols: int,
+    sharp: float,
+    exp_ok: float,
     expected_aruco_markers: Optional[int],
-    w_sharp: float, w_exposure: float, w_corners: float
+    w_sharp: float,
+    w_exposure: float,
+    w_corners: float,
 ) -> float:
     # make robust if any weight is None
     ws = [max(0.0, float(0.0 if w is None else w)) for w in (w_sharp, w_exposure, w_corners)]
     s = sum(ws)
-    ws = [1/3, 1/3, 1/3] if s <= 0 else [w / s for w in ws]
+    ws = [1 / 3, 1 / 3, 1 / 3] if s <= 0 else [w / s for w in ws]
 
     if pattern in ("chessboard", "circles", "acircles"):
         expected = float(rows * cols)
     elif pattern == "charuco":
         expected = float(rows * cols)
     else:  # aruco_grid
-        expected = 4.0 * (float(expected_aruco_markers) if expected_aruco_markers and expected_aruco_markers > 0
-                          else float(rows * cols))
+        expected = 4.0 * (
+            float(expected_aruco_markers)
+            if expected_aruco_markers and expected_aruco_markers > 0
+            else float(rows * cols)
+        )
     corners_norm = min(1.0, n_corners / (expected + 1e-6))
     sharp_term = min(1.0, sharp * 200.0)
     score = ws[0] * sharp_term + ws[1] * exp_ok + ws[2] * corners_norm
     return float(np.clip(score, 0.0, 1.0))
 
+
 def _ensure_aruco_available(reason: str) -> None:
     if not hasattr(cv, "aruco"):
-        _err(
-            f"OpenCV was built without the ArUco module. "
-            f"Install 'opencv-contrib-python' to use {reason}."
-        )
+        _err(f"OpenCV was built without the ArUco module. Install 'opencv-contrib-python' to use {reason}.")
         sys.exit(1)
 
-def get_aruco_dict(name:str) -> "cv.aruco.Dictionary":
+
+def get_aruco_dict(name: str) -> "cv.aruco.Dictionary":
     _ensure_aruco_available("ArUco/Charuco detection")
     key = name.strip()
     if hasattr(cv.aruco, key):
         dict_id = getattr(cv.aruco, key)
-        if hasattr(cv.aruco, "Dictionary_get"): # for older versions
+        if hasattr(cv.aruco, "Dictionary_get"):  # for older versions
             return cv.aruco.Dictionary_get(dict_id)
         if hasattr(cv.aruco, "getPredefinedDictionary"):
             return cv.aruco.getPredefinedDictionary(dict_id)
@@ -244,6 +278,7 @@ def get_aruco_dict(name:str) -> "cv.aruco.Dictionary":
             if hasattr(cv.aruco, "getPredefinedDictionary"):
                 return cv.aruco.getPredefinedDictionary(dict_id)
     raise ValueError(f"Unknown ArUco dictionary: {name}")
+
 
 def detect_chessboard(gray: np.ndarray, rows: int, cols: int) -> Tuple[bool, Optional[np.ndarray]]:
     pattern_size = (cols, rows)
@@ -265,12 +300,16 @@ def detect_chessboard(gray: np.ndarray, rows: int, cols: int) -> Tuple[bool, Opt
         )
     return found, corners
 
-def detect_circular_grid(gray: np.ndarray, rows: int, cols: int, asymmetric: bool = False) -> Tuple[bool, Optional[np.ndarray], int]:
+
+def detect_circular_grid(
+    gray: np.ndarray, rows: int, cols: int, asymmetric: bool = False
+) -> Tuple[bool, Optional[np.ndarray], int]:
     pattern_size = (cols, rows)
     flags = cv.CALIB_CB_ASYMMETRIC_GRID if asymmetric else cv.CALIB_CB_SYMMETRIC_GRID
     found, centers = cv.findCirclesGrid(gray, pattern_size, flags=flags)
     count = int(rows * cols) if found else 0
     return found, centers, count
+
 
 def detect_charuco(
     gray: np.ndarray,
@@ -320,6 +359,7 @@ def detect_charuco(
         return False, None, int(len(ch_corners)) if ch_corners is not None else 0
     return True, ch_corners, int(len(ch_corners))
 
+
 def detect_aruco_grid(
     gray: np.ndarray,
     aruco_dict_name: str,
@@ -343,6 +383,7 @@ def detect_aruco_grid(
     pts = np.concatenate([c.reshape(-1, 2) for c in corners], axis=0).astype(np.float32)
     return True, pts.reshape(-1, 1, 2), int(pts.shape[0])
 
+
 def detect_pattern(
     img: np.ndarray,
     pattern: str,
@@ -361,7 +402,7 @@ def detect_pattern(
 
     if pattern in ("circles", "acircles"):
         gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-        asym = (pattern == "acircles")
+        asym = pattern == "acircles"
         found, centers, count = detect_circular_grid(gray, rows, cols, asymmetric=asym)
         return found, centers, count
     if pattern == "charuco":
@@ -373,6 +414,7 @@ def detect_pattern(
         found, corners, count = detect_aruco_grid(gray, aruco_name, rows, cols, square, separation)
         return found, corners, count
     raise ValueError("Pattern must be one of: chessboard, charuco, aruco_grid, circles, acircles")
+
 
 def evaluate_image(
     path: str,
@@ -407,17 +449,22 @@ def evaluate_image(
     if sharp < min_sharpness:
         details.update({"found": 0.0, "n_corners": 0.0})
         return DetectResult(False, 0.0, None, details)
-    found, corners, n_corners = detect_pattern(
-        img, pattern, rows, cols, aruco_name, square, marker, separation
-    )
+    found, corners, n_corners = detect_pattern(img, pattern, rows, cols, aruco_name, square, marker, separation)
     details.update({"found": 1.0 if found else 0.0, "n_corners": float(n_corners)})
     if n_corners < min_corners or not found or corners is None:
         return DetectResult(False, 0.0, None, details)
     cx, cy, log_scale, _ = _centre_scale_angle(corners, h, w)
     score = pattern_score(
-        n_corners, pattern, rows, cols, sharp, exp_ok,
+        n_corners,
+        pattern,
+        rows,
+        cols,
+        sharp,
+        exp_ok,
         expected_aruco_markers,
-        w_sharp, w_exposure, w_corners
+        w_sharp,
+        w_exposure,
+        w_corners,
     )
     details.update({"center_x": cx, "center_y": cy, "log_scale": log_scale, "score": score})
     feats = np.array([cx, cy, log_scale], dtype=np.float32)
@@ -430,11 +477,15 @@ def _worker_init() -> None:
     except Exception:
         pass
 
-def _evaluate_workers(args: Tuple[str, Dict]) -> Tuple[str, float, int, str, Dict[str, object]]:
+
+def _evaluate_workers(
+    args: Tuple[str, Dict],
+) -> Tuple[str, float, int, str, Dict[str, object]]:
     path, ev_kwargs = args
     mtime, size, content_hash = _fingerprint_file(path)
     res = evaluate_image(path, **ev_kwargs)
     return path, mtime, size, content_hash, res.to_light()
+
 
 def _build_kmeans_matrix(feats: np.ndarray, standardize: bool = True) -> np.ndarray:
     # feats columns are [cx, cy, log_scale] in that order
@@ -446,14 +497,15 @@ def _build_kmeans_matrix(feats: np.ndarray, standardize: bool = True) -> np.ndar
         km = ((km - mu) / sd).astype(np.float32)
     return km
 
+
 def select_kmeans(
-        feats: np.ndarray,
-        scores: np.ndarray,
-        k: int,
-        *,
-        seed: int,
-        standardize: bool,
-    ) -> List[int]:
+    feats: np.ndarray,
+    scores: np.ndarray,
+    k: int,
+    *,
+    seed: int,
+    standardize: bool,
+) -> List[int]:
     n = len(feats)
     if n == 0 or k <= 0:
         return []
@@ -461,7 +513,14 @@ def select_kmeans(
     km_feats = _build_kmeans_matrix(feats.astype(np.float32), standardize)
     cv.setRNGSeed(seed)
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 50, 1e-3)
-    _, labels, _ = cv.kmeans(km_feats, K=k, bestLabels=None, criteria=criteria, attempts=5, flags=cv.KMEANS_PP_CENTERS)
+    _, labels, _ = cv.kmeans(
+        km_feats,
+        K=k,
+        bestLabels=None,
+        criteria=criteria,
+        attempts=5,
+        flags=cv.KMEANS_PP_CENTERS,
+    )
     labels = labels.ravel()
     sel: List[int] = []
     for c in range(k):
@@ -473,6 +532,7 @@ def select_kmeans(
         remaining = sorted(set(range(n)) - set(sel), key=lambda i: float(scores[i]), reverse=True)
         sel.extend(remaining[: (k - len(sel))])
     return sel
+
 
 def select_greedy(
     feats: np.ndarray,
@@ -496,7 +556,7 @@ def select_greedy(
         if len(selected) >= k:
             break
         d = np.linalg.norm(km - km[i], axis=1)
-        taken |= (d < max(1e-6, min_dist))
+        taken |= d < max(1e-6, min_dist)
     if len(selected) < k:
         for i in order:
             if not taken[i]:
@@ -504,6 +564,7 @@ def select_greedy(
             if len(selected) >= k:
                 break
     return selected
+
 
 def select_random(
     feats: np.ndarray,
@@ -565,12 +626,19 @@ def select_for_camera_cached(
     if sel == "kmeans":
         idxs = select_kmeans(feats_arr, scores_arr, k, seed=seed, standardize=kmeans_standardize)
     elif sel == "greedy":
-        idxs = select_greedy(feats_arr, scores_arr, k, min_dist=greedy_min_dist, standardize=kmeans_standardize)
+        idxs = select_greedy(
+            feats_arr,
+            scores_arr,
+            k,
+            min_dist=greedy_min_dist,
+            standardize=kmeans_standardize,
+        )
     elif sel == "random":
         idxs = select_random(feats_arr, scores_arr, k, seed=seed)
     else:
         raise ValueError(f"Unknown selector: {selector}")
     return [valid_paths[i] for i in idxs]
+
 
 def group_by_frame_id(paths: Sequence[str]) -> Dict[str, List[str]]:
     groups: Dict[str, List[str]] = {}
@@ -580,6 +648,7 @@ def group_by_frame_id(paths: Sequence[str]) -> Dict[str, List[str]]:
             continue
         groups.setdefault(fid, []).append(p)
     return groups
+
 
 def select_joint_consistent_cached(
     cams: Dict[str, List[str]],
@@ -632,7 +701,9 @@ def select_joint_consistent_cached(
             joint.append((fid, row))
     if not joint:
         if strict:
-            raise RuntimeError("--require-all-cams specified but no frames with valid detections across all cameras were found.")
+            raise RuntimeError(
+                "--require-all-cams specified but no frames with valid detections across all cameras were found."
+            )
         return {
             cam: select_for_camera_cached(
                 paths,
@@ -656,7 +727,13 @@ def select_joint_consistent_cached(
     if selector == "kmeans":
         sel = select_kmeans(feats_arr, scores_arr, per_camera, seed=seed, standardize=kmeans_standardize)
     elif selector == "greedy":
-        sel = select_greedy(feats_arr, scores_arr, per_camera, min_dist=greedy_min_dist, standardize=kmeans_standardize)
+        sel = select_greedy(
+            feats_arr,
+            scores_arr,
+            per_camera,
+            min_dist=greedy_min_dist,
+            standardize=kmeans_standardize,
+        )
     elif selector == "random":
         sel = select_random(feats_arr, scores_arr, per_camera, seed=seed)
     else:
@@ -668,6 +745,7 @@ def select_joint_consistent_cached(
             for cam in cams:
                 result[cam].append(row[cam][0])
     return result
+
 
 def select_pairwise_consistent_cached(
     cams: Dict[str, List[str]],
@@ -726,6 +804,7 @@ def select_pairwise_consistent_cached(
                 result[cam].append(best_of[key][0])
     return result
 
+
 def write_camera_yaml(
     out_dir: str,
     cam_name: str,
@@ -735,11 +814,13 @@ def write_camera_yaml(
     os.makedirs(out_dir, exist_ok=True)
     if relative_to:
         rel_root = os.path.abspath(relative_to)
+
         def to_rel(p: str) -> str:
             try:
                 return os.path.relpath(os.path.abspath(p), start=rel_root)
             except Exception:
                 return os.path.abspath(p)
+
         images = [to_rel(p) for p in img_paths]
     else:
         images = [os.path.abspath(p) for p in img_paths]
@@ -749,6 +830,7 @@ def write_camera_yaml(
         yaml.safe_dump({"image_list": images}, f, sort_keys=False)
     return ypath
 
+
 def write_master_yaml(out_dir: str, cam_to_yaml: Dict[str, str]) -> str:
     data = {"cameras": [{"name": cam, "yaml": os.path.abspath(yp)} for cam, yp in sorted(cam_to_yaml.items())]}
     ypath = os.path.join(out_dir, "master.yaml")
@@ -757,8 +839,20 @@ def write_master_yaml(out_dir: str, cam_to_yaml: Dict[str, str]) -> str:
         yaml.safe_dump(data, f, sort_keys=False)
     return ypath
 
+
 class MetricsWriter:
-    _DEFAULT_KEYS = ["read_fail", "found", "sharpness", "exposure_ok", "n_corners", "center_x", "center_y", "log_scale", "score"]
+    _DEFAULT_KEYS = [
+        "read_fail",
+        "found",
+        "sharpness",
+        "exposure_ok",
+        "n_corners",
+        "center_x",
+        "center_y",
+        "log_scale",
+        "score",
+    ]
+
     def __init__(self, csv_path: Optional[str], append: bool = False) -> None:
         self.csv_path = csv_path
         self.writer: Optional[csv.writer] = None
@@ -769,22 +863,46 @@ class MetricsWriter:
             self.writer = csv.writer(self.file)
             if not append:
                 self.writer.writerow(["image_path", "mtime", "size", "content_hash"] + self._DEFAULT_KEYS)
-    def write(self, img_path: str, mtime: float, size: int, content_hash: str, details: Dict[str, float]) -> None:
+
+    def write(
+        self,
+        img_path: str,
+        mtime: float,
+        size: int,
+        content_hash: str,
+        details: Dict[str, float],
+    ) -> None:
         if not self.writer:
             return
-        row = [img_path, f"{mtime:.3f}", size, content_hash] + [details.get(k, float("nan")) for k in self._DEFAULT_KEYS]
+        row = [img_path, f"{mtime:.3f}", size, content_hash] + [
+            details.get(k, float("nan")) for k in self._DEFAULT_KEYS
+        ]
         self.writer.writerow(row)
+
     def close(self) -> None:
         if self.file:
             self.file.close()
 
+
 _CACHE_VERSION = 6
+
 
 def _config_hash(d: Dict) -> str:
     keys = [
-        "pattern", "rows", "cols", "aruco_dict", "max_size",
-        "min_sharpness", "min_corners", "square", "marker", "separation",
-        "expected_aruco_markers", "w_sharp", "w_exposure", "w_corners",
+        "pattern",
+        "rows",
+        "cols",
+        "aruco_dict",
+        "max_size",
+        "min_sharpness",
+        "min_corners",
+        "square",
+        "marker",
+        "separation",
+        "expected_aruco_markers",
+        "w_sharp",
+        "w_exposure",
+        "w_corners",
     ]
     s = "|".join(f"{k}={d.get(k)!r}" for k in keys)
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
@@ -800,20 +918,25 @@ def load_cache(path: str) -> Optional[Dict]:
     except Exception:
         return None
 
+
 def save_cache(path: str, data: Dict) -> None:
     tmp = path + ".tmp"
     with open(tmp, "wb") as f:
         pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
     os.replace(tmp, path)
 
+
 def _ensure_matplotlib() -> bool:
     try:
         import matplotlib  # type: ignore
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt  # noqa
+
         return True
     except Exception:
         return False
+
 
 def viz_per_camera(
     viz_dir: str,
@@ -828,6 +951,7 @@ def viz_per_camera(
         _warn("matplotlib not available; skipping visualization")
         return
     import matplotlib.pyplot as plt
+
     os.makedirs(viz_dir, exist_ok=True)
 
     # centers
@@ -835,7 +959,14 @@ def viz_per_camera(
     if len(all_feats):
         plt.scatter(all_feats[:, 0], all_feats[:, 1], s=6, alpha=0.25, label="all")
     if len(sel_feats):
-        plt.scatter(sel_feats[:, 0], sel_feats[:, 1], s=20, alpha=0.9, label="selected", marker="o")
+        plt.scatter(
+            sel_feats[:, 0],
+            sel_feats[:, 1],
+            s=20,
+            alpha=0.9,
+            label="selected",
+            marker="o",
+        )
     plt.gca().invert_yaxis()
     plt.xlabel("center_x")
     plt.ylabel("center_y")
@@ -879,12 +1010,41 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         required=True,
         help="Type of calibration pattern",
     )
-    ap.add_argument("--rows", type=int, required=True, help="Pattern rows (inner corners or circle rows)")
-    ap.add_argument("--cols", type=int, required=True, help="Pattern cols (inner corners or circle cols)")
-    ap.add_argument("--aruco-dict", default="DICT_5X5_1000", help="ArUco dictionary name for aruco_grid/charuco")
-    ap.add_argument("--square", type=float, default=0.0, help="Square size (meters) for Charuco/GridBoard")
-    ap.add_argument("--marker", type=float, default=0.0, help="Marker size (meters) for Charuco/GridBoard")
-    ap.add_argument("--separation", type=float, default=0.0, help="Marker separation (meters) for GridBoard")
+    ap.add_argument(
+        "--rows",
+        type=int,
+        required=True,
+        help="Pattern rows (inner corners or circle rows)",
+    )
+    ap.add_argument(
+        "--cols",
+        type=int,
+        required=True,
+        help="Pattern cols (inner corners or circle cols)",
+    )
+    ap.add_argument(
+        "--aruco-dict",
+        default="DICT_5X5_1000",
+        help="ArUco dictionary name for aruco_grid/charuco",
+    )
+    ap.add_argument(
+        "--square",
+        type=float,
+        default=0.0,
+        help="Square size (meters) for Charuco/GridBoard",
+    )
+    ap.add_argument(
+        "--marker",
+        type=float,
+        default=0.0,
+        help="Marker size (meters) for Charuco/GridBoard",
+    )
+    ap.add_argument(
+        "--separation",
+        type=float,
+        default=0.0,
+        help="Marker separation (meters) for GridBoard",
+    )
     ap.add_argument(
         "--expected-aruco-markers",
         type=int,
@@ -921,20 +1081,48 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         help="With --require-all-cams, error out if no common frames exist",
     )
     ap.add_argument("--jobs", type=int, default=0, help="Parallel workers (0=auto, 1=single)")
-    ap.add_argument("--max-size", type=int, default=0, help="Max long side in px for processing (0 = full res)")
+    ap.add_argument(
+        "--max-size",
+        type=int,
+        default=0,
+        help="Max long side in px for processing (0 = full res)",
+    )
     ap.add_argument("--video", help="Single-camera video file path")
-    ap.add_argument("--video-step", type=int, default=10, help="Process every Nth frame from --video")
+    ap.add_argument(
+        "--video-step",
+        type=int,
+        default=10,
+        help="Process every Nth frame from --video",
+    )
     ap.add_argument(
         "--pairwise",
         action="store_true",
         help="Greedy selection to maximize camera-pair coverage over frame IDs",
     )
-    ap.add_argument("--min-sharpness", type=float, default=0.0, help="Minimum area-normalized Laplacian variance")
+    ap.add_argument(
+        "--min-sharpness",
+        type=float,
+        default=0.0,
+        help="Minimum area-normalized Laplacian variance",
+    )
     ap.add_argument("--min-corners", type=int, default=0, help="Minimum detected corners/points")
     ap.add_argument("--w-sharp", type=float, default=0.40, help="Weight for sharpness (clamped >=0)")
-    ap.add_argument("--w-exposure", type=float, default=0.30, help="Weight for exposure sanity (clamped >=0)")
-    ap.add_argument("--w-corners", type=float, default=0.20, help="Weight for corner/marker coverage (clamped >=0)")
-    ap.add_argument("--relative-to", help="Write relative paths in YAMLs with respect to this directory")
+    ap.add_argument(
+        "--w-exposure",
+        type=float,
+        default=0.30,
+        help="Weight for exposure sanity (clamped >=0)",
+    )
+    ap.add_argument(
+        "--w-corners",
+        type=float,
+        default=0.20,
+        help="Weight for corner/marker coverage (clamped >=0)",
+    )
+    ap.add_argument(
+        "--relative-to",
+        help="Write relative paths in YAMLs with respect to this directory",
+    )
     ap.add_argument("--dump-metrics", help="Path to CSV file for per-image metrics (streaming)")
     ap.add_argument("--viz-out", help="Directory to save simple selection visualizations")
     ap.add_argument(
@@ -970,6 +1158,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     if args.jobs <= 0:
         try:
             import multiprocessing as mp
+
             jobs = max(1, mp.cpu_count() - 2)
         except Exception:
             jobs = 1
@@ -1031,7 +1220,10 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             cache_items = cache_data.get("items", {})
         elif cache_data:
             warn_list.append("Cache exists but config has changed; will re-evaluate images.")
-    mw = MetricsWriter(args.dump_metrics, append=bool(args.resume and os.path.exists(args.dump_metrics or "")))
+    mw = MetricsWriter(
+        args.dump_metrics,
+        append=bool(args.resume and os.path.exists(args.dump_metrics or "")),
+    )
     todo: List[str] = []
     for p in all_paths:
         mtime, size, content_hash = _fingerprint_file(p)
@@ -1039,7 +1231,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         if not item or "content_hash" not in item:
             todo.append(p)
         else:
-            if (abs(item.get("mtime", 0.0) - mtime) > 1e-6) or (item.get("size", -1) != size) or (item.get("content_hash", "") != content_hash):
+            if (
+                (abs(item.get("mtime", 0.0) - mtime) > 1e-6)
+                or (item.get("size", -1) != size)
+                or (item.get("content_hash", "") != content_hash)
+            ):
                 todo.append(p)
     parallel_threshold = 50
     if todo:
@@ -1074,7 +1270,12 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         for path, mtime, size, content_hash, res_light in results:
             details = DetectResult.from_light(res_light).details
             mw.write(path, mtime, size, content_hash, details)
-            cache_items[path] = {"mtime": mtime, "size": size, "content_hash": content_hash, "result": res_light}
+            cache_items[path] = {
+                "mtime": mtime,
+                "size": size,
+                "content_hash": content_hash,
+                "result": res_light,
+            }
         if args.cache_file:
             data = {"version": _CACHE_VERSION, "config": cfg_hash, "items": cache_items}
             save_cache(args.cache_file, data)
@@ -1084,7 +1285,13 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                 item = cache_items.get(p)
                 if not item:
                     continue
-                mw.write(p, item.get("mtime", 0.0), item.get("size", -1), item.get("content_hash", ""), DetectResult.from_light(item["result"]).details)
+                mw.write(
+                    p,
+                    item.get("mtime", 0.0),
+                    item.get("size", -1),
+                    item.get("content_hash", ""),
+                    DetectResult.from_light(item["result"]).details,
+                )
     mw.close()
     selector = args.selector
     if args.require_all_cams:
@@ -1162,7 +1369,14 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                         sel_scores.append(res.score)
                 sel_feats_arr = np.vstack(sel_feats) if sel_feats else np.empty((0, 3))
                 sel_scores_arr = np.array(sel_scores) if sel_scores else np.empty(0)
-                viz_per_camera(args.viz_out, cam, all_feats_arr, all_scores_arr, sel_feats_arr, sel_scores_arr)
+                viz_per_camera(
+                    args.viz_out,
+                    cam,
+                    all_feats_arr,
+                    all_scores_arr,
+                    sel_feats_arr,
+                    sel_scores_arr,
+                )
     dt = time.time() - t0
     print("\nSelection summary:")
     for cam, paths in selected.items():
@@ -1170,5 +1384,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     print(f"\nPer-camera YAMLs: {args.out}")
     print(f"Master YAML: {master_yaml}")
     print(f"Total time: {dt:.2f}s  |  Images: {total_imgs}  |  Jobs: {jobs}")
+
+
 if __name__ == "__main__":
     main()
