@@ -722,16 +722,7 @@ std::vector<int> ExifReader::getIntVector(const size_t offset) const
     uint32_t count = getU32(offset + 4);
     size_t dataOffset = getU32(offset + 8);
 
-    size_t typeSize = 0;
-    switch (type) {
-        case 1: typeSize = 1; break; // BYTE
-        case 3: typeSize = 2; break; // SHORT
-        case 4: typeSize = 4; break; // LONG (unsigned)
-        case 9: typeSize = 4; break; // SLONG (signed)
-        default:
-            throw ExifParsingError(); // unsupported type
-    }
-
+    size_t typeSize = getExifTagTypeSize(type);
     size_t requiredSize = dataOffset + count * typeSize;
     if (dataOffset > m_data.size() || requiredSize > m_data.size()) {
         throw ExifParsingError();
@@ -742,19 +733,19 @@ std::vector<int> ExifReader::getIntVector(const size_t offset) const
 
     for (uint32_t i = 0; i < count; i++) {
         switch (type) {
-            case 1: // BYTE
+            case TAG_TYPE_BYTE:
                 result.push_back(m_data[dataOffset]);
                 dataOffset += 1;
                 break;
-            case 3: // SHORT
+            case TAG_TYPE_SHORT:
                 result.push_back(getU16(dataOffset));
                 dataOffset += 2;
                 break;
-            case 4: // LONG (unsigned)
+            case TAG_TYPE_LONG:
                 result.push_back(static_cast<int>(getU32(dataOffset)));
                 dataOffset += 4;
                 break;
-            case 9: // SLONG (signed 32-bit)
+            case TAG_TYPE_SLONG:
             {
                 int32_t v;
                 std::memcpy(&v, &m_data[dataOffset], sizeof(int32_t));
