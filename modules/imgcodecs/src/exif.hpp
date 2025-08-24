@@ -80,6 +80,7 @@ private:
     uint32_t    extractIFDOffset(const ExifEntry& entry) const;
     ExifEntry   parseExifEntry( const size_t offset );
     std::vector<uchar>  getRaw(const size_t offset) const;
+    std::vector<int>  getIntVector(const size_t offset) const;
     std::vector<Rational> getRational(const size_t offset) const;
     std::vector<SRational> getSRational(const size_t offset) const;
 

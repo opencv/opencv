@@ -604,7 +604,10 @@ ExifEntry ExifReader::parseExifEntry(const size_t offset)
         break;
 
     case TAG_TYPE_SHORT:
-        exifentry.setValueAsInt(getU16(offset + 8));
+        if (exifentry.count > 1)
+            exifentry.setValueAsIntVector(getIntVector(offset));
+        else
+            exifentry.setValueAsInt(getU16(offset + 8));
         break;
 
     case TAG_TYPE_LONG:
@@ -713,6 +716,58 @@ uint32_t ExifReader::getU32(const size_t offset) const
             m_data[offset + 3];
 }
 
+std::vector<int> ExifReader::getIntVector(const size_t offset) const
+{
+    uint16_t type  = getU16(offset + 2);
+    uint32_t count = getU32(offset + 4);
+    size_t dataOffset = getU32(offset + 8);
+
+    size_t typeSize = 0;
+    switch (type) {
+        case 1: typeSize = 1; break; // BYTE
+        case 3: typeSize = 2; break; // SHORT
+        case 4: typeSize = 4; break; // LONG (unsigned)
+        case 9: typeSize = 4; break; // SLONG (signed)
+        default:
+            throw ExifParsingError(); // unsupported type
+    }
+
+    size_t requiredSize = dataOffset + count * typeSize;
+    if (dataOffset > m_data.size() || requiredSize > m_data.size()) {
+        throw ExifParsingError();
+    }
+
+    std::vector<int> result;
+    result.reserve(count);
+
+    for (uint32_t i = 0; i < count; i++) {
+        switch (type) {
+            case 1: // BYTE
+                result.push_back(m_data[dataOffset]);
+                dataOffset += 1;
+                break;
+            case 3: // SHORT
+                result.push_back(getU16(dataOffset));
+                dataOffset += 2;
+                break;
+            case 4: // LONG (unsigned)
+                result.push_back(static_cast<int>(getU32(dataOffset)));
+                dataOffset += 4;
+                break;
+            case 9: // SLONG (signed 32-bit)
+            {
+                int32_t v;
+                std::memcpy(&v, &m_data[dataOffset], sizeof(int32_t));
+                result.push_back(v);
+                dataOffset += 4;
+                break;
+            }
+        }
+    }
+
+    return result;
+}
+
 /**
  * @brief Get unsigned rational data from raw exif data
  *          This is internal function and is not exposed to client
@@ -756,6 +811,62 @@ std::vector<SRational> ExifReader::getSRational(const size_t offset) const
         dataOffset += 8;
     }
     return result;
+}
+
+int ExifEntry::getValueAsInt() const
+{
+    return value_u32;
+}
+
+std::vector<int> ExifEntry::getValueAsIntVector() const
+{
+    return vec_int;
+}
+
+std::string ExifEntry::getValueAsString() const
+{
+    return value_str;
+}
+
+std::vector<uchar> ExifEntry::getValueAsRaw() const
+{
+    return vec_raw;
+}
+
+std::vector<SRational> ExifEntry::getValueAsRational() const
+{
+    return vec_srational;
+}
+
+void ExifEntry::setValueAsString(const std::string& value)
+{
+    value_str = value;
+    count = static_cast<int>(value.size() + 1);
+}
+
+void ExifEntry::setValueAsInt(int value)
+{
+    value_u32 = value;
+}
+
+void ExifEntry::setValueAsIntVector(const std::vector<int>& value)
+{
+    vec_int = value;
+}
+
+void ExifEntry::setValueAsRaw(const std::vector<uchar>& value)
+{
+    vec_raw = value;
+}
+
+void ExifEntry::setValueAsRational(const std::vector<SRational>& value)
+{
+    vec_srational = value;
+}
+
+bool ExifEntry::empty() const
+{
+    return tagId == TAG_EMPTY;
 }
 
 std::string ExifEntry::getTagTypeAsString() const
@@ -912,6 +1023,9 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_DEFAULT_BLACK_RENDER ? "Black Render" :
         tag == TAG_ACTIVE_AREA ? "Active Area" :
         tag == TAG_FORWARD_MATRIX1 ? "Forward Matrix 1" :
+        tag == TAG_SENSING_METHOD ? "Sensing Method" :
+        tag == TAG_FOCAL_LENGHT_IN_35MM ? "Focal Length In 35mm Film" :
+        tag == TAG_COMPOSITE_IMAGE ? "Composite Image" :
         tag == TAG_FORWARD_MATRIX2 ? "Forward Matrix 2" : nullptr;
     return tagstr ? std::string(tagstr) : cv::format("<unknown tag>(%d)", (int)tag);
 };
@@ -937,11 +1051,15 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
         break;
     case TAG_TYPE_BYTE:
     case TAG_TYPE_SHORT:
+        if (count > 1)
+            dumpVector(strm, getValueAsIntVector());
+        else
+            strm << getValueAsInt();
+        break;
     case TAG_TYPE_LONG:
         strm << getValueAsInt();
         break;
     case TAG_TYPE_FLOAT:
-
         strm << getValueAsInt();
         break;
     case TAG_TYPE_DOUBLE:
@@ -954,10 +1072,14 @@ std::ostream& ExifEntry::dump(std::ostream& strm) const
     case TAG_TYPE_UNDEFINED:
     {
         strm << "[";
-        for (size_t i = 0; i < value_raw.size(); ++i) {
-            if (i) strm << " ";
-            strm << std::hex << std::setw(2) << std::setfill('0')
-                << static_cast<int>(value_raw[i]);
+        for (size_t i = 0; i < vec_raw.size(); ++i) {
+            if (i) strm << ",";
+            strm << "0x" << std::hex << std::setw(2) << std::setfill('0')
+                << static_cast<unsigned int>(vec_raw[i]);
+            if (i >= 3 && i + 6 < count) {
+                strm << ", ... ";
+                i = count - 4;
+            }
         }
         strm << "]" << std::dec;
         break;

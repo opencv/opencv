@@ -18,7 +18,7 @@ static void dumpExif(const std::vector<std::vector<ExifEntry>>& exif_entries, co
         // Dump each entry using ExifEntry's dump method
         for (const auto& entry : block)
         {
-            entry.dump(std::cout);
+            std::cout << entry.dumpAsString() << std::endl;
         }
     }
 }

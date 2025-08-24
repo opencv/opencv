@@ -421,10 +421,15 @@ enum ExifTagId
     TAG_WHITE_BALANCE = 41987,
     TAG_SCENE_CAPTURE_TYPE = 41990,
 
+    TAG_SENSING_METHOD = 41495,
+    TAG_FOCAL_LENGHT_IN_35MM = 41989,
+
     TAG_BODY_SERIAL_NUMBER = 42033,
     TAG_LENS_SPECIFICATION = 42034,
     TAG_LENS_MAKE = 42035,
     TAG_LENS_MODEL = 42036,
+
+    TAG_COMPOSITE_IMAGE = 42080,
 
     TAG_DNG_VERSION = 50706,
     TAG_DNG_BACKWARD_VERSION = 50707,
@@ -482,38 +487,37 @@ struct CV_EXPORTS_W_SIMPLE ExifEntry
 public:
     ExifEntry()
         : tagId(TAG_EMPTY), type(TAG_TYPE_NOTYPE), count(1),
-        value_u32(0), value_str(), value_raw(), value_srational() {}
+        value_u32(0), value_str(), vec_raw(), vec_srational() {}
     ~ExifEntry() = default;
 
     CV_PROP_RW int tagId;
     CV_PROP_RW int type;
     CV_PROP_RW int count;
 
-    CV_WRAP int getValueAsInt() const { return value_u32; }
-    CV_WRAP std::string getValueAsString() const { return value_str; }
-    CV_WRAP std::vector<uchar> getValueAsRaw() const { return value_raw; }
-    CV_WRAP std::vector<SRational> getValueAsRational() const { return value_srational; }
+    CV_WRAP int getValueAsInt() const;
+    CV_WRAP std::string getValueAsString() const;
+    CV_WRAP std::vector<int> getValueAsIntVector() const;
+    CV_WRAP std::vector<uchar> getValueAsRaw() const;
+    CV_WRAP std::vector<SRational> getValueAsRational() const;
 
-    CV_WRAP void setValueAsString(const std::string& value) {
-        value_str = value;
-        count = static_cast<int>(value.size() + 1);
-    }
+    CV_WRAP void setValueAsInt(int value);
+    CV_WRAP void setValueAsString(const std::string& value);
+    CV_WRAP void setValueAsIntVector(const std::vector<int>& value);
+    CV_WRAP void setValueAsRaw(const std::vector<uchar>& value);
+    CV_WRAP void setValueAsRational(const std::vector<SRational>& value);
 
-    CV_WRAP void setValueAsInt(int value) { value_u32 = value; }
-    CV_WRAP void setValueAsRaw(const std::vector<uchar>& value) { value_raw = value; }
-    CV_WRAP void setValueAsRational(const std::vector<SRational>& value) { value_srational = value; }
-
-    CV_WRAP bool empty() const { return tagId == TAG_EMPTY; }
+    CV_WRAP bool empty() const;
     CV_WRAP std::string getTagIdAsString() const;
     CV_WRAP std::string getTagTypeAsString() const;
     CV_WRAP std::string dumpAsString() const;
     std::ostream& dump(std::ostream& strm) const;
 
 private:
-    int value_u32;
     std::string value_str;
-    std::vector<uchar> value_raw;
-    std::vector<SRational> value_srational;
+    int value_u32;
+    std::vector<int> vec_int;
+    std::vector<uchar> vec_raw;
+    std::vector<SRational> vec_srational;
 };
 
 /** @brief Decodes EXIF metadata from binary data into structured ExifEntry entries.
