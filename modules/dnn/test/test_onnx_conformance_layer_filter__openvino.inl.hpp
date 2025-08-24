@@ -723,21 +723,21 @@ CASE(test_greater_equal_bcast_expanded)
 CASE(test_greater_equal_expanded)
     // no filter
 CASE(test_gridsample)
-    // no filter
+    SKIP;
 CASE(test_gridsample_aligncorners_true)
-    // no filter
+    SKIP;
 CASE(test_gridsample_bicubic)
     // no filter
 CASE(test_gridsample_bilinear)
-    // no filter
+    SKIP;
 CASE(test_gridsample_border_padding)
-    // no filter
+    SKIP;
 CASE(test_gridsample_nearest)
     // no filter
 CASE(test_gridsample_reflection_padding)
-    // no filter
+    SKIP;
 CASE(test_gridsample_zeros_padding)
-    // no filter
+    SKIP;
 CASE(test_group_normalization_epsilon)
     // no filter
 CASE(test_group_normalization_example)

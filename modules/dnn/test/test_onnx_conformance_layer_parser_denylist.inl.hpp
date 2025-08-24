@@ -81,14 +81,8 @@
 "test_gelu_default_2_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_1_expanded", // parser: no corresponding layer for CastLike
 "test_gelu_tanh_2_expanded", // parser: no corresponding layer for CastLike
-"test_gridsample", // Issues::Layer::Can't create layer "onnx_node_output_0!Y" of type "GridSample" in function 'getLayerInstance'
-"test_gridsample_aligncorners_true", // ---- same as above ---
 "test_gridsample_bicubic", // ---- same as above ---
-"test_gridsample_bilinear", // ---- same as above ---
-"test_gridsample_border_padding", // ---- same as above ---
 "test_gridsample_nearest", // ---- same as above ---
-"test_gridsample_reflection_padding", // ---- same as above ---
-"test_gridsample_zeros_padding", // ---- same as above ---
 "test_gru_batchwise", // Issues::Parser::node_proto.input_size() == 6 in function 'parseGRU'
 "test_gru_defaults", // ---- same as above ---
 "test_gru_seq_length", // ---- same as above ---
