@@ -487,7 +487,7 @@ struct CV_EXPORTS_W_SIMPLE ExifEntry
 public:
     ExifEntry()
         : tagId(TAG_EMPTY), type(TAG_TYPE_NOTYPE), count(1),
-        value_u32(0), value_str(), vec_raw(), vec_srational() {}
+        value_str(), value_u32(0), vec_int(), vec_raw(), vec_srational() {}
     ~ExifEntry() = default;
 
     CV_PROP_RW int tagId;
