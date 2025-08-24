@@ -877,6 +877,15 @@
             "v_type": "Mat",
             "j_import": "org.opencv.core.MatOfByte"
         },
+        "vector_vector_Mat": {
+            "j_type": "List<List<Mat>>",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "std::vector< std::vector<Mat> > %(n)s",
+            "suffix": "J",
+            "v_type": "vector_Mat",
+            "j_import": "org.opencv.core.Mat"
+        },
         "vector_vector_DMatch": {
             "j_type": "List<MatOfDMatch>",
             "jn_type": "long",
