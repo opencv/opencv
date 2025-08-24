@@ -8,7 +8,6 @@ import argparse
 import csv
 import glob
 import hashlib
-import math
 import os
 import pickle
 import re
@@ -17,23 +16,19 @@ import time
 import warnings
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import cv2 as cv
 import numpy as np
 import yaml
+import itertools
 
 try:
     from tqdm import tqdm as _tqdm
     _HAS_TQDM = True
 except ImportError:
     _HAS_TQDM = False
-
-try:
-    from PIL import Image, ImageOps
-    _PIL_OK = True
-except ImportError:
-    _PIL_OK = False
 
 def _pbar(iterable: Iterable, total: Optional[int] = None, desc: str = "") -> Iterable:
     if _HAS_TQDM:
@@ -94,6 +89,12 @@ def list_cameras(root: str) -> Dict[str, List[str]]:
             if imgs:
                 cams[name] = sorted(imgs, key=_nat_key)
         if not cams:
+            imgs: List[str] = []
+            for ext in IMG_EXTS:
+                imgs.extend(glob.glob(os.path.join(root, ext)))
+            if imgs:
+                cams["mono"] = sorted(imgs, key=_nat_key)
+        if not cams:
             raise RuntimeError(f"No camera folders with images found under: {root}")
         return cams
 
@@ -113,40 +114,47 @@ def parse_frame_id(path: str) -> Optional[str]:
 
 def _fingerprint_file(path: str) -> Tuple[float, int, str]:
     try:
-        st = os.stat(path)
-        with open(path, "rb") as f:
-            hash_obj = hashlib.sha256(f.read(1024))
-            content_hash = hash_obj.hexdigest()
-        return (st.st_mtime, st.st_size, content_hash)
+        if "#frame" in path:
+            vpath, _, fstr = path.rpartition("#frame")
+            st = os.stat(vpath)
+            content_hash = hashlib.sha256((vpath + fstr).encode()).hexdigest()
+            return (st.st_mtime, st.st_size, content_hash)
+        else:
+            st = os.stat(path)
+            with open(path, "rb") as f:
+                hash_obj = hashlib.sha256(f.read(1024))
+                content_hash = hash_obj.hexdigest()
+            return (st.st_mtime, st.st_size, content_hash)
     except Exception:
         return (0.0, -1, "")
 
-def _read_grayscale(path: str, max_size: Optional[int] = None, fix_orientation: bool = False) -> Optional[np.ndarray]:
+def _load_image_bgr(path: str, max_size: Optional[int] = None) -> Optional[np.ndarray]:
     try:
-        if fix_orientation and _PIL_OK:
-            with Image.open(path) as im:
-                im = ImageOps.exif_transpose(im)
-                im = im.convert("L")
-                if max_size and max_size > 0:
-                    w, h = im.size
-                    scale = float(max_size) / max(w, h)
-                    if scale < 1.0:
-                        im = im.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
-                return np.array(im, dtype=np.uint8)
-        else:
-            with open(path, "rb") as f:
-                data = np.frombuffer(f.read(), dtype=np.uint8)
-            img = cv.imdecode(data, cv.IMREAD_GRAYSCALE)
-            if img is None:
-                _warn(f"Failed to decode image: {path}")
+        if "#frame" in path:
+            vpath, _, fstr = path.rpartition("#frame")
+            fidx = int(fstr)
+            cap = cv.VideoCapture(vpath)
+            if not cap.isOpened():
+                _warn(f"Failed to open video: {vpath}")
                 return None
-            if max_size and max_size > 0:
-                h, w = img.shape[:2]
-                scale = float(max_size) / max(w, h)
-                if scale < 1.0:
-                    new_size = (int(w * scale), int(h * scale))
-                    img = cv.resize(img, new_size, interpolation=cv.INTER_AREA)
-            return img
+            cap.set(cv.CAP_PROP_POS_FRAMES, fidx)
+            ok, img = cap.read()
+            cap.release()
+            if not ok:
+                _warn(f"Failed to read frame {fidx} from video: {vpath}")
+                return None
+        else:
+            data = np.fromfile(path, dtype=np.uint8)
+            img = cv.imdecode(data, cv.IMREAD_COLOR)  # BGR
+        if img is None:
+            _warn(f"Failed to decode image: {path}")
+            return None
+        if max_size and max_size > 0:
+            h, w = img.shape[:2]
+            scale = float(max_size) / float(max(h, w))
+            if scale < 1.0:
+                img = cv.resize(img, (int(w * scale), int(h * scale)), interpolation=cv.INTER_AREA)
+        return img
     except Exception:
         _warn(f"Error reading image: {path}")
         return None
@@ -180,38 +188,27 @@ def _centre_scale_angle(corners: np.ndarray, h: int, w: int) -> Tuple[float, flo
         angle = 0.0
     return cx / w, cy / h, float(np.log(area + 1e-6)), angle
 
-def _normalize_weight(ws: Tuple[float, float, float, float]) -> Tuple[float, float, float, float]:
-    ws = tuple(max(0.0, w) for w in ws)
+def pattern_score(
+    n_corners: int, pattern: str, rows: int, cols: int,
+    sharp: float, exp_ok: float,
+    expected_aruco_markers: Optional[int],
+    w_sharp: float, w_exposure: float, w_corners: float
+) -> float:
+    # make robust if any weight is None
+    ws = [max(0.0, float(0.0 if w is None else w)) for w in (w_sharp, w_exposure, w_corners)]
     s = sum(ws)
-    if s <= 0.0:
-        return (0.4, 0.3, 0.2, 0.1)
-    return tuple(w / s for w in ws)
+    ws = [1/3, 1/3, 1/3] if s <= 0 else [w / s for w in ws]
 
-def pattern_score(n_corners: int, pattern: str, rows: int, cols: int,
-                  sharp: float, exp_ok: float, angle_deg: float,
-                  expected_aruco_markers: Optional[int],
-                  w_sharp: float, w_exposure: float, w_corners: float, w_angle: float) -> float:
-    ws = _normalize_weight((w_sharp, w_exposure, w_corners, w_angle))
-    w_sharp, w_exposure, w_corners, w_angle = ws
-    if pattern == "chessboard" or pattern == "circulargrid":
+    if pattern in ("chessboard", "circles", "acircles"):
         expected = float(rows * cols)
-        corners_norm = min(1.0, n_corners / (expected + 1e-6))
     elif pattern == "charuco":
         expected = float(rows * cols)
-        corners_norm = min(1.0, n_corners / max(6.0, expected))
-    else:
-        if expected_aruco_markers and expected_aruco_markers > 0:
-            expected = 4.0 * float(expected_aruco_markers)
-        else:
-            expected = 4.0 * rows * cols
-        corners_norm = min(1.0, n_corners / (expected + 1e-6))
-    ang_term = 0.5 + 0.5 * abs(np.sin(np.deg2rad(angle_deg)))
-    score = (
-        w_sharp * min(1.0, sharp * 200.0)
-        + w_exposure * exp_ok
-        + w_corners * corners_norm
-        + w_angle * ang_term
-    )
+    else:  # aruco_grid
+        expected = 4.0 * (float(expected_aruco_markers) if expected_aruco_markers and expected_aruco_markers > 0
+                          else float(rows * cols))
+    corners_norm = min(1.0, n_corners / (expected + 1e-6))
+    sharp_term = min(1.0, sharp * 200.0)
+    score = ws[0] * sharp_term + ws[1] * exp_ok + ws[2] * corners_norm
     return float(np.clip(score, 0.0, 1.0))
 
 def _ensure_aruco_available(reason: str) -> None:
@@ -323,11 +320,11 @@ def detect_charuco(
         return False, None, int(len(ch_corners)) if ch_corners is not None else 0
     return True, ch_corners, int(len(ch_corners))
 
-def detect_aruco_markers(
+def detect_aruco_grid(
     gray: np.ndarray,
     aruco_dict_name: str,
-    grid_cols: Optional[int],
-    grid_rows: Optional[int],
+    grid_cols: int,
+    grid_rows: int,
     square: float,
     separation: float,
 ) -> Tuple[bool, Optional[np.ndarray], int]:
@@ -337,44 +334,45 @@ def detect_aruco_markers(
     corners, ids, rejected = detector.detectMarkers(gray)
     if ids is None or len(ids) == 0:
         return False, None, 0
-    # optionally refine using a grid board
-    if grid_cols and grid_rows and grid_cols > 0 and grid_rows > 0 and square > 0 and separation > 0:
+    # optional refine if square/separation > 0
+    if grid_cols > 0 and grid_rows > 0 and square > 0 and separation > 0:
         board = cv.aruco.GridBoard((grid_cols, grid_rows), square, separation, adict)
         corners, ids, rejected, _ = detector.refineDetectedMarkers(gray, board, corners, ids, rejected)
     if ids is None or len(ids) == 0:
         return False, None, 0
     pts = np.concatenate([c.reshape(-1, 2) for c in corners], axis=0).astype(np.float32)
-    return True, pts.reshape(-1, 1, 2), pts.shape[0]
+    return True, pts.reshape(-1, 1, 2), int(pts.shape[0])
 
 def detect_pattern(
-    gray: np.ndarray,
+    img: np.ndarray,
     pattern: str,
     rows: int,
     cols: int,
     aruco_name: str,
     square: float,
     marker: float,
-    grid_cols: Optional[int],
-    grid_rows: Optional[int],
     separation: float,
-    circular_type: str,
-    expected_aruco_markers: Optional[int] = None,
 ) -> Tuple[bool, Optional[np.ndarray], int]:
     if pattern == "chessboard":
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         found, corners = detect_chessboard(gray, rows, cols)
         n_corners = rows * cols if found and corners is not None else 0
         return found, corners, n_corners
-    if pattern == "circulargrid":
-        asym = (circular_type.lower() == "asymmetric")
+
+    if pattern in ("circles", "acircles"):
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        asym = (pattern == "acircles")
         found, centers, count = detect_circular_grid(gray, rows, cols, asymmetric=asym)
         return found, centers, count
     if pattern == "charuco":
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
         found, corners, count = detect_charuco(gray, rows, cols, aruco_name, square, marker)
         return found, corners, count
-    if pattern == "aruco":
-        found, corners, count = detect_aruco_markers(gray, aruco_name, grid_cols, grid_rows, square, separation)
+    if pattern == "aruco_grid":
+        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        found, corners, count = detect_aruco_grid(gray, aruco_name, rows, cols, square, separation)
         return found, corners, count
-    raise ValueError("Pattern must be chessboard, charuco, aruco, circulargrid")
+    raise ValueError("Pattern must be one of: chessboard, charuco, aruco_grid, circles, acircles")
 
 def evaluate_image(
     path: str,
@@ -384,24 +382,21 @@ def evaluate_image(
     cols: int,
     aruco_name: str,
     max_size: Optional[int],
-    fix_orientation: bool,
     min_sharpness: float,
     min_corners: int,
     square: float,
     marker: float,
-    grid_cols: Optional[int],
-    grid_rows: Optional[int],
     separation: float,
-    circular_type: str,
     expected_aruco_markers: Optional[int],
     w_sharp: float,
     w_exposure: float,
     w_corners: float,
-    w_angle: float,
 ) -> DetectResult:
-    gray = _read_grayscale(path, max_size=max_size, fix_orientation=fix_orientation)
-    if gray is None:
+    img = _load_image_bgr(path, max_size=max_size)
+    if img is None:
         return DetectResult(False, 0.0, None, {"read_fail": 1.0})
+
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
     h, w = gray.shape[:2]
     sharp = _sharpness(gray)
     exp_ok = _exposure_penalty(gray)
@@ -413,43 +408,21 @@ def evaluate_image(
         details.update({"found": 0.0, "n_corners": 0.0})
         return DetectResult(False, 0.0, None, details)
     found, corners, n_corners = detect_pattern(
-        gray,
-        pattern,
-        rows,
-        cols,
-        aruco_name,
-        square,
-        marker,
-        grid_cols,
-        grid_rows,
-        separation,
-        circular_type,
-        expected_aruco_markers,
+        img, pattern, rows, cols, aruco_name, square, marker, separation
     )
-    details.update({
-        "found": 1.0 if found else 0.0,
-        "n_corners": float(n_corners),
-    })
+    details.update({"found": 1.0 if found else 0.0, "n_corners": float(n_corners)})
     if n_corners < min_corners or not found or corners is None:
         return DetectResult(False, 0.0, None, details)
-    cx, cy, log_scale, angle = _centre_scale_angle(corners, h, w)
+    cx, cy, log_scale, _ = _centre_scale_angle(corners, h, w)
     score = pattern_score(
-        n_corners,
-        pattern,
-        rows,
-        cols,
-        sharp,
-        exp_ok,
-        angle,
+        n_corners, pattern, rows, cols, sharp, exp_ok,
         expected_aruco_markers,
-        w_sharp,
-        w_exposure,
-        w_corners,
-        w_angle,
+        w_sharp, w_exposure, w_corners
     )
-    details.update({"center_x": cx, "center_y": cy, "log_scale": log_scale, "angle": angle, "score": score})
-    feats = np.array([cx, cy, log_scale, angle], dtype=np.float32)
+    details.update({"center_x": cx, "center_y": cy, "log_scale": log_scale, "score": score})
+    feats = np.array([cx, cy, log_scale], dtype=np.float32)
     return DetectResult(True, float(score), feats, details)
+
 
 def _worker_init() -> None:
     try:
@@ -464,13 +437,13 @@ def _evaluate_workers(args: Tuple[str, Dict]) -> Tuple[str, float, int, str, Dic
     return path, mtime, size, content_hash, res.to_light()
 
 def _build_kmeans_matrix(feats: np.ndarray, standardize: bool = True) -> np.ndarray:
-    cx, cy, log_s, ang_deg = feats[:, 0], feats[:, 1], feats[:, 2], feats[:, 3]
-    ang = np.deg2rad(ang_deg)
-    km = np.column_stack([cx, cy, log_s, np.sin(ang), np.cos(ang)]).astype(np.float32)
-    if standardize and len(feats) > 1:
+    # feats columns are [cx, cy, log_scale] in that order
+    km = feats.astype(np.float32, copy=False)
+    if standardize and len(km) > 1:
         mu = km.mean(axis=0, dtype=np.float64)
         sd = km.std(axis=0, dtype=np.float64)
-        km = ((km - mu) / (sd + 1e-6)).astype(np.float32)
+        sd[sd <= 0] = 1.0
+        km = ((km - mu) / sd).astype(np.float32)
     return km
 
 def select_kmeans(
@@ -556,7 +529,6 @@ def select_for_camera_cached(
     seed: int,
     kmeans_standardize: bool,
     greedy_min_dist: float,
-    circular_type: str,
     cache_items: Dict[str, Dict],
 ) -> List[str]:
     if per_camera <= 0:
@@ -617,7 +589,6 @@ def select_joint_consistent_cached(
     seed: int,
     kmeans_standardize: bool,
     greedy_min_dist: float,
-    circular_type: str,
     strict: bool,
     cache_items: Dict[str, Dict],
 ) -> Dict[str, List[str]]:
@@ -634,7 +605,6 @@ def select_joint_consistent_cached(
                 seed=seed,
                 kmeans_standardize=kmeans_standardize,
                 greedy_min_dist=greedy_min_dist,
-                circular_type=circular_type,
                 cache_items=cache_items,
             )
             for cam, paths in cams.items()
@@ -671,7 +641,6 @@ def select_joint_consistent_cached(
                 seed=seed,
                 kmeans_standardize=kmeans_standardize,
                 greedy_min_dist=greedy_min_dist,
-                circular_type=circular_type,
                 cache_items=cache_items,
             )
             for cam, paths in cams.items()
@@ -682,7 +651,7 @@ def select_joint_consistent_cached(
         fstack = np.vstack([row[c][2] for c in row])
         feats.append(np.median(fstack, axis=0))  # median for robustness
         scores.append(np.mean([row[c][1] for c in row]))
-    feats_arr = np.vstack(feats) if feats else np.empty((0, 4), dtype=np.float32)
+    feats_arr = np.vstack(feats) if feats else np.empty((0, 3), dtype=np.float32)
     scores_arr = np.asarray(scores, dtype=np.float32) if scores else np.empty(0, dtype=np.float32)
     if selector == "kmeans":
         sel = select_kmeans(feats_arr, scores_arr, per_camera, seed=seed, standardize=kmeans_standardize)
@@ -700,12 +669,68 @@ def select_joint_consistent_cached(
                 result[cam].append(row[cam][0])
     return result
 
+def select_pairwise_consistent_cached(
+    cams: Dict[str, List[str]],
+    *,
+    per_camera: int,
+    cache_items: Dict[str, Dict],
+) -> Dict[str, List[str]]:
+    cam_groups = {cam: group_by_frame_id(paths) for cam, paths in cams.items()}
+    all_fids = sorted({fid for groups in cam_groups.values() for fid in groups.keys()}, key=_nat_key)
+    cams_list = sorted(cams.keys())
+    # best detection per (cam, fid)
+    best_of: Dict[Tuple[str, str], Tuple[str, float, np.ndarray]] = {}
+    for cam in cams_list:
+        for fid, plist in cam_groups[cam].items():
+            best = None
+            for p in sorted(plist, key=_nat_key):
+                item = cache_items.get(p)
+                if not item:
+                    continue
+                light = item.get("result")
+                res = DetectResult.from_light(light if light else {})
+                if res.found and res.features is not None:
+                    if best is None or res.score > best[1]:
+                        best = (p, res.score, res.features)
+            if best:
+                best_of[(cam, fid)] = best
+    pair_count: Dict[Tuple[str, str], int] = defaultdict(int)
+    chosen_fids: List[str] = []
+
+    def gain(fid: str) -> Tuple[int, int]:
+        cams_here = [cam for cam in cams_list if (cam, fid) in best_of]
+        pairs = list(itertools.combinations(cams_here, 2))
+        g = sum(1 for ab in pairs if pair_count[ab] == 0)
+        return g, len(cams_here)
+
+    while len(chosen_fids) < per_camera and all_fids:
+        fid, gbest, mbest = None, -1, -1
+        for f in all_fids:
+            if f in chosen_fids:
+                continue
+            g, m = gain(f)
+            if g > gbest or (g == gbest and m > mbest):
+                fid, gbest, mbest = f, g, m
+        if fid is None or gbest <= 0:
+            break
+        chosen_fids.append(fid)
+        cams_here = [cam for cam in cams_list if (cam, fid) in best_of]
+        for ab in itertools.combinations(cams_here, 2):
+            pair_count[ab] += 1
+
+    result = {cam: [] for cam in cams_list}
+    for fid in chosen_fids:
+        for cam in cams_list:
+            key = (cam, fid)
+            if key in best_of and len(result[cam]) < per_camera:
+                result[cam].append(best_of[key][0])
+    return result
+
 def write_camera_yaml(
     out_dir: str,
     cam_name: str,
     img_paths: List[str],
     relative_to: Optional[str],
-    legacy: bool,
 ) -> str:
     os.makedirs(out_dir, exist_ok=True)
     if relative_to:
@@ -720,23 +745,20 @@ def write_camera_yaml(
         images = [os.path.abspath(p) for p in img_paths]
     ypath = os.path.join(out_dir, f"{cam_name}.yaml")
     with open(ypath, "w") as f:
-        if legacy:
-            f.write("%YAML:1.0\n")
+        f.write("%YAML:1.0\n")
         yaml.safe_dump({"image_list": images}, f, sort_keys=False)
     return ypath
 
-
-def write_master_yaml(out_dir: str, cam_to_yaml: Dict[str, str], legacy: bool) -> str:
+def write_master_yaml(out_dir: str, cam_to_yaml: Dict[str, str]) -> str:
     data = {"cameras": [{"name": cam, "yaml": os.path.abspath(yp)} for cam, yp in sorted(cam_to_yaml.items())]}
     ypath = os.path.join(out_dir, "master.yaml")
     with open(ypath, "w") as f:
-        if legacy:
-            f.write("%YAML:1.0\n")
+        f.write("%YAML:1.0\n")
         yaml.safe_dump(data, f, sort_keys=False)
     return ypath
 
 class MetricsWriter:
-    _DEFAULT_KEYS = ["read_fail", "found", "sharpness", "exposure_ok", "n_corners", "center_x", "center_y", "log_scale", "angle", "score"]
+    _DEFAULT_KEYS = ["read_fail", "found", "sharpness", "exposure_ok", "n_corners", "center_x", "center_y", "log_scale", "score"]
     def __init__(self, csv_path: Optional[str], append: bool = False) -> None:
         self.csv_path = csv_path
         self.writer: Optional[csv.writer] = None
@@ -756,14 +778,13 @@ class MetricsWriter:
         if self.file:
             self.file.close()
 
-_CACHE_VERSION = 3
+_CACHE_VERSION = 6
 
 def _config_hash(d: Dict) -> str:
     keys = [
-        "pattern", "rows", "cols", "aruco_dict", "max_size", "fix_orientation",
-        "min_sharpness", "min_corners", "square", "marker", "grid_cols",
-        "grid_rows", "separation", "expected_aruco_markers", "w_sharp",
-        "w_exposure", "w_corners", "w_angle", "circular_type",
+        "pattern", "rows", "cols", "aruco_dict", "max_size",
+        "min_sharpness", "min_corners", "square", "marker", "separation",
+        "expected_aruco_markers", "w_sharp", "w_exposure", "w_corners",
     ]
     s = "|".join(f"{k}={d.get(k)!r}" for k in keys)
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
@@ -808,6 +829,8 @@ def viz_per_camera(
         return
     import matplotlib.pyplot as plt
     os.makedirs(viz_dir, exist_ok=True)
+
+    # centers
     plt.figure(figsize=(5, 5))
     if len(all_feats):
         plt.scatter(all_feats[:, 0], all_feats[:, 1], s=6, alpha=0.25, label="all")
@@ -821,18 +844,8 @@ def viz_per_camera(
     plt.tight_layout()
     plt.savefig(os.path.join(viz_dir, f"{cam}_centers.png"))
     plt.close()
-    plt.figure(figsize=(5, 3))
-    if len(all_feats):
-        plt.hist(all_feats[:, 3], bins=24, alpha=0.4, label="all")
-    if len(sel_feats):
-        plt.hist(sel_feats[:, 3], bins=24, alpha=0.9, label="selected")
-    plt.xlabel("angle (deg)")
-    plt.ylabel("count")
-    plt.title(f"{cam}: angle distribution")
-    plt.legend(loc="best")
-    plt.tight_layout()
-    plt.savefig(os.path.join(viz_dir, f"{cam}_angle_hist.png"))
-    plt.close()
+
+    # scores
     plt.figure(figsize=(5, 3))
     if len(all_scores):
         plt.hist(all_scores, bins=20, alpha=0.4, label="all")
@@ -846,34 +859,32 @@ def viz_per_camera(
     plt.savefig(os.path.join(viz_dir, f"{cam}_score_hist.png"))
     plt.close()
 
+
 def main(argv: Optional[Sequence[str]] = None) -> None:
     ap = argparse.ArgumentParser(
         description="Select best calibration images and emit YAML lists",
         epilog=(
             "Examples:\n"
             "  python3 multicam_image_selector.py --root /data/multicam --out ./yaml --pattern chessboard --rows 7 --cols 10 --per-camera 80 --seed 42 --max-size 1600 --dump-metrics metrics.csv --jobs 8 --viz-out ./viz --cache-file .selector_cache.pkl --resume\n"
-            "  python3 multicam_image_selector.py --root /data --out yaml --pattern aruco --aruco-dict DICT_4X4_1000 --gridboard 7x5 --square 0.03 --separation 0.006 --expected-aruco-markers 20 --selector greedy --greedy-min-dist 0.5 --kmeans-standardize\n"
-            "  python3 multicam_image_selector.py --root /data --out yaml --pattern charuco --rows 4 --cols 11 --aruco-dict DICT_5X5_1000 --square 0.02 --marker 0.014 --require-all-cams --per-camera 60 --fix-orientation --w-sharp 0.5 --w-corners 0.3\n"
-            "  python3 multicam_image_selector.py --root /data --out yaml --pattern circulargrid --rows 4 --cols 11 --circular-type symmetric --per-camera 60"
+            "  python3 multicam_image_selector.py --root /data --out yaml --pattern aruco_grid --rows 7 --cols 5 --aruco-dict DICT_4X4_1000 --square 0.03 --separation 0.006 --expected-aruco-markers 20 --selector greedy --greedy-min-dist 0.5 --kmeans-standardize\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    ap.add_argument("--root", required=True, help="Dataset root containing camera folders")
-    ap.add_argument("--out", required=True, help="Output directory for YAMLs")
+    group = ap.add_mutually_exclusive_group(required=True)
+    group.add_argument("--root", help="Dataset root containing camera folders")
+    group.add_argument("--video", help="Single-camera video file path")
     ap.add_argument(
         "--pattern",
-        choices=["chessboard", "charuco", "aruco", "circulargrid"],
+        choices=["chessboard", "charuco", "aruco_grid", "circles", "acircles"],
         required=True,
         help="Type of calibration pattern",
     )
     ap.add_argument("--rows", type=int, required=True, help="Pattern rows (inner corners or circle rows)")
     ap.add_argument("--cols", type=int, required=True, help="Pattern cols (inner corners or circle cols)")
-    ap.add_argument("--aruco-dict", default="DICT_5X5_1000", help="Aruco dictionary name for aruco/charuco")
-    ap.add_argument("--circular-type", choices=["symmetric", "asymmetric"], default="symmetric", help="Circle grid type when using circulargrid pattern")
+    ap.add_argument("--aruco-dict", default="DICT_5X5_1000", help="ArUco dictionary name for aruco_grid/charuco")
     ap.add_argument("--square", type=float, default=0.0, help="Square size (meters) for Charuco/GridBoard")
     ap.add_argument("--marker", type=float, default=0.0, help="Marker size (meters) for Charuco/GridBoard")
     ap.add_argument("--separation", type=float, default=0.0, help="Marker separation (meters) for GridBoard")
-    ap.add_argument("--gridboard", type=str, help="GridBoard WxH (e.g., 7x5). Only used for --pattern aruco")
     ap.add_argument(
         "--expected-aruco-markers",
         type=int,
@@ -911,19 +922,19 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     )
     ap.add_argument("--jobs", type=int, default=0, help="Parallel workers (0=auto, 1=single)")
     ap.add_argument("--max-size", type=int, default=0, help="Max long side in px for processing (0 = full res)")
-    ap.add_argument("--fix-orientation", action="store_true", help="Autorotate using EXIF (requires Pillow)")
+    ap.add_argument("--video", help="Single-camera video file path")
+    ap.add_argument("--video-step", type=int, default=10, help="Process every Nth frame from --video")
+    ap.add_argument(
+        "--pairwise",
+        action="store_true",
+        help="Greedy selection to maximize camera-pair coverage over frame IDs",
+    )
     ap.add_argument("--min-sharpness", type=float, default=0.0, help="Minimum area-normalized Laplacian variance")
     ap.add_argument("--min-corners", type=int, default=0, help="Minimum detected corners/points")
     ap.add_argument("--w-sharp", type=float, default=0.40, help="Weight for sharpness (clamped >=0)")
     ap.add_argument("--w-exposure", type=float, default=0.30, help="Weight for exposure sanity (clamped >=0)")
     ap.add_argument("--w-corners", type=float, default=0.20, help="Weight for corner/marker coverage (clamped >=0)")
-    ap.add_argument("--w-angle", type=float, default=0.10, help="Weight for orientation diversity (clamped >=0)")
     ap.add_argument("--relative-to", help="Write relative paths in YAMLs with respect to this directory")
-    ap.add_argument(
-        "--yaml-legacy",
-        action="store_true",
-        help="Prepend %%YAML:1.0 for legacy consumers",
-    )
     ap.add_argument("--dump-metrics", help="Path to CSV file for per-image metrics (streaming)")
     ap.add_argument("--viz-out", help="Directory to save simple selection visualizations")
     ap.add_argument(
@@ -933,40 +944,29 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     )
     ap.add_argument("--resume", action="store_true", help="Resume from cache when possible")
     args = ap.parse_args(argv)
-    warn_list: List[str] = []
-    if args.pattern in ("charuco", "aruco"):
+    if not getattr(args, "root", None) and not getattr(args, "video", None):
+        _err("Provide either --root (images) or --video (mono video).")
+        sys.exit(2)
+    if args.pattern in ("charuco", "aruco_grid"):
         _ensure_aruco_available(f"--pattern {args.pattern}")
         try:
             _ = get_aruco_dict(args.aruco_dict)
         except Exception as ex:
             _err(str(ex))
             sys.exit(1)
-        if args.fix_orientation and not _PIL_OK:
-            warn_list.append("--fix-orientation requested but Pillow is not available; continuing without EXIF rotation.")
+    warn_list: List[str] = []
     if args.square < 0 or args.marker < 0 or args.separation < 0:
         warn_list.append("Negative physical dimensions were given; clamping to 0.")
-    if args.pattern == "aruco" and args.gridboard and (args.square <= 0 or args.separation <= 0):
-        warn_list.append("GridBoard used but --square/--separation not positive; refinement may be less effective.")
     if args.expected_aruco_markers < 0:
         warn_list.append("--expected-aruco-markers < 0; ignoring.")
     if args.selector == "random":
         warn_list.append("--selector=random is quality-aware: selects randomly from top-scoring candidates.")
-    if any(w < 0 for w in (args.w_sharp, args.w_exposure, args.w_corners, args.w_angle)):
+    if any(w < 0 for w in (args.w_sharp, args.w_exposure, args.w_corners)):
         warn_list.append("Negative weights provided; clamping to 0.")
     if args.greedy_min_dist <= 0 and args.selector == "greedy":
         warn_list.append("--greedy-min-dist <=0; may lead to low diversity.")
     for msg in warn_list:
         _warn(msg)
-    gb_cols = gb_rows = None
-    if args.gridboard:
-        m = re.match(r"^\s*(\d+)\s*[xX]\s*(\d+)\s*$", args.gridboard)
-        if not m:
-            _err("--gridboard must be in WxH form, e.g., 7x5")
-            sys.exit(1)
-        gb_cols, gb_rows = int(m.group(1)), int(m.group(2))
-        if gb_cols <= 0 or gb_rows <= 0:
-            _err("--gridboard dimensions must be positive")
-            sys.exit(1)
     if args.jobs <= 0:
         try:
             import multiprocessing as mp
@@ -976,7 +976,28 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     else:
         jobs = max(1, args.jobs)
     t0 = time.time()
-    cams = list_cameras(args.root)
+    if getattr(args, "video", None):
+        cams = {"mono": []}
+        vcap = cv.VideoCapture(args.video)
+        if not vcap.isOpened():
+            _err(f"Cannot open video: {args.video}")
+            sys.exit(1)
+        fidx = 0
+        step = max(1, int(args.video_step))
+        while True:
+            ok, _ = vcap.read()
+            if not ok:
+                break
+            if fidx % step == 0:
+                cams["mono"].append(f"{os.path.abspath(args.video)}#frame{fidx}")
+            fidx += 1
+        vcap.release()
+        if not cams["mono"]:
+            _err("No frames read from --video")
+            sys.exit(1)
+    else:
+        cams = list_cameras(args.root)
+
     all_paths: List[str] = []
     for cam, paths in cams.items():
         all_paths.extend(paths)
@@ -990,21 +1011,17 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         cols=args.cols,
         aruco_dict=args.aruco_dict,
         max_size=(args.max_size if args.max_size > 0 else None),
-        fix_orientation=bool(args.fix_orientation),
         min_sharpness=args.min_sharpness,
         min_corners=args.min_corners,
         square=max(0.0, args.square),
         marker=max(0.0, args.marker),
-        grid_cols=gb_cols,
-        grid_rows=gb_rows,
         separation=max(0.0, args.separation),
         expected_aruco_markers=(args.expected_aruco_markers if args.expected_aruco_markers > 0 else None),
         w_sharp=max(0.0, args.w_sharp),
         w_exposure=max(0.0, args.w_exposure),
         w_corners=max(0.0, args.w_corners),
-        w_angle=max(0.0, args.w_angle),
-        circular_type=args.circular_type,
     )
+
     cfg_hash = _config_hash(eval_cfg)
     cache_data: Optional[Dict] = None
     cache_items: Dict[str, Dict] = {}
@@ -1032,21 +1049,17 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             cols=eval_cfg["cols"],
             aruco_name=eval_cfg["aruco_dict"],
             max_size=eval_cfg["max_size"],
-            fix_orientation=eval_cfg["fix_orientation"],
             min_sharpness=eval_cfg["min_sharpness"],
             min_corners=eval_cfg["min_corners"],
             square=eval_cfg["square"],
             marker=eval_cfg["marker"],
-            grid_cols=eval_cfg["grid_cols"],
-            grid_rows=eval_cfg["grid_rows"],
             separation=eval_cfg["separation"],
-            circular_type=eval_cfg["circular_type"],
             expected_aruco_markers=eval_cfg["expected_aruco_markers"],
             w_sharp=eval_cfg["w_sharp"],
             w_exposure=eval_cfg["w_exposure"],
             w_corners=eval_cfg["w_corners"],
-            w_angle=eval_cfg["w_angle"],
         )
+
         tasks = [(p, ev_kwargs) for p in todo]
         desc = f"Evaluating {len(todo)}/{total_imgs} images ({jobs} jobs)"
         results = []
@@ -1082,8 +1095,13 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             seed=args.seed,
             kmeans_standardize=args.kmeans_standardize,
             greedy_min_dist=args.greedy_min_dist,
-            circular_type=args.circular_type,
             strict=args.strict_all_cams,
+            cache_items=cache_items,
+        )
+    elif getattr(args, "pairwise", False):
+        selected = select_pairwise_consistent_cached(
+            cams,
+            per_camera=args.per_camera,
             cache_items=cache_items,
         )
     else:
@@ -1095,20 +1113,20 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                 seed=args.seed,
                 kmeans_standardize=args.kmeans_standardize,
                 greedy_min_dist=args.greedy_min_dist,
-                circular_type=args.circular_type,
                 cache_items=cache_items,
             )
             for cam, paths in cams.items()
         }
+
     any_selected = any(len(paths) > 0 for paths in selected.values())
     if not any_selected:
         _warn("No valid images selected for any camera. Check thresholds, pattern detection, or dataset.")
     os.makedirs(args.out, exist_ok=True)
     cam_to_yaml: Dict[str, str] = {}
     for cam, paths in selected.items():
-        ypath = write_camera_yaml(args.out, cam, paths, args.relative_to, legacy=args.yaml_legacy)
+        ypath = write_camera_yaml(args.out, cam, paths, args.relative_to)
         cam_to_yaml[cam] = ypath
-    master_yaml = write_master_yaml(args.out, cam_to_yaml, legacy=args.yaml_legacy)
+    master_yaml = write_master_yaml(args.out, cam_to_yaml)
     if args.viz_out:
         ok = _ensure_matplotlib()
         if not ok:
@@ -1126,7 +1144,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                     if res.found and res.features is not None:
                         all_feats.append(res.features)
                         all_scores.append(res.score)
-                all_feats_arr = np.vstack(all_feats) if all_feats else np.empty((0, 4))
+                all_feats_arr = np.vstack(all_feats) if all_feats else np.empty((0, 3))
                 all_scores_arr = np.array(all_scores) if all_scores else np.empty(0)
                 sel_paths = selected.get(cam, [])
                 sel_feats: List[np.ndarray] = []
@@ -1142,7 +1160,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                     if res.found and res.features is not None:
                         sel_feats.append(res.features)
                         sel_scores.append(res.score)
-                sel_feats_arr = np.vstack(sel_feats) if sel_feats else np.empty((0, 4))
+                sel_feats_arr = np.vstack(sel_feats) if sel_feats else np.empty((0, 3))
                 sel_scores_arr = np.array(sel_scores) if sel_scores else np.empty(0)
                 viz_per_camera(args.viz_out, cam, all_feats_arr, all_scores_arr, sel_feats_arr, sel_scores_arr)
     dt = time.time() - t0
