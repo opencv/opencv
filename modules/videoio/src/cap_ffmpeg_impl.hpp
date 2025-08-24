@@ -685,7 +685,10 @@ void CvCapture_FFMPEG::close()
     if( video_st )
     {
 #ifdef CV_FFMPEG_CODECPAR
+// avcodec_close removed in FFmpeg release 8.0
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 11, 100))
         avcodec_close( context );
+# endif
 #endif
         video_st = NULL;
     }
@@ -2005,7 +2008,18 @@ void CvCapture_FFMPEG::get_rotation_angle()
     rotation_angle = 0;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
+    // av_stream_get_side_data removed in FFmpeg release 8.0
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 11, 100))
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+# else
+    AVPacketSideData* sd = video_st->codecpar->coded_side_data;
+    int nb_sd = video_st->codecpar->nb_coded_side_data;
+    if (sd && nb_sd > 0)
+    {
+        const AVPacketSideData* mtx = av_packet_side_data_get(sd,  nb_sd, AV_PKT_DATA_DISPLAYMATRIX);
+        data = mtx->data;
+    }
+# endif
     if (data)
     {
         rotation_angle = -cvRound(av_display_rotation_get((const int32_t*)data));
