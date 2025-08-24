@@ -12,7 +12,7 @@ namespace opencv_test { namespace {
 static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
     Point2f to_pt = pt - el.center;
     double el_angle = el.angle * CV_PI / 180;
-    const Point2f to_pt_el(
+    const Point2d to_pt_el(
         to_pt.x * cos(-el_angle) - to_pt.y * sin(-el_angle),
         to_pt.x * sin(-el_angle) + to_pt.y * cos(-el_angle));
     const double pt_angle = atan2(to_pt_el.y / el.size.height, to_pt_el.x / el.size.width);
