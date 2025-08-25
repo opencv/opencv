@@ -71,6 +71,17 @@ static std::vector<uchar> exifEntryValuetoBytes(const ExifEntry& entry)
     std::vector<uchar> bytes;
     switch (entry.type)
     {
+    case TAG_TYPE_SHORT:
+    {
+        std::vector<int> vec_int = entry.getValueAsIntVector();
+        for (int v : vec_int)
+        {
+            uint16_t u16 = static_cast<uint16_t>(v);
+            bytes.push_back(static_cast<uchar>(u16 & 0xFF));       // low byte
+            bytes.push_back(static_cast<uchar>((u16 >> 8) & 0xFF)); // high byte
+        }
+    }
+    break;
     case TAG_TYPE_ASCII:
     {
         std::string str = entry.getValueAsString();
@@ -105,7 +116,7 @@ static std::vector<uchar> exifEntryValuetoBytes(const ExifEntry& entry)
     }
     break;
     default:
-        // other types are handled inline in toUInt32()
+        CV_LOG_WARNING(NULL, "Undefined conversion for type " << entry.type );
         break;
     }
 
