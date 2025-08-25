@@ -6,7 +6,8 @@
 
 namespace cv {
 
-bool loadCalibrationResultFromFile(const String& calibration_file, Mat& coeffMat, // mterms x 4, [Bx,By,Rx,Ry]
+bool loadCalibrationResultFromFile(const String& calibration_file,
+                                   Mat& coeffMat,
                                    int& degree,
                                    int& width,
                                    int& height) {
@@ -85,7 +86,7 @@ bool loadCalibrationResultFromFile(const String& calibration_file, Mat& coeffMat
 
     const int mterms = (int)red_x.size();
 
-    coeffMat.create(4, mterms, CV_32F);  // rows=4 components, cols=mterms
+    coeffMat.create(4, mterms, CV_32F);
 
     float* Bx = coeffMat.ptr<float>(0);
     float* By = coeffMat.ptr<float>(1);
