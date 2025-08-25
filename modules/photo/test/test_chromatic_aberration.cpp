@@ -178,7 +178,7 @@ TEST_F(ChromaticAberrationTest, FunctionClassEquivalence)
 {
     cv::ChromaticAberrationCorrector corrector(test_yaml_file);
     cv::Mat ref  = corrector.correctImage(test_image);
-    cv::Mat out  = cv::correctChromaticAberration(test_image, test_yaml_file);  // wrapper
+    cv::Mat out  = cv::correctChromaticAberration(test_image, test_yaml_file);
 
     ASSERT_EQ(ref.size(),  test_image.size());
     ASSERT_EQ(ref.type(),  test_image.type());

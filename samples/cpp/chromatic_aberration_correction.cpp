@@ -64,7 +64,6 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // Load the input image
     Mat input = imread(inputPath, IMREAD_UNCHANGED);
     if (input.empty())
     {
@@ -74,10 +73,8 @@ int main(int argc, char** argv)
 
     try
     {
-        // Apply chromatic aberration correction
         Mat corrected = correctChromaticAberration(input, calibPath, bayerPattern);
 
-        // Show results
         namedWindow("Original",    WINDOW_AUTOSIZE);
         namedWindow("Corrected",   WINDOW_AUTOSIZE);
         imshow("Original",  input);
