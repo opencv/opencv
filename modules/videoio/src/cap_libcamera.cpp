@@ -153,6 +153,8 @@ void LibcameraFrameAllocator::deallocate(cv::UMatData* data) const
         app_->recycleRequest(request_to_recycle_);
         request_to_recycle_ = nullptr;
     }
+    
+    delete this;
 }
 
 
@@ -939,7 +941,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         uint8_t *libcamera_buffer_ptr = mem[0].data();
         
         if (vstr == expected_row_bytes) {
-            auto allocator = std::make_unique<LibcameraFrameAllocator>(app, completed_request->request);
+            LibcameraFrameAllocator* allocator = new LibcameraFrameAllocator(app, completed_request->request);
             
             reuse_dims_[0] = (int)vh;
             reuse_dims_[1] = (int)vw;
@@ -955,7 +957,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
             size_t steps[] = {vstr, pixel_bytes};
             
             Mat zero_copy_mat(2, sizes, CV_8UC3, libcamera_buffer_ptr, steps);
-            zero_copy_mat.allocator = allocator.release(); 
+            zero_copy_mat.allocator = allocator; 
             
             if (!zero_copy_mat.u) {
                 zero_copy_mat.u = u;
