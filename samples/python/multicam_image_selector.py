@@ -1087,7 +1087,6 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         default=0,
         help="Max long side in px for processing (0 = full res)",
     )
-    ap.add_argument("--video", help="Single-camera video file path")
     ap.add_argument(
         "--video-step",
         type=int,
@@ -1131,6 +1130,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         help="Path to persistent cache pickle (default: .selector_cache.pkl)",
     )
     ap.add_argument("--resume", action="store_true", help="Resume from cache when possible")
+    ap.add_argument("--out", required=True, help="Output directory for YAMLs")
     args = ap.parse_args(argv)
     if not getattr(args, "root", None) and not getattr(args, "video", None):
         _err("Provide either --root (images) or --video (mono video).")
