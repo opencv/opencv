@@ -963,7 +963,7 @@ public:
     @param calibration_file  Path to YAML/XML file with polynomial data.
     @throws cv::Exception on load or parse failure.
     */
-    explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
+    CV_WRAP explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
 
     /** @brief Apply correction to an input image.
 
@@ -977,7 +977,7 @@ public:
     @returns Corrected image
     @throws cv::Exception if size ≠ calibration.
     */
-    Mat correctImage(InputArray input_image, int bayerPattern = -1);
+    CV_WRAP Mat correctImage(InputArray input_image, int bayerPattern = -1);
 
 private:
     Mat coeffMat_;
@@ -997,7 +997,7 @@ private:
     @param map_x   Output X-map (CV_32F)
     @param map_y   Output Y-map (CV_32F)
     */
-    void buildRemapsFromCoeffMat(int height, int width,
+    CV_WRAP void buildRemapsFromCoeffMat(int height, int width,
                              const Mat& coeffs,
                              int degree,
                              int rowX, int rowY,

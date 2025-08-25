@@ -47,10 +47,10 @@ def main(argv=None):
         return 1
 
     try:
-        corrected = cv.photo.correctChromaticAberration(img, args.calibration, args.bayer)
+        corrected = cv.correctChromaticAberration(img, args.calibration, args.bayer)
 
         if corrected is None:
-            print("ERROR: cv.photo.correctChromaticAberration returned None", file=sys.stderr)
+            print("ERROR: cv.correctChromaticAberration returned None", file=sys.stderr)
             return 1
 
         if not args.no_gui:

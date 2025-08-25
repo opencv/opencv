@@ -8,7 +8,7 @@ namespace opencv_test
 {
 namespace
 {
-PERF_TEST(Photo, ChromaticAberrationCorrector)
+PERF_TEST(ChromaticAberration, ChromaticAberrationCorrector)
 {
     std::string calib_file = getDataPath("cv/cameracalibration/chromatic_aberration/ca_photo_calib.yaml");
     std::string image_file = getDataPath("cv/cameracalibration/chromatic_aberration/ca_photo.png");
@@ -28,7 +28,7 @@ PERF_TEST(Photo, ChromaticAberrationCorrector)
     SANITY_CHECK_NOTHING();
 }
 
-PERF_TEST(Photo, CorrectChromaticAberrationFunction)
+PERF_TEST(ChromaticAberration, CorrectChromaticAberrationFunction)
 {
     std::string calib_file = getDataPath("cv/cameracalibration/chromatic_aberration/ca_photo_calib.yaml");
     std::string image_file = getDataPath("cv/cameracalibration/chromatic_aberration/ca_photo.png");
