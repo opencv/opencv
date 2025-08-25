@@ -54,7 +54,7 @@ TEST_F(Test_Graph_Simplifier, LayerNormSubGraph) {
 }
 
 TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
-    test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
+    test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Pow", "Reduce", "Sqrt"});
 }
 
 TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {

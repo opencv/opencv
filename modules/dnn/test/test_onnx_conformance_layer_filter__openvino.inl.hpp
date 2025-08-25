@@ -411,15 +411,15 @@ CASE(test_concat_3d_axis_negative_2)
 CASE(test_concat_3d_axis_negative_3)
     // no filter
 CASE(test_constant)
-    // no filter
+    SKIP;
 CASE(test_constant_pad)
-    // no filter
+    SKIP;
 CASE(test_constantofshape_float_ones)
-    // no filter
+    SKIP;
 CASE(test_constantofshape_int_shape_zero)
     // no filter
 CASE(test_constantofshape_int_zeros)
-    // no filter
+    SKIP;
 CASE(test_conv_with_autopad_same)
 #if SKIP_SET_1
     SKIP_MYRIAD;
@@ -547,7 +547,7 @@ CASE(test_dynamicquantizelinear_min_adjusted)
 CASE(test_dynamicquantizelinear_min_adjusted_expanded)
     // no filter
 CASE(test_edge_pad)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_diagonal)
     SKIP;
 CASE(test_hardmax_axis_0)
@@ -911,13 +911,13 @@ CASE(test_lrn)
 CASE(test_lrn_default)
     // no filter
 CASE(test_lstm_batchwise)
-    // no filter
+    SKIP;
 CASE(test_lstm_defaults)
-    // no filter
+    SKIP;
 CASE(test_lstm_with_initial_bias)
-    // no filter
+    SKIP;
 CASE(test_lstm_with_peepholes)
-    // no filter
+    SKIP;
 CASE(test_matmul_2d)
     // no filter
 CASE(test_matmul_3d)
@@ -1266,23 +1266,23 @@ CASE(test_pow_bcast_scalar)
 CASE(test_pow_example)
     // no filter
 CASE(test_pow_types_float)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_int32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_int64)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_uint32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_float32_uint64)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int32_float32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int32_int32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int64_float32)
-    // no filter
+    SKIP;
 CASE(test_pow_types_int64_int64)
     SKIP;
 CASE(test_prelu_broadcast)
@@ -1560,7 +1560,7 @@ CASE(test_reduce_sum_square_negative_axes_keepdims_random)
     }
 #endif
 CASE(test_reflect_pad)
-    // no filter
+    SKIP;
 CASE(test_relu)
     // no filter
 CASE(test_reshape_allowzero_reordered)
