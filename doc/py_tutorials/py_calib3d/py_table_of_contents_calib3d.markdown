@@ -20,3 +20,13 @@ Camera Calibration and 3D Reconstruction {#tutorial_py_table_of_contents_calib3d
 
     Extract depth
     information from 2D images.
+
+-   @subpage tutorial_py_multicam_image_selector
+
+    Select good calibration images
+    automatically from multi-camera datasets or videos.
+
+-   @subpage tutorial_py_multicam_vis
+
+    Visualize camera
+    extrinsics, reprojection errors, and board poses in 3-D.
