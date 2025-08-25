@@ -459,13 +459,9 @@ uint32_t ExifReader::extractIFDOffset(const ExifEntry& entry) const
 bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::vector< std::vector<ExifEntry> >& exif_entries_vec)
 {
     if (data && size > 0)
-    {
         m_data.assign(data, data + size);
-    }
     else
-    {
         return false;
-    }
 
     m_format = getFormat();
 
@@ -489,7 +485,7 @@ bool ExifReader::parseExif(const unsigned char* data, const size_t size, std::ve
         {
             ExifEntry exifEntry = parseExifEntry(offset);
             exif_entries.push_back(exifEntry);
-            if (exifEntry.tagId == 0x8769 || exifEntry.tagId == 0x8825) // Exif or GPS IFD pointer
+            if (exifEntry.tagId == TAG_EXIF_OFFSET || exifEntry.tagId == TAG_GPS_INFO) // Exif or GPS IFD pointer
             {
                 uint32_t sub_ifd_offset = exifEntry.getValueAsInt();
                 if (sub_ifd_offset < m_data.size())
@@ -922,12 +918,19 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_MODIFY_DATE ? "Modify Date" :
         tag == TAG_ARTIST ? "Artist" :
         tag == TAG_HOST_COMPUTER ? "Host Computer" :
+
         tag == TAG_WHITE_POINT ? "White Point" :
+        tag == TAG_PRIMARY_CHROMATICITIES ? "Primary Chromaticities" :
+
         tag == TAG_SAMPLE_FORMAT ? "Sample Format" :
 
         tag == TAG_JPGFROMRAWSTART ? "Jpg From Raw Start " :
         tag == TAG_JPGFROMRAWLENGTH ? "Jpg From Raw Length" :
-        tag == TAG_YCBCRPOSITIONING ? "YCbCr Positioning" :
+
+        tag == TAG_YCBCR_COEFFICIENTS ? "YCbCr Coefficients" :
+        tag == TAG_YCBCR_SUBSAMPLING ? "YCbCr SubSampling" :
+        tag == TAG_YCBCR_POSITIONING ? "YCbCr Positioning" :
+        tag == TAG_REFERENCE_BLACK_WHITE ? "Reference Black White" :
 
         tag == TAG_CFA_REPEAT_PATTERN_DIM ? "CFA Repeat Pattern Dim" :
         tag == TAG_CFA_PATTERN ? "CFA Pattern" :
@@ -982,6 +985,16 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_EXIF_IMAGE_WIDTH ? "Exif Image Width" :
         tag == TAG_EXIF_IMAGE_HEIGHT ? "Exif Image Height" :
 
+        tag == TAG_INTEROPERABILITY ? "Interoperability" :
+
+        tag == TAG_SUBJECT_LOCATION ? "Subject Location" :
+        tag == TAG_EXPOSURE_INDEX ? "Exposure Index" :
+        tag == TAG_SENSING_METHOD ? "Sensing Method" :
+
+        tag == TAG_FILE_SOURCE ? "File Source" :
+
+        tag == TAG_PHOTO_CFA_PATTERN ? "CFA Pattern" :
+
         tag == TAG_WHITE_BALANCE ? "White Balance" :
         tag == TAG_DIGITAL_ZOOM_RATIO ? "Digital Zoom Ratio" :
         tag == TAG_FOCAL_LENGHT_IN_35MM ? "Focal Length In 35mm Film" :
@@ -990,6 +1003,8 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_CONTRAST ? "Contrast" :
         tag == TAG_SATURATION ? "Saturation" :
         tag == TAG_SHARPNESS ? "Sharpness" :
+
+        tag == TAG_DISTANCE_RANGE ? "Subject Distance Range" :
 
         tag == TAG_FOCAL_PLANE_X_RESOLUTION ? "Focal Plane X Resolution" :
         tag == TAG_FOCAL_PLANE_Y_RESOLUTION ? "Focal Plane Y Resolution" :
@@ -1002,15 +1017,21 @@ std::string ExifEntry::getTagIdAsString() const
 
         tag == TAG_IMAGE_UNIQUE_ID ? "Image Unique ID" :
 
+        tag == TAG_COMPOSITE_IMAGE ? "Composite Image" :
+
         tag == TAG_BODY_SERIAL_NUMBER ? "Body Serial Number" :
         tag == TAG_LENS_SPECIFICATION ? "Lens Specification" :
         tag == TAG_LENS_MAKE ? "Lens Make" :
         tag == TAG_LENS_MODEL ? "Lens Model" :
         tag == TAG_GAMMA ? "Gamma" :
+
+        tag == TAG_PRINT_IMAGE_MATCHING ? "Print Image Matching" :
+
+        tag == TAG_CHROMA_BLUR_RADIUS ? "Chroma Blur Radius" :
         tag == TAG_DNG_VERSION ? "DNG Version" :
         tag == TAG_DNG_BACKWARD_VERSION ? "DNG Backward Version" :
         tag == TAG_UNIQUE_CAMERA_MODEL ? "Unique Camera Model" :
-        tag == TAG_CHROMA_BLUR_RADIUS ? "Chroma Blur Radius" :
+
         tag == TAG_CFA_PLANECOLOR ? "CFA Plane Color" :
         tag == TAG_CFA_LAYOUT ? "CFA Layout" :
         tag == TAG_BLACK_LEVEL_REPEAT_DIM ? "Black Level Repeat Dim" :
@@ -1027,22 +1048,25 @@ std::string ExifEntry::getTagIdAsString() const
         tag == TAG_AS_SHOT_NEUTRAL ? "As Shot Neutral" :
         tag == TAG_AS_SHOT_WHITE_XY ? "As Shot White XY" :
         tag == TAG_BASELINE_EXPOSURE ? "Baseline Exposure" :
+
         tag == TAG_CALIBRATION_ILLUMINANT1 ? "Calibration Illuminant 1" :
         tag == TAG_CALIBRATION_ILLUMINANT2 ? "Calibration Illuminant 2" :
+
+        tag == TAG_ACTIVE_AREA ? "Active Area" :
         tag == TAG_EXTRA_CAMERA_PROFILES ? "Extra Camera Profiles" :
-        tag == TAG_PROFILE_NAME ? "Profile Name" :
         tag == TAG_AS_SHOT_PROFILE_NAME ? "As Shot Profile Name" :
+
+        tag == TAG_PROFILE_NAME ? "Profile Name" :
+
+        tag == TAG_FORWARD_MATRIX1 ? "Forward Matrix 1" :
+        tag == TAG_FORWARD_MATRIX2 ? "Forward Matrix 2" :
+
         tag == TAG_PREVIEW_COLORSPACE ? "Preview Colorspace" :
         tag == TAG_OPCODE_LIST2 ? "Op Code List 2" :
         tag == TAG_NOISE_PROFILE ? "Noise Profile" :
-        tag == TAG_DEFAULT_BLACK_RENDER ? "Black Render" :
-        tag == TAG_ACTIVE_AREA ? "Active Area" :
-        tag == TAG_FORWARD_MATRIX1 ? "Forward Matrix 1" :
-        tag == TAG_SENSING_METHOD ? "Sensing Method" :
+        tag == TAG_DEFAULT_BLACK_RENDER ? "Black Render" : nullptr;
 
-        tag == TAG_COMPOSITE_IMAGE ? "Composite Image" :
-        tag == TAG_FORWARD_MATRIX2 ? "Forward Matrix 2" : nullptr;
-    return tagstr ? std::string(tagstr) : cv::format("<unknown tag>(%d)", (int)tag);
+    return tagstr ? std::string(tagstr) : cv::format("----------------*********************--------------<unknown tag>(%d)", (int)tag);
 };
 
 std::string ExifEntry::dumpAsString() const {

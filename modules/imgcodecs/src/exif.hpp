@@ -23,9 +23,9 @@ public:
 
     enum ExifEndianness
     {
-        INTEL = 0x49,
-        MOTO = 0x4D,
-        NONE = 0x00
+        INTEL = 73,
+        MOTO = 77,
+        NONE = 0
     };
 
     /**
