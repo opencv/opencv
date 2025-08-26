@@ -5,6 +5,8 @@
 #include <opencv2/dnn/dnn.hpp>
 #include "utils.hpp"
 #include "unicode.hpp"
+#include "core_bpe.hpp"
+
 
 namespace cv { namespace dnn { 
 CV__DNN_INLINE_NS_BEGIN
@@ -196,5 +198,6 @@ Tokenizer Tokenizer::load(const std::string& model_dir) {
     }
     return tok;
 }
+
 CV__DNN_INLINE_NS_END
 }}

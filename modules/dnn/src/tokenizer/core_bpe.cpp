@@ -1,43 +1,10 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  Portions of this file are inspired by or adapted from the tiktoken Rust
-//  implementation:
-//      https://github.com/openai/tiktoken/blob/main/src/lib.rs
-//
-//  This file is part of the OpenCV DNN module for tokenization.
-//
-////////////////////////////////////////////////////////////////////////////////////////*/
 
-/*M///////////////////////////////////////////////////////////////////////////////////////
-// MIT License
-//
-// Copyright (c) 2022 OpenAI, Shantanu Jain
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-//
-////////////////////////////////////////////////////////////////////////////////////////*/
-#include <opencv2/dnn/dnn.hpp>
 #include "unicode.hpp"
 #include "utils.hpp"
+#include "core_bpe.hpp"
 
 #include <cstdint>
 #include <string>
@@ -53,7 +20,6 @@
 
 namespace cv { namespace dnn { 
 CV__DNN_INLINE_NS_BEGIN
-
 static constexpr std::uint32_t RANK_MAX  = std::numeric_limits<std::uint32_t>::max();
 static constexpr std::size_t SZ_MAX = std::numeric_limits<std::size_t>::max();
 

@@ -2,17 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-#if defined(_MSC_VER)
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-#endif
-
-#include "unicode.hpp"
-// ...existing code...
-
-#if defined(_MSC_VER)
-#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-#endif
-
 #include "unicode.hpp"
 #include "unicode-data.hpp"
 
@@ -36,14 +25,6 @@ size_t unicode_len_utf8(char src) {
     const size_t lookup[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4 };
     uint8_t highbits = static_cast<uint8_t>(src) >> 4;
     return lookup[highbits];
-}
-
-static std::string unicode_cpts_to_utf8(const std::vector<uint32_t> & cps) {
-    std::string result;
-    for (size_t i = 0; i < cps.size(); ++i) {
-        result.append(unicode_cpt_to_utf8(cps[i]));
-    }
-    return result;
 }
 
 uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
