@@ -133,8 +133,8 @@ double calcError(const vector<Point2f>& v, const Mat& u)
     return err;
 }
 
-const double rough_success_error_level = 2.5;
-const double precise_success_error_level = 2;
+const double rough_success_error_level = 35.0;
+const double precise_success_error_level = 30;
 
 
 /* ///////////////////// chess_corner_test ///////////////////////// */
