@@ -27,7 +27,7 @@ static double rms_algebraic_dist(const vector<Point2f>& pts, const RotatedRect& 
 }
 
 static bool fit_and_check_ellipse(const vector<Point2f>& pts, const double eps) {
-    RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
+    const RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
     return rms_algebraic_dist(pts, ellipse) < eps;
 }
 
