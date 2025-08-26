@@ -186,6 +186,7 @@ protected:
     void parseDetectionOutput      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseEinsum               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parsePow                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseElu                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseExpand               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseFlatten              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1750,18 +1751,21 @@ void ONNXImporter2::parseCumSum(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto, ninputs);
 }
 
-// "Equal" "Greater" "Less" "Pow" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual" "And" "Or" "Xor"
+void ONNXImporter2::parsePow(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Pow";
+    addLayer(layerParams, node_proto);
+}
+
+// "Equal" "Greater" "Less" "Add" "Sub" "Mul" "Div" "Sum" "Min" "Max" "GreaterOrEqual" "LessOrEqual" "And" "Or" "Xor"
 void ONNXImporter2::parseElementWise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto_)
 {
     opencv_onnx::NodeProto node_proto = node_proto_;
     String op_type = toLowerCase(node_proto.op_type());
 
-    if (node_proto.op_type() == "Pow") {
-        layerParams.type = "Pow";
-    } else {
-        layerParams.type = "NaryEltwise";
-        layerParams.set("operation", toLowerCase(node_proto.op_type()));
-    }
+    layerParams.type = "NaryEltwise";
+    layerParams.set("operation", toLowerCase(node_proto.op_type()));
+
     if (node_proto.op_type() == "Mod") {
         if (layerParams.get<int>("fmod", 0)) {
             layerParams.set("operation", "fmod");
@@ -2507,8 +2511,9 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
+    dispatch["Pow"] = &ONNXImporter2::parsePow;
 
-    dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
+    dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
             dispatch["LessOrEqual"] = dispatch["Mod"] = dispatch["And"] = dispatch["Or"] = dispatch["Xor"] = &ONNXImporter2::parseElementWise;
 
