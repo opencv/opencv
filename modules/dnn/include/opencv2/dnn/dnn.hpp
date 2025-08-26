@@ -2109,11 +2109,11 @@ public:
      * names directly (e.g. @c model_dir + "config.json"), so @p model_dir must
      * end with an appropriate path separator.
      *
-     * @param model_dir  Directory path prefix to model files.
+     * @param model_config  Path to config.json for model.
      * @return A @c Tokenizer ready for use.
      * @throw cv::Exception if files are missing or @c model_type is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_dir); 
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config); 
 
     /** 
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).

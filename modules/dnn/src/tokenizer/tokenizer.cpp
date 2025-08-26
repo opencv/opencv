@@ -179,15 +179,20 @@ CoreBPE getTokenizerForCl100kBaseFromJSON_FS(const std::string &name,
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), CL100K_BASE);
 }
 
-Tokenizer Tokenizer::load(const std::string& model_dir) {
-    const std::string cfg_path = model_dir + "config.json";
-    cv::FileStorage cfg(cfg_path, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+Tokenizer Tokenizer::load(const std::string& model_config) {
+    // We set the full path to config.json smilair to what readNetFromCaffe(prototxt,...) does. 
+    cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
     if (!cfg.isOpened()) 
-        CV_Error(cv::Error::StsError, "Could not open config.json at: " + cfg_path);
+        CV_Error(cv::Error::StsError, "Could not open config.json at: " + model_config);
 
     std::string model_type;
     cfg["model_type"] >> model_type;
-    const std::string tok_json = model_dir + "tokenizer.json";
+    std::string dir = model_config;
+    {
+        size_t pos = dir.find_last_of("/\\");
+        dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
+    }
+    std::string tok_json = dir + "tokenizer.json";
     Tokenizer tok;
     if (model_type == "gpt2") {
         tok.coreBPE_ = std::make_shared<CoreBPE>(getTokenizerForGPT2FromJSON("gpt2", tok_json));
