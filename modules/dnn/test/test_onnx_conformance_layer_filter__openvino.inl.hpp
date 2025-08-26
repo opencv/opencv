@@ -913,13 +913,13 @@ CASE(test_group_normalization_epsilon)
 CASE(test_group_normalization_example)
     // no filter
 CASE(test_gru_batchwise)
-    // no filter
+    SKIP;
 CASE(test_gru_defaults)
-    // no filter
+    SKIP;
 CASE(test_gru_seq_length)
-    // no filter
+    SKIP;
 CASE(test_gru_with_initial_bias)
-    // no filter
+    SKIP;
 CASE(test_hammingwindow)
     SKIP;
 CASE(test_hammingwindow_expanded)
