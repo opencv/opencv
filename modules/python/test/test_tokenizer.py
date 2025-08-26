@@ -59,10 +59,6 @@ class TokenizerBindingTest(NewOpenCVTests):
     #     print(ids_cv)
     #     print(ids_hf)
     #     self.assertEqual(len(ids_tik), len(ids_cv), len(ids_hf))
-
-
-
-        
-        
+    
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
