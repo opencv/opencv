@@ -43,8 +43,13 @@
 
 namespace opencv_test { namespace {
 
-TEST(MultiBandBlender, CanBlendTwoImages)
+CV_ENUM(MaskType, CV_8U, CV_Bool);
+typedef testing::TestWithParam<MaskType> MultiBandBlender;
+
+TEST_P(MultiBandBlender, CanBlendTwoImages)
 {
+    int mask_type = GetParam();
+
     Mat image1 = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/baboon.png");
     Mat image2 = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.png");
     ASSERT_EQ(image1.rows, image2.rows); ASSERT_EQ(image1.cols, image2.cols);
@@ -53,11 +58,11 @@ TEST(MultiBandBlender, CanBlendTwoImages)
     image1.convertTo(image1s, CV_16S);
     image2.convertTo(image2s, CV_16S);
 
-    Mat mask1(image1s.size(), CV_8U);
+    Mat mask1(image1s.size(), mask_type);
     mask1(Rect(0, 0, mask1.cols/2, mask1.rows)).setTo(255);
     mask1(Rect(mask1.cols/2, 0, mask1.cols - mask1.cols/2, mask1.rows)).setTo(0);
 
-    Mat mask2(image2s.size(), CV_8U);
+    Mat mask2(image2s.size(), mask_type);
     mask2(Rect(0, 0, mask2.cols/2, mask2.rows)).setTo(0);
     mask2(Rect(mask2.cols/2, 0, mask2.cols - mask2.cols/2, mask2.rows)).setTo(255);
 
@@ -75,5 +80,7 @@ TEST(MultiBandBlender, CanBlendTwoImages)
     double psnr = cvtest::PSNR(expected, result);
     EXPECT_GE(psnr, 50);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, MultiBandBlender, MaskType::all());
 
 }} // namespace
