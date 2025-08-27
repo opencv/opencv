@@ -1116,8 +1116,31 @@ Mat::operator std::array<_Tp, _Nm>() const
 template<typename _Tp, int n> inline
 Mat::operator Vec<_Tp, n>() const
 {
-    CV_Assert( data && dims <= 2 && (rows == 1 || cols == 1) &&
-               rows + cols - 1 == n && channels() == 1 );
+    if (!data) {
+    CV_Error(cv::Error::StsNullPtr,
+             "Mat::operator Vec: Matrix data is null.");
+}
+if (dims > 2) {
+    CV_Error(cv::Error::StsBadArg,
+             "Mat::operator Vec: Matrix must have <= 2 dimensions, got " +
+             std::to_string(dims));
+}
+if (!(rows == 1 || cols == 1)) {
+    CV_Error(cv::Error::StsBadSize,
+             "Mat::operator Vec: Matrix must be a row or column vector, got " +
+             std::to_string(rows) + "x" + std::to_string(cols));
+}
+if (rows + cols - 1 != n) {
+    CV_Error(cv::Error::StsUnmatchedSizes,
+             "Mat::operator Vec: Vector length mismatch. Expected " +
+             std::to_string(n) + ", got " +
+             std::to_string(rows + cols - 1));
+}
+if (channels() != 1) {
+    CV_Error(cv::Error::StsBadArg,
+             "Mat::operator Vec: Only single-channel Mat can be converted to Vec.");
+}
+
 
     if( isContinuous() && type() == traits::Type<_Tp>::value )
         return Vec<_Tp, n>((_Tp*)data);
