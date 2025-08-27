@@ -1113,7 +1113,7 @@ public:
     CV_WRAP Subdiv2D(Rect rect);
 
     /** @overload */
-    CV_WRAP_AS(Subdiv2D2f) Subdiv2D(Rect2f rect);
+    CV_WRAP Subdiv2D(Rect2f rect2f);
 
     /** @overload
 
