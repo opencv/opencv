@@ -11,10 +11,13 @@ namespace opencv_test { namespace {
 // return true if point lies inside ellipse
 static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
     Point2f to_pt = pt - el.center;
-    double pt_angle = atan2(to_pt.y, to_pt.x);
     double el_angle = el.angle * CV_PI / 180;
-    double x_dist = 0.5 * el.size.width * cos(pt_angle + el_angle);
-    double y_dist = 0.5 * el.size.height * sin(pt_angle + el_angle);
+    const Point2d to_pt_el(
+        to_pt.x * cos(-el_angle) - to_pt.y * sin(-el_angle),
+        to_pt.x * sin(-el_angle) + to_pt.y * cos(-el_angle));
+    const double pt_angle = atan2(to_pt_el.y / el.size.height, to_pt_el.x / el.size.width);
+    const double x_dist = 0.5 * el.size.width * cos(pt_angle);
+    const double y_dist = 0.5 * el.size.height * sin(pt_angle);
     double el_dist = sqrt(x_dist * x_dist + y_dist * y_dist);
     return cv::norm(to_pt) < el_dist;
 }

@@ -1,3 +1,1586 @@
+2024-09-11  Even Rouault  <even.rouault@spatialys.com>
+
+	libtiff v4.7.0rc2 preparation
+
+2024-09-11  Even Rouault  <even.rouault@spatialys.com>
+
+	configure.ac: make a provision to look for up to python 3.16 ...
+	hopefully we'll have ditched autoconf support at that point...
+
+	Fix test dependency on tiff2rgba-32BPP that breaks 'make check -jX'
+
+	test/tiff2ps*.sh scripts: try to use POSIX only diff flags.
+
+2024-09-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'automake_doc_fix' into 'master'
+	doc/Makefile.am: make sure that 'doc-html' and 'doc-man' targets have dependencies to avoid them to be rebuilt by successive make
+
+	See merge request libtiff/libtiff!657
+
+2024-09-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch '4_7_0_rst_rgb2ycbcr_thumbnail' into 'master'
+	v4.7.0.rst: clarify that rgb2ycbcr and thumbnail are not installed
+
+	See merge request libtiff/libtiff!659
+
+2024-09-10  Even Rouault  <even.rouault@spatialys.com>
+
+	v4.7.0.rst: clarify that rgb2ycbcr and thumbnail are not installed.
+
+2024-09-08  Even Rouault  <even.rouault@spatialys.com>
+
+	doc/Makefile.am: make sure that 'doc-html' and 'doc-man' targets have dependencies to avoid them to be rebuilt by successive make
+
+	doc/Makefile.am: move rst_sources and EXTRA_DIST variables on top of file
+
+2024-09-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'index_rst_formatting_issue' into 'master'
+	index.rst: fix formatting issue
+
+	See merge request libtiff/libtiff!656
+
+2024-09-07  Even Rouault  <even.rouault@spatialys.com>
+
+	index.rst: fix formatting issue.
+
+2024-09-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'prepare_release_4_7_0' into 'master'
+	Prepare release 4.7.0
+
+	See merge request libtiff/libtiff!654
+
+2024-09-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Doc: remove 'Master' terminlogy.
+
+	v4.7.0.rst: remove mention about autoconf-archive since that change has been reverted
+
+	Revert "autotools: allow pulling in updated macros from autoconf-archive"
+	This reverts commit c820d16c30c27b3be6c3d10834b6d75607ae9d77.
+
+	Revert "HOWTO-RELEASE: document the necessary dependencies for producing dist tarballs"
+	This reverts commit f1a91e42b3f23641cb5559fb60e1d73d201275eb.
+
+	Revert "configure.ac: fix HAVE_OPENGL determination due to recent changes"
+	This reverts commit c370e67f7fd9320674544113218b7fbca4f65c2b.
+
+	configure.ac: fix HAVE_OPENGL determination due to recent changes.
+
+	Update version numbers for 4.7.0.
+
+	Update ChangeLog and create release notes for v4.7.0.
+
+2024-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	typo fixes.
+
+2024-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'autoconf-archive' into 'master'
+	autotools: allow pulling in updated macros from autoconf-archive
+
+	See merge request libtiff/libtiff!645
+
+2024-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'remove_last_usage_of_get_field_type' into 'master'
+	Change last usage of get_field_type at TIFFWriteDirectorySec() to set_field_type
+
+	See merge request libtiff/libtiff!653
+
+2024-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	libtiff v4.7.0rc1 preparation
+
+2024-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'autoconf-archive' into 'master'
+	autotools: allow pulling in updated macros from autoconf-archive
+
+	See merge request libtiff/libtiff!645
+
+2024-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'remove_last_usage_of_get_field_type' into 'master'
+	Change last usage of get_field_type at TIFFWriteDirectorySec() to set_field_type
+
+	See merge request libtiff/libtiff!653
+
+2024-09-05  Su_Laus  <sulau@freenet.de>
+
+	Change last usage of get_field_type at TIFFWriteDirectorySec() for codec related tags to set_field_type.
+
+2024-09-03  Eli Schwartz  <eschwartz93@gmail.com>
+
+	HOWTO-RELEASE: document the necessary dependencies for producing dist tarballs
+
+	autogen.sh: actually return failure if any step failed.
+	Previously, it exited with failure if and only if the wget calls failed.
+	But it is possible for any command to fail, e.g. if the autotools are
+	broken, misconfigured, or missing dependencies.
+
+2024-09-03  Eli Schwartz  <eschwartz93@gmail.com>
+
+	autotools: allow pulling in updated macros from autoconf-archive.
+	Instead of inlining a few macros in acinclude.m4 and forgetting about
+	them, teach aclocal to install the macros to m4/ when autoreconf is run.
+	They are no longer tracked in one big file, nor tracked at all in git,
+	but producing dist tarballs will bundle them up just like `configure`
+	and `Makefile.in`.
+
+	Note: previous behavior of AX_CHECK_GL* was to simply ignore support and
+	proceed, if it was asked for and not found. The updated macros expect to
+	opt into this by specifying action-if-not-found.
+
+	VL_* is obsolete. Upgrade to AX_CFLAGS_WARN_ALL.
+
+2024-09-03  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'XZY2RGB' into 'master'
+	Fixes #644 Index comparison as size_t to avoid overflow in TIFFXYZToRGB
+
+	Closes #644
+
+	See merge request libtiff/libtiff!649
+
+2024-09-03  Nicolas Badoux  <n.badoux@hotmail.com>
+
+	Fixes #644 Index comparison as size_t to avoid overflow in TIFFXYZToRGB.
+
+2024-09-01  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'ci_werror' into 'master'
+	CI: build with -Wall -Wextra -Werror
+
+	See merge request libtiff/libtiff!652
+
+2024-08-30  Even Rouault  <even.rouault@spatialys.com>
+
+	configure.ac: avoid -Werror passed to CFLAGS to interfere with feature detection
+
+	CI: build with -Wall -Wextra -Werror.
+
+2024-08-30  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'ci-old-update' into 'master'
+	ci: Update "old" build jobs to use Ubuntu 22.04
+
+	See merge request libtiff/libtiff!651
+
+2024-08-30  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Update "old" build jobs to use Ubuntu 22.04.
+
+2024-08-30  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'ci-ubuntu-22.04' into 'master'
+	ci: Update to use Ubuntu 24.04 CI images
+
+	See merge request libtiff/libtiff!650
+
+2024-08-30  Roger Leigh  <rleigh@codelibre.net>
+
+	ci: Update to use Ubuntu 24.04 CI images.
+
+2024-08-28  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'uv_encode' into 'master'
+	Fix #645 by using unsigned int for variable indexing an array in uv_decode() and uv_encode()
+
+	Closes #645
+
+	See merge request libtiff/libtiff!648
+
+2024-08-28  Nicolas Badoux  <n.badoux@hotmail.com>
+
+	Fix #645 by using unsigned int for variable indexing an array in uv_decode() and uv_encode()
+	Change `vi` to unsigned int in `uv_decode()` and `uv_encode()` to ensure that upper bound `UV_NVS` cannot be satisfied by a negative value which will overflow when cast to an unsigned value at array access time. This fixes issue #645 where a segmentation fault was caused.
+
+2024-08-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_643_solitary_CustomDirectory_read' into 'master'
+	Fix #643 by initializing pointer to TIFFSetField() and TIFFGetField() before TIFFReadGPSDirectory
+
+	Closes #643
+
+	See merge request libtiff/libtiff!647
+
+2024-08-27  Su Laus  <sulau@freenet.de>
+
+	Fix #643 by initializing pointer to TIFFSetField() and TIFFGetField() before TIFFReadGPSDirectory
+	Initialize pointer to TIFFSetField() and TIFFGetField() (i.e. tif-\>tif_tagmethods.vsetfield and tif-\>tif_tagmethods.vgetfield) even if the file is opened with "h" option. This fixes issue #643 where a segmentation fault was caused.
+
+2024-08-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff_strip' into 'master'
+	Add non-zero check before division in TIFFComputeStrip
+
+	See merge request libtiff/libtiff!646
+
+2024-08-23  Nicolas Badoux  <n.badoux@hotmail.com>
+
+	Add non-zero check before division in TIFFComputeStrip.
+
+2024-08-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_564' into 'master'
+	TIFFScanlineSize64(): revert merge request #564
+
+	See merge request libtiff/libtiff!644
+
+2024-08-15  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFScanlineSize64(): revert merge request #564.
+	https://gitlab.com/libtiff/libtiff/-/merge_requests/564 broke decoding of: "tools/tiffcp -c none in.tif out.tif"
+	with [in.tif](/uploads/0475a88cf6e66652b030a0a3a0c47313/in.tif)
+	leading to shift each line of the target image by one extra pixel at each line.
+	Unfortunately, this cancels what https://gitlab.com/libtiff/libtiff/-/merge_requests/564 tried to fix. I'll let @caolanm propose an alternative fix in a follow-up merge request
+
+2024-08-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'coverity_fix_from_MR_634' into 'master'
+	Fix some Coverity Scan issues introduced by MR 634.
+
+	See merge request libtiff/libtiff!643
+
+2024-08-14  Su_Laus  <sulau@freenet.de>
+
+	Fix some Coverity Scan issues introduced by MR 634.
+
+2024-08-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'lerc-pkgconfig' into 'master'
+	libtiff-4.pc: Fix `Requires.private` missing `Lerc`.
+
+	See merge request libtiff/libtiff!633
+
+2024-08-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'manpage_update_directory_incrementing' into 'master'
+	Amend manpages for changes in current directory index behaviour.
+
+	See merge request libtiff/libtiff!639
+
+2024-08-11  Su Laus  <sulau@freenet.de>
+
+	Amend manpages for changes in current directory index behaviour.
+
+2024-08-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcrop_coverity_20240723' into 'master'
+	Attempt to address tiffcrop Coverity scan issues 1605444, 1605445, and 1605449.
+
+	See merge request libtiff/libtiff!642
+
+2024-08-11  Lee Howard  <faxguy@howardsilvan.com>
+
+	Attempt to address tiffcrop Coverity scan issues 1605444, 1605445, and 1605449.
+
+2024-08-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_CurDir_wrong_incrementing' into 'master'
+	Fix cases where tif_curdir is set incorrectly
+
+	See merge request libtiff/libtiff!634
+
+2024-08-11  Su Laus  <sulau@freenet.de>
+
+	Fix cases where tif_curdir is set incorrectly.
+	Fix cases where the current directory number (tif_curdir) is set inconsistently or incorrectly, depending on the previous history.
+
+	See additional checks and tests in test/test_directory.c of this MR for intended setting of tif_curdir (i.e. TIFFCurrentDirectory(tif)).
+
+2024-07-12  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'coverity_fixes_tiff2pdf_#2' into 'master'
+	Try to fix additional Coverity issues in tiff2pdf
+
+	See merge request libtiff/libtiff!641
+
+2024-07-12  Su Laus  <sulau@freenet.de>
+
+	Try to fix additional Coverity issues in tiff2pdf.
+
+2024-07-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_autoconf_diff_parameter_crlf' into 'master'
+	Add parameter for "diff" used in autoconf test scripts to ignore LF and CRLF differences.
+
+	See merge request libtiff/libtiff!640
+
+2024-07-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'coverity_fixes_tiff2pdf' into 'master'
+	Fix Coverity issues in tiff2pdf.
+
+	See merge request libtiff/libtiff!638
+
+2024-07-09  Su Laus  <sulau@freenet.de>
+
+	Fix Coverity issues in tiff2pdf.
+
+2024-06-29  Su_Laus  <sulau@freenet.de>
+
+	Add parameter for "diff" used in autoconf test scripts to ignore LF and CRLF differences.
+
+2024-06-28  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'coverity_fixes_test_thumbnail' into 'master'
+	Coverity Scan fixes in thumbnail.c and custom_dir_EXIF_231.c
+
+	See merge request libtiff/libtiff!637
+
+2024-06-28  Su Laus  <sulau@freenet.de>
+
+	Coverity Scan fixes in thumbnail.c and custom_dir_EXIF_231.c.
+
+2024-06-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'coverity_fixes' into 'master'
+	Try to silence new Coverity Scan false positives
+
+	See merge request libtiff/libtiff!636
+
+2024-06-24  Even Rouault  <even.rouault@spatialys.com>
+
+	Try to silence new Coverity Scan false positives.
+	There are other warnings in tools/ that I'll let others deal with.
+
+2024-06-24  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix/make' into 'master'
+	fix: error when running make clean
+
+	Closes #630
+
+	See merge request libtiff/libtiff!635
+
+2024-06-24  Kévin Dunglas  <kevin@dunglas.fr>
+
+	fix: error when running make clean.
+
+2024-06-15  Niklas Hambüchen  <mail@nh2.me>
+
+	libtiff-4.pc: Fix `Requires.private` missing `Lerc`.
+	It provides a `.pc` file starting from version 4 in:
+
+	https://github.com/Esri/lerc/blob/8d6e8251544bbe1379feb0fe0a0934e43ca1a6cd/Lerc.pc.in
+
+	libtiff's CMake build system already has support for this,
+	adding `Lerc` to `Requires.private` if Lerc is >= 4.
+
+	In contrast to the CMake build system, autoconf has no good way
+	to check for checking the Lerc version, we do it unconditionally
+	there.
+
+2024-06-13  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'rfc02_text__restore_tools' into 'master'
+	Text for RFC 2: Restoring needed libtiff tools
+
+	See merge request libtiff/libtiff!581
+
+2024-06-13  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'add_some_conversion_test_to_cmake' into 'master'
+	Port some basic sanity checks from autoconf to cmake.
+
+	See merge request libtiff/libtiff!630
+
+2024-06-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcp_coverity_check_malloc_return' into 'master'
+	tiffcp: Add check for limitMalloc return to fix Coverity CID 1603334
+
+	See merge request libtiff/libtiff!632
+
+2024-06-10  Su_Laus  <sulau@freenet.de>
+
+	tiffcp add check for limitMalloc return to fix Coverity CID 1603334.
+
+2024-06-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'aim-nara-master-patch-67955' into 'master'
+	Remove unnecessary `2` in tiffcmp name
+
+	See merge request libtiff/libtiff!631
+
+2024-06-07  AIM | Nara  <takeshi.naramidate@ai-ms.com>
+
+	Remove unnecessary `2` in tiffcmp name.
+
+2024-05-30  Su_Laus  <sulau@freenet.de>
+
+	Port some basic sanity checks from autoconf to cmake. Checks are for tiffcp and tiffcrop RGB->YCbCr JPEG conversions (see MR !611 / 'tiffcp_tiffcrop_RGB_YCbCr_tests')
+
+2024-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'ofz65182' into 'master'
+	an issue seen in putcontig8bitYCbCr22tile
+
+	See merge request libtiff/libtiff!564
+
+2024-05-29  Caolán McNamara  <caolanm@gmail.com>
+
+	TIFFScanlineSize64(): fix computation in non-JPEG YCbCr case (#564)
+	Fixes https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=65182
+
+2024-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_375' into 'master'
+	TIFFRead[Scanline/EncodedStrip/EncodeTile]: 0-initialize output buffer if setupdecode fails ; most codecs: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	Closes #375
+
+	See merge request libtiff/libtiff!628
+
+2024-05-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2pdf-planar' into 'master'
+	Inconsistent PLANARCONFIG value for the input and output TIFF in tiff2pdf.c
+
+	See merge request libtiff/libtiff!629
+
+2024-05-29  Timothy Lyanguzov  <timothy.lyanguzov@sap.com>
+
+	Inconsistent PLANARCONFIG value for the input and output TIFF in tiff2pdf.c
+	Fixed a bug in tiff2pdf.c whereas the PLANARCONFIG for the output TIFF is set to a fixed value of PLANARCONFIG_CONTIG as opposed to match the value of the input TIFF.
+	This mainly manifest in the heap-buffer-overread due to the difference of sizes in the buffers (between input and output) allocated and read to the size of output buffer.
+
+	Reimplementation of !92
+
+2024-05-27  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_lzma/tif_lzw: add code comments.
+
+2024-05-26  Even Rouault  <even.rouault@spatialys.com>
+
+	ZSTDDecode: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	PixarLogDecode: zero-initialize output buffer if failure.
+
+	PackBitsDecode: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	JPEGDecode: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	LERCDecode: zero-initialize output buffer if failure.
+
+	LZMADecode: zero-initialize (not-yet-written parts of) output buffer if failure, and handle repeated calls to decoding same tile/strip if previous failure occured
+
+	TWebPDecode: zero-initialize output buffer if failure, and handle repeated calls to decoding same tile/strip if previous failure occured
+
+	ThunderDecode: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	OJPEGDecode: zero-initialize output buffer if failure.
+
+	JBIGDecode: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	ZIPDecode: zero-initialize (not-yet-written parts of) output buffer if failure, and handle repeated calls to decoding same tile/strip if previous failure occured
+
+	LZWDecode: zero-initialize (not-yet-written parts of) output buffer if failure
+
+	TIFFRead[Scanline/EncodedStrip/EncodeTile]: 0-initialize output buffer if setupdecode fails
+	Fixes #375
+
+2024-05-25  Su_Laus  <sulau@freenet.de>
+
+	Text for RFC 2: Restoring needed libtiff tools - file added to doc/Makefile.am and rebased.
+
+	Text for RFC 2: Restoring needed libtiff tools - approved with voting history updated.
+
+	Text for RFC 2: Restoring needed libtiff tools - further amended.
+
+	Text for RFC 2: Restoring needed libtiff tools - amended.
+
+	Text for RFC 2: Restoring needed libtiff tools.
+
+2024-05-23  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2pdf_539' into 'master'
+	fix tiff2pdf issue #539; however, there certainly remain many JPEG-compressed...
+
+	See merge request libtiff/libtiff!597
+
+2024-05-23  Lee Howard  <faxguy@howardsilvan.com>
+
+	tiff2pdf: fix issue with JPEG restart-interval marker when converting from JPEG-compressed files
+	Fixes #539
+
+	however, there certainly remain many JPEG-compressed TIFFs which tiff2pdf will fumble without disabling data passthrough (using the -n option) - I supect that it has to do with the JPEG tables being removed from the JPEG and placed into the TIFF headers - as tiff2pdf would need to put these back into the JPEG instead of just passing the data through to the PDF
+
+2024-05-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'test_fix' into 'master'
+	test/Makefile.am: make sure that all test images are bundled by make dist even...
+
+	See merge request libtiff/libtiff!626
+
+2024-05-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'add_missing_rst_files' into 'master'
+	doc/Makefile.am: add rfcs/ files in rst_sources variable
+
+	See merge request libtiff/libtiff!624
+
+2024-05-22  Even Rouault  <even.rouault@spatialys.com>
+
+	test/Makefile.am: make sure that all test images are bundled by make dist even if JPEG or JBIG is not available
+
+2024-05-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'timothyl/32bpp-cmake-test' into 'master'
+	Add new test to CMake
+
+	See merge request libtiff/libtiff!625
+
+2024-05-22  Timothy Lyanguzov  <timothy.lyanguzov@sap.com>
+
+	Add new test to CMake.
+	See previous merge request libtiff/libtiff!611
+
+2024-05-22  Even Rouault  <even.rouault@spatialys.com>
+
+	doc/Makefile.am: add rfcs/ files in rst_sources variable.
+
+2024-05-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcp_tiffcrop_RGB_YCbCr_tests' into 'master'
+	Add some basic sanity checks for tiffcp and tiffcrop RGB->YCbCr JPEG conversions.
+
+	See merge request libtiff/libtiff!611
+
+2024-05-22  Lee Howard  <faxguy@howardsilvan.com>
+
+	Add some basic sanity checks for tiffcp and tiffcrop RGB->YCbCr JPEG conversions.
+
+2024-05-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcp_LZW_JBIG_test' into 'master'
+	Add basic sanity check for tiffcp LZW->JBIG conversion.
+
+	See merge request libtiff/libtiff!612
+
+2024-05-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcrop_masonwilde_fix' into 'master'
+	Apply "Fix heap-buffer-overflow in function extractImageSection"
+
+	See merge request libtiff/libtiff!613
+
+2024-05-21  Lee Howard  <faxguy@howardsilvan.com>
+
+	tiffcrop: Apply "Fix heap-buffer-overflow in function extractImageSection"
+	https://gitlab.com/masonwilde/libtiff/-/commit/848434a81c443f59ec90d41218eba6e48a450a11
+
+	authored by zhailiangliang commit 848434a81c443f59ec90d41218eba6e48a450a11
+
+	The overflow conditions were previously addressed, but this provides additional error messages.
+
+2024-05-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_183_alternative' into 'master'
+	OJPEG: reset subsampling_convert_state =0 in OJPEGPreDecode (fixes tiff2pdf issue #183)
+
+	See merge request libtiff/libtiff!621
+
+2024-05-21  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'thunder-fix' into 'master'
+	A fix for Thunder RLE
+
+	See merge request libtiff/libtiff!623
+
+2024-05-21  Timothy Lyanguzov  <theta682@gmail.com>
+
+	A fix for Thunder RLE.
+	The commit https://gitlab.com/robinwatts/libtiff/-/commit/be0519ca3d222c19008fe160873f3b5c28e6b36b states:
+
+	Thunder RLE can fail to decode last run. Bug seen with GhostPDL. Decode of test tif file gives valgrind errors due to the "thunder decode" failing to extract the final run of compressed pixels.
+
+	The logic in the decoder, presumably intended to spot overruns of data, is incorrect in that runs that end at the end of a row (npixels == maxpixels) will not be decoded.
+
+	Fix this by limiting 'n', the number of pixels to copy. Note that npixels is updated by the 'unlimited' value to ensure the error reporting at the end of the loop still works.
+
+2024-05-18  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2ps_fax2tiff_476' into 'master'
+	fix fax2ps and fax2tiff bugs #476
+
+	See merge request libtiff/libtiff!598
+
+2024-05-18  Lee Howard  <faxguy@howardsilvan.com>
+
+	Fix fax2ps and fax2tiff memory leaks.
+	Fixes #476
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2rgba_469' into 'master'
+	fix tiff2rgba issue #469
+
+	See merge request libtiff/libtiff!600
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'formatting-fixes' into 'master'
+	Formatting fixes
+
+	See merge request libtiff/libtiff!622
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Formatting fixes.
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'coverity_fixes' into 'master'
+	3 Coverity Scan fixes in tools & contrib
+
+	See merge request libtiff/libtiff!592
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2pdf_596' into 'master'
+	tiff2pdf issue #596
+
+	See merge request libtiff/libtiff!594
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffdither_473' into 'master'
+	fix tiffdither bug #473
+
+	See merge request libtiff/libtiff!599
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fax2tiff_468' into 'master'
+	fix fax2tiff issue #468
+
+	See merge request libtiff/libtiff!601
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2rgba_background' into 'master'
+	Add background gradient option for tiff2rgba alpha compositing.
+
+	See merge request libtiff/libtiff!610
+
+2024-05-17  Lee Howard  <faxguy@howardsilvan.com>
+
+	Add background gradient option for tiff2rgba alpha compositing.
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2pdf_253' into 'master'
+	Fix tiff2pdf issue #253 - red and blue were being swapped for RGBA decoding
+
+	See merge request libtiff/libtiff!603
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fax2tiff_249' into 'master'
+	Fix fax2tiff issue #249, unreasonable width input
+
+	See merge request libtiff/libtiff!604
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcp_tiffcrop_228' into 'master'
+	correct tiffcp and tiffcrop issue #228
+
+	See merge request libtiff/libtiff!605
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	OJPEG: reset subsampling_convert_state =0 in OJPEGPreDecode (fixes tiff2pdf issue #183)
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fax2tiff_191' into 'master'
+	Fix fax2tiff issue #191 - EOFB interpretation
+
+	See merge request libtiff/libtiff!606
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiff2pdf_98' into 'master'
+	Fix tiff2pdf documentation issue #98
+
+	See merge request libtiff/libtiff!608
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffgt_warning' into 'master'
+	Avoids a warning regarding fallthrough.
+
+	See merge request libtiff/libtiff!609
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcrop_542_550_552' into 'master'
+	tiffcrop: fixes #542, #550, #552 (buffer overflows, use after free)
+
+	See merge request libtiff/libtiff!595
+
+2024-05-17  Lee Howard  <faxguy@howardsilvan.com>
+
+	tiffcrop: fixes #542, #550, #552 (buffer overflows, use after free)
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'Fedora_am_version' into 'master'
+	libtiff-am-version.patch from Fedora stating:
+
+	See merge request libtiff/libtiff!617
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'formatting-fixes' into 'master'
+	Code formatting fixes
+
+	See merge request libtiff/libtiff!620
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Code formatting fixes.
+	Result of running ``pre-commit run --all``
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'sphinx_quotes_dashes' into 'master'
+	Don't let Sphinx inconsistently alter quotes and dashes in rst files.
+
+	See merge request libtiff/libtiff!615
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffmedian_599' into 'master'
+	tiffmedian issue #599
+
+	See merge request libtiff/libtiff!593
+
+2024-05-17  Lee Howard  <faxguy@howardsilvan.com>
+
+	tiffmedian: fix memory leaks.
+	Closes #599
+
+2024-05-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'more_spelling_corrections' into 'master'
+	Typo fixes following...
+
+	See merge request libtiff/libtiff!618
+
+2024-05-17  Lee Howard  <faxguy@howardsilvan.com>
+
+	Typo fixes following https://gitlab.com/libtiff/libtiff/-/commit/c95c77350820e19c8e273925bc97259727d19695
+
+2024-05-16  Lee Howard  <faxguy@howardsilvan.com>
+
+	libtiff-am-version.patch from Fedora stating: Back off the minimum required automake version to 1.11.  There isn't anything in libtiff currently that actually requires 1.12, and changing this allows the package to be built on pre-F18 machines for easier testing.
+
+	Don't let Sphinx inconsistently alter quotes and dashes in rst files. Author: Laszlo Boszormenyi (GCS) <gcs@debian.org> Bug-Debian: https://bugs.debian.org/1028456
+
+	Add basic sanity check for tiffcp LZW->JBIG conversion.
+
+	Avoids a warning regarding fallthrough.
+
+	Fix tiff2pdf documentation issue #98.
+
+	Fix fax2tiff issue #191 - EOFB interpretation.
+
+	Update tiffcp.c.
+
+	Correct tiffcrop output of RGB JPEG and tiffcp/tiffcrop documentation - issue #228
+
+	Fix tiffcp and tiffcrop issue 228 - step 1.
+
+	Fix fax2tiff issue #249, unreasonable width input.
+
+	Fix tiff2pdf issue #253 - red and blue were being swapped for RGBA decoding
+
+	fix fax2tiff issue #468.
+
+	fix tiff2rgba issue #469.
+
+	fix tiffdither bug #473.
+
+	tiff2pdf issue #596.
+
+2024-05-16  Even Rouault  <even.rouault@spatialys.com>
+
+	contrib/addtiffo: validate return of TIFFWriteEncodedXXXX() calls (CID 1024680)
+
+	tiffdump.c: fix wrong printf formattre in error message (CID 1472932)
+
+	tiffset.c: avoid false positive Coverity Scan warning on 64-bit builds (CID 1518997)
+
+2024-05-16  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'master' into 'master'
+	Fix some Coverity warnings.
+
+	See merge request libtiff/libtiff!590
+
+2024-05-16  Lee Howard  <faxguy@howardsilvan.com>
+
+	Fix some Coverity warnings.
+
+2024-05-13  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'revert_tools_removement' into 'master'
+	Restore tools from archive and unsupported and tiffcp -i option with revert.
+
+	See merge request libtiff/libtiff!589
+
+2024-05-11  Su_Laus  <sulau@freenet.de>
+
+	Apply some newer changes to the reverted code and prepare note for 4.7.0.
+
+	Revert "Remove -i option (ignore errors) from tiffcp, because almost all fuzzer issues were consequential errors from ignored errors because of the "-i" option."
+	This reverts commit 280a568ae887c27a422a5da862398ffdbcd9b84d.
+
+2024-05-11  Su_Laus  <sulau@freenet.de>
+
+	Revert "Move most TIFF tools to archive and keep some as unsupported (see #580)."
+	This reverts commit eab89a627f0a65e9a1a47c4b30b4802c80b1ac45.
+
+	# Conflicts:
+	#	tools/unsupported/CMakeLists.txt
+	#	tools/unsupported/tif_tools-unsupported_versioninfo.rc
+
+2024-05-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'calloc-transposed-args' into 'master'
+	Fix -Werror=calloc-transposed-args with gcc 14
+
+	See merge request libtiff/libtiff!588
+
+2024-05-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Fix -Werror=calloc-transposed-args with gcc 14.
+
+2024-05-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'EvaluateIFDdatasizeReading_ossfuzz_68327' into 'master'
+	EvaluateIFDdatasizeReading(): avoid unsigned integer overflow (master only)
+
+	See merge request libtiff/libtiff!586
+
+2024-04-27  Even Rouault  <even.rouault@spatialys.com>
+
+	EvaluateIFDdatasizeReading(): avoid unsigned integer overflow (master only)
+	Fixes https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=68327
+
+2024-04-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'ci-appveyor-cygwin-upgrade' into 'master'
+	appveyor: Upgrade cygwin packages
+
+	See merge request libtiff/libtiff!585
+
+2024-04-25  Roger Leigh  <rleigh@codelibre.net>
+
+	appveyor: Upgrade cygwin packages.
+
+2024-04-25  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'libjpeg_turbo_3_0' into 'master'
+	Change messages/comments refering libjpeg-turbo 2.2 to 3.0
+
+	See merge request libtiff/libtiff!584
+
+2024-04-24  Even Rouault  <even.rouault@spatialys.com>
+
+	Change messages/comments refering libjpeg-turbo 2.2 to 3.0.
+	libjpeg-turbo 2.2 was actually released as 3.0. Reflect that
+
+2024-04-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'EvaluateIFDdatasizeReading_unsigned_int_overflow_fix' into 'master'
+	EvaluateIFDdatasizeReading(): avoid potential unsigned integer overflow on corrupted tag
+
+	See merge request libtiff/libtiff!582
+
+2024-04-22  Even Rouault  <even.rouault@spatialys.com>
+
+	EvaluateIFDdatasizeReading(): avoid potential unsigned integer overflow on corrupted tag
+
+2024-04-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tif_dir_logging-627' into 'master'
+	tif_dir.c: Log source file, line number, and input tif for directory count error.
+
+	Closes #627
+
+	See merge request libtiff/libtiff!583
+
+2024-04-22  Kurt Schwehr  <schwehr@gmail.com>
+
+	tif_dir.c: Log source file, line number, and input tif for directory count error.
+
+2024-04-14  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_readrgbastrip_fpe' into 'master'
+	Avoiding FPEs (division by zero) in tif_getimage.c
+
+	See merge request libtiff/libtiff!580
+
+2024-04-09  Zurab Tsinadze  <zurab.tsinadze@epfl.ch>
+
+	Avoid FPEs (division by zero) in tif_getimage.c.
+
+2024-04-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'appveyor-vs2022' into 'master'
+	appveyor: Add VS2022 builds
+
+	See merge request libtiff/libtiff!579
+
+2024-04-06  Roger Leigh  <rleigh@codelibre.net>
+
+	appveyor: Add VS2022 builds.
+
+2024-04-04  Roger Leigh  <rleigh@codelibre.net>
+
+	Merge branch 'appveyor-mingw-fix' into 'master'
+	appveyor: Use MinGW-w64
+
+	See merge request libtiff/libtiff!578
+
+2024-04-04  Roger Leigh  <rleigh@codelibre.net>
+
+	appveyor: Use MinGW-w64.
+
+2024-04-03  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'update_rfc1_status' into 'master'
+	RFC1: update status to adopted
+
+	See merge request libtiff/libtiff!577
+
+2024-04-03  Even Rouault  <even.rouault@spatialys.com>
+
+	RFC1: update status to adopted.
+
+2024-04-03  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'rfc1_psc' into 'master'
+	Doc: add 'RFC 1: Project Steering Committee Guidelines' and a PSC page
+
+	See merge request libtiff/libtiff!566
+
+2024-04-03  Even Rouault  <even.rouault@spatialys.com>
+
+	Doc: add 'RFC 1: Project Steering Committee Guidelines' and a PSC page.
+
+2024-04-02  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_coverity_test_directory_expansion' into 'master'
+	Fix coverity scan issue in test_directory.c
+
+	See merge request libtiff/libtiff!576
+
+2024-04-02  Su_Laus  <sulau@freenet.de>
+
+	Fix coverity scan issue in test_directory.c.
+
+2024-04-02  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'typo_fixes' into 'master'
+	Various typo fixes
+
+	See merge request libtiff/libtiff!575
+
+2024-04-02  Even Rouault  <even.rouault@spatialys.com>
+
+	Various typo fixes.
+
+2024-03-31  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'test_directory_expansion_endianness' into 'master'
+	Enhance test_directory.c with big-endian and little-endian test cases
+
+	See merge request libtiff/libtiff!574
+
+2024-03-30  Su_Laus  <sulau@freenet.de>
+
+	Enhance test/test_directory.c with big-endian and little-endian test cases.
+	Insert testcase into test_directory.c for #618 "Failure in TIFFSetSubDirectory() will break subsequent TIFFSetDirectory() calls".
+
+2024-03-29  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'correct_coverity_issues_from_avoid_IFD_overwriting' into 'master'
+	Correct some coverity issues from "avoid IFD overwriting"
+
+	See merge request libtiff/libtiff!573
+
+2024-03-29  Su_Laus  <sulau@freenet.de>
+
+	Correct some coverity issues from "avoid IFD overwriting".
+
+2024-03-28  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_gdal_9548' into 'master'
+	LERC codec: deal with issues with multi-band PlanarConfig=Contig and NaN values
+
+	See merge request libtiff/libtiff!572
+
+2024-03-26  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'avoid_IFD_overwriting_other_data_TIFFWriteDirectory' into 'master'
+	TIFFWriteDirectory: Avoid overwriting following data if an IFD is enlarged.
+
+	See merge request libtiff/libtiff!565
+
+2024-03-26  Su Laus  <sulau@freenet.de>
+
+	TIFFWriteDirectory: Avoid overwriting following data if an IFD is enlarged.
+	Avoid overwriting other data if an IFD that has already been written is enlarged. If entries are to be changed in an IFD that has already been written to the file, the memory area can be overwritten as long as the IFD data volume has not increased. Otherwise, the IFD must be written to a different location in the file. Up to now, LibTIFF has simply overwritten the IFD and other data areas in the file.
+
+	With this MR, the size of the IFD, and location of IFD data, is tracked and checked if the IFD can be safely overwritten or has to be re-written to another location.
+
+2024-03-24  Even Rouault  <even.rouault@spatialys.com>
+
+	LERC codec: deal with issues with multi-band PlanarConfig=Contig and NaN values
+	Fixes https://github.com/OSGeo/gdal/issues/9530.
+	Cf https://github.com/OSGeo/gdal/pull/9548 for the GDAL specific fix.
+
+	The LERC codec up-to-now didn't do any special processing when writing a strile
+	in a multi-band PlanarConfig=Contig file, resulting in corruptions. Now we
+	generate a mask buffer in that situation. Actually, if the NaN values are not
+	at the same location accross bands, we need to write one mask-per-band, which
+	requires liblerc >= 3.0, and in that situation change the LERC blob to
+	multi-band instead of multi-depth/dim, with liblerc >= 3.0. When all bands have
+	NaN values at the same location, we generate a single mask, which is compatible
+	of liblerc < 3.0, but requires at last this version of libtiff to be read. This
+	is the best solution we come with to fix the issue while having the maximum
+	backward compatibility.
+
+2024-03-24  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'harmonize_TIFFheader_swapping' into 'master'
+	Correct and harmonize swapping of internal 'tif_header' parameters.
+
+	See merge request libtiff/libtiff!571
+
+2024-03-24  Su Laus  <sulau@freenet.de>
+
+	Correct and harmonize swapping of internal 'tif_header' parameters.
+
+2024-03-19  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'chore/printf-format-specifiers' into 'master'
+	chore: use correct format specifiers
+
+	See merge request libtiff/libtiff!570
+
+2024-03-19  Tom  <tom@msbit.com.au>
+
+	chore: use correct format specifiers.
+	When building on my Mac, I get the following warnings:
+
+	    libtiff/tools/tiffcp.c:154:24: warning: format specifies type 'unsigned short' but the argument has type 'tdir_t' (aka 'unsigned int') [-Wformat]
+	                    comma, nextImage);
+	                           ^~~~~~~~~
+	    libtiff/tools/tiffcp.c:1295:39: warning: format specifies type 'unsigned short' but the argument has type 'tdir_t' (aka 'unsigned int') [-Wformat]
+	                      TIFFFileName(bias), TIFFCurrentDirectory(bias),
+	                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~
+	    libtiff/tools/tiffcp.c:1296:37: warning: format specifies type 'unsigned short' but the argument has type 'tdir_t' (aka 'unsigned int') [-Wformat]
+	                      TIFFFileName(in), TIFFCurrentDirectory(in));
+	                                        ^~~~~~~~~~~~~~~~~~~~~~~~
+	    libtiff/tools/tiffcp.c:1303:37: warning: format specifies type 'unsigned short' but the argument has type 'tdir_t' (aka 'unsigned int') [-Wformat]
+	                      TIFFFileName(in), TIFFCurrentDirectory(in));
+	                                        ^~~~~~~~~~~~~~~~~~~~~~~~
+	    libtiff/tools/tiffsplit.c:174:21: warning: format specifies type 'long long' but the argument has type 'size_t' (aka 'unsigned long') [-Wformat]
+	                        path_len);
+	                        ^~~~~~~~
+
+	This updates the format specifiers from `PRIu16` to `PRIu32` for `tdir_t`
+	(which is a `typdef`ed `uint32_t`) and from `TIFF_SSIZE_FORMAT` to
+	`TIFF_SIZE_FORMAT` for `size_t`, which makes sense given that it's an unsigned
+	type.
+
+2024-03-16  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_628_FPE_at_TIFFhowmany' into 'master'
+	Avoiding FPE (division by zero) for TIFFhowmany_32() and TIFFhowmany_64()...
+
+	Closes #628
+
+	See merge request libtiff/libtiff!568
+
+2024-03-15  Su_Laus  <sulau@freenet.de>
+
+	Avoiding FPE (division by zero) for TIFFhowmany_32() and TIFFhowmany_64() macros by checking for denominator not zero before macros are executed. Fixes #628.
+
+2024-03-14  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_wrong_return_TIFFIsBigTIFF_if_swapping_case' into 'master'
+	Fix wrong return of TIFFIsBigTIFF() in case byte-swapping is acitve
+
+	See merge request libtiff/libtiff!567
+
+2024-03-13  Su_Laus  <sulau@freenet.de>
+
+	Fix wrong return of TIFFIsBigTIFF() in case byte-swapping is acitve (i.e. little endian image on a big endian machine).
+
+2024-01-30  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'master' into 'master'
+	Setting the TIFFFieldInfo field `set_field_type` should consider `field_writecount` not `field_readcount`
+
+	See merge request libtiff/libtiff!544
+
+2024-01-30  Timo Stüber  <omit66@gmail.com>
+
+	Setting the TIFFFieldInfo field `set_field_type` should consider `field_writecount` not `field_readcount`
+	In most of the cases the field_writecount and field_readcount of the TIFFFieldInfo are equal. But they do not have to be the same.
+
+	I encountered this issues when using an older release of Pillow. Since they use custom fields for decoding only, they set the readcount value to 0. As the result _TIFFSetGetType can not identify the type correctly and set TIFF_SETGET_UNDEFINED.
+
+	Error Message:
+	```
+	TIFFLib: _TIFFWriteDirectorySec(): Rational2Double: .set_field_type is not 4 but 1.
+	```
+
+	During the execution of TIFFMergeFieldInfo the fields get_field_type and set_field_type set. I guess the set_field_type should dependent on the field_writecount.
+
+2024-01-24  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'avoid_memory_leaks_using_TIFFCreateDirectory' into 'master'
+	Avoiding memory leaks when using TIFFCreateDirectory()
+
+	See merge request libtiff/libtiff!563
+
+2024-01-24  Su_Laus  <sulau@freenet.de>
+
+	Avoiding memory leaks when using TIFFCreateDirectory() by releasing the allocated memory in the tif-structure.
+
+2024-01-10  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'WIN32' into 'master'
+	Use #ifdef _WIN32 to test for Windows, and tiffio.h: remove definition of __WIN32__
+
+	See merge request libtiff/libtiff!562
+
+2024-01-08  Even Rouault  <even.rouault@spatialys.com>
+
+	test/raw_decode.c: remove likely ifdef tricks related to old compilers or unusual setups
+
+	tif_jpeg.c/tif_ojpeg.c: remove likely ifdef tricks related to old compilers or unusual setups
+
+	Remove _TIFFUInt64ToFloat() and _TIFFUInt64ToDouble()
+
+	Remove support for _MSC_VER < 1500.
+
+2024-01-07  Even Rouault  <even.rouault@spatialys.com>
+
+	Use #ifdef _WIN32 to test for Windows, and tiffio.h: remove definition of __WIN32__
+
+2023-12-20  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_579_non_terminated_ASCII_deletes_one_byte' into 'master'
+	Fixed issue with non-terminated ASCII arrays where the last character is overwritten (fixes #579)
+
+	Closes #579
+
+	See merge request libtiff/libtiff!561
+
+2023-12-20  Su_Laus  <sulau@freenet.de>
+
+	For non-terminated ASCII arrays, the buffer is first enlarged before a NULL is set at the end to avoid deleting the last character. Fixes #579. Some editorials in tif_dir.c.
+
+2023-12-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_624_check_TIFFCreateAnonField_return' into 'master'
+	Fix 624: Check return value of _TIFFCreateAnonField()
+
+	Closes #624
+
+	See merge request libtiff/libtiff!560
+
+2023-12-01  Su_Laus  <sulau@freenet.de>
+
+	Check return value of _TIFFCreateAnonField().
+	Fixes #624
+
+2023-11-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'TIFFOpenOptionsSetMaxCumulatedMemAlloc' into 'master'
+	Add TIFFOpenOptionsSetMaxCumulatedMemAlloc()
+
+	See merge request libtiff/libtiff!556
+
+2023-11-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Add TIFFOpenOptionsSetMaxCumulatedMemAlloc()
+	This function complements ``TIFFOpenOptionsSetMaxSingleMemAlloc()`` to define the maximum cumulated memory allocations in byte, for a given TIFF handle, that libtiff internal memory allocation functions are allowed.
+
+2023-11-23  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'unity_clang_fixes' into 'master'
+	Fixes to avoid CLang warnings on unity builds
+
+	See merge request libtiff/libtiff!558
+
+2023-11-23  Even Rouault  <even.rouault@spatialys.com>
+
+	Fixes to avoid CLang warnings on unity builds.
+
+2023-11-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'cmake_UNITY_BUILD' into 'master'
+	Changes to allow building with cmake -DCMAKE_UNITY_BUILD=ON
+
+	See merge request libtiff/libtiff!557
+
+2023-11-22  Even Rouault  <even.rouault@spatialys.com>
+
+	CI: test -DCMAKE_UNITY_BUILD=ON.
+
+	Changes to allow building with cmake -DCMAKE_UNITY_BUILD=ON.
+
+2023-11-22  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'manpage_506_TIFFClose_check_with_TIFFFlush' into 'master'
+	manpage: Note on using TIFFFlush() before TIFFClose()
+
+	Closes #506
+
+	See merge request libtiff/libtiff!555
+
+2023-11-16  Su_Laus  <sulau@freenet.de>
+
+	manpage: Note on using TIFFFlush() before TIFFClose() to check that the data has been successfully written to the file.
+	Closes #506
+
+2023-11-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'manpage_621_TIFFOpenOptionsSetMaxSingleMemAlloc' into 'master'
+	manpage: Update TIFF documentation about TIFFOpenOptions.rst and memory limitting.
+
+	Closes #621
+
+	See merge request libtiff/libtiff!553
+
+2023-11-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'rectify_some_shadowed_declarations' into 'master'
+	Rectify some shadowed declarations and warnings in tools and test modules.
+
+	See merge request libtiff/libtiff!552
+
+2023-11-11  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_TIFFRealloc_usage_to_TIFFReallocExt' into 'master'
+	Change internally used _TIFFRealloc() to _TIFFReallocExt()
+
+	See merge request libtiff/libtiff!554
+
+2023-11-11  Su_Laus  <sulau@freenet.de>
+
+	Change internally used _TIFFRealloc() to _TIFFReallocExt(), which respects the TIFFOpenOptionsSetMaxSingleMemAlloc() limit.
+
+2023-11-11  Timothy Lyanguzov  <theta682@gmail.com>
+
+	Fix typo.
+
+2023-11-09  Su_Laus  <sulau@freenet.de>
+
+	manpage: Update TIFF documentation about TIFFOpenOptions.rst and TIFFOpenOptionsSetMaxSingleMemAlloc() usage and some other small fixes.
+
+2023-11-08  Su_Laus  <sulau@freenet.de>
+
+	Rectify some shadowed declarations and warnings in tools and test modules.
+
+2023-11-04  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_583' into 'master'
+	tif_fax3.c: error out after a number of times end-of-file has been reached (fixes #583)
+
+	Closes #583
+
+	See merge request libtiff/libtiff!547
+
+2023-11-04  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_622' into 'master'
+	TIFFReadRGBAStrip/TIFFReadRGBATile: add more validation of col/row (fixes #622)
+
+	Closes #622
+
+	See merge request libtiff/libtiff!546
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'extra_limit_getfilesize' into 'master'
+	tif_dirread.c: only issue TIFFGetFileSize() for large enough RAM requests
+
+	See merge request libtiff/libtiff!551
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_dirread.c: only issue TIFFGetFileSize() for large enough RAM requests
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'TIFFFetchDirectory_remove_useless_check' into 'master'
+	TIFFFetchDirectory(): remove useless allocsize vs filesize check
+
+	See merge request libtiff/libtiff!550
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	TIFFFetchDirectory(): remove useless allocsize vs filesize check.
+	CoverityScan rightly points that the max value for dircount16 * dirsize
+	is 4096 * 20. That's small enough not to do any check
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'limit_getfilesize' into 'master'
+	tif_dirread.c: only issue TIFFGetFileSize() for large enough RAM requests
+
+	See merge request libtiff/libtiff!549
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_dirread.c: only issue TIFFGetFileSize() for large enough RAM requests
+	Ammends 5320c9d89c054fa805d037d84c57da874470b01a
+
+	This fixes a performance regression caught by the GDAL regression test
+	suite.
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tif_dirread-typo' into 'master'
+	tif_dirread.c: Fix typo: greather -> greater
+
+	See merge request libtiff/libtiff!548
+
+2023-10-31  Kurt Schwehr  <schwehr@google.com>
+
+	tif_dirread.c: Fix typo: greather -> greater.
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_614_check_mem_allocation_vs_filelength' into 'master'
+	Prevent some out-of-memory attacks
+
+	See merge request libtiff/libtiff!545
+
+2023-10-31  Su Laus  <sulau@freenet.de>
+
+	Prevent some out-of-memory attacks.
+	Some small fuzzer files fake large amounts of data and provoke out-of-memory situations. For non-compressed data content / tags, out-of-memory can be prevented by comparing with the file size.
+
+	At image reading, data size of some tags / data structures (StripByteCounts, StripOffsets, StripArray, TIFF directory) is compared with file size to prevent provoked out-of-memory attacks.
+
+	See issue https://gitlab.com/libtiff/libtiff/-/issues/614#note_1602683857
+
+2023-10-31  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_fax3.c: error out after a number of times end-of-file has been reached (fixes #583)
+
+	TIFFReadRGBAStrip/TIFFReadRGBATile: add more validation of col/row (fixes #622)
+
+2023-10-30  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_failed_subdirectory_read' into 'master'
+	#618: ensure absolute seeking is forced independent
+
+	See merge request libtiff/libtiff!543
+
+2023-10-25  Manuel Massing  <m.massing@virtualities.de>
+
+	#618: ensure absolute seeking is forced independent of TIFFReadDirectory success.
+	This fixes TIFFSetDirectory calls for the case where
+	TIFFReadDirectory was unsuccessful.
+
+2023-10-17  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'cmake' into 'master'
+	CMake: Fix TIFF_INCLUDE_DIRS
+
+	See merge request libtiff/libtiff!541
+
+2023-10-12  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_616' into 'master'
+	tif_lzw.c: avoid warning about misaligned address with UBSAN (fixes #616)
+
+	Closes #616
+
+	See merge request libtiff/libtiff!542
+
+2023-10-12  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'tiffcp_cancel_ycbcr' into 'master'
+	tiffcp: replace PHOTOMETRIC_YCBCR with PHOTOMETRIC_RGB when outputing to...
+
+	See merge request libtiff/libtiff!540
+
+2023-10-12  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_lzw.c: avoid warning about misaligned address with UBSAN (fixes #616)
+	The branch suppressed by this commit wasn't useful as I've verified that
+	with -O2 and -O3 and gcc or clang, doing a memcpy() + _byteswap_uint64()
+	generates exactly the same code as _byteswap_uint64(*ptr).
+	The warning with UBSAN thus only comes from UBSAN generating special code
+	to catch the misalignment, but is unlikely to cause any issue in
+	practice given the above observation.
+
+2023-10-12  Julien Schueller  <schueller@phimeca.com>
+
+	CMake: Fix TIFF_INCLUDE_DIRS.
+
+2023-10-08  Even Rouault  <even.rouault@spatialys.com>
+
+	tiffcp: preserve TIFFTAG_REFERENCEBLACKWHITE when doing YCbCr JPEG -> YCbCr JPEG
+
+2023-10-07  Even Rouault  <even.rouault@spatialys.com>
+
+	tiffcp: replace PHOTOMETRIC_YCBCR with PHOTOMETRIC_RGB when outputing to compression != JPEG (refs #571)
+
+2023-10-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'kmilos-master-patch-42063' into 'master'
+	CMake: MinGW compilers don't need a .def file for shared library
+
+	See merge request libtiff/libtiff!448
+
+2023-10-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'kmilos-master-patch-64997' into 'master'
+	CMake: move libdeflate and Lerc to Requires.private
+
+	See merge request libtiff/libtiff!536
+
+2023-10-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'clarify_archive' into 'master'
+	Doc: clarify unsupported (still in tarball) and archived (only in git) utilities
+
+	See merge request libtiff/libtiff!532
+
+2023-10-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_571_alternative' into 'master'
+	tiffcp: Setting the correct photometric interpretation for the output image...
+
+	Closes #571
+
+	See merge request libtiff/libtiff!539
+
+2023-10-04  Even Rouault  <even.rouault@spatialys.com>
+
+	tiffcp: do not copy tags YCBCRCOEFFICIENTS, YCBCRSUBSAMPLING, YCBCRPOSITIONING, REFERENCEBLACKWHITE. Only set TIFFTAG_YCBCRSUBSAMPLING when generating YCbCr JPEG
+
+	tiffcp: Setting the correct photometric interpretation for the output image when converting JPEG-YCBCR to JPEG-RGB images.
+	Closes #571
+
+2023-09-28  Miloš Komarčević  <miloskomarcevic@aim.com>
+
+	CMake: move libdeflate and Lerc to Requires.private.
+
+2023-09-27  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'kmilos-windres' into 'master'
+	CMake: enable resource compilation on all Windows
+
+	See merge request libtiff/libtiff!537
+
+2023-09-27  Miloš Komarčević  <miloskomarcevic@aim.com>
+
+	CMake: enable resource compilation on all Windows.
+
+2023-09-15  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_608' into 'master'
+	tif_dirinfo.c: re-enable TIFFTAG_EP_CFAREPEATPATTERNDIM and TIFFTAG_EP_CFAPATTERN tags (fixes #608)
+
+	Closes #608
+
+	See merge request libtiff/libtiff!534
+
+2023-09-15  Even Rouault  <even.rouault@spatialys.com>
+
+	tif_dirinfo.c: re-enable TIFFTAG_EP_CFAREPEATPATTERNDIM and TIFFTAG_EP_CFAPATTERN tags (fixes #608)
+
+2023-09-09  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_606_tiffcp_check_also_input_compression_codec' into 'master'
+	tiffcp: Fixes #606. Check also codec of input image, not only from output image.
+
+	Closes #606
+
+	See merge request libtiff/libtiff!533
+
+2023-09-09  Su_Laus  <sulau@freenet.de>
+
+	Check also if codec of input image is available, independently from codec check of output image and return with error if not. Fixes #606.
+
+2023-09-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Doc: clarify unsupported (still in tarball) and archived (only in git) utilities
+
+2023-09-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'update_release_date' into 'master'
+	Update RELEASE-DATE
+
+	See merge request libtiff/libtiff!531
+
+2023-09-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Update RELEASE-DATE.
+
+2023-09-08  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_605' into 'master'
+	autoconf.ac: fix detection of windows.h for mingw (fixes #605)
+
+	Closes #605
+
+	See merge request libtiff/libtiff!530
+
+2023-09-07  Even Rouault  <even.rouault@spatialys.com>
+
+	autoconf.ac: fix detection of windows.h for mingw (fixes #605)
+
+2023-09-06  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'prepare_v4_6_0' into 'master'
+	Prepare for libtiff 4.6.0 release
+
+	See merge request libtiff/libtiff!528
+
+2023-09-05  Even Rouault  <even.rouault@spatialys.com>
+
+	doc/index.rst: add warning about tools removal.
+
+2023-09-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Merge branch 'fix_603_readme_doc_reference_update' into 'master'
+	Update documentation reference within README.md. Fixes #603.
+
+	Closes #603
+
+	See merge request libtiff/libtiff!529
+
+2023-09-05  Su_Laus  <sulau@freenet.de>
+
+	Update documentation reference within README.md. Fixes #603.
+
+2023-09-05  Even Rouault  <even.rouault@spatialys.com>
+
+	Fix references to mailing list.
+
 2023-09-05  Even Rouault  <even.rouault@spatialys.com>
 
 	libtiff v4.6.0 released
@@ -299,7 +1882,7 @@
 	Fixes https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=59751
 
 	In 738e0409 (refs #575), we disabled DNG / EP tags, but there was a
-	special proessing for TIFFTAG_EP_BATTERYLEVEL that must be disabled
+	special processing for TIFFTAG_EP_BATTERYLEVEL that must be disabled
 	since the tag is no longer defined.
 
 2023-06-09  Su_Laus  <sulau@freenet.de>
@@ -395,8 +1978,8 @@
 	tif_dirinfo.c: disable DNG 1.2->1.6 tags.
 	They were added per b90b20d36d7833f54a1f3014c324f6c21b988006 but it has
 	been found in https://gitlab.com/libtiff/libtiff/-/issues/575 that it
-	could cause compatibity issues with libtiff users, so this addition
-	should be defered for a feature release (likely 4.6.0) and not a patch one.
+	could cause compatibility issues with libtiff users, so this addition
+	should be deferred for a feature release (likely 4.6.0) and not a patch one.
 
 	Fixes #575
 
@@ -576,7 +2159,7 @@
 2023-05-06  Even Rouault  <even.rouault@spatialys.com>
 
 	Merge branch 'fix_548' into 'master'
-	LZWDecode(): avoid crash when trying to read again from a strip whith a...
+	LZWDecode(): avoid crash when trying to read again from a strip with a...
 
 	Closes #548
 
@@ -610,7 +2193,7 @@
 
 2023-04-29  Even Rouault  <even.rouault@spatialys.com>
 
-	LZWDecode(): avoid crash when trying to read again from a strip whith a missing end-of-information marker (fixes #548)
+	LZWDecode(): avoid crash when trying to read again from a strip with a missing end-of-information marker (fixes #548)
 
 2023-04-25  Su_Laus  <sulau@freenet.de>
 
@@ -1339,7 +2922,7 @@
 
 	Use structures that can be extended as extra argument.
 
-	Leverages and ammends https://gitlab.com/libtiff/libtiff/-/merge_requests/409
+	Leverages and amends https://gitlab.com/libtiff/libtiff/-/merge_requests/409
 
 2022-11-21  Even Rouault  <even.rouault@spatialys.com>
 
@@ -2077,7 +3660,7 @@
 	to
 	{ TIFFTAG_INTEROPERABILITYIFD, 1, 1, TIFF_IFD8, 0, TIFF_SETGET_IFD8, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 0, 0, "InteroperabilityIFDOffset", NULL },
 
-	However, if those tags schould not be handled by LibTiff because they are deamed as abandoned or unwanted tags, those tags need to be defined with FIELD_IGNORE instead of FIELD_CUSTOM and keeping set_field_type  = TIFF_SETGET_UNDEFINED
+	However, if those tags should not be handled by LibTiff because they are deemed as abandoned or unwanted tags, those tags need to be defined with FIELD_IGNORE instead of FIELD_CUSTOM and keeping set_field_type  = TIFF_SETGET_UNDEFINED
 
 2022-07-01  Su_Laus  <sulau@freenet.de>
 
@@ -2185,7 +3768,7 @@
 	tif_predict.c: make horAcc8() work with icc (ICC) 2021.6.0 20220226 -O2.
 	For a reason I don't understand, recent ICC generates wrong code in -O2
 	mode for the stride = 3 and 4 cases. The modified code is more
-	straightfoward, so go for it.
+	straightforward, so go for it.
 
 2022-06-19  Roger Leigh  <rleigh@codelibre.net>
 
@@ -2442,7 +4025,7 @@
 	Include stdlib.h in tif_lzw.c.
 	In `tif_lzw.c`, a call is made to `_byteswap_uint64`. This is declared in `stdlib.h`. `stdlib.h` is not included in `tib_lzw.c`, so a name error may occur.
 
-	This change adds `#include stdlib.h` to `tif_lzw.c`, to prevent a name error from occuring when `stdlib.h` is not included.
+	This change adds `#include stdlib.h` to `tif_lzw.c`, to prevent a name error from occurring when `stdlib.h` is not included.
 
 2022-05-29  Roger Leigh  <rleigh@codelibre.net>
 
@@ -2662,7 +4245,7 @@
 
 2022-04-22  Even Rouault  <even.rouault@spatialys.com>
 
-	tif_lzw.c: fix potential out-of-bounds error when trying to read in the same tile/strip after an error has occured (fixes #410)
+	tif_lzw.c: fix potential out-of-bounds error when trying to read in the same tile/strip after an error has occurred (fixes #410)
 
 2022-04-06  Su_Laus  <sulau@freenet.de>
 
@@ -3035,7 +4618,7 @@
 2022-02-11  Even Rouault  <even.rouault@spatialys.com>
 
 	Merge branch 'predictor_2_64bit' into 'master'
-	Predictor 2 (horizontal differenciation): support 64-bit
+	Predictor 2 (horizontal differentiation): support 64-bit
 
 	See merge request libtiff/libtiff!296
 
@@ -3054,7 +4637,7 @@
 
 2022-02-09  Even Rouault  <even.rouault@spatialys.com>
 
-	Predictor 2 (horizontal differenciation): support 64-bit.
+	Predictor 2 (horizontal differentiation): support 64-bit.
 	There's no reason not to support 64-bit. The TIFF 6 specification
 	doesn't say anything about that (and even mention 4-bit, which we don't
 	support)
@@ -3237,8 +4820,8 @@
 2021-12-13  Even Rouault  <even.rouault@spatialys.com>
 
 	OJPEG: avoid assertion when using TIFFReadScanline() (fixes #337)
-	Note: my analyis of the issue would be that the use of the scanline API
-	is currently propably broken with OJPEG.
+	Note: my analysis of the issue would be that the use of the scanline API
+	is currently probably broken with OJPEG.
 
 2021-12-10  Even Rouault  <even.rouault@spatialys.com>
 
@@ -3492,7 +5075,7 @@
 2021-09-23  Even Rouault  <even.rouault@spatialys.com>
 
 	TIFFAppendToStrip(): fix rewrite-in-place logic.
-	reproducable in particular with packbits compression.
+	reproducible in particular with packbits compression.
 
 	Fixes https://github.com/OSGeo/gdal/issues/4538
 
@@ -3960,7 +5543,7 @@
 2021-03-07  Antonio Valentino  <Antonio.Valentino@esa.int>
 
 	Add LERC plugin.
-	The lerc plugin code has been copyed form GDAL.
+	The lerc plugin code has been copied from GDAL.
 
 2021-03-06  Roger Leigh  <rleigh@codelibre.net>
 
@@ -4160,7 +5743,7 @@
 
 	Correct include order.
 
-	Eliminate implict fallthrough usage.
+	Eliminate implicit fallthrough usage.
 	Use simple loops in place of manual loop unrolling.  Rely on
 	the compiler optimiser to unroll loops when appropriate.
 
@@ -4422,7 +6005,7 @@
 2021-01-18  Even Rouault  <even.rouault@spatialys.com>
 
 	Merge branch 'tiffcmp' into 'master'
-	tiffcmp: fix comparaison with pixels that are fractional number of bytes
+	tiffcmp: fix comparison with pixels that are fractional number of bytes
 
 	Closes #53
 
@@ -4438,8 +6021,8 @@
 
 2021-01-15  Thomas Bernard  <miniupnp@free.fr>
 
-	tiffcmp: fix comparaison with pixels that are fractional number of bytes
-	For exemple : 4bits per sample + 3 samples per pixel => 1.5 bytes per pixel
+	tiffcmp: fix comparison with pixels that are fractional number of bytes
+	For example : 4bits per sample + 3 samples per pixel => 1.5 bytes per pixel
 
 	tiff2ps: exit the loop in case of error.
 	fixes #232
@@ -4634,7 +6217,7 @@
 2020-12-31  Kurt Schwehr  <schwehr@google.com>
 
 	custom_dir_EXIF_231.c: dos2unix and codespell.
-	additonal, Varable, greather, alwasy
+	additional, Variable, greater, always
 
 2020-12-31  Kurt Schwehr  <schwehr@google.com>
 
@@ -7740,7 +9323,7 @@
 
 2017-11-23  Roger Leigh  <rleigh@codelibre.net>
 
-	appveyor: Correct path for git clone and skip artefact archival.
+	appveyor: Correct path for git clone and skip artifact archival.
 
 2017-11-22  Roger Leigh  <rleigh@codelibre.net>
 
