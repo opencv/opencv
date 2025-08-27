@@ -38,6 +38,11 @@ uint32_t TIFFComputeStrip(TIFF *tif, uint32_t row, uint16_t sample)
     TIFFDirectory *td = &tif->tif_dir;
     uint32_t strip;
 
+    if (td->td_rowsperstrip == 0)
+    {
+        TIFFErrorExtR(tif, module, "Cannot compute strip: RowsPerStrip is zero");
+        return 0;
+    }
     strip = row / td->td_rowsperstrip;
     if (td->td_planarconfig == PLANARCONFIG_SEPARATE)
     {
@@ -61,6 +66,11 @@ uint32_t TIFFNumberOfStrips(TIFF *tif)
     TIFFDirectory *td = &tif->tif_dir;
     uint32_t nstrips;
 
+    if (td->td_rowsperstrip == 0)
+    {
+        TIFFWarningExtR(tif, "TIFFNumberOfStrips", "RowsPerStrip is zero");
+        return 0;
+    }
     nstrips = (td->td_rowsperstrip == (uint32_t)-1
                    ? 1
                    : TIFFhowmany_32(td->td_imagelength, td->td_rowsperstrip));
@@ -107,7 +117,8 @@ uint64_t TIFFVStripSize64(TIFF *tif, uint32_t nrows)
         if ((ycbcrsubsampling[0] != 1 && ycbcrsubsampling[0] != 2 &&
              ycbcrsubsampling[0] != 4) ||
             (ycbcrsubsampling[1] != 1 && ycbcrsubsampling[1] != 2 &&
-             ycbcrsubsampling[1] != 4))
+             ycbcrsubsampling[1] != 4) ||
+            (ycbcrsubsampling[0] == 0 || ycbcrsubsampling[1] == 0))
         {
             TIFFErrorExtR(tif, module, "Invalid YCbCr subsampling (%dx%d)",
                           ycbcrsubsampling[0], ycbcrsubsampling[1]);
@@ -267,7 +278,8 @@ uint64_t TIFFScanlineSize64(TIFF *tif)
             if (((ycbcrsubsampling[0] != 1) && (ycbcrsubsampling[0] != 2) &&
                  (ycbcrsubsampling[0] != 4)) ||
                 ((ycbcrsubsampling[1] != 1) && (ycbcrsubsampling[1] != 2) &&
-                 (ycbcrsubsampling[1] != 4)))
+                 (ycbcrsubsampling[1] != 4)) ||
+                ((ycbcrsubsampling[0] == 0) || (ycbcrsubsampling[1] == 0)))
             {
                 TIFFErrorExtR(tif, module, "Invalid YCbCr subsampling");
                 return 0;
@@ -287,7 +299,25 @@ uint64_t TIFFScanlineSize64(TIFF *tif)
         else
         {
             uint64_t scanline_samples;
-            scanline_samples = _TIFFMultiply64(tif, td->td_imagewidth,
+            uint32_t scanline_width = td->td_imagewidth;
+
+#if 0
+            // Tries to fix https://gitlab.com/libtiff/libtiff/-/merge_requests/564
+            // but causes regression when decoding legit files with tiffcp -c none
+            // Cf https://gitlab.com/libtiff/libtiff/-/merge_requests/644
+            if (td->td_photometric == PHOTOMETRIC_YCBCR)
+            {
+                uint16_t subsampling_hor;
+                uint16_t ignored;
+                TIFFGetFieldDefaulted(tif, TIFFTAG_YCBCRSUBSAMPLING,
+                                      &subsampling_hor, &ignored);
+                if (subsampling_hor > 1) // roundup width for YCbCr
+                    scanline_width =
+                        TIFFroundup_32(scanline_width, subsampling_hor);
+            }
+#endif
+
+            scanline_samples = _TIFFMultiply64(tif, scanline_width,
                                                td->td_samplesperpixel, module);
             scanline_size =
                 TIFFhowmany_64(_TIFFMultiply64(tif, scanline_samples,
