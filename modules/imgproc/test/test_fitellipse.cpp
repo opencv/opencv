@@ -26,11 +26,6 @@ static double rms_algebraic_dist(const vector<Point2f>& pts, const RotatedRect& 
     return sqrt(sum_algebraic_dists_sqr / pts.size());
 }
 
-static bool fit_and_check_ellipse(const vector<Point2f>& pts, const double eps) {
-    const RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
-    return rms_algebraic_dist(pts, ellipse) < eps;
-}
-
 TEST(Imgproc_FitEllipse_Issue_4515, accuracy) {
     vector<Point2f> pts;
     pts.push_back(Point2f(327, 317));
@@ -46,7 +41,8 @@ TEST(Imgproc_FitEllipse_Issue_4515, accuracy) {
     pts.push_back(Point2f(333, 319));
     pts.push_back(Point2f(333, 320));
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts, 1e-1));
+    const RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 1e-1);
 }
 
 TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
@@ -62,7 +58,8 @@ TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
     pts.push_back(Point2f(929.145f, 744.976f));
     pts.push_back(Point2f(917.474f, 791.823f));
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts, 5e-2));
+    const RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 5e-2);
 }
 
 TEST(Imgproc_FitEllipse_Issue_10270, accuracy) {
