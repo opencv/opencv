@@ -236,6 +236,30 @@ if(NOT OPENCV_SKIP_PYTHON_LOADER)
   install(FILES "${__python_loader_install_tmp_path}/cv2/${__target_config}" DESTINATION "${OPENCV_PYTHON_INSTALL_PATH}/cv2/" COMPONENT python)
 endif()  # NOT OPENCV_SKIP_PYTHON_LOADER
 
+# Install pip metadata files to ensure that opencv installed via CMake is listed by pip list
+# See https://packaging.python.org/specifications/recording-installed-packages/
+# and https://packaging.python.org/en/latest/specifications/core-metadata/#core-metadata
+option(OPENCV_PYTHON_PIP_METADATA_INSTALL "Use CMake to install Python pip metadata. Set to off if some other tool already installs it." OFF)
+mark_as_advanced(OPENCV_PYTHON_PIP_METADATA_INSTALL)
+set(OPENCV_PYTHON_PIP_METADATA_INSTALLER "cmake" CACHE STRING "Specify the string to identify the pip Installer. Default: cmake, change this if you are using another tool.")
+mark_as_advanced(OPENCV_PYTHON_PIP_METADATA_INSTALLER)
+if(OPENCV_PYTHON_PIP_METADATA_INSTALL)
+  if(WIN32)
+    set(NEW_LINE "\n\r")
+  else()
+    set(NEW_LINE "\n")
+  endif()
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/METADATA "")
+  file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/METADATA "Metadata-Version: 2.1${NEW_LINE}")
+  file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/METADATA "Name: opencv-python${NEW_LINE}")
+  file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/METADATA "Version: ${OPENCV_VERSION}${NEW_LINE}")
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/INSTALLER "${OPENCV_PYTHON_PIP_METADATA_INSTALLER}${NEW_LINE}")
+  install(
+    FILES "${CMAKE_CURRENT_BINARY_DIR}/METADATA" "${CMAKE_CURRENT_BINARY_DIR}/INSTALLER"
+    DESTINATION ${OPENCV_PYTHON_INSTALL_PATH}/opencv_python-${OPENCV_VERSION}.dist-info
+    COMPONENT python)
+endif()
+
 unset(PYTHON_SRC_DIR)
 unset(PYTHON_CVPY_PROCESS)
 unset(CVPY_SUFFIX)
