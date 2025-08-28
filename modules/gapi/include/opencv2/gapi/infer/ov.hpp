@@ -732,6 +732,8 @@ protected:
     detail::ParamDesc m_desc;
 };
 
+GAPI_EXPORTS cv::GKernelPackage kernels();
+
 } // namespace ov
 
 namespace wip { namespace ov {
