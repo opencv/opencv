@@ -21,7 +21,11 @@ void Mat_to_MatShape(cv::Mat& mat, cv::MatShape& matshape);
 
 void MatShape_to_Mat(cv::MatShape& matshape, cv::Mat& mat);
 
-std::vector<cv::MatShape> List_to_vector_MatShape(JNIEnv* env, jobject list);
+void Mat_to_vector_MatShape(cv::Mat& mat, std::vector<cv::MatShape>& v_matshape);
+void vector_MatShape_to_Mat(std::vector<cv::MatShape>& v_matshape, cv::Mat& mat);
+
+void Mat_to_vector_vector_MatShape(cv::Mat& mat, std::vector< std::vector< cv::MatShape > >& vv_matshape);
+void vector_vector_MatShape_to_Mat(std::vector< std::vector< cv::MatShape > >& vv_matshape, cv::Mat& mat);
 
 jobject vector_Ptr_Layer_to_List(JNIEnv* env, std::vector<cv::Ptr<cv::dnn::Layer> >& vs);
 

@@ -105,8 +105,8 @@ static int TIFFReadAndRealloc(TIFF *tif, tmsize_t size, tmsize_t rawdata_offset,
                 TIFFErrorExtR(tif, module, "Invalid buffer size");
                 return 0;
             }
-            new_rawdata =
-                (uint8_t *)_TIFFrealloc(tif->tif_rawdata, tif->tif_rawdatasize);
+            new_rawdata = (uint8_t *)_TIFFreallocExt(tif, tif->tif_rawdata,
+                                                     tif->tif_rawdatasize);
             if (new_rawdata == 0)
             {
                 TIFFErrorExtR(tif, module,
@@ -464,6 +464,10 @@ int TIFFReadScanline(TIFF *tif, void *buf, uint32_t row, uint16_t sample)
         if (e)
             (*tif->tif_postdecode)(tif, (uint8_t *)buf, tif->tif_scanlinesize);
     }
+    else
+    {
+        memset(buf, 0, (size_t)tif->tif_scanlinesize);
+    }
     return (e > 0 ? 1 : -1);
 }
 
@@ -495,6 +499,11 @@ static tmsize_t TIFFReadEncodedStripGetStripSize(TIFF *tif, uint32_t strip,
     rowsperstrip = td->td_rowsperstrip;
     if (rowsperstrip > td->td_imagelength)
         rowsperstrip = td->td_imagelength;
+    if (rowsperstrip == 0)
+    {
+        TIFFErrorExtR(tif, module, "rowsperstrip is zero");
+        return ((tmsize_t)(-1));
+    }
     stripsperplane =
         TIFFhowmany_32_maxuint_compat(td->td_imagelength, rowsperstrip);
     stripinplane = (strip % stripsperplane);
@@ -544,7 +553,10 @@ tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,
     if ((size != (tmsize_t)(-1)) && (size < stripsize))
         stripsize = size;
     if (!TIFFFillStrip(tif, strip))
+    {
+        memset(buf, 0, (size_t)stripsize);
         return ((tmsize_t)(-1));
+    }
     if ((*tif->tif_decodestrip)(tif, buf, stripsize, plane) <= 0)
         return ((tmsize_t)(-1));
     (*tif->tif_postdecode)(tif, buf, stripsize);
@@ -962,9 +974,13 @@ tmsize_t TIFFReadEncodedTile(TIFF *tif, uint32_t tile, void *buf, tmsize_t size)
         size = tilesize;
     else if (size > tilesize)
         size = tilesize;
-    if (TIFFFillTile(tif, tile) &&
-        (*tif->tif_decodetile)(tif, (uint8_t *)buf, size,
-                               (uint16_t)(tile / td->td_stripsperimage)))
+    if (!TIFFFillTile(tif, tile))
+    {
+        memset(buf, 0, (size_t)size);
+        return ((tmsize_t)(-1));
+    }
+    else if ((*tif->tif_decodetile)(tif, (uint8_t *)buf, size,
+                                    (uint16_t)(tile / td->td_stripsperimage)))
     {
         (*tif->tif_postdecode)(tif, (uint8_t *)buf, size);
         return (size);
@@ -1449,6 +1465,11 @@ static int TIFFStartTile(TIFF *tif, uint32_t tile)
         tif->tif_flags |= TIFF_CODERSETUP;
     }
     tif->tif_curtile = tile;
+    if (td->td_tilewidth == 0)
+    {
+        TIFFErrorExtR(tif, module, "Zero tilewidth");
+        return 0;
+    }
     howmany32 = TIFFhowmany_32(td->td_imagewidth, td->td_tilewidth);
     if (howmany32 == 0)
     {
@@ -1545,9 +1566,14 @@ int TIFFReadFromUserBuffer(TIFF *tif, uint32_t strile, void *inbuf,
 
     if (TIFFIsTiled(tif))
     {
-        if (!TIFFStartTile(tif, strile) ||
-            !(*tif->tif_decodetile)(tif, (uint8_t *)outbuf, outsize,
-                                    (uint16_t)(strile / td->td_stripsperimage)))
+        if (!TIFFStartTile(tif, strile))
+        {
+            ret = 0;
+            memset(outbuf, 0, (size_t)outsize);
+        }
+        else if (!(*tif->tif_decodetile)(
+                     tif, (uint8_t *)outbuf, outsize,
+                     (uint16_t)(strile / td->td_stripsperimage)))
         {
             ret = 0;
         }
@@ -1558,13 +1584,26 @@ int TIFFReadFromUserBuffer(TIFF *tif, uint32_t strile, void *inbuf,
         uint32_t stripsperplane;
         if (rowsperstrip > td->td_imagelength)
             rowsperstrip = td->td_imagelength;
-        stripsperplane =
-            TIFFhowmany_32_maxuint_compat(td->td_imagelength, rowsperstrip);
-        if (!TIFFStartStrip(tif, strile) ||
-            !(*tif->tif_decodestrip)(tif, (uint8_t *)outbuf, outsize,
-                                     (uint16_t)(strile / stripsperplane)))
+        if (rowsperstrip == 0)
         {
+            TIFFErrorExtR(tif, module, "rowsperstrip is zero");
             ret = 0;
+        }
+        else
+        {
+            stripsperplane =
+                TIFFhowmany_32_maxuint_compat(td->td_imagelength, rowsperstrip);
+            if (!TIFFStartStrip(tif, strile))
+            {
+                ret = 0;
+                memset(outbuf, 0, (size_t)outsize);
+            }
+            else if (!(*tif->tif_decodestrip)(
+                         tif, (uint8_t *)outbuf, outsize,
+                         (uint16_t)(strile / stripsperplane)))
+            {
+                ret = 0;
+            }
         }
     }
     if (ret)

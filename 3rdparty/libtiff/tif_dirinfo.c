@@ -213,8 +213,6 @@ static const TIFFField tiffFields[] = {
     {TIFFTAG_CURRENTPREPROFILEMATRIX, -1, -1, TIFF_SRATIONAL, 0, TIFF_SETGET_C16_FLOAT, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 1, "CurrentPreProfileMatrix", NULL},
     {TIFFTAG_PERSAMPLE, 0, 0, TIFF_SHORT, 0, TIFF_SETGET_UNDEFINED, TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "PerSample", NULL},
 #if 0
-    /* TODO: revert above #if 0 for TIFF 4.6.0 */
-
     /* begin DNG 1.2.0.0 tags */
     {TIFFTAG_COLORIMETRICREFERENCE, 1, 1, TIFF_SHORT, 0, TIFF_SETGET_UINT16, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "ColorimetricReference", NULL},
     {TIFFTAG_CAMERACALIBRATIONSIGNATURE, -1, -1, TIFF_BYTE, 0, TIFF_SETGET_C16_UINT8, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 1, "CameraCalibrationSignature", NULL},
@@ -282,9 +280,11 @@ static const TIFFField tiffFields[] = {
     {TIFFTAG_ILLUMINANTDATA2, -3, -3, TIFF_UNDEFINED, 0, TIFF_SETGET_C32_UINT8, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 1, "IlluminantData2", NULL},
     {TIFFTAG_ILLUMINANTDATA3, -3, -3, TIFF_UNDEFINED, 0, TIFF_SETGET_C32_UINT8, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 1, "IlluminantData3", NULL},
     /* end DNG tags */
+#endif
     /* begin TIFF/EP tags */
     {TIFFTAG_EP_CFAREPEATPATTERNDIM, 2, 2, TIFF_SHORT, 0, TIFF_SETGET_C0_UINT16, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "EP CFARepeatPatternDim", NULL},
     {TIFFTAG_EP_CFAPATTERN, -1, -1, TIFF_BYTE, 0, TIFF_SETGET_C16_UINT8, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 1, "EP CFAPattern", NULL},
+#if 0
     /* TIFFTAG_EP_BATTERYLEVEL can be RATIONAL or ASCII.
      * LibTiff defines it as ASCII and converts RATIONAL to an ASCII string. */
     {TIFFTAG_EP_BATTERYLEVEL, -1, -1, TIFF_ASCII, 0, TIFF_SETGET_ASCII, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "EP BatteryLevel", NULL},
@@ -374,7 +374,7 @@ static const TIFFField exifFields[] = {
     {EXIFTAG_BRIGHTNESSVALUE, 1, 1, TIFF_SRATIONAL, 0, TIFF_SETGET_FLOAT, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "BrightnessValue", NULL},
     {EXIFTAG_EXPOSUREBIASVALUE, 1, 1, TIFF_SRATIONAL, 0, TIFF_SETGET_FLOAT, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "ExposureBiasValue", NULL},
     {EXIFTAG_MAXAPERTUREVALUE, 1, 1, TIFF_RATIONAL, 0, TIFF_SETGET_FLOAT, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "MaxApertureValue", NULL},
-    /*--: EXIFTAG_SUBJECTDISTANCE: LibTiff returns value of "-1" if numerator equals 4294967295 (0xFFFFFFFF) to indicate infinite distance! 
+    /*--: EXIFTAG_SUBJECTDISTANCE: LibTiff returns value of "-1" if numerator equals 4294967295 (0xFFFFFFFF) to indicate infinite distance!
      *    However, there are two other EXIF tags where numerator indicates a special value and six other cases where the denominator indicates special values,
      *    which are not treated within LibTiff!! */
     {EXIFTAG_SUBJECTDISTANCE, 1, 1, TIFF_RATIONAL, 0, TIFF_SETGET_FLOAT, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, 1, 0, "SubjectDistance", NULL},
@@ -887,7 +887,7 @@ const TIFFField *_TIFFFindOrRegisterField(TIFF *tif, uint32_t tag,
     if (fld == NULL)
     {
         fld = _TIFFCreateAnonField(tif, tag, dt);
-        if (!_TIFFMergeFields(tif, fld, 1))
+        if (fld == NULL || !_TIFFMergeFields(tif, fld, 1))
             return NULL;
     }
 
@@ -1197,12 +1197,24 @@ int TIFFMergeFieldInfo(TIFF *tif, const TIFFFieldInfo info[], uint32_t n)
     for (i = 0; i < n; i++)
     {
         tp->field_tag = info[i].field_tag;
+        if (info[i].field_readcount < TIFF_VARIABLE2 ||
+            info[i].field_readcount == 0 ||
+            info[i].field_writecount < TIFF_VARIABLE2 ||
+            info[i].field_writecount == 0)
+        {
+            /* The fields (field_readcount) and (field_writecount) may use the
+             * values TIFF_VARIABLE (-1), TIFF_SPP (-2), TIFF_VARIABLE2 (-3). */
+            TIFFErrorExtR(tif, module,
+                          "The value of field_readcount and field_writecount "
+                          "must be greater than or equal to -3 and not zero.");
+            return -1;
+        }
         tp->field_readcount = info[i].field_readcount;
         tp->field_writecount = info[i].field_writecount;
         tp->field_type = info[i].field_type;
         tp->field_anonymous = 0;
         tp->set_field_type =
-            _TIFFSetGetType(info[i].field_type, info[i].field_readcount,
+            _TIFFSetGetType(info[i].field_type, info[i].field_writecount,
                             info[i].field_passcount);
         tp->get_field_type =
             _TIFFSetGetType(info[i].field_type, info[i].field_readcount,

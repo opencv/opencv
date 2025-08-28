@@ -42,7 +42,7 @@ target_include_directories(ipphal PRIVATE
 
 target_link_libraries(ipphal PUBLIC ${IPP_IW_LIBRARY} ${IPP_LIBRARIES})
 
-set_target_properties(ipphal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH})
+set_target_properties(ipphal PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${3P_LIBRARY_OUTPUT_PATH} DEBUG_POSTFIX "${OPENCV_DEBUG_POSTFIX}")
 
 if(NOT BUILD_SHARED_LIBS)
   ocv_install_target(ipphal EXPORT OpenCVModules ARCHIVE DESTINATION ${OPENCV_3P_LIB_INSTALL_PATH} COMPONENT dev)

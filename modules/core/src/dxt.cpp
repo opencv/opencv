@@ -60,6 +60,14 @@ namespace cv
 #undef USE_IPP_DFT
 #endif
 
+#if defined USE_IPP_DFT
+#if IPP_VERSION_X100 >= 202220
+#define IPP_DISABLE_DFT32F ((depth == CV_32F) && (ippCPUID_AVX512F&cv::ipp::getIppFeatures()))
+#else
+#define IPP_DISABLE_DFT32F false
+#endif
+#endif
+
 /****************************************************************************************\
                                Discrete Fourier Transform
 \****************************************************************************************/
@@ -3258,7 +3266,7 @@ public:
         opt.ipp_spec = 0;
         opt.ipp_work = 0;
 
-        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) ) // use IPP DFT if available
+        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) && !IPP_DISABLE_DFT32F) // use IPP DFT if available
         {
             int ipp_norm_flag = (flags & CV_HAL_DFT_SCALE) == 0 ? 8 : opt.isInverse ? 2 : 1;
             int specsize=0, initsize=0, worksize=0;
