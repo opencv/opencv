@@ -119,7 +119,8 @@ TEST(Imgproc_FitEllipse_Issue_26078, accuracy) {
         {1366, 1019}, {1430, 1019}, {1430, 1017}, {1431, 1016}, {1440, 1016}, {1440, 308},
     });
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipse(pts);
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 1e-2);
 }
 
 TEST(Imgproc_FitEllipse_Issue_26360_1, accuracy) {
@@ -132,7 +133,8 @@ TEST(Imgproc_FitEllipse_Issue_26360_1, accuracy) {
         {257, 105}, {256, 104}, {257, 103}, {257, 102}, {257, 101},
     });
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipse(pts);
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 1e-1);
 }
 
 TEST(Imgproc_FitEllipse_Issue_26360_2, accuracy) {
@@ -140,7 +142,8 @@ TEST(Imgproc_FitEllipse_Issue_26360_2, accuracy) {
         {37, 105}, {38, 106}, {38, 107}, {25, 129}, {254, 121}, {257, 103}, {257, 102}, {257, 101},
     });
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipse(pts);
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 5e-2);
 }
 
 TEST(Imgproc_FitEllipse_Issue_26360_3, accuracy) {
@@ -148,7 +151,8 @@ TEST(Imgproc_FitEllipse_Issue_26360_3, accuracy) {
         {37, 105}, {38, 106}, {38, 107}, {257, 103}, {257, 102}, {257, 101},
     });
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipse(pts);
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 1e-2);
 }
 
 TEST(Imgproc_FitEllipse_Issue_26360_4, accuracy) {
@@ -156,7 +160,8 @@ TEST(Imgproc_FitEllipse_Issue_26360_4, accuracy) {
         {30, 105}, {25, 110}, {30, 115}, {250, 105}, {255, 110}, {250, 115},
     });
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipse(pts);
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 1e-2);
 }
 
 template<typename T>
