@@ -2482,8 +2482,8 @@ public:
     UMat(const UMat& m, const Range* ranges);
     UMat(const UMat& m, const std::vector<Range>& ranges);
 
-    // FIXIT copyData=false is not implemented, drop this in favor of cv::Mat (OpenCV 5.0)
-    //! builds matrix from std::vector with or without copying the data
+    //! builds matrix from std::vector. The data is always copied. The copyData
+    //! parameter is deprecated and will be removed in OpenCV 5.0.
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
 
     //! destructor - calls release()

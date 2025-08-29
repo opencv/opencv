@@ -1083,6 +1083,7 @@ TiffEncoder::TiffEncoder()
 {
     m_description = "TIFF Files (*.tiff;*.tif)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_TIFF_RESUNIT, IMWRITE_TIFF_XDPI, IMWRITE_TIFF_YDPI, IMWRITE_TIFF_COMPRESSION, IMWRITE_TIFF_ROWSPERSTRIP, IMWRITE_TIFF_PREDICTOR};
 }
 
 TiffEncoder::~TiffEncoder()
@@ -1218,15 +1219,92 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     cv::Ptr<void> tif_cleanup(tif, cv_tiffCloseHandle);
 
     //Settings that matter to all images
-    int compression = COMPRESSION_LZW;
-    int predictor = PREDICTOR_HORIZONTAL;
+    int compression = IMWRITE_TIFF_COMPRESSION_LZW;
+    int predictor = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
     int resUnit = -1, dpiX = -1, dpiY = -1;
 
-    readParam(params, IMWRITE_TIFF_COMPRESSION, compression);
-    readParam(params, IMWRITE_TIFF_PREDICTOR, predictor);
-    readParam(params, IMWRITE_TIFF_RESUNIT, resUnit);
-    readParam(params, IMWRITE_TIFF_XDPI, dpiX);
-    readParam(params, IMWRITE_TIFF_YDPI, dpiY);
+    if(readParam(params, IMWRITE_TIFF_COMPRESSION, compression))
+    {
+        switch(compression) {
+            case IMWRITE_TIFF_COMPRESSION_NONE:
+            case IMWRITE_TIFF_COMPRESSION_CCITTRLE:
+            case IMWRITE_TIFF_COMPRESSION_CCITTFAX3: // IMWRITE_TIFF_COMPRESSION_CCITT_T4:
+            case IMWRITE_TIFF_COMPRESSION_CCITTFAX4: // IMWRITE_TIFF_COMPRESSION_CCITT_T6:
+            case IMWRITE_TIFF_COMPRESSION_LZW:
+            case IMWRITE_TIFF_COMPRESSION_OJPEG:
+            case IMWRITE_TIFF_COMPRESSION_JPEG:
+            case IMWRITE_TIFF_COMPRESSION_T85:
+            case IMWRITE_TIFF_COMPRESSION_T43:
+            case IMWRITE_TIFF_COMPRESSION_NEXT:
+            case IMWRITE_TIFF_COMPRESSION_CCITTRLEW:
+            case IMWRITE_TIFF_COMPRESSION_PACKBITS:
+            case IMWRITE_TIFF_COMPRESSION_THUNDERSCAN:
+            case IMWRITE_TIFF_COMPRESSION_IT8CTPAD:
+            case IMWRITE_TIFF_COMPRESSION_IT8LW:
+            case IMWRITE_TIFF_COMPRESSION_IT8MP:
+            case IMWRITE_TIFF_COMPRESSION_IT8BL:
+            case IMWRITE_TIFF_COMPRESSION_PIXARFILM:
+            case IMWRITE_TIFF_COMPRESSION_PIXARLOG:
+            case IMWRITE_TIFF_COMPRESSION_DEFLATE:
+            case IMWRITE_TIFF_COMPRESSION_ADOBE_DEFLATE:
+            case IMWRITE_TIFF_COMPRESSION_DCS:
+            case IMWRITE_TIFF_COMPRESSION_JBIG:
+            case IMWRITE_TIFF_COMPRESSION_SGILOG:
+            case IMWRITE_TIFF_COMPRESSION_SGILOG24:
+            case IMWRITE_TIFF_COMPRESSION_JP2000:
+            case IMWRITE_TIFF_COMPRESSION_LERC:
+            case IMWRITE_TIFF_COMPRESSION_LZMA:
+            case IMWRITE_TIFF_COMPRESSION_ZSTD:
+            case IMWRITE_TIFF_COMPRESSION_WEBP:
+            case IMWRITE_TIFF_COMPRESSION_JXL:
+                break;
+            default:
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_COMPRESSION must be one of ImwriteTiffCompressionFlags. It is fallbacked to IMWRITE_TIFF_COMPRESSION_LZW", compression));
+                compression = IMWRITE_TIFF_COMPRESSION_LZW;
+                break;
+        }
+    }
+    if(readParam(params, IMWRITE_TIFF_PREDICTOR, predictor))
+    {
+        switch(predictor) {
+            case IMWRITE_TIFF_PREDICTOR_NONE:
+            case IMWRITE_TIFF_PREDICTOR_HORIZONTAL:
+            case IMWRITE_TIFF_PREDICTOR_FLOATINGPOINT:
+                break;
+            default:
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_PREDICTOR must be one of ImwriteTiffPredictorFlags. It is fallbacked to IMWRITE_TIFF_PREDICTOR_HORIZONTAL", predictor));
+                predictor = IMWRITE_TIFF_PREDICTOR_HORIZONTAL;
+                break;
+        }
+    }
+    if(readParam(params, IMWRITE_TIFF_RESUNIT, resUnit))
+    {
+        switch(resUnit) {
+            case IMWRITE_TIFF_RESOLUTION_UNIT_NONE:
+            case IMWRITE_TIFF_RESOLUTION_UNIT_INCH:
+            case IMWRITE_TIFF_RESOLUTION_UNIT_CENTIMETER:
+                break;
+            default:
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_RESUNIT must be one of ImwriteTiffResolutionUnitFlags. It is fallbacked to IMWRITE_TIFF_RESOLUTION_UNIT_INCH", resUnit));
+                resUnit = IMWRITE_TIFF_RESOLUTION_UNIT_INCH;
+                break;
+        }
+    }
+
+    if(readParam(params, IMWRITE_TIFF_XDPI, dpiX))
+    {
+        if(dpiX <= 0) {
+            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_XDPI must be positive. It is ignored.", dpiX));
+            dpiX = -1;
+        }
+    }
+    if(readParam(params, IMWRITE_TIFF_YDPI, dpiY))
+    {
+        if(dpiY <= 0) {
+            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_TIFF_YDPI must be positive. It is ignored.", dpiX));
+            dpiY = -1;
+        }
+    }
 
     //Iterate through each image in the vector and write them out as Tiff directories
     for (size_t page = 0; page < img_vec.size(); page++)
@@ -1249,8 +1327,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
             CV_TIFF_CHECK_CALL(TIFFSetField(tif, TIFFTAG_PAGENUMBER, page, img_vec.size()));
         }
 
-        int compression_param = -1;  // OPENCV_FUTURE
-        if (type == CV_32FC3 && (!readParam(params, IMWRITE_TIFF_COMPRESSION, compression_param) || compression_param == COMPRESSION_SGILOG))
+        if (type == CV_32FC3 && compression == COMPRESSION_SGILOG)
         {
             if (!write_32FC3_SGILOG(img, tif))
                 return false;

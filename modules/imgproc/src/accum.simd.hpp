@@ -2825,7 +2825,7 @@ void accW_simd_(const ushort* src, float* dst, const uchar* mask, int len, int c
                 v_expand(v_src1, v_src10, v_src11);
                 v_expand(v_src2, v_src20, v_src21);
 
-                v_float32 v_dst00, v_dst01, v_dst02, v_dst10, v_dst11, v_dst20, v_dst21;
+                v_float32 v_dst00, v_dst01, v_dst10, v_dst11, v_dst20, v_dst21;
                 v_load_deinterleave(dst + x * cn             , v_dst00, v_dst10, v_dst20);
                 v_load_deinterleave(dst + (x +     step) * cn, v_dst01, v_dst11, v_dst21);
 

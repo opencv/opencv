@@ -5,10 +5,10 @@ import argparse
 
 morph_size = 0
 max_operator = 4
-max_elem = 2
+max_elem = 3
 max_kernel_size = 21
 title_trackbar_operator_type = 'Operator:\n 0: Opening - 1: Closing  \n 2: Gradient - 3: Top Hat \n 4: Black Hat'
-title_trackbar_element_type = 'Element:\n 0: Rect - 1: Cross - 2: Ellipse'
+title_trackbar_element_type = 'Element:\n 0: Rect - 1: Cross - 2: Ellipse - 3: Diamond'
 title_trackbar_kernel_size = 'Kernel size:\n 2n + 1'
 title_window = 'Morphology Transformations Demo'
 morph_op_dic = {0: cv.MORPH_OPEN, 1: cv.MORPH_CLOSE, 2: cv.MORPH_GRADIENT, 3: cv.MORPH_TOPHAT, 4: cv.MORPH_BLACKHAT}
@@ -24,6 +24,8 @@ def morphology_operations(val):
         morph_elem = cv.MORPH_CROSS
     elif val_type == 2:
         morph_elem = cv.MORPH_ELLIPSE
+    elif val_type == 3:
+        morph_elem = cv.MORPH_DIAMOND
 
     element = cv.getStructuringElement(morph_elem, (2*morph_size + 1, 2*morph_size+1), (morph_size, morph_size))
     operation = morph_op_dic[morph_operator]
