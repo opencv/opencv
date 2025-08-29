@@ -914,7 +914,7 @@ class JSWrapperGenerator(object):
 
 
 
-            # Generate bindings for properties
+            # Generate bindings for properties(prop)
             for prop in class_info.props:
                 if prop.tp in type_dict and not self._is_string_type(prop.tp):
                     _class_property = class_property_enum_template
