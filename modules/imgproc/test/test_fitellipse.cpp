@@ -8,31 +8,22 @@
 
 namespace opencv_test { namespace {
 
-// return true if point lies inside ellipse
-static bool check_pt_in_ellipse(const Point2f& pt, const RotatedRect& el) {
-    Point2f to_pt = pt - el.center;
-    double el_angle = el.angle * CV_PI / 180;
+static double algebraic_dist(const Point2f& pt, const RotatedRect& el) {
+    const Point2d to_pt = pt - el.center;
+    const double el_angle = el.angle * CV_PI / 180;
     const Point2d to_pt_el(
         to_pt.x * cos(-el_angle) - to_pt.y * sin(-el_angle),
         to_pt.x * sin(-el_angle) + to_pt.y * cos(-el_angle));
-    const double pt_angle = atan2(to_pt_el.y / el.size.height, to_pt_el.x / el.size.width);
-    const double x_dist = 0.5 * el.size.width * cos(pt_angle);
-    const double y_dist = 0.5 * el.size.height * sin(pt_angle);
-    double el_dist = sqrt(x_dist * x_dist + y_dist * y_dist);
-    return cv::norm(to_pt) < el_dist;
+    return normL2Sqr<double>(Point2d(2 * to_pt_el.x / el.size.width, 2 * to_pt_el.y / el.size.height)) - 1;
 }
 
-// Return true if mass center of fitted points lies inside ellipse
-static bool fit_and_check_ellipse(const vector<Point2f>& pts) {
-    RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
-
-    Point2f mass_center;
-    for (size_t i = 0; i < pts.size(); i++) {
-        mass_center += pts[i];
+static double rms_algebraic_dist(const vector<Point2f>& pts, const RotatedRect& el) {
+    double sum_algebraic_dists_sqr = 0;
+    for (const auto& pt : pts) {
+        const auto pt_algebraic_dist = algebraic_dist(pt, el);
+        sum_algebraic_dists_sqr += pt_algebraic_dist * pt_algebraic_dist;
     }
-    mass_center /= (float)pts.size();
-
-    return check_pt_in_ellipse(mass_center, ellipse);
+    return sqrt(sum_algebraic_dists_sqr / pts.size());
 }
 
 TEST(Imgproc_FitEllipse_Issue_4515, accuracy) {
@@ -50,7 +41,8 @@ TEST(Imgproc_FitEllipse_Issue_4515, accuracy) {
     pts.push_back(Point2f(333, 319));
     pts.push_back(Point2f(333, 320));
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 1e-1);
 }
 
 TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
@@ -66,7 +58,8 @@ TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
     pts.push_back(Point2f(929.145f, 744.976f));
     pts.push_back(Point2f(917.474f, 791.823f));
 
-    EXPECT_TRUE(fit_and_check_ellipse(pts));
+    const RotatedRect ellipse = fitEllipseDirect(pts); // fitEllipseAMS() also works fine
+    EXPECT_LT(rms_algebraic_dist(pts, ellipse), 5e-2);
 }
 
 TEST(Imgproc_FitEllipse_Issue_10270, accuracy) {
