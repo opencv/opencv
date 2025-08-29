@@ -367,11 +367,11 @@ TEST(Imgcodecs_Bmp, read_32bit_rgb)
 
     ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
     ASSERT_FALSE(img.empty());
-    ASSERT_EQ(CV_8UC4, img.type());
+    ASSERT_EQ(CV_8UC3, img.type());
 
     ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH));
     ASSERT_FALSE(img.empty());
-    ASSERT_EQ(CV_8UC4, img.type());
+    ASSERT_EQ(CV_8UC3, img.type());
 }
 
 TEST(Imgcodecs_Bmp, rgba_bit_mask)
@@ -436,9 +436,8 @@ TEST(Imgcodecs_Bmp, rgba_scale)
     ASSERT_EQ(data[0], 255);
 }
 
-// See https://github.com/opencv/opencv/issues/27555
 typedef testing::TestWithParam<ImwriteBMPCompressionFlags> Imgcodecs_bmp_compress;
-TEST_P(Imgcodecs_bmp_compress, rgba32bpp_regression27555)
+TEST_P(Imgcodecs_bmp_compress, rgba32bpp)
 {
     const ImwriteBMPCompressionFlags comp = GetParam();
 
@@ -463,9 +462,22 @@ TEST_P(Imgcodecs_bmp_compress, rgba32bpp_regression27555)
     Mat dst;
     ASSERT_NO_THROW(dst = cv::imdecode(buf, IMREAD_UNCHANGED));
     ASSERT_FALSE(dst.empty());
-    ASSERT_EQ(CV_8UC4, dst.type());
 
-    EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
+    if(comp == IMWRITE_BMP_COMPRESSION_RGB)
+    {
+        // If BI_RGB is used, output BMP file stores RGB image.
+        ASSERT_EQ(CV_8UC3, dst.type());
+        Mat srcBGR;
+        cv::cvtColor(src, srcBGR, cv::COLOR_BGRA2BGR);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), srcBGR, dst);
+    }
+    else
+    {
+        // If BI_BITFIELDS is used, output BMP file stores RGBA image.
+        ASSERT_EQ(CV_8UC4, dst.type());
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
+    }
+
 }
 INSTANTIATE_TEST_CASE_P(All,
     Imgcodecs_bmp_compress,
