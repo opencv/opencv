@@ -32,6 +32,7 @@ ocv_add_module(gapi
       opencv_video opencv_calib3d
     WRAP
       python
+      js
 )
 
 if(MSVC)
