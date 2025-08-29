@@ -360,7 +360,16 @@ TEST(Imgcodecs_Bmp, read_32bit_rgb)
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filenameInput = root + "readwrite/test_32bit_rgb.bmp";
 
-    const Mat img = cv::imread(filenameInput, IMREAD_UNCHANGED);
+    Mat img;
+    ASSERT_NO_THROW(img = cv::imread(filenameInput));
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_UNCHANGED));
+    ASSERT_FALSE(img.empty());
+    ASSERT_EQ(CV_8UC3, img.type());
+
+    ASSERT_NO_THROW(img = cv::imread(filenameInput, IMREAD_COLOR | IMREAD_ANYCOLOR | IMREAD_ANYDEPTH));
     ASSERT_FALSE(img.empty());
     ASSERT_EQ(CV_8UC3, img.type());
 }
@@ -426,6 +435,55 @@ TEST(Imgcodecs_Bmp, rgba_scale)
     data = img.ptr();
     ASSERT_EQ(data[0], 255);
 }
+
+typedef testing::TestWithParam<ImwriteBMPCompressionFlags> Imgcodecs_bmp_compress;
+TEST_P(Imgcodecs_bmp_compress, rgba32bpp)
+{
+    const ImwriteBMPCompressionFlags comp = GetParam();
+
+    RNG rng = theRNG();
+    Mat src(256, 256, CV_8UC4);
+    rng.fill(src, RNG::UNIFORM, Scalar(0,0,0,0), Scalar(255,255,255,255));
+
+    vector<uint8_t> buf;
+    bool ret = false;
+    ASSERT_NO_THROW(ret = cv::imencode(".bmp", src, buf, {IMWRITE_BMP_COMPRESSION, static_cast<int>(comp)}));
+    ASSERT_TRUE(ret);
+
+    ASSERT_EQ(buf[0x0e], comp == IMWRITE_BMP_COMPRESSION_RGB ? 40 : 124 ); // the size of header
+    ASSERT_EQ(buf[0x0f],  0);
+    ASSERT_EQ(buf[0x1c], 32); // the number of bits per pixel = 32
+    ASSERT_EQ(buf[0x1d],  0);
+    ASSERT_EQ(buf[0x1e], static_cast<int>(comp)); // the compression method
+    ASSERT_EQ(buf[0x1f],  0);
+    ASSERT_EQ(buf[0x20],  0);
+    ASSERT_EQ(buf[0x21],  0);
+
+    Mat dst;
+    ASSERT_NO_THROW(dst = cv::imdecode(buf, IMREAD_UNCHANGED));
+    ASSERT_FALSE(dst.empty());
+
+    if(comp == IMWRITE_BMP_COMPRESSION_RGB)
+    {
+        // If BI_RGB is used, output BMP file stores RGB image.
+        ASSERT_EQ(CV_8UC3, dst.type());
+        Mat srcBGR;
+        cv::cvtColor(src, srcBGR, cv::COLOR_BGRA2BGR);
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), srcBGR, dst);
+    }
+    else
+    {
+        // If BI_BITFIELDS is used, output BMP file stores RGBA image.
+        ASSERT_EQ(CV_8UC4, dst.type());
+        EXPECT_PRED_FORMAT2(cvtest::MatComparator(0, 0), src, dst);
+    }
+
+}
+INSTANTIATE_TEST_CASE_P(All,
+    Imgcodecs_bmp_compress,
+    testing::Values(
+        IMWRITE_BMP_COMPRESSION_RGB,
+        IMWRITE_BMP_COMPRESSION_BITFIELDS));
 
 #ifdef HAVE_IMGCODEC_HDR
 TEST(Imgcodecs_Hdr, regression)

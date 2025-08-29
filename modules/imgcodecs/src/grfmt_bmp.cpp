@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "grfmt_bmp.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv
 {
@@ -603,6 +604,7 @@ BmpEncoder::BmpEncoder()
 {
     m_description = "Windows bitmap (*.bmp;*.dib)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_BMP_COMPRESSION};
 }
 
 
@@ -615,11 +617,12 @@ ImageEncoder BmpEncoder::newEncoder() const
     return makePtr<BmpEncoder>();
 }
 
-bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
+bool  BmpEncoder::write( const Mat& img, const std::vector<int>& params )
 {
     int width = img.cols, height = img.rows, channels = img.channels();
     int fileStep = (width*channels + 3) & -4;
     uchar zeropad[] = "\0\0\0\0";
+
     WLByteStream strm;
 
     if( m_buf )
@@ -630,7 +633,35 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     else if( !strm.open( m_filename ))
         return false;
 
-    int  bitmapHeaderSize = 40;
+    // sRGB colorspace requires BITMAPV5HEADER.
+    // See https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv5header
+    bool useV5BitFields = true;
+    for(size_t i = 0 ; i < params.size(); i++)
+    {
+        const int value = params[i+1];
+        switch(params[i])
+        {
+            case IMWRITE_BMP_COMPRESSION:
+            {
+                switch(value) {
+                    case IMWRITE_BMP_COMPRESSION_RGB:
+                        useV5BitFields = false;
+                        break;
+                    case IMWRITE_BMP_COMPRESSION_BITFIELDS:
+                        useV5BitFields = true;
+                        break;
+                    default:
+                        useV5BitFields = true;
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_BMP_COMPRESSION must be one of ImwriteBMPCompressionFlags. It is fallbacked to true", value));
+                        break;
+                }
+            }
+            break;
+        }
+    }
+    useV5BitFields &= (channels == 4); // BMP_BITFIELDS requires 32 bit per pixel.
+
+    int  bitmapHeaderSize = useV5BitFields ? 124 : 40;
     int  paletteSize = channels > 1 ? 0 : 1024;
     int  headerSize = 14 /* fileheader */ + bitmapHeaderSize + paletteSize;
     size_t fileSize = (size_t)fileStep*height + headerSize;
@@ -653,12 +684,35 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& )
     CHECK_WRITE(strm.putDWord( height ));
     CHECK_WRITE(strm.putWord( 1 ));
     CHECK_WRITE(strm.putWord( channels << 3 ));
-    CHECK_WRITE(strm.putDWord( BMP_RGB ));
+    CHECK_WRITE(strm.putDWord( useV5BitFields ? BMP_BITFIELDS : BMP_RGB ));
     CHECK_WRITE(strm.putDWord( 0 ));
     CHECK_WRITE(strm.putDWord( 0 ));
     CHECK_WRITE(strm.putDWord( 0 ));
     CHECK_WRITE(strm.putDWord( 0 ));
     CHECK_WRITE(strm.putDWord( 0 ));
+
+    if( useV5BitFields )
+    {
+        CHECK_WRITE(strm.putDWord( 0x00FF0000 )); // bV5RedMask
+        CHECK_WRITE(strm.putDWord( 0x0000FF00 )); // bV5GreenMask
+        CHECK_WRITE(strm.putDWord( 0x000000FF )); // bV5BlueMask
+        CHECK_WRITE(strm.putDWord( 0xFF000000 )); // bV5AlphaMask
+        CHECK_WRITE(strm.putBytes( "BGRs", 4)); // bV5CSType (sRGB)
+        { // bV5Endpoints
+            for(int index_rgb = 0; index_rgb < 3; index_rgb ++ ){ // Red/Green/Blue
+                CHECK_WRITE(strm.putDWord( 0 )); // ciexyzX
+                CHECK_WRITE(strm.putDWord( 0 )); // ciexyzY
+                CHECK_WRITE(strm.putDWord( 0 )); // ciexyzZ
+            }
+        }
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5GammaRed
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5GammaGreen
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5GammaBlue
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5Intent
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5ProfileData
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5ProfileSize
+        CHECK_WRITE(strm.putDWord( 0 )); // bV5Reserved
+    }
 
     if( channels == 1 )
     {
