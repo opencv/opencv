@@ -64,13 +64,11 @@ TEST(Imgproc_FitEllipse_Issue_6544, accuracy) {
 
 TEST(Imgproc_FitEllipse_Issue_10270, accuracy) {
     vector<Point2f> pts;
-    float scale = 1;
-    Point2f shift(0, 0);
-    pts.push_back(Point2f(0, 1)*scale+shift);
-    pts.push_back(Point2f(0, 2)*scale+shift);
-    pts.push_back(Point2f(0, 3)*scale+shift);
-    pts.push_back(Point2f(2, 3)*scale+shift);
-    pts.push_back(Point2f(0, 4)*scale+shift);
+    pts.push_back(Point2f(0, 1));
+    pts.push_back(Point2f(0, 2));
+    pts.push_back(Point2f(0, 3));
+    pts.push_back(Point2f(2, 3));
+    pts.push_back(Point2f(0, 4));
 
     // check that we get almost vertical ellipse centered around (1, 3)
     RotatedRect e = fitEllipse(pts);
@@ -82,13 +80,11 @@ TEST(Imgproc_FitEllipse_Issue_10270, accuracy) {
 
 TEST(Imgproc_FitEllipse_JavaCase, accuracy) {
     vector<Point2f> pts;
-    float scale = 1;
-    Point2f shift(0, 0);
-    pts.push_back(Point2f(0, 0)*scale+shift);
-    pts.push_back(Point2f(1, 1)*scale+shift);
-    pts.push_back(Point2f(-1, 1)*scale+shift);
-    pts.push_back(Point2f(-1, -1)*scale+shift);
-    pts.push_back(Point2f(1, -1)*scale+shift);
+    pts.push_back(Point2f(0, 0));
+    pts.push_back(Point2f(1, 1));
+    pts.push_back(Point2f(-1, 1));
+    pts.push_back(Point2f(-1, -1));
+    pts.push_back(Point2f(1, -1));
 
     // check that we get almost circle centered around (0, 0)
     RotatedRect e = fitEllipse(pts);
