@@ -97,6 +97,9 @@ std::shared_ptr<ParallelForAPI> createParallelForAPI()
         if (!isKnown)
             CV_LOG_INFO(NULL, "core(parallel): unknown backend: " << name);
     }
+    // Note: when no backend is found we still mark initialized so that subsequent calls
+    // don't repeatedly try to initialize on every getCurrentParallelForAPI().
+    // The caller (setParallelForBackend) relies on validation and will react accordingly.
     g_initializedParallelForAPI = true;
     return std::shared_ptr<ParallelForAPI>();
 }
@@ -128,6 +131,19 @@ bool setParallelForBackend(const std::string& backendName, bool propagateNumThre
     CV_TRACE_FUNCTION();
 
     std::string backendName_u = toUpperCase(backendName);
+    // Helper: check whether backendName_u exists among registered backends
+    auto isBackendKnown = [&](const std::string& name) -> bool {
+        if (name.empty())
+            return true; // builtin is always allowed
+        const auto& backends = getParallelBackendsInfo();
+        for (const auto& info : backends)
+        {
+            if (name == info.name)
+                return true;
+        }
+        return false;
+    };
+
     if (g_initializedParallelForAPI)
     {
         // ... already initialized
@@ -138,17 +154,50 @@ bool setParallelForBackend(const std::string& backendName, bool propagateNumThre
         }
         else
         {
-            // ... re-create new
+            // If requested backend is unknown, refuse and don't overwrite current state
+            if (!isBackendKnown(backendName_u))
+            {
+                CV_LOG_INFO(NULL, "core(parallel): unknown backend: " << backendName);
+                return false;
+            }
+
+            // Try to initialize the requested backend before committing the change
             CV_LOG_DEBUG(NULL, "core(parallel): replacing parallel backend...");
+
+            // Preserve old name in case initialization fails
+            std::string oldName = getParallelBackendName();
+
+            // Temporarily set the requested name so createParallelForAPI() will try it
             getParallelBackendName() = backendName_u;
-            getCurrentParallelForAPI() = createParallelForAPI();
+            std::shared_ptr<ParallelForAPI> newApi = createParallelForAPI();
+
+            if (!newApi)
+            {
+                // initialization failed -> restore previous name and keep previous backend
+                CV_LOG_WARNING(NULL, "core(parallel): backend is not available: " << backendName << " (keeping previous backend: " << oldName << ")");
+                getParallelBackendName() = oldName;
+                // ensure that getCurrentParallelForAPI() remains unchanged
+                return false;
+            }
+
+            // success -> commit new backend
+            getCurrentParallelForAPI() = newApi;
         }
     }
     else
     {
-        // ... no backend exists, just specify the name (initialization is triggered by getCurrentParallelForAPI() call)
+        // ... no backend exists yet
+        // If requested backend is unknown, refuse early
+        if (!isBackendKnown(backendName_u))
+        {
+            CV_LOG_INFO(NULL, "core(parallel): unknown backend: " << backendName);
+            return false;
+        }
+
+        // Just set the backend name — actual initialization will happen when getCurrentParallelForAPI() is used
         getParallelBackendName() = backendName_u;
     }
+
     std::shared_ptr<ParallelForAPI> api = getCurrentParallelForAPI();
     if (!api)
     {
