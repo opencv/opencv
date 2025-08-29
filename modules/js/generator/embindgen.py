@@ -320,7 +320,6 @@ class Namespace(object):
 
 class JSWrapperGenerator(object):
     def __init__(self, preprocessor_definitions=None):
-
         self.bindings = []
         self.wrapper_funcs = []
 
@@ -332,7 +331,7 @@ class JSWrapperGenerator(object):
             preprocessor_definitions=preprocessor_definitions
         )
         self.class_idx = 0
-    
+
     def _is_string_type(self, tp):
         """
         Conservative check whether `tp` represents a string-like type.
@@ -352,7 +351,6 @@ class JSWrapperGenerator(object):
         if 'basic_string' in norm and 'char' in norm:
             return True
         return False
-
 
     def add_class(self, stype, name, decl):
         class_info = ClassInfo(name, decl)
