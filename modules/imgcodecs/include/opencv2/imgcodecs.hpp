@@ -184,7 +184,7 @@ enum ImwriteTiffResolutionUnitFlags {
 };
 
 enum ImwriteEXRTypeFlags {
-       /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
+       // IMWRITE_EXR_TYPE_UNIT = 0, // not supported
        IMWRITE_EXR_TYPE_HALF   = 1, //!< store as HALF (FP16)
        IMWRITE_EXR_TYPE_FLOAT  = 2  //!< store as FP32 (default)
      };
