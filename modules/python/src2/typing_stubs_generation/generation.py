@@ -4,7 +4,7 @@ from io import StringIO
 from pathlib import Path
 import re
 from typing import (Callable, NamedTuple, Union, Set, Dict,
-                    Collection, Tuple, List)
+                    Collection, Tuple, List, Optional)
 import warnings
 
 from .ast_utils import (get_enclosing_namespace,
@@ -68,9 +68,8 @@ def _function_display_name(function_node: FunctionNode) -> str:
         return function_node.export_name
 
 
-def _maybe_widen_to_pathlike(func_display_name: str,
-                             param_name: str,
-                             typename: str | None) -> str | None:
+def _maybe_widen_to_pathlike(func_display_name: str, param_name: str,
+                            typename: Optional[str]) -> Optional[str]:
     """
     If this argument is one of our filename params and currently typed as 'str',
     widen it to a 3.8-safe union.
@@ -83,8 +82,6 @@ def _maybe_widen_to_pathlike(func_display_name: str,
     except Exception:
         pass
     return typename
-# --- End: PathLike filename overrides ----------------------------------------
-
 
 
 def generate_typing_stubs(root: NamespaceNode, output_path: Path):
