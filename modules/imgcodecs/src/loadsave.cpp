@@ -750,7 +750,7 @@ imreadmulti_(const String& filename, int flags, std::vector<Mat>& mats, int star
  * @param[in] filename File to load
  * @param[in] flags Flags you wish to set.
 */
-Mat imread( const String& filename, int flags )
+Mat imread( const std::filesystem::path& filepath, int flags )
 {
     CV_TRACE_FUNCTION();
 
@@ -758,7 +758,7 @@ Mat imread( const String& filename, int flags )
     Mat img;
 
     /// load the data
-    imread_( filename, flags, img, nullptr, noArray() );
+    imread_( filepath.string(), flags, img, nullptr, noArray() );
 
     /// return a reference to the data
     return img;
@@ -781,12 +781,12 @@ Mat imreadWithMetadata( const String& filename,
     return img;
 }
 
-void imread( const String& filename, OutputArray dst, int flags )
+void imread( const std::filesystem::path& filepath, OutputArray dst, int flags )
 {
     CV_TRACE_FUNCTION();
 
     /// load the data
-    imread_(filename, flags, dst, nullptr, noArray());
+    imread_(filepath.string(), flags, dst, nullptr, noArray());
 }
 
 /**
@@ -1165,7 +1165,7 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
     return code;
 }
 
-bool imwrite( const String& filename, InputArray _img,
+bool imwrite( const std::filesystem::path& filepath, InputArray _img,
               const std::vector<int>& params )
 {
     CV_TRACE_FUNCTION();
@@ -1179,7 +1179,7 @@ bool imwrite( const String& filename, InputArray _img,
         img_vec.push_back(_img.getMat());
 
     CV_Assert(!img_vec.empty());
-    return imwrite_(filename, img_vec, {}, noArray(), params, false);
+    return imwrite_(filepath.string(), img_vec, {}, noArray(), params, false);
 }
 
 bool imwriteWithMetadata( const String& filename, InputArray _img,

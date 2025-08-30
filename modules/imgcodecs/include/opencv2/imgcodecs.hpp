@@ -44,6 +44,7 @@
 #define OPENCV_IMGCODECS_HPP
 
 #include "opencv2/core.hpp"
+#include <filesystem>
 
 /**
   @defgroup imgcodecs Image file reading and writing
@@ -364,7 +365,7 @@ Currently, the following file formats are supported:
 @param filename Name of the file to be loaded.
 @param flags Flag that can take values of cv::ImreadModes, default with cv::IMREAD_COLOR_BGR.
 */
-CV_EXPORTS_W Mat imread( const String& filename, int flags = IMREAD_COLOR_BGR );
+CV_EXPORTS_W Mat imread( const std::filesystem::path& filepath, int flags = IMREAD_COLOR_BGR );
 
 /** @brief Loads an image from a file.
 
@@ -375,7 +376,7 @@ This is an overloaded member function, provided for convenience. It differs from
 @note
 The image passing through the img parameter can be pre-allocated. The memory is reused if the shape and the type match with the load image.
  */
-CV_EXPORTS_W void imread( const String& filename, OutputArray dst, int flags = IMREAD_COLOR_BGR );
+CV_EXPORTS_W void imread( const std::filesystem::path& filepath, OutputArray dst, int flags = IMREAD_COLOR_BGR );
 
 /** @brief Reads an image from a file along with associated metadata.
 
@@ -540,7 +541,7 @@ It also demonstrates how to save multiple images in a TIFF file:
 @param img (Mat or vector of Mat) Image or Images to be saved.
 @param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
 */
-CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
+CV_EXPORTS_W bool imwrite( const std::filesystem::path& filepath, InputArray img,
               const std::vector<int>& params = std::vector<int>());
 
 /** @brief Saves an image to a specified file with metadata

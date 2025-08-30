@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html
 #include "test_precomp.hpp"
 #include "test_common.hpp"
+#include <filesystem>
 
 namespace opencv_test { namespace {
 
@@ -617,6 +618,17 @@ TEST(Imgcodecs_Params, imencode_regression_22752)
 //  params.push_back(100)); // Forget it.
     vector<uchar> buf;
     EXPECT_ANY_THROW(cv::imencode("test.jpg", img, buf, params));  // parameters size or missing JPEG codec
+}
+
+TEST(Imgcodecs, read_write_filesystem_path) {
+    std::filesystem::path path = cvtest::TS::ptr()->get_data_path() + "../cv/shared/fruits.png";
+    ASSERT_TRUE(std::filesystem::exists(path)) << "File missing: " << path.string();
+    cv::Mat img = cv::imread(path, cv::IMREAD_COLOR);
+    EXPECT_FALSE(img.empty()) << "Failed to read with std::filesystem::path";
+    std::filesystem::path out_path = "output.png";
+    ASSERT_TRUE(cv::imwrite(out_path, img)) << "Failed to write with std::filesystem::path";
+    ASSERT_TRUE(std::filesystem::exists(out_path)) << "Output file not created";
+    std::filesystem::remove(out_path);
 }
 
 }} // namespace
