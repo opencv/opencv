@@ -44,21 +44,5 @@ class TokenizerBindingTest(NewOpenCVTests):
         sent = tok.decode([15339, 1917])
         self.assertEqual(sent, "hello world")
 
-    # def test_tokenizer_tiktoken_AutoTokenizer(self):
-    #     from tiktoken import encoding_for_model
-    #     from transformers import AutoTokenizer
-
-    #     encoding = encoding_for_model("gpt2")
-    #     hf_tokenizer = AutoTokenizer.from_pretrained("openai-community/gpt2", use_fast=True)
-    #     cv_tokenizer = cv.dnn.Tokenizer.load(_tf_gpt2("gpt2/config.json"))
-    #     sentence = "Young man, in mathematics you don't understand things. You just get used to them."
-    #     ids_tik = encoding.encode(sentence)     # returns <class 'list'>
-    #     ids_cv = cv_tokenizer.encode(sentence)  # returns <class 'numpy.ndarray'>
-    #     ids_hf = hf_tokenizer.encode(sentence)  # returns <class 'list'>
-    #     print(ids_tik)
-    #     print(ids_cv)
-    #     print(ids_hf)
-    #     self.assertEqual(len(ids_tik), len(ids_cv), len(ids_hf))
-    
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

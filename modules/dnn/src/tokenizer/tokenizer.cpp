@@ -11,30 +11,85 @@
 namespace cv { namespace dnn { 
 CV__DNN_INLINE_NS_BEGIN
 
-Tokenizer::Tokenizer() : coreBPE_(nullptr) {}
+CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& json_path);
+CoreBPE getTokenizerForCl100kBaseFromJSON_FS(const std::string &name,
+                                                         const std::string &json_path);
 
-Tokenizer::Tokenizer(std::shared_ptr<CoreBPE> core)
-    : coreBPE_(std::move(core)) {
+struct Tokenizer::Impl {
+    TokenizeMethod method;
+    Ptr<CoreBPE> coreBPE;
+
+    Impl(TokenizeMethod m) : method(m) {}
+
+    std::vector<int> encode(const std::string& text) {
+        switch (method) {
+            case TokenizeMethod::BPE: {
+                CV_Assert(coreBPE);
+                std::vector<uint32_t> tok = coreBPE->encode(text, {}).first;
+                return std::vector<int>(tok.begin(), tok.end());
+            }
+            // other cases to be added for example sentence piece
+        }
+        return {};
+    }
+
+    std::string decode(const std::vector<int>& tokens) {
+        switch (method) {
+            case TokenizeMethod::BPE: {
+                CV_Assert(coreBPE);
+                std::vector<uint32_t> t32(tokens.begin(), tokens.end());
+                auto opt_bytes = coreBPE->decodeBytes(t32);
+                if (!opt_bytes)
+                    CV_Error(cv::Error::StsError, "Invalid decode.");
+                const auto& bytes = *opt_bytes;
+                return std::string(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+            }
+            // other cases to be added for example sentence piece
+        }
+        return {};
+    }
+
+    void loadFromConfig(const std::string& model_config) {
+        // We set the full path to config.json smilair to what readNetFromCaffe(prototxt,...) does. 
+        cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+        if (!cfg.isOpened())
+            CV_Error(cv::Error::StsError, "Could not open config.json: " + model_config);
+        std::string model_type;
+        cfg["model_type"] >> model_type;
+        std::string dir = model_config;
+        size_t pos = dir.find_last_of("/\\");
+        dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
+        std::string tok_json = dir + "tokenizer.json";
+
+        switch (method) {
+            case TokenizeMethod::BPE: {
+                if (model_type == "gpt2") {
+                    coreBPE = makePtr<CoreBPE>(getTokenizerForGPT2FromJSON("gpt2", tok_json));
+                } else if (model_type == "gpt4") {
+                    coreBPE = makePtr<CoreBPE>(getTokenizerForCl100kBaseFromJSON_FS("cl100k_base", tok_json));
+                } else {
+                    CV_Error(cv::Error::StsError, "Unsupported model_type for BPE: " + model_type);
+                }
+                break;
+            }
+            // other cases to be added for example sentence piece
+        }
+    }
+    
+};
+
+Tokenizer::Tokenizer(TokenizeMethod method)
+    : impl_(makePtr<Impl>(method)) {
 }
 
 std::vector<int> Tokenizer::encode(const std::string& text) {
-    // We dont allow any of the special tokens for now so we set allow
-    // to empty
-    std::vector<uint32_t> tok = coreBPE_->encode(text, {}).first;
-    return std::vector<int>(tok.begin(), tok.end());
+    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
+    return impl_->encode(text);
 }
 
 std::string Tokenizer::decode(const std::vector<int>& tokens) { 
-        std::vector<uint32_t> tokens32(tokens.begin(), tokens.end());
-        auto opt_bytes = coreBPE_->decodeBytes(tokens32); 
-        if (!opt_bytes) {
-            CV_Error(cv::Error::StsError, "Invalid decode.");
-        }
-        const std::vector<std::uint8_t>& bytes = *opt_bytes;
-
-        // Convert bytes to std::string (UTF-8)
-        std::string result(reinterpret_cast<const char*>(bytes.data()), bytes.size());
-        return result;
+    if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
+    return impl_->decode(tokens);
 };
 
 CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& json_path) {
@@ -73,9 +128,7 @@ CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& 
         mergeableRanks.emplace(token_to_bytes(key), (uint32_t)id);
         max_id = std::max(max_id, id);
     }
-
-
-
+    
     // size sanity
     if ((int)mergeableRanks.size() != (int)vocab.size() - 1) {
         CV_Error(cv::Error::StsError,
@@ -179,30 +232,19 @@ CoreBPE getTokenizerForCl100kBaseFromJSON_FS(const std::string &name,
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), CL100K_BASE);
 }
 
-Tokenizer Tokenizer::load(const std::string& model_config) {
-    // We set the full path to config.json smilair to what readNetFromCaffe(prototxt,...) does. 
-    cv::FileStorage cfg(model_config, cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
-    if (!cfg.isOpened()) 
-        CV_Error(cv::Error::StsError, "Could not open config.json at: " + model_config);
-
-    std::string model_type;
-    cfg["model_type"] >> model_type;
-    std::string dir = model_config;
-    {
-        size_t pos = dir.find_last_of("/\\");
-        dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
-    }
-    std::string tok_json = dir + "tokenizer.json";
-    Tokenizer tok;
-    if (model_type == "gpt2") {
-        tok.coreBPE_ = std::make_shared<CoreBPE>(getTokenizerForGPT2FromJSON("gpt2", tok_json));
-    } else if (model_type == "gpt4") {
-        tok.coreBPE_ = std::make_shared<CoreBPE>(getTokenizerForCl100kBaseFromJSON_FS("cl100k_base", tok_json));
-    } else {
-        CV_Error(cv::Error::StsError, "Unsupported model_type in config.json: " + model_type);
-    }
-    return tok;
+static Tokenizer::TokenizeMethod parseAlgorithm(const std::string& algorithm) {
+    std::string alg;
+    alg.reserve(algorithm.size());
+    for (char c : algorithm) alg.push_back((char)std::tolower((unsigned char)c));
+    if (alg == "bpe") return Tokenizer::TokenizeMethod::BPE;
+    CV_Error(cv::Error::StsBadArg, "Unsupported tokenizer algorithm: " + algorithm);
 }
 
+Tokenizer Tokenizer::load(const std::string& model_config, const std::string& algorithm) {
+    TokenizeMethod m = parseAlgorithm(algorithm);
+    Tokenizer tok(m);
+    tok.impl_->loadFromConfig(model_config);
+    return tok;
+}
 CV__DNN_INLINE_NS_END
 }}

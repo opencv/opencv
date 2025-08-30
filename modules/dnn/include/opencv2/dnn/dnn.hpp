@@ -2077,8 +2077,6 @@ public:
     CV_WRAP int getMaxCandidates() const;
 };
 
-class CoreBPE;
-
 /** 
  * @brief High-level tokenizer wrapper for DNN usage.
  *
@@ -2095,8 +2093,15 @@ class CoreBPE;
  */
 class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
-    CV_WRAP Tokenizer();
-    Tokenizer(std::shared_ptr<CoreBPE> core);
+    enum class TokenizeMethod {
+        BPE = 0,
+    };
+
+    /**
+     * @brief Construct a tokenizer with a given method default BPE.
+     * For BPE method you normally call Tokenizer::load() to initialize model data.
+     */
+    Tokenizer(TokenizeMethod method = TokenizeMethod::BPE);
 
     /** 
      * @brief Load a tokenizer from a model directory.
@@ -2113,7 +2118,8 @@ public:
      * @return A @c Tokenizer ready for use.
      * @throw cv::Exception if files are missing or @c model_type is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config); 
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config, 
+                                    const std::string& algorithm="BPE"); 
 
     /** 
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
@@ -2126,8 +2132,9 @@ public:
     CV_WRAP std::vector<int> encode(const std::string& text);
     
     CV_WRAP std::string decode(const std::vector<int>& tokens);
+    struct Impl;
 private:
-    std::shared_ptr<CoreBPE> coreBPE_;
+    Ptr<Impl> impl_;
 };
 
 //! @}
@@ -2142,5 +2149,3 @@ CV__DNN_INLINE_NS_END
 #include <opencv2/dnn/utils/inference_engine.hpp>
 
 #endif  /* OPENCV_DNN_DNN_HPP */
-
-

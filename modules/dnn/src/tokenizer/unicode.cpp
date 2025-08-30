@@ -799,5 +799,4 @@ std::vector<std::string> unicode_regex_split(const std::string & text, const std
 
     return unicode_byte_encoding_process(bpe_words);
 }
-
 }}

@@ -201,5 +201,4 @@ private:
 };
 CV__DNN_INLINE_NS_END
 }}
-
 #endif

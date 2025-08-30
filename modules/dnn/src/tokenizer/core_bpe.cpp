@@ -20,6 +20,7 @@
 
 namespace cv { namespace dnn { 
 CV__DNN_INLINE_NS_BEGIN
+
 static constexpr std::uint32_t RANK_MAX  = std::numeric_limits<std::uint32_t>::max();
 static constexpr std::size_t SZ_MAX = std::numeric_limits<std::size_t>::max();
 
