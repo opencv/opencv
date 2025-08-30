@@ -24,6 +24,69 @@ from .nodes.type_node import (TypeNode, AliasTypeNode, AliasRefTypeNode,
                               ConditionalAliasTypeNode, PrimitiveTypeNode)
 
 
+# --- Begin: PathLike filename overrides --------------------------------------
+# Keys are function/method identifiers as they appear in the generated stubs.
+# For module-level functions, use the exported name, e.g., "imread".
+# For methods/ctors, use "Class.__init__", "Class.open", etc.
+PATHLIKE_OVERRIDES = {
+    # imgcodecs
+    "imread": {"filename"},
+    "imreadmulti": {"filename"},
+    "imwrite": {"filename"},
+    "imwritemulti": {"filename"},  # present in some builds
+    "haveImageReader": {"filename"},
+    "haveImageWriter": {"filename"},
+
+    # videoio
+    "VideoCapture.__init__": {"filename"},   # ctor overload that takes a file
+    "VideoCapture.open": {"filename"},
+    "VideoWriter.__init__": {"filename"},
+    "VideoWriter.open": {"filename"},
+
+    # objdetect / core I/O-ish
+    "CascadeClassifier.load": {"filename"},
+    "FileStorage.__init__": {"filename"},    # first arg is path in read mode
+
+    # samples
+    "samples.findFile": {"filename"},
+}
+
+
+def _function_display_name(function_node: FunctionNode) -> str:
+    """
+    Returns a stable identifier used by PATHLIKE_OVERRIDES.
+    - For methods/ctors: 'Class.__init__', 'Class.open', etc.
+    - For free functions: 'imread', 'imwrite', etc.
+    """
+    try:
+        if getattr(function_node, "is_method", False):
+            owner = function_node.owner_class.export_name  # e.g. "VideoCapture"
+            return f"{owner}.{function_node.export_name}"
+        return function_node.export_name
+    except Exception:
+        # Fallback to exported name
+        return function_node.export_name
+
+
+def _maybe_widen_to_pathlike(func_display_name: str,
+                             param_name: str,
+                             typename: str | None) -> str | None:
+    """
+    If this argument is one of our filename params and currently typed as 'str',
+    widen it to: 'str | _os.PathLike[str]'.
+    """
+    if typename is None:
+        return None
+    try:
+        if param_name in PATHLIKE_OVERRIDES.get(func_display_name, set()) and typename.strip() == "str":
+            return "str | _os.PathLike[str]"
+    except Exception:
+        pass
+    return typename
+# --- End: PathLike filename overrides ----------------------------------------
+
+
+
 def generate_typing_stubs(root: NamespaceNode, output_path: Path):
     """Generates typing stubs for the AST with root `root` and outputs
     created files tree to directory pointed by `output_path`.
@@ -448,6 +511,8 @@ def _generate_function_stub(function_node: FunctionNode,
 
     function_module = get_enclosing_namespace(function_node)
     function_module_name = function_module.full_export_name
+    
+    display_name = _function_display_name(function_node)
 
     for overload in function_node.overloads:
         # Annotate every function argument
@@ -455,6 +520,10 @@ def _generate_function_stub(function_node: FunctionNode,
         for arg in overload.arguments:
             annotated_arg = arg.name
             typename = arg.relative_typename(function_module_name)
+
+            # widen 'str' -> 'str | _os.PathLike[str]' when flagged
+            typename = _maybe_widen_to_pathlike(display_name, arg.name, typename)
+
             if typename is not None:
                 annotated_arg += ": " + typename
             if arg.default_value is not None:
@@ -620,6 +689,10 @@ else:
     from typing_extensions import Protocol"""
         )
 
+    # Ensure os.PathLike is available in generated stubs
+    if "import os as _os" not in ordered_required_imports:
+        ordered_required_imports.insert(0, "import os as _os")
+    
     return ordered_required_imports
 
 
