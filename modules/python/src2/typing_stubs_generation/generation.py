@@ -73,13 +73,13 @@ def _maybe_widen_to_pathlike(func_display_name: str,
                              typename: str | None) -> str | None:
     """
     If this argument is one of our filename params and currently typed as 'str',
-    widen it to: 'str | _os.PathLike[str]'.
+    widen it to a 3.8-safe union.
     """
     if typename is None:
         return None
     try:
         if param_name in PATHLIKE_OVERRIDES.get(func_display_name, set()) and typename.strip() == "str":
-            return "str | _os.PathLike[str]"
+            return "Union[str, _os.PathLike[str]]"
     except Exception:
         pass
     return typename
@@ -693,6 +693,8 @@ else:
     if "import os as _os" not in ordered_required_imports:
         ordered_required_imports.insert(0, "import os as _os")
     
+    if "from typing import Union" not in ordered_required_imports:
+        ordered_required_imports.append("from typing import Union")
     return ordered_required_imports
 
 
