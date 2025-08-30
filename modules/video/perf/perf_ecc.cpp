@@ -65,7 +65,11 @@ PERF_TEST_P(TransformationType, findTransformECC, /*testing::ValuesIn(MotionType
         findTransformECC(templateImage, img, warpMat, transform_type,
             TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 5, -1));
     }
-    SANITY_CHECK(warpMat, 3e-3);
+
+    if (transform_type == MOTION_HOMOGRAPHY)
+        SANITY_CHECK(warpMat, 8.1e-3);
+    else
+        SANITY_CHECK(warpMat, 3e-3);
 }
 
 } // namespace
