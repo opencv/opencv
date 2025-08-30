@@ -5,6 +5,13 @@
 #ifndef OPENCV_HAL_VSX_UTILS_HPP
 #define OPENCV_HAL_VSX_UTILS_HPP
 
+#if defined(__x86_64__) || defined(__riscv) || defined(__s390x__) || defined(__aarch64__) || defined(__loongarch64) \
+    || defined(__POWER10__) || (defined(__powerpc64__) && defined(__ARCH_PWR10__))
+  #define CV_VSX_HAS_FLOAT64_CONVERT 1
+#else
+  #define CV_VSX_HAS_FLOAT64_CONVERT 0
+#endif
+
 #include "opencv2/core/cvdef.h"
 
 #ifndef SKIP_INCLUDES
@@ -257,8 +264,27 @@ VSX_IMPL_1VRG(vec_udword2, vec_udword2, vpopcntd, vec_popcntu)
 VSX_IMPL_1VRG(vec_udword2, vec_dword2,  vpopcntd, vec_popcntu)
 
 // converts between single and double-precision
-VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, vec_floate)
-VSX_REDIRECT_1RG(vec_double2, vec_float4,  vec_cvfo, vec_doubleo)
+
+#if CV_VSX_HAS_FLOAT64_CONVERT
+//  Use VSX double<->float conversion instructions (if supported by the architecture)
+    VSX_REDIRECT_1RG(vec_float4,  vec_double2, vec_cvfo, vec_floate)
+    VSX_REDIRECT_1RG(vec_double2, vec_float4,  vec_cvfo, vec_doubleo)
+#else
+//  Fallback: implement vec_cvfo using scalar operations (to ensure successful linking)
+    static inline vec_float4 vec_cvfo(const vec_double2& a)
+    {
+        float r0 = static_cast<float>(reinterpret_cast<const double*>(&a)[0]);
+        float r1 = static_cast<float>(reinterpret_cast<const double*>(&a)[1]);
+        return (vec_float4){r0, r1, 0.f, 0.f};
+    }
+
+    static inline vec_double2 vec_cvfo(const vec_float4& a)
+    {
+        double r0 = static_cast<double>(reinterpret_cast<const float*>(&a)[0]);
+        double r1 = static_cast<double>(reinterpret_cast<const float*>(&a)[2]);
+        return (vec_double2){r0, r1};
+    }
+#endif
 
 // converts word and doubleword to double-precision
 #undef vec_ctd
