@@ -221,29 +221,30 @@ def pattern_score(
     cols: int,
     sharp: float,
     exp_ok: float,
+    area_ratio: float,
     expected_aruco_markers: Optional[int],
     w_sharp: float,
     w_exposure: float,
     w_corners: float,
+    w_coverage: float,
 ) -> float:
-    # make robust if any weight is None
-    ws = [max(0.0, float(0.0 if w is None else w)) for w in (w_sharp, w_exposure, w_corners)]
+    # clamp negative weights and normalise
+    ws = [max(0.0, float(0.0 if w is None else w)) for w in (w_sharp, w_exposure, w_corners, w_coverage)]
     s = sum(ws)
-    ws = [1 / 3, 1 / 3, 1 / 3] if s <= 0 else [w / s for w in ws]
+    ws = [1.0 / 4.0] * 4 if s <= 0 else [w / s for w in ws]
 
-    if pattern in ("chessboard", "circles", "acircles"):
-        expected = float(rows * cols)
-    elif pattern == "charuco":
+    # expected number of corners/markers for normalising the corner term
+    if pattern in ("chessboard", "circles", "acircles", "charuco"):
         expected = float(rows * cols)
     else:  # aruco_grid
         expected = 4.0 * (
-            float(expected_aruco_markers)
-            if expected_aruco_markers and expected_aruco_markers > 0
-            else float(rows * cols)
+            float(expected_aruco_markers) if expected_aruco_markers and expected_aruco_markers > 0 else float(rows * cols)
         )
     corners_norm = min(1.0, n_corners / (expected + 1e-6))
     sharp_term = min(1.0, sharp * 200.0)
-    score = ws[0] * sharp_term + ws[1] * exp_ok + ws[2] * corners_norm
+    exposure_term = exp_ok
+    coverage_term = float(np.clip(area_ratio, 0.0, 1.0))
+    score = ws[0] * sharp_term + ws[1] * exposure_term + ws[2] * corners_norm + ws[3] * coverage_term
     return float(np.clip(score, 0.0, 1.0))
 
 
@@ -433,6 +434,7 @@ def evaluate_image(
     w_sharp: float,
     w_exposure: float,
     w_corners: float,
+    w_coverage: float,
 ) -> DetectResult:
     img = _load_image_bgr(path, max_size=max_size)
     if img is None:
@@ -447,13 +449,22 @@ def evaluate_image(
         "exposure_ok": exp_ok,
     }
     if sharp < min_sharpness:
-        details.update({"found": 0.0, "n_corners": 0.0})
+        details.update({"found": 0.0, "n_corners": 0.0, "area_ratio": 0.0})
         return DetectResult(False, 0.0, None, details)
     found, corners, n_corners = detect_pattern(img, pattern, rows, cols, aruco_name, square, marker, separation)
     details.update({"found": 1.0 if found else 0.0, "n_corners": float(n_corners)})
     if n_corners < min_corners or not found or corners is None:
+        details.setdefault("area_ratio", 0.0)
         return DetectResult(False, 0.0, None, details)
+    # compute centre, scale and orientation
     cx, cy, log_scale, _ = _centre_scale_angle(corners, h, w)
+    # compute convex hull area ratio (spatial coverage)
+    try:
+        hull = cv.convexHull(corners)
+        area_ratio = float(cv.contourArea(hull) / float(w * h)) if w > 0 and h > 0 else 0.0
+    except Exception:
+        area_ratio = 0.0
+    details["area_ratio"] = area_ratio
     score = pattern_score(
         n_corners,
         pattern,
@@ -461,10 +472,12 @@ def evaluate_image(
         cols,
         sharp,
         exp_ok,
+        area_ratio,
         expected_aruco_markers,
         w_sharp,
         w_exposure,
         w_corners,
+        w_coverage,
     )
     details.update({"center_x": cx, "center_y": cy, "log_scale": log_scale, "score": score})
     feats = np.array([cx, cy, log_scale], dtype=np.float32)
@@ -850,6 +863,7 @@ class MetricsWriter:
         "center_x",
         "center_y",
         "log_scale",
+        "area_ratio",
         "score",
     ]
 
@@ -884,7 +898,7 @@ class MetricsWriter:
             self.file.close()
 
 
-_CACHE_VERSION = 6
+_CACHE_VERSION = 7
 
 
 def _config_hash(d: Dict) -> str:
@@ -903,6 +917,7 @@ def _config_hash(d: Dict) -> str:
         "w_sharp",
         "w_exposure",
         "w_corners",
+        "w_coverage",
     ]
     s = "|".join(f"{k}={d.get(k)!r}" for k in keys)
     return hashlib.sha256(s.encode("utf-8")).hexdigest()[:16]
@@ -1119,6 +1134,12 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         help="Weight for corner/marker coverage (clamped >=0)",
     )
     ap.add_argument(
+        "--w-coverage",
+        type=float,
+        default=0.10,
+        help="Weight for spatial coverage (convex hull area ratio). Larger values emphasise images where the pattern occupies more of the frame.",
+    )
+    ap.add_argument(
         "--relative-to",
         help="Write relative paths in YAMLs with respect to this directory",
     )
@@ -1149,7 +1170,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         warn_list.append("--expected-aruco-markers < 0; ignoring.")
     if args.selector == "random":
         warn_list.append("--selector=random is quality-aware: selects randomly from top-scoring candidates.")
-    if any(w < 0 for w in (args.w_sharp, args.w_exposure, args.w_corners)):
+    if any(w < 0 for w in (args.w_sharp, args.w_exposure, args.w_corners, args.w_coverage)):
         warn_list.append("Negative weights provided; clamping to 0.")
     if args.greedy_min_dist <= 0 and args.selector == "greedy":
         warn_list.append("--greedy-min-dist <=0; may lead to low diversity.")
@@ -1209,6 +1230,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         w_sharp=max(0.0, args.w_sharp),
         w_exposure=max(0.0, args.w_exposure),
         w_corners=max(0.0, args.w_corners),
+        w_coverage=max(0.0, args.w_coverage),
     )
 
     cfg_hash = _config_hash(eval_cfg)
@@ -1254,6 +1276,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             w_sharp=eval_cfg["w_sharp"],
             w_exposure=eval_cfg["w_exposure"],
             w_corners=eval_cfg["w_corners"],
+            w_coverage=eval_cfg["w_coverage"],
         )
 
         tasks = [(p, ev_kwargs) for p in todo]
