@@ -508,7 +508,7 @@ def _generate_function_stub(function_node: FunctionNode,
 
     function_module = get_enclosing_namespace(function_node)
     function_module_name = function_module.full_export_name
-    
+
     display_name = _function_display_name(function_node)
 
     for overload in function_node.overloads:
@@ -689,7 +689,7 @@ else:
     # Ensure os.PathLike is available in generated stubs
     if "import os as _os" not in ordered_required_imports:
         ordered_required_imports.insert(0, "import os as _os")
-    
+
     if "from typing import Union" not in ordered_required_imports:
         ordered_required_imports.append("from typing import Union")
     return ordered_required_imports
