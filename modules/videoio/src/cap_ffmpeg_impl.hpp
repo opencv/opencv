@@ -686,7 +686,7 @@ void CvCapture_FFMPEG::close()
     {
 #ifdef CV_FFMPEG_CODECPAR
 // avcodec_close removed in FFmpeg release 8.0
-# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 11, 100))
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
         avcodec_close( context );
 # endif
 #endif
@@ -1751,6 +1751,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = context->coded_width, buffer_height = context->coded_height;
+        buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
+        buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
 
 #if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
         img_convert_ctx = sws_alloc_context();
@@ -1774,9 +1776,11 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         rgb_picture.format = result_format;
         rgb_picture.width = buffer_width;
         rgb_picture.height = buffer_height;
-        // rgb_picture.color_range = AVCOL_RANGE_JPEG;
-        // rgb_picture.color_primaries = sw_picture->color_primaries;
-        // rgb_picture.color_trc = sw_picture->color_trc;
+        rgb_picture.color_range = AVCOL_RANGE_JPEG;
+        rgb_picture.colorspace = AVCOL_SPC_RGB;
+        // rgb_picture.chroma_location = (AVChromaLocation)0;
+        rgb_picture.color_primaries = sw_picture->color_primaries;
+        rgb_picture.color_trc = sw_picture->color_trc;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
         {
             CV_WARN("OutOfMemory");
@@ -2028,7 +2032,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
     // av_stream_get_side_data removed in FFmpeg release 8.0
-# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 11, 100))
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
 # else
     AVPacketSideData* sd = video_st->codecpar->coded_side_data;
