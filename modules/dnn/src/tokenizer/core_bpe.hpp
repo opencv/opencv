@@ -108,34 +108,6 @@ CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint
                                  const ByteVecRankMap& ranks);
 
 /** 
- * @brief Split a byte sequence into BPE token byte-spans (no id translation).
- *
- * Applies the same merge boundaries as bytePairEncode(), but returns the raw
- * byte segments instead of ids.
- *
- * @param piece  Input bytes.
- * @param ranks  Map from byte-sequence tokens to ids (used only to test mergeability).
- * @return Vector of byte slices corresponding to final BPE tokens.
- *
- * @see bytePairEncode
- */
-CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(const std::vector<std::uint8_t>& piece, 
-                                   const ByteVecRankMap& ranks);
-
-/** 
- * @overload
- * @brief Split a UTF-8 string into BPE token byte-spans (no id translation).
- *
- * Converts @p s to bytes and calls the byte-vector overload.
- *
- * @param s      UTF-8 string (will be copied to bytes).
- * @param ranks  Map used to determine mergeability.
- * @return Vector of byte slices corresponding to final BPE tokens.
- */
-CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(std::string& s,
-                                   const ByteVecRankMap& ranks);
-
-/** 
  * @brief Core Byte Pair Encoding (BPE) engine (mergeable-ranks model).
  *
  * Encodes and decodes tokens at the byte level (UTF-8 input is split to bytes),
@@ -143,22 +115,12 @@ CV_EXPORTS std::vector<std::vector<std::uint8_t>> bytePairSplit(std::string& s,
  *
  * The implementation follows the structure of OpenAI’s tiktoken encoders.
  */
-class CV_EXPORTS CoreBPE {
+class CoreBPE {
 public:
     CoreBPE(); 
     explicit CoreBPE(ByteVecRankMap encoder,
             std::unordered_map<std::string, std::uint32_t> specialEncoder, 
             const std::string& pattern);
-
-    /** 
-     * @brief Encode text with ordinary BPE (no special tokens).
-     *
-     * Splits @p text using @c pattern_ and applies BPE over each split.
-     *
-     * @param text  UTF-8 input.
-     * @return Vector of token ids.
-     */
-    std::vector<std::uint32_t> encodeOrdinary(const std::string& text) const;
 
     /** 
      * @brief Encode text with optional special tokens.
@@ -175,8 +137,6 @@ public:
      */
     std::pair<std::vector<std::uint32_t>, std::size_t> encode(const std::string& text,
                                                      const std::unordered_set<std::string>& allowedSpecial) const;
-    std::uint32_t encodeSingleToken(std::vector<uint8_t>& piece) const;
-    
      /** 
       * @brief Decode a sequence of token ids into raw bytes.
      *
@@ -186,7 +146,6 @@ public:
      * @return Decoded bytes on success, or @c std::nullopt if any id is unknown.
      */
     std::optional<std::vector<std::uint8_t>> decodeBytes(const std::vector<std::uint32_t>& tokens) const;
-    std::vector<uint8_t> decodeSingleTokenBytes(const std::uint32_t token) const;
     
 private:
     ByteVecRankMap encoder_;

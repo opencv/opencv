@@ -99,25 +99,6 @@ std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece
     return out;
 }
 
-std::vector<std::vector<std::uint8_t>> bytePairSplit(const std::vector<std::uint8_t>& piece, 
-                                   const ByteVecRankMap& ranks){
-    auto merged = bytePairMerge(ranks, piece);
-    std::vector<std::vector<std::uint8_t>> out;
-    out.reserve(merged.size()-1);
-    for (std::size_t i = 0; i+1< merged.size(); ++i) {
-        std::size_t s = merged[i].first, e = merged[i+1].first;
-        out.emplace_back(piece.begin()+s, piece.begin()+e);
-    }
-    return out;
-}
-
-std::vector<std::vector<std::uint8_t>> bytePairSplit(std::string& s,
-                                   const ByteVecRankMap& ranks)
-{
-    std::vector<std::uint8_t> bytes(s.begin(), s.end());
-    return bytePairSplit(bytes, ranks);
-}
-
 std::string CoreBPE::makeSpecialPattern(const std::unordered_map<std::string, std::uint32_t>& special) {
     static const std::string meta = R"([.^$|()\[\]{}*+?\\])";
     std::string pat;
@@ -197,38 +178,6 @@ CoreBPE::decodeBytes(const std::vector<std::uint32_t>& tokens) const {
     return out;
 }
 
-std::vector<uint8_t> CoreBPE::decodeSingleTokenBytes(const std::uint32_t token) const {
-    auto it = decoder_.find(token);
-    if (it != decoder_.end()) {
-        return it->second;
-    }
-    auto it_spec = specialDecoder_.find(token);
-    if (it_spec != specialDecoder_.end()) {
-        return it_spec->second;
-    } 
-    CV_Error(cv::Error::StsError, "Error in decode single token");
-}
-
-std::vector<std::uint32_t> CoreBPE::encodeOrdinary(const std::string& txt) const {
-
-    std::vector<std::string> regexes{ pattern_ };
-    auto splits = unicode_regex_split(txt, regexes);
-
-    std::vector<std::uint32_t> tokens;
-    for (auto& subUtf8 : splits) {
-        // std::cout << "[" << subUtf8 << "]" << std::endl; 
-        std::vector<std::uint8_t> piece(subUtf8.begin(), subUtf8.end());
-        auto it = encoder_.find(piece);
-        if (it != encoder_.end()) {
-            tokens.push_back(it->second);
-        } else {
-            auto subTokens = bytePairEncode(piece, encoder_);
-            tokens.insert(tokens.end(),
-                          subTokens.begin(), subTokens.end());
-        }
-    }
-    return tokens;
-}
 /*
  * This function tokenizes input text by handling special tokens and applying Byte Pair Encoding (BPE)
  * to ordinary text segments. It searches for allowed special tokens, processes ordinary text with BPE,
@@ -318,24 +267,6 @@ CoreBPE::encode(const std::string& text,
     }
 
     return { ret, last_piece_token_len };
-}
-
-std::uint32_t CoreBPE::encodeSingleToken(std::vector<uint8_t>& piece) const {
-    auto it = encoder_.find(piece);
-    if (it != encoder_.end()) {
-        return it->second;
-    }
-
-    try {
-        std::string piece_str(piece.begin(), piece.end());
-        auto sit = specialEncoder_.find(piece_str);
-        if (sit != specialEncoder_.end()) {
-            return sit->second;
-        }
-    } catch (...) {
-        CV_Error(cv::Error::StsError, "Failed to encode single token: not found in encoder or specialEncoder");
-    }
-    return -1;
 }
 CV__DNN_INLINE_NS_END
 }}
