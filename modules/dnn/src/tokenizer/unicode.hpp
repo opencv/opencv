@@ -93,8 +93,6 @@ uint32_t    unicode_cpt_from_utf8(const std::string & utf8, size_t & offset);
 
 std::vector<uint32_t> unicode_cpts_from_utf8(const std::string & utf8);
 
-std::vector<uint32_t> unicode_cpts_normalize_nfd(const std::vector<uint32_t> & cpts);
-
 unicode_cpt_flags unicode_cpt_flags_from_cpt (uint32_t cpt);
 unicode_cpt_flags unicode_cpt_flags_from_utf8(const std::string & utf8);
 

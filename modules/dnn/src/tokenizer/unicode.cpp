@@ -550,19 +550,6 @@ std::string unicode_cpt_to_utf8(uint32_t cpt) {
     throw std::invalid_argument("invalid codepoint");
 }
 
-std::vector<uint32_t> unicode_cpts_normalize_nfd(const std::vector<uint32_t> & cpts) {
-    auto comp = [] (const uint32_t cpt, const range_nfd & range) {
-        return cpt < range.first;
-    };
-    std::vector<uint32_t> result(cpts.size());
-    for (size_t i = 0; i < cpts.size(); ++i) {
-        const uint32_t cpt = cpts[i];
-        auto it = std::upper_bound(unicode_ranges_nfd.begin(), unicode_ranges_nfd.end(), cpt, comp) - 1;
-        result[i] = (it->first <= cpt && cpt <= it->last) ? it->nfd : cpt;
-    }
-    return result;
-}
-
 std::vector<uint32_t> unicode_cpts_from_utf8(const std::string & utf8) {
     std::vector<uint32_t> result;
     result.reserve(utf8.size());
