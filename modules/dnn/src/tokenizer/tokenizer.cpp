@@ -99,10 +99,10 @@ CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& 
     }
 
     cv::FileNode model = fs["model"];
-    FileNode vocab = model["vocab"];
-    if (vocab.empty()) {
-        CV_Error(Error::StsError, "tokenizer.json missing model.vocab");
-    }
+    CV_CheckFalse(model.empty(), "tokenizer.json missing 'model'");
+
+    cv::FileNode vocab = model["vocab"];
+    CV_CheckFalse(vocab.empty(), "tokenizer.json missing model.vocab");
 
     auto token_to_bytes = [&](const std::string& token_utf8) -> std::vector<uint8_t> {
         std::vector<std::uint8_t> out;
@@ -114,6 +114,7 @@ CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& 
         }
         return out;
     };
+    
     ByteVecRankMap mergeableRanks;
     mergeableRanks.reserve(vocab.size());
     int max_id = -1;
@@ -128,7 +129,7 @@ CoreBPE getTokenizerForGPT2FromJSON(const std::string &name, const std::string& 
         mergeableRanks.emplace(token_to_bytes(key), (uint32_t)id);
         max_id = std::max(max_id, id);
     }
-    
+
     // size sanity
     if ((int)mergeableRanks.size() != (int)vocab.size() - 1) {
         CV_Error(cv::Error::StsError,
@@ -179,10 +180,10 @@ CoreBPE getTokenizerForCl100kBaseFromJSON_FS(const std::string &name,
         CV_Error(cv::Error::StsError, "Failed to open tokenizer.json: " + json_path);
 
     cv::FileNode model = fs["model"];
-    if (model.empty()) CV_Error(cv::Error::StsError, "tokenizer.json missing 'model'");
+    CV_CheckFalse(model.empty(), "tokenizer.json missing 'model'");
 
     cv::FileNode vocab = model["vocab"];
-    if (vocab.empty()) CV_Error(cv::Error::StsError, "tokenizer.json missing model.vocab");
+    CV_CheckFalse(vocab.empty(), "tokenizer.json missing model.vocab");
 
     ByteVecRankMap mergeableRanks;
     mergeableRanks.reserve((size_t)vocab.size());
