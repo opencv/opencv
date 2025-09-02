@@ -1719,7 +1719,16 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     if (!sw_picture || !sw_picture->data[0])
         return false;
 
-    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format));
+    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format) << ", colorspace: "
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56, 72, 0)
+        << av_color_space_name(sw_picture->colorspace)
+#else
+        << av_get_colorspace_name(sw_picture->colorspace)
+#endif
+        << ", range: " << av_color_range_name(sw_picture->color_range)
+        << ", primaries: " << av_color_primaries_name(sw_picture->color_primaries)
+        << ", transfer: " << av_color_transfer_name(sw_picture->color_trc)
+    );
     const AVPixelFormat result_format = convertRGB ? AV_PIX_FMT_BGR24 : (AVPixelFormat)sw_picture->format;
     switch (result_format)
     {
