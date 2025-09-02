@@ -104,8 +104,8 @@ this case the function finds such a pose that minimizes reprojection error, that
 of squared distances between the observed projections "imagePoints" and the projected (using
 cv::projectPoints ) "objectPoints". Initial solution for non-planar "objectPoints" needs at least 6 points and uses the DLT algorithm.
 Initial solution for planar "objectPoints" needs at least 4 points and uses pose from homography decomposition.
--   cv::SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+-   cv::SOLVEPNP_P3P Method is based on the solution described in the "Elements of Geometry for Computer Vision" course
+teached by Tomas Pajdla (@cite Pajdla2016).
 In this case the function requires exactly four object and image points.
 -   cv::SOLVEPNP_AP3P Method is based on the paper of T. Ke, S. Roumeliotis
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
