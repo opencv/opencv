@@ -392,7 +392,7 @@ public:
             zw[1] = Zw2(0);     zw[4] = Zw2(1);     zw[7] = Zw2(2);
             zw[2] = Z3crZ1w(0); zw[5] = Z3crZ1w(1); zw[8] = Z3crZ1w(2);
 
-            const Matx33d R = Math::rotVec2RotMat(Math::rotMat2RotVec(Z * Zw.inv()));
+            const Matx33d R = Z * Zw.inv();
             Matx33d KR = K * R;
             Matx34d P;
             hconcat(KR, -KR * (X1 - R.t() * nX1), P);
