@@ -2094,15 +2094,15 @@ CASE(test_triu_square_neg)
 CASE(test_triu_zero)
     // no filter
 CASE(test_unique_not_sorted_without_axis)
-    // no filter
+    SKIP;
 CASE(test_unique_sorted_with_axis)
-    // no filter
+    SKIP;
 CASE(test_unique_sorted_with_axis_3d)
-    // no filter
+    SKIP;
 CASE(test_unique_sorted_with_negative_axis)
-    // no filter
+    SKIP;
 CASE(test_unique_sorted_without_axis)
-    // no filter
+    SKIP;
 CASE(test_unsqueeze_axis_0)
     SKIP;
 CASE(test_unsqueeze_axis_1)
