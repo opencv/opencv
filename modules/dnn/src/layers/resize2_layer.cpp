@@ -29,22 +29,39 @@ namespace cv { namespace dnn {
 
 namespace {
 
+enum class CoordTransMode {
+    HALF_PIXEL,
+    PYTORCH_HALF_PIXEL,
+    TF_HALF_PIXEL_FOR_NN,
+    TF_CROP_AND_RESIZE,
+    ASYMMETRIC
+};
+
+static inline CoordTransMode parseCoordTransMode(const String& s)
+{
+    if (s == "half_pixel") return CoordTransMode::HALF_PIXEL;
+    if (s == "pytorch_half_pixel") return CoordTransMode::PYTORCH_HALF_PIXEL;
+    if (s == "tf_half_pixel_for_nn") return CoordTransMode::TF_HALF_PIXEL_FOR_NN;
+    if (s == "tf_crop_and_resize") return CoordTransMode::TF_CROP_AND_RESIZE;
+    return CoordTransMode::ASYMMETRIC;
+}
+
 inline float computeSrcGeneric(int dst, float scale, int limit, int len,
-                               const String &coordTransMode, bool halfPixelCenters,
+                               CoordTransMode coordTransMode, bool /*halfPixelCenters*/,
                                float start_coord = 0.0f, float end_coord = 1.0f)
 {
-    if (coordTransMode == "tf_crop_and_resize")
+    if (coordTransMode == CoordTransMode::TF_CROP_AND_RESIZE)
     {
         if (len > 1)
             return start_coord * (limit - 1) + dst * (end_coord - start_coord) * (limit - 1) / float(len - 1);
         else
             return 0.5f * (start_coord + end_coord) * (limit - 1);
     }
-    if (coordTransMode == "pytorch_half_pixel")
+    if (coordTransMode == CoordTransMode::PYTORCH_HALF_PIXEL)
         return (len > 1) ? (dst + 0.5f)*scale - 0.5f : 0.f;
-    if (coordTransMode == "half_pixel")
+    if (coordTransMode == CoordTransMode::HALF_PIXEL)
         return (dst + 0.5f)*scale - 0.5f;
-    if (coordTransMode == "tf_half_pixel_for_nn")
+    if (coordTransMode == CoordTransMode::TF_HALF_PIXEL_FOR_NN)
         return (dst + 0.5f)*scale;
     return dst*scale;
 }
@@ -56,7 +73,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
                                         int len,
                                         float start_coord,
                                         float end_coord,
-                                        const String& coordTransMode,
+                                        CoordTransMode coordTransMode,
                                         const String& nearestMode,
                                         bool halfPixelCenters)
 {
@@ -80,7 +97,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
     {
         float src = computeSrcGeneric(i, scale, inLen - 1, len,
                                       coordTransMode, halfPixelCenters, start_coord, end_coord);
-        if (coordTransMode == "tf_crop_and_resize") {
+        if (coordTransMode == CoordTransMode::TF_CROP_AND_RESIZE) {
             if (src < 0.f || src >= float(inLen)) {
                 map[i] = -1; // out of bounds
                 continue;
@@ -90,6 +107,62 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
         }
         map[i] = nearestIndex(src);
     }
+}
+
+static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
+                                             std::vector<int>& i1,
+                                             std::vector<float>& frac,
+                                             std::vector<bool>& outOfBounds,
+                                             int outLen,
+                                             int inLen,
+                                             float scale,
+                                             int len,
+                                             float start_coord,
+                                             float end_coord,
+                                             CoordTransMode coordTransMode,
+                                             bool halfPixelCenters,
+                                             bool tf_crop_and_resize_mode)
+{
+    i0.resize(outLen);
+    i1.resize(outLen);
+    frac.resize(outLen);
+    outOfBounds.assign(outLen, false);
+
+    for (int o = 0; o < outLen; ++o)
+    {
+        float src = computeSrcGeneric(o, scale, inLen, len,
+                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
+        if (tf_crop_and_resize_mode)
+        {
+            int base = int(std::floor(src));
+            if (base < 0 || base >= inLen - 1) {
+                outOfBounds[o] = true;
+                i0[o] = 0;
+                i1[o] = 0;
+                frac[o] = 0.0f;
+            } else {
+                i0[o] = base;
+                i1[o] = base + 1;
+                frac[o] = src - float(base);
+            }
+        }
+        else
+        {
+            src = std::min(std::max(src, 0.f), float(inLen - 1) - 1e-6f);
+            int base = int(std::floor(src));
+            i0[o] = base;
+            i1[o] = std::clamp(base + 1, 0, inLen - 1);
+            frac[o] = src - float(base);
+        }
+    }
+}
+
+static inline void interpolateCubicResize(float x, float A, float* coeffs )
+{
+    coeffs[0] = ((A*(x + 1) - 5*A)*(x + 1) + 8*A)*(x + 1) - 4*A;
+    coeffs[1] = ((A + 2)*x - (A + 3))*x*x + 1;
+    coeffs[2] = ((A + 2)*(1 - x) - (A + 3))*(1 - x)*(1 - x) + 1;
+    coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
 }
 
 template<typename T>
@@ -111,16 +184,18 @@ void resizeNearest(const Mat &inp, Mat &out,
     Mat inpP = inp.reshape(1, numPlanes * inH);
     Mat outP = out.reshape(1, numPlanes * outH);
 
+    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+
     std::vector<int> mapY(outH);
     buildNearestIndexMap(mapY, outH, inH, scaleH, lenY, start_y, end_y,
-                         coordTransMode, nearestMode, halfPixelCenters);
+                         coordMode, nearestMode, halfPixelCenters);
 
     std::vector<int> mapX(outW);
     buildNearestIndexMap(mapX, outW, inW, scaleW, lenX, start_x, end_x,
-                         coordTransMode, nearestMode, halfPixelCenters);
+                         coordMode, nearestMode, halfPixelCenters);
 
     const int nstripes = 16;
-    const bool tf_crop_and_resize_mode = (coordTransMode == "tf_crop_and_resize");
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
         int row0 = range.start * (outH * numPlanes) / nstripes;
         int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
@@ -170,56 +245,22 @@ void resizeBilinear(const Mat &inp, Mat &out,
     Mat inpP = inp.reshape(1, numPlanes*inH);
     Mat outP = out.reshape(1, numPlanes*outH);
 
-    const bool tf_crop_and_resize_mode = (coordTransMode == "tf_crop_and_resize");
-
-    auto clampC = [&](int dst, float scale, int lim, int len, float start_coord, float end_coord) {
-        float src = computeSrcGeneric(dst, scale, lim, len,
-                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
-        if (tf_crop_and_resize_mode) {
-            int i0 = int(std::floor(src));
-            return std::make_pair(i0, src - float(i0));
-        } else {
-            src = std::min(std::max(src, 0.f), float(lim-1) - 1e-6f);
-            int i0 = int(std::floor(src));
-            return std::make_pair(i0, src - float(i0));
-        }
-    };
+    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
 
     std::vector<int>    x0(outW), x1(outW);
     std::vector<float> lx(outW);
-    std::vector<bool>  outOfBoundsX(outW, false);
-    for (int x = 0; x < outW; ++x)
-    {
-        auto [xi, xfrac] = clampC(x, scaleW, inW, lenX, start_x, end_x);
-        if (tf_crop_and_resize_mode && (xi < 0 || xi >= inW - 1)) {
-            outOfBoundsX[x] = true;
-            x0[x] = 0;
-            x1[x] = 0;
-            lx[x] = 0.0f;
-        } else {
-            x0[x] = xi;
-            x1[x] = std::clamp(xi + 1, 0, inW - 1);
-            lx[x] = xfrac;
-        }
-    }
+    std::vector<bool>  outOfBoundsX(outW);
+    buildBilinearIndexAndLerp(x0, x1, lx, outOfBoundsX,
+                              outW, inW, scaleW, lenX, start_x, end_x,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode);
 
     std::vector<int>    y0(outH), y1(outH);
     std::vector<float> ly(outH);
-    std::vector<bool>  outOfBoundsY(outH, false);
-    for (int y = 0; y < outH; ++y)
-    {
-        auto [yi, yfrac] = clampC(y, scaleH, inH, lenY, start_y, end_y);
-        if (tf_crop_and_resize_mode && (yi < 0 || yi >= inH - 1)) {
-            outOfBoundsY[y] = true;
-            y0[y] = 0;
-            y1[y] = 0;
-            ly[y] = 0.0f;
-        } else {
-            y0[y] = yi;
-            y1[y] = std::clamp(yi + 1, 0, inH - 1);
-            ly[y] = yfrac;
-        }
-    }
+    std::vector<bool>  outOfBoundsY(outH);
+    buildBilinearIndexAndLerp(y0, y1, ly, outOfBoundsY,
+                              outH, inH, scaleH, lenY, start_y, end_y,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode);
 
     const int nstripes = 16;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
@@ -248,6 +289,18 @@ void resizeBilinear(const Mat &inp, Mat &out,
 
                 T* outRowBase = outP.ptr<T>( p * outH + oy );
 
+                std::vector<float> hbufbuf(inW + 3);
+                float* hbuf = hbufbuf.data() + 1;
+                for (int ix = 0; ix < inW; ++ix)
+                {
+                    float v0 = static_cast<float>(row0ptr[ix]);
+                    float v1 = static_cast<float>(row1ptr[ix]);
+                    hbuf[ix] = v0 + fy * (v1 - v0);
+                }
+                hbuf[-1] = hbuf[0];
+                hbuf[inW] = hbuf[inW - 1];
+                hbuf[inW + 1] = hbuf[inW - 1];
+
                 for (int ox = 0; ox < outW; ++ox)
                 {
                     if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
@@ -256,11 +309,9 @@ void resizeBilinear(const Mat &inp, Mat &out,
                         int   xi = x0[ox];
                         float fx = lx[ox];
 
-                        const T* c0 = row0ptr + xi;
-                        const T* c1 = row1ptr + xi;
-                        float top    = c0[0] + fx * (c0[1] - c0[0]);
-                        float bottom = c1[0] + fx * (c1[1] - c1[0]);
-                        outRowBase[ox] = T(top + fy * (bottom - top));
+                        float left = hbuf[xi];
+                        float res  = left + fx * (hbuf[xi + 1] - left);
+                        outRowBase[ox] = T(res);
                     }
                 }
             }
@@ -286,19 +337,11 @@ void resizeCubic(const Mat &inp, Mat &out,
     Mat inpPlanes = inp.reshape(1, numPlanes * inH);
     Mat outPlanes = out.reshape(1, numPlanes * outH);
 
-    const bool tf_crop_and_resize_mode = (coordTransMode == "tf_crop_and_resize");
+    CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
+    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
 
     auto clampInt = [](int v, int lo, int hi) {
         return v < lo ? lo : (v > hi ? hi : v);
-    };
-    auto cubicWeight = [&](float x) {
-        float a = cubicA;
-        x = std::abs(x);
-        if (x < 1.f)
-            return (a + 2.f) * x*x*x - (a + 3.f) * x*x + 1.f;
-        else if (x < 2.f)
-            return a * x*x*x - 5.f*a * x*x + 8.f*a * x - 4.f*a;
-        return 0.f;
     };
 
     std::vector<std::array<int,4>> x_id(outW);
@@ -306,39 +349,46 @@ void resizeCubic(const Mat &inp, Mat &out,
     std::vector<bool> outOfBoundsX(outW, false);
     for (int ox = 0; ox < outW; ++ox)
     {
-        float src_x = computeSrcGeneric(ox, scaleW, inW, lenX, coordTransMode, halfPixelCenters, start_x, end_x);
+        float src_x = computeSrcGeneric(ox, scaleW, inW, lenX, coordMode, halfPixelCenters, start_x, end_x);
         int ix = int(std::floor(src_x));
         float dx = src_x - ix;
         float sw = 0.f;
         bool hasOutOfBounds = false;
-        for (int k = -1; k <= 2; ++k)
+        interpolateCubicResize(dx, cubicA, x_w[ox].data());
+        if (!tf_crop_and_resize_mode && !excludeOutside)
         {
-            float w = cubicWeight(k - dx);
-            int idx = ix + k;
-            if (tf_crop_and_resize_mode) {
-                if (idx < 0 || idx >= inW) {
-                    hasOutOfBounds = true;
-                    x_id[ox][k+1] = -1;
-                    x_w [ox][k+1] = 0.f;
-                } else {
-                    x_id[ox][k+1] = idx;
-                    x_w [ox][k+1] = w;
-                    sw += w;
-                }
-            } else if (idx < 0 || idx >= inW) {
-                if (excludeOutside) {
-                    x_id[ox][k+1] = -1;
-                    x_w [ox][k+1] = 0.f;
-                } else {
-                    idx = clampInt(idx, 0, inW - 1);
-                    x_id[ox][k+1] = idx;
-                    x_w [ox][k+1] = w;
-                    sw += w;
-                }
-            } else {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idx = clampInt(ix + k, 0, inW - 1);
                 x_id[ox][k+1] = idx;
-                x_w [ox][k+1] = w;
-                sw += w;
+                sw += x_w[ox][k+1];
+            }
+        }
+        else if (tf_crop_and_resize_mode)
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idx = ix + k;
+                unsigned valid = (unsigned)idx < (unsigned)inW;
+                x_id[ox][k+1] = valid ? idx : -1;
+                float w = x_w[ox][k+1];
+                float wv = valid ? w : 0.f;
+                x_w[ox][k+1] = wv;
+                sw += wv;
+                hasOutOfBounds |= !valid;
+            }
+        }
+        else
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idx = ix + k;
+                unsigned valid = (unsigned)idx < (unsigned)inW;
+                x_id[ox][k+1] = valid ? idx : -1;
+                float w = x_w[ox][k+1];
+                float wv = valid ? w : 0.f;
+                x_w[ox][k+1] = wv;
+                sw += wv;
             }
         }
         if (sw != 0.f)
@@ -354,39 +404,46 @@ void resizeCubic(const Mat &inp, Mat &out,
     std::vector<bool> outOfBoundsY(outH, false);
     for (int oy = 0; oy < outH; ++oy)
     {
-        float src_y = computeSrcGeneric(oy, scaleH, inH, lenY, coordTransMode, halfPixelCenters, start_y, end_y);
+        float src_y = computeSrcGeneric(oy, scaleH, inH, lenY, coordMode, halfPixelCenters, start_y, end_y);
         int iy = int(std::floor(src_y));
         float dy = src_y - iy;
         float swy = 0.f;
         bool hasOutOfBounds = false;
-        for (int k = -1; k <= 2; ++k)
+        interpolateCubicResize(dy, cubicA, y_w[oy].data());
+        if (!tf_crop_and_resize_mode && !excludeOutside)
         {
-            float w = cubicWeight(k - dy);
-            int idy = iy + k;
-            if (tf_crop_and_resize_mode) {
-                if (idy < 0 || idy >= inH) {
-                    hasOutOfBounds = true;
-                    y_id[oy][k+1] = -1;
-                    y_w [oy][k+1] = 0.f;
-                } else {
-                    y_id[oy][k+1] = idy;
-                    y_w [oy][k+1] = w;
-                    swy += w;
-                }
-            } else if (idy < 0 || idy >= inH) {
-                if (excludeOutside) {
-                    y_id[oy][k+1] = -1;
-                    y_w [oy][k+1] = 0.f;
-                } else {
-                    idy = clampInt(idy, 0, inH - 1);
-                    y_id[oy][k+1] = idy;
-                    y_w [oy][k+1] = w;
-                    swy += w;
-                }
-            } else {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idy = clampInt(iy + k, 0, inH - 1);
                 y_id[oy][k+1] = idy;
-                y_w [oy][k+1] = w;
-                swy += w;
+                swy += y_w[oy][k+1];
+            }
+        }
+        else if (tf_crop_and_resize_mode)
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idy = iy + k;
+                unsigned valid = (unsigned)idy < (unsigned)inH;
+                y_id[oy][k+1] = valid ? idy : -1;
+                float w = y_w[oy][k+1];
+                float wv = valid ? w : 0.f;
+                y_w[oy][k+1] = wv;
+                swy += wv;
+                hasOutOfBounds |= !valid;
+            }
+        }
+        else
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idy = iy + k;
+                unsigned valid = (unsigned)idy < (unsigned)inH;
+                y_id[oy][k+1] = valid ? idy : -1;
+                float w = y_w[oy][k+1];
+                float wv = valid ? w : 0.f;
+                y_w[oy][k+1] = wv;
+                swy += wv;
             }
         }
         if (swy != 0.f)
@@ -397,40 +454,65 @@ void resizeCubic(const Mat &inp, Mat &out,
         }
     }
 
-    const int R = numPlanes * outH;
-    parallel_for_(Range(0, R), [&](const Range& range) {
-        for (int i = range.start; i < range.end; ++i)
-        {
-            int p  = i / outH;    // plane
-            int oy = i % outH;    // output row
-            const float* inpBase = inpPlanes.ptr<float>(p * inH);
-            float*       outRow  = outPlanes.ptr<float>(p * outH) + oy * outW;
+    const int nstripes = 16;
+    parallel_for_(Range(0, nstripes), [&](const Range& range) {
+        int row0 = range.start * (outH * numPlanes) / nstripes;
+        int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
+        int plane0 = row0 / outH, plane1 = row1 / outH;
+        row0 %= outH;
+        row1 %= outH;
 
-            for (int ox = 0; ox < outW; ++ox)
+        for (int p = plane0; p <= plane1; ++p)
+        {
+            int oy0 = (p == plane0) ? row0 : 0;
+            int oy1 = (p == plane1) ? row1 : outH - 1;
+            const float* inpBase = inpPlanes.ptr<float>(p * inH);
+            for (int oy = oy0; oy <= oy1; ++oy)
             {
-                if (tf_crop_and_resize_mode && (outOfBoundsY[oy] || outOfBoundsX[ox])) {
-                    outRow[ox] = extrapolation_value;
-                } else {
-                    float val = 0.f;
-                    bool  hasValid = false;
+                float* outRow = outPlanes.ptr<float>(p * outH) + oy * outW;
+
+                if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                    for (int ox = 0; ox < outW; ++ox)
+                        outRow[ox] = extrapolation_value;
+                    continue;
+                }
+
+                std::vector<float> hbuf(inW, 0.f);
+                for (int ix = 0; ix < inW; ++ix)
+                {
+                    float v = 0.f;
+                    bool hasValid = false;
                     for (int ky = 0; ky < 4; ++ky)
                     {
                         int yy = y_id[oy][ky];
                         if (yy < 0) continue;
                         const float* row = inpBase + yy * inW;
-                        for (int kx = 0; kx < 4; ++kx)
-                        {
-                            int xx = x_id[ox][kx];
-                            if (xx < 0) continue;
-                            val      += y_w[oy][ky] * x_w[ox][kx] * row[xx];
-                            hasValid  = true;
-                        }
+                        v += y_w[oy][ky] * row[ix];
+                        hasValid = true;
+                    }
+                    hbuf[ix] = hasValid ? v : 0.f;
+                }
+
+                for (int ox = 0; ox < outW; ++ox)
+                {
+                    if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
+                        outRow[ox] = extrapolation_value;
+                        continue;
+                    }
+                    float val = 0.f;
+                    bool hasValid = false;
+                    for (int kx = 0; kx < 4; ++kx)
+                    {
+                        int xx = x_id[ox][kx];
+                        if (xx < 0) continue;
+                        val += x_w[ox][kx] * hbuf[xx];
+                        hasValid = true;
                     }
                     outRow[ox] = hasValid ? val : 0.f;
                 }
             }
         }
-    });
+    }, nstripes);
 }
 }
 
@@ -466,6 +548,7 @@ public:
         alignCorners = params.get<bool>("align_corners", false);
         halfPixelCenters = params.get<bool>("half_pixel_centers", false);
         coordTransMode = params.get<String>("coordinate_transformation_mode", "half_pixel");
+        coordTransModeE = parseCoordTransMode(coordTransMode);
 
         if (interpolation == "opencv_linear")
             halfPixelCenters = true;
@@ -645,7 +728,7 @@ public:
         updateOutSizeAndScale(inpShape, outShape);
 
         // Read ROI if dynamicROI is enabled
-        if (dynamicROI && coordTransMode == "tf_crop_and_resize" && ninputs >= 2)
+        if (dynamicROI && coordTransModeE == CoordTransMode::TF_CROP_AND_RESIZE && ninputs >= 2)
         {
             Mat roiTensor = inputs[1];
             std::vector<float> roi;
@@ -709,7 +792,7 @@ public:
         int depth = inp_.type(), orig_depth = depth;
 
         Mat inp, out;
-        if (depth != CV_32F && depth != CV_8S) {
+        if (depth != CV_32F && depth != CV_8S && depth != CV_8U && depth != CV_16F && depth != CV_16BF) {
             inp_.convertTo(inp, CV_32F);
             out.fit(outShape, CV_32F);
             depth = CV_32F;
@@ -720,16 +803,30 @@ public:
 
         if(interpolation=="nearest"){
             switch(depth){
-            case CV_8S:  resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);break;
-            case CV_32F: resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);break;
+            case CV_8S:
+            case CV_8U:
+                resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
+            case CV_16F:
+            case CV_16BF:
+            case CV_32F:
+                resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
             default: CV_Error(Error::StsUnsupportedFormat,"Nearest supports only CV_8S & CV_32F");
             }
         }
         else if(interpolation=="bilinear"||interpolation=="opencv_linear"){
             switch(depth){
-            case CV_8S:  resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);break;
-            case CV_32F: resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);break;
-            default: CV_Error(Error::StsUnsupportedFormat,"Bilinear supports only CV_8S & CV_32F");
+            case CV_8S:
+            case CV_8U:
+                resizeBilinear<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
+            case CV_16F:
+            case CV_16BF:
+            case CV_32F:
+                resizeBilinear<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                break;
+            default: CV_Error(Error::StsUnsupportedFormat,"Bilinear supports only CV_8S/CV_8U & CV_16F/CV_16BF/CV_32F");
             }
         }
         else if(interpolation=="cubic"){
@@ -896,6 +993,7 @@ protected:
     bool dynamicROI;
     bool halfPixelCenters;
     String coordTransMode;
+    CoordTransMode coordTransModeE;
     String nearestMode;  // ONNX "nearest_mode" attribute
     bool excludeOutside; // ONNX attribute for cubic
     float cubicCoeffA;
