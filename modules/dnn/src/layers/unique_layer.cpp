@@ -102,6 +102,40 @@ public:
     }
 
 private:
+    template<typename Key, typename LessKey, typename EqualKey>
+    void sortAndGroupKeys(std::vector<std::pair<int, Key>>& keyed,
+                          const LessKey& lessKey,
+                          const EqualKey& equalKey,
+                          std::vector<int>& groupRepIndex,
+                          std::vector<int>& firstJ,
+                          std::vector<int64>& counts,
+                          std::vector<int>& inv) const
+    {
+        std::sort(keyed.begin(), keyed.end(), [&](const std::pair<int, Key>& a, const std::pair<int, Key>& b){
+            if (lessKey(a.second, b.second)) return true;
+            if (lessKey(b.second, a.second)) return false;
+            return a.first < b.first;
+        });
+
+        int g = 0;
+        const int A = (int)keyed.size();
+        for (int pos = 0; pos < A; )
+        {
+            int start = pos;
+            int minJ = keyed[pos].first;
+            int64 cnt = 0;
+            while (pos < A && equalKey(keyed[start].second, keyed[pos].second)) {
+                inv[ keyed[pos].first ] = g;
+                minJ = std::min(minJ, keyed[pos].first);
+                ++cnt; ++pos;
+            }
+            groupRepIndex.push_back(keyed[start].first);
+            firstJ.push_back(minJ);
+            counts.push_back(cnt);
+            ++g;
+        }
+    }
+
     template<typename T, typename WT = T>
     void uniqueAxisImpl(const Mat& X, std::vector<Mat>& outs, int ax, bool sorted) const
     {
@@ -123,78 +157,69 @@ private:
 
         const T* inPtr = X.ptr<const T>();
 
-        auto getVal = [&](int u, size_t ob, size_t ij)->WT {
-            if (ax < 0)
-                return static_cast<WT>(inPtr[(size_t)u]);
-            size_t off = ob * (size_t)dimAxis * inner + (size_t)u * inner + ij;
-            return static_cast<WT>(inPtr[off]);
-        };
-
-        std::vector<int> perm(A);
-        std::iota(perm.begin(), perm.end(), 0);
-        auto lessIdx = [&](int ua, int ub){
-            if (ax < 0) {
-                WT va = getVal(ua, 0, 0);
-                WT vb = getVal(ub, 0, 0);
-                if (va < vb) return true;
-                if (va > vb) return false;
-                return ua < ub;
-            }
-            for (size_t ob = 0; ob < outer; ++ob) {
-                for (size_t ij = 0; ij < inner; ++ij) {
-                    WT va = getVal(ua, ob, ij);
-                    WT vb = getVal(ub, ob, ij);
-                    if (va < vb) return true;
-                    if (va > vb) return false;
-                }
-            }
-            return false;
-        };
-        std::sort(perm.begin(), perm.end(), lessIdx);
-
-        auto eqIdx = [&](int ua, int ub){
-            if (ax < 0)
-                return getVal(ua, 0, 0) == getVal(ub, 0, 0);
-            for (size_t ob = 0; ob < outer; ++ob) {
-                for (size_t ij = 0; ij < inner; ++ij) {
-                    if (getVal(ua, ob, ij) != getVal(ub, ob, ij))
-                        return false;
-                }
-            }
-            return true;
-        };
-
         std::vector<int> groupRepIndex; groupRepIndex.reserve(A);
         std::vector<int> firstJ; firstJ.reserve(A);
         std::vector<int64> counts; counts.reserve(A);
         std::vector<int> inv(A, -1);
 
-        int g = 0;
-        for (int pos = 0; pos < A; )
+        if (ax < 0)
         {
-            int start = pos;
-            int minJ = perm[pos];
-            int64 cnt = 0;
-            while (pos < A && eqIdx(perm[start], perm[pos])) {
-                inv[ perm[pos] ] = g;
-                minJ = std::min(minJ, perm[pos]);
-                ++cnt;
-                ++pos;
+            using Pair = std::pair<int, WT>; // (original index, value)
+            std::vector<Pair> keyed(A);
+            for (int u = 0; u < A; ++u)
+                keyed[u] = {u, static_cast<WT>(inPtr[(size_t)u])};
+
+            auto lessPair = [](const WT& a, const WT& b){ return a < b; };
+            auto equalPair = [](const WT& a, const WT& b){ return a == b; };
+            sortAndGroupKeys(keyed, lessPair, equalPair, groupRepIndex, firstJ, counts, inv);
+        }
+        else
+        {
+            const size_t S = (size_t)sliceElems;
+            std::vector<WT> flat((size_t)A * S);
+            for (int u = 0; u < A; ++u)
+            {
+                size_t wrote = 0;
+                for (size_t ob = 0; ob < outer; ++ob)
+                {
+                    for (size_t ij = 0; ij < inner; ++ij)
+                    {
+                        size_t srcOff = ob * (size_t)dimAxis * inner + (size_t)u * inner + ij;
+                        flat[(size_t)u * S + wrote] = static_cast<WT>(inPtr[srcOff]);
+                        ++wrote;
+                    }
+                }
             }
-            groupRepIndex.push_back(perm[start]);
-            firstJ.push_back(minJ);
-            counts.push_back(cnt);
-            ++g;
+
+            using Pair = std::pair<int, size_t>; // (original index, offset into flat)
+            std::vector<Pair> keyed(A);
+            for (int u = 0; u < A; ++u)
+                keyed[u] = {u, (size_t)u * S};
+
+            auto lessLex = [&](size_t aoff, size_t boff){
+                const WT* pa = &flat[aoff];
+                const WT* pb = &flat[boff];
+                for (size_t t = 0; t < S; ++t) {
+                    if (pa[t] < pb[t]) return true;
+                    if (pa[t] > pb[t]) return false;
+                }
+                return false;
+            };
+            auto equalLex = [&](size_t aoff, size_t boff){
+                const WT* pa = &flat[aoff];
+                const WT* pb = &flat[boff];
+                for (size_t t = 0; t < S; ++t) {
+                    if (pa[t] != pb[t]) return false;
+                }
+                return true;
+            };
+
+            sortAndGroupKeys(keyed, lessLex, equalLex, groupRepIndex, firstJ, counts, inv);
         }
 
         std::vector<int> order((int)groupRepIndex.size());
         std::iota(order.begin(), order.end(), 0);
-        if (sorted) {
-            auto lessRep = [&](int ga, int gb){
-                return lessIdx(groupRepIndex[ga], groupRepIndex[gb]);
-            };
-            std::sort(order.begin(), order.end(), lessRep);
-        } else {
+        if (!sorted) {
             auto firstOccurLess = [&](int ga, int gb){ return firstJ[ga] < firstJ[gb]; };
             std::sort(order.begin(), order.end(), firstOccurLess);
         }
