@@ -1817,15 +1817,19 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
     {
         if (!tensor_proto.raw_data().empty())
         {
-            Mat(sizes, CV_16BFC1, (void*)rawdata).copyTo(blob);
+            blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
+            size_t bytes = (size_t)blob.total() * blob.elemSize();
+            memcpy(blob.data, rawdata, bytes);
         }
         else if (!tensor_proto.int32_data().empty())
         {
             const auto& v = tensor_proto.int32_data();
-            std::vector<uint16_t> bf(v.size());
+            blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
+            uint16_t* dst = reinterpret_cast<uint16_t*>(blob.data);
             for (size_t i = 0; i < v.size(); ++i)
-                bf[i] = static_cast<uint16_t>(v[i] & 0xFFFF); // low 16 bits
-            Mat(sizes, CV_16BFC1, bf.data()).copyTo(blob);
+            {
+                dst[i] = static_cast<uint16_t>(v[i] & 0xFFFF);
+            }
         }
         else
         {
