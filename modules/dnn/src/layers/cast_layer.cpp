@@ -14,18 +14,36 @@ namespace
     inline void convertToBF16(const Mat& src, Mat& dst)
     {
         const int ddepth = dst.depth();
+        if (!(ddepth == CV_16BF || ddepth == CV_16U))
+        {
+            CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
+        }
+
+        Mat src32;
+        if (src.depth() != CV_32F)
+            src.convertTo(src32, CV_32F);
+        const Mat& s = src32.empty() ? src : src32;
+
+        uint16_t* outRaw = NULL;
+        Mat dst_bf16;
         if (ddepth == CV_16BF)
         {
-            src.convertTo(dst, CV_16BF, 1, 0, Mat::BF16Policy_Truncate);
-            return;
+            outRaw = reinterpret_cast<uint16_t*>(dst.ptr<bfloat>());
         }
-        if (ddepth == CV_16U)
+        else
         {
-            Mat dst_bf16(dst.size(), CV_MAKETYPE(CV_16BF, dst.channels()), dst.data, dst.step);
-            src.convertTo(dst_bf16, CV_16BF, 1, 0, Mat::BF16Policy_Truncate);
-            return;
+            dst_bf16 = Mat(dst.size(), CV_MAKETYPE(CV_16BF, dst.channels()), dst.data, dst.step);
+            outRaw = dst_bf16.ptr<uint16_t>();
         }
-        CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
+
+        const float* in = s.ptr<float>();
+        size_t numElems = (size_t)s.total() * (size_t)s.channels();
+        for (size_t i = 0; i < numElems; ++i)
+        {
+            uint32_t bits;
+            memcpy(&bits, &in[i], sizeof(bits));
+            outRaw[i] = (uint16_t)(bits >> 16);
+        }
     }
 }
 
