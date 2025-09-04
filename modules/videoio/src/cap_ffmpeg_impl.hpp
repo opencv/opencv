@@ -2018,7 +2018,9 @@ void CvCapture_FFMPEG::get_rotation_angle()
     {
         const AVPacketSideData* mtx = av_packet_side_data_get(sd,  nb_sd, AV_PKT_DATA_DISPLAYMATRIX);
         if (mtx)
+        {
             data = mtx->data;
+        }
     }
 # endif
     if (data)
