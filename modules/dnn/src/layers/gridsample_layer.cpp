@@ -11,7 +11,7 @@
 
 // ONNX operator: GridSample
 // Spec: https://onnx.ai/onnx/operators/onnx__GridSample.html
-// Supported opsets: 16, 20, 22
+// Supported opsets: 16-22
 
 namespace cv {
 namespace dnn {
@@ -30,31 +30,184 @@ static inline float reflectCoord(float x, int limit, bool align_corners) {
     return t + minv;
 }
 
-static inline float cubicWeight(float t, float alpha) {
-    t = std::fabs(t);
-    const float t2 = t * t;
-    const float t3 = t2 * t;
-    if (t <= 1.f) {
-        return (alpha + 2.f) * t3 - (alpha + 3.f) * t2 + 1.f;
-    } else if (t < 2.f) {
-        return alpha * t3 - 5.f * alpha * t2 + 8.f * alpha * t - 4.f * alpha;
-    } else {
-        return 0.f;
-    }
+static inline void getCubicCoeffs(float x, float A, float* coeffs )
+{
+    coeffs[0] = ((A*(x + 1.0f) - 5.0f*A)*(x + 1.0f) + 8.0f*A)*(x + 1.0f) - 4.0f*A;
+    coeffs[1] = ((A + 2.0f)*x - (A + 3.0f))*x*x + 1.0f;
+    coeffs[2] = ((A + 2.0f)*(1.0f - x) - (A + 3.0f))*(1.0f - x)*(1.0f - x) + 1.0f;
+    coeffs[3] = 1.0f - coeffs[0] - coeffs[1] - coeffs[2];
 }
 
-static inline void normToPix(float nx, float ny, int W, int H, bool align_corners, float& x, float& y) {
-    if (align_corners) {
-        x = (nx + 1.f) * 0.5f * (W - 1);
-        y = (ny + 1.f) * 0.5f * (H - 1);
-    } else {
-        x = ((nx + 1.f) * W - 1.f) * 0.5f;
-        y = ((ny + 1.f) * H - 1.f) * 0.5f;
-    }
+static inline void computeNormToPixParams(int W, int H, bool align_corners,
+                                           float& xscale, float& yscale,
+                                           float& xdelta, float& ydelta)
+{
+    const float delta = align_corners ? 1.f : 0.f;
+    xscale = 0.5f * (W - delta);
+    yscale = 0.5f * (H - delta);
+    xdelta = 0.5f * (W - delta) + 0.5f * (delta - 1.f);
+    ydelta = 0.5f * (H - delta) + 0.5f * (delta - 1.f);
+}
+
+static inline void normToPix(float nx, float ny,
+                             float xscale, float yscale,
+                             float xdelta, float ydelta,
+                             float& x, float& y)
+{
+    x = nx * xscale + xdelta;
+    y = ny * yscale + ydelta;
 }
 
 enum Mode { M_NEAREST=0, M_BILINEAR=1, M_BICUBIC=2 };
 enum Pad  { P_ZEROS=0,  P_BORDER=1,  P_REFLECTION=2 };
+
+template<typename T, int MODE, int PAD>
+static inline void gridSampleComputeRows(
+        const T* Xptr,
+        const float* Gptr,
+        T* Yptr,
+        int N, int C, int H, int W,
+        int Hout, int Wout,
+        bool align_corners)
+{
+    size_t xNStride = (size_t)C * H * W;
+    size_t xCStride = (size_t)H * W;
+    size_t xHStride = (size_t)W;
+
+    size_t gNStride = (size_t)Hout * Wout * 2;
+    size_t gHStride = (size_t)Wout * 2;
+    size_t gWStride = 2;
+
+    size_t yNStride = (size_t)C * Hout * Wout;
+    size_t yCStride = (size_t)Hout * Wout;
+    size_t yHStride = (size_t)Wout;
+
+    auto fetch = [&](const T* baseNC, int yy, int xx)->float {
+        int px = xx, py = yy;
+        if (PAD == P_BORDER) {
+            px = saturate_cast<int>(std::min(float(W - 1), std::max(0.f, float(px))));
+            py = saturate_cast<int>(std::min(float(H - 1), std::max(0.f, float(py))));
+        } else if (PAD == P_REFLECTION) {
+            px = saturate_cast<int>(std::floor(reflectCoord((float)px, W, align_corners) + 0.5f));
+            py = saturate_cast<int>(std::floor(reflectCoord((float)py, H, align_corners) + 0.5f));
+        }
+        if (px < 0 || py < 0 || px >= W || py >= H) return 0.f;
+        const T* p = baseNC + (size_t)py * xHStride + (size_t)px;
+        return (float)(*p);
+    };
+
+    int nstripes = Hout * C * N;
+    parallel_for_(Range(0, nstripes), [&](const Range& range) {
+        for (int row = range.start; row < range.end; row++) {
+            int n = row / (Hout * C);
+            int c = (row - n * Hout * C) / Hout;
+            int h = row % Hout;
+
+            const T* baseNC = Xptr + n * xNStride + c * xCStride;
+            size_t yRowBase = n * yNStride + c * yCStride + h * yHStride;
+            size_t gRowBase = n * gNStride + h * gHStride;
+
+            float xscale, yscale, xdelta, ydelta;
+            computeNormToPixParams(W, H, align_corners, xscale, yscale, xdelta, ydelta);
+            for (int w = 0; w < Wout; w++) {
+                float nx = Gptr[gRowBase + w * gWStride + 0];
+                float ny = Gptr[gRowBase + w * gWStride + 1];
+                float xf, yf; normToPix(nx, ny, xscale, yscale, xdelta, ydelta, xf, yf);
+
+                float outv = 0.f;
+                if (MODE == M_NEAREST) {
+                    int px = cvRound(xf);
+                    int py = cvRound(yf);
+                    outv = fetch(baseNC, py, px);
+                } else if (MODE == M_BILINEAR) {
+                    int x0 = saturate_cast<int>(floorf(xf));
+                    int y0 = saturate_cast<int>(floorf(yf));
+                    float dx = xf - x0, dy = yf - y0;
+
+                    if (x0 >= 0 && y0 >= 0 && x0 + 1 < W && y0 + 1 < H)
+                    {
+                        const T* p_y0 = baseNC + (size_t)y0 * xHStride;
+                        const T* p_y1 = baseNC + (size_t)(y0 + 1) * xHStride;
+                        float v00 = (float)p_y0[x0];
+                        float v01 = (float)p_y0[x0 + 1];
+                        float v10 = (float)p_y1[x0];
+                        float v11 = (float)p_y1[x0 + 1];
+                        float vx0 = v00 * (1.f - dx) + v01 * dx;
+                        float vx1 = v10 * (1.f - dx) + v11 * dx;
+                        outv = vx0 * (1.f - dy) + vx1 * dy;
+                    }
+                    else
+                    {
+                        float v00 = fetch(baseNC, y0,     x0);
+                        float v01 = fetch(baseNC, y0,     x0 + 1);
+                        float v10 = fetch(baseNC, y0 + 1, x0);
+                        float v11 = fetch(baseNC, y0 + 1, x0 + 1);
+                        float vx0 = v00 * (1.f - dx) + v01 * dx;
+                        float vx1 = v10 * (1.f - dx) + v11 * dx;
+                        outv = vx0 * (1.f - dy) + vx1 * dy;
+                    }
+                } else {
+                    const float alpha = -0.75f;
+                    int x1 = saturate_cast<int>(floorf(xf));
+                    int y1 = saturate_cast<int>(floorf(yf));
+                    float tx = xf - x1, ty = yf - y1;
+
+                    float wx[4], wy[4];
+                    getCubicCoeffs(tx, alpha, wx);
+                    getCubicCoeffs(ty, alpha, wy);
+
+                    if (x1 >= 1 && y1 >= 1 && x1 + 2 < W && y1 + 2 < H) {
+                        const T* p = baseNC + (size_t)(y1 - 1) * xHStride + (x1 - 1);
+                        float rowv0 = (float)p[0] * wx[0] + (float)p[1] * wx[1] + (float)p[2] * wx[2] + (float)p[3] * wx[3];
+                        p += xHStride;
+                        float rowv1 = (float)p[0] * wx[0] + (float)p[1] * wx[1] + (float)p[2] * wx[2] + (float)p[3] * wx[3];
+                        p += xHStride;
+                        float rowv2 = (float)p[0] * wx[0] + (float)p[1] * wx[1] + (float)p[2] * wx[2] + (float)p[3] * wx[3];
+                        p += xHStride;
+                        float rowv3 = (float)p[0] * wx[0] + (float)p[1] * wx[1] + (float)p[2] * wx[2] + (float)p[3] * wx[3];
+                        outv = rowv0 * wy[0] + rowv1 * wy[1] + rowv2 * wy[2] + rowv3 * wy[3];
+                    } else {
+                        float rowv0 = fetch(baseNC, y1 - 1, x1 - 1) * wx[0] + fetch(baseNC, y1 - 1, x1    ) * wx[1] +
+                                      fetch(baseNC, y1 - 1, x1 + 1) * wx[2] + fetch(baseNC, y1 - 1, x1 + 2) * wx[3];
+                        float rowv1 = fetch(baseNC, y1,     x1 - 1) * wx[0] + fetch(baseNC, y1,     x1    ) * wx[1] +
+                                      fetch(baseNC, y1,     x1 + 1) * wx[2] + fetch(baseNC, y1,     x1 + 2) * wx[3];
+                        float rowv2 = fetch(baseNC, y1 + 1, x1 - 1) * wx[0] + fetch(baseNC, y1 + 1, x1    ) * wx[1] +
+                                      fetch(baseNC, y1 + 1, x1 + 1) * wx[2] + fetch(baseNC, y1 + 1, x1 + 2) * wx[3];
+                        float rowv3 = fetch(baseNC, y1 + 2, x1 - 1) * wx[0] + fetch(baseNC, y1 + 2, x1    ) * wx[1] +
+                                      fetch(baseNC, y1 + 2, x1 + 1) * wx[2] + fetch(baseNC, y1 + 2, x1 + 2) * wx[3];
+                        outv = rowv0 * wy[0] + rowv1 * wy[1] + rowv2 * wy[2] + rowv3 * wy[3];
+                    }
+                }
+                Yptr[yRowBase + w] = saturate_cast<T>(outv);
+            }
+        }
+    });
+}
+
+template<typename T>
+static inline void gridSampleDispatch(
+        const T* Xptr,
+        const float* Gptr,
+        T* Yptr,
+        int N, int C, int H, int W,
+        int Hout, int Wout,
+        bool align_corners,
+        int mode, int padding)
+{
+    if (mode == M_NEAREST) {
+        if (padding == P_ZEROS) gridSampleComputeRows<T, M_NEAREST, P_ZEROS>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+        else if (padding == P_BORDER) gridSampleComputeRows<T, M_NEAREST, P_BORDER>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+        else gridSampleComputeRows<T, M_NEAREST, P_REFLECTION>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+    } else if (mode == M_BILINEAR) {
+        if (padding == P_ZEROS) gridSampleComputeRows<T, M_BILINEAR, P_ZEROS>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+        else if (padding == P_BORDER) gridSampleComputeRows<T, M_BILINEAR, P_BORDER>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+        else gridSampleComputeRows<T, M_BILINEAR, P_REFLECTION>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+    } else {
+        if (padding == P_ZEROS) gridSampleComputeRows<T, M_BICUBIC, P_ZEROS>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+        else if (padding == P_BORDER) gridSampleComputeRows<T, M_BICUBIC, P_BORDER>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+        else gridSampleComputeRows<T, M_BICUBIC, P_REFLECTION>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners);
+    }
+}
 
 class GridSampleLayerImpl CV_FINAL : public GridSampleLayer
 {
@@ -122,111 +275,49 @@ public:
         const int N = X.size[0], C = X.size[1], H = X.size[2], W = X.size[3];
         const int Hout = G.size[1], Wout = G.size[2];
 
-        Mat Xf = X;
-        if (X.depth() != CV_32F) X.convertTo(Xf, CV_32F);
         Mat Gf = G;
         if (G.depth() != CV_32F) G.convertTo(Gf, CV_32F);
 
-        Mat Ytmp({N, C, Hout, Wout}, CV_32F);
-        Ytmp.setTo(Scalar(0));
-
-        auto Xptr = (const float*)Xf.data;
-        auto Gptr = (const float*)Gf.data;
-        auto Yptr = (float*)Ytmp.data;
-
-        size_t xNStride = (size_t)C*H*W;
-        size_t xCStride = (size_t)H*W;
-        size_t xHStride = (size_t)W;
-
-        size_t gNStride = (size_t)Hout*Wout*2;
-        size_t gHStride = (size_t)Wout*2;
-        size_t gWStride = 2;
-
-        size_t yNStride = (size_t)C*Hout*Wout;
-        size_t yCStride = (size_t)Hout*Wout;
-        size_t yHStride = (size_t)Wout;
-
-        auto sampleAt = [&](int n, int c, float x, float y)->float {
-            auto fetch = [&](int yy, int xx)->float {
-                int px = xx, py = yy;
-                if (padding == P_BORDER) {
-                    px = int(std::min(float(W - 1), std::max(0.f, float(px))));
-                    py = int(std::min(float(H - 1), std::max(0.f, float(py))));
-                } else if (padding == P_REFLECTION) {
-                    px = int(std::floor(reflectCoord((float)px, W, align_corners) + 0.5f));
-                    py = int(std::floor(reflectCoord((float)py, H, align_corners) + 0.5f));
-                }
-                if (px < 0 || py < 0 || px >= W || py >= H) return 0.f;
-                const float* base = Xptr + n*xNStride + c*xCStride + (size_t)py*xHStride + (size_t)px;
-                return *base;
-            };
-
-            if (mode == M_NEAREST) {
-                int px = int(std::floor(x + 0.5f));
-                int py = int(std::floor(y + 0.5f));
-                return fetch(py, px);
-            } else if (mode == M_BILINEAR) {
-                int x0 = (int)floorf(x), y0 = (int)floorf(y);
-                float dx = x - x0, dy = y - y0;
-                float v00 = fetch(y0,   x0);
-                float v01 = fetch(y0,   x0+1);
-                float v10 = fetch(y0+1, x0);
-                float v11 = fetch(y0+1, x0+1);
-                float vx0 = v00*(1.f-dx) + v01*dx;
-                float vx1 = v10*(1.f-dx) + v11*dx;
-                return vx0*(1.f-dy) + vx1*dy;
-            } else {
-                const float alpha = -0.75f;
-                int x1 = (int)floorf(x);
-                int y1 = (int)floorf(y);
-                float tx = x - x1, ty = y - y1;
-
-                float wx[4], wy[4];
-                for (int i = 0; i < 4; ++i) {
-                    wx[i] = cubicWeight((i - 1) - tx, alpha);
-                    wy[i] = cubicWeight((i - 1) - ty, alpha);
-                }
-                float sumwx = wx[0]+wx[1]+wx[2]+wx[3];
-                float sumwy = wy[0]+wy[1]+wy[2]+wy[3];
-                if (sumwx != 0.f) { for (int i = 0; i < 4; ++i) wx[i] /= sumwx; }
-                if (sumwy != 0.f) { for (int i = 0; i < 4; ++i) wy[i] /= sumwy; }
-
-                float acc = 0.f;
-                for (int j = 0; j < 4; ++j) {
-                    float row = 0.f;
-                    for (int i = 0; i < 4; ++i) {
-                        row += fetch(y1 + (j - 1), x1 + (i - 1)) * wx[i];
-                    }
-                    acc += row * wy[j];
-                }
-                return acc;
-            }
-        };
-
-        cv::parallel_for_(cv::Range(0, N * C * Hout * Wout), [&](const cv::Range& r) {
-            for (int idx = r.start; idx < r.end; ++idx) {
-                int t = idx;
-                int w = t % Wout; t /= Wout;
-                int h = t % Hout; t /= Hout;
-                int c = t % C;    t /= C;
-                int n = t;
-
-                float nx = Gptr[n*gNStride + h*gHStride + w*gWStride + 0];
-                float ny = Gptr[n*gNStride + h*gHStride + w*gWStride + 1];
-                float x, y; normToPix(nx, ny, W, H, align_corners, x, y);
-
-                Yptr[n*yNStride + c*yCStride + h*yHStride + w] = sampleAt(n, c, x, y);
-            }
-        });
+        const float* Gptr = (const float*)Gf.data;
 
         CV_Assert(!outputs.empty());
         int outType  = outputs[0].type();
-        int outDepth = CV_MAT_DEPTH(outType);
-        if (outDepth == CV_32F) {
-            Ytmp.copyTo(outputs[0]);
-        } else {
-            Ytmp.convertTo(outputs[0], outType);
+
+        Mat Ytmp({N, C, Hout, Wout}, outType);
+        Ytmp.setTo(Scalar(0));
+
+        switch (X.depth()) {
+        case CV_8U: {
+            const uchar* Xptr = X.ptr<uchar>();
+            uchar* Yptr = Ytmp.ptr<uchar>();
+            gridSampleDispatch<uchar>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, mode, padding);
+            break;
         }
+        case CV_16F: {
+            const hfloat* Xptr = X.ptr<hfloat>();
+            hfloat* Yptr = Ytmp.ptr<hfloat>();
+            gridSampleDispatch<hfloat>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, mode, padding);
+            break;
+        }
+#ifdef CV_16BF
+        case CV_16BF: {
+            const bfloat* Xptr = X.ptr<bfloat>();
+            bfloat* Yptr = Ytmp.ptr<bfloat>();
+            gridSampleDispatch<bfloat>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, mode, padding);
+            break;
+        }
+#endif
+        case CV_32F: {
+            const float* Xptr = X.ptr<float>();
+            float* Yptr = Ytmp.ptr<float>();
+            gridSampleDispatch<float>(Xptr, Gptr, Yptr, N, C, H, W, Hout, Wout, align_corners, mode, padding);
+            break;
+        }
+        default:
+            CV_Error(Error::StsNotImplemented, "Unsupported input depth for GridSample");
+        }
+
+        Ytmp.copyTo(outputs[0]);
     }
 };
 

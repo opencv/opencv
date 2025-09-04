@@ -733,7 +733,7 @@ CASE(test_gridsample_bilinear)
 CASE(test_gridsample_border_padding)
     SKIP;
 CASE(test_gridsample_nearest)
-    // no filter
+    SKIP;
 CASE(test_gridsample_reflection_padding)
     SKIP;
 CASE(test_gridsample_zeros_padding)

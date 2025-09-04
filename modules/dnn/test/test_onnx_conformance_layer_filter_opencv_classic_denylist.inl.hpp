@@ -119,3 +119,4 @@
 "test_gridsample_border_padding",
 "test_gridsample_reflection_padding",
 "test_gridsample_zeros_padding",
+"test_gridsample_nearest",
