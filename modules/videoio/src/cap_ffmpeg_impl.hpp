@@ -2017,7 +2017,8 @@ void CvCapture_FFMPEG::get_rotation_angle()
     if (sd && nb_sd > 0)
     {
         const AVPacketSideData* mtx = av_packet_side_data_get(sd,  nb_sd, AV_PKT_DATA_DISPLAYMATRIX);
-        data = mtx->data;
+        if (mtx)
+            data = mtx->data;
     }
 # endif
     if (data)
