@@ -160,8 +160,6 @@ static void refine_lambda(double &lambda1, double &lambda2, double &lambda3, con
 };
 
 void p3p::calibrateAndNormalizePointsPnP(const Mat &opoints_, const Mat &ipoints_) {
-    Mat ipoints_input_depth = ipoints_.clone(), opoints_input_depth = opoints_.clone();
-
     auto convertPoints = [] (const Mat &points_input, Mat &points, int pt_dim) {
         points_input.convertTo(points, CV_64F); // convert points to have float precision
         if (points.channels() > 1)
@@ -174,7 +172,7 @@ void p3p::calibrateAndNormalizePointsPnP(const Mat &opoints_, const Mat &ipoints
     };
 
     Mat ipoints;
-    convertPoints(ipoints_input_depth, ipoints, 2);
+    convertPoints(ipoints_, ipoints, 2);
     for (int i = 0; i < ipoints.rows; i++) {
         const double k_inv_u = ipoints.at<double>(i, 0);
         const double k_inv_v = ipoints.at<double>(i, 1);
@@ -185,7 +183,7 @@ void p3p::calibrateAndNormalizePointsPnP(const Mat &opoints_, const Mat &ipoints
     }
 
     Mat opoints;
-    convertPoints(opoints_input_depth, opoints, 3);
+    convertPoints(opoints_, opoints, 3);
     X_copy[0](0) = opoints.at<double>(0, 0);
     X_copy[0](1) = opoints.at<double>(0, 1);
     X_copy[0](2) = opoints.at<double>(0, 2);
