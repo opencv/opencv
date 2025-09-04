@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include <cstdint>
 
 namespace cv {
 namespace dnn {
@@ -14,27 +15,24 @@ namespace dnn {
 // Supported opsets: 9-18 (no attributes)
 
 namespace {
-
-template <typename T, typename WT = T>
-static inline bool isNonZero(const T v)
+static inline bool isNonZeroF16(uint16_t val)
 {
-    return (WT)v != (WT)0;
-}
+    return (val & 0x7fff) != 0;
 }
 
-namespace {
-
-template <typename T, typename WT = T>
-static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::vector<size_t>& nzcounts)
+template <typename T, typename PT>
+static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::vector<size_t>& nzcounts, PT isNonZero)
 {
     const int nstripes = 16;
     nzcounts.assign(nstripes, 0);
+    if (total == 0)
+        return 0;
     cv::parallel_for_(cv::Range(0, nstripes), [&](const cv::Range& range) {
         const size_t i0 = total * (size_t)range.start / (size_t)nstripes;
         const size_t i1 = total * (size_t)range.end   / (size_t)nstripes;
         size_t nz = 0;
         for (size_t i = i0; i < i1; ++i)
-            nz += isNonZero<T, WT>(data[i]);
+            nz += isNonZero(data[i]);
         nzcounts[(size_t)range.start] = nz;
     });
 
@@ -43,19 +41,26 @@ static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::ve
     return total_nz;
 }
 
-template <typename T, typename WT = T>
+template <typename T>
+static inline size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::vector<size_t>& nzcounts)
+{
+    return computeNonZeroCountsPerStripe<T>(data, total, nzcounts, [](T v){ return v != (T)0; });
+}
+
+template <typename T, typename PT>
 static void emitIndicesStripes(const T* data,
                                size_t total,
                                int rank,
                                const std::vector<int>& dims,
                                const std::vector<int>& strides,
                                const std::vector<size_t>& nzstart,
-                               int64* y)
+                               int64* y,
+                               PT isNonZero)
 {
     const int nstripes = 16;
     const size_t nnz_total = nzstart.back();
     if (rank == 0) {
-        return; // nothing to emit for 0-D input: output shape is 0 x nnz
+        return;
     }
     const int lastDimSize = dims[rank - 1];
 
@@ -86,7 +91,7 @@ static void emitIndicesStripes(const T* data,
             for (size_t dj = 0; dj < chunk; ++dj)
             {
                 const size_t idxLinear = i + dj;
-                if (isNonZero<T, WT>(data[idxLinear]))
+                if (isNonZero(data[idxLinear]))
                 {
                     for (int d = 0; d < rank - 1; ++d)
                         y[(size_t)d * nnz_total + col] = (int64)coord[d];
@@ -112,6 +117,18 @@ static void emitIndicesStripes(const T* data,
             }
         }
     });
+}
+
+template <typename T>
+static void emitIndicesStripes(const T* data,
+                               size_t total,
+                               int rank,
+                               const std::vector<int>& dims,
+                               const std::vector<int>& strides,
+                               const std::vector<size_t>& nzstart,
+                               int64* y)
+{
+    emitIndicesStripes<T>(data, total, rank, dims, strides, nzstart, y, [](T v){ return v != (T)0; });
 }
 }
 
@@ -160,29 +177,6 @@ public:
         std::vector<int> dims(rank), strides(rank);
         for (int i = 0; i < rank; ++i) dims[i] = X.size[i];
 
-        if (rank == 0) {
-            const bool nz = X.type() == CV_32F ? isNonZero<float>(X.at<float>(0))
-                          : X.type() == CV_64F ? isNonZero<double>(X.at<double>(0))
-                          : X.type() == CV_32S ? (X.at<int>(0) != 0)
-                          : X.type() == CV_16F ? isNonZero<hfloat, float>(X.at<hfloat>(0))
-                          : X.type() == CV_16BF ? isNonZero<bfloat, float>(X.at<bfloat>(0))
-                          : X.at<uchar>(0) != 0;
-            MatShape outShape = shape(0, nz ? 1 : 0);
-            auto kind = out_arr.kind();
-            if (kind == _InputArray::STD_VECTOR_MAT) {
-                std::vector<Mat>& outs_m = out_arr.getMatVecRef();
-                outs_m.resize(1);
-                outs_m[0].fit(outShape, CV_64S);
-            } else if (kind == _InputArray::STD_VECTOR_UMAT) {
-                std::vector<UMat>& outs_u = out_arr.getUMatVecRef();
-                outs_u.resize(1);
-                outs_u[0].fit(outShape, CV_64S);
-            } else {
-                CV_Error(Error::StsNotImplemented, "NonZero: unsupported OutputArrayOfArrays kind");
-            }
-            return;
-        }
-
         if (rank > 0) {
             strides.back() = 1;
             for (int i = rank - 2; i >= 0; --i)
@@ -201,12 +195,14 @@ public:
         case CV_8S:  { nnz = computeNonZeroCountsPerStripe<schar>(X.ptr<schar>(), total, nzcounts); break; }
         case CV_16U: { nnz = computeNonZeroCountsPerStripe<ushort>(X.ptr<ushort>(), total, nzcounts); break; }
         case CV_16S: { nnz = computeNonZeroCountsPerStripe<short>(X.ptr<short>(), total, nzcounts); break; }
+        case CV_32U: { nnz = computeNonZeroCountsPerStripe<uint32_t>(X.ptr<uint32_t>(), total, nzcounts); break; }
         case CV_32S: { nnz = computeNonZeroCountsPerStripe<int>(X.ptr<int>(), total, nzcounts); break; }
+        case CV_64U: { nnz = computeNonZeroCountsPerStripe<uint64_t>(X.ptr<uint64_t>(), total, nzcounts); break; }
         case CV_64S: { nnz = computeNonZeroCountsPerStripe<int64>(X.ptr<int64>(), total, nzcounts); break; }
         case CV_32F: { nnz = computeNonZeroCountsPerStripe<float>(X.ptr<float>(), total, nzcounts); break; }
         case CV_64F: { nnz = computeNonZeroCountsPerStripe<double>(X.ptr<double>(), total, nzcounts); break; }
-        case CV_16F: { nnz = computeNonZeroCountsPerStripe<hfloat, float>(X.ptr<hfloat>(), total, nzcounts); break; }
-        case CV_16BF:{ nnz = computeNonZeroCountsPerStripe<bfloat, float>(X.ptr<bfloat>(), total, nzcounts); break; }
+        case CV_16F: { nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_16BF:{ nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
         case CV_Bool:{ nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nzcounts); break; }
         default:
             CV_Error_(Error::StsError, ("NonZero: Unsupported input depth=%d", depth));
@@ -233,12 +229,14 @@ public:
             case CV_8S:  { emitIndicesStripes<schar>(X.ptr<schar>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_16U: { emitIndicesStripes<ushort>(X.ptr<ushort>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_16S: { emitIndicesStripes<short>(X.ptr<short>(), total, rank, dims, strides, nzstart, y); break; }
+            case CV_32U: { emitIndicesStripes<uint32_t>(X.ptr<uint32_t>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_32S: { emitIndicesStripes<int>(X.ptr<int>(), total, rank, dims, strides, nzstart, y); break; }
+            case CV_64U: { emitIndicesStripes<uint64_t>(X.ptr<uint64_t>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_64S: { emitIndicesStripes<int64>(X.ptr<int64>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_32F: { emitIndicesStripes<float>(X.ptr<float>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_64F: { emitIndicesStripes<double>(X.ptr<double>(), total, rank, dims, strides, nzstart, y); break; }
-            case CV_16F: { emitIndicesStripes<hfloat, float>(X.ptr<hfloat>(), total, rank, dims, strides, nzstart, y); break; }
-            case CV_16BF:{ emitIndicesStripes<bfloat, float>(X.ptr<bfloat>(), total, rank, dims, strides, nzstart, y); break; }
+            case CV_16F: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+            case CV_16BF:{ emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
             case CV_Bool:{ emitIndicesStripes<uchar>(X.ptr<uchar>(), total, rank, dims, strides, nzstart, y); break; }
             default: break;
             }
@@ -257,12 +255,14 @@ public:
             case CV_8S:  { emitIndicesStripes<schar>(X.ptr<schar>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_16U: { emitIndicesStripes<ushort>(X.ptr<ushort>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_16S: { emitIndicesStripes<short>(X.ptr<short>(), total, rank, dims, strides, nzstart, y); break; }
+            case CV_32U: { emitIndicesStripes<uint32_t>(X.ptr<uint32_t>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_32S: { emitIndicesStripes<int>(X.ptr<int>(), total, rank, dims, strides, nzstart, y); break; }
+            case CV_64U: { emitIndicesStripes<uint64_t>(X.ptr<uint64_t>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_64S: { emitIndicesStripes<int64>(X.ptr<int64>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_32F: { emitIndicesStripes<float>(X.ptr<float>(), total, rank, dims, strides, nzstart, y); break; }
             case CV_64F: { emitIndicesStripes<double>(X.ptr<double>(), total, rank, dims, strides, nzstart, y); break; }
-            case CV_16F: { emitIndicesStripes<hfloat, float>(X.ptr<hfloat>(), total, rank, dims, strides, nzstart, y); break; }
-            case CV_16BF:{ emitIndicesStripes<bfloat, float>(X.ptr<bfloat>(), total, rank, dims, strides, nzstart, y); break; }
+            case CV_16F: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+            case CV_16BF:{ emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
             case CV_Bool:{ emitIndicesStripes<uchar>(X.ptr<uchar>(), total, rank, dims, strides, nzstart, y); break; }
             default: break;
             }
