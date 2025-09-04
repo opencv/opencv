@@ -54,13 +54,7 @@ TEST_F(Test_Graph_Simplifier, LayerNormSubGraph) {
 }
 
 TEST_F(Test_Graph_Simplifier, LayerNormNoFusionSubGraph) {
-    EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
-
-    if (engine_forced == ENGINE_NEW) {
-        test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Pow", "Reduce", "Sqrt"});
-    } else if (engine_forced == ENGINE_CLASSIC) {
-        test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
-    }
+    test("layer_norm_no_fusion", std::vector<std::string>{"NaryEltwise", "Reduce", "Sqrt"});
 }
 
 TEST_F(Test_Graph_Simplifier, ResizeSubgraph) {

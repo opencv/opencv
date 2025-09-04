@@ -1281,12 +1281,6 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DetLayer> create(const LayerParams &params);
     };
 
-    class CV_EXPORTS PowLayer : public Layer
-    {
-    public:
-        static Ptr<PowLayer> create(const LayerParams &params);
-    };
-
     /**
      * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *
