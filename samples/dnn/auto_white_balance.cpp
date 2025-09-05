@@ -5,7 +5,7 @@
 /*
 Auto white balance using FC4: https://github.com/yuanming-hu/fc4
 
-Given an image, the FC4 model predicts scene illuminant (R,G,B). We then apply
+Given an RGB image, the FC4 model predicts scene illuminant (R,G,B). We then apply
 the illuminant to the image, applying the correction in the linear RGB space.
 
 Yuanming Hu, Baoyuan Wang, and Stephen Lin. “FC⁴: Fully Convolutional Color
