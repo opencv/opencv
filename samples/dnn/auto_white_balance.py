@@ -16,6 +16,8 @@ import sys
 import numpy as np
 import cv2 as cv
 
+from common import *
+
 
 def extract_illuminant(out: np.ndarray) -> np.ndarray:
     flat = out.astype(np.float32).reshape(-1)
@@ -55,13 +57,12 @@ def annotate(img_bgr: np.ndarray, title: str) -> None:
     th = max(1, int(round(fs * 2)))
     cv.putText(img_bgr, title, (10, 30), cv.FONT_HERSHEY_SIMPLEX, fs, (0,255,0), th)
 
-backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
-            cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
-targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL,
-           cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
 
 
 def main():
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+
     p = argparse.ArgumentParser(
         description="FC4 Color Constancy (ONNX): " \
         "predicts illuminant and applies Von Kries white balance."
@@ -69,33 +70,33 @@ def main():
     p.add_argument("--model", required=True, help="Path to ONNX model file")
     p.add_argument("--input", required=True, help="Path to input image")
     p.add_argument("--scale", type=float, default=1.0, help="Input scaling factor (e.g., 1/255)")
-    p.add_argument("--mean", type=float, nargs=3, default=[0.0, 0.0, 0.0],
+    p.add_argument("--mean", type=float, nargs=3, default=0.0,
                    help="Mean to subtract (B G R)")
     p.add_argument("--rgb", action="store_true", help="Swap BGR->RGB for model input")
-    p.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
-                    help="Choose one of computation backends: "
-                         "%d: automatically (by default), "
-                         "%d: Halide language (http://halide-lang.org/), "
-                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
-                         "%d: OpenCV implementation, "
-                         "%d: VKCOM, "
-                         "%d: CUDA"% backends)
-    p.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
-                        help='Choose one of target computation devices: '
-                            '%d: CPU target (by default), '
-                            '%d: OpenCL, '
-                            '%d: OpenCL fp16 (half-float precision), '
-                            '%d: NCS2 VPU, '
-                            '%d: HDDL VPU, '
-                            '%d: Vulkan, '
-                            '%d: CUDA, '
-                            '%d: CUDA fp16 (half-float preprocess)'% targets)
+    p.add_argument('--backend', default="default", type=str, choices=backends,
+            help="Choose one of computation backends: "
+            "default: automatically (by default), "
+            "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+            "opencv: OpenCV implementation, "
+            "vkcom: VKCOM, "
+            "cuda: CUDA, "
+            "webnn: WebNN")
+    p.add_argument('--target', default="cpu", type=str, choices=targets,
+            help="Choose one of target computation devices: "
+            "cpu: CPU target (by default), "
+            "opencl: OpenCL, "
+            "opencl_fp16: OpenCL fp16 (half-float precision), "
+            "ncs2_vpu: NCS2 VPU, "
+            "hddl_vpu: HDDL VPU, "
+            "vulkan: Vulkan, "
+            "cuda: CUDA, "
+            "cuda_fp16: CUDA fp16 (half-float preprocess)")
     args = p.parse_args()
 
     try:
         net = cv.dnn.readNetFromONNX(args.model)
-        net.setPreferableBackend(_BACKENDS[args.backend])
-        net.setPreferableTarget(_TARGETS[args.target])
+        net.setPreferableBackend(get_backend_id(args.backend))
+        net.setPreferableTarget(get_target_id(args.target))
     except cv.error as e:
         print(f"Error loading model: {e}", file=sys.stderr)
         sys.exit(1)
@@ -107,7 +108,7 @@ def main():
 
     blob = cv.dnn.blobFromImage(
         img, scalefactor=args.scale, size=(img.shape[1], img.shape[0]),
-        mean=tuple(args.mean), swapRB=args.rgb, crop=False, ddepth=cv.CV_32F
+        mean=args.mean, swapRB=args.rgb, crop=False, ddepth=cv.CV_32F
     )
     net.setInput(blob)
 
