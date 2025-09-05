@@ -6,6 +6,7 @@
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 
 namespace cv { namespace dnn {
 
@@ -53,7 +54,27 @@ public:
     CastLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
-        outputType = params.get<int>("outputType");
+        hasToParam = false;
+        toCvDepth_ = -1;
+        if (params.has("to"))
+        {
+            hasToParam = true;
+            toCvDepth_ = mapToCvDepth(params.get<int>("to"));
+        }
+        else if (params.has("outputType"))
+        {
+            const int v = params.get<int>("outputType");
+            if (v == CV_Bool || v == CV_8U || v == CV_8S || v == CV_16U || v == CV_16S ||
+                v == CV_32S || v == CV_64S || v == CV_32F || v == CV_64F || v == CV_16F || v == CV_16BF)
+            {
+                hasToParam = true;
+                toCvDepth_ = v;
+            }
+            else
+            {
+                CV_Error(Error::StsNotImplemented, "Cast: unsupported 'outputType' value");
+            }
+        }
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -67,7 +88,7 @@ public:
                                 std::vector<MatShape> &outputs,
                                 std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_CheckEQ(inputs.size(), (size_t)1, "");
+        CV_Check(inputs.size(), inputs.size() == 1 || inputs.size() == 2, "Cast expects 1 (Cast) or 2 (CastLike) inputs");
         outputs.assign(1, inputs[0]);
         return false;
     }
@@ -78,12 +99,40 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        if (outputType == CV_16F)
-            outputs.assign(1, CV_32F);
-        else if (outputType == CV_16BF)
-            outputs.assign(1, CV_16U);
+        CV_Check(inputs.size(), !inputs.empty(), "Cast expects at least 1 input");
+
+        int targetDepth = -1;
+        if (hasToParam)
+        {
+            targetDepth = toCvDepth_;
+        }
         else
-            outputs.assign(1, outputType);
+        {
+            Net::Impl* netimpl_ = getNetImpl(const_cast<CastLayerImpl*>(this));
+            if (netimpl_ && this->inputs.size() >= 2)
+            {
+                const Arg& in1_arg = this->inputs[1];
+                if (in1_arg.idx >= 0)
+                {
+                    const ArgData& ad = netimpl_->argData(in1_arg);
+                    if (ad.type >= 0)
+                        targetDepth = CV_MAT_DEPTH(ad.type);
+                }
+            }
+        }
+
+        if (targetDepth < 0)
+        {
+            targetDepth = CV_32F;
+        }
+
+        const int in0Type = inputs[0];
+        const int in0CN   = in0Type >= 0 ? CV_MAT_CN(in0Type) : 1;
+        int planDepth = targetDepth;
+        if (planDepth == CV_16F)   planDepth = CV_32F;
+        if (planDepth == CV_16BF)  planDepth = CV_16U;
+        const int outType = CV_MAKETYPE(planDepth, in0CN);
+        outputs.assign(1, outType);
     }
 
 #ifdef HAVE_OPENCL
@@ -93,8 +142,36 @@ public:
 
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
-        CV_CheckEQ(inputs.size(), (size_t)1, "");
+        CV_Check(inputs.size(), inputs.size() == 1 || inputs.size() == 2, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
+
+        int runtimeTargetDepth = -1;
+        if (hasToParam)
+        {
+            runtimeTargetDepth = toCvDepth_;
+        }
+        else
+        {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (netimpl_ && this->inputs.size() >= 2)
+            {
+                const Arg& in1_arg = this->inputs[1];
+                const ArgData& ad = netimpl_->argData(in1_arg);
+                if (ad.type >= 0)
+                    runtimeTargetDepth = CV_MAT_DEPTH(ad.type);
+            }
+            if (runtimeTargetDepth < 0 && inputs.size() >= 2 && !inputs[1].empty())
+                runtimeTargetDepth = inputs[1].depth();
+
+            if (runtimeTargetDepth < 0 && !inputs.empty() && !inputs[0].empty())
+                runtimeTargetDepth = inputs[0].depth();
+        }
+        CV_CheckGE(runtimeTargetDepth, 0, "Cast: failed to resolve target data type at runtime");
+
+        int plannedDDepth = (runtimeTargetDepth == CV_16F) ? CV_32F :
+                            (runtimeTargetDepth == CV_16BF ? CV_16U : runtimeTargetDepth);
+        if (outputs[0].depth() != plannedDDepth)
+            outputs[0].create(outputs[0].size(), CV_MAKETYPE(plannedDDepth, inputs[0].channels()));
 
         if (inputs[0].depth() == outputs[0].depth())
             inputs[0].copyTo(outputs[0]);
@@ -116,20 +193,38 @@ public:
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
-        CV_CheckEQ(inputs.size(), (size_t)1, "");
+        CV_Check(inputs.size(), inputs.size() == 1 || inputs.size() == 2, "Cast expects 1 (Cast) or 2 (CastLike) inputs");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
         const Mat& src0 = inputs[0];
         Mat& dst0 = outputs[0];
 
-        if (src0.type() == dst0.type())
+        int runtimeTargetDepth = -1;
+        if (hasToParam)
         {
-            if (!(outputType == CV_16F && dst0.depth() == CV_32F))
-            {
-                src0.copyTo(dst0);
-                return;
-            }
+            runtimeTargetDepth = toCvDepth_;
         }
+        else
+        {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (netimpl_ && this->inputs.size() >= 2)
+            {
+                const Arg& in1_arg = this->inputs[1];
+                const ArgData& ad = netimpl_->argData(in1_arg);
+                if (ad.type >= 0)
+                    runtimeTargetDepth = CV_MAT_DEPTH(ad.type);
+            }
+            if (runtimeTargetDepth < 0 && inputs.size() >= 2 && !inputs[1].empty())
+                runtimeTargetDepth = inputs[1].depth();
+            if (runtimeTargetDepth < 0)
+                runtimeTargetDepth = src0.depth();
+        }
+        CV_CheckGE(runtimeTargetDepth, 0, "Cast: failed to resolve target data type at runtime");
+
+        int plannedDDepth = (runtimeTargetDepth == CV_16F) ? CV_32F :
+                            (runtimeTargetDepth == CV_16BF ? CV_16U : runtimeTargetDepth);
+        if (dst0.depth() != plannedDDepth)
+            dst0.create(dst0.size(), CV_MAKETYPE(plannedDDepth, src0.channels()));
 
         Mat src = src0.isContinuous() ? src0 : src0.clone();
         Mat dst = dst0.isContinuous() ? dst0 : dst0.clone();
@@ -137,7 +232,13 @@ public:
         const int sdepth = src.depth();
         const int ddepth = dst.depth();
 
-        if (outputType == CV_16BF && (ddepth == CV_16BF || ddepth == CV_16U))
+        if (sdepth == runtimeTargetDepth && !(runtimeTargetDepth == CV_16F && ddepth == CV_32F))
+        {
+            src0.copyTo(dst0);
+            return;
+        }
+
+        if (runtimeTargetDepth == CV_16BF && (ddepth == CV_16BF || ddepth == CV_16U))
         {
             convertToBF16(src, dst);
         }
@@ -145,16 +246,30 @@ public:
         {
             src.convertTo(dst, ddepth);
         }
-        else
-        {
-            src.convertTo(dst, ddepth);
-        }
-
-        if (outputType == CV_16F && ddepth == CV_32F)
+        else if (runtimeTargetDepth == CV_16F && ddepth == CV_32F)
         {
             Mat tmp16;
             src.convertTo(tmp16, CV_16F);
             tmp16.convertTo(dst, CV_32F);
+        }
+        else if (runtimeTargetDepth == CV_64F && ddepth != CV_64F)
+        {
+            Mat tmp64;
+            src.convertTo(tmp64, CV_64F);
+            if (ddepth == CV_32F)
+                tmp64.convertTo(dst, CV_32F);
+            else if (ddepth == CV_16U || ddepth == CV_16BF)
+            {
+                Mat tmp32;
+                tmp64.convertTo(tmp32, CV_32F);
+                convertToBF16(tmp32, dst);
+            }
+            else
+                tmp64.convertTo(dst, ddepth);
+        }
+        else
+        {
+            src.convertTo(dst, ddepth);
         }
 
         if (dst.data != dst0.data)
@@ -171,7 +286,46 @@ public:
 #endif  // HAVE_DNN_NGRAPH
 
 private:
-    int outputType;
+    bool hasToParam = false;
+    int  toCvDepth_ = -1;
+
+    static int mapToCvDepth(int v)
+    {
+        switch (v)
+        {
+            case 1:  return CV_32F;
+            case 2:  return CV_8U;
+            case 3:  return CV_8S;
+            case 4:  return CV_16U;
+            case 5:  return CV_16S;
+            case 6:  return CV_32S;
+            case 7:  return CV_64S;
+            case 10: return CV_16F;
+            case 11: return CV_64F;
+            case 16: return CV_16BF;
+            default: break;
+        }
+
+        if (v == CV_8U || v == CV_8S || v == CV_16U || v == CV_16S ||
+            v == CV_32S || v == CV_64S || v == CV_32F || v == CV_64F || v == CV_16F || v == CV_16BF || v == CV_Bool)
+            return v;
+
+        CV_Error(Error::StsNotImplemented, "Cast: unsupported 'to' / dtype value");
+    }
+
+    int resolveTargetDepthAtTypeTime(const std::vector<MatType>& inputs) const
+    {
+        if (hasToParam)
+            return toCvDepth_;
+        if (inputs.size() == 2)
+        {
+            int likeType = inputs[1];
+            if (likeType >= 0)
+                return CV_MAT_DEPTH(likeType);
+            return -1;
+        }
+        return CV_MAT_DEPTH(inputs[0]);
+    }
 };
 
 Ptr<CastLayer> CastLayer::create(const LayerParams& params)
