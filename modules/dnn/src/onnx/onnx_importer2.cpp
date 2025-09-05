@@ -1483,37 +1483,15 @@ void ONNXImporter2::parseShape(LayerParams& layerParams, const opencv_onnx::Node
 
 void ONNXImporter2::parseCast(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::TensorProto_DataType onnx_type = (opencv_onnx::TensorProto_DataType)layerParams.get<int>("to");
-    int type = dataType2cv(onnx_type);
-
     layerParams.type = "Cast";
-    layerParams.set("outputType", type);
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    CV_CheckGE(node_proto.input_size(), 2, "CastLike requires two inputs");
-
-    // Infer destination dtype (depth) from the second input
-    int dstDepth = -1;
-    if (netimpl->isConstArg(node_inputs[1]))
-    {
-        Mat likeTensor = net.argTensor(node_inputs[1]);
-        CV_CheckFalse(likeTensor.empty(), "CastLike: 'like' input is empty");
-        dstDepth = CV_MAT_DEPTH(likeTensor.type());
-    }
-    else
-    {
-        const ArgData& dstArgData = netimpl->argData(node_inputs[1]);
-        CV_CheckGE(dstArgData.type, 0, "CastLike: invalid type on 'like' input");
-        dstDepth = CV_MAT_DEPTH(dstArgData.type);
-    }
-    CV_CheckGE(dstDepth, 0, "Failed to infer dtype for CastLike target input");
-
+    CV_CheckEQ(node_proto.input_size(), 2, "CastLike requires two inputs");
     layerParams.type = "Cast";
-    layerParams.set("outputType", dstDepth);
-    addLayer(layerParams, node_proto, 1);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseConstantOfShape(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
