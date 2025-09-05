@@ -33,13 +33,24 @@ const string param_keys =
     "{ input i         |  chicky_512.png   | Path to input image }"
     "{ model           |                   | Path to ONNX model file }";
 
-const string backend_keys =
-    format("{ backend          | default | Choose backend: "
-           "default: auto, openvino, opencv, vkcom, cuda, webnn }");
+const string backend_keys = format(
+    "{ backend | default | Choose one of computation backends: "
+    "default: automatically (by default), "
+    "openvino: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+    "opencv: OpenCV implementation, "
+    "vkcom: VKCOM, "
+    "cuda: CUDA, "
+    "webnn: WebNN }");
 
-const string target_keys =
-    format("{ target           | cpu | Choose target: "
-           "cpu, opencl, opencl_fp16, vpu, vulkan, cuda, cuda_fp16 }");
+const string target_keys = format(
+    "{ target | cpu | Choose one of target computation devices: "
+    "cpu: CPU target (by default), "
+    "opencl: OpenCL, "
+    "opencl_fp16: OpenCL fp16 (half-float precision), "
+    "vpu: VPU, "
+    "vulkan: Vulkan, "
+    "cuda: CUDA, "
+    "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
 static cv::Vec3f extractIlluminant(const cv::Mat &out) {
     CV_Assert(out.total() >= 3);
