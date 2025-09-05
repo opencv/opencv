@@ -5,7 +5,7 @@
 #
 # Auto white balance using FC4: https://github.com/yuanming-hu/fc4
 #
-# Given an image, the FC4 model predicts scene illuminant (R,G,B). We then apply
+# Given an RGB image, the FC4 model predicts scene illuminant (R,G,B). We then apply
 # the illuminant to the image, applying the correction in the linear RGB space.
 #
 # Yuanming Hu, Baoyuan Wang, and Stephen Lin. “FC⁴: Fully Convolutional Color
@@ -55,23 +55,10 @@ def annotate(img_bgr: np.ndarray, title: str) -> None:
     th = max(1, int(round(fs * 2)))
     cv.putText(img_bgr, title, (10, 30), cv.FONT_HERSHEY_SIMPLEX, fs, (0,255,0), th)
 
-_BACKENDS = {
-    "default": cv.dnn.DNN_BACKEND_DEFAULT,
-    "opencv":  cv.dnn.DNN_BACKEND_OPENCV,
-    "openvino":cv.dnn.DNN_BACKEND_INFERENCE_ENGINE,
-    "vkcom":   cv.dnn.DNN_BACKEND_VKCOM,
-    "cuda":    cv.dnn.DNN_BACKEND_CUDA,
-    "webnn":   cv.dnn.DNN_BACKEND_WEBNN,
-}
-_TARGETS = {
-    "cpu":         cv.dnn.DNN_TARGET_CPU,
-    "opencl":      cv.dnn.DNN_TARGET_OPENCL,
-    "opencl_fp16": cv.dnn.DNN_TARGET_OPENCL_FP16,
-    "vpu":         cv.dnn.DNN_TARGET_MYRIAD,
-    "vulkan":      cv.dnn.DNN_TARGET_VULKAN,
-    "cuda":        cv.dnn.DNN_TARGET_CUDA,
-    "cuda_fp16":   cv.dnn.DNN_TARGET_CUDA_FP16,
-}
+backends = (cv.dnn.DNN_BACKEND_DEFAULT, cv.dnn.DNN_BACKEND_HALIDE, cv.dnn.DNN_BACKEND_INFERENCE_ENGINE, cv.dnn.DNN_BACKEND_OPENCV,
+            cv.dnn.DNN_BACKEND_VKCOM, cv.dnn.DNN_BACKEND_CUDA)
+targets = (cv.dnn.DNN_TARGET_CPU, cv.dnn.DNN_TARGET_OPENCL, cv.dnn.DNN_TARGET_OPENCL_FP16, cv.dnn.DNN_TARGET_MYRIAD, cv.dnn.DNN_TARGET_HDDL,
+           cv.dnn.DNN_TARGET_VULKAN, cv.dnn.DNN_TARGET_CUDA, cv.dnn.DNN_TARGET_CUDA_FP16)
 
 
 def main():
@@ -85,8 +72,24 @@ def main():
     p.add_argument("--mean", type=float, nargs=3, default=[0.0, 0.0, 0.0],
                    help="Mean to subtract (B G R)")
     p.add_argument("--rgb", action="store_true", help="Swap BGR->RGB for model input")
-    p.add_argument("--backend", default="default", choices=_BACKENDS.keys(), help="DNN backend")
-    p.add_argument("--target", default="cpu", choices=_TARGETS.keys(), help="DNN target")
+    p.add_argument('--backend', choices=backends, default=cv.dnn.DNN_BACKEND_DEFAULT, type=int,
+                    help="Choose one of computation backends: "
+                         "%d: automatically (by default), "
+                         "%d: Halide language (http://halide-lang.org/), "
+                         "%d: Intel's Deep Learning Inference Engine (https://software.intel.com/openvino-toolkit), "
+                         "%d: OpenCV implementation, "
+                         "%d: VKCOM, "
+                         "%d: CUDA"% backends)
+    p.add_argument('--target', choices=targets, default=cv.dnn.DNN_TARGET_CPU, type=int,
+                        help='Choose one of target computation devices: '
+                            '%d: CPU target (by default), '
+                            '%d: OpenCL, '
+                            '%d: OpenCL fp16 (half-float precision), '
+                            '%d: NCS2 VPU, '
+                            '%d: HDDL VPU, '
+                            '%d: Vulkan, '
+                            '%d: CUDA, '
+                            '%d: CUDA fp16 (half-float preprocess)'% targets)
     args = p.parse_args()
 
     try:
