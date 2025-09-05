@@ -52,19 +52,19 @@ const string target_keys = format(
     "cuda: CUDA, "
     "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
-static cv::Vec3f extractIlluminant(const cv::Mat &out) {
+static Vec3f extractIlluminant(const Mat &out) {
     CV_Assert(out.total() >= 3);
 
-    cv::Mat f32;
+    Mat f32;
     if (out.depth() == CV_32F)
         f32 = out;
     else
         out.convertTo(f32, CV_32F);
 
-    cv::Mat flat = f32.reshape(1, 1);
+    Mat flat = f32.reshape(1, 1);
     const float *p = flat.ptr<float>(0);
 
-    return cv::Vec3f(p[0], p[1], p[2]);
+    return Vec3f(p[0], p[1], p[2]);
 }
 
 static Mat srgbToLinear(const Mat &srgb32f) {
@@ -137,8 +137,8 @@ static Mat correct(const Mat &bgr8u, const Vec3f &illumRGB_linear) {
     Mat normalized = corrected / maxVal;
 
     Mat srgb = linearToSrgb(normalized);
-    cv::min(srgb, 1.0, srgb);
-    cv::max(srgb, 0.0, srgb);
+    min(srgb, 1.0, srgb);
+    max(srgb, 0.0, srgb);
 
     Mat rgb8u, bgrOut;
     srgb.convertTo(rgb8u, CV_8U, 255.0);
