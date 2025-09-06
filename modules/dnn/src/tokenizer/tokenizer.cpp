@@ -60,6 +60,14 @@ struct Tokenizer::Impl {
         size_t pos = dir.find_last_of("/\\");
         dir = (pos == std::string::npos) ? std::string() : dir.substr(0, pos + 1);
         std::string tok_json = dir + "tokenizer.json";
+        std::string methodType; 
+        cfg["method"] >> methodType;
+        
+        if (methodType == "BPE") {
+            method = TokenizeMethod::BPE;
+        } else { // Other methods to be added for example sentencePiece, wordPiece 
+            CV_Error(cv::Error::StsError, "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE");
+        }
 
         switch (method) {
             case TokenizeMethod::BPE: {
@@ -233,17 +241,8 @@ CoreBPE getTokenizerForCl100kBaseFromJSON_FS(const std::string &name,
     return CoreBPE(std::move(mergeableRanks), std::move(specialTokens), CL100K_BASE);
 }
 
-static Tokenizer::TokenizeMethod parseAlgorithm(const std::string& algorithm) {
-    std::string alg;
-    alg.reserve(algorithm.size());
-    for (char c : algorithm) alg.push_back((char)std::tolower((unsigned char)c));
-    if (alg == "bpe") return Tokenizer::TokenizeMethod::BPE;
-    CV_Error(cv::Error::StsBadArg, "Unsupported tokenizer algorithm: " + algorithm);
-}
-
-Tokenizer Tokenizer::load(const std::string& model_config, const std::string& algorithm) {
-    TokenizeMethod m = parseAlgorithm(algorithm);
-    Tokenizer tok(m);
+Tokenizer Tokenizer::load(const std::string& model_config) {
+    Tokenizer tok;
     tok.impl_->loadFromConfig(model_config);
     return tok;
 }

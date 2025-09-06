@@ -2077,6 +2077,10 @@ public:
     CV_WRAP int getMaxCandidates() const;
 };
 
+enum class TokenizeMethod {
+    BPE = 0,
+};
+
 /** 
  * @brief High-level tokenizer wrapper for DNN usage.
  *
@@ -2093,10 +2097,6 @@ public:
  */
 class CV_EXPORTS_W_SIMPLE Tokenizer {
 public:
-    enum class TokenizeMethod {
-        BPE = 0,
-    };
-
     /**
      * @brief Construct a tokenizer with a given method default BPE.
      * For BPE method you normally call Tokenizer::load() to initialize model data.
@@ -2118,8 +2118,7 @@ public:
      * @return A @c Tokenizer ready for use.
      * @throw cv::Exception if files are missing or @c model_type is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config, 
-                                    const std::string& algorithm="BPE"); 
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config); 
 
     /** 
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
