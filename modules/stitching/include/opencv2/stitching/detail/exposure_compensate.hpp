@@ -49,6 +49,13 @@
 
 #include "opencv2/core.hpp"
 
+#if defined(__GNUC__) && __GNUC__ >= 15 && !defined(__clang__)
+// See https://github.com/opencv/opencv/issues/27752
+// GCC 15 warns ExposureCompensator::feed(...) was hidden, but it is false-positive because it is pure virtual function.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverloaded-virtual"
+#endif
+
 namespace cv {
 namespace detail {
 
@@ -241,5 +248,9 @@ public:
 
 } // namespace detail
 } // namespace cv
+
+#if defined(__GNUC__) && __GNUC__ >= 15 && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #endif // OPENCV_STITCHING_EXPOSURE_COMPENSATE_HPP
