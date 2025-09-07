@@ -29,10 +29,11 @@ References:
 Yuanming Hu, Baoyuan Wang, and Stephen Lin. “FC⁴: Fully Convolutional Color
 Constancy with Confidence-Weighted Pooling.” CVPR, 2017, pp. 4085–4094.
 
-Lilong Shi and Brian Funt, "Re-processed Version of the Gehler Color Constancy Dataset of 568 Images,"
-accessed from http://www.cs.sfu.ca/~colour/data/
+Lilong Shi and Brian Funt, "Re-processed Version of the Gehler Color
+Constancy Dataset of 568 Images," accessed from http://www.cs.sfu.ca/~colour/data/
 
-“IEC 61966-2-1:1999 – Multimedia Systems and Equipment – Colour Measurement and Management – Part 2-1: Colour Management – Default RGB Colour Space – sRGB.” IEC Standard, 1999.
+“IEC 61966-2-1:1999 – Multimedia Systems and Equipment – Colour Measurement and Management –
+Part 2-1: Colour Management – Default RGB Colour Space – sRGB.” IEC Standard, 1999.
 '''
 
 import argparse
@@ -43,32 +44,42 @@ import cv2 as cv
 from common import *
 
 
+# Normalization constant for 8bit values
+NORMALIZE_FACTOR = 1.0 / 255.0
+
+# sRGB to linear conversion constants (or vice versa):
+# SRGB_THRESHOLD / LINEAR_THRESHOLD: breakpoints between linear and gamma regions
+# SRGB_SLOPE: slope of the linear segment near black
+# SRGB_ALPHA: offset to ensure continuity at the threshold
+# SRGB_EXP: gamma exponent
+SRGB_THRESHOLD = 0.04045
+SRGB_ALPHA     = 0.055
+SRGB_SLOPE     = 12.92
+SRGB_EXP       = 2.4
+LINEAR_THRESHOLD = 0.0031308
+
 def srgb_to_linear(rgb: np.ndarray) -> np.ndarray:
-    a = 0.055
-    low  = rgb / 12.92
-    high = np.power((rgb + a) / (1.0 + a), 2.4)
-    return np.where(rgb <= 0.04045, low, high).astype(np.float32)
+    low  = rgb / SRGB_SLOPE
+    high = np.power((rgb + SRGB_ALPHA) / (1.0 + SRGB_ALPHA), SRGB_EXP, dtype=np.float32)
+    return np.where(rgb <= SRGB_THRESHOLD, low, high).astype(np.float32)
 
 def linear_to_srgb(lin: np.ndarray) -> np.ndarray:
-    a = 0.055
-    low  = lin * 12.92
-    high = (1.0 + a) * np.power(lin, 1.0/2.4) - a
-    return np.where(lin <= 0.0031308, low, high).astype(np.float32)
+    low  = lin * SRGB_SLOPE
+    high = (1.0 + SRGB_ALPHA) * np.power(lin, 1.0 / SRGB_EXP, dtype=np.float32) - SRGB_ALPHA
+    return np.where(lin <= LINEAR_THRESHOLD, low, high).astype(np.float32)
 
 def correct(bgr8u: np.ndarray, illum_rgb_linear: np.ndarray) -> np.ndarray:
     assert bgr8u.dtype == np.uint8 and bgr8u.ndim == 3 and bgr8u.shape[2] == 3
 
-    bgr = bgr8u.astype(np.float32) / 255.0
-
+    bgr = bgr8u.astype(np.float32) * NORMALIZE_FACTOR
     lin = srgb_to_linear(bgr)
-
-    eR = max(float(illum_rgb_linear[0]), 1e-10)
-    eG = max(float(illum_rgb_linear[1]), 1e-10)
-    eB = max(float(illum_rgb_linear[2]), 1e-10)
+    e_r = max(float(illum_rgb_linear[0]), 1e-10)
+    e_g = max(float(illum_rgb_linear[1]), 1e-10)
+    e_b = max(float(illum_rgb_linear[2]), 1e-10)
     s3 = np.float32(np.sqrt(3.0))
-    corr_bgr = np.array([eB * s3 + 1e-10,
-                         eG * s3 + 1e-10,
-                         eR * s3 + 1e-10],
+    corr_bgr = np.array([e_b * s3 + 1e-10,
+                         e_g * s3 + 1e-10,
+                         e_r * s3 + 1e-10],
                         dtype=np.float32)
 
     corrected = lin / corr_bgr.reshape(1, 1, 3)
@@ -78,6 +89,7 @@ def correct(bgr8u: np.ndarray, illum_rgb_linear: np.ndarray) -> np.ndarray:
 
     srgb = linear_to_srgb(corrected)
     srgb = np.clip(srgb, 0.0, 1.0)
+
     out_bgr8 = (srgb * 255.0 + 0.5).astype(np.uint8)
     return out_bgr8
 
@@ -88,11 +100,13 @@ def annotate(img_bgr: np.ndarray, title: str) -> None:
 
 def get_args_parser(func_args):
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
-    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
+    targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan",
+               "cuda", "cuda_fp16")
 
     p = argparse.ArgumentParser(add_help=False)
-    p.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
-                        help='An optional path to file with preprocessing parameters.')
+    p.add_argument('--zoo',
+                   default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                   help='An optional path to file with preprocessing parameters.')
     p.add_argument("--input", help="Path to input image", default="castle.png")
     p.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
