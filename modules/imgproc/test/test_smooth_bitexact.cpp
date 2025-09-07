@@ -307,3 +307,14 @@ INSTANTIATE_TEST_CASE_P(/*nothing*/, GaussianBlurVsBitexact,
 );
 
 }} // namespace
+
+TEST(GaussianBlur_Bitexact, NonSquareKernel)
+{
+    cv::Mat src(100, 100, CV_8UC1, cv::Scalar(128));
+    cv::Mat dst;
+
+    cv::GaussianBlur(src, dst, cv::Size(7, 3), 1.5, 0.5);
+
+    ASSERT_EQ(src.size(), dst.size());
+    ASSERT_EQ(src.type(), dst.type());
+}
