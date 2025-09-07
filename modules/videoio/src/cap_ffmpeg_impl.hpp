@@ -1129,6 +1129,15 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
         }
     }
 
+    if (params.empty() || !params.has(CAP_PROP_N_THREADS))
+    {
+        std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
+        if (!threads_option.empty())
+        {
+            nThreads = atoi(threads_option.c_str());
+        }
+    }
+
 #if USE_AV_INTERRUPT_CALLBACK
     /* interrupt callback */
     interrupt_metadata.timeout_after_ms = open_timeout;
