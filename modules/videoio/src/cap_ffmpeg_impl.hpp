@@ -607,6 +607,7 @@ struct CvCapture_FFMPEG
     int hw_device;
     int use_opencl;
     int extraDataIdx;
+    int nThreads = 0;
 };
 
 void CvCapture_FFMPEG::init()
@@ -1047,7 +1048,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
 
     unsigned i;
     bool valid = false;
-    int nThreads = 0;
 
     close();
 
@@ -1751,7 +1751,13 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = context->coded_width, buffer_height = context->coded_height;
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
+        buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
+        buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
 
+        img_convert_ctx = sws_alloc_context();
+        img_convert_ctx->threads = nThreads;  // 0 for automatic selection
+#else
         img_convert_ctx = sws_getCachedContext(
                 img_convert_ctx,
                 buffer_width, buffer_height,
@@ -1761,7 +1767,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 SWS_BICUBIC,
                 NULL, NULL, NULL
                 );
-
+#endif
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
 
@@ -1789,7 +1795,9 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
-
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
+    sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
+#else
     sws_scale(
             img_convert_ctx,
             sw_picture->data,
@@ -1798,7 +1806,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             rgb_picture.data,
             rgb_picture.linesize
             );
-
+#endif
     *data = frame.data;
     *step = frame.step;
     *width = frame.width;
