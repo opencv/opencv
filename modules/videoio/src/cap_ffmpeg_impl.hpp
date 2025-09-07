@@ -1758,7 +1758,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
         frame.data == NULL )
     {
-#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 7, 100)
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
         int buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
         int buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
 
@@ -1846,7 +1846,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.step = rgb_picture.linesize[0];
     }
 
-#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 7, 100)
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
     sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
 #else
     sws_scale(
