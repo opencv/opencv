@@ -1779,10 +1779,10 @@ Context& initializeContextFromGL()
                   0
                 };
 #  if defined(OPENCV_ENABLE_EGL_INTEROP) && defined(OPENCV_ENABLE_GLX_INTEROP) //GLX fallback
-                if(properties[4] == CL_EGL_DISPLAY_KHR && properties[3] == (cl_context_properties)EGL_NO_CONTEXT) {
-                    properties[3] = (cl_context_properties)glXGetCurrentContext();
-                    properties[4] = (cl_context_properties)CL_GLX_DISPLAY_KHR;
-                    properties[5] = (cl_context_properties)glXGetCurrentDisplay();
+                if(props[4] == CL_EGL_DISPLAY_KHR && props[3] == (cl_context_properties)EGL_NO_CONTEXT) {
+                    props[3] = (cl_context_properties)glXGetCurrentContext();
+                    props[4] = (cl_context_properties)CL_GLX_DISPLAY_KHR;
+                    props[5] = (cl_context_properties)glXGetCurrentDisplay();
                 }
 #  endif
                 context = clCreateContext(props, 1, &devices[devUsed], NULL, NULL, &status);
