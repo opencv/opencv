@@ -51,7 +51,7 @@ const string param_keys =
     "(optional) }"
     "{ zoo             | ../dnn/models.yml | Path to models.yml file "
     "(optional) }"
-    "{ input i         |  castle.jpg       | Path to input image }";
+    "{ input i         |  castle.png       | Path to input image }";
 ;
 
 const string backend_keys =
