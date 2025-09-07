@@ -372,6 +372,7 @@ void UMat::release()
 {
     if( u && CV_XADD(&(u->urefcount), -1) == 1 )
         deallocate();
+    u = 0;
     size.clear();
     dims = cols = rows = 0;
 }

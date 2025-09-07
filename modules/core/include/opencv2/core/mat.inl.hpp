@@ -551,8 +551,7 @@ Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
       allocator(0), u(0), size(1)
 {
     size[0] = cols;
-    step[1] = sizeof(_Tp);
-    step[0] = cols*step[1];
+    step[0] = sizeof(_Tp);
 
     if(vec.empty())
         return;
@@ -596,8 +595,7 @@ Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
       allocator(0), u(0), size(1), step(0)
 {
     size[0] = cols;
-    step[1] = sizeof(_Tp);
-    step[0] = cols*step[1];
+    step[0] = sizeof(_Tp);
 
     if(arr.empty())
         return;
@@ -618,8 +616,7 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
     if( !copyData )
     {
         size[0] = cols;
-        step[1] = sizeof(_Tp);
-        step[0] = cols*step[1];
+        step[0] = sizeof(_Tp);
         datastart = data = (uchar*)vec.val;
         datalimit = dataend = datastart + cols * step[0];
     }
@@ -631,11 +628,12 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
-      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(1), step(0)
+      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(2), step(0)
 {
     if( !copyData )
     {
-        size[0] = cols;
+        size[1] = cols;
+        size[0] = rows;
         step[1] = sizeof(_Tp);
         step[0] = n*sizeof(_Tp);
         datastart = data = (uchar*)M.val;
@@ -653,8 +651,7 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
     if( !copyData )
     {
         size[0] = cols;
-        step[1] = sizeof(_Tp);
-        step[0] = cols*step[1];
+        step[0] = sizeof(_Tp);
         datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + cols * step[0];
     }
@@ -675,8 +672,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
     if( !copyData )
     {
         size[0] = cols;
-        step[1] = sizeof(_Tp);
-        step[0] = cols*step[1];
+        step[0] = sizeof(_Tp);
         datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + cols * step[0];
     }
@@ -1302,6 +1298,10 @@ void Mat::push_back(const _Tp& elem)
     if( !isSubmatrix() && isContinuous() && tmp <= datalimit )
     {
         *(_Tp*)(data + (size.p[0]++) * step.p[0]) = elem;
+        if (dims == 2)
+            rows = size.p[0];
+        else if (dims == 1)
+            cols = size.p[0];
         dataend = tmp;
     }
     else
