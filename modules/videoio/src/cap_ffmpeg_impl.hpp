@@ -1748,26 +1748,36 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
         frame.data == NULL )
     {
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 7, 100)
+        int buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
+        int buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
+#else
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = context->coded_width, buffer_height = context->coded_height;
-#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
-        buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
-        buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
-
-        img_convert_ctx = sws_alloc_context();
-        img_convert_ctx->threads = nThreads;  // 0 for automatic selection
-#else
-        img_convert_ctx = sws_getCachedContext(
-                img_convert_ctx,
-                buffer_width, buffer_height,
-                (AVPixelFormat)sw_picture->format,
-                buffer_width, buffer_height,
-                result_format,
-                SWS_BICUBIC,
-                NULL, NULL, NULL
-                );
 #endif
+
+        if (swscale_version() >= CALC_FFMPEG_VERSION(8, 12, 100))
+        {
+            img_convert_ctx = sws_alloc_context();
+            if (img_convert_ctx)
+            {
+                av_opt_set_int(img_convert_ctx, "sws_flags", SWS_BICUBIC, 0);
+                av_opt_set_int(img_convert_ctx, "threads", nThreads, 0);
+            }
+        }
+        else
+        {
+            img_convert_ctx = sws_getCachedContext(
+                    img_convert_ctx,
+                    buffer_width, buffer_height,
+                    (AVPixelFormat)sw_picture->format,
+                    buffer_width, buffer_height,
+                    result_format,
+                    SWS_BICUBIC,
+                    NULL, NULL, NULL
+                    );
+        }
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
 
@@ -1795,7 +1805,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
-#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 7, 100)
     sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
 #else
     sws_scale(
