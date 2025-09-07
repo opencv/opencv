@@ -104,6 +104,14 @@ inline const int& MatShape::operator [](size_t idx) const
     return p[idx];
 }
 
+inline Size MatShape::operator()() const
+{
+    CV_Assert(dims <= 2);
+    int cols = dims > 0 ? p[dims > 1] : int(dims >= 0);
+    int rows = dims > 1 ? p[0] : int(dims >= 0);
+    return Size(cols, rows);
+}
+
 template<typename _It> inline MatShape::MatShape(_It begin, _It end)
 {
     int buf[MAX_DIMS];
@@ -540,11 +548,11 @@ template<typename _Tp> inline
 Mat::Mat(const std::vector<_Tp>& vec, bool copyData)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(1), rows(1),
       cols((int)vec.size()), data(0), datastart(0), dataend(0), datalimit(0),
-      allocator(0), u(0), size(&cols)
+      allocator(0), u(0), size(1)
 {
-    step.buf[1] = sizeof(_Tp);
-    step.buf[0] = cols*step.buf[1];
-    step.p = &step.buf[1];
+    size[0] = cols;
+    step[1] = sizeof(_Tp);
+    step[0] = cols*step[1];
 
     if(vec.empty())
         return;
@@ -585,11 +593,11 @@ template<typename _Tp, std::size_t _Nm> inline
 Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(1), rows(1),
       cols((int)arr.size()), data(0), datastart(0), dataend(0), datalimit(0),
-      allocator(0), u(0), size(&cols), step(0)
+      allocator(0), u(0), size(1), step(0)
 {
-    step.buf[1] = sizeof(_Tp);
-    step.buf[0] = cols*step.buf[1];
-    step.p = &step.buf[1];
+    size[0] = cols;
+    step[1] = sizeof(_Tp);
+    step[0] = cols*step[1];
 
     if(arr.empty())
         return;
@@ -605,13 +613,13 @@ Mat::Mat(const std::array<_Tp, _Nm>& arr, bool copyData)
 template<typename _Tp, int n> inline
 Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(1), rows(1), cols(n), data(0),
-      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&cols), step(0)
+      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(1), step(0)
 {
     if( !copyData )
     {
-        step.p = &step.buf[1];
-        step.buf[1] = sizeof(_Tp);
-        step.buf[0] = cols*step.buf[1];
+        size[0] = cols;
+        step[1] = sizeof(_Tp);
+        step[0] = cols*step[1];
         datastart = data = (uchar*)vec.val;
         datalimit = dataend = datastart + cols * step[0];
     }
@@ -623,13 +631,13 @@ Mat::Mat(const Vec<_Tp, n>& vec, bool copyData)
 template<typename _Tp, int m, int n> inline
 Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(m), cols(n), data(0),
-      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(1), step(0)
 {
     if( !copyData )
     {
-        step.p = &step.buf[0];
-        step.buf[1] = sizeof(_Tp);
-        step.buf[0] = n*sizeof(_Tp);
+        size[0] = cols;
+        step[1] = sizeof(_Tp);
+        step[0] = n*sizeof(_Tp);
         datastart = data = (uchar*)M.val;
         datalimit = dataend = datastart + rows * step[0];
     }
@@ -640,13 +648,13 @@ Mat::Mat(const Matx<_Tp,m,n>& M, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const Point_<_Tp>& pt, bool copyData)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(1), rows(1), cols(2), data(0),
-      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&cols), step(0)
+      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(1), step(0)
 {
     if( !copyData )
     {
-        step.p = &step.buf[1];
-        step.buf[1] = sizeof(_Tp);
-        step.buf[0] = cols*step.buf[1];
+        size[0] = cols;
+        step[1] = sizeof(_Tp);
+        step[0] = cols*step[1];
         datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + cols * step[0];
     }
@@ -661,20 +669,21 @@ Mat::Mat(const Point_<_Tp>& pt, bool copyData)
 
 template<typename _Tp> inline
 Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
-    : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows(3), cols(1), data(0),
-      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(&rows), step(0)
+    : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(1), rows(1), cols(3), data(0),
+      datastart(0), dataend(0), datalimit(0), allocator(0), u(0), size(1), step(0)
 {
     if( !copyData )
     {
-        step.p = &step.buf[1];
-        step.buf[1] = sizeof(_Tp);
-        step.buf[0] = cols*step.buf[1];
+        size[0] = cols;
+        step[1] = sizeof(_Tp);
+        step[0] = cols*step[1];
         datastart = data = (uchar*)&pt.x;
         datalimit = dataend = datastart + cols * step[0];
     }
     else
     {
-        create(3, 1, traits::Type<_Tp>::value);
+        int sz = 3;
+        create(1, &sz, traits::Type<_Tp>::value);
         ((_Tp*)data)[0] = pt.x;
         ((_Tp*)data)[1] = pt.y;
         ((_Tp*)data)[2] = pt.z;
@@ -684,7 +693,7 @@ Mat::Mat(const Point3_<_Tp>& pt, bool copyData)
 template<typename _Tp> inline
 Mat::Mat(const MatCommaInitializer_<_Tp>& commaInitializer)
     : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(0), rows(0), cols(0), data(0),
-      datastart(0), dataend(0), allocator(0), u(0), size(&rows)
+      datastart(0), dataend(0), allocator(0), u(0)
 {
     *this = commaInitializer.operator Mat_<_Tp>();
 }
@@ -789,6 +798,12 @@ inline
 int Mat::channels() const
 {
     return CV_MAT_CN(flags);
+}
+
+inline
+MatShape Mat::shape() const
+{
+    return size;
 }
 
 inline
@@ -1093,9 +1108,9 @@ const _Tp& Mat::at(int i0) const
     if( isContinuous() || rows == 1 )
         return ((const _Tp*)data)[i0];
     if( cols == 1 )
-        return *(const _Tp*)(data + step.buf[0] * i0);
+        return *(const _Tp*)(data + step[0] * i0);
     int i = i0 / cols, j = i0 - i * cols;
-    return ((const _Tp*)(data + step.buf[0] * i))[j];
+    return ((const _Tp*)(data + step[0] * i))[j];
 }
 
 template<typename _Tp> inline
@@ -1315,6 +1330,7 @@ void Mat::push_back(const std::vector<_Tp>& v)
 
 ///////////////////////////// MatSize ////////////////////////////
 
+/*
 inline
 MatSize::MatSize(int* _p) CV_NOEXCEPT
     : p(_p) {}
@@ -1364,21 +1380,21 @@ bool MatSize::operator != (const MatSize& sz) const CV_NOEXCEPT
 {
     return !(*this == sz);
 }
-
-
+*/
 
 ///////////////////////////// MatStep ////////////////////////////
 
 inline
 MatStep::MatStep() CV_NOEXCEPT
 {
-    p = buf; p[0] = p[1] = 0; p[2] = 153;
+    clear();
 }
 
 inline
 MatStep::MatStep(size_t s) CV_NOEXCEPT
 {
-    p = buf; p[0] = s; p[1] = 0; p[2] = 153;
+    clear();
+    p[0] = s;
 }
 
 inline
@@ -1395,18 +1411,20 @@ size_t& MatStep::operator[](int i) CV_NOEXCEPT
 
 inline MatStep::operator size_t() const
 {
-    CV_DbgAssert( p == buf || p == buf+1 );
-    return *p;
+    return p[0];
 }
 
 inline MatStep& MatStep::operator = (size_t s)
 {
-    CV_DbgAssert( p == buf || p == buf+1 );
-    *p = s;
+    p[0] = s;
     return *this;
 }
 
-
+inline void MatStep::clear()
+{
+    for (int i = 0; i < MatShape::MAX_DIMS; i++)
+        p[i] = 0;
+}
 
 ////////////////////////////// Mat_<_Tp> ////////////////////////////
 

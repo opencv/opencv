@@ -150,6 +150,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     void emplace_back(int value);
     int& operator [](size_t idx);
     const int& operator [](size_t idx) const;
+    Size operator()() const; // for compatibility with MatSize
 
     CV_WRAP bool hasSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
 
@@ -723,20 +724,7 @@ struct CV_EXPORTS UMatData
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
-
-struct CV_EXPORTS MatSize
-{
-    explicit MatSize(int* _p) CV_NOEXCEPT;
-    int dims() const CV_NOEXCEPT;
-    Size operator()() const;
-    const int& operator[](int i) const;
-    int& operator[](int i);
-    operator const int*() const CV_NOEXCEPT;  // TODO OpenCV 4.0: drop this
-    bool operator == (const MatSize& sz) const CV_NOEXCEPT;
-    bool operator != (const MatSize& sz) const CV_NOEXCEPT;
-
-    int* p;
-};
+typedef MatShape MatSize;
 
 struct CV_EXPORTS MatStep
 {
@@ -746,11 +734,9 @@ struct CV_EXPORTS MatStep
     size_t& operator[](int i) CV_NOEXCEPT;
     operator size_t() const;
     MatStep& operator = (size_t s);
+    void clear();
 
-    size_t* p;
-    size_t buf[3];
-protected:
-    MatStep& operator = (const MatStep&);
+    size_t p[MatShape::MAX_DIMS];
 };
 
 /** @example samples/cpp/cout_mat.cpp

@@ -1623,7 +1623,7 @@ void cv::compare(InputArray _src1, InputArray _src2, OutputArray _dst, int op)
 
     int cn = src1.channels();
 
-    _dst.create(src1.dims, src1.size, CV_8UC(cn));
+    _dst.create(src1.size, CV_8UC(cn));
     src1 = src1.reshape(1); src2 = src2.reshape(1);
     Mat dst = _dst.getMat().reshape(1);
 

@@ -160,14 +160,14 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
       std::vector<size_t> steps(ndims);
       std::vector<int> sizes(ndims);
       size_t totalBytes = 1;
-      for(int dim = 0 ; dim<ndims ; ++dim)
+      for(int dim = ndims-1; dim >= 0; --dim)
       {
           const bool isFirstDim = (dim == 0);
           const bool isLastDim = (dim+1 == ndims);
           const int length = rng.uniform(1, 64);
-          steps[dim] = (isLastDim ? 1 : static_cast<size_t>(length))*CV_ELEM_SIZE(type);
+          steps[dim] = isLastDim ? CV_ELEM_SIZE(type) : sizes[dim+1]*steps[dim+1];
           sizes[dim] = (isFirstDim || continuous) ? length : rng.uniform(1, length);
-          totalBytes *= steps[dim]*static_cast<size_t>(sizes[dim]);
+          totalBytes *= steps[dim];
       }
 
       std::vector<unsigned char> buffer(totalBytes);

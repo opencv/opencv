@@ -656,7 +656,7 @@ void scaleAdd(InputArray _src1, double alpha, InputArray _src2, OutputArray _dst
     Mat src1 = _src1.getMat(), src2 = _src2.getMat();
     CV_Assert(src1.size == src2.size);
 
-    _dst.create(src1.dims, src1.size, type);
+    _dst.create(src1.size, type);
     Mat dst = _dst.getMat();
 
     float falpha = (float)alpha;

@@ -26,7 +26,7 @@ static void tanh(const Mat &src, Mat &dst)
 
 static void tanh(const Mat &src, Mat &dst)
 {
-    dst.create(src.dims, (const int*)src.size, src.type());
+    dst.create(src.size, src.type());
     if (src.type() == CV_32F)
         tanh<float>(src, dst);
     else if (src.type() == CV_64F)

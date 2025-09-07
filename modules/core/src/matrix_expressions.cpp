@@ -1679,7 +1679,7 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
     if( _type == -1 )
         _type = e.a.type();
 
-    m.create(e.a.dims, e.a.size, _type);
+    m.create(e.a.size, _type);
 
     if( e.flags == 'I' && e.a.dims <= 2 )
         setIdentity(m, Scalar(e.alpha));

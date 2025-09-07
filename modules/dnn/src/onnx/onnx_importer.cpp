@@ -3870,7 +3870,7 @@ void ONNXImporter::parseQConcat(LayerParams& layerParams, const opencv_onnx::Nod
         for (size_t i = 2; i < num_inputs; i += 3)
         {
             Mat blob = getBlob(node_proto, i);
-            if (blob.size.dims() > inputShape.size())
+            if (blob.size.dims > inputShape.size())
             {
                 inputShape = shape(blob);
             }

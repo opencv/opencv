@@ -776,17 +776,18 @@ void cv::Laplacian( InputArray _src, OutputArray _dst, int ddepth, int ksize,
         const uchar* sptr = src.ptr() + src.step[0] * y;
 
         int dy0 = std::min(std::max((int)(STRIPE_SIZE/(CV_ELEM_SIZE(stype)*src.cols)), 1), src.rows);
-        Mat d2x( dy0 + kd.rows - 1, src.cols, wtype );
-        Mat d2y( dy0 + kd.rows - 1, src.cols, wtype );
+        Mat d2xbuf( dy0 + kd.rows - 1, src.cols, wtype );
+        Mat d2ybuf( dy0 + kd.rows - 1, src.cols, wtype );
 
         for( ; dsty < src.rows; sptr += dy0*src.step, dsty += dy )
         {
-            fx->proceed( sptr, (int)src.step, dy0, d2x.ptr(), (int)d2x.step );
-            dy = fy->proceed( sptr, (int)src.step, dy0, d2y.ptr(), (int)d2y.step );
+            fx->proceed( sptr, (int)src.step, dy0, d2xbuf.ptr(), (int)d2xbuf.step );
+            dy = fy->proceed( sptr, (int)src.step, dy0, d2ybuf.ptr(), (int)d2ybuf.step );
             if( dy > 0 )
             {
                 Mat dstripe = dst.rowRange(dsty, dsty + dy);
-                d2x.rows = d2y.rows = dy; // modify the headers, which should work
+                Mat d2x = d2xbuf.rowRange(0, dy);
+                Mat d2y = d2ybuf.rowRange(0, dy);
                 d2x += d2y;
                 d2x.convertTo( dstripe, ddepth, scale, delta );
             }
