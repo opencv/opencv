@@ -78,10 +78,10 @@ const string target_keys =
 const float NORMALIZE_FACTOR = 1.0f / 255.0f;
 
 // sRGB to linear conversion constants (or vice versa):
-//  SRGB_THRESHOLD / LINEAR_THRESHOLD: breakpoints between linear and gamma regions
-//  SRGB_SLOPE: slope of the linear segment near black
-//  SRGB_ALPHA: offset to ensure continuity at the threshold
-//  SRGB_EXP: gamma exponent
+// SRGB_THRESHOLD / LINEAR_THRESHOLD: breakpoints between linear and gamma regions
+// SRGB_SLOPE: slope of the linear segment near black
+// SRGB_ALPHA: offset to ensure continuity at the threshold
+// SRGB_EXP: gamma exponent
 const float SRGB_THRESHOLD = 0.04045f;
 const float SRGB_ALPHA = 0.055f;
 const float SRGB_SLOPE = 12.92f;
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
         cerr << "Error loading model: " << e.what() << endl;
         return -1;
     }
-    Mat img = imread(inputPath, IMREAD_UNCHANGED);
+    Mat img = imread(inputPath, IMREAD_COLOR);
     if (img.empty()) {
         cerr << "Cannot load image: " << inputPath << endl;
         return -1;
@@ -243,8 +243,6 @@ int main(int argc, char **argv) {
     Mat corrVis = corrected.clone();
     annotate(origVis, "Original");
     annotate(corrVis, "FC4-corrected");
-    imwrite("corr.jpg", corrVis);
-
     Mat stacked;
     hconcat(origVis, corrVis, stacked);
     imshow("Original and Corrected Images", stacked);
