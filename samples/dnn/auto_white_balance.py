@@ -2,14 +2,38 @@
 # This file is part of OpenCV project.
 # It is subject to the license terms in the LICENSE file found in the top-level
 # directory of this distribution and at http://opencv.org/license.html.
-#
-# Auto white balance using FC4: https://github.com/yuanming-hu/fc4
-#
-# Given an RGB image, the FC4 model predicts scene illuminant (R,G,B). We then apply
-# the illuminant to the image, applying the correction in the linear RGB space.
-#
-# Yuanming Hu, Baoyuan Wang, and Stephen Lin. “FC⁴: Fully Convolutional Color
-# Constancy with Confidence-Weighted Pooling.” CVPR, 2017, pp. 4085–4094.
+
+'''
+Auto white balance using FC4: https://github.com/yuanming-hu/fc4
+
+Color constancy is a method to make colors of objects render correctly on a photo.
+White balance aims to make white objects appear white on an image and not a shade of any
+other color, independent of the actual light setting. White balance correction creates
+a neutral looking coloring of the objects, and generally makes colors look more similar
+to their 'true' colors under different light conditions.
+
+Given an RGB image, the FC4 model predicts scene illuminant (R,G,B). We then apply
+the illuminant to the image, applying the correction in the linear RGB space.
+The transformation between linear and sRGB spaces is done as described in the sRGB standard,
+which is a nonlinear Gamma correction with exponent 2.4 and extra handling of very small values.
+
+The training of the FC4 model was done on the Gehler-Shi dataset. The dataset includes
+568 images and ground truth corrections, as well as ground truth illuminants. The linear
+RGB images from the dataset were used with Gamma correction of 2.2 applied.
+
+The model can be downloaded in the following link:
+https://raw.githubusercontent.com/MykhailoTrushch/opencv/d6ab21353a87e4c527e38e464384c7ee78e96e22/samples/dnn/models/fc4_fold_0.onnx
+
+References:
+
+Yuanming Hu, Baoyuan Wang, and Stephen Lin. “FC⁴: Fully Convolutional Color
+Constancy with Confidence-Weighted Pooling.” CVPR, 2017, pp. 4085–4094.
+
+Lilong Shi and Brian Funt, "Re-processed Version of the Gehler Color Constancy Dataset of 568 Images,"
+accessed from http://www.cs.sfu.ca/~colour/data/
+
+“IEC 61966-2-1:1999 – Multimedia Systems and Equipment – Colour Measurement and Management – Part 2-1: Colour Management – Default RGB Colour Space – sRGB.” IEC Standard, 1999.
+'''
 
 import argparse
 import sys
@@ -18,11 +42,6 @@ import cv2 as cv
 
 from common import *
 
-
-def extract_illuminant(out: np.ndarray) -> np.ndarray:
-    flat = out.astype(np.float32).reshape(-1)
-    assert flat.size >= 3, "ONNX output has fewer than 3 values"
-    return flat[:3]
 
 def srgb_to_linear(rgb: np.ndarray) -> np.ndarray:
     a = 0.055
@@ -38,41 +57,43 @@ def linear_to_srgb(lin: np.ndarray) -> np.ndarray:
 
 def correct(bgr8u: np.ndarray, illum_rgb_linear: np.ndarray) -> np.ndarray:
     assert bgr8u.dtype == np.uint8 and bgr8u.ndim == 3 and bgr8u.shape[2] == 3
-    rgb = cv.cvtColor(bgr8u, cv.COLOR_BGR2RGB).astype(np.float32) / 255.0
-    lin = srgb_to_linear(rgb)
 
-    s3 = np.sqrt(3.0).astype(np.float32)
-    corr = (illum_rgb_linear.astype(np.float32) * s3) + 1e-10  # [R,G,B]
-    corrected = lin / corr.reshape(1, 1, 3)
+    bgr = bgr8u.astype(np.float32) / 255.0
 
-    max_val = corrected.max() + 1e-10
-    normalized = corrected / max_val
+    lin = srgb_to_linear(bgr)
 
-    srgb = np.clip(linear_to_srgb(normalized), 0.0, 1.0)
-    out_rgb8 = (srgb * 255.0 + 0.5).astype(np.uint8)
-    return cv.cvtColor(out_rgb8, cv.COLOR_RGB2BGR)
+    eR = max(float(illum_rgb_linear[0]), 1e-10)
+    eG = max(float(illum_rgb_linear[1]), 1e-10)
+    eB = max(float(illum_rgb_linear[2]), 1e-10)
+    s3 = np.float32(np.sqrt(3.0))
+    corr_bgr = np.array([eB * s3 + 1e-10,
+                         eG * s3 + 1e-10,
+                         eR * s3 + 1e-10],
+                        dtype=np.float32)
+
+    corrected = lin / corr_bgr.reshape(1, 1, 3)
+
+    max_val = float(corrected.max()) + 1e-10
+    corrected /= max_val
+
+    srgb = linear_to_srgb(corrected)
+    srgb = np.clip(srgb, 0.0, 1.0)
+    out_bgr8 = (srgb * 255.0 + 0.5).astype(np.uint8)
+    return out_bgr8
 
 def annotate(img_bgr: np.ndarray, title: str) -> None:
     fs = max(0.5, min(img_bgr.shape[1], img_bgr.shape[0]) / 800.0)
     th = max(1, int(round(fs * 2)))
     cv.putText(img_bgr, title, (10, 30), cv.FONT_HERSHEY_SIMPLEX, fs, (0,255,0), th)
 
-
-
-def main():
+def get_args_parser(func_args):
     backends = ("default", "openvino", "opencv", "vkcom", "cuda")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan", "cuda", "cuda_fp16")
 
-    p = argparse.ArgumentParser(
-        description="FC4 Color Constancy (ONNX): " \
-        "predicts illuminant and applies Von Kries white balance."
-    )
-    p.add_argument("--model", required=True, help="Path to ONNX model file")
-    p.add_argument("--input", required=True, help="Path to input image")
-    p.add_argument("--scale", type=float, default=1.0, help="Input scaling factor (e.g., 1/255)")
-    p.add_argument("--mean", type=float, nargs=3, default=0.0,
-                   help="Mean to subtract (B G R)")
-    p.add_argument("--rgb", action="store_true", help="Swap BGR->RGB for model input")
+    p = argparse.ArgumentParser(add_help=False)
+    p.add_argument('--zoo', default=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'models.yml'),
+                        help='An optional path to file with preprocessing parameters.')
+    p.add_argument("--input", help="Path to input image", default="castle.png")
     p.add_argument('--backend', default="default", type=str, choices=backends,
             help="Choose one of computation backends: "
             "default: automatically (by default), "
@@ -91,7 +112,22 @@ def main():
             "vulkan: Vulkan, "
             "cuda: CUDA, "
             "cuda_fp16: CUDA fp16 (half-float preprocess)")
-    args = p.parse_args()
+
+    args, _ = p.parse_known_args()
+    add_preproc_args(args.zoo, p, 'auto_white_balance')
+    p = argparse.ArgumentParser(
+        parents=[p],
+        description="FC4 Color Constancy (ONNX): " \
+        "predicts illuminant and applies white balance.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    return p.parse_args(func_args)
+
+
+
+def main(func_args=None):
+    args = get_args_parser(func_args)
+    args.model = findModel(args.model, args.sha1)
 
     try:
         net = cv.dnn.readNetFromONNX(args.model)
@@ -101,7 +137,7 @@ def main():
         print(f"Error loading model: {e}", file=sys.stderr)
         sys.exit(1)
 
-    img = cv.imread(args.input, cv.IMREAD_COLOR)
+    img = cv.imread(findFile(args.input), cv.IMREAD_COLOR)
     if img is None:
         print(f"Cannot load image: {args.input}", file=sys.stderr)
         sys.exit(1)
@@ -118,7 +154,7 @@ def main():
         print(f"Forward error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    illum = extract_illuminant(out)
+    illum = out.astype(np.float32).reshape(-1)[:3]
     corrected = correct(img, illum)
 
     orig_vis = img.copy()
@@ -129,6 +165,7 @@ def main():
     cv.imshow("Original and Corrected Images", stacked)
     cv.waitKey(0)
     cv.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
