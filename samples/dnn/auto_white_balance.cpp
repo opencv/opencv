@@ -8,7 +8,8 @@ Auto white balance using FC4: https://github.com/yuanming-hu/fc4
 Color constancy is a method to make colors of objects render correctly on a photo.
 White balance aims to make white objects appear white on an image and not a shade of any
 other color, independent of the actual light setting. White balance correction creates
-a neutral looking coloring of the objects, and generally improves the accuracy of colors.
+a neutral looking coloring of the objects, and generally makes colors look more similar
+to their 'true' colors under different light conditions.
 
 Given an RGB image, the FC4 model predicts scene illuminant (R,G,B). We then apply
 the illuminant to the image, applying the correction in the linear RGB space.
@@ -73,7 +74,14 @@ const string target_keys =
            "cuda: CUDA, "
            "cuda_fp16: CUDA fp16 (half-float preprocess) }");
 
+// Normalization constant for 8bit values
 const float NORMALIZE_FACTOR = 1.0f / 255.0f;
+
+// sRGB to linear conversion constants (or vice versa):
+//  SRGB_THRESHOLD / LINEAR_THRESHOLD: breakpoints between linear and gamma regions
+//  SRGB_SLOPE: slope of the linear segment near black
+//  SRGB_ALPHA: offset to ensure continuity at the threshold
+//  SRGB_EXP: gamma exponent
 const float SRGB_THRESHOLD = 0.04045f;
 const float SRGB_ALPHA = 0.055f;
 const float SRGB_SLOPE = 12.92f;
