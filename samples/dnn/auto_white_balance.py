@@ -16,6 +16,7 @@ Given an RGB image, the FC4 model predicts scene illuminant (R,G,B). We then app
 the illuminant to the image, applying the correction in the linear RGB space.
 The transformation between linear and sRGB spaces is done as described in the sRGB standard,
 which is a nonlinear Gamma correction with exponent 2.4 and extra handling of very small values.
+This sample is written for 8bit images. The FC4 model accepts RGB images with applied Gamma scaling.
 
 The training of the FC4 model was done on the Gehler-Shi dataset. The dataset includes
 568 images and ground truth corrections, as well as ground truth illuminants. The linear
