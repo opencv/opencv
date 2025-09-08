@@ -2519,7 +2519,7 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     if (!encode_video) {
         CV_Assert(cn == 1 && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
         const bool set_key_frame = key_frame ? key_frame : idr_period ? frame_idx % idr_period == 0 : 1;
-        bool ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, pts_index, b_frame_dts_delay, set_key_frame);
+        int ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, pts_index, b_frame_dts_delay, set_key_frame);
         frame_idx++;
         return ret == 0;
     }
