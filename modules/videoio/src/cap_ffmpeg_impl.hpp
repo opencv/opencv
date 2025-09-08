@@ -992,6 +992,12 @@ public:
 
 inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 {
+    if (!enc->thread_count)
+    {
+        int nCpus = cv::getNumberOfCPUs();
+        enc->thread_count = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
+    }
+
     AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
 
     if (avdiscard_entry)
@@ -1037,7 +1043,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
 
     unsigned i;
     bool valid = false;
-    int nThreads = std::min(requestedThreads, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
+    int nThreads = 0;
 
     close();
 
