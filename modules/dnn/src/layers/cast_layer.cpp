@@ -142,36 +142,8 @@ public:
 
         inputs_.getUMatVector(inputs);
         outputs_.getUMatVector(outputs);
-        CV_Check(inputs.size(), inputs.size() == 1 || inputs.size() == 2, "");
+        CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
-
-        int runtimeTargetDepth = -1;
-        if (hasToParam)
-        {
-            runtimeTargetDepth = toCvDepth_;
-        }
-        else
-        {
-            Net::Impl* netimpl_ = getNetImpl(this);
-            if (netimpl_ && this->inputs.size() >= 2)
-            {
-                const Arg& in1_arg = this->inputs[1];
-                const ArgData& ad = netimpl_->argData(in1_arg);
-                if (ad.type >= 0)
-                    runtimeTargetDepth = CV_MAT_DEPTH(ad.type);
-            }
-            if (runtimeTargetDepth < 0 && inputs.size() >= 2 && !inputs[1].empty())
-                runtimeTargetDepth = inputs[1].depth();
-
-            if (runtimeTargetDepth < 0 && !inputs.empty() && !inputs[0].empty())
-                runtimeTargetDepth = inputs[0].depth();
-        }
-        CV_CheckGE(runtimeTargetDepth, 0, "Cast: failed to resolve target data type at runtime");
-
-        int plannedDDepth = (runtimeTargetDepth == CV_16F) ? CV_32F :
-                            (runtimeTargetDepth == CV_16BF ? CV_16U : runtimeTargetDepth);
-        if (outputs[0].depth() != plannedDDepth)
-            outputs[0].create(outputs[0].size(), CV_MAKETYPE(plannedDDepth, inputs[0].channels()));
 
         if (inputs[0].depth() == outputs[0].depth())
             inputs[0].copyTo(outputs[0]);
