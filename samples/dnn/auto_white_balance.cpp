@@ -21,8 +21,15 @@ The training of the FC4 model was done on the Gehler-Shi dataset. The dataset in
 568 images and ground truth corrections, as well as ground truth illuminants. The linear
 RGB images from the dataset were used with Gamma correction of 2.2 applied.
 
+The model is a pretrained fold 0 of a training pipeline on the Gehler-Shi dataset.
+The model was converted from a .pth file to onnx using torch.onnx.export.
 The model can be downloaded in the following link:
 https://raw.githubusercontent.com/MykhailoTrushch/opencv/d6ab21353a87e4c527e38e464384c7ee78e96e22/samples/dnn/models/fc4_fold_0.onnx
+
+Copyright (c) 2017 Yuanming Hu, Baoyuan Wang, Stephen Lin
+Copyright (c) 2021 Matteo Rizzo
+
+Licensed under the MIT license.
 
 References:
 
