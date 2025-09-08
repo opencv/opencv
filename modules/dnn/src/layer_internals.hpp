@@ -273,7 +273,7 @@ struct DataLayer : public Layer
                         std::vector<cv::Range> plane(4, Range::all());
                         plane[0] = Range(n, n + 1);
                         plane[1] = Range(c, c + 1);
-                        UMat out = outputs[i](plane).reshape(1, inp.dims, inp.size.p);
+                        UMat out = outputs[i](plane).reshape(1, inp.size);
 
                         if (isFP16)
                         {

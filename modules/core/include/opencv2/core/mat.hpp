@@ -1618,6 +1618,13 @@ public:
     */
     CV_NODISCARD_STD static MatExpr zeros(int ndims, const int* sz, int type);
 
+    /** @overload
+    @param ndims Array dimensionality.
+    @param sz Array of integers specifying the array shape.
+    @param type Created matrix type.
+    */
+    CV_NODISCARD_STD static MatExpr zeros(const MatShape& shape, int type);
+
     /** @brief Returns an array of all 1's of the specified size and type.
 
     The method returns a Matlab-style 1's array initializer, similarly to Mat::zeros. Note that using
@@ -1648,6 +1655,13 @@ public:
     @param type Created matrix type.
     */
     CV_NODISCARD_STD static MatExpr ones(int ndims, const int* sz, int type);
+
+    /** @overload
+    @param ndims Array dimensionality.
+    @param sz Array of integers specifying the array shape.
+    @param type Created matrix type.
+    */
+    CV_NODISCARD_STD static MatExpr ones(const MatShape& shape, int type);
 
     /** @brief Returns an identity matrix of the specified size and type.
 
