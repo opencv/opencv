@@ -302,6 +302,19 @@ UMat::UMat(int _dims, const int* _sz, int _type, const Scalar& _s, UMatUsageFlag
     *this = _s;
 }
 
+UMat::UMat(const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0)
+{
+    create(_shape.dims, _shape.p, _type);
+}
+
+UMat::UMat(const MatShape& _shape, int _type, const Scalar& _s, UMatUsageFlags _usageFlags)
+: flags(MAGIC_VAL), dims(0), rows(0), cols(0), allocator(0), usageFlags(_usageFlags), u(0), offset(0)
+{
+    create(_shape.dims, _shape.p, _type);
+    *this = _s;
+}
+
 UMat::UMat(const UMat& m)
 : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), allocator(m.allocator),
   usageFlags(m.usageFlags), u(m.u), offset(m.offset), size(m.size), step(m.step)
@@ -1377,6 +1390,11 @@ UMat UMat::zeros(int ndims, const int* sz, int type, UMatUsageFlags usageFlags)
     return UMat(ndims, sz, type, Scalar::all(0), usageFlags);
 }
 
+UMat UMat::zeros(const MatShape& shape, int type, UMatUsageFlags usageFlags)
+{
+    return UMat(shape.dims, shape.p, type, Scalar::all(0), usageFlags);
+}
+
 UMat UMat::ones(int rows, int cols, int type, UMatUsageFlags usageFlags)
 {
     return UMat(rows, cols, type, Scalar(1), usageFlags);
@@ -1390,6 +1408,11 @@ UMat UMat::ones(Size size, int type, UMatUsageFlags usageFlags)
 UMat UMat::ones(int ndims, const int* sz, int type, UMatUsageFlags usageFlags)
 {
     return UMat(ndims, sz, type, Scalar(1), usageFlags);
+}
+
+UMat UMat::ones(const MatShape& shape, int type, UMatUsageFlags usageFlags)
+{
+    return UMat(shape.dims, shape.p, type, Scalar(1), usageFlags);
 }
 
 }

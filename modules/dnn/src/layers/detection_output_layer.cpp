@@ -252,7 +252,7 @@ public:
                              const cv::String& code_type, const bool variance_encoded_in_target,
                              const bool clip, std::vector<LabelBBox>& all_decode_bboxes)
     {
-        UMat outmat = UMat(loc_mat.size, CV_32F);
+        UMat outmat(loc_mat.size, CV_32F);
         size_t nthreads = loc_mat.total();
         String kernel_name;
 
