@@ -169,14 +169,17 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
           sizes[dim] = (isFirstDim || continuous) ? length : rng.uniform(1, length);
           totalBytes *= steps[dim];
       }
+      totalBytes *= sizes[0];
 
-      std::vector<unsigned char> buffer(totalBytes);
-      void* data = buffer.data();
+      unsigned char magicval = 153;
+      size_t border = 128;
+      std::vector<unsigned char> buffer(totalBytes+border*2, magicval);
+      void* data = buffer.data() + border;
 
       Mat m = Mat(ndims, sizes.data(), type, data, steps.data());
 
       std::vector<Range> nzRange(ndims);
-      for(int dim = 0 ; dim<ndims ; ++dim)
+      for(int dim = 0; dim < ndims ; ++dim)
       {
         const int pos = rng.uniform(0, sizes[dim]);
         nzRange[dim] = Range(pos, pos+1);
@@ -187,6 +190,10 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
 
       const int nzCount = countNonZero(m);
       EXPECT_EQ((nzCount>0), hasNonZero(m));
+      for (size_t j = 0; j < border; j++) {
+          ASSERT_EQ(buffer[j], magicval);
+          ASSERT_EQ(buffer[border + totalBytes + j], magicval);
+      }
     }
 }
 
