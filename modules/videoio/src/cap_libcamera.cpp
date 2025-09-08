@@ -979,6 +979,7 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
                 memcpy(target_frame.ptr(row), src_ptr, expected_row_bytes);
                 src_ptr += vstr;  
             }
+            app->recycleRequest(completed_request->request);
             return true;
         }
         
