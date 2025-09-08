@@ -607,7 +607,7 @@ struct CvCapture_FFMPEG
     int hw_device;
     int use_opencl;
     int extraDataIdx;
-    int nThreads;
+    int requestedThreads;
 };
 
 void CvCapture_FFMPEG::init()
@@ -659,7 +659,7 @@ void CvCapture_FFMPEG::init()
     hw_device = -1;
     use_opencl = 0;
     extraDataIdx = 1;
-    nThreads = cv::getNumberOfCPUs();
+    requestedThreads = cv::getNumberOfCPUs();
 }
 
 
@@ -992,18 +992,6 @@ public:
 
 inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 {
-    if (!enc->thread_count)
-    {
-        int nCpus = cv::getNumberOfCPUs();
-        int requestedThreads = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
-        std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
-        if (!threads_option.empty())
-        {
-            requestedThreads = atoi(threads_option.c_str());
-        }
-        enc->thread_count = requestedThreads;
-    }
-
     AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
 
     if (avdiscard_entry)
@@ -1049,6 +1037,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
 
     unsigned i;
     bool valid = false;
+    int nThreads = std::min(requestedThreads, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
 
     close();
 
@@ -1121,7 +1110,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
 #endif
         if (params.has(CAP_PROP_N_THREADS))
         {
-            nThreads = params.get<int>(CAP_PROP_N_THREADS);
+            nThreads = requestedThreads = params.get<int>(CAP_PROP_N_THREADS);
         }
         if (params.warnUnusedParameters())
         {
@@ -1135,7 +1124,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
         std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
         if (!threads_option.empty())
         {
-            nThreads = atoi(threads_option.c_str());
+            nThreads = requestedThreads = atoi(threads_option.c_str());
         }
     }
 
@@ -1780,7 +1769,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
 
         av_opt_set_int(img_convert_ctx, "sws_flags", SWS_BICUBIC, 0);
-        av_opt_set_int(img_convert_ctx, "threads", nThreads, 0);
+        av_opt_set_int(img_convert_ctx, "threads", requestedThreads, 0);
 
         if (swscale_version() < CALC_FFMPEG_VERSION(8, 12, 100))
         {
