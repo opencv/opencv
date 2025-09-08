@@ -659,7 +659,7 @@ void CvCapture_FFMPEG::init()
     hw_device = -1;
     use_opencl = 0;
     extraDataIdx = 1;
-    nThreads = 0;
+    nThreads = cv::getNumberOfCPUs();
 }
 
 
