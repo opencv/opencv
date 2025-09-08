@@ -13,16 +13,20 @@ import json
 from tests_common import NewOpenCVTests
 
 def _tf(filename=""):
-    base = (os.environ.get("OPENCV_DNN_TEST_DATA_PATH")
-            or os.environ.get("OPENCV_TEST_DATA_PATH")
-            or os.getcwd())
-    return os.path.join(base, "dnn", "llm", filename)
+    base = os.environ.get("OPENCV_TEST_DATA_PATH") or os.getcwd()
+    path = os.path.join(base, "dnn", "llm", filename)
+    if not os.path.exists(path):
+        raise FileNotFoundError(
+            f"Missing test data: {path}. "
+            "Set OPENCV_TEST_DATA_PATH to the testdata root contains dnn/llm."
+        )
+    return path
 
 class TokenizerBindingTest(NewOpenCVTests):
     def test_tokenizer_binding(self):
         try:
             tokenizer = cv.dnn.Tokenizer
-            print("Tokenizer binding is available.")
+            print("Tokenizer binding is available.", tokenizer)
             gpt2_model = _tf("gpt2/config.json")
             tokenizer = cv.dnn.Tokenizer.load(gpt2_model)
             print("Tokenizer loaded from:", gpt2_model)

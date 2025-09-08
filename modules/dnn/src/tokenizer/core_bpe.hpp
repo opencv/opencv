@@ -50,7 +50,7 @@
 #include <cstdint>
 
 namespace cv { namespace dnn {
-CV__DNN_INLINE_NS_BEGIN  
+CV__DNN_INLINE_NS_BEGIN
 /** 
  * @brief Hasher for byte vectors to enable use in unordered_map.
  *
@@ -89,7 +89,7 @@ using ByteVecRankMap = std::unordered_map<std::vector<std::uint8_t>, std::uint32
  *
  * @note This is the low-level merge routine used by BPE; it does not translate
  *       segments into ids. For that, see bytePairEncode().
- * @see bytePairEncode, bytePairSplit
+ * @see bytePairEncode
  */
 CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks, 
                                                         const std::vector<std::uint8_t>& piece);
@@ -105,7 +105,7 @@ CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(cons
  * @param ranks  Map from byte-sequence tokens to ids (includes all singletons 0..255).
  * @return Token ids produced by BPE for the given @p piece.
  *
- * @see bytePairMerge, bytePairSplit
+ * @see bytePairMerge
  */
 CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece, 
                                  const ByteVecRankMap& ranks);

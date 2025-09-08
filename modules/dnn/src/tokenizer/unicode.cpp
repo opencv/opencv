@@ -21,12 +21,6 @@
 
 namespace cv { namespace dnn {
 
-size_t unicode_len_utf8(char src) {
-    const size_t lookup[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 3, 4 };
-    uint8_t highbits = static_cast<uint8_t>(src) >> 4;
-    return lookup[highbits];
-}
-
 uint32_t unicode_cpt_from_utf8(const std::string & utf8, size_t & offset) {
     assert(offset < utf8.size());
     if (!(utf8[offset + 0] & 0x80)) {
@@ -571,15 +565,6 @@ unicode_cpt_flags unicode_cpt_flags_from_cpt(const uint32_t cpt) {
     static const unicode_cpt_flags undef(unicode_cpt_flags::UNDEFINED);
     static const auto cpt_flags = unicode_cpt_flags_array();
     return cpt < cpt_flags.size() ? cpt_flags[cpt] : undef;
-}
-
-unicode_cpt_flags unicode_cpt_flags_from_utf8(const std::string & utf8) {
-    static const unicode_cpt_flags undef(unicode_cpt_flags::UNDEFINED);
-    if (utf8.empty()) {
-        return undef;  // undefined
-    }
-    size_t offset = 0;
-    return unicode_cpt_flags_from_cpt(unicode_cpt_from_utf8(utf8, offset));
 }
 
 std::string unicode_byte_to_utf8(uint8_t byte) {
