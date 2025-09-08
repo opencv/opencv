@@ -187,7 +187,7 @@ public:
 
 protected:
     template<class Compensator>
-    void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
+    void feedWithStrategy(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks);
 
 private:
