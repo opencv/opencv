@@ -654,7 +654,7 @@ void UMat::create(int d0, const int* _sizes, int _type, UMatUsageFlags _usageFla
 
     finalizeHdr(*this);
     addref();
-    dims = d0;
+    size.dims = dims = d0;
 }
 
 void UMat::create(const std::vector<int>& _sizes, int _type, UMatUsageFlags _usageFlags)
@@ -995,6 +995,8 @@ UMat UMat::reshape(int new_cn, int new_rows) const
         hdr.step[0] = total_width * elemSize1();
     } else {
         hdr.size[0] = hdr.rows = rows;
+        if (dims <= 1)
+            hdr.step[0] = cols * CV_ELEM_SIZE(flags);
     }
 
     int new_width = total_width / new_cn;

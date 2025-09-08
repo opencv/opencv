@@ -94,13 +94,13 @@ inline const int* MatShape::data() const { return p; }
 
 inline int& MatShape::operator [](size_t idx)
 {
-    CV_Assert(idx < (size_t)(dims >= 0 ? dims : 1));
+    CV_Assert(idx < (size_t)(dims > 0 ? dims : 1));
     return p[idx];
 }
 
 inline const int& MatShape::operator [](size_t idx) const
 {
-    CV_Assert(idx < (size_t)(dims >= 0 ? dims : 1));
+    CV_Assert(idx < (size_t)(dims > 0 ? dims : 1));
     return p[idx];
 }
 

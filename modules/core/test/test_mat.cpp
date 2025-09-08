@@ -2598,7 +2598,7 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     cv::Mat m(dims, depth);
 
     // By default m has dims: [1, 100]
-    m.dims = 1;
+    m.size.dims = m.dims = 1;
 
     EXPECT_NO_THROW(m.create(dims, depth));
 }
