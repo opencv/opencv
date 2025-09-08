@@ -686,7 +686,7 @@ void CvCapture_FFMPEG::close()
     {
 #ifdef CV_FFMPEG_CODECPAR
 // avcodec_close removed in FFmpeg release 8.0
-# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 11, 100))
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
         avcodec_close( context );
 # endif
 #endif
@@ -1719,7 +1719,16 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     if (!sw_picture || !sw_picture->data[0])
         return false;
 
-    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format));
+    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format) << ", colorspace: "
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56, 72, 0)
+        << av_color_space_name(sw_picture->colorspace)
+#else
+        << av_get_colorspace_name(sw_picture->colorspace)
+#endif
+        << ", range: " << av_color_range_name(sw_picture->color_range)
+        << ", primaries: " << av_color_primaries_name(sw_picture->color_primaries)
+        << ", transfer: " << av_color_transfer_name(sw_picture->color_trc)
+    );
     const AVPixelFormat result_format = convertRGB ? AV_PIX_FMT_BGR24 : (AVPixelFormat)sw_picture->format;
     switch (result_format)
     {
@@ -2009,7 +2018,7 @@ void CvCapture_FFMPEG::get_rotation_angle()
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
     // av_stream_get_side_data removed in FFmpeg release 8.0
-# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(62, 11, 100))
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
 # else
     AVPacketSideData* sd = video_st->codecpar->coded_side_data;
