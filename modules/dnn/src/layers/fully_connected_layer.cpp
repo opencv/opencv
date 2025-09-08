@@ -203,7 +203,7 @@ public:
     class FullyConnected : public ParallelLoopBody
     {
     public:
-        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useAVX(false), useAVX2(false), useAVX512(false), useRVV(false), useLASX(false) {}
+        FullyConnected() : srcMat(0), weights(0), biasMat(0), activ(0), dstMat(0), nstripes(0), useNEON(false), useAVX(false), useAVX2(false), useAVX512(false), useRVV(false), useLASX(false) {}
 
         static void run(const Mat& srcMat, const Mat& weights, const Mat& biasMat,
                         Mat& dstMat, const ActivationLayer* activ, int nstripes)
@@ -226,6 +226,7 @@ public:
             p.useAVX = checkHardwareSupport(CPU_AVX);
             p.useAVX2 = checkHardwareSupport(CPU_AVX2);
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
+            p.useNEON = checkHardwareSupport(CPU_NEON);
             p.useRVV = checkHardwareSupport(CPU_RVV);
             p.useLASX = checkHardwareSupport(CPU_LASX);
 
@@ -275,6 +276,11 @@ public:
             #if CV_TRY_AVX
                 if( useAVX )
                     opt_AVX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize_aligned);
+                else
+            #endif
+            #if CV_TRY_NEON
+                if( useNEON )
+                    opt_NEON::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize);
                 else
             #endif
             #if CV_TRY_RVV && CV_RVV
@@ -337,6 +343,7 @@ public:
         const ActivationLayer* activ;
         Mat* dstMat;
         int nstripes;
+        bool useNEON;
         bool useAVX;
         bool useAVX2;
         bool useAVX512;
