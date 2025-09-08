@@ -390,6 +390,7 @@ macro(ocv_nvcc_flags)
   endif()
 
   if(WIN32)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler=/wd4505)
     if (NOT (CUDA_VERSION VERSION_LESS "11.2"))
         set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcudafe --display_error_number --diag-suppress 1394,1388)
     endif()
