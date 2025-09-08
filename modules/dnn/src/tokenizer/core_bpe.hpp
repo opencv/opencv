@@ -45,6 +45,9 @@
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
+#include <optional>
+#include <string>
+#include <cstdint>
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN  

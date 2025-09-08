@@ -265,7 +265,6 @@ if(NOT BUILD_PROTOBUF)
     ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
   endif()
 endif()
-
 # Include Tokenizer 
 file(GLOB extra_tokenizer_src
      "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer/*.cpp"

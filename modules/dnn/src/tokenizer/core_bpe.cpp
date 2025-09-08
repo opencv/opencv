@@ -6,17 +6,7 @@
 #include "utils.hpp"
 #include "core_bpe.hpp"
 
-#include <cstdint>
-#include <string>
-#include <vector>
-#include <unordered_map>
 #include <regex>
-#include <set>
-#include <stdexcept>
-#include <thread>
-#include <cassert>
-#include <optional>
-#include <iostream>
 
 namespace cv { namespace dnn { 
 CV__DNN_INLINE_NS_BEGIN
@@ -149,8 +139,6 @@ CoreBPE::CoreBPE(ByteVecRankMap encoder,
     sortedTokenBytes_.reserve(encoder_.size());
     for (auto& kv : encoder_) sortedTokenBytes_.push_back(kv.first);
     std::sort(sortedTokenBytes_.begin(), sortedTokenBytes_.end());
-
-
 }
 
 std::optional<std::vector<std::uint8_t>>
@@ -265,7 +253,7 @@ CoreBPE::encode(const std::string& text,
             break;
         }
     }
-
+    
     return { ret, last_piece_token_len };
 }
 CV__DNN_INLINE_NS_END

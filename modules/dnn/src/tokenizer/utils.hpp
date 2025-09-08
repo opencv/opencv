@@ -8,8 +8,10 @@
 #include <string>
 
 namespace cv { namespace dnn { 
+    
+// R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K"
+static const std::string R50K_UTF8 = "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)";
 
-static const std::string R50K_UTF8 = R"R50K('(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+$|\s+(?!\S)|\s)R50K";
 // GPT-4’s cl100k_base split pattern
 // NOTE: This pattern is adapted from the original Python regex used for GPT-4's cl100k_base BPE split.
 // The original Python pattern is:
