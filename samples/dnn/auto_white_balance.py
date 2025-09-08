@@ -129,7 +129,7 @@ def get_args_parser(func_args):
             "cuda_fp16: CUDA fp16 (half-float preprocess)")
 
     args, _ = p.parse_known_args()
-    add_preproc_args(args.zoo, p, 'auto_white_balance')
+    add_preproc_args(args.zoo, p, 'auto_white_balance', prefix="", alias="fc4")
     p = argparse.ArgumentParser(
         parents=[p],
         description="FC4 Color Constancy (ONNX): " \
