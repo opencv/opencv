@@ -21,9 +21,9 @@ The training of the FC4 model was done on the Gehler-Shi dataset. The dataset in
 568 images and ground truth corrections, as well as ground truth illuminants. The linear
 RGB images from the dataset were used with Gamma correction of 2.2 applied.
 
-The model is a pretrained fold 0 of a training pipeline on the Gehler-Shi dataset.
-The model was converted from a .pth file to onnx using torch.onnx.export.
-The model can be downloaded in the following link:
+The model is a pretrained fold 0 of a training pipeline on the Gehler-Shi dataset, from the PyTorch
+implementation of the FC4 algorithm by Mateo Rizzo. The model was converted from a .pth file to onnx
+using torch.onnx.export. The model can be downloaded in the following link:
 https://raw.githubusercontent.com/MykhailoTrushch/opencv/d6ab21353a87e4c527e38e464384c7ee78e96e22/samples/dnn/models/fc4_fold_0.onnx
 
 Copyright (c) 2017 Yuanming Hu, Baoyuan Wang, Stephen Lin
@@ -35,6 +35,10 @@ References:
 
 Yuanming Hu, Baoyuan Wang, and Stephen Lin. “FC⁴: Fully Convolutional Color
 Constancy with Confidence-Weighted Pooling.” CVPR, 2017, pp. 4085–4094.
+
+Implementations of FC4:
+https://github.com/yuanming-hu/fc4/
+https://github.com/matteo-rizzo/fc4-pytorch
 
 Lilong Shi and Brian Funt, "Re-processed Version of the Gehler Color Constancy Dataset of 568 Images,"
 accessed from http://www.cs.sfu.ca/~colour/data/
