@@ -1,4 +1,4 @@
-README for libpng version 1.6.43
+README for libpng version 1.6.45
 ================================
 
 See the note about version numbers near the top of `png.h`.
@@ -157,8 +157,6 @@ Files included in this distribution
                           "PNG: The Definitive Guide" by Greg Roelofs,
                           O'Reilly, 1999
         libtests/     =>  Test programs
-        oss-fuzz/     =>  Files used by the OSS-Fuzz project for fuzz-testing
-                          libpng
         pngexif/      =>  Program to inspect the EXIF information in PNG files
         pngminim/     =>  Minimal decoder, encoder, and progressive decoder
                           programs demonstrating the use of pngusr.dfa

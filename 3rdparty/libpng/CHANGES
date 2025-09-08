@@ -6196,6 +6196,39 @@ Version 1.6.43 [February 23, 2024]
     consistency verification and text linting.
   Added version consistency verification to pngtest.c also.
 
+Version 1.6.44 [September 12, 2024]
+  Hardened calculations in chroma handling to prevent overflows, and
+    relaxed a constraint in cHRM validation to accomodate the standard
+    ACES AP1 set of color primaries.
+    (Contributed by John Bowler)
+  Removed the ASM implementation of ARM Neon optimizations and updated
+    the build accordingly. Only the remaining C implementation shall be
+    used from now on, thus ensuring the support of the PAC/BTI security
+    features on ARM64.
+    (Contributed by Ross Burton and John Bowler)
+  Fixed the pickup of the PNG_HARDWARE_OPTIMIZATIONS option in the
+    CMake build on FreeBSD/amd64. This is an important performance fix
+    on this platform.
+  Applied various fixes and improvements to the CMake build.
+    (Contributed by Eric Riff, Benjamin Buch and Erik Scholz)
+  Added fuzzing targets for the simplified read API.
+    (Contributed by Mikhail Khachayants)
+  Fixed a build error involving pngtest.c under a custom config.
+    This was a regression introduced in a code cleanup in libpng-1.6.43.
+    (Contributed by Ben Wagner)
+  Fixed and improved the config files for AppVeyor CI and Travis CI.
+
+Version 1.6.45 [January 7, 2025]
+  Added support for the cICP chunk.
+    (Contributed by Lucas Chollet and John Bowler)
+  Adjusted and improved various checks in colorspace calculations.
+    (Contributed by John Bowler)
+  Rearranged the write order of colorspace chunks for better conformance
+    with the PNG v3 draft specification.
+    (Contributed by John Bowler)
+  Raised the minimum required CMake version from 3.6 to 3.14.
+  Forked off a development branch for libpng version 1.8.
+
 Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
 Subscription is required; visit
 https://lists.sourceforge.net/lists/listinfo/png-mng-implement

@@ -901,6 +901,7 @@ PngEncoder::PngEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_support_metadata[IMAGE_METADATA_CICP] = true;
     op_zstream1.zalloc = NULL;
     op_zstream2.zalloc = NULL;
     next_seq_num = 0;
@@ -1115,6 +1116,16 @@ bool  PngEncoder::write( const Mat& img, const std::vector<int>& params )
                                 reinterpret_cast<png_charp>(iccp.data()),
 #endif
                                 static_cast<png_uint_32>(iccp.size()));
+                        }
+
+                        std::vector<uchar>& cicp = m_metadata[IMAGE_METADATA_CICP];
+                        if (!cicp.empty()) {
+#ifdef PNG_cICP_SUPPORTED
+                            CV_CheckEQ((size_t)4, cicp.size(), "The cICP chunk consists of four 1-byte unsigned integers");
+                            png_set_cICP(png_ptr, info_ptr, cicp[0], cicp[1], cicp[2], cicp[3]);
+#else
+                            CV_LOG_WARNING(NULL, "Libpng is too old and does not support cICP.");
+#endif
                         }
                     }
 
