@@ -148,10 +148,9 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     const int& back() const;
     void push_back(int value);
     void emplace_back(int value);
-    int& operator [](size_t idx);
     const int& operator [](size_t idx) const;
+    int& operator [](size_t idx);
     Size operator()() const; // for compatibility with MatSize
-    operator const int* () const { return p; } // for compatibility with MatSize
 
     CV_WRAP bool hasSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
 
@@ -164,7 +163,6 @@ struct CV_EXPORTS_W_SIMPLE MatShape
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 
-    operator std::vector<int>() const;
     std::string str() const;
 
     int dims;

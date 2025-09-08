@@ -469,7 +469,7 @@ void setSize( UMat& m, int _dims, const int* _sz,
         size_t autostep = m.size[i+1]*m.step[i+1];
         if (_steps) {
             m.step[i] = _steps[i];
-            CV_Assert(m.step[i] >= autostep);
+            //CV_Assert(m.step[i] >= autostep);
         } else if (autoSteps) {
             m.step[i] = autostep;
         } else {

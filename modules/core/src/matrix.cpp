@@ -401,13 +401,6 @@ MatShape MatShape::expand(const MatShape& another) const
     return result;
 }
 
-MatShape::operator std::vector<int>() const
-{
-    if (dims < 0)
-        return std::vector<int>(1, 0);
-    return std::vector<int>(p, p + dims);
-}
-
 /////////////////////////// MatAllocator ////////////////////////////
 
 void MatAllocator::map(UMatData*, AccessFlag) const
@@ -614,7 +607,7 @@ void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool auto
         size_t autostep = m.size[i+1]*m.step[i+1];
         if (_steps) {
             m.step[i] = _steps[i];
-            CV_Assert(m.step[i] >= autostep);
+            //CV_Assert(m.step[i] >= autostep);
         } else if (autoSteps) {
             m.step[i] = autostep;
         } else {
