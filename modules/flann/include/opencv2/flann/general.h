@@ -54,12 +54,12 @@ public:
 
 #define FLANN_THROW(TYPE, STR) throw FLANNException(STR)
 
+//! @endcond
+
 #else
 
 #define FLANN_THROW(TYPE, STR) CV_Error(TYPE, STR)
 
 #endif
-
-//! @endcond
 
 #endif  /* OPENCV_FLANN_GENERAL_H_ */
