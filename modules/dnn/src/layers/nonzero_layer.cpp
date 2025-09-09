@@ -70,7 +70,7 @@ static void emitIndicesStripes(const T* data,
         size_t col = nzstart[(size_t)range.start];
 
         std::array<int, CV_MAX_DIM> coord;
-        for (int d = 0; d < rank; ++d) coord[d] = 0;
+        std::fill_n(coord.begin(), rank, 0);
         if (rank > 0) coord[rank - 1] = lastDimSize - 1;
 
         for (; i < i1; ++i)
