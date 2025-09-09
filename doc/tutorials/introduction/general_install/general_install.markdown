@@ -26,7 +26,7 @@ Other organizations and people maintain their own binary distributions of OpenCV
 - System packages in popular Linux distributions (https://pkgs.org/search/?q=opencv)
 - PyPI (https://pypi.org/search/?q=opencv)
 - Conda (https://anaconda.org/search?q=opencv)
-- Conan (https://github.com/conan-community/conan-opencv)
+- Conan (https://conan.io/center/recipes/opencv)
 - vcpkg (https://github.com/microsoft/vcpkg/tree/master/ports/opencv)
 - NuGet (https://www.nuget.org/packages?q=opencv)
 - Brew (https://formulae.brew.sh/formula/opencv)
