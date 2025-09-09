@@ -159,8 +159,10 @@ static DLDataType GetDLPackType(size_t elemSize1, int depth) {
     dtype.lanes = 1;
     switch (depth)
     {
-        case CV_8S: case CV_16S: case CV_32S: dtype.code = kDLInt; break;
-        case CV_8U: case CV_16U: dtype.code = kDLUInt; break;
+        case CV_Bool: dtype.code = kDLBool; break;
+        case CV_16BF: dtype.code = kDLBfloat; break;
+        case CV_8S: case CV_16S: case CV_32S: case CV_64S: dtype.code = kDLInt; break;
+        case CV_8U: case CV_16U: case CV_32U: case CV_64U: dtype.code = kDLUInt; break;
         case CV_16F: case CV_32F: case CV_64F: dtype.code = kDLFloat; break;
         default:
             CV_Error(Error::StsNotImplemented, "__dlpack__ data type");
@@ -176,6 +178,7 @@ static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
             case 8: return CV_8SC(channels);
             case 16: return CV_16SC(channels);
             case 32: return CV_32SC(channels);
+            case 64: return CV_64SC(channels);
             default:
             {
                 PyErr_SetString(PyExc_BufferError,
@@ -190,6 +193,8 @@ static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
         {
             case 8: return CV_8UC(channels);
             case 16: return CV_16UC(channels);
+            case 32: return CV_32UC(channels);
+            case 64: return CV_64UC(channels);
             default:
             {
                 PyErr_SetString(PyExc_BufferError,
@@ -212,6 +217,14 @@ static int DLPackTypeToCVType(const DLDataType& dtype, int channels) {
                 return -1;
             }
         }
+    }
+    if (dtype.code == kDLBool)
+    {
+        return CV_BoolC(channels);
+    }
+    if (dtype.code == kDLBfloat)
+    {
+        return CV_16BFC(channels);
     }
     PyErr_SetString(PyExc_BufferError, format("Unsupported dlpack data type: %d", dtype.code).c_str());
     return -1;
