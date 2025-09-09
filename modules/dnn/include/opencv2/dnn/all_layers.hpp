@@ -526,6 +526,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<IsInfLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS GridSampleLayer : public Layer
+    {
+    public:
+        static Ptr<GridSampleLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
