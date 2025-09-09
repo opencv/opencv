@@ -80,6 +80,23 @@ void PrintTo(const ImreadModes& val, std::ostream* os)
     *os << "IMREAD_UNKNOWN(" << (int)v << ")";
 }
 
+static inline
+void PrintTo(const ImwriteBMPCompressionFlags& val, std::ostream* os)
+{
+    switch(val)
+    {
+        case IMWRITE_BMP_COMPRESSION_RGB:
+            *os << "IMWRITE_BMP_COMPRESSION_RGB";
+            break;
+        case IMWRITE_BMP_COMPRESSION_BITFIELDS:
+            *os << "IMWRITE_BMP_COMPRESSION_BITFIELDS";
+            break;
+        default:
+            *os << "IMWRITE_BMP_COMPRESSION_UNKNOWN(" << (int)val << ")";
+            break;
+    }
+}
+
 } // namespace
 
 #endif
