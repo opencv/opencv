@@ -526,19 +526,25 @@ void resizeCubic(const Mat &inp, Mat &out,
                         outRow[ox] = extrapolation_value_;
                         continue;
                     }
-                    const int xx0 = x_id[ox][0];
-                    const int xx1 = x_id[ox][1];
-                    const int xx2 = x_id[ox][2];
-                    const int xx3 = x_id[ox][3];
+                    const int xx = x_id[ox][1];
                     const float w0x = x_w[ox][0];
                     const float w1x = x_w[ox][1];
                     const float w2x = x_w[ox][2];
                     const float w3x = x_w[ox][3];
-                    float val = 0.f;
-                    if (xx0 >= 0) val += hbuf[xx0] * w0x;
-                    if (xx1 >= 0) val += hbuf[xx1] * w1x;
-                    if (xx2 >= 0) val += hbuf[xx2] * w2x;
-                    if (xx3 >= 0) val += hbuf[xx3] * w3x;
+                    float val;
+                    if (1 <= xx && xx + 3 < inW) {
+                        val = hbuf[xx - 1] * w0x + hbuf[xx] * w1x + hbuf[xx + 1] * w2x + hbuf[xx + 2] * w3x;
+                    } else {
+                        const int xx0 = x_id[ox][0];
+                        const int xx1 = x_id[ox][1];
+                        const int xx2 = x_id[ox][2];
+                        const int xx3 = x_id[ox][3];
+                        val = 0.f;
+                        if (xx0 >= 0) val += hbuf[xx0] * w0x;
+                        if (xx1 >= 0) val += hbuf[xx1] * w1x;
+                        if (xx2 >= 0) val += hbuf[xx2] * w2x;
+                        if (xx3 >= 0) val += hbuf[xx3] * w3x;
+                    }
                     outRow[ox] = val;
                 }
             }
