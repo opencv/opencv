@@ -46,7 +46,9 @@ typedef std::vector<Scalar> vector_Scalar;
 #ifdef HAVE_OPENCV_OBJDETECT
 typedef std::vector<aruco::Dictionary> vector_Dictionary;
 #endif // HAVE_OPENCV_OBJDETECT
+#ifdef HAVE_OPENCV_3D
 typedef std::vector<MSTEdge> vector_MSTEdge;
+#endif // HAVE_OPENCV_3D
 
 typedef std::vector<std::vector<char> > vector_vector_char;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
