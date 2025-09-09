@@ -22,9 +22,8 @@ static inline bool isNonZeroF16(uint16_t val)
 }
 
 template <typename T, typename PT>
-static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::vector<size_t>& nzcounts, PT isNonZero)
+static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, int nstripes, std::vector<size_t>& nzcounts, PT isNonZero)
 {
-    const int nstripes = 16;
     nzcounts.assign(nstripes, 0);
     if (total == 0)
         return 0;
@@ -43,14 +42,15 @@ static size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::ve
 }
 
 template <typename T>
-static inline size_t computeNonZeroCountsPerStripe(const T* data, size_t total, std::vector<size_t>& nzcounts)
+static inline size_t computeNonZeroCountsPerStripe(const T* data, size_t total, int nstripes, std::vector<size_t>& nzcounts)
 {
-    return computeNonZeroCountsPerStripe<T>(data, total, nzcounts, [](T v){ return v != (T)0; });
+    return computeNonZeroCountsPerStripe<T>(data, total, nstripes, nzcounts, [](T v){ return v != (T)0; });
 }
 
 template <typename T, typename PT>
 static void emitIndicesStripes(const T* data,
                                size_t total,
+                               int nstripes,
                                int rank,
                                const std::vector<int>& dims,
                                const std::vector<int>& strides,
@@ -58,7 +58,6 @@ static void emitIndicesStripes(const T* data,
                                int64* y,
                                PT isNonZero)
 {
-    const int nstripes = 16;
     const size_t nnz_total = nzstart.back();
     if (rank == 0) {
         return;
@@ -85,7 +84,6 @@ static void emitIndicesStripes(const T* data,
                     idxLinear /= (size_t)dims[d];
                 }
             }
-
             if (isNonZero(data[i]))
             {
                 for (int d = 0; d < rank; ++d)
@@ -99,13 +97,14 @@ static void emitIndicesStripes(const T* data,
 template <typename T>
 static void emitIndicesStripes(const T* data,
                                size_t total,
+                               int nstripes,
                                int rank,
                                const std::vector<int>& dims,
                                const std::vector<int>& strides,
                                const std::vector<size_t>& nzstart,
                                int64* y)
 {
-    emitIndicesStripes<T>(data, total, rank, dims, strides, nzstart, y, [](T v){ return v != (T)0; });
+    emitIndicesStripes<T>(data, total, nstripes, rank, dims, strides, nzstart, y, [](T v){ return v != (T)0; });
 }
 }
 
@@ -161,6 +160,7 @@ public:
         }
 
         size_t total = X.total();
+        const int nstripes = 16;
 
         const int depth = CV_MAT_DEPTH(X.type());
         std::vector<size_t> nzcounts;
@@ -169,18 +169,18 @@ public:
         switch (depth)
         {
         case CV_8U:
-        case CV_8S:  { nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nzcounts); break; }
+        case CV_8S:  { nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nstripes, nzcounts); break; }
         case CV_16U:
-        case CV_16S: { nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nzcounts); break; }
+        case CV_16S: { nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nstripes, nzcounts); break; }
         case CV_32U:
-        case CV_32S: { nnz = computeNonZeroCountsPerStripe<uint32_t>(X.ptr<uint32_t>(), total, nzcounts); break; }
+        case CV_32S: { nnz = computeNonZeroCountsPerStripe<uint32_t>(X.ptr<uint32_t>(), total, nstripes, nzcounts); break; }
         case CV_64U:
-        case CV_64S: { nnz = computeNonZeroCountsPerStripe<uint64_t>(X.ptr<uint64_t>(), total, nzcounts); break; }
-        case CV_32F: { nnz = computeNonZeroCountsPerStripe<float>(X.ptr<float>(), total, nzcounts); break; }
-        case CV_64F: { nnz = computeNonZeroCountsPerStripe<double>(X.ptr<double>(), total, nzcounts); break; }
-        case CV_16F: { nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
-        case CV_16BF:{ nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
-        case CV_Bool:{ nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nzcounts); break; }
+        case CV_64S: { nnz = computeNonZeroCountsPerStripe<uint64_t>(X.ptr<uint64_t>(), total, nstripes, nzcounts); break; }
+        case CV_32F: { nnz = computeNonZeroCountsPerStripe<float>(X.ptr<float>(), total, nstripes, nzcounts); break; }
+        case CV_64F: { nnz = computeNonZeroCountsPerStripe<double>(X.ptr<double>(), total, nstripes, nzcounts); break; }
+        case CV_16F: { nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nstripes, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_16BF:{ nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nstripes, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_Bool:{ nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nstripes, nzcounts); break; }
         default:
             CV_Error_(Error::StsError, ("NonZero: Unsupported input depth=%d", depth));
         }
@@ -214,18 +214,18 @@ public:
         switch (depth)
         {
         case CV_8U:
-        case CV_8S:  { emitIndicesStripes<uchar>(X.ptr<uchar>(), total, rank, dims, strides, nzstart, y); break; }
+        case CV_8S:  { emitIndicesStripes<uchar>(X.ptr<uchar>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         case CV_16U:
-        case CV_16S: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y); break; }
+        case CV_16S: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         case CV_32U:
-        case CV_32S: { emitIndicesStripes<uint32_t>(X.ptr<uint32_t>(), total, rank, dims, strides, nzstart, y); break; }
+        case CV_32S: { emitIndicesStripes<uint32_t>(X.ptr<uint32_t>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         case CV_64U:
-        case CV_64S: { emitIndicesStripes<uint64_t>(X.ptr<uint64_t>(), total, rank, dims, strides, nzstart, y); break; }
-        case CV_32F: { emitIndicesStripes<float>(X.ptr<float>(), total, rank, dims, strides, nzstart, y); break; }
-        case CV_64F: { emitIndicesStripes<double>(X.ptr<double>(), total, rank, dims, strides, nzstart, y); break; }
-        case CV_16F: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
-        case CV_16BF:{ emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
-        case CV_Bool:{ emitIndicesStripes<uchar>(X.ptr<uchar>(), total, rank, dims, strides, nzstart, y); break; }
+        case CV_64S: { emitIndicesStripes<uint64_t>(X.ptr<uint64_t>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
+        case CV_32F: { emitIndicesStripes<float>(X.ptr<float>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
+        case CV_64F: { emitIndicesStripes<double>(X.ptr<double>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
+        case CV_16F: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, nstripes, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_16BF:{ emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, nstripes, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_Bool:{ emitIndicesStripes<uchar>(X.ptr<uchar>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         default: break;
         }
 
