@@ -46,6 +46,23 @@ static inline CoordTransMode parseCoordTransMode(const String& s)
     return CoordTransMode::ASYMMETRIC;
 }
 
+enum class NearestMode {
+    FLOOR,
+    CEIL,
+    ROUND_PREFER_CEIL,
+    ROUND_PREFER_FLOOR
+};
+
+static inline NearestMode parseNearestMode(const String& s)
+{
+    if (s == "floor") return NearestMode::FLOOR;
+    if (s == "ceil") return NearestMode::CEIL;
+    if (s == "round_prefer_ceil") return NearestMode::ROUND_PREFER_CEIL;
+    return NearestMode::ROUND_PREFER_FLOOR;
+}
+
+static constexpr int kResizeNumStripes = 16;
+
 inline float computeSrcGeneric(int dst, float scale, int limit, int len,
                                CoordTransMode coordTransMode, bool /*halfPixelCenters*/,
                                float start_coord = 0.0f, float end_coord = 1.0f)
@@ -74,7 +91,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
                                         float start_coord,
                                         float end_coord,
                                         CoordTransMode coordTransMode,
-                                        const String& nearestMode,
+                                        NearestMode nearestMode,
                                         bool halfPixelCenters)
 {
     auto nearestIndex = [&](float src) {
@@ -82,9 +99,9 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
         const float frac = src - f;
         const float eps = 1e-6f;
         int idx;
-        if (nearestMode == "floor") idx = cvFloor(src);
-        else if (nearestMode == "ceil")  idx = cvCeil(src);
-        else if (nearestMode == "round_prefer_ceil") {
+        if (nearestMode == NearestMode::FLOOR) idx = cvFloor(src);
+        else if (nearestMode == NearestMode::CEIL)  idx = cvCeil(src);
+        else if (nearestMode == NearestMode::ROUND_PREFER_CEIL) {
             idx = (abs(frac - 0.5f) <= eps) ? (f + 1) : cvRound(src);
         } else {
             idx = (abs(frac - 0.5f) <= eps) ? f : cvRound(src);
@@ -112,7 +129,7 @@ static inline void buildNearestIndexMap(std::vector<int>& map,
 static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
                                              std::vector<int>& i1,
                                              std::vector<float>& frac,
-                                             std::vector<bool>& outOfBounds,
+                                             std::vector<uint8_t>& outOfBounds,
                                              int outLen,
                                              int inLen,
                                              float scale,
@@ -126,7 +143,7 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
     i0.resize(outLen);
     i1.resize(outLen);
     frac.resize(outLen);
-    outOfBounds.assign(outLen, false);
+    outOfBounds.assign(outLen, 0);
 
     for (int o = 0; o < outLen; ++o)
     {
@@ -136,7 +153,7 @@ static inline void buildBilinearIndexAndLerp(std::vector<int>& i0,
         {
             int base = int(std::floor(src));
             if (base < 0 || base >= inLen - 1) {
-                outOfBounds[o] = true;
+                outOfBounds[o] = 1;
                 i0[o] = 0;
                 i1[o] = 0;
                 frac[o] = 0.0f;
@@ -165,11 +182,86 @@ static inline void interpolateCubicResize(float x, float A, float* coeffs )
     coeffs[3] = 1.f - coeffs[0] - coeffs[1] - coeffs[2];
 }
 
+static inline void buildCubicIndexAndWeights(std::vector<std::array<int,4>>& ids,
+                                             std::vector<std::array<float,4>>& weights,
+                                             std::vector<uint8_t>& outOfBounds,
+                                             int outLen,
+                                             int inLen,
+                                             float scale,
+                                             int len,
+                                             float start_coord,
+                                             float end_coord,
+                                             CoordTransMode coordTransMode,
+                                             bool halfPixelCenters,
+                                             bool tf_crop_and_resize_mode,
+                                             bool excludeOutside,
+                                             float cubicA)
+{
+    ids.resize(outLen);
+    weights.resize(outLen);
+    outOfBounds.assign(outLen, 0);
+
+    for (int o = 0; o < outLen; ++o)
+    {
+        float src = computeSrcGeneric(o, scale, inLen, len,
+                                      coordTransMode, halfPixelCenters, start_coord, end_coord);
+        int i = int(std::floor(src));
+        float d = src - i;
+        float sw = 0.f;
+        bool hasOutOfBounds = false;
+        interpolateCubicResize(d, cubicA, weights[o].data());
+
+        if (!tf_crop_and_resize_mode && !excludeOutside)
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idx = std::clamp(i + k, 0, inLen - 1);
+                ids[o][k+1] = idx;
+                sw += weights[o][k+1];
+            }
+        }
+        else if (tf_crop_and_resize_mode)
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idx = i + k;
+                unsigned valid = (unsigned)idx < (unsigned)inLen;
+                ids[o][k+1] = valid ? idx : -1;
+                float w = weights[o][k+1];
+                float wv = valid ? w : 0.f;
+                weights[o][k+1] = wv;
+                sw += wv;
+                hasOutOfBounds |= !valid;
+            }
+        }
+        else
+        {
+            for (int k = -1; k <= 2; ++k)
+            {
+                int idx = i + k;
+                unsigned valid = (unsigned)idx < (unsigned)inLen;
+                ids[o][k+1] = valid ? idx : -1;
+                float w = weights[o][k+1];
+                float wv = valid ? w : 0.f;
+                weights[o][k+1] = wv;
+                sw += wv;
+            }
+        }
+
+        if (sw != 0.f)
+            for (int k = 0; k < 4; ++k)
+                weights[o][k] /= sw;
+
+        if (tf_crop_and_resize_mode && hasOutOfBounds)
+            outOfBounds[o] = 1;
+    }
+}
+
 template<typename T>
 void resizeNearest(const Mat &inp, Mat &out,
                    float scaleH, float scaleW,
                    int lenY, int lenX,
-                   const String &nearestMode,
+                   NearestMode nearestMode,
                    const String &coordTransMode,
                    bool halfPixelCenters,
                    float start_y = 0.0f, float end_y = 1.0f,
@@ -194,32 +286,39 @@ void resizeNearest(const Mat &inp, Mat &out,
     buildNearestIndexMap(mapX, outW, inW, scaleW, lenX, start_x, end_x,
                          coordMode, nearestMode, halfPixelCenters);
 
-    const int nstripes = 16;
-    const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
+    const int nstripes = kResizeNumStripes;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
+        const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
         int row0 = range.start * (outH * numPlanes) / nstripes;
+        float extrapolation_value_ = extrapolation_value;
         int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
         int plane0 = row0 / outH, plane1 = row1 / outH;
         row0 %= outH;
         row1 %= outH;
+
+        const int* mapYptr = mapY.data();
+        const int* mapXptr = mapX.data();
+
         for (int p = plane0; p <= plane1; p++) {
             int y0 = p == plane0 ? row0 : 0;
             int y1 = p == plane1 ? row1 : outH - 1;
             for (int y = y0; y <= y1; y++) {
-                if (tf_crop_and_resize_mode && mapY[y] == -1) {
+                int my = mapYptr[y];
+                if (tf_crop_and_resize_mode && my == -1) {
                     T* outRowFill = outP.ptr<T>(p * outH + y);
                     for (int x = 0; x < outW; ++x)
-                        outRowFill[x] = T(extrapolation_value);
+                        outRowFill[x] = T(extrapolation_value_);
                     continue;
                 }
-                const T* inpRow = inpP.ptr<T>(p * inH + mapY[y]);
+                const T* inpRow = inpP.ptr<T>(p * inH + my);
                 T*       outRow = outP.ptr<T>(p * outH + y);
                 for (int x = 0; x < outW; ++x)
                 {
-                    if (tf_crop_and_resize_mode && mapX[x] == -1) {
-                        outRow[x] = T(extrapolation_value);
+                    int mx = mapXptr[x];
+                    if (tf_crop_and_resize_mode && mx == -1) {
+                        outRow[x] = T(extrapolation_value_);
                     } else {
-                        outRow[x] = inpRow[ mapX[x] ];
+                        outRow[x] = inpRow[mx];
                     }
                 }
             }
@@ -250,19 +349,19 @@ void resizeBilinear(const Mat &inp, Mat &out,
 
     std::vector<int>    x0(outW), x1(outW);
     std::vector<float> lx(outW);
-    std::vector<bool>  outOfBoundsX(outW);
+    std::vector<uint8_t>  outOfBoundsX(outW);
     buildBilinearIndexAndLerp(x0, x1, lx, outOfBoundsX,
                               outW, inW, scaleW, lenX, start_x, end_x,
                               coordMode, halfPixelCenters, tf_crop_and_resize_mode);
 
     std::vector<int>    y0(outH), y1(outH);
     std::vector<float> ly(outH);
-    std::vector<bool>  outOfBoundsY(outH);
+    std::vector<uint8_t>  outOfBoundsY(outH);
     buildBilinearIndexAndLerp(y0, y1, ly, outOfBoundsY,
                               outH, inH, scaleH, lenY, start_y, end_y,
                               coordMode, halfPixelCenters, tf_crop_and_resize_mode);
 
-    const int nstripes = 16;
+    const int nstripes = kResizeNumStripes;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
         int row0 = range.start * (outH * numPlanes) / nstripes;
         int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
@@ -270,27 +369,37 @@ void resizeBilinear(const Mat &inp, Mat &out,
         row0 %= outH;
         row1 %= outH;
 
+        const int* y0ptr = y0.data();
+        const int* y1ptr = y1.data();
+        const float* lyptr = ly.data();
+        const int* x0ptr = x0.data();
+        const float* lxptr = lx.data();
+        const uint8_t* outOfBoundsYptr = outOfBoundsY.data();
+        const uint8_t* outOfBoundsXptr = outOfBoundsX.data();
+        float extrapolation_value_ = extrapolation_value;
+        const bool tf_crop_and_resize_mode_ = tf_crop_and_resize_mode;
+        std::vector<float> hbufbuf(inW + 3);
+        float* hbuf = hbufbuf.data() + 1;
+
         for (int p = plane0; p <= plane1; ++p)
         {
             int oy0 = (p == plane0) ? row0 : 0;
             int oy1 = (p == plane1) ? row1 : outH - 1;
             for (int oy = oy0; oy <= oy1; ++oy)
             {
-                if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                if (tf_crop_and_resize_mode_ && outOfBoundsYptr[oy]) {
                     T* outRowFill = outP.ptr<T>(p * outH + oy);
                     for (int ox = 0; ox < outW; ++ox)
-                        outRowFill[ox] = T(extrapolation_value);
+                        outRowFill[ox] = T(extrapolation_value_);
                     continue;
                 }
 
-                const T* row0ptr = inpP.ptr<T>( p * inH + y0[oy] );
-                const T* row1ptr = inpP.ptr<T>( p * inH + y1[oy] );
-                float    fy      = ly[oy];
+                const T* row0ptr = inpP.ptr<T>( p * inH + y0ptr[oy] );
+                const T* row1ptr = inpP.ptr<T>( p * inH + y1ptr[oy] );
+                float    fy      = lyptr[oy];
 
                 T* outRowBase = outP.ptr<T>( p * outH + oy );
 
-                std::vector<float> hbufbuf(inW + 3);
-                float* hbuf = hbufbuf.data() + 1;
                 for (int ix = 0; ix < inW; ++ix)
                 {
                     float v0 = static_cast<float>(row0ptr[ix]);
@@ -303,11 +412,11 @@ void resizeBilinear(const Mat &inp, Mat &out,
 
                 for (int ox = 0; ox < outW; ++ox)
                 {
-                    if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
-                        outRowBase[ox] = T(extrapolation_value);
+                    if (tf_crop_and_resize_mode_ && outOfBoundsXptr[ox]) {
+                        outRowBase[ox] = T(extrapolation_value_);
                     } else {
-                        int   xi = x0[ox];
-                        float fx = lx[ox];
+                        int   xi = x0ptr[ox];
+                        float fx = lxptr[ox];
 
                         float left = hbuf[xi];
                         float res  = left + fx * (hbuf[xi + 1] - left);
@@ -340,127 +449,35 @@ void resizeCubic(const Mat &inp, Mat &out,
     CoordTransMode coordMode = parseCoordTransMode(coordTransMode);
     const bool tf_crop_and_resize_mode = (coordMode == CoordTransMode::TF_CROP_AND_RESIZE);
 
-    auto clampInt = [](int v, int lo, int hi) {
-        return v < lo ? lo : (v > hi ? hi : v);
-    };
-
     std::vector<std::array<int,4>> x_id(outW);
     std::vector<std::array<float,4>> x_w (outW);
-    std::vector<bool> outOfBoundsX(outW, false);
-    for (int ox = 0; ox < outW; ++ox)
-    {
-        float src_x = computeSrcGeneric(ox, scaleW, inW, lenX, coordMode, halfPixelCenters, start_x, end_x);
-        int ix = int(std::floor(src_x));
-        float dx = src_x - ix;
-        float sw = 0.f;
-        bool hasOutOfBounds = false;
-        interpolateCubicResize(dx, cubicA, x_w[ox].data());
-        if (!tf_crop_and_resize_mode && !excludeOutside)
-        {
-            for (int k = -1; k <= 2; ++k)
-            {
-                int idx = clampInt(ix + k, 0, inW - 1);
-                x_id[ox][k+1] = idx;
-                sw += x_w[ox][k+1];
-            }
-        }
-        else if (tf_crop_and_resize_mode)
-        {
-            for (int k = -1; k <= 2; ++k)
-            {
-                int idx = ix + k;
-                unsigned valid = (unsigned)idx < (unsigned)inW;
-                x_id[ox][k+1] = valid ? idx : -1;
-                float w = x_w[ox][k+1];
-                float wv = valid ? w : 0.f;
-                x_w[ox][k+1] = wv;
-                sw += wv;
-                hasOutOfBounds |= !valid;
-            }
-        }
-        else
-        {
-            for (int k = -1; k <= 2; ++k)
-            {
-                int idx = ix + k;
-                unsigned valid = (unsigned)idx < (unsigned)inW;
-                x_id[ox][k+1] = valid ? idx : -1;
-                float w = x_w[ox][k+1];
-                float wv = valid ? w : 0.f;
-                x_w[ox][k+1] = wv;
-                sw += wv;
-            }
-        }
-        if (sw != 0.f)
-            for (int k = 0; k < 4; ++k)
-                x_w[ox][k] /= sw;
-        if (tf_crop_and_resize_mode && hasOutOfBounds) {
-            outOfBoundsX[ox] = true;
-        }
-    }
+    std::vector<uint8_t> outOfBoundsX(outW);
+    buildCubicIndexAndWeights(x_id, x_w, outOfBoundsX,
+                              outW, inW, scaleW, lenX, start_x, end_x,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode,
+                              excludeOutside, cubicA);
 
     std::vector<std::array<int,4>> y_id(outH);
     std::vector<std::array<float,4>> y_w (outH);
-    std::vector<bool> outOfBoundsY(outH, false);
-    for (int oy = 0; oy < outH; ++oy)
-    {
-        float src_y = computeSrcGeneric(oy, scaleH, inH, lenY, coordMode, halfPixelCenters, start_y, end_y);
-        int iy = int(std::floor(src_y));
-        float dy = src_y - iy;
-        float swy = 0.f;
-        bool hasOutOfBounds = false;
-        interpolateCubicResize(dy, cubicA, y_w[oy].data());
-        if (!tf_crop_and_resize_mode && !excludeOutside)
-        {
-            for (int k = -1; k <= 2; ++k)
-            {
-                int idy = clampInt(iy + k, 0, inH - 1);
-                y_id[oy][k+1] = idy;
-                swy += y_w[oy][k+1];
-            }
-        }
-        else if (tf_crop_and_resize_mode)
-        {
-            for (int k = -1; k <= 2; ++k)
-            {
-                int idy = iy + k;
-                unsigned valid = (unsigned)idy < (unsigned)inH;
-                y_id[oy][k+1] = valid ? idy : -1;
-                float w = y_w[oy][k+1];
-                float wv = valid ? w : 0.f;
-                y_w[oy][k+1] = wv;
-                swy += wv;
-                hasOutOfBounds |= !valid;
-            }
-        }
-        else
-        {
-            for (int k = -1; k <= 2; ++k)
-            {
-                int idy = iy + k;
-                unsigned valid = (unsigned)idy < (unsigned)inH;
-                y_id[oy][k+1] = valid ? idy : -1;
-                float w = y_w[oy][k+1];
-                float wv = valid ? w : 0.f;
-                y_w[oy][k+1] = wv;
-                swy += wv;
-            }
-        }
-        if (swy != 0.f)
-            for (int k = 0; k < 4; ++k)
-                y_w[oy][k] /= swy;
-        if (tf_crop_and_resize_mode && hasOutOfBounds) {
-            outOfBoundsY[oy] = true;
-        }
-    }
+    std::vector<uint8_t> outOfBoundsY(outH);
+    buildCubicIndexAndWeights(y_id, y_w, outOfBoundsY,
+                              outH, inH, scaleH, lenY, start_y, end_y,
+                              coordMode, halfPixelCenters, tf_crop_and_resize_mode,
+                              excludeOutside, cubicA);
 
-    const int nstripes = 16;
+    const int nstripes = kResizeNumStripes;
     parallel_for_(Range(0, nstripes), [&](const Range& range) {
         int row0 = range.start * (outH * numPlanes) / nstripes;
         int row1 = range.end   * (outH * numPlanes) / nstripes - 1;
         int plane0 = row0 / outH, plane1 = row1 / outH;
         row0 %= outH;
         row1 %= outH;
+
+        const bool tf_crop_and_resize_mode_ = tf_crop_and_resize_mode;
+        const uint8_t* outOfBoundsYptr = outOfBoundsY.data();
+        const uint8_t* outOfBoundsXptr = outOfBoundsX.data();
+        float extrapolation_value_ = extrapolation_value;
+        std::vector<float> hbuf(inW, 0.f);
 
         for (int p = plane0; p <= plane1; ++p)
         {
@@ -471,44 +488,58 @@ void resizeCubic(const Mat &inp, Mat &out,
             {
                 float* outRow = outPlanes.ptr<float>(p * outH) + oy * outW;
 
-                if (tf_crop_and_resize_mode && outOfBoundsY[oy]) {
+                if (tf_crop_and_resize_mode_ && outOfBoundsYptr[oy]) {
                     for (int ox = 0; ox < outW; ++ox)
-                        outRow[ox] = extrapolation_value;
+                        outRow[ox] = extrapolation_value_;
                     continue;
                 }
 
-                std::vector<float> hbuf(inW, 0.f);
+                const float w0y = y_w[oy][0];
+                const float w1y = y_w[oy][1];
+                const float w2y = y_w[oy][2];
+                const float w3y = y_w[oy][3];
+
+                int yy0, yy1, yy2, yy3;
+                yy0 = y_id[oy][0];
+                yy1 = y_id[oy][1];
+                yy2 = y_id[oy][2];
+                yy3 = y_id[oy][3];
+
+                const float* ptr0 = (yy0 >= 0) ? (inpBase + (size_t)yy0 * inW) : nullptr;
+                const float* ptr1 = (yy1 >= 0) ? (inpBase + (size_t)yy1 * inW) : nullptr;
+                const float* ptr2 = (yy2 >= 0) ? (inpBase + (size_t)yy2 * inW) : nullptr;
+                const float* ptr3 = (yy3 >= 0) ? (inpBase + (size_t)yy3 * inW) : nullptr;
+
                 for (int ix = 0; ix < inW; ++ix)
                 {
                     float v = 0.f;
-                    bool hasValid = false;
-                    for (int ky = 0; ky < 4; ++ky)
-                    {
-                        int yy = y_id[oy][ky];
-                        if (yy < 0) continue;
-                        const float* row = inpBase + yy * inW;
-                        v += y_w[oy][ky] * row[ix];
-                        hasValid = true;
-                    }
-                    hbuf[ix] = hasValid ? v : 0.f;
+                    if (ptr0) v += ptr0[ix] * w0y;
+                    if (ptr1) v += ptr1[ix] * w1y;
+                    if (ptr2) v += ptr2[ix] * w2y;
+                    if (ptr3) v += ptr3[ix] * w3y;
+                    hbuf[ix] = v;
                 }
 
                 for (int ox = 0; ox < outW; ++ox)
                 {
-                    if (tf_crop_and_resize_mode && outOfBoundsX[ox]) {
-                        outRow[ox] = extrapolation_value;
+                    if (tf_crop_and_resize_mode_ && outOfBoundsXptr[ox]) {
+                        outRow[ox] = extrapolation_value_;
                         continue;
                     }
+                    const int xx0 = x_id[ox][0];
+                    const int xx1 = x_id[ox][1];
+                    const int xx2 = x_id[ox][2];
+                    const int xx3 = x_id[ox][3];
+                    const float w0x = x_w[ox][0];
+                    const float w1x = x_w[ox][1];
+                    const float w2x = x_w[ox][2];
+                    const float w3x = x_w[ox][3];
                     float val = 0.f;
-                    bool hasValid = false;
-                    for (int kx = 0; kx < 4; ++kx)
-                    {
-                        int xx = x_id[ox][kx];
-                        if (xx < 0) continue;
-                        val += x_w[ox][kx] * hbuf[xx];
-                        hasValid = true;
-                    }
-                    outRow[ox] = hasValid ? val : 0.f;
+                    if (xx0 >= 0) val += hbuf[xx0] * w0x;
+                    if (xx1 >= 0) val += hbuf[xx1] * w1x;
+                    if (xx2 >= 0) val += hbuf[xx2] * w2x;
+                    if (xx3 >= 0) val += hbuf[xx3] * w3x;
+                    outRow[ox] = val;
                 }
             }
         }
@@ -539,7 +570,7 @@ public:
         }
         interpolation = params.get<String>("interpolation");
         // Keep nearest_mode if provided (ONNX attribute). Default is "round_prefer_floor" as per ONNX spec.
-        nearestMode = params.get<String>("nearest_mode", "round_prefer_floor");
+        nearestModeE = parseNearestMode(params.get<String>("nearest_mode", "round_prefer_floor"));
         CV_Check(interpolation, interpolation == "nearest" || interpolation == "opencv_linear" || interpolation == "bilinear" || interpolation == "cubic", "");
 
         excludeOutside = params.get<bool>("exclude_outside", false);
@@ -805,12 +836,12 @@ public:
             switch(depth){
             case CV_8S:
             case CV_8U:
-                resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<int8_t>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             case CV_16F:
             case CV_16BF:
             case CV_32F:
-                resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestMode,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
+                resizeNearest<float>(inp,out,scaleHeight,scaleWidth,length_resized_y,length_resized_x,nearestModeE,coordTransMode,halfPixelCenters,roi_start_y,roi_end_y,roi_start_x,roi_end_x,extrapolation_value);
                 break;
             default: CV_Error(Error::StsUnsupportedFormat,"Nearest supports only CV_8S & CV_32F");
             }
@@ -994,7 +1025,7 @@ protected:
     bool halfPixelCenters;
     String coordTransMode;
     CoordTransMode coordTransModeE;
-    String nearestMode;  // ONNX "nearest_mode" attribute
+    NearestMode nearestModeE;  // ONNX "nearest_mode" attribute
     bool excludeOutside; // ONNX attribute for cubic
     float cubicCoeffA;
     float roi_start_y, roi_end_y, roi_start_x, roi_end_x;
