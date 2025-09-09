@@ -44,11 +44,7 @@
 "test_compress_1", // ---- same as above ---
 "test_compress_default_axis", // ---- same as above ---
 "test_compress_negative_axis", // ---- same as above ---
-"test_constant",  // Issue::Wrong output
-"test_constant_pad",  // Issue:: Unkonwn error
-"test_constantofshape_float_ones", // Issue::Parser::Weights are required as inputs
 "test_constantofshape_int_shape_zero", // Issue::Parser::Weights are required as inputs
-"test_constantofshape_int_zeros", // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding", // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convinteger_without_padding", //Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
 "test_convtranspose", // Issue::Parser::Weights are required as inputs
@@ -69,7 +65,6 @@
 "test_dynamicquantizelinear_max_adjusted_expanded",  // ---- same as above ---
 "test_dynamicquantizelinear_min_adjusted",  // ---- same as above ---
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
-"test_edge_pad", // Issue::Parser::Weights are required as inputs
 "test_einsum_inner_prod", // Issue::Output shape does not match with reference
 "test_elu_default_expanded_ver18",
 "test_elu_example_expanded_ver18",
@@ -93,10 +88,6 @@
 "test_loop11", // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_loop13_seq", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_loop16_seq_none", // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
-"test_lstm_batchwise", // Issues::Parser:: !name.empty() && constBlobs.count(name) == 1 in function 'parseLSTM'
-"test_lstm_defaults", // ---- same as above ---
-"test_lstm_with_initial_bias", // ---- same as above ---
-"test_lstm_with_peepholes", // ---- same as above ---
 "test_matmulinteger", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!Y" of type "MatMulInteger" in function 'getLayerInstance'
 "test_momentum", // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple", // ---- same as above ---
@@ -150,15 +141,6 @@
 "test_optional_get_element_sequence", // ---- same as above ---
 "test_optional_has_element", // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_optional_has_element_empty", // ---- same as above ---
-"test_pow_types_float", // Issue:: Unsupported data type
-"test_pow_types_float32_int32", // ---- same as above ---
-"test_pow_types_float32_int64", // ---- same as above ---
-"test_pow_types_float32_uint32", // ---- same as above ---
-"test_pow_types_float32_uint64", // ---- same as above ---
-"test_pow_types_int", // Issue:: Unsupported data type
-"test_pow_types_int32_float32", // ---- same as above ---
-"test_pow_types_int32_int32", // ---- same as above ---
-"test_pow_types_int64_float32", // ---- same as above ---
 "test_prelu_broadcast", // Issue::Parser:Blob slope not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_prelu_example", // ---- same as above ---
 "test_qlinearconv", // Issue::Parser:  Blob x_scale not found in const blobs in function 'getBlob' (weights are required as inputs)
@@ -176,7 +158,6 @@
 "test_reduce_sum_keepdims_random", // ---- same as above ---
 "test_reduce_sum_negative_axes_keepdims_example",
 "test_reduce_sum_negative_axes_keepdims_random", // ---- same as above ---
-"test_reflect_pad", // Issue:: Parser:  Blob shape not found in const blobs in function 'getBlob' (weights are required as inputs)
 "test_reshape_allowzero_reordered", // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 "test_resize_downsample_scales_cubic",  // Issue:: Parser: layer_id.find(node_proto.input(i)) == layer_id.end() in function 'parseResize'
 "test_resize_downsample_scales_cubic_A_n0p5_exclude_outside", // ---- same as above ---

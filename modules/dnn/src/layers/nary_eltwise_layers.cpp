@@ -33,6 +33,7 @@ static int _mod(int x, int y) {
     }
     return res;
 }
+
 }
 
 class NaryEltwiseHelper CV_FINAL
@@ -361,12 +362,33 @@ public:
         }
 
         if (op == OPERATION::POW) {
-            /*
-                First input: exponent of Type T;
-                Second input: power of the exponent of Type T1;
-                Output: same type T as first input's.
-            */
-            outputs.assign(1, inputs.front());
+            CV_Assert(inputs.size() == 2);
+            auto isIntegerType = [](int t) {
+                return t == CV_8S || t == CV_8U || t == CV_16S || t == CV_16U || t == CV_32S || t == CV_32U || t == CV_64S || t == CV_64U;
+            };
+            auto isFloatType = [](int t) {
+                return t == CV_32F || t == CV_64F || t == CV_16F || t == CV_16BF;
+            };
+
+            int out_type;
+            const bool baseIsInt   = isIntegerType(inputs[0]);
+            const bool expIsInt    = isIntegerType(inputs[1]);
+            const bool baseIsFloat = isFloatType(inputs[0]);
+            const bool expIsFloat  = isFloatType(inputs[1]);
+
+            if ((baseIsInt && expIsInt) || (baseIsFloat && expIsFloat))
+            {
+                out_type = (inputs[0] == inputs[1]) ? inputs[0] : CV_32F;
+            }
+            else if (baseIsFloat != expIsFloat)
+            {
+                out_type = inputs[0];
+            }
+            else
+            {
+                out_type = CV_32F;
+            }
+            outputs.assign(1, out_type);
             return;
         }
 
@@ -766,8 +788,22 @@ public:
             return;
         }
 
-        int type_for_dispatch = op == OPERATION::WHERE ? outputs.front().type() : inputs.front().type();
-        typeDispatch(type_for_dispatch, inputs.size(), inputs, outputs);
+        std::vector<Mat> used_inputs = inputs;
+        if (op == OPERATION::POW) {
+            CV_Assert(used_inputs.size() == 2);
+            const int out_type = outputs[0].type();
+            if (used_inputs[0].type() != out_type || used_inputs[1].type() != out_type) {
+                Mat a_conv, b_conv;
+                used_inputs[0].convertTo(a_conv, out_type);
+                used_inputs[1].convertTo(b_conv, out_type);
+                used_inputs = {a_conv, b_conv};
+                helper.init(used_inputs, outputs);
+                CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+            }
+        }
+
+        int type_for_dispatch = (op == OPERATION::WHERE || op == OPERATION::POW) ? outputs.front().type() : used_inputs.front().type();
+        typeDispatch(type_for_dispatch, used_inputs.size(), used_inputs, outputs);
     }
 
     template<typename T, typename... Args>
@@ -801,7 +837,7 @@ public:
                     break;
                 }
                 case OPERATION::POW: {
-                    auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
+                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)a, (double)b)); };
                     binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
                     break;
                 }
@@ -943,6 +979,11 @@ public:
                 CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
                           op != OPERATION::OR && op != OPERATION::XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
+                break;
+            case CV_64F:
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
+                          op != OPERATION::OR && op != OPERATION::XOR);
+                opDispatch<double>(std::forward<Args>(args)...);
                 break;
             case CV_16S:
                 opDispatch<int16_t>(std::forward<Args>(args)...);
