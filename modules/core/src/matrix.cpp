@@ -1439,23 +1439,28 @@ void Mat::reserve(size_t nelems)
     const size_t MIN_SIZE = 64;
 
     CV_Assert( (int)nelems >= 0 );
-    if( !isSubmatrix() && data + step.p[0]*nelems <= datalimit )
+    if( !isSubmatrix() && step.p[0] != 0 && data + step.p[0]*nelems <= datalimit )
         return;
 
     int r = size.p[0];
-
-    if( (size_t)r >= nelems )
+    if( (size_t)r >= nelems)
         return;
 
-    size.p[0] = rows = std::max((int)nelems, 1);
-    size_t newsize = total()*elemSize();
+    MatShape newsize = size;
+    size_t esz = elemSize();
+    newsize.dims = std::max(newsize.dims, 1);
+    if (dims > 1 && r == 0 && step.p[0] == 0) {
+        step.p[0] = size.p[1] * (dims == 2 ? esz : step.p[1]);
+    }
+    newsize.p[0] = (int)nelems;
+    size_t newbytes = newsize.total() * esz;
+    if (newbytes < MIN_SIZE) {
+        newsize.p[0] = 1;
+        newsize.p[0] = int(MIN_SIZE / newsize.total() / esz);
+    }
 
-    if( newsize < MIN_SIZE )
-        size.p[0] = (int)((MIN_SIZE + newsize - 1)*nelems/newsize);
-
-    Mat m(dims, size.p, type());
-    size.p[0] = r;
-    if( r > 0 )
+    Mat m(newsize, type());
+    if( r > 0)
     {
         Mat mpart = m.rowRange(0, r);
         copyTo(mpart);
@@ -1463,6 +1468,7 @@ void Mat::reserve(size_t nelems)
 
     *this = m;
     size.p[0] = r;
+
     if (dims == 2)
         rows = size.p[0];
     else if (dims == 1)
@@ -1500,8 +1506,8 @@ void Mat::reserveBuffer(size_t nbytes)
 
 void Mat::resize(size_t nelems)
 {
-    int saveRows = size.p[0];
-    if( saveRows == (int)nelems )
+    int r = size.p[0];
+    if( r == (int)nelems )
         return;
     CV_Assert( (int)nelems >= 0 );
 
@@ -1513,7 +1519,7 @@ void Mat::resize(size_t nelems)
         rows = size.p[0];
     else if (dims == 1)
         cols = size.p[0];
-    dataend += (size.p[0] - saveRows)*step.p[0];
+    dataend += (size.p[0] - r)*(int64_t)step.p[0];
 
     //updateContinuityFlag(*this);
 }
@@ -1548,6 +1554,7 @@ void Mat::push_back(const Mat& elems)
         *this = elems.clone();
         return;
     }
+    CV_Assert(dims > 0);
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
@@ -1556,8 +1563,15 @@ void Mat::push_back(const Mat& elems)
         CV_Error(cv::Error::StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
         CV_Error(cv::Error::StsUnmatchedFormats, "Pushed vector type is not the same as matrix type");
+    size_t esz = elemSize();
+    size_t minstep = dims <= 1 ? esz : size.p[1] * (dims == 2 ? esz : step.p[1]);
+    size_t step0 = step.p[0];
+    if (step0 < minstep) {
+        if (size.p[0] <= 1)
+            step.p[0] = step0 = minstep;
+    }
 
-    if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
+    if( isSubmatrix() || dataend + step0*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
 
     size.p[0] += int(delta);
@@ -1565,12 +1579,12 @@ void Mat::push_back(const Mat& elems)
         rows = size.p[0];
     else if (dims == 1)
         cols = size.p[0];
-    dataend += step.p[0]*delta;
+    dataend += step0*delta;
 
     //updateContinuityFlag(*this);
 
     if( isContinuous() && elems.isContinuous() )
-        memcpy(data + r*step.p[0], elems.data, elems.total()*elems.elemSize());
+        memcpy(data + r*step0, elems.data, elems.total()*elems.elemSize());
     else
     {
         Mat part = rowRange(int(r), int(r + delta));
