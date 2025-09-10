@@ -28,10 +28,7 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     version_constant = root.add_constant("__version__", "<unused>")
     version_constant._value_type = "str"
 
-    # Apply global Scalar typing adjustments:
-    # - Returns of Scalar become tuple[float, float, float, float]
-    # - Add float overloads for any functions that accept Scalar arguments
-    apply_scalar_typing_rules(root)
+    convert_returned_scalar_to_tuple(root)
 
     """
     def redirectError(
@@ -131,63 +128,28 @@ def make_optional_arg(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], 
     return _make_optional_arg
 
 
-def _is_scalar_type_node(t: TypeNode) -> bool:
-    # Handle Optional[...] wrapping
-    if isinstance(t, OptionalTypeNode):
-        return _is_scalar_type_node(cast(OptionalTypeNode, t).items[0])  # type: ignore
-    name = getattr(t, 'ctype_name', '') or ''
-    tname = getattr(t, 'typename', '') or ''
-    return name == 'Scalar' or tname == 'Scalar' or t.full_typename.endswith('.Scalar')
+def convert_returned_scalar_to_tuple(root: NamespaceNode) -> None:
+    """Force `tuple[float, float, float, float]` usage instead of Scalar alias
+    for return types due to `pyopencv_from` specialization for Scalar type.
+    """
 
+    float_4_tuple_node = TupleTypeNode(
+        "ScalarOutput",
+        items=(PrimitiveTypeNode.float_(),) * 4
+    )
 
-def apply_scalar_typing_rules(root: NamespaceNode) -> None:
-    def process_function(fn: FunctionNode) -> None:
-        # 1) Narrow return type if it's Scalar -> tuple[float, float, float, float]
-        new_ret_tuple = TupleTypeNode('ScalarReturn', (
-            PrimitiveTypeNode.float_(),
-            PrimitiveTypeNode.float_(),
-            PrimitiveTypeNode.float_(),
-            PrimitiveTypeNode.float_(),
-        ))
-        for i, ol in enumerate(list(fn.overloads)):
-            if ol.return_type is not None and _is_scalar_type_node(ol.return_type.type_node):
-                # Replace return type in-place
-                ol.return_type.type_node = new_ret_tuple
-                fn.overloads[i] = FunctionNode.Overload(ol.arguments, ol.return_type)
+    def fix_scalar_return_type(fn: FunctionNode.Overload):
+        if fn.return_type is None:
+            return
+        if fn.return_type.type_node.typename == "Scalar":
+            fn.return_type.type_node = float_4_tuple_node
 
-        # 2) Add float overloads for any Scalar-typed parameters
-        add_overloads: list[FunctionNode.Overload] = []
-        for ol in fn.overloads:
-            has_scalar_arg = False
-            modified_args: list[FunctionNode.Arg] = []
-            for a in ol.arguments:
-                t = a.type_node
-                if t is not None and _is_scalar_type_node(t):
-                    t = PrimitiveTypeNode.float_()
-                    has_scalar_arg = True
-                modified_args.append(FunctionNode.Arg(a.name, t, a.default_value))
-            if has_scalar_arg:
-                add_overloads.append(FunctionNode.Overload(tuple(modified_args), ol.return_type))
-        for args, ret in add_overloads:
-            fn.add_overload(list(args), ret)
+    for overload in for_each_function_overload(root):
+        fix_scalar_return_type(overload)
 
-    def process_class(cls):
-        """Process functions in a class and recurse into nested classes."""
-        for fn in cls.functions.values():
-            process_function(fn)
-        # Recurse into nested classes
-        for nested_cls in cls.classes.values():
-            process_class(nested_cls)
-    
-    def process_namespace(ns: NamespaceNode) -> None:
-        for fn in ns.functions.values():
-            process_function(fn)
-        for cls in ns.classes.values():
-            process_class(cls)
-        for child_ns in ns.namespaces.values():
-            process_namespace(child_ns)
-
-    process_namespace(root)
+    for ns in root.namespaces.values():
+        for overload in for_each_function_overload(ns):
+            fix_scalar_return_type(overload)
 
 
 def refine_cuda_module(root: NamespaceNode) -> None:

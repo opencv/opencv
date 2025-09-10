@@ -55,9 +55,10 @@ _PREDEFINED_TYPES = (
                             doc="Required length is 2"),
     AliasTypeNode.sequence_("Size2f", PrimitiveTypeNode.float_(),
                             doc="Required length is 2"),
-    AliasTypeNode.sequence_(
+    AliasTypeNode.union_(
         "Scalar",
-        PrimitiveTypeNode.float_(),
+        items=(SequenceTypeNode("Scalar", PrimitiveTypeNode.float_()),
+               PrimitiveTypeNode.float_()),
         doc="Max sequence length is at most 4"
     ),
     AliasTypeNode.sequence_("Point", PrimitiveTypeNode.int_(),
