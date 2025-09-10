@@ -28,6 +28,8 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     version_constant = root.add_constant("__version__", "<unused>")
     version_constant._value_type = "str"
 
+    convert_returned_scalar_to_tuple(root)
+
     """
     def redirectError(
         onError: Callable[[int, str, str, str, int], None] | None
@@ -124,6 +126,30 @@ def make_optional_arg(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], 
                 )
 
     return _make_optional_arg
+
+
+def convert_returned_scalar_to_tuple(root: NamespaceNode) -> None:
+    """Force `tuple[float, float, float, float]` usage instead of Scalar alias
+    for return types due to `pyopencv_from` specialization for Scalar type.
+    """
+
+    float_4_tuple_node = TupleTypeNode(
+        "ScalarOutput",
+        items=(PrimitiveTypeNode.float_(),) * 4
+    )
+
+    def fix_scalar_return_type(fn: FunctionNode.Overload):
+        if fn.return_type is None:
+            return
+        if fn.return_type.type_node.typename == "Scalar":
+            fn.return_type.type_node = float_4_tuple_node
+
+    for overload in for_each_function_overload(root):
+        fix_scalar_return_type(overload)
+
+    for ns in root.namespaces.values():
+        for overload in for_each_function_overload(ns):
+            fix_scalar_return_type(overload)
 
 
 def refine_cuda_module(root: NamespaceNode) -> None:
