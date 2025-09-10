@@ -163,6 +163,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 
+    std::vector<int> vec() const;
     std::string str() const;
 
     int dims;
@@ -1619,8 +1620,7 @@ public:
     CV_NODISCARD_STD static MatExpr zeros(int ndims, const int* sz, int type);
 
     /** @overload
-    @param ndims Array dimensionality.
-    @param sz Array of integers specifying the array shape.
+    @param shape Array shape.
     @param type Created matrix type.
     */
     CV_NODISCARD_STD static MatExpr zeros(const MatShape& shape, int type);
@@ -1657,8 +1657,7 @@ public:
     CV_NODISCARD_STD static MatExpr ones(int ndims, const int* sz, int type);
 
     /** @overload
-    @param ndims Array dimensionality.
-    @param sz Array of integers specifying the array shape.
+    @param shape Array shape.
     @param type Created matrix type.
     */
     CV_NODISCARD_STD static MatExpr ones(const MatShape& shape, int type);

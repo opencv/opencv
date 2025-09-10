@@ -191,6 +191,13 @@ size_t MatShape::total() const
     return result;
 }
 
+std::vector<int> MatShape::vec() const
+{
+    if (dims < 0)
+        return std::vector<int>(1, 0);
+    return std::vector<int>(p, p + dims);
+}
+
 std::string MatShape::str() const
 {
     std::stringstream sstrm;
