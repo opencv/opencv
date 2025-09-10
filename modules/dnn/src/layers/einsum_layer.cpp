@@ -232,7 +232,7 @@ Mat Diagonal(const Mat& input, int dim1, int dim2)
             }
         }
 
-        // Permutate the input so that the dims from which we need the diagonal forms the innermost dims
+        // Permute the input so that the dims from which we need the diagonal form the innermost dims
         Mat transposed = Transpose(input, input_dims, permutation);
 
         // Parse the diagonal from the innermost dims
@@ -246,7 +246,7 @@ Mat Diagonal(const Mat& input, int dim1, int dim2)
             reverse_permutation[perm] = iter++;
         }
 
-        // Permutate using the reverse permutation to get back the original axes ordering
+        // Permute using the reverse permutation to get back the original axes ordering
         // (Pass in CPU Transpose function here as this Diagonal method will only be used for CPU based diagonal parsing)
         output = Transpose(output, shape(output), reverse_permutation);
     } else {
@@ -299,19 +299,19 @@ public:
     // Preprocessed inputs
     std::vector<Mat> preProcessedInputs;
 
-    // This is container for preporcessed inputs
+    // This container holds preprocessed inputs
     std::vector<MatShape> homogenizedInputDims;
 
-    // Collect outpus dimentions
-    MatShape einsumOutDims; // vector to store output dimentions
+    // Collect output dimensions
+    MatShape einsumOutDims; // vector to store output dimensions
 
-    // These hold equation subring, left hand side and right it of
+    // These hold equation substrings: the left-hand side, right-hand side, and the full equation
     String lhs_eq, rhs_eq, equation;
 
-    // Holds token from left hand side of the equation
+    // Holds tokens from the left-hand side of the equation
     std::vector<String> lhs_eq_tokens;
 
-    // Idicates if equation substring is defined in explit way such as "ij, jk->ik"
+    // Indicates if the equation substring is defined in an explicit way such as "ij, jk->ik"
     // as opposed to "ij->"
     bool explicitEquation = false;
 
@@ -330,14 +330,14 @@ public:
     // A value of -1 means the corresponding subscript index is not found in the output
     std::vector<int> subscriptIndicesToOutputIndices;
 
-    // Hold max number of alphabetic numbers
+    // Holds the max number of alphabetic characters
     static const size_t numOfLetters = 52;
 
     // Stores the count corresponding to each letter encountered
     // A value of `0` indicates that the corresponding letter hasn't been seen at all
     std::array<int, numOfLetters> letter2count;
 
-    // Hold the assigned index corresponding to the letter seen
+    // Holds the assigned index corresponding to the letter seen
     // `-1` means the corresponding letter wasn't seen at all
     std::array<int, numOfLetters> letter2index;
 
@@ -363,7 +363,7 @@ public:
     void calculateOutputShape();
     void preProcessInputs(InputArrayOfArrays& inputs);
     Mat reduceSum(Mat& src, MatShape& reduceAxis);
-    Mat FinalizeOutput(const Mat& candidateOuput, const MatShape& ordered_subscript_indices_in_candidate);
+    Mat FinalizeOutput(const Mat& candidateOutput, const MatShape& ordered_subscript_indices_in_candidate);
     Mat pairwiseOperandProcess(
         const Mat& left,
         const MatShape& leftShapeOverride,
@@ -410,8 +410,8 @@ public:
         letter2count.fill(0);
         letter2index.fill(-1);
 
-        // parser equation and extract tokens from the equation
-        // save token to lhs_eq_tokens variable
+        // parse equation and extract tokens from the equation
+        // save tokens to lhs_eq_tokens vector
         parseEquation(equation); // TODO: return lhs_eq_tokens
     }
 
@@ -420,7 +420,7 @@ public:
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    // getMeoryShapes
+    // getMemoryShapes
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -456,7 +456,7 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
-        CV_CheckEQ((size_t)inputs_arr.total(), (size_t)numInputs, "Number of inputs in forward and inputs during graph constructions do not match");
+        CV_CheckEQ((size_t)inputs_arr.total(), (size_t)numInputs, "Number of inputs in forward and inputs during graph construction do not match");
 
         if (inputs_arr.depth() == CV_16F)
         {
@@ -546,14 +546,14 @@ public:
             }
         }
 
-        // check of product of output dimentions and computed output dimentions match
+        // check that product of output dimensions and computed output dimensions match
         size_t reqProd = std::accumulate(einsumOutDims.begin(), einsumOutDims.end(), 1, std::multiplies<int>());
         MatShape realOutputDims = shape(result);
         size_t realProd = std::accumulate(realOutputDims.begin(), realOutputDims.end(), 1, std::multiplies<int>());
 
         CV_CheckEQ(reqProd, realProd, "Real output can not be shaped in to required output");
 
-        // reduce dimentions
+        // reduce dimensions
         result = result.reshape(1, einsumOutDims.size(), einsumOutDims.data());
         result.copyTo(outputs[0]);
     } // forward
@@ -630,20 +630,20 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         // same axes order
         MatShape homogenizedInputDims_(numLetterIndices, 1);
 
-        int dimIndexInIreprocessedInput = 0;
+        int dimIndexInPreprocessedInput = 0;
         int dimIndexInOriginalInput = 0;
 
         for (const auto& subscriptIndex : currSubscriptIndices)
         {
             if(subscriptIndicesToInputIndex[subscriptIndex] == -1){
-                subscriptIndicesToInputIndex[subscriptIndex] = dimIndexInIreprocessedInput++;
+                subscriptIndicesToInputIndex[subscriptIndex] = dimIndexInPreprocessedInput++;
                 homogenizedInputDims_[subscriptIndex] = input_dims[dimIndexInOriginalInput];
             } else {
                 // Call diagonal
                 preprocessed = Diagonal(
                     !preprocessed.empty() ? preprocessed : inputs[inputIter],
                     subscriptIndicesToInputIndex[subscriptIndex],
-                    dimIndexInIreprocessedInput);
+                    dimIndexInPreprocessedInput);
             }
             ++dimIndexInOriginalInput;
         }
@@ -686,7 +686,7 @@ void LayerEinsumImpl::parseEquation(String equation)
     std::size_t arrow_idx = equation.find("->");
     if (arrow_idx != std::string::npos)
     {
-        // split left and righ hand sides of the equation
+        // split left- and right-hand sides of the equation
         lhs_eq = equation.substr(0, arrow_idx);
         rhs_eq = equation.substr(arrow_idx + 2);
         explicitEquation = true;
@@ -762,7 +762,7 @@ void LayerEinsumImpl::calculateOutputShape()
             CV_CheckNE(letterIndex, -1,
                 "The only permissible subscript labels are lowercase letters (a-z) and uppercase letters (A-Z).");
             CV_CheckEQ(outputLetterToCount[letterIndex], 0,
-                "Output subscript constains repeated letters");
+                "Output subscript contains repeated letters");
 
             ++outputLetterToCount[letterIndex];
             auto mappedIndex = letter2index[letterIndex];
@@ -770,7 +770,7 @@ void LayerEinsumImpl::calculateOutputShape()
             CV_CheckNE(mappedIndex, -1,
                 "Output subscript has letters that were not encountered in the inputs");
 
-            // Push output dimention
+            // Push output dimension
             // Einsum layer only has one output vector
             einsumOutDims.emplace_back(subscriptIndicesToDimValue[mappedIndex]);
 
@@ -797,7 +797,7 @@ void LayerEinsumImpl::validateOutputSubscript()
             if(rhs_eq.find("...") == std::string::npos)
             {
                 CV_Error(Error::StsError,
-                "Provided output subscript does not include ellipsis while Inputs subscrits constain ellipsis");
+                "Provided output subscript does not include ellipsis while input subscripts contain ellipsis");
             }
         }
     }
@@ -1006,7 +1006,7 @@ void LayerEinsumImpl::processEquation(const std::vector<MatShape>& inputs)
                             CV_Error(Error::StsError, cv::format("Einsum operands can not be broadcasted."
                                                                 "Check input shapes/equation passed."
                                                                 "Input shape of operand [%d]", inputIdx) +
-                                                    cv::format(" is incompatible in the dimention [%zu].", static_cast<size_t>(dim_count)));
+                                                    cv::format(" is incompatible in the dimension [%zu].", static_cast<size_t>(dim_count)));
                         }
                     }
                 }
@@ -1113,7 +1113,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     Mat currentLeft;
     Mat currentRight;
 
-    CV_CheckEQ(leftRank, rightRank, "Raks of pair-wise operands must be equal");
+    CV_CheckEQ(leftRank, rightRank, "Ranks of pair-wise operands must be equal");
 
     // Following vectors hold:
     // lro: dim indices that are present in left, right, and reduce_dims
@@ -1192,7 +1192,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
     }
 
 
-    // Permutate the left operand so that the axes order go like this: [lro, lo, reduce_dims, ro]
+    // Permute the left operand so that the axes order go like this: [lro, lo, reduce_dims, ro]
     MatShape reshaped_dims;
     std::vector<size_t> left_permutation;
     left_permutation.reserve(lro.size() + lo.size() + reduceDims.size() + ro.size());
@@ -1225,7 +1225,7 @@ Mat LayerEinsumImpl::pairwiseOperandProcess(
         }
     }
 
-    // Permutate the right operand so that the axes order go like this: [lro, reduce_dims, ro, lo]
+    // Permute the right operand so that the axes order go like this: [lro, reduce_dims, ro, lo]
     std::vector<size_t> right_permutation;
     right_permutation.reserve(lro.size() + lo.size() + reduceDims.size() + ro.size());
     right_permutation.insert(right_permutation.end(), lro.begin(), lro.end());

@@ -119,6 +119,7 @@ enum ImwriteFlags {
        IMWRITE_JPEGXL_EFFORT       = 641,//!< For JPEG XL, encoder effort/speed level without affecting decoding speed; it is between 1 (fastest) and 10 (slowest). Default is 7.
        IMWRITE_JPEGXL_DISTANCE     = 642,//!< For JPEG XL, distance level for lossy compression: target max butteraugli distance, lower = higher quality, 0 = lossless; range: 0 .. 25. Default is 1.
        IMWRITE_JPEGXL_DECODING_SPEED = 643,//!< For JPEG XL, decoding speed tier for the provided options; minimum is 0 (slowest to decode, best quality/density), and maximum is 4 (fastest to decode, at the cost of some quality/density). Default is 0.
+       IMWRITE_BMP_COMPRESSION     = 768,  //!< For BMP, use to specify compress parameter for 32bpp image. Default is IMWRITE_BMP_COMPRESSION_BITFIELDS. See cv::ImwriteBMPCompressionFlags.
        IMWRITE_GIF_LOOP            = 1024, //!< Not functional since 4.12.0. Replaced by cv::Animation::loop_count.
        IMWRITE_GIF_SPEED           = 1025, //!< Not functional since 4.12.0. Replaced by cv::Animation::durations.
        IMWRITE_GIF_QUALITY         = 1026, //!< For GIF, it can be a quality from 1 to 8. Default is 2. See cv::ImwriteGifCompressionFlags.
@@ -184,7 +185,7 @@ enum ImwriteTiffResolutionUnitFlags {
 };
 
 enum ImwriteEXRTypeFlags {
-       /*IMWRITE_EXR_TYPE_UNIT = 0, //!< not supported */
+       // IMWRITE_EXR_TYPE_UNIT = 0, // not supported
        IMWRITE_EXR_TYPE_HALF   = 1, //!< store as HALF (FP16)
        IMWRITE_EXR_TYPE_FLOAT  = 2  //!< store as FP32 (default)
      };
@@ -245,6 +246,12 @@ enum ImwriteHDRCompressionFlags {
     IMWRITE_HDR_COMPRESSION_RLE = 1
 };
 
+//! Imwrite BMP specific values for IMWRITE_BMP_COMPRESSION parameter key.
+enum ImwriteBMPCompressionFlags {
+    IMWRITE_BMP_COMPRESSION_RGB = 0,       //!< Use BI_RGB. OpenCV v4.12.0 or before supports to encode with this compression only.
+    IMWRITE_BMP_COMPRESSION_BITFIELDS = 3, //!< Use BI_BITFIELDS. OpenCV v4.13.0 or later can support to encode with this compression. (only for 32 BPP images)
+};
+
 //! Imwrite GIF specific values for IMWRITE_GIF_QUALITY parameter key, if larger than 3, then its related to the size of the color table.
 enum ImwriteGIFCompressionFlags {
     IMWRITE_GIF_FAST_NO_DITHER       = 1,
@@ -264,8 +271,9 @@ enum ImageMetadataType
     IMAGE_METADATA_EXIF = 0,     // EXIF metadata (e.g., camera info, GPS, orientation)
     IMAGE_METADATA_XMP = 1,      // XMP metadata (eXtensible Metadata Platform - Adobe format)
     IMAGE_METADATA_ICCP = 2,     // ICC Profile (color profile for color management)
+    IMAGE_METADATA_CICP = 3,     // cICP Profile (video signal type)
 
-    IMAGE_METADATA_MAX = 2       // Highest valid index (usually used for bounds checking)
+    IMAGE_METADATA_MAX = 3       // Highest valid index (usually used for bounds checking)
 };
 
 //! @} imgcodecs_flags
@@ -498,6 +506,11 @@ filename extension (see cv::imread for the list of extensions). In general, only
 single-channel or 3-channel (with 'BGR' channel order) images
 can be saved using this function, with these exceptions:
 
+- With BMP encoder, 8-bit unsigned (CV_8U) images can be saved.
+  - BMP images with an alpha channel can be saved using this function.
+    To achieve this, create an 8-bit 4-channel (CV_8UC4) BGRA image, ensuring the alpha channel is the last component.
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255.
+    OpenCV v4.13.0 or later use BI_BITFIELDS compression as default. See IMWRITE_BMP_COMPRESSION.
 - With OpenEXR encoder, only 32-bit float (CV_32F) images can be saved. More than 4 channels can be saved. (imread can load it then.)
   - 8-bit unsigned (CV_8U) images are not supported.
 - With Radiance HDR encoder, non 64-bit float (CV_64F) images can be saved.

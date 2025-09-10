@@ -410,7 +410,16 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
             if(!ok)
                 return false;
 
-            parallel_for_(range, invoker, threads*4);
+            // Tile height can't be smaller than the radius.
+            // Otherwise, the second tile has mixed top border (pixels from both
+            // inmem and outside should be used), which is not supported in IPP.
+            int maxTiles = (int)iwDst.m_size.height / radius;
+            int numTiles = threads * 4;
+            if (numTiles > maxTiles) {
+                // Keep the tiles number as multiple of threads for the better workload balance.
+                numTiles = (maxTiles / threads) * threads;
+            }
+            parallel_for_(range, invoker, numTiles);
 
             if(!ok)
                 return false;
