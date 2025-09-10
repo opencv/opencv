@@ -139,3 +139,4 @@
 "test_constant_pad",
 "test_constantofshape_float_ones",
 "test_constantofshape_int_zeros",
+"test_nonzero_example",

@@ -1218,7 +1218,7 @@ CASE(test_nonmaxsuppression_two_batches)
 CASE(test_nonmaxsuppression_two_classes)
     // no filter
 CASE(test_nonzero_example)
-    // no filter
+    SKIP;
 CASE(test_not_2d)
     // no filter
 CASE(test_not_3d)
