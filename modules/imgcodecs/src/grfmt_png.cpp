@@ -1630,20 +1630,52 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
     for (size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[i] == IMWRITE_PNG_COMPRESSION)
+        const int value = params[i+1];
+        switch (params[i])
         {
+        case IMWRITE_PNG_COMPRESSION:
             m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-            m_compression_level = params[i + 1];
-            m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
-        }
-        if (params[i] == IMWRITE_PNG_STRATEGY)
-        {
-            m_compression_strategy = params[i + 1];
-            m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
-        }
-        if (params[i] == IMWRITE_PNG_BILEVEL)
-        {
-            m_isBilevel = params[i + 1] != 0;
+            m_compression_level = MIN(MAX(value, 0), Z_BEST_COMPRESSION);
+            if(value != m_compression_level) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, m_compression_level));
+            }
+            break;
+
+        case IMWRITE_PNG_STRATEGY:
+            {
+                switch(value) {
+                    case IMWRITE_PNG_STRATEGY_DEFAULT:
+                    case IMWRITE_PNG_STRATEGY_FILTERED:
+                    case IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY:
+                    case IMWRITE_PNG_STRATEGY_RLE:
+                    case IMWRITE_PNG_STRATEGY_FIXED:
+                        m_compression_strategy = value;
+                        break;
+                    default:
+                        m_compression_strategy = IMWRITE_PNG_STRATEGY_RLE;
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_STRATEGY must be one of ImwritePNGFlags. It is fallbacked to IMWRITE_PNG_STRATEGY_RLE", value));
+                        break;
+                }
+            }
+            break;
+
+        case IMWRITE_PNG_BILEVEL:
+            m_isBilevel = value != 0;
+            if((value != 0) && (value != 1)) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_BILEVEL must be 0 or 1. It is fallbacked to 1", value ));
+            }
+            break;
+
+        case IMWRITE_PNG_FILTER:
+            CV_LOG_WARNING(nullptr, "IMWRITE_PNG_BILEVEL parameter is not supported for APNG");
+            break;
+
+        case IMWRITE_PNG_ZLIBBUFFER_SIZE:
+            CV_LOG_WARNING(nullptr, "IMWRITE_PNG_ZLIBBUFFER_SIZE parameter is not supported for APNG");
+            break;
+
+        default:
+            break;
         }
     }
 
