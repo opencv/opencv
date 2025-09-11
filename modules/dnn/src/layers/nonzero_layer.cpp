@@ -168,6 +168,7 @@ public:
         size_t nnz = 0;
         switch (depth)
         {
+        case CV_Bool:
         case CV_8U:
         case CV_8S:  { nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nstripes, nzcounts); break; }
         case CV_16U:
@@ -178,9 +179,8 @@ public:
         case CV_64S: { nnz = computeNonZeroCountsPerStripe<uint64_t>(X.ptr<uint64_t>(), total, nstripes, nzcounts); break; }
         case CV_32F: { nnz = computeNonZeroCountsPerStripe<float>(X.ptr<float>(), total, nstripes, nzcounts); break; }
         case CV_64F: { nnz = computeNonZeroCountsPerStripe<double>(X.ptr<double>(), total, nstripes, nzcounts); break; }
-        case CV_16F: { nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nstripes, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_16F:
         case CV_16BF:{ nnz = computeNonZeroCountsPerStripe<uint16_t>(X.ptr<uint16_t>(), total, nstripes, nzcounts, [](uint16_t v){ return isNonZeroF16(v); }); break; }
-        case CV_Bool:{ nnz = computeNonZeroCountsPerStripe<uchar>(X.ptr<uchar>(), total, nstripes, nzcounts); break; }
         default:
             CV_Error_(Error::StsError, ("NonZero: Unsupported input depth=%d", depth));
         }
@@ -213,6 +213,7 @@ public:
 
         switch (depth)
         {
+        case CV_Bool:
         case CV_8U:
         case CV_8S:  { emitIndicesStripes<uchar>(X.ptr<uchar>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         case CV_16U:
@@ -223,9 +224,8 @@ public:
         case CV_64S: { emitIndicesStripes<uint64_t>(X.ptr<uint64_t>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         case CV_32F: { emitIndicesStripes<float>(X.ptr<float>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         case CV_64F: { emitIndicesStripes<double>(X.ptr<double>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
-        case CV_16F: { emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, nstripes, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
+        case CV_16F:
         case CV_16BF:{ emitIndicesStripes<uint16_t>(X.ptr<uint16_t>(), total, nstripes, rank, dims, strides, nzstart, y, [](uint16_t v){ return isNonZeroF16(v); }); break; }
-        case CV_Bool:{ emitIndicesStripes<uchar>(X.ptr<uchar>(), total, nstripes, rank, dims, strides, nzstart, y); break; }
         default: break;
         }
 
