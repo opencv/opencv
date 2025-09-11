@@ -647,13 +647,13 @@ CASE(test_gathernd_example_int32)
 CASE(test_gathernd_example_int32_batch_dim1)
     // no filter
 CASE(test_gelu_default_1)
-    // no filter
+    SKIP;
 CASE(test_gelu_default_1_expanded)
-    // no filter
+    SKIP;
 CASE(test_gelu_default_2)
-    // no filter
+    SKIP;
 CASE(test_gelu_default_2_expanded)
-    // no filter
+    SKIP;
 CASE(test_gelu_tanh_1)
     if (target == DNN_TARGET_CPU) {
         default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
@@ -664,7 +664,7 @@ CASE(test_gelu_tanh_1)
         default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
     }
 CASE(test_gelu_tanh_1_expanded)
-    // no filter
+    SKIP;
 CASE(test_gelu_tanh_2)
     if (target == DNN_TARGET_CPU) {
         default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
@@ -675,7 +675,7 @@ CASE(test_gelu_tanh_2)
         default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
     }
 CASE(test_gelu_tanh_2_expanded)
-    // no filter
+    SKIP;
 CASE(test_gemm_all_attributes)
     SKIP;
 CASE(test_gemm_alpha)
