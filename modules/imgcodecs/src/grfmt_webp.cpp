@@ -511,23 +511,26 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
 
     anim_config.anim_params.bgcolor = bgvalue;
     anim_config.anim_params.loop_count = animation.loop_count;
+    anim_config.minimize_size = 0;
 
-    if (params.size() > 1)
+    for(size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[0] == IMWRITE_WEBP_QUALITY)
+        const int value = params[i+1];
+        if (params[i] == IMWRITE_WEBP_QUALITY)
         {
-            config.lossless = 0;
-            config.quality = static_cast<float>(params[1]);
+            config.lossless = 0; // false
+            config.quality = static_cast<float>(value);
             if (config.quality < 1.0f)
             {
                 config.quality = 1.0f;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
             }
-            if (config.quality >= 100.0f)
+            if (config.quality > 100.0f)
             {
-                config.lossless = 1;
+                config.quality = 100.0f;
+                config.lossless = 1; // true
             }
         }
-        anim_config.minimize_size = 0;
     }
 
     std::unique_ptr<WebPAnimEncoder, void (*)(WebPAnimEncoder*)> anim_encoder(

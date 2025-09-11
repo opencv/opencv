@@ -540,8 +540,8 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
             {
                 compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
                 compression_level = MIN(MAX(value, 0), Z_BEST_COMPRESSION);
-                if(value != m_compression_level) {
-                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, m_compression_level));
+                if(value != compression_level) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, compression_level));
                 }
                 set_compression_level = true;
             }
@@ -556,7 +556,7 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                         compression_strategy = value;
                         break;
                     default:
-                        compression_strategy = IMWRITE_PNG_STRATEGY_RLE:
+                        compression_strategy = IMWRITE_PNG_STRATEGY_RLE;
                         CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_STRATEGY must be one of ImwritePNGFlags. It is fallbacked to IMWRITE_PNG_STRATEGY_RLE", value));
                         break;
                 }
