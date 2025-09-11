@@ -15,29 +15,6 @@
 "test_bernoulli_expanded",  // ---- same as above ---
 "test_bernoulli_seed", // ---- same as above ---
 "test_bernoulli_seed_expanded",  // ---- same as above ---
-"test_cast_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
-"test_cast_DOUBLE_to_FLOAT16", // Issue::Unsuppoted data type
-"test_cast_FLOAT16_to_DOUBLE", // Issue::Unsuppoted data type
-"test_cast_FLOAT16_to_FLOAT", // Issue::Unsuppoted data type
-"test_cast_FLOAT_to_BFLOAT16", // Issue::Unsuppoted data type
-"test_cast_FLOAT_to_DOUBLE", // Issue::Unsuppoted data type
-"test_cast_FLOAT_to_FLOAT16", // Issue::Unsuppoted data type
-"test_castlike_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
-"test_castlike_BFLOAT16_to_FLOAT_expanded",  // Issue::Unsuppoted data type
-"test_castlike_DOUBLE_to_FLOAT", // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_DOUBLE_to_FLOAT16", // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_DOUBLE_to_FLOAT16_expanded",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_DOUBLE_to_FLOAT_expanded",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_FLOAT16_to_DOUBLE",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT16_to_DOUBLE_expanded",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT16_to_FLOAT", // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_FLOAT16_to_FLOAT_expanded", // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_FLOAT_to_BFLOAT16", // Issue::Unsuppoted data type
-"test_castlike_FLOAT_to_BFLOAT16_expanded", // Issue::Unsuppoted data type
-"test_castlike_FLOAT_to_DOUBLE", // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_FLOAT_to_DOUBLE_expanded", // Issue::Unsuppoted data type
-"test_castlike_FLOAT_to_FLOAT16", // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_FLOAT_to_FLOAT16_expanded", // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
 "test_castlike_FLOAT_to_STRING",
 "test_castlike_STRING_to_FLOAT", // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
 "test_compress_0", // Issue::Can't create layer "onnx_node_output_0!output" of type "Compress" in function 'getLayerInstance'
