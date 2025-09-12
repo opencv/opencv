@@ -3528,8 +3528,9 @@ TEST_P(MinMaxSupportedMatDepth, minMaxIdx)
 {
     cv::Mat src = cv::Mat::zeros(16,16, CV_MAKETYPE(GetParam(), 1));
     double minV=0.0, maxV=0.0;
-    int minIdx=0, maxIdx=0;
-    EXPECT_NO_THROW(cv::minMaxIdx(src, &minV, &maxV, &minIdx, &maxIdx));
+    int minIdx[2] = {0, 0};
+    int maxIdx[2] = {0, 0};
+    EXPECT_NO_THROW(cv::minMaxIdx(src, &minV, &maxV, minIdx, maxIdx));
 }
 
 INSTANTIATE_TEST_CASE_P(
