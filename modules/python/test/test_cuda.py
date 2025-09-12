@@ -146,7 +146,7 @@ class cuda_test(NewOpenCVTests):
         self.assertEqual(True, hasattr(cv.cuda, 'nonLocalMeans'))
 
     def test_dlpack_GpuMat(self):
-        for dtype in [np.int8, np.uint8, np.int16, np.uint16, np.float16, np.int32, np.float32, np.float64]:
+        for dtype in [np.int8, np.uint8, np.int16, np.uint16, np.float16, np.int32, np.float32, np.float64, np.int64, np.uint32, np.uint64, np.bool_]:
             for channels in [2, 3, 5]:
                 ref = (np.random.random((64, 128, channels)) * 255).astype(dtype)
                 src = cv.cuda_GpuMat()
