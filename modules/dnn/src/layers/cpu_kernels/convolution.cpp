@@ -1853,7 +1853,7 @@ void convBlockMR1_F32(int np, const float* a, const float* b, float *c, const fl
 }
 
 #if CV_SIMD128
-#if !CV_WASM_SIMD
+#if CONV_NR_FP32 > 8
 static inline void convBlock4x24(int np, const float* a, const float* b, float* c, int ldc, bool init_c, const int convMR, const int convNR)
 {
     v_float32x4 c0  = v_setzero_f32(), c1 = c0, c2 = c0, c3 = c0, c4 = c0, c5 = c0;
@@ -2087,7 +2087,7 @@ void convBlock_F32(int np, const float* a, const float* b, float* c, int ldc, bo
     // The possible outLen range is [24, 8~1].
 #if CV_SIMD128
     CV_Assert(convMR == 4);
-#if !CV_WASM_SIMD
+#if CONV_NR_FP32 > 8
     if (outLen > 8 && convNR == 24)
     {
         convBlock4x24(np, a, b, c, ldc, init_c, convMR, convNR);
