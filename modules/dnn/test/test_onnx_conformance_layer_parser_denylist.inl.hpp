@@ -132,7 +132,6 @@
 "test_nonmaxsuppression_suppress_by_IOU_and_scores", // ---- same as above ---
 "test_nonmaxsuppression_two_batches", // ---- same as above ---
 "test_nonmaxsuppression_two_classes", // ---- same as above ---
-"test_nonzero_example", // Issue::Can't create layer "onnx_node_output_0!result" of type "NonZero" in function 'getLayerInstance'
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---
