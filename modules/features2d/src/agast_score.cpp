@@ -90,7 +90,7 @@ void makeAgastOffsets(int pixel[16], int rowStride, AgastFeatureDetector::Detect
         pixel[k] = offsets[k][0] + offsets[k][1] * rowStride;
 }
 
-#if (defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+#if (defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64) || defined(_M_ARM64) || defined(__aarch64__) || defined(__arm__))
 // 16 pixel mask
 template<>
 int agast_cornerScore<AgastFeatureDetector::OAST_9_16>(const uchar* ptr, const int pixel[], int threshold)
@@ -9373,7 +9373,7 @@ int agast_cornerScore<AgastFeatureDetector::AGAST_5_8>(const uchar* ptr, const i
         b_test = (bmin + bmax) / 2;
     }
 }
-#else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+#else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64) || defined(_M_ARM64) || defined(__aarch64__) || defined(__arm__))
 
 
 int agast_tree_search(const uint32_t table_struct32[], int pixel_[], const unsigned char* const ptr, int threshold)
@@ -9858,6 +9858,6 @@ int agast_cornerScore<AgastFeatureDetector::OAST_9_16>(const uchar* ptr, const i
     return AGAST_ALL_SCORE(ptr, pixel, threshold, AgastFeatureDetector::OAST_9_16);
 }
 
-#endif // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+#endif // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64) || defined(_M_ARM64) || defined(__aarch64__) || defined(__arm__))
 
 } // namespace cv
