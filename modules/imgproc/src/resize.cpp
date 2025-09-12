@@ -3843,7 +3843,7 @@ void resize(int src_type,
                         saturate_cast<int>(src_height*inv_scale_y));
     CV_Assert( !dsize.empty() );
 
-    CV_IPP_RUN_FAST(ipp_resize(src_data, src_step, src_width, src_height, dst_data, dst_step, dsize.width, dsize.height, inv_scale_x, inv_scale_y, depth, cn, interpolation))
+    CV_IPP_RUN_FAST(ipp_resize(src_data, src_step, src_width, src_height, dst_data, dst_step, dsize.width, dsize.height, inv_scale_x, inv_scale_y, depth, cn, interpolation));
 
     static ResizeFunc linear_tab[CV_DEPTH_MAX] =
     {
@@ -3939,6 +3939,9 @@ void resize(int src_type,
         0,
         resizeAreaFast_<float, float, ResizeAreaFastVec_SIMD_32f>,
         resizeAreaFast_<double, double, ResizeAreaFastNoVec<double, double> >,
+        0,
+        0,
+        resizeAreaFast_<uchar, int, ResizeAreaFastVec<uchar, ResizeAreaFastVec_SIMD_8u> >, /* resize bool as uchar*/
         0
     };
 
@@ -3946,7 +3949,8 @@ void resize(int src_type,
     {
         resizeArea_<uchar, float>, 0, resizeArea_<ushort, float>,
         resizeArea_<short, float>, 0, resizeArea_<float, float>,
-        resizeArea_<double, double>, 0
+        resizeArea_<double, double>, 0, 0,
+        resizeArea_<uchar, float> /* resize bool as uchar*/, 0
     };
 
     static be_resize_func linear_exact_tab[CV_DEPTH_MAX] =
@@ -3958,6 +3962,9 @@ void resize(int src_type,
         resize_bitExact<int, interpolationLinear<int> >,
         0,
         0,
+        0,
+        0,
+        resize_bitExact<uchar, interpolationLinear<uchar> >, /* resize bool as uchar */
         0
     };
 
@@ -3977,7 +3984,9 @@ void resize(int src_type,
         // in case of inv_scale_x && inv_scale_y is equal to 0.5
         // INTER_AREA (fast) is equal to bit exact INTER_LINEAR
         if (is_area_fast && iscale_x == 2 && iscale_y == 2 && cn != 2)//Area resize implementation for 2-channel images isn't bit-exact
+        {
             interpolation = INTER_AREA;
+        }
         else
         {
             be_resize_func func = linear_exact_tab[depth];
