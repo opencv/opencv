@@ -106,7 +106,7 @@ static std::string dataType2str(int dt)
 static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
 {
     Mat m = getMatFromTensor(tensor_proto, false, base_path);
-    m.dims = (int)tensor_proto.dims_size();
+    m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
 

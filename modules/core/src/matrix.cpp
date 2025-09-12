@@ -191,6 +191,13 @@ size_t MatShape::total() const
     return result;
 }
 
+std::vector<int> MatShape::vec() const
+{
+    if (dims < 0)
+        return std::vector<int>(1, 0);
+    return std::vector<int>(p, p + dims);
+}
+
 std::string MatShape::str() const
 {
     std::stringstream sstrm;
@@ -401,13 +408,6 @@ MatShape MatShape::expand(const MatShape& another) const
     return result;
 }
 
-MatShape::operator std::vector<int>() const
-{
-    if (dims < 0)
-        return std::vector<int>(1, 0);
-    return std::vector<int>(p, p + dims);
-}
-
 /////////////////////////// MatAllocator ////////////////////////////
 
 void MatAllocator::map(UMatData*, AccessFlag) const
@@ -603,85 +603,31 @@ MatAllocator* Mat::getStdAllocator()
 
 //==================================================================================================
 
-bool MatSize::operator==(const MatSize& sz) const CV_NOEXCEPT
-{
-    int d = dims();
-    int dsz = sz.dims();
-    if( d != dsz )
-        return false;
-    if( d == 2 )
-        return p[0] == sz.p[0] && p[1] == sz.p[1];
-
-    for( int i = 0; i < d; i++ )
-        if( p[i] != sz.p[i] )
-            return false;
-    return true;
-}
-
 void setSize( Mat& m, int _dims, const int* _sz, const size_t* _steps, bool autoSteps)
 {
-    CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM );
-    if( m.dims != _dims )
-    {
-        if( m.step.p != m.step.buf && m.step.p != m.step.buf+1)
-        {
-            fastFree(m.step.p);
-        }
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
-        if( _dims > 2 )
-        {
-            m.step.p = (size_t*)fastMalloc(_dims*sizeof(m.step.p[0]) + (_dims+1)*sizeof(m.size.p[0]));
-            m.size.p = (int*)(m.step.p + _dims) + 1;
-            m.size.p[-1] = _dims;
-            m.rows = m.cols = -1;
-        }
-    }
+    CV_Assert( 0 <= _dims && _dims <= CV_MAX_DIM && _dims <= MatShape::MAX_DIMS);
 
     m.dims = _dims;
-    size_t esz = CV_ELEM_SIZE(m.flags), esz1 = CV_ELEM_SIZE1(m.flags), total = esz;
-    if (_sz != 0) {
-        for( int i = _dims-1; i >= 0; i-- )
-        {
-            int s = _sz[i];
-            CV_Assert( s >= 0 );
-            m.size.p[i] = s;
-
-            if( _steps )
-            {
-                if (i < _dims-1)
-                {
-                    if (_steps[i] % esz1 != 0)
-                    {
-                        CV_Error_(Error::BadStep, ("Step %zu for dimension %d must be a multiple of esz1 %zu", _steps[i], i, esz1));
-                    }
-
-                    m.step.p[i] = _steps[i];
-                }
-                else
-                {
-                    m.step.p[i] = esz;
-                }
-            }
-            else if( autoSteps )
-            {
-                m.step.p[i] = total;
-                uint64 total1 = (uint64)total*s;
-                if( (uint64)total1 != (size_t)total1 )
-                    CV_Error( cv::Error::StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
-                total = (size_t)total1;
-            }
+    m.size = MatShape(_dims, _sz);
+    m.step[std::max(_dims-1, 0)] = CV_ELEM_SIZE(m.flags);
+    for (int i = _dims-2; i >= 0; i--) {
+        size_t autostep = m.size[i+1]*m.step[i+1];
+        if (_steps) {
+            m.step[i] = _steps[i];
+            //CV_Assert(m.step[i] >= autostep);
+        } else if (autoSteps) {
+            m.step[i] = autostep;
+        } else {
+            m.step[i] = 0;
         }
     }
 
-    if( _dims < 2 )
+    if( _dims <= 2 )
     {
-        m.cols = _dims >= 1 && _sz ? _sz[0] : 1;
-        m.rows = 1;
-        m.size.p = &m.cols;
-        m.step.buf[0] = m.cols*esz;
-        m.step.buf[1] = esz;
-        m.step.p = &m.step.buf[1];
+        m.cols = _dims == 0 ? 1 : _sz ? _sz[_dims > 1] : 0;
+        m.rows = _dims < 2 ? 1 : _sz ? _sz[0] : 0;
+    } else {
+        m.cols = m.rows = -1;
     }
 }
 
@@ -743,19 +689,19 @@ void finalizeHdr(Mat& m)
 
 Mat::Mat() CV_NOEXCEPT
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {}
 
 Mat::Mat(int _rows, int _cols, int _type)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_rows, _cols, _type);
 }
 
 Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_rows, _cols, _type);
     *this = _s;
@@ -763,14 +709,14 @@ Mat::Mat(int _rows, int _cols, int _type, const Scalar& _s)
 
 Mat::Mat(Size _sz, int _type)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create( _sz.height, _sz.width, _type );
 }
 
 Mat::Mat(Size _sz, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_sz.height, _sz.width, _type);
     *this = _s;
@@ -778,14 +724,14 @@ Mat::Mat(Size _sz, int _type, const Scalar& _s)
 
 Mat::Mat(int _dims, const int* _sz, int _type)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_dims, _sz, _type);
 }
 
 Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_dims, _sz, _type);
     *this = _s;
@@ -793,14 +739,14 @@ Mat::Mat(int _dims, const int* _sz, int _type, const Scalar& _s)
 
 Mat::Mat(const std::vector<int>& _sz, int _type)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_sz, _type);
 }
 
 Mat::Mat(const std::vector<int>& _sz, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_sz, _type);
     *this = _s;
@@ -808,21 +754,21 @@ Mat::Mat(const std::vector<int>& _sz, int _type, const Scalar& _s)
 
 Mat::Mat(const MatShape& _shape, int _type)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_shape, _type);
 }
 
 Mat::Mat(std::initializer_list<int> _shape, int _type)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_shape, _type);
 }
 
 Mat::Mat(const MatShape& _shape, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_shape, _type);
     *this = _s;
@@ -830,7 +776,7 @@ Mat::Mat(const MatShape& _shape, int _type, const Scalar& _s)
 
 Mat::Mat(std::initializer_list<int> _shape, int _type, const Scalar& _s)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows), step(0)
+      datalimit(0), allocator(0), u(0)
 {
     create(_shape, _type);
     *this = _s;
@@ -839,29 +785,16 @@ Mat::Mat(std::initializer_list<int> _shape, int _type, const Scalar& _s)
 Mat::Mat(const Mat& m)
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
-      u(m.u), size(&rows), step(0)
+      u(m.u), size(m.size), step(m.step)
 {
     if( u )
         CV_XADD(&u->refcount, 1);
-    if( m.dims <= 2 )
-    {
-        int _1d = m.dims <= 1;
-        size.p = &rows + _1d;
-        step.p = &step.buf[_1d];
-        step.buf[0] = m.step.buf[0];
-        step.buf[1] = m.step.buf[1];
-    }
-    else
-    {
-        dims = 0;
-        copySize(m);
-    }
 }
 
 Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_rows), cols(_cols),
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
-      allocator(0), u(0), size(&rows)
+      allocator(0), u(0), size(2)
 {
     CV_Assert(total() == 0 || data != NULL);
 
@@ -879,8 +812,10 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
             CV_Error(Error::BadStep, "Step must be a multiple of esz1");
         }
     }
-    step.buf[0] = _step;
-    step.buf[1] = esz;
+    size[0] = rows;
+    size[1] = cols;
+    step[0] = _step;
+    step[1] = esz;
     datalimit = datastart + _step * rows;
     dataend = datalimit - _step + minstep;
     updateContinuityFlag();
@@ -889,7 +824,7 @@ Mat::Mat(int _rows, int _cols, int _type, void* _data, size_t _step)
 Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
     : flags(MAGIC_VAL + (_type & TYPE_MASK)), dims(2), rows(_sz.height), cols(_sz.width),
       data((uchar*)_data), datastart((uchar*)_data), dataend(0), datalimit(0),
-      allocator(0), u(0), size(&rows)
+      allocator(0), u(0), size(2)
 {
     CV_Assert(total() == 0 || data != NULL);
 
@@ -908,6 +843,8 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
             CV_Error(Error::BadStep, "Step must be a multiple of esz1");
         }
     }
+    size[0] = rows;
+    size[1] = cols;
     step[0] = _step;
     step[1] = esz;
     datalimit = datastart + _step*rows;
@@ -918,13 +855,10 @@ Mat::Mat(Size _sz, int _type, void* _data, size_t _step)
 
 Mat::~Mat()
 {
-    CV_Assert(dummy == 153 && step.buf[2] == 153);
     release();
-    if( step.p != step.buf && step.p != step.buf+1 )
-        fastFree(step.p);
 }
 
-Mat& Mat::operator=(const Mat& m)
+Mat& Mat::operator = (const Mat& m)
 {
     if( this != &m )
     {
@@ -932,20 +866,11 @@ Mat& Mat::operator=(const Mat& m)
             CV_XADD(&m.u->refcount, 1);
         release();
         flags = m.flags;
-
-        if( dims <= 2 && m.dims <= 2 )
-        {
-            int _1d = m.dims < 2;
-            dims = m.dims;
-            rows = m.rows;
-            cols = m.cols;
-            step.p = &step.buf[_1d];
-            step.buf[0] = m.step.buf[0];
-            step.buf[1] = m.step.buf[1];
-            size.p = &rows + _1d;
-        }
-        else
-            copySize(m);
+        dims = m.dims;
+        rows = m.rows;
+        cols = m.cols;
+        size = m.size;
+        step = m.step;
         data = m.data;
         datastart = m.datastart;
         dataend = m.dataend;
@@ -987,7 +912,8 @@ void Mat::create(Size _sz, int _type)
 
 void Mat::createSameSize(InputArray m, int type)
 {
-    _OutputArray(*this).createSameSize(m, type);
+    MatShape msize = m.shape();
+    create(msize, type);
 }
 
 void Mat::fit(int _dims, const int* _sizes, int _type)
@@ -1063,16 +989,9 @@ void Mat::release()
     datastart = dataend = datalimit = data = 0;
     for(int i = 0; i < dims; i++)
         size.p[i] = 0;
-#ifdef _DEBUG
     flags = MAGIC_VAL;
-    if(step.p != step.buf && step.p != step.buf+1)
-    {
-        fastFree(step.p);
-        step.p = step.buf;
-        size.p = &rows;
-    }
     dims = rows = cols = 0;
-#endif
+    size.clear();
 }
 
 size_t Mat::step1(int i) const
@@ -1105,71 +1024,31 @@ size_t Mat::total(int startDim, int endDim) const
     return p;
 }
 
-MatShape Mat::shape() const
-{
-    return dims == 0 && data == 0 ? MatShape() : MatShape(dims, size.p);
-}
-
 Mat::Mat(Mat&& m) CV_NOEXCEPT
     : flags(m.flags), dims(m.dims), rows(m.rows), cols(m.cols), data(m.data),
       datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit), allocator(m.allocator),
-      u(m.u), size(&rows)
+      u(m.u), size(m.size), step(m.step)
 {
-    if (m.dims <= 2)  // move new step/size info
-    {
-        int _1d = dims <= 1;
-        step.p = &step.buf[_1d];
-        size.p = &rows + _1d;
-        step.buf[0] = m.step.buf[0];
-        step.buf[1] = m.step.buf[1];
-    }
-    else
-    {
-        CV_Assert(m.step.p != m.step.buf && m.step.p != m.step.buf+1);
-        step.p = m.step.p;
-        size.p = m.size.p;
-        m.step.p = m.step.buf;
-        m.size.p = &m.rows;
-    }
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.size.clear(); m.step.clear();
     m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
     m.allocator = NULL;
     m.u = NULL;
 }
 
 
-Mat& Mat::operator=(Mat&& m)
+Mat& Mat::operator = (Mat&& m)
 {
     if (this == &m)
       return *this;
 
     release();
     flags = m.flags; dims = m.dims; rows = m.rows; cols = m.cols; data = m.data;
+    size = m.size; step = m.step;
     datastart = m.datastart; dataend = m.dataend; datalimit = m.datalimit; allocator = m.allocator;
     u = m.u;
-    if (step.p != step.buf && step.p != step.buf+1) // release self step/size
-    {
-        fastFree(step.p);
-    }
-    step.p = step.buf;
-    size.p = &rows;
-    if (m.dims <= 2) // move new step/size info
-    {
-        int _1d = dims <= 1;
-        step.buf[0] = m.step.buf[0];
-        step.buf[1] = m.step.buf[1];
-        step.p = &step.buf[_1d];
-        size.p = &rows + _1d;
-    }
-    else
-    {
-        CV_Assert(m.step.p != m.step.buf && m.step.p != m.step.buf+1);
-        step.p = m.step.p;
-        size.p = m.size.p;
-    }
-    m.step.p = m.step.buf;
-    m.size.p = &m.rows;
     m.flags = MAGIC_VAL; m.dims = m.rows = m.cols = 0;
+    m.size.clear(); m.step.clear();
     m.data = NULL; m.datastart = NULL; m.dataend = NULL; m.datalimit = NULL;
     m.allocator = NULL;
     m.u = NULL;
@@ -1218,7 +1097,7 @@ void Mat::create(int d0, const int* _sizes, int _type)
             a = a0;
         try
         {
-            u = a->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
+            u = a->allocate(dims, size.p, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
             allocator = a;
         }
@@ -1226,7 +1105,7 @@ void Mat::create(int d0, const int* _sizes, int _type)
         {
             if (a == a0)
                 throw;
-            u = a0->allocate(dims, size, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
+            u = a0->allocate(dims, size.p, _type, 0, step.p, ACCESS_RW /* ignored */, USAGE_DEFAULT);
             CV_Assert(u != 0);
             allocator = a0;
         }
@@ -1235,7 +1114,7 @@ void Mat::create(int d0, const int* _sizes, int _type)
 
     addref();
     finalizeHdr(*this);
-    dims = d0;
+    size.dims = dims = d0;
 }
 
 void Mat::create(const std::vector<int>& _sizes, int _type)
@@ -1266,14 +1145,11 @@ void Mat::create(std::initializer_list<int> _shape, int _type)
 
 void Mat::copySize(const Mat& m)
 {
-    setSize(*this, m.dims, 0, 0);
-    step.buf[0] = m.step.buf[0];
-    step.buf[1] = m.step.buf[1];
-    for( int i = 0; i < dims; i++ )
-    {
-        size[i] = m.size[i];
-        step[i] = m.step[i];
-    }
+    dims = m.dims;
+    cols = m.cols;
+    rows = m.rows;
+    size = m.size;
+    step = m.step;
 }
 
 void Mat::deallocate()
@@ -1288,17 +1164,20 @@ void Mat::deallocate()
 
 Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows)
+      datalimit(0), allocator(0), u(0)
 {
-    CV_Assert( m.dims >= 2 || (m.dims == 1 && (_rowRange == Range::all() || _rowRange == Range(0, m.rows))));
+    CV_Assert(m.dims <= MatShape::MAX_DIMS);
+    CV_Assert(m.dims >= 2 ||
+              (m.dims == 1 && (_rowRange == Range::all() ||
+                               _rowRange == Range(0, m.rows))));
     if( m.dims > 2 )
     {
-        AutoBuffer<Range> rs(m.dims);
+        Range rs[MatShape::MAX_DIMS];
         rs[0] = _rowRange;
         rs[1] = _colRange;
         for( int i = 2; i < m.dims; i++ )
             rs[i] = Range::all();
-        *this = m(rs.data());
+        *this = m(rs);
         return;
     }
 
@@ -1309,7 +1188,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
         {
             CV_Assert( 0 <= _rowRange.start && _rowRange.start <= _rowRange.end
                        && _rowRange.end <= m.rows );
-            rows = _rowRange.size();
+            size[0] = rows = _rowRange.size();
             data += step*_rowRange.start;
             flags |= SUBMATRIX_FLAG;
         }
@@ -1318,7 +1197,7 @@ Mat::Mat(const Mat& m, const Range& _rowRange, const Range& _colRange)
         {
             CV_Assert( 0 <= _colRange.start && _colRange.start <= _colRange.end
                        && _colRange.end <= m.cols );
-            cols = _colRange.size();
+            size[dims > 1] = cols = _colRange.size();
             data += _colRange.start*elemSize();
             flags |= SUBMATRIX_FLAG;
         }
@@ -1343,7 +1222,7 @@ Mat::Mat(const Mat& m, const Rect& roi)
     : flags(m.flags), dims(2), rows(roi.height), cols(roi.width),
     data(m.data + roi.y*m.step[0]),
     datastart(m.datastart), dataend(m.dataend), datalimit(m.datalimit),
-    allocator(m.allocator), u(m.u), size(&rows)
+    allocator(m.allocator), u(m.u), size(2)
 {
     CV_Assert( m.dims <= 2 );
 
@@ -1354,7 +1233,10 @@ Mat::Mat(const Mat& m, const Rect& roi)
     if( roi.width < m.cols || roi.height < m.rows )
         flags |= SUBMATRIX_FLAG;
 
-    step[0] = m.step[0]; step[1] = esz;
+    size[0] = rows;
+    size[1] = cols;
+    step[0] = m.step[0];
+    step[1] = esz;
     updateContinuityFlag();
 
     addref();
@@ -1368,7 +1250,7 @@ Mat::Mat(const Mat& m, const Rect& roi)
 
 Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _steps)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows)
+      datalimit(0), allocator(0), u(0)
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
@@ -1380,7 +1262,7 @@ Mat::Mat(int _dims, const int* _sizes, int _type, void* _data, const size_t* _st
 
 Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _steps)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows)
+      datalimit(0), allocator(0), u(0)
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
@@ -1392,7 +1274,7 @@ Mat::Mat(const std::vector<int>& _sizes, int _type, void* _data, const size_t* _
 
 Mat::Mat(const MatShape& _shape, int _type, void* _data, const size_t* _steps)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows)
+      datalimit(0), allocator(0), u(0)
 {
     flags |= CV_MAT_TYPE(_type);
     datastart = data = (uchar*)_data;
@@ -1407,7 +1289,7 @@ Mat::Mat(const MatShape& _shape, int _type, void* _data, const size_t* _steps)
 
 Mat::Mat(std::initializer_list<int> _shape, int _type, void* _data, const size_t* _steps)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows)
+      datalimit(0), allocator(0), u(0)
 {
     int new_shape[MatShape::MAX_DIMS];
     int _dims = (int)_shape.size();
@@ -1425,7 +1307,7 @@ Mat::Mat(std::initializer_list<int> _shape, int _type, void* _data, const size_t
 
 Mat::Mat(const Mat& m, const Range* ranges)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-      datalimit(0), allocator(0), u(0), size(&rows)
+      datalimit(0), allocator(0), u(0)
 {
     int d = m.dims;
 
@@ -1446,12 +1328,17 @@ Mat::Mat(const Mat& m, const Range* ranges)
             flags |= SUBMATRIX_FLAG;
         }
     }
+
+    if (d <= 2) {
+        rows = d == 2 ? size[0] : 1;
+        cols = d <= 0 ? (d >= 0) : size[d > 1];
+    }
     updateContinuityFlag();
 }
 
 Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
     : flags(MAGIC_VAL), dims(0), rows(0), cols(0), data(0), datastart(0), dataend(0),
-    datalimit(0), allocator(0), u(0), size(&rows)
+    datalimit(0), allocator(0), u(0)
 {
     int d = m.dims;
 
@@ -1471,6 +1358,11 @@ Mat::Mat(const Mat& m, const std::vector<Range>& ranges)
             data += r.start*step.p[i];
             flags |= SUBMATRIX_FLAG;
         }
+    }
+
+    if (d <= 2) {
+        rows = d == 2 ? size[0] : 1;
+        cols = d <= 0 ? (d >= 0) : size[d > 1];
     }
     updateContinuityFlag();
 }
@@ -1511,12 +1403,17 @@ Mat Mat::diag(int d) const
 void Mat::pop_back(size_t nelems)
 {
     CV_Assert( nelems <= (size_t)size.p[0] );
+    CV_Assert( dims >= 1 );
 
     if( isSubmatrix() )
         *this = rowRange(0, size.p[0] - (int)nelems);
     else
     {
         size.p[0] -= (int)nelems;
+        if (dims == 2)
+            rows = size.p[0];
+        else if (dims == 1)
+            cols = size.p[0];
         dataend -= nelems*step.p[0];
     }
 }
@@ -1531,6 +1428,10 @@ void Mat::push_back_(const void* elem)
     size_t esz = elemSize();
     memcpy(data + r*step.p[0], elem, esz);
     size.p[0] = int(r + 1);
+    if (dims == 2)
+        rows = size.p[0];
+    else if (dims == 1)
+        cols = size.p[0];
     dataend += step.p[0];
     uint64 tsz = size.p[0];
     for( int i = 1; i < dims; i++ )
@@ -1545,23 +1446,28 @@ void Mat::reserve(size_t nelems)
     const size_t MIN_SIZE = 64;
 
     CV_Assert( (int)nelems >= 0 );
-    if( !isSubmatrix() && data + step.p[0]*nelems <= datalimit )
+    if( !isSubmatrix() && step.p[0] != 0 && data + step.p[0]*nelems <= datalimit )
         return;
 
     int r = size.p[0];
-
-    if( (size_t)r >= nelems )
+    if( (size_t)r >= nelems)
         return;
 
-    size.p[0] = std::max((int)nelems, 1);
-    size_t newsize = total()*elemSize();
+    MatShape newsize = size;
+    size_t esz = elemSize();
+    newsize.dims = std::max(newsize.dims, 1);
+    if (dims > 1 && r == 0 && step.p[0] == 0) {
+        step.p[0] = size.p[1] * (dims == 2 ? esz : step.p[1]);
+    }
+    newsize.p[0] = (int)nelems;
+    size_t newbytes = newsize.total() * esz;
+    if (newbytes < MIN_SIZE) {
+        newsize.p[0] = 1;
+        newsize.p[0] = int(MIN_SIZE / newsize.total() / esz);
+    }
 
-    if( newsize < MIN_SIZE )
-        size.p[0] = (int)((MIN_SIZE + newsize - 1)*nelems/newsize);
-
-    Mat m(dims, size.p, type());
-    size.p[0] = r;
-    if( r > 0 )
+    Mat m(newsize, type());
+    if( r > 0)
     {
         Mat mpart = m.rowRange(0, r);
         copyTo(mpart);
@@ -1569,6 +1475,11 @@ void Mat::reserve(size_t nelems)
 
     *this = m;
     size.p[0] = r;
+
+    if (dims == 2)
+        rows = size.p[0];
+    else if (dims == 1)
+        cols = size.p[0];
     dataend = data + step.p[0]*r;
 }
 
@@ -1602,8 +1513,8 @@ void Mat::reserveBuffer(size_t nbytes)
 
 void Mat::resize(size_t nelems)
 {
-    int saveRows = size.p[0];
-    if( saveRows == (int)nelems )
+    int r = size.p[0];
+    if( r == (int)nelems )
         return;
     CV_Assert( (int)nelems >= 0 );
 
@@ -1611,7 +1522,11 @@ void Mat::resize(size_t nelems)
         reserve(nelems);
 
     size.p[0] = (int)nelems;
-    dataend += (size.p[0] - saveRows)*step.p[0];
+    if (dims == 2)
+        rows = size.p[0];
+    else if (dims == 1)
+        cols = size.p[0];
+    dataend += (size.p[0] - r)*(int64_t)step.p[0];
 
     //updateContinuityFlag(*this);
 }
@@ -1646,6 +1561,7 @@ void Mat::push_back(const Mat& elems)
         *this = elems.clone();
         return;
     }
+    CV_Assert(dims > 0);
 
     size.p[0] = elems.size.p[0];
     bool eq = size == elems.size;
@@ -1654,17 +1570,28 @@ void Mat::push_back(const Mat& elems)
         CV_Error(cv::Error::StsUnmatchedSizes, "Pushed vector length is not equal to matrix row length");
     if( type() != elems.type() )
         CV_Error(cv::Error::StsUnmatchedFormats, "Pushed vector type is not the same as matrix type");
+    size_t esz = elemSize();
+    size_t minstep = dims <= 1 ? esz : size.p[1] * (dims == 2 ? esz : step.p[1]);
+    size_t step0 = step.p[0];
+    if (step0 < minstep) {
+        if (size.p[0] <= 1)
+            step.p[0] = step0 = minstep;
+    }
 
-    if( isSubmatrix() || dataend + step.p[0]*delta > datalimit )
+    if( isSubmatrix() || dataend + step0*delta > datalimit )
         reserve( std::max(r + delta, (r*3+1)/2) );
 
     size.p[0] += int(delta);
-    dataend += step.p[0]*delta;
+    if (dims == 2)
+        rows = size.p[0];
+    else if (dims == 1)
+        cols = size.p[0];
+    dataend += step0*delta;
 
     //updateContinuityFlag(*this);
 
     if( isContinuous() && elems.isContinuous() )
-        memcpy(data + r*step.p[0], elems.data, elems.total()*elems.elemSize());
+        memcpy(data + r*step0, elems.data, elems.total()*elems.elemSize());
     else
     {
         Mat part = rowRange(int(r), int(r + delta));
@@ -1763,8 +1690,12 @@ Mat Mat::reshape(int new_cn, int new_rows) const
             CV_Error( cv::Error::StsBadArg, "The total number of matrix elements "
                                     "is not divisible by the new number of rows" );
 
-        hdr.rows = new_rows;
-        hdr.step.buf[0] = total_width * elemSize1();
+        hdr.size[0] = hdr.rows = new_rows;
+        hdr.step[0] = total_width * elemSize1();
+    } else {
+        hdr.size[0] = hdr.rows = rows;
+        if (dims <= 1)
+            hdr.step[0] = cols * CV_ELEM_SIZE(flags);
     }
 
     int new_width = total_width / new_cn;
@@ -1773,12 +1704,10 @@ Mat Mat::reshape(int new_cn, int new_rows) const
         CV_Error( cv::Error::BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
-    hdr.dims = 2;
-    hdr.cols = new_width;
+    hdr.size.dims = hdr.dims = 2;
+    hdr.size[1] = hdr.cols = new_width;
     hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((new_cn-1) << CV_CN_SHIFT);
-    hdr.step.buf[1] = CV_ELEM_SIZE(hdr.flags);
-    hdr.step.p = &hdr.step.buf[0];
-    hdr.size.p = &hdr.rows;
+    hdr.step[1] = CV_ELEM_SIZE(hdr.flags);
     return hdr;
 }
 

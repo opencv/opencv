@@ -187,7 +187,7 @@ void add(const Mat& _a, double alpha, const Mat& _b, double beta,
     if( ctype < 0 )
         ctype = a.depth();
     ctype = CV_MAKETYPE(CV_MAT_DEPTH(ctype), a.channels());
-    c.create(a.dims, &a.size[0], ctype);
+    c.create(a.size, ctype);
     const Mat *arrays[] = {&a, &b, &c, 0};
     Mat planes[3], buf[3];
 
@@ -349,7 +349,7 @@ void convert(const Mat& src, cv::OutputArray _dst,
     int ddepth = CV_MAT_DEPTH(dtype);
 
     dtype = CV_MAKETYPE(ddepth, src.channels());
-    _dst.create(src.dims, &src.size[0], dtype);
+    _dst.create(src.size, dtype);
     Mat dst = _dst.getMat();
     if( alpha == 0 )
     {
@@ -424,7 +424,7 @@ void convert(const Mat& src, cv::OutputArray _dst,
 
 void copy(const Mat& src, Mat& dst, const Mat& mask, bool invertMask)
 {
-    dst.create(src.dims, &src.size[0], src.type());
+    dst.create(src.size, src.type());
 
     if(mask.empty())
     {
@@ -576,7 +576,7 @@ void insert(const Mat& src, Mat& dst, int coi)
 
 void extract(const Mat& src, Mat& dst, int coi)
 {
-    dst.create( src.dims, &src.size[0], src.depth() );
+    dst.create( src.size, src.depth() );
     CV_Assert( 0 <= coi && coi < src.channels() );
 
     const Mat* arrays[] = {&src, &dst, 0};
@@ -1770,7 +1770,7 @@ void logicOp( const Mat& src1, const Mat& src2, Mat& dst, char op )
 {
     CV_Assert( op == '&' || op == '|' || op == '^' );
     CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
-    dst.create( src1.dims, &src1.size[0], src1.type() );
+    dst.create( src1.size, src1.type() );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
 
@@ -1792,7 +1792,7 @@ void logicOp( const Mat& src1, const Mat& src2, Mat& dst, char op )
 void logicOp(const Mat& src, const Scalar& s, Mat& dst, char op)
 {
     CV_Assert( op == '&' || op == '|' || op == '^' || op == '~' );
-    dst.create( src.dims, &src.size[0], src.type() );
+    dst.create( src.size, src.type() );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
 
@@ -1887,7 +1887,7 @@ compareS_(const _Tp* src1, _WTp value, uchar* dst, size_t total, int cmpop)
 void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
 {
     CV_Assert( src1.type() == src2.type() && src1.channels() == 1 && src1.size == src2.size );
-    dst.create( src1.dims, &src1.size[0], CV_8U );
+    dst.create( src1.size, CV_8U );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
 
@@ -1949,7 +1949,7 @@ void compare(const Mat& src1, const Mat& src2, Mat& dst, int cmpop)
 void compare(const Mat& src, double value, Mat& dst, int cmpop)
 {
     CV_Assert( src.channels() == 1 );
-    dst.create( src.dims, &src.size[0], CV_8U );
+    dst.create( src.size, CV_8U );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
 
@@ -2749,7 +2749,7 @@ minmax16f_(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, char op)
 
 static void minmax(const Mat& src1, const Mat& src2, Mat& dst, char op)
 {
-    dst.create(src1.dims, src1.size, src1.type());
+    dst.create(src1.size, src1.type());
     CV_Assert( src1.type() == src2.type() && src1.size == src2.size );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];
@@ -2845,7 +2845,7 @@ minmax_16f(const _Tp* src1, _Tp val_, _Tp* dst, size_t total, char op)
 
 static void minmax(const Mat& src1, double val, Mat& dst, char op)
 {
-    dst.create(src1.dims, src1.size, src1.type());
+    dst.create(src1.size, src1.type());
     const Mat *arrays[]={&src1, &dst, 0};
     Mat planes[2];
 
@@ -2947,7 +2947,7 @@ muldiv_16f(const _Tp* src1, const _Tp* src2, _Tp* dst, size_t total, double scal
 
 static void muldiv(const Mat& src1, const Mat& src2, Mat& dst, int ctype, double scale, char op)
 {
-    dst.create(src2.dims, src2.size, (ctype >= 0 ? ctype : src2.type()));
+    dst.create(src2.size, (ctype >= 0 ? ctype : src2.type()));
     CV_Assert( src1.empty() || (src1.type() == src2.type() && src1.size == src2.size) );
     const Mat *arrays[]={&src1, &src2, &dst, 0};
     Mat planes[3];

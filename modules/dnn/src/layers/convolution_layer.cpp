@@ -617,7 +617,7 @@ public:
         if (fusedWeights)
         {
             weightsMat.copyTo(weightVK); // to handle the case of isContinuous() == false
-            weightVK = weightVK.reshape(1, blobs[0].dims, blobs[0].size);
+            weightVK = weightVK.reshape(1, blobs[0].size);
         }
         else
             weightVK = blobs[0];

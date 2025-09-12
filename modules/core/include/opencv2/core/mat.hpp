@@ -148,8 +148,9 @@ struct CV_EXPORTS_W_SIMPLE MatShape
     const int& back() const;
     void push_back(int value);
     void emplace_back(int value);
-    int& operator [](size_t idx);
     const int& operator [](size_t idx) const;
+    int& operator [](size_t idx);
+    Size operator()() const; // for compatibility with MatSize
 
     CV_WRAP bool hasSymbols() const; // negative elements in the shape may denote 'symbols' instead of actual values.
 
@@ -162,7 +163,7 @@ struct CV_EXPORTS_W_SIMPLE MatShape
 
     size_t total() const; // returns the total number of elements in the tensor (including padding elements, i.e. the method ignores 'C' in the case of block layout). Returns 1 for scalar tensors. Returns 0 for empty shapes.
 
-    operator std::vector<int>() const;
+    std::vector<int> vec() const;
     std::string str() const;
 
     int dims;
@@ -723,20 +724,7 @@ struct CV_EXPORTS UMatData
 };
 CV_ENUM_FLAGS(UMatData::MemoryFlag)
 
-
-struct CV_EXPORTS MatSize
-{
-    explicit MatSize(int* _p) CV_NOEXCEPT;
-    int dims() const CV_NOEXCEPT;
-    Size operator()() const;
-    const int& operator[](int i) const;
-    int& operator[](int i);
-    operator const int*() const CV_NOEXCEPT;  // TODO OpenCV 4.0: drop this
-    bool operator == (const MatSize& sz) const CV_NOEXCEPT;
-    bool operator != (const MatSize& sz) const CV_NOEXCEPT;
-
-    int* p;
-};
+typedef MatShape MatSize;
 
 struct CV_EXPORTS MatStep
 {
@@ -746,11 +734,9 @@ struct CV_EXPORTS MatStep
     size_t& operator[](int i) CV_NOEXCEPT;
     operator size_t() const;
     MatStep& operator = (size_t s);
+    void clear();
 
-    size_t* p;
-    size_t buf[3];
-protected:
-    MatStep& operator = (const MatStep&);
+    size_t p[MatShape::MAX_DIMS];
 };
 
 /** @example samples/cpp/cout_mat.cpp
@@ -1633,6 +1619,12 @@ public:
     */
     CV_NODISCARD_STD static MatExpr zeros(int ndims, const int* sz, int type);
 
+    /** @overload
+    @param shape Array shape.
+    @param type Created matrix type.
+    */
+    CV_NODISCARD_STD static MatExpr zeros(const MatShape& shape, int type);
+
     /** @brief Returns an array of all 1's of the specified size and type.
 
     The method returns a Matlab-style 1's array initializer, similarly to Mat::zeros. Note that using
@@ -1663,6 +1655,12 @@ public:
     @param type Created matrix type.
     */
     CV_NODISCARD_STD static MatExpr ones(int ndims, const int* sz, int type);
+
+    /** @overload
+    @param shape Array shape.
+    @param type Created matrix type.
+    */
+    CV_NODISCARD_STD static MatExpr ones(const MatShape& shape, int type);
 
     /** @brief Returns an identity matrix of the specified size and type.
 
@@ -2745,6 +2743,8 @@ public:
     //! constructs n-dimensional matrix
     UMat(int ndims, const int* sizes, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     UMat(int ndims, const int* sizes, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    UMat(const MatShape& shape, int type, const Scalar& s, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 
     //! copy constructor
     UMat(const UMat& m);
@@ -2816,9 +2816,11 @@ public:
     CV_NODISCARD_STD static UMat zeros(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat zeros(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat zeros(int ndims, const int* sz, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat zeros(const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat ones(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat ones(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat ones(int ndims, const int* sz, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
+    CV_NODISCARD_STD static UMat ones(const MatShape& shape, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat eye(int rows, int cols, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
     CV_NODISCARD_STD static UMat eye(Size size, int type, UMatUsageFlags usageFlags = USAGE_DEFAULT);
 

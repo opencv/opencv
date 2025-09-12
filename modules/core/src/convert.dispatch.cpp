@@ -164,7 +164,7 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     bool allowTransposed = dims == 1 ||
         dst.kind() == _InputArray::STD_VECTOR ||
         (dst.fixedSize() && dst.dims() == 1);
-    dst.create( dims, size, dtype, -1, allowTransposed );
+    dst.create( size, dtype, -1, allowTransposed );
     Mat dstMat = dst.getMat();
 
     if( dims <= 2 )

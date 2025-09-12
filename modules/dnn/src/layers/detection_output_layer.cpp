@@ -252,7 +252,7 @@ public:
                              const cv::String& code_type, const bool variance_encoded_in_target,
                              const bool clip, std::vector<LabelBBox>& all_decode_bboxes)
     {
-        UMat outmat = UMat(loc_mat.dims, loc_mat.size, CV_32F);
+        UMat outmat(loc_mat.size, CV_32F);
         size_t nthreads = loc_mat.total();
         String kernel_name;
 
@@ -382,7 +382,7 @@ public:
             return true;
         }
 
-        UMat umat = use_half ? UMat::zeros(4, outputs[0].size, CV_32F) : outputs[0];
+        UMat umat = use_half ? UMat::zeros(outputs[0].size, CV_32F) : outputs[0];
 
         if (!use_half)
             umat.setTo(0);

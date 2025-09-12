@@ -155,7 +155,7 @@ void magnitude( InputArray src1, InputArray src2, OutputArray dst )
                ocl_math_op(src1, src2, dst, OCL_OP_MAG))
 
     Mat X = src1.getMat(), Y = src2.getMat();
-    dst.create(X.dims, X.size, X.type());
+    dst.create(X.size, X.type());
     Mat Mag = dst.getMat();
 
     const Mat* arrays[] = {&X, &Y, &Mag, 0};
@@ -191,7 +191,7 @@ void phase( InputArray src1, InputArray src2, OutputArray dst, bool angleInDegre
                ocl_math_op(src1, src2, dst, angleInDegrees ? OCL_OP_PHASE_DEGREES : OCL_OP_PHASE_RADIANS))
 
     Mat X = src1.getMat(), Y = src2.getMat();
-    dst.create( X.dims, X.size, type );
+    dst.create( X.size, type );
     Mat Angle = dst.getMat();
 
     const Mat* arrays[] = {&X, &Y, &Angle, 0};
@@ -288,8 +288,8 @@ void cartToPolar( InputArray src1, InputArray src2,
     Mat X = src1.getMat(), Y = src2.getMat();
     int type = X.type(), depth = X.depth(), cn = X.channels();
     CV_Assert( X.size == Y.size && type == Y.type() && (depth == CV_32F || depth == CV_64F));
-    dst1.create( X.dims, X.size, type );
-    dst2.create( X.dims, X.size, type );
+    dst1.create( X.size, type );
+    dst2.create( X.size, type );
     Mat Mag = dst1.getMat(), Angle = dst2.getMat();
 
     const Mat* arrays[] = {&X, &Y, &Mag, &Angle, 0};
@@ -393,8 +393,8 @@ void polarToCart( InputArray src1, InputArray src2,
 
     Mat Mag = src1.getMat(), Angle = src2.getMat();
     CV_Assert( Mag.empty() || Angle.size == Mag.size);
-    dst1.create( Angle.dims, Angle.size, type );
-    dst2.create( Angle.dims, Angle.size, type );
+    dst1.create( Angle.size, type );
+    dst2.create( Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
@@ -445,7 +445,7 @@ void exp( InputArray _src, OutputArray _dst )
                ocl_math_op(_src, noArray(), _dst, OCL_OP_EXP))
 
     Mat src = _src.getMat();
-    _dst.create( src.dims, src.size, type );
+    _dst.create( src.size, type );
     Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};
@@ -478,7 +478,7 @@ void log( InputArray _src, OutputArray _dst )
                 ocl_math_op(_src, noArray(), _dst, OCL_OP_LOG))
 
     Mat src = _src.getMat();
-    _dst.create( src.dims, src.size, type );
+    _dst.create( src.size, type );
     Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};
@@ -1032,7 +1032,7 @@ void pow( InputArray _src, double power, OutputArray _dst )
     CV_OCL_RUN(useOpenCL, ocl_pow(_src, power, _dst, is_ipower, ipower))
 
     Mat src = _src.getMat();
-    _dst.create( src.dims, src.size, type );
+    _dst.create( src.size, type );
     Mat dst = _dst.getMat();
 
     const Mat* arrays[] = {&src, &dst, 0};

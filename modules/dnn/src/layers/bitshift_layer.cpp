@@ -29,7 +29,7 @@ static inline T doShift(T inputVal, U shiftVal, int direction, int bitWidth)
 template<typename T, int CvTypeConst, int BitWidth>
 void runBitShift(const Mat& input, const Mat& shift, Mat& output, int direction)
 {
-    output.create(input.dims, input.size.p, input.type());
+    output.create(input.size, input.type());
     const size_t numElements = input.total();
 
     const T* inputPtr = input.ptr<T>();

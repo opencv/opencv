@@ -70,7 +70,7 @@ public:
 
         const int defaultOutType = CV_BoolC1;
         const int outType = (Y.empty() || Y.type() < 0) ? defaultOutType : Y.type();
-        Y.create(X.dims, X.size.p, outType);
+        Y.create(X.size, outType);
 
         const int depth = CV_MAT_DEPTH(X.type());
         const size_t total = X.total();

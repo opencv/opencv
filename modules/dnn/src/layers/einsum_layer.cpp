@@ -532,7 +532,7 @@ public:
 
                 // create temporary variable
                 MatShape tmpResult;
-                for (int i = 0; i < result.size.dims(); i++)
+                for (int i = 0; i < result.size.dims; i++)
                     tmpResult.emplace_back(result.size[i]);
 
 
@@ -656,7 +656,7 @@ void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
         }
 
         if (IsTransposeRequired(
-            !preprocessed.empty() ? preprocessed.size.dims() : inputs[inputIter].size.dims(),
+            !preprocessed.empty() ? preprocessed.size.dims : inputs[inputIter].size.dims,
             permutation))
         {
             // call transpose

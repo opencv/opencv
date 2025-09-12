@@ -671,7 +671,7 @@ public:
             CV_Assert(!weightsMat.empty());
             Mat wm;
             weightsMat.copyTo(wm); // to handle the case of isContinuous() == false
-            wm = wm.reshape(1, blobs[0].dims, blobs[0].size);
+            wm = wm.reshape(1, blobs[0].size);
             vkBlobs.push_back(wm.t());
 
             Ptr<VkComBackendWrapper> inputWrap = inputs[0].dynamicCast<VkComBackendWrapper>();

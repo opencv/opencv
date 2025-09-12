@@ -2411,7 +2411,7 @@ TEST(Mat1D, basic)
     m1.at<uchar>(50) = 10;
     EXPECT_FALSE(m1.empty());
     ASSERT_EQ(1, m1.dims);
-    ASSERT_EQ(1, m1.size.dims());  // hack map on .rows
+    ASSERT_EQ(1, m1.size.dims);  // hack map on .rows
     EXPECT_EQ(Size(100, 1), m1.size());
 
     {
@@ -2598,7 +2598,7 @@ TEST(Mat, Recreate1DMatWithSameMeta)
     cv::Mat m(dims, depth);
 
     // By default m has dims: [1, 100]
-    m.dims = 1;
+    m.size.dims = m.dims = 1;
 
     EXPECT_NO_THROW(m.create(dims, depth));
 }

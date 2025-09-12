@@ -2193,7 +2193,7 @@ void ONNXImporter::parseSqueeze(LayerParams& layerParams, const opencv_onnx::Nod
     {
         Mat inp = getBlob(node_proto, 0);
         Mat out = inp.reshape(1, outShape);
-        out.dims = outShape.size();  // to workaround dims == 1
+        out.size.dims = out.dims = outShape.size();  // to workaround dims == 1
         addConstant(node_proto.output(0), out);
         return;
     }
@@ -2465,7 +2465,7 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
     int dims = static_cast<int>(inpShape.size());
     if (isInput1D)
         dims = 1;
-    Mat shapeMat(1, dims, CV_64S);
+    Mat shapeMat(1, &dims, CV_64S);
     bool isDynamicShape = false;
     for (int j = 0; j < dims; ++j)
     {
@@ -2473,7 +2473,6 @@ void ONNXImporter::parseShape(LayerParams& layerParams, const opencv_onnx::NodeP
         isDynamicShape |= (sz == 0);
         shapeMat.at<int64_t>(j) = sz;
     }
-    shapeMat.dims = 1;  // FIXIT Mat 1D
 
     if (isDynamicShape)
     {
@@ -2508,7 +2507,7 @@ void ONNXImporter::parseCast(LayerParams& layerParams, const opencv_onnx::NodePr
         }
         Mat dst;
         blob.convertTo(dst, type);
-        dst.dims = blob.dims;
+        //dst.size.dims = dst.dims = blob.dims;
         addConstant(node_proto.output(0), dst);
         return;
     }
@@ -2918,8 +2917,8 @@ void ONNXImporter::parseElementWise(LayerParams& layerParams, const opencv_onnx:
                 LayerParams constParams;
                 constParams.name = node_proto.input(i);
                 constParams.type = "Const";
-                // Non-constant propagated layers cannot output 1-d or 0-d tensors.
-                inp.dims = std::max(inp.dims, 2);
+                // Non-constant propagated layers cannot output 0-d tensors.
+                inp.size.dims = inp.dims = std::max(inp.dims, 1);
                 constParams.blobs.push_back(inp);
 
                 opencv_onnx::NodeProto proto;
@@ -3870,7 +3869,7 @@ void ONNXImporter::parseQConcat(LayerParams& layerParams, const opencv_onnx::Nod
         for (size_t i = 2; i < num_inputs; i += 3)
         {
             Mat blob = getBlob(node_proto, i);
-            if (blob.size.dims() > inputShape.size())
+            if (blob.size.dims > inputShape.size())
             {
                 inputShape = shape(blob);
             }

@@ -131,13 +131,13 @@ protected:
                 static_cast<int>(cvtest::randInt(rng)%10+1),
                 static_cast<int>(cvtest::randInt(rng)%10+1),
             };
-            MatND test_mat_nd(3, sz, CV_MAKETYPE(depth, cn));
+            Mat test_mat_nd(3, sz, CV_MAKETYPE(depth, cn));
 
             rng0.fill(test_mat_nd, RNG::UNIFORM, Scalar::all(ranges[depth][0]), Scalar::all(ranges[depth][1]));
             if( depth >= CV_32F )
             {
                 exp(test_mat_nd, test_mat_nd);
-                MatND test_mat_scale(test_mat_nd.dims, test_mat_nd.size, test_mat_nd.type());
+                Mat test_mat_scale(test_mat_nd.size, test_mat_nd.type());
                 rng0.fill(test_mat_scale, RNG::UNIFORM, Scalar::all(-1), Scalar::all(1));
                 cv::multiply(test_mat_nd, test_mat_scale, test_mat_nd);
             }
@@ -148,8 +148,9 @@ protected:
                 static_cast<int>(cvtest::randInt(rng)%10+1),
                 static_cast<int>(cvtest::randInt(rng)%10+1),
             };
-            SparseMat test_sparse_mat = cvTsGetRandomSparseMat(4, ssz, cvtest::randInt(rng)%(CV_64F+1),
-                                                               cvtest::randInt(rng) % 10000, 0, 100, rng);
+            SparseMat test_sparse_mat =
+                cvTsGetRandomSparseMat(4, ssz, cvtest::randInt(rng)%(CV_64F+1),
+                                       cvtest::randInt(rng) % 10000, 0, 100, rng);
 
             fs << "test_int" << test_int << "test_real" << test_real << "test_string" << test_string;
             fs << "test_mat" << test_mat;

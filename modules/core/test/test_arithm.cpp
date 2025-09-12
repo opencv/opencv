@@ -614,7 +614,7 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
 {
     CV_Assert( src.type() == lb.type() && src.type() == rb.type() &&
               src.size == lb.size && src.size == rb.size );
-    dst.create( src.dims, &src.size[0], CV_8U );
+    dst.create( src.size, CV_8U );
     const Mat *arrays[]={&src, &lb, &rb, &dst, 0};
     Mat planes[4];
 
@@ -678,7 +678,7 @@ static void inRange(const Mat& src, const Mat& lb, const Mat& rb, Mat& dst)
 
 static void inRangeS(const Mat& src, const Scalar& lb, const Scalar& rb, Mat& dst)
 {
-    dst.create( src.dims, &src.size[0], CV_8U );
+    dst.create( src.size, CV_8U );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
 
@@ -836,7 +836,7 @@ static void finiteMask_(const _Tp *src, uchar *dst, size_t total, int cn)
 
 static void finiteMask(const Mat& src, Mat& dst)
 {
-    dst.create(src.dims, &src.size[0], CV_8UC1);
+    dst.create(src.size, CV_8UC1);
 
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
@@ -1019,7 +1019,7 @@ namespace reference {
 static void flip(const Mat& src, Mat& dst, int flipcode)
 {
     CV_Assert(src.dims <= 2);
-    dst.createSameSize(src, src.type());
+    dst.create(src.size, src.type());
     int i, j, k, esz = (int)src.elemSize(), width = src.cols*esz;
 
     for( i = 0; i < dst.rows; i++ )
@@ -1191,7 +1191,7 @@ struct SetZeroOp : public BaseElemWiseOp
 namespace reference {
 static void exp(const Mat& src, Mat& dst)
 {
-    dst.create( src.dims, &src.size[0], src.type() );
+    dst.create( src.size, src.type() );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
 
@@ -1220,7 +1220,7 @@ static void exp(const Mat& src, Mat& dst)
 
 static void log(const Mat& src, Mat& dst)
 {
-    dst.create( src.dims, &src.size[0], src.type() );
+    dst.create( src.size, src.type() );
     const Mat *arrays[]={&src, &dst, 0};
     Mat planes[2];
 
@@ -1312,8 +1312,8 @@ static void cartToPolar(const Mat& mx, const Mat& my, Mat& mmag, Mat& mangle, bo
 {
     CV_Assert( (mx.type() == CV_32F || mx.type() == CV_64F) &&
               mx.type() == my.type() && mx.size == my.size );
-    mmag.create( mx.dims, &mx.size[0], mx.type() );
-    mangle.create( mx.dims, &mx.size[0], mx.type() );
+    mmag.create( mx.size, mx.type() );
+    mangle.create( mx.size, mx.type() );
     const Mat *arrays[]={&mx, &my, &mmag, &mangle, 0};
     Mat planes[4];
 
@@ -1380,7 +1380,7 @@ struct CartToPolarToCartOp : public BaseArithmOp
 
         Mat msrc[] = {mag, angle, x, y};
         int pairs[] = {0, 0, 1, 1, 2, 2, 3, 3};
-        dst.create(src[0].dims, src[0].size, CV_MAKETYPE(src[0].depth(), 4));
+        dst.create(src[0].size, CV_MAKETYPE(src[0].depth(), 4));
         cv::mixChannels(msrc, 4, &dst, 1, pairs, 4);
     }
     void refop(const vector<Mat>& src, Mat& dst, const Mat&)
@@ -1389,7 +1389,7 @@ struct CartToPolarToCartOp : public BaseArithmOp
         reference::cartToPolar(src[0], src[1], mag, angle, angleInDegrees);
         Mat msrc[] = {mag, angle, src[0], src[1]};
         int pairs[] = {0, 0, 1, 1, 2, 2, 3, 3};
-        dst.create(src[0].dims, src[0].size, CV_MAKETYPE(src[0].depth(), 4));
+        dst.create(src[0].size, CV_MAKETYPE(src[0].depth(), 4));
         cv::mixChannels(msrc, 4, &dst, 1, pairs, 4);
     }
     void generateScalars(int, RNG& rng)
