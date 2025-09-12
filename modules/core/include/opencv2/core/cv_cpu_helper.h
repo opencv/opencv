@@ -168,13 +168,13 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_AVX(fn, args, mode, ...)  CV_CPU_CALL_AVX(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
-#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_FP16
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_FP16 && !defined(_MSC_VER)
 #  define CV_TRY_FP16 1
 #  define CV_CPU_FORCE_FP16 1
 #  define CV_CPU_HAS_SUPPORT_FP16 1
 #  define CV_CPU_CALL_FP16(fn, args) return (cpu_baseline::fn args)
 #  define CV_CPU_CALL_FP16_(fn, args) return (opt_FP16::fn args)
-#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_FP16
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_FP16 && !defined(_MSC_VER)
 #  define CV_TRY_FP16 1
 #  define CV_CPU_FORCE_FP16 0
 #  define CV_CPU_HAS_SUPPORT_FP16 (cv::checkHardwareSupport(CV_CPU_FP16))
