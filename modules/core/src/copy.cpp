@@ -57,11 +57,12 @@ namespace cv
 template <typename T> static inline
 void scalarToRawData_(const Scalar& s, T * const buf, const int cn, const int unroll_to)
 {
-    int i = 0;
-    for(; i < cn; i++)
-        buf[i] = saturate_cast<T>(s.val[i]);
-    for(; i < unroll_to; i++)
-        buf[i] = buf[i-cn];
+   for(size_t i = 0; i < (size_t)cn; i++)
+    buf[i] = saturate_cast<T>(s.val[i]);
+
+    for(size_t i = cn; i < (size_t)unroll_to; i++)
+     buf[i] = buf[i - cn];
+
 }
 
 void scalarToRawData(const Scalar& s, void* _buf, int type, int unroll_to)
