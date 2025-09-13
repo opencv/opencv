@@ -28,6 +28,9 @@
 #elif CV_NEON              // 16 registers.
 #define CONV_MR_FP32 4
 #define CONV_NR_FP32 12
+#elif CV_WASM_SIMD
+#define CONV_MR_FP32 4
+#define CONV_NR_FP32 8
 #else // SIMD 128, AVX or AVX2
 #define CONV_MR_FP32 4
 #define CONV_NR_FP32 24
