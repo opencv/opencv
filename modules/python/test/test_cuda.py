@@ -153,6 +153,7 @@ class cuda_test(NewOpenCVTests):
                 src.upload(ref)
                 dst = cv.cuda_GpuMat.from_dlpack(src)
                 test = dst.download()
+                self.assertEqual(ref.dtype, test.dtype)
                 equal = np.array_equal(ref, test)
                 if not equal:
                     print(f"Failed test with dtype {dtype} and {channels} channels")
