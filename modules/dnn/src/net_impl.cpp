@@ -626,7 +626,7 @@ void Net::Impl::allocateLayers(const std::vector<LayerPin>& blobsToKeep_)
             {
                 type = CV_16F;
                 if (layers[0].dtype == CV_32F)
-                    layers[0].outputBlobs[i].create(inp.dims, inp.size, CV_16F);
+                    layers[0].outputBlobs[i].create(inp.size, CV_16F);
             }
         }
         inputShapes.push_back(shape(inp));
@@ -1426,7 +1426,7 @@ void Net::Impl::updateLayersShapes()
             preferableTarget == DNN_TARGET_OPENCL_FP16 &&
             inputLayerData.dtype == CV_32F)
         {
-            inp.create(inp.dims, inp.size, CV_16F);
+            inp.create(inp.size, CV_16F);
         }
         inputShapes.push_back(shape(inp));
         inputTypes.push_back(inp.type());

@@ -2389,7 +2389,7 @@ static bool ocl_dft(InputArray _src, OutputArray _dst, int flags, int nonzero_ro
         else
         {
             _dst.createSameSize(src, CV_MAKETYPE(depth, 1));
-            output.create(src.dims, src.size, CV_MAKETYPE(depth, 2));
+            output.create(src.size, CV_MAKETYPE(depth, 2));
         }
     }
 

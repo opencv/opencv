@@ -1438,7 +1438,7 @@ TEST_P(Layer_FullyConnected_Test, Accuracy_01D)
     Mat input(input_shape, CV_32F);
     randn(input, 0, 1);
     Mat output_ref = input.reshape(1, 1) * weights;
-    output_ref.dims = input_shape.dims;
+    output_ref.size.dims = output_ref.dims = input_shape.dims;
 
     std::vector<Mat> inputs{input};
     std::vector<Mat> outputs;

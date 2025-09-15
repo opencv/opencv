@@ -965,7 +965,7 @@ TEST_P(Scale_untrainable, Accuracy)
     net.setPreferableBackend(DNN_BACKEND_OPENCV);
     Mat out = net.forward();
 
-    Mat ref(input.dims, input.size, CV_32F);
+    Mat ref(input.size, CV_32F);
     float* inpData = (float*)input.data;
     float* refData = (float*)ref.data;
     float* weightsData = (float*)weights.data;
@@ -1060,7 +1060,7 @@ TEST_P(Crop, Accuracy)
     for (int i = axis; i < 4; i++)
         crop_range[i] = Range(offsetVal, sizShape[i] + offsetVal);
 
-    Mat ref(sizImage.dims, sizImage.size, CV_32F);
+    Mat ref(sizImage.size, CV_32F);
     inpImage(&crop_range[0]).copyTo(ref);
     normAssert(out, ref);
 }

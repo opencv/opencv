@@ -213,7 +213,7 @@ public:
             {
                 reuse(bestBlobPin, lp);
                 dst = bestBlob.reshape(1, 1).colRange(0, targetTotal).reshape(1, shape);
-                dst.dims = shape.size();
+                dst.size.dims = dst.dims = shape.size();
                 return;
             }
         }

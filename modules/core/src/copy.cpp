@@ -520,7 +520,7 @@ void Mat::copyTo( OutputArray _dst ) const
         return;
     }
 
-    _dst.create( dims, size, stype );
+    _dst.create( size, stype );
     Mat dst = _dst.getMat();
     if( data == dst.data )
         return;
@@ -595,7 +595,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
     Mat dst;
     {
         Mat dst0 = _dst.getMat();
-        _dst.create(dims, size, type()); // TODO Prohibit 'dst' re-creation, user should pass it explicitly with correct size/type or empty
+        _dst.create(size, type()); // TODO Prohibit 'dst' re-creation, user should pass it explicitly with correct size/type or empty
         dst = _dst.getMat();
 
         if (dst.data != dst0.data) // re-allocation happened

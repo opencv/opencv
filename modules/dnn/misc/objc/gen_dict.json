@@ -26,18 +26,18 @@
         "MatShape": {
             "objc_type": "IntVector*",
             "to_cpp": "cv::MatShape(%(n)s.nativeRef)",
-            "from_cpp": "[IntVector fromNative:(std::vector<int>)%(n)s]"
+            "from_cpp": "[IntVector fromNative:%(n)s.vec()]"
         },
         "vector_MatShape": {
             "objc_type": "IntVector*",
             "to_cpp": "cv::MatShape(%(n)s.nativeRef)",
-            "from_cpp": "[IntVector fromNative:(std::vector<int>)%(n)s]",
+            "from_cpp": "[IntVector fromNative:%(n)s.vec()]",
             "v_type": "MatShape"
         },
         "vector_vector_MatShape": {
             "objc_type": "IntVector*",
             "to_cpp": "cv::MatShape(%(n)s.nativeRef)",
-            "from_cpp": "[IntVector fromNative:(std::vector<int>)%(n)s]",
+            "from_cpp": "[IntVector fromNative:%(n)s.vec()]",
             "v_v_type": "MatShape"
         },
         "LayerId": {
