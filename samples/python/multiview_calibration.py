@@ -449,8 +449,10 @@ def calibrateFromPoints(
     print('distortion', distortions)
     print('mean RMS error over all visible frames %.3E' % rmse)
 
+    errors_per_camera = np.array([np.mean(errs[errs > 0]) for errs in errors_per_frame])
+
     with np.printoptions(precision=2):
-        print('mean RMS errors per camera', np.array([np.mean(errs[errs > 0]) for errs in errors_per_frame]))
+        print('mean RMS errors per camera', errors_per_camera)
 
     return {
         'Rs': Rs,
@@ -460,6 +462,7 @@ def calibrateFromPoints(
         'rvecs0': rvecs0,
         'tvecs0': tvecs0,
         'errors_per_frame': errors_per_frame,
+        'errors_per_camera': errors_per_camera,
         'output_pairs': output_pairs,
         'image_points': image_points,
         'models': models,
