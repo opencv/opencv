@@ -254,7 +254,20 @@ public:
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto cast = std::make_shared<ov::op::v0::Convert>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node, cvTypeToOvType(outputType));
+        ov::element::Type dstType;
+        if (hasToParam)
+        {
+            dstType = cvTypeToOvType(CV_MAKETYPE(toCvDepth_, 1));
+        }
+        else if (nodes.size() >= 2)
+        {
+            dstType = nodes[1].dynamicCast<InfEngineNgraphNode>()->node.get_element_type();
+        }
+        else
+        {
+            dstType = nodes[0].dynamicCast<InfEngineNgraphNode>()->node.get_element_type();
+        }
+        auto cast = std::make_shared<ov::op::v0::Convert>(nodes[0].dynamicCast<InfEngineNgraphNode>()->node, dstType);
         return Ptr<BackendNode>(new InfEngineNgraphNode(cast));
     }
 #endif  // HAVE_DNN_NGRAPH
