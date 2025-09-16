@@ -151,6 +151,13 @@ class cuda_test(NewOpenCVTests):
                 ref = (np.random.random((64, 128, channels)) * 255).astype(dtype)
                 src = cv.cuda_GpuMat()
                 src.upload(ref)
+
+                # workaround int64/uint64 conversion to int32/uint32
+                if dtype == np.int64:
+                    src = src.convertTo(cv.CV_64S)
+                elif dtype == np.uint64:
+                    src = src.convertTo(cv.CV_64U)
+
                 dst = cv.cuda_GpuMat.from_dlpack(src)
                 test = dst.download()
                 self.assertEqual(ref.dtype, test.dtype)
