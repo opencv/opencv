@@ -459,6 +459,23 @@ CV__DNN_INLINE_NS_BEGIN
                               const int requiredInternals,
                               std::vector<MatType>&outputs,
                               std::vector<MatType>&internals) const;
+                              
+        // this is the method for Layer to express its attitude to the block layout
+        // or any other special form of layout. It takes
+        // layouts of the inputs and should return the desired layouts of
+        // inputs, as well as layouts of the outputs.
+        // By default, no mater what the actual inputs' layouts are,
+        // the desired inputs as well as outputs will get 'Unknown' layout values.
+        // It means that the layer can only handle non-block layout
+        // (depending on the model format, e.g. NCHW for ONNX or NHWC for TFLite)
+        // and will return tensors with non-block layout as well.
+        // Some layers could override this default behaviour:
+        // a) if they _can_ process block-layout data, like element-wise operations, or
+        // b) if they _need_ block-layout data, like convolution
+        virtual void getLayouts(const std::vector<DataLayout>& actualInputs,
+                                std::vector<DataLayout>& desiredInputs,
+                                const int requiredOutputs,
+                                std::vector<DataLayout>& outputs) const;
 
         virtual int64 getFLOPS(const std::vector<MatShape> &inputs,
                                const std::vector<MatShape> &outputs) const;
