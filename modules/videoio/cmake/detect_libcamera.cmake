@@ -7,13 +7,14 @@ if(NOT HAVE_LIBCAMERA AND PKG_CONFIG_FOUND)
   endif()
 endif()
 
-if(HAVE_LIBCAMERA)
-  if((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 17))
-    message(STATUS "CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD} is too old to support libcamera. Use C++17 or later. Turning HAVE_LIBCAMERA off")
-    set(HAVE_LIBCAMERA FALSE)
-  endif()
-endif()
 
+# libcamera requires C++17. Check if C++17 is available.
 if(HAVE_LIBCAMERA)
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag("-std=c++17" COMPILER_SUPPORTS_CXX17)
+  if(NOT COMPILER_SUPPORTS_CXX17)
+    message(FATAL_ERROR "libcamera plugin requires C++17, but the compiler does not support it.")
+  endif()
+
   ocv_add_external_target(libcamera "${LIBCAMERA_INCLUDE_DIRS}" "${LIBCAMERA_LINK_LIBRARIES}" "HAVE_LIBCAMERA")
 endif()

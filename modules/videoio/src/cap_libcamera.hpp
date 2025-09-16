@@ -98,9 +98,9 @@ public:
     void setWhiteBalance(WhiteBalance_Modes wb) { awb_index = wb; }
     void setExposureMode(Exposure_Modes exp) { exposure_index = exp; }
 
-    int getExposureMode() { return exposure_index; }
-    int getMeteringMode() { return metering_index; }
-    int getWhiteBalance() { return awb_index; }
+    int getExposureMode() const { return exposure_index; }
+    int getMeteringMode() const { return metering_index; }
+    int getWhiteBalance() const { return awb_index; }
 
     bool help;
     bool version;
@@ -388,7 +388,7 @@ public:
     static constexpr unsigned int FLAG_VIDEO_RAW = 1;              // request raw image stream
     static constexpr unsigned int FLAG_VIDEO_JPEG_COLOURSPACE = 2; // force JPEG colour space
 
-    Options *GetOptions() const { return options_.get(); }
+    Options GetOptions() const { return options_; }
 
     std::string const &CameraId() const;
     void OpenCamera();
@@ -422,7 +422,7 @@ public:
     void StreamDimensions(Stream const *stream, unsigned int *w, unsigned int *h, unsigned int *stride) const;
 
 protected:
-    std::unique_ptr<Options> options_;
+    Options options_;
 
 private:
     static std::shared_ptr<CameraManager> getCameraManager()
@@ -527,7 +527,6 @@ public:
     bool retrieve(cv::Mat& frame, int stream_idx = 0);
 
 protected:
-    Options *options;
     unsigned int still_flags;
     unsigned int vw, vh, vstr;
     std::atomic<bool> needsReconfigure;
