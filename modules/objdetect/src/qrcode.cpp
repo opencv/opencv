@@ -3454,8 +3454,10 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
     Mat tmp_shrinking = bin_barcode;
     int tmp_num_points = 0;
     int num_points = -1;
-    for (eps_horizontal = 0.1; eps_horizontal < 0.4; eps_horizontal += 0.1)
+    double eps = 0.0;
+    for (int epsCoeff = 1; epsCoeff <= 3; epsCoeff++)
     {
+        eps = eps_horizontal * static_cast<double>(epsCoeff);
         tmp_num_points = 0;
         num_points = -1;
         if (purpose == SHRINKING)
@@ -3480,7 +3482,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
                 else
                     break;
             }
-            vector<Point2f> list_lines_y = extractVerticalLines(list_lines_x, eps_horizontal);
+            vector<Point2f> list_lines_y = extractVerticalLines(list_lines_x, eps);
             if (list_lines_y.size() < 3)
             {
                 if (k == 0)
@@ -3490,7 +3492,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
                     list_lines_x = searchHorizontalLines();
                     if (list_lines_x.empty())
                         break;
-                    list_lines_y = extractVerticalLines(list_lines_x, eps_horizontal);
+                    list_lines_y = extractVerticalLines(list_lines_x, eps);
                     if (list_lines_y.size() < 3)
                         break;
                 }
@@ -3568,7 +3570,7 @@ int QRDetectMulti::findNumberLocalizationPoints(vector<Point2f>& tmp_localizatio
     vector<Vec3d> list_lines_x = searchHorizontalLines();
     if (list_lines_x.empty())
         return num_points;
-    vector<Point2f> list_lines_y = extractVerticalLines(list_lines_x, eps_horizontal);
+    vector<Point2f> list_lines_y = extractVerticalLines(list_lines_x, eps);
     if (list_lines_y.size() < 3)
         return num_points;
     if (num_points < 3)
