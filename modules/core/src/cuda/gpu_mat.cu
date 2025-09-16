@@ -550,7 +550,8 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
         return;
     }
 
-    CV_Assert( sdepth <= CV_64F && ddepth <= CV_64F );
+    CV_Assert( (sdepth <= CV_64F || (sdepth >= CV_64U && sdepth <= CV_32U)) &&
+               (ddepth <= CV_64F) || (ddepth >= CV_64U && ddepth <= CV_32U) );
 
     GpuMat src = *this;
 
@@ -558,15 +559,22 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, Stream& stream) co
     GpuMat dst = _dst.getGpuMat();
 
     typedef void (*func_t)(const GpuMat& src, const GpuMat& dst, Stream& stream);
-    static const func_t funcs[7][7] =
+    static const func_t funcs[7][13] =
     {
-        {0, convertToNoScale<uchar, schar>, convertToNoScale<uchar, ushort>, convertToNoScale<uchar, short>, convertToNoScale<uchar, int>, convertToNoScale<uchar, float>, convertToNoScale<uchar, double>},
-        {convertToNoScale<schar, uchar>, 0, convertToNoScale<schar, ushort>, convertToNoScale<schar, short>, convertToNoScale<schar, int>, convertToNoScale<schar, float>, convertToNoScale<schar, double>},
-        {convertToNoScale<ushort, uchar>, convertToNoScale<ushort, schar>, 0, convertToNoScale<ushort, short>, convertToNoScale<ushort, int>, convertToNoScale<ushort, float>, convertToNoScale<ushort, double>},
-        {convertToNoScale<short, uchar>, convertToNoScale<short, schar>, convertToNoScale<short, ushort>, 0, convertToNoScale<short, int>, convertToNoScale<short, float>, convertToNoScale<short, double>},
-        {convertToNoScale<int, uchar>, convertToNoScale<int, schar>, convertToNoScale<int, ushort>, convertToNoScale<int, short>, 0, convertToNoScale<int, float>, convertToNoScale<int, double>},
-        {convertToNoScale<float, uchar>, convertToNoScale<float, schar>, convertToNoScale<float, ushort>, convertToNoScale<float, short>, convertToNoScale<float, int>, 0, convertToNoScale<float, double>},
-        {convertToNoScale<double, uchar>, convertToNoScale<double, schar>, convertToNoScale<double, ushort>, convertToNoScale<double, short>, convertToNoScale<double, int>, convertToNoScale<double, float>, 0}
+        {0, convertToNoScale<uchar, schar>, convertToNoScale<uchar, ushort>, convertToNoScale<uchar, short>, convertToNoScale<uchar, int>, convertToNoScale<uchar, float>, convertToNoScale<uchar, double>, 0, 0, 0, 0, convertToNoScale<uchar, int64_t>, 0},
+        {convertToNoScale<schar, uchar>, 0, convertToNoScale<schar, ushort>, convertToNoScale<schar, short>, convertToNoScale<schar, int>, convertToNoScale<schar, float>, convertToNoScale<schar, double>, 0, 0, 0, 0, convertToNoScale<schar, int64_t>, 0},
+        {convertToNoScale<ushort, uchar>, convertToNoScale<ushort, schar>, 0, convertToNoScale<ushort, short>, convertToNoScale<ushort, int>, convertToNoScale<ushort, float>, convertToNoScale<ushort, double>, 0, 0, 0, 0, convertToNoScale<ushort, int64_t>, 0},
+        {convertToNoScale<short, uchar>, convertToNoScale<short, schar>, convertToNoScale<short, ushort>, 0, convertToNoScale<short, int>, convertToNoScale<short, float>, convertToNoScale<short, double>, 0, 0, 0, 0, convertToNoScale<short, int64_t>, 0},
+        {convertToNoScale<int, uchar>, convertToNoScale<int, schar>, convertToNoScale<int, ushort>, convertToNoScale<int, short>, 0, convertToNoScale<int, float>, convertToNoScale<int, double>, 0, 0, 0, convertToNoScale<int, uint64_t>, convertToNoScale<int, int64_t>, 0},
+        {convertToNoScale<float, uchar>, convertToNoScale<float, schar>, convertToNoScale<float, ushort>, convertToNoScale<float, short>, convertToNoScale<float, int>, 0, convertToNoScale<float, double>, 0, 0, 0, 0, convertToNoScale<float, int64_t>, 0},
+        {convertToNoScale<double, uchar>, convertToNoScale<double, schar>, convertToNoScale<double, ushort>, convertToNoScale<double, short>, convertToNoScale<double, int>, convertToNoScale<double, float>, 0, 0, 0, 0, 0, convertToNoScale<double, int64_t>, 0},
+        // {0, 0, 0, 0, 0, 0, 0},
+        // {0, 0, 0, 0, 0, 0, 0},
+        // {0, 0, 0, 0, 0, 0, 0},
+        // {0, 0, 0, 0, 0, 0, 0},
+        // {convertToNoScale<double, uchar>, convertToNoScale<double, schar>, convertToNoScale<double, ushort>, convertToNoScale<double, short>, convertToNoScale<double, int>, convertToNoScale<double, float>, 0, 0, 0, 0, 0, convertToNoScale<double, int64_t>, 0},
+        // {convertToNoScale<double, uchar>, convertToNoScale<double, schar>, convertToNoScale<double, ushort>, convertToNoScale<double, short>, convertToNoScale<double, int>, convertToNoScale<double, float>, 0, 0, 0, 0, 0, convertToNoScale<double, int64_t>, 0},
+        // {convertToNoScale<double, uchar>, convertToNoScale<double, schar>, convertToNoScale<double, ushort>, convertToNoScale<double, short>, convertToNoScale<double, int>, convertToNoScale<double, float>, 0, 0, 0, 0, 0, convertToNoScale<double, int64_t>, 0},
     };
 
     funcs[sdepth][ddepth](src.reshape(1), dst.reshape(1), stream);
