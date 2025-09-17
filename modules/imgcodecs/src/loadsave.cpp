@@ -1444,6 +1444,12 @@ Mat imdecode( InputArray _buf, int flags )
 {
     CV_TRACE_FUNCTION();
 
+    size_t buf_size = _buf.total() * _buf.elemSize();
+    if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2,147,483,647 bytes)");
+    }
+
     Mat buf = _buf.getMat(), img;
     if (!imdecode_(buf, flags, img, nullptr, noArray()))
         img.release();
@@ -1454,6 +1460,12 @@ Mat imdecode( InputArray _buf, int flags )
 Mat imdecode( InputArray _buf, int flags, Mat* dst )
 {
     CV_TRACE_FUNCTION();
+
+    size_t buf_size = _buf.total() * _buf.elemSize();
+    if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2,147,483,647 bytes)");
+    }
 
     Mat buf = _buf.getMat(), img;
     dst = dst ? dst : &img;
@@ -1467,6 +1479,12 @@ Mat imdecodeWithMetadata( InputArray _buf, std::vector<int>& metadata_types,
                           OutputArrayOfArrays metadata, int flags )
 {
     CV_TRACE_FUNCTION();
+
+    size_t buf_size = _buf.total() * _buf.elemSize();
+    if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2,147,483,647 bytes)");
+    }
 
     Mat buf = _buf.getMat(), img;
     if (!imdecode_(buf, flags, img, &metadata_types, metadata))
