@@ -1,9 +1,9 @@
 # Version Compute Capability from which OpenCV has been compiled is remembered
+option(OpenCV_REQUIRE_CUDA_MINOR_EXACT "Require match the exact cuda minor version to link against produced libraries." ON)
+option(OpenCV_ALLOW_CUDA_MINOR_OLDER "Allow newer cuda minor version to link against produced libraries." OFF)
 set(OpenCV_COMPUTE_CAPABILITIES "@OpenCV_CUDA_CC@")
 
 set(OpenCV_CUDA_VERSION "@CUDA_VERSION_STRING@")
-set(OpenCV_CUDA_VERSION_MIN "@CUDA_VERSION_MIN@")
-set(OpenCV_CUDA_VERSION_MAX "@CUDA_VERSION_MAX@")
 set(OpenCV_USE_CUBLAS   "@HAVE_CUBLAS@")
 set(OpenCV_USE_CUFFT    "@HAVE_CUFFT@")
 set(OpenCV_USE_NVCUVID  "@HAVE_NVCUVID@")
@@ -11,7 +11,7 @@ set(OpenCV_USE_NVCUVENC "@HAVE_NVCUVENC@")
 set(OpenCV_CUDNN_VERSION    "@CUDNN_VERSION@")
 set(OpenCV_USE_CUDNN        "@HAVE_CUDNN@")
 set(ENABLE_CUDA_FIRST_CLASS_LANGUAGE  ON)
-
+get_version_range(${OpenCV_CUDA_VERSION} ${OpenCV_REQUIRE_CUDA_MINOR_EXACT} ${OpenCV_ALLOW_CUDA_MINOR_OLDER} OpenCV_CUDA_VERSION_MIN OpenCV_CUDA_VERSION_MAX)
 if(NOT CUDAToolkit_FOUND)
   if(NOT CMAKE_VERSION VERSION_LESS 3.18)
     if(UNIX AND NOT CMAKE_CUDA_COMPILER AND NOT CUDAToolkit_ROOT)
