@@ -465,6 +465,12 @@ void hlineSmooth5N(const ET* src, int cn, const FT* m, int, FT* dst, int len, in
             for (int i = 2*cn; i < (len - 2)*cn; i++, src++, dst++)
                 *dst = m[0] * src[-2*cn] + m[1] * src[-cn] + m[2] * src[0] + m[3] * src[cn] + m[4] * src[2*cn];
         }
+        else
+        {
+            int offset = (len - 4) * cn;
+            src += offset;
+            dst += offset;
+        }
         // Points that fall right from border
         for (int k = 0; k < cn; k++)
         {
@@ -605,9 +611,10 @@ v_uint16 vx_setall(ushort value) {
     return vx_setall_u16(value);
 }
 template <typename ET, typename FT, typename WET, typename VFT, typename VET>
-void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, int width, int src_stride, int dst_stride)
+void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
 {
     int offset = 1;
+    int vOffset = 2;
     int v = idst - 1;
     int len = (width - offset) * cn;
     int x = offset * cn;
@@ -637,7 +644,7 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
         VFT b10 = v_add(v_shl<1>(v_src0),  v_add(v_src0_ncn, v_src0_cn));
         VFT b11 = v_add(v_shl<1>(v_src1),  v_add(v_src1_ncn, v_src1_cn));
 
-        for (; j < ito - offset; j++, idst_++)
+        for (; j < ito - vOffset; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
 
@@ -670,12 +677,12 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
         b0 = (src_0[0] << 1) + src_0[-cn] + src_0[cn];
         b1 = (src_1[0] << 1) + src_1[-cn] + src_1[cn];
 
-        for (; j < ito - offset; j++, idst_++)
+        for (; j < ito - vOffset; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
             b2 = (src_2[0] << 1) + src_2[-cn] + src_2[cn];
             src_2 += src_stride;
-            dstx[x] = ((b1 <<1) + b0 + b2 + (1<<3)) >> 4;
+            dstx[x] = (ET)(((b1 <<1) + b0 + b2 + (1<<3)) >> 4);
 
             b0 = b1;
             b1 = b2;
@@ -683,22 +690,23 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
     }
 }
 template <typename ET, typename FT>
-void inline smooth3N121(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, int src_stride, int dst_stride);
+void inline smooth3N121(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride);
 
 template <>
-void inline smooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, int src_stride, int dst_stride)
+void inline smooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
 {
     smooth3N121Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16, v_uint8>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
 }
 template <>
-void inline smooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, int src_stride, int dst_stride)
+void inline smooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
 {
     smooth3N121Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32, v_uint16>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
 }
 template <typename ET, typename FT, typename WET, typename VFT, typename VET>
-void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst, int width, int src_stride, int dst_stride)
+void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
 {
     int offset = 2;
+    int vOffset = 3;
     int v = idst - 2;
     int len = (width - offset) * cn;
     int x = offset * cn;
@@ -754,7 +762,7 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
         VFT b30 = v_add(v_add(v_add(v_mul(v_src0, v_6), v_shl<2>(v_add(v_src0_ncn, v_src0_cn))), v_src0_n2cn), v_src0_2cn);
         VFT b31 = v_add(v_add(v_add(v_mul(v_src1, v_6), v_shl<2>(v_add(v_src1_ncn, v_src1_cn))), v_src1_n2cn), v_src1_2cn);
 
-        for (; j < ito - offset; j++, idst_++)
+        for (; j < ito - vOffset; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
 
@@ -794,12 +802,12 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
         b1 = ((src_1[0] * 6) + ((src_1[-cn] + src_1[cn]) << 2) + src_1[-2 * cn] + src_1[2 * cn]);
         b2 = ((src_2[0] * 6) + ((src_2[-cn] + src_2[cn]) << 2) + src_2[-2 * cn] + src_2[2 * cn]);
         b3 = ((src_3[0] * 6) + ((src_3[-cn] + src_3[cn]) << 2) + src_3[-2 * cn] + src_3[2 * cn]);
-        for (; j < ito - offset; j++, idst_++)
+        for (; j < ito - vOffset; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
             b4 = ((src_4[0] * 6) + ((src_4[-cn] + src_4[cn]) << 2) + src_4[-2 * cn] + src_4[2 * cn]);
             src_4 += src_stride;
-            dstx[x] = (b2 * 6 + ((b1 + b3) << 2) + b0 + b4 +128 ) >> 8;
+            dstx[x] = (ET)((b2 * 6 + ((b1 + b3) << 2) + b0 + b4 +128 ) >> 8);
 
             b0 = b1;
             b1 = b2;
@@ -809,15 +817,15 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
     }
 }
 template <typename ET, typename FT>
-void inline smooth5N14641(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, int src_stride, int dst_stride);
+void inline smooth5N14641(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride);
 
 template <>
-void inline smooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, int src_stride, int dst_stride)
+void inline smooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
 {
     smooth5N14641Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16, v_uint8>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
 }
 template <>
-void inline smooth5N14641<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, int src_stride, int dst_stride)
+void inline smooth5N14641<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
 {
     smooth5N14641Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32, v_uint16>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
 }
@@ -1620,25 +1628,25 @@ void vlineSmooth1N1<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, co
         dst[i] = src0[i];
 }
 template <typename ET, typename FT>
-void vlineSmooth3N(const FT* const * src, const FT* m, int, ET* dst, int len, int cn, bool processInnerRegion)
+void vlineSmooth3N(const FT* const * src, const FT* m, int, ET* dst, int len, int kcn, bool processInnerRegion)
 {
     int i = 0;
-    for (; i < cn; i++)
+    for (; i < kcn; i++)
         dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
     if(processInnerRegion)
     {
-        for (; i < len-cn; i++)
+        for (; i < len-kcn; i++)
             dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
     }
-    for (i = len-cn; i < len; i++)
+    for (i = len-kcn; i < len; i++)
         dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
 
 }
 template <>
-void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len, int cn, bool processInnerRegion)
+void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16* m, int, uint8_t* dst, int len, int kcn, bool processInnerRegion)
 {
     int i = 0;
-    for (; i < cn; i++)
+    for (; i < kcn; i++)
         dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
     if(processInnerRegion)
     {
@@ -1655,7 +1663,7 @@ void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
         std::memcpy(&val01, m, sizeof(val01));
         v_int16 v_mul01 = v_reinterpret_as_s16(vx_setall_u32(val01));
         v_int16 v_mul2 = v_reinterpret_as_s16(vx_setall_u16(*((uint16_t*)(m + 2))));
-        for (; i <= min(len - 4*VECSZ, len-cn); i += 4*VECSZ)
+        for (; i <= min(len - 4*VECSZ, len-kcn); i += 4*VECSZ)
         {
             v_int16 v_src00, v_src10, v_src01, v_src11, v_src02, v_src12, v_src03, v_src13;
             v_int16 v_tmp0, v_tmp1;
@@ -1717,38 +1725,38 @@ void vlineSmooth3N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
                                             v_reinterpret_as_u16(v_rshr_pack<16>(v_res6, v_res7))));
         }
 #endif
-        for (; i < len-cn; i++)
+        for (; i < len-kcn; i++)
             dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
     }
-    for (i=len-cn; i < len; i++)
+    for (i=len-kcn; i < len; i++)
         dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i];
 }
 template <typename ET, typename FT>
-void vlineSmooth3N121(const FT* const * src, const FT*, int, ET* dst, int len, int cn, bool processInnerRegion)
+void vlineSmooth3N121(const FT* const * src, const FT*, int, ET* dst, int len, int kcn, bool processInnerRegion)
 {
     int i = 0;
-    for (; i < cn; i++)
+    for (; i < kcn; i++)
         dst[i] = (FT::WT(src[0][i]) >> 2) + (FT::WT(src[2][i]) >> 2) + (FT::WT(src[1][i]) >> 1);
     if(processInnerRegion)
     {
-        for (; i < len-cn; i++)
+        for (; i < len-kcn; i++)
             dst[i] = (FT::WT(src[0][i]) >> 2) + (FT::WT(src[2][i]) >> 2) + (FT::WT(src[1][i]) >> 1);
     }
-    for (i = len-cn; i < len; i++)
+    for (i = len-kcn; i < len; i++)
         dst[i] = (FT::WT(src[0][i]) >> 2) + (FT::WT(src[2][i]) >> 2) + (FT::WT(src[1][i]) >> 1);
 }
 template <>
-void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len, int cn, bool processInnerRegion)
+void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const ufixedpoint16*, int, uint8_t* dst, int len, int kcn, bool processInnerRegion)
 {
     int i = 0;
-    for (; i < cn; i++)
+    for (; i < kcn; i++)
         dst[i] = (((uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[2]))[i]) + ((uint32_t)(((uint16_t*)(src[1]))[i]) << 1)) + (1 << 9)) >> 10;
 
     if(processInnerRegion)
     {
 #if (CV_SIMD || CV_SIMD_SCALABLE)
         const int VECSZ = VTraits<v_uint16>::vlanes();
-        for (; i <= min(len - 2*VECSZ, len-cn); i += 2*VECSZ)
+        for (; i <= min(len - 2*VECSZ, len-kcn); i += 2*VECSZ)
         {
             v_uint32 v_src00, v_src01, v_src02, v_src03, v_src10, v_src11, v_src12, v_src13, v_src20, v_src21, v_src22, v_src23;
             v_expand(vx_load((uint16_t*)(src[0]) + i), v_src00, v_src01);
@@ -1761,10 +1769,10 @@ void vlineSmooth3N121<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, 
                                     v_rshr_pack<10>(v_add(v_add(v_src02, v_src22), v_add(v_src12, v_src12)), v_add(v_add(v_src03, v_src23), v_add(v_src13, v_src13)))));
         }
 #endif
-        for (; i < len-cn; i++)
+        for (; i < len-kcn; i++)
             dst[i] = (((uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[2]))[i]) + ((uint32_t)(((uint16_t*)(src[1]))[i]) << 1)) + (1 << 9)) >> 10;
     }
-    for (i = len-cn; i < len; i++)
+    for (i = len-kcn; i < len; i++)
         dst[i] = (((uint32_t)(((uint16_t*)(src[0]))[i]) + (uint32_t)(((uint16_t*)(src[2]))[i]) + ((uint32_t)(((uint16_t*)(src[1]))[i]) << 1)) + (1 << 9)) >> 10;
 }
 template <>
@@ -1919,8 +1927,8 @@ void vlineSmooth5N<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, con
             }
         }
 #endif
-    for (; i < len-kcn; i++)
-        dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i] + m[3] * src[3][i] + m[4] * src[4][i];
+        for (; i < len-kcn; i++)
+            dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i] + m[3] * src[3][i] + m[4] * src[4][i];
     }
     for ( i = len-kcn; i < len; i++)
         dst[i] = m[0] * src[0][i] + m[1] * src[1][i] + m[2] * src[2][i] + m[3] * src[3][i] + m[4] * src[4][i];
@@ -2210,7 +2218,7 @@ void vlineSmooth<uint8_t, ufixedpoint16>(const ufixedpoint16* const * src, const
     }
 }
 template <typename ET, typename FT>
-void vlineSmoothONa_yzy_a(const FT* const * src, const FT* m, int n, ET* dst, int len, int kcn, bool processInnerRegion)
+void vlineSmoothONa_yzy_a(const FT* const * src, const FT* m, int n, ET* dst, int len, int , bool )
 {
     int pre_shift = n / 2;
     for (int i = 0; i < len; i++)
@@ -2451,13 +2459,13 @@ public:
         }
         else
             vlineSmoothFunc = vlineSmooth;
-        if ((kxlen == 3) && (kx[0] == (FT::one()>>2)&&kx[1] == (FT::one()>>1)&&kx[2] == (FT::one()>>2)) &&
+        if ((width>3) && (kxlen == 3) && (kx[0] == (FT::one()>>2)&&kx[1] == (FT::one()>>1)&&kx[2] == (FT::one()>>2)) &&
             (ky[0] == (FT::one()>>2)&&ky[1] == (FT::one()>>1)&&ky[2] == (FT::one()>>2)))
         {
             doCombined3N121 = true;
             //smoothFunc = smooth3N121; /* using funptr drops performance */
         }
-        else if((kxlen == 5) && (width > 3) &&
+        else if((kxlen == 5) && (width > 5) &&
             kx[2] == (FT::one() * (uint8_t)3 >> 3) &&
             kx[1] == (FT::one() >> 2) && kx[3] == (FT::one() >> 2) &&
             kx[0] == (FT::one() >> 4) && kx[4] == (FT::one() >> 4) &&
@@ -2481,7 +2489,7 @@ public:
                     processFlag = true;
                 hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType, processFlag);
                 bufline = (bufline + 1) % kylen;
-                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn, ((kylen>>1))*cn, false);
+                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn, ((kxlen>>1))*cn, false);
             }
             // inner region
             if(doCombined3N121)
@@ -2495,7 +2503,7 @@ public:
             {
                 hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType, true);
                 bufline = (bufline + 1) % kylen;
-                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst * dst_stride, width * cn, cn, true);
+                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst * dst_stride, width*cn, 0, true);
             }
         }
     }
@@ -2675,7 +2683,7 @@ private:
     bool doCombined5N14641 = false;
     void(*hlineSmoothFunc)(const ET* src, int cn, const FT* m, int n, FT* dst, int len, int borderType, bool processInnerRegion);
     void(*vlineSmoothFunc)(const FT* const * src, const FT* m, int n, ET* dst, int len, int cn, bool processInnerRegion);
-    void(*smoothFunc)(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, int src_stride, int dst_stride);
+    void(*smoothFunc)(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride);
 
     fixedSmoothInvoker(const fixedSmoothInvoker&);
     fixedSmoothInvoker& operator=(const fixedSmoothInvoker&);
