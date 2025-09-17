@@ -1341,6 +1341,7 @@ See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape:
 @param[out] distortions Distortion coefficients. Output size: NUM_CAMERAS x NUM_PARAMS.
 @param[out] perFrameErrors RMSE value for each visible frame, (-1 for non-visible). Output size: NUM_CAMERAS x NUM_FRAMES.
 @param[out] initializationPairs Pairs with camera indices that were used for initial pairwise stereo calibration.
+@param[in] criteria Termination criteria for the iterative optimization algorithm.
 
 Output size: (NUM_CAMERAS-1) x 2.
 
@@ -1382,7 +1383,8 @@ CV_EXPORTS_AS(calibrateMultiviewExtended) double calibrateMultiview (
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         OutputArray initializationPairs, OutputArrayOfArrays rvecs0,
         OutputArrayOfArrays tvecs0, OutputArray perFrameErrors,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        InputArray flagsForIntrinsics=noArray(), int flags = 0,
+        TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 /// @overload
 CV_EXPORTS_W double calibrateMultiview (
@@ -1390,7 +1392,8 @@ CV_EXPORTS_W double calibrateMultiview (
         const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        InputArray flagsForIntrinsics=noArray(), int flags = 0,
+        TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

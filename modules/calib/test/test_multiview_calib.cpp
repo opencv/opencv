@@ -302,7 +302,8 @@ TEST_F(MultiViewTest, OneLine)
     std::vector<std::vector<cv::Mat>> image_points_all;
     cv::Mat visibility;
     loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
-    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_TRUE(!image_points_all.empty());
     for(size_t i = 0; i < cam_names.size(); i++)
     {
         EXPECT_TRUE(!image_points_all[i].empty());
@@ -475,7 +476,8 @@ TEST_F(MultiViewTest, CamsToFloor)
     std::vector<std::vector<cv::Mat>> image_points_all;
     cv::Mat visibility;
     loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
-    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_TRUE(!image_points_all.empty());
     for(size_t i = 0; i < cam_names.size(); i++)
     {
         EXPECT_TRUE(!image_points_all[i].empty());
@@ -542,7 +544,8 @@ TEST_F(MultiViewTest, Hetero)
     std::vector<std::vector<cv::Mat>> image_points_all;
     cv::Mat visibility;
     loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
-    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_TRUE(!image_points_all.empty());
     for(size_t i = 0; i < cam_names.size(); i++)
     {
         EXPECT_TRUE(!image_points_all[i].empty());
@@ -613,10 +616,11 @@ TEST_F(RegisterCamerasTest, hetero1)
     std::vector<std::vector<cv::Mat>> image_points_all;
     cv::Mat visibility;
     loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
-    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_TRUE(!image_points_all.empty());
     for(size_t i = 0; i < cam_names.size(); i++)
     {
-        EXPECT_TRUE(!image_points_all[i].empty());
+        ASSERT_TRUE(!image_points_all[i].empty());
     }
 
     cv::Mat K1, dist1;
@@ -670,10 +674,11 @@ TEST_F(RegisterCamerasTest, hetero2)
     std::vector<std::vector<cv::Mat>> image_points_all;
     cv::Mat visibility;
     loadImagePoints(root, cam_names, num_frames, image_points_all, visibility);
-    EXPECT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_EQ(cam_names.size(), image_points_all.size());
+    ASSERT_TRUE(!image_points_all.empty());
     for(size_t i = 0; i < cam_names.size(); i++)
     {
-        EXPECT_TRUE(!image_points_all[i].empty());
+        ASSERT_TRUE(!image_points_all[i].empty());
     }
 
     cv::Mat K1, dist1;
