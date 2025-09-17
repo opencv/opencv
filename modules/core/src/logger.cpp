@@ -12,6 +12,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <atomic>
 
 #ifdef __ANDROID__
 # include <android/log.h>
@@ -181,6 +182,12 @@ LogLevel getLogLevel()
 
 namespace internal {
 
+namespace //unnamed
+{
+    std::atomic<WriteLogMessageFuncType> stc_userWriteLogMessageFunc{};
+    std::atomic<WriteLogMessageExFuncType> stc_userWriteLogMessageExFunc{};
+} //unnamed
+
 static int getShowTimestampMode()
 {
     static bool param_timestamp_enable = utils::getConfigurationParameterBool("OPENCV_LOG_TIMESTAMP", true);
@@ -190,6 +197,13 @@ static int getShowTimestampMode()
 
 void writeLogMessage(LogLevel logLevel, const char* message)
 {
+    WriteLogMessageFuncType userFunc = stc_userWriteLogMessageFunc.load();
+    if (userFunc && userFunc != writeLogMessage)
+    {
+        (*userFunc)(logLevel, message);
+        return;
+    }
+
     const int threadID = cv::utils::getThreadID();
 
     std::string message_id;
@@ -230,7 +244,9 @@ void writeLogMessage(LogLevel logLevel, const char* message)
     std::ostream* out = (logLevel <= LOG_LEVEL_WARNING) ? &std::cerr : &std::cout;
     (*out) << ss.str();
     if (logLevel <= LOG_LEVEL_WARNING)
+    {
         (*out) << std::flush;
+    }
 }
 
 static const char* stripSourceFilePathPrefix(const char* file)
@@ -252,6 +268,13 @@ static const char* stripSourceFilePathPrefix(const char* file)
 
 void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int line, const char* func, const char* message)
 {
+    WriteLogMessageExFuncType userFunc = stc_userWriteLogMessageExFunc.load();
+    if (userFunc && userFunc != writeLogMessageEx)
+    {
+        (*userFunc)(logLevel, tag, file, line, func, message);
+        return;
+    }
+
     std::ostringstream strm;
     if (tag)
     {
@@ -272,6 +295,24 @@ void writeLogMessageEx(LogLevel logLevel, const char* tag, const char* file, int
     }
     strm << message;
     writeLogMessage(logLevel, strm.str().c_str());
+}
+
+void replaceWriteLogMessage(WriteLogMessageFuncType f)
+{
+    if (f == writeLogMessage)
+    {
+        f = nullptr;
+    }
+    stc_userWriteLogMessageFunc.store(f);
+}
+
+void replaceWriteLogMessageEx(WriteLogMessageExFuncType f)
+{
+    if (f == writeLogMessageEx)
+    {
+        f = nullptr;
+    }
+    stc_userWriteLogMessageExFunc.store(f);
 }
 
 } // namespace

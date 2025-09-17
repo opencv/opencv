@@ -3372,9 +3372,9 @@ VideoCapture_DShow::VideoCapture_DShow(int index, const VideoCaptureParameters& 
     CoInitialize(0);
 
     if (!params.empty()) {
-        int tmpW = params.get<int>(CV_CAP_PROP_FRAME_WIDTH, -1);
-        int tmpH = params.get<int>(CV_CAP_PROP_FRAME_HEIGHT, -1);
-        int tmpFOURCC = params.get<int>(CV_CAP_PROP_FOURCC, -1);
+        int tmpW = params.get<int>(CAP_PROP_FRAME_WIDTH, -1);
+        int tmpH = params.get<int>(CAP_PROP_FRAME_HEIGHT, -1);
+        int tmpFOURCC = params.get<int>(CAP_PROP_FOURCC, -1);
         if (tmpW != -1 && tmpH != -1) {
             g_VI.setupDeviceFourcc(index, tmpW, tmpH, tmpFOURCC);
         }

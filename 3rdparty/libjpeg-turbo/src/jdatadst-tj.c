@@ -19,6 +19,7 @@
  */
 
 /* this is not a core library module, so it doesn't define JPEG_INTERNALS */
+#define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
 #include "jerror.h"
@@ -92,7 +93,7 @@ empty_mem_output_buffer(j_compress_ptr cinfo)
 
   /* Try to allocate new buffer with double size */
   nextsize = dest->bufsize * 2;
-  nextbuffer = (JOCTET *)malloc(nextsize);
+  nextbuffer = (JOCTET *)MALLOC(nextsize);
 
   if (nextbuffer == NULL)
     ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
@@ -183,7 +184,7 @@ jpeg_mem_dest_tj(j_compress_ptr cinfo, unsigned char **outbuffer,
   if (*outbuffer == NULL || *outsize == 0) {
     if (alloc) {
       /* Allocate initial buffer */
-      dest->newbuffer = *outbuffer = (unsigned char *)malloc(OUTPUT_BUF_SIZE);
+      dest->newbuffer = *outbuffer = (unsigned char *)MALLOC(OUTPUT_BUF_SIZE);
       if (dest->newbuffer == NULL)
         ERREXIT1(cinfo, JERR_OUT_OF_MEMORY, 10);
       *outsize = OUTPUT_BUF_SIZE;

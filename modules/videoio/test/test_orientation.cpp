@@ -8,10 +8,6 @@ using namespace std;
 
 namespace opencv_test { namespace {
 
-// PR: https://github.com/opencv/opencv/pull/26800
-// TODO: Enable the tests back on Windows after FFmpeg plugin rebuild
-#ifndef _WIN32
-
 struct VideoCaptureAPITests: TestWithParam<cv::VideoCaptureAPIs>
 {
     void SetUp()
@@ -80,8 +76,13 @@ static cv::VideoCaptureAPIs supported_backends[] = {
     CAP_FFMPEG
 };
 
-INSTANTIATE_TEST_CASE_P(videoio, VideoCaptureAPITests, testing::ValuesIn(supported_backends));
+inline static std::string VideoCaptureAPITests_name_printer(const testing::TestParamInfo<VideoCaptureAPITests::ParamType>& info)
+{
+    std::ostringstream out;
+    out << getBackendNameSafe(info.param);
+    return out.str();
+}
 
-#endif // WIN32
+INSTANTIATE_TEST_CASE_P(videoio, VideoCaptureAPITests, testing::ValuesIn(supported_backends), VideoCaptureAPITests_name_printer);
 
 }} // namespace

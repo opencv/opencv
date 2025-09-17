@@ -94,6 +94,10 @@ ExifEntry_t ExifReader::getTag(const ExifTagName tag) const
     return entry;
 }
 
+const std::vector<unsigned char>& ExifReader::getData() const
+{
+    return m_data;
+}
 
 /**
  * @brief Parsing the exif data buffer and prepare (internal) exif directory

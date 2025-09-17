@@ -41,7 +41,7 @@ Assuming that we have successfully trained YOLOX model, the subsequent step invo
 running this model with OpenCV. There are several critical considerations to address before
 proceeding with this process. Let's delve into these aspects.
 
-### YOLO's Pre-proccessing & Output
+### YOLO's Pre-processing & Output
 
 Understanding the nature of inputs and outputs associated with YOLO family detectors is pivotal.
 These detectors, akin to most Deep Neural Networks (DNN), typically exhibit variation in input

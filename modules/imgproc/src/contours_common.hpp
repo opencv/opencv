@@ -6,7 +6,8 @@
 #define OPENCV_CONTOURS_COMMON_HPP
 
 #include "precomp.hpp"
-#include <stack>
+
+#include "contours_blockstorage.hpp"
 
 namespace cv {
 
@@ -45,11 +46,15 @@ public:
     T body;
 
 public:
-    TreeNode(int self) :
-        self_(self), parent(-1), first_child(-1), prev(-1), next(-1), ctable_next(-1)
+    TreeNode(int self, T&& body_) :
+        self_(self), parent(-1), first_child(-1), prev(-1), next(-1), ctable_next(-1), body(std::move(body_))
     {
         CV_Assert(self >= 0);
     }
+    TreeNode(const TreeNode&) = delete;
+    TreeNode(TreeNode&&) noexcept = default;
+    TreeNode& operator=(const TreeNode&) = delete;
+    TreeNode& operator=(TreeNode&&) noexcept = default;
     int self() const
     {
         return self_;
@@ -59,15 +64,22 @@ public:
 template <typename T>
 class Tree
 {
+public:
+    Tree() {}
+    Tree(const Tree&) = delete;
+    Tree(Tree&&) = delete;
+    Tree& operator=(const Tree&) = delete;
+    Tree& operator=(Tree&&) = delete;
+    ~Tree() = default;
 private:
     std::vector<TreeNode<T>> nodes;
 
 public:
-    TreeNode<T>& newElem()
+    TreeNode<T>& newElem(T && body_)
     {
         const size_t idx = nodes.size();
         CV_DbgAssert(idx < (size_t)std::numeric_limits<int>::max());
-        nodes.push_back(TreeNode<T>((int)idx));
+        nodes.emplace_back(std::move(TreeNode<T>((int)idx, std::move(body_))));
         return nodes[idx];
     }
     TreeNode<T>& elem(int idx)
@@ -101,7 +113,7 @@ public:
         child.parent = prev_item.parent;
         if (prev_item.next != -1)
         {
-            nodes[prev_item.next].prev = idx;
+            ((TreeNode<T>&)nodes[prev_item.next]).prev = idx;
             child.next = prev_item.next;
         }
         child.prev = prev;
@@ -159,23 +171,80 @@ public:
     }
 
 private:
-    std::stack<int> levels;
     Tree<T>& tree;
+    std::stack<int> levels;
 };
 
 //==============================================================================
 
+template <typename T, size_t BLOCK_SIZE_ELEM, size_t STATIC_CAPACITY_BYTES>
+class ContourDataStorage
+{
+public:
+    typedef T data_storage_t;
+    typedef BlockStorage<data_storage_t, BLOCK_SIZE_ELEM, STATIC_CAPACITY_BYTES> storage_t;
+public:
+    ContourDataStorage(void) = delete;
+    ContourDataStorage(storage_t* _storage):storage(_storage) {}
+    ContourDataStorage(const ContourDataStorage&) = delete;
+    ContourDataStorage(ContourDataStorage&&) noexcept = default;
+    ~ContourDataStorage() = default;
+    ContourDataStorage& operator=(const ContourDataStorage&) = delete;
+    ContourDataStorage& operator=(ContourDataStorage&&) noexcept = default;
+public:
+    typename storage_t::RangeIterator getRangeIterator(void) const {return storage->getRangeIterator(first, last);}
+public:
+    bool empty(void) const {return first == last;}
+    size_t size(void) const {return last - first;}
+public:
+    void clear(void) {first = last;}
+    bool resize(size_t newSize)
+    {
+        bool ok = (newSize <= size());
+        if (ok)
+            last = first+newSize;
+        return ok;
+    }
+    void push_back(const data_storage_t& value)
+    {
+        if (empty())
+        {
+            first = storage->size();
+        }
+        storage->push_back(value);
+        last = storage->size();
+    }
+    const data_storage_t& at(size_t index) const {return storage->at(first+index);}
+    data_storage_t& at(size_t index) {return storage->at(first+index);}
+    const data_storage_t& operator[](size_t index) const {return at(index);}
+    data_storage_t& operator[](size_t index) {return at(index);}
+private:
+    storage_t* storage = nullptr;
+    size_t first = 0;
+    size_t last = 0;
+};
+
+typedef ContourDataStorage<cv::Point, 1024, 0> ContourPointsStorage;
+typedef ContourDataStorage<schar, 1024, 0> ContourCodesStorage;
+
 class Contour
 {
 public:
+    ContourPointsStorage pts;
     cv::Rect brect;
     cv::Point origin;
-    std::vector<cv::Point> pts;
-    std::vector<schar> codes;
-    bool isHole;
-    bool isChain;
+    ContourCodesStorage codes;
+    bool isHole = false;
+    bool isChain = false;
 
-    Contour() : isHole(false), isChain(false) {}
+    explicit Contour(ContourPointsStorage::storage_t* pointStorage_,
+                     ContourCodesStorage::storage_t* codesStorage_)
+                    :pts(pointStorage_),codes(codesStorage_) {}
+    Contour(const Contour&) = delete;
+    Contour(Contour&& other) noexcept = default;
+    Contour& operator=(const Contour&) = delete;
+    Contour& operator=(Contour&& other) noexcept = default;
+    ~Contour() = default;
     void updateBoundingRect() {}
     bool isEmpty() const
     {
@@ -185,17 +254,37 @@ public:
     {
         return isChain ? codes.size() : pts.size();
     }
+    void addPoint(const Point& pt)
+    {
+        pts.push_back(pt);
+    }
     void copyTo(void* data) const
     {
         // NOTE: Mat::copyTo doesn't work because it creates new Mat object
         //       instead of reusing existing vector data
         if (isChain)
         {
-            memcpy(data, &codes[0], codes.size() * sizeof(codes[0]));
+            /*memcpy(data, codes.data(), codes.size() * sizeof(typename decltype(codes)::value_type));*/
+            schar* dst = reinterpret_cast<schar*>(data);
+            for(auto rangeIterator = codes.getRangeIterator() ; !rangeIterator.done() ; ++rangeIterator)
+            {
+                const auto range = *rangeIterator;
+                memcpy(dst, range.first, range.second*sizeof(schar));
+                dst += range.second;
+            }
         }
         else
         {
-            memcpy(data, &pts[0], pts.size() * sizeof(pts[0]));
+            /*for (size_t i = 0, count = pts.size() ; i < count ; ++i)
+                ((Point*)data)[i] = pts.at(i);
+                */
+            cv::Point* dst = reinterpret_cast<cv::Point*>(data);
+            for(auto rangeIterator = pts.getRangeIterator() ; !rangeIterator.done() ; ++rangeIterator)
+            {
+                const auto range = *rangeIterator;
+                memcpy(dst, range.first, range.second*sizeof(cv::Point));
+                dst += range.second;
+            }
         }
     }
 };
@@ -211,8 +300,8 @@ void contourTreeToResults(CTree& tree,
                           cv::OutputArray& _hierarchy);
 
 
-std::vector<Point>
-    approximateChainTC89(std::vector<schar> chain, const Point& origin, const int method);
+void approximateChainTC89(const ContourCodesStorage& chain, const Point& origin, const int method,
+                          ContourPointsStorage& output);
 
 }  // namespace cv
 

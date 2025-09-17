@@ -422,6 +422,19 @@ PERF_TEST_P_(BinaryOpTest, reciprocal)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P_(BinaryOpTest, transpose2d)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    Size tsz = Size(sz.height, sz.width);
+    cv::Mat a(sz, type), b(tsz, type);;
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transpose(a, b);
+
+    SANITY_CHECK_NOTHING();
+}
 
 PERF_TEST_P_(BinaryOpTest, transposeND)
 {
@@ -840,6 +853,31 @@ PERF_TEST_P(ExpFixture, Exp,
     TEST_CYCLE()
     {
         cv::exp(src, dst);
+    }
+
+    SANITY_CHECK_NOTHING();
+}
+
+//////////////LOG////////////
+
+typedef Size_MatType LogFixture;
+
+PERF_TEST_P(LogFixture, Log,
+    testing::Combine(testing::Values(TYPICAL_MAT_SIZES), testing::Values(CV_32F, CV_64F)))
+{
+    cv::Size size = std::get<0>(GetParam());
+    int type = std::get<1>(GetParam());
+
+    cv::Mat src(size, type);
+    cv::Mat dst(size, type);
+
+    declare.in(src).out(dst);
+
+    cv::randu(src, 1e-5, 1e5);
+
+    TEST_CYCLE()
+    {
+        cv::log(src, dst);
     }
 
     SANITY_CHECK_NOTHING();

@@ -518,11 +518,34 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         return false;
     }
 
+    // get distance param for JxlBasicInfo.
+    float distance = -1.0; // Negative means not set
+    for( size_t i = 0; i < params.size(); i += 2 )
+    {
+        if( params[i] == IMWRITE_JPEGXL_QUALITY )
+        {
+#if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
+            int quality = params[i+1];
+            quality = MIN(MAX(quality, 0), 100);
+            distance = JxlEncoderDistanceFromQuality(static_cast<float>(quality));
+#else
+            CV_LOG_ONCE_WARNING(NULL, "Quality parameter is supported with libjxl v0.10.0 or later");
+#endif
+        }
+        if( params[i] == IMWRITE_JPEGXL_DISTANCE )
+        {
+            int distanceInt = params[i+1];
+            distanceInt = MIN(MAX(distanceInt, 0), 25);
+            distance = static_cast<float>(distanceInt);
+        }
+    }
+
     JxlBasicInfo info;
     JxlEncoderInitBasicInfo(&info);
     info.xsize = img.cols;
     info.ysize = img.rows;
-    info.uses_original_profile = JXL_FALSE;
+    // Lossless encoding requires uses_original_profile = true.
+    info.uses_original_profile = (distance == 0.0) ? JXL_TRUE : JXL_FALSE;
 
     if( img.channels() == 4 )
     {
@@ -576,30 +599,26 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         return false;
 
     JxlEncoderFrameSettings* frame_settings = JxlEncoderFrameSettingsCreate(encoder.get(), nullptr);
+
+    // set frame settings with distance params
+    if(distance == 0.0) // lossless
+    {
+        if( JXL_ENC_SUCCESS != JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE) )
+        {
+            CV_LOG_WARNING(NULL, "Failed to call JxlEncoderSetFrameLossless()");
+        }
+    }
+    else if(distance > 0.0) // lossy
+    {
+        if( JXL_ENC_SUCCESS != JxlEncoderSetFrameDistance(frame_settings, distance) )
+        {
+            CV_LOG_WARNING(NULL, "Failed to call JxlEncoderSetFrameDistance()");
+        }
+    }
+
     // set frame settings from params if available
     for( size_t i = 0; i < params.size(); i += 2 )
     {
-        if( params[i] == IMWRITE_JPEGXL_QUALITY )
-        {
-#if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
-            int quality = params[i+1];
-            quality = MIN(MAX(quality, 0), 100);
-            const float distance = JxlEncoderDistanceFromQuality(static_cast<float>(quality));
-            JxlEncoderSetFrameDistance(frame_settings, distance);
-            if (distance == 0)
-                JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE);
-#else
-            CV_LOG_ONCE_WARNING(NULL, "Quality parameter is supported with libjxl v0.10.0 or later");
-#endif
-        }
-        if( params[i] == IMWRITE_JPEGXL_DISTANCE )
-        {
-            int distance = params[i+1];
-            distance = MIN(MAX(distance, 0), 25);
-            JxlEncoderSetFrameDistance(frame_settings, distance);
-            if (distance == 0)
-                JxlEncoderSetFrameLossless(frame_settings, JXL_TRUE);
-        }
         if( params[i] == IMWRITE_JPEGXL_EFFORT )
         {
             int effort = params[i+1];

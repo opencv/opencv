@@ -286,6 +286,8 @@ QUnit.test('Charuco detector', function (assert) {
         board.generateImage(new cv.Size(300, 500), board_image);
         assert.ok(!board_image.empty());
 
+        let chess_corners = board.getChessboardCorners();
+
         detector.detectBoard(board_image, corners, ids);
         assert.ok(!corners.empty());
         assert.ok(!ids.empty());
@@ -300,5 +302,6 @@ QUnit.test('Charuco detector', function (assert) {
         detector.delete();
         corners.delete();
         ids.delete();
+        chess_corners.delete();
     }
 });

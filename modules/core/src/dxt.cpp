@@ -844,6 +844,17 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
     Complex<T> t;
     T scale = (T)c.scale;
 
+    if(typeid(T) == typeid(float))
+    {
+        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_32F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
+    if(typeid(T) == typeid(double))
+    {
+        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_64F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
+
     if( c.useIpp )
     {
 #ifdef USE_IPP_DFT

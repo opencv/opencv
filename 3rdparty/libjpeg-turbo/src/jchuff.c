@@ -542,6 +542,10 @@ encode_one_block_simd(working_state *state, JCOEFPTR block, int last_dc_val,
   JOCTET _buffer[BUFSIZE], *buffer;
   int localbuf = 0;
 
+#ifdef ZERO_BUFFERS
+  memset(_buffer, 0, sizeof(_buffer));
+#endif
+
   LOAD_BUFFER()
 
   buffer = jsimd_huff_encode_one_block(state, buffer, block, last_dc_val,

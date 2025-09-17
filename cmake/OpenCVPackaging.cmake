@@ -12,7 +12,7 @@ if(NOT OPENCV_CUSTOM_PACKAGE_INFO)
 "OpenCV (Open Source Computer Vision Library) is an open source computer vision
 and machine learning software library. OpenCV was built to provide a common
 infrastructure for computer vision applications and to accelerate the use of
-machine perception in the commercial products. Being a BSD-licensed product,
+machine perception in the commercial products. Being a Apache 2.0 -licensed product,
 OpenCV makes it easy for businesses to utilize and modify the code.")
   set(CPACK_PACKAGE_VENDOR "OpenCV Foundation")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")

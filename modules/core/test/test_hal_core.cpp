@@ -74,7 +74,8 @@ TEST_P(mathfuncs, accuracy)
     int n = 100;
 
     Mat src(1, n, depth), dst(1, n, depth), dst0(1, n, depth);
-    randu(src, 1, 10);
+    double maxval = depth == CV_32F ? 80 : 700;
+    randu(src, -maxval, maxval);
 
     switch (nfunc)
     {

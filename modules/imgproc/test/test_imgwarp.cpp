@@ -1332,10 +1332,10 @@ TEST_P(Imgproc_RemapRelative, validity)
     data64FC1.reshape(nChannels, size.height).convertTo(src, srcType);
 
     cv::Mat mapRelativeX32F(size, CV_32FC1);
-    mapRelativeX32F.setTo(cv::Scalar::all(-0.33));
+    mapRelativeX32F.setTo(cv::Scalar::all(-0.25));
 
     cv::Mat mapRelativeY32F(size, CV_32FC1);
-    mapRelativeY32F.setTo(cv::Scalar::all(-0.33));
+    mapRelativeY32F.setTo(cv::Scalar::all(-0.25));
 
     cv::Mat mapAbsoluteX32F = mapRelativeX32F.clone();
     mapAbsoluteX32F.forEach<float>([&](float& pixel, const int* position) {
@@ -1371,7 +1371,7 @@ TEST_P(Imgproc_RemapRelative, validity)
         cv::remap(src, dstRelative, mapRelativeX32F, mapRelativeY32F, interpolation | WARP_RELATIVE_MAP, borderType);
     }
 
-    EXPECT_EQ(cvtest::norm(dstAbsolute, dstRelative, NORM_INF), 0);
+    EXPECT_LE(cvtest::norm(dstAbsolute, dstRelative, NORM_INF), 1);
 };
 
 INSTANTIATE_TEST_CASE_P(ImgProc, Imgproc_RemapRelative, testing::Combine(
@@ -1763,6 +1763,41 @@ TEST(Imgproc_Remap, issue_23562)
         remap(src, dst, mapx, mapy, INTER_LINEAR, BORDER_TRANSPARENT);
         ASSERT_EQ(0.0, cvtest::norm(ref, dst, NORM_INF)) << "channels=" << cn;
     }
+}
+
+TEST(Imgproc_getPerspectiveTransform, issue_26916)
+{
+    double src_data[] = {320, 512, 960, 512, 0, 1024, 1280, 1024};
+    const Mat src_points(4, 2, CV_64FC1, src_data);
+
+    double dst_data[] = {0, 0, 1280, 0, 0, 1024, 1280, 1024};
+    const Mat dst_points(4, 2, CV_64FC1, dst_data);
+
+    Mat src_points_f;
+    src_points.convertTo(src_points_f, CV_32FC1);
+
+    Mat dst_points_f;
+    dst_points.convertTo(dst_points_f, CV_32FC1);
+
+    Mat perspective_transform = getPerspectiveTransform(src_points_f, dst_points_f);
+    EXPECT_NEAR(perspective_transform.at<double>(2, 2), 0, 1e-16);
+    EXPECT_NEAR(cv::norm(perspective_transform), 1, 1e-14);
+
+    const Mat ones = Mat::ones(4, 1, CV_64FC1);
+
+    Mat homogeneous_src_points;
+    hconcat(src_points, ones, homogeneous_src_points);
+
+    Mat obtained_homogeneous_dst_points = (perspective_transform * homogeneous_src_points.t()).t();
+    for (int row = 0; row < 4; ++row)
+    {
+        obtained_homogeneous_dst_points.row(row) /= obtained_homogeneous_dst_points.at<double>(row, 2);
+    }
+
+    Mat expected_homogeneous_dst_points;
+    hconcat(dst_points, ones, expected_homogeneous_dst_points);
+
+    EXPECT_MAT_NEAR(obtained_homogeneous_dst_points, expected_homogeneous_dst_points, 1e-10);
 }
 
 }} // namespace

@@ -858,8 +858,8 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
             mp.x = int(event.scrollingDeltaX / 0.100006);
             mp.y = int(event.scrollingDeltaY / 0.100006);
         }
-        if( mp.x && !mp.y && CV_EVENT_MOUSEWHEEL == type ) {
-            type = CV_EVENT_MOUSEHWHEEL;
+        if( mp.x && !mp.y && cv::EVENT_MOUSEWHEEL == type ) {
+            type = cv::EVENT_MOUSEHWHEEL;
         }
         mouseCallback(type, mp.x, mp.y, flags, mouseParam);
     } else if( mp.x >= 0 && mp.y >= 0 && mp.x < imageSize.width && mp.y < imageSize.height ) {
@@ -872,32 +872,32 @@ static NSSize constrainAspectRatio(NSSize base, NSSize constraint) {
         return;
 
     int flags = 0;
-    if([event modifierFlags] & NSShiftKeyMask)		flags |= CV_EVENT_FLAG_SHIFTKEY;
-    if([event modifierFlags] & NSControlKeyMask)	flags |= CV_EVENT_FLAG_CTRLKEY;
-    if([event modifierFlags] & NSAlternateKeyMask)	flags |= CV_EVENT_FLAG_ALTKEY;
+    if([event modifierFlags] & NSShiftKeyMask)		flags |= cv::EVENT_FLAG_SHIFTKEY;
+    if([event modifierFlags] & NSControlKeyMask)	flags |= cv::EVENT_FLAG_CTRLKEY;
+    if([event modifierFlags] & NSAlternateKeyMask)	flags |= cv::EVENT_FLAG_ALTKEY;
 
     //modified code using ternary operator:
     if ([event type] == NSLeftMouseDown) {
     [self cvSendMouseEvent:event
-                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONDOWN : CV_EVENT_LBUTTONDOWN
-                     flags:flags | (([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_FLAG_RBUTTON : CV_EVENT_FLAG_LBUTTON)];
-}
+                      type:([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_RBUTTONDOWN : cv::EVENT_LBUTTONDOWN
+                     flags:flags | (([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_FLAG_RBUTTON : cv::EVENT_FLAG_LBUTTON)];
+    }
 
-if ([event type] == NSLeftMouseUp) {
-    [self cvSendMouseEvent:event
-                      type:([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_RBUTTONUP : CV_EVENT_LBUTTONUP
-                     flags:flags | (([event modifierFlags] & NSControlKeyMask) ? CV_EVENT_FLAG_RBUTTON : CV_EVENT_FLAG_LBUTTON)];
-}
+    if ([event type] == NSLeftMouseUp) {
+        [self cvSendMouseEvent:event
+                        type:([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_RBUTTONUP : cv::EVENT_LBUTTONUP
+                        flags:flags | (([event modifierFlags] & NSControlKeyMask) ? cv::EVENT_FLAG_RBUTTON : cv::EVENT_FLAG_LBUTTON)];
+    }
 
-    if([event type] == NSRightMouseDown){[self cvSendMouseEvent:event type:CV_EVENT_RBUTTONDOWN flags:flags | CV_EVENT_FLAG_RBUTTON];}
-    if([event type] == NSRightMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_RBUTTONUP   flags:flags | CV_EVENT_FLAG_RBUTTON];}
-    if([event type] == NSOtherMouseDown){[self cvSendMouseEvent:event type:CV_EVENT_MBUTTONDOWN flags:flags];}
-    if([event type] == NSOtherMouseUp)	{[self cvSendMouseEvent:event type:CV_EVENT_MBUTTONUP   flags:flags];}
-    if([event type] == NSMouseMoved)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags];}
-    if([event type] == NSLeftMouseDragged) {[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_LBUTTON];}
-    if([event type] == NSRightMouseDragged)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_RBUTTON];}
-    if([event type] == NSOtherMouseDragged)	{[self cvSendMouseEvent:event type:CV_EVENT_MOUSEMOVE   flags:flags | CV_EVENT_FLAG_MBUTTON];}
-    if([event type] == NSEventTypeScrollWheel) {[self cvSendMouseEvent:event type:CV_EVENT_MOUSEWHEEL   flags:flags ];}
+    if([event type] == NSRightMouseDown){[self cvSendMouseEvent:event type:cv::EVENT_RBUTTONDOWN flags:flags | cv::EVENT_FLAG_RBUTTON];}
+    if([event type] == NSRightMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_RBUTTONUP   flags:flags | cv::EVENT_FLAG_RBUTTON];}
+    if([event type] == NSOtherMouseDown){[self cvSendMouseEvent:event type:cv::EVENT_MBUTTONDOWN flags:flags];}
+    if([event type] == NSOtherMouseUp)	{[self cvSendMouseEvent:event type:cv::EVENT_MBUTTONUP   flags:flags];}
+    if([event type] == NSMouseMoved)	{[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags];}
+    if([event type] == NSLeftMouseDragged) {[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags | cv::EVENT_FLAG_LBUTTON];}
+    if([event type] == NSRightMouseDragged)	{[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags | cv::EVENT_FLAG_RBUTTON];}
+    if([event type] == NSOtherMouseDragged)	{[self cvSendMouseEvent:event type:cv::EVENT_MOUSEMOVE   flags:flags | cv::EVENT_FLAG_MBUTTON];}
+    if([event type] == NSEventTypeScrollWheel) {[self cvSendMouseEvent:event type:cv::EVENT_MOUSEWHEEL   flags:flags ];}
 }
 
 -(void)scrollWheel:(NSEvent *)theEvent {
