@@ -365,6 +365,7 @@ def calibrateFromPoints(
         models,
         image_names=None,
         find_intrinsics_in_python=False,
+        use_stereo_init=False,
         Ks=None,
         distortions=None
     ):
@@ -384,9 +385,9 @@ def calibrateFromPoints(
     pinhole_flag = cv.CALIB_RATIONAL_MODEL
     fisheye_flag = cv.CALIB_RECOMPUTE_EXTRINSIC+cv.CALIB_FIX_SKEW
     if Ks is not None and distortions is not None:
-        USE_INTRINSICS_GUESS = True
+        useIntrinsics = True
     else:
-        USE_INTRINSICS_GUESS = find_intrinsics_in_python
+        useIntrinsics = find_intrinsics_in_python
         if find_intrinsics_in_python:
             Ks, distortions = [], []
             for c in range(num_cameras):
@@ -435,7 +436,8 @@ def calibrateFromPoints(
                 Ks=Ks,
                 distortions=distortions,
                 flagsForIntrinsics=np.array([pinhole_flag if models[x] == cv.CALIB_MODEL_PINHOLE else fisheye_flag for x in range(num_cameras)], dtype=int),
-                flags = cv.CALIB_USE_INTRINSIC_GUESS if USE_INTRINSICS_GUESS else 0
+                flags = (cv.CALIB_USE_INTRINSIC_GUESS if useIntrinsics else 0) +
+                        (cv.CALIB_STEREO_REGISTRATION if use_stereo_init else 0)
             )
 # [multiview_calib]
 #    except Exception as e:
@@ -786,7 +788,7 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
 
 def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
                         dist_m, winsize, points_json_file, debug_corners,
-                        RESIZE_IMAGE, find_intrinsics_in_python,
+                        RESIZE_IMAGE, find_intrinsics_in_python, use_stereo_init,
                         is_parallel_detection=True, cam_ids=None, files_with_intrinsics=[], board_dict_path=None):
     """
     files_with_images: NUM_CAMERAS - path to file containing image names (NUM_FRAMES)
@@ -948,6 +950,7 @@ def calibrateFromImages(files_with_images, grid_size, pattern_type, models,
         models,
         all_images_names,
         find_intrinsics_in_python,
+        use_stereo_init,
         Ks=Ks,
         distortions=distortions,
     )
@@ -985,7 +988,8 @@ if __name__ == '__main__':
     parser.add_argument('--pattern_type', type=str, default=None, help='supported: checkerboard, circles, acircles, charuco')
     parser.add_argument('--is_fisheye', type=str, default=None, help='is_ mask, e.g., 0,1,...')
     parser.add_argument('--pattern_distance', type=float, default=None, help='distance between object / pattern points')
-    parser.add_argument('--find_intrinsics_in_python', required=False, action='store_true', help='calibrate intrinsics in Python sample instead of C++')
+    parser.add_argument('--find_intrinsics_in_python', required=False, action='store_true', help='calibrate intrinsics in Python sample instead of built-in version')
+    parser.add_argument('--use_stereo_init', required=False, action='store_true', help='use calibrateStereo instead of registerCameras for initial pairs registration')
     parser.add_argument('--winsize', type=str, default='5,5', help='window size for corners detection: w,h')
     parser.add_argument('--debug_corners', required=False, action='store_true', help='debug flag for corners detection visualization of images')
     parser.add_argument('--points_json_file', type=str, default='', help='if path is provided then image and object points will be saved to JSON file.')
@@ -1012,6 +1016,16 @@ if __name__ == '__main__':
         params.is_fisheye = ','.join('0' * len(cam_files))
         print('Fisheye parameters:', params.is_fisheye)  # TODO: Calculate it automatically
 
+    if params.use_stereo_init:
+        models=[int(v) for v in params.is_fisheye.split(',')]
+        not_the_same = False
+        for i in range (1, len(models)):
+            if models[i-1] != models[i]:
+                not_the_same = True
+        if not_the_same:
+            print("--use_stereo_init option is applicable only if all cameras are calibrated with the same model!")
+            sys.exit(0)
+
     if params.json_file is not None:
         output = calibrateFromJSON(params.json_file, params.find_intrinsics_in_python)
         cam_ids = [str(x) for x in range(len(output['Rs']))]
@@ -1035,6 +1049,7 @@ if __name__ == '__main__':
             debug_corners=params.debug_corners,
             RESIZE_IMAGE=params.resize_image_detection,
             find_intrinsics_in_python=params.find_intrinsics_in_python,
+            use_stereo_init=params.use_stereo_init,
             cam_ids=cam_ids,
             files_with_intrinsics=[x.strip() for x in (params.intrinsics or "").split(',') if x.strip()],
             board_dict_path=params.board_dict_path,

@@ -370,12 +370,16 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             T = -R * Ts_prior[c1] + Ts_prior[c2];
         }
 
+        // stereoCalibrate tries to overwrite distortion coefficients
+        Mat dist1 = distortions[c1].clone();
+        Mat dist2 = distortions[c2].clone();
+
         // image size does not matter since intrinsics are used
         if (are_fisheye_cams) {
             extrinsic_flags |= CALIB_FIX_INTRINSIC;
             fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1],
-                            Ks[c2], distortions[c2],
+                            Ks[c1], dist1,
+                            Ks[c2], dist2,
                             Size(), R, T,
                             extrinsic_flags, criteria);
         } else {
@@ -386,8 +390,8 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
                 extrinsic_flags |= CALIB_THIN_PRISM_MODEL;
 
             stereoCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1],
-                            Ks[c2], distortions[c2],
+                            Ks[c1], dist1,
+                            Ks[c2], dist2,
                             Size(), R, T, noArray(), noArray(), noArray(),
                             extrinsic_flags, criteria);
         }
