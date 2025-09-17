@@ -70,17 +70,17 @@ public:
             if (uinputs.size() >= 3 && !uinputs[2].empty()) {
                 Mat tmp = uinputs[2].getMat(ACCESS_READ);
                 CV_Assert(tmp.channels() == 1 && tmp.total() == 1);
-                tmp.convertTo(Mat(1, 1, CV_32S, &maxOut), CV_32S);
+                maxOut = tensorToScalar<int>(tmp);
             }
             if (uinputs.size() >= 4 && !uinputs[3].empty()) {
                 Mat tmp = uinputs[3].getMat(ACCESS_READ);
                 CV_Assert(tmp.channels() == 1 && tmp.total() == 1);
-                tmp.convertTo(Mat(1, 1, CV_32F, &iouThr), CV_32F);
+                iouThr = tensorToScalar<float>(tmp);
             }
             if (uinputs.size() >= 5 && !uinputs[4].empty()) {
                 Mat tmp = uinputs[4].getMat(ACCESS_READ);
                 CV_Assert(tmp.channels() == 1 && tmp.total() == 1);
-                tmp.convertTo(Mat(1, 1, CV_32F, &scoreThr), CV_32F);
+                scoreThr = tensorToScalar<float>(tmp);
             }
         } else {
             inputs_arr.getMatVector(inputs);
@@ -89,15 +89,15 @@ public:
             scoresBlob = inputs[1];
             if (inputs.size() >= 3 && !inputs[2].empty()) {
                 CV_Assert(inputs[2].channels() == 1 && inputs[2].total() == 1);
-                inputs[2].convertTo(Mat(1, 1, CV_32S, &maxOut), CV_32S);
+                maxOut = tensorToScalar<int>(inputs[2]);
             }
             if (inputs.size() >= 4 && !inputs[3].empty()) {
                 CV_Assert(inputs[3].channels() == 1 && inputs[3].total() == 1);
-                inputs[3].convertTo(Mat(1, 1, CV_32F, &iouThr), CV_32F);
+                iouThr = tensorToScalar<float>(inputs[3]);
             }
             if (inputs.size() >= 5 && !inputs[4].empty()) {
                 CV_Assert(inputs[4].channels() == 1 && inputs[4].total() == 1);
-                inputs[4].convertTo(Mat(1, 1, CV_32F, &scoreThr), CV_32F);
+                scoreThr = tensorToScalar<float>(inputs[4]);
             }
         }
 
