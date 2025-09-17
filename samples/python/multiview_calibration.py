@@ -729,15 +729,17 @@ def detect(cam_idx, frame_idx, img_name, pattern_type,
                                        corners, winsize, (-1,-1), criteria)
 
     elif pattern_type.lower() == 'circles':
+        # Workaround: CALIB_CB_CLUSTERING does not allow pattern flip
         ret, corners = cv.findCirclesGrid(
-            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID
+            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_SYMMETRIC_GRID+cv.CALIB_CB_CLUSTERING
         )
         if ret:
             corners2 = corners / scale
 
     elif pattern_type.lower() == 'acircles':
+        # Workaround: CALIB_CB_CLUSTERING does not allow pattern flip
         ret, corners = cv.findCirclesGrid(
-            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID
+            img_detection, patternSize=grid_size, flags=cv.CALIB_CB_ASYMMETRIC_GRID+cv.CALIB_CB_CLUSTERING
         )
         if ret:
             corners2 = corners / scale
