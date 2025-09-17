@@ -189,23 +189,11 @@ std::string const &LibcameraApp::CameraId() const
 void LibcameraApp::OpenCamera()
 {
 
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Opening camera...");
-
-    if (camera_started_ || camera_acquired_ || camera_) {
-        CV_LOG_WARNING(NULL, "VIDEOIO(Libcamera): Camera not properly closed, forcing cleanup");
-        try {
-            StopCamera();
-            Teardown();
-            CloseCamera();
-        } catch (...) {
-            CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error during cleanup before opening camera");
-        }
-    }
-
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Opening camera...");
     CV_Assert(getCameraManager()->cameras().size() != 0 && "no cameras available");
-    CV_Assert(options_->camera < getCameraManager()->cameras().size() && "camera index out of range");
-
-    std::string const &cam_id = getCameraManager()->cameras()[options_->camera]->id();
+    CV_Assert(options_.camera < getCameraManager()->cameras().size() && "camera index out of range");
+    std::string const &cam_id = getCameraManager()->cameras()[options_.camera]->id();
     camera_ = getCameraManager()->get(cam_id);
     if (!camera_)
         CV_Error(cv::Error::StsAssert, "failed to find camera " + cam_id);
@@ -213,8 +201,8 @@ void LibcameraApp::OpenCamera()
     if (!camera_acquired_ && camera_->acquire())
         CV_Error(cv::Error::StsAssert, "failed to acquire camera " + cam_id);
     camera_acquired_ = true;
-
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Acquired camera " << cam_id);
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Acquired camera " << cam_id);
 }
 
 void LibcameraApp::CloseCamera()
@@ -230,53 +218,41 @@ void LibcameraApp::CloseCamera()
 
     camera_.reset();
 
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera closed");
+    if (options_.verbose && !options_.help)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera closed");
 }
 
 void LibcameraApp::ConfigureViewfinder()
 {
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Configuring viewfinder...");
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Configuring viewfinder...");
 
     StreamRoles stream_roles = {StreamRole::Viewfinder};
     configuration_ = camera_->generateConfiguration(stream_roles);
     if (!configuration_)
         CV_Error(cv::Error::StsAssert, "failed to generate viewfinder configuration");
 
-    // Now we get to override any of the default settings from the options_->
+    // Now we get to override any of the default settings from the options_.*
     configuration_->at(0).pixelFormat = libcamera::formats::RGB888;
-    configuration_->at(0).size.width = options_->video_width;
-    configuration_->at(0).size.height = options_->video_height;
-    
-    if (capture_instance_) {
-        unsigned int min_safe_buffers = 4;
-        
-        if (options_->buffer_count < min_safe_buffers) {
-            options_->buffer_count = min_safe_buffers;
-            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Auto-adjusted buffer count to " << options_->buffer_count 
-                      << " for safe operation");
-        }
-    }
-    
-    configuration_->at(0).bufferCount = options_->buffer_count;
+    configuration_->at(0).size.width = options_.video_width;
+    configuration_->at(0).size.height = options_.video_height;
+    configuration_->at(0).bufferCount = 4;
 
-
-    configureDenoise(options_->denoise == "auto" ? "cdn_off" : options_->denoise);
+    configureDenoise(options_.denoise == "auto" ? "cdn_off" : options_.denoise);
     setupCapture();
 
     streams_["viewfinder"] = configuration_->at(0).stream();
 
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Viewfinder setup complete");
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Viewfinder setup complete");
 }
 
 // 清理所有已分配的资源：内存映射、缓冲区分配器、配置等
 // Teardown all allocated resources: memory mappings, buffer allocator, configuration, etc.
 void LibcameraApp::Teardown()
 {
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Tearing down requests, buffers and configuration");
-
-    if (camera_started_) {
-        StopCamera();
-    }
+    if (options_.verbose && !options_.help)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Tearing down requests, buffers and configuration");
 
     for (auto &iter : mapped_buffers_)
     {
@@ -307,16 +283,19 @@ void LibcameraApp::StartCamera()
 {
     makeRequests();
 
-    if (!controls_.get(controls::ScalerCrop) && options_->roi_width != 0 && options_->roi_height != 0)
+    // Build a list of initial controls that we must set in the camera before starting it.
+    // We don't overwrite anything the application may have set before calling us.
+    if (!controls_.get(controls::ScalerCrop) && options_.roi_width != 0 && options_.roi_height != 0)
     {
         Rectangle sensor_area = *camera_->properties().get(properties::ScalerCropMaximum);
-        int x = options_->roi_x * sensor_area.width;
-        int y = options_->roi_y * sensor_area.height;
-        int w = options_->roi_width * sensor_area.width;
-        int h = options_->roi_height * sensor_area.height;
+        int x = options_.roi_x * sensor_area.width;
+        int y = options_.roi_y * sensor_area.height;
+        int w = options_.roi_width * sensor_area.width;
+        int h = options_.roi_height * sensor_area.height;
         Rectangle crop(x, y, w, h);
         crop.translateBy(sensor_area.topLeft());
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
+        if (options_.verbose)
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
 
@@ -327,35 +306,35 @@ void LibcameraApp::StartCamera()
     {
         if (StillStream())
             controls_.set(controls::FrameDurationLimits, libcamera::Span<const int64_t, 2>({INT64_C(100), INT64_C(1000000000)}));
-        else if (options_->framerate > 0)
+        else if (options_.framerate > 0)
         {
-            int64_t frame_time = 1000000 / options_->framerate;
+            int64_t frame_time = 1000000 / options_.framerate; // in us
             controls_.set(controls::FrameDurationLimits, libcamera::Span<const int64_t, 2>({frame_time, frame_time}));
         }
     }
 
-    if (!controls_.get(controls::ExposureTime) && options_->shutter)
-        controls_.set(controls::ExposureTime, options_->shutter);
-    if (!controls_.get(controls::AnalogueGain) && options_->gain)
-        controls_.set(controls::AnalogueGain, options_->gain);
+    if (!controls_.get(controls::ExposureTime) && options_.shutter)
+        controls_.set(controls::ExposureTime, options_.shutter);
+    if (!controls_.get(controls::AnalogueGain) && options_.gain)
+        controls_.set(controls::AnalogueGain, options_.gain);
     if (!controls_.get(controls::AeMeteringMode))
-        controls_.set(controls::AeMeteringMode, options_->getMeteringMode());
+        controls_.set(controls::AeMeteringMode, options_.getMeteringMode());
     if (!controls_.get(controls::AeExposureMode))
-        controls_.set(controls::AeExposureMode, options_->getExposureMode());
+        controls_.set(controls::AeExposureMode, options_.getExposureMode());
     if (!controls_.get(controls::ExposureValue))
-        controls_.set(controls::ExposureValue, options_->ev);
+        controls_.set(controls::ExposureValue, options_.ev);
     if (!controls_.get(controls::AwbMode))
-        controls_.set(controls::AwbMode, options_->getWhiteBalance());
-    if (!controls_.get(controls::ColourGains) && options_->awb_gain_r && options_->awb_gain_b)
-        controls_.set(controls::ColourGains, libcamera::Span<const float, 2>({options_->awb_gain_r, options_->awb_gain_b}));
+        controls_.set(controls::AwbMode, options_.getWhiteBalance());
+    if (!controls_.get(controls::ColourGains) && options_.awb_gain_r && options_.awb_gain_b)
+        controls_.set(controls::ColourGains, libcamera::Span<const float, 2>({options_.awb_gain_r, options_.awb_gain_b}));
     if (!controls_.get(controls::Brightness))
-        controls_.set(controls::Brightness, options_->brightness);
+        controls_.set(controls::Brightness, options_.brightness);
     if (!controls_.get(controls::Contrast))
-        controls_.set(controls::Contrast, options_->contrast);
+        controls_.set(controls::Contrast, options_.contrast);
     if (!controls_.get(controls::Saturation))
-        controls_.set(controls::Saturation, options_->saturation);
+        controls_.set(controls::Saturation, options_.saturation);
     if (!controls_.get(controls::Sharpness))
-        controls_.set(controls::Sharpness, options_->sharpness);
+        controls_.set(controls::Sharpness, options_.sharpness);
 
     if (camera_->start(&controls_))
         CV_Error(cv::Error::StsError, "failed to start camera");
@@ -370,7 +349,8 @@ void LibcameraApp::StartCamera()
     }
     CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): On-demand mode: " << free_requests_.size() << " requests available");
 
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started!");
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera started!");
 }
 
 void LibcameraApp::StopCamera()
@@ -398,21 +378,23 @@ void LibcameraApp::StopCamera()
 
     controls_.clear(); 
 
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera stopped!");
+    if (options_.verbose && !options_.help)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera stopped!");
 }
 
 void LibcameraApp::ApplyRoiSettings()
 {
-    if (!controls_.get(controls::ScalerCrop) && options_->roi_width != 0 && options_->roi_height != 0)
+    if (!controls_.get(controls::ScalerCrop) && options_.roi_width != 0 && options_.roi_height != 0)
     {
         Rectangle sensor_area = *camera_->properties().get(properties::ScalerCropMaximum);
-        int x = options_->roi_x * sensor_area.width;
-        int y = options_->roi_y * sensor_area.height;
-        int w = options_->roi_width * sensor_area.width;
-        int h = options_->roi_height * sensor_area.height;
+        int x = options_.roi_x * sensor_area.width;
+        int y = options_.roi_y * sensor_area.height;
+        int w = options_.roi_width * sensor_area.width;
+        int h = options_.roi_height * sensor_area.height;
         Rectangle crop(x, y, w, h);
         crop.translateBy(sensor_area.topLeft());
-        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
+        if (options_.verbose)
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Using crop " << crop.toString());
         controls_.set(controls::ScalerCrop, crop);
     }
 }
@@ -584,7 +566,8 @@ void LibcameraApp::setupCapture()
     if (camera_->configure(configuration_.get()) < 0)
         CV_Error(cv::Error::StsError, "failed to configure streams");
 
-    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera streams configured");
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Camera streams configured");
 
 
     allocator_ = new FrameBufferAllocator(camera_);
@@ -617,7 +600,8 @@ void LibcameraApp::setupCapture()
             frame_buffers_[stream].push(buffer.get());
         }
     }
-    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
+    if (options_.verbose)
+        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
 
     // The requests will be made when StartCamera() is called.
 }
@@ -636,7 +620,8 @@ void LibcameraApp::makeRequests()
             {
                 if (free_buffers[stream].empty())
                 {
-                    CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Buffers allocated and mapped");
+                    if (options_.ev)
+                        CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Requests created");
                     return;
                 }
                 std::unique_ptr<Request> request = camera_->createRequest();
@@ -700,27 +685,27 @@ void LibcameraApp::configureDenoise(const std::string &denoise_mode)
 
 LibcameraCapture::LibcameraCapture()
 {
-    auto opts = std::make_unique<Options>();
-    app = new LibcameraApp(std::move(opts));
-    options = static_cast<Options *>(app->GetOptions());
-    
-    app->SetCaptureInstance(this);
-    
-    still_flags = LibcameraApp::FLAG_STILL_NONE;
-    options->photo_width = 640;
-    options->photo_height = 480;
-    options->video_width = 640;
-    options->video_height = 480;
-    options->framerate = 30;
-    options->denoise = "auto";
-    options->timeout = 1000;
-    options->setMetering(Metering_Modes::METERING_MATRIX);
-    options->setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
-    options->setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
-    options->contrast = 1.0f;
-    options->saturation = 1.0f;
-    still_flags |= LibcameraApp::FLAG_STILL_BGR;
-    camera_started_.store(false, std::memory_order_release);
+    options_ = Options();
+    controls_ = controls::controls;
+    // if (!options_)
+    //     options_ = std::make_unique<Options>();
+    controls_.clear();
+    still_flags = FLAG_STILL_NONE;
+    options_.photo_width = 2560;
+    options_.photo_height = 1440;
+    options_.video_width = 640;
+    options_.video_height = 480;
+    options_.framerate = 30;
+    options_.denoise = "auto";
+    options_.timeout = 1000;
+    options_.setMetering(Metering_Modes::METERING_MATRIX);
+    options_.setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
+    options_.setWhiteBalance(WhiteBalance_Modes::WB_AUTO);
+    options_.contrast = 1.0f;
+    options_.saturation = 1.0f;
+    options_.camera = camera_index;
+    // still_flags |= FLAG_STILL_RGB;
+    still_flags |= FLAG_STILL_BGR;
     needsReconfigure.store(false, std::memory_order_release);
     vw = vh = vstr = 0;
 }
@@ -884,13 +869,31 @@ bool LibcameraCapture::grabFrame()
         }
     }
     
-    // Submit a single request and record timing
-    auto now = std::chrono::steady_clock::now();
-    auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
-    last_request_submit_time_ns_.store(ns, std::memory_order_relaxed);
-    
-    if (app && !app->submitSingleRequest()) {
-        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Failed to submit single request in on-demand mode");
+    // Try to get a message from libcamera (non-blocking check)
+    try 
+    {
+        // Use Wait() with short timeout to check for available messages
+        LibcameraCapture::Msg msg = Wait();
+
+        if (msg.type == LibcameraCapture::MsgType::RequestComplete)
+        {
+            CompletedRequestPtr payload = msg.getCompletedRequest();
+            {
+                std::lock_guard<std::mutex> lock(request_mutex_);
+                current_request_ = payload;
+            }
+            return true;
+        }
+        else if (msg.type == LibcameraCapture::MsgType::Quit)
+        {
+            CV_LOG_INFO(NULL, "VIDEOIO(Libcamera): Quit message received");
+            return false;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        // No message available or error occurred
+        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Exception in grabFrame: " << e.what());
         return false;
     }
     
@@ -987,6 +990,25 @@ bool LibcameraCapture::retrieveFrame(int, OutputArray dst)
         CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error in retrieveFrame: " << e.what());
         return false;
     }
+    
+    // Get memory mapped buffer directly from libcamera
+    std::vector<libcamera::Span<uint8_t>> mem = Mmap(request->buffers[stream]);
+    if (mem.empty())
+    {
+        CV_LOG_ERROR(NULL, "VIDEOIO(Libcamera): Error getting memory mapped buffer");
+        return false;
+    }
+    
+    // Create OpenCV Mat directly from libcamera buffer
+    cv::Mat frame(vh, vw, CV_8UC3, mem[0].data(), vstr);
+    frame.copyTo(dst);
+    return true;
+}
+
+bool LibcameraCapture::retrieve(cv::Mat& frame, int stream_idx)
+{
+    cv::OutputArray dst(frame);
+    return retrieveFrame(stream_idx, dst);
 }
 
 double LibcameraCapture::getProperty(int propId) const
@@ -994,29 +1016,29 @@ double LibcameraCapture::getProperty(int propId) const
     switch (propId)
     {
     case cv::CAP_PROP_BRIGHTNESS:
-        return options->brightness;
+        return options_.brightness;
 
     case cv::CAP_PROP_CONTRAST:
-        return options->contrast;
+        return options_.contrast;
 
     case cv::CAP_PROP_SATURATION:
-        return options->saturation;
+        return options_.saturation;
 
     case cv::CAP_PROP_SHARPNESS:
-        return options->sharpness;
+        return options_.sharpness;
 
     case cv::CAP_PROP_AUTO_EXPOSURE:
-        return options->getExposureMode() == Exposure_Modes::EXPOSURE_NORMAL;
+        return options_.getExposureMode() == Exposure_Modes::EXPOSURE_NORMAL;
 
     case cv::CAP_PROP_EXPOSURE:
-        return options->shutter;
+        return options_.shutter;
 
     case cv::CAP_PROP_AUTO_WB:
-        return options->getWhiteBalance() == WhiteBalance_Modes::WB_AUTO;
+        return options_.getWhiteBalance() == WhiteBalance_Modes::WB_AUTO;
 
     case cv::CAP_PROP_WB_TEMPERATURE:
         // Since we don't have a direct WB temperature, return an approximation based on the current setting
-        switch (options->getWhiteBalance())
+        switch (options_.getWhiteBalance())
         {
         case WhiteBalance_Modes::WB_TUNGSTEN:
             return 3000.0; // Approximate value for tungsten
@@ -1031,16 +1053,16 @@ double LibcameraCapture::getProperty(int propId) const
         }
 
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_X:
-        return options->roi_x;
+        return options_.roi_x;
 
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
-        return options->roi_y;
+        return options_.roi_y;
 
     case cv::CAP_PROP_XI_AEAG_ROI_WIDTH:
-        return options->roi_width;
+        return options_.roi_width;
 
     case cv::CAP_PROP_XI_AEAG_ROI_HEIGHT:
-        return options->roi_height;
+        return options_.roi_height;
 
     case cv::CAP_PROP_FOURCC:
     {
@@ -1053,27 +1075,27 @@ double LibcameraCapture::getProperty(int propId) const
     }
 
     case cv::CAP_PROP_FRAME_WIDTH:
-        if (options->video_width != 0)
+        if (options_.video_width != 0)
         {
-            return options->video_width;
+            return options_.video_width;
         }
         else
         {
-            return options->photo_width;
+            return options_.photo_width;
         }
 
     case cv::CAP_PROP_FRAME_HEIGHT:
-        if (options->video_height != 0)
+        if (options_.video_height != 0)
         {
-            return options->video_height;
+            return options_.video_height;
         }
         else
         {
-            return options->photo_height;
+            return options_.photo_height;
         }
 
     case cv::CAP_PROP_FPS:
-        return options->framerate;
+        return options_.framerate;
 
     case cv::CAP_PROP_POS_MSEC:
         {
@@ -1102,44 +1124,44 @@ bool LibcameraCapture::setProperty(int propId, double value)
     switch (propId)
     {
     case cv::CAP_PROP_BRIGHTNESS:
-        options->brightness = value;
+        options_.brightness = value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_CONTRAST:
-        options->contrast = value;
+        options_.contrast = value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_SATURATION:
-        options->saturation = value;
+        options_.saturation = value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_SHARPNESS:
-        options->sharpness = value;
+        options_.sharpness = value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_AUTO_EXPOSURE:
         if (value)
         {
-            options->setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
+            options_.setExposureMode(Exposure_Modes::EXPOSURE_NORMAL);
         }
         else
         {
-            options->setExposureMode(Exposure_Modes::EXPOSURE_SHORT);
+            options_.setExposureMode(Exposure_Modes::EXPOSURE_SHORT);
         }
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_EXPOSURE:
-        options->shutter = value; // Assumes value is in milliseconds, libcamera uses seconds
+        options_.shutter = value; // Assumes value is in milliseconds, libcamera uses seconds
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_AUTO_WB:
-        options->setWhiteBalance(value ? WhiteBalance_Modes::WB_AUTO : WhiteBalance_Modes::WB_INDOOR);
+        options_.setWhiteBalance(value ? WhiteBalance_Modes::WB_AUTO : WhiteBalance_Modes::WB_INDOOR);
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
@@ -1149,19 +1171,19 @@ bool LibcameraCapture::setProperty(int propId, double value)
         // For now, let's assume a simplified approach.
         if (value < 4000)
         {
-            options->setWhiteBalance(WhiteBalance_Modes::WB_TUNGSTEN);
+            options_.setWhiteBalance(WhiteBalance_Modes::WB_TUNGSTEN);
         }
         else if (value < 5000)
         {
-            options->setWhiteBalance(WhiteBalance_Modes::WB_INDOOR);
+            options_.setWhiteBalance(WhiteBalance_Modes::WB_INDOOR);
         }
         else if (value < 6500)
         {
-            options->setWhiteBalance(WhiteBalance_Modes::WB_DAYLIGHT);
+            options_.setWhiteBalance(WhiteBalance_Modes::WB_DAYLIGHT);
         }
         else
         {
-            options->setWhiteBalance(WhiteBalance_Modes::WB_CLOUDY);
+            options_.setWhiteBalance(WhiteBalance_Modes::WB_CLOUDY);
         }
         needsReconfigure.store(true, std::memory_order_release);
         break;
@@ -1172,23 +1194,23 @@ bool LibcameraCapture::setProperty(int propId, double value)
         //     break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_X:
-        options->roi_x = value;
-        app->ApplyRoiSettings();
+        options_.roi_x = value;
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_OFFSET_Y:
-        options->roi_y = value;
-        app->ApplyRoiSettings();
+        options_.roi_y = value;
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_WIDTH:
-        options->roi_width = value;
-        app->ApplyRoiSettings();
+        options_.roi_width = value;
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_XI_AEAG_ROI_HEIGHT:
-        options->roi_height = value;
-        app->ApplyRoiSettings();
+        options_.roi_height = value;
+        ApplyRoiSettings();
         break;
 
     case cv::CAP_PROP_FOURCC:
@@ -1218,17 +1240,17 @@ bool LibcameraCapture::setProperty(int propId, double value)
     }
 
     case cv::CAP_PROP_FRAME_WIDTH:
-        options->video_width = options->photo_width = (int)value;
+        options_.video_width = options_.photo_width = (int)value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_FRAME_HEIGHT:
-        options->video_height = options->photo_height = (int)value;
+        options_.video_height = options_.photo_height = (int)value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
 
     case cv::CAP_PROP_FPS:
-        options->framerate = (float)value;
+        options_.framerate = (float)value;
         needsReconfigure.store(true, std::memory_order_release);
         break;
     case cv::CAP_PROP_AUTOFOCUS:  // Not implemented
@@ -1291,12 +1313,12 @@ bool LibcameraCapture::open(int _index)
 
 bool LibcameraCapture::open(const std::string &_deviceName)
 {
-    (void)_deviceName;
-    
-    options->video_width = 1280;
-    options->video_height = 720;
-    options->framerate = 30;
-    
+    CV_LOG_DEBUG(NULL, "VIDEOIO(Libcamera:" << _deviceName << "): opening...");
+    // Some parameters initialization here, maybe more needed.
+    options_.video_width = 640;
+    options_.video_height = 480;
+    options_.framerate = 30;
+    options_.verbose = true;
     return startVideo();
 }
 

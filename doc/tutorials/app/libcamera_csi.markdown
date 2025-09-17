@@ -5,6 +5,9 @@ Using CSI Cameras with libcamera backend {#tutorial_libcamera_csi}
 
 Introduction
 ------------
+
+libcamera home page: https://libcamera.org/
+
 `libcamera` is an open-source software library aimed at supporting camera systems directly from the Linux operating system on Arm processors. This tutorial is based on the Raspberry Pi OS Bookworm. It is applicable to other OS like Ubuntu but the behavior in other OS is not garanteed. In this tutorial, you will learn how to:
 
 - Install OpenCV with `libcamera` backend enabled
@@ -42,7 +45,7 @@ First please check the sensor of your CSI camera, Raspberry Pi’s implementatio
   - IMX519
   - OV9281
 
-If you are unsure about the model of the sensor, please consult your camera manufacturer. Do not connect your camera to DSI port.
+The list above is inherited from Raspberry Pi documentation: https://www.raspberrypi.com/documentation/computers/camera_software.html. Please note that the list here could be out-of-date. If you are unsure about the model of the sensor, please consult your camera manufacturer. Do not connect your camera to DSI port.
 
 For example, if you have plugged in 2 cameras with ov5647 and imx219, make sure these lines have been added to `/boot/firmware/config.txt`:
 
@@ -92,21 +95,6 @@ Afterwards, run:
 
 ```bash
 cmake . -B build \
-    -DCMAKE_CXX_STANDARD=17 \
-    -DCMAKE_BUILD_TYPE=RelWithDebug \
-    -DBUILD_LIST=videoio,highgui,imgcodecs,imgproc \
-    -DWITH_GTK=ON \
-    -DWITH_GTK_2_X=ON \
-    -DWITH_PNG=ON \
-    -DWITH_WEBP=OFF \
-    -DWITH_SUNRASTER=OFF \
-    -DWITH_PXM=OFF \
-    -DWITH_PFM=OFF \
-    -DWITH_AVIF=OFF \
-    -DWITH_TIFF=OFF \
-    -DWITH_OpenEXR=OFF \
-    -DBUILD_TESTS=ON \
-    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
     -DVIDEOIO_ENABLE_PLUGINS=ON \
     -DVIDEOIO_PLUGIN_LIST="libcamera" \
     -DWITH_LIBCAMERA=ON
@@ -115,11 +103,11 @@ cd ./build
 sudo make && sudo make install
 ```
 
-You can check the index of CSI camera by running `rpicam-hello --list-cameras`. In the previous example, `cv::VideoCapture cap(0);` can create a VideoCapture instance of the ov5647 camera. A minimum code example is like this:
+You can check the index of CSI camera by running `rpicam-hello --list-cameras`. According to the previous example, `cv::VideoCapture cap(0, cv::CAP_LIBCAMERA);` can create a VideoCapture instance of the ov5647 camera. A minimum code example is like this:
 
 ```cpp
 int main() {
-    cv::VideoCapture cap(0); // or cv::VideoCapture cap(0, cv::CAP_LIBCAMERA); if there is a USB camera plugged in.
+    cv::VideoCapture cap(0, cv::CAP_LIBCAMERA); // using cv::VideoCapture cap(*); directly could open linux device "/dev/video*" by default, which lead to mismatch of libcamera internal camera index.
     while (true) {
         cv::Mat frame;
         cap >> frame;
