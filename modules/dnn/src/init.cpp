@@ -108,6 +108,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Split2,         Split2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Squeeze,        SqueezeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Tile2,          Tile2Layer);
+    CV_DNN_REGISTER_LAYER_CLASS(Unique,         UniqueLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Transpose,      TransposeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Unsqueeze,      UnsqueezeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(IsNaN,          IsNaNLayer);

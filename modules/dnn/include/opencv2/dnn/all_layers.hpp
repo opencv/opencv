@@ -1337,6 +1337,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Tile2Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS UniqueLayer : public Layer
+    {
+    public:
+        static Ptr<UniqueLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS LayerNormLayer : public Layer
     {
     public:

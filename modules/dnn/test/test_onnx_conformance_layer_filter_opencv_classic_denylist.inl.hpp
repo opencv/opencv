@@ -140,3 +140,8 @@
 "test_constantofshape_float_ones",
 "test_constantofshape_int_zeros",
 "test_nonzero_example",
+"test_unique_not_sorted_without_axis",
+"test_unique_sorted_with_axis",
+"test_unique_sorted_with_axis_3d",
+"test_unique_sorted_with_negative_axis",
+"test_unique_sorted_without_axis",

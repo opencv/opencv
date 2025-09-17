@@ -287,8 +287,3 @@
 "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
 "test_tril_zero",  // ---- same as above ---
 "test_triu_zero",  // ---- same as above ---
-"test_unique_not_sorted_without_axis", // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "Unique" in function 'getLayerInstance'
-"test_unique_sorted_with_axis",  // ---- same as above ---
-"test_unique_sorted_with_axis_3d",  // ---- same as above ---
-"test_unique_sorted_with_negative_axis",  // ---- same as above ---
-"test_unique_sorted_without_axis",  // ---- same as above ---
