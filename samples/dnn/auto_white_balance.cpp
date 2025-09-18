@@ -99,6 +99,7 @@ const float SRGB_ALPHA = 0.055f;
 const float SRGB_SLOPE = 12.92f;
 const float SRGB_EXP = 2.4f;
 const float LINEAR_THRESHOLD = 0.0031308f;
+const float EPS = 1e-10f;
 
 static Mat srgbToLinear(const Mat &srgb32f) {
     CV_Assert(srgb32f.type() == CV_32FC3);
@@ -150,12 +151,12 @@ static Mat correct(const Mat &bgr8u, const Vec3f &illumRGB_linear) {
 
     Mat lin = srgbToLinear(f32);
 
-    const float eR = std::max(illumRGB_linear[0], 1e-10f);
-    const float eG = std::max(illumRGB_linear[1], 1e-10f);
-    const float eB = std::max(illumRGB_linear[2], 1e-10f);
+    const float eR = std::max(illumRGB_linear[0], EPS);
+    const float eG = std::max(illumRGB_linear[1], EPS);
+    const float eB = std::max(illumRGB_linear[2], EPS);
 
     float s3 = std::sqrt(3.0f);
-    Scalar corr(eB * s3 + 1e-10f, eG * s3 + 1e-10f, eR * s3 + 1e-10f);
+    Scalar corr(eB * s3 + EPS, eG * s3 + EPS, eR * s3 + EPS);
 
     Mat corrected;
     divide(lin, corr, corrected);
@@ -166,7 +167,7 @@ static Mat correct(const Mat &bgr8u, const Vec3f &illumRGB_linear) {
     minMaxLoc(ch[0], nullptr, &m0);
     minMaxLoc(ch[1], nullptr, &m1);
     minMaxLoc(ch[2], nullptr, &m2);
-    float maxVal = static_cast<float>(std::max({m0, m1, m2})) + 1e-10f;
+    float maxVal = static_cast<float>(std::max({m0, m1, m2})) + EPS;
     corrected /= maxVal;
 
     Mat srgb = linearToSrgb(corrected);
@@ -247,6 +248,7 @@ int main(int argc, char **argv) {
     }
 
     const float *p = out.ptr<float>(0);
+    CV_Assert(out.total() == 3);
     Vec3f illum = Vec3f(p[0], p[1], p[2]);
 
     Mat corrected = correct(img, illum);
