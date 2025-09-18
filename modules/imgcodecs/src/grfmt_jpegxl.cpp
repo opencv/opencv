@@ -473,6 +473,7 @@ JpegXLEncoder::JpegXLEncoder()
 {
     m_description = "JPEG XL files (*.jxl)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_JPEGXL_QUALITY, IMWRITE_JPEGXL_EFFORT, IMWRITE_JPEGXL_DISTANCE, IMWRITE_JPEGXL_DECODING_SPEED};
 }
 
 JpegXLEncoder::~JpegXLEncoder()
@@ -522,11 +523,14 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
     float distance = -1.0; // Negative means not set
     for( size_t i = 0; i < params.size(); i += 2 )
     {
+        const int value = params[i+1];
         if( params[i] == IMWRITE_JPEGXL_QUALITY )
         {
 #if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
-            int quality = params[i+1];
-            quality = MIN(MAX(quality, 0), 100);
+            const int quality = MIN(MAX(value, 0), 100);
+            if(value != quality) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEGXL_QUALITY must be between 0 to 100, It is fallbacked to %d", value, quality));
+            }
             distance = JxlEncoderDistanceFromQuality(static_cast<float>(quality));
 #else
             CV_LOG_ONCE_WARNING(NULL, "Quality parameter is supported with libjxl v0.10.0 or later");
@@ -534,8 +538,10 @@ bool JpegXLEncoder::write(const Mat& img, const std::vector<int>& params)
         }
         if( params[i] == IMWRITE_JPEGXL_DISTANCE )
         {
-            int distanceInt = params[i+1];
-            distanceInt = MIN(MAX(distanceInt, 0), 25);
+            const int distanceInt = MIN(MAX(value, 0), 25);
+            if(value != distanceInt) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEGXL_DISTANCE must be between 0 to 25, It is fallbacked to %d", value, distanceInt));
+            }
             distance = static_cast<float>(distanceInt);
         }
     }

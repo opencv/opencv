@@ -1549,7 +1549,7 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
     {
       SYMMETRIC_GRID, ASYMMETRIC_GRID
     };
-    GridType gridType;
+    CV_PROP_RW GridType gridType;
 
     CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
     CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from prediction. Used by CALIB_CB_CLUSTERING.

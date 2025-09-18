@@ -33,20 +33,14 @@ namespace cv
 
 struct CameraParam
 {
-    float    p0[4];
-    float    p1[4];
-    float    p2[9];
-    float    p3[3];
-    float    p4[5];
-    float    p5[5];
-    uint32_t p6[2];
-    uint32_t p7[2];
+    float    intrinsicColor[4];
+    float    distortionColor[8];
 };
 
 class VideoCapture_obsensor : public IVideoCapture
 {
 public:
-    VideoCapture_obsensor(int index);
+    VideoCapture_obsensor(int index, const cv::VideoCaptureParameters& params);
     virtual ~VideoCapture_obsensor();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;

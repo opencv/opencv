@@ -81,7 +81,7 @@ Use 3rd party drivers or cameras
 Many industrial cameras or some video I/O devices don't provide standard driver interfaces
 for the operating system. Thus you can't use  VideoCapture or VideoWriter with these devices.
 
-To get access to their devices, manufactures provide their own C++ API and library that you have to
+To get access to their devices, manufacturers provide their own C++ API and library that you have to
 include and link with your OpenCV application.
 
 It is a common case that these libraries read/write images from/to a memory buffer. If so, it is possible to make a `Mat` header for memory buffer (user-allocated data) and process it

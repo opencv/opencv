@@ -12,14 +12,21 @@ TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/read.png";
-    const string dst_file = cv::tempfile(".png");
     Mat img;
     ASSERT_NO_THROW(img = imread(filename));
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(13043, img.cols);
     EXPECT_EQ(13917, img.rows);
-    ASSERT_NO_THROW(imwrite(dst_file, img));
-    EXPECT_EQ(0, remove(dst_file.c_str()));
+
+    vector<uchar> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, 1024*1024 }));
+    ASSERT_TRUE(status);
+#ifdef HAVE_PNG
+    EXPECT_EQ((size_t)816219, buff.size());
+#else
+    EXPECT_EQ((size_t)817407, buff.size());
+#endif
 }
 
 TEST(Imgcodecs_Png, encode)
@@ -29,7 +36,9 @@ TEST(Imgcodecs_Png, encode)
     vector<int> param;
     param.push_back(IMWRITE_PNG_COMPRESSION);
     param.push_back(3); //default(3) 0-9.
-    EXPECT_NO_THROW(imencode(".png", img_gt, buff, param));
+    bool status = false;
+    EXPECT_NO_THROW(status = imencode(".png", img_gt, buff, param));
+    ASSERT_TRUE(status);
     Mat img;
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
     EXPECT_FALSE(img.empty());
@@ -559,6 +568,26 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("../perf/512x512.png", 7, 155696),
         make_tuple("../perf/512x512.png", 8, 153708),
         make_tuple("../perf/512x512.png", 9, 152181)));
+
+// See https://github.com/opencv/opencv/issues/27614
+typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
+TEST_P(Imgcodecs_Png_ZLIBBUFFER_SIZE, encode_regression_27614)
+{
+    Mat img(320,240,CV_8UC3,cv::Scalar(64,76,43));
+    vector<uint8_t> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, GetParam() }));
+    ASSERT_TRUE(status);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,
+                        testing::Values(5,
+                                        6,         // Minimum limit
+                                        8192,      // Default value
+                                        131072,    // 128 KiB
+                                        262144,    // 256 KiB
+                                        1048576,   // Maximum limit
+                                        1048577));
 
 #endif // HAVE_PNG
 
