@@ -97,6 +97,4 @@ cv.imwrite(OUTPUT, corrected)
 
 Additional Resources
 --------------------
-
-
-1.  Rudakova, V., Monasse, P. (2014). Precise Correction of Lateral Chromatic Aberration in Images. In: Klette, R., Rivera, M., Satoh, S. (eds) Image and Video Technology. PSIVT 2013. Lecture Notes in Computer Science, vol 8333. Springer, Berlin, Heidelberg. https://doi.org/10.1007/978-3-642-53842-1_2
+@cite rudakova2013precise
