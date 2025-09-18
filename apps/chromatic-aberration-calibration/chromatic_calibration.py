@@ -14,12 +14,12 @@ and the actual delta computed with polynomial coefficients. The coefficients are
 format and can be used in this sample to correct images of the same camera, lens and settings.
 
 usage:
-    ca_calibration.py calibrate [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH image
-    ca_calibration.py correct [-h] --coeffs_file YAML_FILE_PATH [-o OUTPUT] image
-    ca_calibration.py full [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH [-o OUTPUT] image
+    chromatic_calibration.py calibrate [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH image
+    chromatic_calibration.py correct [-h] --coeffs_file YAML_FILE_PATH [-o OUTPUT] image
+    chromatic_calibration.py full [-h] [--degree DEGREE] --coeffs_file YAML_FILE_PATH [-o OUTPUT] image
 
 usage example:
-    ca_calibration.py calibrate pattern_aberrated.png --coeffs_file calib_result.yaml
+    chromatic_calibration.py calibrate pattern_aberrated.png --coeffs_file calib_result.yaml
 
 default values:
     --degree: 11

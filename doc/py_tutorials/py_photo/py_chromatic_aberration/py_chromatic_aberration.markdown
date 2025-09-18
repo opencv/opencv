@@ -39,13 +39,13 @@ To create a model of the misalignments of the channels, we use the following cal
 
 2. Take a photo of the printed out calibration grid using your camera. Make sure that al of the discs are in the photo, and that the grid fills as much place as possible, as the chromatic aberration is the strongest at the edges and corners of the photo. You should be able to see color fringes by eye.
 
-3. Run calibraion, see [ca_calibration.py](../../../../apps/chromatic-aberration-calibration/ca_calibration.py). The app can be used as follows:
+3. Run calibraion, see [chromatic_calibration.py](../../../../apps/chromatic-aberration-calibration/chromatic_calibration.py). The app can be used as follows:
 
 ```
-ca_calibration.py calibrate [-h] [--degree DEGREE] --coeffs_file YAML image
-ca_calibration.py correct   [-h] --coeffs_file YAML [-o OUTPUT] image
-ca_calibration.py full      [-h] [--degree DEGREE] --coeffs_file YAML [-o OUTPUT] image
-ca_calibration.py scan      [-h] --degree_range k0 k1 image
+chromatic_calibration.py calibrate [-h] [--degree DEGREE] --coeffs_file YAML image
+chromatic_calibration.py correct   [-h] --coeffs_file YAML [-o OUTPUT] image
+chromatic_calibration.py full      [-h] [--degree DEGREE] --coeffs_file YAML [-o OUTPUT] image
+chromatic_calibration.py scan      [-h] --degree_range k0 k1 image
 ```
 
 Calibrate estimates polynomial coefficients and outputs them to a YAML file to be used with correction functions.
