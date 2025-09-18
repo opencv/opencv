@@ -123,15 +123,6 @@
 "test_nllloss_NCd1d2d3d4d5_mean_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
 "test_nllloss_NCd1d2d3d4d5_mean_weight_expanded", // Issue::Wrong output
 "test_nllloss_NCd1d2d3d4d5_none_no_weight", // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nonmaxsuppression_center_point_box_format", // Issue:: Layer does not exist (NonMaxSuppression)::Can't create layer "onnx_node_output_0!selected_indices" of type "NonMaxSuppression" in function 'getLayerInstance'
-"test_nonmaxsuppression_flipped_coordinates", // ---- same as above ---
-"test_nonmaxsuppression_identical_boxes", // ---- same as above ---
-"test_nonmaxsuppression_limit_output_size", // ---- same as above ---
-"test_nonmaxsuppression_single_box", // ---- same as above ---
-"test_nonmaxsuppression_suppress_by_IOU", // ---- same as above ---
-"test_nonmaxsuppression_suppress_by_IOU_and_scores", // ---- same as above ---
-"test_nonmaxsuppression_two_batches", // ---- same as above ---
-"test_nonmaxsuppression_two_classes", // ---- same as above ---
 "test_onehot_negative_indices", // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis", // ---- same as above ---
 "test_onehot_with_negative_axis", // ---- same as above ---

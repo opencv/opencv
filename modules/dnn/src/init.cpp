@@ -96,6 +96,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Pad2,           Pad2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(NonZero,        NonZeroLayer);
     CV_DNN_REGISTER_LAYER_CLASS(QuantizeLinear, QuantizeLinearLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(NonMaxSuppression, NonMaxSuppressionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Range,          RangeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape,        ReshapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Reshape2,       Reshape2Layer);
