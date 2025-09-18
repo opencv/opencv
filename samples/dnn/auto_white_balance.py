@@ -69,6 +69,7 @@ SRGB_ALPHA     = 0.055
 SRGB_SLOPE     = 12.92
 SRGB_EXP       = 2.4
 LINEAR_THRESHOLD = 0.0031308
+EPS = 1e-10
 
 def srgb_to_linear(rgb: np.ndarray) -> np.ndarray:
     low  = rgb / SRGB_SLOPE
@@ -85,18 +86,18 @@ def correct(bgr8u: np.ndarray, illum_rgb_linear: np.ndarray) -> np.ndarray:
 
     bgr = bgr8u.astype(np.float32) * NORMALIZE_FACTOR
     lin = srgb_to_linear(bgr)
-    e_r = max(float(illum_rgb_linear[0]), 1e-10)
-    e_g = max(float(illum_rgb_linear[1]), 1e-10)
-    e_b = max(float(illum_rgb_linear[2]), 1e-10)
+    e_r = max(float(illum_rgb_linear[0]), EPS)
+    e_g = max(float(illum_rgb_linear[1]), EPS)
+    e_b = max(float(illum_rgb_linear[2]), EPS)
     s3 = np.float32(np.sqrt(3.0))
-    corr_bgr = np.array([e_b * s3 + 1e-10,
-                         e_g * s3 + 1e-10,
-                         e_r * s3 + 1e-10],
+    corr_bgr = np.array([e_b * s3 + EPS,
+                         e_g * s3 + EPS,
+                         e_r * s3 + EPS],
                         dtype=np.float32)
 
     corrected = lin / corr_bgr.reshape(1, 1, 3)
 
-    max_val = float(corrected.max()) + 1e-10
+    max_val = float(corrected.max()) + EPS
     corrected /= max_val
 
     srgb = linear_to_srgb(corrected)
@@ -111,7 +112,7 @@ def annotate(img_bgr: np.ndarray, title: str) -> None:
     cv.putText(img_bgr, title, (10, 30), cv.FONT_HERSHEY_SIMPLEX, fs, (0,255,0), th)
 
 def get_args_parser(func_args):
-    backends = ("default", "openvino", "opencv", "vkcom", "cuda")
+    backends = ("default", "openvino", "opencv", "vkcom", "cuda", "webnn")
     targets = ("cpu", "opencl", "opencl_fp16", "ncs2_vpu", "hddl_vpu", "vulkan",
                "cuda", "cuda_fp16")
 
@@ -180,7 +181,11 @@ def main(func_args=None):
         print(f"Forward error: {e}", file=sys.stderr)
         sys.exit(1)
 
-    illum = out.astype(np.float32).reshape(-1)[:3]
+    illum = out.astype(np.float32).reshape(-1)
+    if out.size != 3:
+        print("Error: model output of size not equal to 3 (should output 3 illuminants in RGB order)")
+        sys.exit(-1)
+
     corrected = correct(img, illum)
 
     orig_vis = img.copy()
