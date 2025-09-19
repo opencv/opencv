@@ -157,6 +157,51 @@ TEST(Imgcodecs_Png, decode_regression27295)
     EXPECT_TRUE(img.empty());
 }
 
+// The program must not crash even when decoding a corrupted APNG image.
+// See https://github.com/opencv/opencv/issues/27744
+#if defined(HAVE_PNG) // APNG is supported only with using libpng
+TEST(Imgcodecs_Png, decode_regression27744)
+{
+    // Create APNG stream
+    Animation anim;
+    for(size_t i = 0 ; i < 3 ; i++) {
+        Mat frame(120, 120, CV_8UC3, Scalar(0,0,0));
+        putText(frame, cv::format("%d", static_cast<int>(i)), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+        anim.frames.push_back(frame);
+        anim.durations.push_back(30);
+    }
+    bool ret = false;
+    vector<uchar> buff;
+    EXPECT_NO_THROW(ret = imencodeanimation(".png", anim,  buff));
+    ASSERT_TRUE(ret) << "imencodeanimation() returns false";
+
+    // Find IDAT chunk
+    const vector<uchar> IDAT = {'I', 'D', 'A', 'T' };
+    std::vector<uchar>::iterator it = std::search(buff.begin(), buff.end(), IDAT.begin(), IDAT.end());
+    ASSERT_FALSE(it == buff.end()) << "IDAT chunk not found";
+
+    // Determine the range to test
+    // APNG stream contains as { len0, len1, len2, len3, 'I', 'D', 'A' 'T', ... }
+    size_t idx = std::distance(buff.begin(), it); // 'I' position
+    size_t len = (buff[idx-4] << 24) + (buff[idx-3] << 16) +
+                 (buff[idx-2] <<  8) + (buff[idx-1]); // IDAT chunk length
+    idx = idx + 4; // Move to IDAT body
+
+    // Test
+    for(size_t i = 0; i < len; i++, idx++) {
+        vector<uint8_t> work = buff;
+        work[idx] = static_cast<uint8_t>((static_cast<uint32_t>(work[idx]) + 1) & 0xff);
+
+        Mat dst;
+        EXPECT_NO_THROW(dst = imdecode(work, cv::IMREAD_COLOR));
+        if(dst.empty()) {
+            // libpng detects some error, but the program is not crashed. Test is passed.
+            break;
+        }
+    }
+}
+#endif
+
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
 
 // Parameterized test for decoding PNG files from the PNGSuite test set
