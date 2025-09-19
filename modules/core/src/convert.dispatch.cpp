@@ -197,6 +197,41 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     }
 }
 
+void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta, Mat::BF16Policy bf16Policy) const
+{
+    if (bf16Policy == BF16Policy_RoundToNearestEven || CV_MAT_DEPTH(type_) != CV_16BF)
+    {
+        convertTo(dst, type_, alpha, beta);
+        return;
+    }
+
+    // BF16Policy_Truncate and dst depth is CV_16BF: implement truncation for float sources, else fallback
+    int stype = type();
+    int sdepth = CV_MAT_DEPTH(stype);
+
+    if (sdepth == CV_32F && CV_MAT_DEPTH(type_) == CV_16BF)
+    {
+        int cn = channels();
+        int dtype = CV_MAKETYPE(CV_16BF, cn);
+        dst.create(dims, size, dtype);
+        Mat dstMat = dst.getMat();
+
+        const float* in = ptr<float>();
+        uint16_t* outRaw = reinterpret_cast<uint16_t*>(dstMat.ptr<bfloat>());
+        size_t numElems = (size_t)total() * (size_t)cn; // elements across channels
+        for (size_t i = 0; i < numElems; ++i)
+        {
+            uint32_t bits;
+            memcpy(&bits, &in[i], sizeof(bits));
+            outRaw[i] = (uint16_t)(bits >> 16);
+        }
+        return;
+    }
+
+    // Otherwise, use the standard path
+    convertTo(dst, type_, alpha, beta);
+}
+
 void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 {
     CV_INSTRUMENT_REGION();

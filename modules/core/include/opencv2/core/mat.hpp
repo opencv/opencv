@@ -1435,6 +1435,9 @@ public:
      */
     void convertTo( OutputArray m, int rtype, double alpha=1, double beta=0 ) const;
 
+    enum BF16Policy { BF16Policy_RoundToNearestEven = 0, BF16Policy_Truncate = 1 };
+    void convertTo( OutputArray m, int rtype, double alpha, double beta, Mat::BF16Policy bf16Policy ) const;
+
     /** @brief Provides a functional form of convertTo.
 
     This is an internally used method called by the @ref MatrixExpressions engine.
