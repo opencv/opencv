@@ -1034,6 +1034,12 @@ bool imdecodeanimation(InputArray buf, Animation& animation, int start, int coun
 {
     CV_TRACE_FUNCTION();
 
+    size_t buf_size = buf.total() * buf.elemSize();
+    if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
+    }
+
     return imdecodeanimation_(buf, IMREAD_UNCHANGED, start, count, animation);
 }
 
@@ -1447,7 +1453,7 @@ Mat imdecode( InputArray _buf, int flags )
     size_t buf_size = _buf.total() * _buf.elemSize();
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
-        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2,147,483,647 bytes)");
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
     }
 
     Mat buf = _buf.getMat(), img;
@@ -1464,7 +1470,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
     size_t buf_size = _buf.total() * _buf.elemSize();
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
-        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2,147,483,647 bytes)");
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
     }
 
     Mat buf = _buf.getMat(), img;
@@ -1483,7 +1489,7 @@ Mat imdecodeWithMetadata( InputArray _buf, std::vector<int>& metadata_types,
     size_t buf_size = _buf.total() * _buf.elemSize();
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
-        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2,147,483,647 bytes)");
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
     }
 
     Mat buf = _buf.getMat(), img;
@@ -1634,6 +1640,12 @@ imdecodemulti_(const Mat& buf, int flags, std::vector<Mat>& mats, int start, int
 bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, const Range& range)
 {
     CV_TRACE_FUNCTION();
+
+    size_t buf_size = _buf.total() * _buf.elemSize();
+    if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
+    {
+        CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
+    }
 
     Mat buf = _buf.getMat();
     if (range == Range::all())
