@@ -9,17 +9,6 @@ namespace opencv_test { namespace {
 
 using namespace cv;
 
-class CV_MOG2Test : public cvtest::BaseTest
-{
-public:
-    // CV_MOG2Test();
-protected:
-    // void SetUp() override {}
-    // void TearDown() override {}
-
-    Mat vid;
-};
-
 ///////////////////////// MOG2 //////////////////////////////
 TEST(BackgroundSubtractorMOG2, KnownForegroundMaskShadowsTrue)
 {
@@ -31,14 +20,15 @@ TEST(BackgroundSubtractorMOG2, KnownForegroundMaskShadowsTrue)
     //White Rectangle
     Mat knownFG = Mat::zeros(input.size(), CV_8U);
 
-    rectangle(knownFG, Rect(3,3,8,8), Scalar(255,255,255), -1);
+    rectangle(knownFG, Rect(3,3,5,5), Scalar(255,255,255), -1);
 
     Mat output;
-    mog2->apply(input, output, knownFG);
+    mog2->apply(input, knownFG, output);
 
-    for(int y = 3; y < 8; y++){
+    for(int y = 3; y < 8; y++)
+    {
         for (int x = 3; x < 8; x++){
-            EXPECT_EQ(output.at<uchar>(y,x),255) << "Expected foreground at (" << x << "," << y << ")";
+            EXPECT_EQ(255,output.at<uchar>(y,x)) << "Expected foreground at (" << x << "," << y << ")";
         }
     }
 }
@@ -56,11 +46,12 @@ TEST(BackgroundSubtractorMOG2, KnownForegroundMaskShadowsFalse)
     rectangle(knownFG, Rect(3,3,5,5), Scalar(255,255,255), FILLED);
 
     Mat output;
-    mog2->apply(input, output, knownFG);
+    mog2->apply(input, knownFG, output);
 
-    for(int y = 3; y < 8; y++){
+    for(int y = 3; y < 8; y++)
+    {
         for (int x = 3; x < 8; x++){
-            EXPECT_EQ(output.at<uchar>(y,x),255) << "Expected foreground at (" << x << "," << y << ")";
+            EXPECT_EQ(255,output.at<uchar>(y,x)) << "Expected foreground at (" << x << "," << y << ")";
         }
     }
 }
@@ -80,11 +71,12 @@ TEST(BackgroundSubtractorKNN, KnownForegroundMaskShadowsTrue)
     rectangle(knownFG, Rect(3,3,5,5), Scalar(255,255,255), FILLED);
 
     Mat output;
-    knn->apply(input, output, knownFG);
+    knn->apply(input, knownFG, output);
 
-    for(int y = 3; y < 8; y++){
+    for(int y = 3; y < 8; y++)
+    {
         for (int x = 3; x < 8; x++){
-            EXPECT_EQ(output.at<uchar>(y,x),255) << "Expected foreground at (" << x << "," << y << ")";
+            EXPECT_EQ(255,output.at<uchar>(y,x)) << "Expected foreground at (" << x << "," << y << ")";
         }
     }
 }
@@ -102,11 +94,12 @@ TEST(BackgroundSubtractorKNN, KnownForegroundMaskShadowsFalse)
     rectangle(knownFG, Rect(3,3,5,5), Scalar(255,255,255), FILLED);
 
     Mat output;
-    knn->apply(input, output, knownFG);
+    knn->apply(input, knownFG, output);
 
-    for(int y = 3; y < 8; y++){
+    for(int y = 3; y < 8; y++)
+    {
         for (int x = 3; x < 8; x++){
-            EXPECT_EQ(output.at<uchar>(y,x),255) << "Expected foreground at (" << x << "," << y << ")";
+            EXPECT_EQ(255,output.at<uchar>(y,x)) << "Expected foreground at (" << x << "," << y << ")";
         }
     }
 }
