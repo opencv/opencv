@@ -305,12 +305,12 @@ static void pairwiseRegistration (const std::vector<std::pair<int,int>> &pairs,
         }
 
         extrinsic_flags |= CALIB_FIX_INTRINSIC;
-        registerCameras(grid_points1, grid_points2, image_points1, image_points2,
+        double err = registerCameras(grid_points1, grid_points2, image_points1, image_points2,
                         Ks[c1], distortions[c1], cv::CameraModel(models.at<uchar>(c1)),
                         Ks[c2], distortions[c2], cv::CameraModel(models.at<uchar>(c2)),
                         R, T, noArray(), noArray(), noArray(), noArray(), noArray(),
                         extrinsic_flags, criteria);
-
+        CV_LOG_INFO(NULL, "Pair " << c1 << "-" << c2 << " registration RMS " << err);
         // R_0 = I
         // R_ij = R_i R_j^T     =>  R_i = R_ij R_j
         // t_ij = ti - R_ij tj  =>  t_i = t_ij + R_ij t_j
@@ -377,11 +377,12 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         // image size does not matter since intrinsics are used
         if (are_fisheye_cams) {
             extrinsic_flags |= CALIB_FIX_INTRINSIC;
-            fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
+            double err = fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], dist1,
                             Ks[c2], dist2,
                             Size(), R, T,
                             extrinsic_flags, criteria);
+            CV_LOG_INFO(NULL, "Stereo pair " << c1 << "-" << c2 << " registration RMS " << err);
         } else {
             extrinsic_flags |= CALIB_FIX_INTRINSIC;
             if ((intrinsic_flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (intrinsic_flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
@@ -389,11 +390,12 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             if ((intrinsic_flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (intrinsic_flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
                 extrinsic_flags |= CALIB_THIN_PRISM_MODEL;
 
-            stereoCalibrate(grid_points, image_points1, image_points2,
+            double err = stereoCalibrate(grid_points, image_points1, image_points2,
                             Ks[c1], dist1,
                             Ks[c2], dist2,
                             Size(), R, T, noArray(), noArray(), noArray(),
                             extrinsic_flags, criteria);
+            CV_LOG_INFO(NULL, "Stereo pair " << c1 << "-" << c2 << " registration RMS " << err);
         }
 
         // R_0 = I
@@ -535,7 +537,8 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                .setStepNormTolerance(termCrit.epsilon)
                .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
            noArray()/*mask, all variables to optimize*/);
-    solver.optimize();
+    cv::LevMarq::Report status = solver.optimize();
+    CV_LOG_INFO(NULL, "LevMarq finished with status " << status.found << " energy " << status.energy << " after " << status.iters << " iterations");
 }
 
 static void checkConnected (const std::vector<std::vector<bool>> &detection_mask_mat) {
@@ -719,6 +722,7 @@ double calibrateMultiview(
                 if (models_mat.at<uchar>(camera) == cv::CALIB_MODEL_FISHEYE) {
                     repr_err = fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
                         K, dist, rvecs, tvecs, flagsForIntrinsics_mat.at<int>(camera));
+                    CV_LOG_INFO(NULL, "Camera " << camera << " intrinsics calibration RMS " << repr_err);
                     // calibrate does not compute error per view, so compute it manually
                     errors_per_view = std::vector<double>(obj_points_.size());
                     for (int f = 0; f < (int) obj_points_.size(); f++) {
@@ -729,6 +733,7 @@ double calibrateMultiview(
                 } else {
                     repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], K, dist,
                     rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics_mat.at<int>(camera));
+                    CV_LOG_INFO(NULL, "Camera " << camera << " intrinsics calibration RMS " << repr_err);
                 }
                 CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
                 int cnt_visible_frame = 0;

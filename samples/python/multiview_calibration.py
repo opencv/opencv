@@ -991,6 +991,7 @@ def calibrateFromJSON(json_file, find_intrinsics_in_python):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--log_level', type=str, choices=('', 'verbose', 'debug', 'info', 'warning', 'error', 'fatal', 'silent'), help='OpenCV log level to print more calibration process details')
     parser.add_argument('--json_file', type=str, default=None, help="json file with all data. Must have keys: 'object_points', 'image_points', 'image_sizes', 'is_fisheye'")
     parser.add_argument('--filenames', type=str, default=None, help='Txt files containing image lists, e.g., cam_1.txt,cam_2.txt,...,cam_N.txt for N cameras')
     parser.add_argument('--pattern_size', type=str, default=None, help='pattern size: width,height')
@@ -1012,6 +1013,21 @@ if __name__ == '__main__':
 
     params, _ = parser.parse_known_args()
     print("params.board_dict_path:", params.board_dict_path)
+
+    if params.log_level == "verbose":
+        cv.setLogLevel(6)
+    elif params.log_level == "debug":
+        cv.setLogLevel(5)
+    elif params.log_level == "info":
+        cv.setLogLevel(4)
+    elif params.log_level == "warning":
+        cv.setLogLevel(3)
+    elif params.log_level == "error":
+        cv.setLogLevel(2)
+    elif params.log_level == "fatal":
+        cv.setLogLevel(1)
+    elif params.log_level == "silent":
+        cv.setLogLevel(0)
 
     if params.visualize:
         assert os.path.exists(params.path_to_visualize), f'Path to result file does not exist: {params.path_to_visualize}'
