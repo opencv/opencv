@@ -302,9 +302,9 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
     Range range(0, sz.height);
     const int nstripes = -1;
-    parallel_for_(range, [&](const Range&)
+    parallel_for_(range, [&](const Range& r)
         {
-            for (int y = range.start; y < range.end; y++)
+            for (int y = r.start; y < r.end; y++)
             {
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
@@ -365,9 +365,9 @@ void renderPointsNormalsColors(InputArray _points, InputArray, InputArray _color
 
     Range range(0, sz.height);
     const int nstripes = -1;
-    parallel_for_(range, [&](const Range&)
+    parallel_for_(range, [&](const Range& r)
         {
-            for (int y = range.start; y < range.end; y++)
+            for (int y = r.start; y < r.end; y++)
             {
                 Vec4b* imgRow = img[y];
                 const ptype* clrRow = colors[y];
