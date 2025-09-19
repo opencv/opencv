@@ -175,7 +175,7 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                                     {
                                         short d[25];
                                         int _k = 0;
-                                    #if CV_ENABLE_UNROLLED && defined(_M_ARM64)
+                                    #if CV_ENABLE_UNROLLED
                                         for (; _k + 4 < 25; _k += 5)
                                         {
                                             d[_k]     = (short)(ptr[k] - ptr[k + pixel[_k]]);
