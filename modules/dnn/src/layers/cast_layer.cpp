@@ -12,41 +12,87 @@
 
 namespace cv { namespace dnn {
 
+// ONNX Cast operator
+// Spec: https://onnx.ai/onnx/operators/onnx__Cast.html
+// Supported opsets: 1-24
+// ONNX CastLike operator
+// Spec: https://onnx.ai/onnx/operators/onnx__CastLike.html
+// Supported opsets: 15-24
+
 namespace
 {
-    inline void convertToBF16(const Mat& src, Mat& dst)
+    inline void castQuantized(const Mat& src, Mat& dst, int targetDepth)
     {
-        const int ddepth = dst.depth();
-        if (!(ddepth == CV_16BF || ddepth == CV_16U))
+        if (targetDepth == CV_16F)
         {
-            CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
+            CV_Assert(dst.depth() == CV_32F);
+            if (src.depth() == CV_32F)
+            {
+                MatConstIterator_<float> sIt = src.begin<float>(), sEnd = src.end<float>();
+                MatIterator_<float> dIt = dst.begin<float>();
+                for (; sIt != sEnd; ++sIt, ++dIt)
+                {
+                    *dIt = (float)hfloat(*sIt);
+                }
+            }
+            else if (src.depth() == CV_64F)
+            {
+                MatConstIterator_<double> sIt = src.begin<double>(), sEnd = src.end<double>();
+                MatIterator_<float> dIt = dst.begin<float>();
+                for (; sIt != sEnd; ++sIt, ++dIt)
+                {
+                    float v = (float)*sIt;
+                    *dIt = (float)hfloat(v);
+                }
+            }
+            else
+            {
+                Mat src32; src.convertTo(src32, CV_32F);
+                MatConstIterator_<float> sIt = src32.begin<float>(), sEnd = src32.end<float>();
+                MatIterator_<float> dIt = dst.begin<float>();
+                for (; sIt != sEnd; ++sIt, ++dIt)
+                {
+                    *dIt = (float)hfloat(*sIt);
+                }
+            }
+            return;
         }
 
-        Mat src32;
-        if (src.depth() != CV_32F)
-            src.convertTo(src32, CV_32F);
-        const Mat& s = src32.empty() ? src : src32;
+        if (targetDepth == CV_16BF)
+        {
+            const int ddepth = dst.depth();
+            if (!(ddepth == CV_16BF || ddepth == CV_16U))
+            {
+                CV_Error(Error::StsNotImplemented, "Unsupported destination depth for BF16 cast");
+            }
 
-        uint16_t* outRaw = NULL;
-        Mat dst_bf16;
-        if (ddepth == CV_16BF)
-        {
-            outRaw = reinterpret_cast<uint16_t*>(dst.ptr<bfloat>());
-        }
-        else
-        {
-            dst_bf16 = Mat(dst.size(), CV_MAKETYPE(CV_16BF, dst.channels()), dst.data, dst.step);
-            outRaw = dst_bf16.ptr<uint16_t>();
-        }
+            Mat dst_bits(dst.size(), CV_MAKETYPE(CV_16U, dst.channels()), dst.data, dst.step);
 
-        const float* in = s.ptr<float>();
-        size_t numElems = (size_t)s.total() * (size_t)s.channels();
-        for (size_t i = 0; i < numElems; ++i)
-        {
-            Cv32suf u;
-            u.f = in[i];
-            outRaw[i] = (uint16_t)(u.u >> 16);
+            const Mat* src32p;
+            Mat src32;
+            if (src.depth() == CV_32F)
+                src32p = &src;
+            else
+            {
+                src.convertTo(src32, CV_32F);
+                src32p = &src32;
+            }
+
+            const int rows = src32p->rows;
+            const int cols_x_cn = src32p->cols * src32p->channels();
+            for (int r = 0; r < rows; ++r)
+            {
+                const float* in = src32p->ptr<float>(r);
+                ushort* out = dst_bits.ptr<ushort>(r);
+                for (int i = 0; i < cols_x_cn; ++i)
+                {
+                    Cv32suf u; u.f = in[i];
+                    out[i] = (ushort)(u.u >> 16);
+                }
+            }
+            return;
         }
+        src.convertTo(dst, dst.depth());
     }
 }
 
@@ -147,6 +193,24 @@ public:
         CV_CheckEQ(inputs.size(), (size_t)1, "");
         CV_CheckEQ(outputs.size(), (size_t)1, "");
 
+        int runtimeTargetDepth = -1;
+        if (hasToParam)
+        {
+            runtimeTargetDepth = toCvDepth_;
+        }
+        else
+        {
+            if (inputs.size() >= 2 && !inputs[1].empty())
+                runtimeTargetDepth = inputs[1].depth();
+            else
+                runtimeTargetDepth = inputs[0].depth();
+        }
+
+        if (runtimeTargetDepth == CV_16F && outputs[0].depth() == CV_32F)
+        {
+            return false;
+        }
+
         if (inputs[0].depth() == outputs[0].depth())
             inputs[0].copyTo(outputs[0]);
         else
@@ -200,8 +264,8 @@ public:
         if (dst0.depth() != plannedDDepth)
             dst0.create(dst0.size(), CV_MAKETYPE(plannedDDepth, src0.channels()));
 
-        Mat src = src0.isContinuous() ? src0 : src0.clone();
-        Mat dst = dst0.isContinuous() ? dst0 : dst0.clone();
+        Mat src = src0;
+        Mat dst = dst0;
 
         const int sdepth = src.depth();
         const int ddepth = dst.depth();
@@ -214,7 +278,7 @@ public:
 
         if (runtimeTargetDepth == CV_16BF && (ddepth == CV_16BF || ddepth == CV_16U))
         {
-            convertToBF16(src, dst);
+            castQuantized(src, dst, CV_16BF);
         }
         else if (sdepth == CV_16BF)
         {
@@ -222,32 +286,21 @@ public:
         }
         else if (runtimeTargetDepth == CV_16F && ddepth == CV_32F)
         {
-            Mat tmp16;
-            src.convertTo(tmp16, CV_16F);
-            tmp16.convertTo(dst, CV_32F);
+            castQuantized(src, dst, CV_16F);
         }
         else if (runtimeTargetDepth == CV_64F && ddepth != CV_64F)
         {
-            Mat tmp64;
-            src.convertTo(tmp64, CV_64F);
-            if (ddepth == CV_32F)
-                tmp64.convertTo(dst, CV_32F);
-            else if (ddepth == CV_16U || ddepth == CV_16BF)
+            if (ddepth == CV_16U || ddepth == CV_16BF)
             {
-                Mat tmp32;
-                tmp64.convertTo(tmp32, CV_32F);
-                convertToBF16(tmp32, dst);
+                castQuantized(src, dst, CV_16BF);
             }
             else
-                tmp64.convertTo(dst, ddepth);
+                src.convertTo(dst, ddepth);
         }
         else
         {
             src.convertTo(dst, ddepth);
         }
-
-        if (dst.data != dst0.data)
-            dst.copyTo(dst0);
     }
 
 #ifdef HAVE_DNN_NGRAPH
