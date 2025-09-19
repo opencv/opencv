@@ -65,7 +65,12 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
 #include "../cuda4dnn/primitives/transpose_convolution.hpp"
+#include <opencv2/core/cuda.hpp>
 using namespace cv::dnn::cuda4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda/conv_naive.hpp"
 #endif
 
 #include "cpu_kernels/convolution.hpp"
@@ -1121,6 +1126,112 @@ public:
             return;
         }
 
+#ifdef HAVE_CUDA
+        if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && !blobs.empty())
+        {
+            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+            CV_Assert(gout.size() == 1);
+
+            // get input as GpuMat
+            cv::cuda::GpuMat gin0;
+            bool inputIsGPU = (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT);
+            if (inputIsGPU)
+            {
+                std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                CV_Assert(!gin.empty());
+                gin0 = gin[0];
+            }
+            else
+            {
+                std::vector<Mat> inputs_tmp; inputs_arr.getMatVector(inputs_tmp);
+                CV_Assert(!inputs_tmp.empty());
+                Mat in = inputs_tmp[0];
+                int rows = in.rows > 0 ? in.rows : 1;
+                int cols = (int)(in.total() / (size_t)rows);
+                Mat in2d = in.reshape(1, rows);
+                gin0.create(rows, cols, in.type());
+                gin0.upload(in2d);
+            }
+
+            // derive output shape from input and weights
+            int N = 1, C_in = 0, H_in = 0, W_in = 0;
+            if (!inputIsGPU)
+            {
+                std::vector<Mat> inputs_host; inputs_arr.getMatVector(inputs_host);
+                const Mat& in0h = inputs_host[0];
+                N = in0h.size[0];
+                C_in = in0h.size[1];
+                H_in = in0h.size[2];
+                W_in = in0h.size[3];
+            }
+            else
+            {
+                int rows = gin0.rows > 0 ? gin0.rows : 1;
+                int cols = gin0.cols > 0 ? gin0.cols : 1;
+                H_in = rows;
+                W_in = cols;
+                N = 1;
+                C_in = blobs[0].size[1] * groups;
+            }
+            int C_out = blobs[0].size[0];
+            int kH = kernel_size[0];
+            int kW = kernel_size.size() > 1 ? kernel_size[1] : kernel_size[0];
+            int sH = strides[0];
+            int sW = strides.size() > 1 ? strides[1] : strides[0];
+            int pH = pads_begin[0];
+            int pW = pads_begin.size() > 1 ? pads_begin[1] : pads_begin[0];
+            int H_out = (H_in + 2 * pH - kH) / sH + 1;
+            int W_out = (W_in + 2 * pW - kW) / sW + 1;
+
+            // allocate output GpuMat as 2D view (rows = N*C_out*H_out, cols = W_out)
+            int out_rows = N * C_out * H_out;
+            int out_cols = W_out;
+            gout[0].create(out_rows, out_cols, CV_32F);
+
+            // upload weights/bias once to device cache
+            static cv::cuda::GpuMat wdev, bdev;
+            if (wdev.empty() || (wdev.rows * wdev.cols) != (int)blobs[0].total())
+            {
+                Mat w = blobs[0];
+                Mat w2d = w.reshape(1, w.total());
+                wdev.create(w2d.rows, w2d.cols, w2d.type());
+                wdev.upload(w2d);
+            }
+            if (hasBias())
+            {
+                if (bdev.empty() || (bdev.rows * bdev.cols) != (int)blobs[1].total())
+                {
+                    Mat b = blobs[1].reshape(1, blobs[1].total());
+                    bdev.create(b.rows, b.cols, b.type());
+                    bdev.upload(b);
+                }
+            }
+            else
+            {
+                bdev.release();
+            }
+
+            // call kernel
+            // compute strides in elements
+            int in_ldw = (int)(gin0.step / sizeof(float));
+            int out_ldw = (int)(gout[0].step / sizeof(float));
+            // weights are uploaded as a flat 2D where rows advance by kW; use kW for both
+            int w_ldw = kW;
+            int w_ldh = kW;
+            cuda_naive_conv::conv2d_nchw_fp32(
+                (const float*)gin0.ptr<float>(),
+                (const float*)wdev.ptr<float>(),
+                bdev.empty() ? nullptr : (const float*)bdev.ptr<float>(),
+                (float*)gout[0].ptr<float>(),
+                N, C_in, H_in, W_in,
+                C_out, kH, kW,
+                sH, sW,
+                pH, pW,
+                in_ldw, out_ldw, w_ldw, w_ldh);
+            return;
+        }
+#endif
+
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
@@ -1213,6 +1324,60 @@ public:
                 weightsMat.release();
             }
 
+            auto kind = outputs_arr.kind();
+#ifdef HAVE_CUDA
+            if (kind == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            {
+                // Prepare GPU output buffers
+                std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+                CV_Assert(gout.size() == 1);
+
+                // derive output shape from inputs and weights
+                const Mat& in0 = inputs[0];
+                int N = in0.size[0];
+                int C_out = blobs.empty() ? inputs[1].size[0] : blobs[0].size[0];
+                std::vector<int> outshape_vec; outshape_vec.reserve(in0.dims);
+                outshape_vec.push_back(N);
+                outshape_vec.push_back(C_out);
+                if (padMode.empty())
+                {
+                    for (int i = 2; i < in0.dims; i++)
+                        outshape_vec.push_back((in0.size[i] + pads_begin[i-2] + pads_end[i-2] - dilations[i-2] * (kernel_size[i-2] - 1) - 1) / strides[i-2] + 1);
+                }
+                else
+                {
+                    std::vector<int> in_spatial; in_spatial.reserve(in0.dims-2);
+                    for (int i = 2; i < in0.dims; i++) in_spatial.push_back(in0.size[i]);
+                    std::vector<int> out_spatial; getConvPoolOutParams(in_spatial, kernel_size, strides, padMode, dilations, out_spatial);
+                    outshape_vec.insert(outshape_vec.end(), out_spatial.begin(), out_spatial.end());
+                }
+                MatShape outshape = MatShape(outshape_vec);
+
+                Mat outCPU; outCPU.create(outshape, in0.type());
+                runFastConv(in0, outCPU, fastConvImpl, nstripes, activ, reluslope, fusedAdd);
+                int rows = outCPU.rows > 0 ? outCPU.rows : 1;
+                int cols = (int)(outCPU.total() / (size_t)rows);
+                Mat out2d = outCPU.reshape(1, rows);
+                gout[0].create(rows, cols, outCPU.type());
+                try { gout[0].upload(out2d); }
+                catch (const cv::Exception& e) {
+                    CV_LOG_WARNING(NULL, "DNN/CUDA: convolution upload to GPU failed: " << e.what() << "; returning CPU result only");
+                }
+                return;
+            }
+#endif
+            if (kind == _InputArray::STD_VECTOR_UMAT)
+            {
+                std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+                CV_Assert(uouts.size() == 1);
+                MatShape outshape = outputs_arr.shape(0);
+                Mat outCPU;
+                outCPU.create(outshape, inputs[0].type());
+                runFastConv(inputs[0], outCPU, fastConvImpl, nstripes, activ, reluslope, fusedAdd);
+                outCPU.copyTo(uouts[0]);
+                return;
+            }
+            // STD_VECTOR_MAT (default)
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
         }
     }

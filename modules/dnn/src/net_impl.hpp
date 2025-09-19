@@ -106,9 +106,6 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_CUDA
     std::vector<cv::cuda::GpuMat> gpuTensors;
     std::vector<cv::cuda::GpuMat> gpuBuffers;
-#else
-    std::vector<Ptr<BackendWrapper>> gpuTensors;
-    std::vector<Ptr<BackendWrapper>> gpuBuffers;
 #endif
 
     virtual bool empty() const;
@@ -230,6 +227,19 @@ struct Net::Impl : public detail::NetImplBase
     void tvUpdateConfictMap(int graphIndex, LayerData& ld, std::vector<std::vector<int> >& graphConflictMap);
     void tvConvertToOutputNode(const LayerData& ld, Ptr<TimVXBackendWrapper>& targetWrap);
     void initTimVXBackend();
+#endif
+
+#ifdef HAVE_CUDA
+    void allocateLayerGpuOutputs(
+            const Ptr<Layer>& layer,
+            const std::vector<int>& inpTypes,
+            const std::vector<MatShape>& inpShapes,
+            std::vector<int>& outTypes,
+            std::vector<MatShape>& outShapes,
+            std::vector<int>& tempTypes,
+            std::vector<MatShape>& tempShapes,
+            std::vector<cv::cuda::GpuMat>& outGpuMats,
+            std::vector<cv::cuda::GpuMat>& tempGpuMats);
 #endif
 
 #ifdef HAVE_CUDA
