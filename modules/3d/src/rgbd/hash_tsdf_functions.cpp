@@ -184,11 +184,12 @@ void integrateHashTsdfVolumeUnit(
 
             vu.pose = subvolumePose;
             vu.index = lastVolIndex;
-            lastVolIndex++;
-            if (lastVolIndex > int(volUnitsData.size().height))
+            if (lastVolIndex >= int(volUnitsData.size().height))
             {
-                volUnitsData.resize((lastVolIndex - 1) * 2);
+                volUnitsData.resize(lastVolIndex * 2);
+                CV_LOG_DEBUG(NULL, "HashTSDF storage extended from " << lastVolIndex << " to " << lastVolIndex * 2 << " volume units");
             }
+            lastVolIndex++;
             volUnitsData.row(vu.index).forEach<VecTsdfVoxel>([](VecTsdfVoxel &vv, const int * /* position */)
             {
                 TsdfVoxel& v = reinterpret_cast<TsdfVoxel&>(vv);
