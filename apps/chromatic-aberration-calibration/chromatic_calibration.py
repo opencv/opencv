@@ -5,6 +5,27 @@
 '''
 Camera calibration for chromatic aberration correction
 The calibration is done of a photo of black discs on white background.
+The calibration pattern can be found either in
+opencv_extra/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png,
+or can be replicated using the script for generating patterns:
+https://github.com/opencv/opencv/blob/4.x/doc/pattern_tools/gen_pattern.py,
+using the following invocation:
+
+python doc/pattern_tools/gen_pattern.py \
+  --output fc4_pattern_A3.svg \
+  --type circles \
+  --rows 26 --columns 37 \
+  --units mm \
+  --square_size 11 \
+  --radius_rate 2.75 \
+  --page_width 420 --page_height 297
+
+And then converted to PNG:
+
+inkscape fc4_pattern_A3.svg --export-type=png --export-dpi=300 \
+  --export-background=white --export-background-opacity=1 \
+  --export-filename=fc4_pattern_A3.png
+
 Calibration image is split into b,g,r, and g is used as reference channel.
 The centres of each circle in red and blue channels are found as centres of ellipses
 and then calculated on a subpixel level. Each centre in red or blue channel is paired to
