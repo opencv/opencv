@@ -110,21 +110,29 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
 }
 
 #ifdef HAVE_CUDA
-static inline void compute2DSizeFromMat(const Mat& host, int& rows, int& cols)
+static inline void fitGpuMatForMat(cv::cuda::GpuMat& gm, const Mat& host)
 {
+    // Flatten host Mat into 2D shape for GpuMat allocation
+    int rows = 1, cols = 1;
     if (host.dims <= 2)
     {
-        rows = host.rows;
+        rows = host.rows > 0 ? host.rows : 1;
         cols = host.cols > 0 ? host.cols : 1;
-        return;
     }
-    rows = host.size[0] > 0 ? host.size[0] : 1;
-    size_t total = host.total();
-    size_t cols_sz = total / (size_t)rows;
-    cols = (int)cols_sz;
-    if (cols == 0) cols = 1;
+    else
+    {
+        rows = host.size[0] > 0 ? host.size[0] : 1;
+        size_t total = host.total();
+        size_t cols_sz = total / (size_t)rows;
+        cols = (int)cols_sz;
+        if (cols <= 0) cols = 1;
+    }
+    if (gm.empty() || gm.rows != rows || gm.cols != cols || gm.type() != host.type())
+        gm.create(rows, cols, host.type());
 }
+#endif
 
+#ifdef HAVE_CUDA
 cv::cuda::GpuMat& Net::Impl::argGpuMat(Arg arg)
 {
     const ArgData& adata = args.at(arg.idx);
@@ -139,15 +147,20 @@ cv::cuda::GpuMat& Net::Impl::argGpuMat(Arg arg)
         gpuTensors.resize(args.size());
 
     Mat& host = argTensor(arg);
-    int rows = 1, cols = 1;
-    compute2DSizeFromMat(host, rows, cols);
-    if (gpuTensors[arg.idx].empty() || gpuTensors[arg.idx].rows != rows || gpuTensors[arg.idx].cols != cols || gpuTensors[arg.idx].type() != host.type())
-        gpuTensors[arg.idx].create(rows, cols, host.type());
-
-    if (!host.empty())
+    try
     {
-        Mat host2d = host.reshape(1, rows);
-        gpuTensors[arg.idx].upload(host2d);
+        fitGpuMatForMat(gpuTensors[arg.idx], host);
+        if (!host.empty())
+        {
+            Mat host2d = host.reshape(1, gpuTensors[arg.idx].rows);
+            gpuTensors[arg.idx].upload(host2d);
+        }
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded arg " << arg.idx << " to GPU (" << gpuTensors[arg.idx].rows << "x" << gpuTensors[arg.idx].cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMat for arg " << arg.idx << ": " << e.what() << ". Falling back to CPU Mat.");
+        gpuTensors[arg.idx].release();
     }
     return gpuTensors[arg.idx];
 }
@@ -161,14 +174,20 @@ void Net::Impl::ensureBufferWrapper(int bufidx)
     if ((size_t)bufidx >= gpuBuffers.size())
         gpuBuffers.resize((size_t)bufidx + 1);
     Mat& host = buffers.at((size_t)bufidx);
-    int rows = 1, cols = 1;
-    compute2DSizeFromMat(host, rows, cols);
-    if (gpuBuffers[(size_t)bufidx].empty() || gpuBuffers[(size_t)bufidx].rows != rows || gpuBuffers[(size_t)bufidx].cols != cols || gpuBuffers[(size_t)bufidx].type() != host.type())
-        gpuBuffers[(size_t)bufidx].create(rows, cols, host.type());
-    if (!host.empty())
+    try
     {
-        Mat host2d = host.reshape(1, rows);
-        gpuBuffers[(size_t)bufidx].upload(host2d);
+        fitGpuMatForMat(gpuBuffers[(size_t)bufidx], host);
+        if (!host.empty())
+        {
+            Mat host2d = host.reshape(1, gpuBuffers[(size_t)bufidx].rows);
+            gpuBuffers[(size_t)bufidx].upload(host2d);
+        }
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded TEMP buffer " << bufidx << " to GPU (" << gpuBuffers[(size_t)bufidx].rows << "x" << gpuBuffers[(size_t)bufidx].cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMat for TEMP buffer " << bufidx << ": " << e.what() << ". Falling back to CPU Mat.");
+        gpuBuffers[(size_t)bufidx].release();
     }
 #else
     (void)bufidx;

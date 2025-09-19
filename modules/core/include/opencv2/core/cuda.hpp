@@ -158,6 +158,10 @@ public:
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     CV_WRAP void release();
 
+    //! allocates or reuses underlying storage to fit the requested 2D size and type (no-op if already compatible)
+    CV_WRAP void fit(int rows, int cols, int type);
+    CV_WRAP void fit(Size size, int type);
+
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
 
