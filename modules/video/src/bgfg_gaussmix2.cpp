@@ -178,7 +178,7 @@ public:
     //! the update operator
     void apply(InputArray image, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 
-    void apply(InputArray image, OutputArray fgmask,InputArray knownForegroundMask, double learningRate) CV_OVERRIDE;
+    void apply(InputArray image, InputArray knownForegroundMask, OutputArray fgmask, double learningRate) CV_OVERRIDE;
 
     //! computes a background image which are the mean of all background gaussians
     virtual void getBackgroundImage(OutputArray backgroundImage) const CV_OVERRIDE;
@@ -548,7 +548,8 @@ public:
                 float _Tb, float _TB, float _Tg,
                 float _varInit, float _varMin, float _varMax,
                 float _prune, float _tau, bool _detectShadows,
-                uchar _shadowVal, const Mat *_knownForegroundMask)
+                uchar _shadowVal, const Mat& _knownForegroundMask)
+            :   knownForegroundMask(_knownForegroundMask)
     {
         src = &_src;
         dst = &_dst;
@@ -567,7 +568,6 @@ public:
         tau = _tau;
         detectShadows = _detectShadows;
         shadowVal = _shadowVal;
-        knownForegroundMask = _knownForegroundMask;
     }
 
     void operator()(const Range& range) const CV_OVERRIDE
@@ -595,9 +595,11 @@ public:
             {
 
                 // Check that foreground mask exists
-                if (knownForegroundMask && !knownForegroundMask->empty()) {
+                if (!knownForegroundMask.empty())
+                {
                     // If input mask states pixel is foreground
-                    if (knownForegroundMask->at<uchar>(y, x) > 0) {
+                    if (knownForegroundMask.at<uchar>(y, x) > 0)
+                    {
                         mask[x] = 255; // ensure output mask marks this pixel as FG
                         continue;
                     }
@@ -779,7 +781,7 @@ public:
 
     bool detectShadows;
     uchar shadowVal;
-    const Mat *knownForegroundMask;
+    const Mat& knownForegroundMask;
 };
 
 #ifdef HAVE_OPENCL
@@ -860,10 +862,10 @@ void BackgroundSubtractorMOG2Impl::create_ocl_apply_kernel()
 
 // Base 3 version class
 void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask, double learningRate) {
-    apply(_image, _fgmask, noArray(), learningRate);
+    apply(_image,  noArray(), _fgmask, learningRate);
 }
 
-void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,InputArray _knownForegroundMask, double learningRate)
+void BackgroundSubtractorMOG2Impl::apply(InputArray _image, InputArray _knownForegroundMask, OutputArray _fgmask, double learningRate)
 {
     CV_INSTRUMENT_REGION();
 
@@ -886,12 +888,12 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
     _fgmask.create( image.size(), CV_8U );
     Mat fgmask = _fgmask.getMat();
 
-    Mat tmpKnownMask;
-    const Mat *knownMaskPtr = nullptr;
-    if (!_knownForegroundMask.empty()) {
-        // store a local Mat so the pointer stays alive for the parallel_for_
-        tmpKnownMask = _knownForegroundMask.getMat();
-        knownMaskPtr = &tmpKnownMask;
+    Mat knownForegroundMask = _knownForegroundMask.getMat();
+
+    if(!knownForegroundMask.empty())
+    {
+    CV_Assert(knownForegroundMask.type() == CV_8UC1);
+    CV_Assert(knownForegroundMask.size() == image.size());
     }
 
     ++nframes;
@@ -906,7 +908,7 @@ void BackgroundSubtractorMOG2Impl::apply(InputArray _image, OutputArray _fgmask,
                               (float)varThreshold,
                               backgroundRatio, varThresholdGen,
                               fVarInit, fVarMin, fVarMax, float(-learningRate*fCT), fTau,
-                              bShadowDetection, nShadowDetection, knownMaskPtr),
+                              bShadowDetection, nShadowDetection, knownForegroundMask),
                               image.total()/(double)(1 << 16));
 }
 
