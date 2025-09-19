@@ -594,6 +594,10 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         {
             m.convertTo(inp_t, adata_type);
         }
+#ifdef HAVE_CUDA
+        if (gpuTensors.size() < args.size()) gpuTensors.resize(args.size());
+        (void)argGpuMat(inp);
+#endif
     } else if (adata.kind == DNN_ARG_TEMP) {
         int bufidx = bufidxs.at(inp.idx);
         Mat& buf = buffers.at(bufidx);
@@ -741,8 +745,10 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 }
             } else {
                 __tensors__.at(out.idx) = m;
+#ifdef HAVE_CUDA
                 if (gpuTensors.size() < args.size()) gpuTensors.resize(args.size());
-                gpuTensors[out.idx] = wrap(__tensors__.at(out.idx));
+                (void)argGpuMat(out);
+#endif
             }
         }
 
@@ -770,7 +776,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         } else {
             outputsVec[i] = outm;
         }
-        (void)argWrapper(out);
+#ifdef HAVE_CUDA
+        (void)argGpuMat(out);
+#endif
     }
 }
 
