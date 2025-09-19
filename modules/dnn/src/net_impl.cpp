@@ -133,9 +133,6 @@ void Net::Impl::clear()
 #ifdef HAVE_CUDA
     gpuTensors = std::vector<cv::cuda::GpuMat>();
     gpuBuffers = std::vector<cv::cuda::GpuMat>();
-#else
-    gpuTensors = std::vector<Ptr<BackendWrapper>>();
-    gpuBuffers = std::vector<Ptr<BackendWrapper>>();
 #endif
 
     mainGraph = Ptr<Graph>();
@@ -150,8 +147,6 @@ void Net::Impl::clear()
     bufidxs.push_back(-1);
 #ifdef HAVE_CUDA
     gpuTensors.push_back(cv::cuda::GpuMat());
-#else
-    gpuTensors.push_back(Ptr<BackendWrapper>());
 #endif
 
     prepared = false;

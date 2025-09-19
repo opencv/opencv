@@ -72,6 +72,8 @@ using namespace cv::dnn::ocl4dnn;
 #include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/conv_naive.hpp"
 #endif
 #include <opencv2/core/utils/logger.hpp>
 
@@ -333,6 +335,107 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
+#ifdef HAVE_CUDA
+        if (type == MAX && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            // existing MAX path
+            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+            if (gout.size() == 1)
+            {
+                cv::cuda::GpuMat gin0;
+                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                {
+                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                    if (!gin.empty()) gin0 = gin[0];
+                }
+                else
+                {
+                    std::vector<Mat> inHost; inputs_arr.getMatVector(inHost);
+                    if (!inHost.empty())
+                    {
+                        const Mat& m = inHost[0];
+                        int rows = m.rows > 0 ? m.rows : 1;
+                        Mat m2d = m.reshape(1, rows);
+                        gin0.create(m2d.rows, m2d.cols, m2d.type());
+                        gin0.upload(m2d);
+                    }
+                }
+                if (!gin0.empty())
+                {
+                    cv::cuda::GpuMat& dst = gout[0];
+                    if (gin0.type() != CV_32F)
+                    {
+                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                    }
+                    if (dst.empty() || dst.type() != CV_32F)
+                    {
+                        int rows = gin0.rows > 0 ? gin0.rows : 1;
+                        int cols = gin0.cols > 0 ? gin0.cols : 1;
+                        dst.create(rows, cols, CV_32F);
+                    }
+                    // Derive k/s/p; use configured params when available
+                    int N = 1, C = 1, H_in = gin0.rows, W_in = gin0.cols;
+                    int H_out = dst.rows > 0 ? dst.rows : 1;
+                    int W_out = dst.cols > 0 ? dst.cols : 1;
+                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : 2;
+                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : kH;
+                    int sH = strides.size() > 0 ? (int)strides[0] : 2;
+                    int sW = strides.size() > 1 ? (int)strides[1] : sH;
+                    int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
+                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : pH;
+                    cv::dnn::cuda_naive_conv::maxpool2d_nchw_flatrows_fp32(
+                        (const float*)gin0.ptr<float>(), (size_t)gin0.step,
+                        (float*)dst.ptr<float>(), (size_t)dst.step,
+                        N, C, H_in, W_in, H_out, W_out,
+                        kH, kW, sH, sW, pH, pW);
+                    return;
+                }
+            }
+        }
+        if (type == AVE && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            // Handle global average pooling when kernel covers full input spatial
+            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+            if (!gout.empty())
+            {
+                cv::cuda::GpuMat gin0;
+                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                {
+                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                    if (!gin.empty()) gin0 = gin[0];
+                }
+                else
+                {
+                    std::vector<Mat> inHost; inputs_arr.getMatVector(inHost);
+                    if (!inHost.empty())
+                    {
+                        const Mat& m = inHost[0];
+                        int rows = m.rows > 0 ? m.rows : 1;
+                        Mat m2d = m.reshape(1, rows);
+                        gin0.create(m2d.rows, m2d.cols, m2d.type());
+                        gin0.upload(m2d);
+                    }
+                }
+                if (!gin0.empty())
+                {
+                    if (gin0.type() != CV_32F)
+                    {
+                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                    }
+                    int N = 1, C = 1, H_in = gin0.rows, W_in = gin0.cols;
+                    // Output should be N x C (single row with C columns per batch) in our 2D view
+                    cv::cuda::GpuMat& dst = gout[0];
+                    if (dst.empty() || dst.type() != CV_32F || dst.rows != N || dst.cols != C)
+                        dst.create(N, C, CV_32F);
+                    cv::dnn::cuda_naive_conv::global_avgpool2d_nchw_flat_fp32(
+                        (const float*)gin0.ptr<float>(), (size_t)gin0.step,
+                        (float*)dst.ptr<float>(), (size_t)dst.step,
+                        N, C, H_in, W_in);
+                    return;
+                }
+            }
+        }
+#endif
         if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);

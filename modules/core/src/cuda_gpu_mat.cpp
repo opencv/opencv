@@ -435,6 +435,41 @@ void cv::cuda::GpuMat::create(int _rows, int _cols, int _type)
 
 void cv::cuda::GpuMat::release()
 {
+    if( refcount && CV_XADD(refcount, -1) == 1 )
+        defaultAllocator()->free(this);
+    dataend = datastart = data = 0;
+    step = 0;
+    refcount = 0;
+    flags &= ~Mat::MAGIC_MASK;
+}
+
+void cv::cuda::GpuMat::fit(int _rows, int _cols, int _type)
+{
+    // Emulate Mat::fit semantics for GPU: avoid reallocation when possible
+    size_t oldTotalBytes = (datastart && dataend) ? (size_t)(dataend - datastart) : 0;
+    size_t esz = CV_ELEM_SIZE(_type);
+    size_t newTotalBytes = (size_t)_rows * (size_t)_cols * esz;
+
+    // Reallocate if:
+    // - need non-contiguous layout (GPU pitch) or ROI, or
+    // - requested bytes exceed current capacity, or
+    // - data pointer is not at the start (ROI)
+    if (newTotalBytes > 0 && (!isContinuous() || newTotalBytes > oldTotalBytes || data != datastart))
+    {
+        create(_rows, _cols, _type);
+        return;
+    }
+
+    // Reuse existing allocation, just adjust header/type
+    flags = (flags & ~Mat::TYPE_MASK) | CV_MAKETYPE(CV_MAT_DEPTH(_type), CV_MAT_CN(_type));
+    rows = _rows;
+    cols = _cols;
+    step = (size_t)cols * esz;
+}
+
+void cv::cuda::GpuMat::fit(Size _sz, int _type)
+{
+    fit(_sz.height, _sz.width, _type);
 }
 
 void cv::cuda::GpuMat::upload(InputArray arr)

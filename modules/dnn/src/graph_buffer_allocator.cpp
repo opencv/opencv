@@ -159,7 +159,9 @@ struct BufferAllocator
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
             netimpl->buffers[i] = Mat();
+#ifdef HAVE_CUDA
         netimpl->gpuBuffers.resize(nbufs);
+#endif
     }
 
     void assign(const Ptr<Graph>& graph)
