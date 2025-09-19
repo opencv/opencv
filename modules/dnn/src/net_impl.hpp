@@ -26,6 +26,9 @@
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
 #include <unordered_map>
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#endif
 
 namespace cv {
 namespace dnn {
@@ -100,8 +103,13 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream* dump_strm;
     int dump_indent;
 
+#ifdef HAVE_CUDA
+    std::vector<cv::cuda::GpuMat> gpuTensors;
+    std::vector<cv::cuda::GpuMat> gpuBuffers;
+#else
     std::vector<Ptr<BackendWrapper>> gpuTensors;
     std::vector<Ptr<BackendWrapper>> gpuBuffers;
+#endif
 
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
@@ -110,7 +118,9 @@ struct Net::Impl : public detail::NetImplBase
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
 
-    Ptr<BackendWrapper>& argWrapper(Arg arg);
+#ifdef HAVE_CUDA
+    cv::cuda::GpuMat& argGpuMat(Arg arg);
+#endif
     void ensureBufferWrapper(int bufidx);
 
 

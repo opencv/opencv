@@ -109,7 +109,23 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
     return wrapper;
 }
 
-Ptr<BackendWrapper>& Net::Impl::argWrapper(Arg arg)
+#ifdef HAVE_CUDA
+static inline void compute2DSizeFromMat(const Mat& host, int& rows, int& cols)
+{
+    if (host.dims <= 2)
+    {
+        rows = host.rows;
+        cols = host.cols > 0 ? host.cols : 1;
+        return;
+    }
+    rows = host.size[0] > 0 ? host.size[0] : 1;
+    size_t total = host.total();
+    size_t cols_sz = total / (size_t)rows;
+    cols = (int)cols_sz;
+    if (cols == 0) cols = 1;
+}
+
+cv::cuda::GpuMat& Net::Impl::argGpuMat(Arg arg)
 {
     const ArgData& adata = args.at(arg.idx);
     if (adata.kind == DNN_ARG_TEMP)
@@ -121,25 +137,42 @@ Ptr<BackendWrapper>& Net::Impl::argWrapper(Arg arg)
     }
     if (gpuTensors.size() < args.size())
         gpuTensors.resize(args.size());
-    if (!gpuTensors[arg.idx])
+
+    Mat& host = argTensor(arg);
+    int rows = 1, cols = 1;
+    compute2DSizeFromMat(host, rows, cols);
+    if (gpuTensors[arg.idx].empty() || gpuTensors[arg.idx].rows != rows || gpuTensors[arg.idx].cols != cols || gpuTensors[arg.idx].type() != host.type())
+        gpuTensors[arg.idx].create(rows, cols, host.type());
+
+    if (!host.empty())
     {
-        Mat& host = argTensor(arg);
-        gpuTensors[arg.idx] = wrap(host);
+        Mat host2d = host.reshape(1, rows);
+        gpuTensors[arg.idx].upload(host2d);
     }
     return gpuTensors[arg.idx];
 }
+#endif
 
 void Net::Impl::ensureBufferWrapper(int bufidx)
 {
+#ifdef HAVE_CUDA
     if (bufidx < 0)
         return;
     if ((size_t)bufidx >= gpuBuffers.size())
         gpuBuffers.resize((size_t)bufidx + 1);
-    if (!gpuBuffers[(size_t)bufidx])
+    Mat& host = buffers.at((size_t)bufidx);
+    int rows = 1, cols = 1;
+    compute2DSizeFromMat(host, rows, cols);
+    if (gpuBuffers[(size_t)bufidx].empty() || gpuBuffers[(size_t)bufidx].rows != rows || gpuBuffers[(size_t)bufidx].cols != cols || gpuBuffers[(size_t)bufidx].type() != host.type())
+        gpuBuffers[(size_t)bufidx].create(rows, cols, host.type());
+    if (!host.empty())
     {
-        Mat& host = buffers.at((size_t)bufidx);
-        gpuBuffers[(size_t)bufidx] = wrap(host);
+        Mat host2d = host.reshape(1, rows);
+        gpuBuffers[(size_t)bufidx].upload(host2d);
     }
+#else
+    (void)bufidx;
+#endif
 }
 
 void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
