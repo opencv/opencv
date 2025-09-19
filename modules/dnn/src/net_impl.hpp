@@ -233,6 +233,24 @@ struct Net::Impl : public detail::NetImplBase
 #endif
 
 #ifdef HAVE_CUDA
+    // Allocate outputs like allocateLayerOutputs and ensure corresponding GpuMats exist
+    void allocateLayerGpuOutputs(
+            const Ptr<Layer>& layer,
+            const std::vector<int>& inpTypes,
+            const std::vector<MatShape>& inpShapes,
+            std::vector<int>& outTypes,
+            std::vector<MatShape>& outShapes,
+            std::vector<std::pair<uchar*, size_t> >& outOrigData,
+            std::vector<Mat>& outputs,
+            std::vector<int>& tempTypes,
+            std::vector<MatShape>& tempShapes,
+            std::vector<Mat>& temps,
+            std::vector<Mat>& globalTemps,
+            std::vector<cv::cuda::GpuMat>& outGpuMats,
+            bool useBufferPool);
+#endif
+
+#ifdef HAVE_CUDA
     struct CudaInfo_t
     {
         CudaInfo_t(cuda4dnn::csl::CSLContext ctxt, cuda4dnn::csl::Stream d2h_stream_)

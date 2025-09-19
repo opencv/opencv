@@ -141,13 +141,22 @@ cv::cuda::GpuMat& Net::Impl::argGpuMat(Arg arg)
     Mat& host = argTensor(arg);
     int rows = 1, cols = 1;
     compute2DSizeFromMat(host, rows, cols);
-    if (gpuTensors[arg.idx].empty() || gpuTensors[arg.idx].rows != rows || gpuTensors[arg.idx].cols != cols || gpuTensors[arg.idx].type() != host.type())
-        gpuTensors[arg.idx].create(rows, cols, host.type());
-
-    if (!host.empty())
+    try
     {
-        Mat host2d = host.reshape(1, rows);
-        gpuTensors[arg.idx].upload(host2d);
+        if (gpuTensors[arg.idx].empty() || gpuTensors[arg.idx].rows != rows || gpuTensors[arg.idx].cols != cols || gpuTensors[arg.idx].type() != host.type())
+            gpuTensors[arg.idx].create(rows, cols, host.type());
+
+        if (!host.empty())
+        {
+            Mat host2d = host.reshape(1, rows);
+            gpuTensors[arg.idx].upload(host2d);
+        }
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded arg " << arg.idx << " to GPU (" << rows << "x" << cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMat for arg " << arg.idx << ": " << e.what() << ". Falling back to CPU Mat.");
+        gpuTensors[arg.idx].release();
     }
     return gpuTensors[arg.idx];
 }
@@ -163,12 +172,21 @@ void Net::Impl::ensureBufferWrapper(int bufidx)
     Mat& host = buffers.at((size_t)bufidx);
     int rows = 1, cols = 1;
     compute2DSizeFromMat(host, rows, cols);
-    if (gpuBuffers[(size_t)bufidx].empty() || gpuBuffers[(size_t)bufidx].rows != rows || gpuBuffers[(size_t)bufidx].cols != cols || gpuBuffers[(size_t)bufidx].type() != host.type())
-        gpuBuffers[(size_t)bufidx].create(rows, cols, host.type());
-    if (!host.empty())
+    try
     {
-        Mat host2d = host.reshape(1, rows);
-        gpuBuffers[(size_t)bufidx].upload(host2d);
+        if (gpuBuffers[(size_t)bufidx].empty() || gpuBuffers[(size_t)bufidx].rows != rows || gpuBuffers[(size_t)bufidx].cols != cols || gpuBuffers[(size_t)bufidx].type() != host.type())
+            gpuBuffers[(size_t)bufidx].create(rows, cols, host.type());
+        if (!host.empty())
+        {
+            Mat host2d = host.reshape(1, rows);
+            gpuBuffers[(size_t)bufidx].upload(host2d);
+        }
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded TEMP buffer " << bufidx << " to GPU (" << rows << "x" << cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+    }
+    catch (const cv::Exception& e)
+    {
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMat for TEMP buffer " << bufidx << ": " << e.what() << ". Falling back to CPU Mat.");
+        gpuBuffers[(size_t)bufidx].release();
     }
 #else
     (void)bufidx;

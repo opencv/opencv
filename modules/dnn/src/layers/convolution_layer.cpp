@@ -65,6 +65,7 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
 #include "../cuda4dnn/primitives/transpose_convolution.hpp"
+#include <opencv2/core/cuda.hpp>
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -1208,6 +1209,40 @@ public:
                 weightsMat.release();
             }
 
+            auto kind = outputs_arr.kind();
+#ifdef HAVE_CUDA
+            if (kind == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            {
+                // Prepare GPU output buffers
+                std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+                CV_Assert(gout.size() == 1);
+                MatShape outshape = outputs_arr.shape(0);
+                Mat outCPU;
+                outCPU.create(outshape, inputs[0].type());
+                runFastConv(inputs[0], outCPU, fastConvImpl, nstripes, activ, reluslope, fusedAdd);
+                int rows = outCPU.rows > 0 ? outCPU.rows : 1;
+                int cols = (int)(outCPU.total() / (size_t)rows);
+                Mat out2d = outCPU.reshape(1, rows);
+                gout[0].create(rows, cols, outCPU.type());
+                try { gout[0].upload(out2d); }
+                catch (const cv::Exception& e) {
+                    CV_LOG_WARNING(NULL, "DNN/CUDA: convolution upload to GPU failed: " << e.what() << "; returning CPU result only");
+                }
+                return;
+            }
+#endif
+            if (kind == _InputArray::STD_VECTOR_UMAT)
+            {
+                std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+                CV_Assert(uouts.size() == 1);
+                MatShape outshape = outputs_arr.shape(0);
+                Mat outCPU;
+                outCPU.create(outshape, inputs[0].type());
+                runFastConv(inputs[0], outCPU, fastConvImpl, nstripes, activ, reluslope, fusedAdd);
+                outCPU.copyTo(uouts[0]);
+                return;
+            }
+            // STD_VECTOR_MAT (default)
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
         }
     }
