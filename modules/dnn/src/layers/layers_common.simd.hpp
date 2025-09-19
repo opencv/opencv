@@ -82,10 +82,10 @@ void fastGEMM1T( const float* vec, const float* weights,
         {
             float32x4_t v = vld1q_f32(vec + k);
 
-            vs0 = vmlaq_f32(vs0, vld1q_f32(wptr), v);
-            vs1 = vmlaq_f32(vs1, vld1q_f32(wptr + wstep), v);
-            vs2 = vmlaq_f32(vs2, vld1q_f32(wptr + wstep * 2), v);
-            vs3 = vmlaq_f32(vs3, vld1q_f32(wptr + wstep * 3), v);
+            vs0 = vfmaq_f32(vs0, vld1q_f32(wptr), v);
+            vs1 = vfmaq_f32(vs1, vld1q_f32(wptr + wstep), v);
+            vs2 = vfmaq_f32(vs2, vld1q_f32(wptr + wstep * 2), v);
+            vs3 = vfmaq_f32(vs3, vld1q_f32(wptr + wstep * 3), v);
         }
         if (k != vecsize)
         {
@@ -97,10 +97,10 @@ void fastGEMM1T( const float* vec, const float* weights,
             float32x4_t w1 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep)), vreinterpretq_u32_f32(tailMask)) );
             float32x4_t w2 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 2)), vreinterpretq_u32_f32(tailMask)) );
             float32x4_t w3 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 3)), vreinterpretq_u32_f32(tailMask)) );
-            vs0 = vmlaq_f32(vs0, w0, v);
-            vs1 = vmlaq_f32(vs1, w1, v);
-            vs2 = vmlaq_f32(vs2, w2, v);
-            vs3 = vmlaq_f32(vs3, w3, v);
+            vs0 = vfmaq_f32(vs0, w0, v);
+            vs1 = vfmaq_f32(vs1, w1, v);
+            vs2 = vfmaq_f32(vs2, w2, v);
+            vs3 = vfmaq_f32(vs3, w3, v);
         }
 
         auto hsumq_f32 = [](float32x4_t x) -> float {
@@ -123,7 +123,7 @@ void fastGEMM1T( const float* vec, const float* weights,
         for ( ; k <= vecsize - 4; k += 4, wptr += 4 )
         {
             float32x4_t v = vld1q_f32(vec + k);
-            vs0 = vmlaq_f32(vs0, vld1q_f32(wptr), v);
+            vs0 = vfmaq_f32(vs0, vld1q_f32(wptr), v);
         }
         if (k != vecsize)
         {
@@ -132,7 +132,7 @@ void fastGEMM1T( const float* vec, const float* weights,
             float32x4_t v  = vld1q_f32(vec + k);
             v = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(v), vreinterpretq_u32_f32(tailMask)) );
             float32x4_t w0 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr)), vreinterpretq_u32_f32(tailMask)) );
-            vs0 = vmlaq_f32(vs0, w0, v);
+            vs0 = vfmaq_f32(vs0, w0, v);
         }
         float32x2_t s2 = vadd_f32(vget_low_f32(vs0), vget_high_f32(vs0));
         s2 = vpadd_f32(s2, s2);
