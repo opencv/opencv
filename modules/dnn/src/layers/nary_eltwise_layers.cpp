@@ -6,8 +6,15 @@
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
+
+#ifdef HAVE_DNN_NGRAPH
 #include "../ie_ngraph.hpp"
-#include "../op_vkcom.hpp"
+#endif
+
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/conv_naive.hpp"
+#endif
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -793,6 +800,45 @@ public:
     {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+#ifdef HAVE_CUDA
+        if ((op == OPERATION::ADD || op == OPERATION::SUM) && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+            if (!gout.empty())
+            {
+                std::vector<cv::cuda::GpuMat> gin;
+                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT) {
+                    inputs_arr.getGpuMatVector(gin);
+                } else {
+                    std::vector<Mat> ih; inputs_arr.getMatVector(ih);
+                    gin.resize(ih.size());
+                    for (size_t i = 0; i < ih.size(); ++i) {
+                        const Mat& m = ih[i];
+                        int rows = m.rows > 0 ? m.rows : 1;
+                        Mat m2d = m.reshape(1, rows);
+                        gin[i].create(m2d.rows, m2d.cols, m2d.type());
+                        gin[i].upload(m2d);
+                    }
+                }
+                CV_Assert(gin.size() >= 2);
+                cv::cuda::GpuMat acc = gin[0];
+                if (acc.type() != CV_32F) { cv::cuda::GpuMat tmp; acc.convertTo(tmp, CV_32F); acc = tmp; }
+                cv::cuda::GpuMat out = gout[0];
+                if (out.empty() || out.type() != CV_32F || out.size() != acc.size())
+                    out.create(acc.rows, acc.cols, CV_32F);
+                acc.convertTo(out, CV_32F);
+                for (size_t k = 1; k < gin.size(); ++k) {
+                    cv::cuda::GpuMat x = gin[k];
+                    if (x.type() != CV_32F) { cv::cuda::GpuMat tmp; x.convertTo(tmp, CV_32F); x = tmp; }
+                    cv::dnn::cuda_naive_conv::add_inplace_fp32_2d((const float*)x.ptr<float>(), (size_t)x.step,
+                                                                  (float*)out.ptr<float>(), (size_t)out.step,
+                                                                  out.rows, out.cols);
+                }
+                return;
+            }
+        }
+#endif
 
         if (inputs_arr.depth() == CV_16F)
         {

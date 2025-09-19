@@ -64,6 +64,18 @@ using namespace cv::dnn::cuda4dnn;
 #endif
 #include <opencv2/core/utils/logger.hpp>
 
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/conv_naive.hpp"
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+#include <openvino/op/roi_pooling.hpp>
+#include <openvino/op/psroi_pooling.hpp>
+#endif
+
+#include <type_traits>
+
 namespace cv
 {
 namespace dnn
@@ -209,6 +221,48 @@ public:
 
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
+
+#ifdef HAVE_CUDA
+        if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+            if (gout.size() == 1)
+            {
+                cv::cuda::GpuMat gin0;
+                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                {
+                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                    if (!gin.empty()) gin0 = gin[0];
+                }
+                else
+                {
+                    std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
+                    if (!inputs_cpu.empty())
+                    {
+                        const Mat& in = inputs_cpu[0];
+                        int rows = in.rows > 0 ? in.rows : 1;
+                        Mat in2d = in.reshape(1, rows);
+                        gin0.create(in2d.rows, in2d.cols, in2d.type());
+                        gin0.upload(in2d);
+                    }
+                }
+                if (!gin0.empty())
+                {
+                    cv::cuda::GpuMat& dst = gout[0];
+                    if (gin0.type() != CV_32F)
+                    {
+                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                    }
+                    if (dst.empty() || dst.type() != CV_32F || dst.rows != gin0.rows || dst.cols != gin0.cols)
+                        dst.create(gin0.rows, gin0.cols, CV_32F);
+                    cv::dnn::cuda_naive_conv::relu_fp32_2d((const float*)gin0.ptr<float>(), (size_t)gin0.step,
+                                                         (float*)dst.ptr<float>(), (size_t)dst.step,
+                                                         gin0.rows, gin0.cols);
+                    return;
+                }
+            }
+        }
+#endif
 
         if (inputs_arr.depth() == CV_16F)
         {
