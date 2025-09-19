@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # This file is part of OpenCV project.
 # It is subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
@@ -278,6 +280,7 @@ def showUndistorted(image_points, Ks, distortions, image_names, cam_ids):
 def plotProjection(points_2d, pattern_points, rvec0, tvec0, rvec1, tvec1,
                    K, dist_coeff, model, cam_idx, frame_idx, per_acc,
                    image=None):
+
     rvec2, tvec2 = cv.composeRT(rvec0, tvec0, rvec1, tvec1)[:2]
 
     if model == cv.CALIB_MODEL_FISHEYE:
@@ -478,7 +481,7 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
                      pattern_points, image_sizes, output_pairs, image_names, cam_ids):
     def _as_rvec(x):
         x = np.asarray(x)
-        return cv.Rodrigues(x)[0] if x.shape == (3, 3) else x.reshape(3, 1)
+        return cv.Rodrigues(x)[0] if x.shape == (3, 3) else x
     rvecs = [_as_rvec(R) for R in Rs]
     errors = errors_per_frame[errors_per_frame > 0]
     detection_mask_idxs = np.stack(np.where(detection_mask)) # 2 x M, first row is camera idx, second is frame idx
@@ -509,14 +512,13 @@ def visualizeResults(detection_mask, Rs, Ts, Ks, distortions, models,
             image = cv.cvtColor(cv.imread(image_names[cam_idx][frame_idx]), cv.COLOR_BGR2RGB)
         mask = insideImageMask(image_points[cam_idx][frame_idx].T,
                                image_sizes[cam_idx][0], image_sizes[cam_idx][1])
-        tvec_cam = np.asarray(Ts[cam_idx]).reshape(3,1)
         plotProjection(
             image_points[cam_idx][frame_idx][mask],
             pattern_points[mask],
             rvecs0[frame_idx],
-            tvecs0[frame_idx],
+            tvecs0[frame_idx].flatten(),
             rvecs[cam_idx],
-            tvec_cam,
+            Ts[cam_idx].flatten(),
             Ks[cam_idx],
             distortions[cam_idx],
             models[cam_idx],
@@ -538,11 +540,18 @@ def visualizeFromFile(file):
     read_keys = [
         'Rs', 'distortions', 'Ks', 'Ts', 'rvecs0', 'tvecs0',
         'errors_per_frame', 'output_pairs', 'image_points', 'models',
-        'image_sizes', 'pattern_points', 'detection_mask', 'cam_ids',
+        'image_sizes', 'pattern_points', 'detection_mask',
     ]
     input = {}
     for key in read_keys:
         input[key] = file_read.getNode(key).mat()
+
+    cam_ids_len = file_read.getNode('cam_ids').size()
+    input['cam_ids'] = np.array(
+        [file_read.getNode('cam_ids').at(i).string() for i in range(cam_ids_len)]
+    )
+
+    print("loaded camera ids: ", input['cam_ids'])
 
     im_names_len = file_read.getNode('image_names').size()
     input['image_names'] = np.array(
@@ -571,7 +580,7 @@ def saveToFile(path_to_save, **kwargs):
         if key == 'image_names':
             save_file.write('image_names', list(np.array(kwargs['image_names']).reshape(-1)))
         elif key == 'cam_ids':
-            save_file.write('cam_ids', list(kwargs['cam_ids']))
+            save_file.write('cam_ids', kwargs['cam_ids'])
         elif key == 'distortions':
             value = kwargs[key]
             save_file.write('distortions', np.concatenate([x.reshape([-1,]) for x in value],axis=0))
