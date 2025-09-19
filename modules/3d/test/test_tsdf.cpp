@@ -594,6 +594,119 @@ void boundingBoxGrowthTest(bool enableGrowth)
 }
 
 
+struct CubesScene : Scene
+{
+    const Affine3f startPose = Affine3f(Vec3f(-1.5f, 0.f, 0.f), Vec3f(1.5f, 3.3f, -2.1f));
+
+    const int nFrames = 100;
+    const Vec3f shift = Vec3f(0.2f, 0.01f, 0.1f);
+    Size frameSize;
+    Matx33f intr;
+    float depthFactor;
+
+    CubesScene(Size sz, Matx33f _intr, float _depthFactor) :
+        frameSize(sz), intr(_intr), depthFactor(_depthFactor)
+    { }
+
+    static float map(Point3f p, bool /*unused*/)
+    {
+        float plane = p.y + 0.5;
+
+        float step = 0.7f;
+        cv::Point3d boxPose {std::fmod(p.x, step)*(p.x < 0 ? -1 : 1) - step / 2,
+                             p.y,
+                             std::fmod(p.z, step)*(p.z < 0 ? -1 : 1) - step / 2};
+        float boxSize = 0.3;
+        float roundness = 0.01;
+        cv::Point3f boxTmp;
+        boxTmp.x = std::max(std::abs(boxPose.x) - boxSize, 0.0);
+        boxTmp.y = std::max(std::abs(boxPose.y) - boxSize, 0.0);
+        boxTmp.z = std::max(std::abs(boxPose.z) - boxSize, 0.0);
+        float roundBox = cv::norm(boxTmp) - roundness;
+
+        float sphereRadius = 0.4;
+        float sphere = cv::norm(boxPose) - sphereRadius;
+
+        float boxMinusSphere = std::max(roundBox, -sphere);
+
+        float res = min({ boxMinusSphere, plane });
+
+        return res;
+    }
+
+    Mat_<float> depth(Affine3f pose) override
+    {
+        Mat_<float> frame(frameSize);
+        Reprojector reproj(intr);
+
+        Range range(0, frame.rows);
+        parallel_for_(range, RenderInvoker<CubesScene>(frame, pose, reproj, depthFactor, false /*unused*/));
+
+        return frame;
+    }
+
+    Mat_<Vec3f> rgb(Affine3f pose) override
+    {
+        Mat_<Vec3f> frame(frameSize);
+        Reprojector reproj(intr);
+
+        Range range(0, frame.rows);
+        parallel_for_(range, RenderColorInvoker<CubesScene>(frame, pose, reproj, depthFactor, false /*unused*/));
+
+        return frame;
+    }
+
+    std::vector<Affine3f> getPoses() override
+    {
+        std::vector<Affine3f> poses;
+        for (int i = 0; i < nFrames; i++)
+        {
+            Affine3f pose = startPose;
+            pose = pose.translate(shift * i);
+            poses.push_back(pose);
+        }
+
+        return poses;
+    }
+};
+
+Ptr<Scene> makeRepeatableScene(Size sz, Matx33f _intr, float _depthFactor)
+{
+    return makePtr<CubesScene>(sz, _intr, _depthFactor);
+}
+
+// For HashTSDF only
+void hugeSceneGrowthTest()
+{
+    VolumeSettings vs(VolumeType::HashTSDF);
+    vs.setMaxDepth(10);
+    Volume volume(VolumeType::HashTSDF, vs);
+
+    Size frameSize(vs.getRaycastWidth(), vs.getRaycastHeight());
+    Matx33f intrIntegrate, intrRaycast;
+    vs.getCameraIntegrateIntrinsics(intrIntegrate);
+    vs.getCameraRaycastIntrinsics(intrRaycast);
+    float depthFactor = vs.getDepthFactor();
+    Ptr<Scene> scene = makeRepeatableScene(frameSize, intrIntegrate, depthFactor);
+    std::vector<Affine3f> poses = scene->getPoses();
+
+    // this should exceed the standard size of 8192 volume units
+    // to grow volume more, use more poses
+    Mat depth = scene->depth(poses[0]);
+    UMat udepth;
+    depth.copyTo(udepth);
+    volume.integrate(udepth, poses[0].matrix);
+    if (cvtest::debugLevel > 0)
+    {
+        debugVolumeDraw(volume, poses[0], depth, depthFactor, "pts.obj");
+    }
+
+    // Reset check
+
+    volume.reset();
+}
+
+
 template <typename VT>
 static Mat_<typename VT::value_type> normalsErrorT(Mat_<VT> srcNormals, Mat_<VT> dstNormals)
 {
@@ -1201,6 +1314,25 @@ TEST_P(BoundingBoxEnableGrowthTest, boundingBoxEnableGrowth)
 }
 
 INSTANTIATE_TEST_CASE_P(Volume, BoundingBoxEnableGrowthTest, ::testing::Combine(PlatformTypeEnum::all(), GrowthEnum::all()));
+
+
+class HugeSceneGrowthTest : public ::testing::TestWithParam<PlatformTypeEnum>
+{ };
+
+TEST_P(HugeSceneGrowthTest, boundingBoxEnableGrowth)
+{
+    auto p = GetParam();
+    bool gpu = (p == PlatformType::GPU);
+
+    OpenCLStatusRevert oclStatus;
+
+    if (!gpu)
+        oclStatus.off();
+
+    hugeSceneGrowthTest();
+}
+
+INSTANTIATE_TEST_CASE_P(Volume, HugeSceneGrowthTest, PlatformTypeEnum::all());
 
 }
 }  // namespace
