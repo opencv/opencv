@@ -603,21 +603,23 @@ void hlineSmooth5N<uint8_t, ufixedpoint16>(const uint8_t* src, int cn, const ufi
         }
     }
 }
-
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 v_uint32 vx_setall(unsigned value) {
     return vx_setall_u32(value);
 }
 v_uint16 vx_setall(ushort value) {
     return vx_setall_u16(value);
 }
+#endif
 template <typename ET, typename FT, typename WET, typename VFT, typename VET>
-void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
+void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride)
 {
     int offset = 1;
     int vOffset = 2;
     int v = idst - 1;
     int len = (width - offset) * cn;
     int x = offset * cn;
+    int maxRow = min((ito - vOffset),height-2);
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     VFT v_8 = vx_setall((WET)8);
     const int VECSZ = VTraits<VET>::vlanes();
@@ -644,7 +646,7 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
         VFT b10 = v_add(v_shl<1>(v_src0),  v_add(v_src0_ncn, v_src0_cn));
         VFT b11 = v_add(v_shl<1>(v_src1),  v_add(v_src1_ncn, v_src1_cn));
 
-        for (; j < ito - vOffset; j++, idst_++)
+        for (; j < maxRow; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
 
@@ -677,7 +679,7 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
         b0 = (src_0[0] << 1) + src_0[-cn] + src_0[cn];
         b1 = (src_1[0] << 1) + src_1[-cn] + src_1[cn];
 
-        for (; j < ito - vOffset; j++, idst_++)
+        for (; j < maxRow; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
             b2 = (src_2[0] << 1) + src_2[-cn] + src_2[cn];
@@ -690,26 +692,27 @@ void inline smooth3N121Impl(const ET* src,  int cn, ET *dst, int ito, int idst, 
     }
 }
 template <typename ET, typename FT>
-void inline smooth3N121(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride);
+void inline smooth3N121(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride);
 
 template <>
-void inline smooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
+void inline smooth3N121<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride)
 {
-    smooth3N121Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16, v_uint8>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
+    smooth3N121Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16, v_uint8>(src, cn, dst, ito, idst, width, height, src_stride, dst_stride);
 }
 template <>
-void inline smooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
+void inline smooth3N121<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride)
 {
-    smooth3N121Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32, v_uint16>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
+    smooth3N121Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32, v_uint16>(src, cn, dst, ito, idst, width, height, src_stride, dst_stride);
 }
 template <typename ET, typename FT, typename WET, typename VFT, typename VET>
-void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
+void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride)
 {
     int offset = 2;
     int vOffset = 3;
     int v = idst - 2;
     int len = (width - offset) * cn;
     int x = offset * cn;
+    int maxRow = min((ito - vOffset),height-4);
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
     VFT v_6 = vx_setall((WET)6);
@@ -762,7 +765,7 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
         VFT b30 = v_add(v_add(v_add(v_mul(v_src0, v_6), v_shl<2>(v_add(v_src0_ncn, v_src0_cn))), v_src0_n2cn), v_src0_2cn);
         VFT b31 = v_add(v_add(v_add(v_mul(v_src1, v_6), v_shl<2>(v_add(v_src1_ncn, v_src1_cn))), v_src1_n2cn), v_src1_2cn);
 
-        for (; j < ito - vOffset; j++, idst_++)
+        for (; j < maxRow; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
 
@@ -802,7 +805,7 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
         b1 = ((src_1[0] * 6) + ((src_1[-cn] + src_1[cn]) << 2) + src_1[-2 * cn] + src_1[2 * cn]);
         b2 = ((src_2[0] * 6) + ((src_2[-cn] + src_2[cn]) << 2) + src_2[-2 * cn] + src_2[2 * cn]);
         b3 = ((src_3[0] * 6) + ((src_3[-cn] + src_3[cn]) << 2) + src_3[-2 * cn] + src_3[2 * cn]);
-        for (; j < ito - vOffset; j++, idst_++)
+        for (; j < maxRow; j++, idst_++)
         {
             ET* dstx = dst + (idst_ * dst_stride);
             b4 = ((src_4[0] * 6) + ((src_4[-cn] + src_4[cn]) << 2) + src_4[-2 * cn] + src_4[2 * cn]);
@@ -817,17 +820,17 @@ void inline smooth5N14641Impl(const ET* src, int cn, ET* dst, int ito, int idst,
     }
 }
 template <typename ET, typename FT>
-void inline smooth5N14641(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride);
+void inline smooth5N14641(const ET* src, const FT*,  const FT*, int cn, ET *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride);
 
 template <>
-void inline smooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
+void inline smooth5N14641<uint8_t, ufixedpoint16>(const uint8_t* src, const ufixedpoint16*,  const ufixedpoint16*, int cn, uint8_t *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride)
 {
-    smooth5N14641Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16, v_uint8>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
+    smooth5N14641Impl<uint8_t, ufixedpoint16, uint16_t, v_uint16, v_uint8>(src, cn, dst, ito, idst, width, height, src_stride, dst_stride);
 }
 template <>
-void inline smooth5N14641<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, size_t src_stride, size_t dst_stride)
+void inline smooth5N14641<uint16_t, ufixedpoint32>(const uint16_t* src, const ufixedpoint32*,  const ufixedpoint32*, int cn, uint16_t *dst, int ito, int idst, int width, int height, size_t src_stride, size_t dst_stride)
 {
-    smooth5N14641Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32, v_uint16>(src, cn, dst, ito, idst, width, src_stride, dst_stride);
+    smooth5N14641Impl<uint16_t, ufixedpoint32, uint32_t, v_uint32, v_uint16>(src, cn, dst, ito, idst, width, height, src_stride, dst_stride);
 }
 
 template <typename ET, typename FT>
@@ -2459,13 +2462,13 @@ public:
         }
         else
             vlineSmoothFunc = vlineSmooth;
-        if ((width>3) && (kxlen == 3) && (kx[0] == (FT::one()>>2)&&kx[1] == (FT::one()>>1)&&kx[2] == (FT::one()>>2)) &&
+        if ((width>3) && (height>3) && (kxlen == 3) && (kx[0] == (FT::one()>>2)&&kx[1] == (FT::one()>>1)&&kx[2] == (FT::one()>>2)) &&
             (ky[0] == (FT::one()>>2)&&ky[1] == (FT::one()>>1)&&ky[2] == (FT::one()>>2)))
         {
             doCombined3N121 = true;
             //smoothFunc = smooth3N121; /* using funptr drops performance */
         }
-        else if((kxlen == 5) && (width > 5) &&
+        else if((kxlen == 5) && (width > 5) && (height>5) &&
             kx[2] == (FT::one() * (uint8_t)3 >> 3) &&
             kx[1] == (FT::one() >> 2) && kx[3] == (FT::one() >> 2) &&
             kx[0] == (FT::one() >> 4) && kx[4] == (FT::one() >> 4) &&
@@ -2485,17 +2488,17 @@ public:
             for (; i < ito; i++, idst++)
             {
                 bool processFlag = false;
-                if(i > ito - kylen)
+                if(i > height - kylen)
                     processFlag = true;
                 hlineSmoothFunc(src + i * src_stride, cn, kx, kxlen, ptrs[bufline], width, borderType, processFlag);
                 bufline = (bufline + 1) % kylen;
-                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn, ((kxlen>>1))*cn, false);
+                vlineSmoothFunc(ptrs + bufline, ky, kylen, dst + idst*dst_stride, width*cn, ((kxlen>>1))*cn, processFlag);
             }
             // inner region
             if(doCombined3N121)
-                smooth3N121(src, kx, ky, cn, dst, ito, idst_start, width, src_stride, dst_stride);
+                smooth3N121(src, kx, ky, cn, dst, ito, idst_start, width, height, src_stride, dst_stride);
             else
-                smooth5N14641(src, kx, ky, cn, dst, ito, idst_start, width, src_stride, dst_stride);
+                smooth5N14641(src, kx, ky, cn, dst, ito, idst_start, width, height, src_stride, dst_stride);
         }
         else
         {
