@@ -74,6 +74,7 @@ static int dataType2cv(int dt)
         dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
         dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
         dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
+        dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? CV_16BF :
         dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
         dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
         dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
@@ -95,6 +96,7 @@ static std::string dataType2str(int dt)
     dt == opencv_onnx::TensorProto_DataType_INT64 ? "INT64" :
     dt == opencv_onnx::TensorProto_DataType_FLOAT ? "FLOAT" :
     dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? "FLOAT16" :
+    dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? "BFLOAT16" :
     dt == opencv_onnx::TensorProto_DataType_BOOL ? "BOOL" :
     dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? "COMPLEX64" :
     dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? "COMPLEX128" : nullptr;
@@ -174,6 +176,7 @@ protected:
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBatchNormalization   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1480,11 +1483,14 @@ void ONNXImporter2::parseShape(LayerParams& layerParams, const opencv_onnx::Node
 
 void ONNXImporter2::parseCast(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::TensorProto_DataType onnx_type = (opencv_onnx::TensorProto_DataType)layerParams.get<int>("to");
-    int type = dataType2cv(onnx_type);
-
     layerParams.type = "Cast";
-    layerParams.set("outputType", type);
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 2, "CastLike requires two inputs");
+    layerParams.type = "Cast";
     addLayer(layerParams, node_proto);
 }
 
@@ -2540,6 +2546,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Pad"] = &ONNXImporter2::parsePad;
     dispatch["Shape"] = &ONNXImporter2::parseShape;
     dispatch["Cast"] = &ONNXImporter2::parseCast;
+    dispatch["CastLike"] = &ONNXImporter2::parseCastLike;
     dispatch["ConstantFill"] = dispatch["ConstantOfShape"] = &ONNXImporter2::parseConstantOfShape;
     dispatch["Gather"] = &ONNXImporter2::parseGather;
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
