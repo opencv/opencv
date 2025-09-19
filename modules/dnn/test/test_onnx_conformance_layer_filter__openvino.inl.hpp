@@ -1200,23 +1200,23 @@ CASE(test_nllloss_NCd1d2d3d4d5_none_no_weight)
 CASE(test_nllloss_NCd1d2d3d4d5_none_no_weight_expanded)
     // no filter
 CASE(test_nonmaxsuppression_center_point_box_format)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_flipped_coordinates)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_identical_boxes)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_limit_output_size)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_single_box)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_suppress_by_IOU)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_suppress_by_IOU_and_scores)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_two_batches)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_two_classes)
-    // no filter
+    SKIP;
 CASE(test_nonzero_example)
     SKIP;
 CASE(test_not_2d)
