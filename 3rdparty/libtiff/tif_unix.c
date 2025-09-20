@@ -91,6 +91,8 @@ static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
     }
     if (count < 0)
         return (tmsize_t)-1;
+    /* Silence Coverity Scan warning about unsigned to signed underflow. */
+    /* coverity[return_overflow:SUPPRESS] */
     return (tmsize_t)bytes_read;
 }
 
@@ -120,6 +122,8 @@ static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
     }
     if (count < 0)
         return (tmsize_t)-1;
+    /* Silence Coverity Scan warning about unsigned to signed underflow. */
+    /* coverity[return_overflow:SUPPRESS] */
     return (tmsize_t)bytes_written;
     /* return ((tmsize_t) write(fdh.fd, buf, bytes_total)); */
 }

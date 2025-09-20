@@ -37,7 +37,7 @@
 /*
  * Dummy functions to fill the omitted client procedures.
  */
-static int _tiffDummyMapProc(thandle_t fd, void **pbase, toff_t *psize)
+int _tiffDummyMapProc(thandle_t fd, void **pbase, toff_t *psize)
 {
     (void)fd;
     (void)pbase;
@@ -45,7 +45,7 @@ static int _tiffDummyMapProc(thandle_t fd, void **pbase, toff_t *psize)
     return (0);
 }
 
-static void _tiffDummyUnmapProc(thandle_t fd, void *base, toff_t size)
+void _tiffDummyUnmapProc(thandle_t fd, void *base, toff_t size)
 {
     (void)fd;
     (void)base;
@@ -107,6 +107,15 @@ void TIFFOpenOptionsSetMaxCumulatedMemAlloc(TIFFOpenOptions *opts,
                                             tmsize_t max_cumulated_mem_alloc)
 {
     opts->max_cumulated_mem_alloc = max_cumulated_mem_alloc;
+}
+
+/** Whether a warning should be emitted when encountering a unknown tag.
+ * Default is FALSE since libtiff 4.7.1
+ */
+void TIFFOpenOptionsSetWarnAboutUnknownTags(TIFFOpenOptions *opts,
+                                            int warn_about_unknown_tags)
+{
+    opts->warn_about_unknown_tags = warn_about_unknown_tags;
 }
 
 void TIFFOpenOptionsSetErrorHandlerExtR(TIFFOpenOptions *opts,
@@ -386,6 +395,7 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
         tif->tif_warnhandler_user_data = opts->warnhandler_user_data;
         tif->tif_max_single_mem_alloc = opts->max_single_mem_alloc;
         tif->tif_max_cumulated_mem_alloc = opts->max_cumulated_mem_alloc;
+        tif->tif_warn_about_unknown_tags = opts->warn_about_unknown_tags;
     }
 
     if (!readproc || !writeproc || !seekproc || !closeproc || !sizeproc)

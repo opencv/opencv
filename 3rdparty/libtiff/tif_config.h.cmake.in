@@ -80,10 +80,16 @@
 #cmakedefine HAVE_UNISTD_H 1
 
 /* 8/12 bit libjpeg dual mode enabled */
-#cmakedefine JPEG_DUAL_MODE_8_12 1 1
+#cmakedefine JPEG_DUAL_MODE_8_12 1
+
+/* 8/12 bit dual mode JPEG built into libjpeg-turbo 3.0+ */
+#cmakedefine HAVE_JPEGTURBO_DUAL_MODE_8_12 1
 
 /* Support LERC compression */
 #cmakedefine LERC_SUPPORT 1
+
+/* Define to 1 when building a static libtiff with LERC enabled. */
+#cmakedefine LERC_STATIC
 
 /* 12bit libjpeg primary include file with path */
 #define LIBJPEG_12_PATH "@LIBJPEG_12_PATH@"
@@ -133,7 +139,7 @@
 # endif
 #else
 # ifndef WORDS_BIGENDIAN
-#  undef WORDS_BIGENDIAN
+#  cmakedefine WORDS_BIGENDIAN 1
 # endif
 #endif
 

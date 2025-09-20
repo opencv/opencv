@@ -131,7 +131,10 @@ static int TIFFDefaultTransferFunction(TIFF *tif, TIFFDirectory *td)
     tmsize_t i, n, nbytes;
 
     tf[0] = tf[1] = tf[2] = 0;
-    if (td->td_bitspersample >= sizeof(tmsize_t) * 8 - 2)
+    // Do not try to generate a default TransferFunction beyond 24 bits.
+    // This otherwise leads to insane amounts, resulting in denial of service
+    // See https://github.com/OSGeo/gdal/issues/10875
+    if (td->td_bitspersample > 24)
         return 0;
 
     n = ((tmsize_t)1) << td->td_bitspersample;

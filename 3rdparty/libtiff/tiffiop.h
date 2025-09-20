@@ -258,6 +258,7 @@ struct tiff
     tmsize_t tif_max_single_mem_alloc;    /* in bytes. 0 for unlimited */
     tmsize_t tif_max_cumulated_mem_alloc; /* in bytes. 0 for unlimited */
     tmsize_t tif_cur_cumulated_mem_alloc; /* in bytes */
+    int tif_warn_about_unknown_tags;
 };
 
 struct TIFFOpenOptions
@@ -268,6 +269,7 @@ struct TIFFOpenOptions
     void *warnhandler_user_data;       /* may be NULL */
     tmsize_t max_single_mem_alloc;     /* in bytes. 0 for unlimited */
     tmsize_t max_cumulated_mem_alloc;  /* in bytes. 0 for unlimited */
+    int warn_about_unknown_tags;
 };
 
 #define isPseudoTag(t) (t > 0xffff) /* is tag value normal or pseudo */
@@ -398,6 +400,8 @@ typedef size_t TIFFIOSize_t;
 extern "C"
 {
 #endif
+    extern int _tiffDummyMapProc(thandle_t fd, void **pbase, toff_t *psize);
+    extern void _tiffDummyUnmapProc(thandle_t fd, void *base, toff_t size);
     extern int _TIFFgetMode(TIFFOpenOptions *opts, thandle_t clientdata,
                             const char *mode, const char *module);
     extern int _TIFFNoRowEncode(TIFF *tif, uint8_t *pp, tmsize_t cc,

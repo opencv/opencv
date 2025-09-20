@@ -723,10 +723,9 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
             {
                 TIFFTagValue *new_customValues;
 
-                td->td_customValueCount++;
                 new_customValues = (TIFFTagValue *)_TIFFreallocExt(
                     tif, td->td_customValues,
-                    sizeof(TIFFTagValue) * td->td_customValueCount);
+                    sizeof(TIFFTagValue) * (td->td_customValueCount + 1));
                 if (!new_customValues)
                 {
                     TIFFErrorExtR(tif, module,
@@ -737,6 +736,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                     goto end;
                 }
 
+                td->td_customValueCount++;
                 td->td_customValues = new_customValues;
 
                 tv = td->td_customValues + (td->td_customValueCount - 1);
@@ -748,8 +748,8 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
             /*
              * Set custom value ... save a copy of the custom tag value.
              */
-            /*--: Rational2Double: For Rationals evaluate "set_field_type" to
-             * determine internal storage size. */
+            /*--: Rational2Double: For Rationals evaluate "set_get_field_type"
+             * to determine internal storage size. */
             tv_size = TIFFFieldSetGetSize(fip);
             if (tv_size == 0)
             {
@@ -806,14 +806,13 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
 
                 if (tv->count == 0)
                 {
-                    status = 0;
-                    TIFFErrorExtR(tif, module,
-                                  "%s: Null count for \"%s\" (type "
-                                  "%d, writecount %d, passcount %d)",
-                                  tif->tif_name, fip->field_name,
-                                  fip->field_type, fip->field_writecount,
-                                  fip->field_passcount);
-                    goto end;
+                    TIFFWarningExtR(tif, module,
+                                    "%s: Null count for \"%s\" (type "
+                                    "%d, writecount %d, passcount %d)",
+                                    tif->tif_name, fip->field_name,
+                                    fip->field_type, fip->field_writecount,
+                                    fip->field_passcount);
+                    break;
                 }
 
                 tv->value = _TIFFCheckMalloc(tif, tv->count, tv_size,
@@ -843,7 +842,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                          fip->field_writecount == TIFF_SPP || tv->count > 1)
                 {
                     /*--: Rational2Double: For Rationals tv_size is set above to
-                     * 4 or 8 according to fip->set_field_type! */
+                     * 4 or 8 according to fip->set_get_field_type! */
                     _TIFFmemcpy(tv->value, va_arg(ap, void *),
                                 tv->count * tv_size);
                     /* Test here for too big values for LONG8, SLONG8 in
@@ -978,7 +977,8 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                         case TIFF_RATIONAL:
                         case TIFF_SRATIONAL:
                             /*-- Rational2Double: For Rationals tv_size is set
-                             * above to 4 or 8 according to fip->set_field_type!
+                             * above to 4 or 8 according to
+                             * fip->set_get_field_type!
                              */
                             {
                                 if (tv_size == 8)
@@ -996,11 +996,11 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                                      * default. */
                                     if (tv_size != 4)
                                     {
-                                        TIFFErrorExtR(
-                                            tif, module,
-                                            "Rational2Double: .set_field_type "
-                                            "in not 4 but %d",
-                                            tv_size);
+                                        TIFFErrorExtR(tif, module,
+                                                      "Rational2Double: "
+                                                      ".set_get_field_type "
+                                                      "in not 4 but %d",
+                                                      tv_size);
                                     }
                                 }
                             }
@@ -1527,7 +1527,7 @@ static int _TIFFVGetField(TIFF *tif, uint32_t tag, va_list ap)
                             case TIFF_SRATIONAL:
                             {
                                 /*-- Rational2Double: For Rationals evaluate
-                                 * "set_field_type" to determine internal
+                                 * "set_get_field_type" to determine internal
                                  * storage size and return value size. */
                                 int tv_size = TIFFFieldSetGetSize(fip);
                                 if (tv_size == 8)
@@ -1545,11 +1545,11 @@ static int _TIFFVGetField(TIFF *tif, uint32_t tag, va_list ap)
                                      * default. */
                                     if (tv_size != 4)
                                     {
-                                        TIFFErrorExtR(
-                                            tif, "_TIFFVGetField",
-                                            "Rational2Double: .set_field_type "
-                                            "in not 4 but %d",
-                                            tv_size);
+                                        TIFFErrorExtR(tif, "_TIFFVGetField",
+                                                      "Rational2Double: "
+                                                      ".set_get_field_type "
+                                                      "in not 4 but %d",
+                                                      tv_size);
                                     }
                                 }
                             }
@@ -1621,6 +1621,7 @@ void TIFFFreeDirectory(TIFF *tif)
     TIFFDirectory *td = &tif->tif_dir;
     int i;
 
+    (*tif->tif_cleanup)(tif);
     _TIFFmemset(td->td_fieldsset, 0, sizeof(td->td_fieldsset));
     CleanupField(td_sminsamplevalue);
     CleanupField(td_smaxsamplevalue);
@@ -2207,7 +2208,7 @@ int TIFFSetSubDirectory(TIFF *tif, uint64_t diroff)
             _TIFFCleanupIFDOffsetAndNumberMaps(tif);
             tif->tif_curdir = 0; /* first directory of new chain */
             /* add this offset to new IFD list */
-            _TIFFCheckDirNumberAndOffset(tif, tif->tif_curdir, diroff);
+            retval = _TIFFCheckDirNumberAndOffset(tif, tif->tif_curdir, diroff);
         }
         /* To be able to return from SubIFD or custom-IFD to main-IFD */
         tif->tif_setdirectory_force_absolute = TRUE;
@@ -2336,12 +2337,12 @@ int TIFFUnlinkDirectory(TIFF *tif, tdir_t dirn)
      * means that the caller can only append to the directory
      * chain.
      */
-    (*tif->tif_cleanup)(tif);
     if ((tif->tif_flags & TIFF_MYBUFFER) && tif->tif_rawdata)
     {
         _TIFFfreeExt(tif, tif->tif_rawdata);
         tif->tif_rawdata = NULL;
         tif->tif_rawcc = 0;
+        tif->tif_rawcp = NULL;
         tif->tif_rawdataoff = 0;
         tif->tif_rawdataloaded = 0;
     }

@@ -30,6 +30,10 @@
 #include "tif_predict.h"
 #include "tiffiop.h"
 
+#if defined(__x86_64__) || defined(_M_X64)
+#include <emmintrin.h>
+#endif
+
 #define PredictorState(tif) ((TIFFPredictorState *)(tif)->tif_data)
 
 static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc);
@@ -208,16 +212,12 @@ static int PredictorSetupDecode(TIFF *tif)
         /*
          * The data should not be swapped outside of the floating
          * point predictor, the accumulation routine should return
-         * byres in the native order.
+         * bytes in the native order.
          */
         if (tif->tif_flags & TIFF_SWAB)
         {
             tif->tif_postdecode = _TIFFNoPostDecode;
         }
-        /*
-         * Allocate buffer to keep the decoded bytes before
-         * rearranging in the right order
-         */
     }
 
     return 1;
@@ -305,6 +305,15 @@ static int PredictorSetupEncode(TIFF *tif)
             sp->encodetile = tif->tif_encodetile;
             tif->tif_encodetile = PredictorEncodeTile;
         }
+        /*
+         * The data should not be swapped outside of the floating
+         * point predictor, the differentiation routine should return
+         * bytes in the native order.
+         */
+        if (tif->tif_flags & TIFF_SWAB)
+        {
+            tif->tif_postdecode = _TIFFNoPostDecode;
+        }
     }
 
     return 1;
@@ -343,7 +352,7 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 {
     tmsize_t stride = PredictorState(tif)->stride;
 
-    unsigned char *cp = (unsigned char *)cp0;
+    uint8_t *cp = cp0;
     if ((cc % stride) != 0)
     {
         TIFFErrorExtR(tif, "horAcc8", "%s", "(cc%stride)!=0");
@@ -355,32 +364,48 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         /*
          * Pipeline the most common cases.
          */
-        if (stride == 3)
+        if (stride == 1)
         {
-            unsigned int cr = cp[0];
-            unsigned int cg = cp[1];
-            unsigned int cb = cp[2];
+            uint32_t acc = cp[0];
+            tmsize_t i = stride;
+            for (; i < cc - 3; i += 4)
+            {
+                cp[i + 0] = (uint8_t)((acc += cp[i + 0]) & 0xff);
+                cp[i + 1] = (uint8_t)((acc += cp[i + 1]) & 0xff);
+                cp[i + 2] = (uint8_t)((acc += cp[i + 2]) & 0xff);
+                cp[i + 3] = (uint8_t)((acc += cp[i + 3]) & 0xff);
+            }
+            for (; i < cc; i++)
+            {
+                cp[i + 0] = (uint8_t)((acc += cp[i + 0]) & 0xff);
+            }
+        }
+        else if (stride == 3)
+        {
+            uint32_t cr = cp[0];
+            uint32_t cg = cp[1];
+            uint32_t cb = cp[2];
             tmsize_t i = stride;
             for (; i < cc; i += stride)
             {
-                cp[i + 0] = (unsigned char)((cr += cp[i + 0]) & 0xff);
-                cp[i + 1] = (unsigned char)((cg += cp[i + 1]) & 0xff);
-                cp[i + 2] = (unsigned char)((cb += cp[i + 2]) & 0xff);
+                cp[i + 0] = (uint8_t)((cr += cp[i + 0]) & 0xff);
+                cp[i + 1] = (uint8_t)((cg += cp[i + 1]) & 0xff);
+                cp[i + 2] = (uint8_t)((cb += cp[i + 2]) & 0xff);
             }
         }
         else if (stride == 4)
         {
-            unsigned int cr = cp[0];
-            unsigned int cg = cp[1];
-            unsigned int cb = cp[2];
-            unsigned int ca = cp[3];
+            uint32_t cr = cp[0];
+            uint32_t cg = cp[1];
+            uint32_t cb = cp[2];
+            uint32_t ca = cp[3];
             tmsize_t i = stride;
             for (; i < cc; i += stride)
             {
-                cp[i + 0] = (unsigned char)((cr += cp[i + 0]) & 0xff);
-                cp[i + 1] = (unsigned char)((cg += cp[i + 1]) & 0xff);
-                cp[i + 2] = (unsigned char)((cb += cp[i + 2]) & 0xff);
-                cp[i + 3] = (unsigned char)((ca += cp[i + 3]) & 0xff);
+                cp[i + 0] = (uint8_t)((cr += cp[i + 0]) & 0xff);
+                cp[i + 1] = (uint8_t)((cg += cp[i + 1]) & 0xff);
+                cp[i + 2] = (uint8_t)((cb += cp[i + 2]) & 0xff);
+                cp[i + 3] = (uint8_t)((ca += cp[i + 3]) & 0xff);
             }
         }
         else
@@ -389,7 +414,7 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             do
             {
                 REPEAT4(stride,
-                        cp[stride] = (unsigned char)((cp[stride] + *cp) & 0xff);
+                        cp[stride] = (uint8_t)((cp[stride] + *cp) & 0xff);
                         cp++)
                 cc -= stride;
             } while (cc > 0);
@@ -512,7 +537,7 @@ static int fpAcc(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     uint32_t bps = tif->tif_dir.td_bitspersample / 8;
     tmsize_t wc = cc / bps;
     tmsize_t count = cc;
-    uint8_t *cp = (uint8_t *)cp0;
+    uint8_t *cp = cp0;
     uint8_t *tmp;
 
     if (cc % (bps * stride) != 0)
@@ -525,17 +550,85 @@ static int fpAcc(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     if (!tmp)
         return 0;
 
-    while (count > stride)
+    if (stride == 1)
     {
-        REPEAT4(stride,
-                cp[stride] = (unsigned char)((cp[stride] + cp[0]) & 0xff);
-                cp++)
-        count -= stride;
+        /* Optimization of general case */
+#define OP                                                                     \
+    do                                                                         \
+    {                                                                          \
+        cp[1] = (uint8_t)((cp[1] + cp[0]) & 0xff);                             \
+        ++cp;                                                                  \
+    } while (0)
+        for (; count > 8; count -= 8)
+        {
+            OP;
+            OP;
+            OP;
+            OP;
+            OP;
+            OP;
+            OP;
+            OP;
+        }
+        for (; count > 1; count -= 1)
+        {
+            OP;
+        }
+#undef OP
+    }
+    else
+    {
+        while (count > stride)
+        {
+            REPEAT4(stride, cp[stride] = (uint8_t)((cp[stride] + cp[0]) & 0xff);
+                    cp++)
+            count -= stride;
+        }
     }
 
     _TIFFmemcpy(tmp, cp0, cc);
     cp = (uint8_t *)cp0;
-    for (count = 0; count < wc; count++)
+    count = 0;
+
+#if defined(__x86_64__) || defined(_M_X64)
+    if (bps == 4)
+    {
+        /* Optimization of general case */
+        for (; count + 15 < wc; count += 16)
+        {
+            /* Interlace 4*16 byte values */
+
+            __m128i xmm0 =
+                _mm_loadu_si128((const __m128i *)(tmp + count + 3 * wc));
+            __m128i xmm1 =
+                _mm_loadu_si128((const __m128i *)(tmp + count + 2 * wc));
+            __m128i xmm2 =
+                _mm_loadu_si128((const __m128i *)(tmp + count + 1 * wc));
+            __m128i xmm3 =
+                _mm_loadu_si128((const __m128i *)(tmp + count + 0 * wc));
+            /* (xmm0_0, xmm1_0, xmm0_1, xmm1_1, xmm0_2, xmm1_2, ...) */
+            __m128i tmp0 = _mm_unpacklo_epi8(xmm0, xmm1);
+            /* (xmm0_8, xmm1_8, xmm0_9, xmm1_9, xmm0_10, xmm1_10, ...) */
+            __m128i tmp1 = _mm_unpackhi_epi8(xmm0, xmm1);
+            /* (xmm2_0, xmm3_0, xmm2_1, xmm3_1, xmm2_2, xmm3_2, ...) */
+            __m128i tmp2 = _mm_unpacklo_epi8(xmm2, xmm3);
+            /* (xmm2_8, xmm3_8, xmm2_9, xmm3_9, xmm2_10, xmm3_10, ...) */
+            __m128i tmp3 = _mm_unpackhi_epi8(xmm2, xmm3);
+            /* (xmm0_0, xmm1_0, xmm2_0, xmm3_0, xmm0_1, xmm1_1, xmm2_1, xmm3_1,
+             * ...) */
+            __m128i tmp2_0 = _mm_unpacklo_epi16(tmp0, tmp2);
+            __m128i tmp2_1 = _mm_unpackhi_epi16(tmp0, tmp2);
+            __m128i tmp2_2 = _mm_unpacklo_epi16(tmp1, tmp3);
+            __m128i tmp2_3 = _mm_unpackhi_epi16(tmp1, tmp3);
+            _mm_storeu_si128((__m128i *)(cp + 4 * count + 0 * 16), tmp2_0);
+            _mm_storeu_si128((__m128i *)(cp + 4 * count + 1 * 16), tmp2_1);
+            _mm_storeu_si128((__m128i *)(cp + 4 * count + 2 * 16), tmp2_2);
+            _mm_storeu_si128((__m128i *)(cp + 4 * count + 3 * 16), tmp2_3);
+        }
+    }
+#endif
+
+    for (; count < wc; count++)
     {
         uint32_t byte;
         for (byte = 0; byte < bps; byte++)
@@ -857,16 +950,38 @@ static int fpDiff(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 
 static int PredictorEncodeRow(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 {
+    static const char module[] = "PredictorEncodeRow";
     TIFFPredictorState *sp = PredictorState(tif);
+    uint8_t *working_copy;
+    int result_code;
 
     assert(sp != NULL);
     assert(sp->encodepfunc != NULL);
     assert(sp->encoderow != NULL);
 
-    /* XXX horizontal differencing alters user's data XXX */
-    if (!(*sp->encodepfunc)(tif, bp, cc))
+    /*
+     * Do predictor manipulation in a working buffer to avoid altering
+     * the callers buffer, like for PredictorEncodeTile().
+     * https://gitlab.com/libtiff/libtiff/-/issues/5
+     */
+    working_copy = (uint8_t *)_TIFFmallocExt(tif, cc);
+    if (working_copy == NULL)
+    {
+        TIFFErrorExtR(tif, module,
+                      "Out of memory allocating %" PRId64 " byte temp buffer.",
+                      (int64_t)cc);
         return 0;
-    return (*sp->encoderow)(tif, bp, cc, s);
+    }
+    memcpy(working_copy, bp, cc);
+
+    if (!(*sp->encodepfunc)(tif, working_copy, cc))
+    {
+        _TIFFfreeExt(tif, working_copy);
+        return 0;
+    }
+    result_code = (*sp->encoderow)(tif, working_copy, cc, s);
+    _TIFFfreeExt(tif, working_copy);
+    return result_code;
 }
 
 static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
@@ -923,7 +1038,7 @@ static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
 
 static const TIFFField predictFields[] = {
     {TIFFTAG_PREDICTOR, 1, 1, TIFF_SHORT, 0, TIFF_SETGET_UINT16,
-     TIFF_SETGET_UINT16, FIELD_PREDICTOR, FALSE, FALSE, "Predictor", NULL},
+     FIELD_PREDICTOR, FALSE, FALSE, "Predictor", NULL},
 };
 
 static int PredictorVSetField(TIFF *tif, uint32_t tag, va_list ap)

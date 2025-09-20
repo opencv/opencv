@@ -48,7 +48,6 @@ void TIFFCleanup(TIFF *tif)
      */
     if (tif->tif_mode != O_RDONLY)
         TIFFFlush(tif);
-    (*tif->tif_cleanup)(tif);
     TIFFFreeDirectory(tif);
 
     _TIFFCleanupIFDOffsetAndNumberMaps(tif);

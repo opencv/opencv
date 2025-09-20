@@ -677,7 +677,8 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
                 else
                 {
                     /*--: Rational2Double: For Rationals evaluate
-                     * "set_field_type" to determine internal storage size. */
+                     * "set_get_field_type" to determine internal storage size.
+                     */
                     int tv_size = TIFFFieldSetGetSize(fip);
                     raw_data = _TIFFmallocExt(tif, tv_size * value_count);
                     mem_alloc = 1;
