@@ -610,26 +610,26 @@ struct CubesScene : Scene
 
     static float map(Point3f p, bool /*unused*/)
     {
-        float plane = p.y + 0.5;
+        float plane = p.y + 0.5f;
 
         float step = 0.7f;
-        cv::Point3d boxPose {std::fmod(p.x, step)*(p.x < 0 ? -1 : 1) - step / 2,
+        cv::Point3f boxPose {std::fmod(p.x, step)*(p.x < 0.f ? -1.f : 1.f) - step / 2.f,
                              p.y,
-                             std::fmod(p.z, step)*(p.z < 0 ? -1 : 1) - step / 2};
-        float boxSize = 0.3;
-        float roundness = 0.01;
+                             std::fmod(p.z, step)*(p.z < 0.f ? -1.f : 1.f) - step / 2.f};
+        float boxSize = 0.3f;
+        float roundness = 0.01f;
         cv::Point3f boxTmp;
-        boxTmp.x = std::max(std::abs(boxPose.x) - boxSize, 0.0);
-        boxTmp.y = std::max(std::abs(boxPose.y) - boxSize, 0.0);
-        boxTmp.z = std::max(std::abs(boxPose.z) - boxSize, 0.0);
-        float roundBox = cv::norm(boxTmp) - roundness;
+        boxTmp.x = std::max(std::abs(boxPose.x) - boxSize, 0.0f);
+        boxTmp.y = std::max(std::abs(boxPose.y) - boxSize, 0.0f);
+        boxTmp.z = std::max(std::abs(boxPose.z) - boxSize, 0.0f);
+        float roundBox = (float)cv::norm(boxTmp) - roundness;
 
-        float sphereRadius = 0.4;
-        float sphere = cv::norm(boxPose) - sphereRadius;
+        float sphereRadius = 0.4f;
+        float sphere = (float)cv::norm(boxPose) - sphereRadius;
 
         float boxMinusSphere = std::max(roundBox, -sphere);
 
-        float res = min({ boxMinusSphere, plane });
+        float res = std::min(boxMinusSphere, plane);
 
         return res;
     }
