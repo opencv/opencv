@@ -302,9 +302,9 @@ void renderPointsNormals(InputArray _points, InputArray _normals, OutputArray im
 
     Range range(0, sz.height);
     const int nstripes = -1;
-    parallel_for_(range, [&](const Range& r)
+    parallel_for_(range, [&](const Range& rows)
         {
-            for (int y = r.start; y < r.end; y++)
+            for (int y = rows.start; y < rows.end; y++)
             {
                 Vec4b* imgRow = img[y];
                 const ptype* ptsRow = points[y];
