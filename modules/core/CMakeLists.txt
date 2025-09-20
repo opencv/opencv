@@ -210,6 +210,11 @@ endif()
 ocv_add_accuracy_tests()
 ocv_add_perf_tests()
 
+if (HAVE_CUDA)
+  ocv_target_compile_definitions(opencv_test_core PRIVATE "HAVE_CUDA=1")
+  ocv_target_compile_definitions(opencv_perf_core PRIVATE "HAVE_CUDA=1")
+endif()
+
 ocv_install_3rdparty_licenses(SoftFloat "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SoftFloat/COPYING.txt")
 
 
