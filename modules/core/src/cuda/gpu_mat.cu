@@ -610,9 +610,9 @@ void cv::cuda::GpuMat::convertTo(OutputArray _dst, int rtype, double alpha, doub
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {convertToScale<uint64_t, uchar>, convertToScale<uint64_t, schar>, convertToScale<uint64_t, ushort>, convertToScale<uint64_t, short>, convertToScale<uint64_t, int>, convertToScale<uint64_t, float>, convertToScale<uint64_t, double>},
-        {convertToScale<int64_t, uchar>, convertToScale<int64_t, schar>, convertToScale<int64_t, ushort>, convertToScale<int64_t, short>, convertToScale<int64_t, int>, convertToScale<int64_t, float>, convertToScale<int64_t, double>},
-        {convertToScale<uint32_t, uchar>, convertToScale<uint32_t, schar>, convertToScale<uint32_t, ushort>, convertToScale<uint32_t, short>, convertToScale<uint32_t, int>, convertToScale<uint32_t, float>, convertToScale<uint32_t, double>},
+        {convertToScale<uint64_t, uchar>, convertToScale<uint64_t, schar>, convertToScale<uint64_t, ushort>, convertToScale<uint64_t, short>, convertToScale<uint64_t, int>, convertToScale<uint64_t, float>, convertToScale<uint64_t, double>, 0, 0, 0, convertToScale<uint64_t, uint64_t>, convertToScale<uint64_t, int64_t>, convertToScale<uint64_t, uint32_t>},
+        {convertToScale<int64_t, uchar>, convertToScale<int64_t, schar>, convertToScale<int64_t, ushort>, convertToScale<int64_t, short>, convertToScale<int64_t, int>, convertToScale<int64_t, float>, convertToScale<int64_t, double>, 0, 0, 0, convertToScale<int64_t, uint64_t>, convertToScale<int64_t, int64_t>, convertToScale<int64_t, uint32_t>},
+        {convertToScale<uint32_t, uchar>, convertToScale<uint32_t, schar>, convertToScale<uint32_t, ushort>, convertToScale<uint32_t, short>, convertToScale<uint32_t, int>, convertToScale<uint32_t, float>, convertToScale<uint32_t, double>, 0, 0, 0, convertToScale<uint32_t, uint64_t>, convertToScale<uint32_t, int64_t>, convertToScale<uint32_t, uint32_t>},
     };
 
     func_t func = funcs[sdepth][ddepth];
