@@ -106,9 +106,6 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_CUDA
     std::vector<cv::cuda::GpuMat> gpuTensors;
     std::vector<cv::cuda::GpuMat> gpuBuffers;
-#else
-    std::vector<Ptr<BackendWrapper>> gpuTensors;
-    std::vector<Ptr<BackendWrapper>> gpuBuffers;
 #endif
 
     virtual bool empty() const;
@@ -265,6 +262,9 @@ struct Net::Impl : public detail::NetImplBase
     std::unique_ptr<CudaInfo_t> cudaInfo;
 
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
+
+    // Cache CUDA backend nodes for the new graph engine keyed by Layer*.
+    std::unordered_map<const void*, Ptr<CUDABackendNode> > cudaNodeCacheNewEngine;
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
