@@ -404,7 +404,7 @@ namespace cv { namespace dnn {
             d2h_event.record(stream);
             cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
             // Copy to host CV_16F then convert
-            cv::Mat temp16(mat.dims, mat.size, CV_16F);
+            cv::Mat temp16(shape(mat), CV_16F);
             cuda4dnn::csl::memcpy<half>(reinterpret_cast<half*>(temp16.data), view.data(), view.size(), d2h_stream);
             temp16.convertTo(const_cast<cv::Mat&>(mat), CV_64F);
         }
@@ -422,9 +422,9 @@ namespace cv { namespace dnn {
             d2h_event.record(stream);
             cuda4dnn::csl::StreamWaitOnEvent(d2h_stream, d2h_event);
             // Copy into a temporary CV_32F view of the destination buffer then convert
-            cv::Mat temp32(mat.dims, mat.size, CV_32F, mat.data);
+            cv::Mat temp32(shape(mat), CV_32F, mat.data);
             cuda4dnn::csl::memcpy<float>(reinterpret_cast<float*>(temp32.data), view.data(), view.size(), d2h_stream);
-            cv::Mat out64(mat.dims, mat.size, CV_64F, mat.data);
+            cv::Mat out64(shape(mat), CV_64F, mat.data);
             temp32.convertTo(out64, CV_64F);
         }
 
