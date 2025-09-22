@@ -472,7 +472,7 @@ CV__DNN_INLINE_NS_BEGIN
         // Some layers could override this default behaviour:
         // a) if they _can_ process block-layout data, like element-wise operations, or
         // b) if they _need_ block-layout data, like convolution
-        virtual void getLayouts(const std::vector<DataLayout>& actualInputs,
+        virtual int getLayouts(const std::vector<DataLayout>& actualInputs,
                                 std::vector<DataLayout>& desiredInputs,
                                 const int requiredOutputs,
                                 std::vector<DataLayout>& outputs) const;

@@ -12,7 +12,6 @@ namespace cv
 {
 namespace dnn
 {
-    
 CV__DNN_INLINE_NS_BEGIN
     
 // computes shape of the output tensor of convolution
@@ -48,36 +47,41 @@ struct ConvState
     std::vector<int> ofstab;
 
     FastActivation fastActivation;
-    enum {ACTIV_MAX_PARAMS = 16};
-    float activParams[ACTIV_MAX_PARAMS];
+    enum {MAX_ACTIV_PARAMS = 16};
+    float activParams[MAX_ACTIV_PARAMS];
     activation_func_t activation;
 
     std::ostream& dump(std::ostream& strm);
     bool sameShape(const ConvState& cs) const;
+
+    void initConv(const MatShape& inpShape,
+                  const MatShape& wshape,
+                  const MatShape& outShape,
+                  int ngroups,
+                  const std::vector<int>& strides,
+                  const std::vector<int>& dilations,
+                  const std::vector<int>& pads,
+                  AutoPadding autoPad, bool ceilMode,
+                  FastActivation fastActivation,
+                  const float* activParams,
+                  size_t nactivParams);
+
+    // initializes the structure of parameters for 1D/2D/3D
+    // depth-wise convolution, max pooling or average pooling
+    void initPooling(const MatShape& inpshape, const MatShape& outshape,
+                     const std::vector<int>& kernel_shape,
+                     const std::vector<int>& strides,
+                     const std::vector<int>& dilations,
+                     const std::vector<int>& pads,
+                     AutoPadding auto_pad, bool ceil_mode);
 };
 
 AutoPadding getAutoPadding(const LayerParams& params);
 
-void initConvState(const MatShape& inpshape,
-                   const MatShape& wshape,
-                   const MatShape& outshape,
-                   const Ptr<Layer>& activ,
-                   int ngroups,
-                   const std::vector<int>& strides,
-                   const std::vector<int>& dilations,
-                   const std::vector<int>& pads,
-                   AutoPadding auto_pad, bool ceil_mode,
-                   ConvState& cs);
 
-// initializes the structure of parameters for 1D/2D/3D
-// depth-wise convolution, max pooling or average pooling
-void initPoolingState(const MatShape& inpshape, const MatShape& outshape,
-                      const std::vector<int>& kernel_shape,
-                      const std::vector<int>& strides,
-                      const std::vector<int>& dilations,
-                      const std::vector<int>& pads,
-                      AutoPadding auto_pad, bool ceil_mode,
-                      ConvState& cs);
+void initConvTables(const ConvState& cs,
+                    std::vector<int32_t>& inpofs,
+                    std::vector<int32_t>& ofsofs);
 
 typedef void (*ConvFunc)(const void* inp, const void* residual, void* out,
                          const ConvState& cs, const void* weights,
@@ -91,14 +95,16 @@ typedef void (*DepthwiseConvFunc)(const void* inp, const void* residual,
                                   const float* bias);
 
 DepthwiseConvFunc getDepthwiseConvFunc(int depth);
-ConvFunc getConvFunc(int depth);
+ConvFunc getConvFunc(int depth, int C0);
 
 void repackDepthwiseConvWeights(const void* inpw, int inptype,
                                 void* outw, int outtype,
                                 const MatShape& wsize, int C0);
+void repackConvWeights(const void* inpw, int inptype,
+                       void* outw, int outtype,
+                       const MatShape& wshape, int C0);
 
 CV__DNN_INLINE_NS_END
-
 }
 }
 

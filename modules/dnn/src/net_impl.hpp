@@ -103,6 +103,11 @@ struct Net::Impl : public detail::NetImplBase
     int globGraphIdx;
 
     int accuracy;
+    // if you change DEFAULT_C0/defaultC0, don't forget to update
+    // implementation of convolution, convTranspose,
+    // maxpool, avgpool, resize, pad ... where defaultC0 is accessed and used.
+    enum { DEFAULT_C0 = 8 };
+    int defaultC0;
     bool enableFP16, haveFP16;
     bool prepared; // need to rerun graph transformations/optimizations
     bool finalizeLayers; // need to initialize each layer

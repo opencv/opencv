@@ -9,6 +9,7 @@
 #include "layers/cpu_kernels/conv2_depthwise.simd_declarations.hpp"
 
 namespace cv { namespace dnn {
+CV__DNN_INLINE_NS_BEGIN
 
 DepthwiseConvFunc getDepthwiseConvFunc(int depth)
 {
@@ -90,4 +91,5 @@ void repackDepthwiseConvWeights(const void* inpw__, int inptype_, void* outw__, 
     });
 }
 
+CV__DNN_INLINE_NS_END
 }}

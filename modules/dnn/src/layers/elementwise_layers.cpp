@@ -93,6 +93,18 @@ using std::sin;
 using std::sinh;
 using std::tan;
 
+int ActivationLayer::getLayouts(const std::vector<DataLayout>& actualInputs,
+                                std::vector<DataLayout>& desiredInputs,
+                                const int requiredOutputs,
+                                std::vector<DataLayout>& outputs) const
+{
+    size_t ninputs = actualInputs.size();
+    CV_Assert(ninputs >= 1u);
+    desiredInputs = actualInputs;
+    outputs.assign(requiredOutputs, actualInputs[0]);
+    return 0;
+}
+
 struct PowerFunctor;
 
 template<typename Func>

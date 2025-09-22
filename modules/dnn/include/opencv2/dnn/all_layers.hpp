@@ -885,7 +885,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayer : public Layer
     {
     public:
-        virtual void getLayouts(const std::vector<DataLayout>& actualInputs,
+        virtual int getLayouts(const std::vector<DataLayout>& actualInputs,
                                 std::vector<DataLayout>& desiredInputs,
                                 const int requiredOutputs,
                                 std::vector<DataLayout>& outputs) const CV_OVERRIDE;

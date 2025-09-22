@@ -373,7 +373,7 @@ public:
         return true;
     }
 
-    void getLayouts(const std::vector<DataLayout>& actualInputs,
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
                     std::vector<DataLayout>& desiredInputs,
                     const int requiredOutputs,
                     std::vector<DataLayout>& outputs) const CV_OVERRIDE
@@ -381,6 +381,7 @@ public:
         CV_Assert(actualInputs.size() == 1u);
         desiredInputs.assign(1, DATA_LAYOUT_BLOCK);
         outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        return getNetImpl(this)->defaultC0;
     }
 
     void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -404,7 +405,8 @@ public:
                   outKind == _InputArray::STD_VECTOR_UMAT);
 
         ConvState cs;
-        initPoolingState(inpshape, outshape, kernel_shape, strides, dilations, pads, auto_pad, ceil_mode, cs);
+        cs.initPooling(inpshape, outshape, kernel_shape, strides,
+                       dilations, pads, auto_pad, ceil_mode);
 
         if (outKind == _InputArray::STD_VECTOR_MAT) {
             Mat inp = inputs_arr.getMat(0);

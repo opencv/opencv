@@ -278,13 +278,14 @@ void Layer::getTypes(const std::vector<MatType>&inputs,
     internals.assign(requiredInternals, inputs[0]);
 }
 
-void Layer::getLayouts(const std::vector<DataLayout>& actualInputs,
+int Layer::getLayouts(const std::vector<DataLayout>& actualInputs,
                        std::vector<DataLayout>& desiredInputs,
                        const int requiredOutputs,
                        std::vector<DataLayout>& outputs) const
 {
     desiredInputs.assign(actualInputs.size(), DATA_LAYOUT_UNKNOWN);
     outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+    return 0;
 }
 
 int64 Layer::getFLOPS(const std::vector<MatShape>&,

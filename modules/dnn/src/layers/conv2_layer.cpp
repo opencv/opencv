@@ -20,455 +20,6 @@ namespace dnn
     Opset's 1 to 22 are covered.
 */
 
-static void initConv2DTables(const ConvState& cs,
-                             std::vector<int32_t>& ofsbuf_,
-                             std::vector<int32_t>& ofsofs_)
-{
-    int Hk_ = cs.kshape[0], Wk_ = cs.kshape[1];
-    int DY_ = cs.dilations[0], DX_ = cs.dilations[1];
-    int pad_y0 = cs.pads[0], pad_x0 = cs.pads[1];
-    int Hi_ = cs.inpshape[2], Wi_ = cs.inpshape[3], H = cs.outshape[2], W = cs.outshape[3];
-    int C0_ = cs.inpshape.back(), C1_ = cs.inpshape[1];
-    int ngroups = cs.ngroups, C1g = C1_/ngroups;
-    int inner_y0 = cs.inner[0], inner_y1 = cs.inner[1];
-    int inner_x0 = cs.inner[cs.nspatialdims], inner_x1 = cs.inner[cs.nspatialdims + 1];
-
-    ofsofs_.resize(H*W*2);
-
-    int ofs_blocksize = C1g*Hk_*Wk_;
-    bool have_inner = inner_y0 < inner_y1 && inner_x0 < inner_x1;
-
-    int nblocks = have_inner ? 1 + (inner_y0 + (H - inner_y1))*W +
-        (inner_y1 - inner_y0)*(inner_x0 + W - inner_x1) : W*H;
-
-    ofsbuf_.resize(ofs_blocksize*nblocks);
-    int32_t* ofsbuf = ofsbuf_.data();
-
-    if (have_inner) {
-        for (int c = 0, k = 0; c < C1g; c++) {
-            for (int dy = 0; dy < Hk_; dy++) {
-                int yi = dy*DY_;
-                for (int dx = 0; dx < Wk_; dx++, k++) {
-                    int xi = dx*DX_;
-                    ofsbuf[k] = (int32_t)(((c*Hi_ + yi)*Wi_ + xi)*C0_);
-                }
-            }
-        }
-    }
-
-    parallel_for_(Range(0, H), [&](const Range& r) {
-        int C0 = C0_;
-        int Hk = Hk_, Wk = Wk_;
-        int Hi = Hi_, Wi = Wi_;
-        int SY = cs.strides[0], SX = cs.strides[1];
-        int DY = cs.dilations[0], DX = cs.dilations[1];
-        uint8_t* mask = mask_.data();
-        int32_t* ofs0 = ofs0_.data();
-        int32_t** ofsptrs = ofsptrs_.data();
-        int64_t curr_block = 1;
-        if (have_inner) {
-            curr_block += std::min(r.start, inner_y0)*W;
-            curr_block += std::min(std::max(r.start - inner_y0, 0),
-                                   inner_y1 - inner_y0)*(inner_x0 + W - inner_x1);
-            curr_block += std::max(r.start - inner_y1, 0)*W;
-        } else {
-            curr_block = r.start*W;
-        }
-        for (int y0 = r.start; y0 < r.end; y0++) {
-            int yi_ = y0*SY - pad_y0;
-            bool y_inside = inner_y0 <= y0 && y0 < inner_y1;
-
-            for (int x0 = 0; x0 < W; x0++) {
-                int xi_ = x0*SX - pad_x0;
-                bool x_inside = inner_x0 <= x0 && x0 < inner_x1;
-                uint8_t m = (uint8_t)(y_inside & x_inside);
-
-                mask[y0*W + x0] = m;
-
-                if (m) {
-                    ofs0[y0*W + x0] = (int32_t)((yi_*Wi + xi_)*C0);
-                    ofsptrs[y0*W + x0] = ofsbuf;
-                } else {
-                    ofs0[y0*W + x0] = 0;
-                    int32_t* ofsptr = ofsbuf + curr_block*ofs_blocksize;
-                    ofsptrs[y0*W + x0] = ofsptr;
-                    curr_block++;
-
-                    for (int c = 0, k = 0; c < C1g; c++) {
-                        for (int dy = 0; dy < Hk; dy++) {
-                            int yi = yi_ + dy*DY;
-                            bool yi_inside = 0 <= yi && yi < Hi;
-
-                            for (int dx = 0; dx < Wk; dx++, k++) {
-                                int xi = xi_ + dx*DX;
-                                bool xi_inside = 0 <= xi && xi < Wi;
-                                ofsptr[k] = (yi_inside & xi_inside) ?
-                                    (int32_t)(((c*Hi + yi)*Wi + xi)*C0) : INT_MIN/2;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-template<typename _InpT, typename _OutT> void
-repackConv2DWeights_(const _InpT* inpw_, _OutT* outw_,
-                     size_t inp_step_c, size_t inp_step_k, int ksize,
-                     int C0, int K0, int curr_C0, int curr_K0)
-{
-    const _InpT* inpw = inpw_;
-    _OutT* outw = outw_;
-    for (int xy = 0; xy < ksize; xy++, inpw++, outw += C0*K0) {
-        for (int c0 = 0; c0 < curr_C0; c0++) {
-            for (int k0 = 0; k0 < curr_K0; k0++) {
-                outw[c0*K0 + k0] = _OutT(inpw[inp_step_k*k0 + inp_step_c*c0]);
-            }
-        }
-    }
-}
-
-
-// K x (C/ngroups) x Hk x Wk => K1 x C1/ngroups x Hk x Wk x C0 x K0,
-// where K0 == C0
-static void repackConv2DWeights(const void* inpw__, int inptype_,
-                                void* outw__, int outtype_,
-                                const MatShape& wshape, int C0_)
-{
-    CV_Assert(inptype_ == CV_32F || inptype_ == CV_16F);
-    CV_Assert(outtype_ == CV_32F || outtype_ == CV_16F);
-
-    int K1 = (wshape[0] + C0_ - 1)/C0_;
-    parallel_for_(Range(0, K1), [&](const Range& r) {
-        int inptype = inptype_, outtype = outtype_;
-        size_t inp_esz = CV_ELEM_SIZE(inptype);
-        size_t out_esz = CV_ELEM_SIZE(outtype);
-        int C0 = C0_, K0 = C0_;
-        int K = wshape[0], Cg = wshape[1];
-        int C1g = (Cg + C0 - 1)/C0;
-        int Hk = wshape[2], Wk = wshape[3];
-        int ksize = Hk*Wk;
-        size_t inp_step_c = ksize, inp_step_k = Cg*ksize;
-        size_t out_microplane_size = ksize*C0*K0*out_esz;
-
-        for (int k1 = r.start; k1 < r.end; k1++) {
-            int curr_K0 = std::min(K - k1*K0, K0);
-            for (int c1g = 0; c1g < C1g; c1g++) {
-                uint8_t* inpw_ = (uint8_t*)inpw__ + (k1*K0*inp_step_k + c1g*C0*inp_step_c)*inp_esz;
-                uint8_t* outw_ = (uint8_t*)outw__ + (k1*C1g + c1g)*out_microplane_size;
-                int curr_C0 = std::min(Cg - c1g*C0, C0);
-                if (curr_K0 != K0 || curr_C0 != C0)
-                    memset(outw_, 0, out_microplane_size);
-
-                if (inptype == CV_32F && outtype == CV_32F)
-                    repackConv2DWeights_((const float*)inpw_, (float*)outw_, inp_step_c,
-                                         inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else if (inptype == CV_32F && outtype == CV_16F)
-                    repackConv2DWeights_((const float*)inpw_, (hfloat*)outw_, inp_step_c,
-                                         inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else if (inptype == CV_16F && outtype == CV_32F)
-                    repackConv2DWeights_((const hfloat*)inpw_, (float*)outw_, inp_step_c,
-                                         inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else if (inptype == CV_16F && outtype == CV_16F)
-                    repackConv2DWeights_((const hfloat*)inpw_, (hfloat*)outw_, inp_step_c,
-                                         inp_step_k, ksize, C0, K0, curr_C0, curr_K0);
-                else break;
-            }
-        }
-    });
-}
-
-static void conv2d_32f(const void* inp__, const void* residual__, void* out__,
-                       const ConvState& cs, const void* weights__,
-                       const float* scale__, const float* bias__,
-                       const int32_t* ofs0__, const int32_t** ofsptrs__,
-                       const uint8_t* mask__)
-{
-    int nlanes_ = VTraits<v_float32>::vlanes();
-    int C0_ = cs.inpshape.back();
-
-    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
-    CV_Assert(cs.activation == nullptr || cs.fastActivation == FAST_ACTIV_NONE);
-
-    int NK1 = cs.outshape[0]*cs.outshape[1];
-
-    parallel_for_(Range(0, NK1), [&](const Range& r) {
-        const float* scale_ = scale__;
-        const float* bias_ = bias__;
-        const int32_t* ofs0_ = ofs0__;
-        const int32_t** ofsptrs_ = ofsptrs__;
-        constexpr int BLOCK_SIZE = 10;
-        int nk0 = r.start, nk1 = r.end;
-        int C0 = C0_, K0 = C0;
-        int Hi = cs.inpshape[2], Wi = cs.inpshape[3];
-        int H = cs.outshape[2], W = cs.outshape[3];
-        int iplanesize = Hi*Wi;
-        int planesize = H*W;
-        int Hk = cs.kshape[0], Wk = cs.kshape[1];
-        int C1 = cs.inpshape[1], K1 = cs.outshape[1];
-        int ngroups = cs.ngroups, K1g = K1/ngroups, C1g = C1/ngroups;
-        int nC = C1g*Hk*Wk*C0*K0;
-        AutoBuffer<float> sumbuf(BLOCK_SIZE*K0*3);
-        float* sum = sumbuf.data();
-        float* scale = sum + BLOCK_SIZE*K0;
-        float* bias = sum + BLOCK_SIZE*K0*2;
-        const float* inptrs[BLOCK_SIZE];
-        const int32_t* ofsptrs[BLOCK_SIZE];
-        FastActivation fastActivation = cs.fastActivation;
-        const float* activParams = cs.activParams;
-        activation_func_t activation = cs.activation;
-        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
-        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
-                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
-
-        for (int j = 0; j < BLOCK_SIZE*K0; j++) {
-            scale[j] = 1.f;
-            bias[j] = 0.f;
-        }
-
-        for (int nk = nk0; nk < nk1; nk++) {
-            int n = nk/K1, k1 = nk - n*K1;
-            int g = k1/K1g;
-            float* out = (float*)out__ + nk*planesize*K0;
-            const float* inp0 = (const float*)inp__ + (n*C1 + g*C1g)*iplanesize*C0;
-            const float* resptr = residual__ ? (const float*)residual__ + nk*planesize*K0 : nullptr;
-            const float* wptr = (const float*)weights__ + k1*nC;
-
-            if (scale_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        scale[b*K0 + k] = scale_[k1*K0 + k];
-            }
-
-            if (bias_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        bias[b*K0 + k] = bias_[k1*K0 + k];
-            }
-
-            for (int xy0 = 0; xy0 < planesize; xy0 += BLOCK_SIZE, out += K0*BLOCK_SIZE,
-                                            resptr += (resptr ? K0*BLOCK_SIZE : 0)) {
-                int j = 0, blocksize = std::min(planesize - xy0, BLOCK_SIZE);
-
-                for (; j < blocksize; j++) {
-                    inptrs[j] = inp0 + ofs0_[xy0 + j];
-                    ofsptrs[j] = ofsptrs_[xy0 + j];
-                }
-
-                if (j < BLOCK_SIZE) {
-                    const float* last_inptr = inptrs[blocksize-1];
-                    const int32_t* last_ofsptr = ofsptrs[blocksize-1];
-                    for (; j < BLOCK_SIZE; j++) {
-                        inptrs[j] = last_inptr;
-                        ofsptrs[j] = last_ofsptr;
-                    }
-                }
-
-                for (int i = 0; i < BLOCK_SIZE*K0; i++)
-                    sum[i] = 0.f;
-
-                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
-                    for (j = 0; j < BLOCK_SIZE; j++) {
-                        int32_t ofs_ij = ofsptrs[j][i];
-                        const float* x = &inptrs[j][std::max(ofs_ij, 0)];
-                        float mij = (float)(ofs_ij >= 0);
-                        for (int c0 = 0; c0 < C0; c0++) {
-                            float xc = x[c0]*mij;
-                            for (int k = 0; k < K0; k++) {
-                                float w = wptr[c1 + c0*K0 + k];
-                                sum[K0*j + k] += xc*w;
-                            }
-                        }
-                    }
-                }
-
-                if (activation) {
-                    if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            sum[j] = v;
-                        }
-                    } else {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            sum[j] = v;
-                        }
-                    }
-                    activation(sum, out, blocksize*K0, activParams);
-                } else {
-                    if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    } else {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-static void conv2d_1x1_32f(const void* inp__, const void* residual__, void* out__,
-                           const ConvState& cs, const void* weights__,
-                           const float* scale__, const float* bias__,
-                           const int32_t*, const int32_t**, const uint8_t*)
-{
-    int nlanes_ = VTraits<v_float32>::vlanes();
-    int C0_ = cs.inpshape.back();
-
-    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
-    CV_Assert(cs.activation == nullptr || cs.fastActivation == FAST_ACTIV_NONE);
-    CV_Assert(cs.kshape[0] == 1 && cs.kshape[1] == 1);
-    CV_Assert(cs.outshape.back() == cs.inpshape.back());
-    CV_Assert(cs.pads[0] == 0 && cs.pads[1] == 0 &&
-              cs.pads[cs.nspatialdims] == 0 && cs.pads[cs.nspatialdims+1] == 0);
-
-    int NK1 = cs.outshape[0]*cs.outshape[1];
-
-    parallel_for_(Range(0, NK1), [&](const Range& r) {
-        const float* scale_ = scale__;
-        const float* bias_ = bias__;
-        constexpr int BLOCK_SIZE = 10;
-        int nk0 = r.start, nk1 = r.end;
-        //int nlanes = nlanes_;
-        int C0 = C0_, K0 = C0;
-        int Hi = cs.inpshape[2], Wi = cs.inpshape[3];
-        int H0 = cs.outshape[2], W0 = cs.outshape[3];
-        int iplanesize = Hi*Wi;
-        int planesize = H0*W0;
-        int SY = cs.strides[0], SX = cs.strides[1];
-        int C1 = cs.inpshape[1], K1 = cs.outshape[1];
-        int ngroups = cs.ngroups, K1g = K1/ngroups, C1g = C1/ngroups;
-        int nC = C1g*C0*K0;
-        AutoBuffer<float> sumbuf(BLOCK_SIZE*K0*3);
-        float* sum = sumbuf.data();
-        float* scale = sum + BLOCK_SIZE*K0;
-        float* bias = sum + BLOCK_SIZE*K0*2;
-        const float* inptrs[BLOCK_SIZE];
-        FastActivation fastActivation = cs.fastActivation;
-        const float* activParams = cs.activParams;
-        activation_func_t activation = cs.activation;
-        float maxval = fastActivation == FAST_ACTIV_CLIP ? activParams[1] : FLT_MAX;
-        float alpha = fastActivation == FAST_ACTIV_LEAKY_RELU ? activParams[0] :
-                    fastActivation == FAST_ACTIV_NONE ? 1.f : 0.f;
-        bool S1 = SY == 1 && SX == 1;
-
-        for (int j = 0; j < BLOCK_SIZE*K0; j++) {
-            scale[j] = 1.f;
-            bias[j] = 0.f;
-        }
-
-        for (int nk = nk0; nk < nk1; nk++) {
-            int n = nk/K1, k1 = nk - n*K1;
-            int g = k1/K1g;
-            float* out = (float*)out__ + nk*planesize*K0;
-            const float* inp0 = (const float*)inp__ + (n*C1 + g*C1g)*iplanesize*C0;
-            const float* resptr = residual__ ? (const float*)residual__ + nk*planesize*K0 : nullptr;
-            const float* wptr = (const float*)weights__ + k1*nC;
-
-            if (scale_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        scale[b*K0 + k] = scale_[k1*K0 + k];
-            }
-
-            if (bias_) {
-                for (int b = 0; b < BLOCK_SIZE; b++)
-                    for (int k = 0; k < K0; k++)
-                        bias[b*K0 + k] = bias_[k1*K0 + k];
-            }
-
-            int yiWi = 0, xi = 0;
-            for (int xy0 = 0; xy0 < W0*H0; xy0 += BLOCK_SIZE, out += K0*BLOCK_SIZE,
-                                               resptr += (resptr ? K0*BLOCK_SIZE : 0))
-            {
-                int j = 0, blocksize = std::min(W0*H0 - xy0, BLOCK_SIZE);
-
-                if (S1) {
-                    for (; j < blocksize; j++) {
-                        inptrs[j] = inp0 + (xy0 + j)*C0;
-                    }
-                } else {
-                    for (; j < blocksize; j++) {
-                        inptrs[j] = inp0 + (yiWi + xi)*C0;
-                        if ((xi += SX) >= Wi) {
-                            yiWi += Wi*SY;
-                            xi = 0;
-                        }
-                    }
-                }
-
-                if (j < BLOCK_SIZE) {
-                    const float* last_inptr = inptrs[blocksize-1];
-                    for (; j < BLOCK_SIZE; j++)
-                        inptrs[j] = last_inptr;
-                }
-
-                for (int i = 0; i < BLOCK_SIZE*K0; i++)
-                    sum[i] = 0.f;
-
-                for (int c1 = 0, i = 0; c1 < nC; c1 += K0*C0, i++) {
-                    int ofs_ij = i*iplanesize*C0;
-                    for (j = 0; j < BLOCK_SIZE; j++) {
-                        const float* x = &inptrs[j][ofs_ij];
-                        for (int c0 = 0; c0 < C0; c0++) {
-                            float xc = x[c0];
-                            for (int k = 0; k < K0; k++) {
-                                float w = wptr[c1 + c0*K0 + k];
-                                sum[K0*j + k] += xc*w;
-                            }
-                        }
-                    }
-                }
-
-                if (activation) {
-                    if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            sum[j] = v;
-                        }
-                    } else {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            sum[j] = v;
-                        }
-                    }
-                    activation(sum, out, blocksize*K0, activParams);
-                } else {
-                    if (resptr) {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j] + resptr[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    } else {
-                        for (j = 0; j < blocksize*K0; j++) {
-                            float v = sum[j]*scale[j] + bias[j];
-                            v = std::min(v*(v >= 0 ? 1.f : alpha), maxval);
-                            out[j] = v;
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-
-typedef void (*conv2d_func_t)(const void* inp, const void* residual, void* out,
-                              const ConvState& cs, const void* weights,
-                              const float* scale, const float* bias,
-                              const int32_t* ofs0, const int32_t** ofsptrs,
-                              const uint8_t* mask);
-
 class Conv2LayerImpl : public Conv2Layer
 {
 public:
@@ -569,7 +120,7 @@ public:
             wshape1[1] = (wshape1[1] + C0 - 1)/C0;
             weights.fit(wshape1, wtype);
 
-            repackConv2DWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);
+            repackConvWeights(weights_.data, wtype0, weights.data, wtype, wshape0, C0);
         }
 
         if (!bias_.empty()) {
@@ -686,7 +237,7 @@ public:
         return true;
     }
 
-    void getLayouts(const std::vector<DataLayout>& actualInputs,
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
                     std::vector<DataLayout>& desiredInputs,
                     const int requiredOutputs,
                     std::vector<DataLayout>& outputs) const CV_OVERRIDE
@@ -698,6 +249,7 @@ public:
         for (size_t i = 1; i < ninputs; i++)
             desiredInputs[i] = DATA_LAYOUT_UNKNOWN;
         outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        return getNetImpl(this)->defaultC0;
     }
 
     void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -735,6 +287,7 @@ public:
                                            ngroups, strides, dilations,
                                            pads, auto_pad, ceil_mode);
         int outtype = inferType(inptype);
+        int C0 = inpshape.back();
         int outkind = outputs_arr.kind();
         CV_Assert(outkind == _InputArray::STD_VECTOR_MAT ||
                   outkind == _InputArray::STD_VECTOR_UMAT);
@@ -747,8 +300,9 @@ public:
         int nspatialdims = inpshape.dims - 3;
         CV_Assert(wshape0.dims == nspatialdims+2);
 
-        initConvState(inpshape, wshape0, outshape, activ, ngroups,
-                      strides, dilations, pads, auto_pad, ceil_mode, cs);
+        cs.initConv(inpshape, wshape0, outshape, ngroups,
+                    strides, dilations, pads, auto_pad, ceil_mode,
+                    FAST_ACTIV_NONE, nullptr, 0);
         bool conv1x1 = cs.kshape[0]*cs.kshape[1]*cs.kshape[2] == 1;
         bool depthwise = ngroups == cs.inpshape.C;
 
@@ -786,16 +340,16 @@ public:
 
             func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
         } else {
-            if (!conv1x1 && (ofs0.empty() || !cs.sameShape(prev_cs))) {
-                initConv2DTables(cs, ofsbuf, ofsofs);
+            if (!conv1x1 && (inpofs.empty() || !cs.sameShape(prev_cs))) {
+                initConvTables(cs, inpofs, ofsofs);
                 prev_cs = cs;
             }
 
-            ConvFunc func = getConvFunc(inptype);
+            ConvFunc func = getConvFunc(inptype, C0);
             CV_Assert(func != nullptr);
 
             func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
-                 ofsbuf.data(), ofsofs.data());
+                 inpofs.data(), ofsofs.data());
         }
 
         if (uouts) {
@@ -815,10 +369,8 @@ public:
     Mat weights, bias, fused_scale, fused_bias;
     MatShape wshape0;
     ConvState cs, prev_cs;
-    std::vector<int32_t> ofsbuf;
-    std::vector<int32_t> ofs0;
+    std::vector<int32_t> inpofs;
     std::vector<int32_t> ofsofs;
-    std::vector<uint8_t> mask;
     bool fused_batch_norm;
 };
 

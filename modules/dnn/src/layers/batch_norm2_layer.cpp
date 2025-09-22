@@ -69,13 +69,22 @@ public:
         outputs.assign(requiredOutputs, inputs[0]);
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                    std::vector<DataLayout>& desiredInputs,
+                    const int requiredOutputs,
+                    std::vector<DataLayout>& outputs) const CV_OVERRIDE
     {
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
+        size_t ninputs = actualInputs.size();
+        CV_Assert(ninputs >= 1u);
+        desiredInputs.assign(ninputs, DATA_LAYOUT_UNKNOWN);
+        desiredInputs[0] = actualInputs[0];
+        outputs.assign(requiredOutputs, actualInputs[0]);
+        return 0;
+    }
+
+    virtual void finalize(InputArrayOfArrays, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
+    {
+    }
 
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
