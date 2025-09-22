@@ -40,7 +40,8 @@ uint32_t TIFFComputeStrip(TIFF *tif, uint32_t row, uint16_t sample)
 
     if (td->td_rowsperstrip == 0)
     {
-        TIFFErrorExtR(tif, module, "Cannot compute strip: RowsPerStrip is zero");
+        TIFFErrorExtR(tif, module,
+                      "Cannot compute strip: RowsPerStrip is zero");
         return 0;
     }
     strip = row / td->td_rowsperstrip;

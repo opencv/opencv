@@ -93,7 +93,6 @@ typedef struct
 #define LERCDecoderState(tif) GetLERCState(tif)
 #define LERCEncoderState(tif) GetLERCState(tif)
 
-static int LERCEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s);
 static int LERCDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s);
 
 static int LERCFixupTags(TIFF *tif)
@@ -222,7 +221,7 @@ static int SetupBuffers(TIFF *tif, LERCState *sp, const char *module)
     {
         TIFFErrorExtR(tif, module, "Too large uncompressed strip/tile");
         _TIFFfreeExt(tif, sp->uncompressed_buffer);
-        sp->uncompressed_buffer = 0;
+        sp->uncompressed_buffer = NULL;
         sp->uncompressed_alloc = 0;
         return 0;
     }
@@ -230,12 +229,12 @@ static int SetupBuffers(TIFF *tif, LERCState *sp, const char *module)
     if (sp->uncompressed_alloc < new_alloc)
     {
         _TIFFfreeExt(tif, sp->uncompressed_buffer);
-        sp->uncompressed_buffer = _TIFFmallocExt(tif, new_alloc);
+        sp->uncompressed_buffer = (uint8_t *)_TIFFmallocExt(tif, new_alloc);
         if (!sp->uncompressed_buffer)
         {
             TIFFErrorExtR(tif, module, "Cannot allocate buffer");
             _TIFFfreeExt(tif, sp->uncompressed_buffer);
-            sp->uncompressed_buffer = 0;
+            sp->uncompressed_buffer = NULL;
             sp->uncompressed_alloc = 0;
             return 0;
         }
@@ -267,7 +266,7 @@ static int SetupBuffers(TIFF *tif, LERCState *sp, const char *module)
                 TIFFErrorExtR(tif, module, "Cannot allocate buffer");
                 sp->mask_size = 0;
                 _TIFFfreeExt(tif, sp->uncompressed_buffer);
-                sp->uncompressed_buffer = 0;
+                sp->uncompressed_buffer = NULL;
                 sp->uncompressed_alloc = 0;
                 return 0;
             }
@@ -348,7 +347,7 @@ static int LERCPreDecode(TIFF *tif, uint16_t s)
             return 0;
         }
         assert(lerc_data_sizet == (unsigned int)lerc_data_sizet);
-        lerc_data = sp->compressed_buffer;
+        lerc_data = (uint8_t *)sp->compressed_buffer;
         lerc_data_size = (unsigned int)lerc_data_sizet;
 #else
         z_stream strm;
@@ -369,7 +368,7 @@ static int LERCPreDecode(TIFF *tif, uint16_t s)
         strm.avail_in = (uInt)tif->tif_rawcc;
         strm.next_in = tif->tif_rawcp;
         strm.avail_out = sp->compressed_size;
-        strm.next_out = sp->compressed_buffer;
+        strm.next_out = (Bytef *)sp->compressed_buffer;
         zlib_ret = inflate(&strm, Z_FINISH);
         if (zlib_ret != Z_STREAM_END && zlib_ret != Z_OK)
         {
@@ -377,7 +376,7 @@ static int LERCPreDecode(TIFF *tif, uint16_t s)
             inflateEnd(&strm);
             return 0;
         }
-        lerc_data = sp->compressed_buffer;
+        lerc_data = (uint8_t *)sp->compressed_buffer;
         lerc_data_size = sp->compressed_size - strm.avail_out;
         inflateEnd(&strm);
 #endif
@@ -396,7 +395,7 @@ static int LERCPreDecode(TIFF *tif, uint16_t s)
             return 0;
         }
 
-        lerc_data = sp->compressed_buffer;
+        lerc_data = (uint8_t *)sp->compressed_buffer;
         lerc_data_size = (unsigned int)zstd_ret;
 #else
         TIFFErrorExtR(tif, module, "ZSTD support missing");
@@ -568,7 +567,7 @@ static int LERCPreDecode(TIFF *tif, uint16_t s)
         {
             _TIFFfreeExt(tif, sp->uncompressed_buffer_multiband);
             sp->uncompressed_buffer_multiband =
-                _TIFFmallocExt(tif, num_bytes_needed);
+                (uint8_t *)_TIFFmallocExt(tif, num_bytes_needed);
             if (!sp->uncompressed_buffer_multiband)
             {
                 sp->uncompressed_buffer_multiband_alloc = 0;
@@ -752,7 +751,7 @@ static int LERCDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     assert(sp != NULL);
     assert(sp->state == LSTATE_INIT_DECODE);
 
-    if (sp->uncompressed_buffer == 0)
+    if (sp->uncompressed_buffer == NULL)
     {
         memset(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module, "Uncompressed buffer not allocated");
@@ -772,6 +771,8 @@ static int LERCDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
     return 1;
 }
+
+#ifndef LERC_READ_ONLY
 
 static int LERCSetupEncode(TIFF *tif)
 {
@@ -1005,7 +1006,7 @@ static int LERCPostEncode(TIFF *tif)
                 {
                     _TIFFfreeExt(tif, sp->uncompressed_buffer_multiband);
                     sp->uncompressed_buffer_multiband =
-                        _TIFFmallocExt(tif, num_bytes_needed);
+                        (uint8_t *)_TIFFmallocExt(tif, num_bytes_needed);
                     if (!sp->uncompressed_buffer_multiband)
                     {
                         sp->uncompressed_buffer_multiband_alloc = 0;
@@ -1126,7 +1127,8 @@ static int LERCPostEncode(TIFF *tif)
             sp->uncompressed_buffer_multiband, sp->lerc_version,
             GetLercDataType(tif), 1, sp->segment_width, sp->segment_height,
             dst_nbands, dst_nbands, sp->mask_buffer, sp->maxzerror,
-            sp->compressed_buffer, sp->compressed_size, &numBytesWritten);
+            (unsigned char *)sp->compressed_buffer, sp->compressed_size,
+            &numBytesWritten);
     }
     else
 #endif
@@ -1139,7 +1141,8 @@ static int LERCPostEncode(TIFF *tif)
             use_mask ? 1 : 0,
 #endif
             use_mask ? sp->mask_buffer : NULL, sp->maxzerror,
-            sp->compressed_buffer, sp->compressed_size, &numBytesWritten);
+            (unsigned char *)sp->compressed_buffer, sp->compressed_size,
+            &numBytesWritten);
     }
     if (lerc_ret != 0)
     {
@@ -1271,7 +1274,7 @@ static int LERCPostEncode(TIFF *tif)
     {
         int ret;
         uint8_t *tif_rawdata_backup = tif->tif_rawdata;
-        tif->tif_rawdata = sp->compressed_buffer;
+        tif->tif_rawdata = (uint8_t *)sp->compressed_buffer;
         tif->tif_rawcc = numBytesWritten;
         ret = TIFFFlushData1(tif);
         tif->tif_rawdata = tif_rawdata_backup;
@@ -1282,11 +1285,13 @@ static int LERCPostEncode(TIFF *tif)
     return 1;
 }
 
+#endif /* LERC_READ_ONLY */
+
 static void LERCCleanup(TIFF *tif)
 {
     LERCState *sp = GetLERCState(tif);
 
-    assert(sp != 0);
+    assert(sp != NULL);
 
     tif->tif_tagmethods.vgetfield = sp->vgetparent;
     tif->tif_tagmethods.vsetfield = sp->vsetparent;
@@ -1311,21 +1316,18 @@ static void LERCCleanup(TIFF *tif)
 
 static const TIFFField LERCFields[] = {
     {TIFFTAG_LERC_PARAMETERS, TIFF_VARIABLE2, TIFF_VARIABLE2, TIFF_LONG, 0,
-     TIFF_SETGET_C32_UINT32, TIFF_SETGET_UNDEFINED, FIELD_CUSTOM, FALSE, TRUE,
-     "LercParameters", NULL},
+     TIFF_SETGET_C32_UINT32, FIELD_CUSTOM, FALSE, TRUE,
+     (char *)"LercParameters", NULL},
     {TIFFTAG_LERC_MAXZERROR, 0, 0, TIFF_ANY, 0, TIFF_SETGET_DOUBLE,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "LercMaximumError",
-     NULL},
-    {TIFFTAG_LERC_VERSION, 0, 0, TIFF_ANY, 0, TIFF_SETGET_UINT32,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, FALSE, FALSE, "LercVersion", NULL},
+     FIELD_PSEUDO, TRUE, FALSE, (char *)"LercMaximumError", NULL},
+    {TIFFTAG_LERC_VERSION, 0, 0, TIFF_ANY, 0, TIFF_SETGET_UINT32, FIELD_PSEUDO,
+     FALSE, FALSE, (char *)"LercVersion", NULL},
     {TIFFTAG_LERC_ADD_COMPRESSION, 0, 0, TIFF_ANY, 0, TIFF_SETGET_UINT32,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, FALSE, FALSE,
-     "LercAdditionalCompression", NULL},
-    {TIFFTAG_ZSTD_LEVEL, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE,
-     "ZSTD zstd_compress_level", NULL},
-    {TIFFTAG_ZIPQUALITY, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "", NULL},
+     FIELD_PSEUDO, FALSE, FALSE, (char *)"LercAdditionalCompression", NULL},
+    {TIFFTAG_ZSTD_LEVEL, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO, TRUE,
+     FALSE, (char *)"ZSTD zstd_compress_level", NULL},
+    {TIFFTAG_ZIPQUALITY, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO, TRUE,
+     FALSE, (char *)"", NULL},
 };
 
 static int LERCVSetFieldBase(TIFF *tif, uint32_t tag, ...)
@@ -1517,12 +1519,14 @@ int TIFFInitLERC(TIFF *tif, int scheme)
     tif->tif_decoderow = LERCDecode;
     tif->tif_decodestrip = LERCDecode;
     tif->tif_decodetile = LERCDecode;
+#ifndef LERC_READ_ONLY
     tif->tif_setupencode = LERCSetupEncode;
     tif->tif_preencode = LERCPreEncode;
     tif->tif_postencode = LERCPostEncode;
     tif->tif_encoderow = LERCEncode;
     tif->tif_encodestrip = LERCEncode;
     tif->tif_encodetile = LERCEncode;
+#endif
     tif->tif_cleanup = LERCCleanup;
 
     /* Default values for codec-specific fields */

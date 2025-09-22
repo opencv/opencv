@@ -90,6 +90,7 @@ int TIFFJPEGIsFullStripRequired_12(TIFF *tif);
 
 /* HAVE_JPEGTURBO_DUAL_MODE_8_12 is defined for libjpeg-turbo >= 3.0 which
  * adds a dual-mode 8/12 bit API in the same library.
+ * (note: libjpeg-turbo 2.2 was actually released as 3.0)
  */
 
 #if defined(HAVE_JPEGTURBO_DUAL_MODE_8_12)
@@ -205,6 +206,8 @@ typedef struct
     int samplesperclump;
 
     JPEGOtherSettings otherSettings;
+
+    int encode_raw_error;
 } JPEGState;
 
 #define JState(tif) ((JPEGState *)(tif)->tif_data)
@@ -220,13 +223,13 @@ static int DecodeRowError(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 
 static const TIFFField jpegFields[] = {
     {TIFFTAG_JPEGTABLES, -3, -3, TIFF_UNDEFINED, 0, TIFF_SETGET_C32_UINT8,
-     TIFF_SETGET_C32_UINT8, FIELD_JPEGTABLES, FALSE, TRUE, "JPEGTables", NULL},
-    {TIFFTAG_JPEGQUALITY, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "", NULL},
-    {TIFFTAG_JPEGCOLORMODE, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, FALSE, FALSE, "", NULL},
-    {TIFFTAG_JPEGTABLESMODE, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, FALSE, FALSE, "", NULL}};
+     FIELD_JPEGTABLES, FALSE, TRUE, "JPEGTables", NULL},
+    {TIFFTAG_JPEGQUALITY, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO,
+     TRUE, FALSE, "", NULL},
+    {TIFFTAG_JPEGCOLORMODE, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO,
+     FALSE, FALSE, "", NULL},
+    {TIFFTAG_JPEGTABLESMODE, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO,
+     FALSE, FALSE, "", NULL}};
 
 /*
  * libjpeg interface layer.
@@ -1769,7 +1772,8 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                     {
                         unsigned char *out_ptr =
                             ((unsigned char *)buf) + iPair * 3;
-                        JSAMPLE *in_ptr = (JSAMPLE *)(tmpbuf + iPair * 2);
+                        TIFF_JSAMPLE *in_ptr =
+                            (TIFF_JSAMPLE *)(tmpbuf + iPair * 2);
                         out_ptr[0] = (unsigned char)((in_ptr[0] & 0xff0) >> 4);
                         out_ptr[1] =
                             (unsigned char)(((in_ptr[0] & 0xf) << 4) |
@@ -2191,9 +2195,12 @@ static int JPEGPreEncode(TIFF *tif, uint16_t s)
         segment_width = TIFFhowmany_32(segment_width, sp->h_sampling);
         segment_height = TIFFhowmany_32(segment_height, sp->v_sampling);
     }
-    if (segment_width > 65535 || segment_height > 65535)
+    if (segment_width > (uint32_t)JPEG_MAX_DIMENSION ||
+        segment_height > (uint32_t)JPEG_MAX_DIMENSION)
     {
-        TIFFErrorExtR(tif, module, "Strip/tile too large for JPEG");
+        TIFFErrorExtR(tif, module,
+                      "Strip/tile too large for JPEG. Maximum dimension is %d",
+                      (int)JPEG_MAX_DIMENSION);
         return (0);
     }
     sp->cinfo.c.image_width = segment_width;
@@ -2300,6 +2307,7 @@ static int JPEGPreEncode(TIFF *tif, uint16_t s)
             return (0);
     }
     sp->scancount = 0;
+    sp->encode_raw_error = FALSE;
 
     return (1);
 }
@@ -2396,6 +2404,13 @@ static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 
     (void)s;
     assert(sp != NULL);
+
+    if (sp->encode_raw_error)
+    {
+        TIFFErrorExtR(tif, tif->tif_name, "JPEGEncodeRaw() already failed");
+        return 0;
+    }
+
     /* data is expected to be supplied in multiples of a clumpline */
     /* a clumpline is equivalent to v_sampling desubsampled scanlines */
     /* TODO: the following calculation of bytesperclumpline, should substitute
@@ -2467,7 +2482,10 @@ static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
         {
             int n = sp->cinfo.c.max_v_samp_factor * DCTSIZE;
             if (TIFFjpeg_write_raw_data(sp, sp->ds_buffer, n) != n)
+            {
+                sp->encode_raw_error = TRUE;
                 return (0);
+            }
             sp->scancount = 0;
         }
         tif->tif_row += sp->v_sampling;

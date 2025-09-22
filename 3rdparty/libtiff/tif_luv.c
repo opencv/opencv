@@ -145,9 +145,11 @@
  * quantization errors into noise.
  */
 
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 /*
  * State block for each open TIFF
@@ -770,13 +772,26 @@ static int LogLuvEncodeTile(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 #undef exp2 /* Conflict with C'99 function */
 #define exp2(x) exp(M_LN2 *(x))
 
+#define TIFF_RAND_MAX 32767
+
+// From POSIX.1-2001 as an example of an implementation of rand()
+static uint32_t _TIFFRand()
+{
+    static uint32_t nCounter = 0;
+    if (!nCounter)
+        nCounter = (uint32_t)(time(NULL) & UINT32_MAX);
+    ++nCounter;
+    uint32_t nCounterLocal =
+        (uint32_t)(((uint64_t)(nCounter)*1103515245U + 12345U) & UINT32_MAX);
+    nCounter = nCounterLocal;
+    return (nCounterLocal / 65536U) % (TIFF_RAND_MAX + 1);
+};
+
 static int tiff_itrunc(double x, int m)
 {
     if (m == SGILOGENCODE_NODITHER)
         return (int)x;
-    /* Silence CoverityScan warning about bad crypto function */
-    /* coverity[dont_call] */
-    return (int)(x + rand() * (1. / RAND_MAX) - .5);
+    return (int)(x + _TIFFRand() * (1. / TIFF_RAND_MAX) - .5);
 }
 
 #if !LOGLUV_PUBLIC
@@ -1774,10 +1789,10 @@ static int LogLuvVGetField(TIFF *tif, uint32_t tag, va_list ap)
 }
 
 static const TIFFField LogLuvFields[] = {
-    {TIFFTAG_SGILOGDATAFMT, 0, 0, TIFF_SHORT, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "SGILogDataFmt", NULL},
-    {TIFFTAG_SGILOGENCODE, 0, 0, TIFF_SHORT, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "SGILogEncode", NULL}};
+    {TIFFTAG_SGILOGDATAFMT, 0, 0, TIFF_SHORT, 0, TIFF_SETGET_INT, FIELD_PSEUDO,
+     TRUE, FALSE, "SGILogDataFmt", NULL},
+    {TIFFTAG_SGILOGENCODE, 0, 0, TIFF_SHORT, 0, TIFF_SETGET_INT, FIELD_PSEUDO,
+     TRUE, FALSE, "SGILogEncode", NULL}};
 
 int TIFFInitSGILog(TIFF *tif, int scheme)
 {
