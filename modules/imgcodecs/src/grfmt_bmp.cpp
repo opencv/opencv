@@ -48,13 +48,14 @@ namespace cv
 {
 
 static const char* fmtSignBmp = "BM";
+static const size_t INVALID_OFFSET = 0xffffffff;
 
 /************************ BMP decoder *****************************/
 
 BmpDecoder::BmpDecoder()
 {
     m_signature = fmtSignBmp;
-    m_offset = -1;
+    m_offset = INVALID_OFFSET;
     m_buf_supported = true;
     m_origin = ORIGIN_TL;
     m_bpp = 0;
@@ -218,7 +219,7 @@ bool  BmpDecoder::readHeader()
 
     if( !result )
     {
-        m_offset = -1;
+        m_offset = INVALID_OFFSET;
         m_width = m_height = -1;
         m_strm.close();
     }
@@ -237,10 +238,7 @@ bool  BmpDecoder::readData( Mat& img )
     int  nch = color ? 3 : 1;
     int  y, width3 = m_width*nch;
 
-    // FIXIT: use safe pointer arithmetic (avoid 'int'), use size_t, intptr_t, etc
-    CV_Assert(((uint64)m_height * m_width * nch < (CV_BIG_UINT(1) << 30)) && "BMP reader implementation doesn't support large images >= 1Gb");
-
-    if( m_offset < 0 || !m_strm.isOpened())
+    if( m_offset == INVALID_OFFSET || !m_strm.isOpened())
         return false;
 
     if( m_origin == ORIGIN_BL )

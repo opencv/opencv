@@ -45,9 +45,9 @@ public:
     virtual bool  open( const Mat& buf );
     virtual void  close();
     bool          isOpened();
-    void          setPos( int pos );
-    int           getPos();
-    void          skip( int bytes );
+    void          setPos( size_t pos );
+    size_t        getPos();
+    void          skip( size_t bytes );
 
 protected:
 
@@ -57,7 +57,7 @@ protected:
     uchar*  m_current;
     FILE*   m_file;
     int     m_block_size;
-    int     m_block_pos;
+    size_t  m_block_pos;
     bool    m_is_opened;
 
     virtual void  readBlock();

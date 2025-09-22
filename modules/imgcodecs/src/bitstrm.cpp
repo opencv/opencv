@@ -120,9 +120,9 @@ void  RBaseStream::release()
 }
 
 
-void  RBaseStream::setPos( int pos )
+void  RBaseStream::setPos( size_t pos )
 {
-    CV_Assert(isOpened() && pos >= 0);
+    CV_Assert(isOpened());
 
     if( !m_file )
     {
@@ -132,7 +132,7 @@ void  RBaseStream::setPos( int pos )
     }
 
     int offset = pos % m_block_size;
-    int old_block_pos = m_block_pos;
+    size_t old_block_pos = m_block_pos;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
     if (old_block_pos != m_block_pos)
@@ -140,18 +140,19 @@ void  RBaseStream::setPos( int pos )
 }
 
 
-int  RBaseStream::getPos()
+size_t RBaseStream::getPos()
 {
     CV_Assert(isOpened());
-    int pos = validateToInt((m_current - m_start) + m_block_pos);
+    ptrdiff_t diff = m_current - m_start;
+    CV_Assert(diff >= 0);
+    size_t pos = static_cast<size_t>(diff) + m_block_pos;
     CV_Assert(pos >= m_block_pos); // overflow check
-    CV_Assert(pos >= 0); // overflow check
+    CV_Assert(pos >= static_cast<size_t>(diff)); // overflow check
     return pos;
 }
 
-void  RBaseStream::skip( int bytes )
+void  RBaseStream::skip( size_t bytes )
 {
-    CV_Assert(bytes >= 0);
     uchar* old = m_current;
     m_current += bytes;
     CV_Assert(m_current >= old);  // overflow check
