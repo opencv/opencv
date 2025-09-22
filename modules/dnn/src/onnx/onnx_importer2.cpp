@@ -220,7 +220,7 @@ protected:
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNegativeLogLikelihoodLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseSoftmaxCrossEntropyLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSoftmaxCrossEntropyLoss  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnique               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2639,7 +2639,6 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
-
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =

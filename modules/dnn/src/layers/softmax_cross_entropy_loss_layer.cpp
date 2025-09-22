@@ -8,7 +8,13 @@
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-// Opset's 12 to 23 are covered.
+// ONNX operator: SoftmaxCrossEntropyLoss
+// Spec: https://onnx.ai/onnx/operators/onnx__SoftmaxCrossEntropyLoss.html
+// Supported opsets: 12-23
+
+namespace {
+const int nstripes = 16;
+}
 
 namespace cv {
 namespace dnn {
@@ -76,8 +82,9 @@ public:
 
         Mat logits2D; tensorNCX_to_NSxC(logits, logits2D);
         Mat logp2D;   computeLogSoftmax(logits2D, logp2D);
-        if (wantLogProb)
+        if (wantLogProb){
             NSxC_to_tensorNCX(logp2D, logits.dims, logits.size.p, outv[1]);
+        }
 
         const bool expanded = (labels.dims == logits.dims && labels.size[1] == C) || soft_label;
         const float eps = std::max(0.f, std::min(1.f, label_smoothing));
@@ -97,17 +104,25 @@ public:
             parallel_for_(Range(0, N*S), [&](const Range& rr){
                 for (int r = rr.start; r < rr.end; ++r) {
                     const float* p = logp2D.ptr<float>(r);
-                    double s = 0.0; for (int c = 0; c < C; ++c) s += p[c];
-                    meanLogRow[r] = (float)(s / C);
+                    double s = 0.0;
+                    for (int c = 0; c < C; ++c) {
+                        s += p[c];
+                    }
+                    meanLogRow[r] = static_cast<float>(s / C);
                 }
-            }, 16);
+            }, nstripes);
         }
 
         parallel_for_(Range(0, N*S), [&](const Range& rr){
             for (int r = rr.start; r < rr.end; ++r)
             {
                 const int y = idx1D.at<int>(r);
-                if (y == ignore_index) { validMask.at<uchar>(r) = 0; effW.at<float>(r) = 0.f; continue; }
+                if (y == ignore_index)
+                {
+                    validMask.at<uchar>(r) = 0;
+                    effW.at<float>(r) = 0.f;
+                    continue;
+                }
                 CV_Assert(0 <= y && y < C);
 
                 const float lp = logp2D.at<float>(r, y);
@@ -119,7 +134,7 @@ public:
                 per.at<float>(r) = loss * cw;
                 effW.at<float>(r) = cw;
             }
-        }, 16);
+        }, nstripes);
         }
         else
         {
@@ -129,10 +144,11 @@ public:
                             parallel_for_(Range(0, N*S), [&](const Range& rr){
                 for (int r = rr.start; r < rr.end; ++r) {
                     float* a = lab2D.ptr<float>(r);
-                    for (int c = 0; c < C; ++c)
+                    for (int c = 0; c < C; ++c) {
                         a[c] = (1.f - eps) * a[c] + eps / C;
+                    }
                 }
-            }, 16);
+            }, nstripes);
             }
 
             if (hasWeight) {
@@ -141,7 +157,7 @@ public:
                 if (wc == 1.f) continue;
                 parallel_for_(Range(0, N*S), [&](const Range& rr){
                     for (int r = rr.start; r < rr.end; ++r) lab2D.at<float>(r, c) *= wc;
-                }, 16);
+                }, nstripes);
             }
             }
 
@@ -151,15 +167,18 @@ public:
                 const float* b = logp2D.ptr<float>(r);
 
                 double dot = 0.0, wsum = 0.0;
-                for (int c = 0; c < C; ++c) { dot += (double)a[c] * (double)b[c]; wsum += (double)a[c]; }
+                for (int c = 0; c < C; ++c) {
+                    dot += static_cast<double>(a[c]) * static_cast<double>(b[c]);
+                    wsum += static_cast<double>(a[c]);
+                }
 
                 if (wsum == 0.0) {
                     validMask.at<uchar>(r) = 0;
                     effW.at<float>(r) = 0.f;
                     per.at<float>(r) = 0.f;
                 } else {
-                    per.at<float>(r) = (float)(-dot);
-                    effW.at<float>(r) = (float)wsum;
+                    per.at<float>(r) = static_cast<float>(-dot);
+                    effW.at<float>(r) = static_cast<float>(wsum);
                 }
             }
         }
@@ -181,8 +200,8 @@ public:
                     if (reduction == "mean") den += std::max(1e-12f, wEff);
                 }
             }
-            const float out = (reduction == "sum") ? (float)num
-                                                : (float)((den > 0.0) ? (num / den) : 0.0);
+            const float out = (reduction == "sum") ? static_cast<float>(num)
+                                                : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
             outv[0].create(1, 1, CV_32F);
             outv[0].at<float>(0) = out;
         }
@@ -212,8 +231,9 @@ public:
 
                 float* dstRow = dst.ptr<float>(row);
                 const float* nBase = srcData + n * sN;
-                for (int c = 0; c < C; ++c)
+                for (int c = 0; c < C; ++c) {
                     dstRow[c] = nBase[c * sC + s];
+                }
             }
         }, nstripes);
     }
@@ -241,8 +261,9 @@ public:
 
                 const float* srcRow = src2D.ptr<float>(row);
                 float* nBase = dstData + n * sN;
-                for (int c = 0; c < C; ++c)
+                for (int c = 0; c < C; ++c) {
                     nBase[c * sC + s] = srcRow[c];
+                }
             }
         }, nstripes);
     }
@@ -261,14 +282,21 @@ private:
             for (int r = rr.start; r < rr.end; ++r)
             {
                 const float* x = logits2D.ptr<float>(r);
-                float m = x[0]; for (int c=1;c<logits2D.cols;++c) m = std::max(m, x[c]);
+                float m = x[0];
+                for (int c = 1; c < logits2D.cols; ++c) {
+                    m = std::max(m, x[c]);
+                }
                 double sum = 0.0;
-                for (int c=0;c<logits2D.cols;++c) sum += std::exp((double)x[c] - m);
-                float logZ = (float)(std::log(sum) + m);
+                for (int c = 0; c < logits2D.cols; ++c) {
+                    sum += std::exp(static_cast<double>(x[c]) - m);
+                }
+                float logZ = static_cast<float>(std::log(sum) + m);
                 float* y = logp2D.ptr<float>(r);
-                for (int c=0;c<logits2D.cols;++c) y[c] = x[c] - logZ;
+                for (int c = 0; c < logits2D.cols; ++c) {
+                    y[c] = x[c] - logZ;
+                }
             }
-        }, 16);
+        }, nstripes);
     }
 };
 
