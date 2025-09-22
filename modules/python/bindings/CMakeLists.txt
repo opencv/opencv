@@ -51,7 +51,7 @@ ocv_list_filterout(opencv_hdrs "modules/core/include/opencv2/core/fast_math.hpp"
 ocv_list_filterout(opencv_hdrs "modules/core/.*/cuda/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/hal/")
 ocv_list_filterout(opencv_hdrs "modules/core/.*/opencl/")
-ocv_list_filterout(opencv_hdrs "modules/.+/utils/.*")
+ocv_list_filterout(opencv_hdrs "modules/.+/utils/trace.hpp")
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.inl\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*_inl\\\\.h*")
 ocv_list_filterout(opencv_hdrs "modules/.*\\\\.details\\\\.h*")
