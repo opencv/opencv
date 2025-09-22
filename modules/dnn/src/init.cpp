@@ -193,6 +193,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast,           CastLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Cast2,          Cast2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(DepthToSpace,   DepthToSpaceLayer)
     CV_DNN_REGISTER_LAYER_CLASS(SpaceToDepth,   SpaceToDepthLayer)
     CV_DNN_REGISTER_LAYER_CLASS(DepthToSpaceInt8, DepthToSpaceLayer)

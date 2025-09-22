@@ -176,6 +176,7 @@ protected:
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBatchNormalization   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCast2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1481,16 +1482,16 @@ void ONNXImporter2::parseShape(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter2::parseCast(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter2::parseCast2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Cast";
+    layerParams.type = "Cast2";
     addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 2, "CastLike requires two inputs");
-    layerParams.type = "Cast";
+    layerParams.type = "Cast2";
     addLayer(layerParams, node_proto);
 }
 
@@ -2545,7 +2546,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Reshape"] = &ONNXImporter2::parseReshape;
     dispatch["Pad"] = &ONNXImporter2::parsePad;
     dispatch["Shape"] = &ONNXImporter2::parseShape;
-    dispatch["Cast"] = &ONNXImporter2::parseCast;
+    dispatch["Cast"] = &ONNXImporter2::parseCast2;
     dispatch["CastLike"] = &ONNXImporter2::parseCastLike;
     dispatch["ConstantFill"] = dispatch["ConstantOfShape"] = &ONNXImporter2::parseConstantOfShape;
     dispatch["Gather"] = &ONNXImporter2::parseGather;
