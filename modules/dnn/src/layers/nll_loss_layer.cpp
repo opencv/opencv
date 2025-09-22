@@ -8,7 +8,13 @@
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
-// Opset's 12 to 23 are covered.
+// ONNX operator: NegativeLogLikelihoodLoss
+// Spec: https://onnx.ai/onnx/operators/onnx__NegativeLogLikelihoodLoss.html
+// Supported opsets: 12-23
+
+namespace {
+const int nstripes = 16;
+}
 
 namespace cv {
 namespace dnn {
@@ -39,7 +45,9 @@ public:
             MatShape shp = x;
             MatShape y; y.reserve(shp.size()-1);
             y.push_back(shp[0]);
-            for (size_t i = 2; i < shp.size(); ++i) y.push_back(shp[i]);
+            for (size_t i = 2; i < shp.size(); ++i) {
+                y.push_back(shp[i]);
+            }
             out.assign(1, y);
         }
         else
@@ -85,8 +93,12 @@ public:
 
         Mat logp2D; tensorNCX_to_NSxC(logp, logp2D);
         Mat idx32;
-        if (label.type() == CV_32S) idx32 = label;
-        else                        label.convertTo(idx32, CV_32S);
+        if (label.type() == CV_32S){
+            idx32 = label;
+        }
+        else {
+            label.convertTo(idx32, CV_32S);
+        }
         CV_Assert((int)idx32.total() == N*S);
         Mat idx1D = idx32.reshape(1, N*S).clone();
 
@@ -98,7 +110,12 @@ public:
             for (int r = rr.start; r < rr.end; ++r)
             {
                 const int y = idx1D.at<int>(r);
-                if (y == ignore_index) { validMask.at<uchar>(r) = 0; effW.at<float>(r) = 0.f; continue; }
+                if (y == ignore_index)
+                {
+                    validMask.at<uchar>(r) = 0;
+                    effW.at<float>(r) = 0.f;
+                    continue;
+                }
                 CV_Assert(0 <= y && y < C);
 
                 const float lp = logp2D.at<float>(r, y);
@@ -107,12 +124,14 @@ public:
                 per.at<float>(r)  = -lp * cw;
                 effW.at<float>(r) =  cw;
             }
-        }, 16);
+        }, nstripes);
 
         if (reduction == "none")
         {
             std::vector<int> outShape; outShape.push_back(N);
-            for (int i = 2; i < logp.dims; ++i) outShape.push_back(logp.size[i]);
+            for (int i = 2; i < logp.dims; ++i) {
+                outShape.push_back(logp.size[i]);
+            }
             outv[0].create((int)outShape.size(), outShape.data(), CV_32F);
             per.reshape(1, outv[0].size).copyTo(outv[0]);
         }
@@ -124,8 +143,7 @@ public:
                 num += per.at<float>(r);
                 if (reduction == "mean") den += std::max(1e-12f, effW.at<float>(r));
             }
-            const float out = (reduction == "sum") ? (float)num
-                                                : (float)((den > 0.0) ? (num / den) : 0.0);
+            const float out = (reduction == "sum") ? static_cast<float>(num) : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
             outv[0].create(1, 1, CV_32F);
             outv[0].at<float>(0) = out;
         }
@@ -155,8 +173,9 @@ public:
 
                 float* dstRow = dst.ptr<float>(row);
                 const float* nBase = srcData + n * sN;
-                for (int c = 0; c < C; ++c)
+                for (int c = 0; c < C; ++c){
                     dstRow[c] = nBase[c * sC + s];
+                }
             }
         }, nstripes);
     }
@@ -170,5 +189,4 @@ Ptr<NegativeLogLikelihoodLossLayer> NegativeLogLikelihoodLossLayer::create(const
 {
     return Ptr<NegativeLogLikelihoodLossLayer>(new NegativeLogLikelihoodLossImpl(params));
 }
-
 }}
