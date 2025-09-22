@@ -59,7 +59,17 @@ void  RBaseStream::readBlock()
         throw RBS_THROW_EOS;
     }
 
+#ifdef _WIN32
+    // See https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fseek-fseeki64?view=msvc-170
+    // See https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
+    // - Windows uses LLP64 data model, sizeof long int = 32.
+    // - Linux   uses LP64  data model, sizeof long int = 64.
+    // So for Windows, we have to use _fseeki64() instead of fseek().
+    _fseeki64( m_file, m_block_pos, SEEK_SET );
+#else
     fseek( m_file, m_block_pos, SEEK_SET );
+#endif
+
     size_t readed = fread( m_start, 1, m_block_size, m_file );
     m_end = m_start + readed;
 
@@ -120,7 +130,7 @@ void  RBaseStream::release()
 }
 
 
-void  RBaseStream::setPos( int pos )
+void  RBaseStream::setPos( int64_t pos )
 {
     CV_Assert(isOpened() && pos >= 0);
 
@@ -132,7 +142,7 @@ void  RBaseStream::setPos( int pos )
     }
 
     int offset = pos % m_block_size;
-    int old_block_pos = m_block_pos;
+    int64_t old_block_pos = m_block_pos;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
     if (old_block_pos != m_block_pos)
@@ -140,16 +150,16 @@ void  RBaseStream::setPos( int pos )
 }
 
 
-int  RBaseStream::getPos()
+int64_t RBaseStream::getPos()
 {
     CV_Assert(isOpened());
-    int pos = validateToInt((m_current - m_start) + m_block_pos);
+    int64_t pos = validateToInt64((m_current - m_start) + m_block_pos);
     CV_Assert(pos >= m_block_pos); // overflow check
     CV_Assert(pos >= 0); // overflow check
     return pos;
 }
 
-void  RBaseStream::skip( int bytes )
+void  RBaseStream::skip( int64_t bytes )
 {
     CV_Assert(bytes >= 0);
     uchar* old = m_current;
