@@ -11,12 +11,13 @@ namespace cv
 {
 
 static const char* fmtSignSunRas = "\x59\xA6\x6A\x95";
+static const size_t INVALID_OFFSET = 0xffffffff;
 
 /************************ Sun Raster reader *****************************/
 
 SunRasterDecoder::SunRasterDecoder()
 {
-    m_offset = -1;
+    m_offset = INVALID_OFFSET;
     m_signature = fmtSignSunRas;
     m_bpp = 0;
     m_encoding = RAS_STANDARD;
@@ -94,7 +95,7 @@ bool  SunRasterDecoder::readHeader()
                     m_type = IsColorPalette( m_palette, m_bpp ) ? CV_8UC3 : CV_8UC1;
                     m_offset = m_strm.getPos();
 
-                    CV_Assert(m_offset == 32 + m_maplength);
+                    CV_Assert(m_offset == static_cast<size_t>(32 + m_maplength));
                     result = true;
                 }
             }
@@ -107,7 +108,7 @@ bool  SunRasterDecoder::readHeader()
 
                 m_offset = m_strm.getPos();
 
-                CV_Assert(m_offset == 32 + m_maplength);
+                CV_Assert(m_offset == static_cast<size_t>(32 + m_maplength));
                 result = true;
             }
         }
@@ -118,7 +119,7 @@ bool  SunRasterDecoder::readHeader()
 
     if( !result )
     {
-        m_offset = -1;
+        m_offset = INVALID_OFFSET;
         m_width = m_height = -1;
         m_strm.close();
     }
@@ -138,7 +139,7 @@ bool  SunRasterDecoder::readData( Mat& img )
     int  width3 = m_width*nch;
     int  y;
 
-    if( m_offset < 0 || !m_strm.isOpened())
+    if( m_offset == INVALID_OFFSET || !m_strm.isOpened())
         return false;
 
     AutoBuffer<uchar> _src(src_pitch + 32);

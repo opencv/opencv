@@ -59,7 +59,25 @@ void  RBaseStream::readBlock()
         throw RBS_THROW_EOS;
     }
 
-    fseek( m_file, m_block_pos, SEEK_SET );
+    // fseek()'s 2nd argument type is "signed long int".
+    // m_block_pos is "size_t(unsigned long int)".
+    // So converting is required.
+    if(m_block_pos > std::numeric_limits<int64_t>::max()) {
+        throw RBS_BAD_POSITION;
+    }
+    const int64_t pos_i64 = static_cast<int64_t>(m_block_pos);
+
+#ifdef _WIN32
+    // See https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fseek-fseeki64?view=msvc-170
+    // See https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
+    // - Windows uses LLP64 data model, sizeof long int = 32.
+    // - Linux   uses LP64  data model, sizeof long int = 64.
+    // So for Windows, we have to use _fseek64() instead of fseek().
+    _fseek64( m_file, pos_i64, SEEK_SET );
+#else
+    fseek( m_file, pos_i64, SEEK_SET );
+#endif
+
     size_t readed = fread( m_start, 1, m_block_size, m_file );
     m_end = m_start + readed;
 
