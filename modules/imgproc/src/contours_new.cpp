@@ -158,7 +158,7 @@ static bool icvTraceContour(Mat& image, const Point& start, const Point& end, bo
                 break;
 
             i3 = i4;
-            s = (s + 4) & 7;
+            s ^= 4;
         }  // end of border following loop
     }
     else
@@ -260,7 +260,7 @@ static void icvFetchContourEx(Mat& image,
                 break;
 
             i3 = i4;
-            s = (s + 4) & 7;
+            s ^= 4;
         }
     }
     rect.width -= rect.x - 1;
