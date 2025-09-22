@@ -73,7 +73,7 @@ public:
     //! the destructor
     virtual ~BaseRowFilter();
     //! the filtering operator. Must be overridden in the derived classes. The horizontal border interpolation is done outside of the class.
-    virtual void operator()(const uchar* src, uchar* dst, int width, int cn) = 0;
+    virtual void operator()(const uchar* src, uchar* dst, int width, int cn, bool processInnerRegion) = 0;
 
     int ksize;
     int anchor;
@@ -101,7 +101,7 @@ public:
     //! the destructor
     virtual ~BaseColumnFilter();
     //! the filtering operator. Must be overridden in the derived classes. The vertical border interpolation is done outside of the class.
-    virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width) = 0;
+    virtual void operator()(const uchar** src, uchar* dst, int dststep, int dstcount, int width, int kcn, bool processInnerRegion) = 0;
     //! resets the internal buffers, if any
     virtual void reset();
 
@@ -109,6 +109,32 @@ public:
     int anchor;
 };
 
+/*!
+ The Base Class for Row-Column Filters
+
+ This is the base class for linear or non-linear filters that process both rows and columns of 2D arrays.
+ Such filters are used for smaller kernels 3x3 and 5x5 with combined separable Row filtering followed by Column filtering without intermediate buffer.
+
+ Several functions in OpenCV return Ptr<BaseRowColumnFilter> for the specific types of filters,
+ and those pointers can be used directly or within cv::FilterEngine.
+
+ Unlike cv::BaseFilter, cv::BaseRowColumnFilter takes separable packed row and column kernels instead of full 2D kernel.
+ */
+class BaseRowColumnFilter
+{
+public:
+    //! the default constructor
+    BaseRowColumnFilter();
+    //! the destructor
+    virtual ~BaseRowColumnFilter();
+    //! the filtering operator. Must be overridden in the derived classes. All border interpolation is done outside of the class.
+    virtual void operator()(const uchar* src, uchar* dst, int src_stride, int dst_stride, int width, int height, int cn) = 0;
+    //! resets the internal buffers, if any
+    virtual void reset();
+
+    int ksize;
+    int anchor;
+};
 
 /*!
  The Base Class for Non-Separable 2D Filters.
@@ -220,6 +246,7 @@ public:
     FilterEngine(const Ptr<BaseFilter>& _filter2D,
                  const Ptr<BaseRowFilter>& _rowFilter,
                  const Ptr<BaseColumnFilter>& _columnFilter,
+                 const Ptr<BaseRowColumnFilter>& _rowColumnFilter,
                  int srcType, int dstType, int bufType,
                  int _rowBorderType = BORDER_REPLICATE,
                  int _columnBorderType = -1,
@@ -230,6 +257,7 @@ public:
     void init(const Ptr<BaseFilter>& _filter2D,
               const Ptr<BaseRowFilter>& _rowFilter,
               const Ptr<BaseColumnFilter>& _columnFilter,
+              const Ptr<BaseRowColumnFilter>& _rowColumnFilter,
               int srcType, int dstType, int bufType,
               int _rowBorderType = BORDER_REPLICATE,
               int _columnBorderType = -1,
@@ -247,6 +275,8 @@ public:
 
     //! returns true if the filter is separable
     bool isSeparable() const { return !filter2D; }
+    bool isRowColumnSeparable() const { return rowColumnFilter != nullptr; }
+
     //! returns the number
     int remainingInputRows() const;
     int remainingOutputRows() const;
@@ -280,6 +310,7 @@ public:
     Ptr<BaseFilter> filter2D;
     Ptr<BaseRowFilter> rowFilter;
     Ptr<BaseColumnFilter> columnFilter;
+    Ptr<BaseRowColumnFilter> rowColumnFilter;
 };
 
 
@@ -334,7 +365,13 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType,
 //! returns vertical 1D box filter
 Ptr<BaseColumnFilter> getColumnSumFilter( int sumType, int dstType,
                                                      int ksize, int anchor = -1,
-                                                     double scale = 1);
+                                                     double scale = 1, int kernelSizeLog2 = 0);
+
+//! returns combined Row-column separable filter
+Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType,
+                                                     int ksize,
+                                                     double scale);
+
 //! returns box filter engine
 Ptr<FilterEngine> createBoxFilter( int srcType, int dstType, Size ksize,
                                               Point anchor = Point(-1,-1),
