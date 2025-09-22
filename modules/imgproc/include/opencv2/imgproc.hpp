@@ -4114,7 +4114,7 @@ The algorithm based on the paper @cite LowIlie2003 .
 @param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
 @param nsides The parameter defines the number of sides of the result polygon.
 @param epsilon_percentage defines the percentage of the maximum of additional area.
-If it equals -1, it is not used. Otherwise algorighm stops if additional area is greater than contourArea(_curve) * percentage.
+If it equals -1, it is not used. Otherwise algorithm stops if additional area is greater than contourArea(_curve) * percentage.
 If additional area exceeds the limit, algorithm returns as many vertices as there were at the moment the limit was exceeded.
 @param ensure_convex If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
  */
