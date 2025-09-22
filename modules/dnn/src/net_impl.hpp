@@ -236,14 +236,10 @@ struct Net::Impl : public detail::NetImplBase
             const std::vector<MatShape>& inpShapes,
             std::vector<int>& outTypes,
             std::vector<MatShape>& outShapes,
-            std::vector<std::pair<uchar*, size_t> >& outOrigData,
-            std::vector<Mat>& outputs,
             std::vector<int>& tempTypes,
             std::vector<MatShape>& tempShapes,
-            std::vector<Mat>& temps,
-            std::vector<Mat>& globalTemps,
             std::vector<cv::cuda::GpuMat>& outGpuMats,
-            bool useBufferPool);
+            std::vector<cv::cuda::GpuMat>& tempGpuMats);
 #endif
 
 #ifdef HAVE_CUDA
