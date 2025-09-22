@@ -406,5 +406,66 @@ void tensorToScalar(const Mat& tensor, int type, void* value)
     }
 }
 
+void tensorNCX_to_NSxC(const Mat& src, Mat& dst, int nstripes)
+{
+    CV_Assert(src.dims >= 2);
+    const int N = src.size[0], C = src.size[1];
+    int S = 1; for (int i = 2; i < src.dims; ++i) S *= src.size[i];
+
+    Mat src32; src.convertTo(src32, CV_32F);
+    int sz3[3] = { N, C, S };
+    Mat src3 = src32.reshape(1, 3, sz3);
+
+    dst.create(N * S, C, CV_32F);
+
+    const size_t sN = src3.step1(0);
+    const size_t sC = src3.step1(1);
+
+    const float* srcData = src3.ptr<float>();
+    parallel_for_(Range(0, N * S), [&](const Range& r){
+        for (int row = r.start; row < r.end; ++row)
+        {
+            const int n = row / S;
+            const int s = row % S;
+
+            float* dstRow = dst.ptr<float>(row);
+            const float* nBase = srcData + n * sN;
+            for (int c = 0; c < C; ++c){
+                dstRow[c] = nBase[c * sC + s];
+            }
+        }
+    }, nstripes);
+}
+
+void NSxC_to_tensorNCX(const Mat& src2D, int ndims, const int* sizes, Mat& dst, int nstripes)
+{
+    CV_Assert(ndims >= 2);
+    const int N = sizes[0], C = sizes[1];
+    int S = 1; for (int i = 2; i < ndims; ++i) S *= sizes[i];
+
+    dst.create(ndims, sizes, CV_32F);
+
+    int sz3[3] = { N, C, S };
+    Mat dst3 = dst.reshape(1, 3, sz3);
+
+    const size_t sN = dst3.step1(0);
+    const size_t sC = dst3.step1(1);
+    float* dstData = dst3.ptr<float>();
+
+    parallel_for_(Range(0, N * S), [&](const Range& r){
+        for (int row = r.start; row < r.end; ++row)
+        {
+            const int n = row / S;
+            const int s = row % S;
+
+            const float* srcRow = src2D.ptr<float>(row);
+            float* nBase = dstData + n * sN;
+            for (int c = 0; c < C; ++c) {
+                nBase[c * sC + s] = srcRow[c];
+            }
+        }
+    }, nstripes);
+}
+
 }
 }

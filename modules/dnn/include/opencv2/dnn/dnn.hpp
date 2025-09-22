@@ -107,6 +107,14 @@ CV__DNN_INLINE_NS_BEGIN
         DNN_TARGET_CPU_FP16, // Only the ARM platform is supported. Low precision computing, accelerate model inference.
     };
 
+    // Shared reduction enum for DNN loss layers
+    enum LossReduction
+    {
+        DNN_LOSS_REDUCTION_NONE = 0,
+        DNN_LOSS_REDUCTION_MEAN = 1,
+        DNN_LOSS_REDUCTION_SUM = 2
+    };
+
     enum TracingMode
     {
         DNN_TRACE_NONE = 0, //!< Don't trace anything
