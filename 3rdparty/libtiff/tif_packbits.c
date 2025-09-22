@@ -31,6 +31,8 @@
  */
 #include <stdio.h>
 
+#ifndef PACKBITS_READ_ONLY
+
 static int PackBitsPreEncode(TIFF *tif, uint16_t s)
 {
     (void)s;
@@ -78,7 +80,7 @@ static int PackBitsEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
     op = tif->tif_rawcp;
     ep = tif->tif_rawdata + tif->tif_rawdatasize;
     state = BASE;
-    lastliteral = 0;
+    lastliteral = NULL;
     while (cc > 0)
     {
         /*
@@ -231,6 +233,8 @@ static int PackBitsEncodeChunk(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
     return (1);
 }
 
+#endif
+
 static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 {
     static const char module[] = "PackBitsDecode";
@@ -314,11 +318,13 @@ int TIFFInitPackBits(TIFF *tif, int scheme)
     tif->tif_decoderow = PackBitsDecode;
     tif->tif_decodestrip = PackBitsDecode;
     tif->tif_decodetile = PackBitsDecode;
+#ifndef PACKBITS_READ_ONLY
     tif->tif_preencode = PackBitsPreEncode;
     tif->tif_postencode = PackBitsPostEncode;
     tif->tif_encoderow = PackBitsEncode;
     tif->tif_encodestrip = PackBitsEncodeChunk;
     tif->tif_encodetile = PackBitsEncodeChunk;
+#endif
     return (1);
 }
 #endif /* PACKBITS_SUPPORT */

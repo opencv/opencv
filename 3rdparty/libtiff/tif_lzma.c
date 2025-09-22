@@ -450,9 +450,8 @@ static int LZMAVGetField(TIFF *tif, uint32_t tag, va_list ap)
 }
 
 static const TIFFField lzmaFields[] = {
-    {TIFFTAG_LZMAPRESET, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE,
-     "LZMA2 Compression Preset", NULL},
+    {TIFFTAG_LZMAPRESET, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO, TRUE,
+     FALSE, "LZMA2 Compression Preset", NULL},
 };
 
 int TIFFInitLZMA(TIFF *tif, int scheme)

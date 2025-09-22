@@ -216,6 +216,7 @@ typedef enum
 #define COMPRESSION_ZSTD 50000             /* ZSTD: WARNING not registered in Adobe-maintained registry */
 #define COMPRESSION_WEBP 50001             /* WEBP: WARNING not registered in Adobe-maintained registry */
 #define COMPRESSION_JXL 50002              /* JPEGXL: WARNING not registered in Adobe-maintained registry */
+#define COMPRESSION_JXL_DNG_1_7 52546      /* JPEGXL from DNG 1.7 specification */
 #define TIFFTAG_PHOTOMETRIC 262            /* photometric interpretation */
 #define PHOTOMETRIC_MINISWHITE 0           /* min value is white */
 #define PHOTOMETRIC_MINISBLACK 1           /* min value is black */

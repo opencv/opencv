@@ -329,16 +329,15 @@ extern "C"
 
     struct _TIFFField
     {
-        uint32_t field_tag;      /* field's tag */
-        short field_readcount;   /* read count/TIFF_VARIABLE/TIFF_SPP */
-        short field_writecount;  /* write count/TIFF_VARIABLE */
-        TIFFDataType field_type; /* type of associated data */
-        uint32_t
-            field_anonymous; /* if true, this is a unknown / anonymous tag */
-        TIFFSetGetFieldType set_field_type; /* type to be passed to TIFFSetField
-                                               and TIFFGetField*/
-        TIFFSetGetFieldType get_field_type; /* not used */
-        unsigned short field_bit;           /* bit in fieldsset bit vector */
+        uint32_t field_tag;       /* field's tag */
+        short field_readcount;    /* read count/TIFF_VARIABLE/TIFF_SPP */
+        short field_writecount;   /* write count/TIFF_VARIABLE */
+        TIFFDataType field_type;  /* type of associated data */
+        uint32_t field_anonymous; /* if true, this is a unknown /
+                                     anonymous tag */
+        TIFFSetGetFieldType set_get_field_type; /* type to be passed to
+                                                   TIFFSetField, TIFFGetField */
+        unsigned short field_bit;        /* bit in fieldsset bit vector */
         unsigned char field_oktochange;  /* if true, can change while writing */
         unsigned char field_passcount;   /* if true, pass dir count on set */
         char *field_name;                /* ASCII name */

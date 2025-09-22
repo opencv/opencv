@@ -87,8 +87,8 @@ extern "C"
     static uint64_t _tiffisSizeProc(thandle_t fd);
     static int _tiffosCloseProc(thandle_t fd);
     static int _tiffisCloseProc(thandle_t fd);
-    static int _tiffDummyMapProc(thandle_t, void **base, toff_t *size);
-    static void _tiffDummyUnmapProc(thandle_t, void *base, toff_t size);
+    static int _tiffDummyMapProcCxx(thandle_t, void **base, toff_t *size);
+    static void _tiffDummyUnmapProcCxx(thandle_t, void *base, toff_t size);
     static TIFF *_tiffStreamOpen(const char *name, const char *mode, void *fd);
 
     struct tiffis_data
@@ -324,14 +324,14 @@ extern "C"
         return 0;
     }
 
-    static int _tiffDummyMapProc(thandle_t, void **base, toff_t *size)
+    static int _tiffDummyMapProcCxx(thandle_t, void **base, toff_t *size)
     {
         (void)base;
         (void)size;
         return (0);
     }
 
-    static void _tiffDummyUnmapProc(thandle_t, void *base, toff_t size)
+    static void _tiffDummyUnmapProcCxx(thandle_t, void *base, toff_t size)
     {
         (void)base;
         (void)size;
@@ -354,7 +354,7 @@ extern "C"
             tif = TIFFClientOpen(
                 name, mode, reinterpret_cast<thandle_t>(data), _tiffosReadProc,
                 _tiffosWriteProc, _tiffosSeekProc, _tiffosCloseProc,
-                _tiffosSizeProc, _tiffDummyMapProc, _tiffDummyUnmapProc);
+                _tiffosSizeProc, _tiffDummyMapProcCxx, _tiffDummyUnmapProcCxx);
             if (!tif)
             {
                 delete data;
@@ -369,7 +369,7 @@ extern "C"
             tif = TIFFClientOpen(
                 name, mode, reinterpret_cast<thandle_t>(data), _tiffisReadProc,
                 _tiffisWriteProc, _tiffisSeekProc, _tiffisCloseProc,
-                _tiffisSizeProc, _tiffDummyMapProc, _tiffDummyUnmapProc);
+                _tiffisSizeProc, _tiffDummyMapProcCxx, _tiffDummyUnmapProcCxx);
             if (!tif)
             {
                 delete data;

@@ -363,9 +363,8 @@ static int ZSTDVGetField(TIFF *tif, uint32_t tag, va_list ap)
 }
 
 static const TIFFField ZSTDFields[] = {
-    {TIFFTAG_ZSTD_LEVEL, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT,
-     TIFF_SETGET_UNDEFINED, FIELD_PSEUDO, TRUE, FALSE, "ZSTD compression_level",
-     NULL},
+    {TIFFTAG_ZSTD_LEVEL, 0, 0, TIFF_ANY, 0, TIFF_SETGET_INT, FIELD_PSEUDO, TRUE,
+     FALSE, "ZSTD compression_level", NULL},
 };
 
 int TIFFInitZSTD(TIFF *tif, int scheme)
