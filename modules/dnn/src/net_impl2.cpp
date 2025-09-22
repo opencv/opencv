@@ -440,7 +440,6 @@ void Net::Impl::allocateLayerGpuOutputs(
 }
 #endif
 
-
 void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs)
 {
     if (!mainGraph) {
@@ -712,7 +711,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 #ifdef HAVE_CUDA
         bool usedGpuInputs = false;
         if (supportGPU && inKind == _InputArray::STD_VECTOR_CUDA_GPU_MAT) {
-            std::vector<cv::cuda::GpuMat>& inGpu = inputs_.getGpuMatVecRef();
+            std::vector<cv::cuda::GpuMat> inGpu; inputs_.getGpuMatVector(inGpu);
             CV_CheckEQ(inGpu.size(), n_gr_inputs, "Unexpected number of GPU inputs");
             if (gpuTensors.size() < args.size()) gpuTensors.resize(args.size());
             for (i = 0; i < n_gr_inputs; i++) {
@@ -720,16 +719,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 const ArgData& ad = args.at(inp.idx);
                 CV_Assert(ad.kind == DNN_ARG_INPUT);
                 const cv::cuda::GpuMat& gm = inGpu[i];
-                MatShape mshape;
-                if (gm.dims <= 2) {
-                    mshape = MatShape(2);
-                    mshape[0] = gm.rows;
-                    mshape[1] = gm.cols;
-                } else {
-                    mshape = MatShape(2);
-                    mshape[0] = gm.rows;
-                    mshape[1] = gm.cols;
-                }
+                MatShape mshape(2);
+                int rows = gm.rows > 0 ? gm.rows : 1;
+                int cols = gm.cols > 0 ? gm.cols : 1;
+                mshape[0] = rows;
+                mshape[1] = cols;
                 Mat& host = argTensor(inp);
                 host.fit(mshape, gm.type());
                 gpuTensors[inp.idx] = gm;
@@ -1009,9 +1003,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         } else {
             outputsVec[i] = outm;
         }
-#ifdef HAVE_CUDA
-        // no redundant uploads here
-#endif
     }
 }
 

@@ -230,7 +230,6 @@ struct Net::Impl : public detail::NetImplBase
 #endif
 
 #ifdef HAVE_CUDA
-    // Allocate outputs like allocateLayerOutputs and ensure corresponding GpuMats exist
     void allocateLayerGpuOutputs(
             const Ptr<Layer>& layer,
             const std::vector<int>& inpTypes,
@@ -262,9 +261,6 @@ struct Net::Impl : public detail::NetImplBase
     std::unique_ptr<CudaInfo_t> cudaInfo;
 
     void initCUDABackend(const std::vector<LayerPin>& blobsToKeep_);
-
-    // Cache CUDA backend nodes for the new graph engine keyed by Layer*.
-    std::unordered_map<const void*, Ptr<CUDABackendNode> > cudaNodeCacheNewEngine;
 #endif
 
     void allocateLayer(int lid, const LayersShapesMap& layersShapes);
