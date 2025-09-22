@@ -34,7 +34,7 @@ TEST(Imgcodecs_BMP, encode_decode_over1GB_regression27789)
 TEST(Imgcodecs_BMP, write_read_over1GB_regression27789)
 {
     applyTestTag( CV_TEST_TAG_MEMORY_1GB, CV_TEST_TAG_LONG );
-    string bmpFilename = cv::tempfile(".bmp");
+    string bmpFilename = cv::tempfile(".bmp"); // To remove it, test must use EXPECT_* instead of ASSERT_*.
 
     // Create large Mat over 1GB
     // 20000 px * 18000 px *  24 bpp(3ch) = 1,080,000,000 bytes
@@ -43,13 +43,13 @@ TEST(Imgcodecs_BMP, write_read_over1GB_regression27789)
 
     // Write large BMP file.
     bool ret = false;
-    ASSERT_NO_THROW(ret = cv::imwrite(bmpFilename, src, {}));
-    ASSERT_TRUE(ret);
+    EXPECT_NO_THROW(ret = cv::imwrite(bmpFilename, src, {}));
+    EXPECT_TRUE(ret);
 
     // Read large BMP file.
     cv::Mat dst;
-    ASSERT_NO_THROW(dst = cv::imread(bmpFilename, cv::IMREAD_COLOR));
-    ASSERT_FALSE(dst.empty());
+    EXPECT_NO_THROW(dst = cv::imread(bmpFilename, cv::IMREAD_COLOR));
+    EXPECT_FALSE(dst.empty());
 
     remove(bmpFilename.c_str());
 }
