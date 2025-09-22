@@ -48,14 +48,13 @@ namespace cv
 {
 
 static const char* fmtSignBmp = "BM";
-static const size_t INVALID_OFFSET = 0xffffffff;
 
 /************************ BMP decoder *****************************/
 
 BmpDecoder::BmpDecoder()
 {
     m_signature = fmtSignBmp;
-    m_offset = INVALID_OFFSET;
+    m_offset = -1;
     m_buf_supported = true;
     m_origin = ORIGIN_TL;
     m_bpp = 0;
@@ -219,7 +218,7 @@ bool  BmpDecoder::readHeader()
 
     if( !result )
     {
-        m_offset = INVALID_OFFSET;
+        m_offset = -1;
         m_width = m_height = -1;
         m_strm.close();
     }
@@ -238,7 +237,7 @@ bool  BmpDecoder::readData( Mat& img )
     int  nch = color ? 3 : 1;
     int  y, width3 = m_width*nch;
 
-    if( m_offset == INVALID_OFFSET || !m_strm.isOpened())
+    if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
     if( m_origin == ORIGIN_BL )

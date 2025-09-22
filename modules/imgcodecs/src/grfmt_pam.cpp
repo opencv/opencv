@@ -59,8 +59,6 @@
 
 namespace cv {
 
-static const size_t INVALID_OFFSET = 0xffffffff;
-
 /* the PAM related fields */
 #define MAX_PAM_HEADER_IDENITFIER_LENGTH 8
 #define MAX_PAM_HEADER_VALUE_LENGTH 255
@@ -361,7 +359,7 @@ static int ParseInt(const char *str, int len)
 
 PAMDecoder::PAMDecoder()
 {
-    m_offset = INVALID_OFFSET;
+    m_offset = -1;
     m_buf_supported = true;
     bit_mode = false;
     selected_fmt = IMWRITE_PAM_FORMAT_NULL;
@@ -505,14 +503,14 @@ bool PAMDecoder::readHeader()
         }
 
         // failed
-        m_offset = INVALID_OFFSET;
+        m_offset = -1;
         m_width = m_height = -1;
         m_strm.close();
         return false;
     }
     catch (...)
     {
-        m_offset = INVALID_OFFSET;
+        m_offset = -1;
         m_width = m_height = -1;
         m_strm.close();
         throw;
@@ -536,7 +534,7 @@ bool PAMDecoder::readData(Mat& img)
     AutoBuffer<uchar> _src(src_elems_per_row * 2);
     uchar* src = _src.data();
 
-    if( m_offset == INVALID_OFFSET || !m_strm.isOpened())
+    if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
     if (selected_fmt != IMWRITE_PAM_FORMAT_NULL)

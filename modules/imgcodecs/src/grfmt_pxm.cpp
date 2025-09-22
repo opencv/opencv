@@ -50,8 +50,6 @@
 namespace cv
 {
 
-static const size_t INVALID_OFFSET = 0xffffffff;
-
 ///////////////////////// P?M reader //////////////////////////////
 
 static int ReadNumber(RLByteStream& strm, int maxdigits = 0)
@@ -104,7 +102,7 @@ static int ReadNumber(RLByteStream& strm, int maxdigits = 0)
 
 PxMDecoder::PxMDecoder()
 {
-    m_offset = INVALID_OFFSET;
+    m_offset = -1;
     m_buf_supported = true;
     m_bpp = 0;
     m_binary = false;
@@ -199,7 +197,7 @@ bool PxMDecoder::readHeader()
 
     if( !result )
     {
-        m_offset = INVALID_OFFSET;
+        m_offset = -1;
         m_width = m_height = -1;
         m_strm.close();
     }
@@ -218,7 +216,7 @@ bool PxMDecoder::readData( Mat& img )
     int  nch = CV_MAT_CN(m_type);
     int  width3 = m_width*nch;
 
-    if( m_offset == INVALID_OFFSET || !m_strm.isOpened())
+    if( m_offset < 0 || !m_strm.isOpened())
         return false;
 
     uchar gray_palette[256] = {0};

@@ -24,8 +24,6 @@ DECLARE_RBS_EXCEPTION(THROW_FORB)
 #define RBS_THROW_FORB RBS_THROW_FORB_Exception(cv::Error::StsError, "Forrbidden huffman code", CV_Func, __FILE__, __LINE__)
 DECLARE_RBS_EXCEPTION(BAD_HEADER)
 #define RBS_BAD_HEADER RBS_BAD_HEADER_Exception(cv::Error::StsError, "Invalid header", CV_Func, __FILE__, __LINE__)
-DECLARE_RBS_EXCEPTION(BAD_POSITION)
-#define RBS_BAD_POSITION RBS_THROW_EOS_Exception(cv::Error::StsError, "Unexpected position of input stream", CV_Func, __FILE__, __LINE__)
 
 #define CHECK_WRITE(action) \
 if (!action) \
@@ -47,9 +45,9 @@ public:
     virtual bool  open( const Mat& buf );
     virtual void  close();
     bool          isOpened();
-    void          setPos( size_t pos );
-    size_t        getPos();
-    void          skip( size_t bytes );
+    void          setPos( int64_t pos );
+    int64_t       getPos();
+    void          skip( int64_t bytes );
 
 protected:
 
@@ -59,7 +57,7 @@ protected:
     uchar*  m_current;
     FILE*   m_file;
     int     m_block_size;
-    size_t  m_block_pos;
+    int64_t m_block_pos;
     bool    m_is_opened;
 
     virtual void  readBlock();

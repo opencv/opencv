@@ -59,23 +59,15 @@ void  RBaseStream::readBlock()
         throw RBS_THROW_EOS;
     }
 
-    // fseek()'s 2nd argument type is "signed long int".
-    // m_block_pos is "size_t(unsigned long int)".
-    // So converting is required.
-    if(m_block_pos > static_cast<size_t>(std::numeric_limits<int64_t>::max())) {
-        throw RBS_BAD_POSITION;
-    }
-    const int64_t pos_i64 = static_cast<int64_t>(m_block_pos);
-
 #ifdef _WIN32
     // See https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fseek-fseeki64?view=msvc-170
     // See https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
     // - Windows uses LLP64 data model, sizeof long int = 32.
     // - Linux   uses LP64  data model, sizeof long int = 64.
     // So for Windows, we have to use _fseeki64() instead of fseek().
-    _fseeki64( m_file, pos_i64, SEEK_SET );
+    _fseeki64( m_file, m_block_pos, SEEK_SET );
 #else
-    fseek( m_file, pos_i64, SEEK_SET );
+    fseek( m_file, m_block_pos, SEEK_SET );
 #endif
 
     size_t readed = fread( m_start, 1, m_block_size, m_file );
@@ -138,9 +130,9 @@ void  RBaseStream::release()
 }
 
 
-void  RBaseStream::setPos( size_t pos )
+void  RBaseStream::setPos( int64_t pos )
 {
-    CV_Assert(isOpened());
+    CV_Assert(isOpened() && pos >= 0);
 
     if( !m_file )
     {
@@ -150,7 +142,7 @@ void  RBaseStream::setPos( size_t pos )
     }
 
     int offset = pos % m_block_size;
-    size_t old_block_pos = m_block_pos;
+    int64_t old_block_pos = m_block_pos;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
     if (old_block_pos != m_block_pos)
@@ -158,19 +150,18 @@ void  RBaseStream::setPos( size_t pos )
 }
 
 
-size_t RBaseStream::getPos()
+int64_t RBaseStream::getPos()
 {
     CV_Assert(isOpened());
-    ptrdiff_t diff = m_current - m_start;
-    CV_Assert(diff >= 0);
-    size_t pos = static_cast<size_t>(diff) + m_block_pos;
+    int64_t pos = validateToInt64((m_current - m_start) + m_block_pos);
     CV_Assert(pos >= m_block_pos); // overflow check
-    CV_Assert(pos >= static_cast<size_t>(diff)); // overflow check
+    CV_Assert(pos >= 0); // overflow check
     return pos;
 }
 
-void  RBaseStream::skip( size_t bytes )
+void  RBaseStream::skip( int64_t bytes )
 {
+    CV_Assert(bytes >= 0);
     uchar* old = m_current;
     m_current += bytes;
     CV_Assert(m_current >= old);  // overflow check
