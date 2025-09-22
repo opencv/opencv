@@ -25,6 +25,8 @@ TEST(Imgcodecs_BMP, encode_decode_over1GB_regression27789)
     ASSERT_NO_THROW(ret = cv::imencode(".bmp", src, buf, {}));
     ASSERT_TRUE(ret);
 
+    src.release(); // To reduce usage memory, it is needed.
+
     // Decode large BMP file.
     cv::Mat dst;
     ASSERT_NO_THROW(dst = cv::imdecode(buf, cv::IMREAD_COLOR));
