@@ -1314,6 +1314,9 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS NegativeLogLikelihoodLossLayer : public Layer
     {
     public:
+        LossReduction reduction;
+        int ignoreIndex;
+
         static Ptr<NegativeLogLikelihoodLossLayer> create(const LayerParams& params);
     };
 
@@ -1321,6 +1324,10 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<SoftmaxCrossEntropyLossLayer> create(const LayerParams& params);
+        LossReduction reduction;
+        int ignoreIndex;
+        float labelSmoothing;
+        bool softLabel;
     };
 
     /**

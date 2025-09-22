@@ -108,6 +108,10 @@ void reshapeAndCopyFirst(InputArrayOfArrays inputs,
                          OutputArrayOfArrays outputs,
                          const MatShape& shape);
 
+void tensorNCX_to_NSxC(const Mat& src, Mat& dst, int nstripes = 16);
+
+void NSxC_to_tensorNCX(const Mat& src2D, int ndims, const int* sizes, Mat& dst, int nstripes);
+
 }
 }
 
