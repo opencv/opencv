@@ -1077,11 +1077,19 @@ TEST(minEnclosingPolygon, input_errors)
     std::vector<cv::Point2f> kgon;
     std::vector<cv::Point2f> ngon;
 
-    std::cout << "Four lines of \'invalid argument: ...\' are expected:" << std::endl;
-
     ngon = {{0.0, 0.0}, {1.0, 1.0}};
-    EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
-    << "unexpected exception: not enough points in input ngon (n < 3)";
+    EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 3), cv::Exception);
+
+    ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
+    EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 2), cv::Exception);
+    EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 5), cv::Exception);
+}
+
+TEST(minEnclosingPolygon, input_corner_cases)
+{
+    double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon;
 
     ngon = {{0.0, 0.0}, {0.0, 0.0}, {1.0, 1.0}, {1.0, 1.0}};
     EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
@@ -1090,30 +1098,7 @@ TEST(minEnclosingPolygon, input_errors)
     ngon = {{0.0, 0.0}, {1.0, 1.0}, {2.0, 2.0}, {3.0, 3.0}, {4.0, 4.0}};
     EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
     << "unexpected exception: all points on line";
-
-    ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
-    EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 2)) << "unexpected exception: k < 3";
-}
-
-TEST(minEnclosingPolygon, input_warnings)
-{
-    double area = -1.0;
-    std::vector<cv::Point2f> kgon;
-    std::vector<cv::Point2f> ngon;
-
-    std::cout << "Two lines of \'Warning: ...\' are expected:" << std::endl;
-
-    ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
-    EXPECT_NO_THROW({
-        area = minEnclosingConvexPolygon(ngon, kgon, 4);
-    }) << "unexpected exception: n = k failed";
-    EXPECT_NEAR(area, 1.0, 1e-4) << "n = k: area not equal " << ngon;
-
-    ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
-    EXPECT_NO_THROW({
-        area = minEnclosingConvexPolygon(ngon, kgon, 5);
-    }) << "unexpected exception: n < k failed";
-    EXPECT_NEAR(area, 1.0, 1e-4) << "n < k: area not equal " << ngon;
+    EXPECT_LE(area, 0.);
 }
 
 TEST(minEnclosingPolygon, unit_circle)

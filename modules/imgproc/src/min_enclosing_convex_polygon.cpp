@@ -19,7 +19,7 @@
  //M*/
 
 #include "precomp.hpp"
-#include <opencv2/imgproc.hpp>
+#include <opencv2/core/utils/logger.hpp>
 
 #include <vector>
 #include <algorithm>
@@ -29,27 +29,9 @@
 #include <iostream>
 #include <cstdlib>
 
-
-
 //////////////////////////// Constants definitions ////////////////////////////
 
 #define EPSILON 1e-6
-
-
-///////////////////////// Helper function declarations /////////////////////////
-
-namespace minEnclosingConvexPolygon {
-
-static void findMinEnclosingPolygon(cv::InputArray points, const int &k, cv::OutputArray kgon, double &area);
-
-static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon, const int &k,
-                                    cv::OutputArray kgon, double &area);
-
-static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon, std::vector<cv::Point2f> &minPolygon,
-                               double &area, int k);
-
-} //namespace
-
 
 //////////////////////// Class and struct declarations ////////////////////////
 
@@ -355,7 +337,7 @@ const FlushIntersect& FlushIntersections::lineIntersect(int i, int j)
     if(itr.done)
         return itr;
 
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     if((i + 1) % n == j)
     {
         itr.intersection.point = ngon[j];
@@ -481,7 +463,7 @@ BalancedIntersect BalancedIntersections::balancedIntersect(int i, int j, int e)
     if(balanced_intersections[i][j].done)
         return balanced_intersections[i][j];
 
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     if((i + 2) % n == j)
     {
         BalancedIntersect& bi = balanced_intersections[i][j];
@@ -616,7 +598,7 @@ void Chains::findSingleE(int i, int j, int l, int r)
  */
 void Chains::singleSideImpl(int i, int j1, int j2)
 {
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     if((j1 + 1) %n == j2)
     {
         return;
@@ -678,7 +660,7 @@ void Chains::findMiddleE1(int i, int j, int l, int r)
  */
 void Chains::middleSideImpl1(int i, int j1, int j2)
 {
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     if((j1 + 1) %n == j2)
     {
         return;
@@ -763,7 +745,7 @@ void Chains::findMiddleE(int h, int i, int j, int l, int r)
  */
 void Chains::middleSideImpl(int h, int i, int j1, int j2)
 {
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     if((j1 + 1) %n == j2)
     {
         return;
@@ -979,7 +961,7 @@ std::vector<cv::Point2f> Chains::findKVertices(std::vector<Side>& sides)
         }
         else
         {
-            throw std::logic_error("");
+            CV_Error(cv::Error::StsInternal, "findKVertices logic error!");
         }
     }
     return vertices;
@@ -992,88 +974,6 @@ std::vector<cv::Point2f> Chains::findKVertices(std::vector<Side>& sides)
 
 namespace minEnclosingConvexPolygon {
 
-//! Find the minimum enclosing convex kgon and its area. Converting inputs to used vector shape and data format.
-/*!
- * @param points         Set of points
- * @param k              Number of vertices of the output polygon
- * @param minPolygon     Minimum area convex k-gon enclosing the given set of points
- * @param area           Area of minPolygon
- */
-static void findMinEnclosingPolygon(cv::InputArray points, const int &k,
-                                    cv::OutputArray minPolygon, double &area)
-{
-    CV_Assert(!points.empty());
-
-    std::vector<cv::Point2f> ngon, kgon;
-    cv::convexHull(points, ngon, true);
-    findMinEnclosingPolygon(ngon, k, minPolygon, area);
-}
-
-//! Find the minimum enclosing convex polygon and its area for a given set of points. Handling of input errors.
-/*!
- * @param ngon           The polygon representing the convex hull of the points
- * @param k              Number of vertices of the output polygon
- * @param minPolygon     Minimum area convex k-gon enclosing the given polygon
- * @param area           Area of minPolygon
- */
-static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon, const int &k,
-                                    cv::OutputArray minPolygon, double &area) {
-    try
-    {
-        if (ngon.size() < 3)
-        {
-            throw std::invalid_argument(
-            "ngon must have 3 or more different points enclosing an area" );
-        }
-        if (cv::contourArea(ngon) < EPSILON )
-        {
-            throw std::invalid_argument( "invalid ngon: all points on line" );
-        }
-        if (k <= 3)
-        {
-            throw std::invalid_argument( "k must be 3 or higher" );
-        }
-        const size_t n = ngon.size();
-        if ((const int)n == k)
-        {
-            throw std::runtime_error ("(n = k)");
-        }
-        if ((const int)n < k)
-        {
-            throw std::runtime_error ("(n < k)");
-        }
-    }
-    catch (std::invalid_argument &message)
-    {
-        std::cout << "invalid argument: " << message.what() << std::endl;
-        return;
-    }
-    catch (std::runtime_error &message)
-    {
-        std::cout << "Warning: no minimum area polygon calculated " << message.what() << std::endl;
-        cv::Mat(ngon).copyTo(minPolygon);
-        area = cv::contourArea(minPolygon);
-        return;
-    }
-    catch (...)
-    {
-        std::cout << "input error" << std::endl;
-        return;
-    }
-
-    try
-    {
-        std::vector<cv::Point2f> kgon;
-        findMinAreaPolygon(ngon, kgon, area, k);
-        cv::Mat(kgon).copyTo(minPolygon);
-    }
-    catch (...)
-    {
-        std::cout << "correct input but execution failed" << std::endl;
-        return;
-    }
-}
-
 //! Find the minimum enclosing convex polygon and its area by calculating the one-sided and h-sided chains for all possible combinations of sides and then using the one that gives the smallest extra area.
 /*!
  * @param ngon           The polygon representing the convex hull of the points
@@ -1081,12 +981,10 @@ static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon, const 
  * @param kgon           Minimum area convex k-gon enclosing the given polygon
  * @param area           Area of kgon
  */
-static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
-                               std::vector<cv::Point2f> &minPolygon,
-                               double &area,
-                               int k) {
-
-    const size_t n = ngon.size();
+static double findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
+                                 std::vector<cv::Point2f> &minPolygon, int k)
+{
+    const int n = (int)ngon.size();
 
     Chains chains(ngon, k);
     chains.calcOneSidedChains();
@@ -1106,10 +1004,8 @@ static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
     kgon.sides = chains.findKSides(k, min.i, min.j);
     kgon.vertices = chains.findKVertices(kgon.sides);
 
-    cv::Mat(kgon.vertices).copyTo(minPolygon);
-    area = cv::contourArea(minPolygon);
-
-    return;
+    minPolygon = kgon.vertices;
+    return cv::contourArea(minPolygon);
 }
 
 } //namespace
@@ -1126,7 +1022,39 @@ static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
 
 double cv::minEnclosingConvexPolygon(cv::InputArray points, cv::OutputArray polygon, int k)
 {
-    double area = -1.0;
-    minEnclosingConvexPolygon::findMinEnclosingPolygon(points, k, polygon, area);
+    int n = (int)points.getMat().checkVector(2);
+
+    CV_Assert(!points.empty() && n >= k);
+    CV_CheckGE(n, 3, "ngon must have 3 or more different points enclosing an area");
+    CV_CheckGE(k, 3, "k must be 3 or higher");
+
+    std::vector<cv::Point2f> ngon, kgon;
+    cv::convexHull(points, ngon, true);
+
+    n = (int)ngon.size();
+
+    if (n < k)
+    {
+        CV_LOG_WARNING(NULL, "convex hull of size " << n << " must have equal or more different points than k = " << k);
+        points.copyTo(polygon);
+        return 0.;
+    }
+
+    if (n == k)
+    {
+        cv::Mat(ngon).copyTo(polygon);
+        return cv::contourArea(polygon);
+    }
+
+    if (cv::contourArea(ngon) < EPSILON)
+    {
+        CV_LOG_WARNING(NULL, "invalid ngon: all points on line");
+        points.copyTo(polygon);
+        return 0.;
+    }
+
+    double area = minEnclosingConvexPolygon::findMinAreaPolygon(ngon, kgon, k);
+    cv::Mat(kgon).copyTo(polygon);
+
     return area;
 }
