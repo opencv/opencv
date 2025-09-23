@@ -131,7 +131,15 @@ static void generateCentersPP(const Mat& data, Mat& _out_centers,
                           KMeansPPDistanceComputer(tdist2, data, dist, ci),
                           (double)divUp((size_t)(dims * N), CV_KMEANS_PARALLEL_GRANULARITY));
             double s = 0;
-            for (int i = 0; i < N; i++)
+            int i = 0;
+        #if CV_ENABLE_UNROLLED
+            for (; i + 7 < N; i += 8)
+            {
+                s += tdist2[i + 0] + tdist2[i + 1] + tdist2[i + 2] + tdist2[i + 3] +
+                     tdist2[i + 4] + tdist2[i + 5] + tdist2[i + 6] + tdist2[i + 7];
+            }
+        #endif
+            for (; i < N; i++)
             {
                 s += tdist2[i];
             }
