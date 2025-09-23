@@ -107,7 +107,10 @@ inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
+{
+    CV_CheckLE(vec.size(), static_cast<size_t>(std::numeric_limits<int>::max()), "Must not be larger than INT_MAX");
+    init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec);
+}
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
