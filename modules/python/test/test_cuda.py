@@ -154,11 +154,11 @@ class cuda_test(NewOpenCVTests):
 
                 # workaround int64/uint64 conversion to int32/uint32
                 if dtype == np.int64:
-                    print("skip")
+                    print("skip because of https://github.com/opencv/opencv/issues/27671")
                     continue
                     src = src.convertTo(cv.CV_64S)
                 elif dtype == np.uint64:
-                    print("skip")
+                    print("skip because of https://github.com/opencv/opencv/issues/27671")
                     continue
                     src = src.convertTo(cv.CV_64U)
 
