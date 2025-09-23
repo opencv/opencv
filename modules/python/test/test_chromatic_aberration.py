@@ -22,15 +22,22 @@ class ChromaticAberrationTest(NewOpenCVTests):
         self.assertIsNotNone(self.test_image, "Failed to load test image")
         self.assertFalse(self.test_image.size == 0, "Failed to load test image")
 
-    def test_chromatic_aberration_corrector_load_calibration(self):
-        corrector = cv.ChromaticAberrationCorrector(self.test_yaml_file)
-        self.assertIsNotNone(corrector)
+    def test_load_calib_and_correct_image(self):
+        coeffMat, degree, calibW, calibH = cv.loadCalibrationResultFromFile(self.test_yaml_file)
 
-        with self.assertRaises((cv.error, SystemError)):
-            _ = cv.ChromaticAberrationCorrector("non_existent_file.yaml")
+        self.assertIsInstance(coeffMat, np.ndarray)
+        self.assertEqual(coeffMat.dtype, np.float32)
+        self.assertEqual(coeffMat.shape[0], 4)
+        self.assertGreater(coeffMat.shape[1], 0)
+        self.assertGreater(degree, 0)
+        self.assertGreater(calibW, 0)
+        self.assertGreater(calibH, 0)
+        self.assertEqual(coeffMat.shape[1], EXPECTED_COEFFS_SIZE)
 
-    def test_chromatic_aberration_correction(self):
-        corrected = cv.correctChromaticAberration(self.test_image, self.test_yaml_file)
+        self.assertEqual(self.test_image.shape[1], calibW)
+        self.assertEqual(self.test_image.shape[0], calibH)
+
+        corrected = cv.correctChromaticAberration(self.test_image, coeffMat, calibW, calibH, degree)
 
         self.assertEqual(corrected.shape[:2], self.test_image.shape[:2])
         self.assertEqual(corrected.dtype, self.test_image.dtype)
@@ -39,79 +46,14 @@ class ChromaticAberrationTest(NewOpenCVTests):
         sum_diff = cv.sumElems(diff)
         self.assertGreater(sum(sum_diff[:3]), 0.0)
 
-    def test_chromatic_aberration_correction_tablet(self):
-        test_yaml_file = self.find_file(
-            "cv/cameracalibration/chromatic_aberration/calib_result_tablet.yaml"
-        )
-        test_image = self.get_sample(
-            "cv/cameracalibration/chromatic_aberration/tablet_circles_.png", 1
-        )
-        self.assertIsNotNone(test_image, "Failed to load test image")
-        self.assertFalse(test_image.size == 0, "Failed to load test image")
-
-        corrected = cv.correctChromaticAberration(test_image, test_yaml_file)
-
-        self.assertEqual(corrected.shape[:2], test_image.shape[:2])
-        self.assertEqual(corrected.dtype, test_image.dtype)
-
-        diff = cv.absdiff(test_image, corrected)
-        sum_diff = cv.sumElems(diff)
-        self.assertGreater(sum(sum_diff[:3]), 0.0)
-
-    def test_chromatic_aberration_correction_synthetic_simple_warp(self):
-        test_yaml_file = self.find_file(
-            "cv/cameracalibration/chromatic_aberration/simple_warp.yaml"
-        )
-        test_image = self.get_sample(
-            "cv/cameracalibration/chromatic_aberration/synthetic_simple_warp.png", 1
-        )
-        self.assertIsNotNone(test_image, "Failed to load test image")
-        self.assertFalse(test_image.size == 0, "Failed to load test image")
-
-        corrected = cv.correctChromaticAberration(test_image, test_yaml_file)
-
-        self.assertEqual(corrected.shape[:2], test_image.shape[:2])
-        self.assertEqual(corrected.dtype, test_image.dtype)
-
-        diff = cv.absdiff(test_image, corrected)
-        sum_diff = cv.sumElems(diff)
-        self.assertGreater(sum(sum_diff[:3]), 0.0)
-
-    def test_chromatic_aberration_correction_synthetic_radial(self):
-        test_yaml_file = self.find_file("cv/cameracalibration/chromatic_aberration/radial.yaml")
-        test_image = self.get_sample(
-            "cv/cameracalibration/chromatic_aberration/synthetic_radial.png", 1
-        )
-        self.assertIsNotNone(test_image, "Failed to load test image")
-        self.assertFalse(test_image.size == 0, "Failed to load test image")
-
-        corrected = cv.correctChromaticAberration(test_image, test_yaml_file)
-
-        self.assertEqual(corrected.shape[:2], test_image.shape[:2])
-        self.assertEqual(corrected.dtype, test_image.dtype)
-
-        diff = cv.absdiff(test_image, corrected)
-        sum_diff = cv.sumElems(diff)
-        self.assertGreater(sum(sum_diff[:3]), 0.0)
-
-    def test_chromatic_aberration_correction_invalid_input(self):
-        gray = cv.cvtColor(self.test_image, cv.COLOR_BGR2GRAY)
-        with self.assertRaises(cv.error):
-            _ = cv.correctChromaticAberration(gray, self.test_yaml_file)
-
-    def test_correct_chromatic_aberration_function(self):
-        corrected = cv.correctChromaticAberration(self.test_image, self.test_yaml_file)
-
-        self.assertEqual(corrected.shape[0], self.test_image.shape[0])
-        self.assertEqual(corrected.shape[1], self.test_image.shape[1])
-        self.assertEqual(corrected.dtype, self.test_image.dtype)
-
-    def test_yaml_reading_integration(self):
+    def test_yaml_contents_as_expected(self):
         fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
 
         red_node = fs.getNode("red_channel")
         blue_node = fs.getNode("blue_channel")
+        self.assertTrue(red_node.isMap())
+        self.assertTrue(blue_node.isMap())
 
         coeffs_x = red_node.getNode("coeffs_x")
         self.assertIsNotNone(coeffs_x)
@@ -131,24 +73,41 @@ class ChromaticAberrationTest(NewOpenCVTests):
 
         fs.release()
 
-    def test_function_class_equivalence(self):
-        if not hasattr(cv, "ChromaticAberrationCorrector"):
-            self.skipTest("cv.ChromaticAberrationCorrector is not available in Python bindings")
+    def test_invalid_single_channel(self):
+        coeffMat, degree, calibW, calibH = self._load_calib()
 
-        corrector = cv.ChromaticAberrationCorrector(self.test_yaml_file)
-        ref = corrector.correctImage(self.test_image)
-        out = cv.correctChromaticAberration(self.test_image, self.test_yaml_file)
+        gray = cv.cvtColor(self.test_image, cv.COLOR_BGR2GRAY)
+        with self.assertRaises(cv.error):
+            _ = cv.correctChromaticAberration(gray, coeffMat, calibW, calibH, degree)
 
-        self.assertEqual(ref.shape[:2], self.test_image.shape[:2])
-        self.assertEqual(ref.dtype, self.test_image.dtype)
+    def test_empty_coeff_mat(self):
+        coeffMat, degree, calibW, calibH = self._load_calib()
 
-        diff = cv.absdiff(ref, out)
-        inf_norm = cv.norm(diff, cv.NORM_INF)
-        self.assertLessEqual(inf_norm, 1)
+        emptyCoeff = np.empty((0, 0), dtype=np.float32)
+        with self.assertRaises(cv.error):
+            _ = cv.correctChromaticAberration(self.test_image, emptyCoeff, calibW, calibH, degree)
 
-        nz = cv.countNonZero(diff.reshape(-1, 1))
-        self.assertEqual(nz, 0, msg=f"{nz} pixels differ between implementations")
+    def test_mismatched_image_size(self):
+        coeffMat, degree, calibW, calibH = self._load_calib()
 
+        resized = cv.resize(self.test_image, (self.test_image.shape[1] // 2, self.test_image.shape[0] // 2))
+        with self.assertRaises(cv.error):
+            _ = cv.correctChromaticAberration(resized, coeffMat, calibW, calibH, degree)
+
+    def test_wrong_coeff_type(self):
+        coeffMat, degree, calibW, calibH = self._load_calib()
+
+        wrongType = coeffMat.astype(np.float64)
+        with self.assertRaises(cv.error):
+            _ = cv.correctChromaticAberration(self.test_image, wrongType, calibW, calibH, degree)
+
+    def test_degree_does_not_match_coeff_cols(self):
+        coeffMat, degree, calibW, calibH = self._load_calib()
+
+        wrongDegree = max(1, degree - 1)
+        self.assertNotEqual(EXPECTED_COEFFS_SIZE, coeffMat.shape[1])
+        with self.assertRaises(cv.error):
+            _ = cv.correctChromaticAberration(self.test_image, coeffMat, calibW, calibH, wrongDegree)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

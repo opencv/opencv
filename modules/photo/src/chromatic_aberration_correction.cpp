@@ -6,16 +6,16 @@
 
 namespace cv {
 
-bool loadCalibrationResultFromFile(const String& calibration_file,
-                                   Mat& coeffMat,
+void loadCalibrationResultFromFile(const String& calibration_file,
+                                    OutputArray coeffMat,
                                    int& degree,
                                    int& width,
                                    int& height) {
+    Mat tmp;
     FileStorage fs(calibration_file, FileStorage::READ);
     if (!fs.isOpened()){
         CV_Error_(Error::StsError,
                     ("Cannot open calibration file: %s", calibration_file.c_str()));
-        return false;
     }
 
     int imgW = 0, imgH = 0;
@@ -24,7 +24,6 @@ bool loadCalibrationResultFromFile(const String& calibration_file,
     if (imgW <= 0 || imgH <= 0) {
         CV_Error(Error::StsBadArg,
                     "image_width and image_height must be positive");
-        return false;
     }
     auto readChannel = [&](const char* key,
                             std::vector<double>& coeffs_x,
@@ -75,23 +74,21 @@ bool loadCalibrationResultFromFile(const String& calibration_file,
         CV_Error_(Error::StsBadSize,
                     ("Red (%zu) and blue (%zu) coefficient counts differ",
                     red_x.size(), blue_x.size()));
-        return false;
     }
     if (deg_red != deg_blue){
         CV_Error_(Error::StsBadArg,
                     ("Red (%d) and blue (%d) degrees differ",
                     deg_red, deg_blue));
-        return false;
     }
 
     const int mterms = (int)red_x.size();
 
-    coeffMat.create(4, mterms, CV_32F);
+    tmp.create(4, mterms, CV_32F);
 
-    float* Bx = coeffMat.ptr<float>(0);
-    float* By = coeffMat.ptr<float>(1);
-    float* Rx = coeffMat.ptr<float>(2);
-    float* Ry = coeffMat.ptr<float>(3);
+    float* Bx = tmp.ptr<float>(0);
+    float* By = tmp.ptr<float>(1);
+    float* Rx = tmp.ptr<float>(2);
+    float* Ry = tmp.ptr<float>(3);
 
     for (int i = 0; i < mterms; ++i) {
         Bx[i] = static_cast<float>(blue_x[i]);
@@ -103,11 +100,11 @@ bool loadCalibrationResultFromFile(const String& calibration_file,
     width = imgW;
     height = imgH;
     degree = deg_red;
+    tmp.copyTo(coeffMat);
 
-    return true;
 }
 
-void ChromaticAberrationCorrector::buildRemapsFromCoeffMat(int height, int width,
+void buildRemapsFromCoeffMat(int height, int width,
                              const Mat& coeffs,
                              int degree,
                              int rowX, int rowY,
@@ -209,23 +206,31 @@ void ChromaticAberrationCorrector::buildRemapsFromCoeffMat(int height, int width
     map_y = Ygrid - dy;
 }
 
-Mat ChromaticAberrationCorrector::correctImage(InputArray input_image, int bayerPattern) {
+Mat correctChromaticAberration(InputArray input_image,
+                               const Mat& coeffMat,
+                               int calib_width,
+                               int calib_height,
+                               int calib_degree,
+                               int bayer_pattern)
+{
     Mat image = input_image.getMat();
     if (image.channels() == 1) {
-        if (bayerPattern < 0) {
+        if (bayer_pattern < 0) {
             CV_Error_(Error::StsBadArg,
-                      ("Single‐channel input detected: must pass a valid bayerPattern"));
+                      ("Single-channel input detected: must pass a valid bayer_pattern"));
         }
         Mat dem;
-        demosaicing(image, dem, bayerPattern);
+        demosaicing(image, dem, bayer_pattern);
         image = dem;
     }
 
     const int height = image.rows;
-    const int width = image.cols;
+    const int width  = image.cols;
 
-    if (height != height_ || width != width_) {
-        CV_Error_(Error::StsBadArg, ("Image size %dx%d does not match calibration %dx%d", width, height, width_, height_));
+    if (height != calib_height || width != calib_width) {
+        CV_Error_(Error::StsBadArg,
+                  ("Image size %dx%d does not match calibration %dx%d",
+                   width, height, calib_width, calib_height));
     }
 
     std::vector<Mat> channels;
@@ -233,9 +238,8 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image, int bayer
     Mat b = channels[0], g = channels[1], r = channels[2];
 
     Mat map_x_r, map_y_r, map_x_b, map_y_b;
-
-    buildRemapsFromCoeffMat(height, width, coeffMat_, degree_, 2, 3, map_x_r, map_y_r);
-    buildRemapsFromCoeffMat(height, width, coeffMat_, degree_, 0, 1, map_x_b, map_y_b);
+    buildRemapsFromCoeffMat(height, width, coeffMat, calib_degree, 2, 3, map_x_r, map_y_r);
+    buildRemapsFromCoeffMat(height, width, coeffMat, calib_degree, 0, 1, map_x_b, map_y_b);
 
     Mat r_corr, b_corr;
     remap(r, r_corr, map_x_r, map_y_r, INTER_LINEAR, BORDER_REPLICATE);
@@ -248,15 +252,5 @@ Mat ChromaticAberrationCorrector::correctImage(InputArray input_image, int bayer
     return corrected_image;
 }
 
-ChromaticAberrationCorrector::ChromaticAberrationCorrector(const String& calibration_file) {
-    if (!loadCalibrationResultFromFile(calibration_file, coeffMat_, degree_, width_, height_)) {
-        CV_Error_(Error::StsError, ("Failed to load chromatic-aberration calibration file: %s", calibration_file.c_str()));
-    }
-}
-
-Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern) {
-    ChromaticAberrationCorrector corrector(calibration_file);
-    return corrector.correctImage(input_image, bayerPattern);
-}
 
 }

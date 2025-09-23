@@ -73,7 +73,18 @@ int main(int argc, char** argv)
 
     try
     {
-        Mat corrected = correctChromaticAberration(input, calibPath, bayerPattern);
+        Mat coeffMat;
+        int degree = -1, calibW = -1, calibH = -1;
+        try
+        {
+            loadCalibrationResultFromFile(calibPath, coeffMat, degree, calibW, calibH);
+        }
+        catch (const Exception& e)
+        {
+            cerr << "OpenCV error while reading calibration: " << e.what() << endl;
+            return 1;
+        }
+        Mat corrected = correctChromaticAberration(input, coeffMat, degree, calibW, calibH, bayerPattern);
 
         namedWindow("Original",    WINDOW_AUTOSIZE);
         namedWindow("Corrected",   WINDOW_AUTOSIZE);

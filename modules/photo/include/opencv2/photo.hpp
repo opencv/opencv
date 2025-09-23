@@ -906,8 +906,8 @@ An example correcting chromatic aberration
 This function loads polynomial calibration data from the specified file and applies
 a channel‐specific warp to remove chromatic aberration.
 If @p input_image has one channel, it is assumed to be a raw Bayer image and is
-first demosaiced using @p bayerPattern. If it has three channels, it is treated
-as a BGR image and @p bayerPattern is ignored.
+first demosaiced using @p bayer_pattern. If it has three channels, it is treated
+as a BGR image and @p bayer_pattern is ignored.
 
 Firstly, calibration needs to be done using apps/chromatic-aberration-calibration/ca_calibration.py on a photo of
 a pattern of black discs on white background, included in opencv_extra/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png
@@ -920,14 +920,18 @@ between the centres of discs in red and blue channels compared to green are mini
 are then saved in a yaml file which can be used with this function to correct lateral chromatic aberration.
 
 @param input_image Input BGR image to correct
-@param calibration_file Path to calibration file containing polynomial coefficients
-@param bayerPattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
+@param coeff_mat Coefficient model
+@param calib_width Width of images for the calibration coefficient model
+@param calib_height Height of images for the calibration coefficient model
+@param calib_degree Degree of the calibration coefficient model
+@param bayer_pattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
                         demosaicing when @p input_image has one channel; ignored otherwise.
 @return Corrected BGR image
 */
-CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern = -1);
+// CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern = -1);
+CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const Mat& coeff_mat, int calib_width, int calib_height, int calib_degree, int bayer_pattern = -1);
 
-/** @brief Load chromatic-aberration calibration into a packed coefficient matrix.
+/** @brief Load chromatic-aberration calibration parameters.
 
 Reads the red and blue polynomial coefficients from the specified file and
 packs them into a 4×N CV_32F matrix:
@@ -936,73 +940,19 @@ packs them into a 4×N CV_32F matrix:
   row 2 = red  dx coefficients
   row 3 = red  dy coefficients
 
-@param calibration_file  Path to YAML/XML calibration file.
+@param calibration_file  Path to YAML calibration file.
 @param coeffMat          Output 4xN coefficient matrix (CV_32F).
-@param degree            [out] Polynomial degree inferred from N.
-@param width             [out] Image width read from file.
-@param height            [out] Image height read from file.
-@returns true on success; most failures throw cv::Exception.
+@param degree            Polynomial degree inferred from N.
+@param width             Image width read from file.
+@param height            Image height read from file.
 */
-CV_EXPORTS_W bool loadCalibrationResultFromFile(
+CV_EXPORTS_W void loadCalibrationResultFromFile(
     const String& calibration_file,
-    Mat& coeffMat,
+    OutputArray coeffMat,
     CV_OUT int& degree,
     CV_OUT int& width,
     CV_OUT int& height);
 
-
-/** @brief Object-oriented chromatic aberration corrector.
-
-Loads calibration once in its constructor and then can repeatedly correct
-images of the same size and type.
-*/
-class CV_EXPORTS_W ChromaticAberrationCorrector {
-public:
-    /** @brief Construct from a calibration file.
-
-    @param calibration_file  Path to YAML/XML file with polynomial data.
-    @throws cv::Exception on load or parse failure.
-    */
-    CV_WRAP explicit ChromaticAberrationCorrector(const cv::String& calibration_file);
-
-    /** @brief Apply correction to an input image.
-
-    If @p input_image is a single-channel raw Bayer image, @p bayerPattern needs to
-    be specified to demosaic it before applying the correction. For a 3-channel BGR image,
-    @p bayerPattern has the default value -1.
-
-    @param input_image  Image matching the calibration size.
-    @param bayerPattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
-                        demosaicing when @p input_image has one channel; ignored otherwise.
-    @returns Corrected image
-    @throws cv::Exception if size ≠ calibration.
-    */
-    CV_WRAP Mat correctImage(InputArray input_image, int bayerPattern = -1);
-
-private:
-    Mat coeffMat_;
-    int width_, height_, degree_;
-
-    /** @brief Internal helper to build remap grids from packed coefficients.
-
-    Evaluates the 2D polynomial stored in @p coeffs at each pixel coordinate
-    to produce map_x/map_y for cv::remap().
-
-    @param height  Image height
-    @param width   Image width
-    @param coeffs  4×N coefficient matrix
-    @param degree  Polynomial degree (N = (degree+1)(degree+2)/2)
-    @param colX    Row index in @p coeffs for the dx terms (0…3)
-    @param colY    Row index in @p coeffs for the dy terms (0…3)
-    @param map_x   Output X-map (CV_32F)
-    @param map_y   Output Y-map (CV_32F)
-    */
-    CV_WRAP void buildRemapsFromCoeffMat(int height, int width,
-                             const Mat& coeffs,
-                             int degree,
-                             int rowX, int rowY,
-                             Mat& map_x, Mat& map_y);
-};
 
 //! @} photo_ca_correction
 
