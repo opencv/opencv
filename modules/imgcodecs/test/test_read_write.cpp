@@ -600,6 +600,24 @@ TEST(Imgcodecs, imwrite_regression_26207_extra)
     EXPECT_EQ(0, remove(filename.c_str()));
 }
 
+TEST(Imgcodecs, decode_over2GB)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    // empty buffer more than 2GB size
+    std::vector<uint8_t> buf(size_t(INT_MAX) + 4096);
+    cv::Mat dst;
+    EXPECT_THROW(dst = cv::imdecode(buf, cv::IMREAD_COLOR), cv::Exception);
+}
+
+TEST(Imgcodecs, decodemulti_over2GB)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    // empty buffer more than 2GB size
+    std::vector<uint8_t> buf(size_t(INT_MAX) + 4096);
+    std::vector<cv::Mat> dst;
+    EXPECT_THROW(cv::imdecodemulti(buf, cv::IMREAD_COLOR, dst), cv::Exception);
+}
+
 TEST(Imgcodecs_Params, imwrite_regression_22752)
 {
     const Mat img(16, 16, CV_8UC3, cv::Scalar::all(0));
