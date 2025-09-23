@@ -397,12 +397,9 @@ double BalancedIntersections::extraArea(int first, int last,
  */
 BalancedIntersect BalancedIntersections::flush(int i, int j, int e)
 {
-    if(i == e)
-        std::logic_error("");
-    if(j == e)
-        std::logic_error("");
+    CV_Assert(j != e);
 
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     const int before = (e - 1 + n) % n;
     BalancedIntersect bi = balanced_intersections[i][j];
 
@@ -687,7 +684,7 @@ void Chains::middleSideImpl1(int i, int j1, int j2)
  */
 void Chains::findMiddleE(int h, int i, int j, int l, int r)
 {
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     Segment& one = middle_sides[h][i][j];
     if (one.done)
         return;
@@ -696,8 +693,8 @@ void Chains::findMiddleE(int h, int i, int j, int l, int r)
     const int h_floor = (h - 1) / 2;
     const int h_ceil = h - 1 - h_floor;
 
-    if(dist == 0)
-        throw std::logic_error("");
+    CV_Assert(dist != 0);
+
     if(dist - 1 < h)
     {
         one.done = true;
@@ -791,8 +788,8 @@ std::set<int> Chains::relevantChainLengths(int h)
  */
 void Chains::calcOneSidedChains()
 {
-    const size_t n = ngon.size();
-    for(size_t i = 0; i < n; i++)
+    const int n = (int)ngon.size();
+    for(int i = 0; i < n; i++)
     {
         int j1 = (i + 2) %n, j2 = (i - 2 + n) %n;
 
@@ -808,12 +805,12 @@ void Chains::calcOneSidedChains()
  */
 void Chains::calcMiddleChains(int h)
 {
-    const size_t n = ngon.size();
+    const int n = (int)ngon.size();
     if (h == 0)
     {
-        for (size_t i = 0; i < n; i++)
+        for (int i = 0; i < n; i++)
         {
-            for (size_t j = 0; j < n; j++)
+            for (int j = 0; j < n; j++)
             {
                 Segment& one = middle_sides[h][i][j];
                 const FlushIntersect itrs = intersections.lineIntersect(i, j);
@@ -829,7 +826,7 @@ void Chains::calcMiddleChains(int h)
     }
     if (h == 1)
     {
-        for (size_t i = 0; i < n; i++)
+        for (int i = 0; i < n; i++)
         {
             int j1 = (i + 2) %n, j2 = (i - 2 + n) %n;
 
@@ -840,7 +837,7 @@ void Chains::calcMiddleChains(int h)
         return;
     }
 
-    for (size_t i = 0; i < n; i++)
+    for (int i = 0; i < n; i++)
     {
         int j1 = (i + 2) %n, j2 = (i - 2 + n) %n;
 
@@ -886,10 +883,8 @@ Minimum Chains::minimumArea(int n, int k)
  */
 std::vector<Side> Chains::reconstructHSidedChain(int h, int i, int j)
 {
-    if(h == 0)
-    {
-        throw std::logic_error("");
-    }
+    CV_Assert(h != 0);
+
     if(h == 1)
     {
         return std::vector<Side>{{middle_sides[h][i][j].side, true}};
@@ -1036,7 +1031,7 @@ double cv::minEnclosingConvexPolygon(cv::InputArray points, cv::OutputArray poly
     if (n < k)
     {
         CV_LOG_WARNING(NULL, "convex hull of size " << n << " must have equal or more different points than k = " << k);
-        points.copyTo(polygon);
+        polygon.release();
         return 0.;
     }
 
@@ -1048,8 +1043,8 @@ double cv::minEnclosingConvexPolygon(cv::InputArray points, cv::OutputArray poly
 
     if (cv::contourArea(ngon) < EPSILON)
     {
-        CV_LOG_WARNING(NULL, "invalid ngon: all points on line");
-        points.copyTo(polygon);
+        CV_LOG_WARNING(NULL, "Singular input poligon");
+        polygon.release();
         return 0.;
     }
 

@@ -1075,9 +1075,8 @@ TEST(minEnclosingCircle, three_points)
 TEST(minEnclosingPolygon, input_errors)
 {
     std::vector<cv::Point2f> kgon;
-    std::vector<cv::Point2f> ngon;
+    std::vector<cv::Point2f> ngon {{0.0, 0.0}, {1.0, 1.0}};
 
-    ngon = {{0.0, 0.0}, {1.0, 1.0}};
     EXPECT_THROW(minEnclosingConvexPolygon(ngon, kgon, 3), cv::Exception);
 
     ngon = {{0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
@@ -1089,60 +1088,52 @@ TEST(minEnclosingPolygon, input_corner_cases)
 {
     double area = -1.0;
     std::vector<cv::Point2f> kgon;
-    std::vector<cv::Point2f> ngon;
+    std::vector<cv::Point2f> ngon = {{0.0, 0.0}, {0.0, 0.0}, {1.0, 1.0}, {1.0, 1.0}};
 
-    ngon = {{0.0, 0.0}, {0.0, 0.0}, {1.0, 1.0}, {1.0, 1.0}};
-    EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, 3))
     << "unexpected exception: not enough different points in input ngon (double points)";
+    EXPECT_LE(area, 0.);
+    EXPECT_TRUE(kgon.empty());
 
     ngon = {{0.0, 0.0}, {1.0, 1.0}, {2.0, 2.0}, {3.0, 3.0}, {4.0, 4.0}};
-    EXPECT_NO_THROW(minEnclosingConvexPolygon(ngon, kgon, 3))
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, 3))
     << "unexpected exception: all points on line";
     EXPECT_LE(area, 0.);
+    EXPECT_TRUE(kgon.empty());
 }
 
 TEST(minEnclosingPolygon, unit_circle)
 {
-    double area = -1.0;
-    std::vector<cv::Point2f> kgon;
-    std::vector<cv::Point2f> ngon;
     const int n = 64;
     const int k = 7;
+    double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon(n);
 
     for(int i = 0; i < n; i++)
     {
-        cv::Point2f new_point(cos(i * 2.0 * M_PI / n), sin(i * 2.0 * M_PI / n));
-        ngon.push_back(new_point);
+        ngon[i] = { cosf(i * 2.f * M_PI / n), sinf(i * 2.f * M_PI / n) };
     }
 
-    EXPECT_NO_THROW({
-        area = minEnclosingConvexPolygon(ngon, kgon, k);
-    });
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, k));
     EXPECT_GT(area, cv::contourArea(ngon));
     EXPECT_EQ((int)kgon.size(), k);
 }
 
 TEST(minEnclosingPolygon, random_points)
 {
-    double area = -1.0;
-    std::vector<cv::Point2f> kgon;
-    std::vector<cv::Point2f> ngon;
-    std::vector<cv::Point2f> ngonHull;
     const int n = 100;
     const int k = 7;
 
-    srand(0);
-    for(int i = 0; i < n; i++)
-    {
-        cv::Point2f new_point(rand() % 100 + 1, rand() % 100 + 1);
-        ngon.push_back(new_point);
-    }
+    double area = -1.0;
+    std::vector<cv::Point2f> kgon;
+    std::vector<cv::Point2f> ngon(n);
+    std::vector<cv::Point2f> ngonHull;
 
+    cv::randu(ngon, 1, 101);
     cv::convexHull(ngon, ngonHull, true);
 
-    EXPECT_NO_THROW({
-        area = minEnclosingConvexPolygon(ngon, kgon, k);
-    });
+    EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, k));
     EXPECT_GT(area, cv::contourArea(ngonHull));
     EXPECT_EQ(kgon.size(), (size_t)k);
 }
