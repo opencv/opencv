@@ -4,15 +4,6 @@
  //  It is subject to the license terms in the LICENSE file found in the top-level directory of this
  //  distribution and at http://opencv.org/license.html.
  //
- //
- //  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
- //
- //  By downloading, copying, installing or using the software you agree to this license.
- //  If you do not agree to this license, do not download, install,
- //  copy or use the software.
- //
- //  INFORMATION REGARDING THE CONTRIBUTION:
- //
  //  Author: Sara Kuhnert
  //  Created: 20.05.2025
  //  E-mail: <sara.kuhnert[AT]gmx.de>
@@ -24,40 +15,6 @@
  //
  //  The overall complexity of the algorithm is theta(n^2log(n)log(k)) where "n" represents the number
  //  of vertices in the input convex polygon and "k" the number of vertices in the output polygon.
- //
- //
- //
- //                           License Agreement
- //                For Open Source Computer Vision Library
- //
- // Copyright (C) 2000, Intel Corporation, all rights reserved.
- // Copyright (C) 2013, OpenCV Foundation, all rights reserved.
- // Copyright (C) 2020, Sara Kuhnert, all rights reserved.
- // Third party copyrights are property of their respective owners.
- //
- // Redistribution and use in source and binary forms, with or without modification,
- // are permitted provided that the following conditions are met:
- //
- //   * Redistribution's of source code must retain the above copyright notice,
- //     this list of conditions and the following disclaimer.
- //
- //   * Redistribution's in binary form must reproduce the above copyright notice,
- //     this list of conditions and the following disclaimer in the documentation
- //     and/or other materials provided with the distribution.
- //
- //   * The name of the copyright holders may not be used to endorse or promote products
- //     derived from this software without specific prior written permission.
- //
- // This software is provided by the copyright holders and contributors "as is" and
- // any express or implied warranties, including, but not limited to, the implied
- // warranties of merchantability and fitness for a particular purpose are disclaimed.
- // In no event shall the Intel Corporation or contributors be liable for any direct,
- // indirect, incidental, special, exemplary, or consequential damages
- // (including, but not limited to, procurement of substitute goods or services;
- // loss of use, data, or profits; or business interruption) however caused
- // and on any theory of liability, whether in contract, strict liability,
- // or tort (including negligence or otherwise) arising in any way out of
- // the use of this software, even if advised of the possibility of such damage.
  //
  //M*/
 
@@ -83,20 +40,13 @@
 
 namespace minEnclosingConvexPolygon {
 
-static void findMinEnclosingPolygon(cv::InputArray points,
-                                    const int &k,
-                                    CV_OUT cv::OutputArray &kgon,
-                                    CV_OUT double &area);
+static void findMinEnclosingPolygon(cv::InputArray points, const int &k, cv::OutputArray kgon, double &area);
 
-static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon,
-                                    const int &k,
-                                    cv::OutputArray &kgon,
-                                    double &area);
+static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon, const int &k,
+                                    cv::OutputArray kgon, double &area);
 
-static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
-                                std::vector<cv::Point2f> &minPolygon,
-                                double &area,
-                                int k);
+static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon, std::vector<cv::Point2f> &minPolygon,
+                               double &area, int k);
 
 } //namespace
 
@@ -443,8 +393,8 @@ const FlushIntersect& FlushIntersections::lineIntersect(int i, int j)
  * @param extra2        Intersection point
  */
 double BalancedIntersections::extraArea(int first, int last,
-                                       const cv::Point2f& extra1,
-                                       const cv::Point2f& extra2)
+                                        const cv::Point2f& extra1,
+                                        const cv::Point2f& extra2)
 {
     const size_t n = ngon.size();
     area_edges.resize(0);
@@ -1049,15 +999,14 @@ namespace minEnclosingConvexPolygon {
  * @param minPolygon     Minimum area convex k-gon enclosing the given set of points
  * @param area           Area of minPolygon
  */
-static void findMinEnclosingPolygon(cv::InputArray points,
-                                    const int &k,
-                                    CV_OUT cv::OutputArray &minPolygon,
-                                    CV_OUT double &area) {
+static void findMinEnclosingPolygon(cv::InputArray points, const int &k,
+                                    cv::OutputArray minPolygon, double &area)
+{
     CV_Assert(!points.empty());
+
     std::vector<cv::Point2f> ngon, kgon;
     cv::convexHull(points, ngon, true);
-    findMinEnclosingPolygon(ngon, k, kgon, area);
-    cv::Mat(kgon).copyTo(minPolygon);
+    findMinEnclosingPolygon(ngon, k, minPolygon, area);
 }
 
 //! Find the minimum enclosing convex polygon and its area for a given set of points. Handling of input errors.
@@ -1067,10 +1016,8 @@ static void findMinEnclosingPolygon(cv::InputArray points,
  * @param minPolygon     Minimum area convex k-gon enclosing the given polygon
  * @param area           Area of minPolygon
  */
-static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon,
-                                    const int &k,
-                                    cv::OutputArray &minPolygon,
-                                    double &area) {
+static void findMinEnclosingPolygon(const std::vector<cv::Point2f> &ngon, const int &k,
+                                    cv::OutputArray minPolygon, double &area) {
     try
     {
         if (ngon.size() < 3)
@@ -1177,7 +1124,7 @@ static void findMinAreaPolygon(const std::vector<cv::Point2f> &ngon,
  * @param k             Number of vertices of the output polygon
  */
 
-double cv::minEnclosingConvexPolygon(cv::InputArray points, CV_OUT cv::OutputArray polygon, int k)
+double cv::minEnclosingConvexPolygon(cv::InputArray points, cv::OutputArray polygon, int k)
 {
     double area = -1.0;
     minEnclosingConvexPolygon::findMinEnclosingPolygon(points, k, polygon, area);
