@@ -935,7 +935,7 @@ std::vector<Side> Chains::findKSides(int k, int i, int j)
  */
 std::vector<cv::Point2f> Chains::findKVertices(std::vector<Side>& sides)
 {
-    const int k = sides.size();
+    const int k = (int)sides.size();
     std::vector<cv::Point2f> vertices(k);
 
     for(int u = 0; u < k; u++)

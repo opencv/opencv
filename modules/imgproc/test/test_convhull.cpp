@@ -1112,7 +1112,7 @@ TEST(minEnclosingPolygon, unit_circle)
 
     for(int i = 0; i < n; i++)
     {
-        ngon[i] = { cosf(i * 2.f * M_PI / n), sinf(i * 2.f * M_PI / n) };
+        ngon[i] = { cosf(float(i * 2.f * M_PI / n)), sinf(float(i * 2.f * M_PI / n)) };
     }
 
     EXPECT_NO_THROW(area = minEnclosingConvexPolygon(ngon, kgon, k));
