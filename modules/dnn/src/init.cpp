@@ -118,6 +118,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BitShift,       BitShiftLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GridSample,     GridSampleLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(Reduce2,        Reduce2Layer);
 
     CV_DNN_REGISTER_LAYER_CLASS(Convolution,    ConvolutionLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Deconvolution,  DeconvolutionLayer);
