@@ -184,3 +184,5 @@
 "test_reduce_sum_keepdims_random",
 "test_reduce_sum_negative_axes_keepdims_example",
 "test_reduce_sum_negative_axes_keepdims_random",
+"test_reduce_sum_default_axes_keepdims_random",
+
