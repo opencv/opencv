@@ -27,8 +27,7 @@ The correction follows the paper of Rudakova et al. on the lateral chromatic abe
 
 The paper also proposed to use the calibration pattern of black discs, many more than the polynomial model coefficients count to get a proper fit. Degree 11 is often used, but smaller degrees can achieve similar level of accuracy with much better performance.
 
-![Chromatic Aberration Example](images/ca1.png)
-![Chromatic Aberration Example](images/ca2.png)
+![Chromatic Aberration Example](images/ca1.png) ![Chromatic Aberration Example](images/ca2.png)
 
 Calibration
 ------
