@@ -949,9 +949,9 @@ packs them into a 4×N CV_32F matrix:
 CV_EXPORTS_W void loadCalibrationResultFromFile(
     const String& calibration_file,
     OutputArray coeffMat,
-    CV_OUT int& degree,
     CV_OUT int& width,
-    CV_OUT int& height);
+    CV_OUT int& height,
+    CV_OUT int& degree);
 
 
 //! @} photo_ca_correction

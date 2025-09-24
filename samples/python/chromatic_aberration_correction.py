@@ -47,7 +47,9 @@ def main(argv=None):
         return 1
 
     try:
-        corrected = cv.correctChromaticAberration(img, args.calibration, args.bayer)
+        coeffMat, calibW, calibH, degree = cv.loadCalibrationResultFromFile(args.calibration)
+        print(calibW, calibH)
+        corrected = cv.correctChromaticAberration(img, coeffMat, calibW, calibH, degree, args.bayer)
 
         if corrected is None:
             print("ERROR: cv.correctChromaticAberration returned None", file=sys.stderr)

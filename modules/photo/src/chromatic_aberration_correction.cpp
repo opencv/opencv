@@ -8,9 +8,9 @@ namespace cv {
 
 void loadCalibrationResultFromFile(const String& calibration_file,
                                     OutputArray coeffMat,
-                                   int& degree,
                                    int& width,
-                                   int& height) {
+                                   int& height,
+                                   int& degree) {
     Mat tmp;
     FileStorage fs(calibration_file, FileStorage::READ);
     if (!fs.isOpened()){

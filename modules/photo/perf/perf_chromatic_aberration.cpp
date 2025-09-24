@@ -21,7 +21,7 @@ PERF_TEST(ChromaticAberration, CorrectChromaticAberration)
     cv::Mat coeffMat;
     int degree = -1, calibW = -1, calibH = -1;
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(calib_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(calib_file, coeffMat, calibW, calibH, degree);
     });
 
     cv::Mat dst;

@@ -30,7 +30,7 @@ protected:
 TEST_F(ChromaticAberrationTest, LoadCalibAndCorrectImage)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
     });
 
     ASSERT_FALSE(coeffMat.empty());
@@ -86,7 +86,7 @@ TEST_F(ChromaticAberrationTest, YAMLContentsAsExpected)
 TEST_F(ChromaticAberrationTest, InvalidSingleChannel)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
     });
 
     cv::Mat gray;
@@ -100,7 +100,7 @@ TEST_F(ChromaticAberrationTest, InvalidSingleChannel)
 TEST_F(ChromaticAberrationTest, EmptyCoeffMat)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
     });
 
     cv::Mat emptyCoeff;
@@ -112,7 +112,7 @@ TEST_F(ChromaticAberrationTest, EmptyCoeffMat)
 TEST_F(ChromaticAberrationTest, MismatchedImageSize)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
     });
     cv::Mat resized;
     cv::resize(test_image, resized, cv::Size(test_image.cols/2, test_image.rows/2));
@@ -124,7 +124,7 @@ TEST_F(ChromaticAberrationTest, MismatchedImageSize)
 TEST_F(ChromaticAberrationTest, WrongCoeffType)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
     });
     cv::Mat wrongType;
     coeffMat.convertTo(wrongType, CV_64F);
@@ -136,7 +136,7 @@ TEST_F(ChromaticAberrationTest, WrongCoeffType)
 TEST_F(ChromaticAberrationTest, DegreeDoesNotMatchCoeffCols)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, degree, calibW, calibH);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
     });
     int wrongDegree = std::max(1, degree - 1);
     ASSERT_NE((wrongDegree + 1) * (wrongDegree + 2) / 2, coeffMat.cols);

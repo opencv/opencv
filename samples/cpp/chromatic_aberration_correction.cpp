@@ -75,25 +75,16 @@ int main(int argc, char** argv)
     {
         Mat coeffMat;
         int degree = -1, calibW = -1, calibH = -1;
-        try
-        {
-            loadCalibrationResultFromFile(calibPath, coeffMat, degree, calibW, calibH);
-        }
-        catch (const Exception& e)
-        {
-            cerr << "OpenCV error while reading calibration: " << e.what() << endl;
-            return 1;
-        }
-        Mat corrected = correctChromaticAberration(input, coeffMat, degree, calibW, calibH, bayerPattern);
+        loadCalibrationResultFromFile(calibPath, coeffMat, calibW, calibH, degree);
+        Mat corrected = correctChromaticAberration(input, coeffMat, calibW, calibH, degree, bayerPattern);
 
-        namedWindow("Original",    WINDOW_AUTOSIZE);
-        namedWindow("Corrected",   WINDOW_AUTOSIZE);
+        namedWindow("Original", WINDOW_AUTOSIZE);
+        namedWindow("Corrected", WINDOW_AUTOSIZE);
         imshow("Original",  input);
         imshow("Corrected", corrected);
         cout << "Press any key to continue..." << endl;
         waitKey();
 
-        // Save corrected image
         if (!imwrite(outputPath, corrected))
         {
             cerr << "WARNING: Could not write output image: " << outputPath << endl;
