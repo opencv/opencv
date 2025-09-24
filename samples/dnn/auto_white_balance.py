@@ -99,9 +99,9 @@ def correct(bgr8u: np.ndarray, illum_rgb_linear: np.ndarray) -> np.ndarray:
 
     max_val = float(corrected.max()) + EPS
     corrected /= max_val
+    corrected = np.clip(corrected, 0.0, 1.0)
 
     srgb = linear_to_srgb(corrected)
-    srgb = np.clip(srgb, 0.0, 1.0)
 
     out_bgr8 = (srgb * 255.0 + 0.5).astype(np.uint8)
     return out_bgr8

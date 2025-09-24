@@ -169,11 +169,10 @@ static Mat correct(const Mat &bgr8u, const Vec3f &illumRGB_linear) {
     minMaxLoc(ch[2], nullptr, &m2);
     float maxVal = static_cast<float>(std::max({m0, m1, m2})) + EPS;
     corrected /= maxVal;
+    min(corrected, 1.0, corrected);
+    max(corrected, 0.0, corrected);
 
     Mat srgb = linearToSrgb(corrected);
-
-    min(srgb, 1.0, srgb);
-    max(srgb, 0.0, srgb);
 
     Mat out;
     srgb.convertTo(out, CV_8U, 255.0);
