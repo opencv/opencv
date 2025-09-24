@@ -1407,8 +1407,8 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
         roi.x + roi.width <= wholeSize.width &&
         roi.y + roi.height <= wholeSize.height );
 
-    int srcStep = _src.step;
-    int dstStep = _dst.step;
+    size_t srcStep = _src.step;
+    size_t dstStep = _dst.step;
     int srcType = _src.type();
     int cn = CV_MAT_CN(srcType);
     int sesz = (int)getElemSize(srcType);
