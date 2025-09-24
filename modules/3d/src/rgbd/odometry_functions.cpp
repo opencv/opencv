@@ -48,13 +48,18 @@ static UMat prepareScaledDepth(OdometryFrame& frame)
     frame.getDepth(depth);
     CV_Assert(!depth.empty());
 
+    UMat depthFlt;
+    depth.convertTo(depthFlt, CV_32FC1);
+    patchNaNs(depthFlt, 0);
     // Odometry works well with depth values in range [0, 10)
     // If it's bigger, let's scale it down by 5000, a typical depth factor
     double maxv;
-    cv::minMaxLoc(depth, nullptr, &maxv);
-    UMat depthFlt;
-    depth.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
-    patchNaNs(depthFlt, 0);
+    cv::minMaxLoc(depthFlt, nullptr, &maxv);
+    if (maxv > 10)
+    {
+        cv::multiply(depthFlt, (1.f / 5000.f), depthFlt);
+    }
+
     frame.impl->scaledDepth = depthFlt;
 
     return depthFlt;
