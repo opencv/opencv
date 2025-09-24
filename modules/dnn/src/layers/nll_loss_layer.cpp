@@ -81,7 +81,9 @@ public:
         bool isReduced = (reduction != DNN_LOSS_REDUCTION_NONE);
         if (!isReduced) {
             lossShape.push_back(N);
-            for (int i = 2; i < logp.dims; ++i) lossShape.push_back(logp.size[i]);
+            for (int i = 2; i < logp.dims; ++i) {
+                lossShape.push_back(logp.size[i]);
+            }
         }
 
         auto kind = out_arr.kind();
@@ -123,7 +125,9 @@ public:
         };
 
         const int nstripes = 16;
-        Mat logp2D; tensorNCX_to_NSxC(logp, logp2D, nstripes);
+        Mat logp32; logp.convertTo(logp32, CV_32F);
+        const size_t sN = logp32.step1(0);
+        const size_t sC = logp32.step1(1);
 
         CV_Assert(label.depth() == CV_32S || label.depth() == CV_64S);
         CV_Assert((int)label.total() == N*S);
@@ -135,11 +139,11 @@ public:
 
         if (label.depth() == CV_32S)
         {
-            reduceNLLPerSample<int32_t>(logp2D, idx1D, C, ignoreIndex, weightAt, per, effW, validMask, nstripes);
+            reduceNLLPerSample<int32_t>(logp32, sN, sC, S, idx1D, C, ignoreIndex, weightAt, per, effW, validMask, nstripes);
         }
         else
         {
-            reduceNLLPerSample<int64_t>(logp2D, idx1D, C, ignoreIndex, weightAt, per, effW, validMask, nstripes);
+            reduceNLLPerSample<int64_t>(logp32, sN, sC, S, idx1D, C, ignoreIndex, weightAt, per, effW, validMask, nstripes);
         }
 
         if (!isReduced)
@@ -149,10 +153,19 @@ public:
         else
         {
             double num = 0.0, den = 0.0;
-            for (int r = 0; r < per.rows; ++r) {
-                if (!validMask.at<uchar>(r)) continue;
-                num += per.at<float>(r);
-                if (reduction == DNN_LOSS_REDUCTION_MEAN) den += std::max(1e-12f, effW.at<float>(r));
+            const float* perData = per.ptr<float>();
+            const float* effData = effW.ptr<float>();
+            const uchar* validData = validMask.ptr<uchar>();
+            const int R = per.rows;
+
+            for (int r = 0; r < R; ++r) {
+                const float m = validData[r] ? 1.f : 0.f;
+                num += static_cast<double>(perData[r] * m);
+
+                if (reduction == DNN_LOSS_REDUCTION_MEAN)
+                {
+                    den += static_cast<double>(std::max(1e-12f, effData[r]) * m);
+                }
             }
             const float out = (reduction == DNN_LOSS_REDUCTION_SUM) ? static_cast<float>(num) : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
             out_loss.at<float>(0) = out;
@@ -160,8 +173,11 @@ public:
     }
 
 private:
-    template<typename IndexT, typename WeightGetter>
-    static inline void reduceNLLPerSample(const Mat& logp2D,
+    template<typename T, typename WeightGetter>
+    static inline void reduceNLLPerSample(const Mat& logp32,
+                                          const size_t sN,
+                                          const size_t sC,
+                                          const int S,
                                           const Mat& idx1D,
                                           const int C,
                                           const int ignoreIndex,
@@ -173,9 +189,10 @@ private:
     {
         CV_Assert(idx1D.cols == 1);
         parallel_for_(Range(0, idx1D.rows), [&](const Range& rr){
+            const float* base = logp32.ptr<float>();
             for (int r = rr.start; r < rr.end; ++r)
             {
-                const IndexT y_raw = idx1D.at<IndexT>(r);
+                const T y_raw = idx1D.at<T>(r);
                 if ((int64_t)y_raw == (int64_t)ignoreIndex)
                 {
                     validMask.at<uchar>(r) = 0;
@@ -185,9 +202,11 @@ private:
 
                 const int64_t yi64 = (int64_t)y_raw;
                 CV_Assert(yi64 >= 0 && yi64 < (int64_t)C);
-                const int y = (int)yi64;
+                const int y = static_cast<int>(yi64);
 
-                const float lp = logp2D.at<float>(r, y);
+                const int n = r / S;
+                const int s = r % S;
+                const float lp = base[n * sN + y * sC + s];
                 const float cw = weightAt(y);
 
                 per.at<float>(r)  = -lp * cw;
