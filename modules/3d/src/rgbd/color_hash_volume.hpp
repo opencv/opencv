@@ -10,11 +10,11 @@ class ColorHashTSDFVolumeImpl : public Volume
 public:
     ColorHashTSDFVolumeImpl(const VolumeSettings& settings);
     
-    virtual void integrate(InputArray _depth, InputArray _image, InputArray _pose, InputArray _cameraMat) CV_OVERRIDE;
-    
+    virtual void integrate(InputArray depth, InputArray color,
+                           InputArray pose, InputArray cameraMat) ;    
     virtual void raycast(InputArray cameraPose, InputArray cameraMat, 
                         OutputArray points, OutputArray normals, 
-                        Size frameSize = Size()) const CV_OVERRIDE;
+                        Size frameSize = Size());
 
 private:
     // Hash table structure for sparse storage
@@ -28,6 +28,8 @@ private:
     float voxelSize;
     float truncDist;
     Matx44f pose;
+    float maxDepth;
+    int maxWeight;
 
     Point3f transformPoint(const Point3f& pt, const Matx44f& transform)
     {

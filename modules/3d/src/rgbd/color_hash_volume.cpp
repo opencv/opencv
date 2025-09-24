@@ -8,14 +8,26 @@ ColorHashTSDFVolumeImpl::ColorHashTSDFVolumeImpl(const VolumeSettings& settings)
     voxelSize = settings.getVoxelSize();
     truncDist = settings.getTsdfTruncateDistance();
     settings.getVolumePose(pose);
+
+    try {
+        maxDepth = settings.getMaxDepth();
+    } catch (...) {
+        maxDepth = 3.0f;
+    }
+    
+    try {
+        maxWeight = settings.getMaxWeight();
+    } catch (...) {
+        maxWeight = 100;
+    }
 }
 
-void ColorHashTSDFVolumeImpl::integrate(InputArray depth, InputArray pose, InputArray cameraMat)
+void ColorHashTSDFVolumeImpl::integrate(InputArray _depth, InputArray _color, InputArray _pose, InputArray _cameraMat)
 {
-    Mat depthMat = depth.getMat();
-    Matx44f poseMat = pose.getMat();
-    Matx33f intrinsics = cameraMat.getMat();
-    
+    Mat depthMat = _depth.getMat();
+    Mat colorMat = _color.getMat();
+    Matx44f poseMat = _pose.getMat();
+    Matx33f intrinsics = _cameraMat.getMat();
 
     const float fx = intrinsics(0, 0);
     const float fy = intrinsics(1, 1);
@@ -55,14 +67,14 @@ void ColorHashTSDFVolumeImpl::integrate(InputArray depth, InputArray pose, Input
             else
             {
                 float oldW = voxel.weight;
-                float newW = std::min(oldW + 1, maxWeight);
+                float newW = std::min(oldW + 1.0f, static_cast<float>(maxWeight));
                 voxel.tsdf = (voxel.tsdf * oldW + tsdf) / newW;
                 voxel.weight = newW;
             }
             
             if(std::abs(sdf) <= truncDist)
             {
-                Vec3b color = colorImage.at<Vec3b>(y, x);
+                Vec3b color = colorMat.at<Vec3b>(y, x);
                 if(voxel.weight == 1)
                 {
                     voxel.color = color;
@@ -80,12 +92,19 @@ void ColorHashTSDFVolumeImpl::integrate(InputArray depth, InputArray pose, Input
 
 void ColorHashTSDFVolumeImpl::raycast(InputArray cameraPose, InputArray cameraMat,
                                     OutputArray points, OutputArray normals,
-                                    Size frameSize) const
+                                    Size frameSize) 
 {
     Matx44f viewPose = cameraPose.getMat();
     Matx33f intrinsics = cameraMat.getMat();
     
+    points.create(frameSize, CV_32FC3);
+    normals.create(frameSize, CV_32FC3);
+    
     // TODO: Implement raycasting with color interpolation
+    // Basic placeholder implementation
+    Mat pointsMat = points.getMat();
+    Mat normalsMat = normals.getMat();
+    pointsMat.setTo(0);
+    normalsMat.setTo(0);
 }
-
-} 
+ 
