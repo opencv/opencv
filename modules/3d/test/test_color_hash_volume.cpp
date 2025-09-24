@@ -2,8 +2,9 @@
 #include <opencv2/3d/volume.hpp>
 #include "../src/rgbd/color_hash_volume.hpp"
 
-// For memory measurement
-size_t measureVolumeMemory(cv::Ptr<cv::ColorHashTSDFVolume> volume, const cv::Mat& depth, const cv::Mat& color,
+namespace opencv_test { namespace {
+
+static size_t measureVolumeMemory(cv::Ptr<cv::ColorHashTSDFVolume> volume, const cv::Mat& depth, const cv::Mat& color,
                           const cv::Matx33f& intr, const cv::Matx44f& pose)
 {
     for(int i = 0; i < 5; i++) {
@@ -41,8 +42,6 @@ size_t measureVolumeMemory(cv::Ptr<cv::ColorHashTSDFVolume> volume, const cv::Ma
 }
 
 
-namespace opencv_test { namespace  {
-
 TEST(ColorHashTSDFVolume, BasicOperation)
 {
     cv::VolumeSettings settings;
@@ -79,7 +78,30 @@ TEST(ColorHashTSDFVolume, BasicOperation)
     EXPECT_EQ(points.size(), depth.size());
 }
 
-namespace opencv_test { namespace  {
+
+TEST(ColorHashTSDFVolume, EmptyVolume)
+{
+    cv::VolumeSettings settings;
+    settings.setVoxelSize(0.01f);
+    settings.setVolumeResolution(cv::Vec3i(64, 64, 64));
+    settings.setDepthFactor(1000.0f);
+    settings.setTsdfTruncateDistance(0.03f);
+    
+    cv::Ptr<cv::ColorHashTSDFVolume> volume = cv::ColorHashTSDFVolume::create(settings);
+    
+    cv::Matx33f intr = cv::Matx33f::eye();
+    cv::Matx44f pose = cv::Matx44f::eye();
+    cv::Size size(640, 480);
+    
+    cv::Mat points, normals, colors;
+    volume->raycast(pose, intr, points, normals, colors, size);
+    
+    // Empty volume should return valid but empty matrices
+    EXPECT_FALSE(points.empty());
+    EXPECT_FALSE(normals.empty());
+    EXPECT_FALSE(colors.empty());
+}
+
 TEST(ColorHashTSDFVolume, MemoryUsage) 
 {
     cv::VolumeSettings settings;
@@ -113,31 +135,6 @@ TEST(ColorHashTSDFVolume, MemoryUsage)
 
     std::cout << "Memory usage: " << memBefore / 1024 / 1024 << "MB -> "
               << memAfter / 1024 / 1024 << "MB (ratio: " << memRatio << "x)\n";
-}
-}}
-
-
-TEST(ColorHashTSDFVolume, EmptyVolume)
-{
-    cv::VolumeSettings settings;
-    settings.setVoxelSize(0.01f);
-    settings.setVolumeResolution(cv::Vec3i(64, 64, 64));
-    settings.setDepthFactor(1000.0f);
-    settings.setTsdfTruncateDistance(0.03f);
-    
-    cv::Ptr<cv::ColorHashTSDFVolume> volume = cv::ColorHashTSDFVolume::create(settings);
-    
-    cv::Matx33f intr = cv::Matx33f::eye();
-    cv::Matx44f pose = cv::Matx44f::eye();
-    cv::Size size(640, 480);
-    
-    cv::Mat points, normals, colors;
-    volume->raycast(pose, intr, points, normals, colors, size);
-    
-    // Empty volume should return valid but empty matrices
-    EXPECT_FALSE(points.empty());
-    EXPECT_FALSE(normals.empty());
-    EXPECT_FALSE(colors.empty());
 }
 
 }} // namespace
