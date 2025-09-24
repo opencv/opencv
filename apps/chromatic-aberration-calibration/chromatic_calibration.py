@@ -583,8 +583,8 @@ def cmd_correct(parsed_args: argparse.Namespace) -> None:
     img = cv2.imread(parsed_args.image, cv2.IMREAD_COLOR)
     if img is None:
         raise FileNotFoundError(parsed_args.image)
-    calib = load_calib_result(parsed_args.coeffs_file)
-    fixed = correct_image(img, calib)
+    coeffMat, degree, width, height = cv2.loadCalibrationResultFromFile(parsed_args.coeffs_file)
+    fixed = cv2.correctChromaticAberration(img, coeffMat, width, height, degree)
     cv2.imwrite(parsed_args.output, fixed)
     print(f"Corrected image written to {parsed_args.output}")
 
@@ -596,7 +596,8 @@ def cmd_full(parsed_args: argparse.Namespace) -> None:
     calib = calibrate_from_image(img, degree=parsed_args.degree)
     save_calib_result(calib, path=parsed_args.coeffs_file)
     print("Saved coefficients to", parsed_args.coeffs_file)
-    fixed = correct_image(img, calib)
+    coeffMat, degree, width, height = cv2.loadCalibrationResultFromFile(parsed_args.coeffs_file)
+    fixed = cv2.correctChromaticAberration(img, coeffMat, width, height, degree)
     cv2.imwrite(parsed_args.output, fixed)
     print(f"Corrected image written to {parsed_args.output}")
 
