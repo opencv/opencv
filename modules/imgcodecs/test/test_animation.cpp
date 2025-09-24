@@ -82,7 +82,7 @@ TEST(Imgcodecs, animation_over2GB)
 {
     applyTestTag(CV_TEST_TAG_MEMORY_6GB);
     // empty buffer more than 2GB size
-    std::vector<uint8_t> buf(size_t(INT_MAX) + 4096);
+    std::vector<uint8_t> buf(size_t(INT_MAX) + size_t(4096));
     Animation animation;
     EXPECT_THROW(cv::imdecodeanimation(buf, animation), cv::Exception);
 }

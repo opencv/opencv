@@ -1034,7 +1034,7 @@ bool imdecodeanimation(InputArray buf, Animation& animation, int start, int coun
 {
     CV_TRACE_FUNCTION();
 
-    size_t buf_size = buf.total() * CV_ELEM_SIZE(buf.type());
+    size_t buf_size = buf.total() * size_t(CV_ELEM_SIZE(buf.type()));
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
         CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
@@ -1450,7 +1450,7 @@ Mat imdecode( InputArray _buf, int flags )
 {
     CV_TRACE_FUNCTION();
 
-    size_t buf_size = _buf.total() * CV_ELEM_SIZE(_buf.type());
+    size_t buf_size = _buf.total() * size_t(CV_ELEM_SIZE(_buf.type()));
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
         CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
@@ -1467,7 +1467,7 @@ Mat imdecode( InputArray _buf, int flags, Mat* dst )
 {
     CV_TRACE_FUNCTION();
 
-    size_t buf_size = _buf.total() * CV_ELEM_SIZE(_buf.type());
+    size_t buf_size = _buf.total() * size_t(CV_ELEM_SIZE(_buf.type()));
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
         CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
@@ -1486,7 +1486,7 @@ Mat imdecodeWithMetadata( InputArray _buf, std::vector<int>& metadata_types,
 {
     CV_TRACE_FUNCTION();
 
-    size_t buf_size = _buf.total() * CV_ELEM_SIZE(_buf.type());
+    size_t buf_size = _buf.total() * size_t(CV_ELEM_SIZE(_buf.type()));
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
         CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
@@ -1641,7 +1641,7 @@ bool imdecodemulti(InputArray _buf, int flags, CV_OUT std::vector<Mat>& mats, co
 {
     CV_TRACE_FUNCTION();
 
-    size_t buf_size = _buf.total() * CV_ELEM_SIZE(_buf.type());
+    size_t buf_size = _buf.total() * size_t(CV_ELEM_SIZE(_buf.type()));
     if (buf_size > static_cast<size_t>(std::numeric_limits<int>::max()))
     {
         CV_Error(Error::StsOutOfRange, "Input buffer is too large (larger than 2GB)");
