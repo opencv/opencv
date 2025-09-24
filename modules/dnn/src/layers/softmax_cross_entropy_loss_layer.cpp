@@ -122,15 +122,50 @@ public:
             CV_Assert(out_loss.total() == 1);
         }
         const int nstripes = 16;
+        Mat logits32; logits.convertTo(logits32, CV_32F);
+        const size_t sN = logits32.step1(0);
+        const size_t sC = logits32.step1(1);
 
-        Mat logits2D; tensorNCX_to_NSxC(logits, logits2D, nstripes);
-        CV_Assert(logits2D.isContinuous());
-        Mat logp2D; logp2D.create(logits2D.size(), CV_32F);
-        CV_Assert(logp2D.isContinuous());
-        logSoftmax(logp2D, logits2D, 1);
-        if (wantLogProb) {
-            NSxC_to_tensorNCX(logp2D, logits.dims, logits.size.p, out_logprob, nstripes);
+        std::vector<float> rowLogSumExp(N*S);
+        std::vector<float> meanLogRow(N*S);
+
+        bool writeLogProb = (wantLogProb);
+        size_t sN_out = 0, sC_out = 0;
+        float* outlpBase = nullptr;
+        if (writeLogProb) {
+            CV_Assert(out_logprob.type() == CV_32F);
+            sN_out = out_logprob.step1(0);
+            sC_out = out_logprob.step1(1);
+            outlpBase = out_logprob.ptr<float>();
         }
+
+        parallel_for_(Range(0, N*S), [&](const Range& rr){
+            const float* base = logits32.ptr<float>();
+            for (int r = rr.start; r < rr.end; ++r) {
+                const int n = r / S;
+                const int s = r % S;
+                const float* rowBase = base + n * sN + s;
+
+                float maxv = rowBase[0];
+                for (int c = 1; c < C; ++c) maxv = std::max(maxv, rowBase[c * sC]);
+
+                double sumExp = 0.0;
+                double sumLogits = 0.0;
+                for (int c = 0; c < C; ++c) {
+                    const float v = rowBase[c * sC];
+                    sumExp += std::exp(static_cast<double>(v - maxv));
+                    sumLogits += v;
+                }
+                const float lse = static_cast<float>(std::log(sumExp) + maxv);
+                rowLogSumExp[r] = lse;
+                meanLogRow[r] = static_cast<float>(sumLogits / C) - lse;
+
+                if (writeLogProb) {
+                    float* dst = outlpBase + n * sN_out + s;
+                    for (int c = 0; c < C; ++c) dst[c * sC_out] = rowBase[c * sC] - lse;
+                }
+            }
+        }, nstripes);
 
         const bool expanded = (labels.dims == logits.dims && labels.size[1] == C) || softLabel;
         const float eps = std::max(0.f, std::min(1.f, labelSmoothing));
@@ -145,77 +180,63 @@ public:
             CV_Assert((int)labels.total() == N*S);
             Mat idx1D = labels.reshape(1, N*S);
 
-            std::vector<float> meanLogRow;
-            float* meanLogRowData = nullptr;
-            if (eps > 0.f) {
-                meanLogRow.resize(N*S);
-                parallel_for_(Range(0, N*S), [&](const Range& rr){
-                    for (int r = rr.start; r < rr.end; ++r) {
-                        const float* p = logp2D.ptr<float>(r);
-                        double s = 0.0;
-                        for (int c = 0; c < C; ++c) {
-                            s += p[c];
-                        }
-                        meanLogRow[r] = static_cast<float>(s / C);
-                    }
-                }, nstripes);
-                meanLogRowData = meanLogRow.data();
-            }
-
+            const float* wptr = hasWeight ? w.ptr<float>() : nullptr;
             if (labels.depth() == CV_32S)
             {
-                reduceSCEPerSample<int32_t>(logp2D, idx1D, C, ignoreIndex, eps, meanLogRowData, w, hasWeight, per, effW, validMask, nstripes);
+                if (hasWeight)
+                    reduceSCEPerSample<int32_t, true>(logits32, sN, sC, S, idx1D, C, ignoreIndex, eps, meanLogRow.data(), rowLogSumExp.data(), wptr, per, effW, validMask, nstripes);
+                else
+                    reduceSCEPerSample<int32_t, false>(logits32, sN, sC, S, idx1D, C, ignoreIndex, eps, meanLogRow.data(), rowLogSumExp.data(), wptr, per, effW, validMask, nstripes);
             }
             else
             {
-                reduceSCEPerSample<int64_t>(logp2D, idx1D, C, ignoreIndex, eps, meanLogRowData, w, hasWeight, per, effW, validMask, nstripes);
+                if (hasWeight)
+                    reduceSCEPerSample<int64_t, true>(logits32, sN, sC, S, idx1D, C, ignoreIndex, eps, meanLogRow.data(), rowLogSumExp.data(), wptr, per, effW, validMask, nstripes);
+                else
+                    reduceSCEPerSample<int64_t, false>(logits32, sN, sC, S, idx1D, C, ignoreIndex, eps, meanLogRow.data(), rowLogSumExp.data(), wptr, per, effW, validMask, nstripes);
             }
         }
         else
         {
-            Mat lab2D; tensorNCX_to_NSxC(labels, lab2D, nstripes);
+            Mat labels32; labels.convertTo(labels32, CV_32F);
+            const size_t sN_lab = labels32.step1(0);
+            const size_t sC_lab = labels32.step1(1);
 
-            if (!softLabel && eps > 0.f) {
-                parallel_for_(Range(0, N*S), [&](const Range& rr){
-                    for (int r = rr.start; r < rr.end; ++r) {
-                        float* a = lab2D.ptr<float>(r);
-                        for (int c = 0; c < C; ++c) {
-                            a[c] = (1.f - eps) * a[c] + eps / C;
-                        }
+            const float smoothMul = (!softLabel && eps > 0.f) ? (1.f - eps) : 1.f;
+            const float smoothAdd = (!softLabel && eps > 0.f) ? (eps / C) : 0.f;
+            std::vector<float> onesW;
+            const float* wBase = nullptr;
+            if (hasWeight){
+                wBase = w.ptr<float>();
+            } else {
+                onesW.assign(C, 1.f);
+                wBase = onesW.data();
+            }
+
+            parallel_for_(Range(0, N*S), [&](const Range& rr){
+                const float* baseLogits = logits32.ptr<float>();
+                const float* baseLabels = labels32.ptr<float>();
+                const float* wlocal = wBase;
+                for (int r = rr.start; r < rr.end; ++r) {
+                    const int n = r / S;
+                    const int s = r % S;
+                    const float* arow = baseLabels + n * sN_lab + s;
+                    const float* lrow = baseLogits + n * sN + s;
+
+                    double dot = 0.0, wsum = 0.0;
+                    for (int c = 0; c < C; ++c) {
+                        float a = arow[c * sC_lab] * smoothMul + smoothAdd;
+                        a *= wlocal[c];
+                        wsum += static_cast<double>(a);
+                        dot  += static_cast<double>(a) * static_cast<double>(lrow[c * sC]);
                     }
-                }, nstripes);
-            }
 
-            if (hasWeight) {
-                for (int c = 0; c < C; ++c) {
-                    const float wc = w.at<float>(c);
-                    if (wc == 1.f) continue;
-                    parallel_for_(Range(0, N*S), [&](const Range& rr){
-                        for (int r = rr.start; r < rr.end; ++r) lab2D.at<float>(r, c) *= wc;
-                    }, nstripes);
+                    const float m = (wsum != 0.0) ? 1.f : 0.f;
+                    validMask.at<uchar>(r) = static_cast<uchar>(m > 0.f);
+                    effW.at<float>(r) = static_cast<float>(wsum * m);
+                    per.at<float>(r) = static_cast<float>(-(dot - static_cast<double>(rowLogSumExp[r]) * wsum) * m);
                 }
-            }
-
-            for (int r = 0; r < N*S; ++r)
-            {
-                const float* a = lab2D.ptr<float>(r);
-                const float* b = logp2D.ptr<float>(r);
-
-                double dot = 0.0, wsum = 0.0;
-                for (int c = 0; c < C; ++c) {
-                    dot += static_cast<double>(a[c]) * static_cast<double>(b[c]);
-                    wsum += static_cast<double>(a[c]);
-                }
-
-                if (wsum == 0.0) {
-                    validMask.at<uchar>(r) = 0;
-                    effW.at<float>(r) = 0.f;
-                    per.at<float>(r) = 0.f;
-                } else {
-                    per.at<float>(r) = static_cast<float>(-dot);
-                    effW.at<float>(r) = static_cast<float>(wsum);
-                }
-            }
+            }, nstripes);
         }
 
         if (!isReduced)
@@ -225,29 +246,39 @@ public:
         else
         {
             double num = 0.0, den = 0.0;
-            for (int r = 0; r < per.rows; ++r) {
-                const float wEff = effW.at<float>(r);
-                if (validMask.at<uchar>(r)) {
-                    num += per.at<float>(r);
-                    if (reduction == DNN_LOSS_REDUCTION_MEAN) den += std::max(1e-12f, wEff);
+            const float* perData = per.ptr<float>();
+            const float* effData = effW.ptr<float>();
+            const uchar* validData = validMask.ptr<uchar>();
+            const int R = per.rows;
+
+            for (int r = 0; r < R; ++r) {
+                const float m = validData[r] ? 1.f : 0.f;
+                num += static_cast<double>(perData[r] * m);
+                if (reduction == DNN_LOSS_REDUCTION_MEAN)
+                {
+                    den += static_cast<double>(std::max(1e-12f, effData[r]) * m);
                 }
             }
+
             const float out = (reduction == DNN_LOSS_REDUCTION_SUM) ? static_cast<float>(num)
-                                                : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
+                                                 : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
             out_loss.at<float>(0) = out;
         }
     }
 
 private:
-    template<typename IndexT>
-    static inline void reduceSCEPerSample(const Mat& logp2D,
+    template<typename T, bool UseWeight>
+    static inline void reduceSCEPerSample(const Mat& logits32,
+                                          const size_t sN,
+                                          const size_t sC,
+                                          const int S,
                                           const Mat& idx1D,
                                           const int C,
                                           const int ignoreIndex,
                                           const float eps,
                                           const float* meanLogRowData,
-                                          const Mat& w,
-                                          const bool hasWeight,
+                                          const float* rowLogSumExp,
+                                          const float* weightBase,
                                           Mat& per,
                                           Mat& effW,
                                           Mat& validMask,
@@ -255,9 +286,10 @@ private:
     {
         CV_Assert(idx1D.cols == 1);
         parallel_for_(Range(0, idx1D.rows), [&](const Range& rr){
+            const float* base = logits32.ptr<float>();
             for (int r = rr.start; r < rr.end; ++r)
             {
-                const IndexT y_raw = idx1D.at<IndexT>(r);
+                const T y_raw = idx1D.at<T>(r);
                 if ((int64_t)y_raw == (int64_t)ignoreIndex)
                 {
                     validMask.at<uchar>(r) = 0;
@@ -267,12 +299,15 @@ private:
 
                 const int64_t yi64 = (int64_t)y_raw;
                 CV_Assert(yi64 >= 0 && yi64 < (int64_t)C);
-                const int y = (int)yi64;
+                const int y = static_cast<int>(yi64);
 
-                const float lp = logp2D.at<float>(r, y);
-                const float cw = hasWeight ? w.at<float>(y) : 1.f;
+                const int n = r / S;
+                const int s = r % S;
+                const float logits_y = base[n * sN + y * sC + s];
+                const float lp_y = logits_y - rowLogSumExp[r];
+                const float cw = UseWeight ? weightBase[y] : 1.f;
 
-                float loss = -(1.f - eps) * lp;
+                float loss = -(1.f - eps) * lp_y;
                 if (eps > 0.f) loss += -eps * meanLogRowData[r];
 
                 per.at<float>(r)  = loss * cw;
