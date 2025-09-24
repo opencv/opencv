@@ -435,6 +435,8 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream& dumpTypeShape(std::ostream& strm, int type, const MatShape& shape) const;
     std::ostream& dump(std::ostream& strm);
 
+    ///////////////// various graph transformations ///////////////////////
+
     // infers all types
     void inferTypes();
     // infers all shapes
@@ -445,6 +447,7 @@ struct Net::Impl : public detail::NetImplBase
     void fuse();
     void constFold();
     void constArgs();
+    void useBlockLayout();
 
 };  // Net::Impl
 

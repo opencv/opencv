@@ -120,19 +120,6 @@ static inline void getPadding(const std::vector<int>& pads,
     }
 }
 
-void ConvState::initPooling(const MatShape& inpshape,
-                            const MatShape& outshape,
-                            const std::vector<int>& kernel_shape,
-                            const std::vector<int>& strides,
-                            const std::vector<int>& dilations,
-                            const std::vector<int>& pads,
-                            AutoPadding auto_pad, bool ceil_mode)
-{
-    //size_t kshape_size =
-    //CV_Assert(kernel_shape.size() <= (size_t)ConvState::MAX_CONV_DIMS);
-    CV_Error(Error::StsNotImplemented, "");
-}
-
 bool ConvState::sameShape(const ConvState& cs) const
 {
     return kshape == cs.kshape &&
@@ -143,9 +130,9 @@ bool ConvState::sameShape(const ConvState& cs) const
            pads == cs.pads;
 }
 
-void ConvState::initConv(const MatShape& inpShape_,
+void ConvState::initConv(const MatShape& inpshape_,
                          const MatShape& wshape_,
-                         const MatShape& outShape_,
+                         const MatShape& outshape_,
                          int ngroups_,
                          const std::vector<int>& strides_,
                          const std::vector<int>& dilations_,
@@ -160,15 +147,15 @@ void ConvState::initConv(const MatShape& inpShape_,
     CV_Assert(strides_.empty() || (strides_.size() == size_t(nspatialdims)));
     CV_Assert(dilations_.empty() || (dilations_.size() == size_t(nspatialdims)));
     CV_Assert(pads_.empty() || (pads_.size() == size_t(nspatialdims*2)));
-    CV_Assert(inpShape_.dims == outShape_.dims);
-    CV_Assert(nspatialdims == inpShape_.dims - 3);
-    CV_Assert(inpShape_[1] % ngroups == 0);
-    CV_Assert(outShape_[1] % ngroups == 0);
-    CV_Assert(inpShape_[0] == outShape_[0]);
-    CV_Assert(inpShape_.back() == outShape_.back());
+    CV_Assert(inpshape_.dims == outshape_.dims);
+    CV_Assert(nspatialdims == inpshape_.dims - 3);
+    CV_Assert(inpshape_[1] % ngroups == 0);
+    CV_Assert(outshape_[1] % ngroups == 0);
+    CV_Assert(inpshape_[0] == outshape_[0]);
+    CV_Assert(inpshape_.back() == outshape_.back());
 
-    inpshape = inpShape_;
-    outshape = outShape_;
+    inpshape = inpshape_;
+    outshape = outshape_;
     ngroups = ngroups_;
 
     fastActivation = fastActivation_;
@@ -394,6 +381,56 @@ void repackConvWeights(const void* inpw__, int inptype_,
             }
         }
     });
+}
+
+void ConvState::initPooling(const MatShape& inpshape_,
+                            const MatShape& outshape_,
+                            const std::vector<int>& kshape_,
+                            const std::vector<int>& strides_,
+                            const std::vector<int>& dilations_,
+                            const std::vector<int>& pads_,
+                            AutoPadding autoPad, bool ceilMode)
+{
+    nspatialdims = int(kshape_.size());
+    CV_Assert(0 < nspatialdims && nspatialdims <= ConvState::MAX_CONV_DIMS);
+    CV_Assert(strides_.empty() || (strides_.size() == size_t(nspatialdims)));
+    CV_Assert(dilations_.empty() || (dilations_.size() == size_t(nspatialdims)));
+    CV_Assert(pads_.empty() || (pads_.size() == size_t(nspatialdims*2)));
+    CV_Assert(inpshape_.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(inpshape_.dims == nspatialdims + 3);
+
+    int C = inpshape_.C;
+    inpshape = inpshape_;
+    outshape = outshape_;
+    ngroups = C;
+
+    for (int i = 0; i < nspatialdims; i++) {
+        int j = i + (MAX_CONV_DIMS - nspatialdims);
+        kshape[j] = kshape_[i];
+        CV_Assert(kshape[j] > 0);
+
+        strides[j] = strides_.empty() ? 1 : strides_[i];
+        dilations[j] = dilations_.empty() ? 1 : dilations_[i];
+
+        CV_Assert(strides[j] > 0);
+        CV_Assert(dilations[j] > 0);
+
+        int pad0, pad1;
+        getPadding(pads_, i, nspatialdims, autoPad, kshape[i], pad0, pad1);
+        CV_Assert_N(pad0 >= 0, pad1 >= 0);
+        pads[j] = pad0;
+        pads[j + MAX_CONV_DIMS] = pad1;
+
+        int inner0 = (pad0 + strides[j] - 1)/strides[j];
+        int inner1 = (inpshape[i+2] - (kshape[j] - 1)*dilations[j] + pad0)/strides[j];
+        inner1 += inner1*strides[j] - pad0 + (kshape[j] - 1)*dilations[j] < inpshape[i+2];
+        inner1 = std::min(inner1, outshape[i+2]);
+        if (inner0 >= inner1) {
+            inner0 = inner1 = outshape[i+2];
+        }
+        inner[j] = inner0;
+        inner[j + MAX_CONV_DIMS] = inner1;
+    }
 }
 
 CV__DNN_INLINE_NS_END
