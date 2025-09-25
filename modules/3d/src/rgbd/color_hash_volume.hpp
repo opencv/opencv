@@ -371,3 +371,62 @@ public:
 } // namespace cv
 
 #endif // __OPENCV_COLOR_HASH_VOLUME_HPP__
+
+#ifndef OPENCV_3D_COLOR_HASH_VOLUME_HPP
+#define OPENCV_3D_COLOR_HASH_VOLUME_HPP
+
+#include "opencv2/3d/volume.hpp"
+#include "hash_tsdf_functions.hpp"
+#include "color_tsdf_functions.hpp"
+
+namespace cv {
+
+struct ColorHashTsdfVoxel
+{
+    TsdfType tsdf;
+    WeightType weight;
+    ColorType r, g, b;
+    
+    ColorHashTsdfVoxel()
+    {
+        tsdf = floatToTsdf(1.0f);
+        weight = 0;
+        r = g = b = 0;
+    }
+};
+
+// Reuse most HashTsdf functions but add color support
+void integrateColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex,
+    const int frameId, const int volumeUnitDegree, bool enableGrowth,
+    InputArray _depth, InputArray _rgb, InputArray _pixNorms,
+    InputOutputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
+
+void raycastColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose,
+    int height, int width, InputArray intr, const int volumeUnitDegree,
+    InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    OutputArray _points, OutputArray _normals, OutputArray _colors);
+
+void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData,
+    const VolumeUnitIndexes& volumeUnits, const int volumeUnitDegree,
+    OutputArray _points, OutputArray _normals, OutputArray _colors);
+
+#ifdef HAVE_OPENCL
+void ocl_integrateColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose,
+    int& lastVolIndex, const int frameId, int& bufferSizeDegree,
+    const int volumeUnitDegree, bool enableGrowth,
+    InputArray _depth, InputArray _rgb, InputArray _pixNorms,
+    InputArray _lastVisibleIndices,
+    InputOutputArray _volUnitsDataCopy, InputOutputArray _volUnitsData,
+    CustomHashSet& hashTable, InputArray _isActiveFlags);
+
+// Reuse raycast and fetch functions from HashTSDFGPU implementation
+// but add color support using the ColorTSDFVoxel structure
+#endif
+
+} // namespace cv
+
+#endif

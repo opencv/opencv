@@ -875,15 +875,15 @@ namespace
 {
     struct VolumeTypeEnum
     {
-        static const std::array<VolumeType, 3> vals;
-        static const std::array<std::string, 3> svals;
+        static const std::array<VolumeType, 4> vals;
+        static const std::array<std::string, 4> svals;
 
         VolumeTypeEnum(VolumeType v = VolumeType::TSDF) : val(v) {}
         operator VolumeType() const { return val; }
         void PrintTo(std::ostream *os) const
         {
             int v = int(val);
-            if (v >= 0 && v < 3)
+            if (v >= 0 && v < 4)
             {
                 *os << svals[v];
             }
@@ -894,14 +894,24 @@ namespace
         }
         static ::testing::internal::ParamGenerator<VolumeTypeEnum> all()
         {
-            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]));
+            return ::testing::Values(VolumeTypeEnum(vals[0]), VolumeTypeEnum(vals[1]), VolumeTypeEnum(vals[2]), VolumeTypeEnum(vals[3]));
         }
 
     private:
         VolumeType val;
     };
-    const std::array<VolumeType, 3> VolumeTypeEnum::vals{VolumeType::TSDF, VolumeType::HashTSDF, VolumeType::ColorTSDF};
-    const std::array<std::string, 3> VolumeTypeEnum::svals{std::string("TSDF"), std::string("HashTSDF"), std::string("ColorTSDF")};
+    const std::array<VolumeType, 4> VolumeTypeEnum::vals{
+        VolumeType::TSDF, 
+        VolumeType::HashTSDF, 
+        VolumeType::ColorTSDF,
+        VolumeType::ColorHashTSDF
+    };
+    const std::array<std::string, 4> VolumeTypeEnum::svals{
+        std::string("TSDF"),
+        std::string("HashTSDF"), 
+        std::string("ColorTSDF"),
+        std::string("ColorHashTSDF")
+    };
 
     static inline void PrintTo(const VolumeTypeEnum &t, std::ostream *os) { t.PrintTo(os); }
 
@@ -1239,14 +1249,21 @@ TEST_P(VolumeTestFixture, fetch_normals)
 }
 
 //TODO: fix it when ColorTSDF gets GPU version
-INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture, /*::testing::Combine(PlatformTypeEnum::all(), VolumeTypeEnum::all())*/
-                        ::testing::Combine(
-                        ::testing::Values(PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
-                                          PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
-                                          PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
-                                          PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
-                                          PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}),
-                        VolumeTestSrcTypeEnum::all(), FrameSizeTypeEnum::all()));
+INSTANTIATE_TEST_CASE_P(Volume, VolumeTestFixture,
+    ::testing::Combine(
+        ::testing::Values(
+            PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::HashTSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+            PlatformVolumeType {PlatformType::CPU, VolumeType::ColorHashTSDF},
+            PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF},
+            PlatformVolumeType {PlatformType::GPU, VolumeType::HashTSDF}
+            // Note: Color types don't support GPU yet
+        ),
+        VolumeTestSrcTypeEnum::all(),
+        FrameSizeTypeEnum::all()
+    )
+);
 
 
 class StaticVolumeBoundingBox : public ::testing::TestWithParam<PlatformVolumeType>
@@ -1267,9 +1284,11 @@ TEST_P(StaticVolumeBoundingBox, staticBoundingBox)
 
 //TODO: edit this list when ColorTSDF gets GPU support
 INSTANTIATE_TEST_CASE_P(Volume, StaticVolumeBoundingBox, ::testing::Values(
-                        PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
-                        PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
-                        PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}));
+    PlatformVolumeType {PlatformType::CPU, VolumeType::TSDF},
+    PlatformVolumeType {PlatformType::CPU, VolumeType::ColorTSDF},
+    PlatformVolumeType {PlatformType::CPU, VolumeType::ColorHashTSDF},
+    PlatformVolumeType {PlatformType::GPU, VolumeType::TSDF}
+));
 
 
 class ReproduceVolPoseRotTest : public ::testing::TestWithParam<PlatformTypeEnum>
