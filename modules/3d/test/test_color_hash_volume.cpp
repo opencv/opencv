@@ -12,33 +12,6 @@ static size_t measureVolumeMemory(cv::Ptr<cv::ColorHashTSDFVolume> volume, const
         framePose(0, 3) += 0.02f * i; // Move along X axis
         volume->integrate(depth, color, framePose, intr);
     }
-    
-    // Get process memory info
-    size_t memUsage = 0;
-#ifdef _WIN32
-    PROCESS_MEMORY_COUNTERS_EX pmc;
-    if(GetProcessMemoryInfo(GetCurrentProcess(), (PROCESS_MEMORY_COUNTERS*)&pmc, sizeof(pmc)))
-    {
-        memUsage = pmc.WorkingSetSize;
-    }
-#else
-    // On Linux/Unix, read from /proc/self/status
-    FILE* fp = fopen("/proc/self/status", "r");
-    if(fp)
-    {
-        char line[128];
-        while(fgets(line, sizeof(line), fp))
-        {
-            if(strncmp(line, "VmRSS:", 6) == 0)
-            {
-                memUsage = (size_t)atol(line + 7) * 1024;
-                break;
-            }
-        }
-        fclose(fp);
-    }
-#endif
-    return memUsage;
 }
 
 
