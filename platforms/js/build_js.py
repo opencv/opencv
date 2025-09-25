@@ -175,6 +175,10 @@ class Builder:
         if flags:
             cmd += ["-DCMAKE_C_FLAGS='%s'" % flags,
                     "-DCMAKE_CXX_FLAGS='%s'" % flags]
+
+        if self.options.extra_modules:
+            cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.options.extra_modules)
+
         return cmd
 
     def get_build_flags(self):
@@ -260,6 +264,8 @@ if __name__ == "__main__":
     # Write a path to modify file like argument of this flag
     parser.add_argument('--config', help="Specify configuration file with own list of exported into JS functions")
     parser.add_argument('--webnn', action="store_true", help="Enable WebNN Backend")
+    parser.add_argument("--extra_modules", required=False, help="Path extra modules location (OPENCV_EXTRA_MODULES_PATH)")
+
 
     transformed_args = ["--cmake_option={}".format(arg) if arg[:2] == "-D" else arg for arg in sys.argv[1:]]
     args = parser.parse_args(transformed_args)
