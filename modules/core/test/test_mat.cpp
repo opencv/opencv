@@ -1471,6 +1471,14 @@ TEST(Core_InputArray, empty)
     ASSERT_TRUE( _InputArray(data).empty() );
 }
 
+TEST(Core_InputArray, convert_from_vector_over2GB)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    // empty buffer more than 2GB size
+    std::vector<uint8_t> buf(size_t(INT_MAX) + 4096);
+    EXPECT_ANY_THROW(auto work = _InputArray(buf));
+}
+
 TEST(Core_CopyMask, bug1918)
 {
     Mat_<unsigned char> tmpSrc(100,100);
