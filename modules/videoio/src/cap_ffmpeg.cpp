@@ -116,6 +116,8 @@ public:
             if (!ffmpegCapture->retrieveFrame(flag, &data, &step, &width, &height, &cn, &depth))
                 return false;
         }
+        if (ffmpegCapture->frame_pts<0)ffmpegCapture->frame_pts = 0;
+        if(ffmpegCapture->frame_dts<0)ffmpegCapture->frame_dts = 0;
 
         cv::Mat(height, width, CV_MAKETYPE(depth, cn), data, step).copyTo(frame);
         return true;
