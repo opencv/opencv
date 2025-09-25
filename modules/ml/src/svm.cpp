@@ -128,7 +128,7 @@ struct SvmParams
         C = 1;
         nu = 0;
         p = 0;
-        termCrit = TermCriteria( CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 1000, FLT_EPSILON );
+        termCrit = TermCriteria( TermCriteria::MAX_ITER|TermCriteria::EPS, 1000, FLT_EPSILON );
     }
 
     SvmParams( int _svmType, int _kernelType,
@@ -412,8 +412,7 @@ ParamGrid SVM::getDefaultGrid( int param_id )
         grid.logStep = 7; // total iterations = 3
     }
     else
-        cvError( cv::Error::StsBadArg, "SVM::getDefaultGrid", "Invalid type of parameter "
-                "(use one of SVM::C, SVM::GAMMA et al.)", __FILE__, __LINE__ );
+        CV_Error( cv::Error::StsBadArg, "Invalid type of parameter (use one of SVM::C, SVM::GAMMA et al.)");
     return grid;
 }
 

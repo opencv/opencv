@@ -864,8 +864,8 @@ public:
 
         TermCriteria termcrit;
         termcrit.type = TermCriteria::COUNT + TermCriteria::EPS;
-        termcrit.maxCount = std::max((params.termCrit.type & CV_TERMCRIT_ITER ? params.termCrit.maxCount : MAX_ITER), 1);
-        termcrit.epsilon = std::max((params.termCrit.type & CV_TERMCRIT_EPS ? params.termCrit.epsilon : DEFAULT_EPSILON), DBL_EPSILON);
+        termcrit.maxCount = std::max((params.termCrit.type & TermCriteria::MAX_ITER ? params.termCrit.maxCount : MAX_ITER), 1);
+        termcrit.epsilon = std::max((params.termCrit.type & TermCriteria::EPS ? params.termCrit.epsilon : DEFAULT_EPSILON), DBL_EPSILON);
 
         int iter = 0;
         switch(params.trainMethod){
@@ -901,7 +901,7 @@ public:
         int count = inputs.rows;
 
         int iter = -1, max_iter = termCrit.maxCount*count;
-        double epsilon = (termCrit.type & CV_TERMCRIT_EPS) ? termCrit.epsilon*count : 0;
+        double epsilon = (termCrit.type & TermCriteria::EPS) ? termCrit.epsilon*count : 0;
 
         int l_count = layer_count();
         int ivcount = layer_sizes[0];
