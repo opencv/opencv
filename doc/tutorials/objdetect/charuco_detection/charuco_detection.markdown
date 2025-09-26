@@ -77,7 +77,7 @@ through `board.ids`, like in the `cv::aruco::Board` parent class.
 
 Once we have our `cv::aruco::CharucoBoard` object, we can create an image to print it. There are
 two ways to do this:
-1. By using the script `doc/patter_tools/gen_pattern.py `, see @subpage tutorial_camera_calibration_pattern.
+1. By using the script `apps/pattern_tools/generate_pattern.py `, see @subpage tutorial_camera_calibration_pattern.
 2. By using the function `cv::aruco::CharucoBoard::generateImage()`.
 
 The function `cv::aruco::CharucoBoard::generateImage()` is provided in cv::aruco::CharucoBoard class
