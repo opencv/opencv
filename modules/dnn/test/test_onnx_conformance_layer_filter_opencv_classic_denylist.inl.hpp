@@ -564,3 +564,7 @@
 "test_center_crop_pad_crop_negative_axes_hwc_expanded",
 "test_center_crop_pad_pad",
 "test_center_crop_pad_pad_expanded",
+"test_affine_grid_3d",
+"test_affine_grid_3d_align_corners",
+"test_affine_grid_2d",
+"test_affine_grid_2d_align_corners",
