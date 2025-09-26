@@ -11,8 +11,7 @@ int test()
     _mm_storel_epi64((__m128i*)dst, v_dst);
     return (int)dst[0];
 }
-#elif (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) /*|| (defined _MSC_VER && defined _M_ARM64)*/
-// Windows + ARM64 case disabled: https://github.com/opencv/opencv/issues/25052
+#elif (defined __GNUC__ && (defined __arm__ || defined __aarch64__)) || (defined _MSC_VER && defined _M_ARM64)
 #include "arm_neon.h"
 int test()
 {
