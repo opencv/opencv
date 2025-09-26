@@ -8,7 +8,7 @@ on:
 jobs:
 
   Linux:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Linux.yaml@as/libcamera_ci
     with:
       workflow_branch: main
 
