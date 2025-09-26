@@ -658,8 +658,6 @@ namespace Math {
     Matx33d getSkewSymmetric(const Vec3d &v_);
     // eliminate matrix with m rows and n columns to be upper triangular.
     bool eliminateUpperTriangular (std::vector<double> &a, int m, int n);
-    Matx33d rotVec2RotMat (const Vec3d &v);
-    Vec3d rotMat2RotVec (const Matx33d &R);
 }
 
 class SolverPoly: public Algorithm {
