@@ -201,7 +201,9 @@ public:
                 if (refIt != refCounter.end() && refIt->second == 0)
                 {
                     const Mat& unusedBlob = hostIt->second;
-                    if (unusedBlob.total() >= targetTotal && unusedBlob.total() < bestBlobTotal && unusedBlob.type() == dtype)
+                    // Only reuse blobs of exactly the same size to avoid stateless issues
+                    // This prevents memory from previous computations from affecting current results
+                    if (unusedBlob.total() == targetTotal && unusedBlob.type() == dtype)
                     {
                         bestBlobPin = hostIt->first;
                         bestBlob = unusedBlob;
