@@ -538,3 +538,17 @@ seemoredetails:
   height: 512
   sample: "super_resolution"
   input: true
+
+################################################################################
+# Auto white balance models.
+################################################################################
+
+fc4:
+  load_info:
+    url: "https://raw.githubusercontent.com/MykhailoTrushch/fc4-models/main/fc4_fold_0.onnx"
+    sha1: "e8a9a65ec0baaae3e4c97b34274a620eb362e905"
+  model: "fc4_fold_0.onnx"
+  sample: "auto_white_balance"
+  scale: 0.00392156862
+  rgb: true
+  mean: 0
