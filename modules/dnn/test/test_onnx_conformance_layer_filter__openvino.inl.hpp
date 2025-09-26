@@ -95,6 +95,16 @@ CASE(test_add_bcast)
 #if SKIP_SET_1
     SKIP;
 #endif
+CASE(test_add_int16)
+    SKIP;
+CASE(test_add_int8)
+    SKIP;
+CASE(test_add_uint16)
+    SKIP;
+CASE(test_add_uint32)
+    SKIP;
+CASE(test_add_uint64)
+    SKIP;
 CASE(test_add_uint8)
 #if SKIP_SET_1
     SKIP;
@@ -358,23 +368,39 @@ CASE(test_clip)
     SKIP;
 CASE(test_clip_default_inbounds)
     SKIP;
+CASE(test_clip_default_inbounds_expanded)
+    SKIP;
 CASE(test_clip_default_int8_inbounds)
+    SKIP;
+CASE(test_clip_default_int8_inbounds_expanded)
     SKIP;
 CASE(test_clip_default_int8_max)
     SKIP;
+CASE(test_clip_default_int8_max_expanded)
+    SKIP;
 CASE(test_clip_default_int8_min)
+    SKIP;
+CASE(test_clip_default_int8_min_expanded)
     SKIP;
 CASE(test_clip_default_max)
     SKIP;
+CASE(test_clip_default_max_expanded)
+    SKIP;
 CASE(test_clip_default_min)
+    SKIP;
+CASE(test_clip_default_min_expanded)
     SKIP;
 CASE(test_clip_example)
     SKIP;
 CASE(test_clip_inbounds)
     SKIP;
+CASE(test_clip_inbounds_expanded)
+    SKIP;
 CASE(test_clip_outbounds)
     SKIP;
 CASE(test_clip_splitbounds)
+    SKIP;
+CASE(test_clip_splitbounds_expanded)
     SKIP;
 CASE(test_compress_0)
     // no filter
@@ -588,6 +614,866 @@ CASE(test_equal)
     // no filter
 CASE(test_equal_bcast)
     // no filter
+CASE(test_equal_int16)
+    SKIP;
+CASE(test_equal_int8)
+    SKIP;
+CASE(test_equal_uint16)
+    SKIP;
+CASE(test_equal_uint32)
+    SKIP;
+CASE(test_equal_uint64)
+    SKIP;
+CASE(test_equal_uint8)
+    SKIP;
+CASE(test_erf)
+    // no filter
+CASE(test_exp)
+    // no filter
+CASE(test_exp_example)
+    // no filter
+CASE(test_expand_dim_changed)
+    SKIP;
+CASE(test_expand_dim_unchanged)
+    SKIP;
+CASE(test_eyelike_populate_off_main_diagonal)
+    // no filter
+CASE(test_eyelike_with_dtype)
+    // no filter
+CASE(test_eyelike_without_dtype)
+    // no filter
+CASE(test_flatten_axis0)
+    // no filter
+CASE(test_flatten_axis1)
+    // no filter
+CASE(test_flatten_axis2)
+    // no filter
+CASE(test_flatten_axis3)
+    // no filter
+CASE(test_flatten_default_axis)
+    // no filter
+CASE(test_flatten_negative_axis1)
+    // no filter
+CASE(test_flatten_negative_axis2)
+    // no filter
+CASE(test_flatten_negative_axis3)
+    // no filter
+CASE(test_flatten_negative_axis4)
+    // no filter
+CASE(test_floor)
+    // no filter
+CASE(test_floor_example)
+    // no filter
+CASE(test_gather_0)
+    // no filter
+CASE(test_gather_1)
+    // no filter
+CASE(test_gather_2d_indices)
+    // no filter
+CASE(test_gather_elements_0)
+    // no filter
+CASE(test_gather_elements_1)
+    // no filter
+CASE(test_gather_elements_negative_indices)
+    // no filter
+CASE(test_gather_negative_indices)
+    // no filter
+CASE(test_gathernd_example_float32)
+    // no filter
+CASE(test_gathernd_example_int32)
+    // no filter
+CASE(test_gathernd_example_int32_batch_dim1)
+    // no filter
+CASE(test_gelu_default_1)
+    // no filter
+CASE(test_gelu_default_1_expanded)
+    // no filter
+CASE(test_gelu_default_2)
+    // no filter
+CASE(test_gelu_default_2_expanded)
+    // no filter
+CASE(test_gelu_tanh_1)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+    }
+CASE(test_gelu_tanh_1_expanded)
+    // no filter
+CASE(test_gelu_tanh_2)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80144e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+    }
+CASE(test_gelu_tanh_2_expanded)
+    // no filter
+CASE(test_gemm_all_attributes)
+    SKIP;
+CASE(test_gemm_alpha)
+    SKIP;
+CASE(test_gemm_beta)
+    SKIP;
+CASE(test_gemm_default_matrix_bias)
+    SKIP; // https://github.com/opencv/opencv/issues/25472
+CASE(test_gemm_default_no_bias)
+    SKIP;
+CASE(test_gemm_default_scalar_bias)
+    SKIP;
+CASE(test_gemm_default_single_elem_vector_bias)
+    SKIP;
+CASE(test_gemm_default_vector_bias)
+    SKIP;
+CASE(test_gemm_default_zero_bias)
+    SKIP;
+CASE(test_gemm_transposeA)
+    SKIP;
+CASE(test_gemm_transposeB)
+    SKIP;
+CASE(test_globalaveragepool)
+    // no filter
+CASE(test_globalaveragepool_precomputed)
+    // no filter
+CASE(test_globalmaxpool)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_globalmaxpool_precomputed)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_greater)
+    // no filter
+CASE(test_greater_bcast)
+    // no filter
+CASE(test_greater_equal)
+    // no filter
+CASE(test_greater_equal_bcast)
+    // no filter
+CASE(test_greater_equal_bcast_expanded)
+    // no filter
+CASE(test_greater_equal_expanded)
+    // no filter
+CASE(test_gridsample)
+    SKIP;
+CASE(test_gridsample_aligncorners_true)
+    SKIP;
+CASE(test_gridsample_bicubic)
+    // no filter
+CASE(test_gridsample_bilinear)
+    SKIP;
+CASE(test_gridsample_border_padding)
+    SKIP;
+CASE(test_gridsample_nearest)
+    SKIP;
+CASE(test_gridsample_reflection_padding)
+    SKIP;
+CASE(test_gridsample_zeros_padding)
+    SKIP;
+CASE(test_group_normalization_epsilon)
+    // no filter
+CASE(test_group_normalization_example)
+    // no filter
+CASE(test_gru_batchwise)
+    // no filter
+CASE(test_gru_defaults)
+    // no filter
+CASE(test_gru_seq_length)
+    // no filter
+CASE(test_gru_with_initial_bias)
+    // no filter
+CASE(test_hardmax_axis_0)
+    // no filter
+CASE(test_hardmax_axis_1)
+    // no filter
+CASE(test_hardmax_axis_2)
+    // no filter
+CASE(test_hardmax_default_axis)
+    // no filter
+CASE(test_hardmax_example)
+    // no filter
+CASE(test_hardmax_negative_axis)
+    // no filter
+CASE(test_hardmax_one_hot)
+    // no filter
+CASE(test_einsum_batch_matmul)
+    // no filter
+CASE(test_einsum_inner_prod)
+    // no filter
+CASE(test_einsum_sum)
+    // no filter
+CASE(test_einsum_transpose)
+    // no filter
+CASE(test_elu)
+    // no filter
+CASE(test_elu_default)
+    // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
+CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
+    // no filter
+CASE(test_equal)
+    // no filter
+CASE(test_equal_bcast)
+    // no filter
+CASE(test_equal_int16)
+    SKIP;
+CASE(test_equal_int8)
+    SKIP;
+CASE(test_equal_uint16)
+    SKIP;
+CASE(test_equal_uint32)
+    SKIP;
+CASE(test_equal_uint64)
+    SKIP;
+CASE(test_equal_uint8)
+    SKIP;
+CASE(test_erf)
+    // no filter
+CASE(test_exp)
+    // no filter
+CASE(test_exp_example)
+    // no filter
+CASE(test_expand_dim_changed)
+    SKIP;
+CASE(test_expand_dim_unchanged)
+    SKIP;
+CASE(test_eyelike_populate_off_main_diagonal)
+    // no filter
+CASE(test_eyelike_with_dtype)
+    // no filter
+CASE(test_eyelike_without_dtype)
+    // no filter
+CASE(test_flatten_axis0)
+    // no filter
+CASE(test_flatten_axis1)
+    // no filter
+CASE(test_flatten_axis2)
+    // no filter
+CASE(test_flatten_axis3)
+    // no filter
+CASE(test_flatten_default_axis)
+    // no filter
+CASE(test_flatten_negative_axis1)
+    // no filter
+CASE(test_flatten_negative_axis2)
+    // no filter
+CASE(test_flatten_negative_axis3)
+    // no filter
+CASE(test_flatten_negative_axis4)
+    // no filter
+CASE(test_floor)
+    // no filter
+CASE(test_floor_example)
+    // no filter
+CASE(test_gather_0)
+    // no filter
+CASE(test_gather_1)
+    // no filter
+CASE(test_gather_2d_indices)
+    // no filter
+CASE(test_gather_elements_0)
+    // no filter
+CASE(test_gather_elements_1)
+    // no filter
+CASE(test_gather_elements_negative_indices)
+    // no filter
+CASE(test_gather_negative_indices)
+    // no filter
+CASE(test_gathernd_example_float32)
+    // no filter
+CASE(test_gathernd_example_int32)
+    // no filter
+CASE(test_gathernd_example_int32_batch_dim1)
+    // no filter
+CASE(test_gelu_default_1)
+    // no filter
+CASE(test_gelu_default_1_expanded)
+    // no filter
+CASE(test_gelu_default_2)
+    // no filter
+CASE(test_gelu_default_2_expanded)
+    // no filter
+CASE(test_gelu_tanh_1)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+    }
+CASE(test_gelu_tanh_1_expanded)
+    // no filter
+CASE(test_gelu_tanh_2)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80144e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+    }
+CASE(test_gelu_tanh_2_expanded)
+    // no filter
+CASE(test_gemm_all_attributes)
+    SKIP;
+CASE(test_gemm_alpha)
+    SKIP;
+CASE(test_gemm_beta)
+    SKIP;
+CASE(test_gemm_default_matrix_bias)
+    SKIP; // https://github.com/opencv/opencv/issues/25472
+CASE(test_gemm_default_no_bias)
+    SKIP;
+CASE(test_gemm_default_scalar_bias)
+    SKIP;
+CASE(test_gemm_default_single_elem_vector_bias)
+    SKIP;
+CASE(test_gemm_default_vector_bias)
+    SKIP;
+CASE(test_gemm_default_zero_bias)
+    SKIP;
+CASE(test_gemm_transposeA)
+    SKIP;
+CASE(test_gemm_transposeB)
+    SKIP;
+CASE(test_globalaveragepool)
+    // no filter
+CASE(test_globalaveragepool_precomputed)
+    // no filter
+CASE(test_globalmaxpool)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_globalmaxpool_precomputed)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_greater)
+    // no filter
+CASE(test_greater_bcast)
+    // no filter
+CASE(test_greater_equal)
+    // no filter
+CASE(test_greater_equal_bcast)
+    // no filter
+CASE(test_greater_equal_bcast_expanded)
+    // no filter
+CASE(test_greater_equal_expanded)
+    // no filter
+CASE(test_gridsample)
+    SKIP;
+CASE(test_gridsample_aligncorners_true)
+    SKIP;
+CASE(test_gridsample_bicubic)
+    // no filter
+CASE(test_gridsample_bilinear)
+    SKIP;
+CASE(test_gridsample_border_padding)
+    SKIP;
+CASE(test_gridsample_nearest)
+    SKIP;
+CASE(test_gridsample_reflection_padding)
+    SKIP;
+CASE(test_gridsample_zeros_padding)
+    SKIP;
+CASE(test_group_normalization_epsilon)
+    // no filter
+CASE(test_group_normalization_example)
+    // no filter
+CASE(test_gru_batchwise)
+    // no filter
+CASE(test_gru_defaults)
+    // no filter
+CASE(test_gru_seq_length)
+    // no filter
+CASE(test_gru_with_initial_bias)
+    // no filter
+CASE(test_hardmax_axis_0)
+    // no filter
+CASE(test_hardmax_axis_1)
+    // no filter
+CASE(test_hardmax_axis_2)
+    // no filter
+CASE(test_hardmax_default_axis)
+    // no filter
+CASE(test_hardmax_example)
+    // no filter
+CASE(test_hardmax_negative_axis)
+    // no filter
+CASE(test_hardmax_one_hot)
+    // no filter
+CASE(test_einsum_batch_matmul)
+    // no filter
+CASE(test_einsum_inner_prod)
+    // no filter
+CASE(test_einsum_sum)
+    // no filter
+CASE(test_einsum_transpose)
+    // no filter
+CASE(test_elu)
+    // no filter
+CASE(test_elu_default)
+    // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
+CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
+    // no filter
+CASE(test_equal)
+    // no filter
+CASE(test_equal_bcast)
+    // no filter
+CASE(test_equal_int16)
+    SKIP;
+CASE(test_equal_int8)
+    SKIP;
+CASE(test_equal_uint16)
+    SKIP;
+CASE(test_equal_uint32)
+    SKIP;
+CASE(test_equal_uint64)
+    SKIP;
+CASE(test_equal_uint8)
+    SKIP;
+CASE(test_erf)
+    // no filter
+CASE(test_exp)
+    // no filter
+CASE(test_exp_example)
+    // no filter
+CASE(test_expand_dim_changed)
+    SKIP;
+CASE(test_expand_dim_unchanged)
+    SKIP;
+CASE(test_eyelike_populate_off_main_diagonal)
+    // no filter
+CASE(test_eyelike_with_dtype)
+    // no filter
+CASE(test_eyelike_without_dtype)
+    // no filter
+CASE(test_flatten_axis0)
+    // no filter
+CASE(test_flatten_axis1)
+    // no filter
+CASE(test_flatten_axis2)
+    // no filter
+CASE(test_flatten_axis3)
+    // no filter
+CASE(test_flatten_default_axis)
+    // no filter
+CASE(test_flatten_negative_axis1)
+    // no filter
+CASE(test_flatten_negative_axis2)
+    // no filter
+CASE(test_flatten_negative_axis3)
+    // no filter
+CASE(test_flatten_negative_axis4)
+    // no filter
+CASE(test_floor)
+    // no filter
+CASE(test_floor_example)
+    // no filter
+CASE(test_gather_0)
+    // no filter
+CASE(test_gather_1)
+    // no filter
+CASE(test_gather_2d_indices)
+    // no filter
+CASE(test_gather_elements_0)
+    // no filter
+CASE(test_gather_elements_1)
+    // no filter
+CASE(test_gather_elements_negative_indices)
+    // no filter
+CASE(test_gather_negative_indices)
+    // no filter
+CASE(test_gathernd_example_float32)
+    // no filter
+CASE(test_gathernd_example_int32)
+    // no filter
+CASE(test_gathernd_example_int32_batch_dim1)
+    // no filter
+CASE(test_gelu_default_1)
+    // no filter
+CASE(test_gelu_default_1_expanded)
+    // no filter
+CASE(test_gelu_default_2)
+    // no filter
+CASE(test_gelu_default_2_expanded)
+    // no filter
+CASE(test_gelu_tanh_1)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+    }
+CASE(test_gelu_tanh_1_expanded)
+    // no filter
+CASE(test_gelu_tanh_2)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80144e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+    }
+CASE(test_gelu_tanh_2_expanded)
+    // no filter
+CASE(test_gemm_all_attributes)
+    SKIP;
+CASE(test_gemm_alpha)
+    SKIP;
+CASE(test_gemm_beta)
+    SKIP;
+CASE(test_gemm_default_matrix_bias)
+    SKIP; // https://github.com/opencv/opencv/issues/25472
+CASE(test_gemm_default_no_bias)
+    SKIP;
+CASE(test_gemm_default_scalar_bias)
+    SKIP;
+CASE(test_gemm_default_single_elem_vector_bias)
+    SKIP;
+CASE(test_gemm_default_vector_bias)
+    SKIP;
+CASE(test_gemm_default_zero_bias)
+    SKIP;
+CASE(test_gemm_transposeA)
+    SKIP;
+CASE(test_gemm_transposeB)
+    SKIP;
+CASE(test_globalaveragepool)
+    // no filter
+CASE(test_globalaveragepool_precomputed)
+    // no filter
+CASE(test_globalmaxpool)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_globalmaxpool_precomputed)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_greater)
+    // no filter
+CASE(test_greater_bcast)
+    // no filter
+CASE(test_greater_equal)
+    // no filter
+CASE(test_greater_equal_bcast)
+    // no filter
+CASE(test_greater_equal_bcast_expanded)
+    // no filter
+CASE(test_greater_equal_expanded)
+    // no filter
+CASE(test_gridsample)
+    SKIP;
+CASE(test_gridsample_aligncorners_true)
+    SKIP;
+CASE(test_gridsample_bicubic)
+    // no filter
+CASE(test_gridsample_bilinear)
+    SKIP;
+CASE(test_gridsample_border_padding)
+    SKIP;
+CASE(test_gridsample_nearest)
+    SKIP;
+CASE(test_gridsample_reflection_padding)
+    SKIP;
+CASE(test_gridsample_zeros_padding)
+    SKIP;
+CASE(test_group_normalization_epsilon)
+    // no filter
+CASE(test_group_normalization_example)
+    // no filter
+CASE(test_gru_batchwise)
+    // no filter
+CASE(test_gru_defaults)
+    // no filter
+CASE(test_gru_seq_length)
+    // no filter
+CASE(test_gru_with_initial_bias)
+    // no filter
+CASE(test_hardmax_axis_0)
+    // no filter
+CASE(test_hardmax_axis_1)
+    // no filter
+CASE(test_hardmax_axis_2)
+    // no filter
+CASE(test_hardmax_default_axis)
+    // no filter
+CASE(test_hardmax_example)
+    // no filter
+CASE(test_hardmax_negative_axis)
+    // no filter
+CASE(test_hardmax_one_hot)
+    // no filter
+CASE(test_einsum_batch_matmul)
+    // no filter
+CASE(test_einsum_inner_prod)
+    // no filter
+CASE(test_einsum_sum)
+    // no filter
+CASE(test_einsum_transpose)
+    // no filter
+CASE(test_elu)
+    // no filter
+CASE(test_elu_default)
+    // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
+CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
+    // no filter
+CASE(test_equal)
+    // no filter
+CASE(test_equal_bcast)
+    // no filter
+CASE(test_equal_int16)
+    SKIP;
+CASE(test_equal_int8)
+    SKIP;
+CASE(test_equal_uint16)
+    SKIP;
+CASE(test_equal_uint32)
+    SKIP;
+CASE(test_equal_uint64)
+    SKIP;
+CASE(test_equal_uint8)
+    SKIP;
+CASE(test_erf)
+    // no filter
+CASE(test_exp)
+    // no filter
+CASE(test_exp_example)
+    // no filter
+CASE(test_expand_dim_changed)
+    SKIP;
+CASE(test_expand_dim_unchanged)
+    SKIP;
+CASE(test_eyelike_populate_off_main_diagonal)
+    // no filter
+CASE(test_eyelike_with_dtype)
+    // no filter
+CASE(test_eyelike_without_dtype)
+    // no filter
+CASE(test_flatten_axis0)
+    // no filter
+CASE(test_flatten_axis1)
+    // no filter
+CASE(test_flatten_axis2)
+    // no filter
+CASE(test_flatten_axis3)
+    // no filter
+CASE(test_flatten_default_axis)
+    // no filter
+CASE(test_flatten_negative_axis1)
+    // no filter
+CASE(test_flatten_negative_axis2)
+    // no filter
+CASE(test_flatten_negative_axis3)
+    // no filter
+CASE(test_flatten_negative_axis4)
+    // no filter
+CASE(test_floor)
+    // no filter
+CASE(test_floor_example)
+    // no filter
+CASE(test_gather_0)
+    // no filter
+CASE(test_gather_1)
+    // no filter
+CASE(test_gather_2d_indices)
+    // no filter
+CASE(test_gather_elements_0)
+    // no filter
+CASE(test_gather_elements_1)
+    // no filter
+CASE(test_gather_elements_negative_indices)
+    // no filter
+CASE(test_gather_negative_indices)
+    // no filter
+CASE(test_gathernd_example_float32)
+    // no filter
+CASE(test_gathernd_example_int32)
+    // no filter
+CASE(test_gathernd_example_int32_batch_dim1)
+    // no filter
+CASE(test_gelu_default_1)
+    // no filter
+CASE(test_gelu_default_1_expanded)
+    // no filter
+CASE(test_gelu_default_2)
+    // no filter
+CASE(test_gelu_default_2_expanded)
+    // no filter
+CASE(test_gelu_tanh_1)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+        default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+    }
+CASE(test_gelu_tanh_1_expanded)
+    // no filter
+CASE(test_gelu_tanh_2)
+    if (target == DNN_TARGET_CPU) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80057e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+    }
+    if (target == DNN_TARGET_OPENCL) {
+        default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80144e-05 vs 1e-05
+        default_lInf = 0.00046; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+    }
+CASE(test_gelu_tanh_2_expanded)
+    // no filter
+CASE(test_gemm_all_attributes)
+    SKIP;
+CASE(test_gemm_alpha)
+    SKIP;
+CASE(test_gemm_beta)
+    SKIP;
+CASE(test_gemm_default_matrix_bias)
+    SKIP; // https://github.com/opencv/opencv/issues/25472
+CASE(test_gemm_default_no_bias)
+    SKIP;
+CASE(test_gemm_default_scalar_bias)
+    SKIP;
+CASE(test_gemm_default_single_elem_vector_bias)
+    SKIP;
+CASE(test_gemm_default_vector_bias)
+    SKIP;
+CASE(test_gemm_default_zero_bias)
+    SKIP;
+CASE(test_gemm_transposeA)
+    SKIP;
+CASE(test_gemm_transposeB)
+    SKIP;
+CASE(test_globalaveragepool)
+    // no filter
+CASE(test_globalaveragepool_precomputed)
+    // no filter
+CASE(test_globalmaxpool)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_globalmaxpool_precomputed)
+#if SKIP_SET_1
+    SKIP_MYRIAD;
+#endif
+CASE(test_greater)
+    // no filter
+CASE(test_greater_bcast)
+    // no filter
+CASE(test_greater_equal)
+    // no filter
+CASE(test_greater_equal_bcast)
+    // no filter
+CASE(test_greater_equal_bcast_expanded)
+    // no filter
+CASE(test_greater_equal_expanded)
+    // no filter
+CASE(test_gridsample)
+    SKIP;
+CASE(test_gridsample_aligncorners_true)
+    SKIP;
+CASE(test_gridsample_bicubic)
+    // no filter
+CASE(test_gridsample_bilinear)
+    SKIP;
+CASE(test_gridsample_border_padding)
+    SKIP;
+CASE(test_gridsample_nearest)
+    SKIP;
+CASE(test_gridsample_reflection_padding)
+    SKIP;
+CASE(test_gridsample_zeros_padding)
+    SKIP;
+CASE(test_group_normalization_epsilon)
+    // no filter
+CASE(test_group_normalization_example)
+    // no filter
+CASE(test_gru_batchwise)
+    // no filter
+CASE(test_gru_defaults)
+    // no filter
+CASE(test_gru_seq_length)
+    // no filter
+CASE(test_gru_with_initial_bias)
+    // no filter
+CASE(test_hardmax_axis_0)
+    // no filter
+CASE(test_hardmax_axis_1)
+    // no filter
+CASE(test_hardmax_axis_2)
+    // no filter
+CASE(test_hardmax_default_axis)
+    // no filter
+CASE(test_hardmax_example)
+    // no filter
+CASE(test_hardmax_negative_axis)
+    // no filter
+CASE(test_hardmax_one_hot)
+    // no filter
+CASE(test_einsum_batch_matmul)
+    // no filter
+CASE(test_einsum_inner_prod)
+    // no filter
+CASE(test_einsum_sum)
+    // no filter
+CASE(test_einsum_transpose)
+    // no filter
+CASE(test_elu)
+    // no filter
+CASE(test_elu_default)
+    // no filter
+CASE(test_elu_default_expanded_ver18)
+    // no filter
+CASE(test_elu_example)
+    // no filter
+CASE(test_elu_example_expanded_ver18)
+    // no filter
+CASE(test_elu_expanded_ver18)
+    // no filter
+CASE(test_equal)
+    // no filter
+CASE(test_equal_bcast)
+    // no filter
+CASE(test_equal_int16)
+    SKIP;
+CASE(test_equal_int8)
+    SKIP;
+CASE(test_equal_uint16)
+    SKIP;
+CASE(test_equal_uint32)
+    SKIP;
+CASE(test_equal_uint64)
+    SKIP;
+CASE(test_equal_uint8)
+    SKIP;
 CASE(test_erf)
     // no filter
 CASE(test_exp)
@@ -792,11 +1678,15 @@ CASE(test_instancenorm_example)
     // no filter
 CASE(test_isinf)
     SKIP;
+CASE(test_isinf_float16)
+    SKIP;
 CASE(test_isinf_negative)
     SKIP;
 CASE(test_isinf_positive)
     SKIP;
 CASE(test_isnan)
+    SKIP;
+CASE(test_isnan_float16)
     SKIP;
 CASE(test_layer_normalization_2d_axis0)
     // no filter
@@ -868,24 +1758,34 @@ CASE(test_logsoftmax_axis_0_expanded)
     SKIP_OPENCL;
     SKIP_OPENCL_FP16;
 #endif
+CASE(test_logsoftmax_axis_0_expanded_ver18)
+    SKIP;
 CASE(test_logsoftmax_axis_1)
     // no filter
 CASE(test_logsoftmax_axis_1_expanded)
     // no filter
+CASE(test_logsoftmax_axis_1_expanded_ver18)
+    SKIP;
 CASE(test_logsoftmax_axis_2)
     // no filter
 CASE(test_logsoftmax_axis_2_expanded)
     // no filter
+CASE(test_logsoftmax_axis_2_expanded_ver18)
+    SKIP;
 CASE(test_logsoftmax_default_axis)
 #if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_logsoftmax_default_axis_expanded)
     // no filter
+CASE(test_logsoftmax_default_axis_expanded_ver18)
+    SKIP;
 CASE(test_logsoftmax_example_1)
     // no filter
 CASE(test_logsoftmax_example_1_expanded)
     // no filter
+CASE(test_logsoftmax_example_1_expanded_ver18)
+    SKIP;
 CASE(test_logsoftmax_large_number)
 #if SKIP_SET_1
     SKIP_OPENCL_FP16;
@@ -896,10 +1796,14 @@ CASE(test_logsoftmax_large_number_expanded)
     SKIP_OPENCL_FP16;
     SKIP_MYRIAD;
 #endif
+CASE(test_logsoftmax_large_number_expanded_ver18)
+    SKIP;
 CASE(test_logsoftmax_negative_axis)
     // no filter
 CASE(test_logsoftmax_negative_axis_expanded)
     // no filter
+CASE(test_logsoftmax_negative_axis_expanded_ver18)
+    SKIP;
 CASE(test_loop11)
     // no filter
 CASE(test_loop13_seq)
@@ -1115,6 +2019,16 @@ CASE(test_mul_bcast)
 #endif
 CASE(test_mul_example)
     // no filter
+CASE(test_mul_int16)
+    SKIP;
+CASE(test_mul_int8)
+    SKIP;
+CASE(test_mul_uint16)
+    SKIP;
+CASE(test_mul_uint32)
+    SKIP;
+CASE(test_mul_uint64)
+    SKIP;
 CASE(test_mul_uint8)
     SKIP;
 CASE(test_mvn)
@@ -1897,24 +2811,34 @@ CASE(test_softmax_axis_0_expanded)
     SKIP_OPENCL;
     SKIP_OPENCL_FP16;
 #endif
+CASE(test_softmax_axis_0_expanded_ver18)
+    SKIP;
 CASE(test_softmax_axis_1)
     // no filter
 CASE(test_softmax_axis_1_expanded)
     // no filter
+CASE(test_softmax_axis_1_expanded_ver18)
+    SKIP;
 CASE(test_softmax_axis_2)
     // no filter
 CASE(test_softmax_axis_2_expanded)
     // no filter
+CASE(test_softmax_axis_2_expanded_ver18)
+    SKIP;
 CASE(test_softmax_default_axis)
 #if SKIP_SET_1
     SKIP;
 #endif
 CASE(test_softmax_default_axis_expanded)
     // no filter
+CASE(test_softmax_default_axis_expanded_ver18)
+    SKIP;
 CASE(test_softmax_example)
     // no filter
 CASE(test_softmax_example_expanded)
     // no filter
+CASE(test_softmax_example_expanded_ver18)
+    SKIP;
 CASE(test_softmax_large_number)
 #if SKIP_SET_1
     SKIP_OPENCL_FP16;
@@ -1925,10 +2849,14 @@ CASE(test_softmax_large_number_expanded)
     SKIP_OPENCL_FP16;
     SKIP_MYRIAD;
 #endif
+CASE(test_softmax_large_number_expanded_ver18)
+    SKIP;
 CASE(test_softmax_negative_axis)
     // no filter
 CASE(test_softmax_negative_axis_expanded)
     // no filter
+CASE(test_softmax_negative_axis_expanded_ver18)
+    SKIP;
 CASE(test_softplus)
     // no filter
 CASE(test_softplus_example)
@@ -1993,6 +2921,8 @@ CASE(test_sum_one_input)
     // no filter
 CASE(test_sum_two_inputs)
     // no filter
+CASE(test_swish)
+    SKIP;
 CASE(test_tan)
     // no filter
 CASE(test_tan_example)
