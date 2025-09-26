@@ -434,138 +434,147 @@ bool  PngDecoder::readData( Mat& img )
         if (!processing_start((void*)&frameRaw, mat_cur))
             return false;
 
-        while (true)
+        // See https://github.com/opencv/opencv/issues/27744
+        if( setjmp( png_jmpbuf ( m_png_ptr ) ) == 0 )
         {
-            id = read_chunk(chunk);
-            if (!id)
-                return false;
-
-            if (id == id_fcTL && m_is_IDAT_loaded)
+            while (true)
             {
-                if (!m_is_fcTL_loaded)
+                id = read_chunk(chunk);
+                if (!id)
+                    return false;
+
+                if (id == id_fcTL && m_is_IDAT_loaded)
                 {
-                    m_mat_raw.copyTo(m_animation.still_image);
-                }
-                else
-                {
-                    if (processing_finish())
+                    if (!m_is_fcTL_loaded)
                     {
-                        if (dop == 2)
-                            memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
-
-                        if (x0 + w0 > frameCur.getWidth() || y0 + h0 > frameCur.getHeight())
-                           return false;
-
-                        compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                        if (!delay_den)
-                            delay_den = 100;
-                        m_animation.durations.push_back(cvRound(1000. * delay_num / delay_den));
-
-                        if (mat_cur.channels() == img.channels())
+                        m_mat_raw.copyTo(m_animation.still_image);
+                    }
+                    else
+                    {
+                        if (processing_finish())
                         {
-                            if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                                mat_cur.convertTo(img, CV_8U, 1. / 255);
+                            if (dop == 2)
+                                memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
+
+                            if (x0 + w0 > frameCur.getWidth() || y0 + h0 > frameCur.getHeight())
+                            return false;
+
+                            compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
+                            if (!delay_den)
+                                delay_den = 100;
+                            m_animation.durations.push_back(cvRound(1000. * delay_num / delay_den));
+
+                            if (mat_cur.channels() == img.channels())
+                            {
+                                if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                                    mat_cur.convertTo(img, CV_8U, 1. / 255);
+                                else
+                                    mat_cur.copyTo(img);
+                            }
                             else
-                                mat_cur.copyTo(img);
+                            {
+                                Mat mat_cur_scaled;
+                                if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                                    mat_cur.convertTo(mat_cur_scaled, CV_8U, 1. / 255);
+                                else
+                                    mat_cur_scaled = mat_cur;
+
+                                if (img.channels() == 1)
+                                    cvtColor(mat_cur_scaled, img, COLOR_BGRA2GRAY);
+                                else if (img.channels() == 3)
+                                    cvtColor(mat_cur_scaled, img, COLOR_BGRA2BGR);
+                            }
+
+                            if (dop != 2)
+                            {
+                                memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
+                                if (dop == 1)
+                                    for (j = 0; j < h0; j++)
+                                        memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
+                            }
                         }
                         else
                         {
-                            Mat mat_cur_scaled;
-                            if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                                mat_cur.convertTo(mat_cur_scaled, CV_8U, 1. / 255);
-                            else
-                                mat_cur_scaled = mat_cur;
-
-                            if (img.channels() == 1)
-                                cvtColor(mat_cur_scaled, img, COLOR_BGRA2GRAY);
-                            else if (img.channels() == 3)
-                                cvtColor(mat_cur_scaled, img, COLOR_BGRA2BGR);
+                            return false;
                         }
+                    }
 
-                        if (dop != 2)
+                    w0 = png_get_uint_32(&chunk.p[12]);
+                    h0 = png_get_uint_32(&chunk.p[16]);
+                    x0 = png_get_uint_32(&chunk.p[20]);
+                    y0 = png_get_uint_32(&chunk.p[24]);
+                    delay_num = png_get_uint_16(&chunk.p[28]);
+                    delay_den = png_get_uint_16(&chunk.p[30]);
+                    dop = chunk.p[32];
+                    bop = chunk.p[33];
+
+                    if (int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
+                    {
+                        return false;
+                    }
+
+                    memcpy(&m_chunkIHDR.p[8], &chunk.p[12], 8);
+
+                    if (m_is_fcTL_loaded)
+                        return true;
+                    else
+                    {
+                        m_is_fcTL_loaded = true;
+                        ClearPngPtr();
+                        if (!processing_start((void*)&frameRaw, mat_cur))
+                            return false;
+                    }
+                }
+                else if (id == id_IDAT)
+                {
+                    m_is_IDAT_loaded = true;
+                    png_process_data(m_png_ptr, m_info_ptr, chunk.p.data(), chunk.p.size());
+                }
+                else if (id == id_fdAT && m_is_fcTL_loaded)
+                {
+                    m_is_IDAT_loaded = true;
+                    png_save_uint_32(&chunk.p[4], static_cast<uint32_t>(chunk.p.size() - 16));
+                    memcpy(&chunk.p[8], "IDAT", 4);
+                    png_process_data(m_png_ptr, m_info_ptr, &chunk.p[4], chunk.p.size() - 4);
+                }
+                else if (id == id_IEND)
+                {
+                    if (processing_finish())
+                    {
+                        compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
+                        if (!delay_den)
+                            delay_den = 100;
+                        m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
+
+                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U && mat_cur.channels() == img.channels())
+                            mat_cur.convertTo(img, CV_8U, 1. / 255);
+                        else
                         {
-                            memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
-                            if (dop == 1)
-                                for (j = 0; j < h0; j++)
-                                    memset(frameNext.getRows()[y0 + j] + x0 * img.channels(), 0, w0 * img.channels());
+                            if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
+                                mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
+                            if (mat_cur.channels() == img.channels())
+                                mat_cur.copyTo(img);
+                            else if (img.channels() == 1)
+                                cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
+                            else if (img.channels() == 3)
+                                cvtColor(mat_cur, img, COLOR_BGRA2BGR);
                         }
                     }
                     else
-                    {
                         return false;
-                    }
-                }
 
-                w0 = png_get_uint_32(&chunk.p[12]);
-                h0 = png_get_uint_32(&chunk.p[16]);
-                x0 = png_get_uint_32(&chunk.p[20]);
-                y0 = png_get_uint_32(&chunk.p[24]);
-                delay_num = png_get_uint_16(&chunk.p[28]);
-                delay_den = png_get_uint_16(&chunk.p[30]);
-                dop = chunk.p[32];
-                bop = chunk.p[33];
-
-                if (int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
-                {
-                    return false;
-                }
-
-                memcpy(&m_chunkIHDR.p[8], &chunk.p[12], 8);
-
-                if (m_is_fcTL_loaded)
                     return true;
-                else
-                {
-                    m_is_fcTL_loaded = true;
-                    ClearPngPtr();
-                    if (!processing_start((void*)&frameRaw, mat_cur))
-                        return false;
-                }
-            }
-            else if (id == id_IDAT)
-            {
-                m_is_IDAT_loaded = true;
-                png_process_data(m_png_ptr, m_info_ptr, chunk.p.data(), chunk.p.size());
-            }
-            else if (id == id_fdAT && m_is_fcTL_loaded)
-            {
-                m_is_IDAT_loaded = true;
-                png_save_uint_32(&chunk.p[4], static_cast<uint32_t>(chunk.p.size() - 16));
-                memcpy(&chunk.p[8], "IDAT", 4);
-                png_process_data(m_png_ptr, m_info_ptr, &chunk.p[4], chunk.p.size() - 4);
-            }
-            else if (id == id_IEND)
-            {
-                if (processing_finish())
-                {
-                    compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
-                    if (!delay_den)
-                        delay_den = 100;
-                    m_animation.durations.push_back(cvRound(1000.*delay_num/delay_den));
-
-                    if (mat_cur.depth() == CV_16U && img.depth() == CV_8U && mat_cur.channels() == img.channels())
-                        mat_cur.convertTo(img, CV_8U, 1. / 255);
-                    else
-                    {
-                        if (mat_cur.depth() == CV_16U && img.depth() == CV_8U)
-                            mat_cur.convertTo(mat_cur, CV_8U, 1. / 255);
-                        if (mat_cur.channels() == img.channels())
-                            mat_cur.copyTo(img);
-                        else if (img.channels() == 1)
-                            cvtColor(mat_cur, img, COLOR_BGRA2GRAY);
-                        else if (img.channels() == 3)
-                            cvtColor(mat_cur, img, COLOR_BGRA2BGR);
-                    }
                 }
                 else
-                    return false;
-
-                return true;
+                    png_process_data(m_png_ptr, m_info_ptr, chunk.p.data(), chunk.p.size());
             }
-            else
-                png_process_data(m_png_ptr, m_info_ptr, chunk.p.data(), chunk.p.size());
+            return false;
         }
-        return false;
+        else
+        {
+            // libpng internal error is detected.
+            return false;
+        }
     }
 
     volatile bool result = false;
@@ -1621,20 +1630,52 @@ bool PngEncoder::writeanimation(const Animation& animation, const std::vector<in
 
     for (size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[i] == IMWRITE_PNG_COMPRESSION)
+        const int value = params[i+1];
+        switch (params[i])
         {
+        case IMWRITE_PNG_COMPRESSION:
             m_compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-            m_compression_level = params[i + 1];
-            m_compression_level = MIN(MAX(m_compression_level, 0), Z_BEST_COMPRESSION);
-        }
-        if (params[i] == IMWRITE_PNG_STRATEGY)
-        {
-            m_compression_strategy = params[i + 1];
-            m_compression_strategy = MIN(MAX(m_compression_strategy, 0), Z_FIXED);
-        }
-        if (params[i] == IMWRITE_PNG_BILEVEL)
-        {
-            m_isBilevel = params[i + 1] != 0;
+            m_compression_level = MIN(MAX(value, 0), Z_BEST_COMPRESSION);
+            if(value != m_compression_level) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, m_compression_level));
+            }
+            break;
+
+        case IMWRITE_PNG_STRATEGY:
+            {
+                switch(value) {
+                    case IMWRITE_PNG_STRATEGY_DEFAULT:
+                    case IMWRITE_PNG_STRATEGY_FILTERED:
+                    case IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY:
+                    case IMWRITE_PNG_STRATEGY_RLE:
+                    case IMWRITE_PNG_STRATEGY_FIXED:
+                        m_compression_strategy = value;
+                        break;
+                    default:
+                        m_compression_strategy = IMWRITE_PNG_STRATEGY_RLE;
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_STRATEGY must be one of ImwritePNGFlags. It is fallbacked to IMWRITE_PNG_STRATEGY_RLE", value));
+                        break;
+                }
+            }
+            break;
+
+        case IMWRITE_PNG_BILEVEL:
+            m_isBilevel = value != 0;
+            if((value != 0) && (value != 1)) {
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_BILEVEL must be 0 or 1. It is fallbacked to 1", value ));
+            }
+            break;
+
+        case IMWRITE_PNG_FILTER:
+            CV_LOG_WARNING(nullptr, "IMWRITE_PNG_BILEVEL parameter is not supported for APNG");
+            break;
+
+        case IMWRITE_PNG_ZLIBBUFFER_SIZE:
+            CV_LOG_WARNING(nullptr, "IMWRITE_PNG_ZLIBBUFFER_SIZE parameter is not supported for APNG");
+            break;
+
+        default:
+            break;
         }
     }
 

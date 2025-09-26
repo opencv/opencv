@@ -95,9 +95,9 @@ enum ImwriteFlags {
        IMWRITE_JPEG_SAMPLING_FACTOR = 7, //!< For JPEG, set sampling factor. See cv::ImwriteJPEGSamplingFactorParams.
        IMWRITE_PNG_COMPRESSION     = 16, //!< For PNG, it can be the compression level from 0 to 9. A higher value means a smaller size and longer compression time. If specified, strategy is changed to IMWRITE_PNG_STRATEGY_DEFAULT (Z_DEFAULT_STRATEGY). Default value is 1 (best speed setting).
        IMWRITE_PNG_STRATEGY        = 17, //!< For PNG, One of cv::ImwritePNGFlags, default is IMWRITE_PNG_STRATEGY_RLE.
-       IMWRITE_PNG_BILEVEL         = 18, //!< For PNG, Binary level PNG, 0 or 1, default is 0.
-       IMWRITE_PNG_FILTER          = 19, //!< For PNG, One of cv::ImwritePNGFilterFlags, default is IMWRITE_PNG_FILTER_SUB.
-       IMWRITE_PNG_ZLIBBUFFER_SIZE = 20, //!< For PNG with libpng, sets the size of the internal zlib compression buffer in bytes, from 6 to 1048576(1024 KiB). Default is 8192(8 KiB). For normal use, 131072(128 KiB) or 262144(256 KiB) may be sufficient. If WITH_SPNG=ON, it is not supported.
+       IMWRITE_PNG_BILEVEL         = 18, //!< For PNG, Binary level PNG, 0 or 1, default is 0. For APNG, it is not supported.
+       IMWRITE_PNG_FILTER          = 19, //!< For PNG, One of cv::ImwritePNGFilterFlags, default is IMWRITE_PNG_FILTER_SUB. For APNG, it is not supported.
+       IMWRITE_PNG_ZLIBBUFFER_SIZE = 20, //!< For PNG with libpng, sets the size of the internal zlib compression buffer in bytes, from 6 to 1048576(1024 KiB). Default is 8192(8 KiB). For normal use, 131072(128 KiB) or 262144(256 KiB) may be sufficient. If WITH_SPNG=ON, it is not supported. For APNG, it is not supported.
        IMWRITE_PXM_BINARY          = 32, //!< For PPM, PGM, or PBM, it can be a binary format flag, 0 or 1. Default value is 1.
        IMWRITE_EXR_TYPE            = (3 << 4) + 0 /* 48 */, //!< override EXR storage type (FLOAT (FP32) is default)
        IMWRITE_EXR_COMPRESSION     = (3 << 4) + 1 /* 49 */, //!< override EXR compression type (ZIP_COMPRESSION = 3 is default)

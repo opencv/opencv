@@ -4079,7 +4079,7 @@ The algorithm based on the paper @cite LowIlie2003 .
 @param approxCurve Result of the approximation. The type is vector of a 2D point (Point2f or Point) in std::vector or Mat.
 @param nsides The parameter defines the number of sides of the result polygon.
 @param epsilon_percentage defines the percentage of the maximum of additional area.
-If it equals -1, it is not used. Otherwise algorighm stops if additional area is greater than contourArea(_curve) * percentage.
+If it equals -1, it is not used. Otherwise algorithm stops if additional area is greater than contourArea(_curve) * percentage.
 If additional area exceeds the limit, algorithm returns as many vertices as there were at the moment the limit was exceeded.
 @param ensure_convex If it is true, algorithm creates a convex hull of input contour. Otherwise input vector should be convex.
  */
@@ -4157,7 +4157,8 @@ The function finds the four vertices of a rotated rectangle. The four vertices a
 in clockwise order starting from the point with greatest \f$y\f$. If two points have the
 same \f$y\f$ coordinate the rightmost is the starting point. This function is useful to draw the
 rectangle. In C++, instead of using this function, you can directly use RotatedRect::points method. Please
-visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses for contours" for more information.
+visit the @ref tutorial_bounding_rotated_ellipses "tutorial on Creating Bounding rotated boxes and ellipses
+for contours" for more information.
 
 @param box The input rotated rectangle. It may be the output of @ref minAreaRect.
 @param points The output array of four vertices of rectangles.
@@ -4196,6 +4197,30 @@ than \f$\theta(n)\f$. Thus the overall complexity of the function is \f$O(n log(
 of the OutputArray must be CV_32F.
  */
 CV_EXPORTS_W double minEnclosingTriangle( InputArray points, CV_OUT OutputArray triangle );
+
+
+/**
+@brief Finds a convex polygon of minimum area enclosing a 2D point set and returns its area.
+
+This function takes a given set of 2D points and finds the enclosing polygon with k vertices and minimal
+area. It takes the set of points and the parameter k as input and returns the area of the minimal
+enclosing polygon.
+
+The Implementation is based on a paper by Aggarwal, Chang and Yap @cite Aggarwal1985. They
+provide a \f$\theta(n²log(n)log(k))\f$ algorighm for finding the minimal convex polygon with k
+vertices enclosing a 2D convex polygon with n vertices (k < n). Since the #minEnclosingConvexPolygon
+function takes a 2D point set as input, an additional preprocessing step of computing the convex hull
+of the 2D point set is required. The complexity of the #convexHull function is \f$O(n log(n))\f$ which
+is lower than \f$\theta(n²log(n)log(k))\f$. Thus the overall complexity of the function is
+\f$O(n²log(n)log(k))\f$.
+
+@param points   Input vector of 2D points, stored in std::vector\<\> or Mat
+@param polygon  Output vector of 2D points defining the vertices of the enclosing polygon
+@param k        Number of vertices of the output polygon
+ */
+
+CV_EXPORTS_W double minEnclosingConvexPolygon ( InputArray points, OutputArray polygon, int k );
+
 
 /** @brief Compares two shapes.
 

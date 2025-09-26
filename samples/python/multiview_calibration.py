@@ -1015,19 +1015,19 @@ if __name__ == '__main__':
     print("params.board_dict_path:", params.board_dict_path)
 
     if params.log_level == "verbose":
-        cv.setLogLevel(6)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_VERBOSE)
     elif params.log_level == "debug":
-        cv.setLogLevel(5)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_DEBUG)
     elif params.log_level == "info":
-        cv.setLogLevel(4)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_INFO)
     elif params.log_level == "warning":
-        cv.setLogLevel(3)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_WARNING)
     elif params.log_level == "error":
-        cv.setLogLevel(2)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_ERROR)
     elif params.log_level == "fatal":
-        cv.setLogLevel(1)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_FATAL)
     elif params.log_level == "silent":
-        cv.setLogLevel(0)
+        cv.utils.logging.setLogLevel(cv.utils.logging.LOG_LEVEL_SILENT)
 
     if params.visualize:
         assert os.path.exists(params.path_to_visualize), f'Path to result file does not exist: {params.path_to_visualize}'
