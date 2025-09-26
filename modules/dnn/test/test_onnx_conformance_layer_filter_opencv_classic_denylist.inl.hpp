@@ -552,3 +552,7 @@
 "test_nllloss_NCd1d2d3_sum_weight_high_ii_expanded",
 "test_nllloss_NCd1d2d3d4d5_mean_weight",
 "test_nllloss_NCd1d2d3d4d5_none_no_weight",
+"test_affine_grid_3d",
+"test_affine_grid_3d_align_corners",
+"test_affine_grid_2d",
+"test_affine_grid_2d_align_corners",
