@@ -239,7 +239,7 @@ void write_pixel( const double& pixelValue,
         else if( image.depth() == CV_32S ){  image.ptr<Vec3i>(row)[col] = Vec3i(newValue,newValue,newValue); }
         else if( image.depth() == CV_32F ){  image.ptr<Vec3f>(row)[col] = Vec3f(newValue,newValue,newValue); }
         else if( image.depth() == CV_64F ){  image.ptr<Vec3d>(row)[col] = Vec3d(newValue,newValue,newValue); }
-        else{                          throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
+        else{ throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
     }
 
     // input: 3 channel, output: 1 channel
@@ -393,7 +393,9 @@ bool GdalDecoder::readData( Mat& img ){
            CMYK, and YCbCr color spaces, rather than converting them
            to BGR. */
         int color = 0;
-        switch (band->GetColorInterpretation()) {
+        auto cinterp = band->GetColorInterpretation();
+        std::cout << "Color interpretation: " << cinterp << std::endl;
+        switch (cinterp) {
         case GCI_PaletteIndex:
         case GCI_GrayIndex:
         case GCI_BlueBand:
@@ -423,7 +425,8 @@ bool GdalDecoder::readData( Mat& img ){
         nCols = band->GetXSize();
 
         // create a temporary scanline pointer to store data
-        double* scanline = new double[nCols];
+        AutoBuffer<double> ab(nCols);
+        double* scanline = ab.data();
 
         // iterate over each row and column
         for( int y=0; y<nRows; y++ ){
@@ -445,9 +448,6 @@ bool GdalDecoder::readData( Mat& img ){
                 }
             }
         }
-
-        // delete our temp pointer
-        delete [] scanline;
     }
 
     return true;
@@ -479,7 +479,6 @@ bool GdalDecoder::readHeader(){
     if( m_driver == NULL ){
         return false;
     }
-
 
     // get the image dimensions
     m_width = m_dataset->GetRasterXSize();
