@@ -41,29 +41,23 @@
 
 #include "precomp.hpp"
 
-
 /****************************************************************************************\
 *                                       Image Alignment (ECC algorithm)                  *
 \****************************************************************************************/
 
 using namespace cv;
 
-static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
-                                    const Mat& src3, const Mat& src4,
-                                    const Mat& src5, Mat& dst)
-{
-
-
+static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2, const Mat& src3, const Mat& src4, const Mat& src5,
+                                    Mat& dst) {
     CV_Assert(src1.size() == src2.size());
     CV_Assert(src1.size() == src3.size());
     CV_Assert(src1.size() == src4.size());
 
-    CV_Assert( src1.rows == dst.rows);
-    CV_Assert(dst.cols == (src1.cols*8));
-    CV_Assert(dst.type() == CV_32FC1);
+    CV_Assert(src1.rows == dst.rows);
+    CV_Assert(dst.cols == (src1.cols * 8));
+    CV_Assert(dst.type() == CV_MAKETYPE(CV_32F, src1.channels()));
 
     CV_Assert(src5.isContinuous());
-
 
     const float* hptr = src5.ptr<float>(0);
 
@@ -78,19 +72,23 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
 
     const int w = src1.cols;
 
+    // create denominator for all points as a block
+    Mat den_;
+    addWeighted(src3, h2_, src4, h5_, 1.0, den_);
 
-    //create denominator for all points as a block
-    Mat den_ = src3*h2_ + src4*h5_ + 1.0;//check the time of this! otherwise use addWeighted
+    // create projected points
+    Mat hatX_, hatY_;
+    addWeighted(src3, h0_, src4, h3_, 0.0, hatX_);
+    hatX_ += h6_;
 
-    //create projected points
-    Mat hatX_ = -src3*h0_ - src4*h3_ - h6_;
-    divide(hatX_, den_, hatX_);
-    Mat hatY_ = -src3*h1_ - src4*h4_ - h7_;
-    divide(hatY_, den_, hatY_);
+    addWeighted(src3, h1_, src4, h4_, 0.0, hatY_);
+    hatY_ += h7_;
 
+    divide(-hatY_, den_, hatY_);
+    divide(-hatX_, den_, hatX_);
 
-    //instead of dividing each block with den,
-    //just pre-divide the block of gradients (it's more efficient)
+    // instead of dividing each block with den,
+    // just pre-divide the block of gradients (it's more efficient)
 
     Mat src1Divided_;
     Mat src2Divided_;
@@ -98,114 +96,98 @@ static void image_jacobian_homo_ECC(const Mat& src1, const Mat& src2,
     divide(src1, den_, src1Divided_);
     divide(src2, den_, src2Divided_);
 
+    // compute Jacobian blocks (8 blocks)
 
-    //compute Jacobian blocks (8 blocks)
+    dst.colRange(0, w) = src1Divided_.mul(src3);  // 1
 
-    dst.colRange(0, w) = src1Divided_.mul(src3);//1
+    dst.colRange(w, 2 * w) = src2Divided_.mul(src3);  // 2
 
-    dst.colRange(w,2*w) = src2Divided_.mul(src3);//2
-
-    Mat temp_ = (hatX_.mul(src1Divided_)+hatY_.mul(src2Divided_));
-    dst.colRange(2*w,3*w) = temp_.mul(src3);//3
+    Mat temp_ = (hatX_.mul(src1Divided_) + hatY_.mul(src2Divided_));
+    dst.colRange(2 * w, 3 * w) = temp_.mul(src3);  // 3
 
     hatX_.release();
     hatY_.release();
 
-    dst.colRange(3*w, 4*w) = src1Divided_.mul(src4);//4
+    dst.colRange(3 * w, 4 * w) = src1Divided_.mul(src4);  // 4
 
-    dst.colRange(4*w, 5*w) = src2Divided_.mul(src4);//5
+    dst.colRange(4 * w, 5 * w) = src2Divided_.mul(src4);  // 5
 
-    dst.colRange(5*w, 6*w) = temp_.mul(src4);//6
+    dst.colRange(5 * w, 6 * w) = temp_.mul(src4);  // 6
 
-    src1Divided_.copyTo(dst.colRange(6*w, 7*w));//7
+    src1Divided_.copyTo(dst.colRange(6 * w, 7 * w));  // 7
 
-    src2Divided_.copyTo(dst.colRange(7*w, 8*w));//8
+    src2Divided_.copyTo(dst.colRange(7 * w, 8 * w));  // 8
 }
 
-static void image_jacobian_euclidean_ECC(const Mat& src1, const Mat& src2,
-                                         const Mat& src3, const Mat& src4,
-                                         const Mat& src5, Mat& dst)
-{
-
-    CV_Assert( src1.size()==src2.size());
-    CV_Assert( src1.size()==src3.size());
-    CV_Assert( src1.size()==src4.size());
-
-    CV_Assert( src1.rows == dst.rows);
-    CV_Assert(dst.cols == (src1.cols*3));
-    CV_Assert(dst.type() == CV_32FC1);
-
-    CV_Assert(src5.isContinuous());
-
-    const float* hptr = src5.ptr<float>(0);
-
-    const float h0 = hptr[0];//cos(theta)
-    const float h1 = hptr[3];//sin(theta)
-
-    const int w = src1.cols;
-
-    //create -sin(theta)*X -cos(theta)*Y for all points as a block -> hatX
-    Mat hatX = -(src3*h1) - (src4*h0);
-
-    //create cos(theta)*X -sin(theta)*Y for all points as a block -> hatY
-    Mat hatY = (src3*h0) - (src4*h1);
-
-
-    //compute Jacobian blocks (3 blocks)
-    dst.colRange(0, w) = (src1.mul(hatX))+(src2.mul(hatY));//1
-
-    src1.copyTo(dst.colRange(w, 2*w));//2
-    src2.copyTo(dst.colRange(2*w, 3*w));//3
-}
-
-
-static void image_jacobian_affine_ECC(const Mat& src1, const Mat& src2,
-                                      const Mat& src3, const Mat& src4,
-                                      Mat& dst)
-{
-
+static void image_jacobian_euclidean_ECC(const Mat& src1, const Mat& src2, const Mat& src3, const Mat& src4,
+                                         const Mat& src5, Mat& dst) {
     CV_Assert(src1.size() == src2.size());
     CV_Assert(src1.size() == src3.size());
     CV_Assert(src1.size() == src4.size());
 
     CV_Assert(src1.rows == dst.rows);
-    CV_Assert(dst.cols == (6*src1.cols));
+    CV_Assert(dst.cols == (src1.cols * 3));
+    CV_Assert(dst.type() == CV_MAKETYPE(CV_32F, src1.channels()));
 
-    CV_Assert(dst.type() == CV_32FC1);
+    CV_Assert(src5.isContinuous());
 
+    const float* hptr = src5.ptr<float>(0);
+
+    const float h0 = hptr[0];  // cos(theta)
+    const float h1 = hptr[3];  // sin(theta)
 
     const int w = src1.cols;
 
-    //compute Jacobian blocks (6 blocks)
+    // create -sin(theta)*X -cos(theta)*Y for all points as a block -> hatX
+    Mat hatX = -(src3 * h1) - (src4 * h0);
 
-    dst.colRange(0,w) = src1.mul(src3);//1
-    dst.colRange(w,2*w) = src2.mul(src3);//2
-    dst.colRange(2*w,3*w) = src1.mul(src4);//3
-    dst.colRange(3*w,4*w) = src2.mul(src4);//4
-    src1.copyTo(dst.colRange(4*w,5*w));//5
-    src2.copyTo(dst.colRange(5*w,6*w));//6
+    // create cos(theta)*X -sin(theta)*Y for all points as a block -> hatY
+    Mat hatY = (src3 * h0) - (src4 * h1);
+
+    // compute Jacobian blocks (3 blocks)
+    dst.colRange(0, w) = (src1.mul(hatX)) + (src2.mul(hatY));  // 1
+
+    src1.copyTo(dst.colRange(w, 2 * w));      // 2
+    src2.copyTo(dst.colRange(2 * w, 3 * w));  // 3
 }
 
+static void image_jacobian_affine_ECC(const Mat& src1, const Mat& src2, const Mat& src3, const Mat& src4, Mat& dst) {
+    CV_Assert(src1.size() == src2.size());
+    CV_Assert(src1.size() == src3.size());
+    CV_Assert(src1.size() == src4.size());
 
-static void image_jacobian_translation_ECC(const Mat& src1, const Mat& src2, Mat& dst)
-{
+    CV_Assert(src1.rows == dst.rows);
+    CV_Assert(dst.cols == (6 * src1.cols));
 
-    CV_Assert( src1.size()==src2.size());
-
-    CV_Assert( src1.rows == dst.rows);
-    CV_Assert(dst.cols == (src1.cols*2));
-    CV_Assert(dst.type() == CV_32FC1);
+    CV_Assert(dst.type() == CV_MAKETYPE(CV_32F, src1.channels()));
 
     const int w = src1.cols;
 
-    //compute Jacobian blocks (2 blocks)
+    // compute Jacobian blocks (6 blocks)
+
+    dst.colRange(0, w) = src1.mul(src3);          // 1
+    dst.colRange(w, 2 * w) = src2.mul(src3);      // 2
+    dst.colRange(2 * w, 3 * w) = src1.mul(src4);  // 3
+    dst.colRange(3 * w, 4 * w) = src2.mul(src4);  // 4
+    src1.copyTo(dst.colRange(4 * w, 5 * w));      // 5
+    src2.copyTo(dst.colRange(5 * w, 6 * w));      // 6
+}
+
+static void image_jacobian_translation_ECC(const Mat& src1, const Mat& src2, Mat& dst) {
+    CV_Assert(src1.size() == src2.size());
+
+    CV_Assert(src1.rows == dst.rows);
+    CV_Assert(dst.cols == (src1.cols * 2));
+    CV_Assert(dst.type() == CV_MAKETYPE(CV_32F, src1.channels()));
+
+    const int w = src1.cols;
+
+    // compute Jacobian blocks (2 blocks)
     src1.copyTo(dst.colRange(0, w));
-    src2.copyTo(dst.colRange(w, 2*w));
+    src2.copyTo(dst.colRange(w, 2 * w));
 }
 
-
-static void project_onto_jacobian_ECC(const Mat& src1, const Mat& src2, Mat& dst)
-{
+static void project_onto_jacobian_ECC(const Mat& src1, const Mat& src2, Mat& dst) {
     /* this functions is used for two types of projections. If src1.cols ==src.cols
     it does a blockwise multiplication (like in the outer product of vectors)
     of the blocks in matrices src1 and src2 and dst
@@ -222,59 +204,54 @@ static void project_onto_jacobian_ECC(const Mat& src1, const Mat& src2, Mat& dst
 
     float* dstPtr = dst.ptr<float>(0);
 
-    if (src1.cols !=src2.cols){//dst.cols==1
-        w  = src2.cols;
-        for (int i=0; i<dst.rows; i++){
-            dstPtr[i] = (float) src2.dot(src1.colRange(i*w,(i+1)*w));
+    if (src1.cols != src2.cols) {  // dst.cols==1
+        w = src2.cols;
+        for (int i = 0; i < dst.rows; i++) {
+            dstPtr[i] = (float)src2.dot(src1.colRange(i * w, (i + 1) * w));
         }
     }
 
     else {
-        CV_Assert(dst.cols == dst.rows); //dst is square (and symmetric)
-        w = src2.cols/dst.cols;
+        CV_Assert(dst.cols == dst.rows);  // dst is square (and symmetric)
+        w = src2.cols / dst.cols;
         Mat mat;
-        for (int i=0; i<dst.rows; i++){
+        for (int i = 0; i < dst.rows; i++) {
+            mat = Mat(src1.colRange(i * w, (i + 1) * w));
+            dstPtr[i * (dst.rows + 1)] = (float)pow(norm(mat), 2);  // diagonal elements
 
-            mat = Mat(src1.colRange(i*w, (i+1)*w));
-            dstPtr[i*(dst.rows+1)] = (float) pow(norm(mat),2); //diagonal elements
-
-            for (int j=i+1; j<dst.cols; j++){ //j starts from i+1
-                dstPtr[i*dst.cols+j] = (float) mat.dot(src2.colRange(j*w, (j+1)*w));
-                dstPtr[j*dst.cols+i] = dstPtr[i*dst.cols+j]; //due to symmetry
+            for (int j = i + 1; j < dst.cols; j++) {  // j starts from i+1
+                dstPtr[i * dst.cols + j] = (float)mat.dot(src2.colRange(j * w, (j + 1) * w));
+                dstPtr[j * dst.cols + i] = dstPtr[i * dst.cols + j];  // due to symmetry
             }
         }
     }
 }
 
+static void update_warping_matrix_ECC(Mat& map_matrix, const Mat& update, const int motionType) {
+    CV_Assert(map_matrix.type() == CV_32FC1);
+    CV_Assert(update.type() == CV_32FC1);
 
-static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const int motionType)
-{
-    CV_Assert (map_matrix.type() == CV_32FC1);
-    CV_Assert (update.type() == CV_32FC1);
-
-    CV_Assert (motionType == MOTION_TRANSLATION || motionType == MOTION_EUCLIDEAN ||
-        motionType == MOTION_AFFINE || motionType == MOTION_HOMOGRAPHY);
+    CV_Assert(motionType == MOTION_TRANSLATION || motionType == MOTION_EUCLIDEAN || motionType == MOTION_AFFINE ||
+              motionType == MOTION_HOMOGRAPHY);
 
     if (motionType == MOTION_HOMOGRAPHY)
-        CV_Assert (map_matrix.rows == 3 && update.rows == 8);
+        CV_Assert(map_matrix.rows == 3 && update.rows == 8);
     else if (motionType == MOTION_AFFINE)
         CV_Assert(map_matrix.rows == 2 && update.rows == 6);
     else if (motionType == MOTION_EUCLIDEAN)
-        CV_Assert (map_matrix.rows == 2 && update.rows == 3);
+        CV_Assert(map_matrix.rows == 2 && update.rows == 3);
     else
-        CV_Assert (map_matrix.rows == 2 && update.rows == 2);
+        CV_Assert(map_matrix.rows == 2 && update.rows == 2);
 
-    CV_Assert (update.cols == 1);
+    CV_Assert(update.cols == 1);
 
-    CV_Assert( map_matrix.isContinuous());
-    CV_Assert( update.isContinuous() );
-
+    CV_Assert(map_matrix.isContinuous());
+    CV_Assert(update.isContinuous());
 
     float* mapPtr = map_matrix.ptr<float>(0);
     const float* updatePtr = update.ptr<float>(0);
 
-
-    if (motionType == MOTION_TRANSLATION){
+    if (motionType == MOTION_TRANSLATION) {
         mapPtr[2] += updatePtr[0];
         mapPtr[5] += updatePtr[1];
     }
@@ -302,23 +279,23 @@ static void update_warping_matrix_ECC (Mat& map_matrix, const Mat& update, const
 
         mapPtr[2] += updatePtr[1];
         mapPtr[5] += updatePtr[2];
-        mapPtr[0] = mapPtr[4] = (float) cos(new_theta);
-        mapPtr[3] = (float) sin(new_theta);
+        mapPtr[0] = mapPtr[4] = (float)cos(new_theta);
+        mapPtr[3] = (float)sin(new_theta);
         mapPtr[1] = -mapPtr[3];
     }
 }
 
-
 /** Function that computes enhanced corelation coefficient from Georgios et.al. 2008
-*   See https://github.com/opencv/opencv/issues/12432
-*/
-double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask)
-{
+ *   See https://github.com/opencv/opencv/issues/12432
+ */
+double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask) {
     CV_Assert(!templateImage.empty());
     CV_Assert(!inputImage.empty());
 
-    if( ! (templateImage.type()==inputImage.type()))
-        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
+    CV_Assert(templateImage.channels() == 1 || templateImage.channels() == 3);
+
+    if (!(templateImage.type() == inputImage.type()))
+        CV_Error(Error::StsUnmatchedFormats, "Both input images must have the same data type");
 
     Scalar meanTemplate, sdTemplate;
 
@@ -335,7 +312,7 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
      * ultimately results in an incorrect ECC. To circumvent this problem, if unsigned ints are provided,
      * we convert them to a signed ints with larger resolution for the subtraction step.
      */
-    if(type == CV_8U || type == CV_16U) {
+    if (type == CV_8U || type == CV_16U) {
         int newType = type == CV_8U ? CV_16S : CV_32S;
         Mat templateMatConverted, inputMatConverted;
         templateMat.convertTo(templateMatConverted, newType);
@@ -344,40 +321,36 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
         cv::swap(inputMat, inputMatConverted);
     }
     subtract(templateMat, meanTemplate, templateImage_zeromean, inputMask);
-    double templateImagenorm = std::sqrt(active_pixels*sdTemplate.val[0]*sdTemplate.val[0]);
+    double templateImagenorm = std::sqrt(active_pixels * cv::norm(sdTemplate, NORM_L2SQR));
 
     Scalar meanInput, sdInput;
 
     Mat inputImage_zeromean = Mat::zeros(inputImage.size(), inputImage.type());
     meanStdDev(inputImage, meanInput, sdInput, inputMask);
     subtract(inputMat, meanInput, inputImage_zeromean, inputMask);
-    double inputImagenorm = std::sqrt(active_pixels*sdInput.val[0]*sdInput.val[0]);
+    double inputImagenorm = std::sqrt(active_pixels * norm(sdInput, NORM_L2SQR));
 
-    return templateImage_zeromean.dot(inputImage_zeromean)/(templateImagenorm*inputImagenorm);
+    return templateImage_zeromean.dot(inputImage_zeromean) / (templateImagenorm * inputImagenorm);
 }
 
-
-double cv::findTransformECC(InputArray templateImage,
-                            InputArray inputImage,
-                            InputOutputArray warpMatrix,
-                            int motionType,
-                            TermCriteria criteria,
-                            InputArray inputMask,
-                            int gaussFiltSize)
-{
-
-
-    Mat src = templateImage.getMat();//template image
-    Mat dst = inputImage.getMat(); //input image (to be warped)
-    Mat map = warpMatrix.getMat(); //warp (transformation)
+double cv::findTransformECC(InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix,
+                            int motionType, TermCriteria criteria, InputArray inputMask, int gaussFiltSize) {
+    Mat src = templateImage.getMat();  // template image
+    Mat dst = inputImage.getMat();     // input image (to be warped)
+    Mat map = warpMatrix.getMat();     // warp (transformation)
 
     CV_Assert(!src.empty());
     CV_Assert(!dst.empty());
 
+    CV_Assert(src.channels() == 1 || src.channels() == 3);
+    CV_Assert(src.channels() == dst.channels());
+    CV_Assert(src.depth() == dst.depth());
+    CV_Assert(src.depth() == CV_8U || src.depth() == CV_16U || src.depth() == CV_32F || src.depth() == CV_64F);
+
     // If the user passed an un-initialized warpMatrix, initialize to identity
-    if(map.empty()) {
+    if (map.empty()) {
         int rowCount = 2;
-        if(motionType == MOTION_HOMOGRAPHY)
+        if (motionType == MOTION_HOMOGRAPHY)
             rowCount = 3;
 
         warpMatrix.create(rowCount, 3, CV_32FC1);
@@ -385,43 +358,38 @@ double cv::findTransformECC(InputArray templateImage,
         map = Mat::eye(rowCount, 3, CV_32F);
     }
 
-    if( ! (src.type()==dst.type()))
-        CV_Error( Error::StsUnmatchedFormats, "Both input images must have the same data type" );
+    if (!(src.type() == dst.type()))
+        CV_Error(Error::StsUnmatchedFormats, "Both input images must have the same data type");
 
-    //accept only 1-channel images
-    if( src.type() != CV_8UC1 && src.type()!= CV_32FC1)
-        CV_Error( Error::StsUnsupportedFormat, "Images must have 8uC1 or 32fC1 type");
+    if (map.type() != CV_32FC1)
+        CV_Error(Error::StsUnsupportedFormat, "warpMatrix must be single-channel floating-point matrix");
 
-    if( map.type() != CV_32FC1)
-        CV_Error( Error::StsUnsupportedFormat, "warpMatrix must be single-channel floating-point matrix");
+    CV_Assert(map.cols == 3);
+    CV_Assert(map.rows == 2 || map.rows == 3);
 
-    CV_Assert (map.cols == 3);
-    CV_Assert (map.rows == 2 || map.rows ==3);
+    CV_Assert(motionType == MOTION_AFFINE || motionType == MOTION_HOMOGRAPHY || motionType == MOTION_EUCLIDEAN ||
+              motionType == MOTION_TRANSLATION);
 
-    CV_Assert (motionType == MOTION_AFFINE || motionType == MOTION_HOMOGRAPHY ||
-        motionType == MOTION_EUCLIDEAN || motionType == MOTION_TRANSLATION);
-
-    if (motionType == MOTION_HOMOGRAPHY){
-        CV_Assert (map.rows ==3);
+    if (motionType == MOTION_HOMOGRAPHY) {
+        CV_Assert(map.rows == 3);
     }
 
-    CV_Assert (criteria.type & TermCriteria::COUNT || criteria.type & TermCriteria::EPS);
-    const int    numberOfIterations = (criteria.type & TermCriteria::COUNT) ? criteria.maxCount : 200;
-    const double termination_eps    = (criteria.type & TermCriteria::EPS)   ? criteria.epsilon  :  -1;
+    CV_Assert(criteria.type & TermCriteria::COUNT || criteria.type & TermCriteria::EPS);
+    const int numberOfIterations = (criteria.type & TermCriteria::COUNT) ? criteria.maxCount : 200;
+    const double termination_eps = (criteria.type & TermCriteria::EPS) ? criteria.epsilon : -1;
 
-    int paramTemp = 6;//default: affine
-    switch (motionType){
-      case MOTION_TRANSLATION:
-          paramTemp = 2;
-          break;
-      case MOTION_EUCLIDEAN:
-          paramTemp = 3;
-          break;
-      case MOTION_HOMOGRAPHY:
-          paramTemp = 8;
-          break;
+    int paramTemp = 6;  // default: affine
+    switch (motionType) {
+        case MOTION_TRANSLATION:
+            paramTemp = 2;
+            break;
+        case MOTION_EUCLIDEAN:
+            paramTemp = 3;
+            break;
+        case MOTION_HOMOGRAPHY:
+            paramTemp = 8;
+            break;
     }
-
 
     const int numberOfParameters = paramTemp;
 
@@ -438,10 +406,8 @@ double cv::findTransformECC(InputArray templateImage,
     float* XcoPtr = Xcoord.ptr<float>(0);
     float* YcoPtr = Ycoord.ptr<float>(0);
     int j;
-    for (j=0; j<ws; j++)
-        XcoPtr[j] = (float) j;
-    for (j=0; j<hs; j++)
-        YcoPtr[j] = (float) j;
+    for (j = 0; j < ws; j++) XcoPtr[j] = (float)j;
+    for (j = 0; j < hs; j++) YcoPtr[j] = (float)j;
 
     repeat(Xcoord, hs, 1, Xgrid);
     repeat(Ycoord, 1, ws, Ygrid);
@@ -449,29 +415,38 @@ double cv::findTransformECC(InputArray templateImage,
     Xcoord.release();
     Ycoord.release();
 
-    Mat templateZM    = Mat(hs, ws, CV_32F);// to store the (smoothed)zero-mean version of template
-    Mat templateFloat = Mat(hs, ws, CV_32F);// to store the (smoothed) template
-    Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
-    Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
-    Mat imageMask     = Mat(hs, ws, CV_8U); // to store the final mask
+    const int channels = src.channels();
+    int type = CV_MAKETYPE(CV_32F, channels);  // используем отдельно, если нужно явно
+
+    std::vector<cv::Mat> XgridCh(channels, Xgrid);
+    cv::merge(XgridCh, Xgrid);
+
+    std::vector<cv::Mat> YgridCh(channels, Ygrid);
+    cv::merge(YgridCh, Ygrid);
+
+    Mat templateZM = Mat(hs, ws, type);     // to store the (smoothed)zero-mean version of template
+    Mat templateFloat = Mat(hs, ws, type);  // to store the (smoothed) template
+    Mat imageFloat = Mat(hd, wd, type);     // to store the (smoothed) input image
+    Mat imageWarped = Mat(hs, ws, type);    // to store the warped zero-mean input image
+    Mat imageMask = Mat(hs, ws, CV_8U);     // to store the final mask
 
     Mat inputMaskMat = inputMask.getMat();
-    //to use it for mask warping
+    // to use it for mask warping
     Mat preMask;
-    if(inputMask.empty())
+    if (inputMask.empty())
         preMask = Mat::ones(hd, wd, CV_8U);
     else
         threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
 
-    //gaussian filtering is optional
+    // Gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());
     GaussianBlur(templateFloat, templateFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     Mat preMaskFloat;
-    preMask.convertTo(preMaskFloat, CV_32F);
+    preMask.convertTo(preMaskFloat, type);
     GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
     // Change threshold.
-    preMaskFloat *= (0.5/0.95);
+    preMaskFloat *= (0.5 / 0.95);
     // Rounding conversion.
     preMaskFloat.convertTo(preMask, preMask.type());
     preMask.convertTo(preMaskFloat, preMaskFloat.type());
@@ -480,11 +455,10 @@ double cv::findTransformECC(InputArray templateImage,
     GaussianBlur(imageFloat, imageFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
 
     // needed matrices for gradients and warped gradients
-    Mat gradientX = Mat::zeros(hd, wd, CV_32FC1);
-    Mat gradientY = Mat::zeros(hd, wd, CV_32FC1);
-    Mat gradientXWarped = Mat(hs, ws, CV_32FC1);
-    Mat gradientYWarped = Mat(hs, ws, CV_32FC1);
-
+    Mat gradientX = Mat::zeros(hd, wd, type);
+    Mat gradientY = Mat::zeros(hd, wd, type);
+    Mat gradientXWarped = Mat(hs, ws, type);
+    Mat gradientYWarped = Mat(hs, ws, type);
 
     // calculate first order image derivatives
     Matx13f dx(-0.5f, 0.0f, 0.5f);
@@ -492,60 +466,59 @@ double cv::findTransformECC(InputArray templateImage,
     filter2D(imageFloat, gradientX, -1, dx);
     filter2D(imageFloat, gradientY, -1, dx.t());
 
-    gradientX = gradientX.mul(preMaskFloat);
-    gradientY = gradientY.mul(preMaskFloat);
+    cv::Mat preMaskFloatNCh;
+    std::vector<cv::Mat> maskChannels(gradientX.channels(), preMaskFloat);
+    cv::merge(maskChannels, preMaskFloatNCh);
+
+    gradientX = gradientX.mul(preMaskFloatNCh);
+    gradientY = gradientY.mul(preMaskFloatNCh);
 
     // matrices needed for solving linear equation system for maximizing ECC
-    Mat jacobian                = Mat(hs, ws*numberOfParameters, CV_32F);
-    Mat hessian                 = Mat(numberOfParameters, numberOfParameters, CV_32F);
-    Mat hessianInv              = Mat(numberOfParameters, numberOfParameters, CV_32F);
-    Mat imageProjection         = Mat(numberOfParameters, 1, CV_32F);
-    Mat templateProjection      = Mat(numberOfParameters, 1, CV_32F);
-    Mat imageProjectionHessian  = Mat(numberOfParameters, 1, CV_32F);
-    Mat errorProjection         = Mat(numberOfParameters, 1, CV_32F);
+    Mat jacobian = Mat(hs, ws * numberOfParameters, type);
+    Mat hessian = Mat(numberOfParameters, numberOfParameters, CV_32F);
+    Mat hessianInv = Mat(numberOfParameters, numberOfParameters, CV_32F);
+    Mat imageProjection = Mat(numberOfParameters, 1, CV_32F);
+    Mat templateProjection = Mat(numberOfParameters, 1, CV_32F);
+    Mat imageProjectionHessian = Mat(numberOfParameters, 1, CV_32F);
+    Mat errorProjection = Mat(numberOfParameters, 1, CV_32F);
 
-    Mat deltaP = Mat(numberOfParameters, 1, CV_32F);//transformation parameter correction
-    Mat error = Mat(hs, ws, CV_32F);//error as 2D matrix
+    Mat deltaP = Mat(numberOfParameters, 1, CV_32F);  // transformation parameter correction
+    Mat error = Mat(hs, ws, CV_32F);                  // error as 2D matrix
 
-    const int imageFlags = INTER_LINEAR  + WARP_INVERSE_MAP;
-    const int maskFlags  = INTER_NEAREST + WARP_INVERSE_MAP;
-
+    const int imageFlags = INTER_LINEAR + WARP_INVERSE_MAP;
+    const int maskFlags = INTER_NEAREST + WARP_INVERSE_MAP;
 
     // iteratively update map_matrix
-    double rho      = -1;
-    double last_rho = - termination_eps;
-    for (int i = 1; (i <= numberOfIterations) && (fabs(rho-last_rho)>= termination_eps); i++)
-    {
-
+    double rho = -1;
+    double last_rho = -termination_eps;
+    for (int i = 1; (i <= numberOfIterations) && (fabs(rho - last_rho) >= termination_eps); i++) {
         // warp-back portion of the inputImage and gradients to the coordinate space of the templateImage
-        if (motionType != MOTION_HOMOGRAPHY)
-        {
-            warpAffine(imageFloat, imageWarped,     map, imageWarped.size(),     imageFlags);
-            warpAffine(gradientX,  gradientXWarped, map, gradientXWarped.size(), imageFlags);
-            warpAffine(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
-            warpAffine(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
-        }
-        else
-        {
-            warpPerspective(imageFloat, imageWarped,     map, imageWarped.size(),     imageFlags);
-            warpPerspective(gradientX,  gradientXWarped, map, gradientXWarped.size(), imageFlags);
-            warpPerspective(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
-            warpPerspective(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
+        if (motionType != MOTION_HOMOGRAPHY) {
+            warpAffine(imageFloat, imageWarped, map, imageWarped.size(), imageFlags);
+            warpAffine(gradientX, gradientXWarped, map, gradientXWarped.size(), imageFlags);
+            warpAffine(gradientY, gradientYWarped, map, gradientYWarped.size(), imageFlags);
+            warpAffine(preMask, imageMask, map, imageMask.size(), maskFlags);
+        } else {
+            warpPerspective(imageFloat, imageWarped, map, imageWarped.size(), imageFlags);
+            warpPerspective(gradientX, gradientXWarped, map, gradientXWarped.size(), imageFlags);
+            warpPerspective(gradientY, gradientYWarped, map, gradientYWarped.size(), imageFlags);
+            warpPerspective(preMask, imageMask, map, imageMask.size(), maskFlags);
         }
 
         Scalar imgMean, imgStd, tmpMean, tmpStd;
-        meanStdDev(imageWarped,   imgMean, imgStd, imageMask);
+        meanStdDev(imageWarped, imgMean, imgStd, imageMask);
         meanStdDev(templateFloat, tmpMean, tmpStd, imageMask);
 
-        subtract(imageWarped,   imgMean, imageWarped, imageMask);//zero-mean input
+        subtract(imageWarped, imgMean, imageWarped, imageMask);  // zero-mean input
         templateZM = Mat::zeros(templateZM.rows, templateZM.cols, templateZM.type());
-        subtract(templateFloat, tmpMean, templateZM,  imageMask);//zero-mean template
+        subtract(templateFloat, tmpMean, templateZM, imageMask);  // zero-mean template
 
-        const double tmpNorm = std::sqrt(countNonZero(imageMask)*(tmpStd.val[0])*(tmpStd.val[0]));
-        const double imgNorm = std::sqrt(countNonZero(imageMask)*(imgStd.val[0])*(imgStd.val[0]));
+        int validPixels = countNonZero(imageMask);
+        double tmpNorm = std::sqrt(validPixels * cv::norm(tmpStd, cv::NORM_L2SQR));
+        double imgNorm = std::sqrt(validPixels * cv::norm(imgStd, cv::NORM_L2SQR));
 
         // calculate jacobian of image wrt parameters
-        switch (motionType){
+        switch (motionType) {
             case MOTION_AFFINE:
                 image_jacobian_affine_ECC(gradientXWarped, gradientYWarped, Xgrid, Ygrid, jacobian);
                 break;
@@ -569,48 +542,42 @@ double cv::findTransformECC(InputArray templateImage,
 
         // calculate enhanced correlation coefficient (ECC)->rho
         last_rho = rho;
-        rho = correlation/(imgNorm*tmpNorm);
+        rho = correlation / (imgNorm * tmpNorm);
         if (cvIsNaN(rho)) {
-          CV_Error(Error::StsNoConv, "NaN encountered.");
+            CV_Error(Error::StsNoConv, "NaN encountered.");
         }
 
         // project images into jacobian
-        project_onto_jacobian_ECC( jacobian, imageWarped, imageProjection);
+        project_onto_jacobian_ECC(jacobian, imageWarped, imageProjection);
         project_onto_jacobian_ECC(jacobian, templateZM, templateProjection);
 
-
         // calculate the parameter lambda to account for illumination variation
-        imageProjectionHessian = hessianInv*imageProjection;
-        const double lambda_n = (imgNorm*imgNorm) - imageProjection.dot(imageProjectionHessian);
+        imageProjectionHessian = hessianInv * imageProjection;
+        const double lambda_n = (imgNorm * imgNorm) - imageProjection.dot(imageProjectionHessian);
         const double lambda_d = correlation - templateProjection.dot(imageProjectionHessian);
-        if (lambda_d <= 0.0)
-        {
+        if (lambda_d <= 0.0) {
             rho = -1;
-            CV_Error(Error::StsNoConv, "The algorithm stopped before its convergence. The correlation is going to be minimized. Images may be uncorrelated or non-overlapped");
-
+            CV_Error(Error::StsNoConv,
+                     "The algorithm stopped before its convergence. The correlation is going to be minimized. Images "
+                     "may be uncorrelated or non-overlapped");
         }
-        const double lambda = (lambda_n/lambda_d);
+        const double lambda = (lambda_n / lambda_d);
 
         // estimate the update step delta_p
-        error = lambda*templateZM - imageWarped;
+        error = lambda * templateZM - imageWarped;
         project_onto_jacobian_ECC(jacobian, error, errorProjection);
         deltaP = hessianInv * errorProjection;
 
         // update warping matrix
-        update_warping_matrix_ECC( map, deltaP, motionType);
-
-
+        update_warping_matrix_ECC(map, deltaP, motionType);
     }
 
     // return final correlation coefficient
     return rho;
 }
 
-double cv::findTransformECC(InputArray templateImage, InputArray inputImage,
-    InputOutputArray warpMatrix, int motionType,
-    TermCriteria criteria,
-    InputArray inputMask)
-{
+double cv::findTransformECC(InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix,
+                            int motionType, TermCriteria criteria, InputArray inputMask) {
     // Use default value of 5 for gaussFiltSize to maintain backward compatibility.
     return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, 5);
 }
