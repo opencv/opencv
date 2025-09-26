@@ -127,7 +127,7 @@ in ascending order starting on 0, so they will be 0, 1, 2, ..., 34.
 
 After creating a grid board, we probably want to print it and use it.
 There are two ways to do this:
-1. By using the script `doc/patter_tools/gen_pattern.py `, see @subpage tutorial_camera_calibration_pattern.
+1. By using the script `apps/pattern_tools/generate_pattern.py `, see @subpage tutorial_camera_calibration_pattern.
 2. By using the function `cv::aruco::GridBoard::generateImage()`.
 
 The function `cv::aruco::GridBoard::generateImage()` is provided in cv::aruco::GridBoard class and

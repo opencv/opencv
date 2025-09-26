@@ -5,7 +5,7 @@ import os, tempfile, numpy as np
 import sys
 import cv2 as cv
 from tests_common import NewOpenCVTests
-import gen_pattern
+import ..generate_pattern
 
 class aruco_objdetect_test(NewOpenCVTests):
 
