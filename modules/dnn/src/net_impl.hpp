@@ -26,6 +26,9 @@
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
 #include <unordered_map>
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#endif
 
 namespace cv {
 namespace dnn {
@@ -100,12 +103,22 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream* dump_strm;
     int dump_indent;
 
+#ifdef HAVE_CUDA
+    std::vector<cv::cuda::GpuMat> gpuTensors;
+    std::vector<cv::cuda::GpuMat> gpuBuffers;
+#endif
+
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
     virtual void setPreferableTarget(int targetId);
 
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
+
+#ifdef HAVE_CUDA
+    cv::cuda::GpuMat& argGpuMat(Arg arg);
+#endif
+    void ensureBufferWrapper(int bufidx);
 
 
     virtual void clear();
@@ -214,6 +227,23 @@ struct Net::Impl : public detail::NetImplBase
     void tvUpdateConfictMap(int graphIndex, LayerData& ld, std::vector<std::vector<int> >& graphConflictMap);
     void tvConvertToOutputNode(const LayerData& ld, Ptr<TimVXBackendWrapper>& targetWrap);
     void initTimVXBackend();
+#endif
+
+#ifdef HAVE_CUDA
+    void allocateLayerGpuOutputs(
+            const Ptr<Layer>& layer,
+            const std::vector<int>& inpTypes,
+            const std::vector<MatShape>& inpShapes,
+            std::vector<int>& outTypes,
+            std::vector<MatShape>& outShapes,
+            std::vector<std::pair<uchar*, size_t> >& outOrigData,
+            std::vector<Mat>& outputs,
+            std::vector<int>& tempTypes,
+            std::vector<MatShape>& tempShapes,
+            std::vector<Mat>& temps,
+            std::vector<Mat>& globalTemps,
+            std::vector<cv::cuda::GpuMat>& outGpuMats,
+            bool useBufferPool);
 #endif
 
 #ifdef HAVE_CUDA
