@@ -681,6 +681,8 @@ void UMat::create(const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
         release();
     } else {
         create(_shape.dims, _shape.p, _type, _usageFlags);
+        size.layout = _shape.layout;
+        size.C = _shape.C;
     }
 }
 
@@ -715,6 +717,8 @@ void UMat::fit(const std::vector<int>& _shape, int _type, UMatUsageFlags _usageF
 void UMat::fit(const MatShape& _shape, int _type, UMatUsageFlags _usageFlags)
 {
     fit(_shape.dims, _shape.p, _type, _usageFlags);
+    size.layout = _shape.layout;
+    size.C = _shape.C;
 }
 
 void UMat::fit(int _rows, int _cols, int _type, UMatUsageFlags _usageFlags)

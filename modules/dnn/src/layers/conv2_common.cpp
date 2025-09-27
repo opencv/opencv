@@ -149,8 +149,8 @@ void ConvState::initConv(const MatShape& inpshape_,
     CV_Assert(pads_.empty() || (pads_.size() == size_t(nspatialdims*2)));
     CV_Assert(inpshape_.dims == outshape_.dims);
     CV_Assert(nspatialdims == inpshape_.dims - 3);
-    CV_Assert(inpshape_[1] % ngroups == 0);
-    CV_Assert(outshape_[1] % ngroups == 0);
+    CV_Assert(inpshape_[1] % ngroups_ == 0);
+    CV_Assert(outshape_[1] % ngroups_ == 0);
     CV_Assert(inpshape_[0] == outshape_[0]);
     CV_Assert(inpshape_.back() == outshape_.back());
 
@@ -224,7 +224,7 @@ void initConvTables(const ConvState& cs,
     int inner_z0 = cs.inner[0], inner_y0 = cs.inner[1], inner_x0 = cs.inner[2];
     int inner_z1 = cs.inner[3], inner_y1 = cs.inner[4], inner_x1 = cs.inner[5];
 
-    inpofs_.resize(D*H*W*2);
+    ofsofs_.resize(D*H*W*2);
 
     int ofs_blocksize = C1g*Dk*Hk*Wk;
     bool have_inner = inner_z0 < inner_z1 && inner_y0 < inner_y1 && inner_x0 < inner_x1;

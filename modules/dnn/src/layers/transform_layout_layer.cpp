@@ -92,11 +92,10 @@ typedef void (*transform_layout_func_t)(const void* inp, int istep, int istep0, 
                                         void* out, int ostep, int ostep0, int ostep1,
                                         int npix, int C0, int C1, int C);
 
-static void transform_layout(const Mat& inp, Mat& out)
+static void transform_layout(const Mat& inp, Mat& out, DataLayout inplayout)
 {
     MatShape inpshape = inp.shape();
     MatShape outshape = out.shape();
-    DataLayout inplayout = inpshape.layout;
     DataLayout outlayout = outshape.layout;
 
     if (inp.empty())
@@ -195,6 +194,7 @@ class TransformLayoutLayerImpl : public TransformLayoutLayer
 public:
     TransformLayoutLayerImpl(const LayerParams& params)
     {
+        setParamsFrom(params);
         layout = (DataLayout)params.get<int>("layout");
         C0 = params.get<int>("C0", 1);
     }
@@ -202,7 +202,7 @@ public:
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
     {
         prindent(strm, indent);
-        strm << "layout: " << layoutToString(layout) << ",\n";
+        strm << "target_layout: \"" << layoutToString(layout) << "\",\n";
 
         if (layout == DATA_LAYOUT_BLOCK) {
             prindent(strm, indent);
@@ -237,10 +237,17 @@ public:
         temptypes.clear();
     }
 
-    MatShape inferShape(const MatShape& inpshape) const
+    DataLayout getInputLayout(DataLayout inplayout) const
     {
+        return inplayout != DATA_LAYOUT_UNKNOWN ? inplayout : getNetImpl(this)->originalLayout;
+    }
+
+    MatShape inferShape(const MatShape& inpshape_) const
+    {
+        MatShape inpshape = inpshape_;
         int ndims = inpshape.dims;
-        DataLayout inplayout = inpshape.layout;
+        DataLayout inplayout = getInputLayout(inpshape.layout);
+        inpshape.layout = inplayout;
         CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
         CV_Assert(inplayout == DATA_LAYOUT_BLOCK || inplayout == DATA_LAYOUT_NCHW || inplayout == DATA_LAYOUT_NHWC);
 
@@ -330,7 +337,8 @@ public:
 
     void runOp(const Mat& inp, Mat& out)
     {
-        transform_layout(inp, out);
+        DataLayout inplayout = getInputLayout(inp.size.layout);
+        transform_layout(inp, out, inplayout);
     }
 };
 

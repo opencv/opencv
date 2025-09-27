@@ -12,6 +12,7 @@ using std::vector;
 using std::string;
 
 using PLayer = Ptr<Layer>;
+using PGraph = Ptr<Graph>;
 
 /* Inserts layout conversion operations (if needed) into the model graph and subgraphs.
 
@@ -58,111 +59,143 @@ struct BlockLayoutTransformer
                             // don't transform it several times
     vector<Arg> nonblockCache; // another cache of non-block args
     DataLayout defaultLayout;
+    int trlayoutIdx;
 
-    std::pair<Arg, PLayer> getProperArg(const Arg& arg, bool block, int64_t defaultC0)
+    std::pair<Arg, PLayer> getProperArg(const Arg& arg, bool block, int defaultC0)
     {
         if (arg.empty() || (layouts[arg.idx] == DATA_LAYOUT_BLOCK) == block)
             return {arg, PLayer()};
-        std::vector<Arg> *cache, *another_cache;
+        std::vector<Arg> *cache, *altCache;
         if (block) {
             cache = &blockCache;
-            another_cache = &nonblockCache;
+            altCache = &nonblockCache;
         } else {
             cache = &nonblockCache;
-            another_cache = &blockCache;
+            altCache = &blockCache;
         }
         Arg cached = cache->at(arg.idx);
         if (!cached.empty())
             return {cached, PLayer()};
-        const ArgData& adata = net->argData(arg);
-        cached = net->newArg(adata.name + (block ? ".block" : ".nonblock"), DNN_ARG_TEMP);
-        cache->at(arg.idx) = cached;
-        CV_Assert(cached.idx == (int)layouts.size());
-        Op tr_op;
-        if (block)
-            tr_op = TransformLayoutOp::create(DATA_LAYOUT_BLOCK, defaultC0);
-        else
-            tr_op = TransformLayoutOp::create(defaultLayout, 0);
+        size_t nargs = netimpl->args.size();
+        CV_Assert(layouts.size() == nargs &&
+                  cache->size() == nargs &&
+                  altCache->size() == nargs);
 
-        std::vector<Arg> inputs = {arg}, outputs = {cached};
-        Node tr_node = NodeData::create(adata.name + (block ? ".to_block" : ".from_block"), tr_op, inputs, outputs);
+        const ArgData& adata = netimpl->args.at(arg.idx);
+        const char* suffix = block ? "block" : "nonblock";
 
-        layouts.push_back(block ? DATA_LAYOUT_BLOCK : defaultLayout);
-        cache->push_back(Arg());
-        another_cache->push_back(Arg());
-
-        return {cached, tr_node};
-    }
-
-    void transformGraph(Graph& g)
-    {
-        const vector<Node>& curr_prog = g->prog();
-        // [TODO] maybe we need to infer type and pass it to preferredBlockSize(), so that block size is dynamic
-        int defaultType = CV_32F;
-        int64_t defaultC0 = 8;//net->getBackend(0)->preferredBlockSize(defaultType);
-        vector<Node> new_prog;
-        std::vector<Arg> new_inputs;
-        size_t nchanges = 0;
-
-        for (const Node& node: curr_prog) {
-            const Op& op = node->op();
-            const vector<Arg>& inputs = node->inputs();
-            const vector<Arg>& outputs = node->outputs();
-            size_t ninputs = inputs.size(), noutputs = outputs.size();
-            new_inputs.clear();
-            int op_blockiness = 0;
-            DataLayout layout0 = defaultLayout;
-            std::string op_name = op->name();
-            std::string name = node->name();
-            //std::cout << "name: " << name << ", op_name: " << op_name << ", inp0 layout: " << layoutToString(layouts[inputs[0].idx]) << "\n";
-
-            for (const Graph& subgraph: node->subgraphs()) {
-                transformGraph(const_cast<Graph&>(subgraph));
-                nchanges++;
-            }
-
-            for (size_t i = 0; i < ninputs; i++) {
-                int blockiness = op->supportBlockLayout((int)i);
-                if (blockiness > 0) {
-                    CV_Assert(op_blockiness >= 0);
-                    op_blockiness = 1;
-                } else if (blockiness < 0 && op_blockiness <= 0) {
-                    op_blockiness = -1;
-                }
-
-                Arg inp = inputs[i], new_inp = inp;
-                if (i == 0)
-                    layout0 = layouts[inp.idx];
-                if (blockiness != 0) {
-                    auto new_inp_node = getProperArg(inp, blockiness > 0, defaultC0);
-                    new_inp = new_inp_node.first;
-                    if (new_inp_node.second) {
-                        new_prog.push_back(new_inp_node.second);
-                    }
-                    nchanges += !(new_inp == inp);
-                }
-                new_inputs.push_back(new_inp);
-            }
-
-            DataLayout layout1 = op_blockiness > 0 ? DATA_LAYOUT_BLOCK : op_blockiness < 0 ? defaultLayout : layout0;
-            for (size_t i = 0; i < noutputs; i++) {
-                Arg out = outputs[i];
-                layouts[out.idx] = layout1;
-            }
-            Node new_node = NodeData::create(node->name(), op, new_inputs, outputs, node->subgraphs());
-            new_prog.push_back(new_node);
+        std::string newname = format("%s.%s", adata.name.c_str(), suffix);
+        int idx = 1;
+        for ( ; netimpl->haveArg(newname); idx++) {
+            newname = format("%s.%s%d", adata.name.c_str(), suffix, idx);
         }
 
-        if (nchanges > 0)
-            g->setProg(new_prog);
+        cached = netimpl->newArg(newname, DNN_ARG_TEMP);
+        CV_Assert(size_t(cached.idx) == nargs);
+
+        cache->at(arg.idx) = cached;
+        cache->push_back(cached);
+        altCache->push_back(arg);
+
+        LayerParams params;
+        params.name = format("trlayout.%d", trlayoutIdx++);
+        params.type = "TransformLayout";
+        params.set("layout", int(block ? DATA_LAYOUT_BLOCK : defaultLayout));
+        params.set("C0", int(defaultC0));
+        PLayer trlayer = TransformLayoutLayer::create(params);
+
+        trlayer->netimpl = netimpl;
+        trlayer->inputs = {arg};
+        trlayer->outputs = {cached};
+        layouts.push_back(block ? DATA_LAYOUT_BLOCK : defaultLayout);
+
+        return {cached, trlayer};
+    }
+
+    void transformGraph(PGraph& g)
+    {
+        const vector<PLayer>& currProg = g->prog();
+        int defaultC0 = netimpl->defaultC0;
+        vector<PLayer> newProg;
+        std::vector<Arg> newInputs;
+        std::vector<DataLayout> inputLayoutsOrig, inputLayoutsNew, outputLayouts;
+        size_t nchanges = 0;
+
+        for (const PLayer& layer: currProg) {
+            const vector<Arg>& inputs = layer->inputs;
+            const vector<Arg>& outputs = layer->outputs;
+            size_t ninputs = inputs.size(), noutputs = outputs.size();
+            std::string op_name = layer->type;
+            std::string name = layer->name;
+            vector<PGraph>* subgraphs = layer->subgraphs();
+            std::cout << "name: " << name << ", op_name: " << op_name << ", inp0 layout: " << layoutToString(layouts[inputs[0].idx]) << "\n";
+
+            if (subgraphs) {
+                for (PGraph& subgraph: *subgraphs) {
+                    transformGraph(subgraph);
+                    nchanges++;
+                }
+            }
+
+            inputLayoutsOrig.clear();
+            for (size_t i = 0; i < ninputs; i++) {
+                inputLayoutsOrig.push_back(layouts.at(inputs[i].idx));
+            }
+
+            layer->getLayouts(inputLayoutsOrig, inputLayoutsNew, int(noutputs), outputLayouts);
+            CV_Assert(inputLayoutsNew.size() == ninputs);
+            CV_Assert(outputLayouts.size() == noutputs);
+
+            newInputs.clear();
+            bool changedInputs = false;
+            for (size_t i = 0; i < ninputs; i++) {
+                Arg inp = inputs[i];
+                DataLayout prevLayout = inputLayoutsOrig[i];
+                DataLayout newLayout = inputLayoutsNew[i];
+                if (!inp.empty()) {
+                    if (prevLayout == DATA_LAYOUT_BLOCK) {
+                        blockCache.at(inp.idx) = inp;
+                    } else {
+                        nonblockCache.at(inp.idx) = inp;
+                    }
+                }
+                if (newLayout != prevLayout &&
+                    (newLayout == DATA_LAYOUT_BLOCK ||
+                     prevLayout == DATA_LAYOUT_BLOCK)) {
+                    auto p = getProperArg(inp, newLayout == DATA_LAYOUT_BLOCK, defaultC0);
+                    newInputs.push_back(p.first);
+                    if (p.second) {
+                        newProg.push_back(p.second);
+                    }
+                    changedInputs = true;
+                    nchanges++;
+                } else {
+                    newInputs.push_back(inp);
+                }
+            }
+
+            for (size_t i = 0; i < noutputs; i++) {
+                layouts.at(outputs[i].idx) = outputLayouts[i];
+            }
+
+            if (changedInputs) {
+                layer->inputs = newInputs;
+            }
+            newProg.push_back(layer);
+        }
+
+        if (nchanges > 0) {
+            g->setProg(newProg);
+        }
     }
 
     void transform()
     {
         size_t nargs = netimpl->args.size();
-        defaultLayout = netimpl->defaultLayout;
+        defaultLayout = netimpl->originalLayout;
+        trlayoutIdx = 0;
 
-        layouts.assign(nargs, defaultLayout);
+        layouts.assign(nargs, DATA_LAYOUT_UNKNOWN);
         blockCache.assign(nargs, Arg());
         nonblockCache.assign(nargs, Arg());
 

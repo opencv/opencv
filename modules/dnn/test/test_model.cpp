@@ -838,4 +838,47 @@ TEST_P(Test_Model, TextDetectionByEAST)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Model, dnnBackendsAndTargets());
 
+typedef testing::TestWithParam<Target> Reproducibility_ResNet50_ONNX;
+TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
+{
+    Target targetId = GetParam();
+    applyTestTag(targetId == DNN_TARGET_CPU ? CV_TEST_TAG_MEMORY_512MB : CV_TEST_TAG_MEMORY_1GB);
+    ASSERT_TRUE(ocl::useOpenCL() || targetId == DNN_TARGET_CPU || targetId == DNN_TARGET_CPU_FP16);
+
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/resnet50v1.onnx"));
+
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(targetId);
+
+    if (targetId == DNN_TARGET_CPU_FP16)
+        net.enableWinograd(false);
+
+    net.dumpToStream(std::cout);
+
+    float l1 = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 3e-5 : 1e-5;
+    float lInf = (targetId == DNN_TARGET_OPENCL_FP16 || targetId == DNN_TARGET_CPU_FP16) ? 6e-3 : 1e-4;
+
+    Mat input = blobFromImage(imread(_tf("googlenet_0.png")), 1.0f, Size(224,224), Scalar(), false);
+    ASSERT_TRUE(!input.empty());
+
+    net.setInput(input);
+    Mat out = net.forward();
+
+    Mat ref = blobFromNPY(_tf("resnet50_prob.npy"));
+    normAssert(ref, out, "", l1, lInf);
+
+    if (targetId == DNN_TARGET_OPENCL || targetId == DNN_TARGET_OPENCL_FP16)
+    {
+        UMat out_umat;
+        net.forward(out_umat);
+        normAssert(ref, out_umat, "out_umat", l1, lInf);
+
+        std::vector<UMat> out_umats;
+        net.forward(out_umats);
+        normAssert(ref, out_umats[0], "out_umat_vector", l1, lInf);
+    }
+}
+INSTANTIATE_TEST_CASE_P(/**/, Reproducibility_ResNet50_ONNX,
+                        testing::ValuesIn(getAvailableTargets(DNN_BACKEND_OPENCV)));
+
 }} // namespace

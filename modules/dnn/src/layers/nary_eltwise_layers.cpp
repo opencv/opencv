@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "../precomp.hpp"
+#include "../net_impl.hpp"
 #include "layers_common.hpp"
 #include "../op_cuda.hpp"
 #include "../op_cann.hpp"
@@ -197,12 +198,13 @@ public:
         BITWISE_OR,
         BITWISE_XOR,
     } op;
+    std::string operation;
 
     NaryEltwiseLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
 
-        String operation = toLowerCase(params.get<String>("operation", "sum"));
+        operation = toLowerCase(params.get<String>("operation", "sum"));
 
         if (operation == "equal")
             op = OPERATION::EQUAL;
@@ -254,6 +256,13 @@ public:
             op = OPERATION::BITWISE_XOR;
         else
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
+    }
+
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        prindent(strm, indent);
+        strm << "operation: \"" << operation << "\",\n";
+        return strm;
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -428,6 +437,34 @@ public:
             outputs.assign(requiredOutputs, inputs[0]);
     }
 
+    int getLayouts(const std::vector<DataLayout>& actualInputs,
+                   std::vector<DataLayout>& desiredInputs,
+                   const int requiredOutputs,
+                   std::vector<DataLayout>& outputs) const CV_OVERRIDE
+    {
+        auto* netimpl_ = getNetImpl(this);
+        DataLayout defaultLayout = netimpl_->originalLayout;
+        size_t ninputs = actualInputs.size(), nblockInputs = 0;
+        CV_Assert(ninputs > 1u);
+        for (size_t i = 0; i < ninputs; i++) {
+            DataLayout layout = actualInputs[i];
+            nblockInputs += layout == DATA_LAYOUT_BLOCK;
+        }
+
+        desiredInputs = actualInputs;
+        if (nblockInputs == ninputs) {
+            outputs.assign(requiredOutputs, DATA_LAYOUT_BLOCK);
+        } else {
+            if (nblockInputs < ninputs) {
+                for (size_t i = 0; i < ninputs; i++) {
+                    DataLayout layout = actualInputs[i];
+                    desiredInputs[i] = layout == DATA_LAYOUT_BLOCK ? defaultLayout : layout;
+                }
+            }
+            outputs.assign(requiredOutputs, DATA_LAYOUT_UNKNOWN);
+        }
+        return outputs[0] == DATA_LAYOUT_BLOCK ? netimpl_->defaultC0 : 0;
+    }
 
     template <typename T, typename RESULT_T, typename Functor>
     void binary_forward_impl(const Functor& op, int ndims, const std::vector<int>& shape,

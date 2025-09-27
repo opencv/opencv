@@ -13,7 +13,7 @@ std::string layoutToString(DataLayout layout)
         layout == DATA_LAYOUT_ND ? "ND" :
         layout == DATA_LAYOUT_NCHW ? "NCHW" :
         layout == DATA_LAYOUT_NHWC ? "NHWC" :
-        layout == DATA_LAYOUT_BLOCK ? "NC1HWC0" :
+        layout == DATA_LAYOUT_BLOCK ? "BLOCK" :
         layout == DATA_LAYOUT_NCDHW ? "NCDHW" :
         layout == DATA_LAYOUT_NDHWC ? "NDHWC" :
         layout == DATA_LAYOUT_PLANAR ? "PLANAR" :
@@ -943,6 +943,8 @@ void Mat::fit(const std::vector<int>& _shape, int _type)
 void Mat::fit(const MatShape& _shape, int _type)
 {
     fit(_shape.dims, _shape.p, _type);
+    size.layout = _shape.layout;
+    size.C = _shape.C;
 }
 
 void Mat::fit(std::initializer_list<int> _shape, int _type)
@@ -1129,6 +1131,8 @@ void Mat::create(const MatShape& _shape, int _type)
         return;
     }
     create(_shape.dims, _shape.p, _type);
+    size.layout = _shape.layout;
+    size.C = _shape.C;
 }
 
 void Mat::create(std::initializer_list<int> _shape, int _type)

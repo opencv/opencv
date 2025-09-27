@@ -215,7 +215,7 @@ public:
                           std::vector<MatType>& temptypes) const CV_OVERRIDE
     {
         int ninputs = (int)inptypes.size();
-        CV_Assert(ninputs == 1);
+        CV_Assert(ninputs >= 1);
 
         outtypes.assign(1, inferType(inptypes[0]));
         temptypes.clear();
@@ -277,8 +277,12 @@ public:
             ninputs--;
         }
 
-        bool dynamic_weights = ninputs > 1;
-        if (dynamic_weights) {
+        bool dynamic_weights = false;
+        for (int i = 1; i < ninputs; i++) {
+            if (!netimpl_->isConstArg(inputs[i]))
+                dynamic_weights = true;
+        }
+        if (dynamic_weights || weights.empty()) {
             setWeights(inputs_arr.getMat(1), ninputs > 2 ? inputs_arr.getMat(2) : Mat(),
                        inpshape.back(), netimpl_->accuracy);
         }

@@ -232,7 +232,7 @@ CV__DNN_INLINE_NS_BEGIN
         Arg();
         explicit Arg(int idx_);
         bool empty() const;
-        operator bool() const;
+        operator int() const;
         // idx > 0: the Arg is input or output argument of some operation inside inference graph
         // idx < 0: the Arg is input or output argument of a pattern
         // idx == 0: no/empty argument; used in operations where some of the inputs/outputs are optional.
