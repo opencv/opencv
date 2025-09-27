@@ -138,16 +138,6 @@
 "test_qlinearmatmul_3D", // ---- same as above ---
 "test_range_float_type_positive_delta_expanded", // ---- Unsupported operations: Loop ---
 "test_range_int32_type_negative_delta_expanded", // ---- same as above ---
-"test_reduce_sum_default_axes_keepdims_example", // Issue:: Parser: Reduce layer doesn't support non contant axes: 'constBlobs.find(node_proto.input(1)) != constBlobs.end()' must be 'true' (layer does not support dynamic parameters)
-"test_reduce_sum_default_axes_keepdims_random",  // ---- same as above ---
-"test_reduce_sum_do_not_keepdims_example",  // ---- same as above ---
-"test_reduce_sum_do_not_keepdims_random",  // ---- same as above ---
-"test_reduce_sum_empty_axes_input_noop_example",  // ---- same as above ---
-"test_reduce_sum_empty_axes_input_noop_random",  // ---- same as above ---
-"test_reduce_sum_keepdims_example",  // ---- same as above ---
-"test_reduce_sum_keepdims_random", // ---- same as above ---
-"test_reduce_sum_negative_axes_keepdims_example",
-"test_reduce_sum_negative_axes_keepdims_random", // ---- same as above ---
 "test_reshape_allowzero_reordered", // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
 "test_resize_downsample_scales_linear_align_corners", // ---- same as above ---
