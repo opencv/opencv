@@ -211,6 +211,94 @@ private:
 };
 
 
+class ColorHashTsdfVolume : public Volume::Impl
+{
+public:
+    ColorHashTsdfVolume(const VolumeSettings& settings);
+    ~ColorHashTsdfVolume();
+
+    virtual void integrate(const OdometryFrame& frame, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray pose) override;
+    virtual void integrate(InputArray depth, InputArray image, InputArray pose) override;
+    virtual void raycast(InputArray cameraPose, OutputArray points, OutputArray normals, OutputArray colors) const override;
+    virtual void raycast(InputArray cameraPose, int height, int width, InputArray intr, OutputArray points, OutputArray normals, OutputArray colors) const override;
+
+    virtual void fetchNormals(InputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormals(OutputArray points, OutputArray normals) const override;
+    virtual void fetchPointsNormalsColors(OutputArray points, OutputArray normals, OutputArray colors) const override;
+
+    virtual void reset() override;
+    virtual int getVisibleBlocks() const override;
+    virtual size_t getTotalVolumeUnits() const override;
+
+    // Enabels or disables new volume unit allocation during integration
+    // Applicable for HashTSDF only
+    virtual void setEnableGrowth(bool v) override;
+    // Returns if new volume units are allocated during integration or not
+    // Applicable for HashTSDF only
+    virtual bool getEnableGrowth() const override;
+
+    // Gets bounding box in volume coordinates with given precision:
+    // VOLUME_UNIT - up to volume unit
+    // VOXEL - up to voxel
+    // returns (min_x, min_y, min_z, max_x, max_y, max_z) in volume coordinates
+    virtual void getBoundingBox(OutputArray bb, int precision) const override;
+
+public:
+    int lastVolIndex;
+    int lastFrameId;
+    Vec6f frameParams;
+    int volumeUnitDegree;
+    bool enableGrowth;
+
+#ifndef HAVE_OPENCL
+    Mat volUnitsData;
+    Mat pixNorms;
+    VolumeUnitIndexes volumeUnits;
+#else
+    VolumeUnitIndexes cpu_volumeUnits;
+
+    Mat cpu_volUnitsData;
+    Mat cpu_pixNorms;
+    UMat gpu_volUnitsData;
+    UMat gpu_pixNorms;
+
+    int bufferSizeDegree;
+    // per-volume-unit data
+    UMat lastVisibleIndices;
+    UMat isActiveFlags;
+    //TODO: remove it when there's no CPU parts
+    Mat volUnitsDataCopy;
+    //TODO: move indexes.volumes to GPU
+    CustomHashSet hashTable;
+#endif
+};
+
+
+class VolumeFactory
+{
+public:
+    static Ptr<Volume::Impl> create(VolumeType voltype, const VolumeSettings& settings)
+    {
+        switch (voltype)
+        {
+        case VolumeType::TSDF:
+            return makePtr<TsdfVolume>(settings);
+        case VolumeType::HashTSDF:
+            return makePtr<HashTsdfVolume>(settings);
+        case VolumeType::ColorTSDF:
+            return makePtr<ColorTsdfVolume>(settings);
+        case VolumeType::ColorHashTSDF:
+            return makePtr<ColorHashTsdfVolume>(settings); 
+
+        default:
+            CV_Error(Error::StsBadArg, "Invalid volume type");
+            return Ptr<Volume::Impl>();
+        }
+    }
+};
+
+
 Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
 {
     switch (vtype)
@@ -224,6 +312,9 @@ Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
     case VolumeType::ColorTSDF:
         this->impl = makePtr<ColorTsdfVolume>(settings);
         break;
+    case VolumeType::ColorHashTSDF:
+        this->impl = makePtr<ColorHashTsdfVolume>(settings); 
+
     default:
         CV_Error(Error::StsInternal, "Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
         break;

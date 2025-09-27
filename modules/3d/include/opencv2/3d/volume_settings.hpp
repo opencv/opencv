@@ -16,7 +16,8 @@ enum class VolumeType
 {
     TSDF = 0,
     HashTSDF = 1,
-    ColorTSDF = 2
+    ColorTSDF = 2,
+    ColorHashTSDF = 3
 };
 
 
