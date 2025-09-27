@@ -1414,6 +1414,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CastLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS Cast2Layer : public Layer {
+    public:
+        static Ptr<Cast2Layer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS NonMaxSuppressionLayer : public Layer
     {
     public:
