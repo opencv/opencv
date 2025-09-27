@@ -1021,7 +1021,7 @@ protected:
 
         if (testSrcType == VolumeTestSrcType::MAT)
         {
-            if (volumeType == VolumeType::ColorTSDF)
+            if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
                 volume->integrate(udepth, urgb, poses[0].matrix);
             else
                 volume->integrate(udepth, poses[0].matrix);
@@ -1066,7 +1066,8 @@ void VolumeTestFixture::saveObj(std::string funcName, Mat points, Mat normals)
     string platformString = gpu ? "GPU" : "CPU";
     string volumeTypeString = volumeType == VolumeType::TSDF ? "TSDF" :
                               volumeType == VolumeType::HashTSDF ? "HashTSDF" :
-                              volumeType == VolumeType::ColorTSDF  ? "ColorTSDF" : "";
+                              volumeType == VolumeType::ColorTSDF  ? "ColorTSDF" :
+                              volumeType == VolumeType::ColorHashTSDF  ? "ColorHashTSDF" : "";
     string testSrcTypeString = testSrcType == VolumeTestSrcType::MAT ? "MAT" :
                                testSrcType == VolumeTestSrcType::ODOMETRY_FRAME ? "OFRAME" : "";
     string frameSizeSpecifiedString = frameSizeSpecified == FrameSizeType::DEFAULT ? "DefaultSize" :
@@ -1081,14 +1082,14 @@ void VolumeTestFixture::raycast_test()
     UMat upoints, unormals, ucolors;
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (frameSizeSpecified == FrameSizeType::DEFAULT)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, upoints, unormals);
@@ -1101,7 +1102,7 @@ void VolumeTestFixture::raycast_test()
 
     if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
@@ -1156,14 +1157,14 @@ void VolumeTestFixture::valid_points_test()
     UMat upoints, unormals, ucolors;
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, frameSize.height, frameSize.width, intrRaycast, upoints, unormals);
     }
     else if (frameSizeSpecified == FrameSizeType::DEFAULT)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[0].matrix, upoints, unormals, ucolors);
         else
             volume->raycast(poses[0].matrix, upoints, unormals);
@@ -1179,7 +1180,7 @@ void VolumeTestFixture::valid_points_test()
 
     if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             displayColorImage(depth, rgb, points, normals, colors, depthFactor, lightPose);
         else
             displayImage(depth, points, normals, depthFactor, lightPose);
@@ -1190,14 +1191,14 @@ void VolumeTestFixture::valid_points_test()
 
     if (frameSizeSpecified == FrameSizeType::CUSTOM)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints2, unormals2, ucolors2);
         else
             volume->raycast(poses[17].matrix, frameSize.height, frameSize.width, intrRaycast, upoints2, unormals2);
     }
     else
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             volume->raycast(poses[17].matrix, upoints2, unormals2, ucolors2);
         else
             volume->raycast(poses[17].matrix, upoints2, unormals2);
@@ -1212,7 +1213,7 @@ void VolumeTestFixture::valid_points_test()
 
     if (cvtest::debugLevel > 0)
     {
-        if (volumeType == VolumeType::ColorTSDF)
+        if (volumeType == VolumeType::ColorTSDF || volumeType == VolumeType::ColorHashTSDF)
             displayColorImage(depth, rgb, points2, normals2, colors2, depthFactor, lightPose);
         else
             displayImage(depth, points2, normals2, depthFactor, lightPose);

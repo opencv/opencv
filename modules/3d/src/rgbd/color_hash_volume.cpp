@@ -62,13 +62,21 @@ public:
 
         try {
             maxDepth = settings.getMaxDepth();
-        } catch (...) {
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, "VolumeSettings: getMaxDepth() failed, using default 3.0f. Error: " << e.what());
+            maxDepth = 3.0f;
+        } catch (const std::exception& e) {
+            CV_LOG_WARNING(NULL, "VolumeSettings: Unexpected exception in getMaxDepth(): " << e.what() << ". Using 3.0f.");
             maxDepth = 3.0f;
         }
-        
+
         try {
             maxWeight = settings.getMaxWeight();
-        } catch (...) {
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, "VolumeSettings: getMaxWeight() failed, using default 100. Error: " << e.what());
+            maxWeight = 100;
+        } catch (const std::exception& e) {
+            CV_LOG_WARNING(NULL, "VolumeSettings: Unexpected exception in getMaxWeight(): " << e.what() << ". Using 100.");
             maxWeight = 100;
         }
     }
@@ -264,11 +272,6 @@ protected:
         auto it = hashMap.find(computeHash(voxelCoords));
         return it != hashMap.end() ? it->second.second.tsdf : truncDist;
     }
-};
-
-CV_EXPORTS_W Ptr<ColorHashTSDFVolume> ColorHashTSDFVolume::create(const VolumeSettings& settings){
-    return makePtr<ColorHashTSDFVolumeImpl>(settings);
-}
 };
 
 } // namespace cv
