@@ -292,13 +292,15 @@ CvResult CV_API_CALL cv_capture_open(const char* filename, int camera_index, CV_
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
+    if (!filename && camera_index < 0)
         return CV_ERROR_FAIL;
-    CV_UNUSED(camera_index);
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
-        cap = new CvCapture_FFMPEG_proxy(String(filename), cv::VideoCaptureParameters());
+        if (filename)
+            cap = new CvCapture_FFMPEG_proxy(String(filename), cv::VideoCaptureParameters());
+        else
+            cap = new CvCapture_FFMPEG_proxy(camera_index, cv::VideoCaptureParameters());
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
@@ -328,14 +330,16 @@ CvResult CV_API_CALL cv_capture_open_with_params(
     if (!handle)
         return CV_ERROR_FAIL;
     *handle = NULL;
-    if (!filename)
+    if (!filename && camera_index < 0)
         return CV_ERROR_FAIL;
-    CV_UNUSED(camera_index);
     CvCapture_FFMPEG_proxy *cap = 0;
     try
     {
         cv::VideoCaptureParameters parameters(params, n_params);
-        cap = new CvCapture_FFMPEG_proxy(String(filename), parameters);
+        if (filename)
+            cap = new CvCapture_FFMPEG_proxy(String(filename), parameters);
+        else
+            cap = new CvCapture_FFMPEG_proxy(camera_index, parameters);
         if (cap->isOpened())
         {
             *handle = (CvPluginCapture)cap;
