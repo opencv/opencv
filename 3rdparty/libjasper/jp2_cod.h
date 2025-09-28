@@ -301,6 +301,7 @@ void jp2_box_destroy(jp2_box_t *box);
 jp2_box_t *jp2_box_get(jas_stream_t *in);
 int jp2_box_put(jp2_box_t *box, jas_stream_t *out);
 int jp2_uuid_putdata_ab(jp2_box_t *box, jas_stream_t *out);
+int jp2_box_put_error0(jp2_box_t *box, jas_stream_t *out);
 
 #define JP2_DTYPETOBPC(dtype) \
   ((JAS_IMAGE_CDT_GETSGND(dtype) << 7) | (JAS_IMAGE_CDT_GETPREC(dtype) - 1))

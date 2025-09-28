@@ -134,7 +134,7 @@ static int jp2_pclr_putdata(jp2_box_t *box, jas_stream_t *out);
 static void jp2_pclr_dumpdata(jp2_box_t *box, FILE *out);
 static void jp2_uuid_destroy(jp2_box_t *box);
 static int jp2_uuid_getdata(jp2_box_t *box, jas_stream_t *in);
-int jp2_uuid_putdata(jp2_box_t *box, jas_stream_t *out);
+static int jp2_uuid_putdata(jp2_box_t *box, jas_stream_t *out);
 
 
 /******************************************************************************\
@@ -528,6 +528,57 @@ error:
         jas_stream_close(tmpstream);
     }
     return -1;
+}
+
+int jp2_box_put_error0(jp2_box_t *box, jas_stream_t *out)
+{
+    jas_stream_t *tmpstream;
+    bool extlen;
+    bool dataflag;
+
+    tmpstream = 0;
+
+    dataflag = !(box->info->flags & (JP2_BOX_SUPER | JP2_BOX_NODATA));
+
+    if (dataflag) {
+        tmpstream = jas_stream_memopen(0, 0);
+        if (box->ops->putdata) {
+            if ((*box->ops->putdata)(box, tmpstream)) {
+                goto error;
+            }
+        }
+        box->len = jas_stream_tell(tmpstream) + JP2_BOX_HDRLEN(false);
+        jas_stream_rewind(tmpstream);
+    }
+    //extlen = (box->len >= (((uint_fast64_t)1) << 32)) != 0;
+    if (jp2_putuint32(out, /*extlen ? 1 :*/ box->len)) {
+        goto error;
+    }
+    if (jp2_putuint32(out, box->type)) {
+        goto error;
+    }
+    /*if (extlen) {
+        if (jp2_putuint64(out, box->len)) {
+            goto error;
+        }
+    }*/
+
+    if (dataflag) {
+        if (jas_stream_copy(out, tmpstream, box->len - JP2_BOX_HDRLEN(false))) {
+            goto error;
+        }
+        jas_stream_close(tmpstream);
+    }
+
+    return 0;
+    abort();
+
+error:
+
+    if (tmpstream) {
+        jas_stream_close(tmpstream);
+    }
+    return 0;
 }
 
 static int jp2_jp_putdata(jp2_box_t *box, jas_stream_t *out)
@@ -935,7 +986,7 @@ static int jp2_uuid_putdata(jp2_box_t *box, jas_stream_t *out)
     return 0;
 }
 
-static int jp2_uuid_putdata_ab(jp2_box_t *box, jas_stream_t *out)
+int jp2_uuid_putdata_ab(jp2_box_t *box, jas_stream_t *out)
 {
     jp2_uuid_t *uuid = &box->data.uuid;
     int i;
