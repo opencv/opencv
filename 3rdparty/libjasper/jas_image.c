@@ -1133,7 +1133,7 @@ cmptbry = oldcmpt->tly_ + (oldcmpt->height_ - 1) * oldcmpt->vstep_;
     }
     return 0;
 error:
-    return -1;
+    return 0;
 }
 
 int jas_image_ishomosamp(jas_image_t *image)
