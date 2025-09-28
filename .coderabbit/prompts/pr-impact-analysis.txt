@@ -7,7 +7,7 @@ When invoked on a pull request (PR), do the following:
 3) For each affected module, estimate the **risk** as Low / Medium / High and explain why (use: file churn, header changes, public API changes, changes in include headers, build flags).
 4) Produce a short **test checklist** (concrete tests to run locally in Yocto/devshell or unit tests).
 5) Detect likely **feature impacts** (user-facing endpoints, APIs, or behavior) and map them to file paths.
-6) If any headers (`modules/**/include/**/*.h` or `modules/**/include/**/*.hpp`) are changed, explicitly call out potential API breakage and recommend adding/patching `CHANGELOG.md` with the suggested changelog bullet.
+6) If any headers are changed, explicitly call out potential API breakage and recommend adding/patching `CHANGELOG.md` with the suggested changelog bullet.
 7) Provide an **actionable suggestion** (one-sentence) to reduce risk (e.g., "add unit tests for X", "pin dependency Y", "write integration test for module Z").
 8) Keep output compact (max 12 bullet points). Use code references (filename:line if available).
 
