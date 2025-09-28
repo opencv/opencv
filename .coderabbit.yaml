@@ -1,0 +1,72 @@
+# .coderabbit.yaml - Custom test configuration for evaluation
+profile: "assertive"
+
+# Basic inclusion/exclusion
+paths:
+  include:
+    - "modules/**"
+    - "samples/**"
+  exclude:
+    - "3rdparty/**"
+    - "build/**"
+
+# Tools to enable
+tools:
+  cppcheck:
+    enabled: true
+    args: ["--enable=warning,performance,portability"]
+  clang_tidy:
+    enabled: true
+    # If you have compile_commands.json, point to it
+    compile_commands_path: "build/compile_commands.json"
+
+# Global thresholds
+thresholds:
+  docstring_coverage: 0.80   # 80% minimum docstring coverage (C++ doc comments)
+  max_pr_files_changed: 200  # warn if >200 files changed
+  max_cyclomatic_complexity: 30
+
+# Custom regex checks (simple patterns to test custom rule capability)
+custom_checks:
+  - id: "no-todo-committed"
+    description: "Disallow 'TODO' comments in PRs"
+    pattern: "(TODO|FIXME)"
+    file_patterns:
+      - "**/*.cpp"
+      - "**/*.h"
+    severity: "warning"
+    auto_fix: false
+
+  - id: "require-changelog"
+    description: "Require CHANGELOG entry when public API headers changed"
+    pattern: "^.*$"  # any change (we'll scope by file_patterns)
+    file_patterns:
+      - "modules/**/include/**.h"
+    severity: "error"
+    condition: "if_changed"   # run when matched files changed
+    requires_file: "CHANGELOG.md"   # require presence of changelog update in PR
+
+  - id: "api-break-detect"
+    description: "Detect potential public API signature changes (simple regex)"
+    pattern: "(\\bint\\b|\\bvoid\\b|\\bstd::string\\b)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\([^;{]*\\)\\s*;"
+    file_patterns:
+      - "modules/**/include/**.h"
+    severity: "warning"
+    note: "This is a heuristic — review manually."
+
+# Labels / actions mapping
+actions:
+  - on: "error"        # for custom_checks severity=error
+    add_label: "blocked/api-change"
+    comment: "🚫 This PR changes public headers — please add a CHANGELOG.md entry explaining the API change."
+  - on: "warning"
+    add_label: "needs-review"
+    comment: "⚠️ CodeRabbit detected potential issues - please review the warnings"
+
+# PR comment templates (used for auto-summary)
+comment_templates:
+  summary: |
+    CodeRabbit automated review summary:
+    - Docstring coverage: {{docstring_coverage}} (threshold: {{thresholds.docstring_coverage}})
+    - Files changed: {{pr.files_changed}}
+    - Issues found: {{issue_count}}
