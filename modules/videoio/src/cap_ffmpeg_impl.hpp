@@ -1134,16 +1134,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         }
     }
 
-#if USE_AV_INTERRUPT_CALLBACK
-    /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = open_timeout;
-    get_monotonic_time(&interrupt_metadata.value);
-
-    ic = avformat_alloc_context();
-    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
-    ic->interrupt_callback.opaque = &interrupt_metadata;
-#endif
-
     std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if (options.empty())
     {
@@ -1176,19 +1166,32 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         entry = av_dict_get(dict, "f", NULL, 0);
         if (!entry)
         {
-            CV_Error(Error::StsBadArg, "Use OPENCV_FFMPEG_CAPTURE_OPTIONS to specify camera backend");
+            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: Use OPENCV_FFMPEG_CAPTURE_OPTIONS to specify camera backend");
+            return false;
         }
         avdevice_list_input_sources(nullptr, entry->value, dict, &device_list);
         if (!device_list)
         {
-            CV_Error(Error::StsBadArg, format("No camera backend with name %s", entry->value));
+            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: No camera backend with name " << entry->value);
+            return false;
         }
-        CV_CheckLT(index, device_list->nb_devices, "Camera index out of range");
+        CV_CheckLT(index, device_list->nb_devices, "VIDEOIO/FFMPEG: Camera index out of range");
         _filename = device_list->devices[index]->device_name;
 #else
-        CV_Error(Error::StsBadArg, "OpenCV should be configured with libavdevice to open a camera device");
+        CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice to open a camera device");
+        return false;
 #endif
     }
+
+#if USE_AV_INTERRUPT_CALLBACK
+    /* interrupt callback */
+    interrupt_metadata.timeout_after_ms = open_timeout;
+    get_monotonic_time(&interrupt_metadata.value);
+
+    ic = avformat_alloc_context();
+    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
+    ic->interrupt_callback.opaque = &interrupt_metadata;
+#endif
 
     if (stream)
     {
