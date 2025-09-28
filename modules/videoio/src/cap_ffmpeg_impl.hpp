@@ -526,7 +526,7 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
+    bool open(const char* filename, int index, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -1032,7 +1032,7 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
+bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
@@ -3436,7 +3436,22 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(filename, nullptr, params))
+    if (capture->open(filename, -1, nullptr, params))
+        return capture;
+
+    capture->close();
+    delete capture;
+    return 0;
+}
+
+static
+CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(int index, const VideoCaptureParameters& params)
+{
+    CvCapture_FFMPEG* capture = new CvCapture_FFMPEG();
+    if (!capture)
+        return 0;
+    capture->init();
+    if (capture->open(nullptr, index, nullptr, params))
         return capture;
 
     capture->close();
@@ -3451,7 +3466,7 @@ CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(const Ptr<IStreamReader
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(nullptr, stream, params))
+    if (capture->open(nullptr, -1, stream, params))
         return capture;
 
     capture->close();
