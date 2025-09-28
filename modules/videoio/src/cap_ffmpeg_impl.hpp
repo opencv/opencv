@@ -1172,16 +1172,19 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
     AVDeviceInfoList* device_list = nullptr;
     if (index >= 0)
     {
-#ifndef HAVE_FFMPEG_LIBAVDEVICE
-        CV_Error(Error::StsBadArg, "OpenCV should be configured with libavdevice to open a camera device");
-#endif
-        if (!input_format)
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+        entry = av_dict_get(dict, "f", NULL, 0);
+        if (!entry)
         {
-            CV_Error(Error::StsBadArg, "");
+            CV_Error(Error::StsBadArg, "Video device not specified");
         }
-        avdevice_list_input_sources(input_format, nullptr, dict, &device_list);
+        const AVInputFormat* container = av_find_input_format(entry->value);
+        avdevice_list_input_sources(container, nullptr, dict, &device_list);
         CV_CheckLT(index, device_list->nb_devices, "Camera index out of range");
         _filename = device_list->devices[index]->device_name;
+#else
+        CV_Error(Error::StsBadArg, "OpenCV should be configured with libavdevice to open a camera device");
+#endif
     }
 
     if (stream)
@@ -1235,8 +1238,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         ic->pb = avio_context;
     }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
     if (device_list)
         avdevice_free_list_devices(&device_list);
+#endif
 
     if (err < 0)
     {
