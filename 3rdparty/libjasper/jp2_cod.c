@@ -134,7 +134,7 @@ static int jp2_pclr_putdata(jp2_box_t *box, jas_stream_t *out);
 static void jp2_pclr_dumpdata(jp2_box_t *box, FILE *out);
 static void jp2_uuid_destroy(jp2_box_t *box);
 static int jp2_uuid_getdata(jp2_box_t *box, jas_stream_t *in);
-static int jp2_uuid_putdata(jp2_box_t *box, jas_stream_t *out);
+int jp2_uuid_putdata(jp2_box_t *box, jas_stream_t *out);
 
 
 /******************************************************************************\
