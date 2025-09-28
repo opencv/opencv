@@ -66,7 +66,7 @@ namespace {
 static const struct VideoBackendInfo builtin_backends[] =
 {
 #ifdef HAVE_FFMPEG
-    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, cvCreateCameraCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
+    DECLARE_STATIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_ALL | MODE_WRITER, cvCreateFileCapture_FFMPEG_proxy, cvCreateCameraCapture_FFMPEG_proxy, cvCreateVideoWriter_FFMPEG_proxy)
     DECLARE_STATIC_BACKEND_WITH_STREAM_SUPPORT(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_STREAM, cvCreateStreamCapture_FFMPEG_proxy)
 #elif defined(ENABLE_PLUGINS) || defined(HAVE_FFMPEG_WRAPPER)
     DECLARE_DYNAMIC_BACKEND(CAP_FFMPEG, "FFMPEG", MODE_CAPTURE_BY_FILENAME | MODE_CAPTURE_BY_STREAM | MODE_WRITER)

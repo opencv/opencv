@@ -1047,6 +1047,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
 
     close();
 
+#ifndef HAVE_FFMPEG_LIBAVDEVICE
+    CV_CheckLT(index, 0, "OpenCV should be configured with libavdevice to open a camera device");
+#endif
+
     readStream = stream;
 
     if (!params.empty())
@@ -1162,14 +1166,37 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         av_dict_set(&dict, "rtsp_transport", "tcp", 0);
 #endif
     }
+
     CV_FFMPEG_FMT_CONST AVInputFormat* input_format = NULL;
     AVDictionaryEntry* entry = av_dict_get(dict, "input_format", NULL, 0);
+    std::cout << entry << std::endl;
     if (entry != 0)
     {
       input_format = av_find_input_format(entry->value);
     }
 
-    if (!_filename)
+
+    //     const AVInputFormat *fmt = NULL;
+    //  void *iii = 0;
+    //  while ((fmt = av_demuxer_iterate(&iii)))
+    // std::cout << fmt->name << std::endl;
+    // avdevice_register_all();
+
+      input_format = av_find_input_format("video4linux2");
+    std::cout << input_format << std::endl;
+
+    AVDeviceInfoList* device_list = nullptr;
+    avdevice_list_input_sources(input_format, nullptr, dict, &device_list);
+    std::cout << device_list << std::endl;
+    std::cout << device_list->nb_devices << std::endl;
+    CV_CheckLT(index, device_list->nb_devices, "Camera index out of range");
+    for (int ii = 0; ii < device_list->nb_devices; ++ii)
+    {
+        std::cout << device_list->devices[ii]->device_name << std::endl;
+    }
+    _filename = device_list->devices[0]->device_name;
+
+    if (stream)
     {
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
@@ -1220,6 +1247,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         ic->pb = avio_context;
     }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
+    // avdevice_free_list_devices(device_list);
 
     if (err < 0)
     {
