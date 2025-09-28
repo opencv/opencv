@@ -935,6 +935,25 @@ static int jp2_uuid_putdata(jp2_box_t *box, jas_stream_t *out)
     return 0;
 }
 
+static int jp2_uuid_putdata_ab(jp2_box_t *box, jas_stream_t *out)
+{
+    jp2_uuid_t *uuid = &box->data.uuid;
+    int i;
+
+    for (i = 0; i < 13; i++)
+    {
+        if (jp2_putuint8(out, uuid->uuid[i]))
+        return -1;
+    }
+
+    for (i = 0; i < uuid->datalen; i++)
+    {
+        if (jp2_putuint8(out, uuid->data[i]))
+        return -1;
+    }
+    return 0;
+}
+
 static int jp2_getint(jas_stream_t *in, int s, int n, int_fast32_t *val)
 {
     int c;
