@@ -54,6 +54,23 @@ custom_checks:
     severity: "warning"
     note: "This is a heuristic — review manually."
 
+# Custom AI prompts manifest (file-driven approach)
+custom_prompts:
+  - id: "impact-analysis"
+    name: "PR Impact Analysis"
+    file: ".coderabbit/prompts/pr-impact-analysis.txt"
+    description: "Estimate impacted modules, suggested test areas, and potential breakage risk for C++/Yocto PRs"
+    triggers:
+      - on_pr_open
+      - on_command     # allows manual invocation via PR comment
+    file_patterns:
+      - "modules/**"
+      - "**/*.cpp"
+      - "**/*.h"
+    run_as: "assistant"   # informational only; instructs the agent role
+    required_permissions:
+      - "read:repo"       # doc only — ensure the bot has permission to read files
+
 # Labels / actions mapping
 actions:
   - on: "error"        # for custom_checks severity=error

@@ -2,6 +2,7 @@
 .*
 !.gitignore
 !.coderabbit.yaml
+!.coderabbit/
 
 *.autosave
 *.pyc
