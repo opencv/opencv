@@ -1173,41 +1173,12 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
     if (index >= 0)
     {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
-        const AVInputFormat* container = nullptr;
         entry = av_dict_get(dict, "f", NULL, 0);
-        if (entry)
+        if (!entry)
         {
-            container = av_find_input_format(entry->value);
+            CV_Error(Error::StsBadArg, "Video device not specified");
         }
-        if (!container)
-        {
-            container = av_input_video_device_next(container);
-            while (container)
-            {
-                avdevice_list_input_sources(container, nullptr, dict, &device_list);
-                if (device_list)
-                {
-                    int nb_devices = device_list->nb_devices;
-                    avdevice_free_list_devices(&device_list);
-                    device_list = nullptr;
-                    if (nb_devices > 0)
-                    {
-                        CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: choose camera device " << container->name);
-                        break;
-                    }
-                }
-                container = av_input_video_device_next(container);
-            }
-        }
-        if (container)
-        {
-            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: camera device " << container->name);
-        }
-        else
-        {
-            CV_LOG_WARNING(NULL, "Unable to choose camera device");
-            return false;
-        }
+        const AVInputFormat* container = av_find_input_format(entry->value);
         avdevice_list_input_sources(container, nullptr, dict, &device_list);
         CV_CheckLT(index, device_list->nb_devices, "Camera index out of range");
         _filename = device_list->devices[index]->device_name;
@@ -1267,13 +1238,10 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         ic->pb = avio_context;
     }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
-    if (device_list)
-    {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
+    if (device_list)
         avdevice_free_list_devices(&device_list);
-        device_list = nullptr;
 #endif
-    }
 
     if (err < 0)
     {
