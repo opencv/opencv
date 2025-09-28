@@ -1173,17 +1173,16 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
     if (index >= 0)
     {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
-        const AVInputFormat* container = nullptr;
         entry = av_dict_get(dict, "f", NULL, 0);
-        if (entry)
+        if (!entry)
         {
-            container = av_find_input_format(entry->value);
+            CV_Error(Error::StsBadArg, "Use OPENCV_FFMPEG_CAPTURE_OPTIONS to specify camera backend");
         }
-        if (!container)
+        avdevice_list_input_sources(nullptr, entry->value, dict, &device_list);
+        if (!device_list)
         {
-            CV_Error(Error::StsBadArg, "Unable to choose video device.");
+            CV_Error(Error::StsBadArg, format("No camera backend with name %s", entry->value));
         }
-        avdevice_list_input_sources(container, nullptr, dict, &device_list);
         CV_CheckLT(index, device_list->nb_devices, "Camera index out of range");
         _filename = device_list->devices[index]->device_name;
 #else
