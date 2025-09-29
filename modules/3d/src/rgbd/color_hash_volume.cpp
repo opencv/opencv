@@ -273,5 +273,5 @@ protected:
         return it != hashMap.end() ? it->second.second.tsdf : truncDist;
     }
 };
-
+}
 } // namespace cv
