@@ -191,7 +191,6 @@ public:
             std::map<LayerPin, int>::const_iterator refIt;
 
             const int targetTotal = total(shape);
-            int bestBlobTotal = INT_MAX;
 
             for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
             {
@@ -207,7 +206,7 @@ public:
                     {
                         bestBlobPin = hostIt->first;
                         bestBlob = unusedBlob;
-                        bestBlobTotal = unusedBlob.total();
+                        break; // Found exact match, no need to continue searching
                     }
                 }
             }
