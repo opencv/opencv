@@ -1,0 +1,50 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
+
+#ifndef OPENCV_3D_COLOR_HASH_TSDF_FUNCTIONS_HPP
+#define OPENCV_3D_COLOR_HASH_TSDF_FUNCTIONS_HPP
+
+#include "hash_tsdf_functions.hpp"
+#include "color_tsdf_functions.hpp"
+
+namespace cv
+{
+
+// A colored voxel for the Hashing TSDF implementation.
+// It's functionally identical to RGBTsdfVoxel but is given a distinct name for clarity.
+typedef RGBTsdfVoxel ColorHashTsdfVoxel;
+
+
+void integrateColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, const int volumeUnitDegree, bool enableGrowth,
+    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputOutputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
+
+void raycastColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
+    InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals, OutputArray _colors);
+
+void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors);
+
+
+#ifdef HAVE_OPENCL
+
+void ocl_integrateColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree, bool enableGrowth,
+    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _lastVisibleIndices, InputOutputArray _volUnitsDataCopy, InputOutputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags);
+
+void ocl_raycastColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
+    const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals, OutputArray _colors);
+
+void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
+    const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals, OutputArray _colors);
+
+#endif
+
+} // namespace cv
+
+#endif 
