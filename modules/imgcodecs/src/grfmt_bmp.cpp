@@ -633,7 +633,7 @@ bool  BmpEncoder::write( const Mat& img, const std::vector<int>& params )
     // sRGB colorspace requires BITMAPV5HEADER.
     // See https://learn.microsoft.com/en-us/windows/win32/api/wingdi/ns-wingdi-bitmapv5header
     bool useV5BitFields = true;
-    for(size_t i = 0 ; i < params.size(); i++)
+    for(size_t i = 0; i < params.size(); i+=2)
     {
         const int value = params[i+1];
         switch(params[i])
