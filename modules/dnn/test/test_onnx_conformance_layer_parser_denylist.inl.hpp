@@ -336,7 +336,7 @@
 "test_center_crop_pad_crop_negative_axes_hwc_expanded",
 "test_center_crop_pad_pad",
 "test_center_crop_pad_pad_expanded",
-"test_clip_example_expanded",
+"test_clip_example_expanded", //wrong output
 "test_clip_expanded",
 "test_clip_min_greater_than_max",
 "test_clip_min_greater_than_max_expanded",
@@ -350,7 +350,7 @@
 "test_compress_1",  // ---- same as above ---
 "test_compress_default_axis",  // ---- same as above ---
 "test_compress_negative_axis",  // ---- same as above ---
-"test_constant_pad_axes",
+"test_constant_pad_axes", //type mismatch
 "test_constant_pad_negative_axes",
 "test_constantofshape_int_shape_zero",  // Issue::Parser::Weights are required as inputs
 "test_convinteger_with_padding",  // Issues::Layer::Can't create layer "onnx_node_output_0!y" of type "ConvInteger" in function 'getLayerInstance'
@@ -367,8 +367,6 @@
 "test_convtranspose_pad",  // Issue::Parser::Weights are required as inputs
 "test_convtranspose_pads",  // Issue::Parser::Weights are required as inputs
 "test_convtranspose_with_kernel",  // Issue::Parser::Weights are required as inputs
-"test_cumsum_1d_int32_exclusive",
-"test_cumsum_2d_int32",
 "test_deform_conv_with_mask_bias",
 "test_deform_conv_with_multiple_offset_groups",
 "test_dequantizelinear_e4m3fn",
@@ -386,11 +384,6 @@
 "test_dft_inverse",
 "test_dft_inverse_opset19",
 "test_dft_opset19",
-"test_div_int16",
-"test_div_int8",
-"test_div_uint16",
-"test_div_uint32",
-"test_div_uint64",
 "test_dropout_default_mask",  // Issue::cvtest::norm::wrong data type
 "test_dropout_default_mask_ratio",  // ---- same as above ---
 "test_dynamicquantizelinear",  // Issue:: Unkonwn error
@@ -413,24 +406,6 @@
 "test_gelu_default_2_expanded",  // parser: no corresponding layer for CastLike
 "test_gelu_tanh_1_expanded",  // parser: no corresponding layer for CastLike
 "test_gelu_tanh_2_expanded",  // parser: no corresponding layer for CastLike
-"test_greater_equal_int16",
-"test_greater_equal_int16_expanded",
-"test_greater_equal_int8",
-"test_greater_equal_int8_expanded",
-"test_greater_equal_uint16",
-"test_greater_equal_uint16_expanded",
-"test_greater_equal_uint32",
-"test_greater_equal_uint32_expanded",
-"test_greater_equal_uint64",
-"test_greater_equal_uint64_expanded",
-"test_greater_equal_uint8",
-"test_greater_equal_uint8_expanded",
-"test_greater_int16",
-"test_greater_int8",
-"test_greater_uint16",
-"test_greater_uint32",
-"test_greater_uint64",
-"test_greater_uint8",
 "test_gridsample_bicubic",  // ---- same as above ---
 "test_gridsample_bicubic_align_corners_0_additional_1",
 "test_gridsample_bicubic_align_corners_1_additional_1",
@@ -537,24 +512,6 @@
 "test_leakyrelu_default_expanded",
 "test_leakyrelu_example_expanded",
 "test_leakyrelu_expanded",
-"test_less_equal_int16",
-"test_less_equal_int16_expanded",
-"test_less_equal_int8",
-"test_less_equal_int8_expanded",
-"test_less_equal_uint16",
-"test_less_equal_uint16_expanded",
-"test_less_equal_uint32",
-"test_less_equal_uint32_expanded",
-"test_less_equal_uint64",
-"test_less_equal_uint64_expanded",
-"test_less_equal_uint8",
-"test_less_equal_uint8_expanded",
-"test_less_int16",
-"test_less_int8",
-"test_less_uint16",
-"test_less_uint32",
-"test_less_uint64",
-"test_less_uint8",
 "test_loop11",  // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_loop13_seq",  // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_loop16_seq_none",  // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
@@ -571,7 +528,7 @@
 "test_maxpool_2d_ceil_output_size_reduce_by_one",
 "test_maxpool_3d_dilations",
 "test_maxpool_3d_dilations_use_ref_impl",
-"test_maxpool_3d_dilations_use_ref_impl_large",
+"test_maxpool_3d_dilations_use_ref_impl_large", //shape mismatch
 "test_melweightmatrix",
 "test_momentum",  // Issues::Layer does not exist. Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_momentum_multiple",  // ---- same as above ---
@@ -786,7 +743,7 @@
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
 "test_resize_downsample_scales_cubic_antialias",
 "test_resize_downsample_scales_linear_align_corners",  // ---- same as above ---
-"test_resize_downsample_scales_linear_antialias", // type mismatch
+"test_resize_downsample_scales_linear_antialias", //incorrect output
 "test_resize_downsample_scales_linear_half_pixel_symmetric",
 "test_resize_downsample_sizes_cubic_antialias",
 "test_resize_downsample_sizes_linear_antialias",
@@ -795,10 +752,8 @@
 "test_resize_tf_crop_and_resize_axes_2_3",
 "test_resize_tf_crop_and_resize_axes_3_2",
 "test_resize_tf_crop_and_resize_extrapolation_value",
-"test_resize_upsample_scales_linear_half_pixel_symmetric",
-"test_resize_upsample_scales_nearest_axes_2_3",
+"test_resize_upsample_scales_linear_half_pixel_symmetric", //shape mismatch
 "test_resize_upsample_scales_nearest_axes_3_2",
-"test_resize_upsample_sizes_nearest_axes_2_3",
 "test_resize_upsample_sizes_nearest_axes_3_2",
 "test_resize_upsample_sizes_nearest_not_larger",
 "test_resize_upsample_sizes_nearest_not_smaller",
@@ -964,21 +919,14 @@
 "test_split_2d_uneven_split_opset18",
 "test_split_equal_parts_1d_opset13",
 "test_split_equal_parts_1d_opset18",
-"test_split_equal_parts_2d_opset13",
 "test_split_equal_parts_default_axis_opset13",
 "test_split_equal_parts_default_axis_opset18",
 "test_split_to_sequence_1",
 "test_split_to_sequence_2",
 "test_split_to_sequence_nokeepdims",
-"test_split_variable_parts_1d_opset13",
-"test_split_variable_parts_1d_opset18",
-"test_split_variable_parts_2d_opset13",
-"test_split_variable_parts_2d_opset18",
-"test_split_variable_parts_default_axis_opset13",
-"test_split_variable_parts_default_axis_opset18",
 "test_split_zero_size_splits",  // ---- incompatible type of input tensor #0 'input': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput' ---
-"test_split_zero_size_splits_opset13",
-"test_split_zero_size_splits_opset18",
+"test_split_zero_size_splits_opset13", // type mismatch
+"test_split_zero_size_splits_opset18", // type mismatch
 "test_stft",
 "test_stft_with_window",
 "test_string_concat",
@@ -998,11 +946,6 @@
 "test_strnormalizer_export_monday_empty_output",  // ---- same as above ---
 "test_strnormalizer_export_monday_insensintive_upper_twodim",  // ---- same as above ---
 "test_strnormalizer_nostopwords_nochangecase",  // Issue:: Parser: Can't create layer "onnx_node_output_0!y" of type "StringNormalizer" in function 'getLayerInstance'
-"test_sub_int16",
-"test_sub_int8",
-"test_sub_uint16",
-"test_sub_uint32",
-"test_sub_uint64",
 "test_swish_expanded",
 "test_tensorscatter",
 "test_tensorscatter_3d",
@@ -1017,17 +960,11 @@
 "test_thresholdedrelu_default_expanded_ver18",
 "test_thresholdedrelu_example_expanded_ver18",
 "test_thresholdedrelu_expanded_ver18",
-"test_top_k_same_values", //type mismatch
-"test_top_k_same_values_2d",
-"test_top_k_same_values_largest",
-"test_top_k_uint64",
 "test_training_dropout",  // Issue::cvtest::norm::wrong data type
-"test_training_dropout_default",  // ---- same as above ---
+"test_training_dropout_default",  // ---- same as above --- type mismatch
 "test_training_dropout_default_mask",  // ---- same as above ---
 "test_training_dropout_mask",  // ---- same as above ---
-"test_training_dropout_zero_ratio",  // ---- same as above ---
 "test_training_dropout_zero_ratio_mask",  // ---- same as above ---
-"test_tril_zero",  // ---- same as above ---
-"test_triu_zero",  // ---- same as above ---
-"test_unique_length_1",
-"test_wrap_pad", // type mismatch
+"test_tril_zero",  // ---- same as above --- type mismatch
+"test_triu_zero",  // ---- same as above --- type mismatch
+"test_unique_length_1", //incorrect output
