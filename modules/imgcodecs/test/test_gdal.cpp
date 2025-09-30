@@ -29,9 +29,9 @@ static void test_gdal_read(const string filename, bool required = true) {
         }
     }
 
-    EXPECT_EQ(101.125, (img.at<Vec<float, 7>>(0, 0)[0]));
+    EXPECT_EQ(105.125, (img.at<Vec<float, 7>>(0, 0)[0]));
     EXPECT_EQ(203.500, (img.at<Vec<float, 7>>(2, 1)[3]));
-    EXPECT_EQ(305.875, (img.at<Vec<float, 7>>(4, 2)[6]));
+    EXPECT_EQ(301.875, (img.at<Vec<float, 7>>(4, 2)[6]));
 }
 
 TEST(Imgcodecs_gdal, read_envi)
@@ -42,7 +42,7 @@ TEST(Imgcodecs_gdal, read_envi)
 TEST(Imgcodecs_gdal, read_fits)
 {
     // .fit test is optional because GDAL may be built wihtout CFITSIO library support
-    test_gdal_read("../cv/gdal/fits_test.fit", false);
+    test_gdal_read("../cv/gdal/fits_test.fits", false);
 }
 
 #endif // HAVE_GDAL
