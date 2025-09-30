@@ -22,9 +22,9 @@ public:
     {
         setParamsFrom(params);
         String red = toLowerCase(params.get<String>("reduction", "mean"));
-        if (red == "none") reduction = DNN_LOSS_REDUCTION_NONE;
-        else if (red == "mean") reduction = DNN_LOSS_REDUCTION_MEAN;
-        else if (red == "sum") reduction = DNN_LOSS_REDUCTION_SUM;
+        if (red == "none") reduction = LOSS_REDUCTION_NONE;
+        else if (red == "mean") reduction = LOSS_REDUCTION_MEAN;
+        else if (red == "sum") reduction = LOSS_REDUCTION_SUM;
         else CV_Error(Error::StsBadArg, "Unsupported reduction: " + red);
         ignoreIndex = params.get<int>("ignore_index", -1);
     }
@@ -40,7 +40,7 @@ public:
         CV_Assert(in.size() >= 2);
         const MatShape& x = in[0];
         CV_Assert(x.size() >= 2);
-        if (reduction == DNN_LOSS_REDUCTION_NONE)
+        if (reduction == LOSS_REDUCTION_NONE)
         {
             MatShape shp = x;
             MatShape y; y.reserve(shp.size()-1);
@@ -78,7 +78,7 @@ public:
         int S = 1; for (int i = 2; i < logp.dims; ++i) S *= logp.size[i];
 
         MatShape lossShape;
-        bool isReduced = (reduction != DNN_LOSS_REDUCTION_NONE);
+        bool isReduced = (reduction != LOSS_REDUCTION_NONE);
         if (!isReduced) {
             lossShape.push_back(N);
             for (int i = 2; i < logp.dims; ++i) {
@@ -118,11 +118,7 @@ public:
             wflat.convertTo(w_f, CV_32F);
         }
 
-        auto weightAt = [&](int c) -> float {
-            if (!hasWeight) return 1.f;
-            CV_DbgAssert(0 <= c && c < C);
-            return w_f.at<float>(c, 0);
-        };
+        const float* wfDataPtr = hasWeight ? w_f.ptr<float>() : nullptr;
 
         const int nstripes = 16;
         Mat logp32; logp.convertTo(logp32, CV_32F);
@@ -139,11 +135,11 @@ public:
 
         if (label.depth() == CV_32S)
         {
-            reduceNLLPerSample<int32_t>(logp32, sN, sC, S, idx1D, C, ignoreIndex, weightAt, per, effW, validMask, nstripes);
+            reduceNLLPerSample<int32_t>(logp32, sN, sC, S, idx1D, C, ignoreIndex, hasWeight, wfDataPtr, per, effW, validMask, nstripes);
         }
         else
         {
-            reduceNLLPerSample<int64_t>(logp32, sN, sC, S, idx1D, C, ignoreIndex, weightAt, per, effW, validMask, nstripes);
+            reduceNLLPerSample<int64_t>(logp32, sN, sC, S, idx1D, C, ignoreIndex, hasWeight, wfDataPtr, per, effW, validMask, nstripes);
         }
 
         if (!isReduced)
@@ -162,26 +158,27 @@ public:
                 const float m = validData[r] ? 1.f : 0.f;
                 num += static_cast<double>(perData[r] * m);
 
-                if (reduction == DNN_LOSS_REDUCTION_MEAN)
+                if (reduction == LOSS_REDUCTION_MEAN)
                 {
                     den += static_cast<double>(std::max(1e-12f, effData[r]) * m);
                 }
             }
-            const float out = (reduction == DNN_LOSS_REDUCTION_SUM) ? static_cast<float>(num) : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
+            const float out = (reduction == LOSS_REDUCTION_SUM) ? static_cast<float>(num) : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
             out_loss.at<float>(0) = out;
         }
     }
 
 private:
-    template<typename T, typename WeightGetter>
+    template<typename T>
     static inline void reduceNLLPerSample(const Mat& logp32,
-                                          const size_t sN,
-                                          const size_t sC,
-                                          const int S,
+                                          const size_t sN_,
+                                          const size_t sC_,
+                                          const int S_,
                                           const Mat& idx1D,
-                                          const int C,
-                                          const int ignoreIndex,
-                                          WeightGetter weightAt,
+                                          const int C_,
+                                          const int ignoreIndex_,
+                                          const bool hasWeight_,
+                                          const float* wfData_,
                                           Mat& per,
                                           Mat& effW,
                                           Mat& validMask,
@@ -190,13 +187,31 @@ private:
         CV_Assert(idx1D.cols == 1);
         parallel_for_(Range(0, idx1D.rows), [&](const Range& rr){
             const float* base = logp32.ptr<float>();
+            const T* idx1DData = idx1D.ptr<T>();
+            uchar* validMaskData = validMask.ptr<uchar>();
+            float* effWData = effW.ptr<float>();
+            float* perData = per.ptr<float>();
+
+            const size_t sIdx = idx1D.step1(0);
+            const size_t sVM = validMask.step1(0);
+            const size_t sEff = effW.step1(0);
+            const size_t sPer = per.step1(0);
+
+            const size_t sN = sN_;
+            const size_t sC = sC_;
+            const int S = S_;
+            const int C = C_;
+            const int ignoreIndex = ignoreIndex_;
+            const bool hasWeight = hasWeight_;
+            const float* wfData = wfData_;
+
             for (int r = rr.start; r < rr.end; ++r)
             {
-                const T y_raw = idx1D.at<T>(r);
+                const T y_raw = idx1DData[r * sIdx];
                 if ((int64_t)y_raw == (int64_t)ignoreIndex)
                 {
-                    validMask.at<uchar>(r) = 0;
-                    effW.at<float>(r) = 0.f;
+                    validMaskData[r * sVM] = 0;
+                    effWData[r * sEff] = 0.f;
                     continue;
                 }
 
@@ -207,10 +222,10 @@ private:
                 const int n = r / S;
                 const int s = r % S;
                 const float lp = base[n * sN + y * sC + s];
-                const float cw = weightAt(y);
+                const float cw = hasWeight ? wfData[y] : 1.f;
 
-                per.at<float>(r)  = -lp * cw;
-                effW.at<float>(r) =  cw;
+                perData[r * sPer]  = -lp * cw;
+                effWData[r * sEff] =  cw;
             }
         }, nstripes);
     }
