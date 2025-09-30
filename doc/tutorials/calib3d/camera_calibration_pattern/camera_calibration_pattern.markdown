@@ -19,7 +19,7 @@ What is calibration pattern? why I need it?
 
 The flat printable pattern may be used:
 
-1. For camera intrinsics (internal parameters) calibration. See #tutorial_camera_calibration.
+1. For camera intrinsics (internal parameters) calibration. See @ref tutorial_camera_calibration.
 2. For stereo or multi-camera system extrinsics (external parameters: rotation and translation
    of each camera) calibration. See cv::stereoCalibrate for details.
 3. Camera pose registration relative to well known point in 3d world. See multiview calibration

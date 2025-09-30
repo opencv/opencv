@@ -44,7 +44,7 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                 try:
                     basedir = os.path.abspath(os.path.dirname(__file__))
-                    pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
+                    pm = generate_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
                                 board_height, "charuco_checkboard", marker_size,
                                 os.path.join(basedir, aruco_type_str[aruco_type_i]+'.json.gz'), 0)
                     pm.make_charuco_board()
@@ -102,7 +102,7 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                 try:
                     basedir = os.path.abspath(os.path.dirname(__file__))
-                    pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
+                    pm = generate_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
                                 board_height, "charuco_checkboard", marker_size, os.path.join(basedir, aruco_type_str+'.json.gz'), 0)
                     pm.make_charuco_board()
                     pm.save()
