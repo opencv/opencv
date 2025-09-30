@@ -23,9 +23,9 @@ public:
     {
         setParamsFrom(params);
         String red = toLowerCase(params.get<String>("reduction", "mean"));
-        if (red == "none") reduction = DNN_LOSS_REDUCTION_NONE;
-        else if (red == "mean") reduction = DNN_LOSS_REDUCTION_MEAN;
-        else if (red == "sum") reduction = DNN_LOSS_REDUCTION_SUM;
+        if (red == "none") reduction = LOSS_REDUCTION_NONE;
+        else if (red == "mean") reduction = LOSS_REDUCTION_MEAN;
+        else if (red == "sum") reduction = LOSS_REDUCTION_SUM;
         else CV_Error(Error::StsBadArg, "Unsupported reduction: " + red);
         ignoreIndex = params.get<int>("ignore_index", -1);
         labelSmoothing = params.get<float>("label_smoothing", 0.f);
@@ -44,7 +44,7 @@ public:
         const MatShape& x = in[0];
         CV_Assert(x.size() >= 2);
 
-        if (reduction == DNN_LOSS_REDUCTION_NONE) {
+        if (reduction == LOSS_REDUCTION_NONE) {
             MatShape y; y.push_back(x[0]);
             for (size_t i = 2; i < x.size(); ++i) y.push_back(x[i]);
             out.push_back(y);
@@ -81,7 +81,7 @@ public:
         int S = 1; for (int i = 2; i < logits.dims; ++i) S *= logits.size[i];
         MatShape logitsShape = shape(logits);
         MatShape lossShape;
-        bool isReduced = (reduction != DNN_LOSS_REDUCTION_NONE);
+        bool isReduced = (reduction != LOSS_REDUCTION_NONE);
         if (!isReduced) {
             lossShape.push_back(N);
             for (int i = 2; i < logits.dims; ++i) lossShape.push_back(logits.size[i]);
@@ -141,28 +141,38 @@ public:
 
         parallel_for_(Range(0, N*S), [&](const Range& rr){
             const float* base = logits32.ptr<float>();
+            float* rowLSE = rowLogSumExp.data();
+            float* meanLR = meanLogRow.data();
+            const size_t sN_ = sN;
+            const size_t sC_ = sC;
+            const int S_ = S;
+            const int C_ = C;
+            const bool writeLP = writeLogProb;
+            float* outlpPtr = outlpBase;
+            const size_t sN_out_ = sN_out;
+            const size_t sC_out_ = sC_out;
             for (int r = rr.start; r < rr.end; ++r) {
-                const int n = r / S;
-                const int s = r % S;
-                const float* rowBase = base + n * sN + s;
+                const int n = r / S_;
+                const int s = r % S_;
+                const float* rowBase = base + n * sN_ + s;
 
                 float maxv = rowBase[0];
-                for (int c = 1; c < C; ++c) maxv = std::max(maxv, rowBase[c * sC]);
+                for (int c = 1; c < C_; ++c) maxv = std::max(maxv, rowBase[c * sC_]);
 
                 double sumExp = 0.0;
                 double sumLogits = 0.0;
-                for (int c = 0; c < C; ++c) {
-                    const float v = rowBase[c * sC];
+                for (int c = 0; c < C_; ++c) {
+                    const float v = rowBase[c * sC_];
                     sumExp += std::exp(static_cast<double>(v - maxv));
                     sumLogits += v;
                 }
                 const float lse = static_cast<float>(std::log(sumExp) + maxv);
-                rowLogSumExp[r] = lse;
-                meanLogRow[r] = static_cast<float>(sumLogits / C) - lse;
+                rowLSE[r] = lse;
+                meanLR[r] = static_cast<float>(sumLogits / C_) - lse;
 
-                if (writeLogProb) {
-                    float* dst = outlpBase + n * sN_out + s;
-                    for (int c = 0; c < C; ++c) dst[c * sC_out] = rowBase[c * sC] - lse;
+                if (writeLP && outlpPtr) {
+                    float* dst = outlpPtr + n * sN_out_ + s;
+                    for (int c = 0; c < C_; ++c) dst[c * sC_out_] = rowBase[c * sC_] - lse;
                 }
             }
         }, nstripes);
@@ -216,25 +226,42 @@ public:
             parallel_for_(Range(0, N*S), [&](const Range& rr){
                 const float* baseLogits = logits32.ptr<float>();
                 const float* baseLabels = labels32.ptr<float>();
-                const float* wlocal = wBase;
+                const float* wData = wBase;
+                float* perData = per.ptr<float>();
+                float* effWData = effW.ptr<float>();
+                uchar* validMaskData = validMask.ptr<uchar>();
+                float* rowLSE = rowLogSumExp.data();
+                const size_t sN_ = sN;
+                const size_t sC_ = sC;
+                const size_t sN_lab_ = sN_lab;
+                const size_t sC_lab_ = sC_lab;
+                const int S_ = S;
+                const int C_ = C;
+                const float smoothMul_ = smoothMul;
+                const float smoothAdd_ = smoothAdd;
+
+                const size_t sPer = per.step1(0);
+                const size_t sEff = effW.step1(0);
+                const size_t sVM = validMask.step1(0);
+
                 for (int r = rr.start; r < rr.end; ++r) {
-                    const int n = r / S;
-                    const int s = r % S;
-                    const float* arow = baseLabels + n * sN_lab + s;
-                    const float* lrow = baseLogits + n * sN + s;
+                    const int n = r / S_;
+                    const int s = r % S_;
+                    const float* arow = baseLabels + n * sN_lab_ + s;
+                    const float* lrow = baseLogits + n * sN_ + s;
 
                     double dot = 0.0, wsum = 0.0;
-                    for (int c = 0; c < C; ++c) {
-                        float a = arow[c * sC_lab] * smoothMul + smoothAdd;
-                        a *= wlocal[c];
+                    for (int c = 0; c < C_; ++c) {
+                        float a = arow[c * sC_lab_] * smoothMul_ + smoothAdd_;
+                        a *= wData[c];
                         wsum += static_cast<double>(a);
-                        dot  += static_cast<double>(a) * static_cast<double>(lrow[c * sC]);
+                        dot  += static_cast<double>(a) * static_cast<double>(lrow[c * sC_]);
                     }
 
                     const float m = (wsum != 0.0) ? 1.f : 0.f;
-                    validMask.at<uchar>(r) = static_cast<uchar>(m > 0.f);
-                    effW.at<float>(r) = static_cast<float>(wsum * m);
-                    per.at<float>(r) = static_cast<float>(-(dot - static_cast<double>(rowLogSumExp[r]) * wsum) * m);
+                    validMaskData[r * sVM] = static_cast<uchar>(m > 0.f);
+                    effWData[r * sEff] = static_cast<float>(wsum * m);
+                    perData[r * sPer] = static_cast<float>(-(dot - static_cast<double>(rowLSE[r]) * wsum) * m);
                 }
             }, nstripes);
         }
@@ -254,13 +281,13 @@ public:
             for (int r = 0; r < R; ++r) {
                 const float m = validData[r] ? 1.f : 0.f;
                 num += static_cast<double>(perData[r] * m);
-                if (reduction == DNN_LOSS_REDUCTION_MEAN)
+                if (reduction == LOSS_REDUCTION_MEAN)
                 {
                     den += static_cast<double>(std::max(1e-12f, effData[r]) * m);
                 }
             }
 
-            const float out = (reduction == DNN_LOSS_REDUCTION_SUM) ? static_cast<float>(num)
+            const float out = (reduction == LOSS_REDUCTION_SUM) ? static_cast<float>(num)
                                                  : static_cast<float>((den > 0.0) ? (num / den) : 0.0);
             out_loss.at<float>(0) = out;
         }
@@ -269,11 +296,11 @@ public:
 private:
     template<typename T, bool UseWeight>
     static inline void reduceSCEPerSample(const Mat& logits32,
-                                          const size_t sN,
-                                          const size_t sC,
-                                          const int S,
+                                          const size_t sN_,
+                                          const size_t sC_,
+                                          const int S_,
                                           const Mat& idx1D,
-                                          const int C,
+                                          const int C_,
                                           const int ignoreIndex,
                                           const float eps,
                                           const float* meanLogRowData,
@@ -287,13 +314,28 @@ private:
         CV_Assert(idx1D.cols == 1);
         parallel_for_(Range(0, idx1D.rows), [&](const Range& rr){
             const float* base = logits32.ptr<float>();
+            const T* idx1DData = idx1D.ptr<T>();
+            uchar* validMaskData = validMask.ptr<uchar>();
+            float* effWData = effW.ptr<float>();
+            float* perData = per.ptr<float>();
+
+            const size_t sIdx = idx1D.step1(0);
+            const size_t sVM = validMask.step1(0);
+            const size_t sEff = effW.step1(0);
+            const size_t sPer = per.step1(0);
+
+            const size_t sN = sN_;
+            const size_t sC = sC_;
+            const int S = S_;
+            const int C = C_;
+
             for (int r = rr.start; r < rr.end; ++r)
             {
-                const T y_raw = idx1D.at<T>(r);
+                const T y_raw = idx1DData[r * sIdx];
                 if ((int64_t)y_raw == (int64_t)ignoreIndex)
                 {
-                    validMask.at<uchar>(r) = 0;
-                    effW.at<float>(r) = 0.f;
+                    validMaskData[r * sVM] = 0;
+                    effWData[r * sEff] = 0.f;
                     continue;
                 }
 
@@ -310,8 +352,8 @@ private:
                 float loss = -(1.f - eps) * lp_y;
                 if (eps > 0.f) loss += -eps * meanLogRowData[r];
 
-                per.at<float>(r)  = loss * cw;
-                effW.at<float>(r) =  cw;
+                perData[r * sPer]  = loss * cw;
+                effWData[r * sEff] =  cw;
             }
         }, nstripes);
     }

@@ -1311,6 +1311,14 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Resize2Layer> create(const LayerParams& params);
     };
 
+    // Shared reduction enum for DNN loss layers
+    enum LossReduction
+    {
+        LOSS_REDUCTION_NONE = 0,
+        LOSS_REDUCTION_MEAN = 1,
+        LOSS_REDUCTION_SUM = 2
+    };
+
     class CV_EXPORTS NegativeLogLikelihoodLossLayer : public Layer
     {
     public:
