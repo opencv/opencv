@@ -2113,6 +2113,18 @@ void cv::inRange(InputArray _src, InputArray _lowerb,
 
         convertAndUnrollScalar( lb, src.type(), lbuf, blocksize );
         convertAndUnrollScalar( ub, src.type(), ubuf, blocksize );
+
+        if (depth == CV_8U && src.dims <= 2) {
+            uint8_t lb_scalar = lbuf[0];
+            uint8_t ub_scalar = ubuf[0];
+            CALL_HAL(inRange_u8, cv_hal_inRange8u, src.data, src.step, dst.data, dst.step, dst.depth(), src.cols, src.rows, src.channels(),
+                lb_scalar, ub_scalar);
+        } else if (depth == CV_32F && src.dims <= 2) {
+            double lb_scalar = lb.ptr<double>(0)[0];
+            double ub_scalar = ub.ptr<double>(0)[0];
+            CALL_HAL(inRange_f32, cv_hal_inRange32f, src.data, src.step, dst.data, dst.step, dst.depth(), src.cols, src.rows, src.channels(),
+                lb_scalar, ub_scalar);
+        }
     }
 
     for( size_t i = 0; i < it.nplanes; i++, ++it )
