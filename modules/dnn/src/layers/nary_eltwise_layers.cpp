@@ -398,6 +398,8 @@ public:
             CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
             if (preferableTarget == DNN_TARGET_OPENCL_FP16)
                 CV_CheckType(input, input == CV_16F || input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
+            else if (preferableTarget == DNN_TARGET_CUDA || preferableTarget == DNN_TARGET_CUDA_FP16)
+                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
             else
                 CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
@@ -1010,13 +1012,6 @@ public:
     ) override
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
-
-        // Force CPU fallback for dtypes not supported by cuda4dnn (e.g. CV_64F)
-        const int depth = inputs[0]->getHostMatDepth();
-        if (depth == CV_64F)
-        {
-            return Ptr<BackendNode>();
-        }
 
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
