@@ -442,6 +442,24 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS Reduce2Layer : public Layer
     {
     public:
+        enum class ReduceType
+        {
+            MAX,
+            MIN,
+            MEAN,
+            SUM,
+            L1,
+            L2,
+            PROD,
+            SUM_SQUARE,
+            LOG_SUM,
+            LOG_SUM_EXP
+        };
+        ReduceType reduce_type;
+        bool keepdims;
+        bool noop_with_empty_axes;
+        std::vector<int> axes;
+
         static Ptr<Reduce2Layer> create(const LayerParams& params);
     };
 
