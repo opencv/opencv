@@ -15,7 +15,7 @@ The tutorial describes all pattern supported by OpenCV for camera(s) calibration
 with their strength, pitfalls and practical recommendations.
 
 What is calibration pattern? why I need it?
---------------------------------------------
+-------------------------------------------
 
 The flat printable pattern may be used:
 
@@ -28,8 +28,6 @@ The flat printable pattern may be used:
 Pattern Types
 -------------
 
-![](../../../pattern.png)
-
 **Chessboard**. Classic calibration pattern of black and white squares. The all calibration algorithms
 use internal chessboard corners as features. See cv::findChessboardCorners and cv::cornerSubPix to
 detect the board and refine corners coordinates with sub-pixel accuracy. The board size is defined
@@ -37,7 +35,7 @@ as amount of internal corners, but not amount of black or white squares. Also pa
 the board with even size is symmetric. If board has even amount of corners by one of direction then
 its pose is defined up to 180 degrees (2 solutions). It the board is square with size N x N then its
 pose is defined up to 90 degrees (4 solutions). The last two cases are not suitable for calibration.
-Example code to generate features corrdinates for calibration (object points):
+Example code to generate features coordinates for calibration (object points):
 ```
     std::vector<cv::Point3f> objectPoints;
     for (int i = 0; i < boardSize.height; ++i) {
@@ -46,17 +44,17 @@ Example code to generate features corrdinates for calibration (object points):
         }
     }
 ```
-
-![](../../../acircles_pattern.png)
+Printable chessboard pattern: https://github.com/opencv/opencv/blob/4.x/doc/pattern.png
+(9x6 chessboard, page width: 210 mm, page height: 297 mm (A4))
 
 **Circles Grid**. The circles grid is symmetric or asymmetric (each even row shifted) grid of black
 circles on a white background or vice verse. See cv::findCirclesGrid function to detect the board
-with OpenCV. The detector produce sub-pixel coordinates od the circle centers and does not require
+with OpenCV. The detector produces sub-pixel coordinates of the circle centers and does not require
 additional refinement. The board size is defined as amount of circles in grid by x and y axis.
 In case of asymmetric grid the shifted rows are taken into account too. The board is suitable for
 intrinsics calibration. Symmetric grids suffer from the same issue as chessboard pattern with even
 size. It's pose is defined up to 180 degrees.
-Example code to generate features corrdinates for calibration with symmetic grid (object points):
+Example code to generate features coordinates for calibration with symmetric grid (object points):
 ```
     std::vector<cv::Point3f> objectPoints;
     for (int i = 0; i < boardSize.height; ++i) {
@@ -74,8 +72,8 @@ Example code to generate features corrdinates for calibration with asymmetic gri
         }
     }
 ```
-
-![](../../../charuco_board_pattern.png)
+Printable asymmetric circles grid pattern: https://github.com/opencv/opencv/blob/4.x/doc/acircles_pattern.png
+(11x4 asymmetric circles grid, page width: 210 mm, page height: 297 mm (A4))
 
 **ChAruco board**. Chessboard unreached with ArUco markers. Each internal corner of the board is
 described by 2 neighborhood ArUco markers that makes it unique. The board size is defined in number
@@ -95,51 +93,9 @@ Example code to generate features corrdinates for calibration (object points) fo
         }
     }
 ```
-
-Pattern Size
-------------
-
-Pattern is defined by it's physical board size, element (square or circle) physical size and amount
-of elements. Factors that affect calibration quality:
-
-- **Amount of features**. Most of OpenCV functions that work with detected patterns use optimization
-or some random consensus strategies inside. More features on board means more points for optimization
-and better estimation quality. Calibration process requires several images. It means that in most
-of cases lower amount of pattern features may be compensated by higher amount frames.
-
-- **Element size**. The physical size of elements depends on the distance and size in pixels.
-Each detector defines some minimal size for reliable detection. For circles grid it's circle
-radius, for chessboard it's square size, for ChAruco board it's ArUco marker element size.
-General recommendation: larger elements (in frame pixels) reduces detection uncertainty.
-
-- **Board size**. The board should be fully visible, sharp and reliably detected by OpenCV algorithms.
-So, the board size should satisfy previous items, if it's used with typical target distance.
-Usually larger board is better, but smaller boards allow to calibrate corners better.
-
-Generic Recommendations
------------------------
-
-1. The final pattern should be as flat as possible. It improves calibration accuracy.
-2. Glance pattern is worse than matte. Blinks and shadows on glance surface degrades board detection
-significantly.
-3. Most of detection algorithms expect white (black) border around the markers. Please do not cut
-them or cover them.
-
-Ready to Use Printable Patterns
--------------------------------
-
-- Chessboard pattern: https://github.com/opencv/opencv/blob/4.x/doc/pattern.png
-
-Detials: 9x6 chessboard, page width: 210 mm, page height: 297 mm (A4)
-
-- Circles grid pattern: https://github.com/opencv/opencv/blob/4.x/doc/acircles_pattern.png
-
-Details: 11x4 assymetric circles grid, page width: 210 mm, page height: 297 mm (A4)
-
-- ChAruco board pattern: https://github.com/opencv/opencv/blob/4.x/doc/charuco_board_pattern.png
-
-Details: 7X5 ChAruco board, square size: 30 mm , marker size: 15 mm, ArUco dict: DICT_5X5_100,
-page width: 210 mm, page height: 297 mm (A4).
+Printable ChAruco board pattern: https://github.com/opencv/opencv/blob/4.x/doc/charuco_board_pattern.png
+(7X5 ChAruco board, square size: 30 mm, marker size: 15 mm, ArUco dict: DICT_5X5_100, page width:
+210 mm, page height: 297 mm (A4))
 
 Create Your Own Pattern
 -----------------------
@@ -185,3 +141,32 @@ You can generate your dictionary in the file my_dictionary.json with 30 markers 
 5 bits using the utility provided in `samples/cpp/aruco_dict_utils.cpp`.
 
         bin/example_cpp_aruco_dict_utils.exe my_dict.json -nMarkers=30 -markerSize=5
+
+Pattern Size
+------------
+
+Pattern is defined by it's physical board size, element (square or circle) physical size and amount
+of elements. Factors that affect calibration quality:
+
+- **Amount of features**. Most of OpenCV functions that work with detected patterns use optimization
+or some random consensus strategies inside. More features on board means more points for optimization
+and better estimation quality. Calibration process requires several images. It means that in most
+of cases lower amount of pattern features may be compensated by higher amount frames.
+
+- **Element size**. The physical size of elements depends on the distance and size in pixels.
+Each detector defines some minimal size for reliable detection. For circles grid it's circle
+radius, for chessboard it's square size, for ChAruco board it's ArUco marker element size.
+General recommendation: larger elements (in frame pixels) reduces detection uncertainty.
+
+- **Board size**. The board should be fully visible, sharp and reliably detected by OpenCV algorithms.
+So, the board size should satisfy previous items, if it's used with typical target distance.
+Usually larger board is better, but smaller boards allow to calibrate corners better.
+
+Generic Recommendations
+-----------------------
+
+1. The final pattern should be as flat as possible. It improves calibration accuracy.
+2. Glance pattern is worse than matte. Blinks and shadows on glance surface degrades board detection
+significantly.
+3. Most of detection algorithms expect white (black) border around the markers. Please do not cut
+them or cover them.
