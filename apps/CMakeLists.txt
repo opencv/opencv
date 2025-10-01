@@ -1,6 +1,11 @@
 add_definitions(-D__OPENCV_BUILD=1)
 add_definitions(-D__OPENCV_APPS=1)
 
+if (NOT CMAKE_CROSSCOMPILING)
+  file(RELATIVE_PATH __loc_relative "${OpenCV_BINARY_DIR}" "${CMAKE_CURRENT_LIST_DIR}/pattern-tools\n")
+  file(APPEND "${OpenCV_BINARY_DIR}/opencv_apps_python_tests.cfg" "${__loc_relative}")
+endif()
+
 string(REPLACE "," ";" OPENCV_INSTALL_APPS_LIST "${OPENCV_INSTALL_APPS_LIST}")  # support comma-separated list (,) too
 
 # Unified function for creating OpenCV applications:

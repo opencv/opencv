@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-"""gen_pattern.py
+"""generate_pattern.py
 Usage example:
-python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 216 -h 279
+python generate_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 216 -h 279
 -o, --output - output file (default out.svg)
 -r, --rows - pattern rows (default 11)
 -c, --columns - pattern columns (default 8)

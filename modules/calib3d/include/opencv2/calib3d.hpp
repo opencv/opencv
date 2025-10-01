@@ -1385,7 +1385,7 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
@@ -1444,7 +1444,7 @@ which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
 
-Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the corresponding checkerboard pattern:
 \image html pics/checkerboard_radon.png width=60%
  */
