@@ -2465,6 +2465,8 @@ CASE(test_transpose_all_permutations_4)
     // no filter
 CASE(test_transpose_all_permutations_5)
     // no filter
+CASE(test_transpose_default)
+    // no filter
 CASE(test_tril)
     SKIP;
 CASE(test_tril_neg)
@@ -2535,6 +2537,8 @@ CASE(test_where_example)
     // no filter
 CASE(test_where_long_example)
     // no filter
+CASE(test_wrap_pad)
+    SKIP;
 CASE(test_xor2d)
     // no filter
 CASE(test_xor3d)
