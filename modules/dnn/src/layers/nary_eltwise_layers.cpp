@@ -303,35 +303,45 @@ public:
         return backendId == DNN_BACKEND_OPENCV;
     }
 
-    static MatShape findCommonShape(std::vector<MatShape> shapes)
+    // [TODO] move it to MatShape
+    static MatShape findCommonShape(const std::vector<MatShape>& shapes)
     {
-        CV_Assert(!shapes.empty());
-        const size_t dim = std::max_element(shapes.begin(), shapes.end(),
-                                            [](const MatShape& a, const MatShape& b)
-                                            { return a.size() < b.size(); })->size();
+        size_t i, ninputs = shapes.size();
+        CV_Assert(ninputs > 0u);
 
-        for (auto& shape : shapes)
-        {
-            shape.insert(shape.begin(), dim - shape.size(), 1);
+        int C0 = shapes[0].C, dims0 = shapes[0].dims, maxdims = dims0;
+        bool constC = true;
+        bool allBlock = true;
+        bool constDims = true;
+        for (i = 0; i < ninputs; i++) {
+            const MatShape& inpShape = shapes[i];
+            int dims = inpShape.dims;
+            allBlock = allBlock && inpShape.layout == DATA_LAYOUT_BLOCK;
+            constC = constC && inpShape.C == C0;
+            constDims = constDims && dims == dims0;
+            maxdims = std::max(maxdims, dims);
         }
 
-        MatShape outShape(dim, 1);
-        for (size_t i = 0; i < dim; ++i)
+        MatShape outShape(maxdims, 1);
+        if (allBlock && constC && constDims) {
+            outShape.layout = DATA_LAYOUT_BLOCK;
+            outShape.C = C0;
+        }
+
+        for (i = 0; i < ninputs; i++)
         {
-            for (const auto& shape : shapes)
-            {
-                if (shape[i] != outShape[i])
-                {
-                    CV_Assert(shape[i] == 1 || outShape[i] == 1);
-                    if (outShape[i] == 1)
-                        outShape[i] = shape[i];
-                }
+            const MatShape& inpShape = shapes[i];
+            int dims = inpShape.dims, delta = maxdims - dims;
+            for (int j = 0; j < maxdims; j++) {
+                int inpsz = j < delta ? 1 : inpShape[j - delta];
+                int outsz = outShape[j];
+                CV_Assert(inpsz == outsz || inpsz == 1 || outsz == 1);
+                outShape[j] = std::max(outsz, inpsz);
             }
         }
 
         return outShape;
     }
-
 
     virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
         std::vector<Mat> inputs, outputs;

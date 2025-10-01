@@ -28,9 +28,9 @@ public:
         setParamsFrom(params);
         auto_pad = getAutoPadding(params);
         ceil_mode = params.get<bool>("ceil_mode", false);
-        strides = params.getVector<int>("strides");
-        dilations = params.getVector<int>("dilations");
-        pads = params.getVector<int>("pads");
+        strides = params.getVector<int>("stride");
+        dilations = params.getVector<int>("dilation");
+        pads = params.getVector<int>("pad");
         ngroups = params.get<int>("group", 1);
         fused_batch_norm = false;
         add_residual = false;
@@ -39,7 +39,7 @@ public:
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
     {
         prindent(strm, indent);
-        strm << "ngroups: " << ngroups << ",\n";
+        strm << "group: " << ngroups << ",\n";
 
         /*prindent(strm, indent);
         strm << "ksizes: [";
@@ -48,21 +48,21 @@ public:
         strm << "],\n";*/
 
         prindent(strm, indent);
-        strm << "dilations: [";
+        strm << "stride: [";
+        for (size_t k = 0; k < strides.size(); k++)
+            strm << (k > 0 ? ", " : "") << strides[k];
+        strm << "],\n";
+
+        prindent(strm, indent);
+        strm << "dilation: [";
         for (size_t k = 0; k < dilations.size(); k++)
             strm << (k > 0 ? ", " : "") << dilations[k];
         strm << "],\n";
 
         prindent(strm, indent);
-        strm << "pads: [";
+        strm << "pad: [";
         for (size_t k = 0; k < pads.size(); k++)
             strm << (k > 0 ? ", " : "") << pads[k];
-        strm << "],\n";
-
-        prindent(strm, indent);
-        strm << "strides: [";
-        for (size_t k = 0; k < strides.size(); k++)
-            strm << (k > 0 ? ", " : "") << strides[k];
         strm << "],\n";
 
         if (fused_batch_norm) {
@@ -307,7 +307,7 @@ public:
         cs.initConv(inpshape, wshape0, outshape, ngroups,
                     strides, dilations, pads, auto_pad, ceil_mode,
                     FAST_ACTIV_NONE, nullptr, 0);
-        bool conv1x1 = cs.kshape[0]*cs.kshape[1]*cs.kshape[2] == 1;
+        //bool conv1x1 = cs.kshape[0]*cs.kshape[1]*cs.kshape[2] == 1;
         bool depthwise = ngroups == cs.inpshape.C;
 
         const float* scale_data = nullptr;
@@ -344,7 +344,8 @@ public:
 
             func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data);
         } else {
-            if (!conv1x1 && (inpofs.empty() || !cs.sameShape(prev_cs))) {
+            // [TODO] add special 1x1 convolution kernels that don't need inpofs & ofsofs
+            if (/*!conv1x1 &&*/ (inpofs.empty() || !cs.sameShape(prev_cs))) {
                 initConvTables(cs, inpofs, ofsofs);
                 prev_cs = cs;
             }

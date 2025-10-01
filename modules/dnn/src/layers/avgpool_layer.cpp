@@ -329,11 +329,40 @@ public:
     {
         setParamsFrom(params);
         auto_pad = getAutoPadding(params);
-        kernel_shape = params.getVector<int>("kernel_shape");
-        strides = params.getVector<int>("strides");
-        dilations = params.getVector<int>("dilations");
-        pads = params.getVector<int>("pads");
+        kernel_shape = params.getVector<int>("kernel_size");
+        strides = params.getVector<int>("stride");
+        dilations = params.getVector<int>("dilation");
+        pads = params.getVector<int>("pad");
         ceil_mode = params.get<bool>("ceil_mode", false);
+    }
+
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        prindent(strm, indent);
+        strm << "kernel_size: [";
+        for (size_t k = 0; k < kernel_shape.size(); k++)
+            strm << (k > 0 ? ", " : "") << kernel_shape[k];
+        strm << "],\n";
+
+        prindent(strm, indent);
+        strm << "dilation: [";
+        for (size_t k = 0; k < dilations.size(); k++)
+            strm << (k > 0 ? ", " : "") << dilations[k];
+        strm << "],\n";
+
+        prindent(strm, indent);
+        strm << "pad: [";
+        for (size_t k = 0; k < pads.size(); k++)
+            strm << (k > 0 ? ", " : "") << pads[k];
+        strm << "],\n";
+
+        prindent(strm, indent);
+        strm << "stride: [";
+        for (size_t k = 0; k < strides.size(); k++)
+            strm << (k > 0 ? ", " : "") << strides[k];
+        strm << "],\n";
+
+        return strm;
     }
 
     virtual int64_t getFLOPS(const std::vector<MatShape> &inputs,
