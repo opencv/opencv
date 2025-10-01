@@ -8,9 +8,17 @@
 #include <opencv2/dnn/shape_utils.hpp>
 #include "../net_impl.hpp"
 #include "../op_cann.hpp"
+#include "layers_common.hpp"
+#include "../dnn_common.hpp"
 
 namespace cv {
 namespace dnn {
+
+template <typename T> struct WorkType { using type = T; };
+template <> struct WorkType<hfloat> { using type = float; };
+template <> struct WorkType<bfloat> { using type = float; };
+template <> struct WorkType<int8_t> { using type = int; };
+template <> struct WorkType<uint8_t> { using type = int; };
 
 class Reduce2LayerImpl CV_FINAL : public Reduce2Layer
 {
@@ -19,29 +27,29 @@ public:
         setParamsFrom(params);
 
         CV_Assert(params.has("reduce"));
-        String op_type = toLowerCase(params.get<String>("reduce"));
-        if (op_type == "max")
+        String reduce_type_str = toLowerCase(params.get<String>("reduce"));
+        if (reduce_type_str == "max")
             reduce_type = ReduceType::MAX;
-        else if (op_type == "min")
+        else if (reduce_type_str == "min")
             reduce_type = ReduceType::MIN;
-        else if (op_type == "mean")
+        else if (reduce_type_str == "mean")
             reduce_type = ReduceType::MEAN;
-        else if (op_type == "sum")
+        else if (reduce_type_str == "sum")
             reduce_type = ReduceType::SUM;
-        else if (op_type == "sum_square")
+        else if (reduce_type_str == "sum_square")
             reduce_type = ReduceType::SUM_SQUARE;
-        else if (op_type == "l1")
+        else if (reduce_type_str == "l1")
             reduce_type = ReduceType::L1;
-        else if (op_type == "l2")
+        else if (reduce_type_str == "l2")
             reduce_type = ReduceType::L2;
-        else if (op_type == "log_sum")
+        else if (reduce_type_str == "log_sum")
             reduce_type = ReduceType::LOG_SUM;
-        else if (op_type == "log_sum_exp")
+        else if (reduce_type_str == "log_sum_exp")
             reduce_type = ReduceType::LOG_SUM_EXP;
-        else if (op_type == "prod")
+        else if (reduce_type_str == "prod")
             reduce_type = ReduceType::PROD;
         else
-            CV_Error(Error::StsBadArg, "Unknown reduce type\"" + op_type + "\"");
+            CV_Error(Error::StsBadArg, "Unknown reduce type\"" + reduce_type_str + "\"");
 
         keepdims = params.get<bool>("keepdims", true);
         noop_with_empty_axes = params.get<bool>("noop_with_empty_axes", false);
@@ -49,9 +57,9 @@ public:
         if (params.has("axes")) {
             auto param_axes = params.get("axes");
             int num_axes = param_axes.size();
-            axes_from_params.resize(num_axes);
+            axes.resize(num_axes);
             for (int i = 0; i < num_axes; ++i)
-                axes_from_params[i] = param_axes.get<int>(i);
+                axes[i] = param_axes.get<int>(i);
         }
     }
 
@@ -79,13 +87,13 @@ public:
         }
 
         std::vector<int> axes;
-        if (!axes_from_params.empty()) {
-            axes = axes_from_params;
+        if (!this->axes.empty()) {
+            axes = this->axes;
         } else if (inps.size() >= 2) {
             Net::Impl* netimpl_ = getNetImpl(this);
             if (netimpl_ && netimpl_->isConstArg(inputs[1])) {
                 Mat axesTensor = netimpl_->argTensor(inputs[1]);
-                tensorToAxes(axesTensor, axes);
+                tensorToIntVec(axesTensor, axes);
             }
         }
 
@@ -124,14 +132,6 @@ public:
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE {
-#ifdef HAVE_CANN
-        if (backendId == DNN_BACKEND_CANN)
-            return !axes_from_params.empty() && (
-                   reduce_type == ReduceType::MAX  || reduce_type == ReduceType::MIN     ||
-                   reduce_type == ReduceType::MEAN || reduce_type == ReduceType::SUM     ||
-                   reduce_type == ReduceType::PROD || reduce_type == ReduceType::LOG_SUM ||
-                   reduce_type == ReduceType::LOG_SUM_EXP);
-#endif
         return backendId == DNN_BACKEND_OPENCV;
     }
 
@@ -141,100 +141,111 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_8U || inputs[0] == CV_8S, "");
+        CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_64F || inputs[0] == CV_32S || inputs[0] == CV_64S || inputs[0] == CV_16F || inputs[0] == CV_16BF || inputs[0] == CV_8U || inputs[0] == CV_8S || inputs[0] == CV_Bool, "");
         outputs.assign(1, inputs[0]);
     }
 
-    template <typename T>
+    template <typename T, typename WT, typename AccT>
     class ReduceBase {
     public:
         using dtype_input = T;
-        ReduceBase(size_t n, const T& init) : n_(n), accumulator_(init) {}
-        virtual void update(const T& a) = 0;
-        virtual T get_value() { return accumulator_; }
-        virtual ~ReduceBase() = default;
+        using work_type = WT;
+        using acc_type = AccT;
+        ReduceBase(size_t n, const T& init) : n_(n), accumulator_(static_cast<AccT>(static_cast<WT>(init))) {}
+        AccT finalize() const { return accumulator_; }
     protected:
         size_t n_;
-        T accumulator_;
+        AccT accumulator_;
     };
 
-    template <typename T>
-    class ReduceMin : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceMin : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceMin(size_t n, const T& init) : ReduceBase<T>(n, init) {}
-        void update(const T& a) override { this->accumulator_ = a > this->accumulator_ ? this->accumulator_ : a; }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceMin(size_t n, const WT& init) : Base(n, static_cast<T>(init)) { this->accumulator_ = static_cast<AccT>(init); }
+        inline void update(const WT& a) { this->accumulator_ = a > static_cast<WT>(this->accumulator_) ? this->accumulator_ : static_cast<AccT>(a); }
     };
 
-    template <typename T>
-    class ReduceMax : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceMax : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceMax(size_t n, const T& init) : ReduceBase<T>(n, init) {}
-        void update(const T& a) override { this->accumulator_ = a > this->accumulator_ ? a : this->accumulator_; }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceMax(size_t n, const WT& init) : Base(n, static_cast<T>(init)) { this->accumulator_ = static_cast<AccT>(init); }
+        inline void update(const WT& a) { this->accumulator_ = a > static_cast<WT>(this->accumulator_) ? static_cast<AccT>(a) : this->accumulator_; }
     };
 
-    template <typename T>
-    class ReduceSum : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceSum : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceSum(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-        void update(const T& a) override { this->accumulator_ += a; }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceSum(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
+        inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a); }
     };
 
-    template <typename T>
-    class ReduceMean : public ReduceSum<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceMean : public ReduceSum<T, WT, AccT> {
     public:
-        ReduceMean(size_t n, const T& init) : ReduceSum<T>(n, init) {}
-        T get_value() override { return this->accumulator_ / static_cast<T>(this->n_); }
+        using Base = ReduceSum<T, WT, AccT>;
+        ReduceMean(size_t n, const WT& init) : Base(n, init) {}
+        inline AccT finalize() const { return this->accumulator_ / static_cast<AccT>(this->n_); }
     };
 
-    template <typename T>
-    class ReduceSumSquare : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceSumSquare : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceSumSquare(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-        void update(const T& a) override { this->accumulator_ += a * a; }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceSumSquare(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
+        inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a) * static_cast<AccT>(a); }
     };
 
-    template <typename T>
-    class ReduceL1 : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceL1 : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceL1(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-        void update(const T& a) override { this->accumulator_ += a > 0 ? a : -a; }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceL1(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
+        inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a >= WT(0) ? a : -a); }
     };
 
-    template <typename T>
-    class ReduceL2 : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceL2 : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceL2(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-        void update(const T& a) override { this->accumulator_ += a * a; }
-        T get_value() override { return static_cast<T>(std::sqrt(this->accumulator_)); }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceL2(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
+        inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a) * static_cast<AccT>(a); }
+        inline AccT finalize() const { return static_cast<AccT>(std::sqrt(this->accumulator_)); }
     };
 
-    template <typename T>
-    class ReduceProd : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceProd : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceProd(size_t n, const T& init) : ReduceBase<T>(n, 1) {}
-        void update(const T& a) override { this->accumulator_ *= a; }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceProd(size_t n, const WT&) : Base(n, static_cast<T>(1)) { this->accumulator_ = static_cast<AccT>(WT(1)); }
+        inline void update(const WT& a) { this->accumulator_ = static_cast<AccT>(this->accumulator_) * static_cast<AccT>(a); }
     };
 
-    template <typename T>
-    class ReduceLogSum : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceLogSum : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceLogSum(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-        void update(const T& a) override { this->accumulator_ += a; }
-        T get_value() override { return static_cast<T>(std::log(this->accumulator_)); }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceLogSum(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
+        inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(a); }
+        inline AccT finalize() const { return static_cast<AccT>(std::log(this->accumulator_)); }
     };
 
-    template <typename T>
-    class ReduceLogSumExp : public ReduceBase<T> {
+    template <typename T, typename WT, typename AccT>
+    class ReduceLogSumExp : public ReduceBase<T, WT, AccT> {
     public:
-        ReduceLogSumExp(size_t n, const T& init) : ReduceBase<T>(n, 0) {}
-        void update(const T& a) override { this->accumulator_ += static_cast<T>(std::exp(a)); }
-        T get_value() override { return static_cast<T>(std::log(this->accumulator_)); }
+        using Base = ReduceBase<T, WT, AccT>;
+        ReduceLogSumExp(size_t n, const WT&) : Base(n, static_cast<T>(0)) { this->accumulator_ = AccT(0); }
+        inline void update(const WT& a) { this->accumulator_ += static_cast<AccT>(std::exp(static_cast<AccT>(a))); }
+        inline AccT finalize() const { return static_cast<AccT>(std::log(this->accumulator_)); }
     };
 
     template <typename Op>
     class ReduceAllInvoker : public ParallelLoopBody {
     public:
         using dtype = typename Op::dtype_input;
+        using WT = typename Op::work_type;
         const Mat& src;
         Mat& dst;
         int n_reduce;
@@ -256,11 +267,12 @@ public:
             const dtype* p_src = src.ptr<const dtype>();
             dtype* p_dst = dst.ptr<dtype>();
             for (int i = start; i < end; ++i) {
-                Op accumulator(n_reduce, *p_src);
+                Op accumulator(n_reduce, static_cast<WT>(*p_src));
                 for (int l = 0; l < loop_size; ++l) {
-                    accumulator.update(p_src[l]);
+                    accumulator.update(static_cast<WT>(p_src[l]));
                 }
-                p_dst[i] = accumulator.get_value();
+                auto val = accumulator.finalize();
+                p_dst[i] = saturate_cast<dtype>(static_cast<double>(val));
             }
         }
     };
@@ -269,6 +281,7 @@ public:
     class ReduceInvoker : public ParallelLoopBody {
     public:
         using dtype = typename Op::dtype_input;
+        using WT = typename Op::work_type;
         const Mat& src;
         Mat& dst;
         std::vector<int> reduced_axes;
@@ -392,14 +405,15 @@ public:
             size_t loop = start % last_unreduced_dim;
             size_t origin = unprojected_steps[main_index] + loop * last_unreduced_step;
             for (int i = start; i < end; ++i) {
-                Op accumulator(n_reduce, p_src[origin + projected_steps[0]]);
+                Op accumulator(n_reduce, static_cast<WT>(p_src[origin + projected_steps[0]]));
                 for (auto projected_step : projected_steps) {
                     const dtype* loop_p_src = p_src + origin + projected_step;
                     for (auto l = 0; l < loop_size; l += last_reduced_step) {
-                        accumulator.update(loop_p_src[l]);
+                        accumulator.update(static_cast<WT>(loop_p_src[l]));
                     }
                 }
-                p_dst[i] = accumulator.get_value();
+                auto val = accumulator.finalize();
+                p_dst[i] = saturate_cast<dtype>(static_cast<double>(val));
 
                 ++loop;
                 if (loop >= last_unreduced_dim) {
@@ -419,22 +433,16 @@ public:
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
-        if (inputs_arr.depth() == CV_16F)
-        {
-            forward_fallback(inputs_arr, outputs_arr, internals_arr);
-            return;
-        }
-
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
 
         CV_Assert(!inputs.empty());
         Mat& src = inputs[0];
         std::vector<int> axes;
-        if (!axes_from_params.empty()) {
-            axes = axes_from_params;
+        if (!this->axes.empty()) {
+            axes = this->axes;
         } else if (inputs.size() >= 2) {
-            tensorToAxes(inputs[1], axes);
+            tensorToIntVec(inputs[1], axes);
         }
 
         MatShape inpShape = shape(src);
@@ -480,19 +488,57 @@ public:
         typeDispatch(dst.type(), src, dst, axes, noop_with_empty_axes);
     }
 
+    virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
+    {
+        prindent(strm, indent);
+        strm << "reduce_type: \"";
+        switch (reduce_type) {
+            case ReduceType::MAX: strm << "MAX"; break;
+            case ReduceType::MIN: strm << "MIN"; break;
+            case ReduceType::MEAN: strm << "MEAN"; break;
+            case ReduceType::SUM: strm << "SUM"; break;
+            case ReduceType::L1: strm << "L1"; break;
+            case ReduceType::L2: strm << "L2"; break;
+            case ReduceType::PROD: strm << "PROD"; break;
+            case ReduceType::SUM_SQUARE: strm << "SUM_SQUARE"; break;
+            case ReduceType::LOG_SUM: strm << "LOG_SUM"; break;
+            case ReduceType::LOG_SUM_EXP: strm << "LOG_SUM_EXP"; break;
+        }
+        strm << "\",\n";
+
+        prindent(strm, indent);
+        strm << "keepdims: " << (keepdims ? "true" : "false") << ",\n";
+
+        prindent(strm, indent);
+        strm << "noop_with_empty_axes: " << (noop_with_empty_axes ? "true" : "false") << ",\n";
+
+        prindent(strm, indent);
+        strm << "axes: [";
+        for (size_t i = 0; i < axes.size(); ++i) {
+            if (i > 0) strm << ", ";
+            strm << axes[i];
+        }
+        strm << "]\n";
+        return strm;
+    }
+
     template <typename T, typename... Args>
     inline void opDispatch(Args&&... args) {
+        using WT = typename WorkType<T>::type;
+        using FloatAcc = float;
+        using DoubleAcc = double;
+        using AccT = typename std::conditional<std::is_floating_point<WT>::value, FloatAcc, DoubleAcc>::type;
         switch (reduce_type) {
-            case ReduceType::MAX:         ReduceInvoker<ReduceMax<T>>::run(std::forward<Args>(args)...);       break;
-            case ReduceType::MIN:         ReduceInvoker<ReduceMin<T>>::run(std::forward<Args>(args)...);       break;
-            case ReduceType::MEAN:        ReduceInvoker<ReduceMean<T>>::run(std::forward<Args>(args)...);      break;
-            case ReduceType::SUM:         ReduceInvoker<ReduceSum<T>>::run(std::forward<Args>(args)...);       break;
-            case ReduceType::L1:          ReduceInvoker<ReduceL1<T>>::run(std::forward<Args>(args)...);        break;
-            case ReduceType::L2:          ReduceInvoker<ReduceL2<T>>::run(std::forward<Args>(args)...);        break;
-            case ReduceType::PROD:        ReduceInvoker<ReduceProd<T>>::run(std::forward<Args>(args)...);      break;
-            case ReduceType::SUM_SQUARE:  ReduceInvoker<ReduceSumSquare<T>>::run(std::forward<Args>(args)...); break;
-            case ReduceType::LOG_SUM:     ReduceInvoker<ReduceLogSum<T>>::run(std::forward<Args>(args)...);    break;
-            case ReduceType::LOG_SUM_EXP: ReduceInvoker<ReduceLogSumExp<T>>::run(std::forward<Args>(args)...); break;
+            case ReduceType::MAX:         ReduceInvoker<ReduceMax<T, WT, WT>>::run(std::forward<Args>(args)...);         break;
+            case ReduceType::MIN:         ReduceInvoker<ReduceMin<T, WT, WT>>::run(std::forward<Args>(args)...);         break;
+            case ReduceType::MEAN:        ReduceInvoker<ReduceMean<T, WT, AccT>>::run(std::forward<Args>(args)...);      break;
+            case ReduceType::SUM:         ReduceInvoker<ReduceSum<T, WT, AccT>>::run(std::forward<Args>(args)...);       break;
+            case ReduceType::L1:          ReduceInvoker<ReduceL1<T, WT, AccT>>::run(std::forward<Args>(args)...);        break;
+            case ReduceType::L2:          ReduceInvoker<ReduceL2<T, WT, AccT>>::run(std::forward<Args>(args)...);        break;
+            case ReduceType::PROD:        ReduceInvoker<ReduceProd<T, WT, WT>>::run(std::forward<Args>(args)...);        break;
+            case ReduceType::SUM_SQUARE:  ReduceInvoker<ReduceSumSquare<T, WT, AccT>>::run(std::forward<Args>(args)...); break;
+            case ReduceType::LOG_SUM:     ReduceInvoker<ReduceLogSum<T, WT, AccT>>::run(std::forward<Args>(args)...);    break;
+            case ReduceType::LOG_SUM_EXP: ReduceInvoker<ReduceLogSumExp<T, WT, AccT>>::run(std::forward<Args>(args)...); break;
             default: CV_Error(Error::StsBadArg, "DNN/Reduce: Unsupported operation.");
         }
     }
@@ -500,95 +546,16 @@ public:
     template <typename... Args>
     inline void typeDispatch(const int type, Args&&... args) {
         switch (type) {
-            case CV_8U:  opDispatch<uint8_t>(std::forward<Args>(args)...); break;
-            case CV_8S:  opDispatch<int8_t>(std::forward<Args>(args)...);  break;
-            case CV_32S: opDispatch<int32_t>(std::forward<Args>(args)...); break;
-            case CV_64S: opDispatch<int64_t>(std::forward<Args>(args)...); break;
-            case CV_32F: opDispatch<float>(std::forward<Args>(args)...);   break;
+            case CV_Bool: opDispatch<uint8_t>(std::forward<Args>(args)...); break;
+            case CV_8U:   opDispatch<uint8_t>(std::forward<Args>(args)...); break;
+            case CV_8S:   opDispatch<int8_t>(std::forward<Args>(args)...);  break;
+            case CV_32S:  opDispatch<int32_t>(std::forward<Args>(args)...); break;
+            case CV_64S:  opDispatch<int64_t>(std::forward<Args>(args)...); break;
+            case CV_32F:  opDispatch<float>(std::forward<Args>(args)...);   break;
+            case CV_64F:  opDispatch<double>(std::forward<Args>(args)...);  break;
+            case CV_16F:  opDispatch<hfloat>(std::forward<Args>(args)...);  break;
+            case CV_16BF: opDispatch<bfloat>(std::forward<Args>(args)...);  break;
             default: CV_Error(cv::Error::BadDepth, "DNN/Reduce: Unsupported type.");
-        }
-    }
-
-#ifdef HAVE_CANN
-    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
-                                      const std::vector<Ptr<BackendWrapper> > &outputs,
-                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
-    {
-        CV_Check(!axes_from_params.empty(), "DNN/CANN: Reduce2 needs constant axes to build CANN operators");
-
-        auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
-        auto input_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
-        auto input_desc = input_wrapper->getTensorDesc();
-
-        std::vector<int> axes_shape{(int)axes_from_params.size()};
-        Mat axes_mat(axes_shape, CV_32S, axes_from_params.data());
-        auto axes_node = std::make_shared<CannConstOp>(axes_mat.data, axes_mat.type(), axes_shape, cv::format("%s_axes", name.c_str()));
-        auto axes_desc = axes_node->getTensorDesc();
-
-        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
-
-        std::shared_ptr<ge::Operator> reduce_op = nullptr;
-        switch (reduce_type)
-        {
-#define BUILD_CANN_REDUCE_OP(op_type, class_name, op_name)                         \
-            case op_type: {                                                        \
-                auto op = std::make_shared<ge::op::class_name>(op_name);           \
-                op->set_input_x_by_name(*input_node, input_wrapper->name.c_str()); \
-                op->set_input_axes(*(axes_node)->getOp());                         \
-                op->set_attr_keep_dims(keepdims);                                  \
-                op->update_input_desc_x(*input_desc);                              \
-                op->update_input_desc_axes(*axes_desc);                            \
-                op->update_output_desc_y(*output_desc);                            \
-                reduce_op = op;                                                    \
-            } break;
-            BUILD_CANN_REDUCE_OP(ReduceType::MAX,         ReduceMax,       name);
-            BUILD_CANN_REDUCE_OP(ReduceType::MIN,         ReduceMin,       name);
-            BUILD_CANN_REDUCE_OP(ReduceType::MEAN,        ReduceMean,      name);
-            BUILD_CANN_REDUCE_OP(ReduceType::SUM,         ReduceSum,       name);
-            BUILD_CANN_REDUCE_OP(ReduceType::PROD,        ReduceProd,      name);
-            BUILD_CANN_REDUCE_OP(ReduceType::LOG_SUM,     ReduceLogSum,    name);
-            BUILD_CANN_REDUCE_OP(ReduceType::LOG_SUM_EXP, ReduceLogSumExp, name);
-#undef BUILD_CANN_REDUCE_OP
-            default: CV_Error(Error::StsNotImplemented, "Unsupported reduce operation");
-        }
-
-        return Ptr<BackendNode>(new CannBackendNode(reduce_op));
-    }
-#endif // HAVE_CANN
-
-private:
-    enum ReduceType
-    {
-        MAX,
-        MIN,
-        MEAN,
-        SUM,
-        L1,
-        L2,
-        PROD,
-        SUM_SQUARE,
-        LOG_SUM,
-        LOG_SUM_EXP
-    } reduce_type;
-
-    bool keepdims;
-    bool noop_with_empty_axes;
-    std::vector<int> axes_from_params;
-
-    static inline void tensorToAxes(const Mat& m, std::vector<int>& axes) {
-        axes.clear();
-        if (m.empty()) return;
-        const int d = m.depth();
-        axes.resize((int)m.total());
-        switch (d) {
-            case CV_8U:  for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<uint8_t>(i);  break;
-            case CV_8S:  for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<int8_t>(i);   break;
-            case CV_16U: for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<uint16_t>(i); break;
-            case CV_16S: for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<int16_t>(i);  break;
-            case CV_32S: for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<int32_t>(i);  break;
-            case CV_64S: for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<int64_t>(i);  break;
-            case CV_32F: for (int i = 0; i < (int)m.total(); ++i) axes[i] = (int)m.at<float>(i);    break;
-            default: CV_Error(Error::StsBadArg, "Unsupported axes tensor type");
         }
     }
 };
