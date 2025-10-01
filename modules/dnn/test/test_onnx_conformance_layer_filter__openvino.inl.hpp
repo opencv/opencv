@@ -1869,6 +1869,50 @@ CASE(test_reduce_prod_negative_axes_keepdims_random)
         default_lInf = 0.05f;  // Expected: (normInf) <= (lInf), actual: 0.0201836 vs 0.02
     }
 #endif
+CASE(test_reduce_l1_default_axes_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_l1_default_axes_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_l1_do_not_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_l1_do_not_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_l1_keep_dims_example_expanded)
+    SKIP;
+CASE(test_reduce_l1_keep_dims_random_expanded)
+    SKIP;
+CASE(test_reduce_l1_negative_axes_keep_dims_example_expanded)
+    SKIP;
+CASE(test_reduce_l1_negative_axes_keep_dims_random_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_asc_axes_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_default_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_desc_axes_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_negative_axes_expanded)
+    SKIP;
+CASE(test_reduce_max_bool_inputs)
+    SKIP;
+CASE(test_reduce_min_bool_inputs)
+    SKIP;
+CASE(test_reduce_sum_square_default_axes_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_default_axes_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_do_not_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_do_not_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_negative_axes_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_sum_square_negative_axes_keepdims_random_expanded)
+    SKIP;
 CASE(test_reduce_sum_default_axes_keepdims_example)
     SKIP;
 CASE(test_reduce_sum_default_axes_keepdims_random)

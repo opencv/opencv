@@ -806,12 +806,12 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayer : public Layer
     {
     public:
-        virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
+        virtual void forwardSlice(const float*, float*, int,
+                                  size_t, int, int) const {}
+        virtual void forwardSlice(const int*, const int*, int*, int,
+                                  size_t, int, int) const {}
+        virtual void forwardSlice(const int8_t*, const int8_t*, int8_t*, int,
+                                  size_t, int, int) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
