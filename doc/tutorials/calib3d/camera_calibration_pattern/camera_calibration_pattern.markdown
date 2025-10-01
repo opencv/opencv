@@ -28,23 +28,56 @@ The flat printable pattern may be used:
 Pattern Types
 -------------
 
-*Chessboard*. Classic calibration pattern of black and white squares. The all calibration algorithms
-use internal chessboard corners as features. See cv::findChessboardCorners and cv::refineCornersSubpix
-to detect the board and refine corners coordinates with sub-pixel accuracy. The board size is defined
+![](../../../pattern.png)
+
+**Chessboard**. Classic calibration pattern of black and white squares. The all calibration algorithms
+use internal chessboard corners as features. See cv::findChessboardCorners and cv::cornerSubPix to
+detect the board and refine corners coordinates with sub-pixel accuracy. The board size is defined
 as amount of internal corners, but not amount of black or white squares. Also pay attention, that
 the board with even size is symmetric. If board has even amount of corners by one of direction then
 its pose is defined up to 180 degrees (2 solutions). It the board is square with size N x N then its
 pose is defined up to 90 degrees (4 solutions). The last two cases are not suitable for calibration.
+Example code to generate features corrdinates for calibration (object points):
+```
+    std::vector<cv::Point3f> objectPoints;
+    for (int i = 0; i < boardSize.height; ++i) {
+        for (int j = 0; j < boardSize.width; ++j) {
+            objectPoints.push_back(Point3f(j*squareSize, i*squareSize, 0));
+        }
+    }
+```
 
-*Circles Grid*. The circles grid is symmetric or asymmetric (each even row shifted) grid of black
-circles on a white background or vice verse. See `findCirclesGrid` function to detect the board with
-OpenCV. The detector produce sub-pixel coordinates od the circle centers and does not require
+![](../../../acircles_pattern.png)
+
+**Circles Grid**. The circles grid is symmetric or asymmetric (each even row shifted) grid of black
+circles on a white background or vice verse. See cv::findCirclesGrid function to detect the board
+with OpenCV. The detector produce sub-pixel coordinates od the circle centers and does not require
 additional refinement. The board size is defined as amount of circles in grid by x and y axis.
 In case of asymmetric grid the shifted rows are taken into account too. The board is suitable for
 intrinsics calibration. Symmetric grids suffer from the same issue as chessboard pattern with even
 size. It's pose is defined up to 180 degrees.
+Example code to generate features corrdinates for calibration with symmetic grid (object points):
+```
+    std::vector<cv::Point3f> objectPoints;
+    for (int i = 0; i < boardSize.height; ++i) {
+        for (int j = 0; j < boardSize.width; ++j) {
+            objectPoints.push_back(Point3f(j*squareSize, i*squareSize, 0));
+        }
+    }
+```
+Example code to generate features corrdinates for calibration with asymmetic grid (object points):
+```
+    std::vector<cv::Point3f> objectPoints;
+    for (int i = 0; i < boardSize.height; i++) {
+        for (int j = 0; j < boardSize.width; j++) {
+            objectPoints.push_back(Point3f((2 * j + i % 2)*squareSize, i*squareSize, 0));
+        }
+    }
+```
 
-*ChAruco board*. Chessboard unreached with ArUco markers. Each internal corner of the board is
+![](../../../charuco_board_pattern.png)
+
+**ChAruco board**. Chessboard unreached with ArUco markers. Each internal corner of the board is
 described by 2 neighborhood ArUco markers that makes it unique. The board size is defined in number
 of units, but not internal corners. ChAruco board of size N x M is equivalent to chessboard pattern
 of size  N-1 x M-1. OpenCV provides `cv::aruco::CharucoDetector` class for the board detection.
@@ -53,6 +86,15 @@ about ArUco pairs. In opposite to the previous pattern partially occluded board 
 corners are labeled. The board is rotation invariant, but set of ArUco markers and their order
 should be known to detector apriori. It cannot detect ChAruco board with predefined size and random
 set of markers.
+Example code to generate features corrdinates for calibration (object points) for board size in units:
+```
+    std::vector<cv::Point3f> objectPoints;
+    for (int i = 0; i < boardSize.height-1; ++i) {
+        for (int j = 0; j < boardSize.width-1; ++j) {
+            objectPoints.push_back(Point3f(j*squareSize, i*squareSize, 0));
+        }
+    }
+```
 
 Pattern Size
 ------------
@@ -60,17 +102,17 @@ Pattern Size
 Pattern is defined by it's physical board size, element (square or circle) physical size and amount
 of elements. Factors that affect calibration quality:
 
-- *Amount of features*. Most of OpenCV functions that work with detected patterns use optimization
+- **Amount of features**. Most of OpenCV functions that work with detected patterns use optimization
 or some random consensus strategies inside. More features on board means more points for optimization
-and better estimation quality. Calibration process requires several images. It means that for most
-of cases the amount of pattern features may be compensated by higher amount frames.
+and better estimation quality. Calibration process requires several images. It means that in most
+of cases lower amount of pattern features may be compensated by higher amount frames.
 
-- *Element size*. The physical size of elements depends on the distance and size in pixels.
+- **Element size**. The physical size of elements depends on the distance and size in pixels.
 Each detector defines some minimal size for reliable detection. For circles grid it's circle
 radius, for chessboard it's square size, for ChAruco board it's ArUco marker element size.
 General recommendation: larger elements (in frame pixels) reduces detection uncertainty.
 
-- *Board size*. The board should be fully visible, sharp and reliably detected by OpenCV algorithms.
+- **Board size**. The board should be fully visible, sharp and reliably detected by OpenCV algorithms.
 So, the board size should satisfy previous items, if it's used with typical target distance.
 Usually larger board is better, but smaller boards allow to calibrate corners better.
 
@@ -78,7 +120,7 @@ Generic Recommendations
 -----------------------
 
 1. The final pattern should be as flat as possible. It improves calibration accuracy.
-2. Glance surface is bad idea. Blinks and shadows on glance surface degrades board detection
+2. Glance pattern is worse than matte. Blinks and shadows on glance surface degrades board detection
 significantly.
 3. Most of detection algorithms expect white (black) border around the markers. Please do not cut
 them or cover them.
