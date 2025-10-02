@@ -56,6 +56,10 @@ public:
     virtual int   getMaxWeight() const = 0;
     virtual void  setRaycastStepFactor(float val) = 0;
     virtual float getRaycastStepFactor() const = 0;
+    virtual void  setGradientDeltaFactor(float val) = 0;
+    virtual float getGradientDeltaFactor() const = 0;
+    virtual void  setVolumeUnitHideThreshold(int val) = 0;
+    virtual int   getVolumeUnitHideThreshold() const = 0;
 
     virtual void setVolumePose(InputArray val) = 0;
     virtual void getVolumePose(OutputArray val) const = 0;
@@ -95,6 +99,10 @@ public:
     virtual int   getMaxWeight() const override;
     virtual void  setRaycastStepFactor(float val) override;
     virtual float getRaycastStepFactor() const override;
+    virtual void  setGradientDeltaFactor(float val) override;
+    virtual float getGradientDeltaFactor() const override;
+    virtual void  setVolumeUnitHideThreshold(int val) override;
+    virtual int   getVolumeUnitHideThreshold() const override;
 
     virtual void setVolumePose(InputArray val) override;
     virtual void getVolumePose(OutputArray val) const override;
@@ -120,6 +128,8 @@ private:
     int   maxWeight;
     float raycastStepFactor;
     bool  zFirstMemOrder;
+    float gradientDeltaFactor;
+    int   volumeUnitHideThreshold;
 
     Matx44f volumePose;
     Point3i volumeResolution;
@@ -156,13 +166,15 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
+        static constexpr float gradientDeltaFactor = 1.0f;  
+        static const int volumeUnitHideThreshold = 10;      
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
         // Unlike original code, this should work with any volume size
         // Not only when (x,y,z % 32) == 0
         const Point3i  volumeResolution = Vec3i::all(128); //number of voxels
-    };
+};
 
     class DefaultHashTsdfSets {
     public:
@@ -190,6 +202,8 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.25f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
+        static constexpr float gradientDeltaFactor = 1.0f;  
+        static const int volumeUnitHideThreshold = 10;      
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
@@ -232,6 +246,8 @@ public:
         static const int maxWeight = 64; // number of frames
         static constexpr float raycastStepFactor = 0.75f;
         static const bool zFirstMemOrder = true; // order of voxels in volume
+        static constexpr float gradientDeltaFactor = 1.0f;  
+        static const int volumeUnitHideThreshold = 10;      
 
         const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
         const Matx44f  volumePoseMatrix = volumePose.matrix;
@@ -239,6 +255,42 @@ public:
         // Not only when (x,y,z % 32) == 0
         const Point3i  volumeResolution = Vec3i::all(128); //number of voxels
     };
+
+    class DefaultColorHashTsdfSets {
+    public:
+        static const int integrateWidth = 640;
+        static const int integrateHeight = 480;
+        float ifx = 525.f; // focus point x axis
+        float ify = 525.f; // focus point y axis
+        float icx = float(integrateWidth) / 2.f - 0.5f;  // central point x axis
+        float icy = float(integrateHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraIntegrateIntrinsics = Matx33f(ifx, 0, icx, 0, ify, icy, 0, 0, 1); // camera settings
+
+        static const int raycastWidth = 640;
+        static const int raycastHeight = 480;
+        float rfx = 525.f; // focus point x axis
+        float rfy = 525.f; // focus point y axis
+        float rcx = float(raycastWidth) / 2.f - 0.5f;  // central point x axis
+        float rcy = float(raycastHeight) / 2.f - 0.5f; // central point y axis
+        const Matx33f  cameraRaycastIntrinsics = Matx33f(rfx, 0, rcx, 0, rfy, rcy, 0, 0, 1); // camera settings
+
+        static constexpr float depthFactor = 5000.f; // 5000 for the 16-bit PNG files, 1 for the 32-bit float images in the ROS bag files
+        static constexpr float volumeSize = 3.f; // meters
+        static constexpr float voxelSize = volumeSize / 512.f; //meters (similar to HashTSDF)
+        static constexpr float tsdfTruncateDistance = 7 * voxelSize; // similar to HashTSDF
+        static constexpr float maxDepth = 4.f;
+        static const int maxWeight = 64; // number of frames
+        static constexpr float raycastStepFactor = 0.25f; // similar to HashTSDF
+        static const bool zFirstMemOrder = true; // order of voxels in volume
+        static constexpr float gradientDeltaFactor = 1.0f;  
+        static const int volumeUnitHideThreshold = 10;      
+
+        const Affine3f volumePose = Affine3f().translate(Vec3f(-volumeSize / 2.f, -volumeSize / 2.f, 0.5f));
+        const Matx44f  volumePoseMatrix = volumePose.matrix;
+        // Unlike original code, this should work with any volume size
+        // Not only when (x,y,z % 32) == 0
+        const Point3i  volumeResolution = Vec3i::all(16); //number of voxels (similar to HashTSDF)
+};
 
 };
 
@@ -291,7 +343,10 @@ void VolumeSettings::setCameraIntegrateIntrinsics(InputArray val) { this->impl->
 void VolumeSettings::getCameraIntegrateIntrinsics(OutputArray val) const { this->impl->getCameraIntegrateIntrinsics(val); };
 void VolumeSettings::setCameraRaycastIntrinsics(InputArray val) { this->impl->setCameraRaycastIntrinsics(val); };
 void VolumeSettings::getCameraRaycastIntrinsics(OutputArray val) const { this->impl->getCameraRaycastIntrinsics(val); };
-
+void  VolumeSettings::setGradientDeltaFactor(float val) { this->impl->setGradientDeltaFactor(val); };
+float VolumeSettings::getGradientDeltaFactor() const { return this->impl->getGradientDeltaFactor(); };
+void  VolumeSettings::setVolumeUnitHideThreshold(int val) { this->impl->setVolumeUnitHideThreshold(val); };
+int   VolumeSettings::getVolumeUnitHideThreshold() const { return this->impl->getVolumeUnitHideThreshold(); };
 
 VolumeSettingsImpl::VolumeSettingsImpl()
     : VolumeSettingsImpl(VolumeType::TSDF)
@@ -322,6 +377,8 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeStrides = calcVolumeStrides(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
+        this->gradientDeltaFactor = ds.gradientDeltaFactor;
+        this->volumeUnitHideThreshold = ds.volumeUnitHideThreshold;
     }
     else if (volumeType == VolumeType::HashTSDF)
     {
@@ -344,6 +401,8 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeStrides = calcVolumeStrides(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
+        this->gradientDeltaFactor = ds.gradientDeltaFactor;
+        this->volumeUnitHideThreshold = ds.volumeUnitHideThreshold;
     }
     else if (volumeType == VolumeType::ColorTSDF)
     {
@@ -366,6 +425,32 @@ VolumeSettingsImpl::VolumeSettingsImpl(VolumeType _volumeType)
         this->volumeStrides = calcVolumeStrides(ds.volumeResolution, ds.zFirstMemOrder);
         this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
         this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
+        this->gradientDeltaFactor = ds.gradientDeltaFactor;
+        this->volumeUnitHideThreshold = ds.volumeUnitHideThreshold;
+    }
+    else if (volumeType == VolumeType::ColorHashTSDF)
+    {
+        DefaultColorHashTsdfSets ds = DefaultColorHashTsdfSets();
+
+        this->integrateWidth = ds.integrateWidth;
+        this->integrateHeight = ds.integrateHeight;
+        this->raycastWidth = ds.raycastWidth;
+        this->raycastHeight = ds.raycastHeight;
+        this->depthFactor = ds.depthFactor;
+        this->voxelSize = ds.voxelSize;
+        this->tsdfTruncateDistance = ds.tsdfTruncateDistance;
+        this->maxDepth = ds.maxDepth;
+        this->maxWeight = ds.maxWeight;
+        this->raycastStepFactor = ds.raycastStepFactor;
+        this->zFirstMemOrder = ds.zFirstMemOrder;
+
+        this->volumePose = ds.volumePoseMatrix;
+        this->volumeResolution = ds.volumeResolution;
+        this->volumeStrides = calcVolumeStrides(ds.volumeResolution, ds.zFirstMemOrder);
+        this->cameraIntegrateIntrinsics = ds.cameraIntegrateIntrinsics;
+        this->cameraRaycastIntrinsics = ds.cameraRaycastIntrinsics;
+        this->gradientDeltaFactor = ds.gradientDeltaFactor;
+        this->volumeUnitHideThreshold = ds.volumeUnitHideThreshold;
     }
 }
 
@@ -531,5 +616,27 @@ void VolumeSettingsImpl::getCameraRaycastIntrinsics(OutputArray val) const
 {
     Mat(this->cameraRaycastIntrinsics).copyTo(val);
 }
+
+void VolumeSettingsImpl::setGradientDeltaFactor(float val)
+{
+    this->gradientDeltaFactor = val;
+}
+
+float VolumeSettingsImpl::getGradientDeltaFactor() const
+{
+    return this->gradientDeltaFactor;
+}
+
+void VolumeSettingsImpl::setVolumeUnitHideThreshold(int val)
+{
+    this->volumeUnitHideThreshold = val;
+}
+
+int VolumeSettingsImpl::getVolumeUnitHideThreshold() const
+{
+    return this->volumeUnitHideThreshold;
+}
+
+
 
 }

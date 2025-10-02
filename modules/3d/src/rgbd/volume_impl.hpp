@@ -211,7 +211,7 @@ private:
 };
 
 
-class ColorHashTsdfVolume : public Volume::Impl
+class ColorHashTsdfVolume : public ColorTsdfVolume
 {
 public:
     ColorHashTsdfVolume(const VolumeSettings& settings);
@@ -289,8 +289,7 @@ public:
         case VolumeType::ColorTSDF:
             return makePtr<ColorTsdfVolume>(settings);
         case VolumeType::ColorHashTSDF:
-            return makePtr<ColorHashTsdfVolume>(settings); 
-
+            return makePtr<ColorHashTsdfVolume>(settings);
         default:
             CV_Error(Error::StsBadArg, "Invalid volume type");
             return Ptr<Volume::Impl>();
@@ -313,10 +312,10 @@ Volume::Volume(VolumeType vtype, const VolumeSettings& settings)
         this->impl = makePtr<ColorTsdfVolume>(settings);
         break;
     case VolumeType::ColorHashTSDF:
-        this->impl = makePtr<ColorHashTsdfVolume>(settings); 
-
+        this->impl = makePtr<ColorHashTsdfVolume>(settings);
+        break;
     default:
-        CV_Error(Error::StsInternal, "Incorrect OdometryType, you are able to use only { ICP, RGB, RGBD }");
+        CV_Error(Error::StsInternal, "Incorrect VolumeType");
         break;
     }
 }
@@ -345,4 +344,4 @@ bool Volume::getEnableGrowth() const { return this->impl->getEnableGrowth(); }
 
 }
 
-#endif // !OPENCV_3D_VOLUME_IMPL_HPP
+#endif // OPENCV_3D_VOLUME_IMPL_HPP

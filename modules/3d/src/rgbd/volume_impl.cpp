@@ -597,7 +597,11 @@ bool ColorTsdfVolume::getEnableGrowth() const
 // COLOR_HASH_TSDF
 
 ColorHashTsdfVolume::ColorHashTsdfVolume(const VolumeSettings& _settings) :
-    Volume::Impl(_settings)
+    ColorTsdfVolume(_settings),
+    lastVolIndex(0),
+    lastFrameId(0),
+    volumeUnitDegree(0),
+    enableGrowth(true)
 {
     Vec3i resolution;
     settings.getVolumeResolution(resolution);
@@ -709,8 +713,13 @@ void ColorHashTsdfVolume::raycast(InputArray _cameraPose, int height, int width,
 
 void ColorHashTsdfVolume::fetchNormals(InputArray points, OutputArray normals) const
 {
-    // This is valid, it just fetches normals and ignores colors
-    fetchPointsNormalsColors(points, normals, noArray());
+    if(points.empty())
+    {
+        normals.release();
+        return;
+    }
+    
+    fetchPointsNormalsColors(OutputArray(points.getMat()), normals, noArray());
 }
 
 void ColorHashTsdfVolume::fetchPointsNormals(OutputArray points, OutputArray normals) const

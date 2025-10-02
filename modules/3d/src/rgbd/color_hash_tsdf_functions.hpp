@@ -45,6 +45,27 @@ void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
 
 #endif
 
+// Forward declarations
+Point3f transformDirection(const Point3f& dir, const Matx44f& mat);
+Point3f transformPoint(const Point3f& pt, const Matx44f& mat);
+
+bool integrateColorVolumeUnit(VolumeUnit& unit, const VolumeSettings& settings, const Matx44f& cameraPose,
+                            InputArray depth, InputArray rgb, InputArray pixNorms,
+                            const Vec3i& unitIdx, const Point3i& volUnitDims,
+                            float voxelSize, float trancDist, int maxWeight, const Intr& intrinsics);
+
+std::vector<Vec3i> findNewVisibleVolumeUnits(const VolumeSettings& settings, const Matx44f& cameraPose,
+                                           InputArray depth, const Intr& intrinsics,
+                                           const VolumeUnitIndexes& existingUnits,
+                                           const Point3i& volUnitDims, float voxelSize);
+
+bool raycastColorHashTsdf(const Point3f& rayOrigin, const Point3f& rayDir, float tmin, float tmax,
+                         const VolumeUnitIndexes& volumeUnits, InputArray _volUnitsData,
+                         const Point3i& volUnitDims, int unitResolution, float voxelSize, float trancDist,
+                         Point3f& hitPoint, Point3f& hitNormal, Vec3b& hitColor);
+
+Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int volUnitSize, float voxelSize, float deltaFactor);
+
 } // namespace cv
 
-#endif 
+#endif
