@@ -782,12 +782,12 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayer : public Layer
     {
     public:
-        virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
+        virtual void forwardSlice(const float*, float*, int,
+                                  size_t, int, int) const {}
+        virtual void forwardSlice(const int*, const int*, int*, int,
+                                  size_t, int, int) const {}
+        virtual void forwardSlice(const int8_t*, const int8_t*, int8_t*, int,
+                                  size_t, int, int) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
@@ -1285,6 +1285,33 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Resize2Layer> create(const LayerParams& params);
+    };
+
+    // Shared reduction enum for DNN loss layers
+    enum LossReduction
+    {
+        LOSS_REDUCTION_NONE = 0,
+        LOSS_REDUCTION_MEAN = 1,
+        LOSS_REDUCTION_SUM = 2
+    };
+
+    class CV_EXPORTS NegativeLogLikelihoodLossLayer : public Layer
+    {
+    public:
+        LossReduction reduction;
+        int ignoreIndex;
+
+        static Ptr<NegativeLogLikelihoodLossLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS SoftmaxCrossEntropyLossLayer : public Layer
+    {
+    public:
+        static Ptr<SoftmaxCrossEntropyLossLayer> create(const LayerParams& params);
+        LossReduction reduction;
+        int ignoreIndex;
+        float labelSmoothing;
+        bool softLabel;
     };
 
     /**
