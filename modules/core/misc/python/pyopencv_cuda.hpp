@@ -112,7 +112,7 @@ bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMat& obj, bool copy
         static_cast<int>(tensor->dl_tensor.shape[1]),
         type,
         tensor->dl_tensor.data,
-        tensor->dl_tensor.strides[0] * tensor->dl_tensor.dtype.bits / 8
+        static_cast<size_t>(tensor->dl_tensor.strides[0] * tensor->dl_tensor.dtype.bits / 8)
     );
     if (copy)
         obj = obj.clone();
@@ -140,7 +140,7 @@ bool parseDLPackTensor(DLManagedTensor* tensor, cv::cuda::GpuMatND& obj, bool co
     std::vector<int> sizes(tensor->dl_tensor.ndim);
     for (int i = 0; i < tensor->dl_tensor.ndim - 1; ++i)
     {
-        steps[i] = tensor->dl_tensor.strides[i] * tensor->dl_tensor.dtype.bits / 8;
+        steps[i] = static_cast<size_t>(tensor->dl_tensor.strides[i] * tensor->dl_tensor.dtype.bits / 8);
         sizes[i] = static_cast<int>(tensor->dl_tensor.shape[i]);
     }
     sizes.back() = static_cast<int>(tensor->dl_tensor.shape[tensor->dl_tensor.ndim - 1]);
