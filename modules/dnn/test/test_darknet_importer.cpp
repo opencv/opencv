@@ -1155,66 +1155,87 @@ TEST_P(Test_Darknet_layers, sam)
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
 
 // Test for YOLOv4 stateless behavior on 32-bit Windows (GitHub issue #27580)
-// This test verifies that the memory reuse fix in legacy_backend.hpp works correctly
+// This test reproduces and verifies the fix for the memory reuse bug
 TEST(Test_Darknet, yolov4_stateless_behavior)
 {
-    // This test verifies the fix for GitHub issue #27580
-    // The fix is in modules/dnn/src/legacy_backend.hpp where the blob reuse
-    // condition was changed from '>=' to '==' to ensure exact size matching.
+    // This test reproduces the bug from GitHub issue #27580:
+    // When processing images of different sizes, the DNN backend reused memory blobs
+    // that were larger than needed, causing residual data from previous computations
+    // to affect current results, making YOLOv4 non-stateless.
     
-    // The issue was that when processing images of different sizes, the DNN backend
-    // would reuse memory blobs that were larger than needed, causing residual data
-    // from previous computations to affect the current results.
+    // The fix in modules/dnn/src/legacy_backend.hpp changed the blob reuse condition
+    // from '>=' to '==' to ensure exact size matching, preventing the stateless issue.
     
-    // By requiring exact size matching (unusedBlob.total() == targetTotal), we ensure
-    // that only clean, appropriately-sized memory is reused, making YOLOv4 stateless.
+#if defined(HAVE_PROTOBUF)
+    // Create a minimal working network for testing
+    // Using a simple convolution network to test memory reuse behavior
+    LayerParams lp;
+    lp.type = "Convolution";
+    lp.name = "testConv";
+    lp.set("kernel_size", 3);
+    lp.set("num_output", 8);
+    lp.set("pad", 1);
+    lp.set("stride", 1);
     
-    // Test the memory reuse logic by creating a simple network and testing
-    // that the DNN module can handle different input sizes correctly
-    
-    // Create a simple network configuration
-    const string cfg = R"(
-[net]
-batch=1
-channels=3
-height=32
-width=32
-
-[convolutional]
-batch_normalize=0
-filters=8
-size=3
-stride=1
-pad=1
-activation=relu
-)";
-    
-    // Test that we can create a network (this exercises the memory management)
     Net net;
-    ASSERT_TRUE(net.empty()) << "Net should be empty initially";
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
     
-    // Verify that the DNN module is functional and can handle basic operations
-    // This indirectly tests that our memory reuse fix doesn't break basic functionality
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
     
-    // Test blob creation with different sizes (this exercises the memory reuse logic)
-    Mat blob1 = blobFromImage(Mat::zeros(32, 32, CV_8UC3), 1.0, Size(32, 32));
-    Mat blob2 = blobFromImage(Mat::zeros(64, 64, CV_8UC3), 1.0, Size(64, 64));
-    Mat blob3 = blobFromImage(Mat::zeros(32, 32, CV_8UC3), 1.0, Size(32, 32));
+    // Initialize layer with random weights
+    std::vector<int> weightsShape = {8, 3, 3, 3};
+    Mat weights(weightsShape, CV_32F);
+    cv::randu(weights, -1.0f, 1.0f);
+    std::vector<int> biasShape = {8};
+    Mat bias(biasShape, CV_32F);
+    cv::randu(bias, -1.0f, 1.0f);
     
-    // Verify blobs are created correctly
-    EXPECT_FALSE(blob1.empty()) << "First blob should not be empty";
-    EXPECT_FALSE(blob2.empty()) << "Second blob should not be empty";
-    EXPECT_FALSE(blob3.empty()) << "Third blob should not be empty";
+    // Set the weights
+    net.getLayer(id)->blobs.push_back(weights);
+    net.getLayer(id)->blobs.push_back(bias);
     
-    // Verify blob sizes are correct
-    EXPECT_EQ(blob1.size, blob3.size) << "Blobs with same input size should have same output size";
-    EXPECT_NE(blob1.size, blob2.size) << "Blobs with different input sizes should have different output sizes";
+    // Test scenario from the original bug report:
+    // Process images of different sizes and verify stateless behavior
     
-    // The memory reuse fix ensures that blob1 and blob3 can reuse the same memory
-    // (exact size match) while blob2 uses different memory (different size)
-    // This prevents the stateless issue described in GitHub issue #27580
+    // First inference with 160x192 image (main image)
+    Mat input1 = Mat::ones(160, 192, CV_8UC3);
+    Mat blob1 = blobFromImage(input1, 1.0/255.0, Size(), Scalar(), false);
+    net.setInput(blob1);
+    Mat output1 = net.forward();
     
-    SUCCEED() << "YOLOv4 stateless fix verified - memory reuse now requires exact size matching";
+    // Second inference with 192x192 image (larger image)
+    Mat input2 = Mat::ones(192, 192, CV_8UC3);
+    Mat blob2 = blobFromImage(input2, 1.0/255.0, Size(), Scalar(), false);
+    net.setInput(blob2);
+    Mat output2 = net.forward();
+    
+    // Third inference with 160x192 image again (same size as first)
+    // This reproduces the bug: the memory reused from the larger blob (192x192)
+    // would contain residual data, making the output different from output1
+    Mat input3 = Mat::ones(160, 192, CV_8UC3);
+    Mat blob3 = blobFromImage(input3, 1.0/255.0, Size(), Scalar(), false);
+    net.setInput(blob3);
+    Mat output3 = net.forward();
+    
+    // Verify stateless behavior: output1 and output3 should be identical
+    // because they use the same input size. The fix ensures exact size matching
+    // prevents reusing larger blobs that would contain residual data.
+    double diff = cv::norm(output1, output3, NORM_INF);
+    
+    // With the fix, outputs should match exactly (diff should be very small)
+    // Without the fix, outputs would differ due to residual memory
+    EXPECT_LT(diff, 1e-5) << "YOLOv4 should be stateless - outputs with same input size should match exactly. "
+                          << "Difference: " << diff;
+    
+    // Verify we got valid outputs
+    EXPECT_FALSE(output1.empty()) << "First output should not be empty";
+    EXPECT_FALSE(output2.empty()) << "Second output should not be empty";
+    EXPECT_FALSE(output3.empty()) << "Third output should not be empty";
+    
+    // Verify output shapes match for same input sizes
+    EXPECT_EQ(output1.size, output3.size) << "Outputs with same input size should have same shape";
+#endif
 }
 
 }} // namespace
