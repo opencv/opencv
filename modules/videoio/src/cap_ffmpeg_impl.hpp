@@ -1164,15 +1164,27 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
     {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
         entry = av_dict_get(dict, "f", NULL, 0);
-        if (!entry)
+        char* backend;
+        if (entry)
         {
-            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: Use OPENCV_FFMPEG_CAPTURE_OPTIONS to specify camera backend");
-            return false;
+            backend = entry->value;
         }
-        avdevice_list_input_sources(nullptr, entry->value, dict, &device_list);
+        else
+        {
+#ifdef __linux__
+            backend = "v4l2";
+#endif
+#ifdef _WIN32
+            backend = "dshow";
+#endif
+#ifdef __APPLE__
+            backend = "avfoundation";
+#endif
+        }
+        avdevice_list_input_sources(nullptr, backend, dict, &device_list);
         if (!device_list)
         {
-            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: No camera backend with name " << entry->value);
+            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: Failed list devices for backend " << backend);
             return false;
         }
         CV_CheckLT(index, device_list->nb_devices, "VIDEOIO/FFMPEG: Camera index out of range");
