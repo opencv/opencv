@@ -218,6 +218,7 @@ protected:
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseOneHot               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCenterCropPad        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1769,6 +1770,11 @@ void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "DFT";
+    addLayer(layerParams, node_proto);
+}
 void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "GridSample";
@@ -2638,6 +2644,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
     dispatch["CenterCropPad"] = &ONNXImporter2::parseCenterCropPad;
     dispatch["OneHot"] = &ONNXImporter2::parseOneHot;
+    dispatch["DFT"] = &ONNXImporter2::parseDFT;
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;

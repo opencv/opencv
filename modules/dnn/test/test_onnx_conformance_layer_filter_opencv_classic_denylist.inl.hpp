@@ -576,3 +576,8 @@
 "test_onehot_with_axis",
 "test_onehot_with_negative_axis",
 "test_onehot_without_axis",
+"test_dft",
+"test_dft_axis_opset19",
+"test_dft_inverse",
+"test_dft_inverse_opset19",
+"test_dft_opset19",

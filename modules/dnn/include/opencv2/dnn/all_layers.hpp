@@ -1318,6 +1318,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<CenterCropPadLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS DFTLayer : public Layer
+    {
+    public:
+        bool inverse;
+        bool onesided;
+        int axis_attr;
+        int dft_length;
+        std::vector<int> axes;
+        static Ptr<DFTLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS Resize2Layer : public Layer
     {
     public:
