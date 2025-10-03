@@ -56,6 +56,19 @@ public:
                 out.push_back(2);
             }
         }
+        // Optional: adjust axis length when dft_length known and valid
+        if (dft_length > 0 && !out.empty())
+        {
+            int ndims_in = (int)inshape.size();
+            int ax = axis_attr;
+            if (ax == INT_MIN)
+            {
+                ax = (inshape.back() == 2 || inshape.back() == 1) ? ndims_in - 2 : ndims_in - 1;
+            }
+            if (ax < 0) ax += ndims_in;
+            if (ax >= 0 && ax < (int)out.size() - 1)
+                out[ax] = dft_length;
+        }
         outputs.assign(1, out);
         return false;
     }
@@ -210,7 +223,8 @@ public:
                     }
                     if (inverse)
                     {
-                        accRe /= N; accIm /= N;
+                        accRe /= (double)N;
+                        accIm /= (double)N;
                     }
                     size_t ok = (size_t)k * strideAxisDst;
                     out[ok + 0] = (float)accRe;
@@ -270,7 +284,8 @@ public:
                     }
                     if (inverse)
                     {
-                        accRe /= N; accIm /= N;
+                        accRe /= (double)N;
+                        accIm /= (double)N;
                     }
                     size_t ok = (size_t)k * strideAxisDst;
                     out[ok + 0] = accRe;
