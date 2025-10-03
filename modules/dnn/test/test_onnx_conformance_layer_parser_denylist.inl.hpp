@@ -352,14 +352,6 @@
 "test_gridsample_bicubic",  // ---- same as above ---
 "test_gridsample_bicubic_align_corners_0_additional_1",
 "test_gridsample_bicubic_align_corners_1_additional_1",
-"test_gridsample_bilinear_align_corners_0_additional_1",
-"test_gridsample_bilinear_align_corners_1_additional_1",
-"test_gridsample_nearest_align_corners_0_additional_1",
-"test_gridsample_nearest_align_corners_1_additional_1",
-"test_gridsample_volumetric_bilinear_align_corners_0",
-"test_gridsample_volumetric_bilinear_align_corners_1",
-"test_gridsample_volumetric_nearest_align_corners_0",
-"test_gridsample_volumetric_nearest_align_corners_1",
 "test_group_normalization_epsilon_expanded",
 "test_group_normalization_example_expanded",
 "test_gru_batchwise",  // Issues::Parser::node_proto.input_size() == 6 in function 'parseGRU'
