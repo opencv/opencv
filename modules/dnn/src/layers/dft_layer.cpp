@@ -36,8 +36,9 @@ public:
         CV_Assert(inputs.size() >= 1);
         const MatShape &inshape = inputs[0];
         MatShape out = inshape;
-        // ONNX conformance expects complex as an extra trailing axis of size 2.
-        // Some models keep an existing singleton axis before the complex axis.
+        // If input ends with 2 (complex), keep.
+        // If input ends with 1, replace it with 2.
+        // Otherwise, append a trailing 2.
         if (!out.empty())
         {
             if (out.back() == 2)
@@ -46,13 +47,10 @@ public:
             }
             else if (out.back() == 1)
             {
-                // keep the singleton and append complex axis
-                out.push_back(2);
+                out.back() = 2;
             }
             else
             {
-                // append singleton and complex axis
-                out.push_back(1);
                 out.push_back(2);
             }
         }
@@ -87,17 +85,16 @@ public:
         }
         else if (srcLastIsOne)
         {
-            std::vector<int> outSizes(ndims + 1);
+            std::vector<int> outSizes(ndims);
             for (int i = 0; i < ndims; ++i) outSizes[i] = src.size[i];
-            outSizes[ndims] = 2;
+            outSizes[ndims - 1] = 2;
             dst.create((int)outSizes.size(), &outSizes[0], src.type());
         }
         else
         {
-            std::vector<int> outSizes(ndims + 2);
+            std::vector<int> outSizes(ndims + 1);
             for (int i = 0; i < ndims; ++i) outSizes[i] = src.size[i];
-            outSizes[ndims] = 1;
-            outSizes[ndims + 1] = 2;
+            outSizes[ndims] = 2;
             dst.create((int)outSizes.size(), &outSizes[0], src.type());
         }
 
