@@ -1281,6 +1281,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DetLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS DFTLayer : public Layer
+    {
+    public:
+        static Ptr<DFTLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS Resize2Layer : public Layer
     {
     public:

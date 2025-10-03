@@ -213,6 +213,7 @@ protected:
     void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1699,6 +1700,31 @@ void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // ONNX DFT: attributes (optional): axes (ints), inverse (int/bool), onesided (int/bool)
+    // We propagate attributes as-is to the layer.
+    layerParams.type = "DFT";
+    // axes is already parsed by importer into layerParams if present (handled by common attr parsing)
+    // normalize attribute names to consistent types
+    if (layerParams.has("inverse"))
+    {
+        int inv = 0;
+        try { inv = layerParams.get<int>("inverse"); } catch (...) {
+            inv = layerParams.get<bool>("inverse", false) ? 1 : 0;
+        }
+        layerParams.set("inverse", inv);
+    }
+    if (layerParams.has("onesided"))
+    {
+        int os = 0;
+        try { os = layerParams.get<int>("onesided"); } catch (...) {
+            os = layerParams.get<bool>("onesided", false) ? 1 : 0;
+        }
+        layerParams.set("onesided", os);
+    }
+    addLayer(layerParams, node_proto);
+}
 void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "GridSample";
@@ -2551,6 +2577,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
     dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
+    dispatch["DFT"] = &ONNXImporter2::parseDFT;
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;

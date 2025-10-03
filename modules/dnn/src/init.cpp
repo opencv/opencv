@@ -116,6 +116,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(IsNaN,          IsNaNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(IsInf,          IsInfLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(DFT,            DFTLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BitShift,       BitShiftLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GridSample,     GridSampleLayer);
 
