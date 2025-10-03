@@ -53,6 +53,95 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                size_t bstep, float* cptr, size_t cstep,
                int ma, int na, int nb );
 
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_NEON
+
+static const uint32_t tailMaskArray[7] = {
+    0u, 0u, 0u, 0u,
+    0xffffffffu, 0xffffffffu, 0xffffffffu
+};
+
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize )
+{
+    int i = 0;
+    CV_Assert(vecsize >= 4 || vecsize == 0);
+    const uint32_t* tailMaskPtr = tailMaskArray + (vecsize % 4);
+    const uint32x4_t tailMaskU = vld1q_u32(tailMaskPtr);
+    const float32x4_t tailMask = vreinterpretq_f32_u32(tailMaskU);
+
+    for ( ; i <= nvecs - 4; i += 4 )
+    {
+        const float* wptr = weights + i * wstep;
+        float32x4_t vs0 = vdupq_n_f32(0.0f);
+        float32x4_t vs1 = vdupq_n_f32(0.0f);
+        float32x4_t vs2 = vdupq_n_f32(0.0f);
+        float32x4_t vs3 = vdupq_n_f32(0.0f);
+        int k = 0;
+        for ( ; k <= vecsize - 4; k += 4, wptr += 4 )
+        {
+            float32x4_t v = vld1q_f32(vec + k);
+
+            vs0 = vmlaq_f32(vs0, vld1q_f32(wptr), v);
+            vs1 = vmlaq_f32(vs1, vld1q_f32(wptr + wstep), v);
+            vs2 = vmlaq_f32(vs2, vld1q_f32(wptr + wstep * 2), v);
+            vs3 = vmlaq_f32(vs3, vld1q_f32(wptr + wstep * 3), v);
+        }
+        if (k != vecsize)
+        {
+            k    = vecsize - 4;
+            wptr = weights + i * wstep + k;
+            float32x4_t v = vld1q_f32(vec + k);
+            v = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(v), vreinterpretq_u32_f32(tailMask)) );
+            float32x4_t w0 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr)), vreinterpretq_u32_f32(tailMask)) );
+            float32x4_t w1 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep)), vreinterpretq_u32_f32(tailMask)) );
+            float32x4_t w2 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 2)), vreinterpretq_u32_f32(tailMask)) );
+            float32x4_t w3 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr + wstep * 3)), vreinterpretq_u32_f32(tailMask)) );
+            vs0 = vmlaq_f32(vs0, w0, v);
+            vs1 = vmlaq_f32(vs1, w1, v);
+            vs2 = vmlaq_f32(vs2, w2, v);
+            vs3 = vmlaq_f32(vs3, w3, v);
+        }
+
+        auto hsumq_f32 = [](float32x4_t x) -> float {
+            float32x2_t s2 = vadd_f32(vget_low_f32(x), vget_high_f32(x));
+            s2 = vpadd_f32(s2, s2);
+            return vget_lane_f32(s2, 0);
+        };
+
+        dst[i + 0] = hsumq_f32(vs0) + bias[i + 0];
+        dst[i + 1] = hsumq_f32(vs1) + bias[i + 1];
+        dst[i + 2] = hsumq_f32(vs2) + bias[i + 2];
+        dst[i + 3] = hsumq_f32(vs3) + bias[i + 3];
+    }
+
+    for ( ; i < nvecs; i++ )
+    {
+        const float* wptr = weights + i * wstep;
+        float32x4_t vs0 = vdupq_n_f32(0.0f);
+        int k = 0;
+        for ( ; k <= vecsize - 4; k += 4, wptr += 4 )
+        {
+            float32x4_t v = vld1q_f32(vec + k);
+            vs0 = vmlaq_f32(vs0, vld1q_f32(wptr), v);
+        }
+        if (k != vecsize)
+        {
+            k    = vecsize - 4;
+            wptr = weights + i * wstep + k;
+            float32x4_t v  = vld1q_f32(vec + k);
+            v = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(v), vreinterpretq_u32_f32(tailMask)) );
+            float32x4_t w0 = vreinterpretq_f32_u32( vandq_u32(vreinterpretq_u32_f32(vld1q_f32(wptr)), vreinterpretq_u32_f32(tailMask)) );
+            vs0 = vmlaq_f32(vs0, w0, v);
+        }
+        float32x2_t s2 = vadd_f32(vget_low_f32(vs0), vget_high_f32(vs0));
+        s2 = vpadd_f32(s2, s2);
+        dst[i] = vget_lane_f32(s2, 0) + bias[i];
+    }
+}
+
+#endif //CV_NEON
+
 #if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_AVX
 
 #if !CV_FMA3 // AVX workaround
