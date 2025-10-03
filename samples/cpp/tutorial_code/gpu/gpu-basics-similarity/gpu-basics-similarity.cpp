@@ -181,14 +181,13 @@ double getPSNR(const Mat& I1, const Mat& I2)
 
     double sse = s.val[0] + s.val[1] + s.val[2]; // sum channels
 
-    if( sse <= 1e-10) // for small values return zero
-        return 0;
-    else
-    {
-        double  mse =sse /(double)(I1.channels() * I1.total());
-        double psnr = 10.0*log10((255*255)/mse);
-        return psnr;
-    }
+    double  mse = sse /(double)(I1.channels() * I1.total());
+
+    // For very small SSE, add epsilon to approximate infinite PSNR (~361 dB)
+    if( sse <= 1e-10) mse+= DBL_EPSILON;
+
+    double psnr = 10.0*log10((255*255)/mse);
+    return psnr;
 }
 //! [getpsnr]
 
@@ -206,14 +205,13 @@ double getPSNR_CUDA_optimized(const Mat& I1, const Mat& I2, BufferPSNR& b)
 
     double sse = cuda::sum(b.gs, b.buf)[0];
 
-    if( sse <= 1e-10) // for small values return zero
-        return 0;
-    else
-    {
-        double mse = sse /(double)(I1.channels() * I1.total());
-        double psnr = 10.0*log10((255*255)/mse);
-        return psnr;
-    }
+    double mse = sse /(double)(I1.channels() * I1.total());
+
+    // For very small SSE, add epsilon to approximate infinite PSNR (~361 dB)
+    if (sse <= 1e-10) mse += DBL_EPSILON;
+
+    double psnr = 10.0*log10((255*255)/mse);
+    return psnr;
 }
 //! [getpsnropt]
 
@@ -234,14 +232,13 @@ double getPSNR_CUDA(const Mat& I1, const Mat& I2)
     Scalar s = cuda::sum(gs);
     double sse = s.val[0] + s.val[1] + s.val[2];
 
-    if( sse <= 1e-10) // for small values return zero
-        return 0;
-    else
-    {
-        double  mse =sse /(double)(gI1.channels() * I1.total());
-        double psnr = 10.0*log10((255*255)/mse);
-        return psnr;
-    }
+    double  mse = sse /(double)(gI1.channels() * I1.total());
+
+    // For very small SSE, add epsilon to approximate infinite PSNR (~361 dB)
+    if( sse <= 1e-10) mse+= DBL_EPSILON;
+
+    double psnr = 10.0*log10((255*255)/mse);
+    return psnr;
 }
 //! [getpsnrcuda]
 
