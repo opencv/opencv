@@ -183,10 +183,6 @@
 "test_blackmanwindow_expanded",
 "test_blackmanwindow_symmetric",
 "test_blackmanwindow_symmetric_expanded",
-"test_cast_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
-"test_cast_DOUBLE_to_FLOAT16",  // Issue::Unsuppoted data type
-"test_cast_FLOAT16_to_DOUBLE",  // Issue::Unsuppoted data type
-"test_cast_FLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
 "test_cast_FLOAT16_to_FLOAT4E2M1",
 "test_cast_FLOAT16_to_FLOAT8E4M3FN",
 "test_cast_FLOAT16_to_FLOAT8E4M3FNUZ",
@@ -204,9 +200,6 @@
 "test_cast_FLOAT8E5M2FNUZ_to_FLOAT16",
 "test_cast_FLOAT8E5M2_to_FLOAT",
 "test_cast_FLOAT8E5M2_to_FLOAT16",
-"test_cast_FLOAT_to_BFLOAT16",  // Issue::Unsuppoted data type
-"test_cast_FLOAT_to_DOUBLE",  // Issue::Unsuppoted data type
-"test_cast_FLOAT_to_FLOAT16",  // Issue::Unsuppoted data type
 "test_cast_FLOAT_to_FLOAT4E2M1",
 "test_cast_FLOAT_to_FLOAT8E4M3FN",
 "test_cast_FLOAT_to_FLOAT8E4M3FNUZ",
@@ -232,15 +225,6 @@
 "test_cast_no_saturate_FLOAT_to_FLOAT8E4M3FNUZ",
 "test_cast_no_saturate_FLOAT_to_FLOAT8E5M2",
 "test_cast_no_saturate_FLOAT_to_FLOAT8E5M2FNUZ",
-"test_castlike_BFLOAT16_to_FLOAT",  // Issue::Unsuppoted data type
-"test_castlike_BFLOAT16_to_FLOAT_expanded",  // Issue::Unsuppoted data type
-"test_castlike_DOUBLE_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_DOUBLE_to_FLOAT16",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_DOUBLE_to_FLOAT16_expanded",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_DOUBLE_to_FLOAT_expanded",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_FLOAT16_to_DOUBLE",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT16_to_DOUBLE_expanded",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT16_to_FLOAT",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
 "test_castlike_FLOAT16_to_FLOAT4E2M1",
 "test_castlike_FLOAT16_to_FLOAT4E2M1_expanded",
 "test_castlike_FLOAT16_to_FLOAT8E4M3FN",
@@ -251,7 +235,6 @@
 "test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ",
 "test_castlike_FLOAT16_to_FLOAT8E5M2FNUZ_expanded",
 "test_castlike_FLOAT16_to_FLOAT8E5M2_expanded",
-"test_castlike_FLOAT16_to_FLOAT_expanded",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
 "test_castlike_FLOAT16_to_INT4",
 "test_castlike_FLOAT16_to_INT4_expanded",
 "test_castlike_FLOAT16_to_UINT4",
@@ -276,12 +259,6 @@
 "test_castlike_FLOAT8E5M2_to_FLOAT16",
 "test_castlike_FLOAT8E5M2_to_FLOAT16_expanded",
 "test_castlike_FLOAT8E5M2_to_FLOAT_expanded",
-"test_castlike_FLOAT_to_BFLOAT16",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT_to_BFLOAT16_expanded",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT_to_DOUBLE",  // Issues::Layer::Can't create layer "onnx_node_output_0!output" of type "CastLike" in function 'getLayerInstance'
-"test_castlike_FLOAT_to_DOUBLE_expanded",  // Issue::Unsuppoted data type
-"test_castlike_FLOAT_to_FLOAT16",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
-"test_castlike_FLOAT_to_FLOAT16_expanded",  // Issues::Layer::mismatch in input and output shapes  inputs.size() == requiredOutputs in function 'getMemoryShapes'
 "test_castlike_FLOAT_to_FLOAT4E2M1",
 "test_castlike_FLOAT_to_FLOAT4E2M1_expanded",
 "test_castlike_FLOAT_to_FLOAT8E4M3FN",

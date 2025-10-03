@@ -559,12 +559,11 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         int adata_type = adata.type;
         if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
             adata_type = CV_32F;
-        // [TODO] need to analyze this situation more carefully
-        if (adata_type == CV_64F)
-            adata_type = CV_32F;
+
         if (adata_type != mtype &&
             !((adata_type == CV_64F || adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
-              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)))
+              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)) &&
+            !(adata.type == CV_16BF && mtype == CV_16U) && !(adata.type == CV_16F && mtype == CV_16U))
         {
             CV_Error_(Error::StsBadArg, ("incompatible type of input tensor #%zu '%s': %s given, %s expected",
                                          idx, adata.name.c_str(), typeToString(mtype).c_str(),
@@ -574,7 +573,21 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         if (inp_t.shape() != mshape || inp_t.type() != adata_type)
             finalizeLayers = true;
         inp_t.fit(mshape, adata_type);
-        m.convertTo(inp_t, adata_type);
+
+        if (adata.type == CV_16BF && mtype == CV_16U)
+        {
+            Mat tmp(mshape, CV_16BF, (void*)m.data);
+            tmp.convertTo(inp_t, adata_type);
+        }
+        else if (adata.type == CV_16F && mtype == CV_16U)
+        {
+            Mat tmp(mshape, CV_16F, (void*)m.data);
+            tmp.convertTo(inp_t, adata_type);
+        }
+        else
+        {
+            m.convertTo(inp_t, adata_type);
+        }
     } else if (adata.kind == DNN_ARG_TEMP) {
         int bufidx = bufidxs.at(inp.idx);
         Mat& buf = buffers.at(bufidx);
