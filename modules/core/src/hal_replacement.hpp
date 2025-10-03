@@ -1138,6 +1138,44 @@ inline int hal_ni_sum(const uchar *src_data, size_t src_step, int src_type, int 
 #define cv_hal_sum hal_ni_sum
 //! @endcond
 
+/**
+   @brief inRange (lower_bound <= src_value) && (src_value <= upper_bound) ? 255 : 0
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param dst_depth Destination image depth
+   @param width Image width
+   @param height Image height
+   @param cn number of channels
+   @param lower_bound Range lower bound
+   @param upper_bound Range upper bound
+*/
+inline int hal_ni_inRange8u(const uchar *src_data, size_t src_step,
+              uchar *dst_data, size_t dst_step, int dst_depth, int width,
+              int height, int cn, uchar lower_bound, uchar upper_bound) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief inRange (lower_bound <= src_value) && (src_value <= upper_bound) ? 255 : 0
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param dst_depth Destination image depth
+   @param width Image width
+   @param height Image height
+   @param cn number of channels
+   @param lower_bound Range lower bound
+   @param upper_bound Range upper bound
+*/
+inline int hal_ni_inRange32f(const uchar *src_data, size_t src_step,
+              uchar *dst_data, size_t dst_step, int dst_depth, int width,
+              int height, int cn, double lower_bound, double upper_bound) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_inRange8u hal_ni_inRange8u
+#define cv_hal_inRange32f hal_ni_inRange32f
+//! @endcond
+
 //! @}
 
 #if defined(__clang__)
