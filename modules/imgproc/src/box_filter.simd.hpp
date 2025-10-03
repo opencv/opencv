@@ -1391,14 +1391,11 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
      const Point &ofs, double scale, int borderType, int sumType, bool inplace)
 {
     int i, j;
-    std::vector<int> borderTab;
+    cv::utils::BufferArea area, area2;
+    int* borderTab = 0;
+    uchar* buf = 0, *constBorder = 0;
+    uchar* border = 0, *inplaceSrc = 0, *inplaceDst = 0;
     std::vector<ST*> bufPtr;
-    std::vector<uchar> buf;
-    std::vector<uchar> constBorder;
-    std::vector<uchar> border;
-    std::vector<uchar> inplaceSrc;
-    std::vector<uchar> inplaceDst;
-
     const uchar* src = _src.ptr();
     uchar* dst = _dst.ptr();
     Size wholeSize = wsz;
@@ -1429,10 +1426,11 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
     int bufStep = bufWidth*besz;
 
     src -= xofs1*sesz;
-    borderTab.resize(borderLength*cn);
-    buf.resize(bufWidth*(kheight+1)*besz);
-    constBorder.resize(bufWidth*sesz);
-    memset(&constBorder[0], 0, bufWidth*sesz);
+    area.allocate(borderTab, borderLength*cn);
+    area.allocate(buf, bufWidth*(kheight+1)*besz);
+    area.allocate(constBorder, bufWidth*sesz);
+    area.commit();
+    area.zeroFill();
 
     // compute border tables
     if( dx1 > 0 || dx2 > 0 )
@@ -1441,7 +1439,7 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
         {
             int xofs1w = std::min(roi.x, anchor.x) - roi.x;
             int wholeWidth = wholeSize.width;
-            int* btabx = (int*)(&borderTab[0]);
+            int* btabx = borderTab;
 
             for( i = 0; i < dx1; i++ )
             {
@@ -1461,26 +1459,35 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
 
     if( inplace )
     {
-        border.resize(bufWidth*sesz);
-        inplaceSrc.resize(dy2*bufWidth*sesz);
-        inplaceDst.resize(bufWidth*sesz);
-        if( borderType == BORDER_CONSTANT )
-            memset(&inplaceSrc[0], 0, dy2*bufWidth*sesz);
-        else
+        area2.allocate(border, bufWidth*sesz);
+        area2.allocate(inplaceDst, bufWidth*sesz);
+        if( dy2 )
         {
-            for( int idx=0; idx < dy2; ++idx )
+            area2.allocate(inplaceSrc, dy2*bufWidth*sesz);
+            area2.commit();
+            if( borderType == BORDER_CONSTANT )
+                memset(inplaceSrc, 0, dy2*bufWidth*sesz);
+            else
             {
-                uchar* out = (uchar*)alignCore(&inplaceSrc[bufWidth*sesz*idx],
-                                               borderLeft*sizeof(T), inplace);
-                int rc = height1-(dy2-idx);
-                int srcY = borderInterpolate(rc + roi.y - anchor.y, wholeSize.height, borderType);
-                const uchar* inp = (uchar*)(src+(srcY-roi.y)*srcStep);
-                memcpy(out, inp, width*sesz);
+                for( int idx=0; idx < dy2; ++idx )
+                {
+                    uchar* out = (uchar*)alignCore(&inplaceSrc[bufWidth*sesz*idx],
+                                                borderLeft*sizeof(T), inplace);
+                    int rc = height1-(dy2-idx);
+                    int srcY = borderInterpolate(rc + roi.y - anchor.y, wholeSize.height, borderType);
+                    const uchar* inp = (uchar*)(src+(srcY-roi.y)*srcStep);
+                    memcpy(out, inp, width*sesz);
+                }
             }
         }
+        else
+            area2.commit();
     }
     else
-        border.resize((kwidth-1+max(dx1, dx2)+VEC_ALIGN)*sesz);
+    {
+        area2.allocate(border, (kwidth-1+max(dx1, dx2)+VEC_ALIGN)*sesz);
+        area2.commit();
+    }
     bufPtr.resize(kheight);
 
     const T *S;
@@ -1488,8 +1495,8 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
     T* D;
     T* R;
     ST** buf_ptr = &bufPtr[0];
-    const int *btab = &borderTab[0];
-    T* C = (T*)alignCore(&constBorder[0], borderLeft*sizeof(T), inplace);
+    const int *btab = borderTab;
+    T* C = (T*)alignCore(constBorder, borderLeft*sizeof(T), inplace);
     ST* SUM = (ST*)alignCore(&buf[bufStep*kheight], borderLeft*sizeof(ST), inplace);
     for( int k=0;k<kheight;k++ )
         buf_ptr[k] = (ST*)alignCore(&buf[bufStep*k], borderLeft*sizeof(ST), inplace);
@@ -1509,9 +1516,9 @@ void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &
             ref = (const T*)(src+(srcY-roi.y)*srcStep);
 
         S = ref;
-        R = (T*)alignPtr((uchar*)&border[0], VEC_ALIGN);
+        R = (T*)alignPtr(border, VEC_ALIGN);
         if ( inplace && (rc < (kheight-1)) )
-            D = (T*)alignCore(&inplaceDst[0], borderLeft*sizeof(T), inplace);
+            D = (T*)alignCore(inplaceDst, borderLeft*sizeof(T), inplace);
         else
             D = (T*)dst;
         for( int k=0; k < kheight; k++ )
