@@ -439,6 +439,30 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ReduceLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS Reduce2Layer : public Layer
+    {
+    public:
+        enum class ReduceType
+        {
+            MAX,
+            MIN,
+            MEAN,
+            SUM,
+            L1,
+            L2,
+            PROD,
+            SUM_SQUARE,
+            LOG_SUM,
+            LOG_SUM_EXP
+        };
+        ReduceType reduce_type;
+        bool keepdims;
+        bool noop_with_empty_axes;
+        std::vector<int> axes;
+
+        static Ptr<Reduce2Layer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS SoftmaxLayer : public Layer
     {
     public:
@@ -782,12 +806,12 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS ActivationLayer : public Layer
     {
     public:
-        virtual void forwardSlice(const float* src, float* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int* src, const int* lut, int* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
-        virtual void forwardSlice(const int8_t* src, const int8_t* lut, int8_t* dst, int len,
-                                  size_t outPlaneSize, int cn0, int cn1) const {}
+        virtual void forwardSlice(const float*, float*, int,
+                                  size_t, int, int) const {}
+        virtual void forwardSlice(const int*, const int*, int*, int,
+                                  size_t, int, int) const {}
+        virtual void forwardSlice(const int8_t*, const int8_t*, int8_t*, int,
+                                  size_t, int, int) const {}
     };
 
     class CV_EXPORTS ReLULayer : public ActivationLayer
