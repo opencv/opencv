@@ -1738,12 +1738,14 @@ void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodePr
         }
         layerParams.set("onesided", os);
     }
-    // Set axis default per opset if not provided via attr or input
-    if (!layerParams.has("axis"))
-    {
-        // Per ONNX spec v17: default axis = 1. v20 changed summary but default remains provided via input in many tests.
-        layerParams.set("axis", 1);
-    }
+    // Set axis default per opset if not provided via attr or input.
+    // IMPORTANT: Do not override when legacy attribute 'axes' is present (pre-opset19),
+    // otherwise explicit 'axes' gets ignored by DFT layer which prioritizes 'axis'.
+    // if (!layerParams.has("axis") && !layerParams.has("axes"))
+    // {
+    //     // Per ONNX spec v17: default axis = 1. v20 changed summary but default often comes via input.
+    //     layerParams.set("axis", -2);
+    // }
     // If const inputs were folded, reduce inputs accordingly
     int max_inputs = node_proto.input_size();
     if (node_proto.input_size() >= 2 && !node_proto.input(1).empty() && net.isConstArg(node_inputs[1]))

@@ -17,15 +17,8 @@ public:
         setParamsFrom(params);
         inverse = params.get<int>("inverse", 0) != 0;
         onesided = params.get<int>("onesided", 0) != 0;
-        axis_attr = params.get<int>("axis", INT_MIN);
+        axis_attr = params.get<int>("axis", 1);
         dft_length = params.get<int>("dft_length", -1);
-        if (params.has("axes"))
-        {
-            DictValue dv = params.get("axes");
-            axes.resize(dv.size());
-            for (int i = 0; i < dv.size(); ++i)
-                axes[i] = dv.get<int>(i);
-        }
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
