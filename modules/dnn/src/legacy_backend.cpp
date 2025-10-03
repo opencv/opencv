@@ -90,7 +90,7 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
         CV_Assert(haveCUDA());
 
 #ifdef HAVE_CUDA
-        CV_CheckType(m.depth(), m.depth() == CV_32F || m.depth() == CV_8S || m.depth() == CV_8U || m.depth() == CV_32S || m.depth() == CV_64S || m.depth() == CV_Bool || m.depth() == CV_64F, "Unsupported type for CUDA");
+        CV_CheckType(m.depth(), m.depth() == CV_32F || m.depth() == CV_8S || m.depth() == CV_8U || m.depth() == CV_32S || m.depth() == CV_64S || m.depth() == CV_Bool, "Unsupported type for CUDA");
         CV_Assert(IS_DNN_CUDA_TARGET(targetId));
         switch (m.depth())
         {
@@ -109,11 +109,6 @@ Ptr<BackendWrapper> wrapMat(int backendId, int targetId, cv::Mat& m)
             return CUDABackendWrapperINT64::create(m);
         case CV_Bool:
             return CUDABackendWrapperBOOL::create(m);
-        case CV_64F:
-            if (targetId == DNN_TARGET_CUDA_FP16)
-                return CUDABackendWrapperFP16_FROM_FP64::create(m);
-            else
-                return CUDABackendWrapperFP64::create(m);
         default:
             CV_Error(Error::BadDepth, "Unsupported mat type for CUDA");
         }

@@ -1011,6 +1011,13 @@ public:
     {
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
+        // Force CPU fallback for dtypes not supported by cuda4dnn (e.g. CV_64F)
+        const int depth = inputs[0]->getHostMatDepth();
+        if (depth == CV_64F)
+        {
+            return Ptr<BackendNode>();
+        }
+
         cuda4dnn::EltwiseOpType op_ = cuda4dnn::EltwiseOpType::SUM;
         switch (op) {
             case OPERATION::MAX:

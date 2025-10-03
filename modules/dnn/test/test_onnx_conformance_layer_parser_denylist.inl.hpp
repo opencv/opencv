@@ -379,10 +379,6 @@
 "test_eyelike_populate_off_main_diagonal",  // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
 "test_eyelike_with_dtype",  // ---- same as above ---
 "test_eyelike_without_dtype",  // ---- same as above ---
-"test_gelu_default_1_expanded",  // parser: no corresponding layer for CastLike
-"test_gelu_default_2_expanded",  // parser: no corresponding layer for CastLike
-"test_gelu_tanh_1_expanded",  // parser: no corresponding layer for CastLike
-"test_gelu_tanh_2_expanded",  // parser: no corresponding layer for CastLike
 "test_gridsample_bicubic",  // ---- same as above ---
 "test_gridsample_bicubic_align_corners_0_additional_1",
 "test_gridsample_bicubic_align_corners_1_additional_1",
