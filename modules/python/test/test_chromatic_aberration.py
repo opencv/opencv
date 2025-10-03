@@ -106,7 +106,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
         coeffMat, calibW, calibH, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
 
         wrongDegree = max(1, degree - 1)
-        self.assertNotEqual(EXPECTED_COEFFS_SIZE, coeffMat.shape[1])
+        self.assertNotEqual(wrongDegree, coeffMat.shape[1])
         with self.assertRaises(cv.error):
             _ = cv.correctChromaticAberration(self.test_image, coeffMat, calibW, calibH, wrongDegree)
 
