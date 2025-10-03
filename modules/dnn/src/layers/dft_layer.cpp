@@ -17,6 +17,8 @@ public:
         setParamsFrom(params);
         inverse = params.get<int>("inverse", 0) != 0;
         onesided = params.get<int>("onesided", 0) != 0;
+        axis_attr = params.get<int>("axis", INT_MIN);
+        dft_length = params.get<int>("dft_length", -1);
         if (params.has("axes"))
         {
             DictValue dv = params.get("axes");
@@ -99,8 +101,13 @@ public:
         }
 
         // Determine single transform axis (only 1D supported for now)
-        int axis = (srcHasComplex ? ndims - 2 : ndims - 1); // default axis excludes complex dim when present
-        if (!axes.empty())
+        int axis = (srcHasComplex ? ndims - 2 : ndims - 1); // default axis excludes complex dim when present (=-2)
+        if (axis_attr != INT_MIN)
+        {
+            axis = axis_attr;
+            if (axis < 0) axis += ndims;
+        }
+        else if (!axes.empty())
         {
             CV_Assert(axes.size() == 1);
             axis = axes[0];
@@ -114,9 +121,7 @@ public:
         std::vector<int> dimSizesSrc(ndims);
         for (int i = 0; i < ndims; ++i) dimSizesSrc[i] = src.size[i];
         std::vector<size_t> stridesSrc(ndims, 1);
-        // if src has complex, last dim is complex with stride 1; if not, last stride is for last real dim
-        int startStrideFrom = srcHasComplex ? ndims - 2 : ndims - 1;
-        for (int i = startStrideFrom; i >= 0; --i)
+        for (int i = ndims - 2; i >= 0; --i)
             stridesSrc[i] = stridesSrc[i + 1] * (size_t)dimSizesSrc[i + 1];
 
         // Dst sizes/strides
@@ -127,7 +132,8 @@ public:
         for (int i = ndimsDst - 2; i >= 0; --i)
             stridesDst[i] = stridesDst[i + 1] * (size_t)dimSizesDst[i + 1];
 
-        const int N = dimSizesSrc[axis];
+        int N = dimSizesSrc[axis];
+        if (dft_length > 0) N = dft_length; // use provided length
         const size_t strideAxisSrc = stridesSrc[axis];
         const size_t strideAxisDst = stridesDst[axis];
 
@@ -187,7 +193,7 @@ public:
                         double angle = 2.0 * CV_PI * k * n / N;
                         double c = cos(angle);
                         double s = sin(angle) * sign;
-                        size_t offSrc = (size_t)n * strideAxisSrc;
+                        size_t offSrc = (size_t)std::min(n, dimSizesSrc[axis]-1) * strideAxisSrc;
                         double re, im;
                         if (srcHasComplex)
                         {
@@ -196,7 +202,7 @@ public:
                         }
                         else
                         {
-                            re = in[offSrc];
+                            re = (n < dimSizesSrc[axis]) ? in[offSrc] : 0.0;
                             im = 0.0;
                         }
                         accRe += re * c - im * s;
@@ -247,7 +253,7 @@ public:
                         double angle = 2.0 * CV_PI * k * n / N;
                         double c = cos(angle);
                         double s = sin(angle) * sign;
-                        size_t offSrc = (size_t)n * strideAxisSrc;
+                        size_t offSrc = (size_t)std::min(n, dimSizesSrc[axis]-1) * strideAxisSrc;
                         double re, im;
                         if (srcHasComplex)
                         {
@@ -256,7 +262,7 @@ public:
                         }
                         else
                         {
-                            re = in[offSrc];
+                            re = (n < dimSizesSrc[axis]) ? in[offSrc] : 0.0;
                             im = 0.0;
                         }
                         accRe += re * c - im * s;
@@ -295,6 +301,8 @@ public:
 private:
     bool inverse;
     bool onesided;
+    int axis_attr;
+    int dft_length;
     std::vector<int> axes;
 };
 

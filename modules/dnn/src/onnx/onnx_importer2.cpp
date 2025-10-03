@@ -1705,7 +1705,22 @@ void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodePr
     // ONNX DFT: attributes (optional): axes (ints), inverse (int/bool), onesided (int/bool)
     // We propagate attributes as-is to the layer.
     layerParams.type = "DFT";
-    // axes is already parsed by importer into layerParams if present (handled by common attr parsing)
+    // dft_length may be provided as second input (scalar). If const, fold into attribute
+    if (node_proto.input_size() >= 2 && !node_proto.input(1).empty() && net.isConstArg(node_inputs[1]))
+    {
+        Mat lenMat = net.argTensor(node_inputs[1]);
+        CV_Assert(lenMat.total() == 1);
+        int dft_length = lenMat.depth() == CV_64F || lenMat.type() == CV_64S ? (int)lenMat.at<int64_t>(0) : lenMat.at<int>(0);
+        layerParams.set("dft_length", dft_length);
+    }
+    // axis may be provided as third input (scalar) for newer opsets
+    if (node_proto.input_size() >= 3 && !node_proto.input(2).empty() && net.isConstArg(node_inputs[2]))
+    {
+        Mat axisMat = net.argTensor(node_inputs[2]);
+        CV_Assert(axisMat.total() == 1);
+        int ax = (axisMat.depth() == CV_64F || axisMat.type() == CV_64S) ? (int)axisMat.at<int64_t>(0) : axisMat.at<int>(0);
+        layerParams.set("axis", ax);
+    }
     // normalize attribute names to consistent types
     if (layerParams.has("inverse"))
     {
@@ -1723,7 +1738,13 @@ void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodePr
         }
         layerParams.set("onesided", os);
     }
-    addLayer(layerParams, node_proto);
+    // If const inputs were folded, reduce inputs accordingly
+    int max_inputs = node_proto.input_size();
+    if (node_proto.input_size() >= 2 && !node_proto.input(1).empty() && net.isConstArg(node_inputs[1]))
+        max_inputs = std::min(max_inputs, 1);
+    if (node_proto.input_size() >= 3 && !node_proto.input(2).empty() && net.isConstArg(node_inputs[2]))
+        max_inputs = std::min(max_inputs, 1);
+    addLayer(layerParams, node_proto, max_inputs);
 }
 void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
