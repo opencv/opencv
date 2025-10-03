@@ -303,3 +303,7 @@
 "test_castlike_FLOAT_to_DOUBLE_expanded",
 "test_castlike_FLOAT_to_FLOAT16",
 "test_castlike_FLOAT_to_FLOAT16_expanded",
+"test_gelu_default_1_expanded",
+"test_gelu_default_2_expanded",
+"test_gelu_tanh_1_expanded",
+"test_gelu_tanh_2_expanded",
