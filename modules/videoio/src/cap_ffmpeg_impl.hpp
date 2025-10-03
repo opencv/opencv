@@ -960,7 +960,7 @@ public:
         if ( debug_option || (!level_option.empty()) )
         {
             av_log_set_level(level);
-            if (!skip_log_callback) 
+            if (!skip_log_callback)
             {
                 av_log_set_callback(ffmpeg_log_callback);
             }
@@ -992,7 +992,7 @@ public:
 #ifdef CV_FFMPEG_LOCKMGR
         av_lockmgr_register(NULL);
 #endif
-        if (!skip_log_callback) 
+        if (!skip_log_callback)
         {
             av_log_set_callback(NULL);
         }
