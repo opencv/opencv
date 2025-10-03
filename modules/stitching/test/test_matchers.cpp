@@ -45,8 +45,12 @@ namespace opencv_test { namespace {
 
 #if defined(HAVE_OPENCV_XFEATURES2D) && defined(OPENCV_ENABLE_NONFREE)
 
-TEST(SurfFeaturesFinder, CanFindInROIs)
+CV_ENUM(MaskType, CV_8U, CV_Bool);
+typedef testing::TestWithParam<MaskType> SurfFeaturesFinder;
+
+TEST_P(SurfFeaturesFinder, CanFindInROIs)
 {
+    int mask_type = GetParam();
     Ptr<Feature2D> finder = xfeatures2d::SURF::create();
     Mat img  = imread(string(cvtest::TS::ptr()->get_data_path()) + "cv/shared/lena.png");
 
@@ -55,7 +59,7 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     rois.push_back(Rect(img.cols / 2, img.rows / 2, img.cols - img.cols / 2, img.rows - img.rows / 2));
 
     // construct mask
-    Mat mask = Mat::zeros(img.size(), CV_8U);
+    Mat mask = Mat::zeros(img.size(), mask_type);
     for (const Rect &roi : rois)
     {
         Mat(mask, roi) = 1;
@@ -81,6 +85,8 @@ TEST(SurfFeaturesFinder, CanFindInROIs)
     EXPECT_GT(br_rect_count, 0);
     EXPECT_EQ(bad_count, 0);
 }
+
+INSTANTIATE_TEST_CASE_P(/**/, SurfFeaturesFinder, MaskType::all());
 
 #endif // HAVE_OPENCV_XFEATURES2D && OPENCV_ENABLE_NONFREE
 

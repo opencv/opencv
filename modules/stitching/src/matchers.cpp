@@ -340,7 +340,7 @@ void FeaturesMatcher::match(const std::vector<ImageFeatures> &features, std::vec
 {
     const int num_images = static_cast<int>(features.size());
 
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
+    CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.cols == num_images && mask.rows));
     Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
         mask_ = Mat::ones(num_images, num_images, CV_8U);
@@ -491,7 +491,7 @@ void BestOf2NearestRangeMatcher::match(const std::vector<ImageFeatures> &feature
 {
     const int num_images = static_cast<int>(features.size());
 
-    CV_Assert(mask.empty() || (mask.type() == CV_8U && mask.cols == num_images && mask.rows));
+    CV_Assert(mask.empty() || ((mask.type() == CV_8U || mask.type() == CV_Bool) && mask.cols == num_images && mask.rows));
     Mat_<uchar> mask_(mask.getMat(ACCESS_READ));
     if (mask_.empty())
         mask_ = Mat::ones(num_images, num_images, CV_8U);
