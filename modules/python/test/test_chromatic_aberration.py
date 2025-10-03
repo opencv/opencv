@@ -3,6 +3,7 @@
 # It is subject to the license terms in the LICENSE file found in the top-level directory
 # of this distribution and at http://opencv.org/license.html.
 
+import numpy as np
 import cv2 as cv
 from tests_common import NewOpenCVTests
 
