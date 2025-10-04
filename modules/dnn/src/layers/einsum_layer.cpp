@@ -168,8 +168,32 @@ Mat DiagonalInnermostDims(const Mat& input, bool preserve_innermost_dim_val) {
         output_dims[rank - 1] = 1;
     }
 
-    // TODO: hande different types
-    Mat output = DiagonalDataAssignment<float>(input);
+    Mat output;
+    switch (input.depth())
+    {
+        case CV_32F:
+            output = DiagonalDataAssignment<float>(input);
+            break;
+        case CV_64F:
+            output = DiagonalDataAssignment<double>(input);
+            break;
+        case CV_16F:
+        {
+            Mat tmp32;
+            input.convertTo(tmp32, CV_32F);
+            Mat out32 = DiagonalDataAssignment<float>(tmp32);
+            out32.convertTo(output, input.type());
+            break;
+        }
+        default:
+        {
+            Mat tmp32;
+            input.convertTo(tmp32, CV_32F);
+            Mat out32 = DiagonalDataAssignment<float>(tmp32);
+            out32.convertTo(output, input.type());
+            break;
+        }
+    }
 
     if (output_dims != shape(output)){
         CV_Error(Error::StsError, "Output shape does not match with calculated shape");
@@ -420,7 +444,26 @@ public:
                backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
-    // getMemoryShapes
+    virtual void getTypes(const std::vector<MatType>& inputs,
+                          const int requiredOutputs,
+                          const int requiredInternals,
+                          std::vector<MatType>& outputs,
+                          std::vector<MatType>& internals) const CV_OVERRIDE
+    {
+        CV_Assert(!inputs.empty());
+        for (const int t : inputs)
+            CV_CheckTypeEQ(t, inputs[0], "All Einsum inputs must have the same type");
+
+        if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+            CV_CheckType(inputs[0], inputs[0] == CV_16F || inputs[0] == CV_32F || inputs[0] == CV_64F, "");
+        else
+            CV_CheckType(inputs[0], inputs[0] == CV_32F || inputs[0] == CV_64F || inputs[0] == CV_16F, "");
+
+        outputs.assign(1, inputs[0]);
+        internals.assign(requiredInternals, inputs[0]);
+    }
+
+    // getMeoryShapes
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
                          const int requiredOutputs,
                          std::vector<MatShape> &outputs,
@@ -586,16 +629,27 @@ Mat LayerEinsumImpl::reduceSum(Mat& src, MatShape& reduceAxis)
     std::vector<MatShape> outputShapes, internalShapes;
     reduce->getMemoryShapes(inputShapes, 1, outputShapes, internalShapes);
 
+    int origType = src.type();
+    Mat src32 = src;
+    if (src.depth() != CV_32F)
+        src.convertTo(src32, CV_32F);
     Mat output(outputShapes[0], CV_32F);
 
     std::vector<Mat> inputs;
     std::vector<Mat> outputs;
     std::vector<Mat> internals;
-    inputs.emplace_back(src);
+    inputs.emplace_back(src32);
     outputs.emplace_back(output);
 
     reduce->forward(inputs, outputs, internals);
-    return outputs[0];
+    Mat out = outputs[0];
+    if (CV_MAT_TYPE(origType) != CV_32F)
+    {
+        Mat converted;
+        out.convertTo(converted, origType);
+        return converted;
+    }
+    return out;
 }
 
 void LayerEinsumImpl::preProcessInputs(InputArrayOfArrays& inputs_arr)
@@ -1374,47 +1428,60 @@ Mat LayerEinsumImpl::batchwiseMatMul(
     Mat reshapedInput1 = input1;
     Mat reshapedInput2 = input2;
 
+    int origType = input1.type();
+    Mat a = reshapedInput1, b = reshapedInput2;
+    if (input1.depth() != CV_32F)
+    {
+        reshapedInput1.convertTo(a, CV_32F);
+        reshapedInput2.convertTo(b, CV_32F);
+    }
 
     Mat output;
     if (batches > 1)
     {
         // create tmpout with type like input1
-        output = Mat({batches, M, N}, input1.type());
+        output = Mat({batches, M, N}, CV_32F);
 
-        reshapedInput2 = reshapedInput2.reshape(1, input2ShapeOverride);
-        reshapedInput1 = reshapedInput1.reshape(1, input1ShapeOverride);
+        b = b.reshape(1, input2ShapeOverride);
+        a = a.reshape(1, input1ShapeOverride);
 
-        fastGemmBatch(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+        fastGemmBatch(false, false, 1.0, a, b, 0.0, output, opt);
     } else {
 
         // input1 should of size MxK
         // check if input1 needs reshape, if need reshape
-        if (input1.dims > 2 || input1.size[0] != M || (input1.dims > 1 && input1.size[1] != K) || input1.dims == 1)
+        if (reshapedInput1.dims > 2 || reshapedInput1.size[0] != M || (reshapedInput1.dims > 1 && reshapedInput1.size[1] != K) || reshapedInput1.dims == 1)
         {
             int shape[] = {M, K};
-            reshapedInput1 = input1.reshape(1, 2, shape);
+            a = a.reshape(1, 2, shape);
         }
 
         // input2 should be of size KxN
         // check if input2 needs reshape, if needs reshape
-        if (input2.dims > 2 || input2.size[0] != K || (input2.dims > 1 &&  input2.size[1] != N) || input2.dims == 1)
+        if (reshapedInput2.dims > 2 || reshapedInput2.size[0] != K || (reshapedInput2.dims > 1 &&  reshapedInput2.size[1] != N) || reshapedInput2.dims == 1)
         {
             int shape2[] = {K, N};
-            reshapedInput2 = input2.reshape(1, 2, shape2);
+            b = b.reshape(1, 2, shape2);
         }
 
 
-        output = Mat(M, N, reshapedInput1.type());
-        if ((reshapedInput1.dims == 0 && reshapedInput2.dims == 0)  ||
-            (reshapedInput1.dims == 0 && reshapedInput2.dims != 0) ||
-            (reshapedInput1.dims != 0 && reshapedInput2.dims == 0))
+        output = Mat(M, N, CV_32F);
+        if ((a.dims == 0 && b.dims == 0)  ||
+            (a.dims == 0 && b.dims != 0) ||
+            (a.dims != 0 && b.dims == 0))
         {
-            output = reshapedInput1.mul(reshapedInput2); // fastGemm does not support 0D * 0D multiplication
+            output = a.mul(b); // fastGemm does not support 0D * 0D multiplication
         } else {
-            fastGemm(false, false, 1.0, reshapedInput1, reshapedInput2, 0.0, output, opt);
+            fastGemm(false, false, 1.0, a, b, 0.0, output, opt);
         }
 
         output = output.reshape(1, {1, M, N});
+    }
+    if (CV_MAT_TYPE(origType) != CV_32F)
+    {
+        Mat converted;
+        output.convertTo(converted, origType);
+        return converted;
     }
     return output;
 };

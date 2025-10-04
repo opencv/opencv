@@ -1813,12 +1813,35 @@ Mat getMatFromTensor(const opencv_onnx::TensorProto& tensor_proto, bool uint8ToI
             Mat(sizes, CV_16FC1, rawdata).convertTo(blob, CV_32FC1);
         }
     }
+    else if (datatype == opencv_onnx::TensorProto_DataType_BFLOAT16)
+    {
+        if (!tensor_proto.raw_data().empty())
+        {
+            blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
+            size_t bytes = (size_t)blob.total() * blob.elemSize();
+            memcpy(blob.data, rawdata, bytes);
+        }
+        else if (!tensor_proto.int32_data().empty())
+        {
+            const auto& v = tensor_proto.int32_data();
+            blob.create((int)sizes.size(), sizes.data(), CV_16BFC1);
+            uint16_t* dst = reinterpret_cast<uint16_t*>(blob.data);
+            for (size_t i = 0; i < v.size(); ++i)
+            {
+                dst[i] = static_cast<uint16_t>(v[i] & 0xFFFF);
+            }
+        }
+        else
+        {
+            CV_Error(Error::StsNotImplemented, "BFLOAT16 tensor has no raw_data");
+        }
+    }
     else if (datatype == opencv_onnx::TensorProto_DataType_DOUBLE)
     {
         if (!tensor_proto.double_data().empty())
             Mat(sizes, CV_64FC1, (void*)tensor_proto.double_data().data()).convertTo(blob, CV_32FC1);
         else
-            Mat(sizes, CV_64FC1, rawdata).convertTo(blob, CV_32FC1);
+            Mat(sizes, CV_64FC1, rawdata).copyTo(blob);
     }
     else if (datatype == opencv_onnx::TensorProto_DataType_INT32)
     {
