@@ -2,8 +2,6 @@ set(sample_dir ${CMAKE_CURRENT_SOURCE_DIR}/tutorial_code/calib3d/real_time_pose_
 set(target example_tutorial_)
 
 set(sample_pnplib
-        ${sample_dir}CsvReader.cpp
-        ${sample_dir}CsvWriter.cpp
         ${sample_dir}ModelRegistration.cpp
         ${sample_dir}Mesh.cpp
         ${sample_dir}Model.cpp

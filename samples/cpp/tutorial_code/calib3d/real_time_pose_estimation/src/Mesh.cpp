@@ -6,8 +6,7 @@
  */
 
 #include "Mesh.h"
-#include "CsvReader.h"
-
+#include <opencv2/3d.hpp>
 
 // --------------------------------------------------- //
 //                   TRIANGLE CLASS                    //
@@ -62,16 +61,7 @@ Mesh::~Mesh()
 /** Load a CSV with *.ply format **/
 void Mesh::load(const std::string& path)
 {
-    // Create the reader
-    CsvReader csvReader(path);
-
-    // Clear previous data
-    list_vertex_.clear();
-    list_triangles_.clear();
-
-    // Read from .ply file
-    csvReader.readPLY(list_vertex_, list_triangles_);
-
+    cv::loadMesh(path, list_vertex_, list_triangles_);
     // Update mesh attributes
     num_vertices_ = (int)list_vertex_.size();
     num_triangles_ = (int)list_triangles_.size();

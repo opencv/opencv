@@ -14,10 +14,11 @@ Real Time pose estimation of a textured object {#tutorial_real_time_pose}
 
 Nowadays, augmented reality is one of the top research topic in computer vision and robotics fields.
 The most elemental problem in augmented reality is the estimation of the camera pose respect of an
-object in the case of computer vision area to perform subsequent 3D rendering or, in robotics, to obtain an object pose for grasping and manipulation. However, this is not a trivial
-problem to solve due to the fact that the most common issue in image processing is the computational
-cost of applying a lot of algorithms or mathematical operations for solving a problem which is basic
-and immediately for humans.
+object in the case of computer vision area to perform subsequent 3D rendering or, in robotics, to
+obtain an object pose for grasping and manipulation. However, this is not a trivial problem to solve
+due to the fact that the most common issue in image processing is the computational cost of applying
+a lot of algorithms or mathematical operations for solving a problem which is basic and immediately
+for humans.
 
 Goal
 ----
