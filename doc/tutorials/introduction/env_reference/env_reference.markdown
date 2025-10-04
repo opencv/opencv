@@ -273,6 +273,7 @@ Some external dependencies can be detached into a dynamic library, which will be
 | OPENCV_FFMPEG_THREADS | num | | set FFmpeg thread count |
 | OPENCV_FFMPEG_DEBUG | bool | false | enable logging messages from FFmpeg |
 | OPENCV_FFMPEG_LOGLEVEL | num | | set FFmpeg logging level |
+| OPENCV_FFMPEG_SKIP_LOG_CALLBACK | bool | false | do not install OpenCV's FFmpeg log callback (preserve default/user callback) |
 | OPENCV_FFMPEG_DLL_DIR | dir path | | directory with FFmpeg plugin (legacy) |
 | OPENCV_FFMPEG_IS_THREAD_SAFE | bool | false | enabling this option will turn off thread safety locks in the FFmpeg backend (use only if you are sure FFmpeg is built with threading support, tested on Linux) |
 | OPENCV_FFMPEG_READ_ATTEMPTS | num | 4096 | number of failed `av_read_frame` attempts before failing read procedure |

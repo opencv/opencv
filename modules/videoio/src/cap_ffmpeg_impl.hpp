@@ -937,6 +937,8 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 
 class InternalFFMpegRegister
 {
+    static bool skip_log_callback;
+
 public:
     static void init(const bool threadSafe)
     {
@@ -949,6 +951,7 @@ public:
     {
         const bool debug_option = utils::getConfigurationParameterBool("OPENCV_FFMPEG_DEBUG");
         std::string level_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_LOGLEVEL");
+        skip_log_callback = utils::getConfigurationParameterBool("OPENCV_FFMPEG_SKIP_LOG_CALLBACK");
         int level = AV_LOG_VERBOSE;
         if (!level_option.empty())
         {
@@ -957,7 +960,10 @@ public:
         if ( debug_option || (!level_option.empty()) )
         {
             av_log_set_level(level);
-            av_log_set_callback(ffmpeg_log_callback);
+            if (!skip_log_callback)
+            {
+                av_log_set_callback(ffmpeg_log_callback);
+            }
         }
         else
         {
@@ -986,9 +992,14 @@ public:
 #ifdef CV_FFMPEG_LOCKMGR
         av_lockmgr_register(NULL);
 #endif
-        av_log_set_callback(NULL);
+        if (!skip_log_callback)
+        {
+            av_log_set_callback(NULL);
+        }
     }
 };
+
+bool InternalFFMpegRegister::skip_log_callback = false;
 
 inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 {
