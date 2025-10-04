@@ -83,6 +83,18 @@ We map the 32-bit float HDR data into the range [0..1].
 Actually, in some cases the values can be larger than 1 or lower the 0, so notice
 we will later have to clip the data in order to avoid overflow.
 
+**Note for HDR Tutorial Users:**
+
+The function `cv.createTonemap()` used in the HDR tutorial applies gamma correction. 
+
+- **Default gamma value:** 1.0  
+- **Tutorial example gamma:** 2.2  
+
+To get results similar to the tutorial images, please set the gamma explicitly when creating the tonemap object:
+
+```cpp
+cv::Ptr<cv::Tonemap> tonemap = cv::createTonemap(2.2f);
+
 @code{.py}
 # Tonemap HDR image
 tonemap1 = cv.createTonemap(gamma=2.2)
