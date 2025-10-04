@@ -44,6 +44,7 @@
 
 #include <ostream>
 #include <vector>
+#include <unordered_set>
 #include <opencv2/core.hpp>
 #include "opencv2/core/async.hpp"
 
@@ -2074,6 +2075,65 @@ public:
 
     CV_WRAP TextDetectionModel_DB& setMaxCandidates(int maxCandidates);
     CV_WRAP int getMaxCandidates() const;
+};
+
+enum class TokenizeMethod {
+    BPE = 0,
+};
+
+/** 
+ * @brief High-level tokenizer wrapper for DNN usage.
+ *
+ * Provides a simple API to @c encode and @c decode text using a @c CoreBPE instance.
+ * Models are loaded via Tokenizer::load().
+ *
+ * @par Example
+ * @code
+ * using namespace cv::dnn;
+ * Tokenizer tok = Tokenizer::load("/path/to/model/"); 
+ * std::vector<int> ids = tok.encode("hello world");
+ * std::string text = tok.decode(ids);
+ * @endcode
+ */
+class CV_EXPORTS_W_SIMPLE Tokenizer {
+public:
+    /**
+     * @brief Construct a tokenizer with a given method default BPE.
+     * For BPE method you normally call Tokenizer::load() to initialize model data.
+     */
+    Tokenizer(TokenizeMethod method = TokenizeMethod::BPE);
+
+    /** 
+     * @brief Load a tokenizer from a model directory.
+     *
+     * Expects the directory to contain:
+     *  - @c config.json with field @c "model_type" in {\c "gpt2", @c "gpt4"}
+     *  - @c tokenizer.json produced by the corresponding model family.
+     *
+     * @attention The argument is a path prefix; this function concatenates file
+     * names directly (e.g. @c model_dir + "config.json"), so @p model_dir must
+     * end with an appropriate path separator.
+     *
+     * @param model_config  Path to config.json for model.
+     * @return A @c Tokenizer ready for use.
+     * @throw cv::Exception if files are missing or @c model_type is unsupported.
+     */
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config); 
+
+    /** 
+     * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
+     *
+     * Calls the underlying @c CoreBPE::encode with an empty allowed-special set.
+     *
+     * @param text  UTF-8 input string.
+     * @return Vector of token ids (32-bit ids narrowed to @c int for convenience).
+     */
+    CV_WRAP std::vector<int> encode(const std::string& text);
+    
+    CV_WRAP std::string decode(const std::vector<int>& tokens);
+    struct Impl;
+private:
+    Ptr<Impl> impl_;
 };
 
 //! @}
