@@ -1057,4 +1057,18 @@ TEST(ffmpeg_cap_properties, set_pos_get_msec)
 
 #endif // WIN32
 
+TEST(videoio_ffmpeg, camera_index)
+{
+    utils::Paths devs = utils::getConfigurationParameterPaths("OPENCV_TEST_V4L2_VIVID_DEVICE");
+    if (devs.size() != 1)
+    {
+        throw SkipTestException("OPENCV_TEST_V4L2_VIVID_DEVICE is not set");
+    }
+    VideoCapture cap;
+    ASSERT_TRUE(cap.open(0, CAP_FFMPEG));
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_FALSE(frame.empty());
+}
+
 }} // namespace
