@@ -422,46 +422,6 @@ Matx33d Math::getSkewSymmetric(const Vec3d &v) {
             -v[1],  v[0], 0};
 }
 
-Matx33d Math::rotVec2RotMat (const Vec3d &v) {
-    const double phi = sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-    const double x = v[0] / phi, y = v[1] / phi, z = v[2] / phi;
-    const double a = sin(phi), b = cos(phi);
-    // R = I + sin(phi) * skew(v) + (1 - cos(phi) * skew(v)^2
-    return {(b - 1)*y*y + (b - 1)*z*z + 1, -a*z - x*y*(b - 1), a*y - x*z*(b - 1),
-     a*z - x*y*(b - 1), (b - 1)*x*x + (b - 1)*z*z + 1, -a*x - y*z*(b - 1),
-    -a*y - x*z*(b - 1), a*x - y*z*(b - 1), (b - 1)*x*x + (b - 1)*y*y + 1};
-}
-
-Vec3d Math::rotMat2RotVec (const Matx33d &R) {
-    // https://math.stackexchange.com/questions/83874/efficient-and-accurate-numerical-implementation-of-the-inverse-rodrigues-rotatio?rq=1
-    Vec3d rot_vec;
-    const double trace = R(0,0)+R(1,1)+R(2,2);
-    if (trace >= 3 - FLT_EPSILON) {
-        rot_vec = (0.5 * (trace-3)/12)*Vec3d(R(2,1)-R(1,2),
-                                             R(0,2)-R(2,0),
-                                             R(1,0)-R(0,1));
-    } else if (3 - FLT_EPSILON > trace && trace > -1 + FLT_EPSILON) {
-        double theta = acos((trace - 1) / 2);
-        rot_vec = (theta / (2 * sin(theta))) * Vec3d(R(2,1)-R(1,2),
-                                                     R(0,2)-R(2,0),
-                                                     R(1,0)-R(0,1));
-    } else {
-        int a;
-        if (R(0,0) > R(1,1))
-            a = R(0,0) > R(2,2) ? 0 : 2;
-        else
-            a = R(1,1) > R(2,2) ? 1 : 2;
-        Vec3d v;
-        int b = (a + 1) % 3, c = (a + 2) % 3;
-        double s = sqrt(R(a,a) - R(b,b) - R(c,c) + 1);
-        v[a] = s / 2;
-        v[b] = (R(b,a) + R(a,b)) / (2 * s);
-        v[c] = (R(c,a) + R(a,c)) / (2 * s);
-        rot_vec = M_PI * v / norm(v);
-    }
-    return rot_vec;
-}
-
 /*
  * Eliminate matrix of m rows and n columns to be upper triangular.
  */
