@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <cstddef>
+#include "opencv2/core/cvdef.h" // for CV_EXPORTS visibility
 
 namespace cv { namespace detail {
 
@@ -78,16 +79,15 @@ struct VectorVectorOps final : VectorVectorOpsBase {
 };
 
 // Registry API (thread-local) for vector ops
-void register_vector_ops(const void* key, const VectorOpsBase* ops);
-void unregister_vector_ops(const void* key);
-const VectorOpsBase* get_vector_ops(const void* key);
+CV_EXPORTS void register_vector_ops(const void* key, const VectorOpsBase* ops);
+CV_EXPORTS void unregister_vector_ops(const void* key);
+CV_EXPORTS const VectorOpsBase* get_vector_ops(const void* key);
 
 // Registry API (thread-local) for vector<vector<...>> ops
-void register_vector_vector_ops(const void* key, const VectorVectorOpsBase* ops);
-void unregister_vector_vector_ops(const void* key);
-const VectorVectorOpsBase* get_vector_vector_ops(const void* key);
+CV_EXPORTS void register_vector_vector_ops(const void* key, const VectorVectorOpsBase* ops);
+CV_EXPORTS void unregister_vector_vector_ops(const void* key);
+CV_EXPORTS const VectorVectorOpsBase* get_vector_vector_ops(const void* key);
 
 }} // namespace cv::detail
 
 #endif // OPENCV_CORE_DETAIL_INPUT_ARRAY_OPS_HPP
-
