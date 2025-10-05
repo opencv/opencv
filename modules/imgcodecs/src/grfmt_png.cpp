@@ -141,7 +141,6 @@ APNGFrame::APNGFrame()
     _transparencySize = 0;
     _delayNum = 1;
     _delayDen = 1000;
-    _rows = NULL;
 }
 
 APNGFrame::~APNGFrame() {}
@@ -159,7 +158,7 @@ bool APNGFrame::setMat(const cv::Mat& src, unsigned delayNum, unsigned delayDen)
         _height = src.rows;
         _colorType = src.channels() == 1 ? PNG_COLOR_TYPE_GRAY : src.channels() == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA;
         _pixels = src.data;
-        _rows = new png_bytep[_height * sizeof(png_bytep)];
+        _rows.resize(_height);
 
         for (unsigned int i = 0; i < _height; ++i)
             _rows[i] = _pixels + i * rowbytes;
@@ -178,7 +177,6 @@ void APNGFrame::setTransparencySize(int transparencySize) { _transparencySize = 
 void APNGFrame::setDelayNum(unsigned int delayNum) { _delayNum = delayNum; }
 void APNGFrame::setDelayDen(unsigned int delayDen) { _delayDen = delayDen; }
 void APNGFrame::setPixels(unsigned char* pixels) { _pixels = pixels; }
-void APNGFrame::setRows(unsigned char** rows) { _rows = rows; }
 
 PngDecoder::PngDecoder()
 {
@@ -304,35 +302,35 @@ bool  PngDecoder::readHeader()
 
                     if (id == id_acTL && chunk.size == 20)
                     {
-                        m_animation.loop_count = png_get_uint_32(chunk.p + 12);
+                        m_animation.loop_count = png_get_uint_32(chunk.p.data() + 12);
 
                         if (chunk.p[8] > 0)
                         {
                             chunk.p[8] = 0;
                             chunk.p[9] = 0;
-                            m_frame_count = png_get_uint_32(chunk.p + 8);
+                            m_frame_count = png_get_uint_32(chunk.p.data() + 8);
                             m_frame_count++;
                         }
                         else
-                            m_frame_count = png_get_uint_32(chunk.p + 8);
+                            m_frame_count = png_get_uint_32(chunk.p.data() + 8);
                     }
 
                     if (id == id_fcTL)
                     {
                         m_is_fcTL_loaded = true;
-                        w0 = png_get_uint_32(chunk.p + 12);
-                        h0 = png_get_uint_32(chunk.p + 16);
-                        x0 = png_get_uint_32(chunk.p + 20);
-                        y0 = png_get_uint_32(chunk.p + 24);
-                        delay_num = png_get_uint_16(chunk.p + 28);
-                        delay_den = png_get_uint_16(chunk.p + 30);
+                        w0 = png_get_uint_32(chunk.p.data() + 12);
+                        h0 = png_get_uint_32(chunk.p.data() + 16);
+                        x0 = png_get_uint_32(chunk.p.data() + 20);
+                        y0 = png_get_uint_32(chunk.p.data() + 24);
+                        delay_num = png_get_uint_16(chunk.p.data() + 28);
+                        delay_den = png_get_uint_16(chunk.p.data() + 30);
                         dop = chunk.p[32];
                         bop = chunk.p[33];
                     }
 
                     if (id == id_bKGD)
                     {
-                        int bgcolor = png_get_uint_32(chunk.p + 8);
+                        int bgcolor = png_get_uint_32(chunk.p.data() + 8);
                         m_animation.bgcolor[3] = (bgcolor >> 24) & 0xFF;
                         m_animation.bgcolor[2] = (bgcolor >> 16) & 0xFF;
                         m_animation.bgcolor[1] = (bgcolor >> 8) & 0xFF;
@@ -461,39 +459,37 @@ bool  PngDecoder::readData( Mat& img )
                 }
                 else
                 {
-                    delete[] chunk.p;
                     return false;
                 }
 
-                w0 = png_get_uint_32(chunk.p + 12);
-                h0 = png_get_uint_32(chunk.p + 16);
-                x0 = png_get_uint_32(chunk.p + 20);
-                y0 = png_get_uint_32(chunk.p + 24);
-                delay_num = png_get_uint_16(chunk.p + 28);
-                delay_den = png_get_uint_16(chunk.p + 30);
+                w0 = png_get_uint_32(chunk.p.data() + 12);
+                h0 = png_get_uint_32(chunk.p.data() + 16);
+                x0 = png_get_uint_32(chunk.p.data() + 20);
+                y0 = png_get_uint_32(chunk.p.data() + 24);
+                delay_num = png_get_uint_16(chunk.p.data() + 28);
+                delay_den = png_get_uint_16(chunk.p.data() + 30);
                 dop = chunk.p[32];
                 bop = chunk.p[33];
 
                 if (int(x0 + w0) > img.cols || int(y0 + h0) > img.rows || dop > 2 || bop > 1)
                 {
-                    delete[] chunk.p;
                     return false;
                 }
 
-                memcpy(m_chunkIHDR.p + 8, chunk.p + 12, 8);
+                memcpy(m_chunkIHDR.p.data() + 8, chunk.p.data() + 12, 8);
                 return true;
             }
             else if (id == id_IDAT)
             {
                 m_is_IDAT_loaded = true;
-                png_process_data(png_ptr, info_ptr, chunk.p, chunk.size);
+                png_process_data(png_ptr, info_ptr, chunk.p.data(), chunk.size);
             }
             else if (id == id_fdAT && m_is_fcTL_loaded)
             {
                 m_is_IDAT_loaded = true;
-                png_save_uint_32(chunk.p + 4, chunk.size - 16);
-                memcpy(chunk.p + 8, "IDAT", 4);
-                png_process_data(png_ptr, info_ptr, chunk.p + 4, chunk.size - 4);
+                png_save_uint_32(chunk.p.data() + 4, chunk.size - 16);
+                memcpy(chunk.p.data() + 8, "IDAT", 4);
+                png_process_data(png_ptr, info_ptr, chunk.p.data() + 4, chunk.size - 4);
             }
             else if (id == id_IEND)
             {
@@ -514,13 +510,11 @@ bool  PngDecoder::readData( Mat& img )
                 else
                     return false;
 
-                delete[] chunk.p;
                 return true;
             }
             else
-                png_process_data(png_ptr, info_ptr, chunk.p, chunk.size);
+                png_process_data(png_ptr, info_ptr, chunk.p.data(), chunk.size);
 
-            delete[] chunk.p;
         }
         return false;
     }
@@ -613,7 +607,7 @@ bool PngDecoder::nextPage() {
     return ++m_frame_no < (int)m_frame_count;
 }
 
-void PngDecoder::compose_frame(unsigned char** rows_dst, unsigned char** rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels)
+void PngDecoder::compose_frame(const std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char _bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels)
 {
     uint32_t  i, j;
     int u, v, al;
@@ -673,10 +667,10 @@ uint32_t PngDecoder::read_chunk(Chunk& chunk)
         {
             CV_LOG_WARNING(NULL, "chunk data is too large");
         }
-        chunk.p = new unsigned char[chunk.size];
-        memcpy(chunk.p, len, 4);
-        if (read_from_io(chunk.p + 4, chunk.size - 4, 1) == 1)
-            return *(uint32_t*)(chunk.p + 4);
+        chunk.p.resize(chunk.size);
+        memcpy(chunk.p.data(), len, 4);
+        if (read_from_io(chunk.p.data() + 4, chunk.size - 4, 1) == 1)
+            return *(uint32_t*)(chunk.p.data() + 4);
     }
     return 0;
 }
@@ -709,7 +703,7 @@ bool PngDecoder::processing_start(void* frame_ptr, const Mat& img)
         png_set_tRNS_to_alpha(png_ptr);
 
     png_process_data(png_ptr, info_ptr, header, 8);
-    png_process_data(png_ptr, info_ptr, m_chunkIHDR.p, m_chunkIHDR.size);
+    png_process_data(png_ptr, info_ptr, m_chunkIHDR.p.data(), m_chunkIHDR.size);
 
     if ((m_color_type & PNG_COLOR_MASK_COLOR) && img.channels() > 1 && !m_use_rgb)
         png_set_bgr(png_ptr); // convert RGB to BGR
