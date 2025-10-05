@@ -4,6 +4,7 @@
 
 #include "precomp.hpp"
 #include "opencv2/core/mat.hpp"
+#include "opencv2/core/detail/input_array_ops.hpp"
 
 namespace cv {
 
@@ -42,8 +43,14 @@ Mat _InputArray::getMat_(int i) const
     {
         CV_Assert( i < 0 );
         int t = CV_MAT_TYPE(flags);
+        const detail::VectorOpsBase* ops = detail::get_vector_ops(obj);
+        if (ops)
+        {
+            size_t n = ops->size(obj);
+            if (n == 0) return Mat();
+            return Mat(1, (int)n, t, const_cast<void*>(ops->data(obj)));
+        }
         const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-
         return !v.empty() ? Mat(size(), t, (void*)&v[0]) : Mat();
     }
 
@@ -68,11 +75,12 @@ Mat _InputArray::getMat_(int i) const
     if( k == STD_VECTOR_VECTOR )
     {
         int t = type(i);
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        CV_Assert( 0 <= i && i < (int)vv.size() );
-        const std::vector<uchar>& v = vv[i];
-
-        return !v.empty() ? Mat(size(i), t, (void*)&v[0]) : Mat();
+        const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        CV_Assert( 0 <= i && (size_t)i < ops->outer_size(obj) );
+        size_t n = ops->inner_size(obj, i);
+        if (n == 0) return Mat();
+        return Mat(1, (int)n, t, ops->inner_data(const_cast<void*>(obj), i));
     }
 
     if( k == STD_VECTOR_MAT )
@@ -184,14 +192,15 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
 
     if( k == STD_VECTOR )
     {
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-
-        size_t n = size().width, esz = CV_ELEM_SIZE(flags);
+        const detail::VectorOpsBase* ops = detail::get_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        size_t n = ops->size(obj);
+        size_t esz = CV_ELEM_SIZE(flags);
         int t = CV_MAT_DEPTH(flags), cn = CV_MAT_CN(flags);
         mv.resize(n);
-
+        uchar* base = static_cast<uchar*>(ops->data(const_cast<void*>(obj)));
         for( size_t i = 0; i < n; i++ )
-            mv[i] = Mat(1, cn, t, (void*)(&v[0] + esz*i));
+            mv[i] = Mat(1, cn, t, (void*)(base + esz*i));
         return;
     }
 
@@ -203,15 +212,16 @@ void _InputArray::getMatVector(std::vector<Mat>& mv) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        int n = (int)vv.size();
+        const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        int n = (int)ops->outer_size(obj);
         int t = CV_MAT_TYPE(flags);
         mv.resize(n);
-
-        for( int i = 0; i < n; i++ )
+        for (int i = 0; i < n; i++)
         {
-            const std::vector<uchar>& v = vv[i];
-            mv[i] = Mat(size(i), t, (void*)&v[0]);
+            size_t len = ops->inner_size(obj, i);
+            void* ptr = ops->inner_data(const_cast<void*>(obj), i);
+            mv[i] = len ? Mat(1, (int)len, t, ptr) : Mat();
         }
         return;
     }
@@ -412,10 +422,10 @@ Size _InputArray::size(int i) const
     if( k == STD_VECTOR )
     {
         CV_Assert( i < 0 );
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        const std::vector<int>& iv = *(const std::vector<int>*)obj;
-        size_t szb = v.size(), szi = iv.size();
-        return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
+        const detail::VectorOpsBase* ops = detail::get_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        size_t count = ops->size(obj);
+        return Size((int)count, 1);
     }
 
     if( k == STD_BOOL_VECTOR )
@@ -430,14 +440,16 @@ Size _InputArray::size(int i) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
+        const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+        CV_Assert(ops != nullptr);
         if( i < 0 )
-            return vv.empty() ? Size() : Size((int)vv.size(), 1);
-        CV_Assert( i < (int)vv.size() );
-        const std::vector<std::vector<int> >& ivv = *(const std::vector<std::vector<int> >*)obj;
-
-        size_t szb = vv[i].size(), szi = ivv[i].size();
-        return szb == szi ? Size((int)szb, 1) : Size((int)(szb/CV_ELEM_SIZE(flags)), 1);
+        {
+            size_t outer = ops->outer_size(obj);
+            return outer == 0 ? Size() : Size((int)outer, 1);
+        }
+        CV_Assert( i < (int)ops->outer_size(obj) );
+        size_t inner = ops->inner_size(obj, i);
+        return Size((int)inner, 1);
     }
 
     if( k == STD_VECTOR_MAT )
@@ -644,10 +656,11 @@ int _InputArray::dims(int i) const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
         if( i < 0 )
             return 1;
-        CV_Assert( i < (int)vv.size() );
+        const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        CV_Assert( (size_t)i < ops->outer_size(obj) );
         return 2;
     }
 
@@ -856,8 +869,9 @@ bool _InputArray::empty() const
 
     if( k == STD_VECTOR )
     {
-        const std::vector<uchar>& v = *(const std::vector<uchar>*)obj;
-        return v.empty();
+        const detail::VectorOpsBase* ops = detail::get_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        return ops->size(obj) == 0;
     }
 
     if( k == STD_BOOL_VECTOR )
@@ -871,8 +885,9 @@ bool _InputArray::empty() const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        const std::vector<std::vector<uchar> >& vv = *(const std::vector<std::vector<uchar> >*)obj;
-        return vv.empty();
+        const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        return ops->outer_size(obj) == 0;
     }
 
     if( k == STD_VECTOR_MAT )
@@ -1372,103 +1387,33 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
-        std::vector<uchar>* v = (std::vector<uchar>*)obj;
-
-        if( k == STD_VECTOR_VECTOR )
-        {
-            std::vector<std::vector<uchar> >& vv = *(std::vector<std::vector<uchar> >*)obj;
-            if( i < 0 )
-            {
-                CV_Assert(!fixedSize() || len == vv.size());
-                vv.resize(len);
-                return;
-            }
-            CV_Assert( i < (int)vv.size() );
-            v = &vv[i];
-        }
-        else
-            CV_Assert( i < 0 );
-
         int type0 = CV_MAT_TYPE(flags);
         CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
 
-        int esz = CV_ELEM_SIZE(type0);
-        CV_Assert(!fixedSize() || len == ((std::vector<uchar>*)v)->size() / esz);
-        switch( esz )
+        if (k == STD_VECTOR)
         {
-        case 1:
-            ((std::vector<uchar>*)v)->resize(len);
-            break;
-        case 2:
-            ((std::vector<Vec2b>*)v)->resize(len);
-            break;
-        case 3:
-            ((std::vector<Vec3b>*)v)->resize(len);
-            break;
-        case 4:
-            ((std::vector<int>*)v)->resize(len);
-            break;
-        case 6:
-            ((std::vector<Vec3s>*)v)->resize(len);
-            break;
-        case 8:
-            ((std::vector<Vec2i>*)v)->resize(len);
-            break;
-        case 12:
-            ((std::vector<Vec3i>*)v)->resize(len);
-            break;
-        case 16:
-            ((std::vector<Vec4i>*)v)->resize(len);
-            break;
-        case 20:
-            ((std::vector<Vec<int, 5> >*)v)->resize(len);
-            break;
-        case 24:
-            ((std::vector<Vec6i>*)v)->resize(len);
-            break;
-        case 28:
-            ((std::vector<Vec<int, 7> >*)v)->resize(len);
-            break;
-        case 32:
-            ((std::vector<Vec8i>*)v)->resize(len);
-            break;
-        case 36:
-            ((std::vector<Vec<int, 9> >*)v)->resize(len);
-            break;
-        case 40:
-            ((std::vector<Vec<int, 10> >*)v)->resize(len);
-            break;
-        case 44:
-            ((std::vector<Vec<int, 11> >*)v)->resize(len);
-            break;
-        case 48:
-            ((std::vector<Vec<int, 12> >*)v)->resize(len);
-            break;
-        case 52:
-            ((std::vector<Vec<int, 13> >*)v)->resize(len);
-            break;
-        case 56:
-            ((std::vector<Vec<int, 14> >*)v)->resize(len);
-            break;
-        case 60:
-            ((std::vector<Vec<int, 15> >*)v)->resize(len);
-            break;
-        case 64:
-            ((std::vector<Vec<int, 16> >*)v)->resize(len);
-            break;
-        case 128:
-            ((std::vector<Vec<int, 32> >*)v)->resize(len);
-            break;
-        case 256:
-            ((std::vector<Vec<int, 64> >*)v)->resize(len);
-            break;
-        case 512:
-            ((std::vector<Vec<int, 128> >*)v)->resize(len);
-            break;
-        default:
-            CV_Error_(cv::Error::StsBadArg, ("Vectors with element size %d are not supported. Please, modify OutputArray::create()\n", esz));
+            CV_Assert( i < 0 );
+            const detail::VectorOpsBase* ops = detail::get_vector_ops(obj);
+            CV_Assert(ops != nullptr);
+            CV_Assert(!fixedSize() || len == ops->size(obj));
+            ops->resize(obj, len);
+            return;
         }
-        return;
+        else // STD_VECTOR_VECTOR
+        {
+            const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+            CV_Assert(ops != nullptr);
+            if( i < 0 )
+            {
+                CV_Assert(!fixedSize() || len == ops->outer_size(obj));
+                ops->outer_resize(obj, len);
+                return;
+            }
+            CV_Assert( (size_t)i < ops->outer_size(obj) );
+            CV_Assert(!fixedSize() || len == ops->inner_size(obj, i));
+            ops->inner_resize(obj, i, len);
+            return;
+        }
     }
 
     if( k == NONE )
@@ -1727,7 +1672,9 @@ void _OutputArray::release() const
 
     if( k == STD_VECTOR_VECTOR )
     {
-        ((std::vector<std::vector<uchar> >*)obj)->clear();
+        const detail::VectorVectorOpsBase* ops = detail::get_vector_vector_ops(obj);
+        CV_Assert(ops != nullptr);
+        ops->outer_resize(obj, 0);
         return;
     }
 
