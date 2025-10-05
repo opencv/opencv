@@ -1387,12 +1387,12 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
     {
         CV_Assert( d == 2 && (sizes[0] == 1 || sizes[1] == 1 || sizes[0]*sizes[1] == 0) );
         size_t len = sizes[0]*sizes[1] > 0 ? sizes[0] + sizes[1] - 1 : 0;
-        int type0 = CV_MAT_TYPE(flags);
-        CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
 
         if (k == STD_VECTOR)
         {
             CV_Assert( i < 0 );
+            int type0 = CV_MAT_TYPE(flags);
+            CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
             const detail::VectorOpsBase* ops = detail::get_vector_ops(obj);
             CV_Assert(ops != nullptr);
             CV_Assert(!fixedSize() || len == ops->size(obj));
@@ -1409,7 +1409,9 @@ void _OutputArray::create(int d, const int* sizes, int mtype, int i,
                 ops->outer_resize(obj, len);
                 return;
             }
+            int type0 = CV_MAT_TYPE(flags);
             CV_Assert( (size_t)i < ops->outer_size(obj) );
+            CV_Assert( mtype == type0 || (CV_MAT_CN(mtype) == CV_MAT_CN(type0) && ((1 << type0) & fixedDepthMask) != 0) );
             CV_Assert(!fixedSize() || len == ops->inner_size(obj, i));
             ops->inner_resize(obj, i, len);
             return;
