@@ -148,12 +148,14 @@ int main(int argc, char *argv[])
     Mesh mesh;                 // instantiate Mesh object
     mesh.load(ply_read_path);  // load an object mesh
 
+    //! [features]
     RobustMatcher rmatcher;                                                     // instantiate RobustMatcher
 
     Ptr<FeatureDetector> detector, descriptor;
     createFeatures(featureName, numKeyPoints, detector, descriptor);
     rmatcher.setFeatureDetector(detector);                                      // set feature detector
     rmatcher.setDescriptorExtractor(descriptor);                                // set descriptor extractor
+    //! [features]
     rmatcher.setDescriptorMatcher(createMatcher(featureName, useFLANN));        // set matcher
     rmatcher.setRatio(ratioTest); // set ratio test parameter
     if (!model.get_trainingImagePath().empty())
@@ -162,6 +164,7 @@ int main(int argc, char *argv[])
         rmatcher.setTrainingImage(trainingImg);
     }
 
+    //! [Kalman_init_call]
     KalmanFilter KF;             // instantiate Kalman Filter
     int nStates = 18;            // the number of states
     int nMeasurements = 6;       // the number of measured states
@@ -169,6 +172,8 @@ int main(int argc, char *argv[])
     double dt = 0.125;           // time between measurements (1/FPS)
 
     initKalmanFilter(KF, nStates, nMeasurements, nInputs, dt);    // init function
+    //! [Kalman_init_call]
+
     Mat measurements(nMeasurements, 1, CV_64FC1); measurements.setTo(Scalar(0));
     bool good_measurement = false;
 
@@ -209,6 +214,7 @@ int main(int argc, char *argv[])
         frame_vis = frame.clone();    // refresh visualisation frame
 
         // -- Step 1: Robust matching between model descriptors and scene descriptors
+        //! [robust_match_call]
         vector<DMatch> good_matches;       // to obtain the 3D points of the model
         vector<KeyPoint> keypoints_scene;  // to obtain the 2D points of the scene
 
@@ -220,6 +226,7 @@ int main(int argc, char *argv[])
         {
             rmatcher.robustMatch(frame, good_matches, keypoints_scene, descriptors_model, keypoints_model);
         }
+        //! [robust_match_call]
 
         frame_matching = rmatcher.getImageMatching();
         if (!frame_matching.empty())
@@ -228,6 +235,7 @@ int main(int argc, char *argv[])
         }
 
         // -- Step 2: Find out the 2D/3D correspondences
+        //! [correspondences]
         vector<Point3f> list_points3d_model_match; // container for the model 3D coordinates found in the scene
         vector<Point2f> list_points2d_scene_match; // container for the model 2D coordinates found in the scene
 
@@ -238,6 +246,7 @@ int main(int argc, char *argv[])
             list_points3d_model_match.push_back(point3d_model);         // add 3D point
             list_points2d_scene_match.push_back(point2d_scene);         // add 2D point
         }
+        //! [correspondences]
 
         // Draw outliers
         draw2DPoints(frame_vis, list_points2d_scene_match, red);
@@ -268,6 +277,7 @@ int main(int argc, char *argv[])
 
             // -- Step 5: Kalman Filter
 
+            //! [step_5]
             // GOOD MEASUREMENT
             if( inliers_idx.rows >= minInliersKalman )
             {
@@ -287,12 +297,14 @@ int main(int argc, char *argv[])
             Mat rotation_estimated(3, 3, CV_64FC1);
             updateKalmanFilter( KF, measurements,
                                 translation_estimated, rotation_estimated);
+            //! [step_5]
 
             // -- Step 6: Set estimated projection matrix
             pnp_detection_est.set_P_matrix(rotation_estimated, translation_estimated);
         }
 
         // -- Step X: Draw pose and coordinate frame
+        //! [step_x]
         float l = 5;
         vector<Point2f> pose_points2d;
         if (!good_measurement || displayFilteredPose)
@@ -315,6 +327,7 @@ int main(int argc, char *argv[])
             pose_points2d.push_back(pnp_detection.backproject3DPoint(Point3f(0,0,l)));  // axis z
             draw3DCoordinateAxes(frame_vis, pose_points2d);           // draw axes
         }
+        //! [step_x]
 
         // FRAME RATE
         // see how much time has elapsed
@@ -389,6 +402,7 @@ void help()
 }
 
 /**********************************************************************************************************/
+//! [Kalman_init]
 void initKalmanFilter(KalmanFilter &KF, int nStates, int nMeasurements, int nInputs, double dt)
 {
     KF.init(nStates, nMeasurements, nInputs, CV_64F);                 // init Kalman Filter
@@ -457,8 +471,10 @@ void initKalmanFilter(KalmanFilter &KF, int nStates, int nMeasurements, int nInp
     KF.measurementMatrix.at<double>(4,10) = 1; // pitch
     KF.measurementMatrix.at<double>(5,11) = 1; // yaw
 }
+//! [Kalman_init]
 
 /**********************************************************************************************************/
+//! [Kalman_update]
 void updateKalmanFilter( KalmanFilter &KF, Mat &measurement,
                          Mat &translation_estimated, Mat &rotation_estimated )
 {
@@ -482,8 +498,10 @@ void updateKalmanFilter( KalmanFilter &KF, Mat &measurement,
     // Convert estimated quaternion to rotation matrix
     rotation_estimated = euler2rot(eulers_estimated);
 }
+//! [Kalman_update]
 
 /**********************************************************************************************************/
+//! [fill_measure]
 void fillMeasurements( Mat &measurements,
                        const Mat &translation_measured, const Mat &rotation_measured)
 {
@@ -499,3 +517,4 @@ void fillMeasurements( Mat &measurements,
     measurements.at<double>(4) = measured_eulers.at<double>(1);      // pitch
     measurements.at<double>(5) = measured_eulers.at<double>(2);      // yaw
 }
+//! [fill_measure]

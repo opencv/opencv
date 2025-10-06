@@ -59,7 +59,8 @@ void Model::save(const std::string &path)
     storage.release();
 }
 
-/** Load a YAML file using OpenCv functions **/
+/** Load a YAML file using OpenCV functions **/
+//! [model_load]
 void Model::load(const std::string &path)
 {
     cv::Mat points3d_mat;
@@ -80,3 +81,4 @@ void Model::load(const std::string &path)
 
     storage.release();
 }
+//! [model_load]

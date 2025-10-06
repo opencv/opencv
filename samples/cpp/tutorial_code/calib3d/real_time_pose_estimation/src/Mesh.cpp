@@ -59,6 +59,7 @@ Mesh::~Mesh()
 }
 
 /** Load a CSV with *.ply format **/
+//! [mesh_load]
 void Mesh::load(const std::string& path)
 {
     cv::loadMesh(path, list_vertex_, list_triangles_);
@@ -66,3 +67,4 @@ void Mesh::load(const std::string& path)
     num_vertices_ = (int)list_vertex_.size();
     num_triangles_ = (int)list_triangles_.size();
 }
+//! [mesh_load]
