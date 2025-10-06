@@ -45,6 +45,7 @@
 namespace cv {
 
 int validateToInt(size_t step);
+int64_t validateToInt64(size_t step);
 
 template <typename _Tp> static inline
 size_t safeCastToSizeT(const _Tp v_origin, const char* msg)
