@@ -211,7 +211,7 @@ class PatternMaker:
                         for y_ in range(len(img_mark)):
                             if (img_mark[y_][x_] != 0):
                                 square = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_)*side, width=side,
-                                             height=side, fill="white", stroke="white", stroke_width = spacing*0.01)
+                                             height=side, fill="white", stroke="none")
                                 self.g.append(square)
 
     def save(self):
