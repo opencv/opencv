@@ -44,4 +44,3 @@ const VectorVectorOpsBase* get_vector_vector_ops(const void* key) {
 }
 
 }} // namespace cv::detail
-
