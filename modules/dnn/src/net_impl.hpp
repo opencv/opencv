@@ -100,12 +100,18 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream* dump_strm;
     int dump_indent;
 
+    std::vector<Ptr<BackendWrapper>> gpuTensors;
+    std::vector<Ptr<BackendWrapper>> gpuBuffers;
+
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
     virtual void setPreferableTarget(int targetId);
 
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
+
+    Ptr<BackendWrapper>& argWrapper(Arg arg);
+    void ensureBufferWrapper(int bufidx);
 
 
     virtual void clear();

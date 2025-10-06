@@ -159,6 +159,7 @@ struct BufferAllocator
         netimpl->buffers.resize(nbufs);
         for (int i = 0; i < nbufs; i++)
             netimpl->buffers[i] = Mat();
+        netimpl->gpuBuffers.resize(nbufs);
     }
 
     void assign(const Ptr<Graph>& graph)

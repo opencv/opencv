@@ -109,6 +109,38 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
     return wrapper;
 }
 
+Ptr<BackendWrapper>& Net::Impl::argWrapper(Arg arg)
+{
+    const ArgData& adata = args.at(arg.idx);
+    if (adata.kind == DNN_ARG_TEMP)
+    {
+        int bufidx = bufidxs.at(arg.idx);
+        CV_Assert(bufidx >= 0);
+        ensureBufferWrapper(bufidx);
+        return gpuBuffers.at((size_t)bufidx);
+    }
+    if (gpuTensors.size() < args.size())
+        gpuTensors.resize(args.size());
+    if (!gpuTensors[arg.idx])
+    {
+        Mat& host = argTensor(arg);
+        gpuTensors[arg.idx] = wrap(host);
+    }
+    return gpuTensors[arg.idx];
+}
+
+void Net::Impl::ensureBufferWrapper(int bufidx)
+{
+    if (bufidx < 0)
+        return;
+    if ((size_t)bufidx >= gpuBuffers.size())
+        gpuBuffers.resize((size_t)bufidx + 1);
+    if (!gpuBuffers[(size_t)bufidx])
+    {
+        Mat& host = buffers.at((size_t)bufidx);
+        gpuBuffers[(size_t)bufidx] = wrap(host);
+    }
+}
 
 void Net::Impl::initBackend(const std::vector<LayerPin>& blobsToKeep_)
 {
