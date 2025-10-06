@@ -599,6 +599,7 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         Mat& buf = buffers.at(bufidx);
         buf.fit(mshape, mtype); // minimize reallocations
         m.copyTo(buf);
+        ensureBufferWrapper(bufidx);
     } else {
         CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
                                      graph->name().data(), adata.name.c_str(),
@@ -729,15 +730,19 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                                 (!m.u || m.u->size == outOrigData[i].second));
                 } else if (!buf.u || m.u->size > buf.u->size) {
                     buf = m;
+                    ensureBufferWrapper(bufidx);
                 } else {
                     // this branch means that the layer still calls
                     // 'create()' rather than 'fit()'; that needs to be fixed, but
                     // we provide workaround here at the expense of extra copy.
                     buf.fit(m.shape(), m.type());
                     m.copyTo(buf);
+                    ensureBufferWrapper(bufidx);
                 }
             } else {
                 __tensors__.at(out.idx) = m;
+                if (gpuTensors.size() < args.size()) gpuTensors.resize(args.size());
+                gpuTensors[out.idx] = wrap(__tensors__.at(out.idx));
             }
         }
 
@@ -765,6 +770,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         } else {
             outputsVec[i] = outm;
         }
+        (void)argWrapper(out);
     }
 }
 
