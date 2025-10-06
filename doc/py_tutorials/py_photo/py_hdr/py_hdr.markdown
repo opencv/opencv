@@ -93,7 +93,6 @@ The function `cv.createTonemap()` used in the HDR tutorial applies gamma correct
 To get results similar to the tutorial images, please set the gamma explicitly when creating the tonemap object:
 
 ```cpp
-cv::Ptr<cv::Tonemap> tonemap = cv::createTonemap(2.2f);
 
 @code{.py}
 # Tonemap HDR image
