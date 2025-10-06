@@ -19,94 +19,94 @@
 namespace cv {
 namespace aruco {
 
+struct FractalMarker::FractalMarkerImpl {
+    int id;
+    std::vector<cv::KeyPoint> keypts;
+    cv::Mat _M;
+    cv::Mat _mask;
+    std::vector<int> _submarkers;
 
-// FractalMarker constructor
-FractalMarker::FractalMarker(int markerId, cv::Mat m, std::vector<cv::Point3f> corners, std::vector<int> id_submarkers) {
-    this->id = markerId;
-    this->_M = m;
-    for (auto pt : corners)
-        keypts.push_back(cv::KeyPoint(pt.x, pt.y, -1, -1, -1, -1, 0));
-    _submarkers = id_submarkers;
-    _mask = cv::Mat::ones(m.size(), CV_8UC1);
-}
+    int nBits() const { return _M.total(); }
+    cv::Mat mat() const { return _M; }
+    cv::Mat mask() const { return _mask; }
+    std::vector<int> subMarkers() const { return _submarkers; }
+    void addSubFractalMarker(const FractalMarker& submarker) { 
+        int nBitsSqrt = sqrt(nBits());
+        float bitSize = getMarkerSize() / (nBitsSqrt + 2.0f);
+        float nsubBits = submarker.fractalMarkerImpl->getMarkerSize() / bitSize;
 
-FractalMarker::FractalMarker() 
-    : id(-1), keypts(), _M(), _mask(), _submarkers() {}
+        int x_min = int(round(submarker.fractalMarkerImpl->keypts[0].pt.x / bitSize + nBitsSqrt / 2));
+        int x_max = x_min + nsubBits;
+        int y_min = int(round(-submarker.fractalMarkerImpl->keypts[0].pt.y / bitSize + nBitsSqrt / 2));
+        int y_max = y_min + nsubBits;
 
-// FractalMarker methods
-int FractalMarker::nBits() {
-    return _M.total();
-}
-
-cv::Mat FractalMarker::mat() {
-    return _M;
-}
-
-cv::Mat FractalMarker::mask() {
-    return _mask;
-}
-
-std::vector<int> FractalMarker::subMarkers() {
-    return _submarkers;
-}
-
-float FractalMarker::getMarkerSize() const {
-    return static_cast<float>(cv::norm(keypts[0].pt - keypts[1].pt));
-}
-
-std::vector<cv::KeyPoint> FractalMarker::getKeypts() {
-    if (keypts.size() > 4) return keypts;
-
-    int nBitsSquared = int(sqrt(mat().total()));
-    float bitSize = getMarkerSize() / (nBitsSquared + 2);
-
-    // Set submarker pixels (=1) and add border
-    cv::Mat marker;
-    mat().copyTo(marker);
-    marker += -1 * (mask() - 1);
-    cv::Mat markerBorder;
-    copyMakeBorder(marker, markerBorder, 1, 1, 1, 1, cv::BORDER_CONSTANT, 0);
-
-    // Get inner corners
-    for (int y = 0; y < markerBorder.rows - 1; y++) {
-        for (int x = 0; x < markerBorder.cols - 1; x++) {
-            int sum = markerBorder.at<uchar>(y, x) + markerBorder.at<uchar>(y, x + 1) +
-                      markerBorder.at<uchar>(y + 1, x) + markerBorder.at<uchar>(y + 1, x + 1);
-
-            if (sum == 1)
-                keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 1));
-            else if (sum == 3)
-                keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 0));
-            else if (sum == 2) {
-                if ((markerBorder.at<uchar>(y, x) == markerBorder.at<uchar>(y + 1, x + 1)) &&
-                    (markerBorder.at<uchar>(y, x + 1) == markerBorder.at<uchar>(y + 1, x)))
-                    keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 2));
+        for (int y = y_min; y < y_max; y++) {
+            for (int x = x_min; x < x_max; x++) {
+                _mask.at<uchar>(y, x) = 0;
             }
         }
     }
+    float getMarkerSize() const { return static_cast<float>(cv::norm(keypts[0].pt - keypts[1].pt)); }
+    std::vector<cv::KeyPoint> getKeypts() { 
+        if (keypts.size() > 4) return keypts;
 
-    return keypts;
-}
+        int nBitsSquared = int(sqrt(mat().total()));
+        float bitSize = getMarkerSize() / (nBitsSquared + 2);
 
-void FractalMarker::addSubFractalMarker(FractalMarker submarker) {
-    int nBitsSqrt = sqrt(nBits());
-    float bitSize = getMarkerSize() / (nBitsSqrt + 2.0f);
-    float nsubBits = submarker.getMarkerSize() / bitSize;
+        // Set submarker pixels (=1) and add border
+        cv::Mat marker;
+        mat().copyTo(marker);
+        marker += -1 * (mask() - 1);
+        cv::Mat markerBorder;
+        copyMakeBorder(marker, markerBorder, 1, 1, 1, 1, cv::BORDER_CONSTANT, 0);
 
-    int x_min = int(round(submarker.keypts[0].pt.x / bitSize + nBitsSqrt / 2));
-    int x_max = x_min + nsubBits;
-    int y_min = int(round(-submarker.keypts[0].pt.y / bitSize + nBitsSqrt / 2));
-    int y_max = y_min + nsubBits;
+        // Get inner corners
+        for (int y = 0; y < markerBorder.rows - 1; y++) {
+            for (int x = 0; x < markerBorder.cols - 1; x++) {
+                int sum = markerBorder.at<uchar>(y, x) + markerBorder.at<uchar>(y, x + 1) +
+                          markerBorder.at<uchar>(y + 1, x) + markerBorder.at<uchar>(y + 1, x + 1);
 
-    for (int y = y_min; y < y_max; y++) {
-        for (int x = x_min; x < x_max; x++) {
-            _mask.at<uchar>(y, x) = 0;
+                if (sum == 1)
+                    keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 1));
+                else if (sum == 3)
+                    keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 0));
+                else if (sum == 2) {
+                    if ((markerBorder.at<uchar>(y, x) == markerBorder.at<uchar>(y + 1, x + 1)) &&
+                        (markerBorder.at<uchar>(y, x + 1) == markerBorder.at<uchar>(y + 1, x)))
+                        keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 2));
+                }
+            }
         }
+
+        return keypts;
     }
+    int getId() const { return id; }
+};
+
+// FractalMarker constructor
+FractalMarker::FractalMarker(int markerId, cv::InputArray m, const std::vector<cv::Point3f>& corners, const std::vector<int>& id_submarkers)
+    : fractalMarkerImpl(new FractalMarkerImpl)
+{
+    fractalMarkerImpl->id = markerId;
+    fractalMarkerImpl->_M = m.getMat();
+    for (auto pt : corners)
+        fractalMarkerImpl->keypts.push_back(cv::KeyPoint(pt.x, pt.y, -1, -1, -1, -1, 0));
+    fractalMarkerImpl->_submarkers = id_submarkers;
+    fractalMarkerImpl->_mask = cv::Mat::ones(m.size(), CV_8UC1);
 }
 
-void FractalMarker::draw(cv::Mat &in, const cv::Scalar color) const {
-    float flineWidth = std::max(1.f, std::min(5.f, float(in.cols) / 500.f));
+FractalMarker::FractalMarker()
+    : fractalMarkerImpl(new FractalMarkerImpl)
+{
+    fractalMarkerImpl->id = -1;
+    fractalMarkerImpl->_M = cv::Mat();
+    fractalMarkerImpl->_mask = cv::Mat::ones(1, 1, CV_8UC1);
+    fractalMarkerImpl->_submarkers = std::vector<int>();
+    fractalMarkerImpl->keypts = std::vector<cv::KeyPoint>();
+}
+
+void FractalMarker::draw(cv::InputOutputArray in, const cv::Scalar color) {
+    float flineWidth = std::max(1.f, std::min(5.f, float(in.cols()) / 500.f));
     int lineWidth = round(flineWidth);
     for (int i = 0; i < 4; i++)
         cv::line(in, (*this)[i], (*this)[(i + 1) % 4], color, lineWidth);
@@ -117,13 +117,16 @@ void FractalMarker::draw(cv::Mat &in, const cv::Scalar color) const {
     cv::rectangle(in, (*this)[2] - p2, (*this)[2] + p2, cv::Scalar(255, 0, 0, 255), lineWidth);
 }
 
-// FractalMarkerSet constructor
-FractalMarkerSet::FractalMarkerSet() : mInfoType(-1), idExternal(-1) {}
-
-FractalMarkerSet::FractalMarkerSet(std::string str)
-{
+struct FractalMarkerSet {
+    std::map<int, FractalMarker> fractalMarkerCollection;
+    std::map<int, std::vector<int>> bits_ids;
+    int mInfoType = 0;
+    int idExternal = -1;
+    
+    FractalMarkerSet() : mInfoType(-1), idExternal(-1) {}
+    FractalMarkerSet(const std::string& config){
     std::stringstream stream;
-    if (str=="FRACTAL_2L_6")
+    if (config=="FRACTAL_2L_6")
     {
         unsigned char _conf_2L_6[] = {
             0x02, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -153,7 +156,7 @@ FractalMarkerSet::FractalMarkerSet(std::string str)
         unsigned int _conf_2L_6_len = 272;
         stream.write((char*) _conf_2L_6, sizeof(unsigned char)*_conf_2L_6_len);
     }
-    else if (str=="FRACTAL_3L_6")
+    else if (config=="FRACTAL_3L_6")
     {
         unsigned char _conf_3L_6[] = {
             0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -200,7 +203,7 @@ FractalMarkerSet::FractalMarkerSet(std::string str)
         unsigned int _conf_3L_6_len = 480;
         stream.write((char*) _conf_3L_6, sizeof(unsigned char)*_conf_3L_6_len);
     }
-    else if (str=="FRACTAL_4L_6")
+    else if (config=="FRACTAL_4L_6")
     {
         unsigned char _conf_4L_6[] = {
             0x02, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -267,7 +270,7 @@ FractalMarkerSet::FractalMarkerSet(std::string str)
         unsigned int _conf_4L_6_len = 713;
         stream.write((char*) _conf_4L_6, sizeof(unsigned char)*_conf_4L_6_len);
     }
-    else if (str=="FRACTAL_5L_6")
+    else if (config=="FRACTAL_5L_6")
     {
         unsigned char _conf_5L_6[] = {
             0x02, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -350,7 +353,7 @@ FractalMarkerSet::FractalMarkerSet(std::string str)
         stream.write((char*) _conf_5L_6, sizeof(unsigned char)*_conf_5L_6_len);
     }
     else
-        {CV_Error(cv::Error::StsBadArg, "Configuration not valid: " + str + ". Use: FRACTAL_2L_6, FRACTAL_3L_6, FRACTAL_4L_6 or FRACTAL_5L_6.");}
+        {CV_Error(cv::Error::StsBadArg, "Configuration not valid: " + config + ". Use: FRACTAL_2L_6, FRACTAL_3L_6, FRACTAL_4L_6 or FRACTAL_5L_6.");}
     stream.read((char*)&mInfoType,sizeof(mInfoType));
     /*Number of markers*/
     int _nmarkers;
@@ -390,70 +393,91 @@ FractalMarkerSet::FractalMarkerSet(std::string str)
     for(auto &id_marker:fractalMarkerCollection)
     {
         FractalMarker &marker = id_marker.second;
-        for(auto id:id_marker.second.subMarkers())
-            marker.addSubFractalMarker(fractalMarkerCollection[id]);
+        for(auto id:id_marker.second.fractalMarkerImpl->subMarkers())
+            marker.fractalMarkerImpl->addSubFractalMarker(fractalMarkerCollection[id]);
 
         //Init marker kpts
-        marker.getKeypts();
+        marker.fractalMarkerImpl->getKeypts();
 
-        bits_ids[marker.nBits()].push_back(marker.id);
+        bits_ids[marker.fractalMarkerImpl->nBits()].push_back(marker.fractalMarkerImpl->id);
     }
-}
+    }
 
-void FractalMarkerSet::convertToMeters(float size) {
-    CV_Assert(mInfoType == 0 || mInfoType == 2);
+    void convertToMeters(float size){
+            CV_Assert(mInfoType == 0 || mInfoType == 2);
 
     mInfoType = 1;
 
     // Calculate pixel size in meters and rescale markers
-    float pixSizeM = size / float(fractalMarkerCollection[idExternal].getMarkerSize());
-    for (auto& [id, marker] : fractalMarkerCollection) {
-        for (auto& kpt : marker.keypts) {
-            kpt.pt *= pixSizeM;
+    float pixSizeM = size / float(fractalMarkerCollection[idExternal].fractalMarkerImpl->getMarkerSize());
+        for (auto& [id, marker] : fractalMarkerCollection) {
+           for (auto& kpt : marker.fractalMarkerImpl->keypts) {
+                kpt.pt *= pixSizeM;
+            }
         }
     }
-}
 
-void FractalMarkerDetector::setParams(const std::string& fractal_config, int minInternalDistSq_, float markerSize) {
-    fractalMarkerSet = FractalMarkerSet(fractal_config);
+
+};
+
+struct FractalDetector::FractalDetectorImpl {
+    FractalMarkerSet fractalMarkerSet;
+    int minInternalDistSq;
+
+    static std::vector<cv::Point2f> sort(const std::vector<cv::Point2f>& marker);
+    static float getSubpixelValue(const cv::Mat& im_grey, const cv::Point2f& p);
+    static int getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet);
+    static int perimeter(const std::vector<cv::Point2f>& a);
+    void kfilter(std::vector<cv::KeyPoint>& kpoints);
+    void assignClass(const cv::Mat& im, std::vector<cv::KeyPoint>& kpoints, float sizeNorm = 0.f, int wsize = 5);
+
+};
+
+FractalDetector::FractalDetector()
+    : fractalDetectorImpl(new FractalDetectorImpl)
+{}
+
+void FractalDetector::setParams(const std::string& fractal_config, int minInternalDistSq_, float markerSize) {
+    fractalDetectorImpl->fractalMarkerSet = FractalMarkerSet(fractal_config);
     if (markerSize != -1) {
-        fractalMarkerSet.convertToMeters(markerSize);
+        fractalDetectorImpl->fractalMarkerSet.convertToMeters(markerSize);
     }
-    minInternalDistSq = minInternalDistSq_;
+    fractalDetectorImpl->minInternalDistSq = minInternalDistSq_;
 }
 
-std::vector<FractalMarker>  FractalMarkerDetector::detect(const cv::Mat &img){
+bool FractalDetector::detect(cv::InputArray img,
+                                   std::vector<FractalMarker>& markers,
+                                   cv::OutputArray p3d,
+                                   cv::OutputArray p2d)
+{
+    markers.clear();
+    cv::Mat bwimage, thresImage;
 
-    cv::Mat bwimage,thresImage;
+    // Convert to grayscale if needed
+    if (img.channels() == 3)
+        cv::cvtColor(img, bwimage, cv::COLOR_BGR2GRAY);
+    else
+        bwimage = img.getMat();
 
     std::vector<std::pair<int, std::vector<cv::Point2f>>> candidates;
 
-    std::vector<FractalMarker> DetectedFractalMarkers;
-
-    //first, convert to bw
-    if(img.channels()==3)
-        cv::cvtColor(img,bwimage,cv::COLOR_BGR2GRAY);
-    else bwimage=img;
-
-
     ///////////////////////////////////////////////////
     // Adaptive Threshold to detect border
-    int adaptiveWindowSize=std::max(int(3),int(15*float(bwimage.cols)/1920.));
-    if( adaptiveWindowSize%2==0) adaptiveWindowSize++;
-    cv::adaptiveThreshold(bwimage, thresImage, 255.,cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, adaptiveWindowSize, 7);
+    int adaptiveWindowSize = std::max(int(3), int(15 * float(bwimage.cols) / 1920.));
+    if (adaptiveWindowSize % 2 == 0) adaptiveWindowSize++;
+    cv::adaptiveThreshold(bwimage, thresImage, 255., cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY_INV, adaptiveWindowSize, 7);
 
     ///////////////////////////////////////////////////
     // compute marker candidates by detecting contours
-    //if image is eroded, minSize must be adapted
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Point> approxCurve;
     cv::findContours(thresImage, contours, cv::noArray(), cv::RETR_LIST, cv::CHAIN_APPROX_NONE);
 
-    //analyze  it is a paralelepiped likely to be the marker
+    // analyze  it is a paralelepiped likely to be the marker
     for (unsigned int i = 0; i < contours.size(); i++)
     {
         // check it is a possible element by first checking that is is large enough
-        if (120 > int(contours[i].size())  ) continue;
+        if (120 > int(contours[i].size()))  continue;
         // can approximate to a convex rect?
         cv::approxPolyDP(contours[i], approxCurve, double(contours[i].size()) * 0.05, true);
 
@@ -461,227 +485,220 @@ std::vector<FractalMarker>  FractalMarkerDetector::detect(const cv::Mat &img){
         // add the points
         std::vector<cv::Point2f> markerCandidate;
         for (int j = 0; j < 4; j++)
-            markerCandidate.push_back( cv::Point2f( approxCurve[j].x,approxCurve[j].y));
+            markerCandidate.push_back(cv::Point2f(approxCurve[j].x, approxCurve[j].y));
 
-        //sort corner in clockwise direction
-        markerCandidate=sort(markerCandidate);
+        // sort corner in clockwise direction
+        markerCandidate = fractalDetectorImpl->sort(markerCandidate);
 
-        //extract the code
-        //obtain the intensities of the bits using homography
-
-        std::vector<cv::Point2f> in = {cv::Point2f(0,0), cv::Point2f(1,0), cv::Point2f(1,1), cv::Point2f(0,1)};
+        // extract the code
+        // obtain the intensities of the bits using homography
+        std::vector<cv::Point2f> in = { cv::Point2f(0,0), cv::Point2f(1,0), cv::Point2f(1,1), cv::Point2f(0,1) };
         cv::Mat H = cv::getPerspectiveTransform(in, markerCandidate);
 
-        for(auto b_vm:fractalMarkerSet.bits_ids)
+        for (auto b_vm : fractalDetectorImpl->fractalMarkerSet.bits_ids)
         {
-            int nbitsWithBorder = sqrt(b_vm.first)+2;
-            cv::Mat bits(nbitsWithBorder,nbitsWithBorder,CV_8UC1);
-            int pixelSum=0;
+            int nbitsWithBorder = sqrt(b_vm.first) + 2;
+            cv::Mat bits(nbitsWithBorder, nbitsWithBorder, CV_8UC1);
+            int pixelSum = 0;
 
-            for(int r=0;r<bits.rows;r++){
-                for(int c=0;c<bits.cols;c++){
-                    float x = float(c+0.5f) / float(bits.cols);
-                    float y = float(r+0.5f) / float(bits.rows);
+            for (int r = 0; r < bits.rows; r++) {
+                for (int c = 0; c < bits.cols; c++) {
+                    float x = float(c + 0.5f) / float(bits.cols);
+                    float y = float(r + 0.5f) / float(bits.rows);
                     double* m = H.ptr<double>(0);
-                    double a = m[0]*x + m[1]*y + m[2];
-                    double b = m[3]*x + m[4]*y + m[5];
-                    double c_ = m[6]*x + m[7]*y + m[8];
-                    cv::Point2f mapped(a/c_, b/c_);
-                    auto pixelValue = uchar(0.5 + getSubpixelValue(bwimage, mapped));
-                    bits.at<uchar>(r,c) = pixelValue;
+                    double a = m[0] * x + m[1] * y + m[2];
+                    double b = m[3] * x + m[4] * y + m[5];
+                    double c_ = m[6] * x + m[7] * y + m[8];
+                    cv::Point2f mapped(a / c_, b / c_);
+                    auto pixelValue = uchar(0.5 + fractalDetectorImpl->getSubpixelValue(bwimage, mapped));
+                    bits.at<uchar>(r, c) = pixelValue;
                     pixelSum += pixelValue;
                 }
             }
 
-            //threshold by the average value
-            double mean=double(pixelSum)/double(bits.cols*bits.rows);
-            cv::threshold(bits,bits,mean,255,cv::THRESH_BINARY);
+            // threshold by the average value
+            double mean = double(pixelSum) / double(bits.cols * bits.rows);
+            cv::threshold(bits, bits, mean, 255, cv::THRESH_BINARY);
 
-            //now, analyze the inner code to see if is a marker.
-            //  If so, rotate to have the points properly sorted
-            int nrotations=0;
+            // now, analyze the inner code to see if is a marker.
+            // If so, rotate to have the points properly sorted
+            int nrotations = 0;
+            int id = fractalDetectorImpl->getMarkerId(bits, nrotations, b_vm.second, fractalDetectorImpl->fractalMarkerSet);
 
-            int id=getMarkerId(bits, nrotations, b_vm.second, fractalMarkerSet);
-
-            if(id==-1) continue;//not a marker
-            std::rotate(markerCandidate.begin(),markerCandidate.begin() + 4 - nrotations,markerCandidate.end());
-            candidates.push_back(std::make_pair(id,markerCandidate));
+            if (id == -1) continue; // not a marker
+            std::rotate(markerCandidate.begin(), markerCandidate.begin() + 4 - nrotations, markerCandidate.end());
+            candidates.push_back(std::make_pair(id, markerCandidate));
         }
     }
 
     ////////////////////////////////////////////
-    //remove duplicates
-    // sort by id and within same id set the largest first
-    std::sort(candidates.begin(), candidates.end(),[](const std::pair<int, std::vector<cv::Point2f>> &a,const std::pair<int, std::vector<cv::Point2f>> &b){
-        if( a.first<b.first) return true;
-        else if( a.first==b.first) return perimeter(a.second)>perimeter(b.second);
+    // remove duplicates
+    std::sort(candidates.begin(), candidates.end(), [this](const std::pair<int, std::vector<cv::Point2f>>& a, const std::pair<int, std::vector<cv::Point2f>>& b) {
+        if (a.first < b.first) return true;
+        else if (a.first == b.first) return fractalDetectorImpl->perimeter(a.second) > fractalDetectorImpl->perimeter(b.second);
         else return false;
     });
 
-     // Using std::unique remove duplicates
-       auto ip = std::unique(candidates.begin(), candidates.end(),[](const std::pair<int, std::vector<cv::Point2f>> &a,const std::pair<int, std::vector<cv::Point2f>> &b){return a.first==b.first;});
-       candidates.resize(std::distance(candidates.begin(), ip));
+    auto ip = std::unique(candidates.begin(), candidates.end(), [](const std::pair<int, std::vector<cv::Point2f>>& a, const std::pair<int, std::vector<cv::Point2f>>& b) {return a.first == b.first; });
+    candidates.resize(std::distance(candidates.begin(), ip));
 
-       if(candidates.size()>0){
-           ////////////////////////////////////////////
-           //finally subpixel corner refinement
-           int halfwsize= 4*float(bwimage.cols)/float(bwimage.cols) +0.5 ;
-           std::vector<cv::Point2f> Corners;
-           for (const auto &m:candidates)
-               Corners.insert(Corners.end(), m.second.begin(),m.second.end());
-           cv::cornerSubPix(bwimage, Corners, cv::Size(halfwsize,halfwsize), cv::Size(-1, -1),cv::TermCriteria( cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 12, 0.005));
-           // copy back to the markers
-           for (unsigned int i = 0; i < candidates.size(); i++)
-           {
-               DetectedFractalMarkers.push_back(fractalMarkerSet.fractalMarkerCollection[candidates[i].first]);
-               for (int c = 0; c < 4; c++) DetectedFractalMarkers[i].push_back(Corners[i * 4 + c]);
-           }
-       }
-
-    //Done
-    return DetectedFractalMarkers;
-}
-
-std::vector<FractalMarker> FractalMarkerDetector::detect(const cv::Mat &img, std::vector<cv::Point3f>& p3d,
-                                                  std::vector<cv::Point2f>& p2d)
-{
-    // Convert to grayscale if needed
-    cv::Mat bwimage;
-    if(img.channels()==3)
-        cv::cvtColor(img, bwimage, cv::COLOR_BGR2GRAY);
-    else 
-        bwimage = img;
-
-    // Fractal marker detection
-    std::vector<FractalMarker> detected = detect(bwimage);
-
-    if(detected.size() > 0) {
-        // Prepare points for homography
-        std::vector<cv::Point2f> imgpoints;
-        std::vector<cv::Point3f> objpoints;
-        for(auto marker : detected) {
-            for(auto p : marker)
-                imgpoints.push_back(p);
-
-            for(int c = 0; c < 4; c++) {
-                cv::KeyPoint kpt = fractalMarkerSet.fractalMarkerCollection[marker.id].getKeypts()[c];
-                objpoints.push_back(cv::Point3f(kpt.pt.x, kpt.pt.y, 0));
-            }
-        }
-
-        // FAST feature detection
-        std::vector<cv::KeyPoint> kpoints;
-        cv::Ptr<cv::FastFeatureDetector> fd = cv::FastFeatureDetector::create();
-        fd->detect(bwimage, kpoints);
-        
-        // Filter keypoints
-        kfilter(kpoints);
-        assignClass(bwimage, kpoints);
-
-        // Build FLANN index
-        cv::Mat kpointsMat(kpoints.size(), 2, CV_32F);
-        for (size_t i = 0; i < kpoints.size(); ++i)
+    if (candidates.size() > 0) {
+        ////////////////////////////////////////////
+        // finally subpixel corner refinement
+        int halfwsize = 4 * float(bwimage.cols) / float(bwimage.cols) + 0.5;
+        std::vector<cv::Point2f> Corners;
+        for (const auto& m : candidates)
+            Corners.insert(Corners.end(), m.second.begin(), m.second.end());
+        cv::cornerSubPix(bwimage, Corners, cv::Size(halfwsize, halfwsize), cv::Size(-1, -1), cv::TermCriteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 12, 0.005));
+        // copy back to the markers
+        for (unsigned int i = 0; i < candidates.size(); i++)
         {
-            kpointsMat.at<float>(i, 0) = kpoints[i].pt.x;
-            kpointsMat.at<float>(i, 1) = kpoints[i].pt.y;
-        }
-        cv::flann::Index Kdtree;
-        Kdtree.build(kpointsMat, cv::flann::KDTreeIndexParams(1), cvflann::FLANN_DIST_EUCLIDEAN);
-
-        // Compute homography
-        cv::Mat H = cv::findHomography(objpoints, imgpoints);
-
-        // Process each marker
-        std::vector<int> nearestIdxList;
-        std::vector<float> distsList;
-        for (auto &fm : fractalMarkerSet.fractalMarkerCollection) {
-            std::vector<cv::Point2f> imgPoints;
-            std::vector<cv::Point2f> objPoints;
-            std::vector<cv::KeyPoint> objKeyPoints = fm.second.getKeypts();
-        
-            for (auto kpt : objKeyPoints)
-                objPoints.push_back(cv::Point2f(kpt.pt.x, kpt.pt.y));
-        
-            cv::perspectiveTransform(objPoints, imgPoints, H);
-        
-            // We consider only markers whose internal points are separated by a specific distance.
-            bool consider = true;
-            for (size_t i = 0; i < imgPoints.size() - 1 && consider; i++)
-                for (size_t j = i + 1; j < imgPoints.size() && consider; j++)
-                    if (pow(imgPoints[i].x - imgPoints[j].x, 2) + pow(imgPoints[i].y - imgPoints[j].y, 2) < minInternalDistSq)
-                        consider = false;
-        
-            if (consider) {
-                for (size_t idx = 0; idx < imgPoints.size(); idx++) {
-                    if (imgPoints[idx].x > 0 && imgPoints[idx].x < img.cols &&
-                        imgPoints[idx].y > 0 && imgPoints[idx].y < img.rows) {
-                        std::vector<float> query = {imgPoints[idx].x, imgPoints[idx].y};
-                        std::vector<int> indices;
-                        std::vector<float> dists;
-                        
-                        Kdtree.radiusSearch(query, indices, dists, 400.0, 1, cv::flann::SearchParams());
-                        
-                        int nearestIdx = indices[0];
-
-                        float newDist = cv::norm(cv::Point2f(kpoints[nearestIdx].pt) - cv::Point2f(imgPoints[idx]));
-                        
-                        // This is my next step, adjusting the distance threshold
-                        // -to reach a good performance on different images
-                        if (kpoints[nearestIdx].class_id != objKeyPoints[idx].class_id||dists[0] > 320||dists[0] == 0) {
-                            continue;
-                        }
-                        if (nearestIdx != -1) {
-                            bool duplicateFound = false;
-                            for (size_t i = 0; i < nearestIdxList.size(); ++i) {
-                                if (nearestIdxList[i] == nearestIdx) {
-                                    duplicateFound = true;
-                                    float existingDist = distsList[i];
-                                    if (newDist < existingDist) {
-                                        p2d[i] = kpoints[nearestIdx].pt;
-                                        p3d[i] = cv::Point3f(objPoints[idx].x, objPoints[idx].y, 0);
-                                        distsList[i] = newDist; // update distsList
-                                    }
-                                    break;
-                                }
-                            }
-                        
-                            if (!duplicateFound) {
-                                nearestIdxList.push_back(nearestIdx);
-                                distsList.push_back(newDist);              
-
-                                p2d.push_back(kpoints[nearestIdx].pt);
-                                p3d.push_back(cv::Point3f(objPoints[idx].x, objPoints[idx].y, 0));
-                            }
-                        }
-                    }
-                }
-            } else {
-                // If a marker is detected and it is not possible to take all their corners,
-                // at least take the external one!
-                for (auto markerDetected : detected) {
-                    if (markerDetected.id == fm.first) {
-                        for (int c = 0; c < 4; c++) {
-                            cv::Point2f pt = markerDetected.keypts[c].pt;
-                            p3d.push_back(cv::Point3f(pt.x, pt.y, 0));
-                            p2d.push_back(markerDetected[c]);
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        // Subpixel refinement
-        if(p2d.size() > 0) {
-            cv::Size winSize(4, 4);
-            cv::Size zeroZone(-1, -1);
-            cv::TermCriteria criteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 12, 0.005);
-            cornerSubPix(bwimage, p2d, winSize, zeroZone, criteria);
+            markers.push_back(fractalDetectorImpl->fractalMarkerSet.fractalMarkerCollection[candidates[i].first]);
+            for (int c = 0; c < 4; c++) markers[i].push_back(Corners[i * 4 + c]);
         }
     }
-    return detected;
+
+    if (markers.empty()) {
+        return false;
+    }
+
+    // If p3d or p2d are not needed, just return detection
+    if (!p3d.needed() || !p2d.needed()) {
+        return true;
+    }
+
+    // Prepare points for homography
+    std::vector<cv::Point2f> imgpoints;
+    std::vector<cv::Point3f> objpoints;
+    for (auto& marker : markers) {
+        for (auto p : marker)
+            imgpoints.push_back(p);
+
+        for (int c = 0; c < 4; c++) {
+            cv::KeyPoint kpt = fractalDetectorImpl->fractalMarkerSet.fractalMarkerCollection[marker.fractalMarkerImpl->id].fractalMarkerImpl->getKeypts()[c];
+            objpoints.push_back(cv::Point3f(kpt.pt.x, kpt.pt.y, 0));
+        }
+    }
+
+    // FAST feature detection
+    std::vector<cv::KeyPoint> kpoints;
+    cv::Ptr<cv::FastFeatureDetector> fd = cv::FastFeatureDetector::create();
+    fd->detect(bwimage, kpoints);
+
+    // Filter keypoints
+    fractalDetectorImpl->kfilter(kpoints);
+    fractalDetectorImpl->assignClass(bwimage, kpoints);
+
+    // Build FLANN index
+    cv::Mat kpointsMat((int)kpoints.size(), 2, CV_32F);
+    for (size_t i = 0; i < kpoints.size(); ++i)
+    {
+        kpointsMat.at<float>((int)i, 0) = kpoints[i].pt.x;
+        kpointsMat.at<float>((int)i, 1) = kpoints[i].pt.y;
+    }
+    cv::flann::Index Kdtree;
+    Kdtree.build(kpointsMat, cv::flann::KDTreeIndexParams(1), cvflann::FLANN_DIST_EUCLIDEAN);
+
+    // Compute homography
+    cv::Mat H = cv::findHomography(objpoints, imgpoints);
+
+    std::vector<cv::Point2f> p2d_vec;
+    std::vector<cv::Point3f> p3d_vec;
+
+    // Process each marker
+    std::vector<int> nearestIdxList;
+    std::vector<float> distsList;
+    for (auto& fm : fractalDetectorImpl->fractalMarkerSet.fractalMarkerCollection) {
+        std::vector<cv::Point2f> imgPoints;
+        std::vector<cv::Point2f> objPoints;
+        std::vector<cv::KeyPoint> objKeyPoints = fm.second.fractalMarkerImpl->getKeypts();
+
+        for (auto kpt : objKeyPoints)
+            objPoints.push_back(cv::Point2f(kpt.pt.x, kpt.pt.y));
+
+        cv::perspectiveTransform(objPoints, imgPoints, H);
+
+        // We consider only markers whose internal points are separated by a specific distance.
+        bool consider = true;
+        for (size_t i = 0; i < imgPoints.size() - 1 && consider; i++)
+            for (size_t j = i + 1; j < imgPoints.size() && consider; j++)
+                if (pow(imgPoints[i].x - imgPoints[j].x, 2) + pow(imgPoints[i].y - imgPoints[j].y, 2) < fractalDetectorImpl->minInternalDistSq)
+                    consider = false;
+
+        if (consider) {
+            for (size_t idx = 0; idx < imgPoints.size(); idx++) {
+                if (imgPoints[idx].x > 0 && imgPoints[idx].x < img.cols() &&
+                    imgPoints[idx].y > 0 && imgPoints[idx].y < img.rows()) {
+                    std::vector<float> query = { imgPoints[idx].x, imgPoints[idx].y };
+                    std::vector<int> indices;
+                    std::vector<float> dists;
+
+                    Kdtree.radiusSearch(query, indices, dists, 400.0, 1, cv::flann::SearchParams());
+
+                    if (indices.empty()) continue;
+                    int nearestIdx = indices[0];
+
+                    float newDist = cv::norm(cv::Point2f(kpoints[nearestIdx].pt) - cv::Point2f(imgPoints[idx]));
+
+                    if (kpoints[nearestIdx].class_id != objKeyPoints[idx].class_id || dists[0] > 320 || dists[0] == 0) {
+                        continue;
+                    }
+                    if (nearestIdx != -1) {
+                        bool duplicateFound = false;
+                        for (size_t i = 0; i < nearestIdxList.size(); ++i) {
+                            if (nearestIdxList[i] == nearestIdx) {
+                                duplicateFound = true;
+                                float existingDist = distsList[i];
+                                if (newDist < existingDist) {
+                                    p2d_vec[i] = kpoints[nearestIdx].pt;
+                                    p3d_vec[i] = cv::Point3f(objPoints[idx].x, objPoints[idx].y, 0);
+                                    distsList[i] = newDist; // update distsList
+                                }
+                                break;
+                            }
+                        }
+
+                        if (!duplicateFound) {
+                            nearestIdxList.push_back(nearestIdx);
+                            distsList.push_back(newDist);
+
+                            p2d_vec.push_back(kpoints[nearestIdx].pt);
+                            p3d_vec.push_back(cv::Point3f(objPoints[idx].x, objPoints[idx].y, 0));
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // If a marker is detected and it is not possible to take all their corners,
+            // at least take the external one!
+            for (auto markerDetected : markers) {
+                if (markerDetected.fractalMarkerImpl->id == fm.first) {
+                    for (int c = 0; c < 4; c++) {
+                        cv::Point2f pt = markerDetected.fractalMarkerImpl->keypts[c].pt;
+                        p3d_vec.push_back(cv::Point3f(pt.x, pt.y, 0));
+                        p2d_vec.push_back(markerDetected[c]);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Subpixel refinement
+    if (!p2d_vec.empty()) {
+        
+        cv::Size winSize(4, 4);
+        cv::Size zeroZone(-1, -1);
+        cv::TermCriteria criteria(cv::TermCriteria::MAX_ITER | cv::TermCriteria::EPS, 12, 0.005);
+        cornerSubPix(bwimage, p2d_vec, winSize, zeroZone, criteria);
+        cv::Mat(p2d_vec).copyTo(p2d);
+        cv::Mat(p3d_vec).copyTo(p3d);
+    }
+    return true;
 }
 
-std::vector<cv::Point2f> FractalMarkerDetector::sort(const std::vector<cv::Point2f>& marker) {
+std::vector<cv::Point2f> FractalDetector::FractalDetectorImpl::sort(const std::vector<cv::Point2f>& marker) {
     std::vector<cv::Point2f> res_marker = marker;
 
     double dx1 = res_marker[1].x - res_marker[0].x;
@@ -696,7 +713,7 @@ std::vector<cv::Point2f> FractalMarkerDetector::sort(const std::vector<cv::Point
     return res_marker;
 }
 
-float FractalMarkerDetector::getSubpixelValue(const cv::Mat& im_grey, const cv::Point2f& p) {
+float FractalDetector::FractalDetectorImpl::getSubpixelValue(const cv::Mat& im_grey, const cv::Point2f& p) {
     float intpartX, intpartY;
     float decpartX = std::modf(p.x, &intpartX);
     float decpartY = std::modf(p.y, &intpartY);
@@ -721,7 +738,7 @@ float FractalMarkerDetector::getSubpixelValue(const cv::Mat& im_grey, const cv::
             decpartX*decpartY*float(im_grey.at<uchar>(tl.y+1,tl.x+1));
 }
 
-int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet) {
+int FractalDetector::FractalDetectorImpl::getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet) {
     auto rotate = [](const cv::Mat& in) {
         cv::Mat out(in.size(), in.type());
         for (int i = 0; i < in.rows; i++) {
@@ -752,9 +769,9 @@ int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, con
             FractalMarker fm = markerSet.fractalMarkerCollection.at(idx);
 
             cv::Mat masked;
-            bit_inner.copyTo(masked, fm.mask());
+            bit_inner.copyTo(masked, fm.fractalMarkerImpl->mask());
 
-            if (cv::countNonZero(masked != fm.mat() * 255) == 0) {
+            if (cv::countNonZero(masked != fm.fractalMarkerImpl->mat() * 255) == 0) {
                 return idx;
             }
         }
@@ -765,7 +782,7 @@ int FractalMarkerDetector::getMarkerId(const cv::Mat& bits, int& nrotations, con
     return -1;
 }
 
-int FractalMarkerDetector::perimeter(const std::vector<cv::Point2f>& a) {
+int FractalDetector::FractalDetectorImpl::perimeter(const std::vector<cv::Point2f>& a) {
     int sum = 0;
     for (size_t i = 0; i < a.size(); i++) {
         sum += cv::norm(a[i] - a[(i + 1) % a.size()]);
@@ -773,7 +790,7 @@ int FractalMarkerDetector::perimeter(const std::vector<cv::Point2f>& a) {
     return sum;
 }
 
-void FractalMarkerDetector::kfilter(std::vector<cv::KeyPoint>& kpoints) {
+void FractalDetector::FractalDetectorImpl::kfilter(std::vector<cv::KeyPoint>& kpoints) {
     float minResp = kpoints[0].response;
     float maxResp = kpoints[0].response;
     for (auto& p : kpoints) {
@@ -801,7 +818,7 @@ void FractalMarkerDetector::kfilter(std::vector<cv::KeyPoint>& kpoints) {
     kpoints.erase(std::remove_if(kpoints.begin(), kpoints.end(), [](const cv::KeyPoint& kpt) { return kpt.size == -1; }), kpoints.end());
 }
 
-void FractalMarkerDetector::assignClass(const cv::Mat& im, std::vector<cv::KeyPoint>& kpoints, float sizeNorm, int wsize) {
+void FractalDetector::FractalDetectorImpl::assignClass(const cv::Mat& im, std::vector<cv::KeyPoint>& kpoints, float sizeNorm, int wsize) {
     CV_Assert(im.type() == CV_8UC1);
 
     int wsizeFull = wsize * 2 + 1;

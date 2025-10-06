@@ -5,29 +5,41 @@
 #include "test_precomp.hpp"
 #include "opencv2/objdetect/fractal_detector.hpp"
 
+#include <string>
+
+std::string fractal_aruco_images[] = {
+    "hand.jpg",
+    "close.jpg",
+    "confusion.jpg",
+    "distortion.jpg",
+    "far.jpg"
+};
+
 namespace opencv_test { namespace {
 
-#define FRACTAL_TEST_CASE(imgname) \
-TEST(CV_FractalAruco, can_detect_##imgname) \
-{ \
-    string imgPath = cvtest::findDataFile("fractal_aruco/" #imgname ".jpg"); \
-    Mat image = imread(imgPath); \
-    ASSERT_FALSE(image.empty()) << "Can't read image: " << imgPath; \
-    aruco::FractalMarkerDetector detector; \
-    detector.setParams("FRACTAL_4L_6"); \
-    vector<Point3f> points3D; \
-    vector<Point2f> points2D; \
-    vector<aruco::FractalMarker> markers = detector.detect(image, points3D, points2D); \
-    ASSERT_GT(markers.size(), 0u) << "No fractal markers detected in " << #imgname; \
-    ASSERT_GT(points2D.size(), 0u) << "No 2D points detected in " << #imgname; \
-    ASSERT_EQ(points3D.size(), points2D.size()) << "3D/2D points count mismatch in " << #imgname; \
-    \
+typedef testing::TestWithParam<std::string> CV_FractalAruco;
+
+TEST_P(CV_FractalAruco, can_detect)
+{
+    const std::string& imgname = GetParam();
+    std::string imgPath = cvtest::findDataFile("fractal_aruco/" + imgname);
+    Mat image = imread(imgPath);
+    ASSERT_FALSE(image.empty()) << "Can't read image: " << imgPath;
+    aruco::FractalDetector detector;
+    detector.setParams("FRACTAL_4L_6");
+    std::vector<Point3f> points3D;
+    std::vector<Point2f> points2D;
+    std::vector<aruco::FractalMarker> markers;
+    bool detected = detector.detect(image, markers, points3D, points2D);
+    ASSERT_TRUE(detected) << "Fractal markers detection failed in " << imgname;
+    ASSERT_GT(markers.size(), 0u) << "No fractal markers detected in " << imgname;
+    ASSERT_GT(points2D.size(), 0u) << "No 2D points detected in " << imgname;
+    ASSERT_EQ(points3D.size(), points2D.size()) << "3D/2D points count mismatch in " << imgname;
 }
 
-FRACTAL_TEST_CASE(hand)
-FRACTAL_TEST_CASE(close)
-FRACTAL_TEST_CASE(confusion)
-FRACTAL_TEST_CASE(distortion)
-FRACTAL_TEST_CASE(far)
+INSTANTIATE_TEST_CASE_P(
+    /*empty*/, CV_FractalAruco,
+    testing::ValuesIn(fractal_aruco_images)
+);
 }
 } // namespace
