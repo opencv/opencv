@@ -647,13 +647,13 @@ CASE(test_elu)
 CASE(test_elu_default)
     // no filter
 CASE(test_elu_default_expanded_ver18)
-    // no filter
+    SKIP;
 CASE(test_elu_example)
     // no filter
 CASE(test_elu_example_expanded_ver18)
-    // no filter
+    SKIP;
 CASE(test_elu_expanded_ver18)
-    // no filter
+    SKIP;
 CASE(test_equal)
     // no filter
 CASE(test_equal_bcast)

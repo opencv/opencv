@@ -433,3 +433,6 @@
 "test_reduce_sum_square_keepdims_random",
 "test_reduce_sum_square_negative_axes_keepdims_example",
 "test_reduce_sum_square_negative_axes_keepdims_random",
+"test_elu_default_expanded_ver18",
+"test_elu_example_expanded_ver18",
+"test_elu_expanded_ver18",

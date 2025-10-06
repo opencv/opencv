@@ -356,9 +356,6 @@
 "test_dynamicquantizelinear_min_adjusted_expanded",  // ---- same as above ---
 "test_einsum_inner_prod",  // Issue::Output shape does not match with reference
 "test_einsum_scalar",
-"test_elu_default_expanded_ver18",
-"test_elu_example_expanded_ver18",
-"test_elu_expanded_ver18",
 "test_equal_string",
 "test_equal_string_broadcast",
 "test_eyelike_populate_off_main_diagonal",  // Issues::Layer::Can't create layer::Can't create layer "onnx_node_output_0!y" of type "EyeLike" in function 'getLayerInstance'
