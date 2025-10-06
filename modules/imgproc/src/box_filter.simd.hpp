@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, 2018, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -51,6 +52,8 @@ Ptr<BaseRowFilter> getRowSumFilter(int srcType, int sumType, int ksize, int anch
 Ptr<BaseColumnFilter> getColumnSumFilter(int sumType, int dstType, int ksize, int anchor, double scale);
 Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
                                   Point anchor, bool normalize, int borderType);
+void blockSum(const Mat& src, Mat& dst, Size ksize, Point anchor,
+              const Size &wsz, const Point &ofs, bool normalize, int borderType);
 
 Ptr<BaseRowFilter> getSqrRowSumFilter(int srcType, int sumType, int ksize, int anchor);
 
@@ -1166,6 +1169,392 @@ struct ColumnSum<int, float> :
     std::vector<int> sum;
 };
 
+#define VEC_ALIGN CV_MALLOC_ALIGN
+template<typename ST, typename T>
+inline int BlockSumBorder(const T* ref, const T* S, T* R, ST* SUM, T* D, ST** buf_ptr,
+    const int *btab, int width, int i, int cn, int dx1, int dx2, int kheight, int kwidth,
+    bool leftBorder, int borderLen, int borderType, double scale)
+{
+    int j=0, k;
+    const T* Si = S+i;
+    if( leftBorder )
+    {
+        for( k=0; k < dx1*cn; k++, j++ )
+        {
+            if( borderType != BORDER_CONSTANT )
+                R[j] = ref[btab[k]];
+            else
+                R[j] = 0;
+        }
+        if( width >= dx1+dx2 )
+        {
+            for( k=0; k < (kwidth-1)*cn; k++, j++ )
+            {
+                R[j] = Si[k];
+            }
+        }
+        else
+        {
+            int diff = dx1+dx2-width;
+            for( k=0; k < (kwidth-1-diff)*cn; k++, j++ )
+            {
+                R[j] = Si[k];
+            }
+            int rem = min(diff, dx2);
+            for( k=0; k < rem*cn; k++, j++ )
+            {
+                if( borderType != BORDER_CONSTANT )
+                    R[j] = ref[btab[dx1*cn+k]];
+                else
+                    R[j] = 0;
+            }
+        }
+    }
+    else
+    {
+        for( k=0; k < borderLen+(kwidth-1-dx2)*cn; k++, j++ )
+        {
+            R[j] = Si[k];
+        }
+        for( k=0; k < dx2*cn; k++, j++ )
+        {
+            if( borderType != BORDER_CONSTANT )
+                R[j] = ref[btab[dx1*cn+k]];
+            else
+            {
+                R[j] = 0;
+            }
+        }
+    }
+
+    for( j=0; j < borderLen; j++, i++ )
+    {
+        ST Sp = 0;
+        for(k=0; k < kwidth; k++)
+            Sp += (ST)R[j+k*cn];
+        buf_ptr[kheight-1][i] = Sp;
+        ST s0 = SUM[i] + Sp;
+        D[i] = saturate_cast<T>(s0*scale);
+        SUM[i] = s0 - buf_ptr[0][i];
+    }
+
+    return i;
+}
+
+template<typename ST, typename T>
+inline void BlockSumBorderInplace(const T* ref, const T* S, T* R,
+    const int *btab, int width, int cn, int dx1, int dx2, int borderType)
+{
+    int j=0, k;
+    for( k=0; k < dx1*cn; k++, j++ )
+    {
+        if( borderType != BORDER_CONSTANT )
+            R[j] = ref[btab[k]];
+        else
+            R[j] = 0;
+    }
+    for( k=0; k < width*cn; k++, j++ )
+    {
+        R[j] = S[k];
+    }
+    for( k=0; k < dx2*cn; k++, j++ )
+    {
+        if( borderType != BORDER_CONSTANT )
+            R[j] = ref[btab[dx1*cn+k]];
+        else
+        {
+            R[j] = 0;
+        }
+    }
+}
+
+template<typename ST, typename T>
+inline int BlockSumCoreRow(const T* S, ST* SUM, T* D, ST** buf_ptr, double scale,
+     int widthcn, int i, int cn, int kheight, int kwidth)
+{
+    bool haveScale = scale != 1;
+    if( haveScale )
+    {
+        for( ; i < widthcn; i++ )
+        {
+            ST Ss = 0;
+            for( int k=0; k < kwidth; k++ )
+                Ss += (ST)S[i+k*cn];
+            buf_ptr[kheight-1][i] = Ss;
+            ST s0 = SUM[i] + Ss;
+            D[i] = saturate_cast<T>(s0*scale);
+            SUM[i] = s0 - buf_ptr[0][i];
+        }
+    }
+    else
+    {
+        for( ; i < widthcn; i++ )
+        {
+            ST Ss = 0;
+            for( int k=0; k < kwidth; k++ )
+                Ss += (ST)S[i+k*cn];
+            buf_ptr[kheight-1][i] = Ss;
+            ST s0 = SUM[i] + Ss;
+            D[i] = saturate_cast<T>(s0);
+            SUM[i] = s0 - buf_ptr[0][i];
+        }
+    }
+    return i;
+}
+
+template<typename ST, typename T>
+inline int BlockSumCore(const T* S, ST* SUM, T* D, ST** buf_ptr, double scale,
+     int widthcn, int i, int cn, int kheight, int kwidth)
+{
+    bool haveScale = scale != 1;
+    switch(kwidth)
+    {
+        case 3:
+            if( haveScale )
+            {
+                for( ; i < widthcn; i++ )
+                {
+                    ST Sp = (ST)S[i] + (ST)S[i+1*cn] + (ST)S[i+2*cn];
+                    buf_ptr[kheight-1][i] = Sp;
+                    ST s0 = SUM[i] + Sp;
+                    D[i] = saturate_cast<T>(s0*scale);
+                    SUM[i] = s0 - buf_ptr[0][i];
+                }
+            }
+            else
+            {
+                for( ; i < widthcn; i++ )
+                {
+                    ST Sp = (ST)S[i] + (ST)S[i+1*cn] + (ST)S[i+2*cn];
+                    buf_ptr[kheight-1][i] = Sp;
+                    ST s0 = SUM[i] + Sp;
+                    D[i] = saturate_cast<T>(s0);
+                    SUM[i] = s0 - buf_ptr[0][i];
+                }
+            }
+            break;
+        case 5:
+            if( haveScale )
+            {
+                for( ; i < widthcn; i++ )
+                {
+                    ST Sp = (ST)S[i] + (ST)S[i+1*cn] + (ST)S[i+2*cn] + (ST)S[i+3*cn] + (ST)S[i+4*cn];
+                    buf_ptr[kheight-1][i] = Sp;
+                    ST s0 = SUM[i] + Sp;
+                    D[i] = saturate_cast<T>(s0*scale);
+                    SUM[i] = s0 - buf_ptr[0][i];
+                }
+            }
+            else
+            {
+                for( ; i < widthcn; i++ )
+                {
+                    ST Sp = (ST)S[i] + (ST)S[i+1*cn] + (ST)S[i+2*cn] + (ST)S[i+3*cn] + (ST)S[i+4*cn];
+                    buf_ptr[kheight-1][i] = Sp;
+                    ST s0 = SUM[i] + Sp;
+                    D[i] = saturate_cast<T>(s0);
+                    SUM[i] = s0 - buf_ptr[0][i];
+                }
+            }
+            break;
+        case 1:
+            i = BlockSumCoreRow(S, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, 1);
+            break;
+        case 2:
+            i = BlockSumCoreRow(S, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, 2);
+            break;
+        case 4:
+            i = BlockSumCoreRow(S, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, 4);
+            break;
+        default:
+            CV_Error_( cv::Error::StsNotImplemented,
+                ("Unsupported kernel width (=%d)", kwidth));
+            break;
+    }
+    return i;
+}
+
+uchar* alignCore(uchar* ptr, int borderBytes, bool inplace) // align core region to VEC_ALIGN
+{
+    if( inplace ) // borders handled in core
+        return alignPtr((uchar*)ptr, VEC_ALIGN);
+    else // borders handled separately
+    {
+        ptr += borderBytes;
+        uchar* aligned = alignPtr((uchar*)ptr, VEC_ALIGN);
+        return aligned - borderBytes;
+    }
+}
+
+template<typename ST, typename T>
+void BlockSum(const Mat& _src, Mat& _dst, Size ksize, Point anchor, const Size &wsz,
+     const Point &ofs, double scale, int borderType, int sumType, bool inplace)
+{
+    int i, j;
+    cv::utils::BufferArea area, area2;
+    int* borderTab = 0;
+    uchar* buf = 0, *constBorder = 0;
+    uchar* border = 0, *inplaceSrc = 0, *inplaceDst = 0;
+    std::vector<ST*> bufPtr;
+    const uchar* src = _src.ptr();
+    uchar* dst = _dst.ptr();
+    Size wholeSize = wsz;
+    Rect roi = Rect(ofs, _src.size());
+    CV_Assert( roi.x >= 0 && roi.y >= 0 && roi.width >= 0 && roi.height >= 0 &&
+        roi.x + roi.width <= wholeSize.width &&
+        roi.y + roi.height <= wholeSize.height );
+
+    size_t srcStep = _src.step;
+    size_t dstStep = _dst.step;
+    int srcType = _src.type();
+    int cn = CV_MAT_CN(srcType);
+    int sesz = (int)getElemSize(srcType);
+    int besz = (int)getElemSize(sumType);
+    int kwidth = ksize.width;
+    int kheight = ksize.height;
+    int borderLength = std::max(kwidth - 1, 1);
+    int width = roi.width;
+    int height = roi.height;
+    int width1 = width + kwidth - 1;
+    int height1 = height + kheight - 1;
+    int xofs1 = std::min(roi.x, anchor.x);
+    int dx1 = std::max(anchor.x - roi.x, 0);
+    int dx2 = std::max(kwidth - anchor.x - 1 + roi.x + roi.width - wholeSize.width, 0);
+    int dy2 = std::max(kheight - anchor.y - 1 + roi.y + roi.height - wholeSize.height, 0);
+    int borderLeft = min(dx1, width)*cn;
+    int bufWidth = (width1+borderLeft+VEC_ALIGN);
+    int bufStep = bufWidth*besz;
+
+    src -= xofs1*sesz;
+    area.allocate(borderTab, borderLength*cn);
+    area.allocate(buf, bufWidth*(kheight+1)*besz);
+    area.allocate(constBorder, bufWidth*sesz);
+    area.commit();
+    area.zeroFill();
+
+    // compute border tables
+    if( dx1 > 0 || dx2 > 0 )
+    {
+        if( borderType != BORDER_CONSTANT )
+        {
+            int xofs1w = std::min(roi.x, anchor.x) - roi.x;
+            int wholeWidth = wholeSize.width;
+            int* btabx = borderTab;
+
+            for( i = 0; i < dx1; i++ )
+            {
+                int p0 = (borderInterpolate(i-dx1, wholeWidth, borderType) + xofs1w)*cn;
+                for( j = 0; j < cn; j++ )
+                    btabx[i*cn + j] = p0 + j;
+            }
+
+            for( i = 0; i < dx2; i++ )
+            {
+                int p0 = (borderInterpolate(wholeWidth+i, wholeWidth, borderType) + xofs1w)*cn;
+                for( j = 0; j < cn; j++ )
+                    btabx[(i + dx1)*cn + j] = p0 + j;
+            }
+        }
+    }
+
+    if( inplace )
+    {
+        area2.allocate(border, bufWidth*sesz);
+        area2.allocate(inplaceDst, bufWidth*sesz);
+        if( dy2 )
+        {
+            area2.allocate(inplaceSrc, dy2*bufWidth*sesz);
+            area2.commit();
+            if( borderType == BORDER_CONSTANT )
+                memset(inplaceSrc, 0, dy2*bufWidth*sesz);
+            else
+            {
+                for( int idx=0; idx < dy2; ++idx )
+                {
+                    uchar* out = (uchar*)alignCore(&inplaceSrc[bufWidth*sesz*idx],
+                                                borderLeft*sizeof(T), inplace);
+                    int rc = height1-(dy2-idx);
+                    int srcY = borderInterpolate(rc + roi.y - anchor.y, wholeSize.height, borderType);
+                    const uchar* inp = (uchar*)(src+(srcY-roi.y)*srcStep);
+                    memcpy(out, inp, width*sesz);
+                }
+            }
+        }
+        else
+            area2.commit();
+    }
+    else
+    {
+        area2.allocate(border, (kwidth-1+max(dx1, dx2)+VEC_ALIGN)*sesz);
+        area2.commit();
+    }
+    bufPtr.resize(kheight);
+
+    const T *S;
+    const T* ref;
+    T* D;
+    T* R;
+    ST** buf_ptr = &bufPtr[0];
+    const int *btab = borderTab;
+    T* C = (T*)alignCore(constBorder, borderLeft*sizeof(T), inplace);
+    ST* SUM = (ST*)alignCore(&buf[bufStep*kheight], borderLeft*sizeof(ST), inplace);
+    for( int k=0;k<kheight;k++ )
+        buf_ptr[k] = (ST*)alignCore(&buf[bufStep*k], borderLeft*sizeof(ST), inplace);
+
+    for( int rc=0, bbi=0; rc < height1; rc++ )
+    {
+        int srcY = borderInterpolate(rc + roi.y - anchor.y, wholeSize.height, borderType);
+        if( srcY < 0 ) // can happen only with constant border type
+            ref = (const T*)(C);
+        else if( inplace && rc >= height1-dy2 )
+        {
+            int idx = rc - (height1-dy2);
+            ref = (const T*)alignCore(&inplaceSrc[bufWidth*sesz*idx],
+                                      borderLeft*sizeof(T), inplace);
+        }
+        else
+            ref = (const T*)(src+(srcY-roi.y)*srcStep);
+
+        S = ref;
+        R = (T*)alignPtr(border, VEC_ALIGN);
+        if ( inplace && (rc < (kheight-1)) )
+            D = (T*)alignCore(inplaceDst, borderLeft*sizeof(T), inplace);
+        else
+            D = (T*)dst;
+        for( int k=0; k < kheight; k++ )
+            buf_ptr[k] = (ST*)alignCore(&buf[((bbi+k)%kheight)*bufStep],
+                                        borderLeft*sizeof(ST), inplace);
+
+        int widthcn = width*cn;
+        i=0;
+        if( inplace )
+        {
+            BlockSumBorderInplace<ST,T>(ref, S, R, btab, width, cn, dx1, dx2, borderType);
+            BlockSumCore<ST,T>(R, SUM, D, buf_ptr, scale, widthcn, i, cn, kheight, kwidth);
+        }
+        else
+        {
+            if( dx1>0 )
+            {
+                i = BlockSumBorder<ST,T>(ref, S, R, SUM, D, buf_ptr, btab, width, i, cn,
+                        dx1, dx2, kheight, kwidth, true, borderLeft, borderType, scale);
+                S-=(dx1*cn);
+            }
+            i = BlockSumCore<ST,T>(S, SUM, D, buf_ptr, scale, widthcn-(dx2*cn), i, cn, kheight, kwidth);
+            if( i<widthcn && dx2>0 )
+            {
+                int border_len_right = widthcn-i;
+                i = BlockSumBorder<ST,T>(ref, S, R, SUM, D, buf_ptr, btab, width, i, cn,
+                        dx1, dx2, kheight, kwidth, false, border_len_right, borderType, scale);
+            }
+        }
+
+        bbi++; bbi %= kheight;
+        if( rc >= (kheight-1) )
+            dst += dstStep;
+    }
+}
+
 }  // namespace anon
 
 
@@ -1271,6 +1660,35 @@ Ptr<FilterEngine> createBoxFilter(int srcType, int dstType, Size ksize,
            srcType, dstType, sumType, borderType );
 }
 
+void blockSum(const Mat& src, Mat& dst, Size ksize, Point anchor,
+    const Size &wsz, const Point &ofs, bool normalize, int borderType)
+{
+    CV_INSTRUMENT_REGION();
+
+    int cn = CV_MAT_CN(src.type()), sumType = CV_64F;
+    sumType = CV_MAKETYPE( sumType, cn );
+
+    CV_Assert( CV_MAT_CN(src.type()) == CV_MAT_CN(dst.type()) );
+    int sdepth = CV_MAT_DEPTH(sumType), ddepth = CV_MAT_DEPTH(dst.type());
+
+    if( anchor.x < 0 )
+        anchor.x = ksize.width/2;
+
+    if( anchor.y < 0 )
+        anchor.y = ksize.height/2;
+
+    double scale = normalize ? 1./(ksize.width*ksize.height) : 1;
+    bool inplace = src.data == dst.data;
+
+    if( ddepth == CV_32F && sdepth == CV_64F )
+        BlockSum<double, float> (src, dst, ksize, anchor, wsz, ofs, scale, borderType, sumType, inplace);
+    else if( ddepth == CV_64F && sdepth == CV_64F )
+        BlockSum<double, double> (src, dst, ksize, anchor, wsz, ofs, scale, borderType, sumType, inplace);
+    else
+        CV_Error_( cv::Error::StsNotImplemented,
+            ("Unsupported combination of sum format (=%d), and destination format (=%d)",
+            sumType, dst.type()));
+}
 
 /****************************************************************************************\
                                     Squared Box Filter
