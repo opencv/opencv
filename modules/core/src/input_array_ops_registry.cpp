@@ -14,8 +14,20 @@ namespace cv { namespace detail {
 
 namespace {
 
-using VecOpsMap = std::unordered_map<const void*, const VectorOpsBase*>;
-using VecVecOpsMap = std::unordered_map<const void*, const VectorVectorOpsBase*>;
+struct VecOpsEntry
+{
+    const VectorOpsBase* ops = nullptr;
+    size_t refcount = 0;
+};
+
+struct VecVecOpsEntry
+{
+    const VectorVectorOpsBase* ops = nullptr;
+    size_t refcount = 0;
+};
+
+using VecOpsMap = std::unordered_map<const void*, VecOpsEntry>;
+using VecVecOpsMap = std::unordered_map<const void*, VecVecOpsEntry>;
 
 VecOpsMap& get_vec_ops_storage()
 {
@@ -40,13 +52,40 @@ cv::Mutex& get_registry_mutex()
 void register_vector_ops(const void* key, const VectorOpsBase* ops) {
     if (!key || !ops) return;
     cv::AutoLock lock(get_registry_mutex());
-    get_vec_ops_storage()[key] = ops;
+    VecOpsMap& storage = get_vec_ops_storage();
+    VecOpsEntry& entry = storage[key];
+    if (entry.refcount == 0)
+    {
+        entry.ops = ops;
+    }
+    else
+    {
+        CV_Assert(entry.ops == ops);
+    }
+    ++entry.refcount;
+}
+
+void retain_vector_ops(const void* key) {
+    if (!key) return;
+    cv::AutoLock lock(get_registry_mutex());
+    VecOpsMap& storage = get_vec_ops_storage();
+    auto it = storage.find(key);
+    if (it == storage.end())
+        return;
+    CV_Assert(it->second.refcount > 0);
+    ++it->second.refcount;
 }
 
 void unregister_vector_ops(const void* key) {
     if (!key) return;
     cv::AutoLock lock(get_registry_mutex());
-    get_vec_ops_storage().erase(key);
+    VecOpsMap& storage = get_vec_ops_storage();
+    auto it = storage.find(key);
+    if (it == storage.end())
+        return;
+    CV_Assert(it->second.refcount > 0);
+    if (--it->second.refcount == 0)
+        storage.erase(it);
 }
 
 const VectorOpsBase* get_vector_ops(const void* key) {
@@ -54,19 +93,46 @@ const VectorOpsBase* get_vector_ops(const void* key) {
     cv::AutoLock lock(get_registry_mutex());
     VecOpsMap& storage = get_vec_ops_storage();
     auto it = storage.find(key);
-    return it == storage.end() ? nullptr : it->second;
+    return it == storage.end() ? nullptr : it->second.ops;
 }
 
 void register_vector_vector_ops(const void* key, const VectorVectorOpsBase* ops) {
     if (!key || !ops) return;
     cv::AutoLock lock(get_registry_mutex());
-    get_vecvec_ops_storage()[key] = ops;
+    VecVecOpsMap& storage = get_vecvec_ops_storage();
+    VecVecOpsEntry& entry = storage[key];
+    if (entry.refcount == 0)
+    {
+        entry.ops = ops;
+    }
+    else
+    {
+        CV_Assert(entry.ops == ops);
+    }
+    ++entry.refcount;
+}
+
+void retain_vector_vector_ops(const void* key) {
+    if (!key) return;
+    cv::AutoLock lock(get_registry_mutex());
+    VecVecOpsMap& storage = get_vecvec_ops_storage();
+    auto it = storage.find(key);
+    if (it == storage.end())
+        return;
+    CV_Assert(it->second.refcount > 0);
+    ++it->second.refcount;
 }
 
 void unregister_vector_vector_ops(const void* key) {
     if (!key) return;
     cv::AutoLock lock(get_registry_mutex());
-    get_vecvec_ops_storage().erase(key);
+    VecVecOpsMap& storage = get_vecvec_ops_storage();
+    auto it = storage.find(key);
+    if (it == storage.end())
+        return;
+    CV_Assert(it->second.refcount > 0);
+    if (--it->second.refcount == 0)
+        storage.erase(it);
 }
 
 const VectorVectorOpsBase* get_vector_vector_ops(const void* key) {
@@ -74,7 +140,7 @@ const VectorVectorOpsBase* get_vector_vector_ops(const void* key) {
     cv::AutoLock lock(get_registry_mutex());
     VecVecOpsMap& storage = get_vecvec_ops_storage();
     auto it = storage.find(key);
-    return it == storage.end() ? nullptr : it->second;
+    return it == storage.end() ? nullptr : it->second.ops;
 }
 
 }} // namespace cv::detail

@@ -89,6 +89,31 @@ int rawType()
     return (int)CV_MAKETYPE(CV_8U, elemSize);
 }
 
+namespace detail
+{
+static inline void retain_registered_vector_ops(int flags, void* obj)
+{
+    if (!obj)
+        return;
+    int kind = flags & _InputArray::KIND_MASK;
+    if (kind == _InputArray::STD_VECTOR)
+        detail::retain_vector_ops(obj);
+    else if (kind == _InputArray::STD_VECTOR_VECTOR)
+        detail::retain_vector_vector_ops(obj);
+}
+
+static inline void release_registered_vector_ops(int flags, void* obj)
+{
+    if (!obj)
+        return;
+    int kind = flags & _InputArray::KIND_MASK;
+    if (kind == _InputArray::STD_VECTOR)
+        detail::unregister_vector_ops(obj);
+    else if (kind == _InputArray::STD_VECTOR_VECTOR)
+        detail::unregister_vector_vector_ops(obj);
+}
+} // namespace detail
+
 //////////////////////// Input/Output Arrays ////////////////////////
 
 inline void _InputArray::init(int _flags, const void* _obj)
@@ -107,6 +132,50 @@ inline _InputArray::_InputArray(const Mat& m) { init(+MAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_READ, &vec); }
 inline _InputArray::_InputArray(const UMat& m) { init(+UMAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_READ, &vec); }
+
+inline _InputArray::_InputArray(const _InputArray& other)
+{
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    detail::retain_registered_vector_ops(flags, obj);
+}
+
+inline _InputArray::_InputArray(_InputArray&& other) CV_NOEXCEPT
+{
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    other.flags = NONE;
+    other.obj = nullptr;
+    other.sz = Size();
+}
+
+inline _InputArray& _InputArray::operator=(const _InputArray& other)
+{
+    if (this == &other)
+        return *this;
+    detail::release_registered_vector_ops(flags, obj);
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    detail::retain_registered_vector_ops(flags, obj);
+    return *this;
+}
+
+inline _InputArray& _InputArray::operator=(_InputArray&& other) CV_NOEXCEPT
+{
+    if (this == &other)
+        return *this;
+    detail::release_registered_vector_ops(flags, obj);
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    other.flags = NONE;
+    other.obj = nullptr;
+    other.sz = Size();
+    return *this;
+}
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
@@ -183,7 +252,10 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
     return v;
 }
 
-inline _InputArray::~_InputArray() {}
+inline _InputArray::~_InputArray()
+{
+    detail::release_registered_vector_ops(flags, obj);
+}
 
 inline Mat _InputArray::getMat(int i) const
 {
@@ -211,6 +283,22 @@ inline _OutputArray::_OutputArray(Mat& m) { init(+MAT+ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT + ACCESS_WRITE, &vec); }
 inline _OutputArray::_OutputArray(UMat& m) { init(+UMAT + ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
+
+inline _OutputArray::_OutputArray(const _OutputArray& other) : _InputArray(other) {}
+
+inline _OutputArray::_OutputArray(_OutputArray&& other) CV_NOEXCEPT : _InputArray(std::move(other)) {}
+
+inline _OutputArray& _OutputArray::operator=(const _OutputArray& other)
+{
+    _InputArray::operator=(other);
+    return *this;
+}
+
+inline _OutputArray& _OutputArray::operator=(_OutputArray&& other) CV_NOEXCEPT
+{
+    _InputArray::operator=(std::move(other));
+    return *this;
+}
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
@@ -338,6 +426,22 @@ inline _InputOutputArray::_InputOutputArray(Mat& m) { init(+MAT+ACCESS_RW, &m); 
 inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT+ACCESS_RW, &vec); }
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(+UMAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_RW, &vec); }
+
+inline _InputOutputArray::_InputOutputArray(const _InputOutputArray& other) : _OutputArray(other) {}
+
+inline _InputOutputArray::_InputOutputArray(_InputOutputArray&& other) CV_NOEXCEPT : _OutputArray(std::move(other)) {}
+
+inline _InputOutputArray& _InputOutputArray::operator=(const _InputOutputArray& other)
+{
+    _OutputArray::operator=(other);
+    return *this;
+}
+
+inline _InputOutputArray& _InputOutputArray::operator=(_InputOutputArray&& other) CV_NOEXCEPT
+{
+    _OutputArray::operator=(std::move(other));
+    return *this;
+}
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)

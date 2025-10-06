@@ -80,11 +80,13 @@ struct VectorVectorOps final : VectorVectorOpsBase {
 
 // Registry API (thread-local) for vector ops
 CV_EXPORTS void register_vector_ops(const void* key, const VectorOpsBase* ops);
+CV_EXPORTS void retain_vector_ops(const void* key);
 CV_EXPORTS void unregister_vector_ops(const void* key);
 CV_EXPORTS const VectorOpsBase* get_vector_ops(const void* key);
 
 // Registry API (thread-local) for vector<vector<...>> ops
 CV_EXPORTS void register_vector_vector_ops(const void* key, const VectorVectorOpsBase* ops);
+CV_EXPORTS void retain_vector_vector_ops(const void* key);
 CV_EXPORTS void unregister_vector_vector_ops(const void* key);
 CV_EXPORTS const VectorVectorOpsBase* get_vector_vector_ops(const void* key);
 
