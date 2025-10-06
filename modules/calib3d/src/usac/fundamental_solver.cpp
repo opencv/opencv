@@ -385,7 +385,7 @@ public:
             Matx<double, 9, 9> AtA_(AtA), U, Vt;
             Vec<double, 9> W;
             SVD::compute(AtA_, W, U, Vt, SVD::FULL_UV + SVD::MODIFY_A);
-            models = std::vector<Mat> { Mat_<double>(3, 3, Vt.val + 72 /*=8*9*/) };
+            models = std::vector<Mat> { Mat_<double>(3, 3, Vt.val + 72 /*=8*9*/).clone() };
 #endif
         }
 
@@ -503,7 +503,7 @@ public:
        Matx<double, 9, 9> AtA_(covariance), U, Vt;
        Vec<double, 9> W;
        SVD::compute(AtA_, W, U, Vt, SVD::FULL_UV + SVD::MODIFY_A);
-       models = std::vector<Mat> { Mat_<double>(3, 3, Vt.val + 72 /*=8*9*/) };
+       models = std::vector<Mat> { Mat_<double>(3, 3, Vt.val + 72 /*=8*9*/).clone() };
 #endif
         if (enforce_rank)
             FundamentalDegeneracy::recoverRank(models[0], is_fundamental);

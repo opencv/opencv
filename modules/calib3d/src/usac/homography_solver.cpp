@@ -253,7 +253,7 @@ public:
             Matx<double, 9, 9> Vt;
             Vec<double, 9> D;
             if (! eigen(Matx<double, 9, 9>(AtA), D, Vt)) return 0;
-            H = Mat_<double>(3, 3, Vt.val + 72/*=8*9*/);
+            H = Mat_<double>(3, 3, Vt.val + 72/*=8*9*/).clone();
 #endif
         }
         const auto * const h = (double *) H.data;
