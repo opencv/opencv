@@ -1935,6 +1935,40 @@ CASE(test_reduce_sum_negative_axes_keepdims_random)
     SKIP;
 CASE(test_reduce_sum_square_default_axes_keepdims_example)
     // no filter
+CASE(test_reduce_l2_default_axes_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_l2_default_axes_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_l2_do_not_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_l2_do_not_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_l2_keep_dims_example_expanded)
+    SKIP;
+CASE(test_reduce_l2_keep_dims_random_expanded)
+    SKIP;
+CASE(test_reduce_l2_negative_axes_keep_dims_example_expanded)
+    SKIP;
+CASE(test_reduce_l2_negative_axes_keep_dims_random_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_default_axes_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_default_axes_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_do_not_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_do_not_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_negative_axes_keepdims_example_expanded)
+    SKIP;
+CASE(test_reduce_log_sum_exp_negative_axes_keepdims_random_expanded)
+    SKIP;
+CASE(test_reduce_sum_empty_axes_input_noop)
+    SKIP;
 CASE(test_reduce_sum_square_default_axes_keepdims_random)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)
