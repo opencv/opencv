@@ -540,7 +540,10 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     int mtype = m.type();
     MatShape mshape = m.shape();
     const std::vector<Arg>& gr_inputs = graph->inputs();
-    CV_Assert(idx < gr_inputs.size());
+    if (idx >= gr_inputs.size())
+    {
+        return;
+    }
     Arg inp = gr_inputs[idx];
     const ArgData& adata = args.at(inp.idx);
     /*

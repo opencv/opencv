@@ -224,12 +224,28 @@ public:
         {
             const Mat &src = inputs[i];
             Mat &dst = outputs[i];
-            CV_Assert_N(src.size == dst.size, src.type() == dst.type(),
-                      src.isContinuous(), dst.isContinuous(), src.type() == CV_32F);
+            CV_Assert_N(src.size == dst.size, src.isContinuous(), dst.isContinuous());
 
-            const int nstripes = getNumThreads();
-            PBody body(func, src, dst, nstripes);
-            parallel_for_(Range(0, nstripes), body, nstripes);
+            if (src.type() == CV_32F && dst.type() == CV_32F)
+            {
+                const int nstripes = getNumThreads();
+                PBody body(func, src, dst, nstripes);
+                parallel_for_(Range(0, nstripes), body, nstripes);
+                continue;
+            }
+
+            if (src.type() == CV_64F && dst.type() == CV_64F)
+            {
+                Mat src_f, dst_f(dst.size, CV_32F);
+                src.convertTo(src_f, CV_32F);
+                const int nstripes = getNumThreads();
+                PBody body(func, src_f, dst_f, nstripes);
+                parallel_for_(Range(0, nstripes), body, nstripes);
+                dst_f.convertTo(dst, CV_64F);
+                continue;
+            }
+
+            CV_Error(Error::StsUnsupportedFormat, "ElementWiseLayer: unsupported input/output type; expected CV_32F or CV_64F.");
         }
     }
 

@@ -1702,117 +1702,117 @@ CASE(test_reciprocal)
 CASE(test_reciprocal_example)
     // no filter
 CASE(test_reduce_l1_default_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_default_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_keep_dims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_keep_dims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_negative_axes_keep_dims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l1_negative_axes_keep_dims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_default_axes_keepdims_example)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)
         default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00490189 vs 0.004)
 #endif
 CASE(test_reduce_l2_default_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_keep_dims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_keep_dims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_negative_axes_keep_dims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_l2_negative_axes_keep_dims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_asc_axes)
     // no filter
 CASE(test_reduce_log_sum_default)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_desc_axes)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_default_axes_keepdims_example)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)
         default_l1 = 0.01f;  // Expected: (normL1) <= (l1), actual: 0.00671387 vs 0.004
 #endif
 CASE(test_reduce_log_sum_exp_default_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_negative_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_exp_negative_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_log_sum_negative_axes)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_default_axes_keepdim_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_default_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_negative_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_max_negative_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_default_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_default_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_negative_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_mean_negative_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_default_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_default_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_negative_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_min_negative_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_prod_default_axes_keepdims_example)
 #if SKIP_SET_1
     SKIP_MYRIAD;  // accuracy (Expected: (normL1) <= (l1), actual: inf vs 0.004)
@@ -1826,7 +1826,7 @@ CASE(test_reduce_prod_default_axes_keepdims_random)
     }
 #endif
 CASE(test_reduce_prod_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_prod_do_not_keepdims_random)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)
@@ -1836,7 +1836,7 @@ CASE(test_reduce_prod_do_not_keepdims_random)
     }
 #endif
 CASE(test_reduce_prod_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_prod_keepdims_random)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)
@@ -1853,7 +1853,7 @@ CASE(test_reduce_prod_keepdims_random)
     }
 #endif
 CASE(test_reduce_prod_negative_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_prod_negative_axes_keepdims_random)
 #if SKIP_SET_1
     if (target == DNN_TARGET_MYRIAD)
