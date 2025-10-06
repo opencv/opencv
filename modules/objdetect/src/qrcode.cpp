@@ -2958,12 +2958,7 @@ std::string ImplContour::decode(InputArray in, InputArray points, OutputArray st
     vector<Point2f> src_points;
     points.copyTo(src_points);
     CV_Assert(src_points.size() == 4);
-    if (contourArea(src_points) <= 0.0)
-    {
-        if (straight_qrcode.needed())
-            straight_qrcode.release();
-        return std::string();
-    }
+    CV_CheckGT(contourArea(src_points), 0.0, "Invalid QR code source points");
 
     QRDecode qrdec(useAlignmentMarkers);
     qrdec.init(inarr, src_points);
