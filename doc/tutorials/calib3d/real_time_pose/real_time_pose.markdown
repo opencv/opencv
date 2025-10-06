@@ -280,7 +280,7 @@ Here is explained in detail the code for the real time application:
     than a given threshold. Finally, a symmetry test is applied in order to remove non symmetrical
     matches.
 
-    @snippet samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobustMatcher.cpp robust_match_call
+    @snippet samples/cpp/tutorial_code/calib3d/real_time_pose_estimation/src/RobustMatcher.cpp robust_match
 
     After the matches filtering we have to subtract the 2D and 3D correspondences from the found scene
     keypoints and our 3D model using the obtained *DMatches* vector. For more information about
