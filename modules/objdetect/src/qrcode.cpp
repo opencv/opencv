@@ -772,21 +772,27 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
     const double experimental_area = fabs(contourArea(hull));
 
     vector<Point2f> result_hull_point(angle_size);
+    vector<bool> used_hull_point(hull_size, false);
     double min_norm;
     for (size_t i = 0; i < angle_size; i++)
     {
         min_norm = std::numeric_limits<double>::max();
-        Point closest_pnt;
+        int closest_pnt_idx = -1;
         for (int j = 0; j < hull_size; j++)
         {
+            if (used_hull_point[j])
+            {
+                continue;
+            }
             double temp_norm = norm(hull[j] - angle_list[i]);
             if (min_norm > temp_norm)
             {
                 min_norm = temp_norm;
-                closest_pnt = hull[j];
+                closest_pnt_idx = j;
             }
         }
-        result_hull_point[i] = closest_pnt;
+        result_hull_point[i] = hull[closest_pnt_idx];
+        used_hull_point[closest_pnt_idx] = true;
     }
 
     int start_line[2] = { 0, 0 }, finish_line[2] = { 0, 0 }, unstable_pnt = 0;
