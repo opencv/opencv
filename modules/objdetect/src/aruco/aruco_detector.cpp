@@ -313,10 +313,10 @@ static void _detectInitialCandidates(const Mat &grey, vector<vector<Point2f> > &
   * the border bits
   */
 static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int markerSize,
-                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu) {
+                        int markerBorderBits, int cellSize, double cellMarginRate, double minStdDevOtsu, OutputArray _cellPixelRatio = noArray()) {
     CV_Assert(_image.getMat().channels() == 1);
     CV_Assert(corners.size() == 4ull);
-    CV_Assert(markerBorderBits > 0 && cellSize > 0 && cellMarginRate >= 0 && cellMarginRate <= 1);
+    CV_Assert(markerBorderBits > 0 && cellSize > 0 && cellMarginRate >= 0 && cellMarginRate <= 0.5);
     CV_Assert(minStdDevOtsu >= 0);
 
     // number of bits in the marker
@@ -339,6 +339,7 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
 
     // output image containing the bits
     Mat bits(markerSizeWithBorders, markerSizeWithBorders, CV_8UC1, Scalar::all(0));
+    Mat cellPixelRatio(markerSizeWithBorders, markerSizeWithBorders, CV_32FC1, Scalar::all(0));
 
     // check if standard deviation is enough to apply Otsu
     // if not enough, it probably means all bits are the same color (black or white)
@@ -349,10 +350,15 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
     meanStdDev(innerRegion, mean, stddev);
     if(stddev.ptr< double >(0)[0] < minStdDevOtsu) {
         // all black or all white, depending on mean value
-        if(mean.ptr< double >(0)[0] > 127)
+        if(mean.ptr< double >(0)[0] > 127){
             bits.setTo(1);
-        else
+            cellPixelRatio.setTo(1);
+        }
+        else {
             bits.setTo(0);
+            cellPixelRatio.setTo(0);
+        }
+        if(_cellPixelRatio.needed()) cellPixelRatio.copyTo(_cellPixelRatio);
         return bits;
     }
 
@@ -369,8 +375,13 @@ static Mat _extractBits(InputArray _image, const vector<Point2f>& corners, int m
             // count white pixels on each cell to assign its value
             size_t nZ = (size_t) countNonZero(square);
             if(nZ > square.total() / 2) bits.at<unsigned char>(y, x) = 1;
+
+            // define the cell pixel ratio as the ratio of the white pixels. For inverted markers, the ratio will be inverted.
+            if(_cellPixelRatio.needed()) cellPixelRatio.at<float>(y, x) = (nZ / (float)square.total());
         }
     }
+
+    if(_cellPixelRatio.needed()) cellPixelRatio.copyTo(_cellPixelRatio);
 
     return bits;
 }
@@ -403,6 +414,50 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
 }
 
 
+/** @brief Given a matrix containing the percentage of white pixels in each marker cell, returns the normalized marker uncertainty [0;1] for the specific id.
+ * The uncertainty is defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
+ * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
+ */
+
+static float _getMarkerUnc(const Mat& groundTruthbits, const Mat &cellPixelRatio, const int markerSize, const int borderSize) {
+
+    CV_Assert(markerSize == groundTruthbits.cols && markerSize == groundTruthbits.rows);
+
+    const int sizeWithBorders = markerSize + 2 * borderSize;
+    CV_Assert(markerSize > 0 && cellPixelRatio.cols == sizeWithBorders && cellPixelRatio.rows == sizeWithBorders);
+
+    // Get border uncertainty. cellPixelRatio has the opposite color as the borders --> it is the uncertainty.
+    float tempBorderUnc = 0.f;
+    for(int y = 0; y < sizeWithBorders; y++) {
+        for(int k = 0; k < borderSize; k++) {
+            // Left and right vertical sides
+            tempBorderUnc += cellPixelRatio.ptr<float>(y)[k];
+            tempBorderUnc += cellPixelRatio.ptr<float>(y)[sizeWithBorders - 1 - k];
+        }
+    }
+    for(int x = borderSize; x < sizeWithBorders - borderSize; x++) {
+        for(int k = 0; k < borderSize; k++) {
+            // Top and bottom horizontal sides
+            tempBorderUnc += cellPixelRatio.ptr<float>(k)[x];
+            tempBorderUnc += cellPixelRatio.ptr<float>(sizeWithBorders - 1 - k)[x];
+        }
+    }
+
+    // Get the inner marker uncertainty. For a white or black cell, the uncertainty is the ratio of black or white pixels respectively.
+    float tempInnerUnc = 0.f;
+    for(int y = borderSize; y < markerSize + borderSize; y++) {
+        for(int x = borderSize; x < markerSize + borderSize; x++) {
+            tempInnerUnc += abs(groundTruthbits.ptr<float>(y - borderSize)[x - borderSize] - cellPixelRatio.ptr<float>(y)[x]);
+        }
+    }
+
+    // Compute the overall normalized marker uncertainty
+    float normalizedMarkerUnc = (tempInnerUnc + tempBorderUnc) / (sizeWithBorders * sizeWithBorders);
+
+    return normalizedMarkerUnc;
+}
+
+
 /**
  * @brief Tries to identify one candidate given the dictionary
  * @return candidate typ. zero if the candidate is not valid,
@@ -412,6 +467,7 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
 static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _image,
                                      const vector<Point2f>& _corners, int& idx,
                                      const DetectorParameters& params, int& rotation,
+                                     float &markerUnc,
                                      const float scale = 1.f) {
     CV_DbgAssert(params.markerBorderBits > 0);
     uint8_t typ=1;
@@ -423,10 +479,12 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         scaled_corners[i].y = _corners[i].y * scale;
     }
 
+    Mat cellPixelRatio;
     Mat candidateBits =
         _extractBits(_image, scaled_corners, dictionary.markerSize, params.markerBorderBits,
                      params.perspectiveRemovePixelPerCell,
-                     params.perspectiveRemoveIgnoredMarginPerCell, params.minOtsuStdDev);
+                     params.perspectiveRemoveIgnoredMarginPerCell, params.minOtsuStdDev,
+                     cellPixelRatio);
 
     // analyze border bits
     int maximumErrorsInBorder =
@@ -439,6 +497,7 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         // to get from 255 to 1
         Mat invertedImg = ~candidateBits-254;
         int invBError = _getBorderErrors(invertedImg, dictionary.markerSize, params.markerBorderBits);
+        cellPixelRatio = -1.0 * cellPixelRatio + 1;
         // white marker
         if(invBError<borderErrors){
             borderErrors = invBError;
@@ -457,6 +516,12 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
     // try to indentify the marker
     if(!dictionary.identify(onlyBits, idx, rotation, params.errorCorrectionRate))
         return 0;
+
+    // compute the candidate's uncertainty
+    Mat groundTruthbits;
+    Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
+    bitsUints.convertTo(groundTruthbits, CV_32F);
+    markerUnc = _getMarkerUnc(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
 
     return typ;
 }
@@ -657,7 +722,7 @@ struct ArucoDetector::ArucoDetectorImpl {
      * @brief Detect markers either using multiple or just first dictionary
      */
     void detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
-            OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices, DictionaryMode dictMode) {
+            OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices, OutputArray _markersUnc, DictionaryMode dictMode) {
         CV_Assert(!_image.empty());
 
         CV_Assert(detectorParams.markerBorderBits > 0);
@@ -717,6 +782,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<vector<Point2f> > candidates;
         vector<vector<Point> > contours;
         vector<int> ids;
+        vector<float> markersUnc;
 
         /// STEP 2.a Detect marker candidates :: using AprilTag
         if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
@@ -738,7 +804,7 @@ struct ArucoDetector::ArucoDetectorImpl {
 
             /// STEP 2: Check candidate codification (identify markers)
             identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
-                    ids, dictionary, rejectedImgPoints);
+                    ids, dictionary, rejectedImgPoints, markersUnc);
 
             /// STEP 3: Corner refinement :: use corner subpix
             if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
@@ -766,7 +832,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 // temporary variable to store the current candidates
                 vector<vector<Point2f>> currentCandidates;
                 identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize.at(currentDictionary.markerSize), currentCandidates, contours,
-                        ids, currentDictionary, rejectedImgPoints);
+                        ids, currentDictionary, rejectedImgPoints, markersUnc);
                 if (_dictIndices.needed()) {
                     dictIndices.insert(dictIndices.end(), currentCandidates.size(), dictIndex);
                 }
@@ -848,6 +914,9 @@ struct ArucoDetector::ArucoDetectorImpl {
         }
         if (_dictIndices.needed()) {
             Mat(dictIndices).copyTo(_dictIndices);
+        }
+        if (_markersUnc.needed()) {
+            Mat(markersUnc).copyTo(_markersUnc);
         }
     }
 
@@ -982,9 +1051,10 @@ struct ArucoDetector::ArucoDetectorImpl {
      */
     void identifyCandidates(const Mat& grey, const vector<Mat>& image_pyr, vector<MarkerCandidateTree>& selectedContours,
                             vector<vector<Point2f> >& accepted, vector<vector<Point> >& contours,
-                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected) const {
+                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected, vector<float>& markersUnc) const {
         size_t ncandidates = selectedContours.size();
 
+        vector<float> markersUncTmp(ncandidates, 1.f);
         vector<int> idsTmp(ncandidates, -1);
         vector<int> rotated(ncandidates, 0);
         vector<uint8_t> validCandidates(ncandidates, 0);
@@ -1018,11 +1088,11 @@ struct ArucoDetector::ArucoDetectorImpl {
                     }
                     const float scale = detectorParams.useAruco3Detection ? img.cols / static_cast<float>(grey.cols) : 1.f;
 
-                    validCandidates[v] = _identifyOneCandidate(currentDictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], scale);
+                    validCandidates[v] = _identifyOneCandidate(currentDictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], markersUncTmp[v], scale);
 
                     if (validCandidates[v] == 0 && checkCloseContours) {
                         for (const MarkerCandidate& closeMarkerCandidate: selectedContours[v].closeContours) {
-                            validCandidates[v] = _identifyOneCandidate(currentDictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], scale);
+                            validCandidates[v] = _identifyOneCandidate(currentDictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], markersUncTmp[v], scale);
                             if (validCandidates[v] > 0) {
                                 selectedContours[v].corners = closeMarkerCandidate.corners;
                                 selectedContours[v].contour = closeMarkerCandidate.contour;
@@ -1058,6 +1128,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                     accepted.push_back(selectedContours[i].corners);
                     contours.push_back(selectedContours[i].contour);
                     ids.push_back(idsTmp[i]);
+                    markersUnc.push_back(markersUncTmp[i]);
             }
             else {
                 rejected.push_back(selectedContours[i].corners);
@@ -1103,14 +1174,19 @@ ArucoDetector::ArucoDetector(const vector<Dictionary> &_dictionaries,
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionaries, _detectorParams, _refineParams);
 }
 
+void ArucoDetector::detectMarkersWithUnc(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids, OutputArray _markersUnc,
+                                  OutputArrayOfArrays _rejectedImgPoints) const {
+    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), _markersUnc, DictionaryMode::Single);
+}
+
 void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
                                   OutputArrayOfArrays _rejectedImgPoints) const {
-    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), DictionaryMode::Single);
+    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), noArray(), DictionaryMode::Single);
 }
 
 void ArucoDetector::detectMarkersMultiDict(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
                                   OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices) const {
-    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, _dictIndices, DictionaryMode::Multi);
+    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, _dictIndices, noArray(), DictionaryMode::Multi);
 }
 
 /**
