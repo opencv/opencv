@@ -1055,8 +1055,6 @@ TEST(ffmpeg_cap_properties, set_pos_get_msec)
     EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 0.0);
 }
 
-#endif // WIN32
-
 // Test that seeking twice to the same frame in videos with negative DTS
 // does not result in negative position or timestamp values
 // related issue: https://github.com/opencv/opencv/issues/27819
@@ -1101,6 +1099,8 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
         EXPECT_GE(cap.get(CAP_PROP_POS_FRAMES), f);
     }
 }
+
+#endif // WIN32
 
 
 }} // namespace
