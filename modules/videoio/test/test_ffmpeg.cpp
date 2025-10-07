@@ -1062,36 +1062,36 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
 {
     if (!videoio_registry::hasBackend(CAP_FFMPEG))
         throw SkipTestException("FFmpeg backend was not found");
-    
+
     const std::string filename = findDataFile("video/negdts_h264.mp4");
     VideoCapture cap(filename, CAP_FFMPEG);
-    
+
     if (!cap.isOpened())
         throw SkipTestException("Video stream is not supported");
-    
+
     const int framesToProbe[] = {2, 3, 4, 5};
-    
+
     for (int f : framesToProbe)
     {
         // Reset to frame 0
         ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
         cap.get(CAP_PROP_POS_FRAMES);
-        
+
         // Seek to target frame
         ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, f));
         const double posAfterFirstSeek = cap.get(CAP_PROP_POS_FRAMES);
-        
+
         // Seek to the same frame again
         ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, f));
         const double posAfterSecondSeek = cap.get(CAP_PROP_POS_FRAMES);
         const double tsAfterSecondSeek = cap.get(CAP_PROP_POS_MSEC);
-        
+
         EXPECT_GE(posAfterSecondSeek, 0)
             << "Frame index became negative after second seek to frame " << f
             << " (first seek gave " << posAfterFirstSeek << ")";
         EXPECT_GE(tsAfterSecondSeek, 0.0)
             << "Timestamp became negative after second seek to frame " << f;
-        
+
         // Verify that reading a frame works and position advances
         Mat frame;
         ASSERT_TRUE(cap.read(frame));
