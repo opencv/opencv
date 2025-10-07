@@ -524,12 +524,12 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
         return std::string("Unknown error");
 }
 
-static inline int64_t to_avtb(int64_t ts, AVRational tb) 
+static inline int64_t to_avtb(int64_t ts, AVRational tb)
 {
     return av_rescale_q(ts, tb, AV_TIME_BASE_Q);
 }
 
-static inline int64_t from_avtb(int64_t ts_avtb, AVRational tb) 
+static inline int64_t from_avtb(int64_t ts_avtb, AVRational tb)
 {
     return av_rescale_q(ts_avtb, AV_TIME_BASE_Q, tb);
 }
@@ -573,10 +573,10 @@ struct CvCapture_FFMPEG
     int64_t           picture_pts;
     int64_t           pts_in_fps_time_base;
     int64_t           dts_delay_in_fps_time_base;
-	
-	/// Timestamp offset in AV_TIME_BASE units for normalization
-	int64_t ts_offset_avtb = 0;
-	bool    ts_offset_decided = false;
+
+    /// Timestamp offset in AV_TIME_BASE units for normalization
+    int64_t ts_offset_avtb = 0;
+    bool    ts_offset_decided = false;
 
     AVIOContext     * avio_context;
 
@@ -638,8 +638,8 @@ void CvCapture_FFMPEG::init()
     picture_pts = AV_NOPTS_VALUE_;
     pts_in_fps_time_base = 0;
     dts_delay_in_fps_time_base = 0;
-	ts_offset_avtb = 0;
-	ts_offset_decided = false;
+    ts_offset_avtb = 0;
+    ts_offset_decided = false;
     first_frame_number = -1;
     memset( &rgb_picture, 0, sizeof(rgb_picture) );
     memset( &frame, 0, sizeof(frame) );
@@ -1722,47 +1722,47 @@ bool CvCapture_FFMPEG::grabFrame()
         if (picture_pts == AV_NOPTS_VALUE_) {
             int64_t dts = 0;
             if (!rawMode) {
-				picture_pts = (picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_)
-								? picture->CV_FFMPEG_PTS_FIELD
-								: picture->pkt_dts;
-				if (frame_number == 0) dts = picture->pkt_dts;
-			} else {
-				const AVPacket& packet_raw = (packet.data != 0) ? packet : packet_filtered;
-				picture_pts = (packet_raw.pts != AV_NOPTS_VALUE_)
-								? packet_raw.pts
-								: packet_raw.dts;
-				if (frame_number == 0) dts = packet_raw.dts;
-			}
-			
-			// Decide timestamp offset once on first frame to normalize all timestamps to start at zero.
+                picture_pts = (picture->CV_FFMPEG_PTS_FIELD != AV_NOPTS_VALUE_)
+                                ? picture->CV_FFMPEG_PTS_FIELD
+                                : picture->pkt_dts;
+                if (frame_number == 0) dts = picture->pkt_dts;
+            } else {
+                const AVPacket& packet_raw = (packet.data != 0) ? packet : packet_filtered;
+                picture_pts = (packet_raw.pts != AV_NOPTS_VALUE_)
+                                ? packet_raw.pts
+                                : packet_raw.dts;
+                if (frame_number == 0) dts = packet_raw.dts;
+            }
+
+            // Decide timestamp offset once on first frame to normalize all timestamps to start at zero.
             // This handles videos with negative DTS values (e.g., from B-frame reordering) or non-zero
             // start_time. Similar to FFmpeg's -avoid_negative_ts make_zero option.
-			if (!ts_offset_decided) 
-			{
-				int64_t min_start_avtb = INT64_MAX;
+            if (!ts_offset_decided)
+            {
+                int64_t min_start_avtb = INT64_MAX;
 
-				// Check container start_time (already in AV_TIME_BASE units)
-                if (ic && ic->start_time != AV_NOPTS_VALUE_) 
-				{
+                // Check container start_time (already in AV_TIME_BASE units)
+                if (ic && ic->start_time != AV_NOPTS_VALUE_)
+                {
                     min_start_avtb = ic->start_time;
                 }
 
                 // Check stream start_time
                 AVStream* st = ic->streams[video_stream];
-                if (st->start_time != AV_NOPTS_VALUE_) 
-				{
+                if (st->start_time != AV_NOPTS_VALUE_)
+                {
                     int64_t s = to_avtb(st->start_time, st->time_base);
                     if (s < min_start_avtb) min_start_avtb = s;
                 }
 
                 // Check first observed timestamp (PTS preferred, else DTS from frame 0)
                 int64_t first_ts_stream = picture_pts;
-                if (first_ts_stream == AV_NOPTS_VALUE_ && dts != AV_NOPTS_VALUE_) 
-				{
+                if (first_ts_stream == AV_NOPTS_VALUE_ && dts != AV_NOPTS_VALUE_)
+                {
                     first_ts_stream = dts;
                 }
-                if (first_ts_stream != AV_NOPTS_VALUE_) 
-				{
+                if (first_ts_stream != AV_NOPTS_VALUE_)
+                {
                     int64_t t = to_avtb(first_ts_stream, st->time_base);
                     if (t < min_start_avtb) min_start_avtb = t;
                 }
@@ -1770,17 +1770,17 @@ bool CvCapture_FFMPEG::grabFrame()
                 // Compute offset to shift negative timestamps to zero
                 ts_offset_avtb = (min_start_avtb != INT64_MAX && min_start_avtb < 0) ? -min_start_avtb : 0;
                 ts_offset_decided = true;
-			}
+            }
 
-			// Apply normalization to picture_pts
-            if (picture_pts != AV_NOPTS_VALUE_) 
-			{
+            // Apply normalization to picture_pts
+            if (picture_pts != AV_NOPTS_VALUE_)
+            {
                 int64_t t = to_avtb(picture_pts, video_st->time_base);
                 t += ts_offset_avtb;
                 picture_pts = from_avtb(t, video_st->time_base);
             }
 
-			
+
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0) || LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
             AVRational frame_rate = video_st->avg_frame_rate;
 #else
@@ -2187,7 +2187,7 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
-	return (double)dts * r2d(ic->streams[video_stream]->time_base);
+    return (double)dts * r2d(ic->streams[video_stream]->time_base);
 }
 
 void CvCapture_FFMPEG::get_rotation_angle()
