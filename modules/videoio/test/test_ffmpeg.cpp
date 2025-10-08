@@ -1069,6 +1069,13 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
     if (!cap.isOpened())
         throw SkipTestException("Video stream is not supported");
 
+    // after open, a single grab() should not yield negative POS_MSEC.
+    ASSERT_TRUE(cap.grab());
+    EXPECT_GE(cap.get(CAP_PROP_POS_MSEC), 0.0) << "Negative ts immediately after open+grab()";
+
+    ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
+    (void)cap.get(CAP_PROP_POS_FRAMES);
+
     const int framesToProbe[] = {2, 3, 4, 5};
 
     for (int f : framesToProbe)
@@ -1091,6 +1098,10 @@ TEST(videoio_ffmpeg, seek_with_negative_dts)
             << " (first seek gave " << posAfterFirstSeek << ")";
         EXPECT_GE(tsAfterSecondSeek, 0.0)
             << "Timestamp became negative after second seek to frame " << f;
+
+        // Per-iteration decode check: grab() + ts non-negative
+        ASSERT_TRUE(cap.grab());
+        EXPECT_GE(cap.get(CAP_PROP_POS_MSEC), 0.0) << "Negative timestamp after grab() at frame " << f;
 
         // Verify that reading a frame works and position advances
         Mat frame;
