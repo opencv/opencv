@@ -151,28 +151,64 @@ public:
             float* outlpPtr = outlpBase;
             const size_t sN_out_ = sN_out;
             const size_t sC_out_ = sC_out;
+            AutoBuffer<float> tempBuf_(C_);
+            float* tempbuf = tempBuf_.data();
             for (int r = rr.start; r < rr.end; ++r) {
                 const int n = r / S_;
                 const int s = r % S_;
                 const float* rowBase = base + n * sN_ + s;
 
-                float maxv = rowBase[0];
-                for (int c = 1; c < C_; ++c) maxv = std::max(maxv, rowBase[c * sC_]);
-
-                double sumExp = 0.0;
-                double sumLogits = 0.0;
-                for (int c = 0; c < C_; ++c) {
-                    const float v = rowBase[c * sC_];
-                    sumExp += std::exp(static_cast<double>(v - maxv));
-                    sumLogits += v;
+                float maxv = -FLT_MAX;
+                int c = 0;
+#if CV_ENABLE_UNROLLED && defined(_M_ARM64)
+                for (; c + 3 < C_; c += 4) {
+                    const float v0 = rowBase[(c + 0) * sC_];
+                    const float v1 = rowBase[(c + 1) * sC_];
+                    const float v2 = rowBase[(c + 2) * sC_];
+                    const float v3 = rowBase[(c + 3) * sC_];
+                    tempbuf[c + 0] = v0;
+                    tempbuf[c + 1] = v1;
+                    tempbuf[c + 2] = v2;
+                    tempbuf[c + 3] = v3;
+                    maxv = std::max(maxv, std::max(std::max(v0, v1), std::max(v2, v3)));
                 }
-                const float lse = static_cast<float>(std::log(sumExp) + maxv);
+#endif
+                for (; c < C_; ++c) {
+                    const float v = rowBase[c * sC_];
+                    tempbuf[c] = v;
+                    maxv = std::max(maxv, v);
+                }
+
+                float sumExp = 0.f;
+                float sumLogits = 0.f;
+                int i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+                const int nlanes = VTraits<v_float32>::vlanes();
+                v_float32 vsExp = vx_setzero_f32();
+                v_float32 vsLog = vx_setzero_f32();
+                v_float32 vmaxv = vx_setall_f32(maxv);
+                for (; i <= C_ - nlanes; i += nlanes) {
+                    v_float32 v = vx_load(tempbuf + i);
+                    vsLog = v_add(vsLog, v);
+                    v_float32 vshift = v_sub(v, vmaxv);
+                    v_float32 ev = v_exp(vshift);
+                    vsExp = v_add(vsExp, ev);
+                }
+                sumExp += v_reduce_sum(vsExp);
+                sumLogits += v_reduce_sum(vsLog);
+#endif
+                for (; i < C_; ++i) {
+                    const float v = tempbuf[i];
+                    sumLogits += v;
+                    sumExp += expf(v - maxv);
+                }
+                const float lse = logf(sumExp) + maxv;
                 rowLSE[r] = lse;
-                meanLR[r] = static_cast<float>(sumLogits / C_) - lse;
+                meanLR[r] = sumLogits / static_cast<float>(C_) - lse;
 
                 if (writeLP && outlpPtr) {
                     float* dst = outlpPtr + n * sN_out_ + s;
-                    for (int c = 0; c < C_; ++c) dst[c * sC_out_] = rowBase[c * sC_] - lse;
+                    for (int c = 0; c < C_; ++c) dst[c * sC_out_] = tempbuf[c] - lse;
                 }
             }
         }, nstripes);
