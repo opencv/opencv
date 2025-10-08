@@ -726,8 +726,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             CV_Error_(Error::StsBadArg, ("wrong number of inputs in graph '%s': %zu given, %zu expected",
                                          graph->name().data(), inputs_.total(), n_gr_inputs));
         }
-        _InputArray::KindFlag inKind = inputs_.kind();
 #ifdef HAVE_CUDA
+        _InputArray::KindFlag inKind = inputs_.kind();
         bool usedGpuInputs = false;
         if (supportGPU && inKind == _InputArray::STD_VECTOR_CUDA_GPU_MAT) {
             std::vector<cv::cuda::GpuMat> inGpu; inputs_.getGpuMatVector(inGpu);
@@ -838,10 +838,10 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
-        bool ranOnGPU = false;
         std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
         if (!subgraphs) {
 #ifdef HAVE_CUDA
+            bool ranOnGPU = false;
             if (supportGPU && !dynamicOutShapes) {
                 CV_LOG_INFO(NULL, "DNN/CUDA: attempting GPU forward for layer '" << layer->name << "' (" << layer->type << ")");
                 try {
