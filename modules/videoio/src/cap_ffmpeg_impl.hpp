@@ -1767,12 +1767,8 @@ bool CvCapture_FFMPEG::grabFrame()
                     if (t < min_start_avtb) min_start_avtb = t;
                 }
 
-                // Compute offset to shift timestamps to zero
-                if (min_start_avtb != INT64_MAX) {
-                    ts_offset_avtb = -min_start_avtb;
-                } else {
-                    ts_offset_avtb = 0;
-                }
+                // Compute offset to shift negative timestamps to zero
+                ts_offset_avtb = (min_start_avtb != INT64_MAX && min_start_avtb < 0) ? -min_start_avtb : 0;
                 ts_offset_decided = true;
             }
 
@@ -2200,7 +2196,13 @@ int64_t CvCapture_FFMPEG::dts_to_frame_number(int64_t dts)
 
 double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 {
-    return (double)dts * r2d(ic->streams[video_stream]->time_base);
+    const AVStream* st = ic->streams[video_stream];
+    int64_t ts = dts;
+
+    if (ts_offset_avtb == 0 && st->start_time != AV_NOPTS_VALUE_)
+        ts -= st->start_time;
+
+    return ts * r2d(st->time_base);
 }
 
 void CvCapture_FFMPEG::get_rotation_angle()
@@ -2253,9 +2255,19 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
     {
         int64_t _frame_number_temp = std::max(_frame_number-delta, (int64_t)0);
         double sec = (double)_frame_number_temp / get_fps();
-        int64_t time_stamp = ic->streams[video_stream]->start_time;
-        double  time_base  = r2d(ic->streams[video_stream]->time_base);
-        time_stamp += (int64_t)(sec / time_base + 0.5);
+
+        AVStream* st = ic->streams[video_stream];
+        int64_t time_stamp = st->start_time;
+        double  time_base  = r2d(st->time_base);
+        int64_t ts_norm = (int64_t)(sec / time_base + 0.5);
+
+        if (ts_offset_avtb != 0) {
+            // map normalized target back to original demux timeline
+            time_stamp += ts_norm - from_avtb(ts_offset_avtb, st->time_base);
+        } else {
+            time_stamp += ts_norm;
+        }
+
         if (get_total_frames() > 1) av_seek_frame(ic, video_stream, time_stamp, AVSEEK_FLAG_BACKWARD);
         if(!rawMode)
             avcodec_flush_buffers(context);
