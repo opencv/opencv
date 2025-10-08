@@ -1776,13 +1776,22 @@ bool CvCapture_FFMPEG::grabFrame()
                 ts_offset_decided = true;
             }
 
-            // Apply normalization to picture_pts (not in raw mode)
-            if (picture_pts != AV_NOPTS_VALUE_ && !rawMode)
+            // Apply normalization to picture_pts
+            if (picture_pts != AV_NOPTS_VALUE_)
             {
                 int64_t t = to_avtb(picture_pts, video_st->time_base);
                 t += ts_offset_avtb;
                 picture_pts = from_avtb(t, video_st->time_base);
             }
+
+            // Also normalize dts
+            if (dts != AV_NOPTS_VALUE_)
+            {
+                int64_t t = to_avtb(dts, video_st->time_base);
+                t += ts_offset_avtb;
+                dts = from_avtb(t, video_st->time_base);
+            }
+
 
 
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0) || LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
