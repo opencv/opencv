@@ -68,51 +68,11 @@ public:
             return;
         }
 
-        switch (t)
-        {
-            case CV_8U: {
-                const uint8_t* in = inputs[0].ptr<uint8_t>();
-                uint8_t* out = outputs[0].ptr<uint8_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<uint8_t>(~in[i]);
-                break; }
-            case CV_8S: {
-                const int8_t* in = inputs[0].ptr<int8_t>();
-                int8_t* out = outputs[0].ptr<int8_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<int8_t>(~in[i]);
-                break; }
-            case CV_16U: {
-                const uint16_t* in = inputs[0].ptr<uint16_t>();
-                uint16_t* out = outputs[0].ptr<uint16_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<uint16_t>(~in[i]);
-                break; }
-            case CV_16S: {
-                const int16_t* in = inputs[0].ptr<int16_t>();
-                int16_t* out = outputs[0].ptr<int16_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<int16_t>(~in[i]);
-                break; }
-            case CV_32U: {
-                const uint32_t* in = inputs[0].ptr<uint32_t>();
-                uint32_t* out = outputs[0].ptr<uint32_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<uint32_t>(~in[i]);
-                break; }
-            case CV_32S: {
-                const int32_t* in = inputs[0].ptr<int32_t>();
-                int32_t* out = outputs[0].ptr<int32_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<int32_t>(~in[i]);
-                break; }
-            case CV_64U: {
-                const uint64_t* in = inputs[0].ptr<uint64_t>();
-                uint64_t* out = outputs[0].ptr<uint64_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<uint64_t>(~in[i]);
-                break; }
-            case CV_64S: {
-                const int64_t* in = inputs[0].ptr<int64_t>();
-                int64_t* out = outputs[0].ptr<int64_t>();
-                for (size_t i = 0; i < size; ++i) out[i] = static_cast<int64_t>(~in[i]);
-                break; }
-            default:
-                CV_Error(Error::BadDepth, "Not/BitwiseNot expects bool or integer tensor");
-        }
+        const unsigned char* in = inputs[0].ptr<unsigned char>();
+        unsigned char* out = outputs[0].ptr<unsigned char>();
+        size_t totalBytes = size * inputs[0].elemSize();
+        for (size_t i = 0; i < totalBytes; ++i)
+            out[i] = static_cast<unsigned char>(~in[i]);
     }
 
 #ifdef HAVE_DNN_NGRAPH
