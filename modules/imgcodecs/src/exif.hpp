@@ -154,6 +154,7 @@ public:
     ExifReader();
     ~ExifReader();
 
+    bool processRawProfile(const char* profile, size_t profile_len);
 
     /**
      * @brief Parse the file with exif info
@@ -175,6 +176,10 @@ public:
      */
     ExifEntry_t getTag( const ExifTagName tag ) const;
 
+    /**
+     * @brief Get the whole exif buffer
+     */
+    const std::vector<unsigned char>& getData() const;
 
 private:
     std::vector<unsigned char> m_data;

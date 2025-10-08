@@ -344,7 +344,11 @@ protected:
             }
         }
 
-        solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, pointsCount, 0.5f, 0.99, inliers, method);
+        bool isEstimateSuccess = solvePnPRansac(points, projectedPoints, intrinsics, distCoeffs, rvec, tvec, false, pointsCount, 0.5f, 0.99, inliers, method);
+        if (!isEstimateSuccess)
+        {
+            return false;
+        }
 
         bool isTestSuccess = inliers.size() + numOutliers >= points.size();
 

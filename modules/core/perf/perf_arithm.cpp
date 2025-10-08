@@ -422,6 +422,19 @@ PERF_TEST_P_(BinaryOpTest, reciprocal)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST_P_(BinaryOpTest, transpose2d)
+{
+    Size sz = get<0>(GetParam());
+    int type = get<1>(GetParam());
+    Size tsz = Size(sz.height, sz.width);
+    cv::Mat a(sz, type), b(tsz, type);;
+
+    declare.in(a, WARMUP_RNG).out(b);
+
+    TEST_CYCLE() cv::transpose(a, b);
+
+    SANITY_CHECK_NOTHING();
+}
 
 PERF_TEST_P_(BinaryOpTest, transposeND)
 {

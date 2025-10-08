@@ -197,8 +197,6 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_PYRAMIDS_UP         1 // Different results
 #define IPP_DISABLE_PYRAMIDS_DOWN       1 // Different results
 #define IPP_DISABLE_PYRAMIDS_BUILD      1 // Different results
-#define IPP_DISABLE_WARPAFFINE          1 // Different results
-#define IPP_DISABLE_WARPPERSPECTIVE     1 // Different results
 #define IPP_DISABLE_REMAP               1 // Different results
 #define IPP_DISABLE_YUV_RGB             1 // accuracy difference
 #define IPP_DISABLE_RGB_YUV             1 // breaks OCL accuracy tests
@@ -209,11 +207,9 @@ T* allocSingletonNew() { return new(allocSingletonNewBuffer(sizeof(T))) T(); }
 #define IPP_DISABLE_XYZ_RGB             1 // big accuracy difference
 #define IPP_DISABLE_HOUGH               1 // improper integration/results
 #define IPP_DISABLE_FILTER2D_BIG_MASK   1 // different results on masks > 7x7
-#define IPP_DISABLE_NORM_8U             1 // accuracy difference in perf test sanity check
 
 // Temporary disabled named IPP region. Performance
 #define IPP_DISABLE_PERF_COPYMAKE       1 // performance variations
-#define IPP_DISABLE_PERF_LUT            1 // there are no performance benefits (PR #2653)
 #define IPP_DISABLE_PERF_TRUE_DIST_MT   1 // cv::distanceTransform OpenCV MT performance is better
 #define IPP_DISABLE_PERF_CANNY_MT       1 // cv::Canny OpenCV MT performance is better
 

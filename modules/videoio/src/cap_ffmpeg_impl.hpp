@@ -607,6 +607,7 @@ struct CvCapture_FFMPEG
     int hw_device;
     int use_opencl;
     int extraDataIdx;
+    int requestedThreads;
 };
 
 void CvCapture_FFMPEG::init()
@@ -658,6 +659,7 @@ void CvCapture_FFMPEG::init()
     hw_device = -1;
     use_opencl = 0;
     extraDataIdx = 1;
+    requestedThreads = cv::getNumberOfCPUs();
 }
 
 
@@ -685,7 +687,10 @@ void CvCapture_FFMPEG::close()
     if( video_st )
     {
 #ifdef CV_FFMPEG_CODECPAR
+// avcodec_close removed in FFmpeg release 8.0
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
         avcodec_close( context );
+# endif
 #endif
         video_st = NULL;
     }
@@ -932,6 +937,8 @@ static void ffmpeg_log_callback(void *ptr, int level, const char *fmt, va_list v
 
 class InternalFFMpegRegister
 {
+    static bool skip_log_callback;
+
 public:
     static void init(const bool threadSafe)
     {
@@ -944,6 +951,7 @@ public:
     {
         const bool debug_option = utils::getConfigurationParameterBool("OPENCV_FFMPEG_DEBUG");
         std::string level_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_LOGLEVEL");
+        skip_log_callback = utils::getConfigurationParameterBool("OPENCV_FFMPEG_SKIP_LOG_CALLBACK");
         int level = AV_LOG_VERBOSE;
         if (!level_option.empty())
         {
@@ -952,7 +960,10 @@ public:
         if ( debug_option || (!level_option.empty()) )
         {
             av_log_set_level(level);
-            av_log_set_callback(ffmpeg_log_callback);
+            if (!skip_log_callback)
+            {
+                av_log_set_callback(ffmpeg_log_callback);
+            }
         }
         else
         {
@@ -981,22 +992,21 @@ public:
 #ifdef CV_FFMPEG_LOCKMGR
         av_lockmgr_register(NULL);
 #endif
-        av_log_set_callback(NULL);
+        if (!skip_log_callback)
+        {
+            av_log_set_callback(NULL);
+        }
     }
 };
+
+bool InternalFFMpegRegister::skip_log_callback = false;
 
 inline void fill_codec_context(AVCodecContext * enc, AVDictionary * dict)
 {
     if (!enc->thread_count)
     {
         int nCpus = cv::getNumberOfCPUs();
-        int requestedThreads = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
-        std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
-        if (!threads_option.empty())
-        {
-            requestedThreads = atoi(threads_option.c_str());
-        }
-        enc->thread_count = requestedThreads;
+        enc->thread_count = std::min(nCpus, 16);  // [OPENCV:FFMPEG:24] Application has requested XX threads. Using a thread count greater than 16 is not recommended.
     }
 
     AVDictionaryEntry* avdiscard_entry = av_dict_get(dict, "avdiscard", NULL, 0);
@@ -1117,12 +1127,21 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
 #endif
         if (params.has(CAP_PROP_N_THREADS))
         {
-            nThreads = params.get<int>(CAP_PROP_N_THREADS);
+            nThreads = requestedThreads = params.get<int>(CAP_PROP_N_THREADS);
         }
         if (params.warnUnusedParameters())
         {
             CV_LOG_ERROR(NULL, "VIDEOIO/FFMPEG: unsupported parameters in .open(), see logger INFO channel for details. Bailout");
             return false;
+        }
+    }
+
+    if (params.empty() || !params.has(CAP_PROP_N_THREADS))
+    {
+        std::string threads_option = utils::getConfigurationParameterString("OPENCV_FFMPEG_THREADS");
+        if (!threads_option.empty())
+        {
+            nThreads = requestedThreads = atoi(threads_option.c_str());
         }
     }
 
@@ -1716,7 +1735,17 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
     if (!sw_picture || !sw_picture->data[0])
         return false;
 
-    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format));
+#if LIBAVUTIL_BUILD >= CALC_FFMPEG_VERSION(56, 72, 0)
+    const char* color_space_name = av_color_space_name(sw_picture->colorspace);
+#else
+    const char* color_space_name = av_get_colorspace_name(sw_picture->colorspace);
+#endif
+    CV_LOG_DEBUG(NULL, "Input picture format: " << av_get_pix_fmt_name((AVPixelFormat)sw_picture->format)
+        << ", colorspace: " << color_space_name
+        << ", range: " << av_color_range_name(sw_picture->color_range)
+        << ", primaries: " << av_color_primaries_name(sw_picture->color_primaries)
+        << ", transfer: " << av_color_transfer_name(sw_picture->color_trc)
+    );
     const AVPixelFormat result_format = convertRGB ? AV_PIX_FMT_BGR24 : (AVPixelFormat)sw_picture->format;
     switch (result_format)
     {
@@ -1736,6 +1765,51 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.height != video_st->CV_FFMPEG_CODEC_FIELD->height ||
         frame.data == NULL )
     {
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
+        int buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
+        int buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
+
+        // Reproduce sws_getCachedContext but with threads option
+        int64_t src_h_chr_pos = -513, dst_h_chr_pos = -513,
+                src_v_chr_pos = -513, dst_v_chr_pos = -513;
+        if (img_convert_ctx)
+        {
+            av_opt_get_int(img_convert_ctx, "src_h_chr_pos", 0, &src_h_chr_pos);
+            av_opt_get_int(img_convert_ctx, "src_v_chr_pos", 0, &src_v_chr_pos);
+            av_opt_get_int(img_convert_ctx, "dst_h_chr_pos", 0, &dst_h_chr_pos);
+            av_opt_get_int(img_convert_ctx, "dst_v_chr_pos", 0, &dst_v_chr_pos);
+            sws_freeContext(img_convert_ctx);
+            img_convert_ctx = NULL;
+        }
+
+        img_convert_ctx = sws_alloc_context();
+        if (img_convert_ctx == NULL)
+            return false;//CV_Error(0, "Cannot initialize the conversion context!");
+
+        av_opt_set_int(img_convert_ctx, "sws_flags", SWS_BICUBIC, 0);
+        av_opt_set_int(img_convert_ctx, "threads", requestedThreads, 0);
+
+        if (swscale_version() < CALC_FFMPEG_VERSION(8, 12, 100))
+        {
+            av_opt_set_int(img_convert_ctx, "src_h_chr_pos", src_h_chr_pos, 0);
+            av_opt_set_int(img_convert_ctx, "src_v_chr_pos", src_v_chr_pos, 0);
+            av_opt_set_int(img_convert_ctx, "dst_h_chr_pos", dst_h_chr_pos, 0);
+            av_opt_set_int(img_convert_ctx, "dst_v_chr_pos", dst_v_chr_pos, 0);
+            av_opt_set_int(img_convert_ctx, "srcw", buffer_width, 0);
+            av_opt_set_int(img_convert_ctx, "srch", buffer_height, 0);
+            av_opt_set_int(img_convert_ctx, "dstw", buffer_width, 0);
+            av_opt_set_int(img_convert_ctx, "dsth", buffer_height, 0);
+            av_opt_set_pixel_fmt(img_convert_ctx, "src_format", (AVPixelFormat)sw_picture->format, 0);
+            av_opt_set_pixel_fmt(img_convert_ctx, "dst_format", result_format, 0);
+            av_opt_set_double(img_convert_ctx, "param0", SWS_PARAM_DEFAULT, 0);
+            av_opt_set_double(img_convert_ctx, "param1", SWS_PARAM_DEFAULT, 0);
+
+            if (sws_init_context(img_convert_ctx, NULL, NULL) < 0) {
+                sws_freeContext(img_convert_ctx);
+                img_convert_ctx = NULL;
+            }
+        }
+#else
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = context->coded_width, buffer_height = context->coded_height;
@@ -1749,6 +1823,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
                 SWS_BICUBIC,
                 NULL, NULL, NULL
                 );
+#endif
 
         if (img_convert_ctx == NULL)
             return false;//CV_Error(0, "Cannot initialize the conversion context!");
@@ -1778,6 +1853,9 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.step = rgb_picture.linesize[0];
     }
 
+#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
+    sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
+#else
     sws_scale(
             img_convert_ctx,
             sw_picture->data,
@@ -1786,6 +1864,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
             rgb_picture.data,
             rgb_picture.linesize
             );
+#endif
 
     *data = frame.data;
     *step = frame.step;
@@ -2005,7 +2084,21 @@ void CvCapture_FFMPEG::get_rotation_angle()
     rotation_angle = 0;
 #if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
+    // av_stream_get_side_data removed in FFmpeg release 8.0
+# if (LIBAVCODEC_BUILD < CALC_FFMPEG_VERSION(61, 9, 108))
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+# else
+    AVPacketSideData* sd = video_st->codecpar->coded_side_data;
+    int nb_sd = video_st->codecpar->nb_coded_side_data;
+    if (sd && nb_sd > 0)
+    {
+        const AVPacketSideData* mtx = av_packet_side_data_get(sd,  nb_sd, AV_PKT_DATA_DISPLAYMATRIX);
+        if (mtx)
+        {
+            data = mtx->data;
+        }
+    }
+# endif
     if (data)
     {
         rotation_angle = -cvRound(av_display_rotation_get((const int32_t*)data));
@@ -2080,6 +2173,7 @@ void CvCapture_FFMPEG::seek(int64_t _frame_number)
         else
         {
             frame_number = 0;
+            picture_pts = AV_NOPTS_VALUE_;
             break;
         }
     }
@@ -2097,27 +2191,14 @@ bool CvCapture_FFMPEG::setProperty( int property_id, double value )
     switch( property_id )
     {
     case CAP_PROP_POS_MSEC:
+        seek(value/1000.0);
+        return true;
     case CAP_PROP_POS_FRAMES:
+        seek((int64_t)value);
+        return true;
     case CAP_PROP_POS_AVI_RATIO:
-        {
-            switch( property_id )
-            {
-            case CAP_PROP_POS_FRAMES:
-                seek((int64_t)value);
-                break;
-
-            case CAP_PROP_POS_MSEC:
-                seek(value/1000.0);
-                break;
-
-            case CAP_PROP_POS_AVI_RATIO:
-                seek((int64_t)(value*ic->duration));
-                break;
-            }
-
-            picture_pts=(int64_t)value;
-        }
-        break;
+        seek((int64_t)(value*ic->duration));
+        return true;
     case CAP_PROP_FORMAT:
         if (value == -1)
             return setRaw();
@@ -2517,19 +2598,21 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     if (!encode_video) {
         CV_Assert(cn == 1 && ((width > 0 && height == 1) || (width == 1 && height > 0 && step == 1)));
         const bool set_key_frame = key_frame ? key_frame : idr_period ? frame_idx % idr_period == 0 : 1;
-        bool ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, pts_index, b_frame_dts_delay, set_key_frame);
+        int ret = icv_av_encapsulate_video_FFMPEG(oc, video_st, context, (uint8_t*)data, width, frame_idx, pts_index, b_frame_dts_delay, set_key_frame);
         frame_idx++;
-        return ret;
+        return ret == 0;
     }
 
     // check parameters
     if (input_pix_fmt == AV_PIX_FMT_BGR24) {
         if (cn != 3) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected 3 channels but got " << cn);
             return false;
         }
     }
     else if (input_pix_fmt == AV_PIX_FMT_GRAY8 || input_pix_fmt == AV_PIX_FMT_GRAY16LE) {
         if (cn != 1) {
+            CV_LOG_WARNING(NULL, "write frame skipped - expected 1 channel but got " << cn);
             return false;
         }
     }
@@ -2640,14 +2723,16 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
         }
         hw_frame->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
-        ret = ret_write >= 0 ? true : false;
+        // AVERROR(EAGAIN): continue sending input, not an error
+        ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
         av_frame_free(&hw_frame);
     } else
 #endif
     {
         picture->pts = frame_idx;
         int ret_write = icv_av_write_frame_FFMPEG(oc, video_st, context, outbuf, outbuf_size, picture, frame_idx);
-        ret = ret_write >= 0 ? true : false;
+        // AVERROR(EAGAIN): continue sending input, not an error
+        ret = (ret_write >= 0 || ret_write == AVERROR(EAGAIN));
     }
 
     frame_idx++;

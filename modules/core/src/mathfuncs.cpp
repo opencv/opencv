@@ -378,79 +378,12 @@ static bool ocl_polarToCart( InputArray _mag, InputArray _angle,
 
 #endif
 
-#ifdef HAVE_IPP
-static bool ipp_polarToCart(Mat &mag, Mat &angle, Mat &x, Mat &y)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-    int depth = angle.depth();
-    if(depth != CV_32F && depth != CV_64F)
-        return false;
-
-    if(angle.dims <= 2)
-    {
-        int len = (int)(angle.cols*angle.channels());
-
-        if(depth == CV_32F)
-        {
-            for (int h = 0; h < angle.rows; h++)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_32f, (const float*)mag.ptr(h), (const float*)angle.ptr(h), (float*)x.ptr(h), (float*)y.ptr(h), len) < 0)
-                    return false;
-            }
-        }
-        else
-        {
-            for (int h = 0; h < angle.rows; h++)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_64f, (const double*)mag.ptr(h), (const double*)angle.ptr(h), (double*)x.ptr(h), (double*)y.ptr(h), len) < 0)
-                    return false;
-            }
-        }
-        return true;
-    }
-    else
-    {
-        const Mat      *arrays[] = {&mag, &angle, &x, &y, NULL};
-        uchar          *ptrs[4]  = {NULL};
-        NAryMatIterator it(arrays, ptrs);
-        int len = (int)(it.size*angle.channels());
-
-        if(depth == CV_32F)
-        {
-            for (size_t i = 0; i < it.nplanes; i++, ++it)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_32f, (const float*)ptrs[0], (const float*)ptrs[1], (float*)ptrs[2], (float*)ptrs[3], len) < 0)
-                    return false;
-            }
-        }
-        else
-        {
-            for (size_t i = 0; i < it.nplanes; i++, ++it)
-            {
-                if(CV_INSTRUMENT_FUN_IPP(ippsPolarToCart_64f, (const double*)ptrs[0], (const double*)ptrs[1], (double*)ptrs[2], (double*)ptrs[3], len) < 0)
-                    return false;
-            }
-        }
-        return true;
-    }
-}
-#endif
-
 void polarToCart( InputArray src1, InputArray src2,
                   OutputArray dst1, OutputArray dst2, bool angleInDegrees )
 {
     CV_INSTRUMENT_REGION();
 
     CV_Assert(dst1.getObj() != dst2.getObj());
-
-#ifdef HAVE_IPP
-    const bool isInPlace =
-        (src1.getObj() == dst1.getObj()) ||
-        (src1.getObj() == dst2.getObj()) ||
-        (src2.getObj() == dst1.getObj()) ||
-        (src2.getObj() == dst2.getObj());
-#endif
 
     int type = src2.type(), depth = CV_MAT_DEPTH(type), cn = CV_MAT_CN(type);
     CV_Assert((depth == CV_32F || depth == CV_64F) && (src1.empty() || src1.type() == type));
@@ -463,8 +396,6 @@ void polarToCart( InputArray src1, InputArray src2,
     dst1.create( Angle.dims, Angle.size, type );
     dst2.create( Angle.dims, Angle.size, type );
     Mat X = dst1.getMat(), Y = dst2.getMat();
-
-    CV_IPP_RUN(!angleInDegrees && !isInPlace, ipp_polarToCart(Mag, Angle, X, Y));
 
     const Mat* arrays[] = {&Mag, &Angle, &X, &Y, 0};
     uchar* ptrs[4] = {};
@@ -1007,9 +938,40 @@ static bool ocl_pow(InputArray _src, double power, OutputArray _dst,
     bool issqrt = std::abs(power - 0.5) < DBL_EPSILON;
     const char * const op = issqrt ? "OP_SQRT" : is_ipower ? "OP_POWN" : "OP_POW";
 
+    // Note: channels are unrolled
+
+    std::string extra_opts ="";
+    if (is_ipower)
+    {
+        int wdepth = CV_32F;
+        if (depth == CV_64F)
+            wdepth = CV_64F;
+        else if (depth == CV_16F)
+            wdepth = CV_16F;
+
+        char cvt[2][50];
+        extra_opts = format(
+            " -D srcT1=%s -DsrcT1_C1=%s"
+            " -D srcT2=int -D workST=int"
+            " -D workT=%s -D wdepth=%d -D convertToWT1=%s"
+            " -D convertToDT=%s"
+            " -D workT1=%s",
+            ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+            ocl::typeToStr(CV_MAKE_TYPE(depth, 1)),
+            ocl::typeToStr(CV_MAKE_TYPE(wdepth, 1)),
+            wdepth,
+            ocl::convertTypeStr(depth, wdepth, 1, cvt[0], sizeof(cvt[0])),
+            ocl::convertTypeStr(wdepth, depth, 1, cvt[1], sizeof(cvt[1])),
+            ocl::typeToStr(wdepth)
+        );
+    }
+
     ocl::Kernel k("KF", ocl::core::arithm_oclsrc,
-                  format("-D dstT=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D %s -D UNARY_OP%s",
-                         ocl::typeToStr(depth), depth, rowsPerWI, op,
+                  format("-D cn=%d -D dstT=%s -D dstT_C1=%s -D DEPTH_dst=%d -D rowsPerWI=%d -D %s%s%s%s",
+                         1,
+                         ocl::typeToStr(depth), ocl::typeToStr(depth), depth, rowsPerWI, op,
+                         " -D UNARY_OP=1",
+                         extra_opts.empty() ? "" : extra_opts.c_str(),
                          doubleSupport ? " -D DOUBLE_SUPPORT" : ""));
     if (k.empty())
         return false;
@@ -1628,7 +1590,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     {
         if( a1 == 0 )
         {
-            if( a2 == 0 )
+            if( a2 == 0 ) // constant
                 n = a3 == 0 ? -1 : 0;
             else
             {
@@ -1662,15 +1624,23 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     }
     else
     {
+        // cubic equation
         a0 = 1./a0;
         a1 *= a0;
         a2 *= a0;
         a3 *= a0;
 
         double Q = (a1 * a1 - 3 * a2) * (1./9);
-        double R = (2 * a1 * a1 * a1 - 9 * a1 * a2 + 27 * a3) * (1./54);
+        double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
-        double d = Qcubed - R * R;
+        /*
+          Here we expand expression `Qcubed - R * R` for `d` variable
+          to reduce common terms `a1^6 / 729` and `-a1^4 * a2 / 81`
+          and thus decrease rounding error (in case of quite big coefficients).
+
+          And then we additionally group terms to further reduce rounding error.
+        */
+        double d = (a1 * a1 * (a2 * a2 - 4 * a1 * a3) + 2 * a2 * (9 * a1 * a3 - 2 * a2 * a2) - 27 * a3 * a3) * (1./108);
 
         if( d > 0 )
         {

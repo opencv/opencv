@@ -239,7 +239,7 @@ void write_pixel( const double& pixelValue,
         else if( image.depth() == CV_32S ){  image.ptr<Vec3i>(row)[col] = Vec3i(newValue,newValue,newValue); }
         else if( image.depth() == CV_32F ){  image.ptr<Vec3f>(row)[col] = Vec3f(newValue,newValue,newValue); }
         else if( image.depth() == CV_64F ){  image.ptr<Vec3d>(row)[col] = Vec3d(newValue,newValue,newValue); }
-        else{                          throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
+        else{ throw std::runtime_error("Unknown image depth, gdal:1, img: 3"); }
     }
 
     // input: 3 channel, output: 1 channel
@@ -407,6 +407,9 @@ bool GdalDecoder::readData( Mat& img ){
             break;
         case GCI_AlphaBand:
             color = 3;
+            break;
+        case GCI_Undefined:
+            color = c;
             break;
         default:
             CV_Error(cv::Error::StsError, "Invalid/unsupported mode");

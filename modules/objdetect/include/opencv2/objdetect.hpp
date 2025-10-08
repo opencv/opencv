@@ -729,7 +729,8 @@ public:
     };
 
     enum ECIEncodings {
-        ECI_UTF8 = 26
+        ECI_SHIFT_JIS = 20,
+        ECI_UTF8 = 26,
     };
 
     /** @brief QR code encoder parameters. */
@@ -741,10 +742,10 @@ public:
         CV_PROP_RW int version;
 
         //! The optional level of error correction (by default - the lowest).
-        CV_PROP_RW CorrectionLevel correction_level;
+        CV_PROP_RW QRCodeEncoder::CorrectionLevel correction_level;
 
         //! The optional encoding mode - Numeric, Alphanumeric, Byte, Kanji, ECI or Structured Append.
-        CV_PROP_RW EncodeMode mode;
+        CV_PROP_RW QRCodeEncoder::EncodeMode mode;
 
         //! The optional number of QR codes to generate in Structured Append mode.
         CV_PROP_RW int structure_number;
@@ -808,6 +809,13 @@ public:
      */
     CV_WRAP std::string detectAndDecodeCurved(InputArray img, OutputArray points=noArray(),
                                               OutputArray straight_qrcode = noArray());
+
+    /** @brief Returns a kind of encoding for the decoded info from the latest @ref decode or @ref detectAndDecode call
+    @param codeIdx an index of the previously decoded QR code.
+                   When @ref decode or @ref detectAndDecode is used, valid value is zero.
+                   For @ref decodeMulti or @ref detectAndDecodeMulti use indices corresponding to the output order.
+    */
+    CV_WRAP QRCodeEncoder::ECIEncodings getEncoding(int codeIdx = 0);
 };
 
 class CV_EXPORTS_W_SIMPLE QRCodeDetectorAruco : public GraphicalCodeDetector {

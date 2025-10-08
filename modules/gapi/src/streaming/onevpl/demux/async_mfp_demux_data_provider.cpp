@@ -14,7 +14,9 @@ namespace cv {
 namespace gapi {
 namespace wip {
 namespace onevpl {
-#ifdef _WIN32
+
+#ifdef HAVE_GAPI_MSMF
+
 static HRESULT create_media_source(const std::string& url, IMFMediaSource **ppSource) {
     wchar_t sURL[MAX_PATH];
     GAPI_Assert(url.size() < MAX_PATH && "Windows MAX_PATH limit was reached");
@@ -785,7 +787,7 @@ bool MFPAsyncDemuxDataProvider::empty() const {
            (processing_locked_buffer_storage.size() == 0) &&
            (get_locked_buffer_size() == 0);
 }
-#else // _WIN32
+#else // HAVE_GAPI_MSMF
 
 MFPAsyncDemuxDataProvider::MFPAsyncDemuxDataProvider(const std::string&) {
     GAPI_Error("Unsupported: Microsoft Media Foundation is not available");
@@ -804,7 +806,7 @@ bool MFPAsyncDemuxDataProvider::empty() const {
     GAPI_Error("Unsupported: Microsoft Media Foundation is not available");
     return true;
 }
-#endif // _WIN32
+#endif // HAVE_GAPI_MSMF
 } // namespace onevpl
 } // namespace wip
 } // namespace gapi
