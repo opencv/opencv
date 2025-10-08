@@ -23,6 +23,22 @@ template <> struct WorkType<uint8_t> { using type = int; };
 class Reduce2LayerImpl CV_FINAL : public Reduce2Layer
 {
 public:
+    static const char* reduceTypeToString(ReduceType t)
+    {
+        switch (t) {
+            case ReduceType::MAX: return "MAX";
+            case ReduceType::MIN: return "MIN";
+            case ReduceType::MEAN: return "MEAN";
+            case ReduceType::SUM: return "SUM";
+            case ReduceType::L1: return "L1";
+            case ReduceType::L2: return "L2";
+            case ReduceType::PROD: return "PROD";
+            case ReduceType::SUM_SQUARE: return "SUM_SQUARE";
+            case ReduceType::LOG_SUM: return "LOG_SUM";
+            case ReduceType::LOG_SUM_EXP: return "LOG_SUM_EXP";
+        }
+        return "UNKNOWN";
+    }
     Reduce2LayerImpl(const LayerParams& params) {
         setParamsFrom(params);
 
@@ -491,20 +507,7 @@ public:
     virtual std::ostream& dumpAttrs(std::ostream& strm, int indent) const CV_OVERRIDE
     {
         prindent(strm, indent);
-        strm << "reduce_type: \"";
-        switch (reduce_type) {
-            case ReduceType::MAX: strm << "MAX"; break;
-            case ReduceType::MIN: strm << "MIN"; break;
-            case ReduceType::MEAN: strm << "MEAN"; break;
-            case ReduceType::SUM: strm << "SUM"; break;
-            case ReduceType::L1: strm << "L1"; break;
-            case ReduceType::L2: strm << "L2"; break;
-            case ReduceType::PROD: strm << "PROD"; break;
-            case ReduceType::SUM_SQUARE: strm << "SUM_SQUARE"; break;
-            case ReduceType::LOG_SUM: strm << "LOG_SUM"; break;
-            case ReduceType::LOG_SUM_EXP: strm << "LOG_SUM_EXP"; break;
-        }
-        strm << "\",\n";
+        strm << "reduce_type: \"" << reduceTypeToString(reduce_type) << "\",\n";
 
         prindent(strm, indent);
         strm << "keepdims: " << (keepdims ? "true" : "false") << ",\n";
@@ -522,12 +525,8 @@ public:
         return strm;
     }
 
-    template <typename T, typename... Args>
+    template <typename T, typename WT, typename AccT, typename... Args>
     inline void opDispatch(Args&&... args) {
-        using WT = typename WorkType<T>::type;
-        using FloatAcc = float;
-        using DoubleAcc = double;
-        using AccT = typename std::conditional<std::is_floating_point<WT>::value, FloatAcc, DoubleAcc>::type;
         switch (reduce_type) {
             case ReduceType::MAX:         ReduceInvoker<ReduceMax<T, WT, WT>>::run(std::forward<Args>(args)...);         break;
             case ReduceType::MIN:         ReduceInvoker<ReduceMin<T, WT, WT>>::run(std::forward<Args>(args)...);         break;
@@ -546,15 +545,18 @@ public:
     template <typename... Args>
     inline void typeDispatch(const int type, Args&&... args) {
         switch (type) {
-            case CV_Bool: opDispatch<uint8_t>(std::forward<Args>(args)...); break;
-            case CV_8U:   opDispatch<uint8_t>(std::forward<Args>(args)...); break;
-            case CV_8S:   opDispatch<int8_t>(std::forward<Args>(args)...);  break;
-            case CV_32S:  opDispatch<int32_t>(std::forward<Args>(args)...); break;
-            case CV_64S:  opDispatch<int64_t>(std::forward<Args>(args)...); break;
-            case CV_32F:  opDispatch<float>(std::forward<Args>(args)...);   break;
-            case CV_64F:  opDispatch<double>(std::forward<Args>(args)...);  break;
-            case CV_16F:  opDispatch<hfloat>(std::forward<Args>(args)...);  break;
-            case CV_16BF: opDispatch<bfloat>(std::forward<Args>(args)...);  break;
+            case CV_Bool:
+                CV_Assert(reduce_type == ReduceType::MAX || reduce_type == ReduceType::MIN);
+                opDispatch<uint8_t, int, float>(std::forward<Args>(args)...);
+                break;
+            case CV_8U:   opDispatch<uint8_t, int, float>(std::forward<Args>(args)...);   break;
+            case CV_8S:   opDispatch<int8_t, int, float>(std::forward<Args>(args)...);    break;
+            case CV_32S:  opDispatch<int32_t, int32_t, double>(std::forward<Args>(args)...); break;
+            case CV_64S:  opDispatch<int64_t, int64_t, double>(std::forward<Args>(args)...); break;
+            case CV_32F:  opDispatch<float, float, float>(std::forward<Args>(args)...);   break;
+            case CV_64F:  opDispatch<double, double, double>(std::forward<Args>(args)...); break;
+            case CV_16F:  opDispatch<hfloat, float, float>(std::forward<Args>(args)...);  break;
+            case CV_16BF: opDispatch<bfloat, float, float>(std::forward<Args>(args)...);  break;
             default: CV_Error(cv::Error::BadDepth, "DNN/Reduce: Unsupported type.");
         }
     }
