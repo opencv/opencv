@@ -26,64 +26,40 @@ struct FractalMarker::FractalMarkerImpl {
     cv::Mat _mask;
     std::vector<int> _submarkers;
 
-    int nBits() const { return _M.total(); }
-    cv::Mat mat() const { return _M; }
-    cv::Mat mask() const { return _mask; }
-    std::vector<int> subMarkers() const { return _submarkers; }
-    void addSubFractalMarker(const FractalMarker& submarker) { 
-        int nBitsSqrt = sqrt(nBits());
-        float bitSize = getMarkerSize() / (nBitsSqrt + 2.0f);
-        float nsubBits = submarker.fractalMarkerImpl->getMarkerSize() / bitSize;
-
-        int x_min = int(round(submarker.fractalMarkerImpl->keypts[0].pt.x / bitSize + nBitsSqrt / 2));
-        int x_max = x_min + nsubBits;
-        int y_min = int(round(-submarker.fractalMarkerImpl->keypts[0].pt.y / bitSize + nBitsSqrt / 2));
-        int y_max = y_min + nsubBits;
-
-        for (int y = y_min; y < y_max; y++) {
-            for (int x = x_min; x < x_max; x++) {
-                _mask.at<uchar>(y, x) = 0;
-            }
-        }
-    }
-    float getMarkerSize() const { return static_cast<float>(cv::norm(keypts[0].pt - keypts[1].pt)); }
-    std::vector<cv::KeyPoint> getKeypts() { 
-        if (keypts.size() > 4) return keypts;
-
-        int nBitsSquared = int(sqrt(mat().total()));
-        float bitSize = getMarkerSize() / (nBitsSquared + 2);
-
-        // Set submarker pixels (=1) and add border
-        cv::Mat marker;
-        mat().copyTo(marker);
-        marker += -1 * (mask() - 1);
-        cv::Mat markerBorder;
-        copyMakeBorder(marker, markerBorder, 1, 1, 1, 1, cv::BORDER_CONSTANT, 0);
-
-        // Get inner corners
-        for (int y = 0; y < markerBorder.rows - 1; y++) {
-            for (int x = 0; x < markerBorder.cols - 1; x++) {
-                int sum = markerBorder.at<uchar>(y, x) + markerBorder.at<uchar>(y, x + 1) +
-                          markerBorder.at<uchar>(y + 1, x) + markerBorder.at<uchar>(y + 1, x + 1);
-
-                if (sum == 1)
-                    keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 1));
-                else if (sum == 3)
-                    keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 0));
-                else if (sum == 2) {
-                    if ((markerBorder.at<uchar>(y, x) == markerBorder.at<uchar>(y + 1, x + 1)) &&
-                        (markerBorder.at<uchar>(y, x + 1) == markerBorder.at<uchar>(y + 1, x)))
-                        keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 2));
-                }
-            }
-        }
-
-        return keypts;
-    }
-    int getId() const { return id; }
+    int nBits() const;
+    cv::Mat mat() const;
+    cv::Mat mask() const;
+    std::vector<int> subMarkers() const;
+    void addSubFractalMarker(const FractalMarker& submarker);
+    float getMarkerSize() const;
+    std::vector<cv::KeyPoint> getKeypts();
 };
 
-// FractalMarker constructor
+struct FractalMarkerSet {
+    std::map<int, FractalMarker> fractalMarkerCollection;
+    std::map<int, std::vector<int>> bits_ids;
+    int mInfoType = 0;
+    int idExternal = -1;
+
+    FractalMarkerSet() : mInfoType(-1), idExternal(-1) {}
+    FractalMarkerSet(const std::string& config);
+    void convertToMeters(float size);
+};
+
+struct FractalDetector::FractalDetectorImpl {
+    FractalMarkerSet fractalMarkerSet;
+    int minInternalDistSq;
+
+    static std::vector<cv::Point2f> sort(const std::vector<cv::Point2f>& marker);
+    static float getSubpixelValue(const cv::Mat& im_grey, const cv::Point2f& p);
+    static int getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet);
+    static int perimeter(const std::vector<cv::Point2f>& a);
+    void kfilter(std::vector<cv::KeyPoint>& kpoints);
+    void assignClass(const cv::Mat& im, std::vector<cv::KeyPoint>& kpoints, float sizeNorm = 0.f, int wsize = 5);
+
+};
+
+// Implementation of FractalMarker methods
 FractalMarker::FractalMarker(int markerId, cv::InputArray m, const std::vector<cv::Point3f>& corners, const std::vector<int>& id_submarkers)
     : fractalMarkerImpl(new FractalMarkerImpl)
 {
@@ -117,14 +93,79 @@ void FractalMarker::draw(cv::InputOutputArray in, const cv::Scalar color) {
     cv::rectangle(in, (*this)[2] - p2, (*this)[2] + p2, cv::Scalar(255, 0, 0, 255), lineWidth);
 }
 
-struct FractalMarkerSet {
-    std::map<int, FractalMarker> fractalMarkerCollection;
-    std::map<int, std::vector<int>> bits_ids;
-    int mInfoType = 0;
-    int idExternal = -1;
-    
-    FractalMarkerSet() : mInfoType(-1), idExternal(-1) {}
-    FractalMarkerSet(const std::string& config){
+int FractalMarker::FractalMarkerImpl::nBits() const {
+    return _M.total();
+}
+
+cv::Mat FractalMarker::FractalMarkerImpl::mat() const {
+    return _M;
+}
+
+cv::Mat FractalMarker::FractalMarkerImpl::mask() const {
+    return _mask;
+}
+
+std::vector<int> FractalMarker::FractalMarkerImpl::subMarkers() const {
+    return _submarkers;
+}
+
+void FractalMarker::FractalMarkerImpl::addSubFractalMarker(const FractalMarker& submarker) {
+    int nBitsSqrt = sqrt(nBits());
+    float bitSize = getMarkerSize() / (nBitsSqrt + 2.0f);
+    float nsubBits = submarker.fractalMarkerImpl->getMarkerSize() / bitSize;
+
+    int x_min = int(round(submarker.fractalMarkerImpl->keypts[0].pt.x / bitSize + nBitsSqrt / 2));
+    int x_max = x_min + nsubBits;
+    int y_min = int(round(-submarker.fractalMarkerImpl->keypts[0].pt.y / bitSize + nBitsSqrt / 2));
+    int y_max = y_min + nsubBits;
+
+    for (int y = y_min; y < y_max; y++) {
+        for (int x = x_min; x < x_max; x++) {
+            _mask.at<uchar>(y, x) = 0;
+        }
+    }
+}
+
+float FractalMarker::FractalMarkerImpl::getMarkerSize() const {
+    return static_cast<float>(cv::norm(keypts[0].pt - keypts[1].pt));
+}
+
+std::vector<cv::KeyPoint> FractalMarker::FractalMarkerImpl::getKeypts() {
+    if (keypts.size() > 4) return keypts;
+
+    int nBitsSquared = int(sqrt(mat().total()));
+    float bitSize = getMarkerSize() / (nBitsSquared + 2);
+
+    // Set submarker pixels (=1) and add border
+    cv::Mat marker;
+    mat().copyTo(marker);
+    marker += -1 * (mask() - 1);
+    cv::Mat markerBorder;
+    copyMakeBorder(marker, markerBorder, 1, 1, 1, 1, cv::BORDER_CONSTANT, 0);
+
+    // Get inner corners
+    for (int y = 0; y < markerBorder.rows - 1; y++) {
+        for (int x = 0; x < markerBorder.cols - 1; x++) {
+            int sum = markerBorder.at<uchar>(y, x) + markerBorder.at<uchar>(y, x + 1) +
+                      markerBorder.at<uchar>(y + 1, x) + markerBorder.at<uchar>(y + 1, x + 1);
+
+            if (sum == 1)
+                keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 1));
+            else if (sum == 3)
+                keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 0));
+            else if (sum == 2) {
+                if ((markerBorder.at<uchar>(y, x) == markerBorder.at<uchar>(y + 1, x + 1)) &&
+                    (markerBorder.at<uchar>(y, x + 1) == markerBorder.at<uchar>(y + 1, x)))
+                    keypts.push_back(cv::KeyPoint(cv::Point2f(x - nBitsSquared / 2.f, -(y - nBitsSquared / 2.f)) * bitSize, -1, -1, -1, -1, 2));
+            }
+        }
+    }
+
+    return keypts;
+}
+
+// Implementation of FractalMarkerSet methods
+FractalMarkerSet::FractalMarkerSet(const std::string& config) {
     std::stringstream stream;
     if (config=="FRACTAL_2L_6")
     {
@@ -401,38 +442,23 @@ struct FractalMarkerSet {
 
         bits_ids[marker.fractalMarkerImpl->nBits()].push_back(marker.fractalMarkerImpl->id);
     }
-    }
+}
 
-    void convertToMeters(float size){
-            CV_Assert(mInfoType == 0 || mInfoType == 2);
-
+void FractalMarkerSet::convertToMeters(float size){
+    CV_Assert(mInfoType == 0 || mInfoType == 2);
     mInfoType = 1;
-
     // Calculate pixel size in meters and rescale markers
     float pixSizeM = size / float(fractalMarkerCollection[idExternal].fractalMarkerImpl->getMarkerSize());
-        for (auto& [id, marker] : fractalMarkerCollection) {
-           for (auto& kpt : marker.fractalMarkerImpl->keypts) {
-                kpt.pt *= pixSizeM;
-            }
+    for (auto& pair : fractalMarkerCollection) {
+        // auto& id = pair.first;
+        auto& marker = pair.second;
+        for (auto& kpt : marker.fractalMarkerImpl->keypts) {
+            kpt.pt *= pixSizeM;
         }
     }
+}
 
-
-};
-
-struct FractalDetector::FractalDetectorImpl {
-    FractalMarkerSet fractalMarkerSet;
-    int minInternalDistSq;
-
-    static std::vector<cv::Point2f> sort(const std::vector<cv::Point2f>& marker);
-    static float getSubpixelValue(const cv::Mat& im_grey, const cv::Point2f& p);
-    static int getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet);
-    static int perimeter(const std::vector<cv::Point2f>& a);
-    void kfilter(std::vector<cv::KeyPoint>& kpoints);
-    void assignClass(const cv::Mat& im, std::vector<cv::KeyPoint>& kpoints, float sizeNorm = 0.f, int wsize = 5);
-
-};
-
+// Implementation of FractalDetector methods
 FractalDetector::FractalDetector()
     : fractalDetectorImpl(new FractalDetectorImpl)
 {}
@@ -446,10 +472,10 @@ void FractalDetector::setParams(const std::string& fractal_config, int minIntern
 }
 
 bool FractalDetector::detect(cv::InputArray img,
-                                   std::vector<FractalMarker>& markers,
-                                   cv::OutputArray p3d,
-                                   cv::OutputArray p2d)
-{
+                            std::vector<FractalMarker>& markers,
+                            cv::OutputArray p3d,
+                            cv::OutputArray p2d)
+    {
     markers.clear();
     cv::Mat bwimage, thresImage;
 
