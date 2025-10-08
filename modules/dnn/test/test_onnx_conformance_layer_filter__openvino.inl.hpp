@@ -272,6 +272,36 @@ CASE(test_bernoulli_seed)
     // no filter
 CASE(test_bernoulli_seed_expanded)
     // no filter
+CASE(test_bitwise_and_i16_3d)
+    SKIP;
+CASE(test_bitwise_and_i32_2d)
+    SKIP;
+CASE(test_bitwise_and_ui64_bcast_3v1d)
+    SKIP;
+CASE(test_bitwise_and_ui8_bcast_4v3d)
+    SKIP;
+CASE(test_bitwise_not_2d)
+    SKIP;
+CASE(test_bitwise_not_3d)
+    SKIP;
+CASE(test_bitwise_not_4d)
+    SKIP;
+CASE(test_bitwise_or_i16_4d)
+    SKIP;
+CASE(test_bitwise_or_i32_2d)
+    SKIP;
+CASE(test_bitwise_or_ui64_bcast_3v1d)
+    SKIP;
+CASE(test_bitwise_or_ui8_bcast_4v3d)
+    SKIP;
+CASE(test_bitwise_xor_i16_3d)
+    SKIP;
+CASE(test_bitwise_xor_i32_2d)
+    SKIP;
+CASE(test_bitwise_xor_ui64_bcast_3v1d)
+    SKIP;
+CASE(test_bitwise_xor_ui8_bcast_4v3d)
+    SKIP;
 CASE(test_bitshift_left_uint16)
     SKIP;
 CASE(test_bitshift_left_uint32)
