@@ -1767,13 +1767,17 @@ bool CvCapture_FFMPEG::grabFrame()
                     if (t < min_start_avtb) min_start_avtb = t;
                 }
 
-                // Compute offset to shift negative timestamps to zero
-                ts_offset_avtb = (min_start_avtb != INT64_MAX && min_start_avtb < 0) ? -min_start_avtb : 0;
+                // Compute offset to shift timestamps to zero
+                if (min_start_avtb != INT64_MAX) {
+                    ts_offset_avtb = -min_start_avtb;
+                } else {
+                    ts_offset_avtb = 0;
+                }
                 ts_offset_decided = true;
             }
 
-            // Apply normalization to picture_pts
-            if (picture_pts != AV_NOPTS_VALUE_)
+            // Apply normalization to picture_pts (not in raw mode)
+            if (picture_pts != AV_NOPTS_VALUE_ && !rawMode)
             {
                 int64_t t = to_avtb(picture_pts, video_st->time_base);
                 t += ts_offset_avtb;
