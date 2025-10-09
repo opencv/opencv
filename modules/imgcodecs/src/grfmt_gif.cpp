@@ -764,7 +764,7 @@ bool GifEncoder::lzwEncode() {
     //initialize
     int32_t prev = imgCodeStream[0];
 
-    for (int64_t i = 1; i < height * width; i++) {
+    for (size_t i = 1; i < size_t(height * width); i++) {
         // add the output code to the output buffer
         while (bitLeft >= 8) {
             buffer[bufferLen++] = (uchar)output;
