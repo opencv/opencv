@@ -88,9 +88,9 @@ Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
     return Mat();
 }
 
-ExifEntry_t BaseImageDecoder::getExifTag(const ExifTagName tag) const
+ExifEntry BaseImageDecoder::getExifEntrybyTagId(const ExifTagId tag) const
 {
-    return m_exif.getTag(tag);
+    return m_exif.getEntrybyTagId(tag);
 }
 
 bool BaseImageDecoder::setSource( const String& filename )
