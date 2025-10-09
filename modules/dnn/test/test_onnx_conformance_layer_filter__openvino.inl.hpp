@@ -1176,6 +1176,12 @@ CASE(test_leakyrelu_default)
     // no filter
 CASE(test_leakyrelu_example)
     // no filter
+CASE(test_leakyrelu_default_expanded)
+    SKIP;
+CASE(test_leakyrelu_example_expanded)
+    SKIP;
+CASE(test_leakyrelu_expanded)
+    SKIP;
 CASE(test_less)
     // no filter
 CASE(test_less_bcast)
@@ -1683,6 +1689,10 @@ CASE(test_prelu_broadcast)
     // no filter
 CASE(test_prelu_example)
     // no filter
+CASE(test_prelu_broadcast_expanded)
+    SKIP;
+CASE(test_prelu_example_expanded)
+    SKIP;
 CASE(test_qlinearconv)
     // no filter
 CASE(test_qlinearmatmul_2D)

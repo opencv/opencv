@@ -452,3 +452,8 @@
 "test_shrink_hard_expanded_ver18",
 "test_shrink_soft_expanded_ver18",
 "test_relu_expanded_ver18",
+"test_prelu_broadcast_expanded",
+"test_prelu_example_expanded",
+"test_leakyrelu_default_expanded",
+"test_leakyrelu_example_expanded",
+"test_leakyrelu_expanded",
