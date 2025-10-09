@@ -212,6 +212,8 @@ public:
     Ptr<ActivationLayer> activ;
 
     Ptr<FastConv> fastConvImpl;
+    // Cache last input shape for CUDA fast path shape derivation
+    MatShape lastInputShape;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
@@ -363,6 +365,8 @@ public:
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
+        if (!inputs.empty())
+            lastInputShape = shape(inputs[0]);
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
         if (!blobs.empty())
@@ -1145,7 +1149,7 @@ public:
                 gin0.upload(in2d);
             }
 
-            // derive output shape from input and weights
+            // derive input shape N,C,H_in,W_in
             int N = 1, C_in = 0, H_in = 0, W_in = 0;
             if (!inputIsGPU)
             {
@@ -1158,12 +1162,13 @@ public:
             }
             else
             {
-                int rows = gin0.rows > 0 ? gin0.rows : 1;
-                int cols = gin0.cols > 0 ? gin0.cols : 1;
-                H_in = rows;
-                W_in = cols;
-                N = 1;
-                C_in = blobs[0].size[1] * groups;
+                MatShape ish = lastInputShape;
+                int dims = (int)ish.size();
+                CV_Assert(dims >= 4);
+                N = ish[0];
+                C_in = ish[1];
+                H_in = ish[dims - 2];
+                W_in = ish[dims - 1];
             }
             int C_out = blobs[0].size[0];
             int kH = kernel_size[0];
@@ -1175,10 +1180,21 @@ public:
             int H_out = (H_in + 2 * pH - kH) / sH + 1;
             int W_out = (W_in + 2 * pW - kW) / sW + 1;
 
-            // allocate output GpuMat as 2D view (rows = N*C_out*H_out, cols = W_out)
-            int out_rows = N * C_out * H_out;
-            int out_cols = W_out;
+            // Sanity check the flattened GPU input view (rows=N, cols=C_in*H_in*W_in)
+            {
+                size_t expected_cols = (size_t)C_in * (size_t)H_in * (size_t)W_in;
+                if (gin0.rows != std::max(N, 1) || (size_t)gin0.cols != expected_cols)
+                {
+                    CV_LOG_WARNING(NULL, "DNN/CUDA: conv: GPU input view is (rows=" << gin0.rows << ", cols=" << gin0.cols
+                                           << ") but expected (rows=" << N << ", cols=" << expected_cols << "). Proceeding with provided view.");
+                }
+            }
+
+            // allocate output GpuMat as 2D view (rows = N, cols = C_out*H_out*W_out)
+            int out_rows = std::max(N, 1);
+            int out_cols = std::max(C_out * H_out * W_out, 1);
             gout[0].create(out_rows, out_cols, CV_32F);
+            gout[0].setTo(Scalar::all(0));
 
             // upload weights/bias once to device cache
             static cv::cuda::GpuMat wdev, bdev;
@@ -1203,13 +1219,14 @@ public:
                 bdev.release();
             }
 
-            // call kernel
-            // compute strides in elements
+            // call kernel with pitch-aware strides (elements per row)
             int in_ldw = (int)(gin0.step / sizeof(float));
             int out_ldw = (int)(gout[0].step / sizeof(float));
             // weights are uploaded as a flat 2D where rows advance by kW; use kW for both
             int w_ldw = kW;
             int w_ldh = kW;
+            int groups_ = groups;
+            int cpg = blobs[0].size[1];
             cuda_naive_conv::conv2d_nchw_fp32(
                 (const float*)gin0.ptr<float>(),
                 (const float*)wdev.ptr<float>(),
@@ -1219,7 +1236,7 @@ public:
                 C_out, kH, kW,
                 sH, sW,
                 pH, pW,
-                in_ldw, out_ldw, w_ldw, w_ldh);
+                in_ldw, out_ldw, w_ldw, w_ldh, groups_, cpg);
             return;
         }
 #endif
