@@ -234,6 +234,18 @@ ocv_list_filterout_ex(dnn_plugin_srcs
     "/src/(cuda|cuda4dnn|ocl4dnn|vkcom|webnn)/"
 )
 
+if(HAVE_CUDA)
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/conv2d_naive.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/relu_naive.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/add_naive.cu")
+  list(APPEND dnn_srcs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/pool_naive.cu")
+  list(APPEND dnn_int_hdrs "${CMAKE_CURRENT_LIST_DIR}/src/cuda/conv_naive.hpp")
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/conv2d_naive.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/relu_naive.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/add_naive.cu" PROPERTIES LANGUAGE CUDA)
+  set_source_files_properties("${CMAKE_CURRENT_LIST_DIR}/src/cuda/pool_naive.cu" PROPERTIES LANGUAGE CUDA)
+endif()
+
 ocv_option(OPENCV_DNN_OPENVINO "Build with OpenVINO support (2021.4+)" (TARGET ocv.3rdparty.openvino))
 if(TARGET ocv.3rdparty.openvino AND OPENCV_DNN_OPENVINO)
   if(NOT HAVE_OPENVINO AND NOT HAVE_NGRAPH)
