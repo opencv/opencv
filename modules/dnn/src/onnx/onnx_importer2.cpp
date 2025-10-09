@@ -239,6 +239,8 @@ protected:
     void parseNonMaxSuprression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -1680,6 +1682,27 @@ void ONNXImporter2::parseBitShift(LayerParams& layerParams, const opencv_onnx::N
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseBitwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& op_type = node_proto.op_type();
+    layerParams.type = "NaryEltwise";
+    if (op_type == "BitwiseAnd")
+        layerParams.set("operation", String("bitwise_and"));
+    else if (op_type == "BitwiseOr")
+        layerParams.set("operation", String("bitwise_or"));
+    else if (op_type == "BitwiseXor")
+        layerParams.set("operation", String("bitwise_xor"));
+    else
+        CV_Error(Error::StsNotImplemented, String("Unsupported bitwise op: ") + op_type);
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitwiseNot(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Not";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
@@ -2563,6 +2586,10 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
+    dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseOr"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseXor"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseNot"] = &ONNXImporter2::parseBitwiseNot;
     dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
