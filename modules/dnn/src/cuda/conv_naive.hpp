@@ -4,7 +4,7 @@ namespace cv { namespace dnn { namespace cuda_naive_conv {
 
 // Launch a naive NCHW FP32 convolution on the default CUDA stream.
 // Assumptions:
-// - groups == 1
+// - groups >= 1 (groups==1 for standard conv)
 // - dilation_h == dilation_w == 1
 // - data layout: input [N, C_in, H_in, W_in], weights [C_out, C_in, kH, kW], bias [C_out] or nullptr
 // - output layout: [N, C_out, H_out, W_out]
@@ -28,7 +28,9 @@ void conv2d_nchw_fp32(
     int in_ldw,      // input row stride in elements
     int out_ldw,     // output row stride in elements
     int w_ldw,       // weights row stride in elements (advance over kw)
-    int w_ldh        // weights stride over kh in elements
+    int w_ldh,       // weights stride over kh in elements
+    int groups,      // number of groups
+    int C_in_per_group // input channels per group
 );
 
 // Flat FP32 ReLU: y[i] = max(x[i], 0)
@@ -64,5 +66,9 @@ void maxpool2d_nchw_flatrows_fp32(
     int kH, int kW,
     int sH, int sW,
     int pH, int pW);
+
+// Fully connected (GEMM) FP32: y [N x M] = x [N x K] * W^T [K x M] + b [M]
+void fc_fp32(const float* x, const float* w, const float* b, float* y,
+             int N, int K, int M);
 
 }}} // namespace cv::dnn::cuda_naive_conv

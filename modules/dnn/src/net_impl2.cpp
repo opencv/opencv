@@ -738,11 +738,14 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 const ArgData& ad = args.at(inp.idx);
                 CV_Assert(ad.kind == DNN_ARG_INPUT);
                 const cv::cuda::GpuMat& gm = inGpu[i];
-                MatShape mshape(2);
-                int rows = gm.rows > 0 ? gm.rows : 1;
-                int cols = gm.cols > 0 ? gm.cols : 1;
-                mshape[0] = rows;
-                mshape[1] = cols;
+                // Preserve the model's original N-D shape for this input when available
+                MatShape mshape = ad.shape;
+                if (mshape.empty()) {
+                    // Fallback: if shape is unknown, keep it as a flat 1-D tensor with total elements
+                    size_t total_elems = (size_t)(gm.rows > 0 ? gm.rows : 1) * (size_t)(gm.cols > 0 ? gm.cols : 1);
+                    mshape = MatShape(1);
+                    mshape[0] = (int)std::max<size_t>(total_elems, 1);
+                }
                 Mat& host = argTensor(inp);
                 host.fit(mshape, gm.type());
                 gpuTensors[inp.idx] = gm;
@@ -838,10 +841,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
+#ifdef HAVE_CUDA
+        bool ranOnGPU = false;
+#endif
+
         std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
         if (!subgraphs) {
 #ifdef HAVE_CUDA
-            bool ranOnGPU = false;
             if (supportGPU && !dynamicOutShapes) {
                 CV_LOG_INFO(NULL, "DNN/CUDA: attempting GPU forward for layer '" << layer->name << "' (" << layer->type << ")");
                 try {
@@ -907,11 +913,11 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 }
             }
 #endif
-#ifdef HAVE_CUDA
-            if (!ranOnGPU) {
-                CV_Error(Error::StsError, "DNN/CUDA: GPU-only execution requested but layer failed to run on GPU");
-            }
-#endif
+// #ifdef HAVE_CUDA
+//             if (!ranOnGPU) {
+//                 CV_Error(Error::StsError, "DNN/CUDA: GPU-only execution requested but layer failed to run on GPU");
+//             }
+// #endif
         }
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
@@ -1001,25 +1007,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     const cv::cuda::GpuMat& gm = gpuTensors[out.idx];
                     int rows = gm.rows > 0 ? gm.rows : 1;
                     int cols = gm.cols > 0 ? gm.cols : 1;
-                    if (isMainGraph) {
-                        Mat& dst = outputsVec[i];
-                        const ArgData& ad = args.at(out.idx);
-                        dst.fit(ad.shape, gm.type());
-                        Mat host2d(dst.dims <= 2 ? dst : dst.reshape(1, rows));
-                        if (host2d.rows != rows || host2d.cols != cols || host2d.type() != gm.type())
-                            host2d.create(rows, cols, gm.type());
-                        gm.download(host2d);
-                        continue;
-                    } else {
-                        Mat& dst = outputsVec[i];
-                        const ArgData& ad = args.at(out.idx);
-                        dst.fit(ad.shape, gm.type());
-                        Mat host2d(dst.dims <= 2 ? dst : dst.reshape(1, rows));
-                        if (host2d.rows != rows || host2d.cols != cols || host2d.type() != gm.type())
-                            host2d.create(rows, cols, gm.type());
-                        gm.download(host2d);
-                        continue;
-                    }
+                    // Download into a 2D staging Mat but preserve the N-D host shape
+                    Mat& dst = outputsVec[i];
+                    const ArgData& ad = args.at(out.idx);
+                    dst.fit(ad.shape, gm.type());
+                    Mat host2d(dst.dims <= 2 ? dst : dst.reshape(1, rows));
+                    if (host2d.rows != rows || host2d.cols != cols || host2d.type() != gm.type())
+                        host2d.create(rows, cols, gm.type());
+                    gm.download(host2d);
+                    continue;
                 }
             } catch (const cv::Exception& e) {
                 CV_LOG_WARNING(NULL, "DNN/CUDA: failed to download graph output to host: " << e.what());

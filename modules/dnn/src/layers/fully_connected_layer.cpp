@@ -59,6 +59,8 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
+#include "../cuda/conv_naive.hpp"
+#include <opencv2/core/cuda.hpp>
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -547,6 +549,53 @@ public:
 
                 for (size_t i = 0; i < input.size(); i++)
                 {
+#if defined(HAVE_CUDA)
+                    if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                    {
+                        // Use our cuBLAS-based FC on GPU
+                        std::vector<cv::cuda::GpuMat> gin, gout;
+                        inputs_arr.getGpuMatVector(gin);
+                        outputs_arr.getGpuMatVector(gout);
+                        if (!gin.empty() && !gout.empty())
+                        {
+                            cv::cuda::GpuMat src = gin[i];
+                            cv::cuda::GpuMat dst = gout[i];
+                            // Flatten N…axis to N, rest to K
+                            int axisCan = normalize_axis(axis, input[i].dims);
+                            int N = input[i].total(0, axisCan);
+                            int K = input[i].total(axisCan);
+                            int M = weightsMat.rows; // numOutput
+                            if (dst.empty() || dst.rows != N || dst.cols != M || dst.type() != CV_32F)
+                                dst.create(N, M, CV_32F);
+                            static cv::cuda::GpuMat wdev, bdev;
+                            if (wdev.empty() || (wdev.rows * wdev.cols) != (int)weightsMat.total())
+                            {
+                                Mat w2d = weightsMat.reshape(1, weightsMat.rows);
+                                wdev.create(w2d.rows, w2d.cols, w2d.type());
+                                wdev.upload(w2d);
+                            }
+                            if (bias && !biasMat.empty())
+                            {
+                                if (bdev.empty() || (bdev.rows * bdev.cols) != (int)biasMat.total())
+                                {
+                                    Mat b2d = biasMat.reshape(1, biasMat.total());
+                                    bdev.create(b2d.rows, b2d.cols, b2d.type());
+                                    bdev.upload(b2d);
+                                }
+                            }
+                            else
+                                bdev.release();
+
+                            cv::dnn::cuda_naive_conv::fc_fp32(
+                                (const float*)src.ptr<float>(),
+                                (const float*)wdev.ptr<float>(),
+                                bdev.empty() ? nullptr : (const float*)bdev.ptr<float>(),
+                                (float*)dst.ptr<float>(),
+                                N, K, M);
+                            return;
+                        }
+                    }
+#endif
                     Mat srcMat = input[i].reshape(1, outerSize);
                     Mat dstMat = output[i].reshape(1, outerSize);
 

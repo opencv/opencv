@@ -248,6 +248,18 @@ public:
                 }
                 if (!gin0.empty())
                 {
+                    if (inputs_arr.kind() != _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                    {
+                        std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
+                        if (!inputs_cpu.empty())
+                        {
+                            MatShape ish = shape(inputs_cpu[0]);
+                            int N = ish.size() > 0 ? ish[0] : 1;
+                            Mat m2d = inputs_cpu[0].reshape(1, N);
+                            gin0.create(m2d.rows, m2d.cols, m2d.type());
+                            gin0.upload(m2d);
+                        }
+                    }
                     cv::cuda::GpuMat& dst = gout[0];
                     if (gin0.type() != CV_32F)
                     {
