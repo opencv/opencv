@@ -386,9 +386,6 @@
 "test_hannwindow_expanded",
 "test_hannwindow_symmetric",
 "test_hannwindow_symmetric_expanded",
-"test_hardsigmoid_default_expanded_ver18",
-"test_hardsigmoid_example_expanded_ver18",
-"test_hardsigmoid_expanded_ver18",
 "test_identity_opt",  //  23221 illegal hardware instruction
 "test_identity_sequence",  // Issue:: Unkonwn error
 "test_if_opt",  // Issue::Failed to allocate 17059022683624350 bytes in function 'OutOfMemoryError'
@@ -582,7 +579,6 @@
 "test_regex_full_match_basic",
 "test_regex_full_match_email_domain",
 "test_regex_full_match_empty",
-"test_relu_expanded_ver18",
 "test_reshape_allowzero_reordered",  // incompatible type of input tensor #0 'data': CV_8UC1 given, CV_32FC1 expected in function 'setGraphInput'
 "test_resize_downsample_scales_cubic_align_corners",  // ---- same as above ---
 "test_resize_downsample_scales_cubic_antialias",
@@ -731,9 +727,6 @@
 "test_sce_sum_expanded",  // ---- same as above ---
 "test_sce_sum_log_prob",  // ---- same as above ---
 "test_sce_sum_log_prob_expanded",  // ---- same as above ---
-"test_selu_default_expanded_ver18",
-"test_selu_example_expanded_ver18",
-"test_selu_expanded_ver18",
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
 "test_sequence_insert_at_front",  // ---- same as above ---
 "test_sequence_map_add_1_sequence_1_tensor",
@@ -749,16 +742,10 @@
 "test_sequence_map_identity_2_sequences",
 "test_sequence_map_identity_2_sequences_expanded",
 "test_shape_start_greater_than_end",
-"test_shrink_hard_expanded_ver18",
-"test_shrink_soft_expanded_ver18",
 "test_simple_rnn_batchwise",  // Issue:: Parser: Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
 "test_simple_rnn_defaults",  // ---- same as above ---
 "test_simple_rnn_with_initial_bias",  // ---- same as above ---
 "test_slice_start_out_of_bounds",
-"test_softplus_example_expanded_ver18",
-"test_softplus_expanded_ver18",
-"test_softsign_example_expanded_ver18",
-"test_softsign_expanded_ver18",
 "test_split_1d_uneven_split_opset18", //type mismatch
 "test_split_2d_uneven_split_opset18",
 "test_split_equal_parts_1d_opset13",
@@ -801,9 +788,6 @@
 "test_tfidfvectorizer_tf_onlybigrams_levelempty",  // ---- same as above ---
 "test_tfidfvectorizer_tf_onlybigrams_skip5",  // ---- same as above ---
 "test_tfidfvectorizer_tf_uniandbigrams_skip5",  // Issue:: Parser: Can't create layer "onnx_node_output_0!Y" of type "TfIdfVectorizer" in function 'getLayerInstance'
-"test_thresholdedrelu_default_expanded_ver18",
-"test_thresholdedrelu_example_expanded_ver18",
-"test_thresholdedrelu_expanded_ver18",
 "test_training_dropout",  // Issue::cvtest::norm::wrong data type
 "test_training_dropout_default",  // ---- same as above --- type mismatch
 "test_training_dropout_default_mask",  // ---- same as above ---

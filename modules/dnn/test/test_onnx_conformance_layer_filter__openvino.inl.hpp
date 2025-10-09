@@ -1094,6 +1094,12 @@ CASE(test_hardsigmoid_default)
     // no filter
 CASE(test_hardsigmoid_example)
     // no filter
+CASE(test_hardsigmoid_default_expanded_ver18)
+    SKIP;
+CASE(test_hardsigmoid_example_expanded_ver18)
+    SKIP;
+CASE(test_hardsigmoid_expanded_ver18)
+    SKIP;
 CASE(test_hardswish)
     // no filter
 CASE(test_hardswish_expanded)
@@ -2029,6 +2035,8 @@ CASE(test_reflect_pad)
     SKIP;
 CASE(test_relu)
     // no filter
+CASE(test_relu_expanded_ver18)
+    SKIP;
 CASE(test_reshape_allowzero_reordered)
     // no filter
 CASE(test_reshape_extended_dims)
@@ -2282,13 +2290,13 @@ CASE(test_selu)
 CASE(test_selu_default)
     // no filter
 CASE(test_selu_default_expanded_ver18)
-    // no filter
+    SKIP;
 CASE(test_selu_example)
     // no filter
 CASE(test_selu_example_expanded_ver18)
-    // no filter
+    SKIP;
 CASE(test_selu_expanded_ver18)
-    // no filter
+    SKIP;
 CASE(test_sequence_insert_at_back)
     // no filter
 CASE(test_sequence_insert_at_front)
@@ -2317,6 +2325,10 @@ CASE(test_shrink_hard)
     // no filter
 CASE(test_shrink_soft)
     // no filter
+CASE(test_shrink_hard_expanded_ver18)
+    SKIP;
+CASE(test_shrink_soft_expanded_ver18)
+    SKIP;
 CASE(test_sigmoid)
     // no filter
 CASE(test_sigmoid_example)
@@ -2417,10 +2429,18 @@ CASE(test_softplus)
     // no filter
 CASE(test_softplus_example)
     // no filter
+CASE(test_softplus_example_expanded_ver18)
+    SKIP;
+CASE(test_softplus_expanded_ver18)
+    SKIP;
 CASE(test_softsign)
     // no filter
 CASE(test_softsign_example)
     // no filter
+CASE(test_softsign_example_expanded_ver18)
+    SKIP;
+CASE(test_softsign_expanded_ver18)
+    SKIP;
 CASE(test_spacetodepth)
     // no filter
 CASE(test_spacetodepth_example)
@@ -2531,6 +2551,12 @@ CASE(test_thresholdedrelu_default)
     // no filter
 CASE(test_thresholdedrelu_example)
     // no filter
+CASE(test_thresholdedrelu_default_expanded_ver18)
+    SKIP;
+CASE(test_thresholdedrelu_example_expanded_ver18)
+    SKIP;
+CASE(test_thresholdedrelu_expanded_ver18)
+    SKIP;
 CASE(test_tile)
     SKIP;
 CASE(test_tile_precomputed)
