@@ -51,10 +51,10 @@ int validateToInt(size_t sz)
     return valueInt;
 }
 
-int64_t validateToInt64(size_t sz)
+int64_t validateToInt64(ptrdiff_t sz)
 {
     int64_t valueInt = static_cast<int64_t>(sz);
-    CV_Assert((size_t)valueInt == sz);
+    CV_Assert((ptrdiff_t)valueInt == sz);
     return valueInt;
 }
 
