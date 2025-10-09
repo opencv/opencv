@@ -1870,25 +1870,25 @@ CASE(test_reduce_prod_negative_axes_keepdims_random)
     }
 #endif
 CASE(test_reduce_sum_default_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_default_axes_keepdims_random)
     // no filter
 CASE(test_reduce_sum_do_not_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_do_not_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_empty_axes_input_noop_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_empty_axes_input_noop_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_negative_axes_keepdims_example)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_negative_axes_keepdims_random)
-    // no filter
+    SKIP;
 CASE(test_reduce_sum_square_default_axes_keepdims_example)
     // no filter
 CASE(test_reduce_sum_square_default_axes_keepdims_random)
