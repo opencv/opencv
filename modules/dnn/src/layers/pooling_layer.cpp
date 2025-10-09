@@ -137,6 +137,8 @@ public:
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
+    // Cache last input shape from finalize() to use in GPU fast path
+    MatShape lastInputShape;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
@@ -180,6 +182,9 @@ public:
         poolOp.release();
 #endif
         computeMaxIdx = type == MAX && outputs.size() == 2;
+
+        if (!inputs.empty())
+            lastInputShape = shape(inputs[0]);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -354,35 +359,44 @@ public:
                     if (!inHost.empty())
                     {
                         const Mat& m = inHost[0];
-                        int rows = m.rows > 0 ? m.rows : 1;
-                        Mat m2d = m.reshape(1, rows);
+                        // Build 2D view as [N, C*H*W]
+                        MatShape ish = shape(m);
+                        int N = ish.size() > 0 ? ish[0] : 1;
+                        Mat m2d = m.reshape(1, N);
                         gin0.create(m2d.rows, m2d.cols, m2d.type());
                         gin0.upload(m2d);
                     }
                 }
                 if (!gin0.empty())
                 {
-                    cv::cuda::GpuMat& dst = gout[0];
-                    if (gin0.type() != CV_32F)
-                    {
-                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
-                    }
-                    if (dst.empty() || dst.type() != CV_32F)
-                    {
-                        int rows = gin0.rows > 0 ? gin0.rows : 1;
-                        int cols = gin0.cols > 0 ? gin0.cols : 1;
-                        dst.create(rows, cols, CV_32F);
-                    }
-                    // Derive k/s/p; use configured params when available
-                    int N = 1, C = 1, H_in = gin0.rows, W_in = gin0.cols;
-                    int H_out = dst.rows > 0 ? dst.rows : 1;
-                    int W_out = dst.cols > 0 ? dst.cols : 1;
+                    // Derive N,C,H,W from cached input shape (set in finalize)
+                    MatShape ish = lastInputShape;
+                    int dims = (int)ish.size();
+                    CV_Assert(dims >= 3);
+                    int N = ish[0];
+                    int C = (dims >= 4) ? ish[1] : 1;
+                    int H_in = (dims >= 4) ? ish[dims - 2] : 1;
+                    int W_in = ish[dims - 1];
+                    // Pool2D only here
                     int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : 2;
                     int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : kH;
                     int sH = strides.size() > 0 ? (int)strides[0] : 2;
                     int sW = strides.size() > 1 ? (int)strides[1] : sH;
                     int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
                     int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : pH;
+                    int H_out = (H_in + 2 * pH - kH) / sH + 1;
+                    int W_out = (W_in + 2 * pW - kW) / sW + 1;
+
+                    cv::cuda::GpuMat& dst = gout[0];
+                    if (gin0.type() != CV_32F)
+                    {
+                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                    }
+                    // allocate output as [N, C*H_out*W_out]
+                    int out_rows = std::max(N, 1);
+                    int out_cols = std::max(C * H_out * W_out, 1);
+                    if (dst.empty() || dst.type() != CV_32F || dst.rows != out_rows || dst.cols != out_cols)
+                        dst.create(out_rows, out_cols, CV_32F);
                     cv::dnn::cuda_naive_conv::maxpool2d_nchw_flatrows_fp32(
                         (const float*)gin0.ptr<float>(), (size_t)gin0.step,
                         (float*)dst.ptr<float>(), (size_t)dst.step,
@@ -410,8 +424,9 @@ public:
                     if (!inHost.empty())
                     {
                         const Mat& m = inHost[0];
-                        int rows = m.rows > 0 ? m.rows : 1;
-                        Mat m2d = m.reshape(1, rows);
+                        MatShape ish = shape(m);
+                        int N = ish.size() > 0 ? ish[0] : 1;
+                        Mat m2d = m.reshape(1, N);
                         gin0.create(m2d.rows, m2d.cols, m2d.type());
                         gin0.upload(m2d);
                     }
@@ -422,16 +437,33 @@ public:
                     {
                         cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
                     }
-                    int N = 1, C = 1, H_in = gin0.rows, W_in = gin0.cols;
-                    // Output should be N x C (single row with C columns per batch) in our 2D view
-                    cv::cuda::GpuMat& dst = gout[0];
-                    if (dst.empty() || dst.type() != CV_32F || dst.rows != N || dst.cols != C)
-                        dst.create(N, C, CV_32F);
-                    cv::dnn::cuda_naive_conv::global_avgpool2d_nchw_flat_fp32(
-                        (const float*)gin0.ptr<float>(), (size_t)gin0.step,
-                        (float*)dst.ptr<float>(), (size_t)dst.step,
-                        N, C, H_in, W_in);
-                    return;
+                    // Derive N,C,H,W from cached input shape
+                    MatShape ish = lastInputShape;
+                    int dims = (int)ish.size();
+                    CV_Assert(dims >= 3);
+                    int N = ish[0];
+                    int C = (dims >= 4) ? ish[1] : 1;
+                    int H_in = (dims >= 4) ? ish[dims - 2] : 1;
+                    int W_in = ish[dims - 1];
+                    // Check if this is truly global average pooling: kernel equals spatial dims, stride=1, pad=0
+                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : H_in;
+                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : W_in;
+                    int sH = strides.size() > 0 ? (int)strides[0] : 1;
+                    int sW = strides.size() > 1 ? (int)strides[1] : 1;
+                    int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
+                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : 0;
+                    if (kH == H_in && kW == W_in && sH == 1 && sW == 1 && pH == 0 && pW == 0)
+                    {
+                        // Output should be N x C in our 2D view
+                        cv::cuda::GpuMat& dst = gout[0];
+                        if (dst.empty() || dst.type() != CV_32F || dst.rows != std::max(N,1) || dst.cols != std::max(C,1))
+                            dst.create(std::max(N,1), std::max(C,1), CV_32F);
+                        cv::dnn::cuda_naive_conv::global_avgpool2d_nchw_flat_fp32(
+                            (const float*)gin0.ptr<float>(), (size_t)gin0.step,
+                            (float*)dst.ptr<float>(), (size_t)dst.step,
+                            N, C, H_in, W_in);
+                        return;
+                    }
                 }
             }
         }
