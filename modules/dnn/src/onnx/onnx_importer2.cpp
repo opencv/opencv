@@ -1107,8 +1107,51 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 {
     CV_Assert(node_inputs.empty());
     CV_Assert(node_outputs.size() == 1);
-    CV_Assert(layerParams.blobs.size() == 1);
-    Mat m = layerParams.blobs[0];
+
+    Mat m;
+    if (!layerParams.blobs.empty())
+    {
+        CV_Assert(layerParams.blobs.size() == 1);
+        m = layerParams.blobs[0];
+    }
+    else
+    {
+        if (layerParams.has("value_float"))
+        {
+            float v = layerParams.get<float>("value_float");
+            int sizes[] = { 1 };
+            m.create(1, sizes, CV_32F);
+            m.at<float>(0) = v;
+        }
+        else if (layerParams.has("value_int"))
+        {
+            int v = layerParams.get<int>("value_int");
+            int sizes[] = { 1 };
+            m.create(1, sizes, CV_32S);
+            m.at<int>(0) = v;
+        }
+        else if (layerParams.has("value_floats"))
+        {
+            const DictValue& arr = layerParams.get("value_floats");
+            int n = (int)arr.size();
+            int sizes[] = { n };
+            m.create(1, sizes, CV_32F);
+            for (int i = 0; i < n; ++i) m.at<float>(i) = (float)arr.getRealValue(i);
+        }
+        else if (layerParams.has("value_ints"))
+        {
+            const DictValue& arr = layerParams.get("value_ints");
+            int n = (int)arr.size();
+            int sizes[] = { n };
+            m.create(1, sizes, CV_32S);
+            for (int i = 0; i < n; ++i) m.at<int>(i) = arr.get<int>(i);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "DNN/ONNX: Constant node has no supported attributes");
+        }
+    }
+
     Arg out = node_outputs[0];
     ArgData& data = netimpl->args.at(out.idx);
     data.kind = DNN_ARG_CONST;
