@@ -265,6 +265,14 @@ if(NOT BUILD_PROTOBUF)
     ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
   endif()
 endif()
+# Include Tokenizer 
+file(GLOB extra_tokenizer_src
+     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer/*.cpp"
+)
+list(APPEND include_dirs
+     "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer"
+)
+ocv_glob_module_sources(${sources_options} SOURCES ${fw_srcs} ${webnn_srcs} ${extra_tokenizer_src})
 
 set(perf_path "${CMAKE_CURRENT_LIST_DIR}/perf")
 file(GLOB_RECURSE perf_srcs "${perf_path}/*.cpp")
