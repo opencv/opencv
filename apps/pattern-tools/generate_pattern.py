@@ -215,12 +215,12 @@ class PatternMaker:
                             while y_ < len(img_mark) and img_mark[y_][x_] != 0:
                                 y_ += 1
 
-                            if y_ != y_start:
+                            if y_ > y_start:
                                 rect = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_start)*side, width=side,
                                            height=(y_ - y_start)*side, fill="white", stroke="none")
                                 self.g.append(rect)
-                            else:
-                                y_ += 1
+
+                            y_ += 1
 
                     for y_ in range(len(img_mark)):
                         x_ = 0
@@ -229,12 +229,12 @@ class PatternMaker:
                             while x_ < len(img_mark[0]) and img_mark[y_][x_] != 0:
                                 x_ += 1
 
-                            if x_ != x_start:
+                            if x_ > x_start:
                                 rect = SVG("rect", x=x_pos+ch_ar_border+(x_start)*side, y=y_pos+ch_ar_border+(y_)*side, width=(x_-x_start)*side,
                                            height=side, fill="white", stroke="none")
                                 self.g.append(rect)
-                            else:
-                                x_ += 1
+
+                            x_ += 1
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
