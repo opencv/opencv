@@ -1058,7 +1058,7 @@ void ONNXImporter2::parseGlobalPool(LayerParams &layerParams, const opencv_onnx:
 
 void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Reduce";
+    layerParams.type = "Reduce2";
     const auto& op_type = node_proto.op_type();
     String reduce_type;
     if (op_type == "ReduceMax")
@@ -1084,27 +1084,6 @@ void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::Nod
     else
         CV_Error(Error::StsNotImplemented, "DNN/ONNX: " + op_type + " is not supported.");
     layerParams.set("reduce", reduce_type);
-
-    int num_inputs = node_proto.input_size();
-    CV_Check(num_inputs, num_inputs >= 1 && num_inputs <= 2, "DNN/ONNX: Reduce layers should have at least one input and at most two inputs");
-
-    bool const_axis_input = false;
-    if (num_inputs >= 2) {
-        CV_CheckTrue(net.isConstArg(node_inputs[1]), "Reduce layer doesn't support non contant axes");
-        const_axis_input = true;
-    }
-
-    // "axes" is turned to one of the inputs since opset 18,
-    // except for ReduceSum, which has "axes" input since opset 13.
-    if (const_axis_input) {
-        Mat mat_axes = net.argTensor(node_inputs[1]);
-        int num_axes = (int)mat_axes.total();
-        std::vector<int> axes(num_axes);
-        for (int i = 0; i < num_axes; ++i)
-            axes[i] = mat_axes.at<int64_t>(i);
-        layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
-    }
-
     addLayer(layerParams, node_proto);
 }
 
