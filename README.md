@@ -1,5 +1,12 @@
 ## OpenCV: Open Source Computer Vision Library
 
+### Quick Installation (Python)
+
+For users who want to quickly try OpenCV with Python, you can install it via pip:
+
+```bash
+pip install opencv-python
+
 
 ### Resources
 

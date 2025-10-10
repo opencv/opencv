@@ -1,5 +1,14 @@
 #!/usr/bin/env python
 
+"""
+This script is part of the OpenCV Python bindings generator.
+It defines templates and helper functions for creating type stubs,
+parsing arguments, and generating code to wrap C++ classes for Python.
+
+Contributors can use this file to extend or debug Python bindings generation.
+"""
+
+
 from __future__ import print_function
 import hdr_parser, sys, re
 import json
