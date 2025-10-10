@@ -247,7 +247,10 @@ protected:
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-    void parseRMSNormalization     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);    void parseRotaryEmbedding      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRMSNormalization     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRotaryEmbedding      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRandomNormalLike     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -1530,6 +1533,10 @@ void ONNXImporter2::parseGather(LayerParams& layerParams, const opencv_onnx::Nod
 {
     layerParams.type = "Gather2";
     CV_CheckEQ(node_proto.input_size(), 2, "");
+    // Diagnostics: log axis used by this Gather node (attribute may be absent -> default 0)
+    int axis = layerParams.get<int>("axis", 0);
+    const std::string node_name = node_proto.has_name() ? node_proto.name() : std::string();
+    CV_LOG_WARNING(NULL, "DNN/ONNX: Gather node '" << node_name << "' axis=" << axis << ", outputs=" << (node_proto.output_size() > 0 ? node_proto.output(0) : std::string("")));
     addLayer(layerParams, node_proto);
 }
 
@@ -2016,6 +2023,22 @@ void ONNXImporter2::parseQuantizeLinear(LayerParams& layerParams, const opencv_o
 
 void ONNXImporter2::parseRMSNormalization(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseRandomNormalLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    if (layerParams.has("dtype"))
+    {
+        int dt = layerParams.get<int>("dtype", -1);
+        if (dt >= 0)
+        {
+            layerParams.set<int>("output_dtype", dataType2cv((opencv_onnx::TensorProto_DataType)dt));
+        }
+        layerParams.erase("dtype");
+    }
+
+    layerParams.type = "RandomNormalLike";
     addLayer(layerParams, node_proto);
 }
 
@@ -2706,6 +2729,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["Range"] = &ONNXImporter2::parseRange;
     dispatch["Einsum"] = &ONNXImporter2::parseEinsum;
     dispatch["TopK"] = &ONNXImporter2::parseTopK2;
+    dispatch["RandomNormalLike"] = &ONNXImporter2::parseRandomNormalLike;
 
     std::vector<std::string> simpleLayers {
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
