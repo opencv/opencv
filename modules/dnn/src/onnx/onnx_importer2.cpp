@@ -1120,14 +1120,14 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
         {
             float v = layerParams.get<float>("value_float");
             int sizes[] = { 1 };
-            m = Mat(1, sizes, CV_32F);
+            m.create(1, sizes, CV_32F);
             m.at<float>(0) = v;
         }
         else if (layerParams.has("value_int"))
         {
             int v = layerParams.get<int>("value_int");
             int sizes[] = { 1 };
-            m = Mat(1, sizes, CV_32S);
+            m.create(1, sizes, CV_32S);
             m.at<int>(0) = v;
         }
         else if (layerParams.has("value_floats"))
@@ -1135,7 +1135,7 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
             const DictValue& arr = layerParams.get("value_floats");
             int n = (int)arr.size();
             int sizes[] = { n };
-            m = Mat(1, sizes, CV_32F);
+            m.create(1, sizes, CV_32F);
             for (int i = 0; i < n; ++i) m.at<float>(i) = (float)arr.getRealValue(i);
         }
         else if (layerParams.has("value_ints"))
@@ -1143,7 +1143,7 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
             const DictValue& arr = layerParams.get("value_ints");
             int n = (int)arr.size();
             int sizes[] = { n };
-            m = Mat(1, sizes, CV_32S);
+            m.create(1, sizes, CV_32S);
             for (int i = 0; i < n; ++i) m.at<int>(i) = arr.get<int>(i);
         }
         else
