@@ -1311,6 +1311,18 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Resize2Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS NegativeLogLikelihoodLossLayer : public Layer
+    {
+    public:
+        static Ptr<NegativeLogLikelihoodLossLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS SoftmaxCrossEntropyLossLayer : public Layer
+    {
+    public:
+        static Ptr<SoftmaxCrossEntropyLossLayer> create(const LayerParams& params);
+    };
+
     /**
      * @brief Bilinear resize layer from https://github.com/cdmh/deeplab-public-ver2
      *
