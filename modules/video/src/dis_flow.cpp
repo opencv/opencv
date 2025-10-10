@@ -1101,7 +1101,7 @@ bool DISOpticalFlowImpl::ocl_PatchInverseSearch(UMat &src_U,
         subgroups_build_options = " -DCV_USE_SUBGROUPS=1";
 
     String build_options = cv::format(
-                "-DDIS_BORDER_SIZE=%d -DDIS_PATCH_SIZE=%d -DDIS_PATCH_STRIDE=%d",
+                "-cl-std=CL2.0 -DDIS_BORDER_SIZE=%d -DDIS_PATCH_SIZE=%d -DDIS_PATCH_STRIDE=%d",
                 border_size, patch_size, patch_stride
             ) + subgroups_build_options;
 
