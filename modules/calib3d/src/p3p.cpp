@@ -2,465 +2,386 @@
 #include <cmath>
 #include <iostream>
 
-#include "polynom_solver.h"
 #include "p3p.h"
 
-void p3p::init_inverse_parameters()
+
+using namespace cv;
+
+// Copyright (c) 2020, Viktor Larsson
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//
+//     * Neither the name of the copyright holder nor the
+//       names of its contributors may be used to endorse or promote products
+//       derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+// Author: Yaqing Ding
+//         Mark Shachkov
+
+// https://github.com/PoseLib/PoseLib/blob/79fe59ada3122c50383ac06e043a5e04072c6711/PoseLib/solvers/p3p.cc
+namespace yaqding
 {
-    inv_fx = 1. / fx;
-    inv_fy = 1. / fy;
-    cx_fx = cx / fx;
-    cy_fy = cy / fy;
-}
 
-p3p::p3p(cv::Mat cameraMatrix)
-{
-    if (cameraMatrix.depth() == CV_32F)
-        init_camera_parameters<float>(cameraMatrix);
-    else
-        init_camera_parameters<double>(cameraMatrix);
-    init_inverse_parameters();
-}
-
-p3p::p3p(double _fx, double _fy, double _cx, double _cy)
-{
-    fx = _fx;
-    fy = _fy;
-    cx = _cx;
-    cy = _cy;
-    init_inverse_parameters();
-}
-
-bool p3p::solve(cv::Mat& R, cv::Mat& tvec, const cv::Mat& opoints, const cv::Mat& ipoints)
-{
-    CV_INSTRUMENT_REGION();
-
-    double rotation_matrix[3][3] = {}, translation[3] = {};
-    std::vector<double> points;
-    if (opoints.depth() == ipoints.depth())
-    {
-        if (opoints.depth() == CV_32F)
-            extract_points<cv::Point3f,cv::Point2f>(opoints, ipoints, points);
-        else
-            extract_points<cv::Point3d,cv::Point2d>(opoints, ipoints, points);
-    }
-    else if (opoints.depth() == CV_32F)
-        extract_points<cv::Point3f,cv::Point2d>(opoints, ipoints, points);
-    else
-        extract_points<cv::Point3d,cv::Point2f>(opoints, ipoints, points);
-
-    bool result = solve(rotation_matrix, translation,
-                        points[0], points[1], points[2], points[3], points[4],
-                        points[5], points[6], points[7], points[8], points[9],
-                        points[10], points[11], points[12], points[13], points[14],
-                        points[15], points[16], points[17], points[18], points[19]);
-    cv::Mat(3, 1, CV_64F, translation).copyTo(tvec);
-    cv::Mat(3, 3, CV_64F, rotation_matrix).copyTo(R);
-    return result;
-}
-
-int p3p::solve(std::vector<cv::Mat>& Rs, std::vector<cv::Mat>& tvecs, const cv::Mat& opoints, const cv::Mat& ipoints)
-{
-    CV_INSTRUMENT_REGION();
-
-    double rotation_matrix[4][3][3] = {}, translation[4][3] = {};
-    std::vector<double> points;
-    if (opoints.depth() == ipoints.depth())
-    {
-        if (opoints.depth() == CV_32F)
-            extract_points<cv::Point3f,cv::Point2f>(opoints, ipoints, points);
-        else
-            extract_points<cv::Point3d,cv::Point2d>(opoints, ipoints, points);
-    }
-    else if (opoints.depth() == CV_32F)
-        extract_points<cv::Point3f,cv::Point2d>(opoints, ipoints, points);
-    else
-        extract_points<cv::Point3d,cv::Point2f>(opoints, ipoints, points);
-
-    const bool p4p = std::max(opoints.checkVector(3, CV_32F), opoints.checkVector(3, CV_64F)) == 4;
-    int solutions = solve(rotation_matrix, translation,
-                          points[0], points[1], points[2], points[3], points[4],
-                          points[5], points[6], points[7], points[8], points[9],
-                          points[10], points[11], points[12], points[13], points[14],
-                          points[15], points[16], points[17], points[18], points[19],
-                          p4p);
-
-    for (int i = 0; i < solutions; i++) {
-        cv::Mat R, tvec;
-        cv::Mat(3, 1, CV_64F, translation[i]).copyTo(tvec);
-        cv::Mat(3, 3, CV_64F, rotation_matrix[i]).copyTo(R);
-
-        Rs.push_back(R);
-        tvecs.push_back(tvec);
-    }
-
-    return solutions;
-}
-
-bool p3p::solve(double R[3][3], double t[3],
-    double mu0, double mv0,   double X0, double Y0, double Z0,
-    double mu1, double mv1,   double X1, double Y1, double Z1,
-    double mu2, double mv2,   double X2, double Y2, double Z2,
-    double mu3, double mv3,   double X3, double Y3, double Z3)
-{
-    double Rs[4][3][3] = {}, ts[4][3] = {};
-
-    const bool p4p = true;
-    int n = solve(Rs, ts, mu0, mv0, X0, Y0, Z0,  mu1, mv1, X1, Y1, Z1, mu2, mv2, X2, Y2, Z2, mu3, mv3, X3, Y3, Z3, p4p);
-
-    if (n == 0)
-        return false;
-
-    for(int i = 0; i < 3; i++) {
-        for(int j = 0; j < 3; j++)
-            R[i][j] = Rs[0][i][j];
-        t[i] = ts[0][i];
-    }
-
-    return true;
-}
-
-int p3p::solve(double R[4][3][3], double t[4][3],
-               double mu0, double mv0,   double X0, double Y0, double Z0,
-               double mu1, double mv1,   double X1, double Y1, double Z1,
-               double mu2, double mv2,   double X2, double Y2, double Z2,
-               double mu3, double mv3,   double X3, double Y3, double Z3,
-               bool p4p)
-{
-    double mk0, mk1, mk2;
-    double norm;
-
-    mu0 = inv_fx * mu0 - cx_fx;
-    mv0 = inv_fy * mv0 - cy_fy;
-    norm = sqrt(mu0 * mu0 + mv0 * mv0 + 1);
-    mk0 = 1. / norm; mu0 *= mk0; mv0 *= mk0;
-
-    mu1 = inv_fx * mu1 - cx_fx;
-    mv1 = inv_fy * mv1 - cy_fy;
-    norm = sqrt(mu1 * mu1 + mv1 * mv1 + 1);
-    mk1 = 1. / norm; mu1 *= mk1; mv1 *= mk1;
-
-    mu2 = inv_fx * mu2 - cx_fx;
-    mv2 = inv_fy * mv2 - cy_fy;
-    norm = sqrt(mu2 * mu2 + mv2 * mv2 + 1);
-    mk2 = 1. / norm; mu2 *= mk2; mv2 *= mk2;
-
-    mu3 = inv_fx * mu3 - cx_fx;
-    mv3 = inv_fy * mv3 - cy_fy;
-
-    double distances[3];
-    distances[0] = sqrt( (X1 - X2) * (X1 - X2) + (Y1 - Y2) * (Y1 - Y2) + (Z1 - Z2) * (Z1 - Z2) );
-    distances[1] = sqrt( (X0 - X2) * (X0 - X2) + (Y0 - Y2) * (Y0 - Y2) + (Z0 - Z2) * (Z0 - Z2) );
-    distances[2] = sqrt( (X0 - X1) * (X0 - X1) + (Y0 - Y1) * (Y0 - Y1) + (Z0 - Z1) * (Z0 - Z1) );
-
-    // Calculate angles
-    double cosines[3];
-    cosines[0] = mu1 * mu2 + mv1 * mv2 + mk1 * mk2;
-    cosines[1] = mu0 * mu2 + mv0 * mv2 + mk0 * mk2;
-    cosines[2] = mu0 * mu1 + mv0 * mv1 + mk0 * mk1;
-
-    double lengths[4][3] = {};
-    int n = solve_for_lengths(lengths, distances, cosines);
-
-    int nb_solutions = 0;
-    double reproj_errors[4];
-    for(int i = 0; i < n; i++) {
-        double M_orig[3][3];
-
-        M_orig[0][0] = lengths[i][0] * mu0;
-        M_orig[0][1] = lengths[i][0] * mv0;
-        M_orig[0][2] = lengths[i][0] * mk0;
-
-        M_orig[1][0] = lengths[i][1] * mu1;
-        M_orig[1][1] = lengths[i][1] * mv1;
-        M_orig[1][2] = lengths[i][1] * mk1;
-
-        M_orig[2][0] = lengths[i][2] * mu2;
-        M_orig[2][1] = lengths[i][2] * mv2;
-        M_orig[2][2] = lengths[i][2] * mk2;
-
-        if (!align(M_orig, X0, Y0, Z0, X1, Y1, Z1, X2, Y2, Z2, R[nb_solutions], t[nb_solutions]))
-            continue;
-
-        if (p4p) {
-            double X3p = R[nb_solutions][0][0] * X3 + R[nb_solutions][0][1] * Y3 + R[nb_solutions][0][2] * Z3 + t[nb_solutions][0];
-            double Y3p = R[nb_solutions][1][0] * X3 + R[nb_solutions][1][1] * Y3 + R[nb_solutions][1][2] * Z3 + t[nb_solutions][1];
-            double Z3p = R[nb_solutions][2][0] * X3 + R[nb_solutions][2][1] * Y3 + R[nb_solutions][2][2] * Z3 + t[nb_solutions][2];
-            double mu3p = X3p / Z3p;
-            double mv3p = Y3p / Z3p;
-            reproj_errors[nb_solutions] = (mu3p - mu3) * (mu3p - mu3) + (mv3p - mv3) * (mv3p - mv3);
-        }
-
-        nb_solutions++;
-    }
-
-    if (p4p) {
-        //sort the solutions
-        for (int i = 1; i < nb_solutions; i++) {
-            for (int j = i; j > 0 && reproj_errors[j-1] > reproj_errors[j]; j--) {
-                std::swap(reproj_errors[j], reproj_errors[j-1]);
-                std::swap(R[j], R[j-1]);
-                std::swap(t[j], t[j-1]);
-            }
-        }
-    }
-
-    return nb_solutions;
-}
-
-/// Given 3D distances between three points and cosines of 3 angles at the apex, calculates
-/// the lengths of the line segments connecting projection center (P) and the three 3D points (A, B, C).
-/// Returned distances are for |PA|, |PB|, |PC| respectively.
-/// Only the solution to the main branch.
-/// Reference : X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang; "Complete Solution Classification for the Perspective-Three-Point Problem"
-/// IEEE Trans. on PAMI, vol. 25, No. 8, August 2003
-/// \param lengths Lengths of line segments up to four solutions.
-/// \param distances Distance between 3D points in pairs |BC|, |AC|, |AB|.
-/// \param cosines Cosine of the angles /_BPC, /_APC, /_APB.
-/// \returns Number of solutions.
-/// WARNING: NOT ALL THE DEGENERATE CASES ARE IMPLEMENTED
-
-int p3p::solve_for_lengths(double lengths[4][3], double distances[3], double cosines[3])
-{
-    double p = cosines[0] * 2;
-    double q = cosines[1] * 2;
-    double r = cosines[2] * 2;
-
-    double inv_d22 = 1. / (distances[2] * distances[2]);
-    double a = inv_d22 * (distances[0] * distances[0]);
-    double b = inv_d22 * (distances[1] * distances[1]);
-
-    double a2 = a * a, b2 = b * b, p2 = p * p, q2 = q * q, r2 = r * r;
-    double pr = p * r, pqr = q * pr;
-
-    // Check reality condition (the four points should not be coplanar)
-    if (p2 + q2 + r2 - pqr - 1 == 0)
-        return 0;
-
-    double ab = a * b, a_2 = 2*a;
-
-    double A = -2 * b + b2 + a2 + 1 + ab*(2 - r2) - a_2;
-
-    // Check reality condition
-    if (A == 0) return 0;
-
-    double a_4 = 4*a;
-
-    double B = q*(-2*(ab + a2 + 1 - b) + r2*ab + a_4) + pr*(b - b2 + ab);
-    double C = q2 + b2*(r2 + p2 - 2) - b*(p2 + pqr) - ab*(r2 + pqr) + (a2 - a_2)*(2 + q2) + 2;
-    double D = pr*(ab-b2+b) + q*((p2-2)*b + 2 * (ab - a2) + a_4 - 2);
-    double E = 1 + 2*(b - a - ab) + b2 - b*p2 + a2;
-
-    double temp = (p2*(a-1+b) + r2*(a-1-b) + pqr - a*pqr);
-    double b0 = b * temp * temp;
-    // Check reality condition
-    if (b0 == 0)
-        return 0;
-
-    double real_roots[4];
-    int n = solve_deg4(A, B, C, D, E,  real_roots[0], real_roots[1], real_roots[2], real_roots[3]);
-
-    if (n == 0)
-        return 0;
-
-    int nb_solutions = 0;
-    double r3 = r2*r, pr2 = p*r2, r3q = r3 * q;
-    double inv_b0 = 1. / b0;
-
-    // For each solution of x
-    for(int i = 0; i < n; i++) {
-        double x = real_roots[i];
-
-        // Check reality condition
-        if (x <= 0)
-            continue;
-
-        double x2 = x*x;
-
-        double b1 =
-            ((1-a-b)*x2 + (q*a-q)*x + 1 - a + b) *
-            (((r3*(a2 + ab*(2 - r2) - a_2 + b2 - 2*b + 1)) * x +
-
-            (r3q*(2*(b-a2) + a_4 + ab*(r2 - 2) - 2) + pr2*(1 + a2 + 2*(ab-a-b) + r2*(b - b2) + b2))) * x2 +
-
-            (r3*(q2*(1-2*a+a2) + r2*(b2-ab) - a_4 + 2*(a2 - b2) + 2) + r*p2*(b2 + 2*(ab - b - a) + 1 + a2) + pr2*q*(a_4 + 2*(b - ab - a2) - 2 - r2*b)) * x +
-
-            2*r3q*(a_2 - b - a2 + ab - 1) + pr2*(q2 - a_4 + 2*(a2 - b2) + r2*b + q2*(a2 - a_2) + 2) +
-            p2*(p*(2*(ab - a - b) + a2 + b2 + 1) + 2*q*r*(b + a_2 - a2 - ab - 1)));
-
-        // Check reality condition
-        if (b1 <= 0)
-            continue;
-
-        double y = inv_b0 * b1;
-        double v = x2 + y*y - x*y*r;
-
-        if (v <= 0)
-            continue;
-
-        double Z = distances[2] / sqrt(v);
-        double X = x * Z;
-        double Y = y * Z;
-
-        lengths[nb_solutions][0] = X;
-        lengths[nb_solutions][1] = Y;
-        lengths[nb_solutions][2] = Z;
-
-        nb_solutions++;
-    }
-
-    return nb_solutions;
-}
-
-bool p3p::align(double M_end[3][3],
-    double X0, double Y0, double Z0,
-    double X1, double Y1, double Z1,
-    double X2, double Y2, double Z2,
-    double R[3][3], double T[3])
-{
-    // Centroids:
-    double C_start[3] = {}, C_end[3] = {};
-    for(int i = 0; i < 3; i++) C_end[i] = (M_end[0][i] + M_end[1][i] + M_end[2][i]) / 3;
-    C_start[0] = (X0 + X1 + X2) / 3;
-    C_start[1] = (Y0 + Y1 + Y2) / 3;
-    C_start[2] = (Z0 + Z1 + Z2) / 3;
-
-    // Covariance matrix s:
-    double s[3 * 3] = {};
-    for(int j = 0; j < 3; j++) {
-        s[0 * 3 + j] = (X0 * M_end[0][j] + X1 * M_end[1][j] + X2 * M_end[2][j]) / 3 - C_end[j] * C_start[0];
-        s[1 * 3 + j] = (Y0 * M_end[0][j] + Y1 * M_end[1][j] + Y2 * M_end[2][j]) / 3 - C_end[j] * C_start[1];
-        s[2 * 3 + j] = (Z0 * M_end[0][j] + Z1 * M_end[1][j] + Z2 * M_end[2][j]) / 3 - C_end[j] * C_start[2];
-    }
-
-    double Qs[16] = {}, evs[4] = {}, U[16] = {};
-
-    Qs[0 * 4 + 0] = s[0 * 3 + 0] + s[1 * 3 + 1] + s[2 * 3 + 2];
-    Qs[1 * 4 + 1] = s[0 * 3 + 0] - s[1 * 3 + 1] - s[2 * 3 + 2];
-    Qs[2 * 4 + 2] = s[1 * 3 + 1] - s[2 * 3 + 2] - s[0 * 3 + 0];
-    Qs[3 * 4 + 3] = s[2 * 3 + 2] - s[0 * 3 + 0] - s[1 * 3 + 1];
-
-    Qs[1 * 4 + 0] = Qs[0 * 4 + 1] = s[1 * 3 + 2] - s[2 * 3 + 1];
-    Qs[2 * 4 + 0] = Qs[0 * 4 + 2] = s[2 * 3 + 0] - s[0 * 3 + 2];
-    Qs[3 * 4 + 0] = Qs[0 * 4 + 3] = s[0 * 3 + 1] - s[1 * 3 + 0];
-    Qs[2 * 4 + 1] = Qs[1 * 4 + 2] = s[1 * 3 + 0] + s[0 * 3 + 1];
-    Qs[3 * 4 + 1] = Qs[1 * 4 + 3] = s[2 * 3 + 0] + s[0 * 3 + 2];
-    Qs[3 * 4 + 2] = Qs[2 * 4 + 3] = s[2 * 3 + 1] + s[1 * 3 + 2];
-
-    jacobi_4x4(Qs, evs, U);
-
-    // Looking for the largest eigen value:
-    int i_ev = 0;
-    double ev_max = evs[i_ev];
-    for(int i = 1; i < 4; i++)
-        if (evs[i] > ev_max)
-            ev_max = evs[i_ev = i];
-
-    // Quaternion:
-    double q[4];
-    for(int i = 0; i < 4; i++)
-        q[i] = U[i * 4 + i_ev];
-
-    double q02 = q[0] * q[0], q12 = q[1] * q[1], q22 = q[2] * q[2], q32 = q[3] * q[3];
-    double q0_1 = q[0] * q[1], q0_2 = q[0] * q[2], q0_3 = q[0] * q[3];
-    double q1_2 = q[1] * q[2], q1_3 = q[1] * q[3];
-    double q2_3 = q[2] * q[3];
-
-    R[0][0] = q02 + q12 - q22 - q32;
-    R[0][1] = 2. * (q1_2 - q0_3);
-    R[0][2] = 2. * (q1_3 + q0_2);
-
-    R[1][0] = 2. * (q1_2 + q0_3);
-    R[1][1] = q02 + q22 - q12 - q32;
-    R[1][2] = 2. * (q2_3 - q0_1);
-
-    R[2][0] = 2. * (q1_3 - q0_2);
-    R[2][1] = 2. * (q2_3 + q0_1);
-    R[2][2] = q02 + q32 - q12 - q22;
-
-    for(int i = 0; i < 3; i++)
-        T[i] = C_end[i] - (R[i][0] * C_start[0] + R[i][1] * C_start[1] + R[i][2] * C_start[2]);
-
-    return true;
-}
-
-bool p3p::jacobi_4x4(double * A, double * D, double * U)
-{
-    double B[4] = {}, Z[4] = {};
-    double Id[16] = {1., 0., 0., 0.,
-        0., 1., 0., 0.,
-        0., 0., 1., 0.,
-        0., 0., 0., 1.};
-
-    memcpy(U, Id, 16 * sizeof(double));
-
-    B[0] = A[0]; B[1] = A[5]; B[2] = A[10]; B[3] = A[15];
-    memcpy(D, B, 4 * sizeof(double));
-
-    for(int iter = 0; iter < 50; iter++) {
-        double sum = fabs(A[1]) + fabs(A[2]) + fabs(A[3]) + fabs(A[6]) + fabs(A[7]) + fabs(A[11]);
-
-        if (sum == 0.0)
+static bool solve_cubic_single_real(double c2, double c1, double c0, double &root) {
+    double a = c1 - c2 * c2 / 3.0;
+    double b = (2.0 * c2 * c2 * c2 - 9.0 * c2 * c1) / 27.0 + c0;
+    double c = b * b / 4.0 + a * a * a / 27.0;
+    if (c != 0) {
+        if (c > 0) {
+            c = std::sqrt(c);
+            b *= -0.5;
+            root = std::cbrt(b + c) + std::cbrt(b - c) - c2 / 3.0;
             return true;
+        } else {
+            c = 3.0 * b / (2.0 * a) * std::sqrt(-3.0 / a);
+            root = 2.0 * std::sqrt(-a / 3.0) * std::cos(std::acos(c) / 3.0) - c2 / 3.0;
+        }
+    } else {
+        root = -c2 / 3.0 + (a != 0 ? (3.0 * b / a) : 0);
+    }
+    return false;
+}
 
-        double tresh =  (iter < 3) ? 0.2 * sum / 16. : 0.0;
-        for(int i = 0; i < 3; i++) {
-            double * pAij = A + 5 * i + 1;
-            for(int j = i + 1 ; j < 4; j++) {
-                double Aij = *pAij;
-                double eps_machine = 100.0 * fabs(Aij);
+static bool root2real(double b, double c, double &r1, double &r2) {
+    const double THRESHOLD = -1.0e-12;
+    double v = b * b - 4.0 * c;
+    if (v < THRESHOLD) {
+        r1 = r2 = -0.5 * b;
+        return v >= 0;
+    }
+    if (v > THRESHOLD && v < 0.0) {
+        r1 = -0.5 * b;
+        r2 = -2;
+        return true;
+    }
 
-                if ( iter > 3 && fabs(D[i]) + eps_machine == fabs(D[i]) && fabs(D[j]) + eps_machine == fabs(D[j]) )
-                    *pAij = 0.0;
-                else if (fabs(Aij) > tresh) {
-                    double hh = D[j] - D[i], t;
-                    if (fabs(hh) + eps_machine == fabs(hh))
-                        t = Aij / hh;
-                    else {
-                        double theta = 0.5 * hh / Aij;
-                        t = 1.0 / (fabs(theta) + sqrt(1.0 + theta * theta));
-                        if (theta < 0.0) t = -t;
-                    }
+    double y = std::sqrt(v);
+    if (b < 0) {
+        r1 = 0.5 * (-b + y);
+        r2 = 0.5 * (-b - y);
+    } else {
+        r1 = 2.0 * c / (-b + y);
+        r2 = 2.0 * c / (-b - y);
+    }
+    return true;
+}
 
-                    hh = t * Aij;
-                    Z[i] -= hh;
-                    Z[j] += hh;
-                    D[i] -= hh;
-                    D[j] += hh;
-                    *pAij = 0.0;
+static std::array<Vec3d, 2> compute_pq(Matx33d C) {
+    std::array<Vec3d, 2> pq;
+    Matx33d C_adj;
 
-                    double c = 1.0 / sqrt(1 + t * t);
-                    double s = t * c;
-                    double tau = s / (1.0 + c);
-                    for(int k = 0; k <= i - 1; k++) {
-                        double g = A[k * 4 + i], h = A[k * 4 + j];
-                        A[k * 4 + i] = g - s * (h + g * tau);
-                        A[k * 4 + j] = h + s * (g - h * tau);
-                    }
-                    for(int k = i + 1; k <= j - 1; k++) {
-                        double g = A[i * 4 + k], h = A[k * 4 + j];
-                        A[i * 4 + k] = g - s * (h + g * tau);
-                        A[k * 4 + j] = h + s * (g - h * tau);
-                    }
-                    for(int k = j + 1; k < 4; k++) {
-                        double g = A[i * 4 + k], h = A[j * 4 + k];
-                        A[i * 4 + k] = g - s * (h + g * tau);
-                        A[j * 4 + k] = h + s * (g - h * tau);
-                    }
-                    for(int k = 0; k < 4; k++) {
-                        double g = U[k * 4 + i], h = U[k * 4 + j];
-                        U[k * 4 + i] = g - s * (h + g * tau);
-                        U[k * 4 + j] = h + s * (g - h * tau);
-                    }
-                }
-                pAij++;
+    C_adj(0, 0) = C(1, 2) * C(2, 1) - C(1, 1) * C(2, 2);
+    C_adj(1, 1) = C(0, 2) * C(2, 0) - C(0, 0) * C(2, 2);
+    C_adj(2, 2) = C(0, 1) * C(1, 0) - C(0, 0) * C(1, 1);
+    C_adj(0, 1) = C(0, 1) * C(2, 2) - C(0, 2) * C(2, 1);
+    C_adj(0, 2) = C(0, 2) * C(1, 1) - C(0, 1) * C(1, 2);
+    C_adj(1, 0) = C_adj(0, 1);
+    C_adj(1, 2) = C(0, 0) * C(1, 2) - C(0, 2) * C(1, 0);
+    C_adj(2, 0) = C_adj(0, 2);
+    C_adj(2, 1) = C_adj(1, 2);
+
+    Matx31d v;
+    if (C_adj(0, 0) > C_adj(1, 1)) {
+        if (C_adj(0, 0) > C_adj(2, 2)) {
+            v = C_adj.col(0) / std::sqrt(C_adj(0, 0));
+        } else {
+            v = C_adj.col(2) / std::sqrt(C_adj(2, 2));
+        }
+    } else if (C_adj(1, 1) > C_adj(2, 2)) {
+        v = C_adj.col(1) / std::sqrt(C_adj(1, 1));
+    } else {
+        v = C_adj.col(2) / std::sqrt(C_adj(2, 2));
+    }
+
+    C(0, 1) -= v(2);
+    C(0, 2) += v(1);
+    C(1, 2) -= v(0);
+    C(1, 0) += v(2);
+    C(2, 0) -= v(1);
+    C(2, 1) += v(0);
+
+    pq[0](0) = C.col(0)(0);
+    pq[0](1) = C.col(0)(1);
+    pq[0](2) = C.col(0)(2);
+    pq[1](0) = C.row(0)(0);
+    pq[1](1) = C.row(0)(1);
+    pq[1](2) = C.row(0)(2);
+
+    return pq;
+}
+
+// Performs a few Newton steps on the equations
+static void refine_lambda(double &lambda1, double &lambda2, double &lambda3, const double a12, const double a13,
+                   const double a23, const double b12, const double b13, const double b23) {
+    for (int iter = 0; iter < 5; ++iter) {
+        double r1 = (lambda1 * lambda1 - 2.0 * lambda1 * lambda2 * b12 + lambda2 * lambda2 - a12);
+        double r2 = (lambda1 * lambda1 - 2.0 * lambda1 * lambda3 * b13 + lambda3 * lambda3 - a13);
+        double r3 = (lambda2 * lambda2 - 2.0 * lambda2 * lambda3 * b23 + lambda3 * lambda3 - a23);
+
+        if (std::abs(r1) + std::abs(r2) + std::abs(r3) < 1e-10)
+            return;
+
+        double x11 = lambda1 - lambda2 * b12;
+        double x12 = lambda2 - lambda1 * b12;
+        double x21 = lambda1 - lambda3 * b13;
+        double x23 = lambda3 - lambda1 * b13;
+        double x32 = lambda2 - lambda3 * b23;
+        double x33 = lambda3 - lambda2 * b23;
+        double detJ = 0.5 / (x11 * x23 * x32 + x12 * x21 * x33); // half minus inverse determinant
+
+        // This uses the closed form of the inverse for the jacobian.
+        // Due to the zero elements this actually becomes quite nice.
+        lambda1 += (-x23 * x32 * r1 - x12 * x33 * r2 + x12 * x23 * r3) * detJ;
+        lambda2 += (-x21 * x33 * r1 + x11 * x33 * r2 - x11 * x23 * r3) * detJ;
+        lambda3 += (x21 * x32 * r1 - x11 * x32 * r2 - x12 * x21 * r3) * detJ;
+    }
+}
+
+};
+
+void p3p::calibrateAndNormalizePointsPnP(const Mat &opoints_, const Mat &ipoints_) {
+    auto convertPoints = [] (const Mat &points_input, Mat &points, int pt_dim) {
+        points_input.convertTo(points, CV_64F); // convert points to have float precision
+        if (points.channels() > 1)
+            points = points.reshape(1, (int)points.total()); // convert point to have 1 channel
+        if (points.rows < points.cols)
+            transpose(points, points); // transpose so points will be in rows
+        CV_CheckGE(points.cols, pt_dim, "Invalid dimension of point");
+        if (points.cols != pt_dim) // in case when image points are 3D convert them to 2D
+            points = points.colRange(0, pt_dim);
+    };
+
+    Mat ipoints;
+    convertPoints(ipoints_, ipoints, 2);
+    for (int i = 0; i < ipoints.rows; i++) {
+        const double k_inv_u = ipoints.at<double>(i, 0);
+        const double k_inv_v = ipoints.at<double>(i, 1);
+        double x_norm = 1.0 / sqrt(k_inv_u*k_inv_u + k_inv_v*k_inv_v + 1);
+        x_copy[i](0) = k_inv_u * x_norm;
+        x_copy[i](1) = k_inv_v * x_norm;
+        x_copy[i](2) =           x_norm;
+    }
+
+    Mat opoints;
+    convertPoints(opoints_, opoints, 3);
+    X_copy[0](0) = opoints.at<double>(0, 0);
+    X_copy[0](1) = opoints.at<double>(0, 1);
+    X_copy[0](2) = opoints.at<double>(0, 2);
+
+    X_copy[1](0) = opoints.at<double>(1, 0);
+    X_copy[1](1) = opoints.at<double>(1, 1);
+    X_copy[1](2) = opoints.at<double>(1, 2);
+
+    X_copy[2](0) = opoints.at<double>(2, 0);
+    X_copy[2](1) = opoints.at<double>(2, 1);
+    X_copy[2](2) = opoints.at<double>(2, 2);
+}
+
+p3p::p3p() :
+    x_copy(), X_copy()
+{
+}
+
+int p3p::estimate(std::vector<Mat>& Rs, std::vector<Mat>& ts, const cv::Mat& opoints, const cv::Mat& ipoints) {
+    CV_INSTRUMENT_REGION();
+    calibrateAndNormalizePointsPnP(opoints, ipoints);
+
+    Rs.reserve(4);
+    ts.reserve(4);
+
+    Vec3d X01 = X_copy[0] - X_copy[1];
+    Vec3d X02 = X_copy[0] - X_copy[2];
+    Vec3d X12 = X_copy[1] - X_copy[2];
+
+    double a01 = norm(X01, NORM_L2SQR);
+    double a02 = norm(X02, NORM_L2SQR);
+    double a12 = norm(X12, NORM_L2SQR);
+
+    std::array<Vec3d, 3> X = {X_copy[0], X_copy[1], X_copy[2]};
+    std::array<Vec3d, 3> x = {x_copy[0], x_copy[1], x_copy[2]};
+
+    // Switch X,x so that BC is the largest distance among {X01, X02, X12}
+    if (a01 > a02) {
+        if (a01 > a12) {
+            std::swap(x[0], x[2]);
+            std::swap(X[0], X[2]);
+            std::swap(a01, a12);
+            X01 = -X12;
+            X02 = -X02;
+        }
+    } else if (a02 > a12) {
+        std::swap(x[0], x[1]);
+        std::swap(X[0], X[1]);
+        std::swap(a02, a12);
+        X01 = -X01;
+        X02 = X12;
+    }
+
+    const double a12d = 1.0 / a12;
+    const double a = a01 * a12d;
+    const double b = a02 * a12d;
+
+    const double m01 = x[0].dot(x[1]);
+    const double m02 = x[0].dot(x[2]);
+    const double m12 = x[1].dot(x[2]);
+
+    // Ugly parameters to simplify the calculation
+    const double m12sq = -m12 * m12 + 1.0;
+    const double m02sq = -1.0 + m02 * m02;
+    const double m01sq = -1.0 + m01 * m01;
+    const double ab = a * b;
+    const double bsq = b * b;
+    const double asq = a * a;
+    const double m013 = -2.0 + 2.0 * m01 * m02 * m12;
+    const double bsqm12sq = bsq * m12sq;
+    const double asqm12sq = asq * m12sq;
+    const double abm12sq = 2.0 * ab * m12sq;
+
+    const double k3_inv = 1.0 / (bsqm12sq + b * m02sq);
+    const double k2 = k3_inv * ((-1.0 + a) * m02sq + abm12sq + bsqm12sq + b * m013);
+    const double k1 = k3_inv * (asqm12sq + abm12sq + a * m013 + (-1.0 + b) * m01sq);
+    const double k0 = k3_inv * (asqm12sq + a * m01sq);
+
+    double s;
+    bool G = yaqding::solve_cubic_single_real(k2, k1, k0, s);
+
+    Matx33d C;
+    C(0, 0) = -a + s * (1 - b);
+    C(0, 1) = -m02 * s;
+    C(0, 2) = a * m12 + b * m12 * s;
+    C(1, 0) = C(0, 1);
+    C(1, 1) = s + 1;
+    C(1, 2) = -m01;
+    C(2, 0) = C(0, 2);
+    C(2, 1) = C(1, 2);
+    C(2, 2) = -a - b * s + 1;
+
+    std::array<Vec3d, 2> pq = yaqding::compute_pq(C);
+
+    // XX << X01, X02, X01.cross(X02);
+    // XX = XX.inverse().eval();
+    Matx33d XX;
+    XX(0,0) = X01(0);   XX(1,0) = X01(1);   XX(2,0) = X01(2);
+    XX(0,1) = X02(0);   XX(1,1) = X02(1);   XX(2,1) = X02(2);
+    Vec3d X01_X02 = X01.cross(X02);
+    XX(0,2) = X01_X02(0);   XX(1,2) = X01_X02(1);   XX(2,2) = X01_X02(2);
+    XX = XX.inv();
+
+    int n_sols = 0;
+    for (int i = 0; i < 2; ++i) {
+        // [p0 p1 p2] * [1; x; y] = 0, or [p0 p1 p2] * [d2; d0; d1] = 0
+        double p0 = pq[i](0);
+        double p1 = pq[i](1);
+        double p2 = pq[i](2);
+        // here we run into trouble if p0 is zero,
+        // so depending on which is larger, we solve for either d0 or d1
+        // The case p0 = p1 = 0 is degenerate and can be ignored
+        bool switch_12 = std::abs(p0) <= std::abs(p1);
+
+        if (switch_12) {
+            // eliminate d0
+            double w0 = -p0 / p1;
+            double w1 = -p2 / p1;
+            double ca = 1.0 / (w1 * w1 - b);
+            double cb = 2.0 * (b * m12 - m02 * w1 + w0 * w1) * ca;
+            double cc = (w0 * w0 - 2 * m02 * w0 - b + 1.0) * ca;
+            double taus[2];
+
+            if (!yaqding::root2real(cb, cc, taus[0], taus[1]))
+                continue;
+
+            for (double tau : taus) {
+                if (tau <= 0)
+                    continue;
+
+                // positive only
+                double d2 = std::sqrt(a12 / (tau * (tau - 2.0 * m12) + 1.0));
+                double d1 = tau * d2;
+                double d0 = (w0 * d2 + w1 * d1);
+                if (d0 < 0)
+                    continue;
+
+                yaqding::refine_lambda(d0, d1, d2, a01, a02, a12, m01, m02, m12);
+                Vec3d v1 = d0 * x[0] - d1 * x[1];
+                Vec3d v2 = d0 * x[0] - d2 * x[2];
+                // YY << v1, v2, v1.cross(v2);
+                Matx33d YY;
+                YY(0,0) = v1(0);   YY(1,0) = v1(1);   YY(2,0) = v1(2);
+                YY(0,1) = v2(0);   YY(1,1) = v2(1);   YY(2,1) = v2(2);
+                Vec3d v1_v2 = v1.cross(v2);
+                YY(0,2) = v1_v2(0);   YY(1,2) = v1_v2(1);   YY(2,2) = v1_v2(2);
+
+                // output->emplace_back(R, d0 * x[0] - R * X[0]);
+                Matx33d R = (YY * XX);
+                Rs.push_back(Mat(R));
+                Vec3d trans = (d0 * x[0] - R * X[0]);
+                ts.push_back(Mat(trans));
+                ++n_sols;
+            }
+        } else {
+            double w0 = -p1 / p0;
+            double w1 = -p2 / p0;
+            double ca = 1.0 / (-a * w1 * w1 + 2 * a * m12 * w1 - a + 1);
+            double cb = 2 * (a * m12 * w0 - m01 - a * w0 * w1) * ca;
+            double cc = (1 - a * w0 * w0) * ca;
+
+            double taus[2];
+            if (!yaqding::root2real(cb, cc, taus[0], taus[1]))
+                continue;
+
+            for (double tau : taus) {
+                if (tau <= 0)
+                    continue;
+
+                double d0 = std::sqrt(a01 / (tau * (tau - 2.0 * m01) + 1.0));
+                double d1 = tau * d0;
+                double d2 = w0 * d0 + w1 * d1;
+
+                if (d2 < 0)
+                    continue;
+
+                yaqding::refine_lambda(d0, d1, d2, a01, a02, a12, m01, m02, m12);
+                Vec3d v1 = d0 * x[0] - d1 * x[1];
+                Vec3d v2 = d0 * x[0] - d2 * x[2];
+                // YY << v1, v2, v1.cross(v2);
+                Matx33d YY;
+                YY(0,0) = v1(0);   YY(1,0) = v1(1);   YY(2,0) = v1(2);
+                YY(0,1) = v2(0);   YY(1,1) = v2(1);   YY(2,1) = v2(2);
+                Vec3d v1_v2 = v1.cross(v2);
+                YY(0,2) = v1_v2(0);   YY(1,2) = v1_v2(1);   YY(2,2) = v1_v2(2);
+
+                // output->emplace_back(R, d0 * x[0] - R * X[0]);
+                Matx33d R = (YY * XX);
+                Rs.push_back(Mat(R));
+                Vec3d trans = (d0 * x[0] - R * X[0]);
+                ts.push_back(Mat(trans));
+                ++n_sols;
             }
         }
 
-        for(int i = 0; i < 4; i++) B[i] += Z[i];
-        memcpy(D, B, 4 * sizeof(double));
-        memset(Z, 0, 4 * sizeof(double));
+        if (n_sols > 0 && G)
+            break;
     }
 
-    return false;
+    return n_sols;
 }
