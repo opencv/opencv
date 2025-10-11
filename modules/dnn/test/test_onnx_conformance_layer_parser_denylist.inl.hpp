@@ -485,35 +485,8 @@
 "test_mvn_expanded",  // Issues::Wrong answer
 "test_mvn_expanded_ver18",
 "test_nesterov_momentum",  // Issues::Layer does not exist (NesterovsAcceleratedGradient) Can't create layer "onnx_node_output_0!X_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
-"test_nllloss_NC",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1_mean_weight_negative_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1_mean_weight_negative_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1_weight",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1_weight_ii",  // Issue:: Unsupported data type
-"test_nllloss_NCd1_weight_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1d2",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_no_weight_reduction_mean_ii",  // Issue:: Unsupported data type
-"test_nllloss_NCd1d2_no_weight_reduction_mean_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1d2_reduction_mean",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_reduction_mean_expanded",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_reduction_sum",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_reduction_sum_expanded",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_with_weight",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_with_weight_reduction_mean",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_with_weight_reduction_sum",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_with_weight_reduction_sum_expanded",  // Issue::Wrong output on CUDA
-"test_nllloss_NCd1d2_with_weight_reduction_sum_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2_with_weight_reduction_sum_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1d2d3_none_no_weight_negative_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2d3_none_no_weight_negative_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1d2d3_sum_weight_high_ii",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2d3_sum_weight_high_ii_expanded",  // Issue:: Unsupported data type
-"test_nllloss_NCd1d2d3d4d5_mean_weight",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_nllloss_NCd1d2d3d4d5_mean_weight_expanded",  // Issue::Wrong output
-"test_nllloss_NCd1d2d3d4d5_none_no_weight",  // Issue:: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
+"test_nllloss_NCd1d2_reduction_sum_expanded",
+"test_nllloss_NCd1d2d3d4d5_mean_weight_expanded",
 "test_onehot_negative_indices",  // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
 "test_onehot_with_axis",  // ---- same as above ---
 "test_onehot_with_negative_axis",  // ---- same as above ---
@@ -653,75 +626,7 @@
 "test_rotary_embedding_with_rotary_dim",
 "test_rotary_embedding_with_rotary_dim_expanded",
 "test_scan9_sum",  // Issue:: Parser: 'Graph' is not supported in function 'getLayerParams'
-"test_scan_sum",  // ---- same as above ---
-"test_sce_NCd1_mean_weight_negative_ii",  // Issue:: Parser: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_sce_NCd1_mean_weight_negative_ii_expanded",  // ---- same as above ---
-"test_sce_NCd1_mean_weight_negative_ii_log_prob",  // ---- same as above ---
-"test_sce_NCd1_mean_weight_negative_ii_log_prob_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3_none_no_weight_negative_ii",  // ---- same as above ---
-"test_sce_NCd1d2d3_none_no_weight_negative_ii_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3_none_no_weight_negative_ii_log_prob",  // ---- same as above ---
-"test_sce_NCd1d2d3_none_no_weight_negative_ii_log_prob_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3_sum_weight_high_ii",  // ---- same as above ---
-"test_sce_NCd1d2d3_sum_weight_high_ii_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3_sum_weight_high_ii_log_prob",  // ---- same as above ---
-"test_sce_NCd1d2d3_sum_weight_high_ii_log_prob_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_mean_weight",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_mean_weight_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_mean_weight_log_prob",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_mean_weight_log_prob_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_none_no_weight",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_none_no_weight_expanded",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_none_no_weight_log_prob",  // ---- same as above ---
-"test_sce_NCd1d2d3d4d5_none_no_weight_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean",  // Issue:: Parser: Layer does not exist (NegativeLogLikelihoodLoss, SoftmaxCrossEntropyLoss)
-"test_sce_mean_3d",  // ---- same as above ---
-"test_sce_mean_3d_expanded",  // ---- same as above ---
-"test_sce_mean_3d_log_prob",  // ---- same as above ---
-"test_sce_mean_3d_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_expanded",  // ---- same as above ---
-"test_sce_mean_log_prob",  // ---- same as above ---
-"test_sce_mean_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_no_weight_ii",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_3d",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_3d_expanded",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_3d_log_prob",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_3d_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_4d",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_4d_expanded",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_4d_log_prob",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_4d_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_expanded",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_log_prob",  // ---- same as above ---
-"test_sce_mean_no_weight_ii_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_weight",  // ---- same as above ---
-"test_sce_mean_weight_expanded",  // ---- same as above ---
-"test_sce_mean_weight_ii",  // ---- same as above ---
-"test_sce_mean_weight_ii_3d",  // ---- same as above ---
-"test_sce_mean_weight_ii_3d_expanded",  // ---- same as above ---
-"test_sce_mean_weight_ii_3d_log_prob",  // ---- same as above ---
-"test_sce_mean_weight_ii_3d_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_weight_ii_4d",  // ---- same as above ---
-"test_sce_mean_weight_ii_4d_expanded",  // ---- same as above ---
-"test_sce_mean_weight_ii_4d_log_prob",  // ---- same as above ---
-"test_sce_mean_weight_ii_4d_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_weight_ii_expanded",  // ---- same as above ---
-"test_sce_mean_weight_ii_log_prob",  // ---- same as above ---
-"test_sce_mean_weight_ii_log_prob_expanded",  // ---- same as above ---
-"test_sce_mean_weight_log_prob",  // ---- same as above ---
-"test_sce_mean_weight_log_prob_expanded",  // ---- same as above ---
-"test_sce_none",  // ---- same as above ---
-"test_sce_none_expanded",  // ---- same as above ---
-"test_sce_none_log_prob",  // ---- same as above ---
-"test_sce_none_log_prob_expanded",  // ---- same as above ---
-"test_sce_none_weights",  // ---- same as above ---
-"test_sce_none_weights_expanded",  // ---- same as above ---
-"test_sce_none_weights_log_prob",  // ---- same as above ---
-"test_sce_none_weights_log_prob_expanded",  // ---- same as above ---
-"test_sce_sum",  // ---- same as above ---
-"test_sce_sum_expanded",  // ---- same as above ---
-"test_sce_sum_log_prob",  // ---- same as above ---
-"test_sce_sum_log_prob_expanded",  // ---- same as above ---
+"test_scan_sum", // ---- same as above ---
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
 "test_sequence_insert_at_front",  // ---- same as above ---
 "test_sequence_map_add_1_sequence_1_tensor",

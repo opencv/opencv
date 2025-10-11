@@ -1528,77 +1528,77 @@ CASE(test_neg_example)
 CASE(test_nesterov_momentum)
     // no filter
 CASE(test_nllloss_NC)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NC_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_mean_weight_negative_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_mean_weight_negative_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_weight)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_weight_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1_weight_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_no_weight_reduction_mean_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_no_weight_reduction_mean_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_reduction_mean)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_reduction_mean_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_reduction_sum)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_reduction_sum_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_reduction_mean)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_reduction_mean_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_reduction_sum)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_reduction_sum_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_reduction_sum_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2_with_weight_reduction_sum_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3_none_no_weight_negative_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3_none_no_weight_negative_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3_sum_weight_high_ii)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3_sum_weight_high_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3d4d5_mean_weight)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3d4d5_mean_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3d4d5_none_no_weight)
-    // no filter
+    SKIP;
 CASE(test_nllloss_NCd1d2d3d4d5_none_no_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_nonmaxsuppression_center_point_box_format)
     SKIP;
 CASE(test_nonmaxsuppression_flipped_coordinates)
@@ -2160,141 +2160,141 @@ CASE(test_scatternd_min)
 CASE(test_scatternd_multiply)
     // no filter
 CASE(test_sce_NCd1_mean_weight_negative_ii)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1_mean_weight_negative_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1_mean_weight_negative_ii_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1_mean_weight_negative_ii_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_none_no_weight_negative_ii)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_none_no_weight_negative_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_none_no_weight_negative_ii_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_none_no_weight_negative_ii_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_sum_weight_high_ii)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_sum_weight_high_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_sum_weight_high_ii_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3_sum_weight_high_ii_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_mean_weight)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_mean_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_mean_weight_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_mean_weight_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_none_no_weight)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_none_no_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_none_no_weight_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_NCd1d2d3d4d5_none_no_weight_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_3d)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_3d_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_3d_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_3d_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_3d)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_3d_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_3d_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_3d_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_4d)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_4d_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_4d_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_4d_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_no_weight_ii_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_3d)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_3d_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_3d_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_3d_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_4d)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_4d_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_4d_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_4d_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_ii_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_mean_weight_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_none)
-    // no filter
+    SKIP;
 CASE(test_sce_none_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_none_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_none_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_none_weights)
-    // no filter
+    SKIP;
 CASE(test_sce_none_weights_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_none_weights_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_none_weights_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_sum)
-    // no filter
+    SKIP;
 CASE(test_sce_sum_expanded)
-    // no filter
+    SKIP;
 CASE(test_sce_sum_log_prob)
-    // no filter
+    SKIP;
 CASE(test_sce_sum_log_prob_expanded)
-    // no filter
+    SKIP;
 CASE(test_selu)
     // no filter
 CASE(test_selu_default)
