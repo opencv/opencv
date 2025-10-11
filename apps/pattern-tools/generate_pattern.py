@@ -208,6 +208,8 @@ class PatternMaker:
                                              height=self.aruco_marker_size, fill="black", stroke="none")
                     self.g.append(square)
 
+                    # BUG: https://github.com/opencv/opencv/issues/27871
+                    # The loop bellow merges white squares horizontally and vertically to exclude visible grid on the final pattern
                     for x_ in range(len(img_mark[0])):
                         y_ = 0
                         while y_ < len(img_mark):
