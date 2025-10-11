@@ -199,7 +199,7 @@ namespace cv { namespace cuda { namespace device
             static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float> > op()
             {
                 plus<float> op;
-                return thrust::make_tuple(op, op);
+                return { op, op };
             }
         };
         template <> struct Unroll<2>
@@ -218,7 +218,7 @@ namespace cv { namespace cuda { namespace device
             static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float>, plus<float> > op()
             {
                 plus<float> op;
-                return thrust::make_tuple(op, op, op);
+                return { op, op, op };
             }
         };
         template <> struct Unroll<3>
@@ -237,7 +237,7 @@ namespace cv { namespace cuda { namespace device
             static __device__ __forceinline__ const thrust::tuple<plus<float>, plus<float>, plus<float>, plus<float> > op()
             {
                 plus<float> op;
-                return thrust::make_tuple(op, op, op, op);
+                return { op, op, op, op };
             }
         };
         template <> struct Unroll<4>
