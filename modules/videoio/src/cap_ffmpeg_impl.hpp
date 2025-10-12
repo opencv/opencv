@@ -1164,7 +1164,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
     {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
         entry = av_dict_get(dict, "f", NULL, 0);
-        char* backend = nullptr;
+        const char* backend = nullptr;
         if (entry)
         {
             backend = entry->value;
