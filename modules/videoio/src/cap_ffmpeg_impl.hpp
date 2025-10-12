@@ -1164,7 +1164,7 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
     {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
         entry = av_dict_get(dict, "f", NULL, 0);
-        char* backend;
+        char* backend = nullptr;
         if (entry)
         {
             backend = entry->value;
@@ -1181,16 +1181,16 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
             backend = "avfoundation";
 #endif
         }
-        avdevice_list_input_sources(nullptr, backend, dict, &device_list);
+        avdevice_list_input_sources(nullptr, backend, nullptr, &device_list);
         if (!device_list)
         {
-            CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: Failed list devices for backend " << backend);
+            CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/FFMPEG: Failed list devices for backend " << backend);
             return false;
         }
         CV_CheckLT(index, device_list->nb_devices, "VIDEOIO/FFMPEG: Camera index out of range");
         _filename = device_list->devices[index]->device_name;
 #else
-        CV_LOG_DEBUG(NULL, "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice to open a camera device");
+        CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice to open a camera device");
         return false;
 #endif
     }
