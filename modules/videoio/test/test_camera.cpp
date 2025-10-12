@@ -329,7 +329,7 @@ TEST(DISABLED_videoio_camera, waitAny_V4L)
 
 TEST(DISABLED_videoio_camera, ffmpeg_index)
 {
-    int idx = (int)utils::getConfigurationParameterSizeT("OPENCV_TEST_FFMPEG_DEVICE_IDX", -1);
+    int idx = (int)utils::getConfigurationParameterSizeT("OPENCV_TEST_FFMPEG_DEVICE_IDX", (size_t)-1);
     if (idx == -1)
     {
         throw SkipTestException("OPENCV_TEST_FFMPEG_DEVICE_IDX is not set");
