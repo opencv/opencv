@@ -90,7 +90,7 @@ void fillBorderConstant(int borderSize, cv::Scalar borderValue, cv::Mat& mat)
         case CV_16S: return &fillConstBorderRow< int16_t>; break;
         case CV_16U: return &fillConstBorderRow<uint16_t>; break;
         case CV_32F: return &fillConstBorderRow< float  >; break;
-        default: GAPI_Error("InternalError"); return &fillConstBorderRow<uint8_t>;
+        default: GAPI_Error("InternalError");
         }
     };
 
