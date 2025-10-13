@@ -1353,7 +1353,7 @@ cv::dnn::Winofunc getWinofunc_F32()
 //==============================================================================
 
 // FP16, currently, only ARMv8 may support it
-#if defined(CV_CPU_COMPILE_NEON_FP16) && CV_CPU_COMPILE_NEON_FP16 && !defined(_MSC_VER)
+#if defined(CV_CPU_COMPILE_NEON_FP16) && CV_CPU_COMPILE_NEON_FP16
 
 #undef T4x4
 #define T4x4(a, b, c, d, tr0, tr1) \
