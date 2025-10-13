@@ -313,7 +313,7 @@ static int maxLineConsumption(const cv::GFluidKernel::Kind kind, int window, int
         }
     } break;
     case cv::GFluidKernel::Kind::YUV420toRGB: return inPort == 0 ? 2 : 1; break;
-    default: GAPI_Error("InternalError"); return 0;
+    default: GAPI_Error("InternalError");
     }
 }
 
@@ -325,7 +325,7 @@ static int borderSize(const cv::GFluidKernel::Kind kind, int window)
     // Resize never reads from border pixels
     case cv::GFluidKernel::Kind::Resize: return 0; break;
     case cv::GFluidKernel::Kind::YUV420toRGB: return 0; break;
-    default: GAPI_Error("InternalError"); return 0;
+    default: GAPI_Error("InternalError");
     }
 }
 
