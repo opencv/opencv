@@ -82,7 +82,7 @@ public:
         else
         {
             axes.resize(rank);
-            for (int i = 0; i < rank; ++i) axes[i] = i;
+            std::iota(axes.begin(), axes.end(), 0);
         }
 
         CV_Assert((int)shapeTensor.total() == (int)axes.size());
