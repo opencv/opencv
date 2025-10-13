@@ -1830,7 +1830,6 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
         default:
             GAPI_Error("Unsupported cmd type in pull");
     }
-    GAPI_Error("Unreachable code");
 }
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
