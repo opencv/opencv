@@ -1305,6 +1305,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<DetLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS CenterCropPadLayer : public Layer
+    {
+    public:
+        static Ptr<CenterCropPadLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS Resize2Layer : public Layer
     {
     public:

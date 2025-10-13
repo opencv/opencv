@@ -394,6 +394,30 @@ CASE(test_celu)
     // no filter
 CASE(test_celu_expanded)
     // no filter
+CASE(test_center_crop_pad_crop)
+    SKIP;
+CASE(test_center_crop_pad_crop_and_pad)
+    SKIP;
+CASE(test_center_crop_pad_crop_and_pad_expanded)
+    SKIP;
+CASE(test_center_crop_pad_crop_axes_chw)
+    SKIP;
+CASE(test_center_crop_pad_crop_axes_chw_expanded)
+    SKIP;
+CASE(test_center_crop_pad_crop_axes_hwc)
+    SKIP;
+CASE(test_center_crop_pad_crop_axes_hwc_expanded)
+    SKIP;
+CASE(test_center_crop_pad_crop_expanded)
+    SKIP;
+CASE(test_center_crop_pad_crop_negative_axes_hwc)
+    SKIP;
+CASE(test_center_crop_pad_crop_negative_axes_hwc_expanded)
+    SKIP;
+CASE(test_center_crop_pad_pad)
+    SKIP;
+CASE(test_center_crop_pad_pad_expanded)
+    SKIP;
 CASE(test_clip)
     SKIP;
 CASE(test_clip_default_inbounds)
