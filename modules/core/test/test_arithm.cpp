@@ -3222,7 +3222,7 @@ INSTANTIATE_TEST_CASE_P(Core_CartPolar, Core_PolarToCart_inplace,
 );
 
 CV_ENUM(LutIdxType, CV_8U, CV_8S, CV_16U, CV_16S)
-CV_ENUM(LutMatType, CV_8U, CV_8S, CV_16U, CV_16S, CV_16F, CV_32S, CV_32F, CV_64F)
+CV_ENUM(LutMatType, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F)
 
 struct Core_LUT: public testing::TestWithParam< std::tuple<LutIdxType, LutMatType> >
 {
@@ -3262,78 +3262,39 @@ struct Core_LUT: public testing::TestWithParam< std::tuple<LutIdxType, LutMatTyp
     template<int ch = 1, bool same_cn = false>
     cv::Mat reference(cv::Mat input, cv::Mat table)
     {
+        cv::Mat ret = cv::Mat();
         if ((input.depth() == CV_8U) || (input.depth() == CV_8S)) // Index type for LUT operation
         {
-            if (table.depth() == CV_8U) // Value type for LUT operation
+            switch(table.depth()) // Value type for LUT operation
             {
-                return referenceWithType<uchar, uchar, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_8S)
-            {
-                return referenceWithType<uchar, char, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_16U)
-            {
-                return referenceWithType<uchar, ushort, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_16S)
-            {
-                return referenceWithType<uchar, short, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_16F)
-            {
-                return referenceWithType<uchar, ushort, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_32S)
-            {
-                return referenceWithType<uchar, int, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_32F)
-            {
-                return referenceWithType<uchar, float, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_64F)
-            {
-                return referenceWithType<uchar, double, ch, same_cn>(input, table);
+                case CV_8U:   ret = referenceWithType<uint8_t, uint8_t,  ch, same_cn>(input, table); break;
+                case CV_8S:   ret = referenceWithType<uint8_t, int8_t,   ch, same_cn>(input, table); break;
+                case CV_16U:  ret = referenceWithType<uint8_t, uint16_t, ch, same_cn>(input, table); break;
+                case CV_16S:  ret = referenceWithType<uint8_t, int16_t,  ch, same_cn>(input, table); break;
+                case CV_32S:  ret = referenceWithType<uint8_t, int32_t,  ch, same_cn>(input, table); break;
+                case CV_32F:  ret = referenceWithType<uint8_t, float,    ch, same_cn>(input, table); break;
+                case CV_64F:  ret = referenceWithType<uint8_t, double,   ch, same_cn>(input, table); break;
+                case CV_16F:  ret = referenceWithType<uint8_t, uint16_t, ch, same_cn>(input, table); break;
+                default:      ret = cv::Mat();                                                       break;
             }
         }
         else if ((input.depth() == CV_16U) || (input.depth() == CV_16S))
         {
-            if (table.depth() == CV_8U)
+            switch(table.depth()) // Value type for LUT operation
             {
-                return referenceWithType<ushort, uchar, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_8S)
-            {
-                return referenceWithType<ushort, char, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_16U)
-            {
-                return referenceWithType<ushort, ushort, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_16S)
-            {
-                return referenceWithType<ushort, short, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_16F)
-            {
-                return referenceWithType<ushort, ushort, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_32S)
-            {
-                return referenceWithType<ushort, int, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_32F)
-            {
-                return referenceWithType<ushort, float, ch, same_cn>(input, table);
-            }
-            else if (table.depth() == CV_64F)
-            {
-                return referenceWithType<ushort, double, ch, same_cn>(input, table);
+                case CV_8U:   ret = referenceWithType<uint16_t, uint8_t,  ch, same_cn>(input, table); break;
+                case CV_8S:   ret = referenceWithType<uint16_t, int8_t,   ch, same_cn>(input, table); break;
+                case CV_16U:  ret = referenceWithType<uint16_t, uint16_t, ch, same_cn>(input, table); break;
+                case CV_16S:  ret = referenceWithType<uint16_t, int16_t,  ch, same_cn>(input, table); break;
+                case CV_32S:  ret = referenceWithType<uint16_t, int32_t,  ch, same_cn>(input, table); break;
+                case CV_32F:  ret = referenceWithType<uint16_t, float,    ch, same_cn>(input, table); break;
+                case CV_64F:  ret = referenceWithType<uint16_t, double,   ch, same_cn>(input, table); break;
+                case CV_16F:  ret = referenceWithType<uint16_t, uint16_t, ch, same_cn>(input, table); break;
+                default:      ret = cv::Mat();                                                        break;
             }
         }
 
-        return cv::Mat();
+        return ret;
     }
 };
 

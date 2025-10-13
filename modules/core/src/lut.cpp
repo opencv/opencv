@@ -15,7 +15,7 @@ namespace cv
 {
 
 template<typename Ti, typename T> static void
-LUT_( const Ti* src, const T* lut, T* dst, int len, int cn, int lutcn )
+LUT_( const Ti* src, const T* lut, T* dst, const int len, const int cn, const int lutcn )
 {
     if( lutcn == 1 )
     {
@@ -30,99 +30,45 @@ LUT_( const Ti* src, const T* lut, T* dst, int len, int cn, int lutcn )
     }
 }
 
-static void LUT8u_8u( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_8s( const uchar* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_16u( const uchar* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_16s( const uchar* src, const short* lut, short* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_32s( const uchar* src, const int* lut, int* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_16f( const uchar* src, const hfloat* lut, hfloat* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_32f( const uchar* src, const float* lut, float* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT8u_64f( const uchar* src, const double* lut, double* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_8u( const ushort* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_8s( const ushort* src, const schar* lut, schar* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_16u( const ushort* src, const ushort* lut, ushort* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_16s( const ushort* src, const short* lut, short* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_32s( const ushort* src, const int* lut, int* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_16f( const ushort* src, const hfloat* lut, hfloat* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_32f( const ushort* src, const float* lut, float* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
-static void LUT16u_64f( const ushort* src, const double* lut, double* dst, int len, int cn, int lutcn )
-{
-    LUT_( src, lut, dst, len, cn, lutcn );
-}
-
 typedef void (*LUTFunc)( const uchar* src, const uchar* lut, uchar* dst, int len, int cn, int lutcn );
 
-static LUTFunc lutTab_8u[CV_DEPTH_MAX] =
+static LUTFunc getLUTFunc(const int srcDepth, const int dstDepth)
 {
-    (LUTFunc)LUT8u_8u, (LUTFunc)LUT8u_8s, (LUTFunc)LUT8u_16u, (LUTFunc)LUT8u_16s,
-    (LUTFunc)LUT8u_32s, (LUTFunc)LUT8u_32f, (LUTFunc)LUT8u_64f, (LUTFunc)LUT8u_16f
-};
+    LUTFunc ret = nullptr;
+    if((srcDepth == CV_8U) || (srcDepth == CV_8S))
+    {
+        switch(dstDepth)
+        {
+            case CV_8U:   ret = (LUTFunc)LUT_<uint8_t, uint8_t>;   break;
+            case CV_8S:   ret = (LUTFunc)LUT_<uint8_t, int8_t>;    break;
+            case CV_16U:  ret = (LUTFunc)LUT_<uint8_t, uint16_t>;  break;
+            case CV_16S:  ret = (LUTFunc)LUT_<uint8_t, int16_t>;   break;
+            case CV_32S:  ret = (LUTFunc)LUT_<uint8_t, int32_t>;   break;
+            case CV_32F:  ret = (LUTFunc)LUT_<uint8_t, int32_t>;   break; // float
+            case CV_64F:  ret = (LUTFunc)LUT_<uint8_t, int64_t>;   break; // double
+            case CV_16F:  ret = (LUTFunc)LUT_<uint8_t, int16_t>;   break; // hfloat
+            default:      ret = nullptr;                           break;
+        }
+    }
+    else if((srcDepth == CV_16U) || (srcDepth == CV_16S))
+    {
+        switch(dstDepth)
+        {
+            case CV_8U:   ret = (LUTFunc)LUT_<uint16_t, uint8_t>;  break;
+            case CV_8S:   ret = (LUTFunc)LUT_<uint16_t, int8_t>;   break;
+            case CV_16U:  ret = (LUTFunc)LUT_<uint16_t, uint16_t>; break;
+            case CV_16S:  ret = (LUTFunc)LUT_<uint16_t, int16_t>;  break;
+            case CV_32S:  ret = (LUTFunc)LUT_<uint16_t, int32_t>;  break;
+            case CV_32F:  ret = (LUTFunc)LUT_<uint16_t, int32_t>;  break; // float
+            case CV_64F:  ret = (LUTFunc)LUT_<uint16_t, int64_t>;  break; // double
+            case CV_16F:  ret = (LUTFunc)LUT_<uint16_t, int16_t>;  break; // hfloat
+            default:      ret = nullptr;                           break;
+        }
+    }
 
-static LUTFunc lutTab_16u[CV_DEPTH_MAX] =
-{
-    (LUTFunc)LUT16u_8u, (LUTFunc)LUT16u_8s, (LUTFunc)LUT16u_16u, (LUTFunc)LUT16u_16s,
-    (LUTFunc)LUT16u_32s, (LUTFunc)LUT16u_32f, (LUTFunc)LUT16u_64f, (LUTFunc)LUT16u_16f
-};
+    CV_CheckTrue(ret != nullptr, "An unexpected type combination was specified.");
+    return ret;
+}
 
 #ifdef HAVE_OPENCL
 
@@ -163,18 +109,7 @@ public:
     LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
         : ok(_ok), src_(src), lut_(lut), dst_(dst)
     {
-        if((src_.depth() == CV_8U) || (src_.depth() == CV_8S))
-        {
-            func = lutTab_8u[lut.depth()];
-        }
-        else if((src_.depth() == CV_16U) || (src_.depth() == CV_16S))
-        {
-            func = lutTab_16u[lut.depth()];
-        }
-        else
-        {
-            func = nullptr;
-        }
+        func = getLUTFunc(src_.depth(), dst_.depth());
         *ok = (func != nullptr);
     }
 
@@ -220,6 +155,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
             ((_lut.total() == 65536) && ((depth == CV_16U)||(depth == CV_16S)))
         )
     );
+
     CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (_lut.total() == 256),
                ocl_LUT(_src, _lut, _dst))
 
@@ -227,8 +163,11 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-    CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
-             lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
+    if(_lut.total() == 256) // HAL supports only CV_8U/CV_8S index
+    {
+        CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
+                 lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
+    }
 
     if (_src.dims() <= 2)
     {
@@ -246,16 +185,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
         }
     }
 
-    LUTFunc func = nullptr;
-    if((depth == CV_8U) || (depth == CV_8S))
-    {
-        func = lutTab_8u[lut.depth()];
-    }
-    else if((depth == CV_16U) || (depth == CV_16S))
-    {
-        func = lutTab_16u[lut.depth()];
-    }
-
+    const LUTFunc func = getLUTFunc(src.depth(), dst.depth());
     CV_Assert( func != nullptr );
 
     const Mat* arrays[] = {&src, &dst, 0};
