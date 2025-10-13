@@ -393,10 +393,9 @@ IOStream& operator<< (IOStream& os, const cv::GArrayDesc &) {return os;}
 IIStream& operator>> (IIStream& is,       cv::GArrayDesc &) {return is;}
 
 #if !defined(GAPI_STANDALONE)
-IOStream& operator<< (IOStream& os, const cv::UMat &)
+IOStream& operator<< (IOStream&, const cv::UMat &)
 {
     GAPI_Error("Serialization: Unsupported << for UMat");
-    return os;
 }
 IIStream& operator >> (IIStream&, cv::UMat &)
 {
