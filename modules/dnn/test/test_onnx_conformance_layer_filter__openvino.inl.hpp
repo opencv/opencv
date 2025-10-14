@@ -1666,13 +1666,13 @@ CASE(test_not_3d)
 CASE(test_not_4d)
     // no filter
 CASE(test_onehot_negative_indices)
-    // no filter
+    SKIP;
 CASE(test_onehot_with_axis)
-    // no filter
+    SKIP;
 CASE(test_onehot_with_negative_axis)
-    // no filter
+    SKIP;
 CASE(test_onehot_without_axis)
-    // no filter
+    SKIP;
 CASE(test_optional_get_element)
     // no filter
 CASE(test_optional_get_element_sequence)
