@@ -62,25 +62,8 @@ static void findCircle3pts(Point2f *pts, Point2f &center, float &radius)
     float det = v1.x * v2.y - v1.y * v2.x;
     if (fabs(det) <= EPS)
     {
-        // v1 and v2 are colinear, so the longest distance between any 2 points
-        // is the diameter of the minimum enclosing circle.
-        float d1 = normL2Sqr<float>(pts[0] - pts[1]);
-        float d2 = normL2Sqr<float>(pts[0] - pts[2]);
-        float d3 = normL2Sqr<float>(pts[1] - pts[2]);
-        radius = sqrt(std::max(d1, std::max(d2, d3))) * 0.5f + EPS;
-        if (d1 >= d2 && d1 >= d3)
-        {
-            center = (pts[0] + pts[1]) * 0.5f;
-        }
-        else if (d2 >= d1 && d2 >= d3)
-        {
-            center = (pts[0] + pts[2]) * 0.5f;
-        }
-        else
-        {
-            CV_DbgAssert(d3 >= d1 && d3 >= d2);
-            center = (pts[1] + pts[2]) * 0.5f;
-        }
+        // triangle is degenerate, so this is 2-points case
+        // 2-points case should be taken into account in previous step
         return;
     }
     float cx = (c1 * v2.y - c2 * v1.y) / det;

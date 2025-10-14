@@ -127,6 +127,44 @@ TEST(Imgproc_minEnclosingCircle, regression_16051) {
     EXPECT_NEAR(2.1024551f, radius, 1e-3);
 }
 
+TEST(Imgproc_minEnclosingCircle, regression_27891) {
+    {
+        const vector<Point2f> pts = { {219, 301}, {639, 635}, {740, 569}, {740, 569}, {309, 123}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+
+    {
+        const vector<Point2f> pts = { {219, 301}, {639, 635}, {740, 569}, {740, 569}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+
+    {
+        const vector<Point2f> pts = { {639, 635}, {740, 569}, {740, 569}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+}
+
 PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
 {
 public:
