@@ -61,10 +61,7 @@ TEST(minEnclosingCircle, basic_test)
     // 0             1
     // NB: The triangle is obtuse, so the only pts[0] and pts[1] are on the circle.
     {
-        vector<Point2f> pts;
-        pts.push_back(Point2f(0, 0));
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(5, 1));
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 1} };
         minEnclosingCircle(pts, center, radius);
         EXPECT_NEAR(center.x, 5, EPS);
         EXPECT_NEAR(center.y, 0, EPS);
@@ -75,10 +72,7 @@ TEST(minEnclosingCircle, basic_test)
     //  2
     // 0 1
     {
-        vector<Point2f> pts;
-        pts.push_back(Point2f(0, 0));
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(5, 5));
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 5} };
         minEnclosingCircle(pts, center, radius);
         EXPECT_NEAR(center.x, 5, EPS);
         EXPECT_NEAR(center.y, 0, EPS);
@@ -92,10 +86,7 @@ TEST(minEnclosingCircle, basic_test)
     // 0   1
     // NB: The triangle is acute, so all 3 points are on the circle.
     {
-        vector<Point2f> pts;
-        pts.push_back(Point2f(0, 0));
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(5, 10));
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 10} };
         minEnclosingCircle(pts, center, radius);
         EXPECT_NEAR(center.x, 5, EPS);
         EXPECT_NEAR(center.y, 3.75, EPS);
@@ -104,10 +95,7 @@ TEST(minEnclosingCircle, basic_test)
 
     // The 3 points are colinear.
     {
-        vector<Point2f> pts;
-        pts.push_back(Point2f(0, 0));
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(3, 0));
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {3, 0} };
         minEnclosingCircle(pts, center, radius);
         EXPECT_NEAR(center.x, 5, EPS);
         EXPECT_NEAR(center.y, 0, EPS);
@@ -116,10 +104,7 @@ TEST(minEnclosingCircle, basic_test)
 
     // 2 points are the same.
     {
-        vector<Point2f> pts;
-        pts.push_back(Point2f(0, 0));
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(10, 0));
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {10, 0} };
         minEnclosingCircle(pts, center, radius);
         EXPECT_NEAR(center.x, 5, EPS);
         EXPECT_NEAR(center.y, 0, EPS);
@@ -128,10 +113,7 @@ TEST(minEnclosingCircle, basic_test)
 
     // 3 points are the same.
     {
-        vector<Point2f> pts;
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(10, 0));
-        pts.push_back(Point2f(10, 0));
+        const vector<Point2f> pts = { {10, 0}, {10, 0}, {10, 0} };
         minEnclosingCircle(pts, center, radius);
         EXPECT_NEAR(center.x, 10, EPS);
         EXPECT_NEAR(center.y, 0, EPS);
