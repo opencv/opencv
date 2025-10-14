@@ -636,7 +636,7 @@ enum
 /** Canny edge detector flags */
 enum
 {
-    CV_CANNY_L2_GRADIENT  =(1 << 31)
+    CV_CANNY_L2_GRADIENT  =(1U << 31)
 };
 
 /** Variants of a Hough transform */
