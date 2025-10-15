@@ -147,25 +147,32 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 
     int cn = _src.channels(), depth = _src.depth();
     int lutcn = _lut.channels();
+    const size_t lut_size = _lut.total();
 
     CV_Assert( (lutcn == cn || lutcn == 1) && _lut.isContinuous() &&
         (
-            ((_lut.total() == 256) && ((depth == CV_8U)||(depth == CV_8S)))
+            ((lut_size == 256) && ((depth == CV_8U)||(depth == CV_8S)))
             ||
-            ((_lut.total() == 65536) && ((depth == CV_16U)||(depth == CV_16S)))
+            ((lut_size == 65536) && ((depth == CV_16U)||(depth == CV_16S)))
         )
     );
 
-    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (_lut.total() == 256),
+    CV_OCL_RUN(_dst.isUMat() && _src.dims() <= 2 && (lut_size == 256),
                ocl_LUT(_src, _lut, _dst))
 
     Mat src = _src.getMat(), lut = _lut.getMat();
     _dst.create(src.dims, src.size, CV_MAKETYPE(_lut.depth(), cn));
     Mat dst = _dst.getMat();
 
-    if(_lut.total() == 256) // HAL supports only CV_8U/CV_8S index
+    if(lut_size == 256)
     {
         CALL_HAL(LUT, cv_hal_lut, src.data, src.step, src.type(), lut.data,
+                 lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
+    }
+    else
+    {
+        CV_CheckEQ(lut_size, 65536UL, "Unsupported LUT table size");
+        CALL_HAL(LUT16, cv_hal_lut16, src.data, src.step, src.type(), lut.data,
                  lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
     }
 
