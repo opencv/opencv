@@ -56,6 +56,22 @@ TEST(minEnclosingCircle, basic_test)
     Point2f center;
     float radius;
 
+    {
+        const vector<Point2f> pts = { {5, 10} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 10, EPS);
+        EXPECT_NEAR(radius, 0, EPS);
+    }
+
+    {
+        const vector<Point2f> pts = { {5, 10}, {11, 18} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 8, EPS);
+        EXPECT_NEAR(center.y, 14, EPS);
+        EXPECT_NEAR(radius, 5, EPS);
+    }
+
     // pts[2] is within the circle with diameter pts[0] - pts[1].
     //        2
     // 0             1
