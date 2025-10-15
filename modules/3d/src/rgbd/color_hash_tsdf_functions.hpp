@@ -42,9 +42,9 @@ void ocl_raycastColorHashTsdfVolumeUnit(
     const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals,
     OutputArray _colors);
 
-void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
-    const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors);
+void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(const VolumeSettings& settings,
+    InputArray _volUnits, const CustomHashSet& volumeUnits,
+    int volumeUnitDegree, OutputArray points, OutputArray normals, OutputArray colors);
 
 #endif
 
