@@ -705,7 +705,7 @@ void ColorHashTsdfVolume::raycast(InputArray _cameraPose, int height, int width,
     raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals, _colors);
 #else
     if (useGPU)
-        ocl_raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, hashTable, gpu_volUnitsData, _points, _normals, _colors);
+        ocl_raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, InputArray(hashTable), gpu_volUnitsData, _points, _normals, _colors);
     else
         raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals, _colors);
 #endif
@@ -734,7 +734,7 @@ void ColorHashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArr
     fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, volUnitsData, volumeUnits, volumeUnitDegree, points, normals, colors);
 #else
     if (useGPU)
-        ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, volumeUnitDegree, gpu_volUnitsData, volUnitsDataCopy, hashTable, points, normals, colors);
+        ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, gpu_volUnitsData, hashTable.toVolumeUnitIndexes(), volumeUnitDegree, points, normals, colors);
     else
         fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals, colors);
 #endif

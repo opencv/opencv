@@ -32,16 +32,19 @@ void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
 #ifdef HAVE_OPENCL
 
 void ocl_integrateColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree, bool enableGrowth,
-    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _lastVisibleIndices, InputOutputArray _volUnitsDataCopy, InputOutputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags);
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
+    const int volumeUnitDegree, bool enableGrowth, InputArray _depth, InputArray _rgb,
+    InputArray _pixNorms, InputOutputArray _volUnitsData, VolumeUnitIndexes& volumeUnits);
 
 void ocl_raycastColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
-    const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals, OutputArray _colors);
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray intr, const int volumeUnitDegree, InputArray _volUnitsData,
+    const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals,
+    OutputArray _colors);
 
 void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
-    const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals, OutputArray _colors);
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors);
 
 #endif
 

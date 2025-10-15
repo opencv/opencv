@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "color_hash_tsdf_functions.hpp"
 #include "opencv2/core/hal/intrin.hpp"
+#include "opencv2/core/ocl.hpp"
 
 namespace cv {
 
@@ -99,7 +100,7 @@ void integrateColorHashTsdfVolumeUnit(
                 CV_Assert(dataStart + unitResolution <= volUnitsData.rows * volUnitsData.cols);
                 
                 Mat unitData = volUnitsData.rowRange(dataStart, dataStart + unitResolution);
-                unitData.forEach<ColorHashTsdfVoxel>([](ColorHashTsdfVoxel& voxel, const int* pos) {
+                unitData.forEach<ColorHashTsdfVoxel>([](ColorHashTsdfVoxel& voxel, const int*) {
                     voxel.tsdf = floatToTsdf(0.0f);
                     voxel.weight = 0;
                     voxel.r = voxel.g = voxel.b = 0;
@@ -119,34 +120,34 @@ void raycastColorHashTsdfVolumeUnit(
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
     CV_TRACE_FUNCTION();
-    
+
     Mat volUnitsData = _volUnitsData.getMat();
     Matx33f cameraIntr = intr.getMat();
-    
+
     _points.create(height, width, CV_32FC3);
     _normals.create(height, width, CV_32FC3);
     _colors.create(height, width, CV_8UC3);
-    
+
     Mat points = _points.getMat();
     Mat normals = _normals.getMat();
     Mat colors = _colors.getMat();
-    
+
     points.setTo(0);
     normals.setTo(0);
     colors.setTo(0);
-    
+
     float voxelSize = settings.getVoxelSize();
     float trancDist = settings.getTsdfTruncateDistance();
     Vec3i volResolution;
     settings.getVolumeResolution(volResolution);
-    
+
     const int volUnitSize = 1 << volumeUnitDegree;
     const Point3i volUnitDims = Point3i(volUnitSize, volUnitSize, volUnitSize);
     const int unitResolution = volUnitSize * volUnitSize * volUnitSize;
-    
+
     Matx44f invCameraPose = cameraPose.inv();
     float voxelSizeInv = 1.0f / voxelSize;
-    
+
     for (int y = 0; y < height; y++)
     {
         for (int x = 0; x < width; x++)
@@ -158,26 +159,25 @@ void raycastColorHashTsdfVolumeUnit(
             );
             float rayDirNorm = cv::norm(rayDirVec);
             Point3f rayDir = rayDirNorm > 0 ? rayDirVec / rayDirNorm : Point3f(0, 0, 0);
-            
+
             Point3f rayOrigin(0, 0, 0);
             Point3f rayDirVol = transformDirection(rayDir, invCameraPose);
             Point3f rayOriginVol = transformPoint(rayOrigin, invCameraPose) * voxelSizeInv;
-            
+
             float tmin = 0.0f;
             float tmax = settings.getRaycastStepFactor() * voxelSizeInv;
-            
+
             Point3f hitPoint, hitNormal;
             Vec3b hitColor;
-            bool hit = raycastColorHashTsdf(rayOriginVol, rayDirVol, tmin, tmax, volumeUnits, volUnitsData,
-                                          volUnitDims, unitResolution, voxelSize, trancDist, 
+            bool hit = raycastColorHashTsdf(rayOriginVol, rayDirVol, tmin, tmax, volumeUnits, volUnitsData,                                          volUnitDims, unitResolution, voxelSize, trancDist,
                                           hitPoint, hitNormal, hitColor);
-            
+
             if (hit)
             {
                 // Transform hit point back to camera space
                 Point3f worldPoint = hitPoint * voxelSize;
                 Point3f cameraPoint = transformPoint(worldPoint, cameraPose);
-                
+
                 points.at<Point3f>(y, x) = cameraPoint;
                 normals.at<Point3f>(y, x) = hitNormal;
                 colors.at<Vec3b>(y, x) = hitColor;
@@ -262,10 +262,10 @@ void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
 }
 
 // Helper functions
-bool integrateColorVolumeUnit(VolumeUnit& unit, const VolumeSettings& settings, const Matx44f& cameraPose,
+bool integrateColorVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
                             InputArray _depth, InputArray _rgb, InputArray _pixNorms,
                             const Vec3i& unitIdx, const Point3i& volUnitDims,
-                            float voxelSize, float trancDist, int maxWeight, const Intr& intrinsics)
+                            float voxelSize, float trancDist, const Intr& intrinsics)
 {
     CV_TRACE_FUNCTION();
     Mat depth = _depth.getMat();
@@ -316,9 +316,6 @@ bool integrateColorVolumeUnit(VolumeUnit& unit, const VolumeSettings& settings, 
 
                         // Clamp the SDF to the truncation distance
                         sdf = std::max(std::min(sdf, trancDist), -trancDist);
-
-                        // Convert SDF to TSDF value (-1 to 1)
-                        float newTsdfValue = sdf / trancDist;
 
                         // Simplified visibility check: if a pixel projects onto the unit's area
                         // and has valid depth within influence range, mark as visible.
@@ -399,78 +396,78 @@ Point3f transformPoint(const Point3f& pt, const Matx44f& mat)
 }
 
 bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrigin, const Point3f& rayDir, float tmin,
-                         float tmax,const VolumeUnitIndexes& volumeUnits, InputArray _volUnitsData,
-                         const Point3i& volUnitDims, int unitResolution, float voxelSize, float trancDist,
-                         Point3f& hitPoint, Point3f& hitNormal, Vec3b& hitColor)
-{
-    CV_TRACE_FUNCTION();
-    Mat volUnitsData = _volUnitsData.getMat();
+                              float tmax, const VolumeUnitIndexes& volumeUnits, InputArray _volUnitsData,
+                              const Point3i& volUnitDims, int unitResolution, float voxelSize, float trancDist,
+                              Point3f& hitPoint, Point3f& hitNormal, Vec3b& hitColor)
+    {
+        CV_TRACE_FUNCTION();
+        Mat volUnitsData = _volUnitsData.getMat();
 
-    float t = tmin;
-    const float stepSize = voxelSize * settings.getRaycastStepFactor();
+        float t = tmin;
+        const float stepSize = voxelSize * settings.getRaycastStepFactor();
 
-    while (t < tmax) {
-        Point3f currentPos = rayOrigin + t * rayDir;
+        while (t < tmax) {
+            Point3f currentPos = rayOrigin + t * rayDir;
 
-        // Determine which volume unit this point might be in
-        Vec3i unitIdx(
-            static_cast<int>(std::floor(currentPos.x / (volUnitDims.x * voxelSize))),
-            static_cast<int>(std::floor(currentPos.y / (volUnitDims.y * voxelSize))),
-            static_cast<int>(std::floor(currentPos.z / (volUnitDims.z * voxelSize)))
-        );
-
-        // Check if the potential unit exists in our hash map
-        auto unitIt = volumeUnits.find(unitIdx);
-        if (unitIt != volumeUnits.end()) {
-            const VolumeUnit& unit = unitIt->second;
-
-            // Calculate the position within the unit's coordinate system
-            Point3i localCoord(
-                static_cast<int>(std::floor((currentPos.x - unitIdx[0] * volUnitDims.x * voxelSize) / voxelSize)),
-                static_cast<int>(std::floor((currentPos.y - unitIdx[1] * volUnitDims.y * voxelSize) / voxelSize)),
-                static_cast<int>(std::floor((currentPos.z - unitIdx[2] * volUnitDims.z * voxelSize) / voxelSize))
+            // Determine which volume unit this point might be in
+            Vec3i unitIdx(
+                static_cast<int>(std::floor(currentPos.x / (volUnitDims.x * voxelSize))),
+                static_cast<int>(std::floor(currentPos.y / (volUnitDims.y * voxelSize))),
+                static_cast<int>(std::floor(currentPos.z / (volUnitDims.z * voxelSize)))
             );
 
-            // Check if local coordinates are within the unit's bounds
-            if (localCoord.x >= 0 && localCoord.x < volUnitDims.x &&
-                localCoord.y >= 0 && localCoord.y < volUnitDims.y &&
-                localCoord.z >= 0 && localCoord.z < volUnitDims.z) {
+            // Check if the potential unit exists in our hash map
+            auto unitIt = volumeUnits.find(unitIdx);
+            if (unitIt != volumeUnits.end()) {
+                const VolumeUnit& unit = unitIt->second;
 
-                // Calculate the index within the unit's data array
-                int voxelIndex = localCoord.z * volUnitDims.x * volUnitDims.y +
-                               localCoord.y * volUnitDims.x + localCoord.x;
+                // Calculate the position within the unit's coordinate system
+                Point3i localCoord(
+                    static_cast<int>(std::floor((currentPos.x - unitIdx[0] * volUnitDims.x * voxelSize) / voxelSize)),
+                    static_cast<int>(std::floor((currentPos.y - unitIdx[1] * volUnitDims.y * voxelSize) / voxelSize)),
+                    static_cast<int>(std::floor((currentPos.z - unitIdx[2] * volUnitDims.z * voxelSize) / voxelSize))
+                );
 
-                // Ensure the unit's data slice is accessible
-                int dataStart = unit.index * unitResolution;
-                if (dataStart + unitResolution <= volUnitsData.rows * volUnitsData.cols) {
-                    Mat unitData = volUnitsData.rowRange(dataStart, dataStart + unitResolution);
-                    const ColorHashTsdfVoxel& voxel = unitData.ptr<ColorHashTsdfVoxel>()[voxelIndex];
+                // Check if local coordinates are within the unit's bounds
+                if (localCoord.x >= 0 && localCoord.x < volUnitDims.x &&
+                    localCoord.y >= 0 && localCoord.y < volUnitDims.y &&
+                    localCoord.z >= 0 && localCoord.z < volUnitDims.z) {
 
-                    // Check if this voxel represents the surface (TSDF near zero)
-                    if (voxel.weight > 0 && std::abs(tsdfToFloat(voxel.tsdf)) < trancDist * 0.1f) {
-                        hitPoint = currentPos;
-                        hitColor = Vec3b(voxel.b, voxel.g, voxel.r); 
+                    // Calculate the index within the unit's data array
+                    int voxelIndex = localCoord.z * volUnitDims.x * volUnitDims.y +
+                                     localCoord.y * volUnitDims.x + localCoord.x;
 
-                        // Compute normal using gradient of TSDF values in the neighborhood
-                        hitNormal = computeColorVoxelNormal(unitData, localCoord.x, localCoord.y, localCoord.z,
-                                                          volUnitDims.x, voxelSize, 1.0f);
+                    // Ensure the unit's data slice is accessible
+                    int dataStart = unit.index * unitResolution;
+                    if (dataStart + unitResolution <= volUnitsData.rows * volUnitsData.cols) {
+                        Mat unitData = volUnitsData.rowRange(dataStart, dataStart + unitResolution);
+                        const ColorHashTsdfVoxel& voxel = unitData.ptr<ColorHashTsdfVoxel>()[voxelIndex];
 
-                        // Normalize the normal vector
-                        float normLength = cv::norm(hitNormal);
-                        if (normLength > 1e-6f) {
-                            hitNormal /= normLength;
-                        } else {
-                            // Fallback if gradient calculation failed
-                            hitNormal = -rayDir;
+                        // Check if this voxel represents the surface (TSDF near zero)
+                        if (voxel.weight > 0 && std::abs(tsdfToFloat(voxel.tsdf)) < trancDist * 0.1f) {
+                            hitPoint = currentPos;
+                            hitColor = Vec3b(voxel.b, voxel.g, voxel.r);
+
+                            // Compute normal using gradient of TSDF values in the neighborhood
+                            hitNormal = computeColorVoxelNormal(unitData, localCoord.x, localCoord.y, localCoord.z,
+                                                              volUnitDims.x, voxelSize, 1.0f);
+
+                            // Normalize the normal vector
+                            float normLength = cv::norm(hitNormal);
+                            if (normLength > 1e-6f) {
+                                hitNormal /= normLength;
+                            } else {
+                                // Fallback if gradient calculation failed
+                                hitNormal = -rayDir;
+                            }
+                            return true;
                         }
-                        return true;
                     }
                 }
             }
+            t += stepSize;
         }
-        t += stepSize;
-    }
-    return false;
+        return false;
 }
 
 Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z,
@@ -516,29 +513,34 @@ Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z,
 #ifdef HAVE_OPENCL
 
 void ocl_integrateColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId, int& bufferSizeDegree, const int volumeUnitDegree, bool enableGrowth,
-    InputArray _depth, InputArray _rgb, InputArray _pixNorms, InputArray _lastVisibleIndices, InputOutputArray _volUnitsDataCopy, InputOutputArray _volUnitsData, CustomHashSet& hashTable, InputArray _isActiveFlags)
+    const VolumeSettings& settings, const Matx44f& cameraPose, int& lastVolIndex, const int frameId,
+    const int volumeUnitDegree, bool enableGrowth, InputArray _depth, InputArray _rgb,
+    InputArray _pixNorms, InputOutputArray _volUnitsData, VolumeUnitIndexes& volumeUnits)
 {
-    CV_TRACE_FUNCTION();
-    CV_Error(cv::Error::StsNotImplemented, "OpenCL implementation for Color Hash TSDF not implemented yet");
+    integrateColorHashTsdfVolumeUnit(
+        settings, cameraPose, lastVolIndex, frameId, volumeUnitDegree, enableGrowth,
+        _depth, _rgb, _pixNorms, _volUnitsData, volumeUnits);
 }
 
 void ocl_raycastColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
-    const CustomHashSet& hashTable, InputArray _volUnitsData, OutputArray _points, OutputArray _normals, OutputArray _colors)
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
+    InputArray intr, const int volumeUnitDegree, InputArray _volUnitsData,
+    const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals,
+    OutputArray _colors)
 {
-    CV_TRACE_FUNCTION();
-    CV_Error(cv::Error::StsNotImplemented, "OpenCL implementation for Color Hash TSDF raycast not implemented yet");
+    raycastColorHashTsdfVolumeUnit(
+        settings, cameraPose, height, width, intr, volumeUnitDegree,
+        _volUnitsData, volumeUnits, _points, _normals, _colors);
 }
 
 void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, const int volumeUnitDegree, InputArray _volUnitsData, InputArray _volUnitsDataCopy,
-    const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals, OutputArray _colors)
+    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
-    CV_TRACE_FUNCTION();
-    CV_Error(cv::Error::StsNotImplemented, "OpenCL implementation for Color Hash TSDF fetch not implemented yet");
+    fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
+        settings, _volUnitsData, volumeUnits, volumeUnitDegree, _points, _normals, _colors);
 }
 
-#endif 
+#endif
 
 } // namespace cv
