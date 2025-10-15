@@ -50,7 +50,7 @@ class aruco_objdetect_test(NewOpenCVTests):
                     pm.make_charuco_board()
                     pm.save()
                     drawing = svg2rlg(filesvg)
-                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=72)
+                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=96)
                     from_svg_img = cv.imread(filepng)
                     _charucoCorners, _charuco_ids_svg, marker_corners_svg, marker_ids_svg = charuco_detector.detectBoard(from_svg_img)
                     _charucoCorners, _charuco_ids_cv, marker_corners_cv, marker_ids_cv = charuco_detector.detectBoard(from_cv_img)
@@ -107,7 +107,7 @@ class aruco_objdetect_test(NewOpenCVTests):
                     pm.make_charuco_board()
                     pm.save()
                     drawing = svg2rlg(filesvg)
-                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=72)
+                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=96)
                     from_svg_img = cv.imread(filepng)
 
                     #test
