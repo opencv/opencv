@@ -125,7 +125,7 @@ elseif(HAVE_QT)
     endif()
 
     foreach(dt_dep ${qt_deps})
-      add_definitions(${Qt${QT_VERSION_MAJOR}${dt_dep}_DEFINITIONS})
+      link_libraries(${Qt${QT_VERSION_MAJOR}${dt_dep}})
       include_directories(${Qt${QT_VERSION_MAJOR}${dt_dep}_INCLUDE_DIRS})
       list(APPEND HIGHGUI_LIBRARIES ${Qt${QT_VERSION_MAJOR}${dt_dep}_LIBRARIES})
     endforeach()
