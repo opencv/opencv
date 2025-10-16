@@ -69,8 +69,6 @@ which we have in OpenCV. The first method is Debevec and the second one is Rober
 Notice that the HDR image is of type float32, and not uint8, as it contains the
 full dynamic range of all exposure images.
 
-
-
 @code{.py}
 # Merge exposures to HDR image
 merge_debevec = cv.createMergeDebevec()
@@ -85,7 +83,7 @@ We map the 32-bit float HDR data into the range [0..1].
 Actually, in some cases the values can be larger than 1 or lower the 0, so notice
 we will later have to clip the data in order to avoid overflow.
 
-Note: The function `cv.createTonemap()` uses a default gamma value of 1.0.  
+@Note: The function `cv.createTonemap()` uses a default gamma value of 1.0.  
 Set it explicitly to 2.2 to match standard display brightness and ensure consistent tone mapping results.
 
 
