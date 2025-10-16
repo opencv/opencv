@@ -74,10 +74,13 @@ struct ConvState
                      const std::vector<int>& dilations,
                      const std::vector<int>& pads,
                      AutoPadding auto_pad, bool ceil_mode);
+    
+    // internal-use method to initialize coordtab and ofstab.
+    // it's called from initConv and initPooling
+    void initOfs();
 };
 
 AutoPadding getAutoPadding(const LayerParams& params);
-
 
 void initConvTables(const ConvState& cs,
                     std::vector<int32_t>& inpofs,

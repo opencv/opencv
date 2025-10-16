@@ -202,7 +202,7 @@ static void conv32fC8(const void* inp__, const void* residual__, void* out__,
                 vst1q_f32(sum + 8*5, s50); vst1q_f32(sum + 8*5 + 4, s51);
                 vst1q_f32(sum + 8*6, s60); vst1q_f32(sum + 8*6 + 4, s61);
                 vst1q_f32(sum + 8*7, s70); vst1q_f32(sum + 8*7 + 4, s71);
-            #elif CV_SIMD128
+#elif CV_SIMD128
                 v_float32 z = vx_setzero_f32();
                 v_float32 s00 = z, s01 = z, s10 = z, s11 = z;
                 v_float32 s20 = z, s21 = z, s30 = z, s31 = z;

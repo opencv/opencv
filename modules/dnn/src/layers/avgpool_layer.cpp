@@ -13,28 +13,40 @@ namespace cv
 namespace dnn
 {
 
-static void avgpool2d_32f(const void* inp_, void* out_, const ConvState& cs, bool count_include_pad)
+static void avgPool32f(const void* inp_, void* out_,
+                       const ConvState& cs, bool count_include_pad_)
 {
+    constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
     int C0_ = cs.inpshape.back();
     int NC = cs.inpshape[0]*cs.inpshape[1];
     int nlanes_ = VTraits<v_float32>::vlanes();
 
-    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2);
-    CV_Assert(cs.nspatialdims == 2);
+    CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
+    CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
+    CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
     parallel_for_(Range(0, NC), [&](const Range& r) {
+        bool count_include_pad = count_include_pad_;
+        int sdims = cs.nspatialdims;
         int nc0 = r.start, nc1 = r.end;
         int nlanes = nlanes_, C0 = cs.inpshape.back();
-        int Hi = cs.inpshape[2], Wi = cs.inpshape[3];
-        int H = cs.outshape[2], W = cs.outshape[3];
-        int iplanesize = Hi*Wi*C0;
-        int planesize = H*W*C0;
-        int SY = cs.strides[0], SX = cs.strides[1];
-        int pad_y0 = cs.pads[0], pad_x0 = cs.pads[1];
-        int inner_y0 = cs.inner[0], inner_x0 = cs.inner[1];
-        int inner_y1 = cs.inner[cs.nspatialdims], inner_x1 = cs.inner[cs.nspatialdims+1];
-        int ksize = (int)(cs.coordtab.size()/2);
-        const int* yxtab = cs.coordtab.data();
+        int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+        int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+        int Wi = cs.inpshape[sdims + 1];
+        int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+        int H = sdims > 1 ? cs.outshape[sdims] : 1;
+        int W = cs.outshape[sdims + 1];
+        int iplanesize = Di*Hi*Wi*C0;
+        int planesize = D*H*W*C0;
+        int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
+        int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
+        int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
+        int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];
+        int ksize = (int)cs.ofstab.size();
+        const int* zyxtab = cs.coordtab.data();
         const int* ofstab = cs.ofstab.data();
 
         const float* inp = (const float*)inp_ + nc0*iplanesize;
@@ -43,118 +55,126 @@ static void avgpool2d_32f(const void* inp_, void* out_, const ConvState& cs, boo
         v_float32 vscale0 = vx_setall_f32(1.f/ksize);
 
         for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
-            for (int y0 = 0; y0 < H; y0++, out += W*C0) {
-                int x0 = 0, x1 = y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
-                int yi_ = y0*SY - pad_y0;
-                for(;;) {
-                    
-                    if (nlanes == C0) {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            v_float32 s0 = z;
-                            int nitems = 0;
-                            for (int k = 0; k < ksize; k++) {
-                                int yi = yi_ + yxtab[k*2];
-                                int xi = xi_ + yxtab[k*2+1];
-                                v_float32 v0;
-                                if ((unsigned)yi >= (unsigned)Hi || (unsigned)xi >= (unsigned)Wi)
-                                    continue;
-                                v0 = vx_load(inp + (yi*Wi + xi)*C0);
-                                s0 = v_add(s0, v0);
-                                nitems++;
-                            }
-                            s0 = v_mul(s0, count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems));
-                            vx_store(out + x0*C0, s0);
-                        }
-                    } else {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            for (int c = 0; c < C0; c += nlanes*2) {
-                                v_float32 s0 = z, s1 = z;
+            for (int z0 = 0; z0 < D; z0++) {
+                int zi_ = z0*SZ - padZ0;
+                for (int y0 = 0; y0 < H; y0++, out += W*C0) {
+                    int x0 = 0;
+                    int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
+                        y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
+                    int yi_ = y0*SY - padY0;
+                    for(;;) {
+                        if (nlanes == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                v_float32 s0 = z;
                                 int nitems = 0;
                                 for (int k = 0; k < ksize; k++) {
-                                    int yi = yi_ + yxtab[k*2];
-                                    int xi = xi_ + yxtab[k*2+1];
-                                    v_float32 v0, v1;
-                                    if ((unsigned)yi >= (unsigned)Hi || (unsigned)xi >= (unsigned)Wi)
+                                    int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                    int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                    int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                    v_float32 v0;
+                                    if ((unsigned)zi >= (unsigned)Di ||
+                                        (unsigned)yi >= (unsigned)Hi ||
+                                        (unsigned)xi >= (unsigned)Wi)
                                         continue;
-                                    int ofs_k = (yi*Wi + xi)*C0 + c;
-                                    v0 = vx_load(inp + ofs_k);
-                                    v1 = vx_load(inp + ofs_k + nlanes);
+                                    v0 = vx_load(inp + ((zi*Hi + yi)*Wi + xi)*C0);
                                     s0 = v_add(s0, v0);
-                                    s1 = v_add(s1, v1);
                                     nitems++;
                                 }
-                                v_float32 vscale = count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems);
-                                s0 = v_mul(s0, vscale);
-                                s1 = v_mul(s1, vscale);
-                                vx_store(out + x0*C0 + c, s0);
-                                vx_store(out + x0*C0 + c + nlanes, s1);
+                                s0 = v_mul(s0, count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems));
+                                vx_store(out + x0*C0, s0);
+                            }
+                        } else {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                for (int c = 0; c < C0; c += nlanes*2) {
+                                    v_float32 s0 = z, s1 = z;
+                                    int nitems = 0;
+                                    for (int k = 0; k < ksize; k++) {
+                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                        v_float32 v0, v1;
+                                        if ((unsigned)zi >= (unsigned)Di ||
+                                            (unsigned)yi >= (unsigned)Hi ||
+                                            (unsigned)xi >= (unsigned)Wi)
+                                            continue;
+                                        int ofs_k = ((zi*Hi + yi)*Wi + xi)*C0 + c;
+                                        v0 = vx_load(inp + ofs_k);
+                                        v1 = vx_load(inp + ofs_k + nlanes);
+                                        s0 = v_add(s0, v0);
+                                        s1 = v_add(s1, v1);
+                                    }
+                                    v_float32 vscale = count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems);
+                                    s0 = v_mul(s0, vscale);
+                                    s1 = v_mul(s1, vscale);
+                                    vx_store(out + x0*C0 + c, s0);
+                                    vx_store(out + x0*C0 + c + nlanes, s1);
+                                }
                             }
                         }
-                    }
-                    if (x0 == W)
-                        break;
-                    x1 = inner_x1;
-                    if (nlanes == C0) {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            const float* inp_xi = inp + (Wi*yi_ + xi_)*C0;
-
-                            v_float32 s0 = vx_load(inp_xi + ofstab[0]);
-                            for (int k = 1; k < ksize; k++)
-                                s0 = v_add(s0, vx_load(inp_xi + ofstab[k]));
-                            s0 = v_mul(s0, vscale0);
-                            vx_store(out + x0*C0, s0);
-                        }
-                    } else if (nlanes*2 == C0) {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            const float* inp_xi = inp + (Wi*yi_ + xi_)*C0;
-
-                            int ofs_k = ofstab[0];
-                            v_float32 s0 = vx_load(inp_xi + ofs_k);
-                            v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
-                            for (int k = 1; k < ksize; k++) {
-                                ofs_k = ofstab[k];
-                                s0 = v_add(s0, vx_load(inp_xi + ofs_k));
-                                s1 = v_add(s1, vx_load(inp_xi + ofs_k + nlanes));
+                        if (x0 == W)
+                            break;
+                        x1 = inner_x1;
+                        if (nlanes == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                
+                                v_float32 s0 = vx_load(inp_xi + ofstab[0]);
+                                for (int k = 1; k < ksize; k++)
+                                    s0 = v_add(s0, vx_load(inp_xi + ofstab[k]));
+                                vx_store(out + x0*C0, v_mul(s0, vscale0));
                             }
-                            s0 = v_mul(s0, vscale0);
-                            s1 = v_mul(s1, vscale0);
-                            vx_store(out + x0*C0, s0);
-                            vx_store(out + x0*C0 + nlanes, s1);
-                        }
-                    } else {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            for (int c = 0; c < C0; c += nlanes*4) {
-                                const float* inp_xi = inp + (Wi*yi_ + xi_)*C0 + c;
-
+                        } else if (nlanes*2 == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load(inp_xi + ofs_k);
                                 v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
-                                v_float32 s2 = vx_load(inp_xi + ofs_k + nlanes*2);
-                                v_float32 s3 = vx_load(inp_xi + ofs_k + nlanes*3);
                                 for (int k = 1; k < ksize; k++) {
                                     ofs_k = ofstab[k];
                                     s0 = v_add(s0, vx_load(inp_xi + ofs_k));
                                     s1 = v_add(s1, vx_load(inp_xi + ofs_k + nlanes));
-                                    s2 = v_add(s2, vx_load(inp_xi + ofs_k + nlanes*2));
-                                    s3 = v_add(s3, vx_load(inp_xi + ofs_k + nlanes*3));
                                 }
                                 s0 = v_mul(s0, vscale0);
                                 s1 = v_mul(s1, vscale0);
-                                s2 = v_mul(s2, vscale0);
-                                s3 = v_mul(s3, vscale0);
-                                vx_store(out + x0*C0 + c, s0);
-                                vx_store(out + x0*C0 + c + nlanes, s1);
-                                vx_store(out + x0*C0 + c + nlanes*2, s2);
-                                vx_store(out + x0*C0 + c + nlanes*3, s3);
+                                vx_store(out + x0*C0, s0);
+                                vx_store(out + x0*C0 + nlanes, s1);
+                            }
+                        } else {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                for (int c = 0; c < C0; c += nlanes*4) {
+                                    const float* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    
+                                    int ofs_k = ofstab[0];
+                                    v_float32 s0 = vx_load(inp_xi + ofs_k);
+                                    v_float32 s1 = vx_load(inp_xi + ofs_k + nlanes);
+                                    v_float32 s2 = vx_load(inp_xi + ofs_k + nlanes*2);
+                                    v_float32 s3 = vx_load(inp_xi + ofs_k + nlanes*3);
+                                    for (int k = 1; k < ksize; k++) {
+                                        ofs_k = ofstab[k];
+                                        s0 = v_add(s0, vx_load(inp_xi + ofs_k));
+                                        s1 = v_add(s1, vx_load(inp_xi + ofs_k + nlanes));
+                                        s2 = v_add(s2, vx_load(inp_xi + ofs_k + nlanes*2));
+                                        s3 = v_add(s3, vx_load(inp_xi + ofs_k + nlanes*3));
+                                    }
+                                    s0 = v_mul(s0, vscale0);
+                                    s1 = v_mul(s1, vscale0);
+                                    s2 = v_mul(s2, vscale0);
+                                    s3 = v_mul(s3, vscale0);
+                                    vx_store(out + x0*C0 + c, s0);
+                                    vx_store(out + x0*C0 + c + nlanes, s1);
+                                    vx_store(out + x0*C0 + c + nlanes*2, s2);
+                                    vx_store(out + x0*C0 + c + nlanes*3, s3);
+                                }
                             }
                         }
+                        x1 = W;
                     }
-                    x1 = W;
                 }
             }
         }
@@ -162,165 +182,188 @@ static void avgpool2d_32f(const void* inp_, void* out_, const ConvState& cs, boo
 }
 
 template<typename _Tp>
-static void avgpool2d_16(const _Tp* inp_, _Tp* out_, const ConvState& cs, bool count_include_pad)
+static void avgPool16xf(const _Tp* inp_, _Tp* out_,
+                        const ConvState& cs, bool count_include_pad_)
 {
+    constexpr int MAX_POOL_DIMS = ConvState::MAX_CONV_DIMS;
     int C0_ = cs.inpshape.back();
     int NC = cs.inpshape[0]*cs.inpshape[1];
     int nlanes_ = VTraits<v_float32>::vlanes();
 
     CV_Assert(C0_ == nlanes_ || C0_ == nlanes_*2 || C0_ % (nlanes_*4) == 0);
-    CV_Assert(cs.nspatialdims == 2);
+    CV_Assert(cs.nspatialdims <= MAX_POOL_DIMS && MAX_POOL_DIMS == 3);
+    CV_Assert(cs.inpshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.outshape.layout == DATA_LAYOUT_BLOCK);
+    CV_Assert(cs.inpshape.dims == cs.outshape.dims);
 
     parallel_for_(Range(0, NC), [&](const Range& r) {
+        bool count_include_pad = count_include_pad_;
+        int sdims = cs.nspatialdims;
         int nc0 = r.start, nc1 = r.end;
         int nlanes = nlanes_, C0 = cs.inpshape.back();
-        int Hi = cs.inpshape[2], Wi = cs.inpshape[3];
-        int H = cs.outshape[2], W = cs.outshape[3];
-        int iplanesize = Hi*Wi*C0;
-        int planesize = H*W*C0;
-        int SY = cs.strides[0], SX = cs.strides[1];
-        int pad_y0 = cs.pads[0], pad_x0 = cs.pads[1];
-        int inner_y0 = cs.inner[0], inner_x0 = cs.inner[1];
-        int inner_y1 = cs.inner[cs.nspatialdims], inner_x1 = cs.inner[cs.nspatialdims+1];
-        int ksize = (int)(cs.coordtab.size()/2);
-        const int* yxtab = cs.coordtab.data();
+        int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+        int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+        int Wi = cs.inpshape[sdims + 1];
+        int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+        int H = sdims > 1 ? cs.outshape[sdims] : 1;
+        int W = cs.outshape[sdims + 1];
+        int iplanesize = Di*Hi*Wi*C0;
+        int planesize = D*H*W*C0;
+        int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
+        int padZ0 = cs.pads[0], padY0 = cs.pads[1], padX0 = cs.pads[2];
+        int inner_z0 = cs.inner[0], inner_z1 = cs.inner[MAX_POOL_DIMS];
+        int inner_y0 = cs.inner[1], inner_y1 = cs.inner[MAX_POOL_DIMS + 1];
+        int inner_x0 = cs.inner[2], inner_x1 = cs.inner[MAX_POOL_DIMS + 2];
+        int ksize = (int)cs.ofstab.size();
+        const int* zyxtab = cs.coordtab.data();
         const int* ofstab = cs.ofstab.data();
 
-        const _Tp* inp = inp_ + nc0*iplanesize;
-        _Tp* out = out_ + nc0*planesize;
+        const _Tp* inp = (const _Tp*)inp_ + nc0*iplanesize;
+        _Tp* out = (_Tp*)out_ + nc0*planesize;
         v_float32 z = vx_setzero_f32();
         v_float32 vscale0 = vx_setall_f32(1.f/ksize);
 
         for (int nc = nc0; nc < nc1; nc++, inp += iplanesize) {
-            for (int y0 = 0; y0 < H; y0++, out += W*C0) {
-                int x0 = 0, x1 = y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
-                int yi_ = y0*SY - pad_y0;
-                for(;;) {
-                    if (nlanes == C0) {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            v_float32 s0 = z;
-                            int nitems = 0;
-                            for (int k = 0; k < ksize; k++) {
-                                int yi = yi_ + yxtab[k*2];
-                                int xi = xi_ + yxtab[k*2+1];
-                                v_float32 v0;
-                                if ((unsigned)yi >= (unsigned)Hi || (unsigned)xi >= (unsigned)Wi)
-                                    continue;
-                                v0 = vx_load_expand(inp + (yi*Wi + xi)*C0);
-                                s0 = v_add(s0, v0);
-                                nitems++;
-                            }
-                            s0 = v_mul(s0, count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems));
-                            v_pack_store(out + x0*C0, s0);
-                        }
-                    } else {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            for (int c = 0; c < C0; c += nlanes*2) {
-                                v_float32 s0 = z, s1 = z;
+            for (int z0 = 0; z0 < D; z0++) {
+                int zi_ = z0*SZ - padZ0;
+                for (int y0 = 0; y0 < H; y0++, out += W*C0) {
+                    int x0 = 0;
+                    int x1 = z0 >= inner_z0 && z0 < inner_z1 &&
+                        y0 >= inner_y0 && y0 < inner_y1 ? inner_x0 : W;
+                    int yi_ = y0*SY - padY0;
+                    for(;;) {
+                        if (nlanes == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                v_float32 s0 = z;
                                 int nitems = 0;
                                 for (int k = 0; k < ksize; k++) {
-                                    int yi = yi_ + yxtab[k*2];
-                                    int xi = xi_ + yxtab[k*2+1];
-                                    v_float32 v0, v1;
-                                    if ((unsigned)yi >= (unsigned)Hi || (unsigned)xi >= (unsigned)Wi)
+                                    int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                    int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                    int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                    v_float32 v0;
+                                    if ((unsigned)zi >= (unsigned)Di ||
+                                        (unsigned)yi >= (unsigned)Hi ||
+                                        (unsigned)xi >= (unsigned)Wi)
                                         continue;
-                                    int ofs_k = (yi*Wi + xi)*C0 + c;
-                                    v0 = vx_load_expand(inp + ofs_k);
-                                    v1 = vx_load_expand(inp + ofs_k + nlanes);
+                                    v0 = vx_load_expand(inp + ((zi*Hi + yi)*Wi + xi)*C0);
                                     s0 = v_add(s0, v0);
-                                    s1 = v_add(s1, v1);
                                     nitems++;
                                 }
-                                v_float32 vscale = count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems);
-                                v_pack_store(out + x0*C0 + c, v_mul(s0, vscale));
-                                v_pack_store(out + x0*C0 + c + nlanes, v_mul(s1, vscale));
+                                s0 = v_mul(s0, count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems));
+                                v_pack_store(out + x0*C0, s0);
+                            }
+                        } else {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                for (int c = 0; c < C0; c += nlanes*2) {
+                                    v_float32 s0 = z, s1 = z;
+                                    int nitems = 0;
+                                    for (int k = 0; k < ksize; k++) {
+                                        int zi = zi_ + zyxtab[k*MAX_POOL_DIMS];
+                                        int yi = yi_ + zyxtab[k*MAX_POOL_DIMS+1];
+                                        int xi = xi_ + zyxtab[k*MAX_POOL_DIMS+2];
+                                        v_float32 v0, v1;
+                                        if ((unsigned)zi >= (unsigned)Di ||
+                                            (unsigned)yi >= (unsigned)Hi ||
+                                            (unsigned)xi >= (unsigned)Wi)
+                                            continue;
+                                        int ofs_k = ((zi*Hi + yi)*Wi + xi)*C0 + c;
+                                        v0 = vx_load_expand(inp + ofs_k);
+                                        v1 = vx_load_expand(inp + ofs_k + nlanes);
+                                        s0 = v_add(s0, v0);
+                                        s1 = v_add(s1, v1);
+                                    }
+                                    v_float32 vscale = count_include_pad ? vscale0 : vx_setall_f32(1.f/nitems);
+                                    s0 = v_mul(s0, vscale);
+                                    s1 = v_mul(s1, vscale);
+                                    v_pack_store(out + x0*C0 + c, s0);
+                                    v_pack_store(out + x0*C0 + c + nlanes, s1);
+                                }
                             }
                         }
-                    }
-                    if (x0 == W)
-                        break;
-                    x1 = inner_x1;
-                    if (nlanes == C0) {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            const _Tp* inp_xi = inp + (Wi*yi_ + xi_)*C0;
-
-                            v_float32 s0 = vx_load_expand(inp_xi + ofstab[0]);
-                            for (int k = 1; k < ksize; k++)
-                                s0 = v_add(s0, vx_load_expand(inp_xi + ofstab[k]));
-                            s0 = v_mul(s0, vscale0);
-                            v_pack_store(out + x0*C0, s0);
-                        }
-                    } else if (nlanes*2 == C0) {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            const _Tp* inp_xi = inp + (Wi*yi_ + xi_)*C0;
-
-                            int ofs_k = ofstab[0];
-                            v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
-                            v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
-                            for (int k = 1; k < ksize; k++) {
-                                ofs_k = ofstab[k];
-                                s0 = v_add(s0, vx_load_expand(inp_xi + ofs_k));
-                                s1 = v_add(s1, vx_load_expand(inp_xi + ofs_k + nlanes));
+                        if (x0 == W)
+                            break;
+                        x1 = inner_x1;
+                        if (nlanes == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                
+                                v_float32 s0 = vx_load_expand(inp_xi + ofstab[0]);
+                                for (int k = 1; k < ksize; k++)
+                                    s0 = v_add(s0, vx_load_expand(inp_xi + ofstab[k]));
+                                v_pack_store(out + x0*C0, v_mul(s0, vscale0));
                             }
-                            s0 = v_mul(s0, vscale0);
-                            s1 = v_mul(s1, vscale0);
-                            v_pack_store(out + x0*C0, s0);
-                            v_pack_store(out + x0*C0 + nlanes, s1);
-                        }
-                    } else {
-                        for (; x0 < x1; x0++) {
-                            int xi_ = x0*SX - pad_x0;
-                            for (int c = 0; c < C0; c += nlanes*4) {
-                                const _Tp* inp_xi = inp + (Wi*yi_ + xi_)*C0 + c;
-
+                        } else if (nlanes*2 == C0) {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                
                                 int ofs_k = ofstab[0];
                                 v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
                                 v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
-                                v_float32 s2 = vx_load_expand(inp_xi + ofs_k + nlanes*2);
-                                v_float32 s3 = vx_load_expand(inp_xi + ofs_k + nlanes*3);
                                 for (int k = 1; k < ksize; k++) {
                                     ofs_k = ofstab[k];
                                     s0 = v_add(s0, vx_load_expand(inp_xi + ofs_k));
                                     s1 = v_add(s1, vx_load_expand(inp_xi + ofs_k + nlanes));
-                                    s2 = v_add(s2, vx_load_expand(inp_xi + ofs_k + nlanes*2));
-                                    s3 = v_add(s3, vx_load_expand(inp_xi + ofs_k + nlanes*3));
                                 }
                                 s0 = v_mul(s0, vscale0);
                                 s1 = v_mul(s1, vscale0);
-                                s2 = v_mul(s2, vscale0);
-                                s3 = v_mul(s3, vscale0);
-                                v_pack_store(out + x0*C0 + c, s0);
-                                v_pack_store(out + x0*C0 + c + nlanes, s1);
-                                v_pack_store(out + x0*C0 + c + nlanes*2, s2);
-                                v_pack_store(out + x0*C0 + c + nlanes*3, s3);
+                                v_pack_store(out + x0*C0, s0);
+                                v_pack_store(out + x0*C0 + nlanes, s1);
+                            }
+                        } else {
+                            for (; x0 < x1; x0++) {
+                                int xi_ = x0*SX - padX0;
+                                for (int c = 0; c < C0; c += nlanes*4) {
+                                    const _Tp* inp_xi = inp + ((Hi*zi_ + Wi)*yi_ + xi_)*C0;
+                                    
+                                    int ofs_k = ofstab[0];
+                                    v_float32 s0 = vx_load_expand(inp_xi + ofs_k);
+                                    v_float32 s1 = vx_load_expand(inp_xi + ofs_k + nlanes);
+                                    v_float32 s2 = vx_load_expand(inp_xi + ofs_k + nlanes*2);
+                                    v_float32 s3 = vx_load_expand(inp_xi + ofs_k + nlanes*3);
+                                    for (int k = 1; k < ksize; k++) {
+                                        ofs_k = ofstab[k];
+                                        s0 = v_add(s0, vx_load_expand(inp_xi + ofs_k));
+                                        s1 = v_add(s1, vx_load_expand(inp_xi + ofs_k + nlanes));
+                                        s2 = v_add(s2, vx_load_expand(inp_xi + ofs_k + nlanes*2));
+                                        s3 = v_add(s3, vx_load_expand(inp_xi + ofs_k + nlanes*3));
+                                    }
+                                    s0 = v_mul(s0, vscale0);
+                                    s1 = v_mul(s1, vscale0);
+                                    s2 = v_mul(s2, vscale0);
+                                    s3 = v_mul(s3, vscale0);
+                                    v_pack_store(out + x0*C0 + c, s0);
+                                    v_pack_store(out + x0*C0 + c + nlanes, s1);
+                                    v_pack_store(out + x0*C0 + c + nlanes*2, s2);
+                                    v_pack_store(out + x0*C0 + c + nlanes*3, s3);
+                                }
                             }
                         }
+                        x1 = W;
                     }
-                    x1 = W;
                 }
             }
         }
     });
 }
 
-static void avgpool2d_16f(const void* inp_, void* out_,
-                          const ConvState& cs, bool countIncludePadding)
+static void avgPool16f(const void* inp_, void* out_,
+                       const ConvState& cs, bool countIncludePadding)
 {
-    avgpool2d_16((const hfloat*)inp_, (hfloat*)out_, cs, countIncludePadding);
+    avgPool16xf((const hfloat*)inp_, (hfloat*)out_, cs, countIncludePadding);
 }
 
-static void avgpool2d_16bf(const void* inp_, void* out_,
-                           const ConvState& cs, bool countIncludePadding)
+static void avgPool16bf(const void* inp_, void* out_,
+                        const ConvState& cs, bool countIncludePadding)
 {
-    avgpool2d_16((const bfloat*)inp_, (bfloat*)out_, cs, countIncludePadding);
+    avgPool16xf((const bfloat*)inp_, (bfloat*)out_, cs, countIncludePadding);
 }
 
-typedef void (*avgpool_func_t)(const void* inp, void* out,
-                               const ConvState& cs, bool countIncludePadding);
+typedef void (*AvgPoolFunc)(const void* inp, void* out,
+                            const ConvState& cs, bool countIncludePadding);
 
 class AveragePoolLayerImpl : public AveragePoolLayer
 {
@@ -458,10 +501,10 @@ public:
     void runOp(const Mat& inp, Mat& out, const ConvState& cs)
     {
         int inptype = inp.type();
-        avgpool_func_t func =
-            inptype == CV_32F ? avgpool2d_32f :
-            inptype == CV_16F ? avgpool2d_16f :
-            inptype == CV_16BF ? avgpool2d_16bf : nullptr;
+        AvgPoolFunc func =
+            inptype == CV_32F ? avgPool32f :
+            inptype == CV_16F ? avgPool16f :
+            inptype == CV_16BF ? avgPool16bf : nullptr;
 
         CV_Assert(func != nullptr && "AveragePool: unsupported data type");
         func(inp.data, out.data, cs, count_include_pad);

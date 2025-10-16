@@ -168,7 +168,7 @@ void ConvState::initConv(const MatShape& inpshape_,
     }
 
     CV_Assert(wshape_[0] > 0 && wshape_[1] > 0);
-    for (size_t i = 0; i < size_t(MAX_CONV_DIMS); i++) {
+    for (int i = 0; i < MAX_CONV_DIMS; i++) {
         kshape[i] = strides[i] = dilations[i] = 1;
         pads[i] = pads[i + MAX_CONV_DIMS] = 0;
         inner[i] = 0;
@@ -202,23 +202,31 @@ void ConvState::initConv(const MatShape& inpshape_,
         inner[j] = inner0;
         inner[j + MAX_CONV_DIMS] = inner1;
     }
+    
+    int C = inpshape.layout == DATA_LAYOUT_BLOCK ? inpshape.C :
+        inpshape.layout == DATA_LAYOUT_NHWC ? inpshape.back() : inpshape[1];
+    bool depthwise = ngroups == C;
+    if (depthwise) {
+        initOfs();
+    }
 }
 
 void initConvTables(const ConvState& cs,
                     std::vector<int32_t>& inpofs_,
                     std::vector<int32_t>& ofsofs_)
 {
-    int sdims = cs.nspatialdims, ndims = sdims + 3;
+    int sdims = cs.nspatialdims;
+    CV_Assert(sdims + 3 == cs.inpshape.dims);
     int Dk = cs.kshape[0], Hk = cs.kshape[1], Wk = cs.kshape[2];
     int DZ = cs.dilations[0], DY = cs.dilations[1], DX = cs.dilations[2];
     int SZ = cs.strides[0], SY = cs.strides[1], SX = cs.strides[2];
     int pad_z0 = cs.pads[0], pad_y0 = cs.pads[1], pad_x0 = cs.pads[2];
-    int Di = ndims > 2 ? cs.inpshape[ndims - 4] : 1;
-    int Hi = ndims > 1 ? cs.inpshape[ndims - 3] : 1;
-    int Wi = cs.inpshape[ndims - 2];
-    int D = ndims > 2 ? cs.outshape[ndims - 4] : 1;
-    int H = ndims > 1 ? cs.outshape[ndims - 3] : 1;
-    int W = cs.outshape[ndims - 2];
+    int Di = sdims > 2 ? cs.inpshape[sdims - 1] : 1;
+    int Hi = sdims > 1 ? cs.inpshape[sdims] : 1;
+    int Wi = cs.inpshape[sdims+1];
+    int D = sdims > 2 ? cs.outshape[sdims - 1] : 1;
+    int H = sdims > 1 ? cs.outshape[sdims] : 1;
+    int W = cs.outshape[sdims + 1];
     int C0 = cs.inpshape.back(), C1 = cs.inpshape[1];
     int ngroups = cs.ngroups, C1g = C1/ngroups;
     int inner_z0 = cs.inner[0], inner_y0 = cs.inner[1], inner_x0 = cs.inner[2];
@@ -230,7 +238,7 @@ void initConvTables(const ConvState& cs,
     bool have_inner = inner_z0 < inner_z1 && inner_y0 < inner_y1 && inner_x0 < inner_x1;
 
     inpofs_.resize(ofs_blocksize);
-
+    
     if (have_inner) {
         for (int c = 0, k = 0; c < C1g; c++) {
             for (int dy = 0; dy < Hk; dy++) {
@@ -260,10 +268,10 @@ void initConvTables(const ConvState& cs,
             for (int x0 = 0; x0 < W; x0++) {
                 int xi_ = x0*SX - pad_x0;
                 bool x_inside = inner_x0 <= x0 && x0 < inner_x1;
-                int idx = (y0*W + x0)*2;
+                int idx = ((z0*H + y0)*W + x0)*2;
 
                 if (x_inside && y_inside && z_inside) {
-                    ofsofs[idx] = (int32_t)((yi_*Wi + xi_)*C0);
+                    ofsofs[idx] = (int32_t)(((zi_*Hi + yi_)*Wi + xi_)*C0);
                     ofsofs[idx + 1] = 0;
                 } else if (z_inside && prev_z_inside) {
                     ofsofs[idx] = ofsofs[idx - W*H*2] + Wi*Hi*SZ*C0;
@@ -403,6 +411,13 @@ void ConvState::initPooling(const MatShape& inpshape_,
     inpshape = inpshape_;
     outshape = outshape_;
     ngroups = C;
+    
+    for (int i = 0; i < MAX_CONV_DIMS; i++) {
+        kshape[i] = strides[i] = dilations[i] = 1;
+        pads[i] = pads[i + MAX_CONV_DIMS] = 0;
+        inner[i] = 0;
+        inner[i + MAX_CONV_DIMS] = 1;
+    }
 
     for (int i = 0; i < nspatialdims; i++) {
         int j = i + (MAX_CONV_DIMS - nspatialdims);
@@ -430,6 +445,34 @@ void ConvState::initPooling(const MatShape& inpshape_,
         }
         inner[j] = inner0;
         inner[j + MAX_CONV_DIMS] = inner1;
+    }
+    initOfs();
+}
+
+void ConvState::initOfs()
+{
+    CV_Assert(MAX_CONV_DIMS == 3);
+    int sdims = nspatialdims;
+    int KD = kshape[0], KH = kshape[1], KW = kshape[2];
+    int SZ = strides[0], SY = strides[1], SX = strides[2];
+    int padZ0 = pads[0], padY0 = pads[1], padX0 = pads[2];
+    int Hi = sdims > 1 ? inpshape[sdims] : 1;
+    int Wi = inpshape[sdims + 1];
+    int ksize = KD*KH*KW;
+    coordtab.resize(ksize*MAX_CONV_DIMS);
+    ofstab.resize(ksize);
+    for (int z = 0, k = 0; z < KD; z++) {
+        int dz = z*SZ - padZ0;
+        for (int y = 0; y < KH; y++) {
+            int dy = y*SY - padY0;
+            for (int x = 0; x < KW; x++, k++) {
+                int dx = x*SX - padX0;
+                coordtab[k*MAX_CONV_DIMS] = dz;
+                coordtab[k*MAX_CONV_DIMS + 1] = dy;
+                coordtab[k*MAX_CONV_DIMS + 2] = dx;
+                ofstab[k] = (dz*Hi + dy)*Wi + dx;
+            }
+        }
     }
 }
 
