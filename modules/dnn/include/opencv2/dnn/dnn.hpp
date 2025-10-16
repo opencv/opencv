@@ -2107,26 +2107,26 @@ public:
      * @brief Load a tokenizer from a model directory.
      *
      * Expects the directory to contain:
-     *  - @c config.json with field @c "model_type" in {\c "gpt2", @c "gpt4"}
-     *  - @c tokenizer.json produced by the corresponding model family.
+     *  - `config.json` with field `model_type` with value "gpt2" or "gpt4".
+     *  - `tokenizer.json` produced by the corresponding model family.
      *
      * @attention The argument is a path prefix; this function concatenates file
-     * names directly (e.g. @c model_dir + "config.json"), so @p model_dir must
+     * names directly (e.g. `model_dir` + "config.json"), so `model_dir` must
      * end with an appropriate path separator.
      *
      * @param model_config  Path to config.json for model.
-     * @return A @c Tokenizer ready for use.
-     * @throw cv::Exception if files are missing or @c model_type is unsupported.
+     * @return A Tokenizer ready for use.
+     * @throw cv::Exception if files are missing or `model_type` is unsupported.
      */
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
     /**
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
      *
-     * Calls the underlying @c CoreBPE::encode with an empty allowed-special set.
+     * Calls the underlying `CoreBPE::encode` with an empty allowed-special set.
      *
      * @param text  UTF-8 input string.
-     * @return Vector of token ids (32-bit ids narrowed to @c int for convenience).
+     * @return Vector of token ids (32-bit ids narrowed to int for convenience).
      */
     CV_WRAP std::vector<int> encode(const std::string& text);
 
