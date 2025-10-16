@@ -46,7 +46,7 @@
 #include <unordered_set>
 
 namespace cv { namespace dnn {
-    
+
 struct range_nfd {
     uint32_t first;
     uint32_t last;

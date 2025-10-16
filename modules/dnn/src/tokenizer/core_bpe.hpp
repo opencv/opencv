@@ -51,7 +51,7 @@
 
 namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
-/** 
+/**
  * @brief Hasher for byte vectors to enable use in unordered_map.
  *
  * Computes a simple rolling hash over the bytes.
@@ -66,7 +66,7 @@ struct ByteVecHash {
     }
 };
 
-/** 
+/**
  * @brief Map from raw byte-sequence tokens to their merge rank / token id.
  *
  * Keys are byte sequences (not Unicode code points). Values are the
@@ -74,7 +74,7 @@ struct ByteVecHash {
  */
 using ByteVecRankMap = std::unordered_map<std::vector<std::uint8_t>, std::uint32_t, ByteVecHash>;
 
-/** 
+/**
  * @brief Merge-adjacent byte pairs by increasing rank until no mergeable pair remains.
  *
  * Scans adjacent byte pairs in @p piece, repeatedly splicing out the minimal-rank
@@ -91,10 +91,10 @@ using ByteVecRankMap = std::unordered_map<std::vector<std::uint8_t>, std::uint32
  *       segments into ids. For that, see bytePairEncode().
  * @see bytePairEncode
  */
-CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks, 
+CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks,
                                                         const std::vector<std::uint8_t>& piece);
 
-/** 
+/**
  * @brief Encode a byte sequence into token ids using BPE merge rules.
  *
  * If @p piece is a single byte present in @p ranks, returns that id directly.
@@ -107,10 +107,10 @@ CV_EXPORTS std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(cons
  *
  * @see bytePairMerge
  */
-CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece, 
+CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece,
                                  const ByteVecRankMap& ranks);
 
-/** 
+/**
  * @brief Core Byte Pair Encoding (BPE) engine (mergeable-ranks model).
  *
  * Encodes and decodes tokens at the byte level (UTF-8 input is split to bytes),
@@ -120,12 +120,12 @@ CV_EXPORTS std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint
  */
 class CoreBPE {
 public:
-    CoreBPE(); 
+    CoreBPE();
     explicit CoreBPE(ByteVecRankMap encoder,
-            std::unordered_map<std::string, std::uint32_t> specialEncoder, 
+            std::unordered_map<std::string, std::uint32_t> specialEncoder,
             const std::string& pattern);
 
-    /** 
+    /**
      * @brief Encode text with optional special tokens.
      *
      * Scans @p text for allowed special tokens, emits them as single ids,
@@ -140,7 +140,7 @@ public:
      */
     std::pair<std::vector<std::uint32_t>, std::size_t> encode(const std::string& text,
                                                      const std::unordered_set<std::string>& allowedSpecial) const;
-     /** 
+     /**
       * @brief Decode a sequence of token ids into raw bytes.
      *
      * Looks up ids in either the mergeable-token or special-token decoders.
@@ -149,13 +149,13 @@ public:
      * @return Decoded bytes on success, or @c std::nullopt if any id is unknown.
      */
     std::optional<std::vector<std::uint8_t>> decodeBytes(const std::vector<std::uint32_t>& tokens) const;
-    
+
 private:
     ByteVecRankMap encoder_;
     std::unordered_map<std::string, std::uint32_t> specialEncoder_;
-    std::unordered_map<std::uint32_t, std::vector<std::uint8_t>>  decoder_;          
+    std::unordered_map<std::uint32_t, std::vector<std::uint8_t>>  decoder_;
     std::unordered_map<std::uint32_t, std::vector<std::uint8_t>>  specialDecoder_;
-    std::unordered_map<std::string, std::uint32_t>  specialStringDecoder_;   
+    std::unordered_map<std::string, std::uint32_t>  specialStringDecoder_;
     std::string pattern_;
     std::string specialPattern_;
     std::vector<std::vector<std::uint8_t>> sortedTokenBytes_;

@@ -2081,7 +2081,7 @@ enum class TokenizeMethod {
     BPE = 0,
 };
 
-/** 
+/**
  * @brief High-level tokenizer wrapper for DNN usage.
  *
  * Provides a simple API to @c encode and @c decode text using a @c CoreBPE instance.
@@ -2090,7 +2090,7 @@ enum class TokenizeMethod {
  * @par Example
  * @code
  * using namespace cv::dnn;
- * Tokenizer tok = Tokenizer::load("/path/to/model/"); 
+ * Tokenizer tok = Tokenizer::load("/path/to/model/");
  * std::vector<int> ids = tok.encode("hello world");
  * std::string text = tok.decode(ids);
  * @endcode
@@ -2103,7 +2103,7 @@ public:
      */
     Tokenizer(TokenizeMethod method = TokenizeMethod::BPE);
 
-    /** 
+    /**
      * @brief Load a tokenizer from a model directory.
      *
      * Expects the directory to contain:
@@ -2118,9 +2118,9 @@ public:
      * @return A @c Tokenizer ready for use.
      * @throw cv::Exception if files are missing or @c model_type is unsupported.
      */
-    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config); 
+    CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
-    /** 
+    /**
      * @brief Encode UTF-8 text to token ids (special tokens currently disabled).
      *
      * Calls the underlying @c CoreBPE::encode with an empty allowed-special set.
@@ -2129,7 +2129,7 @@ public:
      * @return Vector of token ids (32-bit ids narrowed to @c int for convenience).
      */
     CV_WRAP std::vector<int> encode(const std::string& text);
-    
+
     CV_WRAP std::string decode(const std::vector<int>& tokens);
     struct Impl;
 private:

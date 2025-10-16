@@ -13,9 +13,7 @@ ocv_add_dispatched_file_force_all("layers/cpu_kernels/fast_gemm_kernels" AVX AVX
 
 ocv_add_module(dnn opencv_core opencv_imgproc WRAP python java objc js)
 
-
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/plugin.cmake)
-
 
 ocv_option(OPENCV_DNN_OPENCL "Build with OpenCL support" HAVE_OPENCL AND NOT APPLE)
 
@@ -265,7 +263,8 @@ if(NOT BUILD_PROTOBUF)
     ocv_target_compile_definitions(opencv_test_dnn PRIVATE "OPENCV_DNN_EXTERNAL_PROTOBUF=1")
   endif()
 endif()
-# Include Tokenizer 
+
+# Include Tokenizer
 file(GLOB extra_tokenizer_src
      "${CMAKE_CURRENT_LIST_DIR}/src/tokenizer/*.cpp"
 )

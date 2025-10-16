@@ -9,7 +9,7 @@
 
 #include <functional>
 
-namespace cv { namespace dnn { 
+namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 // Registry of implementations (method -> methodImpl)
@@ -30,8 +30,8 @@ struct Tokenizer::Impl {
 
 struct BpeTokenizerImpl : public Tokenizer::Impl {
     Ptr<CoreBPE> coreBPE;
-    
-    explicit BpeTokenizerImpl(CoreBPE core) 
+
+    explicit BpeTokenizerImpl(CoreBPE core)
         : coreBPE(makePtr<CoreBPE>(std::move(core))) {}
 
     std::vector<int> encode(const std::string& text) override {
@@ -77,7 +77,7 @@ std::vector<int> Tokenizer::encode(const std::string& text) {
     return impl_->encode(text);
 }
 
-std::string Tokenizer::decode(const std::vector<int>& tokens) { 
+std::string Tokenizer::decode(const std::vector<int>& tokens) {
     if (!impl_) CV_Error(cv::Error::StsError, "Tokenizer impl null");
     return impl_->decode(tokens);
 };
@@ -100,7 +100,7 @@ CoreBPE buildTokenizerGPT(const std::string& model_type, const std::string& json
     } else if (model_type == "gpt4" || model_type == "cl100k_base") {
         pattern = CL100K_BASE;
     } else {
-        CV_Error(cv::Error::StsError, 
+        CV_Error(cv::Error::StsError,
             "Unsupported model_type: " + model_type + " (expected gpt2/r50k_base or gpt4/cl100k_base)");
     }
 
@@ -163,7 +163,7 @@ Tokenizer Tokenizer::load(const std::string& model_config) {
     auto& reg = tokenizerRegistry();
     auto it = reg.find(methodType);
     if (it == reg.end())
-        CV_Error(cv::Error::StsError, 
+        CV_Error(cv::Error::StsError,
             "Unsupported tokenizer method: '" + methodType + "'. Supported: BPE");
 
     Tokenizer tok;

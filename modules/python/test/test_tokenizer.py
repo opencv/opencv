@@ -62,6 +62,6 @@ class TokenizerBindingTest(NewOpenCVTests):
                 msg=f"Mismatch for sample '{s['name']}'"
             )
             self.assertEqual(tok.decode(expected), text)
-            
+
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()

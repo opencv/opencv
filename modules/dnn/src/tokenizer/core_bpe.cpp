@@ -8,7 +8,7 @@
 
 #include <regex>
 
-namespace cv { namespace dnn { 
+namespace cv { namespace dnn {
 CV__DNN_INLINE_NS_BEGIN
 
 static constexpr std::uint32_t RANK_MAX  = std::numeric_limits<std::uint32_t>::max();
@@ -29,23 +29,23 @@ static std::uint32_t maybeGetRank(const ByteVecRankMap& ranks, const std::vector
  * https://github.com/openai/tiktoken/blob/4560a8896f5fb1d35c6f8fd6eee0399f9a1a27ca/src/lib.rs#L17-L73
  *
  */
-std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks, 
+std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRankMap& ranks,
                                                         const std::vector<std::uint8_t>& piece) {
     std::vector<std::pair<std::size_t, std::uint32_t>> parts;
     parts.reserve(piece.size() + 1);
 
     std::pair<std::uint32_t, std::size_t> minRank{RANK_MAX, SZ_MAX};
-    
+
     for (std::size_t i = 0; i+1 < piece.size(); ++i) {
         std::vector<std::uint8_t> key(piece.begin() + i, piece.begin() + i + 2);
         std::uint32_t r = maybeGetRank(ranks, key);
         if (r < minRank.first) minRank = {r, i};
         parts.emplace_back(i, r);
-    } 
+    }
     parts.emplace_back(piece.size() - 1, RANK_MAX);
     parts.emplace_back(piece.size(), RANK_MAX);
 
-    auto getRank = [&](const std::vector<std::pair<std::size_t, std::uint32_t>>& p, 
+    auto getRank = [&](const std::vector<std::pair<std::size_t, std::uint32_t>>& p,
                        std::size_t idx) -> std::uint32_t {
         if (idx + 3 < p.size()) {
             std::size_t s = p[idx].first;
@@ -71,7 +71,7 @@ std::vector<std::pair<std::size_t, std::uint32_t>> bytePairMerge(const ByteVecRa
     return parts;
 }
 
-std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece, 
+std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece,
                                  const ByteVecRankMap& ranks) {
 
     if (piece.size() == 1) {
@@ -79,7 +79,7 @@ std::vector<std::uint32_t> bytePairEncode(const std::vector<std::uint8_t>& piece
         return it == ranks.end() ? std::vector<std::uint32_t>{} : std::vector<std::uint32_t>{it->second};
     }
     auto merged = bytePairMerge(ranks, piece);
-    std::vector<std::uint32_t> out; 
+    std::vector<std::uint32_t> out;
     out.reserve(merged.size()-1);
 
     for (std::size_t i = 0; i+1 <  merged.size(); ++i) {
@@ -97,9 +97,9 @@ std::string CoreBPE::makeSpecialPattern(const std::unordered_map<std::string, st
     for (auto const& kv : special) {
         if (!first) pat.push_back('|');
         first = false;
-        // Escape each character in the token 
+        // Escape each character in the token
         for (char c : kv.first) {
-            if (meta.find(c) != std::string::npos) 
+            if (meta.find(c) != std::string::npos)
                 pat.push_back('\\');
             pat.push_back(c);
         }
@@ -118,17 +118,17 @@ CoreBPE::CoreBPE()
 {}
 
 CoreBPE::CoreBPE(ByteVecRankMap encoder,
-            std::unordered_map<std::string, std::uint32_t> specialEncoder, 
-            const std::string& pattern) 
-    : encoder_(std::move(encoder)),  
+            std::unordered_map<std::string, std::uint32_t> specialEncoder,
+            const std::string& pattern)
+    : encoder_(std::move(encoder)),
       specialEncoder_(std::move(specialEncoder)),
       decoder_(), specialDecoder_(),
       pattern_(pattern), specialPattern_(makeSpecialPattern(specialEncoder_)),
       sortedTokenBytes_() {
-        
-    for (auto& kv : encoder_) 
+
+    for (auto& kv : encoder_)
         decoder_.emplace(kv.second, kv.first);
-    for (auto& kv : specialEncoder_) 
+    for (auto& kv : specialEncoder_)
         specialDecoder_.emplace(kv.second, std::vector<std::uint8_t>(kv.first.begin(), kv.first.end()));
 
     for (const auto& kv : specialDecoder_) {
@@ -253,7 +253,7 @@ CoreBPE::encode(const std::string& text,
             break;
         }
     }
-    
+
     return { ret, last_piece_token_len };
 }
 CV__DNN_INLINE_NS_END
