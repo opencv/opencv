@@ -565,7 +565,7 @@ enum SolvePnPMethod {
                               //!< Initial solution for non-planar "objectPoints" needs at least 6 points and uses the DLT algorithm. \n
                               //!< Initial solution for planar "objectPoints" needs at least 4 points and uses pose from homography decomposition.
     SOLVEPNP_EPNP        = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
-    SOLVEPNP_P3P         = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
+    SOLVEPNP_P3P         = 2, //!< Revisiting the P3P Problem @cite ding2023revisiting
     SOLVEPNP_DLS         = 3, //!< **Broken implementation. Using this flag will fallback to EPnP.** \n
                               //!< A Direct Least-Squares (DLS) Method for PnP @cite hesch2011direct
     SOLVEPNP_UPNP        = 4, //!< **Broken implementation. Using this flag will fallback to EPnP.** \n
@@ -1154,8 +1154,8 @@ assumed.
 the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
 @param tvecs Output translation vectors.
 @param flags Method for solving a P3P problem:
--   @ref SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+-   @ref SOLVEPNP_P3P Method is based on the paper of Ding, Y., Yang, J., Larsson, V., Olsson, C., & Åstrom, K.
+"Revisiting the P3P Problem" (@cite ding2023revisiting).
 -   @ref SOLVEPNP_AP3P Method is based on the paper of T. Ke and S. Roumeliotis.
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 

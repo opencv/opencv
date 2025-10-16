@@ -470,7 +470,7 @@ public:
     {
         eps[SOLVEPNP_ITERATIVE] = 1.0e-6;
         eps[SOLVEPNP_EPNP] = 1.0e-6;
-        eps[SOLVEPNP_P3P] = 2.0e-4;
+        eps[SOLVEPNP_P3P] = 1.0e-4;
         eps[SOLVEPNP_AP3P] = 1.0e-4;
         eps[SOLVEPNP_DLS] = 1.0e-6; // DLS is remapped to EPnP, so we use the same threshold
         eps[SOLVEPNP_UPNP] = 1.0e-6; // UPnP is remapped to EPnP, so we use the same threshold
@@ -613,7 +613,7 @@ class CV_solveP3P_Test : public CV_solvePnPRansac_Test
 public:
     CV_solveP3P_Test()
     {
-        eps[SOLVEPNP_P3P] = 2.0e-4;
+        eps[SOLVEPNP_P3P] = 1.0e-4;
         eps[SOLVEPNP_AP3P] = 1.0e-4;
         totalTestsCount = 1000;
     }
@@ -1513,7 +1513,7 @@ TEST(Calib3d_SolvePnP, generic)
                 for (size_t i = 0; i < rvecs_est.size() && !isTestSuccess; i++) {
                     double rvecDiff = cvtest::norm(rvecs_est[i], rvec_ground_truth, NORM_L2);
                     double tvecDiff = cvtest::norm(tvecs_est[i], tvec_ground_truth, NORM_L2);
-                    const double threshold = method == SOLVEPNP_P3P ? 1e-2 : 1e-4;
+                    const double threshold = 1e-4;
                     isTestSuccess = rvecDiff < threshold && tvecDiff < threshold;
                 }
 
@@ -1581,7 +1581,7 @@ TEST(Calib3d_SolvePnP, generic)
                 for (size_t i = 0; i < rvecs_est.size() && !isTestSuccess; i++) {
                     double rvecDiff = cvtest::norm(rvecs_est[i], rvec_ground_truth, NORM_L2);
                     double tvecDiff = cvtest::norm(tvecs_est[i], tvec_ground_truth, NORM_L2);
-                    const double threshold = method == SOLVEPNP_P3P ? 1e-2 : 1e-4;
+                    const double threshold = 1e-4;
                     isTestSuccess = rvecDiff < threshold && tvecDiff < threshold;
                 }
 
