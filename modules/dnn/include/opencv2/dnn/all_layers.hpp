@@ -559,6 +559,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS OneHotLayer : public Layer
     {
     public:
+        int axis;
         static Ptr<OneHotLayer> create(const LayerParams& params);
     };
 
