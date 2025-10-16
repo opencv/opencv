@@ -678,8 +678,11 @@ void ColorHashTsdfVolume::integrate(InputArray _depth, InputArray _image, InputA
 #else
     if (useGPU)
     {
-        ocl_integrateColorHashTsdfVolumeUnit(settings, cameraPose, lastVolIndex, lastFrameId, bufferSizeDegree, volumeUnitDegree, enableGrowth, depth, image, gpu_pixNorms,
-                                        lastVisibleIndices, volUnitsDataCopy, gpu_volUnitsData, hashTable, isActiveFlags);
+        VolumeUnitIndexes volumeUnits; 
+        ocl_integrateColorHashTsdfVolumeUnit(
+            settings, cameraPose, lastVolIndex, lastFrameId,
+            volumeUnitDegree, enableGrowth,
+            depth, image, gpu_pixNorms, gpu_volUnitsData, volumeUnits);
     }
     else
     {
@@ -705,9 +708,9 @@ void ColorHashTsdfVolume::raycast(InputArray _cameraPose, int height, int width,
     raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, volUnitsData, volumeUnits, _points, _normals, _colors);
 #else
     if (useGPU)
-        ocl_raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, InputArray(hashTable), gpu_volUnitsData, _points, _normals, _colors);
+        ocl_raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, gpu_volUnitsData, hashTable, _points, _normals, _colors);
     else
-        raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, cpu_volumeUnits, _points, _normals, _colors);
+        raycastColorHashTsdfVolumeUnit(settings, cameraPose, height, width, intr, volumeUnitDegree, cpu_volUnitsData, hashTable, _points, _normals, _colors);
 #endif
 }
 

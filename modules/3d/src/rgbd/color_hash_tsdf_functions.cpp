@@ -57,8 +57,9 @@ void integrateColorHashTsdfVolumeUnit(
     // Iterate through all existing volume units and integrate depth data
     std::vector<Vec3i> unitsToRemove;
     
-    for (auto& unitPair : volumeUnits)
+    for (auto it = volumeUnits.begin(); it != volumeUnits.end(); ++it)
     {
+        auto& unitPair = *it;
         const Vec3i& unitIdx = unitPair.first;
         VolumeUnit& unit = unitPair.second;
         
@@ -117,7 +118,7 @@ void integrateColorHashTsdfVolumeUnit(
 
 void raycastColorHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
-    InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals, OutputArray _colors)
+    InputArray _volUnitsData, const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
     CV_TRACE_FUNCTION();
 
@@ -169,7 +170,8 @@ void raycastColorHashTsdfVolumeUnit(
 
             Point3f hitPoint, hitNormal;
             Vec3b hitColor;
-            bool hit = raycastColorHashTsdf(rayOriginVol, rayDirVol, tmin, tmax, volumeUnits, volUnitsData,                                          volUnitDims, unitResolution, voxelSize, trancDist,
+            bool hit = raycastColorHashTsdf(settings, rayOriginVol, rayDirVol, tmin, tmax, hashTable, volUnitsData,
+                                          volUnitDims, unitResolution, voxelSize, trancDist,
                                           hitPoint, hitNormal, hitColor);
 
             if (hit)
@@ -187,11 +189,11 @@ void raycastColorHashTsdfVolumeUnit(
 }
 
 void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits,
+    const VolumeSettings& settings, InputArray _volUnitsData, const CustomHashSet& hashTable,
     const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
     CV_TRACE_FUNCTION();
-    
+
     Mat volUnitsData = _volUnitsData.getMat();
     
     float voxelSize = settings.getVoxelSize();
@@ -206,7 +208,7 @@ void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
     std::vector<Point3f> normalsVec;
     std::vector<Vec3b> colorsVec;
     
-    for (const auto& unitPair : volumeUnits)
+    for (const auto& unitPair : hashTable)
     {
         const Vec3i& unitIdx = unitPair.first;
         const VolumeUnit& unit = unitPair.second;
@@ -232,7 +234,7 @@ void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
                     {
                         Point3f voxelPos = unitOrigin + Point3f(x, y, z) * voxelSize;
                         
-                        Point3f normal = computeColorVoxelNormal(unitData, x, y, z, volUnitSize, voxelSize, gradientDeltaFactor);
+                        Point3f normal = computeColorVoxelNormal(unitData, x, y, z, volUnitDims.x, voxelSize, 1.0f);
                         
                         if (!isNaN(normal))
                         {
@@ -470,8 +472,7 @@ bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrig
         return false;
 }
 
-Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z,
-                               int volUnitSize, float voxelSize, float deltaFactor)
+Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int volUnitSize)
 {
     CV_TRACE_FUNCTION();
     Mat unitData = _unitData.getMat();
@@ -525,20 +526,20 @@ void ocl_integrateColorHashTsdfVolumeUnit(
 void ocl_raycastColorHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width,
     InputArray intr, const int volumeUnitDegree, InputArray _volUnitsData,
-    const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals,
+    const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals,
     OutputArray _colors)
 {
     raycastColorHashTsdfVolumeUnit(
         settings, cameraPose, height, width, intr, volumeUnitDegree,
-        _volUnitsData, volumeUnits, _points, _normals, _colors);
+        _volUnitsData, hashTable, _points, _normals, _colors);
 }
 
 void ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(const VolumeSettings& settings,
-    InputArray _volUnits, const VolumeUnitIndexes& volumeUnits,
+    InputArray _volUnits, const CustomHashSet& hashTable,
     int volumeUnitDegree, OutputArray points, OutputArray normals, OutputArray colors)
 {
     fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
-        settings, _volUnits, volumeUnits, volumeUnitDegree, points, normals, colors);
+        settings, _volUnits, hashTable, volumeUnitDegree, points, normals, colors);
 }
 
 #endif
