@@ -21,6 +21,7 @@ import numpy as np
 import yaml
 import math
 import warnings
+import numbers
 
 def insideImageMask(pts, w, h):
     return (pts[0] >= 0) & (pts[0] <= w - 1) & (pts[1] >= 0) & (pts[1] <= h - 1)
@@ -591,7 +592,10 @@ def saveToFile(path_to_save, **kwargs):
             if key in ('rvecs0', 'tvecs0'):
                 # Replace None by [0, 0, 0]
                 value = [arr if arr is not None else np.zeros((3, 1)) for arr in value]
-            save_file.write(key, np.array(value))
+            if isinstance(value, numbers.Number):
+                save_file.write(key, value)
+            else:
+                save_file.write(key, np.array(value))
 
     save_file.release()
 
@@ -1051,10 +1055,12 @@ if __name__ == '__main__':
             print("--use_stereo_init option is applicable only if all cameras are calibrated with the same model!")
             sys.exit(0)
 
+    grid_size = [int(v) for v in params.pattern_size.split(',')]
+    cam_ids = []
+
     if params.json_file is not None:
         output = calibrateFromJSON(params.json_file, params.find_intrinsics_in_python)
         cam_ids = [str(x) for x in range(len(output['Rs']))]
-        output['cam_ids'] = cam_ids
     else:
         print(params.pattern_size)
         if (params.pattern_type is None or params.pattern_size is None or params.pattern_distance is None):
@@ -1062,10 +1068,9 @@ if __name__ == '__main__':
 
         # cam_N.txt --> cam_N --> N
         cam_ids = [os.path.splitext(f)[0].split('_')[-1] for f in params.filenames.split(',')]
-
         output = calibrateFromImages(
             files_with_images=[x.strip() for x in params.filenames.split(',')],
-            grid_size=[int(v) for v in params.pattern_size.split(',')],
+            grid_size=grid_size,
             pattern_type=params.pattern_type,
             models=[int(v) for v in params.is_fisheye.split(',')],
             dist_m=params.pattern_distance,
@@ -1079,7 +1084,10 @@ if __name__ == '__main__':
             files_with_intrinsics=[x.strip() for x in (params.intrinsics or "").split(',') if x.strip()],
             board_dict_path=params.board_dict_path,
         )
-        output['cam_ids'] = cam_ids
+
+    output['cam_ids'] = cam_ids
+    output['board_width'] = grid_size[0]
+    output['board_height'] = grid_size[1]
 
     # Evaluate the error
     if params.gt_file is not None:
