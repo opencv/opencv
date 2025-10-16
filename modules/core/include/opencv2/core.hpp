@@ -540,9 +540,9 @@ The function LUT fills the output array with values from the look-up table. Indi
 are taken from the input array. That is, the function processes each element of src as follows:
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
-\f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
-@param src input array of 8-bit elements.
-@param lut look-up table of 256 elements; in case of multi-channel input array, the table should
+\f[d =  \forkthree{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\) or \(\texttt{CV_16U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}{32768}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\)}\f]
+@param src input array of 8-bit or 16-bit integer elements.
+@param lut look-up table of 256 elements (if src has depth CV_8U or CV_8S) or 65536 elements(if src has depth CV_16U or CV_16S); in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
 number of channels as in the input array.
 @param dst output array of the same size and number of channels as src, and the same depth as lut.
