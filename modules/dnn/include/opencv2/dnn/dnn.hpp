@@ -2109,13 +2109,12 @@ public:
      *  - `config.json` with field `model_type` with value "gpt2" or "gpt4".
      *  - `tokenizer.json` produced by the corresponding model family.
      *
-     * @attention The argument is a path prefix; this function concatenates file
+     * The argument is a path prefix; this function concatenates file
      * names directly (e.g. `model_dir` + "config.json"), so `model_dir` must
      * end with an appropriate path separator.
      *
      * @param model_config  Path to config.json for model.
-     * @return A Tokenizer ready for use.
-     * @throw cv::Exception if files are missing or `model_type` is unsupported.
+     * @return A Tokenizer ready for use. Throws cv::Exception if files are missing or `model_type` is unsupported.
      */
     CV_WRAP static Tokenizer load(CV_WRAP_FILE_PATH const std::string& model_config);
 
