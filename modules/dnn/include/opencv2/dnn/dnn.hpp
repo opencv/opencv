@@ -2084,10 +2084,9 @@ enum class TokenizeMethod {
 /**
  * @brief High-level tokenizer wrapper for DNN usage.
  *
- * Provides a simple API to @c encode and @c decode text using a @c CoreBPE instance.
+ * Provides a simple API to encode and decode tokens for LLMs.
  * Models are loaded via Tokenizer::load().
  *
- * @par Example
  * @code
  * using namespace cv::dnn;
  * Tokenizer tok = Tokenizer::load("/path/to/model/");
