@@ -166,7 +166,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     }
     else
     {
-        CALL_HAL(LUT16, cv_hal_lut16, src.ptr<ushort>(), src.step, src.type(), lut.ptr<ushort>(),
+        CALL_HAL(LUT16, cv_hal_lut16, src.ptr<ushort>(), src.step, src.type(), lut.data,
                  lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
     }
 
