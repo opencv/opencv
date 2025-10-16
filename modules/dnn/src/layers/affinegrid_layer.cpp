@@ -11,7 +11,7 @@
 
 // ONNX operator: AffineGrid
 // Spec: https://onnx.ai/onnx/operators/onnx__AffineGrid.html
-// Supported opsets: 16-22
+// Supported opsets: 20
 
 namespace cv {
 namespace dnn {
@@ -19,12 +19,157 @@ namespace dnn {
 class AffineGridLayerImpl CV_FINAL : public AffineGridLayer
 {
 public:
-    bool align_corners;
-
     AffineGridLayerImpl(const LayerParams& params)
     {
         setParamsFrom(params);
         align_corners = params.get<bool>("align_corners", false);
+    }
+
+private:
+    template<typename T>
+    void computeGrid2D(const Mat& theta, Mat& grid, int N, int H, int W,
+                       float xs, float xd, float ys, float yd) const
+    {
+        const int total = N * H;
+        parallel_for_(Range(0, total), [&](const Range& range){
+            const int H_ = H;
+            const int W_ = W;
+            const float xs_ = xs, xd_ = xd, ys_ = ys, yd_ = yd;
+            const Mat theta_ = theta;
+            Mat grid_ = grid;
+            int lastN = -1;
+            const T* T0 = nullptr;
+            const T* T1 = nullptr;
+            for (int nyi = range.start; nyi < range.end; nyi++)
+            {
+                int n = nyi / H_;
+                int y = nyi - n * H_;
+                if (n != lastN)
+                {
+                    int i0[3] = {n, 0, 0};
+                    int i1[3] = {n, 1, 0};
+                    T0 = theta_.ptr<T>(i0);
+                    T1 = theta_.ptr<T>(i1);
+                    lastN = n;
+                }
+                float ny = yd_ + ys_ * y;
+                float base0 = (float)T0[1]*ny + (float)T0[2];
+                float base1 = (float)T1[1]*ny + (float)T1[2];
+                float* out = grid_.ptr<float>(n, y, 0);
+                for (int x = 0; x < W_; x++)
+                {
+                    float nx = xd_ + xs_ * x;
+                    out[2*x + 0] = (float)T0[0]*nx + base0;
+                    out[2*x + 1] = (float)T1[0]*nx + base1;
+                }
+            }
+        });
+    }
+
+    template<typename T>
+    void computeGrid3D(const Mat& theta, Mat& grid, int N, int D, int H, int W,
+                       float xs, float xd, float ys, float yd, float zs, float zd) const
+    {
+        const int stride = D * H;
+        const int total = N * stride;
+        parallel_for_(Range(0, total), [&](const Range& range){
+            const int H_ = H;
+            const int W_ = W;
+            const int stride_ = stride;
+            const float xs_ = xs, xd_ = xd, ys_ = ys, yd_ = yd, zs_ = zs, zd_ = zd;
+            const Mat theta_ = theta;
+            Mat grid_ = grid;
+            int lastN = -1;
+            const T* T0 = nullptr;
+            const T* T1 = nullptr;
+            const T* T2 = nullptr;
+            for (int ndz = range.start; ndz < range.end; ndz++)
+            {
+                int n = ndz / stride_;
+                int rem = ndz - n * stride_;
+                int z = rem / H_;
+                int y = rem - z * H_;
+                if (n != lastN)
+                {
+                    int i0[3] = {n, 0, 0};
+                    int i1[3] = {n, 1, 0};
+                    int i2[3] = {n, 2, 0};
+                    T0 = theta_.ptr<T>(i0);
+                    T1 = theta_.ptr<T>(i1);
+                    T2 = theta_.ptr<T>(i2);
+                    lastN = n;
+                }
+                float ny = yd_ + ys_ * y;
+                float nz = zd_ + zs_ * z;
+                float base0 = (float)T0[1]*ny + (float)T0[2]*nz + (float)T0[3];
+                float base1 = (float)T1[1]*ny + (float)T1[2]*nz + (float)T1[3];
+                float base2 = (float)T2[1]*ny + (float)T2[2]*nz + (float)T2[3];
+                int idx[5] = {n, z, y, 0, 0};
+                float* out = grid_.ptr<float>(idx);
+                for (int x = 0; x < W_; x++)
+                {
+                    float nx = xd_ + xs_ * x;
+                    int o = 3*x;
+                    out[o + 0] = (float)T0[0]*nx + base0;
+                    out[o + 1] = (float)T1[0]*nx + base1;
+                    out[o + 2] = (float)T2[0]*nx + base2;
+                }
+            }
+        });
+    }
+    void resolveSizeAndShape(int N, bool is3d, const Mat* explicitSz,
+                         MatShape& outShape, int& D, int& H, int& W) const
+    {
+        outShape = is3d ? MatShape{N, -1, -1, -1, 3} : MatShape{N, -1, -1, 2};
+        D = 1; H = -1; W = -1;
+
+        Mat sz;
+        if (explicitSz)
+        {
+            sz = *explicitSz;
+        }
+        else
+        {
+            Net::Impl* netimpl_ = getNetImpl(this);
+            if (!netimpl_)
+                return;
+            try
+            {
+                sz = netimpl_->argTensor(this->inputs[1]);
+            }
+            catch (const cv::Exception& e)
+            {
+                CV_Error(cv::Error::StsError,
+                        cv::format("DNN/AffineGrid: failed to resolve output shape from 'size' tensor: %s", e.what()));
+            }
+        }
+
+        if (sz.empty())
+            return;
+
+        CV_CheckTrue(sz.total() == (size_t)(is3d ? 5 : 4),
+                    "size input must have 4 (2D) or 5 (3D) elements");
+
+        auto readAt = [&](int idx) -> int {
+            if (sz.depth() == CV_64S) return (int)sz.at<int64_t>(idx);
+            if (sz.depth() == CV_32S) return (int)sz.at<int32_t>(idx);
+            CV_CheckType(sz.depth(), sz.depth() == CV_64S || sz.depth() == CV_32S,
+                        "size tensor must be int32 or int64");
+            return -1;
+        };
+
+        if (is3d) {
+            D = readAt(2);
+            H = readAt(3);
+            W = readAt(4);
+            if (D > 0 && H > 0 && W > 0)
+                outShape = MatShape{N, D, H, W, 3};
+        } else {
+            H = readAt(2);
+            W = readAt(3);
+            if (H > 0 && W > 0)
+                outShape = MatShape{N, H, W, 2};
+        }
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -32,7 +177,7 @@ public:
                          std::vector<MatShape> &outputs,
                          std::vector<MatShape> &internals) const CV_OVERRIDE
     {
-        CV_CheckGE((int)inputs.size(), 1, "AffineGrid requires at least transform input");
+        CV_CheckGE((int)inputs.size(), 2, "AffineGrid requires two inputs: theta and size");
 
         const MatShape thetaShape = inputs[0];
         CV_CheckGE((int)thetaShape.size(), 3, "theta must be at least 3D [N, r, c]");
@@ -43,40 +188,13 @@ public:
         const bool is3d = (r == 3);
 
         MatShape outShape;
-        if ((int)inputs.size() >= 2) {
-            const MatShape sizeShape = inputs[1];
-            CV_CheckTrue(sizeShape.size() == 1, "size input must be 1D tensor");
-            const int dims = (int)sizeShape[0];
-            CV_CheckTrue(dims == (is3d ? 5 : 4), "size input must have 4 (2D) or 5 (3D) elements");
-            MatShape resolved = is3d ? MatShape{N, -1, -1, -1, 3} : MatShape{N, -1, -1, 2};
-            Net::Impl* netimpl_ = getNetImpl(this);
-            if (netimpl_) {
-                try {
-                    Mat sz = netimpl_->argTensor(this->inputs[1]);
-                    if (!sz.empty()) {
-                        if (!is3d) {
-                            int H = -1, W = -1;
-                            if (sz.depth() == CV_64S) { H = (int)sz.at<int64_t>(2); W = (int)sz.at<int64_t>(3); }
-                            else if (sz.depth() == CV_32S) { H = sz.at<int32_t>(2); W = sz.at<int32_t>(3); }
-                            if (H > 0 && W > 0) resolved = MatShape{N, H, W, 2};
-                        } else {
-                            int D = -1, H = -1, W = -1;
-                            if (sz.depth() == CV_64S) { D = (int)sz.at<int64_t>(2); H = (int)sz.at<int64_t>(3); W = (int)sz.at<int64_t>(4); }
-                            else if (sz.depth() == CV_32S) { D = sz.at<int32_t>(2); H = sz.at<int32_t>(3); W = sz.at<int32_t>(4); }
-                            if (D > 0 && H > 0 && W > 0) resolved = MatShape{N, D, H, W, 3};
-                        }
-                    }
-                } catch (const cv::Exception& e) {
-                    CV_Error(cv::Error::StsError, cv::format("DNN/AffineGrid: failed to resolve output shape from 'size' tensor: %s", e.what()));
-                }
-            }
-            outShape = resolved;
-        } else {
-            if (is3d)
-                outShape = MatShape{N, -1, -1, -1, 3};
-            else
-                outShape = MatShape{N, -1, -1, 2};
-        }
+        const MatShape sizeShape = inputs[1];
+        CV_CheckTrue(sizeShape.size() == 1, "size input must be 1D tensor");
+        const int dims = (int)sizeShape[0];
+        CV_CheckTrue(dims == (is3d ? 5 : 4), "size input must have 4 (2D) or 5 (3D) elements");
+        int D, H, W;
+        resolveSizeAndShape(N, is3d, /*explicitSz*/nullptr, outShape, D, H, W);
+
         outputs.assign(1, outShape);
         return false;
     }
@@ -85,7 +203,7 @@ public:
     {
         Net::Impl* netimpl_ = getNetImpl(this);
         if (!netimpl_) return true;
-        if (this->inputs.size() < 2) return true;
+        CV_CheckGE((int)this->inputs.size(), 2, "AffineGrid requires two inputs: theta and size");
 
         if (netimpl_->isConstArg(this->inputs[1])) return false;
         try {
@@ -102,14 +220,12 @@ public:
                   std::vector<MatType>& outputs,
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckGE((int)inputs.size(), 1, "");
+        CV_CheckGE((int)inputs.size(), 2, "AffineGrid requires two inputs: theta and size");
         const bool allow_fp16 = (preferableTarget == DNN_TARGET_OPENCL_FP16 || preferableTarget == DNN_TARGET_CPU_FP16);
         const int thetaType = inputs[0];
         const bool is_float_ok = thetaType == CV_32F || thetaType == CV_64F || thetaType == CV_16BF || (allow_fp16 && thetaType == CV_16F) || thetaType == CV_16F;
         CV_CheckType(thetaType, is_float_ok, "AffineGrid: theta must be a floating tensor");
-
-        if (inputs.size() >= 2)
-            CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
+        CV_CheckType(inputs[1], inputs[1] == CV_64S || inputs[1] == CV_32S, "");
 
         outputs.assign(std::max(1, requiredOutputs), CV_32F);
         internals.assign(requiredInternals, CV_32F);
@@ -117,62 +233,50 @@ public:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
+        auto inKind = inputs_arr.kind();
+        auto outKind = outputs_arr.kind();
+        CV_Assert(inKind == _InputArray::STD_VECTOR_MAT || inKind == _InputArray::STD_VECTOR_UMAT);
+        CV_Assert(outKind == _InputArray::STD_VECTOR_MAT || outKind == _InputArray::STD_VECTOR_UMAT);
 
-        const Mat& theta = inputs[0];
+        Mat theta, sz;
+        if (inKind == _InputArray::STD_VECTOR_MAT) {
+            theta = inputs_arr.getMat(0);
+            sz = inputs_arr.getMat(1);
+        } else {
+            UMat utheta = inputs_arr.getUMat(0);
+            UMat usz = inputs_arr.getUMat(1);
+            theta = utheta.getMat(ACCESS_READ);
+            sz = usz.getMat(ACCESS_READ);
+        }
+
         CV_CheckTrue(theta.dims == 3, "theta must be 3D [N, r, c]");
         const int N = theta.size[0];
         const int r = theta.size[1];
         const bool is3d = (r == 3);
 
         int D = 1, H = 0, W = 0;
-        if ((int)inputs.size() >= 2) {
-            Mat sz = inputs[1];
-            CV_CheckTrue(sz.total() == (size_t)(is3d ? 5 : 4), "size input must have 4 (2D) or 5 (3D) elements");
-            if (is3d) {
-                if (sz.depth() == CV_64S) {
-                    D = (int)sz.at<int64_t>(2);
-                    H = (int)sz.at<int64_t>(3);
-                    W = (int)sz.at<int64_t>(4);
-                } else if (sz.depth() == CV_32S) {
-                    D = (int)sz.at<int32_t>(2);
-                    H = (int)sz.at<int32_t>(3);
-                    W = (int)sz.at<int32_t>(4);
-                } else {
-                    CV_CheckType(sz.depth(), sz.depth() == CV_64S || sz.depth() == CV_32S, "");
-                }
-            } else {
-                if (sz.depth() == CV_64S) {
-                    H = (int)sz.at<int64_t>(2);
-                    W = (int)sz.at<int64_t>(3);
-                } else if (sz.depth() == CV_32S) {
-                    H = (int)sz.at<int32_t>(2);
-                    W = (int)sz.at<int32_t>(3);
-                } else {
-                    CV_CheckType(sz.depth(), sz.depth() == CV_64S || sz.depth() == CV_32S, "");
-                }
-            }
-        } else {
-            const Mat& out = outputs[0];
-            CV_CheckTrue(out.dims >= 3, "output must be preallocated with proper shape when size input is absent");
-            if (is3d) {
-                CV_CheckTrue(out.dims == 5, "3D grid must be [N, D, H, W, 3]");
-                D = out.size[1]; H = out.size[2]; W = out.size[3];
-            } else {
-                CV_CheckTrue(out.dims == 4, "2D grid must be [N, H, W, 2]");
-                H = out.size[1]; W = out.size[2];
-            }
-        }
+        MatShape dummy;
+        resolveSizeAndShape(N, is3d, &sz, dummy, D, H, W);
+
         CV_CheckGT(H, 0, "H must be > 0");
         CV_CheckGT(W, 0, "W must be > 0");
         if (is3d) CV_CheckGT(D, 0, "D must be > 0");
 
         std::vector<int> outShape = is3d ? std::vector<int>{N, D, H, W, 3}
                                          : std::vector<int>{N, H, W, 2};
-        Mat& grid = outputs[0];
-        grid.create((int)outShape.size(), outShape.data(), CV_32F);
+        MatShape fitShape(outShape.begin(), outShape.end());
+        Mat grid;
+        if (outKind == _InputArray::STD_VECTOR_MAT) {
+            std::vector<Mat>& outs = outputs_arr.getMatVecRef();
+            outs.resize(1);
+            outs[0].fit(fitShape, CV_32F);
+            grid = outs[0];
+        } else {
+            std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
+            uouts.resize(1);
+            uouts[0].fit(fitShape, CV_32F);
+            grid = uouts[0].getMat(ACCESS_WRITE);
+        }
 
         auto computeLinspace = [&](int len, float& scale, float& delta){
             if (align_corners) {
@@ -189,51 +293,25 @@ public:
         computeLinspace(H, ys, yd);
         if (is3d) computeLinspace(D, zs, zd);
 
-        Mat thetaF;
-        if (theta.depth() == CV_32F) thetaF = theta; else theta.convertTo(thetaF, CV_32F);
-
-        parallel_for_(Range(0, N), [&](const Range& range){
-            for (int n = range.start; n < range.end; n++) {
-                int i0[3] = {n, 0, 0};
-                int i1[3] = {n, 1, 0};
-                int i2[3] = {n, 2, 0};
-                const float* T0 = thetaF.ptr<float>(i0);
-                const float* T1 = thetaF.ptr<float>(i1);
-                const float* T2 = is3d ? thetaF.ptr<float>(i2) : nullptr;
-                if (!is3d) {
-                    for (int y = 0; y < H; y++) {
-                        float ny = yd + ys * y;
-                        float base0 = T0[1]*ny + T0[2];
-                        float base1 = T1[1]*ny + T1[2];
-                        float* out = grid.ptr<float>(n, y, 0);
-                        for (int x = 0; x < W; x++) {
-                            float nx = xd + xs * x;
-                            out[2*x + 0] = T0[0]*nx + base0;
-                            out[2*x + 1] = T1[0]*nx + base1;
-                        }
-                    }
-                } else {
-                    for (int zh = 0; zh < D * H; zh++) {
-                        int z = zh / H;
-                        int y = zh - z * H;
-                        float ny = yd + ys * y;
-                        float nz = zd + zs * z;
-                        float base0 = T0[1]*ny + T0[2]*nz + T0[3];
-                        float base1 = T1[1]*ny + T1[2]*nz + T1[3];
-                        float base2 = T2[1]*ny + T2[2]*nz + T2[3];
-                        int idx[5] = {n, z, y, 0, 0};
-                        float* out = grid.ptr<float>(idx);
-                        for (int x = 0; x < W; x++) {
-                            float nx = xd + xs * x;
-                            int o = 3*x;
-                            out[o + 0] = T0[0]*nx + base0;
-                            out[o + 1] = T1[0]*nx + base1;
-                            out[o + 2] = T2[0]*nx + base2;
-                        }
-                    }
-                }
+        int depth = theta.depth();
+        if (!is3d){
+            switch (depth) {
+                case CV_32F: computeGrid2D<float>(theta, grid, N, H, W, xs, xd, ys, yd); break;
+                case CV_64F: computeGrid2D<double>(theta, grid, N, H, W, xs, xd, ys, yd); break;
+                case CV_16F: computeGrid2D<hfloat>(theta, grid, N, H, W, xs, xd, ys, yd); break;
+                case CV_16BF: computeGrid2D<bfloat>(theta, grid, N, H, W, xs, xd, ys, yd); break;
+                default: CV_Error(cv::Error::BadDepth, "AffineGrid: unsupported theta depth");
             }
-        });
+        }
+        else{
+            switch (depth) {
+                case CV_32F: computeGrid3D<float>(theta, grid, N, D, H, W, xs, xd, ys, yd, zs, zd); break;
+                case CV_64F: computeGrid3D<double>(theta, grid, N, D, H, W, xs, xd, ys, yd, zs, zd); break;
+                case CV_16F: computeGrid3D<hfloat>(theta, grid, N, D, H, W, xs, xd, ys, yd, zs, zd); break;
+                case CV_16BF: computeGrid3D<bfloat>(theta, grid, N, D, H, W, xs, xd, ys, yd, zs, zd); break;
+                default: CV_Error(cv::Error::BadDepth, "AffineGrid: unsupported theta depth");
+            }
+        }
     }
 };
 

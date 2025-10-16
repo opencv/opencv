@@ -566,6 +566,7 @@ CV__DNN_INLINE_NS_BEGIN
     class CV_EXPORTS AffineGridLayer : public Layer
     {
     public:
+        bool align_corners;
         static Ptr<AffineGridLayer> create(const LayerParams& params);
     };
 
