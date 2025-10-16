@@ -22,7 +22,7 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2_Tokens) {
     std::vector<int> expected = {31373, 995};
     EXPECT_EQ(tokens, expected);
 }
- 
+
 TEST(Tokenizer_BPE, Tokenizer_GPT4) {
     std::string gpt4_model = _tf("gpt4/config.json");
     Tokenizer tok = Tokenizer::load(gpt4_model);
@@ -46,7 +46,8 @@ TEST(Tokenizer_BPE, Tokenizer_GPT2) {
     auto txt = tok.decode(ids);
     EXPECT_EQ(txt, "hello world");
 
-    auto ids_j = tok.encode("长字符");
+    // "Long characters" in Chinese
+    auto ids_j = tok.encode("\xe9\x95\xbf\xe5\xad\x97\xe7\xac\xa6");
     std::string word = tok.decode(ids_j);
     std::cout << word << std::endl;
 }
