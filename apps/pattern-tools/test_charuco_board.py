@@ -13,7 +13,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         try:
             import cairosvg
         except:
-            raise self.skipTest("libraies svglib and reportlab not found")
+            raise self.skipTest("cairosvg library was not found")
         else:
             cols = 3
             rows = 5
@@ -72,7 +72,7 @@ class aruco_objdetect_test(NewOpenCVTests):
         try:
             import cairosvg
         except:
-            raise self.skipTest("libraies svglib and reportlab not found")
+            raise self.skipTest("cairosvg library was not found")
         else:
             cols = 3
             rows = 5
