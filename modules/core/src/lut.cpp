@@ -6,6 +6,7 @@
 #include "precomp.hpp"
 #include "opencl_kernels_core.hpp"
 #include "convert.hpp"
+#include <sys/types.h>
 
 /****************************************************************************************\
 *                                    LUT Transform                                       *
@@ -99,24 +100,19 @@ static bool ocl_LUT(InputArray _src, InputArray _lut, OutputArray _dst)
 class LUTParallelBody : public ParallelLoopBody
 {
 public:
-    bool* ok;
     const Mat& src_;
     const Mat& lut_;
     Mat& dst_;
 
-    LUTFunc func;
+    LUTFunc func_;
 
-    LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, bool* _ok)
-        : ok(_ok), src_(src), lut_(lut), dst_(dst)
+    LUTParallelBody(const Mat& src, const Mat& lut, Mat& dst, LUTFunc func)
+        : src_(src), lut_(lut), dst_(dst), func_(func)
     {
-        func = getLUTFunc(src_.depth(), dst_.depth());
-        *ok = (func != nullptr);
     }
 
     void operator()( const cv::Range& range ) const CV_OVERRIDE
     {
-        CV_Assert(*ok);
-
         const int row0 = range.start;
         const int row1 = range.end;
 
@@ -132,7 +128,7 @@ public:
         int len = (int)it.size;
 
         for( size_t i = 0; i < it.nplanes; i++, ++it )
-            func(ptrs[0], lut_.ptr(), ptrs[1], len, cn, lutcn);
+            func_(ptrs[0], lut_.ptr(), ptrs[1], len, cn, lutcn);
     }
 private:
     LUTParallelBody(const LUTParallelBody&);
@@ -151,8 +147,7 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
 
     CV_Assert( (lutcn == cn || lutcn == 1) && _lut.isContinuous() &&
         (
-            ((lut_size == 256) && ((depth == CV_8U)||(depth == CV_8S)))
-            ||
+            ((lut_size == 256) && ((depth == CV_8U)||(depth == CV_8S))) ||
             ((lut_size == 65536) && ((depth == CV_16U)||(depth == CV_16S)))
         )
     );
@@ -171,29 +166,24 @@ void cv::LUT( InputArray _src, InputArray _lut, OutputArray _dst )
     }
     else
     {
-        CV_CheckEQ(lut_size, 65536UL, "Unsupported LUT table size");
-        CALL_HAL(LUT16, cv_hal_lut16, src.data, src.step, src.type(), lut.data,
+        CALL_HAL(LUT16, cv_hal_lut16, src.ptr<ushort>(), src.step, src.type(), lut.ptr<ushort>(),
                  lut.elemSize1(), lutcn, dst.data, dst.step, src.cols, src.rows);
-    }
-
-    if (_src.dims() <= 2)
-    {
-        bool ok = false;
-        LUTParallelBody body(src, lut, dst, &ok);
-        if (ok)
-        {
-            Range all(0, dst.rows);
-            if (dst.total() >= (size_t)(1<<18))
-                parallel_for_(all, body, (double)std::max((size_t)1, dst.total()>>16));
-            else
-                body(all);
-            if (ok)
-                return;
-        }
     }
 
     const LUTFunc func = getLUTFunc(src.depth(), dst.depth());
     CV_Assert( func != nullptr );
+
+    if (_src.dims() <= 2)
+    {
+        LUTParallelBody body(src, lut, dst, func);
+        Range all(0, dst.rows);
+        if (dst.total() >= (size_t)(1<<18))
+            parallel_for_(all, body, (double)std::max((size_t)1, dst.total()>>16));
+        else
+            body(all);
+
+        return;
+    }
 
     const Mat* arrays[] = {&src, &dst, 0};
     uchar* ptrs[2] = {};
