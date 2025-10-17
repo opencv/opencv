@@ -526,7 +526,7 @@ inline static std::string _opencv_ffmpeg_get_error_string(int error_code)
 
 struct CvCapture_FFMPEG
 {
-    bool open(const char* filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
+    bool open(const char* filename, int index, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
     void close();
 
     double getProperty(int) const;
@@ -1043,7 +1043,7 @@ static bool isThreadSafe() {
     return threadSafe;
 }
 
-bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
+bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params)
 {
     const bool threadSafe = isThreadSafe();
     InternalFFMpegRegister::init(threadSafe);
@@ -1145,16 +1145,6 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
         }
     }
 
-#if USE_AV_INTERRUPT_CALLBACK
-    /* interrupt callback */
-    interrupt_metadata.timeout_after_ms = open_timeout;
-    get_monotonic_time(&interrupt_metadata.value);
-
-    ic = avformat_alloc_context();
-    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
-    ic->interrupt_callback.opaque = &interrupt_metadata;
-#endif
-
     std::string options = utils::getConfigurationParameterString("OPENCV_FFMPEG_CAPTURE_OPTIONS");
     if (options.empty())
     {
@@ -1180,7 +1170,53 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
       input_format = av_find_input_format(entry->value);
     }
 
-    if (!_filename)
+    AVDeviceInfoList* device_list = nullptr;
+    if (index >= 0)
+    {
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+        entry = av_dict_get(dict, "f", NULL, 0);
+        const char* backend = nullptr;
+        if (entry)
+        {
+            backend = entry->value;
+        }
+        else
+        {
+#ifdef __linux__
+            backend = "v4l2";
+#endif
+#ifdef _WIN32
+            backend = "dshow";
+#endif
+#ifdef __APPLE__
+            backend = "avfoundation";
+#endif
+        }
+        avdevice_list_input_sources(nullptr, backend, nullptr, &device_list);
+        if (!device_list)
+        {
+            CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/FFMPEG: Failed list devices for backend " << backend);
+            return false;
+        }
+        CV_CheckLT(index, device_list->nb_devices, "VIDEOIO/FFMPEG: Camera index out of range");
+        _filename = device_list->devices[index]->device_name;
+#else
+        CV_LOG_ONCE_WARNING(NULL, "VIDEOIO/FFMPEG: OpenCV should be configured with libavdevice to open a camera device");
+        return false;
+#endif
+    }
+
+#if USE_AV_INTERRUPT_CALLBACK
+    /* interrupt callback */
+    interrupt_metadata.timeout_after_ms = open_timeout;
+    get_monotonic_time(&interrupt_metadata.value);
+
+    ic = avformat_alloc_context();
+    ic->interrupt_callback.callback = _opencv_ffmpeg_interrupt_callback;
+    ic->interrupt_callback.opaque = &interrupt_metadata;
+#endif
+
+    if (stream)
     {
         size_t avio_ctx_buffer_size = 4096;
         uint8_t* avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
@@ -1231,6 +1267,13 @@ bool CvCapture_FFMPEG::open(const char* _filename, const Ptr<IStreamReader>& str
         ic->pb = avio_context;
     }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
+    if (device_list)
+    {
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
+        avdevice_free_list_devices(&device_list);
+        device_list = nullptr;
+#endif
+    }
 
     if (err < 0)
     {
@@ -3447,7 +3490,22 @@ CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(const char* filename, con
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(filename, nullptr, params))
+    if (capture->open(filename, -1, nullptr, params))
+        return capture;
+
+    capture->close();
+    delete capture;
+    return 0;
+}
+
+static
+CvCapture_FFMPEG* cvCreateFileCaptureWithParams_FFMPEG(int index, const VideoCaptureParameters& params)
+{
+    CvCapture_FFMPEG* capture = new CvCapture_FFMPEG();
+    if (!capture)
+        return 0;
+    capture->init();
+    if (capture->open(nullptr, index, nullptr, params))
         return capture;
 
     capture->close();
@@ -3462,7 +3520,7 @@ CvCapture_FFMPEG* cvCreateStreamCaptureWithParams_FFMPEG(const Ptr<IStreamReader
     if (!capture)
         return 0;
     capture->init();
-    if (capture->open(nullptr, stream, params))
+    if (capture->open(nullptr, -1, stream, params))
         return capture;
 
     capture->close();
