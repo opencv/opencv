@@ -1055,6 +1055,63 @@ TEST(ffmpeg_cap_properties, set_pos_get_msec)
     EXPECT_EQ(cap.get(CAP_PROP_POS_MSEC), 0.0);
 }
 
+// Test that seeking twice to the same frame in videos with negative DTS
+// does not result in negative position or timestamp values
+// related issue: https://github.com/opencv/opencv/issues/27819
+TEST(videoio_ffmpeg, seek_with_negative_dts)
+{
+    if (!videoio_registry::hasBackend(CAP_FFMPEG))
+        throw SkipTestException("FFmpeg backend was not found");
+
+    const std::string filename = findDataFile("video/negdts_h264.mp4");
+    VideoCapture cap(filename, CAP_FFMPEG);
+
+    if (!cap.isOpened())
+        throw SkipTestException("Video stream is not supported");
+
+    // after open, a single grab() should not yield negative POS_MSEC.
+    ASSERT_TRUE(cap.grab());
+    EXPECT_GE(cap.get(CAP_PROP_POS_MSEC), 0.0) << "Negative ts immediately after open+grab()";
+
+    ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
+    (void)cap.get(CAP_PROP_POS_FRAMES);
+
+    const int framesToProbe[] = {2, 3, 4, 5};
+
+    for (int f : framesToProbe)
+    {
+        // Reset to frame 0
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, 0));
+        cap.get(CAP_PROP_POS_FRAMES);
+
+        // Seek to target frame
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, f));
+        const double posAfterFirstSeek = cap.get(CAP_PROP_POS_FRAMES);
+
+        // Seek to the same frame again
+        ASSERT_TRUE(cap.set(CAP_PROP_POS_FRAMES, f));
+        const double posAfterSecondSeek = cap.get(CAP_PROP_POS_FRAMES);
+        const double tsAfterSecondSeek = cap.get(CAP_PROP_POS_MSEC);
+
+        EXPECT_GE(posAfterSecondSeek, 0)
+            << "Frame index became negative after second seek to frame " << f
+            << " (first seek gave " << posAfterFirstSeek << ")";
+        EXPECT_GE(tsAfterSecondSeek, 0.0)
+            << "Timestamp became negative after second seek to frame " << f;
+
+        // Per-iteration decode check: grab() + ts non-negative
+        ASSERT_TRUE(cap.grab());
+        EXPECT_GE(cap.get(CAP_PROP_POS_MSEC), 0.0) << "Negative timestamp after grab() at frame " << f;
+
+        // Verify that reading a frame works and position advances
+        Mat frame;
+        ASSERT_TRUE(cap.read(frame));
+        ASSERT_FALSE(frame.empty());
+        EXPECT_GE(cap.get(CAP_PROP_POS_FRAMES), f);
+    }
+}
+
 #endif // WIN32
+
 
 }} // namespace
