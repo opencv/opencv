@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-"""gen_pattern.py
+"""generate_pattern.py
 Usage example:
-python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 216 -h 279
+python generate_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 216 -h 279
 -o, --output - output file (default out.svg)
 -r, --rows - pattern rows (default 11)
 -c, --columns - pattern columns (default 8)
@@ -16,6 +16,7 @@ python gen_pattern.py -o out.svg -r 11 -c 8 -T circles -s 20.0 -R 5.0 -u mm -w 2
 -m, --markers - list of cells with markers for the radon checkerboard
 -p, --aruco_marker_size - aruco markers size for ChAruco pattern (default 10.0)
 -f, --dict_file - file name of custom aruco dictionary for ChAruco pattern
+-do, --dict_offset - index of the first ArUco index used
 -H, --help - show help
 """
 
@@ -27,7 +28,7 @@ from svgfig import *
 
 
 class PatternMaker:
-    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file):
+    def __init__(self, cols, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file, dict_offset):
         self.cols = cols
         self.rows = rows
         self.output = output
@@ -39,6 +40,7 @@ class PatternMaker:
         self.markers = markers
         self.aruco_marker_size = aruco_marker_size #for charuco boards only
         self.dict_file = dict_file
+        self.dict_offset = dict_offset
 
         self.g = SVG("g")  # the svg group container
 
@@ -188,7 +190,7 @@ class PatternMaker:
         ch_ar_border = (self.square_size - self.aruco_marker_size)/2
         if ch_ar_border < side*0.7:
             print("Marker border {} is less than 70% of ArUco pin size {}. Please increase --square_size or decrease --marker_size for stable board detection".format(ch_ar_border, int(side)))
-        marker_id = 0
+        marker_id = self.dict_offset
         for y in range(0, self.rows):
             for x in range(0, self.cols):
 
@@ -205,12 +207,36 @@ class PatternMaker:
                     square = SVG("rect", x=x_pos+ch_ar_border, y=y_pos+ch_ar_border, width=self.aruco_marker_size,
                                              height=self.aruco_marker_size, fill="black", stroke="none")
                     self.g.append(square)
+
+                    # BUG: https://github.com/opencv/opencv/issues/27871
+                    # The loop bellow merges white squares horizontally and vertically to exclude visible grid on the final pattern
                     for x_ in range(len(img_mark[0])):
-                        for y_ in range(len(img_mark)):
-                            if (img_mark[y_][x_] != 0):
-                                square = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_)*side, width=side,
-                                             height=side, fill="white", stroke="white", stroke_width = spacing*0.01)
-                                self.g.append(square)
+                        y_ = 0
+                        while y_ < len(img_mark):
+                            y_start = y_
+                            while y_ < len(img_mark) and img_mark[y_][x_] != 0:
+                                y_ += 1
+
+                            if y_ > y_start:
+                                rect = SVG("rect", x=x_pos+ch_ar_border+(x_)*side, y=y_pos+ch_ar_border+(y_start)*side, width=side,
+                                           height=(y_ - y_start)*side, fill="white", stroke="none")
+                                self.g.append(rect)
+
+                            y_ += 1
+
+                    for y_ in range(len(img_mark)):
+                        x_ = 0
+                        while x_ < len(img_mark[0]):
+                            x_start = x_
+                            while x_ < len(img_mark[0]) and img_mark[y_][x_] != 0:
+                                x_ += 1
+
+                            if x_ > x_start:
+                                rect = SVG("rect", x=x_pos+ch_ar_border+(x_start)*side, y=y_pos+ch_ar_border+(y_)*side, width=(x_-x_start)*side,
+                                           height=side, fill="white", stroke="none")
+                                self.g.append(rect)
+
+                            x_ += 1
 
     def save(self):
         c = canvas(self.g, width="%d%s" % (self.width, self.units), height="%d%s" % (self.height, self.units),
@@ -248,6 +274,8 @@ def main():
                         action="store", dest="aruco_marker_size", type=float)
     parser.add_argument("-f", "--dict_file", help="file name of custom aruco dictionary for ChAruco pattern", default="DICT_ARUCO_ORIGINAL.json",
                         action="store", dest="dict_file", type=str)
+    parser.add_argument("-do", "--dict_offset", help="index of the first ArUco index used", default=0,
+                        action="store", dest="dict_offset", type=int)
     args = parser.parse_args()
 
     show_help = args.show_help
@@ -263,6 +291,7 @@ def main():
     radius_rate = args.radius_rate
     aruco_marker_size = args.aruco_marker_size
     dict_file = args.dict_file
+    dict_offset = args.dict_offset
 
     if 'page_width' and 'page_height' in args:
         page_width = args.page_width
@@ -288,7 +317,7 @@ def main():
     if p_type == "charuco_board" and aruco_marker_size >= square_size:
         raise ValueError("ArUco markers size must be smaller than square size")
 
-    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file)
+    pm = PatternMaker(columns, rows, output, units, square_size, radius_rate, page_width, page_height, markers, aruco_marker_size, dict_file, dict_offset)
     # dict for easy lookup of pattern type
     mp = {"circles": pm.make_circles_pattern, "acircles": pm.make_acircles_pattern,
           "checkerboard": pm.make_checkerboard_pattern, "radon_checkerboard": pm.make_radon_checkerboard_pattern,

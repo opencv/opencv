@@ -389,33 +389,43 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         channels = 3;
     }
 
-    uint8_t *out = NULL;
+    uint8_t *encoder_out = NULL;
     size_t size = 0;
     if (comp_lossless)
     {
         if (channels == 3)
         {
-            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &encoder_out);
         }
         else if (channels == 4)
         {
-            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &encoder_out);
         }
     }
     else
     {
         if (channels == 3)
         {
-            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
         }
         else if (channels == 4)
         {
-            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
         }
     }
 
-    WebPData finalData = { out, size };
-    if (!m_metadata.empty()) {
+#if WEBP_DECODER_ABI_VERSION >= 0x0206
+    Ptr<uint8_t> out_cleaner(encoder_out, WebPFree);
+#else
+    Ptr<uint8_t> out_cleaner(encoder_out, free);
+#endif
+
+    uint8_t *out = encoder_out;
+    uint8_t *muxer_out = nullptr;
+
+    if (!m_metadata.empty())
+    {
+        WebPData muxerData;
 
         WebPMux* mux = WebPMuxNew();
         WebPData imageData = { out, size };
@@ -442,8 +452,10 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
             WebPMuxSetChunk(mux, "ICCP", &metadata, 1);
         }
 
-        if (WebPMuxAssemble(mux, &finalData) == WEBP_MUX_OK) {
-            size = finalData.size;
+        if (WebPMuxAssemble(mux, &muxerData) == WEBP_MUX_OK) {
+            size = muxerData.size;
+            muxer_out = const_cast<uint8_t*>(muxerData.bytes);
+            out = muxer_out;
             WebPMuxDelete(mux);
         }
         else {
@@ -453,9 +465,9 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     }
 
 #if WEBP_DECODER_ABI_VERSION >= 0x0206
-    Ptr<uint8_t> out_cleaner(out, WebPFree);
+    Ptr<const uint8_t> muxer_cleaner(muxer_out, WebPFree);
 #else
-    Ptr<uint8_t> out_cleaner(out, free);
+    Ptr<const uint8_t> muxer_cleaner(muxer_out, free);
 #endif
 
     CV_Assert(size > 0);
@@ -463,7 +475,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     if (m_buf)
     {
         m_buf->resize(size);
-        memcpy(&(*m_buf)[0], finalData.bytes, size);
+        memcpy(&(*m_buf)[0], out, size);
         bytes_written = size;
     }
     else
@@ -471,7 +483,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         FILE *fd = fopen(m_filename.c_str(), "wb");
         if (fd != NULL)
         {
-            bytes_written = fwrite(finalData.bytes, sizeof(uint8_t), size, fd);
+            bytes_written = fwrite(out, sizeof(uint8_t), size, fd);
             if (size != bytes_written)
             {
                 CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, size));
