@@ -8,8 +8,8 @@
 Loads YAMLS from calibration.cpp sample code and displays an interactive 3d plot using meshlab and matplotlib
 
 usage:
-    python3 multicam_vis.py cam1.yml
-    python3 multicam_vis.py cam1.yml cam2.yml --view board --export scene
+    python3 visualize_mono_calibration.py cam1.yml
+    python3 visualize_mono_calibration.py cam1.yml cam2.yml --view board --export scene
 
 Arguments:
     calib_files       YAML files with calibration data
@@ -284,6 +284,7 @@ def plot_scene_board_view(
 def export_scene_to_obj_multi(
     base_name: str,
     calibs: List[Dict[str, object]],
+    board_size: Tuple[int, int],
     view: str = "camera",
     max_frustums_per_cam: Optional[int] = None,
 ) -> None:
@@ -305,16 +306,13 @@ def export_scene_to_obj_multi(
             rvec = row[:3]
             tvec = row[3:]
             R, _ = cv2.Rodrigues(rvec)
-            ux = np.unique(grid[:, 0])
-            uy = np.unique(grid[:, 1])
-            nx, ny = ux.size, uy.size
             pts_h = (R @ grid.T).T + tvec.reshape(1, 3)
-            world = pts_h.reshape((nx, ny, 3), order="F")
+            world = pts_h.reshape((board_size[0], board_size[1], 3), order="F")
             corners = [
                 world[0, 0],
-                world[nx - 1, 0],
-                world[nx - 1, ny - 1],
-                world[0, ny - 1],
+                world[board_size[0] - 1, 0],
+                world[board_size[0] - 1, board_size[1] - 1],
+                world[0, board_size[1] - 1],
             ]
             v0 = len(vertices)
             vertices.extend([tuple(v.tolist()) for v in corners])
@@ -491,6 +489,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         export_scene_to_obj_multi(
             args.export,
             calibs,
+            board_size,
             view=view,
             max_frustums_per_cam=args.max_frustums,
         )
