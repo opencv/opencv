@@ -160,18 +160,9 @@ if(PARALLEL_ENABLE_PLUGINS)
   endif()
 endif()
 
-set(CORE_CUDA_LIBS "")
 if(HAVE_CUDA)
   if(NOT HAVE_opencv_cudev)
     message(FATAL_ERROR "CUDA: OpenCV requires enabled 'cudev' module from 'opencv_contrib' repository: https://github.com/opencv/opencv_contrib")
-  endif()
-  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
-    ocv_module_include_directories(${CUDAToolkit_INCLUDE_DIRS})
-    list(APPEND CORE_CUDA_LIBS "CUDA::cudart${CUDA_LIB_EXT}")
-    # the first class language does not have emulation
-  else()
-    # use CUDA_LIBRARIES from findCUDA.cmake to also support CUDA_BUILD_EMULATION
-    list(APPEND CORE_CUDA_LIBS "${CUDA_LIBRARIES}")
   endif()
   ocv_warnings_disable(CMAKE_CXX_FLAGS -Wundef -Wenum-compare -Wunused-function -Wshadow)
 endif()
@@ -185,8 +176,13 @@ ocv_target_link_libraries(${the_module} PRIVATE
     "${LAPACK_LIBRARIES}" "${CPUFEATURES_LIBRARIES}" "${HALIDE_LIBRARIES}"
     "${ITT_LIBRARIES}"
     "${OPENCV_HAL_LINKER_LIBS}"
-    "${CORE_CUDA_LIBS}"
 )
+if(HAVE_CUDA AND ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+  # the link libraries can only be add after ocv_create_module
+  ocv_target_link_libraries(${the_module} PUBLIC "CUDA::cudart${CUDA_LIB_EXT}")
+  # the first class language does not have emulation
+endif()
+
 
 if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
