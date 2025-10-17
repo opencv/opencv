@@ -51,10 +51,12 @@
 #include "opencv2/core/cuda.hpp"
 #include "opencv2/cudev.hpp"
 #include "opencv2/core/cuda/utility.hpp"
+#include "opencv2/core/cuda/cuda_compat.hpp"
 
 using namespace cv;
 using namespace cv::cuda;
 using namespace cv::cudev;
+using cv::cuda::device::compat::double4Compat;
 
 device::ThrustAllocator::~ThrustAllocator()
 {
@@ -341,7 +343,7 @@ void cv::cuda::GpuMat::copyTo(OutputArray _dst, InputArray _mask, Stream& stream
         {0,0,0,0},
         {0,0,0,0},
         {0,0,0,0},
-        {copyWithMask<double>, copyWithMask<double2>, copyWithMask<double3>, copyWithMask<double4>}
+        {copyWithMask<double>, copyWithMask<double2>, copyWithMask<double3>, copyWithMask<double4Compat>}
     };
 
     if (mask.channels() == channels())
@@ -424,7 +426,7 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar value, Stream& stream)
         {setToWithOutMask<short>,setToWithOutMask<short2>,setToWithOutMask<short3>,setToWithOutMask<short4>},
         {setToWithOutMask<int>,setToWithOutMask<int2>,setToWithOutMask<int3>,setToWithOutMask<int4>},
         {setToWithOutMask<float>,setToWithOutMask<float2>,setToWithOutMask<float3>,setToWithOutMask<float4>},
-        {setToWithOutMask<double>,setToWithOutMask<double2>,setToWithOutMask<double3>,setToWithOutMask<double4>}
+        {setToWithOutMask<double>,setToWithOutMask<double2>,setToWithOutMask<double3>,setToWithOutMask<double4Compat>}
     };
 
     funcs[depth()][channels() - 1](*this, value, stream);
@@ -455,7 +457,7 @@ GpuMat& cv::cuda::GpuMat::setTo(Scalar value, InputArray _mask, Stream& stream)
         {setToWithMask<short>,setToWithMask<short2>,setToWithMask<short3>,setToWithMask<short4>},
         {setToWithMask<int>,setToWithMask<int2>,setToWithMask<int3>,setToWithMask<int4>},
         {setToWithMask<float>,setToWithMask<float2>,setToWithMask<float3>,setToWithMask<float4>},
-        {setToWithMask<double>,setToWithMask<double2>,setToWithMask<double3>,setToWithMask<double4>}
+        {setToWithMask<double>,setToWithMask<double2>,setToWithMask<double3>,setToWithMask<double4Compat>}
     };
 
     funcs[depth()][channels() - 1](*this, mask, value, stream);

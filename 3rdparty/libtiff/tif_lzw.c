@@ -161,14 +161,13 @@ typedef struct
 } LZWCodecState;
 
 #define LZWState(tif) ((LZWBaseState *)(tif)->tif_data)
-#define DecoderState(tif) ((LZWCodecState *)LZWState(tif))
-#define EncoderState(tif) ((LZWCodecState *)LZWState(tif))
+#define LZWDecoderState(tif) ((LZWCodecState *)LZWState(tif))
+#define LZWEncoderState(tif) ((LZWCodecState *)LZWState(tif))
 
 static int LZWDecode(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s);
 #ifdef LZW_COMPAT
 static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s);
 #endif
-static void cl_hash(LZWCodecState *);
 
 /*
  * LZW Decoder.
@@ -183,7 +182,7 @@ static int LZWFixupTags(TIFF *tif)
 static int LZWSetupDecode(TIFF *tif)
 {
     static const char module[] = "LZWSetupDecode";
-    LZWCodecState *sp = DecoderState(tif);
+    LZWCodecState *sp = LZWDecoderState(tif);
     int code;
 
     if (sp == NULL)
@@ -199,7 +198,7 @@ static int LZWSetupDecode(TIFF *tif)
             return (0);
         }
 
-        sp = DecoderState(tif);
+        sp = LZWDecoderState(tif);
         sp->dec_codetab = NULL;
         sp->dec_decode = NULL;
 
@@ -245,7 +244,7 @@ static int LZWSetupDecode(TIFF *tif)
 static int LZWPreDecode(TIFF *tif, uint16_t s)
 {
     static const char module[] = "LZWPreDecode";
-    LZWCodecState *sp = DecoderState(tif);
+    LZWCodecState *sp = LZWDecoderState(tif);
 
     (void)s;
     assert(sp != NULL);
@@ -329,10 +328,7 @@ static int LZWPreDecode(TIFF *tif, uint16_t s)
 #ifdef WORDS_BIGENDIAN
 #define GetNextData(nextdata, bp) memcpy(&nextdata, bp, sizeof(nextdata))
 #elif SIZEOF_WORDTYPE == 8
-#if defined(__GNUC__) && defined(__x86_64__)
-#define GetNextData(nextdata, bp)                                              \
-    nextdata = __builtin_bswap64(*(uint64_t *)(bp))
-#elif defined(_M_X64)
+#if defined(_M_X64)
 #define GetNextData(nextdata, bp) nextdata = _byteswap_uint64(*(uint64_t *)(bp))
 #elif defined(__GNUC__)
 #define GetNextData(nextdata, bp)                                              \
@@ -346,10 +342,7 @@ static int LZWPreDecode(TIFF *tif, uint16_t s)
                (((uint64_t)bp[6]) << 8) | (((uint64_t)bp[7]))
 #endif
 #elif SIZEOF_WORDTYPE == 4
-#if defined(__GNUC__) && defined(__i386__)
-#define GetNextData(nextdata, bp)                                              \
-    nextdata = __builtin_bswap32(*(uint32_t *)(bp))
-#elif defined(_M_X86)
+#if defined(_M_X86)
 #define GetNextData(nextdata, bp)                                              \
     nextdata = _byteswap_ulong(*(unsigned long *)(bp))
 #elif defined(__GNUC__)
@@ -409,7 +402,7 @@ static int LZWPreDecode(TIFF *tif, uint16_t s)
 static int LZWDecode(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
 {
     static const char module[] = "LZWDecode";
-    LZWCodecState *sp = DecoderState(tif);
+    LZWCodecState *sp = LZWDecoderState(tif);
     uint8_t *op = (uint8_t *)op0;
     tmsize_t occ = occ0;
     uint8_t *bp;
@@ -423,6 +416,7 @@ static int LZWDecode(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
 
     if (sp->read_error)
     {
+        memset(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module,
                       "LZWDecode: Scanline %" PRIu32 " cannot be read due to "
                       "previous error",
@@ -737,6 +731,8 @@ after_loop:
 
     if (occ > 0)
     {
+        memset(op, 0, (size_t)occ);
+        sp->read_error = 1;
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %" PRIu32 " (short %" PRIu64
                       " bytes)",
@@ -746,12 +742,14 @@ after_loop:
     return (1);
 
 no_eoi:
+    memset(op, 0, (size_t)occ);
     sp->read_error = 1;
     TIFFErrorExtR(tif, module,
                   "LZWDecode: Strip %" PRIu32 " not terminated with EOI code",
                   tif->tif_curstrip);
     return 0;
 error_code:
+    memset(op, 0, (size_t)occ);
     sp->read_error = 1;
     TIFFErrorExtR(tif, tif->tif_name, "Using code not yet in table");
     return 0;
@@ -800,7 +798,7 @@ error_code:
 static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
 {
     static const char module[] = "LZWDecodeCompat";
-    LZWCodecState *sp = DecoderState(tif);
+    LZWCodecState *sp = LZWDecoderState(tif);
     uint8_t *op = (uint8_t *)op0;
     tmsize_t occ = occ0;
     uint8_t *tp;
@@ -1019,6 +1017,10 @@ static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
 }
 #endif /* LZW_COMPAT */
 
+#ifndef LZW_READ_ONLY
+
+static void cl_hash(LZWCodecState *);
+
 /*
  * LZW Encoding.
  */
@@ -1026,7 +1028,7 @@ static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
 static int LZWSetupEncode(TIFF *tif)
 {
     static const char module[] = "LZWSetupEncode";
-    LZWCodecState *sp = EncoderState(tif);
+    LZWCodecState *sp = LZWEncoderState(tif);
 
     assert(sp != NULL);
     sp->enc_hashtab = (hash_t *)_TIFFmallocExt(tif, HSIZE * sizeof(hash_t));
@@ -1043,7 +1045,7 @@ static int LZWSetupEncode(TIFF *tif)
  */
 static int LZWPreEncode(TIFF *tif, uint16_t s)
 {
-    LZWCodecState *sp = EncoderState(tif);
+    LZWCodecState *sp = LZWEncoderState(tif);
 
     (void)s;
     assert(sp != NULL);
@@ -1114,7 +1116,7 @@ static int LZWPreEncode(TIFF *tif, uint16_t s)
  */
 static int LZWEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 {
-    register LZWCodecState *sp = EncoderState(tif);
+    register LZWCodecState *sp = LZWEncoderState(tif);
     register long fcode;
     register hash_t *hp;
     register int h, c;
@@ -1299,7 +1301,7 @@ static int LZWEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
  */
 static int LZWPostEncode(TIFF *tif)
 {
-    register LZWCodecState *sp = EncoderState(tif);
+    register LZWCodecState *sp = LZWEncoderState(tif);
     uint8_t *op = tif->tif_rawcp;
     long nextbits = sp->lzw_nextbits;
     WordType nextdata = sp->lzw_nextdata;
@@ -1375,17 +1377,19 @@ static void cl_hash(LZWCodecState *sp)
         hp->hash = -1;
 }
 
+#endif
+
 static void LZWCleanup(TIFF *tif)
 {
     (void)TIFFPredictorCleanup(tif);
 
-    assert(tif->tif_data != 0);
+    assert(tif->tif_data != NULL);
 
-    if (DecoderState(tif)->dec_codetab)
-        _TIFFfreeExt(tif, DecoderState(tif)->dec_codetab);
+    if (LZWDecoderState(tif)->dec_codetab)
+        _TIFFfreeExt(tif, LZWDecoderState(tif)->dec_codetab);
 
-    if (EncoderState(tif)->enc_hashtab)
-        _TIFFfreeExt(tif, EncoderState(tif)->enc_hashtab);
+    if (LZWEncoderState(tif)->enc_hashtab)
+        _TIFFfreeExt(tif, LZWEncoderState(tif)->enc_hashtab);
 
     _TIFFfreeExt(tif, tif->tif_data);
     tif->tif_data = NULL;
@@ -1404,9 +1408,9 @@ int TIFFInitLZW(TIFF *tif, int scheme)
     tif->tif_data = (uint8_t *)_TIFFmallocExt(tif, sizeof(LZWCodecState));
     if (tif->tif_data == NULL)
         goto bad;
-    DecoderState(tif)->dec_codetab = NULL;
-    DecoderState(tif)->dec_decode = NULL;
-    EncoderState(tif)->enc_hashtab = NULL;
+    LZWDecoderState(tif)->dec_codetab = NULL;
+    LZWDecoderState(tif)->dec_decode = NULL;
+    LZWEncoderState(tif)->enc_hashtab = NULL;
     LZWState(tif)->rw_mode = tif->tif_mode;
 
     /*
@@ -1418,12 +1422,14 @@ int TIFFInitLZW(TIFF *tif, int scheme)
     tif->tif_decoderow = LZWDecode;
     tif->tif_decodestrip = LZWDecode;
     tif->tif_decodetile = LZWDecode;
+#ifndef LZW_READ_ONLY
     tif->tif_setupencode = LZWSetupEncode;
     tif->tif_preencode = LZWPreEncode;
     tif->tif_postencode = LZWPostEncode;
     tif->tif_encoderow = LZWEncode;
     tif->tif_encodestrip = LZWEncode;
     tif->tif_encodetile = LZWEncode;
+#endif
     tif->tif_cleanup = LZWCleanup;
     /*
      * Setup predictor setup.

@@ -39,11 +39,16 @@ TEST(ML_KNearest, accuracy)
     {
         SCOPED_TRACE("KDTree");
         Mat neighborIndexes;
+        Mat neighborResponses;
+        Mat dists;
         float err = 1000;
         Ptr<KNearest> knn = KNearest::create();
         knn->setAlgorithmType(KNearest::KDTREE);
         knn->train(trainData, ml::ROW_SAMPLE, trainLabels);
-        knn->findNearest(testData, 4, neighborIndexes);
+        knn->findNearest(testData, 4, neighborIndexes, neighborResponses, dists);
+        EXPECT_EQ(neighborIndexes.size(), Size(4, pointsCount));
+        EXPECT_EQ(neighborResponses.size(), Size(4, pointsCount * 2));
+        EXPECT_EQ(dists.size(), Size(4, pointsCount));
         Mat bestLabels;
         // The output of the KDTree are the neighbor indexes, not actual class labels
         // so we need to do some extra work to get actual predictions

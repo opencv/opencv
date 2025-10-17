@@ -12,14 +12,21 @@ TEST(Imgcodecs_Png, write_big)
 {
     const string root = cvtest::TS::ptr()->get_data_path();
     const string filename = root + "readwrite/read.png";
-    const string dst_file = cv::tempfile(".png");
     Mat img;
     ASSERT_NO_THROW(img = imread(filename));
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(13043, img.cols);
     EXPECT_EQ(13917, img.rows);
-    ASSERT_NO_THROW(imwrite(dst_file, img));
-    EXPECT_EQ(0, remove(dst_file.c_str()));
+
+    vector<uchar> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, 1024*1024 }));
+    ASSERT_TRUE(status);
+#ifdef HAVE_PNG
+    EXPECT_EQ((size_t)816219, buff.size());
+#else
+    EXPECT_EQ((size_t)817407, buff.size());
+#endif
 }
 
 TEST(Imgcodecs_Png, encode)
@@ -29,7 +36,9 @@ TEST(Imgcodecs_Png, encode)
     vector<int> param;
     param.push_back(IMWRITE_PNG_COMPRESSION);
     param.push_back(3); //default(3) 0-9.
-    EXPECT_NO_THROW(imencode(".png", img_gt, buff, param));
+    bool status = false;
+    EXPECT_NO_THROW(status = imencode(".png", img_gt, buff, param));
+    ASSERT_TRUE(status);
     Mat img;
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_ANYDEPTH)); // hang
     EXPECT_FALSE(img.empty());
@@ -147,6 +156,51 @@ TEST(Imgcodecs_Png, decode_regression27295)
     EXPECT_NO_THROW(img = imdecode(buff, IMREAD_COLOR));
     EXPECT_TRUE(img.empty());
 }
+
+// The program must not crash even when decoding a corrupted APNG image.
+// See https://github.com/opencv/opencv/issues/27744
+#if defined(HAVE_PNG) // APNG is supported only with using libpng
+TEST(Imgcodecs_Png, decode_regression27744)
+{
+    // Create APNG stream
+    Animation anim;
+    for(size_t i = 0 ; i < 3 ; i++) {
+        Mat frame(120, 120, CV_8UC3, Scalar(0,0,0));
+        putText(frame, cv::format("%d", static_cast<int>(i)), Point(5, 28), FONT_HERSHEY_SIMPLEX, .5, Scalar(100, 255, 0, 255), 2);
+        anim.frames.push_back(frame);
+        anim.durations.push_back(30);
+    }
+    bool ret = false;
+    vector<uchar> buff;
+    EXPECT_NO_THROW(ret = imencodeanimation(".png", anim,  buff));
+    ASSERT_TRUE(ret) << "imencodeanimation() returns false";
+
+    // Find IDAT chunk
+    const vector<uchar> IDAT = {'I', 'D', 'A', 'T' };
+    std::vector<uchar>::iterator it = std::search(buff.begin(), buff.end(), IDAT.begin(), IDAT.end());
+    ASSERT_FALSE(it == buff.end()) << "IDAT chunk not found";
+
+    // Determine the range to test
+    // APNG stream contains as { len0, len1, len2, len3, 'I', 'D', 'A' 'T', ... }
+    size_t idx = std::distance(buff.begin(), it); // 'I' position
+    size_t len = (buff[idx-4] << 24) + (buff[idx-3] << 16) +
+                 (buff[idx-2] <<  8) + (buff[idx-1]); // IDAT chunk length
+    idx = idx + 4; // Move to IDAT body
+
+    // Test
+    for(size_t i = 0; i < len; i++, idx++) {
+        vector<uint8_t> work = buff;
+        work[idx] = static_cast<uint8_t>((static_cast<uint32_t>(work[idx]) + 1) & 0xff);
+
+        Mat dst;
+        EXPECT_NO_THROW(dst = imdecode(work, cv::IMREAD_COLOR));
+        if(dst.empty()) {
+            // libpng detects some error, but the program is not crashed. Test is passed.
+            break;
+        }
+    }
+}
+#endif
 
 typedef testing::TestWithParam<string> Imgcodecs_Png_PngSuite;
 
@@ -559,6 +613,26 @@ INSTANTIATE_TEST_CASE_P(/**/,
         make_tuple("../perf/512x512.png", 7, 155696),
         make_tuple("../perf/512x512.png", 8, 153708),
         make_tuple("../perf/512x512.png", 9, 152181)));
+
+// See https://github.com/opencv/opencv/issues/27614
+typedef testing::TestWithParam<int> Imgcodecs_Png_ZLIBBUFFER_SIZE;
+TEST_P(Imgcodecs_Png_ZLIBBUFFER_SIZE, encode_regression_27614)
+{
+    Mat img(320,240,CV_8UC3,cv::Scalar(64,76,43));
+    vector<uint8_t> buff;
+    bool status = false;
+    ASSERT_NO_THROW(status = imencode(".png", img, buff, { IMWRITE_PNG_ZLIBBUFFER_SIZE, GetParam() }));
+    ASSERT_TRUE(status);
+}
+
+INSTANTIATE_TEST_CASE_P(/*nothing*/, Imgcodecs_Png_ZLIBBUFFER_SIZE,
+                        testing::Values(5,
+                                        6,         // Minimum limit
+                                        8192,      // Default value
+                                        131072,    // 128 KiB
+                                        262144,    // 256 KiB
+                                        1048576,   // Maximum limit
+                                        1048577));
 
 #endif // HAVE_PNG
 

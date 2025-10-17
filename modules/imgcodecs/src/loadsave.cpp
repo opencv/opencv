@@ -98,6 +98,9 @@ static inline int calcType(int type, int flags)
         if( (flags & IMREAD_ANYDEPTH) == 0 )
             type = CV_MAKETYPE(CV_8U, CV_MAT_CN(type));
 
+        //if( (flags & IMREAD_ANYCOLOR) != 0 /*&& CV_MAT_CN(type) > 1*/ )
+        //    type = CV_MAKETYPE(CV_MAT_DEPTH(type), CV_MAT_CN(type));
+        //else if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 )
         if( (flags & IMREAD_COLOR) != 0 || (flags & IMREAD_COLOR_RGB) != 0 ||
            ((flags & IMREAD_ANYCOLOR) != 0 && CV_MAT_CN(type) > 1) )
             type = CV_MAKETYPE(CV_MAT_DEPTH(type), 3);
@@ -361,6 +364,20 @@ static ImageEncoder findEncoder( const String& _ext )
     return ImageEncoder();
 }
 
+static bool isValidEncodeKeyAtAll(const int key)
+{
+    bool ret = false;
+    ImageCodecInitializer& codecs = getCodecs();
+    for( size_t i = 0; i < codecs.encoders.size(); i++ )
+    {
+        if( codecs.encoders[i]->isValidEncodeKey(key) == true )
+        {
+            ret = true;
+            break;
+        }
+    }
+    return ret;
+}
 
 static void ExifTransform(int orientation, OutputArray img)
 {
@@ -495,9 +512,6 @@ imread_( const String& filename, int flags, OutputArray mat,
     /// Search for the relevant decoder to handle the imagery
     ImageDecoder decoder;
 
-    if (metadata_types)
-        metadata_types->clear();
-
 #ifdef HAVE_GDAL
     if(flags != IMREAD_UNCHANGED && (flags & IMREAD_LOAD_GDAL) == IMREAD_LOAD_GDAL ){
         decoder = GdalDecoder().newDecoder();
@@ -535,6 +549,12 @@ imread_( const String& filename, int flags, OutputArray mat,
 
     /// set the filename in the driver
     decoder->setSource( filename );
+
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
+    }
 
     try
     {
@@ -1055,7 +1075,12 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
         Mat image = img_vec[page];
         CV_Assert(!image.empty());
 
+#ifdef HAVE_OPENEXR
+        CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( image.channels() == 1 || image.channels() == 3 || image.channels() == 4 );
+#endif
+
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
@@ -1099,6 +1124,27 @@ static bool imwrite_( const String& filename, const std::vector<Mat>& img_vec,
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        if(encoder->isValidEncodeKey(key))
+        {
+            // Current encoder supports specified key.
+            // Do nothing.
+        }
+        else if(isValidEncodeKeyAtAll(key))
+        {
+            // Current encoder does not support specified key, but some encoder supports it.
+            CV_LOG_WARNING(nullptr, cv::format("An unsupported key(%d) was specified and has been ignored.", key));
+        }
+        else
+        {
+            // No encoder supports specified key.
+            CV_LOG_WARNING(nullptr, cv::format("An unknown key(%d) was specified and has been ignored.", key));
+        }
+    }
+
     bool code = false;
     try
     {
@@ -1260,9 +1306,6 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
            std::vector<int>* metadata_types,
            OutputArrayOfArrays metadata )
 {
-    if (metadata_types)
-        metadata_types->clear();
-
     CV_Assert(!buf.empty());
     CV_Assert(buf.isContinuous());
     CV_Assert(buf.checkVector(1, CV_8U) > 0);
@@ -1311,6 +1354,12 @@ imdecode_( const Mat& buf, int flags, Mat& mat,
             CV_Error( Error::StsError, "failed to write image data to temporary file" );
         }
         decoder->setSource(filename);
+    }
+
+    if (metadata_types)
+    {
+        metadata_types->clear();
+        decoder->setReadOptions(1);
     }
 
     bool success = false;
@@ -1609,7 +1658,11 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
         CV_Assert(!image.empty());
 
         const int channels = image.channels();
+#ifdef HAVE_OPENEXR
+        CV_Assert( channels == 1 || channels == 3 || channels == 4 || encoder.dynamicCast<ExrEncoder>() );
+#else
         CV_Assert( channels == 1 || channels == 3 || channels == 4 );
+#endif
 
         Mat temp;
         if( !encoder->isFormatSupported(image.depth()) )
@@ -1644,6 +1697,26 @@ bool imencodeWithMetadata( const String& ext, InputArray _img,
 
     CV_Check(params.size(), (params.size() & 1) == 0, "Encoding 'params' must be key-value pairs");
     CV_CheckLE(params.size(), (size_t)(CV_IO_MAX_IMAGE_PARAMS*2), "");
+
+    for(size_t v = 0; v < params.size(); v+= 2)
+    {
+        const int key = params[v];
+        if(encoder->isValidEncodeKey(key))
+        {
+            // Current encoder supports specified key.
+            // Do nothing.
+        }
+        else if(isValidEncodeKeyAtAll(key))
+        {
+            // Current encoder does not support specified key, but some encoder supports it.
+            CV_LOG_WARNING(nullptr, cv::format("An unsupported key(%d) was specified and has been ignored.", key));
+        }
+        else
+        {
+            // No encoder supports specified key.
+            CV_LOG_WARNING(nullptr, cv::format("An unknown key(%d) was specified and has been ignored.", key));
+        }
+    }
 
     bool code = false;
     String filename;

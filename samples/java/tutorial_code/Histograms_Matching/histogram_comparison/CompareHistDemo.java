@@ -52,23 +52,23 @@ class CompareHist {
 
         List<Mat> hsvBaseList = Arrays.asList(hsvBase);
         Imgproc.calcHist(hsvBaseList, new MatOfInt(channels), new Mat(), histBase, new MatOfInt(histSize), new MatOfFloat(ranges), false);
-        Core.normalize(histBase, histBase, 0, 1, Core.NORM_MINMAX);
+        Core.normalize(histBase, histBase, 1, 0, Core.NORM_L1);
 
         List<Mat> hsvHalfDownList = Arrays.asList(hsvHalfDown);
         Imgproc.calcHist(hsvHalfDownList, new MatOfInt(channels), new Mat(), histHalfDown, new MatOfInt(histSize), new MatOfFloat(ranges), false);
-        Core.normalize(histHalfDown, histHalfDown, 0, 1, Core.NORM_MINMAX);
+        Core.normalize(histHalfDown, histHalfDown, 1, 0, Core.NORM_L1);
 
         List<Mat> hsvTest1List = Arrays.asList(hsvTest1);
         Imgproc.calcHist(hsvTest1List, new MatOfInt(channels), new Mat(), histTest1, new MatOfInt(histSize), new MatOfFloat(ranges), false);
-        Core.normalize(histTest1, histTest1, 0, 1, Core.NORM_MINMAX);
+        Core.normalize(histTest1, histTest1, 1, 0, Core.NORM_L1);
 
         List<Mat> hsvTest2List = Arrays.asList(hsvTest2);
         Imgproc.calcHist(hsvTest2List, new MatOfInt(channels), new Mat(), histTest2, new MatOfInt(histSize), new MatOfFloat(ranges), false);
-        Core.normalize(histTest2, histTest2, 0, 1, Core.NORM_MINMAX);
+        Core.normalize(histTest2, histTest2, 1, 0, Core.NORM_L1);
         //! [Calculate the histograms for the HSV images]
 
         //! [Apply the histogram comparison methods]
-        for( int compareMethod = 0; compareMethod < 4; compareMethod++ ) {
+        for( int compareMethod = 0; compareMethod < 6; compareMethod++ ) {
             double baseBase = Imgproc.compareHist( histBase, histBase, compareMethod );
             double baseHalf = Imgproc.compareHist( histBase, histHalfDown, compareMethod );
             double baseTest1 = Imgproc.compareHist( histBase, histTest1, compareMethod );

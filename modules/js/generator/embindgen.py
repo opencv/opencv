@@ -320,7 +320,6 @@ class Namespace(object):
 
 class JSWrapperGenerator(object):
     def __init__(self, preprocessor_definitions=None):
-
         self.bindings = []
         self.wrapper_funcs = []
 
@@ -332,6 +331,29 @@ class JSWrapperGenerator(object):
             preprocessor_definitions=preprocessor_definitions
         )
         self.class_idx = 0
+
+    def _is_string_type(self, tp: str) -> bool:
+        """Check if a type should be treated as string in bindings."""
+        string_types = {
+            "std::string",
+            "char",
+            "signed char",
+            "unsigned char",
+        }
+        return tp in string_types
+
+    def _generate_class_properties(self, class_info, class_bindings):
+        # Generate bindings for properties
+        for prop in class_info.props:
+            if prop.tp in type_dict and not self._is_string_type(prop.tp):
+                _class_property = class_property_enum_template
+            else:
+                _class_property = class_property_template
+
+            class_bindings.append(_class_property.substitute(
+                js_name=prop.name,
+                cpp_name='::'.join([class_info.cname, prop.name])
+            ))
 
     def add_class(self, stype, name, decl):
         class_info = ClassInfo(name, decl)
@@ -893,11 +915,17 @@ class JSWrapperGenerator(object):
 
 
 
-            # Generate bindings for properties
-            for property in class_info.props:
-                _class_property = class_property_enum_template if property.tp in type_dict else class_property_template
-                class_bindings.append(_class_property.substitute(js_name=property.name, cpp_name='::'.join(
-                    [class_info.cname, property.name])))
+            # Generate bindings for properties(prop)
+            for prop in class_info.props:
+                if prop.tp in type_dict and not self._is_string_type(prop.tp):
+                    _class_property = class_property_enum_template
+                else:
+                    _class_property = class_property_template
+
+                class_bindings.append(_class_property.substitute(
+                    js_name=prop.name,
+                    cpp_name='::'.join([class_info.cname, prop.name])
+                ))
 
             dv = ''
             base = Template("""base<$base>""")

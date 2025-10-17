@@ -2343,6 +2343,9 @@ TEST_F(LimitedSourceInfer, ReleaseFrame)
 
 TEST_F(LimitedSourceInfer, ReleaseFrameAsync)
 {
+    if (cvtest::skipUnstableTests)
+        throw SkipTestException("Skip LimitedSourceInfer.ReleaseFrameAsync as it hangs sporadically");
+
     constexpr int max_frames      = 50;
     constexpr int resources_limit = 4;
     constexpr int nireq           = 8;

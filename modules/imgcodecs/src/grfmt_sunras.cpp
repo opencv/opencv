@@ -94,7 +94,7 @@ bool  SunRasterDecoder::readHeader()
                     m_type = IsColorPalette( m_palette, m_bpp ) ? CV_8UC3 : CV_8UC1;
                     m_offset = m_strm.getPos();
 
-                    CV_Assert(m_offset == 32 + m_maplength);
+                    CV_Assert(m_offset == static_cast<int64_t>(32 + m_maplength));
                     result = true;
                 }
             }
@@ -107,7 +107,7 @@ bool  SunRasterDecoder::readHeader()
 
                 m_offset = m_strm.getPos();
 
-                CV_Assert(m_offset == 32 + m_maplength);
+                CV_Assert(m_offset == static_cast<int64_t>(32 + m_maplength));
                 result = true;
             }
         }

@@ -141,5 +141,4 @@ cv::GRunArg cv::gapi::bind(cv::GRunArgP &out)
         GAPI_Error("This value type is UNKNOWN!");
         break;
     }
-    return cv::GRunArg();
 }
