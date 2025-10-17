@@ -462,10 +462,16 @@ bool CV_ECC_Test_Mask::testMask(int from)
                 computeRMS(mapTranslation, translationGround));
             return false;
         }
-
-        // Test with non-default gaussian blur.
+        
+        Mat_<unsigned char> warpedMask = Mat_<unsigned char>::ones(warpedImage.rows, warpedImage.cols);
+        for (int i=warpedImage.rows*1/3; i<warpedImage.rows*2/3; i++) {
+          for (int j=warpedImage.cols*1/3; j<warpedImage.cols*2/3; j++) {
+            warpedMask(i, j) = 0;
+          }
+        }
+        // Test with template mask.
         findTransformECC(warpedImage, testImg, mapTranslation, 0,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, 1);
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, warpedMask);
 
         if (!isMapCorrect(mapTranslation)){
             ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
@@ -474,7 +480,24 @@ bool CV_ECC_Test_Mask::testMask(int from)
 
         if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
+           ts->printf( ts->LOG, "RMS = %f",
+                computeRMS(mapTranslation, translationGround));
+            return false;
+        }
+       
+
+        // Test with non-default gaussian blur.
+        findTransformECC(warpedImage, testImg, mapTranslation, 0,
+            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, warpedMask, 1);
+
+        if (!isMapCorrect(mapTranslation)){
+            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+            return false;
+        }
+
+        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
+            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+           ts->printf( ts->LOG, "RMS = %f",
                 computeRMS(mapTranslation, translationGround));
             return false;
         }
