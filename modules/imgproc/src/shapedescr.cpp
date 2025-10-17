@@ -98,13 +98,7 @@ static void findThirdPoint(const PT *pts, int i, int j, Point2f &center, float &
             ptsf[0] = (Point2f)pts[i];
             ptsf[1] = (Point2f)pts[j];
             ptsf[2] = (Point2f)pts[k];
-            Point2f new_center; float new_radius = 0;
-            findCircle3pts(ptsf, new_center, new_radius);
-            if (new_radius > 0)
-            {
-                radius = new_radius;
-                center = new_center;
-            }
+            findCircle3pts(ptsf, center, radius);
         }
     }
 }
@@ -129,13 +123,7 @@ void findSecondPoint(const PT *pts, int i, Point2f &center, float &radius)
         }
         else
         {
-            Point2f new_center; float new_radius = 0;
-            findThirdPoint(pts, i, j, new_center, new_radius);
-            if (new_radius > 0)
-            {
-                radius = new_radius;
-                center = new_center;
-            }
+            findThirdPoint(pts, i, j, center, radius);
         }
     }
 }
@@ -161,13 +149,7 @@ static void findMinEnclosingCircle(const PT *pts, int count, Point2f &center, fl
         }
         else
         {
-            Point2f new_center; float new_radius = 0;
-            findSecondPoint(pts, i, new_center, new_radius);
-            if (new_radius > 0)
-            {
-                radius = new_radius;
-                center = new_center;
-            }
+            findSecondPoint(pts, i, center, radius);
         }
     }
 }
@@ -193,61 +175,42 @@ void cv::minEnclosingCircle( InputArray _points, Point2f& _center, float& _radiu
     const Point* ptsi = points.ptr<Point>();
     const Point2f* ptsf = points.ptr<Point2f>();
 
-    switch (count)
+    if( count == 1 )
     {
-        case 1:
-        {
-            _center = (is_float) ? ptsf[0] : Point2f((float)ptsi[0].x, (float)ptsi[0].y);
-            _radius = EPS;
-            break;
-        }
-        case 2:
-        {
-            Point2f p1 = (is_float) ? ptsf[0] : Point2f((float)ptsi[0].x, (float)ptsi[0].y);
-            Point2f p2 = (is_float) ? ptsf[1] : Point2f((float)ptsi[1].x, (float)ptsi[1].y);
-            _center.x = (p1.x + p2.x) / 2.0f;
-            _center.y = (p1.y + p2.y) / 2.0f;
-            _radius = (float)(norm(p1 - p2) / 2.0) + EPS;
-            break;
-        }
-        default:
-        {
-            Point2f center;
-            float radius = 0.f;
-            if (is_float)
+        _center = (is_float) ? ptsf[0] : Point2f((float)ptsi[0].x, (float)ptsi[0].y);
+        _radius = EPS;
+        return;
+    }
+
+    if (is_float)
+    {
+        findMinEnclosingCircle<Point2f>(ptsf, count, _center, _radius);
+        #if 0
+            for (int m = 0; m < count; ++m)
             {
-                findMinEnclosingCircle<Point2f>(ptsf, count, center, radius);
-                #if 0
-                    for (size_t m = 0; m < count; ++m)
-                    {
-                        float d = (float)norm(ptsf[m] - center);
-                        if (d > radius)
-                        {
-                            printf("error!\n");
-                        }
-                    }
-                #endif
+                float d = (float)norm(ptsf[m] - _center);
+                if (d > _radius)
+                {
+                    printf("error!\n");
+                }
             }
-            else
+        #endif
+    }
+    else
+    {
+        findMinEnclosingCircle<Point>(ptsi, count, _center, _radius);
+        #if 0
+            for (int m = 0; m < count; ++m)
             {
-                findMinEnclosingCircle<Point>(ptsi, count, center, radius);
-                #if 0
-                    for (size_t m = 0; m < count; ++m)
-                    {
-                        double dx = ptsi[m].x - center.x;
-                        double dy = ptsi[m].y - center.y;
-                        double d = std::sqrt(dx * dx + dy * dy);
-                        if (d > radius)
-                        {
-                            printf("error!\n");
-                        }
-                    }
-                #endif
+                double dx = ptsi[m].x - _center.x;
+                double dy = ptsi[m].y - _center.y;
+                double d = std::sqrt(dx * dx + dy * dy);
+                if (d > _radius)
+                {
+                    printf("error!\n");
+                }
             }
-            _center = center;
-            _radius = radius;
-            break;
-        }
+        #endif
     }
 }
 
