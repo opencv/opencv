@@ -15,37 +15,37 @@ set(OpenCV_ENABLE_CUDA_FIRST_CLASS_LANGUAGE "@ENABLE_CUDA_FIRST_CLASS_LANGUAGE@"
 
 # Function to calculate the version range based on match_minor flag
 function(ocv_get_version_range version_expected match_minor allow_older lower_bound upper_bound ver_target)
-    # Split the version into components
-    string(REPLACE "." ";" version_list ${version_expected})
-    list(LENGTH version_list version_length)
+  # Split the version into components
+  string(REPLACE "." ";" version_list ${version_expected})
+  list(LENGTH version_list version_length)
 
-    # Extract major and minor components
-    list(GET version_list 0 major)
-    if(version_length GREATER 1)
-        list(GET version_list 1 minor)
-    else()
-        set(minor 0)  # Default minor to 0 if not provided
-    endif()
+  # Extract major and minor components
+  list(GET version_list 0 major)
+  if(version_length GREATER 1)
+    list(GET version_list 1 minor)
+  else()
+    set(minor 0)  # Default minor to 0 if not provided
+  endif()
 
-    # Determine the range based on match_minor flag
-    if(match_minor)
-        # Match minor: range is [major.minor, major.<minor + 1>)
-        math(EXPR new_minor "${minor} + 1")
-        set(${lower_bound} "${major}.${minor}" PARENT_SCOPE)
-        set(${upper_bound} "${major}.${new_minor}" PARENT_SCOPE)
-        set(${ver_target} "${major}.${minor}" PARENT_SCOPE)
+  # Determine the range based on match_minor flag
+  if(match_minor)
+    # Match minor: range is [major.minor, major.<minor + 1>)
+    math(EXPR new_minor "${minor} + 1")
+    set(${lower_bound} "${major}.${minor}" PARENT_SCOPE)
+    set(${upper_bound} "${major}.${new_minor}" PARENT_SCOPE)
+    set(${ver_target} "${major}.${minor}" PARENT_SCOPE)
+  else()
+    if(allow_older)
+      # Do not match minor: range is [major, <major + 1>)
+      set(${lower_bound} "${major}" PARENT_SCOPE)
     else()
-        if(allow_older)
-          # backward compatible match minor: range is [major.minor, <major + 1>)
-          set(${lower_bound} "${major}" PARENT_SCOPE)
-        else()
-          # Do not match minor: range is [major, <major + 1>)
-          set(${lower_bound} "${major}.${minor}" PARENT_SCOPE)
-        endif()
-        set(${ver_target} "${major}" PARENT_SCOPE)
-        math(EXPR new_major "${major} + 1")
-        set(${upper_bound} "${new_major}" PARENT_SCOPE)
+      # backward compatible match minor: range is [major.minor, <major + 1>)
+      set(${lower_bound} "${major}.${minor}" PARENT_SCOPE)
     endif()
+    set(${ver_target} "${major}" PARENT_SCOPE)
+    math(EXPR new_major "${major} + 1")
+    set(${upper_bound} "${new_major}" PARENT_SCOPE)
+  endif()
 endfunction()
 
 function(ocv_check_cuda_version_range version_detected ver_min ver_max)
