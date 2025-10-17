@@ -55,8 +55,10 @@ def load_calib(
     K = fs.getNode("camera_matrix").mat().astype(np.float64)
     w = int(fs.getNode("image_width").real())
     h = int(fs.getNode("image_height").real())
+    bw = int(fs.getNode("board_width").real())
+    bh = int(fs.getNode("board_height").real())
     fs.release()
-    return errs, extr, grid, K, (w, h)
+    return errs, extr, grid, K, (w, h), (bw, bh)
 
 
 def invert_extrinsic(
@@ -117,14 +119,11 @@ def draw_frustum(
         )
 
 
-def build_board_mesh(grid: np.ndarray) -> List[List[np.ndarray]]:
-    ux = np.unique(grid[:, 0])
-    uy = np.unique(grid[:, 1])
-    nx, ny = ux.size, uy.size
-    pts = grid.reshape((nx, ny, 3), order="F")
+def build_board_mesh(grid: np.ndarray, board_width: int, board_height: int) -> List[List[np.ndarray]]:
+    pts = grid.reshape((board_width, board_height, 3), order="F")
     faces: List[List[np.ndarray]] = []
-    for ix in range(nx - 1):
-        for iy in range(ny - 1):
+    for ix in range(board_width - 1):
+        for iy in range(board_height - 1):
             p00 = pts[ix, iy]
             p10 = pts[ix + 1, iy]
             p11 = pts[ix + 1, iy + 1]
@@ -139,6 +138,7 @@ def plot_scene_camera_view(
     grid: np.ndarray,
     K: np.ndarray,
     imsize: Tuple[int, int],
+    board_size: Tuple[int, int],
     errors: Optional[List[float]] = None,
     colormap: Optional[callable] = None,
 ) -> List[Poly3DCollection]:
@@ -167,7 +167,7 @@ def plot_scene_camera_view(
     ax.set_zlim(mins[2], maxs[2])
     ax.set_box_aspect((maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2]))
     cmap = colormap or plt.get_cmap("tab20")
-    faces_template = build_board_mesh(grid)
+    faces_template = build_board_mesh(grid, board_size[0], board_size[1])
     meshes: List[Poly3DCollection] = []
     for idx, (R, t) in enumerate(Rts):
         faces_transformed: List[List[np.ndarray]] = []
@@ -209,6 +209,7 @@ def plot_scene_camera_view(
 def plot_scene_board_view(
     ax,
     calibs: List[Dict[str, object]],
+    board_size: Tuple[int, int],
     colormap: Optional[callable] = None,
     max_frustums_per_cam: Optional[int] = None,
 ) -> None:
@@ -239,7 +240,7 @@ def plot_scene_board_view(
     ax.set_zlim(mins[2], maxs[2])
     ax.set_box_aspect((maxs[0] - mins[0], maxs[1] - mins[1], maxs[2] - mins[2]))
     cmap = colormap or plt.get_cmap("tab10")
-    faces = build_board_mesh(board_points)
+    faces = build_board_mesh(board_points, board_size[0], board_size[1])
     board_mesh = Poly3DCollection(faces, alpha=0.3, linewidths=0.2)
     board_mesh.set_facecolor((0.2, 0.8, 1.0, 0.3))
     board_mesh.set_edgecolor("white")
@@ -474,13 +475,14 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
         view = "camera" if len(args.calib_files) == 1 else "board"
     calibs: List[Dict[str, object]] = []
     for idx, fname in enumerate(args.calib_files):
-        errs, extr, grid, K, imsize = load_calib(fname)
+        errs, extr, grid, K, imsize, board_size = load_calib(fname)
         calib_data: Dict[str, object] = {
             "errors": errs,
             "extr": extr,
             "grid": grid,
             "K": K,
             "imsize": imsize,
+            "board_size": board_size,
             "label": f"Cam{idx}",
         }
         calibs.append(calib_data)
@@ -522,6 +524,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                 calibs[0]["grid"],
                 calibs[0]["K"],
                 calibs[0]["imsize"],
+                calibs[0]["board_size"],
                 errors=calibs[0]["errors"],
             )
 
@@ -586,12 +589,14 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                     calibs[0]["grid"],
                     calibs[0]["K"],
                     calibs[0]["imsize"],
+                    calibs[0]["board_size"]
                 )
             else:
                 # board view for multiple cameras
                 plot_scene_board_view(
                     ax_3d,
                     calibs,
+                    calibs[0]["board_size"],
                     max_frustums_per_cam=args.max_frustums,
                 )
             plt.tight_layout()
