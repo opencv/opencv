@@ -48,6 +48,11 @@ static LUTFunc getLUTFunc(const int srcDepth, const int dstDepth)
             case CV_32F:  ret = (LUTFunc)LUT_<uint8_t, int32_t>;   break; // float
             case CV_64F:  ret = (LUTFunc)LUT_<uint8_t, int64_t>;   break; // double
             case CV_16F:  ret = (LUTFunc)LUT_<uint8_t, int16_t>;   break; // hfloat
+            case CV_16BF: ret = (LUTFunc)LUT_<uint8_t, int16_t>;   break; // bfloat
+            case CV_Bool: ret = (LUTFunc)LUT_<uint8_t, uint8_t>;   break; // bool
+            case CV_64U:  ret = (LUTFunc)LUT_<uint8_t, uint64_t>;  break;
+            case CV_64S:  ret = (LUTFunc)LUT_<uint8_t, int64_t>;   break;
+            case CV_32U:  ret = (LUTFunc)LUT_<uint8_t, uint32_t>;  break;
             default:      ret = nullptr;                           break;
         }
     }
@@ -63,6 +68,11 @@ static LUTFunc getLUTFunc(const int srcDepth, const int dstDepth)
             case CV_32F:  ret = (LUTFunc)LUT_<uint16_t, int32_t>;  break; // float
             case CV_64F:  ret = (LUTFunc)LUT_<uint16_t, int64_t>;  break; // double
             case CV_16F:  ret = (LUTFunc)LUT_<uint16_t, int16_t>;  break; // hfloat
+            case CV_16BF: ret = (LUTFunc)LUT_<uint16_t, int16_t>;  break; // bfloat
+            case CV_Bool: ret = (LUTFunc)LUT_<uint16_t, uint8_t>;  break; // bool
+            case CV_64U:  ret = (LUTFunc)LUT_<uint16_t, uint64_t>; break;
+            case CV_64S:  ret = (LUTFunc)LUT_<uint16_t, int64_t>;  break;
+            case CV_32U:  ret = (LUTFunc)LUT_<uint16_t, uint32_t>; break;
             default:      ret = nullptr;                           break;
         }
     }

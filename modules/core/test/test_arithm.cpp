@@ -3540,7 +3540,7 @@ INSTANTIATE_TEST_CASE_P(
 );
 
 CV_ENUM(LutIdxType, CV_8U, CV_8S, CV_16U, CV_16S)
-CV_ENUM(LutMatType, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F)
+CV_ENUM(LutMatType, CV_8U, CV_8S, CV_16U, CV_16S, CV_32S, CV_32F, CV_64F, CV_16F, CV_16BF, CV_Bool, CV_64U, CV_64S, CV_32U)
 
 struct Core_LUT: public testing::TestWithParam< std::tuple<LutIdxType, LutMatType> >
 {
@@ -3593,6 +3593,11 @@ struct Core_LUT: public testing::TestWithParam< std::tuple<LutIdxType, LutMatTyp
                 case CV_32F:  ret = referenceWithType<uint8_t, float,    ch, same_cn>(input, table); break;
                 case CV_64F:  ret = referenceWithType<uint8_t, double,   ch, same_cn>(input, table); break;
                 case CV_16F:  ret = referenceWithType<uint8_t, uint16_t, ch, same_cn>(input, table); break;
+                case CV_16BF: ret = referenceWithType<uint8_t, uint16_t, ch, same_cn>(input, table); break;
+                case CV_Bool: ret = referenceWithType<uint8_t, uint8_t,  ch, same_cn>(input, table); break;
+                case CV_64U:  ret = referenceWithType<uint8_t, uint64_t, ch, same_cn>(input, table); break;
+                case CV_64S:  ret = referenceWithType<uint8_t, int64_t,  ch, same_cn>(input, table); break;
+                case CV_32U:  ret = referenceWithType<uint8_t, uint32_t, ch, same_cn>(input, table); break;
                 default:      ret = cv::Mat();                                                       break;
             }
         }
@@ -3608,6 +3613,11 @@ struct Core_LUT: public testing::TestWithParam< std::tuple<LutIdxType, LutMatTyp
                 case CV_32F:  ret = referenceWithType<uint16_t, float,    ch, same_cn>(input, table); break;
                 case CV_64F:  ret = referenceWithType<uint16_t, double,   ch, same_cn>(input, table); break;
                 case CV_16F:  ret = referenceWithType<uint16_t, uint16_t, ch, same_cn>(input, table); break;
+                case CV_16BF: ret = referenceWithType<uint16_t, uint16_t, ch, same_cn>(input, table); break;
+                case CV_Bool: ret = referenceWithType<uint16_t, uint8_t,  ch, same_cn>(input, table); break;
+                case CV_64U:  ret = referenceWithType<uint16_t, uint64_t, ch, same_cn>(input, table); break;
+                case CV_64S:  ret = referenceWithType<uint16_t, int64_t,  ch, same_cn>(input, table); break;
+                case CV_32U:  ret = referenceWithType<uint16_t, uint32_t, ch, same_cn>(input, table); break;
                 default:      ret = cv::Mat();                                                        break;
             }
         }
