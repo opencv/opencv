@@ -739,7 +739,7 @@ void ColorHashTsdfVolume::fetchPointsNormalsColors(OutputArray points, OutputArr
     if (useGPU)
         ocl_fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, gpu_volUnitsData, hashTable, volumeUnitDegree, points, normals, colors);
     else
-        fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, cpu_volUnitsData, cpu_volumeUnits, volumeUnitDegree, points, normals, colors);
+        fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(settings, cpu_volUnitsData, hashTable, volumeUnitDegree, points, normals, colors);
 #endif
 }
 

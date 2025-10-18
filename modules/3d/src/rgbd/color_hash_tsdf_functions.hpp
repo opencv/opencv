@@ -84,6 +84,7 @@ bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrig
 
 Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int volUnitSize, float voxelSize, float deltaFactor);
 
+Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int volUnitSize);
 } // namespace cv
 
 #endif

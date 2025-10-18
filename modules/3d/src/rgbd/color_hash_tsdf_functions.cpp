@@ -116,6 +116,179 @@ void integrateColorHashTsdfVolumeUnit(
     }
 }
 
+void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, InputArray _volUnitsData, const CustomHashSet& hashTable,
+    const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors)
+{
+    CV_TRACE_FUNCTION();
+
+    Mat volUnitsData = _volUnitsData.getMat();
+
+    float voxelSize = settings.getVoxelSize();
+    float trancDist = settings.getTsdfTruncateDistance();
+
+    const int volUnitSize = 1 << volumeUnitDegree;
+    const Point3i volUnitDims = Point3i(volUnitSize, volUnitSize, volUnitSize);
+    const int unitResolution = volUnitSize * volUnitSize * volUnitSize;
+
+    std::vector<Point3f> pointsVec;
+    std::vector<Point3f> normalsVec;
+    std::vector<Vec3b> colorsVec;
+
+    // Iterate through all possible indices in the hash table
+    for (int i = 0; i < hashTable.capacity; i++)
+    {
+        const Vec4i& data = hashTable.data[i];
+        if (data[3] == -1) continue;  // Skip empty entries
+
+        const Vec3i unitIdx(data[0], data[1], data[2]);
+        int place = hashTable.find(unitIdx);
+        if (place < 0) continue;
+
+        // Extract volume unit index from the hash table data
+        int unitIndex = data[3];  // Assuming the fourth component stores the volume unit index
+        
+        // Calculate data range for this unit
+        int dataStart = unitIndex * unitResolution;
+        CV_Assert(dataStart + unitResolution <= volUnitsData.rows * volUnitsData.cols);
+        
+        Mat unitData = volUnitsData.rowRange(dataStart, dataStart + unitResolution);
+        
+        Point3f unitOrigin = Point3f(unitIdx[0], unitIdx[1], unitIdx[2]) * volUnitSize * voxelSize;
+        
+        // Extract surface points from this volume unit
+        for (int z = 1; z < volUnitSize - 1; z++)
+        {
+            for (int y = 1; y < volUnitSize - 1; y++)
+            {
+                for (int x = 1; x < volUnitSize - 1; x++)
+                {
+                    int voxelIndex = z * volUnitSize * volUnitSize + y * volUnitSize + x;
+                    const ColorHashTsdfVoxel& voxel = unitData.ptr<ColorHashTsdfVoxel>()[voxelIndex];
+                    
+                    if (voxel.weight > 0 && std::abs(tsdfToFloat(voxel.tsdf)) < trancDist)
+                    {
+                        Point3f voxelPos = unitOrigin + Point3f(x, y, z) * voxelSize;
+                        
+                        Point3f normal = computeColorVoxelNormal(unitData, x, y, z, volUnitDims.x, voxelSize, 1.0f);
+                        
+                        if (!isNaN(normal))
+                        {
+                            pointsVec.push_back(voxelPos);
+                            normalsVec.push_back(normal / cv::norm(normal));
+                            colorsVec.push_back(Vec3b(voxel.r, voxel.g, voxel.b));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Convert vectors to output arrays
+    if (!pointsVec.empty())
+    {
+        Mat(pointsVec).reshape(1, (int)pointsVec.size()).copyTo(_points);
+        Mat(normalsVec).reshape(1, (int)normalsVec.size()).copyTo(_normals);
+        Mat(colorsVec).reshape(1, (int)colorsVec.size()).copyTo(_colors);
+    }
+    else
+    {
+        _points.release();
+        _normals.release();
+        _colors.release();
+    }
+}
+
+// Declare these functions before they are used
+bool integrateColorVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+                            InputArray _depth, InputArray _rgb, InputArray _pixNorms,
+                            const Vec3i& unitIdx, const Point3i& volUnitDims,
+                            float voxelSize, float trancDist, int maxWeight,
+                            const Intr& intrinsics);
+
+std::vector<Vec3i> findNewVisibleVolumeUnits(const VolumeSettings& settings, const Matx44f& cameraPose,
+                                           InputArray depth, const Intr& intrinsics,
+                                           const VolumeUnitIndexes& existingUnits,
+                                           const Point3i& volUnitDims, float voxelSize);
+
+bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrigin, const Point3f& rayDir, float tmin,
+                              float tmax, const VolumeUnitIndexes& volumeUnits, InputArray _volUnitsData,
+                              const Point3i& volUnitDims, int unitResolution, float voxelSize, float trancDist,
+                              Point3f& hitPoint, Point3f& hitNormal, Vec3b& hitColor);
+
+void raycastColorHashTsdfVolumeUnit(
+    const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
+    InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals, OutputArray _colors)
+{
+    CV_TRACE_FUNCTION();
+
+    Mat volUnitsData = _volUnitsData.getMat();
+    Matx33f cameraIntr = intr.getMat();
+
+    _points.create(height, width, CV_32FC3);
+    _normals.create(height, width, CV_32FC3);
+    _colors.create(height, width, CV_8UC3);
+
+    Mat points = _points.getMat();
+    Mat normals = _normals.getMat();
+    Mat colors = _colors.getMat();
+
+    points.setTo(0);
+    normals.setTo(0);
+    colors.setTo(0);
+
+    float voxelSize = settings.getVoxelSize();
+    float trancDist = settings.getTsdfTruncateDistance();
+    Vec3i volResolution;
+    settings.getVolumeResolution(volResolution);
+
+    const int volUnitSize = 1 << volumeUnitDegree;
+    const Point3i volUnitDims = Point3i(volUnitSize, volUnitSize, volUnitSize);
+    const int unitResolution = volUnitSize * volUnitSize * volUnitSize;
+
+    Matx44f invCameraPose = cameraPose.inv();
+    float voxelSizeInv = 1.0f / voxelSize;
+
+    for (int y = 0; y < height; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            Point3f rayDirVec(
+                (x - cameraIntr(0, 2)) / cameraIntr(0, 0),
+                (y - cameraIntr(1, 2)) / cameraIntr(1, 1),
+                1.0f
+            );
+            float rayDirNorm = cv::norm(rayDirVec);
+            Point3f rayDir = rayDirNorm > 0 ? rayDirVec / rayDirNorm : Point3f(0, 0, 0);
+
+            Point3f rayOrigin(0, 0, 0);
+            Point3f rayDirVol = transformDirection(rayDir, invCameraPose);
+            Point3f rayOriginVol = transformPoint(rayOrigin, invCameraPose) * voxelSizeInv;
+
+            float tmin = 0.0f;
+            float tmax = settings.getRaycastStepFactor() * voxelSizeInv;
+
+            Point3f hitPoint, hitNormal;
+            Vec3b hitColor;
+            bool hit = raycastColorHashTsdf(settings, rayOriginVol, rayDirVol, tmin, tmax, 
+                                          reinterpret_cast<const VolumeUnitIndexes&>(volumeUnits), 
+                                          volUnitsData, volUnitDims, unitResolution, 
+                                          voxelSize, trancDist, hitPoint, hitNormal, hitColor);
+
+            if (hit)
+            {
+                // Transform hit point back to camera space
+                Point3f worldPoint = hitPoint * voxelSize;
+                Point3f cameraPoint = transformPoint(worldPoint, cameraPose);
+
+                points.at<Point3f>(y, x) = cameraPoint;
+                normals.at<Point3f>(y, x) = hitNormal;
+                colors.at<Vec3b>(y, x) = hitColor;
+            }
+        }
+    }
+}
+
 void raycastColorHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     InputArray _volUnitsData, const CustomHashSet& hashTable, OutputArray _points, OutputArray _normals, OutputArray _colors)
@@ -170,9 +343,23 @@ void raycastColorHashTsdfVolumeUnit(
 
             Point3f hitPoint, hitNormal;
             Vec3b hitColor;
-            bool hit = raycastColorHashTsdf(settings, rayOriginVol, rayDirVol, tmin, tmax, hashTable, volUnitsData,
-                                          volUnitDims, unitResolution, voxelSize, trancDist,
-                                          hitPoint, hitNormal, hitColor);
+            
+            // Convert CustomHashSet to VolumeUnitIndexes for the raycast function
+            VolumeUnitIndexes volumeUnits;
+            for (int i = 0; i < hashTable.capacity; i++)
+            {
+                const Vec4i& data = hashTable.data[i];
+                if (data[3] == -1) continue;
+
+                const Vec3i unitIdx(data[0], data[1], data[2]);
+                VolumeUnit unit;
+                unit.index = data[3];  // Assuming the fourth component stores the volume unit index
+                volumeUnits[unitIdx] = unit;
+            }
+            
+            bool hit = raycastColorHashTsdf(settings, rayOriginVol, rayDirVol, tmin, tmax, 
+                                          volumeUnits, volUnitsData, volUnitDims, unitResolution, 
+                                          voxelSize, trancDist, hitPoint, hitNormal, hitColor);
 
             if (hit)
             {
@@ -188,86 +375,11 @@ void raycastColorHashTsdfVolumeUnit(
     }
 }
 
-void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
-    const VolumeSettings& settings, InputArray _volUnitsData, const CustomHashSet& hashTable,
-    const int volumeUnitDegree, OutputArray _points, OutputArray _normals, OutputArray _colors)
-{
-    CV_TRACE_FUNCTION();
-
-    Mat volUnitsData = _volUnitsData.getMat();
-    
-    float voxelSize = settings.getVoxelSize();
-    float trancDist = settings.getTsdfTruncateDistance();
-    float gradientDeltaFactor = settings.getGradientDeltaFactor();
-    
-    const int volUnitSize = 1 << volumeUnitDegree;
-    const Point3i volUnitDims = Point3i(volUnitSize, volUnitSize, volUnitSize);
-    const int unitResolution = volUnitSize * volUnitSize * volUnitSize;
-    
-    std::vector<Point3f> pointsVec;
-    std::vector<Point3f> normalsVec;
-    std::vector<Vec3b> colorsVec;
-    
-    for (const auto& unitPair : hashTable)
-    {
-        const Vec3i& unitIdx = unitPair.first;
-        const VolumeUnit& unit = unitPair.second;
-        
-        Point3f unitOrigin = Point3f(unitIdx[0], unitIdx[1], unitIdx[2]) * volUnitSize * voxelSize;
-        
-        int dataStart = unit.index * unitResolution;
-        CV_Assert(dataStart + unitResolution <= volUnitsData.rows * volUnitsData.cols);
-        
-        Mat unitData = volUnitsData.rowRange(dataStart, dataStart + unitResolution);
-        
-        // Extract surface points from this volume unit
-        for (int z = 1; z < volUnitSize - 1; z++)
-        {
-            for (int y = 1; y < volUnitSize - 1; y++)
-            {
-                for (int x = 1; x < volUnitSize - 1; x++)
-                {
-                    int voxelIndex = z * volUnitSize * volUnitSize + y * volUnitSize + x;
-                    const ColorHashTsdfVoxel& voxel = unitData.ptr<ColorHashTsdfVoxel>()[voxelIndex];
-                    
-                    if (voxel.weight > 0 && std::abs(tsdfToFloat(voxel.tsdf)) < trancDist)
-                    {
-                        Point3f voxelPos = unitOrigin + Point3f(x, y, z) * voxelSize;
-                        
-                        Point3f normal = computeColorVoxelNormal(unitData, x, y, z, volUnitDims.x, voxelSize, 1.0f);
-                        
-                        if (!isNaN(normal))
-                        {
-                            pointsVec.push_back(voxelPos);
-                            normalsVec.push_back(normal / cv::norm(normal));
-                            colorsVec.push_back(Vec3b(voxel.r, voxel.g, voxel.b));
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // Convert vectors to output arrays
-    if (!pointsVec.empty())
-    {
-        Mat(pointsVec).reshape(1, (int)pointsVec.size()).copyTo(_points);
-        Mat(normalsVec).reshape(1, (int)normalsVec.size()).copyTo(_normals);
-        Mat(colorsVec).reshape(1, (int)colorsVec.size()).copyTo(_colors);
-    }
-    else
-    {
-        _points.release();
-        _normals.release();
-        _colors.release();
-    }
-}
-
-// Helper functions
-bool integrateColorVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
+bool integrateColorVolumeUnit(VolumeUnit& unit, const VolumeSettings& settings, const Matx44f& cameraPose,
                             InputArray _depth, InputArray _rgb, InputArray _pixNorms,
                             const Vec3i& unitIdx, const Point3i& volUnitDims,
-                            float voxelSize, float trancDist, const Intr& intrinsics)
+                            float voxelSize, float trancDist, int maxWeight,
+                            const Intr& intrinsics)
 {
     CV_TRACE_FUNCTION();
     Mat depth = _depth.getMat();
@@ -472,7 +584,7 @@ bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrig
         return false;
 }
 
-Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int volUnitSize)
+Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int volUnitSize, float voxelSize, float scale)
 {
     CV_TRACE_FUNCTION();
     Mat unitData = _unitData.getMat();
@@ -505,8 +617,11 @@ Point3f computeColorVoxelNormal(InputArray _unitData, int x, int y, int z, int v
     float grad_y = tsdfToFloat(ptr[idx_yp].tsdf) - tsdfToFloat(ptr[idx_ym].tsdf);
     float grad_z = tsdfToFloat(ptr[idx_zp].tsdf) - tsdfToFloat(ptr[idx_zm].tsdf);
 
-    // Return the gradient vector (which is the normal direction)
-    // The normal points in the direction of increasing SDF (away from the surface)
+    // Apply voxelSize and scale to the gradient calculation
+    grad_x *= scale / voxelSize;
+    grad_y *= scale / voxelSize;
+    grad_z *= scale / voxelSize;
+    
     Point3f normal(grad_x, grad_y, grad_z);
     return normal;
 }
