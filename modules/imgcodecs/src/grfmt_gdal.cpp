@@ -425,8 +425,18 @@ bool GdalDecoder::readData( Mat& img ){
         // create a temporary scanline pointer to store data
         double* scanline = new double[nCols];
 
+#if GDAL_VERSION_NUM < GDAL_COMPUTE_VERSION(3,3,0)
+        // FITS drivers on version GDAL prior to v3.3.0 return vertically mirrored results.
+        // See https://github.com/OSGeo/gdal/pull/3520
+        // See https://github.com/OSGeo/gdal/commit/ef0f86696d163e065943b27f50dcff77790a1311
+        const bool isNeedVerticallyFlip = strncmp(m_dataset->GetDriverName(), "FITS", 4) == 0;
+#else
+        const bool isNeedVerticallyFlip = false;
+#endif
+
         // iterate over each row and column
-        for( int y=0; y<nRows; y++ ){
+        for( int y=0; y<nRows; y++ ){ // for GDAL
+            const int yCv = isNeedVerticallyFlip ? (nRows - 1) - y : y ; // for OpenCV
 
             // get the entire row
             CPLErr err = band->RasterIO( GF_Read, 0, y, nCols, 1, scanline, nCols, 1, GDT_Float64, 0, 0);
@@ -438,10 +448,10 @@ bool GdalDecoder::readData( Mat& img ){
                 // set depending on image types
                 //   given boost, I would use enable_if to speed up.  Avoid for now.
                 if( hasColorTable == false ){
-                    write_pixel( scanline[x], gdalType, nChannels, img, y, x, color );
+                    write_pixel( scanline[x], gdalType, nChannels, img, yCv, x, color );
                 }
                 else{
-                    write_ctable_pixel( scanline[x], gdalType, gdalColorTable, img, y, x, color );
+                    write_ctable_pixel( scanline[x], gdalType, gdalColorTable, img, yCv, x, color );
                 }
             }
         }
