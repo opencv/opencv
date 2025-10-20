@@ -83,7 +83,7 @@ We map the 32-bit float HDR data into the range [0..1].
 Actually, in some cases the values can be larger than 1 or lower the 0, so notice
 we will later have to clip the data in order to avoid overflow.
 
-@Note: The function `cv.createTonemap()` uses a default gamma value of 1.0.  
+@Note: The function `cv.createTonemap()` uses a default gamma value of 1.0.
 Set it explicitly to 2.2 to match standard display brightness and ensure consistent tone mapping results.
 
 
