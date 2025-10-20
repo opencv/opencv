@@ -385,6 +385,16 @@ if(WITH_GDAL)
     else()
         set(HAVE_GDAL YES)
         ocv_include_directories(${GDAL_INCLUDE_DIR})
+
+        # GDAL_VERSION requires CMake 3.14 or later, if not found, GDAL_RELEASE_NAME is used instead.
+        # See https://cmake.org/cmake/help/latest/module/FindGDAL.html
+        if(NOT GDAL_VERSION)
+            if(EXISTS "${GDAL_INCLUDE_DIR}/gdal_version.h")
+                file(STRINGS "${GDAL_INCLUDE_DIR}/gdal_version.h" gdal_version_str REGEX "^#[\t ]+define[\t ]+GDAL_RELEASE_NAME[\t ]*")
+                string(REGEX REPLACE "^#\[\t ]+define[\t ]+GDAL_RELEASE_NAME[\t ]+\"([^ \\n]*)\"" "\\1" GDAL_VERSION "${gdal_version_str}")
+                unset(gdal_version_str)
+            endif()
+        endif()
     endif()
 endif()
 
