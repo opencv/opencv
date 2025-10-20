@@ -43,7 +43,6 @@
 #include "precomp.hpp"
 
 #include "opencv2/photo/cuda.hpp"
-#include "opencv2/core/private.cuda.hpp"
 
 #include "opencv2/opencv_modules.hpp"
 
@@ -60,11 +59,14 @@ using namespace cv::cuda;
 
 #if !defined (HAVE_CUDA) || !defined(HAVE_OPENCV_CUDAARITHM) || !defined(HAVE_OPENCV_CUDAIMGPROC)
 
+#include "opencv2/core/private/cuda_stubs.hpp"
 void cv::cuda::nonLocalMeans(InputArray, OutputArray, float, int, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::fastNlMeansDenoising(InputArray, OutputArray, float, int, int, Stream&) { throw_no_cuda(); }
 void cv::cuda::fastNlMeansDenoisingColored(InputArray, OutputArray, float, float, int, int, Stream&) { throw_no_cuda(); }
 
 #else
+
+#include "opencv2/core/private.cuda.hpp"
 
 //////////////////////////////////////////////////////////////////////////////////
 //// Non Local Means Denosing (brute force)
