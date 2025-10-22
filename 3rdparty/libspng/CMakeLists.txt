@@ -7,7 +7,6 @@ project(${SPNG_LIBRARY})
 
 set(CURR_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set_property(GLOBAL PROPERTY SPNG_INCLUDE_DIR ${CURR_INCLUDE_DIR})
-ocv_include_directories(${ZLIB_INCLUDE_DIRS})
 
 file(GLOB_RECURSE spng_headers RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "*.h")
 file(GLOB_RECURSE spng_sources RELATIVE "${CMAKE_CURRENT_LIST_DIR}" "*.c")
@@ -23,7 +22,7 @@ if(MSVC)
 endif(MSVC)
 
 add_library(${SPNG_LIBRARY} STATIC ${OPENCV_3RDPARTY_EXCLUDE_FROM_ALL} ${spng_headers} ${spng_sources})
-target_link_libraries(${SPNG_LIBRARY} ${ZLIB_LIBRARIES})
+target_link_libraries(${SPNG_LIBRARY} ${ZLIB_LIBRARY})
 
 set_target_properties(${SPNG_LIBRARY}
         PROPERTIES OUTPUT_NAME ${SPNG_LIBRARY}
