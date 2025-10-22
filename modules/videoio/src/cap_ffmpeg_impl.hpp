@@ -87,6 +87,10 @@ extern "C" {
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
     ? CALC_FFMPEG_VERSION(52, 85, 100) : CALC_FFMPEG_VERSION(53, 15, 0))
 #include <libavutil/display.h>
+#if defined(LIBAVCODEC_VERSION_MAJOR) && (LIBAVCODEC_VERSION_MAJOR >= 61)
+#  include <libavcodec/codec_par.h>
+#  include <libavcodec/packet.h>
+#endif
 #endif
 
 #if LIBAVUTIL_BUILD >= (LIBAVUTIL_VERSION_MICRO >= 100 \
@@ -684,8 +688,11 @@ void CvCapture_FFMPEG::close()
 
     if( video_st )
     {
-#ifdef CV_FFMPEG_CODECPAR
-        avcodec_close( context );
+#if defined(LIBAVCODEC_VERSION_MAJOR) && (LIBAVCODEC_VERSION_MAJOR >= 61)
+    avcodec_free_context(&context);
+    context = nullptr;
+#elif CV_FFMPEG_CODECPAR
+    avcodec_close(context);
 #endif
         video_st = NULL;
     }
@@ -2003,7 +2010,17 @@ double CvCapture_FFMPEG::dts_to_sec(int64_t dts) const
 void CvCapture_FFMPEG::get_rotation_angle()
 {
     rotation_angle = 0;
-#if LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
+#if defined(LIBAVFORMAT_VERSION_MAJOR) && (LIBAVFORMAT_VERSION_MAJOR >= 61)
+    // New path: read from coded_side_data
+    if (video_st && video_st->codecpar) {
+        const AVPacketSideData* sd =
+            av_packet_side_data_get(video_st->codecpar->coded_side_data,
+                                    video_st->codecpar->nb_coded_side_data,
+                                    AV_PKT_DATA_DISPLAYMATRIX);
+        if (sd && sd->data && sd->size >= 9 * (int)sizeof(int32_t))
+            rotation_angle = -av_display_rotation_get(reinterpret_cast<const int32_t*>(sd->data));
+    }
+#elif LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(57, 68, 100)
     const uint8_t *data = 0;
     data = av_stream_get_side_data(video_st, AV_PKT_DATA_DISPLAYMATRIX, NULL);
     if (data)
