@@ -52,31 +52,48 @@ namespace opencv_test { namespace {
 
 TEST(minEnclosingCircle, basic_test)
 {
-    vector<Point2f> pts;
-    pts.push_back(Point2f(0, 0));
-    pts.push_back(Point2f(10, 0));
-    pts.push_back(Point2f(5, 1));
     const float EPS = 1.0e-3f;
     Point2f center;
     float radius;
+
+    {
+        const vector<Point2f> pts = { {5, 10} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 10, EPS);
+        EXPECT_NEAR(radius, 0, EPS);
+    }
+
+    {
+        const vector<Point2f> pts = { {5, 10}, {11, 18} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 8, EPS);
+        EXPECT_NEAR(center.y, 14, EPS);
+        EXPECT_NEAR(radius, 5, EPS);
+    }
 
     // pts[2] is within the circle with diameter pts[0] - pts[1].
     //        2
     // 0             1
     // NB: The triangle is obtuse, so the only pts[0] and pts[1] are on the circle.
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 1} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // pts[2] is on the circle with diameter pts[0] - pts[1].
     //  2
     // 0 1
-    pts[2] = Point2f(5, 5);
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 5} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // pts[2] is outside the circle with diameter pts[0] - pts[1].
     //   2
@@ -84,32 +101,40 @@ TEST(minEnclosingCircle, basic_test)
     //
     // 0   1
     // NB: The triangle is acute, so all 3 points are on the circle.
-    pts[2] = Point2f(5, 10);
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 3.75, EPS);
-    EXPECT_NEAR(6.25f, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {5, 10} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 3.75, EPS);
+        EXPECT_NEAR(6.25f, radius, EPS);
+    }
 
     // The 3 points are colinear.
-    pts[2] = Point2f(3, 0);
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {3, 0} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // 2 points are the same.
-    pts[2] = pts[1];
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 5, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(5, radius, EPS);
+    {
+        const vector<Point2f> pts = { {0, 0}, {10, 0}, {10, 0} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 5, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(5, radius, EPS);
+    }
 
     // 3 points are the same.
-    pts[0] = pts[1];
-    minEnclosingCircle(pts, center, radius);
-    EXPECT_NEAR(center.x, 10, EPS);
-    EXPECT_NEAR(center.y, 0, EPS);
-    EXPECT_NEAR(0, radius, EPS);
+    {
+        const vector<Point2f> pts = { {10, 0}, {10, 0}, {10, 0} };
+        minEnclosingCircle(pts, center, radius);
+        EXPECT_NEAR(center.x, 10, EPS);
+        EXPECT_NEAR(center.y, 0, EPS);
+        EXPECT_NEAR(0, radius, EPS);
+    }
 }
 
 TEST(Imgproc_minEnclosingCircle, regression_16051) {
@@ -125,6 +150,44 @@ TEST(Imgproc_minEnclosingCircle, regression_16051) {
     EXPECT_NEAR(center.x, 86.9f, 1e-3);
     EXPECT_NEAR(center.y, 1414.1f, 1e-3);
     EXPECT_NEAR(2.1024551f, radius, 1e-3);
+}
+
+TEST(Imgproc_minEnclosingCircle, regression_27891) {
+    {
+        const vector<Point2f> pts = { {219, 301}, {639, 635}, {740, 569}, {740, 569}, {309, 123}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+
+    {
+        const vector<Point2f> pts = { {219, 301}, {639, 635}, {740, 569}, {740, 569}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
+
+    {
+        const vector<Point2f> pts = { {639, 635}, {740, 569}, {740, 569}, {349, 88} };
+
+        Point2f center;
+        float radius;
+        minEnclosingCircle(pts, center, radius);
+
+        EXPECT_NEAR(center.x, 522.476f, 1e-3f);
+        EXPECT_NEAR(center.y, 346.4029f, 1e-3f);
+        EXPECT_NEAR(radius, 311.2331f, 1e-3f);
+    }
 }
 
 PARAM_TEST_CASE(ConvexityDefects_regression_5908, bool, int)
