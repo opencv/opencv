@@ -251,7 +251,8 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
 
     if (empty())
     {
-        dst.release();
+        int type_to_use = type_ >= 0 ? type_ : type();
+        dst.create(size(), type_to_use);
         return;
     }
 
