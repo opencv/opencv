@@ -716,14 +716,18 @@ template<typename _Tp> inline
 _Tp* Mat::ptr(int y)
 {
     CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
-    return (_Tp*)(data + step.p[0] * y);
+    _Tp* p = (_Tp*)((void*)(data + step.p[0] * y));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
 const _Tp* Mat::ptr(int y) const
 {
     CV_DbgAssert( y == 0 || (data && dims >= 1 && (unsigned)y < (unsigned)size.p[0]) );
-    return (const _Tp*)(data + step.p[0] * y);
+    const _Tp* p = (const _Tp*)((const void*)(data + step.p[0] * y));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 inline
@@ -753,7 +757,10 @@ _Tp* Mat::ptr(int i0, int i1)
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
-    return (_Tp*)(data + i0 * step.p[0] + i1 * step.p[1]);
+
+    _Tp* p = (_Tp*)((void*)(data + i0 * step.p[0] + i1 * step.p[1]));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
@@ -763,7 +770,10 @@ const _Tp* Mat::ptr(int i0, int i1) const
     CV_DbgAssert(data);
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
-    return (const _Tp*)(data + i0 * step.p[0] + i1 * step.p[1]);
+
+    const _Tp* p = (const _Tp*)((const void*)(data + i0 * step.p[0] + i1 * step.p[1]));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 inline
@@ -796,7 +806,10 @@ _Tp* Mat::ptr(int i0, int i1, int i2)
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
     CV_DbgAssert((unsigned)i2 < (unsigned)size.p[2]);
-    return (_Tp*)(data + i0 * step.p[0] + i1 * step.p[1] + i2 * step.p[2]);
+
+    _Tp* p = (_Tp*)((void*)(data + i0 * step.p[0] + i1 * step.p[1] + i2 * step.p[2]));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
@@ -807,7 +820,10 @@ const _Tp* Mat::ptr(int i0, int i1, int i2) const
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
     CV_DbgAssert((unsigned)i2 < (unsigned)size.p[2]);
-    return (const _Tp*)(data + i0 * step.p[0] + i1 * step.p[1] + i2 * step.p[2]);
+
+    const _Tp* p = (const _Tp*)((const void*)(data + i0 * step.p[0] + i1 * step.p[1] + i2 * step.p[2]));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 inline
@@ -849,7 +865,10 @@ _Tp* Mat::ptr(const int* idx)
         CV_DbgAssert( (unsigned)idx[i] < (unsigned)size.p[i] );
         p += idx[i] * step.p[i];
     }
-    return (_Tp*)p;
+
+    _Tp* tPtr = (_Tp*)((void*)p);
+    CV_DbgAssert(((uintptr_t)tPtr & (alignof(_Tp) - 1)) == 0);
+    return tPtr;
 }
 
 template<typename _Tp> inline
@@ -863,7 +882,10 @@ const _Tp* Mat::ptr(const int* idx) const
         CV_DbgAssert( (unsigned)idx[i] < (unsigned)size.p[i] );
         p += idx[i] * step.p[i];
     }
-    return (const _Tp*)p;
+
+    const _Tp* tPtr = (const _Tp*)((const void*)p);
+    CV_DbgAssert(((uintptr_t)tPtr & (alignof(_Tp) - 1)) == 0);
+    return tPtr;
 }
 
 template<int n> inline
@@ -901,7 +923,10 @@ _Tp& Mat::at(int i0, int i1)
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(i1 * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
-    return ((_Tp*)(data + step.p[0] * i0))[i1];
+
+    _Tp* p = ((_Tp*)((void*)(data + step.p[0] * i0))) + i1;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -912,7 +937,10 @@ const _Tp& Mat::at(int i0, int i1) const
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(i1 * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
-    return ((const _Tp*)(data + step.p[0] * i0))[i1];
+
+    const _Tp* p = ((const _Tp*)((const void*)(data + step.p[0] * i0))) + i1;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -923,7 +951,10 @@ _Tp& Mat::at(Point pt)
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(pt.x * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
-    return ((_Tp*)(data + step.p[0] * pt.y))[pt.x];
+
+    _Tp* p = ((_Tp*)((void*)(data + step.p[0] * pt.y))) + pt.x;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -934,7 +965,10 @@ const _Tp& Mat::at(Point pt) const
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)(pt.x * DataType<_Tp>::channels) < (unsigned)(size.p[1] * channels()));
     CV_DbgAssert(CV_ELEM_SIZE1(traits::Depth<_Tp>::value) == elemSize1());
-    return ((const _Tp*)(data + step.p[0] * pt.y))[pt.x];
+
+    const _Tp* p = ((const _Tp*)((const void*)(data + step.p[0] * pt.y))) + pt.x;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -945,11 +979,21 @@ _Tp& Mat::at(int i0)
     CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
     CV_DbgAssert(elemSize() == sizeof(_Tp));
     if( isContinuous() || size.p[0] == 1 )
-        return ((_Tp*)data)[i0];
+    {
+        _Tp* p = ((_Tp*)((void*)(data))) + i0;
+        CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+        return *p;
+    }
     if( size.p[1] == 1 )
-        return *(_Tp*)(data + step.p[0] * i0);
+    {
+        _Tp* p = (_Tp*)((void*)(data + step.p[0] * i0));
+        CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+        return *p;
+    }
     int i = i0 / cols, j = i0 - i * cols;
-    return ((_Tp*)(data + step.p[0] * i))[j];
+    _Tp* p = ((_Tp*)((void*)(data + step.p[0] * i))) + j;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -960,53 +1004,71 @@ const _Tp& Mat::at(int i0) const
     CV_DbgAssert((unsigned)i0 < (unsigned)(size.p[0] * size.p[1]));
     CV_DbgAssert(elemSize() == sizeof(_Tp));
     if( isContinuous() || size.p[0] == 1 )
-        return ((const _Tp*)data)[i0];
+    {
+        const _Tp* p = ((const _Tp*)((const void*)data)) + i0;
+        CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+        return *p;
+    }
     if( size.p[1] == 1 )
-        return *(const _Tp*)(data + step.p[0] * i0);
+    {
+        const _Tp* p = (const _Tp*)((const void*)(data + step.p[0] * i0));
+        CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+        return *p;
+    }
     int i = i0 / cols, j = i0 - i * cols;
-    return ((const _Tp*)(data + step.p[0] * i))[j];
+    const _Tp* p = ((const _Tp*)((const void*)(data + step.p[0] * i))) + j;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 _Tp& Mat::at(int i0, int i1, int i2)
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
-    return *(_Tp*)ptr(i0, i1, i2);
+    _Tp* p = (_Tp*)((void*)ptr(i0, i1, i2));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 const _Tp& Mat::at(int i0, int i1, int i2) const
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
-    return *(const _Tp*)ptr(i0, i1, i2);
+    const _Tp* p = (const _Tp*)((const void*)ptr(i0, i1, i2));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 _Tp& Mat::at(const int* idx)
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
-    return *(_Tp*)ptr(idx);
+    _Tp* p = (_Tp*)((void*)ptr(idx));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 const _Tp& Mat::at(const int* idx) const
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
-    return *(const _Tp*)ptr(idx);
+    const _Tp* p = (const _Tp*)((const void*)ptr(idx));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp, int n> inline
 _Tp& Mat::at(const Vec<int, n>& idx)
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
-    return *(_Tp*)ptr(idx.val);
+    return *ptr<_Tp>(idx.val);
 }
 
 template<typename _Tp, int n> inline
 const _Tp& Mat::at(const Vec<int, n>& idx) const
 {
     CV_DbgAssert( elemSize() == sizeof(_Tp) );
-    return *(const _Tp*)ptr(idx.val);
+    return *ptr<_Tp>(idx.val);
 }
 
 template<typename _Tp> inline
@@ -1604,14 +1666,18 @@ template<typename _Tp> inline
 _Tp* Mat_<_Tp>::operator [](int y)
 {
     CV_DbgAssert( 0 <= y && y < size.p[0] );
-    return (_Tp*)(data + y*step.p[0]);
+    _Tp* p = (_Tp*)((void*)(data + y*step.p[0]));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
 const _Tp* Mat_<_Tp>::operator [](int y) const
 {
     CV_DbgAssert( 0 <= y && y < size.p[0] );
-    return (const _Tp*)(data + y*step.p[0]);
+    const _Tp* p = (const _Tp*)((const void*)(data + y*step.p[0]));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
@@ -1622,7 +1688,10 @@ _Tp& Mat_<_Tp>::operator ()(int i0, int i1)
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
     CV_DbgAssert(type() == traits::Type<_Tp>::value);
-    return ((_Tp*)(data + step.p[0] * i0))[i1];
+
+    _Tp* p = ((_Tp*)((void*)(data + step.p[0] * i0))) + i1;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -1633,7 +1702,10 @@ const _Tp& Mat_<_Tp>::operator ()(int i0, int i1) const
     CV_DbgAssert((unsigned)i0 < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)i1 < (unsigned)size.p[1]);
     CV_DbgAssert(type() == traits::Type<_Tp>::value);
-    return ((const _Tp*)(data + step.p[0] * i0))[i1];
+
+    const _Tp* p = ((const _Tp*)((const void*)(data + step.p[0] * i0))) + i1;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -1644,7 +1716,10 @@ _Tp& Mat_<_Tp>::operator ()(Point pt)
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)pt.x < (unsigned)size.p[1]);
     CV_DbgAssert(type() == traits::Type<_Tp>::value);
-    return ((_Tp*)(data + step.p[0] * pt.y))[pt.x];
+
+    _Tp* p = ((_Tp*)((void*)(data + step.p[0] * pt.y))) + pt.x;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -1655,7 +1730,10 @@ const _Tp& Mat_<_Tp>::operator ()(Point pt) const
     CV_DbgAssert((unsigned)pt.y < (unsigned)size.p[0]);
     CV_DbgAssert((unsigned)pt.x < (unsigned)size.p[1]);
     CV_DbgAssert(type() == traits::Type<_Tp>::value);
-    return ((const _Tp*)(data + step.p[0] * pt.y))[pt.x];
+
+    const _Tp* p = ((const _Tp*)((const void*)(data + step.p[0] * pt.y))) + pt.x;
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
@@ -1933,89 +2011,113 @@ size_t SparseMat::nzcount() const
 template<typename _Tp> inline
 _Tp& SparseMat::ref(int i0, size_t* hashval)
 {
-    return *(_Tp*)((SparseMat*)this)->ptr(i0, true, hashval);
+    _Tp* p = (_Tp*)((void*)(((SparseMat*)this)->ptr(i0, true, hashval)));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 _Tp& SparseMat::ref(int i0, int i1, size_t* hashval)
 {
-    return *(_Tp*)((SparseMat*)this)->ptr(i0, i1, true, hashval);
+    _Tp* p = (_Tp*)((void*)(((SparseMat*)this)->ptr(i0, i1, true, hashval)));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 _Tp& SparseMat::ref(int i0, int i1, int i2, size_t* hashval)
 {
-    return *(_Tp*)((SparseMat*)this)->ptr(i0, i1, i2, true, hashval);
+    _Tp* p = (_Tp*)((void*)(((SparseMat*)this)->ptr(i0, i1, i2, true, hashval)));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 _Tp& SparseMat::ref(const int* idx, size_t* hashval)
 {
-    return *(_Tp*)((SparseMat*)this)->ptr(idx, true, hashval);
+    _Tp* p = (_Tp*)((void*)(((SparseMat*)this)->ptr(idx, true, hashval)));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 _Tp SparseMat::value(int i0, size_t* hashval) const
 {
-    const _Tp* p = (const _Tp*)((SparseMat*)this)->ptr(i0, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(i0, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
     return p ? *p : _Tp();
 }
 
 template<typename _Tp> inline
 _Tp SparseMat::value(int i0, int i1, size_t* hashval) const
 {
-    const _Tp* p = (const _Tp*)((SparseMat*)this)->ptr(i0, i1, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(i0, i1, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
     return p ? *p : _Tp();
 }
 
 template<typename _Tp> inline
 _Tp SparseMat::value(int i0, int i1, int i2, size_t* hashval) const
 {
-    const _Tp* p = (const _Tp*)((SparseMat*)this)->ptr(i0, i1, i2, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(i0, i1, i2, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
     return p ? *p : _Tp();
 }
 
 template<typename _Tp> inline
 _Tp SparseMat::value(const int* idx, size_t* hashval) const
 {
-    const _Tp* p = (const _Tp*)((SparseMat*)this)->ptr(idx, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(idx, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
     return p ? *p : _Tp();
 }
 
 template<typename _Tp> inline
 const _Tp* SparseMat::find(int i0, size_t* hashval) const
 {
-    return (const _Tp*)((SparseMat*)this)->ptr(i0, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(i0, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
 const _Tp* SparseMat::find(int i0, int i1, size_t* hashval) const
 {
-    return (const _Tp*)((SparseMat*)this)->ptr(i0, i1, false, hashval);
+    const _Tp* p = (const _Tp*)((void*)((SparseMat*)this)->ptr(i0, i1, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
 const _Tp* SparseMat::find(int i0, int i1, int i2, size_t* hashval) const
 {
-    return (const _Tp*)((SparseMat*)this)->ptr(i0, i1, i2, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(i0, i1, i2, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
 const _Tp* SparseMat::find(const int* idx, size_t* hashval) const
 {
-    return (const _Tp*)((SparseMat*)this)->ptr(idx, false, hashval);
+    const _Tp* p = (const _Tp*)((const void*)((SparseMat*)this)->ptr(idx, false, hashval));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return p;
 }
 
 template<typename _Tp> inline
 _Tp& SparseMat::value(Node* n)
 {
-    return *(_Tp*)((uchar*)n + hdr->valueOffset);
+    _Tp* p = (_Tp*)((void*)((uchar*)n + hdr->valueOffset));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 template<typename _Tp> inline
 const _Tp& SparseMat::value(const Node* n) const
 {
-    return *(const _Tp*)((const uchar*)n + hdr->valueOffset);
+    const _Tp* p = (const _Tp*)((const void*)((const uchar*)n + hdr->valueOffset));
+    CV_DbgAssert(((uintptr_t)p & (alignof(_Tp) - 1)) == 0);
+    return *p;
 }
 
 inline
@@ -2504,7 +2606,7 @@ MatConstIterator_<_Tp>& MatConstIterator_<_Tp>::operator = (const MatConstIterat
 template<typename _Tp> inline
 const _Tp& MatConstIterator_<_Tp>::operator *() const
 {
-    return *(_Tp*)(this->ptr);
+    return *(_Tp*)((void*)(this->ptr));
 }
 
 template<typename _Tp> inline
@@ -2610,7 +2712,7 @@ MatConstIterator_<_Tp> operator - (const MatConstIterator_<_Tp>& a, ptrdiff_t of
 template<typename _Tp> inline
 const _Tp& MatConstIterator_<_Tp>::operator [](ptrdiff_t i) const
 {
-    return *(_Tp*)MatConstIterator::operator [](i);
+    return *(_Tp*)((void*)MatConstIterator::operator [](i));
 }
 
 
@@ -2657,7 +2759,7 @@ MatIterator_<_Tp>& MatIterator_<_Tp>::operator = (const MatIterator_<_Tp>& it )
 template<typename _Tp> inline
 _Tp& MatIterator_<_Tp>::operator *() const
 {
-    return *(_Tp*)(this->ptr);
+    return *(_Tp*)((void*)(this->ptr));
 }
 
 template<typename _Tp> inline
@@ -2772,7 +2874,7 @@ inline SparseMatConstIterator& SparseMatConstIterator::operator = (const SparseM
 template<typename _Tp> inline
 const _Tp& SparseMatConstIterator::value() const
 {
-    return *(const _Tp*)ptr;
+    return *(const _Tp*)((const void*)ptr);
 }
 
 inline
@@ -2840,7 +2942,7 @@ SparseMatIterator& SparseMatIterator::operator = (const SparseMatIterator& it)
 template<typename _Tp> inline
 _Tp& SparseMatIterator::value() const
 {
-    return *(_Tp*)ptr;
+    return *(_Tp*)((void*)ptr);
 }
 
 inline
@@ -2900,7 +3002,7 @@ SparseMatConstIterator_<_Tp>& SparseMatConstIterator_<_Tp>::operator = (const Sp
 template<typename _Tp> inline
 const _Tp& SparseMatConstIterator_<_Tp>::operator *() const
 {
-    return *(const _Tp*)this->ptr;
+    return *(const _Tp*)((const void*)this->ptr);
 }
 
 template<typename _Tp> inline
@@ -2952,7 +3054,7 @@ SparseMatIterator_<_Tp>& SparseMatIterator_<_Tp>::operator = (const SparseMatIte
 template<typename _Tp> inline
 _Tp& SparseMatIterator_<_Tp>::operator *() const
 {
-    return *(_Tp*)this->ptr;
+    return *(_Tp*)((void*)this->ptr);
 }
 
 template<typename _Tp> inline
