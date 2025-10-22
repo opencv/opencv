@@ -1596,7 +1596,12 @@ void cv::ogl::render(const ogl::Arrays& arr, InputArray indices, int mode, Scala
 #  if defined(__ANDROID__)
 #    include <EGL/egl.h>
 #  elif defined(__linux__)
-#    include <GL/glx.h>
+#    if defined(OPENCV_ENABLE_EGL_INTEROP)
+#      include <EGL/egl.h>
+#    endif
+#    if defined(OPENCV_ENABLE_GLX_INTEROP)
+#      include <GL/glx.h>
+#    endif
 #  endif
 #endif // HAVE_OPENGL
 
@@ -1762,19 +1767,32 @@ Context& initializeContextFromGL()
 #elif defined(__linux__)
                 cl_context_properties props[] =
                 {
-                    CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
-                    CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
-                    CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
-                    0
+#  if defined(OPENCV_ENABLE_EGL_INTEROP) // prefer EGL
+                  CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                  CL_GL_CONTEXT_KHR, (cl_context_properties)eglGetCurrentContext(),
+                  CL_EGL_DISPLAY_KHR, (cl_context_properties)eglGetCurrentDisplay(),
+#  elif defined(OPENCV_ENABLE_GLX_INTEROP)
+                  CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[i],
+                  CL_GL_CONTEXT_KHR, (cl_context_properties)glXGetCurrentContext(),
+                  CL_GLX_DISPLAY_KHR, (cl_context_properties)glXGetCurrentDisplay(),
+#  endif
+                  0
                 };
+#  if defined(OPENCV_ENABLE_EGL_INTEROP) && defined(OPENCV_ENABLE_GLX_INTEROP) //GLX fallback
+                if(props[4] == CL_EGL_DISPLAY_KHR && props[3] == (cl_context_properties)EGL_NO_CONTEXT) {
+                    props[3] = (cl_context_properties)glXGetCurrentContext();
+                    props[4] = (cl_context_properties)CL_GLX_DISPLAY_KHR;
+                    props[5] = (cl_context_properties)glXGetCurrentDisplay();
+                }
+#  endif
                 context = clCreateContext(props, 1, &devices[devUsed], NULL, NULL, &status);
 #endif
-        }
 
         if (status != CL_SUCCESS)
             CV_Error_(cv::Error::OpenCLInitError, ("OpenCL: Can't create context for OpenGL interop: %d", status));
         else
             break;
+        }
     }
 
 
