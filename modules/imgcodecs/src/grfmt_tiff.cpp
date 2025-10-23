@@ -52,10 +52,17 @@
 
 #include "grfmt_tiff.hpp"
 #include <limits>
+#include <string>
+#include <cstdarg>
 
 #include "tiff.h"
 #include "tiffio.h"
 
+#ifdef TIFFLIB_AT_LEAST
+#if TIFFLIB_AT_LEAST(4, 5, 0)
+#define OCV_HAVE_TIFF_OPEN_OPTIONS
+#endif
+#endif
 namespace cv
 {
 
@@ -78,30 +85,116 @@ static void cv_tiffCloseHandle(void* handle)
     TIFFClose((TIFF*)handle);
 }
 
+static std::string vformat(const char* fmt, va_list ap)
+{
+    if (!fmt)
+        return {};
+    va_list ap_copy;
+    va_copy(ap_copy, ap);
+    const int len = std::vsnprintf(nullptr, 0, fmt, ap_copy);
+    va_end(ap_copy);
+    if (len < 0)
+        return fmt;
+
+    std::string buf(static_cast<size_t>(len) + 1, '\0');
+    std::vsnprintf(&buf[0], buf.size(), fmt, ap);
+    buf.pop_back();
+    return buf;
+}
+
+static std::string formatTiffMessage(const char* module, const char* fmt, va_list ap)
+{
+    std::stringstream ss;
+    if (module && module[0] != '\0')
+        ss << module << ": ";
+    ss << cv::vformat(fmt, ap);
+    return ss.str();
+}
+
+static int TIFF_Error(TIFF *, void *, const char* module, const char* fmt, va_list ap)
+{
+    CV_LOG_ERROR(NULL, formatTiffMessage(module, fmt, ap));
+    return 1;
+}
+
+static int TIFF_Warning(TIFF *, void *, const char* module, const char* fmt, va_list ap)
+{
+     CV_LOG_WARNING(NULL, formatTiffMessage(module, fmt, ap));
+     return 1;
+}
+
+#ifdef OCV_HAVE_TIFF_OPEN_OPTIONS
+static TIFFOpenOptions* cv_tiffCreateOptions()
+{
+    auto opts = TIFFOpenOptionsAlloc();
+    TIFFOpenOptionsSetErrorHandlerExtR(opts, &TIFF_Error, nullptr);
+    TIFFOpenOptionsSetWarningHandlerExtR(opts, &TIFF_Warning, nullptr);
+#if TIFFLIB_AT_LEAST(4, 7, 1)
+    TIFFOpenOptionsSetWarnAboutUnknownTags(opts, 1);
+#endif
+    return opts;
+}
+#endif
+
+static TIFF* cv_tiffOpen(const char* filename, const char* mode)
+{
+#ifdef OCV_HAVE_TIFF_OPEN_OPTIONS
+    auto opts = cv_tiffCreateOptions();
+    auto tiff = TIFFOpenExt(filename, mode, opts);
+    TIFFOpenOptionsFree(opts);
+    return tiff;
+#else
+    return TIFFOpen(filename, mode);
+#endif
+}
+
+static TIFF* cv_tiffClientOpen(const char* name, const char* mode, thandle_t clientdata,
+                     TIFFReadWriteProc readproc, TIFFReadWriteProc writeproc,
+                     TIFFSeekProc seekproc, TIFFCloseProc closeproc,
+                     TIFFSizeProc sizeproc, TIFFMapFileProc mapproc,
+                     TIFFUnmapFileProc unmapproc)
+{
+#ifdef OCV_HAVE_TIFF_OPEN_OPTIONS
+    auto opts = cv_tiffCreateOptions();
+    auto tiff = TIFFClientOpenExt(name, mode, clientdata, readproc, writeproc,
+        seekproc, closeproc, sizeproc, mapproc, unmapproc, opts);
+    TIFFOpenOptionsFree(opts);
+    return tiff;
+#else
+    return TIFFClientOpen(name, mode, clientdata, readproc, writeproc,
+        seekproc, closeproc, sizeproc, mapproc, unmapproc);
+#endif
+}
+
+#ifndef OCV_HAVE_TIFF_OPEN_OPTIONS
+
 static void cv_tiffErrorHandler(const char* module, const char* fmt, va_list ap)
 {
-    if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_DEBUG)
-        return;
-    // TODO cv::vformat() with va_list parameter
-    fprintf(stderr, "OpenCV TIFF: ");
-    if (module != NULL)
-        fprintf(stderr, "%s: ", module);
-    fprintf(stderr, "Warning, ");
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, ".\n");
+    (void) TIFF_Error(nullptr, nullptr, module, fmt, ap);
+}
+
+static void cv_tiffWarningHandler(const char* module, const char* fmt, va_list ap)
+{
+    (void) TIFF_Warning(nullptr, nullptr, module, fmt, ap);
 }
 
 static bool cv_tiffSetErrorHandler_()
 {
     TIFFSetErrorHandler(cv_tiffErrorHandler);
-    TIFFSetWarningHandler(cv_tiffErrorHandler);
+    TIFFSetWarningHandler(cv_tiffWarningHandler);
     return true;
 }
 
+#endif
+
 static bool cv_tiffSetErrorHandler()
 {
+#ifndef OCV_HAVE_TIFF_OPEN_OPTIONS
     static bool v = cv_tiffSetErrorHandler_();
     return v;
+#else
+    return true;
+#endif
 }
 
 static const char fmtSignTiffII[] = "II\x2a\x00";
@@ -241,7 +334,7 @@ bool TiffDecoder::readHeader()
         {
             m_buf_pos = 0;
             TiffDecoderBufHelper* buf_helper = new TiffDecoderBufHelper(this->m_buf, this->m_buf_pos);
-            tif = TIFFClientOpen( "", "r", reinterpret_cast<thandle_t>(buf_helper), &TiffDecoderBufHelper::read,
+            tif = cv_tiffClientOpen( "", "r", reinterpret_cast<thandle_t>(buf_helper), &TiffDecoderBufHelper::read,
                                   &TiffDecoderBufHelper::write, &TiffDecoderBufHelper::seek,
                                   &TiffDecoderBufHelper::close, &TiffDecoderBufHelper::size,
                                   &TiffDecoderBufHelper::map, /*unmap=*/0 );
@@ -250,7 +343,7 @@ bool TiffDecoder::readHeader()
         }
         else
         {
-            tif = TIFFOpen(m_filename.c_str(), "r");
+            tif = cv_tiffOpen(m_filename.c_str(), "r");
         }
         if (tif)
             m_tif.reset(tif, cv_tiffCloseHandle);
@@ -1113,7 +1206,7 @@ public:
     {
         // do NOT put "wb" as the mode, because the b means "big endian" mode, not "binary" mode.
         // http://www.simplesystems.org/libtiff/functions/TIFFOpen.html
-        return TIFFClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
+        return cv_tiffClientOpen( "", "w", reinterpret_cast<thandle_t>(this), &TiffEncoderBufHelper::read,
                                &TiffEncoderBufHelper::write, &TiffEncoderBufHelper::seek,
                                &TiffEncoderBufHelper::close, &TiffEncoderBufHelper::size,
                                /*map=*/0, /*unmap=*/0 );
@@ -1210,7 +1303,7 @@ bool TiffEncoder::writeLibTiff( const std::vector<Mat>& img_vec, const std::vect
     }
     else
     {
-        tif = TIFFOpen(m_filename.c_str(), "w");
+        tif = cv_tiffOpen(m_filename.c_str(), "w");
     }
     if (!tif)
     {
