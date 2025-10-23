@@ -564,3 +564,7 @@
 "test_center_crop_pad_crop_negative_axes_hwc_expanded",
 "test_center_crop_pad_pad",
 "test_center_crop_pad_pad_expanded",
+"test_onehot_negative_indices",
+"test_onehot_with_axis",
+"test_onehot_with_negative_axis",
+"test_onehot_without_axis",
