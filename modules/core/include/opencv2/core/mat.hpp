@@ -216,6 +216,11 @@ public:
     template<typename _Tp> static _InputArray rawIn(const std::vector<_Tp>& vec);
     template<typename _Tp, std::size_t _Nm> static _InputArray rawIn(const std::array<_Tp, _Nm>& arr);
 
+    _InputArray(const _InputArray& other);
+    _InputArray(_InputArray&& other) CV_NOEXCEPT;
+    _InputArray& operator=(const _InputArray& other);
+    _InputArray& operator=(_InputArray&& other) CV_NOEXCEPT;
+
     Mat getMat(int idx=-1) const;
     Mat getMat_(int idx=-1) const;
     UMat getUMat(int idx=-1) const;
@@ -356,6 +361,11 @@ public:
     template<typename _Tp> static _OutputArray rawOut(std::vector<_Tp>& vec);
     template<typename _Tp, std::size_t _Nm> static _OutputArray rawOut(std::array<_Tp, _Nm>& arr);
 
+    _OutputArray(const _OutputArray& other);
+    _OutputArray(_OutputArray&& other) CV_NOEXCEPT;
+    _OutputArray& operator=(const _OutputArray& other);
+    _OutputArray& operator=(_OutputArray&& other) CV_NOEXCEPT;
+
     bool fixedSize() const;
     bool fixedType() const;
     bool needed() const;
@@ -429,6 +439,11 @@ public:
 
     template<typename _Tp> static _InputOutputArray rawInOut(std::vector<_Tp>& vec);
     template<typename _Tp, std::size_t _Nm> _InputOutputArray rawInOut(std::array<_Tp, _Nm>& arr);
+
+    _InputOutputArray(const _InputOutputArray& other);
+    _InputOutputArray(_InputOutputArray&& other) CV_NOEXCEPT;
+    _InputOutputArray& operator=(const _InputOutputArray& other);
+    _InputOutputArray& operator=(_InputOutputArray&& other) CV_NOEXCEPT;
 
 };
 
