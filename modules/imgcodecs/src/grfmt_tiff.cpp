@@ -52,6 +52,8 @@
 
 #include "grfmt_tiff.hpp"
 #include <limits>
+#include <string>
+#include <cstdarg>
 
 #include "tiff.h"
 #include "tiffio.h"
@@ -83,31 +85,50 @@ static void cv_tiffCloseHandle(void* handle)
     TIFFClose((TIFF*)handle);
 }
 
-static int cv_tiffErrorHandler(TIFF *, void * userData, const char* module, const char* fmt, va_list ap)
+static std::string vformat(const char* fmt, va_list ap)
 {
-    // return non-zero means "don't call the global error handler"
-    // TODO tiff-specific log tag
-    if (cv::utils::logging::getLogLevel() < cv::utils::logging::LOG_LEVEL_DEBUG)
-        return 1;
+    if (!fmt)
+        return {};
+    va_list ap_copy;
+    va_copy(ap_copy, ap);
+    const int len = std::vsnprintf(nullptr, 0, fmt, ap_copy);
+    va_end(ap_copy);
+    if (len < 0)
+        return fmt;
 
-    auto header = reinterpret_cast<const char*>(userData);
-    // TODO cv::vformat() with va_list parameter
-    fprintf(stderr, "OpenCV TIFF: ");
-    if (header)
-        fprintf(stderr, "%s: ", header);
+    std::string buf(static_cast<size_t>(len) + 1, '\0');
+    std::vsnprintf(&buf[0], buf.size(), fmt, ap);
+    buf.pop_back();
+    return buf;
+}
+
+static std::string formatTiffMessage(const char* module, const char* fmt, va_list ap)
+{
+    std::stringstream ss;
     if (module && module[0] != '\0')
-        fprintf(stderr, "%s: ", module);
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, ".\n");
+        ss << module << ": ";
+    ss << cv::vformat(fmt, ap);
+    return ss.str();
+}
+
+static int TIFF_Error(TIFF *, void *, const char* module, const char* fmt, va_list ap)
+{
+    CV_LOG_ERROR(NULL, formatTiffMessage(module, fmt, ap));
     return 1;
+}
+
+static int TIFF_Warning(TIFF *, void *, const char* module, const char* fmt, va_list ap)
+{
+     CV_LOG_WARNING(NULL, formatTiffMessage(module, fmt, ap));
+     return 1;
 }
 
 #ifdef OCV_HAVE_TIFF_OPEN_OPTIONS
 static TIFFOpenOptions* cv_tiffCreateOptions()
 {
     auto opts = TIFFOpenOptionsAlloc();
-    TIFFOpenOptionsSetErrorHandlerExtR(opts, &cv_tiffErrorHandler, (void*)"error");
-    TIFFOpenOptionsSetWarningHandlerExtR(opts, &cv_tiffErrorHandler, (void*)"warning");
+    TIFFOpenOptionsSetErrorHandlerExtR(opts, &TIFF_Error, nullptr);
+    TIFFOpenOptionsSetWarningHandlerExtR(opts, &TIFF_Warning, nullptr);
 #if TIFFLIB_AT_LEAST(4, 7, 1)
     TIFFOpenOptionsSetWarnAboutUnknownTags(opts, 1);
 #endif
@@ -149,12 +170,12 @@ static TIFF* cv_tiffClientOpen(const char* name, const char* mode, thandle_t cli
 
 static void cv_tiffErrorHandler(const char* module, const char* fmt, va_list ap)
 {
-    (void) cv_tiffErrorHandler(nullptr, (void*)"error", module, fmt, ap);
+    (void) TIFF_Error(nullptr, nullptr, module, fmt, ap);
 }
 
 static void cv_tiffWarningHandler(const char* module, const char* fmt, va_list ap)
 {
-    (void) cv_tiffErrorHandler(nullptr, (void*)"warning", module, fmt, ap);
+    (void) TIFF_Warning(nullptr, nullptr, module, fmt, ap);
 }
 
 static bool cv_tiffSetErrorHandler_()
