@@ -142,7 +142,6 @@ def plot_scene_camera_view(
     errors: Optional[List[float]] = None,
     colormap: Optional[callable] = None,
 ) -> List[Poly3DCollection]:
-    n_views = extr.shape[0]
     Rts: List[Tuple[np.ndarray, np.ndarray]] = []
     for row in extr:
         rvec = row[:3].reshape(3, 1)
@@ -218,7 +217,7 @@ def plot_scene_board_view(
     board_points = calibs[0][
         "grid"
     ]  # assumes that all cameras use the same board pattern
-    for idx, calib in enumerate(calibs):
+    for calib in calibs:
         extr = calib["extr"]
         for i, row in enumerate(extr):
             # optional subsample
@@ -293,7 +292,6 @@ def export_scene_to_obj_multi(
     faces: List[List[int]] = []
     materials: List[Tuple[str, Tuple[float, float, float], float]] = []
     group_info: List[Tuple[str, int, int, str]] = []
-    cmap = plt.get_cmap("tab20")
     if view == "camera":
         # first calibration is used in camera view
         calib = calibs[0]
@@ -302,7 +300,7 @@ def export_scene_to_obj_multi(
         board_mat = "board_mat"
         materials.append((board_mat, (0.2, 0.8, 1.0), 0.3))
         start_faces = len(faces)
-        for idx, row in enumerate(extr):
+        for row in extr:
             rvec = row[:3]
             tvec = row[3:]
             R, _ = cv2.Rodrigues(rvec)
@@ -374,7 +372,7 @@ def export_scene_to_obj_multi(
         frustum_mat = "frustum_mat"
         materials.append((frustum_mat, (1.0, 0.4, 0.2), 1.0))
         start_faces = len(faces)
-        for cam_idx, calib in enumerate(calibs):
+        for calib in calibs:
             extr = calib["extr"]
             K = calib["K"]
             imsize = calib["imsize"]
@@ -542,7 +540,7 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
                         meshes[i].set_edgecolor("white")
                 fig.canvas.draw_idle()
 
-            span = SpanSelector(
+            SpanSelector(
                 ax_err,
                 onselect_y,
                 "vertical",
