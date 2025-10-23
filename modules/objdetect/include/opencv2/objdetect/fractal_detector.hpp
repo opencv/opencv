@@ -20,7 +20,8 @@ namespace aruco {
  * matrix representation, mask, submarker IDs, and keypoints. It provides methods to draw
  * the marker and is used as the output of the fractal marker detector.
  */
-class CV_EXPORTS_W_SIMPLE FractalMarker : public std::vector<Point2f> {
+class CV_EXPORTS_W_SIMPLE FractalMarker
+{
 public:
     /**
      * @brief Default constructor for FractalMarker.
@@ -43,12 +44,18 @@ public:
      */
     CV_WRAP void draw(InputOutputArray image, const Scalar color = Scalar(0, 0, 255));
 
+    CV_WRAP int size() const;
+    CV_WRAP cv::Point2f get(int idx);
+    cv::Point2f& operator[](size_t idx);
+
+    void push_back(const cv::Point2f& p);
+
 protected:
     /**
      * @brief Internal implementation details for FractalMarker (PIMPL idiom).
      */
     struct FractalMarkerImpl;
-    Ptr<FractalMarkerImpl> fractalMarkerImpl;
+    Ptr<FractalMarkerImpl> impl;
 
     friend struct FractalMarkerSet;
     friend class FractalDetector;
@@ -90,7 +97,7 @@ protected:
      * @brief Internal implementation details for FractalDetector (PIMPL idiom).
      */
     struct FractalDetectorImpl;
-    Ptr<FractalDetectorImpl> fractalDetectorImpl;
+    Ptr<FractalDetectorImpl> impl;
 };
 
 } // namespace aruco
