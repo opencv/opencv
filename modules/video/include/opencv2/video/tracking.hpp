@@ -271,7 +271,7 @@ enum
 /**
 @brief Computes the Enhanced Correlation Coefficient (ECC) value between two images
 
-The Enhanced Correlation Coefficient (ECC) is a normalized measure of similarity between two images.
+The Enhanced Correlation Coefficient (ECC) is a normalized measure of similarity between two images @cite EP08.
 The result lies in the range [-1, 1], where 1 corresponds to perfect similarity (modulo affine shift and scale),
 0 indicates no correlation, and -1 indicates perfect negative correlation.
 
