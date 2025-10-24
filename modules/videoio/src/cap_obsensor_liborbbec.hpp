@@ -59,6 +59,7 @@ protected:
     std::shared_ptr<ob::VideoFrame> grabbedDepthFrame;
     std::shared_ptr<ob::Pipeline> pipe;
     std::shared_ptr<ob::Config> config;
+    std::shared_ptr<ob::Align> alignFilter;
     CameraParam camParam;
 };
 
