@@ -42,41 +42,49 @@
 
 #include "test_precomp.hpp"
 
-namespace opencv_test { namespace {
+namespace opencv_test {
+namespace {
 
-class CV_ECC_BaseTest : public cvtest::BaseTest
-{
-public:
+class CV_ECC_BaseTest : public cvtest::BaseTest {
+   public:
     CV_ECC_BaseTest();
+    virtual ~CV_ECC_BaseTest();
 
-protected:
-
+   protected:
     double computeRMS(const Mat& mat1, const Mat& mat2);
     bool isMapCorrect(const Mat& mat);
 
+    virtual bool test(const Mat) { return true; };  // single test
+    bool testAllTypes(const Mat img);               // run test for all supported data types (U8, U16, F32, F64)
+    bool testAllChNum(const Mat img);               // run test for all supported channels count (gray, RGB)
 
-    double MAX_RMS_ECC;//upper bound for RMS error
-    int ntests;//number of tests per motion type
-    int ECC_iterations;//number of iterations for ECC
-    double ECC_epsilon; //we choose a negative value, so that
+    void run(int);
+
+    bool checkMap(const Mat& map, const Mat& ground);
+
+    double MAX_RMS_ECC;  // upper bound for RMS error
+    int ntests;          // number of tests per motion type
+    int ECC_iterations;  // number of iterations for ECC
+    double ECC_epsilon;  // we choose a negative value, so that
     // ECC_iterations are always executed
+    TermCriteria criteria;
 };
 
-CV_ECC_BaseTest::CV_ECC_BaseTest()
-{
-    MAX_RMS_ECC=0.1;
+CV_ECC_BaseTest::CV_ECC_BaseTest() {
+    MAX_RMS_ECC = 0.1;
     ntests = 3;
     ECC_iterations = 50;
-    ECC_epsilon = -1; //-> negative value means that ECC_Iterations will be executed
+    ECC_epsilon = -1;  //-> negative value means that ECC_Iterations will be executed
+    criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, ECC_iterations, ECC_epsilon);
 }
 
+CV_ECC_BaseTest::~CV_ECC_BaseTest() {}
 
-bool CV_ECC_BaseTest::isMapCorrect(const Mat& map)
-{
+bool CV_ECC_BaseTest::isMapCorrect(const Mat& map) {
     bool tr = true;
     float mapVal;
-    for(int i =0; i<map.rows; i++)
-        for(int j=0; j<map.cols; j++){
+    for (int i = 0; i < map.rows; i++)
+        for (int j = 0; j < map.cols; j++) {
             mapVal = map.at<float>(i, j);
             tr = tr & (!cvIsNaN(mapVal) && (fabs(mapVal) < 1e9));
         }
@@ -84,415 +92,326 @@ bool CV_ECC_BaseTest::isMapCorrect(const Mat& map)
     return tr;
 }
 
-double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2){
-
+double CV_ECC_BaseTest::computeRMS(const Mat& mat1, const Mat& mat2) {
     CV_Assert(mat1.rows == mat2.rows);
     CV_Assert(mat1.cols == mat2.cols);
 
     Mat errorMat;
     subtract(mat1, mat2, errorMat);
 
-    return sqrt(errorMat.dot(errorMat)/(mat1.rows*mat1.cols));
+    return sqrt(errorMat.dot(errorMat) / (mat1.rows * mat1.cols * mat1.channels()));
 }
 
-class CV_ECC_Test_Translation : public CV_ECC_BaseTest
-{
-public:
+bool CV_ECC_BaseTest::checkMap(const Mat& map, const Mat& ground) {
+    if (!isMapCorrect(map)) {
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        return false;
+    }
+
+    if (computeRMS(map, ground) > MAX_RMS_ECC) {
+        ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
+        ts->printf(ts->LOG, "RMS = %f", computeRMS(map, ground));
+        return false;
+    }
+    return true;
+}
+
+bool CV_ECC_BaseTest::testAllTypes(const Mat img) {
+    auto types = {CV_8U, CV_16U, CV_32F, CV_64F};
+    for (auto type : types) {
+        Mat timg;
+        img.convertTo(timg, type);
+        if (!test(timg))
+            return false;
+    }
+    return true;
+}
+
+bool CV_ECC_BaseTest::testAllChNum(const Mat img) {
+    if (!testAllTypes(img))
+        return false;
+
+    Mat gray;
+    cvtColor(img, gray, COLOR_RGB2GRAY);
+    if (!testAllTypes(gray))
+        return false;
+
+    return true;
+}
+
+void CV_ECC_BaseTest::run(int) {
+    Mat img = imread(string(ts->get_data_path()) + "shared/fruits.png");
+    if (img.empty()) {
+        ts->printf(ts->LOG, "test image can not be read");
+        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
+        return;
+    }
+
+    Mat testImg;
+    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
+
+    testAllChNum(testImg);
+
+    ts->set_failed_test_info(cvtest::TS::OK);
+}
+
+class CV_ECC_Test_Translation : public CV_ECC_BaseTest {
+   public:
     CV_ECC_Test_Translation();
-protected:
-    void run(int);
 
-    bool testTranslation(int);
+   protected:
+    bool test(const Mat);
 };
 
-CV_ECC_Test_Translation::CV_ECC_Test_Translation(){}
+CV_ECC_Test_Translation::CV_ECC_Test_Translation() {}
 
-bool CV_ECC_Test_Translation::testTranslation(int from)
-{
-    Mat img = imread( string(ts->get_data_path()) + "shared/fruits.png", 0);
-
-
-    if (img.empty())
-    {
-        ts->printf( ts->LOG, "test image can not be read");
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return false;
-    }
-    Mat testImg;
-    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
-
+bool CV_ECC_Test_Translation::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
 
-    int progress=0;
+    int progress = 0;
 
-    for (int k=from; k<ntests; k++){
-
-        ts->update_context( this, k, true );
+    for (int k = 0; k < ntests; k++) {
+        ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        Mat translationGround = (Mat_<float>(2,3) << 1, 0, (rng.uniform(10.f, 20.f)),
-            0, 1, (rng.uniform(10.f, 20.f)));
+        Mat translationGround = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
 
         Mat warpedImage;
 
-        warpAffine(testImg, warpedImage, translationGround,
-            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+        warpAffine(testImg, warpedImage, translationGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapTranslation = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
+        Mat mapTranslation = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
-        findTransformECC(warpedImage, testImg, mapTranslation, 0,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
+        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria);
 
-        if (!isMapCorrect(mapTranslation)){
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        if (!checkMap(mapTranslation, translationGround))
             return false;
-        }
-
-        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
-                computeRMS(mapTranslation, translationGround));
-            return false;
-        }
-
     }
     return true;
 }
 
-void CV_ECC_Test_Translation::run(int from)
-{
-
-    if (!testTranslation(from))
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-
-
-class CV_ECC_Test_Euclidean : public CV_ECC_BaseTest
-{
-public:
+class CV_ECC_Test_Euclidean : public CV_ECC_BaseTest {
+   public:
     CV_ECC_Test_Euclidean();
-protected:
-    void run(int);
 
-    bool testEuclidean(int);
+   protected:
+    bool test(const Mat);
 };
 
-CV_ECC_Test_Euclidean::CV_ECC_Test_Euclidean() { }
+CV_ECC_Test_Euclidean::CV_ECC_Test_Euclidean() {}
 
-bool CV_ECC_Test_Euclidean::testEuclidean(int from)
-{
-    Mat img = imread( string(ts->get_data_path()) + "shared/fruits.png", 0);
-
-
-    if (img.empty())
-    {
-        ts->printf( ts->LOG, "test image can not be read");
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return false;
-    }
-    Mat testImg;
-    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
-
+bool CV_ECC_Test_Euclidean::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
 
     int progress = 0;
-    for (int k=from; k<ntests; k++){
-        ts->update_context( this, k, true );
+    for (int k = 0; k < ntests; k++) {
+        ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        double angle = CV_PI/30 + CV_PI*rng.uniform((double)-2.f, (double)2.f)/180;
+        double angle = CV_PI / 30 + CV_PI * rng.uniform((double)-2.f, (double)2.f) / 180;
 
-        Mat euclideanGround = (Mat_<float>(2,3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)),
-            sin(angle), cos(angle), (rng.uniform(10.f, 20.f)));
+        Mat euclideanGround = (Mat_<float>(2, 3) << cos(angle), -sin(angle), (rng.uniform(10.f, 20.f)), sin(angle),
+                               cos(angle), (rng.uniform(10.f, 20.f)));
 
         Mat warpedImage;
 
-        warpAffine(testImg, warpedImage, euclideanGround,
-            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+        warpAffine(testImg, warpedImage, euclideanGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapEuclidean = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
+        Mat mapEuclidean = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
-        findTransformECC(warpedImage, testImg, mapEuclidean, 1,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
+        findTransformECC(warpedImage, testImg, mapEuclidean, 1, criteria);
 
-        if (!isMapCorrect(mapEuclidean)){
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        if (!checkMap(mapEuclidean, euclideanGround))
             return false;
-        }
-
-        if (computeRMS(mapEuclidean, euclideanGround)>MAX_RMS_ECC){
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
-                computeRMS(mapEuclidean, euclideanGround));
-            return false;
-        }
-
     }
     return true;
 }
 
-
-void CV_ECC_Test_Euclidean::run(int from)
-{
-
-    if (!testEuclidean(from))
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-class CV_ECC_Test_Affine : public CV_ECC_BaseTest
-{
-public:
+class CV_ECC_Test_Affine : public CV_ECC_BaseTest {
+   public:
     CV_ECC_Test_Affine();
-protected:
-    void run(int);
 
-    bool testAffine(int);
+   protected:
+    bool test(const Mat img);
 };
 
-CV_ECC_Test_Affine::CV_ECC_Test_Affine(){}
+CV_ECC_Test_Affine::CV_ECC_Test_Affine() {}
 
-
-bool CV_ECC_Test_Affine::testAffine(int from)
-{
-    Mat img = imread( string(ts->get_data_path()) + "shared/fruits.png", 0);
-
-    if (img.empty())
-    {
-        ts->printf( ts->LOG, "test image can not be read");
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return false;
-    }
-    Mat testImg;
-    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
-
+bool CV_ECC_Test_Affine::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
 
     int progress = 0;
-    for (int k=from; k<ntests; k++){
-        ts->update_context( this, k, true );
+    for (int k = 0; k < ntests; k++) {
+        ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-
-        Mat affineGround = (Mat_<float>(2,3) << (1-rng.uniform(-0.05f, 0.05f)),
-            (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
-            (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),
-            (rng.uniform(10.f, 20.f)));
+        Mat affineGround = (Mat_<float>(2, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
+                            (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
+                            (rng.uniform(10.f, 20.f)));
 
         Mat warpedImage;
 
-        warpAffine(testImg, warpedImage, affineGround,
-            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+        warpAffine(testImg, warpedImage, affineGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapAffine = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
+        Mat mapAffine = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
-        findTransformECC(warpedImage, testImg, mapAffine, 2,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
+        findTransformECC(warpedImage, testImg, mapAffine, 2, criteria);
 
-        if (!isMapCorrect(mapAffine)){
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        if (!checkMap(mapAffine, affineGround))
             return false;
-        }
-
-        if (computeRMS(mapAffine, affineGround)>MAX_RMS_ECC){
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
-                computeRMS(mapAffine, affineGround));
-            return false;
-        }
-
     }
 
     return true;
 }
 
-
-void CV_ECC_Test_Affine::run(int from)
-{
-
-    if (!testAffine(from))
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-class CV_ECC_Test_Homography : public CV_ECC_BaseTest
-{
-public:
+class CV_ECC_Test_Homography : public CV_ECC_BaseTest {
+   public:
     CV_ECC_Test_Homography();
-protected:
-    void run(int);
 
-    bool testHomography(int);
+   protected:
+    bool test(const Mat testImg);
 };
 
-CV_ECC_Test_Homography::CV_ECC_Test_Homography(){}
+CV_ECC_Test_Homography::CV_ECC_Test_Homography() {}
 
-bool CV_ECC_Test_Homography::testHomography(int from)
-{
-    Mat img = imread( string(ts->get_data_path()) + "shared/fruits.png", 0);
-
-
-    if (img.empty())
-    {
-        ts->printf( ts->LOG, "test image can not be read");
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return false;
-    }
-    Mat testImg;
-    resize(img, testImg, Size(216, 216), 0, 0, INTER_LINEAR_EXACT);
-
+bool CV_ECC_Test_Homography::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
 
     int progress = 0;
-    for (int k=from; k<ntests; k++){
-        ts->update_context( this, k, true );
+    for (int k = 0; k < ntests; k++) {
+        ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        Mat homoGround = (Mat_<float>(3,3) << (1-rng.uniform(-0.05f, 0.05f)),
-            (rng.uniform(-0.03f, 0.03f)), (rng.uniform(10.f, 20.f)),
-            (rng.uniform(-0.03f, 0.03f)), (1-rng.uniform(-0.05f, 0.05f)),(rng.uniform(10.f, 20.f)),
-            (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
+        Mat homoGround =
+            (Mat_<float>(3, 3) << (1 - rng.uniform(-0.05f, 0.05f)), (rng.uniform(-0.03f, 0.03f)),
+             (rng.uniform(10.f, 20.f)), (rng.uniform(-0.03f, 0.03f)), (1 - rng.uniform(-0.05f, 0.05f)),
+             (rng.uniform(10.f, 20.f)), (rng.uniform(0.0001f, 0.0003f)), (rng.uniform(0.0001f, 0.0003f)), 1.f);
 
         Mat warpedImage;
 
-        warpPerspective(testImg, warpedImage, homoGround,
-            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+        warpPerspective(testImg, warpedImage, homoGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
         Mat mapHomography = Mat::eye(3, 3, CV_32F);
 
-        findTransformECC(warpedImage, testImg, mapHomography, 3,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
+        findTransformECC(warpedImage, testImg, mapHomography, 3, criteria);
 
-        if (!isMapCorrect(mapHomography)){
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        if (!checkMap(mapHomography, homoGround))
             return false;
-        }
-
-        if (computeRMS(mapHomography, homoGround)>MAX_RMS_ECC){
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
-                computeRMS(mapHomography, homoGround));
-            return false;
-        }
-
     }
     return true;
 }
 
-void CV_ECC_Test_Homography::run(int from)
-{
-    if (!testHomography(from))
-        return;
-
-    ts->set_failed_test_info(cvtest::TS::OK);
-}
-
-class CV_ECC_Test_Mask : public CV_ECC_BaseTest
-{
-public:
+class CV_ECC_Test_Mask : public CV_ECC_BaseTest {
+   public:
     CV_ECC_Test_Mask();
-protected:
-    void run(int);
 
-    bool testMask(int);
+   protected:
+    bool test(const Mat);
 };
 
-CV_ECC_Test_Mask::CV_ECC_Test_Mask(){}
+CV_ECC_Test_Mask::CV_ECC_Test_Mask() {}
 
-bool CV_ECC_Test_Mask::testMask(int from)
-{
-    Mat img = imread( string(ts->get_data_path()) + "shared/fruits.png", 0);
-
-
-    if (img.empty())
-    {
-        ts->printf( ts->LOG, "test image can not be read");
-        ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_TEST_DATA);
-        return false;
-    }
-    Mat scaledImage;
-    resize(img, scaledImage, Size(216, 216), 0, 0, INTER_LINEAR_EXACT );
-
-    Mat_<float> testImg;
-    scaledImage.convertTo(testImg, testImg.type());
-
+bool CV_ECC_Test_Mask::test(const Mat testImg) {
     cv::RNG rng = ts->get_rng();
 
-    int progress=0;
+    int progress = 0;
 
-    for (int k=from; k<ntests; k++){
-
-        ts->update_context( this, k, true );
+    for (int k = 0; k < ntests; k++) {
+        ts->update_context(this, k, true);
         progress = update_progress(progress, k, ntests, 0);
 
-        Mat translationGround = (Mat_<float>(2,3) << 1, 0, (rng.uniform(10.f, 20.f)),
-            0, 1, (rng.uniform(10.f, 20.f)));
+        Mat translationGround = (Mat_<float>(2, 3) << 1, 0, (rng.uniform(10.f, 20.f)), 0, 1, (rng.uniform(10.f, 20.f)));
 
         Mat warpedImage;
 
-        warpAffine(testImg, warpedImage, translationGround,
-            Size(200,200), INTER_LINEAR + WARP_INVERSE_MAP);
+        warpAffine(testImg, warpedImage, translationGround, Size(200, 200), INTER_LINEAR + WARP_INVERSE_MAP);
 
-        Mat mapTranslation = (Mat_<float>(2,3) << 1, 0, 0, 0, 1, 0);
+        Mat mapTranslation = (Mat_<float>(2, 3) << 1, 0, 0, 0, 1, 0);
 
         Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
-        for (int i=testImg.rows*2/3; i<testImg.rows; i++) {
-          for (int j=testImg.cols*2/3; j<testImg.cols; j++) {
-            testImg(i, j) = 0;
-            mask(i, j) = 0;
-          }
-        }
+        Rect region(testImg.cols * 2 / 3, testImg.rows * 2 / 3, testImg.cols / 3, testImg.rows / 3);
 
-        findTransformECC(warpedImage, testImg, mapTranslation, 0,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask);
+        rectangle(testImg, region, Scalar::all(0), FILLED);
+        rectangle(mask, region, Scalar(0), FILLED);
 
-        if (!isMapCorrect(mapTranslation)){
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria, mask);
+
+        if (!checkMap(mapTranslation, translationGround))
             return false;
-        }
-
-        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
-                computeRMS(mapTranslation, translationGround));
-            return false;
-        }
 
         // Test with non-default gaussian blur.
-        findTransformECC(warpedImage, testImg, mapTranslation, 0,
-            TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, 1);
+        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria, mask, 1);
 
-        if (!isMapCorrect(mapTranslation)){
-            ts->set_failed_test_info(cvtest::TS::FAIL_INVALID_OUTPUT);
+        if (!checkMap(mapTranslation, translationGround))
             return false;
-        }
-
-        if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
-            ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-            ts->printf( ts->LOG, "RMS = %f",
-                computeRMS(mapTranslation, translationGround));
-            return false;
-        }
-
     }
     return true;
 }
 
-void CV_ECC_Test_Mask::run(int from)
-{
-    if (!testMask(from))
-        return;
+void testECCProperties(Mat x, float eps) {
+    // The channels are independent
+    Mat y = x.t();
+    Mat Z = Mat::zeros(x.size(), y.type());
+    Mat O = Mat::ones(x.size(), y.type());
 
-    ts->set_failed_test_info(cvtest::TS::OK);
+    EXPECT_NEAR(computeECC(x, y), 0.0, eps);
+    if (x.type() != CV_8U && x.type() != CV_8U) {
+        EXPECT_NEAR(computeECC(x + y, x - y), 0.0, eps);
+    }
+
+    EXPECT_NEAR(computeECC(x, x), 1.0, eps);
+
+    Mat R, G, B, X, Y;
+    cv::merge(std::vector<cv::Mat>({O, Z, Z}), R);
+    cv::merge(std::vector<cv::Mat>({Z, O, Z}), G);
+    cv::merge(std::vector<cv::Mat>({Z, Z, O}), B);
+    cv::merge(std::vector<cv::Mat>({x, x, x}), X);
+    cv::merge(std::vector<cv::Mat>({y, y, y}), Y);
+
+    // 1. The channels are orthogonal and independent
+    EXPECT_NEAR(computeECC(X.mul(R), X.mul(G)), 0, eps);
+    EXPECT_NEAR(computeECC(X.mul(R), X.mul(B)), 0, eps);
+    EXPECT_NEAR(computeECC(X.mul(B), X.mul(G)), 0, eps);
+
+    EXPECT_NEAR(computeECC(X.mul(R) + Y.mul(B), X.mul(B) + Y.mul(R)), 0, eps);
+
+    EXPECT_NEAR(computeECC(X.mul(R) + Y.mul(G) + (X + Y).mul(B), Y.mul(R) + X.mul(G) + (X - Y).mul(B)), 0, eps);
+
+    // 2. Each channel contribute equally
+    EXPECT_NEAR(computeECC(X.mul(R) + Y.mul(G + B), X), 1.0 / 3, eps);
+    EXPECT_NEAR(computeECC(X.mul(G) + Y.mul(R + B), X), 1.0 / 3, eps);
+    EXPECT_NEAR(computeECC(X.mul(B) + Y.mul(G + R), X), 1.0 / 3, eps);
+
+    // 3. The coefficient is invariant with respect to the offset of channels
+    EXPECT_NEAR(computeECC(X - R + 2 * G + B, X), 1.0, eps);
+    if (x.type() != CV_8U && x.type() != CV_8U) {
+        EXPECT_NEAR(computeECC(X + R - 2 * G + B, Y), 0.0, eps);
+    }
+
+    // The channels are independent. Check orthogonal combinations
+    // full squares norm = sum of squared norms
+    EXPECT_NEAR(computeECC(X, Y + X), 1.0 / sqrt(2.0), eps);
+    EXPECT_NEAR(computeECC(X, 2 * Y + X), 1.0 / sqrt(5.0), eps);
 }
 
-TEST(Video_ECC_Test_Compute, accuracy)
-{
+TEST(Video_ECC_Test_Compute, properies) {
+    Mat xline(1, 100, CV_32F), x;
+    for (int i = 0; i < xline.cols; ++i) xline.at<float>(0, i) =  (float)i;
+
+    repeat(xline, xline.cols, 1, x);
+
+    Mat x_f64, x_u8, x_u16;
+    x.convertTo(x_f64, CV_64F);
+    x.convertTo(x_u8, CV_8U);
+    x.convertTo(x_u16, CV_16U);
+
+    testECCProperties(x, 1e-5f);
+    testECCProperties(x_f64, 1e-5f);
+    testECCProperties(x_u8, 1);
+    testECCProperties(x_u16, 1);
+}
+
+TEST(Video_ECC_Test_Compute, accuracy) {
     Mat testImg = (Mat_<float>(3, 3) << 1, 0, 0, 1, 0, 0, 1, 0, 0);
     Mat warpedImage = (Mat_<float>(3, 3) << 0, 1, 0, 0, 1, 0, 0, 1, 0);
     Mat_<unsigned char> mask = Mat_<unsigned char>::ones(testImg.rows, testImg.cols);
@@ -501,8 +420,7 @@ TEST(Video_ECC_Test_Compute, accuracy)
     EXPECT_NEAR(ecc, -0.5f, 1e-5f);
 }
 
-TEST(Video_ECC_Test_Compute, bug_14657)
-{
+TEST(Video_ECC_Test_Compute, bug_14657) {
     /*
      * Simple test case - a 2 x 2 matrix with 10, 10, 10, 6. When the mean (36 / 4 = 9) is subtracted,
      * it results in 1, 1, 1, 0 for the unsigned int case - compare to  1, 1, 1, -3 in the signed case.
@@ -512,11 +430,26 @@ TEST(Video_ECC_Test_Compute, bug_14657)
     EXPECT_NEAR(computeECC(img, img), 1.0f, 1e-5f);
 }
 
+TEST(Video_ECC_Translation, accuracy) {
+    CV_ECC_Test_Translation test;
+    test.safe_run();
+}
+TEST(Video_ECC_Euclidean, accuracy) {
+    CV_ECC_Test_Euclidean test;
+    test.safe_run();
+}
+TEST(Video_ECC_Affine, accuracy) {
+    CV_ECC_Test_Affine test;
+    test.safe_run();
+}
+TEST(Video_ECC_Homography, accuracy) {
+    CV_ECC_Test_Homography test;
+    test.safe_run();
+}
+TEST(Video_ECC_Mask, accuracy) {
+    CV_ECC_Test_Mask test;
+    test.safe_run();
+}
 
-TEST(Video_ECC_Translation, accuracy) { CV_ECC_Test_Translation test; test.safe_run();}
-TEST(Video_ECC_Euclidean, accuracy) { CV_ECC_Test_Euclidean test; test.safe_run(); }
-TEST(Video_ECC_Affine, accuracy) { CV_ECC_Test_Affine test; test.safe_run(); }
-TEST(Video_ECC_Homography, accuracy) { CV_ECC_Test_Homography test; test.safe_run(); }
-TEST(Video_ECC_Mask, accuracy) { CV_ECC_Test_Mask test; test.safe_run(); }
-
-}} // namespace
+}  // namespace
+}  // namespace opencv_test
