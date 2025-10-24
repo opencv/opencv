@@ -191,7 +191,6 @@ public:
             std::map<LayerPin, int>::const_iterator refIt;
 
             const int targetTotal = total(shape);
-            int bestBlobTotal = INT_MAX;
 
             for (hostIt = memHosts.begin(); hostIt != memHosts.end(); ++hostIt)
             {
@@ -201,11 +200,13 @@ public:
                 if (refIt != refCounter.end() && refIt->second == 0)
                 {
                     const Mat& unusedBlob = hostIt->second;
-                    if (unusedBlob.total() >= targetTotal && unusedBlob.total() < bestBlobTotal && unusedBlob.type() == dtype)
+                    // Only reuse blobs of exactly the same size to avoid stateless issues
+                    // This prevents memory from previous computations from affecting current results
+                    if (unusedBlob.total() == targetTotal && unusedBlob.type() == dtype)
                     {
                         bestBlobPin = hostIt->first;
                         bestBlob = unusedBlob;
-                        bestBlobTotal = unusedBlob.total();
+                        break; // Found exact match, no need to continue searching
                     }
                 }
             }

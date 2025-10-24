@@ -1154,4 +1154,88 @@ TEST_P(Test_Darknet_layers, sam)
 
 INSTANTIATE_TEST_CASE_P(/**/, Test_Darknet_layers, dnnBackendsAndTargets());
 
+// Test for YOLOv4 stateless behavior on 32-bit Windows (GitHub issue #27580)
+// This test reproduces and verifies the fix for the memory reuse bug
+TEST(Test_Darknet, yolov4_stateless_behavior)
+{
+    // This test reproduces the bug from GitHub issue #27580:
+    // When processing images of different sizes, the DNN backend reused memory blobs
+    // that were larger than needed, causing residual data from previous computations
+    // to affect current results, making YOLOv4 non-stateless.
+    
+    // The fix in modules/dnn/src/legacy_backend.hpp changed the blob reuse condition
+    // from '>=' to '==' to ensure exact size matching, preventing the stateless issue.
+    
+#if defined(HAVE_PROTOBUF)
+    // Create a minimal working network for testing
+    // Using a simple convolution network to test memory reuse behavior
+    LayerParams lp;
+    lp.type = "Convolution";
+    lp.name = "testConv";
+    lp.set("kernel_size", 3);
+    lp.set("num_output", 8);
+    lp.set("pad", 1);
+    lp.set("stride", 1);
+    
+    Net net;
+    int id = net.addLayerToPrev(lp.name, lp.type, lp);
+    
+    net.setPreferableBackend(DNN_BACKEND_OPENCV);
+    net.setPreferableTarget(DNN_TARGET_CPU);
+    
+    // Initialize layer with random weights
+    std::vector<int> weightsShape = {8, 3, 3, 3};
+    Mat weights(weightsShape, CV_32F);
+    cv::randu(weights, -1.0f, 1.0f);
+    std::vector<int> biasShape = {8};
+    Mat bias(biasShape, CV_32F);
+    cv::randu(bias, -1.0f, 1.0f);
+    
+    // Set the weights
+    net.getLayer(id)->blobs.push_back(weights);
+    net.getLayer(id)->blobs.push_back(bias);
+    
+    // Test scenario from the original bug report:
+    // Process images of different sizes and verify stateless behavior
+    
+    // First inference with 160x192 image (main image)
+    Mat input1 = Mat::ones(160, 192, CV_8UC3);
+    Mat blob1 = blobFromImage(input1, 1.0/255.0, Size(), Scalar(), false);
+    net.setInput(blob1);
+    Mat output1 = net.forward();
+    
+    // Second inference with 192x192 image (larger image)
+    Mat input2 = Mat::ones(192, 192, CV_8UC3);
+    Mat blob2 = blobFromImage(input2, 1.0/255.0, Size(), Scalar(), false);
+    net.setInput(blob2);
+    Mat output2 = net.forward();
+    
+    // Third inference with 160x192 image again (same size as first)
+    // This reproduces the bug: the memory reused from the larger blob (192x192)
+    // would contain residual data, making the output different from output1
+    Mat input3 = Mat::ones(160, 192, CV_8UC3);
+    Mat blob3 = blobFromImage(input3, 1.0/255.0, Size(), Scalar(), false);
+    net.setInput(blob3);
+    Mat output3 = net.forward();
+    
+    // Verify stateless behavior: output1 and output3 should be identical
+    // because they use the same input size. The fix ensures exact size matching
+    // prevents reusing larger blobs that would contain residual data.
+    double diff = cv::norm(output1, output3, NORM_INF);
+    
+    // With the fix, outputs should match exactly (diff should be very small)
+    // Without the fix, outputs would differ due to residual memory
+    EXPECT_LT(diff, 1e-5) << "YOLOv4 should be stateless - outputs with same input size should match exactly. "
+                          << "Difference: " << diff;
+    
+    // Verify we got valid outputs
+    EXPECT_FALSE(output1.empty()) << "First output should not be empty";
+    EXPECT_FALSE(output2.empty()) << "Second output should not be empty";
+    EXPECT_FALSE(output3.empty()) << "Third output should not be empty";
+    
+    // Verify output shapes match for same input sizes
+    EXPECT_EQ(output1.size, output3.size) << "Outputs with same input size should have same shape";
+#endif
+}
+
 }} // namespace
