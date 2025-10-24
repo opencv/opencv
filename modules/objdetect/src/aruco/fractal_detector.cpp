@@ -63,7 +63,7 @@ struct FractalDetector::FractalDetectorImpl {
 
 void FractalMarker::FractalMarkerImpl::draw(cv::InputOutputArray in, const cv::Scalar color) {
     float flineWidth = std::max(1.f, std::min(5.f, float(in.cols()) / 500.f));
-    int lineWidth = round(flineWidth);
+    int lineWidth = (int)round(flineWidth);
     for (int i = 0; i < 4; i++)
         cv::line(in, data[i], data[(i + 1) % 4], color, lineWidth);
 
@@ -97,7 +97,7 @@ void FractalMarker::draw(cv::InputOutputArray in, const cv::Scalar color) {
 }
 
 int FractalMarker::FractalMarkerImpl::nBits() const {
-    return _M.total();
+    return (int)_M.total();
 }
 
 cv::Mat FractalMarker::FractalMarkerImpl::mat() const {
@@ -113,14 +113,14 @@ std::vector<int> FractalMarker::FractalMarkerImpl::subMarkers() const {
 }
 
 void FractalMarker::FractalMarkerImpl::addSubFractalMarker(const FractalMarker& submarker) {
-    int nBitsSqrt = sqrt(nBits());
+    int nBitsSqrt = (int)sqrt(nBits());
     float bitSize = getMarkerSize() / (nBitsSqrt + 2.0f);
     float nsubBits = submarker.impl->getMarkerSize() / bitSize;
 
     int x_min = int(round(submarker.impl->keypts[0].pt.x / bitSize + nBitsSqrt / 2));
-    int x_max = x_min + nsubBits;
+    int x_max = int(x_min + nsubBits);
     int y_min = int(round(-submarker.impl->keypts[0].pt.y / bitSize + nBitsSqrt / 2));
-    int y_max = y_min + nsubBits;
+    int y_max = int(y_min + nsubBits);
 
     for (int y = y_min; y < y_max; y++) {
         for (int x = x_min; x < x_max; x++) {
@@ -441,7 +441,8 @@ FractalMarkerSet::FractalMarkerSet(const std::string& config) {
 
         //MAT
         cv::Mat mat;
-        mat.create(sqrt(nbits), sqrt(nbits), CV_8UC1);
+        int sz = int(sqrt(nbits));
+        mat.create(sz, sz, CV_8UC1);
         stream.read((char*)mat.data, mat.elemSize() * mat.total());
 
         //SUBMARKERS
@@ -559,7 +560,7 @@ bool FractalDetector::detect(cv::InputArray img,
                     double a = m[0] * x + m[1] * y + m[2];
                     double b = m[3] * x + m[4] * y + m[5];
                     double c_ = m[6] * x + m[7] * y + m[8];
-                    cv::Point2f mapped(a / c_, b / c_);
+                    cv::Point2f mapped(float(a / c_), float(b / c_));
                     auto pixelValue = uchar(0.5 + impl->getSubpixelValue(bwimage, mapped));
                     bits.at<uchar>(r, c) = pixelValue;
                     pixelSum += pixelValue;
@@ -771,12 +772,12 @@ float FractalDetector::FractalDetectorImpl::getSubpixelValue(const cv::Mat& im_g
     cv::Point tl;
 
     if (decpartX>0.5) {
-        if (decpartY>0.5) tl=cv::Point(intpartX,intpartY);
-        else tl=cv::Point(intpartX,intpartY-1);
+        if (decpartY>0.5) tl=cv::Point(int(intpartX), int(intpartY));
+        else tl=cv::Point(int(intpartX), int(intpartY-1));
     }
     else{
-        if (decpartY>0.5) tl=cv::Point(intpartX-1,intpartY);
-        else tl=cv::Point(intpartX-1,intpartY-1);
+        if (decpartY>0.5) tl=cv::Point(int(intpartX-1), int(intpartY));
+        else tl=cv::Point(int(intpartX-1), int(intpartY-1));
     }
     if(tl.x<0) tl.x=0;
     if(tl.y<0) tl.y=0;
@@ -833,11 +834,11 @@ int FractalDetector::FractalDetectorImpl::getMarkerId(const cv::Mat& bits, int& 
 }
 
 int FractalDetector::FractalDetectorImpl::perimeter(const std::vector<cv::Point2f>& a) {
-    int sum = 0;
+    double sum = 0;
     for (size_t i = 0; i < a.size(); i++) {
         sum += cv::norm(a[i] - a[(i + 1) % a.size()]);
     }
-    return sum;
+    return int(sum);
 }
 
 void FractalDetector::FractalDetectorImpl::kfilter(std::vector<cv::KeyPoint>& kpoints) {
