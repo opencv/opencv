@@ -30,6 +30,10 @@ if(HAVE_IPP_IW)
   target_compile_definitions(ipphal PRIVATE HAVE_IPP_IW)
 endif()
 
+if(WITH_IPP_CALLS_ENFORCED)
+  target_compile_definitions(ipphal PRIVATE IPP_CALLS_ENFORCED)
+endif()
+
 target_include_directories(ipphal PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 ocv_warnings_disable(CMAKE_CXX_FLAGS -Wno-suggest-override)
 
