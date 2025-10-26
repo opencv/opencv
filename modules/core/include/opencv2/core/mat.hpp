@@ -2562,7 +2562,7 @@ public:
     Mat_(const Mat_& m, const std::vector<Range>& ranges);
     //! from a matrix expression
     explicit Mat_(const MatExpr& e);
-    //! makes a matrix out of Vec, std::vector, Point_ or Point3_. 
+    //! makes a matrix out of Vec, std::vector, Point_ or Point3_.
     //! In OpenCV 5.x, from std::vector, creates a matrix with a single row (cols = vector size).
     //! (Previous versions: the matrix had a single column.)
     explicit Mat_(const std::vector<_Tp>& vec, bool copyData=false);
