@@ -29,7 +29,7 @@ TEST_P(CV_FractalAruco, can_detect)
     detector.setParams("FRACTAL_4L_6");
     std::vector<Point3f> points3D;
     std::vector<Point2f> points2D;
-    std::vector<aruco::FractalMarker> markers;
+    std::vector<aruco::FractalArucoMarker> markers;
     bool detected = detector.detect(image, markers, points3D, points2D);
     ASSERT_TRUE(detected) << "Fractal markers detection failed in " << imgname;
     ASSERT_GT(markers.size(), 0u) << "No fractal markers detected in " << imgname;

@@ -19,7 +19,7 @@
 namespace cv {
 namespace aruco {
 
-struct FractalMarker::FractalMarkerImpl {
+struct FractalArucoMarker::FractalMarkerImpl {
     std::vector<Point2f> data;
     int id;
     std::vector<cv::KeyPoint> keypts;
@@ -31,14 +31,14 @@ struct FractalMarker::FractalMarkerImpl {
     cv::Mat mat() const;
     cv::Mat mask() const;
     std::vector<int> subMarkers() const;
-    void addSubFractalMarker(const FractalMarker& submarker);
+    void addSubFractalMarker(const FractalArucoMarker& submarker);
     float getMarkerSize() const;
     std::vector<cv::KeyPoint> getKeypoints();
     void draw(cv::InputOutputArray in, const cv::Scalar color);
 };
 
 struct FractalMarkerSet {
-    std::map<int, FractalMarker> fractalMarkerCollection;
+    std::map<int, FractalArucoMarker> fractalMarkerCollection;
     std::map<int, std::vector<int>> bits_ids;
     int mInfoType = 0;
     int idExternal = -1;
@@ -61,7 +61,7 @@ struct FractalDetector::FractalDetectorImpl {
 
 };
 
-void FractalMarker::FractalMarkerImpl::draw(cv::InputOutputArray in, const cv::Scalar color) {
+void FractalArucoMarker::FractalMarkerImpl::draw(cv::InputOutputArray in, const cv::Scalar color) {
     float flineWidth = std::max(1.f, std::min(5.f, float(in.cols()) / 500.f));
     int lineWidth = (int)round(flineWidth);
     for (int i = 0; i < 4; i++)
@@ -74,7 +74,7 @@ void FractalMarker::FractalMarkerImpl::draw(cv::InputOutputArray in, const cv::S
 }
 
 // Implementation of FractalMarker methods
-FractalMarker::FractalMarker(int markerId, cv::InputArray m, const std::vector<cv::Point3f>& corners, const std::vector<int>& id_submarkers)
+FractalArucoMarker::FractalArucoMarker(int markerId, cv::InputArray m, const std::vector<cv::Point3f>& corners, const std::vector<int>& id_submarkers)
     : impl(makePtr<FractalMarkerImpl>())
 {
     impl->id = markerId;
@@ -85,34 +85,34 @@ FractalMarker::FractalMarker(int markerId, cv::InputArray m, const std::vector<c
     impl->_mask = cv::Mat::ones(m.size(), CV_8UC1);
 }
 
-FractalMarker::FractalMarker()
+FractalArucoMarker::FractalArucoMarker()
     : impl(makePtr<FractalMarkerImpl>())
 {
     impl->id = -1;
     impl->_mask = cv::Mat::ones(1, 1, CV_8UC1);
 }
 
-void FractalMarker::draw(cv::InputOutputArray in, const cv::Scalar color) {
+void FractalArucoMarker::draw(cv::InputOutputArray in, const cv::Scalar color) {
     impl->draw(in, color);
 }
 
-int FractalMarker::FractalMarkerImpl::nBits() const {
+int FractalArucoMarker::FractalMarkerImpl::nBits() const {
     return (int)_M.total();
 }
 
-cv::Mat FractalMarker::FractalMarkerImpl::mat() const {
+cv::Mat FractalArucoMarker::FractalMarkerImpl::mat() const {
     return _M;
 }
 
-cv::Mat FractalMarker::FractalMarkerImpl::mask() const {
+cv::Mat FractalArucoMarker::FractalMarkerImpl::mask() const {
     return _mask;
 }
 
-std::vector<int> FractalMarker::FractalMarkerImpl::subMarkers() const {
+std::vector<int> FractalArucoMarker::FractalMarkerImpl::subMarkers() const {
     return _submarkers;
 }
 
-void FractalMarker::FractalMarkerImpl::addSubFractalMarker(const FractalMarker& submarker) {
+void FractalArucoMarker::FractalMarkerImpl::addSubFractalMarker(const FractalArucoMarker& submarker) {
     int nBitsSqrt = (int)sqrt(nBits());
     float bitSize = getMarkerSize() / (nBitsSqrt + 2.0f);
     float nsubBits = submarker.impl->getMarkerSize() / bitSize;
@@ -129,11 +129,11 @@ void FractalMarker::FractalMarkerImpl::addSubFractalMarker(const FractalMarker& 
     }
 }
 
-float FractalMarker::FractalMarkerImpl::getMarkerSize() const {
+float FractalArucoMarker::FractalMarkerImpl::getMarkerSize() const {
     return static_cast<float>(cv::norm(keypts[0].pt - keypts[1].pt));
 }
 
-std::vector<cv::KeyPoint> FractalMarker::FractalMarkerImpl::getKeypoints() {
+std::vector<cv::KeyPoint> FractalArucoMarker::FractalMarkerImpl::getKeypoints() {
     if (keypts.size() > 4) return keypts;
 
     int nBitsSquared = int(sqrt(mat().total()));
@@ -167,22 +167,22 @@ std::vector<cv::KeyPoint> FractalMarker::FractalMarkerImpl::getKeypoints() {
     return keypts;
 }
 
-int FractalMarker::size() const
+int FractalArucoMarker::size() const
 {
     return (int)impl->data.size();
 }
 
-cv::Point2f FractalMarker::get(int idx)
+cv::Point2f FractalArucoMarker::get(int idx)
 {
     return impl->data[idx];
 }
 
-cv::Point2f& FractalMarker::operator[](size_t idx)
+cv::Point2f& FractalArucoMarker::operator[](size_t idx)
 {
     return impl->data[idx];
 }
 
-void FractalMarker::push_back(const cv::Point2f& p)
+void FractalArucoMarker::push_back(const cv::Point2f& p)
 {
     impl->data.push_back(p);
 }
@@ -452,13 +452,13 @@ FractalMarkerSet::FractalMarkerSet(const std::string& config) {
         if (nsub > 0)
             stream.read((char*)&id_submarkers[0],sizeof(int)*nsub);
 
-        fractalMarkerCollection[id] = FractalMarker(id, mat, corners, id_submarkers);
+        fractalMarkerCollection[id] = FractalArucoMarker(id, mat, corners, id_submarkers);
     }
 
     //Add subfractals
     for(auto &id_marker:fractalMarkerCollection)
     {
-        FractalMarker &marker = id_marker.second;
+        FractalArucoMarker &marker = id_marker.second;
         for(auto id:id_marker.second.impl->subMarkers())
             marker.impl->addSubFractalMarker(fractalMarkerCollection[id]);
 
@@ -497,7 +497,7 @@ void FractalDetector::setParams(const std::string& fractal_config, int minIntern
 }
 
 bool FractalDetector::detect(cv::InputArray img,
-                            std::vector<FractalMarker>& markers,
+                            std::vector<FractalArucoMarker>& markers,
                             cv::OutputArray p3d,
                             cv::OutputArray p2d)
     {
@@ -817,7 +817,7 @@ int FractalDetector::FractalDetectorImpl::getMarkerId(const cv::Mat& bits, int& 
     nrotations = 0;
     do {
         for (auto idx : markersId) {
-            FractalMarker fm = markerSet.fractalMarkerCollection.at(idx);
+            FractalArucoMarker fm = markerSet.fractalMarkerCollection.at(idx);
 
             cv::Mat masked;
             bit_inner.copyTo(masked, fm.impl->mask());
