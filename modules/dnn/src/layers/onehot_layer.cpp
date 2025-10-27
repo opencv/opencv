@@ -36,9 +36,12 @@ public:
 private:
     bool getConstPositiveDepth(int& depthOut) const
     {
+        Net::Impl* netimpl_ = getNetImpl(this);
+        if (!netimpl_ || !netimpl_->isConstArg(this->inputs[1]))
+            return false;
+
         try
         {
-            Net::Impl* netimpl_ = getNetImpl(this);
             Mat depthTensor = netimpl_->argTensor(this->inputs[1]);
             if (!depthTensor.empty() && depthTensor.total() == 1)
             {
@@ -75,8 +78,8 @@ private:
 public:
     bool dynamicOutputShapes() const CV_OVERRIDE
     {
-        int depth = 0;
-        return !getConstPositiveDepth(depth);
+        Net::Impl* netimpl_ = getNetImpl(this);
+        return !(netimpl_ && netimpl_->isConstArg(this->inputs[1]));
     }
 
     bool getMemoryShapes(const std::vector<MatShape>& inputs,
@@ -114,12 +117,9 @@ public:
 
 private:
     template<typename Tout>
-    void runKernel(const Mat& indices, const Mat& depthMat, const Mat& values, Mat& Y)
+    void runKernel(const Mat& indices, int depth, const Mat& values, Mat& Y)
     {
-        int64_t depth64 = 0;
-        tensorToScalar(depthMat, CV_64S, &depth64);
-        CV_CheckGT(depth64, 0, "OneHot: depth must be > 0");
-        int depth = (int)depth64;
+        CV_CheckGT(depth, 0, "OneHot: depth must be > 0");
 
         MatShape outShape = shape(indices);
         int ndims = (int)outShape.size();
@@ -153,14 +153,19 @@ private:
         Tout* outPtr = Y.ptr<Tout>();
 
         parallel_for_(Range(0, (int)inTotal), [&](const Range& r){
+            const int64_t* localIdxPtr64 = idxPtr64;
+            Tout* localOutPtr = outPtr;
+            const size_t localOutStep = outStep;
+            const int localDepth = depth;
+            const Tout localOnVal = onVal;
             for (int pos = r.start; pos < r.end; ++pos) {
-                int64_t idxVal = idxPtr64[pos];
-                int64_t wrapped = idxVal % depth;
-                if (wrapped < 0) wrapped += depth;
-                size_t hi = (size_t)pos / outStep;
-                size_t lo = (size_t)pos % outStep;
-                size_t base = hi * ((size_t)depth * outStep) + lo;
-                outPtr[base + (size_t)wrapped * outStep] = onVal;
+                int64_t idxVal = localIdxPtr64[pos];
+                int64_t wrapped = idxVal % localDepth;
+                if (wrapped < 0) wrapped += localDepth;
+                size_t hi = (size_t)pos / localOutStep;
+                size_t lo = (size_t)pos % localOutStep;
+                size_t base = hi * ((size_t)localDepth * localOutStep) + lo;
+                localOutPtr[base + (size_t)wrapped * localOutStep] = localOnVal;
             }
         });
     }
@@ -214,17 +219,13 @@ public:
         int ndims = (int)outShape.size();
         int insAxis = normalize_axis(axis, ndims + 1);
 
+        CV_Assert(depthMat.total() == 1);
+        int64_t depth64 = 0;
+        tensorToScalar(depthMat, CV_64S, &depth64);
+        CV_CheckGT(depth64, 0, "OneHot: depth must be > 0");
         MatShape finalShape;
-        if (depthMat.total() == 1)
-        {
-            int64_t depth64 = 0;
-            tensorToScalar(depthMat, CV_64S, &depth64);
-            if (depth64 > 0)
-            {
-                outShape.insert(outShape.begin() + insAxis, (int)depth64);
-                finalShape = outShape;
-            }
-        }
+        outShape.insert(outShape.begin() + insAxis, (int)depth64);
+        finalShape = outShape;
         if (!finalShape.empty())
         {
             if (outKind == _InputArray::STD_VECTOR_MAT)
@@ -240,16 +241,16 @@ public:
         }
 
         switch (outDepth) {
-            case CV_8U:   runKernel<uchar>(indices, depthMat, values, Y); break;
-            case CV_8S:   runKernel<schar>(indices, depthMat, values, Y); break;
-            case CV_16U:  runKernel<uint16_t>(indices, depthMat, values, Y); break;
-            case CV_16S:  runKernel<int16_t>(indices, depthMat, values, Y); break;
-            case CV_32S:  runKernel<int>(indices, depthMat, values, Y); break;
-            case CV_64S:  runKernel<int64_t>(indices, depthMat, values, Y); break;
-            case CV_16F:  runKernel<hfloat>(indices, depthMat, values, Y); break;
-            case CV_16BF: runKernel<bfloat>(indices, depthMat, values, Y); break;
-            case CV_32F:  runKernel<float>(indices, depthMat, values, Y); break;
-            case CV_64F:  runKernel<double>(indices, depthMat, values, Y); break;
+            case CV_8U:   runKernel<uchar>(indices, (int)depth64, values, Y); break;
+            case CV_8S:   runKernel<schar>(indices, (int)depth64, values, Y); break;
+            case CV_16U:  runKernel<uint16_t>(indices, (int)depth64, values, Y); break;
+            case CV_16S:  runKernel<int16_t>(indices, (int)depth64, values, Y); break;
+            case CV_32S:  runKernel<int>(indices, (int)depth64, values, Y); break;
+            case CV_64S:  runKernel<int64_t>(indices, (int)depth64, values, Y); break;
+            case CV_16F:  runKernel<hfloat>(indices, (int)depth64, values, Y); break;
+            case CV_16BF: runKernel<bfloat>(indices, (int)depth64, values, Y); break;
+            case CV_32F:  runKernel<float>(indices, (int)depth64, values, Y); break;
+            case CV_64F:  runKernel<double>(indices, (int)depth64, values, Y); break;
             default: CV_Error(Error::BadDepth, "OneHot: unsupported output type");
         }
 
