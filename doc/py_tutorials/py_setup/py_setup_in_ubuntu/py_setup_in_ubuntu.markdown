@@ -1,6 +1,8 @@
 Install OpenCV-Python in Ubuntu {#tutorial_py_setup_in_ubuntu}
 ===============================
 
+**Quick start (recommended)**: Use `python3 -m venv .venv && source .venv/bin/activate`, then install from PyPI with `python3 -m pip install --upgrade pip` and `python3 -m pip install opencv-python`. For contrib or headless variants see @ref tutorial_py_pip_install. The steps below cover distro packages or building from source and are **not required** for typical Python use.
+
 Goals
 -----
 
