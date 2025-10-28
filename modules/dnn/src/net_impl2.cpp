@@ -800,15 +800,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         }
 #endif
 
-        // Normalize input types: convert U8 -> F32 before getTypes() for all layers
-        for (i = 0; i < ninputs; i++) {
-            if (CV_MAT_DEPTH(inpTypes[i]) == CV_8U) {
-                Mat m32f; inpMats[i].convertTo(m32f, CV_32F);
-                inpMats[i] = m32f;
-                inpTypes[i] = CV_MAKETYPE(CV_32F, CV_MAT_CN(inpTypes[i]));
-            }
-        }
-
         if (tracingMode != DNN_TRACE_NONE) {
             strm_ << "-----------\n";
             strm_ << "'" << graph->name() << "' [" << opidx << "/" << nops << "]. " << layer->type << " node: " << layer->name << "\n";
@@ -913,11 +904,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 }
             }
 #endif
-// #ifdef HAVE_CUDA
-//             if (!ranOnGPU) {
-//                 CV_Error(Error::StsError, "DNN/CUDA: GPU-only execution requested but layer failed to run on GPU");
-//             }
-// #endif
         }
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
@@ -938,6 +924,14 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         if (!(supportGPU && ranOnGPU))
 #endif
         {
+            try {
+                if (finalizeLayers) {
+                    layer->finalize((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats);
+                }
+                layer->forward((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats, (OutputArrayOfArrays)tempMats);
+            } catch (const cv::Exception& e) {
+                CV_Error_(Error::StsError, ("DNN: CPU forward failed for layer '%s' (%s): %s", layer->name.c_str(), layer->type.c_str(), e.what()));
+            }
             CV_Assert(outMats.size() == noutputs);
         }
 
@@ -962,6 +956,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 continue;
             }
 #endif
+
             const Mat& m = outMats[i];
             adata.type = m.type();
             adata.shape = m.shape();
