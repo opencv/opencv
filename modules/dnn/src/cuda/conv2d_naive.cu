@@ -58,24 +58,32 @@ void conv2d_nchw_fp32(
 
         if (ok) {
             int x_n = N, x_c = C_in, x_h = H_in, x_w = W_in;
-            int x_stride_w = 1;
-            int x_stride_h = x_w;
-            int x_stride_c = x_h * x_stride_h;
-            // Use provided leading dimension (in elements) for batch stride to account for pitch
-            int x_stride_n = in_ldw; // elements per row in the 2D view
-            st = cudnnSetTensor4dDescriptorEx(xDesc, CUDNN_DATA_FLOAT, x_n, x_c, x_h, x_w,
-                                              x_stride_n, x_stride_c, x_stride_h, x_stride_w);
+            int contiguous_in = x_c * x_h * x_w;
+            if (in_ldw <= 0 || in_ldw == contiguous_in) {
+                st = cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, x_n, x_c, x_h, x_w);
+            } else {
+                int x_stride_w = 1;
+                int x_stride_h = x_w;
+                int x_stride_c = x_h * x_stride_h;
+                int x_stride_n = in_ldw;
+                st = cudnnSetTensor4dDescriptorEx(xDesc, CUDNN_DATA_FLOAT, x_n, x_c, x_h, x_w,
+                                                  x_stride_n, x_stride_c, x_stride_h, x_stride_w);
+            }
             if (st != CUDNN_STATUS_SUCCESS) { ok = false; }
         }
         if (ok) {
             int y_n = N, y_c = C_out, y_h = H_out, y_w = W_out;
-            int y_stride_w = 1;
-            int y_stride_h = y_w;
-            int y_stride_c = y_h * y_stride_h;
-            // Use provided leading dimension (in elements) for batch stride to account for pitch
-            int y_stride_n = out_ldw; // elements per row in the 2D view
-            st = cudnnSetTensor4dDescriptorEx(yDesc, CUDNN_DATA_FLOAT, y_n, y_c, y_h, y_w,
-                                              y_stride_n, y_stride_c, y_stride_h, y_stride_w);
+            int contiguous_out = y_c * y_h * y_w;
+            if (out_ldw <= 0 || out_ldw == contiguous_out) {
+                st = cudnnSetTensor4dDescriptor(yDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, y_n, y_c, y_h, y_w);
+            } else {
+                int y_stride_w = 1;
+                int y_stride_h = y_w;
+                int y_stride_c = y_h * y_stride_h;
+                int y_stride_n = out_ldw;
+                st = cudnnSetTensor4dDescriptorEx(yDesc, CUDNN_DATA_FLOAT, y_n, y_c, y_h, y_w,
+                                                  y_stride_n, y_stride_c, y_stride_h, y_stride_w);
+            }
             if (st != CUDNN_STATUS_SUCCESS) { ok = false; }
         }
         if (ok && d_bias) {
@@ -93,30 +101,18 @@ void conv2d_nchw_fp32(
                 st = cudnnSetConvolutionGroupCount(convDesc, groups);
                 if (st != CUDNN_STATUS_SUCCESS) { ok = false; }
             }
-        }
-
-        // Algo and workspace
-        cudnnConvolutionFwdAlgo_t algo;
-        int maxAlgos = 0, retAlgos = 0;
-        if (ok) {
-#if CUDNN_MAJOR >= 8
-            st = cudnnGetConvolutionForwardAlgorithmMaxCount(handle, &maxAlgos);
-            if (st != CUDNN_STATUS_SUCCESS || maxAlgos <= 0) ok = false;
-            std::vector<cudnnConvolutionFwdAlgoPerf_t> perf;
+            // Reduce numeric drift vs CPU by avoiding TF32/tensor cores
+#if CUDNN_MAJOR >= 7
             if (ok) {
-                perf.resize(maxAlgos);
-                st = cudnnGetConvolutionForwardAlgorithm_v7(handle, xDesc, wDesc, convDesc, yDesc, maxAlgos, &retAlgos, perf.data());
-                if (st != CUDNN_STATUS_SUCCESS || retAlgos <= 0) ok = false; else { algo = perf[0].algo; workspace_size = perf[0].memory; }
-            }
-#else
-            st = cudnnGetConvolutionForwardAlgorithm(handle, xDesc, wDesc, convDesc, yDesc, CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &algo);
-            if (st != CUDNN_STATUS_SUCCESS) ok = false;
-            if (ok) {
-                st = cudnnGetConvolutionForwardWorkspaceSize(handle, xDesc, wDesc, convDesc, yDesc, algo, &workspace_size);
-                if (st != CUDNN_STATUS_SUCCESS) ok = false;
+                st = cudnnSetConvolutionMathType(convDesc, CUDNN_DEFAULT_MATH);
+                if (st != CUDNN_STATUS_SUCCESS) { ok = false; }
             }
 #endif
         }
+
+        // Algo and workspace: pick a stable, deterministic algo
+        cudnnConvolutionFwdAlgo_t algo = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM;
+        workspace_size = 0;
         if (ok && workspace_size > 0) {
             if (cudaMalloc(&workspace, workspace_size) != cudaSuccess) ok = false;
         }
@@ -129,16 +125,6 @@ void conv2d_nchw_fp32(
             const float alpha = 1.0f, beta = 1.0f;
             st = cudnnAddTensor(handle, &alpha, bDesc, d_bias, &beta, yDesc, d_output);
             if (st != CUDNN_STATUS_SUCCESS) ok = false;
-        }
-
-        if (!ok) {
-            std::fprintf(stderr,
-                "DNN(cuDNN): conv2d_nchw_fp32 failed: %s (N=%d C_in=%d H_in=%d W_in=%d -> C_out=%d k=%dx%d s=%dx%d p=%dx%d groups=%d cpg=%d)\n",
-                cudnnGetErrorString(st), N, C_in, H_in, W_in, C_out, kH, kW, strideH, strideW, padH, padW, groups, C_in_per_group);
-        } else {
-            std::fprintf(stderr,
-                "DNN(cuDNN): conv2d_nchw_fp32 using cuDNN (N=%d C_in=%d H_in=%d W_in=%d -> C_out=%d H_out=%d W_out=%d k=%dx%d s=%dx%d p=%dx%d groups=%d cpg=%d)\n",
-                N, C_in, H_in, W_in, C_out, H_out, W_out, kH, kW, strideH, strideW, padH, padW, groups, C_in_per_group);
         }
 
         if (workspace) cudaFree(workspace);
