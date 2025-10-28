@@ -33,9 +33,6 @@ void relu_fp32(const float* d_input, float* d_output, size_t count)
                                    &alpha, xDesc, d_input,
                                    &beta, yDesc, d_output)) != CUDNN_STATUS_SUCCESS) ok = false;
 
-        if (ok) std::fprintf(stderr, "DNN(cuDNN): relu_fp32 using cuDNN (count=%zu)\n", count);
-        else std::fprintf(stderr, "DNN(cuDNN): relu_fp32 cuDNN error: %s\n", cudnnGetErrorString(st));
-
         if (actDesc) cudnnDestroyActivationDescriptor(actDesc);
         if (yDesc) cudnnDestroyTensorDescriptor(yDesc);
         if (xDesc) cudnnDestroyTensorDescriptor(xDesc);
@@ -64,6 +61,7 @@ void relu_fp32_2d(const float* d_input, size_t input_step, float* d_output, size
         int x_stride_h = 1;
         int x_stride_c = 1;
         int x_stride_n = (int)(input_step / sizeof(float));
+        if (x_stride_n <= 0) x_stride_n = cols;
         if (ok && (st = cudnnSetTensor4dDescriptorEx(xDesc, CUDNN_DATA_FLOAT, n, c, h, w,
                                           x_stride_n, x_stride_c, x_stride_h, x_stride_w)) != CUDNN_STATUS_SUCCESS) ok = false;
 
@@ -71,6 +69,7 @@ void relu_fp32_2d(const float* d_input, size_t input_step, float* d_output, size
         int y_stride_h = 1;
         int y_stride_c = 1;
         int y_stride_n = (int)(output_step / sizeof(float));
+        if (y_stride_n <= 0) y_stride_n = cols;
         if (ok && (st = cudnnSetTensor4dDescriptorEx(yDesc, CUDNN_DATA_FLOAT, n, c, h, w,
                                           y_stride_n, y_stride_c, y_stride_h, y_stride_w)) != CUDNN_STATUS_SUCCESS) ok = false;
 
@@ -80,9 +79,6 @@ void relu_fp32_2d(const float* d_input, size_t input_step, float* d_output, size
         if (ok && (st = cudnnActivationForward(handle, actDesc,
                                    &alpha, xDesc, d_input,
                                    &beta, yDesc, d_output)) != CUDNN_STATUS_SUCCESS) ok = false;
-
-        if (ok) std::fprintf(stderr, "DNN(cuDNN): relu_fp32_2d using cuDNN (rows=%d cols=%d)\n", rows, cols);
-        else std::fprintf(stderr, "DNN(cuDNN): relu_fp32_2d cuDNN error: %s\n", cudnnGetErrorString(st));
 
         if (actDesc) cudnnDestroyActivationDescriptor(actDesc);
         if (yDesc) cudnnDestroyTensorDescriptor(yDesc);

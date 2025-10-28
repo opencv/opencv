@@ -173,6 +173,10 @@ void Net::Impl::ensureBufferWrapper(int bufidx)
         return;
     if ((size_t)bufidx >= gpuBuffers.size())
         gpuBuffers.resize((size_t)bufidx + 1);
+    // If this TEMP buffer already has a valid GPU tensor produced by a previous GPU layer,
+    // don't override it by uploading the stale/placeholder host Mat (which can be 1x1).
+    if (!gpuBuffers[(size_t)bufidx].empty())
+        return;
     Mat& host = buffers.at((size_t)bufidx);
     try
     {
