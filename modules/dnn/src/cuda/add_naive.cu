@@ -52,9 +52,6 @@ void add2_fp32_2d(
                           &alpha2, bDesc, d_b,
                           &beta, yDesc, d_y)) != CUDNN_STATUS_SUCCESS) ok = false;
 
-        if (ok) std::fprintf(stderr, "DNN(cuDNN): add2_fp32_2d using cuDNN (rows=%d cols=%d)\n", rows, cols);
-        else std::fprintf(stderr, "DNN(cuDNN): add2_fp32_2d cuDNN error: %s\n", cudnnGetErrorString(st));
-
         if (opDesc) cudnnDestroyOpTensorDescriptor(opDesc);
         if (yDesc) cudnnDestroyTensorDescriptor(yDesc);
         if (bDesc) cudnnDestroyTensorDescriptor(bDesc);
@@ -114,9 +111,6 @@ void add_inplace_fp32_2d(
                           &alpha1, yDesc, d_y,
                           &alpha2, xDesc, d_x,
                           &beta, yDesc, d_y)) != CUDNN_STATUS_SUCCESS) ok = false;
-
-        if (ok) std::fprintf(stderr, "DNN(cuDNN): add_inplace_fp32_2d using cuDNN (rows=%d cols=%d)\n", rows, cols);
-        else std::fprintf(stderr, "DNN(cuDNN): add_inplace_fp32_2d cuDNN error: %s\n", cudnnGetErrorString(st));
 
         if (opDesc) cudnnDestroyOpTensorDescriptor(opDesc);
         if (yDesc) cudnnDestroyTensorDescriptor(yDesc);

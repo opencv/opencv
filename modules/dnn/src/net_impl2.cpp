@@ -901,6 +901,51 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     CV_LOG_INFO(NULL, "DNN/CUDA: ran on GPU for layer '" << layer->name << "' (device " << cv::cuda::getDevice() << ")");
                 } catch (const cv::Exception& e) {
                     CV_LOG_WARNING(NULL, "DNN/CUDA: pure GpuMat forward failed for layer '" << layer->name << "' (" << layer->type << "): " << e.what() << ". Falling back to CPU.");
+                    // Clear GPU outputs to avoid accidental usage later
+                    outGpuMats.clear();
+                    tempGpuMats.clear();
+                    // Ensure CPU inputs are materialized from GPU if needed
+                    for (size_t ii = 0; ii < ninputs; ++ii) {
+                        Arg ainp = inputs[ii];
+                        const ArgData& ad = args.at(ainp.idx);
+                        MatShape ish = ii < inpShapes.size() ? inpShapes[ii] : ad.shape;
+                        int ty = (ii < inpTypes.size() && inpTypes[ii] >= 0) ? inpTypes[ii] : ad.type;
+                        Mat& host = argTensor(ainp);
+                        if (!ish.empty() && ty >= 0) host.fit(ish, ty);
+                        if (ad.kind == DNN_ARG_TEMP) {
+                            int ibuf = bufidxs.at(ainp.idx);
+                            if (ibuf >= 0 && (size_t)ibuf < gpuBuffers.size() && !gpuBuffers[(size_t)ibuf].empty()) {
+                                const cv::cuda::GpuMat& gm = gpuBuffers[(size_t)ibuf];
+                                int rows = gm.rows > 0 ? gm.rows : 1;
+                                Mat h2d = host.dims <= 2 ? host : host.reshape(1, rows);
+                                if (h2d.rows != rows || h2d.cols != gm.cols || h2d.type() != gm.type())
+                                    h2d.create(rows, gm.cols, gm.type());
+                                gm.download(h2d);
+                            }
+                        } else {
+                            if (gpuTensors.size() > (size_t)ainp.idx && !gpuTensors[ainp.idx].empty()) {
+                                const cv::cuda::GpuMat& gm = gpuTensors[ainp.idx];
+                                int rows = gm.rows > 0 ? gm.rows : 1;
+                                Mat h2d = host.dims <= 2 ? host : host.reshape(1, rows);
+                                if (h2d.rows != rows || h2d.cols != gm.cols || h2d.type() != gm.type())
+                                    h2d.create(rows, gm.cols, gm.type());
+                                gm.download(h2d);
+                            }
+                        }
+                        inpMats[ii] = host;
+                    }
+                    // Prepare CPU outputs depending on shape mode
+                    if (!dynamicOutShapes) {
+                        allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+                                             tempTypes, tempShapes, tempMats, scratchBufs, true);
+                    } else {
+                        outMats.resize(noutputs);
+                        for (size_t i2 = 0; i2 < noutputs; i2++) {
+                            Arg out2 = outputs[i2];
+                            outMats[i2] = argTensor(out2);
+                        }
+                        tempMats = scratchBufs;
+                    }
                 }
             }
 #endif
@@ -925,6 +970,15 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 #endif
         {
             try {
+                // If GPU attempt allocated only GPU outputs, allocate CPU outputs before CPU forward
+#ifdef HAVE_CUDA
+                if (!dynamicOutShapes && (supportGPU && !ranOnGPU)) {
+                    if (outMats.empty()) {
+                        allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+                                             tempTypes, tempShapes, tempMats, scratchBufs, true);
+                    }
+                }
+#endif
                 if (finalizeLayers) {
                     layer->finalize((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats);
                 }
