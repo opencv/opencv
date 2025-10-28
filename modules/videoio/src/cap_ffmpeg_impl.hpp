@@ -1170,7 +1170,9 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
       input_format = av_find_input_format(entry->value);
     }
 
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
     AVDeviceInfoList* device_list = nullptr;
+#endif
     if (index >= 0)
     {
 #ifdef HAVE_FFMPEG_LIBAVDEVICE
@@ -1267,13 +1269,13 @@ bool CvCapture_FFMPEG::open(const char* _filename, int index, const Ptr<IStreamR
         ic->pb = avio_context;
     }
     int err = avformat_open_input(&ic, _filename, input_format, &dict);
+#ifdef HAVE_FFMPEG_LIBAVDEVICE
     if (device_list)
     {
-#ifdef HAVE_FFMPEG_LIBAVDEVICE
         avdevice_free_list_devices(&device_list);
         device_list = nullptr;
-#endif
     }
+#endif
 
     if (err < 0)
     {
