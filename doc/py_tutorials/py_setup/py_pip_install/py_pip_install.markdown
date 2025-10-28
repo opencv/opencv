@@ -68,21 +68,21 @@ Install exactly **one** of these per environment.
 
 ## Troubleshooting
 
-**Pip is trying to build from source**  
-Symptoms: very long build step, CMake errors, compiler errors.  
+**Pip is trying to build from source**
+Symptoms: very long build step, CMake errors, compiler errors.
 Fixes:
 - Upgrade build tooling: `python -m pip install --upgrade pip setuptools wheel`
 - Ensure your Python version is supported by the chosen package.
 - If you are on an uncommon platform or Python build, switch to a supported Python or try a different variant (headless vs non‑headless).
 
-**“No matching distribution found” or “Unsupported wheel”**  
+**“No matching distribution found” or “Unsupported wheel”**
 - Confirm your Python version (e.g., `python -V`). Choose a wheel that supports that version (manylinux/macOS/Windows wheels on PyPI target specific Python versions).
 - Create a fresh virtual environment with a mainstream Python (e.g., 3.10–3.12) and reinstall.
 
-**Raspberry Pi / ARM**  
+**Raspberry Pi / ARM**
 - Wheels may lag behind new Python/Pi OS releases. Try `opencv-python-headless` first. If unavailable, consider system packages for camera/GUI pieces, or build from source following the OS page linked below.
 
-**Import works in terminal but fails in IDE**  
+**Import works in terminal but fails in IDE**
 - The IDE is using a different interpreter. Select the **same** environment inside your IDE’s interpreter settings.
 
 ## What about system packages or building from source?
