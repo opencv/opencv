@@ -1,0 +1,146 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import random
+from pathlib import Path
+
+# ======================================
+#   JIE42903 — Genetic Algorithm Scheduler
+# ======================================
+
+DATA_PATH = 'program_ratings_modified.csv'  # Place this file in the same folder as the app
+
+# --- App Title ---
+st.title('Genetic Algorithm Scheduler — JIE42903 Assignment')
+st.markdown("""
+This Streamlit app demonstrates a **Genetic Algorithm (GA)** for scheduling programs based on their ratings.  
+You can modify the **Crossover Rate (CO_R)** and **Mutation Rate (MUT_R)** interactively and observe how the generated schedule changes.
+""")
+
+# --- Upload or Load CSV ---
+uploaded = st.file_uploader('Upload Modified CSV (optional)', type=['csv'])
+if uploaded is not None:
+    df = pd.read_csv(uploaded)
+else:
+    if Path(DATA_PATH).exists():
+        df = pd.read_csv(DATA_PATH)
+    else:
+        st.error('No CSV file found. Upload one or place program_ratings_modified.csv in this app folder.')
+        st.stop()
+
+# --- Sidebar Parameters ---
+st.sidebar.header('Genetic Algorithm Parameters')
+
+# Assignment requirement:
+# CO_R default = 0.8 (range 0–0.95)
+# MUT_R default = 0.2 (range 0.01–0.05)
+co_r = st.sidebar.slider('Crossover Rate (CO_R)', 0.0, 0.95, 0.8, step=0.01)
+mut_r = st.sidebar.slider('Mutation Rate (MUT_R)', 0.01, 0.05, 0.02, step=0.01)
+
+st.sidebar.markdown('---')
+st.sidebar.subheader('Optional Parameters for Additional Trials')
+co2 = st.sidebar.slider('CO_R for Trial 2', 0.0, 0.95, 0.9, step=0.01)
+mut2 = st.sidebar.slider('MUT_R for Trial 2', 0.01, 0.05, 0.03, step=0.01)
+co3 = st.sidebar.slider('CO_R for Trial 3', 0.0, 0.95, 0.6, step=0.01)
+mut3 = st.sidebar.slider('MUT_R for Trial 3', 0.01, 0.05, 0.05, step=0.01)
+
+st.sidebar.markdown('---')
+pop_size = st.sidebar.number_input('Population Size', min_value=20, max_value=500, value=150, step=10)
+generations = st.sidebar.number_input('Generations', min_value=10, max_value=2000, value=400, step=10)
+
+# --- GA Implementation ---
+programs = df.reset_index(drop=True)
+n_programs = len(programs)
+slot_weights = np.linspace(1.5, 0.5, n_programs)  # earlier slots more important
+
+def fitness_of_chromosome(chrom):
+    """Calculate fitness based on weighted program ratings."""
+    ratings = programs.loc[chrom, 'Rating'].values
+    return float((ratings * slot_weights).sum())
+
+def create_chromosome():
+    """Create a random permutation of programs."""
+    return np.random.permutation(n_programs)
+
+def initial_population(pop_size):
+    """Generate initial population."""
+    return [create_chromosome() for _ in range(pop_size)]
+
+def tournament_selection(pop, fitnesses, k=3):
+    """Select the best individual from a random subset."""
+    selected = random.sample(range(len(pop)), k)
+    best = max(selected, key=lambda i: fitnesses[i])
+    return pop[best].copy()
+
+def ordered_crossover(parent1, parent2):
+    """Perform ordered crossover (OX) for permutation chromosomes."""
+    a, b = sorted(random.sample(range(n_programs), 2))
+    child = [-1]*n_programs
+    child[a:b+1] = parent1[a:b+1]
+    p2_idx = (b+1) % n_programs
+    c_idx = (b+1) % n_programs
+    while -1 in child:
+        gene = parent2[p2_idx]
+        if gene not in child:
+            child[c_idx] = gene
+            c_idx = (c_idx + 1) % n_programs
+        p2_idx = (p2_idx + 1) % n_programs
+    return np.array(child, dtype=int)
+
+def swap_mutation(chrom):
+    """Perform swap mutation between two random genes."""
+    a, b = random.sample(range(n_programs), 2)
+    chrom2 = chrom.copy()
+    chrom2[a], chrom2[b] = chrom2[b], chrom2[a]
+    return chrom2
+
+def run_ga(co_r, mut_r, pop_size, generations):
+    """Run the Genetic Algorithm."""
+    pop = initial_population(pop_size)
+    best = None
+    best_fit = -1e9
+    for gen in range(generations):
+        fitnesses = [fitness_of_chromosome(p) for p in pop]
+        new_pop = []
+        while len(new_pop) < pop_size:
+            parent1 = tournament_selection(pop, fitnesses)
+            parent2 = tournament_selection(pop, fitnesses)
+            if random.random() < co_r:
+                child = ordered_crossover(parent1, parent2)
+            else:
+                child = parent1.copy()
+            if random.random() < mut_r:
+                child = swap_mutation(child)
+            new_pop.append(child)
+        pop = new_pop
+        for p in pop:
+            f = fitness_of_chromosome(p)
+            if f > best_fit:
+                best_fit = f
+                best = p.copy()
+    return best, best_fit
+
+# --- Run and Display Results ---
+st.header('Run the Genetic Algorithm')
+
+if st.button('Run 3 Trials'):
+    param_list = [
+        (co_r, mut_r),
+        (co2, mut2),
+        (co3, mut3)
+    ]
+
+    for i, (cr, mr) in enumerate(param_list, start=1):
+        with st.spinner(f'Running Trial {i} with CO_R={cr}, MUT_R={mr}...'):
+            best, fit = run_ga(cr, mr, int(pop_size), int(generations))
+            sched = programs.loc[best].reset_index(drop=True)
+            sched['Slot'] = sched.index + 1
+            sched['SlotWeight'] = slot_weights[:len(sched)]
+            sched['WeightedScore'] = (sched['Rating'] * sched['SlotWeight']).round(3)
+            
+            # --- Display in Table Format ---
+            st.subheader(f'Trial {i} — CO_R={cr}, MUT_R={mr} — Fitness={fit:.3f}')
+            st.dataframe(sched, use_container_width=True)
+            st.caption("📋 The table above shows the scheduled programs generated by the genetic algorithm.")
+
+st.success('Adjust parameters in the sidebar and rerun to observe different scheduling results.')
