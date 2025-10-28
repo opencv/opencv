@@ -52,7 +52,6 @@ void fc_fp32(const float* x, const float* w, const float* b, float* y,
         }
     }
 
-    // Optional bias add using cuDNN addTensor: Y(N,M,1,1) += B(1,M,1,1)
     if (ok && b != nullptr) {
         cdst = cudnnCreate(&cudnn);
         if (cdst != CUDNN_STATUS_SUCCESS) {

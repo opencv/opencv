@@ -28,6 +28,7 @@ void global_avgpool2d_nchw_flat_fp32(
         int x_stride_h = W;
         int x_stride_c = H * W;
         int x_stride_n = (int)(input_step_bytes / sizeof(float));
+        if (x_stride_n <= 0) x_stride_n = C * H * W;
         if (ok && (st = cudnnSetTensor4dDescriptorEx(xDesc, CUDNN_DATA_FLOAT,
                                          N, C, H, W,
                                          x_stride_n, x_stride_c, x_stride_h, x_stride_w)) != CUDNN_STATUS_SUCCESS) ok = false;
@@ -37,6 +38,7 @@ void global_avgpool2d_nchw_flat_fp32(
         int y_stride_h = 1;
         int y_stride_c = 1;
         int y_stride_n = (int)(output_step_bytes / sizeof(float));
+        if (y_stride_n <= 0) y_stride_n = C;
         if (ok && (st = cudnnSetTensor4dDescriptorEx(yDesc, CUDNN_DATA_FLOAT,
                                          N, C, 1, 1,
                                          y_stride_n, y_stride_c, y_stride_h, y_stride_w)) != CUDNN_STATUS_SUCCESS) ok = false;
@@ -48,12 +50,6 @@ void global_avgpool2d_nchw_flat_fp32(
         if (ok && (st = cudnnPoolingForward(handle, pDesc,
                                 &alpha, xDesc, d_input,
                                 &beta, yDesc, d_output)) != CUDNN_STATUS_SUCCESS) ok = false;
-
-        if (ok) {
-            std::fprintf(stderr, "DNN(cuDNN): global_avgpool2d using cuDNN (N=%d C=%d H=%d W=%d)\n", N, C, H, W);
-        } else {
-            std::fprintf(stderr, "DNN(cuDNN): global_avgpool2d cuDNN error: %s\n", cudnnGetErrorString(st));
-        }
 
         if (pDesc) cudnnDestroyPoolingDescriptor(pDesc);
         if (yDesc) cudnnDestroyTensorDescriptor(yDesc);
@@ -125,6 +121,7 @@ void maxpool2d_nchw_flatrows_fp32(
         int x_stride_h = W_in;
         int x_stride_c = H_in * W_in;
         int x_stride_n = (int)(input_step_bytes / sizeof(float));
+        if (x_stride_n <= 0) x_stride_n = C * H_in * W_in;
         if (ok && (st = cudnnSetTensor4dDescriptorEx(xDesc, CUDNN_DATA_FLOAT,
                                          N, C, H_in, W_in,
                                          x_stride_n, x_stride_c, x_stride_h, x_stride_w)) != CUDNN_STATUS_SUCCESS) ok = false;
@@ -133,6 +130,7 @@ void maxpool2d_nchw_flatrows_fp32(
         int y_stride_h = W_out;
         int y_stride_c = H_out * W_out;
         int y_stride_n = (int)(output_step_bytes / sizeof(float));
+        if (y_stride_n <= 0) y_stride_n = C * H_out * W_out;
         if (ok && (st = cudnnSetTensor4dDescriptorEx(yDesc, CUDNN_DATA_FLOAT,
                                          N, C, H_out, W_out,
                                          y_stride_n, y_stride_c, y_stride_h, y_stride_w)) != CUDNN_STATUS_SUCCESS) ok = false;
@@ -144,13 +142,6 @@ void maxpool2d_nchw_flatrows_fp32(
         if (ok && (st = cudnnPoolingForward(handle, pDesc,
                                 &alpha, xDesc, d_input,
                                 &beta, yDesc, d_output)) != CUDNN_STATUS_SUCCESS) ok = false;
-
-        if (ok) {
-            std::fprintf(stderr, "DNN(cuDNN): maxpool2d using cuDNN (N=%d C=%d Hin=%d Win=%d Hout=%d Wout=%d k=%dx%d s=%dx%d p=%dx%d)\n",
-                     N, C, H_in, W_in, H_out, W_out, kH, kW, sH, sW, pH, pW);
-        } else {
-            std::fprintf(stderr, "DNN(cuDNN): maxpool2d cuDNN error: %s\n", cudnnGetErrorString(st));
-        }
 
         if (pDesc) cudnnDestroyPoolingDescriptor(pDesc);
         if (yDesc) cudnnDestroyTensorDescriptor(yDesc);
