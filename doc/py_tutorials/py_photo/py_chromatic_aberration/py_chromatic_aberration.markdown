@@ -36,7 +36,7 @@ To create a model of the misalignments of the channels, we use the following cal
 
 1. Print out the calibration photo available in [opencv_extra/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png](https://github.com/opencv/opencv_extra/tree/5.x/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png). The photo is a grid of black discs on a white background, and as the chromatic aberration fringes appear on the edges of objects in the photo, we will be able to see many different misalignments and model them precisely.
 
-2. Take a photo of the printed out calibration grid using your camera. Make sure that al of the discs are in the photo, and that the grid fills as much place as possible, as the chromatic aberration is the strongest at the edges and corners of the photo. You should be able to see color fringes by eye.
+2. Take one or more images of the printed out calibration grid using your camera. Make sure that all of the discs are in the photo, and that the grid fills as much place as possible, as the chromatic aberration is the strongest at the edges and corners of the photo. You should be able to see color fringes by eye.
 
 3. Run calibraion, see [chromatic_calibration.py](../../../../apps/chromatic-aberration-calibration/chromatic_calibration.py). The app can be used as follows:
 
@@ -78,8 +78,8 @@ OUTPUT     = "corrected.png"
 BAYER      = -1
 SHOW       = True
 
-img = cv.imread(INPUT, cv.IMREAD_UNCHANGED)
-corrected = cv.correctChromaticAberration(img, CALIB_YAML, BAYER)
+coeffMat, calibW, calibH, degree = cv.loadCalibrationResultFromFile(CALIB_FILE)
+corrected = cv.correctChromaticAberration(img, coeffMat, calibW, calibH, degree, BAYER)
 
 if SHOW:
     cv.namedWindow("Original",  cv.WINDOW_AUTOSIZE)
