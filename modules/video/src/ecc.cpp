@@ -40,7 +40,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 
 /****************************************************************************************\
 *                                       Image Alignment (ECC algorithm)                  *
@@ -455,40 +454,12 @@ double cv::findTransformECC(InputArray templateImage,
     Mat imageFloat    = Mat(hd, wd, CV_32F);// to store the (smoothed) input image
     Mat imageWarped   = Mat(hs, ws, CV_32F);// to store the warped zero-mean input image
     Mat imageMask     = Mat(hs, ws, CV_8U); // to store the final mask
-    Mat combinedMask     = Mat(hs, ws, CV_8U); // to store the final mask
  
     Mat inputMaskMat = inputMask.getMat();
-    //to use it for mask warping
-    Mat preMask;
-    if(inputMask.empty())
-	{
-		preMask = Mat::ones(hd, wd, CV_8U);}
-    else {
-        threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
-        preMask.convertTo(preMask, CV_8U);}
-
-    Mat templateMaskMat = templateMask.getMat();
-    //to use in mask warping
-    Mat tempMask;
-    if(templateMask.empty())
-	{
-		tempMask = Mat::ones(hs, ws, CV_8U);}
-    else{
-        threshold(templateMask, tempMask, 0, 1, THRESH_BINARY);
-        tempMask.convertTo(tempMask, preMask.type());}
 
     //gaussian filtering is optional
     src.convertTo(templateFloat, templateFloat.type());
     GaussianBlur(templateFloat, templateFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
-
-    Mat preMaskFloat;
-    preMask.convertTo(preMaskFloat, CV_32F);
-    GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
-    // Change threshold.
-    preMaskFloat *= (0.5/0.95);
-    // Rounding conversion.
-    preMaskFloat.convertTo(preMask, preMask.type());
-    preMask.convertTo(preMaskFloat, preMaskFloat.type());
 
     dst.convertTo(imageFloat, imageFloat.type());
     GaussianBlur(imageFloat, imageFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
@@ -498,21 +469,55 @@ double cv::findTransformECC(InputArray templateImage,
     Mat gradientY = Mat::zeros(hd, wd, CV_32FC1);
     Mat gradientXWarped = Mat(hs, ws, CV_32FC1);
     Mat gradientYWarped = Mat(hs, ws, CV_32FC1);
-    
+
     // calculate first order image derivatives
     Matx13f dx(-0.5f, 0.0f, 0.5f);
 
     filter2D(imageFloat, gradientX, -1, dx);
     filter2D(imageFloat, gradientY, -1, dx.t());
 
-    //combine 2 mask here
-    Mat mattwo; 
-    mattwo = Mat::ones(hs, ws, CV_8U); 
-    mattwo *= 2;
-    Mat sumMask;
-    
-    gradientX = gradientX.mul(preMaskFloat);
-    gradientY = gradientY.mul(preMaskFloat);
+    // To use in mask warping
+    Mat templtMask;
+    if(templateMask.empty())
+    {
+        templtMask = Mat::ones(hs, ws, CV_8U);
+    }
+    else
+    {
+        threshold(templateMask, templtMask, 0, 1, THRESH_BINARY);
+        templtMask.convertTo(templtMask, CV_32F);
+        GaussianBlur(templtMask, templtMask, Size(gaussFiltSize, gaussFiltSize), 0, 0);
+        templtMask *= (0.5/0.95);
+        templtMask.convertTo(templtMask, CV_8U);
+    }
+
+    //to use it for mask warping
+    Mat preMask;
+    if(inputMask.empty())
+    {
+        preMask = Mat::ones(hd, wd, CV_8U);
+    }
+    else
+    {
+        Mat preMaskFloat;
+        threshold(inputMask, preMask, 0, 1, THRESH_BINARY);
+
+        preMask.convertTo(preMaskFloat, CV_32F);
+        GaussianBlur(preMaskFloat, preMaskFloat, Size(gaussFiltSize, gaussFiltSize), 0, 0);
+        // Change threshold.
+        preMaskFloat *= (0.5/0.95);
+        // Rounding conversion.
+        preMaskFloat.convertTo(preMask, CV_8U);
+
+        // If there's no template mask, we can apply image masks to gradients only once.
+        // Otherwise, we'll need to combine the template and image masks at each iteration.
+        if (templateMask.empty())
+        {
+            preMask.convertTo(preMaskFloat, preMaskFloat.type());
+            gradientX = gradientX.mul(preMaskFloat);
+            gradientY = gradientY.mul(preMaskFloat);
+        }
+    }
 
     // matrices needed for solving linear equation system for maximizing ECC
     Mat jacobian                = Mat(hs, ws*numberOfParameters, CV_32F);
@@ -535,9 +540,7 @@ double cv::findTransformECC(InputArray templateImage,
     double last_rho = - termination_eps;
     for (int i = 1; (i <= numberOfIterations) && (fabs(rho-last_rho)>= termination_eps); i++)
     {
-        // update warping matrix
-        update_warping_matrix_ECC( map, deltaP, motionType);
- 
+
         // warp-back portion of the inputImage and gradients to the coordinate space of the templateImage
         if (motionType != MOTION_HOMOGRAPHY)
         {
@@ -553,29 +556,27 @@ double cv::findTransformECC(InputArray templateImage,
             warpPerspective(gradientY,  gradientYWarped, map, gradientYWarped.size(), imageFlags);
             warpPerspective(preMask,    imageMask,       map, imageMask.size(),       maskFlags);
         }
-        
-        //combine 2 mask here in imageMask
-        sumMask = Mat::zeros(hs, ws, CV_8U);
-        add(imageMask, tempMask, sumMask);
-        combinedMask = Mat::zeros(hs, ws, CV_8U);
-        divide( sumMask, mattwo, combinedMask);
-    
-    
-	    Mat combinedMaskFloat;
-		combinedMask.convertTo(combinedMaskFloat, CV_32F);
-		gradientXWarped = gradientXWarped.mul(combinedMaskFloat);
-    	gradientYWarped = gradientYWarped.mul(combinedMaskFloat);
+
+        if (!templateMask.empty())
+        {
+            cv::bitwise_and(imageMask, templtMask, imageMask);
+
+            Mat combinedMaskFloat;
+            imageMask.convertTo(combinedMaskFloat, CV_32F);
+            gradientXWarped = gradientXWarped.mul(combinedMaskFloat);
+            gradientYWarped = gradientYWarped.mul(combinedMaskFloat);
+        }
 
         Scalar imgMean, imgStd, tmpMean, tmpStd;
-        meanStdDev(imageWarped,   imgMean, imgStd, combinedMask);
-        meanStdDev(templateFloat, tmpMean, tmpStd, combinedMask);
+        meanStdDev(imageWarped,   imgMean, imgStd, imageMask);
+        meanStdDev(templateFloat, tmpMean, tmpStd, imageMask);
 
-        subtract(imageWarped,   imgMean, imageWarped, combinedMask);//zero-mean input
+        subtract(imageWarped,   imgMean, imageWarped, imageMask);//zero-mean input
         templateZM = Mat::zeros(templateZM.rows, templateZM.cols, templateZM.type());
-		subtract(templateFloat, tmpMean, templateZM,  combinedMask);//zero-mean template
+        subtract(templateFloat, tmpMean, templateZM,  imageMask);//zero-mean template
 
-		const double tmpNorm = norm(templateZM,  cv::NORM_L2, combinedMask);
-		const double imgNorm = norm(imageWarped, cv::NORM_L2, combinedMask);
+        const double tmpNorm = std::sqrt(countNonZero(imageMask)*(tmpStd.val[0])*(tmpStd.val[0]));
+        const double imgNorm = std::sqrt(countNonZero(imageMask)*(imgStd.val[0])*(imgStd.val[0]));
 
         // calculate jacobian of image wrt parameters
         switch (motionType){
@@ -629,25 +630,32 @@ double cv::findTransformECC(InputArray templateImage,
         project_onto_jacobian_ECC(jacobian, error, errorProjection);
         deltaP = hessianInv * errorProjection;
 
-        // now call at the start of the loop
-        // update warping matrix
-        //update_warping_matrix_ECC( map, deltaP, motionType);
-
-
+        update_warping_matrix_ECC( map, deltaP, motionType);
     }
 
     // return final correlation coefficient
     return rho;
 }
 
+double cv::findTransformECC(InputArray templateImage,
+                            InputArray inputImage,
+                            InputOutputArray warpMatrix,
+                            int motionType,
+                            TermCriteria criteria,
+                            InputArray inputMask,
+                            int gaussFiltSize
+                            ) {
+    return cv::findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria,
+                                    inputMask, noArray(), gaussFiltSize);
+}
+
 double cv::findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType,
     TermCriteria criteria,
-    InputArray inputMask,
-    InputArray templateMask)
+    InputArray inputMask)
 {
     // Use default value of 5 for gaussFiltSize to maintain backward compatibility.
-    return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, templateMask, 5);
+    return findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria, inputMask, 5);
 }
 
 

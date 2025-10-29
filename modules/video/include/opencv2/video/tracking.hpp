@@ -276,7 +276,7 @@ enum
 findTransformECC
  */
 
-CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = cv::noArray());
+CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = noArray());
 
 /** @example samples/cpp/image_alignment.cpp
 An example using the image alignment ECC algorithm
@@ -303,6 +303,8 @@ criteria.epsilon defines the threshold of the increment in the correlation coeff
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
 @param inputMask An optional mask to indicate valid values of inputImage.
+@param templateMask  An optional mask to indicate valid values of inputImage. The effective support
+ is intersection of warped inputMask and templateMask.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
@@ -336,14 +338,20 @@ computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType,
                                       TermCriteria criteria,
-                                      InputArray inputMask, InputArray templateMask, int gaussFiltSize);
+                                      InputArray inputMask, InputArray templateMask, int gaussFiltSize = 5);
+
+/** @overload */
+CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
+                                      InputOutputArray warpMatrix, int motionType,
+                                      TermCriteria criteria,
+                                      InputArray inputMask, int gaussFiltSize);
 
 /** @overload */
 CV_EXPORTS_W
 double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
-    InputArray inputMask = cv::noArray(),  InputArray templateMask = cv::noArray() );
+    InputArray inputMask = cv::noArray());
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

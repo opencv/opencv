@@ -497,7 +497,7 @@ bool CV_ECC_Test_Mask::testMask(int from)
 
         if (computeRMS(mapTranslation, translationGround)>MAX_RMS_ECC){
             ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-           ts->printf( ts->LOG, "RMS = %f",
+            ts->printf( ts->LOG, "RMS = %f",
                 computeRMS(mapTranslation, translationGround));
             return false;
         }
