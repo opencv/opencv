@@ -564,3 +564,8 @@
 "test_center_crop_pad_crop_negative_axes_hwc_expanded",
 "test_center_crop_pad_pad",
 "test_center_crop_pad_pad_expanded",
+"test_dft",
+"test_dft_axis_opset19",
+"test_dft_inverse",
+"test_dft_inverse_opset19",
+"test_dft_opset19",
