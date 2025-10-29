@@ -873,7 +873,16 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
     COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
 
-    COLOR_COLORCVT_MAX  = 155
+    //! ICC Profile-based color conversions
+    COLOR_ICC_PROFILE_TRANSFORM = 156, //!< Convert using ICC profile transformation with specified profiles
+    COLOR_ICC_PERCEPTUAL        = 157, //!< ICC perceptual rendering intent
+    COLOR_ICC_RELATIVE_COLORIMETRIC = 158, //!< ICC relative colorimetric rendering intent
+    COLOR_ICC_SATURATION        = 159, //!< ICC saturation rendering intent
+    COLOR_ICC_ABSOLUTE_COLORIMETRIC = 160, //!< ICC absolute colorimetric rendering intent
+    COLOR_ICC_CAM02             = 161, //!< ICC with CIECAM02 color appearance model
+    COLOR_ICC_CAM16             = 162, //!< ICC with CAM16 color appearance model
+
+    COLOR_COLORCVT_MAX  = 170
 };
 
 //! @addtogroup imgproc_shape
@@ -5164,7 +5173,7 @@ Point LineIterator::pos() const
 
 } // cv
 
-
+#include "./imgproc/icc.hpp"
 #include "./imgproc/segmentation.hpp"
 
 

@@ -381,6 +381,20 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
         case COLOR_mRGBA2RGBA:
             cvtColormRGBA2RGBA(_src, _dst);
             break;
+
+        // ICC Profile-based color conversions
+        case COLOR_ICC_PROFILE_TRANSFORM:
+        case COLOR_ICC_PERCEPTUAL:
+        case COLOR_ICC_RELATIVE_COLORIMETRIC:
+        case COLOR_ICC_SATURATION:
+        case COLOR_ICC_ABSOLUTE_COLORIMETRIC:
+        case COLOR_ICC_CAM02:
+        case COLOR_ICC_CAM16:
+            // ICC transformations require profile information
+            // These codes are reserved for use with colorProfileTransform() function
+            CV_Error( cv::Error::StsBadArg, "ICC color conversion requires profile information. Use colorProfileTransform() instead of cvtColor()." );
+            break;
+
         default:
             CV_Error( cv::Error::StsBadFlag, "Unknown/unsupported color conversion code" );
     }
