@@ -22,9 +22,9 @@ namespace logging {
 /** Set global logging level
 @return previous logging level
 */
-CV_EXPORTS LogLevel setLogLevel(LogLevel logLevel);
+CV_EXPORTS_W LogLevel setLogLevel(LogLevel logLevel);
 /** Get global logging level */
-CV_EXPORTS LogLevel getLogLevel();
+CV_EXPORTS_W LogLevel getLogLevel();
 
 CV_EXPORTS void registerLogTag(cv::utils::logging::LogTag* plogtag);
 

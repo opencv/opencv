@@ -55,6 +55,7 @@
 
 #include "utils.hpp"
 #include "grfmt_pam.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 namespace cv {
 
@@ -657,6 +658,7 @@ PAMEncoder::PAMEncoder()
 {
     m_description = "Portable arbitrary format (*.pam)";
     m_buf_supported = true;
+    m_supported_encode_key = {IMWRITE_PAM_TUPLETYPE};
 }
 
 
@@ -689,12 +691,25 @@ bool PAMEncoder::write( const Mat& img, const std::vector<int>& params )
     int x, y, tmp, bufsize = 256;
 
     /* parse save file type */
-    for( size_t i = 0; i < params.size(); i += 2 )
+    for( size_t i = 0; i < params.size(); i += 2 ) {
+        const int value = params[i+1];
         if( params[i] == IMWRITE_PAM_TUPLETYPE ) {
-            if ( params[i+1] > IMWRITE_PAM_FORMAT_NULL &&
-                 params[i+1] < (int) PAM_FORMATS_NO)
-                fmt = &formats[params[i+1]];
+            switch(value) {
+                case IMWRITE_PAM_FORMAT_NULL:
+                case IMWRITE_PAM_FORMAT_BLACKANDWHITE:
+                case IMWRITE_PAM_FORMAT_GRAYSCALE:
+                case IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA:
+                case IMWRITE_PAM_FORMAT_RGB:
+                case IMWRITE_PAM_FORMAT_RGB_ALPHA:
+                    fmt = &formats[value];
+                    break;
+                default:
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PAM_TUPLETYPE must be one of ImwritePAMFlags. It is ignored", value));
+                    fmt = nullptr;
+                    break;
+            }
         }
+    }
 
     if( m_buf )
     {

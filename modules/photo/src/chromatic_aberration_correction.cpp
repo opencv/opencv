@@ -101,10 +101,9 @@ void loadCalibrationResultFromFile(const String& calibration_file,
     height = imgH;
     degree = deg_red;
     tmp.copyTo(coeffMat);
-
 }
 
-void buildRemapsFromCoeffMat(int height, int width,
+static void buildRemapsFromCoeffMat(int height, int width,
                              const Mat& coeffs,
                              int degree,
                              int rowX, int rowY,
@@ -251,6 +250,4 @@ Mat correctChromaticAberration(InputArray input_image,
 
     return corrected_image;
 }
-
-
 }

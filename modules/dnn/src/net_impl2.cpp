@@ -253,7 +253,6 @@ Arg Net::Impl::newArg(const std::string& name, ArgKind kind, bool allowEmptyName
     return Arg(idx);
 }
 
-
 int Net::Impl::findDim(const std::string& dimname, bool insert)
 {
     if (!dimname.empty()) {
@@ -541,7 +540,10 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
     int mtype = m.type();
     MatShape mshape = m.shape();
     const std::vector<Arg>& gr_inputs = graph->inputs();
-    CV_Assert(idx < gr_inputs.size());
+    if (idx >= gr_inputs.size())
+    {
+        return;
+    }
     Arg inp = gr_inputs[idx];
     const ArgData& adata = args.at(inp.idx);
     /*
@@ -560,12 +562,14 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         int adata_type = adata.type;
         if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
             adata_type = CV_32F;
-        // [TODO] need to analyze this situation more carefully
-        if (adata_type == CV_64F)
-            adata_type = CV_32F;
+
         if (adata_type != mtype &&
             !((adata_type == CV_64F || adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
-              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)))
+              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)) &&
+            !((adata_type == CV_8U || adata_type == CV_8S || adata_type == CV_16U || adata_type == CV_16S || adata_type == CV_32S || adata_type == CV_32U || adata_type == CV_64S || adata_type == CV_64U) &&
+              (mtype == CV_8U || mtype == CV_8S || mtype == CV_16U || mtype == CV_16S || mtype == CV_32S || mtype == CV_32U || mtype == CV_64S || mtype == CV_64U)) &&
+            !(adata.type == CV_16BF && mtype == CV_16U) && !(adata.type == CV_16F && mtype == CV_16U) &&
+            !m.empty())
         {
             CV_Error_(Error::StsBadArg, ("incompatible type of input tensor #%zu '%s': %s given, %s expected",
                                          idx, adata.name.c_str(), typeToString(mtype).c_str(),
@@ -575,7 +579,21 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         if (inp_t.shape() != mshape || inp_t.type() != adata_type)
             finalizeLayers = true;
         inp_t.fit(mshape, adata_type);
-        m.convertTo(inp_t, adata_type);
+
+        if (adata.type == CV_16BF && mtype == CV_16U)
+        {
+            Mat tmp(mshape, CV_16BF, (void*)m.data);
+            tmp.convertTo(inp_t, adata_type);
+        }
+        else if (adata.type == CV_16F && mtype == CV_16U)
+        {
+            Mat tmp(mshape, CV_16F, (void*)m.data);
+            tmp.convertTo(inp_t, adata_type);
+        }
+        else
+        {
+            m.convertTo(inp_t, adata_type);
+        }
     } else if (adata.kind == DNN_ARG_TEMP) {
         int bufidx = bufidxs.at(inp.idx);
         Mat& buf = buffers.at(bufidx);
@@ -595,7 +613,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     if (graphofs_it == graphofs.end()) {
         CV_Error_(Error::StsObjectNotFound, ("graph '%s' does not belong to the model", graph->name().c_str()));
     }
-
     std::ostream& strm_ = dump_strm ? *dump_strm : std::cout;
     const std::vector<Ptr<Layer> >& prog = graph->prog();
     size_t i, nops = prog.size();
@@ -611,14 +628,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
     size_t graph_ofs = (size_t)graphofs_it->second;
     CV_Assert(graph_ofs + nops <= totalLayers);
-
-    if (inputs_.empty()) {
-        // inputs are already set; it's only possible to do with the main graph
-        CV_Assert(isMainGraph);
-        for (i = 0; i < n_gr_inputs; i++)
-            CV_CheckFalse(argTensor(gr_inputs[i]).empty(), "Some of the model inputs were not set");
-    }
-    else {
+    if (!inputs_.empty()) {
         if (inputs_.total() != n_gr_inputs) {
             CV_Error_(Error::StsBadArg, ("wrong number of inputs in graph '%s': %zu given, %zu expected",
                                          graph->name().data(), inputs_.total(), n_gr_inputs));
@@ -660,7 +670,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 traceArg(strm_, "Input", i, inp, false);
             }
         }
-
         bool dynamicOutShapes = layer->dynamicOutputShapes();
         if (!dynamicOutShapes) {
             allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
@@ -676,11 +685,27 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
-        // [TODO] handle If/Loop/...
-        CV_Assert(!layer->subgraphs());
-        if (finalizeLayers)
-            layer->finalize(inpMats, outMats);
-        layer->forward(inpMats, outMats, tempMats);
+        std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
+        if (!subgraphs) {
+            if (finalizeLayers)
+                layer->finalize(inpMats, outMats);
+            layer->forward(inpMats, outMats, tempMats);
+        }
+        else {
+            Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
+            if (iflayer) {
+                int branch = iflayer->branch(inpMats[0]);
+                Ptr<Graph> subgraph = subgraphs->at(branch);
+                std::vector<Mat> branchInputs;
+                if (inpMats.size() > 1)
+                    branchInputs.assign(inpMats.begin() + 1, inpMats.end());
+                forwardGraph(subgraph, branchInputs, outMats, false);
+            }
+            else {
+                CV_Error_(Error::StsNotImplemented,
+                          ("unknown layer type '%s' with subgraphs", layer->type.c_str()));
+            }
+        }
         CV_Assert(outMats.size() == noutputs);
 
         for (i = 0; i < noutputs; i++) {
@@ -748,6 +773,11 @@ void Net::Impl::updateUseCounts(const Ptr<Graph>& graph, std::vector<int>& useco
 {
     if (!graph)
         return;
+    const std::vector<Arg>& gr_outputs = graph->outputs();
+    for (const Arg& output: gr_outputs) {
+        CV_Assert(output.idx < (int)usecounts.size());
+        usecounts[output.idx]++;
+    }
     const std::vector<Ptr<Layer> >& prog = graph->prog();
     for (const Ptr<Layer>& layer: prog) {
         const std::vector<Arg>& inputs = layer->inputs;

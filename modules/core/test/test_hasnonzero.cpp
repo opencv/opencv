@@ -160,23 +160,26 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
       std::vector<size_t> steps(ndims);
       std::vector<int> sizes(ndims);
       size_t totalBytes = 1;
-      for(int dim = 0 ; dim<ndims ; ++dim)
+      for(int dim = ndims-1; dim >= 0; --dim)
       {
           const bool isFirstDim = (dim == 0);
           const bool isLastDim = (dim+1 == ndims);
           const int length = rng.uniform(1, 64);
-          steps[dim] = (isLastDim ? 1 : static_cast<size_t>(length))*CV_ELEM_SIZE(type);
+          steps[dim] = isLastDim ? CV_ELEM_SIZE(type) : sizes[dim+1]*steps[dim+1];
           sizes[dim] = (isFirstDim || continuous) ? length : rng.uniform(1, length);
-          totalBytes *= steps[dim]*static_cast<size_t>(sizes[dim]);
+          totalBytes *= steps[dim];
       }
+      totalBytes *= sizes[0];
 
-      std::vector<unsigned char> buffer(totalBytes);
-      void* data = buffer.data();
+      unsigned char magicval = 153;
+      size_t border = 128;
+      std::vector<unsigned char> buffer(totalBytes+border*2, magicval);
+      void* data = buffer.data() + border;
 
       Mat m = Mat(ndims, sizes.data(), type, data, steps.data());
 
       std::vector<Range> nzRange(ndims);
-      for(int dim = 0 ; dim<ndims ; ++dim)
+      for(int dim = 0; dim < ndims ; ++dim)
       {
         const int pos = rng.uniform(0, sizes[dim]);
         nzRange[dim] = Range(pos, pos+1);
@@ -187,6 +190,10 @@ TEST_P(HasNonZeroNd, hasNonZeroNd)
 
       const int nzCount = countNonZero(m);
       EXPECT_EQ((nzCount>0), hasNonZero(m));
+      for (size_t j = 0; j < border; j++) {
+          ASSERT_EQ(buffer[j], magicval);
+          ASSERT_EQ(buffer[border + totalBytes + j], magicval);
+      }
     }
 }
 

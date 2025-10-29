@@ -47,14 +47,26 @@ static UMat prepareScaledDepth(OdometryFrame& frame)
     UMat depth;
     frame.getDepth(depth);
     CV_Assert(!depth.empty());
+    bool isFloat = (depth.type() == CV_32FC1 || depth.type() == CV_64FC1);
 
     // Odometry works well with depth values in range [0, 10)
     // If it's bigger, let's scale it down by 5000, a typical depth factor
-    double maxv;
-    cv::minMaxLoc(depth, nullptr, &maxv);
     UMat depthFlt;
-    depth.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
-    patchNaNs(depthFlt, 0);
+    if (isFloat)
+    {
+        depth.convertTo(depthFlt, CV_32FC1);
+        patchNaNs(depthFlt, 0);
+    }
+
+    double maxv;
+    cv::minMaxLoc(isFloat ? depthFlt : depth, nullptr, &maxv);
+
+    if (!isFloat || maxv > 10)
+    {
+        depth.convertTo(depthFlt, CV_32FC1, maxv > 10 ? (1.f / 5000.f) : 1.f);
+        patchNaNs(depthFlt, 0);
+    }
+
     frame.impl->scaledDepth = depthFlt;
 
     return depthFlt;
@@ -273,7 +285,7 @@ static void prepareRGBFrameBase(OdometryFrame& frame, OdometrySettings settings)
     }
     else
     {
-        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.type() == CV_8UC1 || mask.type() == CV_8SC1 || mask.type() == CV_BoolC1);
         CV_Assert(mask.size() == grayImage.size());
         cv::bitwise_and(mask, depthMask, frame.impl->mask);
     }
@@ -358,7 +370,7 @@ static void prepareICPFrameBase(OdometryFrame& frame, OdometrySettings settings)
     }
     else
     {
-        CV_Assert(mask.type() == CV_8UC1);
+        CV_Assert(mask.type() == CV_8UC1 || mask.type() == CV_8SC1 || mask.type() == CV_BoolC1);
         CV_Assert(mask.size() == scaledDepth.size());
         cv::bitwise_and(mask, depthMask, frame.impl->mask);
     }

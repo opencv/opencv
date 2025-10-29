@@ -107,6 +107,10 @@ typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 typedef TrackerMIL::Params TrackerMIL_Params;
 #endif
 
+#ifdef HAVE_OPENCV_XIMGPROC
+typedef ximgproc::EdgeDrawing::Params EdgeDrawing_Params;
+#endif
+
 // HACK: JS generator ommits namespace for parameter types for some reason. Added typedef to handle std::string correctly
 typedef std::string string;
 

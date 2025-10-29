@@ -63,7 +63,7 @@ There are some parameters when you get familiar with StereoBM, and you may need 
 - uniqueness_ratio: Another post-filtering step. If the best matching disparity is not sufficiently better than every other disparity in the search range, the pixel is filtered out. You can try tweaking this if texture_threshold and the speckle filtering are still letting through spurious matches.
 - prefilter_size and prefilter_cap: The pre-filtering phase, which normalizes image brightness and enhances texture in preparation for block matching. Normally you should not need to adjust these.
 
-These parameters are set with dedicated setters and getters after the algoritm
+These parameters are set with dedicated setters and getters after the algorithm
 initialization, such as `setTextureThreshold`, `setSpeckleRange`, `setUniquenessRatio`,
 and more. See cv::StereoBM documentation for details.
 

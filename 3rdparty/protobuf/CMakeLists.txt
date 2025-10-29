@@ -62,7 +62,7 @@ append_if_exist(Protobuf_SRCS
   ${PROTOBUF_ROOT}/src/google/protobuf/arena.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/arenastring.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/extension_set.cc
-#  ${PROTOBUF_ROOT}/src/google/protobuf/generated_enum_util.cc
+  ${PROTOBUF_ROOT}/src/google/protobuf/generated_enum_util.cc
 #  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_table_driven_lite.cc
 #  ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_tctable_lite.cc
   ${PROTOBUF_ROOT}/src/google/protobuf/generated_message_util.cc

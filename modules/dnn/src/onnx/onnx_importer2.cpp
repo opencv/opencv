@@ -7,7 +7,7 @@
 
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/dnn/layer_reg.private.hpp>
-
+#include <opencv2/core/utils/filesystem.hpp>
 #include <opencv2/core/utils/fp_control_utils.hpp>
 #include <opencv2/core/utils/logger.defines.hpp>
 #undef CV_LOG_STRIP_LEVEL
@@ -58,7 +58,9 @@ static T getScalarFromMat(Mat m)
     return m.at<T>(0);
 }
 
-static int dataType2cv(opencv_onnx::TensorProto_DataType dt)
+
+
+static int dataType2cv(int dt)
 {
     return
         dt == opencv_onnx::TensorProto_DataType_UINT8 ? CV_8U :
@@ -72,12 +74,14 @@ static int dataType2cv(opencv_onnx::TensorProto_DataType dt)
         dt == opencv_onnx::TensorProto_DataType_FLOAT ? CV_32F :
         dt == opencv_onnx::TensorProto_DataType_DOUBLE ? CV_64F :
         dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? CV_16F :
+        dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? CV_16BF :
         dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? CV_32FC2 :
         dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? CV_64FC2 :
         dt == opencv_onnx::TensorProto_DataType_BOOL ? CV_Bool : -1;
 }
 
-static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
+
+static std::string dataType2str(int dt)
 {
     const char* str =
     dt == opencv_onnx::TensorProto_DataType_UNDEFINED ? "UNDEFINED" :
@@ -92,6 +96,7 @@ static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
     dt == opencv_onnx::TensorProto_DataType_INT64 ? "INT64" :
     dt == opencv_onnx::TensorProto_DataType_FLOAT ? "FLOAT" :
     dt == opencv_onnx::TensorProto_DataType_FLOAT16 ? "FLOAT16" :
+    dt == opencv_onnx::TensorProto_DataType_BFLOAT16 ? "BFLOAT16" :
     dt == opencv_onnx::TensorProto_DataType_BOOL ? "BOOL" :
     dt == opencv_onnx::TensorProto_DataType_COMPLEX64 ? "COMPLEX64" :
     dt == opencv_onnx::TensorProto_DataType_COMPLEX128 ? "COMPLEX128" : nullptr;
@@ -100,10 +105,10 @@ static std::string dataType2str(opencv_onnx::TensorProto_DataType dt)
     return std::string(str);
 }
 
-static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto)
+static Mat getMatFromTensor2(const opencv_onnx::TensorProto& tensor_proto, const std::string base_path="")
 {
-    Mat m = getMatFromTensor(tensor_proto, false);
-    m.dims = (int)tensor_proto.dims_size();
+    Mat m = getMatFromTensor(tensor_proto, false, base_path);
+    m.size.dims = m.dims = (int)tensor_proto.dims_size();
     return m;
 }
 
@@ -140,6 +145,7 @@ protected:
     Net net;
     Net::Impl* netimpl;
     std::string onnxFilename;
+    std::string onnxBasePath;
     Ptr<Graph> curr_graph;
     opencv_onnx::GraphProto* curr_graph_proto;
     std::vector<Ptr<Layer> > curr_prog;
@@ -170,8 +176,11 @@ protected:
     void parseAveragePool          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBatchNormalization   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCast                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCast2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCastLike             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseClip                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConcat               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIf                   (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstant             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConstantOfShape      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseConv                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -203,8 +212,20 @@ protected:
     void parsePRelu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReduce               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNonZero              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRelu                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTrilu                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseCenterCropPad        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNegativeLogLikelihoodLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSoftmaxCrossEntropyLoss  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseUnique               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseResize2              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseReshape              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseShape                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -218,6 +239,11 @@ protected:
     void parseTranspose            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnsqueeze            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUpsample             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseNonMaxSuprression    (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseTopK2                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -262,6 +288,9 @@ Net ONNXImporter2::parseFile(const char *onnxFilename_)
 {
     CV_Assert(onnxFilename_);
     onnxFilename = onnxFilename_;
+
+    onnxBasePath = utils::fs::getParent(onnxFilename_);
+
     CV_LOG_DEBUG(NULL, "DNN/ONNX: processing ONNX model from file: " << onnxFilename);
 
     std::fstream input(onnxFilename, std::ios::in | std::ios::binary);
@@ -468,7 +497,9 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             }
             else if (attribute_proto.has_g())
             {
-                CV_Error(Error::StsNotImplemented, format("DNN/ONNX/Attribute[%s]: 'Graph' is not supported", attribute_name.c_str()));
+                // CV_Error(Error::StsNotImplemented, format("DNN/ONNX/Attribute[%s]: 'Graph' is not supported", attribute_name.c_str()));
+                continue;
+
             }
             else if (attribute_proto.graphs_size() > 0)
             {
@@ -705,7 +736,7 @@ bool ONNXImporter2::parseValueInfo(const opencv_onnx::ValueInfoProto& valueInfoP
 
 Mat ONNXImporter2::parseTensor(const opencv_onnx::TensorProto& tensor_proto)
 {
-    return getMatFromTensor2(tensor_proto);
+    return getMatFromTensor2(tensor_proto, onnxBasePath);
 }
 
 Ptr<Graph> ONNXImporter2::parseGraph(opencv_onnx::GraphProto* graph_proto, bool mainGraph_)
@@ -1030,7 +1061,7 @@ void ONNXImporter2::parseGlobalPool(LayerParams &layerParams, const opencv_onnx:
 
 void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "Reduce";
+    layerParams.type = "Reduce2";
     const auto& op_type = node_proto.op_type();
     String reduce_type;
     if (op_type == "ReduceMax")
@@ -1056,27 +1087,6 @@ void ONNXImporter2::parseReduce(LayerParams& layerParams, const opencv_onnx::Nod
     else
         CV_Error(Error::StsNotImplemented, "DNN/ONNX: " + op_type + " is not supported.");
     layerParams.set("reduce", reduce_type);
-
-    int num_inputs = node_proto.input_size();
-    CV_Check(num_inputs, num_inputs >= 1 && num_inputs <= 2, "DNN/ONNX: Reduce layers should have at least one input and at most two inputs");
-
-    bool const_axis_input = false;
-    if (num_inputs >= 2) {
-        CV_CheckTrue(net.isConstArg(node_inputs[1]), "Reduce layer doesn't support non contant axes");
-        const_axis_input = true;
-    }
-
-    // "axes" is turned to one of the inputs since opset 18,
-    // except for ReduceSum, which has "axes" input since opset 13.
-    if (const_axis_input) {
-        Mat mat_axes = net.argTensor(node_inputs[1]);
-        int num_axes = (int)mat_axes.total();
-        std::vector<int> axes(num_axes);
-        for (int i = 0; i < num_axes; ++i)
-            axes[i] = mat_axes.at<int64_t>(i);
-        layerParams.set("axes", DictValue::arrayInt(&axes[0], num_axes));
-    }
-
     addLayer(layerParams, node_proto);
 }
 
@@ -1100,8 +1110,51 @@ void ONNXImporter2::parseConstant(LayerParams& layerParams, const opencv_onnx::N
 {
     CV_Assert(node_inputs.empty());
     CV_Assert(node_outputs.size() == 1);
-    CV_Assert(layerParams.blobs.size() == 1);
-    Mat m = layerParams.blobs[0];
+
+    Mat m;
+    if (!layerParams.blobs.empty())
+    {
+        CV_Assert(layerParams.blobs.size() == 1);
+        m = layerParams.blobs[0];
+    }
+    else
+    {
+        if (layerParams.has("value_float"))
+        {
+            float v = layerParams.get<float>("value_float");
+            int sizes[] = { 1 };
+            m.create(1, sizes, CV_32F);
+            m.at<float>(0) = v;
+        }
+        else if (layerParams.has("value_int"))
+        {
+            int v = layerParams.get<int>("value_int");
+            int sizes[] = { 1 };
+            m.create(1, sizes, CV_32S);
+            m.at<int>(0) = v;
+        }
+        else if (layerParams.has("value_floats"))
+        {
+            const DictValue& arr = layerParams.get("value_floats");
+            int n = (int)arr.size();
+            int sizes[] = { n };
+            m.create(1, sizes, CV_32F);
+            for (int i = 0; i < n; ++i) m.at<float>(i) = (float)arr.getRealValue(i);
+        }
+        else if (layerParams.has("value_ints"))
+        {
+            const DictValue& arr = layerParams.get("value_ints");
+            int n = (int)arr.size();
+            int sizes[] = { n };
+            m.create(1, sizes, CV_32S);
+            for (int i = 0; i < n; ++i) m.at<int>(i) = arr.get<int>(i);
+        }
+        else
+        {
+            CV_Error(Error::StsBadArg, "DNN/ONNX: Constant node has no supported attributes");
+        }
+    }
+
     Arg out = node_outputs[0];
     ArgData& data = netimpl->args.at(out.idx);
     data.kind = DNN_ARG_CONST;
@@ -1175,32 +1228,36 @@ void ONNXImporter2::parseImageScaler(LayerParams& layerParams, const opencv_onnx
 
 void ONNXImporter2::parseClip(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    layerParams.type = "ReLU6";
+    layerParams.type = "Clip";
     float min_value = -FLT_MAX, max_value = FLT_MAX;
     int input_size = node_proto.input_size();
     CV_Check(input_size, 1 <= input_size && input_size <= 3, "");
 
     if (input_size >= 2 && !node_proto.input(1).empty())
     {
-        Mat m;
-        CV_Assert(net.isConstArg(node_inputs[1]));
-        net.argTensor(node_inputs[1]).convertTo(m, CV_32F);
-        CV_Assert(m.total() == 1);
-        min_value = m.at<float>(0);
+        if (net.isConstArg(node_inputs[1]))
+        {
+            Mat m = net.argTensor(node_inputs[1]);
+            m.convertTo(m, CV_32F);
+            CV_Assert(m.total() == 1);
+            min_value = m.at<float>(0);
+            layerParams.set("min", min_value);
+        }
     }
 
     if (input_size == 3 && !node_proto.input(2).empty())
     {
-        Mat m;
-        CV_Assert(net.isConstArg(node_inputs[2]));
-        net.argTensor(node_inputs[2]).convertTo(m, CV_32F);
-        CV_Assert(m.total() == 1);
-        max_value = m.at<float>(0);
+        if (net.isConstArg(node_inputs[2]))
+        {
+            Mat m = net.argTensor(node_inputs[2]);
+            m.convertTo(m, CV_32F);
+            CV_Assert(m.total() == 1);
+            max_value = m.at<float>(0);
+            layerParams.set("max", max_value);
+        }
     }
 
-    layerParams.set("min_value", layerParams.get<float>("min", min_value));
-    layerParams.set("max_value", layerParams.get<float>("max", max_value));
-    addLayer(layerParams, node_proto, 1);
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseLeakyRelu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1452,13 +1509,16 @@ void ONNXImporter2::parseShape(LayerParams& layerParams, const opencv_onnx::Node
     addLayer(layerParams, node_proto);
 }
 
-void ONNXImporter2::parseCast(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter2::parseCast2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
-    opencv_onnx::TensorProto_DataType onnx_type = (opencv_onnx::TensorProto_DataType)layerParams.get<int>("to");
-    int type = dataType2cv(onnx_type);
+    layerParams.type = "Cast2";
+    addLayer(layerParams, node_proto);
+}
 
-    layerParams.type = "Cast";
-    layerParams.set("outputType", type);
+void ONNXImporter2::parseCastLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 2, "CastLike requires two inputs");
+    layerParams.type = "Cast2";
     addLayer(layerParams, node_proto);
 }
 
@@ -1488,14 +1548,38 @@ void ONNXImporter2::parseConcat(LayerParams& layerParams, const opencv_onnx::Nod
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseIf(LayerParams& layerParams,
+                            const opencv_onnx::NodeProto& node_proto)
+{
+    CV_Assert(node_proto.input_size() >= 1);
+    layerParams.type = "If";
+
+    addLayer(layerParams, node_proto);
+
+    std::vector<Ptr<Graph> > thenelse(2);
+    for (int i = 0; i < node_proto.attribute_size(); ++i)
+    {
+        const auto& attr = node_proto.attribute(i);
+        if (attr.name() == "then_branch" || attr.name() == "else_branch") {
+            opencv_onnx::GraphProto branch = attr.g();
+            Ptr<Graph> graph = parseGraph(&branch, false);
+            thenelse[(int)(attr.name() == "else_branch")] = graph;
+        }
+    }
+
+    CV_Assert_N(!thenelse[0].empty(), !thenelse[1].empty());
+
+    Ptr<Layer>& ifLayer = curr_prog.back();
+    *ifLayer->subgraphs() = thenelse;
+}
+
 // https://github.com/onnx/onnx/blob/master/docs/Operators.md#Resize
-void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+void ONNXImporter2::parseResize2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     int ninputs = node_proto.input_size();
-    layerParams.type = "Resize";
+    layerParams.type = "Resize2";
     String interp_mode = layerParams.get<String>("coordinate_transformation_mode", "half_pixel");
 
-    CV_Assert(interp_mode != "tf_crop_and_resize");
     bool halfPixel = interp_mode == "tf_half_pixel_for_nn" || interp_mode == "half_pixel" || interp_mode == "pytorch_half_pixel";
 
     layerParams.set("align_corners", interp_mode == "align_corners");
@@ -1517,16 +1601,39 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
     if(scalesArg.idx > 0 && netimpl->isConstArg(scalesArg))
         scales = netimpl->argTensor(scalesArg);
 
-    if (ninputs >= 3 && interp_mode == "tf_crop_and_resize") {
-        int roiInputId = 1;
-        Arg roiArg = node_inputs[roiInputId];
-        if (!netimpl->isConstArg(roiArg)) {
-            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
+    if (interp_mode == "tf_crop_and_resize")
+    {
+        CV_Assert(ninputs >= 3);
+        Arg roiArg    = node_inputs[1];
+        bool hasSizes = (ninputs >= 4);
+        Arg sizesArg  = hasSizes ? node_inputs[3] : Arg();
+
+        bool staticRoi   = netimpl->isConstArg(roiArg);
+        bool staticSizes = hasSizes && netimpl->isConstArg(sizesArg);
+
+        if (staticRoi && (!hasSizes || staticSizes))
+        {
+            Mat roiMat = netimpl->argTensor(roiArg), roiF;
+            CV_CheckEQ(roiMat.total(), (size_t)4,
+                      "ONNX/Resize: ROI must have 4 values [y1,x1,y2,x2]");
+            roiMat.convertTo(roiF, CV_32F);
+            layerParams.set("y1", roiF.at<float>(0));
+            layerParams.set("x1", roiF.at<float>(1));
+            layerParams.set("y2", roiF.at<float>(2));
+            layerParams.set("x2", roiF.at<float>(3));
+
+            if (hasSizes && staticSizes)
+            {
+                Mat szMat = netimpl->argTensor(sizesArg), sz;
+                CV_CheckEQ(szMat.total(), (size_t)4,
+                          "ONNX/Resize: sizes must have 4 values [N,C,H,W]");
+                szMat.convertTo(sz, CV_32S);
+                layerParams.set("height", sz.at<int>(2));
+                layerParams.set("width",  sz.at<int>(3));
+            }
+            layerParams.set("dynamic_roi", false);
         }
-        Mat roi = netimpl->argTensor(roiArg);
-        if (!roi.empty()) {
-            CV_Error(Error::StsNotImplemented, "ONNX/Resize: only empty ROI is supported");
-        }
+        else layerParams.set("dynamic_roi", true);
     }
 
     if (scales.total() == 4)
@@ -1550,8 +1657,135 @@ void ONNXImporter2::parseResize(LayerParams& layerParams, const opencv_onnx::Nod
             ninputs = 1;
         }
     }
+
+    for (int i_attr = 0; i_attr < node_proto.attribute_size(); ++i_attr)
+    {
+        const auto& a = node_proto.attribute(i_attr);
+        if (a.name() == "nearest_mode" && a.has_s())
+            layerParams.set("nearest_mode", String(a.s()));
+        else if (a.name() == "exclude_outside" && a.has_i())
+            layerParams.set("exclude_outside", static_cast<int>(a.i()) != 0);
+        else if (a.name() == "cubic_coeff_a" && a.has_f())
+            layerParams.set("cubic_coeff_a", static_cast<float>(a.f()));
+        else if (a.name() == "extrapolation_value" && a.has_f())
+            layerParams.set("extrapolation_value", static_cast<float>(a.f()));
+    }
+
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto, ninputs);
+}
+
+void ONNXImporter2::parseCenterCropPad(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int ninputs = node_proto.input_size();
+    CV_Assert(ninputs >= 2);
+    layerParams.type = "CenterCropPad";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseUnique(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Unique";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseSize(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Size";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitShift(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    // ONNX spec: direction is required string attr: "LEFT" or "RIGHT"
+    // https://onnx.ai/onnx/operators/onnx__BitShift.html
+    layerParams.type = "BitShift";
+    String dir = layerParams.get<String>("direction", "");
+
+    CV_Assert(dir == "LEFT" || dir == "RIGHT");
+    CV_Assert(!dir.empty());
+
+    if (!dir.empty())
+    {
+        if (dir == "LEFT" || dir == "left")
+            layerParams.set("direction", 0);
+        else if (dir == "RIGHT" || dir == "right")
+            layerParams.set("direction", 1);
+    }
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitwise(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    const std::string& op_type = node_proto.op_type();
+    layerParams.type = "NaryEltwise";
+    if (op_type == "BitwiseAnd")
+        layerParams.set("operation", String("bitwise_and"));
+    else if (op_type == "BitwiseOr")
+        layerParams.set("operation", String("bitwise_or"));
+    else if (op_type == "BitwiseXor")
+        layerParams.set("operation", String("bitwise_xor"));
+    else
+        CV_Error(Error::StsNotImplemented, String("Unsupported bitwise op: ") + op_type);
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseBitwiseNot(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Not";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseTrilu(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    int ninputs = node_proto.input_size();
+    layerParams.type = "Trilu";
+    addLayer(layerParams, node_proto, ninputs);
+
+}
+
+void ONNXImporter2::parseIsNaN(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "IsNaN";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseIsInf(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "IsInf";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "Det";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "GridSample";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseNonMaxSuprression(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NonMaxSuprression";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseNegativeLogLikelihoodLoss(LayerParams& layerParams,
+                                                   const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NegativeLogLikelihoodLoss";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseSoftmaxCrossEntropyLoss(LayerParams& layerParams,
+                                                 const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "SoftmaxCrossEntropyLoss";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1605,6 +1839,12 @@ void ONNXImporter2::parseUpsample(LayerParams& layerParams, const opencv_onnx::N
     }
     replaceLayerParam(layerParams, "mode", "interpolation");
     addLayer(layerParams, node_proto, n_inputs);
+}
+
+void ONNXImporter2::parseNonZero(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "NonZero";
+    addLayer(layerParams, node_proto);
 }
 
 void ONNXImporter2::parseSoftMax(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -1720,6 +1960,23 @@ void ONNXImporter2::parseEinsum(LayerParams& layerParams, const opencv_onnx::Nod
     CV_CheckFalse(equation.empty(), "Equation is empty");
 
     addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseTopK2(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "TopK2";
+    if (node_proto.input_size() >= 2 && net.isConstArg(node_inputs[1]))
+    {
+        Mat kMat = net.argTensor(node_inputs[1]);
+        CV_Assert(kMat.type() == CV_32S || kMat.type() == CV_64S);
+        int k = kMat.type() == CV_32S ? getScalarFromMat<int>(kMat):(int)getScalarFromMat<int64_t>(kMat);
+        layerParams.set("k", k);
+        addLayer(layerParams, node_proto, 1);
+    }
+    else //Dynamic K
+    {
+        addLayer(layerParams, node_proto);
+    }
 }
 
 void ONNXImporter2::parseDequantizeLinear(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
@@ -2343,6 +2600,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tanh"] = &ONNXImporter2::parseTanh;
     dispatch["Abs"] = &ONNXImporter2::parseAbs;
     dispatch["PRelu"] = &ONNXImporter2::parsePRelu;
+    dispatch["NonZero"] = &ONNXImporter2::parseNonZero;
     dispatch["LRN"] = &ONNXImporter2::parseLRN;
     dispatch["InstanceNormalization"] = &ONNXImporter2::parseInstanceNormalization;
     dispatch["BatchNormalization"] = &ONNXImporter2::parseBatchNormalization;
@@ -2358,13 +2616,29 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Reshape"] = &ONNXImporter2::parseReshape;
     dispatch["Pad"] = &ONNXImporter2::parsePad;
     dispatch["Shape"] = &ONNXImporter2::parseShape;
-    dispatch["Cast"] = &ONNXImporter2::parseCast;
+    dispatch["Cast"] = &ONNXImporter2::parseCast2;
+    dispatch["CastLike"] = &ONNXImporter2::parseCastLike;
     dispatch["ConstantFill"] = dispatch["ConstantOfShape"] = &ONNXImporter2::parseConstantOfShape;
     dispatch["Gather"] = &ONNXImporter2::parseGather;
     dispatch["GatherElements"] = &ONNXImporter2::parseGatherElements;
     dispatch["Concat"] = &ONNXImporter2::parseConcat;
-    dispatch["Resize"] = &ONNXImporter2::parseResize;
+    dispatch["If"] = &ONNXImporter2::parseIf;
+    dispatch["Resize"] = &ONNXImporter2::parseResize2;
+    dispatch["Size"] = &ONNXImporter2::parseSize;
+    dispatch["Unique"] = &ONNXImporter2::parseUnique;
+    dispatch["Trilu"] = &ONNXImporter2::parseTrilu;
+    dispatch["IsNaN"] = &ONNXImporter2::parseIsNaN;
+    dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
+    dispatch["CenterCropPad"] = &ONNXImporter2::parseCenterCropPad;
+    dispatch["Det"] = &ONNXImporter2::parseDet;
+    dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
+    dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
+    dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseOr"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseXor"] = &ONNXImporter2::parseBitwise;
+    dispatch["BitwiseNot"] = &ONNXImporter2::parseBitwiseNot;
+    dispatch["NonMaxSuprression"] = &ONNXImporter2::parseNonMaxSuprression;
     dispatch["SoftMax"] = dispatch["Softmax"] = dispatch["LogSoftmax"] = &ONNXImporter2::parseSoftMax;
     dispatch["DetectionOutput"] = &ONNXImporter2::parseDetectionOutput;
     dispatch["CumSum"] = &ONNXImporter2::parseCumSum;
@@ -2373,6 +2647,8 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Tile"] = &ONNXImporter2::parseTile;
     dispatch["LayerNormalization"] = &ONNXImporter2::parseLayerNorm;
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
+    dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
+    dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
@@ -2382,6 +2658,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Where"] = &ONNXImporter2::parseElementWise;
     dispatch["Range"] = &ONNXImporter2::parseRange;
     dispatch["Einsum"] = &ONNXImporter2::parseEinsum;
+    dispatch["TopK"] = &ONNXImporter2::parseTopK2;
 
     std::vector<std::string> simpleLayers {
         "Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",

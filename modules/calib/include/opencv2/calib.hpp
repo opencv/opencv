@@ -424,6 +424,9 @@ f_{\text{mm}} = \frac{\text{sensor_size_in_mm}}{2 \times \tan{\frac{\text{fov}}{
 \f]
 This latter conversion can be useful when using a rendering software to mimic a physical camera device.
 
+@note
+    -    See also #calibrationMatrixValues
+
 <B> Additional references, notes </B><br>
 @note
     -   Many functions in this module take a camera intrinsic matrix as an input parameter. Although all
@@ -626,7 +629,8 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+to create the desired checkerboard pattern.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
                                          int flags = CALIB_CB_ADAPTIVE_THRESH + CALIB_CB_NORMALIZE_IMAGE );
@@ -684,8 +688,9 @@ which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
 
-Use gen_pattern.py (@ref tutorial_camera_calibration_pattern) to create checkerboard.
-![Checkerboard](pics/checkerboard_radon.png)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+to create the corresponding checkerboard pattern:
+\image html pics/checkerboard_radon.png width=60%
  */
 CV_EXPORTS_AS(findChessboardCornersSBWithMeta)
 bool findChessboardCornersSB(InputArray image,Size patternSize, OutputArray corners,
@@ -769,7 +774,7 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
     {
       SYMMETRIC_GRID, ASYMMETRIC_GRID
     };
-    GridType gridType;
+    CV_PROP_RW GridType gridType;
 
     CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
     CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from prediction. Used by CALIB_CB_CLUSTERING.
@@ -1336,6 +1341,7 @@ See @ref CALIB_USE_INTRINSIC_GUESS and other `CALIB_` constants. Expected shape:
 @param[out] distortions Distortion coefficients. Output size: NUM_CAMERAS x NUM_PARAMS.
 @param[out] perFrameErrors RMSE value for each visible frame, (-1 for non-visible). Output size: NUM_CAMERAS x NUM_FRAMES.
 @param[out] initializationPairs Pairs with camera indices that were used for initial pairwise stereo calibration.
+@param[in] criteria Termination criteria for the iterative optimization algorithm.
 
 Output size: (NUM_CAMERAS-1) x 2.
 
@@ -1377,7 +1383,8 @@ CV_EXPORTS_AS(calibrateMultiviewExtended) double calibrateMultiview (
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         OutputArray initializationPairs, OutputArrayOfArrays rvecs0,
         OutputArrayOfArrays tvecs0, OutputArray perFrameErrors,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        InputArray flagsForIntrinsics=noArray(), int flags = 0,
+        TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 /// @overload
 CV_EXPORTS_W double calibrateMultiview (
@@ -1385,7 +1392,8 @@ CV_EXPORTS_W double calibrateMultiview (
         const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
-        InputArray flagsForIntrinsics=noArray(), int flags = 0);
+        InputArray flagsForIntrinsics=noArray(), int flags = 0,
+        TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
 
 /** @brief Computes Hand-Eye calibration: \f$_{}^{g}\textrm{T}_c\f$

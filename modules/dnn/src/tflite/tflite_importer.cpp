@@ -130,7 +130,7 @@ Mat TFLiteImporter::parseTensor(const Tensor& tensor)
     Mat res = Mat(shape, dtype, const_cast<void*>(data));
     // workaround for scalars support
     if (!tensor_shape || shape.size() == 1)
-        res.dims = 1;
+        res.size.dims = res.dims = 1;
     return res;
 }
 
@@ -287,7 +287,7 @@ void TFLiteImporter::populateNet()
                     Mat dataFP32;
                     data.convertTo(dataFP32, CV_32F);
                     // workaround for scalars support
-                    dataFP32.dims = data.dims;
+                    dataFP32.size.dims = dataFP32.dims = data.dims;
                     allTensors[op_outputs->Get(0)] = dataFP32;
                     continue;
                 }

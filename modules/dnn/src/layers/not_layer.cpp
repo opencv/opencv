@@ -40,8 +40,10 @@ public:
         std::vector<MatType>& outputs,
         std::vector<MatType>& internals) const CV_OVERRIDE
     {
-        CV_CheckTypeEQ(inputs[0], CV_Bool, "");
-        outputs.assign(1, CV_Bool);
+        int t = inputs[0];
+        bool isInt = (t == CV_8S || t == CV_8U || t == CV_16S || t == CV_16U || t == CV_32S || t == CV_32U || t == CV_64S || t == CV_64U);
+        CV_CheckType(inputs[0], t == CV_Bool || isInt, "Not/BitwiseNot expects bool or integer tensor");
+        outputs.assign(1, t);
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
@@ -52,19 +54,25 @@ public:
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
-
-        CV_CheckTypeEQ(inputs[0].type(), CV_Bool, "");
-        CV_CheckTypeEQ(outputs[0].type(), CV_Bool, "");
-
         CV_Assert(inputs[0].isContinuous());
         CV_Assert(outputs[0].isContinuous());
 
-        bool* input = inputs[0].ptr<bool>();
-        bool* output = outputs[0].ptr<bool>();
+        int t = inputs[0].type();
         size_t size = inputs[0].total();
+        if (t == CV_Bool)
+        {
+            bool* input = inputs[0].ptr<bool>();
+            bool* output = outputs[0].ptr<bool>();
+            for (size_t i = 0; i < size; ++i)
+                output[i] = !input[i];
+            return;
+        }
 
-        for (size_t i = 0; i < size; ++i)
-            output[i] = !input[i];
+        const unsigned char* in = inputs[0].ptr<unsigned char>();
+        unsigned char* out = outputs[0].ptr<unsigned char>();
+        size_t totalBytes = size * inputs[0].elemSize();
+        for (size_t i = 0; i < totalBytes; ++i)
+            out[i] = static_cast<unsigned char>(~in[i]);
     }
 
 #ifdef HAVE_DNN_NGRAPH

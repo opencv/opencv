@@ -298,7 +298,7 @@ void cv::goodFeaturesToTrack( InputArray _image, OutputArray _corners,
     CV_INSTRUMENT_REGION();
 
     CV_Assert( qualityLevel > 0 && minDistance >= 0 && maxCorners >= 0 );
-    CV_Assert( _mask.empty() || (_mask.type() == CV_8UC1 && _mask.sameSize(_image)) );
+    CV_Assert( _mask.empty() || ((_mask.type() == CV_8UC1 || _mask.type() == CV_BoolC1) && _mask.sameSize(_image)) );
 
     CV_OCL_RUN(_image.dims() <= 2 && _image.isUMat(),
                ocl_goodFeaturesToTrack(_image, _corners, maxCorners, qualityLevel, minDistance,

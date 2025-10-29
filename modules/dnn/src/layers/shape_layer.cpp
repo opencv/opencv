@@ -45,6 +45,9 @@ public:
         int start_ = start < 0 ? start + outDims : start;
         int end_ = end >= outDims ? outDims : end < 0 ? end + outDims : end;
 
+        start_ = std::max(0, std::min(start_, outDims));
+        end_ = std::max(0, std::min(end_, outDims));
+
         CV_Assert(0 <= start_);
         CV_Assert(start_ <= end_);
         CV_Assert(end_ <= outDims);
@@ -108,7 +111,7 @@ public:
 
         shape_type_t shapeData[CV_MAX_DIM];
         for (int i = r.start; i < r.end; i++)
-            shapeData[i] = (shape_type_t)inpShape[i];
+            shapeData[i - r.start] = (shape_type_t)inpShape[i];
 
         Mat shape({r.end - r.start}, shapeType, shapeData);
 

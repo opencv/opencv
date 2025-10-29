@@ -166,7 +166,7 @@ for `cv::aruco::Dictionary`. The data member of board classes are public and can
 - Alright, but how can I render a 3d model to create an augmented reality application?
 
 To do so, you will need to use an external rendering engine library, such as OpenGL. The aruco module
-only provides the functionality to obtain the camera pose, i.e. the rotation and traslation vectors,
+only provides the functionality to obtain the camera pose, i.e. the rotation and translation vectors,
 which is necessary to create the augmented reality effect. However, you will need to adapt the rotation
 and traslation vectors from the OpenCV format to the format accepted by your 3d rendering library.
 The original ArUco library contains examples of how to do it for OpenGL and Ogre3D.

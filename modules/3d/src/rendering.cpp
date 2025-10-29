@@ -118,7 +118,7 @@ static void drawTriangle(Vec4f verts[3], Vec3f colors[3], Mat& depthBuf, Mat& co
 static void linearizeDepth(const Mat& inbuf, const Mat& validMask, Mat outbuf, double zFar, double zNear)
 {
     CV_Assert(inbuf.type() == CV_32FC1);
-    CV_Assert(validMask.type() == CV_8UC1);
+    CV_Assert(validMask.type() == CV_8UC1 || validMask.type() == CV_8SC1 || validMask.type() == CV_BoolC1);
     CV_Assert(outbuf.type() == CV_32FC1);
     CV_Assert(outbuf.size() == inbuf.size());
 

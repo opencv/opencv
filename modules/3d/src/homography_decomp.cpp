@@ -506,7 +506,7 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
                                               InputArray _pointsMask)
 {
     CV_Assert(_beforeRectifiedPoints.type() == CV_32FC2 && _afterRectifiedPoints.type() == CV_32FC2);
-    CV_Assert(_pointsMask.empty() || _pointsMask.type() == CV_8U);
+    CV_Assert(_pointsMask.empty() || _pointsMask.type() == CV_8U || _pointsMask.type() == CV_8S || _pointsMask.type() == CV_Bool);
 
     Mat beforeRectifiedPoints = _beforeRectifiedPoints.getMat();
     Mat afterRectifiedPoints = _afterRectifiedPoints.getMat();

@@ -3499,8 +3499,10 @@ struct Kernel::Impl
 
     void addUMat(const UMat& m, bool dst)
     {
+        // TSAN false positive: see #27638
         CV_Assert(nu < MAX_ARRS && m.u && m.u->urefcount > 0);
         u[nu] = m.u;
+        // TSAN false positive: see #27638
         CV_XADD(&m.u->urefcount, 1);
         nu++;
         if(dst && m.u->tempUMat())
@@ -5651,6 +5653,7 @@ public:
         if(!u)
             return;
 
+        // Next two lines: TSAN false positive: see #27638
         CV_Assert(u->urefcount == 0);
         CV_Assert(u->refcount == 0 && "UMat deallocation error: some derived Mat is still alive");
 
@@ -6583,11 +6586,13 @@ public:
 
     void flushCleanupQueue() const
     {
+        // TSAN false positive: see #27638
         if (!cleanupQueue.empty())
         {
             std::deque<UMatData*> q;
             {
                 cv::AutoLock lock(cleanupQueueMutex);
+                // TSAN false positive: see #27638
                 q.swap(cleanupQueue);
             }
             for (std::deque<UMatData*>::const_iterator i = q.begin(); i != q.end(); ++i)

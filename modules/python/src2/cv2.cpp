@@ -46,6 +46,9 @@ typedef std::vector<Scalar> vector_Scalar;
 #ifdef HAVE_OPENCV_OBJDETECT
 typedef std::vector<aruco::Dictionary> vector_Dictionary;
 #endif // HAVE_OPENCV_OBJDETECT
+#ifdef HAVE_OPENCV_3D
+typedef std::vector<MSTEdge> vector_MSTEdge;
+#endif // HAVE_OPENCV_3D
 
 typedef std::vector<std::vector<char> > vector_vector_char;
 typedef std::vector<std::vector<Point> > vector_vector_Point;
@@ -543,11 +546,26 @@ static bool init_body(PyObject * m)
     PUBLISH(CV_16SC2);
     PUBLISH(CV_16SC3);
     PUBLISH(CV_16SC4);
+    PUBLISH(CV_32U);
+    PUBLISH(CV_32UC1);
+    PUBLISH(CV_32UC2);
+    PUBLISH(CV_32UC3);
+    PUBLISH(CV_32UC4);
     PUBLISH(CV_32S);
     PUBLISH(CV_32SC1);
     PUBLISH(CV_32SC2);
     PUBLISH(CV_32SC3);
     PUBLISH(CV_32SC4);
+    PUBLISH(CV_64U);
+    PUBLISH(CV_64UC1);
+    PUBLISH(CV_64UC2);
+    PUBLISH(CV_64UC3);
+    PUBLISH(CV_64UC4);
+    PUBLISH(CV_64S);
+    PUBLISH(CV_64SC1);
+    PUBLISH(CV_64SC2);
+    PUBLISH(CV_64SC3);
+    PUBLISH(CV_64SC4);
     PUBLISH(CV_32F);
     PUBLISH(CV_32FC1);
     PUBLISH(CV_32FC2);

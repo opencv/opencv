@@ -4,9 +4,9 @@
 
 The pose computation problem @cite Marchand16 consists in solving for the rotation and translation that minimizes the reprojection error from 3D-2D point correspondences.
 
-The `solvePnP` and related functions estimate the object pose given a set of object points, their corresponding image projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below (more precisely, the X-axis of the camera frame is pointing to the right, the Y-axis downward and the Z-axis forward).
+The `solvePnP` and related functions estimate the object pose given a set of object points, their corresponding image projections, as well as the camera intrinsic matrix and the distortion coefficients, see the figure below (more precisely, the convention in the computer vision field is to have the X-axis of the camera frame pointing to the right, the Y-axis downward and the Z-axis forward).
 
-![](pnp.jpg)
+![Top: the 6 dof pose computed from a list of 3D-2D point correspondences. Bottom: the considered perspective projection model.](pnp.jpg)
 
 Points expressed in the world frame \f$ \bf{X}_w \f$ are projected into the image plane \f$ \left[ u, v \right] \f$
 using the perspective projection model \f$ \Pi \f$ and the camera intrinsic parameters matrix \f$ \bf{A} \f$ (also denoted \f$ \bf{K} \f$ in the literature):
@@ -104,23 +104,14 @@ this case the function finds such a pose that minimizes reprojection error, that
 of squared distances between the observed projections "imagePoints" and the projected (using
 cv::projectPoints ) "objectPoints". Initial solution for non-planar "objectPoints" needs at least 6 points and uses the DLT algorithm.
 Initial solution for planar "objectPoints" needs at least 4 points and uses pose from homography decomposition.
--   cv::SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+-   cv::SOLVEPNP_P3P Method is based on the paper of Ding, Y., Yang, J., Larsson, V., Olsson, C., & Åstrom, K.
+"Revisiting the P3P Problem" (@cite ding2023revisiting).
 In this case the function requires exactly four object and image points.
 -   cv::SOLVEPNP_AP3P Method is based on the paper of T. Ke, S. Roumeliotis
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 In this case the function requires exactly four object and image points.
 -   cv::SOLVEPNP_EPNP Method has been introduced by F. Moreno-Noguer, V. Lepetit and P. Fua in the
 paper "EPnP: Efficient Perspective-n-Point Camera Pose Estimation" (@cite lepetit2009epnp).
--   cv::SOLVEPNP_DLS **Broken implementation. Using this flag will fallback to EPnP.** \n
-Method is based on the paper of J. Hesch and S. Roumeliotis.
-"A Direct Least-Squares (DLS) Method for PnP" (@cite hesch2011direct).
--   cv::SOLVEPNP_UPNP **Broken implementation. Using this flag will fallback to EPnP.** \n
-Method is based on the paper of A. Penate-Sanchez, J. Andrade-Cetto,
-F. Moreno-Noguer. "Exhaustive Linearization for Robust Camera Pose and Focal Length
-Estimation" (@cite penate2013exhaustive). In this case the function also estimates the parameters \f$f_x\f$ and \f$f_y\f$
-assuming that both have the same value. Then the cameraMatrix is updated with the estimated
-focal length.
 -   cv::SOLVEPNP_IPPE Method is based on the paper of T. Collins and A. Bartoli.
 "Infinitesimal Plane-Based Pose Estimation" (@cite Collins14). This method requires coplanar object points.
 -   cv::SOLVEPNP_IPPE_SQUARE Method is based on the paper of Toby Collins and Adrien Bartoli.

@@ -52,7 +52,7 @@ size_t convertDepthToFloat(const cv::Mat& depth, const cv::Mat& mask, float scal
 
     cv::Mat_<uchar> uchar_mask = mask;
 
-    if (mask.depth() != CV_8U)
+    if ((mask.depth() != CV_8S) && (mask.depth() != CV_8U) && (mask.depth() != CV_Bool))
         mask.convertTo(uchar_mask, CV_8U);
 
     u_mat = cv::Mat_<float>(depth_size.area(), 1);

@@ -107,7 +107,7 @@ public:
         const int out_h = outputs[0].size[2];
         const int out_w = outputs[0].size[3];
         float* out_data = outputs[0].ptr<float>();
-        std::vector<int> sizes(&outputs[0].size[0], &outputs[0].size[0] + outputs[0].size.dims());
+        std::vector<int> sizes(&outputs[0].size[0], &outputs[0].size[0] + outputs[0].size.dims);
         for (int i = 0; i < inputs.size() - have_reference; i++)
         {
             sizes[1] = inputs[i].size[1];

@@ -23,11 +23,6 @@ if(HAVE_JPEG)
   list(APPEND GRFMT_LIBS ${JPEG_LIBRARIES})
 endif()
 
-if(HAVE_JPEGXL)
-  ocv_include_directories(${OPENJPEG_INCLUDE_DIRS})
-  list(APPEND GRFMT_LIBS ${OPENJPEG_LIBRARIES})
-endif()
-
 if(HAVE_WEBP)
   add_definitions(-DHAVE_WEBP)
   ocv_include_directories(${WEBP_INCLUDE_DIR})

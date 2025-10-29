@@ -29,24 +29,8 @@ void cv::swap( Mat& a, Mat& b )
     std::swap(a.allocator, b.allocator);
     std::swap(a.u, b.u);
 
-    std::swap(a.size.p, b.size.p);
-    std::swap(a.step.p, b.step.p);
-    std::swap(a.step.buf[0], b.step.buf[0]);
-    std::swap(a.step.buf[1], b.step.buf[1]);
-
-    if(a.dims <= 2)
-    {
-        int a_1d = a.dims <= 1;
-        a.step.p = &a.step.buf[a_1d];
-        a.size.p = &a.rows + a_1d;
-    }
-
-    if(b.dims <= 2)
-    {
-        int b_1d = b.dims <= 1;
-        b.step.p = &b.step.buf[b_1d];
-        b.size.p = &b.rows + b_1d;
-    }
+    std::swap(a.size, b.size);
+    std::swap(a.step, b.step);
 }
 
 

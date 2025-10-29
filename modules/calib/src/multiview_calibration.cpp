@@ -265,7 +265,7 @@ static void pairwiseRegistration (const std::vector<std::pair<int,int>> &pairs,
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
-        Mat &intrinsic_flags, int extrinsic_flags = 0) {
+        Mat &intrinsic_flags, int extrinsic_flags, TermCriteria criteria) {
     CV_UNUSED(intrinsic_flags);
     const int NUM_FRAMES = (int)objPoints_norm.size();
     const int NUM_CAMERAS = (int)detection_mask_mat.size();
@@ -305,11 +305,12 @@ static void pairwiseRegistration (const std::vector<std::pair<int,int>> &pairs,
         }
 
         extrinsic_flags |= CALIB_FIX_INTRINSIC;
-        registerCameras(grid_points1, grid_points2, image_points1, image_points2,
+        double err = registerCameras(grid_points1, grid_points2, image_points1, image_points2,
                         Ks[c1], distortions[c1], cv::CameraModel(models.at<uchar>(c1)),
                         Ks[c2], distortions[c2], cv::CameraModel(models.at<uchar>(c2)),
-                        R, T, noArray(), noArray(), noArray(), noArray(), noArray(), extrinsic_flags);
-
+                        R, T, noArray(), noArray(), noArray(), noArray(), noArray(),
+                        extrinsic_flags, criteria);
+        CV_LOG_INFO(NULL, "Pair " << c1 << "-" << c2 << " registration RMS " << err);
         // R_0 = I
         // R_ij = R_i R_j^T     =>  R_i = R_ij R_j
         // t_ij = ti - R_ij tj  =>  t_i = t_ij + R_ij t_j
@@ -328,7 +329,7 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
         const std::vector<std::vector<Mat>> &imagePoints, const std::vector<std::vector<int>> &overlaps,
         const std::vector<std::vector<bool>> &detection_mask_mat, const std::vector<Mat> &Ks,
         const std::vector<Mat> &distortions, std::vector<Matx33d> &Rs_vec, std::vector<Vec3d> &Ts_vec,
-        Mat &intrinsic_flags, int extrinsic_flags = 0) {
+        Mat &intrinsic_flags, int extrinsic_flags, TermCriteria criteria) {
     const int NUM_FRAMES = (int)objPoints_norm.size();
     const int NUM_CAMERAS = (int)detection_mask_mat.size();
     std::vector<Matx33d> Rs_prior;
@@ -369,13 +370,19 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             T = -R * Ts_prior[c1] + Ts_prior[c2];
         }
 
+        // stereoCalibrate tries to overwrite distortion coefficients
+        Mat dist1 = distortions[c1].clone();
+        Mat dist2 = distortions[c2].clone();
+
         // image size does not matter since intrinsics are used
         if (are_fisheye_cams) {
             extrinsic_flags |= CALIB_FIX_INTRINSIC;
-            fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1],
-                            Ks[c2], distortions[c2],
-                            Size(), R, T, extrinsic_flags);
+            double err = fisheye::stereoCalibrate(grid_points, image_points1, image_points2,
+                            Ks[c1], dist1,
+                            Ks[c2], dist2,
+                            Size(), R, T,
+                            extrinsic_flags, criteria);
+            CV_LOG_INFO(NULL, "Stereo pair " << c1 << "-" << c2 << " registration RMS " << err);
         } else {
             extrinsic_flags |= CALIB_FIX_INTRINSIC;
             if ((intrinsic_flags.at<int>(c1) & CALIB_RATIONAL_MODEL) || (intrinsic_flags.at<int>(c2) & CALIB_RATIONAL_MODEL))
@@ -383,10 +390,12 @@ static void pairwiseStereoCalibration (const std::vector<std::pair<int,int>> &pa
             if ((intrinsic_flags.at<int>(c1) & CALIB_THIN_PRISM_MODEL) || (intrinsic_flags.at<int>(c2) & CALIB_THIN_PRISM_MODEL))
                 extrinsic_flags |= CALIB_THIN_PRISM_MODEL;
 
-            stereoCalibrate(grid_points, image_points1, image_points2,
-                            Ks[c1], distortions[c1],
-                            Ks[c2], distortions[c2],
-                            Size(), R, T, noArray(), noArray(), noArray(), extrinsic_flags);
+            double err = stereoCalibrate(grid_points, image_points1, image_points2,
+                            Ks[c1], dist1,
+                            Ks[c2], dist2,
+                            Size(), R, T, noArray(), noArray(), noArray(),
+                            extrinsic_flags, criteria);
+            CV_LOG_INFO(NULL, "Stereo pair " << c1 << "-" << c2 << " registration RMS " << err);
         }
 
         // R_0 = I
@@ -528,7 +537,8 @@ static void optimizeLM (std::vector<double> &param, const RobustFunction &robust
                .setStepNormTolerance(termCrit.epsilon)
                .setSmallEnergyTolerance(termCrit.epsilon * termCrit.epsilon),
            noArray()/*mask, all variables to optimize*/);
-    solver.optimize();
+    cv::LevMarq::Report status = solver.optimize();
+    CV_LOG_INFO(NULL, "LevMarq finished with status " << status.found << " energy " << status.energy << " after " << status.iters << " iterations");
 }
 
 static void checkConnected (const std::vector<std::vector<bool>> &detection_mask_mat) {
@@ -576,7 +586,7 @@ double calibrateMultiview(
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
         OutputArray initializationPairs, OutputArrayOfArrays rvecs0,
         OutputArrayOfArrays tvecs0, OutputArray perFrameErrors,
-        InputArray flagsForIntrinsics, int flags) {
+        InputArray flagsForIntrinsics, int flags, TermCriteria criteria) {
     CV_CheckFalse(objPoints.empty(), "Objects points must not be empty!");
     CV_CheckFalse(imagePoints.empty(), "Image points must not be empty!");
     CV_CheckFalse(imageSize.empty(), "Image size per camera must not be empty!");
@@ -712,6 +722,7 @@ double calibrateMultiview(
                 if (models_mat.at<uchar>(camera) == cv::CALIB_MODEL_FISHEYE) {
                     repr_err = fisheye::calibrate(obj_points_, img_points_, imageSize[camera],
                         K, dist, rvecs, tvecs, flagsForIntrinsics_mat.at<int>(camera));
+                    CV_LOG_INFO(NULL, "Camera " << camera << " intrinsics calibration RMS " << repr_err);
                     // calibrate does not compute error per view, so compute it manually
                     errors_per_view = std::vector<double>(obj_points_.size());
                     for (int f = 0; f < (int) obj_points_.size(); f++) {
@@ -722,6 +733,7 @@ double calibrateMultiview(
                 } else {
                     repr_err = calibrateCamera(obj_points_, img_points_, imageSize[camera], K, dist,
                     rvecs, tvecs, noArray(), noArray(), errors_per_view, flagsForIntrinsics_mat.at<int>(camera));
+                    CV_LOG_INFO(NULL, "Camera " << camera << " intrinsics calibration RMS " << repr_err);
                 }
                 CV_LOG_IF_WARNING(NULL, repr_err > WARNING_RMSE, "Warning! Mean RMSE of intrinsics calibration is higher than "+std::to_string(WARNING_RMSE)+" pixels!");
                 int cnt_visible_frame = 0;
@@ -801,10 +813,10 @@ double calibrateMultiview(
 
     if(flags & cv::CALIB_STEREO_REGISTRATION) {
         multiview::pairwiseStereoCalibration(pairs, models_mat, objPoints_norm, imagePoints,
-            overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
+            overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat, 0, criteria);
     } else {
         multiview::pairwiseRegistration(pairs, models_mat, objPoints_norm, imagePoints,
-            overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat);
+            overlaps, detection_mask_mat, Ks_vec, distortions_vec, Rs_vec, Ts_vec, flagsForIntrinsics_mat, 0, criteria);
     }
 
     const int NUM_VALID_FRAMES = countNonZero(valid_frames);
@@ -853,10 +865,9 @@ double calibrateMultiview(
         cnt_valid_frame++;
     }
 
-    TermCriteria termCrit (TermCriteria::COUNT+TermCriteria::EPS, 100, 1e-6);
     const float RBS_FNC_SCALE = 30;
     multiview::RobustExpFunction robust_fnc(RBS_FNC_SCALE);
-    multiview::optimizeLM(param, robust_fnc, termCrit, valid_frames, detection_mask_mat, objPoints_norm,
+    multiview::optimizeLM(param, robust_fnc, criteria, valid_frames, detection_mask_mat, objPoints_norm,
                           imagePoints, Ks_vec, distortions_vec, models_mat, NUM_PATTERN_PTS);
     const auto * const params = &param[0];
 
@@ -967,10 +978,10 @@ double calibrateMultiview(
         const std::vector<cv::Size>& imageSize, InputArray detectionMask, InputArray models,
         InputOutputArrayOfArrays Ks, InputOutputArrayOfArrays distortions,
         InputOutputArrayOfArrays Rs, InputOutputArrayOfArrays Ts,
-        InputArray flagsForIntrinsics, int flags) {
+        InputArray flagsForIntrinsics, int flags, TermCriteria criteria) {
 
     return calibrateMultiview(objPoints, imagePoints, imageSize, detectionMask, models, Ks, distortions,
-                              Rs, Ts, noArray(), noArray(), noArray(), noArray(), flagsForIntrinsics, flags);
+                Rs, Ts, noArray(), noArray(), noArray(), noArray(), flagsForIntrinsics, flags, criteria);
 }
 
 

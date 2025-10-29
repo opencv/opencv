@@ -303,6 +303,7 @@ protected:
 //==================================================================================================
 
 Ptr<IVideoCapture> cvCreateFileCapture_FFMPEG_proxy(const std::string &filename, const VideoCaptureParameters& params);
+Ptr<IVideoCapture> cvCreateCameraCapture_FFMPEG_proxy(int index, const VideoCaptureParameters& params);
 Ptr<IVideoCapture> cvCreateStreamCapture_FFMPEG_proxy(const Ptr<IStreamReader>& stream, const VideoCaptureParameters& params);
 Ptr<IVideoWriter> cvCreateVideoWriter_FFMPEG_proxy(const std::string& filename, int fourcc,
                                                    double fps, const Size& frameSize,
@@ -376,7 +377,7 @@ Ptr<IVideoWriter> createAndroidVideoWriter(const std::string& filename, int four
                                            double fps, const Size& frameSize,
                                            const VideoWriterParameters& params);
 
-Ptr<IVideoCapture> create_obsensor_capture(int index);
+Ptr<IVideoCapture> create_obsensor_capture(int index, const cv::VideoCaptureParameters& params);
 
 bool VideoCapture_V4L_waitAny(
         const std::vector<VideoCapture>& streams,
@@ -393,6 +394,7 @@ std::ostream& operator<<(std::ostream& out, const VideoAccelerationType& va_type
     case VIDEO_ACCELERATION_D3D11: out << "D3D11"; return out;
     case VIDEO_ACCELERATION_VAAPI: out << "VAAPI"; return out;
     case VIDEO_ACCELERATION_MFX: out << "MFX"; return out;
+    case VIDEO_ACCELERATION_DRM: out << "DRM"; return out;
     }
     out << cv::format("UNKNOWN(0x%ux)", static_cast<unsigned int>(va_type));
     return out;

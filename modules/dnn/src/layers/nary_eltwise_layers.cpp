@@ -33,6 +33,7 @@ static int _mod(int x, int y) {
     }
     return res;
 }
+
 }
 
 class NaryEltwiseHelper CV_FINAL
@@ -194,6 +195,9 @@ public:
         ADD,
         DIV,
         WHERE,
+        BITWISE_AND,
+        BITWISE_OR,
+        BITWISE_XOR,
     } op;
 
     NaryEltwiseLayerImpl(const LayerParams& params)
@@ -244,6 +248,12 @@ public:
             op = OPERATION::XOR;
         else if (operation == "where")
             op = OPERATION::WHERE;
+        else if (operation == "bitwise_and")
+            op = OPERATION::BITWISE_AND;
+        else if (operation == "bitwise_or")
+            op = OPERATION::BITWISE_OR;
+        else if (operation == "bitwise_xor")
+            op = OPERATION::BITWISE_XOR;
         else
             CV_Error(cv::Error::StsBadArg, "Unknown operation type \"" + operation + "\"");
     }
@@ -254,7 +264,7 @@ public:
         if (backendId == DNN_BACKEND_CANN)
             return op == OPERATION::ADD || op == OPERATION::PROD || op == OPERATION::SUB ||
                    op == OPERATION::DIV || op == OPERATION::MAX  || op == OPERATION::MIN ||
-                   op == OPERATION::MOD || op == OPERATION::FMOD;
+                   op == OPERATION::MOD || op == OPERATION::FMOD || op == OPERATION::POW;
 #endif
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return (op == OPERATION::ADD ||
@@ -360,13 +370,46 @@ public:
             return;
         }
 
+        if (op == OPERATION::BITWISE_AND || op == OPERATION::BITWISE_OR || op == OPERATION::BITWISE_XOR)
+        {
+            CV_Assert(inputs.size());
+            for (auto input : inputs)
+            {
+                CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
+                CV_CheckType(input, input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
+            }
+            outputs.assign(requiredOutputs, inputs[0]);
+            return;
+        }
+
         if (op == OPERATION::POW) {
-            /*
-                First input: exponent of Type T;
-                Second input: power of the exponent of Type T1;
-                Output: same type T as first input's.
-            */
-            outputs.assign(1, inputs.front());
+            CV_Assert(inputs.size() == 2);
+            auto isIntegerType = [](int t) {
+                return t == CV_8S || t == CV_8U || t == CV_16S || t == CV_16U || t == CV_32S || t == CV_32U || t == CV_64S || t == CV_64U;
+            };
+            auto isFloatType = [](int t) {
+                return t == CV_32F || t == CV_64F || t == CV_16F || t == CV_16BF;
+            };
+
+            int out_type;
+            const bool baseIsInt   = isIntegerType(inputs[0]);
+            const bool expIsInt    = isIntegerType(inputs[1]);
+            const bool baseIsFloat = isFloatType(inputs[0]);
+            const bool expIsFloat  = isFloatType(inputs[1]);
+
+            if ((baseIsInt && expIsInt) || (baseIsFloat && expIsFloat))
+            {
+                out_type = (inputs[0] == inputs[1]) ? inputs[0] : CV_32F;
+            }
+            else if (baseIsFloat != expIsFloat)
+            {
+                out_type = inputs[0];
+            }
+            else
+            {
+                out_type = CV_32F;
+            }
+            outputs.assign(1, out_type);
             return;
         }
 
@@ -375,9 +418,9 @@ public:
         {
             CV_CheckTypeEQ(inputs[0], input, "All inputs should have equal types");
             if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_16F || input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
             else
-                CV_CheckType(input, input == CV_32F || input == CV_8S || input == CV_8U || input == CV_32S || input == CV_64S, "");
+                CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S || input == CV_8U || input == CV_16S || input == CV_16U || input == CV_32S || input == CV_32U || input == CV_64S || input == CV_64U, "");
         }
 
         if (op == OPERATION::EQUAL || op == OPERATION::GREATER || op == OPERATION::GREATER_EQUAL || op == OPERATION::LESS || op == OPERATION::LESS_EQUAL)
@@ -766,12 +809,161 @@ public:
             return;
         }
 
-        int type_for_dispatch = op == OPERATION::WHERE ? outputs.front().type() : inputs.front().type();
-        typeDispatch(type_for_dispatch, inputs.size(), inputs, outputs);
+        std::vector<Mat> used_inputs = inputs;
+        if (op == OPERATION::POW) {
+            CV_Assert(used_inputs.size() == 2);
+            const int out_type = outputs[0].type();
+            if (used_inputs[0].type() != out_type || used_inputs[1].type() != out_type) {
+                Mat a_conv, b_conv;
+                used_inputs[0].convertTo(a_conv, out_type);
+                used_inputs[1].convertTo(b_conv, out_type);
+                used_inputs = {a_conv, b_conv};
+                helper.init(used_inputs, outputs);
+                CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+            }
+        }
+
+        int type_for_dispatch = (op == OPERATION::WHERE || op == OPERATION::POW) ? outputs.front().type() : used_inputs.front().type();
+        typeDispatch(type_for_dispatch, used_inputs.size(), used_inputs, outputs);
     }
 
     template<typename T, typename... Args>
-    inline void opDispatch(size_t ninputs, Args&&... args)
+    inline typename std::enable_if<std::is_integral<T>::value && !std::is_same<T, bool>::value, void>::type opDispatch(size_t ninputs, Args&&... args)
+    {
+        if (ninputs == 2) {
+            switch (op) {
+                case OPERATION::EQUAL: {
+                    auto equal = [](const T &a, const T &b) { return a == b; };
+                    binary_forward<T, bool>(equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::GREATER: {
+                    auto greater = [](const T &a, const T &b) { return a > b; };
+                    binary_forward<T, bool>(greater, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::GREATER_EQUAL: {
+                    auto greater_equal = [](const T &a, const T &b) { return a >= b; };
+                    binary_forward<T, bool>(greater_equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::LESS: {
+                    auto less = [](const T &a, const T &b) { return a < b; };
+                    binary_forward<T, bool>(less, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::LESS_EQUAL: {
+                    auto less_equal = [](const T &a, const T &b) { return a <= b; };
+                    binary_forward<T, bool>(less_equal, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::POW: {
+                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)a, (double)b)); };
+                    binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
+                    break;
+                }
+                case OPERATION::BITSHIFT: {
+                    auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
+                    binary_forward<T, T>(bitshift, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MAX: {
+                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    binary_forward<T, T>(max, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MEAN: {
+                    auto mean = [](const T &a, const T &b) { return (a + b) / T{2}; };
+                    binary_forward<T, T>(mean, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MIN: {
+                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    binary_forward<T, T>(min, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MOD: {
+                    auto mod = [] (const T &a, const T &b) { return static_cast<T>(_mod(int(a), int(b))); };
+                    binary_forward<T, T>(mod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::FMOD: {
+                    auto fmod = [](const T &a, const T &b) { return std::fmod(a, b); };
+                    binary_forward<T, T>(fmod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::PROD: {
+                    auto prod = [](const T &a, const T &b) { return a * b; };
+                    binary_forward<T, T>(prod, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::SUB: {
+                    auto sub = [](const T &a, const T &b) { return a - b; };
+                    binary_forward<T, T>(sub, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::ADD:
+                case OPERATION::SUM: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    binary_forward<T, T>(sum, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::DIV: {
+                    auto div = [](const T &a, const T &b) { return a / b; };
+                    binary_forward<T, T>(div, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITWISE_AND: {
+                    auto band = [](const T &a, const T &b) { return (T)(a & b); };
+                    binary_forward<T, T>(band, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITWISE_OR: {
+                    auto bor = [](const T &a, const T &b) { return (T)(a | b); };
+                    binary_forward<T, T>(bor, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::BITWISE_XOR: {
+                    auto bxor = [](const T &a, const T &b) { return (T)(a ^ b); };
+                    binary_forward<T, T>(bxor, std::forward<Args>(args)...);
+                    break;
+                }
+                default: CV_Error(Error::StsBadArg, "Unsupported operation");
+            }
+        } else if (ninputs == 3 && op == OPERATION::WHERE) {
+            auto where = [](const T &a, const T &b, const T &c) { return a ? b : c; };
+            ternary_forward<bool, T, T, T>(where, std::forward<Args>(args)...);
+        } else {
+            switch (op)
+            {
+                case OPERATION::MAX: {
+                    auto max = [](const T &a, const T &b) { return std::max(a, b); };
+                    nary_forward<T>(max, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MEAN: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    nary_forward<T>(sum, T{1} / ninputs, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::MIN: {
+                    auto min = [](const T &a, const T &b) { return std::min(a, b); };
+                    nary_forward<T>(min, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                case OPERATION::SUM: {
+                    auto sum = [](const T &a, const T &b) { return a + b; };
+                    nary_forward<T>(sum, T{1}, std::forward<Args>(args)...);
+                    break;
+                }
+                default:
+                    CV_Error(Error::StsBadArg, "Unsupported operation.");
+            }
+        };
+    }
+
+    template<typename T, typename... Args>
+    inline typename std::enable_if<!std::is_integral<T>::value || std::is_same<T, bool>::value, void>::type opDispatch(size_t ninputs, Args&&... args)
     {
         if (ninputs == 2) { // Operators that take two operands
             switch (op) {
@@ -801,13 +993,8 @@ public:
                     break;
                 }
                 case OPERATION::POW: {
-                    auto pow = [] (const T& a, const T& b) { return std::pow(a, b); };
+                    auto pow = [] (const T& a, const T& b) { return saturate_cast<T>(std::pow((double)a, (double)b)); };
                     binary_forward<T, T>(pow, std::forward<Args>(args)..., 1e5);
-                    break;
-                }
-                case OPERATION::BITSHIFT: {
-                    auto bitshift = [] (const uint8_t &a, const uint8_t &b) { return a << b; };
-                    binary_forward<T, T>(bitshift, std::forward<Args>(args)...);
                     break;
                 }
                 case OPERATION::MAX: {
@@ -941,8 +1128,29 @@ public:
                 break;
             case CV_32F:
                 CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
-                          op != OPERATION::OR && op != OPERATION::XOR);
+                          op != OPERATION::OR && op != OPERATION::XOR &&
+                          op != OPERATION::BITWISE_AND && op != OPERATION::BITWISE_OR &&
+                          op != OPERATION::BITWISE_XOR);
                 opDispatch<float>(std::forward<Args>(args)...);
+                break;
+            case CV_64F:
+                CV_Assert(op != OPERATION::BITSHIFT && op != OPERATION::AND &&
+                          op != OPERATION::OR && op != OPERATION::XOR &&
+                          op != OPERATION::BITWISE_AND && op != OPERATION::BITWISE_OR &&
+                          op != OPERATION::BITWISE_XOR);
+                opDispatch<double>(std::forward<Args>(args)...);
+                break;
+            case CV_16S:
+                opDispatch<int16_t>(std::forward<Args>(args)...);
+                break;
+            case CV_16U:
+                opDispatch<uint16_t>(std::forward<Args>(args)...);
+                break;
+            case CV_32U:
+                opDispatch<uint32_t>(std::forward<Args>(args)...);
+                break;
+            case CV_64U:
+                opDispatch<uint64_t>(std::forward<Args>(args)...);
                 break;
             default:
                 CV_Error(cv::Error::BadDepth, "Unsupported type.");
@@ -1036,6 +1244,7 @@ public:
             BUILD_CANN_ELTWISE_OP(OPERATION::MIN,  Minimum, name);
             BUILD_CANN_ELTWISE_OP(OPERATION::MOD,  Mod,     name);
             BUILD_CANN_ELTWISE_OP(OPERATION::FMOD, Mod,     name);
+            BUILD_CANN_ELTWISE_OP(OPERATION::POW,  Pow,     name);
 #undef BUILD_CANN_ELTWISE_OP
             default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
         }

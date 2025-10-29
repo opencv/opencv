@@ -132,7 +132,7 @@ CV_EXPORTS_W void rescaleDepth(InputArray in, int type, OutputArray out, double 
  * This function can be used to visualize the results of the Odometry algorithm.
  * @param depth Depth data, should be 1-channel CV_16U, CV_16S, CV_32F or CV_64F
  * @param image RGB image (optional), should be 1-, 3- or 4-channel CV_8U
- * @param mask Mask of used pixels (optional), should be CV_8UC1
+ * @param mask Mask of used pixels (optional), should be CV_8UC1, CV_8SC1 or CV_BoolC1
  * @param Rt Rotation+translation matrix (3x4 or 4x4) to be applied to depth points
  * @param cameraMatrix Camera intrinsics matrix (3x3)
  * @param warpedDepth The warped depth data (optional)

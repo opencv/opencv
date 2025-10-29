@@ -44,6 +44,7 @@
 #include "precomp.hpp"
 //#include "opencv2/core/core_c.h"
 #include <atomic>
+#include <exception>
 #include <iostream>
 #include <ostream>
 
@@ -126,7 +127,6 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #endif
 
 #ifdef CV_ERROR_SET_TERMINATE_HANDLER
-#include <exception>      // std::set_terminate
 #include <cstdlib>        // std::abort
 #endif
 
@@ -728,7 +728,7 @@ struct HWFeatures
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
     #endif
-    #if defined _M_ARM64
+    #if defined _M_ARM64 || defined _M_ARM64EC
         have[CV_CPU_NEON] = true;
     #endif
     #ifdef __riscv_vector

@@ -220,7 +220,7 @@ public:
 
             const google::protobuf::UnknownFieldSet& unknownFields = msgRefl->GetUnknownFields(msg);
             bool hasData =  fd->is_required() ||
-                            (fd->is_optional() && msgRefl->HasField(msg, fd)) ||
+                            (!fd->is_repeated() && !fd->is_required() && msgRefl->HasField(msg, fd)) ||
                             (fd->is_repeated() && msgRefl->FieldSize(msg, fd) > 0) ||
                             !unknownFields.empty();
             if (!hasData)
@@ -271,7 +271,7 @@ public:
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
             CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
-            Mat(dstBlob.dims, &dstBlob.size[0], CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
+            Mat(dstBlob.size, CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
         }
         else
         {

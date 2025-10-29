@@ -224,12 +224,28 @@ public:
         {
             const Mat &src = inputs[i];
             Mat &dst = outputs[i];
-            CV_Assert_N(src.size == dst.size, src.type() == dst.type(),
-                      src.isContinuous(), dst.isContinuous(), src.type() == CV_32F);
+            CV_Assert_N(src.size == dst.size, src.isContinuous(), dst.isContinuous());
 
-            const int nstripes = getNumThreads();
-            PBody body(func, src, dst, nstripes);
-            parallel_for_(Range(0, nstripes), body, nstripes);
+            if (src.type() == CV_32F && dst.type() == CV_32F)
+            {
+                const int nstripes = getNumThreads();
+                PBody body(func, src, dst, nstripes);
+                parallel_for_(Range(0, nstripes), body, nstripes);
+                continue;
+            }
+
+            if (src.type() == CV_64F && dst.type() == CV_64F)
+            {
+                Mat src_f, dst_f(dst.size, CV_32F);
+                src.convertTo(src_f, CV_32F);
+                const int nstripes = getNumThreads();
+                PBody body(func, src_f, dst_f, nstripes);
+                parallel_for_(Range(0, nstripes), body, nstripes);
+                dst_f.convertTo(dst, CV_64F);
+                continue;
+            }
+
+            CV_Error(Error::StsUnsupportedFormat, "ElementWiseLayer: unsupported input/output type; expected CV_32F or CV_64F.");
         }
     }
 
@@ -716,8 +732,12 @@ struct GeluFunctor : public BaseFunctor {
 #endif
     }
 
-    bool supportBackend(int backendId, int) {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
+    bool supportBackend(int backendId, int)
+    {
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     void apply(const float* srcptr, float* dstptr, int stripeStart, int len, size_t planeSize, int cn0, int cn1) const {
@@ -814,7 +834,19 @@ struct GeluFunctor : public BaseFunctor {
                                 const std::vector<Ptr<BackendWrapper> > &inputs,
                                 const std::vector<Ptr<BackendNode> >& nodes)
     {
-        CV_Error(Error::StsNotImplemented, "");
+        auto input_wrapper = inputs[0].dynamicCast<CannBackendWrapper>();
+
+        auto op = std::make_shared<ge::op::Gelu>(name);
+
+        auto input_node = nodes[0].dynamicCast<CannBackendNode>()->getOp();
+        op->set_input_x_by_name(*input_node, input_wrapper->name.c_str());
+        auto input_desc = input_wrapper->getTensorDesc();
+        op->update_input_desc_x(*input_desc);
+
+        auto output_desc = std::make_shared<ge::TensorDesc>(ge::Shape(), ge::FORMAT_NCHW, ge::DT_FLOAT);
+        op->update_output_desc_y(*output_desc);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
     }
 #endif // HAVE_CANN
 
@@ -1555,7 +1587,9 @@ struct SqrtFunctor : public BaseDefaultFunctor<SqrtFunctor>
 
     bool supportBackend(int backendId, int)
     {
-        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CUDA;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_CUDA   ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     inline float calculate(float x) const
