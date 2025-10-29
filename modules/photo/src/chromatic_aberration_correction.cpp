@@ -1,190 +1,253 @@
-#include "precomp.hpp"
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html
 
-#include <iostream>
+#include "precomp.hpp"
 
 namespace cv {
 
-bool CalibrationResult::loadFromFile(const String& filename) {
-    try {
-        FileStorage fs(filename, FileStorage::READ);
-        if (!fs.isOpened()) {
-            std::cerr << "Trying to open: " << filename << std::endl;
-            return false;
-        }
-        
-        fs["degree"] >> degree;
-        FileNode red_node = fs["red_channel"];
-        poly_red.degree = degree;
-        red_node["coeffs_x"] >> poly_red.coeffs_x;
-        red_node["coeffs_y"] >> poly_red.coeffs_y;
-        red_node["mean_x"] >> poly_red.mean_x;
-        red_node["mean_y"] >> poly_red.mean_y;
-        red_node["std_x"] >> poly_red.std_x;
-        red_node["std_y"] >> poly_red.std_y;
-        
-        FileNode blue_node = fs["blue_channel"];
-        poly_blue.degree = degree;
-        blue_node["coeffs_x"] >> poly_blue.coeffs_x;
-        blue_node["coeffs_y"] >> poly_blue.coeffs_y;
-        blue_node["mean_x"] >> poly_blue.mean_x;
-        blue_node["mean_y"] >> poly_blue.mean_y;
-        blue_node["std_x"] >> poly_blue.std_x;
-        blue_node["std_y"] >> poly_blue.std_y;
-        
-        fs.release();
-        return true;
-    } catch (const Exception& e) {
-        std::cerr << "Trying to open: " << filename << std::endl;
-        std::cout << "Error loading calibration file: " << e.what() << "\n";
-        return false;
+void loadCalibrationResultFromFile(const String& calibration_file,
+                                    OutputArray coeffMat,
+                                   int& width,
+                                   int& height,
+                                   int& degree) {
+    Mat tmp;
+    FileStorage fs(calibration_file, FileStorage::READ);
+    if (!fs.isOpened()){
+        CV_Error_(Error::StsError,
+                    ("Cannot open calibration file: %s", calibration_file.c_str()));
     }
+
+    int imgW = 0, imgH = 0;
+    fs["image_width"]  >> imgW;
+    fs["image_height"] >> imgH;
+    if (imgW <= 0 || imgH <= 0) {
+        CV_Error(Error::StsBadArg,
+                    "image_width and image_height must be positive");
+    }
+    auto readChannel = [&](const char* key,
+                            std::vector<double>& coeffs_x,
+                           std::vector<double>& coeffs_y,
+                           int& deg_out)
+    {
+        FileNode ch = fs[key];
+        if (ch.empty())
+            CV_Error_(Error::StsParseError,
+                        ("Missing channel \"%s\"", key));
+
+        ch["coeffs_x"] >> coeffs_x;
+        ch["coeffs_y"] >> coeffs_y;
+
+        if (coeffs_x.empty() || coeffs_y.empty())
+            CV_Error_(Error::StsParseError,
+                        ("%s: coeffs_x/coeffs_y missing", key));
+
+        if (coeffs_x.size() != coeffs_y.size())
+            CV_Error_(Error::StsBadSize,
+                        ("%s: coeffs_x (%zu) vs coeffs_y (%zu)",
+                        key, coeffs_x.size(), coeffs_y.size()));
+
+        Mat cx(1, (int)coeffs_x.size(), CV_64F, (void*)coeffs_x.data());
+        Mat cy(1, (int)coeffs_y.size(), CV_64F, (void*)coeffs_y.data());
+        if (!checkRange(cx, true) || !checkRange(cy, true))
+            CV_Error_(Error::StsBadArg,
+                      ("%s: coefficient array contains NaN/Inf", key));
+        size_t m = coeffs_x.size();
+        double n_float = (std::sqrt(1.0 + 8.0 * m) - 3.0) / 2.0;
+        int deg = static_cast<int>(std::round(n_float));
+        size_t expected_m = static_cast<size_t>((deg + 1) * (deg + 2) / 2);
+        if (m != expected_m){
+            CV_Error_(Error::StsBadArg,
+                    ("Coefficient count %zu is not triangular for degree %d "
+                    "(expected %zu)", m, deg, expected_m));
+        }
+        deg_out = deg;
+    };
+
+    std::vector<double> red_x, red_y, blue_x, blue_y;
+    int deg_red = 0, deg_blue = 0;
+    readChannel("red_channel",  red_x,  red_y,  deg_red);
+    readChannel("blue_channel", blue_x, blue_y, deg_blue);
+
+
+    if (red_x.size() != blue_x.size()){
+        CV_Error_(Error::StsBadSize,
+                    ("Red (%zu) and blue (%zu) coefficient counts differ",
+                    red_x.size(), blue_x.size()));
+    }
+    if (deg_red != deg_blue){
+        CV_Error_(Error::StsBadArg,
+                    ("Red (%d) and blue (%d) degrees differ",
+                    deg_red, deg_blue));
+    }
+
+    const int mterms = (int)red_x.size();
+
+    tmp.create(4, mterms, CV_32F);
+
+    float* Bx = tmp.ptr<float>(0);
+    float* By = tmp.ptr<float>(1);
+    float* Rx = tmp.ptr<float>(2);
+    float* Ry = tmp.ptr<float>(3);
+
+    for (int i = 0; i < mterms; ++i) {
+        Bx[i] = static_cast<float>(blue_x[i]);
+        By[i] = static_cast<float>(blue_y[i]);
+        Rx[i] = static_cast<float>(red_x[i]);
+        Ry[i] = static_cast<float>(red_y[i]);
+    }
+
+    width = imgW;
+    height = imgH;
+    degree = deg_red;
+    tmp.copyTo(coeffMat);
 }
 
-void Polynomial2D::computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) const {
-    CV_Assert(X.type() == CV_32F && Y.type() == CV_32F && X.size() == Y.size());
+static void buildRemapsFromCoeffMat(int height, int width,
+                             const Mat& coeffs,
+                             int degree,
+                             int rowX, int rowY,
+                             Mat& map_x, Mat& map_y)
+{
+    if (coeffs.type() != CV_32F) {
+        CV_Error_(Error::StsUnsupportedFormat,
+                  ("coeffs Mat must be CV_32F (got type=%d)", coeffs.type()));
+    }
 
-    const int h = X.rows, w = X.cols, D = degree;
-    dx.create(X.size(), CV_32F);
-    dy.create(Y.size(), CV_32F);
+    if (coeffs.rows != 4) {
+        CV_Error_(Error::StsBadSize,
+                  ("coeffs.rows must be 4 (Bx,By,Rx,Ry); got %d", coeffs.rows));
+    }
 
-    const double inv_std_x = 1.0 / std_x;
-    const double inv_std_y = 1.0 / std_y;
+    if (rowX < 0 || rowX >= coeffs.rows) {
+        CV_Error_(Error::StsOutOfRange,
+                  ("rowX index %d out of range [0,%d)", rowX, coeffs.rows));
+    }
+    if (rowY < 0 || rowY >= coeffs.rows) {
+        CV_Error_(Error::StsOutOfRange,
+                  ("rowY index %d out of range [0,%d)", rowY, coeffs.rows));
+    }
 
-    parallel_for_( Range(0, h),
-        [&](const Range& rows)
-    {
-        std::vector<double> x_pow(D + 1);
-        std::vector<double> y_pow(D + 1);
+    if (degree < 0) {
+        CV_Error_(Error::StsBadArg,
+                  ("degree must be non-negative; got %d", degree));
+    }
 
-        for (int y = rows.start; y < rows.end; ++y)
-        {
-            const float* XR = X.ptr<float>(y);
-            const float* YR = Y.ptr<float>(y);
+    const int expected_terms = (degree + 1) * (degree + 2) / 2;
+    if (coeffs.cols != expected_terms) {
+        CV_Error_(Error::StsBadSize,
+                  ("coeffs.cols (%d) != expected polynomial term count (%d) for degree=%d",
+                   coeffs.cols, expected_terms, degree));
+    }
+
+    if (width <= 0 || height <= 0) {
+        CV_Error_(Error::StsBadArg,
+                  ("width (%d) and height (%d) must be positive", width, height));
+    }
+
+    Mat X(1, width, CV_32F), Y(height, 1, CV_32F);
+    for (int i = 0; i < width;  ++i) X.at<float>(0,i) = (float)i;
+    for (int j = 0; j < height; ++j) Y.at<float>(j,0) = (float)j;
+
+    Mat Xgrid, Ygrid;
+    repeat(X, height, 1, Xgrid);
+    repeat(Y, 1, width,  Ygrid);
+
+    Mat dx(height, width, CV_32F);
+    Mat dy(height, width, CV_32F);
+
+    const double mean_x    = width  * 0.5;
+    const double mean_y    = height * 0.5;
+    const double inv_std_x = 1.0 / mean_x;
+    const double inv_std_y = 1.0 / mean_y;
+
+    const float* Cx = coeffs.ptr<float>(rowX);
+    const float* Cy = coeffs.ptr<float>(rowY);
+
+
+    parallel_for_(Range(0, height), [&](const Range& rows){
+        std::vector<double> x_pow(degree + 1);
+        std::vector<double> y_pow(degree + 1);
+        for (int y = rows.start; y < rows.end; ++y) {
+            const float* XR = Xgrid.ptr<float>(y);
+            const float* YR = Ygrid.ptr<float>(y);
             float* DX = dx.ptr<float>(y);
             float* DY = dy.ptr<float>(y);
-
-            for (int x = 0; x < w; ++x)
-            {
+            for (int x = 0; x < width; ++x) {
                 const double xn = (XR[x] - mean_x) * inv_std_x;
                 const double yn = (YR[x] - mean_y) * inv_std_y;
 
                 x_pow[0] = y_pow[0] = 1.0;
-                for (int k = 1; k <= D; ++k)
-                {
-                    x_pow[k] = x_pow[k - 1] * xn;
-                    y_pow[k] = y_pow[k - 1] * yn;
+                for (int k = 1; k <= degree; ++k) {
+                    x_pow[k] = x_pow[k-1] * xn;
+                    y_pow[k] = y_pow[k-1] * yn;
                 }
 
-                double dx_val = 0.0, dy_val = 0.0;
-                std::size_t idx = 0;
-
-                for (int total = 0; total <= D; ++total)
-                {
-                    for (int i = 0; i <= total; ++i)
-                    {
-                        const int j = total - i;
+                double dxv = 0.0, dyv = 0.0;
+                int idx = 0;
+                for (int t = 0; t <= degree; ++t){
+                    for (int i = 0; i <= t; ++i){
+                        const int j = t - i;
                         const double term = x_pow[i] * y_pow[j];
-                        dx_val += coeffs_x[idx] * term;
-                        dy_val += coeffs_y[idx] * term;
+                        dxv += Cx[idx] * term;
+                        dyv += Cy[idx] * term;
                         ++idx;
                     }
                 }
 
-                DX[x] = static_cast<float>(dx_val);
-                DY[x] = static_cast<float>(dy_val);
+                DX[x] = (float)dxv;
+                DY[x] = (float)dyv;
             }
         }
-    } );
+    });
+
+    map_x = Xgrid - dx;
+    map_y = Ygrid - dy;
 }
 
-
-
-std::vector<double> ChromaticAberrationCorrector::computeMonomialTerms(double x, double y, int degree) const {
-    std::vector<double> terms;
-    terms.reserve((degree + 1) * (degree + 2) / 2);
-    
-    for (int total = 0; total <= degree; ++total) {
-        for (int i = 0; i <= total; ++i) {
-            int j = total - i;
-            terms.push_back(std::pow(x, i) * std::pow(y, j));
-        }
-    }
-    return terms;
-}
-
-void ChromaticAberrationCorrector::buildRemaps(int height, int width, const Polynomial2D& poly, 
-                                                 Mat& map_x, Mat& map_y) {
-    Mat X, Y;
-    Mat x_coords = Mat::zeros(1, width, CV_32F);
-    Mat y_coords = Mat::zeros(height, 1, CV_32F);
-    
-    for (int i = 0; i < width; ++i) {
-        x_coords.at<float>(0, i) = static_cast<float>(i);
-    }
-    for (int i = 0; i < height; ++i) {
-        y_coords.at<float>(i, 0) = static_cast<float>(i);
-    }
-    
-    repeat(x_coords, height, 1, X);
-    repeat(y_coords, 1, width, Y);
-    
-    Mat dx, dy;
-    poly.computeDeltas(X, Y, dx, dy);
-    
-    map_x = X - dx;
-    map_y = Y - dy;
-}
-
-bool ChromaticAberrationCorrector::loadCalibration(const String& calibration_file) {
-    return calib_result_.loadFromFile(calibration_file);
-}
-
-Mat ChromaticAberrationCorrector::correctImage(InputArray input_image) {
+Mat correctChromaticAberration(InputArray input_image,
+                               const Mat& coeffMat,
+                               int calib_width,
+                               int calib_height,
+                               int calib_degree,
+                               int bayer_pattern)
+{
     Mat image = input_image.getMat();
-    CV_Assert(image.channels() == 3);
-    
+    if (image.channels() == 1) {
+        if (bayer_pattern < 0) {
+            CV_Error_(Error::StsBadArg,
+                      ("Single-channel input detected: must pass a valid bayer_pattern"));
+        }
+        Mat dem;
+        demosaicing(image, dem, bayer_pattern);
+        image = dem;
+    }
+
     const int height = image.rows;
-    const int width = image.cols;
-    
+    const int width  = image.cols;
+
+    if (height != calib_height || width != calib_width) {
+        CV_Error_(Error::StsBadArg,
+                  ("Image size %dx%d does not match calibration %dx%d",
+                   width, height, calib_width, calib_height));
+    }
+
     std::vector<Mat> channels;
     split(image, channels);
     Mat b = channels[0], g = channels[1], r = channels[2];
-    
+
     Mat map_x_r, map_y_r, map_x_b, map_y_b;
-    buildRemaps(height, width, calib_result_.poly_red, map_x_r, map_y_r);
-    buildRemaps(height, width, calib_result_.poly_blue, map_x_b, map_y_b);
-    
-    Mat r_corr, b_corr, g_corr;
+    buildRemapsFromCoeffMat(height, width, coeffMat, calib_degree, 2, 3, map_x_r, map_y_r);
+    buildRemapsFromCoeffMat(height, width, coeffMat, calib_degree, 0, 1, map_x_b, map_y_b);
+
+    Mat r_corr, b_corr;
     remap(r, r_corr, map_x_r, map_y_r, INTER_LINEAR, BORDER_REPLICATE);
     remap(b, b_corr, map_x_b, map_y_b, INTER_LINEAR, BORDER_REPLICATE);
-    
-    Mat map_x_g, map_y_g;
-    Mat x_coords = Mat::zeros(1, width, CV_32F);
-    Mat y_coords = Mat::zeros(height, 1, CV_32F);
-    
-    for (int i = 0; i < width; ++i) {
-        x_coords.at<float>(0, i) = static_cast<float>(i);
-    }
-    for (int i = 0; i < height; ++i) {
-        y_coords.at<float>(i, 0) = static_cast<float>(i);
-    }
-    
-    repeat(x_coords, height, 1, map_x_g);
-    repeat(y_coords, 1, width, map_y_g);
-    
-    g_corr = g;
 
-    std::vector<Mat> corrected_channels = {b_corr, g_corr, r_corr};
+    std::vector<Mat> corrected_channels = {b_corr, g, r_corr};
     Mat corrected_image;
     merge(corrected_channels, corrected_image);
-    
+
     return corrected_image;
 }
-
-Mat correctChromaticAberration(InputArray image, const String& calibration_file) {
-    ChromaticAberrationCorrector corrector;
-    CV_Assert(corrector.loadCalibration(calibration_file));
-    return corrector.correctImage(image);
-}
-
 }

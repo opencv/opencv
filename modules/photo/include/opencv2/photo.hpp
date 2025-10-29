@@ -898,57 +898,61 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 //! @addtogroup photo_ca_correction Chromatic Aberration Correction
 //! @{
 
-/** @brief Corrects chromatic aberration in an image using polynomial distortion model.
+/** @example samples/cpp/chromatic_aberration_correction.cpp
+An example correcting chromatic aberration
+*/
+/** @brief Corrects lateral chromatic aberration in an image using polynomial distortion model.
 
-@param image Input BGR image to correct
-@param calibration_file Path to calibration file containing polynomial coefficients
+This function loads polynomial calibration data from the specified file and applies
+a channel‐specific warp to remove chromatic aberration.
+If @p input_image has one channel, it is assumed to be a raw Bayer image and is
+first demosaiced using @p bayer_pattern. If it has three channels, it is treated
+as a BGR image and @p bayer_pattern is ignored.
+
+Firstly, calibration needs to be done using apps/chromatic-aberration-calibration/ca_calibration.py on a photo of
+a pattern of black discs on white background, included in opencv_extra/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png
+
+Calibration and correction are based on the algorithm described in the paper
+Rudakova, V., Monasse, P. (2014). Precise Correction of Lateral Chromatic Aberration in Images.
+The chromatic aberration is modeled as a polynomial of some degree in red and blue channels compared to green.
+In calibration, a photo of many black discs on white background is used, and the displacements
+between the centres of discs in red and blue channels compared to green are minimized. The coefficients
+are then saved in a yaml file which can be used with this function to correct lateral chromatic aberration.
+
+@param input_image Input BGR image to correct
+@param coeff_mat Coefficient model
+@param calib_width Width of images for the calibration coefficient model
+@param calib_height Height of images for the calibration coefficient model
+@param calib_degree Degree of the calibration coefficient model
+@param bayer_pattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
+                        demosaicing when @p input_image has one channel; ignored otherwise.
 @return Corrected BGR image
 */
-CV_EXPORTS_W Mat correctChromaticAberration(InputArray image, const String& calibration_file);
+// CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern = -1);
+CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const Mat& coeff_mat, int calib_width, int calib_height, int calib_degree, int bayer_pattern = -1);
 
-struct CV_EXPORTS_W Polynomial2D {
-    std::vector<double> coeffs_x;
-    std::vector<double> coeffs_y;
-    int degree;
-    double mean_x;
-    double mean_y;
-    double std_x;
-    double std_y;
+/** @brief Load chromatic-aberration calibration parameters.
 
-    
-    Polynomial2D() : degree(0) {}
-    
-    void computeDeltas(const Mat& X, const Mat& Y, Mat& dx, Mat& dy) const;
-};
+Reads the red and blue polynomial coefficients from the specified file and
+packs them into a 4×N CV_32F matrix:
+  row 0 = blue dx coefficients
+  row 1 = blue dy coefficients
+  row 2 = red  dx coefficients
+  row 3 = red  dy coefficients
 
-struct CV_EXPORTS_W CalibrationResult {
-    int degree;
-    Polynomial2D poly_red;
-    Polynomial2D poly_blue;
-    int width;
-    int height;
-    double rms_red;
-    double rms_blue;
-    
-    CalibrationResult() : degree(0) {}
-    
-    bool loadFromFile(const String& filename);
-};
+@param calibration_file  Path to YAML calibration file.
+@param coeffMat          Output 4xN coefficient matrix (CV_32F).
+@param degree            Polynomial degree inferred from N.
+@param width             Image width read from file.
+@param height            Image height read from file.
+*/
+CV_EXPORTS_W void loadCalibrationResultFromFile(
+    const String& calibration_file,
+    OutputArray coeffMat,
+    CV_OUT int& width,
+    CV_OUT int& height,
+    CV_OUT int& degree);
 
-class CV_EXPORTS_W ChromaticAberrationCorrector {
-public:
-    ChromaticAberrationCorrector() = default;
-    
-    bool loadCalibration(const String& calibration_file);
-    Mat correctImage(InputArray input_image);
-    
-private:
-    CalibrationResult calib_result_;
-    
-    void buildRemaps(int height, int width, const Polynomial2D& poly, 
-                       Mat& map_x, Mat& map_y);
-    std::vector<double> computeMonomialTerms(double x, double y, int degree) const;
-};
 
 //! @} photo_ca_correction
 
