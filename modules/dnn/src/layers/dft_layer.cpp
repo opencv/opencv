@@ -16,7 +16,7 @@
 namespace cv {
 namespace dnn {
 
-template<typename Scalar, typename ComplexVec, typename FillFn>
+template<typename T, typename ComplexVec, typename FillFn>
 static void dftAlongAxisWorker(const Mat& src,
                                Mat& dst,
                                const std::vector<int>& dimSizesSrc,
@@ -28,6 +28,7 @@ static void dftAlongAxisWorker(const Mat& src,
                                const size_t totalOuter,
                                const int axis,
                                const int N,
+                               const int outN,
                                const size_t strideAxisSrc,
                                const size_t strideAxisDst,
                                const int inMatType,
@@ -35,10 +36,11 @@ static void dftAlongAxisWorker(const Mat& src,
                                const bool inverse,
                                FillFn&& fill)
 {
-    const Scalar* sp = src.ptr<Scalar>();
-    Scalar* dp = dst.ptr<Scalar>();
+    const T* sp = src.ptr<T>();
+    T* dp = dst.ptr<T>();
     cv::parallel_for_(Range(0, (int)totalOuter), [&](const Range& r){
         Mat inRow(1, N, inMatType);
+        Mat outRow;
         for (int pos = r.start; pos < r.end; ++pos)
         {
             size_t baseSrc = 0;
@@ -50,14 +52,13 @@ static void dftAlongAxisWorker(const Mat& src,
                 baseSrc += (size_t)idxVal * stridesSrc[d];
                 baseDst += (size_t)idxVal * stridesDst[d];
             }
-            const Scalar* in = sp + baseSrc;
-            Scalar* out = dp + baseDst;
+            const T* in = sp + baseSrc;
+            T* out = dp + baseDst;
             fill(inRow, in, dimSizesSrc[axis], N, strideAxisSrc);
-            Mat outRow;
             int flags = flagsBase | (inverse ? (DFT_INVERSE | DFT_SCALE) : 0);
             cv::dft(inRow, outRow, flags);
             const ComplexVec* p = outRow.ptr<ComplexVec>(0);
-            for (int k = 0; k < N; ++k)
+            for (int k = 0; k < outN; ++k)
             {
                 size_t ok = (size_t)k * strideAxisDst;
                 out[ok + 0] = p[k][0];
@@ -67,7 +68,7 @@ static void dftAlongAxisWorker(const Mat& src,
     });
 }
 
-template<typename Scalar, typename ComplexVec>
+template<typename T, typename ComplexVec>
 static void runTypedDFT(const Mat& src,
                         Mat& dst,
                         const std::vector<int>& dimSizesSrc,
@@ -79,22 +80,23 @@ static void runTypedDFT(const Mat& src,
                         const size_t totalOuter,
                         const int axis,
                         const int N,
+                        const int outN,
                         const size_t strideAxisSrc,
                         const size_t strideAxisDst,
                         const bool srcHasComplex,
                         const bool inverse)
 {
-    const int matTypeReal = std::is_same<Scalar, float>::value ? CV_32F : CV_64F;
-    const int matTypeComplex = std::is_same<Scalar, float>::value ? CV_32FC2 : CV_64FC2;
+    const int matTypeReal = std::is_same<T, float>::value ? CV_32F : CV_64F;
+    const int matTypeComplex = std::is_same<T, float>::value ? CV_32FC2 : CV_64FC2;
 
     if (srcHasComplex)
     {
-        dftAlongAxisWorker<Scalar, ComplexVec>(
+        dftAlongAxisWorker<T, ComplexVec>(
             src, dst, dimSizesSrc, stridesSrc, stridesDst,
             iterDims, outerSizes, outerStep, totalOuter,
-            axis, N, strideAxisSrc, strideAxisDst,
+            axis, N, outN, strideAxisSrc, strideAxisDst,
             matTypeComplex, 0, inverse,
-            [&](Mat& inRow, const Scalar* in, int origLen, int len, size_t stride){
+            [&](Mat& inRow, const T* in, int origLen, int len, size_t stride){
                 ComplexVec* ptr = inRow.ptr<ComplexVec>(0);
                 for (int n = 0; n < origLen; ++n)
                 {
@@ -102,26 +104,26 @@ static void runTypedDFT(const Mat& src,
                     ptr[n][0] = in[offSrc + 0];
                     ptr[n][1] = in[offSrc + 1];
                 }
-                const ComplexVec zeroVal(Scalar(0), Scalar(0));
+                const ComplexVec zeroVal(T(0), T(0));
                 for (int n = origLen; n < len; ++n) ptr[n] = zeroVal;
             }
         );
     }
     else
     {
-        dftAlongAxisWorker<Scalar, ComplexVec>(
+        dftAlongAxisWorker<T, ComplexVec>(
             src, dst, dimSizesSrc, stridesSrc, stridesDst,
             iterDims, outerSizes, outerStep, totalOuter,
-            axis, N, strideAxisSrc, strideAxisDst,
+            axis, N, outN, strideAxisSrc, strideAxisDst,
             matTypeReal, DFT_COMPLEX_OUTPUT, inverse,
-            [&](Mat& inRow, const Scalar* in, int origLen, int len, size_t stride){
-                Scalar* ptr = inRow.ptr<Scalar>(0);
+            [&](Mat& inRow, const T* in, int origLen, int len, size_t stride){
+                T* ptr = inRow.ptr<T>(0);
                 for (int n = 0; n < origLen; ++n)
                 {
                     size_t offSrc = (size_t)n * stride;
                     ptr[n] = in[offSrc];
                 }
-                for (int n = origLen; n < len; ++n) ptr[n] = Scalar(0);
+                for (int n = origLen; n < len; ++n) ptr[n] = T(0);
             }
         );
     }
@@ -154,9 +156,7 @@ public:
                 out.back() = 2;
             else if (last != 2)
                 out.push_back(2);
-        }
-        if (dft_length > 0 && !out.empty())
-        {
+
             int ndims_in = (int)inshape.size();
             int ax = axis_attr;
             if (ax == INT_MIN)
@@ -165,7 +165,10 @@ public:
             }
             if (ax < 0) ax += ndims_in;
             if (ax >= 0 && ax < (int)out.size() - 1)
-                out[ax] = dft_length;
+            {
+                int signalLen = dft_length > 0 ? dft_length : (ax < (int)inshape.size() ? inshape[ax] : out[ax]);
+                out[ax] = onesided ? (signalLen / 2 + 1) : signalLen;
+            }
         }
         outputs.assign(1, out);
         return false;
@@ -175,14 +178,11 @@ public:
     {
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
 
         CV_Assert(!inputs.empty());
-        CV_Assert(outputs.size() == 1);
         CV_Assert(inputs[0].dims >= 1);
 
         const Mat &src = inputs[0];
-        Mat &dst = outputs[0];
 
         const int ndims = src.dims;
         CV_Assert(ndims >= 1);
@@ -201,20 +201,37 @@ public:
             if (axis < 0) axis += ndims;
         }
         CV_Assert(axis >= 0 && axis < (srcHasComplex ? ndims - 1 : ndims));
-        CV_Assert(!onesided);
+        if (onesided)
+        {
+            CV_Assert(!srcHasComplex);
+            CV_Assert(!inverse);
+        }
 
         std::vector<int> outSizesVec;
         outSizesVec.resize(srcHasComplex ? ndims : ndims + (srcLastIsOne ? 0 : 1));
         for (int i = 0; i < ndims; ++i) outSizesVec[i] = src.size[i];
         int complexDim = (int)outSizesVec.size() - 1;
         outSizesVec[complexDim] = 2;
-        if (dft_length > 0)
         {
             int dstDimsNoComplex = (int)outSizesVec.size() - 1;
             if (axis >= 0 && axis < dstDimsNoComplex)
-                outSizesVec[axis] = dft_length;
+            {
+                int signalLen = dft_length > 0 ? dft_length : outSizesVec[axis];
+                outSizesVec[axis] = onesided ? (signalLen / 2 + 1) : signalLen;
+            }
         }
-        dst.create((int)outSizesVec.size(), &outSizesVec[0], src.type());
+        MatShape outShape;
+        outShape.assign(outSizesVec.begin(), outSizesVec.end());
+        auto kind = outputs_arr.kind();
+        if (kind == _InputArray::STD_VECTOR_MAT) {
+            outputs_arr.getMatVecRef()[0].fit(outShape, src.type());
+        } else {
+            CV_Assert(kind == _InputArray::STD_VECTOR_UMAT);
+            outputs_arr.getUMatVecRef()[0].fit(outShape, src.type());
+        }
+        outputs_arr.getMatVector(outputs);
+        CV_Assert(outputs.size() == 1);
+        Mat &dst = outputs[0];
 
         std::vector<int> dimSizesSrc(ndims);
         for (int i = 0; i < ndims; ++i) {
@@ -224,18 +241,15 @@ public:
         for (int i = ndims - 2; i >= 0; --i) {
             stridesSrc[i] = stridesSrc[i + 1] * (size_t)dimSizesSrc[i + 1];
         }
-        const int ndimsDst = dst.dims;
-        std::vector<int> dimSizesDst(ndimsDst);
-        for (int i = 0; i < ndimsDst; ++i) {
-            dimSizesDst[i] = dst.size[i];
-        }
+        const int ndimsDst = (int)outSizesVec.size();
         std::vector<size_t> stridesDst(ndimsDst, 1);
         for (int i = ndimsDst - 2; i >= 0; --i) {
-            stridesDst[i] = stridesDst[i + 1] * (size_t)dimSizesDst[i + 1];
+            stridesDst[i] = stridesDst[i + 1] * (size_t)outSizesVec[i + 1];
         }
 
         int N = dimSizesSrc[axis];
         if (dft_length > 0) N = dft_length;
+        int outN = onesided ? (N / 2 + 1) : N;
         const size_t strideAxisSrc = stridesSrc[axis];
         const size_t strideAxisDst = stridesDst[axis];
         std::vector<int> iterDims;
@@ -262,14 +276,14 @@ public:
         {
             runTypedDFT<float, Vec2f>(src, dst, dimSizesSrc, stridesSrc, stridesDst,
                                       iterDims, outerSizes, outerStep, totalOuter,
-                                      axis, N, strideAxisSrc, strideAxisDst,
+                                      axis, N, outN, strideAxisSrc, strideAxisDst,
                                       srcHasComplex, inverse);
         }
         else if (depth == CV_64F)
         {
             runTypedDFT<double, Vec2d>(src, dst, dimSizesSrc, stridesSrc, stridesDst,
                                        iterDims, outerSizes, outerStep, totalOuter,
-                                       axis, N, strideAxisSrc, strideAxisDst,
+                                       axis, N, outN, strideAxisSrc, strideAxisDst,
                                        srcHasComplex, inverse);
         }
         else
