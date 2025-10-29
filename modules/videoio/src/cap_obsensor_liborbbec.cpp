@@ -90,7 +90,7 @@ VideoCapture_obsensor::VideoCapture_obsensor(int, const cv::VideoCaptureParamete
 #if ORBBEC_SDK_VERSION_MAJOR == 1
         colorFrame = frameset->colorFrame();
         depthFrame = frameset->depthFrame();
-#else 
+#else
         auto alignFrameSet = alignFilter->process(frameset);
         if (alignFrameSet) {
             colorFrame = alignFrameSet->as<ob::FrameSet>()->colorFrame();
