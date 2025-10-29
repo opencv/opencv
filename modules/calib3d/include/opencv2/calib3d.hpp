@@ -3426,7 +3426,7 @@ CV_EXPORTS_W cv::Mat estimateTranslation2D(InputArray from, InputArray to, Outpu
                                            double ransacReprojThreshold = 3,
                                            size_t maxIters = 2000, double confidence = 0.99,
                                            size_t refineIters = 0);
-                                          
+
 /** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
 An example program with homography decomposition.
 

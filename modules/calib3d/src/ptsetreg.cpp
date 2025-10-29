@@ -765,7 +765,7 @@ public:
 /*
  * Compute
  *      x      1  0     X     t_x
- *          =          *    + 
+ *          =          *    +
  *      y      0  1     Y     t_y
  *
  *  - every element in _m1 contains (X, Y), which are called source points
