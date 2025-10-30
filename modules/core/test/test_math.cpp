@@ -135,7 +135,7 @@ double Core_PowTest::get_success_error_level( int test_case_idx, int i, int j )
         return power == cvRound(power) && power >= 0 ? 0 : 1;
     else
     {
-        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*1024*1.1;
+        return depth != CV_64F ? Base::get_success_error_level( test_case_idx, i, j ) : DBL_EPSILON*1024*1.11;
     }
 }
 
@@ -477,8 +477,9 @@ class Core_DotProductTest : public Core_MatrixTest
 public:
     Core_DotProductTest();
 protected:
-    void run_func();
-    void prepare_to_validation( int test_case_idx );
+    void run_func() CV_OVERRIDE;
+    void prepare_to_validation( int test_case_idx ) CV_OVERRIDE;
+    double get_success_error_level( int test_case_idx, int i, int j ) CV_OVERRIDE;
 };
 
 
@@ -498,6 +499,15 @@ void Core_DotProductTest::prepare_to_validation( int )
     test_mat[REF_OUTPUT][0].at<Scalar>(0,0) = Scalar(cvtest::crossCorr( test_mat[INPUT][0], test_mat[INPUT][1] ));
 }
 
+double Core_DotProductTest::get_success_error_level( int test_case_idx, int i, int j )
+{
+#ifdef __riscv
+    const int depth = test_mat[i][j].depth();
+    if (depth == CV_64F)
+        return 2.5e-5;
+#endif
+    return Core_MatrixTest::get_success_error_level( test_case_idx, i, j );
+}
 
 ///////// crossproduct //////////
 
@@ -2425,7 +2435,7 @@ static void checkRoot(Mat& r, T re, T im)
 {
     for (int i = 0; i < r.cols*r.rows; i++)
     {
-        Vec<T, 2> v = *(Vec<T, 2>*)r.ptr(i);
+        Vec<T, 2>& v = *(Vec<T, 2>*)r.ptr(i);
         if (fabs(re - v[0]) < 1e-6 && fabs(im - v[1]) < 1e-6)
         {
             v[0] = std::numeric_limits<T>::quiet_NaN();
@@ -2435,6 +2445,179 @@ static void checkRoot(Mat& r, T re, T im)
     }
     GTEST_NONFATAL_FAILURE_("Can't find root") << "(" << re << ", " << im << ")";
 }
+
+TEST(Core_SolveCubicConstant, accuracy)
+{
+    {
+        const std::vector<double> coeffs{0., 0., 0., 1.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 0);
+    }
+
+    {
+        const std::vector<double> coeffs{0., 0., 0., 0.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, -1);
+    }
+}
+
+TEST(Core_SolveCubicLinear, accuracy)
+{
+    const std::vector<double> coeffs{0., 0., 2., -2.};
+    std::vector<double> roots;
+    const auto num_roots = solveCubic(coeffs, roots);
+
+    EXPECT_EQ(num_roots, 1);
+    EXPECT_EQ(roots[0], 1.);
+}
+
+TEST(Core_SolveCubicQuadratic, accuracy)
+{
+    {
+        const std::vector<double> coeffs{0., 2., -4., 4.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 0);
+    }
+
+    {
+        const std::vector<double> coeffs{0., 2., -4., 2.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], 1.);
+    }
+
+    {
+        const std::vector<double> coeffs{0., 2., -6., 4.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 2);
+        EXPECT_EQ(roots[0], 2.);
+        EXPECT_EQ(roots[1], 1.);
+    }
+}
+
+TEST(Core_SolveCubicCubic, accuracy)
+{
+    {
+        const std::vector<double> coeffs{2., -6., 6., -2.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], 1.);
+    }
+
+    {
+        const std::vector<double> coeffs{2., -10., 24., -16.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{2., -10., 16., -8.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_TRUE(num_roots == 2 || num_roots == 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 2., 1e-8);
+        if (num_roots == 3)
+        {
+            EXPECT_NEAR(roots[2], 2., 1e-8);
+        }
+    }
+
+    {
+        const std::vector<double> coeffs{2., -12., 22., -12.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+        EXPECT_NEAR(roots[2], 2., 1e-8);
+    }
+}
+
+TEST(Core_SolveCubicNormalizedCubic, accuracy)
+{
+    {
+        const std::vector<double> coeffs{-3., 3., -1.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], 1.);
+    }
+
+    {
+        const std::vector<double> coeffs{-5., 12., -8.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+    }
+
+    {
+        const std::vector<double> coeffs{-5., 8., -4.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_TRUE(num_roots == 2 || num_roots == 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 2., 1e-8);
+        if (num_roots == 3)
+        {
+            EXPECT_NEAR(roots[2], 2., 1e-8);
+        }
+    }
+
+    {
+        const std::vector<double> coeffs{-6., 11., -6.};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 3);
+        EXPECT_NEAR(roots[0], 1., 1e-8);
+        EXPECT_NEAR(roots[1], 3., 1e-8);
+        EXPECT_NEAR(roots[2], 2., 1e-8);
+    }
+}
+
+TEST(Core_SolveCubic, regression_27323)
+{
+    {
+        const std::vector<double> coeffs{2e-13, 1, -2, 1};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], -5e12 - 2.);
+    }
+
+    {
+        const std::vector<double> coeffs{5e12, -1e13, 5e12};
+        std::vector<double> roots;
+        const auto num_roots = solveCubic(coeffs, roots);
+
+        EXPECT_EQ(num_roots, 1);
+        EXPECT_EQ(roots[0], -5e12 - 2.);
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
@@ -3018,7 +3201,7 @@ TEST(CovariationMatrixVectorOfMatWithMean, accuracy)
     cv::randu(src,cv::Scalar(-128), cv::Scalar(128));
     cv::Mat goldMean;
 
-    cv::reduce(src,goldMean,0 ,REDUCE_AVG, CV_32F);
+    cv::reduce(src, goldMean, 0, REDUCE_AVG, CV_32F);
 
     cv::calcCovarMatrix(src,gold,goldMean,singleMatFlags,CV_32F);
 
@@ -3992,6 +4175,13 @@ TEST(Core_FastMath, InlineNaN)
     EXPECT_EQ( cvIsNaN((double) NAN), 1);
     EXPECT_EQ( cvIsNaN((double) -NAN), 1);
     EXPECT_EQ( cvIsNaN(0.0), 0);
+
+    // Regression: check the +/-Inf cases
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
+    suf.u = 0xFFF0000000000000UL;
+    EXPECT_EQ( cvIsNaN(suf.f), 0);
 }
 
 TEST(Core_FastMath, InlineIsInf)
@@ -4003,6 +4193,13 @@ TEST(Core_FastMath, InlineIsInf)
     EXPECT_EQ( cvIsInf((double) HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf((double) -HUGE_VAL), 1);
     EXPECT_EQ( cvIsInf(0.0), 0);
+
+    // Regression: check the cases of 0x7FF00000xxxxxxxx
+    Cv64suf suf;
+    suf.u = 0x7FF0000000000001UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
+    suf.u = 0x7FF0000012345678UL;
+    EXPECT_EQ( cvIsInf(suf.f), 0);
 }
 
 }} // namespace

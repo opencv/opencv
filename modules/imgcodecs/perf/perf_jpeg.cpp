@@ -5,6 +5,9 @@
 
 namespace opencv_test
 {
+
+#ifdef HAVE_JPEG
+
 using namespace perf;
 
 PERF_TEST(JPEG, Decode)
@@ -24,6 +27,23 @@ PERF_TEST(JPEG, Decode)
     SANITY_CHECK_NOTHING();
 }
 
+PERF_TEST(JPEG, Decode_rgb)
+{
+    String filename = getDataPath("stitching/boat1.jpg");
+
+    FILE *f = fopen(filename.c_str(), "rb");
+    fseek(f, 0, SEEK_END);
+    long len = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    vector<uchar> file_buf((size_t)len);
+    EXPECT_EQ(len, (long)fread(&file_buf[0], 1, (size_t)len, f));
+    fclose(f); f = NULL;
+
+    TEST_CYCLE() imdecode(file_buf, IMREAD_COLOR_RGB);
+
+    SANITY_CHECK_NOTHING();
+}
+
 PERF_TEST(JPEG, Encode)
 {
     String filename = getDataPath("stitching/boat1.jpg");
@@ -34,5 +54,7 @@ PERF_TEST(JPEG, Encode)
 
     SANITY_CHECK_NOTHING();
 }
+
+#endif // HAVE_JPEG
 
 } // namespace

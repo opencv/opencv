@@ -122,10 +122,7 @@
                     "}",
                     "\n"
                 ]
-            },
-            "checkHardwareSupport" : {"j_code" : [""], "jn_code" : [""], "cpp_code" : [""] },
-            "setUseOptimized"      : {"j_code" : [""], "jn_code" : [""], "cpp_code" : [""] },
-            "useOptimized"         : {"j_code" : [""], "jn_code" : [""], "cpp_code" : [""] }
+            }
         }
     },
     "func_arg_fix" : {
@@ -651,6 +648,31 @@
             "jni_var": "Vec3d %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2)",
             "suffix": "DDD"
         },
+        "Vec4i": {
+            "j_type": "int[]",
+            "jn_args": [
+                [
+                    "int",
+                    ".val[0]"
+                ],
+                [
+                    "int",
+                    ".val[1]"
+                ],
+                [
+                    "int",
+                    ".val[2]"
+                ],
+                [
+                    "int",
+                    ".val[3]"
+                ]
+            ],
+            "jn_type": "int[]",
+            "jni_type": "jintArray",
+            "jni_var": "Vec4i %(n)s(%(n)s_val0, %(n)s_val1, %(n)s_val2, %(n)s_val3)",
+            "suffix": "IIII"
+        },
         "c_string": {
             "j_type": "String",
             "jn_type": "String",
@@ -854,6 +876,15 @@
             "suffix": "J",
             "v_type": "Mat",
             "j_import": "org.opencv.core.MatOfByte"
+        },
+        "vector_vector_Mat": {
+            "j_type": "List<List<Mat>>",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "std::vector< std::vector<Mat> > %(n)s",
+            "suffix": "J",
+            "v_type": "vector_Mat",
+            "j_import": "org.opencv.core.Mat"
         },
         "vector_vector_DMatch": {
             "j_type": "List<MatOfDMatch>",

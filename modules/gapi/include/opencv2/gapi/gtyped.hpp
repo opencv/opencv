@@ -40,7 +40,7 @@ namespace detail
     //workaround for MSVC 19.0 bug
     template <typename T>
     auto make_default()->decltype(T{}) {return {};}
-}; // detail
+} // detail
 
 /**
  * @brief This class is a typed wrapper over a regular GComputation.

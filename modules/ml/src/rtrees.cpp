@@ -158,7 +158,7 @@ public:
         float* psamples = samples.ptr<float>();
         size_t sstep0 = samples.step1(), sstep1 = 1;
         Mat sample0, sample(nallvars, 1, CV_32F, &samplebuf[0]);
-        int predictFlags = _isClassifier ? (PREDICT_MAX_VOTE + RAW_OUTPUT) : PREDICT_SUM;
+        int predictFlags = _isClassifier ? (+PREDICT_MAX_VOTE + RAW_OUTPUT) : PREDICT_SUM;
 
         bool calcOOBError = eps > 0 || rparams.calcVarImportance;
         double max_response = 0.;
@@ -309,7 +309,7 @@ public:
     {
         CV_TRACE_FUNCTION();
         if( roots.empty() )
-            CV_Error( CV_StsBadArg, "RTrees have not been trained" );
+            CV_Error( cv::Error::StsBadArg, "RTrees have not been trained" );
 
         writeFormat(fs);
         writeParams(fs);
@@ -388,9 +388,10 @@ public:
             results = output.getMat();
             for( i = 0; i < nsamples; i++ )
             {
+                const Mat sampleRow = samples.row(i);
                 for( j = 0; j < ntrees; j++ )
                 {
-                    float val = predictTrees( Range(j, j+1), samples.row(i), flags);
+                    float val = predictTrees( Range(j, j+1), sampleRow, flags);
                     results.at<float> (i, j) = val;
                 }
             }
@@ -408,9 +409,10 @@ public:
             for( i = 0; i < nsamples; i++ )
             {
                 votes.clear();
+                const Mat sampleRow = samples.row(i);
                 for( j = 0; j < ntrees; j++ )
                 {
-                    int val = (int)predictTrees( Range(j, j+1), samples.row(i), flags);
+                    int val = (int)predictTrees( Range(j, j+1), sampleRow, flags);
                     votes.push_back(val);
                 }
 

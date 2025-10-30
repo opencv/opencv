@@ -40,7 +40,11 @@ endif()
 
 # --- CUDA ---
 if(WITH_CUDA)
-  include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDALanguage.cmake")
+  else()
+    include("${OpenCV_SOURCE_DIR}/cmake/OpenCVDetectCUDA.cmake")
+  endif()
   if(NOT HAVE_CUDA)
     message(WARNING "OpenCV is not able to find/configure CUDA SDK (required by WITH_CUDA).
 CUDA support will be disabled in OpenCV build.
@@ -80,7 +84,13 @@ if(WITH_EIGEN AND NOT HAVE_EIGEN)
         set(EIGEN_WORLD_VERSION ${EIGEN3_WORLD_VERSION})
         set(EIGEN_MAJOR_VERSION ${EIGEN3_MAJOR_VERSION})
         set(EIGEN_MINOR_VERSION ${EIGEN3_MINOR_VERSION})
-      else()  # Eigen config file
+      elseif(DEFINED Eigen3_VERSION_MAJOR) # Recommended package config variables
+        # see https://github.com/opencv/opencv/issues/27530
+        set(EIGEN_WORLD_VERSION ${Eigen3_VERSION_MAJOR})
+        set(EIGEN_MAJOR_VERSION ${Eigen3_VERSION_MINOR})
+        set(EIGEN_MINOR_VERSION ${Eigen3_VERSION_PATCH})
+      else()  # Deprecated package config variables
+        # Removed on master at https://gitlab.com/libeigen/eigen/-/commit/f2984cd0778dd0a1d7e74216d826eaff2bc6bfab
         set(EIGEN_WORLD_VERSION ${EIGEN3_VERSION_MAJOR})
         set(EIGEN_MAJOR_VERSION ${EIGEN3_VERSION_MINOR})
         set(EIGEN_MINOR_VERSION ${EIGEN3_VERSION_PATCH})
@@ -157,3 +167,56 @@ if(WITH_CLP)
     endif()
   endif()
 endif(WITH_CLP)
+
+# --- ARM KleidiCV
+if(WITH_KLEIDICV)
+  if(KLEIDICV_SOURCE_PATH AND EXISTS "${KLEIDICV_SOURCE_PATH}/adapters/opencv/CMakeLists.txt")
+    message(STATUS "Use external KleidiCV ${KLEIDICV_SOURCE_PATH}")
+    set(HAVE_KLEIDICV ON)
+  endif()
+  if(NOT HAVE_KLEIDICV)
+    include("${OpenCV_SOURCE_DIR}/hal/kleidicv/kleidicv.cmake")
+    download_kleidicv(KLEIDICV_SOURCE_PATH)
+    if(KLEIDICV_SOURCE_PATH)
+      set(HAVE_KLEIDICV ON)
+    endif()
+  endif()
+endif(WITH_KLEIDICV)
+
+# --- FastCV ---
+if(WITH_FASTCV)
+  if((EXISTS ${FastCV_INCLUDE_PATH}) AND (EXISTS ${FastCV_LIB_PATH}))
+    message(STATUS "Use external FastCV ${FastCV_INCLUDE_PATH}, ${FastCV_LIB_PATH}")
+    find_library(FASTCV_LIBRARY NAMES "fastcv"
+                 PATHS "${FastCV_LIB_PATH}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+    mark_as_advanced(FASTCV_LIBRARY)
+    if (FASTCV_LIBRARY)
+      set(HAVE_FASTCV TRUE CACHE BOOL "FastCV status")
+    else()
+      set(HAVE_FASTCV FALSE CACHE BOOL "FastCV status")
+    endif()
+  else()
+    include("${OpenCV_SOURCE_DIR}/3rdparty/fastcv/fastcv.cmake")
+    set(FCV_ROOT_DIR "${OpenCV_BINARY_DIR}/3rdparty/fastcv")
+    download_fastcv(${FCV_ROOT_DIR})
+    if(HAVE_FASTCV)
+      set(FastCV_INCLUDE_PATH "${FCV_ROOT_DIR}/inc" CACHE PATH "FastCV includes directory")
+      set(FastCV_LIB_PATH "${FCV_ROOT_DIR}/libs" CACHE PATH "FastCV library directory")
+      ocv_install_3rdparty_licenses(FastCV "${OpenCV_BINARY_DIR}/3rdparty/fastcv/LICENSE")
+      add_library(fastcv STATIC IMPORTED)
+      set_target_properties(fastcv PROPERTIES
+          IMPORTED_LINK_INTERFACE_LIBRARIES "dl"
+          IMPORTED_LOCATION "${FastCV_LIB_PATH}/libfastcv.a"
+      )
+      if (NOT BUILD_SHARED_LIBS)
+        install(FILES "${FastCV_LIB_PATH}/libfastcv.a" DESTINATION "${OPENCV_3P_LIB_INSTALL_PATH}" COMPONENT "dev")
+        set(FASTCV_LOCATION_PATH "${FastCV_LIB_PATH}/libfastcv.a" CACHE INTERNAL "" FORCE)
+        set(FASTCV_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/${OPENCV_3P_LIB_INSTALL_PATH}/libfastcv.a" CACHE INTERNAL "" FORCE)
+      endif()
+      set(FASTCV_LIBRARY "fastcv" CACHE PATH "FastCV library")
+      list(APPEND OPENCV_LINKER_LIBS ${FASTCV_LIBRARY})
+    else()
+      set(HAVE_FASTCV FALSE CACHE BOOL "FastCV status")
+    endif()
+  endif()
+endif(WITH_FASTCV)

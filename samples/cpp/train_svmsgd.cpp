@@ -29,7 +29,7 @@ struct Data
 bool doTrain(const Mat samples, const Mat responses, Mat &weights, float &shift);
 
 //function finds two points for drawing line (wx = 0)
-bool findPointsForLine(const Mat &weights, float shift, Point points[], int width, int height);
+bool findPointsForLine(const Mat &weights, float shift, Point points[2], int width, int height);
 
 // function finds cross point of line (wx = 0) and segment ( (y = HEIGHT, 0 <= x <= WIDTH) or (x = WIDTH, 0 <= y <= HEIGHT) )
 bool findCrossPointWithBorders(const Mat &weights, float shift, const std::pair<Point,Point> &segment, Point &crossPoint);

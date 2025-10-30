@@ -334,26 +334,11 @@ protected:
 
 
 // TODO: move to core::util?
-#ifdef CV_CXX11
 #include <thread>
 static void sleep_ms(int64 ms)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
-#elif defined(__linux__)
-#include <time.h>
-static void sleep_ms(int64 ms)
-{
-    nanosleep(ms * 1000 * 1000);
-}
-#elif defined _WIN32
-static void sleep_ms(int64 ms)
-{
-    Sleep(ms);
-}
-#else
-#error "Can not detect sleep_ms() implementation"
-#endif
 
 
 // Linux specific

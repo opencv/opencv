@@ -18,7 +18,7 @@ public:
     const cv::MatAllocator* stdAllocator;
 };
 
-extern NumpyAllocator g_numpyAllocator;
+inline NumpyAllocator& GetNumpyAllocator() {static NumpyAllocator gNumpyAllocator;return gNumpyAllocator;}
 
 //======================================================================================================================
 

@@ -97,7 +97,7 @@ public:
 
     /**
     */
-    RNNDescriptor(const Handle &handle, RNNMode mode, int hidden_size, int num_layers,
+    RNNDescriptor(const Handle &handle, RNNMode mode, int input_size, int hidden_size, int num_layers,
                   bool bidirectional, const DropoutDescriptor &dropoutDesc)
     {
         CUDA4DNN_CHECK_CUDNN(cudnnCreateRNNDescriptor(&descriptor));
@@ -119,12 +119,35 @@ public:
 
         try
         {
+#if CUDNN_MAJOR >= 9
+            CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v8(
+                                    descriptor,
+                                    algo,
+                                    rnn_mode,
+                                    CUDNN_RNN_DOUBLE_BIAS,
+                                    bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                                    CUDNN_LINEAR_INPUT, detail::get_data_type<T>(),
+                                    detail::get_data_type<T>(),
+                                    detail::get_data_type<T>() == CUDNN_DATA_HALF ? CUDNN_TENSOR_OP_MATH : CUDNN_DEFAULT_MATH,
+                                    input_size,
+                                    hidden_size,
+                                    hidden_size,
+                                    num_layers,
+                                    dropoutDesc.get(),
+                                    0)); // What other flags do we might want here?
+#else
             CUDA4DNN_CHECK_CUDNN(cudnnSetRNNDescriptor_v6(
-                handle.get(), descriptor, hidden_size, num_layers, dropoutDesc.get(),
-                CUDNN_LINEAR_INPUT, bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
-                rnn_mode,
-                algo, //CUDNN_RNN_ALGO_STANDARD,
-                detail::get_data_type<T>()));
+                                    handle.get(),
+                                    descriptor,
+                                    hidden_size,
+                                    num_layers,
+                                    dropoutDesc.get(),
+                                    CUDNN_LINEAR_INPUT,
+                                    bidirectional ? CUDNN_BIDIRECTIONAL : CUDNN_UNIDIRECTIONAL,
+                                    rnn_mode,
+                                    algo,
+                                    detail::get_data_type<T>()));
+#endif
         }
         catch (...)
         {
@@ -158,16 +181,34 @@ private:
     cudnnRNNAlgo_t algo{CUDNN_RNN_ALGO_STANDARD};
 };
 
-template<class T>
-size_t getRNNWorkspaceSize(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
-                           const int seqLength, const TensorDescriptorsArray<T> &inputDesc)
+#if CUDNN_MAJOR >= 9
+template <class T>
+void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
+                 cudnnRNNDataDescriptor_t xDesc, DevicePtr<const T> x,
+                 cudnnRNNDataDescriptor_t yDesc, DevicePtr<T> y,
+                 cudnnTensorDescriptor_t hDesc, DevicePtr<const T> hx, DevicePtr<T> hy,
+                 cudnnTensorDescriptor_t cDesc, DevicePtr<const T> cx, DevicePtr<T> cy,
+                 size_t weightSpaceSize, DevicePtr<const T> weightSpace,
+                 size_t cudnn_WorkspaceSize, DevicePtr<T> cudnn_Workspace,
+                 size_t reserveSpaceSize, DevicePtr<T> reserveSpace)
 {
-    size_t workSize;
-    CUDA4DNN_CHECK_CUDNN(cudnnGetRNNWorkspaceSize(handle.get(), rnnDesc.get(), seqLength,
-                                                  inputDesc.get().data(), &workSize));
-    return workSize;
+    CV_Assert(handle);
+
+    std::cout << "cudnn_WorkspaceSize: " << cudnn_WorkspaceSize << std::endl;
+    std::cout << "reserveSpaceSize: " << reserveSpaceSize << std::endl;
+
+    CUDA4DNN_CHECK_CUDNN(cudnnRNNForward(
+        handle.get(), rnnDesc.get(), CUDNN_FWD_MODE_INFERENCE,
+        nullptr, // docs say use this as null on >= 8.9.1
+        xDesc, x.get(), yDesc, y.get(),
+        hDesc, hx.get(), hy.get(),
+        cDesc, cx.get(), cy.get(),
+        weightSpaceSize, weightSpace.get(),
+        cudnn_WorkspaceSize, cudnn_Workspace.get(),
+        reserveSpaceSize, reserveSpace.get()));
 }
 
+#else
 template<class T>
 void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
                  const FilterDescriptor<T> &filterDesc, DevicePtr<const T> filterPtr,
@@ -189,6 +230,7 @@ void LSTMForward(const Handle &handle, const RNNDescriptor<T> &rnnDesc,
                                                   initialCDesc.get(), ycOutputPtr.get(),
                                                   static_cast<void*>(workspace.get()), workspace.size_in_bytes()));
 }
+#endif
 
 }}}}} /* namespace cv::dnn::cuda4dnn::csl::cudnn */
 

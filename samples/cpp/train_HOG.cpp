@@ -47,7 +47,7 @@ void convert_to_ml( const vector< Mat > & train_samples, Mat& trainData )
     //--Convert data
     const int rows = (int)train_samples.size();
     const int cols = (int)std::max( train_samples[0].cols, train_samples[0].rows );
-    Mat tmp( 1, cols, CV_32FC1 ); //< used for transposition if needed
+    Mat tmp( 1, cols, CV_32FC1 ); ///< used for transposition if needed
     trainData = Mat( rows, cols, CV_32FC1 );
 
     for( size_t i = 0 ; i < train_samples.size(); ++i )

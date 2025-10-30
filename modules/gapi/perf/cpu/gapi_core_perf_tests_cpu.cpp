@@ -252,6 +252,7 @@ INSTANTIATE_TEST_CASE_P(Split4PerfTestCPU, Split4PerfTest,
 INSTANTIATE_TEST_CASE_P(Merge3PerfTestCPU, Merge3PerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8U),
             Values(cv::compile_args(CORE_CPU))));
 
 INSTANTIATE_TEST_CASE_P(Merge4PerfTestCPU, Merge4PerfTest,

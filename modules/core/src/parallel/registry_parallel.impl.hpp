@@ -111,7 +111,7 @@ protected:
     bool readPrioritySettings()
     {
         bool hasChanges = false;
-        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_PARALLEL_PRIORITY_LIST", NULL);
+        cv::String prioritized_backends = utils::getConfigurationParameterString("OPENCV_PARALLEL_PRIORITY_LIST");
         if (prioritized_backends.empty())
             return hasChanges;
         CV_LOG_INFO(NULL, "core(parallel): Configured priority list (OPENCV_PARALLEL_PRIORITY_LIST): " << prioritized_backends);

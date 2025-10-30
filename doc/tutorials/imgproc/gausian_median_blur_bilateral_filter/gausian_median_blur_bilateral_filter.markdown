@@ -133,7 +133,7 @@ Explanation
 Let's check the OpenCV functions that involve only the smoothing procedure, since the rest is
 already known by now.
 
-#### Normalized Block Filter:
+### Normalized Block Filter:
 
 -   OpenCV offers the function **blur()** to perform smoothing with this filter.
     We specify 4 arguments (more details, check the Reference):
@@ -157,7 +157,7 @@ already known by now.
 @snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py blur
 @end_toggle
 
-#### Gaussian Filter:
+### Gaussian Filter:
 
 -   It is performed by the function **GaussianBlur()** :
     Here we use 4 arguments (more details, check the OpenCV reference):
@@ -183,7 +183,7 @@ already known by now.
 @snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py gaussianblur
 @end_toggle
 
-#### Median Filter:
+### Median Filter:
 
 -   This filter is provided by the **medianBlur()** function:
     We use three arguments:
@@ -203,7 +203,7 @@ already known by now.
 @snippet samples/python/tutorial_code/imgProc/Smoothing/smoothing.py medianblur
 @end_toggle
 
-#### Bilateral Filter
+### Bilateral Filter
 
 -   Provided by OpenCV function **bilateralFilter()**
     We use 5 arguments:

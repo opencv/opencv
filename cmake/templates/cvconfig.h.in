@@ -72,11 +72,14 @@
 #cmakedefine HAVE_OPENJPEG
 #cmakedefine HAVE_JASPER
 
+/* AVIF codec */
+#cmakedefine HAVE_AVIF
+
 /* IJG JPEG codec */
 #cmakedefine HAVE_JPEG
 
-/* libpng/png.h needs to be included */
-#cmakedefine HAVE_LIBPNG_PNG_H
+/* JPEG XL codec */
+#cmakedefine HAVE_JPEGXL
 
 /* GDCM DICOM codec */
 #cmakedefine HAVE_GDCM

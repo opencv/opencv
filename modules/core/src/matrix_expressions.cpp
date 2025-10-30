@@ -21,7 +21,7 @@ static void checkOperandsExist(const Mat& a)
 {
     if (a.empty())
     {
-        CV_Error(CV_StsBadArg, "Matrix operand is an empty matrix.");
+        CV_Error(cv::Error::StsBadArg, "Matrix operand is an empty matrix.");
     }
 }
 
@@ -29,7 +29,7 @@ static void checkOperandsExist(const Mat& a, const Mat& b)
 {
     if (a.empty() || b.empty())
     {
-        CV_Error(CV_StsBadArg, "One or more matrix operands are empty.");
+        CV_Error(cv::Error::StsBadArg, "One or more matrix operands are empty.");
     }
 }
 
@@ -554,7 +554,7 @@ void MatOp::matmul(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const
 
         if( isT(e1) )
         {
-            flags = CV_GEMM_A_T;
+            flags = cv::GEMM_1_T;
             scale = e1.alpha;
             m1 = e1.a;
         }
@@ -568,7 +568,7 @@ void MatOp::matmul(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const
 
         if( isT(e2) )
         {
-            flags |= CV_GEMM_B_T;
+            flags |= cv::GEMM_2_T;
             scale *= e2.alpha;
             m2 = e2.a;
         }
@@ -1456,7 +1456,7 @@ void MatOp_Bin::assign(const MatExpr& e, Mat& m, int _type) const
     else if( e.flags == 'a' && !e.b.data )
         cv::absdiff(e.a, e.s, dst);
     else
-        CV_Error(CV_StsError, "Unknown operation");
+        CV_Error(cv::Error::StsError, "Unknown operation");
 
     if( dst.data != m.data )
         dst.convertTo(m, _type);
@@ -1574,10 +1574,10 @@ void MatOp_GEMM::add(const MatExpr& e1, const MatExpr& e2, MatExpr& res) const
     double alpha1 = i1 ? 1 : e1.alpha, alpha2 = i2 ? 1 : e2.alpha;
 
     if( isMatProd(e1) && (i2 || isScaled(e2) || isT(e2)) )
-        MatOp_GEMM::makeExpr(res, (e1.flags & ~CV_GEMM_C_T)|(isT(e2) ? CV_GEMM_C_T : 0),
+        MatOp_GEMM::makeExpr(res, (e1.flags & ~cv::GEMM_3_T)|(isT(e2) ? cv::GEMM_3_T : 0),
                              e1.a, e1.b, alpha1, e2.a, alpha2);
     else if( isMatProd(e2) && (i1 || isScaled(e1) || isT(e1)) )
-        MatOp_GEMM::makeExpr(res, (e2.flags & ~CV_GEMM_C_T)|(isT(e1) ? CV_GEMM_C_T : 0),
+        MatOp_GEMM::makeExpr(res, (e2.flags & ~cv::GEMM_3_T)|(isT(e1) ? cv::GEMM_3_T : 0),
                              e2.a, e2.b, alpha2, e1.a, alpha1);
     else if( this == e2.op )
         MatOp::add(e1, e2, res);
@@ -1593,10 +1593,10 @@ void MatOp_GEMM::subtract(const MatExpr& e1, const MatExpr& e2, MatExpr& res) co
     double alpha1 = i1 ? 1 : e1.alpha, alpha2 = i2 ? 1 : e2.alpha;
 
     if( isMatProd(e1) && (i2 || isScaled(e2) || isT(e2)) )
-        MatOp_GEMM::makeExpr(res, (e1.flags & ~CV_GEMM_C_T)|(isT(e2) ? CV_GEMM_C_T : 0),
+        MatOp_GEMM::makeExpr(res, (e1.flags & ~cv::GEMM_3_T)|(isT(e2) ? cv::GEMM_3_T : 0),
                              e1.a, e1.b, alpha1, e2.a, -alpha2);
     else if( isMatProd(e2) && (i1 || isScaled(e1) || isT(e1)) )
-        MatOp_GEMM::makeExpr(res, (e2.flags & ~CV_GEMM_C_T)|(isT(e1) ? CV_GEMM_C_T : 0),
+        MatOp_GEMM::makeExpr(res, (e2.flags & ~cv::GEMM_3_T)|(isT(e1) ? cv::GEMM_3_T : 0),
                             e2.a, e2.b, -alpha2, e1.a, alpha1);
     else if( this == e2.op )
         MatOp::subtract(e1, e2, res);
@@ -1618,9 +1618,9 @@ void MatOp_GEMM::transpose(const MatExpr& e, MatExpr& res) const
     CV_INSTRUMENT_REGION();
 
     res = e;
-    res.flags = (!(e.flags & CV_GEMM_A_T) ? CV_GEMM_B_T : 0) |
-                (!(e.flags & CV_GEMM_B_T) ? CV_GEMM_A_T : 0) |
-                (!(e.flags & CV_GEMM_C_T) ? CV_GEMM_C_T : 0);
+    res.flags = (!(e.flags & cv::GEMM_1_T) ? cv::GEMM_2_T : 0) |
+                (!(e.flags & cv::GEMM_2_T) ? cv::GEMM_1_T : 0) |
+                (!(e.flags & cv::GEMM_3_T) ? cv::GEMM_3_T : 0);
     swap(res.a, res.b);
 }
 
@@ -1691,7 +1691,7 @@ void MatOp_Initializer::assign(const MatExpr& e, Mat& m, int _type) const
     else if( e.flags == '1' )
         m = Scalar(e.alpha);
     else
-        CV_Error(CV_StsError, "Invalid matrix initializer type");
+        CV_Error(cv::Error::StsError, "Invalid matrix initializer type");
 }
 
 void MatOp_Initializer::multiply(const MatExpr& e, double s, MatExpr& res) const

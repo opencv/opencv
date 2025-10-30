@@ -56,30 +56,30 @@ icvTriangulatePoints(CvMat* projMatr1, CvMat* projMatr2, CvMat* projPoints1, CvM
     if( projMatr1 == 0 || projMatr2 == 0 ||
       projPoints1 == 0 || projPoints2 == 0 ||
       points4D == 0)
-      CV_Error( CV_StsNullPtr, "Some of parameters is a NULL pointer" );
+      CV_Error( cv::Error::StsNullPtr, "Some of parameters is a NULL pointer" );
 
     if( !CV_IS_MAT(projMatr1) || !CV_IS_MAT(projMatr2) ||
       !CV_IS_MAT(projPoints1) || !CV_IS_MAT(projPoints2) ||
       !CV_IS_MAT(points4D) )
-      CV_Error( CV_StsUnsupportedFormat, "Input parameters must be matrices" );
+      CV_Error( cv::Error::StsUnsupportedFormat, "Input parameters must be matrices" );
 
     int numPoints = projPoints1->cols;
 
     if( numPoints < 1 )
-        CV_Error( CV_StsOutOfRange, "Number of points must be more than zero" );
+        CV_Error( cv::Error::StsOutOfRange, "Number of points must be more than zero" );
 
     if( projPoints2->cols != numPoints || points4D->cols != numPoints )
-        CV_Error( CV_StsUnmatchedSizes, "Number of points must be the same" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "Number of points must be the same" );
 
     if( projPoints1->rows != 2 || projPoints2->rows != 2)
-        CV_Error( CV_StsUnmatchedSizes, "Number of proj points coordinates must be == 2" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "Number of proj points coordinates must be == 2" );
 
     if( points4D->rows != 4 )
-        CV_Error( CV_StsUnmatchedSizes, "Number of world points coordinates must be == 4" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "Number of world points coordinates must be == 4" );
 
     if( projMatr1->cols != 4 || projMatr1->rows != 3 ||
        projMatr2->cols != 4 || projMatr2->rows != 3)
-        CV_Error( CV_StsUnmatchedSizes, "Size of projection matrices must be 3x4" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "Size of projection matrices must be 3x4" );
 
     // preallocate SVD matrices on stack
     cv::Matx<double, 4, 4> matrA;
@@ -147,30 +147,30 @@ icvCorrectMatches(CvMat *F_, CvMat *points1_, CvMat *points2_, CvMat *new_points
     cv::Ptr<CvMat> F;
 
     if (!CV_IS_MAT(F_) || !CV_IS_MAT(points1_) || !CV_IS_MAT(points2_) )
-        CV_Error( CV_StsUnsupportedFormat, "Input parameters must be matrices" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "Input parameters must be matrices" );
     if (!( F_->cols == 3 && F_->rows == 3))
-        CV_Error( CV_StsUnmatchedSizes, "The fundamental matrix must be a 3x3 matrix");
+        CV_Error( cv::Error::StsUnmatchedSizes, "The fundamental matrix must be a 3x3 matrix");
     if (!(((F_->type & CV_MAT_TYPE_MASK) >> 3) == 0 ))
-        CV_Error( CV_StsUnsupportedFormat, "The fundamental matrix must be a single-channel matrix" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "The fundamental matrix must be a single-channel matrix" );
     if (!(points1_->rows == 1 && points2_->rows == 1 && points1_->cols == points2_->cols))
-        CV_Error( CV_StsUnmatchedSizes, "The point-matrices must have one row, and an equal number of columns" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The point-matrices must have one row, and an equal number of columns" );
     if (((points1_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
-        CV_Error( CV_StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The first set of points must contain two channels; one for x and one for y" );
     if (((points2_->type & CV_MAT_TYPE_MASK) >> 3) != 1 )
-        CV_Error( CV_StsUnmatchedSizes, "The second set of points must contain two channels; one for x and one for y" );
+        CV_Error( cv::Error::StsUnmatchedSizes, "The second set of points must contain two channels; one for x and one for y" );
     if (new_points1 != NULL) {
         CV_Assert(CV_IS_MAT(new_points1));
         if (new_points1->cols != points1_->cols || new_points1->rows != 1)
-            CV_Error( CV_StsUnmatchedSizes, "The first output matrix must have the same dimensions as the input matrices" );
+            CV_Error( cv::Error::StsUnmatchedSizes, "The first output matrix must have the same dimensions as the input matrices" );
         if (CV_MAT_CN(new_points1->type) != 2)
-            CV_Error( CV_StsUnsupportedFormat, "The first output matrix must have two channels; one for x and one for y" );
+            CV_Error( cv::Error::StsUnsupportedFormat, "The first output matrix must have two channels; one for x and one for y" );
     }
     if (new_points2 != NULL) {
         CV_Assert(CV_IS_MAT(new_points2));
         if (new_points2->cols != points2_->cols || new_points2->rows != 1)
-            CV_Error( CV_StsUnmatchedSizes, "The second output matrix must have the same dimensions as the input matrices" );
+            CV_Error( cv::Error::StsUnmatchedSizes, "The second output matrix must have the same dimensions as the input matrices" );
         if (CV_MAT_CN(new_points2->type) != 2)
-            CV_Error( CV_StsUnsupportedFormat, "The second output matrix must have two channels; one for x and one for y" );
+            CV_Error( cv::Error::StsUnsupportedFormat, "The second output matrix must have two channels; one for x and one for y" );
     }
 
     // Make sure F uses double precision

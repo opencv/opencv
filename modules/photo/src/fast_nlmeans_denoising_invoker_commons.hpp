@@ -174,7 +174,7 @@ public:
     static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
     {
         return calcDist<T>(a_down, b_down) - calcDist<T>(a_up, b_up);
-    };
+    }
 
     template <typename T, typename WT>
     static inline WT calcWeight(double dist, const float *h,
@@ -296,7 +296,7 @@ public:
     static inline int calcUpDownDist(T a_up, T a_down, T b_up, T b_down)
     {
         return calcUpDownDist_<T>::f(a_up, a_down, b_up, b_down);
-    };
+    }
 
     template <typename T, typename WT>
     static inline WT calcWeight(double dist, const float *h,

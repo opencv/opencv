@@ -50,4 +50,71 @@ TEST(Imgproc_Subdiv2D_getTriangleList, regression_5788)
     EXPECT_EQ(trig_cnt, 105);
 }
 
-}};
+TEST(Imgproc_Subdiv2D, issue_25696) {
+    std::vector<cv::Point2f> points{
+        {0, 0}, {40, 40}, {84, 104}, {86, 108}
+    };
+
+    cv::Rect subdivRect{cv::Point{-10, -10}, cv::Point{96, 118}};
+    cv::Subdiv2D subdiv{subdivRect};
+    subdiv.insert(points);
+
+    std::vector<cv::Vec6f> triangles;
+    subdiv.getTriangleList(triangles);
+
+    ASSERT_EQ(static_cast<size_t>(2), triangles.size());
+}
+
+// Initialization test
+TEST(Imgproc_Subdiv2D, rect2f_constructor_and_init)
+{
+    cv::Rect2f rect_f(0.5f, 1.5f, 100.7f, 200.3f);
+    cv::Subdiv2D subdiv_f(rect_f);
+
+    cv::Point2f pt1(50.2f, 80.1f);
+    cv::Point2f pt2(75.8f, 120.9f);
+    cv::Point2f pt3(25.5f, 150.3f);
+
+    EXPECT_NO_THROW(subdiv_f.insert(pt1));
+    EXPECT_NO_THROW(subdiv_f.insert(pt2));
+    EXPECT_NO_THROW(subdiv_f.insert(pt3));
+
+    cv::Subdiv2D subdiv_init;
+
+    EXPECT_NO_THROW(subdiv_init.initDelaunay(rect_f));
+    EXPECT_NO_THROW(subdiv_init.insert(pt1));
+    EXPECT_NO_THROW(subdiv_init.insert(pt2));
+    EXPECT_NO_THROW(subdiv_init.insert(pt3));
+
+    std::vector<cv::Vec6f> triangles;
+
+    EXPECT_NO_THROW(subdiv_f.getTriangleList(triangles));
+    EXPECT_GT(triangles.size(), 0u);
+}
+
+// test with small coordinates
+TEST(Imgproc_Subdiv2D, rect2f_edge_cases)
+{
+    cv::Rect2f small_rect(0.0f, 0.0f, 0.1f, 0.1f);
+    cv::Subdiv2D subdiv_small(small_rect);
+
+    cv::Point2f small_pt(0.05f, 0.05f);
+    EXPECT_NO_THROW(subdiv_small.insert(small_pt));
+    cv::Rect2f float_rect(10.25f, 20.75f, 50.5f, 30.25f);
+
+    cv::Subdiv2D subdiv_float(float_rect);
+
+    cv::Point2f float_pt1(35.125f, 35.875f);
+    cv::Point2f float_pt2(45.375f, 25.625f);
+    cv::Point2f float_pt3(55.750f, 45.125f);
+
+    EXPECT_NO_THROW(subdiv_float.insert(float_pt1));
+    EXPECT_NO_THROW(subdiv_float.insert(float_pt2));
+    EXPECT_NO_THROW(subdiv_float.insert(float_pt3));
+
+    std::vector<cv::Vec6f> triangles;
+
+    subdiv_float.getTriangleList(triangles);
+    EXPECT_GT(triangles.size(), 0u);
+}
+}}

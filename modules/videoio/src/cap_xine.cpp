@@ -213,13 +213,13 @@ class XINECapture : public IVideoCapture
 
         switch (property_id)
         {
-        case CV_CAP_PROP_POS_MSEC: return res ? pos_t : 0;
-        case CV_CAP_PROP_POS_FRAMES: return frame_number;
-        case CV_CAP_PROP_POS_AVI_RATIO: return length && res ? pos_l / 65535.0 : 0.0;
-        case CV_CAP_PROP_FRAME_WIDTH: return size.width;
-        case CV_CAP_PROP_FRAME_HEIGHT: return size.height;
-        case CV_CAP_PROP_FPS: return frame_rate;
-        case CV_CAP_PROP_FOURCC: return (double)xine_get_stream_info(stream, XINE_STREAM_INFO_VIDEO_FOURCC);
+        case CAP_PROP_POS_MSEC: return res ? pos_t : 0;
+        case CAP_PROP_POS_FRAMES: return frame_number;
+        case CAP_PROP_POS_AVI_RATIO: return length && res ? pos_l / 65535.0 : 0.0;
+        case CAP_PROP_FRAME_WIDTH: return size.width;
+        case CAP_PROP_FRAME_HEIGHT: return size.height;
+        case CAP_PROP_FPS: return frame_rate;
+        case CAP_PROP_FOURCC: return (double)xine_get_stream_info(stream, XINE_STREAM_INFO_VIDEO_FOURCC);
         }
         return 0;
     }
@@ -230,9 +230,9 @@ class XINECapture : public IVideoCapture
         CV_Assert(vo_port);
         switch (property_id)
         {
-        case CV_CAP_PROP_POS_MSEC: return seekTime((int)value);
-        case CV_CAP_PROP_POS_FRAMES: return seekFrame((int)value);
-        case CV_CAP_PROP_POS_AVI_RATIO: return seekRatio(value);
+        case CAP_PROP_POS_MSEC: return seekTime((int)value);
+        case CAP_PROP_POS_FRAMES: return seekFrame((int)value);
+        case CAP_PROP_POS_AVI_RATIO: return seekRatio(value);
         default: return false;
         }
     }

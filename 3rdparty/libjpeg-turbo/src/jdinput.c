@@ -3,22 +3,25 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
- * Copyright (C) 2010, 2016, 2018, 2022, D. R. Commander.
+ * Copyright (C) 2010, 2016, 2018, 2022, 2024, D. R. Commander.
  * Copyright (C) 2015, Google, Inc.
  * For conditions of distribution and use, see the accompanying README.ijg
  * file.
  *
  * This file contains input control logic for the JPEG decompressor.
  * These routines are concerned with controlling the decompressor's input
- * processing (marker reading and coefficient decoding).  The actual input
- * reading is done in jdmarker.c, jdhuff.c, and jdphuff.c.
+ * processing (marker reading and coefficient/difference decoding).
+ * The actual input reading is done in jdmarker.c, jdhuff.c, jdphuff.c,
+ * and jdlhuff.c.
  */
 
 #define JPEG_INTERNALS
 #include "jinclude.h"
 #include "jpeglib.h"
-#include "jpegcomp.h"
+#include "jpegapicomp.h"
 
 
 /* Private state */
@@ -46,15 +49,26 @@ initial_setup(j_decompress_ptr cinfo)
 {
   int ci;
   jpeg_component_info *compptr;
+  int data_unit = cinfo->master->lossless ? 1 : DCTSIZE;
 
   /* Make sure image isn't bigger than I can handle */
   if ((long)cinfo->image_height > (long)JPEG_MAX_DIMENSION ||
       (long)cinfo->image_width > (long)JPEG_MAX_DIMENSION)
     ERREXIT1(cinfo, JERR_IMAGE_TOO_BIG, (unsigned int)JPEG_MAX_DIMENSION);
 
-  /* For now, precision must match compiled-in value... */
-  if (cinfo->data_precision != BITS_IN_JSAMPLE)
-    ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  /* Lossy JPEG images must have 8 or 12 bits per sample.  Lossless JPEG images
+   * can have 2 to 16 bits per sample.
+   */
+#ifdef D_LOSSLESS_SUPPORTED
+  if (cinfo->master->lossless) {
+    if (cinfo->data_precision < 2 || cinfo->data_precision > 16)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  } else
+#endif
+  {
+    if (cinfo->data_precision != 8 && cinfo->data_precision != 12)
+      ERREXIT1(cinfo, JERR_BAD_PRECISION, cinfo->data_precision);
+  }
 
   /* Check that number of components won't exceed internal array sizes */
   if (cinfo->num_components > MAX_COMPONENTS)
@@ -78,36 +92,36 @@ initial_setup(j_decompress_ptr cinfo)
   }
 
 #if JPEG_LIB_VERSION >= 80
-  cinfo->block_size = DCTSIZE;
+  cinfo->block_size = data_unit;
   cinfo->natural_order = jpeg_natural_order;
   cinfo->lim_Se = DCTSIZE2 - 1;
 #endif
 
-  /* We initialize DCT_scaled_size and min_DCT_scaled_size to DCTSIZE.
-   * In the full decompressor, this will be overridden by jdmaster.c;
+  /* We initialize DCT_scaled_size and min_DCT_scaled_size to DCTSIZE in lossy
+   * mode.  In the full decompressor, this will be overridden by jdmaster.c;
    * but in the transcoder, jdmaster.c is not used, so we must do it here.
    */
 #if JPEG_LIB_VERSION >= 70
-  cinfo->min_DCT_h_scaled_size = cinfo->min_DCT_v_scaled_size = DCTSIZE;
+  cinfo->min_DCT_h_scaled_size = cinfo->min_DCT_v_scaled_size = data_unit;
 #else
-  cinfo->min_DCT_scaled_size = DCTSIZE;
+  cinfo->min_DCT_scaled_size = data_unit;
 #endif
 
   /* Compute dimensions of components */
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
 #if JPEG_LIB_VERSION >= 70
-    compptr->DCT_h_scaled_size = compptr->DCT_v_scaled_size = DCTSIZE;
+    compptr->DCT_h_scaled_size = compptr->DCT_v_scaled_size = data_unit;
 #else
-    compptr->DCT_scaled_size = DCTSIZE;
+    compptr->DCT_scaled_size = data_unit;
 #endif
-    /* Size in DCT blocks */
+    /* Size in data units */
     compptr->width_in_blocks = (JDIMENSION)
       jdiv_round_up((long)cinfo->image_width * (long)compptr->h_samp_factor,
-                    (long)(cinfo->max_h_samp_factor * DCTSIZE));
+                    (long)(cinfo->max_h_samp_factor * data_unit));
     compptr->height_in_blocks = (JDIMENSION)
       jdiv_round_up((long)cinfo->image_height * (long)compptr->v_samp_factor,
-                    (long)(cinfo->max_v_samp_factor * DCTSIZE));
+                    (long)(cinfo->max_v_samp_factor * data_unit));
     /* Set the first and last MCU columns to decompress from multi-scan images.
      * By default, decompress all of the MCU columns.
      */
@@ -133,7 +147,7 @@ initial_setup(j_decompress_ptr cinfo)
   /* Compute number of fully interleaved MCU rows. */
   cinfo->total_iMCU_rows = (JDIMENSION)
     jdiv_round_up((long)cinfo->image_height,
-                  (long)(cinfo->max_v_samp_factor * DCTSIZE));
+                  (long)(cinfo->max_v_samp_factor * data_unit));
 
   /* Decide whether file contains multiple scans */
   if (cinfo->comps_in_scan < cinfo->num_components || cinfo->progressive_mode)
@@ -150,6 +164,7 @@ per_scan_setup(j_decompress_ptr cinfo)
 {
   int ci, mcublks, tmp;
   jpeg_component_info *compptr;
+  int data_unit = cinfo->master->lossless ? 1 : DCTSIZE;
 
   if (cinfo->comps_in_scan == 1) {
 
@@ -160,14 +175,14 @@ per_scan_setup(j_decompress_ptr cinfo)
     cinfo->MCUs_per_row = compptr->width_in_blocks;
     cinfo->MCU_rows_in_scan = compptr->height_in_blocks;
 
-    /* For noninterleaved scan, always one block per MCU */
+    /* For noninterleaved scan, always one data unit per MCU */
     compptr->MCU_width = 1;
     compptr->MCU_height = 1;
     compptr->MCU_blocks = 1;
     compptr->MCU_sample_width = compptr->_DCT_scaled_size;
     compptr->last_col_width = 1;
     /* For noninterleaved scans, it is convenient to define last_row_height
-     * as the number of block rows present in the last iMCU row.
+     * as the number of data unit rows present in the last iMCU row.
      */
     tmp = (int)(compptr->height_in_blocks % compptr->v_samp_factor);
     if (tmp == 0) tmp = compptr->v_samp_factor;
@@ -187,22 +202,22 @@ per_scan_setup(j_decompress_ptr cinfo)
     /* Overall image size in MCUs */
     cinfo->MCUs_per_row = (JDIMENSION)
       jdiv_round_up((long)cinfo->image_width,
-                    (long)(cinfo->max_h_samp_factor * DCTSIZE));
+                    (long)(cinfo->max_h_samp_factor * data_unit));
     cinfo->MCU_rows_in_scan = (JDIMENSION)
       jdiv_round_up((long)cinfo->image_height,
-                    (long)(cinfo->max_v_samp_factor * DCTSIZE));
+                    (long)(cinfo->max_v_samp_factor * data_unit));
 
     cinfo->blocks_in_MCU = 0;
 
     for (ci = 0; ci < cinfo->comps_in_scan; ci++) {
       compptr = cinfo->cur_comp_info[ci];
-      /* Sampling factors give # of blocks of component in each MCU */
+      /* Sampling factors give # of data units of component in each MCU */
       compptr->MCU_width = compptr->h_samp_factor;
       compptr->MCU_height = compptr->v_samp_factor;
       compptr->MCU_blocks = compptr->MCU_width * compptr->MCU_height;
       compptr->MCU_sample_width = compptr->MCU_width *
                                   compptr->_DCT_scaled_size;
-      /* Figure number of non-dummy blocks in last MCU column & row */
+      /* Figure number of non-dummy data units in last MCU column & row */
       tmp = (int)(compptr->width_in_blocks % compptr->MCU_width);
       if (tmp == 0) tmp = compptr->MCU_width;
       compptr->last_col_width = tmp;
@@ -281,7 +296,8 @@ METHODDEF(void)
 start_input_pass(j_decompress_ptr cinfo)
 {
   per_scan_setup(cinfo);
-  latch_quant_tables(cinfo);
+  if (!cinfo->master->lossless)
+    latch_quant_tables(cinfo);
   (*cinfo->entropy->start_pass) (cinfo);
   (*cinfo->coef->start_input_pass) (cinfo);
   cinfo->inputctl->consume_input = cinfo->coef->consume_data;
@@ -290,8 +306,8 @@ start_input_pass(j_decompress_ptr cinfo)
 
 /*
  * Finish up after inputting a compressed-data scan.
- * This is called by the coefficient controller after it's read all
- * the expected data of the scan.
+ * This is called by the coefficient or difference controller after it's read
+ * all the expected data of the scan.
  */
 
 METHODDEF(void)
@@ -307,8 +323,8 @@ finish_input_pass(j_decompress_ptr cinfo)
  * Return value is JPEG_SUSPENDED, JPEG_REACHED_SOS, or JPEG_REACHED_EOI.
  *
  * The consume_input method pointer points either here or to the
- * coefficient controller's consume_data routine, depending on whether
- * we are reading a compressed data segment or inter-segment markers.
+ * coefficient or difference controller's consume_data routine, depending on
+ * whether we are reading a compressed data segment or inter-segment markers.
  */
 
 METHODDEF(int)

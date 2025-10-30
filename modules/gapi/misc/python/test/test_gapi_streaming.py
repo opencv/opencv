@@ -17,7 +17,7 @@ try:
 
     @cv.gapi.op('custom.delay', in_types=[cv.GMat], out_types=[cv.GMat])
     class GDelay:
-        """Delay for 10 ms."""
+        """Delay for 50 ms."""
 
         @staticmethod
         def outMeta(desc):
@@ -30,7 +30,7 @@ try:
 
         @staticmethod
         def run(img):
-            time.sleep(0.01)
+            time.sleep(0.05)
             return img
 
 
@@ -289,8 +289,7 @@ try:
             ccomp.start()
 
             # Assert
-            max_num_frames  = 10
-            proc_num_frames = 0
+            max_num_frames  = 50
 
             out_counter = 0
             desync_out_counter = 0
@@ -307,12 +306,11 @@ try:
                 else:
                     none_counter += 1
 
-                proc_num_frames += 1
-                if proc_num_frames == max_num_frames:
+                if out_counter == max_num_frames:
                     ccomp.stop()
                     break
 
-            self.assertLess(0, proc_num_frames)
+            self.assertLess(0, out_counter)
             self.assertLess(desync_out_counter, out_counter)
             self.assertLess(0, none_counter)
 
@@ -541,7 +539,38 @@ try:
                 self.assertEqual(0.0, cv.norm(convertNV12p2BGR(expected1), actual1, cv.NORM_INF))
                 self.assertEqual(0.0, cv.norm(convertNV12p2BGR(expected2), actual2, cv.NORM_INF))
 
+        def test_python_custom_stream_source(self):
+            class MySource:
+                def __init__(self):
+                    self.count = 0
 
+                def pull(self):
+                    if self.count >= 3:
+                        return None
+                    self.count += 1
+                    return np.ones((10, 10, 3), np.uint8) * self.count
+
+                def descr_of(self):
+                    return np.zeros((10, 10, 3), np.uint8)
+
+            g_in = cv.GMat()
+            g_out = cv.gapi.copy(g_in)
+            c = cv.GComputation(g_in, g_out)
+
+            comp = c.compileStreaming()
+
+            src = cv.gapi.wip.make_py_src(MySource())
+            comp.setSource([src])
+            comp.start()
+
+            frames = []
+            while True:
+                has_frame, frame = comp.pull()
+                if not has_frame:
+                    break
+                frames.append(frame)
+
+            self.assertEqual(len(frames), 3)
 
 except unittest.SkipTest as e:
 

@@ -67,9 +67,3 @@ See the result below:
 ![image](images/shitomasi_block1.jpg)
 
 This function is more appropriate for tracking. We will see that when its time comes.
-
-Additional Resources
---------------------
-
-Exercises
----------

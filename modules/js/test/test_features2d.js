@@ -2,11 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-if (typeof module !== 'undefined' && module.exports) {
-    // The environment is Node.js
-    var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
-
 function generateTestFrame(width, height) {
   let w = width || 200;
   let h = height || 200;
@@ -60,6 +55,15 @@ QUnit.test('Detectors', function(assert) {
   let akaze = new cv.AKAZE();
   akaze.detect(image, kp);
   assert.equal(kp.size(), 53, 'AKAZE');
+});
+
+QUnit.test('SimpleBlobDetector', function(assert) {
+  let image = generateTestFrame();
+
+  let kp = new cv.KeyPointVector();
+  let sbd = new cv.SimpleBlobDetector();
+  sbd.detect(image, kp);
+  assert.equal(kp.size(), 0);
 });
 
 QUnit.test('BFMatcher', function(assert) {

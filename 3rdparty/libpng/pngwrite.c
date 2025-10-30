@@ -1,7 +1,6 @@
-
 /* pngwrite.c - general routines to write a PNG file
  *
- * Copyright (c) 2018-2019 Cosmin Truta
+ * Copyright (c) 2018-2025 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -75,10 +74,10 @@ write_unknown_chunks(png_structrp png_ptr, png_const_inforp info_ptr,
  * library.  If you have a new chunk to add, make a function to write it,
  * and put it in the correct location here.  If you want the chunk written
  * after the image data, put it in png_write_end().  I strongly encourage
- * you to supply a PNG_INFO_ flag, and check info_ptr->valid before writing
- * the chunk, as that will keep the code from breaking if you want to just
- * write a plain PNG file.  If you have long comments, I suggest writing
- * them in png_write_end(), and compressing them.
+ * you to supply a PNG_INFO_<chunk> flag, and check info_ptr->valid before
+ * writing the chunk, as that will keep the code from breaking if you want
+ * to just write a plain PNG file.  If you have long comments, I suggest
+ * writing them in png_write_end(), and compressing them.
  */
 void PNGAPI
 png_write_info_before_PLTE(png_structrp png_ptr, png_const_inforp info_ptr)
@@ -128,29 +127,61 @@ png_write_info_before_PLTE(png_structrp png_ptr, png_const_inforp info_ptr)
        * the application continues writing the PNG.  So check the 'invalid'
        * flag here too.
        */
-#ifdef PNG_GAMMA_SUPPORTED
-#  ifdef PNG_WRITE_gAMA_SUPPORTED
-      if ((info_ptr->colorspace.flags & PNG_COLORSPACE_INVALID) == 0 &&
-          (info_ptr->colorspace.flags & PNG_COLORSPACE_FROM_gAMA) != 0 &&
-          (info_ptr->valid & PNG_INFO_gAMA) != 0)
-         png_write_gAMA_fixed(png_ptr, info_ptr->colorspace.gamma);
-#  endif
+#ifdef PNG_WRITE_UNKNOWN_CHUNKS_SUPPORTED
+         /* Write unknown chunks first; PNG v3 establishes a precedence order
+          * for colourspace chunks.  It is certain therefore that new
+          * colourspace chunks will have a precedence and very likely it will be
+          * higher than all known so far.  Writing the unknown chunks here is
+          * most likely to present the chunks in the most convenient order.
+          *
+          * FUTURE: maybe write chunks in the order the app calls png_set_chnk
+          * to give the app control.
+          */
+         write_unknown_chunks(png_ptr, info_ptr, PNG_HAVE_IHDR);
 #endif
 
+#ifdef PNG_WRITE_sBIT_SUPPORTED
+         /* PNG v3: a streaming app will need to see this before cICP because
+          * the information is helpful in handling HLG encoding (which is
+          * natively 10 bits but gets expanded to 16 in PNG.)
+          *
+          * The app shouldn't care about the order ideally, but it might have
+          * no choice.  In PNG v3, apps are allowed to reject PNGs where the
+          * APNG chunks are out of order so it behooves libpng to be nice here.
+          */
+         if ((info_ptr->valid & PNG_INFO_sBIT) != 0)
+            png_write_sBIT(png_ptr, &(info_ptr->sig_bit), info_ptr->color_type);
+#endif
+
+   /* PNG v3: the July 2004 version of the TR introduced the concept of colour
+    * space priority.  As above it therefore behooves libpng to write the colour
+    * space chunks in the priority order so that a streaming app need not buffer
+    * them.
+    */
 #ifdef PNG_COLORSPACE_SUPPORTED
-      /* Write only one of sRGB or an ICC profile.  If a profile was supplied
-       * and it matches one of the known sRGB ones issue a warning.
+#  ifdef PNG_WRITE_cICP_SUPPORTED /* Priority 4 */
+   if ((info_ptr->valid & PNG_INFO_cICP) != 0)
+      {
+         png_write_cICP(png_ptr,
+                        info_ptr->cicp_colour_primaries,
+                        info_ptr->cicp_transfer_function,
+                        info_ptr->cicp_matrix_coefficients,
+                        info_ptr->cicp_video_full_range_flag);
+      }
+#  endif
+
+      /* PNG v3 change: it is now permitted to write both sRGB and ICC profiles,
+       * however because the libpng code auto-generates an sRGB for the
+       * corresponding ICC profiles and because PNG v2 disallowed this we need
+       * to only write one.
+       *
+       * Remove the PNG v2 warning about writing an sRGB ICC profile as well
+       * because it's invalid with PNG v3.
        */
-#  ifdef PNG_WRITE_iCCP_SUPPORTED
+#  ifdef PNG_WRITE_iCCP_SUPPORTED /* Priority 3 */
          if ((info_ptr->colorspace.flags & PNG_COLORSPACE_INVALID) == 0 &&
              (info_ptr->valid & PNG_INFO_iCCP) != 0)
          {
-#    ifdef PNG_WRITE_sRGB_SUPPORTED
-               if ((info_ptr->valid & PNG_INFO_sRGB) != 0)
-                  png_app_warning(png_ptr,
-                      "profile matches sRGB but writing iCCP instead");
-#     endif
-
             png_write_iCCP(png_ptr, info_ptr->iccp_name,
                 info_ptr->iccp_profile);
          }
@@ -159,29 +190,29 @@ png_write_info_before_PLTE(png_structrp png_ptr, png_const_inforp info_ptr)
 #     endif
 #  endif
 
-#  ifdef PNG_WRITE_sRGB_SUPPORTED
+#  ifdef PNG_WRITE_sRGB_SUPPORTED /* Priority 2 */
          if ((info_ptr->colorspace.flags & PNG_COLORSPACE_INVALID) == 0 &&
              (info_ptr->valid & PNG_INFO_sRGB) != 0)
             png_write_sRGB(png_ptr, info_ptr->colorspace.rendering_intent);
 #  endif /* WRITE_sRGB */
 #endif /* COLORSPACE */
 
-#ifdef PNG_WRITE_sBIT_SUPPORTED
-         if ((info_ptr->valid & PNG_INFO_sBIT) != 0)
-            png_write_sBIT(png_ptr, &(info_ptr->sig_bit), info_ptr->color_type);
+#ifdef PNG_GAMMA_SUPPORTED
+#  ifdef PNG_WRITE_gAMA_SUPPORTED /* Priority 1 */
+      if ((info_ptr->colorspace.flags & PNG_COLORSPACE_INVALID) == 0 &&
+          (info_ptr->colorspace.flags & PNG_COLORSPACE_FROM_gAMA) != 0 &&
+          (info_ptr->valid & PNG_INFO_gAMA) != 0)
+         png_write_gAMA_fixed(png_ptr, info_ptr->colorspace.gamma);
+#  endif
 #endif
 
 #ifdef PNG_COLORSPACE_SUPPORTED
-#  ifdef PNG_WRITE_cHRM_SUPPORTED
+#  ifdef PNG_WRITE_cHRM_SUPPORTED /* Also priority 1 */
          if ((info_ptr->colorspace.flags & PNG_COLORSPACE_INVALID) == 0 &&
              (info_ptr->colorspace.flags & PNG_COLORSPACE_FROM_cHRM) != 0 &&
              (info_ptr->valid & PNG_INFO_cHRM) != 0)
             png_write_cHRM_fixed(png_ptr, &info_ptr->colorspace.end_points_xy);
 #  endif
-#endif
-
-#ifdef PNG_WRITE_UNKNOWN_CHUNKS_SUPPORTED
-         write_unknown_chunks(png_ptr, info_ptr, PNG_HAVE_IHDR);
 #endif
 
       png_ptr->mode |= PNG_WROTE_INFO_BEFORE_PLTE;
@@ -239,7 +270,10 @@ png_write_info(png_structrp png_ptr, png_const_inforp info_ptr)
 
 #ifdef PNG_WRITE_eXIf_SUPPORTED
    if ((info_ptr->valid & PNG_INFO_eXIf) != 0)
+   {
       png_write_eXIf(png_ptr, info_ptr->exif, info_ptr->num_exif);
+      png_ptr->mode |= PNG_WROTE_eXIf;
+   }
 #endif
 
 #ifdef PNG_WRITE_hIST_SUPPORTED
@@ -366,7 +400,8 @@ png_write_end(png_structrp png_ptr, png_inforp info_ptr)
       png_error(png_ptr, "No IDATs written into file");
 
 #ifdef PNG_WRITE_CHECK_FOR_INVALID_INDEX_SUPPORTED
-   if (png_ptr->num_palette_max > png_ptr->num_palette)
+   if (png_ptr->color_type == PNG_COLOR_TYPE_PALETTE &&
+       png_ptr->num_palette_max >= png_ptr->num_palette)
       png_benign_error(png_ptr, "Wrote palette index exceeding num_palette");
 #endif
 
@@ -439,8 +474,9 @@ png_write_end(png_structrp png_ptr, png_inforp info_ptr)
 #endif
 
 #ifdef PNG_WRITE_eXIf_SUPPORTED
-   if ((info_ptr->valid & PNG_INFO_eXIf) != 0)
-      png_write_eXIf(png_ptr, info_ptr->exif, info_ptr->num_exif);
+      if ((info_ptr->valid & PNG_INFO_eXIf) != 0 &&
+          (png_ptr->mode & PNG_WROTE_eXIf) == 0)
+         png_write_eXIf(png_ptr, info_ptr->exif, info_ptr->num_exif);
 #endif
 
 #ifdef PNG_WRITE_UNKNOWN_CHUNKS_SUPPORTED
@@ -489,6 +525,16 @@ png_convert_from_time_t(png_timep ptime, time_t ttime)
    png_debug(1, "in png_convert_from_time_t");
 
    tbuf = gmtime(&ttime);
+   if (tbuf == NULL)
+   {
+      /* TODO: add a safe function which takes a png_ptr argument and raises
+       * a png_error if the ttime argument is invalid and the call to gmtime
+       * fails as a consequence.
+       */
+      memset(ptime, 0, sizeof(*ptime));
+      return;
+   }
+
    png_convert_from_struct_tm(ptime, tbuf);
 }
 #endif
@@ -700,11 +746,11 @@ png_write_row(png_structrp png_ptr, png_const_bytep row)
    /* 1.5.6: moved from png_struct to be a local structure: */
    png_row_info row_info;
 
-   if (png_ptr == NULL)
-      return;
-
    png_debug2(1, "in png_write_row (row %u, pass %d)",
        png_ptr->row_number, png_ptr->pass);
+
+   if (png_ptr == NULL)
+      return;
 
    /* Initialize transformations and other stuff if first time */
    if (png_ptr->row_number == 0 && png_ptr->pass == 0)
@@ -1196,6 +1242,8 @@ png_set_compression_strategy(png_structrp png_ptr, int strategy)
 void PNGAPI
 png_set_compression_window_bits(png_structrp png_ptr, int window_bits)
 {
+   png_debug(1, "in png_set_compression_window_bits");
+
    if (png_ptr == NULL)
       return;
 
@@ -1279,6 +1327,8 @@ png_set_text_compression_strategy(png_structrp png_ptr, int strategy)
 void PNGAPI
 png_set_text_compression_window_bits(png_structrp png_ptr, int window_bits)
 {
+   png_debug(1, "in png_set_text_compression_window_bits");
+
    if (png_ptr == NULL)
       return;
 
@@ -1316,6 +1366,8 @@ png_set_text_compression_method(png_structrp png_ptr, int method)
 void PNGAPI
 png_set_write_status_fn(png_structrp png_ptr, png_write_status_ptr write_row_fn)
 {
+   png_debug(1, "in png_set_write_status_fn");
+
    if (png_ptr == NULL)
       return;
 
@@ -1343,6 +1395,8 @@ void PNGAPI
 png_write_png(png_structrp png_ptr, png_inforp info_ptr,
     int transforms, voidp params)
 {
+   png_debug(1, "in png_write_png");
+
    if (png_ptr == NULL || info_ptr == NULL)
       return;
 

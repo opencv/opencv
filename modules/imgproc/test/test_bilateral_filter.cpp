@@ -110,10 +110,12 @@ namespace opencv_test { namespace {
             src.type() == dst.type() && src.size() == dst.size() &&
             src.data != dst.data );
 
-        if( sigma_color <= 0 )
-            sigma_color = 1;
-        if( sigma_space <= 0 )
-            sigma_space = 1;
+        constexpr double eps = 1e-6;
+        if( sigma_color <= eps || sigma_space <= eps )
+        {
+            src.copyTo(dst);
+            return;
+        }
 
         double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
         double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -243,7 +245,7 @@ namespace opencv_test { namespace {
 
         rng.fill(_src, RNG::UNIFORM, 0, 256);
 
-        _sigma_color = _sigma_space = 1.;
+        _sigma_color = _sigma_space = rng.uniform(0., 10.);
 
         return 1;
     }

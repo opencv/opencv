@@ -274,22 +274,21 @@ template<typename T> struct VBLAS
 {
     int dot(const T*, const T*, int, T*) const { return 0; }
     int givens(T*, T*, int, T, T) const { return 0; }
-    int givensx(T*, T*, int, T, T, T*, T*) const { return 0; }
 };
 
-#if CV_SIMD
+#if CV_SIMD // TODO: enable for CV_SIMD_SCALABLE, GCC 13 related
 template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, float* result) const
 {
-    if( n < 2*v_float32::nlanes )
+    if( n < 2*VTraits<v_float32>::vlanes() )
         return 0;
     int k = 0;
     v_float32 s0 = vx_setzero_f32();
-    for( ; k <= n - v_float32::nlanes; k += v_float32::nlanes )
+    for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
 
-        s0 += a0 * b0;
+        s0 = v_add(s0, v_mul(a0, b0));
     }
     *result = v_reduce_sum(s0);
     vx_cleanup();
@@ -299,16 +298,16 @@ template<> inline int VBLAS<float>::dot(const float* a, const float* b, int n, f
 
 template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, float s) const
 {
-    if( n < v_float32::nlanes)
+    if( n < VTraits<v_float32>::vlanes())
         return 0;
     int k = 0;
     v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
-    for( ; k <= n - v_float32::nlanes; k += v_float32::nlanes )
+    for( ; k <= n - VTraits<v_float32>::vlanes(); k += VTraits<v_float32>::vlanes() )
     {
         v_float32 a0 = vx_load(a + k);
         v_float32 b0 = vx_load(b + k);
-        v_float32 t0 = (a0 * c4) + (b0 * s4);
-        v_float32 t1 = (b0 * c4) - (a0 * s4);
+        v_float32 t0 = v_add(v_mul(a0, c4), v_mul(b0, s4));
+        v_float32 t1 = v_sub(v_mul(b0, c4), v_mul(a0, s4));
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
@@ -317,44 +316,19 @@ template<> inline int VBLAS<float>::givens(float* a, float* b, int n, float c, f
 }
 
 
-template<> inline int VBLAS<float>::givensx(float* a, float* b, int n, float c, float s,
-                                             float* anorm, float* bnorm) const
-{
-    if( n < v_float32::nlanes)
-        return 0;
-    int k = 0;
-    v_float32 c4 = vx_setall_f32(c), s4 = vx_setall_f32(s);
-    v_float32 sa = vx_setzero_f32(), sb = vx_setzero_f32();
-    for( ; k <= n - v_float32::nlanes; k += v_float32::nlanes )
-    {
-        v_float32 a0 = vx_load(a + k);
-        v_float32 b0 = vx_load(b + k);
-        v_float32 t0 = (a0 * c4) + (b0 * s4);
-        v_float32 t1 = (b0 * c4) - (a0 * s4);
-        v_store(a + k, t0);
-        v_store(b + k, t1);
-        sa += t0 + t0;
-        sb += t1 + t1;
-    }
-    *anorm = v_reduce_sum(sa);
-    *bnorm = v_reduce_sum(sb);
-    vx_cleanup();
-    return k;
-}
-
-#if CV_SIMD_64F
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
 template<> inline int VBLAS<double>::dot(const double* a, const double* b, int n, double* result) const
 {
-    if( n < 2*v_float64::nlanes )
+    if( n < 2*VTraits<v_float64>::vlanes() )
         return 0;
     int k = 0;
     v_float64 s0 = vx_setzero_f64();
-    for( ; k <= n - v_float64::nlanes; k += v_float64::nlanes )
+    for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
 
-        s0 += a0 * b0;
+        s0 = v_add(s0, v_mul(a0, b0));
     }
     double sbuf[2];
     v_store(sbuf, s0);
@@ -368,12 +342,12 @@ template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double 
 {
     int k = 0;
     v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
-    for( ; k <= n - v_float64::nlanes; k += v_float64::nlanes )
+    for( ; k <= n - VTraits<v_float64>::vlanes(); k += VTraits<v_float64>::vlanes() )
     {
         v_float64 a0 = vx_load(a + k);
         v_float64 b0 = vx_load(b + k);
-        v_float64 t0 = (a0 * c2) + (b0 * s2);
-        v_float64 t1 = (b0 * c2) - (a0 * s2);
+        v_float64 t0 = v_add(v_mul(a0, c2), v_mul(b0, s2));
+        v_float64 t1 = v_sub(v_mul(b0, c2), v_mul(a0, s2));
         v_store(a + k, t0);
         v_store(b + k, t1);
     }
@@ -382,30 +356,6 @@ template<> inline int VBLAS<double>::givens(double* a, double* b, int n, double 
 }
 
 
-template<> inline int VBLAS<double>::givensx(double* a, double* b, int n, double c, double s,
-                                              double* anorm, double* bnorm) const
-{
-    int k = 0;
-    v_float64 c2 = vx_setall_f64(c), s2 = vx_setall_f64(s);
-    v_float64 sa = vx_setzero_f64(), sb = vx_setzero_f64();
-    for( ; k <= n - v_float64::nlanes; k += v_float64::nlanes )
-    {
-        v_float64 a0 = vx_load(a + k);
-        v_float64 b0 = vx_load(b + k);
-        v_float64 t0 = (a0 * c2) + (b0 * s2);
-        v_float64 t1 = (b0 * c2) - (a0 * s2);
-        v_store(a + k, t0);
-        v_store(b + k, t1);
-        sa += t0 * t0;
-        sb += t1 * t1;
-    }
-    double abuf[2], bbuf[2];
-    v_store(abuf, sa);
-    v_store(bbuf, sb);
-    *anorm = abuf[0] + abuf[1];
-    *bnorm = bbuf[0] + bbuf[1];
-    return k;
-}
 #endif //CV_SIMD_64F
 #endif //CV_SIMD
 
@@ -916,7 +866,7 @@ double invert( InputArray _src, OutputArray _dst, int method )
                 #if CV_SIMD128
                     const float d_32f = (float)d;
                     const v_float32x4 d_vec(d_32f, -d_32f, -d_32f, d_32f);
-                    v_float32x4 s0 = v_load_halves((const float*)srcdata, (const float*)(srcdata + srcstep)) * d_vec;//0123//3120
+                    v_float32x4 s0 = v_mul(v_load_halves((const float *)srcdata, (const float *)(srcdata + srcstep)), d_vec);//0123//3120
                     s0 = v_extract<3>(s0, v_combine_low(v_rotate_right<1>(s0), s0));
                     v_store_low((float*)dstdata, s0);
                     v_store_high((float*)(dstdata + dststep), s0);
@@ -942,10 +892,10 @@ double invert( InputArray _src, OutputArray _dst, int method )
                     d = 1./d;
                 #if CV_SIMD128_64F
                     v_float64x2 det = v_setall_f64(d);
-                    v_float64x2 s0 = v_load((const double*)srcdata) * det;
-                    v_float64x2 s1 = v_load((const double*)(srcdata+srcstep)) * det;
+                    v_float64x2 s0 = v_mul(v_load((const double *)srcdata), det);
+                    v_float64x2 s1 = v_mul(v_load((const double *)(srcdata + srcstep)), det);
                     v_float64x2 sm = v_extract<1>(s1, s0);//30
-                    v_float64x2 ss = v_setall<double>(0) - v_extract<1>(s0, s1);//12
+                    v_float64x2 ss = v_sub(v_setall<double>(0), v_extract<1>(s0, s1));//12
                     v_store((double*)dstdata, v_combine_low(sm, ss));//31
                     v_store((double*)(dstdata + dststep), v_combine_high(ss, sm));//20
                 #else
@@ -1241,7 +1191,7 @@ bool solve( InputArray _src, InputArray _src2arg, OutputArray _dst, int method )
     Mat dst = _dst.getMat();
 
     if( m < n )
-        CV_Error(CV_StsBadArg, "The function can not solve under-determined linear systems" );
+        CV_Error(cv::Error::StsBadArg, "The function can not solve under-determined linear systems" );
 
     if( m == n )
         is_normal = false;
@@ -1565,7 +1515,7 @@ void SVD::backSubst( InputArray _w, InputArray _u, InputArray _vt,
                vt.ptr<double>(), vt.step, true, rhs.ptr<double>(), rhs.step, nb,
                dst.ptr<double>(), dst.step, buffer.data());
     else
-        CV_Error( CV_StsUnsupportedFormat, "" );
+        CV_Error( cv::Error::StsUnsupportedFormat, "" );
 }
 
 

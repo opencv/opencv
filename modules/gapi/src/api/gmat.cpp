@@ -26,6 +26,10 @@ cv::GMat::GMat(const GNode &n, std::size_t out)
 {
 }
 
+cv::GMat::GMat(cv::Mat m)
+    : m_priv(new GOrigin(GShape::GMAT, cv::gimpl::ConstVal(m))) {
+}
+
 cv::GOrigin& cv::GMat::priv()
 {
     return *m_priv;
@@ -153,10 +157,18 @@ std::ostream& operator<<(std::ostream& os, const cv::GMatDesc &desc)
         break;
     }
 
-    os << "C" << desc.chan;
-    if (desc.planar) os << "p";
-    os << " ";
-    os << desc.size.width << "x" << desc.size.height;
+    if (desc.isND()) {
+        os << " [";
+        for (size_t i = 0; i < desc.dims.size() - 1; ++i) {
+            os << desc.dims[i] << "x";
+        }
+        os << desc.dims.back() << "]";
+    } else {
+        os << "C" << desc.chan;
+        if (desc.planar) os << "p";
+        os << " ";
+        os << desc.size.width << "x" << desc.size.height;
+    }
 
     return os;
 }

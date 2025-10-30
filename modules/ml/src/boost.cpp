@@ -210,7 +210,7 @@ public:
         double* result = buf.data();
         float* sbuf = (float*)(result + n);
         Mat sample(1, nvars, CV_32F, sbuf);
-        int predictFlags = bparams.boostType == Boost::DISCRETE ? (PREDICT_MAX_VOTE | RAW_OUTPUT) : PREDICT_SUM;
+        int predictFlags = bparams.boostType == Boost::DISCRETE ? (+PREDICT_MAX_VOTE | RAW_OUTPUT) : PREDICT_SUM;
         predictFlags |= COMPRESSED_INPUT;
 
         for( i = 0; i < n; i++ )
@@ -308,7 +308,7 @@ public:
             }
         }
         else
-            CV_Error(CV_StsNotImplemented, "Unknown boosting type");
+            CV_Error(cv::Error::StsNotImplemented, "Unknown boosting type");
 
         /*if( bparams.boostType != Boost::LOGIT )
         {
@@ -387,7 +387,7 @@ public:
     void write( FileStorage& fs ) const CV_OVERRIDE
     {
         if( roots.empty() )
-            CV_Error( CV_StsBadArg, "RTrees have not been trained" );
+            CV_Error( cv::Error::StsBadArg, "RTrees have not been trained" );
 
         writeFormat(fs);
         writeParams(fs);

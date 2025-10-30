@@ -18,10 +18,99 @@ opencv_fd:
   rgb: false
   sample: "object_detection"
 
+# YOLOv8 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
+# Might be used for all YOLOv8n YOLOv8s YOLOv8m YOLOv8l and YOLOv8x
+yolov8x:
+  load_info:
+    url: "https://huggingface.co/cabelo/yolov8/resolve/main/yolov8x.onnx?download=true"
+    sha1: "462f15d668c046d38e27d3df01fe8142dd004cb4"
+  model: "yolov8x.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8s:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8s.onnx"
+    sha1: "82cd83984396fe929909ecb58212b0e86d0904b1"
+  model: "yolov8s.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8n:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8m:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8m.onnx"
+    sha1: "656ffeb4f3b067bc30df956728b5f9c61a4cb090"
+  model: "yolov8m.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+yolov8l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8l.onnx"
+    sha1: "462df53ca3a85d110bf6be7fc2e2bb1277124395"
+  model: "yolov8l.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
+# YOLOv5 object detection family from ultralytics (https://github.com/ultralytics/ultralytics)
+# Might be used for all YOLOv5n YOLOv5s YOLOv5m YOLOv5l and YOLOv5x
+
+yolov5l:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov5l.onnx"
+    sha1: "9de7e54c524b7fe7577bbd4cdbbdaed53375c8f1"
+  model: "yolov5l.onnx"
+  mean: 0.0
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "yolo_detector"
+
 # YOLO4 object detection family from Darknet (https://github.com/AlexeyAB/darknet)
 # YOLO object detection family from Darknet (https://pjreddie.com/darknet/yolo/)
 # Might be used for all YOLOv2, TinyYolov2, YOLOv3, YOLOv4 and TinyYolov4
-yolo:
+yolov4:
   load_info:
     url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v3_optimal/yolov4.weights"
     sha1: "0143deb6c46fcc7f74dd35bf3c14edc3784e99ee"
@@ -32,7 +121,38 @@ yolo:
   width: 416
   height: 416
   rgb: true
-  classes: "object_detection_classes_yolov4.txt"
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+yolov4-tiny:
+  load_info:
+    url: "https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights"
+    sha1: "451caaab22fb9831aa1a5ee9b5ba74a35ffa5dcb"
+  model: "yolov4-tiny.weights"
+  config: "yolov4-tiny.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+yolov3:
+  load_info:
+    url: "https://pjreddie.com/media/files/yolov3.weights"
+    sha1: "520878f12e97cf820529daea502acca380f1cb8e"
+  model: "yolov3.weights"
+  config: "yolov3.cfg"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 416
+  height: 416
+  rgb: true
+  classes: "object_detection_classes_yolo.txt"
+  background_label_id: 0
   sample: "object_detection"
 
 tiny-yolo-voc:
@@ -47,6 +167,21 @@ tiny-yolo-voc:
   height: 416
   rgb: true
   classes: "object_detection_classes_pascal_voc.txt"
+  background_label_id: 0
+  sample: "object_detection"
+
+yolov8:
+  load_info:
+    url: "https://github.com/CVHub520/X-AnyLabeling/releases/download/v0.1.0/yolov8n.onnx"
+    sha1: "68f864475d06e2ec4037181052739f268eeac38d"
+  model: "yolov8n.onnx"
+  mean: [0, 0, 0]
+  scale: 0.00392
+  width: 640
+  height: 640
+  rgb: true
+  postprocessing: "yolov8"
+  classes: "object_detection_classes_yolo.txt"
   sample: "object_detection"
 
 # Caffe implementation of SSD model from https://github.com/chuanqi305/MobileNet-SSD
@@ -160,6 +295,18 @@ fcn8s:
   config: "fcn8s-heavy-pascal.prototxt"
   mean: [0, 0, 0]
   scale: 1.0
+  width: 500
+  height: 500
+  rgb: false
+  sample: "segmentation"
+
+fcnresnet101:
+  load_info:
+    url: "https://github.com/onnx/models/raw/fb8271d5d5d9b90dbb1eb5e8e40f8f580fb248b3/vision/object_detection_segmentation/fcn/model/fcn-resnet101-11.onnx"
+    sha1: "e7e76474bf6b73334ab32c4be1374c9e605f5aed"
+  model: "fcn-resnet101-11.onnx"
+  mean: [103.5, 116.2, 123.6]
+  scale: 0.019
   width: 500
   height: 500
   rgb: false

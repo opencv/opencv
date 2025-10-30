@@ -1,0 +1,188 @@
+#version 450
+
+#define KSTRIP_LEN 32
+#define BLOCK_SIZE 64 // the output channel shoule be aligned to 64.
+#define WARP 32
+
+#define INNER_THREAD 16 // inner thread
+#define ALL_THREAD 256
+
+#define A_INSTRIP 8
+#define A_STRIP 8 // (BLOCK_SIZE/A_INSTRIP)
+
+#define B_INSTRIP 4 // (ALL_THREAD/BLOCK_SIZE)
+#define B_STRIP 8 // (KSTRIP_LEN/B_INSTRIP)
+
+#define PER_THREAD (BLOCK_SIZE/INNER_THREAD)
+
+layout(binding = 0) readonly buffer Input0{
+    float image_data[];
+};
+
+layout(binding = 1) readonly buffer Input1 {
+    float bias_data[];
+};
+
+layout(binding = 2) readonly buffer Input2{
+    float weight_data[];
+};
+
+layout(binding = 3) writeonly buffer Output{
+    float output_data[];
+};
+
+layout(binding = 4) uniform pushBlock {
+    int Hi; // H in
+    int Wi; // W in
+    int H0; // H out
+    int W0; // W out
+    int stride_h;
+    int stride_w;
+    int pad_h;
+    int pad_w;
+    int Hk;
+    int Wk;
+    int dilation_h;
+    int dilation_w;
+    int Kg;
+    int Cg;
+    int group;
+    int CgHkWk_aligned;
+    int activationType; // 0 : no activation, 1: ReLU, 2: ReLU6.
+    int batchi;  // batch index
+    int groupi;  // group index
+} p;
+
+shared float wshare[KSTRIP_LEN][BLOCK_SIZE]; // 2 KB
+shared float inshare[BLOCK_SIZE][KSTRIP_LEN]; // 2 KB
+
+layout(local_size_x = ALL_THREAD, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    int M = p.Kg;             // output channel
+    int K = p.CgHkWk_aligned; // Hk * Wk * G // aligned to KSTRIP_LEN
+    int N = p.H0 * p.W0;      // H0 * W0
+
+    int mIndex = int(gl_WorkGroupID.x) * BLOCK_SIZE;
+    int nIndex = int(gl_WorkGroupID.y) * BLOCK_SIZE;
+
+    int local_x = int(gl_LocalInvocationID.x) % 16; // 0~7
+    int local_y = int(gl_LocalInvocationID.x) / 16; // 0~31
+
+    int w_local_x = int(gl_LocalInvocationID.x) % KSTRIP_LEN; // 256 / 32 = 8
+    int w_local_y = int(gl_LocalInvocationID.x) / KSTRIP_LEN;
+
+    int in_local_x = int(gl_LocalInvocationID.x) % BLOCK_SIZE; // 256 / 64 = 4
+    int in_local_y = int(gl_LocalInvocationID.x) / BLOCK_SIZE;
+
+    int woffset = p.groupi * p.Kg * K + K * mIndex + w_local_y * K + w_local_x;
+    int inoffset = (p.batchi * p.group + p.groupi) * p.Hi*p.Wi*p.Cg;
+    int outoffset = (p.batchi * p.group + p.groupi) * p.H0*p.W0*p.Kg;
+    int biasoffset = p.groupi * p.Kg + mIndex + local_x * PER_THREAD;
+
+    vec4 sum[PER_THREAD];
+    {
+        for (int i = 0; i < PER_THREAD; i++)
+        {
+            sum[i] = vec4(bias_data[biasoffset + i]);
+        }
+    }
+
+    float regA[PER_THREAD];
+    float regB[PER_THREAD];
+
+    int KStrip = K / KSTRIP_LEN;
+    int KRemain = K - KStrip * KSTRIP_LEN; // NOTE: this value shoule be always 0.
+
+    for (int i = 0; i < KStrip; i++)
+    {
+        int k = i * KSTRIP_LEN;
+        // load Weight to local memory.
+        for (int s = 0; s < A_STRIP; s++)
+        {
+            wshare[w_local_x][s * A_INSTRIP + w_local_y] = weight_data[woffset + s * A_INSTRIP * K + k];
+        }
+
+        // load Input to local memory
+        for (int s = 0; s < B_STRIP; s++)
+        {
+            int kk = in_local_y + s * B_INSTRIP + k;
+
+            int HkWk = p.Hk * p.Wk;
+            int cg = kk/HkWk;
+            int hkwk = kk - cg * HkWk;
+            int hk = hkwk / p.Wk;
+            int wk = hkwk - hk * p.Wk;
+            int dh = hk * p.dilation_h, dw = wk * p.dilation_w;
+
+            int h0w0 = in_local_x + nIndex;
+            int h0 = h0w0 / p.W0;
+            int w0 = h0w0 - h0 * p.W0;
+
+            int hi = h0 * p.stride_h + dh - p.pad_h;
+            int wi = w0 * p.stride_w + dw - p.pad_w;
+
+            if (cg < p.Cg && uint(hi) < uint(p.Hi) && uint(wi) < uint(p.Wi))
+                inshare[in_local_x][s * B_INSTRIP + in_local_y] = image_data[inoffset + cg * p.Hi * p.Wi + hi * p.Wi + wi];
+            else
+                inshare[in_local_x][s * B_INSTRIP + in_local_y] = 0.f;
+        }
+
+        barrier();
+
+        for (int j = 0; j < KSTRIP_LEN; j++)
+        {
+            // Load shared memory to register.
+            for (int m = 0; m < 4; m++)
+            {
+                regA[m] = wshare[j][local_x*4 + m];
+            }
+
+            for (int m = 0; m < 4; m++)
+            {
+                regB[m] = inshare[local_y + 16 * m][j];
+            }
+
+            for (int m = 0; m < 4; m++)
+            {
+                for (int n = 0; n < 4; n++)
+                {
+                    sum[m][n] += regA[m] * regB[n];
+                }
+            }
+        }
+        barrier();
+    }
+
+    if (p.activationType == 1) // ReLU
+    {
+        sum[0] = max(sum[0], vec4(0));
+        sum[1] = max(sum[1], vec4(0));
+        sum[2] = max(sum[2], vec4(0));
+        sum[3] = max(sum[3], vec4(0));
+    }
+    else if (p.activationType == 2) // ReLU6
+    {
+        sum[0] = clamp(sum[0], vec4(0), vec4(6));
+        sum[1] = clamp(sum[1], vec4(0), vec4(6));
+        sum[2] = clamp(sum[2], vec4(0), vec4(6));
+        sum[3] = clamp(sum[3], vec4(0), vec4(6));
+    }
+
+    for (int n = 0; n < PER_THREAD; n++)
+    {
+        int nIndex2 = nIndex + n * INNER_THREAD + local_y;
+        if (nIndex2 < N)
+        {
+            for (int m = 0; m < PER_THREAD; m++)
+            {
+                int mIndex2 = mIndex + local_x * PER_THREAD + m;
+                if (mIndex2 < M)
+                {
+                    output_data[outoffset + mIndex2 * N + nIndex2] = sum[m][n];
+                }
+            }
+        }
+    }
+}

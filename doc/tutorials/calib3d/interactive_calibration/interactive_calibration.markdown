@@ -4,6 +4,7 @@ Interactive camera calibration application {#tutorial_interactive_calibration}
 @tableofcontents
 
 @prev_tutorial{tutorial_real_time_pose}
+@next_tutorial{tutorial_usac}
 
 |    |    |
 | -: | :- |
@@ -11,7 +12,7 @@ Interactive camera calibration application {#tutorial_interactive_calibration}
 | Compatibility | OpenCV >= 3.1 |
 
 
-According to classical calibration technique user must collect all data first and when run @ref cv::calibrateCamera function
+According to classical calibration technique user must collect all data first and then run @ref cv::calibrateCamera function
 to obtain camera parameters. If average re-projection error is huge or if estimated parameters seems to be wrong, process of
 selection or collecting data and starting of @ref cv::calibrateCamera repeats.
 
@@ -95,9 +96,9 @@ By default values of advanced parameters are stored in defaultConfig.xml
 -  *charuco_square_length*: size of square on chAruco board (in pixels)
 -  *charuco_marker_size*: size of Aruco markers on chAruco board (in pixels)
 -  *calibration_step*: interval in frames between launches of @ref cv::calibrateCamera
--  *max_frames_num*: if number of frames for calibration is greater then this value frames filter starts working.
+-  *max_frames_num*: if number of frames for calibration is greater than this value frames filter starts working.
 After filtration size of calibration dataset is equals to *max_frames_num*
--  *min_frames_num*: if number of frames is greater then this value turns on auto flags tuning, undistorted view and quality evaluation
+-  *min_frames_num*: if number of frames is greater than this value turns on auto flags tuning, undistorted view and quality evaluation
 -  *solver_eps*: precision of Levenberg-Marquardt solver in @ref cv::calibrateCamera
 -  *solver_max_iters*: iterations limit of solver
 -  *fast_solver*: if this value is nonzero and Lapack is found QR decomposition is used instead of SVD in solver.
@@ -128,7 +129,7 @@ This pattern is very sensitive to quality of production and measurements.
 
 Data filtration
 ------
-When size of calibration dataset is greater then *max_frames_num* starts working
+When size of calibration dataset is greater than *max_frames_num* starts working
 data filter. It tries to remove "bad" frames from dataset. Filter removes the frame
  on which \f$loss\_function\f$ takes maximum.
 
@@ -179,34 +180,34 @@ Example of output XML file:
 <framesCount>21</framesCount>
 <cameraResolution>
   1280 720</cameraResolution>
-<cameraMatrix type_id="opencv-matrix">
+<camera_matrix type_id="opencv-matrix">
   <rows>3</rows>
   <cols>3</cols>
   <dt>d</dt>
   <data>
     1.2519588293098975e+03 0. 6.6684948780852471e+02 0.
-    1.2519588293098975e+03 3.6298123112613683e+02 0. 0. 1.</data></cameraMatrix>
-<cameraMatrix_std_dev type_id="opencv-matrix">
+    1.2519588293098975e+03 3.6298123112613683e+02 0. 0. 1.</data></camera_matrix>
+<camera_matrix_std_dev type_id="opencv-matrix">
   <rows>4</rows>
   <cols>1</cols>
   <dt>d</dt>
   <data>
     0. 1.2887048808572649e+01 2.8536856683866230e+00
-    2.8341737483430314e+00</data></cameraMatrix_std_dev>
-<dist_coeffs type_id="opencv-matrix">
+    2.8341737483430314e+00</data></camera_matrix_std_dev>
+<distortion_coefficients type_id="opencv-matrix">
   <rows>1</rows>
   <cols>5</cols>
   <dt>d</dt>
   <data>
     1.3569117181595716e-01 -8.2513063822554633e-01 0. 0.
-    1.6412101575010554e+00</data></dist_coeffs>
-<dist_coeffs_std_dev type_id="opencv-matrix">
+    1.6412101575010554e+00</data></distortion_coefficients>
+<distortion_coefficients_std_dev type_id="opencv-matrix">
   <rows>5</rows>
   <cols>1</cols>
   <dt>d</dt>
   <data>
     1.5570675523402111e-02 8.7229075437543435e-02 0. 0.
-    1.8382427901856876e-01</data></dist_coeffs_std_dev>
+    1.8382427901856876e-01</data></distortion_coefficients_std_dev>
 <avg_reprojection_error>4.2691743074130178e-01</avg_reprojection_error>
 </opencv_storage>
 @endcode

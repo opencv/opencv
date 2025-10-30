@@ -61,10 +61,10 @@
 #  define CV_FORMAT_PRINTF(A, B)
 #endif
 
-//! @cond IGNORED
-
 namespace cv
 {
+//! @cond IGNORED
+
 
 ////////////////////////////// Matx methods depending on core API /////////////////////////////
 
@@ -424,26 +424,6 @@ template<typename _Tp> static inline _Tp randu()
   return (_Tp)theRNG();
 }
 
-///////////////////////////////// Formatted string generation /////////////////////////////////
-
-/** @brief Returns a text string formatted using the printf-like expression.
-
-The function acts like sprintf but forms and returns an STL string. It can be used to form an error
-message in the Exception constructor.
-@param fmt printf-compatible formatting specifiers.
-
-**Note**:
-|Type|Specifier|
-|-|-|
-|`const char*`|`%s`|
-|`char`|`%c`|
-|`float` / `double`|`%f`,`%g`|
-|`int`, `long`, `long long`|`%d`, `%ld`, ``%lld`|
-|`unsigned`, `unsigned long`, `unsigned long long`|`%u`, `%lu`, `%llu`|
-|`uint64` -> `uintmax_t`, `int64` -> `intmax_t`|`%ju`, `%jd`|
-|`size_t`|`%zu`|
- */
-CV_EXPORTS String format( const char* fmt, ... ) CV_FORMAT_PRINTF(1, 2);
 
 ///////////////////////////////// Formatted output of cv::Mat /////////////////////////////////
 
@@ -496,6 +476,28 @@ int print(const Matx<_Tp, m, n>& matx, FILE* stream = stdout)
 
 //! @endcond
 
+///////////////////////////////// Formatted string generation /////////////////////////////////
+
+/** @brief Returns a text string formatted using the printf-like expression.
+
+The function acts like sprintf but forms and returns an STL string. It can be used to form an error
+message in the Exception constructor.
+@param fmt printf-compatible formatting specifiers.
+
+**Note**:
+|Type|Specifier|
+|-|-|
+|`const char*`|`%s`|
+|`char`|`%c`|
+|`float` / `double`|`%f`,`%g`|
+|`int`, `long`, `long long`|`%d`, `%ld`, ``%lld`|
+|`unsigned`, `unsigned long`, `unsigned long long`|`%u`, `%lu`, `%llu`|
+|`uint64` -> `uintmax_t`, `int64` -> `intmax_t`|`%ju`, `%jd`|
+|`size_t`|`%zu`|
+@ingroup core_utils
+ */
+CV_EXPORTS String format(const char* fmt, ...) CV_FORMAT_PRINTF(1, 2);
+
 /****************************************************************************************\
 *                                  Auxiliary algorithms                                  *
 \****************************************************************************************/
@@ -506,7 +508,7 @@ The generic function partition implements an \f$O(N^2)\f$ algorithm for splittin
 into one or more equivalency classes, as described in
 <http://en.wikipedia.org/wiki/Disjoint-set_data_structure> . The function returns the number of
 equivalency classes.
-@param _vec Set of elements stored as a vector.
+@param vec Set of elements stored as a vector.
 @param labels Output vector of labels. It contains as many elements as vec. Each label labels[i] is
 a 0-based cluster index of `vec[i]`.
 @param predicate Equivalence predicate (pointer to a boolean function of two arguments or an
@@ -516,11 +518,11 @@ may or may not be in the same class.
 @ingroup core_cluster
 */
 template<typename _Tp, class _EqPredicate> int
-partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
+partition( const std::vector<_Tp>& vec, std::vector<int>& labels,
           _EqPredicate predicate=_EqPredicate())
 {
-    int i, j, N = (int)_vec.size();
-    const _Tp* vec = &_vec[0];
+    int i, j, N = (int)vec.size();
+    const _Tp* _vec = &vec[0];
 
     const int PARENT=0;
     const int RANK=1;
@@ -546,7 +548,7 @@ partition( const std::vector<_Tp>& _vec, std::vector<int>& labels,
 
         for( j = 0; j < N; j++ )
         {
-            if( i == j || !predicate(vec[i], vec[j]))
+            if( i == j || !predicate(_vec[i], _vec[j]))
                 continue;
             int root2 = j;
 

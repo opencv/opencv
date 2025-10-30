@@ -92,7 +92,7 @@ void Sharpen(const Mat& myImage,Mat& Result)
 
         for(int i= nChannels;i < nChannels*(myImage.cols-1); ++i)
         {
-            *output++ = saturate_cast<uchar>(5*current[i]
+            output[i] = saturate_cast<uchar>(5*current[i]
                          -current[i-nChannels] - current[i+nChannels] - previous[i] - next[i]);
         }
     }

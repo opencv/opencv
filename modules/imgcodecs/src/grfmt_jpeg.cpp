@@ -247,7 +247,42 @@ bool  JpegDecoder::readHeader()
         if (state->cinfo.src != 0)
         {
             jpeg_save_markers(&state->cinfo, APP1, 0xffff);
+            jpeg_save_markers(&state->cinfo, APP2, 0xffff);
             jpeg_read_header( &state->cinfo, TRUE );
+
+            const std::streamsize EXIF_HEADER_SIZE = 6;   // "Exif\0\0"
+            const std::streamsize XMP_HEADER_SIZE  = 29;  // "http://ns.adobe.com/xap/1.0/"
+            const std::streamsize ICC_HEADER_SIZE  = 14;  // "ICC_PROFILE\0" + seq/total
+
+            for (jpeg_saved_marker_ptr cmarker = state->cinfo.marker_list; cmarker != nullptr; cmarker = cmarker->next)
+            {
+                // Handle APP1 marker: could be Exif or XMP
+                if (cmarker->marker == APP1 && cmarker->data_length > EXIF_HEADER_SIZE)
+                {
+                    unsigned char* data = cmarker->data;
+
+                    // Check for Exif data
+                    if (std::memcmp(data, "Exif\0\0", EXIF_HEADER_SIZE) == 0)
+                    {
+                        m_exif.parseExif(data + EXIF_HEADER_SIZE, cmarker->data_length - EXIF_HEADER_SIZE);
+                    }
+                    // Check for XMP metadata
+                    else if (m_read_options && cmarker->data_length >= XMP_HEADER_SIZE &&
+                        std::memcmp(data, "http://ns.adobe.com/xap/1.0/", XMP_HEADER_SIZE) == 0)
+                    {
+                        std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                        xmp.insert(xmp.end(), data, data + cmarker->data_length);
+                    }
+                }
+
+                // Handle APP2 marker: typically contains ICC profile data
+                if (m_read_options && cmarker->marker == APP2 && cmarker->data_length > ICC_HEADER_SIZE)
+                {
+                    const unsigned char* data = cmarker->data;
+                    std::vector<uchar>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                    iccp.insert(iccp.end(), data + ICC_HEADER_SIZE, data + cmarker->data_length);
+                }
+            }
 
             state->cinfo.scale_num=1;
             state->cinfo.scale_denom = m_scale_denom;
@@ -402,14 +437,12 @@ int my_jpeg_load_dht (struct jpeg_decompress_struct *info, unsigned char *dht,
 bool  JpegDecoder::readData( Mat& img )
 {
     volatile bool result = false;
-    size_t step = img.step;
-    bool color = img.channels() > 1;
+    const bool color = img.channels() > 1;
 
     if( m_state && m_width && m_height )
     {
         jpeg_decompress_struct* cinfo = &((JpegState*)m_state)->cinfo;
         JpegErrorMgr* jerr = &((JpegState*)m_state)->jerr;
-        JSAMPARRAY buffer = 0;
 
         if( setjmp( jerr->setjmp_buffer ) == 0 )
         {
@@ -429,17 +462,30 @@ bool  JpegDecoder::readData( Mat& img )
             }
 #endif
 
+            // See https://github.com/opencv/opencv/issues/25274
+            // Conversion CMYK->BGR is not supported in libjpeg-turbo.
+            // So supporting both directly and indirectly is necessary.
+            bool doDirectRead = false;
+
             if( color )
             {
                 if( cinfo->num_components != 4 )
                 {
+#ifdef JCS_EXTENSIONS
+                    cinfo->out_color_space = m_use_rgb ? JCS_EXT_RGB : JCS_EXT_BGR;
+                    cinfo->out_color_components = 3;
+                    doDirectRead = true; // BGR -> BGR
+#else
                     cinfo->out_color_space = JCS_RGB;
                     cinfo->out_color_components = 3;
+                    doDirectRead = m_use_rgb ? true : false; // RGB -> BGR
+#endif
                 }
                 else
                 {
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
+                    doDirectRead = false; // CMYK -> BGR
                 }
             }
             else
@@ -448,59 +494,60 @@ bool  JpegDecoder::readData( Mat& img )
                 {
                     cinfo->out_color_space = JCS_GRAYSCALE;
                     cinfo->out_color_components = 1;
+                    doDirectRead = true; // GRAY -> GRAY
                 }
                 else
                 {
                     cinfo->out_color_space = JCS_CMYK;
                     cinfo->out_color_components = 4;
+                    doDirectRead = false; // CMYK -> GRAY
                 }
             }
-
-            // Check for Exif marker APP1
-            jpeg_saved_marker_ptr exif_marker = NULL;
-            jpeg_saved_marker_ptr cmarker = cinfo->marker_list;
-            while( cmarker && exif_marker == NULL )
-            {
-                if (cmarker->marker == APP1)
-                    exif_marker = cmarker;
-
-                cmarker = cmarker->next;
-            }
-
-            // Parse Exif data
-            if( exif_marker )
-            {
-                const std::streamsize offsetToTiffHeader = 6; //bytes from Exif size field to the first TIFF header
-
-                if (exif_marker->data_length > offsetToTiffHeader)
-                {
-                    m_exif.parseExif(exif_marker->data + offsetToTiffHeader, exif_marker->data_length - offsetToTiffHeader);
-                }
-            }
-
 
             jpeg_start_decompress( cinfo );
 
-            buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
-                                              JPOOL_IMAGE, m_width*4, 1 );
-
-            uchar* data = img.ptr();
-            for( ; m_height--; data += step )
+            if( doDirectRead)
             {
-                jpeg_read_scanlines( cinfo, buffer, 1 );
-                if( color )
+                for( int iy = 0 ; iy < m_height; iy ++ )
                 {
-                    if( cinfo->out_color_components == 3 )
-                        icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
-                    else
-                        icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    uchar* data = img.ptr<uchar>(iy);
+                    if (jpeg_read_scanlines( cinfo, &data, 1 ) != 1) return false;
                 }
-                else
+            }
+            else
+            {
+                JSAMPARRAY buffer = (*cinfo->mem->alloc_sarray)((j_common_ptr)cinfo,
+                                                                 JPOOL_IMAGE, m_width*4, 1 );
+
+                for( int iy = 0 ; iy < m_height; iy ++ )
                 {
-                    if( cinfo->out_color_components == 1 )
-                        memcpy( data, buffer[0], m_width );
+                    uchar* data = img.ptr<uchar>(iy);
+                    if (jpeg_read_scanlines( cinfo, buffer, 1 ) != 1) return false;
+
+                    if( color )
+                    {
+                        if (m_use_rgb)
+                        {
+                            if( cinfo->out_color_components == 3 )
+                                icvCvt_BGR2RGB_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                            else
+                                icvCvt_CMYK2RGB_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        }
+                        else
+                        {
+                            if( cinfo->out_color_components == 3 )
+                                icvCvt_RGB2BGR_8u_C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                            else
+                                icvCvt_CMYK2BGR_8u_C4C3R( buffer[0], 0, data, 0, Size(m_width,1) );
+                        }
+                    }
                     else
-                        icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    {
+                        if( cinfo->out_color_components == 1 )
+                            memcpy( data, buffer[0], m_width );
+                        else
+                            icvCvt_CMYK2Gray_8u_C4C1R( buffer[0], 0, data, 0, Size(m_width,1) );
+                    }
                 }
             }
 
@@ -565,6 +612,11 @@ JpegEncoder::JpegEncoder()
 {
     m_description = "JPEG files (*.jpeg;*.jpg;*.jpe)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[(size_t)IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_XMP] = true;
+    m_support_metadata[(size_t)IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_JPEG_QUALITY, IMWRITE_JPEG_PROGRESSIVE, IMWRITE_JPEG_OPTIMIZE, IMWRITE_JPEG_RST_INTERVAL, IMWRITE_JPEG_LUMA_QUALITY, IMWRITE_JPEG_CHROMA_QUALITY, IMWRITE_JPEG_SAMPLING_FACTOR};
 }
 
 
@@ -593,8 +645,6 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
     int width = img.cols, height = img.rows;
 
     std::vector<uchar> out_buf(1 << 12);
-    AutoBuffer<uchar> _buffer;
-    uchar* buffer;
 
     struct jpeg_compress_struct cinfo;
     JpegErrorMgr jerr;
@@ -629,8 +679,41 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         int _channels = img.channels();
         int channels = _channels > 1 ? 3 : 1;
-        cinfo.input_components = channels;
-        cinfo.in_color_space = channels > 1 ? JCS_RGB : JCS_GRAYSCALE;
+
+        bool doDirectWrite = false;
+        switch( _channels )
+        {
+            case 1:
+                cinfo.input_components = 1;
+                cinfo.in_color_space = JCS_GRAYSCALE;
+                doDirectWrite = true; // GRAY -> GRAY
+                break;
+            case 3:
+#ifdef JCS_EXTENSIONS
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_EXT_BGR;
+                doDirectWrite = true; // BGR -> BGR
+#else
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_RGB;
+                doDirectWrite = false; // BGR -> RGB
+#endif
+                break;
+            case 4:
+#ifdef JCS_EXTENSIONS
+                cinfo.input_components = 4;
+                cinfo.in_color_space = JCS_EXT_BGRX;
+                doDirectWrite = true; // BGRX -> BGRX
+#else
+                cinfo.input_components = 3;
+                cinfo.in_color_space = JCS_RGB;
+                doDirectWrite = false; // BGRA -> RGB
+#endif
+                break;
+            default:
+                CV_Error(cv::Error::StsError, cv::format("Unsupported number of _channels: %06d", _channels) );
+                break;
+        }
 
         int quality = 95;
         int progressive = 0;
@@ -642,27 +725,39 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
 
         for( size_t i = 0; i < params.size(); i += 2 )
         {
+            const int value = params[i+1];
             if( params[i] == IMWRITE_JPEG_QUALITY )
             {
-                quality = params[i+1];
-                quality = MIN(MAX(quality, 0), 100);
+                quality = MIN(MAX(value, 0), 100);
+                if(value != quality) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_QUALITY must be between 0 to 100. It is fallbacked to %d", value, quality));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_PROGRESSIVE )
             {
-                progressive = params[i+1];
+                progressive = MIN(MAX(value,0), 1);
+                if(value != progressive) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_PROGRESSIVE must be 0 or 1. It is fallbacked to %d", value, progressive));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_OPTIMIZE )
             {
-                optimize = params[i+1];
+                optimize = MIN(MAX(value,0), 1);
+                if(value != optimize) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_OPTIMIZE must be 0 or 1. It is fallbacked to %d", value, optimize));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_LUMA_QUALITY )
             {
-                if (params[i+1] >= 0)
+                if (value >= 0)
                 {
-                    luma_quality = MIN(MAX(params[i+1], 0), 100);
+                    luma_quality = MIN(MAX(value, 0), 100);
+                    if(value != luma_quality) {
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_LUMA_QUALITY must be between 0 to 100. It is fallbacked to %d.", value, luma_quality));
+                    }
 
                     quality = luma_quality;
 
@@ -670,6 +765,8 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                     {
                         chroma_quality = luma_quality;
                     }
+                } else {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_LUMA_QUALITY must be between 0 to 100. It is ignored.", value));
                 }
             }
 
@@ -677,19 +774,26 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             {
                 if (params[i+1] >= 0)
                 {
-                    chroma_quality = MIN(MAX(params[i+1], 0), 100);
+                    chroma_quality = MIN(MAX(value, 0), 100);
+                    if(value != chroma_quality) {
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_CHROMA_QUALITY must be between 0 to 100. It is fallbacked to %d.", value, chroma_quality));
+                    }
+                } else {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_CHROMA_QUALITY must be between 0 to 100. It is ignored.", value));
                 }
             }
 
             if( params[i] == IMWRITE_JPEG_RST_INTERVAL )
             {
-                rst_interval = params[i+1];
-                rst_interval = MIN(MAX(rst_interval, 0), 65535L);
+                rst_interval = MIN(MAX(value, 0), 65535L);
+                if(value != rst_interval) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_RST_INTERVAL must be between 0 to 65535. It is fallbacked to %d.", value, rst_interval));
+                }
             }
 
             if( params[i] == IMWRITE_JPEG_SAMPLING_FACTOR )
             {
-                sampling_factor = static_cast<uint32_t>(params[i+1]);
+                sampling_factor = static_cast<uint32_t>(value);
 
                 switch ( sampling_factor )
                 {
@@ -702,7 +806,7 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                     break;
 
                     default:
-                    CV_LOG_WARNING(NULL, cv::format("Unknown value for IMWRITE_JPEG_SAMPLING_FACTOR: 0x%06x", sampling_factor ) );
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG_SAMPLING_FACTOR must be one of ImwriteJPEGSamplingFactorParams. It is fallbacked to IMWRITE_JPEG_SAMPLING_FACTOR_420.", value));
                     sampling_factor = 0;
                     break;
                 }
@@ -727,9 +831,9 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
             cinfo.comp_info[1].h_samp_factor = 1;
         }
 
-#if JPEG_LIB_VERSION >= 70
         if (luma_quality >= 0 && chroma_quality >= 0)
         {
+#if JPEG_LIB_VERSION >= 70
             cinfo.q_scale_factor[0] = jpeg_quality_scaling(luma_quality);
             cinfo.q_scale_factor[1] = jpeg_quality_scaling(chroma_quality);
             if ( luma_quality != chroma_quality )
@@ -741,31 +845,79 @@ bool JpegEncoder::write( const Mat& img, const std::vector<int>& params )
                 cinfo.comp_info[1].h_samp_factor = 1;
             }
             jpeg_default_qtables( &cinfo, TRUE );
-        }
+#else
+            // See https://github.com/opencv/opencv/issues/25646
+            CV_LOG_ONCE_WARNING(NULL, cv::format("IMWRITE_JPEG_LUMA/CHROMA_QUALITY are not supported bacause JPEG_LIB_VERSION < 70."));
 #endif // #if JPEG_LIB_VERSION >= 70
+        }
 
         jpeg_start_compress( &cinfo, TRUE );
 
-        if( channels > 1 )
-            _buffer.allocate(width*channels);
-        buffer = _buffer.data();
+        if (!m_metadata.empty()) {
+            const std::vector<uchar>& metadata_exif = m_metadata[IMAGE_METADATA_EXIF];
+            size_t exif_size = metadata_exif.size();
+            if (exif_size > 0u) {
+                const char app1_exif_prefix[] = {'E', 'x', 'i', 'f', '\0', '\0'};
+                size_t app1_exif_prefix_size = sizeof(app1_exif_prefix);
+                size_t data_size = exif_size + app1_exif_prefix_size;
 
-        for( int y = 0; y < height; y++ )
+                std::vector<uchar> metadata_app1(data_size);
+                uchar* data = metadata_app1.data();
+                memcpy(data, app1_exif_prefix, app1_exif_prefix_size);
+                memcpy(data + app1_exif_prefix_size, metadata_exif.data(), exif_size);
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 1, data, (unsigned)data_size);
+            }
+
+            const std::vector<uchar>& metadata_xmp = m_metadata[IMAGE_METADATA_XMP];
+            size_t xmp_size = metadata_xmp.size();
+            if (xmp_size > 0u) {
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 1, metadata_xmp.data(), (unsigned)xmp_size);
+            }
+
+            const std::vector<uchar>& metadata_iccp = m_metadata[IMAGE_METADATA_ICCP];
+            size_t iccp_size = metadata_iccp.size();
+            if (iccp_size > 0u) {
+                const char app1_iccp_prefix[] = {'I','C','C','_','P','R','O','F','I','L','E','\0','\1','\1'};
+                size_t app1_iccp_prefix_size = sizeof(app1_iccp_prefix);
+                size_t data_size = iccp_size + app1_iccp_prefix_size;
+
+                std::vector<uchar> metadata_app1(data_size);
+                uchar* data = metadata_app1.data();
+                memcpy(data, app1_iccp_prefix, app1_iccp_prefix_size);
+                memcpy(data + app1_iccp_prefix_size, metadata_iccp.data(), iccp_size);
+                jpeg_write_marker(&cinfo, JPEG_APP0 + 2, data, (unsigned)data_size);
+            }
+        }
+
+        if( doDirectWrite )
         {
-            uchar *data = img.data + img.step*y, *ptr = data;
-
-            if( _channels == 3 )
+            for( int y = 0; y < height; y++ )
             {
-                icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
-                ptr = buffer;
+                uchar *data = const_cast<uchar*>(img.ptr<uchar>(y));
+                jpeg_write_scanlines( &cinfo, &data, 1 );
             }
-            else if( _channels == 4 )
-            {
-                icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
-                ptr = buffer;
-            }
+        }
+        else
+        {
+            CV_Check(_channels, (_channels == 3) || (_channels == 4), "Unsupported number of channels(indirect write)");
 
-            jpeg_write_scanlines( &cinfo, &ptr, 1 );
+            AutoBuffer<uchar> _buffer;
+            _buffer.allocate(width*channels);
+            uchar *buffer = _buffer.data();
+
+            for( int y = 0; y < height; y++ )
+            {
+                uchar *data = const_cast<uchar*>(img.ptr<uchar>(y));
+                if( _channels == 3 )
+                {
+                    icvCvt_BGR2RGB_8u_C3R( data, 0, buffer, 0, Size(width,1) );
+                }
+                else // if( _channels == 4 )
+                {
+                    icvCvt_BGRA2BGR_8u_C4C3R( data, 0, buffer, 0, Size(width,1), 2 );
+                }
+                jpeg_write_scanlines( &cinfo, &buffer, 1 );
+            }
         }
 
         jpeg_finish_compress( &cinfo );

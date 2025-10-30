@@ -4,9 +4,7 @@
 
 // This is .hpp file included from test_utils.cpp
 
-#ifdef CV_CXX11
 #include <thread>  // std::thread
-#endif
 
 #include "opencv2/core/utils/tls.hpp"
 
@@ -33,8 +31,6 @@ public:
 
 int TLSReporter::g_last_id = 0;
 int TLSReporter::g_allocated = 0;
-
-#ifdef CV_CXX11
 
 template<typename T>
 static void callNThreadsWithTLS(int N, TLSData<T>& tls)
@@ -128,7 +124,5 @@ static void testTLSAccumulator(bool detachFirst)
 
 TEST(Core_TLS, AccumulatorHoldData_detachData) { testTLSAccumulator(true); }
 TEST(Core_TLS, AccumulatorHoldData_gather) { testTLSAccumulator(false); }
-
-#endif
 
 }}  // namespace

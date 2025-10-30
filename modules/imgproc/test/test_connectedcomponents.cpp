@@ -81,7 +81,7 @@ void CV_ConnectedComponentsTest::run(int /* start_from */)
     int ccltype[] = { cv::CCL_DEFAULT, cv::CCL_WU, cv::CCL_GRANA, cv::CCL_BOLELLI, cv::CCL_SAUF, cv::CCL_BBDT, cv::CCL_SPAGHETTI };
 
     string exp_path = string(ts->get_data_path()) + "connectedcomponents/ccomp_exp.png";
-    Mat exp = imread(exp_path, 0);
+    Mat exp = imread(exp_path, IMREAD_GRAYSCALE);
     Mat orig = imread(string(ts->get_data_path()) + "connectedcomponents/concentric_circles.png", 0);
 
     if (orig.empty())
@@ -798,7 +798,47 @@ TEST(Imgproc_ConnectedComponents, 4conn_regression_21366)
     }
 }
 
+TEST(Imgproc_ConnectedComponents, regression_27568)
+{
+    Mat image = Mat::zeros(Size(512, 512), CV_8UC1);
+    for (int row = 0; row < image.rows; row += 2)
+    {
+        for (int col = 0; col < image.cols; col += 2)
+        {
+            image.at<uint8_t>(row, col) = 1;
+        }
+    }
 
+    for (const int connectivity : {4, 8})
+    {
+        for (const int ccltype : {CCL_DEFAULT, CCL_WU, CCL_GRANA, CCL_BOLELLI, CCL_SAUF, CCL_BBDT, CCL_SPAGHETTI})
+        {
+            {
+                Mat labels, stats, centroids;
+                try
+                {
+                    connectedComponentsWithStats(
+                        image, labels, stats, centroids, connectivity, CV_16U, ccltype);
+                    ADD_FAILURE();
+                }
+                catch (const Exception& exception)
+                {
+                    EXPECT_TRUE(
+                        strstr(
+                            exception.what(),
+                            "Total number of labels overflowed label type. Try using CV_32S instead of CV_16U as ltype"));
+                }
+            }
+
+            {
+                Mat labels, stats, centroids;
+                EXPECT_NO_THROW(
+                    connectedComponentsWithStats(
+                        image, labels, stats, centroids, connectivity, CV_32S, ccltype));
+            }
+        }
+    }
+}
 
 }
 } // namespace

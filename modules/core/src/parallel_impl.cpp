@@ -45,9 +45,8 @@ DECLARE_CV_PAUSE
       static inline void cv_non_sse_mm_pause() { __asm__ __volatile__ ("rep; nop"); }
 #     define _mm_pause cv_non_sse_mm_pause
 #   endif
-// 5 * v is meants for backward compatibility: with pre-Skylake CPUs, _mm_pause took 4 or 5 cycles.
-// With post-Skylake CPUs, _mm_pause takes 140 cycles.
-#   define CV_PAUSE(v) do { const uint64_t __delay = 5 * v; uint64_t __init = __rdtsc(); do { _mm_pause(); } while ((__rdtsc() - __init) < __delay); } while (0)
+// With Skylake CPUs and above, _mm_pause takes 140 cycles so no need for a loop.
+#   define CV_PAUSE(v) do { (void)v; _mm_pause(); } while (0)
 # elif defined __GNUC__ && defined __aarch64__
 #   define CV_PAUSE(v) do { for (int __delay = (v); __delay > 0; --__delay) { asm volatile("yield" ::: "memory"); } } while (0)
 # elif defined __GNUC__ && defined __arm__
@@ -581,8 +580,11 @@ void ThreadPool::run(const Range& range, const ParallelLoopBody& body, double ns
             pthread_mutex_unlock(&mutex);
 
             CV_LOG_VERBOSE(NULL, 5, "MainThread: wake worker threads...");
-            for (size_t i = 0; i < threads.size(); ++i)
+            size_t num_threads_to_wake = std::min(static_cast<size_t>(range.size()), threads.size());
+            for (size_t i = 0; i < num_threads_to_wake; ++i)
             {
+                if (job->current_task >= job->range.size())
+                    break;
                 WorkerThread& thread = *(threads[i].get());
                 if (
 #if defined(__clang__) && defined(__has_feature)

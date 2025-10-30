@@ -30,7 +30,8 @@ namespace
                                     , nullptr
                                     , { GShape::GMAT }
                                     , { D::OpaqueKind::CV_UNKNOWN }
-                                    , { cv::detail::HostCtor{cv::util::monostate{}} }
+                                    , { D::HostCtor{cv::util::monostate{}} }
+                                    , { D::OpaqueKind::CV_UNKNOWN }
                                     }).pass(m).yield(0);
     }
 
@@ -41,7 +42,8 @@ namespace
                                     , nullptr
                                     , { GShape::GMAT }
                                     , { D::OpaqueKind::CV_UNKNOWN, D::OpaqueKind::CV_UNKNOWN }
-                                    , { cv::detail::HostCtor{cv::util::monostate{}} }
+                                    , { D::HostCtor{cv::util::monostate{}} }
+                                    , { D::OpaqueKind::CV_UNKNOWN}
                                     }).pass(m1, m2).yield(0);
     }
 

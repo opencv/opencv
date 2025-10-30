@@ -15,7 +15,7 @@ This tutorial is deprecated.
 @tableofcontents
 
 OpenCV with CUDA for Tegra
-==========================
+--------------------------
 
 This document is a basic guide to building the OpenCV libraries with CUDA support for use in the Tegra environment. It covers the basic elements of building the version 3.1.0 libraries from source code for three (3) different types of platforms:
 
@@ -36,17 +36,16 @@ The OpenCV build system supports native compilation for all the supported platfo
 At the present time, this document focuses only on native compilation.
 
 Getting the Source Code {#tutorial_building_tegra_cuda_getting_the_code}
-=======================
+-----------------------
 
 There are two (2) ways to get the OpenCV source code:
 
-* Direct download from the [OpenCV downloads](http://opencv.org/releases.html) page
+* Direct download from the [OpenCV downloads](https://opencv.org/releases) page
 * Cloning the git repositories hosted on [GitHub](https://github.com/opencv)
 
 For this guide, the focus is on using the git repositories. This is because the 3.1.0 version of OpenCV will not build with CUDA 8.0 without applying a few small upstream changes from the git repository.
 
-OpenCV
-------
+### OpenCV
 
 Start with the `opencv` repository:
 
@@ -93,8 +92,7 @@ You should see output similar to:
 
 At this point, the `opencv` repository is ready for building.
 
-OpenCV Extra
-------------
+### OpenCV Extra
 
 The `opencv_extra` repository contains extra data for the OpenCV library, including the data files used by the tests and demos. It must be cloned separately:
 
@@ -111,12 +109,11 @@ You may opt to not fetch this repository if you do not plan on running the tests
 __Note:__ If you plan to run the tests, some tests expect the data to be present and will fail without it.
 
 Preparation and Prerequisites {#tutorial_building_tegra_cuda_preparation}
-=============================
+-----------------------------
 
 To build OpenCV, you need a directory to create the configuration and build the libraries. You also need a number of 3rd-party libraries upon which OpenCV depends.
 
-Prerequisites for Ubuntu Linux
-------------------------------
+### Prerequisites for Ubuntu Linux
 
 These are the basic requirements for building OpenCV for Tegra on Linux:
 
@@ -186,8 +183,7 @@ The commands that will do this:
 
 Once all the necessary packages are installed, you can configure the build.
 
-Preparing the Build Area
-------------------------
+### Preparing the Build Area
 
 Software projects that use the CMake system for configuring their builds expect the actual builds to be done outside of the source tree itself. For configuring and building OpenCV, create a directory called "build" in the same base directory into which you cloned the git repositories:
 
@@ -197,7 +193,7 @@ Software projects that use the CMake system for configuring their builds expect 
 You are now ready to configure and build OpenCV.
 
 Configuring OpenCV for Building {#tutorial_building_tegra_cuda_configuring}
-===============================
+-------------------------------
 
 The CMake configuration options given below for the different platforms are targeted towards the functionality needed for Tegra. They are based on the original configuration options used for building OpenCV 2.4.13.
 
@@ -209,8 +205,7 @@ For the Linux-based platforms, the shown value for the `CMAKE_INSTALL_PREFIX` pa
 
 In each of the `cmake` invocations below, the last parameter, `OPENCV_TEST_DATA_PATH`, tells the build system where to find the test-data that is provided by the `opencv_extra` repository. When this is included, a `make install` installs this test-data alongside the libraries and example code, and a `make test` automatically provides this path to the tests that have to load data from it. If you did not clone the `opencv_extra` repository, do not include this parameter.
 
-Vibrante V4L Configuration
---------------------------
+### Vibrante V4L Configuration
 
 Supported platform: Drive PX 2
 
@@ -251,8 +246,7 @@ The configuration provided above builds the Python bindings for Python 2 (but no
 
     -DBUILD_opencv_python2=OFF
 
-Jetson L4T Configuration
-------------------------
+### Jetson L4T Configuration
 
 Supported platforms:
 
@@ -261,7 +255,7 @@ Supported platforms:
 
 Configuration is slightly different for the Jetson TK1 and the Jetson TX1 systems.
 
-### Jetson TK1
+#### Jetson TK1
 
     $ cmake \
         -DCMAKE_BUILD_TYPE=Release \
@@ -299,7 +293,7 @@ Configuration is slightly different for the Jetson TK1 and the Jetson TX1 system
 
 __Note:__ This uses CUDA 6.5, not 8.0.
 
-### Jetson TX1
+#### Jetson TX1
 
     $ cmake \
         -DCMAKE_BUILD_TYPE=Release \
@@ -336,8 +330,7 @@ __Note:__ This uses CUDA 6.5, not 8.0.
 
 __Note:__ This configuration does not set the `ENABLE_NEON` parameter.
 
-Ubuntu Desktop Linux Configuration
-----------------------------------
+### Ubuntu Desktop Linux Configuration
 
 Supported platforms:
 
@@ -383,12 +376,11 @@ This configuration is nearly identical to that for V4L and L4T, except that the 
 As with previous examples, the configuration given above builds the Python bindings for Python 2 (but not Python 3) as part of the build process.
 
 Building OpenCV {#tutorial_building_tegra_cuda_building}
-===============
+---------------
 
 Once `cmake` finishes configuring OpenCV, building is done using the standard `make` utility.
 
-Building with `make`
---------------------
+### Building with `make`
 
 The only parameter that is needed for the invocation of `make` is the `-j` parameter for specifying how many parallel threads to use. This varies depending on the system and how much memory is available, other running processes, etc. The following table offers suggested values for this parameter:
 
@@ -408,12 +400,11 @@ By default, CMake hides the details of the build steps. If you need to see more 
     $ make -j6 VERBOSE=1
 
 Testing OpenCV {#tutorial_building_tegra_cuda_testing}
-==============
+--------------
 
 Once the build completes successfully, you have the option of running the extensive set of tests that OpenCV provides. If you did not clone the `opencv_extra` repository and specify the path to `testdata` in the `cmake` invocation, then testing is not recommended.
 
-Testing under Linux
--------------------
+### Testing under Linux
 
 To run the basic tests under Linux, execute:
 
@@ -425,7 +416,7 @@ This executes `ctest` to carry out the tests, as specified in CTest syntax withi
 
 In this example, there are two (2) arguments passed to `ctest`: `--verbose` and `--parallel 3`. The first argument causes the output from `ctest` to be more detailed, and the second causes `ctest` to run as many as three (3) tests in parallel. As with choosing a thread count for building, base any choice for testing on the available number of processor cores, physical memory, etc. Some of the tests do attempt to allocate significant amounts of memory.
 
-### Known Issues with Tests
+#### Known Issues with Tests
 
 At present, not all of the tests in the OpenCV test suite pass. There are tests that fail whether or not CUDA is compiled, and there are tests that are only specific to CUDA that also do not currently pass.
 
@@ -434,7 +425,7 @@ __Note:__ There are no tests that pass without CUDA but fail only when CUDA is i
 As the full lists of failing tests vary based on platform, it is impractical to list them here.
 
 Installing OpenCV {#tutorial_building_tegra_cuda_installing}
-=================
+-----------------
 
 Installing OpenCV is very straightforward. For the Linux-based platforms, the command is:
 
@@ -443,14 +434,13 @@ Installing OpenCV is very straightforward. For the Linux-based platforms, the co
 Depending on the chosen installation location, you may need root privilege to install.
 
 Building OpenCV 2.4.X {#tutorial_building_tegra_cuda_opencv_24X}
-=====================
+---------------------
 
 If you wish to build your own version of the 2.4 version of OpenCV, there are only a few adjustments that must be made. At the time of this writing, the latest version on the 2.4 tree is 2.4.13. These instructions may work for later versions of 2.4, though they have not been tested for any earlier versions.
 
 __Note:__ The 2.4.X OpenCV source does not have the extra modules and code for Tegra that was upstreamed into the 3.X versions of OpenCV. This part of the guide is only for cases where you want to build a vanilla version of OpenCV 2.4.
 
-Selecting the 2.4 Source
-------------------------
+### Selecting the 2.4 Source
 
 First you must select the correct source branch or tag. If you want a specific version such as 2.4.13, you want to make a local branch based on the tag, as was done with the 3.1.0 tag above:
 
@@ -466,14 +456,13 @@ If you simply want the newest code from the 2.4 line of OpenCV, there is a `2.4`
 
 There is no need for the `git cherry-pick` commands used with 3.1.0 when building the 2.4.13 source.
 
-Configuring
------------
+### Configuring
 
 Configuring is done with CMake as before. The primary difference is that OpenCV 2.4 only provides Python bindings for Python 2, and thus does not distinguish between Python 2 and Python 3 in the CMake parameters. There is only one parameter, `BUILD_opencv_python`. In addition, there is a build-related parameter that controls features in 2.4 that are not in 3.1.0. This parameter is `BUILD_opencv_nonfree`.
 
 Configuration still takes place in a separate directory that must be a sibling to the `opencv` and `opencv_extra` directories.
 
-### Configuring Vibrante V4L
+#### Configuring Vibrante V4L
 
 For DRIVE PX 2:
 
@@ -510,7 +499,7 @@ For DRIVE PX 2:
         -DOPENCV_TEST_DATA_PATH=../opencv_extra/testdata \
         ../opencv
 
-### Configuring Jetson L4T
+#### Configuring Jetson L4T
 
 For Jetson TK1:
 
@@ -582,7 +571,7 @@ For Jetson TX1:
         -DOPENCV_TEST_DATA_PATH=../opencv_extra/testdata \
         ../opencv
 
-### Configuring Desktop Ubuntu Linux
+#### Configuring Desktop Ubuntu Linux
 
 For both 14.04 LTS and 16.04 LTS:
 
@@ -618,13 +607,12 @@ For both 14.04 LTS and 16.04 LTS:
         -DOPENCV_TEST_DATA_PATH=../opencv_extra/testdata \
         ../opencv
 
-Building, Testing and Installing
---------------------------------
+### Building, Testing and Installing
 
 Once configured, the steps of building, testing, and installing are the same as above for the 3.1.0 source.
 
 CMake Parameter Reference {#tutorial_building_tegra_cuda_parameter_reference}
-=========================
+-------------------------
 
 The following is a table of all the parameters passed to CMake in the recommended invocations above. Some of these are parameters from CMake itself, while most are specific to OpenCV.
 

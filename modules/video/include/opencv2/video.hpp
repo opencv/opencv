@@ -49,7 +49,6 @@
   @{
     @defgroup video_motion Motion Analysis
     @defgroup video_track Object Tracking
-    @defgroup video_c C API
   @}
 */
 

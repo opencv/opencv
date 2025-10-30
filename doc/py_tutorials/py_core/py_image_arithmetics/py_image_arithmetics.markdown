@@ -50,6 +50,8 @@ Here \f$\gamma\f$ is taken as zero.
 @code{.py}
 img1 = cv.imread('ml.png')
 img2 = cv.imread('opencv-logo.png')
+assert img1 is not None, "file could not be read, check with os.path.exists()"
+assert img2 is not None, "file could not be read, check with os.path.exists()"
 
 dst = cv.addWeighted(img1,0.7,img2,0.3,0)
 
@@ -76,6 +78,8 @@ bitwise operations as shown below:
 # Load two images
 img1 = cv.imread('messi5.jpg')
 img2 = cv.imread('opencv-logo-white.png')
+assert img1 is not None, "file could not be read, check with os.path.exists()"
+assert img2 is not None, "file could not be read, check with os.path.exists()"
 
 # I want to put logo on top-left corner, So I create a ROI
 rows,cols,channels = img2.shape
@@ -105,9 +109,6 @@ more understanding, display all the intermediate images in the above code, espec
 img2_fg.
 
 ![image](images/overlay.jpg)
-
-Additional Resources
---------------------
 
 Exercises
 ---------

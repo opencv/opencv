@@ -157,7 +157,7 @@ public:
                             q0 = v_max(q0, v_min(a, v0_));
                             q1 = v_min(q1, v_max(b, v0_));
                         }
-                        q0 = v_max(q0, v_setzero_s16() - q1);
+                        q0 = v_max(q0, v_sub(v_setzero_s16(), q1));
                         curr[j + k] = (uchar)(v_reduce_max(q0) - 1);
                     }
                 }

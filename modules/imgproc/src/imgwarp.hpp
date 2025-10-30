@@ -74,7 +74,6 @@ namespace opt_SSE4_1
 void convertMaps_nninterpolate32f1c16s_SSE41(const float* src1f, const float* src2f, short* dst1, int width);
 void convertMaps_32f1c16s_SSE41(const float* src1f, const float* src2f, short* dst1, ushort* dst2, int width);
 void convertMaps_32f2c16s_SSE41(const float* src1f, short* dst1, ushort* dst2, int width);
-void WarpAffineInvoker_Blockline_SSE41(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw);
 
 class WarpPerspectiveLine_SSE4
 {

@@ -159,7 +159,7 @@ struct Copy: public cv::detail::KernelTag
         return cv::gapi::streaming::IActor::Ptr(new Actor(args));
     }
 
-    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
+    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; }
 };
 
 void Copy::Actor::run(cv::gimpl::GIslandExecutable::IInput  &in,
@@ -249,7 +249,7 @@ struct GOCVBGR: public cv::detail::KernelTag
     {
         return cv::gapi::streaming::IActor::Ptr(new Actor(args));
     }
-    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
+    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; }
 };
 
 void GOCVBGR::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
@@ -323,7 +323,7 @@ struct GOCVY: public cv::detail::KernelTag
     {
         return cv::gapi::streaming::IActor::Ptr(new Actor(args));
     }
-    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
+    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; }
 };
 
 void GOCVY::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)
@@ -389,7 +389,7 @@ struct GOCVUV: public cv::detail::KernelTag
     {
         return cv::gapi::streaming::IActor::Ptr(new Actor(args));
     }
-    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; };
+    static cv::gapi::streaming::GStreamingKernel kernel() { return {&create}; }
 };
 
 void GOCVUV::Actor::extractRMat(const cv::MediaFrame& frame, cv::RMat& rmat)

@@ -5,87 +5,93 @@
 // Copyright (C) 2018, Intel Corporation, all rights reserved.
 // Third party copyrights are property of their respective owners.
 
-#ifndef OPENCV_DNN_VKCOM_INTERNAL_HPP
-#define OPENCV_DNN_VKCOM_INTERNAL_HPP
+#ifndef OPENCV_DNN_VKCOM_COMMON_HPP
+#define OPENCV_DNN_VKCOM_COMMON_HPP
 
-#include <float.h>
-#include "../include/vkcom.hpp"
-#include "context.hpp"
+#include <math.h>
+#include <string.h>
+#include <map>
+#include <mutex>
+#include <thread>
+#include <vector>
+#include <iostream>
+#include <sstream>
+#include <algorithm>
+#include <memory>
 
-#ifdef USE_SHADERC
-#include "shaderc/shaderc.hpp"
-#else
-typedef int shaderc_shader_kind;
-#define shaderc_compute_shader 0
+#ifdef HAVE_VULKAN
+#include <vulkan/vulkan.h>
 #endif
+
+#include "opencv2/core/utils/logger.hpp"
+#include "../vulkan/vk_functions.hpp"
+#include "../include/vkcom.hpp"
+#include "../shader/spv_shader.hpp"
+//#include "../vulkan/vk_functions.hpp"
+//#include "../vulkan/vk_loader.hpp"
 
 namespace cv { namespace dnn { namespace vkcom {
 
 #ifdef HAVE_VULKAN
+extern VkQueue kQueue;
+extern VkDevice kDevice;
+extern cv::Mutex kContextMtx;
+extern Ptr<CommandPool> cmdPoolPtr;
+extern Ptr<PipelineFactory> pipelineFactoryPtr;
+extern VkPhysicalDeviceMemoryProperties physicalDeviceMemoryProperties;
 
-Context* getContext();
-VkPhysicalDevice getPhysicalDevice();
-std::vector<uint32_t> compile(const std::string& name,
-                              shaderc_shader_kind kind,
-                              const std::string& data);
-void bindTensor(VkDevice& device, Tensor& tensor, int binding, VkDescriptorSet descriptor_set);
-void computeConvOutputShapeAndPadding(const PaddingMode& padding_mode,
-                                      int& padding_top, int& padding_left,
-                                      const int& in_h, const int& in_w,
-                                      const int& filter_h, const int& filter_w,
-                                      const int& dilation_h, const int& dilation_w,
-                                      const int& stride_h, const int& stride_w,
-                                      int& out_h, int& out_w);
-void computePoolOutputShape(const PaddingMode& padding_mode,
-                            const int& padding_top, const int& padding_left,
-                            const int& in_h, const int& in_w,
-                            const int& filter_h, const int& filter_w,
-                            const int& stride_h, const int& stride_w,
-                            int& out_h, int& out_w);
 
-inline bool checkFormat(Format fmt)
+
+enum ShapeIdx
 {
-    return (fmt > -1 && fmt < kFormatNum) ? true : false;
+    kShapeIdxBatch = 0,
+    kShapeIdxChannel,
+    kShapeIdxHeight,
+    kShapeIdxWidth,
+};
+
+#define VK_CHECK_RESULT(f) \
+{ \
+        if (f != VK_SUCCESS) \
+        { \
+            CV_LOG_ERROR(NULL, "Vulkan check failed, result = " << (int)f); \
+            CV_Error(Error::StsError, "Vulkan check failed"); \
+        } \
 }
 
-inline size_t elementSize(Format fmt)
-{
-    if (fmt == kFormatFp32 || fmt == kFormatInt32)
-    {
-        return 4;
-    }
-    else if (fmt >= 0 && fmt < kFormatNum)
-    {
-        CV_LOG_WARNING(NULL, format("Unsupported format %d", fmt));
-    }
-    else
-    {
-        CV_Error(Error::StsError, format("Invalid format %d", fmt));
-    }
-    return 0;
+#define VKCOM_CHECK_BOOL_RET_VAL(val, ret) \
+{ \
+    bool res = (val); \
+    if (!res) \
+    { \
+        CV_LOG_WARNING(NULL, "Check bool failed"); \
+        return ret; \
+    } \
 }
 
-inline int shapeCount(const Shape& shape, int start = -1, int end = -1)
-{
-    if (start == -1) start = 0;
-    if (end == -1) end = (int)shape.size();
-
-    if (shape.empty())
-        return 0;
-
-    int elems = 1;
-    assert(start <= (int)shape.size() &&
-           end <= (int)shape.size() &&
-           start <= end);
-    for(int i = start; i < end; i++)
-    {
-        elems *= shape[i];
-    }
-    return elems;
+#define VKCOM_CHECK_POINTER_RET_VOID(p) \
+{ \
+    if (NULL == (p)) \
+    { \
+        CV_LOG_WARNING(NULL, "Check pointer failed"); \
+        return; \
+    } \
 }
 
+#define VKCOM_CHECK_POINTER_RET_VAL(p, val) \
+{ \
+    if (NULL == (p)) \
+    { \
+        CV_LOG_WARNING(NULL, "Check pointer failed"); \
+        return (val); \
+    } \
+}
+
+bool checkFormat(Format fmt);
+size_t elementSize(Format fmt);
+int shapeCount(const Shape& shape, int start = -1, int end = -1);
 #endif // HAVE_VULKAN
 
 }}} // namespace cv::dnn::vkcom
 
-#endif // OPENCV_DNN_VKCOM_INTERNAL_HPP
+#endif // OPENCV_DNN_VKCOM_COMMON_HPP

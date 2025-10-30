@@ -72,7 +72,7 @@ Theory
 
 -#  We mentioned that an Affine Transformation is basically a **relation**
     between two images. The information about this relation can come, roughly, in two ways:
-    -#  We know both \f$X\f$ and T and we also know that they are related. Then our task is to find \f$M\f$
+    -#  We know both \f$X\f$ and \f$T\f$ and we also know that they are related. Then our task is to find \f$M\f$
     -#  We know \f$M\f$ and \f$X\f$. To obtain \f$T\f$ we only need to apply \f$T = M \cdot X\f$. Our information
         for \f$M\f$ may be explicit (i.e. have the 2-by-3 matrix) or it can come as a geometric relation
         between points.

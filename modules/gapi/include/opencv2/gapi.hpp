@@ -10,7 +10,7 @@
 
 #include <memory>
 
-/** \defgroup gapi G-API framework
+/** \defgroup gapi_ref G-API framework
 @{
     @defgroup gapi_main_classes G-API Main Classes
     @defgroup gapi_data_objects G-API Data Types

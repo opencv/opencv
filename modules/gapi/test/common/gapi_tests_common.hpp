@@ -370,7 +370,7 @@ public:
             initMatByPointsVectorRandU<Pt<double>>(sz_in);
             break;
         case CV_16F:
-            initMatByPointsVectorRandU<Pt<cv::float16_t>>(sz_in);
+            initMatByPointsVectorRandU<Pt<cv::hfloat>>(sz_in);
             break;
         default:
             GAPI_Error("Unsupported depth");

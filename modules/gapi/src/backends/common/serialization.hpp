@@ -195,7 +195,7 @@ class GAPI_EXPORTS ByteMemoryInStream final: public IIStream {
     size_t m_idx = 0u;
 
     void check(std::size_t n) { (void) n; GAPI_DbgAssert(m_idx+n-1 < m_storage.size()); }
-    uint32_t getU32() { uint32_t v{}; *this >> v; return v; };
+    uint32_t getU32() { uint32_t v{}; *this >> v; return v; }
 
     //virtual IIStream& operator>> (uint32_t &) final;
 

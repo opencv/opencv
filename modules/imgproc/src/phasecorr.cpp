@@ -38,6 +38,7 @@
 
 #include "precomp.hpp"
 #include <vector>
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv
 {
@@ -252,18 +253,18 @@ void divSpectrums( InputArray _srcA, InputArray _srcB, OutputArray _dst, int fla
             if( !conjB )
                 for( j = j0; j < j1; j += 2 )
                 {
-                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-                    double re = (double)(dataA[j]*dataB[j] + dataA[j+1]*dataB[j+1]);
-                    double im = (double)(dataA[j+1]*dataB[j] - dataA[j]*dataB[j+1]);
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] + (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] - (double)dataA[j]*dataB[j+1];
                     dataC[j] = (float)(re / denom);
                     dataC[j+1] = (float)(im / denom);
                 }
             else
                 for( j = j0; j < j1; j += 2 )
                 {
-                    double denom = (double)(dataB[j]*dataB[j] + dataB[j+1]*dataB[j+1] + eps);
-                    double re = (double)(dataA[j]*dataB[j] - dataA[j+1]*dataB[j+1]);
-                    double im = (double)(dataA[j+1]*dataB[j] + dataA[j]*dataB[j+1]);
+                    double denom = (double)dataB[j]*dataB[j] + (double)dataB[j+1]*dataB[j+1] + (double)eps;
+                    double re = (double)dataA[j]*dataB[j] - (double)dataA[j+1]*dataB[j+1];
+                    double im = (double)dataA[j+1]*dataB[j] + (double)dataA[j]*dataB[j+1];
                     dataC[j] = (float)(re / denom);
                     dataC[j+1] = (float)(im / denom);
                 }
@@ -613,9 +614,28 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
     AutoBuffer<double> _wc(cols);
     double* const wc = _wc.data();
 
-    double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0f * CV_PI / (double)(rows - 1);
-    for(int j = 0; j < cols; j++)
-        wc[j] = 0.5 * (1.0 - cos(coeff0 * j));
+    double coeff0 = 2.0 * CV_PI / (double)(cols - 1), coeff1 = 2.0 * CV_PI / (double)(rows - 1);
+    int c = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int nlanes32 = VTraits<v_float32>::vlanes();
+    const int nlanes64 = VTraits<v_float64>::vlanes();
+    const int max_nlanes = VTraits<v_float64>::max_nlanes;
+    std::array<double, max_nlanes> index;
+    std::iota(index.data(), index.data()+max_nlanes, 0.f);
+    v_float64 vindex = vx_load(index.data());
+    v_float64 delta = vx_setall_f64(VTraits<v_float64>::vlanes());
+    v_float64 vcoeff0 = vx_setall_f64(coeff0);
+    v_float64 one = vx_setall_f64(1.f);
+    v_float64 half = vx_setall_f64(0.5f);
+    for (; c <= cols - nlanes64; c += nlanes64)
+    {
+        v_float64 v = v_mul(half, v_sub(one, v_cos(v_mul(vcoeff0, vindex))));
+        vx_store(wc + c, v);
+        vindex = v_add(vindex, delta);
+    }
+#endif
+    for(; c < cols; c++)
+        wc[c] = 0.5 * (1.0 - cos(coeff0 * c));
 
     if(dst.depth() == CV_32F)
     {
@@ -623,7 +643,17 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
         {
             float* dstData = dst.ptr<float>(i);
             double wr = 0.5 * (1.0 - cos(coeff1 * i));
-            for(int j = 0; j < cols; j++)
+            int j = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+            v_float64 vwr = vx_setall_f64(wr);
+            for (; j <= cols - nlanes32; j += nlanes32)
+            {
+                v_float64 v0 = v_mul(vwr, vx_load(wc + j));
+                v_float64 v1 = v_mul(vwr, vx_load(wc + j + nlanes64));
+                vx_store(dstData + j, v_cvt_f32(v0, v1));
+            }
+#endif
+            for(; j < cols; j++)
                 dstData[j] = (float)(wr * wc[j]);
         }
     }
@@ -633,7 +663,16 @@ void cv::createHanningWindow(OutputArray _dst, cv::Size winSize, int type)
         {
             double* dstData = dst.ptr<double>(i);
             double wr = 0.5 * (1.0 - cos(coeff1 * i));
-            for(int j = 0; j < cols; j++)
+            int j = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+            v_float64 vwr = vx_setall_f64(wr);
+            for (; j <= cols - nlanes64; j += nlanes64)
+            {
+                v_float64 v = v_mul(vwr, vx_load(wc + j));
+                vx_store(dstData + j, v);
+            }
+#endif
+            for(; j < cols; j++)
                 dstData[j] = wr * wc[j];
         }
     }

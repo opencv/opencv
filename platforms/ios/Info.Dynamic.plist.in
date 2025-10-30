@@ -23,7 +23,7 @@
         <string>iPhoneOS</string>
     </array>
     <key>MinimumOSVersion</key>
-    <string>8.0</string>
+    <string>${IPHONEOS_DEPLOYMENT_TARGET}</string>
     <key>UIDeviceFamily</key>
     <array>
         <integer>1</integer>

@@ -3,6 +3,8 @@
  *
  * This file was part of the Independent JPEG Group's software:
  * Copyright (C) 1991-1997, Thomas G. Lane.
+ * Lossless JPEG Modifications:
+ * Copyright (C) 1999, Ken Murchison.
  * libjpeg-turbo Modifications:
  * Copyright (C) 2010-2011, 2015-2016, 2021, D. R. Commander.
  * Copyright (C) 2018, Matthias Räncker.
@@ -10,8 +12,9 @@
  * file.
  *
  * This file contains declarations for Huffman entropy decoding routines
- * that are shared between the sequential decoder (jdhuff.c) and the
- * progressive decoder (jdphuff.c).  No other modules need to see these.
+ * that are shared between the sequential decoder (jdhuff.c), the progressive
+ * decoder (jdphuff.c), and the lossless decoder (jdlhuff.c).  No other modules
+ * need to see these.
  */
 
 #include "jconfigint.h"

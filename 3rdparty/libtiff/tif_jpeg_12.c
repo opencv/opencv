@@ -1,69 +1,63 @@
 
 #include "tiffiop.h"
 
+#if defined(HAVE_JPEGTURBO_DUAL_MODE_8_12)
+#define JPEG_DUAL_MODE_8_12
+#endif
+
 #if defined(JPEG_DUAL_MODE_8_12)
 
-#  define TIFFInitJPEG TIFFInitJPEG_12
-#  define TIFFJPEGIsFullStripRequired TIFFJPEGIsFullStripRequired_12
+#define FROM_TIF_JPEG_12
 
-int
-TIFFInitJPEG_12(TIFF* tif, int scheme);
+#ifdef TIFFInitJPEG
+#undef TIFFInitJPEG
+#endif
+#define TIFFInitJPEG TIFFInitJPEG_12
 
-#  include LIBJPEG_12_PATH
+#ifdef TIFFJPEGIsFullStripRequired
+#undef TIFFJPEGIsFullStripRequired
+#endif
+#define TIFFJPEGIsFullStripRequired TIFFJPEGIsFullStripRequired_12
 
-#  include "tif_jpeg.c"
+int TIFFInitJPEG_12(TIFF *tif, int scheme);
 
-int TIFFReInitJPEG_12( TIFF *tif, int scheme, int is_encode )
+#if !defined(HAVE_JPEGTURBO_DUAL_MODE_8_12)
+#include LIBJPEG_12_PATH
+#endif
 
+#include "tif_jpeg.c"
+
+int TIFFReInitJPEG_12(TIFF *tif, const JPEGOtherSettings *otherSettings,
+                      int scheme, int is_encode)
 {
-    JPEGState* sp;
+    JPEGState *sp;
+    uint8_t *new_tif_data;
 
+    (void)scheme;
     assert(scheme == COMPRESSION_JPEG);
 
+    new_tif_data =
+        (uint8_t *)_TIFFreallocExt(tif, tif->tif_data, sizeof(JPEGState));
+
+    if (new_tif_data == NULL)
+    {
+        TIFFErrorExtR(tif, "TIFFReInitJPEG_12",
+                      "No space for JPEG state block");
+        return 0;
+    }
+
+    tif->tif_data = new_tif_data;
+    _TIFFmemset(tif->tif_data, 0, sizeof(JPEGState));
+
+    TIFFInitJPEGCommon(tif);
+
     sp = JState(tif);
-    sp->tif = tif;				/* back link */
+    sp->otherSettings = *otherSettings;
 
-    /*
-     * Override parent get/set field methods.
-     */
-    tif->tif_tagmethods.vgetfield = JPEGVGetField; /* hook for codec tags */
-    tif->tif_tagmethods.vsetfield = JPEGVSetField; /* hook for codec tags */
-    tif->tif_tagmethods.printdir = JPEGPrintDir;   /* hook for codec tags */
-
-    /*
-     * Install codec methods.
-     */
-    tif->tif_fixuptags = JPEGFixupTags;
-    tif->tif_setupdecode = JPEGSetupDecode;
-    tif->tif_predecode = JPEGPreDecode;
-    tif->tif_decoderow = JPEGDecode;
-    tif->tif_decodestrip = JPEGDecode;
-    tif->tif_decodetile = JPEGDecode;
-    tif->tif_setupencode = JPEGSetupEncode;
-    tif->tif_preencode = JPEGPreEncode;
-    tif->tif_postencode = JPEGPostEncode;
-    tif->tif_encoderow = JPEGEncode;
-    tif->tif_encodestrip = JPEGEncode;
-    tif->tif_encodetile = JPEGEncode;  
-    tif->tif_cleanup = JPEGCleanup;
-    tif->tif_defstripsize = JPEGDefaultStripSize;
-    tif->tif_deftilesize = JPEGDefaultTileSize;
-    tif->tif_flags |= TIFF_NOBITREV;	/* no bit reversal, please */
-
-    sp->cinfo_initialized = FALSE;
-
-    if( is_encode )
+    if (is_encode)
         return JPEGSetupEncode(tif);
     else
         return JPEGSetupDecode(tif);
 }
 
 #endif /* defined(JPEG_DUAL_MODE_8_12) */
-
-/*
- * Local Variables:
- * mode: c
- * c-basic-offset: 8
- * fill-column: 78
- * End:
- */

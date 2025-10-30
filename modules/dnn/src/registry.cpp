@@ -11,11 +11,16 @@
 #include "op_cuda.hpp"
 #include "op_webnn.hpp"
 #include "op_timvx.hpp"
+#include "op_cann.hpp"
 
 #include "halide_scheduler.hpp"
 
 #include "backend.hpp"
 #include "factory.hpp"
+
+#ifdef HAVE_CUDA
+#include "cuda4dnn/init.hpp"
+#endif
 
 namespace cv {
 namespace dnn {
@@ -58,6 +63,11 @@ private:
                     haveBackendOpenVINO = true;
             }
         }
+#endif
+
+        bool haveBackendCPU_FP16 = false;
+#if defined(__arm64__) && __arm64__
+        haveBackendCPU_FP16 = true;
 #endif
 
         if (haveBackendOpenVINO && openvino::checkTarget(DNN_TARGET_CPU))
@@ -103,16 +113,37 @@ private:
 
         backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU));
 
+        if (haveBackendCPU_FP16)
+            backends.push_back(std::make_pair(DNN_BACKEND_OPENCV, DNN_TARGET_CPU_FP16));
+
 #ifdef HAVE_VULKAN
         if (haveVulkan())
             backends.push_back(std::make_pair(DNN_BACKEND_VKCOM, DNN_TARGET_VULKAN));
 #endif
 
 #ifdef HAVE_CUDA
-        if (haveCUDA())
+        cuda4dnn::checkVersions();
+
+        bool hasCudaCompatible = false;
+        bool hasCudaFP16 = false;
+        for (int i = 0; i < cuda4dnn::getDeviceCount(); i++)
+        {
+            if (cuda4dnn::isDeviceCompatible(i))
+            {
+                hasCudaCompatible = true;
+                if (cuda4dnn::doesDeviceSupportFP16(i))
+                {
+                    hasCudaFP16 = true;
+                    break; // we already have all we need here
+                }
+            }
+        }
+
+        if (hasCudaCompatible)
         {
             backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA));
-            backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
+            if (hasCudaFP16)
+                backends.push_back(std::make_pair(DNN_BACKEND_CUDA, DNN_TARGET_CUDA_FP16));
         }
 #endif
 
@@ -121,6 +152,10 @@ private:
         {
             backends.push_back(std::make_pair(DNN_BACKEND_TIMVX, DNN_TARGET_NPU));
         }
+#endif
+
+#ifdef HAVE_CANN
+        backends.push_back(std::make_pair(DNN_BACKEND_CANN, DNN_TARGET_NPU));
 #endif
     }
 

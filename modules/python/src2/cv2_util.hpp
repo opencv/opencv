@@ -42,7 +42,7 @@ private:
 
 /**
  * Light weight RAII wrapper for `PyObject*` owning references.
- * In comparisson to C++11 `std::unique_ptr` with custom deleter, it provides
+ * In comparison to C++11 `std::unique_ptr` with custom deleter, it provides
  * implicit conversion functions that might be useful to initialize it with
  * Python functions those returns owning references through the `PyObject**`
  * e.g. `PyErr_Fetch` or directly pass it to functions those want to borrow
@@ -68,6 +68,10 @@ public:
     operator PyObject**()
     {
         return &obj_;
+    }
+
+    operator bool() {
+        return obj_ != nullptr;
     }
 
     PyObject* release()

@@ -28,12 +28,12 @@ namespace
     void WriteFunction(uint8_t* row, int nr, int w) {
         for (int i = 0; i < w; i++)
             row[i] = static_cast<uint8_t>(nr+i);
-    };
+    }
     void ReadFunction1x1(const uint8_t* row, int w) {
         for (int i = 0; i < w; i++)
             std::cout << std::setw(4) << static_cast<int>(row[i]) << " ";
         std::cout << "\n";
-    };
+    }
     void ReadFunction3x3(const uint8_t* rows[3], int w) {
         for (int i = 0; i < 3; i++) {
             for (int j = -1; j < w+1; j++) {
@@ -42,7 +42,7 @@ namespace
             std::cout << "\n";
         }
         std::cout << "\n";
-    };
+    }
 }
 
 TEST(FluidBuffer, InputTest)

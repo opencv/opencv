@@ -50,6 +50,7 @@ namespace s11n {
  *
  * @brief G-API classes for constructed and compiled graphs.
  */
+
 /**
  * @brief GComputation class represents a captured computation
  * graph. GComputation objects form boundaries for expression code

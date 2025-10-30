@@ -83,10 +83,15 @@ We map the 32-bit float HDR data into the range [0..1].
 Actually, in some cases the values can be larger than 1 or lower the 0, so notice
 we will later have to clip the data in order to avoid overflow.
 
+@note: The function `cv.createTonemap()` uses a default gamma value of 1.0.
+Set it explicitly to 2.2 to match standard display brightness and ensure consistent tone mapping results.
+
+
 @code{.py}
-# Tonemap HDR image
+# Tonemap HDR images using gamma correction (set gamma=2.2 for standard display brightness)
 tonemap1 = cv.createTonemap(gamma=2.2)
 res_debevec = tonemap1.process(hdr_debevec.copy())
+res_robertson = tonemap1.process(hdr_robertson.copy())
 @endcode
 
 ### 4. Merge exposures using Mertens fusion
@@ -124,6 +129,8 @@ Results
 You can see the different results but consider that each algorithm have additional
 extra parameters that you should fit to get your desired outcome. Best practice is
 to try the different methods and see which one performs best for your scene.
+
+The results below were generated with a gamma value of 2.2 during tonemapping.
 
 ### Debevec:
 

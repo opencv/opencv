@@ -38,6 +38,8 @@ int main()
     waitKey(0);
     //! [Algorithm]
 
+    const char * vertex_names[4] {"0", "1", "2", "3"};
+
     //! [RotatedRect_demo]
     Mat test_image(200, 200, CV_8UC3, Scalar(0));
     RotatedRect rRect = RotatedRect(Point2f(100,100), Size2f(100,50), 30);
@@ -45,7 +47,10 @@ int main()
     Point2f vertices[4];
     rRect.points(vertices);
     for (int i = 0; i < 4; i++)
+    {
         line(test_image, vertices[i], vertices[(i+1)%4], Scalar(0,255,0), 2);
+        putText(test_image, vertex_names[i], vertices[i], FONT_HERSHEY_SIMPLEX, 1, Scalar(255,255,255));
+    }
 
     Rect brect = rRect.boundingRect();
     rectangle(test_image, brect, Scalar(255,0,0), 2);
@@ -73,6 +78,7 @@ int main()
             tm.start();
             // do something ...
             tm.stop();
+            cout << "Last iteration: " << tm.getLastTimeSec() << endl;
         }
         cout << "Average time per iteration in seconds: " << tm.getAvgTimeSec() << endl;
         cout << "Average FPS: " << tm.getFPS() << endl;

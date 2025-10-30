@@ -22,7 +22,7 @@ In this tutorial, we first introduce how to obtain the custom OCR model, then ho
 
 After completing the model training, please use [transform_to_onnx.py](https://github.com/zihaomu/deep-text-recognition-benchmark/blob/master/transform_to_onnx.py) to convert the model into onnx format.
 
-#### Execute in webcam
+### Execute in webcam
 The Python version example code can be found at [here](https://github.com/opencv/opencv/blob/4.x/samples/dnn/text_detection.py).
 
 Example:
@@ -44,9 +44,10 @@ Their performance at different text recognition datasets is shown in the table b
 | CRNN_VGG-BiLSTM-CTC | 82.63    | 82.07 | 92.96     | 88.867     | 66.28     | 71.01  | 62.37    | 78.03       | 8.45              |
 | ResNet-CTC           | 84.00        | 84.08  | 92.39     | 88.96     | 67.74     | 74.73  | 67.60    | 79.93    | 44.28             |
 
-The performance of the text recognition model were tesred on OpenCV DNN, and does not include the text detection model.
+The performance of the text recognition model were tested on OpenCV DNN, and does not include the text detection model.
 
-#### Model selection suggestion:
+### Model selection suggestion
+
 The input of text recognition model is the output of the text detection model, which causes the performance of text detection to greatly affect the performance of text recognition.
 
 DenseNet_CTC has the smallest parameters and best FPS, and it is suitable for edge devices, which are very sensitive to the cost of calculation. If you have limited computing resources and want to achieve better accuracy, VGG_CTC is a good choice.

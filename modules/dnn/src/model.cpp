@@ -21,7 +21,7 @@ struct Model::Impl
 
     Size   size;
     Scalar mean;
-    double  scale = 1.0;
+    Scalar scale = Scalar::all(1.0);
     bool   swapRB = false;
     bool   crop = false;
     Mat    blob;
@@ -37,6 +37,7 @@ public:
 
     virtual void setPreferableBackend(Backend backendId) { net.setPreferableBackend(backendId); }
     virtual void setPreferableTarget(Target targetId) { net.setPreferableTarget(targetId); }
+    virtual void enableWinograd(bool useWinograd) { net.enableWinograd(useWinograd); }
 
     virtual
     void initNet(const Net& network)
@@ -60,7 +61,7 @@ public:
     {
         size = size_;
         mean = mean_;
-        scale = scale_;
+        scale = Scalar::all(scale_);
         crop = crop_;
         swapRB = swapRB_;
     }
@@ -75,7 +76,7 @@ public:
         mean = mean_;
     }
     /*virtual*/
-    void setInputScale(double scale_)
+    void setInputScale(const Scalar& scale_)
     {
         scale = scale_;
     }
@@ -89,6 +90,11 @@ public:
     {
         swapRB = swapRB_;
     }
+    /*virtual*/
+    void setOutputNames(const std::vector<String>& outNames_)
+    {
+        outNames = outNames_;
+    }
 
     /*virtual*/
     void processFrame(InputArray frame, OutputArrayOfArrays outs)
@@ -97,7 +103,17 @@ public:
         if (size.empty())
             CV_Error(Error::StsBadSize, "Input size not specified");
 
-        blob = blobFromImage(frame, scale, size, mean, swapRB, crop);
+        Image2BlobParams param;
+        param.scalefactor = scale;
+        param.size = size;
+        param.mean = mean;
+        param.swapRB = swapRB;
+        if (crop)
+        {
+            param.paddingmode = DNN_PMODE_CROP_CENTER;
+        }
+        Mat blob = dnn::blobFromImageWithParams(frame, param); // [1, 10, 10, 4]
+
         net.setInput(blob);
 
         // Faster-RCNN or R-FCN
@@ -141,10 +157,18 @@ Model& Model::setPreferableBackend(Backend backendId)
     impl->setPreferableBackend(backendId);
     return *this;
 }
+
 Model& Model::setPreferableTarget(Target targetId)
 {
     CV_DbgAssert(impl);
     impl->setPreferableTarget(targetId);
+    return *this;
+}
+
+Model& Model::enableWinograd(bool useWinograd)
+{
+    CV_DbgAssert(impl);
+    impl->enableWinograd(useWinograd);
     return *this;
 }
 
@@ -162,9 +186,11 @@ Model& Model::setInputMean(const Scalar& mean)
     return *this;
 }
 
-Model& Model::setInputScale(double scale)
+Model& Model::setInputScale(const Scalar& scale_)
 {
     CV_DbgAssert(impl);
+
+    Scalar scale = broadcastRealScalar(scale_);
     impl->setInputScale(scale);
     return *this;
 }
@@ -180,6 +206,13 @@ Model& Model::setInputSwapRB(bool swapRB)
 {
     CV_DbgAssert(impl);
     impl->setInputSwapRB(swapRB);
+    return *this;
+}
+
+Model& Model::setOutputNames(const std::vector<String>& outNames)
+{
+    CV_DbgAssert(impl);
+    impl->setOutputNames(outNames);
     return *this;
 }
 
@@ -294,9 +327,9 @@ void ClassificationModel::classify(InputArray frame, int& classId, float& conf)
 }
 
 KeypointsModel::KeypointsModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config) {}
 
-KeypointsModel::KeypointsModel(const Net& network) : Model(network) {};
+KeypointsModel::KeypointsModel(const Net& network) : Model(network) {}
 
 std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 {
@@ -352,15 +385,17 @@ std::vector<Point2f> KeypointsModel::estimate(InputArray frame, float thresh)
 }
 
 SegmentationModel::SegmentationModel(const String& model, const String& config)
-    : Model(model, config) {};
+    : Model(model, config) {}
 
-SegmentationModel::SegmentationModel(const Net& network) : Model(network) {};
+SegmentationModel::SegmentationModel(const Net& network) : Model(network) {}
 
 void SegmentationModel::segment(InputArray frame, OutputArray mask)
 {
     std::vector<Mat> outs;
     impl->processFrame(frame, outs);
-    CV_Assert(outs.size() == 1);
+    // default output is the first one
+    if(outs.size() > 1)
+        outs.resize(1);
     Mat score = outs[0];
 
     const int chns = score.size[1];
@@ -1358,7 +1393,7 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
     {
         CV_TRACE_FUNCTION();
         std::vector< std::vector<Point2f> > results;
-
+        confidences.clear();
         std::vector<Mat> outs;
         processFrame(frame, outs);
         CV_Assert(outs.size() == 1);
@@ -1385,7 +1420,8 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
             std::vector<Point>& contour = contours[i];
 
             // Calculate text contour score
-            if (contourScore(binary, contour) < polygonThreshold)
+            float score = contourScore(binary, contour);
+            if (score < polygonThreshold)
                 continue;
 
             // Rescale
@@ -1398,6 +1434,11 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
 
             // Unclip
             RotatedRect box = minAreaRect(contourScaled);
+            float minLen = std::min(box.size.height/scaleWidth, box.size.width/scaleHeight);
+
+            // Filter very small boxes
+            if (minLen < 3)
+                continue;
 
             // minArea() rect is not normalized, it may return rectangles with angle=-90 or height < width
             const float angle_threshold = 60;  // do not expect vertical text, TODO detection algo property
@@ -1422,10 +1463,12 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
                 approx.emplace_back(vertex[j]);
             std::vector<Point2f> polygon;
             unclip(approx, polygon, unclipRatio);
+            if (polygon.empty())
+                continue;
             results.push_back(polygon);
+            confidences.push_back(score);
         }
 
-        confidences = std::vector<float>(contours.size(), 1.0f);
         return results;
     }
 
@@ -1458,7 +1501,10 @@ struct TextDetectionModel_DB_Impl : public TextDetectionModel_Impl
     {
         double area = contourArea(inPoly);
         double length = arcLength(inPoly, true);
-        CV_Assert(length > FLT_EPSILON);
+
+        if(length == 0.)
+            return;
+
         double distance = area * unclipRatio / length;
 
         size_t numPoints = inPoly.size();

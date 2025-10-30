@@ -1,4 +1,4 @@
-if(MSVC OR IOS)
+if(MSVC OR IOS OR XROS)
   return()
 endif()
 
@@ -110,7 +110,7 @@ endif()
 # =============================================================================
 else() # DEFINED CMAKE_HELPER_SCRIPT
 
-cmake_minimum_required(VERSION 2.8.12.2)
+cmake_minimum_required(VERSION 3.5)
 cmake_policy(SET CMP0012 NEW)
 include("${CMAKE_HELPER_SCRIPT}")
 include("${OpenCV_SOURCE_DIR}/cmake/OpenCVUtils.cmake")

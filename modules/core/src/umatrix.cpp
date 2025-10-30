@@ -539,7 +539,7 @@ void setSize( UMat& m, int _dims, const int* _sz,
             m.step.p[i] = total;
             int64 total1 = (int64)total*s;
             if( (uint64)total1 != (size_t)total1 )
-                CV_Error( CV_StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
+                CV_Error( cv::Error::StsOutOfRange, "The total matrix size does not fit to \"size_t\" type" );
             total = (size_t)total1;
         }
     }
@@ -965,16 +965,16 @@ UMat UMat::reshape(int new_cn, int new_rows) const
     {
         int total_size = total_width * rows;
         if( !isContinuous() )
-            CV_Error( CV_BadStep,
+            CV_Error( cv::Error::BadStep,
             "The matrix is not continuous, thus its number of rows can not be changed" );
 
         if( (unsigned)new_rows > (unsigned)total_size )
-            CV_Error( CV_StsOutOfRange, "Bad new number of rows" );
+            CV_Error( cv::Error::StsOutOfRange, "Bad new number of rows" );
 
         total_width = total_size / new_rows;
 
         if( total_width * new_rows != total_size )
-            CV_Error( CV_StsBadArg, "The total number of matrix elements "
+            CV_Error( cv::Error::StsBadArg, "The total number of matrix elements "
                                     "is not divisible by the new number of rows" );
 
         hdr.rows = new_rows;
@@ -984,7 +984,7 @@ UMat UMat::reshape(int new_cn, int new_rows) const
     int new_width = total_width / new_cn;
 
     if( new_width * new_cn != total_width )
-        CV_Error( CV_BadNumChannels,
+        CV_Error( cv::Error::BadNumChannels,
         "The total width is not divisible by the new number of channels" );
 
     hdr.cols = new_width;
@@ -1050,13 +1050,13 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
             else if (i < dims)
                 newsz_buf[i] = this->size[i];
             else
-                CV_Error(CV_StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
+                CV_Error(cv::Error::StsOutOfRange, "Copy dimension (which has zero size) is not present in source matrix");
 
             total_elem1 *= (size_t)newsz_buf[i];
         }
 
         if (total_elem1 != total_elem1_ref)
-            CV_Error(CV_StsUnmatchedSizes, "Requested and source matrices have different count of elements");
+            CV_Error(cv::Error::StsUnmatchedSizes, "Requested and source matrices have different count of elements");
 
         UMat hdr = *this;
         hdr.flags = (hdr.flags & ~CV_MAT_CN_MASK) | ((_cn-1) << CV_CN_SHIFT);
@@ -1065,7 +1065,7 @@ UMat UMat::reshape(int _cn, int _newndims, const int* _newsz) const
         return hdr;
     }
 
-    CV_Error(CV_StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
+    CV_Error(cv::Error::StsNotImplemented, "Reshaping of n-dimensional non-continuous matrices is not supported yet");
 }
 
 Mat UMat::getMat(AccessFlag accessFlags) const
@@ -1233,70 +1233,10 @@ void UMat::copyTo(OutputArray _dst, InputArray _mask) const
     src.copyTo(_dst, _mask);
 }
 
-void UMat::convertTo(OutputArray _dst, int _type, double alpha, double beta) const
-{
-    CV_INSTRUMENT_REGION();
 
-    bool noScale = std::fabs(alpha - 1) < DBL_EPSILON && std::fabs(beta) < DBL_EPSILON;
-    int stype = type(), cn = CV_MAT_CN(stype);
-
-    if( _type < 0 )
-        _type = _dst.fixedType() ? _dst.type() : stype;
-    else
-        _type = CV_MAKETYPE(CV_MAT_DEPTH(_type), cn);
-
-    int sdepth = CV_MAT_DEPTH(stype), ddepth = CV_MAT_DEPTH(_type);
-    if( sdepth == ddepth && noScale )
-    {
-        copyTo(_dst);
-        return;
-    }
-#ifdef HAVE_OPENCL
-    bool doubleSupport = ocl::Device::getDefault().doubleFPConfig() > 0;
-    bool needDouble = sdepth == CV_64F || ddepth == CV_64F;
-    if( dims <= 2 && cn && _dst.isUMat() && ocl::useOpenCL() &&
-            ((needDouble && doubleSupport) || !needDouble) )
-    {
-        int wdepth = std::max(CV_32F, sdepth), rowsPerWI = 4;
-
-        char cvt[2][40];
-        ocl::Kernel k("convertTo", ocl::core::convert_oclsrc,
-                      format("-D srcT=%s -D WT=%s -D dstT=%s -D convertToWT=%s -D convertToDT=%s%s%s",
-                             ocl::typeToStr(sdepth), ocl::typeToStr(wdepth), ocl::typeToStr(ddepth),
-                             ocl::convertTypeStr(sdepth, wdepth, 1, cvt[0]),
-                             ocl::convertTypeStr(wdepth, ddepth, 1, cvt[1]),
-                             doubleSupport ? " -D DOUBLE_SUPPORT" : "", noScale ? " -D NO_SCALE" : ""));
-        if (!k.empty())
-        {
-            UMat src = *this;
-            _dst.create( size(), _type );
-            UMat dst = _dst.getUMat();
-
-            float alphaf = (float)alpha, betaf = (float)beta;
-            ocl::KernelArg srcarg = ocl::KernelArg::ReadOnlyNoSize(src),
-                    dstarg = ocl::KernelArg::WriteOnly(dst, cn);
-
-            if (noScale)
-                k.args(srcarg, dstarg, rowsPerWI);
-            else if (wdepth == CV_32F)
-                k.args(srcarg, dstarg, alphaf, betaf, rowsPerWI);
-            else
-                k.args(srcarg, dstarg, alpha, beta, rowsPerWI);
-
-            size_t globalsize[2] = { (size_t)dst.cols * cn, ((size_t)dst.rows + rowsPerWI - 1) / rowsPerWI };
-            if (k.run(2, globalsize, NULL, false))
-            {
-                CV_IMPL_ADD(CV_IMPL_OCL);
-                return;
-            }
-        }
-    }
-#endif
-    UMat src = *this;  // Fake reference to itself.
-                       // Resolves issue 8693 in case of src == dst.
-    Mat m = getMat(ACCESS_READ);
-    m.convertTo(_dst, _type, alpha, beta);
-}
+//
+// void UMat::convertTo moved to convert.dispatch.cpp
+//
 
 UMat& UMat::setTo(InputArray _value, InputArray _mask)
 {

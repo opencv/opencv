@@ -146,7 +146,7 @@ public:
         return (ptr_ - other.ptr_) / step_;
     }
 
-    /* Comparision */
+    /* Comparison */
     bool operator==(const ChannelsIterator<Traits>& other) const CV_NOEXCEPT
     {
         return ptr_ == other.ptr_;
@@ -330,14 +330,20 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
     bool rate_is_specified = false;
     for (size_t i = 0; i < params.size(); i += 2)
     {
+        const int value = params[i + 1];
         switch (params[i])
         {
         case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
-            parameters.tcp_rates[0] = 1000.f / std::min(std::max(params[i + 1], 1), 1000);
-            rate_is_specified = true;
+            {
+                const int compression = std::min(std::max(value, 1), 1000);
+                parameters.tcp_rates[0] = 1000.f / static_cast<float>(compression);
+                if(value != compression) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG2000_COMPRESSION_X1000 must be between 1 to 1000. It is fallbacked to 1", value));
+                }
+                rate_is_specified = true;
+            }
             break;
         default:
-            CV_LOG_WARNING(NULL, "OpenJPEG2000(encoder): skip unsupported parameter: " << params[i]);
             break;
         }
     }
@@ -350,7 +356,7 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
     return parameters;
 }
 
-bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
+bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bool use_rgb)
 {
     using ImageComponents = std::vector<const OPJ_INT32*>;
 
@@ -377,8 +383,9 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
 
     if (inChannels >= 3)
     {
+        int swap_rb = use_rgb ? 0 : 2;
         // Assume RGB (+ alpha) for 3 channels -> BGR
-        ImageComponents incomps { inImg.comps[2].data, inImg.comps[1].data, inImg.comps[0].data };
+        ImageComponents incomps { inImg.comps[swap_rb].data, inImg.comps[1].data, inImg.comps[swap_rb^2].data };
         // Assume RGBA for 4 channels -> BGRA
         if (outChannels > 3)
         {
@@ -393,7 +400,7 @@ bool decodeSRGBData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
     return false;
 }
 
-bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
+bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bool)
 {
     using ImageComponents = std::vector<const OPJ_INT32*>;
 
@@ -411,7 +418,7 @@ bool decodeGrayscaleData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shif
     return false;
 }
 
-bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
+bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift, bool use_rgb)
 {
     using ImageComponents = std::vector<const OPJ_INT32*>;
 
@@ -426,7 +433,10 @@ bool decodeSYCCData(const opj_image_t& inImg, cv::Mat& outImg, uint8_t shift)
     if (outChannels == 3 && inChannels >= 3) {
         copyToMat(ImageComponents { inImg.comps[0].data, inImg.comps[1].data, inImg.comps[2].data },
                   outImg, shift);
-        cvtColor(outImg, outImg, COLOR_YUV2BGR);
+        if (use_rgb)
+            cvtColor(outImg, outImg, COLOR_YUV2RGB);
+        else
+            cvtColor(outImg, outImg, COLOR_YUV2BGR);
         return true;
     }
 
@@ -585,7 +595,7 @@ bool Jpeg2KOpjDecoderBase::readHeader()
 
 bool Jpeg2KOpjDecoderBase::readData( Mat& img )
 {
-    using DecodeFunc = bool(*)(const opj_image_t&, cv::Mat&, uint8_t shift);
+    using DecodeFunc = bool(*)(const opj_image_t&, cv::Mat&, uint8_t shift, bool use_rgb);
 
     if (!opj_decode(codec_.get(), stream_.get(), image_.get()))
     {
@@ -647,7 +657,7 @@ bool Jpeg2KOpjDecoderBase::readData( Mat& img )
         CV_Assert(comp.data && "OpenJPEG2000: missing component data (unsupported / broken input)");
     }
 
-    return decode(*image_, img, shift);
+    return decode(*image_, img, shift, m_use_rgb);
 }
 
 } // namespace detail
@@ -681,6 +691,7 @@ ImageDecoder Jpeg2KJ2KOpjDecoder::newDecoder() const
 Jpeg2KOpjEncoder::Jpeg2KOpjEncoder()
 {
     m_description = "JPEG-2000 files (*.jp2)";
+    m_supported_encode_key = {IMWRITE_JPEG2000_COMPRESSION_X1000};
 }
 
 ImageEncoder Jpeg2KOpjEncoder::newEncoder() const

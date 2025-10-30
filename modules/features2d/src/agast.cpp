@@ -48,7 +48,7 @@ The references are:
 namespace cv
 {
 
-#if (defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+#if (defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64) || defined(_M_ARM64) || defined(__aarch64__) || defined(__arm__))
 
 static void AGAST_5_8(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold)
 {
@@ -7444,7 +7444,7 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
 
 
 
-#else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+#else // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64) || defined(_M_ARM64) || defined(__aarch64__) || defined(__arm__))
 
 static void AGAST_ALL(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, AgastFeatureDetector::DetectorType agasttype)
 {
@@ -7932,7 +7932,7 @@ static void OAST_9_16(InputArray _img, std::vector<KeyPoint>& keypoints, int thr
     AGAST_ALL(_img, keypoints, threshold, AgastFeatureDetector::OAST_9_16);
 }
 
-#endif // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64))
+#endif // !(defined __i386__ || defined(_M_IX86) || defined __x86_64__ || defined(_M_X64) || defined(_M_ARM64) || defined(__aarch64__) || defined(__arm__))
 
 void AGAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression)
 {
@@ -7947,6 +7947,27 @@ public:
     AgastFeatureDetector_Impl( int _threshold, bool _nonmaxSuppression, DetectorType _type )
     : threshold(_threshold), nonmaxSuppression(_nonmaxSuppression), type(_type)
     {}
+
+    void read( const FileNode& fn) CV_OVERRIDE
+    {
+        // if node is empty, keep previous value
+        if (!fn["threshold"].empty())
+            fn["threshold"] >> threshold;
+        if (!fn["nonmaxSuppression"].empty())
+            fn["nonmaxSuppression"] >> nonmaxSuppression;
+        if (!fn["type"].empty())
+            fn["type"] >> type;
+    }
+    void write( FileStorage& fs) const CV_OVERRIDE
+    {
+        if(fs.isOpened())
+        {
+            fs << "name" << getDefaultName();
+            fs << "threshold" << threshold;
+            fs << "nonmaxSuppression" << nonmaxSuppression;
+            fs << "type" << type;
+        }
+    }
 
     void detect( InputArray _image, std::vector<KeyPoint>& keypoints, InputArray _mask ) CV_OVERRIDE
     {

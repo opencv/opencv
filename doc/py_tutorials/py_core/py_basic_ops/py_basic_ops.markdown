@@ -25,6 +25,7 @@ Let's load a color image first:
 >>> import cv2 as cv
 
 >>> img = cv.imread('messi5.jpg')
+>>> assert img is not None, "file could not be read, check with os.path.exists()"
 @endcode
 You can access a pixel value by its row and column coordinates. For BGR image, it returns an array
 of Blue, Green, Red values. For grayscale image, just corresponding intensity is returned.
@@ -49,23 +50,6 @@ You can modify the pixel values the same way.
 
 Numpy is an optimized library for fast array calculations. So simply accessing each and every pixel
 value and modifying it will be very slow and it is discouraged.
-
-@note The above method is normally used for selecting a region of an array, say the first 5 rows
-and last 3 columns. For individual pixel access, the Numpy array methods, array.item() and
-array.itemset() are considered better. They always return a scalar, however, so if you want to access
-all the B,G,R values, you will need to call array.item() separately for each value.
-
-Better pixel accessing and editing method :
-@code{.py}
-# accessing RED value
->>> img.item(10,10,2)
-59
-
-# modifying RED value
->>> img.itemset((10,10,2),100)
->>> img.item(10,10,2)
-100
-@endcode
 
 Accessing Image Properties
 --------------------------
@@ -173,6 +157,7 @@ from matplotlib import pyplot as plt
 BLUE = [255,0,0]
 
 img1 = cv.imread('opencv-logo.png')
+assert img1 is not None, "file could not be read, check with os.path.exists()"
 
 replicate = cv.copyMakeBorder(img1,10,10,10,10,cv.BORDER_REPLICATE)
 reflect = cv.copyMakeBorder(img1,10,10,10,10,cv.BORDER_REFLECT)
@@ -193,9 +178,3 @@ See the result below. (Image is displayed with matplotlib. So RED and BLUE chann
 interchanged):
 
 ![image](images/border.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

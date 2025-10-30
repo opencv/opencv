@@ -85,6 +85,9 @@
 #elif defined OCL_CV_REDUCE_MIN
 #define INIT_VALUE MAX_VAL
 #define PROCESS_ELEM(acc, value) acc = min(value, acc)
+#elif defined OCL_CV_REDUCE_SUM2
+#define INIT_VALUE 0
+#define PROCESS_ELEM(acc, value) acc += value*value
 #else
 #error "No operation is specified"
 #endif

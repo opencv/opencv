@@ -11,6 +11,9 @@
 #include "layers_common.hpp"
 #include "../ie_ngraph.hpp"
 #include "../op_webnn.hpp"
+#include "../op_cann.hpp"
+
+#include <opencv2/dnn/shape_utils.hpp>
 
 #ifdef HAVE_OPENCL
 #include "opencl_kernels_dnn.hpp"
@@ -40,7 +43,8 @@ public:
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
                backendId == DNN_BACKEND_WEBNN ||
-               backendId == DNN_BACKEND_CUDA;
+               backendId == DNN_BACKEND_CUDA ||
+               backendId == DNN_BACKEND_CANN;
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -58,10 +62,15 @@ public:
     {
         std::vector<UMat> outputs;
         outs.getUMatVector(outputs);
-        if (outs.depth() == CV_16S)
-            convertFp16(blobs[0], outputs[0]);
+        if (outs.depth() == CV_16F) {
+            auto blob = blobs[0];
+            if (blob.type() != CV_32F) {
+                blob.convertTo(blob, CV_32F);
+            }
+            blob.convertTo(outputs[0], CV_16F);
+        }
         else
-            blobs[0].copyTo(outputs[0]);
+            blobs[0].convertTo(outputs[0], outputs[0].type());
         return true;
     }
 #endif
@@ -76,17 +85,66 @@ public:
 
         std::vector<Mat> outputs;
         outputs_arr.getMatVector(outputs);
-        blobs[0].copyTo(outputs[0]);
+        blobs[0].convertTo(outputs[0], outputs[0].type());
     }
 
+#ifdef HAVE_CANN
+    virtual Ptr<BackendNode> initCann(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                      const std::vector<Ptr<BackendWrapper> > &outputs,
+                                      const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto mat_shape = shape(blobs[0]);
+        std::vector<int64_t> mat_shape_{mat_shape.begin(), mat_shape.end()};
+
+        auto ge_shape = ge::Shape(mat_shape_);
+        auto ge_dtype = ge::DT_FLOAT;
+        switch (blobs[0].type())
+        {
+            case CV_32F: break;
+            case CV_32S: ge_dtype = ge::DT_INT32; break;
+            default: CV_Error(Error::StsNotImplemented, "Unsuppported data type");
+        }
+        auto size_of_type = sizeof(float);
+        switch (blobs[0].type())
+        {
+            case CV_32F: break;
+            case CV_32S: size_of_type = sizeof(int); break;
+            default: CV_Error(Error::StsNotImplemented, "Unsuppported data type");
+        }
+
+        auto desc = std::make_shared<ge::TensorDesc>(ge_shape, ge::FORMAT_NCHW, ge_dtype);
+        auto ge_tensor = std::make_shared<ge::Tensor>();
+        ge_tensor->SetTensorDesc(*desc);
+        ge_tensor->SetData(blobs[0].data, ge_shape.GetShapeSize() * size_of_type);
+
+        auto op = std::make_shared<ge::op::Const>(name);
+        op->set_attr_value(*ge_tensor);
+
+        return Ptr<BackendNode>(new CannBackendNode(op));
+    }
+#endif // HAVE_CANN
 
 #ifdef HAVE_DNN_NGRAPH
     virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs,
                                         const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
     {
-        auto node = std::make_shared<ngraph::op::Constant>(ngraph::element::f32,
+        ov::element::Type dType;
+        if (blobs[0].depth() == CV_32F) {
+            dType = ov::element::f32;
+        } else if (blobs[0].depth() == CV_32S) {
+            dType = ov::element::i32;
+        } else if (blobs[0].depth() == CV_8S) {
+            dType = ov::element::i8;
+        } else {
+            CV_Error(Error::StsNotImplemented, format("Unexpected Const data depth: %d", blobs[0].depth()));
+        }
+        std::shared_ptr<ov::Node> node =
+                    std::make_shared<ov::op::v0::Constant>(dType,
                                                            getShape<size_t>(blobs[0]),
                                                            blobs[0].data);
+        if (node->get_element_type() != ov::element::f32) {
+            node = std::make_shared<ov::op::v0::Convert>(node, ov::element::f32);
+        }
         return Ptr<BackendNode>(new InfEngineNgraphNode(node));
     }
 #endif  // HAVE_DNN_NGRAPH
@@ -112,7 +170,11 @@ public:
         auto context = reinterpret_cast<csl::CSLContext*>(context_);
 
         CV_Assert(blobs.size() == 1);
-        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blobs[0]);
+        Mat blob = blobs[0];
+        if (blob.type() != CV_32F) {
+            blob.convertTo(blob, CV_32F);
+        }
+        return make_cuda_node<cuda4dnn::ConstOp>(preferableTarget, std::move(context->stream), blob);
     }
 #endif
 

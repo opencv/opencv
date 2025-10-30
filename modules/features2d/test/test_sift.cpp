@@ -30,5 +30,17 @@ TEST(Features2d_SIFT, descriptor_type)
     ASSERT_EQ(countNonZero(diff), 0) << "descriptors are not identical";
 }
 
+TEST(Features2d_SIFT, regression_26139)
+{
+    auto extractor = cv::SIFT::create();
+    cv::Mat1b image{cv::Size{300, 300}, 0};
+    std::vector<cv::KeyPoint> kps {
+        cv::KeyPoint(154.076813f, 136.160904f, 111.078636f, 216.195618f, 0.00000899323549f, 7)
+    };
+    cv::Mat descriptors;
+    extractor->compute(image, kps, descriptors); // we expect no memory corruption
+    ASSERT_EQ(descriptors.size(), Size(128, 1));
+}
+
 
 }} // namespace

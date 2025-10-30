@@ -5,8 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
-
-#include <opencv2/dnn/shape_utils.hpp>
+#include "../ie_ngraph.hpp"
 
 namespace cv
 {
@@ -110,7 +109,8 @@ public:
             return true;
         }
 
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV ||
+               backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool setActivation(const Ptr<ActivationLayer>& layer) CV_OVERRIDE
@@ -237,6 +237,27 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> >& inputs, const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        auto input = nodes[0].dynamicCast<InfEngineNgraphNode>()->node;
+
+        input = ngraphDequantize(input, input_sc, input_zp);
+
+        std::vector<size_t> shape(input.get_shape().size(), 1);
+        shape[1] = origin_weights.total();
+
+        ov::Output<ov::Node> res;
+        auto ieWeights = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, origin_weights.data);
+        auto ieBias = std::make_shared<ov::op::v0::Constant>(ov::element::f32, shape, origin_bias.data);
+        res = std::make_shared<ov::op::v1::Multiply>(input, ieWeights);
+        res = std::make_shared<ov::op::v1::Add>(res, ieBias);
+
+        res = ngraphQuantize(res, output_sc, output_zp);
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {

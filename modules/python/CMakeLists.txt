@@ -35,7 +35,7 @@ add_subdirectory(python3)
 
 else()  # standalone build
 
-cmake_minimum_required(VERSION 2.8.12.2)
+cmake_minimum_required(VERSION 3.5)
 project(OpenCVPython CXX C)
 include("./standalone.cmake")
 

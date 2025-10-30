@@ -16,9 +16,9 @@ namespace aruco {
 void _copyVector2Output(std::vector<std::vector<Point2f> > &vec, OutputArrayOfArrays out, const float scale = 1.f);
 
 /**
-  * @brief Convert input image to gray if it is a 3-channels image
+  * @brief Convert input image to gray if it is a BGR or BGRA image
   */
-void _convertToGrey(InputArray _in, OutputArray _out);
+void _convertToGrey(InputArray _in, Mat& _out);
 
 template<typename T>
 inline bool readParameter(const std::string& name, T& parameter, const FileNode& node)
@@ -31,10 +31,12 @@ inline bool readParameter(const std::string& name, T& parameter, const FileNode&
 }
 
 template<typename T>
-inline bool readWriteParameter(const std::string& name, T& parameter, const FileNode& readNode, FileStorage& writeStorage) {
-    if (!readNode.empty())
-        return readParameter(name, parameter, readNode);
-    writeStorage << name << parameter;
+inline bool readWriteParameter(const std::string& name, T& parameter, const FileNode* readNode, FileStorage* writeStorage)
+{
+    if (readNode)
+        return readParameter(name, parameter, *readNode);
+    CV_Assert(writeStorage);
+    *writeStorage << name << parameter;
     return true;
 }
 

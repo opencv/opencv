@@ -36,6 +36,13 @@
 namespace cv
 {
 
+// for some compilers it takes very long time to compile
+// automatically generated code in EMEstimatorCallback::runKernel(),
+// so we temporarily disable optimizations here
+#if defined __hexagon__ && defined __clang__
+#pragma clang optimize off
+#endif
+
 class EMEstimatorCallback CV_FINAL : public PointSetRegistrator::Callback
 {
 public:
@@ -401,6 +408,11 @@ protected:
     }
 };
 
+// restore optimizations (if any)
+#if defined __hexagon__ && defined __clang__
+#pragma clang optimize on
+#endif
+
 // Find essential matrix given undistorted points and two cameras.
 static Mat findEssentialMat_( InputArray _points1, InputArray _points2,
                              InputArray cameraMatrix1, InputArray cameraMatrix2,
@@ -433,9 +445,9 @@ cv::Mat cv::findEssentialMat( InputArray _points1, InputArray _points2, InputArr
 {
     CV_INSTRUMENT_REGION();
 
-    if (method >= 32 && method <= 38)
+    if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
         return usac::findEssentialMat(_points1, _points2, _cameraMatrix,
-            method, prob, threshold, _mask);
+            method, prob, threshold, _mask, maxIters);
 
     Mat points1, points2, cameraMatrix;
     _points1.getMat().convertTo(points1, CV_64F);
@@ -522,9 +534,9 @@ cv::Mat cv::findEssentialMat( InputArray points1, InputArray points2,
                       InputArray cameraMatrix1, InputArray cameraMatrix2,
                       InputArray dist_coeff1, InputArray dist_coeff2, OutputArray mask, const UsacParams &params) {
     Ptr<usac::Model> model;
-    usac::setParameters(model, usac::EstimationMethod::Essential, params, mask.needed());
+    usac::setParameters(model, usac::EstimationMethod::ESSENTIAL, params, mask.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+    if (usac::run(model, points1, points2,
             ransac_output, cameraMatrix1, cameraMatrix2, dist_coeff1, dist_coeff2)) {
         usac::saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel();

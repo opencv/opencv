@@ -66,7 +66,7 @@ Mat CameraParams::K() const
     Mat_<double> k = Mat::eye(3, 3, CV_64F);
     k(0,0) = focal; k(0,2) = ppx;
     k(1,1) = focal * aspect; k(1,2) = ppy;
-    return std::move(k);
+    return Mat(k);
 }
 
 } // namespace detail

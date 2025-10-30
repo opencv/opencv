@@ -2691,6 +2691,7 @@ static int read_non_idat_chunks(spng_ctx *ctx)
             if(!memcmp(chunk.type, type_exif, 4))
             {
                 if(ctx->file.exif) return SPNG_EDUP_EXIF;
+                if(!chunk.length) return SPNG_EEXIF;
 
                 ctx->file.exif = 1;
 
@@ -4999,11 +5000,11 @@ void spng_ctx_free(spng_ctx *ctx)
     spng__free(ctx, ctx->prev_scanline_buf);
     spng__free(ctx, ctx->filtered_scanline_buf);
 
-    spng_free_fn *free_func = ctx->alloc.free_fn;
+    spng_free_fn *free_fn = ctx->alloc.free_fn;
 
     memset(ctx, 0, sizeof(spng_ctx));
 
-    free_func(ctx);
+    free_fn(ctx);
 }
 
 static int buffer_read_fn(spng_ctx *ctx, void *user, void *data, size_t n)
@@ -5743,7 +5744,8 @@ int spng_set_iccp(spng_ctx *ctx, struct spng_iccp *iccp)
     SPNG_SET_CHUNK_BOILERPLATE(iccp);
 
     if(check_png_keyword(iccp->profile_name)) return SPNG_EICCP_NAME;
-    if(!iccp->profile_len || iccp->profile_len > UINT_MAX) return 1;
+    if(!iccp->profile_len) return SPNG_ECHUNK_SIZE;
+    if(iccp->profile_len > spng_u32max) return SPNG_ECHUNK_STDLEN;
 
     if(ctx->iccp.profile && !ctx->user.iccp) spng__free(ctx, ctx->iccp.profile);
 

@@ -46,21 +46,21 @@
 
 /**************************************PUBLICFUNC*************************************/
 
-#if depth == 0
+#if SRC_DEPTH == 0
     #define DATA_TYPE uchar
     #define MAX_NUM  255
     #define HALF_MAX_NUM 128
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_uchar_sat(num)
     #define DEPTH_0
-#elif depth == 2
+#elif SRC_DEPTH == 2
     #define DATA_TYPE ushort
     #define MAX_NUM  65535
     #define HALF_MAX_NUM 32768
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_ushort_sat(num)
     #define DEPTH_2
-#elif depth == 5
+#elif SRC_DEPTH == 5
     #define DATA_TYPE float
     #define MAX_NUM  1.0f
     #define HALF_MAX_NUM 0.5f
@@ -78,18 +78,18 @@ enum
     hsv_shift  = 12
 };
 
-#define scnbytes ((int)sizeof(DATA_TYPE)*scn)
-#define dcnbytes ((int)sizeof(DATA_TYPE)*dcn)
+#define scnbytes ((int)sizeof(DATA_TYPE)*SCN)
+#define dcnbytes ((int)sizeof(DATA_TYPE)*DCN)
 
-#ifndef hscale
-#define hscale 0
+#ifndef HSCALE
+#define HSCALE 0
 #endif
 
-#ifndef hrange
-#define hrange 0
+#ifndef HRANGE
+#define HRANGE 0
 #endif
 
-#if bidx == 0
+#if BIDX == 0
 #define R_COMP z
 #define G_COMP y
 #define B_COMP x
@@ -148,7 +148,7 @@ __kernel void RGB2HSV(__global const uchar* src, int src_step, int src_offset,
                 h = (vr & (g - b)) +
                     (~vr & ((vg & mad24(diff, 2, b - r)) + ((~vg) & mad24(4, diff, r - g))));
                 h = mad24(h, hdiv_table[diff], (1 << (hsv_shift-1))) >> hsv_shift;
-                h += h < 0 ? hrange : 0;
+                h += h < 0 ? HRANGE : 0;
 
                 dst[dst_index] = convert_uchar_sat_rte(h);
                 dst[dst_index + 1] = (uchar)s;
@@ -188,7 +188,7 @@ __kernel void HSV2RGB(__global const uchar* src, int src_step, int src_offset,
                 {
                     float tab[4];
                     int sector;
-                    h *= hscale;
+                    h *= HSCALE;
                     if( h < 0 )
                         do h += 6; while( h < 0 );
                     else if( h >= 6 )
@@ -213,10 +213,10 @@ __kernel void HSV2RGB(__global const uchar* src, int src_step, int src_offset,
                 else
                     b = g = r = v;
 
-                dst[dst_index + bidx] = convert_uchar_sat_rte(b*255.f);
+                dst[dst_index + BIDX] = convert_uchar_sat_rte(b*255.f);
                 dst[dst_index + 1] = convert_uchar_sat_rte(g*255.f);
-                dst[dst_index + (bidx^2)] = convert_uchar_sat_rte(r*255.f);
-#if dcn == 4
+                dst[dst_index + (BIDX^2)] = convert_uchar_sat_rte(r*255.f);
+#if DCN == 4
                 dst[dst_index + 3] = MAX_NUM;
 #endif
 
@@ -275,7 +275,7 @@ __kernel void RGB2HSV(__global const uchar* srcptr, int src_step, int src_offset
                 if( h < 0 )
                     h += 360.f;
 
-                dst[0] = h*hscale;
+                dst[0] = h*HSCALE;
                 dst[1] = s;
                 dst[2] = v;
 
@@ -316,7 +316,7 @@ __kernel void HSV2RGB(__global const uchar* srcptr, int src_step, int src_offset
                 {
                     float tab[4];
                     int sector;
-                    h *= hscale;
+                    h *= HSCALE;
                     if(h < 0)
                         do h += 6; while (h < 0);
                     else if (h >= 6)
@@ -341,10 +341,10 @@ __kernel void HSV2RGB(__global const uchar* srcptr, int src_step, int src_offset
                 else
                     b = g = r = v;
 
-                dst[bidx] = b;
+                dst[BIDX] = b;
                 dst[1] = g;
-                dst[bidx^2] = r;
-#if dcn == 4
+                dst[BIDX^2] = r;
+#if DCN == 4
                 dst[3] = MAX_NUM;
 #endif
 
@@ -410,7 +410,7 @@ __kernel void RGB2HLS(__global const uchar* src, int src_step, int src_offset,
                         h += 360.f;
                 }
 
-                dst[dst_index] = convert_uchar_sat_rte(h*hscale);
+                dst[dst_index] = convert_uchar_sat_rte(h*HSCALE);
                 dst[dst_index + 1] = convert_uchar_sat_rte(l*255.f);
                 dst[dst_index + 2] = convert_uchar_sat_rte(s*255.f);
 
@@ -451,7 +451,7 @@ __kernel void HLS2RGB(__global const uchar* src, int src_step, int src_offset,
                     float p2 = l <= 0.5f ? l*(1 + s) : l + s - l*s;
                     float p1 = 2*l - p2;
 
-                    h *= hscale;
+                    h *= HSCALE;
                     if( h < 0 )
                         do h += 6; while( h < 0 );
                     else if( h >= 6 )
@@ -472,10 +472,10 @@ __kernel void HLS2RGB(__global const uchar* src, int src_step, int src_offset,
                 else
                     b = g = r = l;
 
-                dst[dst_index + bidx] = convert_uchar_sat_rte(b*255.f);
+                dst[dst_index + BIDX] = convert_uchar_sat_rte(b*255.f);
                 dst[dst_index + 1] = convert_uchar_sat_rte(g*255.f);
-                dst[dst_index + (bidx^2)] = convert_uchar_sat_rte(r*255.f);
-#if dcn == 4
+                dst[dst_index + (BIDX^2)] = convert_uchar_sat_rte(r*255.f);
+#if DCN == 4
                 dst[dst_index + 3] = MAX_NUM;
 #endif
 
@@ -538,7 +538,7 @@ __kernel void RGB2HLS(__global const uchar* srcptr, int src_step, int src_offset
                     if( h < 0.f ) h += 360.f;
                 }
 
-                dst[0] = h*hscale;
+                dst[0] = h*HSCALE;
                 dst[1] = l;
                 dst[2] = s;
 
@@ -582,7 +582,7 @@ __kernel void HLS2RGB(__global const uchar* srcptr, int src_step, int src_offset
                     float p2 = l <= 0.5f ? l*(1 + s) : l + s - l*s;
                     float p1 = 2*l - p2;
 
-                    h *= hscale;
+                    h *= HSCALE;
                     if( h < 0 )
                         do h += 6; while( h < 0 );
                     else if( h >= 6 )
@@ -603,10 +603,10 @@ __kernel void HLS2RGB(__global const uchar* srcptr, int src_step, int src_offset
                 else
                     b = g = r = l;
 
-                dst[bidx] = b;
+                dst[BIDX] = b;
                 dst[1] = g;
-                dst[bidx^2] = r;
-#if dcn == 4
+                dst[BIDX^2] = r;
+#if DCN == 4
                 dst[3] = MAX_NUM;
 #endif
 

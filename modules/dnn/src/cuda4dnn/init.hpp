@@ -15,7 +15,7 @@
 
 namespace cv { namespace dnn { namespace cuda4dnn {
 
-    void checkVersions()
+    inline void checkVersions()
     {
         // https://docs.nvidia.com/deeplearning/cudnn/developer-guide/index.html#programming-model
         // cuDNN API Compatibility
@@ -23,8 +23,19 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         //     Any patch release x.y.z is forward or backward-compatible with applications built against another cuDNN patch release x.y.w (meaning, of the same major and minor version number, but having w!=z).
         //     cuDNN minor releases beginning with cuDNN 7 are binary backward-compatible with applications built against the same or earlier patch release (meaning, an application built against cuDNN 7.x is binary compatible with cuDNN library 7.y, where y>=x).
         //     Applications compiled with a cuDNN version 7.y are not guaranteed to work with 7.x release when y > x.
-        auto cudnn_bversion = cudnnGetVersion();
-        auto cudnn_major_bversion = cudnn_bversion / 1000, cudnn_minor_bversion = cudnn_bversion % 1000 / 100;
+        int cudnn_bversion = cudnnGetVersion();
+        int cudnn_major_bversion = 0, cudnn_minor_bversion = 0;
+        // CuDNN changed major version multiplier in 9.0
+        if (cudnn_bversion >= 9*10000)
+        {
+            cudnn_major_bversion = cudnn_bversion / 10000;
+            cudnn_minor_bversion = cudnn_bversion % 10000 / 100;
+        }
+        else
+        {
+            cudnn_major_bversion = cudnn_bversion / 1000;
+            cudnn_minor_bversion = cudnn_bversion % 1000 / 100;
+        }
         if (cudnn_major_bversion != CUDNN_MAJOR || cudnn_minor_bversion < CUDNN_MINOR)
         {
             std::ostringstream oss;
@@ -33,21 +44,23 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         }
     }
 
-    int getDeviceCount()
+    inline int getDeviceCount()
     {
         return cuda::getCudaEnabledDeviceCount();
     }
 
-    int getDevice()
+    inline int getDevice()
     {
         int device_id = -1;
         CUDA4DNN_CHECK_CUDA(cudaGetDevice(&device_id));
         return device_id;
     }
 
-    bool isDeviceCompatible()
+    inline bool isDeviceCompatible(int device_id = -1)
     {
-        int device_id = getDevice();
+        if (device_id < 0)
+            device_id = getDevice();
+
         if (device_id < 0)
             return false;
 
@@ -65,9 +78,11 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         return false;
     }
 
-    bool doesDeviceSupportFP16()
+    inline bool doesDeviceSupportFP16(int device_id = -1)
     {
-        int device_id = getDevice();
+        if (device_id < 0)
+            device_id = getDevice();
+
         if (device_id < 0)
             return false;
 
@@ -76,9 +91,7 @@ namespace cv { namespace dnn { namespace cuda4dnn {
         CUDA4DNN_CHECK_CUDA(cudaDeviceGetAttribute(&minor, cudaDevAttrComputeCapabilityMinor, device_id));
 
         int version = major * 10 + minor;
-        if (version < 53)
-            return false;
-        return true;
+        return (version >= 53);
     }
 
 }}} /* namespace cv::dnn::cuda4dnn */

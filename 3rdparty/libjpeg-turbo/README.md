@@ -21,7 +21,26 @@ derivative of libjpeg v6b developed by Miyasaka Masaru.  The TigerVNC and
 VirtualGL projects made numerous enhancements to the codec in 2009, and in
 early 2010, libjpeg-turbo spun off into an independent project, with the goal
 of making high-speed JPEG compression/decompression technology available to a
-broader range of users and developers.
+broader range of users and developers.  libjpeg-turbo is an ISO/IEC and ITU-T
+reference implementation of the JPEG standard.
+
+More information about libjpeg-turbo can be found at
+<https://libjpeg-turbo.org>.
+
+
+Funding
+=======
+
+libjpeg-turbo is an independent open source project, but we rely on patronage
+and funded development in order to maintain that independence.  The easiest way
+to ensure that libjpeg-turbo remains community-focused and free of any one
+organization's agenda is to
+[sponsor our project through GitHub](https://github.com/sponsors/libjpeg-turbo).
+All sponsorship money goes directly toward funding the labor necessary to
+maintain libjpeg-turbo, support the user community, and implement bug fixes and
+strategically important features.
+
+[![Sponsor libjpeg-turbo](https://img.shields.io/github/sponsors/libjpeg-turbo?label=Sponsor&logo=GitHub)](https://github.com/sponsors/libjpeg-turbo)
 
 
 License
@@ -50,9 +69,12 @@ JPEG images:
   generating planar YUV images and performing multiple simultaneous lossless
   transforms on an image.  The Java interface for libjpeg-turbo is written on
   top of the TurboJPEG API.  The TurboJPEG API is recommended for first-time
-  users of libjpeg-turbo.  Refer to [tjexample.c](tjexample.c) and
-  [TJExample.java](java/TJExample.java) for examples of its usage and to
-  <http://libjpeg-turbo.org/Documentation/Documentation> for API documentation.
+  users of libjpeg-turbo.  Refer to [tjcomp.c](src/tjcomp.c),
+  [tjdecomp.c](src/tjdecomp.c), [tjtran.c](src/tjtran.c),
+  [TJComp.java](java/TJComp.java), [TJDecomp.java](java/TJDecomp.java), and
+  [TJTran.java](java/TJTran.java) for examples of its usage and to
+  <https://libjpeg-turbo.org/Documentation/Documentation> for API
+  documentation.
 
 - **libjpeg API**<br>
   This is the de facto industry-standard API for compressing and decompressing
@@ -60,8 +82,9 @@ JPEG images:
   more powerful.  The libjpeg API implementation in libjpeg-turbo is both
   API/ABI-compatible and mathematically compatible with libjpeg v6b.  It can
   also optionally be configured to be API/ABI-compatible with libjpeg v7 and v8
-  (see below.)  Refer to [cjpeg.c](cjpeg.c) and [djpeg.c](djpeg.c) for examples
-  of its usage and to [libjpeg.txt](libjpeg.txt) for API documentation.
+  (see below.)  Refer to [cjpeg.c](src/cjpeg.c) and [djpeg.c](src/djpeg.c) for
+  examples of its usage and to [libjpeg.txt](doc/libjpeg.txt) for API
+  documentation.
 
 There is no significant performance advantage to either API when both are used
 to perform similar operations.
@@ -113,9 +136,9 @@ extensions at compile time with:
 
     #ifdef JCS_ALPHA_EXTENSIONS
 
-[jcstest.c](jcstest.c), located in the libjpeg-turbo source tree, demonstrates
-how to check for the existence of the colorspace extensions at compile time and
-run time.
+[jcstest.c](src/jcstest.c), located in the libjpeg-turbo source tree,
+demonstrates how to check for the existence of the colorspace extensions at
+compile time and run time.
 
 libjpeg v7 and v8 API/ABI Emulation
 -----------------------------------
@@ -180,7 +203,7 @@ supported and which aren't.
 NOTE:  As of this writing, extensive research has been conducted into the
 usefulness of DCT scaling as a means of data reduction and SmartScale as a
 means of quality improvement.  Readers are invited to peruse the research at
-<http://www.libjpeg-turbo.org/About/SmartScale> and draw their own conclusions,
+<https://libjpeg-turbo.org/About/SmartScale> and draw their own conclusions,
 but it is the general belief of our project that these features have not
 demonstrated sufficient usefulness to justify inclusion in libjpeg-turbo.
 
@@ -245,16 +268,6 @@ programs that need them, without breaking ABI compatibility for programs that
 don't, and it allows those functions to be provided in the "official"
 libjpeg-turbo binaries.
 
-Those who are concerned about maintaining strict conformance with the libjpeg
-v6b or v7 API can pass an argument of `-DWITH_MEM_SRCDST=0` to `cmake` prior to
-building libjpeg-turbo.  This will restore the pre-1.3 behavior, in which
-`jpeg_mem_src()` and `jpeg_mem_dest()` are only included when emulating the
-libjpeg v8 API/ABI.
-
-On Un*x systems, including the in-memory source/destination managers changes
-the dynamic library version from 62.2.0 to 62.3.0 if using libjpeg v6b API/ABI
-emulation and from 7.2.0 to 7.3.0 if using libjpeg v7 API/ABI emulation.
-
 Note that, on most Un*x systems, the dynamic linker will not look for a
 function in a library until that function is actually used.  Thus, if a program
 is built against libjpeg-turbo 1.3+ and uses `jpeg_mem_src()` or
@@ -274,30 +287,35 @@ Mathematical Compatibility
 ==========================
 
 For the most part, libjpeg-turbo should produce identical output to libjpeg
-v6b.  The one exception to this is when using the floating point DCT/IDCT, in
-which case the outputs of libjpeg v6b and libjpeg-turbo can differ for the
-following reasons:
+v6b.  There are two exceptions:
 
-- The SSE/SSE2 floating point DCT implementation in libjpeg-turbo is ever so
-  slightly more accurate than the implementation in libjpeg v6b, but not by
-  any amount perceptible to human vision (generally in the range of 0.01 to
-  0.08 dB gain in PNSR.)
+1. When decompressing a JPEG image that uses 4:4:0 chrominance subsampling, the
+outputs of libjpeg v6b and libjpeg-turbo can differ because libjpeg-turbo
+implements a "fancy" (smooth) 4:4:0 upsampling algorithm and libjpeg did not.
 
-- When not using the SIMD extensions, libjpeg-turbo uses the more accurate
-  (and slightly faster) floating point IDCT algorithm introduced in libjpeg
-  v8a as opposed to the algorithm used in libjpeg v6b.  It should be noted,
-  however, that this algorithm basically brings the accuracy of the floating
-  point IDCT in line with the accuracy of the accurate integer IDCT.  The
-  floating point DCT/IDCT algorithms are mainly a legacy feature, and they do
-  not produce significantly more accuracy than the accurate integer algorithms
-  (to put numbers on this, the typical difference in PNSR between the two
-  algorithms is less than 0.10 dB, whereas changing the quality level by 1 in
-  the upper range of the quality scale is typically more like a 1.0 dB
-  difference.)
+2. When using the floating point DCT/IDCT, the outputs of libjpeg v6b and
+libjpeg-turbo can differ for the following reasons:
 
-- If the floating point algorithms in libjpeg-turbo are not implemented using
-  SIMD instructions on a particular platform, then the accuracy of the
-  floating point DCT/IDCT can depend on the compiler settings.
+    - The SSE/SSE2 floating point DCT implementation in libjpeg-turbo is ever
+      so slightly more accurate than the implementation in libjpeg v6b, but not
+      by any amount perceptible to human vision (generally in the range of 0.01
+      to 0.08 dB gain in PNSR.)
+
+    - When not using the SIMD extensions, libjpeg-turbo uses the more accurate
+      (and slightly faster) floating point IDCT algorithm introduced in libjpeg
+      v8a as opposed to the algorithm used in libjpeg v6b.  It should be noted,
+      however, that this algorithm basically brings the accuracy of the
+      floating point IDCT in line with the accuracy of the accurate integer
+      IDCT.  The floating point DCT/IDCT algorithms are mainly a legacy
+      feature, and they do not produce significantly more accuracy than the
+      accurate integer algorithms.  (To put numbers on this, the typical
+      difference in PNSR between the two algorithms is less than 0.10 dB,
+      whereas changing the quality level by 1 in the upper range of the quality
+      scale is typically more like a 1.0 dB difference.)
+
+    - If the floating point algorithms in libjpeg-turbo are not implemented
+      using SIMD instructions on a particular platform, then the accuracy of
+      the floating point DCT/IDCT can depend on the compiler settings.
 
 While libjpeg-turbo does emulate the libjpeg v8 API/ABI, under the hood it is
 still using the same algorithms as libjpeg v6b, so there are several specific

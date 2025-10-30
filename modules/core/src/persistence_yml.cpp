@@ -107,6 +107,12 @@ public:
         writeScalar( key, fs::itoa( value, buf, 10 ));
     }
 
+    void write(const char* key, int64_t value)
+    {
+        char buf[128];
+        writeScalar( key, fs::itoa( value, buf, 10, true ));
+    }
+
     void write( const char* key, double value )
     {
         char buf[128];
@@ -152,7 +158,7 @@ public:
                         *data++ = 't';
                     else
                     {
-                        sprintf( data, "x%02x", c );
+                        snprintf( data, sizeof(buf) - (data - buf), "x%02x", c );
                         data += 3;
                     }
                 }
@@ -567,7 +573,7 @@ public:
             else
             {
             force_int:
-                int ival = (int)strtol( ptr, &endptr, 0 );
+                int64_t ival = strtoll( ptr, &endptr, 0 );
                 node.setValue(FileNode::INT, &ival);
             }
 

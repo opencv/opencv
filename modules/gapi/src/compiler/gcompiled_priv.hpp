@@ -27,7 +27,7 @@ namespace cv {
 namespace gimpl
 {
     struct GRuntimeArgs;
-};
+}
 
 // FIXME: GAPI_EXPORTS is here only due to tests and Windows linker issues
 class GAPI_EXPORTS GCompiled::Priv

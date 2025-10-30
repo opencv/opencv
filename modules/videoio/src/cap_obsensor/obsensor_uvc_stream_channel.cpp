@@ -35,17 +35,23 @@
 
 namespace cv {
 namespace obsensor {
+const ObExtensionUnit OBSENSOR_COMMON_XU_UNIT = { XU_UNIT_ID_COMMON, { 0xA55751A1, 0xF3C5, 0x4A5E, { 0x8D, 0x5A, 0x68, 0x54, 0xB8, 0xFA, 0x27, 0x16 } } };
+const ObExtensionUnit OBSENSOR_G330_XU_UNIT = { XU_UNIT_ID_G330, { 0xC9606CCB, 0x594C, 0x4D25, { 0xaf, 0x47, 0xcc, 0xc4, 0x96, 0x43, 0x59, 0x95 } } };
+
 const uint8_t OB_EXT_CMD0[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x52, 0x00, 0x5B, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD1[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x54, 0x00, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD2[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x56, 0x00, 0x0d, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD3[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x58, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD4[16] = { 0x47, 0x4d, 0x02, 0x00, 0x03, 0x00, 0x60, 0x00, 0xed, 0x03, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD5[16] = { 0x47, 0x4d, 0x02, 0x00, 0x03, 0x00, 0x62, 0x00, 0xe9, 0x03, 0x00, 0x00 };
-const uint8_t OB_EXT_CMD6[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x7c, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
+const uint8_t OB_EXT_CMD6[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0x7c, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD7[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x12, 0x55, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD8[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 const uint8_t OB_EXT_CMD9[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x13, 0x4b, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
-const uint8_t OB_EXT_CMD10[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00 };
+const uint8_t OB_EXT_CMD11[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+const uint8_t OB_EXT_CMD12[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfe, 0x13, 0x3f, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00 };
+const uint8_t OB_EXT_CMD13[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x13, 0x4b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+const uint8_t OB_EXT_CMD14[16] = { 0x47, 0x4d, 0x04, 0x00, 0x02, 0x00, 0xfa, 0x14, 0xd3, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00 };
 
 #if defined(HAVE_OBSENSOR_V4L2)
 #define fourCc2Int(a, b, c, d) \
@@ -60,6 +66,7 @@ const std::map<uint32_t, FrameFormat> fourccToOBFormat = {
     {fourCc2Int('M', 'J', 'P', 'G'), FRAME_FORMAT_MJPG},
     {fourCc2Int('Y', '1', '6', ' '), FRAME_FORMAT_Y16},
     {fourCc2Int('Y', '1', '4', ' '), FRAME_FORMAT_Y14},
+    {fourCc2Int('Z', '1', '6', ' '), FRAME_FORMAT_Y16}
 };
 
 StreamType parseUvcDeviceNameToStreamType(const std::string& devName)
@@ -198,10 +205,9 @@ DepthFrameUnpacker::DepthFrameUnpacker(){
     outputDataBuf_ = new uint8_t[OUT_DATA_SIZE];
 }
 
-DepthFrameUnpacker::~DepthFrameUnpacker(){
+DepthFrameUnpacker::~DepthFrameUnpacker() {
     delete[] outputDataBuf_;
 }
-
 
 #define ON_BITS(count) ((1 << count) - 1)
 #define CREATE_MASK(count, offset) (ON_BITS(count) << offset)
@@ -243,6 +249,7 @@ void DepthFrameUnpacker::process(Frame *frame){
 
 IUvcStreamChannel::IUvcStreamChannel(const UvcDeviceInfo& devInfo) :
     devInfo_(devInfo),
+    xuUnit_(IS_OBSENSOR_GEMINI330_PID(devInfo.pid) ? OBSENSOR_G330_XU_UNIT : OBSENSOR_COMMON_XU_UNIT),
     streamType_(parseUvcDeviceNameToStreamType(devInfo_.name))
 {
 
@@ -269,14 +276,27 @@ bool IUvcStreamChannel::setProperty(int propId, const uint8_t* /*data*/, uint32_
             rst &= getXu(2, &rcvData, &rcvLen);
             rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
             rst &= getXu(2, &rcvData, &rcvLen);
-        }
-        else if(OBSENSOR_ASTRA2_PID == devInfo_.pid ){
-            rst &= setXu(2, OB_EXT_CMD10, sizeof(OB_EXT_CMD8));
+        }else if(OBSENSOR_ASTRA2_PID == devInfo_.pid ){
+            rst &= setXu(2, OB_EXT_CMD12, sizeof(OB_EXT_CMD12));
             rst &= getXu(2, &rcvData, &rcvLen);
             rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
             rst &= getXu(2, &rcvData, &rcvLen);
-        }
-        else{
+        }else if(OBSENSOR_GEMINI2L_PID == devInfo_.pid){
+            rst &= setXu(2, OB_EXT_CMD11, sizeof(OB_EXT_CMD11));
+            rst &= getXu(2, &rcvData, &rcvLen);
+            rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
+            rst &= getXu(2, &rcvData, &rcvLen);
+        }else if(OBSENSOR_GEMINI2XL_PID == devInfo_.pid){
+            rst &= setXu(2, OB_EXT_CMD11, sizeof(OB_EXT_CMD11));
+            rst &= getXu(2, &rcvData, &rcvLen);
+            rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
+            rst &= getXu(2, &rcvData, &rcvLen);
+        }else if(IS_OBSENSOR_GEMINI330_PID(devInfo_.pid)) {
+            rst &= setXu(2, OB_EXT_CMD6, sizeof(OB_EXT_CMD6));
+            rst &= getXu(2, &rcvData, &rcvLen);
+            rst &= setXu(2, OB_EXT_CMD14, sizeof(OB_EXT_CMD14));
+            rst &= getXu(2, &rcvData, &rcvLen);
+        }else{
             rst &= setXu(2, OB_EXT_CMD0, sizeof(OB_EXT_CMD0));
             rst &= getXu(2, &rcvData, &rcvLen);
             rst &= setXu(2, OB_EXT_CMD1, sizeof(OB_EXT_CMD1));
@@ -305,14 +325,48 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
         if(OBSENSOR_GEMINI2_PID == devInfo_.pid){
             // return default param
             CameraParam param;
-            param.p0[0] = 516.652f;
-            param.p0[1] = 516.692f;
-            param.p0[2] = 322.988f;
-            param.p0[3] = 235.787f;
-            param.p1[0] = 516.652f;
-            param.p1[1] = 516.692f;
-            param.p1[2] = 322.988f;
-            param.p1[3] = 235.787f;
+            param.p0[0] = 519.342f;
+            param.p0[1] = 519.043f;
+            param.p0[2] = 319.41f;
+            param.p0[3] = 240.839f;
+            param.p1[0] = 519.342f;
+            param.p1[1] = 519.043f;
+            param.p1[2] = 319.41f;
+            param.p1[3] = 240.839f;
+            param.p6[0] = 640;
+            param.p6[1] = 480;
+            param.p7[0] = 640;
+            param.p7[1] = 480;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }else if(OBSENSOR_GEMINI2L_PID == devInfo_.pid){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 688.87f;
+            param.p0[1] = 688.922f;
+            param.p0[2] = 644.317f;
+            param.p0[3] = 354.382f;
+            param.p1[0] = 688.87f;
+            param.p1[1] = 688.922f;
+            param.p1[2] = 644.317f;
+            param.p1[3] = 354.382f;
+            param.p6[0] = 1280;
+            param.p6[1] = 720;
+            param.p7[0] = 1280;
+            param.p7[1] = 720;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }else if(OBSENSOR_GEMINI2XL_PID == devInfo_.pid){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 610.847f;
+            param.p0[1] = 610.829f;
+            param.p0[2] = 640.647f;
+            param.p0[3] = 401.817f;
+            param.p1[0] = 610.847f;
+            param.p1[1] = 610.829f;
+            param.p1[2] = 640.647f;
+            param.p1[3] = 401.817f;
             param.p6[0] = 640;
             param.p6[1] = 480;
             param.p7[0] = 640;
@@ -331,6 +385,60 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
             param.p1[1] = 558.003f;
             param.p1[2] = 312.546f;
             param.p1[3] = 241.169f;
+            param.p6[0] = 640;
+            param.p6[1] = 480;
+            param.p7[0] = 640;
+            param.p7[1] = 480;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }
+        else if(OBSENSOR_FEMTO_MEGA_PID == devInfo_.pid){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 748.370f;
+            param.p0[1] = 748.296f;
+            param.p0[2] = 634.670f;
+            param.p0[3] = 341.196f;
+            param.p1[0] = 374.185f;
+            param.p1[1] = 374.148f;
+            param.p1[2] = 317.335f;
+            param.p1[3] = 170.598f;
+            param.p6[0] = 1280;
+            param.p6[1] = 720;
+            param.p7[0] = 640;
+            param.p7[1] = 360;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }
+        else if(IS_OBSENSOR_GEMINI330_SHORT_PID(devInfo_.pid)){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 460.656f;
+            param.p0[1] = 460.782f;
+            param.p0[2] = 320.985f;
+            param.p0[3] = 233.921f;
+            param.p1[0] = 460.656f;
+            param.p1[1] = 460.782f;
+            param.p1[2] = 320.985f;
+            param.p1[3] = 233.921f;
+            param.p6[0] = 640;
+            param.p6[1] = 480;
+            param.p7[0] = 640;
+            param.p7[1] = 480;
+            *recvDataSize = sizeof(CameraParam);
+            memcpy(recvData, &param, *recvDataSize);
+        }
+        else if(IS_OBSENSOR_GEMINI330_LONG_PID(devInfo_.pid)){
+            // return default param
+            CameraParam param;
+            param.p0[0] = 366.751f;
+            param.p0[1] = 365.782f;
+            param.p0[2] = 319.893f;
+            param.p0[3] = 243.415f;
+            param.p1[0] = 366.751f;
+            param.p1[1] = 365.782f;
+            param.p1[2] = 319.893f;
+            param.p1[3] = 243.415f;
             param.p6[0] = 640;
             param.p6[1] = 480;
             param.p7[0] = 640;
@@ -358,7 +466,7 @@ bool IUvcStreamChannel::getProperty(int propId, uint8_t* recvData, uint32_t* rec
 
 bool IUvcStreamChannel::initDepthFrameProcessor()
 {
-    if(OBSENSOR_GEMINI2_PID == devInfo_.pid || OBSENSOR_ASTRA2_PID == devInfo_.pid){
+    if( OBSENSOR_ASTRA2_PID == devInfo_.pid){
         uint8_t* rcvData;
         uint32_t rcvLen;
 
@@ -371,7 +479,38 @@ bool IUvcStreamChannel::initDepthFrameProcessor()
         depthFrameProcessor_ = makePtr<DepthFrameUnpacker>();
         return true;
     }
-    else if (streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4)))
+    else if(OBSENSOR_GEMINI2_PID == devInfo_.pid || OBSENSOR_GEMINI2L_PID == devInfo_.pid){
+        uint8_t* rcvData;
+        uint32_t rcvLen;
+
+        setXu(2, OB_EXT_CMD7, sizeof(OB_EXT_CMD7));
+        getXu(2, &rcvData, &rcvLen);
+
+        setXu(2, OB_EXT_CMD9, sizeof(OB_EXT_CMD9));
+        getXu(2, &rcvData, &rcvLen);
+        return true;
+    }
+    else if(OBSENSOR_GEMINI2XL_PID == devInfo_.pid){
+        uint8_t* rcvData;
+        uint32_t rcvLen;
+
+        setXu(2, OB_EXT_CMD7, sizeof(OB_EXT_CMD7));
+        getXu(2, &rcvData, &rcvLen);
+
+        setXu(2, OB_EXT_CMD13, sizeof(OB_EXT_CMD13));
+        getXu(2, &rcvData, &rcvLen);
+        return true;
+    }
+    else if(IS_OBSENSOR_GEMINI330_PID(devInfo_.pid))
+    {
+        uint8_t* rcvData;
+        uint32_t rcvLen;
+
+        setXu(2, OB_EXT_CMD7, sizeof(OB_EXT_CMD7));
+        getXu(2, &rcvData, &rcvLen);
+        return true;
+    }
+    else if(streamType_ == OBSENSOR_STREAM_DEPTH && setXu(2, OB_EXT_CMD4, sizeof(OB_EXT_CMD4)))
     {
         uint8_t* rcvData;
         uint32_t rcvLen;

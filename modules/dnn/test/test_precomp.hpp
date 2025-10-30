@@ -45,6 +45,7 @@
 #include "opencv2/ts/ts_perf.hpp"
 #include "opencv2/core/utility.hpp"
 #include "opencv2/core/ocl.hpp"
+#include "opencv2/core/utils/configuration.private.hpp"
 
 #include "opencv2/dnn.hpp"
 #include "test_common.hpp"

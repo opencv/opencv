@@ -1,44 +1,6 @@
-/*M///////////////////////////////////////////////////////////////////////////////////////
-//
-//  IMPORTANT: READ BEFORE DOWNLOADING, COPYING, INSTALLING OR USING.
-//
-//  By downloading, copying, installing or using the software you agree to this license.
-//  If you do not agree to this license, do not download, install,
-//  copy or use the software.
-//
-//
-//                           License Agreement
-//                For Open Source Computer Vision Library
-//
-// Copyright (C) 2000-2008, Intel Corporation, all rights reserved.
-// Copyright (C) 2009, Willow Garage Inc., all rights reserved.
-// Third party copyrights are property of their respective owners.
-//
-// Redistribution and use in source and binary forms, with or without modification,
-// are permitted provided that the following conditions are met:
-//
-//   * Redistribution's of source code must retain the above copyright notice,
-//     this list of conditions and the following disclaimer.
-//
-//   * Redistribution's in binary form must reproduce the above copyright notice,
-//     this list of conditions and the following disclaimer in the documentation
-//     and/or other materials provided with the distribution.
-//
-//   * The name of the copyright holders may not be used to endorse or promote products
-//     derived from this software without specific prior written permission.
-//
-// This software is provided by the copyright holders and contributors "as is" and
-// any express or implied warranties, including, but not limited to, the implied
-// warranties of merchantability and fitness for a particular purpose are disclaimed.
-// In no event shall the Intel Corporation or contributors be liable for any direct,
-// indirect, incidental, special, exemplary, or consequential damages
-// (including, but not limited to, procurement of substitute goods or services;
-// loss of use, data, or profits; or business interruption) however caused
-// and on any theory of liability, whether in contract, strict liability,
-// or tort (including negligence or otherwise) arising in any way out of
-// the use of this software, even if advised of the possibility of such damage.
-//
-//M*/
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level
+// directory of this distribution and at http://opencv.org/license.html
 
 #include "precomp.hpp"
 #include "bitstrm.hpp"
@@ -48,11 +10,6 @@ namespace cv
 {
 
 const int BS_DEF_BLOCK_SIZE = 1<<15;
-
-bool  bsIsBigEndian( void )
-{
-    return (((const int*)"\0\x1\x2\x3\x4\x5\x6\x7")[0] & 255) != 0;
-}
 
 /////////////////////////  RBaseStream ////////////////////////////
 
@@ -102,7 +59,17 @@ void  RBaseStream::readBlock()
         throw RBS_THROW_EOS;
     }
 
+#ifdef _WIN32
+    // See https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/fseek-fseeki64?view=msvc-170
+    // See https://en.wikipedia.org/wiki/64-bit_computing#64-bit_data_models
+    // - Windows uses LLP64 data model, sizeof long int = 32.
+    // - Linux   uses LP64  data model, sizeof long int = 64.
+    // So for Windows, we have to use _fseeki64() instead of fseek().
+    _fseeki64( m_file, m_block_pos, SEEK_SET );
+#else
     fseek( m_file, m_block_pos, SEEK_SET );
+#endif
+
     size_t readed = fread( m_start, 1, m_block_size, m_file );
     m_end = m_start + readed;
 
@@ -163,7 +130,7 @@ void  RBaseStream::release()
 }
 
 
-void  RBaseStream::setPos( int pos )
+void  RBaseStream::setPos( int64_t pos )
 {
     CV_Assert(isOpened() && pos >= 0);
 
@@ -175,7 +142,7 @@ void  RBaseStream::setPos( int pos )
     }
 
     int offset = pos % m_block_size;
-    int old_block_pos = m_block_pos;
+    int64_t old_block_pos = m_block_pos;
     m_block_pos = pos - offset;
     m_current = m_start + offset;
     if (old_block_pos != m_block_pos)
@@ -183,16 +150,16 @@ void  RBaseStream::setPos( int pos )
 }
 
 
-int  RBaseStream::getPos()
+int64_t RBaseStream::getPos()
 {
     CV_Assert(isOpened());
-    int pos = validateToInt((m_current - m_start) + m_block_pos);
+    int64_t pos = validateToInt64((m_current - m_start) + m_block_pos);
     CV_Assert(pos >= m_block_pos); // overflow check
     CV_Assert(pos >= 0); // overflow check
     return pos;
 }
 
-void  RBaseStream::skip( int bytes )
+void  RBaseStream::skip( int64_t bytes )
 {
     CV_Assert(bytes >= 0);
     uchar* old = m_current;
@@ -377,26 +344,30 @@ void  WBaseStream::allocate()
 }
 
 
-void  WBaseStream::writeBlock()
+bool  WBaseStream::writeBlock()
 {
     int size = (int)(m_current - m_start);
 
     CV_Assert(isOpened());
     if( size == 0 )
-        return;
+        return true;
 
     if( m_buf )
     {
         size_t sz = m_buf->size();
         m_buf->resize( sz + size );
         memcpy( &(*m_buf)[sz], m_start, size );
+        m_current = m_start;
+        m_block_pos += size;
+        return true;
     }
     else
     {
-        fwrite( m_start, 1, size, m_file );
+        size_t written = fwrite( m_start, 1, size, m_file );
+        m_current = m_start;
+        m_block_pos += size;
+        return written == (size_t)size;
     }
-    m_current = m_start;
-    m_block_pos += size;
 }
 
 
@@ -463,15 +434,17 @@ WLByteStream::~WLByteStream()
 {
 }
 
-void WLByteStream::putByte( int val )
+bool  WLByteStream::putByte( int val )
 {
     *m_current++ = (uchar)val;
     if( m_current >= m_end )
-        writeBlock();
+        return writeBlock();
+
+    return true;
 }
 
 
-void WLByteStream::putBytes( const void* buffer, int count )
+bool  WLByteStream::putBytes( const void* buffer, int count )
 {
     uchar* data = (uchar*)buffer;
 
@@ -492,12 +465,18 @@ void WLByteStream::putBytes( const void* buffer, int count )
             count -= l;
         }
         if( m_current == m_end )
-            writeBlock();
+        {
+            bool written = writeBlock();
+            if (!written)
+                return false;
+        }
     }
+
+    return true;
 }
 
 
-void WLByteStream::putWord( int val )
+bool  WLByteStream::putWord( int val )
 {
     uchar *current = m_current;
 
@@ -507,17 +486,19 @@ void WLByteStream::putWord( int val )
         current[1] = (uchar)(val >> 8);
         m_current = current + 2;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
         putByte(val);
         putByte(val >> 8);
     }
+
+    return true;
 }
 
 
-void WLByteStream::putDWord( int val )
+bool  WLByteStream::putDWord( int val )
 {
     uchar *current = m_current;
 
@@ -529,7 +510,7 @@ void WLByteStream::putDWord( int val )
         current[3] = (uchar)(val >> 24);
         m_current = current + 4;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
@@ -538,6 +519,8 @@ void WLByteStream::putDWord( int val )
         putByte(val >> 16);
         putByte(val >> 24);
     }
+
+    return true;
 }
 
 
@@ -548,7 +531,7 @@ WMByteStream::~WMByteStream()
 }
 
 
-void WMByteStream::putWord( int val )
+bool  WMByteStream::putWord( int val )
 {
     uchar *current = m_current;
 
@@ -558,17 +541,19 @@ void WMByteStream::putWord( int val )
         current[1] = (uchar)val;
         m_current = current + 2;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
         putByte(val >> 8);
         putByte(val);
     }
+
+    return true;
 }
 
 
-void WMByteStream::putDWord( int val )
+bool  WMByteStream::putDWord( int val )
 {
     uchar *current = m_current;
 
@@ -580,7 +565,7 @@ void WMByteStream::putDWord( int val )
         current[3] = (uchar)val;
         m_current = current + 4;
         if( m_current == m_end )
-            writeBlock();
+            return writeBlock();
     }
     else
     {
@@ -589,6 +574,8 @@ void WMByteStream::putDWord( int val )
         putByte(val >> 8);
         putByte(val);
     }
+
+    return true;
 }
 
 }

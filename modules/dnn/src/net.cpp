@@ -13,6 +13,7 @@ CV__DNN_INLINE_NS_BEGIN
 Net::Net()
     : impl(makePtr<Net::Impl>())
 {
+    setPreferableBackend(DNN_BACKEND_DEFAULT);
 }
 
 Net::~Net()
@@ -212,6 +213,16 @@ void Net::dumpToFile(const String& path)
     CV_Assert(!empty());
     std::ofstream file(path.c_str());
     file << dump();
+    file.close();
+}
+
+void Net::dumpToPbtxt(const String& path)
+{
+    CV_TRACE_FUNCTION();
+    CV_Assert(impl);
+    CV_Assert(!empty());
+    std::ofstream file(path.c_str());
+    file << impl->dumpToPbtxt(true);
     file.close();
 }
 

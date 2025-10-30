@@ -1,9 +1,8 @@
-
 /* filter_msa_intrinsics.c - MSA optimised filter functions
  *
- * Copyright (c) 2018 Cosmin Truta
+ * Copyright (c) 2018-2024 Cosmin Truta
  * Copyright (c) 2016 Glenn Randers-Pehrson
- * Written by Mandar Sahastrabuddhe, August 2016.
+ * Written by Mandar Sahastrabuddhe, August 2016
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -11,7 +10,6 @@
  */
 
 #include <stdio.h>
-#include <stdint.h>
 #include "../pngpriv.h"
 
 #ifdef PNG_READ_SUPPORTED
@@ -20,6 +18,7 @@
 #if PNG_MIPS_MSA_IMPLEMENTATION == 1 /* intrinsics code from pngpriv.h */
 
 #include <msa.h>
+#include <stdint.h>
 
 /* libpng row pointers are not necessarily aligned to any particular boundary,
  * however this code will only work with appropriate alignment. mips/mips_init.c
@@ -47,7 +46,7 @@
        uint8_t *psrc_lw_m = (uint8_t *) (psrc);  \
        uint32_t val_m;                           \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "lw  %[val_m],  %[psrc_lw_m]  \n\t"   \
                                                  \
            : [val_m] "=r" (val_m)                \
@@ -62,7 +61,7 @@
        uint8_t *pdst_sh_m = (uint8_t *) (pdst);  \
        uint16_t val_m = (val);                   \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "sh  %[val_m],  %[pdst_sh_m]  \n\t"   \
                                                  \
            : [pdst_sh_m] "=m" (*pdst_sh_m)       \
@@ -75,7 +74,7 @@
        uint8_t *pdst_sw_m = (uint8_t *) (pdst);  \
        uint32_t val_m = (val);                   \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "sw  %[val_m],  %[pdst_sw_m]  \n\t"   \
                                                  \
            : [pdst_sw_m] "=m" (*pdst_sw_m)       \
@@ -83,20 +82,20 @@
        );                                        \
    }
 
-       #if (__mips == 64)
+   #if __mips == 64
         #define SD(val, pdst)                         \
         {                                             \
             uint8_t *pdst_sd_m = (uint8_t *) (pdst);  \
             uint64_t val_m = (val);                   \
                                                       \
-            asm volatile (                            \
+            __asm__ volatile (                        \
                 "sd  %[val_m],  %[pdst_sd_m]  \n\t"   \
                                                       \
                 : [pdst_sd_m] "=m" (*pdst_sd_m)       \
                 : [val_m] "r" (val_m)                 \
             );                                        \
         }
-    #else
+   #else
         #define SD(val, pdst)                                          \
         {                                                              \
             uint8_t *pdst_sd_m = (uint8_t *) (pdst);                   \
@@ -108,17 +107,17 @@
             SW(val0_m, pdst_sd_m);                                     \
             SW(val1_m, pdst_sd_m + 4);                                 \
         }
-    #endif
+   #endif /* __mips == 64 */
 #else
    #define MSA_SRLI_B(a, b)   (a >> b)
 
-#if (__mips_isa_rev >= 6)
+#if __mips_isa_rev >= 6
    #define LW(psrc)                              \
    ( {                                           \
        uint8_t *psrc_lw_m = (uint8_t *) (psrc);  \
        uint32_t val_m;                           \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "lw  %[val_m],  %[psrc_lw_m]  \n\t"   \
                                                  \
            : [val_m] "=r" (val_m)                \
@@ -133,7 +132,7 @@
        uint8_t *pdst_sh_m = (uint8_t *) (pdst);  \
        uint16_t val_m = (val);                   \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "sh  %[val_m],  %[pdst_sh_m]  \n\t"   \
                                                  \
            : [pdst_sh_m] "=m" (*pdst_sh_m)       \
@@ -146,7 +145,7 @@
        uint8_t *pdst_sw_m = (uint8_t *) (pdst);  \
        uint32_t val_m = (val);                   \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "sw  %[val_m],  %[pdst_sw_m]  \n\t"   \
                                                  \
            : [pdst_sw_m] "=m" (*pdst_sw_m)       \
@@ -154,20 +153,20 @@
        );                                        \
    }
 
-   #if (__mips == 64)
+   #if __mips == 64
         #define SD(val, pdst)                         \
         {                                             \
             uint8_t *pdst_sd_m = (uint8_t *) (pdst);  \
             uint64_t val_m = (val);                   \
                                                       \
-            asm volatile (                            \
+            __asm__ volatile (                        \
                 "sd  %[val_m],  %[pdst_sd_m]  \n\t"   \
                                                       \
                 : [pdst_sd_m] "=m" (*pdst_sd_m)       \
                 : [val_m] "r" (val_m)                 \
             );                                        \
         }
-    #else
+   #else
         #define SD(val, pdst)                                          \
         {                                                              \
             uint8_t *pdst_sd_m = (uint8_t *) (pdst);                   \
@@ -179,14 +178,14 @@
             SW(val0_m, pdst_sd_m);                                     \
             SW(val1_m, pdst_sd_m + 4);                                 \
         }
-    #endif
-#else  // !(__mips_isa_rev >= 6)
+   #endif /* __mips == 64 */
+#else
    #define LW(psrc)                              \
    ( {                                           \
        uint8_t *psrc_lw_m = (uint8_t *) (psrc);  \
        uint32_t val_m;                           \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "ulw  %[val_m],  %[psrc_lw_m]  \n\t"  \
                                                  \
            : [val_m] "=r" (val_m)                \
@@ -201,7 +200,7 @@
        uint8_t *pdst_sh_m = (uint8_t *) (pdst);  \
        uint16_t val_m = (val);                   \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "ush  %[val_m],  %[pdst_sh_m]  \n\t"  \
                                                  \
            : [pdst_sh_m] "=m" (*pdst_sh_m)       \
@@ -214,7 +213,7 @@
        uint8_t *pdst_sw_m = (uint8_t *) (pdst);  \
        uint32_t val_m = (val);                   \
                                                  \
-       asm volatile (                            \
+       __asm__ volatile (                        \
            "usw  %[val_m],  %[pdst_sw_m]  \n\t"  \
                                                  \
            : [pdst_sw_m] "=m" (*pdst_sw_m)       \
@@ -222,7 +221,7 @@
        );                                        \
    }
 
-   #define SD(val, pdst)                                          \
+   #define SD(val, pdst)                                           \
     {                                                              \
         uint8_t *pdst_sd_m = (uint8_t *) (pdst);                   \
         uint32_t val0_m, val1_m;                                   \
@@ -238,14 +237,14 @@
     {                                          \
         uint8_t *pdst_m = (uint8_t *) (pdst);  \
                                                \
-        asm volatile (                         \
+        __asm__ volatile (                     \
             "usw  $0,  %[pdst_m]  \n\t"        \
                                                \
             : [pdst_m] "=m" (*pdst_m)          \
             :                                  \
         );                                     \
     }
-#endif  // (__mips_isa_rev >= 6)
+#endif /* __mips_isa_rev >= 6 */
 #endif
 
 #define LD_B(RTYPE, psrc) *((RTYPE *) (psrc))
@@ -379,8 +378,8 @@ void png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
       LD_UB4(pp, 16, src4, src5, src6, src7);
       pp += 64;
 
-	  ADD4(src0, src4, src1, src5, src2, src6, src3, src7,
-	       src0, src1, src2, src3);
+      ADD4(src0, src4, src1, src5, src2, src6, src3, src7,
+           src0, src1, src2, src3);
 
       ST_UB4(src0, src1, src2, src3, rp, 16);
       rp += 64;
@@ -400,7 +399,7 @@ void png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
             LD_UB4(pp, 16, src4, src5, src6, src7);
 
             ADD4(src0, src4, src1, src5, src2, src6, src3, src7,
-	             src0, src1, src2, src3);
+                 src0, src1, src2, src3);
 
             ST_UB4(src0, src1, src2, src3, rp, 16);
             rp += 64;
@@ -425,7 +424,7 @@ void png_read_filter_row_up_msa(png_row_infop row_info, png_bytep row,
             LD_UB2(rp, 16, src0, src1);
             LD_UB2(pp, 16, src4, src5);
 
-			ADD2(src0, src4, src1, src5, src0, src1);
+            ADD2(src0, src4, src1, src5, src0, src1);
 
             ST_UB2(src0, src1, rp, 16);
             rp += 32;

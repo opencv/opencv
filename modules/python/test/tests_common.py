@@ -24,11 +24,12 @@ class NewOpenCVTests(unittest.TestCase):
     # path to local repository folder containing 'samples' folder
     repoPath = None
     extraTestDataPath = None
+    extraDnnTestDataPath = None
     # github repository url
     repoUrl = 'https://raw.github.com/opencv/opencv/4.x'
 
     def find_file(self, filename, searchPaths=[], required=True):
-        searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath]
+        searchPaths = searchPaths if searchPaths else [self.repoPath, self.extraTestDataPath, self.extraDnnTestDataPath]
         for path in searchPaths:
             if path is not None:
                 candidate = path + '/' + filename
@@ -36,6 +37,8 @@ class NewOpenCVTests(unittest.TestCase):
                     return candidate
         if required:
             self.fail('File ' + filename + ' not found')
+        else:
+            self.skipTest('File ' + filename + ' not found')
         return None
 
 
@@ -46,7 +49,7 @@ class NewOpenCVTests(unittest.TestCase):
             filepath = self.find_file(filename)
             with open(filepath, 'rb') as f:
                 filedata = f.read()
-            self.image_cache[filename] = cv.imdecode(np.fromstring(filedata, dtype=np.uint8), iscolor)
+            self.image_cache[filename] = cv.imdecode(np.frombuffer(filedata, dtype=np.uint8), iscolor)
         return self.image_cache[filename]
 
     def setUp(self):
@@ -55,7 +58,7 @@ class NewOpenCVTests(unittest.TestCase):
 
     def hashimg(self, im):
         """ Compute a hash for an image, useful for image comparisons """
-        return hashlib.md5(im.tostring()).hexdigest()
+        return hashlib.md5(im.tobytes()).hexdigest()
 
     if sys.version_info[:2] == (2, 6):
         def assertLess(self, a, b, msg=None):
@@ -81,10 +84,17 @@ class NewOpenCVTests(unittest.TestCase):
         print("Testing OpenCV", cv.__version__)
         print("Local repo path:", args.repo)
         NewOpenCVTests.repoPath = args.repo
+
         try:
             NewOpenCVTests.extraTestDataPath = os.environ['OPENCV_TEST_DATA_PATH']
         except KeyError:
             print('Missing opencv extra repository. Some of tests may fail.')
+
+        try:
+            NewOpenCVTests.extraDnnTestDataPath = os.environ['OPENCV_DNN_TEST_DATA_PATH']
+        except KeyError:
+            pass
+
         random.seed(0)
         unit_argv = [sys.argv[0]] + other
         unittest.main(argv=unit_argv)

@@ -14,6 +14,14 @@
 
 #import <Foundation/Foundation.h>
 
+#ifdef AVAILABLE_IMGCODECS
+#if TARGET_OS_IPHONE || TARGET_OS_VISION
+#import <UIKit/UIKit.h>
+#elif TARGET_OS_MAC
+#import <AppKit/AppKit.h>
+#endif
+#endif
+
 @class Size2i;
 @class Scalar;
 @class Range;
@@ -181,6 +189,37 @@ CV_EXPORTS @interface Mat : NSObject
 - (int)put:(NSArray<NSNumber*>*)indices count:(int)count intBuffer:(const int*)buffer NS_REFINED_FOR_SWIFT;
 - (int)put:(NSArray<NSNumber*>*)indices count:(int)count shortBuffer:(const short*)buffer NS_REFINED_FOR_SWIFT;
 
+#pragma mark - Converters
+
+#ifdef AVAILABLE_IMGCODECS
+
+- (CGImageRef)toCGImage CF_RETURNS_RETAINED;
+- (instancetype)initWithCGImage:(CGImageRef)image;
+- (instancetype)initWithCGImage:(CGImageRef)image alphaExist:(BOOL)alphaExist;
+
+#if TARGET_OS_IPHONE || TARGET_OS_VISION
+
+- (UIImage*)toUIImage;
+- (instancetype)initWithUIImage:(UIImage*)image;
+- (instancetype)initWithUIImage:(UIImage*)image alphaExist:(BOOL)alphaExist;
+
+#elif TARGET_OS_MAC
+
+- (NSImage*)toNSImage;
+- (instancetype)initWithNSImage:(NSImage*)image;
+- (instancetype)initWithNSImage:(NSImage*)image alphaExist:(BOOL)alphaExist;
+
+#endif
+
+#endif
+
+#pragma mark - QuickLook
+
+#ifdef AVAILABLE_IMGCODECS
+
+- (id)debugQuickLookObject;
+
+#endif
 
 @end
 

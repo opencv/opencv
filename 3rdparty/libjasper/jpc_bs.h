@@ -100,7 +100,7 @@
 #define	JPC_BITSTREAM_NOCLOSE	0x01
 /* End of file has been reached while reading. */
 #define	JPC_BITSTREAM_EOF	0x02
-/* An I/O error has occured. */
+/* An I/O error has occurerd. */
 #define	JPC_BITSTREAM_ERR	0x04
 
 /******************************************************************************\

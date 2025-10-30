@@ -4,51 +4,28 @@ import java.io.File;
 import java.io.IOException;
 import junit.framework.Assert;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.Mat;
 
 import android.content.Context;
-import android.test.AndroidTestRunner;
-import android.test.InstrumentationTestRunner;
 import android.util.Log;
+
+import androidx.test.runner.AndroidJUnitRunner;
+
 
 /**
  * This only class is Android specific.
  */
 
-public class OpenCVTestRunner extends InstrumentationTestRunner {
+public class OpenCVTestRunner extends AndroidJUnitRunner {
 
     private static final long MANAGER_TIMEOUT = 3000;
     public static String LENA_PATH;
     public static String CHESS_PATH;
     public static String LBPCASCADE_FRONTALFACE_PATH;
     public static Context context;
-
-    private AndroidTestRunner androidTestRunner;
     private static String TAG = "opencv_test_java";
-
-    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(getContext()) {
-
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    Log("OpenCV loaded successfully");
-                    synchronized (this) {
-                        notify();
-                    }
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
-            }
-        }
-    };
 
     public static String getTempFileName(String extension)
     {
@@ -76,30 +53,13 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
 
     @Override
     public void onStart() {
-        // try to load internal libs
-        if (!OpenCVLoader.initDebug()) {
-            // There is no internal OpenCV libs
-            // Using OpenCV Manager for initialization;
+        Assert.assertTrue(OpenCVLoader.initLocal());
 
-            Log("Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION, getContext(), mLoaderCallback);
-
-            synchronized (this) {
-                try {
-                    wait(MANAGER_TIMEOUT);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        } else {
-            Log("OpenCV library found inside test package. Using it!");
-        }
-
-        context = getContext();
+        context = getTargetContext();
         Assert.assertNotNull("Context can't be 'null'", context);
-        LENA_PATH = Utils.exportResource(context, R.drawable.lena);
-        CHESS_PATH = Utils.exportResource(context, R.drawable.chessboard);
-        LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);
+        LENA_PATH = Utils.exportResource(context, context.getResources().getIdentifier("lena", "drawable", context.getPackageName()));
+        CHESS_PATH = Utils.exportResource(context, context.getResources().getIdentifier("chessboard", "drawable", context.getPackageName()));
+        //LBPCASCADE_FRONTALFACE_PATH = Utils.exportResource(context, R.raw.lbpcascade_frontalface);
 
         /*
          * The original idea about test order randomization is from
@@ -109,12 +69,6 @@ public class OpenCVTestRunner extends InstrumentationTestRunner {
         //Collections.shuffle(testCases); //shuffle the tests order
 
         super.onStart();
-    }
-
-    @Override
-    protected AndroidTestRunner getAndroidTestRunner() {
-        androidTestRunner = super.getAndroidTestRunner();
-        return androidTestRunner;
     }
 
     public static String getOutputFileName(String name)

@@ -60,11 +60,17 @@ namespace cv
 #undef USE_IPP_DFT
 #endif
 
+#if defined USE_IPP_DFT
+#if IPP_VERSION_X100 >= 202220
+#define IPP_DISABLE_DFT32F ((depth == CV_32F) && (ippCPUID_AVX512F&cv::ipp::getIppFeatures()))
+#else
+#define IPP_DISABLE_DFT32F false
+#endif
+#endif
+
 /****************************************************************************************\
                                Discrete Fourier Transform
 \****************************************************************************************/
-
-#define CV_MAX_LOCAL_DFT_SIZE  (1 << 15)
 
 static unsigned char bitrevTab[] =
 {
@@ -845,6 +851,17 @@ DFT(const OcvDftOptions & c, const Complex<T>* src, Complex<T>* dst)
     int i, j, k;
     Complex<T> t;
     T scale = (T)c.scale;
+
+    if(typeid(T) == typeid(float))
+    {
+        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_32F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
+    if(typeid(T) == typeid(double))
+    {
+        CALL_HAL(dft, cv_hal_dft, reinterpret_cast<const uchar*>(src), reinterpret_cast<uchar*>(dst), CV_64F,
+                 c.nf, c.factors, c.scale, c.itab, c.wave, c.tab_size, c.n, c.isInverse, c.noPermute);
+    }
 
     if( c.useIpp )
     {
@@ -3249,7 +3266,7 @@ public:
         opt.ipp_spec = 0;
         opt.ipp_work = 0;
 
-        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) ) // use IPP DFT if available
+        if( CV_IPP_CHECK_COND && (opt.n*count >= 64) && !IPP_DISABLE_DFT32F) // use IPP DFT if available
         {
             int ipp_norm_flag = (flags & CV_HAL_DFT_SCALE) == 0 ? 8 : opt.isInverse ? 2 : 1;
             int specsize=0, initsize=0, worksize=0;
@@ -3471,7 +3488,7 @@ Ptr<DFT2D> DFT2D::create(int width, int height, int depth,
     {
         if(width == 1 && nonzero_rows > 0 )
         {
-            CV_Error( CV_StsNotImplemented,
+            CV_Error( cv::Error::StsNotImplemented,
             "This mode (using nonzero_rows with a single-column matrix) breaks the function's logic, so it is prohibited.\n"
             "For fast convolution/correlation use 2-column matrix or single-row matrix instead" );
         }
@@ -4319,7 +4336,7 @@ public:
             if( len != prev_len )
             {
                 if( len > 1 && (len & 1) )
-                    CV_Error( CV_StsNotImplemented, "Odd-size DCT\'s are not implemented" );
+                    CV_Error( cv::Error::StsNotImplemented, "Odd-size DCT\'s are not implemented" );
 
                 opt.nf = DFTFactorize( len, opt.factors );
                 bool inplace_transform = opt.factors[0] == opt.factors[opt.nf-1];
@@ -4365,7 +4382,7 @@ struct ReplacementDCT2D : public hal::DCT2D
     ReplacementDCT2D() : context(0), isInitialized(false) {}
     bool init(int width, int height, int depth, int flags)
     {
-        int res = hal_ni_dctInit2D(&context, width, height, depth, flags);
+        int res = cv_hal_dctInit2D(&context, width, height, depth, flags);
         isInitialized = (res == CV_HAL_ERROR_OK);
         return isInitialized;
     }

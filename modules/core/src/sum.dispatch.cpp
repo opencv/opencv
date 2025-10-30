@@ -10,12 +10,6 @@
 #include "sum.simd.hpp"
 #include "sum.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
 
-#undef HAVE_IPP
-#undef CV_IPP_RUN_FAST
-#define CV_IPP_RUN_FAST(f, ...)
-#undef CV_IPP_RUN
-#define CV_IPP_RUN(c, f, ...)
-
 namespace cv
 {
 
@@ -62,13 +56,13 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
     wgs2_aligned >>= 1;
 
     static const char * const opMap[3] = { "OP_SUM", "OP_SUM_ABS", "OP_SUM_SQR" };
-    char cvt[2][40];
+    char cvt[2][50];
     String opts = format("-D srcT=%s -D srcT1=%s -D dstT=%s -D dstTK=%s -D dstT1=%s -D ddepth=%d -D cn=%d"
                          " -D convertToDT=%s -D %s -D WGS=%d -D WGS2_ALIGNED=%d%s%s%s%s -D kercn=%d%s%s%s -D convertFromU=%s",
                          ocl::typeToStr(CV_MAKE_TYPE(depth, mcn)), ocl::typeToStr(depth),
                          ocl::typeToStr(dtype), ocl::typeToStr(CV_MAKE_TYPE(ddepth, mcn)),
                          ocl::typeToStr(ddepth), ddepth, cn,
-                         ocl::convertTypeStr(depth, ddepth, mcn, cvt[0]),
+                         ocl::convertTypeStr(depth, ddepth, mcn, cvt[0], sizeof(cvt[0])),
                          opMap[sum_op], (int)wgs, wgs2_aligned,
                          doubleSupport ? " -D DOUBLE_SUPPORT" : "",
                          haveMask ? " -D HAVE_MASK" : "",
@@ -76,7 +70,7 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
                          haveMask && _mask.isContinuous() ? " -D HAVE_MASK_CONT" : "", kercn,
                          haveSrc2 ? " -D HAVE_SRC2" : "", calc2 ? " -D OP_CALC2" : "",
                          haveSrc2 && _src2.isContinuous() ? " -D HAVE_SRC2_CONT" : "",
-                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1]) : "noconvert");
+                         depth <= CV_32S && ddepth == CV_32S ? ocl::convertTypeStr(CV_8U, ddepth, convert_cn, cvt[1], sizeof(cvt[1])) : "noconvert");
 
     ocl::Kernel k("reduce", ocl::core::reduce_oclsrc, opts);
     if (k.empty())
@@ -124,90 +118,42 @@ bool ocl_sum( InputArray _src, Scalar & res, int sum_op, InputArray _mask,
 
 #endif
 
-#ifdef HAVE_IPP
-static bool ipp_sum(Mat &src, Scalar &_res)
-{
-    CV_INSTRUMENT_REGION_IPP();
-
-#if IPP_VERSION_X100 >= 700
-    int cn = src.channels();
-    if (cn > 4)
-        return false;
-    size_t total_size = src.total();
-    int rows = src.size[0], cols = rows ? (int)(total_size/rows) : 0;
-    if( src.dims == 2 || (src.isContinuous() && cols > 0 && (size_t)rows*cols == total_size) )
-    {
-        IppiSize sz = { cols, rows };
-        int type = src.type();
-        typedef IppStatus (CV_STDCALL* ippiSumFuncHint)(const void*, int, IppiSize, double *, IppHintAlgorithm);
-        typedef IppStatus (CV_STDCALL* ippiSumFuncNoHint)(const void*, int, IppiSize, double *);
-        ippiSumFuncHint ippiSumHint =
-            type == CV_32FC1 ? (ippiSumFuncHint)ippiSum_32f_C1R :
-            type == CV_32FC3 ? (ippiSumFuncHint)ippiSum_32f_C3R :
-            type == CV_32FC4 ? (ippiSumFuncHint)ippiSum_32f_C4R :
-            0;
-        ippiSumFuncNoHint ippiSum =
-            type == CV_8UC1 ? (ippiSumFuncNoHint)ippiSum_8u_C1R :
-            type == CV_8UC3 ? (ippiSumFuncNoHint)ippiSum_8u_C3R :
-            type == CV_8UC4 ? (ippiSumFuncNoHint)ippiSum_8u_C4R :
-            type == CV_16UC1 ? (ippiSumFuncNoHint)ippiSum_16u_C1R :
-            type == CV_16UC3 ? (ippiSumFuncNoHint)ippiSum_16u_C3R :
-            type == CV_16UC4 ? (ippiSumFuncNoHint)ippiSum_16u_C4R :
-            type == CV_16SC1 ? (ippiSumFuncNoHint)ippiSum_16s_C1R :
-            type == CV_16SC3 ? (ippiSumFuncNoHint)ippiSum_16s_C3R :
-            type == CV_16SC4 ? (ippiSumFuncNoHint)ippiSum_16s_C4R :
-            0;
-        CV_Assert(!ippiSumHint || !ippiSum);
-        if( ippiSumHint || ippiSum )
-        {
-            Ipp64f res[4];
-            IppStatus ret = ippiSumHint ?
-                            CV_INSTRUMENT_FUN_IPP(ippiSumHint, src.ptr(), (int)src.step[0], sz, res, ippAlgHintAccurate) :
-                            CV_INSTRUMENT_FUN_IPP(ippiSum, src.ptr(), (int)src.step[0], sz, res);
-            if( ret >= 0 )
-            {
-                for( int i = 0; i < cn; i++ )
-                    _res[i] = res[i];
-                return true;
-            }
-        }
-    }
-#else
-    CV_UNUSED(src); CV_UNUSED(_res);
-#endif
-    return false;
-}
-#endif
-
 Scalar sum(InputArray _src)
 {
     CV_INSTRUMENT_REGION();
 
-#if defined HAVE_OPENCL || defined HAVE_IPP
-    Scalar _res;
-#endif
+    Scalar _res = Scalar::all(0.0);
 
 #ifdef HAVE_OPENCL
     CV_OCL_RUN_(OCL_PERFORMANCE_CHECK(_src.isUMat()) && _src.dims() <= 2,
                 ocl_sum(_src, _res, OCL_OP_SUM),
-                _res)
+                _res);
 #endif
 
     Mat src = _src.getMat();
-    CV_IPP_RUN(IPP_VERSION_X100 >= 700, ipp_sum(src, _res), _res);
+    int cn = src.channels();
+    CV_CheckLE( cn, 4, "cv::sum does not support more than 4 channels" );
 
-    int k, cn = src.channels(), depth = src.depth();
+    if (_src.dims() <= 2)
+    {
+        CALL_HAL_RET2(sum, cv_hal_sum, _res, src.data, src.step, src.type(), src.cols, src.rows, &_res[0]);
+    }
+    else if (_src.isContinuous())
+    {
+        CALL_HAL_RET2(sum, cv_hal_sum, _res, src.data, 0, src.type(), (int)src.total(), 1, &_res[0]);
+    }
+
+    int k, depth = src.depth();
     SumFunc func = getSumFunc(depth);
-    CV_Assert( cn <= 4 && func != 0 );
+    CV_Assert( func != nullptr );
 
     const Mat* arrays[] = {&src, 0};
     uchar* ptrs[1] = {};
     NAryMatIterator it(arrays, ptrs);
-    Scalar s;
     int total = (int)it.size, blockSize = total, intSumBlockSize = 0;
     int j, count = 0;
     AutoBuffer<int> _buf;
-    int* buf = (int*)&s[0];
+    int* buf = (int*)&_res[0];
     size_t esz = 0;
     bool blockSum = depth < CV_32S;
 
@@ -234,7 +180,7 @@ Scalar sum(InputArray _src)
             {
                 for( k = 0; k < cn; k++ )
                 {
-                    s[k] += buf[k];
+                    _res[k] += buf[k];
                     buf[k] = 0;
                 }
                 count = 0;
@@ -242,7 +188,7 @@ Scalar sum(InputArray _src)
             ptrs[0] += bsz*esz;
         }
     }
-    return s;
+    return _res;
 }
 
 } // namespace

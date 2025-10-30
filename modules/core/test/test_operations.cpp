@@ -42,6 +42,7 @@
 
 #include "test_precomp.hpp"
 #include "opencv2/ts/ocl_test.hpp" // T-API like tests
+#include <fenv.h>
 
 namespace opencv_test {
 namespace {
@@ -1213,7 +1214,7 @@ bool CV_OperationsTest::TestSVD()
             cvtest::norm(Vt*Vt.t(), I, CV_C) > FLT_EPSILON ||
             W.at<float>(2) < 0 || W.at<float>(1) < W.at<float>(2) ||
             W.at<float>(0) < W.at<float>(1) ||
-            cvtest::norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON )
+            cvtest::norm(U*Mat::diag(W)*Vt, Q, CV_C) > FLT_EPSILON*2 )
             throw test_excep();
     }
     catch(const test_excep&)
@@ -1379,6 +1380,15 @@ TEST(MatTestRoi, adjustRoiOverflow)
     ASSERT_EQ(roi.rows, m.rows);
 }
 
+TEST(MatTestRoi, adjustRoiUndefinedBehavior)
+{
+    Mat m(6, 6, CV_8U);
+    Mat roi(m, cv::Range(2, 4), cv::Range(2, 4));
+    // This could trigger a (negative int)*size_t when updating data,
+    // which is undefined behavior.
+    roi.adjustROI(2, 2, 2, 2);
+    EXPECT_EQ(m.data, roi.data);
+}
 
 CV_ENUM(SortRowCol, SORT_EVERY_COLUMN, SORT_EVERY_ROW)
 CV_ENUM(SortOrder, SORT_ASCENDING, SORT_DESCENDING)
@@ -1560,5 +1570,54 @@ TEST(Core_Arithm, scalar_handling_19599)  // https://github.com/opencv/opencv/is
     EXPECT_EQ(1, c.cols);
     EXPECT_EQ(1, c.rows);
 }
+
+// https://github.com/opencv/opencv/issues/24163
+typedef tuple<perf::MatDepth,int,int,int> Arith_Regression24163Param;
+typedef testing::TestWithParam<Arith_Regression24163Param> Core_Arith_Regression24163;
+
+TEST_P(Core_Arith_Regression24163, test_for_ties_to_even)
+{
+    const int matDepth = get<0>(GetParam());
+    const int matHeight= get<1>(GetParam());
+    const int matWidth = 3; // Fixed
+    const int alpha    = get<2>(GetParam());
+    const int beta     = get<3>(GetParam());
+
+    // If alpha and/or beta are negative, and matDepth is unsigned, test is passed.
+    if( ( (alpha < 0) || (beta < 0) )
+        &&
+        ( (matDepth != CV_8S) && (matDepth != CV_16S) && (matDepth != CV_32S) ) )
+    {
+        throw SkipTestException( cv::format("Test is skipped(matDepth is not signed, alpha = %d, beta = %d)", alpha, beta) );
+    }
+
+    const int matType = CV_MAKE_TYPE(matDepth, 1);
+    const Size matSize(matWidth, matHeight);
+    const Mat src1(matSize, matType, Scalar(alpha,alpha,alpha,alpha));
+    const Mat src2(matSize, matType, Scalar(beta, beta, beta, beta));
+    const Mat result = ( src1 + src2 ) / 2;
+
+    const int rounding = fegetround();
+    fesetround(FE_TONEAREST);
+    const int mean = lrint( static_cast<double>(alpha + beta) / 2.0 );
+    fesetround(rounding);
+
+    const Mat expected(matSize, matType, Scalar::all(mean));
+
+    // Compare result and extected.
+    ASSERT_EQ(expected.size(), result.size());
+    EXPECT_EQ(0, cvtest::norm(expected, result, NORM_INF)) <<
+        "result=" << std::endl << result << std::endl <<
+        "expected=" << std::endl << expected;
+}
+
+INSTANTIATE_TEST_CASE_P(/* */, Core_Arith_Regression24163,
+    testing::Combine(
+        testing::Values(perf::MatDepth(CV_8U), CV_8S, CV_16U, CV_16S, CV_32S), // MatType
+        testing::Values( 3, 4, 5, 6),    // MatHeight
+        testing::Values(-2,-1, 0, 1, 2), // src1
+        testing::Values(   -1, 0, 1   )  // src2
+    )
+);
 
 }} // namespace

@@ -3,6 +3,7 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include <iostream>
+#include <sstream>
 
 #include <opencv2/core.hpp>
 #include <opencv2/core/ocl.hpp>
@@ -140,13 +141,13 @@ static void dumpOpenCLInformation()
         DUMP_MESSAGE_STDOUT("    Max memory allocation size = " << maxMemAllocSizeStr);
         DUMP_CONFIG_PROPERTY("cv_ocl_current_maxMemAllocSize", device.maxMemAllocSize());
 
-        const char* doubleSupportStr = device.doubleFPConfig() > 0 ? "Yes" : "No";
+        const char* doubleSupportStr = device.hasFP64() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Double support = " << doubleSupportStr);
-        DUMP_CONFIG_PROPERTY("cv_ocl_current_haveDoubleSupport", device.doubleFPConfig() > 0);
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_haveDoubleSupport", device.hasFP64());
 
-        const char* halfSupportStr = device.halfFPConfig() > 0 ? "Yes" : "No";
+        const char* halfSupportStr = device.hasFP16() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Half support = " << halfSupportStr);
-        DUMP_CONFIG_PROPERTY("cv_ocl_current_haveHalfSupport", device.halfFPConfig() > 0);
+        DUMP_CONFIG_PROPERTY("cv_ocl_current_haveHalfSupport", device.hasFP16());
 
         const char* isUnifiedMemoryStr = device.hostUnifiedMemory() ? "Yes" : "No";
         DUMP_MESSAGE_STDOUT("    Host unified memory = " << isUnifiedMemoryStr);

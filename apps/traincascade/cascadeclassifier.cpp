@@ -142,7 +142,7 @@ bool CvCascadeClassifier::train( const string _cascadeDirName,
     double time = (double)getTickCount();
 
     if( _cascadeDirName.empty() || _posFilename.empty() || _negFilename.empty() )
-        CV_Error( CV_StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is NULL" );
+        CV_Error( cv::Error::StsBadArg, "_cascadeDirName or _bgfileName or _vecFileName is NULL" );
 
     string dirName;
     if (_cascadeDirName.find_last_of("/\\") == (_cascadeDirName.length() - 1) )
@@ -370,7 +370,7 @@ void CvCascadeClassifier::writeStages( FileStorage &fs, const Mat& featureMap ) 
         it != stageClassifiers.end();++it, ++i )
     {
         snprintf( cmnt, sizeof(cmnt), "stage %d", i );
-        cvWriteComment( fs.fs, cmnt, 0 );
+        fs.writeComment(cmnt);
         fs << "{";
         (*it)->write( fs, featureMap );
         fs << "}";
@@ -452,7 +452,7 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
         //char buf[256];
         CvSeq* weak;
         if ( cascadeParams.featureType != CvFeatureParams::HAAR )
-            CV_Error( CV_StsBadFunc, "old file format is used for Haar-like features only");
+            CV_Error( cv::Error::StsBadFunc, "old file format is used for Haar-like features only");
         fs << "{:" ICV_HAAR_TYPE_ID;
         fs << ICV_HAAR_SIZE_NAME << "[:" << cascadeParams.winSize.width <<
             cascadeParams.winSize.height << "]";
@@ -466,7 +466,7 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
             fs << ICV_HAAR_TREES_NAME << "[";
             for( int wi = 0; wi < weak->total; wi++ )
             {
-                int inner_node_idx = -1, total_inner_node_idx = -1;
+                int total_inner_node_idx = -1;
                 queue<const CvDTreeNode*> inner_nodes_queue;
                 CvCascadeBoostTree* tree = *((CvCascadeBoostTree**) cvGetSeqElem( weak, wi ));
 
@@ -482,7 +482,6 @@ void CvCascadeClassifier::save( const string filename, bool baseFormat )
                 while (!inner_nodes_queue.empty())
                 {
                     tempNode = inner_nodes_queue.front();
-                    inner_node_idx++;
 
                     fs << "{";
                     fs << ICV_HAAR_FEATURE_NAME << "{";

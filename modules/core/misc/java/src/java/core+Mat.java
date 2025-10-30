@@ -470,6 +470,7 @@ public class Mat {
      * Element-wise multiplication with scale factor
      * @param m operand with with which to perform element-wise multiplication
      * @param scale scale factor
+     * @return reference to a new Mat object
      */
     public Mat mul(Mat m, double scale) {
         return new Mat(n_mul(nativeObj, m.nativeObj, scale));
@@ -478,6 +479,7 @@ public class Mat {
     /**
     * Element-wise multiplication
     * @param m operand with with which to perform element-wise multiplication
+    * @return reference to a new Mat object
     */
     public Mat mul(Mat m) {
         return new Mat(n_mul(nativeObj, m.nativeObj));
@@ -487,6 +489,7 @@ public class Mat {
     * Matrix multiplication
     * @param m operand with with which to perform matrix multiplication
     * @see Core#gemm(Mat, Mat, double, Mat, double, Mat, int)
+    * @return reference to a new Mat object
     */
     public Mat matMul(Mat m) {
         return new Mat(n_matMul(nativeObj, m.nativeObj));

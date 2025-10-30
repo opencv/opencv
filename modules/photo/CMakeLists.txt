@@ -5,3 +5,7 @@ if(HAVE_CUDA)
 endif()
 
 ocv_define_module(photo opencv_imgproc OPTIONAL opencv_cudaarithm opencv_cudaimgproc WRAP java objc python js)
+
+if(HAVE_CUDA AND ENABLE_CUDA_FIRST_CLASS_LANGUAGE AND HAVE_OPENCV_CUDAARITHM AND HAVE_OPENCV_CUDAIMGPROC)
+  ocv_target_link_libraries(${the_module} PUBLIC "CUDA::cudart${CUDA_LIB_EXT}")
+endif()

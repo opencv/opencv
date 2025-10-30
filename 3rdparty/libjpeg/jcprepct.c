@@ -2,6 +2,7 @@
  * jcprepct.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
+ * Modified 2003-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -109,7 +110,8 @@ expand_bottom_edge (JSAMPARRAY image_data, JDIMENSION num_cols,
   register int row;
 
   for (row = input_rows; row < output_rows; row++) {
-    jcopy_sample_rows(image_data, input_rows-1, image_data, row,
+    jcopy_sample_rows(image_data + input_rows - 1,
+		      image_data + row,
 		      1, num_cols);
   }
 }
@@ -220,8 +222,8 @@ pre_process_context (j_compress_ptr cinfo,
 	for (ci = 0; ci < cinfo->num_components; ci++) {
 	  int row;
 	  for (row = 1; row <= cinfo->max_v_samp_factor; row++) {
-	    jcopy_sample_rows(prep->color_buf[ci], 0,
-			      prep->color_buf[ci], -row,
+	    jcopy_sample_rows(prep->color_buf[ci],
+			      prep->color_buf[ci] - row,
 			      1, cinfo->image_width);
 	  }
 	}
@@ -277,10 +279,9 @@ create_context_buffer (j_compress_ptr cinfo)
   /* Grab enough space for fake row pointers for all the components;
    * we need five row groups' worth of pointers for each component.
    */
-  fake_buffer = (JSAMPARRAY)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				(cinfo->num_components * 5 * rgroup_height) *
-				SIZEOF(JSAMPROW));
+  fake_buffer = (JSAMPARRAY) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE,
+     (cinfo->num_components * 5 * rgroup_height) * SIZEOF(JSAMPROW));
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
@@ -324,10 +325,9 @@ jinit_c_prep_controller (j_compress_ptr cinfo, boolean need_full_buffer)
   if (need_full_buffer)		/* safety check */
     ERREXIT(cinfo, JERR_BAD_BUFFER_MODE);
 
-  prep = (my_prep_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_prep_controller));
-  cinfo->prep = (struct jpeg_c_prep_controller *) prep;
+  prep = (my_prep_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_prep_controller));
+  cinfo->prep = &prep->pub;
   prep->pub.start_pass = start_pass_prep;
 
   /* Allocate the color conversion buffer.

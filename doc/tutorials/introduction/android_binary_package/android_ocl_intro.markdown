@@ -1,26 +1,26 @@
 Use OpenCL in Android camera preview based CV application {#tutorial_android_ocl_intro}
 =====================================
 
-@prev_tutorial{tutorial_dev_with_OCV_on_Android}
+@prev_tutorial{tutorial_android_dnn_intro}
 @next_tutorial{tutorial_macos_install}
 
 |    |    |
 | -: | :- |
-| Original author | Andrey Pavlenko |
-| Compatibility | OpenCV >= 3.0 |
+| Original author | Andrey Pavlenko, Alexander Panov |
+| Compatibility   | OpenCV >= 4.9 |
 
-@warning
-This tutorial is deprecated.
+@tableofcontents
 
 This guide was designed to help you in use of [OpenCL &trade;](https://www.khronos.org/opencl/) in Android camera preview based CV application.
-It was written for [Eclipse-based ADT tools](http://developer.android.com/tools/help/adt.html)
-(deprecated by Google now), but it easily can be reproduced with [Android Studio](http://developer.android.com/tools/studio/index.html).
+Tutorial was written for [Android Studio](http://developer.android.com/tools/studio/index.html) 2022.2.1. It was tested with Ubuntu 22.04.
 
 This tutorial assumes you have the following installed and configured:
 
--   JDK
--   Android SDK and NDK
--   Eclipse IDE with ADT and CDT plugins
+-   Android Studio (2022.2.1.+)
+-   JDK 17
+-   Android SDK
+-   Android NDK (25.2.9519653+)
+-   download OpenCV source code from [github](git@github.com:opencv/opencv.git) or from [releases](https://opencv.org/releases/) and build by [instruction on wiki](https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build).
 
 It also assumes that you are familiar with Android Java and JNI programming basics.
 If you need help with anything of the above, you may refer to our @ref tutorial_android_dev_intro guide.
@@ -29,6 +29,56 @@ This tutorial also assumes you have an Android operated device with OpenCL enabl
 
 The related source code is located within OpenCV samples at
 [opencv/samples/android/tutorial-4-opencl](https://github.com/opencv/opencv/tree/4.x/samples/android/tutorial-4-opencl/) directory.
+
+How to build custom OpenCV Android SDK with OpenCL
+--------------------------------------------------
+
+1. __Assemble and configure Android OpenCL SDK.__
+The JNI part of the sample depends on standard Khornos OpenCL headers, and C++ wrapper for OpenCL and libOpenCL.so.
+The standard OpenCL headers may be copied from 3rdparty directory in OpenCV repository or you Linux distribution package.
+C++ wrapper is available in [official Khronos reposiotry on Github](https://github.com/KhronosGroup/OpenCL-CLHPP).
+Copy the header files to didicated directory in the following way:
+@code{.bash}
+cd your_path/ && mkdir ANDROID_OPENCL_SDK && mkdir ANDROID_OPENCL_SDK/include && cd ANDROID_OPENCL_SDK/include
+cp -r path_to_opencv/opencv/3rdparty/include/opencl/1.2/CL . && cd CL
+wget https://github.com/KhronosGroup/OpenCL-CLHPP/raw/main/include/CL/opencl.hpp
+wget https://github.com/KhronosGroup/OpenCL-CLHPP/raw/main/include/CL/cl2.hpp
+@endcode
+libOpenCL.so may be provided with BSP or just downloaded from any OpenCL-cabaple Android device with relevant arhitecture.
+@code{.bash}
+cd your_path/ANDROID_OPENCL_SDK && mkdir lib && cd lib
+adb pull /system/vendor/lib64/libOpenCL.so
+@endcode
+System verison of libOpenCL.so may have a lot of platform specific dependencies. `-Wl,--allow-shlib-undefined` flag allows
+to ignore 3rdparty symbols if they are not used during the build.
+The following CMake line allows to link the JNI part against standard OpenCL, but not include the loadLibrary into
+application package. System OpenCL API is used in run-time.
+@code
+target_link_libraries(${target} -lOpenCL)
+@endcode
+
+
+2. __Build custom OpenCV Android SDK with OpenCL.__
+OpenCL support (T-API) is disabled in OpenCV builds for Android OS by default.
+but it's possible to rebuild locally OpenCV for Android with OpenCL/T-API enabled: use `-DWITH_OPENCL=ON` option for CMake.
+You also need to specify the path to the Android OpenCL SDK: use `-DANDROID_OPENCL_SDK=path_to_your_Android_OpenCL_SDK` option for CMake.
+If you are building OpenCV using `build_sdk.py` please follow [instruction on wiki](https://github.com/opencv/opencv/wiki/Custom-OpenCV-Android-SDK-and-AAR-package-build).
+Set these CMake parameters in your `.config.py`, e.g. `ndk-18-api-level-21.config.py`:
+@code{.py}
+ABI("3", "arm64-v8a", None, 21, cmake_vars=dict('WITH_OPENCL': 'ON', 'ANDROID_OPENCL_SDK': 'path_to_your_Android_OpenCL_SDK'))
+@endcode
+If you are building OpenCV using cmake/ninja, use this bash script (set your NDK_VERSION and your paths instead of examples of paths):
+@code{.bash}
+cd path_to_opencv && mkdir build && cd build
+export NDK_VERSION=25.2.9519653
+export ANDROID_SDK=/home/user/Android/Sdk/
+export ANDROID_OPENCL_SDK=/path_to_ANDROID_OPENCL_SDK/
+export ANDROID_HOME=$ANDROID_SDK
+export ANDROID_NDK_HOME=$ANDROID_SDK/ndk/$NDK_VERSION/
+cmake -GNinja -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_STL=c++_shared -DANDROID_NATIVE_API_LEVEL=24
+-DANDROID_SDK=$ANDROID_SDK -DANDROID_NDK=$ANDROID_NDK_HOME -DBUILD_JAVA=ON -DANDROID_HOME=$ANDROID_SDK -DBUILD_ANDROID_EXAMPLES=ON
+-DINSTALL_ANDROID_EXAMPLES=ON -DANDROID_ABI=arm64-v8a -DWITH_OPENCL=ON -DANDROID_OPENCL_SDK=$ANDROID_OPENCL_SDK ..
+@endcode
 
 Preface
 -------
@@ -97,74 +147,16 @@ public class Tutorial4Activity extends Activity {
 
 And a minimal `View` class respectively:
 
-@code{.java}
-public class MyGLSurfaceView extends GLSurfaceView {
+@snippet samples/android/tutorial-4-opencl/src/org/opencv/samples/tutorial4/MyGLSurfaceView.java minimal_surface_view
 
-    MyGLRendererBase mRenderer;
-
-    public MyGLSurfaceView(Context context) {
-        super(context);
-
-        if(android.os.Build.VERSION.SDK_INT >= 21)
-            mRenderer = new Camera2Renderer(this);
-        else
-            mRenderer = new CameraRenderer(this);
-
-        setEGLContextClientVersion(2);
-        setRenderer(mRenderer);
-        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        super.surfaceCreated(holder);
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        super.surfaceDestroyed(holder);
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-        super.surfaceChanged(holder, format, w, h);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        mRenderer.onResume();
-    }
-
-    @Override
-    public void onPause() {
-        mRenderer.onPause();
-        super.onPause();
-    }
-}
-@endcode
-
-__Note__: we use two renderer classes: one for legacy [Camera](http://developer.android.com/reference/android/hardware/Camera.html) API
+@note we use two renderer classes: one for legacy [Camera](http://developer.android.com/reference/android/hardware/Camera.html) API
 and another for modern [Camera2](http://developer.android.com/reference/android/hardware/camera2/package-summary.html).
 
 A minimal `Renderer` class can be implemented in Java (OpenGL ES 2.0 [available](http://developer.android.com/reference/android/opengl/GLES20.html) in Java),
 but since we are going to modify the preview texture with OpenCL let's move OpenGL stuff to JNI.
 Here is a simple Java wrapper for our JNI stuff:
 
-@code{.java}
-public class NativeGLRenderer {
-    static
-    {
-        System.loadLibrary("opencv_java4"); // comment this when using OpenCV Manager
-        System.loadLibrary("JNIrender");
-    }
-
-    public static native int initGL();
-    public static native void closeGL();
-    public static native void drawFrame();
-    public static native void changeSize(int width, int height);
-}
-@endcode
+@snippet samples/android/tutorial-4-opencl/src/org/opencv/samples/tutorial4/NativePart.java native_part
 
 Since `Camera` and `Camera2` APIs differ significantly in camera setup and control, let's create a base class for the two corresponding renderers:
 
@@ -275,126 +267,21 @@ After that we can read (_copy_) pixel data from C/C++ via `glReadPixels()` and w
 
 Also that `GL_TEXTURE_2D` texture can be shared with OpenCL without copying, but we have to create OpenCL context with special way for that:
 
-@code{.cpp}
-void initCL()
-{
-    EGLDisplay mEglDisplay = eglGetCurrentDisplay();
-    if (mEglDisplay == EGL_NO_DISPLAY)
-        LOGE("initCL: eglGetCurrentDisplay() returned 'EGL_NO_DISPLAY', error = %x", eglGetError());
-
-    EGLContext mEglContext = eglGetCurrentContext();
-    if (mEglContext == EGL_NO_CONTEXT)
-        LOGE("initCL: eglGetCurrentContext() returned 'EGL_NO_CONTEXT', error = %x", eglGetError());
-
-    cl_context_properties props[] =
-    {   CL_GL_CONTEXT_KHR,   (cl_context_properties) mEglContext,
-        CL_EGL_DISPLAY_KHR,  (cl_context_properties) mEglDisplay,
-        CL_CONTEXT_PLATFORM, 0,
-        0 };
-
-    try
-    {
-        cl::Platform p = cl::Platform::getDefault();
-        std::string ext = p.getInfo<CL_PLATFORM_EXTENSIONS>();
-        if(ext.find("cl_khr_gl_sharing") == std::string::npos)
-            LOGE("Warning: CL-GL sharing isn't supported by PLATFORM");
-        props[5] = (cl_context_properties) p();
-
-        theContext = cl::Context(CL_DEVICE_TYPE_GPU, props);
-        std::vector<cl::Device> devs = theContext.getInfo<CL_CONTEXT_DEVICES>();
-        LOGD("Context returned %d devices, taking the 1st one", devs.size());
-        ext = devs[0].getInfo<CL_DEVICE_EXTENSIONS>();
-        if(ext.find("cl_khr_gl_sharing") == std::string::npos)
-            LOGE("Warning: CL-GL sharing isn't supported by DEVICE");
-
-        theQueue = cl::CommandQueue(theContext, devs[0]);
-
-        // ...
-    }
-    catch(cl::Error& e)
-    {
-        LOGE("cl::Error: %s (%d)", e.what(), e.err());
-    }
-    catch(std::exception& e)
-    {
-        LOGE("std::exception: %s", e.what());
-    }
-    catch(...)
-    {
-        LOGE( "OpenCL info: unknown error while initializing OpenCL stuff" );
-    }
-    LOGD("initCL completed");
-}
-@endcode
-
-@note To build this JNI code you need __OpenCL 1.2__ headers from [Khronos web site](https://www.khronos.org/registry/cl/api/1.2/) and
-the __libOpenCL.so__ downloaded from the device you'll run the application.
+@snippet samples/android/tutorial-4-opencl/jni/CLprocessor.cpp init_opencl
 
 Then the texture can be wrapped by a `cl::ImageGL` object and processed via OpenCL calls:
-@code{.cpp}
-    cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, texIn);
-    cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, texOut);
 
-    std::vector < cl::Memory > images;
-    images.push_back(imgIn);
-    images.push_back(imgOut);
-    theQueue.enqueueAcquireGLObjects(&images);
-    theQueue.finish();
-
-    cl::Kernel Laplacian = ...
-    Laplacian.setArg(0, imgIn);
-    Laplacian.setArg(1, imgOut);
-    theQueue.finish();
-
-    theQueue.enqueueNDRangeKernel(Laplacian, cl::NullRange, cl::NDRange(w, h), cl::NullRange);
-    theQueue.finish();
-
-    theQueue.enqueueReleaseGLObjects(&images);
-    theQueue.finish();
-@endcode
+@snippet samples/android/tutorial-4-opencl/jni/CLprocessor.cpp process_pure_opencl
 
 ### OpenCV T-API
 
 But instead of writing OpenCL code by yourselves you may want to use __OpenCV T-API__ that calls OpenCL implicitly.
 All that you need is to pass the created OpenCL context to OpenCV (via `cv::ocl::attachContext()`) and somehow wrap OpenGL texture with `cv::UMat`.
 Unfortunately `UMat` keeps OpenCL _buffer_ internally, that can't be wrapped over either OpenGL _texture_ or OpenCL _image_ - so we have to copy image data here:
-@code{.cpp}
-    cl::ImageGL imgIn (theContext, CL_MEM_READ_ONLY,  GL_TEXTURE_2D, 0, tex);
-    std::vector < cl::Memory > images(1, imgIn);
-    theQueue.enqueueAcquireGLObjects(&images);
-    theQueue.finish();
 
-    cv::UMat uIn, uOut, uTmp;
-    cv::ocl::convertFromImage(imgIn(), uIn);
-    theQueue.enqueueReleaseGLObjects(&images);
+@snippet samples/android/tutorial-4-opencl/jni/CLprocessor.cpp process_tapi
 
-    cv::Laplacian(uIn, uTmp, CV_8U);
-    cv:multiply(uTmp, 10, uOut);
-    cv::ocl::finish();
-
-    cl::ImageGL imgOut(theContext, CL_MEM_WRITE_ONLY, GL_TEXTURE_2D, 0, tex);
-    images.clear();
-    images.push_back(imgOut);
-    theQueue.enqueueAcquireGLObjects(&images);
-    cl_mem clBuffer = (cl_mem)uOut.handle(cv::ACCESS_READ);
-    cl_command_queue q = (cl_command_queue)cv::ocl::Queue::getDefault().ptr();
-    size_t offset = 0;
-    size_t origin[3] = { 0, 0, 0 };
-    size_t region[3] = { w, h, 1 };
-    CV_Assert(clEnqueueCopyBufferToImage (q, clBuffer, imgOut(), offset, origin, region, 0, NULL, NULL) == CL_SUCCESS);
-    theQueue.enqueueReleaseGLObjects(&images);
-    cv::ocl::finish();
-@endcode
-
-- @note We have to make one more image data copy when placing back the modified image to the original OpenGL texture via OpenCL image wrapper.
-- @note By default the OpenCL support (T-API) is disabled in OpenCV builds for Android OS (so it's absent in official packages as of version 3.0),
-  but it's possible to rebuild locally OpenCV for Android with OpenCL/T-API enabled: use `-DWITH_OPENCL=YES` option for CMake.
-  @code{.cmd}
-  cd opencv-build-android
-  path/to/cmake.exe -GNinja -DCMAKE_MAKE_PROGRAM="path/to/ninja.exe" -DCMAKE_TOOLCHAIN_FILE=path/to/opencv/platforms/android/android.toolchain.cmake -DANDROID_ABI="armeabi-v7a with NEON" -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON path/to/opencv
-  path/to/ninja.exe install/strip
-  @endcode
-  To use your own modified `libopencv_java4.so` you have to keep inside your APK, not to use OpenCV Manager and load it manually via `System.loadLibrary("opencv_java4")`.
+@note We have to make one more image data copy when placing back the modified image to the original OpenGL texture via OpenCL image wrapper.
 
 Performance notes
 -----------------

@@ -43,7 +43,7 @@
 #define OPENCV_DNN_DNN_SHAPE_UTILS_HPP
 
 #include <opencv2/dnn/dnn.hpp>
-#include <opencv2/core/types_c.h>  // CV_MAX_DIM
+#include <opencv2/core/cvdef.h>  // CV_MAX_DIM
 #include <iostream>
 #include <ostream>
 #include <sstream>

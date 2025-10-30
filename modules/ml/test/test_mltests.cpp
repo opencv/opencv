@@ -55,7 +55,7 @@ static DatasetDesc & getDataset(const string & name)
 
 // interfaces and templates
 
-template <typename T> string modelName() { return "Unknown"; };
+template <typename T> string modelName() { return "Unknown"; }
 template <typename T> Ptr<T> tuneModel(const DatasetDesc &, Ptr<T> m) { return m; }
 
 struct IModelFactory

@@ -45,6 +45,7 @@
 
 #include "opencv2/opencv_modules.hpp"
 
+#include <array>
 #include <vector>
 #include <algorithm>
 #include <utility>

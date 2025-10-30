@@ -28,21 +28,7 @@ if(NOT DEFINED CV_GCC AND CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 endif()
 if(NOT DEFINED CV_CLANG AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")  # Clang or AppleClang (see CMP0025)
   set(CV_CLANG 1)
-  set(CMAKE_COMPILER_IS_CLANGCXX 1)  # TODO next release: remove this
-  set(CMAKE_COMPILER_IS_CLANGCC 1)   # TODO next release: remove this
 endif()
-
-function(access_CMAKE_COMPILER_IS_CLANGCXX)
-  if(NOT OPENCV_SUPPRESS_DEPRECATIONS)
-    message(WARNING "DEPRECATED: CMAKE_COMPILER_IS_CLANGCXX support is deprecated in OpenCV.
-    Consider using:
-    - CV_GCC    # GCC
-    - CV_CLANG  # Clang or AppleClang (see CMP0025)
-")
-  endif()
-endfunction()
-variable_watch(CMAKE_COMPILER_IS_CLANGCXX access_CMAKE_COMPILER_IS_CLANGCXX)
-variable_watch(CMAKE_COMPILER_IS_CLANGCC access_CMAKE_COMPILER_IS_CLANGCXX)
 
 
 # ----------------------------------------------------------------------------
@@ -68,6 +54,23 @@ if(MSVC AND CMAKE_C_COMPILER MATCHES "icc|icl")
   set(CV_ICC   __INTEL_COMPILER_FOR_WINDOWS)
 endif()
 
+# ----------------------------------------------------------------------------
+# Detect Intel ICXC compiler
+# ----------------------------------------------------------------------------
+if(UNIX)
+  if(__INTEL_COMPILER)
+    set(CV_ICX   __INTEL_LLVM_COMPILER)
+  elseif(CMAKE_C_COMPILER MATCHES "icx")
+    set(CV_ICX   icx_matches_c_compiler)
+  elseif(CMAKE_CXX_COMPILER MATCHES "icpx")
+    set(CV_ICX   icpx_matches_cxx_compiler)
+  endif()
+endif()
+
+if(MSVC AND CMAKE_CXX_COMPILER MATCHES ".*(dpcpp-cl|dpcpp|icx-cl|icpx|icx)(.exe)?$")
+  set(CV_ICX   __INTEL_LLVM_COMPILER_WINDOWS)
+endif()
+
 if(NOT DEFINED CMAKE_CXX_COMPILER_VERSION
     AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_COMPILER_VERSION)
   message(WARNING "OpenCV: Compiler version is not available: CMAKE_CXX_COMPILER_VERSION is not set")
@@ -79,6 +82,10 @@ endif()
 if(NOT DEFINED CMAKE_SIZEOF_VOID_P
     AND NOT OPENCV_SUPPRESS_MESSAGE_MISSING_CMAKE_SIZEOF_VOID_P)
   message(WARNING "OpenCV: CMAKE_SIZEOF_VOID_P is not defined. Perhaps CMake toolchain is broken")
+endif()
+if(NOT CMAKE_SIZEOF_VOID_P GREATER 0)
+  message(FATAL_ERROR "CMake fails to determine the bitness of the target platform.
+  Please check your CMake and compiler installation. If you are cross-compiling then ensure that your CMake toolchain file correctly sets the compiler details.")
 endif()
 
 message(STATUS "Detected processor: ${CMAKE_SYSTEM_PROCESSOR}")
@@ -153,8 +160,10 @@ elseif(MSVC)
     set(OpenCV_ARCH "ARM")
   elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
     set(OpenCV_ARCH "x64")
+  elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    set(OpenCV_ARCH "x86")
   else()
-    set(OpenCV_ARCH x86)
+    message(FATAL_ERROR "Failed to determine system architecture")
   endif()
 
   if(MSVC_VERSION EQUAL 1400)
@@ -173,7 +182,7 @@ elseif(MSVC)
     set(OpenCV_RUNTIME vc15)
   elseif(MSVC_VERSION MATCHES "^192[0-9]$")
     set(OpenCV_RUNTIME vc16)
-  elseif(MSVC_VERSION MATCHES "^193[0-9]$")
+  elseif(MSVC_VERSION MATCHES "^19[34][0-9]$")
     set(OpenCV_RUNTIME vc17)
   else()
     message(WARNING "OpenCV does not recognize MSVC_VERSION \"${MSVC_VERSION}\". Cannot set OpenCV_RUNTIME")
@@ -198,27 +207,35 @@ if(CMAKE_VERSION VERSION_LESS "3.1")
   endforeach()
 endif()
 
+# See https://github.com/opencv/opencv/issues/27105
+# - CMAKE_COMPILE_FEATURES is used to detect what features are available by the compiler.
+# - CMAKE_CXX_STANDARD is used to detect what features are available in this configuration.
 if(NOT OPENCV_SKIP_CMAKE_CXX_STANDARD)
+  if(DEFINED CMAKE_CXX_STANDARD AND ((CMAKE_CXX_STANDARD EQUAL 98) OR (CMAKE_CXX_STANDARD LESS 11)))
+    message(FATAL_ERROR "OpenCV 4.x requires C++11, but your configuration does not enable(CMAKE_CXX_STANDARD=${CMAKE_CXX_STANDARD}).")
+  endif()
+
   ocv_update(CMAKE_CXX_STANDARD 11)
   ocv_update(CMAKE_CXX_STANDARD_REQUIRED TRUE)
   ocv_update(CMAKE_CXX_EXTENSIONS OFF) # use -std=c++11 instead of -std=gnu++11
-  if(CMAKE_CXX11_COMPILE_FEATURES)
+endif()
+
+# Meta-feature "cxx_std_XX" in CMAKE_CXX_COMPILE_FEATURES are supported in CMake 3.8+.
+# - See https://cmake.org/cmake/help/latest/release/3.8.html
+# For CMake 3.7-, use CMAKE_CXXxx_COMPILE_FEATURES instead of it.
+if(CMAKE_CXX11_COMPILE_FEATURES OR ("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES))
+  if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 11))
     set(HAVE_CXX11 ON)
   endif()
 endif()
-if(NOT HAVE_CXX11)
-  ocv_check_compiler_flag(CXX "" HAVE_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-  if(NOT HAVE_CXX11)
-    ocv_check_compiler_flag(CXX "-std=c++11" HAVE_STD_CXX11 "${OpenCV_SOURCE_DIR}/cmake/checks/cxx11.cpp")
-    if(HAVE_STD_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      set(HAVE_CXX11 ON)
-    endif()
+if(CMAKE_CXX17_COMPILE_FEATURES OR ("cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES))
+  if((NOT DEFINED CMAKE_CXX_STANDARD) OR (CMAKE_CXX_STANDARD GREATER_EQUAL 17))
+    set(HAVE_CXX17 ON)
   endif()
 endif()
 
 if(NOT HAVE_CXX11)
-  message(FATAL_ERROR "OpenCV 4.x requires C++11")
+  message(FATAL_ERROR "OpenCV 4.x requires C++11, but your compiler does not support it")
 endif()
 
 set(__OPENCV_ENABLE_ATOMIC_LONG_LONG OFF)

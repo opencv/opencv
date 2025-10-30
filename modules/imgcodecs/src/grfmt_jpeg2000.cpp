@@ -286,11 +286,12 @@ bool  Jpeg2KDecoder::readData( Mat& img )
         {
             int ncmpts;
             int cmptlut[3];
+            int swap_rb = m_use_rgb ? 0 : 2;
             if( color )
             {
-                cmptlut[0] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_B );
-                cmptlut[1] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_G );
-                cmptlut[2] = jas_image_getcmptbytype( image, JAS_IMAGE_CT_RGB_R );
+                cmptlut[0] = jas_image_getcmptbytype( image, swap_rb );
+                cmptlut[1] = jas_image_getcmptbytype( image, 1 );
+                cmptlut[2] = jas_image_getcmptbytype( image, swap_rb^2 );
                 if( cmptlut[0] < 0 || cmptlut[1] < 0 || cmptlut[2] < 0 )
                     result = false;
                 ncmpts = 3;
@@ -492,6 +493,7 @@ bool  Jpeg2KDecoder::readComponent16u( unsigned short *data, void *_buffer,
 Jpeg2KEncoder::Jpeg2KEncoder()
 {
     m_description = "JPEG-2000 files (*.jp2)";
+    m_supported_encode_key = {IMWRITE_JPEG2000_COMPRESSION_X1000};
 }
 
 
@@ -525,10 +527,17 @@ bool  Jpeg2KEncoder::write( const Mat& _img, const std::vector<int>& params )
     double target_compression_rate = 1.0;
     for( size_t i = 0; i < params.size(); i += 2 )
     {
+        const int value = params[i+1];
         switch(params[i])
         {
         case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
-            target_compression_rate = std::min(std::max(params[i+1], 0), 1000) / 1000.0;
+            {
+                const int compression = std::min(std::max(value, 0), 1000);
+                target_compression_rate = static_cast<double>(compression) / 1000.0;
+                if(value != compression){
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG2000_COMPRESSION_X1000 must be between 0 to 1000. It is fallbacked to %d", value, compression));
+                }
+            }
             break;
         }
     }

@@ -181,12 +181,9 @@ static double getError (TestSolver test_case, int pt_idx, const cv::Mat &pts1, c
     if (test_case == TestSolver::Fundam || test_case == TestSolver::Essen) {
         cv::Mat l2 = model     * pt1;
         cv::Mat l1 = model.t() * pt2;
-        if (test_case == TestSolver::Fundam) // sampson error
-            return fabs(pt2.dot(l2)) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
-                                      pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
-        else // symmetric geometric distance
-            return sqrt(pow(pt1.dot(l1),2) / (pow(l1.at<double>(0),2) + pow(l1.at<double>(1),2)) +
-                        pow(pt2.dot(l2),2) / (pow(l2.at<double>(0),2) + pow(l2.at<double>(1),2)));
+        // Sampson error
+        return fabs(pt2.dot(l2)) / sqrt(pow(l1.at<double>(0), 2) + pow(l1.at<double>(1), 2) +
+                                  pow(l2.at<double>(0), 2) + pow(l2.at<double>(1), 2));
     } else
     if (test_case == TestSolver::PnP) { // PnP, reprojection error
         cv::Mat img_pt = model * pt2; img_pt /= img_pt.at<double>(2);
@@ -299,8 +296,11 @@ TEST(usac_Fundamental, regression_19639)
     EXPECT_TRUE(m.empty());
 }
 
+CV_ENUM(UsacMethod, USAC_DEFAULT, USAC_ACCURATE, USAC_PROSAC, USAC_FAST, USAC_MAGSAC)
+typedef TestWithParam<UsacMethod> usac_Essential;
 
-TEST(usac_Essential, accuracy) {
+TEST_P(usac_Essential, accuracy) {
+    int method = GetParam();
     std::vector<int> gt_inliers;
     const int pts_size = 1500;
     cv::RNG &rng = cv::theRNG();
@@ -312,25 +312,57 @@ TEST(usac_Essential, accuracy) {
         int inl_size = generatePoints(rng, pts1, pts2, K1, K2, false /*two calib*/,
           pts_size, TestSolver ::Fundam, inl_ratio, 0.01 /*noise std, works bad with high noise*/, gt_inliers);
         const double conf = 0.99, thr = 1.;
-        for (auto flag : flags) {
-            cv::Mat mask, E;
-            try {
-                E = cv::findEssentialMat(pts1, pts2, K1, flag, conf, thr, mask);
-            } catch (cv::Exception &e) {
-                if (e.code != cv::Error::StsNotImplemented)
-                    FAIL() << "Essential matrix estimation failed!\n";
-                else continue;
-            }
-            // calibrate points
-            cv::Mat cpts1_3d, cpts2_3d;
-            cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), cpts1_3d);
-            cv::vconcat(pts2, cv::Mat::ones(1, pts2.cols, pts2.type()), cpts2_3d);
-            cpts1_3d = K1.inv() * cpts1_3d; cpts2_3d = K1.inv() * cpts2_3d;
-            checkInliersMask(TestSolver::Essen, inl_size, thr / ((K1.at<double>(0,0) + K1.at<double>(1,1)) / 2),
-                             cpts1_3d.rowRange(0,2), cpts2_3d.rowRange(0,2), E, mask);
+        cv::Mat mask, E;
+        try {
+            E = cv::findEssentialMat(pts1, pts2, K1, method, conf, thr, mask);
+        } catch (cv::Exception &e) {
+            if (e.code != cv::Error::StsNotImplemented)
+                FAIL() << "Essential matrix estimation failed!\n";
+            else continue;
         }
+        // calibrate points
+        cv::Mat cpts1_3d, cpts2_3d;
+        cv::vconcat(pts1, cv::Mat::ones(1, pts1.cols, pts1.type()), cpts1_3d);
+        cv::vconcat(pts2, cv::Mat::ones(1, pts2.cols, pts2.type()), cpts2_3d);
+        cpts1_3d = K1.inv() * cpts1_3d; cpts2_3d = K1.inv() * cpts2_3d;
+        checkInliersMask(TestSolver::Essen, inl_size, thr / ((K1.at<double>(0,0) + K1.at<double>(1,1)) / 2),
+                            cpts1_3d.rowRange(0,2), cpts2_3d.rowRange(0,2), E, mask);
     }
 }
+
+TEST_P(usac_Essential, maxiters) {
+    int method = GetParam();
+    cv::RNG &rng = cv::theRNG();
+    cv::Mat mask;
+    cv::Mat K1 = cv::Mat(cv::Matx33d(1, 0, 0,
+                                     0, 1, 0,
+                                     0, 0, 1.));
+    const double conf = 0.99, thr = 0.25;
+    int roll_results_sum = 0;
+
+    for (int iters = 0; iters < 10; iters++) {
+        cv::Mat E1, E2;
+        try {
+            cv::Mat pts1 = cv::Mat(2, 50, CV_64F);
+            cv::Mat pts2 = cv::Mat(2, 50, CV_64F);
+            rng.fill(pts1, cv::RNG::UNIFORM, 0.0, 1.0);
+            rng.fill(pts2, cv::RNG::UNIFORM, 0.0, 1.0);
+
+            E1 = cv::findEssentialMat(pts1, pts2, K1, method, conf, thr, 1, mask);
+            E2 = cv::findEssentialMat(pts1, pts2, K1, method, conf, thr, 1000, mask);
+
+            if (E1.dims != E2.dims) { continue; }
+            roll_results_sum += cv::norm(E1, E2, NORM_L1) != 0;
+        } catch (cv::Exception &e) {
+            if (e.code != cv::Error::StsNotImplemented)
+                FAIL() << "Essential matrix estimation failed!\n";
+            else continue;
+        }
+    }
+    EXPECT_NE(roll_results_sum, 0);
+}
+
+INSTANTIATE_TEST_CASE_P(Calib3d, usac_Essential, UsacMethod::all());
 
 TEST(usac_P3P, accuracy) {
     std::vector<int> gt_inliers;
@@ -381,7 +413,7 @@ TEST (usac_Affine2D, accuracy) {
 
 TEST(usac_testUsacParams, accuracy) {
     std::vector<int> gt_inliers;
-    const int pts_size = 1500;
+    const int pts_size = 150000;
     cv::RNG &rng = cv::theRNG();
     const cv::UsacParams usac_params = cv::UsacParams();
     cv::Mat pts1, pts2, K1, K2, mask, model, rvec, tvec, R;

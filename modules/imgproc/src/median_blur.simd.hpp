@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, 2018, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -179,10 +180,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                 for (k = 0; k < 16; ++k)
                 {
 #if CV_SIMD256
-                    v_store(H.fine[k], v_mul_wrap(v256_load(h_fine + 16 * n*(16 * c + k)), v256_setall_u16(2 * r + 1)) + v256_load(H.fine[k]));
+                    v_store(H.fine[k], v_mul_wrap(v256_load(h_fine + 16 * n*(16 * c + k)), v_add(v256_setall_u16(2 * r + 1), v256_load(H.fine[k]))));
 #elif CV_SIMD128
-                    v_store(H.fine[k], v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k)), v_setall_u16((ushort)(2 * r + 1))) + v_load(H.fine[k]));
-                    v_store(H.fine[k] + 8, v_mul_wrap(v_load(h_fine + 16 * n*(16 * c + k) + 8), v_setall_u16((ushort)(2 * r + 1))) + v_load(H.fine[k] + 8));
+                    v_store(H.fine[k], v_add(v_mul_wrap(v_load(h_fine + 16 * n * (16 * c + k)), v_setall_u16((ushort)(2 * r + 1))), v_load(H.fine[k])));
+                    v_store(H.fine[k] + 8, v_add(v_mul_wrap(v_load(h_fine + 16 * n * (16 * c + k) + 8), v_setall_u16((ushort)(2 * r + 1))), v_load(H.fine[k] + 8)));
 #else
                     for (int ind = 0; ind < 16; ++ind)
                         H.fine[k][ind] = (HT)(H.fine[k][ind] + (2 * r + 1) * h_fine[16 * n*(16 * c + k) + ind]);
@@ -199,10 +200,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                 for( j = 0; j < 2*r; ++j, px += 16 )
                 {
 #if CV_SIMD256
-                    v_coarse += v256_load(px);
+                    v_coarse = v_add(v_coarse, v256_load(px));
 #elif CV_SIMD128
-                    v_coarsel += v_load(px);
-                    v_coarseh += v_load(px + 8);
+                    v_coarsel = v_add(v_coarsel, v_load(px));
+                    v_coarseh = v_add(v_coarseh, v_load(px + 8));
 #else
                     for (int ind = 0; ind < 16; ++ind)
                         H.coarse[ind] += px[ind];
@@ -216,11 +217,11 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
 
                     px = h_coarse + 16 * (n*c + std::min(j + r, n - 1));
 #if CV_SIMD256
-                    v_coarse += v256_load(px);
+                    v_coarse = v_add(v_coarse, v256_load(px));
                     v_store(H.coarse, v_coarse);
 #elif CV_SIMD128
-                    v_coarsel += v_load(px);
-                    v_coarseh += v_load(px + 8);
+                    v_coarsel = v_add(v_coarsel, v_load(px));
+                    v_coarseh = v_add(v_coarseh, v_load(px + 8));
                     v_store(H.coarse, v_coarsel);
                     v_store(H.coarse + 8, v_coarseh);
 #else
@@ -261,10 +262,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         for (luc[k] = HT(j - r); luc[k] < MIN(j + r + 1, n); ++luc[k], px += 16)
                         {
 #if CV_SIMD256
-                            v_fine += v256_load(px);
+                            v_fine = v_add(v_fine, v256_load(px));
 #elif CV_SIMD128
-                            v_finel += v_load(px);
-                            v_fineh += v_load(px + 8);
+                            v_finel = v_add(v_finel, v_load(px));
+                            v_fineh = v_add(v_fineh, v_load(px + 8));
 #else
                             for (int ind = 0; ind < 16; ++ind)
                                 H.fine[k][ind] += px[ind];
@@ -275,10 +276,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         {
                             px = h_fine + 16 * (n*(16 * c + k) + (n - 1));
 #if CV_SIMD256
-                            v_fine += v_mul_wrap(v256_load(px), v256_setall_u16(j + r + 1 - n));
+                            v_fine = v_add(v_fine, v_mul_wrap(v256_load(px), v256_setall_u16(j + r + 1 - n)));
 #elif CV_SIMD128
-                            v_finel += v_mul_wrap(v_load(px), v_setall_u16((ushort)(j + r + 1 - n)));
-                            v_fineh += v_mul_wrap(v_load(px + 8), v_setall_u16((ushort)(j + r + 1 - n)));
+                            v_finel = v_add(v_finel, v_mul_wrap(v_load(px), v_setall_u16((ushort)(j + r + 1 - n))));
+                            v_fineh = v_add(v_fineh, v_mul_wrap(v_load(px + 8), v_setall_u16((ushort)(j + r + 1 - n))));
 #else
                             for (int ind = 0; ind < 16; ++ind)
                                 H.fine[k][ind] = (HT)(H.fine[k][ind] + (j + r + 1 - n) * px[ind]);
@@ -298,10 +299,10 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                         for ( ; luc[k] < j+r+1; ++luc[k] )
                         {
 #if CV_SIMD256
-                            v_fine = v_fine + v256_load(px + 16 * MIN(luc[k], n - 1)) - v256_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0));
+                            v_fine = v_sub(v_add(v_fine, v256_load(px + 16 * MIN(luc[k], n - 1))), v256_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0)));
 #elif CV_SIMD128
-                            v_finel = v_finel + v_load(px + 16 * MIN(luc[k], n - 1)    ) - v_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0));
-                            v_fineh = v_fineh + v_load(px + 16 * MIN(luc[k], n - 1) + 8) - v_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0) + 8);
+                            v_finel = v_sub(v_add(v_finel, v_load(px + 16 * MIN(luc[k], n - 1)    )), v_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0)));
+                            v_fineh = v_sub(v_add(v_fineh, v_load(px + 16 * MIN(luc[k], n - 1) + 8)), v_load(px + 16 * MAX(luc[k] - 2 * r - 1, 0) + 8));
 #else
                             for (int ind = 0; ind < 16; ++ind)
                                 H.fine[k][ind] += px[16 * MIN(luc[k], n - 1) + ind] - px[16 * MAX(luc[k] - 2 * r - 1, 0) + ind];
@@ -312,12 +313,12 @@ medianBlur_8u_O1( const Mat& _src, Mat& _dst, int ksize )
                     px = h_coarse + 16 * (n*c + MAX(j - r, 0));
 #if CV_SIMD256
                     v_store(H.fine[k], v_fine);
-                    v_coarse -= v256_load(px);
+                    v_coarse = v_sub(v_coarse, v256_load(px));
 #elif CV_SIMD128
                     v_store(H.fine[k], v_finel);
                     v_store(H.fine[k] + 8, v_fineh);
-                    v_coarsel -= v_load(px);
-                    v_coarseh -= v_load(px + 8);
+                    v_coarsel = v_sub(v_coarsel, v_load(px));
+                    v_coarseh = v_sub(v_coarseh, v_load(px + 8));
 #else
                     for (int ind = 0; ind < 16; ++ind)
                         H.coarse[ind] -= px[ind];
@@ -548,7 +549,7 @@ struct MinMax32f
     }
 };
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 
 struct MinMaxVec8u
 {
@@ -688,13 +689,21 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 if( limit == size.width )
                     break;
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 int nlanes = VTraits<typename VecOp::arg_type>::vlanes();
 #else
                 int nlanes = 1;
 #endif
-                for( ; j <= size.width - nlanes - cn; j += nlanes )
+                for (; j < size.width - cn; j += nlanes)
                 {
+                    //handling tail in vectorized path itself
+                    if ( j > size.width - cn - nlanes ) {
+                        if (j == cn || src == dst) {
+                            break;
+                        }
+                        j = size.width - cn - nlanes;
+                    }
+
                     VT p0 = vop.load(row0+j-cn), p1 = vop.load(row0+j), p2 = vop.load(row0+j+cn);
                     VT p3 = vop.load(row1+j-cn), p4 = vop.load(row1+j), p5 = vop.load(row1+j+cn);
                     VT p6 = vop.load(row2+j-cn), p7 = vop.load(row2+j), p8 = vop.load(row2+j+cn);
@@ -705,6 +714,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     vop(p3, p6); vop(p1, p4); vop(p2, p5); vop(p4, p7);
                     vop(p4, p2); vop(p6, p4); vop(p4, p2);
                     vop.store(dst+j, p4);
+
                 }
 
                 limit = size.width;
@@ -793,13 +803,19 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                 if( limit == size.width )
                     break;
 
-#if CV_SIMD || CV_SIMD_SCALABLE
+#if (CV_SIMD || CV_SIMD_SCALABLE)
                 int nlanes = VTraits<typename VecOp::arg_type>::vlanes();
 #else
                 int nlanes = 1;
 #endif
-                for( ; j <= size.width - nlanes - cn*2; j += nlanes )
+                for( ; j < size.width - cn*2; j += nlanes)
                 {
+                    if ( j > size.width - cn*2 - nlanes ) {
+                        if (j == cn*2 || src == dst) {
+                            break;
+                        }
+                        j = size.width - cn*2 - nlanes;
+                    }
                     VT p0 = vop.load(row[0]+j-cn*2), p5 = vop.load(row[1]+j-cn*2), p10 = vop.load(row[2]+j-cn*2), p15 = vop.load(row[3]+j-cn*2), p20 = vop.load(row[4]+j-cn*2);
                     VT p1 = vop.load(row[0]+j-cn*1), p6 = vop.load(row[1]+j-cn*1), p11 = vop.load(row[2]+j-cn*1), p16 = vop.load(row[3]+j-cn*1), p21 = vop.load(row[4]+j-cn*1);
                     VT p2 = vop.load(row[0]+j-cn*0), p7 = vop.load(row[1]+j-cn*0), p12 = vop.load(row[2]+j-cn*0), p17 = vop.load(row[3]+j-cn*0), p22 = vop.load(row[4]+j-cn*0);
@@ -830,6 +846,7 @@ medianBlur_SortNet( const Mat& _src, Mat& _dst, int m )
                     vop(p13, p17); vop(p3, p15); vop(p11, p23); vop(p11, p15); vop(p7, p19);
                     vop(p7, p11); vop(p11, p13); vop(p11, p12);
                     vop.store(dst+j, p12);
+
                 }
 
                 limit = size.width;
@@ -845,7 +862,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
     CV_INSTRUMENT_REGION();
 
     bool useSortNet = ksize == 3 || (ksize == 5
-#if !(CV_SIMD)
+#if !((CV_SIMD || CV_SIMD_SCALABLE))
             && ( src0.depth() > CV_8U || src0.channels() == 2 || src0.channels() > 4 )
 #endif
         );
@@ -867,7 +884,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
         else if( src.depth() == CV_32F )
             medianBlur_SortNet<MinMax32f, MinMaxVec32f>( src, dst, ksize );
         else
-            CV_Error(CV_StsUnsupportedFormat, "");
+            CV_Error(cv::Error::StsUnsupportedFormat, "");
 
         return;
     }
@@ -881,7 +898,7 @@ void medianBlur(const Mat& src0, /*const*/ Mat& dst, int ksize)
 
         double img_size_mp = (double)(src0.total())/(1 << 20);
         if( ksize <= 3 + (img_size_mp < 1 ? 12 : img_size_mp < 4 ? 6 : 2)*
-            (CV_SIMD ? 1 : 3))
+            ((CV_SIMD || CV_SIMD_SCALABLE) ? 1 : 3))
             medianBlur_8u_Om( src, dst, ksize );
         else
             medianBlur_8u_O1( src, dst, ksize );

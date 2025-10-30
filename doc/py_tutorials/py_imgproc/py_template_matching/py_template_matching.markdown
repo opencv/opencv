@@ -38,18 +38,20 @@ import cv2 as cv
 import numpy as np
 from matplotlib import pyplot as plt
 
-img = cv.imread('messi5.jpg',0)
+img = cv.imread('messi5.jpg', cv.IMREAD_GRAYSCALE)
+assert img is not None, "file could not be read, check with os.path.exists()"
 img2 = img.copy()
-template = cv.imread('template.jpg',0)
+template = cv.imread('template.jpg', cv.IMREAD_GRAYSCALE)
+assert template is not None, "file could not be read, check with os.path.exists()"
 w, h = template.shape[::-1]
 
 # All the 6 methods for comparison in a list
-methods = ['cv.TM_CCOEFF', 'cv.TM_CCOEFF_NORMED', 'cv.TM_CCORR',
-            'cv.TM_CCORR_NORMED', 'cv.TM_SQDIFF', 'cv.TM_SQDIFF_NORMED']
+methods = ['TM_CCOEFF', 'TM_CCOEFF_NORMED', 'TM_CCORR',
+            'TM_CCORR_NORMED', 'TM_SQDIFF', 'TM_SQDIFF_NORMED']
 
 for meth in methods:
     img = img2.copy()
-    method = eval(meth)
+    method = getattr(cv, meth)
 
     # Apply template Matching
     res = cv.matchTemplate(img,template,method)
@@ -113,8 +115,10 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 img_rgb = cv.imread('mario.png')
+assert img_rgb is not None, "file could not be read, check with os.path.exists()"
 img_gray = cv.cvtColor(img_rgb, cv.COLOR_BGR2GRAY)
-template = cv.imread('mario_coin.png',0)
+template = cv.imread('mario_coin.png', cv.IMREAD_GRAYSCALE)
+assert template is not None, "file could not be read, check with os.path.exists()"
 w, h = template.shape[::-1]
 
 res = cv.matchTemplate(img_gray,template,cv.TM_CCOEFF_NORMED)
@@ -128,9 +132,3 @@ cv.imwrite('res.png',img_rgb)
 Result:
 
 ![image](images/res_mario.jpg)
-
-Additional Resources
---------------------
-
-Exercises
----------

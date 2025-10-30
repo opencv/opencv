@@ -99,8 +99,7 @@ namespace cv { namespace cuda
         }
 
 #if (CUDART_VERSION >= 12000)
-        template<class T> inline void bindTexture(const textureReference* tex, const PtrStepSz<T>& img) { CV_Error(cv::Error::GpuNotSupported, "Function removed in CUDA SDK 12"); }
-        template<class T> inline void createTextureObjectPitch2D(cudaTextureObject_t* tex, PtrStepSz<T>& img, const cudaTextureDesc& texDesc) {
+        template<class T> inline void createTextureObjectPitch2D(cudaTextureObject_t*, PtrStepSz<T>&, const cudaTextureDesc&) {
             CV_Error(cv::Error::GpuNotSupported, "Function removed in CUDA SDK 12"); }
 #else
         //TODO: remove from OpenCV 5.x
@@ -123,8 +122,8 @@ namespace cv { namespace cuda
 
             cudaSafeCall( cudaCreateTextureObject(tex, &resDesc, &texDesc, NULL) );
         }
-    }
 #endif
+    }
 }}
 
 //! @endcond

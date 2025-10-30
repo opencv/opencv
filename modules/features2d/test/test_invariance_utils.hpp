@@ -75,8 +75,8 @@ void scaleKeyPoints(const vector<KeyPoint>& src, vector<KeyPoint>& dst, float sc
     dst.resize(src.size());
     for (size_t i = 0; i < src.size(); i++) {
         dst[i] = src[i];
-        dst[i].pt.x *= scale;
-        dst[i].pt.y *= scale;
+        dst[i].pt.x = dst[i].pt.x * scale + (scale - 1.0f) / 2.0f;
+        dst[i].pt.y = dst[i].pt.y * scale + (scale - 1.0f) / 2.0f;
         dst[i].size *= scale;
     }
 }

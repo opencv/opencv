@@ -46,6 +46,9 @@
 
 #include "opencv2/core.hpp"
 #include "opencv2/imgproc.hpp"
+#ifdef HAVE_OPENCV_DNN
+# include "opencv2/dnn.hpp"
+#endif
 
 namespace cv
 {
@@ -166,7 +169,7 @@ performance boost.
 The function implements a sparse iterative version of the Lucas-Kanade optical flow in pyramids. See
 @cite Bouguet00 . The function is parallelized with the TBB library.
 
-@note
+@note Some examples:
 
 -   An example using the Lucas-Kanade optical flow algorithm can be found at
     opencv_source_code/samples/cpp/lkdemo.cpp
@@ -213,7 +216,7 @@ The function finds an optical flow for each prev pixel using the @cite Farneback
 
 \f[\texttt{prev} (y,x)  \sim \texttt{next} ( y + \texttt{flow} (y,x)[1],  x + \texttt{flow} (y,x)[0])\f]
 
-@note
+@note Some examples:
 
 -   An example using the optical flow algorithm described by Gunnar Farneback can be found at
     opencv_source_code/samples/cpp/fback.cpp
@@ -265,17 +268,43 @@ enum
     MOTION_HOMOGRAPHY  = 3
 };
 
-/** @brief Computes the Enhanced Correlation Coefficient value between two images @cite EP08 .
+/**
+@brief Computes the Enhanced Correlation Coefficient (ECC) value between two images
 
-@param templateImage single-channel template image; CV_8U or CV_32F array.
-@param inputImage single-channel input image to be warped to provide an image similar to
- templateImage, same type as templateImage.
-@param inputMask An optional mask to indicate valid values of inputImage.
+The Enhanced Correlation Coefficient (ECC) is a normalized measure of similarity between two images.
+The result lies in the range [-1, 1], where 1 corresponds to perfect similarity (modulo affine shift and scale),
+0 indicates no correlation, and -1 indicates perfect negative correlation.
 
-@sa
-findTransformECC
- */
+For single-channel images, the ECC is defined as:
 
+\f[
+\mathrm{ECC}(I, T) = \frac{\sum_{x} (I(x) - \mu_I)(T(x) - \mu_T)}
+{\sqrt{\sum_{x} (I(x) - \mu_I)^2} \cdot \sqrt{\sum_{x} (T(x) - \mu_T)^2}}
+\f]
+
+For multi-channel images (e.g., 3-channel RGB), the formula generalizes to:
+
+\f[
+\mathrm{ECC}(I, T) =
+\frac{\sum_{x} \sum_{c=1}^{C} (I_c(x) - \mu_{I_c})(T_c(x) - \mu_{T_c})}
+{\sqrt{\sum_{x} \sum_{c=1}^{C} (I_c(x) - \mu_{I_c})^2} \cdot
+ \sqrt{\sum_{x} \sum_{c=1}^{C} (T_c(x) - \mu_{T_c})^2}}
+\f]
+
+Where:
+- \f$I_c(x), T_c(x)\f$ are the values of channel \f$c\f$ at spatial location \f$x\f$,
+- \f$\mu_{I_c}, \mu_{T_c}\f$ are the mean values of channel \f$c\f$ over the masked region (if provided),
+- \f$C\f$ is the number of channels (only 1 and 3 are currently supported),
+- The sums run over all pixels \f$x\f$ in the image domain (optionally restricted by mask).
+
+@param templateImage Input template image; must have either 1 or 3 channels and be of type CV_8U, CV_16U, CV_32F, or CV_64F.
+@param inputImage Input image to be compared with the template; must have the same type and number of channels as templateImage.
+@param inputMask Optional single-channel mask to specify the valid region of interest in inputImage and templateImage.
+
+@return The ECC similarity coefficient in the range [-1, 1].
+
+@sa findTransformECC
+*/
 CV_EXPORTS_W double computeECC(InputArray templateImage, InputArray inputImage, InputArray inputMask = noArray());
 
 /** @example samples/cpp/image_alignment.cpp
@@ -284,8 +313,8 @@ An example using the image alignment ECC algorithm
 
 /** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08 .
 
-@param templateImage single-channel template image; CV_8U or CV_32F array.
-@param inputImage single-channel input image which should be warped with the final warpMatrix in
+@param templateImage 1 or 3 channel template image; CV_8U, CV_16U, CV_32F, CV_64F type.
+@param inputImage input image which should be warped with the final warpMatrix in
 order to provide an image similar to templateImage, same type as templateImage.
 @param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
 @param motionType parameter, specifying the type of motion:
@@ -302,9 +331,9 @@ order to provide an image similar to templateImage, same type as templateImage.
 criteria.epsilon defines the threshold of the increment in the correlation coefficient between two
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
-@param inputMask An optional mask to indicate valid values of inputImage.
-@param templateMask  An optional mask to indicate valid values of inputImage. The effective support
- is intersection of warped inputMask and templateMask.
+@param inputMask An optional single channel mask to indicate valid values of inputImage.
+@param templateMask An optional single channel mask to indicate valid values of templateImage.
+ The effective support is intersection of warped inputMask and templateMask.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
@@ -351,7 +380,7 @@ CV_EXPORTS_W
 double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
-    InputArray inputMask = cv::noArray());
+    InputArray inputMask = noArray());
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter
@@ -572,6 +601,12 @@ public:
     /** @copybrief getGamma @see getGamma */
     CV_WRAP virtual void setGamma(float val) = 0;
 
+    /** @brief Norm value shift for robust penalizer
+    @see setEpsilon */
+    CV_WRAP virtual float getEpsilon() const = 0;
+    /** @copybrief getEpsilon @see getEpsilon */
+    CV_WRAP virtual void setEpsilon(float val) = 0;
+
     /** @brief Creates an instance of VariationalRefinement
     */
     CV_WRAP static Ptr<VariationalRefinement> create();
@@ -652,6 +687,12 @@ public:
     CV_WRAP virtual float getVariationalRefinementGamma() const = 0;
     /** @copybrief getVariationalRefinementGamma @see getVariationalRefinementGamma */
     CV_WRAP virtual void setVariationalRefinementGamma(float val) = 0;
+
+    /** @brief Norm value shift for robust penalizer
+    @see setVariationalRefinementEpsilon */
+    CV_WRAP virtual float getVariationalRefinementEpsilon() const = 0;
+    /** @copybrief getVariationalRefinementEpsilon @see getVariationalRefinementEpsilon */
+    CV_WRAP virtual void setVariationalRefinementEpsilon(float val) = 0;
 
 
     /** @brief Whether to use mean-normalization of patches when computing patch distance. It is turned on
@@ -822,6 +863,13 @@ public:
     static CV_WRAP
     Ptr<TrackerGOTURN> create(const TrackerGOTURN::Params& parameters = TrackerGOTURN::Params());
 
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Constructor
+    @param model pre-loaded GOTURN model
+    */
+    static CV_WRAP Ptr<TrackerGOTURN> create(const dnn::Net& model);
+#endif
+
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
@@ -849,6 +897,16 @@ public:
     static CV_WRAP
     Ptr<TrackerDaSiamRPN> create(const TrackerDaSiamRPN::Params& parameters = TrackerDaSiamRPN::Params());
 
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Constructor
+     *  @param siam_rpn pre-loaded SiamRPN model
+     *  @param kernel_cls1 pre-loaded CLS model
+     *  @param kernel_r1 pre-loaded R1 model
+     */
+    static CV_WRAP
+    Ptr<TrackerDaSiamRPN> create(const dnn::Net& siam_rpn, const dnn::Net& kernel_cls1, const dnn::Net& kernel_r1);
+#endif
+
     /** @brief Return tracking score
     */
     CV_WRAP virtual float getTrackingScore() = 0;
@@ -861,9 +919,9 @@ public:
  *
  *  Nano tracker is much faster and extremely lightweight due to special model structure, the whole model size is about 1.9 MB.
  *  Nano tracker needs two models: one for feature extraction (backbone) and the another for localization (neckhead).
- *  Please download these two onnx models at:https://github.com/HonglinChu/SiamTrackers/tree/master/NanoTrack/models/nanotrackv2.
+ *  Model download link: https://github.com/HonglinChu/SiamTrackers/tree/master/NanoTrack/models/nanotrackv2
  *  Original repo is here: https://github.com/HonglinChu/NanoTrack
- *  Author:HongLinChu, 1628464345@qq.com
+ *  Author: HongLinChu, 1628464345@qq.com
  */
 class CV_EXPORTS_W TrackerNano : public Tracker
 {
@@ -887,12 +945,71 @@ public:
     static CV_WRAP
     Ptr<TrackerNano> create(const TrackerNano::Params& parameters = TrackerNano::Params());
 
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Constructor
+     *  @param backbone pre-loaded backbone model
+     *  @param neckhead pre-loaded neckhead model
+     */
+    static CV_WRAP
+    Ptr<TrackerNano> create(const dnn::Net& backbone, const dnn::Net& neckhead);
+#endif
+
     /** @brief Return tracking score
     */
     CV_WRAP virtual float getTrackingScore() = 0;
 
     //void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
     //bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
+};
+
+/** @brief the VIT tracker is a super lightweight dnn-based general object tracking.
+ *
+ *  VIT tracker is much faster and extremely lightweight due to special model structure, the model file is about 767KB.
+ *  Model download link: https://github.com/opencv/opencv_zoo/tree/main/models/object_tracking_vittrack
+ *  Author: PengyuLiu, 1872918507@qq.com
+ */
+class CV_EXPORTS_W TrackerVit : public Tracker
+{
+protected:
+    TrackerVit();  // use ::create()
+public:
+    virtual ~TrackerVit() CV_OVERRIDE;
+
+    struct CV_EXPORTS_W_SIMPLE Params
+    {
+        CV_WRAP Params();
+        CV_PROP_RW std::string net;
+        CV_PROP_RW int backend;
+        CV_PROP_RW int target;
+        CV_PROP_RW Scalar meanvalue;
+        CV_PROP_RW Scalar stdvalue;
+        CV_PROP_RW float tracking_score_threshold;
+    };
+
+    /** @brief Constructor
+    @param parameters vit tracker parameters TrackerVit::Params
+    */
+    static CV_WRAP
+    Ptr<TrackerVit> create(const TrackerVit::Params& parameters = TrackerVit::Params());
+
+#ifdef HAVE_OPENCV_DNN
+    /** @brief Constructor
+     *  @param model pre-loaded DNN model
+     *  @param meanvalue mean value for image preprocessing
+     *  @param stdvalue std value for image preprocessing
+     *  @param tracking_score_threshold threshold for tracking score
+     */
+    static CV_WRAP
+    Ptr<TrackerVit> create(const dnn::Net& model, Scalar meanvalue = Scalar(0.485, 0.456, 0.406),
+                           Scalar stdvalue = Scalar(0.229, 0.224, 0.225), float tracking_score_threshold = 0.20f);
+#endif
+
+    /** @brief Return tracking score
+    */
+    CV_WRAP virtual float getTrackingScore() = 0;
+
+    // void init(InputArray image, const Rect& boundingBox) CV_OVERRIDE;
+    // bool update(InputArray image, CV_OUT Rect& boundingBox) CV_OVERRIDE;
 };
 
 //! @} video_track

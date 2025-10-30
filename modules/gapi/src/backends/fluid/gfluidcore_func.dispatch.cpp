@@ -7,7 +7,7 @@
 #if !defined(GAPI_STANDALONE)
 
 #include <opencv2/core/hal/intrin.hpp>
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 #include "gfluidcore_func.hpp"
 #include "gfluidcore_func.simd.hpp"
 
@@ -277,12 +277,20 @@ int split4_simd(const uchar in[], uchar out1[], uchar out2[],
                     CV_CPU_DISPATCH_MODES_ALL);
 }
 
-int merge3_simd(const uchar in1[], const uchar in2[], const uchar in3[],
-                uchar out[], const int width)
-{
-    CV_CPU_DISPATCH(merge3_simd, (in1, in2, in3, out, width),
-                    CV_CPU_DISPATCH_MODES_ALL);
+#define MERGE3_SIMD(T)                                              \
+int merge3_simd(const T in1[], const T in2[], const T in3[],        \
+                T out[], const int width)                           \
+{                                                                   \
+    CV_CPU_DISPATCH(merge3_simd, (in1, in2, in3, out, width),       \
+                    CV_CPU_DISPATCH_MODES_ALL);                     \
 }
+
+MERGE3_SIMD(uchar)
+MERGE3_SIMD(short)
+MERGE3_SIMD(ushort)
+MERGE3_SIMD(float)
+
+#undef MERGE3_SIMD
 
 int merge4_simd(const uchar in1[], const uchar in2[], const uchar in3[],
                 const uchar in4[], uchar out[], const int width)

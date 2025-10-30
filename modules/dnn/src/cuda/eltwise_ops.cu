@@ -132,8 +132,23 @@ void eltwise_op(const Stream& stream, TensorSpan<T> output, TensorView<T> x, Ten
     }
     else
     {
-        CV_Assert(is_shape_compatible(output, x));
-        CV_Assert(is_shape_compatible(output, y));
+        auto inShape1 = x.shape_as_vector();
+        auto inShape2 = y.shape_as_vector();
+        auto outShape = output.shape_as_vector();
+
+        std::size_t x_ndims = inShape1.size(), y_ndims = inShape2.size();
+        if (x_ndims >= y_ndims) {
+            for (std::size_t i = 0; i < (x_ndims - y_ndims); i++) {
+               inShape2.insert(inShape2.begin(), 1);
+            }
+        } else {
+            for (std::size_t i = 0; i < (y_ndims - x_ndims); i++) {
+               inShape1.insert(inShape1.begin(), 1);
+            }
+        }
+
+        CV_Assert(is_shape_compatible1(outShape, inShape1));
+        CV_Assert(is_shape_compatible1(outShape, inShape2));
 
         /* matching singleton axes in both input tensors can be eliminated
          *
@@ -148,20 +163,21 @@ void eltwise_op(const Stream& stream, TensorSpan<T> output, TensorView<T> x, Ten
          * x: [1, 256, 32, 32] -> [256, 32, 32]
          * y: [1, 256, 1, 1] -> [256, 1, 1]
          */
-        for (int r = 0; r < output.rank(); r++)
-        {
-            while (x.get_axis_size(r) == 1 && y.get_axis_size(r) == 1) {
-                CV_Assert(output.get_axis_size(r) == 1);
-
-                x.squeeze(r);
-                y.squeeze(r);
-                output.squeeze(r);
+        int eliminate_times = 0;
+        for (std::size_t i = 0; i < outShape.size(); i++) {
+            if (inShape1[i] == 1 && inShape2[i] == 1 && outShape[i] == 1 && i != (outShape.size() - 1)) {
+                eliminate_times++;
+            } else {
+                break;
             }
         }
-
-        auto inShape1 = x.shape_as_vector();
-        auto inShape2 = y.shape_as_vector();
-        auto outShape = output.shape_as_vector();
+        if (eliminate_times > 0) {
+            for (int i = 0; i < eliminate_times; i++) {
+                inShape1.erase(inShape1.begin());
+                inShape2.erase(inShape2.begin());
+                outShape.erase(outShape.begin());
+            }
+        }
 
         /* contiguous axes that do not broadcast can be merged into one axis
          *
@@ -183,6 +199,9 @@ void eltwise_op(const Stream& stream, TensorSpan<T> output, TensorView<T> x, Ten
                     auto new_size = inShape1[i] * inShape1[j];
                     inShape1[i] = new_size;
                     inShape2[i] = new_size;
+                    // outShape should be changed after merged
+                    auto output_new_size = outShape[i] * outShape[j];
+                    outShape[i] = output_new_size;
 
                     /* delete axis `j` */
                     inShape1.erase(std::begin(inShape1) + j);
@@ -316,19 +335,47 @@ void eltwise_div_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, 
     eltwise_op<T, DivFunctor<T>>(stream, output, x, y);
 }
 
+template <class T>
+void eltwise_sub_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, SubFunctor<T>>(stream, output, x, y);
+}
+
+template <class T>
+void eltwise_mod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, ModFunctor<T>>(stream, output, x, y);
+}
+
+template <class T>
+void eltwise_fmod_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, FModFunctor<T>>(stream, output, x, y);
+}
+
+template <class T>
+void eltwise_pow_2(const Stream& stream, TensorSpan<T> output, TensorView<T> x, TensorView<T> y) {
+    eltwise_op<T, PowFunctor<T>>(stream, output, x, y);
+}
+
 #if !defined(__CUDA_ARCH__) || (__CUDA_ARCH__ >= 530)
+    template void eltwise_mod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
+    template void eltwise_fmod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
+    template void eltwise_sub_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_div_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_prod_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_sum_coeff_2(const Stream&, TensorSpan<__half>, __half, TensorView<__half>, __half, TensorView<__half>);
     template void eltwise_sum_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_max_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<__half> output, TensorView<__half> x, TensorView<__half> y);
 #endif
+    template void eltwise_mod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
+    template void eltwise_fmod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
+    template void eltwise_sub_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_div_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_prod_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_sum_coeff_2(const Stream&, TensorSpan<float>, float, TensorView<float>, float, TensorView<float>);
     template void eltwise_sum_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_max_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
     template void eltwise_min_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
+    template void eltwise_pow_2(const Stream& stream, TensorSpan<float> output, TensorView<float> x, TensorView<float> y);
 
 }}}} /* namespace cv::dnn::cuda4dnn::kernels */

@@ -53,7 +53,7 @@ namespace cv {
 
     public:
         CV_WRAP PyRotationWarper(String type, float scale);
-        CV_WRAP PyRotationWarper() {};
+        CV_WRAP PyRotationWarper() {}
         ~PyRotationWarper() {}
 
         /** @brief Projects the image point.

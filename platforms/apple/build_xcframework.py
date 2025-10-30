@@ -31,6 +31,8 @@ if __name__ == "__main__":
     parser.add_argument('--framework_name', default='opencv2', help='Name of OpenCV xcframework (default: opencv2, will change to OpenCV in future version)')
     parser.add_argument('--iphoneos_archs', default=None, help='select iPhoneOS target ARCHS. Default is "armv7,arm64"')
     parser.add_argument('--iphonesimulator_archs', default=None, help='select iPhoneSimulator target ARCHS. Default is "x86_64,arm64"')
+    parser.add_argument('--visionos_archs', default=None, help='select visionOS target ARCHS. Default is "arm64"')
+    parser.add_argument('--visionsimulator_archs', default=None, help='select visionSimulator target ARCHS. Default is "arm64"')
     parser.add_argument('--macos_archs', default=None, help='Select MacOS ARCHS. Default is "x86_64,arm64"')
     parser.add_argument('--catalyst_archs', default=None, help='Select Catalyst ARCHS. Default is "x86_64,arm64"')
     parser.add_argument('--build_only_specified_archs', default=False, action='store_true', help='if enabled, only directly specified archs are built and defaults are ignored')
@@ -52,6 +54,13 @@ if __name__ == "__main__":
         iphonesimulator_archs = "x86_64,arm64"
     print('Using iPhoneSimulator ARCHS={}'.format(iphonesimulator_archs))
 
+    # Parse architectures from args
+    visionos_archs = args.visionos_archs
+    print('Using visionOS ARCHS={}'.format(visionos_archs))
+
+    visionsimulator_archs = args.visionsimulator_archs
+    print('Using visionSimulator ARCHS={}'.format(visionsimulator_archs))
+
     macos_archs = args.macos_archs
     if not macos_archs and not args.build_only_specified_archs:
         # Supply defaults
@@ -70,6 +79,7 @@ if __name__ == "__main__":
         # Phase 1: build .frameworks for each platform
         osx_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../osx/build_framework.py')
         ios_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_framework.py')
+        visionos_script_path = os.path.abspath(os.path.abspath(os.path.dirname(__file__))+'/../ios/build_visionos_framework.py')
 
         build_folders = []
 
@@ -90,6 +100,19 @@ if __name__ == "__main__":
             build_folders.append(build_folder)
             command = ["python3", ios_script_path, build_folder, "--iphonesimulator_archs", iphonesimulator_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
             print_header("Building iPhoneSimulator frameworks")
+            execute(command, cwd=os.getcwd())
+        if visionos_archs:
+            build_folder = get_or_create_build_folder(args.out, "visionos")
+            build_folders.append(build_folder)
+            command = ["python3", visionos_script_path, build_folder, "--visionos_archs", visionos_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
+            print_header("Building visionOS frameworks")
+            print(command)
+            execute(command, cwd=os.getcwd())
+        if visionsimulator_archs:
+            build_folder = get_or_create_build_folder(args.out, "visionsimulator")
+            build_folders.append(build_folder)
+            command = ["python3", visionos_script_path, build_folder, "--visionsimulator_archs", visionsimulator_archs, "--framework_name", args.framework_name, "--build_only_specified_archs"] + unknown_args
+            print_header("Building visionSimulator frameworks")
             execute(command, cwd=os.getcwd())
         if macos_archs:
             build_folder = get_or_create_build_folder(args.out, "macos")

@@ -349,7 +349,7 @@ int quad_segment_maxima(const DetectorParameters &td, int sz, struct line_fit_pt
             }
             y[iy] = acc;
         }
-        copy(y.begin(), y.end(), errs.begin());
+        std::copy(y.begin(), y.end(), errs.begin());
     }
 
     std::vector<int> maxima(sz);

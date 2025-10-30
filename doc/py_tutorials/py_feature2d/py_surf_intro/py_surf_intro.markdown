@@ -76,7 +76,7 @@ and descriptors.
 First we will see a simple demo on how to find SURF keypoints and descriptors and draw it. All
 examples are shown in Python terminal since it is just same as SIFT only.
 @code{.py}
->>> img = cv.imread('fly.png',0)
+>>> img = cv.imread('fly.png', cv.IMREAD_GRAYSCALE)
 
 # Create SURF object. You can specify params here or later.
 # Here I set Hessian Threshold to 400
@@ -155,9 +155,3 @@ Finally we check the descriptor size and change it to 128 if it is only 64-dim.
 (47, 128)
 @endcode
 Remaining part is matching which we will do in another chapter.
-
-Additional Resources
---------------------
-
-Exercises
----------

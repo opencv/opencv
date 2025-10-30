@@ -115,7 +115,7 @@ struct Fixture : public RenderNV12TestBase API {                  \
     __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__))   \
     Fixture() {                                                   \
         Init(sz_);                                                \
-    };                                                            \
+    }                                                             \
 };
 
 #define GAPI_RENDER_TEST_FIXTURE_BGR(Fixture, API, Number, ...)  \
@@ -123,7 +123,7 @@ struct Fixture : public RenderBGRTestBase API {                  \
     __WRAP_VAARGS(DEFINE_SPECIFIC_PARAMS_##Number(__VA_ARGS__))   \
     Fixture() {                                                   \
         Init(sz_);                                                \
-    };                                                            \
+    }                                                             \
 };
 
 #define GET_VA_ARGS(...) __VA_ARGS__

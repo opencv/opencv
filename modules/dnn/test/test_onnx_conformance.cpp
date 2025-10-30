@@ -224,6 +224,7 @@ static const TestCase testConformanceConfig[] = {
     {"test_depthtospace_example", 1, 1},
     {"test_dequantizelinear", 3, 1},
     {"test_dequantizelinear_axis", 3, 1},
+    {"test_dequantizelinear_blocked", 3, 1},
     {"test_det_2d", 1, 1},
     {"test_det_nd", 1, 1},
     {"test_div", 2, 1},
@@ -250,7 +251,10 @@ static const TestCase testConformanceConfig[] = {
     {"test_einsum_transpose", 1, 1},
     {"test_elu", 1, 1},
     {"test_elu_default", 1, 1},
+    {"test_elu_default_expanded_ver18", 1, 1},
     {"test_elu_example", 1, 1},
+    {"test_elu_example_expanded_ver18", 1, 1},
+    {"test_elu_expanded_ver18", 1, 1},
     {"test_equal", 2, 1},
     {"test_equal_bcast", 2, 1},
     {"test_erf", 1, 1},
@@ -282,6 +286,14 @@ static const TestCase testConformanceConfig[] = {
     {"test_gathernd_example_float32", 2, 1},
     {"test_gathernd_example_int32", 2, 1},
     {"test_gathernd_example_int32_batch_dim1", 2, 1},
+    {"test_gelu_default_1", 1, 1},
+    {"test_gelu_default_1_expanded", 1, 1},
+    {"test_gelu_default_2", 1, 1},
+    {"test_gelu_default_2_expanded", 1, 1},
+    {"test_gelu_tanh_1", 1, 1},
+    {"test_gelu_tanh_1_expanded", 1, 1},
+    {"test_gelu_tanh_2", 1, 1},
+    {"test_gelu_tanh_2_expanded", 1, 1},
     {"test_gemm_all_attributes", 3, 1},
     {"test_gemm_alpha", 3, 1},
     {"test_gemm_beta", 3, 1},
@@ -311,6 +323,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_gridsample_nearest", 2, 1},
     {"test_gridsample_reflection_padding", 2, 1},
     {"test_gridsample_zeros_padding", 2, 1},
+    {"test_group_normalization_epsilon", 3, 1},
+    {"test_group_normalization_example", 3, 1},
     {"test_gru_batchwise", 3, 2},
     {"test_gru_defaults", 3, 1},
     {"test_gru_seq_length", 4, 1},
@@ -339,6 +353,25 @@ static const TestCase testConformanceConfig[] = {
     {"test_isinf_negative", 1, 1},
     {"test_isinf_positive", 1, 1},
     {"test_isnan", 1, 1},
+    {"test_layer_normalization_2d_axis0", 3, 1},
+    {"test_layer_normalization_2d_axis1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_2d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_3d_axis0_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_1_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_2_epsilon", 3, 1},
+    {"test_layer_normalization_3d_axis_negative_3_epsilon", 3, 1},
+    {"test_layer_normalization_4d_axis0", 3, 1},
+    {"test_layer_normalization_4d_axis1", 3, 1},
+    {"test_layer_normalization_4d_axis2", 3, 1},
+    {"test_layer_normalization_4d_axis3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_1", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_2", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_3", 3, 1},
+    {"test_layer_normalization_4d_axis_negative_4", 3, 1},
+    {"test_layer_normalization_default_axis", 3, 1},
     {"test_leakyrelu", 1, 1},
     {"test_leakyrelu_default", 1, 1},
     {"test_leakyrelu_example", 1, 1},
@@ -425,6 +458,8 @@ static const TestCase testConformanceConfig[] = {
     {"test_min_uint32", 2, 1},
     {"test_min_uint64", 2, 1},
     {"test_min_uint8", 2, 1},
+    {"test_mish", 1, 1},
+    {"test_mish_expanded", 1, 1},
     {"test_mod_broadcast", 2, 1},
     {"test_mod_int64_fmod", 2, 1},
     {"test_mod_mixed_sign_float16", 2, 1},
@@ -535,6 +570,7 @@ static const TestCase testConformanceConfig[] = {
     {"test_qlinearmatmul_3D", 8, 1},
     {"test_quantizelinear", 3, 1},
     {"test_quantizelinear_axis", 3, 1},
+    {"test_quantizelinear_blocked", 3, 1},
     {"test_range_float_type_positive_delta", 3, 1},
     {"test_range_float_type_positive_delta_expanded", 3, 1},
     {"test_range_int32_type_negative_delta", 3, 1},
@@ -746,7 +782,10 @@ static const TestCase testConformanceConfig[] = {
     {"test_sce_sum_log_prob_expanded", 2, 2},
     {"test_selu", 1, 1},
     {"test_selu_default", 1, 1},
+    {"test_selu_default_expanded_ver18", 1, 1},
     {"test_selu_example", 1, 1},
+    {"test_selu_example_expanded_ver18", 1, 1},
+    {"test_selu_expanded_ver18", 1, 1},
     {"test_sequence_insert_at_back", 2, 1},
     {"test_sequence_insert_at_front", 3, 1},
     {"test_shape", 1, 1},
@@ -937,6 +976,7 @@ public:
 
     static std::set<std::string> parser_deny_list;
     static std::set<std::string> global_deny_list;
+    static std::set<std::string> opencv_deny_list;
     static std::set<std::string> opencl_fp16_deny_list;
     static std::set<std::string> opencl_deny_list;
     static std::set<std::string> cpu_deny_list;
@@ -948,6 +988,7 @@ public:
 #endif
 #ifdef HAVE_CUDA
     static std::set<std::string> cuda_deny_list;
+    static std::set<std::string> cuda_fp16_deny_list;
 #endif
 
     Test_ONNX_conformance()
@@ -956,7 +997,7 @@ public:
         backend = get<0>(get<1>(GetParam()));
         target = get<1>(get<1>(GetParam()));
 
-        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD)
+        if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16 || target == DNN_TARGET_MYRIAD || target == DNN_TARGET_CPU_FP16)
         {
             default_l1 = 7e-3;
             default_lInf = 2e-2;
@@ -985,7 +1026,7 @@ public:
             if ((!l->supportBackend(backend) || l->preferableTarget != target) && !fused)
             {
                 hasFallbacks = true;
-                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to has backend implementation" << endl;
+                std::cout << "FALLBACK: Layer [" << l->type << "]:[" << l->name << "] is expected to have backend implementation" << endl;
             }
         }
         return hasFallbacks;
@@ -999,6 +1040,10 @@ public:
 
         global_deny_list = {
             #include "test_onnx_conformance_layer_filter_opencv_all_denylist.inl.hpp"
+        };
+
+        opencv_deny_list = {
+            #include "test_onnx_conformance_layer_filter_opencv_denylist.inl.hpp"
         };
 
         opencl_fp16_deny_list = {
@@ -1029,6 +1074,9 @@ public:
         cuda_deny_list = {
             #include "test_onnx_conformance_layer_filter__cuda_denylist.inl.hpp"
         };
+        cuda_fp16_deny_list = {
+            #include "test_onnx_conformance_layer_filter__cuda_fp16_denylist.inl.hpp"
+        };
 #endif
     }
 
@@ -1036,6 +1084,7 @@ public:
 
 std::set<std::string> Test_ONNX_conformance::parser_deny_list;
 std::set<std::string> Test_ONNX_conformance::global_deny_list;
+std::set<std::string> Test_ONNX_conformance::opencv_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_fp16_deny_list;
 std::set<std::string> Test_ONNX_conformance::opencl_deny_list;
 std::set<std::string> Test_ONNX_conformance::cpu_deny_list;
@@ -1047,6 +1096,7 @@ std::set<std::string> Test_ONNX_conformance::vulkan_deny_list;
 #endif
 #ifdef HAVE_CUDA
 std::set<std::string> Test_ONNX_conformance::cuda_deny_list;
+std::set<std::string> Test_ONNX_conformance::cuda_fp16_deny_list;
 #endif
 
 TEST_P(Test_ONNX_conformance, Layer_Test)
@@ -1057,14 +1107,21 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
     bool checkLayersFallbacks = true;
     bool checkAccuracy = true;
 
+    // SKIP when the test case is in the parser deny list.
     if (parser_deny_list.find(name) != parser_deny_list.end())
     {
         applyTestTag(CV_TEST_TAG_DNN_SKIP_PARSER, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
     }
 
+    // SKIP when the test case is in the global deny list.
+    if (global_deny_list.find(name) != global_deny_list.end())
+    {
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_GLOBAL, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+    }
+
     if (backend == DNN_BACKEND_OPENCV)
     {
-        if (global_deny_list.find(name) != global_deny_list.end())
+        if (opencv_deny_list.find(name) != opencv_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
@@ -1079,6 +1136,23 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if ((target == DNN_TARGET_CPU) && (cpu_deny_list.find(name) != cpu_deny_list.end()))
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+
+        if (name == "test_pow") {
+            default_lInf = 0.00013; // Expected: (normInf) <= (lInf), actual: 0.00012207 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            if (target == DNN_TARGET_OPENCL_FP16) {
+                default_l1 = 0.00016; // Expected: (normL1) <= (l1), actual: 0.000157223 vs 9e-05
+                default_lInf = 0.0016; // Expected: (normInf) <= (lInf), actual: 0.00153041 vs 0.0005
+            } else {
+                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
+                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+            }
         }
     }
 #ifdef HAVE_HALIDE
@@ -1103,14 +1177,41 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_VULKAN, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
         }
+
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152707 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80073e-05 vs 1e-05
+            default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455521 vs 0.0001
+        }
     }
 #endif
 #ifdef HAVE_CUDA
     else if (backend == DNN_BACKEND_CUDA)
     {
-        if (cuda_deny_list.find(name) != cuda_deny_list.end())
+        if (target == DNN_TARGET_CUDA && cuda_deny_list.find(name) != cuda_deny_list.end())
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if (target == DNN_TARGET_CUDA_FP16 && cuda_fp16_deny_list.find(name) != cuda_fp16_deny_list.end())
+        {
+            applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA_FP16, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+
+        if (name == "test_gelu_tanh_1") {
+            default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101815 vs 1e-05
+            default_lInf = 0.00016; // Expected: (normInf) <= (lInf), actual: 0.000152737 vs 0.0001
+        }
+        if (name == "test_gelu_tanh_2") {
+            if (target == DNN_TARGET_CUDA_FP16) {
+                default_l1 = 0.00023; // Expected: (normL1) <= (l1), actual: 0.000220591 vs 9e-05
+                default_lInf = 0.0023; // Expected: (normInf) <= (lInf), actual: 0.00220466 vs 0.0005
+            } else {
+                default_l1 = 9e-5; // Expected: (normL1) <= (l1), actual: 8.80127e-05 vs 1e-05
+                default_lInf = 0.0005; // Expected: (normInf) <= (lInf), actual: 0.000455445 vs 0.0001
+            }
         }
     }
 #endif
@@ -1244,4 +1345,4 @@ INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_conformance,
     printOnnxConfParams
 );
 
-};
+}

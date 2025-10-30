@@ -231,13 +231,13 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
         dptr0[0] = dptr0[size.width-1] = dptr1[0] = dptr1[size.width-1] = val0;
         x = 1;
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             v_int16 ftz = vx_setall_s16((short) ftzero);
             v_int16 ftz2 = vx_setall_s16((short)(ftzero*2));
             v_int16 z = vx_setzero_s16();
 
-            for(; x <= (size.width - 1) - v_int16::nlanes; x += v_int16::nlanes)
+            for(; x <= (size.width - 1) - VTraits<v_int16>::vlanes(); x += VTraits<v_int16>::vlanes())
             {
                 v_int16 s00 = v_reinterpret_as_s16(vx_load_expand(srow0 + x + 1));
                 v_int16 s01 = v_reinterpret_as_s16(vx_load_expand(srow0 + x - 1));
@@ -248,13 +248,13 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
                 v_int16 s30 = v_reinterpret_as_s16(vx_load_expand(srow3 + x + 1));
                 v_int16 s31 = v_reinterpret_as_s16(vx_load_expand(srow3 + x - 1));
 
-                v_int16 d0 = s00 - s01;
-                v_int16 d1 = s10 - s11;
-                v_int16 d2 = s20 - s21;
-                v_int16 d3 = s30 - s31;
+                v_int16 d0 = v_sub(s00, s01);
+                v_int16 d1 = v_sub(s10, s11);
+                v_int16 d2 = v_sub(s20, s21);
+                v_int16 d3 = v_sub(s30, s31);
 
-                v_uint16 v0 = v_reinterpret_as_u16(v_max(v_min(d0 + d1 + d1 + d2 + ftz, ftz2), z));
-                v_uint16 v1 = v_reinterpret_as_u16(v_max(v_min(d1 + d2 + d2 + d3 + ftz, ftz2), z));
+                v_uint16 v0 = v_reinterpret_as_u16(v_max(v_min(v_add(v_add(v_add(v_add(d0, d1), d1), d2), ftz), ftz2), z));
+                v_uint16 v1 = v_reinterpret_as_u16(v_max(v_min(v_add(v_add(v_add(v_add(d1, d2), d2), d3), ftz), ftz2), z));
 
                 v_pack_store(dptr0 + x, v0);
                 v_pack_store(dptr1 + x, v1);
@@ -277,10 +277,10 @@ prefilterXSobel( const Mat& src, Mat& dst, int ftzero )
     {
         uchar* dptr = dst.ptr<uchar>(y);
         x = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         {
             v_uint8 val0_16 = vx_setall_u8(val0);
-            for(; x <= size.width-v_uint8::nlanes; x+=v_uint8::nlanes)
+            for(; x <= size.width-VTraits<v_uint8>::vlanes(); x+=VTraits<v_uint8>::vlanes())
                 v_store(dptr + x, val0_16);
         }
 #endif
@@ -356,7 +356,7 @@ public:
         for (size_t i = 0; i < nstripes; ++i)
         {
             // 1D: [1][  ndisp  ][1]
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             if (params.useShorts())
                 area.allocate(sad_short[i], ndisp + 2);
             else
@@ -364,7 +364,7 @@ public:
                 area.allocate(sad[i], ndisp + 2);
 
             // 2D: [ wsz/2 + 1 ][   height   ][ wsz/2 + 1 ] * [ ndisp ]
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             if (params.useShorts())
                 area.allocate(hsad_short[i], (height + wsz + 2) * ndisp);
             else
@@ -390,7 +390,7 @@ public:
     }
 };
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
 template <typename dType>
 static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                                             Mat& disp, Mat& cost, const StereoBMParams& state,
@@ -422,8 +422,8 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
     short costbuf = 0;
     int coststep = cost.data ? (int)(cost.step/sizeof(costbuf)) : 0;
     const uchar * tab = bufX.tab;
-    short v_seq[v_int16::nlanes];
-    for (short i = 0; i < v_int16::nlanes; ++i)
+    short v_seq[VTraits<v_int16>::max_nlanes];
+    for (short i = 0; i < VTraits<v_int16>::vlanes(); ++i)
         v_seq[i] = i;
 
     ushort *sad = bufX.sad_short[bufNum] + 1;
@@ -446,19 +446,19 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
         {
             int lval = lptr[0];
             v_uint8 lv = vx_setall_u8((uchar)lval);
-            for( d = 0; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
+            for( d = 0; d <= ndisp - VTraits<v_uint8>::vlanes(); d += VTraits<v_uint8>::vlanes() )
             {
                 v_uint8 diff = v_absdiff(lv, vx_load(rptr + d));
                 v_store(cbuf + d, diff);
-                v_store(hsad + d, vx_load(hsad + d) + v_expand_low(diff));
-                v_store(hsad + d + v_uint16::nlanes, vx_load(hsad + d + v_uint16::nlanes) + v_expand_high(diff));
+                v_store(hsad + d, v_add(vx_load(hsad + d), v_expand_low(diff)));
+                v_store(hsad + d + VTraits<v_uint16>::vlanes(), v_add(vx_load(hsad + d + VTraits<v_uint16>::vlanes()), v_expand_high(diff)));
             }
-            if( d <= ndisp - v_uint16::nlanes )
+            if( d <= ndisp - VTraits<v_uint16>::vlanes() )
             {
                 v_uint8 diff = v_absdiff(lv, vx_load_low(rptr + d));
                 v_store_low(cbuf + d, diff);
-                v_store(hsad + d, vx_load(hsad + d) + v_expand_low(diff));
-                d += v_uint16::nlanes;
+                v_store(hsad + d, v_add(vx_load(hsad + d), v_expand_low(diff)));
+                d += VTraits<v_uint16>::vlanes();
             }
             for( ; d < ndisp; d++ )
             {
@@ -496,20 +496,20 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
         {
             int lval = lptr[0];
             v_uint8 lv = vx_setall_u8((uchar)lval);
-            for( d = 0; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
+            for( d = 0; d <= ndisp - VTraits<v_uint8>::vlanes(); d += VTraits<v_uint8>::vlanes() )
             {
                 v_uint8 diff = v_absdiff(lv, vx_load(rptr + d));
                 v_int8 cbs = v_reinterpret_as_s8(vx_load(cbuf_sub + d));
                 v_store(cbuf + d, diff);
-                v_store(hsad + d, v_reinterpret_as_u16(v_reinterpret_as_s16(vx_load(hsad + d) + v_expand_low(diff)) - v_expand_low(cbs)));
-                v_store(hsad + d + v_uint16::nlanes, v_reinterpret_as_u16(v_reinterpret_as_s16(vx_load(hsad + d + v_uint16::nlanes) + v_expand_high(diff)) - v_expand_high(cbs)));
+                v_store(hsad + d, v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(v_add(vx_load(hsad + d), v_expand_low(diff))), v_expand_low(cbs))));
+                v_store(hsad + d + VTraits<v_uint16>::vlanes(), v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(v_add(vx_load(hsad + d + VTraits<v_uint16>::vlanes()), v_expand_high(diff))), v_expand_high(cbs))));
             }
-            if( d <= ndisp - v_uint16::nlanes)
+            if( d <= ndisp - VTraits<v_uint16>::vlanes())
             {
                 v_uint8 diff = v_absdiff(lv, vx_load_low(rptr + d));
                 v_store_low(cbuf + d, diff);
-                v_store(hsad + d, v_reinterpret_as_u16(v_reinterpret_as_s16(vx_load(hsad + d) + v_expand_low(diff)) - vx_load_expand((schar*)cbuf_sub + d)));
-                d += v_uint16::nlanes;
+                v_store(hsad + d, v_reinterpret_as_u16(v_sub(v_reinterpret_as_s16(v_add(vx_load(hsad + d), v_expand_low(diff))), vx_load_expand((schar *)cbuf_sub + d))));
+                d += VTraits<v_uint16>::vlanes();
             }
             for( ; d < ndisp; d++ )
             {
@@ -533,20 +533,20 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
         hsad = hsad0 + (1 - dy0)*ndisp;
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
         {
-            for( d = 0; d <= ndisp-2*v_uint16::nlanes; d += 2*v_uint16::nlanes )
+            for( d = 0; d <= ndisp-2*VTraits<v_uint16>::vlanes(); d += 2*VTraits<v_uint16>::vlanes() )
             {
-                v_store(sad + d, vx_load(sad + d) + vx_load(hsad + d));
-                v_store(sad + d + v_uint16::nlanes, vx_load(sad + d + v_uint16::nlanes) + vx_load(hsad + d + v_uint16::nlanes));
+                v_store(sad + d, v_add(vx_load(sad + d), vx_load(hsad + d)));
+                v_store(sad + d + VTraits<v_uint16>::vlanes(), v_add(vx_load(sad + d + VTraits<v_uint16>::vlanes()), vx_load(hsad + d + VTraits<v_uint16>::vlanes())));
             }
-            if( d <= ndisp-v_uint16::nlanes )
+            if( d <= ndisp-VTraits<v_uint16>::vlanes() )
             {
-                v_store(sad + d, vx_load(sad + d) + vx_load(hsad + d));
-                d += v_uint16::nlanes;
+                v_store(sad + d, v_add(vx_load(sad + d), vx_load(hsad + d)));
+                d += VTraits<v_uint16>::vlanes();
             }
-            if( d <= ndisp-v_uint16::nlanes/2 )
+            if( d <= ndisp-VTraits<v_uint16>::vlanes()/2 )
             {
-                v_store_low(sad + d, vx_load_low(sad + d) + vx_load_low(hsad + d));
-                d += v_uint16::nlanes/2;
+                v_store_low(sad + d, v_add(vx_load_low(sad + d), vx_load_low(hsad + d)));
+                d += VTraits<v_uint16>::vlanes()/2;
             }
             for( ; d < ndisp; d++ )
                 sad[d] = sad[d] + hsad[d];
@@ -564,29 +564,29 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
             v_int16 minsad8 = vx_setall_s16(SHRT_MAX);
             v_int16 mind8 = vx_setall_s16(0);
 
-            for( d = 0; d <= ndisp - 2*v_int16::nlanes; d += 2*v_int16::nlanes )
+            for( d = 0; d <= ndisp - 2*VTraits<v_int16>::vlanes(); d += 2*VTraits<v_int16>::vlanes() )
             {
-                v_int16 sad8 = v_reinterpret_as_s16(vx_load(hsad + d)) - v_reinterpret_as_s16(vx_load(hsad_sub + d)) + v_reinterpret_as_s16(vx_load(sad + d));
+                v_int16 sad8 = v_add(v_sub(v_reinterpret_as_s16(vx_load(hsad + d)), v_reinterpret_as_s16(vx_load(hsad_sub + d))), v_reinterpret_as_s16(vx_load(sad + d)));
                 v_store(sad + d, v_reinterpret_as_u16(sad8));
-                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d));
+                mind8 = v_max(mind8, v_and(v_gt(minsad8, sad8), vx_setall_s16((short)d)));
                 minsad8 = v_min(minsad8, sad8);
 
-                sad8 = v_reinterpret_as_s16(vx_load(hsad + d + v_int16::nlanes)) - v_reinterpret_as_s16(vx_load(hsad_sub + d + v_int16::nlanes)) + v_reinterpret_as_s16(vx_load(sad + d + v_int16::nlanes));
-                v_store(sad + d + v_int16::nlanes, v_reinterpret_as_u16(sad8));
-                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d+v_int16::nlanes));
+                sad8 = v_add(v_sub(v_reinterpret_as_s16(vx_load(hsad + d + VTraits<v_int16>::vlanes())), v_reinterpret_as_s16(vx_load(hsad_sub + d + VTraits<v_int16>::vlanes()))), v_reinterpret_as_s16(vx_load(sad + d + VTraits<v_int16>::vlanes())));
+                v_store(sad + d + VTraits<v_int16>::vlanes(), v_reinterpret_as_u16(sad8));
+                mind8 = v_max(mind8, v_and(v_gt(minsad8, sad8), vx_setall_s16((short)(d + VTraits<v_int16>::vlanes()))));
                 minsad8 = v_min(minsad8, sad8);
             }
-            if( d <= ndisp - v_int16::nlanes )
+            if( d <= ndisp - VTraits<v_int16>::vlanes() )
             {
-                v_int16 sad8 = v_reinterpret_as_s16(vx_load(hsad + d)) - v_reinterpret_as_s16(vx_load(hsad_sub + d)) + v_reinterpret_as_s16(vx_load(sad + d));
+                v_int16 sad8 = v_add(v_sub(v_reinterpret_as_s16(vx_load(hsad + d)), v_reinterpret_as_s16(vx_load(hsad_sub + d))), v_reinterpret_as_s16(vx_load(sad + d)));
                 v_store(sad + d, v_reinterpret_as_u16(sad8));
-                mind8 = v_max(mind8, (minsad8 > sad8) & vx_setall_s16((short)d));
+                mind8 = v_max(mind8, v_and(v_gt(minsad8, sad8), vx_setall_s16((short)d)));
                 minsad8 = v_min(minsad8, sad8);
-                d += v_int16::nlanes;
+                d += VTraits<v_int16>::vlanes();
             }
             minsad = v_reduce_min(minsad8);
-            v_int16 v_mask = (vx_setall_s16((short)minsad) == minsad8);
-            mind = v_reduce_min(((mind8+vx_load(v_seq)) & v_mask) | (vx_setall_s16(SHRT_MAX) & ~v_mask));
+            v_int16 v_mask = (v_eq(vx_setall_s16((short)minsad), minsad8));
+            mind = v_reduce_min(v_or(v_and(v_add(mind8, vx_load(v_seq)), v_mask), v_and(vx_setall_s16(32767), v_not(v_mask))));
             for( ; d < ndisp; d++ )
             {
                 int sad8 = (int)(hsad[d]) - hsad_sub[d] + sad[d];
@@ -610,34 +610,34 @@ static void findStereoCorrespondenceBM_SIMD( const Mat& left, const Mat& right,
                 int thresh = minsad + (minsad * uniquenessRatio/100);
                 v_int32 thresh4 = vx_setall_s32(thresh + 1);
                 v_int32 d1 = vx_setall_s32(mind-1), d2 = vx_setall_s32(mind+1);
-                v_int32 dd_4 = vx_setall_s32(v_int32::nlanes);
+                v_int32 dd_4 = vx_setall_s32(VTraits<v_int32>::vlanes());
                 v_int32 d4 = vx_load_expand(v_seq);
 
-                for( d = 0; d <= ndisp - v_int16::nlanes; d += v_int16::nlanes )
+                for( d = 0; d <= ndisp - VTraits<v_int16>::vlanes(); d += VTraits<v_int16>::vlanes() )
                 {
                     v_int32 sad4_l, sad4_h;
                     v_expand(v_reinterpret_as_s16(vx_load(sad + d)), sad4_l, sad4_h);
-                    if( v_check_any((thresh4 > sad4_l) & ((d1 > d4) | (d4 > d2))) )
+                    if( v_check_any(v_and(v_gt(thresh4, sad4_l), v_or(v_gt(d1, d4), v_gt(d4, d2)))) )
                         break;
-                    d4 += dd_4;
-                    if( v_check_any((thresh4 > sad4_h) & ((d1 > d4) | (d4 > d2))) )
+                    d4 = v_add(d4, dd_4);
+                    if( v_check_any(v_and(v_gt(thresh4, sad4_h), v_or(v_gt(d1, d4), v_gt(d4, d2)))) )
                         break;
-                    d4 += dd_4;
+                    d4 = v_add(d4, dd_4);
                 }
-                if( d <= ndisp - v_int16::nlanes )
+                if( d <= ndisp - VTraits<v_int16>::vlanes() )
                 {
                     dptr[y*dstep] = FILTERED;
                     continue;
                 }
-                if( d <= ndisp - v_int32::nlanes )
+                if( d <= ndisp - VTraits<v_int32>::vlanes() )
                 {
                     v_int32 sad4_l = vx_load_expand((short*)sad + d);
-                    if (v_check_any((thresh4 > sad4_l) & ((d1 > d4) | (d4 > d2))))
+                    if (v_check_any(v_and(v_gt(thresh4, sad4_l), v_or(v_gt(d1, d4), v_gt(d4, d2)))))
                     {
                         dptr[y*dstep] = FILTERED;
                         continue;
                     }
-                    d += v_int16::nlanes;
+                    d += VTraits<v_int16>::vlanes();
                 }
                 for( ; d < ndisp; d++ )
                 {
@@ -699,11 +699,11 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
     int coststep = cost.data ? (int)(cost.step/sizeof(costbuf)) : 0;
     const uchar * tab = bufX.tab;
 
-#if CV_SIMD
-    int v_seq[v_int32::nlanes];
-    for (int i = 0; i < v_int32::nlanes; ++i)
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int v_seq[VTraits<v_int32>::max_nlanes];
+    for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i)
         v_seq[i] = i;
-    v_int32 d0_4 = vx_load(v_seq), dd_4 = vx_setall_s32(v_int32::nlanes);
+    v_int32 d0_4 = vx_load(v_seq), dd_4 = vx_setall_s32(VTraits<v_int32>::vlanes());
 #endif
 
     int *sad = bufX.sad[bufNum] + 1;
@@ -725,17 +725,17 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         {
             int lval = lptr[0];
             d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             {
                 v_uint8 lv = vx_setall_u8((uchar)lval);
 
-                for( ; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
+                for( ; d <= ndisp - VTraits<v_uint8>::vlanes(); d += VTraits<v_uint8>::vlanes() )
                 {
                     v_uint8 rv = vx_load(rptr + d);
                     v_int32 hsad_0 = vx_load(hsad + d);
-                    v_int32 hsad_1 = vx_load(hsad + d + v_int32::nlanes);
-                    v_int32 hsad_2 = vx_load(hsad + d + 2*v_int32::nlanes);
-                    v_int32 hsad_3 = vx_load(hsad + d + 3*v_int32::nlanes);
+                    v_int32 hsad_1 = vx_load(hsad + d + VTraits<v_int32>::vlanes());
+                    v_int32 hsad_2 = vx_load(hsad + d + 2*VTraits<v_int32>::vlanes());
+                    v_int32 hsad_3 = vx_load(hsad + d + 3*VTraits<v_int32>::vlanes());
                     v_uint8 diff = v_absdiff(lv, rv);
                     v_store(cbuf + d, diff);
 
@@ -745,15 +745,15 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     v_expand(diff0, diff00, diff01);
                     v_expand(diff1, diff10, diff11);
 
-                    hsad_0 += v_reinterpret_as_s32(diff00);
-                    hsad_1 += v_reinterpret_as_s32(diff01);
-                    hsad_2 += v_reinterpret_as_s32(diff10);
-                    hsad_3 += v_reinterpret_as_s32(diff11);
+                    hsad_0 = v_add(hsad_0, v_reinterpret_as_s32(diff00));
+                    hsad_1 = v_add(hsad_1, v_reinterpret_as_s32(diff01));
+                    hsad_2 = v_add(hsad_2, v_reinterpret_as_s32(diff10));
+                    hsad_3 = v_add(hsad_3, v_reinterpret_as_s32(diff11));
 
                     v_store(hsad + d, hsad_0);
-                    v_store(hsad + d + v_int32::nlanes, hsad_1);
-                    v_store(hsad + d + 2*v_int32::nlanes, hsad_2);
-                    v_store(hsad + d + 3*v_int32::nlanes, hsad_3);
+                    v_store(hsad + d + VTraits<v_int32>::vlanes(), hsad_1);
+                    v_store(hsad + d + 2*VTraits<v_int32>::vlanes(), hsad_2);
+                    v_store(hsad + d + 3*VTraits<v_int32>::vlanes(), hsad_3);
                 }
             }
 #endif
@@ -793,16 +793,16 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         {
             int lval = lptr[0];
             d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             {
                 v_uint8 lv = vx_setall_u8((uchar)lval);
-                for( ; d <= ndisp - v_uint8::nlanes; d += v_uint8::nlanes )
+                for( ; d <= ndisp - VTraits<v_uint8>::vlanes(); d += VTraits<v_uint8>::vlanes() )
                 {
                     v_uint8 rv = vx_load(rptr + d);
                     v_int32 hsad_0 = vx_load(hsad + d);
-                    v_int32 hsad_1 = vx_load(hsad + d + v_int32::nlanes);
-                    v_int32 hsad_2 = vx_load(hsad + d + 2*v_int32::nlanes);
-                    v_int32 hsad_3 = vx_load(hsad + d + 3*v_int32::nlanes);
+                    v_int32 hsad_1 = vx_load(hsad + d + VTraits<v_int32>::vlanes());
+                    v_int32 hsad_2 = vx_load(hsad + d + 2*VTraits<v_int32>::vlanes());
+                    v_int32 hsad_3 = vx_load(hsad + d + 3*VTraits<v_int32>::vlanes());
                     v_uint8 cbs = vx_load(cbuf_sub + d);
                     v_uint8 diff = v_absdiff(lv, rv);
                     v_store(cbuf + d, diff);
@@ -816,19 +816,19 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
                     v_expand(v_reinterpret_as_s16(cbs0), cbs00, cbs01);
                     v_expand(v_reinterpret_as_s16(cbs1), cbs10, cbs11);
 
-                    v_int32 diff_0 = diff00 - cbs00;
-                    v_int32 diff_1 = diff01 - cbs01;
-                    v_int32 diff_2 = diff10 - cbs10;
-                    v_int32 diff_3 = diff11 - cbs11;
-                    hsad_0 += diff_0;
-                    hsad_1 += diff_1;
-                    hsad_2 += diff_2;
-                    hsad_3 += diff_3;
+                    v_int32 diff_0 = v_sub(diff00, cbs00);
+                    v_int32 diff_1 = v_sub(diff01, cbs01);
+                    v_int32 diff_2 = v_sub(diff10, cbs10);
+                    v_int32 diff_3 = v_sub(diff11, cbs11);
+                    hsad_0 = v_add(hsad_0, diff_0);
+                    hsad_1 = v_add(hsad_1, diff_1);
+                    hsad_2 = v_add(hsad_2, diff_2);
+                    hsad_3 = v_add(hsad_3, diff_3);
 
                     v_store(hsad + d, hsad_0);
-                    v_store(hsad + d + v_int32::nlanes, hsad_1);
-                    v_store(hsad + d + 2*v_int32::nlanes, hsad_2);
-                    v_store(hsad + d + 3*v_int32::nlanes, hsad_3);
+                    v_store(hsad + d + VTraits<v_int32>::vlanes(), hsad_1);
+                    v_store(hsad + d + 2*VTraits<v_int32>::vlanes(), hsad_2);
+                    v_store(hsad + d + 3*VTraits<v_int32>::vlanes(), hsad_3);
                 }
             }
 #endif
@@ -855,18 +855,18 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
         for( y = 1 - dy0; y < wsz2; y++, hsad += ndisp )
         {
             d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             {
-                for( d = 0; d <= ndisp-2*v_int32::nlanes; d += 2*v_int32::nlanes )
+                for( d = 0; d <= ndisp-2*VTraits<v_int32>::vlanes(); d += 2*VTraits<v_int32>::vlanes() )
                 {
                     v_int32 s0 = vx_load(sad + d);
-                    v_int32 s1 = vx_load(sad + d + v_int32::nlanes);
+                    v_int32 s1 = vx_load(sad + d + VTraits<v_int32>::vlanes());
                     v_int32 t0 = vx_load(hsad + d);
-                    v_int32 t1 = vx_load(hsad + d + v_int32::nlanes);
-                    s0 += t0;
-                    s1 += t1;
+                    v_int32 t1 = vx_load(hsad + d + VTraits<v_int32>::vlanes());
+                    s0 = v_add(s0, t0);
+                    s1 = v_add(s1, t1);
                     v_store(sad + d, s0);
-                    v_store(sad + d + v_int32::nlanes, s1);
+                    v_store(sad + d + VTraits<v_int32>::vlanes(), s1);
                 }
             }
 #endif
@@ -884,30 +884,30 @@ findStereoCorrespondenceBM( const Mat& left, const Mat& right,
             hsad = hsad0 + MIN(y + wsz2, height+dy1-1)*ndisp;
             hsad_sub = hsad0 + MAX(y - wsz2 - 1, -dy0)*ndisp;
             d = 0;
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
             {
                 v_int32 minsad4 = vx_setall_s32(INT_MAX);
                 v_int32 mind4 = vx_setall_s32(0), d4 = d0_4;
 
-                for( ; d <= ndisp - 2*v_int32::nlanes; d += 2*v_int32::nlanes )
+                for( ; d <= ndisp - 2*VTraits<v_int32>::vlanes(); d += 2*VTraits<v_int32>::vlanes() )
                 {
-                    v_int32 sad4 = vx_load(sad + d) + vx_load(hsad + d) - vx_load(hsad_sub + d);
+                    v_int32 sad4 = v_sub(v_add(vx_load(sad + d), vx_load(hsad + d)), vx_load(hsad_sub + d));
                     v_store(sad + d, sad4);
-                    mind4 = v_select(minsad4 > sad4, d4, mind4);
+                    mind4 = v_select(v_gt(minsad4, sad4), d4, mind4);
                     minsad4 = v_min(minsad4, sad4);
-                    d4 += dd_4;
+                    d4 = v_add(d4, dd_4);
 
-                    sad4 = vx_load(sad + d + v_int32::nlanes) + vx_load(hsad + d + v_int32::nlanes) - vx_load(hsad_sub + d + v_int32::nlanes);
-                    v_store(sad + d + v_int32::nlanes, sad4);
-                    mind4 = v_select(minsad4 > sad4, d4, mind4);
+                    sad4 = v_sub(v_add(vx_load(sad + d + VTraits<v_int32>::vlanes()), vx_load(hsad + d + VTraits<v_int32>::vlanes())), vx_load(hsad_sub + d + VTraits<v_int32>::vlanes()));
+                    v_store(sad + d + VTraits<v_int32>::vlanes(), sad4);
+                    mind4 = v_select(v_gt(minsad4, sad4), d4, mind4);
                     minsad4 = v_min(minsad4, sad4);
-                    d4 += dd_4;
+                    d4 = v_add(d4, dd_4);
                 }
 
-                int CV_DECL_ALIGNED(CV_SIMD_WIDTH) minsad_buf[v_int32::nlanes], mind_buf[v_int32::nlanes];
+                int CV_DECL_ALIGNED(CV_SIMD_WIDTH) minsad_buf[VTraits<v_int32>::max_nlanes], mind_buf[VTraits<v_int32>::max_nlanes];
                 v_store(minsad_buf, minsad4);
                 v_store(mind_buf, mind4);
-                for (int i = 0; i < v_int32::nlanes; ++i)
+                for (int i = 0; i < VTraits<v_int32>::vlanes(); ++i)
                     if(minsad_buf[i] < minsad || (minsad == minsad_buf[i] && mind_buf[i] < mind)) { minsad = minsad_buf[i]; mind = mind_buf[i]; }
             }
 #endif
@@ -1102,7 +1102,7 @@ struct FindStereoCorrespInvoker : public ParallelLoopBody
         Mat disp_i = disp->rowRange(row0, row1);
         Mat cost_i = state.disp12MaxDiff >= 0 ? cost->rowRange(row0, row1) : Mat();
 
-#if CV_SIMD
+#if (CV_SIMD || CV_SIMD_SCALABLE)
         if (state.useShorts())
         {
             if( disp_i.type() == CV_16S)

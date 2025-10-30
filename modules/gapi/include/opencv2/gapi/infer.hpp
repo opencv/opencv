@@ -101,8 +101,10 @@ public:
         if (it == m_priv->blobs.end()) {
             // FIXME: Avoid modifying GKernel
             auto shape = cv::detail::GTypeTraits<OutT>::shape;
+            auto kind  = cv::detail::GTypeTraits<OutT>::op_kind;
             m_priv->call->kernel().outShapes.push_back(shape);
             m_priv->call->kernel().outCtors.emplace_back(cv::detail::GObtainCtor<OutT>::get());
+            m_priv->call->kernel().outKinds.emplace_back(kind);
             auto out_idx = static_cast<int>(m_priv->blobs.size());
             it = m_priv->blobs.emplace(name,
                     cv::detail::Yield<OutT>::yield(*(m_priv->call), out_idx)).first;
@@ -175,6 +177,7 @@ std::shared_ptr<cv::GCall> makeCall(const std::string         &tag,
                 {}, // outShape will be filled later
                 std::move(kinds),
                 {}, // outCtors will be filled later
+                {}, // outKinds will be filled later
             });
 
     call->setArgs(std::move(args));

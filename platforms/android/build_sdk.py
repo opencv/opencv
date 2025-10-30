@@ -139,6 +139,8 @@ class ABI:
         return "%s (%s)" % (self.name, self.toolchain)
     def haveIPP(self):
         return self.name == "x86" or self.name == "x86_64"
+    def haveKleidiCV(self):
+        return self.name == "arm64-v8a"
 
 #===================================================================================================
 
@@ -158,9 +160,11 @@ class Builder:
         self.debug = True if config.debug else False
         self.debug_info = True if config.debug_info else False
         self.no_samples_build = True if config.no_samples_build else False
+        self.hwasan = True if config.hwasan else False
         self.opencl = True if config.opencl else False
         self.no_kotlin = True if config.no_kotlin else False
         self.shared = True if config.shared else False
+        self.disable = args.disable
 
     def get_cmake(self):
         if not self.config.use_android_buildtools and check_executable(['cmake', '--version']):
@@ -215,7 +219,7 @@ class Builder:
         for d in ["CMakeCache.txt", "CMakeFiles/", "bin/", "libs/", "lib/", "package/", "install/samples/"]:
             rm_one(d)
 
-    def build_library(self, abi, do_install):
+    def build_library(self, abi, do_install, no_media_ndk):
         cmd = [self.cmake_path, "-GNinja"]
         cmake_vars = dict(
             CMAKE_TOOLCHAIN_FILE=self.get_toolchain_file(),
@@ -250,27 +254,48 @@ class Builder:
             cmake_vars['BUILD_SHARED_LIBS'] = "ON"
 
         if self.config.modules_list is not None:
-            cmd.append("-DBUILD_LIST='%s'" % self.config.modules_list)
+            cmake_vars['BUILD_LIST'] = '%s' % self.config.modules_list
 
         if self.config.extra_modules_path is not None:
-            cmd.append("-DOPENCV_EXTRA_MODULES_PATH='%s'" % self.config.extra_modules_path)
+            cmake_vars['OPENCV_EXTRA_MODULES_PATH'] = '%s' % self.config.extra_modules_path
 
         if self.use_ccache == True:
-            cmd.append("-DNDK_CCACHE=ccache")
+            cmake_vars['NDK_CCACHE'] = 'ccache'
         if do_install:
-            cmd.extend(["-DBUILD_TESTS=ON", "-DINSTALL_TESTS=ON"])
+            cmake_vars['BUILD_TESTS'] = "ON"
+            cmake_vars['INSTALL_TESTS'] = "ON"
+
+        if no_media_ndk:
+            cmake_vars['WITH_ANDROID_MEDIANDK'] = "OFF"
+
+        if self.hwasan and "arm64" in abi.name:
+            cmake_vars['OPENCV_ENABLE_MEMORY_SANITIZER'] = "ON"
+            hwasan_flags = "-fno-omit-frame-pointer -fsanitize=hwaddress"
+            for s in ['OPENCV_EXTRA_C_FLAGS', 'OPENCV_EXTRA_CXX_FLAGS', 'OPENCV_EXTRA_EXE_LINKER_FLAGS',
+                      'OPENCV_EXTRA_SHARED_LINKER_FLAGS', 'OPENCV_EXTRA_MODULE_LINKER_FLAGS']:
+                if s in cmake_vars.keys():
+                    cmake_vars[s] = cmake_vars[s] + ' ' + hwasan_flags
+                else:
+                    cmake_vars[s] = hwasan_flags
 
         cmake_vars.update(abi.cmake_vars)
+
+        if len(self.disable) > 0:
+            cmake_vars.update({'WITH_%s' % f : "OFF" for f in self.disable})
+
         cmd += [ "-D%s='%s'" % (k, v) for (k, v) in cmake_vars.items() if v is not None]
         cmd.append(self.opencvdir)
         execute(cmd)
         # full parallelism for C++ compilation tasks
-        execute([self.ninja_path, "opencv_modules"])
+        build_targets = ["opencv_modules"]
+        if do_install:
+            build_targets.append("opencv_tests")
+        execute([self.ninja_path, *build_targets])
         # limit parallelism for building samples (avoid huge memory consumption)
         if self.no_samples_build:
             execute([self.ninja_path, "install" if (self.debug_info or self.debug) else "install/strip"])
         else:
-            execute([self.ninja_path, "-j1" if (self.debug_info or self.debug) else "-j3", "install" if (self.debug_info or self.debug) else "install/strip"])
+            execute([self.ninja_path, "-j1", "install" if (self.debug_info or self.debug) else "install/strip"])
 
     def build_javadoc(self):
         classpaths = []
@@ -280,6 +305,14 @@ class Builder:
                     classpaths.append(os.path.join(dir, f))
         srcdir = os.path.join(self.resultdest, 'sdk', 'java', 'src')
         dstdir = self.docdest
+        # HACK: create stubs for auto-generated files to satisfy imports
+        with open(os.path.join(srcdir, 'org', 'opencv', 'BuildConfig.java'), 'wt') as fs:
+            fs.write("package org.opencv;\n public class BuildConfig {\n}")
+            fs.close()
+        with open(os.path.join(srcdir, 'org', 'opencv', 'R.java'), 'wt') as fs:
+            fs.write("package org.opencv;\n public class R {\n}")
+            fs.close()
+
         # synchronize with modules/java/jar/build.xml.in
         shutil.copy2(os.path.join(SCRIPT_DIR, '../../doc/mymath.js'), dstdir)
         cmd = [
@@ -307,9 +340,12 @@ class Builder:
             '-bottom', 'Generated on %s / OpenCV %s' % (time.strftime("%Y-%m-%d %H:%M:%S"), self.opencv_version),
             "-d", dstdir,
             "-classpath", ":".join(classpaths),
-            '-subpackages', 'org.opencv',
+            '-subpackages', 'org.opencv'
         ]
         execute(cmd)
+        # HACK: remove temporary files needed to satisfy javadoc imports
+        os.remove(os.path.join(srcdir, 'org', 'opencv', 'BuildConfig.java'))
+        os.remove(os.path.join(srcdir, 'org', 'opencv', 'R.java'))
 
     def gather_results(self):
         # Copy all files
@@ -346,6 +382,39 @@ def get_ndk_dir():
         return android_sdk_ndk_bundle
     return None
 
+def check_cmake_flag_enabled(cmake_file, flag_name, strict=True):
+    print(f"Checking build flag '{flag_name}' in: {cmake_file}")
+
+    if not os.path.isfile(cmake_file):
+        msg = f"ERROR: File {cmake_file} does not exist."
+        if strict:
+            print(msg)
+            sys.exit(1)
+        else:
+            print("WARNING:", msg)
+            return
+
+    with open(cmake_file, 'r') as file:
+        for line in file:
+            if line.strip().startswith(f"{flag_name}="):
+                value = line.strip().split('=')[1]
+                if value == '1' or value == 'ON':
+                    print(f"{flag_name}=1 found. Support is enabled.")
+                    return
+                else:
+                    msg = f"ERROR: {flag_name} is set to {value}, expected 1."
+                    if strict:
+                        print(msg)
+                        sys.exit(1)
+                    else:
+                        print("WARNING:", msg)
+                        return
+    msg = f"ERROR: {flag_name} not found in {os.path.basename(cmake_file)}."
+    if strict:
+        print(msg)
+        sys.exit(1)
+    else:
+        print("WARNING:", msg)
 
 #===================================================================================================
 
@@ -370,6 +439,10 @@ if __name__ == "__main__":
     parser.add_argument('--opencl', action="store_true", help="Enable OpenCL support")
     parser.add_argument('--no_kotlin', action="store_true", help="Disable Kotlin extensions")
     parser.add_argument('--shared', action="store_true", help="Build shared libraries")
+    parser.add_argument('--no_media_ndk', action="store_true", help="Do not link Media NDK (required for video I/O support)")
+    parser.add_argument('--hwasan', action="store_true", help="Enable Hardware Address Sanitizer on ARM64")
+    parser.add_argument('--disable', metavar='FEATURE', default=[], action='append', help='OpenCV features to disable (add WITH_*=OFF). To disable multiple, specify this flag again, e.g. "--disable TBB --disable OPENMP"')
+    parser.add_argument('--no-strict-dependencies',action='store_false',dest='strict_dependencies',help='Disable strict dependency checking (default: strict mode ON)')
     args = parser.parse_args()
 
     log.basicConfig(format='%(message)s', level=log.DEBUG)
@@ -447,7 +520,17 @@ if __name__ == "__main__":
 
         os.chdir(builder.libdest)
         builder.clean_library_build_dir()
-        builder.build_library(abi, do_install)
+        builder.build_library(abi, do_install, args.no_media_ndk)
+
+        #Check HAVE_IPP x86 / x86_64
+        if abi.haveIPP():
+           log.info("Checking HAVE_IPP for ABI: %s", abi.name)
+           check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_IPP", strict=args.strict_dependencies)
+
+        #Check HAVE_KLEIDICV for armv8
+        if abi.haveKleidiCV():
+           log.info("Checking HAVE_KLEIDICV for ABI: %s", abi.name)
+           check_cmake_flag_enabled(os.path.join(builder.libdest,"CMakeVars.txt"), "HAVE_KLEIDICV", strict=args.strict_dependencies)
 
     builder.gather_results()
 

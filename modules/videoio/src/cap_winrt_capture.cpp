@@ -154,6 +154,7 @@ namespace cv {
     // see VideoCapture::read
     bool VideoCapture_WinRT::retrieveFrame(int channel, cv::OutputArray outArray)
     {
+        CV_UNUSED(channel);
         if (!started) {
 
             int width, height;

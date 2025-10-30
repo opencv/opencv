@@ -11,6 +11,10 @@ endif()
 
 find_package(Doxygen)
 if(DOXYGEN_FOUND)
+  if (DOXYGEN_VERSION VERSION_LESS 1.12)
+    message(WARNING "Found doxygen ${DOXYGEN_VERSION}, version 1.12 is used for testing, there is "
+                    "a chance your documentation will look different or have some limitations.")
+  endif()
   add_custom_target(doxygen)
 
   # not documented modules list
@@ -181,15 +185,23 @@ if(DOXYGEN_FOUND)
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/opencv.ico")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/pattern.png")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/acircles_pattern.png")
+  list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/charuco_board_pattern.png")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/bodybg.png")
   # list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/mymath.sty")
   list(APPEND CMAKE_DOXYGEN_HTML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/tutorial-utils.js")
   string(REPLACE ";" " \\\n" CMAKE_DOXYGEN_HTML_FILES "${CMAKE_DOXYGEN_HTML_FILES}")
 
-  set(OPENCV_DOCS_DOT_PATH "" CACHE PATH "Doxygen/DOT_PATH value")
+  if (DOXYGEN_DOT_EXECUTABLE)
+    message(STATUS "Found DOT executable: ${DOXYGEN_DOT_EXECUTABLE}")
+    set(init_dot_path "${DOXYGEN_DOT_EXECUTABLE}")
+    set(init_dot_mode "YES")
+  else()
+    set(init_dot_path "")
+    set(init_dot_mode "NO")
+  endif()
+  set(OPENCV_DOCS_DOT_PATH "${init_dot_path}" CACHE PATH "Doxygen/DOT_PATH value")
+  set(OPENCV_DOCS_HAVE_DOT "${init_dot_mode}" CACHE BOOL "Doxygen: build extra diagrams")
   set(CMAKECONFIG_DOT_PATH "${OPENCV_DOCS_DOT_PATH}")
-
-  set(OPENCV_DOCS_HAVE_DOT "NO" CACHE BOOL "Doxygen: build extra diagrams")
   set(CMAKECONFIG_HAVE_DOT "${OPENCV_DOCS_HAVE_DOT}")
 
   # 'png' is good enough for compatibility (but requires +50% storage space)

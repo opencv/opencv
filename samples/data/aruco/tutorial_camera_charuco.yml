@@ -1,0 +1,21 @@
+%YAML:1.0
+---
+calibration_time: "Wed 08 Dec 2021 05:13:09 PM MSK"
+image_width: 640
+image_height: 480
+flags: 0
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 4.5251072219637672e+02, 0., 3.1770297317353277e+02, 0.,
+       4.5676707935146891e+02, 2.7775155919135995e+02, 0., 0., 1. ]
+distortion_coefficients: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ 1.2136925618707872e-01, -1.0854664722560681e+00,
+       1.1786843796668460e-04, -4.6240686046485508e-04,
+       2.9542589406810080e+00 ]
+avg_reprojection_error: 1.8234905535936044e-01
+info: "The camera calibration parameters were obtained by img_00.jpg-img_03.jpg from aruco/tutorials/aruco_calibration/images"

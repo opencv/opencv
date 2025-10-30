@@ -14,9 +14,9 @@ using namespace cv;
 
 const char* keys =
     "{ help  h| | Print help message. }"
-    "{ @input1 | | Path to input image 1. }"
-    "{ @input2 | | Path to input image 2. }"
-    "{ @input3 | | Path to input image 3. }";
+    "{ @input1 |Histogram_Comparison_Source_0.jpg | Path to input image 1. }"
+    "{ @input2 |Histogram_Comparison_Source_1.jpg | Path to input image 2. }"
+    "{ @input3 |Histogram_Comparison_Source_2.jpg | Path to input image 3. }";
 
 /**
  * @function main
@@ -25,9 +25,10 @@ int main( int argc, char** argv )
 {
     //! [Load three images with different environment settings]
     CommandLineParser parser( argc, argv, keys );
-    Mat src_base = imread( parser.get<String>("input1") );
-    Mat src_test1 = imread( parser.get<String>("input2") );
-    Mat src_test2 = imread( parser.get<String>("input3") );
+    samples::addSamplesDataSearchSubDirectory( "doc/tutorials/imgproc/histograms/histogram_comparison/images" );
+    Mat src_base = imread(samples::findFile( parser.get<String>( "@input1" ) ) );
+    Mat src_test1 = imread(samples::findFile( parser.get<String>( "@input2" ) ) );
+    Mat src_test2 = imread(samples::findFile( parser.get<String>( "@input3" ) ) );
     if( src_base.empty() || src_test1.empty() || src_test2.empty() )
     {
         cout << "Could not open or find the images!\n" << endl;
@@ -65,20 +66,20 @@ int main( int argc, char** argv )
     Mat hist_base, hist_half_down, hist_test1, hist_test2;
 
     calcHist( &hsv_base, 1, channels, Mat(), hist_base, 2, histSize, ranges, true, false );
-    normalize( hist_base, hist_base, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize( hist_base, hist_base, 1, 0, NORM_L1, -1, Mat() );
 
     calcHist( &hsv_half_down, 1, channels, Mat(), hist_half_down, 2, histSize, ranges, true, false );
-    normalize( hist_half_down, hist_half_down, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize( hist_half_down, hist_half_down, 1, 0, NORM_L1, -1, Mat() );
 
     calcHist( &hsv_test1, 1, channels, Mat(), hist_test1, 2, histSize, ranges, true, false );
-    normalize( hist_test1, hist_test1, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize( hist_test1, hist_test1, 1, 0, NORM_L1, -1, Mat() );
 
     calcHist( &hsv_test2, 1, channels, Mat(), hist_test2, 2, histSize, ranges, true, false );
-    normalize( hist_test2, hist_test2, 0, 1, NORM_MINMAX, -1, Mat() );
+    normalize( hist_test2, hist_test2, 1, 0, NORM_L1, -1, Mat() );
     //! [Calculate the histograms for the HSV images]
 
     //! [Apply the histogram comparison methods]
-    for( int compare_method = 0; compare_method < 4; compare_method++ )
+    for( int compare_method = 0; compare_method < 6; compare_method++ )
     {
         double base_base = compareHist( hist_base, hist_base, compare_method );
         double base_half = compareHist( hist_base, hist_half_down, compare_method );

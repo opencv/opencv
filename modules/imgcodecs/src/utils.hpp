@@ -45,6 +45,7 @@
 namespace cv {
 
 int validateToInt(size_t step);
+int64_t validateToInt64(ptrdiff_t step);
 
 template <typename _Tp> static inline
 size_t safeCastToSizeT(const _Tp v_origin, const char* msg)
@@ -115,6 +116,8 @@ void icvCvt_BGR5652BGR_8u_C2C3R( const uchar* bgr565, int bgr565_step,
                                  uchar* bgr, int bgr_step, Size size );
 void icvCvt_CMYK2BGR_8u_C4C3R( const uchar* cmyk, int cmyk_step,
                                uchar* bgr, int bgr_step, Size size );
+void icvCvt_CMYK2RGB_8u_C4C3R( const uchar* cmyk, int cmyk_step,
+                               uchar* rgb, int rgb_step, Size size );
 void icvCvt_CMYK2Gray_8u_C4C1R( const uchar* ycck, int ycck_step,
                                 uchar* gray, int gray_step, Size size );
 
@@ -135,7 +138,11 @@ uchar* FillGrayRow1( uchar* data, uchar* indices, int len, uchar* palette );
 
 CV_INLINE bool  isBigEndian( void )
 {
-    return (((const int*)"\0\x1\x2\x3\x4\x5\x6\x7")[0] & 255) != 0;
+#ifdef WORDS_BIGENDIAN
+    return true;
+#else
+    return false;
+#endif
 }
 
 }  // namespace

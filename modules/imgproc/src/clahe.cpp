@@ -415,7 +415,7 @@ namespace
         else if (_src.type() == CV_16UC1)
             calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
         else
-            CV_Error( CV_StsBadArg, "Unsupported type" );
+            CV_Error( cv::Error::StsBadArg, "Unsupported type" );
 
         cv::parallel_for_(cv::Range(0, tilesX_ * tilesY_), *calcLutBody);
 

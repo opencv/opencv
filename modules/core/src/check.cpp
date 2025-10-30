@@ -4,6 +4,8 @@
 
 #include "precomp.hpp"
 
+#include <sstream>
+
 #include "opencv2/core/check.hpp"
 
 namespace cv {
@@ -153,7 +155,12 @@ void check_failed_MatType(const int v, const CheckContext& ctx)
 }
 void check_failed_MatChannels(const int v, const CheckContext& ctx)
 {
-    check_failed_auto_<int>(v, ctx);
+    std::stringstream ss;
+    ss  << ctx.message << ":" << std::endl
+        << "    '" << ctx.p2_str << "'" << std::endl
+        << "where" << std::endl
+        << "    '" << ctx.p1_str << "' is " << v;
+    cv::error(cv::Error::BadNumChannels, ss.str(), ctx.func, ctx.file, ctx.line);
 }
 void check_failed_true(const bool v, const CheckContext& ctx)
 {

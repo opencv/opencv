@@ -50,6 +50,7 @@ function(ocv_create_builtin_dnn_plugin name target)
   endforeach()
 
   if(WIN32)
+    add_definitions(-D_USE_MATH_DEFINES)
     set(OPENCV_PLUGIN_VERSION "${OPENCV_DLLVERSION}" CACHE STRING "")
     if(CMAKE_CXX_SIZEOF_DATA_PTR EQUAL 8)
       set(OPENCV_PLUGIN_ARCH "_64" CACHE STRING "")

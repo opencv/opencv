@@ -19,22 +19,13 @@
 
 #ifdef HAVE_INF_ENGINE
 
-#define INF_ENGINE_RELEASE_2018R5 2018050000
-#define INF_ENGINE_RELEASE_2019R1 2019010000
-#define INF_ENGINE_RELEASE_2019R2 2019020000
-#define INF_ENGINE_RELEASE_2019R3 2019030000
-#define INF_ENGINE_RELEASE_2020_1 2020010000
-#define INF_ENGINE_RELEASE_2020_2 2020020000
-#define INF_ENGINE_RELEASE_2020_3 2020030000
-#define INF_ENGINE_RELEASE_2020_4 2020040000
-#define INF_ENGINE_RELEASE_2021_1 2021010000
-#define INF_ENGINE_RELEASE_2021_2 2021020000
-#define INF_ENGINE_RELEASE_2021_3 2021030000
-#define INF_ENGINE_RELEASE_2021_4 2021040000
+#define INF_ENGINE_RELEASE_2022_1 2022010000
+#define INF_ENGINE_RELEASE_2023_0 2023000000
+#define INF_ENGINE_RELEASE_2024_0 2024000000
 
 #ifndef INF_ENGINE_RELEASE
-#warning("IE version have not been provided via command-line. Using 2021.4 by default")
-#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2021_4
+#warning("IE version have not been provided via command-line. Using 2022.1 by default")
+#define INF_ENGINE_RELEASE INF_ENGINE_RELEASE_2022_1
 #endif
 
 #define INF_ENGINE_VER_MAJOR_GT(ver) (((INF_ENGINE_RELEASE) / 10000) > ((ver) / 10000))
@@ -48,7 +39,9 @@
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #endif
 
-#include <inference_engine.hpp>
+#include <openvino/openvino.hpp>
+#include <openvino/pass/serialize.hpp>
+#include <openvino/pass/convert_fp32_to_fp16.hpp>
 
 #if defined(__GNUC__) && __GNUC__ >= 5
 //#pragma GCC diagnostic pop
@@ -73,12 +66,10 @@ CV__DNN_INLINE_NS_END
 
 Backend& getInferenceEngineBackendTypeParam();
 
-Mat infEngineBlobToMat(const InferenceEngine::Blob::Ptr& blob);
+Mat infEngineBlobToMat(const ov::Tensor& blob);
 
-void infEngineBlobsToMats(const std::vector<InferenceEngine::Blob::Ptr>& blobs,
+void infEngineBlobsToMats(const ov::TensorVector& blobs,
                           std::vector<Mat>& mats);
-
-
 
 CV__DNN_INLINE_NS_BEGIN
 
@@ -90,8 +81,7 @@ bool isArmComputePlugin();
 
 CV__DNN_INLINE_NS_END
 
-
-InferenceEngine::Core& getCore(const std::string& id);
+ov::Core& getCore(const std::string& id);
 
 template<typename T = size_t>
 static inline std::vector<T> getShape(const Mat& mat)

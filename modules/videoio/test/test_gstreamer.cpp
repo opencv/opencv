@@ -178,4 +178,54 @@ TEST(videoio_gstreamer, timeout_property)
     }
 }
 
+//==============================================================================
+// Seeking test with manual GStreamer pipeline
+typedef testing::TestWithParam<string> gstreamer_bunny;
+
+TEST_P(gstreamer_bunny, manual_seek)
+{
+    if (!videoio_registry::hasBackend(CAP_GSTREAMER))
+        throw SkipTestException("GStreamer backend was not found");
+
+    const string video_file = BunnyParameters::getFilename("." + GetParam());
+    const string pipeline = "filesrc location=" + video_file + " ! decodebin ! videoconvert ! video/x-raw, format=BGR ! appsink drop=1";
+    const double target_pos = 3000.0;
+    const double ms_per_frame = 1000.0 / BunnyParameters::getFps();
+    VideoCapture cap;
+    cap.open(pipeline, CAP_GSTREAMER);
+    ASSERT_TRUE(cap.isOpened());
+    Mat img;
+    for (int i = 0; i < 10; i++)
+    {
+        cap >> img;
+    }
+    EXPECT_FALSE(img.empty());
+    cap.set(CAP_PROP_POS_MSEC, target_pos);
+    cap >> img;
+    EXPECT_FALSE(img.empty());
+    double actual_pos = cap.get(CAP_PROP_POS_MSEC);
+    EXPECT_NEAR(actual_pos, target_pos, ms_per_frame);
+}
+
+static const string bunny_params[] = {
+    // string("wmv"),
+    string("mov"),
+    string("mp4"),
+    // string("mpg"),
+    string("avi"),
+    // string("h264"),
+    // string("h265"),
+    string("mjpg.avi")
+};
+
+inline static std::string gstreamer_bunny_name_printer(const testing::TestParamInfo<gstreamer_bunny::ParamType>& info)
+{
+    std::ostringstream out;
+    out << extToStringSafe(info.param);
+    return out.str();
+}
+
+INSTANTIATE_TEST_CASE_P(videoio, gstreamer_bunny, testing::ValuesIn(bunny_params), gstreamer_bunny_name_printer);
+
+
 }} // namespace

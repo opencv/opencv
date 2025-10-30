@@ -28,12 +28,13 @@
 
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
 
-#ifdef HAVE_OBSENSOR
+#if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK)
+
 namespace cv {
 class VideoCapture_obsensor : public IVideoCapture
 {
 public:
-    VideoCapture_obsensor(int index);
+    VideoCapture_obsensor(int index, const cv::VideoCaptureParameters& params);
     virtual ~VideoCapture_obsensor();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;

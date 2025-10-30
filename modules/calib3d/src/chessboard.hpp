@@ -203,12 +203,12 @@ class Chessboard: public cv::Feature2D
                  * d12/d34 = d13/d24
                  *
                  * point order on the line:
-                 * pt1 --> pt2 --> pt3 --> pt4
+                 * p0 --> p1 --> p2 --> p3
                  *
-                 * \param[in] pt1 First point coordinate
-                 * \param[in] pt2 Second point coordinate
-                 * \param[in] pt3 Third point coordinate
-                 * \param[out] pt4 Forth point coordinate
+                 * \param[in] p0 First point coordinate
+                 * \param[in] p1 Second point coordinate
+                 * \param[in] p2 Third point coordinate
+                 * \param[out] p3 Forth point coordinate
                  *
                  */
                 static bool estimatePoint(const cv::Point2f &p0,const cv::Point2f &p1,const cv::Point2f &p2,cv::Point2f &p3);
@@ -309,7 +309,7 @@ class Chessboard: public cv::Feature2D
                  * \brief Draws the corners into the given image
                  *
                  * \param[in] m The image
-                 * \param[out] m The resulting image
+                 * \param[out] out The resulting image
                  * \param[in] H optional homography to calculate search area
                  *
                  */
@@ -668,7 +668,7 @@ class Chessboard: public cv::Feature2D
                   * \brief Calculates the average edge sharpness for the chessboard
                   *
                   * \param[in] image The image where the chessboard was detected
-                  * \param[in] rise_distante Rise distance 0.8 means 10% ... 90%
+                  * \param[in] rise_distance Rise distance 0.8 means 10% ... 90%
                   * \param[in] vertical by default only edge response for horiontal lines are calculated
                   *
                   * \returns Scalar(sharpness, average min_val, average max_val)

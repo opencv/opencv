@@ -13,6 +13,8 @@
 #include "int8layers/layers_common.simd_declarations.hpp"
 #undef CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY
 
+#include "./layers_rvp052.hpp"
+
 #ifdef HAVE_OPENCL
 #include "../ocl4dnn/include/ocl4dnn.hpp"
 #endif

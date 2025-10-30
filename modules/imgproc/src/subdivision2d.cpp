@@ -118,6 +118,16 @@ Subdiv2D::Subdiv2D(Rect rect)
     initDelaunay(rect);
 }
 
+Subdiv2D::Subdiv2D(Rect2f rect)
+{
+    validGeometry = false;
+    freeQEdge = 0;
+    freePoint = 0;
+    recentEdge = 0;
+
+    initDelaunay(rect);
+}
+
 
 Subdiv2D::QuadEdge::QuadEdge()
 {
@@ -282,10 +292,10 @@ int Subdiv2D::locate(Point2f pt, int& _edge, int& _vertex)
     int i, maxEdges = (int)(qedges.size() * 4);
 
     if( qedges.size() < (size_t)4 )
-        CV_Error( CV_StsError, "Subdivision is empty" );
+        CV_Error( cv::Error::StsError, "Subdivision is empty" );
 
     if( pt.x < topLeft.x || pt.y < topLeft.y || pt.x >= bottomRight.x || pt.y >= bottomRight.y )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     int edge = recentEdge;
     CV_Assert(edge > 0);
@@ -417,10 +427,10 @@ int Subdiv2D::insert(Point2f pt)
     int location = locate( pt, curr_edge, curr_point );
 
     if( location == PTLOC_ERROR )
-        CV_Error( CV_StsBadSize, "" );
+        CV_Error( cv::Error::StsBadSize, "" );
 
     if( location == PTLOC_OUTSIDE_RECT )
-        CV_Error( CV_StsOutOfRange, "" );
+        CV_Error( cv::Error::StsOutOfRange, "" );
 
     if( location == PTLOC_VERTEX )
         return curr_point;
@@ -434,7 +444,7 @@ int Subdiv2D::insert(Point2f pt)
     else if( location == PTLOC_INSIDE )
         ;
     else
-        CV_Error_(CV_StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
+        CV_Error_(cv::Error::StsError, ("Subdiv2D::locate returned invalid location = %d", location) );
 
     CV_Assert( curr_edge != 0 );
     validGeometry = false;
@@ -493,9 +503,55 @@ void Subdiv2D::initDelaunay( Rect rect )
 {
     CV_INSTRUMENT_REGION();
 
-    float big_coord = 3.f * MAX( rect.width, rect.height );
+    float big_coord = 6.f * MAX( rect.width, rect.height );
     float rx = (float)rect.x;
     float ry = (float)rect.y;
+
+    vtx.clear();
+    qedges.clear();
+
+    recentEdge = 0;
+    validGeometry = false;
+
+    topLeft = Point2f( rx, ry );
+    bottomRight = Point2f( rx + rect.width, ry + rect.height );
+
+    Point2f ppA( rx + big_coord, ry );
+    Point2f ppB( rx, ry + big_coord );
+    Point2f ppC( rx - big_coord, ry - big_coord );
+
+    vtx.push_back(Vertex());
+    qedges.push_back(QuadEdge());
+
+    freeQEdge = 0;
+    freePoint = 0;
+
+    int pA = newPoint(ppA, false);
+    int pB = newPoint(ppB, false);
+    int pC = newPoint(ppC, false);
+
+    int edge_AB = newEdge();
+    int edge_BC = newEdge();
+    int edge_CA = newEdge();
+
+    setEdgePoints( edge_AB, pA, pB );
+    setEdgePoints( edge_BC, pB, pC );
+    setEdgePoints( edge_CA, pC, pA );
+
+    splice( edge_AB, symEdge( edge_CA ));
+    splice( edge_BC, symEdge( edge_AB ));
+    splice( edge_CA, symEdge( edge_BC ));
+
+    recentEdge = edge_AB;
+}
+
+void Subdiv2D::initDelaunay( Rect2f rect )
+{
+        CV_INSTRUMENT_REGION();
+
+    float big_coord = 6.f * MAX( rect.width, rect.height );
+    float rx = rect.x;
+    float ry = rect.y;
 
     vtx.clear();
     qedges.clear();

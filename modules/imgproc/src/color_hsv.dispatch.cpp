@@ -219,7 +219,7 @@ bool oclCvtColorHSV2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
 
     if(!h.createKernel("HSV2RGB", ocl::imgproc::color_hsv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff", dcn, bidx, hrange, 6.f/hrange)))
+                       format("-D DCN=%d -D BIDX=%d -D HRANGE=%d -D HSCALE=%ff", dcn, bidx, hrange, 6.f/hrange)))
     {
         return false;
     }
@@ -234,7 +234,7 @@ bool oclCvtColorHLS2BGR( InputArray _src, OutputArray _dst, int dcn, int bidx, b
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 255);
 
     if(!h.createKernel("HLS2RGB", ocl::imgproc::color_hsv_oclsrc,
-                       format("-D dcn=%d -D bidx=%d -D hrange=%d -D hscale=%ff", dcn, bidx, hrange, 6.f/hrange)))
+                       format("-D DCN=%d -D BIDX=%d -D HRANGE=%d -D HSCALE=%ff", dcn, bidx, hrange, 6.f/hrange)))
     {
         return false;
     }
@@ -249,12 +249,40 @@ bool oclCvtColorBGR2HLS( InputArray _src, OutputArray _dst, int bidx, bool full 
     float hscale = (_src.depth() == CV_32F ? 360.f : (!full ? 180.f : 256.f))/360.f;
 
     if(!h.createKernel("RGB2HLS", ocl::imgproc::color_hsv_oclsrc,
-                       format("-D hscale=%ff -D bidx=%d -D dcn=3", hscale, bidx)))
+                       format("-D HSCALE=%ff -D BIDX=%d -D DCN=3", hscale, bidx)))
     {
         return false;
     }
 
     return h.run();
+}
+
+static UMat init_sdiv_table()
+{
+    std::vector<int> sdiv(256);
+
+    const int hsv_shift = 12;
+    const int v = 255 << hsv_shift;
+
+    sdiv[0] = 0;
+    for(int i = 1; i < 256; i++ )
+        sdiv[i] = saturate_cast<int>(v/(1.*i));
+
+    return UMat(sdiv, true);
+}
+
+static UMat init_hdiv_table(int hrange)
+{
+    std::vector<int> hdiv(256);
+
+    const int hsv_shift = 12;
+    const int v = hrange << hsv_shift;
+
+    hdiv[0] = 0;
+    for (int i = 1; i < 256; i++ )
+        hdiv[i] = saturate_cast<int>(v/(6.*i));
+
+    return UMat(hdiv, true);
 }
 
 bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full )
@@ -264,8 +292,8 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
     int hrange = _src.depth() == CV_32F ? 360 : (!full ? 180 : 256);
 
     cv::String options = (_src.depth() == CV_8U ?
-                          format("-D hrange=%d -D bidx=%d -D dcn=3", hrange, bidx) :
-                          format("-D hscale=%ff -D bidx=%d -D dcn=3", hrange*(1.f/360.f), bidx));
+                          format("-D HRANGE=%d -D BIDX=%d -D DCN=3", hrange, bidx) :
+                          format("-D HSCALE=%ff -D BIDX=%d -D DCN=3", hrange*(1.f/360.f), bidx));
 
     if(!h.createKernel("RGB2HSV", ocl::imgproc::color_hsv_oclsrc, options))
     {
@@ -274,41 +302,22 @@ bool oclCvtColorBGR2HSV( InputArray _src, OutputArray _dst, int bidx, bool full 
 
     if(_src.depth() == CV_8U)
     {
-        static UMat sdiv_data;
-        static UMat hdiv_data180;
-        static UMat hdiv_data256;
-        static int sdiv_table[256];
-        static int hdiv_table180[256];
-        static int hdiv_table256[256];
-        static volatile bool initialized180 = false, initialized256 = false;
-        volatile bool & initialized = hrange == 180 ? initialized180 : initialized256;
+        static UMat sdiv_data = init_sdiv_table();
+        UMat hdiv_data;
 
-        if (!initialized)
+        if (hrange == 180)
         {
-            int * const hdiv_table = hrange == 180 ? hdiv_table180 : hdiv_table256, hsv_shift = 12;
-            UMat & hdiv_data = hrange == 180 ? hdiv_data180 : hdiv_data256;
-
-            sdiv_table[0] = hdiv_table180[0] = hdiv_table256[0] = 0;
-
-            int v = 255 << hsv_shift;
-            if (!initialized180 && !initialized256)
-            {
-                for(int i = 1; i < 256; i++ )
-                    sdiv_table[i] = saturate_cast<int>(v/(1.*i));
-                Mat(1, 256, CV_32SC1, sdiv_table).copyTo(sdiv_data);
-            }
-
-            v = hrange << hsv_shift;
-            for (int i = 1; i < 256; i++ )
-                hdiv_table[i] = saturate_cast<int>(v/(6.*i));
-
-            Mat(1, 256, CV_32SC1, hdiv_table).copyTo(hdiv_data);
-            initialized = true;
+            static UMat hdiv_data180 = init_hdiv_table(180);
+            hdiv_data = hdiv_data180;
+        }
+        else
+        {
+            static UMat hdiv_data256 = init_hdiv_table(256);
+            hdiv_data = hdiv_data256;
         }
 
         h.setArg(ocl::KernelArg::PtrReadOnly(sdiv_data));
-        h.setArg(hrange == 256 ? ocl::KernelArg::PtrReadOnly(hdiv_data256) :
-                                 ocl::KernelArg::PtrReadOnly(hdiv_data180));
+        h.setArg(ocl::KernelArg::PtrReadOnly(hdiv_data));
     }
 
     return h.run();

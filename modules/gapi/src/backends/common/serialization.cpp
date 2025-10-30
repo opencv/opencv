@@ -8,9 +8,8 @@
 #include <map> // map
 #include <ade/util/zip_range.hpp> // indexed
 
-#define NOMINMAX
-
 #ifdef _WIN32
+#define NOMINMAX
 #include <winsock.h>      // htonl, ntohl
 #else
 #include <netinet/in.h>   // htonl, ntohl
@@ -207,22 +206,20 @@ IOStream& operator<< (IOStream& os, const cv::RMat& mat) {
     mat.serialize(os);
     return os;
 }
-IIStream& operator>> (IIStream& is, cv::RMat&) {
+IIStream& operator>> (IIStream&, cv::RMat&) {
     util::throw_error(std::logic_error("operator>> for RMat should never be called. "
                                         "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
                                         "should be used"));
-    return is;
 }
 
 IOStream& operator<< (IOStream& os, const cv::MediaFrame &frame) {
     frame.serialize(os);
     return os;
 }
-IIStream& operator>> (IIStream& is, cv::MediaFrame &) {
+IIStream& operator>> (IIStream&, cv::MediaFrame &) {
     util::throw_error(std::logic_error("operator>> for MediaFrame should never be called. "
                                         "Instead, cv::gapi::deserialize<cv::GRunArgs, AdapterTypes...>() "
                                         "should be used"));
-    return is;
 }
 
 namespace
@@ -396,27 +393,23 @@ IOStream& operator<< (IOStream& os, const cv::GArrayDesc &) {return os;}
 IIStream& operator>> (IIStream& is,       cv::GArrayDesc &) {return is;}
 
 #if !defined(GAPI_STANDALONE)
-IOStream& operator<< (IOStream& os, const cv::UMat &)
+IOStream& operator<< (IOStream&, const cv::UMat &)
 {
     GAPI_Error("Serialization: Unsupported << for UMat");
-    return os;
 }
-IIStream& operator >> (IIStream& is, cv::UMat &)
+IIStream& operator >> (IIStream&, cv::UMat &)
 {
     GAPI_Error("Serialization: Unsupported >> for UMat");
-    return is;
 }
 #endif // !defined(GAPI_STANDALONE)
 
-IOStream& operator<< (IOStream& os, const cv::gapi::wip::IStreamSource::Ptr &)
+IOStream& operator<< (IOStream&, const cv::gapi::wip::IStreamSource::Ptr &)
 {
     GAPI_Error("Serialization: Unsupported << for IStreamSource::Ptr");
-    return os;
 }
-IIStream& operator >> (IIStream& is, cv::gapi::wip::IStreamSource::Ptr &)
+IIStream& operator >> (IIStream&, cv::gapi::wip::IStreamSource::Ptr &)
 {
-    GAPI_Assert("Serialization: Unsupported >> for IStreamSource::Ptr");
-    return is;
+    GAPI_Error("Serialization: Unsupported >> for IStreamSource::Ptr");
 }
 
 namespace

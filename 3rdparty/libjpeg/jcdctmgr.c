@@ -2,7 +2,7 @@
  * jcdctmgr.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2003-2013 by Guido Vollbeding.
+ * Modified 2003-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -66,15 +66,14 @@ typedef union {
  * Perform forward DCT on one or more blocks of a component.
  *
  * The input samples are taken from the sample_data[] array starting at
- * position start_row/start_col, and moving to the right for any additional
- * blocks. The quantized coefficients are returned in coef_blocks[].
+ * position start_col, and moving to the right for any additional blocks.
+ * The quantized coefficients are returned in coef_blocks[].
  */
 
 METHODDEF(void)
 forward_DCT (j_compress_ptr cinfo, jpeg_component_info * compptr,
 	     JSAMPARRAY sample_data, JBLOCKROW coef_blocks,
-	     JDIMENSION start_row, JDIMENSION start_col,
-	     JDIMENSION num_blocks)
+	     JDIMENSION start_col, JDIMENSION num_blocks)
 /* This version is used for integer DCT implementations. */
 {
   /* This routine is heavily used, so it's worth coding it tightly. */
@@ -83,8 +82,6 @@ forward_DCT (j_compress_ptr cinfo, jpeg_component_info * compptr,
   DCTELEM * divisors = (DCTELEM *) compptr->dct_table;
   DCTELEM workspace[DCTSIZE2];	/* work area for FDCT subroutine */
   JDIMENSION bi;
-
-  sample_data += start_row;	/* fold in the vertical offset once */
 
   for (bi = 0; bi < num_blocks; bi++, start_col += compptr->DCT_h_scaled_size) {
     /* Perform the DCT */
@@ -136,8 +133,7 @@ forward_DCT (j_compress_ptr cinfo, jpeg_component_info * compptr,
 METHODDEF(void)
 forward_DCT_float (j_compress_ptr cinfo, jpeg_component_info * compptr,
 		   JSAMPARRAY sample_data, JBLOCKROW coef_blocks,
-		   JDIMENSION start_row, JDIMENSION start_col,
-		   JDIMENSION num_blocks)
+		   JDIMENSION start_col, JDIMENSION num_blocks)
 /* This version is used for floating-point DCT implementations. */
 {
   /* This routine is heavily used, so it's worth coding it tightly. */
@@ -146,8 +142,6 @@ forward_DCT_float (j_compress_ptr cinfo, jpeg_component_info * compptr,
   FAST_FLOAT * divisors = (FAST_FLOAT *) compptr->dct_table;
   FAST_FLOAT workspace[DCTSIZE2]; /* work area for FDCT subroutine */
   JDIMENSION bi;
-
-  sample_data += start_row;	/* fold in the vertical offset once */
 
   for (bi = 0; bi < num_blocks; bi++, start_col += compptr->DCT_h_scaled_size) {
     /* Perform the DCT */
@@ -347,13 +341,11 @@ start_pass_fdctmgr (j_compress_ptr cinfo)
 #endif
       default:
 	ERREXIT(cinfo, JERR_NOT_COMPILED);
-	break;
       }
       break;
     default:
       ERREXIT2(cinfo, JERR_BAD_DCTSIZE,
 	       compptr->DCT_h_scaled_size, compptr->DCT_v_scaled_size);
-      break;
     }
     qtblno = compptr->quant_tbl_no;
     /* Make sure specified quantization table is present */
@@ -444,7 +436,6 @@ start_pass_fdctmgr (j_compress_ptr cinfo)
 #endif
     default:
       ERREXIT(cinfo, JERR_NOT_COMPILED);
-      break;
     }
   }
 }
@@ -461,17 +452,15 @@ jinit_forward_dct (j_compress_ptr cinfo)
   int ci;
   jpeg_component_info *compptr;
 
-  fdct = (my_fdct_ptr)
-    (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				SIZEOF(my_fdct_controller));
+  fdct = (my_fdct_ptr) (*cinfo->mem->alloc_small)
+    ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(my_fdct_controller));
   cinfo->fdct = &fdct->pub;
   fdct->pub.start_pass = start_pass_fdctmgr;
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
        ci++, compptr++) {
     /* Allocate a divisor table for each component */
-    compptr->dct_table =
-      (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_IMAGE,
-				  SIZEOF(divisor_table));
+    compptr->dct_table = (*cinfo->mem->alloc_small)
+      ((j_common_ptr) cinfo, JPOOL_IMAGE, SIZEOF(divisor_table));
   }
 }

@@ -118,7 +118,7 @@ typedef struct opj_stream_private {
     opj_stream_seek_fn      m_seek_fn;
 
     /**
-     * Actual data stored into the stream if readed from. Data is read by chunk of fixed size.
+     * Actual data stored into the stream if read from. Data is read by chunk of fixed size.
      * you should never access this data directly.
      */
     OPJ_BYTE *                  m_stored_data;

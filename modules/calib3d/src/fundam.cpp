@@ -49,6 +49,13 @@
 namespace cv
 {
 
+static inline double scaleFor(double x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
+}
+static inline float scaleFor(float x){
+    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
+}
+
 /**
  * This class estimates a homography \f$H\in \mathbb{R}^{3\times 3}\f$
  * between \f$\mathbf{x} \in \mathbb{R}^3\f$ and
@@ -113,7 +120,7 @@ public:
      *            2 columns 1 channel
      * @param _m2 destination points containing (x,y), depth is CV_32F with 1 column 2 channels or
      *            2 columns 1 channel
-     * @param _model, CV_64FC1, 3x3, normalized, i.e., the last element is 1
+     * @param _model CV_64FC1, 3x3, normalized, i.e., the last element is 1
      */
     int runKernel( InputArray _m1, InputArray _m2, OutputArray _model ) const CV_OVERRIDE
     {
@@ -177,8 +184,7 @@ public:
         eigen( _LtL, matW, matV );
         _Htemp = _invHnorm*_H0;
         _H0 = _Htemp*_Hnorm2;
-        _H0.convertTo(_model, _H0.type(), 1./_H0.at<double>(2,2) );
-
+        _H0.convertTo(_model, _H0.type(), scaleFor(_H0.at<double>(2,2)));
         return 1;
     }
 
@@ -188,7 +194,7 @@ public:
      * @param _m1 depth CV_32F, 1-channel with 2 columns or 2-channel with 1 column
      * @param _m2 depth CV_32F, 1-channel with 2 columns or 2-channel with 1 column
      * @param _model CV_64FC1, 3x3
-     * @param _err, output, CV_32FC1, square of the L2 norm
+     * @param _err output, CV_32FC1, square of the L2 norm
      */
     void computeError( InputArray _m1, InputArray _m2, InputArray _model, OutputArray _err ) const CV_OVERRIDE
     {
@@ -197,14 +203,14 @@ public:
         const Point2f* M = m1.ptr<Point2f>();
         const Point2f* m = m2.ptr<Point2f>();
         const double* H = model.ptr<double>();
-        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7] };
+        float Hf[] = { (float)H[0], (float)H[1], (float)H[2], (float)H[3], (float)H[4], (float)H[5], (float)H[6], (float)H[7], (float)H[8] };
 
         _err.create(count, 1, CV_32F);
         float* err = _err.getMat().ptr<float>();
 
         for( i = 0; i < count; i++ )
         {
-            float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + 1.f);
+            float ww = 1.f/(Hf[6]*M[i].x + Hf[7]*M[i].y + Hf[8]);
             float dx = (Hf[0]*M[i].x + Hf[1]*M[i].y + Hf[2])*ww - m[i].x;
             float dy = (Hf[3]*M[i].x + Hf[4]*M[i].y + Hf[5])*ww - m[i].y;
             err[i] = dx*dx + dy*dy;
@@ -231,8 +237,9 @@ public:
         if( _Jac.needed())
         {
             _Jac.create(count*2, param.rows, CV_64F);
+            _Jac.setTo(0.);
             J = _Jac.getMat();
-            CV_Assert( J.isContinuous() && J.cols == 8 );
+            CV_Assert( J.isContinuous() && J.cols == 9 );
         }
 
         const Point2f* M = src.ptr<Point2f>();
@@ -244,7 +251,7 @@ public:
         for( i = 0; i < count; i++ )
         {
             double Mx = M[i].x, My = M[i].y;
-            double ww = h[6]*Mx + h[7]*My + 1.;
+            double ww = h[6]*Mx + h[7]*My + h[8];
             ww = fabs(ww) > DBL_EPSILON ? 1./ww : 0;
             double xi = (h[0]*Mx + h[1]*My + h[2])*ww;
             double yi = (h[3]*Mx + h[4]*My + h[5])*ww;
@@ -254,13 +261,11 @@ public:
             if( Jptr )
             {
                 Jptr[0] = Mx*ww; Jptr[1] = My*ww; Jptr[2] = ww;
-                Jptr[3] = Jptr[4] = Jptr[5] = 0.;
-                Jptr[6] = -Mx*ww*xi; Jptr[7] = -My*ww*xi;
-                Jptr[8] = Jptr[9] = Jptr[10] = 0.;
-                Jptr[11] = Mx*ww; Jptr[12] = My*ww; Jptr[13] = ww;
-                Jptr[14] = -Mx*ww*yi; Jptr[15] = -My*ww*yi;
+                Jptr[6] = -Mx*ww*xi; Jptr[7] = -My*ww*xi; Jptr[8] = -ww*xi;
+                Jptr[12] = Mx*ww; Jptr[13] = My*ww; Jptr[14] = ww;
+                Jptr[15] = -Mx*ww*yi; Jptr[16] = -My*ww*yi; Jptr[17] = -ww*yi;
 
-                Jptr += 16;
+                Jptr += 18;
             }
         }
 
@@ -269,7 +274,7 @@ public:
 
     Mat src, dst;
 };
-} // end namesapce cv
+} // end namespace cv
 
 namespace cv{
 static bool createAndRunRHORegistrator(double confidence,
@@ -409,6 +414,11 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 
     if( result && npoints > 4 && method != RHO)
     {
+        // save the original points before compressing
+        const int npoints_input = npoints;
+        const Mat src_input = src.clone();
+        const Mat dst_input = dst.clone();
+
         compressElems( src.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         npoints = compressElems( dst.ptr<Point2f>(), tempMask.ptr<uchar>(), 1, npoints );
         if( npoints > 0 )
@@ -419,8 +429,19 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
             dst = dst1;
             if( method == RANSAC || method == LMEDS )
                 cb->runKernel( src, dst, H );
-            Mat H8(8, 1, CV_64F, H.ptr<double>());
+            Mat H8(9, 1, CV_64F, H.ptr<double>());
             LMSolver::create(makePtr<HomographyRefineCallback>(src, dst), 10)->run(H8);
+            H.convertTo(H, H.type(), scaleFor(H.at<double>(2,2)));
+
+            // find new inliers
+            const float thr_sqr = static_cast<float>(ransacReprojThreshold * ransacReprojThreshold);
+            cv::Mat errors;
+            cb->computeError(src_input, dst_input, H, errors);
+            uchar* maskptr = tempMask.ptr<uchar>();
+            const float * const errors_ptr = errors.ptr<float>();
+            for (int i = 0; i < npoints_input; i++) {
+                maskptr[i] = static_cast<uchar>(errors_ptr[i] <= thr_sqr);
+            }
         }
     }
 
@@ -451,9 +472,9 @@ cv::Mat cv::findHomography( InputArray _points1, InputArray _points2,
 cv::Mat cv::findHomography(InputArray srcPoints, InputArray dstPoints, OutputArray mask,
                    const UsacParams &params) {
     Ptr<usac::Model> model;
-    usac::setParameters(model, usac::EstimationMethod::Homography, params, mask.needed());
+    usac::setParameters(model, usac::EstimationMethod::HOMOGRAPHY, params, mask.needed());
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, srcPoints, dstPoints, model->getRandomGeneratorState(),
+    if (usac::run(model, srcPoints, dstPoints,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel() / ransac_output->getModel().at<double>(2,2);
@@ -913,10 +934,10 @@ cv::Mat cv::findFundamentalMat( cv::InputArray points1, cv::InputArray points2, 
 cv::Mat cv::findFundamentalMat( InputArray points1, InputArray points2,
                         OutputArray mask, const UsacParams &params) {
     Ptr<usac::Model> model;
-    setParameters(model, usac::EstimationMethod::Fundamental, params, mask.needed());
+    setParameters(model, usac::EstimationMethod::FUNDAMENTAL, params, mask.needed());
     CV_Assert(model);
     Ptr<usac::RansacOutput> ransac_output;
-    if (usac::run(model, points1, points2, model->getRandomGeneratorState(),
+    if (usac::run(model, points1, points2,
             ransac_output, noArray(), noArray(), noArray(), noArray())) {
         usac::saveMask(mask, ransac_output->getInliersMask());
         return ransac_output->getModel();
@@ -1001,14 +1022,6 @@ void cv::computeCorrespondEpilines( InputArray _points, int whichImage,
         }
     }
 }
-
-static inline double scaleFor(double x){
-    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1./x : 1.;
-}
-static inline float scaleFor(float x){
-    return (std::fabs(x) > std::numeric_limits<float>::epsilon()) ? 1.f/x : 1.f;
-}
-
 
 void cv::convertPointsFromHomogeneous( InputArray _src, OutputArray _dst )
 {
@@ -1211,7 +1224,7 @@ double cv::sampsonDistance(InputArray _pt1, InputArray _pt2, InputArray _F)
 {
     CV_INSTRUMENT_REGION();
 
-    CV_Assert(_pt1.type() == CV_64F && _pt2.type() == CV_64F && _F.type() == CV_64F);
+    CV_Assert(_pt1.depth() == CV_64F && _pt2.depth() == CV_64F && _F.depth() == CV_64F);
     CV_DbgAssert(_pt1.rows() == 3 && _F.size() == Size(3, 3) && _pt1.rows() == _pt2.rows());
 
     Mat pt1(_pt1.getMat());

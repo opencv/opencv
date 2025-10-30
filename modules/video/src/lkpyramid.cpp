@@ -50,6 +50,7 @@
 #endif
 
 #include "opencv2/core/openvx/ovx_defs.hpp"
+#include "hal_replacement.hpp"
 
 #define  CV_DESCALE(x,n)     (((x) + (1 << ((n)-1))) >> (n))
 
@@ -62,6 +63,9 @@ static void calcScharrDeriv(const cv::Mat& src, cv::Mat& dst)
     int rows = src.rows, cols = src.cols, cn = src.channels(), depth = src.depth();
     CV_Assert(depth == CV_8U);
     dst.create(rows, cols, CV_MAKETYPE(DataType<deriv_type>::depth, cn*2));
+
+    CALL_HAL(ScharrDeriv, cv_hal_ScharrDeriv, src.data, src.step, (short*)dst.data, dst.step, cols, rows, cn);
+
     parallel_for_(Range(0, rows), cv::detail::ScharrDerivInvoker(src, dst), cv::getNumThreads());
 }
 
@@ -97,8 +101,8 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_int16x8 s1 = v_reinterpret_as_s16(v_load_expand(srow1 + x));
                 v_int16x8 s2 = v_reinterpret_as_s16(v_load_expand(srow2 + x));
 
-                v_int16x8 t1 = s2 - s0;
-                v_int16x8 t0 = v_mul_wrap(s0 + s2, c3) + v_mul_wrap(s1, c10);
+                v_int16x8 t1 = v_sub(s2, s0);
+                v_int16x8 t0 = v_add(v_mul_wrap(v_add(s0, s2), c3), v_mul_wrap(s1, c10));
 
                 v_store(trow0 + x, t0);
                 v_store(trow1 + x, t1);
@@ -134,8 +138,8 @@ void cv::detail::ScharrDerivInvoker::operator()(const Range& range) const
                 v_int16x8 s3 = v_load(trow1 + x);
                 v_int16x8 s4 = v_load(trow1 + x + cn);
 
-                v_int16x8 t0 = s1 - s0;
-                v_int16x8 t1 = v_mul_wrap(s2 + s4, c3) + v_mul_wrap(s3, c10);
+                v_int16x8 t0 = v_sub(s1, s0);
+                v_int16x8 t1 = v_add(v_mul_wrap(v_add(s2, s4), c3), v_mul_wrap(s3, c10));
 
                 v_store_interleave((drow + x*2), t0, t1);
             }
@@ -184,10 +188,16 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 {
     CV_INSTRUMENT_REGION();
 
+    const int W_BITS = 14, W_BITS1 = 14;
+    const float FLT_SCALE = 1.f/(1 << 20);
+
     Point2f halfWin((winSize.width-1)*0.5f, (winSize.height-1)*0.5f);
     const Mat& I = *prevImg;
     const Mat& J = *nextImg;
     const Mat& derivI = *prevDeriv;
+
+    cv::AutoBuffer<Point2f> prevPtsScaledData(range.end - range.start);
+    Point2f* prevPtsScaled = prevPtsScaledData.data();
 
     int j, cn = I.channels(), cn2 = cn*2;
     cv::AutoBuffer<deriv_type> _buf(winSize.area()*(cn + cn2));
@@ -210,7 +220,23 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         else
             nextPt = nextPts[ptidx]*2.f;
         nextPts[ptidx] = nextPt;
+        prevPtsScaled[ptidx-range.start] = prevPt;
+    }
 
+    CALL_HAL(LKOpticalFlowLevel, cv_hal_LKOpticalFlowLevel,
+        I.data, I.step, (const short*)derivI.data, derivI.step, J.data, J.step,
+        I.cols, I.rows, I.channels(),
+        (float*)prevPtsScaled, (float*)(nextPts+range.start), range.end-range.start,
+        (level == 0) ? status+range.start: nullptr,
+        err != nullptr ? err+range.start: nullptr,
+        winSize.width, winSize.height, criteria.maxCount, criteria.epsilon,
+        (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) != 0,
+        (float)minEigThreshold
+    );
+
+    for( int ptidx = range.start; ptidx < range.end; ptidx++ )
+    {
+        Point2f prevPt = prevPtsScaled[ptidx-range.start];
         Point2i iprevPt, inextPt;
         prevPt -= halfWin;
         iprevPt.x = cvFloor(prevPt.x);
@@ -221,8 +247,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
         {
             if( level == 0 )
             {
-                if( status )
-                    status[ptidx] = false;
+                status[ptidx] = false;
                 if( err )
                     err[ptidx] = 0;
             }
@@ -231,8 +256,6 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         float a = prevPt.x - iprevPt.x;
         float b = prevPt.y - iprevPt.y;
-        const int W_BITS = 14, W_BITS1 = 14;
-        const float FLT_SCALE = 1.f/(1 << 20);
         int iw00 = cvRound((1.f - a)*(1.f - b)*(1 << W_BITS));
         int iw01 = cvRound(a*(1.f - b)*(1 << W_BITS));
         int iw10 = cvRound((1.f - a)*b*(1 << W_BITS));
@@ -293,10 +316,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
-                t0 = t0 >> (W_BITS1-5);
-                t1 = t1 >> (W_BITS1-5);
+                t0 = v_add(v_dotprod(t00, qw0, qdelta), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1 - 5>(t0);
+                t1 = v_shr<W_BITS1 - 5>(t1);
                 v_store(Iptr + x, v_pack(t0, t1));
 
                 v00 = v_reinterpret_as_s16(v_load(dsrc));
@@ -307,10 +330,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
-                t0 = t0 >> W_BITS1;
-                t1 = t1 >> W_BITS1;
+                t0 = v_add(v_dotprod(t00, qw0, qdelta_d), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta_d), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1>(t0);
+                t1 = v_shr<W_BITS1>(t1);
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr, v00);
 
@@ -332,10 +355,10 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                 v_zip(v00, v01, t00, t01);
                 v_zip(v10, v11, t10, t11);
 
-                t0 = v_dotprod(t00, qw0, qdelta_d) + v_dotprod(t10, qw1);
-                t1 = v_dotprod(t01, qw0, qdelta_d) + v_dotprod(t11, qw1);
-                t0 = t0 >> W_BITS1;
-                t1 = t1 >> W_BITS1;
+                t0 = v_add(v_dotprod(t00, qw0, qdelta_d), v_dotprod(t10, qw1));
+                t1 = v_add(v_dotprod(t01, qw0, qdelta_d), v_dotprod(t11, qw1));
+                t0 = v_shr<W_BITS1>(t0);
+                t1 = v_shr<W_BITS1>(t1);
                 v00 = v_pack(t0, t1); // Ix0 Iy0 Ix1 Iy1 ...
                 v_store(dIptr + 4*2, v00);
 
@@ -479,14 +502,14 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
         if( minEig < minEigThreshold || D < FLT_EPSILON )
         {
-            if( level == 0 && status )
+            if(level == 0)
                 status[ptidx] = false;
             continue;
         }
 
         D = 1.f/D;
 
-        nextPt -= halfWin;
+        Point2f nextPt = nextPts[ptidx] - halfWin;
         Point2f prevDelta;
 
         for( j = 0; j < criteria.maxCount; j++ )
@@ -497,7 +520,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             if( inextPt.x < -winSize.width || inextPt.x >= J.cols ||
                inextPt.y < -winSize.height || inextPt.y >= J.rows )
             {
-                if( level == 0 && status )
+                if( level == 0 )
                     status[ptidx] = false;
                 break;
             }
@@ -548,18 +571,18 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
                     v_zip(v00, v01, t00, t01);
                     v_zip(v10, v11, t10, t11);
 
-                    t0 = v_dotprod(t00, qw0, qdelta) + v_dotprod(t10, qw1);
-                    t1 = v_dotprod(t01, qw0, qdelta) + v_dotprod(t11, qw1);
-                    t0 = t0 >> (W_BITS1-5);
-                    t1 = t1 >> (W_BITS1-5);
-                    diff0 = v_pack(t0, t1) - diff0;
+                    t0 = v_add(v_dotprod(t00, qw0, qdelta), v_dotprod(t10, qw1));
+                    t1 = v_add(v_dotprod(t01, qw0, qdelta), v_dotprod(t11, qw1));
+                    t0 = v_shr<W_BITS1 - 5>(t0);
+                    t1 = v_shr<W_BITS1 - 5>(t1);
+                    diff0 = v_sub(v_pack(t0, t1), diff0);
                     v_zip(diff0, diff0, diff2, diff1); // It0 It0 It1 It1 ...
                     v00 = v_reinterpret_as_s16(v_load(dIptr)); // Ix0 Iy0 Ix1 Iy1 ...
                     v01 = v_reinterpret_as_s16(v_load(dIptr + 8));
                     v_zip(v00, v01, v10, v11);
                     v_zip(diff2, diff1, v00, v01);
-                    qb0 += v_cvt_f32(v_dotprod(v00, v10));
-                    qb1 += v_cvt_f32(v_dotprod(v01, v11));
+                    qb0 = v_add(qb0, v_cvt_f32(v_dotprod(v00, v10)));
+                    qb1 = v_add(qb1, v_cvt_f32(v_dotprod(v01, v11)));
                 }
 #endif
 
@@ -647,7 +670,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
 
 #if CV_SIMD128 && !CV_NEON
             v_float32x4 qf0, qf1;
-            v_recombine(v_interleave_pairs(qb0 + qb1), v_setzero_f32(), qf0, qf1);
+            v_recombine(v_interleave_pairs(v_add(qb0, qb1)), v_setzero_f32(), qf0, qf1);
             ib1 += v_reduce_sum(qf0);
             ib2 += v_reduce_sum(qf1);
 #endif
@@ -680,7 +703,6 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             prevDelta = delta;
         }
 
-        CV_Assert(status != NULL);
         if( status[ptidx] && err && level == 0 && (flags & OPTFLOW_LK_GET_MIN_EIGENVALS) == 0 )
         {
             Point2f nextPoint = nextPts[ptidx] - halfWin;
@@ -692,8 +714,7 @@ void cv::detail::LKTrackerInvoker::operator()(const Range& range) const
             if( inextPoint.x < -winSize.width || inextPoint.x >= J.cols ||
                 inextPoint.y < -winSize.height || inextPoint.y >= J.rows )
             {
-                if( status )
-                    status[ptidx] = false;
+                status[ptidx] = false;
                 continue;
             }
 
@@ -1280,7 +1301,7 @@ void SparsePyrLKOpticalFlowImpl::calc( InputArray _prevImg, InputArray _nextImg,
     Mat statusMat = _status.getMat(), errMat;
     CV_Assert( statusMat.isContinuous() );
     uchar* status = statusMat.ptr();
-    float* err = 0;
+    float* err = nullptr;
 
     for( i = 0; i < npoints; i++ )
         status[i] = true;

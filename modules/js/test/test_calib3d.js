@@ -2,11 +2,6 @@
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
 
-if (typeof module !== 'undefined' && module.exports) {
-  // The environment is Node.js
-  var cv = require('./opencv.js'); // eslint-disable-line no-var
-}
-
 QUnit.module('Camera Calibration and 3D Reconstruction', {});
 
 QUnit.test('constants', function(assert) {

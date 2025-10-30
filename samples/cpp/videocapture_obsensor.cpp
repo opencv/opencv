@@ -1,13 +1,75 @@
+/**
+ * attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+*/
+
 #include <opencv2/videoio.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
 
 using namespace cv;
-int main()
+int main(int argc, char** argv)
 {
-    VideoCapture obsensorCapture(0, CAP_OBSENSOR);
-    if(!obsensorCapture.isOpened()){
+    cv::CommandLineParser parser(argc, argv,
+                                 "{help h ? |  | help message}"
+                                 "{dw |  | depth width }"
+                                 "{dh |  | depth height }"
+                                 "{df |  | depth fps }"
+                                 "{cw |  | color width }"
+                                 "{ch |  | color height }"
+                                 "{cf |  | depth fps }"
+
+    );
+    if (parser.has("help"))
+    {
+        parser.printMessage();
+        return 0;
+    }
+
+    std::vector<int> params;
+    if (parser.has("dw"))
+    {
+        params.push_back(CAP_PROP_OBSENSOR_DEPTH_WIDTH);
+        params.push_back(parser.get<int>("dw"));
+    }
+
+    if (parser.has("dh"))
+    {
+        params.push_back(CAP_PROP_OBSENSOR_DEPTH_HEIGHT);
+        params.push_back(parser.get<int>("dh"));
+    }
+
+    if (parser.has("df"))
+    {
+        params.push_back(CAP_PROP_OBSENSOR_DEPTH_FPS);
+        params.push_back(parser.get<int>("df"));
+    }
+
+    if (parser.has("cw"))
+    {
+        params.push_back(CAP_PROP_FRAME_WIDTH);
+        params.push_back(parser.get<int>("cw"));
+    }
+
+    if (parser.has("ch"))
+    {
+        params.push_back(CAP_PROP_FRAME_HEIGHT);
+        params.push_back(parser.get<int>("ch"));
+    }
+
+    if (parser.has("cf"))
+    {
+        params.push_back(CAP_PROP_FPS);
+        params.push_back(parser.get<int>("cf"));
+    }
+
+    VideoCapture obsensorCapture;
+
+    if (params.empty())
+        obsensorCapture.open(0, CAP_OBSENSOR);
+    else
+        obsensorCapture.open(0, CAP_OBSENSOR, params);
+    if(!obsensorCapture.isOpened()) {
         std::cerr << "Failed to open obsensor capture! Index out of range or no response from device";
         return -1;
     }
@@ -16,11 +78,29 @@ int main()
     double fy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_FY);
     double cx = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CX);
     double cy = obsensorCapture.get(CAP_PROP_OBSENSOR_INTRINSIC_CY);
+
+    double k1 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K1);
+    double k2 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K2);
+    double k3 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K3);
+    double k4 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K4);
+    double k5 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K5);
+    double k6 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_K6);
+    double p1 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1);
+    double p2 = obsensorCapture.get(CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1);
+
     std::cout << "obsensor camera intrinsic params: fx=" << fx << ", fy=" << fy << ", cx=" << cx << ", cy=" << cy << std::endl;
+    std::cout << "obsensor camera distortion params: k,p=" << k1 << ", " << k2 << ", " << k3 << ", "
+                                                           << k4 << ", " << k5 << ", " << k6 << ", "
+                                                           << p1 << ", " << p2 << std::endl;
 
     Mat image;
     Mat depthMap;
     Mat adjDepthMap;
+
+    // Minimum depth value
+    const double minVal = 300;
+    // Maximum depth value
+    const double maxVal = 5000;
     while (true)
     {
         // Grab depth map like this:
@@ -36,7 +116,7 @@ int main()
 
             if (obsensorCapture.retrieve(depthMap, CAP_OBSENSOR_DEPTH_MAP))
             {
-                normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
+                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 applyColorMap(adjDepthMap, adjDepthMap, COLORMAP_JET);
                 imshow("DEPTH", adjDepthMap);
             }
@@ -45,7 +125,7 @@ int main()
             static const float alpha = 0.6f;
             if (!image.empty() && !depthMap.empty())
             {
-                normalize(depthMap, adjDepthMap, 0, 255, NORM_MINMAX, CV_8UC1);
+                depthMap.convertTo(adjDepthMap, CV_8U, 255.0 / (maxVal - minVal), -minVal * 255.0 / (maxVal - minVal));
                 cv::resize(adjDepthMap, adjDepthMap, cv::Size(image.cols, image.rows));
                 for (int i = 0; i < image.rows; i++)
                 {

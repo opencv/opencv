@@ -54,12 +54,11 @@ public:
     /**
      * @brief Constructs a value-initialized GScalar
      *
-     * In contrast with GMat (which can be either an explicit graph input
-     * or a result of some operation), GScalars may have their values
-     * be associated at graph construction time. It is useful when
-     * some operation has a GScalar input which doesn't change during
-     * the program execution, and is set only once. In this case,
-     * there is no need to declare such GScalar as a graph input.
+     * GScalars may have their values be associated at graph
+     * construction time. It is useful when some operation has a
+     * GScalar input which doesn't change during the program
+     * execution, and is set only once. In this case, there is no need
+     * to declare such GScalar as a graph input.
      *
      * @note The value of GScalar may be overwritten by assigning some
      * other GScalar to the object using `operator=` -- on the

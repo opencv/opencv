@@ -70,7 +70,7 @@
 /* Convert matrix to vector */
 #define ICV_MAT2VEC( mat, vdata, vstep, num )      \
     if( MIN( (mat).rows, (mat).cols ) != 1 )       \
-        CV_ERROR( CV_StsBadArg, "" );              \
+        CV_ERROR( cv::Error::StsBadArg, "" );              \
     (vdata) = ((mat).data.ptr);                    \
     if( (mat).rows == 1 )                          \
     {                                              \
@@ -142,7 +142,7 @@
 #define ICV_TRAIN_DATA_REQUIRED( param, flags )                                     \
     if( !ICV_IS_MAT_OF_TYPE( (param), CV_32FC1 ) )                                  \
     {                                                                               \
-        CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );                   \
+        CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );                   \
     }                                                                               \
     else                                                                            \
     {                                                                               \
@@ -154,21 +154,21 @@
 #define ICV_TRAIN_CLASSES_REQUIRED( param )                                         \
     if( !ICV_IS_MAT_OF_TYPE( (param), CV_32FC1 ) )                                  \
     {                                                                               \
-        CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );                   \
+        CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );                   \
     }                                                                               \
     else                                                                            \
     {                                                                               \
         ICV_MAT2VEC( *(param), classes, clstep, ncl );                              \
         if( m != ncl )                                                              \
         {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Unmatched sizes" );                            \
+            CV_ERROR( cv::Error::StsBadArg, "Unmatched sizes" );                            \
         }                                                                           \
     }
 
 #define ICV_ARG_NULL( param )                                                       \
     if( (param) != NULL )                                                           \
     {                                                                               \
-        CV_ERROR( CV_StsBadArg, #param " parameter must be NULL" );                 \
+        CV_ERROR( cv::Error::StsBadArg, #param " parameter must be NULL" );                 \
     }
 
 #define ICV_MISSED_MEASUREMENTS_OPTIONAL( param, flags )                            \
@@ -176,14 +176,14 @@
     {                                                                               \
         if( !ICV_IS_MAT_OF_TYPE( param, CV_8UC1 ) )                                 \
         {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );               \
+            CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );               \
         }                                                                           \
         else                                                                        \
         {                                                                           \
             ICV_RAWDATA( *(param), (flags), missed, msstep, mcstep, mm, mn );       \
             if( mm != m || mn != n )                                                \
             {                                                                       \
-                CV_ERROR( CV_StsBadArg, "Unmatched sizes" );                        \
+                CV_ERROR( cv::Error::StsBadArg, "Unmatched sizes" );                        \
             }                                                                       \
         }                                                                           \
     }
@@ -193,13 +193,13 @@
     {                                                                               \
         if( !ICV_IS_MAT_OF_TYPE( param, CV_32SC1 ) )                                \
         {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );               \
+            CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );               \
         }                                                                           \
         else                                                                        \
         {                                                                           \
             ICV_MAT2VEC( *(param), cidx, cistep, k );                               \
             if( k > n )                                                             \
-                CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );           \
+                CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );           \
         }                                                                           \
     }
 
@@ -208,13 +208,13 @@
     {                                                                               \
         if( !ICV_IS_MAT_OF_TYPE( param, CV_32SC1 ) )                                \
         {                                                                           \
-            CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );               \
+            CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );               \
         }                                                                           \
         else                                                                        \
         {                                                                           \
             ICV_MAT2VEC( *sampleIdx, sidx, sistep, l );                             \
             if( l > m )                                                             \
-                CV_ERROR( CV_StsBadArg, "Invalid " #param " parameter" );           \
+                CV_ERROR( cv::Error::StsBadArg, "Invalid " #param " parameter" );           \
         }                                                                           \
     }
 
@@ -321,9 +321,9 @@ cvWritebackLabels( const CvMat* labels, CvMat* dst_labels,
 #define cvWritebackResponses cvWritebackLabels
 
 #define XML_FIELD_NAME "_name"
-CvFileNode* icvFileNodeGetChild(CvFileNode* father, const char* name);
-CvFileNode* icvFileNodeGetChildArrayElem(CvFileNode* father, const char* name,int index);
-CvFileNode* icvFileNodeGetNext(CvFileNode* n, const char* name);
+cv::FileNode icvFileNodeGetChild( cv::FileNode& father, const char* name );
+cv::FileNode icvFileNodeGetChildArrayElem( cv::FileNode& father, const char* name,int index );
+cv::FileNode icvFileNodeGetNext( cv::FileNode& n, const char* name );
 
 
 void cvCheckTrainData( const CvMat* train_data, int tflag,

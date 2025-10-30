@@ -578,7 +578,7 @@ static uint64_t OneStatPass(VP8Encoder* const enc, VP8RDLevel rd_opt,
   uint64_t size = 0;
   uint64_t size_p0 = 0;
   uint64_t distortion = 0;
-  const uint64_t pixel_count = nb_mbs * 384;
+  const uint64_t pixel_count = (uint64_t)nb_mbs * 384;
 
   VP8IteratorInit(enc, &it);
   SetLoopParams(enc, s->q);
@@ -689,7 +689,7 @@ static int PreLoopInitialize(VP8Encoder* const enc) {
   }
   if (!ok) {
     VP8EncFreeBitWriters(enc);  // malloc error occurred
-    WebPEncodingSetError(enc->pic_, VP8_ENC_ERROR_OUT_OF_MEMORY);
+    return WebPEncodingSetError(enc->pic_, VP8_ENC_ERROR_OUT_OF_MEMORY);
   }
   return ok;
 }
@@ -719,6 +719,7 @@ static int PostLoopFinalize(VP8EncIterator* const it, int ok) {
   } else {
     // Something bad happened -> need to do some memory cleanup.
     VP8EncFreeBitWriters(enc);
+    return WebPEncodingSetError(enc->pic_, VP8_ENC_ERROR_OUT_OF_MEMORY);
   }
   return ok;
 }
@@ -754,6 +755,11 @@ int VP8EncLoop(VP8Encoder* const enc) {
     // *then* decide how to code the skip decision if there's one.
     if (!VP8Decimate(&it, &info, rd_opt) || dont_use_skip) {
       CodeResiduals(it.bw_, &it, &info);
+      if (it.bw_->error_) {
+        // enc->pic_->error_code is set in PostLoopFinalize().
+        ok = 0;
+        break;
+      }
     } else {   // reset predictors after a skip
       ResetAfterSkip(&it);
     }
@@ -778,11 +784,12 @@ int VP8EncTokenLoop(VP8Encoder* const enc) {
   // Roughly refresh the proba eight times per pass
   int max_count = (enc->mb_w_ * enc->mb_h_) >> 3;
   int num_pass_left = enc->config_->pass;
+  int remaining_progress = 40;  // percents
   const int do_search = enc->do_search_;
   VP8EncIterator it;
   VP8EncProba* const proba = &enc->proba_;
   const VP8RDLevel rd_opt = enc->rd_opt_level_;
-  const uint64_t pixel_count = enc->mb_w_ * enc->mb_h_ * 384;
+  const uint64_t pixel_count = (uint64_t)enc->mb_w_ * enc->mb_h_ * 384;
   PassStats stats;
   int ok;
 
@@ -805,6 +812,9 @@ int VP8EncTokenLoop(VP8Encoder* const enc) {
     uint64_t size_p0 = 0;
     uint64_t distortion = 0;
     int cnt = max_count;
+    // The final number of passes is not trivial to know in advance.
+    const int pass_progress = remaining_progress / (2 + num_pass_left);
+    remaining_progress -= pass_progress;
     VP8IteratorInit(enc, &it);
     SetLoopParams(enc, stats.q);
     if (is_last_pass) {
@@ -832,7 +842,7 @@ int VP8EncTokenLoop(VP8Encoder* const enc) {
         StoreSideInfo(&it);
         VP8StoreFilterStats(&it);
         VP8IteratorExport(&it);
-        ok = VP8IteratorProgress(&it, 20);
+        ok = VP8IteratorProgress(&it, pass_progress);
       }
       VP8IteratorSaveBoundary(&it);
     } while (ok && VP8IteratorNext(&it));
@@ -878,7 +888,8 @@ int VP8EncTokenLoop(VP8Encoder* const enc) {
     ok = VP8EmitTokens(&enc->tokens_, enc->parts_ + 0,
                        (const uint8_t*)proba->coeffs_, 1);
   }
-  ok = ok && WebPReportProgress(enc->pic_, enc->percent_ + 20, &enc->percent_);
+  ok = ok && WebPReportProgress(enc->pic_, enc->percent_ + remaining_progress,
+                                &enc->percent_);
   return PostLoopFinalize(&it, ok);
 }
 

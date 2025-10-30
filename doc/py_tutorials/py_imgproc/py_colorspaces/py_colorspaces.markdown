@@ -103,9 +103,6 @@ Now you take [H-10, 100,100] and [H+10, 255, 255] as the lower bound and upper b
 from this method, you can use any image editing tools like GIMP or any online converters to find
 these values, but don't forget to adjust the HSV ranges.
 
-Additional Resources
---------------------
-
 Exercises
 ---------
 

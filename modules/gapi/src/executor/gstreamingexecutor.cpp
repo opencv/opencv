@@ -41,6 +41,10 @@ using namespace cv::gimpl::stream;
 class VideoEmitter final: public cv::gimpl::GIslandEmitter {
     cv::gapi::wip::IStreamSource::Ptr src;
 
+    virtual void halt() override {
+        src->halt();
+    }
+
     virtual bool pull(cv::GRunArg &arg) override {
         // FIXME: probably we can maintain a pool of (then) pre-allocated
         // buffers to avoid runtime allocations.
@@ -61,6 +65,10 @@ public:
 
 class ConstEmitter final: public cv::gimpl::GIslandEmitter {
     cv::GRunArg m_arg;
+
+    virtual void halt() override {
+        // Not used here, but in fact can be used.
+    }
 
     virtual bool pull(cv::GRunArg &arg) override {
         arg = const_cast<const cv::GRunArg&>(m_arg); // FIXME: variant workaround
@@ -1822,7 +1830,6 @@ bool cv::gimpl::GStreamingExecutor::pull(cv::GRunArgsP &&outs)
         default:
             GAPI_Error("Unsupported cmd type in pull");
     }
-    GAPI_Error("Unreachable code");
 }
 
 bool cv::gimpl::GStreamingExecutor::pull(cv::GOptRunArgsP &&outs)
@@ -1917,6 +1924,11 @@ void cv::gimpl::GStreamingExecutor::stop()
     // need to read the output queues until Stop!
     for (auto &q : m_emitter_queues) {
         q.push(stream::Cmd{stream::Stop{}});
+    }
+    // Also kindly ask emitter object to halt to break the blocking src->pull()
+    // loop
+    for (auto &nh : m_emitters) {
+        m_gim.metadata(nh).get<Emitter>().object->halt();
     }
 
     // Pull messages from the final queue to ensure completion

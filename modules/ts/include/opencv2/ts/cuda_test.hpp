@@ -202,6 +202,11 @@ namespace cvtest
         { \
           UnsafeTestBody(); \
         } \
+        catch (const cvtest::details::SkipTestExceptionBase& e) \
+        { \
+            printf("[     SKIP ] %s\n", e.what()); \
+            cv::cuda::resetDevice(); \
+        } \
         catch (...) \
         { \
           cv::cuda::resetDevice(); \
@@ -211,6 +216,8 @@ namespace cvtest
       void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::UnsafeTestBody()
 
     #define DIFFERENT_SIZES testing::Values(cv::Size(128, 128), cv::Size(113, 113))
+
+    #define DIFFERENT_SIZES_EXTRA testing::Values(cv::Size(13, 1), cv::Size(1, 13), cv::Size(128, 128), cv::Size(113, 113))
 
     // Depth
 

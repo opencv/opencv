@@ -5,6 +5,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../op_timvx.hpp"
+#include "../ie_ngraph.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv
@@ -138,7 +139,7 @@ public:
         // For TimVX Backend, only ELTWISE_CHANNNELS_SAME was supported.
         if (backendId == DNN_BACKEND_TIMVX && haveTimVX())
             return channelsModeInput == ELTWISE_CHANNNELS_SAME;
-        return backendId == DNN_BACKEND_OPENCV;
+        return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH;
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -368,6 +369,38 @@ public:
 #endif  // HAVE_TIMVX
         return Ptr<BackendNode>();
     }
+
+#ifdef HAVE_DNN_NGRAPH
+    virtual Ptr<BackendNode> initNgraph(const std::vector<Ptr<BackendWrapper> > &inputs,
+                                        const std::vector<Ptr<BackendNode> >& nodes) CV_OVERRIDE
+    {
+        CV_Assert(nodes.size() >= 2);
+        std::vector<ov::Output<ov::Node>> ieInpNodes(nodes.size());
+        for (size_t i = 0; i < nodes.size(); i++)
+        {
+            ieInpNodes[i] = nodes[i].dynamicCast<InfEngineNgraphNode>()->node;
+
+            float input_sc = !coeffs.empty() ? coeffs[i] : 1.0f;
+            float input_zp = op == PROD ? zeropoints[i] : 0.0f;
+            ieInpNodes[i] = ngraphDequantize(ieInpNodes[i], input_sc, input_zp);
+        }
+
+        auto res = ieInpNodes[0];
+        for (size_t i = 1; i < ieInpNodes.size(); i++)
+        {
+            switch (op) {
+                case SUM:  res = std::make_shared<ov::op::v1::Add>(res, ieInpNodes[i]); break;
+                case PROD: res = std::make_shared<ov::op::v1::Multiply>(res, ieInpNodes[i]); break;
+                case MAX:  res = std::make_shared<ov::op::v1::Maximum>(res, ieInpNodes[i]); break;
+                default: CV_Error(Error::StsNotImplemented, "Unsupported eltwise operation");
+            }
+        }
+
+        res = ngraphQuantize(res, 1.0f, offset);
+
+        return new InfEngineNgraphNode(res);
+    }
+#endif  // HAVE_DNN_NGRAPH
 
     class EltwiseInvoker : public ParallelLoopBody
     {

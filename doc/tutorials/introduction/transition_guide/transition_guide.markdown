@@ -201,7 +201,7 @@ All specialized `ocl` implementations has been hidden behind general C++ algorit
 
 New class cv::UMat is intended to hide data exchange with OpenCL device in a convenient way.
 
-Following example illustrate API modifications (from [OpenCV site](http://opencv.org/platforms/opencl.html)):
+Following example illustrate API modifications (from [OpenCV site](https://opencv.org/opencl)):
 
 -   OpenCL-aware code OpenCV-2.x
 @code{.cpp}

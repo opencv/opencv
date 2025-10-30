@@ -33,7 +33,7 @@
 #include <ppltasks.h>
 #include <concrt.h>
 #include <agile.h>
-#include <opencv2\core.hpp>
+#include <opencv2/core.hpp>
 
 #include <mutex>
 #include <memory>

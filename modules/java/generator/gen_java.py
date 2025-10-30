@@ -65,6 +65,7 @@ type_dict = {
     "char"    : { "j_type" : "char", "jn_type" : "char", "jni_type" : "jchar", "suffix" : "C" },
     "int"     : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
     "long"    : { "j_type" : "int", "jn_type" : "int", "jni_type" : "jint", "suffix" : "I" },
+    "long long" : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
     "float"   : { "j_type" : "float", "jn_type" : "float", "jni_type" : "jfloat", "suffix" : "F" },
     "double"  : { "j_type" : "double", "jn_type" : "double", "jni_type" : "jdouble", "suffix" : "D" },
     "size_t"  : { "j_type" : "long", "jn_type" : "long", "jni_type" : "jlong", "suffix" : "J" },
@@ -88,6 +89,13 @@ type_dict = {
         'suffix': 'Ljava_util_List',
         'v_type': 'string',
         'j_import': 'java.lang.String'
+    },
+    "byte[]": {
+        "j_type" : "byte[]",
+        "jn_type": "byte[]",
+        "jni_type": "jbyteArray",
+        "jni_name": "n_%(n)s",
+        "jni_var": "char* n_%(n)s = reinterpret_cast<char*>(env->GetByteArrayElements(%(n)s, NULL))",
     },
 }
 
@@ -425,6 +433,8 @@ class FuncInfo(GeneralInfo):
             arg_fix_map = func_fix_map.get(arg[1], {})
             arg[0] = arg_fix_map.get('ctype',  arg[0]) #fixing arg type
             arg[3] = arg_fix_map.get('attrib', arg[3]) #fixing arg attrib
+            if arg[0] == 'dnn_Net':
+                arg[0] = 'Net'
             self.args.append(ArgInfo(arg))
 
     def fullClassJAVA(self):
@@ -474,7 +484,7 @@ class JavaWrapperGenerator(object):
             jni_name = "(*("+classinfo.fullNameCPP()+"*)%(n)s_nativeObj)"
         type_dict.setdefault(name, {}).update(
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : jni_name,
               "jni_type" : "jlong",
               "suffix" : "J",
@@ -483,7 +493,7 @@ class JavaWrapperGenerator(object):
         )
         type_dict.setdefault(name+'*', {}).update(
             { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".nativeObj"),),
+              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
               "jni_name" : "&("+jni_name+")",
               "jni_type" : "jlong",
               "suffix" : "J",
@@ -509,14 +519,14 @@ class JavaWrapperGenerator(object):
 
         if classinfo.base:
             classinfo.addImports(classinfo.base)
-        type_dict.setdefault("Ptr_"+name, {}).update(
-            { "j_type" : classinfo.jname,
-              "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
-              "jni_name" : "*((Ptr<"+classinfo.fullNameCPP()+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
-              "suffix" : "J",
-              "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
+        if ("Ptr_"+name) not in type_dict:
+            type_dict["Ptr_"+name] = {
+                "j_type" : classinfo.jname,
+                "jn_type" : "long", "jn_args" : (("__int64", ".getNativeObjAddr()"),),
+                "jni_name" : "*((Ptr<"+classinfo.fullNameCPP()+">*)%(n)s_nativeObj)", "jni_type" : "jlong",
+                "suffix" : "J",
+                "j_import" : "org.opencv.%s.%s" % (self.module, classinfo.jname)
             }
-        )
         logging.info('ok: class %s, name: %s, base: %s', classinfo, name, classinfo.base)
 
     def add_const(self, decl, enumType=None): # [ "const cname", val, [], [] ]
@@ -581,12 +591,16 @@ class JavaWrapperGenerator(object):
             f.write(buf)
         updated_files += 1
 
-    def gen(self, srcfiles, module, output_path, output_jni_path, output_java_path, common_headers):
+    def gen(self, srcfiles, module, output_path, output_jni_path, output_java_path, common_headers,
+            preprocessor_definitions=None):
         self.clear()
         self.module = module
         self.Module = module.capitalize()
         # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
-        parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
+        parser = hdr_parser.CppHeaderParser(
+            generate_umat_decls=False,
+            preprocessor_definitions=preprocessor_definitions
+        )
 
         self.add_class( ['class cv.' + self.Module, '', [], []] ) # [ 'class/struct cname', ':bases', [modlist] [props] ]
 
@@ -686,7 +700,7 @@ class JavaWrapperGenerator(object):
             msg = "// Return type '%s' is not supported, skipping the function\n\n" % fi.ctype
             self.skipped_func_list.append(c_decl + "\n" + msg)
             j_code.write( " "*4 + msg )
-            logging.warning("SKIP:" + c_decl.strip() + "\t due to RET type " + fi.ctype)
+            logging.info("SKIP:" + c_decl.strip() + "\t due to RET type " + fi.ctype)
             return
         for a in fi.args:
             if a.ctype not in type_dict:
@@ -698,7 +712,7 @@ class JavaWrapperGenerator(object):
                 msg = "// Unknown type '%s' (%s), skipping the function\n\n" % (a.ctype, a.out or "I")
                 self.skipped_func_list.append(c_decl + "\n" + msg)
                 j_code.write( " "*4 + msg )
-                logging.warning("SKIP:" + c_decl.strip() + "\t due to ARG type " + a.ctype + "/" + (a.out or "I"))
+                logging.info("SKIP:" + c_decl.strip() + "\t due to ARG type " + a.ctype + "/" + (a.out or "I"))
                 return
 
         self.ported_func_list.append(c_decl)
@@ -729,6 +743,13 @@ class JavaWrapperGenerator(object):
                      "jdouble _tmp_retval_[%(cnt)i] = {%(args)s}; " +
                      "env->SetDoubleArrayRegion(_da_retval_, 0, %(cnt)i, _tmp_retval_);") %
                     { "cnt" : len(fields), "args" : ", ".join(["(jdouble)_retval_" + f[1] for f in fields]) } )
+            elif type_dict[fi.ctype]["jni_type"] == "jintArray":
+                fields = type_dict[fi.ctype]["jn_args"]
+                c_epilogue.append(
+                    ("jintArray _ia_retval_ = env->NewIntArray(%(cnt)i);  " +
+                    "jint _tmp_retval_[%(cnt)i] = {%(args)s}; " +
+                    "env->SetIntArrayRegion(_ia_retval_, 0, %(cnt)i, _tmp_retval_);") %
+                    { "cnt" : len(fields), "args" : ", ".join(["(jint)_retval_" + f[1] for f in fields]) } )
             if fi.classname and fi.ctype and not fi.static: # non-static class method except c-tor
                 # adding 'self'
                 jn_args.append ( ArgInfo([ "__int64", "nativeObj", "", [], "" ]) )
@@ -776,7 +797,14 @@ class JavaWrapperGenerator(object):
                     fields = type_dict[a.ctype].get("jn_args", ((a.ctype, ""),))
                     if "I" in a.out or not a.out or self.isWrapped(a.ctype): # input arg, pass by primitive fields
                         for f in fields:
-                            jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            # Use array access format for Java code when jn_type is array type
+                            if type_dict[a.ctype].get("jn_type", "").endswith("[]"):
+                                # For Java code: convert .val[0] format to [0] format
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1].replace(".val[", "["), "", [], "" ]) )
+                            else:
+                                # For non-array types, use conventional format
+                                jn_args.append ( ArgInfo([ f[0], a.name + f[1], "", [], "" ]) )
+                            # For C++ code: use conventional format as is
                             jni_args.append( ArgInfo([ f[0], a.name + normalize_field_name(f[1]), "", [], "" ]) )
                     if "O" in a.out and not self.isWrapped(a.ctype): # out arg, pass as double[]
                         jn_args.append ( ArgInfo([ "double[]", "%s_out" % a.name, "", [], "" ]) )
@@ -791,9 +819,16 @@ class JavaWrapperGenerator(object):
                             set_vals = []
                             i = 0
                             for f in fields:
-                                set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
-                                    {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
-                                )
+                                # Use array access format for Java code when jn_type is array type
+                                if type_dict[a.ctype].get("jn_type", "").endswith("[]"):
+                                    # For Java code: convert .val[0] format to [0] format
+                                    set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                        {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1].replace(".val[", "["), "i" : i}
+                                    )
+                                else:
+                                    set_vals.append( "%(n)s%(f)s = %(t)s%(n)s_out[%(i)i]" %
+                                        {"n" : a.name, "t": ("("+type_dict[f[0]]["j_type"]+")", "")[f[0]=="double"], "f" : f[1], "i" : i}
+                                    )
                                 i += 1
                             j_epilogue.append( "if("+a.name+"!=null){ " + "; ".join(set_vals) + "; } ")
 
@@ -988,6 +1023,11 @@ class JavaWrapperGenerator(object):
                 ret = "return (jlong) _retval_;"
             elif type_dict[fi.ctype]["jni_type"] == "jdoubleArray":
                 ret = "return _da_retval_;"
+            elif type_dict[fi.ctype]["jni_type"] == "jintArray":
+                ret = "return _ia_retval_;"
+            elif "jni_var" in type_dict[ret_type]:
+                c_epilogue.append(type_dict[ret_type]["jni_var"] % {"n" : '_retval_'})
+                ret = f"return {type_dict[ret_type]['jni_name'] % {'n' : '_retval_'}};"
 
             # hack: replacing func call with property set/get
             name = fi.name
@@ -1240,13 +1280,13 @@ JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete
 def copy_java_files(java_files_dir, java_base_path, default_package_path='org/opencv/'):
     global total_files, updated_files
     java_files = []
-    re_filter = re.compile(r'^.+\.(java|aidl|kt)(.in)?$')
+    re_filter = re.compile(r'^.+\.(java|kt)(.in)?$')
     for root, dirnames, filenames in os.walk(java_files_dir):
        java_files += [os.path.join(root, filename) for filename in filenames if re_filter.match(filename)]
     java_files = [f.replace('\\', '/') for f in java_files]
 
     re_package = re.compile(r'^package +(.+);')
-    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|aidl|kt)(.in)?$')
+    re_prefix = re.compile(r'^.+[\+/]([^\+]+).(java|kt)(.in)?$')
     for java_file in java_files:
         src = checkFileRemap(java_file)
         with open(src, 'r') as f:
@@ -1353,7 +1393,7 @@ def sanitize_java_documentation_string(doc, type):
                 indexDiff += 1
             lines[index + indexDiff] = lines[index + indexDiff][0:i] + lines[index + indexDiff][i + 1:]
         else:
-            if listInd and (not line or line == "*" or line.startswith("@note")):
+            if listInd and (not line or line == "*" or line.strip().startswith("@note") or line.strip().startswith("@param")):
                 lines.insert(index + indexDiff, "  "*len(listInd) + "</li>")
                 indexDiff += 1
                 del listInd[-1]
@@ -1419,7 +1459,8 @@ if __name__ == "__main__":
     java_base_path = os.path.join(dstdir, 'java'); mkdir_p(java_base_path)
     java_test_base_path = os.path.join(dstdir, 'test'); mkdir_p(java_test_base_path)
 
-    for (subdir, target_subdir) in [('src/java', 'java'), ('android/java', None), ('android-21/java', None)]:
+    for (subdir, target_subdir) in [('src/java', 'java'), ('android/java', None),
+                                    ('android-21/java', None), ('android-24/java', None)]:
         if target_subdir is None:
             target_subdir = subdir
         java_files_dir = os.path.join(SCRIPT_DIR, subdir)
@@ -1433,6 +1474,7 @@ if __name__ == "__main__":
     gen_dict_files = []
 
     print("JAVA: Processing OpenCV modules: %d" % len(config['modules']))
+    preprocessor_definitions = config.get('preprocessor_definitions', None)
     for e in config['modules']:
         (module, module_location) = (e['name'], os.path.join(ROOT_DIR, e['location']))
         logging.info("\n=== MODULE: %s (%s) ===\n" % (module, module_location))
@@ -1497,7 +1539,8 @@ if __name__ == "__main__":
             copy_java_files(java_test_files_dir, java_test_base_path, 'org/opencv/test/' + module)
 
         if len(srcfiles) > 0:
-            generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers)
+            generator.gen(srcfiles, module, dstdir, jni_path, java_path, common_headers,
+                          preprocessor_definitions)
         else:
             logging.info("No generated code for module: %s", module)
     generator.finalize(jni_path)

@@ -23,19 +23,32 @@
 
 #include "cap_obsensor_capture.hpp"
 #include "cap_obsensor/obsensor_stream_channel_interface.hpp"
-#ifdef HAVE_OBSENSOR
+#include <cstdint>
+
+#define OB_WIDTH_ANY 0
+#define OB_HEIGHT_ANY 0
+#define OB_FPS_ANY 0
+
+#if defined(HAVE_OBSENSOR) && !defined(HAVE_OBSENSOR_ORBBEC_SDK)
 namespace cv {
-Ptr<IVideoCapture> create_obsensor_capture(int index)
+Ptr<IVideoCapture> create_obsensor_capture(int index, const cv::VideoCaptureParameters& params)
 {
-    return makePtr<VideoCapture_obsensor>(index);
+    return makePtr<VideoCapture_obsensor>(index, params);
 }
 
-VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
+VideoCapture_obsensor::VideoCapture_obsensor(int index, const cv::VideoCaptureParameters& params) : isOpened_(false)
 {
     static const obsensor::StreamProfile colorProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_MJPG };
-    static const obsensor::StreamProfile depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y16};
-    static const obsensor::StreamProfile gemini2depthProfile = {1280, 800, 30, obsensor::FRAME_FORMAT_Y14};
-    static const obsensor::StreamProfile astra2depthProfile = {640, 480, 30, obsensor::FRAME_FORMAT_Y14};
+    static const obsensor::StreamProfile depthProfile = { 640, 480, 30, obsensor::FRAME_FORMAT_Y16 };
+    static const obsensor::StreamProfile gemini2DepthProfile = { 1280, 800, 30, obsensor::FRAME_FORMAT_Y16 };
+    static const obsensor::StreamProfile astra2ColorProfile = { 800, 600, 30, obsensor::FRAME_FORMAT_MJPG };
+    static const obsensor::StreamProfile astra2DepthProfile = { 800, 600, 30, obsensor::FRAME_FORMAT_Y14 };
+    static const obsensor::StreamProfile megaColorProfile = { 1280, 720, 30, obsensor::FRAME_FORMAT_MJPG };
+    static const obsensor::StreamProfile megaDepthProfile = { 640, 576, 30, obsensor::FRAME_FORMAT_Y16 };
+    static const obsensor::StreamProfile gemini2lColorProfile = { 1280, 720, 30, obsensor::FRAME_FORMAT_MJPG };
+    static const obsensor::StreamProfile gemini2lDepthProfile = { 1280, 800, 30, obsensor::FRAME_FORMAT_Y16 };
+    static const obsensor::StreamProfile gemini2XlColorProfile = { 1280, 800, 10, obsensor::FRAME_FORMAT_MJPG };
+    static const obsensor::StreamProfile gemini2XlDepthProfile = { 1280, 800, 10, obsensor::FRAME_FORMAT_Y16 };
 
     streamChannelGroup_ = obsensor::getStreamChannelGroup(index);
     if (!streamChannelGroup_.empty())
@@ -46,26 +59,57 @@ VideoCapture_obsensor::VideoCapture_obsensor(int index) : isOpened_(false)
             switch (streamType)
             {
             case obsensor::OBSENSOR_STREAM_COLOR:
-                channel->start(colorProfile, [&](obsensor::Frame* frame) {
+            {
+                uint32_t color_width = params.get<uint32_t>(CAP_PROP_FRAME_WIDTH, OB_WIDTH_ANY);
+                uint32_t color_height = params.get<uint32_t>(CAP_PROP_FRAME_HEIGHT, OB_HEIGHT_ANY);
+                uint32_t color_fps = params.get<uint32_t>(CAP_PROP_FPS, OB_FPS_ANY);
+
+                obsensor::StreamProfile profile = colorProfile;
+                if (color_width != OB_WIDTH_ANY || color_height != OB_HEIGHT_ANY || color_fps != OB_FPS_ANY) {
+                    profile = { color_width, color_height, color_fps, obsensor::FRAME_FORMAT_MJPG };
+                } else {
+                    if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
+                        profile = megaColorProfile;
+                    }else if(OBSENSOR_GEMINI2L_PID == channel->getPid()){
+                        profile = gemini2lColorProfile;
+                    }else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
+                        profile = astra2ColorProfile;
+                    }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
+                        profile = gemini2XlColorProfile;
+                    }
+                }
+                channel->start(profile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
                     colorFrame_ = Mat(1, frame->dataSize, CV_8UC1, frame->data).clone();
                     frameCv_.notify_all();
                 });
+            }
                 break;
             case obsensor::OBSENSOR_STREAM_DEPTH:
             {
                 uint8_t data = 1;
                 channel->setProperty(obsensor::DEPTH_TO_COLOR_ALIGN, &data, 1);
 
+                uint32_t depth_width = params.get<uint32_t>(CAP_PROP_OBSENSOR_DEPTH_WIDTH, OB_WIDTH_ANY);
+                uint32_t depth_height = params.get<uint32_t>(CAP_PROP_OBSENSOR_DEPTH_HEIGHT, OB_HEIGHT_ANY);
+                uint32_t depth_fps = params.get<uint32_t>(CAP_PROP_OBSENSOR_DEPTH_FPS, OB_FPS_ANY);
+
                 obsensor::StreamProfile profile = depthProfile;
-                if(OBSENSOR_GEMINI2_PID == channel->getPid()){
-                    profile = gemini2depthProfile;
+                if (depth_width != OB_WIDTH_ANY || depth_height != OB_HEIGHT_ANY || depth_fps != OB_FPS_ANY) {
+                    profile = { depth_width, depth_height, depth_fps, obsensor::FRAME_FORMAT_Y16 };
+                } else {
+                    if(OBSENSOR_GEMINI2_PID == channel->getPid()){
+                        profile = gemini2DepthProfile;
+                    }else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
+                        profile = astra2DepthProfile;
+                    }else if(OBSENSOR_FEMTO_MEGA_PID == channel->getPid()){
+                        profile = megaDepthProfile;
+                    }else if(OBSENSOR_GEMINI2L_PID == channel->getPid()){
+                        profile = gemini2lDepthProfile;
+                    }else if(OBSENSOR_GEMINI2XL_PID == channel->getPid()){
+                        profile = gemini2XlDepthProfile;
+                    }
                 }
-                else if(OBSENSOR_ASTRA2_PID == channel->getPid()){
-
-                    profile = astra2depthProfile;
-                }
-
                 channel->start(profile, [&](obsensor::Frame* frame) {
                     std::unique_lock<std::mutex> lk(frameMutex_);
                     depthFrame_ = Mat(frame->height, frame->width, CV_16UC1, frame->data, frame->width * 2).clone();
@@ -119,15 +163,32 @@ bool VideoCapture_obsensor::retrieveFrame(int outputType, OutputArray frame)
         if (!grabbedDepthFrame_.empty())
         {
             if(OBSENSOR_GEMINI2_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.8;
+                const double DepthValueScaleGemini2 = 0.2;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleGemini2;
                 Rect rect(320, 160, 640, 480);
                 grabbedDepthFrame_(rect).copyTo(frame);
             }
             else if(OBSENSOR_ASTRA2_PID == streamChannelGroup_.front()->getPid()){
-                grabbedDepthFrame_ = grabbedDepthFrame_*0.8;
+                const double DepthValueScaleAstra2 = 0.8;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleAstra2;
                 grabbedDepthFrame_.copyTo(frame);
             }
-            else{
+            else if(OBSENSOR_FEMTO_MEGA_PID == streamChannelGroup_.front()->getPid()){
+                Rect rect(0, 0, 640, 360);
+                grabbedDepthFrame_(rect).copyTo(frame);
+            }else if(OBSENSOR_GEMINI2L_PID == streamChannelGroup_.front()->getPid()){
+                const double DepthValueScaleGemini2L = 0.2;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleGemini2L;
+                Rect rect(0, 40, 1280, 720);
+                grabbedDepthFrame_(rect).copyTo(frame);
+            }else if(OBSENSOR_GEMINI2XL_PID == streamChannelGroup_.front()->getPid()){
+                grabbedDepthFrame_.copyTo(frame);
+            }else if(IS_OBSENSOR_GEMINI330_PID(streamChannelGroup_.front()->getPid())){
+                const double DepthValueScaleG300 = 1.0;
+                grabbedDepthFrame_ = grabbedDepthFrame_*DepthValueScaleG300;
+                Rect rect(0, 0, 640, 480);
+                grabbedDepthFrame_(rect).copyTo(frame);
+            }else{
                 grabbedDepthFrame_.copyTo(frame);
             }
             grabbedDepthFrame_.release();
@@ -178,7 +239,22 @@ double VideoCapture_obsensor::getProperty(int propIdx) const {
 
 bool VideoCapture_obsensor::setProperty(int propIdx, double /*propVal*/)
 {
-    CV_LOG_WARNING(NULL, "Unsupported or read only property, id=" << propIdx);
+    switch(propIdx)
+    {
+        case CAP_PROP_OBSENSOR_DEPTH_WIDTH:
+        case CAP_PROP_OBSENSOR_DEPTH_HEIGHT:
+        case CAP_PROP_OBSENSOR_DEPTH_FPS:
+            CV_LOG_WARNING(NULL, "CAP_PROP_OBSENSOR_DEPTH_WIDTH, CAP_PROP_OBSENSOR_DEPTH_HEIGHT, CAP_PROP_OBSENSOR_DEPTH_FPS options are supported during camera initialization only");
+            break;
+        case CAP_PROP_FRAME_WIDTH:
+        case CAP_PROP_FRAME_HEIGHT:
+        case CAP_PROP_FPS:
+            CV_LOG_WARNING(NULL, "CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FPS options are supported during camera initialization only");
+            break;
+        default:
+            CV_LOG_WARNING(NULL, "Unsupported or read only property, id=" << propIdx);
+    }
+
     return false;
 }
 

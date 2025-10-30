@@ -113,14 +113,16 @@ Decolor::Decolor()
     sigma = 0.02f;
 }
 
-vector<double> Decolor::product(const vector <Vec3i> &comb, const double initRGB[3])
+vector<double> Decolor::product(const vector<Vec3i> &comb, const double initRGB[3])
 {
     vector <double> res(comb.size());
     for (size_t i=0;i<comb.size();i++)
     {
         double dp = 0.0;
         for(int j=0;j<3;j++)
+        {
             dp = dp + (comb[i][j] * initRGB[j]);
+        }
         res[i] = dp;
     }
     return res;
@@ -149,22 +151,20 @@ void Decolor::gradvector(const Mat &img, vector <double> &grad) const
     singleChannelGradx(img,dest);
     singleChannelGrady(img,dest1);
 
-    Mat d_trans=dest.t();
-    Mat d1_trans=dest1.t();
-
-    const int height = d_trans.size().height;
-    const int width = d_trans.size().width;
+    // the function uses transposed dest and dest1 here and bellow
+    const int height = dest.size().width;
+    const int width = dest.size().height;
 
     grad.resize(width * height * 2);
 
     for(int i=0;i<height;i++)
         for(int j=0;j<width;j++)
-            grad[i*width + j] = d_trans.at<float>(i, j);
+            grad[i*width + j] = dest.at<float>(j, i);
 
     const int offset = width * height;
     for(int i=0;i<height;i++)
         for(int j=0;j<width;j++)
-            grad[offset + i * width + j] = d1_trans.at<float>(i, j);
+            grad[offset + i * width + j] = dest1.at<float>(j, i);
 }
 
 void Decolor::colorGrad(const Mat &img, vector <double> &Cg) const
@@ -277,7 +277,9 @@ void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
 
     int idx = 0, idx1 = 0;
     for(int r=0 ;r <=order; r++)
+    {
         for(int g=0; g<=order;g++)
+        {
             for(int b =0; b <=order;b++)
             {
                 if((r+g+b)<=order && (r+g+b) > 0)
@@ -293,6 +295,8 @@ void Decolor::grad_system(const Mat &im, vector < vector < double > > &polyGrad,
                     add_to_vector_poly(polyGrad,curGrad,idx1);
                 }
             }
+        }
+    }
 }
 
 void Decolor::wei_update_matrix(const vector < vector <double> > &poly, const vector <double> &Cg, Mat &X)
@@ -305,7 +309,6 @@ void Decolor::wei_update_matrix(const vector < vector <double> > &poly, const ve
         for (int j = 0; j < size0;j++)
             P.at<float>(i,j) = static_cast<float>(poly[i][j]);
 
-    const Mat P_trans = P.t();
     Mat B = Mat(size, size0, CV_32FC1);
     for(int i =0;i < size;i++)
     {
@@ -313,7 +316,8 @@ void Decolor::wei_update_matrix(const vector < vector <double> > &poly, const ve
             B.at<float>(i,j) = static_cast<float>(poly[i][j] * Cg[j]);
     }
 
-    Mat A = P*P_trans;
+    Mat A;
+    mulTransposed(P, A, false);
     solve(A, B, X, DECOMP_NORMAL);
 
 }
@@ -352,8 +356,11 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
     int kk =0;
 
     for(int r =0;r<=order;r++)
+    {
         for(int g=0;g<=order;g++)
+        {
             for(int b=0;b<=order;b++)
+            {
                 if((r + g + b) <=order && (r+g+b) > 0)
                 {
                     for(int i = 0;i<h;i++)
@@ -364,6 +371,9 @@ void Decolor::grayImContruct(vector <double> &wei, const Mat &img, Mat &Gray) co
 
                     kk=kk+1;
                 }
+            }
+        }
+    }
 
     double minval, maxval;
     minMaxLoc(Gray, &minval, &maxval);

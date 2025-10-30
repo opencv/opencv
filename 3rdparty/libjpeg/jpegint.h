@@ -2,7 +2,7 @@
  * jpegint.h
  *
  * Copyright (C) 1991-1997, Thomas G. Lane.
- * Modified 1997-2019 by Guido Vollbeding.
+ * Modified 1997-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -103,8 +103,7 @@ struct jpeg_downsampler {
 typedef JMETHOD(void, forward_DCT_ptr,
 		(j_compress_ptr cinfo, jpeg_component_info * compptr,
 		 JSAMPARRAY sample_data, JBLOCKROW coef_blocks,
-		 JDIMENSION start_row, JDIMENSION start_col,
-		 JDIMENSION num_blocks));
+		 JDIMENSION start_col, JDIMENSION num_blocks));
 
 struct jpeg_forward_dct {
   JMETHOD(void, start_pass, (j_compress_ptr cinfo));
@@ -115,7 +114,7 @@ struct jpeg_forward_dct {
 /* Entropy encoding */
 struct jpeg_entropy_encoder {
   JMETHOD(void, start_pass, (j_compress_ptr cinfo, boolean gather_statistics));
-  JMETHOD(boolean, encode_mcu, (j_compress_ptr cinfo, JBLOCKROW *MCU_data));
+  JMETHOD(boolean, encode_mcu, (j_compress_ptr cinfo, JBLOCKARRAY MCU_data));
   JMETHOD(void, finish_pass, (j_compress_ptr cinfo));
 };
 
@@ -211,7 +210,7 @@ struct jpeg_marker_reader {
 /* Entropy decoding */
 struct jpeg_entropy_decoder {
   JMETHOD(void, start_pass, (j_decompress_ptr cinfo));
-  JMETHOD(boolean, decode_mcu, (j_decompress_ptr cinfo, JBLOCKROW *MCU_data));
+  JMETHOD(boolean, decode_mcu, (j_decompress_ptr cinfo, JBLOCKARRAY MCU_data));
   JMETHOD(void, finish_pass, (j_decompress_ptr cinfo));
 };
 
@@ -416,8 +415,8 @@ EXTERN(void) jinit_memory_mgr JPP((j_common_ptr cinfo));
 /* Utility routines in jutils.c */
 EXTERN(long) jdiv_round_up JPP((long a, long b));
 EXTERN(long) jround_up JPP((long a, long b));
-EXTERN(void) jcopy_sample_rows JPP((JSAMPARRAY input_array, int source_row,
-				    JSAMPARRAY output_array, int dest_row,
+EXTERN(void) jcopy_sample_rows JPP((JSAMPARRAY input_array,
+				    JSAMPARRAY output_array,
 				    int num_rows, JDIMENSION num_cols));
 EXTERN(void) jcopy_block_row JPP((JBLOCKROW input_row, JBLOCKROW output_row,
 				  JDIMENSION num_blocks));

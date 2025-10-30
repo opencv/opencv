@@ -41,6 +41,10 @@ G-API documentation is organized into the following chapters:
 
 - API Reference: functions and classes
 
+    - @subpage gapi_ref
+
+      Core G-API classes, data types, backends, etc.
+
     - @subpage gapi_core
 
       Core G-API operations - arithmetic, boolean, and other matrix
@@ -50,6 +54,14 @@ G-API documentation is organized into the following chapters:
 
       Image processing functions: color space conversions, various
       filters, etc.
+
+    - @subpage gapi_video
+
+      Video processing functionality.
+
+    - @subpage gapi_draw
+
+      Drawing and composition functionality
 
 # API Example {#gapi_example}
 

@@ -1,4 +1,3 @@
-
 /* filter_neon_intrinsics.c - NEON optimised filter functions
  *
  * Copyright (c) 2018 Cosmin Truta
@@ -18,7 +17,7 @@
 /* This code requires -mfpu=neon on the command line: */
 #if PNG_ARM_NEON_IMPLEMENTATION == 1 /* intrinsics code from pngpriv.h */
 
-#if defined(_MSC_VER) && defined(_M_ARM64)
+#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_ARM64)
 #  include <arm64_neon.h>
 #else
 #  include <arm_neon.h>

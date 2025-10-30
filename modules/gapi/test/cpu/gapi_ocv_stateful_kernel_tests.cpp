@@ -165,7 +165,7 @@ namespace
             out = true;
         }
     };
-};
+}
 
 TEST(StatefulKernel, StateInitOnceInRegularMode)
 {
@@ -190,7 +190,7 @@ TEST(StatefulKernel, StateInitOnceInRegularMode)
         EXPECT_TRUE(params.pSetupsCount != nullptr);
         EXPECT_EQ(1, *params.pSetupsCount);
     }
-};
+}
 
 struct StateInitOnce : public ::testing::TestWithParam<bool>{};
 TEST_P(StateInitOnce, StreamingCompiledWithMeta)
@@ -454,6 +454,13 @@ namespace
 
 TEST(StatefulKernel, StateIsInitViaCompArgsInStreaming)
 {
+    // This test is long as it runs BG subtractor (a) twice
+    // (in G-API + for reference) over (b) two files. In fact
+    // it is one more BG Subtractor accuracy test, but not
+    // a stateful initialization test -- the latter must be
+    // done through a light-weight mock object. So for now:
+    applyTestTag(CV_TEST_TAG_VERYLONG);
+
     // G-API graph declaration
     cv::GMat in;
     cv::GMat out = GBackSub::on(in);

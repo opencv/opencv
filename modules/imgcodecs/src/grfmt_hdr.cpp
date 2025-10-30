@@ -43,6 +43,7 @@
 #include "precomp.hpp"
 #include "grfmt_hdr.hpp"
 #include "rgbe.hpp"
+#include "opencv2/core/utils/logger.hpp"
 
 #ifdef HAVE_IMGCODEC_HDR
 
@@ -59,6 +60,9 @@ HdrDecoder::HdrDecoder()
 
 HdrDecoder::~HdrDecoder()
 {
+    if(file) {
+        fclose(file);
+    }
 }
 
 size_t HdrDecoder::signatureLength() const
@@ -93,10 +97,24 @@ bool HdrDecoder::readData(Mat& _img)
     RGBE_ReadPixels_RLE(file, const_cast<float*>(img.ptr<float>()), img.cols, img.rows);
     fclose(file); file = NULL;
 
-    if(_img.depth() == img.depth()) {
-        img.convertTo(_img, _img.type());
-    } else {
-        img.convertTo(_img, _img.type(), 255);
+    // NOTE: 'img' has type CV32FC3
+    switch (_img.depth())
+    {
+        case CV_8U: img.convertTo(img, _img.depth(), 255); break;
+        case CV_32F: break;
+        default: CV_Error(Error::StsError, "Wrong expected image depth, allowed: CV_8U and CV_32F");
+    }
+    switch (_img.channels())
+    {
+        case 1: cvtColor(img, _img, COLOR_BGR2GRAY); break;
+        case 3:
+        // TODO, try to modify RGBE_ReadPixels_RLE to load rgb data directly.
+        if (m_use_rgb)
+            cv::cvtColor(img, _img, cv::COLOR_BGR2RGB);
+        else
+            img.copyTo(_img);
+        break;
+        default: CV_Error(Error::StsError, "Wrong expected image channels, allowed: 1 and 3");
     }
     return true;
 }
@@ -122,6 +140,7 @@ ImageDecoder HdrDecoder::newDecoder() const
 HdrEncoder::HdrEncoder()
 {
     m_description = "Radiance HDR (*.hdr;*.pic)";
+    m_supported_encode_key = {IMWRITE_HDR_COMPRESSION};
 }
 
 HdrEncoder::~HdrEncoder()
@@ -145,10 +164,21 @@ bool HdrEncoder::write( const Mat& input_img, const std::vector<int>& params )
     int compression = IMWRITE_HDR_COMPRESSION_RLE;
     for (size_t i = 0; i + 1 < params.size(); i += 2)
     {
+        const int value = params[i+1];
         switch (params[i])
         {
         case IMWRITE_HDR_COMPRESSION:
-            compression = params[i + 1];
+            switch(value)
+            {
+                case IMWRITE_HDR_COMPRESSION_NONE:
+                case IMWRITE_HDR_COMPRESSION_RLE:
+                    compression = value;
+                    break;
+                default:
+                    compression = IMWRITE_HDR_COMPRESSION_RLE;
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_HDR_COMPRESSION must be one of ImwriteHDRCompressionFlags. It is fallbacked to IMWRITE_HDR_COMPRESSION_RLE", value));
+                    break;
+            }
             break;
         default:
             break;

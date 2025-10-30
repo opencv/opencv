@@ -145,6 +145,12 @@ public:
         writeScalar( key, ptr);
     }
 
+    void write(const char* key, int64_t value)
+    {
+        char buf[128], *ptr = fs::itoa( value, buf, 10, true );
+        writeScalar( key, ptr);
+    }
+
     void write( const char* key, double value )
     {
         char buf[128];
@@ -208,7 +214,7 @@ public:
                     }
                     else
                     {
-                        sprintf( data, "#x%02x", (uchar)c );
+                        snprintf( data, sizeof(buf) - (data - buf), "#x%02x", (uchar)c );
                         data += 4;
                     }
                     *data++ = ';';
@@ -308,8 +314,8 @@ public:
 
         if( !multiline )
         {
-            ptr = fs->resizeWriteBuffer( ptr, len + 9 );
-            sprintf( ptr, "<!-- %s -->", comment );
+            ptr = fs->resizeWriteBuffer( ptr, len + 5+4+1 );
+            snprintf( ptr, len + 5+4+1, "<!-- %s -->", comment );
             len = (int)strlen(ptr);
         }
         else
@@ -344,7 +350,7 @@ public:
                 fs->setBufferPtr(ptr);
                 ptr = fs->flush();
             }
-            sprintf( ptr, "-->" );
+            strcpy( ptr, "-->" );
             fs->setBufferPtr(ptr + 3);
             fs->flush();
         }
@@ -556,7 +562,7 @@ public:
                     }
                     else
                     {
-                        int ival = (int)strtol( ptr, &endptr, 0 );
+                        int64_t ival = strtoll( ptr, &endptr, 0 );
                         elem->setValue(FileNode::INT, &ival);
                     }
 
@@ -737,6 +743,8 @@ public:
                 if( c != '\"' && c != '\'' )
                 {
                     ptr = skipSpaces( ptr, CV_XML_INSIDE_TAG );
+                    if(!ptr)
+                        CV_PARSE_ERROR_CPP("Invalid attribute value");
                     if( *ptr != '\"' && *ptr != '\'' )
                         CV_PARSE_ERROR_CPP( "Attribute value should be put into single or double quotes" );
                 }

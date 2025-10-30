@@ -86,9 +86,9 @@ void image_derivatives_scharr(const cv::Mat& src, cv::Mat& dst, int xorder, int 
 /**
  * @brief This function computes the Perona and Malik conductivity coefficient g1
  * g1 = exp(-|dL|^2/k^2)
- * @param Lx First order image derivative in X-direction (horizontal)
- * @param Ly First order image derivative in Y-direction (vertical)
- * @param dst Output image
+ * @param _Lx First order image derivative in X-direction (horizontal)
+ * @param _Ly First order image derivative in Y-direction (vertical)
+ * @param _dst Output image
  * @param k Contrast factor parameter
  */
 void pm_g1(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
@@ -117,9 +117,9 @@ void pm_g1(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
 /**
  * @brief This function computes the Perona and Malik conductivity coefficient g2
  * g2 = 1 / (1 + dL^2 / k^2)
- * @param Lx First order image derivative in X-direction (horizontal)
- * @param Ly First order image derivative in Y-direction (vertical)
- * @param dst Output image
+ * @param _Lx First order image derivative in X-direction (horizontal)
+ * @param _Ly First order image derivative in Y-direction (vertical)
+ * @param _dst Output image
  * @param k Contrast factor parameter
  */
 void pm_g2(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
@@ -146,9 +146,9 @@ void pm_g2(InputArray _Lx, InputArray _Ly, OutputArray _dst, float k) {
 /* ************************************************************************* */
 /**
  * @brief This function computes Weickert conductivity coefficient gw
- * @param Lx First order image derivative in X-direction (horizontal)
- * @param Ly First order image derivative in Y-direction (vertical)
- * @param dst Output image
+ * @param _Lx First order image derivative in X-direction (horizontal)
+ * @param _Ly First order image derivative in Y-direction (vertical)
+ * @param _dst Output image
  * @param k Contrast factor parameter
  * @note For more information check the following paper: J. Weickert
  * Applications of nonlinear diffusion in image processing and computer vision,
@@ -183,9 +183,9 @@ void weickert_diffusivity(InputArray _Lx, InputArray _Ly, OutputArray _dst, floa
 /**
 * @brief This function computes Charbonnier conductivity coefficient gc
 * gc = 1 / sqrt(1 + dL^2 / k^2)
-* @param Lx First order image derivative in X-direction (horizontal)
-* @param Ly First order image derivative in Y-direction (vertical)
-* @param dst Output image
+* @param _Lx First order image derivative in X-direction (horizontal)
+* @param _Ly First order image derivative in Y-direction (vertical)
+* @param _dst Output image
 * @param k Contrast factor parameter
 * @note For more information check the following paper: J. Weickert
 * Applications of nonlinear diffusion in image processing and computer vision,
@@ -323,7 +323,7 @@ void compute_scharr_derivatives(const cv::Mat& src, cv::Mat& dst, int xorder, in
  * @param _ky Vertical kernel values
  * @param dx Derivative order in X-direction (horizontal)
  * @param dy Derivative order in Y-direction (vertical)
- * @param scale_ Scale factor or derivative size
+ * @param scale Scale factor or derivative size
  */
 void compute_derivative_kernels(cv::OutputArray _kx, cv::OutputArray _ky, int dx, int dy, int scale) {
     CV_INSTRUMENT_REGION();
@@ -415,7 +415,7 @@ private:
 /* ************************************************************************* */
 /**
 * @brief This function performs a scalar non-linear diffusion step
-* @param Ld2 Output image in the evolution
+* @param Ld Output image in the evolution
 * @param c Conductivity image
 * @param Lstep Previous image in the evolution
 * @param stepsize The step size in time units
@@ -490,7 +490,7 @@ void nld_step_scalar(cv::Mat& Ld, const cv::Mat& c, cv::Mat& Lstep, float stepsi
 /* ************************************************************************* */
 /**
 * @brief This function downsamples the input image using OpenCV resize
-* @param img Input image to be downsampled
+* @param src Input image to be downsampled
 * @param dst Output image with half of the resolution of the input image
 */
 void halfsample_image(const cv::Mat& src, cv::Mat& dst) {

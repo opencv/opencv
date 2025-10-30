@@ -253,6 +253,7 @@ INSTANTIATE_TEST_CASE_P(Split4PerfTestFluid, Split4PerfTest,
 INSTANTIATE_TEST_CASE_P(Merge3PerfTestFluid, Merge3PerfTest,
     Combine(Values(AbsExact().to_compare_f()),
             Values(szSmall128, szVGA, sz720p, sz1080p),
+            Values(CV_8U, CV_16S, CV_16U, CV_32F),
             Values(cv::compile_args(CORE_FLUID))));
 
 INSTANTIATE_TEST_CASE_P(Merge4PerfTestFluid, Merge4PerfTest,

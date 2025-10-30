@@ -44,21 +44,21 @@
 //
 //M*/
 
-#if depth == 0
+#if SRC_DEPTH == 0
     #define DATA_TYPE uchar
     #define MAX_NUM  255
     #define HALF_MAX_NUM 128
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_uchar_sat(num)
     #define DEPTH_0
-#elif depth == 2
+#elif SRC_DEPTH == 2
     #define DATA_TYPE ushort
     #define MAX_NUM  65535
     #define HALF_MAX_NUM 32768
     #define COEFF_TYPE int
     #define SAT_CAST(num) convert_ushort_sat(num)
     #define DEPTH_2
-#elif depth == 5
+#elif SRC_DEPTH == 5
     #define DATA_TYPE float
     #define MAX_NUM  1.0f
     #define HALF_MAX_NUM 0.5f
@@ -76,8 +76,8 @@ enum
     xyz_shift  = 12,
 };
 
-#define scnbytes ((int)sizeof(DATA_TYPE)*scn)
-#define dcnbytes ((int)sizeof(DATA_TYPE)*dcn)
+#define scnbytes ((int)sizeof(DATA_TYPE)*SCN)
+#define dcnbytes ((int)sizeof(DATA_TYPE)*DCN)
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
@@ -167,11 +167,11 @@ __kernel void XYZ2RGB(__global const uchar * srcptr, int src_step, int src_offse
                 DATA_TYPE dst0 = SAT_CAST(b);
                 DATA_TYPE dst1 = SAT_CAST(g);
                 DATA_TYPE dst2 = SAT_CAST(r);
-#if dcn == 3 || defined DEPTH_5
+#if DCN == 3 || defined DEPTH_5
                 dst[0] = dst0;
                 dst[1] = dst1;
                 dst[2] = dst2;
-#if dcn == 4
+#if DCN == 4
                 dst[3] = MAX_NUM;
 #endif
 #else
@@ -403,7 +403,7 @@ __kernel void Lab2BGR(__global const uchar * src, int src_step, int src_offset,
 #endif
                     coeffs, lThresh, fThresh);
 
-#if dcn == 3
+#if DCN == 3
                 dst_ptr[0] = SAT_CAST(dstbuf[0] * 255.0f);
                 dst_ptr[1] = SAT_CAST(dstbuf[1] * 255.0f);
                 dst_ptr[2] = SAT_CAST(dstbuf[2] * 255.0f);
@@ -455,7 +455,7 @@ __kernel void Lab2BGR(__global const uchar * srcptr, int src_step, int src_offse
                     coeffs, lThresh, fThresh);
 
                 dst[0] = dstbuf[0], dst[1] = dstbuf[1], dst[2] = dstbuf[2];
-#if dcn == 4
+#if DCN == 4
                 dst[3] = MAX_NUM;
 #endif
                 ++y;
@@ -644,7 +644,7 @@ __kernel void Luv2BGR(__global const uchar * srcptr, int src_step, int src_offse
                 dst[0] = R;
                 dst[1] = G;
                 dst[2] = B;
-#if dcn == 4
+#if DCN == 4
                 dst[3] = MAX_NUM;
 #endif
                 ++y;
@@ -717,7 +717,7 @@ __kernel void Luv2BGR(__global const uchar * src, int src_step, int src_offset,
                 uchar dst1 = SAT_CAST(G * 255.0f);
                 uchar dst2 = SAT_CAST(B * 255.0f);
 
-#if dcn == 4
+#if DCN == 4
                 *(__global uchar4 *)dst = (uchar4)(dst0, dst1, dst2, MAX_NUM);
 #else
                 dst[0] = dst0;

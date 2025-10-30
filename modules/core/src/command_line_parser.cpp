@@ -464,7 +464,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == true)
             {
-                throw cv::Exception(CV_StsParseError,
+                throw cv::Exception(cv::Error::StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -484,7 +484,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
         {
             if (begin == false)
             {
-                throw cv::Exception(CV_StsParseError,
+                throw cv::Exception(cv::Error::StsParseError,
                          String("error in split_range_string(")
                          + str
                          + String(", ")
@@ -508,7 +508,7 @@ std::vector<String> CommandLineParser::Impl::split_range_string(const String& _s
 
     if (begin == true)
     {
-        throw cv::Exception(CV_StsParseError,
+        throw cv::Exception(cv::Error::StsParseError,
                  String("error in split_range_string(")
                  + str
                  + String(", ")
