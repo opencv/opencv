@@ -63,9 +63,6 @@ including support for ICC v2/v4/v5 and iccMAX specifications.
 
 namespace cv {
 
-//! @addtogroup imgproc_color_icc
-//! @{
-
 /** @brief ICC Profile version types
 */
 enum IccProfileVersion {
