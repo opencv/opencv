@@ -467,10 +467,6 @@
 "test_nesterov_momentum",  // Issues::Layer does not exist (NesterovsAcceleratedGradient) Can't create layer "onnx_node_output_0!X_new" of type "ai.onnx.preview.training.Momentum" in function 'getLayerInstance'
 "test_nllloss_NCd1d2_reduction_sum_expanded",
 "test_nllloss_NCd1d2d3d4d5_mean_weight_expanded",
-"test_onehot_negative_indices",  // Issue:: Layer does not exist (OneHot) :: Can't create layer "onnx_node_output_0!y" of type "OneHot" in function 'getLayerInstance'
-"test_onehot_with_axis",  // ---- same as above ---
-"test_onehot_with_negative_axis",  // ---- same as above ---
-"test_onehot_without_axis",  // ---- same as above ---
 "test_optional_get_element",  // Issue::out of memory :: Failed to allocate 1044051907127083008 bytes in function 'OutOfMemoryError'
 "test_optional_get_element_optional_sequence",
 "test_optional_get_element_optional_tensor",

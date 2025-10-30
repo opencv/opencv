@@ -556,6 +556,13 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GridSampleLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS OneHotLayer : public Layer
+    {
+    public:
+        int axis;
+        static Ptr<OneHotLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:

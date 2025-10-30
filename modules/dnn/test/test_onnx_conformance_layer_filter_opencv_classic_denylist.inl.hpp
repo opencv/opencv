@@ -572,3 +572,7 @@
 "test_gridsample_volumetric_bilinear_align_corners_1",
 "test_gridsample_volumetric_nearest_align_corners_0",
 "test_gridsample_volumetric_nearest_align_corners_1",
+"test_onehot_negative_indices",
+"test_onehot_with_axis",
+"test_onehot_with_negative_axis",
+"test_onehot_without_axis",

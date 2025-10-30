@@ -115,6 +115,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Unsqueeze,      UnsqueezeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(IsNaN,          IsNaNLayer);
     CV_DNN_REGISTER_LAYER_CLASS(IsInf,          IsInfLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(OneHot,         OneHotLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Det,            DetLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CenterCropPad,  CenterCropPadLayer);
     CV_DNN_REGISTER_LAYER_CLASS(BitShift,       BitShiftLayer);
