@@ -68,7 +68,7 @@ namespace cv {
 
 /** @brief ICC Profile version types
 */
-enum IccProfileVersion : int {
+enum IccProfileVersion {
     ICC_PROFILE_V2    = 0x02000000,  //!< ICC Profile version 2
     ICC_PROFILE_V4    = 0x04000000,  //!< ICC Profile version 4
     ICC_PROFILE_V5    = 0x05000000,  //!< ICC Profile version 5
@@ -77,7 +77,7 @@ enum IccProfileVersion : int {
 
 /** @brief Color appearance model types for perceptual transformations
 */
-enum ColorAppearanceModel : int {
+enum ColorAppearanceModel {
     CAM_NONE          = 0,   //!< No color appearance model
     CAM02             = 1,   //!< CIECAM02 color appearance model
     CAM16             = 2    //!< CAM16 color appearance model (CIECAM02 successor)
@@ -85,7 +85,7 @@ enum ColorAppearanceModel : int {
 
 /** @brief ICC rendering intents
 */
-enum IccRenderingIntent : int {
+enum IccRenderingIntent {
     ICC_PERCEPTUAL            = 0,   //!< Perceptual rendering intent
     ICC_RELATIVE_COLORIMETRIC = 1,   //!< Relative colorimetric rendering intent
     ICC_SATURATION            = 2,   //!< Saturation rendering intent
@@ -102,8 +102,10 @@ enum IccRenderingIntent : int {
  * - High-precision floating-point processing
  * - Color appearance models (CAM02/CAM16)
  * - Perceptual adaptation and viewing conditions
+ *
+ * @note Python bindings are temporarily disabled for this class.
  */
-class CV_EXPORTS_W IccProfile {
+class CV_EXPORTS IccProfile {
 public:
     /** @brief Default constructor
      */
@@ -132,7 +134,7 @@ public:
      * @param filename Path to ICC profile file
      * @return true if profile loaded successfully
      */
-    CV_WRAP bool load(const String& filename);
+    bool load(const String& filename);
 
     /** @brief Load ICC profile from data buffer
      * @param data ICC profile data buffer
@@ -149,47 +151,47 @@ public:
     /** @brief Check if profile is valid and loaded
      * @return true if profile is valid
      */
-    CV_WRAP bool isValid() const;
+    bool isValid() const;
 
     /** @brief Get ICC profile version
      * @return ICC profile version
      */
-    CV_WRAP IccProfileVersion getVersion() const;
+    IccProfileVersion getVersion() const;
 
     /** @brief Get profile color space signature
      * @return Color space signature as string
      */
-    CV_WRAP String getColorSpace() const;
+    String getColorSpace() const;
 
     /** @brief Get profile connection space signature
      * @return PCS signature as string
      */
-    CV_WRAP String getPCS() const;
+    String getPCS() const;
 
     /** @brief Get number of input channels
      * @return Number of input channels
      */
-    CV_WRAP int getInputChannels() const;
+    int getInputChannels() const;
 
     /** @brief Get number of output channels
      * @return Number of output channels
      */
-    CV_WRAP int getOutputChannels() const;
+    int getOutputChannels() const;
 
     /** @brief Check if profile supports floating-point processing
      * @return true if floating-point processing is supported
      */
-    CV_WRAP bool supportsFloat() const;
+    bool supportsFloat() const;
 
     /** @brief Check if profile supports HDR processing
      * @return true if HDR processing is supported
      */
-    CV_WRAP bool supportsHDR() const;
+    bool supportsHDR() const;
 
     /** @brief Get profile description
      * @return Profile description string
      */
-    CV_WRAP String getDescription() const;
+    String getDescription() const;
 
 private:
     class Impl;
@@ -197,8 +199,10 @@ private:
 };
 
 /** @brief Viewing conditions for color appearance models
+ *
+ * @note Python bindings are temporarily disabled for this struct.
  */
-struct CV_EXPORTS_W ViewingConditions {
+struct CV_EXPORTS ViewingConditions {
     /** @brief White point chromaticity (xy)
      */
     Point2f whitePoint;
@@ -242,12 +246,12 @@ struct CV_EXPORTS_W ViewingConditions {
  * - Apply appropriate color appearance model
  * - Specify viewing conditions when using CAM02/CAM16
  */
-CV_EXPORTS_W void colorProfileTransform(InputArray src, OutputArray dst,
-                                       const IccProfile& srcProfile,
-                                       const IccProfile& dstProfile,
-                                       IccRenderingIntent intent = ICC_PERCEPTUAL,
-                                       ColorAppearanceModel cam = CAM_NONE,
-                                       const ViewingConditions& viewingConditions = ViewingConditions());
+CV_EXPORTS void colorProfileTransform(InputArray src, OutputArray dst,
+                                    const IccProfile& srcProfile,
+                                    const IccProfile& dstProfile,
+                                    IccRenderingIntent intent = ICC_PERCEPTUAL,
+                                    ColorAppearanceModel cam = CAM_NONE,
+                                    const ViewingConditions& viewingConditions = ViewingConditions());
 
 /** @brief Convert single color using ICC profile transformation
  *
@@ -271,14 +275,14 @@ CV_EXPORTS void colorProfileTransformSingle(InputArray src, OutputArray dst,
  * @param colorSpace Color space name ("sRGB", "Adobe RGB", "ProPhoto RGB", "Rec2020", etc.)
  * @return ICC profile for the specified color space
  */
-CV_EXPORTS_W IccProfile createStandardProfile(const String& colorSpace);
+CV_EXPORTS IccProfile createStandardProfile(const String& colorSpace);
 
 /** @brief Get default viewing conditions for different environments
  *
  * @param environment Environment type ("office", "print", "cinema", "outdoors")
  * @return Viewing conditions appropriate for the environment
  */
-CV_EXPORTS_W ViewingConditions getStandardViewingConditions(const String& environment);
+CV_EXPORTS ViewingConditions getStandardViewingConditions(const String& environment);
 
 //! @} imgproc_color_icc
 

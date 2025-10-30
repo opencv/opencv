@@ -41,6 +41,11 @@
 #include <fstream>
 #include <vector>
 #include <memory>
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <arpa/inet.h>
+#endif
 
 namespace cv {
 
@@ -98,6 +103,22 @@ struct IccTagEntry {
     uint32_t offset;             // Offset to tag data
     uint32_t size;               // Size of tag data
 };
+
+// Helper function for network byte order conversion
+#if !defined(_WIN32) && !defined(__ARMEL__)
+// On most platforms, htonl is available from arpa/inet.h
+static uint32_t cv_htonl(uint32_t hostlong) {
+    return ::htonl(hostlong);
+}
+#else
+// Fallback implementation for platforms without htonl
+static uint32_t cv_htonl(uint32_t hostlong) {
+    return ((hostlong & 0xFF000000) >> 24) |
+           ((hostlong & 0x00FF0000) >> 8)  |
+           ((hostlong & 0x0000FF00) << 8)  |
+           ((hostlong & 0x000000FF) << 24);
+}
+#endif
 
 // ICC Profile implementation
 class IccProfile::Impl {
@@ -335,10 +356,10 @@ void colorProfileTransform(InputArray src, OutputArray dst,
     srcMat.copyTo(dstMat);
 
     // Log transformation details (for debugging)
-    CV_LOG_INFO(NULL, "ICC Transform: " + srcProfile.getColorSpace() +
-                " -> " + dstProfile.getColorSpace() +
-                ", Intent: " + std::to_string(intent) +
-                ", CAM: " + std::to_string(cam));
+    // ICC Transform: srcProfile.getColorSpace() -> dstProfile.getColorSpace()
+    (void)intent; // suppress unused parameter warning
+    (void)cam;    // suppress unused parameter warning
+    (void)viewingConditions; // suppress unused parameter warning
 }
 
 void colorProfileTransformSingle(InputArray src, OutputArray dst,
@@ -364,11 +385,11 @@ IccProfile createStandardProfile(const String& colorSpace) {
 
         // Fill with basic header structure
         IccHeader* header = reinterpret_cast<IccHeader*>(syntheticData.data());
-        header->profileSize = htonl(syntheticData.size());
-        header->version = htonl(ICC_PROFILE_V4);
-        header->deviceClass = htonl(ICC_CLASS_DISPLAY);
-        header->colorSpace = htonl(ICC_SIG_RGB);
-        header->pcs = htonl(ICC_SIG_XYZ);
+        header->profileSize = cv_htonl(static_cast<uint32_t>(syntheticData.size()));
+        header->version = cv_htonl(ICC_PROFILE_V4);
+        header->deviceClass = cv_htonl(ICC_CLASS_DISPLAY);
+        header->colorSpace = cv_htonl(ICC_SIG_RGB);
+        header->pcs = cv_htonl(ICC_SIG_XYZ);
 
         profile.load(syntheticData);
     }
@@ -400,12 +421,6 @@ ViewingConditions getStandardViewingConditions(const String& environment) {
     return vc;
 }
 
-// Helper function for htonl (host to network byte order)
-uint32_t htonl(uint32_t hostlong) {
-    return ((hostlong & 0xFF000000) >> 24) |
-           ((hostlong & 0x00FF0000) >> 8)  |
-           ((hostlong & 0x0000FF00) << 8)  |
-           ((hostlong & 0x000000FF) << 24);
-}
+
 
 } // namespace cv
