@@ -55,8 +55,7 @@ PERF_TEST_P(ECCPerfTest, findTransformECC,
                          TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 5, -1));
     }
 
-    // TODO: Update baseline for new test
-    SANITY_CHECK_NOTHING();
+    SANITY_CHECK(warpMat, 3e-3);
 }
 
 }  // namespace opencv_test
