@@ -286,8 +286,6 @@ CV_EXPORTS ViewingConditions getStandardViewingConditions(const String& environm
 
 //! @} imgproc_color_icc
 
-//! @} imgproc_color_icc
-
 } // namespace cv
 
 #endif // OPENCV_IMGPROC_ICC_HPP
