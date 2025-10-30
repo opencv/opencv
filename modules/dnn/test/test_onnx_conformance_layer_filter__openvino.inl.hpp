@@ -880,6 +880,22 @@ CASE(test_gridsample_reflection_padding)
     SKIP;
 CASE(test_gridsample_zeros_padding)
     SKIP;
+CASE(test_gridsample_bilinear_align_corners_0_additional_1)
+    SKIP;
+CASE(test_gridsample_bilinear_align_corners_1_additional_1)
+    SKIP;
+CASE(test_gridsample_nearest_align_corners_0_additional_1)
+    SKIP;
+CASE(test_gridsample_nearest_align_corners_1_additional_1)
+    SKIP;
+CASE(test_gridsample_volumetric_bilinear_align_corners_0)
+    SKIP;
+CASE(test_gridsample_volumetric_bilinear_align_corners_1)
+    SKIP;
+CASE(test_gridsample_volumetric_nearest_align_corners_0)
+    SKIP;
+CASE(test_gridsample_volumetric_nearest_align_corners_1)
+    SKIP;
 CASE(test_group_normalization_epsilon)
     // no filter
 CASE(test_group_normalization_example)
