@@ -281,8 +281,8 @@ CV_EXPORTS IccProfile createStandardProfile(const String& colorSpace);
  */
 CV_EXPORTS ViewingConditions getStandardViewingConditions(const String& environment);
 
-//! @} imgproc_color_icc
-
 } // namespace cv
+
+//! @} imgproc_color_icc
 
 #endif // OPENCV_IMGPROC_ICC_HPP
