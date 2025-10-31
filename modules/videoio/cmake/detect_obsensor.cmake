@@ -17,6 +17,7 @@ if(NOT HAVE_OBSENSOR)
         if(NOT ORBBEC_SDK_VERSION STREQUAL "1")
           # OrbbecSDK v2 loads some libraries at runtime.
           file(COPY ${OrbbecSDK_RUNTIME_RESOURCE_FILES} DESTINATION ${CMAKE_BINARY_DIR}/lib)
+          install(DIRECTORY ${OrbbecSDK_RUNTIME_RESOURCE_FILES} DESTINATION ${OPENCV_LIB_INSTALL_PATH})
         endif()
         install(FILES ${OrbbecSDK_DLL_FILES} DESTINATION ${OPENCV_LIB_INSTALL_PATH})
         ocv_install_3rdparty_licenses(OrbbecSDK ${OrbbecSDK_DIR}/LICENSE.txt)
