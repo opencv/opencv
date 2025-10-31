@@ -59,6 +59,9 @@ protected:
     std::shared_ptr<ob::VideoFrame> grabbedDepthFrame;
     std::shared_ptr<ob::Pipeline> pipe;
     std::shared_ptr<ob::Config> config;
+#if ORBBEC_SDK_VERSION_MAJOR != 1
+    std::shared_ptr<ob::Align> alignFilter;
+#endif
     CameraParam camParam;
 };
 
