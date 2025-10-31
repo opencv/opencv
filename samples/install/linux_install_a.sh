@@ -56,3 +56,11 @@ ls OpenCVModules.cmake
 # [install]
 sudo make install
 # [install]
+
+# [python-quick-check]
+echo "Python quick check:"
+python3 - <<'PY'
+import cv2
+print("OpenCV import OK, version:", cv2.__version__)
+PY
+# [python-quick-check]
