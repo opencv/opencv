@@ -71,6 +71,8 @@ PERF_TEST_P(EstimateTranslation2DPerf, EstimateTranslation2D, ESTIMATE_PARAMS)
     const int method         = get<2>(params);
     const size_t refining    = get<3>(params);
 
+    //fixed seed so the generated data are deterministic
+    cv::theRNG().state = 0x12345678;
     // ground-truth pure translation
     cv::Mat T = rngTranslationMat();
 
@@ -114,8 +116,7 @@ PERF_TEST_P(EstimateTranslation2DPerf, EstimateTranslation2D, ESTIMATE_PARAMS)
                                       /*refineIters=*/refining);
     }
 
-    // Accuracy is covered by unit tests; perf just measures runtime.
-    SANITY_CHECK_NOTHING();
+    SANITY_CHECK(T_est, 1e-6);
 }
 
 } // namespace opencv_test
