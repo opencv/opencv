@@ -406,22 +406,23 @@ void HashTsdfVolume::getBoundingBox(OutputArray boundingBox, int precision) cons
 
         std::vector<Vec3i> vi;
 #ifdef HAVE_OPENCL
-        if (useGPU)
+    if (useGPU)
+    {
+        for (int row = 0; row < hashTable.last; row++)
         {
-            for (int row = 0; row < hashTable.last; row++)
-            {
-                Vec4i idx4 = hashTable.data[row];
-                vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
-            }
+            Vec4i idx4 = hashTable.data[row];
+            vi.push_back(Vec3i(idx4[0], idx4[1], idx4[2]));
         }
-        else
+    }
+    else
 #endif
+    {
+        for (const auto& keyvalue : cpu_volumeUnits)
         {
-            for (const auto& keyvalue : cpu_volumeUnits)
-            {
-                vi.push_back(keyvalue.first);
-            }
+            vi.push_back(keyvalue.first);
         }
+    }
+
 
         if (vi.empty())
         {
