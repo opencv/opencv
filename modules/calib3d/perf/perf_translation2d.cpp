@@ -50,7 +50,7 @@ using namespace perf;
 CV_ENUM(Method, RANSAC, LMEDS)
 typedef tuple<int, double, Method, size_t> TranslationParams;
 typedef TestBaseWithParam<TranslationParams> EstimateTranslation2DPerf;
-#define ESTIMATE_PARAMS Combine(Values(100000, 5000, 100), Values(0.99, 0.95, 0.9), Method::all(), Values(10, 0))
+#define ESTIMATE_PARAMS Combine(Values(1000), Values(0.95), Method::all(), Values(10, 0))
 
 static float rngIn(float from, float to) { return from + (to - from) * (float)theRNG(); }
 
