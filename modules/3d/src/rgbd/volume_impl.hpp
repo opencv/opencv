@@ -251,25 +251,19 @@ public:
     int volumeUnitDegree;
     bool enableGrowth;
 
-#ifndef HAVE_OPENCL
-    Mat volUnitsData;
-    Mat pixNorms;
-    VolumeUnitIndexes volumeUnits;
-#else
-    VolumeUnitIndexes cpu_volumeUnits;
-
+    // Common CPU variables
     Mat cpu_volUnitsData;
     Mat cpu_pixNorms;
+    VolumeUnitIndexes cpu_volumeUnits;
+
+#ifdef HAVE_OPENCL
+    // GPU-specific variables
     UMat gpu_volUnitsData;
     UMat gpu_pixNorms;
-
     int bufferSizeDegree;
-    // per-volume-unit data
     UMat lastVisibleIndices;
     UMat isActiveFlags;
-    //TODO: remove it when there's no CPU parts
     Mat volUnitsDataCopy;
-    //TODO: move indexes.volumes to GPU
     CustomHashSet hashTable;
 #endif
 };
