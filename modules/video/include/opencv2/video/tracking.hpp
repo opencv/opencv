@@ -332,6 +332,8 @@ criteria.epsilon defines the threshold of the increment in the correlation coeff
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
 @param inputMask An optional single channel mask to indicate valid values of inputImage.
+@param templateMask An optional single channel mask to indicate valid values of templateImage.
+ The effective support is intersection of warped inputMask and templateMask.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
@@ -362,6 +364,12 @@ an exception if algorithm does not converges.
 @sa
 computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
  */
+CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
+                                      InputOutputArray warpMatrix, int motionType,
+                                      TermCriteria criteria,
+                                      InputArray inputMask, InputArray templateMask, int gaussFiltSize = 5);
+
+/** @overload */
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType,
                                       TermCriteria criteria,
