@@ -148,6 +148,7 @@ bool isIccSupported() {
 // Extended ICC API for comprehensive test compatibility (always compiled)
 
 IccProfile createStandardProfile(const String& colorSpace) {
+    (void)colorSpace; // Suppress unused parameter warning
     // Create a standard ICC profile
     IccProfile profile;
     
@@ -178,6 +179,8 @@ ViewingConditions getStandardViewingConditions(const String& environment) {
 
 void colorProfileTransformSingle(InputArray src, OutputArray dst, 
                                 const IccProfile& srcProfile, const IccProfile& dstProfile) {
+    (void)srcProfile; // Suppress unused parameter warning
+    (void)dstProfile; // Suppress unused parameter warning
     // Single color transformation - stub implementation
     dst.create(src.size(), src.type());
     src.copyTo(dst);
@@ -185,6 +188,8 @@ void colorProfileTransformSingle(InputArray src, OutputArray dst,
 
 void colorProfileTransform(InputArray src, OutputArray dst,
                           const IccProfile& srcProfile, const IccProfile& dstProfile) {
+    (void)srcProfile; // Suppress unused parameter warning
+    (void)dstProfile; // Suppress unused parameter warning
     // 4-parameter ICC transform - stub implementation  
     dst.create(src.size(), src.type());
     src.copyTo(dst);
@@ -194,6 +199,11 @@ void colorProfileTransform(InputArray src, OutputArray dst,
                           const IccProfile& srcProfile, const IccProfile& dstProfile,
                           int renderingIntent, int cam,
                           const ViewingConditions& vc) {
+    (void)srcProfile; // Suppress unused parameter warning
+    (void)dstProfile; // Suppress unused parameter warning  
+    (void)renderingIntent; // Suppress unused parameter warning
+    (void)cam; // Suppress unused parameter warning
+    (void)vc; // Suppress unused parameter warning
     // Full ICC transform with viewing conditions - stub implementation
     dst.create(src.size(), src.type());
     src.copyTo(dst);
