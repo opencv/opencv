@@ -382,6 +382,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
             cvtColormRGBA2RGBA(_src, _dst);
             break;
 
+#ifdef OPENCV_ENABLE_ICC
         // ICC Profile-based color conversions
         case COLOR_ICC_PROFILE_TRANSFORM:
         case COLOR_ICC_PERCEPTUAL:
@@ -393,6 +394,7 @@ void cvtColor( InputArray _src, OutputArray _dst, int code, int dcn, AlgorithmHi
             // ICC transformations require profile information
             // These codes are reserved for use with colorProfileTransform() function
             CV_Error( cv::Error::StsBadArg, "ICC color conversion requires profile information. Use colorProfileTransform() instead of cvtColor()." );
+#endif
             break;
 
         default:

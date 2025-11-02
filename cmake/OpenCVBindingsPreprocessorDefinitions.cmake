@@ -38,6 +38,10 @@ function(ocv_bindings_generator_populate_preprocessor_definitions
     ocv_add_definition(OPENCV_HAVE_FILESYSTEM_SUPPORT 1)
   endif()
 
+  if(OPENCV_ENABLE_ICC)
+    ocv_add_definition(OPENCV_ENABLE_ICC 1)
+  endif()
+
   ocv_add_definition(OPENCV_BINDINGS_PARSER 1)
 
   # Implementation details definitions, having no impact on how bindings are

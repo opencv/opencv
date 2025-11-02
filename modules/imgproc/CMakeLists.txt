@@ -16,6 +16,13 @@ if(OPENCV_CORE_EXCLUDE_C_API)
   ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_EXCLUDE_C_API=1")
 endif()
 
+# ICC Color Management support
+OCV_OPTION(OPENCV_ENABLE_ICC "Enable ICC v5/iccMAX Color Management support (EXPERIMENTAL)" OFF)
+if(OPENCV_ENABLE_ICC)
+  ocv_target_compile_definitions(${the_module} PRIVATE "OPENCV_ENABLE_ICC=1")
+  message(STATUS "ICC Color Management support is enabled")
+endif()
+
 if(HAVE_IPP)
   # OPENCV_IPP_ENABLE_ALL is defined in modules/core/CMakeList.txt
   OCV_OPTION(OPENCV_IPP_GAUSSIAN_BLUR "Enable IPP optimizations for GaussianBlur (+8Mb in binary size)" OPENCV_IPP_ENABLE_ALL)

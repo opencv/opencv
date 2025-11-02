@@ -873,7 +873,7 @@ enum ColorConversionCodes {
     COLOR_RGBA2YUV_YUNV = COLOR_RGBA2YUV_YUY2, //!< synonym to YUY2
     COLOR_BGRA2YUV_YUNV = COLOR_BGRA2YUV_YUY2, //!< synonym to YUY2
 
-    //! ICC Profile-based color conversions
+    //! ICC Profile-based color conversions (constants always available, functions conditional on OPENCV_ENABLE_ICC)
     COLOR_ICC_PROFILE_TRANSFORM = 156, //!< Convert using ICC profile transformation with specified profiles
     COLOR_ICC_PERCEPTUAL        = 157, //!< ICC perceptual rendering intent
     COLOR_ICC_RELATIVE_COLORIMETRIC = 158, //!< ICC relative colorimetric rendering intent
@@ -882,7 +882,7 @@ enum ColorConversionCodes {
     COLOR_ICC_CAM02             = 161, //!< ICC with CIECAM02 color appearance model
     COLOR_ICC_CAM16             = 162, //!< ICC with CAM16 color appearance model
 
-    COLOR_COLORCVT_MAX  = 170
+    COLOR_COLORCVT_MAX  = 170  //!< Maximum color conversion code (includes ICC constants)
 };
 
 //! @addtogroup imgproc_shape
@@ -5168,6 +5168,37 @@ Point LineIterator::pos() const
 //! @endcond
 
 //! @} imgproc_draw
+
+//! @addtogroup imgproc_color
+//! @{
+
+/** @brief Apply ICC color profile transformation between color spaces.
+
+@param src Source image
+@param dst Destination image  
+@param srcProfilePath Path to source ICC profile
+@param dstProfilePath Path to destination ICC profile
+@param renderingIntent Rendering intent for the transformation
+*/
+CV_WRAP CV_EXPORTS void colorProfileTransform(InputArray src, OutputArray dst,
+                                    const String& srcProfilePath,
+                                    const String& dstProfilePath,
+                                    int renderingIntent = 0);
+
+/** @brief Create a standard ICC profile path for common color spaces.
+
+@param colorSpace Name of the color space (e.g., "sRGB", "Adobe RGB")
+@return Path to the standard ICC profile
+*/
+CV_WRAP CV_EXPORTS String createStandardProfilePath(const String& colorSpace);
+
+/** @brief Check if ICC color management support is available.
+
+@return true if ICC support is available, false otherwise
+*/
+CV_WRAP CV_EXPORTS bool isIccSupported();
+
+//! @} imgproc_color
 
 //! @} imgproc
 
