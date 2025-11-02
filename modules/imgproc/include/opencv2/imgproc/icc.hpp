@@ -75,6 +75,28 @@ String createStandardProfilePath(const String& colorSpace);
 
 bool isIccSupported();
 
+// Constants for backward compatibility with tests  
+const int ICC_PERCEPTUAL = INTENT_PERCEPTUAL;
+const int ICC_RELATIVE_COLORIMETRIC = INTENT_RELATIVE_COLORIMETRIC;
+const int ICC_SATURATION = INTENT_SATURATION;
+const int ICC_ABSOLUTE_COLORIMETRIC = INTENT_ABSOLUTE_COLORIMETRIC;
+const int CAM02 = CAM_CAM02;
+const int CAM16 = CAM_CAM16;
+
+// Additional functions for comprehensive ICC API (always declared, implementation conditional)
+IccProfile createStandardProfile(const String& colorSpace);
+ViewingConditions getStandardViewingConditions(const String& environment);
+void colorProfileTransformSingle(InputArray src, OutputArray dst, 
+                                const IccProfile& srcProfile, const IccProfile& dstProfile);
+
+// Overloaded versions for different parameter combinations
+void colorProfileTransform(InputArray src, OutputArray dst,
+                          const IccProfile& srcProfile, const IccProfile& dstProfile);
+void colorProfileTransform(InputArray src, OutputArray dst,
+                          const IccProfile& srcProfile, const IccProfile& dstProfile,
+                          int renderingIntent, int cam = CAM_NONE,
+                          const ViewingConditions& vc = ViewingConditions());
+
 } // namespace cv
 
 #endif

@@ -5198,6 +5198,10 @@ CV_WRAP CV_EXPORTS String createStandardProfilePath(const String& colorSpace);
 */
 CV_WRAP CV_EXPORTS bool isIccSupported();
 
+// Forward declarations for ICC classes (full declarations in opencv2/imgproc/icc.hpp)
+class IccProfile; 
+struct ViewingConditions;
+
 //! @} imgproc_color
 
 //! @} imgproc
