@@ -264,10 +264,16 @@ public:
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
         {
-            /* only 1d, 2d and 3d convolutions supported */
+            EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT(
+                "OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+            if (engine_forced != ENGINE_CLASSIC){
+                if ((dilation.width != 1) || (dilation.height != 1))
+                return false;
+            }
+            if (ksize == 3 && preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
             if (ksize > 0 && ksize <= 3)
                 return true;
-
             return false;
         }
 #endif
@@ -1131,7 +1137,11 @@ public:
         }
 
 #ifdef HAVE_CUDA
-        if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && !blobs.empty())
+        EngineType engine_forced =
+            (EngineType)utils::getConfigurationParameterSizeT(
+                "OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+
+        if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && !blobs.empty() && engine_forced != ENGINE_CLASSIC)
         {
             std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
             CV_Assert(gout.size() == 1);
@@ -1163,20 +1173,44 @@ public:
             {
                 std::vector<Mat> inputs_host; inputs_arr.getMatVector(inputs_host);
                 const Mat& in0h = inputs_host[0];
+                if (in0h.dims != 4)
+                {
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                    return;
+                }
                 N = in0h.size[0];
                 C_in = in0h.size[1];
                 H_in = in0h.size[2];
                 W_in = in0h.size[3];
+                int expected_C_in = blobs[0].size[1] * groups;
+                if (C_in != expected_C_in)
+                {
+                    // Likely non-NCHW (e.g., NHWC) input ordering, not supported in this CUDA path
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                    return;
+                }
             }
             else
             {
                 MatShape ish = lastInputShape;
                 int dims = (int)ish.size();
                 CV_Assert(dims >= 4);
+                if (dims != 4)
+                {
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                    return;
+                }
                 N = ish[0];
                 C_in = ish[1];
                 H_in = ish[dims - 2];
                 W_in = ish[dims - 1];
+                int expected_C_in = blobs[0].size[1] * groups;
+                if (C_in != expected_C_in)
+                {
+                    // Likely non-NCHW (e.g., NHWC) input ordering, not supported in this CUDA path
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                    return;
+                }
             }
             int C_out = blobs[0].size[0];
             int kH = kernel_size[0];
@@ -1185,6 +1219,26 @@ public:
             int sW = strides.size() > 1 ? strides[1] : strides[0];
             int pH = pads_begin[0];
             int pW = pads_begin.size() > 1 ? pads_begin[1] : pads_begin[0];
+            // Handle asymmetric padding by explicit pre-padding on GPU
+            int pH_end = pads_end[0];
+            int pW_end = pads_end.size() > 1 ? pads_end[1] : pads_end[0];
+            if (pH != pH_end || pW != pW_end)
+            {
+                int H_pad = H_in + pH + pH_end;
+                int W_pad = W_in + pW + pW_end;
+                cv::cuda::GpuMat gin_padded;
+                int pad_rows = std::max(N, 1);
+                int pad_cols = std::max(C_in * H_pad * W_pad, 1);
+                gin_padded.create(pad_rows, pad_cols, CV_32F);
+                gin_padded.setTo(Scalar::all(0));
+                cuda_naive_conv::pad_nchw_fp32(
+                    (const float*)gin0.ptr<float>(),
+                    (float*)gin_padded.ptr<float>(),
+                    N, C_in, H_in, W_in, H_pad, W_pad, pH, pW);
+                gin0 = gin_padded;
+                H_in = H_pad; W_in = W_pad;
+                pH = 0; pW = 0;
+            }
             int H_out = (H_in + 2 * pH - kH) / sH + 1;
             int W_out = (W_in + 2 * pW - kW) / sW + 1;
 
@@ -1204,9 +1258,8 @@ public:
             gout[0].create(out_rows, out_cols, CV_32F);
             gout[0].setTo(Scalar::all(0));
 
-            // upload weights/bias once to device cache
-            static cv::cuda::GpuMat wdev, bdev;
-            if (wdev.empty() || (wdev.rows * wdev.cols) != (int)blobs[0].total())
+            // upload weights/bias to device (per-call to avoid cross-layer cache issues)
+            cv::cuda::GpuMat wdev, bdev;
             {
                 Mat w = blobs[0];
                 Mat w2d = w.reshape(1, w.total());
@@ -1215,16 +1268,9 @@ public:
             }
             if (hasBias())
             {
-                if (bdev.empty() || (bdev.rows * bdev.cols) != (int)blobs[1].total())
-                {
-                    Mat b = blobs[1].reshape(1, blobs[1].total());
-                    bdev.create(b.rows, b.cols, b.type());
-                    bdev.upload(b);
-                }
-            }
-            else
-            {
-                bdev.release();
+                Mat b = blobs[1].reshape(1, blobs[1].total());
+                bdev.create(b.rows, b.cols, b.type());
+                bdev.upload(b);
             }
 
             // call kernel with pitch-aware strides (elements per row)
@@ -1341,9 +1387,9 @@ public:
                 weightsMat.release();
             }
 
-            auto kind = outputs_arr.kind();
 #ifdef HAVE_CUDA
-            if (kind == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            auto kind = outputs_arr.kind();
+            if (kind == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
             {
                 // Prepare GPU output buffers
                 std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
@@ -1383,18 +1429,6 @@ public:
                 return;
             }
 #endif
-            if (kind == _InputArray::STD_VECTOR_UMAT)
-            {
-                std::vector<UMat>& uouts = outputs_arr.getUMatVecRef();
-                CV_Assert(uouts.size() == 1);
-                MatShape outshape = outputs_arr.shape(0);
-                Mat outCPU;
-                outCPU.create(outshape, inputs[0].type());
-                runFastConv(inputs[0], outCPU, fastConvImpl, nstripes, activ, reluslope, fusedAdd);
-                outCPU.copyTo(uouts[0]);
-                return;
-            }
-            // STD_VECTOR_MAT (default)
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
         }
     }

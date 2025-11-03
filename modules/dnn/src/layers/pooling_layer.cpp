@@ -191,6 +191,9 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
+            EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
@@ -374,7 +377,7 @@ public:
                     int dims = (int)ish.size();
                     CV_Assert(dims >= 3);
                     int N = ish[0];
-                    int C = (dims >= 4) ? ish[1] : 1;
+                    int C = (dims >= 4) ? ish[1] : (dims == 3 ? ish[1] : 1);
                     int H_in = (dims >= 4) ? ish[dims - 2] : 1;
                     int W_in = ish[dims - 1];
                     // Pool2D only here
@@ -397,6 +400,7 @@ public:
                     int out_cols = std::max(C * H_out * W_out, 1);
                     if (dst.empty() || dst.type() != CV_32F || dst.rows != out_rows || dst.cols != out_cols)
                         dst.create(out_rows, out_cols, CV_32F);
+
                     cv::dnn::cuda_naive_conv::maxpool2d_nchw_flatrows_fp32(
                         (const float*)gin0.ptr<float>(), (size_t)gin0.step,
                         (float*)dst.ptr<float>(), (size_t)dst.step,
@@ -442,7 +446,7 @@ public:
                     int dims = (int)ish.size();
                     CV_Assert(dims >= 3);
                     int N = ish[0];
-                    int C = (dims >= 4) ? ish[1] : 1;
+                    int C = (dims >= 4) ? ish[1] : (dims == 3 ? ish[1] : 1);
                     int H_in = (dims >= 4) ? ish[dims - 2] : 1;
                     int W_in = ish[dims - 1];
                     // Check if this is truly global average pooling: kernel equals spatial dims, stride=1, pad=0

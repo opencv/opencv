@@ -105,6 +105,9 @@ using std::sin;
 using std::sinh;
 using std::tan;
 
+// Forward declaration to allow type checks in ElementWiseLayer before definition
+struct ReLUFunctor;
+
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
 {
@@ -223,54 +226,56 @@ public:
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
 #ifdef HAVE_CUDA
-        if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
-        {
-            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
-            if (gout.size() == 1)
+        if (std::is_same<Func, ReLUFunctor>::value) {
+            if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
             {
-                cv::cuda::GpuMat gin0;
-                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+                if (gout.size() == 1)
                 {
-                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                    if (!gin.empty()) gin0 = gin[0];
-                }
-                else
-                {
-                    std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
-                    if (!inputs_cpu.empty())
+                    cv::cuda::GpuMat gin0;
+                    if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
                     {
-                        const Mat& in = inputs_cpu[0];
-                        int rows = in.rows > 0 ? in.rows : 1;
-                        Mat in2d = in.reshape(1, rows);
-                        gin0.create(in2d.rows, in2d.cols, in2d.type());
-                        gin0.upload(in2d);
+                        std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                        if (!gin.empty()) gin0 = gin[0];
                     }
-                }
-                if (!gin0.empty())
-                {
-                    if (inputs_arr.kind() != _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                    else
                     {
                         std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
                         if (!inputs_cpu.empty())
                         {
-                            MatShape ish = shape(inputs_cpu[0]);
-                            int N = ish.size() > 0 ? ish[0] : 1;
-                            Mat m2d = inputs_cpu[0].reshape(1, N);
-                            gin0.create(m2d.rows, m2d.cols, m2d.type());
-                            gin0.upload(m2d);
+                            const Mat& in = inputs_cpu[0];
+                            int rows = in.rows > 0 ? in.rows : 1;
+                            Mat in2d = in.reshape(1, rows);
+                            gin0.create(in2d.rows, in2d.cols, in2d.type());
+                            gin0.upload(in2d);
                         }
                     }
-                    cv::cuda::GpuMat& dst = gout[0];
-                    if (gin0.type() != CV_32F)
+                    if (!gin0.empty())
                     {
-                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                        if (inputs_arr.kind() != _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                        {
+                            std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
+                            if (!inputs_cpu.empty())
+                            {
+                                MatShape ish = shape(inputs_cpu[0]);
+                                int N = ish.size() > 0 ? ish[0] : 1;
+                                Mat m2d = inputs_cpu[0].reshape(1, N);
+                                gin0.create(m2d.rows, m2d.cols, m2d.type());
+                                gin0.upload(m2d);
+                            }
+                        }
+                        cv::cuda::GpuMat& dst = gout[0];
+                        if (gin0.type() != CV_32F)
+                        {
+                            cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                        }
+                        if (dst.empty() || dst.type() != CV_32F || dst.rows != gin0.rows || dst.cols != gin0.cols)
+                            dst.create(gin0.rows, gin0.cols, CV_32F);
+                        cv::dnn::cuda_naive_conv::relu_fp32_2d((const float*)gin0.ptr<float>(), (size_t)gin0.step,
+                                                             (float*)dst.ptr<float>(), (size_t)dst.step,
+                                                             gin0.rows, gin0.cols);
+                        return;
                     }
-                    if (dst.empty() || dst.type() != CV_32F || dst.rows != gin0.rows || dst.cols != gin0.cols)
-                        dst.create(gin0.rows, gin0.cols, CV_32F);
-                    cv::dnn::cuda_naive_conv::relu_fp32_2d((const float*)gin0.ptr<float>(), (size_t)gin0.step,
-                                                         (float*)dst.ptr<float>(), (size_t)dst.step,
-                                                         gin0.rows, gin0.cols);
-                    return;
                 }
             }
         }
@@ -281,6 +286,15 @@ public:
             Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
+
+#ifdef HAVE_CUDA
+        // For non-ReLU functors, if outputs are GPU mats, report not implemented to trigger CPU fallback
+        if (!std::is_same<Func, ReLUFunctor>::value &&
+            outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            CV_Error(Error::StsNotImplemented, "ElementWiseLayer: CUDA path not implemented for this operation");
+        }
+#endif
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -390,8 +404,10 @@ struct ReLUFunctor : public BaseFunctor
             return slope == 0;
         }
 #endif
+        // For CUDA backend, disable when slope != 0 (LeakyReLU) per test exclusions
+        if (backendId == DNN_BACKEND_CUDA)
+            return slope == 0.0f;
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -2603,7 +2619,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 
