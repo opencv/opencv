@@ -33,6 +33,22 @@ void conv2d_nchw_fp32(
     int C_in_per_group // input channels per group
 );
 
+// Zero-pad NCHW tensor on GPU with constant 0, writing into a larger output tensor.
+// The padded output has size [N, C, H_in + pad_top + pad_bottom, W_in + pad_left + pad_right].
+// Only top/left offsets are needed for copy; output must be pre-zeroed.
+void pad_nchw_fp32(
+    const float* d_input,          // N * C * H_in * W_in
+    float* d_output,               // N * C * H_pad * W_pad (pre-zeroed)
+    int N,
+    int C,
+    int H_in,
+    int W_in,
+    int H_pad,
+    int W_pad,
+    int pad_top,
+    int pad_left
+);
+
 // Flat FP32 ReLU: y[i] = max(x[i], 0)
 void relu_fp32(const float* d_input, float* d_output, size_t count);
 

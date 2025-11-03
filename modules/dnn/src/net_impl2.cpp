@@ -711,6 +711,21 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     bool supportGPU = (preferableBackend == DNN_BACKEND_CUDA) && haveCUDA() && !cudaInitFailed; // ignore target in new engine
     std::vector<cv::cuda::GpuMat> outGpuMats, tempGpuMats;
     CV_LOG_INFO(NULL, "DNN/CUDA: supportGPU=" << supportGPU << ", backend=" << preferableBackend << ", target=" << preferableTarget);
+    if (supportGPU) {
+        for (size_t opidx_check = 0; opidx_check < nops; ++opidx_check) {
+            const Ptr<Layer>& layer_check = prog.at(opidx_check);
+            if (!layer_check)
+                continue;
+            if (!layer_check->supportBackend(DNN_BACKEND_CUDA)) {
+                CV_LOG_INFO(NULL, "DNN/CUDA: fallback to CPU: layer '" << layer_check->name << "' (" << layer_check->type << ") does not support CUDA backend");
+                supportGPU = false;
+                break;
+            }
+        }
+        if (!supportGPU) {
+            CV_LOG_INFO(NULL, "DNN/CUDA: full-graph CPU fallback enabled for graph '" << graph->name() << "'");
+        }
+    }
 #endif
 
     std::vector<int> inpTypes, outTypes, tempTypes;
@@ -987,6 +1002,72 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 CV_Error_(Error::StsError, ("DNN: CPU forward failed for layer '%s' (%s): %s", layer->name.c_str(), layer->type.c_str(), e.what()));
             }
             CV_Assert(outMats.size() == noutputs);
+        }
+
+        try {
+            for (size_t oi = 0; oi < noutputs; ++oi) {
+                std::ostringstream oss;
+                oss << "DNN/VAL: layer '" << layer->name << "' (#" << oi << ") ";
+#ifdef HAVE_CUDA
+                if (supportGPU && ranOnGPU && oi < outGpuMats.size() && !outGpuMats[oi].empty()) {
+                    const cv::cuda::GpuMat& gm = outGpuMats[oi];
+                    int rows = gm.rows > 0 ? gm.rows : 1;
+                    int cols = gm.cols > 0 ? gm.cols : 1;
+                    Mat host;
+                    host.create(rows, cols, gm.type());
+                    gm.download(host);
+                    Mat host_cont = host.isContinuous() ? host : host.clone();
+                    Mat host_flat = host_cont.reshape(1, 1);
+                    int total = (int)host_flat.total();
+                    int nfirst = std::min(10, total);
+                    int nlast = std::min(10, std::max(total - nfirst, 0));
+                    oss << "first=";
+                    oss << "[";
+                    for (int k = 0; k < nfirst; ++k) {
+                        if (k) oss << ", ";
+                        oss << host_flat.at<float>(0, k);
+                    }
+                    oss << "]";
+                    oss << ", last=";
+                    oss << "[";
+                    for (int k = total - nlast; k < total; ++k) {
+                        if (k > total - nlast) oss << ", ";
+                        if (k >= 0) oss << host_flat.at<float>(0, k);
+                    }
+                    oss << "]";
+                    CV_LOG_INFO(NULL, oss.str());
+                    continue;
+                }
+#endif
+                if (oi < outMats.size() && !outMats[oi].empty()) {
+                    Mat m = outMats[oi];
+                    Mat m32f;
+                    if (m.depth() == CV_32F) m32f = m;
+                    else m.convertTo(m32f, CV_32F);
+                    Mat mc = m32f.isContinuous() ? m32f : m32f.clone();
+                    Mat flat = mc.reshape(1, 1);
+                    int total = (int)flat.total();
+                    int nfirst = std::min(10, total);
+                    int nlast = std::min(10, std::max(total - nfirst, 0));
+                    oss << "first=";
+                    oss << "[";
+                    for (int k = 0; k < nfirst; ++k) {
+                        if (k) oss << ", ";
+                        oss << flat.at<float>(0, k);
+                    }
+                    oss << "]";
+                    oss << ", last=";
+                    oss << "[";
+                    for (int k = total - nlast; k < total; ++k) {
+                        if (k > total - nlast) oss << ", ";
+                        if (k >= 0) oss << flat.at<float>(0, k);
+                    }
+                    oss << "]";
+                    CV_LOG_INFO(NULL, oss.str());
+                }
+            }
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, std::string("DNN/VAL: failed to dump values: ") + e.what());
         }
 
         for (i = 0; i < noutputs; i++) {

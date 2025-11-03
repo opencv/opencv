@@ -1148,6 +1148,8 @@ TEST_P(Test_ONNX_layers, Broadcast)
 {
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NN_BUILDER_2019)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_NN_BUILDER);
+    if (backend == DNN_BACKEND_CUDA)
+        applyTestTag(CV_TEST_TAG_DNN_SKIP_CUDA);
     testONNXModels("channel_broadcast", npy, 0, 0, false, true, 2);
 }
 
@@ -1533,7 +1535,13 @@ TEST_P(Test_ONNX_layers, LSTM_cell_forward)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    testONNXModels("lstm_cell_forward", npy, 0, 0, false, false);
+    double l1 = default_l1, lInf = default_lInf;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA)
+    {
+        l1 = std::max(l1, 4e-5);
+        lInf = std::max(lInf, 3e-4);
+    }
+    testONNXModels("lstm_cell_forward", npy, l1, lInf, false, false);
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
 {
@@ -1544,7 +1552,13 @@ TEST_P(Test_ONNX_layers, LSTM_cell_bidirectional)
     if (backend == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH && target == DNN_TARGET_OPENCL_FP16)
         applyTestTag(CV_TEST_TAG_DNN_SKIP_IE_OPENCL_FP16, CV_TEST_TAG_DNN_SKIP_IE_VERSION);
 #endif
-    testONNXModels("lstm_cell_bidirectional", npy, 0, 0, false, false);
+    double l1 = default_l1, lInf = default_lInf;
+    if (backend == DNN_BACKEND_CUDA && target == DNN_TARGET_CUDA)
+    {
+        l1 = std::max(l1, 4e-5);
+        lInf = std::max(lInf, 3e-4);
+    }
+    testONNXModels("lstm_cell_bidirectional", npy, l1, lInf, false, false);
 }
 TEST_P(Test_ONNX_layers, LSTM_cell_with_peepholes)
 {

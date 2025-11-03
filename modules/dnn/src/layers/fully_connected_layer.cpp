@@ -550,7 +550,8 @@ public:
                 for (size_t i = 0; i < input.size(); i++)
                 {
 #if defined(HAVE_CUDA)
-                    if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                    EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+                    if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
                     {
                         // Use our cuBLAS-based FC on GPU
                         std::vector<cv::cuda::GpuMat> gin, gout;
