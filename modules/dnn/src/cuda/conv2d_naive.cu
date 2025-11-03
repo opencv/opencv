@@ -7,6 +7,48 @@
 
 namespace cv { namespace dnn { namespace cuda_naive_conv {
 
+__global__ void pad_nchw_kernel(const float* in, float* out,
+                                int N, int C, int H_in, int W_in,
+                                int H_pad, int W_pad,
+                                int pad_top, int pad_left)
+{
+    size_t total = (size_t)N * (size_t)C * (size_t)H_in * (size_t)W_in;
+    size_t idx = (size_t)blockIdx.x * (size_t)blockDim.x + (size_t)threadIdx.x;
+    if (idx >= total) return;
+
+    int w = (int)(idx % (size_t)W_in);
+    size_t tmp = idx / (size_t)W_in;
+    int h = (int)(tmp % (size_t)H_in);
+    tmp /= (size_t)H_in;
+    int c = (int)(tmp % (size_t)C);
+    int n = (int)(tmp / (size_t)C);
+
+    size_t dst_idx = (((size_t)n * (size_t)C + (size_t)c) * (size_t)H_pad + (size_t)(h + pad_top)) * (size_t)W_pad + (size_t)(w + pad_left);
+    size_t src_idx = (((size_t)n * (size_t)C + (size_t)c) * (size_t)H_in + (size_t)h) * (size_t)W_in + (size_t)w;
+    out[dst_idx] = in[src_idx];
+}
+
+void pad_nchw_fp32(
+    const float* d_input,
+    float* d_output,
+    int N,
+    int C,
+    int H_in,
+    int W_in,
+    int H_pad,
+    int W_pad,
+    int pad_top,
+    int pad_left)
+{
+    size_t total = (size_t)N * (size_t)C * (size_t)H_in * (size_t)W_in;
+    int threads = 256;
+    int blocks = (int)((total + (size_t)threads - 1) / (size_t)threads);
+    if (blocks > 0) {
+        pad_nchw_kernel<<<blocks, threads>>>(d_input, d_output, N, C, H_in, W_in, H_pad, W_pad, pad_top, pad_left);
+        cudaDeviceSynchronize();
+    }
+}
+
 void conv2d_nchw_fp32(
     const float* d_input,
     const float* d_weights,

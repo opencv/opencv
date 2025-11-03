@@ -181,8 +181,14 @@ public:
         if (backendId == DNN_BACKEND_INFERENCE_ENGINE_NGRAPH)
             return preferableTarget == DNN_TARGET_CPU || dims == 4;
 #endif
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+            return true;
+        }
         return (backendId == DNN_BACKEND_OPENCV) ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CANN;
     }
