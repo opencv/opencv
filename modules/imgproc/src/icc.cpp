@@ -12,7 +12,7 @@ struct IccProfile::Impl {
     std::string filename;
     IccProfileVersion version;
     std::string colorSpace;
-    
+
     Impl() : valid(false), version(ICC_VERSION_4), colorSpace("sRGB") {}
 };
 
@@ -94,7 +94,7 @@ String IccProfile::getDescription() const {
     return "Simplified " + p->colorSpace + " Profile";
 }
 
-ViewingConditions::ViewingConditions() 
+ViewingConditions::ViewingConditions()
     : whitePoint(95.047f, 100.0f, 108.883f), // D65 white point
       adaptingLuminance(64.0f),
       backgroundLuminance(20.0f),
@@ -106,18 +106,18 @@ void colorProfileTransform(InputArray src, OutputArray dst,
                           const String& dstProfilePath,
                           int renderingIntent) {
     CV_UNUSED(renderingIntent);
-    
+
     Mat srcMat = src.getMat();
     CV_Assert(!srcMat.empty());
     CV_Assert(srcMat.channels() == 3);
-    
+
     dst.create(srcMat.size(), srcMat.type());
     Mat dstMat = dst.getMat();
-    
+
     // Load profiles
     IccProfile srcProfile(srcProfilePath);
     IccProfile dstProfile(dstProfilePath);
-    
+
     CV_Assert(srcProfile.isValid() && dstProfile.isValid());
     
     // Simplified implementation: just copy for now
@@ -132,12 +132,12 @@ String createStandardProfilePath(const String& colorSpace) {
         {"ProPhoto RGB", "/usr/share/color/icc/ProPhotoRGB.icc"},
         {"Rec2020", "/usr/share/color/icc/Rec2020.icc"}
     };
-    
+
     auto it = standardProfiles.find(colorSpace);
     if (it != standardProfiles.end()) {
         return it->second;
     }
-    
+
     return "/usr/share/color/icc/sRGB.icc"; // Default fallback
 }
 
@@ -151,7 +151,7 @@ IccProfile createStandardProfile(const String& colorSpace) {
     (void)colorSpace; // Suppress unused parameter warning
     // Create a standard ICC profile
     IccProfile profile;
-    
+
     // For now, return an invalid profile as this is a stub
     // In a full implementation, this would create actual ICC profiles
     return profile;
@@ -159,7 +159,7 @@ IccProfile createStandardProfile(const String& colorSpace) {
 
 ViewingConditions getStandardViewingConditions(const String& environment) {
     ViewingConditions vc;
-    
+
     if (environment == "office") {
         vc.adaptingLuminance = 64.0f;
         vc.backgroundLuminance = 20.0f;
@@ -173,11 +173,11 @@ ViewingConditions getStandardViewingConditions(const String& environment) {
         vc.backgroundLuminance = 0.0f;
         vc.surround = 0; // Dark surround
     }
-    
+
     return vc;
 }
 
-void colorProfileTransformSingle(InputArray src, OutputArray dst, 
+void colorProfileTransformSingle(InputArray src, OutputArray dst,
                                 const IccProfile& srcProfile, const IccProfile& dstProfile) {
     (void)srcProfile; // Suppress unused parameter warning
     (void)dstProfile; // Suppress unused parameter warning
@@ -190,7 +190,7 @@ void colorProfileTransform(InputArray src, OutputArray dst,
                           const IccProfile& srcProfile, const IccProfile& dstProfile) {
     (void)srcProfile; // Suppress unused parameter warning
     (void)dstProfile; // Suppress unused parameter warning
-    // 4-parameter ICC transform - stub implementation  
+    // 4-parameter ICC transform - stub implementation
     dst.create(src.size(), src.type());
     src.copyTo(dst);
 }
@@ -200,7 +200,7 @@ void colorProfileTransform(InputArray src, OutputArray dst,
                           int renderingIntent, int cam,
                           const ViewingConditions& vc) {
     (void)srcProfile; // Suppress unused parameter warning
-    (void)dstProfile; // Suppress unused parameter warning  
+    (void)dstProfile; // Suppress unused parameter warning
     (void)renderingIntent; // Suppress unused parameter warning
     (void)cam; // Suppress unused parameter warning
     (void)vc; // Suppress unused parameter warning

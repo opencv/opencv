@@ -7,12 +7,12 @@ namespace cv {
 
 enum IccProfileVersion {
     ICC_VERSION_2 = 2,
-    ICC_VERSION_4 = 4, 
+    ICC_VERSION_4 = 4,
     ICC_VERSION_5 = 5,
     ICC_MAX_VERSION = 255
 };
 
-// Constants for implementation compatibility  
+// Constants for implementation compatibility
 #define ICC_PROFILE_V2 ICC_VERSION_2
 #define ICC_PROFILE_V4 ICC_VERSION_4
 #define ICC_PROFILE_V5 ICC_VERSION_5
@@ -38,7 +38,7 @@ public:
     IccProfile(const void* data, size_t size);
     IccProfile(const std::vector<uchar>& data);
     ~IccProfile();
-    
+
     bool load(const String& filename);
     bool load(const std::vector<uchar>& data);
     bool isValid() const;
@@ -50,7 +50,7 @@ public:
     bool supportsFloat() const;
     bool supportsHDR() const;
     String getDescription() const;
-    
+
 private:
     struct Impl;
     std::shared_ptr<Impl> p;
@@ -75,7 +75,7 @@ String createStandardProfilePath(const String& colorSpace);
 
 bool isIccSupported();
 
-// Constants for backward compatibility with tests  
+// Constants for backward compatibility with tests
 const int ICC_PERCEPTUAL = INTENT_PERCEPTUAL;
 const int ICC_RELATIVE_COLORIMETRIC = INTENT_RELATIVE_COLORIMETRIC;
 const int ICC_SATURATION = INTENT_SATURATION;
@@ -86,7 +86,7 @@ const int CAM16 = CAM_CAM16;
 // Additional functions for comprehensive ICC API (always declared, implementation conditional)
 IccProfile createStandardProfile(const String& colorSpace);
 ViewingConditions getStandardViewingConditions(const String& environment);
-void colorProfileTransformSingle(InputArray src, OutputArray dst, 
+void colorProfileTransformSingle(InputArray src, OutputArray dst,
                                 const IccProfile& srcProfile, const IccProfile& dstProfile);
 
 // Overloaded versions for different parameter combinations

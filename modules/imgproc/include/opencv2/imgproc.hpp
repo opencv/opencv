@@ -5175,7 +5175,7 @@ Point LineIterator::pos() const
 /** @brief Apply ICC color profile transformation between color spaces.
 
 @param src Source image
-@param dst Destination image  
+@param dst Destination image
 @param srcProfilePath Path to source ICC profile
 @param dstProfilePath Path to destination ICC profile
 @param renderingIntent Rendering intent for the transformation
@@ -5199,7 +5199,7 @@ CV_WRAP CV_EXPORTS String createStandardProfilePath(const String& colorSpace);
 CV_WRAP CV_EXPORTS bool isIccSupported();
 
 // Forward declarations for ICC classes (full declarations in opencv2/imgproc/icc.hpp)
-class IccProfile; 
+class IccProfile;
 struct ViewingConditions;
 
 //! @} imgproc_color
