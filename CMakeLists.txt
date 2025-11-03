@@ -284,9 +284,6 @@ OCV_OPTION(WITH_WAYLAND "Include Wayland support" OFF
 OCV_OPTION(WITH_IPP "Include Intel IPP support" (NOT MINGW AND NOT CV_DISABLE_OPTIMIZATION)
   VISIBLE_IF (X86_64 OR X86) AND NOT WINRT AND NOT IOS AND NOT XROS
   VERIFY HAVE_IPP)
-OCV_OPTION(WITH_IPP_CALLS_ENFORCED "Enforce IPP calls prioritizing performance over accuracy" OFF
-  VISIBLE_IF WITH_IPP
-  VERIFY HAVE_IPP)
 OCV_OPTION(WITH_HALIDE "Include Halide support" OFF
   VISIBLE_IF TRUE
   VERIFY HAVE_HALIDE)
@@ -1762,7 +1759,6 @@ if(WITH_IPP AND HAVE_IPP)
   if(NOT HAVE_IPP_ICV)
     status("       linked:" BUILD_WITH_DYNAMIC_IPP THEN "dynamic" ELSE "static")
   endif()
-  status("       enforced IPP calls: " ${WITH_IPP_CALLS_ENFORCED})
   if(HAVE_IPP_IW)
     if(BUILD_IPP_IW)
       status("    Intel IPP IW:" "sources (${IW_VERSION_MAJOR}.${IW_VERSION_MINOR}.${IW_VERSION_UPDATE})")
