@@ -849,6 +849,10 @@ class JSWrapperGenerator(object):
                         # Register the smart pointer
                         base_class_name = variant.rettype
                         base_class_name = base_class_name.replace("Ptr<","").replace(">","").strip()
+                        if base_class_name not in self.classes:
+                            new_base_class_name = '%s_%s' % (ns_id, base_class_name)
+                            print(base_class_name, ' not found in classes for registering smart pointer using ', new_base_class_name, 'instead')
+                            base_class_name = new_base_class_name
                         self.classes[base_class_name].has_smart_ptr = True
 
                         # Adds the external constructor
