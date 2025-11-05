@@ -183,9 +183,10 @@ void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
                             pointsVec.push_back(voxelPos);
                             normalsVec.push_back(normal / static_cast<float>(cv::norm(normal)));
                             colorsVec.push_back(Vec3b(
-                                static_cast<uchar>(voxel.r),
-                                static_cast<uchar>(voxel.g),
-                                static_cast<uchar>(voxel.b)));
+                                static_cast<uchar>(voxel.r), // Explicit cast to uchar
+                                static_cast<uchar>(voxel.g), // Explicit cast to uchar
+                                static_cast<uchar>(voxel.b)  // Explicit cast to uchar
+                            ));
                         }
                     }
                 }
@@ -208,24 +209,7 @@ void fetchPointsNormalsColorsFromColorHashTsdfVolumeUnit(
     }
 }
 
-// Declare these functions before they are used
-bool integrateColorVolumeUnit(const VolumeSettings& settings, const Matx44f& cameraPose,
-                            InputArray _depth, InputArray _rgb, InputArray _pixNorms,
-                            const Vec3i& unitIdx, const Point3i& volUnitDims,
-                            float voxelSize, float trancDist, int maxWeight,
-                            const Intr& intrinsics);
-
-std::vector<Vec3i> findNewVisibleVolumeUnits(const VolumeSettings& settings, const Matx44f& cameraPose,
-                                           InputArray depth, const Intr& intrinsics,
-                                           const VolumeUnitIndexes& existingUnits,
-                                           const Point3i& volUnitDims, float voxelSize);
-
-bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrigin, const Point3f& rayDir, float tmin,
-                              float tmax, const VolumeUnitIndexes& volumeUnits, InputArray _volUnitsData,
-                              const Point3i& volUnitDims, int unitResolution, float voxelSize, float trancDist,
-                              Point3f& hitPoint, Point3f& hitNormal, Vec3b& hitColor);
-
-void raycastColorHashTsdfVolumeUnit(
+static void raycastColorHashTsdfVolumeUnit(
     const VolumeSettings& settings, const Matx44f& cameraPose, int height, int width, InputArray intr, const int volumeUnitDegree,
     InputArray _volUnitsData, const VolumeUnitIndexes& volumeUnits, OutputArray _points, OutputArray _normals, OutputArray _colors)
 {
@@ -382,13 +366,6 @@ void raycastColorHashTsdfVolumeUnit(
             }
         }
     }
-}
-
-void colorFix(ColorType& r, ColorType& g, ColorType& b) {
-    // Ensure color values are within valid range
-    r = static_cast<ColorType>(std::max(0, std::min(255, static_cast<int>(r))));
-    g = static_cast<ColorType>(std::max(0, std::min(255, static_cast<int>(g))));
-    b = static_cast<ColorType>(std::max(0, std::min(255, static_cast<int>(b))));
 }
 
 bool integrateColorVolumeUnit(
@@ -584,7 +561,11 @@ bool raycastColorHashTsdf(const VolumeSettings& settings, const Point3f& rayOrig
                         // Check if this voxel represents the surface (TSDF near zero)
                         if (voxel.weight > 0 && std::abs(tsdfToFloat(voxel.tsdf)) < trancDist * 0.1f) {
                             hitPoint = currentPos;
-                            hitColor = Vec3b(voxel.b, voxel.g, voxel.r);
+                            hitColor = Vec3b(
+                                static_cast<uchar>(voxel.b),
+                                static_cast<uchar>(voxel.g),
+                                static_cast<uchar>(voxel.r) 
+                            );
 
                             // Compute normal using gradient of TSDF values in the neighborhood
                             hitNormal = computeColorVoxelNormal(unitData, localCoord.x, localCoord.y, localCoord.z,
