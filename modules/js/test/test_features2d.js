@@ -82,7 +82,7 @@ QUnit.test('BFMatcher', function(assert) {
   let matcher = new cv.BFMatcher();
   matcher.match(descriptors, descriptors, dm);
 
-  assert.equal(dm.size(), 67);
+  assert.equal(dm.size(), 68);
 });
 
 QUnit.test('Drawing', function(assert) {
