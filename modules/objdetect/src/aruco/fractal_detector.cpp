@@ -536,7 +536,7 @@ bool FractalDetector::detect(cv::InputArray img,
         // add the points
         std::vector<cv::Point2f> markerCandidate;
         for (int j = 0; j < 4; j++)
-            markerCandidate.push_back(cv::Point2f(approxCurve[j].x, approxCurve[j].y));
+            markerCandidate.push_back(cv::Point2f(static_cast<float>(approxCurve[j].x), static_cast<float>(approxCurve[j].y)));
 
         // sort corner in clockwise direction
         markerCandidate = impl->sort(markerCandidate);
@@ -548,7 +548,7 @@ bool FractalDetector::detect(cv::InputArray img,
 
         for (auto b_vm : impl->fractalMarkerSet.bits_ids)
         {
-            int nbitsWithBorder = sqrt(b_vm.first) + 2;
+            int nbitsWithBorder = static_cast<int>(std::sqrt(b_vm.first)) + 2;
             cv::Mat bits(nbitsWithBorder, nbitsWithBorder, CV_8UC1);
             int pixelSum = 0;
 
@@ -596,7 +596,7 @@ bool FractalDetector::detect(cv::InputArray img,
     if (candidates.size() > 0) {
         ////////////////////////////////////////////
         // finally subpixel corner refinement
-        int halfwsize = 4 * float(bwimage.cols) / float(bwimage.cols) + 0.5;
+        int halfwsize = static_cast<int>(4 * static_cast<float>(bwimage.cols) / static_cast<float>(bwimage.cols) + 0.5f);
         std::vector<cv::Point2f> Corners;
         for (const auto& m : candidates)
             Corners.insert(Corners.end(), m.second.begin(), m.second.end());
@@ -689,7 +689,7 @@ bool FractalDetector::detect(cv::InputArray img,
                     if (indices.empty()) continue;
                     int nearestIdx = indices[0];
 
-                    float newDist = cv::norm(cv::Point2f(kpoints[nearestIdx].pt) - cv::Point2f(imgPoints[idx]));
+                    float newDist = static_cast<float>(cv::norm(cv::Point2f(kpoints[nearestIdx].pt) - cv::Point2f(imgPoints[idx])));
 
                     if (kpoints[nearestIdx].class_id != objKeyPoints[idx].class_id || dists[0] > 320 || dists[0] == 0) {
                         continue;
@@ -781,12 +781,12 @@ float FractalDetector::FractalDetectorImpl::getSubpixelValue(const cv::Mat& im_g
     }
     if(tl.x<0) tl.x=0;
     if(tl.y<0) tl.y=0;
-    if(tl.x>=im_grey.cols)tl.x=im_grey.cols-1;
-    if(tl.y>=im_grey.cols)tl.y=im_grey.rows-1;
-    return (1.f-decpartY)*(1.-decpartX)*float(im_grey.at<uchar>(tl.y,tl.x))+
-            decpartX*(1-decpartY)*float(im_grey.at<uchar>(tl.y,tl.x+1))+
-            (1-decpartX)*decpartY*float(im_grey.at<uchar>(tl.y+1,tl.x))+
-            decpartX*decpartY*float(im_grey.at<uchar>(tl.y+1,tl.x+1));
+    if(tl.x>=im_grey.cols-1)tl.x=im_grey.cols-2;
+    if(tl.y>=im_grey.rows-1)tl.y=im_grey.rows-2;
+    return static_cast<float>((1.f-decpartY)*(1.f-decpartX)*static_cast<float>(im_grey.at<uchar>(tl.y,tl.x))+
+            decpartX*(1.f-decpartY)*static_cast<float>(im_grey.at<uchar>(tl.y,tl.x+1))+
+            (1.f-decpartX)*decpartY*static_cast<float>(im_grey.at<uchar>(tl.y+1,tl.x))+
+            decpartX*decpartY*static_cast<float>(im_grey.at<uchar>(tl.y+1,tl.x+1)));
 }
 
 int FractalDetector::FractalDetectorImpl::getMarkerId(const cv::Mat& bits, int& nrotations, const std::vector<int>& markersId, const FractalMarkerSet& markerSet) {
@@ -963,7 +963,7 @@ void FractalDetector::FractalDetectorImpl::assignClass(const cv::Mat& im, std::v
             }
         }
 
-        int nc = newLab - 1 - unions.size();
+        int nc = static_cast<int>(newLab - 1 - unions.size());
         if (nc == 2) {
             if (nZ > thresIm.total() - nZ)
                 kp.class_id = 0;
