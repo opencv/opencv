@@ -1721,8 +1721,6 @@ The input matrix must be of type `CV_32F` or `CV_64F`; other types are not suppo
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
-CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
-
 /** @brief Performs generalized matrix multiplication.
 
 The function cv::gemm performs generalized matrix multiplication similar to the
