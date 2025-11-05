@@ -1711,10 +1711,13 @@ elements.
 */
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos = 0,
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
+/** @brief Replaces NaNs (Not-a-Number values) in a matrix with the specified value.
 
-/** @brief Replaces NaNs by given number
-@param a input/output matrix (CV_32F type).
-@param val value to convert the NaNs
+This function modifies the input matrix in-place.
+The input matrix must be of type `CV_32F` or `CV_64F`; other types are not supported.
+
+@param a Input/output matrix (CV_32F or CV_64F type).
+@param val Value used to replace NaNs (defaults to 0).
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
