@@ -7,22 +7,20 @@
 
 #include <string>
 
-std::string fractal_aruco_images[] = {
-    "hand.jpg",
-    "close.jpg",
-    "confusion.jpg",
-    "distortion.jpg",
-    "far.jpg"
-};
+//#define RECORD_POINTS
+
+std::string fractal_aruco_cases[] = { "hand", "close", "confusion", "distortion", "far" };
 
 namespace opencv_test { namespace {
 
-typedef testing::TestWithParam<std::string> CV_FractalAruco;
+typedef testing::TestWithParam<std::string> FractalArucoTest;
 
-TEST_P(CV_FractalAruco, can_detect)
+TEST_P(FractalArucoTest, detect)
 {
     const std::string& imgname = GetParam();
-    std::string imgPath = cvtest::findDataFile("fractal_aruco/" + imgname);
+    std::string imgPath = cvtest::findDataFile("fractal_aruco/" + imgname + ".jpg");
+    std::string gtPath = cvtest::findDataFile("fractal_aruco/" + imgname + ".yml");
+
     Mat image = imread(imgPath);
     ASSERT_FALSE(image.empty()) << "Can't read image: " << imgPath;
     aruco::FractalDetector detector;
@@ -30,16 +28,48 @@ TEST_P(CV_FractalAruco, can_detect)
     std::vector<Point3f> points3D;
     std::vector<Point2f> points2D;
     std::vector<aruco::FractalArucoMarker> markers;
+
     bool detected = detector.detect(image, markers, points3D, points2D);
+
+    std::vector<cv::Point3f> points3D_gt;
+    std::vector<cv::Point2f> points2D_gt;
+
+#ifdef RECORD_POINTS
+    cv::FileStorage fs(gtPath, cv::FileStorage::WRITE);
+    fs << "points_2d" << points2D;
+    fs << "points_3d" << points3D;
+    fs.release();
+
+    points3D_gt = points3D;
+    points2D_gt = points2D;
+#else
+    cv::FileStorage fs(gtPath, cv::FileStorage::READ);
+    fs["points_2d"] >> points2D_gt;
+    fs["points_3d"] >> points3D_gt;
+    fs.release();
+#endif
+
     ASSERT_TRUE(detected) << "Fractal markers detection failed in " << imgname;
-    ASSERT_GT(markers.size(), 0u) << "No fractal markers detected in " << imgname;
-    ASSERT_GT(points2D.size(), 0u) << "No 2D points detected in " << imgname;
-    ASSERT_EQ(points3D.size(), points2D.size()) << "3D/2D points count mismatch in " << imgname;
+
+    ASSERT_EQ(points2D.size(), points2D_gt.size());
+    for (size_t i = 0; i < points2D.size(); i++)
+    {
+        EXPECT_EQ(points2D[i].x, points2D_gt[i].x);
+        EXPECT_EQ(points2D[i].y, points2D_gt[i].y);
+    }
+
+    ASSERT_EQ(points3D.size(), points3D_gt.size());
+    for (size_t i = 0; i < points3D.size(); i++)
+    {
+        EXPECT_EQ(points3D[i].x, points3D_gt[i].x);
+        EXPECT_EQ(points3D[i].y, points3D_gt[i].y);
+        EXPECT_EQ(points3D[i].z, points3D_gt[i].z);
+    }
 }
 
 INSTANTIATE_TEST_CASE_P(
-    /*empty*/, CV_FractalAruco,
-    testing::ValuesIn(fractal_aruco_images)
+    /*empty*/, FractalArucoTest,
+    testing::ValuesIn(fractal_aruco_cases)
 );
 }
 } // namespace
