@@ -58,12 +58,19 @@ static cv::Mat rngTranslationMat()
     return cv::Mat(2, 3, CV_64F, t).clone();
 }
 
+static inline cv::Vec2d getTxTy(const cv::Mat& T)
+{
+    CV_Assert(T.rows == 2 && T.cols == 3 && T.type() == CV_64F);
+    return cv::Vec2d(T.at<double>(0,2), T.at<double>(1,2));
+}
+
 TEST_P(EstimateTranslation2D, test1Point)
 {
     // minimal sample is 1 point
     for (size_t i = 0; i < 500; ++i)
     {
         cv::Mat T = rngTranslationMat();
+        cv::Vec2d T_ref = getTxTy(T);
 
         cv::Mat fpts(1, 1, CV_32FC2);
         cv::Mat tpts(1, 1, CV_32FC2);
@@ -72,9 +79,10 @@ TEST_P(EstimateTranslation2D, test1Point)
         transform(fpts, tpts, T);
 
         std::vector<uchar> inliers;
-        cv::Mat T_est = estimateTranslation2D(fpts, tpts, inliers, GetParam() /* method */);
+        cv::Vec2d T_est = estimateTranslation2D(fpts, tpts, inliers, GetParam() /* method */);
 
-        EXPECT_NEAR(0., cvtest::norm(T_est, T, NORM_INF), 1e-3);
+        EXPECT_NEAR(T_est[0], T_ref[0], 1e-6);
+        EXPECT_NEAR(T_est[1], T_ref[1], 1e-6);
         EXPECT_EQ((int)inliers.size(), 1);
         EXPECT_EQ((int)inliers[0], 1);
     }
@@ -85,6 +93,7 @@ TEST_P(EstimateTranslation2D, testNPoints)
     for (size_t i = 0; i < 500; ++i)
     {
         cv::Mat T = rngTranslationMat();
+        cv::Vec2d T_ref = getTxTy(T);
 
         const int method = GetParam();
         const int n = 100;
@@ -113,11 +122,13 @@ TEST_P(EstimateTranslation2D, testNPoints)
         outliers += noise;
 
         std::vector<uchar> inliers;
-        cv::Mat T_est = estimateTranslation2D(fpts, tpts, inliers, method);
+        cv::Vec2d T_est = estimateTranslation2D(fpts, tpts, inliers, method);
 
-        EXPECT_FALSE(T_est.empty());
+        // Check estimation produced finite values
+        ASSERT_TRUE(std::isfinite(T_est[0]) && std::isfinite(T_est[1]));
 
-        EXPECT_NEAR(0., cvtest::norm(T_est, T, NORM_INF), 1e-4);
+        EXPECT_NEAR(T_est[0], T_ref[0], 1e-4);
+        EXPECT_NEAR(T_est[1], T_ref[1], 1e-4);
 
         bool inliers_good = std::count(inliers.begin(), inliers.end(), 1) == m &&
             m == std::accumulate(inliers.begin(), inliers.begin() + m, 0);
@@ -141,12 +152,15 @@ TEST_P(EstimateTranslation2D, testConversion)
     transform(fpts, tpts, T);
 
     std::vector<uchar> inliers;
-    cv::Mat T_est = estimateTranslation2D(fpts, tpts, inliers, GetParam() /* method */);
+    cv::Vec2d T_est = estimateTranslation2D(fpts, tpts, inliers, GetParam() /* method */);
 
-    ASSERT_FALSE(T_est.empty());
+    ASSERT_TRUE(std::isfinite(T_est[0]) && std::isfinite(T_est[1]));
 
-    T.convertTo(T, CV_64F); // need to convert back before compare
-    EXPECT_NEAR(0., cvtest::norm(T_est, T, NORM_INF), 1e-3);
+    T.convertTo(T, CV_64F); // convert back for reference extraction
+    cv::Vec2d T_ref = getTxTy(T);
+
+    EXPECT_NEAR(T_est[0], T_ref[0], 1e-3);
+    EXPECT_NEAR(T_est[1], T_ref[1], 1e-3);
 
     // all must be inliers
     EXPECT_EQ(countNonZero(inliers), 3);
@@ -180,7 +194,7 @@ TEST(EstimateTranslation2D, dont_change_inputs)
 
     cv::Mat inliers;
 
-    cv::Mat T = cv::estimateTranslation2D(pts0, pts1, inliers);
+    cv::Vec2d T = cv::estimateTranslation2D(pts0, pts1, inliers);
 
     for (int i = 0; i < pts0.rows; ++i)
         EXPECT_EQ(pts0_copy.at<cv::Vec2f>(i), pts0.at<cv::Vec2f>(i)) << "pts0: i=" << i;
@@ -189,6 +203,9 @@ TEST(EstimateTranslation2D, dont_change_inputs)
         EXPECT_EQ(pts1_copy.at<cv::Vec2f>(i), pts1.at<cv::Vec2f>(i)) << "pts1: i=" << i;
 
     EXPECT_EQ(0, (int)inliers.at<uchar>(2));
+
+    // sanity: estimated translation should be finite
+    EXPECT_TRUE(std::isfinite(T[0]) && std::isfinite(T[1]));
 }
 
 }} // namespace
