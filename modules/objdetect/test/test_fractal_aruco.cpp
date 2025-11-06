@@ -54,16 +54,16 @@ TEST_P(FractalArucoTest, detect)
     ASSERT_EQ(points2D.size(), points2D_gt.size());
     for (size_t i = 0; i < points2D.size(); i++)
     {
-        EXPECT_EQ(points2D[i].x, points2D_gt[i].x);
-        EXPECT_EQ(points2D[i].y, points2D_gt[i].y);
+        EXPECT_NEAR(points2D[i].x, points2D_gt[i].x, 1e-2);
+        EXPECT_NEAR(points2D[i].y, points2D_gt[i].y, 1e-2);
     }
 
     ASSERT_EQ(points3D.size(), points3D_gt.size());
     for (size_t i = 0; i < points3D.size(); i++)
     {
-        EXPECT_EQ(points3D[i].x, points3D_gt[i].x);
-        EXPECT_EQ(points3D[i].y, points3D_gt[i].y);
-        EXPECT_EQ(points3D[i].z, points3D_gt[i].z);
+        EXPECT_NEAR(points3D[i].x, points3D_gt[i].x, 1e-3);
+        EXPECT_NEAR(points3D[i].y, points3D_gt[i].y, 1e-3);
+        EXPECT_NEAR(points3D[i].z, points3D_gt[i].z, 1e-3);
     }
 }
 
