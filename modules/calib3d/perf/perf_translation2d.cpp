@@ -100,7 +100,7 @@ PERF_TEST_P(EstimateTranslation2DPerf, EstimateTranslation2D, ESTIMATE_PARAMS)
     randu(noise, 0.f, noise_level);
     outliers += noise;
 
-    cv::Mat T_est;
+    cv::Vec2d T_est;
     std::vector<uchar> inliers(n);
 
     warmup(inliers, WARMUP_WRITE);
@@ -116,7 +116,9 @@ PERF_TEST_P(EstimateTranslation2DPerf, EstimateTranslation2D, ESTIMATE_PARAMS)
                                       /*refineIters=*/refining);
     }
 
-    SANITY_CHECK(T_est, 1e-6);
+    // Convert to Mat for SANITY_CHECK consistency
+    cv::Mat T_est_mat = (cv::Mat_<double>(2,1) << T_est[0], T_est[1]);
+    SANITY_CHECK(T_est_mat, 1e-6);
 }
 
 } // namespace opencv_test
