@@ -3402,14 +3402,21 @@ significantly. Values lower than 0.8–0.9 can result in an incorrectly estimate
 @param refineIters Maximum number of iterations of the refining algorithm. For pure translation
 the least-squares solution on inliers is closed-form, so passing 0 is recommended (no additional refine).
 
-@return Output 2D translation matrix \f$2 \times 3\f$ or an empty matrix if the transformation
-could not be estimated. The returned matrix has the following form:
+@return A 2D translation vector \f$[t_x, t_y]^T\f$ as `cv::Vec2d`. If the translation could not be
+estimated, both components are set to NaN and, if @p inliers is provided, the mask is filled with zeros.
+
+\par Converting to a 2x3 transformation matrix:
 \f[
 \begin{bmatrix}
 1 & 0 & t_x\\
 0 & 1 & t_y
-\end{bmatrix}.
+\end{bmatrix}
 \f]
+
+@code{.cpp}
+cv::Vec2d t = cv::estimateTranslation2D(from, to, inliers);
+cv::Mat T = (cv::Mat_<double>(2,3) << 1,0,t[0], 0,1,t[1]);
+@endcode
 
 The function estimates a pure 2D translation between two 2D point sets using the selected robust
 algorithm. Inliers are determined by the reprojection error threshold.
@@ -3421,11 +3428,11 @@ correctly only when there are more than 50% inliers.
 
 @sa estimateAffine2D, estimateAffinePartial2D, getAffineTransform
 */
-CV_EXPORTS_W cv::Mat estimateTranslation2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
-                                           int method = RANSAC,
-                                           double ransacReprojThreshold = 3,
-                                           size_t maxIters = 2000, double confidence = 0.99,
-                                           size_t refineIters = 0);
+CV_EXPORTS_W cv::Vec2d estimateTranslation2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+                                             int method = RANSAC,
+                                             double ransacReprojThreshold = 3,
+                                             size_t maxIters = 2000, double confidence = 0.99,
+                                             size_t refineIters = 0);
 
 /** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
 An example program with homography decomposition.

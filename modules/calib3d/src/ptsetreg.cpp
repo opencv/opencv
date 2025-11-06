@@ -1303,7 +1303,7 @@ Mat estimateAffinePartial2D(InputArray _from, InputArray _to, OutputArray _inlie
     return H;
 }
 
-cv::Mat estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
+cv::Vec2d estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
                               cv::OutputArray _inliers,
                               int method,
                               double ransacReprojThreshold,
@@ -1312,14 +1312,16 @@ cv::Mat estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
 {
     CV_INSTRUMENT_REGION();
 
+    using std::numeric_limits;
+    const double NaN = numeric_limits<double>::quiet_NaN();
+    cv::Vec2d tvec(NaN, NaN);
+
     // Normalize input layout and type:
     // - Accepts various shapes (Nx2, 1xN, etc.); force to CV_32FC2 for the registrator.
     // - Keep local copies to allow reshaping into N x 1 vectors of Point2f.
     cv::Mat from = _from.getMat(), to = _to.getMat();
     int count = from.checkVector(2);
     bool result = false;
-    cv::Mat T; // 2x3 output (CV_64F)
-
     CV_Assert(count >= 0 && to.checkVector(2) == count);
 
     if (from.type() != CV_32FC2 || to.type() != CV_32FC2) {
@@ -1343,6 +1345,7 @@ cv::Mat estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
     }
 
     // Build translation model callback. Minimal sample size is 1.
+    cv::Mat T; // 2x3 output (CV_64F)
     cv::Ptr<cv::PointSetRegistrator::Callback> cb = cv::makePtr<Translation2DEstimatorCallback>();
 
     // Create robust estimators with the same semantics as affine functions.
@@ -1355,14 +1358,11 @@ cv::Mat estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
     else
         CV_Error(Error::StsBadArg, "Unknown or unsupported robust estimation method");
 
-    // Estimation failure: return empty T and zero inlier mask (if requested).
+    // Estimation failure: return NaNs and zero inlier mask (if requested).
     if (!result) {
-        T.release();
-        if (_inliers.needed()) {
-            inliers = cv::Mat::zeros(count, 1, CV_8U);
-            inliers.copyTo(_inliers);
-        }
-        return T;
+        if (_inliers.needed())
+            inliers.setTo(cv::Scalar(0));
+        return tvec;
     }
 
     // Post-process: compress inliers to the front (same pattern as affine),
@@ -1377,6 +1377,8 @@ cv::Mat estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
             cv::Mat dst = to.rowRange(0, nin);
 
             if (refineIters > 0) {
+                if (T.empty())
+                    T = (cv::Mat_<double>(2,3) << 1,0,0, 0,1,0);
                 // LM refine on translation only:
                 // T is 2x3; represent as 6x1 vector [a b c d e f]^T.
                 // We only update the translation entries (c, f).
@@ -1395,15 +1397,22 @@ cv::Mat estimateTranslation2D(cv::InputArray _from, cv::InputArray _to,
                     sx += (double)t[i].x - (double)f[i].x;
                     sy += (double)t[i].y - (double)f[i].y;
                 }
-                double* H = T.ptr<double>();  // T is CV_64F
+                if (T.empty())
+                    T = (cv::Mat_<double>(2,3) << 1,0,0, 0,1,0);
+                double* H = T.ptr<double>();
                 H[2] = sx / nin;  // t_x
                 H[5] = sy / nin;  // t_y
             }
         }
+
+        // Extract translation components
+        if (!T.empty()) {
+            tvec[0] = T.at<double>(0, 2);
+            tvec[1] = T.at<double>(1, 2);
+        }
     }
 
-    // Output is a 2x3 CV_64F matrix consistent with affine routines.
-    return T;
+    return tvec;
 }
 
 } // namespace cv
