@@ -1,0 +1,31 @@
+==============================
+Usage & Integration Guidelines
+==============================
+
+Typical Usage
+-------------
+This allocator and helper system are used internally by OpenCV’s Python module (cv2).
+Direct usage is not required in standard OpenCV-Python workflows. However, for developers
+working on extending OpenCV’s Python bindings or integrating C++ code with NumPy,
+understanding these components is critical.
+
+### 1. NumPy → OpenCV
+When a NumPy array is passed to a cv2 function, OpenCV:
+  - Reads its data pointer, shape, and stride.
+  - Wraps it into a `cv::Mat` without copying data.
+  - Manages lifetime using `NumpyAllocator` and reference counting.
+
+### 2. OpenCV → NumPy
+When returning a cv::Mat or UMat to Python:
+  - The allocator creates a corresponding NumPy ndarray.
+  - The underlying buffer is shared, allowing instant interoperability.
+
+### 3. Manual Example (Advanced)
+```cpp
+PyObject* create_numpy_array_from_mat(const cv::Mat& mat) {
+    auto& allocator = GetNumpyAllocator();
+    size_t step[CV_MAX_DIM];
+    return reinterpret_cast<PyObject*>(
+        allocator.allocate(mat.dims, mat.size, mat.type(), nullptr, step, cv::ACCESS_RW, cv::USAGE_DEFAULT)
+    );
+}
