@@ -1324,7 +1324,6 @@ CV__DNN_INLINE_NS_BEGIN
         bool inverse;
         bool onesided;
         int axis_attr;
-        int dft_length;
         std::vector<int> axes;
         static Ptr<DFTLayer> create(const LayerParams &params);
     };

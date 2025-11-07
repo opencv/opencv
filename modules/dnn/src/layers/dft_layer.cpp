@@ -7,6 +7,8 @@
 #include "../precomp.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
 #include <opencv2/core.hpp>
+#include "../net_impl.hpp"
+#include "layers_common.hpp"
 #include <numeric>
 
 // ONNX DFT operator
@@ -137,9 +139,51 @@ public:
         inverse = params.get<int>("inverse", 0) != 0;
         onesided = params.get<int>("onesided", 0) != 0;
         axis_attr = params.get<int>("axis", 1);
-        dft_length = params.get<int>("dft_length", -1);
     }
 
+    virtual bool dynamicOutputShapes() const CV_OVERRIDE
+    {
+        if (this->inputs.size() >= 2)
+        {
+            Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
+            if (!netimpl_ || !netimpl_->isConstArg(this->inputs[1]))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+private:
+    int getDftLengthFromConstant() const
+    {
+        if (this->inputs.size() < 2)
+        {
+            return -1;
+        }
+
+        Net::Impl* netimpl_ = getNetImpl(const_cast<DFTLayerImpl*>(this));
+        if (!netimpl_)
+        {
+            return -1;
+        }
+
+        Mat dft_length_tensor = netimpl_->argTensor(this->inputs[1]);
+        if (dft_length_tensor.empty() || dft_length_tensor.total() != 1)
+        {
+            return -1;
+        }
+
+        int64_t dft_length64 = 0;
+        tensorToScalar(dft_length_tensor, CV_64S, &dft_length64);
+        if (dft_length64 > 0)
+        {
+            return static_cast<int>(dft_length64);
+        }
+        return -1;
+    }
+
+public:
     virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
                                  const int /*requiredOutputs*/,
                                  std::vector<MatShape> &outputs,
@@ -147,28 +191,27 @@ public:
     {
         CV_Assert(inputs.size() >= 1);
         const MatShape &inshape = inputs[0];
+        CV_Assert(!inshape.empty());
         MatShape out = inshape;
 
-        if (!out.empty())
-        {
-            int last = out.back();
-            if (last == 1)
-                out.back() = 2;
-            else if (last != 2)
-                out.push_back(2);
+        int last = out.back();
+        if (last == 1)
+            out.back() = 2;
+        else if (last != 2)
+            out.push_back(2);
 
-            int ndims_in = (int)inshape.size();
-            int ax = axis_attr;
-            if (ax == INT_MIN)
-            {
-                ax = (inshape.back() == 2 || inshape.back() == 1) ? ndims_in - 2 : ndims_in - 1;
-            }
-            if (ax < 0) ax += ndims_in;
-            if (ax >= 0 && ax < (int)out.size() - 1)
-            {
-                int signalLen = dft_length > 0 ? dft_length : (ax < (int)inshape.size() ? inshape[ax] : out[ax]);
-                out[ax] = onesided ? (signalLen / 2 + 1) : signalLen;
-            }
+        int ndims_in = (int)inshape.size();
+        int ax = axis_attr;
+        if (ax == INT_MIN)
+        {
+            ax = (inshape.back() == 2 || inshape.back() == 1) ? ndims_in - 2 : ndims_in - 1;
+        }
+        if (ax < 0) ax += ndims_in;
+        if (ax >= 0 && ax < (int)out.size() - 1)
+        {
+            int dft_length = getDftLengthFromConstant();
+            int signalLen = dft_length > 0 ? dft_length : (ax < (int)inshape.size() ? inshape[ax] : out[ax]);
+            out[ax] = onesided ? (signalLen / 2 + 1) : signalLen;
         }
         outputs.assign(1, out);
         return false;
@@ -205,6 +248,15 @@ public:
         {
             CV_Assert(!srcHasComplex);
             CV_Assert(!inverse);
+        }
+
+        int dft_length = -1;
+        if (inputs.size() >= 2 && !inputs[1].empty())
+        {
+            CV_Assert(inputs[1].total() == 1);
+            int64_t dft_length64 = -1;
+            tensorToScalar(inputs[1], CV_64S, &dft_length64);
+            dft_length = static_cast<int>(dft_length64);
         }
 
         std::vector<int> outSizesVec;
