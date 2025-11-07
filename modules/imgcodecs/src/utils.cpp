@@ -51,13 +51,6 @@ int validateToInt(size_t sz)
     return valueInt;
 }
 
-int64_t validateToInt64(ptrdiff_t sz)
-{
-    int64_t valueInt = static_cast<int64_t>(sz);
-    CV_Assert((ptrdiff_t)valueInt == sz);
-    return valueInt;
-}
-
 #define  SCALE  14
 #define  cR  (int)(0.299*(1 << SCALE) + 0.5)
 #define  cG  (int)(0.587*(1 << SCALE) + 0.5)
