@@ -3362,6 +3362,78 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
+/** @brief Computes a pure 2D translation between two 2D point sets.
+
+It computes
+\f[
+\begin{bmatrix}
+x\\
+y
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0\\
+0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+X\\
+Y
+\end{bmatrix}
++
+\begin{bmatrix}
+t_x\\
+t_y
+\end{bmatrix}.
+\f]
+
+@param from First input 2D point set containing \f$(X,Y)\f$.
+@param to Second input 2D point set containing \f$(x,y)\f$.
+@param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
+@param method Robust method used to compute the transformation. The following methods are possible:
+-   @ref RANSAC - RANSAC-based robust method
+-   @ref LMEDS - Least-Median robust method
+RANSAC is the default method.
+@param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
+a point as an inlier. Applies only to RANSAC.
+@param maxIters The maximum number of robust method iterations.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8–0.9 can result in an incorrectly estimated transformation.
+@param refineIters Maximum number of iterations of the refining algorithm. For pure translation
+the least-squares solution on inliers is closed-form, so passing 0 is recommended (no additional refine).
+
+@return A 2D translation vector \f$[t_x, t_y]^T\f$ as `cv::Vec2d`. If the translation could not be
+estimated, both components are set to NaN and, if @p inliers is provided, the mask is filled with zeros.
+
+\par Converting to a 2x3 transformation matrix:
+\f[
+\begin{bmatrix}
+1 & 0 & t_x\\
+0 & 1 & t_y
+\end{bmatrix}
+\f]
+
+@code{.cpp}
+cv::Vec2d t = cv::estimateTranslation2D(from, to, inliers);
+cv::Mat T = (cv::Mat_<double>(2,3) << 1,0,t[0], 0,1,t[1]);
+@endcode
+
+The function estimates a pure 2D translation between two 2D point sets using the selected robust
+algorithm. Inliers are determined by the reprojection error threshold.
+
+@note
+The RANSAC method can handle practically any ratio of outliers but needs a threshold to
+distinguish inliers from outliers. The method LMeDS does not need any threshold but works
+correctly only when there are more than 50% inliers.
+
+@sa estimateAffine2D, estimateAffinePartial2D, getAffineTransform
+*/
+CV_EXPORTS_W cv::Vec2d estimateTranslation2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+                                             int method = RANSAC,
+                                             double ransacReprojThreshold = 3,
+                                             size_t maxIters = 2000, double confidence = 0.99,
+                                             size_t refineIters = 0);
+
 /** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
 An example program with homography decomposition.
 
