@@ -1,0 +1,359 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
+#include "../precomp.hpp"
+#include "cpu_kernels/fast_gemm.hpp"
+#include "cpu_kernels/softmax.hpp"
+#include "layers_common.hpp"
+
+#include <opencv2/dnn/shape_utils.hpp>
+
+namespace cv { namespace dnn {
+
+using std::tanh;
+
+
+// Operator spec: https://onnx.ai/onnx/operators/onnx__Attention.html#attention-23
+class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
+ public:
+     AttentionOnnxAiLayerImpl(const LayerParams &params) {
+        setParamsFrom(params);
+        is_causal = params.get<bool>("is_causal", false);
+        kv_num_heads = params.get<int>("kv_num_heads", 0);
+        q_num_heads = params.get<int>("q_num_heads", 0);
+        qk_matmul_output_mode = params.get<int>("qk_matmul_output_mode", 0);
+        scale = params.get<float>("scale", 1.0f );
+        is_scale_set = params.has("scale");
+        softcap = params.get<float>("softcap", 0.f);
+        softmax_precision = params.get<int>("softmax_precision", 0);
+    }
+
+    virtual bool supportBackend(int backendId) CV_OVERRIDE {
+        return backendId == DNN_BACKEND_OPENCV;
+    }
+
+    virtual void getTypes(const std::vector<MatType>&inputs,
+                     const int requiredOutputs,
+                     const int requiredInternals,
+                     std::vector<MatType>&outputs,
+                     std::vector<MatType>&internals) const CV_OVERRIDE {
+        for (auto input : inputs)
+        {
+            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
+                CV_CheckTypeEQ(input, CV_32F, "");
+            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
+                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_64F, "");
+            else
+                CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S, "");
+        }
+
+        outputs.assign(requiredOutputs, inputs[0]);
+
+        // internals:
+        internals.clear();
+        const bool merge_masks = is_causal && (inputs.size() > 3);
+
+        // 1. causal_mask
+        if (is_causal && !merge_masks) {
+            internals.push_back(CV_8U);
+        }
+
+        // 2. attention_mask
+        if (is_causal && !merge_masks)
+            // 2.1 only causal mask
+            internals.push_back(CV_8U);
+        else if(inputs.size() > 3)
+            // 2.2 custom attention mask provided as input
+            internals.push_back(inputs[3]);
+
+        internals.push_back(inputs[0]);
+    }
+
+    virtual bool getMemoryShapes(const std::vector<MatShape> &inputs,
+                                 const int requiredOutputs,
+                                 std::vector<MatShape> &outputs,
+                                 std::vector<MatShape> &internals) const CV_OVERRIDE {
+        CV_CheckTrue(inputs.size() < 5, "past key and past value are not supported yet");
+        const int input_dims = inputs[0].dims;
+        const int batch_size = inputs[0][0];
+        const int seq_len_q = inputs[0][input_dims - 2];
+        const int seq_len_kv = inputs[1][input_dims - 2];
+        const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
+
+        CV_CheckTrue(q_num_heads % kv_num_heads == 0,
+                     "q_num_heads must be divisible by kv_num_heads");
+
+        if (input_dims == 3)
+        {
+            CV_CheckTrue(kv_num_heads > 0,
+                         "For 3D input, kv_num_heads must be greater than 0 (this normally means that kv_num_heads is not set)");
+            CV_CheckTrue(q_num_heads > 0,
+                         "For 3D input, q_num_heads must be greater than 0 (this normally means that q_num_heads is not set)");
+
+            int v_head_size = inputs[2][2] / kv_num_heads;
+            MatShape output_shape{batch_size, seq_len_q, v_head_size * q_num_heads};
+            outputs.push_back(output_shape);
+        }
+        else
+        {
+            int v_head_size = inputs[2][3];
+            MatShape output_shape{batch_size, nhq, seq_len_q, v_head_size};
+            outputs.push_back(output_shape);
+        }
+
+        const bool merge_masks = is_causal && (inputs.size() > 3);
+
+        // internals:
+        // 1. causal_mask (if is_causal and not merge_masks)
+        // 2. attention_mask (broadcasted attention mask - B x H_q x T_q x T_kv)
+        // 3. attention_prob (B x H_q x T_q x T_kv)
+
+        // 1. causal_mask
+        if (is_causal && !merge_masks) {
+            MatShape causal_mask_shape{1, 1, seq_len_q, seq_len_kv};
+            internals.push_back(causal_mask_shape);
+        }
+
+        // 2. attention_mask
+        if (inputs.size() > 3 || is_causal) {
+            MatShape mask_shape{batch_size, nhq, seq_len_q, seq_len_kv};
+            internals.push_back(mask_shape);
+        }
+
+        // 3. attention_prob
+        MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_kv};
+        internals.push_back(attention_prob_shape);
+
+        return false;
+    }
+
+    virtual void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE {
+        opt.init();
+
+    }
+
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
+        if (inputs_arr.depth() == CV_16F)
+        {
+            forward_fallback(inputs_arr, outputs_arr, internals_arr);
+            return;
+        }
+
+
+        std::vector<Mat> inputs, outputs, internals;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
+        internals_arr.getMatVector(internals);
+
+
+        const int input_dims = inputs[0].dims;
+        const int batch_size = inputs[0].size[0];
+
+        const int nhq = input_dims == 3 ?
+                         q_num_heads :
+                         inputs[0].size[1];
+        const int nhkv = input_dims == 3 ?
+                         kv_num_heads :
+                         inputs[1].size[1];
+
+
+        const int qk_head_size = input_dims == 3 ?
+                                 inputs[0].size[2] / nhq :
+                                 inputs[0].size[3];
+        const int v_head_size  = input_dims == 3 ?
+                                 inputs[2].size[2] / nhkv :
+                                 inputs[2].size[3];
+        const int num_gq_groups = nhq / nhkv;
+        const int seq_len_q = input_dims == 3 ?
+                                inputs[0].size[1]:
+                                inputs[0].size[2];
+        const int seq_len_kv = input_dims == 3 ?
+                                inputs[1].size[1]:
+                                inputs[1].size[2];
+        const auto seq_len_square = seq_len_q * seq_len_kv;
+
+        const auto* Q =  inputs[0].ptr<const float>();
+        const auto* K =  inputs[1].ptr<const float>();
+        const auto* V =  inputs[2].ptr<const float>();
+
+        scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
+
+        auto &attention_prob = internals[internals.size() - 1];
+        {
+            auto *output = attention_prob.ptr<float>();
+
+            auto loops = batch_size * nhq;
+
+            // parallel_for_(Range(0, loops), [&] (const Range r) {
+            const Range r = Range(0, loops);
+            for (int i = r.start; i < r.end; i++) {
+                const int _batch_index = i / nhq;
+                const int _q_head_index = i % nhq;
+                const int _k_head_index = _q_head_index / num_gq_groups;
+
+                const int _q_offset = input_dims == 3 ?
+                            _q_head_index * qk_head_size : _q_head_index * qk_head_size * seq_len_q;
+                const int _k_offset = input_dims == 3 ?
+                            _k_head_index * qk_head_size : _k_head_index * qk_head_size * seq_len_kv;
+
+                const auto *q = Q + _batch_index * seq_len_q * qk_head_size * nhq +
+                                _q_offset;
+                const auto *k = K + _batch_index * seq_len_kv * qk_head_size * nhkv +
+                                _k_offset;
+                const int output_offset = i * seq_len_square;
+
+                const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
+                const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
+
+                fastGemm(
+                    false, true,
+                    seq_len_q, qk_head_size,
+                    seq_len_kv, qk_head_size,
+                    scale,
+                    q, ldq0, 1,
+                    k, ldk0, 1,
+                    0.f,
+                    output + output_offset, seq_len_kv,
+                    opt);
+            }
+            // }, loops * seq_len_q * q_num_heads * seq_len_kv * (1 / 1024.0));
+        }
+
+        // Attention masking
+        if (internals.size() > 1) {
+            Mat& attention_mask = internals[internals.size() - 2];
+            const bool merge_masks = is_causal && (inputs.size() > 3);
+
+            if (!merge_masks && is_causal) {
+                // pure causal mask
+                Mat& causal_mask = internals[0];
+                bool* causal_mask_data = causal_mask.ptr<bool>();
+                auto loops = seq_len_square;
+
+                // parallel_for_(Range(0, loops), [&] (const Range r) {
+                const Range r = Range(0, loops);
+                for (int i = r.start; i < r.end; i++) {
+                    int t1 = i / seq_len_kv;
+                    int t2 = i % seq_len_kv;
+                    causal_mask_data[i] = t2 > t1 ? 1 : 0;
+                }
+            }
+
+            broadcast(
+                internals.size() > 2 ? internals[0] : inputs[3],
+                shape(attention_mask),
+                attention_mask
+            );
+
+            if (merge_masks)
+            {
+                if (attention_mask.type() == CV_Bool || attention_mask.type() == CV_8U) {
+                    bool*att_mask_data = attention_mask.ptr<bool>();
+                    auto loops = attention_mask.total();
+                    // parallel_for_(Range(0, loops), [&] (const Range r) {
+                    const Range r = Range(0, loops);
+                    for (int i = r.start; i < r.end; i++) {
+                        const int t = i % seq_len_square;
+                        const int t1 = t / seq_len_kv;
+                        const int t2 = t % seq_len_kv;
+                        att_mask_data[i] = att_mask_data[i] || (t2 > t1);
+                    }
+                } else {
+                    float* att_mask_data = attention_mask.ptr<float>();
+                    auto loops = attention_mask.total();
+                    // parallel_for_(Range(0, loops), [&] (const Range r) {
+                    const Range r = Range(0, loops);
+                    for (int i = r.start; i < r.end; i++) {
+                        const int t = i % seq_len_square;
+                        const int t1 = t / seq_len_kv;
+                        const int t2 = t % seq_len_kv;
+                        if (t2 > t1)
+                            att_mask_data[i] = -FLT_MAX;
+                    }
+                }
+            }
+
+            if ((attention_mask.type() == CV_Bool) || (attention_mask.type() == CV_8U)) {
+                double min_val = -FLT_MAX;
+                attention_prob.setTo(min_val, attention_mask);
+            } else {
+                CV_CheckEQ(attention_mask.type(), attention_prob.type(),
+                        "Attention mask type must either be Bool or match attention scores type");
+                attention_prob += attention_mask;
+            }
+        }
+
+        // softcap, if provided
+        if (softcap > 0.f) {
+            float* attn_data = attention_prob.ptr<float>();
+            auto total_elems = attention_prob.total();
+            for (size_t i = 0; i < total_elems; i++) {
+                attn_data[i] = tanh(attn_data[i] / softcap) * softcap;
+            }
+        }
+
+        // Compute softmax on the last dimension
+        softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);
+        const auto attn = attention_prob.ptr<const float>();
+        auto *output = outputs[0].ptr<float>();
+        auto loops = batch_size * nhq;
+        // parallel_for_(Range(0, loops), [&] (const Range r) {
+        const Range r = Range(0, loops);
+        for (int i = r.start; i < r.end; i++) {
+            const int _batch_index = i / nhq;
+            const int _q_head_index = i % nhq;
+            const int _v_head_index = _q_head_index / num_gq_groups;
+
+            const int v_offset = _batch_index * seq_len_kv * v_head_size * nhkv + (
+                input_dims == 3 ?
+                    _v_head_index * v_head_size :
+                    _v_head_index * v_head_size * seq_len_kv
+            );
+
+            const int out_offset = _batch_index * seq_len_q * v_head_size * nhq + (
+                input_dims == 3 ?
+                    _q_head_index * v_head_size :
+                    _q_head_index * v_head_size * seq_len_q
+            );
+
+            const auto att = attn + i * seq_len_square;
+            const auto v = V + v_offset;
+
+            const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
+            const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
+
+            fastGemm(
+                false, false,
+                seq_len_q, seq_len_kv,
+                seq_len_kv, v_head_size,
+                1.f,
+                att, seq_len_kv, 1,
+                v, ldv0, 1,
+                0.f,
+                output + out_offset, ldout,
+                opt);
+        }
+        // }, loops * seq_len_square * q_num_heads * (1 / 1024.0));
+
+    }
+
+ private:
+    bool is_causal;
+    int kv_num_heads;
+    int q_num_heads;
+    int qk_matmul_output_mode;
+    float scale;
+    bool is_scale_set = false;
+    float softcap;
+    int softmax_precision;
+
+    FastGemmOpt opt;
+};
+
+Ptr<AttentionOnnxAiLayer> AttentionOnnxAiLayer::create(const LayerParams &params) {
+    return makePtr<AttentionOnnxAiLayerImpl>(params);
+}
+
+
+}} // cv::dnn

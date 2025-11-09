@@ -245,10 +245,8 @@ protected:
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-
-    // Domain: com.microsoft
-    // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseAttentionOnnxAi      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDequantizeLinear     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseQuantizeLinear       (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCustomLayer          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2578,6 +2576,28 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
     addLayer(params, node_proto, n_inputs);
 }
 
+void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    int i, n_inputs = node_proto.input_size();
+    // CV_CheckTrue(params.has("kv_num_heads"), "ONNXImporter2/parseAttention: kv_num_heads is required but missing");
+    // CV_CheckTrue(params.has("q_num_heads"), "ONNXImporter2/parseAttention: q_num_heads is required but missing");
+
+    for (i = 1; i < n_inputs; i++) {
+        if (!net.isConstArg(node_inputs[i]))
+            break;
+    }
+
+    if (i == n_inputs) {
+        for (i = 1; i < n_inputs; i++) {
+            Mat blob = net.argTensor(node_inputs[i]);
+            params.blobs.push_back(blob);
+        }
+        n_inputs = 1;
+    }
+    params.type = "AttentionOnnxAi";
+
+    addLayer(params, node_proto, n_inputs);
+}
+
 // Domain: ai.onnx (default)
 // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
 void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
@@ -2657,6 +2677,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["GroupNormalization"] = &ONNXImporter2::parseInstanceNormalization;
     dispatch["NegativeLogLikelihoodLoss"] = &ONNXImporter2::parseNegativeLogLikelihoodLoss;
     dispatch["SoftmaxCrossEntropyLoss"]   = &ONNXImporter2::parseSoftmaxCrossEntropyLoss;
+    // @TODO@ONNX: Add support for SDPA
 
     dispatch["Equal"] = dispatch["Greater"] = dispatch["Less"] = dispatch["Pow"] = dispatch["Add"] =
             dispatch["Sub"] = dispatch["Mul"] = dispatch["Div"] = dispatch["GreaterOrEqual"] =
@@ -2690,7 +2711,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     // com.microsft: This operator is added for compatibility via onnx graph simplifier.
     //               Opset domain cannot be modified from onnx_graph_simplifier.cpp so this
     //               operator cannot be parsed if only added in buildDispatchMap_COM_MICROSOFT
-    dispatch["Attention"] = &ONNXImporter2::parseAttention;
+    dispatch["Attention"] = &ONNXImporter2::parseAttentionOnnxAi;
 
     domain_dispatch_map[str_domain_ai_onnx] = dispatch;
 }
