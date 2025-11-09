@@ -4,6 +4,7 @@ if(NOT OpenBLAS_FOUND AND NOT SKIP_OPENBLAS_PACKAGE)
   find_package(OpenBLAS QUIET)
   if(OpenBLAS_FOUND)
     message(STATUS "Found OpenBLAS package")
+    set(OpenBLAS_LIBRARIES ${OpenBLAS_LIBRARIES} OpenBLAS::OpenBLAS)
   endif()
 endif()
 
