@@ -5,6 +5,10 @@
 #include "opencv2/cudafilters.hpp"
 #include "opencv2/cudaimgproc.hpp"
 
+#ifndef MORPH_DIAMOND
+#define MORPH_DIAMOND 3
+#endif
+
 using namespace std;
 using namespace cv;
 
@@ -102,6 +106,7 @@ int App::run()
             break;
 
         case 'd':
+            // 'd' key sets structuring element to MORPH_DIAMOND (new shape type)
             element_shape = MORPH_DIAMOND;
             break;
 
