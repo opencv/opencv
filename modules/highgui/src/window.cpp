@@ -1115,9 +1115,9 @@ const std::string cv::currentUIFramework()
     return std::string("COCOA");
 #elif defined (HAVE_WAYLAND)
     return std::string("WAYLAND");
-#else
-    return std::string();
 #endif
+
+    return std::string();
 }
 
 // Without OpenGL

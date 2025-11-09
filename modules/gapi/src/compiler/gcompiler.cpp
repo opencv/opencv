@@ -341,7 +341,6 @@ void cv::gimpl::GCompiler::validateInputMeta()
         default:
             GAPI_Error("InternalError");
         }
-        return false; // should never happen
     };
 
     GAPI_LOG_DEBUG(nullptr, "Total count: " << m_metas.size());

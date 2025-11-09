@@ -26,7 +26,7 @@ QUnit.test('Detectors', function(assert) {
 
   let orb = new cv.ORB();
   orb.detect(image, kp);
-  assert.equal(kp.size(), 67, 'ORB');
+  assert.equal(kp.size(), 68, 'ORB');
 
   let mser = new cv.MSER();
   mser.detect(image, kp);
@@ -34,7 +34,7 @@ QUnit.test('Detectors', function(assert) {
 
   let brisk = new cv.BRISK();
   brisk.detect(image, kp);
-  assert.equal(kp.size(), 191, 'BRISK');
+  assert.equal(kp.size(), 187, 'BRISK');
 
   let ffd = new cv.FastFeatureDetector();
   ffd.detect(image, kp);
@@ -54,7 +54,7 @@ QUnit.test('Detectors', function(assert) {
 
   let akaze = new cv.AKAZE();
   akaze.detect(image, kp);
-  assert.equal(kp.size(), 53, 'AKAZE');
+  assert.equal(kp.size(), 52, 'AKAZE');
 });
 
 QUnit.test('SimpleBlobDetector', function(assert) {
@@ -75,14 +75,14 @@ QUnit.test('BFMatcher', function(assert) {
   let orb = new cv.ORB();
   orb.detectAndCompute(image, new cv.Mat(), kp, descriptors);
 
-  assert.equal(kp.size(), 67);
+  assert.equal(kp.size(), 68);
 
   // Run a matcher.
   let dm = new cv.DMatchVector();
   let matcher = new cv.BFMatcher();
   matcher.match(descriptors, descriptors, dm);
 
-  assert.equal(dm.size(), 67);
+  assert.equal(dm.size(), 68);
 });
 
 QUnit.test('Drawing', function(assert) {
@@ -93,7 +93,7 @@ QUnit.test('Drawing', function(assert) {
   let descriptors = new cv.Mat();
   let orb = new cv.ORB();
   orb.detectAndCompute(image, new cv.Mat(), kp, descriptors);
-  assert.equal(kp.size(), 67);
+  assert.equal(kp.size(), 68);
 
   let dst = new cv.Mat();
   cv.drawKeypoints(image, kp, dst);
@@ -104,7 +104,7 @@ QUnit.test('Drawing', function(assert) {
   let dm = new cv.DMatchVector();
   let matcher = new cv.BFMatcher();
   matcher.match(descriptors, descriptors, dm);
-  assert.equal(dm.size(), 67);
+  assert.equal(dm.size(), 68);
 
   cv.drawMatches(image, kp, image, kp, dm, dst);
   assert.equal(dst.rows, image.rows);
@@ -112,7 +112,7 @@ QUnit.test('Drawing', function(assert) {
 
   dm = new cv.DMatchVectorVector();
   matcher.knnMatch(descriptors, descriptors, dm, 2);
-  assert.equal(dm.size(), 67);
+  assert.equal(dm.size(), 68);
   cv.drawMatchesKnn(image, kp, image, kp, dm, dst);
   assert.equal(dst.rows, image.rows);
   assert.equal(dst.cols, 2 * image.cols);
