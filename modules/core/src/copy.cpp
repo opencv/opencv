@@ -446,7 +446,7 @@ void Mat::copyTo( OutputArray _dst ) const
 
     if( empty() )
     {
-        _dst.release();
+        _dst.create(dims, size.p, type());
         return;
     }
 
