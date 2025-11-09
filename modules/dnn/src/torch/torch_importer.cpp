@@ -782,12 +782,14 @@ struct TorchImporter
                 int dim = scalarParams.get<int>("dim") - 1;  // In Lua we start from 1.
                 int pad = scalarParams.get<int>("pad");
 
-                std::vector<int> paddings((dim + 1) * 2, 0);
+                const int numPads = (dim + 1) * 2;
+                int paddings[16] = {0};  // enough for most cases (dim < 7 usually)
                 if (pad > 0)
-                    paddings[dim * 2 + 1] = pad;  // Pad after (right).
+                    paddings[dim * 2 + 1] = pad;  // Pad after (right)
                 else
-                    paddings[dim * 2] = -pad;  // Pad before (left).
-                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+                    paddings[dim * 2] = -pad;     // Pad before (left)
+
+                layerParams.set("paddings", DictValue::arrayInt(paddings, numPads));
 
                 curModule->modules.push_back(newModule);
             }
