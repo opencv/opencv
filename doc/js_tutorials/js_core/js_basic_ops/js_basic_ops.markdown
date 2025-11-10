@@ -77,11 +77,13 @@ How to copy Mat
 There are 2 ways to copy a Mat:
 
 @code{.js}
-// 1. Clone
-let dst = src.clone();
+// 1. Clone (deep copy)
+let dst = src.mat_clone();
 // 2. CopyTo(only entries indicated in the mask are copied)
 src.copyTo(dst, mask);
 @endcode
+
+@note In OpenCV.js, use `mat_clone()` instead of `clone()` to ensure deep copy behavior. The `clone()` method may perform shallow copy due to Emscripten embind limitations.
 
 How to convert the type of Mat
 ------------------------------
