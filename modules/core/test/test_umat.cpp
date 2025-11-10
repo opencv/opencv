@@ -1199,6 +1199,14 @@ TEST(UMat, async_cleanup_without_call_chain_warning)
     }
 }
 
+TEST(UMat, copyToConvertTo_Empty)
+{
+    cv::UMat A(0, 0, CV_16SC2), B, C;
+    A.copyTo(B);
+    ASSERT_EQ(A.type(), B.type());
+    A.convertTo(C, CV_32SC2);
+    ASSERT_EQ(C.type(), CV_32SC2);
+}
 
 ///////////// oclCleanupCallback threadsafe check (#5062) /////////////////////
 

@@ -1113,6 +1113,10 @@ void cv::add( InputArray src1, InputArray src2, OutputArray dst,
     if (src1.empty() && src2.empty())
     {
         dst.release();
+        if (dtype >= 0)
+        {
+            dst.create(0, 0, dtype);
+        }
         return;
     }
 
@@ -1140,6 +1144,10 @@ void cv::subtract( InputArray _src1, InputArray _src2, OutputArray _dst,
     if (_src1.empty() && _src2.empty())
     {
         _dst.release();
+        if (dtype >= 0)
+        {
+            _dst.create(0, 0, dtype);
+        }
         return;
     }
 
@@ -1345,6 +1353,10 @@ void cv::addWeighted( InputArray src1, double alpha, InputArray src2,
     if (src1.empty() && src2.empty())
     {
         dst.release();
+        if (dtype >= 0)
+        {
+            dst.create(0, 0, dtype);
+        }
         return;
     }
 
