@@ -252,6 +252,7 @@ void Mat::convertTo(OutputArray dst, int type_, double alpha, double beta) const
     if (empty())
     {
         dst.release();
+        dst.create(size(), type_ >= 0 ? type_ : type());
         return;
     }
 
@@ -318,6 +319,7 @@ void UMat::convertTo(OutputArray dst, int type_, double alpha, double beta) cons
     if (empty())
     {
         dst.release();
+        dst.create(size(), type_ >= 0 ? type_ : type());
         return;
     }
 
