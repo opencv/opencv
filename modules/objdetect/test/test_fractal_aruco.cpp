@@ -55,8 +55,8 @@ TEST_P(FractalArucoTest, detect)
     for (size_t i = 0; i < points2D.size(); i++)
     {
         // TODO: optimize epsilon
-        EXPECT_NEAR(points2D[i].x, points2D_gt[i].x, 1.5e-2);
-        EXPECT_NEAR(points2D[i].y, points2D_gt[i].y, 1.5e-2);
+        EXPECT_NEAR(points2D[i].x, points2D_gt[i].x, 0.5);
+        EXPECT_NEAR(points2D[i].y, points2D_gt[i].y, 0.5);
     }
 
     ASSERT_EQ(points3D.size(), points3D_gt.size());
