@@ -41,9 +41,7 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
-  if((MSVC_VERSION LESS 1920) OR ARM OR AARCH64) # MSVS 2015/2017 on x86 and ARM
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
-  endif()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702) # MSVS 2015/2017/2019 on x86 and ARM
 endif()
 
 file(GLOB gapi_ext_hdrs
