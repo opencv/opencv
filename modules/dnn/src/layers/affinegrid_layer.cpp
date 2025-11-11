@@ -16,6 +16,108 @@
 namespace cv {
 namespace dnn {
 
+namespace {
+
+template<typename T>
+void computeGrid2D(const Mat& theta, Mat& grid, int N, int H, int W,
+                   float xs, float xd, float ys, float yd)
+{
+    const int total = N * H;
+    parallel_for_(Range(0, total), [&](const Range& range){
+        const int H_ = H;
+        const int W_ = W;
+        const float xs_ = xs, xd_ = xd, ys_ = ys, yd_ = yd;
+        const Mat theta_ = theta;
+        Mat grid_ = grid;
+        int lastN = -1;
+        const T* T0 = nullptr;
+        const T* T1 = nullptr;
+        float T0_0 = 0.f, T1_0 = 0.f;
+        for (int nyi = range.start; nyi < range.end; nyi++)
+        {
+            int n = nyi / H_;
+            int y = nyi - n * H_;
+            if (n != lastN)
+            {
+                int i0[3] = {n, 0, 0};
+                int i1[3] = {n, 1, 0};
+                T0 = theta_.ptr<T>(i0);
+                T1 = theta_.ptr<T>(i1);
+                T0_0 = (float)T0[0];
+                T1_0 = (float)T1[0];
+                lastN = n;
+            }
+            float ny = yd_ + ys_ * y;
+            float base0 = (float)T0[1]*ny + (float)T0[2];
+            float base1 = (float)T1[1]*ny + (float)T1[2];
+            float* out = grid_.ptr<float>(n, y, 0);
+            for (int x = 0; x < W_; x++)
+            {
+                float nx = xd_ + xs_ * x;
+                out[2*x + 0] = T0_0*nx + base0;
+                out[2*x + 1] = T1_0*nx + base1;
+            }
+        }
+    });
+}
+
+template<typename T>
+void computeGrid3D(const Mat& theta, Mat& grid, int N, int D, int H, int W,
+                   float xs, float xd, float ys, float yd, float zs, float zd)
+{
+    const int stride = D * H;
+    const int total = N * stride;
+    parallel_for_(Range(0, total), [&](const Range& range){
+        const int H_ = H;
+        const int W_ = W;
+        const int stride_ = stride;
+        const float xs_ = xs, xd_ = xd, ys_ = ys, yd_ = yd, zs_ = zs, zd_ = zd;
+        const Mat theta_ = theta;
+        Mat grid_ = grid;
+        int lastN = -1;
+        const T* T0 = nullptr;
+        const T* T1 = nullptr;
+        const T* T2 = nullptr;
+        float T0_0 = 0.f, T1_0 = 0.f, T2_0 = 0.f;
+        for (int ndz = range.start; ndz < range.end; ndz++)
+        {
+            int n = ndz / stride_;
+            int rem = ndz - n * stride_;
+            int z = rem / H_;
+            int y = rem - z * H_;
+            if (n != lastN)
+            {
+                int i0[3] = {n, 0, 0};
+                int i1[3] = {n, 1, 0};
+                int i2[3] = {n, 2, 0};
+                T0 = theta_.ptr<T>(i0);
+                T1 = theta_.ptr<T>(i1);
+                T2 = theta_.ptr<T>(i2);
+                T0_0 = (float)T0[0];
+                T1_0 = (float)T1[0];
+                T2_0 = (float)T2[0];
+                lastN = n;
+            }
+            float ny = yd_ + ys_ * y;
+            float nz = zd_ + zs_ * z;
+            float base0 = (float)T0[1]*ny + (float)T0[2]*nz + (float)T0[3];
+            float base1 = (float)T1[1]*ny + (float)T1[2]*nz + (float)T1[3];
+            float base2 = (float)T2[1]*ny + (float)T2[2]*nz + (float)T2[3];
+            int idx[5] = {n, z, y, 0, 0};
+            float* out = grid_.ptr<float>(idx);
+            for (int x = 0; x < W_; x++)
+            {
+                float nx = xd_ + xs_ * x;
+                int o = 3*x;
+                out[o + 0] = T0_0*nx + base0;
+                out[o + 1] = T1_0*nx + base1;
+                out[o + 2] = T2_0*nx + base2;
+            }
+        }
+    });
+}
+}
+
 class AffineGridLayerImpl CV_FINAL : public AffineGridLayer
 {
 public:
@@ -26,97 +128,6 @@ public:
     }
 
 private:
-    template<typename T>
-    void computeGrid2D(const Mat& theta, Mat& grid, int N, int H, int W,
-                       float xs, float xd, float ys, float yd) const
-    {
-        const int total = N * H;
-        parallel_for_(Range(0, total), [&](const Range& range){
-            const int H_ = H;
-            const int W_ = W;
-            const float xs_ = xs, xd_ = xd, ys_ = ys, yd_ = yd;
-            const Mat theta_ = theta;
-            Mat grid_ = grid;
-            int lastN = -1;
-            const T* T0 = nullptr;
-            const T* T1 = nullptr;
-            for (int nyi = range.start; nyi < range.end; nyi++)
-            {
-                int n = nyi / H_;
-                int y = nyi - n * H_;
-                if (n != lastN)
-                {
-                    int i0[3] = {n, 0, 0};
-                    int i1[3] = {n, 1, 0};
-                    T0 = theta_.ptr<T>(i0);
-                    T1 = theta_.ptr<T>(i1);
-                    lastN = n;
-                }
-                float ny = yd_ + ys_ * y;
-                float base0 = (float)T0[1]*ny + (float)T0[2];
-                float base1 = (float)T1[1]*ny + (float)T1[2];
-                float* out = grid_.ptr<float>(n, y, 0);
-                for (int x = 0; x < W_; x++)
-                {
-                    float nx = xd_ + xs_ * x;
-                    out[2*x + 0] = (float)T0[0]*nx + base0;
-                    out[2*x + 1] = (float)T1[0]*nx + base1;
-                }
-            }
-        });
-    }
-
-    template<typename T>
-    void computeGrid3D(const Mat& theta, Mat& grid, int N, int D, int H, int W,
-                       float xs, float xd, float ys, float yd, float zs, float zd) const
-    {
-        const int stride = D * H;
-        const int total = N * stride;
-        parallel_for_(Range(0, total), [&](const Range& range){
-            const int H_ = H;
-            const int W_ = W;
-            const int stride_ = stride;
-            const float xs_ = xs, xd_ = xd, ys_ = ys, yd_ = yd, zs_ = zs, zd_ = zd;
-            const Mat theta_ = theta;
-            Mat grid_ = grid;
-            int lastN = -1;
-            const T* T0 = nullptr;
-            const T* T1 = nullptr;
-            const T* T2 = nullptr;
-            for (int ndz = range.start; ndz < range.end; ndz++)
-            {
-                int n = ndz / stride_;
-                int rem = ndz - n * stride_;
-                int z = rem / H_;
-                int y = rem - z * H_;
-                if (n != lastN)
-                {
-                    int i0[3] = {n, 0, 0};
-                    int i1[3] = {n, 1, 0};
-                    int i2[3] = {n, 2, 0};
-                    T0 = theta_.ptr<T>(i0);
-                    T1 = theta_.ptr<T>(i1);
-                    T2 = theta_.ptr<T>(i2);
-                    lastN = n;
-                }
-                float ny = yd_ + ys_ * y;
-                float nz = zd_ + zs_ * z;
-                float base0 = (float)T0[1]*ny + (float)T0[2]*nz + (float)T0[3];
-                float base1 = (float)T1[1]*ny + (float)T1[2]*nz + (float)T1[3];
-                float base2 = (float)T2[1]*ny + (float)T2[2]*nz + (float)T2[3];
-                int idx[5] = {n, z, y, 0, 0};
-                float* out = grid_.ptr<float>(idx);
-                for (int x = 0; x < W_; x++)
-                {
-                    float nx = xd_ + xs_ * x;
-                    int o = 3*x;
-                    out[o + 0] = (float)T0[0]*nx + base0;
-                    out[o + 1] = (float)T1[0]*nx + base1;
-                    out[o + 2] = (float)T2[0]*nx + base2;
-                }
-            }
-        });
-    }
     void resolveSizeAndShape(int N, bool is3d, const Mat* explicitSz,
                          MatShape& outShape, int& D, int& H, int& W) const
     {
@@ -147,26 +158,19 @@ private:
         if (sz.empty())
             return;
 
-        CV_CheckTrue(sz.total() == (size_t)(is3d ? 5 : 4),
-                    "size input must have 4 (2D) or 5 (3D) elements");
-
-        auto readAt = [&](int idx) -> int {
-            if (sz.depth() == CV_64S) return (int)sz.at<int64_t>(idx);
-            if (sz.depth() == CV_32S) return (int)sz.at<int32_t>(idx);
-            CV_CheckType(sz.depth(), sz.depth() == CV_64S || sz.depth() == CV_32S,
-                        "size tensor must be int32 or int64");
-            return -1;
-        };
+        std::vector<int> sizeVec;
+        tensorToIntVec(sz, sizeVec);
+        CV_CheckTrue((int)sizeVec.size() == (is3d ? 5 : 4), "size input must have 4 (2D) or 5 (3D) elements");
 
         if (is3d) {
-            D = readAt(2);
-            H = readAt(3);
-            W = readAt(4);
+            D = sizeVec[2];
+            H = sizeVec[3];
+            W = sizeVec[4];
             if (D > 0 && H > 0 && W > 0)
                 outShape = MatShape{N, D, H, W, 3};
         } else {
-            H = readAt(2);
-            W = readAt(3);
+            H = sizeVec[2];
+            W = sizeVec[3];
             if (H > 0 && W > 0)
                 outShape = MatShape{N, H, W, 2};
         }
@@ -233,21 +237,14 @@ private:
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
     {
-        auto inKind = inputs_arr.kind();
         auto outKind = outputs_arr.kind();
-        CV_Assert(inKind == _InputArray::STD_VECTOR_MAT || inKind == _InputArray::STD_VECTOR_UMAT);
         CV_Assert(outKind == _InputArray::STD_VECTOR_MAT || outKind == _InputArray::STD_VECTOR_UMAT);
 
-        Mat theta, sz;
-        if (inKind == _InputArray::STD_VECTOR_MAT) {
-            theta = inputs_arr.getMat(0);
-            sz = inputs_arr.getMat(1);
-        } else {
-            UMat utheta = inputs_arr.getUMat(0);
-            UMat usz = inputs_arr.getUMat(1);
-            theta = utheta.getMat(ACCESS_READ);
-            sz = usz.getMat(ACCESS_READ);
-        }
+        std::vector<Mat> inMats;
+        inputs_arr.getMatVector(inMats);
+        CV_CheckGE((int)inMats.size(), 2, "AffineGrid requires two inputs: theta and size");
+        Mat theta = inMats[0];
+        Mat sz = inMats[1];
 
         CV_CheckTrue(theta.dims == 3, "theta must be 3D [N, r, c]");
         const int N = theta.size[0];
@@ -278,20 +275,26 @@ private:
             grid = uouts[0].getMat(ACCESS_WRITE);
         }
 
-        auto computeLinspace = [&](int len, float& scale, float& delta){
-            if (align_corners) {
-                scale = len > 1 ? 2.f / float(len - 1) : 0.f;
-                delta = -1.f;
-            } else {
-                scale = 2.f / float(len);
-                delta = scale * 0.5f - 1.f;
-            }
-        };
-
         float xs, xd, ys, yd, zs=0.f, zd=0.f;
-        computeLinspace(W, xs, xd);
-        computeLinspace(H, ys, yd);
-        if (is3d) computeLinspace(D, zs, zd);
+        if (align_corners) {
+            xs = W > 1 ? 2.f / float(W - 1) : 0.f;
+            xd = -1.f;
+            ys = H > 1 ? 2.f / float(H - 1) : 0.f;
+            yd = -1.f;
+            if (is3d) {
+                zs = D > 1 ? 2.f / float(D - 1) : 0.f;
+                zd = -1.f;
+            }
+        } else {
+            xs = 2.f / float(W);
+            xd = xs * 0.5f - 1.f;
+            ys = 2.f / float(H);
+            yd = ys * 0.5f - 1.f;
+            if (is3d) {
+                zs = 2.f / float(D);
+                zd = zs * 0.5f - 1.f;
+            }
+        }
 
         int depth = theta.depth();
         if (!is3d){
