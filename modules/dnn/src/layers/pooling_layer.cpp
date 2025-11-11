@@ -74,6 +74,8 @@ using namespace cv::dnn::ocl4dnn;
 using namespace cv::dnn::cuda4dnn;
 #include <opencv2/core/cuda.hpp>
 #include "../cuda/conv_naive.hpp"
+#include "../net_impl.hpp"
+#include <cudnn.h>
 #endif
 #include <opencv2/core/utils/logger.hpp>
 
@@ -136,12 +138,18 @@ public:
         ceilMode = params.get<bool>("ceil_mode", true);
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
+        #ifdef HAVE_CUDA
+        cudnnPoolDesc = nullptr;
+        #endif
     }
     // Cache last input shape from finalize() to use in GPU fast path
     MatShape lastInputShape;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
+#endif
+#ifdef HAVE_CUDA
+    cudnnPoolingDescriptor_t cudnnPoolDesc;
 #endif
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -187,13 +195,24 @@ public:
             lastInputShape = shape(inputs[0]);
     }
 
+#ifdef HAVE_CUDA
+    ~PoolingLayerImpl()
+    {
+        if (cudnnPoolDesc)
+        {
+            cudnnDestroyPoolingDescriptor(cudnnPoolDesc);
+            cudnnPoolDesc = nullptr;
+        }
+    }
+#endif
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
             EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
             if (engine_forced != ENGINE_CLASSIC)
-                return false;
+                return true;
+                // return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
@@ -344,9 +363,8 @@ public:
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
 #ifdef HAVE_CUDA
-        if (type == MAX && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        if ((type == MAX || type == AVE) && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
         {
-            // existing MAX path
             std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
             if (gout.size() == 1)
             {
@@ -380,13 +398,13 @@ public:
                     int C = (dims >= 4) ? ish[1] : (dims == 3 ? ish[1] : 1);
                     int H_in = (dims >= 4) ? ish[dims - 2] : 1;
                     int W_in = ish[dims - 1];
-                    // Pool2D only here
-                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : 2;
-                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : kH;
-                    int sH = strides.size() > 0 ? (int)strides[0] : 2;
-                    int sW = strides.size() > 1 ? (int)strides[1] : sH;
+                    // Pool2D parameters
+                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : (type == AVE ? H_in : 2);
+                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : (type == AVE ? W_in : kH);
+                    int sH = strides.size() > 0 ? (int)strides[0] : (type == AVE ? 1 : 2);
+                    int sW = strides.size() > 1 ? (int)strides[1] : (type == AVE ? 1 : sH);
                     int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
-                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : pH;
+                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : 0;
                     int H_out = (H_in + 2 * pH - kH) / sH + 1;
                     int W_out = (W_in + 2 * pW - kW) / sW + 1;
 
@@ -401,73 +419,62 @@ public:
                     if (dst.empty() || dst.type() != CV_32F || dst.rows != out_rows || dst.cols != out_cols)
                         dst.create(out_rows, out_cols, CV_32F);
 
-                    cv::dnn::cuda_naive_conv::maxpool2d_nchw_flatrows_fp32(
-                        (const float*)gin0.ptr<float>(), (size_t)gin0.step,
-                        (float*)dst.ptr<float>(), (size_t)dst.step,
-                        N, C, H_in, W_in, H_out, W_out,
-                        kH, kW, sH, sW, pH, pW);
+                    // Use cached descriptors (NCHW) with explicit strides matching 2D views
+                    Net::Impl* netimpl = getNetImpl(this);
+                    CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                    if (!netimpl->cudaInfo)
+                    {
+                        try {
+                            netimpl->initCUDABackend(netimpl->blobsToKeep);
+                        } catch (const cv::Exception& e) {
+                            CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+                        }
+                    }
+                    CV_Assert(netimpl->cudaInfo);
+                    cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                    // Input descriptor
+                    int x_n_stride = (int)(gin0.step / sizeof(float));
+                    cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                        this->inputs.empty() ? Arg() : this->inputs[0],
+                        N, C, H_in, W_in,
+                        x_n_stride, H_in * W_in, W_in, 1,
+                        CUDNN_DATA_FLOAT);
+                    // Output descriptor
+                    int y_n_stride = (int)(dst.step / sizeof(float));
+                    cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                        this->outputs.empty() ? Arg() : this->outputs[0],
+                        N, C, H_out, W_out,
+                        y_n_stride, H_out * W_out, W_out, 1,
+                        CUDNN_DATA_FLOAT);
+
+                    // Ensure cached cuDNN pooling descriptor exists and matches current params
+                    if (!cudnnPoolDesc) {
+                        cudnnCreatePoolingDescriptor(&cudnnPoolDesc);
+                    }
+                    cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+                    cudnnSetPooling2dDescriptor(cudnnPoolDesc, mode, CUDNN_PROPAGATE_NAN,
+                                                kH, kW, pH, pW, sH, sW);
+
+                    if (type == MAX)
+                    {
+                        std::cout<<"maxPool2dNCHW"<<std::endl;
+                        cv::dnn::cuda::maxPool2dNCHW(
+                            cudnnHandle,
+                            xDesc, yDesc, cudnnPoolDesc,
+                            (const void*)gin0.ptr(),
+                            (void*)dst.ptr());
+                    }
+                    else
+                    {
+                        std::cout<<"avgPool2dNCHW"<<std::endl;
+                        cv::dnn::cuda::avgPool2dNCHW(
+                            cudnnHandle,
+                            xDesc, yDesc, cudnnPoolDesc,
+                            (const void*)gin0.ptr(),
+                            (void*)dst.ptr());
+                    }
                     return;
-                }
-            }
-        }
-        if (type == AVE && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
-        {
-            // Handle global average pooling when kernel covers full input spatial
-            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
-            if (!gout.empty())
-            {
-                cv::cuda::GpuMat gin0;
-                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
-                {
-                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                    if (!gin.empty()) gin0 = gin[0];
-                }
-                else
-                {
-                    std::vector<Mat> inHost; inputs_arr.getMatVector(inHost);
-                    if (!inHost.empty())
-                    {
-                        const Mat& m = inHost[0];
-                        MatShape ish = shape(m);
-                        int N = ish.size() > 0 ? ish[0] : 1;
-                        Mat m2d = m.reshape(1, N);
-                        gin0.create(m2d.rows, m2d.cols, m2d.type());
-                        gin0.upload(m2d);
-                    }
-                }
-                if (!gin0.empty())
-                {
-                    if (gin0.type() != CV_32F)
-                    {
-                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
-                    }
-                    // Derive N,C,H,W from cached input shape
-                    MatShape ish = lastInputShape;
-                    int dims = (int)ish.size();
-                    CV_Assert(dims >= 3);
-                    int N = ish[0];
-                    int C = (dims >= 4) ? ish[1] : (dims == 3 ? ish[1] : 1);
-                    int H_in = (dims >= 4) ? ish[dims - 2] : 1;
-                    int W_in = ish[dims - 1];
-                    // Check if this is truly global average pooling: kernel equals spatial dims, stride=1, pad=0
-                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : H_in;
-                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : W_in;
-                    int sH = strides.size() > 0 ? (int)strides[0] : 1;
-                    int sW = strides.size() > 1 ? (int)strides[1] : 1;
-                    int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
-                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : 0;
-                    if (kH == H_in && kW == W_in && sH == 1 && sW == 1 && pH == 0 && pW == 0)
-                    {
-                        // Output should be N x C in our 2D view
-                        cv::cuda::GpuMat& dst = gout[0];
-                        if (dst.empty() || dst.type() != CV_32F || dst.rows != std::max(N,1) || dst.cols != std::max(C,1))
-                            dst.create(std::max(N,1), std::max(C,1), CV_32F);
-                        cv::dnn::cuda_naive_conv::global_avgpool2d_nchw_flat_fp32(
-                            (const float*)gin0.ptr<float>(), (size_t)gin0.step,
-                            (float*)dst.ptr<float>(), (size_t)dst.step,
-                            N, C, H_in, W_in);
-                        return;
-                    }
                 }
             }
         }

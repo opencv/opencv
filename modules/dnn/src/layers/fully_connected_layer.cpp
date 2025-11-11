@@ -48,6 +48,7 @@
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 #include "../op_vkcom.hpp"
+#include "../net_impl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -61,6 +62,7 @@ using namespace cv::dnn::ocl4dnn;
 #include "../cuda4dnn/primitives/inner_product.hpp"
 #include "../cuda/conv_naive.hpp"
 #include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -553,7 +555,7 @@ public:
                     EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
                     if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
                     {
-                        // Use our cuBLAS-based FC on GPU
+                        // Use our cuBLAS-based FC on GPU with cached handles/descriptors
                         std::vector<cv::cuda::GpuMat> gin, gout;
                         inputs_arr.getGpuMatVector(gin);
                         outputs_arr.getGpuMatVector(gout);
@@ -587,12 +589,51 @@ public:
                             else
                                 bdev.release();
 
-                            cv::dnn::cuda_naive_conv::fc_fp32(
-                                (const float*)src.ptr<float>(),
-                                (const float*)wdev.ptr<float>(),
-                                bdev.empty() ? nullptr : (const float*)bdev.ptr<float>(),
-                                (float*)dst.ptr<float>(),
-                                N, K, M);
+                            // Prepare cuBLAS/cuDNN handles and descriptors via Net::Impl (new engine path)
+                            Net::Impl* netimpl = getNetImpl(this);
+                            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                            if (!netimpl->cudaInfo)
+                            {
+                                try {
+                                    netimpl->initCUDABackend(netimpl->blobsToKeep);
+                                } catch (const cv::Exception& e) {
+                                    CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+                                }
+                            }
+                            CV_Assert(netimpl->cudaInfo);
+                            cublasHandle_t blasHandle = netimpl->cudaInfo->context.cublas_handle.get();
+                            cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                            // Output descriptor (N, C=M, 1, 1) with explicit strides honoring pitch
+                            const int y_n_stride = (int)(dst.step / sizeof(float));
+                            cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                                this->outputs.empty() ? Arg() : this->outputs[0],
+                                N, M, 1, 1,
+                                y_n_stride, 1, 1, 1,
+                                CUDNN_DATA_FLOAT);
+
+                            // Bias descriptor (1, C=M, 1, 1); get/cached via argTensorCuDNN using a named Arg
+                            cudnnTensorDescriptor_t bDesc = nullptr;
+                            if (!bdev.empty()) {
+                                Arg bArg = netimpl->getArg(this->name + ":bias");
+                                bDesc = netimpl->argTensorCuDNN(
+                                    bArg,
+                                    1, M, 1, 1,
+                                    M, 1, 1, 1,
+                                    CUDNN_DATA_FLOAT);
+                            }
+
+                            std::cout<<"matMul"<<std::endl;
+                            cv::dnn::cuda::matMul(
+                                blasHandle,
+                                cudnnHandle,
+                                yDesc,
+                                bDesc,
+                                src,
+                                wdev,
+                                dst,
+                                bdev);
+
                             return;
                         }
                     }
