@@ -4,117 +4,120 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <cudnn.h>
+#include <cuda_fp16.h>
+#include <cuda_bf16.h>
 #include <cstdio>
 #include "conv_naive.hpp"
 
-namespace cv { namespace dnn { namespace cuda_naive_conv {
+namespace cv { namespace dnn { namespace cuda {
 
 static inline const char* cudnn_err(cudnnStatus_t s) { return cudnnGetErrorString(s); }
 
-void fc_fp32(const float* x, const float* w, const float* b, float* y,
-             int N, int K, int M)
+void matMul(cublasHandle_t blas,
+            cudnnHandle_t cudnn,
+            cudnnTensorDescriptor_t yDesc,
+            cudnnTensorDescriptor_t bDesc,
+            const cv::cuda::GpuMat& x,
+            const cv::cuda::GpuMat& w,
+            cv::cuda::GpuMat& y,
+            const cv::cuda::GpuMat& b)
 {
-    // Diagnostics
-    std::fprintf(stderr, "DNN(cuDNN): fc_fp32 using cuBLAS GEMM (N=%d K=%d -> M=%d)\n", N, K, M);
-
-    cublasHandle_t blas = nullptr;
-    cudnnHandle_t cudnn = nullptr;
-    cudnnTensorDescriptor_t yDesc = nullptr, bDesc = nullptr;
+    // Shapes: x [N x K], w [M x K] (row-major), y [N x M]
+    const int N = x.rows;
+    const int K = x.cols;
+    const int M = w.rows;
 
     bool ok = true;
     cublasStatus_t cbst = CUBLAS_STATUS_SUCCESS;
     cudnnStatus_t  cdst = CUDNN_STATUS_SUCCESS;
 
-    // cuBLAS for GEMM
-    cbst = cublasCreate(&blas);
-    if (cbst != CUBLAS_STATUS_SUCCESS) {
-        std::fprintf(stderr, "DNN(cuDNN): fc cublasCreate failed: %d\n", (int)cbst);
-        ok = false;
+    // Basic validation
+    if (ok) {
+        int xtype = x.type(), wtype = w.type(), ytype = y.type();
+        if (!b.empty() && b.type() != ytype) {
+            std::fprintf(stderr, "DNN(cuDNN): matmul bias/output type mismatch\n"); ok = false;
+        }
+        if (!((xtype == CV_32F || xtype == CV_16F || xtype == CV_16BF) &&
+              (wtype == CV_32F || wtype == CV_16F || wtype == CV_16BF) &&
+              (ytype == CV_32F || ytype == CV_16F || ytype == CV_16BF))) {
+            std::fprintf(stderr, "DNN(cuDNN): matmul expects CV_32F/CV_16F/CV_16BF mats\n"); ok = false;
+        }
+    }
+    if (ok) {
+        if (w.cols != K) {
+            std::fprintf(stderr, "DNN(cuDNN): matmul shape mismatch (w.cols=%d, K=%d)\n", w.cols, K);
+            ok = false;
+        }
+        if (y.rows != N || y.cols != M) {
+            std::fprintf(stderr, "DNN(cuDNN): matmul output shape mismatch, got (%d x %d), expected (%d x %d)\n",
+                         y.rows, y.cols, N, M);
+            ok = false;
+        }
+        if (!x.isContinuous() || !w.isContinuous() || !y.isContinuous() || (!b.empty() && !b.isContinuous())) {
+            std::fprintf(stderr, "DNN(cuDNN): matmul expects continuous GpuMat buffers\n");
+            ok = false;
+        }
     }
 
-    // Row-major trick with cuBLAS (which is column-major):
-    // Compute Y_row(NxM) = X_row(NxK) * W_row^T(KxM)
-    // by calling: C_col(MxN) = op(A)=B_row^T(KxN) * op(B)=A_row^T(KxM)
-    // cublasSgemm(CUBLAS_OP_T, CUBLAS_OP_T, M, N, K, ...)
+    // Row-major trick with cuBLAS (column-major lib)
     if (ok) {
-        const float alpha = 1.0f, beta = 0.0f;
-        cbst = cublasSgemm(blas,
-                           CUBLAS_OP_T, CUBLAS_OP_T,
-                           /*m*/ M, /*n*/ N, /*k*/ K,
-                           &alpha,
-                           /*A = B_row (W)*/ w, /*lda = K*/ K,
-                           /*B = A_row (X)*/ x, /*ldb = K*/ K,
-                           &beta,
-                           /*C = Y_row*/ y, /*ldc = M*/ M);
+        float alpha = 1.0f, beta = 0.0f;
+        const void* wPtr = (const void*)w.ptr();
+        const void* xPtr = (const void*)x.ptr();
+        void* yPtr = (void*)y.ptr();
+        const int lda = static_cast<int>(w.step / (size_t)CV_ELEM_SIZE(w.type()));
+        const int ldb = static_cast<int>(x.step / (size_t)CV_ELEM_SIZE(x.type()));
+        const int ldc = static_cast<int>(y.step / (size_t)CV_ELEM_SIZE(y.type()));
+        cudaDataType wType = (w.type() == CV_32F ? CUDA_R_32F : (w.type() == CV_16F ? CUDA_R_16F : CUDA_R_16BF));
+        cudaDataType xType = (x.type() == CV_32F ? CUDA_R_32F : (x.type() == CV_16F ? CUDA_R_16F : CUDA_R_16BF));
+        cudaDataType yType = (y.type() == CV_32F ? CUDA_R_32F : (y.type() == CV_16F ? CUDA_R_16F : CUDA_R_16BF));
+        cublasComputeType_t computeType = CUBLAS_COMPUTE_32F;
+        cbst = cublasGemmEx(blas,
+                            CUBLAS_OP_T, CUBLAS_OP_T,
+                            /*m*/ M, /*n*/ N, /*k*/ K,
+                            &alpha,
+                            /*A = W*/ wPtr, wType, /*lda*/ lda,
+                            /*B = X*/ xPtr, xType, /*ldb*/ ldb,
+                            &beta,
+                            /*C = Y*/ yPtr, yType, /*ldc*/ ldc,
+                            computeType, CUBLAS_GEMM_DEFAULT);
         if (cbst != CUBLAS_STATUS_SUCCESS) {
             std::fprintf(stderr, "DNN(cuDNN): fc GEMM failed: %d\n", (int)cbst);
             ok = false;
         }
     }
 
-    if (ok && b != nullptr) {
-        cdst = cudnnCreate(&cudnn);
-        if (cdst != CUDNN_STATUS_SUCCESS) {
-            std::fprintf(stderr, "DNN(cuDNN): fc cudnnCreate failed: %s\n", cudnn_err(cdst));
-            ok = false;
+    if (ok && !b.empty() && yDesc && bDesc) {
+        // Typed alpha/beta for cudnnAddTensor
+        int n, c, h, w, ns, cs, hs, ws; cudnnDataType_t ydt;
+        cudnnGetTensor4dDescriptor(yDesc, &ydt, &n, &c, &h, &w, &ns, &cs, &hs, &ws);
+        switch (ydt) {
+            case CUDNN_DATA_FLOAT: {
+                const float alpha = 1.0f, beta = 1.0f;
+                cdst = cudnnAddTensor(cudnn, &alpha, bDesc, b.ptr<float>(), &beta, yDesc, y.ptr<float>());
+                break;
+            }
+            case CUDNN_DATA_HALF: {
+                __half alpha = __float2half(1.0f), beta = __float2half(1.0f);
+                cdst = cudnnAddTensor(cudnn, &alpha, bDesc, b.ptr<__half>(), &beta, yDesc, y.ptr<__half>());
+                break;
+            }
+            case CUDNN_DATA_BFLOAT16: {
+                __nv_bfloat16 alpha = __float2bfloat16(1.0f), beta = __float2bfloat16(1.0f);
+                cdst = cudnnAddTensor(cudnn, &alpha, bDesc, b.ptr<__nv_bfloat16>(), &beta, yDesc, y.ptr<__nv_bfloat16>());
+                break;
+            }
+            default: {
+                const float alpha = 1.0f, beta = 1.0f;
+                cdst = cudnnAddTensor(cudnn, &alpha, bDesc, b.ptr<float>(), &beta, yDesc, y.ptr<float>());
+                break;
+            }
         }
-    }
-
-    if (ok && b != nullptr) {
-        cdst = cudnnCreateTensorDescriptor(&yDesc);
-        if (cdst != CUDNN_STATUS_SUCCESS) {
-            std::fprintf(stderr, "DNN(cuDNN): fc create yDesc failed: %s\n", cudnn_err(cdst));
-            ok = false;
-        }
-    }
-    if (ok && b != nullptr) {
-        cdst = cudnnCreateTensorDescriptor(&bDesc);
-        if (cdst != CUDNN_STATUS_SUCCESS) {
-            std::fprintf(stderr, "DNN(cuDNN): fc create bDesc failed: %s\n", cudnn_err(cdst));
-            ok = false;
-        }
-    }
-
-    if (ok && b != nullptr) {
-        // NCHW with H=W=1
-        const int n = N, c = M, h = 1, wv = 1;
-        const int ysN = c * h * wv;
-        const int ysC = h * wv;
-        const int ysH = wv;
-        const int ysW = 1;
-        cdst = cudnnSetTensor4dDescriptorEx(yDesc, CUDNN_DATA_FLOAT, n, c, h, wv, ysN, ysC, ysH, ysW);
-        if (cdst != CUDNN_STATUS_SUCCESS) {
-            std::fprintf(stderr, "DNN(cuDNN): fc set yDesc failed: %s\n", cudnn_err(cdst));
-            ok = false;
-        }
-    }
-    if (ok && b != nullptr) {
-        // Bias has shape (1, M, 1, 1)
-        const int n = 1, c = M, h = 1, wv = 1;
-        const int bsN = c * h * wv;
-        const int bsC = h * wv;
-        const int bsH = wv;
-        const int bsW = 1;
-        cdst = cudnnSetTensor4dDescriptorEx(bDesc, CUDNN_DATA_FLOAT, n, c, h, wv, bsN, bsC, bsH, bsW);
-        if (cdst != CUDNN_STATUS_SUCCESS) {
-            std::fprintf(stderr, "DNN(cuDNN): fc set bDesc failed: %s\n", cudnn_err(cdst));
-            ok = false;
-        }
-    }
-
-    if (ok && b != nullptr) {
-        const float alpha = 1.0f, beta = 1.0f; // Y = 1*B + 1*Y
-        cdst = cudnnAddTensor(cudnn, &alpha, bDesc, b, &beta, yDesc, y);
         if (cdst != CUDNN_STATUS_SUCCESS) {
             std::fprintf(stderr, "DNN(cuDNN): fc add bias failed: %s\n", cudnn_err(cdst));
             ok = false;
         }
     }
-
-    if (yDesc) cudnnDestroyTensorDescriptor(yDesc);
-    if (bDesc) cudnnDestroyTensorDescriptor(bDesc);
-    if (cudnn) cudnnDestroy(cudnn);
-    if (blas)  cublasDestroy(blas);
 }
 
-}}} // namespace cv::dnn::cuda_naive_conv
+}}} // namespace cv::dnn::cuda

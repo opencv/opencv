@@ -28,6 +28,7 @@
 #include <unordered_map>
 #ifdef HAVE_CUDA
 #include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
 #endif
 
 namespace cv {
@@ -106,6 +107,11 @@ struct Net::Impl : public detail::NetImplBase
 #ifdef HAVE_CUDA
     std::vector<cv::cuda::GpuMat> gpuTensors;
     std::vector<cv::cuda::GpuMat> gpuBuffers;
+    std::vector<cv::cuda::GpuMatND> gpuTensorsND;
+    std::vector<cv::cuda::GpuMatND> gpuBuffersND;
+    std::vector<cv::cuda::GpuMatND> layerTempGpuND;
+    // Cached cuDNN tensor descriptors per graph Arg (index-matched to 'args')
+    std::vector<cudnnTensorDescriptor_t> cudnnTensors;
 #endif
 
     virtual bool empty() const;
@@ -117,6 +123,12 @@ struct Net::Impl : public detail::NetImplBase
 
 #ifdef HAVE_CUDA
     cv::cuda::GpuMat& argGpuMat(Arg arg);
+    // Ensure existence and configure cuDNN tensor descriptor for Arg with strides.
+    // Strides are in elements (not bytes). Returns a reference to cached descriptor.
+    cudnnTensorDescriptor_t argTensorCuDNN(Arg arg,
+                                           int N, int C, int H, int W,
+                                           int n_stride, int c_stride, int h_stride, int w_stride,
+                                           cudnnDataType_t dtype);
 #endif
     void ensureBufferWrapper(int bufidx);
 

@@ -443,6 +443,13 @@ public:
 
     void swap(GpuMatND& m) noexcept;
 
+    /** @brief Allocates or reuses underlying storage to fit the requested n-D size and type.
+    - No-op if already compatible (sufficient capacity, continuous, not a submatrix, not external, no ROI).
+    - Reallocates otherwise.
+    Mirrors 2D GpuMat::fit semantics for multi-dimensional tensors.
+    */
+    CV_WRAP void fit(SizeArray size, int type);
+
     /** @brief Creates a full copy of the array and the underlying data.
     The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
     the original step is not taken into account. So, the array copy is a continuous array

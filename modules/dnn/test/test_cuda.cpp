@@ -43,6 +43,7 @@ TEST(DNN_CUDA, AlexNet_ONNX_GroundTruth)
     net.setPreferableBackend(dnn::DNN_BACKEND_CUDA);
     net.setPreferableTarget(dnn::DNN_TARGET_CUDA);
     net.setInput(blob);
+    net.setTracingMode(cv::dnn::DNN_TRACE_OP);  // or cv.dnn.DNN_TRACE_ALL
 
     Mat out = net.forward().clone();
     out = out.reshape(1, 1);

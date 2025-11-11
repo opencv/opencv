@@ -191,4 +191,33 @@ void GpuMatND::download(OutputArray dst, Stream& stream) const
     throw_no_cuda();
 }
 
+void GpuMatND::fit(SizeArray _size, int _type)
+{
+    auto elements_nonzero = [](const SizeArray& v)
+    {
+        return std::all_of(v.begin(), v.end(), [](int u){ return u > 0; });
+    };
+    CV_Assert(!_size.empty());
+    CV_Assert(elements_nonzero(_size));
+
+    _type &= Mat::TYPE_MASK;
+
+    const size_t esz = (size_t)CV_ELEM_SIZE(_type);
+    size_t step0 = esz;
+    for (int i = (int)_size.size() - 2; i >= 0; --i)
+        step0 *= (size_t)_size[(size_t)i + 1];
+    const size_t requiredBytes = (size_t)_size[0] * step0;
+
+    const bool canReuse = !empty() && !external() && isContinuous() && !isSubmatrix() && offset == 0;
+    const size_t oldCapacity = canReuse ? totalMemSize() : 0;
+
+    if (!canReuse || requiredBytes > oldCapacity)
+    {
+        create(std::move(_size), _type);
+        return;
+    }
+
+    setFields(std::move(_size), _type);
+}
+
 #endif
