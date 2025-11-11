@@ -581,3 +581,7 @@
 "test_dft_inverse",
 "test_dft_inverse_opset19",
 "test_dft_opset19",
+"test_affine_grid_3d",
+"test_affine_grid_3d_align_corners",
+"test_affine_grid_2d",
+"test_affine_grid_2d_align_corners",
