@@ -328,12 +328,7 @@
 "test_dequantizelinear_int4",
 "test_dequantizelinear_uint16",
 "test_dequantizelinear_uint4",
-"test_dft",
 "test_dft_axis",
-"test_dft_axis_opset19",
-"test_dft_inverse",
-"test_dft_inverse_opset19",
-"test_dft_opset19",
 "test_dropout_default_mask",  // Issue::cvtest::norm::wrong data type
 "test_dropout_default_mask_ratio",  // ---- same as above ---
 "test_dynamicquantizelinear",  // Issue:: Unkonwn error

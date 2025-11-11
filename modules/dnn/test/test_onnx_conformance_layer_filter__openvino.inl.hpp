@@ -594,6 +594,16 @@ CASE(test_det_2d)
     SKIP;
 CASE(test_det_nd)
     SKIP;
+CASE(test_dft)
+    SKIP;
+CASE(test_dft_axis_opset19)
+    SKIP;
+CASE(test_dft_inverse)
+    SKIP;
+CASE(test_dft_inverse_opset19)
+    SKIP;
+CASE(test_dft_opset19)
+    SKIP;
 CASE(test_div)
     // no filter
 CASE(test_div_bcast)
