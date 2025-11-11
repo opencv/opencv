@@ -201,7 +201,7 @@ cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
-#elif defined _MSC_VER && defined _M_ARM64
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
     float64x1_t v = vdup_n_f64(value);
     int64x1_t r = vcvtn_s64_f64(v);
     return static_cast<int>(vget_lane_s64(r, 0));
@@ -327,7 +327,7 @@ CV_INLINE int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
-#elif defined _MSC_VER && defined _M_ARM64
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM64EC))
     float32x2_t v = vdup_n_f32(value);
     int32x2_t r = vcvtn_s32_f32(v);
     return vget_lane_s32(r, 0);
