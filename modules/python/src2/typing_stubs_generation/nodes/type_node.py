@@ -274,14 +274,21 @@ class AliasTypeNode(TypeNode):
                  required_modules: Tuple[str, ...] = ()) -> None:
         super().__init__(ctype_name, required_modules)
         self.value = value
-        self._export_name = export_name
+        # If alias is exported as is - use its ctype_name
+        if export_name is None:
+            forbidden_symbols = (":", "*", "&")
+            assert all(symbol not in ctype_name for symbol in forbidden_symbols), (
+                "Failed to create AliasTypeNode without export_name. "
+                f"'{ctype_name}' should not contain any of {forbidden_symbols}"
+            )
+            self._export_name = ctype_name
+        else:
+            self._export_name = export_name
         self.doc = doc
 
     @property
     def typename(self) -> str:
-        if self._export_name is not None:
-            return self._export_name
-        return self.ctype_name
+        return self._export_name
 
     @property
     def full_typename(self) -> str:
