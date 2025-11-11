@@ -67,6 +67,8 @@ using namespace cv::dnn::cuda4dnn;
 #ifdef HAVE_CUDA
 #include <opencv2/core/cuda.hpp>
 #include "../cuda/conv_naive.hpp"
+#include "../net_impl.hpp"
+#include <cudnn.h>
 #endif
 
 #ifdef HAVE_DNN_NGRAPH
@@ -271,9 +273,50 @@ public:
                         }
                         if (dst.empty() || dst.type() != CV_32F || dst.rows != gin0.rows || dst.cols != gin0.cols)
                             dst.create(gin0.rows, gin0.cols, CV_32F);
-                        cv::dnn::cuda_naive_conv::relu_fp32_2d((const float*)gin0.ptr<float>(), (size_t)gin0.step,
-                                                             (float*)dst.ptr<float>(), (size_t)dst.step,
-                                                             gin0.rows, gin0.cols);
+                        // Use cached descriptors via Net::Impl
+                        Net::Impl* netimpl = getNetImpl(this);
+                        CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                        if (!netimpl->cudaInfo)
+                        {
+                            try {
+                                netimpl->initCUDABackend(netimpl->blobsToKeep);
+                            } catch (const cv::Exception& e) {
+                                CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+                            }
+                        }
+                        CV_Assert(netimpl->cudaInfo);
+                        cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+                        // Build descriptors honoring pitch: N=rows, C=cols, H=W=1
+                        int in_rows = gin0.rows > 0 ? gin0.rows : 1;
+                        int in_cols = gin0.cols > 0 ? gin0.cols : 1;
+                        int x_n_stride = (int)(gin0.step / sizeof(float));
+                        cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                            this->inputs.empty() ? Arg() : this->inputs[0],
+                            in_rows, in_cols, 1, 1,
+                            x_n_stride, 1, 1, 1,
+                            CUDNN_DATA_FLOAT);
+                        int y_rows = dst.rows > 0 ? dst.rows : 1;
+                        int y_cols = dst.cols > 0 ? dst.cols : 1;
+                        int y_n_stride = (int)(dst.step / sizeof(float));
+                        cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                            this->outputs.empty() ? Arg() : this->outputs[0],
+                            y_rows, y_cols, 1, 1,
+                            y_n_stride, 1, 1, 1,
+                            CUDNN_DATA_FLOAT);
+
+                        std::cout<<"relu"<<std::endl;
+                        static cudnnActivationDescriptor_t reluActDesc = nullptr;
+                        if (!reluActDesc) {
+                            cudnnCreateActivationDescriptor(&reluActDesc);
+                            cudnnSetActivationDescriptor(reluActDesc, CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0.0);
+                        }
+                        cv::dnn::cuda::relu(
+                            cudnnHandle,
+                            reluActDesc,
+                            xDesc,
+                            yDesc,
+                            (const void*)gin0.ptr(),
+                            (void*)dst.ptr());
                         return;
                     }
                 }

@@ -8,6 +8,7 @@
 #ifdef HAVE_CUDA
 #include "cuda/conv_naive.hpp"
 #include <cuda_runtime.h>
+#include <cudnn.h>
 #endif
 
 namespace cv {
@@ -39,25 +40,6 @@ ArgData::ArgData()
     type = -1;
 }
 
-#ifdef HAVE_CUDA
-static inline void fitGpuMatForShape(cv::cuda::GpuMat& gm, const MatShape& shape, int type)
-{
-    int rows = 1;
-    size_t total = 1;
-    if (shape.dims > 0) {
-        rows = shape[0] > 0 ? shape[0] : 1;
-        for (int d = 0; d < shape.dims; ++d) {
-            int dim = shape[d] > 0 ? shape[d] : 1;
-            total *= (size_t)dim;
-        }
-    }
-    size_t cols_sz = total / (size_t)rows;
-    int cols = (int)cols_sz;
-    if (cols <= 0) cols = 1;
-    if (gm.empty() || gm.rows != rows || gm.cols != cols || gm.type() != type)
-        gm.create(rows, cols, type);
-}
-#endif
 
 class GraphImpl : public Graph
 {
@@ -200,6 +182,31 @@ bool Net::Impl::isConstArg(Arg arg) const
 {
     return argKind(arg) == DNN_ARG_CONST;
 }
+
+#ifdef HAVE_CUDA
+cudnnTensorDescriptor_t Net::Impl::argTensorCuDNN(Arg arg,
+                                                  int N, int C, int H, int W,
+                                                  int n_stride, int c_stride, int h_stride, int w_stride,
+                                                  cudnnDataType_t dtype)
+{
+    CV_Assert((size_t)arg.idx < args.size());
+    if (cudnnTensors.size() < args.size())
+        cudnnTensors.resize(args.size(), nullptr);
+    if (!cudnnTensors[arg.idx])
+    {
+        cudnnTensorDescriptor_t desc = nullptr;
+        cudnnStatus_t st = cudnnCreateTensorDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateTensorDescriptor failed");
+        cudnnTensors[arg.idx] = desc;
+    }
+    // Configure descriptor with explicit strides
+    cudnnStatus_t st = cudnnSetTensor4dDescriptorEx(cudnnTensors[arg.idx],
+                                                    dtype, N, C, H, W,
+                                                    n_stride, c_stride, h_stride, w_stride);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetTensor4dDescriptorEx failed");
+    return cudnnTensors[arg.idx];
+}
+#endif
 
 const ArgData& Net::Impl::argData(Arg arg) const
 {
@@ -410,12 +417,53 @@ void Net::Impl::allocateLayerGpuOutputs(
     CV_Assert(outShapes.size() == noutputs);
 
     outGpuMats.resize(noutputs);
+
+    if (gpuTensorsND.size() < args.size()) gpuTensorsND.resize(args.size());
+    size_t maxBufIdx = 0;
+    for (size_t i = 0; i < noutputs; ++i) {
+        Arg out = layer->outputs[i];
+        if (args[out.idx].kind == DNN_ARG_TEMP) {
+            int b = bufidxs.at(out.idx);
+            if (b >= 0) maxBufIdx = std::max(maxBufIdx, (size_t)b);
+        }
+    }
+    if (gpuBuffersND.size() <= maxBufIdx) gpuBuffersND.resize(maxBufIdx + 1);
+
     for (size_t i = 0; i < noutputs; i++) {
         try {
-            fitGpuMatForShape(outGpuMats[i], outShapes[i], outTypes[i]);
-            size_t bytes = (size_t)outGpuMats[i].rows * (size_t)outGpuMats[i].cols * (size_t)CV_ELEM_SIZE(outTypes[i]);
-            CV_LOG_INFO(NULL, "DNN/CUDA: alloc output #" << i << ": " << outGpuMats[i].rows << "x" << outGpuMats[i].cols
-                              << ", type=" << typeToString(outTypes[i])
+            const MatShape& shp = outShapes[i];
+            std::vector<int> ndsize; ndsize.reserve(shp.dims);
+            size_t total = 1;
+            for (int d = 0; d < shp.dims; ++d) {
+                int dim = shp[d] > 0 ? shp[d] : 1;
+                ndsize.push_back(dim);
+                total *= (size_t)dim;
+            }
+            int type = outTypes[i];
+
+            Arg out = layer->outputs[i];
+            const ArgData& ad = args.at(out.idx);
+            cv::cuda::GpuMatND* owner = nullptr;
+            if (ad.kind == DNN_ARG_TEMP) {
+                int b = bufidxs.at(out.idx);
+                CV_Assert(b >= 0);
+                owner = &gpuBuffersND[(size_t)b];
+            } else {
+                owner = &gpuTensorsND[out.idx];
+            }
+            owner->fit(ndsize, type);
+
+            int rows = ndsize.empty() ? 1 : ndsize[0];
+            if (rows <= 0) rows = 1;
+            size_t cols_sz = rows > 0 ? (total / (size_t)rows) : total;
+            int cols = (int)cols_sz; if (cols <= 0) cols = 1;
+            size_t esz = (size_t)CV_ELEM_SIZE(type);
+            size_t step_bytes = (size_t)cols * esz;
+            outGpuMats[i] = cv::cuda::GpuMat(rows, cols, type, owner->getDevicePtr(), step_bytes);
+
+            size_t bytes = owner->totalMemSize();
+            CV_LOG_INFO(NULL, "DNN/CUDA: alloc output #" << i << ": " << rows << "x" << cols
+                              << ", type=" << typeToString(type)
                               << ", bytes=" << bytes
                               << ", device=" << cv::cuda::getDevice());
         } catch (const cv::Exception& e) {
@@ -426,12 +474,32 @@ void Net::Impl::allocateLayerGpuOutputs(
 
     size_t ntemps = tempShapes.size();
     tempGpuMats.resize(ntemps);
+    layerTempGpuND.resize(ntemps);
     for (size_t i = 0; i < ntemps; i++) {
         try {
-            fitGpuMatForShape(tempGpuMats[i], tempShapes[i], tempTypes[i]);
-            size_t bytes = (size_t)tempGpuMats[i].rows * (size_t)tempGpuMats[i].cols * (size_t)CV_ELEM_SIZE(tempTypes[i]);
-            CV_LOG_INFO(NULL, "DNN/CUDA: alloc temp #" << i << ": " << tempGpuMats[i].rows << "x" << tempGpuMats[i].cols
-                              << ", type=" << typeToString(tempTypes[i])
+            const MatShape& shp = tempShapes[i];
+            std::vector<int> ndsize; ndsize.reserve(shp.dims);
+            size_t total = 1;
+            for (int d = 0; d < shp.dims; ++d) {
+                int dim = shp[d] > 0 ? shp[d] : 1;
+                ndsize.push_back(dim);
+                total *= (size_t)dim;
+            }
+            int type = tempTypes[i];
+            cv::cuda::GpuMatND& owner = layerTempGpuND[i];
+            owner.fit(ndsize, type);
+
+            int rows = ndsize.empty() ? 1 : ndsize[0];
+            if (rows <= 0) rows = 1;
+            size_t cols_sz = rows > 0 ? (total / (size_t)rows) : total;
+            int cols = (int)cols_sz; if (cols <= 0) cols = 1;
+            size_t esz = (size_t)CV_ELEM_SIZE(type);
+            size_t step_bytes = (size_t)cols * esz;
+            tempGpuMats[i] = cv::cuda::GpuMat(rows, cols, type, owner.getDevicePtr(), step_bytes);
+
+            size_t bytes = owner.totalMemSize();
+            CV_LOG_INFO(NULL, "DNN/CUDA: alloc temp #" << i << ": " << rows << "x" << cols
+                              << ", type=" << typeToString(type)
                               << ", bytes=" << bytes
                               << ", device=" << cv::cuda::getDevice());
         } catch (const cv::Exception& e) {
@@ -761,8 +829,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     mshape = MatShape(1);
                     mshape[0] = (int)std::max<size_t>(total_elems, 1);
                 }
-                Mat& host = argTensor(inp);
-                host.fit(mshape, gm.type());
                 gpuTensors[inp.idx] = gm;
             }
             usedGpuInputs = true;
@@ -1117,8 +1183,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         layersTimings[opidx + graph_ofs + 1] += timestamp;
 
         if (tracingMode != DNN_TRACE_NONE) {
-            strm_ << "TIME (\"" << layer->name << "\", \"" << layer->type << "\"): " <<
-                format("%.2fms", (double)timestamp*1000./tickfreq) << "\n";
+#ifdef HAVE_CUDA
+            const char* device_str = (supportGPU && ranOnGPU) ? "CUDA" : "CPU";
+#else
+            const char* device_str = "CPU";
+#endif
+            strm_ << "TIME (\"" << layer->name << "\", \"" << layer->type << "\", " << device_str << "): "
+                  << format("%.2fms", (double)timestamp*1000./tickfreq) << "\n";
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
                 traceArg(strm_, "Output", i, out, tracingMode == DNN_TRACE_ALL);
