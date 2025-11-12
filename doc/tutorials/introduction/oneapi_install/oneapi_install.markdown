@@ -12,7 +12,7 @@ Building OpenCV with oneAPI {#tutorial_openai_install}
 
 @tableofcontents
 
-# Quick start {#tutorial_linux_install_quick_start}
+# Quick start {#tutorial_oneapi_install_quick_start}
 
 **oneAPI** is Intel's open initiative (now also maintained by the UXL Foundation) that combines a specification and a set of toolkits for programming CPUs, GPUs, FPGAs and NPUs with a single code base. The core is the SYCL standard (single-source C++ for parallelism), complemented by high-performance libraries — oneTBB (parallelism), oneMKL (linear algebra), oneDNN (neural networks), oneVPL (video), etc. Thus, when you compile with oneAPI's DPC++ (icpx) compiler, the binary gains optimized execution paths that choose, at runtime, the best vector instructions or the available device, without changing the source code. 
 
