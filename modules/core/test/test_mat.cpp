@@ -1385,6 +1385,15 @@ TEST(Core_Mat, push_back)
     }
 }
 
+TEST(Core_Mat, copyToConvertTo_Empty)
+{
+    cv::Mat A(0, 0, CV_16SC2), B, C;
+    A.copyTo(B);
+    ASSERT_EQ(A.type(), B.type());
+    A.convertTo(C, CV_32SC2);
+    ASSERT_EQ(C.type(), CV_32SC2);
+}
+
 TEST(Core_Mat, copyNx1ToVector)
 {
     cv::Mat_<uchar> src(5, 1);
@@ -1469,6 +1478,14 @@ TEST(Core_InputArray, empty)
 {
     vector<vector<Point> > data;
     ASSERT_TRUE( _InputArray(data).empty() );
+}
+
+TEST(Core_InputArray, convert_from_vector_over2GB)
+{
+    applyTestTag(CV_TEST_TAG_MEMORY_6GB);
+    // empty buffer more than 2GB size
+    std::vector<uint8_t> buf(size_t(INT_MAX) + 4096);
+    EXPECT_ANY_THROW(auto work = _InputArray(buf));
 }
 
 TEST(Core_CopyMask, bug1918)

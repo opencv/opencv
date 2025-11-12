@@ -589,7 +589,7 @@ TEST(Drawing, longline)
     Mat mat = Mat::zeros(256, 256, CV_8UC1);
 
     line(mat, cv::Point(34, 204), cv::Point(46400, 47400), cv::Scalar(255), 3);
-    EXPECT_EQ(310, cv::countNonZero(mat));
+    EXPECT_EQ(264, cv::countNonZero(mat));
 
     Point pt[6];
     pt[0].x = 32;

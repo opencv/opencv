@@ -12,6 +12,11 @@ jobs:
     with:
       workflow_branch: main
 
+  Windows:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
+    with:
+      workflow_branch: main
+
   Ubuntu2004-ARM64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
 
@@ -24,12 +29,6 @@ jobs:
   Ubuntu2004-x64-CUDA:
     if: "${{ contains(github.event.pull_request.labels.*.name, 'category: dnn') }} || ${{ contains(github.event.pull_request.labels.*.name, 'category: dnn (onnx)') }}"
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-U20-Cuda.yaml@main
-
-  Windows10-x64:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10.yaml@main
-
-  Windows10-x64-Vulkan:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-W10-Vulkan.yaml@main
 
   macOS-ARM64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-macOS-ARM64.yaml@main

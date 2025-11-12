@@ -8,10 +8,14 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_GDAL
 
-static void test_gdal_read(const string filename) {
+static void test_gdal_read(const string filename, bool required = true) {
     const string path = cvtest::findDataFile(filename);
     Mat img;
     ASSERT_NO_THROW(img = imread(path, cv::IMREAD_LOAD_GDAL | cv::IMREAD_ANYDEPTH | cv::IMREAD_ANYCOLOR));
+    if(!required && img.empty())
+    {
+        throw SkipTestException("GDAL is built wihout required back-end support");
+    }
     ASSERT_FALSE(img.empty());
     EXPECT_EQ(3, img.cols);
     EXPECT_EQ(5, img.rows);
@@ -26,12 +30,11 @@ TEST(Imgcodecs_gdal, read_envi)
     test_gdal_read("../cv/gdal/envi_test.raw");
 }
 
-
 TEST(Imgcodecs_gdal, read_fits)
 {
-    test_gdal_read("../cv/gdal/fits_test.fit");
+    // .fit test is optional because GDAL may be built wihtout CFITSIO library support
+    test_gdal_read("../cv/gdal/fits_test.fit", false);
 }
-
 
 #endif // HAVE_GDAL
 

@@ -330,14 +330,20 @@ opj_cparameters setupEncoderParameters(const std::vector<int>& params)
     bool rate_is_specified = false;
     for (size_t i = 0; i < params.size(); i += 2)
     {
+        const int value = params[i + 1];
         switch (params[i])
         {
         case cv::IMWRITE_JPEG2000_COMPRESSION_X1000:
-            parameters.tcp_rates[0] = 1000.f / std::min(std::max(params[i + 1], 1), 1000);
-            rate_is_specified = true;
+            {
+                const int compression = std::min(std::max(value, 1), 1000);
+                parameters.tcp_rates[0] = 1000.f / static_cast<float>(compression);
+                if(value != compression) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_JPEG2000_COMPRESSION_X1000 must be between 1 to 1000. It is fallbacked to 1", value));
+                }
+                rate_is_specified = true;
+            }
             break;
         default:
-            CV_LOG_WARNING(NULL, "OpenJPEG2000(encoder): skip unsupported parameter: " << params[i]);
             break;
         }
     }
@@ -685,6 +691,7 @@ ImageDecoder Jpeg2KJ2KOpjDecoder::newDecoder() const
 Jpeg2KOpjEncoder::Jpeg2KOpjEncoder()
 {
     m_description = "JPEG-2000 files (*.jp2)";
+    m_supported_encode_key = {IMWRITE_JPEG2000_COMPRESSION_X1000};
 }
 
 ImageEncoder Jpeg2KOpjEncoder::newEncoder() const

@@ -69,6 +69,27 @@ ov::Core cv::gapi::ov::wrap::getCore() {
         ? create_OV_Core_pointer() : create_OV_Core_instance();
 }
 
+static std::string make_default_tensor_name(const ov::Output<const ov::Node>& output) {
+    auto default_name = output.get_node()->get_friendly_name();
+    if (output.get_node()->get_output_size() > 1) {
+        default_name += ':' + std::to_string(output.get_index());
+    }
+    return default_name;
+}
+
+static void ensureNamedTensors(std::shared_ptr<ov::Model> model) {
+    for (auto& input : model->inputs()) {
+        if (input.get_names().empty()) {
+            input.set_names({make_default_tensor_name(input)});
+        }
+    }
+    for (auto& output : model->outputs()) {
+        if (output.get_names().empty()) {
+            output.set_names({make_default_tensor_name(output)});
+        }
+    }
+}
+
 static ov::AnyMap toOV(const ParamDesc::PluginConfigT &config) {
     return {config.begin(), config.end()};
 }
@@ -124,6 +145,25 @@ static int toCV(const ov::element::Type &type) {
         default: GAPI_Error("OV Backend: Unsupported data type");
     }
     return -1;
+}
+
+static inline std::pair<double, double> get_CV_type_range(int cv_type) {
+    switch (cv_type) {
+        case CV_8U:
+            return { static_cast<double>(std::numeric_limits<uint8_t>::min()),
+                     static_cast<double>(std::numeric_limits<uint8_t>::max()) };
+        case CV_32S:
+            return { static_cast<double>(std::numeric_limits<int32_t>::min()),
+                     static_cast<double>(std::numeric_limits<int32_t>::max()) };
+        case CV_32F:
+            return { static_cast<double>(std::numeric_limits<float>::lowest()),
+                     static_cast<double>(std::numeric_limits<float>::max()) };
+        case CV_16F:
+            return { -65504.0, 65504.0 };
+        default:
+            GAPI_Error("OV Backend: Unsupported data type");
+    }
+    return {0.0, 0.0};
 }
 
 static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
@@ -235,6 +275,10 @@ struct OVUnit {
             model = cv::gapi::ov::wrap::getCore()
                 .read_model(desc.model_path, desc.bin_path);
             GAPI_Assert(model);
+
+            if (params.ensure_named_tensors) {
+                ensureNamedTensors(model);
+            }
 
             if (params.num_in == 1u && params.input_names.empty()) {
                 params.input_names = { model->inputs().begin()->get_any_name() };
@@ -1027,6 +1071,20 @@ public:
             if (explicit_out_tensor_prec) {
                 m_ppp.output(output_name).tensor()
                     .set_element_type(toOV(*explicit_out_tensor_prec));
+
+                if (m_model_info.clamp_outputs) {
+                    #if INF_ENGINE_RELEASE >= 2025020000
+                    auto clamp_range = get_CV_type_range(*explicit_out_tensor_prec);
+                    m_ppp.output(output_name).postprocess()
+                        .clamp(clamp_range.first, clamp_range.second);
+                    #else
+                    static bool warned = false;
+                    if (!warned) {
+                        GAPI_LOG_WARNING(NULL, "cfgClampOutputs is enabled, but not supported in this OpenVINO version. Clamping will be ignored.");
+                        warned = true;
+                    }
+                    #endif // INF_ENGINE_RELEASE >= 2025020000
+                }
             }
         }
     }

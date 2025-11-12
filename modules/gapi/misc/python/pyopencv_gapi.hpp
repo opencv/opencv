@@ -1162,6 +1162,161 @@ bool pyopencv_to(PyObject* obj, cv::GProtoOutputArgs& value, const ArgInfo& info
     }
 }
 
+namespace cv {
+namespace gapi {
+namespace wip {
+
+/**
+ * @class PythonCustomStreamSource
+ * @brief Wraps a Python-defined frame source as an IStreamSource for G-API.
+ *
+ * This class allows a G-API pipeline to pull frames from a Python object. The Python object
+ * must implement at a `pull()` method which must return a `numpy.ndarray` containing
+ * the next frame, or `None` to signal end-of-stream. It can also implement a `descr_of()`
+ * method which must return a `numpy.ndarray` that describes the format
+ * (data type, number of channels, height, width) of the frames produced.
+ */
+
+class PythonCustomStreamSource : public IStreamSource
+{
+    public:
+    PythonCustomStreamSource(PyObject* _obj = nullptr) : obj(_obj)
+    {
+        if (obj)
+            Py_INCREF(obj);
+    }
+
+    ~PythonCustomStreamSource()
+    {
+        if (obj)
+            Py_DECREF(obj);
+    }
+
+    bool pull(cv::gapi::wip::Data& data) CV_OVERRIDE
+    {
+        if (!obj)
+            return false;
+
+        PyObject* src = reinterpret_cast<PyObject*>(obj);
+
+        PyGILState_STATE gstate;
+        gstate = PyGILState_Ensure();
+
+        PyObject* result = PyObject_CallMethodObjArgs(src, PyUnicode_FromString("pull"), NULL);
+        bool hasPyPullError = PyErr_Occurred() != nullptr;
+
+        if (!result)
+        {
+            PyErr_Print();
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsError, "PythonCustomStreamSource::pull(): call to .pull() failed");
+        }
+
+        if (result == Py_None)
+        {
+            Py_DECREF(result);
+            PyGILState_Release(gstate);
+            return false;
+        }
+
+        if (!PyArray_Check(result))
+        {
+            PyErr_Format(PyExc_TypeError, "Expected numpy.ndarray from .pull()");
+            PyErr_Print();
+            Py_DECREF(result);
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsError, "PythonCustomStreamSource::pull(): .pull() did not return a numpy.ndarray");
+        }
+
+        cv::Mat mat;
+        ArgInfo info("pull return", 0);
+        if (!pyopencv_to(result, mat, info) || PyErr_Occurred())
+        {
+            PyErr_Print();
+            Py_DECREF(result);
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsError, "PythonCustomStreamSource::pull(): failed to convert numpy to cv::Mat");
+        }
+
+        if (mat.empty())
+        {
+            Py_DECREF(result);
+            PyGILState_Release(gstate);
+            return false;
+        }
+
+        data = mat;
+        Py_DECREF(result);
+        PyGILState_Release(gstate);
+
+        if (hasPyPullError)
+            CV_Error(cv::Error::StsError, "Python .pull() call error");
+
+        return true;
+    }
+
+    GMetaArg descr_of() const CV_OVERRIDE
+    {
+        if (!obj)
+            return cv::GMetaArg(cv::GFrameDesc{cv::MediaFormat::BGR, cv::Size(640, 480)});
+
+        PyGILState_STATE gstate = PyGILState_Ensure();
+        PyObject* result = PyObject_CallMethodObjArgs(obj, PyUnicode_FromString("descr_of"), NULL);
+        if (!result)
+        {
+            PyErr_Print();
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsError, "PythonCustomStreamSource::descr_of(): conversion error");
+        }
+
+        if (!PyArray_Check(result)) {
+            PyErr_Format(PyExc_TypeError, "Expected numpy.ndarray from .descr_of()");
+            PyErr_Print();
+            Py_DECREF(result);
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsError, "PythonCustomStreamSource::descr_of(): did not return a numpy.ndarray");
+        }
+
+        cv::Mat mat;
+        ArgInfo info("descr_of return", 0);
+        if (!pyopencv_to(result, mat, info))
+        {
+            PyErr_Print();
+            Py_DECREF(result);
+            PyGILState_Release(gstate);
+            CV_Error(cv::Error::StsError, "PythonCustomStreamSource::descr_of(): conversion error");
+        }
+
+        Py_DECREF(result);
+        PyGILState_Release(gstate);
+        cv::GMatDesc mdesc = cv::descr_of(mat);
+
+        return cv::GMetaArg(mdesc);
+    }
+
+private:
+    PyObject* obj;
+};
+
+inline cv::Ptr<IStreamSource> make_pysrc_from_pyobject(PyObject* obj)
+{
+    return cv::makePtr<PythonCustomStreamSource>(obj);
+}
+
+} // namespace wip
+} // namespace gapi
+} // namespace cv
+
+template<>
+bool pyopencv_to(PyObject* obj, cv::Ptr<cv::gapi::wip::IStreamSource>& p, const ArgInfo&)
+{
+    if (!obj)
+        return false;
+
+    p = cv::makePtr<cv::gapi::wip::PythonCustomStreamSource>(obj);
+    return true;
+}
+
 // extend cv.gapi methods
 #define PYOPENCV_EXTRA_METHODS_GAPI \
   {"kernels", CV_PY_FN_WITH_KW(pyopencv_cv_gapi_kernels), "kernels(...) -> GKernelPackage"}, \

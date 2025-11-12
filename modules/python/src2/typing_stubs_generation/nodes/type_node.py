@@ -43,7 +43,7 @@ class TypeNode(abc.ABC):
         Returns:
             str: short name of the type node.
         """
-        pass
+        return ""
 
     @property
     def full_typename(self) -> str:
@@ -123,12 +123,11 @@ class TypeNode(abc.ABC):
     def is_resolved(self) -> bool:
         return True
 
-    def relative_typename(self, module_full_export_name: str) -> str:
+    def relative_typename(self, module: str) -> str:
         """Type name relative to the provided module.
 
         Args:
-            module_full_export_name (str): Full export name of the module to
-                get relative name to.
+            module (str): Full export name of the module to get relative name to.
 
         Returns:
             str: If module name of the type node doesn't match `module`, then
@@ -715,11 +714,11 @@ class ContainerTypeNode(AggregatedTypeNode):
 
     @abc.abstractproperty
     def type_format(self) -> str:
-        pass
+        return ""
 
     @abc.abstractproperty
     def types_separator(self) -> str:
-        pass
+        return ""
 
 
 class SequenceTypeNode(ContainerTypeNode):
@@ -893,6 +892,31 @@ class ClassTypeNode(ContainerTypeNode):
     @property
     def types_separator(self) -> str:
         return ", "
+
+
+class PathLikeTypeNode(TypeNode):
+    """Type node representing a PathLike object.
+    """
+    def __init__(self, ctype_name: str) -> None:
+        super().__init__(ctype_name)
+
+    @property
+    def typename(self) -> str:
+        return "os.PathLike[str]"
+
+    @property
+    def required_usage_imports(self) -> Generator[str, None, None]:
+        yield "import os"
+
+    @staticmethod
+    def string_or_pathlike_(ctype_name: str = "string") -> UnionTypeNode:
+        return UnionTypeNode(
+            ctype_name,
+            items=(
+                PrimitiveTypeNode.str_(ctype_name),
+                PathLikeTypeNode(ctype_name)
+            )
+        )
 
 
 def _resolve_symbol(root: Optional[ASTNode], full_symbol_name: str) -> Optional[ASTNode]:
