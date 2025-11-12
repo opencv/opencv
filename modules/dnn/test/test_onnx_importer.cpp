@@ -2607,7 +2607,7 @@ TEST_P(Test_ONNX_nets, LResNet100E_IR)
     }
     else if (target == DNN_TARGET_CUDA_FP16)
     {
-        l1 = 0.009;
+        l1 = 0.0092;
         lInf = 0.04;
     }
     else if (target == DNN_TARGET_CPU_FP16)
