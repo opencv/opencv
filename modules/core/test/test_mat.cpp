@@ -2714,7 +2714,7 @@ TEST(Mat, Recreate1DMatWithSameMeta)
 }
 
 // see https://github.com/opencv/opencv/issues/27298
-TEST(Mat, writeTo_regression27298)
+TEST(Mat, writeAt_regression27298)
 {
     cv::Mat src(40/*height*/, 30/*width*/, CV_8UC1, Scalar(255));
     // Normal
@@ -2730,7 +2730,7 @@ TEST(Mat, writeTo_regression27298)
         cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
         cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
         void* roiData = roi.data;
-        EXPECT_NO_THROW(src.writeTo(roi));
+        EXPECT_NO_THROW(src.writeAt(roi));
         EXPECT_EQ(roi.data, roiData);
         EXPECT_EQ(countNonZero(roi), roi.size().width * roi.size().height) << roi;
     }
@@ -2744,7 +2744,7 @@ TEST(Mat, writeTo_regression27298)
     }
     {
         cv::Mat roi; // empty
-        EXPECT_ANY_THROW(src.writeTo(roi));
+        EXPECT_ANY_THROW(src.writeAt(roi));
     }
 
     // Different Type
@@ -2759,7 +2759,7 @@ TEST(Mat, writeTo_regression27298)
     {
         cv::Mat dst(100, 100, CV_16UC1, Scalar(0));
         cv::Mat roi(dst, cv::Rect(0, 0, 30/*width*/, 40/*height*/));
-        EXPECT_ANY_THROW(src.writeTo(roi));
+        EXPECT_ANY_THROW(src.writeAt(roi));
     }
 
     // Different Size
@@ -2774,7 +2774,7 @@ TEST(Mat, writeTo_regression27298)
     {
         cv::Mat dst(100, 100, CV_8UC1, Scalar(0));
         cv::Mat roi(dst, cv::Rect(0, 0, 40/*width*/, 30/*height*/));
-        EXPECT_ANY_THROW(src.writeTo(roi));
+        EXPECT_ANY_THROW(src.writeAt(roi));
     }
 }
 

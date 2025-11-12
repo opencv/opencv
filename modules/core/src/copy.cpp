@@ -616,7 +616,7 @@ void Mat::copyTo( OutputArray _dst, InputArray _mask ) const
 }
 
 /* dst = src */
-void Mat::writeTo( OutputArray _dst ) const
+void Mat::writeAt( OutputArray _dst ) const
 {
     CV_INSTRUMENT_REGION();
 
@@ -626,7 +626,7 @@ void Mat::writeTo( OutputArray _dst ) const
     CV_CheckEQ(size(), dst.size(), "Make the size of dst the same as src");
     copyTo(_dst);
 }
-void Mat::writeTo( OutputArray _dst, InputArray _mask ) const
+void Mat::writeAt( OutputArray _dst, InputArray _mask ) const
 {
     CV_INSTRUMENT_REGION();
 
