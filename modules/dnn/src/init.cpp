@@ -196,6 +196,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(Expand,         ExpandLayer);
     CV_DNN_REGISTER_LAYER_CLASS(InstanceNormalization, InstanceNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Attention,      AttentionLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(RotaryEmbedding, RotaryEmbeddingLayer);
     CV_DNN_REGISTER_LAYER_CLASS(GroupNormalization, GroupNormLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast,           CastLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Cast2,          Cast2Layer);
