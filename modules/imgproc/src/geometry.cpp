@@ -719,11 +719,13 @@ static Rect pointSetBoundingRect( const Mat& points )
     if( !is_float )
     {
         const int32_t* pts = points.ptr<int32_t>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
         xmin = xmax = pts[0];
         ymin = ymax = pts[1];
 #if CV_SIMD || CV_SIMD_SCALABLE
         v_int32 minval, maxval;
-        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(*(reinterpret_cast<const int64_t*>(pts)))); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        minval = maxval = v_reinterpret_as_s32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
         const int nlanes = VTraits<v_int32>::vlanes()/2;
         for (; i < npoints; i += nlanes)
         {
@@ -763,11 +765,13 @@ static Rect pointSetBoundingRect( const Mat& points )
     else
     {
         const float* pts = points.ptr<float>();
+        int64_t firstval = 0;
+        std::memcpy(&firstval, pts, sizeof(pts[0]) * 2);
         xmin = xmax = cvFloor(pts[0]);
         ymin = ymax = cvFloor(pts[1]);
 #if CV_SIMD || CV_SIMD_SCALABLE
         v_float32 minval, maxval;
-        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(*(reinterpret_cast<const int64_t*>(pts)))); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
+        minval = maxval = v_reinterpret_as_f32(vx_setall_s64(firstval)); //min[0]=pt.x, min[1]=pt.y, min[2]=pt.x, min[3]=pt.y
         const int nlanes = VTraits<v_float32>::vlanes()/2;
         for (; i < npoints; i += nlanes)
         {
