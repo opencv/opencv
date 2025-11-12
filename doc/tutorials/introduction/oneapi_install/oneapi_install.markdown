@@ -14,7 +14,7 @@ Building OpenCV with oneAPI {#tutorial_openai_install}
 
 # Quick start {#tutorial_oneapi_install_quick_start}
 
-**oneAPI** is Intel's open initiative (now also maintained by the UXL Foundation) that combines a specification and a set of toolkits for programming CPUs, GPUs, FPGAs and NPUs with a single code base. The core is the SYCL standard (single-source C++ for parallelism), complemented by high-performance libraries — oneTBB (parallelism), oneMKL (linear algebra), oneDNN (neural networks), oneVPL (video), etc. Thus, when you compile with oneAPI's DPC++ (icpx) compiler, the binary gains optimized execution paths that choose, at runtime, the best vector instructions or the available device, without changing the source code. 
+**oneAPI** is Intel's open initiative (now also maintained by the UXL Foundation) that combines a specification and a set of toolkits for programming CPUs, GPUs, FPGAs and NPUs with a single code base. The core is the SYCL standard (single-source C++ for parallelism), complemented by high-performance libraries — oneTBB (parallelism), oneMKL (linear algebra), oneDNN (neural networks), oneVPL (video), etc. Thus, when you compile with oneAPI's DPC++ (icpx) compiler, the binary gains optimized execution paths that choose, at runtime, the best vector instructions or the available device, without changing the source code.
 
 ## Why compile OpenCV with the oneAPI ecosystem when targeting the CPU:
 
@@ -54,8 +54,6 @@ Systems based on Intel® 64 architectures below are supported both as host and t
 ## How To install oneAPI
 
 Installing oneAPI: To quickly set up the oneAPI ecosystem on openSUSE, simply follow the official guide https://www.intel.com/content/www/us/en/developer/articles/guide/installation-guide-for-oneapi-toolkits.html, which shows you how to enable the distribution’s dedicated repository (zypper ar … oneAPI) and install the metapackages ― for example, intel-basekit (DPC++, TBB, oneDNN, IPP compilers) and, optionally, intel-hpckit or intel-renderkit if you need HPC or graphics tools. The guide also explains post-installation tweaks, such as loading the environment with source /opt/intel/oneapi/setvars.sh , ensuring that the binaries (icpx, dpcpp) and libraries are immediately available in your shell for compiling and running accelerated applications.
-Installing oneAPI: To quickly set up the oneAPI ecosystem on openSUSE, simply follow the official tutorial at https://en.opensuse.org/SDB:Install_oneAPI, which shows you how to enable the distribution’s dedicated repository (zypper ar … oneAPI) and install the metapackages ― for example, intel-basekit (DPC++, TBB, oneDNN, IPP compilers) and, optionally, intel-hpckit or intel-renderkit if you need HPC or graphics tools. The guide also explains post-installation tweaks, such as loading the environment with source /opt/intel/oneapi/setvars.sh , ensuring that the binaries (icpx, dpcpp) and libraries are immediately available in your shell for compiling and running accelerated applications. 
-
 
 ## Download, Github Instruction, Build and Install
 
@@ -65,14 +63,14 @@ Installing oneAPI: To quickly set up the oneAPI ecosystem on openSUSE, simply fo
 git clone https://github.com/opencv/opencv.git
 ```
 
-2. and make sure you are using branch 4.*: 
+2. and make sure you are using branch 4.*:
 
 ```
 git status
 On branch 4.x
 ```
 
-3. Navigate to OpenCV repository and prepare the build folder: 
+3. Navigate to OpenCV repository and prepare the build folder:
 
 ```
 cd opencv
@@ -86,15 +84,15 @@ cd build
 source /opt/intel/oneapi/setvars.sh
 ```
 
-5. Run CMake * with Intel® oneAPI DPC++/C++ Compiler to configure the project: 
+5. Run CMake * with Intel® oneAPI DPC++/C++ Compiler to configure the project:
 
 ```
  cmake -DCMAKE_C_COMPILER=icx \
-       -DCMAKE_CXX_COMPILER=icpx 
+       -DCMAKE_CXX_COMPILER=icpx
        -DCMAKE_CXX_FLAGS="-march=native -mavx -mfma -msse -msse2" ..
  cmake --build .
 ```
-6. Now Make sure openCV* is compiled with Intel® oneAPI DPC++/C++ Compiler and install:  
+6. Now Make sure openCV* is compiled with Intel® oneAPI DPC++/C++ Compiler and install:
 
 ```
 readelf -p .comment bin/opencv_annotation
@@ -106,5 +104,3 @@ make install
 ```
 
 Have fun...
-
-
