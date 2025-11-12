@@ -53,7 +53,7 @@ Systems based on Intel® 64 architectures below are supported both as host and t
 
 ## How To install oneAPI
 
-Installing oneAPI: To quickly set up the oneAPI ecosystem on openSUSE, simply follow the official tutorial at https://en.opensuse.org/SDB:Install_oneAPI, which shows you how to enable the distribution’s dedicated repository (zypper ar … oneAPI) and install the metapackages ― for example, intel-basekit (DPC++, TBB, oneDNN, IPP compilers) and, optionally, intel-hpckit or intel-renderkit if you need HPC or graphics tools. The guide also explains post-installation tweaks, such as loading the environment with source /opt/intel/oneapi/setvars.sh , ensuring that the binaries (icpx, dpcpp) and libraries are immediately available in your shell for compiling and running accelerated applications. 
+Installing oneAPI: To quickly set up the oneAPI ecosystem on openSUSE, simply follow the official, which shows you how to enable the distribution’s dedicated repository (zypper ar … oneAPI) and install the metapackages ― for example, intel-basekit (DPC++, TBB, oneDNN, IPP compilers) and, optionally, intel-hpckit or intel-renderkit if you need HPC or graphics tools. The guide also explains post-installation tweaks, such as loading the environment with source /opt/intel/oneapi/setvars.sh , ensuring that the binaries (icpx, dpcpp) and libraries are immediately available in your shell for compiling and running accelerated applications. 
 
 
 ## Download, Github Instruction, Build and Install
