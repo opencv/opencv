@@ -568,25 +568,25 @@ public:
                             int N = input[i].total(0, axisCan);
                             int M = weightsMat.rows; // numOutput
                             if (dst.empty() || dst.rows != N || dst.cols != M || dst.type() != CV_32F)
-                                dst.create(N, M, CV_32F);
-                            static cv::cuda::GpuMat wdev, bdev;
-                            if (wdev.empty() || (wdev.rows * wdev.cols) != (int)weightsMat.total())
+                                cv::cuda::ensureSizeIsEnough(N, M, CV_32F, dst);
+                            // Cache weights/bias on device without 2D host reshapes; use ND fit
+                            static cv::cuda::GpuMatND wdev_nd, bdev_nd;
                             {
-                                Mat w2d = weightsMat.reshape(1, weightsMat.rows);
-                                wdev.create(w2d.rows, w2d.cols, w2d.type());
-                                wdev.upload(w2d);
+                                MatShape wshape = shape(weightsMat);
+                                cv::cuda::SizeArray wsize(wshape.begin(), wshape.end());
+                                wdev_nd.fit(wsize, weightsMat.type());
+                                wdev_nd.upload(weightsMat);
                             }
-                            if (bias && !biasMat.empty())
-                            {
-                                if (bdev.empty() || (bdev.rows * bdev.cols) != (int)biasMat.total())
-                                {
-                                    Mat b2d = biasMat.reshape(1, biasMat.total());
-                                    bdev.create(b2d.rows, b2d.cols, b2d.type());
-                                    bdev.upload(b2d);
-                                }
+                            if (bias && !biasMat.empty()) {
+                                MatShape bshape = shape(biasMat);
+                                cv::cuda::SizeArray bsize(bshape.begin(), bshape.end());
+                                bdev_nd.fit(bsize, biasMat.type());
+                                bdev_nd.upload(biasMat);
+                            } else {
+                                bdev_nd.release();
                             }
-                            else
-                                bdev.release();
+                            cv::cuda::GpuMat wdev2d = wdev_nd.createGpuMatHeader();
+                            cv::cuda::GpuMat bdev2d = bdev_nd.empty() ? cv::cuda::GpuMat() : bdev_nd.createGpuMatHeader();
 
                             Net::Impl* netimpl = getNetImpl(this);
                             CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
@@ -610,7 +610,7 @@ public:
                                 CUDNN_DATA_FLOAT);
 
                             cudnnTensorDescriptor_t bDesc = nullptr;
-                            if (!bdev.empty()) {
+                            if (!bdev2d.empty()) {
                                 Arg bArg = netimpl->getArg(this->name + ":bias");
                                 bDesc = netimpl->argTensorCuDNN(
                                     bArg,
@@ -626,9 +626,9 @@ public:
                                 yDesc,
                                 bDesc,
                                 src,
-                                wdev,
+                                wdev2d,
                                 dst,
-                                bdev);
+                                bdev2d);
 
                             return;
                         }

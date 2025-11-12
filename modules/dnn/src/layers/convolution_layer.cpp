@@ -1157,7 +1157,6 @@ public:
                 out_gpu_ptr = &((*gout_ptr)[0]);
             }
 
-            // Prepare cuDNN handle and descriptors via Net::Impl (new engine path)
             Net::Impl* netimpl = getNetImpl(this);
             CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
             if (!netimpl->cudaInfo)
@@ -1169,7 +1168,6 @@ public:
                 }
             }
 
-            // get input as GpuMat (already ND-backed; no manual flattening here)
             cv::cuda::GpuMat gin0;
             bool inputIsGPU = (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT);
             if (inputIsGPU)
@@ -1180,7 +1178,6 @@ public:
             }
             else
             {
-                // Upload via Net::Impl allocator; avoid layer-local flattening
                 Arg inpArg = this->inputs.empty() ? Arg() : this->inputs[0];
                 gin0 = netimpl->argGpuMat(inpArg);
                 if (gin0.empty())
@@ -1190,7 +1187,6 @@ public:
                 }
             }
 
-            // derive input shape N,C,H_in,W_in
             int N = 1, C_in = 0, H_in = 0, W_in = 0;
             if (!inputIsGPU)
             {
@@ -1208,7 +1204,6 @@ public:
                 int expected_C_in = blobs[0].size[1] * groups;
                 if (C_in != expected_C_in)
                 {
-                    // Likely non-NCHW (e.g., NHWC) input ordering, not supported in this CUDA path
                     forward_fallback(inputs_arr, outputs_arr, internals_arr);
                     return;
                 }
@@ -1230,7 +1225,6 @@ public:
                 int expected_C_in = blobs[0].size[1] * groups;
                 if (C_in != expected_C_in)
                 {
-                    // Likely non-NCHW (e.g., NHWC) input ordering, not supported in this CUDA path
                     forward_fallback(inputs_arr, outputs_arr, internals_arr);
                     return;
                 }
@@ -1245,14 +1239,12 @@ public:
             int H_out = (H_in + 2 * pH - kH) / sH + 1;
             int W_out = (W_in + 2 * pW - kW) / sW + 1;
 
-            // Expect output already allocated by Net::Impl for GPU path; otherwise fallback
             if (!wantGpuOutput || !out_gpu_ptr || out_gpu_ptr->empty())
             {
                 forward_fallback(inputs_arr, outputs_arr, internals_arr);
                 return;
             }
 
-            // Upload weights and bias as ND tensors without 2D reshaping
             cv::cuda::GpuMatND wdev_nd, bdev_nd;
             {
                 const Mat& w = blobs[0];
@@ -1266,18 +1258,14 @@ public:
                     CV_Error(Error::StsError, "Unexpected convolution weights dimensionality");
                 }
                 wdev_nd.fit(wshape, w.type());
-                size_t bytes = (size_t)w.total() * (size_t)w.elemSize();
-                cudaError_t cst = cudaMemcpy(wdev_nd.getDevicePtr(), w.data, bytes, cudaMemcpyHostToDevice);
-                CV_Assert(cst == cudaSuccess && "cudaMemcpy for weights failed");
+                wdev_nd.upload(w);
             }
             if (hasBias()) {
                 const Mat& b = blobs[1];
                 CV_Assert(b.type() == CV_32F && "DNN/CUDA: bias must be float32");
                 std::vector<int> bshape = { C_out };
                 bdev_nd.fit(bshape, b.type());
-                size_t bbytes = (size_t)b.total() * (size_t)b.elemSize();
-                cudaError_t cstb = cudaMemcpy(bdev_nd.getDevicePtr(), b.data, bbytes, cudaMemcpyHostToDevice);
-                CV_Assert(cstb == cudaSuccess && "cudaMemcpy for bias failed");
+                bdev_nd.upload(b);
             }
 
             int n_stride_in  = C_in * H_in * W_in;
@@ -1317,7 +1305,6 @@ public:
                     C_out, 1, 1, 1, CUDNN_DATA_FLOAT);
             }
 
-            // Use persistent cuDNN handle/stream from CUDA backend
             CV_Assert(netimpl->cudaInfo);
             cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
@@ -1332,7 +1319,6 @@ public:
                 (void*)out_gpu_ptr->ptr());
             if (!wantGpuOutput)
             {
-                // Download GPU result to CPU output
                 Mat out2d_host;
                 out_gpu_ptr->download(out2d_host);
                 MatShape outshape = shape(N, C_out, H_out, W_out);
@@ -1445,49 +1431,6 @@ public:
                 // a new version of weightsMat is created at .finalize() from original weights
                 weightsMat.release();
             }
-
-#ifdef HAVE_CUDA
-            auto kind = outputs_arr.kind();
-            if (kind == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
-            {
-                // Prepare GPU output buffers
-                std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
-                CV_Assert(gout.size() == 1);
-
-                // derive output shape from inputs and weights
-                const Mat& in0 = inputs[0];
-                int N = in0.size[0];
-                int C_out = blobs.empty() ? inputs[1].size[0] : blobs[0].size[0];
-                std::vector<int> outshape_vec; outshape_vec.reserve(in0.dims);
-                outshape_vec.push_back(N);
-                outshape_vec.push_back(C_out);
-                if (padMode.empty())
-                {
-                    for (int i = 2; i < in0.dims; i++)
-                        outshape_vec.push_back((in0.size[i] + pads_begin[i-2] + pads_end[i-2] - dilations[i-2] * (kernel_size[i-2] - 1) - 1) / strides[i-2] + 1);
-                }
-                else
-                {
-                    std::vector<int> in_spatial; in_spatial.reserve(in0.dims-2);
-                    for (int i = 2; i < in0.dims; i++) in_spatial.push_back(in0.size[i]);
-                    std::vector<int> out_spatial; getConvPoolOutParams(in_spatial, kernel_size, strides, padMode, dilations, out_spatial);
-                    outshape_vec.insert(outshape_vec.end(), out_spatial.begin(), out_spatial.end());
-                }
-                MatShape outshape = MatShape(outshape_vec);
-
-                Mat outCPU; outCPU.create(outshape, in0.type());
-                runFastConv(in0, outCPU, fastConvImpl, nstripes, activ, reluslope, fusedAdd);
-                int rows = outCPU.rows > 0 ? outCPU.rows : 1;
-                int cols = (int)(outCPU.total() / (size_t)rows);
-                Mat out2d = outCPU.reshape(1, rows);
-                gout[0].create(rows, cols, outCPU.type());
-                try { gout[0].upload(out2d); }
-                catch (const cv::Exception& e) {
-                    CV_LOG_WARNING(NULL, "DNN/CUDA: convolution upload to GPU failed: " << e.what() << "; returning CPU result only");
-                }
-                return;
-            }
-#endif
             runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
         }
     }
