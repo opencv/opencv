@@ -368,28 +368,15 @@ public:
             std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
             if (gout.size() == 1)
             {
-                cv::cuda::GpuMat gin0;
                 if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
                 {
                     std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                    if (!gin.empty()) gin0 = gin[0];
-                }
-                else
-                {
-                    std::vector<Mat> inHost; inputs_arr.getMatVector(inHost);
-                    if (!inHost.empty())
-                    {
-                        const Mat& m = inHost[0];
-                        // Build 2D view as [N, C*H*W]
-                        MatShape ish = shape(m);
-                        int N = ish.size() > 0 ? ish[0] : 1;
-                        Mat m2d = m.reshape(1, N);
-                        gin0.create(m2d.rows, m2d.cols, m2d.type());
-                        gin0.upload(m2d);
+                    if (gin.empty()) {
+                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                        return;
                     }
-                }
-                if (!gin0.empty())
-                {
+                    cv::cuda::GpuMat gin0 = gin[0];
+                    // Derive N,C,H,W from cached input shape (set in finalize)
                     // Derive N,C,H,W from cached input shape (set in finalize)
                     MatShape ish = lastInputShape;
                     int dims = (int)ish.size();
@@ -409,15 +396,14 @@ public:
                     int W_out = (W_in + 2 * pW - kW) / sW + 1;
 
                     cv::cuda::GpuMat& dst = gout[0];
-                    if (gin0.type() != CV_32F)
-                    {
+                    if (dst.empty()) {
+                        // Output should be preallocated by Net::Impl for GPU path
+                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                        return;
+                    }
+                    if (gin0.type() != CV_32F) {
                         cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
                     }
-                    // allocate output as [N, C*H_out*W_out]
-                    int out_rows = std::max(N, 1);
-                    int out_cols = std::max(C * H_out * W_out, 1);
-                    if (dst.empty() || dst.type() != CV_32F || dst.rows != out_rows || dst.cols != out_cols)
-                        dst.create(out_rows, out_cols, CV_32F);
 
                     // Use cached descriptors (NCHW) with explicit strides matching 2D views
                     Net::Impl* netimpl = getNetImpl(this);
@@ -433,28 +419,24 @@ public:
                     CV_Assert(netimpl->cudaInfo);
                     cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-                    // Input descriptor
-                    int x_n_stride = (int)(gin0.step / sizeof(float));
+                    int x_n_stride = C * H_in * W_in;
                     cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
                         this->inputs.empty() ? Arg() : this->inputs[0],
                         N, C, H_in, W_in,
                         x_n_stride, H_in * W_in, W_in, 1,
                         CUDNN_DATA_FLOAT);
-                    // Output descriptor
-                    int y_n_stride = (int)(dst.step / sizeof(float));
+                    int y_n_stride = C * H_out * W_out;
                     cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
                         this->outputs.empty() ? Arg() : this->outputs[0],
                         N, C, H_out, W_out,
                         y_n_stride, H_out * W_out, W_out, 1,
                         CUDNN_DATA_FLOAT);
 
-                    // Ensure cached cuDNN pooling descriptor exists and matches current params
-                    if (!cudnnPoolDesc) {
-                        cudnnCreatePoolingDescriptor(&cudnnPoolDesc);
-                    }
                     cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-                    cudnnSetPooling2dDescriptor(cudnnPoolDesc, mode, CUDNN_PROPAGATE_NAN,
-                                                kH, kW, pH, pW, sH, sW);
+                    cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
+                        this->name + ":pool",
+                        mode, CUDNN_PROPAGATE_NAN,
+                        kH, kW, pH, pW, sH, sW);
 
                     if (type == MAX)
                     {
@@ -474,6 +456,10 @@ public:
                             (const void*)gin0.ptr(),
                             (void*)dst.ptr());
                     }
+                    return;
+                } else {
+                    // No GPU input provided; fall back to CPU implementation
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
                     return;
                 }
             }

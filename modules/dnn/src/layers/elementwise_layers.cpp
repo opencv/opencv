@@ -305,11 +305,11 @@ public:
                             CUDNN_DATA_FLOAT);
 
                         std::cout<<"relu"<<std::endl;
-                        static cudnnActivationDescriptor_t reluActDesc = nullptr;
-                        if (!reluActDesc) {
-                            cudnnCreateActivationDescriptor(&reluActDesc);
-                            cudnnSetActivationDescriptor(reluActDesc, CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0.0);
-                        }
+                        cudnnActivationDescriptor_t reluActDesc =
+                            netimpl->activationDescCuDNN(this->name + ":relu",
+                                                         CUDNN_ACTIVATION_RELU,
+                                                         CUDNN_PROPAGATE_NAN,
+                                                         0.0);
                         cv::dnn::cuda::relu(
                             cudnnHandle,
                             reluActDesc,

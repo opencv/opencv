@@ -206,6 +206,88 @@ cudnnTensorDescriptor_t Net::Impl::argTensorCuDNN(Arg arg,
     CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetTensor4dDescriptorEx failed");
     return cudnnTensors[arg.idx];
 }
+
+cudnnFilterDescriptor_t Net::Impl::filterDescCuDNN(const std::string& key,
+                                                   cudnnDataType_t dtype, cudnnTensorFormat_t layout,
+                                                   int outC, int inC, int kH, int kW)
+{
+    cudnnFilterDescriptor_t& desc = cudnnFilters[key];
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateFilterDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateFilterDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetFilter4dDescriptor(desc, dtype, layout, outC, inC, kH, kW);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetFilter4dDescriptor failed");
+    return desc;
+}
+
+cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(const std::string& key,
+                                                      int padH, int padW, int strideH, int strideW,
+                                                      int dilH, int dilW, int groups, cudnnDataType_t computeType)
+{
+    cudnnConvolutionDescriptor_t& desc = cudnnConvs[key];
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateConvolutionDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateConvolutionDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetConvolution2dDescriptor(desc, padH, padW, strideH, strideW, dilH, dilW,
+                                                       CUDNN_CROSS_CORRELATION, computeType);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetConvolution2dDescriptor failed");
+#if CUDNN_MAJOR >= 7
+    cudnnSetConvolutionMathType(desc, CUDNN_DEFAULT_MATH);
+#endif
+    if (groups > 1) {
+        cudnnSetConvolutionGroupCount(desc, groups);
+    }
+    return desc;
+}
+
+cudnnActivationDescriptor_t Net::Impl::activationDescCuDNN(const std::string& key,
+                                                           cudnnActivationMode_t mode,
+                                                           cudnnNanPropagation_t nanOpt,
+                                                           double coef)
+{
+    cudnnActivationDescriptor_t& desc = cudnnActs[key];
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateActivationDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateActivationDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetActivationDescriptor(desc, mode, nanOpt, coef);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetActivationDescriptor failed");
+    return desc;
+}
+
+cudnnOpTensorDescriptor_t Net::Impl::opTensorDescCuDNN(const std::string& key,
+                                                       cudnnOpTensorOp_t op,
+                                                       cudnnDataType_t dtype,
+                                                       cudnnNanPropagation_t nanOpt)
+{
+    cudnnOpTensorDescriptor_t& desc = cudnnOpTensors[key];
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateOpTensorDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateOpTensorDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetOpTensorDescriptor(desc, op, dtype, nanOpt);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetOpTensorDescriptor failed");
+    return desc;
+}
+
+cudnnPoolingDescriptor_t Net::Impl::poolingDescCuDNN(const std::string& key,
+                                                     cudnnPoolingMode_t mode,
+                                                     cudnnNanPropagation_t nanOpt,
+                                                     int kH, int kW,
+                                                     int padH, int padW,
+                                                     int strideH, int strideW)
+{
+    cudnnPoolingDescriptor_t& desc = cudnnPools[key];
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreatePoolingDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreatePoolingDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetPooling2dDescriptor(desc, mode, nanOpt, kH, kW, padH, padW, strideH, strideW);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetPooling2dDescriptor failed");
+    return desc;
+}
 #endif
 
 const ArgData& Net::Impl::argData(Arg arg) const

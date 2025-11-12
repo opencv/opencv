@@ -566,7 +566,6 @@ public:
                             // Flatten N…axis to N, rest to K
                             int axisCan = normalize_axis(axis, input[i].dims);
                             int N = input[i].total(0, axisCan);
-                            int K = input[i].total(axisCan);
                             int M = weightsMat.rows; // numOutput
                             if (dst.empty() || dst.rows != N || dst.cols != M || dst.type() != CV_32F)
                                 dst.create(N, M, CV_32F);
@@ -589,7 +588,6 @@ public:
                             else
                                 bdev.release();
 
-                            // Prepare cuBLAS/cuDNN handles and descriptors via Net::Impl (new engine path)
                             Net::Impl* netimpl = getNetImpl(this);
                             CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
                             if (!netimpl->cudaInfo)
@@ -604,7 +602,6 @@ public:
                             cublasHandle_t blasHandle = netimpl->cudaInfo->context.cublas_handle.get();
                             cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-                            // Output descriptor (N, C=M, 1, 1) with explicit strides honoring pitch
                             const int y_n_stride = (int)(dst.step / sizeof(float));
                             cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
                                 this->outputs.empty() ? Arg() : this->outputs[0],
@@ -612,7 +609,6 @@ public:
                                 y_n_stride, 1, 1, 1,
                                 CUDNN_DATA_FLOAT);
 
-                            // Bias descriptor (1, C=M, 1, 1); get/cached via argTensorCuDNN using a named Arg
                             cudnnTensorDescriptor_t bDesc = nullptr;
                             if (!bdev.empty()) {
                                 Arg bArg = netimpl->getArg(this->name + ":bias");

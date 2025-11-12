@@ -73,6 +73,7 @@ using namespace cv::dnn::cuda4dnn;
 
 #ifdef HAVE_CUDA
 #include "../cuda/conv_naive.hpp"
+#include <cuda_runtime.h>
 #endif
 
 #include "cpu_kernels/convolution.hpp"
@@ -1156,7 +1157,19 @@ public:
                 out_gpu_ptr = &((*gout_ptr)[0]);
             }
 
-            // get input as GpuMat
+            // Prepare cuDNN handle and descriptors via Net::Impl (new engine path)
+            Net::Impl* netimpl = getNetImpl(this);
+            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+            if (!netimpl->cudaInfo)
+            {
+                try {
+                    netimpl->initCUDABackend(netimpl->blobsToKeep);
+                } catch (const cv::Exception& e) {
+                    CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+                }
+            }
+
+            // get input as GpuMat (already ND-backed; no manual flattening here)
             cv::cuda::GpuMat gin0;
             bool inputIsGPU = (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT);
             if (inputIsGPU)
@@ -1167,14 +1180,14 @@ public:
             }
             else
             {
-                std::vector<Mat> inputs_tmp; inputs_arr.getMatVector(inputs_tmp);
-                CV_Assert(!inputs_tmp.empty());
-                Mat in = inputs_tmp[0];
-                int rows = in.rows > 0 ? in.rows : 1;
-                int cols = (int)(in.total() / (size_t)rows);
-                Mat in2d = in.reshape(1, rows);
-                gin0.create(rows, cols, in.type());
-                gin0.upload(in2d);
+                // Upload via Net::Impl allocator; avoid layer-local flattening
+                Arg inpArg = this->inputs.empty() ? Arg() : this->inputs[0];
+                gin0 = netimpl->argGpuMat(inpArg);
+                if (gin0.empty())
+                {
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                    return;
+                }
             }
 
             // derive input shape N,C,H_in,W_in
@@ -1232,95 +1245,76 @@ public:
             int H_out = (H_in + 2 * pH - kH) / sH + 1;
             int W_out = (W_in + 2 * pW - kW) / sW + 1;
 
-            // Sanity check the flattened GPU input view (rows=N, cols=C_in*H_in*W_in)
+            // Expect output already allocated by Net::Impl for GPU path; otherwise fallback
+            if (!wantGpuOutput || !out_gpu_ptr || out_gpu_ptr->empty())
             {
-                size_t expected_cols = (size_t)C_in * (size_t)H_in * (size_t)W_in;
-                if (gin0.rows != std::max(N, 1) || (size_t)gin0.cols != expected_cols)
-                {
-                    CV_LOG_WARNING(NULL, "DNN/CUDA: conv: GPU input view is (rows=" << gin0.rows << ", cols=" << gin0.cols
-                                           << ") but expected (rows=" << N << ", cols=" << expected_cols << "). Proceeding with provided view.");
+                forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                return;
+            }
+
+            // Upload weights and bias as ND tensors without 2D reshaping
+            cv::cuda::GpuMatND wdev_nd, bdev_nd;
+            {
+                const Mat& w = blobs[0];
+                CV_Assert(w.type() == CV_32F && "DNN/CUDA: weights must be float32");
+                std::vector<int> wshape;
+                if (w.dims >= 4) {
+                    wshape = { w.size[0], w.size[1], w.size[2], w.size[3] };
+                } else if (w.dims == 3) {
+                    wshape = { w.size[0], w.size[1], w.size[2], 1 };
+                } else {
+                    CV_Error(Error::StsError, "Unexpected convolution weights dimensionality");
                 }
+                wdev_nd.fit(wshape, w.type());
+                size_t bytes = (size_t)w.total() * (size_t)w.elemSize();
+                cudaError_t cst = cudaMemcpy(wdev_nd.getDevicePtr(), w.data, bytes, cudaMemcpyHostToDevice);
+                CV_Assert(cst == cudaSuccess && "cudaMemcpy for weights failed");
+            }
+            if (hasBias()) {
+                const Mat& b = blobs[1];
+                CV_Assert(b.type() == CV_32F && "DNN/CUDA: bias must be float32");
+                std::vector<int> bshape = { C_out };
+                bdev_nd.fit(bshape, b.type());
+                size_t bbytes = (size_t)b.total() * (size_t)b.elemSize();
+                cudaError_t cstb = cudaMemcpy(bdev_nd.getDevicePtr(), b.data, bbytes, cudaMemcpyHostToDevice);
+                CV_Assert(cstb == cudaSuccess && "cudaMemcpy for bias failed");
             }
 
-            // allocate output GpuMat as 2D view (rows = N, cols = C_out*H_out*W_out)
-            int out_rows = std::max(N, 1);
-            int out_cols = std::max(C_out * H_out * W_out, 1);
-            if (wantGpuOutput)
-            {
-                out_gpu_ptr->create(out_rows, out_cols, CV_32F);
-                out_gpu_ptr->setTo(Scalar::all(0));
-            }
-            else
-            {
-                out_gpu_local.create(out_rows, out_cols, CV_32F);
-                out_gpu_local.setTo(Scalar::all(0));
-                out_gpu_ptr = &out_gpu_local;
-            }
+            int n_stride_in  = C_in * H_in * W_in;
+            int c_stride_in  = H_in * W_in;
+            int h_stride_in  = W_in;
+            int w_stride_in  = 1;
+            int n_stride_out = C_out * H_out * W_out;
+            int c_stride_out = H_out * W_out;
+            int h_stride_out = W_out;
+            int w_stride_out = 1;
 
-            // upload weights/bias to device (per-call to avoid cross-layer cache issues)
-            cv::cuda::GpuMat wdev, bdev;
-            {
-                Mat w = blobs[0];
-                Mat w2d = w.reshape(1, w.total());
-                wdev.create(w2d.rows, w2d.cols, w2d.type());
-                wdev.upload(w2d);
-            }
-            if (hasBias())
-            {
-                Mat b = blobs[1].reshape(1, blobs[1].total());
-                bdev.create(b.rows, b.cols, b.type());
-                bdev.upload(b);
-            }
-
-            // call kernel with pitch-aware strides (elements per row)
-            int in_ldw = (int)(gin0.step / sizeof(float));
-            int out_ldw = (int)(out_gpu_ptr->step / sizeof(float));
-
-            // Prepare cuDNN descriptors via Net::Impl cache
-            Net::Impl* netimpl = getNetImpl(this);
-            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-            if (!netimpl->cudaInfo)
-            {
-                try {
-                    netimpl->initCUDABackend(netimpl->blobsToKeep);
-                } catch (const cv::Exception& e) {
-                    CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
-                }
-            }
-            // input tensor descriptor (explicit strides to honor GpuMat pitch)
             cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
                 this->inputs.empty() ? Arg() : this->inputs[0],
                 N, C_in, H_in, W_in,
-                in_ldw, H_in * W_in, W_in, 1,
+                n_stride_in, c_stride_in, h_stride_in, w_stride_in,
                 CUDNN_DATA_FLOAT);
-            // output tensor descriptor
+
             cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
                 this->outputs.empty() ? Arg() : this->outputs[0],
                 N, C_out, H_out, W_out,
-                out_ldw, H_out * W_out, W_out, 1,
+                n_stride_out, c_stride_out, h_stride_out, w_stride_out,
                 CUDNN_DATA_FLOAT);
 
-            // Filter and convolution descriptors cached per-layer
-            if (!cudnnWDesc)
+            cudnnFilterDescriptor_t cudnnWDesc = netimpl->filterDescCuDNN(
+                this->name + ":w",
+                CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
+                C_out, blobs[0].size[1], kH, kW);
+            cudnnConvolutionDescriptor_t cudnnConvDesc = netimpl->convDescCuDNN(
+                this->name + ":conv",
+                pH, pW, sH, sW, 1, 1, groups, CUDNN_DATA_FLOAT);
+            cudnnTensorDescriptor_t cudnnBDesc = nullptr;
+            if (hasBias())
             {
-                cudnnCreateFilterDescriptor(&cudnnWDesc);
-            }
-            cudnnSetFilter4dDescriptor(cudnnWDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
-                                       C_out, blobs[0].size[1], kH, kW);
-            if (!cudnnConvDesc)
-            {
-                cudnnCreateConvolutionDescriptor(&cudnnConvDesc);
-            }
-            cudnnSetConvolution2dDescriptor(cudnnConvDesc, pH, pW, sH, sW, 1, 1, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
-            if (groups > 1)
-                cudnnSetConvolutionGroupCount(cudnnConvDesc, groups);
-#if CUDNN_MAJOR >= 7
-            cudnnSetConvolutionMathType(cudnnConvDesc, CUDNN_DEFAULT_MATH);
-#endif
-            if (!bdev.empty())
-            {
-                if (!cudnnBDesc) cudnnCreateTensorDescriptor(&cudnnBDesc);
-                cudnnSetTensor4dDescriptor(cudnnBDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, 1, C_out, 1, 1);
+                Arg bArg = netimpl->getArg(this->name + ":bias");
+                cudnnBDesc = netimpl->argTensorCuDNN(
+                    bArg, 1, C_out, 1, 1,
+                    C_out, 1, 1, 1, CUDNN_DATA_FLOAT);
             }
 
             // Use persistent cuDNN handle/stream from CUDA backend
@@ -1331,10 +1325,10 @@ public:
             cuda::conv2dNCHW(
                 cudnnHandle,
                 xDesc, cudnnWDesc, cudnnConvDesc, yDesc,
-                bdev.empty() ? nullptr : cudnnBDesc,
+                hasBias() ? cudnnBDesc : nullptr,
                 (const void*)gin0.ptr(),
-                (const void*)wdev.ptr(),
-                bdev.empty() ? nullptr : (const void*)bdev.ptr(),
+                (const void*)wdev_nd.getDevicePtr(),
+                hasBias() ? (const void*)bdev_nd.getDevicePtr() : nullptr,
                 (void*)out_gpu_ptr->ptr());
             if (!wantGpuOutput)
             {
@@ -1346,8 +1340,12 @@ public:
                 outputs_arr.getMatVector(outputs_host);
                 CV_Assert(outputs_host.size() == 1);
                 outputs_host[0].create(outshape, CV_32F);
-                Mat outHost2DView = outputs_host[0].reshape(1, out_rows);
-                out2d_host.copyTo(outHost2DView);
+                // reshape downloaded 2D view back into NCHW
+                Mat outHost2DView = outputs_host[0].reshape(1, std::max(N, 1));
+                if (outHost2DView.size() == out2d_host.size() && outHost2DView.type() == out2d_host.type())
+                    out2d_host.copyTo(outHost2DView);
+                else
+                    out2d_host.reshape(1, outHost2DView.rows).copyTo(outHost2DView);
             }
             return;
         }
