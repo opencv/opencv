@@ -5,16 +5,15 @@ import os, tempfile, numpy as np
 import sys
 import cv2 as cv
 from tests_common import NewOpenCVTests
-import gen_pattern
+import generate_pattern
 
 class aruco_objdetect_test(NewOpenCVTests):
 
     def test_aruco_dicts(self):
         try:
-            from svglib.svglib import svg2rlg
-            from reportlab.graphics import renderPM
+            import cairosvg
         except:
-            raise self.skipTest("libraies svglib and reportlab not found")
+            raise self.skipTest("cairosvg library was not found")
         else:
             cols = 3
             rows = 5
@@ -44,13 +43,12 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                 try:
                     basedir = os.path.abspath(os.path.dirname(__file__))
-                    pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
+                    pm = generate_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
                                 board_height, "charuco_checkboard", marker_size,
-                                os.path.join(basedir, aruco_type_str[aruco_type_i]+'.json.gz'))
+                                os.path.join(basedir, aruco_type_str[aruco_type_i]+'.json.gz'), 0)
                     pm.make_charuco_board()
                     pm.save()
-                    drawing = svg2rlg(filesvg)
-                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=72)
+                    cairosvg.svg2png(url=filesvg, write_to=filepng, background_color="white")
                     from_svg_img = cv.imread(filepng)
                     _charucoCorners, _charuco_ids_svg, marker_corners_svg, marker_ids_svg = charuco_detector.detectBoard(from_svg_img)
                     _charucoCorners, _charuco_ids_cv, marker_corners_cv, marker_ids_cv = charuco_detector.detectBoard(from_cv_img)
@@ -72,10 +70,9 @@ class aruco_objdetect_test(NewOpenCVTests):
 
     def test_aruco_marker_sizes(self):
         try:
-            from svglib.svglib import svg2rlg
-            from reportlab.graphics import renderPM
+            import cairosvg
         except:
-            raise self.skipTest("libraies svglib and reportlab not found")
+            raise self.skipTest("cairosvg library was not found")
         else:
             cols = 3
             rows = 5
@@ -102,12 +99,11 @@ class aruco_objdetect_test(NewOpenCVTests):
 
                 try:
                     basedir = os.path.abspath(os.path.dirname(__file__))
-                    pm = gen_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
-                                board_height, "charuco_checkboard", marker_size, os.path.join(basedir, aruco_type_str+'.json.gz'))
+                    pm = generate_pattern.PatternMaker(cols, rows, filesvg, "px", square_size, 0, board_width,
+                                board_height, "charuco_checkboard", marker_size, os.path.join(basedir, aruco_type_str+'.json.gz'), 0)
                     pm.make_charuco_board()
                     pm.save()
-                    drawing = svg2rlg(filesvg)
-                    renderPM.drawToFile(drawing, filepng, fmt='PNG', dpi=72)
+                    cairosvg.svg2png(url=filesvg, write_to=filepng, background_color="white")
                     from_svg_img = cv.imread(filepng)
 
                     #test

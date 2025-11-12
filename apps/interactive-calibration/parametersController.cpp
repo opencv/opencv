@@ -49,6 +49,9 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
     readFromNode(reader["solver_max_iters"], mInternalParameters.solverMaxIters);
     readFromNode(reader["fast_solver"], mInternalParameters.fastSolving);
+    readFromNode(reader["rational_model"], mInternalParameters.rationalModel);
+    readFromNode(reader["thin_prism_model"], mInternalParameters.thinPrismModel);
+    readFromNode(reader["tiltedModel"], mInternalParameters.tiltedModel);
     readFromNode(reader["frame_filter_conv_param"], mInternalParameters.filterAlpha);
 
     bool retValue =

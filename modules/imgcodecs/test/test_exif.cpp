@@ -452,7 +452,7 @@ TEST(Imgcodecs_Png, Read_Write_With_Exif)
     EXPECT_EQ(img2.rows, img.rows);
     EXPECT_EQ(img2.type(), imgtype);
     EXPECT_EQ(read_metadata_types, read_metadata_types2);
-    EXPECT_GE(read_metadata_types.size(), 1u);
+    ASSERT_GE(read_metadata_types.size(), 1u);
     EXPECT_EQ(read_metadata, read_metadata2);
     EXPECT_EQ(read_metadata_types[0], IMAGE_METADATA_EXIF);
     EXPECT_EQ(read_metadata_types.size(), read_metadata.size());
@@ -532,7 +532,7 @@ static size_t locateString(const uchar* exif, size_t exif_size, const std::strin
     return 0xFFFFFFFFu;
 }
 
-typedef std::tuple<std::string, size_t, std::string, size_t> ReadExif_Sanity_Params;
+typedef std::tuple<std::string, size_t, std::string, size_t, size_t, size_t> ReadExif_Sanity_Params;
 typedef testing::TestWithParam<ReadExif_Sanity_Params> ReadExif_Sanity;
 
 TEST_P(ReadExif_Sanity, Check)
@@ -541,18 +541,27 @@ TEST_P(ReadExif_Sanity, Check)
     size_t exif_size = get<1>(GetParam());
     std::string pattern = get<2>(GetParam());
     size_t ploc = get<3>(GetParam());
+    size_t expected_xmp_size = get<4>(GetParam());
+    size_t expected_iccp_size = get<5>(GetParam());
 
     const string root = cvtest::TS::ptr()->get_data_path();
     filename = root + filename;
 
-    std::vector<int> metadata_types;
-    std::vector<Mat> metadata;
-    Mat img = imreadWithMetadata(filename, metadata_types, metadata, 1);
+    std::vector<int> metadata_types, metadata_types2;
+    std::vector<std::vector<uchar> >  metadata, metadata2;
+    Mat img = imreadWithMetadata(filename, metadata_types, metadata);
+
+    std::vector<uchar> compressed;
+    imencodeWithMetadata(".jpg", img, metadata_types, metadata, compressed);
+    img = imdecodeWithMetadata(compressed, metadata_types2, metadata2);
+
+    EXPECT_EQ(metadata_types, metadata_types2);
+    EXPECT_EQ(metadata, metadata2);
 
     EXPECT_EQ(img.type(), CV_8UC3);
     ASSERT_GE(metadata_types.size(), 1u);
     EXPECT_EQ(metadata_types.size(), metadata.size());
-    const Mat& exif = metadata[IMAGE_METADATA_EXIF];
+    const Mat exif = Mat(metadata[IMAGE_METADATA_EXIF]);
     EXPECT_EQ(exif.type(), CV_8U);
     EXPECT_EQ(exif.total(), exif_size);
     ASSERT_GE(exif_size, 26u); // minimal exif should take at least 26 bytes
@@ -560,18 +569,36 @@ TEST_P(ReadExif_Sanity, Check)
     EXPECT_TRUE(exif.data[0] == 'I' || exif.data[0] == 'M');
     EXPECT_EQ(exif.data[0], exif.data[1]);
     EXPECT_EQ(locateString(exif.data, exif_size, pattern), ploc);
+
+    if (metadata_types.size() > IMAGE_METADATA_XMP)
+    {
+       const Mat xmp = Mat(metadata[IMAGE_METADATA_XMP]);
+       EXPECT_EQ(xmp.type(), CV_8U);
+       EXPECT_GT(xmp.total(), 0u);
+       size_t xmp_size = xmp.total() * xmp.elemSize();
+       EXPECT_EQ(expected_xmp_size, xmp_size);
+    }
+
+    if (metadata_types.size() > IMAGE_METADATA_ICCP)
+    {
+        const Mat iccp = Mat(metadata[IMAGE_METADATA_ICCP]);
+        EXPECT_EQ(iccp.type(), CV_8U);
+        EXPECT_GT(iccp.total(), 0u);
+        size_t iccp_size = iccp.total() * iccp.elemSize();
+        EXPECT_EQ(expected_iccp_size, iccp_size);
+    }
 }
 
 static const std::vector<ReadExif_Sanity_Params> exif_sanity_params
 {
 #ifdef HAVE_JPEG
-    ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120),
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_3.jpg", 916, "Photoshop", 120, 3597, 940),
 #endif
 #ifdef OPENCV_IMGCODECS_PNG_WITH_EXIF
-    ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102),
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_5.png", 112, "ExifTool", 102, 505, 0),
 #endif
 #ifdef HAVE_AVIF
-    ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120),
+    ReadExif_Sanity_Params("readwrite/testExifOrientation_7.avif", 913, "Photoshop", 120, 3597, 940),
 #endif
 };
 

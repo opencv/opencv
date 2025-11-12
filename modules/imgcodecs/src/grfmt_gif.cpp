@@ -559,6 +559,8 @@ GifEncoder::GifEncoder() {
     colorNum = 256; // the number of colors in the color table, default 256
     dithering = 0; // the level dithering, default 0
     globalColorTableSize = 256, localColorTableSize = 0;
+
+    m_supported_encode_key = {IMWRITE_GIF_QUALITY, IMWRITE_GIF_DITHER, IMWRITE_GIF_TRANSPARENCY, IMWRITE_GIF_COLORTABLE};
 }
 
 GifEncoder::~GifEncoder() {
@@ -581,6 +583,7 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
 
     // confirm the params
     for (size_t i = 0; i < params.size(); i += 2) {
+        const int value = params[i+1];
         switch (params[i]) {
             case IMWRITE_GIF_LOOP:
                 CV_LOG_WARNING(NULL, "IMWRITE_GIF_LOOP is not functional since 4.12.0. Replaced by cv::Animation::loop_count.");
@@ -589,17 +592,26 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
                 CV_LOG_WARNING(NULL, "IMWRITE_GIF_SPEED is not functional since 4.12.0. Replaced by cv::Animation::durations.");
                 break;
             case IMWRITE_GIF_DITHER:
-                dithering = std::min(std::max(params[i + 1], -1), 3);
+                dithering = std::min(std::max(value, -1), 3);
+                if(value != dithering) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_GIF_DITHER must be between -1 to 3. It is fallbacked to %d", value, dithering));
+                }
                 fast = false;
                 break;
             case IMWRITE_GIF_TRANSPARENCY:
-                criticalTransparency = (uchar)std::min(std::max(params[i + 1], 0), 255);
+                criticalTransparency = (uchar)std::min(std::max(value, 0), 255);
+                if(value != criticalTransparency) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_GIF_TRANSPARENCY must be between 0 to 255. It is fallbacked to %d", value, criticalTransparency));
+                }
                 break;
             case IMWRITE_GIF_COLORTABLE:
-                localColorTableSize = std::min(std::max(params[i + 1], 0), 1);
+                localColorTableSize = std::min(std::max(value, 0), 1);
+                if(value != localColorTableSize) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_GIF_COLORTABLE must be 0 or 1. It is fallbacked to %d", value, localColorTableSize));
+                }
                 break;
             case IMWRITE_GIF_QUALITY:
-                switch (params[i + 1]) {
+                switch (value) {
                     case IMWRITE_GIF_FAST_FLOYD_DITHER:
                         fast = true;
                         dithering = GRFMT_GIF_FloydSteinberg;
@@ -609,10 +621,13 @@ bool GifEncoder::writeanimation(const Animation& animation, const std::vector<in
                         dithering = GRFMT_GIF_None;
                         break;
                     default:
-                        lzwMinCodeSize = std::min(std::max(params[i + 1], 3), 8);
+                        lzwMinCodeSize = std::min(std::max(value, 3), 8);
                         colorNum = 1 << lzwMinCodeSize;
                         globalColorTableSize = colorNum;
                         fast = false;
+                        if(value != lzwMinCodeSize) {
+                            CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_GIF_QUALITY must be one of ImwriteGIFCompressionFlags. It is fallbacked to %d", value, lzwMinCodeSize));
+                        }
                         break;
                 }
                 break; // case IMWRITE_GIF_QUALITY
@@ -754,7 +769,7 @@ bool GifEncoder::lzwEncode() {
     //initialize
     int32_t prev = imgCodeStream[0];
 
-    for (int64_t i = 1; i < height * width; i++) {
+    for (size_t i = 1; i < size_t(height * width); i++) {
         // add the output code to the output buffer
         while (bitLeft >= 8) {
             buffer[bufferLen++] = (uchar)output;

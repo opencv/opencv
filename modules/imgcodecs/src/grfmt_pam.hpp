@@ -78,8 +78,8 @@ public:
 protected:
 
     RLByteStream    m_strm;
-    int m_maxval, m_channels, m_sampledepth, m_offset,
-        selected_fmt;
+    int64_t m_offset;
+    int m_maxval, m_channels, m_sampledepth, selected_fmt;
     bool bit_mode;
 };
 

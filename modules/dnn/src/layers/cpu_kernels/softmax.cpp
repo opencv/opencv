@@ -48,7 +48,16 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             size_t innerDim = i % innerSize;
             size_t srcOffset = outerDim * outerStep + innerDim;
             // copy data from src to buf along axis, since the data may not be continuous
-            for (size_t _cnDim = 0; _cnDim < axisStep; _cnDim++)
+            size_t _cnDim = 0;
+#if CV_ENABLE_UNROLLED && defined(_M_ARM64)
+            for (; _cnDim + 3 < axisStep; _cnDim += 4) {
+                axisBuf[_cnDim + 0] = srcPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep];
+                axisBuf[_cnDim + 1] = srcPtr[srcOffset + (_cnDim + 1 + axisBias) * cnStep];
+                axisBuf[_cnDim + 2] = srcPtr[srcOffset + (_cnDim + 2 + axisBias) * cnStep];
+                axisBuf[_cnDim + 3] = srcPtr[srcOffset + (_cnDim + 3 + axisBias) * cnStep];
+            }
+#endif
+            for (; _cnDim < axisStep; _cnDim++)
                 axisBuf[_cnDim] = srcPtr[srcOffset + (_cnDim + axisBias) * cnStep];
 
             float maxVal = -FLT_MAX;
@@ -95,7 +104,16 @@ void softmax(Mat &dst, const Mat &src, int axis, int axisBias, int axisStep){
             s = 1.f / s;
 
             // copy back the result to src
-            for (size_t _cnDim = 0; _cnDim < axisStep; _cnDim++)
+            _cnDim = 0;
+#if CV_ENABLE_UNROLLED && defined(_M_ARM64)
+            for (; _cnDim + 3 < axisStep; _cnDim += 4) {
+                dstPtr[srcOffset + (_cnDim + 0 + axisBias) * cnStep] = axisBuf[_cnDim + 0] * s;
+                dstPtr[srcOffset + (_cnDim + 1 + axisBias) * cnStep] = axisBuf[_cnDim + 1] * s;
+                dstPtr[srcOffset + (_cnDim + 2 + axisBias) * cnStep] = axisBuf[_cnDim + 2] * s;
+                dstPtr[srcOffset + (_cnDim + 3 + axisBias) * cnStep] = axisBuf[_cnDim + 3] * s;
+            }
+#endif
+            for (; _cnDim < axisStep; _cnDim++)
                 dstPtr[srcOffset + (_cnDim + axisBias) * cnStep] = axisBuf[_cnDim] * s;
         }
     }, nstripes);

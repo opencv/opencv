@@ -346,6 +346,7 @@ WebPEncoder::WebPEncoder()
     m_support_metadata[IMAGE_METADATA_EXIF] = true;
     m_support_metadata[IMAGE_METADATA_XMP] = true;
     m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_WEBP_QUALITY};
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -364,15 +365,17 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     bool comp_lossless = true;
     float quality = 100.0f;
 
-    if (params.size() > 1)
+    for(size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[0] == IMWRITE_WEBP_QUALITY)
+        const int value = params[i+1];
+        if (params[i] == IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
-            quality = static_cast<float>(params[1]);
+            quality = static_cast<float>(value);
             if (quality < 1.0f)
             {
                 quality = 1.0f;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
             }
             if (quality > 100.0f)
             {
@@ -394,33 +397,43 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         channels = 3;
     }
 
-    uint8_t *out = NULL;
+    uint8_t *encoder_out = NULL;
     size_t size = 0;
     if (comp_lossless)
     {
         if (channels == 3)
         {
-            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &encoder_out);
         }
         else if (channels == 4)
         {
-            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &encoder_out);
         }
     }
     else
     {
         if (channels == 3)
         {
-            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
         }
         else if (channels == 4)
         {
-            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
         }
     }
 
-    WebPData finalData = { out, size };
-    if (!m_metadata.empty()) {
+#if WEBP_DECODER_ABI_VERSION >= 0x0206
+    Ptr<uint8_t> out_cleaner(encoder_out, WebPFree);
+#else
+    Ptr<uint8_t> out_cleaner(encoder_out, free);
+#endif
+
+    uint8_t *out = encoder_out;
+    uint8_t *muxer_out = nullptr;
+
+    if (!m_metadata.empty())
+    {
+        WebPData muxerData;
 
         WebPMux* mux = WebPMuxNew();
         WebPData imageData = { out, size };
@@ -447,8 +460,10 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
             WebPMuxSetChunk(mux, "ICCP", &metadata, 1);
         }
 
-        if (WebPMuxAssemble(mux, &finalData) == WEBP_MUX_OK) {
-            size = finalData.size;
+        if (WebPMuxAssemble(mux, &muxerData) == WEBP_MUX_OK) {
+            size = muxerData.size;
+            muxer_out = const_cast<uint8_t*>(muxerData.bytes);
+            out = muxer_out;
             WebPMuxDelete(mux);
         }
         else {
@@ -458,9 +473,9 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     }
 
 #if WEBP_DECODER_ABI_VERSION >= 0x0206
-    Ptr<uint8_t> out_cleaner(out, WebPFree);
+    Ptr<const uint8_t> muxer_cleaner(muxer_out, WebPFree);
 #else
-    Ptr<uint8_t> out_cleaner(out, free);
+    Ptr<const uint8_t> muxer_cleaner(muxer_out, free);
 #endif
 
     CV_Assert(size > 0);
@@ -468,7 +483,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     if (m_buf)
     {
         m_buf->resize(size);
-        memcpy(&(*m_buf)[0], finalData.bytes, size);
+        memcpy(&(*m_buf)[0], out, size);
         bytes_written = size;
     }
     else
@@ -476,7 +491,7 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         FILE *fd = fopen(m_filename.c_str(), "wb");
         if (fd != NULL)
         {
-            bytes_written = fwrite(finalData.bytes, sizeof(uint8_t), size, fd);
+            bytes_written = fwrite(out, sizeof(uint8_t), size, fd);
             if (size != bytes_written)
             {
                 CV_LOG_ERROR(NULL, cv::format("Only %zu or %zu bytes are written\n",bytes_written, size));
@@ -516,23 +531,26 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
 
     anim_config.anim_params.bgcolor = bgvalue;
     anim_config.anim_params.loop_count = animation.loop_count;
+    anim_config.minimize_size = 0;
 
-    if (params.size() > 1)
+    for(size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[0] == IMWRITE_WEBP_QUALITY)
+        const int value = params[i+1];
+        if (params[i] == IMWRITE_WEBP_QUALITY)
         {
-            config.lossless = 0;
-            config.quality = static_cast<float>(params[1]);
+            config.lossless = 0; // false
+            config.quality = static_cast<float>(value);
             if (config.quality < 1.0f)
             {
                 config.quality = 1.0f;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
             }
-            if (config.quality >= 100.0f)
+            if (config.quality > 100.0f)
             {
-                config.lossless = 1;
+                config.quality = 100.0f;
+                config.lossless = 1; // true
             }
         }
-        anim_config.minimize_size = 0;
     }
 
     std::unique_ptr<WebPAnimEncoder, void (*)(WebPAnimEncoder*)> anim_encoder(

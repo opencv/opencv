@@ -232,6 +232,32 @@ void vector_Mat_to_Mat(std::vector<cv::Mat>& v_mat, cv::Mat& mat)
     }
 }
 
+void Mat_to_vector_vector_Mat(Mat& mat, std::vector< std::vector< Mat > >& vv_mat)
+{
+    std::vector<Mat> vm;
+    vm.reserve( mat.rows );
+    Mat_to_vector_Mat(mat, vm);
+    for(size_t i=0; i<vm.size(); i++)
+    {
+        std::vector<Mat> vmat;
+        Mat_to_vector_Mat(vm[i], vmat);
+        vv_mat.push_back(vmat);
+    }
+}
+
+void vector_vector_Mat_to_Mat(std::vector< std::vector< Mat > >& vv_mat, Mat& mat)
+{
+    std::vector<Mat> vm;
+    vm.reserve( vv_mat.size() );
+    for(size_t i=0; i<vv_mat.size(); i++)
+    {
+        Mat m;
+        vector_Mat_to_Mat(vv_mat[i], m);
+        vm.push_back(m);
+    }
+    vector_Mat_to_Mat(vm, mat);
+}
+
 void Mat_to_vector_vector_Point(Mat& mat, std::vector< std::vector< Point > >& vv_pt)
 {
     std::vector<Mat> vm;
