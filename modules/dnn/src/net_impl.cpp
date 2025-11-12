@@ -154,7 +154,6 @@ void Net::Impl::clear()
 }
 
 
-
 void Net::Impl::validateBackendAndTarget()
 {
     CV_TRACE_FUNCTION();

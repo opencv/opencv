@@ -112,6 +112,12 @@ struct Net::Impl : public detail::NetImplBase
     std::vector<cv::cuda::GpuMatND> layerTempGpuND;
     // Cached cuDNN tensor descriptors per graph Arg (index-matched to 'args')
     std::vector<cudnnTensorDescriptor_t> cudnnTensors;
+    // Cached cuDNN non-tensor descriptors, keyed by string (e.g., layer name + suffix)
+    std::unordered_map<std::string, cudnnFilterDescriptor_t> cudnnFilters;
+    std::unordered_map<std::string, cudnnConvolutionDescriptor_t> cudnnConvs;
+    std::unordered_map<std::string, cudnnActivationDescriptor_t> cudnnActs;
+    std::unordered_map<std::string, cudnnOpTensorDescriptor_t> cudnnOpTensors;
+    std::unordered_map<std::string, cudnnPoolingDescriptor_t> cudnnPools;
 #endif
 
     virtual bool empty() const;
@@ -129,6 +135,37 @@ struct Net::Impl : public detail::NetImplBase
                                            int N, int C, int H, int W,
                                            int n_stride, int c_stride, int h_stride, int w_stride,
                                            cudnnDataType_t dtype);
+    // Initialize CUDA backend (idempotent) and return whether CUDA is ready.
+    bool ensureCudaReady();
+    // Convenience wrappers for common contiguous tensor descriptors
+    cudnnTensorDescriptor_t tensorDescNCHW(Arg arg,
+                                           int N, int C, int H, int W,
+                                           cudnnDataType_t dtype);
+    // Convenience wrapper for flatten-2D views (N x C) with explicit row stride in elements.
+    cudnnTensorDescriptor_t tensorDesc2D(Arg arg,
+                                         int rows, int cols, int row_stride,
+                                         cudnnDataType_t dtype);
+    // Non-tensor descriptor getters (created once, reconfigured on each call)
+    cudnnFilterDescriptor_t filterDescCuDNN(const std::string& key,
+                                            cudnnDataType_t dtype, cudnnTensorFormat_t layout,
+                                            int outC, int inC, int kH, int kW);
+    cudnnConvolutionDescriptor_t convDescCuDNN(const std::string& key,
+                                               int padH, int padW, int strideH, int strideW,
+                                               int dilH, int dilW, int groups, cudnnDataType_t computeType);
+    cudnnActivationDescriptor_t activationDescCuDNN(const std::string& key,
+                                                    cudnnActivationMode_t mode,
+                                                    cudnnNanPropagation_t nanOpt,
+                                                    double coef);
+    cudnnOpTensorDescriptor_t opTensorDescCuDNN(const std::string& key,
+                                                cudnnOpTensorOp_t op,
+                                                cudnnDataType_t dtype,
+                                                cudnnNanPropagation_t nanOpt);
+    cudnnPoolingDescriptor_t poolingDescCuDNN(const std::string& key,
+                                              cudnnPoolingMode_t mode,
+                                              cudnnNanPropagation_t nanOpt,
+                                              int kH, int kW,
+                                              int padH, int padW,
+                                              int strideH, int strideW);
 #endif
     void ensureBufferWrapper(int bufidx);
 
@@ -151,7 +188,11 @@ struct Net::Impl : public detail::NetImplBase
         CV_TRACE_ARG_VALUE(type, "type", ld.type.c_str());
 
         if (ld.layerInstance)
+        {
+            if (!ld.layerInstance->netimpl)
+                ld.layerInstance->netimpl = const_cast<Net::Impl*>(this);
             return ld.layerInstance;
+        }
 
         ld.layerInstance = createLayerInstance(ld);
         if (!ld.layerInstance && basePtr_)
@@ -163,6 +204,9 @@ struct Net::Impl : public detail::NetImplBase
         {
             CV_Error(Error::StsError, "Can't create layer \"" + ld.name + "\" of type \"" + ld.type + "\"");
         }
+
+        if (!ld.layerInstance->netimpl)
+            ld.layerInstance->netimpl = const_cast<Net::Impl*>(this);
 
         return ld.layerInstance;
     }

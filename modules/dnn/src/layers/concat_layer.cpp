@@ -133,7 +133,7 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
-            EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+            EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
                 return false;
             return true;

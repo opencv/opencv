@@ -42,6 +42,12 @@ bool getParam_DNN_CHECK_NAN_INF();
 bool getParam_DNN_CHECK_NAN_INF_DUMP();
 bool getParam_DNN_CHECK_NAN_INF_RAISE_ERROR();
 
+static inline EngineType getForcedDnnEngine()
+{
+    return static_cast<EngineType>(
+        cv::utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO));
+}
+
 
 inline namespace detail {
 

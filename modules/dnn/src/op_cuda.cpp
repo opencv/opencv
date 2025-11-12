@@ -104,6 +104,42 @@ void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)
     }
 }
 
+bool Net::Impl::ensureCudaReady()
+{
+    if (!cudaInfo)
+    {
+        try {
+            initCUDABackend(blobsToKeep);
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+        }
+    }
+    return (bool)cudaInfo;
+}
+
+cudnnTensorDescriptor_t Net::Impl::tensorDescNCHW(Arg arg,
+                                                  int N, int C, int H, int W,
+                                                  cudnnDataType_t dtype)
+{
+    const int n_stride = C * H * W;
+    const int c_stride = H * W;
+    const int h_stride = W;
+    const int w_stride = 1;
+    return argTensorCuDNN(arg, N, C, H, W, n_stride, c_stride, h_stride, w_stride, dtype);
+}
+
+cudnnTensorDescriptor_t Net::Impl::tensorDesc2D(Arg arg,
+                                                int rows, int cols, int row_stride,
+                                                cudnnDataType_t dtype)
+{
+    // Map 2D (rows x cols) to 4D (N=rows, C=cols, H=1, W=1) with explicit strides
+    const int n_stride = row_stride > 0 ? row_stride : cols;
+    const int c_stride = 1;
+    const int h_stride = 1;
+    const int w_stride = 1;
+    return argTensorCuDNN(arg, rows, cols, 1, 1, n_stride, c_stride, h_stride, w_stride, dtype);
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
