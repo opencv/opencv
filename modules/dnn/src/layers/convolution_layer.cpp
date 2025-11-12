@@ -1286,14 +1286,14 @@ public:
             if (inputs[0].dims == 5)
                 conv_dim = CONV_3D;
 
+            // Winograd only works when input h and w >= 12.
+            bool canUseWinograd = useWinograd && conv_dim == CONV_2D && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
+
             // Initialization of FastCovn2d, pack weight.
-            if (!fastConvImpl || variableWeight)
+            if (!fastConvImpl || variableWeight || (fastConvImpl->conv_type == CONV_TYPE_WINOGRAD3X3 && !canUseWinograd))
             {
                 int K = outputs[0].size[1];
                 int C = inputs[0].size[1];
-
-                // Winograd only works when input h and w >= 12.
-                bool canUseWinograd = useWinograd && conv_dim == CONV_2D && inputs[0].size[2] >= 12 && inputs[0].size[3] >= 12;
 
                 CV_Assert(outputs[0].size[1] % ngroups == 0);
                 fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
