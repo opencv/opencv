@@ -135,6 +135,16 @@ struct Net::Impl : public detail::NetImplBase
                                            int N, int C, int H, int W,
                                            int n_stride, int c_stride, int h_stride, int w_stride,
                                            cudnnDataType_t dtype);
+    // Initialize CUDA backend (idempotent) and return whether CUDA is ready.
+    bool ensureCudaReady();
+    // Convenience wrappers for common contiguous tensor descriptors
+    cudnnTensorDescriptor_t tensorDescNCHW(Arg arg,
+                                           int N, int C, int H, int W,
+                                           cudnnDataType_t dtype);
+    // Convenience wrapper for flatten-2D views (N x C) with explicit row stride in elements.
+    cudnnTensorDescriptor_t tensorDesc2D(Arg arg,
+                                         int rows, int cols, int row_stride,
+                                         cudnnDataType_t dtype);
     // Non-tensor descriptor getters (created once, reconfigured on each call)
     cudnnFilterDescriptor_t filterDescCuDNN(const std::string& key,
                                             cudnnDataType_t dtype, cudnnTensorFormat_t layout,

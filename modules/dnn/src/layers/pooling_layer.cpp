@@ -405,32 +405,18 @@ public:
                         cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
                     }
 
-                    // Use cached descriptors (NCHW) with explicit strides matching 2D views
                     Net::Impl* netimpl = getNetImpl(this);
                     CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-                    if (!netimpl->cudaInfo)
-                    {
-                        try {
-                            netimpl->initCUDABackend(netimpl->blobsToKeep);
-                        } catch (const cv::Exception& e) {
-                            CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
-                        }
-                    }
+                    netimpl->ensureCudaReady();
                     CV_Assert(netimpl->cudaInfo);
                     cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-                    int x_n_stride = C * H_in * W_in;
-                    cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                    cudnnTensorDescriptor_t xDesc = netimpl->tensorDescNCHW(
                         this->inputs.empty() ? Arg() : this->inputs[0],
-                        N, C, H_in, W_in,
-                        x_n_stride, H_in * W_in, W_in, 1,
-                        CUDNN_DATA_FLOAT);
-                    int y_n_stride = C * H_out * W_out;
-                    cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                        N, C, H_in, W_in, CUDNN_DATA_FLOAT);
+                    cudnnTensorDescriptor_t yDesc = netimpl->tensorDescNCHW(
                         this->outputs.empty() ? Arg() : this->outputs[0],
-                        N, C, H_out, W_out,
-                        y_n_stride, H_out * W_out, W_out, 1,
-                        CUDNN_DATA_FLOAT);
+                        N, C, H_out, W_out, CUDNN_DATA_FLOAT);
 
                     cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
                     cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(

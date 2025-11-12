@@ -76,6 +76,12 @@ class FullyConnectedLayerImpl CV_FINAL : public InnerProductLayer
 public:
     enum { VEC_ALIGN = 8 };
 
+#ifdef HAVE_CUDA
+    // Persistent GPU storage for weights and bias to avoid per-forward re-uploads
+    cv::cuda::GpuMatND wdev_nd;
+    cv::cuda::GpuMatND bdev_nd;
+#endif
+
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNInnerProduct<float> > innerProductOp;
     std::vector<UMat> umat_blobs;
@@ -555,7 +561,6 @@ public:
                     EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
                     if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
                     {
-                        // Use our cuBLAS-based FC on GPU with cached handles/descriptors
                         std::vector<cv::cuda::GpuMat> gin, gout;
                         inputs_arr.getGpuMatVector(gin);
                         outputs_arr.getGpuMatVector(gout);
@@ -570,13 +575,10 @@ public:
                             if (dst.empty() || dst.rows != N || dst.cols != M || dst.type() != CV_32F)
                                 cv::cuda::ensureSizeIsEnough(N, M, CV_32F, dst);
                             // Cache weights/bias on device without 2D host reshapes; use ND fit
-                            static cv::cuda::GpuMatND wdev_nd, bdev_nd;
-                            {
                                 MatShape wshape = shape(weightsMat);
                                 cv::cuda::SizeArray wsize(wshape.begin(), wshape.end());
                                 wdev_nd.fit(wsize, weightsMat.type());
                                 wdev_nd.upload(weightsMat);
-                            }
                             if (bias && !biasMat.empty()) {
                                 MatShape bshape = shape(biasMat);
                                 cv::cuda::SizeArray bsize(bshape.begin(), bshape.end());
@@ -590,33 +592,21 @@ public:
 
                             Net::Impl* netimpl = getNetImpl(this);
                             CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-                            if (!netimpl->cudaInfo)
-                            {
-                                try {
-                                    netimpl->initCUDABackend(netimpl->blobsToKeep);
-                                } catch (const cv::Exception& e) {
-                                    CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
-                                }
-                            }
+                            netimpl->ensureCudaReady();
                             CV_Assert(netimpl->cudaInfo);
                             cublasHandle_t blasHandle = netimpl->cudaInfo->context.cublas_handle.get();
                             cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
                             const int y_n_stride = (int)(dst.step / sizeof(float));
-                            cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                            cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc2D(
                                 this->outputs.empty() ? Arg() : this->outputs[0],
-                                N, M, 1, 1,
-                                y_n_stride, 1, 1, 1,
-                                CUDNN_DATA_FLOAT);
+                                N, M, y_n_stride, CUDNN_DATA_FLOAT);
 
                             cudnnTensorDescriptor_t bDesc = nullptr;
                             if (!bdev2d.empty()) {
                                 Arg bArg = netimpl->getArg(this->name + ":bias");
-                                bDesc = netimpl->argTensorCuDNN(
-                                    bArg,
-                                    1, M, 1, 1,
-                                    M, 1, 1, 1,
-                                    CUDNN_DATA_FLOAT);
+                                bDesc = netimpl->tensorDesc2D(
+                                    bArg, 1, M, M, CUDNN_DATA_FLOAT);
                             }
 
                             std::cout<<"matMul"<<std::endl;

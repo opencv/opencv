@@ -276,31 +276,22 @@ public:
                         // Use cached descriptors via Net::Impl
                         Net::Impl* netimpl = getNetImpl(this);
                         CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-                        if (!netimpl->cudaInfo)
-                        {
-                            try {
-                                netimpl->initCUDABackend(netimpl->blobsToKeep);
-                            } catch (const cv::Exception& e) {
-                                CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
-                            }
-                        }
+                        netimpl->ensureCudaReady();
                         CV_Assert(netimpl->cudaInfo);
                         cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
                         int in_rows = N;
                         int in_cols = rest;
                         int x_n_stride = gin_nd.dims > 0 ? (int)(gin_nd.step[0] / sizeof(float)) : in_cols;
-                        cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                        cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc2D(
                             this->inputs.empty() ? Arg() : this->inputs[0],
-                            in_rows, in_cols, 1, 1,
-                            x_n_stride, 1, 1, 1,
+                            in_rows, in_cols, x_n_stride,
                             CUDNN_DATA_FLOAT);
                         int y_rows = dst.rows > 0 ? dst.rows : 1;
                         int y_cols = dst.cols > 0 ? dst.cols : 1;
                         int y_n_stride = (int)(dst.step / sizeof(float));
-                        cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                        cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc2D(
                             this->outputs.empty() ? Arg() : this->outputs[0],
-                            y_rows, y_cols, 1, 1,
-                            y_n_stride, 1, 1, 1,
+                            y_rows, y_cols, y_n_stride,
                             CUDNN_DATA_FLOAT);
 
                         std::cout<<"relu"<<std::endl;

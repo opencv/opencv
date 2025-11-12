@@ -860,20 +860,18 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     static bool cudaInitFailed = false;
     bool supportGPU = (preferableBackend == DNN_BACKEND_CUDA) && haveCUDA() && !cudaInitFailed; // ignore target in new engine
     std::vector<cv::cuda::GpuMat> outGpuMats, tempGpuMats;
-    CV_LOG_INFO(NULL, "DNN/CUDA: supportGPU=" << supportGPU << ", backend=" << preferableBackend << ", target=" << preferableTarget);
     if (supportGPU) {
         for (size_t opidx_check = 0; opidx_check < nops; ++opidx_check) {
             const Ptr<Layer>& layer_check = prog.at(opidx_check);
             if (!layer_check)
                 continue;
             if (!layer_check->supportBackend(DNN_BACKEND_CUDA)) {
-                CV_LOG_INFO(NULL, "DNN/CUDA: fallback to CPU: layer '" << layer_check->name << "' (" << layer_check->type << ") does not support CUDA backend");
                 supportGPU = false;
                 break;
             }
         }
         if (!supportGPU) {
-            CV_LOG_INFO(NULL, "DNN/CUDA: full-graph CPU fallback enabled for graph '" << graph->name() << "'");
+            CV_LOG_WARNING(NULL, "DNN/CUDA: full-graph CPU fallback enabled for graph '" << graph->name() << "'");
         }
     }
 #endif
@@ -900,18 +898,8 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             if (gpuTensors.size() < args.size()) gpuTensors.resize(args.size());
             for (i = 0; i < n_gr_inputs; i++) {
                 Arg inp = gr_inputs[i];
-                const ArgData& ad = args.at(inp.idx);
-                CV_Assert(ad.kind == DNN_ARG_INPUT);
-                const cv::cuda::GpuMat& gm = inGpu[i];
-                // Preserve the model's original N-D shape for this input when available
-                MatShape mshape = ad.shape;
-                if (mshape.empty()) {
-                    // Fallback: if shape is unknown, keep it as a flat 1-D tensor with total elements
-                    size_t total_elems = (size_t)(gm.rows > 0 ? gm.rows : 1) * (size_t)(gm.cols > 0 ? gm.cols : 1);
-                    mshape = MatShape(1);
-                    mshape[0] = (int)std::max<size_t>(total_elems, 1);
-                }
-                gpuTensors[inp.idx] = gm;
+                CV_Assert(args.at(inp.idx).kind == DNN_ARG_INPUT);
+                gpuTensors[inp.idx] = inGpu[i];
             }
             usedGpuInputs = true;
         }
@@ -984,11 +972,10 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                                  tempTypes, tempShapes, tempMats, scratchBufs, true);
             }
         } else {
-            // need to keep GPU support here too
             outMats.resize(noutputs);
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
-                outMats[i] = argTensor(out); // need to have method like agrGpuTensor which outputs GpuMats
+                outMats[i] = argTensor(out);
             }
             tempMats = scratchBufs;
         }
@@ -1003,7 +990,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         if (!subgraphs) {
 #ifdef HAVE_CUDA
             if (supportGPU && !dynamicOutShapes) {
-                CV_LOG_INFO(NULL, "DNN/CUDA: attempting GPU forward for layer '" << layer->name << "' (" << layer->type << ")");
                 try {
                     std::vector<cv::cuda::GpuMat> inGpu; inGpu.reserve(ninputs);
                     for (size_t ii = 0; ii < ninputs; ++ii) {
@@ -1024,15 +1010,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     }
                     std::vector<cv::cuda::GpuMat> tmpGpu = tempGpuMats;
                     if (!cudaInfo) {
-                        try { initCUDABackend(blobsToKeep); }
-                        catch (const cv::Exception& e) {
-                            CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+                        if (!ensureCudaReady()) {
                             cudaInitFailed = true;
-                            throw; // propagate to trigger CPU path in caller
+                            CV_Error(Error::StsError, "DNN/CUDA: initCUDABackend failed");
                         }
                     }
                     if (finalizeLayers) {
-                        // Run finalize with host Mat views using inferred shapes/types
                         std::vector<Mat> finalizeOuts(outShapes.size());
                         for (size_t oi = 0; oi < outShapes.size(); ++oi) finalizeOuts[oi].fit(outShapes[oi], outTypes[oi]);
                         // Build proper NCHW host inputs for finalize from GPU tensors/shapes to match dims
@@ -1043,28 +1026,13 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                             if (CV_MAT_DEPTH(ty) != CV_32F) ty = CV_MAKETYPE(CV_32F, CV_MAT_CN(ty));
                             Mat& dst = cpuFinalizeInps[ii];
                             if (!ish.empty()) dst.fit(ish, ty); else dst.create(1, 1, ty);
-                            // prefer GPU download if available
-                            if (supportGPU && ii < inGpu.size() && !inGpu[ii].empty()) {
-                                int rows = inGpu[ii].rows > 0 ? inGpu[ii].rows : 1;
-                                Mat dst2d = dst.reshape(1, rows);
-                                inGpu[ii].download(dst2d);
-                            } else
-                            {
-                                if (!inpMats[ii].empty()) {
-                                    Mat tmp; inpMats[ii].convertTo(tmp, CV_MAT_DEPTH(ty)); tmp.copyTo(dst);
-                                }
-                            }
                         }
-                        CV_LOG_INFO(NULL, "DNN/CUDA: finalizing layer '" << layer->name << "' using rebuilt NCHW host inputs");
                         layer->finalize(cpuFinalizeInps, finalizeOuts);
                     }
-                    // Defer all device-specific execution to layer implementations
                     layer->forward((InputArrayOfArrays)inGpu, (OutputArrayOfArrays)outGpuMats, (OutputArrayOfArrays)tmpGpu);
                     ranOnGPU = true;
-                    CV_LOG_INFO(NULL, "DNN/CUDA: ran on GPU for layer '" << layer->name << "' (device " << cv::cuda::getDevice() << ")");
                 } catch (const cv::Exception& e) {
                     CV_LOG_WARNING(NULL, "DNN/CUDA: pure GpuMat forward failed for layer '" << layer->name << "' (" << layer->type << "): " << e.what() << ". Falling back to CPU.");
-                    // Clear GPU outputs to avoid accidental usage later
                     outGpuMats.clear();
                     tempGpuMats.clear();
                     // Ensure CPU inputs are materialized from GPU if needed

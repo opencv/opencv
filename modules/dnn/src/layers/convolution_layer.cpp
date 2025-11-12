@@ -1159,14 +1159,7 @@ public:
 
             Net::Impl* netimpl = getNetImpl(this);
             CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-            if (!netimpl->cudaInfo)
-            {
-                try {
-                    netimpl->initCUDABackend(netimpl->blobsToKeep);
-                } catch (const cv::Exception& e) {
-                    CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
-                }
-            }
+            netimpl->ensureCudaReady();
 
             cv::cuda::GpuMat gin0;
             bool inputIsGPU = (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT);
@@ -1268,26 +1261,13 @@ public:
                 bdev_nd.upload(b);
             }
 
-            int n_stride_in  = C_in * H_in * W_in;
-            int c_stride_in  = H_in * W_in;
-            int h_stride_in  = W_in;
-            int w_stride_in  = 1;
-            int n_stride_out = C_out * H_out * W_out;
-            int c_stride_out = H_out * W_out;
-            int h_stride_out = W_out;
-            int w_stride_out = 1;
-
-            cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+            cudnnTensorDescriptor_t xDesc = netimpl->tensorDescNCHW(
                 this->inputs.empty() ? Arg() : this->inputs[0],
-                N, C_in, H_in, W_in,
-                n_stride_in, c_stride_in, h_stride_in, w_stride_in,
-                CUDNN_DATA_FLOAT);
+                N, C_in, H_in, W_in, CUDNN_DATA_FLOAT);
 
-            cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+            cudnnTensorDescriptor_t yDesc = netimpl->tensorDescNCHW(
                 this->outputs.empty() ? Arg() : this->outputs[0],
-                N, C_out, H_out, W_out,
-                n_stride_out, c_stride_out, h_stride_out, w_stride_out,
-                CUDNN_DATA_FLOAT);
+                N, C_out, H_out, W_out, CUDNN_DATA_FLOAT);
 
             cudnnFilterDescriptor_t cudnnWDesc = netimpl->filterDescCuDNN(
                 this->name + ":w",
@@ -1300,9 +1280,8 @@ public:
             if (hasBias())
             {
                 Arg bArg = netimpl->getArg(this->name + ":bias");
-                cudnnBDesc = netimpl->argTensorCuDNN(
-                    bArg, 1, C_out, 1, 1,
-                    C_out, 1, 1, 1, CUDNN_DATA_FLOAT);
+                cudnnBDesc = netimpl->tensorDescNCHW(
+                    bArg, 1, C_out, 1, 1, CUDNN_DATA_FLOAT);
             }
 
             CV_Assert(netimpl->cudaInfo);
