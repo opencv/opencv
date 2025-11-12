@@ -591,6 +591,11 @@ private:
     size_t offset;
 };
 
+// Provide namespace-level aliases for nested array types used in bindings
+using SizeArray = GpuMatND::SizeArray;
+using StepArray = GpuMatND::StepArray;
+using IndexArray = GpuMatND::IndexArray;
+
 /** @brief Creates a continuous matrix.
 
 @param rows Row count.

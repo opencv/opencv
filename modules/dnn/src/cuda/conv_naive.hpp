@@ -57,6 +57,33 @@ void conv2dNCHW(
     const void* d_bias,
     void* d_output);
 
+// 1D convolution in NCHW “disguised” as 2D:
+// e.g. input shape: [N, C, 1, L], kernel: [K, C, 1, kW]
+void conv1dNCHW(
+    cudnnHandle_t handle,
+    cudnnTensorDescriptor_t xDesc,
+    cudnnFilterDescriptor_t wDesc,
+    cudnnConvolutionDescriptor_t convDesc,
+    cudnnTensorDescriptor_t yDesc,
+    cudnnTensorDescriptor_t bDesc,
+    const void* d_input,
+    const void* d_weights,
+    const void* d_bias,
+    void* d_output);
+
+// 3D convolution with 5D tensor descriptors, typical layout NCDHW
+void conv3dNCDHW(
+    cudnnHandle_t handle,
+    cudnnTensorDescriptor_t xDesc,
+    cudnnFilterDescriptor_t wDesc,
+    cudnnConvolutionDescriptor_t convDesc,
+    cudnnTensorDescriptor_t yDesc,
+    cudnnTensorDescriptor_t bDesc,
+    const void* d_input,
+    const void* d_weights,
+    const void* d_bias,
+    void* d_output);
+
 void relu(cudnnHandle_t handle,
           cudnnActivationDescriptor_t actDesc,
           cudnnTensorDescriptor_t xDesc,
