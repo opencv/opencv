@@ -306,7 +306,7 @@ inline int flip_inplace(int esz, uchar* data, size_t step, int width, int height
         0, 0, 0, 0,
         0
     };
-    FlipInplaceFunc func = flip_inplace_func_tab[esz];
+    FlipInplaceFunc func = esz <= 32 ? flip_inplace_func_tab[esz] : nullptr;
     if (!func) {
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     }
@@ -348,7 +348,7 @@ int flip(int src_type, const uchar* src_data, size_t src_step, int src_width, in
         0, 0, 0, 0,
         0
     };
-    FlipFunc func = flip_func_tab[esz];
+    FlipFunc func = esz <= 32 ? flip_func_tab[esz] : nullptr;
     if (func) {
         func(src_data, src_step, dst_data, dst_step, src_width, src_height, flip_mode);
         return CV_HAL_ERROR_OK;

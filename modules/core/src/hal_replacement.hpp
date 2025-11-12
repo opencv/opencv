@@ -283,6 +283,32 @@ inline int hal_ni_lut(const uchar *src_data, size_t src_step, size_t src_type, c
 //! @endcond
 
 /**
+Lookup table replacement
+Table consists of 65536 elements of a size from 1 to 8 bytes having 1 channel or src_channels
+For 16s input typea 32768 is added to LUT index
+Destination should have the same element type and number of channels as lookup table elements
+@param src_data Source image data
+@param src_step Source image step
+@param src_type Source image type
+@param lut_data Pointer to lookup table
+@param lut_channel_size Size of each channel in bytes
+@param lut_channels Number of channels in lookup table
+@param dst_data Destination data
+@param dst_step Destination step
+@param width Width of images
+@param height Height of images
+@sa LUT
+*/
+//! @addtogroup core_hal_interface_lut16 Lookup table for 16 bit index
+//! @{
+inline int hal_ni_lut16(const ushort *src_data, size_t src_step, size_t src_type, const uchar* lut_data, size_t lut_channel_size, size_t lut_channels, uchar *dst_data, size_t dst_step, int width, int height) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+//! @}
+
+//! @cond IGNORED
+#define cv_hal_lut16 hal_ni_lut16
+//! @endcond
+
+/**
 Hamming norm of a vector
 @param a pointer to vector data
 @param n length of a vector
@@ -1123,8 +1149,60 @@ inline int hal_ni_copyToMasked(const uchar* src_data, size_t src_step, uchar* ds
 #define cv_hal_copyToMasked hal_ni_copyToMasked
 //! @endcond
 
-//! @}
+/**
+ @ brief sum
+ @param src_data Source image data
+ @param src_step Source image step
+ @param src_type Source image type
+ @param width, height Source image dimensions
+ @param result Pointer to save the sum result to.
+ */
+inline int hal_ni_sum(const uchar *src_data, size_t src_step, int src_type, int width, int height, double *result)
+{ return CV_HAL_ERROR_NOT_IMPLEMENTED; }
 
+//! @cond IGNORED
+#define cv_hal_sum hal_ni_sum
+//! @endcond
+
+/**
+   @brief inRange (lower_bound <= src_value) && (src_value <= upper_bound) ? 255 : 0
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param dst_depth Destination image depth
+   @param width Image width
+   @param height Image height
+   @param cn number of channels
+   @param lower_bound Range lower bound
+   @param upper_bound Range upper bound
+*/
+inline int hal_ni_inRange8u(const uchar *src_data, size_t src_step,
+              uchar *dst_data, size_t dst_step, int dst_depth, int width,
+              int height, int cn, uchar lower_bound, uchar upper_bound) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+/**
+   @brief inRange (lower_bound <= src_value) && (src_value <= upper_bound) ? 255 : 0
+   @param src_data Source image data
+   @param src_step Source image step
+   @param dst_data Destination image data
+   @param dst_step Destination image step
+   @param dst_depth Destination image depth
+   @param width Image width
+   @param height Image height
+   @param cn number of channels
+   @param lower_bound Range lower bound
+   @param upper_bound Range upper bound
+*/
+inline int hal_ni_inRange32f(const uchar *src_data, size_t src_step,
+              uchar *dst_data, size_t dst_step, int dst_depth, int width,
+              int height, int cn, double lower_bound, double upper_bound) { return CV_HAL_ERROR_NOT_IMPLEMENTED; }
+
+//! @cond IGNORED
+#define cv_hal_inRange8u hal_ni_inRange8u
+#define cv_hal_inRange32f hal_ni_inRange32f
+//! @endcond
+
+//! @}
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

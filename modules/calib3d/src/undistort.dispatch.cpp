@@ -425,19 +425,27 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
             x = srcd[i*sstep].x;
             y = srcd[i*sstep].y;
         }
+        // [u, v]^T = [fx * x''' + cx, fy * y''' + cy]^T =>
+        // [x''', y''']^T = [(u - cx) / fx, (v - cy) / fy]^T
         u = x; v = y;
         x = (x - cx)*ifx;
         y = (y - cy)*ify;
 
         if( _distCoeffs ) {
             // compensate tilt distortion
+            // s * [x''', y''', 1]^T = matTilt * [x'', y'', 1]^T =>
+            // s * matTilt^{-1} * [x''', y''', 1]^T = [x'', y'', 1]^T =>
+            // (invMatTilt := matTilt^{-1}, vecUntilt := invMatTilt * [x''', y''', 1]^T)
+            // s * vecUntilt = [x'', y'', 1]^T =>
+            // s * vecUntilt_1 = x'', s * vecUntilt_2 = y'', s * vecUntilt_3 = 1 =>
+            // invProj := s = 1 / vecUntilt_3, x'' = invProj * vecUntilt_1, y'' = invProj * vecUntilt_2
             cv::Vec3d vecUntilt = invMatTilt * cv::Vec3d(x, y, 1);
             double invProj = vecUntilt(2) ? 1./vecUntilt(2) : 1;
             x0 = x = invProj * vecUntilt(0);
             y0 = y = invProj * vecUntilt(1);
 
             double error = std::numeric_limits<double>::max();
-            // compensate distortion iteratively
+            // compensate distortion iteratively using fixed-point iteration
 
             for( int j = 0; ; j++ )
             {
@@ -445,7 +453,9 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                     break;
                 if ((criteria.type & cv::TermCriteria::EPS) && error < criteria.epsilon)
                     break;
+                // r^2 = x'^2 + y'^2
                 double r2 = x*x + y*y;
+                // icdist := (1 + k4 * r^2 + k5 * r^4 + k6 * r^6) / (1 + k1 * r^2 + k2 * r^4 + k3 * r^6)
                 double icdist = (1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2)/(1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2);
                 if (icdist < 0)  // test: undistortPoints.regression_14583
                 {
@@ -453,8 +463,15 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                     y = (v - cy)*ify;
                     break;
                 }
+                // deltaX := 2 * p1 * x' * y' + p2 * (r^2 + 2 * x'^2) + s1 * r^2 + s2 * r^4
+                // deltaY := p1 * (r^2 + 2 * y'^2) + 2 * p2 * x' * y' + s3 * r^2 + s4 * r^4
                 double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
                 double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
+                // [x'', y'']^T = [x' / icdist + deltaX, y' / icdist + deltaY]^T =>
+                // [x', y']^T = [(x'' - deltaX) * icdist, (y'' - deltaY) * icdist]^T =>
+                // x' = f1(x') := (x'' - deltaX) * icdist, y' = f2(y') := (y'' - deltaY) * icdist
+                // Fixed-point iteration:
+                //   new_x' = f1(x') = (x'' - deltaX) * icdist, new_y' = f2(y') = (y'' - deltaY) * icdist
                 x = (x0 - deltaX)*icdist;
                 y = (y0 - deltaY)*icdist;
 
@@ -464,22 +481,33 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
                     double xd, yd, xd0, yd0;
                     cv::Vec3d vecTilt;
 
+                    // r^2 = x'^2 + y'^2
                     r2 = x*x + y*y;
                     r4 = r2*r2;
                     r6 = r4*r2;
                     a1 = 2*x*y;
                     a2 = r2 + 2*x*x;
                     a3 = r2 + 2*y*y;
+                    // cdist := 1 + k1 * r^2 + k2 * r^4 + k3 * r^6
                     cdist = 1 + k[0]*r2 + k[1]*r4 + k[4]*r6;
+                    // icdist2 := 1 / (1 + k4 * r^2 + k5 * r^4 + k6 * r^6)
                     icdist2 = 1./(1 + k[5]*r2 + k[6]*r4 + k[7]*r6);
+                    // x'' = x' * cdist * icdist2 + 2 * p1 * x' * y' + p2 * (r^2 + 2 * x'^2) + s1 * r^2 + s2 * r^4
+                    // y'' = y' * cdist * icdist2 + p1 * (r^2 + 2 * y'^2) + 2 * p2 * x' * y' + s3 * r^2 + s4 * r^4
                     xd0 = x*cdist*icdist2 + k[2]*a1 + k[3]*a2 + k[8]*r2+k[9]*r4;
                     yd0 = y*cdist*icdist2 + k[2]*a3 + k[3]*a1 + k[10]*r2+k[11]*r4;
 
+                    // s * [x''', y''', 1]^T = matTilt * [x'', y'', 1]^T =>
+                    // (vecTilt := matTilt * [x'', y'', 1]^T)
+                    // s * [x''', y''', 1]^T = vecTilt =>
+                    // s * x''' = vecTilt_1, s * y''' = vecTilt_2, s = vecTilt_3 =>
+                    // invProj := 1 / s = 1 / vecTilt_3, x''' = invProj * vecTilt_1, y''' = invProj * vecTilt_2
                     vecTilt = matTilt*cv::Vec3d(xd0, yd0, 1);
                     invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
                     xd = invProj * vecTilt(0);
                     yd = invProj * vecTilt(1);
 
+                    // [u, v]^T = [fx * x''' + cx, fy * y''' + cy]^T
                     double x_proj = xd*fx + cx;
                     double y_proj = yd*fy + cy;
 

@@ -33,20 +33,14 @@ namespace cv
 
 struct CameraParam
 {
-    float    p0[4];
-    float    p1[4];
-    float    p2[9];
-    float    p3[3];
-    float    p4[5];
-    float    p5[5];
-    uint32_t p6[2];
-    uint32_t p7[2];
+    float    intrinsicColor[4];
+    float    distortionColor[8];
 };
 
 class VideoCapture_obsensor : public IVideoCapture
 {
 public:
-    VideoCapture_obsensor(int index);
+    VideoCapture_obsensor(int index, const cv::VideoCaptureParameters& params);
     virtual ~VideoCapture_obsensor();
 
     virtual double getProperty(int propIdx) const CV_OVERRIDE;
@@ -65,6 +59,9 @@ protected:
     std::shared_ptr<ob::VideoFrame> grabbedDepthFrame;
     std::shared_ptr<ob::Pipeline> pipe;
     std::shared_ptr<ob::Config> config;
+#if ORBBEC_SDK_VERSION_MAJOR != 1
+    std::shared_ptr<ob::Align> alignFilter;
+#endif
     CameraParam camParam;
 };
 

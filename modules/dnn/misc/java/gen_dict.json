@@ -11,11 +11,20 @@
         },
         "vector_MatShape": {
             "j_type": "List<MatOfInt>",
-            "jn_type": "List<MatOfInt>",
-            "jni_type": "jobject",
+            "jn_type": "long",
+            "jni_type": "jlong",
             "jni_var": "std::vector< MatShape > %(n)s",
-            "suffix": "Ljava_util_List",
-            "v_type": "vector_MatShape",
+            "suffix": "J",
+            "v_type": "Mat",
+            "j_import": "org.opencv.core.MatOfInt"
+        },
+        "vector_vector_MatShape": {
+            "j_type": "List<List<MatOfInt>>",
+            "jn_type": "long",
+            "jni_type": "jlong",
+            "jni_var": "std::vector< std::vector<MatShape> > %(n)s",
+            "suffix": "J",
+            "v_type": "vector_Mat",
             "j_import": "org.opencv.core.MatOfInt"
         },
         "vector_size_t": {

@@ -191,7 +191,7 @@ if(WITH_LAPACK)
           CBLAS_H "cblas.h"
           LAPACKE_H "lapacke.h"
           INCLUDE_DIR "${OpenBLAS_INCLUDE_DIRS}"
-          LIBRARIES "${OpenBLAS_LIBRARIES}")
+          LIBRARIES "${OpenBLAS_LIBRARY};${OpenBLAS_LIBRARIES}")
       endif()
     endif()
     if(NOT LAPACK_LIBRARIES AND UNIX)

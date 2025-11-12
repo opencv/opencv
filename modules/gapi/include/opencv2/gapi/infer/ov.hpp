@@ -66,6 +66,8 @@ struct ParamDesc {
         LayerVariantAttr<std::vector<float>> scale_values;
 
         LayerVariantAttr<int> interpolation;
+
+        bool clamp_outputs = false;
     };
 
     struct CompiledModel {
@@ -99,6 +101,8 @@ struct ParamDesc {
     PluginConfigT config;
 
     size_t nireq = 1;
+
+    bool ensure_named_tensors = false;
 };
 
 // NB: Just helper to avoid code duplication.
@@ -202,6 +206,24 @@ public:
     */
     Params<Net>& cfgPluginConfig(const detail::ParamDesc::PluginConfigT &config) {
         m_desc.config = config;
+        return *this;
+    }
+
+    /** @brief Ensures the model has named tensors.
+
+    This function is used to ensure that all tensors in the model have names.
+    It goes through all input and output nodes of the model and sets the names
+    if they are not set. This is neccessary for models with nameless tensors.
+
+    If a tensor does not have a name, it will be assigned a default name
+    based on the producer node's friendly name. If the producer node has multiple
+    outputs, the name will be in the form "node_name:N", where N is the output index.
+
+    @param flag If true, then it guarantees that all tensors will have names.
+    @return reference to this parameter structure.
+     */
+    Params<Net>& cfgEnsureNamedTensors(bool flag = true) {
+        m_desc.ensure_named_tensors = flag;
         return *this;
     }
 
@@ -333,6 +355,24 @@ public:
     cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
         detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
             .output_tensor_precision = std::move(precision_map);
+        return *this;
+    }
+
+    /** @brief Enables or disables clamping of model outputs in the PrePostProcessor.
+
+    By default, output values are clamped to the valid range for the output precision
+    by the device or plugin. Enabling this option moves clamping to the PrePostProcessor stage.
+
+    @note This feature is only available with OpenVINO 2025.2 and newer.
+
+    @param flag If true, clamping is performed in the PrePostProcessor;
+    otherwise, it is handled by the device or plugin.
+    @return reference to this parameter structure.
+    */
+    Params<Net>&
+    cfgClampOutputs(bool flag = true) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "clamp outputs")
+            .clamp_outputs = std::move(flag);
         return *this;
     }
 
@@ -524,6 +564,12 @@ public:
         return *this;
     }
 
+    /** @see ov::Params::cfgEnsureNamedTensors. */
+    Params& cfgEnsureNamedTensors(bool flag = true) {
+        m_desc.ensure_named_tensors = flag;
+        return *this;
+    }
+
     /** @see ov::Params::cfgInputTensorLayout. */
     Params& cfgInputTensorLayout(std::string layout) {
         detail::getModelToSetAttrOrThrow(m_desc.kind, "input tensor layout")
@@ -596,6 +642,14 @@ public:
     cfgOutputTensorPrecision(detail::AttrMap<int> precision_map) {
         detail::getModelToSetAttrOrThrow(m_desc.kind, "output tensor precision")
             .output_tensor_precision = std::move(precision_map);
+        return *this;
+    }
+
+    /** @see ov::Params::cfgClampOutputs. */
+    Params&
+    cfgClampOutputs(bool flag = true) {
+        detail::getModelToSetAttrOrThrow(m_desc.kind, "clamp outputs")
+            .clamp_outputs = std::move(flag);
         return *this;
     }
 

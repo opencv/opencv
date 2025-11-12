@@ -215,6 +215,11 @@ int equalize_hist(const uchar* src_data, size_t src_step, uchar* dst_data, size_
 #undef cv_hal_equalize_hist
 #define cv_hal_equalize_hist cv::rvv_hal::imgproc::equalize_hist
 
+int calc_hist(const uchar* src_data, size_t src_step, int src_type, int src_width, int src_height, float* hist_data, int hist_size, const float** ranges, bool uniform, bool accumulate);
+
+#undef cv_hal_calcHist
+#define cv_hal_calcHist cv::rvv_hal::imgproc::calc_hist
+
 /* ############ resize ############ */
 
 int resize(int src_type, const uchar *src_data, size_t src_step, int src_width, int src_height, uchar *dst_data, size_t dst_step, int dst_width, int dst_height, double inv_scale_x, double inv_scale_y, int interpolation);
@@ -231,8 +236,33 @@ int integral(int depth, int sdepth, int sqdepth,
              uchar* tilted_data, [[maybe_unused]] size_t tilted_step,
              int width, int height, int cn);
 
-#undef cv_hal_integral
-#define cv_hal_integral cv::rvv_hal::imgproc::integral
+// Diasbled due to accuracy issue.
+// Details see https://github.com/opencv/opencv/issues/27407.
+//#undef cv_hal_integral
+//#define cv_hal_integral cv::rvv_hal::imgproc::integral
+
+/* ############ scharr ############ */
+int scharr(const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, double scale, double delta, int border_type);
+
+#undef cv_hal_scharr
+#define cv_hal_scharr cv::rvv_hal::imgproc::scharr
+
+/* ############ sobel ############ */
+
+int sobel(const uint8_t *src_data, size_t src_step, uint8_t *dst_data, size_t dst_step, int width, int height, int src_depth, int dst_depth, int cn, int margin_left, int margin_top, int margin_right, int margin_bottom, int dx, int dy, int ksize, double scale, double delta, int border_type);
+
+#undef cv_hal_sobel
+#define cv_hal_sobel cv::rvv_hal::imgproc::sobel
+
+/* ############ canny ############ */
+int canny(const uint8_t *src_data, size_t src_step,
+         uint8_t *dst_data, size_t dst_step,
+         int width, int height, int cn,
+         double low_thresh, double high_thresh,
+         int ksize, bool L2gradient);
+
+#undef cv_hal_canny
+#define cv_hal_canny cv::rvv_hal::imgproc::canny
 
 #endif // CV_HAL_RVV_1P0_ENABLED
 

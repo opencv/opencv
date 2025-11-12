@@ -56,13 +56,44 @@ BaseImageDecoder::BaseImageDecoder()
     m_scale_denom = 1;
     m_use_rgb = false;
     m_frame_count = 1;
+    m_read_options = 0;
+    m_metadata.resize(IMAGE_METADATA_MAX + 1);
 }
 
+bool BaseImageDecoder::haveMetadata(ImageMetadataType type) const
+{
+    if (type == IMAGE_METADATA_EXIF)
+        return !m_exif.getData().empty();
+    return false;
+}
+
+Mat BaseImageDecoder::getMetadata(ImageMetadataType type) const
+{
+    auto makeMat = [](const std::vector<unsigned char>& data) -> Mat {
+        return data.empty() ? Mat() : Mat(1, (int)data.size(), CV_8U, (void*)data.data());
+        };
+
+    switch (type) {
+    case IMAGE_METADATA_EXIF:
+        return makeMat(m_exif.getData());
+
+    case IMAGE_METADATA_XMP:
+    case IMAGE_METADATA_ICCP:
+    case IMAGE_METADATA_CICP:
+        return makeMat(m_metadata[type]);
+
+    default:
+        CV_LOG_WARNING(NULL, "Unknown metadata type requested: " << static_cast<int>(type));
+        break;
+    }
+    return Mat();
+}
 
 ExifEntry_t BaseImageDecoder::getExifTag(const ExifTagName tag) const
 {
     return m_exif.getTag(tag);
 }
+
 bool BaseImageDecoder::setSource( const String& filename )
 {
     m_filename = filename;
@@ -97,6 +128,13 @@ int BaseImageDecoder::setScale( const int& scale_denom )
     return temp;
 }
 
+int BaseImageDecoder::setReadOptions(int read_options)
+{
+    int temp = m_read_options;
+    m_read_options = read_options;
+    return temp;
+}
+
 void BaseImageDecoder::setRGB(bool useRGB)
 {
     m_use_rgb = useRGB;
@@ -118,6 +156,14 @@ bool  BaseImageEncoder::isFormatSupported( int depth ) const
     return depth == CV_8U;
 }
 
+bool BaseImageEncoder::isValidEncodeKey(const int key) const
+{
+    auto first = m_supported_encode_key.begin();
+    auto last = m_supported_encode_key.end();
+
+    return (std::find(first, last, key) != last);
+}
+
 String BaseImageEncoder::getDescription() const
 {
     return m_description;
@@ -137,6 +183,23 @@ bool BaseImageEncoder::setDestination( std::vector<uchar>& buf )
     m_buf = &buf;
     m_buf->clear();
     m_filename = String();
+    return true;
+}
+
+bool BaseImageEncoder::addMetadata(ImageMetadataType type, const Mat& metadata)
+{
+    CV_Assert_N(type >= IMAGE_METADATA_EXIF, type <= IMAGE_METADATA_MAX);
+    if (metadata.empty())
+        return true;
+    size_t itype = (size_t)type;
+    if (itype >= m_support_metadata.size() || !m_support_metadata[itype])
+        return false;
+    if (m_metadata.empty())
+        m_metadata.resize((size_t)IMAGE_METADATA_MAX+1);
+    CV_Assert(metadata.elemSize() == 1);
+    CV_Assert(metadata.isContinuous());
+    const unsigned char* data = metadata.ptr<unsigned char>();
+    m_metadata[itype].assign(data, data + metadata.total());
     return true;
 }
 
