@@ -57,7 +57,7 @@ Installing oneAPI: To quickly set up the oneAPI ecosystem on openSUSE, simply fo
 
 ## Download, Github Instruction, Build and Install
 
-1. Below are the commands to download last version (latest release on the date of publication of this text): 
+1. Below are the commands to download last version (latest release on the date of publication of this text):
 
 ```
 git clone https://github.com/opencv/opencv.git
