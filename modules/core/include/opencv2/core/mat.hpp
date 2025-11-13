@@ -1238,12 +1238,12 @@ public:
     When the operation mask is specified, if the Mat::create call shown above reallocates the matrix,
     the newly allocated matrix is initialized with all zeros before copying the data.
 
-    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use writeAt() .
+    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use copyAt() .
 
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
 
-    @sa writeAt
+    @sa copyAt
      */
     void copyTo( OutputArray m ) const;
 
@@ -1269,7 +1269,7 @@ public:
     @sa copyTo
 
      */
-    void writeAt( OutputArray m ) const;
+    void copyAt( OutputArray m ) const;
 
     /** @overload
     @param m Destination matrix.
@@ -1277,7 +1277,7 @@ public:
     @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
     */
-    void writeAt( OutputArray m, InputArray mask ) const;
+    void copyAt( OutputArray m, InputArray mask ) const;
 
     /** @brief Converts an array to another data type with optional scaling.
 
