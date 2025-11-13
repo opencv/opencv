@@ -158,6 +158,10 @@ public:
     //! decreases reference counter, deallocate the data when reference counter reaches 0
     CV_WRAP void release();
 
+    //! allocates or reuses underlying storage to fit the requested 2D size and type (no-op if already compatible)
+    CV_WRAP void fit(int rows, int cols, int type);
+    CV_WRAP void fit(Size size, int type);
+
     //! swaps with other smart pointer
     CV_WRAP void swap(GpuMat& mat);
 
@@ -439,6 +443,13 @@ public:
 
     void swap(GpuMatND& m) noexcept;
 
+    /** @brief Allocates or reuses underlying storage to fit the requested n-D size and type.
+    - No-op if already compatible (sufficient capacity, continuous, not a submatrix, not external, no ROI).
+    - Reallocates otherwise.
+    Mirrors 2D GpuMat::fit semantics for multi-dimensional tensors.
+    */
+    CV_WRAP void fit(SizeArray size, int type);
+
     /** @brief Creates a full copy of the array and the underlying data.
     The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
     the original step is not taken into account. So, the array copy is a continuous array
@@ -579,6 +590,11 @@ private:
     */
     size_t offset;
 };
+
+// Provide namespace-level aliases for nested array types used in bindings
+using SizeArray = GpuMatND::SizeArray;
+using StepArray = GpuMatND::StepArray;
+using IndexArray = GpuMatND::IndexArray;
 
 /** @brief Creates a continuous matrix.
 

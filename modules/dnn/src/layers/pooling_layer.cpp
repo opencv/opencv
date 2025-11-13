@@ -72,6 +72,10 @@ using namespace cv::dnn::ocl4dnn;
 #include "../cuda4dnn/primitives/roi_pooling.hpp"
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/conv_naive.hpp"
+#include "../net_impl.hpp"
+#include <cudnn.h>
 #endif
 #include <opencv2/core/utils/logger.hpp>
 
@@ -134,10 +138,18 @@ public:
         ceilMode = params.get<bool>("ceil_mode", true);
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
+        #ifdef HAVE_CUDA
+        cudnnPoolDesc = nullptr;
+        #endif
     }
+    // Cache last input shape from finalize() to use in GPU fast path
+    MatShape lastInputShape;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
+#endif
+#ifdef HAVE_CUDA
+    cudnnPoolingDescriptor_t cudnnPoolDesc;
 #endif
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -178,12 +190,29 @@ public:
         poolOp.release();
 #endif
         computeMaxIdx = type == MAX && outputs.size() == 2;
+
+        if (!inputs.empty())
+            lastInputShape = shape(inputs[0]);
     }
 
+#ifdef HAVE_CUDA
+    ~PoolingLayerImpl()
+    {
+        if (cudnnPoolDesc)
+        {
+            cudnnDestroyPoolingDescriptor(cudnnPoolDesc);
+            cudnnPoolDesc = nullptr;
+        }
+    }
+#endif
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
+            EngineType engine_forced = (EngineType)utils::getConfigurationParameterSizeT("OPENCV_FORCE_DNN_ENGINE", ENGINE_AUTO);
+            if (engine_forced != ENGINE_CLASSIC)
+                return true;
+                // return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
@@ -333,6 +362,95 @@ public:
             CV_OCL_RUN(IS_DNN_OPENCL_TARGET(preferableTarget),
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
+#ifdef HAVE_CUDA
+        if ((type == MAX || type == AVE) && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+            if (gout.size() == 1)
+            {
+                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                {
+                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                    if (gin.empty()) {
+                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                        return;
+                    }
+                    cv::cuda::GpuMat gin0 = gin[0];
+                    // Derive N,C,H,W from cached input shape (set in finalize)
+                    // Derive N,C,H,W from cached input shape (set in finalize)
+                    MatShape ish = lastInputShape;
+                    int dims = (int)ish.size();
+                    CV_Assert(dims >= 3);
+                    int N = ish[0];
+                    int C = (dims >= 4) ? ish[1] : (dims == 3 ? ish[1] : 1);
+                    int H_in = (dims >= 4) ? ish[dims - 2] : 1;
+                    int W_in = ish[dims - 1];
+                    // Pool2D parameters
+                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : (type == AVE ? H_in : 2);
+                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : (type == AVE ? W_in : kH);
+                    int sH = strides.size() > 0 ? (int)strides[0] : (type == AVE ? 1 : 2);
+                    int sW = strides.size() > 1 ? (int)strides[1] : (type == AVE ? 1 : sH);
+                    int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
+                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : 0;
+                    int H_out = (H_in + 2 * pH - kH) / sH + 1;
+                    int W_out = (W_in + 2 * pW - kW) / sW + 1;
+
+                    cv::cuda::GpuMat& dst = gout[0];
+                    if (dst.empty()) {
+                        // Output should be preallocated by Net::Impl for GPU path
+                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                        return;
+                    }
+                    if (gin0.type() != CV_32F) {
+                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
+                    }
+
+                    Net::Impl* netimpl = getNetImpl(this);
+                    CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                    netimpl->ensureCudaReady();
+                    CV_Assert(netimpl->cudaInfo);
+                    cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                    cudnnTensorDescriptor_t xDesc = netimpl->tensorDescNCHW(
+                        this->inputs.empty() ? Arg() : this->inputs[0],
+                        N, C, H_in, W_in, CUDNN_DATA_FLOAT);
+                    cudnnTensorDescriptor_t yDesc = netimpl->tensorDescNCHW(
+                        this->outputs.empty() ? Arg() : this->outputs[0],
+                        N, C, H_out, W_out, CUDNN_DATA_FLOAT);
+
+                    cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+                    cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
+                        this->name + ":pool",
+                        mode, CUDNN_PROPAGATE_NAN,
+                        kH, kW, pH, pW, sH, sW);
+
+                    if (type == MAX)
+                    {
+                        std::cout<<"maxPool2dNCHW"<<std::endl;
+                        cv::dnn::cuda::maxPool2dNCHW(
+                            cudnnHandle,
+                            xDesc, yDesc, cudnnPoolDesc,
+                            (const void*)gin0.ptr(),
+                            (void*)dst.ptr());
+                    }
+                    else
+                    {
+                        std::cout<<"avgPool2dNCHW"<<std::endl;
+                        cv::dnn::cuda::avgPool2dNCHW(
+                            cudnnHandle,
+                            xDesc, yDesc, cudnnPoolDesc,
+                            (const void*)gin0.ptr(),
+                            (void*)dst.ptr());
+                    }
+                    return;
+                } else {
+                    // No GPU input provided; fall back to CPU implementation
+                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                    return;
+                }
+            }
+        }
+#endif
         if (inputs_arr.depth() == CV_16F)
         {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);

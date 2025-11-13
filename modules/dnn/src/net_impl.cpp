@@ -130,6 +130,10 @@ void Net::Impl::clear()
     __tensors__ = std::vector<Mat>();
     bufidxs = std::vector<int>();
     buffers = std::vector<Mat>();
+#ifdef HAVE_CUDA
+    gpuTensors = std::vector<cv::cuda::GpuMat>();
+    gpuBuffers = std::vector<cv::cuda::GpuMat>();
+#endif
 
     mainGraph = Ptr<Graph>();
 
@@ -141,10 +145,14 @@ void Net::Impl::clear()
     argnames.insert(std::make_pair(std::string(""), 0));
     __tensors__.push_back(Mat());
     bufidxs.push_back(-1);
+#ifdef HAVE_CUDA
+    gpuTensors.push_back(cv::cuda::GpuMat());
+#endif
 
     prepared = false;
     finalizeLayers = true;
 }
+
 
 
 void Net::Impl::validateBackendAndTarget()
