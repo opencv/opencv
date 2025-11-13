@@ -1,4 +1,4 @@
-Building OpenCV with oneAPI {#tutorial_openai_install}
+Building OpenCV with oneAPI {#tutorial_oneapi_install}
 ===========================
 
 
