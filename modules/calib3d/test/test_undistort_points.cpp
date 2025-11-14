@@ -16,6 +16,7 @@ protected:
     void generateCameraMatrix(Mat& cameraMatrix);
     void generateDistCoeffs(Mat& distCoeffs, int count);
     cv::Mat generateRotationVector();
+    std::vector<cv::Point2d> distortPoints(const cv::Mat &cameraMatrix, const cv::Mat &dist, const std::vector<cv::Point2d> &points);
 
     double thresh = 1.0e-2;
 };
@@ -58,6 +59,34 @@ cv::Mat UndistortPointsTest::generateRotationVector()
     theRNG().fill(rvec, RNG::UNIFORM, -0.2, 0.2);
 
     return rvec;
+}
+
+std::vector<cv::Point2d> UndistortPointsTest::distortPoints(const cv::Mat &cameraMatrix, const cv::Mat &dist, const std::vector<cv::Point2d> &points)
+{
+    CV_Assert(cameraMatrix.rows == 3 && cameraMatrix.cols == 3);
+    CV_Assert(cameraMatrix.type() == CV_64F);
+    CV_Assert(dist.rows * dist.cols == 12);
+    CV_Assert(dist.type() == CV_64F);
+    double *k = reinterpret_cast<double *>(dist.data);
+    double fx = cameraMatrix.at<double>(0, 0);
+    double fy = cameraMatrix.at<double>(1, 1);
+    double cx = cameraMatrix.at<double>(0, 2);
+    double cy = cameraMatrix.at<double>(1, 2);
+    std::vector<cv::Point2d> distortedPoints;
+    distortedPoints.reserve(points.size());
+
+    for (const cv::Point2d p : points) {
+        double x = (p.x - cx) / fx;
+        double y = (p.y - cy) / fy;
+        double r2 = x*x + y*y;
+        double cdist = (1 + ((k[4]*r2 + k[1])*r2 + k[0])*r2)/(1 + ((k[7]*r2 + k[6])*r2 + k[5])*r2);
+        CV_Assert(cdist >= 0);
+        double deltaX = 2*k[2]*x*y + k[3]*(r2 + 2*x*x)+ k[8]*r2+k[9]*r2*r2;
+        double deltaY = k[2]*(r2 + 2*y*y) + 2*k[3]*x*y+ k[10]*r2+k[11]*r2*r2;
+        distortedPoints.push_back(cv::Point2d((x * cdist + deltaX) * fx + cx, (y * cdist + deltaY) * fy + cy));
+    }
+
+    return distortedPoints;
 }
 
 TEST_F(UndistortPointsTest, accuracy)
@@ -194,6 +223,35 @@ TEST_F(UndistortPointsTest, regression_14583)
     EXPECT_NEAR(distort_pt.at<Vec2f>(0)[0], undistort_pt.at<Vec2f>(0)[0], col / 2)
         << "distort point: " << distort_pt << std::endl
         << "undistort point: " << undistort_pt;
+}
+
+TEST_F(UndistortPointsTest, regression_27916)
+{
+    cv::Mat K = (cv::Mat_<double>(3, 3) <<
+        1570.8956145992222, 0., 744.87337646727406, 0.,
+        1570.3494207432338, 575.55087456337526, 0., 0., 1.);
+    cv::Mat dist = (cv::Mat_<double>(1, 12) <<
+        -2.8247717583453804, -0.80078070764368037,
+        -0.014595359484103326, 0.0018820998949700702, 1.9827795585249783,
+        -2.7306773773930897, -1.217725820479524, 2.4052243546080136,
+        -0.0020670359760441713, 3.4660880793174063e-05,
+        0.014100351510458799, -3.0935329736207612e-05);
+
+    const cv::TermCriteria termCriteria(TermCriteria::MAX_ITER | TermCriteria::EPS, 100, thresh / 2);
+    std::vector<cv::Point2d> distortedPoints, distortedPoints2;
+    std::vector<cv::Point2d> undistortedPoints;
+
+    for (int i = 0; i < 50; i++)
+    {
+        for (int j = 0; j < 50; j++)
+        {
+            distortedPoints.push_back(cv::Point2d(i, j));
+        }
+    }
+
+    cv::undistortPoints(distortedPoints, undistortedPoints, K, dist, cv::noArray(), K, termCriteria);
+    distortedPoints2 = distortPoints(K, dist, undistortedPoints);
+    EXPECT_MAT_NEAR(distortedPoints2, distortedPoints, thresh);
 }
 
 }} // namespace
