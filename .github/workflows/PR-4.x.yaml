@@ -13,7 +13,7 @@ jobs:
       workflow_branch: main
 
   Windows:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@main
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-Windows.yaml@as/windows_arm
     with:
       workflow_branch: main
 
