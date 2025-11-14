@@ -452,9 +452,7 @@ cv::RotatedRect cv::fitEllipse( InputArray _points )
 {
     CV_INSTRUMENT_REGION();
 
-    Mat points = _points.getMat();
-    int n = points.checkVector(2);
-    return n == 5 ? fitEllipseDirect(points) : fitEllipseNoDirect(points);
+    return fitEllipseDirect(_points);
 }
 
 cv::RotatedRect cv::fitEllipseAMS( InputArray _points )
