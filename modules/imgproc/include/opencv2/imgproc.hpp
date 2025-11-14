@@ -1067,7 +1067,7 @@ public:
     //!@brief Returns Size defines the number of tiles in row and column.
     CV_WRAP virtual Size getTilesGridSize() const = 0;
 
-    /** @brief Sets bit shift parameter for histogram bins. 
+    /** @brief Sets bit shift parameter for histogram bins.
 
     @param bitShift bit shift value (default is 0).
     */
