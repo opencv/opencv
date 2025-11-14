@@ -1,6 +1,8 @@
 Install OpenCV-Python in Windows {#tutorial_py_setup_in_windows}
 ================================
 
+@note: Please prefer binaries distributed with PyPI, if possible. See @ref tutorial_py_pip_install for details.
+
 Goals
 -----
 
@@ -15,13 +17,13 @@ Installing OpenCV from prebuilt binaries
 
 -#  Below Python packages are to be downloaded and installed to their default locations.
 
-    -#  Python 3.x (3.4+) or Python 2.7.x from [here](https://www.python.org/downloads/).
+    -#  Python 3.x (3.4+) from [here](https://www.python.org/downloads/).
 
     -#  Numpy package (for example, using `pip install numpy` command).
 
     -#  Matplotlib (`pip install matplotlib`) (*Matplotlib is optional, but recommended since we use it a lot in our tutorials*).
 
--#  Install all packages into their default locations. Python will be installed to `C:/Python27/` in case of Python 2.7.
+-#  Install all packages into their default locations. Python will be installed to `C:/Python34/` in case of Python 3.4.
 
 -#  After installation, open Python IDLE. Enter **import numpy** and make sure Numpy is working fine.
 
@@ -29,11 +31,11 @@ Installing OpenCV from prebuilt binaries
     [SourceForge site](https://sourceforge.net/projects/opencvlibrary/files/)
     and double-click to extract it.
 
--#  Goto **opencv/build/python/2.7** folder.
+-#  Goto **opencv/build/python/3.4** folder.
 
--#  Copy **cv2.pyd** to **C:/Python27/lib/site-packages**.
+-#  Copy **cv2.pyd** to **C:/Python34/lib/site-packages**.
 
--#  Copy the **opencv_world.dll** file to **C:/Python27/lib/site-packages**
+-#  Copy the **opencv_world.dll** file to **C:/Python34/lib/site-packages**
 
 -#  Open Python IDLE and type following codes in Python terminal.
     @code
