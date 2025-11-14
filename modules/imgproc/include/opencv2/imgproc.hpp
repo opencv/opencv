@@ -1068,16 +1068,13 @@ public:
     CV_WRAP virtual Size getTilesGridSize() const = 0;
 
     /** @brief Sets bit shift parameter for histogram bins. 
-    
-    The bit shift reduces the number of histogram bins by shifting input data.
-    For example, a bit shift of 4 changes histogram bins from 65536 to 4096 for 16-bit input.
-    
+
     @param bitShift bit shift value (default is 0).
     */
     CV_WRAP virtual void setBitShift(int bitShift) = 0;
 
     /** @brief Returns the bit shift parameter for histogram bins.
-    
+
     @return current bit shift value.
     */
     CV_WRAP virtual int getBitShift() const = 0;
