@@ -1,7 +1,7 @@
 Install OpenCV-Python in Windows {#tutorial_py_setup_in_windows}
 ================================
 
-**Quick start (recommended)**: Install OpenCV from PyPI with `pip install opencv-python` inside a virtual environment. If you need extra modules use `opencv-contrib-python`; for servers/CI use a `*-headless` variant. See @ref tutorial_py_pip_install for variants and troubleshooting. The steps below describe system packages or building from source and are **not required** for typical Python use.
+@note: Please prefer binaries distributed with PyPI, if possible. See @ref tutorial_py_pip_install for details.
 
 Goals
 -----
