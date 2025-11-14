@@ -315,7 +315,7 @@ namespace
     class CLAHE_Impl CV_FINAL : public cv::CLAHE
     {
     public:
-        CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8);
+        CLAHE_Impl(double clipLimit = 40.0, int tilesX = 8, int tilesY = 8, int bitShift = 0);
 
         void apply(cv::InputArray src, cv::OutputArray dst) CV_OVERRIDE;
 
@@ -325,12 +325,16 @@ namespace
         void setTilesGridSize(cv::Size tileGridSize) CV_OVERRIDE;
         cv::Size getTilesGridSize() const CV_OVERRIDE;
 
+        void setBitShift(int bitShift) CV_OVERRIDE;
+        int getBitShift() const CV_OVERRIDE;
+
         void collectGarbage() CV_OVERRIDE;
 
     private:
         double clipLimit_;
         int tilesX_;
         int tilesY_;
+        int bitShift_;
 
         cv::Mat srcExt_;
         cv::Mat lut_;
@@ -341,8 +345,8 @@ namespace
 #endif
     };
 
-    CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY) :
-        clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY)
+    CLAHE_Impl::CLAHE_Impl(double clipLimit, int tilesX, int tilesY, int bitShift) :
+        clipLimit_(clipLimit), tilesX_(tilesX), tilesY_(tilesY), bitShift_(bitShift)
     {
     }
 
@@ -356,7 +360,7 @@ namespace
         bool useOpenCL = cv::ocl::isOpenCLActivated() && _src.isUMat() && _src.dims()<=2 && _src.type() == CV_8UC1;
 #endif
 
-        int histSize = _src.type() == CV_8UC1 ? 256 : 65536;
+        int histSize = _src.type() == CV_8UC1 ? (256 >> bitShift_) : (65536 >> bitShift_);
 
         cv::Size tileSize;
         cv::_InputArray _srcForLut;
@@ -411,9 +415,93 @@ namespace
 
         cv::Ptr<cv::ParallelLoopBody> calcLutBody;
         if (_src.type() == CV_8UC1)
-            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+        {
+            switch (bitShift_)
+            {
+                case 0:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 256, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 1:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 128, 1> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 2:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 64, 2> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 3:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 32, 3> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 4:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 16, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 5:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 8, 5> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 6:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 4, 6> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 7:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<uchar, 2, 7> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                default:
+                    CV_Error(cv::Error::StsBadArg, "Unsupported bitShift value");
+            }
+        }
         else if (_src.type() == CV_16UC1)
-            calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+        {
+            switch (bitShift_)
+            {
+                case 0:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 65536, 0> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 1:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 32768, 1> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 2:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 16384, 2> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 3:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 8192, 3> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 4:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4096, 4> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 5:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 2048, 5> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 6:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 1024, 6> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 7:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 512, 7> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 8:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 256, 8> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 9:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 128, 9> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 10:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 64, 10> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 11:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 32, 11> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 12:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 16, 12> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 13:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 8, 13> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 14:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 4, 14> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                case 15:
+                    calcLutBody = cv::makePtr<CLAHE_CalcLut_Body<ushort, 2, 15> >(srcForLut, lut_, tileSize, tilesX_, clipLimit, lutScale);
+                    break;
+                default:
+                    CV_Error(cv::Error::StsBadArg, "Unsupported bitShift value");
+            }
+        }
         else
             CV_Error( cv::Error::StsBadArg, "Unsupported type" );
 
@@ -421,9 +509,93 @@ namespace
 
         cv::Ptr<cv::ParallelLoopBody> interpolationBody;
         if (_src.type() == CV_8UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+        {
+            switch (bitShift_)
+            {
+                case 0:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 1:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 1> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 2:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 2> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 3:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 3> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 4:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 4> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 5:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 5> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 6:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 6> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 7:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<uchar, 7> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                default:
+                    CV_Error(cv::Error::StsBadArg, "Unsupported bitShift value");
+            }
+        }
         else if (_src.type() == CV_16UC1)
-            interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+        {
+            switch (bitShift_)
+            {
+                case 0:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 0> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 1:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 1> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 2:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 2> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 3:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 3> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 4:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 4> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 5:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 5> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 6:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 6> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 7:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 7> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 8:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 8> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 9:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 9> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 10:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 10> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 11:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 11> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 12:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 12> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 13:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 13> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 14:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 14> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                case 15:
+                    interpolationBody = cv::makePtr<CLAHE_Interpolation_Body<ushort, 15> >(src, dst, lut_, tileSize, tilesX_, tilesY_);
+                    break;
+                default:
+                    CV_Error(cv::Error::StsBadArg, "Unsupported bitShift value");
+            }
+        }
 
         cv::parallel_for_(cv::Range(0, src.rows), *interpolationBody);
     }
@@ -447,6 +619,16 @@ namespace
     cv::Size CLAHE_Impl::getTilesGridSize() const
     {
         return cv::Size(tilesX_, tilesY_);
+    }
+
+    void CLAHE_Impl::setBitShift(int bitShift)
+    {
+        bitShift_ = bitShift;
+    }
+
+    int CLAHE_Impl::getBitShift() const
+    {
+        return bitShift_;
     }
 
     void CLAHE_Impl::collectGarbage()
