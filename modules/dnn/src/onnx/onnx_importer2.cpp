@@ -592,20 +592,16 @@ void ONNXImporter2::parseOperatorSet()
     CV_LOG_INFO(NULL, "DNN/ONNX: ONNX opset version = " << onnx_opset);
 
     buildDispatchMap_ONNX_AI(onnx_opset);
+    buildDispatchMap_COM_MICROSOFT(onnx_opset);
+
     for (const auto& pair : onnx_opset_map)
     {
-        if (pair.first == str_domain_ai_onnx)
-        {
-            continue;  // done above
-        }
-        else if (pair.first == "com.microsoft")
-        {
-            buildDispatchMap_COM_MICROSOFT(pair.second);
-        }
-        else
-        {
-            CV_LOG_INFO(NULL, "DNN/ONNX: unknown domain='" << pair.first << "' version=" << pair.second << ". No dispatch map, you may need to register 'custom' layers.");
-        }
+        if ((pair.first != str_domain_ai_onnx) && (pair.first != "com.microsoft"))
+            CV_LOG_INFO(
+                NULL,
+                "DNN/ONNX: unknown domain='" << pair.first << "' version=" << pair.second << ". No dispatch map, you may need to register 'custom' layers."
+            );
+
     }
 }
 
