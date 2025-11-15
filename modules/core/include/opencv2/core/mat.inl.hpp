@@ -69,6 +69,9 @@
 #pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
 #endif
 
+// Internal helpers for type-safe std::vector handling inside _InputArray/_OutputArray
+#include "opencv2/core/detail/input_array_ops.hpp"
+
 namespace cv
 {
 CV__DEBUG_NS_BEGIN
@@ -85,6 +88,31 @@ int rawType()
     const int elemSize = sizeof(_Tp);
     return (int)CV_MAKETYPE(CV_8U, elemSize);
 }
+
+namespace detail
+{
+static inline void retain_registered_vector_ops(int flags, void* obj)
+{
+    if (!obj)
+        return;
+    int kind = flags & _InputArray::KIND_MASK;
+    if (kind == _InputArray::STD_VECTOR)
+        detail::retain_vector_ops(obj);
+    else if (kind == _InputArray::STD_VECTOR_VECTOR)
+        detail::retain_vector_vector_ops(obj);
+}
+
+static inline void release_registered_vector_ops(int flags, void* obj)
+{
+    if (!obj)
+        return;
+    int kind = flags & _InputArray::KIND_MASK;
+    if (kind == _InputArray::STD_VECTOR)
+        detail::unregister_vector_ops(obj);
+    else if (kind == _InputArray::STD_VECTOR_VECTOR)
+        detail::unregister_vector_vector_ops(obj);
+}
+} // namespace detail
 
 //////////////////////// Input/Output Arrays ////////////////////////
 
@@ -105,11 +133,56 @@ inline _InputArray::_InputArray(const std::vector<Mat>& vec) { init(+STD_VECTOR_
 inline _InputArray::_InputArray(const UMat& m) { init(+UMAT+ACCESS_READ, &m); }
 inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_READ, &vec); }
 
+inline _InputArray::_InputArray(const _InputArray& other)
+{
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    detail::retain_registered_vector_ops(flags, obj);
+}
+
+inline _InputArray::_InputArray(_InputArray&& other) CV_NOEXCEPT
+{
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    other.flags = NONE;
+    other.obj = nullptr;
+    other.sz = Size();
+}
+
+inline _InputArray& _InputArray::operator=(const _InputArray& other)
+{
+    if (this == &other)
+        return *this;
+    detail::release_registered_vector_ops(flags, obj);
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    detail::retain_registered_vector_ops(flags, obj);
+    return *this;
+}
+
+inline _InputArray& _InputArray::operator=(_InputArray&& other) CV_NOEXCEPT
+{
+    if (this == &other)
+        return *this;
+    detail::release_registered_vector_ops(flags, obj);
+    flags = other.flags;
+    obj = other.obj;
+    sz = other.sz;
+    other.flags = NONE;
+    other.obj = nullptr;
+    other.sz = Size();
+    return *this;
+}
+
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
 {
     CV_CheckLE(vec.size(), static_cast<size_t>(std::numeric_limits<int>::max()), "Must not be larger than INT_MAX");
     init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec);
+    detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance());
 }
 
 template<typename _Tp, std::size_t _Nm> inline
@@ -126,7 +199,7 @@ _InputArray::_InputArray(const std::vector<bool>& vec)
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
+{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); detail::register_vector_vector_ops(&vec, &detail::VectorVectorOps<_Tp>::instance()); }
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<Mat_<_Tp> >& vec)
@@ -165,6 +238,7 @@ _InputArray _InputArray::rawIn(const std::vector<_Tp>& vec)
     _InputArray v;
     v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_READ;
     v.obj = (void*)&vec;
+    detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance());
     return v;
 }
 
@@ -178,7 +252,10 @@ _InputArray _InputArray::rawIn(const std::array<_Tp, _Nm>& arr)
     return v;
 }
 
-inline _InputArray::~_InputArray() {}
+inline _InputArray::~_InputArray()
+{
+    detail::release_registered_vector_ops(flags, obj);
+}
 
 inline Mat _InputArray::getMat(int i) const
 {
@@ -207,9 +284,25 @@ inline _OutputArray::_OutputArray(std::vector<Mat>& vec) { init(+STD_VECTOR_MAT 
 inline _OutputArray::_OutputArray(UMat& m) { init(+UMAT + ACCESS_WRITE, &m); }
 inline _OutputArray::_OutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT + ACCESS_WRITE, &vec); }
 
+inline _OutputArray::_OutputArray(const _OutputArray& other) : _InputArray(other) {}
+
+inline _OutputArray::_OutputArray(_OutputArray&& other) CV_NOEXCEPT : _InputArray(std::move(other)) {}
+
+inline _OutputArray& _OutputArray::operator=(const _OutputArray& other)
+{
+    _InputArray::operator=(other);
+    return *this;
+}
+
+inline _OutputArray& _OutputArray::operator=(_OutputArray&& other) CV_NOEXCEPT
+{
+    _InputArray::operator=(std::move(other));
+    return *this;
+}
+
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance()); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(std::array<_Tp, _Nm>& arr)
@@ -221,7 +314,7 @@ _OutputArray::_OutputArray(std::array<Mat, _Nm>& arr)
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); detail::register_vector_vector_ops(&vec, &detail::VectorVectorOps<_Tp>::instance()); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(std::vector<Mat_<_Tp> >& vec)
@@ -241,7 +334,7 @@ _OutputArray::_OutputArray(_Tp* vec, int n)
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance()); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _OutputArray::_OutputArray(const std::array<_Tp, _Nm>& arr)
@@ -253,7 +346,7 @@ _OutputArray::_OutputArray(const std::array<Mat, _Nm>& arr)
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); }
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_WRITE, &vec); detail::register_vector_vector_ops(&vec, &detail::VectorVectorOps<_Tp>::instance()); }
 
 template<typename _Tp> inline
 _OutputArray::_OutputArray(const std::vector<Mat_<_Tp> >& vec)
@@ -311,6 +404,7 @@ _OutputArray _OutputArray::rawOut(std::vector<_Tp>& vec)
     _OutputArray v;
     v.flags = _InputArray::FIXED_TYPE + _InputArray::STD_VECTOR + rawType<_Tp>() + ACCESS_WRITE;
     v.obj = (void*)&vec;
+    detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance());
     return v;
 }
 
@@ -333,9 +427,25 @@ inline _InputOutputArray::_InputOutputArray(std::vector<Mat>& vec) { init(+STD_V
 inline _InputOutputArray::_InputOutputArray(UMat& m) { init(+UMAT+ACCESS_RW, &m); }
 inline _InputOutputArray::_InputOutputArray(std::vector<UMat>& vec) { init(+STD_VECTOR_UMAT+ACCESS_RW, &vec); }
 
+inline _InputOutputArray::_InputOutputArray(const _InputOutputArray& other) : _OutputArray(other) {}
+
+inline _InputOutputArray::_InputOutputArray(_InputOutputArray&& other) CV_NOEXCEPT : _OutputArray(std::move(other)) {}
+
+inline _InputOutputArray& _InputOutputArray::operator=(const _InputOutputArray& other)
+{
+    _OutputArray::operator=(other);
+    return *this;
+}
+
+inline _InputOutputArray& _InputOutputArray::operator=(_InputOutputArray&& other) CV_NOEXCEPT
+{
+    _OutputArray::operator=(std::move(other));
+    return *this;
+}
+
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance()); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(std::array<_Tp, _Nm>& arr)
@@ -347,7 +457,7 @@ _InputOutputArray::_InputOutputArray(std::array<Mat, _Nm>& arr)
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); detail::register_vector_vector_ops(&vec, &detail::VectorVectorOps<_Tp>::instance()); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(std::vector<Mat_<_Tp> >& vec)
@@ -367,7 +477,7 @@ _InputOutputArray::_InputOutputArray(_Tp* vec, int n)
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); detail::register_vector_ops(&vec, &detail::VectorOps<_Tp>::instance()); }
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputOutputArray::_InputOutputArray(const std::array<_Tp, _Nm>& arr)
@@ -379,7 +489,7 @@ _InputOutputArray::_InputOutputArray(const std::array<Mat, _Nm>& arr)
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<std::vector<_Tp> >& vec)
-{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); }
+{ init(FIXED_TYPE + FIXED_SIZE + STD_VECTOR_VECTOR + traits::Type<_Tp>::value + ACCESS_RW, &vec); detail::register_vector_vector_ops(&vec, &detail::VectorVectorOps<_Tp>::instance()); }
 
 template<typename _Tp> inline
 _InputOutputArray::_InputOutputArray(const std::vector<Mat_<_Tp> >& vec)
