@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<package>
+	<metadata>
+		<id>
+			{{ params.id }}
+		</id>
+		<version>
+			{{ params.version }}
+		</version>
+		<description>
+			{{ params.description }}
+		</description>
+		<tags>
+			{{ params.tags }}
+		</tags>
+		<authors>
+			{{ params.authors }}
+		</authors>
+	</metadata>
+	<files>
+		<file src="{{ params.directory }}\include\**\*.*" target="build\native\include" />
+
+		{% for msvc in params.compilers -%}
+		{% for arch in params.architectures -%}
+		<file src="{{ params.directory }}\{{ arch }}\{{ msvc }}\lib\**\opencv_world*.lib" target="build\native\{{ arch }}\{{ msvc }}.0\lib" />
+		<file src="{{ params.directory }}\{{ arch }}\{{ msvc }}\bin\**\opencv_world*.dll" target="build\native\{{ arch }}\{{ msvc }}.0\bin" />
+		<file src="{{ params.directory }}\{{ arch }}\{{ msvc }}\bin\**\*ffmpeg*.dll" target="build\native\{{ arch }}\{{ msvc }}.0\bin" />
+
+		{% endfor -%}
+		{% endfor -%}
+
+		<file src="{{ params.directory }}\OpenCVNuget.targets" target="build\native" />
+	</files>
+</package>
