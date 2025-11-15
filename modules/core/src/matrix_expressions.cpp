@@ -1341,8 +1341,13 @@ void MatOp_AddEx::assign(const MatExpr& e, Mat& m, int _type) const
         cv::subtract(e.s, e.a, dst);
     else
     {
-        e.a.convertTo(dst, e.a.type(), e.alpha);
-        cv::add(dst, e.s, dst);
+        int depth = e.a.depth();
+        int precType = (depth == CV_8U || depth == CV_16U) ? CV_16S : CV_32F;
+        cv::Mat prec;
+        e.a.convertTo(prec, precType);
+        prec = prec * e.alpha;
+        cv::add(prec, e.s, prec);
+        prec.convertTo(dst, e.a.type());
     }
 
     if( dst.data != m.data )
