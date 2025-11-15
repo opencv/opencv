@@ -513,7 +513,8 @@ void filterHomographyDecompByVisibleRefpoints(InputArrayOfArrays _rotations,
     Mat pointsMask = _pointsMask.getMat();
     int nsolutions = (int)_rotations.total();
     int npoints = (int)beforeRectifiedPoints.total();
-    CV_Assert(pointsMask.empty() || pointsMask.checkVector(1, CV_8U) == npoints);
+    CV_Assert(pointsMask.empty() || pointsMask.checkVector(1, CV_8U) == npoints ||
+              pointsMask.checkVector(1, CV_Bool) == npoints);
     const uchar* pointsMaskPtr = pointsMask.data;
 
     std::vector<uchar> solutionMask(nsolutions, (uchar)1);
