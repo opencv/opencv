@@ -1826,7 +1826,7 @@ bool CvCapture_MSMF::grabFrame()
         if (audioStream != -1)
         {
             const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
-            bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplePerSec;
+            bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplesPerSec;
             audioFrame.release();
             if (!aEOS)
                 returnFlag &= grabAudioFrame();
