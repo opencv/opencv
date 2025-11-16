@@ -1382,7 +1382,8 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
     if (params.has(CAP_PROP_AUDIO_STREAM))
     {
         double value = params.get<double>(CAP_PROP_AUDIO_STREAM);
-        if (value == -1 || value > -1)
+        if (value == -1 || value == 0)
+
             audioStream = static_cast<int>(value);
         else
         {
@@ -1390,6 +1391,7 @@ bool CvCapture_MSMF::configureStreams(const cv::VideoCaptureParameters& params)
             return false;
         }
     }
+
     return true;
 }
 bool CvCapture_MSMF::setAudioProperties(const cv::VideoCaptureParameters& params)
