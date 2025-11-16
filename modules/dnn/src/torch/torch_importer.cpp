@@ -598,7 +598,7 @@ struct TorchImporter
                 readTorchTable(scalarParams, tensorParams);
 
                 CV_Assert(tensorParams.count("weight"));
-                Mat weightBlob = tensorParams["weight"].second;
+                const Mat& weightBlob = tensorParams["weight"].second;
                 layerParams.blobs.push_back(weightBlob);
 
                 bool bias = tensorParams.count("bias") != 0;
