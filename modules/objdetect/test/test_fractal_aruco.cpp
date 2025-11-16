@@ -23,7 +23,8 @@ TEST_P(FractalArucoTest, detect)
 
     Mat image = imread(imgPath);
     ASSERT_FALSE(image.empty()) << "Can't read image: " << imgPath;
-    aruco::FractalDetector detector;
+    aruco::FractalMarkerDictionary dictionary = aruco::FractalMarkerDictionary::getPredefinedFractalArucoDictionary(aruco::FRACTAL_5L_6);
+    aruco::FractalDetector detector(dictionary);
     detector.setParams("FRACTAL_4L_6");
     std::vector<Point3f> points3D;
     std::vector<Point2f> points2D;

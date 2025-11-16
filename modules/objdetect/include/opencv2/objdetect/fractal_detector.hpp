@@ -57,7 +57,27 @@ protected:
     struct FractalMarkerImpl;
     Ptr<FractalMarkerImpl> impl;
 
-    friend struct FractalMarkerSet;
+    friend class FractalMarkerDictionary;
+    friend class FractalDetector;
+};
+enum PredefinedFractalDictionaryType {
+    FRACTAL_2L_6,
+    FRACTAL_3L_6,
+    FRACTAL_4L_6,
+    FRACTAL_5L_6,
+};
+class CV_EXPORTS_W_SIMPLE FractalMarkerDictionary 
+{
+public:     
+    CV_WRAP static FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name);
+
+    CV_WRAP FractalMarkerDictionary();
+
+    CV_WRAP FractalMarkerDictionary(const std::string& config);
+
+protected:
+    struct FractalMarkerDictionaryImpl;
+    Ptr<FractalMarkerDictionaryImpl> impl;
     friend class FractalDetector;
 };
 
@@ -72,8 +92,7 @@ public:
     /**
      * @brief Default constructor for FractalDetector.
      */
-    CV_WRAP FractalDetector();
-
+    CV_WRAP FractalDetector(const FractalMarkerDictionary &dictionary = FractalMarkerDictionary::getPredefinedFractalArucoDictionary(FRACTAL_4L_6));
     /**
      * @brief Detects fractal markers in the input image.
      * @param img Input image (grayscale or color).
