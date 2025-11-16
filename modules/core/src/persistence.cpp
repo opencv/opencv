@@ -8,6 +8,9 @@
 #include "persistence_base64_encoding.hpp"
 #include <unordered_map>
 #include <iterator>
+#include <charconv>
+#include <limits>
+#include <cstring>
 
 #include <opencv2/core/utils/logger.hpp>
 
@@ -16,6 +19,67 @@ namespace cv
 
 namespace fs
 {
+
+
+#include <charconv>
+#include <limits>
+#include <cstring>
+
+static bool parseInteger64_with_len(const char* begin, const char* end, std::int64_t &out)
+{
+    // Try signed parse first
+    std::int64_t sval = 0;
+    auto r1 = std::from_chars(begin, end, sval);
+    if (r1.ec == std::errc()) { out = sval; return true; }
+
+    // Try unsigned parse (to detect INT64_MIN represented as "-9223372036854775808")
+    std::uint64_t uval = 0;
+    auto r2 = std::from_chars(begin, end, uval);
+    if (r2.ec == std::errc()) {
+        bool negative = (begin[0] == '-');
+        const std::uint64_t int64_max_plus1 =
+            static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max()) + 1ULL;
+        if (negative && uval == int64_max_plus1) {
+            out = std::numeric_limits<std::int64_t>::min();
+            return true;
+        }
+        if (!negative && uval <= static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max())) {
+            out = static_cast<std::int64_t>(uval);
+            return true;
+        }
+    }
+    return false;
+}
+
+int64_t readLong(char*& ptr)
+{
+    const char* beg = ptr;
+
+    // skip optional sign
+    if (*ptr == '+' || *ptr == '-') ++ptr;
+    // advance over digits
+    while (cv_isdigit(*ptr)) ++ptr;
+
+    const char* end = ptr; // end is first non-digit after number
+
+    std::int64_t value = 0;
+    if (parseInteger64_with_len(beg, end, value)) {
+        // ptr already points to end; return parsed integer
+        return value;
+    }
+
+    // fallback to previous behavior (floating or other), use strtoll if necessary
+    // We call strtoll on the null-terminated copy to keep behavior consistent if needed:
+    // create a temporary null-terminated buffer (safe & minimal)
+    std::string token(beg, end);
+    char *endptr = nullptr;
+    errno = 0;
+    long long v = std::strtoll(token.c_str(), &endptr, 0);
+    (void)endptr;
+    // update ptr to end (already done)
+    return static_cast<int64_t>(v);
+}
+
 
 int strcasecmp(const char* s1, const char* s2)
 {
@@ -349,19 +413,7 @@ static inline int readInt(const uchar* p)
 #endif
 }
 
-static inline int64_t readLong(const uchar* p)
-{
-    // On little endian CPUs, both branches produce the same result. On big endian, only the else branch does.
-#if CV_LITTLE_ENDIAN_MEM_ACCESS
-    int64_t val;
-    memcpy(&val, p, sizeof(val));
-    return val;
-#else
-    unsigned val0 = (unsigned)(p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24));
-    unsigned val1 = (unsigned)(p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24));
-    return val0 | ((int64_t)val1 << 32);
-#endif
-}
+
 
 static inline double readReal(const uchar* p)
 {
