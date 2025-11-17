@@ -68,6 +68,12 @@ enum PredefinedFractalDictionaryType {
 };
 class CV_EXPORTS_W_SIMPLE FractalMarkerDictionary 
 {
+// The Fractal Marker generation creates a hierarchical structure of nVal x nVal binary 
+// matrices, where the central kVal x kVal region is cleared, and outer regions are 
+// randomly configured. Each layer optimizes marker distinctiveness by maximizing its 
+// distance from others. Pixel size adjusts per layer, and corners are defined in 3D 
+// space, ensuring robust and unique markers.
+
 public:     
     CV_WRAP static FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name);
 
