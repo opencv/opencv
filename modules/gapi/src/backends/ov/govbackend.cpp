@@ -185,7 +185,7 @@ static void copyFromOV(const ov::Tensor &tensor, cv::Mat &mat) {
                                        mat.ptr<int>(),
                                        total);
     } else {
-        std::copy_n(reinterpret_cast<uint8_t*>(tensor.data()),
+        std::copy_n(reinterpret_cast<const uint8_t*>(tensor.data()),
                     tensor.get_byte_size(),
                     mat.ptr<uint8_t>());
     }
