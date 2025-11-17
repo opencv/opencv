@@ -153,7 +153,7 @@ void  RBaseStream::setPos( int64_t pos )
 int64_t RBaseStream::getPos()
 {
     CV_Assert(isOpened());
-    int64_t pos = validateToInt64((m_current - m_start) + m_block_pos);
+    int64_t pos = static_cast<int64_t>((m_current - m_start) + m_block_pos);
     CV_Assert(pos >= m_block_pos); // overflow check
     CV_Assert(pos >= 0); // overflow check
     return pos;

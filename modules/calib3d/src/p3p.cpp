@@ -173,7 +173,7 @@ void p3p::calibrateAndNormalizePointsPnP(const Mat &opoints_, const Mat &ipoints
 
     Mat ipoints;
     convertPoints(ipoints_, ipoints, 2);
-    for (int i = 0; i < ipoints.rows; i++) {
+    for (int i = 0; i < 3; i++) {
         const double k_inv_u = ipoints.at<double>(i, 0);
         const double k_inv_v = ipoints.at<double>(i, 1);
         double x_norm = 1.0 / sqrt(k_inv_u*k_inv_u + k_inv_v*k_inv_v + 1);
