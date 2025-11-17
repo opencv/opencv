@@ -218,11 +218,13 @@ protected:
     void parseIsNaN                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseIsInf                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseOneHot               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseDFT                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDet                  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseCenterCropPad        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseGridSample           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseNegativeLogLikelihoodLoss(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSoftmaxCrossEntropyLoss  (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseAffineGrid           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseResize               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseSize                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseUnique               (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -475,19 +477,28 @@ LayerParams ONNXImporter2::getLayerParams(const opencv_onnx::NodeProto& node_pro
             else if (attribute_proto.has_f())
             {
                 lp.set(attribute_name, attribute_proto.f());
+                if (node_proto.op_type() == "Constant")
+                    lp.set("value_float", attribute_proto.f());
             }
             else if (attribute_proto.has_s())
             {
                 lp.set(attribute_name, attribute_proto.s());
+                if (node_proto.op_type() == "Constant")
+                    lp.set("value_string", attribute_proto.s());
             }
             else if (attribute_proto.floats_size() > 0)
             {
                 lp.set(attribute_name, DictValue::arrayReal(
                     attribute_proto.floats().data(), attribute_proto.floats_size()));
+                if (node_proto.op_type() == "Constant")
+                    lp.set("value_floats", DictValue::arrayReal(
+                        attribute_proto.floats().data(), attribute_proto.floats_size()));
             }
             else if (attribute_proto.ints_size() > 0)
             {
                 lp.set(attribute_name, parse(attribute_proto.ints()));
+                if (node_proto.op_type() == "Constant")
+                    lp.set("value_ints", parse(attribute_proto.ints()));
             }
             else if (attribute_proto.has_t())
             {
@@ -1769,9 +1780,20 @@ void ONNXImporter2::parseDet(LayerParams& layerParams, const opencv_onnx::NodePr
     addLayer(layerParams, node_proto);
 }
 
+void ONNXImporter2::parseDFT(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "DFT";
+    addLayer(layerParams, node_proto);
+}
 void ONNXImporter2::parseGridSample(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     layerParams.type = "GridSample";
+    addLayer(layerParams, node_proto);
+}
+
+void ONNXImporter2::parseAffineGrid(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "AffineGrid";
     addLayer(layerParams, node_proto);
 }
 
@@ -2658,8 +2680,10 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["IsInf"] = &ONNXImporter2::parseIsInf;
     dispatch["CenterCropPad"] = &ONNXImporter2::parseCenterCropPad;
     dispatch["OneHot"] = &ONNXImporter2::parseOneHot;
+    dispatch["DFT"] = &ONNXImporter2::parseDFT;
     dispatch["Det"] = &ONNXImporter2::parseDet;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
+    dispatch["AffineGrid"] = &ONNXImporter2::parseAffineGrid;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
     dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;
