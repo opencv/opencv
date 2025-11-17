@@ -332,8 +332,6 @@ criteria.epsilon defines the threshold of the increment in the correlation coeff
 iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
 Default values are shown in the declaration above.
 @param inputMask An optional single channel mask to indicate valid values of inputImage.
-@param templateMask An optional single channel mask to indicate valid values of templateImage.
- The effective support is intersection of warped inputMask and templateMask.
 @param gaussFiltSize An optional value indicating size of gaussian blur filter; (DEFAULT: 5)
 
 The function estimates the optimum transformation (warpMatrix) with respect to ECC criterion
@@ -367,12 +365,6 @@ computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
 CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
                                       InputOutputArray warpMatrix, int motionType,
                                       TermCriteria criteria,
-                                      InputArray inputMask, InputArray templateMask, int gaussFiltSize = 5);
-
-/** @overload */
-CV_EXPORTS_W double findTransformECC( InputArray templateImage, InputArray inputImage,
-                                      InputOutputArray warpMatrix, int motionType,
-                                      TermCriteria criteria,
                                       InputArray inputMask, int gaussFiltSize);
 
 /** @overload */
@@ -381,6 +373,51 @@ double findTransformECC(InputArray templateImage, InputArray inputImage,
     InputOutputArray warpMatrix, int motionType = MOTION_AFFINE,
     TermCriteria criteria = TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, 50, 0.001),
     InputArray inputMask = noArray());
+
+/** @brief Finds the geometric transform (warp) between two images in terms of the ECC criterion @cite EP08
+using validity masks for both the template and the input images.
+
+This function extends findTransformECC() by adding a mask for the template image.
+The Enhanced Correlation Coefficient is evaluated only over pixels that are valid in both images:
+on each iteration inputMask is warped into the template frame and combined with templateMask, and
+only the intersection of these masks contributes to the objective function.
+
+@param templateImage 1 or 3 channel template image; CV_8U, CV_16U, CV_32F, CV_64F type.
+@param inputImage input image which should be warped with the final warpMatrix in
+order to provide an image similar to templateImage, same type as templateImage.
+@param templateMask single-channel 8-bit mask for templateImage indicating valid pixels
+to be used in the alignment. Must have the same size as templateImage.
+@param inputMask single-channel 8-bit mask for inputImage indicating valid pixels
+before warping. Must have the same size as inputImage.
+@param warpMatrix floating-point \f$2\times 3\f$ or \f$3\times 3\f$ mapping matrix (warp).
+@param motionType parameter, specifying the type of motion:
+ -   **MOTION_TRANSLATION** sets a translational motion model; warpMatrix is \f$2\times 3\f$ with
+     the first \f$2\times 2\f$ part being the unity matrix and the rest two parameters being
+     estimated.
+ -   **MOTION_EUCLIDEAN** sets a Euclidean (rigid) transformation as motion model; three
+     parameters are estimated; warpMatrix is \f$2\times 3\f$.
+ -   **MOTION_AFFINE** sets an affine motion model (DEFAULT); six parameters are estimated;
+     warpMatrix is \f$2\times 3\f$.
+ -   **MOTION_HOMOGRAPHY** sets a homography as a motion model; eight parameters are
+     estimated; warpMatrix is \f$3\times 3\f$.
+@param criteria parameter, specifying the termination criteria of the ECC algorithm;
+criteria.epsilon defines the threshold of the increment in the correlation coefficient between two
+iterations (a negative criteria.epsilon makes criteria.maxcount the only termination criterion).
+Default values are shown in the declaration above.
+@param gaussFiltSize size of the Gaussian blur filter used for smoothing images and masks
+before computing the alignment (DEFAULT: 5).
+
+@sa
+findTransformECC, computeECC, estimateAffine2D, estimateAffinePartial2D, findHomography
+*/
+CV_EXPORTS_W double findTransformECCWithMask( InputArray templateImage,
+                                 InputArray inputImage,
+                                 InputArray templateMask,
+                                 InputArray inputMask,
+                                 InputOutputArray warpMatrix,
+                                 int motionType = MOTION_AFFINE,
+                                 TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 50, 1e-6),
+                                 int gaussFiltSize = 5 );
 
 /** @example samples/cpp/kalman.cpp
 An example using the standard Kalman filter

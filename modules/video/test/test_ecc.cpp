@@ -353,14 +353,14 @@ bool CV_ECC_Test_Mask::test(const Mat testImg) {
             }
         }
 
-        findTransformECC(warpedImage, testImg, mapTranslation, 0,
-                    TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon), mask, warpedMask);
+        findTransformECCWithMask(warpedImage, testImg, warpedMask, mask, mapTranslation, 0,
+                    TermCriteria(TermCriteria::COUNT+TermCriteria::EPS, ECC_iterations, ECC_epsilon));
 
         if (!checkMap(mapTranslation, translationGround))
             return false;
 
         // Test with non-default gaussian blur.
-        findTransformECC(warpedImage, testImg, mapTranslation, 0, criteria, mask, warpedMask, 1);
+        findTransformECCWithMask(warpedImage, testImg, warpedMask,  mask, mapTranslation, 0, criteria, 1);
 
         if (!checkMap(mapTranslation, translationGround))
             return false;

@@ -334,8 +334,14 @@ double cv::computeECC(InputArray templateImage, InputArray inputImage, InputArra
 }
 
 
-double cv::findTransformECC(InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix,
-                            int motionType, TermCriteria criteria, InputArray inputMask, InputArray templateMask, int gaussFiltSize) {
+double cv::findTransformECCWithMask( InputArray templateImage,
+                                 InputArray inputImage,
+                                 InputArray templateMask,
+                                 InputArray inputMask,
+                                 InputOutputArray warpMatrix,
+                                 int motionType,
+                                 TermCriteria criteria,
+                                 int gaussFiltSize) {
     Mat src = templateImage.getMat();  // template image
     Mat dst = inputImage.getMat();     // input image (to be warped)
     Mat map = warpMatrix.getMat();     // warp (transformation)
@@ -613,8 +619,8 @@ double cv::findTransformECC(InputArray templateImage,
                             InputArray inputMask,
                             int gaussFiltSize
                             ) {
-    return cv::findTransformECC(templateImage, inputImage, warpMatrix, motionType, criteria,
-                                    inputMask, noArray(), gaussFiltSize);
+    return findTransformECCWithMask(templateImage, inputImage, noArray(), inputMask,
+            warpMatrix, motionType, criteria, gaussFiltSize);
 }
 
 double cv::findTransformECC(InputArray templateImage, InputArray inputImage, InputOutputArray warpMatrix,
