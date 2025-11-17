@@ -1569,6 +1569,7 @@ bool CvCapture_MSMF::configureAudioFrame()
 {
     if (!audioSamples.empty() || !bufferAudioData.empty() && aEOS)
     {
+        const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
         _ComPtr<IMFMediaBuffer> buf = NULL;
         std::vector<BYTE> audioDataInUse;
         BYTE* ptr = NULL;
@@ -1601,20 +1602,19 @@ bool CvCapture_MSMF::configureAudioFrame()
         }
         audioSamples.clear();
 
-        audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
-        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*captureAudioFormat.nChannels*(captureAudioFormat.bit_per_sample)/8)/1e7) : cursize;
-        if ((videoStream != -1) && (chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels) != 0))
+        audioSamplePos += chunkLengthOfBytes/bytesPerSample;
+        chunkLengthOfBytes = (videoStream != -1) ? (LONGLONG)((requiredAudioTime*captureAudioFormat.nSamplesPerSec*bytesPerSample)/1e7) : cursize;
+        if ((videoStream != -1) && (chunkLengthOfBytes % bytesPerSample != 0))
         {
             if ( (double)audioSamplePos/captureAudioFormat.nSamplesPerSec + audioStartOffset * 1e-7 - usedVideoSampleTime * 1e-7 >= 0 )
                 chunkLengthOfBytes -= numberOfAdditionalAudioBytes;
-            numberOfAdditionalAudioBytes = ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels)
-                                        - chunkLengthOfBytes % ((int)(captureAudioFormat.bit_per_sample)/8* (int)captureAudioFormat.nChannels);
+                numberOfAdditionalAudioBytes = bytesPerSample - chunkLengthOfBytes % bytesPerSample;
             chunkLengthOfBytes += numberOfAdditionalAudioBytes;
         }
         if (lastFrame && !syncLastFrame || aEOS && !vEOS)
         {
             chunkLengthOfBytes = bufferAudioData.size();
-            audioSamplePos += chunkLengthOfBytes/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels);
+            audioSamplePos += chunkLengthOfBytes/bytesPerSample;
         }
         CV_Check((double)chunkLengthOfBytes, chunkLengthOfBytes >= INT_MIN || chunkLengthOfBytes <= INT_MAX, "MSMF: The chunkLengthOfBytes is out of the allowed range");
         copy(bufferAudioData.begin(), bufferAudioData.begin() + (int)chunkLengthOfBytes, std::back_inserter(audioDataInUse));
@@ -1825,7 +1825,8 @@ bool CvCapture_MSMF::grabFrame()
 
         if (audioStream != -1)
         {
-            bufferedAudioDuration = (double)(bufferAudioData.size()/((captureAudioFormat.bit_per_sample/8)*captureAudioFormat.nChannels))/captureAudioFormat.nSamplesPerSec;
+            const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
+            bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplesPerSec;
             audioFrame.release();
             if (!aEOS)
                 returnFlag &= grabAudioFrame();
