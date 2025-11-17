@@ -340,5 +340,29 @@ TEST(DISABLED_videoio_camera, ffmpeg_index)
     ASSERT_TRUE(cap.read(frame));
     ASSERT_FALSE(frame.empty());
 }
+TEST(videoio_camera, reopen_basic)
+{
+    VideoCapture cap;
+
+    // First open
+    ASSERT_TRUE(cap.open(0)) << "First open() failed";
+    Mat frame1;
+    ASSERT_TRUE(cap.read(frame1));
+    ASSERT_FALSE(frame1.empty());
+    std::cout << "First read OK" << std::endl;
+
+    // Release camera
+    cap.release();
+    std::cout << "Camera released" << std::endl;
+
+    // Second open
+    ASSERT_TRUE(cap.open(0)) << "Second open() failed";
+    Mat frame2;
+    ASSERT_TRUE(cap.read(frame2));
+    ASSERT_FALSE(frame2.empty());
+    std::cout << "Second read OK" << std::endl;
+
+    cap.release();
+}
 
 }} // namespace
