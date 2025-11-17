@@ -11,6 +11,53 @@ namespace cv
 namespace dnn
 {
 
+static MatShape inferTransformLayoutShape(const MatShape& inpshape_,
+                                          DataLayout outlayout,
+                                          DataLayout defaultLayout,
+                                          int C0)
+{
+    MatShape inpshape = inpshape_;
+    int ndims = inpshape.dims;
+    DataLayout inplayout = inpshape_.layout == DATA_LAYOUT_UNKNOWN ? defaultLayout : inpshape.layout;
+    inpshape.layout = inplayout;
+
+    if (inplayout == outlayout) {
+        return inpshape;
+    }
+    
+    // non-block => block
+    if (outlayout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(inplayout != DATA_LAYOUT_BLOCK);
+        return inpshape.toBlock(C0);
+    }
+
+    // block => non-block
+    if (inplayout == DATA_LAYOUT_BLOCK) {
+        CV_Assert(outlayout != DATA_LAYOUT_BLOCK);
+        return inpshape.fromBlock(outlayout);
+    }
+
+    MatShape outshape = inpshape;
+    outshape.layout = outlayout;
+
+    // NHWC => NCHW
+    if (outlayout == DATA_LAYOUT_NCHW) {
+        CV_Assert(inplayout == DATA_LAYOUT_NHWC);
+        int C = inpshape[ndims-1];
+        for (int i = 2; i < ndims; i++)
+            outshape[i] = inpshape[i-1];
+        outshape[1] = C;
+    } else {
+        // NCHW => NHWC
+        CV_Assert(outlayout == DATA_LAYOUT_NHWC && inplayout == DATA_LAYOUT_NCHW);
+        int C = inpshape[1];
+        for (int i = 2; i < ndims; i++)
+            outshape[i-1] = inpshape[i];
+        outshape[ndims-1] = C;
+    }
+    return outshape;
+}
+
 template <typename _Tp>
 void transform_layout_(const _Tp* inp_, int istep, int istep0, int istep1,
                       _Tp* out_, int ostep, int ostep0, int ostep1,
@@ -92,11 +139,16 @@ typedef void (*transform_layout_func_t)(const void* inp, int istep, int istep0, 
                                         void* out, int ostep, int ostep0, int ostep1,
                                         int npix, int C0, int C1, int C);
 
-static void transform_layout(const Mat& inp, Mat& out, DataLayout inplayout)
+void transformLayout(const Mat& inp, Mat& out,
+                     DataLayout outlayout,
+                     DataLayout defaultLayout,
+                     int C0)
 {
-    MatShape inpshape = inp.shape();
-    MatShape outshape = out.shape();
-    DataLayout outlayout = outshape.layout;
+    MatShape inpshape = inp.size;
+    MatShape outshape = inferTransformLayoutShape(inpshape, outlayout, defaultLayout, C0);
+    DataLayout inplayout = inpshape.layout;
+    
+    out.fit(outshape, inp.type());
 
     if (inp.empty())
         return;
@@ -237,53 +289,10 @@ public:
         temptypes.clear();
     }
 
-    DataLayout getInputLayout(DataLayout inplayout) const
-    {
-        return inplayout != DATA_LAYOUT_UNKNOWN ? inplayout : getNetImpl(this)->originalLayout;
-    }
-
     MatShape inferShape(const MatShape& inpshape_) const
     {
-        MatShape inpshape = inpshape_;
-        int ndims = inpshape.dims;
-        DataLayout inplayout = getInputLayout(inpshape.layout);
-        inpshape.layout = inplayout;
-        CV_Assert(layout == DATA_LAYOUT_BLOCK || layout == DATA_LAYOUT_NCHW || layout == DATA_LAYOUT_NHWC);
-        CV_Assert(inplayout == DATA_LAYOUT_BLOCK || inplayout == DATA_LAYOUT_NCHW || inplayout == DATA_LAYOUT_NHWC);
-
-        if (layout == inplayout) {
-            // identity
-            CV_Assert(layout != DATA_LAYOUT_BLOCK || C0 == inpshape[ndims-1]);
-            return inpshape;
-        }
-
-        // non-block => block
-        if (layout == DATA_LAYOUT_BLOCK)
-            return inpshape.toBlock(C0);
-
-        // block => non-block
-        if (inplayout == DATA_LAYOUT_BLOCK)
-            return inpshape.fromBlock(layout);
-
-        MatShape outshape = inpshape;
-        outshape.layout = layout;
-
-        // NHWC => NCHW
-        if (layout == DATA_LAYOUT_NCHW) {
-            CV_Assert(inplayout == DATA_LAYOUT_NHWC);
-            int C = inpshape[ndims-1];
-            for (int i = 2; i < ndims; i++)
-                outshape[i] = inpshape[i-1];
-            outshape[1] = C;
-        } else {
-            // NCHW => NHWC
-            CV_Assert(layout == DATA_LAYOUT_NHWC && inplayout == DATA_LAYOUT_NCHW);
-            int C = inpshape[1];
-            for (int i = 2; i < ndims; i++)
-                outshape[i-1] = inpshape[i];
-            outshape[ndims-1] = C;
-        }
-        return outshape;
+        return inferTransformLayoutShape(inpshape_, layout,
+                                         getNetImpl(this)->originalLayout, C0);
     }
 
     virtual bool getMemoryShapes(const std::vector<MatShape>& inpshapes,
@@ -337,8 +346,7 @@ public:
 
     void runOp(const Mat& inp, Mat& out)
     {
-        DataLayout inplayout = getInputLayout(inp.size.layout);
-        transform_layout(inp, out, inplayout);
+        transformLayout(inp, out, layout, getNetImpl(this)->originalLayout, C0);
     }
 };
 

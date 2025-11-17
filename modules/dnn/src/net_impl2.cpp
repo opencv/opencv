@@ -842,9 +842,13 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     }
     strm_ << "\n  Layout: " << layoutToString(shape.layout) << "\n";
     if (dumpdata && !constArg) {
-        // [TODO] when we support block layout, block-layout tensor
-        // should be converted to the original layout before printing it
-        pprint(strm_, m, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
+        Mat temp;
+        if (m.size.layout == DATA_LAYOUT_BLOCK) {
+            transformLayout(m, temp, originalLayout, originalLayout, defaultC0);
+        } else {
+            temp = m;
+        }
+        pprint(strm_, temp, 0, PPRINT_CONTEXT, PPRINT_ALL_THRESHOLD, '[');
         strm_ << "\n";
     }
 }
