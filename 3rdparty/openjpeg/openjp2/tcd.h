@@ -141,6 +141,7 @@ typedef struct opj_tcd_cblk_dec {
     OPJ_UINT32 numchunksalloc;      /* Number of chunks item allocated */
     /* Decoded code-block. Only used for subtile decoding. Otherwise tilec->data is directly updated */
     OPJ_INT32* decoded_data;
+    OPJ_BOOL corrupted; /* whether the code block data is corrupted */
 } opj_tcd_cblk_dec_t;
 
 /** Precinct structure */
@@ -312,7 +313,7 @@ typedef struct opj_tcd_marker_info {
 /**
 Dump the content of a tcd structure
 */
-/*void tcd_dump(FILE *fd, opj_tcd_t *tcd, opj_tcd_image_t *img);*/ /* TODO MSD shoul use the new v2 structures */
+/*void tcd_dump(FILE *fd, opj_tcd_t *tcd, opj_tcd_image_t *img);*/ /* TODO MSD should use the new v2 structures */
 
 /**
 Create a new TCD handle
@@ -443,7 +444,7 @@ OPJ_BOOL opj_tcd_update_tile_data(opj_tcd_t *p_tcd,
 OPJ_SIZE_T opj_tcd_get_encoder_input_buffer_size(opj_tcd_t *p_tcd);
 
 /**
- * Initialize the tile coder and may reuse some meory.
+ * Initialize the tile coder and may reuse some memory.
  *
  * @param   p_tcd       TCD handle.
  * @param   p_tile_no   current tile index to encode.
@@ -491,7 +492,7 @@ void opj_tcd_reinit_segment(opj_tcd_seg_t* seg);
  * @param y0     Upper left y in subband coordinates
  * @param x1     Lower right x in subband coordinates
  * @param y1     Lower right y in subband coordinates
- * @return OPJ_TRUE whether the sub-band region contributs to the area of
+ * @return OPJ_TRUE whether the sub-band region contributes to the area of
  *                  interest.
  */
 OPJ_BOOL opj_tcd_is_subband_area_of_interest(opj_tcd_t *tcd,

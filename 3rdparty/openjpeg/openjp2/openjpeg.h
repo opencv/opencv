@@ -546,7 +546,7 @@ typedef struct opj_cparameters {
 } opj_cparameters_t;
 
 #define OPJ_DPARAMETERS_IGNORE_PCLR_CMAP_CDEF_FLAG  0x0001
-#define OPJ_DPARAMETERS_DUMP_FLAG 0x0002
+#define OPJ_DPARAMETERS_DUMP_FLAG                   0x0002
 
 /**
  * Decompression parameters
@@ -772,7 +772,7 @@ typedef struct opj_packet_info {
     OPJ_OFF_T end_ph_pos;
     /** packet end position */
     OPJ_OFF_T end_pos;
-    /** packet distorsion */
+    /** packet distortion */
     double disto;
 } opj_packet_info_t;
 
@@ -1348,9 +1348,13 @@ OPJ_API OPJ_BOOL OPJ_CALLCONV opj_setup_decoder(opj_codec_t *p_codec,
         opj_dparameters_t *parameters);
 
 /**
- * Set strict decoding parameter for this decoder.  If strict decoding is enabled, partial bit
- * streams will fail to decode.  If strict decoding is disabled, the decoder will decode partial
- * bitstreams as much as possible without erroring
+ * Set strict decoding parameter for this decoder.
+ * If strict decoding is enabled, partial bit streams will fail to decode, and
+ * the check for invalid TPSOT values added in https://github.com/uclouvain/openjpeg/pull/514
+ * will be disabled.
+ * If strict decoding is disabled, the decoder will decode partial
+ * bitstreams as much as possible without erroring, and the TPSOT fixing logic
+ * will be enabled.
  *
  * @param p_codec       decompressor handler
  * @param strict        OPJ_TRUE to enable strict decoding, OPJ_FALSE to disable

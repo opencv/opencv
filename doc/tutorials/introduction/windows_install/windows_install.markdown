@@ -9,6 +9,8 @@ Installation in Windows {#tutorial_windows_install}
 | Original author | Bernát Gábor |
 | Compatibility | OpenCV >= 3.0 |
 
+@tableofcontents
+
 @warning
 This tutorial can contain obsolete information.
 
@@ -377,6 +379,9 @@ our OpenCV library that we use in our projects. Start up a command window and en
 
     setx OpenCV_DIR D:\OpenCV\build\x64\vc17     (suggested for Visual Studio 2022 - 64 bit Windows)
     setx OpenCV_DIR D:\OpenCV\build\x86\vc17     (suggested for Visual Studio 2022 - 32 bit Windows)
+
+    setx OpenCV_DIR D:\OpenCV\build\x64\vc18     (suggested for Visual Studio 2026 - 64 bit Windows)
+    setx OpenCV_DIR D:\OpenCV\build\x86\vc18     (suggested for Visual Studio 2026 - 32 bit Windows)
 @endcode
 Here the directory is where you have your OpenCV binaries (*extracted* or *built*). You can have
 different platform (e.g. x64 instead of x86) or compiler type, so substitute appropriate value.

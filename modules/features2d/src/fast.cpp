@@ -49,8 +49,6 @@ The references are:
 #include "opencv2/core/hal/intrin.hpp"
 #include "opencv2/core/utils/buffer_area.private.hpp"
 
-#include "opencv2/core/openvx/ovx_defs.hpp"
-
 namespace cv
 {
 
@@ -176,8 +174,20 @@ void FAST_t(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bo
                                     if(nonmax_suppression)
                                     {
                                         short d[25];
-                                        for (int _k = 0; _k < 25; _k++)
+                                        int _k = 0;
+                                    #if CV_ENABLE_UNROLLED
+                                        for (; _k + 4 < 25; _k += 5)
+                                        {
+                                            d[_k]     = (short)(ptr[k] - ptr[k + pixel[_k]]);
+                                            d[_k + 1] = (short)(ptr[k] - ptr[k + pixel[_k + 1]]);
+                                            d[_k + 2] = (short)(ptr[k] - ptr[k + pixel[_k + 2]]);
+                                            d[_k + 3] = (short)(ptr[k] - ptr[k + pixel[_k + 3]]);
+                                            d[_k + 4] = (short)(ptr[k] - ptr[k + pixel[_k + 4]]);
+                                        }
+                                    #else
+                                        for ( ; _k < 25; _k++)
                                             d[_k] = (short)(ptr[k] - ptr[k + pixel[_k]]);
+                                    #endif
 
                                         v_int16x8 a0, b0, a1, b1;
                                         a0 = b0 = a1 = b1 = v_load(d + 8);
@@ -370,72 +380,6 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 }
 #endif
 
-
-#ifdef HAVE_OPENVX
-namespace ovx {
-    template <> inline bool skipSmallImages<VX_KERNEL_FAST_CORNERS>(int w, int h) { return w*h < 800 * 600; }
-}
-static bool openvx_FAST(InputArray _img, std::vector<KeyPoint>& keypoints,
-                        int _threshold, bool nonmaxSuppression, int type)
-{
-    using namespace ivx;
-
-    // Nonmax suppression is done differently in OpenCV than in OpenVX
-    // 9/16 is the only supported mode in OpenVX
-    if(nonmaxSuppression || type != FastFeatureDetector::TYPE_9_16)
-        return false;
-
-    Mat imgMat = _img.getMat();
-    if(imgMat.empty() || imgMat.type() != CV_8UC1)
-        return false;
-
-    if (ovx::skipSmallImages<VX_KERNEL_FAST_CORNERS>(imgMat.cols, imgMat.rows))
-        return false;
-
-    try
-    {
-        Context context = ovx::getOpenVXContext();
-        Image img = Image::createFromHandle(context, Image::matTypeToFormat(imgMat.type()),
-                                            Image::createAddressing(imgMat), (void*)imgMat.data);
-        ivx::Scalar threshold = ivx::Scalar::create<VX_TYPE_FLOAT32>(context, _threshold);
-        vx_size capacity = imgMat.cols * imgMat.rows;
-        Array corners = Array::create(context, VX_TYPE_KEYPOINT, capacity);
-
-        ivx::Scalar numCorners = ivx::Scalar::create<VX_TYPE_SIZE>(context, 0);
-
-        IVX_CHECK_STATUS(vxuFastCorners(context, img, threshold, (vx_bool)nonmaxSuppression, corners, numCorners));
-
-        size_t nPoints = numCorners.getValue<vx_size>();
-        keypoints.clear(); keypoints.reserve(nPoints);
-        std::vector<vx_keypoint_t> vxCorners;
-        corners.copyTo(vxCorners);
-        for(size_t i = 0; i < nPoints; i++)
-        {
-            vx_keypoint_t kp = vxCorners[i];
-            //if nonmaxSuppression is false, kp.strength is undefined
-            keypoints.push_back(KeyPoint((float)kp.x, (float)kp.y, 7.f, -1, kp.strength));
-        }
-
-#ifdef VX_VERSION_1_1
-        //we should take user memory back before release
-        //(it's not done automatically according to standard)
-        img.swapHandle();
-#endif
-    }
-    catch (const RuntimeError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-    catch (const WrapperError & e)
-    {
-        VX_DbgThrow(e.what());
-    }
-
-    return true;
-}
-
-#endif
-
 static inline int hal_FAST(cv::Mat& src, std::vector<KeyPoint>& keypoints, int threshold, bool nonmax_suppression, FastFeatureDetector::DetectorType type)
 {
     if (threshold > 20)
@@ -497,18 +441,31 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
 {
     CV_INSTRUMENT_REGION();
 
+    const size_t max_fast_features = std::max(_img.total()/100, size_t(1000)); // Simple heuristic that depends on resolution.
+
     CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
-               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
+               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, (int)max_fast_features));
 
     cv::Mat img = _img.getMat();
     CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
 
-    size_t keypoints_count;
-    CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
-             (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
-
-    CV_OVX_RUN(true,
-               openvx_FAST(_img, keypoints, threshold, nonmax_suppression, type))
+    size_t keypoints_count = 1;
+    keypoints.clear();
+    KeyPoint* kps = (KeyPoint*)malloc(sizeof(KeyPoint) * keypoints_count);
+    int hal_ret = cv_hal_FASTv2(img.data, img.step, img.cols, img.rows, (void**)&kps,
+                                &keypoints_count, threshold, nonmax_suppression, type, realloc);
+    if (hal_ret == CV_HAL_ERROR_OK) {
+        keypoints.assign(kps, kps + keypoints_count);
+        free(kps);
+        return;
+    } else {
+        free(kps);
+        keypoints_count = max_fast_features;
+        keypoints.clear();
+        keypoints.resize(keypoints_count);
+        CALL_HAL(fast, cv_hal_FAST, img.data, img.step, img.cols, img.rows,
+                (uchar*)(keypoints.data()), &keypoints_count, threshold, nonmax_suppression, type);
+    }
 
     switch(type) {
     case FastFeatureDetector::TYPE_5_8:

@@ -130,20 +130,27 @@ public:
 
     ImageDecoder newDecoder() const CV_OVERRIDE;
 
-protected:
+private:
     static void readDataFromBuf(void* png_ptr, uchar* dst, size_t size);
     static void info_fn(png_structp png_ptr, png_infop info_ptr);
     static void row_fn(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass);
-    bool processing_start(void* frame_ptr, const Mat& img);
-    bool processing_finish();
-    void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, int channels);
-    size_t read_from_io(void* _Buffer, size_t _ElementSize, size_t _ElementCount);
+    CV_NODISCARD_STD bool processing_start(void* frame_ptr, const Mat& img);
+    CV_NODISCARD_STD bool processing_finish();
+    void compose_frame(std::vector<png_bytep>& rows_dst, const std::vector<png_bytep>& rows_src, unsigned char bop, uint32_t x, uint32_t y, uint32_t w, uint32_t h, Mat& img);
+    /**
+     * @brief Reads data from an I/O source into the provided buffer.
+     * @param buffer Pointer to the buffer where the data will be stored.
+     * @param num_bytes Number of bytes to read into the buffer.
+     * @return true if the operation is successful, false otherwise.
+     */
+    CV_NODISCARD_STD bool readFromStreamOrBuffer(void* buffer, size_t num_bytes);
     uint32_t  read_chunk(Chunk& chunk);
+    CV_NODISCARD_STD bool InitPngPtr();
+    void ClearPngPtr();
 
+    png_structp m_png_ptr = nullptr; // pointer to decompression structure
+    png_infop m_info_ptr = nullptr; // pointer to image information structure
     int   m_bit_depth;
-    void* m_png_ptr;  // pointer to decompression structure
-    void* m_info_ptr; // pointer to image information structure
-    void* m_end_info; // pointer to one more image information structure
     FILE* m_f;
     int   m_color_type;
     Chunk m_chunkIHDR;
@@ -176,7 +183,6 @@ public:
 
     bool isFormatSupported( int depth ) const CV_OVERRIDE;
     bool write( const Mat& img, const std::vector<int>& params ) CV_OVERRIDE;
-    bool writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params) CV_OVERRIDE;
     bool writeanimation(const Animation& animinfo, const std::vector<int>& params) CV_OVERRIDE;
 
     ImageEncoder newEncoder() const CV_OVERRIDE;
@@ -184,7 +190,24 @@ public:
 protected:
     static void writeDataToBuf(void* png_ptr, unsigned char* src, size_t size);
     static void flushBuf(void* png_ptr);
-    size_t write_to_io(void const* _Buffer, size_t  _ElementSize, size_t _ElementCount, FILE* _Stream);
+    /**
+    * @brief Writes data to an output destination, either a file stream or an in-memory buffer.
+    *
+    * This function handles two output scenarios:
+    * 1. If a file stream is provided, the data is written to the stream using `fwrite`.
+    * 2. If `stream` is null, the data is written to an in-memory buffer (`m_buf`), which is resized as needed.
+    *
+    * @param buffer Pointer to the data to be written.
+    * @param num_bytes The number of bytes to be written.
+    * @param stream Pointer to the file stream for writing. If null, the data is written to the in-memory buffer.
+    * @return The number of bytes successfully written.
+    *         - For file-based writes, this is the number of bytes written to the stream.
+    *         - For buffer-based writes, this is the total number of bytes added to the buffer.
+    *
+    * @throws std::runtime_error If the in-memory buffer (`m_buf`) exceeds its maximum capacity.
+    * @note If `num_bytes` is 0 or `buffer` is null, the function returns 0.
+    */
+    size_t writeToStreamOrBuffer(void const* buffer, size_t  num_bytes, FILE* stream);
 
 private:
     void writeChunk(FILE* f, const char* name, unsigned char* data, uint32_t length);
@@ -208,6 +231,10 @@ private:
     unsigned char  trns[256];
     uint32_t       palsize, trnssize;
     uint32_t       next_seq_num;
+    int            m_compression_level;
+    int            m_compression_strategy;
+    int            m_filter;
+    bool           m_isBilevel;
 };
 
 }

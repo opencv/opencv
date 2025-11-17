@@ -68,13 +68,20 @@ if(DEFINED OPENCV_PYTHON_INSTALL_PATH)
   endif()
   set(CMAKE_PYTHON_BINARIES_PATH "${CMAKE_PYTHON_BINARIES_INSTALL_PATH}")
   if (WIN32 AND HAVE_CUDA)
+    set(_cuda_bin_dir "bin")
     if (ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
       if (DEFINED CUDAToolkit_LIBRARY_ROOT)
-        list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDAToolkit_LIBRARY_ROOT}'), 'bin')")
+        if(DEFINED CUDAToolkit_VERSION_MAJOR AND CUDAToolkit_VERSION_MAJOR GREATER_EQUAL 13)
+          set(_cuda_bin_dir "bin/x64")
+        endif()
+        list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDAToolkit_LIBRARY_ROOT}'), '${_cuda_bin_dir}')")
       endif()
     else()
       if (DEFINED CUDA_TOOLKIT_ROOT_DIR)
-        list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDA_TOOLKIT_ROOT_DIR}'), 'bin')")
+        if(DEFINED CUDA_VERSION_MAJOR AND CUDA_VERSION_MAJOR GREATER_EQUAL 13)
+          set(_cuda_bin_dir "bin/x64")
+        endif()
+        list(APPEND CMAKE_PYTHON_BINARIES_PATH "os.path.join(os.getenv('CUDA_PATH', '${CUDA_TOOLKIT_ROOT_DIR}'), '${_cuda_bin_dir}')")
       endif()
     endif()
   endif()
@@ -139,6 +146,7 @@ if(${PYTHON}_VERSION_STRING VERSION_GREATER "3.6" AND PYTHON_DEFAULT_VERSION VER
   # halts on hard error.
   add_custom_command(
     TARGET copy_opencv_typing_stubs
+    POST_BUILD
     COMMAND ${PYTHON_DEFAULT_EXECUTABLE} ${PYTHON_SOURCE_DIR}/src2/copy_typings_stubs_on_success.py
             --stubs_dir ${OPENCV_PYTHON_BINDINGS_DIR}/cv2
             --output_dir ${__loader_path}/cv2

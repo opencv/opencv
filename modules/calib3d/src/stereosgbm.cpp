@@ -508,6 +508,9 @@ static void computeDisparitySGBM( const Mat& img1, const Mat& img2,
     int SW2 = params.calcSADWindowSize().width/2, SH2 = params.calcSADWindowSize().height/2;
     int npasses = params.isFullDP() ? 2 : 1;
 
+    CV_CheckGT(width - (params.minDisparity + params.numDisparities), params.calcSADWindowSize().width/2,
+     "Your input images are too small for your window size and max disparity, and will result in non-deterministic SGBM results");
+
     if( minX1 >= maxX1 )
     {
         disp1 = Scalar::all(INVALID_DISP_SCALED);
@@ -2345,21 +2348,33 @@ void filterSpecklesImpl(cv::Mat& img, int newVal, int maxSpeckleSize, int maxDif
     using namespace cv;
 
     int width = img.cols, height = img.rows, npixels = width*height;
-    size_t bufSize = npixels*(int)(sizeof(Point2s) + sizeof(int) + sizeof(uchar));
+    // space allocation for:
+    // labels : npixels * sizeof(int)
+    // wbuf   : npixels * sizeof(Point2s)
+    // rtype  : (npixels + 1) * sizeof(uchar)
+    size_t bufSize = npixels * sizeof(int)            // for labels
+                     + npixels * sizeof(Point2s)      // for wavefront buffer (wbuf)
+                     + (npixels + 1) * sizeof(uchar); // for region type (rtype)
     if( !_buf.isContinuous() || _buf.empty() || _buf.cols*_buf.rows*_buf.elemSize() < bufSize )
         _buf.reserveBuffer(bufSize);
 
     uchar* buf = _buf.ptr();
     int i, j, dstep = (int)(img.step/sizeof(T));
+
+    // store labels and their corresponding region types
     int* labels = (int*)buf;
     buf += npixels*sizeof(labels[0]);
+    // store wavefront
     Point2s* wbuf = (Point2s*)buf;
     buf += npixels*sizeof(wbuf[0]);
+    // store region type
     uchar* rtype = (uchar*)buf;
+    buf += (npixels + 1) * sizeof(rtype[0]);
     int curlabel = 0;
 
-    // clear out label assignments
+    // clear out label and rtype buffers
     memset(labels, 0, npixels*sizeof(labels[0]));
+    memset(rtype, 0, (npixels + 1)*sizeof(rtype[0]));
 
     for( i = 0; i < height; i++ )
     {

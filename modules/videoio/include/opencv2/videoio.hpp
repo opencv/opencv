@@ -128,7 +128,7 @@ enum VideoCaptureAPIs {
        CAP_INTEL_MFX    = 2300,         //!< Intel MediaSDK
        CAP_XINE         = 2400,         //!< XINE engine (Linux)
        CAP_UEYE         = 2500,         //!< uEye Camera API
-       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
+       CAP_OBSENSOR     = 2600,         //!< For Orbbec 3D-Sensor device/module (Astra+, Femto, Astra2, Gemini2, Gemini2L, Gemini2XL, Gemini330, Femto Mega) attention: Astra2 cameras currently only support Windows and Linux kernel versions no higher than 4.15, and higher versions of Linux kernel may have exceptions.
      };
 
 
@@ -168,7 +168,7 @@ enum VideoCaptureProperties {
        CAP_PROP_TRIGGER       =24,
        CAP_PROP_TRIGGER_DELAY =25,
        CAP_PROP_WHITE_BALANCE_RED_V =26,
-       CAP_PROP_ZOOM          =27,
+       CAP_PROP_ZOOM          =27, //!< Android: May switch physical cameras/lenses. Factor and range are hardware-dependent.
        CAP_PROP_FOCUS         =28,
        CAP_PROP_GUID          =29,
        CAP_PROP_ISO_SPEED     =30,
@@ -268,6 +268,7 @@ enum VideoAccelerationType
     VIDEO_ACCELERATION_D3D11    =  2,  //!< DirectX 11
     VIDEO_ACCELERATION_VAAPI    =  3,  //!< VAAPI
     VIDEO_ACCELERATION_MFX      =  4,  //!< libmfx (Intel MediaSDK/oneVPL)
+    VIDEO_ACCELERATION_DRM       =  5,  //!< Raspberry Pi V4
 };
 
 //! @} Hardware acceleration support
@@ -713,6 +714,19 @@ enum VideoCaptureOBSensorProperties{
     CAP_PROP_OBSENSOR_INTRINSIC_FY=26002,
     CAP_PROP_OBSENSOR_INTRINSIC_CX=26003,
     CAP_PROP_OBSENSOR_INTRINSIC_CY=26004,
+    CAP_PROP_OBSENSOR_RGB_POS_MSEC=26005,
+    CAP_PROP_OBSENSOR_DEPTH_POS_MSEC=26006,
+    CAP_PROP_OBSENSOR_DEPTH_WIDTH=26007,
+    CAP_PROP_OBSENSOR_DEPTH_HEIGHT=26008,
+    CAP_PROP_OBSENSOR_DEPTH_FPS=26009,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K1=26010,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K2=26011,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K3=26012,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K4=26013,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K5=26014,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_K6=26015,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_P1=26016,
+    CAP_PROP_OBSENSOR_COLOR_DISTORTION_P2=26017
 };
 
 //! @} OBSENSOR
@@ -726,8 +740,14 @@ class CV_EXPORTS_W IStreamReader
 public:
     virtual ~IStreamReader();
 
-    /** @brief Read bytes from stream */
-    virtual long long read(char* buffer, long long size) = 0;
+    /** @brief Read bytes from stream
+     *
+     * @param buffer already allocated buffer of at least @p size bytes
+     * @param size maximum number of bytes to read
+     *
+     * @return actual number of read bytes
+     */
+    CV_WRAP virtual long long read(char* buffer, long long size) = 0;
 
     /** @brief Sets the stream position
      *
@@ -736,7 +756,7 @@ public:
      *
      * @see fseek
      */
-    virtual long long seek(long long offset, int origin) = 0;
+    CV_WRAP virtual long long seek(long long offset, int origin) = 0;
 };
 
 class IVideoCapture;

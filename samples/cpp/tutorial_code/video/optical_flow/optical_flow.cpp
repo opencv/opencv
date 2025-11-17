@@ -46,7 +46,7 @@ int main(int argc, char **argv)
         int r = rng.uniform(0, 256);
         int g = rng.uniform(0, 256);
         int b = rng.uniform(0, 256);
-        colors.push_back(Scalar(r,g,b));
+        colors.emplace_back(r,g,b);
     }
 
     Mat old_frame, old_gray;

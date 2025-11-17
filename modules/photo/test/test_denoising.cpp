@@ -165,4 +165,33 @@ TEST(Photo_Denoising, speed)
     printf("execution time: %gms\n", t*1000./getTickFrequency());
 }
 
+// Related issue : https://github.com/opencv/opencv/issues/26582
+TEST(Photo_DenoisingGrayscaleMulti16bitL1, regression)
+{
+    const int imgs_count = 3;
+    string folder = string(cvtest::TS::ptr()->get_data_path()) + "denoising/";
+
+    vector<Mat> original_8u(imgs_count);
+    vector<Mat> original_16u(imgs_count);
+    for (int i = 0; i < imgs_count; i++)
+    {
+        string original_path = format("%slena_noised_gaussian_sigma=20_multi_%d.png", folder.c_str(), i);
+        original_8u[i] = imread(original_path, IMREAD_GRAYSCALE);
+        ASSERT_FALSE(original_8u[i].empty()) << "Could not load input image " << original_path;
+        original_8u[i].convertTo(original_16u[i], CV_16U);
+    }
+
+    Mat result_8u, result_16u;
+    std::vector<float> h = {15};
+    fastNlMeansDenoisingMulti(original_8u, result_8u, /*imgToDenoiseIndex*/ imgs_count / 2, /*temporalWindowSize*/ imgs_count, h, 7, 21, NORM_L1);
+    fastNlMeansDenoisingMulti(original_16u, result_16u, /*imgToDenoiseIndex*/ imgs_count / 2, /*temporalWindowSize*/ imgs_count, h, 7, 21, NORM_L1);
+    DUMP(result_8u, "8u.res.png");
+    DUMP(result_16u, "16u.res.png");
+
+    cv::Mat expected;
+    result_8u.convertTo(expected, CV_16U);
+
+    EXPECT_MAT_NEAR(result_16u, expected, 1);
+}
+
 }} // namespace

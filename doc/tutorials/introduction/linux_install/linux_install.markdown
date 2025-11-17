@@ -1,7 +1,8 @@
 Installation in Linux {#tutorial_linux_install}
 =====================
 
-@next_tutorial{tutorial_linux_gdb_pretty_printer}
+@prev_tutorial{tutorial_env_reference}
+@next_tutorial{tutorial_oneapi_install}
 
 |    |    |
 | -: | :- |

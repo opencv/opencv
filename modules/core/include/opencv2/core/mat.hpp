@@ -372,6 +372,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    Mat reinterpret( int type ) const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -1236,8 +1237,13 @@ public:
 
     When the operation mask is specified, if the Mat::create call shown above reallocates the matrix,
     the newly allocated matrix is initialized with all zeros before copying the data.
+
+    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use copyAt() .
+
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
+
+    @sa copyAt
      */
     void copyTo( OutputArray m ) const;
 
@@ -1248,6 +1254,30 @@ public:
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
     */
     void copyTo( OutputArray m, InputArray mask ) const;
+
+    /** @brief Overwrites the existing matrix
+
+    This method writes existing matrix data, just like copyTo().
+    But if it does not have a proper size or type before the operation, an exception is thrown.
+    This function is helpful to update ROI in an existing matrix.
+
+    If (re)allocation of destination memory is necessary, use copyTo() .
+
+    @param m Destination matrix.
+    If it does not have a proper size or type before the operation, an exception is thrown.
+
+    @sa copyTo
+
+     */
+    void copyAt( OutputArray m ) const;
+
+    /** @overload
+    @param m Destination matrix.
+    If it does not have a proper size or type before the operation, an exception is thrown.
+    @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
+    elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
+    */
+    void copyAt( OutputArray m, InputArray mask ) const;
 
     /** @brief Converts an array to another data type with optional scaling.
 
@@ -1338,6 +1368,15 @@ public:
      * the original sizes in those dimensions are presumed.
      */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
+
+    /** @brief Reset the type of matrix.
+
+    The methods reset the data type of matrix. If the new type and the old type of the matrix
+    have the same element size, the current buffer can be reused. The method needs to consider whether the
+    current mat is a submatrix or has any references.
+    @param type New data type.
+     */
+    Mat reinterpret( int type ) const;
 
     /** @brief Transposes a matrix.
 
@@ -2472,8 +2511,8 @@ public:
     UMat(const UMat& m, const Range* ranges);
     UMat(const UMat& m, const std::vector<Range>& ranges);
 
-    // FIXIT copyData=false is not implemented, drop this in favor of cv::Mat (OpenCV 5.0)
-    //! builds matrix from std::vector with or without copying the data
+    //! builds matrix from std::vector. The data is always copied. The copyData
+    //! parameter is deprecated and will be removed in OpenCV 5.0.
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
 
     //! destructor - calls release()
@@ -3556,7 +3595,7 @@ public:
 /** @brief Matrix expression representation
 @anchor MatrixExpressions
 This is a list of implemented matrix operations that can be combined in arbitrary complex
-expressions (here A, B stand for matrices ( Mat ), s for a scalar ( Scalar ), alpha for a
+expressions (here A, B stand for matrices ( cv::Mat ), s for a cv::Scalar, alpha for a
 real-valued scalar ( double )):
 -   Addition, subtraction, negation: `A+B`, `A-B`, `A+s`, `A-s`, `s+A`, `s-A`, `-A`
 -   Scaling: `A*alpha`
@@ -3571,13 +3610,13 @@ real-valued scalar ( double )):
     0.
 -   Bitwise logical operations: `A logicop B`, `A logicop s`, `s logicop A`, `~A`, where *logicop* is one of
   `&`, `|`, `^`.
--   Element-wise minimum and maximum: `min(A, B)`, `min(A, alpha)`, `max(A, B)`, `max(A, alpha)`
--   Element-wise absolute value: `abs(A)`
+-   Element-wise minimum and maximum: cv::min(A, B), cv::min(A, alpha), cv::max(A, B), cv::max(A, alpha)
+-   Element-wise absolute value: cv::abs(A)
 -   Cross-product, dot-product: `A.cross(B)`, `A.dot(B)`
--   Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as norm,
-    mean, sum, countNonZero, trace, determinant, repeat, and others.
+-   Any function of matrix or matrices and scalars that returns a matrix or a scalar, such as cv::norm,
+    cv::mean, cv::sum, cv::countNonZero, cv::trace, cv::determinant, cv::repeat, and others.
 -   Matrix initializers ( Mat::eye(), Mat::zeros(), Mat::ones() ), matrix comma-separated
-    initializers, matrix constructors and operators that extract sub-matrices (see Mat description).
+    initializers, matrix constructors and operators that extract sub-matrices (see cv::Mat description).
 -   Mat_<destination_type>() constructors to cast the result to the proper type.
 @note Comma-separated initializers and probably some other operations may require additional
 explicit Mat() or Mat_<T>() constructor calls to resolve a possible ambiguity.

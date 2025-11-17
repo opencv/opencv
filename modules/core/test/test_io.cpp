@@ -611,10 +611,8 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         {   /* init */
 
             /* a normal mat */
-            _2d_out = cv::Mat(10, 20, CV_8UC3, cvScalar(1U, 2U, 127U));
-            for (int i = 0; i < _2d_out.rows; ++i)
-                for (int j = 0; j < _2d_out.cols; ++j)
-                    _2d_out.at<cv::Vec3b>(i, j)[1] = (i + j) % 256;
+            _2d_out = Mat(10, 20, CV_8UC3);
+            cv::randu(_2d_out, 0U, 255U);
 
             /* a 4d mat */
             const int Size[] = {4, 4, 4, 4};
@@ -731,29 +729,7 @@ static void test_filestorage_basic(int write_flags, const char* suffix_name, boo
         EXPECT_EQ(_em_in.depth(), _em_out.depth());
         EXPECT_TRUE(_em_in.empty());
 
-        ASSERT_EQ(_2d_in.rows   , _2d_out.rows);
-        ASSERT_EQ(_2d_in.cols   , _2d_out.cols);
-        ASSERT_EQ(_2d_in.dims   , _2d_out.dims);
-        ASSERT_EQ(_2d_in.depth(), _2d_out.depth());
-
-        errors = 0;
-        for(int i = 0; i < _2d_out.rows; ++i)
-        {
-            for (int j = 0; j < _2d_out.cols; ++j)
-            {
-                EXPECT_EQ(_2d_in.at<cv::Vec3b>(i, j), _2d_out.at<cv::Vec3b>(i, j));
-                if (::testing::Test::HasNonfatalFailure())
-                {
-                    printf("i = %d, j = %d\n", i, j);
-                    errors++;
-                }
-                if (errors >= 3)
-                {
-                    i = _2d_out.rows;
-                    break;
-                }
-            }
-        }
+        EXPECT_MAT_NEAR(_2d_in, _2d_out, 0);
 
         ASSERT_EQ(_nd_in.rows   , _nd_out.rows);
         ASSERT_EQ(_nd_in.cols   , _nd_out.cols);
@@ -1569,6 +1545,53 @@ TEST(Core_InputOutput, FileStorage_format_yml_gz)
     EXPECT_EQ(FileStorage::FORMAT_YAML, fs.getFormat());
 }
 
+TEST(Core_InputOutput, FileStorage_json_null_object)
+{
+    std::string test =
+        "{ "
+            "\"padding\": null,"
+            "\"truncation\": null,"
+            "\"version\": \"1.0\""
+        "}";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs["padding"].isNone());
+    ASSERT_TRUE(fs["truncation"].isNone());
+    ASSERT_TRUE(fs["version"].isString());
+
+    ASSERT_EQ(fs["padding"].name(), "padding");
+    ASSERT_EQ(fs["truncation"].name(), "truncation");
+    ASSERT_EQ(fs["version"].name(), "version");
+
+    ASSERT_EQ(fs["padding"].string(), "");
+    ASSERT_EQ(fs["truncation"].string(), "");
+    ASSERT_EQ(fs["version"].string(), "1.0");
+    fs.release();
+}
+
+TEST(Core_InputOutput, FileStorage_json_key_backslash)
+{
+    // equivalent to json text {"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852}
+    std::string test = R"({"\"":1,"\\":59,"Ġ\"":366,"\\\\":6852})";
+    FileStorage fs(test, FileStorage::READ | FileStorage::MEMORY);
+
+    ASSERT_TRUE(fs[R"(")"].isNamed());  // = "\""
+    ASSERT_TRUE(fs[R"(\)"].isNamed());  // = "\\"
+    ASSERT_TRUE(fs[R"(Ġ")"].isNamed()); // = "Ġ\""
+    ASSERT_TRUE(fs[R"(\\)"].isNamed()); // = "\\\\"
+
+    ASSERT_EQ(fs[R"(")"].name(), R"(")");
+    ASSERT_EQ(fs[R"(\)"].name(), R"(\)");
+    ASSERT_EQ(fs[R"(Ġ")"].name(), R"(Ġ")");
+    ASSERT_EQ(fs[R"(\\)"].name(), R"(\\)");
+
+    ASSERT_EQ((int)fs[R"(")"], 1);
+    ASSERT_EQ((int)fs[R"(\)"], 59);
+    ASSERT_EQ((int)fs[R"(Ġ")"], 366);
+    ASSERT_EQ((int)fs[R"(\\)"], 6852);
+    fs.release();
+}
+
 TEST(Core_InputOutput, FileStorage_json_named_nodes)
 {
     std::string test =
@@ -2001,6 +2024,64 @@ TEST(Core_InputOutput, FileStorage_invalid_attribute_value_regression_25946)
     EXPECT_ANY_THROW( fs.open(fileName, FileStorage::READ + FileStorage::FORMAT_XML) );
 
     ASSERT_EQ(0, std::remove(fileName.c_str()));
+}
+
+// see https://github.com/opencv/opencv/issues/26829
+TEST(Core_InputOutput, FileStorage_int64_26829)
+{
+    String content =
+        "%YAML:1.0\n"
+        "String1: string1\n"
+        "IntMin: -2147483648\n"
+        "String2: string2\n"
+        "Int64Min: -9223372036854775808\n"
+        "String3: string3\n"
+        "IntMax: 2147483647\n"
+        "String4: string4\n"
+        "Int64Max: 9223372036854775807\n"
+        "String5: string5\n";
+
+    FileStorage fs(content, FileStorage::READ | FileStorage::MEMORY);
+
+    {
+        std::string str;
+
+        fs["String1"] >> str;
+        EXPECT_EQ(str, "string1");
+
+        fs["String2"] >> str;
+        EXPECT_EQ(str, "string2");
+
+        fs["String3"] >> str;
+        EXPECT_EQ(str, "string3");
+
+        fs["String4"] >> str;
+        EXPECT_EQ(str, "string4");
+
+        fs["String5"] >> str;
+        EXPECT_EQ(str, "string5");
+    }
+
+    {
+        int value;
+
+        fs["IntMin"] >> value;
+        EXPECT_EQ(value, INT_MIN);
+
+        fs["IntMax"] >> value;
+        EXPECT_EQ(value, INT_MAX);
+    }
+
+
+    {
+        int64_t value;
+
+        fs["Int64Min"] >> value;
+        EXPECT_EQ(value, INT64_MIN);
+
+        fs["Int64Max"] >> value;
+        EXPECT_EQ(value, INT64_MAX);
+    }
 }
 
 template <typename T>

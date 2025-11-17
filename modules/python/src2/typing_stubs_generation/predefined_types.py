@@ -28,6 +28,7 @@ _PREDEFINED_TYPES = (
     PrimitiveTypeNode.int_("uint32_t"),
     PrimitiveTypeNode.int_("size_t"),
     PrimitiveTypeNode.int_("int64_t"),
+    PrimitiveTypeNode.int_("long long"),
     PrimitiveTypeNode.float_("float"),
     PrimitiveTypeNode.float_("double"),
     PrimitiveTypeNode.bool_("bool"),
@@ -54,8 +55,12 @@ _PREDEFINED_TYPES = (
                             doc="Required length is 2"),
     AliasTypeNode.sequence_("Size2f", PrimitiveTypeNode.float_(),
                             doc="Required length is 2"),
-    AliasTypeNode.sequence_("Scalar", PrimitiveTypeNode.float_(),
-                            doc="Required length is at most 4"),
+    AliasTypeNode.union_(
+        "Scalar",
+        items=(SequenceTypeNode("Scalar", PrimitiveTypeNode.float_()),
+               PrimitiveTypeNode.float_()),
+        doc="Max sequence length is at most 4"
+    ),
     AliasTypeNode.sequence_("Point", PrimitiveTypeNode.int_(),
                             doc="Required length is 2"),
     AliasTypeNode.ref_("Point2i", "Point"),
@@ -260,6 +265,7 @@ _PREDEFINED_TYPES = (
         export_name="ExtractMetaCallback",
         required_modules=("gapi",)
     ),
+    PrimitiveTypeNode("NativeByteArray", "bytes"),
 )
 
 PREDEFINED_TYPES = dict(

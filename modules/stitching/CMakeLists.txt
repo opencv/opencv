@@ -11,3 +11,7 @@ endif()
 ocv_define_module(stitching opencv_imgproc opencv_features2d opencv_calib3d opencv_flann
                   OPTIONAL opencv_cudaarithm opencv_cudawarping opencv_cudafeatures2d opencv_cudalegacy opencv_cudaimgproc ${STITCHING_CONTRIB_DEPS}
                   WRAP python)
+
+if(HAVE_CUDA AND ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
+  ocv_target_link_libraries(${the_module} PUBLIC "CUDA::cudart${CUDA_LIB_EXT}")
+endif()

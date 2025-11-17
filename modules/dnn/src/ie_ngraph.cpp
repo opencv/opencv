@@ -223,6 +223,9 @@ void InfEngineNgraphNet::init(Target targetId)
         case DNN_TARGET_FPGA:
             device_name = "FPGA";
             break;
+        case DNN_TARGET_NPU:
+            device_name = "NPU";
+            break;
         default:
             CV_Error(Error::StsNotImplemented, "Unknown target");
     };

@@ -267,10 +267,12 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         const int sz2 = 4;       // Scalar has 4 elements.
         m = Mat::zeros(sz2, 1, CV_64F);
 
+        // Fill the Mat with array elements
+        bool filled = true;
         const char *base_ptr = PyArray_BYTES(oarr);
-        for(int i = 0; i < sz; i++ )
+        for(int i = 0; i < sz && filled; i++ )
         {
-            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i);
+            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i); // new object
             if( PyInt_Check(oi) )
                 m.at<double>(i) = (double)PyInt_AsLong(oi);
             else if( PyFloat_Check(oi) )
@@ -279,10 +281,16 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             {
                 failmsg("%s has some non-numerical elements", info.name);
                 m.release();
-                return false;
+                filled = false;
             }
+
+            Py_DECREF(oi);
         }
-        return true;
+
+        if(needcopy)
+            Py_DECREF(o);
+
+        return filled;
     }
 
     // handle degenerate case

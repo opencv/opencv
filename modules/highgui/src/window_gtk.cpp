@@ -1917,7 +1917,7 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
     {
         GdkEventMotion* event_motion = (GdkEventMotion*)event;
 
-        cv_event = CV_EVENT_MOUSEMOVE;
+        cv_event = cv::EVENT_MOUSEMOVE;
         pt32f.x = cvFloor(event_motion->x);
         pt32f.y = cvFloor(event_motion->y);
         state = event_motion->state;
@@ -1933,21 +1933,21 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 
         if( event_button->type == GDK_BUTTON_PRESS )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONDOWN :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONDOWN :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONDOWN : 0;
+            cv_event = event_button->button == 1 ? cv::EVENT_LBUTTONDOWN :
+                       event_button->button == 2 ? cv::EVENT_MBUTTONDOWN :
+                       event_button->button == 3 ? cv::EVENT_RBUTTONDOWN : 0;
         }
         else if( event_button->type == GDK_BUTTON_RELEASE )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONUP :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONUP :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONUP : 0;
+            cv_event = event_button->button == 1 ? cv::EVENT_LBUTTONUP :
+                       event_button->button == 2 ? cv::EVENT_MBUTTONUP :
+                       event_button->button == 3 ? cv::EVENT_RBUTTONUP : 0;
         }
         else if( event_button->type == GDK_2BUTTON_PRESS )
         {
-            cv_event = event_button->button == 1 ? CV_EVENT_LBUTTONDBLCLK :
-                       event_button->button == 2 ? CV_EVENT_MBUTTONDBLCLK :
-                       event_button->button == 3 ? CV_EVENT_RBUTTONDBLCLK : 0;
+            cv_event = event_button->button == 1 ? cv::EVENT_LBUTTONDBLCLK :
+                       event_button->button == 2 ? cv::EVENT_MBUTTONDBLCLK :
+                       event_button->button == 3 ? cv::EVENT_RBUTTONDBLCLK : 0;
         }
         state = event_button->state;
     }
@@ -1960,9 +1960,9 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
 #if defined(GTK_VERSION3_4)
         // NOTE: in current implementation doesn't possible to put into callback function delta_x and delta_y separately
         double delta = (event->scroll.delta_x + event->scroll.delta_y);
-        cv_event   = (event->scroll.delta_x==0) ? CV_EVENT_MOUSEWHEEL : CV_EVENT_MOUSEHWHEEL;
+        cv_event   = (event->scroll.delta_x==0) ? cv::EVENT_MOUSEWHEEL : cv::EVENT_MOUSEHWHEEL;
 #else
-        cv_event = CV_EVENT_MOUSEWHEEL;
+        cv_event = cv::EVENT_MOUSEWHEEL;
 #endif //GTK_VERSION3_4
 
         state    = event->scroll.state;
@@ -1972,11 +1972,11 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         case GDK_SCROLL_SMOOTH: flags |= (((int)delta << 16));
             break;
 #endif //GTK_VERSION3_4
-        case GDK_SCROLL_LEFT:  cv_event = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_LEFT:  cv_event = cv::EVENT_MOUSEHWHEEL;
             /* FALLTHRU */
         case GDK_SCROLL_UP:    flags |= ~0xffff;
             break;
-        case GDK_SCROLL_RIGHT: cv_event = CV_EVENT_MOUSEHWHEEL;
+        case GDK_SCROLL_RIGHT: cv_event = cv::EVENT_MOUSEHWHEEL;
             /* FALLTHRU */
         case GDK_SCROLL_DOWN:  flags |= (((int)1 << 16));
             break;
@@ -2011,16 +2011,16 @@ static gboolean icvOnMouse( GtkWidget *widget, GdkEvent *event, gpointer user_da
         {
             // handle non-keyboard (mouse) modifiers first
             flags |=
-                BIT_MAP(state, GDK_BUTTON1_MASK, CV_EVENT_FLAG_LBUTTON)  |
-                BIT_MAP(state, GDK_BUTTON2_MASK, CV_EVENT_FLAG_MBUTTON)  |
-                BIT_MAP(state, GDK_BUTTON3_MASK, CV_EVENT_FLAG_RBUTTON);
+                BIT_MAP(state, GDK_BUTTON1_MASK, cv::EVENT_FLAG_LBUTTON)  |
+                BIT_MAP(state, GDK_BUTTON2_MASK, cv::EVENT_FLAG_MBUTTON)  |
+                BIT_MAP(state, GDK_BUTTON3_MASK, cv::EVENT_FLAG_RBUTTON);
             // keyboard modifiers
             state &= gtk_accelerator_get_default_mod_mask();
             flags |=
-                BIT_MAP(state, GDK_SHIFT_MASK,   CV_EVENT_FLAG_SHIFTKEY) |
-                BIT_MAP(state, GDK_CONTROL_MASK, CV_EVENT_FLAG_CTRLKEY)  |
-                BIT_MAP(state, GDK_MOD1_MASK,    CV_EVENT_FLAG_ALTKEY)   |
-                BIT_MAP(state, GDK_MOD2_MASK,    CV_EVENT_FLAG_ALTKEY);
+                BIT_MAP(state, GDK_SHIFT_MASK,   cv::EVENT_FLAG_SHIFTKEY) |
+                BIT_MAP(state, GDK_CONTROL_MASK, cv::EVENT_FLAG_CTRLKEY)  |
+                BIT_MAP(state, GDK_MOD1_MASK,    cv::EVENT_FLAG_ALTKEY)   |
+                BIT_MAP(state, GDK_MOD2_MASK,    cv::EVENT_FLAG_ALTKEY);
             window->on_mouse( cv_event, pt.x, pt.y, flags, window->on_mouse_param );
         }
     }

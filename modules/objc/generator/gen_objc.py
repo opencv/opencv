@@ -894,7 +894,8 @@ class ObjectiveCWrapperGenerator(object):
         namespace = self.classes[cname].namespace if cname in self.classes else "cv"
         return namespace.replace(".", "::") + "::"
 
-    def gen(self, srcfiles, module, output_path, output_objc_path, common_headers, manual_classes):
+    def gen(self, srcfiles, module, output_path, output_objc_path,
+            common_headers, manual_classes, preprocessor_definitions=None):
         self.clear()
         self.module = module
         self.objcmodule = make_objcmodule(module)
@@ -903,7 +904,10 @@ class ObjectiveCWrapperGenerator(object):
         extension_signatures = []
 
         # TODO: support UMat versions of declarations (implement UMat-wrapper for Java)
-        parser = hdr_parser.CppHeaderParser(generate_umat_decls=False)
+        parser = hdr_parser.CppHeaderParser(
+            generate_umat_decls=False,
+            preprocessor_definitions=preprocessor_definitions
+        )
 
         module_ci = self.add_class( ['class ' + self.Module, '', [], []]) # [ 'class/struct cname', ':bases', [modlist] [props] ]
         module_ci.header_import = module + '.hpp'
@@ -1662,7 +1666,9 @@ if __name__ == "__main__":
                h_files += [os.path.join(root, filename) for filename in fnmatch.filter(filenames, '*.h')]
                hpp_files += [os.path.join(root, filename) for filename in fnmatch.filter(filenames, '*.hpp')]
             srcfiles = h_files + hpp_files
-            srcfiles = [f for f in srcfiles if not re_bad.search(f.replace('\\', '/'))]
+            # Use relative paths to avoid being affected by the name of the parent directory.
+            # See https://github.com/opencv/opencv/issues/26712
+            srcfiles = [f for f in srcfiles if not re_bad.search(os.path.relpath(f, module_location).replace('\\', '/'))]
         logging.info("\nFiles (%d):\n%s", len(srcfiles), pformat(srcfiles))
 
         common_headers_fname = os.path.join(misc_location, 'filelist_common')
@@ -1713,7 +1719,9 @@ if __name__ == "__main__":
         manual_classes = [x for x in [x[x.rfind('/')+1:-2] for x in [x for x in copied_files if x.endswith('.h')]] if x in type_dict]
 
         if len(srcfiles) > 0:
-            generator.gen(srcfiles, module, dstdir, objc_base_path, common_headers, manual_classes)
+            generator.gen(srcfiles, module, dstdir, objc_base_path,
+                          common_headers, manual_classes,
+                          config.get("preprocessor_definitions"))
         else:
             logging.info("No generated code for module: %s", module)
     generator.finalize(args.target, objc_base_path, objc_build_dir)

@@ -256,7 +256,52 @@ TEST_F(fisheyeTest, solvePnP)
     bool converged = cv::fisheye::solvePnP(obj_points, img_points, this->K, this->D, rvec_pred, tvec_pred);
     EXPECT_MAT_NEAR(rvec, rvec_pred, 1e-6);
     EXPECT_MAT_NEAR(this->T, tvec_pred, 1e-6);
+    ASSERT_TRUE(converged);
+}
 
+TEST_F(fisheyeTest, solvePnPRansac)
+{
+    const int inliers_n = 16;
+    const int outliers_n = 4;
+    const bool use_extrinsic_guess = false;
+    const int iterations_count = 100;
+    const float reprojection_error = 1.0;
+    const double confidence = 0.99;
+
+    cv::Mat rvec;
+    cv::Rodrigues(this->R, rvec);
+
+    // inliers
+    cv::Mat inlier_obj_points(1, inliers_n, CV_64FC3);
+    theRNG().fill(inlier_obj_points, cv::RNG::NORMAL, 2, 1);
+    inlier_obj_points = cv::abs(inlier_obj_points) * 10;
+    cv::Mat inlier_img_points;
+    cv::fisheye::projectPoints(inlier_obj_points, inlier_img_points, rvec, this->T, this->K, this->D);
+
+    // outliers
+    cv::Mat outlier_obj_points(1, outliers_n, CV_64FC3);
+    theRNG().fill(outlier_obj_points, cv::RNG::NORMAL, 2, 1);
+    outlier_obj_points = cv::abs(outlier_obj_points) * 10;
+    cv::Mat outlier_img_points;
+    cv::fisheye::projectPoints(outlier_obj_points, outlier_img_points, rvec, (this->T * 10), this->K, this->D);
+
+    cv::Mat obj_points;
+    cv::hconcat(outlier_obj_points, inlier_obj_points, obj_points);
+
+    cv::Mat img_points;
+    cv::hconcat(outlier_img_points, inlier_img_points, img_points);
+
+    cv::Mat rvec_pred;
+    cv::Mat tvec_pred;
+    cv::Mat inliers_pred;
+
+    bool converged = cv::fisheye::solvePnPRansac(obj_points, img_points, this->K, this->D,
+                                                 rvec_pred, tvec_pred, use_extrinsic_guess,
+                                                 iterations_count, reprojection_error, confidence, inliers_pred);
+
+    EXPECT_MAT_NEAR(rvec, rvec_pred, 1e-5);
+    EXPECT_MAT_NEAR(this->T, tvec_pred, 1e-5);
+    EXPECT_EQ(inliers_pred.size[0], inliers_n);
     ASSERT_TRUE(converged);
 }
 
@@ -595,7 +640,7 @@ TEST_F(fisheyeTest, CalibrationWithFixedFocalLength)
     cv::fisheye::calibrate(objectPoints, imagePoints, imageSize, theK, theD,
                            cv::noArray(), cv::noArray(), flag, cv::TermCriteria(3, 20, 1e-6));
 
-    // ensure that CALIB_FIX_FOCAL_LENGTH works and focal lenght has not changed
+    // ensure that CALIB_FIX_FOCAL_LENGTH works and focal length has not changed
     EXPECT_EQ(theK(0,0), K(0,0));
     EXPECT_EQ(theK(1,1), K(1,1));
 

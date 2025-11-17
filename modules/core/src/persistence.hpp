@@ -6,7 +6,6 @@
 #ifndef SRC_PERSISTENCE_HPP
 #define SRC_PERSISTENCE_HPP
 
-#include "opencv2/core/types_c.h"
 #include <deque>
 #include <sstream>
 #include <string>

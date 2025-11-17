@@ -54,6 +54,7 @@
 #include "opencv2/core/base.hpp"
 
 #include "opencv2/core/cuda.hpp"
+#include "opencv2/core/private/cuda_stubs.hpp"
 
 #ifdef HAVE_CUDA
 #  include <cuda.h>
@@ -101,15 +102,9 @@ namespace cv { namespace cuda {
     CV_EXPORTS void syncOutput(const GpuMat& dst, OutputArray _dst, Stream& stream);
 }}
 
-#ifndef HAVE_CUDA
-
-static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::GpuNotSupported, "The library is compiled without CUDA support"); }
-
-#else // HAVE_CUDA
+#ifdef HAVE_CUDA
 
 #define nppSafeSetStream(oldStream, newStream) { if(oldStream != newStream) { cudaStreamSynchronize(oldStream); nppSetStream(newStream); } }
-
-static inline CV_NORETURN void throw_no_cuda() { CV_Error(cv::Error::StsNotImplemented, "The called functionality is disabled for current build or platform"); }
 
 namespace cv { namespace cuda
 {
@@ -147,7 +142,23 @@ namespace cv { namespace cuda
         inline explicit NppStreamHandler(cudaStream_t newStream)
         {
             nppStreamContext = {};
-            nppSafeCall(nppGetStreamContext(&nppStreamContext));
+            #if CUDA_VERSION < 12090
+                nppSafeCall(nppGetStreamContext(&nppStreamContext));
+            #else
+                int device = 0;
+                cudaSafeCall(cudaGetDevice(&device));
+
+                cudaDeviceProp prop{};
+                cudaSafeCall(cudaGetDeviceProperties(&prop, device));
+
+                nppStreamContext.nCudaDeviceId = device;
+                nppStreamContext.nMultiProcessorCount = prop.multiProcessorCount;
+                nppStreamContext.nMaxThreadsPerMultiProcessor = prop.maxThreadsPerMultiProcessor;
+                nppStreamContext.nMaxThreadsPerBlock = prop.maxThreadsPerBlock;
+                nppStreamContext.nSharedMemPerBlock = prop.sharedMemPerBlock;
+                nppStreamContext.nCudaDevAttrComputeCapabilityMajor = prop.major;
+                nppStreamContext.nCudaDevAttrComputeCapabilityMinor = prop.minor;
+            #endif
             nppStreamContext.hStream = newStream;
             cudaSafeCall(cudaStreamGetFlags(nppStreamContext.hStream, &nppStreamContext.nStreamFlags));
         }

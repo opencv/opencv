@@ -158,7 +158,7 @@ Structuring Element
 -------------------
 
 We manually created a structuring elements in the previous examples with help of cv.Mat.ones. It is
-rectangular shape. But in some cases, you may need elliptical/circular shaped kernels. So for this
+rectangular shape. But in some cases, you may need elliptical/circular shaped kernels or diamond-shaped kernels. So for this
 purpose, OpenCV has a function, **cv.getStructuringElement()**. You just pass the shape and size of
 the kernel, you get the desired kernel.
 

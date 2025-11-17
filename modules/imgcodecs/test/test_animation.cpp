@@ -3,30 +3,9 @@
 // of this distribution and at http://opencv.org/license.html.
 
 #include "test_precomp.hpp"
+#include "test_common.hpp"
 
 namespace opencv_test { namespace {
-
-static void readFileBytes(const std::string& fname, std::vector<unsigned char>& buf)
-{
-    FILE * wfile = fopen(fname.c_str(), "rb");
-    if (wfile != NULL)
-    {
-        fseek(wfile, 0, SEEK_END);
-        size_t wfile_size = ftell(wfile);
-        fseek(wfile, 0, SEEK_SET);
-
-        buf.resize(wfile_size);
-
-        size_t data_size = fread(&buf[0], 1, wfile_size, wfile);
-
-        if(wfile)
-        {
-            fclose(wfile);
-        }
-
-        EXPECT_EQ(data_size, wfile_size);
-    }
-}
 
 static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
 {
@@ -98,6 +77,61 @@ static bool fillFrames(Animation& animation, bool hasAlpha, int n = 14)
 
     return true;
 }
+
+#ifdef HAVE_IMGCODEC_GIF
+
+TEST(Imgcodecs_Gif, imwriteanimation_rgba)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+    s_animation.bgcolor = Scalar(0, 0, 0, 0); // TO DO not implemented yet.
+
+    // Create a temporary output filename for saving the animation.
+    string output = cv::tempfile(".gif");
+
+    // Write the animation to a .webp file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    size_t expected_frame_count = s_animation.frames.size();
+
+    // Verify that the number of frames matches the expected count.
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
+
+    // Check that the background color and loop count match between saved and loaded animations.
+    EXPECT_EQ(l_animation.bgcolor, s_animation.bgcolor); // written as BGRA order
+    EXPECT_EQ(l_animation.loop_count, s_animation.loop_count);
+
+    // Verify that the durations of frames match.
+    for (size_t i = 0; i < l_animation.frames.size() - 1; i++)
+        EXPECT_EQ(cvRound(s_animation.durations[i] / 10), cvRound(l_animation.durations[i] / 10));
+
+    EXPECT_TRUE(imreadanimation(output, l_animation, 5, 3));
+    EXPECT_EQ(expected_frame_count + 3, l_animation.frames.size());
+    EXPECT_EQ(l_animation.frames.size(), l_animation.durations.size());
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[5], l_animation.frames[16], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[6], l_animation.frames[17], NORM_INF));
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[7], l_animation.frames[18], NORM_INF));
+
+    // Verify whether the imread function successfully loads the first frame
+    Mat frame = imread(output, IMREAD_UNCHANGED);
+    EXPECT_EQ(0, cvtest::norm(l_animation.frames[0], frame, NORM_INF));
+
+    std::vector<uchar> buf;
+    readFileBytes(output, buf);
+    vector<Mat> webp_frames;
+
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, webp_frames));
+    EXPECT_EQ(expected_frame_count, webp_frames.size());
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+#endif // HAVE_IMGCODEC_GIF
 
 #ifdef HAVE_WEBP
 
@@ -305,6 +339,51 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgba)
     EXPECT_EQ(0, remove(output.c_str()));
 }
 
+TEST(Imgcodecs_APNG, imwriteanimation_rgba16u)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, true));
+
+    for (size_t i = 0; i < s_animation.frames.size(); i++)
+    {
+        s_animation.frames[i].convertTo(s_animation.frames[i], CV_16U, 255);
+    }
+    // Create a temporary output filename for saving the animation.
+    string output = cv::tempfile(".png");
+
+    // Write the animation to a .png file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    size_t expected_frame_count = s_animation.frames.size() - 2;
+
+    // Verify that the number of frames matches the expected count.
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
+
+    std::vector<uchar> buf;
+    readFileBytes(output, buf);
+    vector<Mat> apng_frames;
+
+    EXPECT_TRUE(imdecodemulti(buf, IMREAD_UNCHANGED, apng_frames));
+    EXPECT_EQ(expected_frame_count, apng_frames.size());
+
+    apng_frames.clear();
+    // Test saving the animation frames as individual still images.
+    EXPECT_TRUE(imwrite(output, s_animation.frames));
+
+    // Read back the still images into a vector of Mats.
+    EXPECT_TRUE(imreadmulti(output, apng_frames));
+
+    // Expect all frames written as multi-page image
+    EXPECT_EQ(expected_frame_count, apng_frames.size());
+
+    // Clean up by removing the temporary file.
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
 TEST(Imgcodecs_APNG, imwriteanimation_rgb)
 {
     Animation s_animation, l_animation;
@@ -323,6 +402,39 @@ TEST(Imgcodecs_APNG, imwriteanimation_rgb)
         EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
     }
     EXPECT_EQ(0, remove(output.c_str()));
+}
+
+TEST(Imgcodecs_APNG, imwriteanimation_gray)
+{
+    Animation s_animation, l_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
+
+    for (size_t i = 0; i < s_animation.frames.size(); i++)
+    {
+        cvtColor(s_animation.frames[i], s_animation.frames[i], COLOR_BGR2GRAY);
+    }
+
+    s_animation.bgcolor = Scalar(50, 100, 150);
+    string output = cv::tempfile(".png");
+    // Write the animation to a .png file and verify success.
+    EXPECT_TRUE(imwriteanimation(output, s_animation));
+
+    // Read the animation back and compare with the original.
+    EXPECT_TRUE(imreadanimation(output, l_animation));
+
+    EXPECT_EQ(Scalar(), l_animation.bgcolor);
+    size_t expected_frame_count = s_animation.frames.size() - 2;
+
+    // Verify that the number of frames matches the expected count.
+    EXPECT_EQ(expected_frame_count, imcount(output));
+    EXPECT_EQ(expected_frame_count, l_animation.frames.size());
+
+    EXPECT_EQ(0, remove(output.c_str()));
+
+    for (size_t i = 0; i < l_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(s_animation.frames[i], l_animation.frames[i], NORM_INF));
+    }
 }
 
 TEST(Imgcodecs_APNG, imwritemulti_rgba)
@@ -392,7 +504,7 @@ TEST(Imgcodecs_APNG, imwriteanimation_bgcolor)
 {
     Animation s_animation, l_animation;
     EXPECT_TRUE(fillFrames(s_animation, true, 2));
-    s_animation.bgcolor = Scalar(50, 100, 150, 128); // different values for test purpose.
+    s_animation.bgcolor = Scalar(50, 100, 150); // will be written in bKGD chunk as RGB.
 
     // Create a temporary output filename for saving the animation.
     string output = cv::tempfile(".png");
@@ -431,6 +543,202 @@ TEST(Imgcodecs_APNG, imencode_rgba)
     EXPECT_EQ(read_frames.size(), s_animation.frames.size() - 2);
 }
 
+typedef testing::TestWithParam<string> Imgcodecs_ImageCollection;
+
+const string exts_multi[] = {
+#ifdef HAVE_AVIF
+    ".avif",
+#endif
+#ifdef HAVE_IMGCODEC_GIF
+    ".gif",
+#endif
+    ".png",
+#ifdef HAVE_TIFF
+    ".tiff",
+#endif
+#ifdef HAVE_WEBP
+    ".webp",
+#endif
+};
+
+TEST_P(Imgcodecs_ImageCollection, animations)
+{
+    Animation s_animation;
+    EXPECT_TRUE(fillFrames(s_animation, false));
+
+    string output = cv::tempfile(GetParam().c_str());
+    ASSERT_TRUE(imwritemulti(output, s_animation.frames));
+    vector<Mat> read_frames;
+    ASSERT_TRUE(imreadmulti(output, read_frames, IMREAD_UNCHANGED));
+
+    {
+        ImageCollection collection(output, IMREAD_UNCHANGED);
+        EXPECT_EQ(read_frames.size(), collection.size());
+        int i = 0;
+        for (auto&& frame : collection)
+        {
+            EXPECT_EQ(0, cvtest::norm(frame, read_frames[i], NORM_INF));
+            ++i;
+        }
+    }
+    EXPECT_EQ(0, remove(output.c_str()));
+}
+
+INSTANTIATE_TEST_CASE_P(/**/,
+    Imgcodecs_ImageCollection,
+    testing::ValuesIn(exts_multi));
+
+TEST(Imgcodecs_APNG, imdecode_animation)
+{
+    Animation gt_animation, mem_animation;
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+
+    EXPECT_TRUE(imreadanimation(filename, gt_animation));
+    EXPECT_EQ(1000, gt_animation.durations.back());
+
+    std::vector<unsigned char> buf;
+    readFileBytes(filename, buf);
+    EXPECT_TRUE(imdecodeanimation(buf, mem_animation));
+
+    EXPECT_EQ(mem_animation.frames.size(), gt_animation.frames.size());
+    EXPECT_EQ(mem_animation.bgcolor, gt_animation.bgcolor);
+    EXPECT_EQ(mem_animation.loop_count, gt_animation.loop_count);
+    for (size_t i = 0; i < gt_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(mem_animation.frames[i], gt_animation.frames[i], NORM_INF));
+        EXPECT_EQ(mem_animation.durations[i], gt_animation.durations[i]);
+    }
+}
+
+TEST(Imgcodecs_APNG, imencode_animation)
+{
+    Animation gt_animation, mem_animation;
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "pngsuite/tp1n3p08.png";
+
+    EXPECT_TRUE(imreadanimation(filename, gt_animation));
+    EXPECT_EQ(1000, gt_animation.durations.back());
+
+    std::vector<unsigned char> buf;
+    EXPECT_TRUE(imencodeanimation(".png", gt_animation, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, mem_animation));
+
+    EXPECT_EQ(mem_animation.frames.size(), gt_animation.frames.size());
+    EXPECT_EQ(mem_animation.bgcolor, gt_animation.bgcolor);
+    EXPECT_EQ(mem_animation.loop_count, gt_animation.loop_count);
+    for (size_t i = 0; i < gt_animation.frames.size(); i++)
+    {
+        EXPECT_EQ(0, cvtest::norm(mem_animation.frames[i], gt_animation.frames[i], NORM_INF));
+        EXPECT_EQ(mem_animation.durations[i], gt_animation.durations[i]);
+    }
+}
+
+TEST(Imgcodecs_APNG, animation_has_hidden_frame)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/033.png";
+    Animation animation1, animation2, animation3;
+
+    imreadanimation(filename, animation1);
+
+    EXPECT_FALSE(animation1.still_image.empty());
+    EXPECT_EQ((size_t)2, animation1.frames.size());
+
+    std::vector<unsigned char> buf;
+    EXPECT_TRUE(imencodeanimation(".png", animation1, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, animation2));
+
+    EXPECT_FALSE(animation2.still_image.empty());
+    EXPECT_EQ(animation1.frames.size(), animation2.frames.size());
+
+    animation1.frames.erase(animation1.frames.begin());
+    animation1.durations.erase(animation1.durations.begin());
+    EXPECT_TRUE(imencodeanimation(".png", animation1, buf));
+    EXPECT_TRUE(imdecodeanimation(buf, animation3));
+
+    EXPECT_FALSE(animation1.still_image.empty());
+    EXPECT_TRUE(animation3.still_image.empty());
+    EXPECT_EQ((size_t)1, animation3.frames.size());
+}
+
+TEST(Imgcodecs_APNG, animation_imread_preview)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/034.png";
+    cv::Mat imread_result;
+    cv::imread(filename, imread_result, cv::IMREAD_UNCHANGED);
+    EXPECT_FALSE(imread_result.empty());
+
+    Animation animation;
+    ASSERT_TRUE(imreadanimation(filename, animation));
+    EXPECT_FALSE(animation.still_image.empty());
+    EXPECT_EQ((size_t)2, animation.frames.size());
+
+    EXPECT_EQ(0, cv::norm(animation.still_image, imread_result, cv::NORM_INF));
+}
+
 #endif // HAVE_PNG
+
+#if defined(HAVE_PNG) || defined(HAVE_SPNG)
+
+TEST(Imgcodecs_APNG, imread_animation_16u)
+{
+    // Set the path to the test image directory and filename for loading.
+    const string root = cvtest::TS::ptr()->get_data_path();
+    const string filename = root + "readwrite/033.png";
+
+    Mat img = imread(filename, IMREAD_UNCHANGED);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC4);
+    EXPECT_EQ(0,     img.at<ushort>(0, 0));
+    EXPECT_EQ(0,     img.at<ushort>(0, 1));
+    EXPECT_EQ(65280, img.at<ushort>(0, 2));
+    EXPECT_EQ(65535, img.at<ushort>(0, 3));
+
+    img = imread(filename, IMREAD_GRAYSCALE);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_8UC1);
+    EXPECT_EQ(76, img.at<uchar>(0, 0));
+
+    img = imread(filename, IMREAD_COLOR);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_8UC3);
+    EXPECT_EQ(0,   img.at<uchar>(0, 0));
+    EXPECT_EQ(0,   img.at<uchar>(0, 1));
+    EXPECT_EQ(255, img.at<uchar>(0, 2));
+
+    img = imread(filename, IMREAD_COLOR_RGB);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_8UC3);
+    EXPECT_EQ(255, img.at<uchar>(0, 0));
+    EXPECT_EQ(0,   img.at<uchar>(0, 1));
+    EXPECT_EQ(0,   img.at<uchar>(0, 2));
+
+    img = imread(filename, IMREAD_ANYDEPTH);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC1);
+    EXPECT_EQ(19517, img.at<ushort>(0, 0));
+
+    img = imread(filename, IMREAD_COLOR | IMREAD_ANYDEPTH);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC3);
+    EXPECT_EQ(0,     img.at<ushort>(0, 0));
+    EXPECT_EQ(0,     img.at<ushort>(0, 1));
+    EXPECT_EQ(65280, img.at<ushort>(0, 2));
+
+    img = imread(filename, IMREAD_COLOR_RGB | IMREAD_ANYDEPTH);
+    ASSERT_FALSE(img.empty());
+    EXPECT_TRUE(img.type() == CV_16UC3);
+    EXPECT_EQ(65280, img.at<ushort>(0, 0));
+    EXPECT_EQ(0,     img.at<ushort>(0, 1));
+    EXPECT_EQ(0,     img.at<ushort>(0, 2));
+}
+
+#endif // HAVE_PNG || HAVE_SPNG
 
 }} // namespace

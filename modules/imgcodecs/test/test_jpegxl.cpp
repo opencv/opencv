@@ -7,6 +7,8 @@ namespace opencv_test { namespace {
 
 #ifdef HAVE_JPEGXL
 
+#include <jxl/version.h> // For JPEGXL_MAJOR_VERSION and JPEGXL_MINOR_VERSION
+
 typedef tuple<perf::MatType, int> MatType_and_Distance;
 typedef testing::TestWithParam<MatType_and_Distance> Imgcodecs_JpegXL_MatType;
 
@@ -16,8 +18,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     const int distanceParam = get<1>(GetParam());
 
     cv::Scalar col;
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compressions.
+    // Lossy compression may be small differences in decoding results by environments.
     double th;
 
     switch( CV_MAT_DEPTH(matType) )
@@ -38,7 +40,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, write_read)
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : (distanceParam > 2) ? 3 : distanceParam;
 
     bool ret = false;
     string tmp_fname = cv::tempfile(".jxl");
@@ -63,8 +65,8 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     const int distanceParam  = get<1>(GetParam());
 
     cv::Scalar col;
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compressions.
+    // Lossy compression may be small differences in decoding results by environments.
     double th;
 
     // If alpha=0, libjxl modify color channels(BGR). So do not set it.
@@ -86,7 +88,7 @@ TEST_P(Imgcodecs_JpegXL_MatType, encode_decode)
     }
 
     // If increasing distanceParam, threshold should be increased.
-    th *= (distanceParam >= 25) ? 5 : ( distanceParam > 2 ) ? 3 : (distanceParam == 2) ? 2: 1;
+    th *= (distanceParam >= 25) ? 5 : (distanceParam > 2) ? 3 : distanceParam;
 
     bool ret = false;
     vector<uchar> buff;
@@ -130,8 +132,8 @@ TEST_P(Imgcodecs_JpegXL_Effort_DecodingSpeed, encode_decode)
     const int speed  = get<1>(GetParam());
 
     cv::Scalar col = cv::Scalar(124,76,42);
-    // Jpeg XL is lossy compression.
-    // There may be small differences in decoding results by environments.
+    // Jpeg XL supports lossy and lossless compression.
+    // Lossy compression may be small differences in decoding results by environments.
     double th = 3; // = 255 / 100 (1%);
 
     bool ret = false;
@@ -179,6 +181,182 @@ TEST(Imgcodecs_JpegXL, encode_from_uncontinued_image)
     EXPECT_NO_THROW(ret = cv::imencode(".jxl", roi, buff, param));
     EXPECT_TRUE(ret);
 }
+
+// See https://github.com/opencv/opencv/issues/26767
+
+typedef tuple<perf::MatType, ImreadModes> MatType_and_ImreadFlag;
+typedef testing::TestWithParam<MatType_and_ImreadFlag> Imgcodecs_JpegXL_MatType_ImreadFlag;
+
+TEST_P(Imgcodecs_JpegXL_MatType_ImreadFlag, all_imreadFlags)
+{
+    string tmp_fname = cv::tempfile(".jxl");
+    const int matType  = get<0>(GetParam());
+    const int imreadFlag  = get<1>(GetParam());
+
+    Mat img(240, 320, matType);
+    randu(img, Scalar(0, 0, 0, 255), Scalar(255, 255, 255, 255));
+
+    vector<int> param;
+    param.push_back(IMWRITE_JPEGXL_DISTANCE);
+    param.push_back(0 /* Lossless */);
+    EXPECT_NO_THROW(imwrite(tmp_fname, img, param));
+
+    Mat img_decoded;
+    EXPECT_NO_THROW(img_decoded = imread(tmp_fname, imreadFlag));
+    EXPECT_FALSE(img_decoded.empty());
+
+    switch( imreadFlag )
+    {
+        case IMREAD_UNCHANGED:
+            EXPECT_EQ( img.type(), img_decoded.type() );
+            break;
+        case IMREAD_GRAYSCALE:
+            EXPECT_EQ( img_decoded.depth(), CV_8U );
+            EXPECT_EQ( img_decoded.channels(), 1 );
+            break;
+        case IMREAD_COLOR:
+        case IMREAD_COLOR_RGB:
+            EXPECT_EQ( img_decoded.depth(), CV_8U );
+            EXPECT_EQ( img_decoded.channels(), 3 );
+            break;
+        case IMREAD_ANYDEPTH:
+            EXPECT_EQ( img_decoded.depth(), img.depth() );
+            EXPECT_EQ( img_decoded.channels(), 1 );
+            break;
+        case IMREAD_ANYCOLOR:
+            EXPECT_EQ( img_decoded.depth(), CV_8U ) ;
+            EXPECT_EQ( img_decoded.channels(), img.channels() == 1 ? 1 : 3 ); // Alpha channel will be dropped.
+            break;
+    }
+    remove(tmp_fname.c_str());
+}
+
+INSTANTIATE_TEST_CASE_P(
+    /**/,
+    Imgcodecs_JpegXL_MatType_ImreadFlag,
+    testing::Combine(
+        testing::Values(
+            CV_8UC1,  CV_8UC3,  CV_8UC4,
+            CV_16UC1, CV_16UC3, CV_16UC4,
+            CV_32FC1, CV_32FC3, CV_32FC4
+        ),
+        testing::Values(
+            IMREAD_UNCHANGED,
+            IMREAD_GRAYSCALE,
+            IMREAD_COLOR,
+            IMREAD_COLOR_RGB,
+            IMREAD_ANYDEPTH,
+            IMREAD_ANYCOLOR
+        )
+) );
+
+TEST(Imgcodecs_JpegXL, imdecode_truncated_stream)
+{
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    vector<uint8_t> buff;
+    vector<int> param;
+
+    bool ret = false;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", src, buff, param));
+    EXPECT_TRUE(ret);
+
+    // Try to decode non-truncated image.
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buff, cv::IMREAD_COLOR));
+    EXPECT_FALSE(decoded.empty());
+
+    // Try to decode truncated image.
+    buff.resize(buff.size() - 1 );
+    EXPECT_NO_THROW(decoded = cv::imdecode(buff, cv::IMREAD_COLOR));
+    EXPECT_TRUE(decoded.empty());
+}
+
+TEST(Imgcodecs_JpegXL, imread_truncated_stream)
+{
+    string tmp_fname = cv::tempfile(".jxl");
+    cv::Mat src(100, 100, CV_8UC1, Scalar(40,50,10));
+    vector<uint8_t> buff;
+    vector<int> param;
+
+    bool ret = false;
+    EXPECT_NO_THROW(ret = cv::imencode(".jxl", src, buff, param));
+    EXPECT_TRUE(ret);
+
+    // Try to decode non-truncated image.
+    FILE *fp = nullptr;
+
+    fp = fopen(tmp_fname.c_str(), "wb");
+    EXPECT_TRUE(fp != nullptr);
+    fwrite(&buff[0], sizeof(uint8_t), buff.size(), fp);
+    fclose(fp);
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imread(tmp_fname, cv::IMREAD_COLOR));
+    EXPECT_FALSE(decoded.empty());
+
+    // Try to decode truncated image.
+    fp = fopen(tmp_fname.c_str(), "wb");
+    EXPECT_TRUE(fp != nullptr);
+    fwrite(&buff[0], sizeof(uint8_t), buff.size() - 1, fp);
+    fclose(fp);
+
+    EXPECT_NO_THROW(decoded = cv::imread(tmp_fname, cv::IMREAD_COLOR));
+    EXPECT_TRUE(decoded.empty());
+
+    // Delete temporary file
+    remove(tmp_fname.c_str());
+}
+
+// See https://github.com/opencv/opencv/issues/27382
+TEST(Imgcodecs_JpegXL, imencode_regression27382)
+{
+    cv::Mat image(1024, 1024, CV_16U);
+    cv::RNG rng(1024);
+    rng.fill(image, cv::RNG::NORMAL, 0, 65535);
+
+    std::vector<unsigned char> buffer;
+    std::vector<int> params = {cv::IMWRITE_JPEGXL_DISTANCE, 0}; // lossless
+
+    EXPECT_NO_THROW(cv::imencode(".jxl", image, buffer, params));
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buffer, cv::IMREAD_UNCHANGED));
+    EXPECT_FALSE(decoded.empty());
+
+    cv::Mat diff;
+    cv::absdiff(image, decoded, diff);
+    double max_diff = 0.0;
+    cv::minMaxLoc(diff, nullptr, &max_diff);
+    EXPECT_EQ(max_diff, 0 );
+}
+
+TEST(Imgcodecs_JpegXL, imencode_regression27382_2)
+{
+    cv::Mat image(1024, 1024, CV_16U);
+    cv::RNG rng(1024);
+    rng.fill(image, cv::RNG::NORMAL, 0, 65535);
+
+    std::vector<unsigned char> buffer;
+    std::vector<int> params = {cv::IMWRITE_JPEGXL_QUALITY, 100}; // lossless
+
+    EXPECT_NO_THROW(cv::imencode(".jxl", image, buffer, params));
+
+    cv::Mat decoded;
+    EXPECT_NO_THROW(decoded = cv::imdecode(buffer, cv::IMREAD_UNCHANGED));
+    EXPECT_FALSE(decoded.empty());
+
+    cv::Mat diff;
+    cv::absdiff(image, decoded, diff);
+    double max_diff = 0.0;
+    cv::minMaxLoc(diff, nullptr, &max_diff);
+#if JPEGXL_MAJOR_VERSION > 0 || JPEGXL_MINOR_VERSION >= 10
+    // Quality parameter is supported with libjxl v0.10.0 or later
+    EXPECT_EQ(max_diff, 0); // Lossless
+#else
+    EXPECT_NE(max_diff, 0); // Lossy
+#endif
+}
+
 
 #endif  // HAVE_JPEGXL
 

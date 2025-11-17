@@ -466,6 +466,24 @@ typedef struct opj_cp {
     /* <<UniPG */
 } opj_cp_t;
 
+/** Entry of a TLM marker segment */
+typedef struct opj_j2k_tlm_tile_part_info {
+    /** Tile index of the tile part. Ttlmi field */
+    OPJ_UINT16 m_tile_index;
+    /** Length in bytes, from the beginning of the SOT marker to the end of
+     * the bit stream data for that tile-part. Ptlmi field */
+    OPJ_UINT32 m_length;
+} opj_j2k_tlm_tile_part_info_t;
+
+/** Information got from the concatenation of TLM marker semgnets. */
+typedef struct opj_j2k_tlm_info {
+    /** Number of entries in m_tile_part_infos. */
+    OPJ_UINT32 m_entries_count;
+    /** Array of m_entries_count values. */
+    opj_j2k_tlm_tile_part_info_t* m_tile_part_infos;
+
+    OPJ_BOOL m_is_invalid;
+} opj_j2k_tlm_info_t;
 
 typedef struct opj_j2k_dec {
     /** locate in which part of the codestream the decoder is (main header, tile header, end) */
@@ -498,6 +516,18 @@ typedef struct opj_j2k_dec {
 
     OPJ_UINT32   m_numcomps_to_decode;
     OPJ_UINT32  *m_comps_indices_to_decode;
+
+    opj_j2k_tlm_info_t m_tlm;
+
+    /** Below if used when there's TLM information available and we use
+     * opj_set_decoded_area() to a subset of all tiles.
+     */
+    /* Current index in m_intersecting_tile_parts_offset[] to seek to */
+    OPJ_UINT32  m_idx_intersecting_tile_parts;
+    /* Number of elements of m_intersecting_tile_parts_offset[] */
+    OPJ_UINT32  m_num_intersecting_tile_parts;
+    /* Start offset of contributing tile parts */
+    OPJ_OFF_T*  m_intersecting_tile_parts_offset;
 
     /** to tell that a tile can be decoded. */
     OPJ_BITFIELD m_can_decode : 1;

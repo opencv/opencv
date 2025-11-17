@@ -2,7 +2,7 @@ __all__ = [
     "apply_manual_api_refinement"
 ]
 
-from typing import cast, Sequence, Callable, Iterable
+from typing import cast, Sequence, Callable, Iterable, Optional
 
 from .nodes import (NamespaceNode, FunctionNode, OptionalTypeNode, TypeNode,
                     ClassProperty, PrimitiveTypeNode, ASTNodeTypeNode,
@@ -28,6 +28,8 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
     version_constant = root.add_constant("__version__", "<unused>")
     version_constant._value_type = "str"
 
+    convert_returned_scalar_to_tuple(root)
+
     """
     def redirectError(
         onError: Callable[[int, str, str, str, int], None] | None
@@ -51,6 +53,20 @@ def apply_manual_api_refinement(root: NamespaceNode) -> None:
         )
     ])
 
+
+def make_optional_none_return(root_node: NamespaceNode,
+                              function_symbol_name: SymbolName) -> None:
+    """
+    Make return type Optional[MatLike],
+    for the functions that may return None.
+    """
+    function = find_function_node(root_node, function_symbol_name)
+    for overload in function.overloads:
+        if overload.return_type is not None:
+            if not isinstance(overload.return_type.type_node, OptionalTypeNode):
+                overload.return_type.type_node = OptionalTypeNode(
+                    overload.return_type.type_node
+                )
 
 def export_matrix_type_constants(root: NamespaceNode) -> None:
     MAX_PREDEFINED_CHANNELS = 4
@@ -79,21 +95,61 @@ def export_matrix_type_constants(root: NamespaceNode) -> None:
     )
 
 
-def make_optional_arg(arg_name: str) -> Callable[[NamespaceNode, SymbolName], None]:
+def make_optional_arg(*arg_names: str) -> Callable[[NamespaceNode, SymbolName], None]:
     def _make_optional_arg(root_node: NamespaceNode,
                            function_symbol_name: SymbolName) -> None:
         function = find_function_node(root_node, function_symbol_name)
-        for overload in function.overloads:
-            arg_idx = _find_argument_index(overload.arguments, arg_name)
-            # Avoid multiplying optional qualification
-            if isinstance(overload.arguments[arg_idx].type_node, OptionalTypeNode):
-                continue
+        for arg_name in arg_names:
+            found_overload_with_arg = False
 
-            overload.arguments[arg_idx].type_node = OptionalTypeNode(
-                cast(TypeNode, overload.arguments[arg_idx].type_node)
-            )
+            for overload in function.overloads:
+                arg_idx = _find_argument_index(overload.arguments, arg_name)
+
+                # skip overloads without this argument
+                if arg_idx is None:
+                    continue
+
+                # Avoid multiplying optional qualification
+                if isinstance(overload.arguments[arg_idx].type_node, OptionalTypeNode):
+                    continue
+
+                overload.arguments[arg_idx].type_node = OptionalTypeNode(
+                    cast(TypeNode, overload.arguments[arg_idx].type_node)
+                )
+
+                found_overload_with_arg = True
+
+            if not found_overload_with_arg:
+                raise RuntimeError(
+                    f"Failed to find argument with name: '{arg_name}'"
+                    f" in '{function_symbol_name.name}' overloads"
+                )
 
     return _make_optional_arg
+
+
+def convert_returned_scalar_to_tuple(root: NamespaceNode) -> None:
+    """Force `tuple[float, float, float, float]` usage instead of Scalar alias
+    for return types due to `pyopencv_from` specialization for Scalar type.
+    """
+
+    float_4_tuple_node = TupleTypeNode(
+        "ScalarOutput",
+        items=(PrimitiveTypeNode.float_(),) * 4
+    )
+
+    def fix_scalar_return_type(fn: FunctionNode.Overload):
+        if fn.return_type is None:
+            return
+        if fn.return_type.type_node.typename == "Scalar":
+            fn.return_type.type_node = float_4_tuple_node
+
+    for overload in for_each_function_overload(root):
+        fix_scalar_return_type(overload)
+
+    for ns in root.namespaces.values():
+        for overload in for_each_function_overload(ns):
+            fix_scalar_return_type(overload)
 
 
 def refine_cuda_module(root: NamespaceNode) -> None:
@@ -313,19 +369,37 @@ def _trim_class_name_from_argument_types(
 
 
 def _find_argument_index(arguments: Sequence[FunctionNode.Arg],
-                         name: str) -> int:
+                         name: str) -> Optional[int]:
     for i, arg in enumerate(arguments):
         if arg.name == name:
             return i
-    raise RuntimeError(
-        f"Failed to find argument with name: '{name}' in {arguments}"
-    )
+    return None
 
 
 NODES_TO_REFINE = {
     SymbolName(("cv", ), (), "resize"): make_optional_arg("dsize"),
     SymbolName(("cv", ), (), "calcHist"): make_optional_arg("mask"),
     SymbolName(("cv", ), (), "floodFill"): make_optional_arg("mask"),
+    SymbolName(("cv", ), ("Feature2D", ), "detectAndCompute"): make_optional_arg("mask"),
+    SymbolName(("cv", ), (), "findEssentialMat"): make_optional_arg(
+        "distCoeffs1", "distCoeffs2", "dist_coeff1", "dist_coeff2"
+    ),
+    SymbolName(("cv", ), (), "drawFrameAxes"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "getOptimalNewCameraMatrix"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "initInverseRectificationMap"): make_optional_arg("distCoeffs", "R"),
+    SymbolName(("cv", ), (), "initUndistortRectifyMap"): make_optional_arg("distCoeffs", "R"),
+    SymbolName(("cv", ), (), "projectPoints"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solveP3P"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnP"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPGeneric"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPRansac"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPRefineLM"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "solvePnPRefineVVS"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "undistort"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", ), (), "undistortPoints"): make_optional_arg("distCoeffs"),
+    SymbolName(("cv", "fisheye"), (), "initUndistortRectifyMap"): make_optional_arg("D"),
+    SymbolName(("cv", ), (), "imread"): make_optional_none_return,
+    SymbolName(("cv", ), (), "imdecode"): make_optional_none_return,
 }
 
 ERROR_CLASS_PROPERTIES = (

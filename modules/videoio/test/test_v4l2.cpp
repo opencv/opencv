@@ -116,7 +116,7 @@ TEST_P(videoio_v4l2, formats)
             EXPECT_EQ(3, img.channels());
             EXPECT_EQ(CV_8U, img.depth());
 #ifdef DUMP_CAMERA_FRAME
-            std::string img_name = "frame_" + fourccToString(params.pixel_format);
+            std::string img_name = "frame_" + fourccToStringSafe(params.pixel_format);
             // V4L2 flag for big-endian formats
             if(params.pixel_format & (1 << 31))
                 img_name += "-BE";
@@ -147,8 +147,8 @@ vector<Format_Channels_Depth> all_params = {
     { V4L2_PIX_FMT_Y10, 1, CV_16U, 1.f, 1.f },
     { V4L2_PIX_FMT_GREY, 1, CV_8U, 1.f, 1.f },
     { V4L2_PIX_FMT_BGR24, 3, CV_8U, 1.f, 1.f },
-    { V4L2_PIX_FMT_XBGR32, 3, CV_8U, 1.f, 1.f },
-    { V4L2_PIX_FMT_ABGR32, 3, CV_8U, 1.f, 1.f },
+    { V4L2_PIX_FMT_XBGR32, 4, CV_8U, 1.f, 1.f },
+    { V4L2_PIX_FMT_ABGR32, 4, CV_8U, 1.f, 1.f },
 };
 
 inline static std::string param_printer(const testing::TestParamInfo<videoio_v4l2::ParamType>& info)
@@ -157,6 +157,20 @@ inline static std::string param_printer(const testing::TestParamInfo<videoio_v4l
 }
 
 INSTANTIATE_TEST_CASE_P(/*videoio_v4l2*/, videoio_v4l2, ValuesIn(all_params), param_printer);
+
+TEST(videoio_ffmpeg, camera_index)
+{
+    utils::Paths devs = utils::getConfigurationParameterPaths("OPENCV_TEST_V4L2_VIVID_DEVICE");
+    if (devs.size() != 1)
+    {
+        throw SkipTestException("OPENCV_TEST_V4L2_VIVID_DEVICE is not set");
+    }
+    VideoCapture cap;
+    ASSERT_TRUE(cap.open(0, CAP_FFMPEG));
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_FALSE(frame.empty());
+}
 
 }} // opencv_test::<anonymous>::
 

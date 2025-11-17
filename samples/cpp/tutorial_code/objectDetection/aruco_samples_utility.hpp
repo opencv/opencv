@@ -32,7 +32,7 @@ inline static bool saveCameraParams(const std::string &filename, cv::Size imageS
     if (flags & cv::CALIB_FIX_ASPECT_RATIO) fs << "aspectRatio" << aspectRatio;
 
     if (flags != 0) {
-        sprintf(buf, "flags: %s%s%s%s",
+        snprintf(buf, sizeof(buf), "flags: %s%s%s%s",
                 flags & cv::CALIB_USE_INTRINSIC_GUESS ? "+use_intrinsic_guess" : "",
                 flags & cv::CALIB_FIX_ASPECT_RATIO ? "+fix_aspectRatio" : "",
                 flags & cv::CALIB_FIX_PRINCIPAL_POINT ? "+fix_principal_point" : "",

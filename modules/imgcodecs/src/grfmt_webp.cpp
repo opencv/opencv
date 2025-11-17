@@ -68,6 +68,7 @@ WebPDecoder::WebPDecoder()
     fs_size = 0;
     m_has_animation = false;
     m_previous_timestamp = 0;
+    m_read_options = 1;
 }
 
 WebPDecoder::~WebPDecoder() {}
@@ -155,14 +156,16 @@ bool WebPDecoder::readHeader()
         webp_data.size = data.total();
 
         WebPAnimDecoderOptions dec_options;
-        WebPAnimDecoderOptionsInit(&dec_options);
+        if (!WebPAnimDecoderOptionsInit(&dec_options))
+            CV_Error(Error::StsInternal, "Failed to initialize animated WebP decoding options");
 
         dec_options.color_mode = m_use_rgb ? MODE_RGBA : MODE_BGRA;
         anim_decoder.reset(WebPAnimDecoderNew(&webp_data, &dec_options));
         CV_Assert(anim_decoder.get() && "Error parsing image");
 
         WebPAnimInfo anim_info;
-        WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info);
+        if (!WebPAnimDecoderGetInfo(anim_decoder.get(), &anim_info))
+            CV_Error(Error::StsInternal, "Failed to get animated WebP information");
         m_animation.loop_count = anim_info.loop_count;
 
         m_animation.bgcolor[0] = (anim_info.bgcolor >> 24) & 0xFF;
@@ -195,6 +198,47 @@ bool WebPDecoder::readData(Mat &img)
     }
     CV_Assert(data.type() == CV_8UC1); CV_Assert(data.rows == 1);
 
+    if (m_read_options) {
+        WebPData webp_data;
+        webp_data.bytes = (const uint8_t*)data.ptr();
+        webp_data.size = data.total();
+
+        std::vector<uchar> metadata;
+        WebPDemuxer* demux = WebPDemux(&webp_data);
+
+        if (demux)
+        {
+            WebPChunkIterator chunk_iter;
+
+            if (WebPDemuxGetChunk(demux, "EXIF", 1, &chunk_iter))
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_exif.parseExif(metadata.data(), metadata.size());
+            }
+
+            if (WebPDemuxGetChunk(demux, "ICCP", 1, &chunk_iter))
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_ICCP] = metadata;
+            }
+
+            if (WebPDemuxGetChunk(demux, "XMP ", 1, &chunk_iter))  // note the space in "XMP "
+            {
+                metadata = std::vector<uchar>(chunk_iter.chunk.bytes,
+                    chunk_iter.chunk.bytes + chunk_iter.chunk.size);
+                WebPDemuxReleaseChunkIterator(&chunk_iter);
+                m_metadata[IMAGE_METADATA_XMP] = metadata;
+            }
+
+            WebPDemuxDelete(demux);
+            m_read_options = 0;
+        }
+    }
+
     Mat read_img;
     CV_CheckType(img.type(), img.type() == CV_8UC1 || img.type() == CV_8UC3 || img.type() == CV_8UC4, "");
     if (img.type() != m_type || img.cols != m_width || img.rows != m_height)
@@ -216,7 +260,8 @@ bool WebPDecoder::readData(Mat &img)
         uint8_t* buf;
         int timestamp;
 
-        WebPAnimDecoderGetNext(anim_decoder.get(), &buf, &timestamp);
+        if (!WebPAnimDecoderGetNext(anim_decoder.get(), &buf, &timestamp))
+            CV_Error(Error::StsInternal, "Failed to decode animated WebP frame");
         Mat tmp(Size(m_width, m_height), CV_8UC4, buf);
 
         if (img.type() == CV_8UC1)
@@ -289,6 +334,11 @@ WebPEncoder::WebPEncoder()
 {
     m_description = "WebP files (*.webp)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_WEBP_QUALITY};
 }
 
 WebPEncoder::~WebPEncoder() { }
@@ -307,15 +357,17 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     bool comp_lossless = true;
     float quality = 100.0f;
 
-    if (params.size() > 1)
+    for(size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[0] == IMWRITE_WEBP_QUALITY)
+        const int value = params[i+1];
+        if (params[i] == IMWRITE_WEBP_QUALITY)
         {
             comp_lossless = false;
-            quality = static_cast<float>(params[1]);
+            quality = static_cast<float>(value);
             if (quality < 1.0f)
             {
                 quality = 1.0f;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
             }
             if (quality > 100.0f)
             {
@@ -337,34 +389,85 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
         channels = 3;
     }
 
-    uint8_t *out = NULL;
+    uint8_t *encoder_out = NULL;
     size_t size = 0;
     if (comp_lossless)
     {
         if (channels == 3)
         {
-            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGR(image->ptr(), width, height, (int)image->step, &encoder_out);
         }
         else if (channels == 4)
         {
-            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &out);
+            size = WebPEncodeLosslessBGRA(image->ptr(), width, height, (int)image->step, &encoder_out);
         }
     }
     else
     {
         if (channels == 3)
         {
-            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGR(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
         }
         else if (channels == 4)
         {
-            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &out);
+            size = WebPEncodeBGRA(image->ptr(), width, height, (int)image->step, quality, &encoder_out);
         }
     }
+
 #if WEBP_DECODER_ABI_VERSION >= 0x0206
-    Ptr<uint8_t> out_cleaner(out, WebPFree);
+    Ptr<uint8_t> out_cleaner(encoder_out, WebPFree);
 #else
-    Ptr<uint8_t> out_cleaner(out, free);
+    Ptr<uint8_t> out_cleaner(encoder_out, free);
+#endif
+
+    uint8_t *out = encoder_out;
+    uint8_t *muxer_out = nullptr;
+
+    if (!m_metadata.empty())
+    {
+        WebPData muxerData;
+
+        WebPMux* mux = WebPMuxNew();
+        WebPData imageData = { out, size };
+        WebPMuxSetImage(mux, &imageData, 0);
+
+        WebPData metadata;
+        if (m_metadata[IMAGE_METADATA_EXIF].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_EXIF].data();
+            metadata.size = m_metadata[IMAGE_METADATA_EXIF].size();
+            WebPMuxSetChunk(mux, "EXIF", &metadata, 1);
+        }
+        if (m_metadata[IMAGE_METADATA_XMP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_XMP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_XMP].size();
+            WebPMuxSetChunk(mux, "XMP ", &metadata, 1);
+        }
+
+        if (m_metadata[IMAGE_METADATA_ICCP].size() > 0)
+        {
+            metadata.bytes = m_metadata[IMAGE_METADATA_ICCP].data();
+            metadata.size = m_metadata[IMAGE_METADATA_ICCP].size();
+            WebPMuxSetChunk(mux, "ICCP", &metadata, 1);
+        }
+
+        if (WebPMuxAssemble(mux, &muxerData) == WEBP_MUX_OK) {
+            size = muxerData.size;
+            muxer_out = const_cast<uint8_t*>(muxerData.bytes);
+            out = muxer_out;
+            WebPMuxDelete(mux);
+        }
+        else {
+            WebPMuxDelete(mux);
+            CV_Error(Error::StsError, "Failed to assemble WebP with EXIF");
+        }
+    }
+
+#if WEBP_DECODER_ABI_VERSION >= 0x0206
+    Ptr<const uint8_t> muxer_cleaner(muxer_out, WebPFree);
+#else
+    Ptr<const uint8_t> muxer_cleaner(muxer_out, free);
 #endif
 
     CV_Assert(size > 0);
@@ -390,20 +493,6 @@ bool WebPEncoder::write(const Mat& img, const std::vector<int>& params)
     }
 
     return (size > 0) && (bytes_written == size);
-}
-
-bool WebPEncoder::writemulti(const std::vector<Mat>& img_vec, const std::vector<int>& params)
-{
-    CV_LOG_INFO(NULL, "Multi page image will be written as animation with 1 second frame duration.");
-
-    Animation animation;
-    animation.frames = img_vec;
-
-    for (size_t i = 0; i < animation.frames.size(); i++)
-    {
-        animation.durations.push_back(1000);
-    }
-    return writeanimation(animation, params);
 }
 
 bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<int>& params)
@@ -434,23 +523,26 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
 
     anim_config.anim_params.bgcolor = bgvalue;
     anim_config.anim_params.loop_count = animation.loop_count;
+    anim_config.minimize_size = 0;
 
-    if (params.size() > 1)
+    for(size_t i = 0; i < params.size(); i += 2)
     {
-        if (params[0] == IMWRITE_WEBP_QUALITY)
+        const int value = params[i+1];
+        if (params[i] == IMWRITE_WEBP_QUALITY)
         {
-            config.lossless = 0;
-            config.quality = static_cast<float>(params[1]);
+            config.lossless = 0; // false
+            config.quality = static_cast<float>(value);
             if (config.quality < 1.0f)
             {
                 config.quality = 1.0f;
+                CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_WEBP_QUALITY must be between 1 to 100(lossy) or more(lossless). It is fallbacked to 1", value));
             }
-            if (config.quality >= 100.0f)
+            if (config.quality > 100.0f)
             {
-                config.lossless = 1;
+                config.quality = 100.0f;
+                config.lossless = 1; // true
             }
         }
-        anim_config.minimize_size = 0;
     }
 
     std::unique_ptr<WebPAnimEncoder, void (*)(WebPAnimEncoder*)> anim_encoder(
@@ -460,7 +552,6 @@ bool WebPEncoder::writeanimation(const Animation& animation, const std::vector<i
     pic.height = height;
     pic.use_argb = 1;
     pic.argb_stride = width;
-    WebPEncode(&config, &pic);
 
     bool is_input_rgba = animation.frames[0].channels() == 4;
     Size canvas_size = Size(animation.frames[0].cols,animation.frames[0].rows);

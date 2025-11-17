@@ -168,8 +168,8 @@ components:
         plays significant role as it requires less iterations,
         furthermore in average P3P solver has around 1.39
         estimated models. Also, in new version of `solvePnPRansac(...)`
-        with `UsacParams` there is an options to pass empty intrinsic
-        matrix `InputOutputArray cameraMatrix`. If matrix is empty than
+        with `UsacParams` there is an option to pass empty intrinsic
+        matrix `InputOutputArray cameraMatrix`. If matrix is empty then
         using Direct Linear Transformation algorithm (PnP with 6 points)
         framework outputs not only rotation and translation vector but
         also calibration matrix.
@@ -201,7 +201,7 @@ a neighborhood graph. In framework there are 3 options to do it:
     cells using hash-table. The method is described in @cite barath2019progressive. Less
     accurate than `NEIGH_FLANN_RADIUS`, although significantly faster.
 
-Note, `NEIGH_FLANN_RADIUS` and `NEIGH_FLANN_RADIUS` are not able to PnP
+Note, `NEIGH_FLANN_RADIUS` and `NEIGH_GRID` are not able to PnP
 solver, since there are 3D object points.
 
 New flags:
@@ -236,7 +236,7 @@ A few other important parameters:
 
 2.  `loIterations` – number of iterations for Local Optimization method.
     *The default value is 10*. By increasing `loIterations` the output
-    model could be more accurate, however, the computationial time may
+    model could be more accurate, however, the computational time may
     also increase.
 
 3.  `loSampleSize` – maximum sample number for Local Optimization. *The
@@ -253,7 +253,7 @@ There are three new sample files in opencv/samples directory.
 1.  `epipolar_lines.cpp` – input arguments of `main` function are two
     paths to images. Then correspondences are found using
     SIFT detector. Fundamental matrix is found using RANSAC from
-    tentative correspondences and epipolar lines are plot.
+    tentative correspondences and epipolar lines are plotted.
 
 2.  `essential_mat_reconstr.cpp` – input arguments are path to data file
     containing image names and single intrinsic matrix and directory
@@ -266,4 +266,4 @@ There are three new sample files in opencv/samples directory.
 
 3.  `essential_mat_reconstr.py` – the same functionality as in .cpp
     file, however instead of clustering points to plane the 3D map of
-    object points is plot.
+    object points is plotted.

@@ -201,6 +201,10 @@ cvRound( double value )
 {
 #if defined CV_INLINE_ROUND_DBL
     CV_INLINE_ROUND_DBL(value);
+#elif defined _MSC_VER && defined _M_ARM64
+    float64x1_t v = vdup_n_f64(value);
+    int64x1_t r = vcvtn_s64_f64(v);
+    return static_cast<int>(vget_lane_s64(r, 0));
 #elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
     __m128d t = _mm_set_sd( value );
     return _mm_cvtsd_si32(t);
@@ -303,7 +307,7 @@ CV_INLINE int cvIsInf( double value )
 {
 #if defined CV_INLINE_ISINF_DBL
     CV_INLINE_ISINF_DBL(value);
-#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || defined(__PPC64__) || defined(__loongarch64)
+#elif defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__PPC64__) || defined(__loongarch64)
     Cv64suf ieee754;
     ieee754.f = value;
     return (ieee754.u & 0x7fffffffffffffff) ==
@@ -323,6 +327,10 @@ CV_INLINE int cvRound(float value)
 {
 #if defined CV_INLINE_ROUND_FLT
     CV_INLINE_ROUND_FLT(value);
+#elif defined _MSC_VER && defined _M_ARM64
+    float32x2_t v = vdup_n_f32(value);
+    int32x2_t r = vcvtn_s32_f32(v);
+    return vget_lane_s32(r, 0);
 #elif ((defined _MSC_VER && defined _M_X64) || (defined __GNUC__ && defined __SSE2__)) && !defined(__CUDACC__)
     __m128 t = _mm_set_ss( value );
     return _mm_cvtss_si32(t);

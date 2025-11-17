@@ -713,8 +713,6 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 // IPP is not bit-exact to OpenCV implementation
                 CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
 #endif
-                CV_OVX_RUN(true,
-                        openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
             }
 
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint16_t*)&fkx[0], (int)fkx.size(), (const uint16_t*)&fky[0], (int)fky.size(), borderType),
@@ -783,8 +781,6 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
                 // IPP is not bit-exact to OpenCV implementation
                 CV_IPP_RUN_FAST(ipp_GaussianBlur(src, dst, ksize, sigma1, sigma2, borderType));
 #endif
-                CV_OVX_RUN(true,
-                        openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
             }
 
             CV_CPU_DISPATCH(GaussianBlurFixedPoint, (src, dst, (const uint32_t*)&fkx[0], (int)fkx.size(), (const uint32_t*)&fky[0], (int)fky.size(), borderType),
@@ -813,9 +809,6 @@ void GaussianBlur(InputArray _src, OutputArray _dst, Size ksize,
     CALL_HAL(gaussianBlur, cv_hal_gaussianBlur, src.ptr(), src.step, dst.ptr(), dst.step, src.cols, src.rows, sdepth, cn,
              ofs.x, ofs.y, wsz.width - src.cols - ofs.x, wsz.height - src.rows - ofs.y, ksize.width, ksize.height,
              sigma1, sigma2, borderType & ~BORDER_ISOLATED);
-
-    CV_OVX_RUN(true,
-               openvx_gaussianBlur(src, dst, ksize, sigma1, sigma2, borderType))
 
 #if defined ENABLE_IPP_GAUSSIAN_BLUR
     // IPP is not bit-exact to OpenCV implementation

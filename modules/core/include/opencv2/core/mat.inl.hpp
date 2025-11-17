@@ -107,7 +107,10 @@ inline _InputArray::_InputArray(const std::vector<UMat>& vec) { init(+STD_VECTOR
 
 template<typename _Tp> inline
 _InputArray::_InputArray(const std::vector<_Tp>& vec)
-{ init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec); }
+{
+    CV_CheckLE(vec.size(), static_cast<size_t>(std::numeric_limits<int>::max()), "Must not be larger than INT_MAX");
+    init(FIXED_TYPE + STD_VECTOR + traits::Type<_Tp>::value + ACCESS_READ, &vec);
+}
 
 template<typename _Tp, std::size_t _Nm> inline
 _InputArray::_InputArray(const std::array<_Tp, _Nm>& arr)
@@ -3025,6 +3028,12 @@ Mat_<_Tp>& Mat_<_Tp>::operator = (const MatExpr& e)
 }
 
 template<typename _Tp> inline
+MatExpr Mat_<_Tp>::zeros(int _ndims, const int* _sizes)
+{
+    return Mat::zeros(_ndims, _sizes, traits::Type<_Tp>::value);
+}
+
+template<typename _Tp> inline
 MatExpr Mat_<_Tp>::zeros(int rows, int cols)
 {
     return Mat::zeros(rows, cols, traits::Type<_Tp>::value);
@@ -3248,18 +3257,13 @@ const Mat_<_Tp>& operator /= (const Mat_<_Tp>& a, const MatExpr& b)
 
 template<typename _Tp> inline
 UMat::UMat(const std::vector<_Tp>& vec, bool copyData)
-: flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
-cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
+    : flags(+MAGIC_VAL + traits::Type<_Tp>::value + CV_MAT_CONT_FLAG), dims(2), rows((int)vec.size()),
+      cols(1), allocator(0), usageFlags(USAGE_DEFAULT), u(0), offset(0), size(&rows)
 {
+    CV_UNUSED(copyData); // parameter kept for backward compatibility
     if(vec.empty())
         return;
-    if( !copyData )
-    {
-        // !!!TODO!!!
-        CV_Error(Error::StsNotImplemented, "");
-    }
-    else
-        Mat((int)vec.size(), 1, traits::Type<_Tp>::value, (uchar*)&vec[0]).copyTo(*this);
+    Mat((int)vec.size(), 1, traits::Type<_Tp>::value, (uchar*)&vec[0]).copyTo(*this);
 }
 
 inline

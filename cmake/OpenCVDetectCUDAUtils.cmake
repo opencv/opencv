@@ -95,7 +95,7 @@ endfunction()
 
 macro(ocv_initialize_nvidia_device_generations)
   OCV_OPTION(CUDA_ENABLE_DEPRECATED_GENERATION "Enable deprecated generations in the list" OFF)
-  set(_generations "Maxwell" "Pascal" "Volta" "Turing" "Ampere" "Lovelace" "Hopper")
+  set(_generations "Maxwell" "Pascal" "Volta" "Turing" "Ampere" "Lovelace" "Hopper" "Blackwell")
   if(CUDA_ENABLE_DEPRECATED_GENERATION)
     set(_generations "Fermi" "${_generations}")
     set(_generations "Kepler" "${_generations}")
@@ -109,6 +109,7 @@ macro(ocv_initialize_nvidia_device_generations)
   set(_arch_ampere   "8.0;8.6")
   set(_arch_lovelace "8.9")
   set(_arch_hopper   "9.0")
+  set(_arch_blackwell "10.0;10.3;11.0;12.0;12.1")
   if(NOT CMAKE_CROSSCOMPILING)
     list(APPEND _generations "Auto")
   endif()
@@ -246,6 +247,8 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
     set(__cuda_arch_bin ${_arch_lovelace})
   elseif(CUDA_GENERATION STREQUAL "Hopper")
     set(__cuda_arch_bin ${_arch_hopper})
+  elseif(CUDA_GENERATION STREQUAL "Blackwell")
+    set(__cuda_arch_bin ${_arch_blackwell})
   elseif(CUDA_GENERATION STREQUAL "Auto")
     ocv_detect_native_cuda_arch(${nvcc_executable} _nvcc_res _nvcc_out)
     if(NOT _nvcc_res EQUAL 0)
@@ -270,13 +273,15 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
       endif()
       if(NOT _nvcc_res EQUAL 0)
         message(STATUS "CUDA: Automatic detection of CUDA generation failed. Going to build for all known architectures")
-        # TX1 (5.3) TX2 (6.2) Xavier (7.2) V100 (7.0) Orin (8.7)
+        # TX1 (5.3) TX2 (6.2) Xavier (7.2) V100 (7.0) Orin (8.7) Thor (11.0) Spark (12.1)
         ocv_filter_available_architecture(${nvcc_executable} __cuda_arch_bin
             5.3
             6.2
             7.2
             7.0
             8.7
+            11.0
+            12.1
         )
       else()
         set(__cuda_arch_bin "${_nvcc_out}")
@@ -293,6 +298,7 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
           ${_arch_ampere}
           ${_arch_lovelace}
           ${_arch_hopper}
+          ${_arch_blackwell}
       )
       list(GET __cuda_arch_bin -1 __cuda_arch_ptx)
     endif()
@@ -305,12 +311,12 @@ macro(ocv_set_cuda_arch_bin_and_ptx nvcc_executable)
 
   # Check if user specified 1.0/2.1 compute capability: we don't support it
   macro(ocv_wipeout_deprecated_cc target_cc)
-    if(" ${CUDA_ARCH_BIN} ${CUDA_ARCH_PTX}" MATCHES " ${target_cc}")
+    if(${target_cc} IN_LIST ARCH_BIN_NO_POINTS OR ${target_cc} IN_LIST ARCH_PTX_NO_POINTS)
       message(SEND_ERROR "CUDA: ${target_cc} compute capability is not supported - exclude it from ARCH/PTX list and re-run CMake")
     endif()
   endmacro()
-  ocv_wipeout_deprecated_cc("1.0")
-  ocv_wipeout_deprecated_cc("2.1")
+  ocv_wipeout_deprecated_cc("10")
+  ocv_wipeout_deprecated_cc("21")
 endmacro()
 
 macro(ocv_set_nvcc_threads_for_vs)
@@ -383,8 +389,14 @@ macro(ocv_nvcc_flags)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler=-fno-finite-math-only)
   endif()
 
-  if(WIN32 AND NOT (CUDA_VERSION VERSION_LESS "11.2"))
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcudafe --display_error_number --diag-suppress 1394,1388)
+  if(WIN32)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler=/wd4505)
+    if (NOT (CUDA_VERSION VERSION_LESS "11.2"))
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcudafe --display_error_number --diag-suppress 1394,1388)
+    endif()
+    if(CUDA_VERSION GREATER "12.8")
+        set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -Xcompiler=/Zc:preprocessor)
+    endif()
   endif()
 
   if(CMAKE_CROSSCOMPILING AND (ARM OR AARCH64))
