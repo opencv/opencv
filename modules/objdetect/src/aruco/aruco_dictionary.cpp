@@ -194,17 +194,23 @@ Mat Dictionary::getByteListFromBits(const Mat &bits) {
 }
 
 
-Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize) {
+Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize, int rotationId) {
     CV_Assert(byteList.total() > 0 &&
               byteList.total() >= (unsigned int)markerSize * markerSize / 8 &&
               byteList.total() <= (unsigned int)markerSize * markerSize / 8 + 1);
+    CV_Assert(rotationId < 4);
+
     Mat bits(markerSize, markerSize, CV_8UC1, Scalar::all(0));
 
     unsigned char base2List[] = { 128, 64, 32, 16, 8, 4, 2, 1 };
+
+    // Use a base offset for the selected rotation
+    int nbytes = (bits.cols * bits.rows + 8 - 1) / 8; // integer ceil
+    int base = rotationId * nbytes;
     int currentByteIdx = 0;
-    // we only need the bytes in normal rotation
-    unsigned char currentByte = byteList.ptr()[0];
+    unsigned char currentByte = byteList.ptr()[base + currentByteIdx];
     int currentBit = 0;
+
     for(int row = 0; row < bits.rows; row++) {
         for(int col = 0; col < bits.cols; col++) {
             if(currentByte >= base2List[currentBit]) {
@@ -214,7 +220,7 @@ Mat Dictionary::getBitsFromByteList(const Mat &byteList, int markerSize) {
             currentBit++;
             if(currentBit == 8) {
                 currentByteIdx++;
-                currentByte = byteList.ptr()[currentByteIdx];
+                currentByte = byteList.ptr()[base + currentByteIdx];
                 // if not enough bits for one more byte, we are in the end
                 // update bit position accordingly
                 if(8 * (currentByteIdx + 1) > (int)bits.total())
