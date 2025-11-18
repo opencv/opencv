@@ -49,34 +49,7 @@ inline const void* scalarPtr(const CudnnScalar& s)
 }
 } // namespace detail
 
-void conv2dNCHW(
-    cudnnHandle_t handle,
-    cudnnTensorDescriptor_t xDesc,
-    cudnnFilterDescriptor_t wDesc,
-    cudnnConvolutionDescriptor_t convDesc,
-    cudnnTensorDescriptor_t yDesc,
-    cudnnTensorDescriptor_t bDesc, // may be nullptr if no bias
-    const void* d_input,
-    const void* d_weights,
-    const void* d_bias,
-    void* d_output);
-
-// 1D convolution in NCHW “disguised” as 2D:
-// e.g. input shape: [N, C, 1, L], kernel: [K, C, 1, kW]
-void conv1dNCHW(
-    cudnnHandle_t handle,
-    cudnnTensorDescriptor_t xDesc,
-    cudnnFilterDescriptor_t wDesc,
-    cudnnConvolutionDescriptor_t convDesc,
-    cudnnTensorDescriptor_t yDesc,
-    cudnnTensorDescriptor_t bDesc,
-    const void* d_input,
-    const void* d_weights,
-    const void* d_bias,
-    void* d_output);
-
-// 3D convolution with 5D tensor descriptors, typical layout NCDHW
-void conv3dNCDHW(
+void convolution(
     cudnnHandle_t handle,
     cudnnTensorDescriptor_t xDesc,
     cudnnFilterDescriptor_t wDesc,
@@ -111,7 +84,7 @@ void addInplace(cudnnHandle_t handle,
                 const void* d_x,
                 void* d_y);
 
-void pool2dNCHW(
+void pool(
     cudnnHandle_t handle,
     cudnnTensorDescriptor_t xDesc,
     cudnnTensorDescriptor_t yDesc,

@@ -470,7 +470,7 @@ public:
                         mode, CUDNN_PROPAGATE_NAN,
                         kH, kW, pH, pW, sH, sW);
 
-                    cv::dnn::cuda::pool2dNCHW(
+                    cv::dnn::cuda::pool(
                         cudnnHandle,
                         xDesc, yDesc, cudnnPoolDesc,
                         (const void*)gin0.ptr(),

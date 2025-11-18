@@ -12,7 +12,7 @@
 
 namespace cv { namespace dnn { namespace cuda {
 
-void pool2dNCHW(
+void pool(
     cudnnHandle_t handle,
     cudnnTensorDescriptor_t xDesc,
     cudnnTensorDescriptor_t yDesc,
