@@ -200,7 +200,7 @@ read_file(const char*  pathname, char*  buffer, size_t  buffsize)
 }
 
 #ifdef __arm__
-/* Extract the content of a the first occurence of a given field in
+/* Extract the content of a the first occurrence of a given field in
  * the content of /proc/cpuinfo and return it as a heap-allocated
  * string that must be freed by the caller.
  *
@@ -215,7 +215,7 @@ extract_cpuinfo_field(const char* buffer, int buflen, const char* field)
     int len;
     const char *p, *q;
 
-    /* Look for first field occurence, and ensures it starts the line. */
+    /* Look for first field occurrence, and ensures it starts the line. */
     p = buffer;
     for (;;) {
         p = memmem(p, bufend-p, field, fieldlen);
@@ -507,7 +507,7 @@ cpulist_read_from(CpuList* list, const char* filename)
 //
 // This code does *NOT* check for '__ANDROID_API__ >= 20' to support the
 // edge case where some NDK developers use headers for a platform that is
-// newer than the one really targetted by their application.
+// newer than the one really targeted by their application.
 // This is typically done to use newer native APIs only when running on more
 // recent Android versions, and requires careful symbol management.
 //
@@ -518,7 +518,7 @@ cpulist_read_from(CpuList* list, const char* filename)
 #if 1
 // OpenCV calls CPU features check during library initialization stage
 // (under other dlopen() call).
-// Unfortunatelly, calling dlopen() recursively is not supported on some old
+// Unfortunately, calling dlopen() recursively is not supported on some old
 // Android versions. Android fix is here:
 // - https://android-review.googlesource.com/#/c/32951/
 // - GitHub mirror: https://github.com/android/platform_bionic/commit/e19d702b8e330cef87e0983733c427b5f7842144
@@ -1278,11 +1278,11 @@ android_setCpuArm(int cpu_count, uint64_t cpu_features, uint32_t cpu_id)
  *   |
  * ARCH_NEON_FP16 (+EXT_FP16)
  *
- * -fpu=<name> values and their correspondance with FPU architectures above:
+ * -fpu=<name> values and their correspondence with FPU architectures above:
  *
  *   {"vfp",               FPU_ARCH_VFP_V2},
  *   {"vfp9",              FPU_ARCH_VFP_V2},
- *   {"vfp3",              FPU_ARCH_VFP_V3}, // For backwards compatbility.
+ *   {"vfp3",              FPU_ARCH_VFP_V3}, // For backwards compatibility.
  *   {"vfp10",             FPU_ARCH_VFP_V2},
  *   {"vfp10-r0",          FPU_ARCH_VFP_V1},
  *   {"vfpxd",             FPU_ARCH_VFP_V1xD},
