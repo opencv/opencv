@@ -1,5 +1,6 @@
-// cuDNN/cuBLAS-backed Fully Connected (GEMM) for FP32
-// y [N x M] = x [N x K] * W^T [K x M] + b [M]
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
 
 #include <cuda_runtime.h>
 #include <cublas_v2.h>

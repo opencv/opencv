@@ -398,7 +398,7 @@ struct CV_EXPORTS_W GpuData
 class CV_EXPORTS_W GpuMatND
 {
 public:
-    using SizeArray = std::vector<int>;
+    using SizeArray = MatShape;
     using StepArray = std::vector<size_t>;
     using IndexArray = std::vector<int>;
 
@@ -413,7 +413,7 @@ public:
     @param type Array type. Use CV_8UC1, ..., CV_16FC4 to create 1-4 channel matrices, or
     CV_8UC(n), ..., CV_64FC(n) to create multi-channel (up to CV_CN_MAX channels) matrices.
     */
-    GpuMatND(SizeArray size, int type);
+    GpuMatND(const MatShape& shape, int type);
 
     /** @overload
     @param size Array of integers specifying an n-dimensional array shape.
@@ -428,7 +428,7 @@ public:
     (if specified, the last step must be equal to the element size, otherwise it will be added as such).
     If not specified, the matrix is assumed to be continuous.
     */
-    GpuMatND(SizeArray size, int type, void* data, StepArray step = StepArray());
+    GpuMatND(const MatShape& shape, int type, void* data, StepArray step = StepArray());
 
     /** @brief Allocates GPU memory.
     Suppose there is some GPU memory already allocated. In that case, this method may choose to reuse that
@@ -437,7 +437,7 @@ public:
     (i.e., isSubmatrix() is false). In other words, this method guarantees that the GPU memory allocated by
     this method is always continuous and is not a sub-region of another GpuMatND.
     */
-    void create(SizeArray size, int type);
+    void create(const MatShape& shape, int type);
 
     void release();
 
@@ -448,7 +448,7 @@ public:
     - Reallocates otherwise.
     Mirrors 2D GpuMat::fit semantics for multi-dimensional tensors.
     */
-    CV_WRAP void fit(SizeArray size, int type);
+    CV_WRAP void fit(const MatShape& shape, int type);
 
     /** @brief Creates a full copy of the array and the underlying data.
     The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
@@ -549,7 +549,7 @@ public:
 
 private:
     //! internal use
-    void setFields(SizeArray size, int type, StepArray step = StepArray());
+    void setFields(MatShape size, int type, StepArray step = StepArray());
 
 public:
     /*! includes several bit-fields:
@@ -564,7 +564,7 @@ public:
     int dims;
 
     //! shape of this array
-    SizeArray size;
+    MatShape size;
 
     /*! step values
     Their semantics is identical to the semantics of step for Mat.

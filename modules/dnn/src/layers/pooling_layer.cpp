@@ -211,8 +211,8 @@ public:
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
-                return false;
                 // return type == MAX;
+                return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
@@ -470,24 +470,11 @@ public:
                         mode, CUDNN_PROPAGATE_NAN,
                         kH, kW, pH, pW, sH, sW);
 
-                    if (type == MAX)
-                    {
-                        std::cout<<"maxPool2dNCHW"<<std::endl;
-                        cv::dnn::cuda::maxPool2dNCHW(
-                            cudnnHandle,
-                            xDesc, yDesc, cudnnPoolDesc,
-                            (const void*)gin0.ptr(),
-                            (void*)dstPtr->ptr());
-                    }
-                    else
-                    {
-                        std::cout<<"avgPool2dNCHW"<<std::endl;
-                        cv::dnn::cuda::avgPool2dNCHW(
-                            cudnnHandle,
-                            xDesc, yDesc, cudnnPoolDesc,
-                            (const void*)gin0.ptr(),
-                            (void*)dstPtr->ptr());
-                    }
+                    cv::dnn::cuda::pool2dNCHW(
+                        cudnnHandle,
+                        xDesc, yDesc, cudnnPoolDesc,
+                        (const void*)gin0.ptr(),
+                        (void*)dstPtr->ptr());
                     if (dstPtr != &dst) {
                         dst32.convertTo(dst, dst.type());
                     }
