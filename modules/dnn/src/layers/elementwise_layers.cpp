@@ -67,7 +67,7 @@ using namespace cv::dnn::cuda4dnn;
 
 #ifdef HAVE_CUDA
 #include <opencv2/core/cuda.hpp>
-#include "../cuda/conv_naive.hpp"
+#include "../cuda/layer_cudnn.hpp"
 #include "../net_impl.hpp"
 #include <cudnn.h>
 #endif

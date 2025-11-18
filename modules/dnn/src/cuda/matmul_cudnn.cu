@@ -7,7 +7,7 @@
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 #include <cstdio>
-#include "conv_naive.hpp"
+#include "layer_cudnn.hpp"
 
 namespace cv { namespace dnn { namespace cuda {
 
