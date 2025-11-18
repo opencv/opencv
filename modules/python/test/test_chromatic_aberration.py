@@ -82,7 +82,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
             _ = cv.correctChromaticAberration(gray, coeffMat, calibW, calibH, degree)
 
     def test_empty_coeff_mat(self):
-        coeffMat, calibW, calibH, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        _, calibW, calibH, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
 
         emptyCoeff = np.empty((0, 0), dtype=np.float32)
         with self.assertRaises(cv.error):
