@@ -1346,14 +1346,14 @@ public:
                 } else {
                     CV_Error(Error::StsError, "Unexpected convolution weights dimensionality");
                 }
-                wdev_nd.fit(wshape, w.type());
+                wdev_nd.fit(MatShape(wshape), w.type());
                 wdev_nd.upload(w);
             }
             if (hasBias()) {
                 const Mat& b = blobs[1];
                 CV_Assert(b.type() == CV_32F && "DNN/CUDA: bias must be float32");
                 std::vector<int> bshape = { C_out };
-                bdev_nd.fit(bshape, b.type());
+                bdev_nd.fit(MatShape(bshape), b.type());
                 bdev_nd.upload(b);
             }
 

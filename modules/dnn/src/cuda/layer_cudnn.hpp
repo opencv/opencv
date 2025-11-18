@@ -1,3 +1,7 @@
+// This file is part of OpenCV project.
+// It is subject to the license terms in the LICENSE file found in the top-level directory
+// of this distribution and at http://opencv.org/license.html.
+
 #pragma once
 #include <cudnn.h>
 #include <cublas_v2.h>
@@ -107,15 +111,7 @@ void addInplace(cudnnHandle_t handle,
                 const void* d_x,
                 void* d_y);
 
-void avgPool2dNCHW(
-    cudnnHandle_t handle,
-    cudnnTensorDescriptor_t xDesc,
-    cudnnTensorDescriptor_t yDesc,
-    cudnnPoolingDescriptor_t pDesc,
-    const void* d_input,
-    void* d_output);
-
-void maxPool2dNCHW(
+void pool2dNCHW(
     cudnnHandle_t handle,
     cudnnTensorDescriptor_t xDesc,
     cudnnTensorDescriptor_t yDesc,

@@ -418,10 +418,10 @@ GpuMatND::GpuMatND() :
 }
 
 inline
-GpuMatND::GpuMatND(SizeArray _size, int _type) :
+GpuMatND::GpuMatND(const MatShape& _shape, int _type) :
     flags(0), dims(0), data(nullptr), offset(0)
 {
-    create(std::move(_size), _type);
+    create(_shape, _type);
 }
 
 inline
