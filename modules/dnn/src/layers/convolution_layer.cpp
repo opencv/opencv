@@ -1338,22 +1338,15 @@ public:
             {
                 const Mat& w = blobs[0];
                 CV_Assert(w.type() == CV_32F && "DNN/CUDA: weights must be float32");
-                std::vector<int> wshape;
-                if (w.dims >= 4) {
-                    wshape = { w.size[0], w.size[1], w.size[2], w.size[3] };
-                } else if (w.dims == 3) {
-                    wshape = { w.size[0], w.size[1], w.size[2], 1 };
-                } else {
-                    CV_Error(Error::StsError, "Unexpected convolution weights dimensionality");
-                }
-                wdev_nd.fit(MatShape(wshape), w.type());
+                MatShape wshape = shape(w);
+                wdev_nd.fit(wshape, w.type());
                 wdev_nd.upload(w);
             }
             if (hasBias()) {
                 const Mat& b = blobs[1];
                 CV_Assert(b.type() == CV_32F && "DNN/CUDA: bias must be float32");
-                std::vector<int> bshape = { C_out };
-                bdev_nd.fit(MatShape(bshape), b.type());
+                MatShape bshape = shape(b);
+                bdev_nd.fit(bshape, b.type());
                 bdev_nd.upload(b);
             }
 

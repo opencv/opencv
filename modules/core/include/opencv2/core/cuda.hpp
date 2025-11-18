@@ -448,7 +448,7 @@ public:
     - Reallocates otherwise.
     Mirrors 2D GpuMat::fit semantics for multi-dimensional tensors.
     */
-    CV_WRAP void fit(const MatShape& shape, int type);
+    void fit(const MatShape& shape, int type);
 
     /** @brief Creates a full copy of the array and the underlying data.
     The method creates a full copy of the array. It mimics the behavior of Mat::clone(), i.e.
