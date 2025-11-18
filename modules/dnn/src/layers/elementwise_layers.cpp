@@ -169,7 +169,8 @@ public:
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
-                return false;
+                return true;
+                // return false;
         }
 #endif
         return func.supportBackend(backendId, this->preferableTarget);
@@ -304,11 +305,12 @@ public:
                             CUDNN_DATA_FLOAT);
 
                         std::cout<<"relu"<<std::endl;
+                        int lid = netimpl->getLayerId(this->name);
                         cudnnActivationDescriptor_t reluActDesc =
-                            netimpl->activationDescCuDNN(this->name + ":relu",
-                                                         CUDNN_ACTIVATION_RELU,
-                                                         CUDNN_PROPAGATE_NAN,
-                                                         0.0);
+                            netimpl->activationDescCuDNN(lid,
+                                                          CUDNN_ACTIVATION_RELU,
+                                                          CUDNN_PROPAGATE_NAN,
+                                                          0.0);
                         cv::dnn::cuda::relu(
                             cudnnHandle,
                             reluActDesc,

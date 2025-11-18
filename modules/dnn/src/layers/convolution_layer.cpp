@@ -1352,23 +1352,18 @@ public:
 
 
             cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
-                this->inputs.empty() ? Arg() : this->inputs[0],
-                N, C_in, H_in, W_in,
-                C_in * H_in * W_in, H_in * W_in, W_in, 1,
-                CUDNN_DATA_FLOAT);
+                inputs_arr, this->inputs, 0);
 
             cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
-                this->outputs.empty() ? Arg() : this->outputs[0],
-                N, C_out, H_out, W_out,
-                C_out * H_out * W_out, H_out * W_out, W_out, 1,
-                CUDNN_DATA_FLOAT);
+                outputs_arr, this->outputs, 0);
 
+            int lid = netimpl->getLayerId(this->name);
             cudnnFilterDescriptor_t cudnnWDesc = netimpl->filterDescCuDNN(
-                this->name + ":w",
+                lid,
                 CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
                 C_out, blobs[0].size[1], kH, kW);
             cudnnConvolutionDescriptor_t cudnnConvDesc = netimpl->convDescCuDNN(
-                this->name + ":conv",
+                lid,
                 pH, pW, sH, sW, dH, dW, groups, CUDNN_DATA_FLOAT);
             cudnnTensorDescriptor_t cudnnBDesc = nullptr;
             if (hasBias())
