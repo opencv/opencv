@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 #include <float.h>
-#include "conv_naive.hpp"
+#include "layer_cudnn.hpp"
 #include <vector>
 #include <cudnn.h>
 #include <cuda_fp16.h>

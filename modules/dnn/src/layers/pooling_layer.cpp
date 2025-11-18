@@ -73,7 +73,7 @@ using namespace cv::dnn::ocl4dnn;
 #include "../cuda4dnn/primitives/max_unpooling.hpp"
 using namespace cv::dnn::cuda4dnn;
 #include <opencv2/core/cuda.hpp>
-#include "../cuda/conv_naive.hpp"
+#include "../cuda/layer_cudnn.hpp"
 #include "../net_impl.hpp"
 #include <cudnn.h>
 #endif
