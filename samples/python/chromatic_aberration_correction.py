@@ -48,7 +48,6 @@ def main(argv=None):
 
     try:
         coeffMat, calibW, calibH, degree = cv.loadCalibrationResultFromFile(args.calibration)
-        print(calibW, calibH)
         corrected = cv.correctChromaticAberration(img, coeffMat, calibW, calibH, degree, args.bayer)
 
         if corrected is None:
