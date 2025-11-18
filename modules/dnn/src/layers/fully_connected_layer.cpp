@@ -60,7 +60,7 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
-#include "../cuda/conv_naive.hpp"
+#include "../cuda/layer_cudnn.hpp"
 #include <opencv2/core/cuda.hpp>
 #include <cudnn.h>
 using namespace cv::dnn::cuda4dnn;
