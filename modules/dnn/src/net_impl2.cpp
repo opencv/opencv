@@ -478,7 +478,7 @@ void Net::Impl::allocateLayerOutputs(
 namespace {
 static inline cv::cuda::GpuMat dnn_createGpuMatFromShape(const MatShape& shp, int type, cv::cuda::GpuMatND& storageND)
 {
-    std::vector<int> ndsize;
+    MatShape ndsize;
     ndsize.reserve(shp.dims);
     size_t total = 1;
     for (int d = 0; d < shp.dims; ++d) {
