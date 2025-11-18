@@ -269,6 +269,7 @@ protected:
     void parseOperatorSet();
 
     const std::string str_domain_ai_onnx = "ai.onnx";
+    const std::string str_domain_com_microsoft = "com.microsoft";
 
     bool useLegacyNames;
     bool getParamUseLegacyNames()
@@ -592,20 +593,16 @@ void ONNXImporter2::parseOperatorSet()
     CV_LOG_INFO(NULL, "DNN/ONNX: ONNX opset version = " << onnx_opset);
 
     buildDispatchMap_ONNX_AI(onnx_opset);
+    buildDispatchMap_COM_MICROSOFT(onnx_opset);
+
     for (const auto& pair : onnx_opset_map)
     {
-        if (pair.first == str_domain_ai_onnx)
-        {
-            continue;  // done above
-        }
-        else if (pair.first == "com.microsoft")
-        {
-            buildDispatchMap_COM_MICROSOFT(pair.second);
-        }
-        else
-        {
-            CV_LOG_INFO(NULL, "DNN/ONNX: unknown domain='" << pair.first << "' version=" << pair.second << ". No dispatch map, you may need to register 'custom' layers.");
-        }
+        if ((pair.first != str_domain_ai_onnx) && (pair.first != str_domain_com_microsoft))
+            CV_LOG_INFO(
+                NULL,
+                "DNN/ONNX: unknown domain='" << pair.first << "' version=" << pair.second << ". No dispatch map, you may need to register 'custom' layers."
+            );
+
     }
 }
 
@@ -2736,7 +2733,7 @@ void ONNXImporter2::buildDispatchMap_COM_MICROSOFT(int opset_version)
     //dispatch["QLinearSoftmax"] = &ONNXImporter2::parseQSoftmax;
     dispatch["Attention"] = &ONNXImporter2::parseAttention;
 
-    domain_dispatch_map["com.microsoft"] = dispatch;
+    domain_dispatch_map[str_domain_com_microsoft] = dispatch;
 }
 
 
