@@ -50,66 +50,70 @@ static void rotate(
     const int batch_size, const int seq_len, const int n_heads, const int dim_head,
     const int rotary_dim, const bool is_data_4d
 ){
-    Range r(0, n_heads * seq_len * batch_size);
-
-    const int dhalf = rotary_dim / 2;
-    for (int i = r.start; i < r.end; ++i)
-    {
-        const int t = i % seq_len;
-        const int b = i / (n_heads * seq_len);
-        const int n = (i - b * n_heads * seq_len - t) / seq_len;
-
-        const int offset = (is_data_4d ?
-            seq_len * (b * n_heads + n ) + t :
-            n_heads * (b * seq_len + t ) + n) * dim_head;
-
-        const float* real = data_in + offset;
-        const float* imag = data_in + offset + dhalf;
-
-        const float*sin_cache_ptr = sin_cache + (b * seq_len + t) * dhalf;
-        const float*cos_cache_ptr = cos_cache + (b * seq_len + t) * dhalf;
-
-        float* out_real = data_out + offset;
-        float* out_imag = data_out + offset + dhalf;
-
-        int d = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        const size_t w = VTraits<v_float32>::vlanes();
-        for (; d + w <= dhalf; d += w)
+    auto fn = [&](const Range &r) {
+        const int dhalf = rotary_dim / 2;
+        for (int i = r.start; i < r.end; ++i)
         {
-            // Alignment requirement: if CV_STRONG_ALIGNMENT=1 then passed pointer must be aligned (sizeof(lane type) should be enough
-            // should be fullfilled by design
-            v_float32 vreal = vx_load(real + d);
-            v_float32 vimag = vx_load(imag + d);
-            v_float32 vsin  = vx_load(sin_cache_ptr + d);
-            v_float32 vcos  = vx_load(cos_cache_ptr + d);
+            const int t = i % seq_len;
+            const int b = i / (n_heads * seq_len);
+            const int n = (i - b * n_heads * seq_len - t) / seq_len;
 
-            v_float32 vout_real = v_sub(v_mul(vcos, vreal), v_mul(vsin, vimag));
-            v_float32 vout_imag = v_add(v_mul(vsin, vreal), v_mul(vcos, vimag));
+            const int offset = (is_data_4d ?
+                seq_len * (b * n_heads + n ) + t :
+                n_heads * (b * seq_len + t ) + n) * dim_head;
 
-            v_store(out_real + d, vout_real);
-            v_store(out_imag + d, vout_imag);
-        }
-#endif
-        // scalar tail
-        for (; d < dhalf; ++d)
-        {
-            float r = real[d];
-            float im = imag[d];
-            float s = sin_cache_ptr[d];
-            float c = cos_cache_ptr[d];
-            out_real[d] = r * c - im * s;
-            out_imag[d] = im * c + r * s;
-        }
+            const float* real = data_in + offset;
+            const float* imag = data_in + offset + dhalf;
 
-        // copy not rotated part
-        if (dim_head > rotary_dim)
-        {
-            const float* data_in_ptr = data_in + offset + rotary_dim;
-            float* out_ptr = data_out + offset + rotary_dim;
-            memcpy(out_ptr, data_in_ptr, (dim_head - rotary_dim) * sizeof(float));
+            const float*sin_cache_ptr = sin_cache + (b * seq_len + t) * dhalf;
+            const float*cos_cache_ptr = cos_cache + (b * seq_len + t) * dhalf;
+
+            float* out_real = data_out + offset;
+            float* out_imag = data_out + offset + dhalf;
+
+            int d = 0;
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t w = VTraits<v_float32>::vlanes();
+            for (; d + w <= dhalf; d += w)
+            {
+                // Alignment requirement: if CV_STRONG_ALIGNMENT=1 then passed pointer must be aligned (sizeof(lane type) should be enough
+                // should be fullfilled by design
+                v_float32 vreal = vx_load(real + d);
+                v_float32 vimag = vx_load(imag + d);
+                v_float32 vsin  = vx_load(sin_cache_ptr + d);
+                v_float32 vcos  = vx_load(cos_cache_ptr + d);
+
+                v_float32 vout_real = v_sub(v_mul(vcos, vreal), v_mul(vsin, vimag));
+                v_float32 vout_imag = v_add(v_mul(vsin, vreal), v_mul(vcos, vimag));
+
+                v_store(out_real + d, vout_real);
+                v_store(out_imag + d, vout_imag);
+            }
+    #endif
+            // scalar tail
+            for (; d < dhalf; ++d)
+            {
+                float r = real[d];
+                float im = imag[d];
+                float s = sin_cache_ptr[d];
+                float c = cos_cache_ptr[d];
+                out_real[d] = r * c - im * s;
+                out_imag[d] = im * c + r * s;
+            }
+
+            // copy not rotated part
+            if (dim_head > rotary_dim)
+            {
+                const float* data_in_ptr = data_in + offset + rotary_dim;
+                float* out_ptr = data_out + offset + rotary_dim;
+                memcpy(out_ptr, data_in_ptr, (dim_head - rotary_dim) * sizeof(float));
+            }
         }
-    }
+    };
+
+    const size_t loops = n_heads * seq_len * batch_size;
+    double nstripes = loops * dim_head * (1 / 1024.0);
+    parallel_for_(Range(0, loops), fn, nstripes);
 }
 
 static void rotate_interleaved(
@@ -118,59 +122,64 @@ static void rotate_interleaved(
     const int batch_size, const int seq_len, const int n_heads, const int dim_head,
     const int rotary_dim, const bool is_data_4d
 ){
-    Range r(0, n_heads * seq_len * batch_size);
+    auto fn = [&](const Range &r) {
+        const int dhalf = rotary_dim / 2;
 
-    const int dhalf = rotary_dim / 2;
-    for (int i = r.start; i < r.end; ++i)
-    {
-        const int t = i % seq_len;
-        const int b = i / (n_heads * seq_len);
-        const int n = (i - b * n_heads * seq_len - t) / seq_len;
-
-        const int offset = (is_data_4d ?
-            seq_len * (b * n_heads + n ) + t :
-            n_heads * (b * seq_len + t ) + n) * dim_head;
-
-        const float* data_in_ptr = data_in + offset;
-        float* out_ptr = data_out + offset;
-
-        const float*sin_cache_ptr = sin_cache + (b * seq_len + t) * dhalf;
-        const float*cos_cache_ptr = cos_cache + (b * seq_len + t) * dhalf;
-
-        int d = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        const size_t w = VTraits<v_float32>::vlanes();
-        for (; d + w <= dhalf; d += w)
+        for (int i = r.start; i < r.end; ++i)
         {
-            v_float32 vimag, vreal;
-            v_float32 vsin  = vx_load(sin_cache_ptr + d);
-            v_float32 vcos  = vx_load(cos_cache_ptr + d);
-            v_load_deinterleave(data_in_ptr + 2*d, vreal, vimag);
+            const int t = i % seq_len;
+            const int b = i / (n_heads * seq_len);
+            const int n = (i - b * n_heads * seq_len - t) / seq_len;
 
-            v_float32 vout_real = v_sub(v_mul(vcos, vreal), v_mul(vsin, vimag));
-            v_float32 vout_imag = v_add(v_mul(vsin, vreal), v_mul(vcos, vimag));
+            const int offset = (is_data_4d ?
+                seq_len * (b * n_heads + n ) + t :
+                n_heads * (b * seq_len + t ) + n) * dim_head;
 
-            v_store_interleave(out_ptr + 2*d, vout_real, vout_imag);
+            const float* data_in_ptr = data_in + offset;
+            float* out_ptr = data_out + offset;
+
+            const float*sin_cache_ptr = sin_cache + (b * seq_len + t) * dhalf;
+            const float*cos_cache_ptr = cos_cache + (b * seq_len + t) * dhalf;
+
+            int d = 0;
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t w = VTraits<v_float32>::vlanes();
+            for (; d + w <= dhalf; d += w)
+            {
+                v_float32 vimag, vreal;
+                v_float32 vsin  = vx_load(sin_cache_ptr + d);
+                v_float32 vcos  = vx_load(cos_cache_ptr + d);
+                v_load_deinterleave(data_in_ptr + 2*d, vreal, vimag);
+
+                v_float32 vout_real = v_sub(v_mul(vcos, vreal), v_mul(vsin, vimag));
+                v_float32 vout_imag = v_add(v_mul(vsin, vreal), v_mul(vcos, vimag));
+
+                v_store_interleave(out_ptr + 2*d, vout_real, vout_imag);
+            }
+    #endif
+            // scalar tail
+            for (; d < dhalf; ++d)
+            {
+                float r = data_in_ptr[2*d];
+                float im = data_in_ptr[2*d + 1];
+                float s = sin_cache_ptr[d];
+                float c = cos_cache_ptr[d];
+                out_ptr[2*d] = r * c - im * s;
+                out_ptr[2*d + 1] = im * c + r * s;
+            }
+            // copy not rotated part
+            if (dim_head > rotary_dim)
+            {
+                const float* data_in_ptr_tail = data_in_ptr + rotary_dim;
+                float* out_ptr_tail = out_ptr + rotary_dim;
+                memcpy(out_ptr_tail, data_in_ptr_tail, (dim_head - rotary_dim) * sizeof(float));
+            }
         }
-#endif
-        // scalar tail
-        for (; d < dhalf; ++d)
-        {
-            float r = data_in_ptr[2*d];
-            float im = data_in_ptr[2*d + 1];
-            float s = sin_cache_ptr[d];
-            float c = cos_cache_ptr[d];
-            out_ptr[2*d] = r * c - im * s;
-            out_ptr[2*d + 1] = im * c + r * s;
-        }
-        // copy not rotated part
-        if (dim_head > rotary_dim)
-        {
-            const float* data_in_ptr_tail = data_in_ptr + rotary_dim;
-            float* out_ptr_tail = out_ptr + rotary_dim;
-            memcpy(out_ptr_tail, data_in_ptr_tail, (dim_head - rotary_dim) * sizeof(float));
-        }
-    }
+    };
+
+    const size_t loops = n_heads * seq_len * batch_size;
+    double nstripes = loops * dim_head * (1 / 1024.0);
+    parallel_for_(Range(0, loops), fn, nstripes);
 }
 
 
