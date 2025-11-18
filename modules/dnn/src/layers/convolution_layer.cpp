@@ -1381,8 +1381,8 @@ public:
             CV_Assert(netimpl->cudaInfo);
             cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-            std::cout<<"conv2dNCHW"<<std::endl;
-            cuda::conv2dNCHW(
+            std::cout<<"convolution"<<std::endl;
+            cuda::convolution(
                 cudnnHandle,
                 xDesc, cudnnWDesc, cudnnConvDesc, yDesc,
                 hasBias() ? cudnnBDesc : nullptr,
