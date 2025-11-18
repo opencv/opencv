@@ -211,8 +211,8 @@ public:
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
-                // return type == MAX;
-                return false;
+                return type == MAX;
+                // return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
@@ -465,8 +465,9 @@ public:
                         N, C, H_out, W_out, CUDNN_DATA_FLOAT);
 
                     cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+                    int lid = netimpl->getLayerId(this->name);
                     cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
-                        this->name + ":pool",
+                        lid,
                         mode, CUDNN_PROPAGATE_NAN,
                         kH, kW, pH, pW, sH, sW);
 

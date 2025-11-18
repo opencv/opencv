@@ -121,23 +121,20 @@ cudnnTensorDescriptor_t Net::Impl::tensorDescNCHW(Arg arg,
                                                   int N, int C, int H, int W,
                                                   cudnnDataType_t dtype)
 {
-    const int n_stride = C * H * W;
-    const int c_stride = H * W;
-    const int h_stride = W;
-    const int w_stride = 1;
-    return argTensorCuDNN(arg, N, C, H, W, n_stride, c_stride, h_stride, w_stride, dtype);
+    CV_UNUSED(N); CV_UNUSED(C); CV_UNUSED(H); CV_UNUSED(W); CV_UNUSED(dtype);
+    std::vector<Arg> single{ arg };
+    _InputArray dummy; // not used inside argTensorCuDNN
+    return argTensorCuDNN(dummy, single, 0);
 }
 
 cudnnTensorDescriptor_t Net::Impl::tensorDesc2D(Arg arg,
                                                 int rows, int cols, int row_stride,
                                                 cudnnDataType_t dtype)
 {
-    // Map 2D (rows x cols) to 4D (N=rows, C=cols, H=1, W=1) with explicit strides
-    const int n_stride = row_stride > 0 ? row_stride : cols;
-    const int c_stride = 1;
-    const int h_stride = 1;
-    const int w_stride = 1;
-    return argTensorCuDNN(arg, rows, cols, 1, 1, n_stride, c_stride, h_stride, w_stride, dtype);
+    CV_UNUSED(rows); CV_UNUSED(cols); CV_UNUSED(row_stride); CV_UNUSED(dtype);
+    std::vector<Arg> single{ arg };
+    _InputArray dummy; // not used inside argTensorCuDNN
+    return argTensorCuDNN(dummy, single, 0);
 }
 
 
