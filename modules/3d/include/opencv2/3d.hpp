@@ -1023,7 +1023,8 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
    -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
        are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
-       global solution to converge.
+       global solution to converge. The function returns true if some solution is found. User code is responsible for
+       solution quality assessment.
    -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
    -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
        Number of input points must be 4. Object points must be defined in the following order:
@@ -2684,7 +2685,7 @@ CV_EXPORTS_W void undistortImage(InputArray distorted, OutputArray undistorted,
     InputArray K, InputArray D, InputArray Knew = cv::noArray(), const Size& new_size = Size());
 
 /**
-@brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+@brief Finds an object pose from 3D-2D point correspondences for fisheye camera model.
 
 @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
 1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can also be passed here.
@@ -2711,7 +2712,7 @@ Number of input points must be 4. Object points must be defined in the following
 - point 3: [-squareLength / 2, -squareLength / 2, 0]
 - for all the other flags, number of input points must be >= 4 and object points can be in any configuration.
 @param criteria Termination criteria for internal undistortPoints call.
-The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+The function internally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
 thus the input are very similar. Check there and Perspective-n-Points is described in @ref calib3d_solvePnP
 for more information.
 */
