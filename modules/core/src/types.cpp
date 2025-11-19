@@ -162,6 +162,9 @@ RotatedRect::RotatedRect(const Point2f& _point1, const Point2f& _point2, const P
     int ht_i = (wd_i + 1) % 2;
 
     float _angle = std::atan(vecs[wd_i][1] / vecs[wd_i][0]) * 180.0f / (float) CV_PI;
+    printf("vecs %lf\n", vecs[wd_i][1]);
+    printf("vecs %lf\n", vecs[wd_i][0]);
+    printf("angle %lf\n", _angle);
     float _width = (float) norm(vecs[wd_i]);
     float _height = (float) norm(vecs[ht_i]);
 

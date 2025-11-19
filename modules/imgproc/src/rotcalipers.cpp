@@ -39,6 +39,7 @@
 //
 //M*/
 #include "precomp.hpp"
+#include <iostream>
 
 namespace cv
 {
@@ -64,6 +65,7 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //    Parameters:
  //      points      - convex hull vertices ( any orientation )
  //      n           - number of vertices
+ //      orientation - -1 for clockwise vertices order, 1 for CCW. 0 if unknown.
  //      mode        - concrete application of algorithm
  //                    can be  CV_CALIPERS_MAXDIST   or
  //                            CV_CALIPERS_MINAREARECT
@@ -115,7 +117,7 @@ static bool firstVecIsRight(const cv::Point2f& vec1, const cv::Point2f &vec2)
 }
 
 /* we will use usual cartesian coordinates */
-static void rotatingCalipers( const Point2f* points, int n, int mode, float* out )
+static void rotatingCalipers( const Point2f* points, int n, float orientation, int mode, float* out )
 {
     float minarea = FLT_MAX;
     float max_dist = 0;
@@ -132,7 +134,6 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
      (a,b) (-b,a) (-a,-b) (b, -a)
      */
     /* this is a first base vector (a,b) initialized by (1,0) */
-    float orientation = 0;
     float base_a;
     float base_b = 0;
 
@@ -171,6 +172,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     }
 
     // find convex hull orientation
+    if (orientation == 0.f)
     {
         double ax = vect[n-1].x;
         double ay = vect[n-1].y;
@@ -365,7 +367,8 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     Point2f out[3];
     RotatedRect box;
 
-    convexHull(_points, hull, false, true);
+    static const bool clockwise = false;
+    convexHull(_points, hull, clockwise, true);
 
     if( hull.depth() != CV_32F )
     {
@@ -375,16 +378,80 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     }
 
     int n = hull.checkVector(2);
-    const Point2f* hpoints = hull.ptr<Point2f>();
+    Point2f* hpoints = hull.ptr<Point2f>();
+
+    // for( int i = 0; i < n; i++ )
+    // {
+    //     std::cout << "hpoint " << hpoints[i] << std::endl;
+    // }
+
+    // for( int i = 0; i < n-1; i++ )
+    // {
+    //     float dx1 = hpoints[i + 1].x - hpoints[i].x;
+    //     float dy1 = hpoints[i + 1].y - hpoints[i].y;
+    //     for( size_t j = i+1; j < n; j++ )
+    //     {
+    //         float dx = hpoints[j].x - hpoints[i].x;
+    //         float dy = hpoints[j].y - hpoints[i].y;
+    //         // double d2 = dx*dx + dy*dy; // can be a really small number, need double here
+
+    //         if (dx1 * dy - dy1 * dx < 0)
+    //         {
+    //             std::swap(hpoints[i + 1], hpoints[j]);
+    //             dx1 = dx;
+    //             dy1 = dy;
+    //             std::cout << "swap" << std::endl;
+    //         }
+    //     }
+    // }
 
     if( n > 2 )
     {
-        rotatingCalipers( hpoints, n, CALIPERS_MINAREARECT, (float*)out );
+        // The angle of rotation represents the angle between the line connecting the starting
+        // and ending points (based on the clockwise order with greatest index for the corner with greatest \f$y\f$)
+        // and the horizontal axis.
+        // [9, 1]
+        // [0, 8]
+        // [-19, 0]
+        rotatingCalipers( hpoints, n, clockwise ? -1.f : 1.f, CALIPERS_MINAREARECT, (float*)out );
         box.center.x = out[0].x + (out[1].x + out[2].x)*0.5f;
         box.center.y = out[0].y + (out[1].y + out[2].y)*0.5f;
         box.size.width = (float)std::sqrt((double)out[1].x*out[1].x + (double)out[1].y*out[1].y);
         box.size.height = (float)std::sqrt((double)out[2].x*out[2].x + (double)out[2].y*out[2].y);
+        // std::cout << out[1] << std::endl;
         box.angle = (float)atan2( (double)out[1].y, (double)out[1].x );
+        // if (out[1].x * out[2].x + out[1].y * out[2].y >= 0)
+        // {
+        //     box.angle = -(float)atan2( (double)out[1].y, (double)out[1].x );
+        //     std::cout << "positive" << std::endl;
+        // }
+        // else
+        // {
+        //     box.angle = (float)atan2( (double)out[1].y, (double)out[1].x );
+        //     std::cout << "negative" << std::endl;
+        // }
+        // std::cout << box.angle << std::endl;
+        // std::cout << atan2(-19, 0) << std::endl;
+        // std::cout << atan2(0, 19) * 180 / CV_PI << std::endl;
+        // std::cout << box.angle << std::endl;
+
+        std::cout << out[0] << std::endl;
+        std::cout << out[1] << std::endl;
+        std::cout << out[2] << std::endl;
+
+//                      ^
+ //                      |
+ //              vector2 |
+ //                      |
+ //                      |____________\
+ //                    corner         /
+ //                               vector1
+
+
+        // box.angle = (float)(box.angle*180/CV_PI);
+        // CV_CheckGE(box.angle, -90.f, "");
+        // CV_CheckLT(box.angle, 0.f, "");
+
     }
     else if( n == 2 )
     {
@@ -395,6 +462,8 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
         box.size.width = (float)std::sqrt(dx*dx + dy*dy);
         box.size.height = 0;
         box.angle = (float)atan2( dy, dx );
+        CV_CheckGE(box.angle, -90.f, "");
+        CV_CheckLT(box.angle, 0.f, "");
     }
     else
     {
@@ -403,6 +472,14 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     }
 
     box.angle = (float)(box.angle*180/CV_PI);
+
+        std::cout << box.center.x << " ";
+        std::cout << box.center.y << " ";
+        std::cout << box.size.width << " ";
+        std::cout << box.size.height << " ";
+        std::cout << box.angle << std::endl;
+        CV_CheckGE(box.angle, -90.f, "");
+
     return box;
 }
 

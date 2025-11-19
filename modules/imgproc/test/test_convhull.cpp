@@ -917,9 +917,37 @@ TEST_P(minAreaRect_Modes, accuracy)
         Mat points(NUM, 1, data_type, Scalar::all(0));
         cvtest::randUni(rng, points, Scalar(-10), Scalar::all(10));
 
+        Mat hull;
+        convexHull(points, hull, false, true);
+
+        if( hull.depth() != CV_32F )
+        {
+            Mat temp;
+            hull.convertTo(temp, CV_32F);
+            hull = temp;
+        }
+
+        int n = hull.checkVector(2);
+        Point2f* hpoints = hull.ptr<Point2f>();
+
         const RotatedRect res = cv::minAreaRect(points);
         Point2f box_pts[4] {};
         res.points(box_pts);
+
+        cv::Mat frame(256, 256, CV_8UC3, cv::Scalar(0));
+
+        for (int j = 0; j < 4; ++j)
+            line(frame, box_pts[j] + Point2f(50, 50), box_pts[(j + 1) % 4] + Point2f(50, 50), Scalar(0, 255, 0), 1);
+
+        for (int i = 0; i < n; ++i)
+        {
+            cv::circle(frame, hpoints[i] + Point2f(50, 50), 0, cv::Scalar(100 + 100 * (float(i) / n), 100 + 100 * (float(i) / n), 100 + 100 * (float(i) / n)));
+        }
+
+        cv::imwrite("debug.png", frame);
+        CV_CheckGE(res.angle, -90.f, "");
+        // CV_CheckLT(res.angle, 0.f, "");
+        std::cout << "-------------------------------------------" << std::endl;
 
         // check that the box contains all the points - all on one side
         double common_side = 0.;
