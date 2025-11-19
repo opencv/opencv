@@ -50,7 +50,10 @@ foreach(m ${OPENCV_MODULES_BUILD})
   endif()
 endforeach()
 
-export(EXPORT OpenCVModules FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake")
+export(EXPORT OpenCVModules
+    FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake"
+    NAMESPACE OpenCV::
+)
 
 if(TARGET ippicv AND NOT BUILD_SHARED_LIBS)
   set(USE_IPPICV TRUE)
@@ -115,7 +118,11 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig-version.cmake.in" "${TMP_DIR}/OpenCVConfig-version.cmake" @ONLY)
 
   configure_file("${OpenCV_SOURCE_DIR}/cmake/templates/OpenCVConfig.cmake.in" "${__tmp_nested}/OpenCVConfig.cmake" @ONLY)
-  install(EXPORT OpenCVModules DESTINATION "${__install_nested}" FILE OpenCVModules.cmake COMPONENT dev)
+  install(EXPORT OpenCVModules
+      DESTINATION "${__install_nested}"
+      FILE OpenCVModules.cmake
+      NAMESPACE OpenCV::
+      COMPONENT dev)
   install(FILES
       "${TMP_DIR}/OpenCVConfig-version.cmake"
       "${__tmp_nested}/OpenCVConfig.cmake"
