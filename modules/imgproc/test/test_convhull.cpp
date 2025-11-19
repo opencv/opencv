@@ -1232,6 +1232,25 @@ TEST(minEnclosingPolygon, pentagon)
     }
 }
 
+TEST(Imgproc_minAreaRect, reproducer_21482)
+{
+    const int N = 4;
+    float pts_[N][2] = {
+        { 188.8991, 12.400669 },
+        { 80.64467, -49.644814 },
+        { 469.59897, 173.28242 },
+        { 690.4597, 299.86768 },
+    };
+
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+    EXPECT_EQ(min(rr.size.width, rr.size.height), 0);
+    EXPECT_GE(max(rr.size.width, rr.size.height), 702);
+}
+
 }} // namespace
 
 /* End of file. */

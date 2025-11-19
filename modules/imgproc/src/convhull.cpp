@@ -48,7 +48,7 @@ namespace cv
 template<typename _Tp, typename _DotTp>
 static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
 {
-    static const _DotTp CONVEXITY_EPSILON = 2e-4;
+    static const _DotTp CONVEXITY_EPSILON = (_DotTp)2e-4;
 
     int incr = end > start ? 1 : -1;
     // prepare first triangle
