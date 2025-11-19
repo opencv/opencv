@@ -1226,7 +1226,7 @@ public:
       annoylib_showUpdate("prefault is set to true, but MAP_POPULATE is not defined on this platform");
 #endif
     }
-    _nodes = (Node*)mmap(0, size, PROT_READ, flags, _fd, 0);
+    _nodes = (Node*)mmap(0, static_cast<size_t>(size), PROT_READ, flags, _fd, 0);
     _n_nodes = (S)(size / _s);
 
     // Find the roots by scanning the end of the file and taking the nodes with most descendants
