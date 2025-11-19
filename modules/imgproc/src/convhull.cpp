@@ -48,6 +48,8 @@ namespace cv
 template<typename _Tp, typename _DotTp>
 static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
 {
+    static const _DotTp CONVEXITY_EPSILON = 2e-4;
+
     int incr = end > start ? 1 : -1;
     // prepare first triangle
     int pprev = start, pcur = pprev + incr, pnext = pcur + incr;
@@ -80,6 +82,10 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
             _Tp bx = array[pnext]->x - array[pcur]->x;
             _Tp ay = cury - array[pprev]->y;
             _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
+            if (abs(convexity) < CONVEXITY_EPSILON)
+            {
+                convexity = 0;
+            }
 
             if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
             {
