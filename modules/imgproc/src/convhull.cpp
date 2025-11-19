@@ -46,10 +46,8 @@ namespace cv
 {
 
 template<typename _Tp, typename _DotTp>
-static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
+static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2, _DotTp eps = 0 )
 {
-    static const _DotTp CONVEXITY_EPSILON = (_DotTp)2e-4;
-
     int incr = end > start ? 1 : -1;
     // prepare first triangle
     int pprev = start, pcur = pprev + incr, pnext = pcur + incr;
@@ -82,7 +80,7 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
             _Tp bx = array[pnext]->x - array[pcur]->x;
             _Tp ay = cury - array[pprev]->y;
             _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
-            if (abs(convexity) < CONVEXITY_EPSILON)
+            if (abs(convexity) < eps)
             {
                 convexity = 0;
             }
@@ -207,11 +205,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         int *tl_stack = stack;
         int tl_count = !is_float ?
             Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
+            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1, 2e-4);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
             Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
+            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1, 2e-4);
 
         // gather upper part of convex hull to output
         if( !clockwise )
@@ -230,11 +228,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         int *bl_stack = stack;
         int bl_count = !is_float ?
             Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
+            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1, 2e-4);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
             Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
+            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1, 2e-4);
 
         if( clockwise )
         {
