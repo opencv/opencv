@@ -41,8 +41,9 @@
 //M*/
 
 #include "precomp.hpp"
-#include "gl_core_3_1.hpp"
 #include <mutex>
+#include "gl_core_3_1.hpp"
+
 
 #ifdef HAVE_OPENGL
 
