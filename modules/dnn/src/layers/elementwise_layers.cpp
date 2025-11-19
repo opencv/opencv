@@ -169,8 +169,7 @@ public:
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
-                return true;
-                // return false;
+                return false;
         }
 #endif
         return func.supportBackend(backendId, this->preferableTarget);
