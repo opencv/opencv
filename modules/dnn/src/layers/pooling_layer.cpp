@@ -211,8 +211,8 @@ public:
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
-                return type == MAX;
-                // return false;
+                // return type == MAX;
+                return false;
             return type == MAX || type == AVE || type == ROI;
         }
 #ifdef HAVE_CANN
