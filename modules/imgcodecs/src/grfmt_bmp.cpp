@@ -337,7 +337,7 @@ bool  BmpDecoder::readData( Mat& img )
                     }
                     else
                     {
-                        int x_shift3 = (int)(line_end - data);
+                        ptrdiff_t x_shift3 = line_end - data;
 
                         if( code == 2 )
                         {
@@ -430,7 +430,7 @@ decode_rle4_bad: ;
                     }
                     else
                     {
-                        int x_shift3 = (int)(line_end - data);
+                        ptrdiff_t x_shift3 = line_end - data;
                         int y_shift = m_height - y;
 
                         if( code || !line_end_flag || x_shift3 < width3 )
@@ -441,7 +441,7 @@ decode_rle4_bad: ;
                                 y_shift = m_strm.getByte();
                             }
 
-                            x_shift3 += (y_shift * width3) & ((code == 0) - 1);
+                            x_shift3 += ((ptrdiff_t)y_shift * width3) & ((code == 0) - 1);
 
                             if( y >= m_height )
                                 break;
