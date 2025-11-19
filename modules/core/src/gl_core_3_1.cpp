@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 #include "gl_core_3_1.hpp"
+#include <mutex>
 
 #ifdef HAVE_OPENGL
 
@@ -1478,7 +1479,10 @@ namespace gl
 
     static void CODEGEN_FUNCPTR Switch_DeleteShader(GLuint shader)
     {
-        DeleteShader = (PFNDELETESHADERPROC)IntGetProcAddress("glDeleteShader");
+        static std::once_flag flag;
+        std::call_once(flag, []() {
+            DeleteShader = (PFNDELETESHADERPROC)IntGetProcAddress("glDeleteShader");
+        });
         DeleteShader(shader);
     }
 
