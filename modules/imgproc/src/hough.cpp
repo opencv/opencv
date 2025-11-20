@@ -819,6 +819,8 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     }
 
     UMat src = _src.getUMat();
+    // numangle is computed from max_theta to ensure we cover the full range [min_theta, max_theta]
+    // The actual angles are computed as: min_theta + theta * i, for i in [0, numangle-1]
     int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
 
