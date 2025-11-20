@@ -14,6 +14,96 @@ namespace cv { namespace dnn {
 using std::tanh;
 
 
+static void apply_causal_mask_to_boolean_input_mask(
+    Mat& input_mask,
+    const int seq_len_q,
+    const int seq_len_kv
+)
+{
+    const int elemSize = CV_ELEM_SIZE1(input_mask.depth());  // bytes per element
+    const int depth = input_mask.depth();
+    auto* mask_data = input_mask.ptr<char>();
+    const int total = input_mask.total();
+    for (int i = 0; i < total; i++)
+    {
+        const int t = i % (seq_len_q * seq_len_kv);
+        const int t1 = t / seq_len_kv;
+        const int t2 = t % seq_len_kv;
+        char* src = mask_data + i * elemSize;
+        switch (depth)
+        {
+            case CV_Bool:
+            {
+                bool val = *(reinterpret_cast<bool*>(src));
+                if (t2 > t1)
+                    val = false;
+                *(reinterpret_cast<bool*>(src)) = val;
+                break;
+            }
+            // for int types, assume 0 == false, non-zero == true
+            case CV_8U:
+            {
+                uint8_t val = *(reinterpret_cast<uint8_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<uint8_t*>(src)) = val;
+                break;
+            }
+            case CV_8S:
+            {
+                int8_t val = *(reinterpret_cast<int8_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<int8_t*>(src)) = val;
+                break;
+            }
+            case CV_16U:
+            {
+                uint16_t val = *(reinterpret_cast<uint16_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<uint16_t*>(src)) = val;
+                break;
+            }
+            case CV_16S:
+            {
+                int16_t val = *(reinterpret_cast<int16_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<int16_t*>(src)) = val;
+                break;
+            }
+            case CV_32S:
+            {
+                int32_t val = *(reinterpret_cast<int32_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<int32_t*>(src)) = val;
+                break;
+            }
+            case CV_64S:
+            {
+                int64_t val = *(reinterpret_cast<int64_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<int64_t*>(src)) = val;
+                break;
+            }
+            case CV_64U:
+            {
+                uint64_t val = *(reinterpret_cast<uint64_t*>(src));
+                if (t2 > t1)
+                    val = 0;
+                *(reinterpret_cast<uint64_t*>(src)) = val;
+                break;
+            }
+            default:
+                CV_Error(Error::StsNotImplemented, "Unsupported depth for boolean mask in causal attention");
+        }
+    }
+}
+
+
 // Operator spec: https://onnx.ai/onnx/operators/onnx__Attention.html#attention-23
 class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
  public:
@@ -67,6 +157,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             // 2.2 custom attention mask provided as input
             internals.push_back(inputs[3]);
 
+        // 3. attention_prob
         internals.push_back(inputs[0]);
     }
 
@@ -139,7 +230,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
-
 
         std::vector<Mat> inputs, outputs, internals;
         inputs_arr.getMatVector(inputs);
@@ -248,18 +338,26 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
             if (merge_masks)
             {
-                if (attention_mask.type() == CV_Bool || attention_mask.type() == CV_8U) {
-                    bool*att_mask_data = attention_mask.ptr<bool>();
-                    auto loops = attention_mask.total();
-                    // parallel_for_(Range(0, loops), [&] (const Range r) {
-                    const Range r = Range(0, loops);
-                    for (int i = r.start; i < r.end; i++) {
-                        const int t = i % seq_len_square;
-                        const int t1 = t / seq_len_kv;
-                        const int t2 = t % seq_len_kv;
-                        att_mask_data[i] = att_mask_data[i] || (t2 > t1);
-                    }
-                } else {
+                if (CV_IS_INT_TYPE(inputs[3].depth()))
+                    apply_causal_mask_to_boolean_input_mask(
+                        attention_mask,
+                        seq_len_q,
+                        seq_len_kv
+                    );
+                    // char*att_mask_data = attention_mask.ptr<char>();
+                    // const int elemSize = CV_ELEM_SIZE1(attention_mask.depth());  // bytes per element
+                    // auto loops = attention_mask.total();
+                    // // parallel_for_(Range(0, loops), [&] (const Range r) {
+                    // const Range r = Range(0, loops);
+                    // for (int i = r.start; i < r.end; i++) {
+                    //     const int t = i % seq_len_square;
+                    //     const int t1 = t / seq_len_kv;
+                    //     const int t2 = t % seq_len_kv;
+
+                    //             att_mask_data[i] = att_mask_data[i] || (t2 > t1);
+                    // }
+                else {
+                    // Currently, only float attention mask is supported in this case
                     float* att_mask_data = attention_mask.ptr<float>();
                     auto loops = attention_mask.total();
                     // parallel_for_(Range(0, loops), [&] (const Range r) {
@@ -347,13 +445,11 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
     bool is_scale_set = false;
     float softcap;
     int softmax_precision;
-
     FastGemmOpt opt;
 };
 
 Ptr<AttentionOnnxAiLayer> AttentionOnnxAiLayer::create(const LayerParams &params) {
     return makePtr<AttentionOnnxAiLayerImpl>(params);
 }
-
 
 }} // cv::dnn
