@@ -128,28 +128,18 @@ if(NOT TARGET opencv_core)
   include(${CMAKE_CURRENT_LIST_DIR}/OpenCVModules${OpenCV_MODULES_SUFFIX}.cmake)
 endif()
 
-set(OpenCV_IMPORTED_NAMESPACE "")
-if(TARGET OpenCV::opencv_core)
-  set(OpenCV_IMPORTED_NAMESPACE "OpenCV::")
-endif()
-
 if(NOT CMAKE_VERSION VERSION_LESS "2.8.11")
   # Target property INTERFACE_INCLUDE_DIRECTORIES available since 2.8.11:
   # * http://www.cmake.org/cmake/help/v2.8.11/cmake.html#prop_tgt:INTERFACE_INCLUDE_DIRECTORIES
   foreach(__component ${OpenCV_LIB_COMPONENTS})
-    set(__cv_target "${__component}")
-    if(OpenCV_IMPORTED_NAMESPACE AND TARGET "${OpenCV_IMPORTED_NAMESPACE}${__component}")
-      set(__cv_target "${OpenCV_IMPORTED_NAMESPACE}${__component}")
-    endif()
-    if(TARGET ${__cv_target})
+    if(TARGET ${__component})
       set_target_properties(
-          ${__cv_target}
+          ${__component}
           PROPERTIES
           INTERFACE_INCLUDE_DIRECTORIES "${OpenCV_INCLUDE_DIRS}"
       )
     endif()
   endforeach()
-  unset(__cv_target)
 endif()
 
 
@@ -240,11 +230,7 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
     # Not using list(APPEND) here, because OpenCV_LIBS may not exist yet.
     # Also not clearing OpenCV_LIBS anywhere, so that multiple calls
     # to find_package(OpenCV) with different component lists add up.
-    set(__cv_target "${__cvcomponent}")
-    if(OpenCV_IMPORTED_NAMESPACE AND TARGET "${OpenCV_IMPORTED_NAMESPACE}${__cvcomponent}")
-      set(__cv_target "${OpenCV_IMPORTED_NAMESPACE}${__cvcomponent}")
-    endif()
-    set(OpenCV_LIBS ${OpenCV_LIBS} "${__cv_target}")
+    set(OpenCV_LIBS ${OpenCV_LIBS} "${__cvcomponent}")
     #indicate that module is found
     string(TOUPPER "${__cvcomponent}" __cvcomponentUP)
     set(${__cvcomponentUP}_FOUND 1)
@@ -252,9 +238,6 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
   endif()
   if(OpenCV_SHARED AND ";${OpenCV_WORLD_COMPONENTS};" MATCHES ";${__cvcomponent};" AND NOT TARGET ${__cvcomponent})
     set(__world_target opencv_world)
-    if(OpenCV_IMPORTED_NAMESPACE AND TARGET "${OpenCV_IMPORTED_NAMESPACE}opencv_world")
-      set(__world_target "${OpenCV_IMPORTED_NAMESPACE}opencv_world")
-    endif()
     get_target_property(__implib_dbg ${__world_target} IMPORTED_IMPLIB_DEBUG)
     get_target_property(__implib_release ${__world_target}  IMPORTED_IMPLIB_RELEASE)
     get_target_property(__location_dbg ${__world_target} IMPORTED_LOCATION_DEBUG)
@@ -281,8 +264,6 @@ foreach(__cvcomponent ${OpenCV_FIND_COMPONENTS})
   endif()
   if(TARGET ${__cvcomponent})
     ocv_map_imported_config(${__cvcomponent})
-  elseif(OpenCV_IMPORTED_NAMESPACE AND TARGET "${OpenCV_IMPORTED_NAMESPACE}${__cvcomponent}")
-    ocv_map_imported_config("${OpenCV_IMPORTED_NAMESPACE}${__cvcomponent}")
   endif()
 endforeach()
 unset(__cv_target)

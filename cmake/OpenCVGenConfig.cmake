@@ -52,7 +52,6 @@ endforeach()
 
 export(EXPORT OpenCVModules
     FILE "${CMAKE_BINARY_DIR}/OpenCVModules.cmake"
-    NAMESPACE OpenCV::
 )
 
 if(TARGET ippicv AND NOT BUILD_SHARED_LIBS)
@@ -121,7 +120,6 @@ function(ocv_gen_config TMP_DIR NESTED_PATH ROOT_NAME)
   install(EXPORT OpenCVModules
       DESTINATION "${__install_nested}"
       FILE OpenCVModules.cmake
-      NAMESPACE OpenCV::
       COMPONENT dev)
   install(FILES
       "${TMP_DIR}/OpenCVConfig-version.cmake"
