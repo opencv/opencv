@@ -1174,13 +1174,31 @@ static bool replacementFilter2D(int stype, int dtype, int kernel_type,
     cvhalFilter2D* ctx;
     int res = cv_hal_filterInit(&ctx, kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, width, height,
                                 stype, dtype, borderType, delta, anchor_x, anchor_y, isSubmatrix, src_data == dst_data);
-    if (res != CV_HAL_ERROR_OK)
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
         return false;
+    } else if (res != CV_HAL_ERROR_OK)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filterInit ==> " CVAUX_STR(cv_hal_filterInit) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_filter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
     bool success = (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filter ==> " CVAUX_STR(cv_hal_filter) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_filterFree(ctx);
-    if (res != CV_HAL_ERROR_OK)
-        return false;
+    success &= (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation filterFree ==> " CVAUX_STR(cv_hal_filterFree) " returned %d (0x%08x)", res, res));
+    }
+
     return success;
 }
 
@@ -1372,13 +1390,31 @@ static bool replacementSepFilter(int stype, int dtype, int ktype,
                                    kernelx_data, kernelx_len,
                                    kernely_data, kernely_len,
                                    anchor_x, anchor_y, delta, borderType);
-    if (res != CV_HAL_ERROR_OK)
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
         return false;
+    } else if (res != CV_HAL_ERROR_OK)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilterInit ==> " CVAUX_STR(cv_hal_sepFilterInit) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_sepFilter(ctx, src_data, src_step, dst_data, dst_step, width, height, full_width, full_height, offset_x, offset_y);
     bool success = (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilter ==> " CVAUX_STR(cv_hal_sepFilter) " returned %d (0x%08x)", res, res));
+    }
+
     res = cv_hal_sepFilterFree(ctx);
-    if (res != CV_HAL_ERROR_OK)
-        return false;
+    success &= (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation sepFilterFree ==> " CVAUX_STR(cv_hal_sepFilterFree) " returned %d (0x%08x)", res, res));
+    }
+
     return success;
 }
 
