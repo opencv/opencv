@@ -46,7 +46,7 @@ namespace cv
 {
 
 template<typename _Tp, typename _DotTp>
-static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2, _DotTp eps = 0 )
+static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int nsign, int sign2 )
 {
     int incr = end > start ? 1 : -1;
     // prepare first triangle
@@ -76,16 +76,16 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
         if( CV_SIGN( by ) != nsign )
         {
-            _Tp ax = array[pcur]->x - array[pprev]->x;
-            _Tp bx = array[pnext]->x - array[pcur]->x;
-            _Tp ay = cury - array[pprev]->y;
-            _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
-            if (abs(convexity) < eps)
+            Vec<_Tp, 2> a(array[pcur]->x - array[pprev]->x, cury - array[pprev]->y);
+            Vec<_Tp, 2> b(array[pnext]->x - array[pcur]->x, by);
+            if (std::is_floating_point<_Tp>::value)
             {
-                convexity = 0;
+                a = normalize(a);
+                b = normalize(b);
             }
+            _DotTp convexity = (_DotTp)a[1]*b[0] - (_DotTp)a[0]*b[1]; // if >0 then convex angle
 
-            if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
+            if( CV_SIGN( convexity ) == sign2 && (a[0] != 0 || a[1] != 0) )
             {
                 pprev = pcur;
                 pcur = pnext;
@@ -205,11 +205,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         int *tl_stack = stack;
         int tl_count = !is_float ?
             Sklansky_<int, int64>( pointer, 0, maxy_ind, tl_stack, -1, 1) :
-            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1, 2e-4);
+            Sklansky_<float, double>( pointerf, 0, maxy_ind, tl_stack, -1, 1);
         int *tr_stack = stack + tl_count;
         int tr_count = !is_float ?
             Sklansky_<int, int64>( pointer, total-1, maxy_ind, tr_stack, -1, -1) :
-            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1, 2e-4);
+            Sklansky_<float, double>( pointerf, total-1, maxy_ind, tr_stack, -1, -1);
 
         // gather upper part of convex hull to output
         if( !clockwise )
@@ -228,11 +228,11 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         int *bl_stack = stack;
         int bl_count = !is_float ?
             Sklansky_<int, int64>( pointer, 0, miny_ind, bl_stack, 1, -1) :
-            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1, 2e-4);
+            Sklansky_<float, double>( pointerf, 0, miny_ind, bl_stack, 1, -1);
         int *br_stack = stack + bl_count;
         int br_count = !is_float ?
             Sklansky_<int, int64>( pointer, total-1, miny_ind, br_stack, 1, 1) :
-            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1, 2e-4);
+            Sklansky_<float, double>( pointerf, total-1, miny_ind, br_stack, 1, 1);
 
         if( clockwise )
         {

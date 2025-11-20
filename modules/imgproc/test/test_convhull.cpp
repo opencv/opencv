@@ -1251,6 +1251,20 @@ TEST(Imgproc_minAreaRect, reproducer_21482)
     EXPECT_GE(max(rr.size.width, rr.size.height), 702);
 }
 
+TEST(Imgproc_minAreaRect, reproducer_21482_small_values)
+{
+    const int N = 4;
+    float pts_[N][2] = { { 0.f, 0.f }, { 1e-4f, 0.f }, { 1e-4f, 1e-4f }, { 0.f, 1e-4f },};
+
+    Mat contour(N, 1, CV_32FC2, (void*)pts_);
+
+    RotatedRect rr = cv::minAreaRect(contour);
+
+    EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
+    EXPECT_EQ(rr.size.width, 1e-4f);
+    EXPECT_EQ(rr.size.height, 1e-4f);
+}
+
 }} // namespace
 
 /* End of file. */
