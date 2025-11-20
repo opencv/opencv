@@ -371,28 +371,30 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
     const int kMeansType = KMEANS_PP_CENTERS;
 
     Mat bgdLabels, fgdLabels;
-    std::vector<Vec3f> bgdSamples, fgdSamples;
+    std::vector<Vec3b> bgdSamples, fgdSamples;
     Point p;
     for( p.y = 0; p.y < img.rows; p.y++ )
     {
         for( p.x = 0; p.x < img.cols; p.x++ )
         {
             if( mask.at<uchar>(p) == GC_BGD || mask.at<uchar>(p) == GC_PR_BGD )
-                bgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+                bgdSamples.push_back( img.at<Vec3b>(p) );
             else // GC_FGD | GC_PR_FGD
-                fgdSamples.push_back( (Vec3f)img.at<Vec3b>(p) );
+                fgdSamples.push_back( img.at<Vec3b>(p) );
         }
     }
     CV_Assert( !bgdSamples.empty() && !fgdSamples.empty() );
     {
-        Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_32FC1, &bgdSamples[0][0] );
+        Mat _bgdSamples( (int)bgdSamples.size(), 3, CV_8UC1, &bgdSamples[0][0] );
+        _bgdSamples.convertTo(_bgdSamples, CV_32FC1);
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)bgdSamples.size());
         kmeans( _bgdSamples, num_clusters, bgdLabels,
                 TermCriteria( TermCriteria::MAX_ITER, kMeansItCount, 0.0), 0, kMeansType );
     }
     {
-        Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_32FC1, &fgdSamples[0][0] );
+        Mat _fgdSamples( (int)fgdSamples.size(), 3, CV_8UC1, &fgdSamples[0][0] );
+        _fgdSamples.convertTo(_fgdSamples, CV_32FC1);
         int num_clusters = GMM::componentsCount;
         num_clusters = std::min(num_clusters, (int)fgdSamples.size());
         kmeans( _fgdSamples, num_clusters, fgdLabels,
@@ -401,12 +403,12 @@ static void initGMMs( const Mat& img, const Mat& mask, GMM& bgdGMM, GMM& fgdGMM 
 
     bgdGMM.initLearning();
     for( int i = 0; i < (int)bgdSamples.size(); i++ )
-        bgdGMM.addSample( bgdLabels.at<int>(i,0), bgdSamples[i] );
+        bgdGMM.addSample( bgdLabels.at<int>(i,0), Vec3d(bgdSamples[i]) );
     bgdGMM.endLearning();
 
     fgdGMM.initLearning();
     for( int i = 0; i < (int)fgdSamples.size(); i++ )
-        fgdGMM.addSample( fgdLabels.at<int>(i,0), fgdSamples[i] );
+        fgdGMM.addSample( fgdLabels.at<int>(i,0), Vec3d(fgdSamples[i]) );
     fgdGMM.endLearning();
 }
 
