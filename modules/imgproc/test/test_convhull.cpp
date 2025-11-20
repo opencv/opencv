@@ -1265,6 +1265,24 @@ TEST(Imgproc_minAreaRect, reproducer_21482_small_values)
     EXPECT_EQ(rr.size.height, 1e-4f);
 }
 
+typedef testing::TestWithParam<tuple<Point2f, Point2f, Point2f, Size2f, float>> minAreaRect_of_line;
+TEST_P(minAreaRect_of_line, accuracy)
+{
+    Point2f p1 = get<0>(GetParam());
+    Point2f p2 = get<1>(GetParam());
+    RotatedRect out = minAreaRect(std::vector<Point2f>{p1, p2});
+    EXPECT_EQ(out.center, get<2>(GetParam()));
+    EXPECT_EQ(out.size, get<3>(GetParam()));
+    EXPECT_NEAR(out.angle, get<4>(GetParam()), 1e-6);
+}
+INSTANTIATE_TEST_CASE_P(Imgproc, minAreaRect_of_line,
+        testing::Values(
+            std::make_tuple(Point2f(10, 15), Point2f(10, 25), Point2f(10, 20), Size2f(10, 0), -90.f),
+            std::make_tuple(Point2f(450, 500), Point2f(508, 500), Point2f(479, 500), Size2f(0, 58), -90.f),
+            std::make_tuple(Point2f(10, 20), Point2f(13, 16), Point2f(11.5, 18), Size2f(5, 0), -53.1301002f),
+            std::make_tuple(Point2f(9, 19), Point2f(4, 7), Point2f(6.5, 13), Size2f(0, 13), -22.6198654f)
+        ));
+
 }} // namespace
 
 /* End of file. */
