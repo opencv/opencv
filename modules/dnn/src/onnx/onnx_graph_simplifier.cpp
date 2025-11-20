@@ -501,6 +501,7 @@ class AttentionSubGraph : public Subgraph {
                           std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
         // add attrs
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        node->set_domain("com.microsoft");
         opencv_onnx::AttributeProto* attr_num_heads = node->add_attribute();
         attr_num_heads->set_name("num_heads");
         attr_num_heads->set_i(num_heads);
@@ -611,6 +612,7 @@ class AttentionSingleHeadSubGraph : public Subgraph {
                           std::vector<Ptr<ImportNodeWrapper> >&) CV_OVERRIDE {
         // add attrs
         opencv_onnx::NodeProto* node = fusedNode.dynamicCast<ONNXNodeWrapper>()->node;
+        node->set_domain("com.microsoft");
         opencv_onnx::AttributeProto* attr_num_heads = node->add_attribute();
         attr_num_heads->set_name("num_heads");
         attr_num_heads->set_i(num_heads);
