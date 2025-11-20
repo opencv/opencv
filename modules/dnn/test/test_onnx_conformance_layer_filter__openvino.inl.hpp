@@ -109,6 +109,14 @@ CASE(test_add_uint8)
 #if SKIP_SET_1
     SKIP;
 #endif
+CASE(test_affine_grid_3d)
+    SKIP;
+CASE(test_affine_grid_3d_align_corners)
+    SKIP;
+CASE(test_affine_grid_2d)
+    SKIP;
+CASE(test_affine_grid_2d_align_corners)
+    SKIP;
 CASE(test_and2d)
     // no filter
 CASE(test_and3d)
@@ -593,6 +601,16 @@ CASE(test_dequantizelinear_blocked)
 CASE(test_det_2d)
     SKIP;
 CASE(test_det_nd)
+    SKIP;
+CASE(test_dft)
+    SKIP;
+CASE(test_dft_axis_opset19)
+    SKIP;
+CASE(test_dft_inverse)
+    SKIP;
+CASE(test_dft_inverse_opset19)
+    SKIP;
+CASE(test_dft_opset19)
     SKIP;
 CASE(test_div)
     // no filter

@@ -4,12 +4,8 @@
 "test_adagrad_multiple",  // ---- same as above ---
 "test_adam",  // Issues::Layer::Can't create layer "onnx_node_output_0!X1_new" of type "ai.onnx.preview.training.Adam" in function 'getLayerInstance'
 "test_adam_multiple",  // ---- same as above ---
-"test_affine_grid_2d",
-"test_affine_grid_2d_align_corners",
 "test_affine_grid_2d_align_corners_expanded",
 "test_affine_grid_2d_expanded",
-"test_affine_grid_3d",
-"test_affine_grid_3d_align_corners",
 "test_affine_grid_3d_align_corners_expanded",
 "test_affine_grid_3d_expanded",
 "test_ai_onnx_ml_array_feature_extractor",
@@ -305,12 +301,7 @@
 "test_dequantizelinear_int4",
 "test_dequantizelinear_uint16",
 "test_dequantizelinear_uint4",
-"test_dft",
 "test_dft_axis",
-"test_dft_axis_opset19",
-"test_dft_inverse",
-"test_dft_inverse_opset19",
-"test_dft_opset19",
 "test_dropout_default_mask",  // Issue::cvtest::norm::wrong data type
 "test_dropout_default_mask_ratio",  // ---- same as above ---
 "test_dynamicquantizelinear",  // Issue:: Unkonwn error

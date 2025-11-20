@@ -4096,7 +4096,7 @@ namespace fisheye
     may additionally scale and shift the result by using a different matrix.
     @param new_size the new size
 
-    The function transforms an image to compensate radial and tangential lens distortion.
+    The function transforms an image to compensate radial lens distortion.
 
     The function is simply a combination of #fisheye::initUndistortRectifyMap (with unity R ) and #remap
     (with bilinear interpolation). See the former function for details of the transformation being
