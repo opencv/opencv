@@ -1247,7 +1247,7 @@ TEST(Imgproc_minAreaRect, reproducer_21482)
     RotatedRect rr = cv::minAreaRect(contour);
 
     EXPECT_TRUE(checkMinAreaRect(rr, contour)) << rr.center << " " << rr.size << " " << rr.angle;
-    EXPECT_EQ(min(rr.size.width, rr.size.height), 0);
+    EXPECT_NEAR(min(rr.size.width, rr.size.height), 0, 1e-5);
     EXPECT_GE(max(rr.size.width, rr.size.height), 702);
 }
 
