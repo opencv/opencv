@@ -166,14 +166,20 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
         CV_CheckTrue(inputs.size() < 5, "past key and past value are not supported yet");
+        CV_CheckTrue(inputs[0].dims == inputs[1].dims &&
+                     inputs[0].dims == inputs[2].dims,
+                     "Query, key and value must have the same number of dimensions");
         const int input_dims = inputs[0].dims;
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
         const int seq_len_kv = inputs[1][input_dims - 2];
+        CV_CheckTrue(inputs[0][input_dims - 2] == seq_len_kv,
+                     "Key and query sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
         CV_CheckTrue(q_num_heads % kv_num_heads == 0,
                      "q_num_heads must be divisible by kv_num_heads");
+
 
         if (input_dims == 3)
         {
