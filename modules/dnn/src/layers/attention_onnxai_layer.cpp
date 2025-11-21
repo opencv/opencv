@@ -350,18 +350,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                         seq_len_q,
                         seq_len_kv
                     );
-                    // char*att_mask_data = attention_mask.ptr<char>();
-                    // const int elemSize = CV_ELEM_SIZE1(attention_mask.depth());  // bytes per element
-                    // auto loops = attention_mask.total();
-                    // // parallel_for_(Range(0, loops), [&] (const Range r) {
-                    // const Range r = Range(0, loops);
-                    // for (int i = r.start; i < r.end; i++) {
-                    //     const int t = i % seq_len_square;
-                    //     const int t1 = t / seq_len_kv;
-                    //     const int t2 = t % seq_len_kv;
-
-                    //             att_mask_data[i] = att_mask_data[i] || (t2 > t1);
-                    // }
                 else {
                     // Currently, only float attention mask is supported in this case
                     float* att_mask_data = attention_mask.ptr<float>();
