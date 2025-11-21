@@ -83,8 +83,6 @@
 "test_attention_4d_gqa_softcap_expanded",
 
 // fixme
-"test_attention_4d_attn_mask_bool",
-"test_attention_4d_attn_mask_bool_4d",
 "test_attention_4d_fp16",
 
 "test_attention_4d_gqa_with_past_and_present",

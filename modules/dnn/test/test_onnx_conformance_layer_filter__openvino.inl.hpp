@@ -2832,6 +2832,10 @@ CASE(test_attention_4d_scaled)
     SKIP;
 CASE(test_attention_4d_softcap)
     SKIP;
+CASE(test_attention_4d_attn_mask_bool)
+    SKIP;
+CASE(test_attention_4d_attn_mask_bool_4d)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH

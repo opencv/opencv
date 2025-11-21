@@ -14,91 +14,75 @@ namespace cv { namespace dnn {
 using std::tanh;
 
 
-static void apply_causal_mask_to_boolean_input_mask(
-    Mat& input_mask,
-    const int seq_len_q,
-    const int seq_len_kv
+static void mask_bias(
+    Mat &att_weights, const Mat &att_mask,
+    const int seq_len_square, const int seq_len_kv,
+    const float min_val, const bool is_causal
 )
 {
-    const int elemSize = CV_ELEM_SIZE1(input_mask.depth());  // bytes per element
-    const int depth = input_mask.depth();
-    auto* mask_data = input_mask.ptr<char>();
-    const int total = input_mask.total();
+    const int total = att_mask.total();
+    auto* mask_data = att_mask.ptr<const float>();
+    auto* weights_data = att_weights.ptr<float>();
     for (int i = 0; i < total; i++)
     {
-        const int t = i % (seq_len_q * seq_len_kv);
-        const int t1 = t / seq_len_kv;
-        const int t2 = t % seq_len_kv;
-        char* src = mask_data + i * elemSize;
+        const int seq_pos = i % seq_len_square;
+        const int q_pos = seq_pos / seq_len_kv;
+        const int k_pos = seq_pos % seq_len_kv;
+        weights_data[i] = (is_causal && k_pos > q_pos) ?
+                          min_val : weights_data[i] + mask_data[i];
+    }
+}
+
+static void mask_bool(
+    Mat &att_weights, const Mat &att_mask,
+    const int seq_len_square, const int seq_len_kv,
+    const float min_val, const bool is_causal
+)
+{
+    const int elemSize = CV_ELEM_SIZE1(att_mask.depth());  // bytes per element
+    const int depth = att_mask.depth();
+    auto* mask_data = att_mask.ptr<const char>();
+    auto* weights_data = att_weights.ptr<float>();
+    const int total = att_mask.total();
+    for (int i = 0; i < total; i++)
+    {
+        const char* src = mask_data + i * elemSize;
+        bool mask_val = false;
         switch (depth)
         {
             case CV_Bool:
-            {
-                bool val = *(reinterpret_cast<bool*>(src));
-                if (t2 > t1)
-                    val = false;
-                *(reinterpret_cast<bool*>(src)) = val;
+                mask_val = *(reinterpret_cast<const bool*>(src));
                 break;
-            }
-            // for int types, assume 0 == false, non-zero == true
             case CV_8U:
-            {
-                uint8_t val = *(reinterpret_cast<uint8_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<uint8_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const uint8_t*>(src)) != 0);
                 break;
-            }
             case CV_8S:
-            {
-                int8_t val = *(reinterpret_cast<int8_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<int8_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const int8_t*>(src)) != 0);
                 break;
-            }
             case CV_16U:
-            {
-                uint16_t val = *(reinterpret_cast<uint16_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<uint16_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const uint16_t*>(src)) != 0);
                 break;
-            }
             case CV_16S:
-            {
-                int16_t val = *(reinterpret_cast<int16_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<int16_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const int16_t*>(src)) != 0);
                 break;
-            }
             case CV_32S:
-            {
-                int32_t val = *(reinterpret_cast<int32_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<int32_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const int32_t*>(src)) != 0);
                 break;
-            }
             case CV_64S:
-            {
-                int64_t val = *(reinterpret_cast<int64_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<int64_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const int64_t*>(src)) != 0);
                 break;
-            }
             case CV_64U:
-            {
-                uint64_t val = *(reinterpret_cast<uint64_t*>(src));
-                if (t2 > t1)
-                    val = 0;
-                *(reinterpret_cast<uint64_t*>(src)) = val;
+                mask_val = (*(reinterpret_cast<const uint64_t*>(src)) != 0);
                 break;
-            }
             default:
-                CV_Error(Error::StsNotImplemented, "Unsupported depth for boolean mask in causal attention");
+                CV_Error(Error::StsNotImplemented, "Unsupported depth for boolean mask in attention");
+        }
+        const int seq_pos = i % seq_len_square;
+        const int q_pos = seq_pos / seq_len_kv;
+        const int k_pos = seq_pos % seq_len_kv;
+        if (!mask_val || (is_causal && k_pos > q_pos))
+        {
+            weights_data[i] = min_val;
         }
     }
 }
@@ -128,36 +112,33 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                      const int requiredInternals,
                      std::vector<MatType>&outputs,
                      std::vector<MatType>&internals) const CV_OVERRIDE {
-        for (auto input : inputs)
-        {
-            if (preferableTarget == DNN_TARGET_CUDA_FP16 || preferableTarget == DNN_TARGET_CUDA)
-                CV_CheckTypeEQ(input, CV_32F, "");
-            else if (preferableTarget == DNN_TARGET_OPENCL_FP16)
-                CV_CheckType(input, input == CV_16F || input == CV_8S || input == CV_64F, "");
-            else
-                CV_CheckType(input, input == CV_32F || input == CV_64F || input == CV_8S, "");
+        // type checks
+        CV_CheckTrue(inputs.size() >= 3, "At least three inputs (query, key, value) are required");
+
+        for (int i = 0; i < 3; i++) {
+            CV_CheckType(inputs[i], inputs[i] == CV_16F || inputs[i] == CV_32F, "");
+        }
+
+        CV_CheckType(inputs[0], inputs[0] == inputs[1] && inputs[0] == inputs[2], "");
+
+        if (inputs.size() >= 4) {
+            CV_CheckType(inputs[3], inputs[3] == CV_8U || inputs[3] == CV_8S ||
+                         inputs[3] == CV_16U || inputs[3] == CV_16S ||
+                         inputs[3] == CV_32S || inputs[3] == CV_64S ||
+                         inputs[3] == CV_64U || inputs[3] == CV_Bool ||
+                         inputs[3] == inputs[2], ""); // attention_mask
         }
 
         outputs.assign(requiredOutputs, inputs[0]);
 
         // internals:
         internals.clear();
-        const bool merge_masks = is_causal && (inputs.size() > 3);
 
-        // 1. causal_mask
-        if (is_causal && !merge_masks) {
-            internals.push_back(CV_8U);
-        }
-
-        // 2. attention_mask
-        if (is_causal && !merge_masks)
-            // 2.1 only causal mask
-            internals.push_back(CV_8U);
-        else if(inputs.size() > 3)
-            // 2.2 custom attention mask provided as input
+        if(inputs.size() > 3)
+            // 1 broadcasted attention_mask
             internals.push_back(inputs[3]);
 
-        // 3. attention_prob
+        // 2. attention_prob
         internals.push_back(inputs[0]);
     }
 
@@ -200,26 +181,17 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             outputs.push_back(output_shape);
         }
 
-        const bool merge_masks = is_causal && (inputs.size() > 3);
-
         // internals:
-        // 1. causal_mask (if is_causal and not merge_masks)
-        // 2. attention_mask (broadcasted attention mask - B x H_q x T_q x T_kv)
-        // 3. attention_prob (B x H_q x T_q x T_kv)
+        // 1. attention_mask (broadcasted input attention mask - B x H_q x T_q x T_kv)
+        // 2. attention_prob (B x H_q x T_q x T_kv)
 
-        // 1. causal_mask
-        if (is_causal && !merge_masks) {
-            MatShape causal_mask_shape{1, 1, seq_len_q, seq_len_kv};
-            internals.push_back(causal_mask_shape);
-        }
-
-        // 2. attention_mask
-        if (inputs.size() > 3 || is_causal) {
+        // 1. broadcasted attention_mask
+        if (inputs.size() > 3) {
             MatShape mask_shape{batch_size, nhq, seq_len_q, seq_len_kv};
             internals.push_back(mask_shape);
         }
 
-        // 3. attention_prob
+        // 2. attention_prob
         MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_kv};
         internals.push_back(attention_prob_shape);
 
@@ -243,7 +215,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         outputs_arr.getMatVector(outputs);
         internals_arr.getMatVector(internals);
 
-
         const int input_dims = inputs[0].dims;
         const int batch_size = inputs[0].size[0];
 
@@ -253,7 +224,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int nhkv = input_dims == 3 ?
                          kv_num_heads :
                          inputs[1].size[1];
-
 
         const int qk_head_size = input_dims == 3 ?
                                  inputs[0].size[2] / nhq :
@@ -318,64 +288,52 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         }
 
         // Attention masking
-        if (internals.size() > 1) {
-            Mat& attention_mask = internals[internals.size() - 2];
-            const bool merge_masks = is_causal && (inputs.size() > 3);
+        if (inputs.size() > 3 || is_causal)
+        {
+            if (internals.size() > 1) {
+                Mat& attention_mask = internals[internals.size() - 2];
 
-            if (!merge_masks && is_causal) {
-                // pure causal mask
-                Mat& causal_mask = internals[0];
-                bool* causal_mask_data = causal_mask.ptr<bool>();
-                auto loops = seq_len_square;
-
-                // parallel_for_(Range(0, loops), [&] (const Range r) {
-                const Range r = Range(0, loops);
-                for (int i = r.start; i < r.end; i++) {
-                    int t1 = i / seq_len_kv;
-                    int t2 = i % seq_len_kv;
-                    causal_mask_data[i] = t2 > t1 ? 1 : 0;
-                }
+                broadcast(
+                    inputs[3],
+                    shape(attention_mask),
+                    attention_mask
+                );
             }
-
-            broadcast(
-                internals.size() > 2 ? internals[0] : inputs[3],
-                shape(attention_mask),
-                attention_mask
-            );
-
-            if (merge_masks)
-            {
+            if (inputs.size() > 3)
                 if (CV_IS_INT_TYPE(inputs[3].depth()))
-                    apply_causal_mask_to_boolean_input_mask(
-                        attention_mask,
-                        seq_len_q,
-                        seq_len_kv
+                    mask_bool(
+                        attention_prob,
+                        internals[internals.size() - 2],
+                        seq_len_square,
+                        seq_len_kv,
+                        -1e9f,
+                        is_causal
                     );
-                else {
-                    // Currently, only float attention mask is supported in this case
-                    float* att_mask_data = attention_mask.ptr<float>();
-                    auto loops = attention_mask.total();
-                    // parallel_for_(Range(0, loops), [&] (const Range r) {
-                    const Range r = Range(0, loops);
-                    for (int i = r.start; i < r.end; i++) {
-                        const int t = i % seq_len_square;
-                        const int t1 = t / seq_len_kv;
-                        const int t2 = t % seq_len_kv;
-                        if (t2 > t1)
-                            att_mask_data[i] = -FLT_MAX;
+                else
+                    mask_bias(
+                        attention_prob,
+                        internals[internals.size() - 2],
+                        seq_len_square,
+                        seq_len_kv,
+                        -1e9f,
+                        is_causal
+                    );
+            else
+            {
+                Range r(0, attention_prob.total());
+                for (int i = r.start; i < r.end; i++)
+                {
+                    const int seq_pos = i % seq_len_square;
+                    const int q_pos = seq_pos / seq_len_kv;
+                    const int k_pos = seq_pos % seq_len_kv;
+                    if (k_pos > q_pos)
+                    {
+                        attention_prob.ptr<float>()[i] = -1e9f;
                     }
                 }
             }
-
-            if ((attention_mask.type() == CV_Bool) || (attention_mask.type() == CV_8U)) {
-                double min_val = -FLT_MAX;
-                attention_prob.setTo(min_val, attention_mask);
-            } else {
-                CV_CheckEQ(attention_mask.type(), attention_prob.type(),
-                        "Attention mask type must either be Bool or match attention scores type");
-                attention_prob += attention_mask;
-            }
         }
+
 
         // softcap, if provided
         if (softcap > 0.f) {
