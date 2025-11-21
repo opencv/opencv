@@ -698,6 +698,7 @@ namespace ogl
 namespace cuda
 {
     class CV_EXPORTS GpuMat;
+    class CV_EXPORTS GpuMatND;
     class CV_EXPORTS HostMem;
     class CV_EXPORTS Stream;
     class CV_EXPORTS Event;
