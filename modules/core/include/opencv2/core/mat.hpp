@@ -1406,8 +1406,13 @@ public:
 
     When the operation mask is specified, if the Mat::create call shown above reallocates the matrix,
     the newly allocated matrix is initialized with all zeros before copying the data.
+
+    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use copyAt() .
+
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
+
+    @sa copyAt
      */
     void copyTo( OutputArray m ) const;
 
@@ -1419,6 +1424,30 @@ public:
     multiple channels.
     */
     void copyTo( OutputArray m, InputArray mask ) const;
+
+    /** @brief Overwrites the existing matrix
+
+    This method writes existing matrix data, just like copyTo().
+    But if it does not have a proper size or type before the operation, an exception is thrown.
+    This function is helpful to update ROI in an existing matrix.
+
+    If (re)allocation of destination memory is necessary, use copyTo() .
+
+    @param m Destination matrix.
+    If it does not have a proper size or type before the operation, an exception is thrown.
+
+    @sa copyTo
+
+     */
+    void copyAt( OutputArray m ) const;
+
+    /** @overload
+    @param m Destination matrix.
+    If it does not have a proper size or type before the operation, an exception is thrown.
+    @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
+    elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
+    */
+    void copyAt( OutputArray m, InputArray mask ) const;
 
     /** @brief Converts an array to another data type with optional scaling.
 
@@ -2562,7 +2591,9 @@ public:
     Mat_(const Mat_& m, const std::vector<Range>& ranges);
     //! from a matrix expression
     explicit Mat_(const MatExpr& e);
-    //! makes a matrix out of Vec, std::vector, Point_ or Point3_. The matrix will have a single column
+    //! makes a matrix out of Vec, std::vector, Point_ or Point3_.
+    //! In OpenCV 5.x, from std::vector, creates a matrix with a single row (cols = vector size).
+    //! (Previous versions: the matrix had a single column.)
     explicit Mat_(const std::vector<_Tp>& vec, bool copyData=false);
     template<int n> explicit Mat_(const Vec<typename DataType<_Tp>::channel_type, n>& vec, bool copyData=true);
     template<int m, int n> explicit Mat_(const Matx<typename DataType<_Tp>::channel_type, m, n>& mtx, bool copyData=true);

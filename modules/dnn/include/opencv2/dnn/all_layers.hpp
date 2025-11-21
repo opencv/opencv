@@ -556,6 +556,20 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<GridSampleLayer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS OneHotLayer : public Layer
+    {
+    public:
+        int axis;
+        static Ptr<OneHotLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS AffineGridLayer : public Layer
+    {
+    public:
+        bool align_corners;
+        static Ptr<AffineGridLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS FlattenLayer : public Layer
     {
     public:
@@ -1309,6 +1323,16 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<CenterCropPadLayer> create(const LayerParams& params);
+    };
+
+    class CV_EXPORTS DFTLayer : public Layer
+    {
+    public:
+        bool inverse;
+        bool onesided;
+        int axis_attr;
+        std::vector<int> axes;
+        static Ptr<DFTLayer> create(const LayerParams &params);
     };
 
     class CV_EXPORTS Resize2Layer : public Layer

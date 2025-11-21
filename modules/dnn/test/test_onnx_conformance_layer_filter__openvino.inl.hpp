@@ -109,6 +109,14 @@ CASE(test_add_uint8)
 #if SKIP_SET_1
     SKIP;
 #endif
+CASE(test_affine_grid_3d)
+    SKIP;
+CASE(test_affine_grid_3d_align_corners)
+    SKIP;
+CASE(test_affine_grid_2d)
+    SKIP;
+CASE(test_affine_grid_2d_align_corners)
+    SKIP;
 CASE(test_and2d)
     // no filter
 CASE(test_and3d)
@@ -594,6 +602,16 @@ CASE(test_det_2d)
     SKIP;
 CASE(test_det_nd)
     SKIP;
+CASE(test_dft)
+    SKIP;
+CASE(test_dft_axis_opset19)
+    SKIP;
+CASE(test_dft_inverse)
+    SKIP;
+CASE(test_dft_inverse_opset19)
+    SKIP;
+CASE(test_dft_opset19)
+    SKIP;
 CASE(test_div)
     // no filter
 CASE(test_div_bcast)
@@ -879,6 +897,22 @@ CASE(test_gridsample_nearest)
 CASE(test_gridsample_reflection_padding)
     SKIP;
 CASE(test_gridsample_zeros_padding)
+    SKIP;
+CASE(test_gridsample_bilinear_align_corners_0_additional_1)
+    SKIP;
+CASE(test_gridsample_bilinear_align_corners_1_additional_1)
+    SKIP;
+CASE(test_gridsample_nearest_align_corners_0_additional_1)
+    SKIP;
+CASE(test_gridsample_nearest_align_corners_1_additional_1)
+    SKIP;
+CASE(test_gridsample_volumetric_bilinear_align_corners_0)
+    SKIP;
+CASE(test_gridsample_volumetric_bilinear_align_corners_1)
+    SKIP;
+CASE(test_gridsample_volumetric_nearest_align_corners_0)
+    SKIP;
+CASE(test_gridsample_volumetric_nearest_align_corners_1)
     SKIP;
 CASE(test_group_normalization_epsilon)
     // no filter
@@ -1650,13 +1684,13 @@ CASE(test_not_3d)
 CASE(test_not_4d)
     // no filter
 CASE(test_onehot_negative_indices)
-    // no filter
+    SKIP;
 CASE(test_onehot_with_axis)
-    // no filter
+    SKIP;
 CASE(test_onehot_with_negative_axis)
-    // no filter
+    SKIP;
 CASE(test_onehot_without_axis)
-    // no filter
+    SKIP;
 CASE(test_optional_get_element)
     // no filter
 CASE(test_optional_get_element_sequence)
