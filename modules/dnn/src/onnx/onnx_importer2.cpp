@@ -247,7 +247,7 @@ protected:
     void parseBitShift             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwise              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseBitwiseNot           (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
-
+    void parseRotaryEmbedding      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
     void parseAttention            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2572,6 +2572,26 @@ void ONNXImporter2::parseQSoftmax(LayerParams& layerParams, const opencv_onnx::N
     layerParams.set("zeropoints", y_zero_point);
     addLayer(layerParams, node_proto);
 }*/
+
+
+void ONNXImporter2::parseRotaryEmbedding(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
+    int i, n_inputs = node_proto.input_size();
+
+    for (i = 1; i < n_inputs; i++) {
+        if (!net.isConstArg(node_inputs[i]))
+            break;
+    }
+
+    if (i == n_inputs) {
+        for (i = 1; i < n_inputs; i++) {
+            Mat blob = net.argTensor(node_inputs[i]);
+            params.blobs.push_back(blob);
+        }
+        n_inputs = 1;
+    }
+
+    addLayer(params, node_proto, n_inputs);
+}
 
 void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeProto& node_proto) {
     int i, n_inputs = node_proto.input_size();

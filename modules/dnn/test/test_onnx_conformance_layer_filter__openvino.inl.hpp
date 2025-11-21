@@ -2732,6 +2732,38 @@ CASE(test_unsqueeze_two_axes)
 CASE(test_unsqueeze_unsorted_axes)
     SKIP;
 CASE(test_upsample_nearest)
+CASE(test_rotary_embedding)
+    SKIP;
+CASE(test_rotary_embedding_3d_input)
+    SKIP;
+CASE(test_rotary_embedding_3d_input_expanded)
+    SKIP;
+CASE(test_rotary_embedding_expanded)
+    SKIP;
+CASE(test_rotary_embedding_interleaved)
+    SKIP;
+CASE(test_rotary_embedding_interleaved_expanded)
+    SKIP;
+CASE(test_rotary_embedding_no_position_ids)
+    SKIP;
+CASE(test_rotary_embedding_no_position_ids_expanded)
+    SKIP;
+CASE(test_rotary_embedding_no_position_ids_interleaved)
+    SKIP;
+CASE(test_rotary_embedding_no_position_ids_interleaved_expanded)
+    SKIP;
+CASE(test_rotary_embedding_no_position_ids_rotary_dim)
+    SKIP;
+CASE(test_rotary_embedding_no_position_ids_rotary_dim_expanded)
+    SKIP;
+CASE(test_rotary_embedding_with_interleaved_rotary_dim)
+    SKIP;
+CASE(test_rotary_embedding_with_interleaved_rotary_dim_expanded)
+    SKIP;
+CASE(test_rotary_embedding_with_rotary_dim)
+    SKIP;
+CASE(test_rotary_embedding_with_rotary_dim_expanded)
+    SKIP;
 #if SKIP_SET_1
     SKIP;
 #endif
