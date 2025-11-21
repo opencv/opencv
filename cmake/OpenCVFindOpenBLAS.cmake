@@ -26,25 +26,25 @@ endif()
 if(NOT OpenBLAS_FOUND)
   # Search using environment hints (OpenBLAS or OpenBLAS_HOME)
   # Prioritize threaded library for performance on RHEL systems
-  find_library(OpenBLAS_LIBRARIES 
-    NAMES openblasp openblas 
-    PATHS ENV "OpenBLAS" ENV "OpenBLAS_HOME" 
-    PATH_SUFFIXES "lib" 
+  find_library(OpenBLAS_LIBRARIES
+    NAMES openblasp openblas
+    PATHS ENV "OpenBLAS" ENV "OpenBLAS_HOME"
+    PATH_SUFFIXES "lib"
     NO_DEFAULT_PATH)
-  
+
   # Support both namespaced (RHEL) and standard (Debian) header layouts
-  find_path(OpenBLAS_INCLUDE_DIRS 
-    NAMES cblas.h 
-    PATHS ENV "OpenBLAS" ENV "OpenBLAS_HOME" 
-    PATH_SUFFIXES "include/openblas" "include" 
+  find_path(OpenBLAS_INCLUDE_DIRS
+    NAMES cblas.h
+    PATHS ENV "OpenBLAS" ENV "OpenBLAS_HOME"
+    PATH_SUFFIXES "include/openblas" "include"
     NO_DEFAULT_PATH)
-  
-  find_path(OpenBLAS_LAPACKE_DIR 
-    NAMES lapacke.h 
-    PATHS "${OpenBLAS_INCLUDE_DIRS}" ENV "OpenBLAS" ENV "OpenBLAS_HOME" 
-    PATH_SUFFIXES "include" 
+
+  find_path(OpenBLAS_LAPACKE_DIR
+    NAMES lapacke.h
+    PATHS "${OpenBLAS_INCLUDE_DIRS}" ENV "OpenBLAS" ENV "OpenBLAS_HOME"
+    PATH_SUFFIXES "include"
     NO_DEFAULT_PATH)
-  
+
   if(OpenBLAS_LIBRARIES AND OpenBLAS_INCLUDE_DIRS)
     message(STATUS "Found OpenBLAS using environment hint")
     set(OpenBLAS_FOUND TRUE)
@@ -60,14 +60,14 @@ if(NOT OpenBLAS_FOUND)
 
   # Try namespaced location first (RHEL: /usr/include/openblas/)
   find_path(OpenBLAS_INCLUDE_DIRS NAMES cblas.h PATH_SUFFIXES openblas)
-  
+
   # Fall back to standard location (Debian: /usr/include/)
   if(NOT OpenBLAS_INCLUDE_DIRS)
     find_path(OpenBLAS_INCLUDE_DIRS NAMES cblas.h)
   endif()
 
   find_path(OpenBLAS_LAPACKE_DIR NAMES lapacke.h PATHS "${OpenBLAS_INCLUDE_DIRS}")
-  
+
   if(OpenBLAS_LIBRARIES AND OpenBLAS_INCLUDE_DIRS)
     message(STATUS "Found OpenBLAS in the system")
     set(OpenBLAS_FOUND TRUE)
