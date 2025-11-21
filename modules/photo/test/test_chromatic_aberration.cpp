@@ -14,8 +14,9 @@ protected:
     std::string test_yaml_file;
     cv::Mat test_image;
     cv::Mat coeffMat;
+    cv::Mat corrected;
     int degree = -1;
-    int calibW = -1, calibH = -1;
+    Size calib_size = {-1, -1};
 
     void SetUp() override
     {
@@ -30,7 +31,7 @@ protected:
 TEST_F(ChromaticAberrationTest, LoadCalibAndCorrectImage)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
     });
 
     ASSERT_FALSE(coeffMat.empty());
@@ -38,16 +39,13 @@ TEST_F(ChromaticAberrationTest, LoadCalibAndCorrectImage)
     ASSERT_EQ(coeffMat.rows, 4);
     ASSERT_GT(coeffMat.cols, 0);
     ASSERT_EQ((degree + 1) * (degree + 2) / 2, coeffMat.cols);
-    ASSERT_GT(calibW, 0);
-    ASSERT_GT(calibH, 0);
+    ASSERT_GT(calib_size.width, 0);
+    ASSERT_GT(calib_size.height, 0);
 
-    ASSERT_EQ(test_image.cols, calibW);
-    ASSERT_EQ(test_image.rows, calibH);
+    ASSERT_EQ(test_image.cols, calib_size.width);
+    ASSERT_EQ(test_image.rows, calib_size.height);
 
-    cv::Mat corrected;
-    ASSERT_NO_THROW({
-        corrected = cv::correctChromaticAberration(test_image, coeffMat, calibW, calibH, degree);
-    });
+    ASSERT_NO_THROW(cv::correctChromaticAberration(test_image, coeffMat, corrected, calib_size, degree));
 
     EXPECT_EQ(corrected.size(), test_image.size());
     EXPECT_EQ(corrected.channels(), test_image.channels());
@@ -86,63 +84,58 @@ TEST_F(ChromaticAberrationTest, YAMLContentsAsExpected)
 TEST_F(ChromaticAberrationTest, InvalidSingleChannel)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
     });
 
     cv::Mat gray;
     cv::cvtColor(test_image, gray, cv::COLOR_BGR2GRAY);
 
-    EXPECT_THROW({
-        cv::correctChromaticAberration(gray, coeffMat, calibW, calibH, degree);
-    }, cv::Exception);
+    EXPECT_THROW(cv::correctChromaticAberration(gray, coeffMat, corrected, calib_size, degree),
+                 cv::Exception);
 }
 
 TEST_F(ChromaticAberrationTest, EmptyCoeffMat)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
     });
 
     cv::Mat emptyCoeff;
-    EXPECT_THROW({
-        cv::correctChromaticAberration(test_image, emptyCoeff, calibW, calibH, degree);
-    }, cv::Exception);
+    EXPECT_THROW(cv::correctChromaticAberration(test_image, emptyCoeff, corrected, calib_size, degree),
+                 cv::Exception);
 }
 
 TEST_F(ChromaticAberrationTest, MismatchedImageSize)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
     });
     cv::Mat resized;
     cv::resize(test_image, resized, cv::Size(test_image.cols/2, test_image.rows/2));
-    EXPECT_THROW({
-        cv::correctChromaticAberration(resized, coeffMat, calibW, calibH, degree);
-    }, cv::Exception);
+    EXPECT_THROW(cv::correctChromaticAberration(resized, coeffMat, corrected, calib_size, degree),
+                 cv::Exception);
 }
 
 TEST_F(ChromaticAberrationTest, WrongCoeffType)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
     });
     cv::Mat wrongType;
     coeffMat.convertTo(wrongType, CV_64F);
-    EXPECT_THROW({
-        cv::correctChromaticAberration(test_image, wrongType, calibW, calibH, degree);
-    }, cv::Exception);
+    EXPECT_THROW(cv::correctChromaticAberration(test_image, wrongType, corrected, calib_size, degree),
+                 cv::Exception);
 }
 
 TEST_F(ChromaticAberrationTest, DegreeDoesNotMatchCoeffCols)
 {
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
     });
     int wrongDegree = std::max(1, degree - 1);
     ASSERT_NE((wrongDegree + 1) * (wrongDegree + 2) / 2, coeffMat.cols);
-    EXPECT_THROW({
-        cv::correctChromaticAberration(test_image, coeffMat, calibW, calibH, wrongDegree);
-    }, cv::Exception);
+    EXPECT_THROW(cv::correctChromaticAberration(test_image, coeffMat, corrected, calib_size, wrongDegree),
+                 cv::Exception);
 }
 
 }}

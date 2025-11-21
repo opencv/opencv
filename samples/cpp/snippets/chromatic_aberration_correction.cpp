@@ -74,9 +74,12 @@ int main(int argc, char** argv)
     try
     {
         Mat coeffMat;
-        int degree = -1, calibW = -1, calibH = -1;
-        loadCalibrationResultFromFile(calibPath, coeffMat, calibW, calibH, degree);
-        Mat corrected = correctChromaticAberration(input, coeffMat, calibW, calibH, degree, bayerPattern);
+        Size calib_size = {-1, -1};
+        int degree = -1;
+
+        loadCalibrationResultFromFile(calibPath, coeffMat, calib_size, degree);
+        Mat corrected;
+        correctChromaticAberration(input, coeffMat, corrected, calib_size, degree, bayerPattern);
 
         namedWindow("Original", WINDOW_AUTOSIZE);
         namedWindow("Corrected", WINDOW_AUTOSIZE);

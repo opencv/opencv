@@ -19,16 +19,18 @@ PERF_TEST(ChromaticAberration, CorrectChromaticAberration)
     ASSERT_EQ(src.type(), CV_8UC3);
 
     cv::Mat coeffMat;
-    int degree = -1, calibW = -1, calibH = -1;
+    int degree = -1;
+    Size calib_size = {-1,-1};
+
     ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(calib_file, coeffMat, calibW, calibH, degree);
+        cv::loadCalibrationResultFromFile(calib_file, coeffMat, calib_size, degree);
     });
 
     cv::Mat dst;
 
     TEST_CYCLE()
     {
-        dst = cv::correctChromaticAberration(src, coeffMat, calibW, calibH, degree);
+        cv::correctChromaticAberration(src, coeffMat, dst, calib_size, degree);
     }
     SANITY_CHECK_NOTHING();
 }

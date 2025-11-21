@@ -7,9 +7,8 @@
 namespace cv {
 
 void loadCalibrationResultFromFile(const String& calibration_file,
-                                    OutputArray coeffMat,
-                                   int& width,
-                                   int& height,
+                                   OutputArray coeffMat,
+                                   Size& calib_size,
                                    int& degree) {
     Mat tmp;
     FileStorage fs(calibration_file, FileStorage::READ);
@@ -97,8 +96,7 @@ void loadCalibrationResultFromFile(const String& calibration_file,
         Ry[i] = static_cast<float>(red_y[i]);
     }
 
-    width = imgW;
-    height = imgH;
+    calib_size = Size(imgW, imgH);
     degree = deg_red;
     tmp.copyTo(coeffMat);
 }
@@ -205,14 +203,16 @@ static void buildRemapsFromCoeffMat(int height, int width,
     map_y = Ygrid - dy;
 }
 
-Mat correctChromaticAberration(InputArray input_image,
-                               const Mat& coeffMat,
-                               int calib_width,
-                               int calib_height,
-                               int calib_degree,
-                               int bayer_pattern)
+void correctChromaticAberration(InputArray input_image,
+                                InputArray coefficients,
+                                OutputArray output_image,
+                                const Size& calib_size,
+                                int calib_degree,
+                                int bayer_pattern)
 {
     Mat image = input_image.getMat();
+    const Mat coeffMat = coefficients.getMat();
+
     if (image.channels() == 1) {
         if (bayer_pattern < 0) {
             CV_Error_(Error::StsBadArg,
@@ -226,10 +226,10 @@ Mat correctChromaticAberration(InputArray input_image,
     const int height = image.rows;
     const int width  = image.cols;
 
-    if (height != calib_height || width != calib_width) {
+    if (height != calib_size.height || width != calib_size.width) {
         CV_Error_(Error::StsBadArg,
                   ("Image size %dx%d does not match calibration %dx%d",
-                   width, height, calib_width, calib_height));
+                   width, height, calib_size.width, calib_size.height));
     }
 
     std::vector<Mat> channels;
@@ -246,8 +246,6 @@ Mat correctChromaticAberration(InputArray input_image,
 
     std::vector<Mat> corrected_channels = {b_corr, g, r_corr};
     Mat corrected_image;
-    merge(corrected_channels, corrected_image);
-
-    return corrected_image;
+    merge(corrected_channels, output_image);
 }
 }

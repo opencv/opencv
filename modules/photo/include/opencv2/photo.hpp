@@ -922,16 +922,17 @@ between the centres of discs in red and blue channels compared to green are mini
 are then saved in a yaml file which can be used with this function to correct lateral chromatic aberration.
 
 @param input_image Input BGR image to correct
-@param coeff_mat Coefficient model
-@param calib_width Width of images for the calibration coefficient model
-@param calib_height Height of images for the calibration coefficient model
+@param coefficients Coefficient model
+@param output_image Corrected BGR image
+@param image_size Size of images for the calibration coefficient model
 @param calib_degree Degree of the calibration coefficient model
 @param bayer_pattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
 demosaicing when @p input_image has one channel; ignored otherwise.
 @return Corrected BGR image
 @sa loadCalibrationResultFromFile, demosaicing
 */
-CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const Mat& coeff_mat, int calib_width, int calib_height, int calib_degree, int bayer_pattern = -1);
+CV_EXPORTS_W void correctChromaticAberration(InputArray input_image, InputArray coefficients, OutputArray output_image,
+                                             const Size& image_size, int calib_degree, int bayer_pattern = -1);
 
 /** @brief Load chromatic-aberration calibration parameters.
 
@@ -945,15 +946,13 @@ packs them into a 4×N CV_32F matrix:
 @param calibration_file  Path to YAML calibration file.
 @param coeffMat          Output 4xN coefficient matrix (CV_32F).
 @param degree            Polynomial degree inferred from N.
-@param width             Image width read from file.
-@param height            Image height read from file.
+@param calib_size        Calibration image size read from file.
 @sa correctChromaticAberration
 */
 CV_EXPORTS_W void loadCalibrationResultFromFile(
     const String& calibration_file,
     OutputArray coeffMat,
-    CV_OUT int& width,
-    CV_OUT int& height,
+    CV_OUT Size& calib_size,
     CV_OUT int& degree);
 
 
