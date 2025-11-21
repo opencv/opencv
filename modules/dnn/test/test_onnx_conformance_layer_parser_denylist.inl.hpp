@@ -36,7 +36,6 @@
 "test_attention_3d_with_past_and_present_expanded",
 "test_attention_3d_gqa_with_past_and_present_expanded",
 "test_attention_3d_causal_expanded",
-"test_attention_3d_diff_heads_sizes_causal",
 "test_attention_3d_diff_heads_sizes_causal_expanded",
 "test_attention_3d_diff_heads_sizes_scaled_expanded",
 "test_attention_3d_diff_heads_sizes_softcap",

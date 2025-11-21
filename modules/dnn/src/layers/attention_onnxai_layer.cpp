@@ -165,6 +165,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                                  const int requiredOutputs,
                                  std::vector<MatShape> &outputs,
                                  std::vector<MatShape> &internals) const CV_OVERRIDE {
+        CV_CheckTrue(inputs.size() >= 3, "At least three inputs (query, key, value) are required");
         CV_CheckTrue(inputs.size() < 5, "past key and past value are not supported yet");
         CV_CheckTrue(inputs[0].dims == inputs[1].dims &&
                      inputs[0].dims == inputs[2].dims,
@@ -173,7 +174,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
         const int seq_len_kv = inputs[1][input_dims - 2];
-        CV_CheckTrue(inputs[0][input_dims - 2] == seq_len_kv,
+        CV_CheckTrue(inputs[2][input_dims - 2] == seq_len_kv,
                      "Key and query sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
