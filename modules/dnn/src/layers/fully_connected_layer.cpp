@@ -48,6 +48,7 @@
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
 #include "../op_vkcom.hpp"
+#include "../net_impl.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
@@ -59,6 +60,9 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/matmul.hpp"
 #include "../cuda4dnn/primitives/inner_product.hpp"
+#include "../cuda/layer_cudnn.hpp"
+#include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
 using namespace cv::dnn::cuda4dnn;
 #endif
 
@@ -71,6 +75,12 @@ class FullyConnectedLayerImpl CV_FINAL : public InnerProductLayer
 {
 public:
     enum { VEC_ALIGN = 8 };
+
+#ifdef HAVE_CUDA
+    // Persistent GPU storage for weights and bias to avoid per-forward re-uploads
+    cv::cuda::GpuMatND wdev_nd;
+    cv::cuda::GpuMatND bdev_nd;
+#endif
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNInnerProduct<float> > innerProductOp;
@@ -547,6 +557,73 @@ public:
 
                 for (size_t i = 0; i < input.size(); i++)
                 {
+#if defined(HAVE_CUDA)
+                    EngineType engine_forced = getForcedDnnEngine();
+                    if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
+                    {
+                        std::vector<cv::cuda::GpuMat> gin, gout;
+                        inputs_arr.getGpuMatVector(gin);
+                        outputs_arr.getGpuMatVector(gout);
+                        if (!gin.empty() && !gout.empty())
+                        {
+                            cv::cuda::GpuMat src = gin[i];
+                            cv::cuda::GpuMat dst = gout[i];
+                            // Flatten N…axis to N, rest to K
+                            int axisCan = normalize_axis(axis, input[i].dims);
+                            int N = input[i].total(0, axisCan);
+                            int M = weightsMat.rows; // numOutput
+                            if (dst.empty() || dst.rows != N || dst.cols != M || dst.type() != CV_32F)
+                                cv::cuda::ensureSizeIsEnough(N, M, CV_32F, dst);
+                            // Cache weights/bias on device without 2D host reshapes; use ND fit
+                                MatShape wshape = shape(weightsMat);
+                                cv::cuda::SizeArray wsize(wshape.begin(), wshape.end());
+                                wdev_nd.fit(wsize, weightsMat.type());
+                                wdev_nd.upload(weightsMat);
+                            if (bias && !biasMat.empty()) {
+                                MatShape bshape = shape(biasMat);
+                                cv::cuda::SizeArray bsize(bshape.begin(), bshape.end());
+                                bdev_nd.fit(bsize, biasMat.type());
+                                bdev_nd.upload(biasMat);
+                            } else {
+                                bdev_nd.release();
+                            }
+                            cv::cuda::GpuMat wdev2d = wdev_nd.createGpuMatHeader();
+                            cv::cuda::GpuMat bdev2d = bdev_nd.empty() ? cv::cuda::GpuMat() : bdev_nd.createGpuMatHeader();
+
+                            Net::Impl* netimpl = getNetImpl(this);
+                            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                            netimpl->ensureCudaReady();
+                            CV_Assert(netimpl->cudaInfo);
+                            cublasHandle_t blasHandle = netimpl->cudaInfo->context.cublas_handle.get();
+                            cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                            const int y_n_stride = (int)(dst.step / sizeof(float));
+                            cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc2D(
+                                this->outputs.empty() ? Arg() : this->outputs[0],
+                                N, M, y_n_stride, CUDNN_DATA_FLOAT);
+
+                            cudnnTensorDescriptor_t bDesc = nullptr;
+                            if (!bdev2d.empty()) {
+                                Arg bArg = netimpl->getArg(this->name + ":bias");
+                                bDesc = netimpl->tensorDesc2D(
+                                    bArg, 1, M, M, CUDNN_DATA_FLOAT);
+                            }
+
+                            std::cout<<"matMul"<<std::endl;
+                            cv::dnn::cuda::matMul(
+                                blasHandle,
+                                cudnnHandle,
+                                yDesc,
+                                bDesc,
+                                src,
+                                wdev2d,
+                                dst,
+                                bdev2d);
+
+                            return;
+                        }
+                    }
+#endif
                     Mat srcMat = input[i].reshape(1, outerSize);
                     Mat dstMat = output[i].reshape(1, outerSize);
 

@@ -104,6 +104,39 @@ void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)
     }
 }
 
+bool Net::Impl::ensureCudaReady()
+{
+    if (!cudaInfo)
+    {
+        try {
+            initCUDABackend(blobsToKeep);
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+        }
+    }
+    return (bool)cudaInfo;
+}
+
+cudnnTensorDescriptor_t Net::Impl::tensorDescNCHW(Arg arg,
+                                                  int N, int C, int H, int W,
+                                                  cudnnDataType_t dtype)
+{
+    CV_UNUSED(N); CV_UNUSED(C); CV_UNUSED(H); CV_UNUSED(W); CV_UNUSED(dtype);
+    std::vector<Arg> single{ arg };
+    _InputArray dummy; // not used inside argTensorCuDNN
+    return argTensorCuDNN(dummy, single, 0);
+}
+
+cudnnTensorDescriptor_t Net::Impl::tensorDesc2D(Arg arg,
+                                                int rows, int cols, int row_stride,
+                                                cudnnDataType_t dtype)
+{
+    CV_UNUSED(rows); CV_UNUSED(cols); CV_UNUSED(row_stride); CV_UNUSED(dtype);
+    std::vector<Arg> single{ arg };
+    _InputArray dummy; // not used inside argTensorCuDNN
+    return argTensorCuDNN(dummy, single, 0);
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn

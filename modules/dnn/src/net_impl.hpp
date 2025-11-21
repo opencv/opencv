@@ -26,6 +26,10 @@
 #include "legacy_backend.hpp"  // wrapMat BlobManager OpenCLBackendWrapper
 
 #include <unordered_map>
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
+#endif
 
 namespace cv {
 namespace dnn {
@@ -100,12 +104,73 @@ struct Net::Impl : public detail::NetImplBase
     std::ostream* dump_strm;
     int dump_indent;
 
+#ifdef HAVE_CUDA
+    std::vector<cv::cuda::GpuMat> gpuTensors;
+    std::vector<cv::cuda::GpuMat> gpuBuffers;
+    std::vector<cv::cuda::GpuMatND> gpuTensorsND;
+    std::vector<cv::cuda::GpuMatND> gpuBuffersND;
+    std::vector<cv::cuda::GpuMatND> layerTempGpuND;
+    // Cached cuDNN tensor descriptors per graph Arg (index-matched to 'args')
+    std::vector<cudnnTensorDescriptor_t> cudnnTensors;
+    // Per-layer cuDNN non-tensor descriptors
+    struct CudnnLayerDescs {
+        cudnnFilterDescriptor_t filter;
+        cudnnConvolutionDescriptor_t conv;
+        cudnnActivationDescriptor_t act;
+        cudnnOpTensorDescriptor_t op;
+        cudnnPoolingDescriptor_t pool;
+        CudnnLayerDescs() : filter(nullptr), conv(nullptr), act(nullptr), op(nullptr), pool(nullptr) {}
+    };
+    std::vector<CudnnLayerDescs> cudnnLayerDescs;
+#endif
+
     virtual bool empty() const;
     virtual void setPreferableBackend(Net& net, int backendId);
     virtual void setPreferableTarget(int targetId);
 
     // FIXIT use inheritance
     virtual Ptr<BackendWrapper> wrap(Mat& host);
+
+#ifdef HAVE_CUDA
+    cv::cuda::GpuMat& argGpuMat(Arg arg);
+    // Ensure existence and configure cuDNN tensor descriptor for the i-th input/output Arg
+    // using recorded shapes. Returns a reference to cached descriptor.
+    cudnnTensorDescriptor_t argTensorCuDNN(InputArrayOfArrays arrays,
+                                           const std::vector<Arg>& argsVec,
+                                           int idx);
+    // Initialize CUDA backend (idempotent) and return whether CUDA is ready.
+    bool ensureCudaReady();
+    // Convenience wrappers for common contiguous tensor descriptors
+    cudnnTensorDescriptor_t tensorDescNCHW(Arg arg,
+                                           int N, int C, int H, int W,
+                                           cudnnDataType_t dtype);
+    // Convenience wrapper for flatten-2D views (N x C) with explicit row stride in elements.
+    cudnnTensorDescriptor_t tensorDesc2D(Arg arg,
+                                         int rows, int cols, int row_stride,
+                                         cudnnDataType_t dtype);
+    // Per-layer descriptor getters (created once, reconfigured on each call)
+    cudnnFilterDescriptor_t filterDescCuDNN(int layerId,
+                                            cudnnDataType_t dtype, cudnnTensorFormat_t layout,
+                                            int outC, int inC, int kH, int kW);
+    cudnnConvolutionDescriptor_t convDescCuDNN(int layerId,
+                                               int padH, int padW, int strideH, int strideW,
+                                               int dilH, int dilW, int groups, cudnnDataType_t computeType);
+    cudnnActivationDescriptor_t activationDescCuDNN(int layerId,
+                                                    cudnnActivationMode_t mode,
+                                                    cudnnNanPropagation_t nanOpt,
+                                                    double coef);
+    cudnnOpTensorDescriptor_t opTensorDescCuDNN(int layerId,
+                                                cudnnOpTensorOp_t op,
+                                                cudnnDataType_t dtype,
+                                                cudnnNanPropagation_t nanOpt);
+    cudnnPoolingDescriptor_t poolingDescCuDNN(int layerId,
+                                              cudnnPoolingMode_t mode,
+                                              cudnnNanPropagation_t nanOpt,
+                                              int kH, int kW,
+                                              int padH, int padW,
+                                              int strideH, int strideW);
+#endif
+    void ensureBufferWrapper(int bufidx);
 
 
     virtual void clear();
@@ -126,7 +191,11 @@ struct Net::Impl : public detail::NetImplBase
         CV_TRACE_ARG_VALUE(type, "type", ld.type.c_str());
 
         if (ld.layerInstance)
+        {
+            if (!ld.layerInstance->netimpl)
+                ld.layerInstance->netimpl = const_cast<Net::Impl*>(this);
             return ld.layerInstance;
+        }
 
         ld.layerInstance = createLayerInstance(ld);
         if (!ld.layerInstance && basePtr_)
@@ -138,6 +207,9 @@ struct Net::Impl : public detail::NetImplBase
         {
             CV_Error(Error::StsError, "Can't create layer \"" + ld.name + "\" of type \"" + ld.type + "\"");
         }
+
+        if (!ld.layerInstance->netimpl)
+            ld.layerInstance->netimpl = const_cast<Net::Impl*>(this);
 
         return ld.layerInstance;
     }
@@ -214,6 +286,19 @@ struct Net::Impl : public detail::NetImplBase
     void tvUpdateConfictMap(int graphIndex, LayerData& ld, std::vector<std::vector<int> >& graphConflictMap);
     void tvConvertToOutputNode(const LayerData& ld, Ptr<TimVXBackendWrapper>& targetWrap);
     void initTimVXBackend();
+#endif
+
+#ifdef HAVE_CUDA
+    void allocateLayerGpuOutputs(
+            const Ptr<Layer>& layer,
+            const std::vector<int>& inpTypes,
+            const std::vector<MatShape>& inpShapes,
+            std::vector<int>& outTypes,
+            std::vector<MatShape>& outShapes,
+            std::vector<int>& tempTypes,
+            std::vector<MatShape>& tempShapes,
+            std::vector<cv::cuda::GpuMat>& outGpuMats,
+            std::vector<cv::cuda::GpuMat>& tempGpuMats);
 #endif
 
 #ifdef HAVE_CUDA

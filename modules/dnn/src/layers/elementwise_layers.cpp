@@ -42,6 +42,7 @@
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
+#include "../net_impl.hpp"
 #include "../op_cuda.hpp"
 #include "../op_inf_engine.hpp"
 #include "../ie_ngraph.hpp"
@@ -63,6 +64,20 @@
 using namespace cv::dnn::cuda4dnn;
 #endif
 #include <opencv2/core/utils/logger.hpp>
+
+#ifdef HAVE_CUDA
+#include <opencv2/core/cuda.hpp>
+#include "../cuda/layer_cudnn.hpp"
+#include "../net_impl.hpp"
+#include <cudnn.h>
+#endif
+
+#ifdef HAVE_DNN_NGRAPH
+#include <openvino/op/roi_pooling.hpp>
+#include <openvino/op/psroi_pooling.hpp>
+#endif
+
+#include <type_traits>
 
 namespace cv
 {
@@ -92,6 +107,9 @@ using std::erf;
 using std::sin;
 using std::sinh;
 using std::tan;
+
+// Forward declaration to allow type checks in ElementWiseLayer before definition
+struct ReLUFunctor;
 
 template<typename Func>
 class ElementWiseLayer : public Func::Layer
@@ -146,6 +164,14 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
+#ifdef HAVE_CUDA
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+        }
+#endif
         return func.supportBackend(backendId, this->preferableTarget);
     }
 
@@ -210,11 +236,108 @@ public:
         CV_OCL_RUN(IS_DNN_OPENCL_TARGET(this->preferableTarget),
                    func.applyOCL(inputs_arr, outputs_arr, internals_arr))
 
+#ifdef HAVE_CUDA
+        if (std::is_same<Func, ReLUFunctor>::value) {
+            if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            {
+                std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
+                if (gout.size() == 1)
+                {
+                    cv::cuda::GpuMatND gin_nd;
+                    if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+                    {
+                        std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                        if (!gin.empty() && !gin[0].empty())
+                        {
+                            const cv::cuda::GpuMat& g0 = gin[0];
+                            cv::cuda::SizeArray sz{ g0.rows > 0 ? g0.rows : 1, g0.cols > 0 ? g0.cols : 1 };
+                            cv::cuda::StepArray st{ (size_t)g0.step, (size_t)CV_ELEM_SIZE(g0.type()) };
+                            gin_nd = cv::cuda::GpuMatND(sz, g0.type(), (void*)g0.ptr(), st);
+                        }
+                    }
+                    else
+                    {
+                        std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
+                        if (!inputs_cpu.empty())
+                        {
+                            const Mat& in0 = inputs_cpu[0];
+                            Mat in_f;
+                            if (in0.type() != CV_32F)
+                                in0.convertTo(in_f, CV_32F);
+                            else
+                                in_f = in0;
+                            MatShape ish = shape(in_f);
+                            cv::cuda::SizeArray ndsz(ish.begin(), ish.end());
+                            gin_nd.fit(ndsz, in_f.type());
+                            gin_nd.upload(in_f);
+                        }
+                    }
+                    if (!gin_nd.empty())
+                    {
+                        cv::cuda::GpuMat& dst = gout[0];
+                        int N = gin_nd.dims > 0 ? gin_nd.size[0] : 1;
+                        int rest = 1;
+                        for (int di = 1; di < gin_nd.dims; ++di) rest *= gin_nd.size[di];
+                        if (N < 1) N = 1;
+                        if (rest < 1) rest = 1;
+                        if (dst.empty() || dst.type() != CV_32F || dst.rows != N || dst.cols != rest)
+                            cv::cuda::ensureSizeIsEnough(N, rest, CV_32F, dst);
+                        // Use cached descriptors via Net::Impl
+                        Net::Impl* netimpl = getNetImpl(this);
+                        CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                        netimpl->ensureCudaReady();
+                        CV_Assert(netimpl->cudaInfo);
+                        cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+                        int in_rows = N;
+                        int in_cols = rest;
+                        int x_n_stride = gin_nd.dims > 0 ? (int)(gin_nd.step[0] / sizeof(float)) : in_cols;
+                        cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc2D(
+                            this->inputs.empty() ? Arg() : this->inputs[0],
+                            in_rows, in_cols, x_n_stride,
+                            CUDNN_DATA_FLOAT);
+                        int y_rows = dst.rows > 0 ? dst.rows : 1;
+                        int y_cols = dst.cols > 0 ? dst.cols : 1;
+                        int y_n_stride = (int)(dst.step / sizeof(float));
+                        cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc2D(
+                            this->outputs.empty() ? Arg() : this->outputs[0],
+                            y_rows, y_cols, y_n_stride,
+                            CUDNN_DATA_FLOAT);
+
+                        std::cout<<"relu"<<std::endl;
+                        int lid = netimpl->getLayerId(this->name);
+                        cudnnActivationDescriptor_t reluActDesc =
+                            netimpl->activationDescCuDNN(lid,
+                                                          CUDNN_ACTIVATION_RELU,
+                                                          CUDNN_PROPAGATE_NAN,
+                                                          0.0);
+                        cv::dnn::cuda::relu(
+                            cudnnHandle,
+                            reluActDesc,
+                            xDesc,
+                            yDesc,
+                            (const void*)gin_nd.getDevicePtr(),
+                            (void*)dst.ptr());
+                        return;
+                    }
+                }
+            }
+        }
+#endif
+
         if (inputs_arr.depth() == CV_16F)
         {
             Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
+
+#ifdef HAVE_CUDA
+        // For non-ReLU functors, if outputs are GPU mats, report not implemented to trigger CPU fallback
+        if (!std::is_same<Func, ReLUFunctor>::value &&
+            outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        {
+            CV_Error(Error::StsNotImplemented, "ElementWiseLayer: CUDA path not implemented for this operation");
+        }
+#endif
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
@@ -324,8 +447,10 @@ struct ReLUFunctor : public BaseFunctor
             return slope == 0;
         }
 #endif
+        // For CUDA backend, disable when slope != 0 (LeakyReLU) per test exclusions
+        if (backendId == DNN_BACKEND_CUDA)
+            return slope == 0.0f;
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 
@@ -2537,7 +2662,6 @@ struct ChannelsPReLUFunctor : public BaseFunctor
             return true;
 #endif
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_CANN;
     }
 
