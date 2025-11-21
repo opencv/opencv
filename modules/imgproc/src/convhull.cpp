@@ -76,12 +76,16 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
         if( CV_SIGN( by ) != nsign )
         {
-            _Tp ax = array[pcur]->x - array[pprev]->x;
-            _Tp bx = array[pnext]->x - array[pcur]->x;
-            _Tp ay = cury - array[pprev]->y;
-            _DotTp convexity = (_DotTp)ay*bx - (_DotTp)ax*by; // if >0 then convex angle
+            Vec<_Tp, 2> a(array[pcur]->x - array[pprev]->x, cury - array[pprev]->y);
+            Vec<_Tp, 2> b(array[pnext]->x - array[pcur]->x, by);
+            if (std::is_floating_point<_Tp>::value)
+            {
+                a = normalize(a);
+                b = normalize(b);
+            }
+            _DotTp convexity = (_DotTp)a[1]*b[0] - (_DotTp)a[0]*b[1]; // if >0 then convex angle
 
-            if( CV_SIGN( convexity ) == sign2 && (ax != 0 || ay != 0) )
+            if( CV_SIGN( convexity ) == sign2 && (a[0] != 0 || a[1] != 0) )
             {
                 pprev = pcur;
                 pcur = pnext;

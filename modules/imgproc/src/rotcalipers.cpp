@@ -64,6 +64,7 @@ enum { CALIPERS_MAXHEIGHT=0, CALIPERS_MINAREARECT=1, CALIPERS_MAXDIST=2 };
  //    Parameters:
  //      points      - convex hull vertices ( any orientation )
  //      n           - number of vertices
+ //      orientation - -1 for clockwise vertices order, 1 for CCW. 0 if unknown.
  //      mode        - concrete application of algorithm
  //                    can be  CV_CALIPERS_MAXDIST   or
  //                            CV_CALIPERS_MINAREARECT
@@ -115,7 +116,7 @@ static bool firstVecIsRight(const cv::Point2f& vec1, const cv::Point2f &vec2)
 }
 
 /* we will use usual cartesian coordinates */
-static void rotatingCalipers( const Point2f* points, int n, int mode, float* out )
+static void rotatingCalipers( const Point2f* points, int n, float orientation, int mode, float* out )
 {
     float minarea = FLT_MAX;
     float max_dist = 0;
@@ -132,7 +133,6 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
      (a,b) (-b,a) (-a,-b) (b, -a)
      */
     /* this is a first base vector (a,b) initialized by (1,0) */
-    float orientation = 0;
     float base_a;
     float base_b = 0;
 
@@ -171,6 +171,7 @@ static void rotatingCalipers( const Point2f* points, int n, int mode, float* out
     }
 
     // find convex hull orientation
+    if (orientation == 0.f)
     {
         double ax = vect[n-1].x;
         double ay = vect[n-1].y;
@@ -365,7 +366,8 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     Point2f out[3];
     RotatedRect box;
 
-    convexHull(_points, hull, false, true);
+    static const bool clockwise = false;
+    convexHull(_points, hull, clockwise, true);
 
     if( hull.depth() != CV_32F )
     {
@@ -379,7 +381,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
 
     if( n > 2 )
     {
-        rotatingCalipers( hpoints, n, CALIPERS_MINAREARECT, (float*)out );
+        rotatingCalipers( hpoints, n, clockwise ? -1.f : 1.f, CALIPERS_MINAREARECT, (float*)out );
         box.center.x = out[0].x + (out[1].x + out[2].x)*0.5f;
         box.center.y = out[0].y + (out[1].y + out[2].y)*0.5f;
         box.size.width = (float)std::sqrt((double)out[1].x*out[1].x + (double)out[1].y*out[1].y);
