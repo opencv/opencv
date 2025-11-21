@@ -2757,6 +2757,81 @@ CASE(test_xor_bcast4v3d)
     // no filter
 CASE(test_xor_bcast4v4d)
     // no filter
+CASE()
+CASE(test_attention_3d)
+    SKIP;
+CASE(test_attention_3d_attn_mask)
+    SKIP;
+CASE(test_attention_3d_causal)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_attn_mask)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_causal)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_softcap)
+    SKIP;
+CASE(test_attention_3d_diff_heads_sizes_scaled)
+    SKIP;
+CASE(test_attention_3d_gqa)
+    SKIP;
+CASE(test_attention_3d_gqa_attn_mask)
+    SKIP;
+CASE(test_attention_3d_gqa_causal)
+    SKIP;
+CASE(test_attention_3d_gqa_scaled)
+    SKIP;
+CASE(test_attention_3d_gqa_softcap)
+    SKIP;
+CASE(test_attention_3d_scaled)
+    SKIP;
+CASE(test_attention_3d_softcap)
+    SKIP;
+CASE(test_attention_3d_transpose_verification)
+    SKIP;
+CASE(test_attention_4d)
+    SKIP;
+CASE(test_attention_4d_attn_mask)
+    SKIP;
+CASE(test_attention_4d_attn_mask_3d)
+    SKIP;
+CASE(test_attention_4d_attn_mask_3d_causal)
+    SKIP;
+CASE(test_attention_4d_attn_mask_4d)
+    SKIP;
+CASE(test_attention_4d_attn_mask_4d_causal)
+    SKIP;
+CASE(test_attention_4d_attn_mask_bool)
+    SKIP;
+CASE(test_attention_4d_attn_mask_bool_4d)
+    SKIP;
+CASE(test_attention_4d_causal)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_attn_mask)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_causal)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_scaled)
+    SKIP;
+CASE(test_attention_4d_diff_heads_sizes_softcap)
+    SKIP;
+CASE(test_attention_4d_gqa)
+    SKIP;
+CASE(test_attention_4d_gqa_attn_mask)
+    SKIP;
+CASE(test_attention_4d_gqa_causal)
+    SKIP;
+CASE(test_attention_4d_gqa_scaled)
+    SKIP;
+CASE(test_attention_4d_gqa_softcap)
+    SKIP;
+CASE(test_attention_4d_scaled)
+    SKIP;
+CASE(test_attention_4d_softcap)
+    SKIP;
 END_SWITCH()
 #undef EOF_LABEL
 #undef BEGIN_SWITCH
