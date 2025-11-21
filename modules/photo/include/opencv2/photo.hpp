@@ -898,9 +898,12 @@ CV_EXPORTS_W void stylization(InputArray src, OutputArray dst, float sigma_s = 6
 //! @addtogroup photo_ca_correction Chromatic Aberration Correction
 //! @{
 
-/** @example samples/cpp/chromatic_aberration_correction.cpp
-An example correcting chromatic aberration
+/** @example samples/cpp/snippets/chromatic_aberration_correction.cpp
+An example correcting chromatic aberration with C++
 */
+/** @example samples/python/snippets/chromatic_aberration_correction.py
+ * An example correcting chromatic aberration with Python
+ */
 /** @brief Corrects lateral chromatic aberration in an image using polynomial distortion model.
 
 This function loads polynomial calibration data from the specified file and applies
@@ -912,8 +915,7 @@ as a BGR image and @p bayer_pattern is ignored.
 Firstly, calibration needs to be done using apps/chromatic-aberration-calibration/ca_calibration.py on a photo of
 a pattern of black discs on white background, included in opencv_extra/testdata/cv/cameracalibration/chromatic_aberration/chromatic_aberration_pattern_a3.png
 
-Calibration and correction are based on the algorithm described in the paper
-Rudakova, V., Monasse, P. (2014). Precise Correction of Lateral Chromatic Aberration in Images.
+Calibration and correction are based on the algorithm described in @cite rudakova2013precise.
 The chromatic aberration is modeled as a polynomial of some degree in red and blue channels compared to green.
 In calibration, a photo of many black discs on white background is used, and the displacements
 between the centres of discs in red and blue channels compared to green are minimized. The coefficients
@@ -925,10 +927,10 @@ are then saved in a yaml file which can be used with this function to correct la
 @param calib_height Height of images for the calibration coefficient model
 @param calib_degree Degree of the calibration coefficient model
 @param bayer_pattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
-                        demosaicing when @p input_image has one channel; ignored otherwise.
+demosaicing when @p input_image has one channel; ignored otherwise.
 @return Corrected BGR image
+@sa loadCalibrationResultFromFile, demosaicing
 */
-// CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const String& calibration_file, int bayerPattern = -1);
 CV_EXPORTS_W Mat correctChromaticAberration(InputArray input_image, const Mat& coeff_mat, int calib_width, int calib_height, int calib_degree, int bayer_pattern = -1);
 
 /** @brief Load chromatic-aberration calibration parameters.
@@ -945,6 +947,7 @@ packs them into a 4×N CV_32F matrix:
 @param degree            Polynomial degree inferred from N.
 @param width             Image width read from file.
 @param height            Image height read from file.
+@sa correctChromaticAberration
 */
 CV_EXPORTS_W void loadCalibrationResultFromFile(
     const String& calibration_file,
