@@ -53,7 +53,119 @@ void fastGEMM( const float* aptr, size_t astep, const float* bptr,
                size_t bstep, float* cptr, size_t cstep,
                int ma, int na, int nb );
 
-#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_NEON
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && defined(CV_CPU_COMPILE_SVE)
+#include <arm_sve.h>
+// dst = vec * weights^t + bias
+
+void fastGEMM1T( const float* vec, const float* weights,
+                 size_t wstep, const float* bias,
+                 float* dst, int nvecs, int vecsize )
+{
+    svbool_t pg_all = svptrue_b32();
+    int i = 0;
+    int vl = svcntw();
+    for( ; i <= nvecs - 15; i += 15 )
+    {
+        const float* wrow0 = weights + i * wstep; // base pointer for row i
+        // we will use wrow0 + k, wrow0 + wstep + k, etc
+        svfloat32_t vs0 = svdup_f32(0.0f), vs1 = svdup_f32(0.0f),
+               vs2 = svdup_f32(0.0f), vs3 = svdup_f32(0.0f),
+               vs4 = svdup_f32(0.0f), vs5 = svdup_f32(0.0f),
+               vs6 = svdup_f32(0.0f), vs7 = svdup_f32(0.0f),
+               vs8 = svdup_f32(0.0f), vs9 = svdup_f32(0.0f),
+               vs10 = svdup_f32(0.0f), vs11 = svdup_f32(0.0f),
+               vs12 = svdup_f32(0.0f), vs13 = svdup_f32(0.0f),
+               vs14 = svdup_f32(0.0f);
+        int k = 0;
+        for( ; k <= vecsize - vl; k += vl )
+        {
+            // load input chunk
+            const float* vecptr = reinterpret_cast<const float*>(vec) + k;
+            svfloat32_t v = svld1_f32(pg_all, vecptr);
+            // load weights from each of 15 rows at offset k
+            vs0 = svmla_f32_m(pg_all, vs0, svld1_f32(pg_all, wrow0 + k), v);
+            vs1 = svmla_f32_m(pg_all, vs1, svld1_f32(pg_all, wrow0 + wstep + k), v);
+            vs2 = svmla_f32_m(pg_all, vs2, svld1_f32(pg_all, wrow0 + wstep*2 + k), v);
+            vs3 = svmla_f32_m(pg_all, vs3, svld1_f32(pg_all, wrow0 + wstep*3 + k), v);
+            vs4 = svmla_f32_m(pg_all, vs4, svld1_f32(pg_all, wrow0 + wstep*4 + k), v);
+            vs5 = svmla_f32_m(pg_all, vs5, svld1_f32(pg_all, wrow0 + wstep*5 + k), v);
+            vs6 = svmla_f32_m(pg_all, vs6, svld1_f32(pg_all, wrow0 + wstep*6 + k), v);
+            vs7 = svmla_f32_m(pg_all, vs7, svld1_f32(pg_all, wrow0 + wstep*7 + k), v);
+            vs8 = svmla_f32_m(pg_all, vs8, svld1_f32(pg_all, wrow0 + wstep*8 + k), v);
+            vs9 = svmla_f32_m(pg_all, vs9, svld1_f32(pg_all, wrow0 + wstep*9 + k), v);
+            vs10 = svmla_f32_m(pg_all, vs10, svld1_f32(pg_all, wrow0 + wstep*10 + k), v);
+            vs11 = svmla_f32_m(pg_all, vs11, svld1_f32(pg_all, wrow0 + wstep*11 + k), v);
+            vs12 = svmla_f32_m(pg_all, vs12, svld1_f32(pg_all, wrow0 + wstep*12 + k), v);
+            vs13 = svmla_f32_m(pg_all, vs13, svld1_f32(pg_all, wrow0 + wstep*13 + k), v);
+            vs14 = svmla_f32_m(pg_all, vs14, svld1_f32(pg_all, wrow0 + wstep*14 + k), v);
+        }
+        if(k < vecsize){
+            svbool_t pg_tail = svwhilelt_b32(k, vecsize);
+            const float* vecptr = reinterpret_cast<const float*>(vec) + k;
+            svfloat32_t v = svld1_f32(pg_tail, vecptr);
+            const float* wptr = wrow0 + k;
+            vs0 = svmla_f32_m(pg_tail, vs0, svld1_f32(pg_tail, wptr), v);
+            vs1 = svmla_f32_m(pg_tail, vs1, svld1_f32(pg_tail, wptr + wstep), v);
+            vs2 = svmla_f32_m(pg_tail, vs2, svld1_f32(pg_tail, wptr + wstep*2), v);
+            vs3 = svmla_f32_m(pg_tail, vs3, svld1_f32(pg_tail, wptr + wstep*3), v);
+            vs4 = svmla_f32_m(pg_tail, vs4, svld1_f32(pg_tail, wptr + wstep*4), v);
+            vs5 = svmla_f32_m(pg_tail, vs5, svld1_f32(pg_tail, wptr + wstep*5), v);
+            vs6 = svmla_f32_m(pg_tail, vs6, svld1_f32(pg_tail, wptr + wstep*6), v);
+            vs7 = svmla_f32_m(pg_tail, vs7, svld1_f32(pg_tail, wptr + wstep*7), v);
+            vs8 = svmla_f32_m(pg_tail, vs8, svld1_f32(pg_tail, wptr + wstep*8), v);
+            vs9 = svmla_f32_m(pg_tail, vs9, svld1_f32(pg_tail, wptr + wstep*9), v);
+            vs10 = svmla_f32_m(pg_tail, vs10, svld1_f32(pg_tail, wptr + wstep*10), v);
+            vs11 = svmla_f32_m(pg_tail, vs11, svld1_f32(pg_tail, wptr + wstep*11), v);
+            vs12 = svmla_f32_m(pg_tail, vs12, svld1_f32(pg_tail, wptr + wstep*12), v);
+            vs13 = svmla_f32_m(pg_tail, vs13, svld1_f32(pg_tail, wptr + wstep*13), v);
+            vs14 = svmla_f32_m(pg_tail, vs14, svld1_f32(pg_tail, wptr + wstep*14), v);
+        }
+        float sum[15];
+        sum[0] = svaddv_f32(pg_all, vs0);
+
+        sum[1] = svaddv_f32(pg_all, vs1);
+        sum[2] = svaddv_f32(pg_all, vs2);
+        sum[3] = svaddv_f32(pg_all, vs3);
+        sum[4] = svaddv_f32(pg_all, vs4);
+        sum[5] = svaddv_f32(pg_all, vs5);
+        sum[6] = svaddv_f32(pg_all, vs6);
+        sum[7] = svaddv_f32(pg_all, vs7);
+        sum[8] = svaddv_f32(pg_all, vs8);
+        sum[9] = svaddv_f32(pg_all, vs9);
+        sum[10] = svaddv_f32(pg_all, vs10);
+        sum[11] = svaddv_f32(pg_all, vs11);
+        sum[12] = svaddv_f32(pg_all, vs12);
+        sum[13] = svaddv_f32(pg_all, vs13);
+        sum[14] = svaddv_f32(pg_all, vs14);
+        for (int j = 0; j < 15; j += vl) {
+            svbool_t pg = svwhilelt_b32(j, 15);
+            svfloat32_t v_sum  = svld1_f32(pg, sum + j);
+            svfloat32_t v_bias = svld1_f32(pg, bias + i + j);
+            svst1_f32(pg, dst + i + j, svadd_f32_z(pg, v_sum, v_bias));
+        }
+    }
+    float temp = 0.f;
+    for( ; i < nvecs; i++ )
+    {
+        const float* wrow = weights + i * wstep;
+        svfloat32_t vs0 = svdup_f32(0.0f);
+        int k = 0;
+        for( ; k <= vecsize - vl; k += vl )
+        {
+            svfloat32_t v = svld1_f32(pg_all, reinterpret_cast<const float*>(vec) + k);
+            vs0 = svmla_f32_m(pg_all, vs0, svld1_f32(pg_all, wrow + k), v);
+        }
+        if (k != vecsize) {
+            svbool_t pg_tail = svwhilelt_b32(k, vecsize);
+            svfloat32_t v = svld1_f32(pg_tail, reinterpret_cast<const float*>(vec) + k);
+            vs0 = svmla_f32_m(pg_tail, vs0, svld1_f32(pg_tail, wrow + k), v);
+        }
+        temp = svaddv_f32(pg_all, vs0);
+        dst[i] = temp + bias[i];
+    }
+}
+#endif
+#if !defined(CV_CPU_OPTIMIZATION_DECLARATIONS_ONLY) && CV_NEON && !defined(CV_CPU_COMPILE_SVE)
 
 static const uint32_t tailMaskArray[7] = {
     0u, 0u, 0u, 0u,

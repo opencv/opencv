@@ -399,6 +399,27 @@
 #endif
 #define __CV_CPU_DISPATCH_CHAIN_AVX512_ICL(fn, args, mode, ...)  CV_CPU_CALL_AVX512_ICL(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
 
+#if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_SVE
+#  define CV_TRY_SVE 1
+#  define CV_CPU_FORCE_SVE 1
+#  define CV_CPU_HAS_SUPPORT_SVE 1
+#  define CV_CPU_CALL_SVE(fn, args) return (cpu_baseline::fn args)
+#  define CV_CPU_CALL_SVE_(fn, args) return (opt_SVE::fn args)
+#elif !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_DISPATCH_COMPILE_SVE
+#  define CV_TRY_SVE 1
+#  define CV_CPU_FORCE_SVE 0
+#  define CV_CPU_HAS_SUPPORT_SVE (cv::checkHardwareSupport(CV_CPU_SVE))
+#  define CV_CPU_CALL_SVE(fn, args) if (CV_CPU_HAS_SUPPORT_SVE) return (opt_SVE::fn args)
+#  define CV_CPU_CALL_SVE_(fn, args) if (CV_CPU_HAS_SUPPORT_SVE) return (opt_SVE::fn args)
+#else
+#  define CV_TRY_SVE 0
+#  define CV_CPU_FORCE_SVE 0
+#  define CV_CPU_HAS_SUPPORT_SVE 0
+#  define CV_CPU_CALL_SVE(fn, args)
+#  define CV_CPU_CALL_SVE_(fn, args)
+#endif
+#define __CV_CPU_DISPATCH_CHAIN_SVE(fn, args, mode, ...)  CV_CPU_CALL_SVE(fn, args); __CV_EXPAND(__CV_CPU_DISPATCH_CHAIN_ ## mode(fn, args, __VA_ARGS__))
+
 #if !defined CV_DISABLE_OPTIMIZATION && defined CV_ENABLE_INTRINSICS && defined CV_CPU_COMPILE_NEON
 #  define CV_TRY_NEON 1
 #  define CV_CPU_FORCE_NEON 1

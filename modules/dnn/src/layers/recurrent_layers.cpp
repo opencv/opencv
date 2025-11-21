@@ -138,6 +138,9 @@ class LSTMLayerImpl CV_FINAL : public LSTMLayer
 #if CV_TRY_AVX2
     bool useAVX2;
 #endif
+#if CV_TRY_SVE
+    bool useSVE;
+#endif
 #if CV_TRY_NEON
     bool useNEON;
 #endif
@@ -155,6 +158,9 @@ public:
 #endif
 #if CV_TRY_AVX2
           , useAVX2(checkHardwareSupport(CPU_AVX2))
+#endif
+#if CV_TRY_SVE
+          , useSVE(checkHardwareSupport(CPU_SVE))
 #endif
 #if CV_TRY_NEON
           , useNEON(checkHardwareSupport(CPU_NEON))
@@ -495,6 +501,13 @@ public:
                 && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F
                 && Wh.cols >= 8;
 #endif
+#if CV_TRY_SVE
+            bool canUseSVE = gates.isContinuous() && bias.isContinuous()
+                && Wx.depth() == CV_32F && gates.depth() == CV_32F
+                && bias.depth() == CV_32F;
+            bool canUseSVE_hInternal = hInternal.isContinuous() && gates.isContinuous() && bias.isContinuous()
+                && Wh.depth() == CV_32F && hInternal.depth() == CV_32F && gates.depth() == CV_32F;
+#endif
 #if CV_TRY_NEON
             bool canUseNeon = gates.isContinuous() && bias.isContinuous()
                 && Wx.depth() == CV_32F && gates.depth() == CV_32F
@@ -554,6 +567,23 @@ public:
                 }
                 else
 #endif
+#if CV_TRY_SVE
+                if (useSVE && canUseSVE && xCurr.isContinuous())
+                {
+                    for (int n = 0; n < xCurr.rows; n++) {
+                        opt_SVE::fastGEMM1T(
+                            xCurr.ptr<float>(n),
+                            Wx.ptr<float>(),
+                            Wx.step1(),
+                            bias.ptr<float>(),
+                            gates.ptr<float>(n),
+                            Wx.rows,
+                            Wx.cols
+                        );
+                    }
+                }
+                else
+#endif
 #if CV_TRY_NEON
                 if (useNEON && canUseNeon && xCurr.isContinuous())
                 {
@@ -598,6 +628,23 @@ public:
                 {
                     for (int n = 0; n < hInternal.rows; n++) {
                         opt_AVX::fastGEMM1T(
+                            hInternal.ptr<float>(n),
+                            Wh.ptr<float>(),
+                            Wh.step1(),
+                            gates.ptr<float>(n),
+                            gates.ptr<float>(n),
+                            Wh.rows,
+                            Wh.cols
+                        );
+                    }
+                }
+                else
+#endif
+#if CV_TRY_SVE
+                if (useSVE && canUseSVE_hInternal)
+                {
+                    for (int n = 0; n < hInternal.rows; n++) {
+                        opt_SVE::fastGEMM1T(
                             hInternal.ptr<float>(n),
                             Wh.ptr<float>(),
                             Wh.step1(),
