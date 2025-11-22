@@ -2618,6 +2618,35 @@ TEST(Core_SolveCubic, regression_27323)
     }
 }
 
+TEST(Core_SolveCubic, Issue_27748_SmallLeadingCoefficient)
+{
+
+    double coeffs_data[] = {
+        2.27373675443232e-13, 
+        84.5523809523809, 
+        -2.79279008706411, 
+        -0.156732355948886
+    };
+    
+    cv::Mat coeffs(1, 4, CV_64F, coeffs_data);
+    cv::Mat roots;
+
+
+    int n = cv::solveCubic(coeffs, roots);
+
+
+    EXPECT_GE(n, 1); 
+    EXPECT_LE(n, 3);
+
+
+    for(int i = 0; i < n; ++i)
+    {
+        double r = roots.at<double>(i);
+
+        EXPECT_LT(fabs(r), 10.0) << "Root " << i << " is suspiciously large: " << r;
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0

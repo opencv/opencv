@@ -1586,12 +1586,15 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         a3 = coeffs.at<double>(i+3);
     }
 
-    if( a0 == 0 )
+
+    double eps = (double)std::numeric_limits<float>::epsilon();
+
+    if( std::abs(a0) <= eps )
     {
-        if( a1 == 0 )
+        if( std::abs(a1) <= eps )
         {
-            if( a2 == 0 ) // constant
-                n = a3 == 0 ? -1 : 0;
+            if( std::abs(a2) <= eps ) // constant
+                n = std::abs(a3) <= eps ? -1 : 0;
             else
             {
                 // linear equation
@@ -1608,7 +1611,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
                 d = std::sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
-                if( fabs(q1) > fabs(q2) )
+                if( std::abs(q1) > std::abs(q2) )
                 {
                     x0 = q1 / a1;
                     x1 = a3 / q1;
@@ -1622,6 +1625,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             }
         }
     }
+
     else
     {
         // cubic equation
