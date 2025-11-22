@@ -1586,46 +1586,46 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         a3 = coeffs.at<double>(i+3);
     }
 
-// Use float epsilon (approx 1e-7) to catch the 1e-13 case from Issue #27748
-// DBL_EPSILON (1e-16) is too small to fix that specific bug.
-double eps = (double)std::numeric_limits<float>::epsilon();
 
-if( std::abs(a0) <= eps )
-{
-    if( std::abs(a1) <= eps )
+    double eps = (double)std::numeric_limits<float>::epsilon();
+
+    if( std::abs(a0) <= eps )
     {
-        if( std::abs(a2) <= eps ) // constant
-            n = std::abs(a3) <= eps ? -1 : 0;
-        else
+        if( std::abs(a1) <= eps )
         {
-            // linear equation
-            x0 = -a3/a2;
-            n = 1;
-        }
-    }
-    else
-    {
-        // quadratic equation
-        double d = a2*a2 - 4*a1*a3;
-        if( d >= 0 )
-        {
-            d = std::sqrt(d);
-            double q1 = (-a2 + d) * 0.5;
-            double q2 = (a2 + d) * -0.5;
-            if( std::abs(q1) > std::abs(q2) )
-            {
-                x0 = q1 / a1;
-                x1 = a3 / q1;
-            }
+            if( std::abs(a2) <= eps ) // constant
+                n = std::abs(a3) <= eps ? -1 : 0;
             else
             {
-                x0 = q2 / a1;
-                x1 = a3 / q2;
+                // linear equation
+                x0 = -a3/a2;
+                n = 1;
             }
-            n = d > 0 ? 2 : 1;
+        }
+        else
+        {
+            // quadratic equation
+            double d = a2*a2 - 4*a1*a3;
+            if( d >= 0 )
+            {
+                d = std::sqrt(d);
+                double q1 = (-a2 + d) * 0.5;
+                double q2 = (a2 + d) * -0.5;
+                if( std::abs(q1) > std::abs(q2) )
+                {
+                    x0 = q1 / a1;
+                    x1 = a3 / q1;
+                }
+                else
+                {
+                    x0 = q2 / a1;
+                    x1 = a3 / q2;
+                }
+                n = d > 0 ? 2 : 1;
+            }
         }
     }
-}
+
     else
     {
         // cubic equation
