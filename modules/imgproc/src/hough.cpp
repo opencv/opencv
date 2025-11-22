@@ -762,7 +762,8 @@ static bool ocl_makePointsList(InputArray _src, OutputArray _pointsList, InputOu
     return pointListKernel.run(2, globalThreads, localThreads, false);
 }
 
-static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_points, double rho, double theta, int numrho, int numangle)
+static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_points,
+                          double rho, double theta, int numrho, int numangle, double min_theta)
 {
     UMat pointsList = _pointsList.getUMat();
     _accum.create(numangle + 2, numrho + 2, CV_32SC1);
@@ -785,8 +786,9 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
         if (fillAccumKernel.empty())
             return false;
         globalThreads[0] = workgroup_size; globalThreads[1] = numangle;
-        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
-                        total_points, irho, (float) theta, numrho, numangle);
+        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList),
+                             ocl::KernelArg::WriteOnlyNoSize(accum),
+                             total_points, irho, (float) theta, numrho, numangle, (float) min_theta);
         return fillAccumKernel.run(2, globalThreads, NULL, false);
     }
     else
@@ -797,8 +799,9 @@ static bool ocl_fillAccum(InputArray _pointsList, OutputArray _accum, int total_
             return false;
         localThreads[0] = workgroup_size; localThreads[1] = 1;
         globalThreads[0] = workgroup_size; globalThreads[1] = numangle+2;
-        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList), ocl::KernelArg::WriteOnlyNoSize(accum),
-                        total_points, irho, (float) theta, numrho, numangle);
+        fillAccumKernel.args(ocl::KernelArg::ReadOnlyNoSize(pointsList),
+                             ocl::KernelArg::WriteOnlyNoSize(accum),
+                             total_points, irho, (float) theta, numrho, numangle, (float) min_theta);
         return fillAccumKernel.run(2, globalThreads, localThreads, false);
     }
 }
@@ -836,7 +839,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     }
 
     UMat accum;
-    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, numrho, numangle))
+    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, numrho, numangle, min_theta))
         return false;
 
     const int pixPerWI = 8;
@@ -849,7 +852,8 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     UMat lines(linesMax, 1, CV_32FC2);
 
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
-                        ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
+                        ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold,
+                        (float) rho, (float) theta, (float) min_theta);
 
     size_t globalThreads[2] = { ((size_t)numrho + pixPerWI - 1)/pixPerWI, (size_t)numangle };
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
