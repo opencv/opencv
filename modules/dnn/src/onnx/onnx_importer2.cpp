@@ -582,6 +582,7 @@ void ONNXImporter2::parseOperatorSet()
         else
             onnx_opset_map[domain_key] = std::max(
                 onnx_opset_map[domain_key], version);
+
         if (
             domain_key != str_domain_ai_onnx &&
             domain_key != str_domain_com_microsoft)
@@ -590,19 +591,6 @@ void ONNXImporter2::parseOperatorSet()
         }
     }
 
-
-    buildDispatchMap_ONNX_AI(); // onnx_opset_map[str_domain_ai_onnx]);
-    buildDispatchMap_COM_MICROSOFT(); // onnx_opset_map[str_domain_com_microsoft]);
-
-    for (const auto& pair : onnx_opset_map)
-    {
-        if ((pair.first != str_domain_ai_onnx) && (pair.first != str_domain_com_microsoft))
-            CV_LOG_INFO(
-                NULL,
-                "DNN/ONNX: unknown domain='" << pair.first << "' version=" << pair.second << ". No dispatch map, you may need to register 'custom' layers."
-            );
-
-    }
 }
 
 /*static bool ifInt8Output(const String& layerType)

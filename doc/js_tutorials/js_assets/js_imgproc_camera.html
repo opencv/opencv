@@ -248,7 +248,7 @@ function backprojection(src) {
         if (base instanceof cv.Mat) {
             base.delete();
         }
-        base = src.clone();
+        base = src.mat_clone();
         cv.cvtColor(base, base, cv.COLOR_RGB2HSV, 0);
     }
     cv.cvtColor(src, dstC3, cv.COLOR_RGB2HSV, 0);

@@ -47,6 +47,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <type_traits>
 #include <google/protobuf/message.h>
 #include <google/protobuf/text_format.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
@@ -56,7 +57,6 @@
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/fp_control_utils.hpp>
-
 
 namespace cv {
 namespace dnn {
@@ -206,7 +206,9 @@ public:
         return (str.size() >= _param.size()) && str.compare(str.size() - _param.size(), _param.size(), _param) == 0;
     }
 
-    void extractLayerParams(const Message &msg, cv::dnn::LayerParams &params, bool isInternal = false)
+    template<class MSG>
+    typename std::enable_if<std::is_base_of<Message, MSG>::value, void>::type
+    extractLayerParams(const MSG &msg, cv::dnn::LayerParams &params, bool isInternal = false)
     {
         const Descriptor *msgDesc = msg.GetDescriptor();
         const Reflection *msgRefl = msg.GetReflection();
@@ -241,6 +243,13 @@ public:
         }
     }
 
+    template<class MSG>
+    typename std::enable_if<!std::is_base_of<Message, MSG>::value, void>::type
+    extractLayerParams(const MSG &msg, cv::dnn::LayerParams &params, bool isInternal = false)
+    {
+        CV_Error(Error::StsError, "DNN/CAFFE: do not have your message be a MessageLite");
+    }
+
     void blobShapeFromProto(const caffe::BlobProto &pbBlob, MatShape& shape)
     {
         shape.clear();
@@ -259,6 +268,18 @@ public:
             shape.resize(1, 1);  // Is a scalar.
     }
 
+    template<class BLOB_PROTO>
+    typename std::enable_if<std::is_base_of<Message, BLOB_PROTO>::value, void>::type
+    AssertBlobProtoIsFloat(const BLOB_PROTO &pbBlob) {
+        CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+    }
+
+    template<class BLOB_PROTO>
+    typename std::enable_if<!std::is_base_of<Message, BLOB_PROTO>::value, void>::type
+    AssertBlobProtoIsFloat(const BLOB_PROTO &pbBlob) {
+        CV_Error(Error::StsError, "DNN/CAFFE: do not have your message be a MessageLite");
+    }
+
     void blobFromProto(const caffe::BlobProto &pbBlob, cv::Mat &dstBlob)
     {
         MatShape shape;
@@ -270,7 +291,7 @@ public:
             // Single precision floats.
             CV_Assert(pbBlob.data_size() == (int)dstBlob.total());
 
-            CV_DbgAssert(pbBlob.GetDescriptor()->FindFieldByLowercaseName("data")->cpp_type() == FieldDescriptor::CPPTYPE_FLOAT);
+            AssertBlobProtoIsFloat(pbBlob);
             Mat(dstBlob.size, CV_32F, (void*)pbBlob.data().data()).copyTo(dstBlob);
         }
         else

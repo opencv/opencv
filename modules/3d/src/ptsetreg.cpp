@@ -1241,6 +1241,8 @@ Vec2d estimateTranslation2D(InputArray _from, InputArray _to,
                               size_t maxIters, double confidence,
                               size_t refineIters)
 {
+    CV_INSTRUMENT_REGION();
+
     using std::numeric_limits;
     const double NaN = numeric_limits<double>::quiet_NaN();
     Vec2d tvec(NaN, NaN);

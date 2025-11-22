@@ -401,7 +401,7 @@ static bool ocl_moments( InputArray _src, Moments& m, bool binary)
     const int TILE_SIZE = 32;
     const int K = 10;
 
-    Size sz = _src.getSz();
+    Size sz = _src.size();
     int xtiles = divUp(sz.width, TILE_SIZE);
     int ytiles = divUp(sz.height, TILE_SIZE);
     int ntiles = xtiles*ytiles;
