@@ -171,6 +171,51 @@ OCL_TEST_P(HoughLinesP, RealImage)
     Near(0.25);
 }
 
+OCL_TEST_P(HoughLines, ThetaRange)
+{
+    // Test that min_theta and max_theta parameters are correctly used
+    generateTestData();
+
+    // Test with restricted theta range (only near horizontal lines)
+    double min_theta = 0.0;
+    double max_theta = CV_PI / 4;  // 0 to 45 degrees
+
+    OCL_OFF(cv::HoughLines(src, dst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+    OCL_ON(cv::HoughLines(usrc, udst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+
+    // Verify that all detected lines have theta within the specified range
+    Mat lines_gpu;
+    udst.copyTo(lines_gpu);
+    for (int i = 0; i < lines_gpu.rows; i++)
+    {
+        Vec2f line = lines_gpu.at<Vec2f>(i);
+        double theta = line[1];
+        EXPECT_GE(theta, min_theta) << "Line " << i << " has theta " << theta << " which is less than min_theta " << min_theta;
+        EXPECT_LE(theta, max_theta) << "Line " << i << " has theta " << theta << " which is greater than max_theta " << max_theta;
+    }
+
+    Near(1e-5);
+
+    // Test with different theta range (near vertical lines)
+    min_theta = CV_PI / 3;  // 60 degrees
+    max_theta = 2 * CV_PI / 3;  // 120 degrees
+
+    OCL_OFF(cv::HoughLines(src, dst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+    OCL_ON(cv::HoughLines(usrc, udst, rhoStep, thetaStep, threshold, 0, min_theta, max_theta));
+
+    // Verify that all detected lines have theta within the specified range
+    udst.copyTo(lines_gpu);
+    for (int i = 0; i < lines_gpu.rows; i++)
+    {
+        Vec2f line = lines_gpu.at<Vec2f>(i);
+        double theta = line[1];
+        EXPECT_GE(theta, min_theta) << "Line " << i << " has theta " << theta << " which is less than min_theta " << min_theta;
+        EXPECT_LE(theta, max_theta) << "Line " << i << " has theta " << theta << " which is greater than max_theta " << max_theta;
+    }
+
+    Near(1e-5);
+}
+
 OCL_INSTANTIATE_TEST_CASE_P(Imgproc, HoughLines, Combine(Values(1, 0.5),                        // rhoStep
                                                          Values(CV_PI / 180.0, CV_PI / 360.0),  // thetaStep
                                                          Values(85, 150)));                     // threshold
