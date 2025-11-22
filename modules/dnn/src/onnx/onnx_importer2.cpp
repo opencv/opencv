@@ -590,6 +590,8 @@ void ONNXImporter2::parseOperatorSet()
             CV_LOG_INFO(NULL, "DNN/ONNX: found opset[" << i << "]: domain='" << domain_key << "' version=" << version);
         }
     }
+    buildDispatchMap_ONNX_AI();
+    buildDispatchMap_COM_MICROSOFT();
 
 }
 

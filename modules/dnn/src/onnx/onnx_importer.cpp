@@ -141,8 +141,8 @@ private:
     DomainDispatchMap domain_dispatch_map;
     std::string getLayerTypeDomain(const opencv_onnx::NodeProto& node_proto);
     const DispatchMap& getDispatchMap(const opencv_onnx::NodeProto& node_proto);
-    void buildDispatchMap_ONNX_AI(int opset_version);
-    void buildDispatchMap_COM_MICROSOFT(int opset_version);
+    void buildDispatchMap_ONNX_AI(); //int opset_version);
+    void buildDispatchMap_COM_MICROSOFT(); //int opset_version);
 
     // Domain: 'ai.onnx' (default)
     // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
@@ -718,8 +718,8 @@ void ONNXImporter::parseOperatorSet()
 
     // CV_LOG_INFO(NULL, "DNN/ONNX: ONNX opset version = " << onnx_opset);
 
-    buildDispatchMap_ONNX_AI(onnx_opset_map[str_domain_ai_onnx]);
-    buildDispatchMap_COM_MICROSOFT(onnx_opset_map[str_domain_com_microsoft]);
+    buildDispatchMap_ONNX_AI(); // onnx_opset_map[str_domain_ai_onnx]);
+    buildDispatchMap_COM_MICROSOFT(); // onnx_opset_map[str_domain_com_microsoft]);
     for (const auto& pair : onnx_opset_map)
     {
         if (pair.first == str_domain_ai_onnx)
@@ -728,7 +728,7 @@ void ONNXImporter::parseOperatorSet()
         }
         else if (pair.first == "com.microsoft")
         {
-            buildDispatchMap_COM_MICROSOFT(pair.second);
+            buildDispatchMap_COM_MICROSOFT();
         }
         else
         {
@@ -3957,9 +3957,9 @@ void ONNXImporter::parseAttention(LayerParams& params, const opencv_onnx::NodePr
 
 // Domain: ai.onnx (default)
 // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
-void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
+void ONNXImporter::buildDispatchMap_ONNX_AI() //int opset_version)
 {
-    CV_UNUSED(opset_version);
+    // CV_UNUSED(opset_version);
     DispatchMap dispatch;
 
     dispatch["ArgMax"] = dispatch["ArgMin"] = &ONNXImporter::parseArg;
@@ -4052,9 +4052,8 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
 
 // Domain: com.microsoft
 // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
-void ONNXImporter::buildDispatchMap_COM_MICROSOFT(int opset_version)
+void ONNXImporter::buildDispatchMap_COM_MICROSOFT()
 {
-    CV_UNUSED(opset_version);
     DispatchMap dispatch;
 
     dispatch["QLinearAdd"] = dispatch["QLinearMul"] = &ONNXImporter::parseQEltwise;
