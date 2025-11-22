@@ -2618,6 +2618,40 @@ TEST(Core_SolveCubic, regression_27323)
     }
 }
 
+TEST(Core_SolveCubic, Issue_27748_SmallLeadingCoefficient)
+{
+    // Coefficients from GitHub Issue #27748
+    // a0 is approx 2.27e-13, which caused instability before the fix
+    double coeffs_data[] = {
+        2.27373675443232e-13, 
+        84.5523809523809, 
+        -2.79279008706411, 
+        -0.156732355948886
+    };
+    
+    cv::Mat coeffs(1, 4, CV_64F, coeffs_data);
+    cv::Mat roots;
+
+    // Attempt to solve. With the fix, this should treat it as a quadratic equation.
+    int n = cv::solveCubic(coeffs, roots);
+
+    // 1. Verify we got a valid number of roots (Quadratic typically returns 2 real roots here)
+    EXPECT_GE(n, 1); 
+    EXPECT_LE(n, 3);
+
+    // 2. Verify values. 
+    // Without fix: Roots were ~ -3.7e14 (Huge)
+    // With fix: Roots should be approx 0.0617 and -0.0287 (Small)
+    
+    // We check that ALL roots are within a reasonable range (e.g., < 10.0)
+    // This proves the numerical explosion is gone.
+    for(int i = 0; i < n; ++i)
+    {
+        double r = roots.at<double>(i);
+        EXPECT_LT(std::abs(r), 10.0) << "Root " << i << " is suspiciously large: " << r;
+    }
+}
+
 TEST(Core_SolvePoly, regression_5599)
 {
     // x^4 - x^2 = 0, roots: 1, -1, 0, 0
