@@ -365,6 +365,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     Mat hull;
     Point2f out[3];
     RotatedRect box;
+    box.angle = -(float)CV_PI / 2;  // default angle for box without rotation and single point
 
     static const bool clockwise = false;
     convexHull(_points, hull, clockwise, true);
@@ -384,19 +385,34 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
         rotatingCalipers( hpoints, n, clockwise ? -1.f : 1.f, CALIPERS_MINAREARECT, (float*)out );
         box.center.x = out[0].x + (out[1].x + out[2].x)*0.5f;
         box.center.y = out[0].y + (out[1].y + out[2].y)*0.5f;
-        box.size.width = (float)std::sqrt((double)out[1].x*out[1].x + (double)out[1].y*out[1].y);
-        box.size.height = (float)std::sqrt((double)out[2].x*out[2].x + (double)out[2].y*out[2].y);
-        box.angle = (float)atan2( (double)out[1].y, (double)out[1].x );
+        box.size.width = (float)std::sqrt((double)out[2].x*out[2].x + (double)out[2].y*out[2].y);
+        box.size.height = (float)std::sqrt((double)out[1].x*out[1].x + (double)out[1].y*out[1].y);
+        if (out[1].x == 0.f && out[1].y > 0.f)
+            std::swap(box.size.width, box.size.height);
+        else
+            box.angle += (float)atan2( (double)out[1].y, (double)out[1].x );
     }
     else if( n == 2 )
     {
         box.center.x = (hpoints[0].x + hpoints[1].x)*0.5f;
         box.center.y = (hpoints[0].y + hpoints[1].y)*0.5f;
-        double dx = hpoints[1].x - hpoints[0].x;
-        double dy = hpoints[1].y - hpoints[0].y;
-        box.size.width = (float)std::sqrt(dx*dx + dy*dy);
-        box.size.height = 0;
-        box.angle = (float)atan2( dy, dx );
+        double dx = hpoints[0].x - hpoints[1].x;
+        double dy = hpoints[0].y - hpoints[1].y;
+        box.size.width = 0;
+        box.size.height = (float)std::sqrt(dx*dx + dy*dy);
+        if (dx == 0)
+        {
+            std::swap(box.size.width, box.size.height);
+        }
+        else if (dy < 0)
+        {
+            box.angle = (float)atan2( dy, dx );
+            std::swap(box.size.width, box.size.height);
+        }
+        else if (dy > 0)
+        {
+            box.angle += (float)atan2( dy, dx );
+        }
     }
     else
     {
@@ -405,6 +421,8 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     }
 
     box.angle = (float)(box.angle*180/CV_PI);
+    CV_DbgCheckGE(box.angle, -90.0f, "");
+    CV_DbgCheckLT(box.angle, 0.0f, "");
     return box;
 }
 
