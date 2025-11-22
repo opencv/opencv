@@ -64,7 +64,7 @@ Net::Impl::Impl()
 
     modelFormat = DNN_MODEL_GENERIC;
     originalLayout = DATA_LAYOUT_NCHW;
-    onnx_opset = 0;
+    // onnx_opset = 0;
 
     accuracy = CV_32F;
     enableFP16 = haveFP16 = false;

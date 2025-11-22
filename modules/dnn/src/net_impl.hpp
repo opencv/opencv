@@ -73,7 +73,7 @@ struct Net::Impl : public detail::NetImplBase
     std::string modelFileName;
     ModelFormat modelFormat;
     DataLayout originalLayout;
-    int onnx_opset;
+    // int onnx_opset;
 
     NamesHash argnames;
     NamesHash dimnames;
