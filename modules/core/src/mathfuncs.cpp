@@ -1586,10 +1586,9 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         a3 = coeffs.at<double>(i+3);
     }
 
-    if( a0 == 0 )
+if( std::abs(a0) <= DBL_EPSILON )
     {
-        if( a1 == 0 )
-        {
+        if( std::abs(a1) <= DBL_EPSILON )
             if( a2 == 0 ) // constant
                 n = a3 == 0 ? -1 : 0;
             else
@@ -1597,7 +1596,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
                 // linear equation
                 x0 = -a3/a2;
                 n = 1;
-            }
+            } 
+          
         }
         else
         {
