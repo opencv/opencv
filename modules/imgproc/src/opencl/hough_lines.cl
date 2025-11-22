@@ -58,7 +58,12 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 
 __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, int list_offset,
                                 __global uchar * accum_ptr, int accum_step, int accum_offset,
+<<<<<<< HEAD
                                 int total_points, float irho, float theta, int numrho, int numangle, float minTheta)
+=======
+                                int total_points, float irho, float theta, int numrho, int numangle,
+                                float minTheta)
+>>>>>>> 91c1773bc4 (Fix OpenCL kernel signature mismatch: add minTheta parameter and correct angle computations)
 {
     int theta_idx = get_global_id(1);
     int count_idx = get_global_id(0);
@@ -91,7 +96,12 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
 
 __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, int list_offset,
                                __global uchar * accum_ptr, int accum_step, int accum_offset,
+<<<<<<< HEAD
                                int total_points, float irho, float theta, int numrho, int numangle, float minTheta)
+=======
+                               int total_points, float irho, float theta, int numrho, int numangle,
+                               float minTheta)
+>>>>>>> 91c1773bc4 (Fix OpenCL kernel signature mismatch: add minTheta parameter and correct angle computations)
 {
     int theta_idx = get_group_id(1);
     int count_idx = get_local_id(0);
@@ -140,8 +150,14 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 #elif defined GET_LINES
 
 __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
+<<<<<<< HEAD
                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr,
                         int linesMax, int threshold, float rho, float theta, float minTheta)
+=======
+                         __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr,
+                         int linesMax, int threshold, float rho, float theta,
+                         float minTheta)
+>>>>>>> 91c1773bc4 (Fix OpenCL kernel signature mismatch: add minTheta parameter and correct angle computations)
 {
     int x0 = get_global_id(0);
     int y = get_global_id(1);
