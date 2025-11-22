@@ -228,6 +228,7 @@ public:
             p.useAVX512 = CV_CPU_HAS_SUPPORT_AVX512_SKX;
             p.useRVV = checkHardwareSupport(CPU_RVV);
             p.useLASX = checkHardwareSupport(CPU_LASX);
+            p.useSVE = checkHardwareSupport(CPU_SVE);
 
             parallel_for_(Range(0, nstripes), p, nstripes);
         }
@@ -275,6 +276,12 @@ public:
             #if CV_TRY_AVX
                 if( useAVX )
                     opt_AVX::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize_aligned);
+                else
+            #endif
+            #if CV_TRY_SVE
+                if( useSVE ) {
+                    opt_SVE::fastGEMM1T( sptr, wptr, wstep, biasptr, dptr, nw, vecsize_aligned);
+                }
                 else
             #endif
             #if CV_TRY_RVV && CV_RVV
@@ -342,6 +349,7 @@ public:
         bool useAVX512;
         bool useRVV;
         bool useLASX;
+        bool useSVE;
     };
 
 #ifdef HAVE_OPENCL
