@@ -20,6 +20,99 @@ namespace dnn
     Opset's 1 to 22 are covered.
 */
 
+static MatShape fastConv2dInferShape(const MatShape& inpshape, const MatShape& wshape,
+                                     const int* strides,
+                                     const int* dilations,
+                                     const int* pads)
+{
+    int ndims = inpshape.dims, wdims = wshape.dims;
+    CV_Assert(ndims == 4 && wdims == 4);
+
+    int N = inpshape[0], C = inpshape[1], H = inpshape[2], W = inpshape[3];
+    int K = wshape[0], WCg = wshape[1], Hk = wshape[2], Wk = wshape[3];
+    int ngroups = C/WCg;
+
+    int pad_y = pads[1] + pads[4];
+    int pad_x = pads[2] + pads[5];
+    int H0 = (H + pad_y - dilations[1]*(Hk - 1) - 1)/strides[1] + 1;
+    int W0 = (W + pad_x - dilations[2]*(Wk - 1) - 1)/strides[2] + 1;
+    MatShape outshape(4);
+    outshape.layout = inpshape.layout;
+    outshape[0] = inpshape[0];
+    outshape[1] = K;
+    outshape[2] = H0;
+    outshape[3] = W0;
+
+    return outshape;
+}
+
+static void refConv2d(const Mat& inp, const Mat& weights, const Mat& bias, Mat& out,
+                      const int* strides, const int* dilations,
+                      const int* pads, FastActivation activation,
+                      float activParam=0.f)
+{
+    CV_Assert(inp.type() == CV_32F);
+
+    MatShape inpshape = inp.size, wshape = weights.size;
+    int ndims = inpshape.dims, wdims = wshape.dims;
+    CV_Assert(ndims == 4 && wdims == 4);
+
+    MatShape outshape = fastConv2dInferShape(inpshape, wshape, strides, dilations, pads);
+    CV_Assert(wshape[0] == outshape[1] && inpshape[0] == outshape[0]);
+
+    out.fit(outshape, inp.type());
+
+    parallel_for_(Range(0, wshape[0]), [&](const Range& range) {
+        int K = wshape[0], WC = wshape[1], Hk = wshape[2], Wk = wshape[3];
+        int N = inpshape[0], C = inpshape[1];
+        int Hi = inpshape[2], Wi = inpshape[3];
+        int H0 = outshape[2], W0 = outshape[3];
+        int ngroups = C/WC;
+        int Cg = C/ngroups, Kg = K/ngroups;
+        int Sy = strides[1], Sx = strides[2];
+        int Dy = dilations[1], Dx = dilations[2];
+        int pady = pads[1], padx = pads[2];
+        float minval = activation == FAST_ACTIV_RELU || activation == FAST_ACTIV_CLIP ? 0.f : -FLT_MAX;
+        float maxval = activation == FAST_ACTIV_CLIP ? activParam : FLT_MAX;
+        const float* wptr = weights.ptr<float>();
+        const float* biasptr = bias.ptr<float>();
+        const float* inptr = inp.ptr<float>();
+        float* outptr = out.ptr<float>();
+
+        for (int k = range.start; k < range.end; k++) {
+            int g = k/Kg;
+            for (int n = 0; n < N; n++) {
+                for (int y0 = 0; y0 < H0; y0++) {
+                    for (int x0 = 0; x0 < W0; x0++) {
+                        int yi_ = y0*Sy - pady;
+                        int xi_ = x0*Sx - padx;
+                        float s = biasptr ? biasptr[k] : 0.f;
+
+                        for (int ky = 0; ky < Hk; ky++) {
+                            int yi = yi_ + ky*Dy;
+                            if (yi < 0 || yi >= Hi)
+                                continue;
+
+                            for (int kx = 0; kx < Wk; kx++) {
+                                int xi = xi_ + kx*Dx;
+                                if (xi < 0 || xi >= Wi)
+                                    continue;
+                                for (int c = 0; c < Cg; c++) {
+                                    size_t ofs = (((n*ngroups + g)*Cg + c)*Hi + yi)*Wi + xi;
+                                    float inpval = inptr[ofs];
+                                    float w = wptr[((k*Cg + c)*Hk+ky)*Wk + kx];
+                                    s += inpval*w;
+                                }
+                            }
+                        }
+                        outptr[((n*K + k)*H0 + y0)*W0 + x0] = std::min(std::max(s, minval), maxval);
+                    }
+                }
+            }
+        }
+    });
+}
+
 class Conv2LayerImpl : public Conv2Layer
 {
 public:
@@ -350,11 +443,31 @@ public:
                 prev_cs = cs;
             }
 
-            ConvFunc func = getConvFunc(inptype, C0);
-            CV_Assert(func != nullptr);
-
-            func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
-                 inpofs.data(), ofsofs.data());
+            if (cs.kshape[1] != 1)
+            {
+                Mat weights0 = inputs_arr.getMat(1);
+                Mat bias0 = ninputs > 2 ? inputs_arr.getMat(2) : Mat();
+                Mat inp0, out0;
+                transformLayout(inp, inp0, DATA_LAYOUT_NCHW,
+                                DATA_LAYOUT_NCHW, inp.size.C);
+                refConv2d(inp0, weights0, bias0, out0,
+                          cs.strides, cs.dilations, cs.pads,
+                          FAST_ACTIV_NONE, 0.f);
+                //transformLayout(out0, refout, DATA_LAYOUT_BLOCK,
+                //                DATA_LAYOUT_NCHW, out.size.back());
+                transformLayout(out0, out, DATA_LAYOUT_BLOCK,
+                                DATA_LAYOUT_NCHW, out.size.back());
+            } else {
+                ConvFunc func = getConvFunc(inptype, C0);
+                CV_Assert(func != nullptr);
+                
+                func(inptr, resptr, outptr, cs, wptr, scale_data, bias_data,
+                     inpofs.data(), ofsofs.data());
+            }
+            
+            //double err = norm(refout, out, NORM_INF);
+            //CV_Assert(err < 1e-3);
+            //printf("max err=%.5g\n", err);
         }
 
         if (uouts) {

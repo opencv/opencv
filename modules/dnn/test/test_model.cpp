@@ -878,8 +878,8 @@ TEST_P(Reproducibility_ResNet50_ONNX, Accuracy)
 
     Mat image = imread(_tf("sqcat.png"));
     Mat input = blobFromImage(image, 0.017, Size(224,224),
-                              Scalar(123.68, 116.779, 103.939),
-                              true, true, CV_32F);
+                              Scalar(103.939, 116.779, 123.68),
+                              false, true, CV_32F);
     ASSERT_TRUE(!input.empty());
 
     net.setInput(input);

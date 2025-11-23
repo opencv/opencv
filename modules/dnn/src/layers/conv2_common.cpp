@@ -454,23 +454,23 @@ void ConvState::initOfs()
     CV_Assert(MAX_CONV_DIMS == 3);
     int sdims = nspatialdims;
     int KD = kshape[0], KH = kshape[1], KW = kshape[2];
-    int SZ = strides[0], SY = strides[1], SX = strides[2];
-    int padZ0 = pads[0], padY0 = pads[1], padX0 = pads[2];
+    int DZ = dilations[0], DY = dilations[1], DX = dilations[2];
     int Hi = sdims > 1 ? inpshape[sdims] : 1;
     int Wi = inpshape[sdims + 1];
     int ksize = KD*KH*KW;
+    int C0 = inpshape.back();
     coordtab.resize(ksize*MAX_CONV_DIMS);
     ofstab.resize(ksize);
     for (int z = 0, k = 0; z < KD; z++) {
-        int dz = z*SZ - padZ0;
+        int dz = z*DZ;
         for (int y = 0; y < KH; y++) {
-            int dy = y*SY - padY0;
+            int dy = y*DY;
             for (int x = 0; x < KW; x++, k++) {
-                int dx = x*SX - padX0;
+                int dx = x*DX;
                 coordtab[k*MAX_CONV_DIMS] = dz;
                 coordtab[k*MAX_CONV_DIMS + 1] = dy;
                 coordtab[k*MAX_CONV_DIMS + 2] = dx;
-                ofstab[k] = (dz*Hi + dy)*Wi + dx;
+                ofstab[k] = ((dz*Hi + dy)*Wi + dx)*C0;
             }
         }
     }

@@ -844,7 +844,7 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     if (dumpdata && !constArg) {
         Mat temp;
         if (m.size.layout == DATA_LAYOUT_BLOCK) {
-            transformLayout(m, temp, originalLayout, originalLayout, defaultC0);
+            transformLayout(m, temp, originalLayout, originalLayout, m.size.C);
         } else {
             temp = m;
         }

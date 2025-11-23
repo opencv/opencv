@@ -147,6 +147,8 @@ void transformLayout(const Mat& inp, Mat& out,
     MatShape inpshape = inp.size;
     MatShape outshape = inferTransformLayoutShape(inpshape, outlayout, defaultLayout, C0);
     DataLayout inplayout = inpshape.layout;
+    if (inplayout == DATA_LAYOUT_UNKNOWN && outlayout == DATA_LAYOUT_BLOCK)
+        inplayout = defaultLayout;
     
     out.fit(outshape, inp.type());
 
@@ -346,7 +348,8 @@ public:
 
     void runOp(const Mat& inp, Mat& out)
     {
-        transformLayout(inp, out, layout, getNetImpl(this)->originalLayout, C0);
+        DataLayout origLayout = getNetImpl(this)->originalLayout;
+        transformLayout(inp, out, layout, origLayout, C0);
     }
 };
 
