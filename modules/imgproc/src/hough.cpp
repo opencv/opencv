@@ -898,8 +898,8 @@ static bool ocl_HoughLinesP(InputArray _src, OutputArray _lines, double rho, dou
 
     UMat accum;
 
-    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, min_theta, numrho, numangle))
-        return false;
+    if (!ocl_fillAccum(pointsList, accum, total_points, rho, theta, 0.0, numrho, numangle))
+            return false;
 
     ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
                                format("-D GET_LINES_PROBABOLISTIC"));
