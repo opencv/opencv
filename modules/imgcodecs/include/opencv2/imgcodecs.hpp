@@ -539,10 +539,10 @@ can be saved using this function, with these exceptions:
     Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255.
   - 8-bit single-channel images (CV_8UC1) are not supported due to GIF's limitation to indexed color formats.
 - With AVIF encoder, 8-bit unsigned (CV_8U) and 16-bit unsigned (CV_16U) images can be saved.
-  - CV_16U images can be saved as only 10 or 12 bpp (not 16 bpp). See IMWRITE_AVIF_DEPTH.
+  - CV_16U images can be saved as only 10-bit or 12-bit (not 16-bit). See IMWRITE_AVIF_DEPTH.
   - AVIF images with an alpha channel can be saved using this function.
     To achieve this, create an 8-bit 4-channel (CV_8UC4) / 16-bit 4-channel (CV_16UC4) BGRA image, ensuring the alpha channel is the last component.
-    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255(8bit)/1023(10bit)/4095(12bit)(see the code sample below).
+    Fully transparent pixels should have an alpha value of 0, while fully opaque pixels should have an alpha value of 255 (8-bit) / 1023 (10-bit) / 4095 (12-bit) (see the code sample below).
 
 If the image format is not supported, the image will be converted to 8-bit unsigned (CV_8U) and saved that way.
 
