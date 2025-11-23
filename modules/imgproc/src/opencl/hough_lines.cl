@@ -90,7 +90,7 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
 
 __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, int list_offset,
                                __global uchar * accum_ptr, int accum_step, int accum_offset,
-                               int total_points, float irho, float theta, int numrho, int numangle)
+                               int total_points, float irho, float theta, float min_theta, int numrho, int numangle)
 {
     int theta_idx = get_group_id(1);
     int count_idx = get_local_id(0);
@@ -99,24 +99,23 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
     if (theta_idx > 0 && theta_idx < numangle + 1)
     {
         float cosVal;
-        float sinVal = sincos(theta * (float) (theta_idx-1), &cosVal);
+        
+      
+        float sinVal = sincos((theta * (float) (theta_idx-1)) + min_theta, &cosVal);
+        
         sinVal *= irho;
         cosVal *= irho;
-
         for (int i=count_idx; i<BUFFER_SIZE; i+=LOCAL_SIZE)
             l_accum[i] = 0;
 
         barrier(CLK_LOCAL_MEM_FENCE);
-
         __global const int * list = (__global const int*)(list_ptr + list_offset);
         const int shift = (numrho - 1) / 2;
-
         for (int i = count_idx; i < total_points; i += LOCAL_SIZE)
         {
             const int point = list[i];
             const int x = (point & 0xFFFF);
             const int y = point >> 16;
-
             int r = convert_int_rte(mad((float)x, cosVal, y * sinVal)) + shift;
             atomic_inc(l_accum + r + 1);
         }
