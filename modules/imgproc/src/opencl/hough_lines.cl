@@ -56,15 +56,20 @@ __kernel void make_point_list(__global const uchar * src_ptr, int src_step, int 
 
 #elif defined FILL_ACCUM_GLOBAL
 
+
+
 __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, int list_offset,
                                 __global uchar * accum_ptr, int accum_step, int accum_offset,
-                                int total_points, float irho, float theta, int numrho, int numangle)
+                                int total_points, float irho, float theta, float min_theta, int numrho, int numangle)
 {
     int theta_idx = get_global_id(1);
     int count_idx = get_global_id(0);
     int glob_size = get_global_size(0);
     float cosVal;
-    float sinVal = sincos(theta * ((float)theta_idx), &cosVal);
+    
+  
+    float sinVal = sincos((theta * ((float)theta_idx)) + min_theta, &cosVal);
+    
     sinVal *= irho;
     cosVal *= irho;
 
@@ -79,7 +84,6 @@ __kernel void fill_accum_global(__global const uchar * list_ptr, int list_step, 
             const int val = list[i];
             const int x = (val & 0xFFFF);
             const int y = (val >> 16) & 0xFFFF;
-
             int r = convert_int_rte(mad((float)x, cosVal, y * sinVal)) + shift;
             atomic_inc(accum + r + 1);
         }
