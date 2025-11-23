@@ -100,7 +100,12 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
     if (result == nullptr) return nullptr;
     result->colorPrimaries = AVIF_COLOR_PRIMARIES_UNSPECIFIED;
     result->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
-    result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
+    // IDENTITY may only be used with 4:4:4 subsampling (AVIF spec, sec. 6.4.2)
+    if (result->yuvFormat == AVIF_PIXEL_FORMAT_YUV444) {
+        result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
+    } else {
+        result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_UNSPECIFIED;
+    }
     result->yuvRange = AVIF_RANGE_FULL;
   } else {
     result =
