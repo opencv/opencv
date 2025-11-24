@@ -31,12 +31,12 @@ class ChromaticAberrationTest(NewOpenCVTests):
         self.assertEqual(coeffMat.shape[0], 4)
         self.assertGreater(coeffMat.shape[1], 0)
         self.assertGreater(degree, 0)
-        self.assertGreater(calibW, 0)
-        self.assertGreater(calibH, 0)
+        self.assertGreater(calib_size[0], 0)
+        self.assertGreater(calib_size[1], 0)
         self.assertEqual(coeffMat.shape[1], EXPECTED_COEFFS_SIZE)
 
-        self.assertEqual(self.test_image.shape[1], calibW)
-        self.assertEqual(self.test_image.shape[0], calibH)
+        self.assertEqual(self.test_image.shape[1], calib_size[0])
+        self.assertEqual(self.test_image.shape[0], calib_size[1])
 
         corrected = cv.correctChromaticAberration(self.test_image, coeffMat, calib_size, degree)
 
