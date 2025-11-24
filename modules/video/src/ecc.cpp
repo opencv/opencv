@@ -61,14 +61,15 @@ public:
      }
 
      // Access block dF/dp_i
-    Mat dFdp(int i) {
+    Mat dp(int i) {
+        CV_Assert(i < paramsNum);
         return m.colRange(i * size.width, (i + 1) * size.width);
     }
 
     // Performs dst = J^T * src
     void project(Mat e, Mat dst) {
         for (int i = 0; i < paramsNum; ++i) {
-            dst.at<float>(i) = (e.dot(dFdp(i)));
+            dst.at<float>(i) = (e.dot(dp(i)));
         }
     }
 
@@ -77,14 +78,14 @@ public:
         float* dstPtr = H.ptr<float>(0);
 
         CV_Assert(H.cols == H.rows);  // H is square (and symmetric)
-        int w = m.cols / H.cols;
+        CV_Assert(H.cols == paramsNum);
         Mat mat;
         for (int i = 0; i < H.rows; i++) {
-            mat = Mat(m.colRange(i * w, (i + 1) * w));
+            mat = dp(i);
             dstPtr[i * (H.rows + 1)] = (float)pow(norm(mat), 2);  // diagonal elements
 
             for (int j = i + 1; j < H.cols; j++) {  // j starts from i+1
-                dstPtr[i * H.cols + j] = (float)mat.dot(m.colRange(j * w, (j + 1) * w));
+                dstPtr[i * H.cols + j] = (float)mat.dot(dp(j));
                 dstPtr[j * H.cols + i] = dstPtr[i * H.cols + j];  // due to symmetry
             }
         }
@@ -93,23 +94,65 @@ public:
 
 /* Generic transformation interface. The derived class should define:
  * The warp transformation from image to template coordinates.
- * The block of coordinates  partial derivatives with respect to a transformation parameter ∂X/∂p_i, ∂Y/∂p_i
- * The operation of the parameters updating.
+ * Method for calculating partial derivatives of intensity dI/dp with respect to model parameters (Jacobian)
  * */
-class MotionModel {
+class WarpModel {
+    // A row vector of parameters of the model being optimized
     Mat T;
+protected:
+    Mat X;
+    Mat Y;
 public:
-    MotionModel(Mat map): T(map) {
+    WarpModel(const Mat map, const Size size, const int type): T(map) {
+
+        const int ws = size.width;
+        const int hs = size.height;
+
+        Mat Xcoord = Mat(1, ws, CV_32F);
+        Mat Ycoord = Mat(hs, 1, CV_32F);
+        Mat Xgrid = Mat(hs, ws, CV_32F);
+        Mat Ygrid = Mat(hs, ws, CV_32F);
+
+        float* XcoPtr = Xcoord.ptr<float>(0);
+        float* YcoPtr = Ycoord.ptr<float>(0);
+        int j;
+        for (j = 0; j < ws; j++) XcoPtr[j] = (float)j;
+        for (j = 0; j < hs; j++) YcoPtr[j] = (float)j;
+
+        repeat(Xcoord, hs, 1, Xgrid);
+        repeat(Ycoord, 1, ws, Ygrid);
+
+        Xcoord.release();
+        Ycoord.release();
+
+        const int channels = CV_MAT_CN(type);
+
+        std::vector<cv::Mat> XgridCh(channels, Xgrid);
+        cv::merge(XgridCh, X);
+
+        std::vector<cv::Mat> YgridCh(channels, Ygrid);
+        cv::merge(YgridCh, Y);
+
+        Xgrid.release();
+        Ygrid.release();
     }
 
+    // Returns the number of model parameters
     int getNumParams() const {
         return T.total();
     }
 
+    /* This method returns the transformation matrix in the canonical form in which it would be returned
+     * from the findTransformECC method, for example, affine or perspective.
+     * The internal parameters of the model T must be properly packed into the output matrix.
+     * Direct model parameter modification is prohibited to avoid inconsistency.
+    */
     virtual Mat getMat() const {
         return T;
     }
 
+    // Returns model parameter with index i.
+    // Direct parameter modification is prohibited to avoid inconsistency.
     float p(int idx) const {
         return T.at<float>(idx, 0);
     }
@@ -120,52 +163,53 @@ public:
     }
 
     // Calculates spatial derivatives of pixel intensities I(x, y, c) w.r.t model parameters.
-    virtual void calcJacobian(const Mat& gradX, const Mat& gradY, const Mat& X, const Mat& Y, Jacobian& jac) = 0;
+    // dI/dp = dI/dx * dx/dp * dI/dy * dy/dp = gradX * dx/dp + gradY * dy/dp
+    // gradX - X image gradient.
+    // gradY - Y image gradient.
+    // dI - image intensity spatial derivatives (Jacobian)  with respect to model parameters
+    virtual void calcJacobian(const Mat& gradX, const Mat& gradY, Jacobian& dI) const = 0;
 
-    // Updates transformation.
+    // Parameter models can only be updated using this method to avoid inconsistency.
     void updateTransform(const Mat& update) {
         T += update;
     }
 
-    virtual ~MotionModel() {}
+    virtual ~WarpModel() {}
 
-    static cv::Ptr<MotionModel> make(const int motionType, const Mat map);
+    static cv::Ptr<WarpModel> make(const int motionType, const Mat map, Size size, int type);
 };
 
-class MotionTranslation : public MotionModel {
-    const int tx = 0;
-    const int ty = 1;
+class WarpTranslation : public WarpModel {
+    enum {tx = 0, ty = 1};
 public:
-    MotionTranslation(const Mat map): MotionModel(map.col(1)) {
+    WarpTranslation(const Mat map, const Size size, const int type): WarpModel(map.col(1), size, type) {
     }
 
     Mat getMat() const override {
-
         return  (cv::Mat_<float>(2, 3) << 1, 0, p(tx),
                                           0, 1, p(ty));
     }
 
-    void calcJacobian(const Mat& gradX, const Mat& gradY, const Mat& X, const Mat& Y,
-            Jacobian& jac) override
+    void calcJacobian(const Mat& gradX, const Mat& gradY, Jacobian& dI) const override
     {
-        (void)X;
-        (void)Y;
-
-        gradX.copyTo(jac.dFdp(tx)); // dI/dtx = dI/dx * dx/dtx; dx/dtx = 1
-        gradY.copyTo(jac.dFdp(ty)); // dI/dty = dI/dy * dy/dty; dy/dty = 1
+        // x' = x + tx
+        // y' = y + ty
+        // dx'/dtx = 1; dx'/dty = 0
+        // dy'/dtx = 0; dy'/dty = 1
+        gradX.copyTo(dI.dp(tx)); // dI/dtx = gradX * 1 + gradY * 0
+        gradY.copyTo(dI.dp(ty)); // dI/dty = gradX * 0 + gradY * 1
     }
 };
 
-class MotionEuclidean: public MotionModel {
-    const int theta = 0;
-    const int tx = 1;
-    const int ty = 2;
+
+class WarpEuclidean: public WarpModel {
+    enum {theta = 0, tx = 1, ty = 2};
 
     static Mat extract(const Mat &map){
         // Assume user matrix is approximately Euclidean:
         // [ c  -s  tx ]
         // [ s   c  ty ]
-        const float c = map.at<float>(0,0);
+        // const float c = map.at<float>(0,0);
         const float s = map.at<float>(1,0);
 
         float theta = std::asin(s);
@@ -175,7 +219,7 @@ class MotionEuclidean: public MotionModel {
     }
 public:
 
-    MotionEuclidean(const Mat &map): MotionModel(extract(map)) {
+    WarpEuclidean(const Mat &map, const Size size, const int type): WarpModel(extract(map), size, type) {
     }
 
     Mat getMat() const override{
@@ -186,7 +230,7 @@ public:
                                         s, c,  p(ty));
     }
 
-    void calcJacobian(const Mat& gradX, const Mat& gradY, const Mat& X, const Mat& Y, Jacobian& jac) override {
+    void calcJacobian(const Mat& gradX, const Mat& gradY, Jacobian& dI) const override {
         const float c = std::cos(p(theta));
         const float s = std::sin(p(theta));
 
@@ -197,35 +241,36 @@ public:
 
         // compute Jacobian blocks (3 blocks)
         // dI/dtheta = Ix * dx/dtheta + Iy * dy/dtheta
-        jac.dFdp(theta) = (gradX.mul(hatX)) + (gradY.mul(hatY));
-        gradX.copyTo(jac.dFdp(tx)); // dI/dtx = Ix  (dx/dtx = 1, dy/dtx = 0)
-        gradY.copyTo(jac.dFdp(ty)); // dI/dty = Iy  (dx/dty = 0, dy/dty = 1)
+        dI.dp(theta) = (gradX.mul(hatX)) + (gradY.mul(hatY));
+        gradX.copyTo(dI.dp(tx)); // dI/dtx = Ix  (dx/dtx = 1, dy/dtx = 0)
+        gradY.copyTo(dI.dp(ty)); // dI/dty = Iy  (dx/dty = 0, dy/dty = 1)
     }
 };
 
-class MotionAffine: public MotionModel {
+class WarpAffine: public WarpModel {
 public:
-    MotionAffine(const Mat map): MotionModel (map.reshape(1,6)) {
+    WarpAffine(const Mat map, const Size size, const int type): WarpModel (map.reshape(1,6), size, type) {
     }
 
-    virtual Mat getMat() const {
-        return MotionModel::getMat().reshape(1, 2);
+    virtual Mat getMat() const override {
+        return WarpModel::getMat().reshape(1, 2);
     }
 
-    void calcJacobian(const Mat& gradX, const Mat& gradY, const Mat& X, const Mat& Y, Jacobian& jac) override {
+    void calcJacobian(const Mat& gradX, const Mat& gradY, Jacobian& dI) const override {
         // compute Jacobian blocks (6 blocks)
-        jac.dFdp(0) = gradX.mul(X);  // dI/da00
-        jac.dFdp(1) = gradX.mul(Y);  // dI/da01
-        gradX.copyTo(jac.dFdp(2));   // dI/da12
-        jac.dFdp(3) = gradY.mul(X);  // dI/da10
-        jac.dFdp(4) = gradY.mul(Y);  // dI/da11
-        gradY.copyTo(jac.dFdp(5));   // dI/da12
+        dI.dp(0) = gradX.mul(X);  // dI/da00
+        dI.dp(1) = gradX.mul(Y);  // dI/da01
+        gradX.copyTo(dI.dp(2));   // dI/da12
+        dI.dp(3) = gradY.mul(X);  // dI/da10
+        dI.dp(4) = gradY.mul(Y);  // dI/da11
+        gradY.copyTo(dI.dp(5));   // dI/da12
     }
 };
 
-class MotionHomography : public MotionModel {
+class WarpHomography : public WarpModel {
 public:
-    MotionHomography(const Mat& map): MotionModel(map.reshape(1, 9).rowRange(0, 8)) {
+    WarpHomography(const Mat& map, const Size size, const int type):
+        WarpModel(map.reshape(1, 9).rowRange(0, 8), size, type) {
     }
 
     Mat getMat() const override {
@@ -239,11 +284,7 @@ public:
         warpPerspective(src, dst, getMat(), dst.size(), flags);
     }
 
-    void calcJacobian(const Mat& gradX,
-                      const Mat& gradY,
-                      const Mat& X,
-                      const Mat& Y,
-                      Jacobian& jac) override
+    void calcJacobian(const Mat& gradX, const Mat& gradY, Jacobian& dI) const override
     {
         const float H00 = p(0);
         const float H01 = p(1);
@@ -279,51 +320,51 @@ public:
 
         Mat temp_ = hatX_.mul(gradXDivided_) + hatY_.mul(gradYDivided_);
 
-        jac.dFdp(0) = gradXDivided_.mul(X); // dI/dp0 = dI/dh0
-        jac.dFdp(1) = gradXDivided_.mul(Y); // dI/dp1 = dI/dh3
-        gradXDivided_.copyTo(jac.dFdp(2));  // dI/dp2 = dI/dh6
-        jac.dFdp(3) = gradYDivided_.mul(X); // dI/dp3 = dI/dh1
-        jac.dFdp(4) = gradYDivided_.mul(Y); // dI/dp4 = dI/dh4
-        gradYDivided_.copyTo(jac.dFdp(5));  // dI/dp5 = dI/dh7
-        jac.dFdp(6) = temp_.mul(X);         // dI/dp6 = dI/dh2
-        jac.dFdp(7) = temp_.mul(Y);         // dI/dp7 = dI/dh5
+        dI.dp(0) = gradXDivided_.mul(X); // dI/dp0 = dI/dh0
+        dI.dp(1) = gradXDivided_.mul(Y); // dI/dp1 = dI/dh3
+        gradXDivided_.copyTo(dI.dp(2));  // dI/dp2 = dI/dh6
+        dI.dp(3) = gradYDivided_.mul(X); // dI/dp3 = dI/dh1
+        dI.dp(4) = gradYDivided_.mul(Y); // dI/dp4 = dI/dh4
+        gradYDivided_.copyTo(dI.dp(5));  // dI/dp5 = dI/dh7
+        dI.dp(6) = temp_.mul(X);         // dI/dp6 = dI/dh2
+        dI.dp(7) = temp_.mul(Y);         // dI/dp7 = dI/dh5
     }
 };
 
-cv::Ptr<MotionModel> MotionModel::make(const int motionType,const Mat map){
+cv::Ptr<WarpModel> WarpModel::make(const int motionType,const Mat map, const Size size, const int type) {
 
     if (!map.empty())
         if (map.type() != CV_32FC1)
-                CV_Error(Error::StsUnsupportedFormat, "warpMatrix must be single-channel floating-point matrix");
+            CV_Error(Error::StsUnsupportedFormat,"warpMatrix must be single-channel floating-point matrix");
 
     switch (motionType) {
     case MOTION_TRANSLATION:
         if (!map.empty()){
             CV_Assert(map.cols == 3 && map.rows == 2);
-            return cv::makePtr<MotionTranslation>(map);
+            return cv::makePtr<WarpTranslation>(map, size, type);
         } else
-            return cv::makePtr<MotionTranslation>(Mat::eye(2,3,CV_32F));
+            return cv::makePtr<WarpTranslation>(Mat::eye(2,3,CV_32F), size, type);
     case MOTION_EUCLIDEAN:
         if (!map.empty()){
             CV_Assert(map.cols == 3 && map.rows == 2);
-            return cv::makePtr<MotionEuclidean>(map);
+            return cv::makePtr<WarpEuclidean>(map, size, type);
         } else
-            return cv::makePtr<MotionEuclidean>(Mat::eye(2,3,CV_32F));
+            return cv::makePtr<WarpEuclidean>(Mat::eye(2,3,CV_32F), size, type);
     case MOTION_AFFINE:
         if (!map.empty()){
             CV_Assert(map.cols == 3 && map.rows == 2);
-            return cv::makePtr<MotionAffine>(map);
+            return cv::makePtr<WarpAffine>(map, size, type);
         } else
-            return cv::makePtr<MotionAffine>(Mat::eye(2,3,CV_32F));
+            return cv::makePtr<WarpAffine>(Mat::eye(2,3,CV_32F), size, type);
     case MOTION_HOMOGRAPHY:
         if (!map.empty()){
             CV_Assert(map.cols == 3 && map.rows == 3);
-            return cv::makePtr<MotionHomography>(map);
+            return cv::makePtr<WarpHomography>(map, size, type);
         } else
-            return cv::makePtr<MotionHomography>(Mat::eye(3, 3, CV_32F));
+            return cv::makePtr<WarpHomography>(Mat::eye(3,3,CV_32F), size, type);
     default:
         CV_Error(cv::Error::StsBadArg,"Unsupported motion type");
-        return cv::Ptr<MotionModel>();
+        return cv::Ptr<WarpModel>();
     }
 }
 
@@ -399,7 +440,7 @@ double cv::findTransformECCWithMask( InputArray templateImage,
     if (!(src.type() == dst.type()))
         CV_Error(Error::StsUnmatchedFormats, "Both input images must have the same data type");
 
-    auto model = MotionModel::make(motionType, map);
+    auto model = WarpModel::make(motionType, map, src.size(), src.type());
 
     if (motionType == MOTION_HOMOGRAPHY) {
         CV_Assert(map.rows == 3);
@@ -416,31 +457,8 @@ double cv::findTransformECCWithMask( InputArray templateImage,
     const int wd = dst.cols;
     const int hd = dst.rows;
 
-    Mat Xcoord = Mat(1, ws, CV_32F);
-    Mat Ycoord = Mat(hs, 1, CV_32F);
-    Mat Xgrid = Mat(hs, ws, CV_32F);
-    Mat Ygrid = Mat(hs, ws, CV_32F);
-
-    float* XcoPtr = Xcoord.ptr<float>(0);
-    float* YcoPtr = Ycoord.ptr<float>(0);
-    int j;
-    for (j = 0; j < ws; j++) XcoPtr[j] = (float)j;
-    for (j = 0; j < hs; j++) YcoPtr[j] = (float)j;
-
-    repeat(Xcoord, hs, 1, Xgrid);
-    repeat(Ycoord, 1, ws, Ygrid);
-
-    Xcoord.release();
-    Ycoord.release();
-
     const int channels = src.channels();
     int type = CV_MAKETYPE(CV_32F, channels);
-
-    std::vector<cv::Mat> XgridCh(channels, Xgrid);
-    cv::merge(XgridCh, Xgrid);
-
-    std::vector<cv::Mat> YgridCh(channels, Ygrid);
-    cv::merge(YgridCh, Ygrid);
 
     Mat templateZM = Mat(hs, ws, type);     // to store the (smoothed)zero-mean version of template
     Mat templateFloat = Mat(hs, ws, type);  // to store the (smoothed) template
@@ -511,7 +529,6 @@ double cv::findTransformECCWithMask( InputArray templateImage,
     }
 
     // matrices needed for solving linear equation system for maximizing ECC
-
     Jacobian jacobian(numberOfParameters, hs, ws, type);
     Mat hessian = Mat(numberOfParameters, numberOfParameters, CV_32F);
     Mat hessianInv = Mat(numberOfParameters, numberOfParameters, CV_32F);
@@ -527,7 +544,6 @@ double cv::findTransformECCWithMask( InputArray templateImage,
     const int maskFlags = INTER_NEAREST + WARP_INVERSE_MAP;
 
     // Iteratively update map_matrix using Gauss–Newton algorithm
-    // w[i+1] = w[i] -
     double rho = -1;
     double last_rho = -termination_eps;
     for (int i = 1; (i <= numberOfIterations) && (fabs(rho - last_rho) >= termination_eps); i++) {
@@ -558,11 +574,10 @@ double cv::findTransformECCWithMask( InputArray templateImage,
         double tmpNorm = std::sqrt(validPixels * cv::norm(tmpStd, cv::NORM_L2SQR));
         double imgNorm = std::sqrt(validPixels * cv::norm(imgStd, cv::NORM_L2SQR));
 
-        model->calcJacobian(gradientXWarped, gradientYWarped, Xgrid, Ygrid, jacobian);
+        model->calcJacobian(gradientXWarped, gradientYWarped, jacobian);
 
         // calculate Hessian and its inverse
         jacobian.getHessian(hessian);
-//        project_onto_jacobian_ECC(jacobian.m, jacobian.m, hessian);
 
         hessianInv = hessian.inv();
 
