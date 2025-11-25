@@ -2353,10 +2353,10 @@ A minimum of 2 motions with non parallel rotation axes are necessary to determin
 So at least 3 different poses are required, but it is strongly recommended to use many more poses.
 
  */
-CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
-                                    InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
-                                    OutputArray R_cam2gripper, OutputArray t_cam2gripper,
-                                    HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
+CV_EXPORTS_W void calibrateHandEye(InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
+                                   InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
+                                   OutputArray R_cam2gripper, OutputArray t_cam2gripper,
+                                   int method = CALIB_HAND_EYE_TSAI);
 
 /** @brief Computes Robot-World/Hand-Eye calibration: \f$_{}^{w}\textrm{T}_b\f$ and \f$_{}^{c}\textrm{T}_g\f$
 
