@@ -56,20 +56,18 @@ public:
         m = Mat(h, w * paramsNum, type);
     }
 
-    Jacobian(int num, Size _size, int type): paramsNum(num), size(_size) {
-        m = Mat(size.height, size.width * paramsNum, type);
-     }
-
      // Access block dF/dp_i
-    Mat dp(int i) {
+    Mat dp(const int i) {
         CV_Assert(i < paramsNum);
         return m.colRange(i * size.width, (i + 1) * size.width);
     }
 
-    // Performs dst = J^T * src
-    void project(Mat e, Mat dst) {
+    // Performs dst = J^T * e
+    void project(const Mat& e, Mat dst) {
+        CV_Assert(dst.rows == paramsNum);
+        CV_Assert(e.size() == size);
         for (int i = 0; i < paramsNum; ++i) {
-            dst.at<float>(i) = (e.dot(dp(i)));
+            dst.at<float>(i) = (float)(e.dot(dp(i)));
         }
     }
 
@@ -139,7 +137,7 @@ public:
 
     // Returns the number of model parameters
     int getNumParams() const {
-        return T.total();
+        return (int)T.total();
     }
 
     /* This method returns the transformation matrix in the canonical form in which it would be returned
@@ -182,7 +180,7 @@ public:
 class WarpTranslation : public WarpModel {
     enum {tx = 0, ty = 1};
 public:
-    WarpTranslation(const Mat map, const Size size, const int type): WarpModel(map.col(1), size, type) {
+    WarpTranslation(const Mat map, const Size size, const int type): WarpModel(map.col(2), size, type) {
     }
 
     Mat getMat() const override {
@@ -206,13 +204,14 @@ class WarpEuclidean: public WarpModel {
     enum {theta = 0, tx = 1, ty = 2};
 
     static Mat extract(const Mat &map){
-        // Assume user matrix is approximately Euclidean:
-        // [ c  -s  tx ]
-        // [ s   c  ty ]
-        // const float c = map.at<float>(0,0);
-        const float s = map.at<float>(1,0);
+        // [ a   b   tx ]
+        // [ c   d   ty ]
+        // Best-fit rotation angle in Frobenius norm:
+        // theta = atan2(c - b, a + d)
+        float X = map.at<float>(0, 0) + map.at<float>(1, 1);
+        float Y = map.at<float>(1, 0) - map.at<float>(0, 1);
+        float theta = std::atan2(Y, X);
 
-        float theta = std::asin(s);
         float tx = map.at<float>(0,2);
         float ty = map.at<float>(1,2);
         return Mat_<float>(3, 1) << theta, tx, ty;
@@ -333,9 +332,10 @@ public:
 
 cv::Ptr<WarpModel> WarpModel::make(const int motionType,const Mat map, const Size size, const int type) {
 
-    if (!map.empty())
+    if (!map.empty()) {
         if (map.type() != CV_32FC1)
             CV_Error(Error::StsUnsupportedFormat,"warpMatrix must be single-channel floating-point matrix");
+    }
 
     switch (motionType) {
     case MOTION_TRANSLATION:
@@ -364,7 +364,6 @@ cv::Ptr<WarpModel> WarpModel::make(const int motionType,const Mat map, const Siz
             return cv::makePtr<WarpHomography>(Mat::eye(3,3,CV_32F), size, type);
     default:
         CV_Error(cv::Error::StsBadArg,"Unsupported motion type");
-        return cv::Ptr<WarpModel>();
     }
 }
 
