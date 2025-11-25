@@ -496,8 +496,10 @@ public:
         }
         catch (const _com_error& e)
         {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error in OnReadSample: " << e.ErrorMessage());
-            return S_OK; // Return S_OK to keep the callback chain alive if possible, or handle appropriate failure code
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+            std::string msg = conv.to_bytes(e.ErrorMessage());
+            CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error in OnReadSample: " << msg);
+            return S_OK; // Keep callback alive
         }
         catch (...)
         {
@@ -1850,7 +1852,9 @@ bool CvCapture_MSMF::grabFrame()
     }
     catch (const _com_error& e)
     {
-        CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error caught in grabFrame: " << e.ErrorMessage());
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+        std::string msg = conv.to_bytes(e.ErrorMessage());
+        CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error caught in grabFrame: " << msg);
         return false;
     }
     catch (const std::exception& e)
