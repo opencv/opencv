@@ -86,7 +86,7 @@ AvifImageUniquePtr ConvertToAvif(const cv::Mat &img, bool lossless, int bit_dept
     result->yuvFormat = AVIF_PIXEL_FORMAT_YUV400;
     result->colorPrimaries = AVIF_COLOR_PRIMARIES_UNSPECIFIED;
     result->transferCharacteristics = AVIF_TRANSFER_CHARACTERISTICS_UNSPECIFIED;
-    result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_IDENTITY;
+    result->matrixCoefficients = AVIF_MATRIX_COEFFICIENTS_UNSPECIFIED;
     result->yuvRange = AVIF_RANGE_FULL;
     result->yuvPlanes[0] = img.data;
     result->yuvRowBytes[0] = img.step[0];
