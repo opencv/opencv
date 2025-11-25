@@ -166,8 +166,8 @@ protected:
     DomainDispatchMap domain_dispatch_map;
     std::string getLayerTypeDomain(const opencv_onnx::NodeProto& node_proto);
     const DispatchMap& getDispatchMap(const opencv_onnx::NodeProto& node_proto);
-    void buildDispatchMap_ONNX_AI(); //int opset_version);
-    void buildDispatchMap_COM_MICROSOFT(); //int opset_version);
+    void buildDispatchMap_ONNX_AI();
+    void buildDispatchMap_COM_MICROSOFT();
 
     // Domain: 'ai.onnx' (default)
     // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
@@ -2593,9 +2593,8 @@ void ONNXImporter2::parseAttention(LayerParams& params, const opencv_onnx::NodeP
 
 // Domain: ai.onnx (default)
 // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
-void ONNXImporter2::buildDispatchMap_ONNX_AI() //int opset_version)
+void ONNXImporter2::buildDispatchMap_ONNX_AI()
 {
-    // CV_UNUSED(opset_version);
     DispatchMap dispatch;
 
     dispatch["ArgMax"] = dispatch["ArgMin"] = &ONNXImporter2::parseArgMinMax;
@@ -2714,7 +2713,6 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI() //int opset_version)
 // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
 void ONNXImporter2::buildDispatchMap_COM_MICROSOFT()
 {
-    // CV_UNUSED(opset_version);
     DispatchMap dispatch;
 
     // BUG: https://github.com/opencv/opencv/issues/26310
