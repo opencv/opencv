@@ -504,7 +504,7 @@ public:
         catch (...)
         {
             CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception in OnReadSample");
-            return S_OK; 
+            return S_OK;
         }
         return S_OK;
     }
