@@ -8,7 +8,7 @@
 #if defined(CV_SVE)
 int test()
 {
-    const float src[svcntw()] = {0.0};
+    const float src[1024] = {0.0};
     svbool_t pg = svptrue_b32();
     svfloat32_t val = svld1(pg, src);
     return (int)svlastb_f32(pg, val);
