@@ -1046,7 +1046,7 @@ size_t imcount_(const String& filename, int flags)
         return collection.size();
     } catch(cv::Exception const& e) {
         // Reading header or finding decoder for the filename is failed
-        CV_LOG_ERROR(NULL, "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what());
+        CV_LOG_WARNING(NULL, "imcount_('" << filename << "'): can't read header or can't find decoder: " << e.what());
     }
     return 0;
 }
