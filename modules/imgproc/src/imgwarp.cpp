@@ -2535,6 +2535,7 @@ void WarpPerspectiveLine_ProcessNN_CV_SIMD(const double *M, short* xy, double X0
     }
 }
 
+#if CV_SIMD128_64F
 void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alpha, double X0, double Y0, double W0, int bw)
 {
     const v_float64x2 v_M0 = v_setall_f64(M[0]);
@@ -2544,7 +2545,8 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
     const v_float64x2 v_intmin = v_setall_f64((double)INT_MIN);
     const v_float64x2 v_2 = v_setall_f64(2.0);
     const v_float64x2 v_zero = v_setzero_f64();
-    const v_float64x2 v_its = v_setall_f64((double)INTER_TAB_SIZE);
+    const v_float64x2 v_1 = v_setall_f64(1.0); // Use 1.0 for pure float inversion
+    const v_float64x2 v_its = v_setall_f64((double)INTER_TAB_SIZE); // Scale factor (32.0)
     const v_int32x4 v_itsi1 = v_setall_s32(INTER_TAB_SIZE - 1);
 
     int x1 = 0;
@@ -2556,81 +2558,45 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
 
     for (; x1 <= bw - 16; x1 += 16)
     {
-        // 0-3
-        v_int32x4 v_X0, v_Y0;
-        {
-            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
-
-            v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
-
-            v_X0 = v_round(v_fX0, v_fX1);
-            v_Y0 = v_round(v_fY0, v_fY1);
+        // Helper macro to process 4 items at a time
+        // FIX: Calculate 1/W first, then multiply coordinates, THEN scale by v_its
+        #define PROCESS_BLOCK(v_X_out, v_Y_out) \
+        { \
+            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0); \
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero); /* 1.0 / W */ \
+            \
+            /* Projection: (M*x) * (1/W) */ \
+            v_float64x2 v_projX = v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W); \
+            v_float64x2 v_projY = v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W); \
+            \
+            /* Scaling: Proj * INTER_TAB_SIZE */ \
+            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_projX, v_its))); \
+            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_projY, v_its))); \
+            v_x1 = v_add(v_x1, v_2); \
+            \
+            /* Second pair */ \
+            v_W = v_muladd(v_M6, v_x1, v_W0); \
+            v_W = v_select(v_ne(v_W, v_zero), v_div(v_1, v_W), v_zero); \
+            \
+            v_projX = v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W); \
+            v_projY = v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W); \
+            \
+            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_projX, v_its))); \
+            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_projY, v_its))); \
+            v_x1 = v_add(v_x1, v_2); \
+            \
+            v_X_out = v_round(v_fX0, v_fX1); \
+            v_Y_out = v_round(v_fY0, v_fY1); \
         }
 
-        // 4-7
-        v_int32x4 v_X1, v_Y1;
-        {
-            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
+        v_int32x4 v_X0, v_Y0, v_X1, v_Y1, v_X2, v_Y2, v_X3, v_Y3;
 
-            v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
+        PROCESS_BLOCK(v_X0, v_Y0); // 0-3
+        PROCESS_BLOCK(v_X1, v_Y1); // 4-7
+        PROCESS_BLOCK(v_X2, v_Y2); // 8-11
+        PROCESS_BLOCK(v_X3, v_Y3); // 12-15
 
-            v_X1 = v_round(v_fX0, v_fX1);
-            v_Y1 = v_round(v_fY0, v_fY1);
-        }
-
-        // 8-11
-        v_int32x4 v_X2, v_Y2;
-        {
-            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
-
-            v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
-
-            v_X2 = v_round(v_fX0, v_fX1);
-            v_Y2 = v_round(v_fY0, v_fY1);
-        }
-
-        // 12-15
-        v_int32x4 v_X3, v_Y3;
-        {
-            v_float64x2 v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY0 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
-
-            v_W = v_muladd(v_M6, v_x1, v_W0);
-            v_W = v_select(v_ne(v_W, v_zero), v_div(v_its, v_W), v_zero);
-            v_float64x2 v_fX1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M0, v_x1, v_X0d), v_W)));
-            v_float64x2 v_fY1 = v_max(v_intmin, v_min(v_intmax, v_mul(v_muladd(v_M3, v_x1, v_Y0d), v_W)));
-            v_x1 = v_add(v_x1, v_2);
-
-            v_X3 = v_round(v_fX0, v_fX1);
-            v_Y3 = v_round(v_fY0, v_fY1);
-        }
+        #undef PROCESS_BLOCK
 
         // store alpha
         v_int32x4 v_alpha0 = v_add(v_shl<INTER_BITS>(v_and(v_Y0, v_itsi1)), v_and(v_X0, v_itsi1));
@@ -2651,12 +2617,15 @@ void WarpPerspectiveLine_Process_CV_SIMD(const double *M, short* xy, short* alph
         v_store_interleave(xy + x1 * 2 + 16, (v_reinterpret_as_s16)(v_X1), (v_reinterpret_as_s16)(v_Y1));
     }
 
+    // Scalar fallback for remaining pixels
     for( ; x1 < bw; x1++ )
     {
         double W = W0 + M[6]*x1;
-        W = W ? static_cast<double>(INTER_TAB_SIZE)/W : 0;
-        double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W));
-        double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W));
+        W = W ? 1./W : 0; // Pure float inversion
+        // Project then Scale
+        double fX = std::max((double)INT_MIN, std::min((double)INT_MAX, (X0 + M[0]*x1)*W * (double)INTER_TAB_SIZE));
+        double fY = std::max((double)INT_MIN, std::min((double)INT_MAX, (Y0 + M[3]*x1)*W * (double)INTER_TAB_SIZE));
+        
         int X = saturate_cast<int>(fX);
         int Y = saturate_cast<int>(fY);
 
