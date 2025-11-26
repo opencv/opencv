@@ -1117,7 +1117,9 @@ String tempfile( const char* suffix )
     }
 
     GUID g;
-    CoCreateGuid(&g);
+    HRESULT hr = CoCreateGuid(&g);
+    if (FAILED(hr))
+        return String();
     char guidStr[40];
     const char* mask = "%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
     sprintf(guidStr, mask,
