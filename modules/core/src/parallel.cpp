@@ -465,7 +465,7 @@ namespace {
 static inline int _initMaxThreads()
 {
     int maxThreads = omp_get_max_threads();
-    if (!utils::getConfigurationParameterBool("OPENCV_FOR_OPENMP_DYNAMIC_DISABLE", false))
+    if (!utils::getConfigurationParameterBool("OPENCV_FOR_OPENMP_DYNAMIC_DISABLE", true))
     {
         omp_set_dynamic(1);
     }
