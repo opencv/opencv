@@ -387,7 +387,7 @@ elseif(ARM OR AARCH64)
       ocv_update(CPU_NEON_FP16_FLAGS_ON "-march=armv8.2-a+fp16")
       ocv_update(CPU_NEON_BF16_FLAGS_ON "-march=armv8.2-a+bf16")
     endif()
-    set(CPU_DISPATCH "NEON_FP16;NEON_BF16;NEON_DOTPROD" CACHE STRING "${HELP_CPU_DISPATCH}")
+    set(CPU_DISPATCH "NEON_FP16;NEON_BF16;NEON_DOTPROD;SVE" CACHE STRING "${HELP_CPU_DISPATCH}")
     ocv_default_baseline_detect_and_check_dispatch()
   endif()
 
