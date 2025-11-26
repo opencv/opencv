@@ -427,6 +427,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
         g_hwFeatureNames[CPU_NEON_FP16] = "NEON_FP16";
         g_hwFeatureNames[CPU_NEON_BF16] = "NEON_BF16";
+        g_hwFeatureNames[CPU_SVE] = "SVE";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
