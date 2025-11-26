@@ -709,9 +709,9 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
         return true;
     }
     std::string str;
-    PyObject* path_obj = NULL;
 
 #if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    PyObject* path_obj = NULL;
     if (info.pathlike)
     {
         path_obj = PyOS_FSPath(obj);
@@ -723,11 +723,12 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
         obj = path_obj;
     }
 #endif
+
+    bool result = false;
     if (getUnicodeString(obj, str))
     {
         value = str;
-        Py_XDECREF(path_obj);
-        return true;
+        result = true;
     }
     else
     {
@@ -740,9 +741,13 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
                     obj->ob_type->tp_name, info.name);
 #endif
         }
-        Py_XDECREF(path_obj);
     }
-    return false;
+
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    Py_XDECREF(path_obj);
+#endif
+
+    return result;
 }
 
 template<>
