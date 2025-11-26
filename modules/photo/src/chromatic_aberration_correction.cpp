@@ -6,20 +6,6 @@
 
 namespace cv {
 
-void loadChromaticAberrationParams(const String& calibration_file,
-                                   OutputArray coeffMat,
-                                   Size& calib_size,
-                                   int& degree)
-{
-    FileStorage fs(calibration_file, FileStorage::READ);
-    if (!fs.isOpened()){
-        CV_Error_(Error::StsError,
-                  ("Cannot open calibration file: %s", calibration_file.c_str()));
-    }
-
-    loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree);
-}
-
 CV_EXPORTS_W void loadChromaticAberrationParams(const FileNode& fs,
                                                 OutputArray coeffMat,
                                                 Size& calib_size,
