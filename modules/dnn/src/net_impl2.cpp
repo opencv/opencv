@@ -1119,10 +1119,6 @@ std::ostream& Net::Impl::dump(std::ostream& strm)
     strm << "{\n";
     prindent(strm, indent);
     strm << "model_format: \"" << modelFormatToString(modelFormat) << "\",\n";
-    if (modelFormat == DNN_MODEL_ONNX) {
-        prindent(strm, indent);
-        strm << "onnx_opset: " << onnx_opset << ",\n";
-    }
     prindent(strm, indent);
     strm << "layout: \"" << layoutToString(originalLayout) << "\",\n";
     if (mainGraph) {
