@@ -565,7 +565,7 @@ enum SolvePnPMethod {
                               //!< Initial solution for non-planar "objectPoints" needs at least 6 points and uses the DLT algorithm. \n
                               //!< Initial solution for planar "objectPoints" needs at least 4 points and uses pose from homography decomposition.
     SOLVEPNP_EPNP        = 1, //!< EPnP: Efficient Perspective-n-Point Camera Pose Estimation @cite lepetit2009epnp
-    SOLVEPNP_P3P         = 2, //!< Complete Solution Classification for the Perspective-Three-Point Problem @cite gao2003complete
+    SOLVEPNP_P3P         = 2, //!< Revisiting the P3P Problem @cite ding2023revisiting
     SOLVEPNP_DLS         = 3, //!< **Broken implementation. Using this flag will fallback to EPnP.** \n
                               //!< A Direct Least-Squares (DLS) Method for PnP @cite hesch2011direct
     SOLVEPNP_UPNP        = 4, //!< **Broken implementation. Using this flag will fallback to EPnP.** \n
@@ -1059,7 +1059,8 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
        of the P3P problem, the last one is used to retain the best solution that minimizes the reprojection error).
    -   With @ref SOLVEPNP_ITERATIVE method and `useExtrinsicGuess=true`, the minimum number of points is 3 (3 points
        are sufficient to compute a pose but there are up to 4 solutions). The initial solution should be close to the
-       global solution to converge.
+       global solution to converge. The function returns true if some solution is found. User code is responsible for
+       solution quality assessment.
    -   With @ref SOLVEPNP_IPPE input points must be >= 4 and object points must be coplanar.
    -   With @ref SOLVEPNP_IPPE_SQUARE this is a special case suitable for marker pose estimation.
        Number of input points must be 4. Object points must be defined in the following order:
@@ -1154,8 +1155,8 @@ assumed.
 the model coordinate system to the camera coordinate system. A P3P problem has up to 4 solutions.
 @param tvecs Output translation vectors.
 @param flags Method for solving a P3P problem:
--   @ref SOLVEPNP_P3P Method is based on the paper of X.S. Gao, X.-R. Hou, J. Tang, H.-F. Chang
-"Complete Solution Classification for the Perspective-Three-Point Problem" (@cite gao2003complete).
+-   @ref SOLVEPNP_P3P Method is based on the paper of Ding, Y., Yang, J., Larsson, V., Olsson, C., & Åstrom, K.
+"Revisiting the P3P Problem" (@cite ding2023revisiting).
 -   @ref SOLVEPNP_AP3P Method is based on the paper of T. Ke and S. Roumeliotis.
 "An Efficient Algebraic Solution to the Perspective-Three-Point Problem" (@cite Ke17).
 
@@ -1385,7 +1386,7 @@ the board to make the detection more robust in various environments. Otherwise, 
 border and the background is dark, the outer black squares cannot be segmented properly and so the
 square grouping and ordering algorithm fails.
 
-Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the desired checkerboard pattern.
  */
 CV_EXPORTS_W bool findChessboardCorners( InputArray image, Size patternSize, OutputArray corners,
@@ -1444,7 +1445,7 @@ which are located on the outside of the board. The following figure illustrates
 a sample checkerboard optimized for the detection. However, any other checkerboard
 can be used as well.
 
-Use the `gen_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
+Use the `generate_pattern.py` Python script (@ref tutorial_camera_calibration_pattern)
 to create the corresponding checkerboard pattern:
 \image html pics/checkerboard_radon.png width=60%
  */
@@ -1549,7 +1550,7 @@ struct CV_EXPORTS_W_SIMPLE CirclesGridFinderParameters
     {
       SYMMETRIC_GRID, ASYMMETRIC_GRID
     };
-    GridType gridType;
+    CV_PROP_RW GridType gridType;
 
     CV_PROP_RW float squareSize; //!< Distance between two adjacent points. Used by CALIB_CB_CLUSTERING.
     CV_PROP_RW float maxRectifiedDistance; //!< Max deviation from prediction. Used by CALIB_CB_CLUSTERING.
@@ -3362,6 +3363,78 @@ CV_EXPORTS_W cv::Mat estimateAffinePartial2D(InputArray from, InputArray to, Out
                                   size_t maxIters = 2000, double confidence = 0.99,
                                   size_t refineIters = 10);
 
+/** @brief Computes a pure 2D translation between two 2D point sets.
+
+It computes
+\f[
+\begin{bmatrix}
+x\\
+y
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0\\
+0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+X\\
+Y
+\end{bmatrix}
++
+\begin{bmatrix}
+t_x\\
+t_y
+\end{bmatrix}.
+\f]
+
+@param from First input 2D point set containing \f$(X,Y)\f$.
+@param to Second input 2D point set containing \f$(x,y)\f$.
+@param inliers Output vector indicating which points are inliers (1-inlier, 0-outlier).
+@param method Robust method used to compute the transformation. The following methods are possible:
+-   @ref RANSAC - RANSAC-based robust method
+-   @ref LMEDS - Least-Median robust method
+RANSAC is the default method.
+@param ransacReprojThreshold Maximum reprojection error in the RANSAC algorithm to consider
+a point as an inlier. Applies only to RANSAC.
+@param maxIters The maximum number of robust method iterations.
+@param confidence Confidence level, between 0 and 1, for the estimated transformation. Anything
+between 0.95 and 0.99 is usually good enough. Values too close to 1 can slow down the estimation
+significantly. Values lower than 0.8–0.9 can result in an incorrectly estimated transformation.
+@param refineIters Maximum number of iterations of the refining algorithm. For pure translation
+the least-squares solution on inliers is closed-form, so passing 0 is recommended (no additional refine).
+
+@return A 2D translation vector \f$[t_x, t_y]^T\f$ as `cv::Vec2d`. If the translation could not be
+estimated, both components are set to NaN and, if @p inliers is provided, the mask is filled with zeros.
+
+\par Converting to a 2x3 transformation matrix:
+\f[
+\begin{bmatrix}
+1 & 0 & t_x\\
+0 & 1 & t_y
+\end{bmatrix}
+\f]
+
+@code{.cpp}
+cv::Vec2d t = cv::estimateTranslation2D(from, to, inliers);
+cv::Mat T = (cv::Mat_<double>(2,3) << 1,0,t[0], 0,1,t[1]);
+@endcode
+
+The function estimates a pure 2D translation between two 2D point sets using the selected robust
+algorithm. Inliers are determined by the reprojection error threshold.
+
+@note
+The RANSAC method can handle practically any ratio of outliers but needs a threshold to
+distinguish inliers from outliers. The method LMeDS does not need any threshold but works
+correctly only when there are more than 50% inliers.
+
+@sa estimateAffine2D, estimateAffinePartial2D, getAffineTransform
+*/
+CV_EXPORTS_W cv::Vec2d estimateTranslation2D(InputArray from, InputArray to, OutputArray inliers = noArray(),
+                                             int method = RANSAC,
+                                             double ransacReprojThreshold = 3,
+                                             size_t maxIters = 2000, double confidence = 0.99,
+                                             size_t refineIters = 0);
+
 /** @example samples/cpp/tutorial_code/features2D/Homography/decompose_homography.cpp
 An example program with homography decomposition.
 
@@ -3969,8 +4042,7 @@ CV_64FC2) (or vector\<Point2f\> ).
 CV_EXPORTS_W
 void undistortImagePoints(InputArray src, OutputArray dst, InputArray cameraMatrix,
                           InputArray distCoeffs,
-                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 5,
-                                                      0.01));
+                          TermCriteria = TermCriteria(TermCriteria::MAX_ITER, 5, 0.01));
 
 //! @} calib3d
 
@@ -4096,7 +4168,7 @@ namespace fisheye
     may additionally scale and shift the result by using a different matrix.
     @param new_size the new size
 
-    The function transforms an image to compensate radial and tangential lens distortion.
+    The function transforms an image to compensate radial lens distortion.
 
     The function is simply a combination of #fisheye::initUndistortRectifyMap (with unity R ) and #remap
     (with bilinear interpolation). See the former function for details of the transformation being
@@ -4259,7 +4331,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
                                   TermCriteria criteria = TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 100, DBL_EPSILON));
 
     /**
-    @brief Finds an object pose from 3D-2D point correspondences for fisheye camera moodel.
+    @brief Finds an object pose from 3D-2D point correspondences for fisheye camera model.
 
     @param objectPoints Array of object points in the object coordinate space, Nx3 1-channel or
     1xN/Nx1 3-channel, where N is the number of points. vector\<Point3d\> can also be passed here.
@@ -4275,7 +4347,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     vectors, respectively, and further optimizes them.
     @param flags Method for solving a PnP problem: see @ref calib3d_solvePnP_flags
     @param criteria Termination criteria for internal undistortPoints call.
-    The function interally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
+    The function internally undistorts points with @ref undistortPoints and call @ref cv::solvePnP,
     thus the input are very similar. More information about Perspective-n-Points is described in @ref calib3d_solvePnP
     for more information.
     */

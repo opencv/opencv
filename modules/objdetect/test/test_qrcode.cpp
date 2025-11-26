@@ -679,4 +679,40 @@ TEST(Objdetect_QRCode_detect, detect_regression_22892)
     EXPECT_EQ(corners.size(), 4U);
 }
 
+// See https://github.com/opencv/opencv/issues/27783
+TEST(Objdetect_QRCode_detect, detect_regression_27783)
+{
+    const std::string name_current_image = "9_qrcodes.jpg";
+    const std::string root = "qrcode/multiple/";
+
+    std::string image_path = findDataFile(root + name_current_image);
+    Mat src = imread(image_path);
+    ASSERT_FALSE(src.empty()) << "Can't read image: " << image_path;
+
+    std::vector<std::string> info;
+    std::vector<Point> corners;
+
+    {
+        // If default, we can decode 9 QRs.
+        QRCodeDetector qrcode;
+        EXPECT_TRUE(qrcode.detectAndDecodeMulti(src, info, corners));
+        ASSERT_EQ(info.size(), 9UL);
+        ASSERT_EQ(corners.size(), 36UL);
+    }
+
+    {
+        // If setEpsX is too small, we can decode no QRs.
+        QRCodeDetector qrcode;
+        qrcode.setEpsX(0.01);
+        EXPECT_FALSE(qrcode.detectAndDecodeMulti(src, info, corners));
+    }
+
+    {
+        // If setEpsY is too small, we can decode no QRs.
+        QRCodeDetector qrcode;
+        qrcode.setEpsY(0.01);
+        EXPECT_FALSE(qrcode.detectAndDecodeMulti(src, info, corners));
+    }
+}
+
 }} // namespace

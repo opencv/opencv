@@ -218,8 +218,14 @@ static bool halMorph(int op, int src_type, int dst_type,
                                anchor_x, anchor_y,
                                borderType, borderValue,
                                iterations, isSubmatrix, src_data == dst_data);
-    if (res != CV_HAL_ERROR_OK)
+    if (res == CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
         return false;
+    } else if (res != CV_HAL_ERROR_OK)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation morphInit ==> " CVAUX_STR(cv_hal_morphInit) " returned %d (0x%08x)", res, res));
+    }
 
     res = cv_hal_morph(ctx, src_data, src_step, dst_data, dst_step, width, height,
                        roi_width, roi_height,
@@ -227,10 +233,19 @@ static bool halMorph(int op, int src_type, int dst_type,
                        roi_width2, roi_height2,
                        roi_x2, roi_y2);
     bool success = (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation morph ==> " CVAUX_STR(cv_hal_morph) " returned %d (0x%08x)", res, res));
+    }
 
     res = cv_hal_morphFree(ctx);
-    if (res != CV_HAL_ERROR_OK)
-        return false;
+    success &= (res == CV_HAL_ERROR_OK);
+    if (res != CV_HAL_ERROR_OK && res != CV_HAL_ERROR_NOT_IMPLEMENTED )
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation morphFree ==> " CVAUX_STR(cv_hal_morphFree) " returned %d (0x%08x)", res, res));
+    }
 
     return success;
 }

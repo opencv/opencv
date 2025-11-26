@@ -23,6 +23,7 @@
 #include <zlib.h>
 
 #include "grfmt_spng.hpp"
+#include <opencv2/core/utils/logger.hpp>
 
 /*
  * libspng does not support RGB -> Gray conversion. In order to decode colorful images as grayscale
@@ -422,6 +423,48 @@ bool SPngDecoder::readData(Mat &img)
                         result = m_exif.parseExif((unsigned char *)exif_s.data, exif_s.length);
                     }
                 }
+
+                if (m_read_options)
+                {
+                    uint32_t text_count;
+
+                    // Retrieve all text chunks
+                    if (spng_get_text(png_ptr, NULL, &text_count) == SPNG_OK)
+                    {
+                        std::vector<spng_text> texts(text_count);
+                        spng_get_text(png_ptr, texts.data(), &text_count);
+
+                        for (size_t i = 0; i < text_count; ++i)
+                        {
+                            char* key = texts[i].keyword;
+                            char* value = texts[i].text;
+                            size_t len = texts[i].length;
+
+                            if (key && (!std::strcmp(key, "Raw profile type exif") || !std::strcmp(key, "Raw profile type APP1")))
+                            {
+                                m_exif.processRawProfile(value, len);
+                            }
+                            else if (key && !std::strcmp(key, "XML:com.adobe.xmp"))
+                            {
+                                auto& out = m_metadata[IMAGE_METADATA_XMP];
+                                out.insert(out.end(),
+                                    value,
+                                    value + len + 1); // include null terminator
+                            }
+                        }
+                    }
+
+                    // ICC Profile
+                    spng_iccp iccp_data;
+
+                    if (spng_get_iccp(png_ptr, &iccp_data) == SPNG_OK && iccp_data.profile_len > 0)
+                    {
+                        auto& out = m_metadata[IMAGE_METADATA_ICCP];
+                        out.insert(out.end(),
+                            iccp_data.profile,
+                            iccp_data.profile + iccp_data.profile_len);
+                    }
+                }
             }
         }
     }
@@ -435,6 +478,11 @@ SPngEncoder::SPngEncoder()
 {
     m_description = "Portable Network Graphics files (*.png)";
     m_buf_supported = true;
+    m_support_metadata.assign((size_t)IMAGE_METADATA_MAX + 1, false);
+    m_support_metadata[IMAGE_METADATA_EXIF] = true;
+    m_support_metadata[IMAGE_METADATA_XMP] = true;
+    m_support_metadata[IMAGE_METADATA_ICCP] = true;
+    m_supported_encode_key = {IMWRITE_PNG_COMPRESSION, IMWRITE_PNG_STRATEGY, IMWRITE_PNG_BILEVEL, IMWRITE_PNG_FILTER, IMWRITE_PNG_ZLIBBUFFER_SIZE};
 }
 
 SPngEncoder::~SPngEncoder()
@@ -487,26 +535,62 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
 
         for (size_t i = 0; i < params.size(); i += 2)
         {
+            const int value = params[i+1];
             if (params[i] == IMWRITE_PNG_COMPRESSION)
             {
                 compression_strategy = IMWRITE_PNG_STRATEGY_DEFAULT; // Default strategy
-                compression_level = params[i + 1];
-                compression_level = MIN(MAX(compression_level, 0), Z_BEST_COMPRESSION);
+                compression_level = MIN(MAX(value, 0), Z_BEST_COMPRESSION);
+                if(value != compression_level) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_COMPRESSION must be between 0 to 9. It is fallbacked to %d", value, compression_level));
+                }
                 set_compression_level = true;
             }
             if (params[i] == IMWRITE_PNG_STRATEGY)
             {
-                compression_strategy = params[i + 1];
-                compression_strategy = MIN(MAX(compression_strategy, 0), Z_FIXED);
+                switch(value) {
+                    case IMWRITE_PNG_STRATEGY_DEFAULT:
+                    case IMWRITE_PNG_STRATEGY_FILTERED:
+                    case IMWRITE_PNG_STRATEGY_HUFFMAN_ONLY:
+                    case IMWRITE_PNG_STRATEGY_RLE:
+                    case IMWRITE_PNG_STRATEGY_FIXED:
+                        compression_strategy = value;
+                        break;
+                    default:
+                        compression_strategy = IMWRITE_PNG_STRATEGY_RLE;
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_STRATEGY must be one of ImwritePNGFlags. It is fallbacked to IMWRITE_PNG_STRATEGY_RLE", value));
+                        break;
+                }
             }
             if (params[i] == IMWRITE_PNG_BILEVEL)
             {
-                isBilevel = params[i + 1] != 0;
+                isBilevel = value != 0;
+                if((value != 0) && (value != 1)) {
+                    CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_BILEVEL must be 0 or 1. It is fallbacked to 1", value ));
+                }
             }
             if( params[i] == IMWRITE_PNG_FILTER )
             {
-                filter = params[i+1];
+                switch(value) {
+                    case IMWRITE_PNG_FILTER_NONE:
+                    case IMWRITE_PNG_FILTER_SUB:
+                    case IMWRITE_PNG_FILTER_UP:
+                    case IMWRITE_PNG_FILTER_AVG:
+                    case IMWRITE_PNG_FILTER_PAETH:
+                    case IMWRITE_PNG_FAST_FILTERS:
+                    case IMWRITE_PNG_ALL_FILTERS:
+                        filter = value;
+                        break;
+                    default:
+                        filter = IMWRITE_PNG_FILTER_SUB;
+                        CV_LOG_WARNING(nullptr, cv::format("The value(%d) for IMWRITE_PNG_FILTER must be one of ImwritePNGFilterFlags. It is fallbacked to IMWRITE_PNG_FILTER_SUB", value ));
+                        break;
+                }
                 set_filter = true;
+            }
+            if( params[i] == IMWRITE_PNG_ZLIBBUFFER_SIZE )
+            {
+                // See https://libspng.org/docs/migrate-libpng/#miscellaneous-functions
+                CV_LOG_WARNING(nullptr, "libspng does not support png_set_compression_buffer_size() which is required for IMWRITE_PNG_ZLIBBUFFER_SIZE");
             }
         }
 
@@ -535,6 +619,37 @@ bool SPngEncoder::write(const Mat &img, const std::vector<int> &params)
                 spng_set_option(ctx, SPNG_FILTER_CHOICE, filter);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_LEVEL, compression_level);
             spng_set_option(ctx, SPNG_IMG_COMPRESSION_STRATEGY, compression_strategy);
+
+            if (!m_metadata.empty()) {
+                std::vector<uchar>& exif = m_metadata[IMAGE_METADATA_EXIF];
+                if (!exif.empty()) {
+                    spng_exif s_exif;
+                    s_exif.data = reinterpret_cast<char*>(exif.data());
+                    s_exif.length = exif.size();
+                    spng_set_exif(ctx, &s_exif);
+                }
+
+                std::vector<uchar>& xmp = m_metadata[IMAGE_METADATA_XMP];
+                if (!xmp.empty()) {
+                    spng_text text_chunk;
+                    strncpy(text_chunk.keyword, "XML:com.adobe.xmp", sizeof(text_chunk.keyword) - 1);
+                    text_chunk.keyword[sizeof(text_chunk.keyword) - 1] = '\0';
+                    text_chunk.type = SPNG_TEXT;
+                    text_chunk.text = reinterpret_cast<char*>(xmp.data());
+                    text_chunk.length = xmp.size();
+                    spng_set_text(ctx, &text_chunk, 1);
+                }
+
+                std::vector<uchar>& iccp = m_metadata[IMAGE_METADATA_ICCP];
+                if (!iccp.empty()) {
+                    spng_iccp s_iccp;
+                    strncpy(s_iccp.profile_name, "ICC Profile", sizeof(s_iccp.profile_name) - 1);
+                    s_iccp.profile_name[sizeof(s_iccp.profile_name) - 1] = '\0';
+                    s_iccp.profile_len = iccp.size();
+                    s_iccp.profile = reinterpret_cast<char*>(iccp.data());
+                    spng_set_iccp(ctx, &s_iccp);
+                }
+            }
 
             int ret;
             spng_encode_chunks(ctx);

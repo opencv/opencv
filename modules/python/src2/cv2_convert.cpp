@@ -267,10 +267,12 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
         const int sz2 = 4;       // Scalar has 4 elements.
         m = Mat::zeros(sz2, 1, CV_64F);
 
+        // Fill the Mat with array elements
+        bool filled = true;
         const char *base_ptr = PyArray_BYTES(oarr);
-        for(int i = 0; i < sz; i++ )
+        for(int i = 0; i < sz && filled; i++ )
         {
-            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i);
+            PyObject* oi = PyArray_GETITEM(oarr, base_ptr + step[0] * i); // new object
             if( PyInt_Check(oi) )
                 m.at<double>(i) = (double)PyInt_AsLong(oi);
             else if( PyFloat_Check(oi) )
@@ -279,10 +281,16 @@ bool pyopencv_to(PyObject* o, Mat& m, const ArgInfo& info)
             {
                 failmsg("%s has some non-numerical elements", info.name);
                 m.release();
-                return false;
+                filled = false;
             }
+
+            Py_DECREF(oi);
         }
-        return true;
+
+        if(needcopy)
+            Py_DECREF(o);
+
+        return filled;
     }
 
     // handle degenerate case
@@ -703,28 +711,29 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
     std::string str;
 
 #if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    PyObject* path_obj = NULL;
     if (info.pathlike)
     {
-        obj = PyOS_FSPath(obj);
+        path_obj = PyOS_FSPath(obj);
         if (PyErr_Occurred())
         {
             failmsg("Expected '%s' to be a str or path-like object", info.name);
             return false;
         }
+        obj = path_obj;
     }
 #endif
+
+    bool result = false;
     if (getUnicodeString(obj, str))
     {
         value = str;
-        return true;
+        result = true;
     }
     else
     {
-        // If error hasn't been already set by Python conversion functions
         if (!PyErr_Occurred())
         {
-            // Direct access to underlying slots of PyObjectType is not allowed
-            // when limited API is enabled
 #ifdef Py_LIMITED_API
             failmsg("Can't convert object to 'str' for '%s'", info.name);
 #else
@@ -733,7 +742,12 @@ bool pyopencv_to(PyObject* obj, String &value, const ArgInfo& info)
 #endif
         }
     }
-    return false;
+
+#if ((PY_VERSION_HEX >= 0x03060000) && !defined(Py_LIMITED_API)) || (Py_LIMITED_API >= 0x03060000)
+    Py_XDECREF(path_obj);
+#endif
+
+    return result;
 }
 
 template<>
