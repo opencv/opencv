@@ -1,0 +1,16 @@
+name: 4.x
+
+on:
+  push:
+    branches:
+      - 4.x
+  schedule:
+    - cron: '44 13 * * 6'
+
+jobs:
+  CodeQL:
+    uses: opencv/ci-gha-workflow/.github/workflows/OCV-CodeQL.yaml@main
+    with:
+      target_branch: '4.x'
+      workflow_branch: main
+
