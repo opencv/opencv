@@ -78,8 +78,9 @@ OUTPUT     = "corrected.png"
 BAYER      = -1
 SHOW       = True
 
-coeffMat, calibW, calibH, degree = cv.loadCalibrationResultFromFile(CALIB_FILE)
-corrected = cv.correctChromaticAberration(img, coeffMat, calibW, calibH, degree, BAYER)
+FileStorage fs(parsed_args.coeffs_file, FileStorage::READ);
+coeffMat, calib_size, degree = cv2.loadChromaticAberrationParams(fs.root())
+corrected = cv.correctChromaticAberration(img, coeffMat, calib_size, degree, BAYER)
 
 if SHOW:
     cv.namedWindow("Original",  cv.WINDOW_AUTOSIZE)

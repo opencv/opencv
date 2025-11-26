@@ -30,9 +30,9 @@ protected:
 
 TEST_F(ChromaticAberrationTest, LoadCalibAndCorrectImage)
 {
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(test_yaml_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
 
     ASSERT_FALSE(coeffMat.empty());
     ASSERT_EQ(coeffMat.type(), CV_32F);
@@ -83,9 +83,9 @@ TEST_F(ChromaticAberrationTest, YAMLContentsAsExpected)
 
 TEST_F(ChromaticAberrationTest, InvalidSingleChannel)
 {
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(test_yaml_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
 
     cv::Mat gray;
     cv::cvtColor(test_image, gray, cv::COLOR_BGR2GRAY);
@@ -96,9 +96,9 @@ TEST_F(ChromaticAberrationTest, InvalidSingleChannel)
 
 TEST_F(ChromaticAberrationTest, EmptyCoeffMat)
 {
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(test_yaml_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
 
     cv::Mat emptyCoeff;
     EXPECT_THROW(cv::correctChromaticAberration(test_image, emptyCoeff, corrected, calib_size, degree),
@@ -107,9 +107,10 @@ TEST_F(ChromaticAberrationTest, EmptyCoeffMat)
 
 TEST_F(ChromaticAberrationTest, MismatchedImageSize)
 {
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(test_yaml_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
+
     cv::Mat resized;
     cv::resize(test_image, resized, cv::Size(test_image.cols/2, test_image.rows/2));
     EXPECT_THROW(cv::correctChromaticAberration(resized, coeffMat, corrected, calib_size, degree),
@@ -118,9 +119,10 @@ TEST_F(ChromaticAberrationTest, MismatchedImageSize)
 
 TEST_F(ChromaticAberrationTest, WrongCoeffType)
 {
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(test_yaml_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
+
     cv::Mat wrongType;
     coeffMat.convertTo(wrongType, CV_64F);
     EXPECT_THROW(cv::correctChromaticAberration(test_image, wrongType, corrected, calib_size, degree),
@@ -129,9 +131,10 @@ TEST_F(ChromaticAberrationTest, WrongCoeffType)
 
 TEST_F(ChromaticAberrationTest, DegreeDoesNotMatchCoeffCols)
 {
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(test_yaml_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(test_yaml_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
+
     int wrongDegree = std::max(1, degree - 1);
     ASSERT_NE((wrongDegree + 1) * (wrongDegree + 2) / 2, coeffMat.cols);
     EXPECT_THROW(cv::correctChromaticAberration(test_image, coeffMat, corrected, calib_size, wrongDegree),

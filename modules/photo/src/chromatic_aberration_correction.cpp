@@ -6,24 +6,31 @@
 
 namespace cv {
 
-void loadCalibrationResultFromFile(const String& calibration_file,
+void loadChromaticAberrationParams(const String& calibration_file,
                                    OutputArray coeffMat,
                                    Size& calib_size,
-                                   int& degree) {
-    Mat tmp;
+                                   int& degree)
+{
     FileStorage fs(calibration_file, FileStorage::READ);
     if (!fs.isOpened()){
         CV_Error_(Error::StsError,
-                    ("Cannot open calibration file: %s", calibration_file.c_str()));
+                  ("Cannot open calibration file: %s", calibration_file.c_str()));
     }
 
+    loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree);
+}
+
+CV_EXPORTS_W void loadChromaticAberrationParams(const FileNode& fs,
+                                                OutputArray coeffMat,
+                                                Size& calib_size,
+                                                int& degree)
+{
     int imgW = 0, imgH = 0;
     fs["image_width"]  >> imgW;
     fs["image_height"] >> imgH;
-    if (imgW <= 0 || imgH <= 0) {
-        CV_Error(Error::StsBadArg,
-                    "image_width and image_height must be positive");
-    }
+
+    CV_Assert(imgW > 0 && imgH > 0);
+
     auto readChannel = [&](const char* key,
                             std::vector<double>& coeffs_x,
                            std::vector<double>& coeffs_y,
@@ -82,7 +89,7 @@ void loadCalibrationResultFromFile(const String& calibration_file,
 
     const int mterms = (int)red_x.size();
 
-    tmp.create(4, mterms, CV_32F);
+    Mat tmp(4, mterms, CV_32F);
 
     float* Bx = tmp.ptr<float>(0);
     float* By = tmp.ptr<float>(1);

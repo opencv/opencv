@@ -71,15 +71,23 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    FileStorage fs(calibPath, FileStorage::READ);
+    if (!fs.isOpened())
+    {
+        cerr << "ERROR: Could not load coeffients file: " << calibPath << endl;
+        return 1;
+    }
+
     try
     {
         Mat coeffMat;
-        Size calib_size = {-1, -1};
+        Size calibSize = {-1, -1};
         int degree = -1;
 
-        loadCalibrationResultFromFile(calibPath, coeffMat, calib_size, degree);
+        cv::loadChromaticAberrationParams(fs.root(), coeffMat, calibSize, degree);
+
         Mat corrected;
-        correctChromaticAberration(input, coeffMat, corrected, calib_size, degree, bayerPattern);
+        correctChromaticAberration(input, coeffMat, corrected, calibSize, degree, bayerPattern);
 
         namedWindow("Original", WINDOW_AUTOSIZE);
         namedWindow("Corrected", WINDOW_AUTOSIZE);

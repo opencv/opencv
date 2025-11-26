@@ -22,9 +22,9 @@ PERF_TEST(ChromaticAberration, CorrectChromaticAberration)
     int degree = -1;
     Size calib_size = {-1,-1};
 
-    ASSERT_NO_THROW({
-        cv::loadCalibrationResultFromFile(calib_file, coeffMat, calib_size, degree);
-    });
+    FileStorage fs(calib_file, FileStorage::READ);
+    ASSERT_TRUE(fs.isOpened());
+    ASSERT_NO_THROW(cv::loadChromaticAberrationParams(fs.root(), coeffMat, calib_size, degree));
 
     cv::Mat dst;
 

@@ -24,7 +24,9 @@ class ChromaticAberrationTest(NewOpenCVTests):
         self.assertFalse(self.test_image.size == 0, "Failed to load test image")
 
     def test_load_calib_and_correct_image(self):
-        coeffMat, calib_size, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        self.assertTrue(fs.isOpened())
+        coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
         self.assertIsInstance(coeffMat, np.ndarray)
         self.assertEqual(coeffMat.dtype, np.float32)
@@ -75,35 +77,46 @@ class ChromaticAberrationTest(NewOpenCVTests):
         fs.release()
 
     def test_invalid_single_channel(self):
-        coeffMat, calib_size, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        self.assertTrue(fs.isOpened())
+        coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
+
 
         gray = cv.cvtColor(self.test_image, cv.COLOR_BGR2GRAY)
         with self.assertRaises(cv.error):
             _ = cv.correctChromaticAberration(gray, coeffMat, calib_size, degree)
 
     def test_empty_coeff_mat(self):
-        _, calib_size, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        self.assertTrue(fs.isOpened())
+        _, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
         emptyCoeff = np.empty((0, 0), dtype=np.float32)
         with self.assertRaises(cv.error):
             _ = cv.correctChromaticAberration(self.test_image, emptyCoeff, calib_size, degree)
 
     def test_mismatched_image_size(self):
-        coeffMat, calib_size, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        self.assertTrue(fs.isOpened())
+        coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
         resized = cv.resize(self.test_image, (self.test_image.shape[1] // 2, self.test_image.shape[0] // 2))
         with self.assertRaises(cv.error):
             _ = cv.correctChromaticAberration(resized, coeffMat, calib_size, degree)
 
     def test_wrong_coeff_type(self):
-        coeffMat, calib_size, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        self.assertTrue(fs.isOpened())
+        coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
         wrongType = coeffMat.astype(np.float64)
         with self.assertRaises(cv.error):
             _ = cv.correctChromaticAberration(self.test_image, wrongType, calib_size, degree)
 
     def test_degree_does_not_match_coeff_cols(self):
-        coeffMat, calib_size, degree = cv.loadCalibrationResultFromFile(self.test_yaml_file)
+        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        self.assertTrue(fs.isOpened())
+        coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
         wrongDegree = max(1, degree - 1)
         self.assertNotEqual(wrongDegree, coeffMat.shape[1])

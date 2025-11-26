@@ -931,32 +931,31 @@ demosaicing when @p input_image has one channel; ignored otherwise.
 
 @returns Corrected BGR image.
 
-@sa loadCalibrationResultFromFile, demosaicing
+@sa loadChromaticAberrationParams, demosaicing
 */
 CV_EXPORTS_W void correctChromaticAberration(InputArray input_image, InputArray coefficients, OutputArray output_image,
                                              const Size& image_size, int calib_degree, int bayer_pattern = -1);
 
-/** @brief Load chromatic-aberration calibration parameters.
+/** @brief Load chromatic-aberration calibration parameters from opened FileStorage.
+ *
+ R e*ads the red and blue polynomial coefficients from the specified file and
+ packs them into a 4×N CV_32F matrix:
+ row 0 = blue dx coefficients
+ row 1 = blue dy coefficients
+ row 2 = red  dx coefficients
+ row 3 = red  dy coefficients
 
-Reads the red and blue polynomial coefficients from the specified file and
-packs them into a 4×N CV_32F matrix:
-  row 0 = blue dx coefficients
-  row 1 = blue dy coefficients
-  row 2 = red  dx coefficients
-  row 3 = red  dy coefficients
-
-@param calibration_file  Path to YAML calibration file.
-@param coeffMat          Output 4xN coefficient matrix (CV_32F).
-@param degree            Polynomial degree inferred from N.
-@param calib_size        Calibration image size read from file.
-@sa correctChromaticAberration
-*/
-CV_EXPORTS_W void loadCalibrationResultFromFile(
-    const String& calibration_file,
+ @param FileNode   Node of opened cv::FileStorage object.
+ @param coeffMat   Output 4xN coefficient matrix (CV_32F).
+ @param degree     Polynomial degree inferred from N.
+ @param calib_size Calibration image size read from file.
+ @sa correctChromaticAberration
+ */
+CV_EXPORTS_W void loadChromaticAberrationParams(
+    const FileNode& node,
     OutputArray coeffMat,
     CV_OUT Size& calib_size,
     CV_OUT int& degree);
-
 
 //! @} photo_ca_correction
 
