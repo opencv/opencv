@@ -1122,7 +1122,7 @@ String tempfile( const char* suffix )
         return String();
     char guidStr[40];
     const char* mask = "%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
-    sprintf(guidStr, mask,
+    snprintf(guidStr, sizeof(guidStr), mask,
             g.Data1, g.Data2, g.Data3, (unsigned int)g.Data4[0], (unsigned int)g.Data4[1],
             (unsigned int)g.Data4[2], (unsigned int)g.Data4[3], (unsigned int)g.Data4[4],
             (unsigned int)g.Data4[5], (unsigned int)g.Data4[6], (unsigned int)g.Data4[7]);
