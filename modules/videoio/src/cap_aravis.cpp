@@ -277,6 +277,7 @@ bool CvCaptureCAM_Aravis::open( int index )
             pixelFormat != ARV_PIXEL_FORMAT_MONO_16) {
             pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
             arv_camera_set_pixel_format(camera, pixelFormat, NULL);
+            targetGrey = 128;
         }
         
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
