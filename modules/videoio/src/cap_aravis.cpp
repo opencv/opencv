@@ -269,6 +269,16 @@ bool CvCaptureCAM_Aravis::open( int index )
 
         // get initial values
         pixelFormat = arv_camera_get_pixel_format(camera, NULL);
+        
+        // If camera's pixel format is not one of the supported formats, set a default
+        if (pixelFormat != ARV_PIXEL_FORMAT_MONO_8 &&
+            pixelFormat != ARV_PIXEL_FORMAT_BAYER_GR_8 &&
+            pixelFormat != ARV_PIXEL_FORMAT_MONO_12 &&
+            pixelFormat != ARV_PIXEL_FORMAT_MONO_16) {
+            pixelFormat = ARV_PIXEL_FORMAT_MONO_8;
+            arv_camera_set_pixel_format(camera, pixelFormat, NULL);
+        }
+        
         exposure = exposureAvailable ? arv_camera_get_exposure_time(camera, NULL) : 0;
         gain = gainAvailable ? arv_camera_get_gain(camera, NULL) : 0;
         fps = arv_camera_get_frame_rate(camera, NULL);
