@@ -17,10 +17,10 @@ jobs:
     with:
       workflow_branch: main
 
-  Ubuntu2004-ARM64:
+  Ubuntu2404-ARM64:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64.yaml@main
 
-  Ubuntu2004-ARM64-Debug:
+  Ubuntu2404-ARM64-Debug:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-ARM64-Debug.yaml@main
 
   Ubuntu2004-x64-OpenVINO:
