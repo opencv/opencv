@@ -353,8 +353,11 @@ if(X86 OR X86_64)
   endif()
 
 elseif(ARM OR AARCH64)
-
-  ocv_update(CPU_SVE_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sve.cpp")
+  if (UNIX AND NOT APPLE)
+    #Current Apple silicone M4 does not support SVE,
+    #but some Xcode versions reports their support.
+    ocv_update(CPU_SVE_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sve.cpp")
+  endif()
   ocv_update(CPU_NEON_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_neon.cpp")
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
   ocv_update(CPU_NEON_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_neon_fp16.cpp")
