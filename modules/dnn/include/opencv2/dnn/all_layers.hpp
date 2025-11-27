@@ -1485,6 +1485,11 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<AttentionLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS RotaryEmbeddingLayer : public Layer {
+     public:
+        static Ptr<RotaryEmbeddingLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS AttentionOnnxAiLayer : public Layer {
      public:
         static Ptr<AttentionOnnxAiLayer> create(const LayerParams &params);

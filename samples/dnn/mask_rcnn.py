@@ -1,3 +1,15 @@
+'''
+Mask R-CNN
+This is an example of using Mask R-CNN for object detection and instance segmentation.
+
+NOTE regarding OpenCV 5.0+:
+The default model configuration (.pbtxt) used in this sample relies on retrieving
+intermediate layers (e.g., 'detection_out_final'). OpenCV 5.0 introduces stricter
+graph optimization which may prune intermediate layers not explicitly registered as outputs.
+If you encounter an error such as "the number of requested and actual outputs must be the same",
+please note that the provided .pbtxt may need to be updated to explicitly declare
+'detection_out_final' as an output node.
+'''
 import cv2 as cv
 import argparse
 import numpy as np
@@ -91,6 +103,8 @@ while cv.waitKey(1) < 0:
     # Run a model
     net.setInput(blob)
 
+    # NOTE: In OpenCV 5.0, requesting 'detection_out_final' will fail if the .pbtxt
+    # does not register it as an output. See file header for details.
     boxes, masks = net.forward(['detection_out_final', 'detection_masks'])
 
     numClasses = masks.shape[1]
