@@ -72,24 +72,24 @@ static void rotate(
             float* out_imag = data_out + offset + dhalf;
 
             int d = 0;
-    // #if (CV_SIMD || CV_SIMD_SCALABLE)
-    //         const size_t w = VTraits<v_float32>::vlanes();
-    //         for (; d + w <= dhalf; d += w)
-    //         {
-    //             // Alignment requirement: if CV_STRONG_ALIGNMENT=1 then passed pointer must be aligned (sizeof(lane type) should be enough
-    //             // should be fullfilled by design
-    //             v_float32 vreal = vx_load(real + d);
-    //             v_float32 vimag = vx_load(imag + d);
-    //             v_float32 vsin  = vx_load(sin_cache_ptr + d);
-    //             v_float32 vcos  = vx_load(cos_cache_ptr + d);
+    #if (CV_SIMD || CV_SIMD_SCALABLE)
+            const size_t w = VTraits<v_float32>::vlanes();
+            for (; d + w <= dhalf; d += w)
+            {
+                // Alignment requirement: if CV_STRONG_ALIGNMENT=1 then passed pointer must be aligned (sizeof(lane type) should be enough
+                // should be fullfilled by design
+                v_float32 vreal = vx_load(real + d);
+                v_float32 vimag = vx_load(imag + d);
+                v_float32 vsin  = vx_load(sin_cache_ptr + d);
+                v_float32 vcos  = vx_load(cos_cache_ptr + d);
 
-    //             v_float32 vout_real = v_sub(v_mul(vcos, vreal), v_mul(vsin, vimag));
-    //             v_float32 vout_imag = v_add(v_mul(vsin, vreal), v_mul(vcos, vimag));
+                v_float32 vout_real = v_sub(v_mul(vcos, vreal), v_mul(vsin, vimag));
+                v_float32 vout_imag = v_add(v_mul(vsin, vreal), v_mul(vcos, vimag));
 
-    //             v_store(out_real + d, vout_real);
-    //             v_store(out_imag + d, vout_imag);
-    //         }
-    // #endif
+                v_store(out_real + d, vout_real);
+                v_store(out_imag + d, vout_imag);
+            }
+    #endif
             // scalar tail
             for (; d < dhalf; ++d)
             {
