@@ -626,7 +626,7 @@ BRISK_Impl::smoothedIntensity(const cv::Mat& image, const cv::Mat& integral, con
     ret_val = A * int(*ptr);
     ptr += dx + 1;
     ret_val += B * int(*ptr);
-    ptr += dy * imagecols + 1;
+    ptr += (dy + 1) * imagecols;
     ret_val += C * int(*ptr);
     ptr -= dx + 1;
     ret_val += D * int(*ptr);
