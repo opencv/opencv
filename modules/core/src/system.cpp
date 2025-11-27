@@ -1106,20 +1106,31 @@ String tempfile( const char* suffix )
         fname = String(aname);
     }
 #else
+    // Use GUID-based naming to avoid race condition with GetTempFileNameA
+    // See issue #19648
     char temp_dir2[MAX_PATH] = { 0 };
-    char temp_file[MAX_PATH] = { 0 };
 
     if (temp_dir.empty())
     {
         ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
         temp_dir = std::string(temp_dir2);
     }
-    if(0 == ::GetTempFileNameA(temp_dir.c_str(), "ocv", 0, temp_file))
+
+    GUID g;
+    HRESULT hr = CoCreateGuid(&g);
+    if (FAILED(hr))
         return String();
+    char guidStr[40];
+    const char* mask = "%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
+    snprintf(guidStr, sizeof(guidStr), mask,
+            g.Data1, g.Data2, g.Data3, (unsigned int)g.Data4[0], (unsigned int)g.Data4[1],
+            (unsigned int)g.Data4[2], (unsigned int)g.Data4[3], (unsigned int)g.Data4[4],
+            (unsigned int)g.Data4[5], (unsigned int)g.Data4[6], (unsigned int)g.Data4[7]);
 
-    DeleteFileA(temp_file);
-
-    fname = temp_file;
+    fname = temp_dir;
+    if (!fname.empty() && fname[fname.size()-1] != '\\' && fname[fname.size()-1] != '/')
+        fname += "\\";
+    fname = fname + "ocv" + guidStr;
 #endif
 # else
 #  ifdef __ANDROID__
