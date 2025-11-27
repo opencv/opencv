@@ -277,6 +277,9 @@ void MultiBandBlender::prepare(Rect dst_roi)
     else
 #endif
     {
+        dst_pyr_laplace_.clear();
+        dst_band_weights_.clear();
+
         dst_pyr_laplace_.resize(num_bands_ + 1);
         dst_pyr_laplace_[0] = dst_;
 
