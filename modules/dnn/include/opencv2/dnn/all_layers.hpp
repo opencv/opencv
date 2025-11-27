@@ -1544,6 +1544,13 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<TopK2Layer> create(const LayerParams &params);
     };
 
+
+    class CV_EXPORTS RMSNormLayer : public Layer
+    {
+    public:
+        static Ptr<RMSNormLayer> create(const LayerParams& params);
+    };
+
 //! @}
 //! @}
 CV__DNN_INLINE_NS_END
