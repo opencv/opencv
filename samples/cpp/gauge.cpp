@@ -1,7 +1,11 @@
 /**
   @file gauge.cpp
   @author Alessandro de Oliveira Faria (A.K.A. CABELO)
-  @brief EThis sample application processes an image frame of an analog gauge and extracts its reading using functions from the OpenCV* computer vision library. The workflow is divided into two stages: calibration and measurement. Questions and suggestions email to: Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
+  @brief This sample application processes an image frame of an analog gauge 
+  and extracts its reading using functions from the OpenCV* computer vision 
+  library. The workflow is divided into two stages: calibration and
+  measurement. Questions and suggestions email to:
+  Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
   @date Nov 26, 2025
 */
 
@@ -165,7 +169,7 @@ double get_current_value(Mat img,
     threshold(gray2, dst2, thresh, maxValue, THRESH_BINARY_INV);
 
     // For debugging: threshold image
-    imwrite("gauge-tempdst2.jpg", dst2);
+    //imwrite("gauge-tempdst2.jpg", dst2);
 
     // Detect lines
     vector<Vec4i> lines;
@@ -221,9 +225,9 @@ double get_current_value(Mat img,
     int x2 = final_line_list[0][2];
     int y2 = final_line_list[0][3];
 
-    // Draw the line on the original image for debugging. 
+    // Draw the line on the original image for debugging.
     line(img, Point(x1, y1), Point(x2, y2), Scalar(0, 255, 0), 2);
-    imwrite("gauge-lines-2.jpg", img);
+    //imwrite("gauge-lines-2.jpg", img);
 
     // Decide which point is furthest from the center.
     double dist_pt_0 = dist_2_pts(x, y, x1, y1);
@@ -238,10 +242,13 @@ double get_current_value(Mat img,
         y_angle = y - y2;
     }
 
-    // atan(y/x) in radianss
-    double res = std::atan(y_angle / x_angle);
-    res = res * 180.0 / CV_PI; // rad2deg
-
+    double res = 0;
+    // atan(y/x) in radians
+    if(x_angle != 0)
+    {	    
+        res = std::atan(y_angle / x_angle);
+        res = res * 180.0 / CV_PI; // rad2deg
+    }
     double final_angle = 0.0;
 
     if (x_angle > 0 && y_angle > 0) { // Quadrante I
