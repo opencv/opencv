@@ -12,7 +12,7 @@ namespace cv { namespace dnn {
 
 
 static void gather(
-    const uchar* data,  const size_t* pos_ids,
+    const uchar* data,  const int64_t* pos_ids,
     const int batch_size, const int seq_len, const int seq_len_max,
     const int dhalf, const int elem_size,
     uchar* out
@@ -26,7 +26,7 @@ static void gather(
         const int t = i % seq_len;
         const int b = i / seq_len;
 
-        size_t pos_id = pos_ids[b * seq_len + t];
+        int64_t pos_id = pos_ids[b * seq_len + t];
         if (pos_id >= seq_len_max)
         {
             outOfRangeIdx = true;
@@ -320,7 +320,7 @@ class RotaryEmbeddingLayerImpl CV_FINAL : public RotaryEmbeddingLayer   {
             for (int i = 0; i < 2; ++i)
             {
                 gather(
-                    caches[i]->ptr<uchar>(), position_ids.ptr<size_t>(),
+                    caches[i]->ptr<uchar>(), position_ids.ptr<int64_t>(),
                     batch_size, seq_len, seq_len_max,
                     dhalf, sizeof(float),
                     internals[i].ptr<uchar>()
