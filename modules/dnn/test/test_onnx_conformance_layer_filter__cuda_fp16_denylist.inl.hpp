@@ -73,6 +73,6 @@
 "test_attention_4d_gqa_scaled",
 "test_attention_4d_gqa_softcap",
 "test_attention_4d_scaled",
-"test_attention_4d_softcap"
+"test_attention_4d_softcap",
 "test_attention_4d_attn_mask_bool",
 "test_attention_4d_attn_mask_bool_4d",
