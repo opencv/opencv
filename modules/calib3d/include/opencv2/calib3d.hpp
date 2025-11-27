@@ -2351,16 +2351,13 @@ Additional information can be found on this [website](http://campar.in.tum.de/Ch
 \note
 A minimum of 2 motions with non parallel rotation axes are necessary to determine the hand-eye transformation.
 So at least 3 different poses are required, but it is strongly recommended to use many more poses.
-\note
--   **Python Usage:** The `method` parameter is the 7th argument. You must use keyword arguments
-    or provide `None` for the output arrays to ensure the method flag is correctly parsed.
-    Example: `cv2.calibrateHandEye(..., method=cv2.CALIB_HAND_EYE_PARK)`
 
  */
 CV_EXPORTS_W void calibrateHandEye( InputArrayOfArrays R_gripper2base, InputArrayOfArrays t_gripper2base,
                                     InputArrayOfArrays R_target2cam, InputArrayOfArrays t_target2cam,
                                     OutputArray R_cam2gripper, OutputArray t_cam2gripper,
                                     HandEyeCalibrationMethod method=CALIB_HAND_EYE_TSAI );
+
 /** @brief Computes Robot-World/Hand-Eye calibration: \f$_{}^{w}\textrm{T}_b\f$ and \f$_{}^{c}\textrm{T}_g\f$
 
 @param[in] R_world2cam Rotation part extracted from the homogeneous matrix that transforms a point
