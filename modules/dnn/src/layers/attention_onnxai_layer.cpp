@@ -151,26 +151,37 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         CV_CheckTrue(inputs[0].dims == inputs[1].dims &&
                      inputs[0].dims == inputs[2].dims,
                      "Query, key and value must have the same number of dimensions");
+        
         const int input_dims = inputs[0].dims;
+        CV_CheckTrue(
+            input_dims == 4 ||  q_num_heads > 0 && kv_num_heads > 0 && input_dims == 3,
+            "Input dimensions must be 4D or 3D (in the latter case, q_num_heads and kv_num_heads must be set)"
+        );
+
         const int batch_size = inputs[0][0];
         const int seq_len_q = inputs[0][input_dims - 2];
         const int seq_len_kv = inputs[1][input_dims - 2];
+
+        const int q_hn = input_dims == 4 ? 
+            inputs[0][1] : q_num_heads;
+        const int kv_hn =input_dims == 4 ? 
+            inputs[1][1] : kv_num_heads;
+
         CV_CheckTrue(inputs[2][input_dims - 2] == seq_len_kv,
                      "Key and query sequence lengths must be equal");
         const int nhq = input_dims == 4 ? inputs[0][1] : q_num_heads;
 
-        CV_CheckTrue(q_num_heads % kv_num_heads == 0,
+        CV_CheckTrue(q_hn % kv_hn == 0,
                      "q_num_heads must be divisible by kv_num_heads");
-
 
         if (input_dims == 3)
         {
-            CV_CheckTrue(kv_num_heads > 0,
+            CV_CheckTrue(kv_hn > 0,
                          "For 3D input, kv_num_heads must be greater than 0 (this normally means that kv_num_heads is not set)");
-            CV_CheckTrue(q_num_heads > 0,
+            CV_CheckTrue(q_hn > 0,
                          "For 3D input, q_num_heads must be greater than 0 (this normally means that q_num_heads is not set)");
 
-            int v_head_size = inputs[2][2] / kv_num_heads;
+            int v_head_size = inputs[2][2] / kv_hn;
             MatShape output_shape{batch_size, seq_len_q, v_head_size * q_num_heads};
             outputs.push_back(output_shape);
         }
