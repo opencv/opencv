@@ -96,8 +96,8 @@ static GaugeCalibration calibrate_gauge(string filename) {
     circle(img, Point(x, y), r, Scalar(0, 0, 255), 3, LINE_AA);
     circle(img, Point(x, y), 2, Scalar(0, 255, 0), 3, LINE_AA);
 
-    // Gneration of calibration lines
-    double separation = 10.0; // em graus
+    // Generation of calibration lines.
+    double separation = 10.0; // in degrees
     int interval = static_cast<int>(360.0 / separation);
 
     vector<Point2f> p1(interval);
@@ -118,12 +118,12 @@ static GaugeCalibration calibrate_gauge(string filename) {
         p2[i].x = x + r * std::cos(angle_rad);
         p2[i].y = y + r * std::sin(angle_rad);
 
-        double text_angle_rad = separation * (i + 9) * CV_PI / 180.0; // i+9 = rotaciona 90°
+        double text_angle_rad = separation * (i + 9) * CV_PI / 180.0; // i+9 = rotate 90°
         p_text[i].x = x - text_offset_x + 1.2 * r * std::cos(text_angle_rad);
         p_text[i].y = y + text_offset_y + 1.2 * r * std::sin(text_angle_rad);
     }
 
-    // Desenha linhas e textos
+    // Draws lines and text.
     for (int i = 0; i < interval; ++i) {
         line(img,
              Point(static_cast<int>(p1[i].x), static_cast<int>(p1[i].y)),
