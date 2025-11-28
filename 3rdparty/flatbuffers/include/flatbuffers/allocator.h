@@ -28,21 +28,21 @@ class Allocator {
   virtual ~Allocator() {}
 
   // Allocate `size` bytes of memory.
-  virtual uint8_t *allocate(size_t size) = 0;
+  virtual uint8_t* allocate(size_t size) = 0;
 
   // Deallocate `size` bytes of memory at `p` allocated by this allocator.
-  virtual void deallocate(uint8_t *p, size_t size) = 0;
+  virtual void deallocate(uint8_t* p, size_t size) = 0;
 
   // Reallocate `new_size` bytes of memory, replacing the old region of size
   // `old_size` at `p`. In contrast to a normal realloc, this grows downwards,
   // and is intended specifcally for `vector_downward` use.
   // `in_use_back` and `in_use_front` indicate how much of `old_size` is
   // actually in use at each end, and needs to be copied.
-  virtual uint8_t *reallocate_downward(uint8_t *old_p, size_t old_size,
+  virtual uint8_t* reallocate_downward(uint8_t* old_p, size_t old_size,
                                        size_t new_size, size_t in_use_back,
                                        size_t in_use_front) {
     FLATBUFFERS_ASSERT(new_size > old_size);  // vector_downward only grows
-    uint8_t *new_p = allocate(new_size);
+    uint8_t* new_p = allocate(new_size);
     memcpy_downward(old_p, old_size, new_p, new_size, in_use_back,
                     in_use_front);
     deallocate(old_p, old_size);
@@ -54,7 +54,7 @@ class Allocator {
   // to `new_p` of `new_size`. Only memory of size `in_use_front` and
   // `in_use_back` will be copied from the front and back of the old memory
   // allocation.
-  void memcpy_downward(uint8_t *old_p, size_t old_size, uint8_t *new_p,
+  void memcpy_downward(uint8_t* old_p, size_t old_size, uint8_t* new_p,
                        size_t new_size, size_t in_use_back,
                        size_t in_use_front) {
     memcpy(new_p + new_size - in_use_back, old_p + old_size - in_use_back,
