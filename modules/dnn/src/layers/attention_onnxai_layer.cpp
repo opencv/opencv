@@ -151,7 +151,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         CV_CheckTrue(inputs[0].dims == inputs[1].dims &&
                      inputs[0].dims == inputs[2].dims,
                      "Query, key and value must have the same number of dimensions");
-        
+
         const int input_dims = inputs[0].dims;
         CV_CheckTrue(
             input_dims == 4 ||  (q_num_heads > 0 && kv_num_heads > 0 && input_dims == 3),
@@ -162,9 +162,9 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const int seq_len_q = inputs[0][input_dims - 2];
         const int seq_len_kv = inputs[1][input_dims - 2];
 
-        const int q_hn = input_dims == 4 ? 
+        const int q_hn = input_dims == 4 ?
             inputs[0][1] : q_num_heads;
-        const int kv_hn =input_dims == 4 ? 
+        const int kv_hn =input_dims == 4 ?
             inputs[1][1] : kv_num_heads;
 
         CV_CheckTrue(inputs[2][input_dims - 2] == seq_len_kv,
