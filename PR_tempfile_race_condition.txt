@@ -1,0 +1,42 @@
+PR Title: Fix tempfile race condition on Windows
+
+Branch: fix/tempfile-race-condition-19648
+Issue: #19648
+
+===== DESCRIPTION =====
+
+Summary
+Fixes race condition in cv::tempfile() on Windows where multiple processes could receive the same temporary filename.
+
+Problem
+The previous implementation used GetTempFileNameA() followed by immediate DeleteFileA(), creating a race condition window where multiple OpenCV processes running simultaneously could get the same filename, causing collisions.
+
+Root Cause
+The function called GetTempFileNameA() to generate a temp filename, immediately deleted the file to free the name, then returned the filename string. Between deletion and return, another process could call GetTempFileNameA() and receive the same filename.
+
+Solution
+Replaced GetTempFileNameA() with GUID-based filename generation using CoCreateGuid(), following the same approach already used in GetTempFileNameWinRT() and Microsoft's recommendations for scenarios requiring many temp files.
+
+Changes
+modules/core/src/system.cpp lines 1110-1124:
+- Removed GetTempFileNameA() and DeleteFileA() calls
+- Added CoCreateGuid() to generate unique GUID-based filenames
+- Format: "ocv{GUID}" where GUID ensures uniqueness across processes
+
+Benefits
+- Eliminates race condition in multi-process scenarios
+- No file I/O overhead from creating and deleting placeholder files
+- Consistent with WinRT implementation approach
+- Follows Microsoft best practices
+
+Testing
+Standard OpenCV test suite. The change only affects Windows temp file naming and maintains the same String return type and usage pattern.
+
+Pull Request Readiness Checklist
+- I agree to contribute to the project under Apache 2 License
+- To the best of my knowledge, the proposed patch is not based on code under GPL or another license incompatible with OpenCV
+- The PR is proposed to the proper branch (4.x)
+- There is a reference to the original bug report and related work (#19648)
+- The code follows existing patterns in the same file (GetTempFileNameWinRT)
+- Windows-specific fix, existing tests cover temp file functionality
+- Changes are isolated to Windows-specific code path

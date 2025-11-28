@@ -1,0 +1,60 @@
+PR Title: Fix LINE_4/LINE_8 swapped behavior in drawing functions
+
+Branch: fix/drawcontours-line-type-swap-26413
+Issue: #26413
+
+===== DESCRIPTION =====
+
+Summary
+Fixes swapped LINE_4 and LINE_8 connectivity behavior in drawContours(), polylines(), and related drawing functions.
+
+Problem
+When using cv::drawContours() and related functions:
+- LINE_4 (4-connected) produced 8-connected lines
+- LINE_8 (8-connected) produced 4-connected lines
+
+This affected all drawing functions using ThickLine() internally.
+
+Root Cause
+In modules/imgproc/src/drawing.cpp line 1670, incorrect routing condition:
+
+if( line_type == 1 || line_type == 4 || shift == 0 )
+    Line( img, p0, p1, color, line_type );
+else
+    Line2( img, p0, p1, color );
+
+This caused:
+- LINE_4 (value 4) matched condition and was routed to Line() which implemented 8-connectivity behavior
+- LINE_8 (value 8) fell through to Line2() which implements 4-connectivity
+
+Solution
+Changed condition from line_type == 4 to line_type == 8:
+
+if( line_type == 1 || line_type == 8 || shift == 0 )
+    Line( img, p0, p1, color, line_type );
+else
+    Line2( img, p0, p1, color );
+
+Now:
+- LINE_8 (value 8) correctly calls Line() with 8-connectivity
+- LINE_4 (value 4) correctly calls Line2() with 4-connectivity
+
+Changes
+modules/imgproc/src/drawing.cpp line 1670: Changed line_type == 4 to line_type == 8
+
+Impact
+- LINE_4 now correctly produces 4-connected lines (horizontal/vertical steps only)
+- LINE_8 now correctly produces 8-connected lines (including diagonals)
+- Matches documented LineTypes enum behavior and user expectations
+
+Testing
+Verified with test code from issue #26413 showing convex hull drawing with different line types produces correct connectivity.
+
+Pull Request Readiness Checklist
+- I agree to contribute to the project under Apache 2 License
+- To the best of my knowledge, the proposed patch is not based on code under GPL or another license incompatible with OpenCV
+- The PR is proposed to the proper branch (4.x)
+- There is a reference to the original bug report (#26413)
+- The fix is minimal (1 character change) and corrects long-standing incorrect behavior
+- Existing drawing tests cover this functionality
+- The change affects all thin-line drawing primitives using ThickLine()
