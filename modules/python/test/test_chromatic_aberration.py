@@ -24,7 +24,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
         self.assertFalse(self.test_image.size == 0, "Failed to load test image")
 
     def test_load_calib_and_correct_image(self):
-        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
         coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
@@ -77,7 +77,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
         fs.release()
 
     def test_invalid_single_channel(self):
-        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
         coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
@@ -87,7 +87,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
             _ = cv.correctChromaticAberration(gray, coeffMat, calib_size, degree)
 
     def test_empty_coeff_mat(self):
-        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
         _, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
@@ -96,7 +96,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
             _ = cv.correctChromaticAberration(self.test_image, emptyCoeff, calib_size, degree)
 
     def test_mismatched_image_size(self):
-        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
         coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
@@ -105,7 +105,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
             _ = cv.correctChromaticAberration(resized, coeffMat, calib_size, degree)
 
     def test_wrong_coeff_type(self):
-        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
         coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
@@ -114,7 +114,7 @@ class ChromaticAberrationTest(NewOpenCVTests):
             _ = cv.correctChromaticAberration(self.test_image, wrongType, calib_size, degree)
 
     def test_degree_does_not_match_coeff_cols(self):
-        FileStorage fs(self.test_yaml_file, FileStorage::READ);
+        fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
         self.assertTrue(fs.isOpened())
         coeffMat, calib_size, degree = cv.loadChromaticAberrationParams(fs.root())
 
