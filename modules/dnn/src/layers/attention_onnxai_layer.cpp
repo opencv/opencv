@@ -154,7 +154,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         
         const int input_dims = inputs[0].dims;
         CV_CheckTrue(
-            input_dims == 4 ||  q_num_heads > 0 && kv_num_heads > 0 && input_dims == 3,
+            input_dims == 4 ||  (q_num_heads > 0 && kv_num_heads > 0 && input_dims == 3),
             "Input dimensions must be 4D or 3D (in the latter case, q_num_heads and kv_num_heads must be set)"
         );
 
