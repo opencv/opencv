@@ -39,9 +39,7 @@ CV_EXPORTS_W void loadChromaticAberrationParams(const FileNode& fs,
                         ("%s: coeffs_x (%zu) vs coeffs_y (%zu)",
                         key, coeffs_x.size(), coeffs_y.size()));
 
-        Mat cx(1, (int)coeffs_x.size(), CV_64F, (void*)coeffs_x.data());
-        Mat cy(1, (int)coeffs_y.size(), CV_64F, (void*)coeffs_y.data());
-        if (!checkRange(cx, true) || !checkRange(cy, true))
+        if (!checkRange(coeffs_x, true) || !checkRange(coeffs_y, true))
             CV_Error_(Error::StsBadArg,
                       ("%s: coefficient array contains NaN/Inf", key));
         size_t m = coeffs_x.size();
