@@ -30,7 +30,7 @@ struct GaugeCalibration {
     int r;
 };
 
-Vec3f avg_circles(const vector<Vec3f> &circles) {
+static Vec3f avg_circles(const vector<Vec3f> &circles) {
     double avg_x = 0.0;
     double avg_y = 0.0;
     double avg_r = 0.0;
@@ -51,13 +51,13 @@ Vec3f avg_circles(const vector<Vec3f> &circles) {
                  static_cast<float>(avg_r));
 }
 
-double dist_2_pts(double x1, double y1, double x2, double y2) {
+static double dist_2_pts(double x1, double y1, double x2, double y2) {
     double dx = x2 - x1;
     double dy = y2 - y1;
     return std::sqrt(dx * dx + dy * dy);
 }
 
-GaugeCalibration calibrate_gauge(string filename) {
+static GaugeCalibration calibrate_gauge(string filename) {
     GaugeCalibration cal;
     Mat img = imread(filename);
     if (img.empty()) {
@@ -66,7 +66,6 @@ GaugeCalibration calibrate_gauge(string filename) {
     }
 
     int height = img.rows;
-    int width  = img.cols;
 
     Mat gray;
     cvtColor(img, gray, COLOR_BGR2GRAY);
@@ -158,7 +157,7 @@ GaugeCalibration calibrate_gauge(string filename) {
     return cal;
 }
 
-double get_current_value(Mat img,
+static double get_current_value(Mat img,
                          const GaugeCalibration &cal) {
     Mat gray2;
     cvtColor(img, gray2, COLOR_BGR2GRAY);
