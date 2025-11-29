@@ -2861,6 +2861,7 @@ static void warpPerspective(int src_type,
     }
 
     if (interpolation == INTER_LINEAR) {
+#if !defined(__riscv)
         switch (src_type) {
             case CV_8UC1: {
                 if (hint == cv::ALGO_HINT_APPROX) {
@@ -2915,6 +2916,7 @@ static void warpPerspective(int src_type,
             }
             // no default
         }
+#endif
     }
 
     Mat src(Size(src_width, src_height), src_type, const_cast<uchar*>(src_data), src_step);
