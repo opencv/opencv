@@ -1476,68 +1476,73 @@ void cv::remap( InputArray _src, OutputArray _dst,
     }
 
     if (interpolation == INTER_LINEAR) {
-        if (map1.depth() == CV_32F) {
-            const auto *src_data = src.ptr<const uint8_t>();
-            auto *dst_data = dst.ptr<uint8_t>();
-            size_t src_step = src.step, dst_step = dst.step,
-                   map1_step = map1.step, map2_step = map2.step;
-            int src_rows = src.rows, src_cols = src.cols;
-            int dst_rows = dst.rows, dst_cols = dst.cols;
-            const float *map1_data = map1.ptr<const float>();
-            const float *map2_data = map2.ptr<const float>();
-            switch (src.type()) {
-                case CV_8UC1: {
-                    if (hint == cv::ALGO_HINT_APPROX) {
-                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    } else {
-                        CV_CPU_DISPATCH(remapLinearInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+            if (map1.depth() == CV_32F) {
+                const auto *src_data = src.ptr<const uint8_t>();
+                auto *dst_data = dst.ptr<uint8_t>();
+                size_t src_step = src.step, dst_step = dst.step,
+                    map1_step = map1.step, map2_step = map2.step;
+                int src_rows = src.rows, src_cols = src.cols;
+                int dst_rows = dst.rows, dst_cols = dst.cols;
+                const float *map1_data = map1.ptr<const float>();
+                const float *map2_data = map2.ptr<const float>();
+
+    
+                // because they use fixed-point arithmetic while 5.x uses floating-point.
+    #if !defined(__riscv)
+                switch (src.type()) {
+                    case CV_8UC1: {
+                        if (hint == cv::ALGO_HINT_APPROX) {
+                            CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        } else {
+                            CV_CPU_DISPATCH(remapLinearInvoker_8UC1, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        }
+                        break;
                     }
-                    break;
-                }
-                case CV_8UC3: {
-                    if (hint == cv::ALGO_HINT_APPROX) {
-                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    } else {
-                        CV_CPU_DISPATCH(remapLinearInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    case CV_8UC3: {
+                        if (hint == cv::ALGO_HINT_APPROX) {
+                            CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        } else {
+                            CV_CPU_DISPATCH(remapLinearInvoker_8UC3, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        }
+                        break;
                     }
-                    break;
-                }
-                case CV_8UC4: {
-                    if (hint == cv::ALGO_HINT_APPROX) {
-                        CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    } else {
-                        CV_CPU_DISPATCH(remapLinearInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                    case CV_8UC4: {
+                        if (hint == cv::ALGO_HINT_APPROX) {
+                            CV_CPU_DISPATCH(remapLinearApproxInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        } else {
+                            CV_CPU_DISPATCH(remapLinearInvoker_8UC4, (src_data, src_step, src_rows, src_cols, dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        }
+                        break;
                     }
-                    break;
+                    case CV_16UC1: {
+                        CV_CPU_DISPATCH(remapLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        break;
+                    }
+                    case CV_16UC3: {
+                        CV_CPU_DISPATCH(remapLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        break;
+                    }
+                    case CV_16UC4: {
+                        CV_CPU_DISPATCH(remapLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        break;
+                    }
+                    case CV_32FC1: {
+                        CV_CPU_DISPATCH(remapLinearInvoker_32FC1, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        break;
+                    }
+                    case CV_32FC3: {
+                        CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        break;
+                    }
+                    case CV_32FC4: {
+                        CV_CPU_DISPATCH(remapLinearInvoker_32FC4, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
+                        break;
+                    }
+                    // no default
                 }
-                case CV_16UC1: {
-                    CV_CPU_DISPATCH(remapLinearInvoker_16UC1, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    break;
-                }
-                case CV_16UC3: {
-                    CV_CPU_DISPATCH(remapLinearInvoker_16UC3, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    break;
-                }
-                case CV_16UC4: {
-                    CV_CPU_DISPATCH(remapLinearInvoker_16UC4, ((const uint16_t*)src_data, src_step, src_rows, src_cols, (uint16_t*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    break;
-                }
-                case CV_32FC1: {
-                    CV_CPU_DISPATCH(remapLinearInvoker_32FC1, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    break;
-                }
-                case CV_32FC3: {
-                    CV_CPU_DISPATCH(remapLinearInvoker_32FC3, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    break;
-                }
-                case CV_32FC4: {
-                    CV_CPU_DISPATCH(remapLinearInvoker_32FC4, ((const float*)src_data, src_step, src_rows, src_cols, (float*)dst_data, dst_step, dst_rows, dst_cols, borderType, borderValue.val, map1_data, map1_step, map2_data, map2_step, hasRelativeFlag), CV_CPU_DISPATCH_MODES_ALL);
-                    break;
-                }
-                // no default
+    #endif // !defined(__riscv)
             }
         }
-    }
 
     RemapNNFunc nnfunc = 0;
     RemapFunc ifunc = 0;
