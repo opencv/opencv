@@ -1222,6 +1222,7 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
             saturate_cast<uint8_t>(border_value[2]),
             saturate_cast<uint8_t>(border_value[3]),
         };
+        // ... (standard setup code) ...
         int border_type_x = border_type != BORDER_CONSTANT &&
                             border_type != BORDER_TRANSPARENT &&
                             srccols <= 1 ? BORDER_REPLICATE : border_type;
@@ -1229,11 +1230,10 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX for 27281: Disable SIMD on RISC-V to use scalar fallback
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
-        // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
 
         std::array<float, max_vlanes_32> start_indices;
@@ -1262,10 +1262,9 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX for 27281
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
-                // [TODO] apply halide trick
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(NEAREST, C1);
                 if (v_reduce_min(inner_mask) != 0) {
                     CV_WARP_VECTOR_SHUFFLE_ALLWITHIN(NEAREST, C1, 8U);
@@ -1275,7 +1274,7 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
                 CV_WARP_VECTOR_INTER_LOAD(NEAREST, C1, 8U, 16U);
                 CV_WARP_VECTOR_INTER_STORE(NEAREST, C1, 16U, 8U);
             }
-#endif // (CV_SIMD || CV_SIMD_SCALABLE)
+#endif
 
             for (; x < dstcols; x++) {
                 float w = x*M[6] + y*M[7] + M[8];
@@ -1316,7 +1315,7 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1353,7 +1352,7 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1407,7 +1406,7 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1445,7 +1444,7 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             // CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             v_float32 dst_x0 = vx_load(start_indices.data());
             v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
@@ -1513,7 +1512,7 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1546,7 +1545,7 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1600,7 +1599,7 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1637,7 +1636,7 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1691,7 +1690,7 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1729,7 +1728,7 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1790,7 +1789,7 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1824,7 +1823,7 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1878,7 +1877,7 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1918,7 +1917,7 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1972,7 +1971,7 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2014,7 +2013,7 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2081,7 +2080,7 @@ void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2116,7 +2115,7 @@ void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2185,7 +2184,7 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2224,7 +2223,7 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2293,7 +2292,7 @@ void remapNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2333,7 +2332,7 @@ void remapNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2409,7 +2408,7 @@ void remapNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int sr
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2444,7 +2443,7 @@ void remapNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int sr
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2513,7 +2512,7 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2552,7 +2551,7 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2621,7 +2620,7 @@ void remapNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int sr
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2661,7 +2660,7 @@ void remapNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int sr
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2737,7 +2736,7 @@ void remapNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2773,7 +2772,7 @@ void remapNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2842,7 +2841,7 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2884,7 +2883,7 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2953,7 +2952,7 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2997,7 +2996,7 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3069,7 +3068,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3105,7 +3104,7 @@ void warpAffineLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int 
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3177,7 +3176,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -3221,7 +3220,7 @@ void warpAffineLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int 
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3296,7 +3295,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -3336,7 +3335,7 @@ void warpAffineLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int 
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
 
             for (; x <= dstcols - uf; x += uf) {
@@ -3409,7 +3408,7 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3442,7 +3441,7 @@ void warpAffineLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, in
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3501,7 +3500,7 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3538,7 +3537,7 @@ void warpAffineLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, in
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3597,7 +3596,7 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3635,7 +3634,7 @@ void warpAffineLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, in
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3705,7 +3704,7 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3739,7 +3738,7 @@ void warpAffineLinearInvoker_32FC1(const float *src_data, size_t src_step, int s
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3796,7 +3795,7 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3836,7 +3835,7 @@ void warpAffineLinearInvoker_32FC3(const float *src_data, size_t src_step, int s
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -3893,7 +3892,7 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -3935,7 +3934,7 @@ void warpAffineLinearInvoker_32FC4(const float *src_data, size_t src_step, int s
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPAFFINE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4319,11 +4318,10 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX for 27281: Disable RVV vector path
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
-        // unrolling_factor = lane_size / 16 = vlanes_32 * 32 / 16 = vlanes_32 * 2
         int uf = vlanes_32 * 2;
 
         std::array<float, max_vlanes_32> start_indices;
@@ -4355,10 +4353,9 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX for 27281
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
-                // [TODO] apply halide trick
                 CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD2(LINEAR, C1);
     #if defined(CV_NEON_AARCH64) && CV_NEON_AARCH64
                 uint8x8_t p00g, p01g, p10g, p11g;
@@ -4384,7 +4381,7 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
                 CV_WARP_LINEAR_VECTOR_INTER_CALC_F32(C1);
                 CV_WARP_LINEAR_VECTOR_INTER_STORE_F32U8(C1);
             }
-#endif // (CV_SIMD || CV_SIMD_SCALABLE)
+#endif
 
             for (; x < dstcols; x++) {
                 float w = x*M[6] + y*M[7] + M[8];
@@ -4428,7 +4425,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -4472,7 +4469,7 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4547,7 +4544,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -4587,7 +4584,7 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4658,7 +4655,7 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4691,7 +4688,7 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4750,7 +4747,7 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4787,7 +4784,7 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4848,7 +4845,7 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4886,7 +4883,7 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4957,7 +4954,7 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4991,7 +4988,7 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5049,7 +5046,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -5089,7 +5086,7 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5149,7 +5146,7 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -5191,7 +5188,7 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5576,7 +5573,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -5614,7 +5611,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5702,7 +5699,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -5748,7 +5745,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5838,7 +5835,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -5880,7 +5877,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5966,7 +5963,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6001,7 +5998,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6075,7 +6072,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6114,7 +6111,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6188,7 +6185,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6228,7 +6225,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6314,7 +6311,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6350,7 +6347,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6423,7 +6420,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6465,7 +6462,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6538,7 +6535,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6582,7 +6579,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv)
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
