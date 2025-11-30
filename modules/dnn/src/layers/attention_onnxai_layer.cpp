@@ -32,7 +32,7 @@ static void mask_bias(
             weights_data[i] = (is_causal && k_pos > q_pos) ?
                             min_val : weights_data[i] + mask_data[i];
         }
-    }; 
+    };
     parallel_for_(Range(0, total), fn, total * (1 / 1024.0));
 }
 
