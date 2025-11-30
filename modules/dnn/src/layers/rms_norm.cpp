@@ -53,6 +53,7 @@ public:
         }
 
         outputs.assign(1, inputs[0]);
+        return true;
     }
 
     void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
