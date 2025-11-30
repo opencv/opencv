@@ -1477,6 +1477,8 @@ void cv::remap( InputArray _src, OutputArray _dst,
 
     if (interpolation == INTER_LINEAR) {
             if (map1.depth() == CV_32F) {
+                // FIX: Move declarations INSIDE the guard to prevent "unused variable" errors on RISC-V
+    #if !defined(__riscv)
                 const auto *src_data = src.ptr<const uint8_t>();
                 auto *dst_data = dst.ptr<uint8_t>();
                 size_t src_step = src.step, dst_step = dst.step,
@@ -1486,9 +1488,6 @@ void cv::remap( InputArray _src, OutputArray _dst,
                 const float *map1_data = map1.ptr<const float>();
                 const float *map2_data = map2.ptr<const float>();
 
-    
-                // because they use fixed-point arithmetic while 5.x uses floating-point.
-    #if !defined(__riscv)
                 switch (src.type()) {
                     case CV_8UC1: {
                         if (hint == cv::ALGO_HINT_APPROX) {
