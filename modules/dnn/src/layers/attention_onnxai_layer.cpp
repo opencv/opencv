@@ -21,16 +21,19 @@ static void mask_bias(
 )
 {
     const int total = att_mask.total();
-    auto* mask_data = att_mask.ptr<const float>();
-    auto* weights_data = att_weights.ptr<float>();
-    for (int i = 0; i < total; i++)
-    {
-        const int seq_pos = i % seq_len_square;
-        const int q_pos = seq_pos / seq_len_kv;
-        const int k_pos = seq_pos % seq_len_kv;
-        weights_data[i] = (is_causal && k_pos > q_pos) ?
-                          min_val : weights_data[i] + mask_data[i];
-    }
+    auto fn = [&](const Range &r) {
+        auto* mask_data = att_mask.ptr<const float>();
+        auto* weights_data = att_weights.ptr<float>();
+        for (int i = r.start; i < r.end; i++)
+        {
+            const int seq_pos = i % seq_len_square;
+            const int q_pos = seq_pos / seq_len_kv;
+            const int k_pos = seq_pos % seq_len_kv;
+            weights_data[i] = (is_causal && k_pos > q_pos) ?
+                            min_val : weights_data[i] + mask_data[i];
+        }
+    }; 
+    parallel_for_(Range(0, total), fn, total * (1 / 1024.0));
 }
 
 static void mask_bool(
@@ -39,52 +42,56 @@ static void mask_bool(
     const float min_val, const bool is_causal
 )
 {
-    const int elemSize = CV_ELEM_SIZE1(att_mask.depth());  // bytes per element
-    const int depth = att_mask.depth();
-    auto* mask_data = att_mask.ptr<const char>();
-    auto* weights_data = att_weights.ptr<float>();
     const int total = att_mask.total();
-    for (int i = 0; i < total; i++)
-    {
-        const char* src = mask_data + i * elemSize;
-        bool mask_val = false;
-        switch (depth)
+
+    auto fn = [&](const Range &r) {
+        const int elemSize = CV_ELEM_SIZE1(att_mask.depth());  // bytes per element
+        const int depth = att_mask.depth();
+        auto* mask_data = att_mask.ptr<const char>();
+        auto* weights_data = att_weights.ptr<float>();
+        for (int i = 0; i < total; i++)
         {
-            case CV_Bool:
-                mask_val = *(reinterpret_cast<const bool*>(src));
-                break;
-            case CV_8U:
-                mask_val = (*(reinterpret_cast<const uint8_t*>(src)) != 0);
-                break;
-            case CV_8S:
-                mask_val = (*(reinterpret_cast<const int8_t*>(src)) != 0);
-                break;
-            case CV_16U:
-                mask_val = (*(reinterpret_cast<const uint16_t*>(src)) != 0);
-                break;
-            case CV_16S:
-                mask_val = (*(reinterpret_cast<const int16_t*>(src)) != 0);
-                break;
-            case CV_32S:
-                mask_val = (*(reinterpret_cast<const int32_t*>(src)) != 0);
-                break;
-            case CV_64S:
-                mask_val = (*(reinterpret_cast<const int64_t*>(src)) != 0);
-                break;
-            case CV_64U:
-                mask_val = (*(reinterpret_cast<const uint64_t*>(src)) != 0);
-                break;
-            default:
-                CV_Error(Error::StsNotImplemented, "Unsupported depth for boolean mask in attention");
+            const char* src = mask_data + i * elemSize;
+            bool mask_val = false;
+            switch (depth)
+            {
+                case CV_Bool:
+                    mask_val = *(reinterpret_cast<const bool*>(src));
+                    break;
+                case CV_8U:
+                    mask_val = (*(reinterpret_cast<const uint8_t*>(src)) != 0);
+                    break;
+                case CV_8S:
+                    mask_val = (*(reinterpret_cast<const int8_t*>(src)) != 0);
+                    break;
+                case CV_16U:
+                    mask_val = (*(reinterpret_cast<const uint16_t*>(src)) != 0);
+                    break;
+                case CV_16S:
+                    mask_val = (*(reinterpret_cast<const int16_t*>(src)) != 0);
+                    break;
+                case CV_32S:
+                    mask_val = (*(reinterpret_cast<const int32_t*>(src)) != 0);
+                    break;
+                case CV_64S:
+                    mask_val = (*(reinterpret_cast<const int64_t*>(src)) != 0);
+                    break;
+                case CV_64U:
+                    mask_val = (*(reinterpret_cast<const uint64_t*>(src)) != 0);
+                    break;
+                default:
+                    CV_Error(Error::StsNotImplemented, "Unsupported depth for boolean mask in attention");
+            }
+            const int seq_pos = i % seq_len_square;
+            const int q_pos = seq_pos / seq_len_kv;
+            const int k_pos = seq_pos % seq_len_kv;
+            if (!mask_val || (is_causal && k_pos > q_pos))
+            {
+                weights_data[i] = min_val;
+            }
         }
-        const int seq_pos = i % seq_len_square;
-        const int q_pos = seq_pos / seq_len_kv;
-        const int k_pos = seq_pos % seq_len_kv;
-        if (!mask_val || (is_causal && k_pos > q_pos))
-        {
-            weights_data[i] = min_val;
-        }
-    }
+    };
+    parallel_for_(Range(0, total), fn, total * (1 / 1024.0));
 }
 
 
@@ -260,39 +267,38 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
             auto loops = batch_size * nhq;
 
-            // parallel_for_(Range(0, loops), [&] (const Range r) {
-            const Range r = Range(0, loops);
-            for (int i = r.start; i < r.end; i++) {
-                const int _batch_index = i / nhq;
-                const int _q_head_index = i % nhq;
-                const int _k_head_index = _q_head_index / num_gq_groups;
+            parallel_for_(Range(0, loops), [&] (const Range r) {
+                for (int i = r.start; i < r.end; i++) {
+                    const int _batch_index = i / nhq;
+                    const int _q_head_index = i % nhq;
+                    const int _k_head_index = _q_head_index / num_gq_groups;
 
-                const int _q_offset = input_dims == 3 ?
-                            _q_head_index * qk_head_size : _q_head_index * qk_head_size * seq_len_q;
-                const int _k_offset = input_dims == 3 ?
-                            _k_head_index * qk_head_size : _k_head_index * qk_head_size * seq_len_kv;
+                    const int _q_offset = input_dims == 3 ?
+                                _q_head_index * qk_head_size : _q_head_index * qk_head_size * seq_len_q;
+                    const int _k_offset = input_dims == 3 ?
+                                _k_head_index * qk_head_size : _k_head_index * qk_head_size * seq_len_kv;
 
-                const auto *q = Q + _batch_index * seq_len_q * qk_head_size * nhq +
-                                _q_offset;
-                const auto *k = K + _batch_index * seq_len_kv * qk_head_size * nhkv +
-                                _k_offset;
-                const int output_offset = i * seq_len_square;
+                    const auto *q = Q + _batch_index * seq_len_q * qk_head_size * nhq +
+                                    _q_offset;
+                    const auto *k = K + _batch_index * seq_len_kv * qk_head_size * nhkv +
+                                    _k_offset;
+                    const int output_offset = i * seq_len_square;
 
-                const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
-                const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
+                    const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
+                    const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
 
-                fastGemm(
-                    false, true,
-                    seq_len_q, qk_head_size,
-                    seq_len_kv, qk_head_size,
-                    scale,
-                    q, ldq0, 1,
-                    k, ldk0, 1,
-                    0.f,
-                    output + output_offset, seq_len_kv,
-                    opt);
-            }
-            // }, loops * seq_len_q * q_num_heads * seq_len_kv * (1 / 1024.0));
+                    fastGemm(
+                        false, true,
+                        seq_len_q, qk_head_size,
+                        seq_len_kv, qk_head_size,
+                        scale,
+                        q, ldq0, 1,
+                        k, ldk0, 1,
+                        0.f,
+                        output + output_offset, seq_len_kv,
+                        opt);
+                }
+            }, loops * seq_len_q * seq_len_kv * (1 / 1024.0));
         }
 
         // Attention masking
@@ -357,43 +363,42 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         const auto attn = attention_prob.ptr<const float>();
         auto *output = outputs[0].ptr<float>();
         auto loops = batch_size * nhq;
-        // parallel_for_(Range(0, loops), [&] (const Range r) {
-        const Range r = Range(0, loops);
-        for (int i = r.start; i < r.end; i++) {
-            const int _batch_index = i / nhq;
-            const int _q_head_index = i % nhq;
-            const int _v_head_index = _q_head_index / num_gq_groups;
+        parallel_for_(Range(0, loops), [&] (const Range r) {
+            for (int i = r.start; i < r.end; i++) {
+                const int _batch_index = i / nhq;
+                const int _q_head_index = i % nhq;
+                const int _v_head_index = _q_head_index / num_gq_groups;
 
-            const int v_offset = _batch_index * seq_len_kv * v_head_size * nhkv + (
-                input_dims == 3 ?
-                    _v_head_index * v_head_size :
-                    _v_head_index * v_head_size * seq_len_kv
-            );
+                const int v_offset = _batch_index * seq_len_kv * v_head_size * nhkv + (
+                    input_dims == 3 ?
+                        _v_head_index * v_head_size :
+                        _v_head_index * v_head_size * seq_len_kv
+                );
 
-            const int out_offset = _batch_index * seq_len_q * v_head_size * nhq + (
-                input_dims == 3 ?
-                    _q_head_index * v_head_size :
-                    _q_head_index * v_head_size * seq_len_q
-            );
+                const int out_offset = _batch_index * seq_len_q * v_head_size * nhq + (
+                    input_dims == 3 ?
+                        _q_head_index * v_head_size :
+                        _q_head_index * v_head_size * seq_len_q
+                );
 
-            const auto att = attn + i * seq_len_square;
-            const auto v = V + v_offset;
+                const auto att = attn + i * seq_len_square;
+                const auto v = V + v_offset;
 
-            const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
-            const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
+                const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
+                const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
 
-            fastGemm(
-                false, false,
-                seq_len_q, seq_len_kv,
-                seq_len_kv, v_head_size,
-                1.f,
-                att, seq_len_kv, 1,
-                v, ldv0, 1,
-                0.f,
-                output + out_offset, ldout,
-                opt);
-        }
-        // }, loops * seq_len_square * q_num_heads * (1 / 1024.0));
+                fastGemm(
+                    false, false,
+                    seq_len_q, seq_len_kv,
+                    seq_len_kv, v_head_size,
+                    1.f,
+                    att, seq_len_kv, 1,
+                    v, ldv0, 1,
+                    0.f,
+                    output + out_offset, ldout,
+                    opt);
+            }
+        }, loops * seq_len_square * q_num_heads * (1 / 1024.0));
 
     }
 
