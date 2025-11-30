@@ -298,6 +298,7 @@ class CvWindow : public CvWinModel
     Q_OBJECT
 public:
     CvWindow(QString arg2, int flag = CV_WINDOW_NORMAL);
+    ~CvWindow();
 
     void setMouseCallBack(CvMouseCallback m, void* param);
 
