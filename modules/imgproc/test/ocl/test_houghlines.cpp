@@ -45,12 +45,24 @@ PARAM_TEST_CASE(HoughLines, double, double, int)
         src_size = randomSize(500, 1920);
         src.create(src_size, CV_8UC1);
         src.setTo(Scalar::all(0));
-        line(src, Point(0, 100), Point(100, 100), Scalar::all(255), 1);
-        line(src, Point(0, 200), Point(100, 200), Scalar::all(255), 1);
-        line(src, Point(0, 400), Point(100, 400), Scalar::all(255), 1);
-        line(src, Point(100, 0), Point(100, 200), Scalar::all(255), 1);
-        line(src, Point(200, 0), Point(200, 200), Scalar::all(255), 1);
-        line(src, Point(400, 0), Point(400, 200), Scalar::all(255), 1);
+
+        // Horizontal lines (theta ≈ π, ~180°) - should be filtered when max_theta < π
+        line(src, Point(0, 100), Point(200, 100), Scalar::all(255), 1);
+        line(src, Point(0, 200), Point(200, 200), Scalar::all(255), 1);
+        line(src, Point(0, 400), Point(200, 400), Scalar::all(255), 1);
+
+        // Vertical lines (theta ≈ π/2, ~90°) - should be filtered when max_theta < π/2
+        line(src, Point(100, 50), Point(100, 250), Scalar::all(255), 1);
+        line(src, Point(200, 50), Point(200, 250), Scalar::all(255), 1);
+        line(src, Point(400, 50), Point(400, 250), Scalar::all(255), 1);
+
+        // Diagonal lines at ~30° (theta ≈ π/6, should pass when max_theta > π/6)
+        line(src, Point(50, 50), Point(200, 137), Scalar::all(255), 1);
+        line(src, Point(250, 150), Point(400, 237), Scalar::all(255), 1);
+
+        // Diagonal lines at ~60° (theta ≈ π/3, should pass when min_theta < π/3 and max_theta > π/3)
+        line(src, Point(50, 250), Point(108, 350), Scalar::all(255), 1);
+        line(src, Point(300, 150), Point(358, 250), Scalar::all(255), 1);
 
         src.copyTo(usrc);
     }
