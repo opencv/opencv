@@ -1972,7 +1972,7 @@ class WarpAffineInvoker :
 {
 public:
     WarpAffineInvoker(const Mat &_src, Mat &_dst, int _interpolation, int _borderType,
-                      const Scalar &_borderValue, int *_adelta, int *_bdelta, const double *_M) :
+                      const Scalar &_borderValue, double *_adelta, double *_bdelta, const double *_M) :
         ParallelLoopBody(), src(_src), dst(_dst), interpolation(_interpolation),
         borderType(_borderType), borderValue(_borderValue), adelta(_adelta), bdelta(_bdelta),
         M(_M)
@@ -1984,9 +1984,7 @@ public:
         const int BLOCK_SZ = 64;
         AutoBuffer<short, 0> __XY(BLOCK_SZ * BLOCK_SZ * 2), __A(BLOCK_SZ * BLOCK_SZ);
         short *XY = __XY.data(), *A = __A.data();
-        const int AB_BITS = MAX(10, (int)INTER_BITS);
-        const int AB_SCALE = 1 << AB_BITS;
-        int round_delta = interpolation == INTER_NEAREST ? AB_SCALE/2 : AB_SCALE/INTER_TAB_SIZE/2, x, y, y1;
+        int x, y, y1;
 
         int bh0 = std::min(BLOCK_SZ/2, dst.rows);
         int bw0 = std::min(BLOCK_SZ*BLOCK_SZ/bh0, dst.cols);
@@ -2005,8 +2003,8 @@ public:
                 for( y1 = 0; y1 < bh; y1++ )
                 {
                     short* xy = XY + y1*bw*2;
-                    int X0 = saturate_cast<int>((M[1]*(y + y1) + M[2])*AB_SCALE) + round_delta;
-                    int Y0 = saturate_cast<int>((M[4]*(y + y1) + M[5])*AB_SCALE) + round_delta;
+                    double X0 = M[1]*(y + y1) + M[2];
+                    double Y0 = M[4]*(y + y1) + M[5];
 
                     if( interpolation == INTER_NEAREST )
                         hal::warpAffineBlocklineNN(adelta + x, bdelta + x, xy, X0, Y0, bw);
@@ -2030,7 +2028,7 @@ private:
     Mat dst;
     int interpolation, borderType;
     Scalar borderValue;
-    int *adelta, *bdelta;
+    double *adelta, *bdelta;
     const double *M;
 };
 
@@ -2275,7 +2273,6 @@ static void warpAffine(int src_type,
                 CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            // no default
         }
     }
 
@@ -2329,20 +2326,17 @@ static void warpAffine(int src_type,
                 CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
-            // no default
         }
     }
 
     int x;
-    AutoBuffer<int> _abdelta(dst.cols*2);
-    int* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
-    const int AB_SCALE = 1 << AB_BITS;
+    AutoBuffer<double> _abdelta(dst.cols*2);
+    double* adelta = &_abdelta[0], *bdelta = adelta + dst.cols;
 
     for( x = 0; x < dst.cols; x++ )
     {
-        adelta[x] = saturate_cast<int>(M[0]*x*AB_SCALE);
-        bdelta[x] = saturate_cast<int>(M[3]*x*AB_SCALE);
+        adelta[x] = M[0]*x;
+        bdelta[x] = M[3]*x;
     }
 
     Range range(0, dst.rows);
@@ -2352,91 +2346,35 @@ static void warpAffine(int src_type,
     parallel_for_(range, invoker, dst.total()/(double)(1<<16));
 }
 
-void warpAffineBlocklineNN(int *adelta, int *bdelta, short* xy, int X0, int Y0, int bw)
+void warpAffineBlocklineNN(double *adelta, double *bdelta, short* xy, double X0, double Y0, int bw)
 {
-    CALL_HAL(warpAffineBlocklineNN, cv_hal_warpAffineBlocklineNN, adelta, bdelta, xy, X0, Y0, bw);
-
-    constexpr int AB_BITS = MAX(10, static_cast<int>(INTER_BITS));
     int x1 = 0;
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-    {
-        const v_int32 v_X0 = vx_setall_s32(X0);
-        const v_int32 v_Y0 = vx_setall_s32(Y0);
-        const int step = VTraits<v_int16>::vlanes();
-        for (; x1 <= bw - step; x1 += step)
-        {
-            v_int16 v_X = v_pack(v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1))),
-                                 v_shr<AB_BITS>(v_add(v_X0, vx_load(adelta + x1 + step / 2))));
-            v_int16 v_Y = v_pack(v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1))),
-                                 v_shr<AB_BITS>(v_add(v_Y0, vx_load(bdelta + x1 + step / 2))));
-            v_store_interleave(xy + 2 * x1, v_X, v_Y);
-        }
-    }
-#endif
     for (; x1 < bw; x1++)
     {
-        const int X = (X0 + adelta[x1]) >> AB_BITS;
-        const int Y = (Y0 + bdelta[x1]) >> AB_BITS;
+        int X = saturate_cast<int>(X0 + adelta[x1]);
+        int Y = saturate_cast<int>(Y0 + bdelta[x1]);
         xy[x1 * 2] = saturate_cast<short>(X);
         xy[x1 * 2 + 1] = saturate_cast<short>(Y);
     }
 }
 
-void warpAffineBlockline(int *adelta, int *bdelta, short* xy, short* alpha, int X0, int Y0, int bw)
+void warpAffineBlockline(double *adelta, double *bdelta, short* xy, short* alpha, double X0, double Y0, int bw)
 {
-    CALL_HAL(warpAffineBlockline, cv_hal_warpAffineBlockline, adelta, bdelta, xy, alpha, X0, Y0, bw);
-
-    const int AB_BITS = MAX(10, (int)INTER_BITS);
     int x1 = 0;
-    #if CV_TRY_AVX2
-    bool useAVX2 = CV_CPU_HAS_SUPPORT_AVX2;
-    if ( useAVX2 )
-        x1 = opt_AVX2::warpAffineBlockline(adelta, bdelta, xy, alpha, X0, Y0, bw);
-    #endif
-    #if CV_TRY_LASX
-    bool useLASX = CV_CPU_HAS_SUPPORT_LASX;
-    if ( useLASX )
-        x1 = opt_LASX::warpAffineBlockline(adelta, bdelta, xy, alpha, X0, Y0, bw);
-    #endif
+    for (; x1 < bw; x1++)
     {
-        #if CV_SIMD128
-        {
-            v_int32x4 v__X0 = v_setall_s32(X0), v__Y0 = v_setall_s32(Y0);
-            v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
-            int span = VTraits<v_float32x4>::vlanes();
-            for( ; x1 <= bw - span * 2; x1 += span * 2 )
-            {
-                v_int32x4 v_X0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(adelta + x1)));
-                v_int32x4 v_Y0 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(bdelta + x1)));
-                v_int32x4 v_X1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__X0, v_load(adelta + x1 + span)));
-                v_int32x4 v_Y1 = v_shr<AB_BITS - INTER_BITS>(v_add(v__Y0, v_load(bdelta + x1 + span)));
-
-                v_int16x8 v_xy[2];
-                v_xy[0] = v_pack(v_shr<INTER_BITS>(v_X0), v_shr<INTER_BITS>(v_X1));
-                v_xy[1] = v_pack(v_shr<INTER_BITS>(v_Y0), v_shr<INTER_BITS>(v_Y1));
-                v_store_interleave(xy + (x1 << 1), v_xy[0], v_xy[1]);
-
-                v_int32x4 v_alpha0 = v_or(v_shl<INTER_BITS>(v_and(v_Y0, v_mask)), v_and(v_X0, v_mask));
-                v_int32x4 v_alpha1 = v_or(v_shl<INTER_BITS>(v_and(v_Y1, v_mask)), v_and(v_X1, v_mask));
-                v_store(alpha + x1, v_pack(v_alpha0, v_alpha1));
-            }
-        }
-        #endif
-        for( ; x1 < bw; x1++ )
-        {
-            int X = (X0 + adelta[x1]) >> (AB_BITS - INTER_BITS);
-            int Y = (Y0 + bdelta[x1]) >> (AB_BITS - INTER_BITS);
-            xy[x1*2] = saturate_cast<short>(X >> INTER_BITS);
-            xy[x1*2+1] = saturate_cast<short>(Y >> INTER_BITS);
-            alpha[x1] = (short)((Y & (INTER_TAB_SIZE-1))*INTER_TAB_SIZE +
-                    (X & (INTER_TAB_SIZE-1)));
-        }
+        double fX = X0 + adelta[x1];
+        double fY = Y0 + bdelta[x1];
+        int X = saturate_cast<int>(fX * INTER_TAB_SIZE);
+        int Y = saturate_cast<int>(fY * INTER_TAB_SIZE);
+        xy[x1 * 2] = saturate_cast<short>(X >> INTER_BITS);
+        xy[x1 * 2 + 1] = saturate_cast<short>(Y >> INTER_BITS);
+        alpha[x1] = (short)((Y & (INTER_TAB_SIZE - 1)) * INTER_TAB_SIZE + (X & (INTER_TAB_SIZE - 1)));
     }
 }
 
 } // hal::
-} // cv::
-
+} // cv:: 
 
 void cv::warpAffine( InputArray _src, OutputArray _dst,
                      InputArray _M0, Size dsize,
@@ -2452,6 +2390,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( _src.channels() <= 4 || (interpolation != INTER_LANCZOS4 &&
                                         interpolation != INTER_CUBIC) );
 
+    // OpenCL optimizations (GPU) - generally unaffected by the RISC-V CPU bug
     CV_OCL_RUN(_src.dims() <= 2 && _dst.isUMat() &&
                _src.cols() <= SHRT_MAX && _src.rows() <= SHRT_MAX,
                ocl_warpTransform_cols4(_src, _dst, _M0, dsize, flags, borderType,
@@ -2476,6 +2415,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
     CV_Assert( (M0.type() == CV_32F || M0.type() == CV_64F) && M0.rows == 2 && M0.cols == 3 );
     M0.convertTo(matM, matM.type());
 
+    // Invert the matrix if the WARP_INVERSE_MAP flag is not set
     if( !(flags & WARP_INVERSE_MAP) )
     {
         double D = M[0]*M[4] - M[1]*M[3];
@@ -2488,6 +2428,7 @@ void cv::warpAffine( InputArray _src, OutputArray _dst,
         M[2] = b1; M[5] = b2;
     }
 
+    // Call the static HAL function which now contains the floating-point fix
     hal::warpAffine(src.type(), src.data, src.step, src.cols, src.rows, dst.data, dst.step, dst.cols, dst.rows,
                     M, interpolation, borderType, borderValue.val, hint);
 }
