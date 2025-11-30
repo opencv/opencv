@@ -516,11 +516,11 @@ This latter conversion can be useful when using a rendering software to mimic a 
     where R is the rotation matrix corresponding to the rotation vector om: R = rodrigues(om); call x, y
     and z the 3 coordinates of Xc:
 
-    \f[\begin{array}{l} x = Xc_1 \\ y = Xc_2 \\ z = Xc_3 \end{array} \f]
+    \f[\begin{array}{l} x = Xc_1, \\ y = Xc_2, \\ z = Xc_3 \end{array} \f]
 
     The pinhole projection coordinates of P is [a; b] where
 
-    \f[\begin{array}{l} a = x / z \ and \ b = y / z \\ r^2 = a^2 + b^2 \\ \theta = atan(r) \end{array} \f]
+    \f[\begin{array}{l} a = x / z, \\ b = y / z, \\ r^2 = a^2 + b^2, \\ \theta = atan(r) \end{array} \f]
 
     Fisheye distortion:
 
@@ -528,11 +528,11 @@ This latter conversion can be useful when using a rendering software to mimic a 
 
     The distorted point coordinates are [x'; y'] where
 
-    \f[\begin{array}{l} x' = (\theta_d / r) a \\ y' = (\theta_d / r) b \end{array} \f]
+    \f[\begin{array}{l} x' = (\theta_d / r) a, \\ y' = (\theta_d / r) b \end{array} \f]
 
     Finally, conversion into pixel coordinates: The final pixel coordinates vector [u; v] where:
 
-    \f[\begin{array}{l} u = f_x (x' + \alpha y') + c_x \\
+    \f[\begin{array}{l} u = f_x (x' + \alpha y') + c_x, \\
     v = f_y y' + c_y \end{array} \f]
 
     Summary:
