@@ -20,7 +20,7 @@ namespace dnn {
 */
 
 template<typename T>
-static void hannWindowFill(Mat& out, int N, double pi, double N1)
+static void HannWindowFill(Mat& out, int N, double pi, double N1)
 {
     CV_Assert(out.dims == 1);
     CV_Assert((int)out.total() == N);
@@ -162,10 +162,10 @@ public:
 
         switch (depth)
         {
-            case CV_32F: hannWindowFill<float>(Y, N, pi, N1); break;
-            case CV_64F: hannWindowFill<double>(Y, N, pi, N1); break;
-            case CV_16F: hannWindowFill<hfloat>(Y, N, pi, N1); break;
-            case CV_16BF: hannWindowFill<bfloat>(Y, N, pi, N1); break;
+            case CV_32F: HannWindowFill<float>(Y, N, pi, N1); break;
+            case CV_64F: HannWindowFill<double>(Y, N, pi, N1); break;
+            case CV_16F: HannWindowFill<hfloat>(Y, N, pi, N1); break;
+            case CV_16BF: HannWindowFill<bfloat>(Y, N, pi, N1); break;
             default: CV_Error(Error::BadDepth, "HannWindow: unsupported output depth");
         }
 
