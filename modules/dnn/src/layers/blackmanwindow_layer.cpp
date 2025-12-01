@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv {
 namespace dnn {
@@ -24,16 +25,51 @@ static void blackmanWindowFill(Mat& out, int N, double alpha, double beta, doubl
     CV_Assert(out.dims == 1);
     CV_Assert((int)out.total() == N);
 
-    T* dst = out.ptr<T>();
-    for (int n = 0; n < N; ++n)
+    const double coeff1 = (2.0 * pi) / N1;
+    const double coeff2 = (4.0 * pi) / N1;
+
+    cv::AutoBuffer<double> _w(N);
+    double* w = _w.data();
+
+    int i = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int nlanes64 = VTraits<v_float64>::vlanes();
+    const int max_nlanes = VTraits<v_float64>::max_nlanes;
+    std::array<double, max_nlanes> index;
+    std::iota(index.data(), index.data() + max_nlanes, 0.0);
+    v_float64 vindex = vx_load(index.data());
+    v_float64 delta = vx_setall_f64(nlanes64);
+    v_float64 vcoeff1 = vx_setall_f64(coeff1);
+    v_float64 vcoeff2 = vx_setall_f64(coeff2);
+    v_float64 valpha = vx_setall_f64(alpha);
+    v_float64 vbeta = vx_setall_f64(beta);
+    v_float64 vnegHalf = vx_setall_f64(-0.5);
+
+    for (; i <= N - nlanes64; i += nlanes64)
     {
-        double arg1 = (double)n * (2.0 * pi) / N1;
-        double arg2 = (double)n * (4.0 * pi) / N1;
+        v_float64 varg1 = v_mul(vcoeff1, vindex);
+        v_float64 varg2 = v_mul(vcoeff2, vindex);
+        v_float64 vc1 = v_cos(varg1);
+        v_float64 vc2 = v_cos(varg2);
+        v_float64 v = v_add(valpha, v_add(v_mul(vc1, vnegHalf), v_mul(vc2, vbeta)));
+        vx_store(w + i, v);
+        vindex = v_add(vindex, delta);
+    }
+#endif
+
+    for (; i < N; ++i)
+    {
+        double arg1 = coeff1 * i;
+        double arg2 = coeff2 * i;
         double v = std::cos(arg1) * (-0.5);
         v += std::cos(arg2) * beta;
         v += alpha;
-        dst[n] = saturate_cast<T>(v);
+        w[i] = v;
     }
+
+    T* dst = out.ptr<T>();
+    for (int n = 0; n < N; ++n)
+        dst[n] = saturate_cast<T>(w[n]);
 }
 
 class BlackmanWindowLayerImpl CV_FINAL : public BlackmanWindowLayer

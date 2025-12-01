@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv {
 namespace dnn {
@@ -26,14 +27,42 @@ static void hammingWindowFill(Mat& out, int N, double pi, double N1)
 
     const double alpha = 25.0 / 46.0;
     const double beta = 1.0 - alpha;
+    const double coeff = (2.0 * pi) / N1;
+
+    cv::AutoBuffer<double> _w(N);
+    double* w = _w.data();
+
+    int i = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int nlanes64 = VTraits<v_float64>::vlanes();
+    const int max_nlanes = VTraits<v_float64>::max_nlanes;
+    std::array<double, max_nlanes> index;
+    std::iota(index.data(), index.data() + max_nlanes, 0.0);
+    v_float64 vindex = vx_load(index.data());
+    v_float64 delta = vx_setall_f64(nlanes64);
+    v_float64 vcoeff = vx_setall_f64(coeff);
+    v_float64 valpha = vx_setall_f64(alpha);
+    v_float64 vbeta = vx_setall_f64(beta);
+
+    for (; i <= N - nlanes64; i += nlanes64)
+    {
+        v_float64 varg = v_mul(vcoeff, vindex);
+        v_float64 vc = v_cos(varg);
+        v_float64 v = v_sub(valpha, v_mul(vc, vbeta));
+        vx_store(w + i, v);
+        vindex = v_add(vindex, delta);
+    }
+#endif
+
+    for (; i < N; ++i)
+    {
+        double arg = coeff * i;
+        w[i] = alpha - std::cos(arg) * beta;
+    }
 
     T* dst = out.ptr<T>();
     for (int n = 0; n < N; ++n)
-    {
-        double arg = (double)n * (2.0 * pi) / N1;
-        double v = alpha - std::cos(arg) * beta;
-        dst[n] = saturate_cast<T>(v);
-    }
+        dst[n] = saturate_cast<T>(w[n]);
 }
 
 class HammingWindowLayerImpl CV_FINAL : public HammingWindowLayer

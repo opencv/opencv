@@ -7,6 +7,7 @@
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include <opencv2/dnn/shape_utils.hpp>
+#include "opencv2/core/hal/intrin.hpp"
 
 namespace cv {
 namespace dnn {
@@ -18,21 +19,45 @@ namespace dnn {
     Supported opsets: 17
 */
 
-
 template<typename T>
 static void hannWindowFill(Mat& out, int N, double pi, double N1)
 {
     CV_Assert(out.dims == 1);
     CV_Assert((int)out.total() == N);
 
+    // Compute window in double precision using a SIMD pattern similar to
+    // imgproc::createHanningWindow, then cast to the requested type.
+    cv::AutoBuffer<double> _w(N);
+    double* w = _w.data();
+
+    const double coeff = (2.0 * pi) / N1;
+
+    int i = 0;
+#if CV_SIMD_64F || CV_SIMD_SCALABLE_64F
+    const int nlanes64 = VTraits<v_float64>::vlanes();
+    const int max_nlanes = VTraits<v_float64>::max_nlanes;
+    std::array<double, max_nlanes> index;
+    std::iota(index.data(), index.data() + max_nlanes, 0.0);
+    v_float64 vindex = vx_load(index.data());
+    v_float64 delta = vx_setall_f64(nlanes64);
+    v_float64 vcoeff = vx_setall_f64(coeff);
+    v_float64 one = vx_setall_f64(1.0);
+    v_float64 half = vx_setall_f64(0.5);
+
+    for (; i <= N - nlanes64; i += nlanes64)
+    {
+        v_float64 v = v_mul(half, v_sub(one, v_cos(v_mul(vcoeff, vindex))));
+        vx_store(w + i, v);
+        vindex = v_add(vindex, delta);
+    }
+#endif
+
+    for (; i < N; ++i)
+        w[i] = 0.5 * (1.0 - std::cos(coeff * i));
+
     T* dst = out.ptr<T>();
     for (int n = 0; n < N; ++n)
-    {
-        double arg = (double)n * pi / N1;
-        double v = std::sin(arg);
-        v = v * v;
-        dst[n] = saturate_cast<T>(v);
-    }
+        dst[n] = saturate_cast<T>(w[n]);
 }
 
 class HannWindowLayerImpl CV_FINAL : public HannWindowLayer
