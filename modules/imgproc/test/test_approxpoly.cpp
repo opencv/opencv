@@ -377,6 +377,19 @@ TEST(Imgproc_ApproxPoly, bad_epsilon)
     ASSERT_ANY_THROW(approxPolyDP(inputPoints, outputPoints, eps, false));
 }
 
+TEST(Imgproc_ApproxPoly, distace_between_point_and_segment)
+{
+    vector<Point2f> inputPoints = {
+        { {0.f, 0.f}, {4.f, 2.f}, {11.f, 1.f}, {8.f, 0.f} }
+    };
+    std::vector<Point2f> result;
+    approxPolyDP(inputPoints, result, 1.9, false);
+    vector<Point2f> expectedResult = {
+        { {0.f, 0.f}, {11.f, 1.f}, {8.f, 0.f} }
+    };
+    ASSERT_EQ(result, expectedResult);
+}
+
 struct ApproxPolyN: public testing::Test
 {
     void SetUp()
