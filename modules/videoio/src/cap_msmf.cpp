@@ -448,50 +448,68 @@ public:
 
     STDMETHODIMP OnReadSample(HRESULT hrStatus, DWORD dwStreamIndex, DWORD dwStreamFlags, LONGLONG llTimestamp, IMFSample *pSample) CV_OVERRIDE
     {
-        HRESULT hr = 0;
-        cv::AutoLock lock(m_mutex);
-
-        if (SUCCEEDED(hrStatus))
+        HRESULT hr = S_OK;
+        try
         {
-            if (pSample)
+            cv::AutoLock lock(m_mutex);
+
+            if (SUCCEEDED(hrStatus))
             {
-                CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
-                if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
+                if (pSample)
                 {
+                    CV_LOG_DEBUG(NULL, "videoio(MSMF): got frame at " << llTimestamp);
+                    if (m_capturedFrames.size() >= MSMF_READER_MAX_QUEUE_SIZE)
+                    {
 #if 0
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
-                    m_capturedFrames.pop();
+                        CV_LOG_DEBUG(NULL, "videoio(MSMF): drop frame (not processed). Timestamp=" << m_capturedFrames.front().timestamp);
+                        m_capturedFrames.pop();
 #else
-                    // this branch reduces latency if we drop frames due to slow processing.
-                    // avoid fetching of already outdated frames from the queue's front.
-                    CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
-                    std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
+
+                        CV_LOG_DEBUG(NULL, "videoio(MSMF): drop previous frames (not processed): " << m_capturedFrames.size());
+                        std::queue<CapturedFrameInfo>().swap(m_capturedFrames);  // similar to missing m_capturedFrames.clean();
 #endif
+                    }
+                    m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
                 }
-                m_capturedFrames.emplace(CapturedFrameInfo{ llTimestamp, _ComPtr<IMFSample>(pSample), hrStatus });
+            }
+            else
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+            }
+            if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+            {
+                // Reached the end of the stream.
+                m_bEOS = true;
+            }
+            m_hrStatus = hrStatus;
+
+            if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
+                m_bEOS = true;
+            }
+
+            if (pSample || m_bEOS)
+            {
+                SetEvent(m_hEvent);
             }
         }
-        else
+        catch (const _com_error& e)
         {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): OnReadSample() is called with error status: " << hrStatus);
+            std::string msg;
+#ifdef _UNICODE
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+            msg = conv.to_bytes(e.ErrorMessage());
+#else
+            msg = std::string(e.ErrorMessage());
+#endif
+            CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error in OnReadSample: " << msg);
+            return S_OK; // Keep callback alive
         }
-
-        if (MF_SOURCE_READERF_ENDOFSTREAM & dwStreamFlags)
+        catch (...)
         {
-            // Reached the end of the stream.
-            m_bEOS = true;
-        }
-        m_hrStatus = hrStatus;
-
-        if (FAILED(hr = m_reader->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): async ReadSample() call is failed with error status: " << hr);
-            m_bEOS = true;
-        }
-
-        if (pSample || m_bEOS)
-        {
-            SetEvent(m_hEvent);
+            CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception in OnReadSample");
+            return S_OK;
         }
         return S_OK;
     }
@@ -1758,82 +1776,108 @@ bool CvCapture_MSMF::grabFrame()
 {
     CV_TRACE_FUNCTION();
 
-    if (grabIsDone)
+    try
     {
-        grabIsDone = false;
-        CV_LOG_DEBUG(NULL, "videoio(MSMF): return pre-grabbed frame " << usedVideoSampleTime);
-        return true;
-    }
-
-    audioFrame = Mat();
-    if (readCallback)  // async "live" capture mode
-    {
-        audioSamples.push_back(NULL);
-        HRESULT hr = 0;
-        SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
-        DWORD dwStreamIndex = 0;
-        if (videoStream != -1)
-            dwStreamIndex = dwVideoStreamIndex;
-        if (audioStream != -1)
-            dwStreamIndex = dwAudioStreamIndex;
-        if (!reader->m_reader)
+        if (grabIsDone)
         {
-            // Initiate capturing with async callback
-            reader->m_reader = videoFileSource.Get();
-            reader->m_dwStreamIndex = dwStreamIndex;
-            if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+            grabIsDone = false;
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): return pre-grabbed frame " << usedVideoSampleTime);
+            return true;
+        }
+
+        audioFrame = Mat();
+        if (readCallback)  // async "live" capture mode
+        {
+            audioSamples.push_back(NULL);
+            HRESULT hr = 0;
+            SourceReaderCB* reader = ((SourceReaderCB*)readCallback.Get());
+            DWORD dwStreamIndex = 0;
+            if (videoStream != -1)
+                dwStreamIndex = dwVideoStreamIndex;
+            if (audioStream != -1)
+                dwStreamIndex = dwAudioStreamIndex;
+            if (!reader->m_reader)
             {
-                CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
-                reader->m_reader = NULL;
+                // Initiate capturing with async callback
+                reader->m_reader = videoFileSource.Get();
+                reader->m_dwStreamIndex = dwStreamIndex;
+                if (FAILED(hr = videoFileSource->ReadSample(dwStreamIndex, 0, NULL, NULL, NULL, NULL)))
+                {
+                    CV_LOG_ERROR(NULL, "videoio(MSMF): can't grab frame - initial async ReadSample() call failed: " << hr);
+                    reader->m_reader = NULL;
+                    return false;
+                }
+            }
+            BOOL bEOS = false;
+            LONGLONG timestamp = 0;
+            if (FAILED(hr = reader->Wait( videoStream == -1 ? INFINITE : 10000, (videoStream != -1) ? usedVideoSample : audioSamples[0], timestamp, bEOS)))  // 10 sec
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
                 return false;
             }
-        }
-        BOOL bEOS = false;
-        LONGLONG timestamp = 0;
-        if (FAILED(hr = reader->Wait( videoStream == -1 ? INFINITE : 10000, (videoStream != -1) ? usedVideoSample : audioSamples[0], timestamp, bEOS)))  // 10 sec
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): can't grab frame. Error: " << hr);
-            return false;
-        }
-        if (bEOS)
-        {
-            CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
-            return false;
-        }
-        if (videoStream != -1)
-            usedVideoSampleTime = timestamp;
-        if (audioStream != -1)
-            return configureAudioFrame();
-
-        CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << usedVideoSampleTime);
-        return true;
-    }
-    else if (isOpen)
-    {
-        if (vEOS)
-            return false;
-
-        bool returnFlag = true;
-
-        if (videoStream != -1)
-        {
-            if (!vEOS)
-                returnFlag &= grabVideoFrame();
-            if (!returnFlag)
+            if (bEOS)
+            {
+                CV_LOG_WARNING(NULL, "videoio(MSMF): EOS signal. Capture stream is lost");
                 return false;
-        }
+            }
+            if (videoStream != -1)
+                usedVideoSampleTime = timestamp;
+            if (audioStream != -1)
+                return configureAudioFrame();
 
-        if (audioStream != -1)
+            CV_LOG_DEBUG(NULL, "videoio(MSMF): grabbed frame " << usedVideoSampleTime);
+            return true;
+        }
+        else if (isOpen)
         {
-            const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
-            bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplesPerSec;
-            audioFrame.release();
-            if (!aEOS)
-                returnFlag &= grabAudioFrame();
-        }
+            if (vEOS)
+                return false;
 
-        return returnFlag;
+            bool returnFlag = true;
+
+            if (videoStream != -1)
+            {
+                if (!vEOS)
+                    returnFlag &= grabVideoFrame();
+                if (!returnFlag)
+                    return false;
+            }
+
+            if (audioStream != -1)
+            {
+                const int bytesPerSample = (captureAudioFormat.bit_per_sample/8) * captureAudioFormat.nChannels;
+                bufferedAudioDuration = (double)(bufferAudioData.size()/bytesPerSample)/captureAudioFormat.nSamplesPerSec;
+                audioFrame.release();
+                if (!aEOS)
+                    returnFlag &= grabAudioFrame();
+            }
+
+            return returnFlag;
+        }
     }
+    catch (const _com_error& e)
+    {
+        std::string msg;
+#ifdef _UNICODE
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
+        msg = conv.to_bytes(e.ErrorMessage());
+#else
+        msg = std::string(e.ErrorMessage());
+#endif
+        CV_LOG_WARNING(NULL, "videoio(MSMF): _com_error caught in grabFrame: " << msg);
+        return false;
+    }
+    catch (const std::exception& e)
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): std::exception caught in grabFrame: " << e.what());
+        return false;
+    }
+    catch (...)
+    {
+        CV_LOG_WARNING(NULL, "videoio(MSMF): Unknown exception caught in grabFrame");
+        return false;
+    }
+
     return false;
 }
 
