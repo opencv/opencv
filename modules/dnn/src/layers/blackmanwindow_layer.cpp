@@ -20,7 +20,7 @@ namespace dnn {
 */
 
 template<typename T>
-static void blackmanWindowFill(Mat& out, int N, double alpha, double beta, double pi, double N1)
+static void BlackmanWindowFill(Mat& out, int N, double alpha, double beta, double pi, double N1)
 {
     CV_Assert(out.dims == 1);
     CV_Assert((int)out.total() == N);
@@ -176,10 +176,10 @@ public:
 
         switch (depth)
         {
-            case CV_32F: blackmanWindowFill<float>(Y, N, alpha, beta, pi, N1); break;
-            case CV_64F: blackmanWindowFill<double>(Y, N, alpha, beta, pi, N1); break;
-            case CV_16F: blackmanWindowFill<hfloat>(Y, N, alpha, beta, pi, N1); break;
-            case CV_16BF: blackmanWindowFill<bfloat>(Y, N, alpha, beta, pi, N1); break;
+            case CV_32F: BlackmanWindowFill<float>(Y, N, alpha, beta, pi, N1); break;
+            case CV_64F: BlackmanWindowFill<double>(Y, N, alpha, beta, pi, N1); break;
+            case CV_16F: BlackmanWindowFill<hfloat>(Y, N, alpha, beta, pi, N1); break;
+            case CV_16BF: BlackmanWindowFill<bfloat>(Y, N, alpha, beta, pi, N1); break;
             default:
                 CV_Error(Error::BadDepth, "BlackmanWindow: unsupported output depth");
         }

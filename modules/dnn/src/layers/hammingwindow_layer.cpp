@@ -20,7 +20,7 @@ namespace dnn {
 */
 
 template<typename T>
-static void hammingWindowFill(Mat& out, int N, double pi, double N1)
+static void HammingWindowFill(Mat& out, int N, double pi, double N1)
 {
     CV_Assert(out.dims == 1);
     CV_Assert((int)out.total() == N);
@@ -166,10 +166,10 @@ public:
 
         switch (depth)
         {
-            case CV_32F: hammingWindowFill<float>(Y, N, pi, N1); break;
-            case CV_64F: hammingWindowFill<double>(Y, N, pi, N1); break;
-            case CV_16F: hammingWindowFill<hfloat>(Y, N, pi, N1); break;
-            case CV_16BF: hammingWindowFill<bfloat>(Y, N, pi, N1); break;
+            case CV_32F: HammingWindowFill<float>(Y, N, pi, N1); break;
+            case CV_64F: HammingWindowFill<double>(Y, N, pi, N1); break;
+            case CV_16F: HammingWindowFill<hfloat>(Y, N, pi, N1); break;
+            case CV_16BF: HammingWindowFill<bfloat>(Y, N, pi, N1); break;
             default:
                 CV_Error(Error::BadDepth, "HammingWindow: unsupported output depth");
         }
