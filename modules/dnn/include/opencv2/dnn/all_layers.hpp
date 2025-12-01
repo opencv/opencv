@@ -99,6 +99,11 @@ CV__DNN_INLINE_NS_BEGIN
     {
     public:
         static Ptr<Layer> create(const LayerParams& params);
+
+        float mean;
+        float scale;
+        bool has_seed;
+        float seed;
     };
 
     //! LSTM recurrent layer
