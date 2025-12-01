@@ -1,5 +1,5 @@
 ;
-; jdsample.asm - upsampling (64-bit SSE2)
+; Upsampling (64-bit SSE2)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2016, 2024, D. R. Commander.
