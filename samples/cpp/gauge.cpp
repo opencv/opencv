@@ -100,9 +100,9 @@ static GaugeCalibration calibrate_gauge(string filename) {
     double separation = 10.0; // in degrees
     int interval = static_cast<int>(360.0 / separation);
 
-    vector<Point2f> p1(interval);
-    vector<Point2f> p2(interval);
-    vector<Point2f> p_text(interval);
+    vector<Point2d> p1(interval);
+    vector<Point2d> p2(interval);
+    vector<Point2d> p_text(interval);
 
     for (int i = 0; i < interval; ++i) {
         double angle_rad = separation * i * CV_PI / 180.0;
