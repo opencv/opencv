@@ -1324,6 +1324,24 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<SizeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS BlackmanWindowLayer : public Layer
+    {
+    public:
+        static Ptr<BlackmanWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HannWindowLayer : public Layer
+    {
+    public:
+        static Ptr<HannWindowLayer> create(const LayerParams &params);
+    };
+
+    class CV_EXPORTS HammingWindowLayer : public Layer
+    {
+    public:
+        static Ptr<HammingWindowLayer> create(const LayerParams &params);
+    };
+
     class CV_EXPORTS DetLayer : public Layer
     {
     public:
