@@ -367,8 +367,9 @@ void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays 
     if (!mainGraph) {
         CV_Error(Error::StsNullPtr, "the model was not loaded");
     }
-    // ************ enable tracing for debugging **********
-    tracingMode = DNN_TRACE_ALL;
+    // ************ uncomment one of the lines below for debugging **********
+    //tracingMode = DNN_TRACE_OP;
+    //tracingMode = DNN_TRACE_ALL;
     // [TODO] initialize profile, tracer, symbolic shapes etc.
     size_t nsymdims = dimnames_vec.size();
     dimvalues.assign(nsymdims, -1);
@@ -562,14 +563,11 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         if ((adata_type == CV_16F || adata_type == CV_16BF) && !enableFP16)
             adata_type = CV_32F;
 
-        const bool adata_is_float = (adata_type == CV_64F || adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF);
-        const bool m_is_float = (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF);
-        const bool adata_is_int = (adata_type == CV_8U || adata_type == CV_8S || adata_type == CV_16U || adata_type == CV_16S || adata_type == CV_32S || adata_type == CV_32U || adata_type == CV_64S || adata_type == CV_64U);
-        const bool m_is_int = (mtype == CV_8U || mtype == CV_8S || mtype == CV_16U || mtype == CV_16S || mtype == CV_32S || mtype == CV_32U || mtype == CV_64S || mtype == CV_64U);
         if (adata_type != mtype &&
-            !(adata_is_float && m_is_float) &&
-            !(adata_is_int && m_is_int) &&
-            !((adata_is_float && m_is_int) || (adata_is_int && m_is_float)) &&
+            !((adata_type == CV_64F || adata_type == CV_32F || adata_type == CV_16F || adata_type == CV_16BF) &&
+              (mtype == CV_64F || mtype == CV_32F || mtype == CV_16F || mtype == CV_16BF)) &&
+            !((adata_type == CV_8U || adata_type == CV_8S || adata_type == CV_16U || adata_type == CV_16S || adata_type == CV_32S || adata_type == CV_32U || adata_type == CV_64S || adata_type == CV_64U) &&
+              (mtype == CV_8U || mtype == CV_8S || mtype == CV_16U || mtype == CV_16S || mtype == CV_32S || mtype == CV_32U || mtype == CV_64S || mtype == CV_64U)) &&
             !(adata.type == CV_16BF && mtype == CV_16U) && !(adata.type == CV_16F && mtype == CV_16U) &&
             !m.empty())
         {
