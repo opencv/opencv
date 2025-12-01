@@ -1,10 +1,13 @@
 // This file is part of OpenCV project.
 // It is subject to the license terms in the LICENSE file found in the top-level directory
 // of this distribution and at http://opencv.org/license.html.
+// Copyright (C) 2025, BigVision LLC, all rights reserved.
+// Third party copyrights are property of their respective owners.
 
 #include "../precomp.hpp"
 #include "layers_common.hpp"
 #include "../net_impl.hpp"
+#include <cmath>
 
 namespace cv
 {
@@ -15,10 +18,78 @@ namespace dnn
     RandomNormalLike layer, as defined in ONNX specification:
     https://onnx.ai/onnx/operators/onnx__RandomNormalLike.html
 
-    Opset's 1+ are covered (attributes: dtype, mean, scale, seed).
+    Supported Opsets: 1-22
 */
 
-class RandomNormalLikeLayerImpl CV_FINAL : public Layer
+namespace
+{
+    template<typename T>
+    void fillRandomNormalImpl(Mat& out, float mean, float scale,
+                              bool has_seed, float seed)
+    {
+        CV_Assert(CV_MAT_DEPTH(out.type()) == DataType<T>::depth);
+        CV_Assert(out.isContinuous());
+
+        RNG rng;
+        if (has_seed)
+        {
+            uint64 seed_u64 = (uint64)std::llround((double)seed);
+            rng.state = seed_u64 ? seed_u64 : 0x12345678ULL;
+        }
+
+        const double mean_d = static_cast<double>(mean);
+        const double scale_d = static_cast<double>(scale);
+
+        T* data = out.ptr<T>();
+        const size_t N = static_cast<size_t>(out.total() * out.channels());
+        for (size_t i = 0; i < N; ++i)
+        {
+            const double v = rng.gaussian(scale_d) + mean_d;
+            data[i] = saturate_cast<T>(v);
+        }
+    }
+
+    void fillRandomNormal(Mat& out, float mean, float scale,
+                          bool has_seed, float seed)
+    {
+        const int depth = CV_MAT_DEPTH(out.type());
+        switch (depth)
+        {
+        case CV_32F:
+            fillRandomNormalImpl<float>(out, mean, scale, has_seed, seed);
+            break;
+        case CV_64F:
+            fillRandomNormalImpl<double>(out, mean, scale, has_seed, seed);
+            break;
+        case CV_8U:
+            fillRandomNormalImpl<uint8_t>(out, mean, scale, has_seed, seed);
+            break;
+        case CV_8S:
+            fillRandomNormalImpl<int8_t>(out, mean, scale, has_seed, seed);
+            break;
+        case CV_32S:
+            fillRandomNormalImpl<int32_t>(out, mean, scale, has_seed, seed);
+            break;
+        case CV_64S:
+            fillRandomNormalImpl<int64_t>(out, mean, scale, has_seed, seed);
+            break;
+        case CV_16F:
+        case CV_16BF:
+        {
+            Mat tmp(out.size(), CV_MAKETYPE(CV_32F, out.channels()));
+            fillRandomNormalImpl<float>(tmp, mean, scale, has_seed, seed);
+            tmp.convertTo(out, out.type());
+            break;
+        }
+        default:
+            CV_Error_(Error::StsNotImplemented,
+                      ("RandomNormalLike: invalid/unsupported tensor type: %s",
+                       typeToString(out.type()).c_str()));
+        }
+    }
+}
+
+class RandomNormalLikeLayerImpl CV_FINAL : public RandomNormalLikeLayer
 {
 public:
     RandomNormalLikeLayerImpl(const LayerParams& params)
@@ -69,8 +140,6 @@ public:
         internals.clear();
     }
 
-    void finalize(InputArrayOfArrays, OutputArrayOfArrays) CV_OVERRIDE {}
-
     void forward(InputArrayOfArrays inputs_arr,
                  OutputArrayOfArrays outputs_arr,
                  OutputArrayOfArrays) CV_OVERRIDE
@@ -92,13 +161,13 @@ public:
             std::vector<Mat>& outs = outputs_arr.getMatVecRef();
             outs.resize(1);
             outs[0].fit(outShape, outType);
-            fillWithRandomNormal(outs[0]);
+            fillRandomNormal(outs[0], mean, scale, has_seed, seed);
         } else if (kind == _InputArray::STD_VECTOR_UMAT) {
             std::vector<UMat>& outs = outputs_arr.getUMatVecRef();
             outs.resize(1);
             outs[0].fit(outShape, outType);
             Mat temp(outShape, outType);
-            fillWithRandomNormal(temp);
+            fillRandomNormal(temp, mean, scale, has_seed, seed);
             temp.copyTo(outs[0]);
         } else {
             CV_Error(Error::StsNotImplemented, "");
@@ -106,41 +175,7 @@ public:
     }
 
 private:
-    void fillWithRandomNormal(Mat& out)
-    {
-        // Only basic numeric types supported
-        int t = out.type();
-        if (t != CV_32F && t != CV_64F && t != CV_16F && t != CV_16BF && t != CV_8U && t != CV_8S && t != CV_32S && t != CV_64S)
-            CV_Error_(Error::StsNotImplemented, ("invalid/unsupported tensor type: %s", typeToString(t).c_str()));
-
-        RNG rng;
-        if (has_seed) {
-            uint64 seed_u64 = (uint64)std::llround((double)seed);
-            rng.state = seed_u64 ? seed_u64 : 0x12345678ULL;
-        }
-
-        if (t == CV_32F) {
-            rng.fill(out, RNG::NORMAL, Scalar(mean), Scalar(scale));
-        } else if (t == CV_64F) {
-            rng.fill(out, RNG::NORMAL, Scalar((double)mean), Scalar((double)scale));
-        } else if (t == CV_16F || t == CV_16BF) {
-            Mat tmp(out.size, CV_32F);
-            rng.fill(tmp, RNG::NORMAL, Scalar(mean), Scalar(scale));
-            tmp.convertTo(out, t);
-        } else if (t == CV_8U || t == CV_8S || t == CV_32S || t == CV_64S) {
-            Mat tmp(out.size, CV_32F);
-            rng.fill(tmp, RNG::NORMAL, Scalar(mean), Scalar(scale));
-            tmp.convertTo(out, t);
-        } else {
-            CV_Error_(Error::StsNotImplemented, ("invalid/unsupported tensor type: %s", typeToString(t).c_str()));
-        }
-    }
-
-    float mean;
-    float scale;
     int output_dtype; // OpenCV cv::Mat type (e.g., CV_32F). -1 means follow input type
-    bool has_seed;
-    float seed;
 };
 
 Ptr<Layer> RandomNormalLikeLayer::create(const LayerParams& params)
