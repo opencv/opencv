@@ -27,23 +27,25 @@ namespace flatbuffers {
 
 class Struct FLATBUFFERS_FINAL_CLASS {
  public:
-  template<typename T> T GetField(uoffset_t o) const {
+  template <typename T>
+  T GetField(uoffset_t o) const {
     return ReadScalar<T>(&data_[o]);
   }
 
-  template<typename T> T GetStruct(uoffset_t o) const {
+  template <typename T>
+  T GetStruct(uoffset_t o) const {
     return reinterpret_cast<T>(&data_[o]);
   }
 
-  const uint8_t *GetAddressOf(uoffset_t o) const { return &data_[o]; }
-  uint8_t *GetAddressOf(uoffset_t o) { return &data_[o]; }
+  const uint8_t* GetAddressOf(uoffset_t o) const { return &data_[o]; }
+  uint8_t* GetAddressOf(uoffset_t o) { return &data_[o]; }
 
  private:
   // private constructor & copy constructor: you obtain instances of this
   // class by pointing to existing data only
   Struct();
-  Struct(const Struct &);
-  Struct &operator=(const Struct &);
+  Struct(const Struct&);
+  Struct& operator=(const Struct&);
 
   uint8_t data_[1];
 };

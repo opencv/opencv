@@ -435,7 +435,7 @@ bool  IsColorPalette( PaletteEntry* palette, int bpp )
 uchar* FillUniColor( uchar* data, uchar*& line_end,
                      int step, int width3,
                      int& y, int height,
-                     int count3, PaletteEntry clr )
+                     ptrdiff_t count3, PaletteEntry clr )
 {
     do
     {
@@ -444,7 +444,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
         if( end > line_end )
             end = line_end;
 
-        count3 -= (int)(end - data);
+        count3 -= end - data;
 
         for( ; data < end; data += 3 )
         {
@@ -467,7 +467,7 @@ uchar* FillUniColor( uchar* data, uchar*& line_end,
 uchar* FillUniGray( uchar* data, uchar*& line_end,
                     int step, int width,
                     int& y, int height,
-                    int count, uchar clr )
+                    ptrdiff_t count, uchar clr )
 {
     do
     {
@@ -476,7 +476,7 @@ uchar* FillUniGray( uchar* data, uchar*& line_end,
         if( end > line_end )
             end = line_end;
 
-        count -= (int)(end - data);
+        count -= end - data;
 
         for( ; data < end; data++ )
         {
