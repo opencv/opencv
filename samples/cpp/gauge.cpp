@@ -1,8 +1,8 @@
 /**
   @file gauge.cpp
   @author Alessandro de Oliveira Faria (A.K.A. CABELO)
-  @brief This sample application processes an image frame of an analog gauge 
-  and extracts its reading using functions from the OpenCV* computer vision 
+  @brief This sample application processes an image frame of an analog gauge
+  and extracts its reading using functions from the OpenCV* computer vision
   library. The workflow is divided into two stages: calibration and
   measurement. Questions and suggestions email to:
   Alessandro de Oliveira Faria cabelo[at]opensuse[dot]org or OpenCV Team.
@@ -245,7 +245,7 @@ static double get_current_value(Mat img,
     double res = 0;
     // atan(y/x) in radians
     if(x_angle != 0)
-    {	    
+    {
         res = std::atan(y_angle / x_angle);
         res = res * 180.0 / CV_PI; // rad2deg
     }
