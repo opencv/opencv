@@ -322,7 +322,7 @@ struct BufferAllocator
                 Arg inp0 = inputs[0];
                 if (inp0.idx > 0 && usecounts[inp0.idx] > 0) {
                     CV_Assert(!netimpl->isConstArg(inp0));
-                    if (!netimpl->isConstArg(trip_count))
+                    if (!netimpl->isConstArg(trip_count) && bufidxs[trip_count.idx] >= 0)
                         shareBuffer(trip_count, inputs[0]);
                     else
                         bufidxs.at(inputs[0].idx) = getFreeBuffer();
@@ -335,7 +335,7 @@ struct BufferAllocator
                     Arg v_out = i >= 0 ? outputs[i] : Arg();
                     if (inparg.idx > 0 && usecounts[inparg.idx] > 0) {
                         CV_Assert(!netimpl->isConstArg(inparg));
-                        if (!netimpl->isConstArg(v_inp))
+                        if (!netimpl->isConstArg(v_inp) && v_inp.idx > 0 && bufidxs[v_inp.idx] >= 0)
                             shareBuffer(v_inp, inparg);
                         else
                             bufidxs[inparg.idx] = getFreeBuffer();
