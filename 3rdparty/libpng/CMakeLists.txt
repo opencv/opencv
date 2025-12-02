@@ -186,7 +186,7 @@ endif()
 if(PNG_TARGET_ARCHITECTURE MATCHES "^(riscv)")
   include(CheckCCompilerFlag)
   set(PNG_RISCV_RVV_POSSIBLE_VALUES on off)
-  set(PNG_RISCV_RVV "off"
+  set(PNG_RISCV_RVV "on"
     CACHE STRING "Enable RISC-V Vector optimizations: on|off; off is default")
   set_property(CACHE PNG_RISCV_RVV
               PROPERTY STRINGS ${PNG_RISCV_RVV_POSSIBLE_VALUES})
