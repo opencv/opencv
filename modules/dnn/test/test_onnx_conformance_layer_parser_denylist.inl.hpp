@@ -432,7 +432,6 @@
 "test_layer_normalization_default_axis",
 "test_layer_normalization_default_axis_expanded",
 "test_layer_normalization_default_axis_expanded_ver18",
-"test_loop11",  // Issue::'Graph' is not supported in function 'getLayerParams'
 "test_loop13_seq",  // Issue::typeProto.has_tensor_type() in function 'populateNet'
 "test_loop16_seq_none",  // Issue::Failed to allocate 179812654996800 bytes in function 'OutOfMemoryError'
 "test_lpnormalization_default",
