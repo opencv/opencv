@@ -1586,12 +1586,26 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         a3 = coeffs.at<double>(i+3);
     }
 
-    if( a0 == 0 )
+    // Normalization to handle small coefficients and avoid overflow/underflow
+    double max_coeff = std::max({std::abs(a0), std::abs(a1), std::abs(a2), std::abs(a3)});
+    if( max_coeff < DBL_EPSILON )
+        return 0;
+
+    double scale = 1.0 / max_coeff;
+    a0 *= scale;
+    a1 *= scale;
+    a2 *= scale;
+    a3 *= scale;
+
+    // Use a small epsilon to check for reduction to lower order equation
+    const double eps = 1e-9;
+
+    if( std::abs(a0) < eps )
     {
-        if( a1 == 0 )
+        if( std::abs(a1) < eps )
         {
-            if( a2 == 0 ) // constant
-                n = a3 == 0 ? -1 : 0;
+            if( std::abs(a2) < eps ) // constant
+                n = std::abs(a3) < eps ? -1 : 0;
             else
             {
                 // linear equation
@@ -1608,7 +1622,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
                 d = std::sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
-                if( fabs(q1) > fabs(q2) )
+                if( std::abs(q1) > std::abs(q2) )
                 {
                     x0 = q1 / a1;
                     x1 = a3 / q1;
