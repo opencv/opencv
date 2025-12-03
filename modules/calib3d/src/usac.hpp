@@ -17,7 +17,7 @@ class Error : public Algorithm {
 public:
     // set model to use getError() function
     virtual void setModelParameters (const Mat &model) = 0;
-    // returns error of point wih @point_idx w.r.t. model
+    // returns error of point with @point_idx w.r.t. model
     virtual float getError (int point_idx) const = 0;
     virtual const std::vector<float> &getErrors (const Mat &model) = 0;
 };
@@ -658,8 +658,6 @@ namespace Math {
     Matx33d getSkewSymmetric(const Vec3d &v_);
     // eliminate matrix with m rows and n columns to be upper triangular.
     bool eliminateUpperTriangular (std::vector<double> &a, int m, int n);
-    Matx33d rotVec2RotMat (const Vec3d &v);
-    Vec3d rotMat2RotVec (const Matx33d &R);
 }
 
 class SolverPoly: public Algorithm {

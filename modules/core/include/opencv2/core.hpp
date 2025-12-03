@@ -540,9 +540,9 @@ The function LUT fills the output array with values from the look-up table. Indi
 are taken from the input array. That is, the function processes each element of src as follows:
 \f[\texttt{dst} (I)  \leftarrow \texttt{lut(src(I) + d)}\f]
 where
-\f[d =  \fork{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}\f]
-@param src input array of 8-bit elements.
-@param lut look-up table of 256 elements; in case of multi-channel input array, the table should
+\f[d =  \forkthree{0}{if \(\texttt{src}\) has depth \(\texttt{CV_8U}\) or \(\texttt{CV_16U}\)}{128}{if \(\texttt{src}\) has depth \(\texttt{CV_8S}\)}{32768}{if \(\texttt{src}\) has depth \(\texttt{CV_16S}\)}\f]
+@param src input array of 8-bit or 16-bit integer elements.
+@param lut look-up table of 256 elements (if src has depth CV_8U or CV_8S) or 65536 elements(if src has depth CV_16U or CV_16S); in case of multi-channel input array, the table should
 either have a single channel (in this case the same table is used for all channels) or the same
 number of channels as in the input array.
 @param dst output array of the same size and number of channels as src, and the same depth as lut.
@@ -804,6 +804,11 @@ Possible usage with some positive example data:
     // 10.0     1.0     (shift to right border)
     normalize(positiveData, normalizedData_minmax, 1.0, 0.0, NORM_MINMAX);
 @endcode
+
+@note Due to rounding issues, min-max normalization can result in values outside provided boundaries.
+If exact range conformity is needed, following workarounds can be used:
+- use double floating point precision (dtype = CV_64F)
+- manually clip values (`cv::max(res, left_bound, res)`, `cv::min(res, right_bound, res)` or `np.clip`)
 
 @param src input array.
 @param dst output array of the same size as src .
@@ -1706,10 +1711,13 @@ elements.
 */
 CV_EXPORTS_W bool checkRange(InputArray a, bool quiet = true, CV_OUT Point* pos = 0,
                             double minVal = -DBL_MAX, double maxVal = DBL_MAX);
+/** @brief Replaces NaNs (Not-a-Number values) in a matrix with the specified value.
 
-/** @brief Replaces NaNs by given number
-@param a input/output matrix (CV_32F type).
-@param val value to convert the NaNs
+This function modifies the input matrix in-place.
+The input matrix must be of type `CV_32F` or `CV_64F`; other types are not supported.
+
+@param a Input/output matrix (CV_32F or CV_64F type).
+@param val Value used to replace NaNs (defaults to 0).
 */
 CV_EXPORTS_W void patchNaNs(InputOutputArray a, double val = 0);
 
@@ -2004,8 +2012,8 @@ The function solveCubic finds the real roots of a cubic equation:
 
 The roots are stored in the roots array.
 @param coeffs equation coefficients, an array of 3 or 4 elements.
-@param roots output array of real roots that has 1 or 3 elements.
-@return number of real roots. It can be 0, 1 or 2.
+@param roots output array of real roots that has 0, 1, 2 or 3 elements.
+@return number of real roots. It can be -1 (all real numbers), 0, 1, 2 or 3.
 */
 CV_EXPORTS_W int solveCubic(InputArray coeffs, OutputArray roots);
 

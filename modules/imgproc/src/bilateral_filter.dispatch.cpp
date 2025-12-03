@@ -13,6 +13,7 @@
 // Copyright (C) 2000-2008, 2018, Intel Corporation, all rights reserved.
 // Copyright (C) 2009, Willow Garage Inc., all rights reserved.
 // Copyright (C) 2014-2015, Itseez Inc., all rights reserved.
+// Copyright (C) 2025, Advanced Micro Devices, all rights reserved.
 // Third party copyrights are property of their respective owners.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -75,10 +76,12 @@ static bool ocl_bilateralFilter_8u(InputArray _src, OutputArray _dst, int d,
     if (depth != CV_8U || cn > 4)
         return false;
 
-    if (sigma_color <= 0)
-        sigma_color = 1;
-    if (sigma_space <= 0)
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        _src.copyTo(_dst);
+        return true;
+    }
 
     double gauss_color_coeff = -0.5 / (sigma_color * sigma_color);
     double gauss_space_coeff = -0.5 / (sigma_space * sigma_space);
@@ -165,13 +168,15 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_8UC1 || src.type() == CV_8UC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
-    double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
-    double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
+    float gauss_color_coeff = (float)(-0.5/(sigma_color*sigma_color));
+    float gauss_space_coeff = (float)(-0.5/(sigma_space*sigma_space));
 
     if( d <= 0 )
         radius = cvRound(sigma_space*1.5);
@@ -191,15 +196,31 @@ bilateralFilter_8u( const Mat& src, Mat& dst, int d,
     int* space_ofs = &_space_ofs[0];
 
     // initialize color-related bilateral filter coefficients
+    i = 0;
+#if (CV_SIMD || CV_SIMD_SCALABLE)
+    int nlanes = VTraits<v_float32>::vlanes();
+    v_float32 v_gauss_color_coeff = vx_setall_f32(gauss_color_coeff);
+    float counter[16] = {0.0, 1., 2., 3., 4., 5., 6., 7.,
+                    8., 9., 10., 11., 12., 13., 14., 15.};
+    v_float32 v_i = vx_load(counter);
+    v_float32 v_inc = vx_setall_f32(float(nlanes));
 
-    for( i = 0; i < 256*cn; i++ )
+    for( ; i < (256*cn) - nlanes; i += nlanes )
+    {
+        v_float32 v_color_weight = v_mul(v_mul(v_i,v_i), v_gauss_color_coeff);
+        v_store(color_weight + i, v_exp(v_color_weight));
+        v_i = v_add(v_i, v_inc);
+    }
+#endif
+    for(; i < 256*cn; i++ )
+    {
         color_weight[i] = (float)std::exp(i*i*gauss_color_coeff);
+    }
 
     // initialize space-related bilateral filter coefficients
     for( i = -radius, maxk = 0; i <= radius; i++ )
     {
         j = -radius;
-
         for( ; j <= radius; j++ )
         {
             double r = std::sqrt((double)i*i + (double)j*j);
@@ -232,10 +253,12 @@ bilateralFilter_32f( const Mat& src, Mat& dst, int d,
 
     CV_Assert( (src.type() == CV_32FC1 || src.type() == CV_32FC3) && src.data != dst.data );
 
-    if( sigma_color <= 0 )
-        sigma_color = 1;
-    if( sigma_space <= 0 )
-        sigma_space = 1;
+    constexpr double eps = 1e-6;
+    if( sigma_color <= eps || sigma_space <= eps )
+    {
+        src.copyTo(dst);
+        return;
+    }
 
     double gauss_color_coeff = -0.5/(sigma_color*sigma_color);
     double gauss_space_coeff = -0.5/(sigma_space*sigma_space);
@@ -358,9 +381,16 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
 #ifdef HAVE_IPP_IW
     CV_INSTRUMENT_REGION_IPP();
 
+    constexpr double eps = 1e-6;
+    if( sigmaColor <= eps || sigmaSpace <= eps )
+    {
+        src.copyTo(dst);
+        return true;
+    }
+
     int         radius         = IPP_MAX(((d <= 0)?cvRound(sigmaSpace*1.5):d/2), 1);
-    Ipp32f      valSquareSigma = (Ipp32f)((sigmaColor <= 0)?1:sigmaColor*sigmaColor);
-    Ipp32f      posSquareSigma = (Ipp32f)((sigmaSpace <= 0)?1:sigmaSpace*sigmaSpace);
+    Ipp32f      valSquareSigma = (Ipp32f)(sigmaColor*sigmaColor);
+    Ipp32f      posSquareSigma = (Ipp32f)(sigmaSpace*sigmaSpace);
 
     // Acquire data and begin processing
     try
@@ -380,7 +410,16 @@ static bool ipp_bilateralFilter(Mat &src, Mat &dst, int d, double sigmaColor, do
             if(!ok)
                 return false;
 
-            parallel_for_(range, invoker, threads*4);
+            // Tile height can't be smaller than the radius.
+            // Otherwise, the second tile has mixed top border (pixels from both
+            // inmem and outside should be used), which is not supported in IPP.
+            int maxTiles = (int)iwDst.m_size.height / radius;
+            int numTiles = threads * 4;
+            if (numTiles > maxTiles) {
+                // Keep the tiles number as multiple of threads for the better workload balance.
+                numTiles = (maxTiles / threads) * threads;
+            }
+            parallel_for_(range, invoker, numTiles);
 
             if(!ok)
                 return false;

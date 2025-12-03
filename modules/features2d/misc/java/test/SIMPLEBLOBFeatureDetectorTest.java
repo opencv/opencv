@@ -108,8 +108,7 @@ public class SIMPLEBLOBFeatureDetectorTest extends OpenCVTestCase {
         assertEquals(2, params.get_minRepeatability());
         assertEquals(10.0f, params.get_minDistBetweenBlobs());
         assertEquals(true, params.get_filterByColor());
-        // FIXME: blobColor field has uchar type in C++ and cannot be automatically wrapped to Java as it does not support unsigned types
-        //assertEquals(0, params.get_blobColor());
+        assertEquals(0, params.get_blobColor());
         assertEquals(true, params.get_filterByArea());
         assertEquals(800f, params.get_minArea());
         assertEquals(6000f, params.get_maxArea());

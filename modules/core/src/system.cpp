@@ -43,6 +43,7 @@
 
 #include "precomp.hpp"
 #include <atomic>
+#include <exception>
 #include <iostream>
 #include <ostream>
 
@@ -125,7 +126,6 @@ void* allocSingletonNewBuffer(size_t size) { return malloc(size); }
 #endif
 
 #ifdef CV_ERROR_SET_TERMINATE_HANDLER
-#include <exception>      // std::set_terminate
 #include <cstdlib>        // std::abort
 #endif
 
@@ -427,6 +427,7 @@ struct HWFeatures
         g_hwFeatureNames[CPU_NEON_DOTPROD] = "NEON_DOTPROD";
         g_hwFeatureNames[CPU_NEON_FP16] = "NEON_FP16";
         g_hwFeatureNames[CPU_NEON_BF16] = "NEON_BF16";
+        g_hwFeatureNames[CPU_SVE] = "SVE";
 
         g_hwFeatureNames[CPU_VSX] = "VSX";
         g_hwFeatureNames[CPU_VSX3] = "VSX3";
@@ -589,6 +590,7 @@ struct HWFeatures
                 {
                     have[CV_CPU_NEON_DOTPROD] = (auxv.a_un.a_val & (1 << 20)) != 0; // HWCAP_ASIMDDP
                     have[CV_CPU_NEON_FP16] = (auxv.a_un.a_val & (1 << 10)) != 0; // HWCAP_ASIMDHP
+                    have[CV_CPU_SVE] = (auxv.a_un.a_val & (1 << 22)) != 0; // HWCAP_SVE
                 }
 #if defined(AT_HWCAP2)
                 else if (auxv.a_type == AT_HWCAP2)
@@ -676,7 +678,7 @@ struct HWFeatures
     #if defined _ARM_ && (defined(_WIN32_WCE) && _WIN32_WCE >= 0x800)
         have[CV_CPU_NEON] = true;
     #endif
-    #if defined _M_ARM64
+    #if defined _M_ARM64 || defined _M_ARM64EC
         have[CV_CPU_NEON] = true;
     #endif
     #ifdef __riscv_vector
@@ -1106,20 +1108,31 @@ String tempfile( const char* suffix )
         fname = String(aname);
     }
 #else
+    // Use GUID-based naming to avoid race condition with GetTempFileNameA
+    // See issue #19648
     char temp_dir2[MAX_PATH] = { 0 };
-    char temp_file[MAX_PATH] = { 0 };
 
     if (temp_dir.empty())
     {
         ::GetTempPathA(sizeof(temp_dir2), temp_dir2);
         temp_dir = std::string(temp_dir2);
     }
-    if(0 == ::GetTempFileNameA(temp_dir.c_str(), "ocv", 0, temp_file))
+
+    GUID g;
+    HRESULT hr = CoCreateGuid(&g);
+    if (FAILED(hr))
         return String();
+    char guidStr[40];
+    const char* mask = "%08x_%04x_%04x_%02x%02x_%02x%02x%02x%02x%02x%02x";
+    snprintf(guidStr, sizeof(guidStr), mask,
+            g.Data1, g.Data2, g.Data3, (unsigned int)g.Data4[0], (unsigned int)g.Data4[1],
+            (unsigned int)g.Data4[2], (unsigned int)g.Data4[3], (unsigned int)g.Data4[4],
+            (unsigned int)g.Data4[5], (unsigned int)g.Data4[6], (unsigned int)g.Data4[7]);
 
-    DeleteFileA(temp_file);
-
-    fname = temp_file;
+    fname = temp_dir;
+    if (!fname.empty() && fname[fname.size()-1] != '\\' && fname[fname.size()-1] != '/')
+        fname += "\\";
+    fname = fname + "ocv" + guidStr;
 #endif
 # else
 #  ifdef __ANDROID__

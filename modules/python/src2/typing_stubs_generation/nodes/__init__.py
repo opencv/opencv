@@ -8,5 +8,5 @@ from .type_node import (
     TypeNode, OptionalTypeNode, UnionTypeNode, NoneTypeNode, TupleTypeNode,
     ASTNodeTypeNode, AliasTypeNode, SequenceTypeNode, AnyTypeNode,
     AggregatedTypeNode, NDArrayTypeNode, AliasRefTypeNode, PrimitiveTypeNode,
-    CallableTypeNode, DictTypeNode, ClassTypeNode
+    CallableTypeNode, DictTypeNode, ClassTypeNode, PathLikeTypeNode
 )

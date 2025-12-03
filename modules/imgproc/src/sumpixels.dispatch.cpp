@@ -486,7 +486,8 @@ cvIntegral( const CvArr* image, CvArr* sumImage,
         ptilted = &tilted;
     }
     cv::integral( src, sum, psqsum ? cv::_OutputArray(*psqsum) : cv::_OutputArray(),
-                  ptilted ? cv::_OutputArray(*ptilted) : cv::_OutputArray(), sum.depth() );
+                  ptilted ? cv::_OutputArray(*ptilted) : cv::_OutputArray(), sum.depth(),
+                  psqsum ? psqsum->depth() : -1 );
 
     CV_Assert( sum.data == sum0.data && sqsum.data == sqsum0.data && tilted.data == tilted0.data );
 }

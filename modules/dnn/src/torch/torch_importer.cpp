@@ -598,7 +598,7 @@ struct TorchImporter
                 readTorchTable(scalarParams, tensorParams);
 
                 CV_Assert(tensorParams.count("weight"));
-                Mat weightBlob = tensorParams["weight"].second;
+                const Mat& weightBlob = tensorParams["weight"].second;
                 layerParams.blobs.push_back(weightBlob);
 
                 bool bias = tensorParams.count("bias") != 0;
@@ -782,12 +782,16 @@ struct TorchImporter
                 int dim = scalarParams.get<int>("dim") - 1;  // In Lua we start from 1.
                 int pad = scalarParams.get<int>("pad");
 
-                std::vector<int> paddings((dim + 1) * 2, 0);
+                AutoBuffer<int> paddingsBuf((dim + 1) * 2);
+                int *paddings = paddingsBuf.data();
+                int paddingsSize = (dim + 1) * 2;
+                for (int i = 0; i < paddingsSize; ++i) paddings[i] = 0;
                 if (pad > 0)
-                    paddings[dim * 2 + 1] = pad;  // Pad after (right).
+                    paddings[dim * 2 + 1] = pad;
                 else
-                    paddings[dim * 2] = -pad;  // Pad before (left).
-                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+                    paddings[dim * 2] = -pad;
+                layerParams.set("paddings", DictValue::arrayInt<int*>(paddings, paddingsSize));
+
 
                 curModule->modules.push_back(newModule);
             }
@@ -935,12 +939,14 @@ struct TorchImporter
 
                 // Torch's SpatialZeroPadding works with 3- or 4-dimensional input.
                 // So we add parameter input_dims=3 to ignore batch dimension if it will be.
-                std::vector<int> paddings(6, 0);  // CHW
+                int paddings[6] = {0, 0, 0, 0, 0, 0};
+
                 paddings[2] = padTop;
                 paddings[3] = padBottom;
                 paddings[4] = padLeft;
                 paddings[5] = padRight;
-                layerParams.set("paddings", DictValue::arrayInt<int*>(&paddings[0], paddings.size()));
+
+                layerParams.set("paddings", DictValue::arrayInt(paddings, 6));
                 layerParams.set("input_dims", 3);
 
                 if (nnName == "SpatialReflectionPadding")

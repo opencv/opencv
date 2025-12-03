@@ -73,6 +73,10 @@ Building OpenCV.js from Source
 ---------------------------------------
 
 -#  To build `opencv.js`, execute python script `<opencv_src_dir>/platforms/js/build_js.py <build_dir>`.
+    The build script builds WebAssembly version by default(`--build_wasm` switch is kept by back-compatibility reason).
+    By default everything is bundled into one JavaScript file by `base64` encoding the WebAssembly code. For production
+    builds you can add `--disable_single_file` which will reduce total size by writing the WebAssembly code
+    to a dedicated `.wasm` file which the generated JavaScript file will automatically load.
 
     For example, to build in `build_js` directory:
     @code{.bash}
@@ -81,16 +85,6 @@ Building OpenCV.js from Source
 
     @note
     It requires `python` and `cmake` installed in your development environment.
-
--#  The build script builds asm.js version by default. To build WebAssembly version, append `--build_wasm` switch.
-    By default everything is bundled into one JavaScript file by `base64` encoding the WebAssembly code. For production
-    builds you can add `--disable_single_file` which will reduce total size by writing the WebAssembly code
-    to a dedicated `.wasm` file which the generated JavaScript file will automatically load.
-
-    For example, to build wasm version in `build_wasm` directory:
-    @code{.bash}
-    emcmake python ./opencv/platforms/js/build_js.py build_wasm --build_wasm
-    @endcode
 
 -#  [Optional] To build the OpenCV.js loader, append `--build_loader`.
 

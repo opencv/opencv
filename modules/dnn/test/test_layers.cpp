@@ -2788,4 +2788,47 @@ INSTANTIATE_TEST_CASE_P(TestLayerFusion, ConvolutionActivationEltwiseFusion, Com
                         TestLayerFusion::dnnBackendsAndTargetsForFusionTests()
 ));
 
+TEST(ConvolutionWinograd, Accuracy)
+{
+    Mat weights({2, 1, 3, 3}, CV_32F);
+    randn(weights, 0, 1);
+
+    // Check convolution can switch between implementations on changed shape.
+    auto getNet = [&]() {
+        Net net;
+        LayerParams lp;
+        lp.name = "conv";
+        lp.type = "Convolution";
+        lp.set("kernel_size", 3);
+        lp.set("num_output", 2);
+        lp.set("pad", 0);
+        lp.set("stride", 1);
+        lp.set("bias_term", false);
+
+        lp.blobs.push_back(weights);
+        net.addLayerToPrev(lp.name, lp.type, lp);
+        return net;
+    };
+
+    Mat inpSmall({1, 1, 5, 5}, CV_32F);
+    Mat inpLarge({1, 1, 64, 64}, CV_32F);
+    randn(inpSmall, 0, 1);
+    randn(inpLarge, 0, 1);
+
+    Net net1 = getNet();
+    Net net2 = getNet();
+    net1.setInput(inpSmall);
+    net2.setInput(inpLarge);
+    Mat refSmall = net1.forward();
+    Mat refLarge = net2.forward();
+
+    net1.setInput(inpLarge);
+    net2.setInput(inpSmall);
+    Mat outLarge = net1.forward();
+    Mat outSmall = net2.forward();
+
+    normAssert(outSmall, refSmall, "Small input after large", 0.0, 0.0);
+    normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
+}
+
 }} // namespace

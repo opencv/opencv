@@ -185,7 +185,8 @@ public:
 #if OPENCV_ABI_COMPATIBILITY < 500
         STD_ARRAY         =14 << KIND_SHIFT,  //!< removed: https://github.com/opencv/opencv/issues/18897
 #endif
-        STD_ARRAY_MAT     =15 << KIND_SHIFT
+        STD_ARRAY_MAT     =15 << KIND_SHIFT,
+        CUDA_GPU_MATND    =16 << KIND_SHIFT
     };
 
     _InputArray();
@@ -204,6 +205,7 @@ public:
     _InputArray(const double& val);
     _InputArray(const cuda::GpuMat& d_mat);
     _InputArray(const std::vector<cuda::GpuMat>& d_mat_array);
+    _InputArray(const cuda::GpuMatND& d_mat);
     _InputArray(const ogl::Buffer& buf);
     _InputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputArray(const cudev::GpuMat_<_Tp>& m);
@@ -223,6 +225,7 @@ public:
     void getUMatVector(std::vector<UMat>& umv) const;
     void getGpuMatVector(std::vector<cuda::GpuMat>& gpumv) const;
     cuda::GpuMat getGpuMat() const;
+    cuda::GpuMatND getGpuMatND() const;
     ogl::Buffer getOGlBuffer() const;
 
     int getFlags() const;
@@ -255,6 +258,7 @@ public:
     bool isVector() const;
     bool isGpuMat() const;
     bool isGpuMatVector() const;
+    bool isGpuMatND() const;
     ~_InputArray();
 
 protected:
@@ -318,6 +322,7 @@ public:
     _OutputArray(std::vector<Mat>& vec);
     _OutputArray(cuda::GpuMat& d_mat);
     _OutputArray(std::vector<cuda::GpuMat>& d_mat);
+    _OutputArray(cuda::GpuMatND& d_mat);
     _OutputArray(ogl::Buffer& buf);
     _OutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(cudev::GpuMat_<_Tp>& m);
@@ -336,6 +341,7 @@ public:
     _OutputArray(const std::vector<Mat>& vec);
     _OutputArray(const cuda::GpuMat& d_mat);
     _OutputArray(const std::vector<cuda::GpuMat>& d_mat);
+    _OutputArray(const cuda::GpuMatND& d_mat);
     _OutputArray(const ogl::Buffer& buf);
     _OutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _OutputArray(const cudev::GpuMat_<_Tp>& m);
@@ -363,6 +369,7 @@ public:
     UMat& getUMatRef(int i=-1) const;
     cuda::GpuMat& getGpuMatRef() const;
     std::vector<cuda::GpuMat>& getGpuMatVecRef() const;
+    cuda::GpuMatND& getGpuMatNDRef() const;
     ogl::Buffer& getOGlBufferRef() const;
     cuda::HostMem& getHostMemRef() const;
     void create(Size sz, int type, int i=-1, bool allowTransposed=false, _OutputArray::DepthMask fixedDepthMask=static_cast<_OutputArray::DepthMask>(0)) const;
@@ -372,6 +379,7 @@ public:
     void release() const;
     void clear() const;
     void setTo(const _InputArray& value, const _InputArray & mask = _InputArray()) const;
+    Mat reinterpret( int type ) const;
 
     void assign(const UMat& u) const;
     void assign(const Mat& m) const;
@@ -392,6 +400,7 @@ public:
     _InputOutputArray(Mat& m);
     _InputOutputArray(std::vector<Mat>& vec);
     _InputOutputArray(cuda::GpuMat& d_mat);
+    _InputOutputArray(cuda::GpuMatND& d_mat);
     _InputOutputArray(ogl::Buffer& buf);
     _InputOutputArray(cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(cudev::GpuMat_<_Tp>& m);
@@ -409,6 +418,7 @@ public:
     _InputOutputArray(const std::vector<Mat>& vec);
     _InputOutputArray(const cuda::GpuMat& d_mat);
     _InputOutputArray(const std::vector<cuda::GpuMat>& d_mat);
+    _InputOutputArray(const cuda::GpuMatND& d_mat);
     _InputOutputArray(const ogl::Buffer& buf);
     _InputOutputArray(const cuda::HostMem& cuda_mem);
     template<typename _Tp> _InputOutputArray(const cudev::GpuMat_<_Tp>& m);
@@ -1236,8 +1246,13 @@ public:
 
     When the operation mask is specified, if the Mat::create call shown above reallocates the matrix,
     the newly allocated matrix is initialized with all zeros before copying the data.
+
+    If (re)allocation of destination memory is not necessary (e.g. updating ROI), use copyAt() .
+
     @param m Destination matrix. If it does not have a proper size or type before the operation, it is
     reallocated.
+
+    @sa copyAt
      */
     void copyTo( OutputArray m ) const;
 
@@ -1248,6 +1263,30 @@ public:
     elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
     */
     void copyTo( OutputArray m, InputArray mask ) const;
+
+    /** @brief Overwrites the existing matrix
+
+    This method writes existing matrix data, just like copyTo().
+    But if it does not have a proper size or type before the operation, an exception is thrown.
+    This function is helpful to update ROI in an existing matrix.
+
+    If (re)allocation of destination memory is necessary, use copyTo() .
+
+    @param m Destination matrix.
+    If it does not have a proper size or type before the operation, an exception is thrown.
+
+    @sa copyTo
+
+     */
+    void copyAt( OutputArray m ) const;
+
+    /** @overload
+    @param m Destination matrix.
+    If it does not have a proper size or type before the operation, an exception is thrown.
+    @param mask Operation mask of the same size as \*this. Its non-zero elements indicate which matrix
+    elements need to be copied. The mask has to be of type CV_8U and can have 1 or multiple channels.
+    */
+    void copyAt( OutputArray m, InputArray mask ) const;
 
     /** @brief Converts an array to another data type with optional scaling.
 
@@ -1338,6 +1377,15 @@ public:
      * the original sizes in those dimensions are presumed.
      */
     Mat reshape(int cn, const std::vector<int>& newshape) const;
+
+    /** @brief Reset the type of matrix.
+
+    The methods reset the data type of matrix. If the new type and the old type of the matrix
+    have the same element size, the current buffer can be reused. The method needs to consider whether the
+    current mat is a submatrix or has any references.
+    @param type New data type.
+     */
+    Mat reinterpret( int type ) const;
 
     /** @brief Transposes a matrix.
 
@@ -2472,8 +2520,8 @@ public:
     UMat(const UMat& m, const Range* ranges);
     UMat(const UMat& m, const std::vector<Range>& ranges);
 
-    // FIXIT copyData=false is not implemented, drop this in favor of cv::Mat (OpenCV 5.0)
-    //! builds matrix from std::vector with or without copying the data
+    //! builds matrix from std::vector. The data is always copied. The copyData
+    //! parameter is deprecated and will be removed in OpenCV 5.0.
     template<typename _Tp> explicit UMat(const std::vector<_Tp>& vec, bool copyData=false);
 
     //! destructor - calls release()

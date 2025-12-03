@@ -589,7 +589,7 @@ TEST(Drawing, longline)
     Mat mat = Mat::zeros(256, 256, CV_8UC1);
 
     line(mat, cv::Point(34, 204), cv::Point(46400, 47400), cv::Scalar(255), 3);
-    EXPECT_EQ(310, cv::countNonZero(mat));
+    EXPECT_EQ(264, cv::countNonZero(mat));
 
     Point pt[6];
     pt[0].x = 32;
@@ -789,7 +789,7 @@ TEST(Drawing, fillpoly_fully)
         cv::Mat labelImage(binary.size(), CV_32S);
         cv::Mat labelCentroids;
         int labels = cv::connectedComponents(binary, labelImage, 4);
-        EXPECT_EQ(2, labels) << "artifacts occured";
+        EXPECT_EQ(2, labels) << "artifacts occurred";
     }
 
     // check if filling went over border
@@ -878,7 +878,7 @@ PARAM_TEST_CASE(FillPolyFully, unsigned, unsigned, int, int, Point, cv::LineType
         cv::Mat labelImage(binary.size(), CV_32S);
         cv::Mat labelCentroids;
         int labels = cv::connectedComponents(binary, labelImage, 4);
-        EXPECT_EQ(2, labels) << "artifacts occured";
+        EXPECT_EQ(2, labels) << "artifacts occurred";
     }
 
     void check_filling_over_border(cv::Mat& img, const std::vector<cv::Point>& polygonPoints)

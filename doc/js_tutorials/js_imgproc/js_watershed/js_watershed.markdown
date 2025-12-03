@@ -17,7 +17,7 @@ nearby, water from different valleys, obviously with different colors will start
 that, you build barriers in the locations where water merges. You continue the work of filling water
 and building barriers until all the peaks are under water. Then the barriers you created gives you
 the segmentation result. This is the "philosophy" behind the watershed. You can visit the [CMM
-webpage on watershed](http://cmm.ensmp.fr/~beucher/wtshed.html) to understand it with the help of
+webpage on watershed](https://people.cmm.minesparis.psl.eu/users/beucher/wtshed.html) to understand it with the help of
 some animations.
 
 But this approach gives you oversegmented result due to noise or any other irregularities in the

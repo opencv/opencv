@@ -1,5 +1,5 @@
 ;
-; jccolor.asm - colorspace conversion (MMX)
+; Colorspace conversion (MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2009, 2016, 2024, D. R. Commander.

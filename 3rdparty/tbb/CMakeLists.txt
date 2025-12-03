@@ -5,8 +5,8 @@ if (WIN32 AND NOT ARM)
   message(FATAL_ERROR "BUILD_TBB option supports Windows on ARM only!\nUse regular official TBB build instead of the BUILD_TBB option!")
 endif()
 
-ocv_update(OPENCV_TBB_RELEASE "v2021.11.0")
-ocv_update(OPENCV_TBB_RELEASE_MD5 "b301151120b08a17e98dcdda6e4f6011")
+ocv_update(OPENCV_TBB_RELEASE "v2022.1.0")
+ocv_update(OPENCV_TBB_RELEASE_MD5 "cce28e6cb1ceae14a93848990c98cb6b")
 ocv_update(OPENCV_TBB_FILENAME "${OPENCV_TBB_RELEASE}.tar.gz")
 string(REGEX REPLACE "^v" "" OPENCV_TBB_RELEASE_ "${OPENCV_TBB_RELEASE}")
 #ocv_update(OPENCV_TBB_SUBDIR ...)
@@ -106,6 +106,11 @@ ocv_warnings_disable(CMAKE_CXX_FLAGS
 set(TBB_SOURCE_FILES ${lib_srcs} ${lib_hdrs})
 
 set(tbb_version_file "version_string.ver")
+if(NOT BUILD_INFO_SKIP_SYSTEM_VERSION)
+  set(TBB_HOST_VERSION " ${CMAKE_HOST_SYSTEM_VERSION}")
+else()
+  set(TBB_HOST_VERSION "")
+endif()
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${tbb_version_file}.cmakein" "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}" @ONLY)
 list(APPEND TBB_SOURCE_FILES "${CMAKE_CURRENT_BINARY_DIR}/${tbb_version_file}")
 

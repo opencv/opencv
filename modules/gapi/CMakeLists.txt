@@ -41,9 +41,7 @@ if(MSVC)
     # and IE deprecated code warning C4996
     ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4503 /wd4996)
   endif()
-  if((MSVC_VERSION LESS 1920) OR ARM OR AARCH64) # MSVS 2015/2017 on x86 and ARM
-    ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702)  # 'unreachable code'
-  endif()
+  ocv_warnings_disable(CMAKE_CXX_FLAGS /wd4702) # MSVS 2015/2017/2019 on x86 and ARM
 endif()
 
 file(GLOB gapi_ext_hdrs
@@ -66,6 +64,7 @@ file(GLOB gapi_ext_hdrs
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/streaming/onevpl/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/plaidml/*.hpp"
     "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/util/*.hpp"
+    "${CMAKE_CURRENT_LIST_DIR}/include/opencv2/${name}/pysrc/*.hpp"
     )
 
 set(gapi_srcs
@@ -242,6 +241,9 @@ set(gapi_srcs
     src/streaming/gstreamer/gstreamer_media_adapter.cpp
     src/streaming/gstreamer/gstreamerenv.cpp
 
+    # Python Custom Stream source
+    src/pysrc/python_stream_source.cpp
+
     # Utils (ITT tracing)
     src/utils/itt.cpp
     )
@@ -378,6 +380,15 @@ endif()
 if(WIN32)
   # Required for htonl/ntohl on Windows
   ocv_target_link_libraries(${the_module} PRIVATE wsock32 ws2_32)
+endif()
+
+ocv_option(OPENCV_GAPI_MSMF "Build G-API with MS Media Foundation support" HAVE_MSMF)
+if(HAVE_MSMF AND OPENCV_GAPI_MSMF)
+  if(TARGET opencv_test_gapi)
+    ocv_target_compile_definitions(opencv_test_gapi PRIVATE -DHAVE_GAPI_MSMF)
+  endif()
+  ocv_target_compile_definitions(${the_module} PRIVATE -DHAVE_GAPI_MSMF)
+  ocv_target_link_libraries(${the_module} PRIVATE ocv.3rdparty.msmf)
 endif()
 
 if(HAVE_DIRECTML)

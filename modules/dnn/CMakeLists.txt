@@ -4,8 +4,8 @@ endif()
 
 set(the_description "Deep neural network module. It allows to load models from different frameworks and to make forward pass")
 
-ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX)
-ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX)
+ocv_add_dispatched_file_force_all("layers/layers_common" AVX AVX2 AVX512_SKX RVV LASX NEON SVE)
+ocv_add_dispatched_file_force_all("int8layers/layers_common" AVX2 AVX512_SKX RVV LASX NEON)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_block" AVX AVX2 NEON NEON_FP16)
 ocv_add_dispatched_file_force_all("layers/cpu_kernels/conv_depthwise" AVX AVX2 RVV LASX)
 ocv_add_dispatched_file("layers/cpu_kernels/conv_winograd_f63" AVX AVX2 NEON NEON_FP16)
@@ -115,8 +115,22 @@ if(HAVE_PROTOBUF)
 
   if(PROTOBUF_UPDATE_FILES)
     file(GLOB proto_files "${CMAKE_CURRENT_LIST_DIR}/src/tensorflow/*.proto" "${CMAKE_CURRENT_LIST_DIR}/src/caffe/opencv-caffe.proto" "${CMAKE_CURRENT_LIST_DIR}/src/onnx/opencv-onnx.proto")
-    set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
-    protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
+    if(CMAKE_VERSION VERSION_LESS "3.13.0")
+      set(PROTOBUF_GENERATE_CPP_APPEND_PATH ON) # required for tensorflow
+      protobuf_generate_cpp(fw_srcs fw_hdrs ${proto_files})
+    else()
+      protobuf_generate(
+        APPEND_PATH # required for tensorflow
+        LANGUAGE cpp
+        IMPORT_DIRS ${Protobuf_IMPORT_DIRS}
+        OUT_VAR fw_srcs
+        PROTOC_EXE ${Protobuf_PROTOC_EXECUTABLE}
+        PROTOS ${proto_files})
+      set(fw_hdrs "${fw_srcs}")
+      # separate the header files and source files
+      list(FILTER fw_srcs EXCLUDE REGEX ".+\.h$")
+      list(FILTER fw_hdrs INCLUDE REGEX ".+\.h$")
+    endif()
   else()
     file(GLOB fw_srcs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.cc" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.cc")
     file(GLOB fw_hdrs "${CMAKE_CURRENT_LIST_DIR}/misc/tensorflow/*.h" "${CMAKE_CURRENT_LIST_DIR}/misc/caffe/opencv-caffe.pb.h" "${CMAKE_CURRENT_LIST_DIR}/misc/onnx/opencv-onnx.pb.h")
@@ -165,7 +179,7 @@ if(OPENCV_DNN_CUDA AND HAVE_CUDA AND HAVE_CUBLAS AND HAVE_CUDNN)
   endforeach()
   unset(CC_LIST)
   if(ENABLE_CUDA_FIRST_CLASS_LANGUAGE)
-    list(APPEND libs ${CUDNN_LIBRARIES} CUDA::cublas${CUDA_LIB_EXT})
+    list(APPEND libs CUDA::cudart${CUDA_LIB_EXT} ${CUDNN_LIBRARIES} CUDA::cublas${CUDA_LIB_EXT})
     if(NOT CUDA_VERSION VERSION_LESS 10.1)
       list(APPEND libs CUDA::cublasLt${CUDA_LIB_EXT})
     endif()

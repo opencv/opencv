@@ -59,10 +59,29 @@ public:
     size_t getFrameCount() const { return m_frame_count; }
 
     /**
+     * @brief Set the internal m_frame_count variable to 1.
+     */
+    void resetFrameCount() { m_frame_count = 1; }
+
+    /**
      * @brief Get the type of the image (e.g., color format, depth).
      * @return The type of the image.
      */
     virtual int type() const { return m_type; }
+
+    /**
+     * @brief Checks whether file contains metadata of the certain type.
+     * @param type The type of metadata to look for
+     */
+    virtual bool haveMetadata(ImageMetadataType type) const;
+
+    /**
+     * @brief Retrieves metadata (if any) of the certain kind.
+     * If there is no such metadata, the method returns empty array.
+     *
+     * @param type The type of metadata to look for
+     */
+    virtual Mat getMetadata(ImageMetadataType type) const;
 
     /**
      * @brief Fetch a specific EXIF tag from the image's metadata.
@@ -90,7 +109,24 @@ public:
      * @param scale_denom The denominator of the scale factor (image is scaled down by 1/scale_denom).
      * @return The scale factor that was set.
      */
-    virtual int setScale(const int& scale_denom);
+    int setScale(const int& scale_denom);
+
+    /**
+     * @brief Set read options for image decoding.
+     *
+     * This function sets internal flags that control various read-time behaviors
+     * such as metadata extraction (e.g., XMP, ICC profiles, textual data)
+     * during image decoding. The flags can be combined using bitwise OR to enable
+     * multiple options simultaneously.
+     *
+     * @param options Bitwise OR of read option flags to enable.
+     *
+     * @return The previous value of the read options flags.
+     *
+     * @note Setting this has no effect unless the image format and decoder support
+     * the selected options. Unknown flags will be ignored.
+     */
+    int setReadOptions(int read_options);
 
     /**
      * @brief Read the image header to extract basic properties (width, height, type).
@@ -154,6 +190,8 @@ protected:
     ExifReader m_exif;    ///< Object for reading EXIF metadata from the image.
     size_t m_frame_count; ///< Number of frames in the image (for animations and multi-page images).
     Animation m_animation;
+    int m_read_options;
+    std::vector<std::vector<unsigned char> > m_metadata;
 };
 
 
@@ -187,6 +225,13 @@ public:
     virtual bool isFormatSupported(int depth) const;
 
     /**
+     * @brief Validates if the encoder supports a specific key.
+     * @param key The key of the encode parameter.
+     * @return true if key is supported for this encoder, false otherwise.
+     */
+    virtual bool isValidEncodeKey(const int key) const;
+
+    /**
      * @brief Set the destination for encoding as a file.
      * @param filename The name of the file to which the image will be written.
      * @return true if the destination was successfully set, false otherwise.
@@ -199,6 +244,13 @@ public:
      * @return true if the destination was successfully set, false otherwise.
      */
     virtual bool setDestination(std::vector<uchar>& buf);
+
+    /**
+     * @brief Sets the metadata to write together with the image data
+     * @param type The type of metadata to add
+     * @param metadata The packed metadata (Exif, XMP, ...)
+     */
+    virtual bool addMetadata(ImageMetadataType type, const Mat& metadata);
 
     /**
      * @brief Encode and write the image data.
@@ -238,11 +290,14 @@ public:
     virtual void throwOnError() const;
 
 protected:
+    std::vector<std::vector<unsigned char> > m_metadata; // see IMAGE_METADATA_...
+    std::vector<bool> m_support_metadata;
     String m_description;    ///< Description of the encoder (e.g., format name, capabilities).
     String m_filename;       ///< Destination file name for encoded data.
     std::vector<uchar>* m_buf; ///< Pointer to the buffer for encoded data if using memory-based destination.
     bool m_buf_supported;    ///< Flag indicating whether buffer-based encoding is supported.
     String m_last_error;     ///< Stores the last error message encountered during encoding.
+    std::vector<int> m_supported_encode_key; ///< Supported encode key list
 };
 
 }

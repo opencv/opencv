@@ -327,7 +327,6 @@ public:
 
         if (m_curr_frame_id % m_throw_every_nth_frame == 0) {
             throw std::logic_error(InvalidSource::exception_msg());
-            return true;
         } else {
             d = cv::Mat(m_mat);
         }

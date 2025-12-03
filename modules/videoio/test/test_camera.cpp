@@ -327,4 +327,18 @@ TEST(DISABLED_videoio_camera, waitAny_V4L)
     }
 }
 
+TEST(DISABLED_videoio_camera, ffmpeg_index)
+{
+    int idx = (int)utils::getConfigurationParameterSizeT("OPENCV_TEST_FFMPEG_DEVICE_IDX", (size_t)-1);
+    if (idx == -1)
+    {
+        throw SkipTestException("OPENCV_TEST_FFMPEG_DEVICE_IDX is not set");
+    }
+    VideoCapture cap;
+    ASSERT_TRUE(cap.open(idx, CAP_FFMPEG));
+    Mat frame;
+    ASSERT_TRUE(cap.read(frame));
+    ASSERT_FALSE(frame.empty());
+}
+
 }} // namespace

@@ -107,6 +107,10 @@ typedef SimpleBlobDetector::Params SimpleBlobDetector_Params;
 typedef TrackerMIL::Params TrackerMIL_Params;
 #endif
 
+#ifdef HAVE_OPENCV_XIMGPROC
+typedef ximgproc::EdgeDrawing::Params EdgeDrawing_Params;
+#endif
+
 // HACK: JS generator ommits namespace for parameter types for some reason. Added typedef to handle std::string correctly
 typedef std::string string;
 
@@ -466,7 +470,8 @@ EMSCRIPTEN_BINDINGS(binding_utils)
     register_vector<double>("DoubleVector");
     register_vector<std::string>("StringVector");
     register_vector<cv::Point>("PointVector");
-    register_vector<cv::Point3f>("Point3fVector");
+    register_vector<cv::Point2f>("Point2fVector");
+    register_vector<cv::Point3_<float>>("Point3fVector");
     register_vector<cv::Mat>("MatVector");
     register_vector<cv::Rect>("RectVector");
     register_vector<cv::KeyPoint>("KeyPointVector");
@@ -612,6 +617,7 @@ EMSCRIPTEN_BINDINGS(binding_utils)
 
     EMSCRIPTEN_CV_RECT(int, "Rect")
     EMSCRIPTEN_CV_RECT(float, "Rect2f")
+    EMSCRIPTEN_CV_RECT(double, "Rect2d")
 
     emscripten::value_object<cv::RotatedRect>("RotatedRect")
         .field("center", &cv::RotatedRect::center)
