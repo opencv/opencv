@@ -1,5 +1,5 @@
 ;
-; jdsample.asm - upsampling (MMX)
+; Upsampling (MMX)
 ;
 ; Copyright 2009 Pierre Ossman <ossman@cendio.se> for Cendio AB
 ; Copyright (C) 2016, 2024, D. R. Commander.

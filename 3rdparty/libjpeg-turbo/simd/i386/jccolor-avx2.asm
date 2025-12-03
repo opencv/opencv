@@ -1,5 +1,5 @@
 ;
-; jccolor.asm - colorspace conversion (AVX2)
+; Colorspace conversion (AVX2)
 ;
 ; Copyright (C) 2009, 2016, 2024, D. R. Commander.
 ; Copyright (C) 2015, Intel Corporation.

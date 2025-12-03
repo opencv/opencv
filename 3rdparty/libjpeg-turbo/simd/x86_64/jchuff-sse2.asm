@@ -1,5 +1,5 @@
 ;
-; jchuff-sse2.asm - Huffman entropy encoding (64-bit SSE2)
+; Huffman entropy encoding (64-bit SSE2)
 ;
 ; Copyright (C) 2009-2011, 2014-2016, 2019, 2021, 2023-2024, D. R. Commander.
 ; Copyright (C) 2015, Matthieu Darbois.
