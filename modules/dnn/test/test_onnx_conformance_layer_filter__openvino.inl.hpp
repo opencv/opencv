@@ -326,6 +326,14 @@ CASE(test_bitshift_right_uint64)
     SKIP;
 CASE(test_bitshift_right_uint8)
     SKIP;
+CASE(test_blackmanwindow)
+    SKIP;
+CASE(test_blackmanwindow_expanded)
+    SKIP;
+CASE(test_blackmanwindow_symmetric)
+    SKIP;
+CASE(test_blackmanwindow_symmetric_expanded)
+    SKIP;
 CASE(test_cast_BFLOAT16_to_FLOAT)
     SKIP;
 CASE(test_cast_DOUBLE_to_FLOAT)
@@ -662,20 +670,6 @@ CASE(test_edge_pad)
     SKIP;
 CASE(test_einsum_batch_diagonal)
     SKIP;
-CASE(test_hardmax_axis_0)
-    SKIP;
-CASE(test_hardmax_axis_1)
-    SKIP;
-CASE(test_hardmax_axis_2)
-    SKIP;
-CASE(test_hardmax_default_axis)
-    SKIP;
-CASE(test_hardmax_example)
-    SKIP;
-CASE(test_hardmax_negative_axis)
-    SKIP;
-CASE(test_hardmax_one_hot)
-    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
@@ -926,20 +920,36 @@ CASE(test_gru_seq_length)
     // no filter
 CASE(test_gru_with_initial_bias)
     // no filter
+CASE(test_hammingwindow)
+    SKIP;
+CASE(test_hammingwindow_expanded)
+    SKIP;
+CASE(test_hammingwindow_symmetric)
+    SKIP;
+CASE(test_hammingwindow_symmetric_expanded)
+    SKIP;
+CASE(test_hannwindow)
+    SKIP;
+CASE(test_hannwindow_expanded)
+    SKIP;
+CASE(test_hannwindow_symmetric)
+    SKIP;
+CASE(test_hannwindow_symmetric_expanded)
+    SKIP;
 CASE(test_hardmax_axis_0)
-    // no filter
+    SKIP;
 CASE(test_hardmax_axis_1)
-    // no filter
+    SKIP;
 CASE(test_hardmax_axis_2)
-    // no filter
+    SKIP;
 CASE(test_hardmax_default_axis)
-    // no filter
+    SKIP;
 CASE(test_hardmax_example)
-    // no filter
+    SKIP;
 CASE(test_hardmax_negative_axis)
-    // no filter
+    SKIP;
 CASE(test_hardmax_one_hot)
-    // no filter
+    SKIP;
 CASE(test_einsum_batch_matmul)
     // no filter
 CASE(test_einsum_inner_prod)
