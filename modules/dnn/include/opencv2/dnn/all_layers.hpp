@@ -1420,6 +1420,12 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<Layer> create(const LayerParams& params);
     };
 
+    class CV_EXPORTS RoiAlignLayer : public Layer
+    {
+    public:
+        static Ptr<RoiAlignLayer> create(const LayerParams& params);
+    };
+
     class CV_EXPORTS CumSumLayer : public Layer
     {
     public:

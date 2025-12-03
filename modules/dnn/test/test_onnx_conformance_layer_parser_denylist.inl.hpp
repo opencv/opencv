@@ -459,9 +459,6 @@
 "test_rms_normalization_4d_axis_negative_4_expanded",
 "test_rms_normalization_default_axis_expanded",
 "test_rnn_seq_length",  // Issue:: Parser:  Can't create layer "onnx_node_output_1!Y_h" of type "RNN" in function 'getLayerInstance'
-"test_roialign_aligned_false",  // Issue:: Parser: Layer does not exist (RoiAlign)
-"test_roialign_aligned_true",  // ---- same as above ---
-"test_roialign_mode_max",
 "test_scan9_sum",  // Issue:: Parser: 'Graph' is not supported in function 'getLayerParams'
 "test_scan_sum", // ---- same as above ---
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'

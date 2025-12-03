@@ -709,3 +709,6 @@
 "test_layer_normalization_default_axis",
 "test_layer_normalization_default_axis_expanded",
 "test_layer_normalization_default_axis_expanded_ver18",
+"test_roialign_aligned_false",
+"test_roialign_aligned_true",
+"test_roialign_mode_max",

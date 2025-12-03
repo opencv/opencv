@@ -90,6 +90,7 @@ void initializeLayerFactory()
     CV_DNN_REGISTER_LAYER_CLASS(ConstantOfShape, ConstantOfShapeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(RandomNormalLike, RandomNormalLikeLayer);
     CV_DNN_REGISTER_LAYER_CLASS(CropAndResize,  CropAndResizeLayer);
+    CV_DNN_REGISTER_LAYER_CLASS(RoiAlign,       RoiAlignLayer);
     CV_DNN_REGISTER_LAYER_CLASS(DequantizeLinear, DequantizeLinearLayer);
     CV_DNN_REGISTER_LAYER_CLASS(Expand2,        Expand2Layer);
     CV_DNN_REGISTER_LAYER_CLASS(Flatten,        FlattenLayer);

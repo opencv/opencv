@@ -2268,9 +2268,11 @@ CASE(test_reversesequence_time)
 CASE(test_rnn_seq_length)
     // no filter
 CASE(test_roialign_aligned_false)
-    // no filter
+    SKIP;
 CASE(test_roialign_aligned_true)
-    // no filter
+    SKIP;
+CASE(test_roialign_mode_max)
+    SKIP;
 CASE(test_round)
     // no filter
 CASE(test_scan9_sum)

@@ -253,6 +253,7 @@ protected:
     void parseRMSNormalization     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRotaryEmbedding      (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRandomNormalLike     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRoiAlign             (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
 
     // Domain: com.microsoft
     // URL: https://github.com/microsoft/onnxruntime/blob/master/docs/ContribOperators.md
@@ -2682,6 +2683,12 @@ void ONNXImporter2::parseAttentionOnnxAi(LayerParams& params, const opencv_onnx:
     addLayer(params, node_proto, n_inputs);
 }
 
+void ONNXImporter2::parseRoiAlign(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    layerParams.type = "RoiAlign";
+    addLayer(layerParams, node_proto, 3);
+}
+
 // Domain: ai.onnx (default)
 // URL: https://github.com/onnx/onnx/blob/master/docs/Operators.md
 void ONNXImporter2::buildDispatchMap_ONNX_AI()
@@ -2748,6 +2755,7 @@ void ONNXImporter2::buildDispatchMap_ONNX_AI()
     dispatch["HammingWindow"] = &ONNXImporter2::parseHammingWindow;
     dispatch["GridSample"] = &ONNXImporter2::parseGridSample;
     dispatch["AffineGrid"] = &ONNXImporter2::parseAffineGrid;
+    dispatch["RoiAlign"] = &ONNXImporter2::parseRoiAlign;
     dispatch["Upsample"] = &ONNXImporter2::parseUpsample;
     dispatch["BitShift"] = &ONNXImporter2::parseBitShift;
     dispatch["BitwiseAnd"] = &ONNXImporter2::parseBitwise;

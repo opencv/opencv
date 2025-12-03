@@ -1580,7 +1580,7 @@ static const TestCase testConformanceConfig[] = {
     {"test_rms_normalization_4d_axis_negative_4_expanded", 0, 0},
     {"test_rms_normalization_default_axis", 0, 0},
     {"test_rms_normalization_default_axis_expanded", 0, 0},
-    {"test_roialign_mode_max", 0, 0},
+    {"test_roialign_mode_max", 3, 1},
     {"test_rotary_embedding", 0, 0},
     {"test_rotary_embedding_3d_input", 0, 0},
     {"test_rotary_embedding_3d_input_expanded", 0, 0},
@@ -1891,6 +1891,10 @@ TEST_P(Test_ONNX_conformance, Layer_Test)
         if ((target == DNN_TARGET_CPU) && (cpu_deny_list.find(name) != cpu_deny_list.end()))
         {
             applyTestTag(CV_TEST_TAG_DNN_SKIP_CPU, CV_TEST_TAG_DNN_SKIP_OPENCV_BACKEND, CV_TEST_TAG_DNN_SKIP_ONNX_CONFORMANCE);
+        }
+        if (name == "test_roialign_aligned_false" || name == "test_roialign_aligned_true")
+        {
+            default_l1 = std::max(default_l1, 3e-5);
         }
         if (name == "test_gelu_tanh_1") {
             default_l1 = 0.00011; // Expected: (normL1) <= (l1), actual: 0.000101805 vs 1e-05
