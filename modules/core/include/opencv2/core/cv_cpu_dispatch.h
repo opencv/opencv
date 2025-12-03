@@ -237,6 +237,10 @@ struct VZeroUpperGuard {
 #elif defined(__ARM_NEON)
 #  include <arm_neon.h>
 #  define CV_NEON 1
+#ifdef __ARM_FEATURE_SVE
+# include<arm_sve.h>
+# define CV_SVE 1
+#endif
 #elif defined(__VSX__) && defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
 #  include <altivec.h>
 #  undef vector
@@ -360,6 +364,10 @@ struct VZeroUpperGuard {
 
 #ifndef CV_NEON
 #  define CV_NEON 0
+#endif
+
+#ifndef CV_SVE
+#  define CV_SVE 0
 #endif
 
 #ifndef CV_RVV071
