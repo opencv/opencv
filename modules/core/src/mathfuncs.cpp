@@ -1590,8 +1590,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     }
 
     // Normalization check
-    // We compute normalized values for the threshold check to avoid relative scale issues
-    double max_coeff = std::max({std::abs(raw_a0), std::abs(raw_a1), std::abs(raw_a2), std::abs(raw_a3)});
+    double max_coeff = (std::max)({std::abs(raw_a0), std::abs(raw_a1), std::abs(raw_a2), std::abs(raw_a3)});
 
     if (max_coeff < std::numeric_limits<double>::epsilon())
         return -1;
@@ -1610,6 +1609,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double a2 = raw_a2;
         double a3 = raw_a3;
 
+        // Check relative to max_coeff to ensure valid thresholds
         if( std::abs(a1) < std::numeric_limits<double>::epsilon() * max_coeff )
         {
             if( std::abs(a2) < std::numeric_limits<double>::epsilon() * max_coeff )
@@ -1647,8 +1647,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     else
     {
         // cubic equation
-        // Use NORMALIZED coefficients to prevent overflow/instability
-        double a0 = a0_norm; // Already normalized
+        double a0 = a0_norm; 
         double a1 = raw_a1 * scale;
         double a2 = raw_a2 * scale;
         double a3 = raw_a3 * scale;
