@@ -53,9 +53,3 @@ jobs:
 
   Linux-RISC-V-Clang:
     uses: opencv/ci-gha-workflow/.github/workflows/OCV-PR-4.x-RISCV.yaml@main
-
-  CodeQL:
-    uses: opencv/ci-gha-workflow/.github/workflows/OCV-CodeQL.yaml@main
-    with:
-      target_branch: '4.x'
-      workflow_branch: main

@@ -1,11 +1,9 @@
 name: 4.x
 
 on:
-  push:
-    branches:
-      - 4.x
   schedule:
-    - cron: '44 13 * * 6'
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   CodeQL:
