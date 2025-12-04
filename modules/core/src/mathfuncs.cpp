@@ -46,8 +46,8 @@
 #include <atomic>
 #include <limits>
 #include <iostream>
-#include <algorithm> 
-#include <cmath>     
+#include <algorithm>
+#include <cmath>
 #include "mathfuncs.hpp"
 
 namespace cv
@@ -1590,6 +1590,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     }
 
     // Normalization check
+    // We compute normalized values for the threshold check to avoid relative scale issues
     double max_coeff = (std::max)({std::abs(raw_a0), std::abs(raw_a1), std::abs(raw_a2), std::abs(raw_a3)});
 
     if (max_coeff < std::numeric_limits<double>::epsilon())
@@ -1603,13 +1604,11 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     if( std::abs(a0_norm) < std::numeric_limits<double>::epsilon() )
     {
         // Reduced order (Quadratic/Linear)
-        // CRITICAL: Use RAW coefficients here to avoid rounding errors in trivial cases 
-        // (Fixes Core_SolveCubicQuadratic.accuracy)
+        // CRITICAL: Use RAW coefficients here to avoid rounding errors in trivial cases
         double a1 = raw_a1;
         double a2 = raw_a2;
         double a3 = raw_a3;
 
-        // Check relative to max_coeff to ensure valid thresholds
         if( std::abs(a1) < std::numeric_limits<double>::epsilon() * max_coeff )
         {
             if( std::abs(a2) < std::numeric_limits<double>::epsilon() * max_coeff )
@@ -1647,7 +1646,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     else
     {
         // cubic equation
-        double a0 = a0_norm; 
+        // Use NORMALIZED coefficients to prevent overflow/instability
+        double a0 = a0_norm; // Already normalized
         double a1 = raw_a1 * scale;
         double a2 = raw_a2 * scale;
         double a3 = raw_a3 * scale;
@@ -1660,7 +1660,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
-        
+
         double d = (a1 * a1 * (a2 * a2 - 4 * a1 * a3) + 2 * a2 * (9 * a1 * a3 - 2 * a2 * a2) - 27 * a3 * a3) * (1./108);
 
         if( d > 0 )
