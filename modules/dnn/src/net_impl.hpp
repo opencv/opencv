@@ -133,11 +133,10 @@ struct Net::Impl : public detail::NetImplBase
 
 #ifdef HAVE_CUDA
     cv::cuda::GpuMat& argGpuMat(Arg arg);
-    // Ensure existence and configure cuDNN tensor descriptor for the i-th input/output Arg
-    // using recorded shapes. Returns a reference to cached descriptor.
-    cudnnTensorDescriptor_t argTensorCuDNN(InputArrayOfArrays arrays,
-                                           const std::vector<Arg>& argsVec,
-                                           int idx);
+    // Low-level ND helper: configure descriptor directly from an explicit MatShape.
+    cudnnTensorDescriptor_t argTensorCuDNN(Arg a,
+                                           const MatShape& shape,
+                                           cudnnDataType_t dtype);
     // Initialize CUDA backend (idempotent) and return whether CUDA is ready.
     bool ensureCudaReady();
     // Convenience wrappers for common contiguous tensor descriptors

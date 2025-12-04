@@ -211,7 +211,6 @@ public:
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
-                // return type == MAX;
                 return false;
             return type == MAX || type == AVE || type == ROI;
         }
@@ -365,10 +364,6 @@ public:
 #ifdef HAVE_CUDA
         if ((type == MAX || type == AVE) && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
         {
-            // Use cuDNN helper only for simple 2D pooling without ceil_mode,
-            // global pooling or index computation. For everything else, signal
-            // that this config is not supported by the helper so that the
-            // engine can fall back to the generic CPU implementation.
             MatShape ish = lastInputShape;
             bool is2D = ish.size() == 4 && kernel_size.size() == 2 && strides.size() == 2;
 
@@ -388,12 +383,10 @@ public:
                         return;
                     }
                     cv::cuda::GpuMat gin0 = gin[0];
-                    // Derive N,C,H,W from cached input shape (set in finalize)
+
                     MatShape ish = lastInputShape;
                     int dims = (int)ish.size();
-                    // cuDNN helper implements only 2D pooling (NCHW). For 1D/3D
-                    // or other non-4D inputs, fall back to the generic path to
-                    // keep numerics consistent with the reference implementation.
+
                     if (dims != 4)
                     {
                         forward_fallback(inputs_arr, outputs_arr, internals_arr);
@@ -403,7 +396,7 @@ public:
                     int C = ish[1];
                     int H_in = ish[dims - 2];
                     int W_in = ish[dims - 1];
-                    // Pool2D parameters
+
                     int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : (type == AVE ? H_in : 2);
                     int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : (type == AVE ? W_in : kH);
                     int sH = strides.size() > 0 ? (int)strides[0] : (type == AVE ? 1 : 2);
@@ -413,7 +406,6 @@ public:
                     int H_out = 0;
                     int W_out = 0;
 
-                    // Match getMemoryShapes() logic for output spatial size
                     int padTop    = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
                     int padBottom = pads_end.size()   > 0 ? (int)pads_end[0]   : 0;
                     int padLeft   = pads_begin.size() > 1 ? (int)pads_begin[1] : padTop;
@@ -436,11 +428,10 @@ public:
 
                     cv::cuda::GpuMat& dst = gout[0];
                     if (dst.empty()) {
-                        // Output should be preallocated by Net::Impl for GPU path
                         forward_fallback(inputs_arr, outputs_arr, internals_arr);
                         return;
                     }
-                    // cuDNN helper operates in float; convert input/output as needed.
+
                     if (gin0.type() != CV_32F) {
                         cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
                     }
@@ -481,7 +472,6 @@ public:
                     }
                     return;
                 } else {
-                    // No GPU input provided; fall back to CPU implementation
                     forward_fallback(inputs_arr, outputs_arr, internals_arr);
                     return;
                 }
