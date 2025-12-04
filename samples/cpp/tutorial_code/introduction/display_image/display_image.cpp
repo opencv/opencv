@@ -33,7 +33,8 @@ int main()
     {
         imwrite("starry_night.png", img);
     }
-    //! [imsave]
+    destroyAllWindows(); // Inside the tag
+//! [imsave]
 
     return 0;
 }

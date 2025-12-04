@@ -16,4 +16,6 @@ k = cv.waitKey(0)
 ## [imsave]
 if k == ord("s"):
     cv.imwrite("starry_night.png", img)
+
+cv.destroyAllWindows()  # Inside the tag
 ## [imsave]
