@@ -106,9 +106,11 @@ inline const int& MatShape::operator [](size_t idx) const
 
 inline Size MatShape::operator()() const
 {
-    CV_Assert(dims <= 2);
-    int cols = dims > 0 ? p[dims > 1] : int(dims >= 0);
-    int rows = dims > 1 ? p[0] : int(dims >= 0);
+    if (dims <= 0)
+        return Size();
+
+    int cols = p[dims - 1];
+    int rows = (dims > 1) ? p[dims - 2] : 1;
     return Size(cols, rows);
 }
 

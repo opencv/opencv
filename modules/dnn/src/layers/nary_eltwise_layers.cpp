@@ -289,6 +289,9 @@ public:
 #endif
 
         if (backendId == DNN_BACKEND_CUDA) {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
             return op == OPERATION::MAX  || op == OPERATION::MIN  || op == OPERATION::SUM ||
                    op == OPERATION::PROD || op == OPERATION::DIV  || op == OPERATION::ADD ||
                    op == OPERATION::SUB  || op == OPERATION::MOD || op == OPERATION::FMOD;

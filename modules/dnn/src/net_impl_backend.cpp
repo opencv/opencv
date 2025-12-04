@@ -110,29 +110,6 @@ Ptr<BackendWrapper> Net::Impl::wrap(Mat& host)
 }
 
 #ifdef HAVE_CUDA
-static inline void fitGpuMatForMat(cv::cuda::GpuMat& gm, const Mat& host)
-{
-    // Flatten host Mat into 2D shape for GpuMat allocation
-    int rows = 1, cols = 1;
-    if (host.dims <= 2)
-    {
-        rows = host.rows > 0 ? host.rows : 1;
-        cols = host.cols > 0 ? host.cols : 1;
-    }
-    else
-    {
-        rows = host.size[0] > 0 ? host.size[0] : 1;
-        size_t total = host.total();
-        size_t cols_sz = total / (size_t)rows;
-        cols = (int)cols_sz;
-        if (cols <= 0) cols = 1;
-    }
-    if (gm.empty() || gm.rows != rows || gm.cols != cols || gm.type() != host.type())
-        gm.create(rows, cols, host.type());
-}
-#endif
-
-#ifdef HAVE_CUDA
 cv::cuda::GpuMat& Net::Impl::argGpuMat(Arg arg)
 {
     const ArgData& adata = args.at(arg.idx);
@@ -145,24 +122,56 @@ cv::cuda::GpuMat& Net::Impl::argGpuMat(Arg arg)
     }
     if (gpuTensors.size() < args.size())
         gpuTensors.resize(args.size());
+    if (gpuTensorsND.size() < args.size())
+        gpuTensorsND.resize(args.size());
+
+    cv::cuda::GpuMat& gm = gpuTensors[arg.idx];
+    cv::cuda::GpuMatND& nd = gpuTensorsND[arg.idx];
+    if (!gm.empty())
+        return gm;
 
     Mat& host = argTensor(arg);
+    MatShape shp = adata.shape;
+    if (shp.empty() && !host.empty())
+        shp = host.shape();
+
     try
     {
-        fitGpuMatForMat(gpuTensors[arg.idx], host);
         if (!host.empty())
         {
-            Mat host2d = host.reshape(1, gpuTensors[arg.idx].rows);
-            gpuTensors[arg.idx].upload(host2d);
+            nd.upload(host);
+            shp = nd.size;
         }
-        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded arg " << arg.idx << " to GPU (" << gpuTensors[arg.idx].rows << "x" << gpuTensors[arg.idx].cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+        else if (!shp.empty())
+        {
+            int t = adata.type >= 0 ? adata.type : CV_32F;
+            nd.fit(shp, t);
+        }
+        else
+        {
+            gm.release();
+            return gm;
+        }
+
+        size_t totalElems = nd.total();
+        int rows = shp.dims > 0 ? shp[0] : 1;
+        if (rows <= 0) rows = 1;
+        size_t cols_sz = rows > 0 ? (totalElems / (size_t)rows) : totalElems;
+        int cols = (int)cols_sz;
+        if (cols <= 0) cols = 1;
+        size_t esz = (size_t)CV_ELEM_SIZE(nd.type());
+        size_t step_bytes = (size_t)cols * esz;
+
+        gm = cv::cuda::GpuMat(rows, cols, nd.type(), nd.getDevicePtr(), step_bytes);
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded arg " << arg.idx << " to GPU (" << gm.rows << "x" << gm.cols << ", " << cv::typeToString(nd.type()) << ") on device " << cv::cuda::getDevice());
     }
     catch (const cv::Exception& e)
     {
-        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMat for arg " << arg.idx << ": " << e.what() << ". Falling back to CPU Mat.");
-        gpuTensors[arg.idx].release();
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMatND for arg " << arg.idx << ": " << e.what() << ". Falling back to CPU Mat.");
+        gm.release();
+        nd.release();
     }
-    return gpuTensors[arg.idx];
+    return gm;
 }
 #endif
 
@@ -173,6 +182,8 @@ void Net::Impl::ensureBufferWrapper(int bufidx)
         return;
     if ((size_t)bufidx >= gpuBuffers.size())
         gpuBuffers.resize((size_t)bufidx + 1);
+    if (gpuBuffersND.size() <= (size_t)bufidx)
+        gpuBuffersND.resize((size_t)bufidx + 1);
     // If this TEMP buffer already has a valid GPU tensor produced by a previous GPU layer,
     // don't override it by uploading the stale/placeholder host Mat (which can be 1x1).
     if (!gpuBuffers[(size_t)bufidx].empty())
@@ -180,18 +191,32 @@ void Net::Impl::ensureBufferWrapper(int bufidx)
     Mat& host = buffers.at((size_t)bufidx);
     try
     {
-        fitGpuMatForMat(gpuBuffers[(size_t)bufidx], host);
+        cv::cuda::GpuMatND& nd = gpuBuffersND[(size_t)bufidx];
+        cv::cuda::GpuMat& gm = gpuBuffers[(size_t)bufidx];
+
         if (!host.empty())
         {
-            Mat host2d = host.reshape(1, gpuBuffers[(size_t)bufidx].rows);
-            gpuBuffers[(size_t)bufidx].upload(host2d);
+            nd.upload(host);
+
+            MatShape shp = host.shape();
+            size_t totalElems = nd.total();
+            int rows = shp.dims > 0 ? shp[0] : 1;
+            if (rows <= 0) rows = 1;
+            size_t cols_sz = rows > 0 ? (totalElems / (size_t)rows) : totalElems;
+            int cols = (int)cols_sz;
+            if (cols <= 0) cols = 1;
+            size_t esz = (size_t)CV_ELEM_SIZE(nd.type());
+            size_t step_bytes = (size_t)cols * esz;
+
+            gm = cv::cuda::GpuMat(rows, cols, nd.type(), nd.getDevicePtr(), step_bytes);
         }
-        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded TEMP buffer " << bufidx << " to GPU (" << gpuBuffers[(size_t)bufidx].rows << "x" << gpuBuffers[(size_t)bufidx].cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
+        CV_LOG_INFO(NULL, "DNN/CUDA: uploaded TEMP buffer " << bufidx << " to GPU (" << gm.rows << "x" << gm.cols << ", " << cv::typeToString(host.type()) << ") on device " << cv::cuda::getDevice());
     }
     catch (const cv::Exception& e)
     {
-        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMat for TEMP buffer " << bufidx << ": " << e.what() << ". Falling back to CPU Mat.");
+        CV_LOG_WARNING(NULL, "DNN/CUDA: failed to allocate/upload GpuMatND for TEMP buffer " << bufidx << ": " << e.what() << ". Falling back to CPU Mat.");
         gpuBuffers[(size_t)bufidx].release();
+        gpuBuffersND[(size_t)bufidx].release();
     }
 #else
     (void)bufidx;

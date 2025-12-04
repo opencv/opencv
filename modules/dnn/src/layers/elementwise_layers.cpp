@@ -108,7 +108,6 @@ using std::sin;
 using std::sinh;
 using std::tan;
 
-// Forward declaration to allow type checks in ElementWiseLayer before definition
 struct ReLUFunctor;
 
 template<typename Func>
@@ -243,82 +242,84 @@ public:
                 std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
                 if (gout.size() == 1)
                 {
-                    cv::cuda::GpuMatND gin_nd;
+                    cv::cuda::GpuMat gin0;
+
                     if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
                     {
                         std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                        if (!gin.empty() && !gin[0].empty())
+                        if (gin.empty() || gin[0].empty())
                         {
-                            const cv::cuda::GpuMat& g0 = gin[0];
-                            cv::cuda::SizeArray sz{ g0.rows > 0 ? g0.rows : 1, g0.cols > 0 ? g0.cols : 1 };
-                            cv::cuda::StepArray st{ (size_t)g0.step, (size_t)CV_ELEM_SIZE(g0.type()) };
-                            gin_nd = cv::cuda::GpuMatND(sz, g0.type(), (void*)g0.ptr(), st);
+                            Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                            return;
+                        }
+                        gin0 = gin[0];
+                        if (gin0.type() != CV_32F)
+                        {
+                            cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
                         }
                     }
                     else
                     {
                         std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
-                        if (!inputs_cpu.empty())
+                        if (inputs_cpu.empty())
                         {
-                            const Mat& in0 = inputs_cpu[0];
-                            Mat in_f;
-                            if (in0.type() != CV_32F)
-                                in0.convertTo(in_f, CV_32F);
-                            else
-                                in_f = in0;
-                            MatShape ish = shape(in_f);
-                            cv::cuda::SizeArray ndsz(ish.begin(), ish.end());
-                            gin_nd.fit(ndsz, in_f.type());
-                            gin_nd.upload(in_f);
+                            Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                            return;
                         }
-                    }
-                    if (!gin_nd.empty())
-                    {
-                        cv::cuda::GpuMat& dst = gout[0];
-                        int N = gin_nd.dims > 0 ? gin_nd.size[0] : 1;
-                        int rest = 1;
-                        for (int di = 1; di < gin_nd.dims; ++di) rest *= gin_nd.size[di];
-                        if (N < 1) N = 1;
-                        if (rest < 1) rest = 1;
-                        if (dst.empty() || dst.type() != CV_32F || dst.rows != N || dst.cols != rest)
-                            cv::cuda::ensureSizeIsEnough(N, rest, CV_32F, dst);
-                        // Use cached descriptors via Net::Impl
-                        Net::Impl* netimpl = getNetImpl(this);
-                        CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-                        netimpl->ensureCudaReady();
-                        CV_Assert(netimpl->cudaInfo);
-                        cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
-                        int in_rows = N;
-                        int in_cols = rest;
-                        int x_n_stride = gin_nd.dims > 0 ? (int)(gin_nd.step[0] / sizeof(float)) : in_cols;
-                        cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc2D(
-                            this->inputs.empty() ? Arg() : this->inputs[0],
-                            in_rows, in_cols, x_n_stride,
-                            CUDNN_DATA_FLOAT);
-                        int y_rows = dst.rows > 0 ? dst.rows : 1;
-                        int y_cols = dst.cols > 0 ? dst.cols : 1;
-                        int y_n_stride = (int)(dst.step / sizeof(float));
-                        cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc2D(
-                            this->outputs.empty() ? Arg() : this->outputs[0],
-                            y_rows, y_cols, y_n_stride,
-                            CUDNN_DATA_FLOAT);
+                        const Mat& in0 = inputs_cpu[0];
+                        Mat in_f;
+                        if (in0.type() != CV_32F)
+                            in0.convertTo(in_f, CV_32F);
+                        else
+                            in_f = in0;
 
-                        std::cout<<"relu"<<std::endl;
-                        int lid = netimpl->getLayerId(this->name);
-                        cudnnActivationDescriptor_t reluActDesc =
-                            netimpl->activationDescCuDNN(lid,
-                                                          CUDNN_ACTIVATION_RELU,
-                                                          CUDNN_PROPAGATE_NAN,
-                                                          0.0);
-                        cv::dnn::cuda::relu(
-                            cudnnHandle,
-                            reluActDesc,
-                            xDesc,
-                            yDesc,
-                            (const void*)gin_nd.getDevicePtr(),
-                            (void*)dst.ptr());
-                        return;
+                        // Flatten to 2D for cuDNN: single batch with all elements.
+                        MatShape ish = shape(in_f);
+                        size_t total_elems = total(ish);
+                        int rows = 1;
+                        int cols = (int)total_elems;
+                        CV_Assert(cols > 0);
+                        Mat in2d = in_f.reshape(1, rows);
+                        gin0.upload(in2d);
                     }
+
+                    cv::cuda::GpuMat& dst = gout[0];
+                    int rows = gin0.rows > 0 ? gin0.rows : 1;
+                    int cols = gin0.cols > 0 ? gin0.cols : 1;
+                    if (dst.empty() || dst.type() != CV_32F || dst.rows != rows || dst.cols != cols)
+                        cv::cuda::ensureSizeIsEnough(rows, cols, CV_32F, dst);
+
+                    Net::Impl* netimpl = getNetImpl(this);
+                    CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                    netimpl->ensureCudaReady();
+                    CV_Assert(netimpl->cudaInfo);
+                    cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+                    // Configure cuDNN descriptors directly from N-D Arg metadata
+                    Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+                    Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+                    const ArgData& xAd = netimpl->argData(xArg);
+                    const ArgData& yAd = netimpl->argData(yArg);
+                    CV_Assert(!xAd.shape.empty() && !yAd.shape.empty());
+                    cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                        xArg, xAd.shape, CUDNN_DATA_FLOAT);
+                    cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                        yArg, yAd.shape, CUDNN_DATA_FLOAT);
+
+                    int lid = netimpl->getLayerId(this->name);
+                    cudnnActivationDescriptor_t reluActDesc =
+                        netimpl->activationDescCuDNN(lid,
+                                                      CUDNN_ACTIVATION_RELU,
+                                                      CUDNN_PROPAGATE_NAN,
+                                                      0.0);
+                    cv::dnn::cuda::relu(
+                        cudnnHandle,
+                        reluActDesc,
+                        xDesc,
+                        yDesc,
+                        (const void*)gin0.ptr(),
+                        (void*)dst.ptr());
+                    return;
                 }
             }
         }
