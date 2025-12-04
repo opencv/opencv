@@ -74,8 +74,13 @@ endif()
 
 # Set definitions and sources for PowerPC.
 if(TARGET_ARCH MATCHES "^(powerpc|ppc64)")
+  if (CPU_VSX_SUPPORTED)
+    set(CPU_VSX_SUPPORTED_STR "on")
+  else()
+    set(CPU_VSX_SUPPORTED_STR "off")
+  endif()
   set(PNG_POWERPC_VSX_POSSIBLE_VALUES on off)
-  set(PNG_POWERPC_VSX "on"
+  set(PNG_POWERPC_VSX ${CPU_VSX_SUPPORTED_STR}
       CACHE STRING "Enable POWERPC VSX optimizations: on|off; on is default")
   set_property(CACHE PNG_POWERPC_VSX
                PROPERTY STRINGS ${PNG_POWERPC_VSX_POSSIBLE_VALUES})
@@ -114,8 +119,13 @@ endif()
 
 # Set definitions and sources for MIPS.
 if(TARGET_ARCH MATCHES "^(mipsel|mips64el)")
+  if (CPU_MSA_SUPPORTED)
+    set(CPU_MSA_SUPPORTED_STR "on")
+  else()
+    set(CPU_MSA_SUPPORTED_STR "off")
+  endif()
   set(PNG_MIPS_MSA_POSSIBLE_VALUES on off)
-  set(PNG_MIPS_MSA "on"
+  set(PNG_MIPS_MSA ${CPU_MSA_SUPPORTED_STR}
       CACHE STRING "Enable MIPS_MSA optimizations: on|off; on is default")
   set_property(CACHE PNG_MIPS_MSA
                PROPERTY STRINGS ${PNG_MIPS_MSA_POSSIBLE_VALUES})
@@ -154,9 +164,14 @@ endif()
 
 # Set definitions and sources for LoongArch.
 if(TARGET_ARCH MATCHES "^(loongarch)")
+  if (CPU_LSX_SUPPORTED)
+    set(CPU_LSX_SUPPORTED_STR "on")
+  else()
+    set(CPU_LSX_SUPPORTED_STR "off")
+  endif()
   include(CheckCCompilerFlag)
   set(PNG_LOONGARCH_LSX_POSSIBLE_VALUES on off)
-  set(PNG_LOONGARCH_LSX "on"
+  set(PNG_LOONGARCH_LSX ${CPU_LSX_SUPPORTED_STR}
       CACHE STRING "Enable LOONGARCH_LSX optimizations: on|off; on is default")
   set_property(CACHE PNG_LOONGARCH_LSX
                PROPERTY STRINGS ${PNG_LOONGARCH_LSX_POSSIBLE_VALUES})
@@ -184,9 +199,14 @@ endif()
 
 # Set definitions and sources for RISC-V.
 if(TARGET_ARCH MATCHES "^(riscv)")
+  if (CPU_RVV_SUPPORTED)
+    set(CPU_RVV_SUPPORTED_STR "on")
+  else()
+    set(CPU_RVV_SUPPORTED_STR "off")
+  endif()
   include(CheckCCompilerFlag)
   set(PNG_RISCV_RVV_POSSIBLE_VALUES on off)
-  set(PNG_RISCV_RVV "on"
+  set(PNG_RISCV_RVV ${CPU_RVV_SUPPORTED_STR}
     CACHE STRING "Enable RISC-V Vector optimizations: on|off; off is default")
   set_property(CACHE PNG_RISCV_RVV
               PROPERTY STRINGS ${PNG_RISCV_RVV_POSSIBLE_VALUES})
