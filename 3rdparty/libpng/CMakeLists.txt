@@ -183,7 +183,7 @@ if(TARGET_ARCH MATCHES "^(loongarch)")
 endif()
 
 # Set definitions and sources for RISC-V.
-if(PNG_TARGET_ARCHITECTURE MATCHES "^(riscv)")
+if(TARGET_ARCH MATCHES "^(riscv)")
   include(CheckCCompilerFlag)
   set(PNG_RISCV_RVV_POSSIBLE_VALUES on off)
   set(PNG_RISCV_RVV "on"
@@ -194,7 +194,6 @@ if(PNG_TARGET_ARCHITECTURE MATCHES "^(riscv)")
   if(index EQUAL -1)
     message(FATAL_ERROR "PNG_RISCV_RVV must be one of [${PNG_RISCV_RVV_POSSIBLE_VALUES}]")
   elseif(NOT PNG_RISCV_RVV STREQUAL "off")
-
     check_c_source_compiles("
       #include <riscv_vector.h>
       int main() {
@@ -247,7 +246,7 @@ if(TARGET_ARCH MATCHES "^(loongarch)")
 endif()
 
 # Set definitions and sources for RISC-V.
-if(PNG_TARGET_ARCHITECTURE MATCHES "^(riscv)")
+if(TARGET_ARCH MATCHES "^(riscv)")
   add_definitions(-DPNG_RISCV_RVV_OPT=0)
 endif()
 
