@@ -322,8 +322,10 @@ int flip(int src_type, const uchar* src_data, size_t src_step, int src_width, in
     if (src_width < 0 || src_height < 0 || esz > 32)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
+    // BUG: https://github.com/opencv/opencv/issues/28124
     if (src_data == dst_data) {
-        return flip_inplace(esz, dst_data, dst_step, src_width, src_height, flip_mode);
+        return CV_HAL_ERROR_NOT_IMPLEMENTED;
+        //return flip_inplace(esz, dst_data, dst_step, src_width, src_height, flip_mode);
     }
 
     if (flip_mode == 0)
