@@ -399,7 +399,7 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
 bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                      InputOutputArray cameraMatrix, InputArray distCoeffs,
-                     OutputArray rvec, OutputArray tvec, OutputArray inliers,
+                     InputOutputArray rvec, InputOutputArray tvec, OutputArray inliers,
                      const UsacParams &params) {
     Ptr<usac::Model> model_params;
     usac::setParameters(model_params, cameraMatrix.empty() ? usac::EstimationMethod::P6P :

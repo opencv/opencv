@@ -59,6 +59,31 @@ class solvepnp_test(NewOpenCVTests):
             eDump = cv.utils.dumpInputArray(e)
             self.assertEqual(eDump, "InputArray: empty()=false kind=0x00010000 flags=0x01010000 total(-1)=1 dims(-1)=2 size(-1)=1x1 type(-1)=CV_32FC1")
 
+    def test_SolvePnP(self):
+        # analog of c++ Calib3d_SolvePnP.translation
+        cameraIntrinsic = np.eye(3, 3, dtype = np.float32)
+        crvec = np.zeros(3, dtype = np.float32)
+        ctvec = np.array([100, 100, 0], dtype = np.float32)
+        p3d = np.array([[0,0,0], [0,0,10], [0,10,10], [10,10,10], [2,5,5], [-4,8,6]], dtype = np.float32)
+        p2d, _ = cv.projectPoints(p3d, crvec, ctvec, cameraIntrinsic, None)
+        rvec = np.array([0, 0, 0], dtype = np.float32)
+        tvec = np.array([100, 100, 0], dtype = np.float32)
+
+        status, rvec, tvec = cv.solvePnP(p3d, p2d, cameraIntrinsic, None, rvec, tvec, useExtrinsicGuess=True)
+        status, rvec2, tvec2 = cv.solvePnP(p3d, p2d, cameraIntrinsic, None)
+
+    def test_SolvePnPRansac(self):
+        # analog of c++ Calib3d_SolvePnP.translation
+        cameraIntrinsic = np.eye(3, 3, dtype = np.float32)
+        crvec = np.zeros(3, dtype = np.float32)
+        ctvec = np.array([100, 100, 0], dtype = np.float32)
+        p3d = np.array([[0,0,0], [0,0,10], [0,10,10], [10,10,10], [2,5,5], [-4,8,6]], dtype = np.float32)
+        p2d, _ = cv.projectPoints(p3d, crvec, ctvec, cameraIntrinsic, None)
+        rvec = np.array([0, 0, 0], dtype = np.float32)
+        tvec = np.array([100, 100, 0], dtype = np.float32)
+
+        status, rvec, tvec = cv.solvePnPRansac(p3d, p2d, cameraIntrinsic, None, rvec, tvec, useExtrinsicGuess=True)
+        status, rvec2, tvec2 = cv.solvePnPRansac(p3d, p2d, cameraIntrinsic, None)
 
 if __name__ == '__main__':
     NewOpenCVTests.bootstrap()
