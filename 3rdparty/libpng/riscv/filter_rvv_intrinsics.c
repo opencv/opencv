@@ -142,7 +142,7 @@ png_read_filter_row_avg_rvv(size_t len, size_t bpp, unsigned char* row,
       x = __riscv_vle8_v_u8m1(row, vl);
 
       /* a = (a + b) / 2, round to zero with vxrm = 2 */
-      a = __riscv_vaaddu_wx_u8m1(a, b, 2, vl);
+      a = __riscv_vaaddu_vv_u8m1(a, b, 2, vl);
 
       /* a += x */
       a = __riscv_vadd_vv_u8m1(a, x, vl);
