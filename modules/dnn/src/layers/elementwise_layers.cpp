@@ -267,12 +267,11 @@ public:
                 cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
                     yArg, yAd.shape, CUDNN_DATA_FLOAT);
 
-                int lid = netimpl->getLayerId(this->name);
                 cudnnActivationDescriptor_t reluActDesc =
-                    netimpl->activationDescCuDNN(lid,
-                                                 CUDNN_ACTIVATION_RELU,
-                                                 CUDNN_PROPAGATE_NAN,
-                                                 0.0);
+                    netimpl->activationDescCuDNN(
+                        CUDNN_ACTIVATION_RELU,
+                        CUDNN_PROPAGATE_NAN,
+                        0.0);
                 cv::dnn::cuda::relu(
                     cudnnHandle,
                     reluActDesc,

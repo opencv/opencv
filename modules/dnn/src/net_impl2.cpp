@@ -183,13 +183,11 @@ bool Net::Impl::isConstArg(Arg arg) const
 }
 
 #ifdef HAVE_CUDA
-cudnnFilterDescriptor_t Net::Impl::filterDescCuDNN(int layerId,
-                                                   cudnnDataType_t dtype, cudnnTensorFormat_t layout,
+cudnnFilterDescriptor_t Net::Impl::filterDescCuDNN(cudnnDataType_t dtype,
+                                                   cudnnTensorFormat_t layout,
                                                    int outC, int inC, int kH, int kW)
 {
-    if ((size_t)layerId >= cudnnLayerDescs.size())
-        cudnnLayerDescs.resize(layerId + 1);
-    cudnnFilterDescriptor_t& desc = cudnnLayerDescs[layerId].filter;
+    cudnnFilterDescriptor_t& desc = cudnnFilterDesc;
     if (!desc) {
         cudnnStatus_t st = cudnnCreateFilterDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateFilterDescriptor failed");
@@ -199,15 +197,12 @@ cudnnFilterDescriptor_t Net::Impl::filterDescCuDNN(int layerId,
     return desc;
 }
 
-cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(int layerId,
-                                                      const std::vector<size_t>& pads_begin,
+cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(const std::vector<size_t>& pads_begin,
                                                       const std::vector<size_t>& strides,
                                                       const std::vector<size_t>& dilations,
                                                       int groups, cudnnDataType_t computeType)
 {
-    if ((size_t)layerId >= cudnnLayerDescs.size())
-        cudnnLayerDescs.resize(layerId + 1);
-    cudnnConvolutionDescriptor_t& desc = cudnnLayerDescs[layerId].conv;
+    cudnnConvolutionDescriptor_t& desc = cudnnConvDesc;
     if (!desc) {
         cudnnStatus_t st = cudnnCreateConvolutionDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateConvolutionDescriptor failed");
@@ -232,14 +227,11 @@ cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(int layerId,
     return desc;
 }
 
-cudnnActivationDescriptor_t Net::Impl::activationDescCuDNN(int layerId,
-                                                           cudnnActivationMode_t mode,
+cudnnActivationDescriptor_t Net::Impl::activationDescCuDNN(cudnnActivationMode_t mode,
                                                            cudnnNanPropagation_t nanOpt,
                                                            double coef)
 {
-    if ((size_t)layerId >= cudnnLayerDescs.size())
-        cudnnLayerDescs.resize(layerId + 1);
-    cudnnActivationDescriptor_t& desc = cudnnLayerDescs[layerId].act;
+    cudnnActivationDescriptor_t& desc = cudnnActDesc;
     if (!desc) {
         cudnnStatus_t st = cudnnCreateActivationDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateActivationDescriptor failed");
@@ -249,14 +241,11 @@ cudnnActivationDescriptor_t Net::Impl::activationDescCuDNN(int layerId,
     return desc;
 }
 
-cudnnOpTensorDescriptor_t Net::Impl::opTensorDescCuDNN(int layerId,
-                                                       cudnnOpTensorOp_t op,
+cudnnOpTensorDescriptor_t Net::Impl::opTensorDescCuDNN(cudnnOpTensorOp_t op,
                                                        cudnnDataType_t dtype,
                                                        cudnnNanPropagation_t nanOpt)
 {
-    if ((size_t)layerId >= cudnnLayerDescs.size())
-        cudnnLayerDescs.resize(layerId + 1);
-    cudnnOpTensorDescriptor_t& desc = cudnnLayerDescs[layerId].op;
+    cudnnOpTensorDescriptor_t& desc = cudnnOpDesc;
     if (!desc) {
         cudnnStatus_t st = cudnnCreateOpTensorDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateOpTensorDescriptor failed");
@@ -266,16 +255,13 @@ cudnnOpTensorDescriptor_t Net::Impl::opTensorDescCuDNN(int layerId,
     return desc;
 }
 
-cudnnPoolingDescriptor_t Net::Impl::poolingDescCuDNN(int layerId,
-                                                     cudnnPoolingMode_t mode,
+cudnnPoolingDescriptor_t Net::Impl::poolingDescCuDNN(cudnnPoolingMode_t mode,
                                                      cudnnNanPropagation_t nanOpt,
                                                      const std::vector<size_t>& kernel_size,
                                                      const std::vector<size_t>& pads_begin,
                                                      const std::vector<size_t>& strides)
 {
-    if ((size_t)layerId >= cudnnLayerDescs.size())
-        cudnnLayerDescs.resize(layerId + 1);
-    cudnnPoolingDescriptor_t& desc = cudnnLayerDescs[layerId].pool;
+    cudnnPoolingDescriptor_t& desc = cudnnPoolDesc;
     if (!desc) {
         cudnnStatus_t st = cudnnCreatePoolingDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreatePoolingDescriptor failed");

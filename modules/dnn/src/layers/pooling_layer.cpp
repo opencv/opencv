@@ -138,18 +138,12 @@ public:
         ceilMode = params.get<bool>("ceil_mode", true);
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
-        #ifdef HAVE_CUDA
-        cudnnPoolDesc = nullptr;
-        #endif
     }
     // Cache last input shape from finalize() to use in GPU fast path
     MatShape lastInputShape;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
-#endif
-#ifdef HAVE_CUDA
-    cudnnPoolingDescriptor_t cudnnPoolDesc;
 #endif
 
     void finalize(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr) CV_OVERRIDE
@@ -195,16 +189,6 @@ public:
             lastInputShape = shape(inputs[0]);
     }
 
-#ifdef HAVE_CUDA
-    ~PoolingLayerImpl()
-    {
-        if (cudnnPoolDesc)
-        {
-            cudnnDestroyPoolingDescriptor(cudnnPoolDesc);
-            cudnnPoolDesc = nullptr;
-        }
-    }
-#endif
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
@@ -405,9 +389,7 @@ public:
                         yArg, yShape, CUDNN_DATA_FLOAT);
 
                     cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-                    int lid = netimpl->getLayerId(this->name);
                     cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
-                        lid,
                         mode, CUDNN_PROPAGATE_NAN,
                         kernel_size, pads_begin, strides);
 

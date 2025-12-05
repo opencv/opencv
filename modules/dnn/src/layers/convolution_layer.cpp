@@ -232,10 +232,6 @@ public:
     cuda4dnn::ConvolutionConfiguration::ActivationType cudaActType;
     float cuda_relu_slope, cuda_crelu_floor, cuda_crelu_ceil;
     float cuda_power_exp, cuda_power_scale, cuda_power_shift;
-    // cuDNN descriptors cached per-layer
-    cudnnFilterDescriptor_t cudnnWDesc;
-    cudnnConvolutionDescriptor_t cudnnConvDesc;
-    cudnnTensorDescriptor_t cudnnBDesc;
 #endif
 
     ConvolutionLayerImpl(const LayerParams &params) : BaseConvolutionLayerImpl(params)
@@ -249,9 +245,6 @@ public:
 #ifdef HAVE_CUDA
         cudaFusionMode = cuda4dnn::ConvolutionConfiguration::FusionMode::NONE;
         cudaActType = cuda4dnn::ConvolutionConfiguration::ActivationType::IDENTITY;
-        cudnnWDesc = nullptr;
-        cudnnConvDesc = nullptr;
-        cudnnBDesc = nullptr;
 #endif
     }
 
@@ -1224,13 +1217,11 @@ public:
             cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
                 yArg, yAd.shape, CUDNN_DATA_FLOAT);
 
-            int lid = netimpl->getLayerId(this->name);
             cudnnFilterDescriptor_t cudnnWDesc = netimpl->filterDescCuDNN(
-                lid,
                 CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
                 C_out, blobs[0].size[1], kH, kW);
             cudnnConvolutionDescriptor_t cudnnConvDesc = netimpl->convDescCuDNN(
-                lid, pads_begin, strides, dilations, groups, CUDNN_DATA_FLOAT);
+                pads_begin, strides, dilations, groups, CUDNN_DATA_FLOAT);
             cudnnTensorDescriptor_t cudnnBDesc = nullptr;
             if (hasBias())
             {
@@ -1356,12 +1347,6 @@ public:
     }
 
 #ifdef HAVE_CUDA
-    ~ConvolutionLayerImpl()
-    {
-        if (cudnnWDesc) { cudnnDestroyFilterDescriptor(cudnnWDesc); cudnnWDesc = nullptr; }
-        if (cudnnConvDesc) { cudnnDestroyConvolutionDescriptor(cudnnConvDesc); cudnnConvDesc = nullptr; }
-        if (cudnnBDesc) { cudnnDestroyTensorDescriptor(cudnnBDesc); cudnnBDesc = nullptr; }
-    }
     Ptr<BackendNode> initCUDA(
         void *context_,
         const std::vector<Ptr<BackendWrapper>>& inputs,
