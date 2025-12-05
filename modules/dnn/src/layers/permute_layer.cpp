@@ -141,8 +141,14 @@ public:
                 return false;
         }
 #endif
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+            return true;
+        }
         return backendId == DNN_BACKEND_OPENCV ||
-               backendId == DNN_BACKEND_CUDA ||
                backendId == DNN_BACKEND_WEBNN ||
                backendId == DNN_BACKEND_CANN;
     }

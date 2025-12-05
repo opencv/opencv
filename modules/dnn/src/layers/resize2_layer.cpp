@@ -717,7 +717,12 @@ public:
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
         if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";
+        }
 
         if (backendId == DNN_BACKEND_CANN)
             return interpolation == "nearest" || interpolation == "bilinear" || interpolation == "opencv_linear";

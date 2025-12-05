@@ -5,6 +5,11 @@
 #include "precomp.hpp"
 
 #include "net_impl.hpp"
+#ifdef HAVE_CUDA
+#include "cuda/layer_cudnn.hpp"
+#include <cuda_runtime.h>
+#include <cudnn.h>
+#endif
 
 namespace cv {
 namespace dnn {
@@ -176,6 +181,104 @@ bool Net::Impl::isConstArg(Arg arg) const
 {
     return argKind(arg) == DNN_ARG_CONST;
 }
+
+#ifdef HAVE_CUDA
+cudnnFilterDescriptor_t Net::Impl::filterDescCuDNN(cudnnDataType_t dtype,
+                                                   cudnnTensorFormat_t layout,
+                                                   int outC, int inC, int kH, int kW)
+{
+    cudnnFilterDescriptor_t& desc = cudnnFilterDesc;
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateFilterDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateFilterDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetFilter4dDescriptor(desc, dtype, layout, outC, inC, kH, kW);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetFilter4dDescriptor failed");
+    return desc;
+}
+
+cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(const std::vector<size_t>& pads_begin,
+                                                      const std::vector<size_t>& strides,
+                                                      const std::vector<size_t>& dilations,
+                                                      int groups, cudnnDataType_t computeType)
+{
+    cudnnConvolutionDescriptor_t& desc = cudnnConvDesc;
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateConvolutionDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateConvolutionDescriptor failed");
+    }
+
+    int padH    = pads_begin.empty()    ? 0 : (int)pads_begin[0];
+    int padW    = pads_begin.size() > 1 ? (int)pads_begin[1] : padH;
+    int strideH = strides.empty()       ? 1 : (int)strides[0];
+    int strideW = strides.size() > 1    ? (int)strides[1] : strideH;
+    int dilH    = dilations.empty()     ? 1 : (int)dilations[0];
+    int dilW    = dilations.size() > 1  ? (int)dilations[1] : dilH;
+
+    cudnnStatus_t st = cudnnSetConvolution2dDescriptor(desc, padH, padW, strideH, strideW, dilH, dilW,
+                                                       CUDNN_CROSS_CORRELATION, computeType);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetConvolution2dDescriptor failed");
+#if CUDNN_MAJOR >= 7
+    cudnnSetConvolutionMathType(desc, CUDNN_DEFAULT_MATH);
+#endif
+    if (groups > 1) {
+        cudnnSetConvolutionGroupCount(desc, groups);
+    }
+    return desc;
+}
+
+cudnnActivationDescriptor_t Net::Impl::activationDescCuDNN(cudnnActivationMode_t mode,
+                                                           cudnnNanPropagation_t nanOpt,
+                                                           double coef)
+{
+    cudnnActivationDescriptor_t& desc = cudnnActDesc;
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateActivationDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateActivationDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetActivationDescriptor(desc, mode, nanOpt, coef);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetActivationDescriptor failed");
+    return desc;
+}
+
+cudnnOpTensorDescriptor_t Net::Impl::opTensorDescCuDNN(cudnnOpTensorOp_t op,
+                                                       cudnnDataType_t dtype,
+                                                       cudnnNanPropagation_t nanOpt)
+{
+    cudnnOpTensorDescriptor_t& desc = cudnnOpDesc;
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreateOpTensorDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateOpTensorDescriptor failed");
+    }
+    cudnnStatus_t st = cudnnSetOpTensorDescriptor(desc, op, dtype, nanOpt);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetOpTensorDescriptor failed");
+    return desc;
+}
+
+cudnnPoolingDescriptor_t Net::Impl::poolingDescCuDNN(cudnnPoolingMode_t mode,
+                                                     cudnnNanPropagation_t nanOpt,
+                                                     const std::vector<size_t>& kernel_size,
+                                                     const std::vector<size_t>& pads_begin,
+                                                     const std::vector<size_t>& strides)
+{
+    cudnnPoolingDescriptor_t& desc = cudnnPoolDesc;
+    if (!desc) {
+        cudnnStatus_t st = cudnnCreatePoolingDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreatePoolingDescriptor failed");
+    }
+
+    int kH = kernel_size.empty()    ? 1 : (int)kernel_size[0];
+    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : kH;
+    int padH = pads_begin.empty()   ? 0 : (int)pads_begin[0];
+    int padW = pads_begin.size() > 1 ? (int)pads_begin[1] : padH;
+    int strideH = strides.empty()   ? 1 : (int)strides[0];
+    int strideW = strides.size() > 1 ? (int)strides[1] : strideH;
+
+    cudnnStatus_t st = cudnnSetPooling2dDescriptor(desc, mode, nanOpt, kH, kW, padH, padW, strideH, strideW);
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetPooling2dDescriptor failed");
+    return desc;
+}
+#endif
 
 const ArgData& Net::Impl::argData(Arg arg) const
 {
@@ -362,6 +465,115 @@ void Net::Impl::allocateLayerOutputs(
     }
 }
 
+#ifdef HAVE_CUDA
+void Net::Impl::allocateLayerGpuOutputs(
+                          const Ptr<Layer>& layer,
+                          const std::vector<int>& inpTypes,
+                          const std::vector<MatShape>& inpShapes,
+                          std::vector<int>& outTypes,
+                          std::vector<MatShape>& outShapes,
+                          std::vector<int>& tempTypes,
+                          std::vector<MatShape>& tempShapes,
+                          std::vector<cv::cuda::GpuMat>& outGpuMats,
+                          std::vector<cv::cuda::GpuMat>& tempGpuMats)
+{
+    size_t noutputs = layer->outputs.size();
+    outShapes.clear();
+    outTypes.clear();
+    tempShapes.clear();
+    tempTypes.clear();
+    layer->getMemoryShapes(inpShapes, (int)noutputs, outShapes, tempShapes);
+    layer->getTypes(inpTypes, (int)noutputs, (int)tempShapes.size(), outTypes, tempTypes);
+    CV_Assert(tempShapes.size() == tempTypes.size());
+    CV_Assert(outShapes.size() == outTypes.size());
+    CV_Assert(outShapes.size() == noutputs);
+
+    outGpuMats.resize(noutputs);
+
+    if (gpuTensorsND.size() < args.size()) gpuTensorsND.resize(args.size());
+    size_t maxBufIdx = 0;
+    for (size_t i = 0; i < noutputs; ++i) {
+        Arg out = layer->outputs[i];
+        if (args[out.idx].kind == DNN_ARG_TEMP) {
+            int b = bufidxs.at(out.idx);
+            if (b >= 0) maxBufIdx = std::max(maxBufIdx, (size_t)b);
+        }
+    }
+    if (gpuBuffersND.size() <= maxBufIdx) gpuBuffersND.resize(maxBufIdx + 1);
+
+    for (size_t i = 0; i < noutputs; i++) {
+        try {
+            const MatShape& shp = outShapes[i];
+            int type = outTypes[i];
+
+            Arg out = layer->outputs[i];
+            const ArgData& ad = args.at(out.idx);
+            if (shp.empty() || type < 0) {
+                outGpuMats[i].release();
+                continue;
+            }
+
+            cv::cuda::GpuMatND* ndStorage = nullptr;
+            if (ad.kind == DNN_ARG_TEMP) {
+                int b = bufidxs.at(out.idx);
+                CV_Assert(b >= 0);
+                ndStorage = &gpuBuffersND[(size_t)b];
+            } else {
+                ndStorage = &gpuTensorsND[out.idx];
+            }
+
+            CV_Assert(ndStorage);
+            ndStorage->fit(shp, type);
+
+            size_t totalElems = ndStorage->total();
+            int rows = shp.dims > 0 ? shp[0] : 1;
+            if (rows <= 0) rows = 1;
+            size_t cols_sz = rows > 0 ? (totalElems / (size_t)rows) : totalElems;
+            int cols = (int)cols_sz;
+            if (cols <= 0) cols = 1;
+            size_t esz = (size_t)CV_ELEM_SIZE(type);
+            size_t step_bytes = (size_t)cols * esz;
+
+            outGpuMats[i] = cv::cuda::GpuMat(rows, cols, type, ndStorage->getDevicePtr(), step_bytes);
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, "DNN/CUDA: failed to prepare output GpuMat #" << i << ": " << e.what());
+            outGpuMats[i].release();
+        }
+    }
+
+    size_t ntemps = tempShapes.size();
+    tempGpuMats.resize(ntemps);
+    layerTempGpuND.resize(ntemps);
+    for (size_t i = 0; i < ntemps; i++) {
+        try {
+            const MatShape& shp = tempShapes[i];
+            int type = tempTypes[i];
+            if (shp.empty() || type < 0) {
+                tempGpuMats[i].release();
+                continue;
+            }
+
+            cv::cuda::GpuMatND& ndStorage = layerTempGpuND[i];
+            ndStorage.fit(shp, type);
+
+            size_t totalElems = ndStorage.total();
+            int rows = shp.dims > 0 ? shp[0] : 1;
+            if (rows <= 0) rows = 1;
+            size_t cols_sz = rows > 0 ? (totalElems / (size_t)rows) : totalElems;
+            int cols = (int)cols_sz;
+            if (cols <= 0) cols = 1;
+            size_t esz = (size_t)CV_ELEM_SIZE(type);
+            size_t step_bytes = (size_t)cols * esz;
+
+            tempGpuMats[i] = cv::cuda::GpuMat(rows, cols, type, ndStorage.getDevicePtr(), step_bytes);
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, "DNN/CUDA: failed to prepare temp GpuMat #" << i << ": " << e.what());
+            tempGpuMats[i].release();
+        }
+    }
+}
+#endif
+
 void Net::Impl::forwardMainGraph(InputArrayOfArrays inputs, OutputArrayOfArrays outputs)
 {
     if (!mainGraph) {
@@ -487,8 +699,8 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
     const int PPRINT_CONTEXT = 3;
     const int PPRINT_CONST_THRESHOLD = 16;
     const int PPRINT_ALL_THRESHOLD = 100;
-    const Mat& m = argTensor(arg);
     const ArgData& adata = args.at(arg.idx);
+    const Mat& m = argTensor(arg);
     bool constArg = adata.kind == DNN_ARG_CONST;
     // [TODO] replace with type compatibility check
     // CV_Assert(m.type() == adata.type);
@@ -497,7 +709,8 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
         return;
     strm_ << "  Buf: " << bufidxs.at(arg.idx) << "\n";
     strm_ << "  Type: " << typeToString(adata.type) << " \n";
-    MatShape shape = m.shape();
+
+    MatShape shape = !m.empty() ? m.shape() : adata.shape;
     strm_ << "  Shape: " << shape;
     if (constArg && m.total() <= PPRINT_CONST_THRESHOLD) {
         strm_ << " /* ";
@@ -599,6 +812,7 @@ void Net::Impl::setGraphInput(Ptr<Graph>& graph, size_t idx, const Mat& m)
         Mat& buf = buffers.at(bufidx);
         buf.fit(mshape, mtype); // minimize reallocations
         m.copyTo(buf);
+        ensureBufferWrapper(bufidx);
     } else {
         CV_Error_(Error::StsBadArg, ("graph %s: argument '%s' must be 'INPUT' or 'TEMP', not '%s'",
                                      graph->name().data(), adata.name.c_str(),
@@ -618,8 +832,29 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     size_t i, nops = prog.size();
     const std::vector<Arg>& gr_inputs = graph->inputs();
     const std::vector<Arg>& gr_outputs = graph->outputs();
+
     size_t n_gr_inputs = gr_inputs.size(), n_gr_outputs = gr_outputs.size();
     std::vector<Mat> inpMats, outMats, tempMats;
+#ifdef HAVE_CUDA
+    static bool cudaInitFailed = false;
+    bool supportGPU = (preferableBackend == DNN_BACKEND_CUDA) && haveCUDA() && !cudaInitFailed; // ignore target in new engine
+    std::vector<cv::cuda::GpuMat> outGpuMats, tempGpuMats;
+    if (supportGPU) {
+        for (size_t opidx_check = 0; opidx_check < nops; ++opidx_check) {
+            const Ptr<Layer>& layer_check = prog.at(opidx_check);
+            if (!layer_check)
+                continue;
+            if (!layer_check->supportBackend(DNN_BACKEND_CUDA)) {
+                supportGPU = false;
+                break;
+            }
+        }
+        if (!supportGPU) {
+            CV_LOG_WARNING(NULL, "DNN/CUDA: full-graph CPU fallback enabled for graph '" << graph->name() << "'");
+        }
+    }
+#endif
+
     std::vector<int> inpTypes, outTypes, tempTypes;
     std::vector<std::pair<uchar*, size_t> > outOrigData;
     std::vector<MatShape> inpShapes, outShapes, tempShapes;
@@ -633,15 +868,33 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             CV_Error_(Error::StsBadArg, ("wrong number of inputs in graph '%s': %zu given, %zu expected",
                                          graph->name().data(), inputs_.total(), n_gr_inputs));
         }
-        for (i = 0; i < n_gr_inputs; i++) {
-            Mat m = inputs_.getMat((int)i);
-            setGraphInput(graph, i, m);
+#ifdef HAVE_CUDA
+        _InputArray::KindFlag inKind = inputs_.kind();
+        bool usedGpuInputs = false;
+        if (supportGPU && inKind == _InputArray::STD_VECTOR_CUDA_GPU_MAT) {
+            std::vector<cv::cuda::GpuMat> inGpu; inputs_.getGpuMatVector(inGpu);
+            CV_CheckEQ(inGpu.size(), n_gr_inputs, "Unexpected number of GPU inputs");
+            if (gpuTensors.size() < args.size()) gpuTensors.resize(args.size());
+            for (i = 0; i < n_gr_inputs; i++) {
+                Arg inp = gr_inputs[i];
+                CV_Assert(args.at(inp.idx).kind == DNN_ARG_INPUT);
+                gpuTensors[inp.idx] = inGpu[i];
+            }
+            usedGpuInputs = true;
+        }
+        if (!usedGpuInputs)
+#endif
+        {
+            for (i = 0; i < n_gr_inputs; i++) {
+                Mat m = inputs_.getMat((int)i);
+                setGraphInput(graph, i, m);
+            }
         }
     }
 
     for (size_t opidx = 0; opidx < nops; opidx++) {
         const Ptr<Layer>& layer = prog.at(opidx);
-        if (!layer) // in theory we shouldn't have any 'nops' at this stage, but just in case we skip them.
+        if (!layer)
             continue;
         const std::vector<Arg>& inputs = layer->inputs;
         const std::vector<Arg>& outputs = layer->outputs;
@@ -652,6 +905,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         inpShapes.resize(ninputs);
         outMats.clear();
         outOrigData.clear();
+#ifdef HAVE_CUDA
+        outGpuMats.clear();
+#endif
 
         for (i = 0; i < ninputs; i++) {
             Arg inp = inputs[i];
@@ -661,6 +917,18 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             inpTypes[i] = m.type();
             inpShapes[i] = m.shape();
         }
+#ifdef HAVE_CUDA
+        if (supportGPU) {
+            for (i = 0; i < ninputs; i++) {
+                if (inpMats[i].empty()) {
+                    Arg ainp = inputs[i];
+                    const ArgData& ad = args.at(ainp.idx);
+                    if (ad.type >= 0) inpTypes[i] = ad.type;
+                    if (!ad.shape.empty()) inpShapes[i] = ad.shape;
+                }
+            }
+        }
+#endif
 
         if (tracingMode != DNN_TRACE_NONE) {
             strm_ << "-----------\n";
@@ -672,8 +940,27 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         }
         bool dynamicOutShapes = layer->dynamicOutputShapes();
         if (!dynamicOutShapes) {
-            allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+#ifdef HAVE_CUDA
+            if (supportGPU) {
+                allocateLayerGpuOutputs(layer, inpTypes, inpShapes, outTypes, outShapes,
+                                        tempTypes, tempShapes, outGpuMats, tempGpuMats); // only GPU mats
+
+                for (size_t oi = 0; oi < outShapes.size(); ++oi) {
+                    Arg out = layer->outputs[oi];
+                    if (out.idx == 0)
+                        continue;
+                    ArgData& adata = args.at(out.idx);
+                    if (!outShapes[oi].empty())
+                        adata.shape = outShapes[oi];
+                    if (outTypes[oi] >= 0)
+                        adata.type = outTypes[oi];
+                }
+            } else
+#endif
+            {
+                allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
                                  tempTypes, tempShapes, tempMats, scratchBufs, true);
+            }
         } else {
             outMats.resize(noutputs);
             for (i = 0; i < noutputs; i++) {
@@ -685,11 +972,102 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
         timestamp = getTickCount();
 
+#ifdef HAVE_CUDA
+        bool ranOnGPU = false;
+#endif
+
         std::vector<Ptr<Graph> >* subgraphs = layer->subgraphs();
         if (!subgraphs) {
-            if (finalizeLayers)
-                layer->finalize(inpMats, outMats);
-            layer->forward(inpMats, outMats, tempMats);
+#ifdef HAVE_CUDA
+            if (supportGPU && !dynamicOutShapes) {
+                try {
+                    std::vector<cv::cuda::GpuMat> inGpu; inGpu.reserve(ninputs);
+                    for (size_t ii = 0; ii < ninputs; ++ii) {
+                        Arg ainp = inputs[ii];
+                        const ArgData& ainpData = args.at(ainp.idx);
+                        if (ainpData.kind == DNN_ARG_TEMP) {
+                            int ibuf = bufidxs.at(ainp.idx);
+                            CV_Assert(ibuf >= 0);
+                            ensureBufferWrapper(ibuf);
+                            inGpu.push_back(gpuBuffers[(size_t)ibuf]);
+                        } else {
+                            if (gpuTensors.size() <= (size_t)ainp.idx) gpuTensors.resize(args.size());
+                            if (gpuTensors[ainp.idx].empty()) {
+                                (void)argGpuMat(ainp);
+                            }
+                            inGpu.push_back(gpuTensors[ainp.idx]);
+                        }
+                    }
+                    std::vector<cv::cuda::GpuMat> tmpGpu = tempGpuMats;
+                    if (!cudaInfo) {
+                        if (!ensureCudaReady()) {
+                            cudaInitFailed = true;
+                            CV_Error(Error::StsError, "DNN/CUDA: initCUDABackend failed");
+                        }
+                    }
+                    if (finalizeLayers) {
+                        std::vector<Mat> finalizeOuts(outShapes.size());
+                        for (size_t oi = 0; oi < outShapes.size(); ++oi) finalizeOuts[oi].fit(outShapes[oi], outTypes[oi]);
+
+                        std::vector<Mat> cpuFinalizeInps; cpuFinalizeInps.resize(ninputs);
+                        for (size_t ii = 0; ii < ninputs; ++ii) {
+                            MatShape ish = ii < inpShapes.size() ? inpShapes[ii] : MatShape();
+                            int ty = (ii < inpTypes.size() && inpTypes[ii] >= 0) ? inpTypes[ii] : CV_32F;
+                            if (CV_MAT_DEPTH(ty) != CV_32F) ty = CV_MAKETYPE(CV_32F, CV_MAT_CN(ty));
+                            Mat& dst = cpuFinalizeInps[ii];
+                            if (!ish.empty()) dst.fit(ish, ty);
+                            else dst.create(1, 1, ty);
+                        }
+                        layer->finalize(cpuFinalizeInps, finalizeOuts);
+                    }
+                    layer->forward((InputArrayOfArrays)inGpu, (OutputArrayOfArrays)outGpuMats, (OutputArrayOfArrays)tmpGpu);
+                    ranOnGPU = true;
+                } catch (const cv::Exception& e) {
+                    CV_LOG_WARNING(NULL, "DNN/CUDA: pure GpuMat forward failed for layer '" << layer->name << "' (" << layer->type << "): " << e.what() << ". Falling back to CPU.");
+                    outGpuMats.clear();
+                    tempGpuMats.clear();
+                    // Ensure CPU inputs are materialized from GPU if needed,
+                    for (size_t ii = 0; ii < ninputs; ++ii) {
+                        Arg ainp = inputs[ii];
+                        const ArgData& ad = args.at(ainp.idx);
+                        Mat& host = argTensor(ainp);
+
+                        if (ad.kind == DNN_ARG_INPUT) {
+                            inpMats[ii] = host;
+                            continue;
+                        }
+
+                        if (ad.kind == DNN_ARG_TEMP) {
+                            int ibuf = bufidxs.at(ainp.idx);
+                            if (ibuf >= 0 &&
+                                (size_t)ibuf < gpuBuffersND.size() &&
+                                !gpuBuffersND[(size_t)ibuf].empty()) {
+                                gpuBuffersND[(size_t)ibuf].download(host);
+                            }
+                        } else {
+                            if (gpuTensorsND.size() > (size_t)ainp.idx &&
+                                !gpuTensorsND[ainp.idx].empty()) {
+                                gpuTensorsND[ainp.idx].download(host);
+                            }
+                        }
+
+                        inpMats[ii] = host;
+                    }
+                    // Prepare CPU outputs depending on shape mode
+                    if (!dynamicOutShapes) {
+                        allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+                                             tempTypes, tempShapes, tempMats, scratchBufs, true);
+                    } else {
+                        outMats.resize(noutputs);
+                        for (size_t i2 = 0; i2 < noutputs; i2++) {
+                            Arg out2 = outputs[i2];
+                            outMats[i2] = argTensor(out2);
+                        }
+                        tempMats = scratchBufs;
+                    }
+                }
+            }
+#endif
         }
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
@@ -706,33 +1084,84 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                           ("unknown layer type '%s' with subgraphs", layer->type.c_str()));
             }
         }
-        CV_Assert(outMats.size() == noutputs);
+#ifdef HAVE_CUDA
+        if (!(supportGPU && ranOnGPU))
+#endif
+        {
+            try {
+#ifdef HAVE_CUDA
+                if (!dynamicOutShapes && (supportGPU && !ranOnGPU)) {
+                    if (outMats.empty()) {
+                        allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+                                             tempTypes, tempShapes, tempMats, scratchBufs, true);
+                    }
+                }
+#endif
+                if (finalizeLayers) {
+                    layer->finalize((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats);
+                }
+                layer->forward((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats, (OutputArrayOfArrays)tempMats);
+            } catch (const cv::Exception& e) {
+                CV_Error_(Error::StsError, ("DNN: CPU forward failed for layer '%s' (%s): %s", layer->name.c_str(), layer->type.c_str(), e.what()));
+            }
+            CV_Assert(outMats.size() == noutputs);
+        }
 
         for (i = 0; i < noutputs; i++) {
             Arg out = outputs[i];
             ArgData& adata = args[out.idx];
+#ifdef HAVE_CUDA
+            if (supportGPU && ranOnGPU) {
+                CV_Assert(i < outTypes.size());
+                CV_Assert(i < outShapes.size());
+                adata.type = outTypes[i];
+                adata.shape = outShapes[i];
+                if (adata.kind == DNN_ARG_TEMP) {
+                    int bufidx = bufidxs.at(out.idx);
+                    if ((size_t)bufidx >= gpuBuffers.size())
+                        gpuBuffers.resize((size_t)bufidx + 1);
+                    if ((size_t)i < outGpuMats.size())
+                        gpuBuffers[(size_t)bufidx] = outGpuMats[i];
+                    if ((size_t)bufidx < buffers.size())
+                        buffers[(size_t)bufidx].release();
+                } else {
+                    if (gpuTensors.size() <= (size_t)out.idx)
+                        gpuTensors.resize(args.size());
+                    if ((size_t)i < outGpuMats.size())
+                        gpuTensors[out.idx] = outGpuMats[i];
+                    __tensors__[out.idx].release();
+                }
+                continue;
+            }
+#endif
+
             const Mat& m = outMats[i];
-            //checkRange(m, false);
             adata.type = m.type();
             adata.shape = m.shape();
+#ifdef HAVE_CUDA
+            if (supportGPU) {
+                if (adata.kind == DNN_ARG_TEMP) {
+                    int bufidx_clear = bufidxs.at(out.idx);
+                    if ((size_t)bufidx_clear < gpuBuffers.size()) {
+                        gpuBuffers[(size_t)bufidx_clear].release();
+                    }
+                } else {
+                    if (gpuTensors.size() > (size_t)out.idx) {
+                        gpuTensors[out.idx].release();
+                    }
+                }
+            }
+#endif
             if (adata.kind == DNN_ARG_TEMP) {
                 int bufidx = bufidxs.at(out.idx);
                 Mat& buf = buffers.at(bufidx);
-
                 if (!dynamicOutShapes) {
-                    // a sanity check: make sure that the data was not reallocated during Layer::forward()
-                    // if the layer claims it does not produce dynamic-shape outputs.
                     CV_Assert_N(buf.u == m.u,
                                 buf.shape() == m.shape(),
-                                buf.type() == m.type(),
-                                (!m.u || m.u->data == outOrigData[i].first),
-                                (!m.u || m.u->size == outOrigData[i].second));
+                                buf.type() == m.type());
                 } else if (!buf.u || m.u->size > buf.u->size) {
                     buf = m;
                 } else {
-                    // this branch means that the layer still calls
-                    // 'create()' rather than 'fit()'; that needs to be fixed, but
-                    // we provide workaround here at the expense of extra copy.
                     buf.fit(m.shape(), m.type());
                     m.copyTo(buf);
                 }
@@ -745,20 +1174,42 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         layersTimings[opidx + graph_ofs + 1] += timestamp;
 
         if (tracingMode != DNN_TRACE_NONE) {
-            strm_ << "TIME (\"" << layer->name << "\", \"" << layer->type << "\"): " <<
-                format("%.2fms", (double)timestamp*1000./tickfreq) << "\n";
+#ifdef HAVE_CUDA
+            const char* device_str = (supportGPU && ranOnGPU) ? "CUDA" : "CPU";
+#else
+            const char* device_str = "CPU";
+#endif
+            strm_ << "TIME (\"" << layer->name << "\", \"" << layer->type << "\", " << device_str << "): "
+                  << format("%.2fms", (double)timestamp*1000./tickfreq) << "\n";
             for (i = 0; i < noutputs; i++) {
                 Arg out = outputs[i];
                 traceArg(strm_, "Output", i, out, tracingMode == DNN_TRACE_ALL);
             }
         }
     }
-
     std::vector<Mat>& outputsVec = outputs_.getMatVecRef();
     outputsVec.resize(n_gr_outputs);
     for (i = 0; i < n_gr_outputs; i++) {
         Arg out = gr_outputs[i];
         const Mat& outm = argTensor(out);
+#ifdef HAVE_CUDA
+        if (supportGPU) {
+            try {
+                if (outm.empty() &&
+                    gpuTensorsND.size() > (size_t)out.idx &&
+                    !gpuTensorsND[out.idx].empty()) {
+                    Mat& dst = outputsVec[i];
+                    const ArgData& ad = args.at(out.idx);
+                    if (!ad.shape.empty() && ad.type >= 0)
+                        dst.fit(ad.shape, ad.type);
+                    gpuTensorsND[out.idx].download(dst);
+                    continue;
+                }
+            } catch (const cv::Exception& e) {
+                CV_LOG_WARNING(NULL, "DNN/CUDA: failed to download graph output to host: " << e.what());
+            }
+        }
+#endif
         if (isMainGraph) {
             outputsVec[i].fit(outm.shape(), outm.type());
             outm.copyTo(outputsVec[i]);
