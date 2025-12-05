@@ -105,23 +105,19 @@ struct Net::Impl : public detail::NetImplBase
     int dump_indent;
 
 #ifdef HAVE_CUDA
-    std::vector<cv::cuda::GpuMat> gpuTensors;
-    std::vector<cv::cuda::GpuMat> gpuBuffers;
+    std::vector<cv::cuda::GpuMat>   gpuTensors;
+    std::vector<cv::cuda::GpuMat>   gpuBuffers;
     std::vector<cv::cuda::GpuMatND> gpuTensorsND;
     std::vector<cv::cuda::GpuMatND> gpuBuffersND;
     std::vector<cv::cuda::GpuMatND> layerTempGpuND;
-    // Cached cuDNN tensor descriptors per graph Arg (index-matched to 'args')
+
     std::vector<cudnnTensorDescriptor_t> cudnnTensors;
-    // Per-layer cuDNN non-tensor descriptors
-    struct CudnnLayerDescs {
-        cudnnFilterDescriptor_t filter;
-        cudnnConvolutionDescriptor_t conv;
-        cudnnActivationDescriptor_t act;
-        cudnnOpTensorDescriptor_t op;
-        cudnnPoolingDescriptor_t pool;
-        CudnnLayerDescs() : filter(nullptr), conv(nullptr), act(nullptr), op(nullptr), pool(nullptr) {}
-    };
-    std::vector<CudnnLayerDescs> cudnnLayerDescs;
+
+    cudnnFilterDescriptor_t      cudnnFilterDesc = nullptr;
+    cudnnConvolutionDescriptor_t cudnnConvDesc   = nullptr;
+    cudnnActivationDescriptor_t  cudnnActDesc    = nullptr;
+    cudnnOpTensorDescriptor_t    cudnnOpDesc     = nullptr;
+    cudnnPoolingDescriptor_t     cudnnPoolDesc   = nullptr;
 #endif
 
     virtual bool empty() const;
@@ -133,39 +129,35 @@ struct Net::Impl : public detail::NetImplBase
 
 #ifdef HAVE_CUDA
     cv::cuda::GpuMat& argGpuMat(Arg arg);
-    // Low-level ND helper: configure descriptor directly from an explicit MatShape.
+
     cudnnTensorDescriptor_t argTensorCuDNN(Arg a,
                                            const MatShape& shape,
                                            cudnnDataType_t dtype);
-    // Initialize CUDA backend (idempotent) and return whether CUDA is ready.
+
     bool ensureCudaReady();
-    // Convenience wrapper for contiguous tensor descriptors using a MatShape
+
     cudnnTensorDescriptor_t tensorDesc(Arg arg,
                                        const MatShape& shape,
                                        cudnnDataType_t dtype);
-    // Convenience wrapper for flatten-2D views (N x C) with explicit row stride in elements.
+
     cudnnTensorDescriptor_t tensorDesc2D(Arg arg,
                                          int rows, int cols, int row_stride,
                                          cudnnDataType_t dtype);
-    // Per-layer descriptor getters (created once, reconfigured on each call)
-    cudnnFilterDescriptor_t filterDescCuDNN(int layerId,
-                                            cudnnDataType_t dtype, cudnnTensorFormat_t layout,
+
+    cudnnFilterDescriptor_t filterDescCuDNN(cudnnDataType_t dtype,
+                                            cudnnTensorFormat_t layout,
                                             int outC, int inC, int kH, int kW);
-    cudnnConvolutionDescriptor_t convDescCuDNN(int layerId,
-                                               const std::vector<size_t>& pads_begin,
+    cudnnConvolutionDescriptor_t convDescCuDNN(const std::vector<size_t>& pads_begin,
                                                const std::vector<size_t>& strides,
                                                const std::vector<size_t>& dilations,
                                                int groups, cudnnDataType_t computeType);
-    cudnnActivationDescriptor_t activationDescCuDNN(int layerId,
-                                                    cudnnActivationMode_t mode,
+    cudnnActivationDescriptor_t activationDescCuDNN(cudnnActivationMode_t mode,
                                                     cudnnNanPropagation_t nanOpt,
                                                     double coef);
-    cudnnOpTensorDescriptor_t opTensorDescCuDNN(int layerId,
-                                                cudnnOpTensorOp_t op,
+    cudnnOpTensorDescriptor_t opTensorDescCuDNN(cudnnOpTensorOp_t op,
                                                 cudnnDataType_t dtype,
                                                 cudnnNanPropagation_t nanOpt);
-    cudnnPoolingDescriptor_t poolingDescCuDNN(int layerId,
-                                              cudnnPoolingMode_t mode,
+    cudnnPoolingDescriptor_t poolingDescCuDNN(cudnnPoolingMode_t mode,
                                               cudnnNanPropagation_t nanOpt,
                                               const std::vector<size_t>& kernel_size,
                                               const std::vector<size_t>& pads_begin,
