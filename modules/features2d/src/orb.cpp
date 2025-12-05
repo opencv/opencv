@@ -1133,12 +1133,15 @@ void ORB_Impl::detectAndCompute( InputArray _image, InputArray _mask,
             if( !mask.empty() )
             {
                 resize(prevMask, currMask, sz, 0, 0, INTER_LINEAR_EXACT);
-                copyMakeBorder(currMask, extMask, border, border, border, border,
-                               BORDER_CONSTANT + BORDER_ISOLATED);
+                if( level > firstLevel )
+                    threshold(currMask, currMask, 254, 0, THRESH_TOZERO);
             }
 
             copyMakeBorder(currImg, extImg, border, border, border, border,
                            BORDER_REFLECT_101 + BORDER_ISOLATED);
+            if (!mask.empty())
+                copyMakeBorder(currMask, extMask, border, border, border, border,
+                               BORDER_CONSTANT+BORDER_ISOLATED);
         }
         else
         {
