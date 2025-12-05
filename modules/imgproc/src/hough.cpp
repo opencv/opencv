@@ -844,7 +844,9 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     ocl::Kernel getLinesKernel(
     "get_lines",
     ocl::imgproc::hough_lines_oclsrc,
-    format("-D GET_LINES -D USE_MINMAX_THETA"));
+    format("-D GET_LINES"));
+
+
 
     if (getLinesKernel.empty())
         return false;
