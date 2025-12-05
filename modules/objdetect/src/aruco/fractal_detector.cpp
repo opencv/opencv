@@ -8,7 +8,7 @@
 #include <opencv2/flann.hpp>
 
 #include "opencv2/objdetect/fractal_detector.hpp"
-#include "predefined_dictionaries.hpp"
+#include "predefined_fractal_dictionaries.hpp"
 
 #include <cmath>
 #include <iterator>
@@ -192,28 +192,12 @@ FractalMarkerDictionary::FractalMarkerDictionary()
     impl->idExternal = -1;
 }
 // Implementation of FractalMarkerDictionary methods
-FractalMarkerDictionary::FractalMarkerDictionary(const std::string& config)
+FractalMarkerDictionary::FractalMarkerDictionary(Mat compressed)
     : impl(makePtr<FractalMarkerDictionaryImpl>())
 {
     std::stringstream stream;
-    if (config=="FRACTAL_2L_6")
-    {
-        stream.write((char*) _conf_2L_6, sizeof(_conf_2L_6));
-    }
-    else if (config=="FRACTAL_3L_6")
-    {
-        stream.write((char*) _conf_3L_6, sizeof(_conf_3L_6));
-    }
-    else if (config=="FRACTAL_4L_6")
-    {
-        stream.write((char*) _conf_4L_6, sizeof(_conf_4L_6));
-    }
-    else if (config=="FRACTAL_5L_6")
-    {
-        stream.write((char*) _conf_5L_6, sizeof(_conf_5L_6));
-    }
-    else
-        {CV_Error(cv::Error::StsBadArg, "Configuration not valid: " + config + ". Use: FRACTAL_2L_6, FRACTAL_3L_6, FRACTAL_4L_6 or FRACTAL_5L_6.");}
+    stream.write((char*) compressed.data, compressed.total());
+
     stream.read((char*)&impl->mInfoType,sizeof(impl->mInfoType));
     /*Number of markers*/
     int _nmarkers;
@@ -262,25 +246,6 @@ FractalMarkerDictionary::FractalMarkerDictionary(const std::string& config)
     }
 }
 
-FractalMarkerDictionary
-FractalMarkerDictionary::getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name)
-{
-    switch (name) {
-    case FRACTAL_2L_6:
-        return FractalMarkerDictionary("FRACTAL_2L_6");
-    case FRACTAL_3L_6:
-        return FractalMarkerDictionary("FRACTAL_3L_6");
-    case FRACTAL_4L_6:
-        return FractalMarkerDictionary("FRACTAL_4L_6");
-    case FRACTAL_5L_6:
-        return FractalMarkerDictionary("FRACTAL_5L_6");
-    default:
-        CV_Error(cv::Error::StsBadArg, "Predefined Fractal Dictionary not valid");
-    }
-    return FractalMarkerDictionary();
-}
-
-
 void FractalMarkerDictionary::FractalMarkerDictionaryImpl::convertToMeters(float size)
 {
     CV_Assert(mInfoType == 0 || mInfoType == 2);
@@ -296,6 +261,23 @@ void FractalMarkerDictionary::FractalMarkerDictionaryImpl::convertToMeters(float
     }
 }
 
+FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name)
+{
+    switch (name)
+    {
+        case FRACTAL_2L_6:
+            return FractalMarkerDictionary(cv::Mat(1, sizeof(_conf_2L_6), CV_8UC1, _conf_2L_6));
+        case FRACTAL_3L_6:
+            return FractalMarkerDictionary(cv::Mat(1, sizeof(_conf_3L_6), CV_8UC1, _conf_3L_6));
+        case FRACTAL_4L_6:
+            return FractalMarkerDictionary(cv::Mat(1, sizeof(_conf_4L_6), CV_8UC1, _conf_4L_6));
+        case FRACTAL_5L_6:
+            return FractalMarkerDictionary(cv::Mat(1, sizeof(_conf_5L_6), CV_8UC1, _conf_5L_6));
+        default:
+            CV_Error(cv::Error::StsBadArg, "Predefined Fractal Dictionary not valid");
+    }
+}
+
 // Implementation of FractalDetector methods
 FractalDetector::FractalDetector(const FractalMarkerDictionary &dictionary)
     : impl(makePtr<FractalDetectorImpl>())
@@ -303,8 +285,7 @@ FractalDetector::FractalDetector(const FractalMarkerDictionary &dictionary)
     impl->fractalMarkerDictionary = dictionary;
 }
 
-void FractalDetector::setParams(const std::string& fractal_config, int minInternalDistSq_, float markerSize) {
-    impl->fractalMarkerDictionary = FractalMarkerDictionary(fractal_config);
+void FractalDetector::setParams(int minInternalDistSq_, float markerSize) {
     if (markerSize != -1) {
         impl->fractalMarkerDictionary.impl->convertToMeters(markerSize);
     }

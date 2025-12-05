@@ -79,17 +79,15 @@ enum PredefinedFractalDictionaryType {
 class CV_EXPORTS_W_SIMPLE FractalMarkerDictionary
 {
 public:
-    CV_WRAP static FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name);
-
-    CV_WRAP FractalMarkerDictionary();
-
-    CV_WRAP FractalMarkerDictionary(const std::string& config);
-
+    FractalMarkerDictionary();
+    CV_WRAP FractalMarkerDictionary(Mat compressed);
 protected:
     struct FractalMarkerDictionaryImpl;
     Ptr<FractalMarkerDictionaryImpl> impl;
     friend class FractalDetector;
 };
+
+CV_EXPORTS_W FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name);
 
 /**
  * @brief Detector for fractal markers in images.
@@ -102,7 +100,7 @@ public:
     /**
      * @brief Default constructor for FractalDetector.
      */
-    CV_WRAP FractalDetector(const FractalMarkerDictionary &dictionary = FractalMarkerDictionary::getPredefinedFractalArucoDictionary(FRACTAL_4L_6));
+    CV_WRAP FractalDetector(const FractalMarkerDictionary &dictionary = getPredefinedFractalArucoDictionary(FRACTAL_4L_6));
     /**
      * @brief Detects fractal markers in the input image.
      * @param img Input image (grayscale or color).
@@ -119,7 +117,7 @@ public:
      * @param minInternalDistSq The minimum squared distance between internal points (default 150).
      * @param markerSize The physical size of the marker in meters (optional, default -1).
      */
-    CV_WRAP void setParams(const std::string& fractal_config, int minInternalDistSq = 150, float markerSize = -1);
+    CV_WRAP void setParams(int minInternalDistSq = 150, float markerSize = -1);
 
 protected:
     /**
