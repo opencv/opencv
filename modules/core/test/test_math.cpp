@@ -2630,19 +2630,18 @@ TEST(Core_SolveCubic, regression_27748)
     Mat coeffs = (Mat_<double>(1, 4) << a, b, c, d);
     Mat roots;
 
-    // We expect the solver to detect the negligible 'a' and solve as quadratic:
-    // 84.4504x^2 - 96.795x + 13.6826 = 0
-    // Discriminant ~ 4745.8
-    // Roots approx: 0.156, 0.990
-
     int n = solveCubic(coeffs, roots);
 
-    EXPECT_GE(n, 2); // Should find at least 2 real roots (as quadratic)
-
+    // Expecting quadratic behavior (2 roots)
+    EXPECT_GE(n, 2); 
+    
+    // Verify roots satisfy the quadratic part of the equation (since a*x^3 is negligible)
     for(int i = 0; i < n; i++)
     {
-        double r = roots.at<double>(i);
-        EXPECT_NEAR(r, 0.5, 1.0);
+        double x = roots.at<double>(i);
+        double val = b*x*x + c*x + d;
+        // Check residual is small
+        EXPECT_LE(std::abs(val), 1e-3) << "Root " << x << " does not satisfy the equation";
     }
 }
 

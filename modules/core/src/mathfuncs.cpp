@@ -1565,50 +1565,40 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     Mat roots = _roots.getMat();
 
     int i = -1, n = 0;
-    // We store raw coefficients to preserve precision for the quadratic case
-    double raw_a0 = 1., raw_a1, raw_a2, raw_a3;
+    double a0 = 1., a1, a2, a3;
     double x0 = 0., x1 = 0., x2 = 0.;
     int ncoeffs = coeffs.rows + coeffs.cols - 1;
 
     if( ctype == CV_32FC1 )
     {
         if( ncoeffs == 4 )
-            raw_a0 = coeffs.at<float>(++i);
+            a0 = coeffs.at<float>(++i);
 
-        raw_a1 = coeffs.at<float>(i+1);
-        raw_a2 = coeffs.at<float>(i+2);
-        raw_a3 = coeffs.at<float>(i+3);
+        a1 = coeffs.at<float>(i+1);
+        a2 = coeffs.at<float>(i+2);
+        a3 = coeffs.at<float>(i+3);
     }
     else
     {
         if( ncoeffs == 4 )
-            raw_a0 = coeffs.at<double>(++i);
+            a0 = coeffs.at<double>(++i);
 
-        raw_a1 = coeffs.at<double>(i+1);
-        raw_a2 = coeffs.at<double>(i+2);
-        raw_a3 = coeffs.at<double>(i+3);
+        a1 = coeffs.at<double>(i+1);
+        a2 = coeffs.at<double>(i+2);
+        a3 = coeffs.at<double>(i+3);
     }
 
-    // Normalization check
-    // We compute normalized values for the threshold check to avoid relative scale issues
-    double max_coeff = (std::max)({std::abs(raw_a0), std::abs(raw_a1), std::abs(raw_a2), std::abs(raw_a3)});
+    // Fix for Issue #27748: Normalize coefficients to avoid overflow/underflow
+    // and correctly detect negligible cubic terms.
+    double max_coeff = std::max(std::max(std::abs(a0), std::abs(a1)), std::max(std::abs(a2), std::abs(a3)));
 
+    // If max_coeff is effectively zero, the equation is 0=0
     if (max_coeff < std::numeric_limits<double>::epsilon())
         return -1;
 
-    // Normalize specifically for the check
-    double scale = 1.0 / max_coeff;
-    double a0_norm = raw_a0 * scale;
-
-    // Use DBL_EPSILON to allow valid cubic terms that are small but significant (Regression 27323)
-    if( std::abs(a0_norm) < std::numeric_limits<double>::epsilon() )
+    // Check if the cubic term is negligible relative to the largest coefficient
+    if( std::abs(a0) < std::numeric_limits<double>::epsilon() * max_coeff )
     {
-        // Reduced order (Quadratic/Linear)
-        // CRITICAL: Use RAW coefficients here to avoid rounding errors in trivial cases
-        double a1 = raw_a1;
-        double a2 = raw_a2;
-        double a3 = raw_a3;
-
         if( std::abs(a1) < std::numeric_limits<double>::epsilon() * max_coeff )
         {
             if( std::abs(a2) < std::numeric_limits<double>::epsilon() * max_coeff )
@@ -1626,7 +1616,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             double d = a2*a2 - 4*a1*a3;
             if( d >= 0 )
             {
-                d = std::sqrt(d);
+                d = sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
                 if( std::abs(q1) > std::abs(q2) )
@@ -1646,11 +1636,12 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     else
     {
         // cubic equation
-        // Use NORMALIZED coefficients to prevent overflow/instability
-        double a0 = a0_norm; // Already normalized
-        double a1 = raw_a1 * scale;
-        double a2 = raw_a2 * scale;
-        double a3 = raw_a3 * scale;
+        // Normalize coefficients in-place to prevent overflow/instability
+        double scale = 1.0 / max_coeff;
+        a0 *= scale; 
+        a1 *= scale; 
+        a2 *= scale; 
+        a3 *= scale;
 
         a0 = 1./a0;
         a1 *= a0;
@@ -1660,32 +1651,39 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
+        
+        /*
+          Here we expand expression `Qcubed - R * R` for `d` variable
+          to reduce common terms `a1^6 / 729` and `-a1^4 * a2 / 81`
+          and thus decrease rounding error (in case of quite big coefficients).
 
+          And then we additionally group terms to further reduce rounding error.
+        */
         double d = (a1 * a1 * (a2 * a2 - 4 * a1 * a3) + 2 * a2 * (9 * a1 * a3 - 2 * a2 * a2) - 27 * a3 * a3) * (1./108);
 
         if( d > 0 )
         {
-            double theta = std::acos(R / std::sqrt(Qcubed));
-            double sqrtQ = std::sqrt(Q);
+            double theta = acos(R / sqrt(Qcubed));
+            double sqrtQ = sqrt(Q);
             double t0 = -2 * sqrtQ;
             double t1 = theta * (1./3);
             double t2 = a1 * (1./3);
-            x0 = t0 * std::cos(t1) - t2;
-            x1 = t0 * std::cos(t1 + (2.*CV_PI/3)) - t2;
-            x2 = t0 * std::cos(t1 + (4.*CV_PI/3)) - t2;
+            x0 = t0 * cos(t1) - t2;
+            x1 = t0 * cos(t1 + (2.*CV_PI/3)) - t2;
+            x2 = t0 * cos(t1 + (4.*CV_PI/3)) - t2;
             n = 3;
         }
         else if( d == 0 )
         {
             if(R >= 0)
             {
-                x0 = -2*std::pow(R, 1./3) - a1/3;
-                x1 = std::pow(R, 1./3) - a1/3;
+                x0 = -2*pow(R, 1./3) - a1/3;
+                x1 = pow(R, 1./3) - a1/3;
             }
             else
             {
-                x0 = 2*std::pow(-R, 1./3) - a1/3;
-                x1 = -std::pow(-R, 1./3) - a1/3;
+                x0 = 2*pow(-R, 1./3) - a1/3;
+                x1 = -pow(-R, 1./3) - a1/3;
             }
             x2 = 0;
             n = x0 == x1 ? 1 : 2;
@@ -1694,8 +1692,8 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         else
         {
             double e;
-            d = std::sqrt(-d);
-            e = std::pow(d + std::fabs(R), 1./3);
+            d = sqrt(-d);
+            e = pow(d + fabs(R), 1./3);
             if( R > 0 )
                 e = -e;
             x0 = (e + Q / e) - a1 * (1./3);
