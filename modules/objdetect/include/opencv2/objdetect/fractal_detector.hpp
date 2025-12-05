@@ -60,21 +60,25 @@ protected:
     friend class FractalMarkerDictionary;
     friend class FractalDetector;
 };
+
 enum PredefinedFractalDictionaryType {
     FRACTAL_2L_6,
     FRACTAL_3L_6,
     FRACTAL_4L_6,
     FRACTAL_5L_6,
 };
-class CV_EXPORTS_W_SIMPLE FractalMarkerDictionary 
-{
-// The Fractal Marker generation creates a hierarchical structure of nVal x nVal binary 
-// matrices, where the central kVal x kVal region is cleared, and outer regions are 
-// randomly configured. Each layer optimizes marker distinctiveness by maximizing its 
-// distance from others. Pixel size adjusts per layer, and corners are defined in 3D 
-// space, ensuring robust and unique markers.
 
-public:     
+/**
+ * The Fractal Marker generation creates a hierarchical structure of nVal x nVal binary
+ * matrices, where the central kVal x kVal region is cleared, and outer regions are
+ * randomly configured. Each layer optimizes marker distinctiveness by maximizing its
+ * distance from others. Pixel size adjusts per layer, and corners are defined in 3D
+ * space, ensuring robust and unique markers.
+ *
+ */
+class CV_EXPORTS_W_SIMPLE FractalMarkerDictionary
+{
+public:
     CV_WRAP static FractalMarkerDictionary getPredefinedFractalArucoDictionary(PredefinedFractalDictionaryType name);
 
     CV_WRAP FractalMarkerDictionary();
