@@ -1072,7 +1072,7 @@ More information about Perspective-n-Points is described in @ref calib3d_solvePn
  */
 CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                             InputArray cameraMatrix, InputArray distCoeffs,
-                            OutputArray rvec, OutputArray tvec,
+                            InputOutputArray rvec, InputOutputArray tvec,
                             bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE );
 
 /** @brief Finds an object pose \f$ {}^{c}\mathbf{T}_o \f$ from 3D-2D point correspondences using the RANSAC scheme to deal with bad matches.
@@ -4353,7 +4353,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     */
     CV_EXPORTS_W bool solvePnP( InputArray objectPoints, InputArray imagePoints,
                                 InputArray cameraMatrix, InputArray distCoeffs,
-                                OutputArray rvec, OutputArray tvec,
+                                InputOutputArray rvec, OutputArray tvec,
                                 bool useExtrinsicGuess = false, int flags = SOLVEPNP_ITERATIVE,
                                 TermCriteria criteria = TermCriteria(TermCriteria::MAX_ITER + TermCriteria::EPS, 10, 1e-8)
                               );
@@ -4398,7 +4398,7 @@ optimization. It is the \f$max(width,height)/\pi\f$ or the provided \f$f_x\f$, \
     */
     CV_EXPORTS_W bool solvePnPRansac( InputArray objectPoints, InputArray imagePoints,
                                       InputArray cameraMatrix, InputArray distCoeffs,
-                                      OutputArray rvec, OutputArray tvec,
+                                      InputOutputArray rvec, InputOutputArray tvec,
                                       bool useExtrinsicGuess = false, int iterationsCount = 100,
                                       float reprojectionError = 8.0, double confidence = 0.99,
                                       OutputArray inliers = noArray(), int flags = SOLVEPNP_ITERATIVE,

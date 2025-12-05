@@ -131,7 +131,7 @@ void drawFrameAxes(InputOutputArray image, InputArray cameraMatrix, InputArray d
 
 bool solvePnP( InputArray opoints, InputArray ipoints,
                InputArray cameraMatrix, InputArray distCoeffs,
-               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess, int flags )
+               InputOutputArray rvec, InputOutputArray tvec, bool useExtrinsicGuess, int flags )
 {
     CV_INSTRUMENT_REGION();
 
@@ -213,7 +213,7 @@ public:
 
 bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
                     InputArray _cameraMatrix, InputArray _distCoeffs,
-                    OutputArray _rvec, OutputArray _tvec, bool useExtrinsicGuess,
+                    InputOutputArray _rvec, InputOutputArray _tvec, bool useExtrinsicGuess,
                     int iterationsCount, float reprojectionError, double confidence,
                     OutputArray _inliers, int flags)
 {
@@ -248,8 +248,6 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
     _rvec.create(3, 1, CV_64FC1);
     _tvec.create(3, 1, CV_64FC1);
 
-    Mat rvec = useExtrinsicGuess ? _rvec.getMat() : Mat(3, 1, CV_64FC1);
-    Mat tvec = useExtrinsicGuess ? _tvec.getMat() : Mat(3, 1, CV_64FC1);
     Mat cameraMatrix = _cameraMatrix.getMat(), distCoeffs = _distCoeffs.getMat();
 
     int model_points = 5;
@@ -293,6 +291,9 @@ bool solvePnPRansac(InputArray _opoints, InputArray _ipoints,
 
         return true;
     }
+
+    Mat rvec = useExtrinsicGuess ? _rvec.getMat() : Mat(3, 1, CV_64FC1);
+    Mat tvec = useExtrinsicGuess ? _tvec.getMat() : Mat(3, 1, CV_64FC1);
 
     Ptr<PointSetRegistrator::Callback> cb; // pointer to callback
     cb = makePtr<PnPRansacCallback>( cameraMatrix, distCoeffs, ransac_kernel_method, useExtrinsicGuess, rvec, tvec);

@@ -1136,7 +1136,7 @@ double cv::fisheye::stereoCalibrate(InputArrayOfArrays objectPoints, InputArrayO
 
 bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
                InputArray cameraMatrix, InputArray distCoeffs,
-               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+               InputOutputArray rvec, InputOutputArray tvec, bool useExtrinsicGuess,
                int flags, TermCriteria criteria)
 {
 
@@ -1150,7 +1150,7 @@ bool cv::fisheye::solvePnP( InputArray opoints, InputArray ipoints,
 
 bool cv::fisheye::solvePnPRansac( InputArray opoints, InputArray ipoints,
                InputArray cameraMatrix, InputArray distCoeffs,
-               OutputArray rvec, OutputArray tvec, bool useExtrinsicGuess,
+               InputOutputArray rvec, InputOutputArray tvec, bool useExtrinsicGuess,
                int iterationsCount, float reprojectionError,
                double confidence, OutputArray inliers,
                int flags, TermCriteria criteria)
