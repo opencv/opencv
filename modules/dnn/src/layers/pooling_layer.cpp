@@ -378,69 +378,12 @@ public:
                 if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
                 {
                     std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                    if (gin.empty()) {
-                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
-                        return;
-                    }
+                    CV_Assert(!gin.empty() && !gin[0].empty());
                     cv::cuda::GpuMat gin0 = gin[0];
 
-                    MatShape ish = lastInputShape;
-                    int dims = (int)ish.size();
-
-                    if (dims != 4)
-                    {
-                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
-                        return;
-                    }
-                    int N = ish[0];
-                    int C = ish[1];
-                    int H_in = ish[dims - 2];
-                    int W_in = ish[dims - 1];
-
-                    int kH = kernel_size.size() > 0 ? (int)kernel_size[0] : (type == AVE ? H_in : 2);
-                    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : (type == AVE ? W_in : kH);
-                    int sH = strides.size() > 0 ? (int)strides[0] : (type == AVE ? 1 : 2);
-                    int sW = strides.size() > 1 ? (int)strides[1] : (type == AVE ? 1 : sH);
-                    int pH = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
-                    int pW = pads_begin.size() > 1 ? (int)pads_begin[1] : 0;
-                    int H_out = 0;
-                    int W_out = 0;
-
-                    int padTop    = pads_begin.size() > 0 ? (int)pads_begin[0] : 0;
-                    int padBottom = pads_end.size()   > 0 ? (int)pads_end[0]   : 0;
-                    int padLeft   = pads_begin.size() > 1 ? (int)pads_begin[1] : padTop;
-                    int padRight  = pads_end.size()   > 1 ? (int)pads_end[1]   : padLeft;
-                    if (padMode.empty())
-                    {
-                        H_out = (int)((H_in + padTop + padBottom - kH) / sH + 1);
-                        W_out = (int)((W_in + padLeft + padRight - kW) / sW + 1);
-                    }
-                    else
-                    {
-                        std::vector<int> inpShape = { H_in, W_in };
-                        std::vector<int> outShape;
-                        getConvPoolOutParams(inpShape, kernel_size, strides, padMode,
-                                             std::vector<size_t>(kernel_size.size(), 1), outShape);
-                        CV_Assert(outShape.size() == 2);
-                        H_out = outShape[0];
-                        W_out = outShape[1];
-                    }
-
                     cv::cuda::GpuMat& dst = gout[0];
-                    if (dst.empty()) {
-                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
-                        return;
-                    }
-
-                    if (gin0.type() != CV_32F) {
-                        cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
-                    }
-                    cv::cuda::GpuMat dst32;
-                    cv::cuda::GpuMat* dstPtr = &dst;
-                    if (dst.type() != CV_32F) {
-                        dst32.create(dst.size(), CV_32F);
-                        dstPtr = &dst32;
-                    }
+                    CV_Assert(!dst.empty());
+                    CV_Assert(gin0.type() == CV_32F && dst.type() == CV_32F);
 
                     Net::Impl* netimpl = getNetImpl(this);
                     CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
@@ -448,28 +391,31 @@ public:
                     CV_Assert(netimpl->cudaInfo);
                     cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-                    cudnnTensorDescriptor_t xDesc = netimpl->tensorDescNCHW(
-                        this->inputs.empty() ? Arg() : this->inputs[0],
-                        N, C, H_in, W_in, CUDNN_DATA_FLOAT);
-                    cudnnTensorDescriptor_t yDesc = netimpl->tensorDescNCHW(
-                        this->outputs.empty() ? Arg() : this->outputs[0],
-                        N, C, H_out, W_out, CUDNN_DATA_FLOAT);
+                    Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+                    Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+                    const ArgData& xAd = netimpl->argData(xArg);
+                    const ArgData& yAd = netimpl->argData(yArg);
+                    MatShape xShape = xAd.shape;
+                    MatShape yShape = yAd.shape;
+                    CV_Assert(xShape.size() == 4 && yShape.size() == 4);
+
+                    cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc(
+                        xArg, xShape, CUDNN_DATA_FLOAT);
+                    cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc(
+                        yArg, yShape, CUDNN_DATA_FLOAT);
 
                     cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
                     int lid = netimpl->getLayerId(this->name);
                     cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
                         lid,
                         mode, CUDNN_PROPAGATE_NAN,
-                        kH, kW, pH, pW, sH, sW);
+                        kernel_size, pads_begin, strides);
 
                     cv::dnn::cuda::pool(
                         cudnnHandle,
                         xDesc, yDesc, cudnnPoolDesc,
                         (const void*)gin0.ptr(),
-                        (void*)dstPtr->ptr());
-                    if (dstPtr != &dst) {
-                        dst32.convertTo(dst, dst.type());
-                    }
+                        (void*)dst.ptr());
                     return;
                 } else {
                     forward_fallback(inputs_arr, outputs_arr, internals_arr);
