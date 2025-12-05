@@ -3,7 +3,8 @@
  * Copyright (c) 2023 Google LLC
  * Written by Manfred SCHLAEGL, 2022
  *            Dragoș Tiselice <dtiselice@google.com>, May 2023.
- *            Filip Wasil     <f.wasil@samsung.com>, March 2025.
+ *            Filip Wasil <f.wasil@samsung.com>, March 2025.
+ *            Liang Junzhao <junzhao.liang@spacemit.com>, November 2025.
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -140,11 +141,8 @@ png_read_filter_row_avg_rvv(size_t len, size_t bpp, unsigned char* row,
       /* x = *row */
       x = __riscv_vle8_v_u8m1(row, vl);
 
-      /* tmp = a + b */
-      vuint16m2_t tmp = __riscv_vwaddu_vv_u16m2(a, b, vl);
-
-      /* a = tmp/2 */
-      a = __riscv_vnsrl_wx_u8m1(tmp, 1, vl);
+      /* a = (a + b) / 2, round to zero with vxrm = 2 */
+      a = __riscv_vaaddu_wx_u8m1(a, b, 2, vl);
 
       /* a += x */
       a = __riscv_vadd_vv_u8m1(a, x, vl);
@@ -265,27 +263,22 @@ png_read_filter_row_paeth_rvv(size_t len, size_t bpp, unsigned char* row,
       /* x = *row */
       vuint8m1_t x = __riscv_vle8_v_u8m1(row, vl);
 
-      /* Calculate p = b - c and pc = a - c using widening subtraction */
-      vuint16m2_t p_wide = __riscv_vwsubu_vv_u16m2(b, c, vl);
-      vuint16m2_t pc_wide = __riscv_vwsubu_vv_u16m2(a, c, vl);
-
-      /* Convert to signed for easier manipulation */
-      size_t vl16 = __riscv_vsetvl_e16m2(bpp);
-      vint16m2_t p = __riscv_vreinterpret_v_u16m2_i16m2(p_wide);
-      vint16m2_t pc = __riscv_vreinterpret_v_u16m2_i16m2(pc_wide);
+      /* p = b - c and pc = a - c */
+      vuint16m2_t p = __riscv_vwsubu_vv_u16m2(b, c, vl);
+      vuint16m2_t pc = __riscv_vwsubu_vv_u16m2(a, c, vl);
 
       /* pa = |p| */
-      vbool8_t p_neg_mask = __riscv_vmslt_vx_i16m2_b8(p, 0, vl16);
-      vint16m2_t pa = __riscv_vrsub_vx_i16m2_m(p_neg_mask, p, 0, vl16);
+      vuint16m2_t tmp = __riscv_vrsub_vx_u16m2(p, 0, vl);
+      vuint16m2_t pa = __riscv_vminu_vv_u16m2(p, tmp, vl);
 
       /* pb = |pc| */
-      vbool8_t pc_neg_mask = __riscv_vmslt_vx_i16m2_b8(pc, 0, vl16);
-      vint16m2_t pb = __riscv_vrsub_vx_i16m2_m(pc_neg_mask, pc, 0, vl16);
+      tmp = __riscv_vrsub_vx_u16m2(pc, 0, vl);
+      vuint16m2_t pb = __riscv_vminu_vv_u16m2(pc, tmp, vl);
 
       /* pc = |p + pc| */
-      vint16m2_t p_plus_pc = __riscv_vadd_vv_i16m2(p, pc, vl16);
-      vbool8_t p_plus_pc_neg_mask = __riscv_vmslt_vx_i16m2_b8(p_plus_pc, 0, vl16);
-      pc = __riscv_vrsub_vx_i16m2_m(p_plus_pc_neg_mask, p_plus_pc, 0, vl16);
+      pc = __riscv_vadd_vv_u16m2(p, pc, vl);
+      tmp = __riscv_vrsub_vx_u16m2(pc, 0, vl);
+      pc = __riscv_vminu_vv_u16m2(pc, tmp, vl);
 
       /*
        * The key insight is that we want the minimum of pa, pb, pc.
@@ -294,31 +287,17 @@ png_read_filter_row_paeth_rvv(size_t len, size_t bpp, unsigned char* row,
        * - Else use c
        */
 
-      /* Find which predictor to use based on minimum absolute difference */
-      vbool8_t pa_le_pb = __riscv_vmsle_vv_i16m2_b8(pa, pb, vl16);
-      vbool8_t pa_le_pc = __riscv_vmsle_vv_i16m2_b8(pa, pc, vl16);
-      vbool8_t pb_le_pc = __riscv_vmsle_vv_i16m2_b8(pb, pc, vl16);
+      /* if (pb < pa) { pa = pb; a = b; } */
+      vbool8_t m1 = __riscv_vmsltu_vv_u16m2_b8(pb, pa, vl);
+      pa = __riscv_vmerge_vvm_u16m2(pa, pb, m1, vl);
+      a = __riscv_vmerge_vvm_u8m1(a, b, m1, vl);
 
-      /* use_a = pa <= pb && pa <= pc */
-      vbool8_t use_a = __riscv_vmand_mm_b8(pa_le_pb, pa_le_pc, vl16);
-
-      /* use_b = !use_a && pb <= pc */
-      vbool8_t not_use_a = __riscv_vmnot_m_b8(use_a, vl16);
-      vbool8_t use_b = __riscv_vmand_mm_b8(not_use_a, pb_le_pc, vl16);
-
-      /* Switch back to e8m1 for final operations */
-      vl = __riscv_vsetvl_e8m1(bpp);
-
-      /* Start with a, then conditionally replace with b or c */
-      vuint8m1_t result = a;
-      result = __riscv_vmerge_vvm_u8m1(result, b, use_b, vl);
-
-      /* use_c = !use_a && !use_b */
-      vbool8_t use_c = __riscv_vmnand_mm_b8(__riscv_vmor_mm_b8(use_a, use_b, vl), __riscv_vmor_mm_b8(use_a, use_b, vl), vl);
-      result = __riscv_vmerge_vvm_u8m1(result, c, use_c, vl);
+      /* if (pc < pa) a = c; */
+      vbool8_t m2 = __riscv_vmsltu_vv_u16m2_b8(pc, pa, vl);
+      a = __riscv_vmerge_vvm_u8m1(a, c, m2, vl);
 
       /* a = result + x */
-      a = __riscv_vadd_vv_u8m1(result, x, vl);
+      a = __riscv_vadd_vv_u8m1(a, x, vl);
 
       /* *row = a */
       __riscv_vse8_v_u8m1(row, a, vl);
