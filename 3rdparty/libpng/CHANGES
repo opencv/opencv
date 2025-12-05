@@ -6229,6 +6229,92 @@ Version 1.6.45 [January 7, 2025]
   Raised the minimum required CMake version from 3.6 to 3.14.
   Forked off a development branch for libpng version 1.8.
 
+Version 1.6.46 [January 23, 2025]
+  Added support for the mDCV and cLLI chunks.
+    (Contributed by John Bowler)
+  Fixed a build issue affecting C89 compilers.
+    This was a regression introduced in libpng-1.6.45.
+    (Contributed by John Bowler)
+  Added makefile.c89, specifically for testing C89 compilers.
+  Cleaned up contrib/pngminus: corrected an old typo, removed an old
+    workaround, and updated the CMake file.
+
+Version 1.6.47 [February 18, 2025]
+  Modified the behaviour of colorspace chunks in order to adhere
+    to the new precedence rules formulated in the latest draft of
+    the PNG Specification.
+    (Contributed by John Bowler)
+  Fixed a latent bug in `png_write_iCCP`.
+    This would have been a read-beyond-end-of-malloc vulnerability,
+    introduced early in the libpng-1.6.0 development, yet (fortunately!)
+    it was inaccessible before the above-mentioned modification of the
+    colorspace precedence rules, due to pre-existing colorspace checks.
+    (Reported by Bob Friesenhahn; fixed by John Bowler)
+
+Version 1.6.48 [April 30, 2025]
+  Fixed the floating-point version of the mDCv setter `png_set_mDCv`.
+    (Reported by Mohit Bakshi; fixed by John Bowler)
+  Added #error directives to discourage the inclusion of private
+    libpng implementation header files in PNG-supporting applications.
+  Added the CMake build option `PNG_LIBCONF_HEADER`, to be used as an
+    alternative to `DFA_XTRA`.
+  Removed the Travis CI configuration files, with heartfelt thanks for
+    their generous support of our project over the past five years!
+
+Version 1.6.49 [June 12, 2025]
+  Added SIMD-optimized code for the RISC-V Vector Extension (RVV).
+    (Contributed by Manfred Schlaegl, Dragos Tiselice and Filip Wasil)
+  Added various fixes and improvements to the build scripts and to
+    the sample code.
+
+Version 1.6.50 [July 1, 2025]
+  Improved the detection of the RVV Extension on the RISC-V platform.
+    (Contributed by Filip Wasil)
+  Replaced inline ASM with C intrinsics in the RVV code.
+    (Contributed by Filip Wasil)
+  Fixed a decoder defect in which unknown chunks trailing IDAT, set
+    to go through the unknown chunk handler, incorrectly triggered
+    out-of-place IEND errors.
+    (Contributed by John Bowler)
+  Fixed the CMake file for cross-platform builds that require `libm`.
+
+Version 1.6.51 [November 21, 2025]
+  Fixed CVE-2025-64505 (moderate severity):
+    Heap buffer overflow in `png_do_quantize` via malformed palette index.
+    (Reported by Samsung; analyzed by Fabio Gritti.)
+  Fixed CVE-2025-64506 (moderate severity):
+    Heap buffer over-read in `png_write_image_8bit` with 8-bit input and
+    `convert_to_8bit` enabled.
+    (Reported by Samsung and <weijinjinnihao@users.noreply.github.com>;
+    analyzed by Fabio Gritti.)
+  Fixed CVE-2025-64720 (high severity):
+    Buffer overflow in `png_image_read_composite` via incorrect palette
+    premultiplication.
+    (Reported by Samsung; analyzed by John Bowler.)
+  Fixed CVE-2025-65018 (high severity):
+    Heap buffer overflow in `png_combine_row` triggered via
+    `png_image_finish_read`.
+    (Reported by <yosiimich@users.noreply.github.com>.)
+  Fixed a memory leak in `png_set_quantize`.
+    (Reported by Samsung; analyzed by Fabio Gritti.)
+  Removed the experimental and incomplete ERROR_NUMBERS code.
+    (Contributed by Tobias Stoeckmann.)
+  Improved the RISC-V vector extension support; required RVV 1.0 or newer.
+    (Contributed by Filip Wasil.)
+  Added GitHub Actions workflows for automated testing.
+  Performed various refactorings and cleanups.
+
+Version 1.6.52 [December 3, 2025]
+  Fixed CVE-2025-66293 (high severity):
+    Out-of-bounds read in `png_image_read_composite`.
+    (Reported by flyfish101 <flyfish101@users.noreply.github.com>.)
+  Fixed the Paeth filter handling in the RISC-V RVV implementation.
+    (Reported by Filip Wasil; fixed by Liang Junzhao.)
+  Improved the performance of the RISC-V RVV implementation.
+    (Contributed by Liang Junzhao.)
+  Added allocation failure fuzzing to oss-fuzz.
+    (Contributed by Philippe Antoine.)
+
 Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
 Subscription is required; visit
 https://lists.sourceforge.net/lists/listinfo/png-mng-implement

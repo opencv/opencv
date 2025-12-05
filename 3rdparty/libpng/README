@@ -1,4 +1,4 @@
-README for libpng version 1.6.45
+README for libpng version 1.6.52
 ================================
 
 See the note about version numbers near the top of `png.h`.
@@ -147,6 +147,7 @@ Files included in this distribution
     loongarch/    =>  Optimized code for LoongArch LSX
     mips/         =>  Optimized code for MIPS MSA and MIPS MMI
     powerpc/      =>  Optimized code for PowerPC VSX
+    riscv/        =>  Optimized code for the RISC-V platform
     ci/           =>  Scripts for continuous integration
     contrib/      =>  External contributions
         arm-neon/     =>  Optimized code for the ARM-NEON platform
@@ -162,6 +163,7 @@ Files included in this distribution
                           programs demonstrating the use of pngusr.dfa
         pngminus/     =>  Simple pnm2png and png2pnm programs
         pngsuite/     =>  Test images
+        riscv-rvv/    =>  Optimized code for the RISC-V Vector platform
         testpngs/     =>  Test images
         tools/        =>  Various tools
         visupng/      =>  VisualPng, a Windows viewer for PNG images
