@@ -139,7 +139,7 @@ __kernel void fill_accum_local(__global const uchar * list_ptr, int list_step, i
 
 __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_offset, int accum_rows, int accum_cols,
                          __global uchar * lines_ptr, int lines_step, int lines_offset, __global int* lines_index_ptr,
-                         int linesMax, int threshold, float rho, float theta)
+                         int linesMax, int threshold, float rho, float theta_step, float minTheta, float maxTheta)
 {
     int x0 = get_global_id(0);
     int y = get_global_id(1);
@@ -163,7 +163,8 @@ __kernel void get_lines(__global uchar * accum_ptr, int accum_step, int accum_of
                 if (index < linesMax)
                 {
                     float radius = (x - (accum_cols - 3) / 2) * rho;
-                    float angle = y * theta;
+                    float angle = minTheta + y * theta_step;
+
 
                     lines[index] = (float2)(radius, angle);
                 }
