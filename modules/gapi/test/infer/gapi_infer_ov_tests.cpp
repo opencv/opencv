@@ -829,7 +829,7 @@ static ov::element::Type toOV(int depth) {
     case CV_16F: return ov::element::f16;
     default: GAPI_Error("OV Backend: Unsupported data type");
     }
-    return ov::element::undefined;
+    return ov::element::dynamic;
 }
 
 struct TestMeanScaleOV : public ::testing::TestWithParam<int>{
