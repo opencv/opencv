@@ -1104,4 +1104,55 @@ TEST(Drawing, contours_filled)
     }
 }
 
+// Test for LINE_4 vs LINE_8 connectivity behavior
+// Regression test for issue #26413
+TEST(Drawing, line_connectivity_4_vs_8)
+{
+    // Create a small image to test line connectivity
+    Mat img4(10, 10, CV_8UC1, Scalar(0));
+    Mat img8(10, 10, CV_8UC1, Scalar(0));
+
+    // Draw a diagonal line from (0,0) to (9,9)
+    // LINE_4 (4-connected) should produce staircase pattern (no diagonals)
+    // LINE_8 (8-connected) should produce diagonal steps
+    line(img4, Point(0, 0), Point(9, 9), Scalar(255), 1, LINE_4);
+    line(img8, Point(0, 0), Point(9, 9), Scalar(255), 1, LINE_8);
+
+    // Count non-zero pixels
+    // LINE_4 produces more pixels due to staircase pattern
+    // LINE_8 produces fewer pixels due to diagonal connectivity
+    int count4 = countNonZero(img4);
+    int count8 = countNonZero(img8);
+
+    // LINE_4 should have more pixels than LINE_8 for diagonal lines
+    // because 4-connectivity requires horizontal/vertical steps only
+    EXPECT_GT(count4, count8) << "LINE_4 should produce more pixels than LINE_8 for diagonal lines";
+
+    // LINE_8 for a 10-pixel diagonal should have exactly 10 pixels
+    EXPECT_EQ(10, count8) << "LINE_8 diagonal from (0,0) to (9,9) should have 10 pixels";
+
+    // LINE_4 for a 10-pixel diagonal should have approximately 19 pixels
+    // (needs both horizontal and vertical steps)
+    EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
+
+    // Verify LINE_4 has no diagonal connections by checking neighbors
+    // In 4-connectivity, each pixel should only connect to horizontal/vertical neighbors
+    for (int y = 1; y < img4.rows - 1; y++)
+    {
+        for (int x = 1; x < img4.cols - 1; x++)
+        {
+            if (img4.at<uchar>(y, x) == 255)
+            {
+                // Check if this pixel has only 4-connected neighbors (not diagonal-only)
+                bool has4neighbor = (img4.at<uchar>(y-1, x) == 255 ||
+                                    img4.at<uchar>(y+1, x) == 255 ||
+                                    img4.at<uchar>(y, x-1) == 255 ||
+                                    img4.at<uchar>(y, x+1) == 255);
+                EXPECT_TRUE(has4neighbor) << "LINE_4 pixel at (" << x << "," << y
+                                          << ") should have at least one 4-connected neighbor";
+            }
+        }
+    }
+}
+
 }} // namespace
