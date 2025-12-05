@@ -240,87 +240,47 @@ public:
             if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
             {
                 std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
-                if (gout.size() == 1)
-                {
-                    cv::cuda::GpuMat gin0;
+                std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
+                CV_Assert(gout.size() == 1 && gin.size() == 1);
 
-                    if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
-                    {
-                        std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                        if (gin.empty() || gin[0].empty())
-                        {
-                            Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-                            return;
-                        }
-                        gin0 = gin[0];
-                        if (gin0.type() != CV_32F)
-                        {
-                            cv::cuda::GpuMat tmp; gin0.convertTo(tmp, CV_32F); gin0 = tmp;
-                        }
-                    }
-                    else
-                    {
-                        std::vector<Mat> inputs_cpu; inputs_arr.getMatVector(inputs_cpu);
-                        if (inputs_cpu.empty())
-                        {
-                            Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
-                            return;
-                        }
-                        const Mat& in0 = inputs_cpu[0];
-                        Mat in_f;
-                        if (in0.type() != CV_32F)
-                            in0.convertTo(in_f, CV_32F);
-                        else
-                            in_f = in0;
+                cv::cuda::GpuMat& gin0 = gin[0];
+                cv::cuda::GpuMat& dst  = gout[0];
 
-                        // Flatten to 2D for cuDNN: single batch with all elements.
-                        MatShape ish = shape(in_f);
-                        size_t total_elems = total(ish);
-                        int rows = 1;
-                        int cols = (int)total_elems;
-                        CV_Assert(cols > 0);
-                        Mat in2d = in_f.reshape(1, rows);
-                        gin0.upload(in2d);
-                    }
+                CV_Assert(!gin0.empty());
+                CV_Assert(gin0.type() == CV_32F && dst.type() == CV_32F);
+                if (dst.empty() || dst.size() != gin0.size())
+                    cv::cuda::ensureSizeIsEnough(gin0.size(), CV_32F, dst);
 
-                    cv::cuda::GpuMat& dst = gout[0];
-                    int rows = gin0.rows > 0 ? gin0.rows : 1;
-                    int cols = gin0.cols > 0 ? gin0.cols : 1;
-                    if (dst.empty() || dst.type() != CV_32F || dst.rows != rows || dst.cols != cols)
-                        cv::cuda::ensureSizeIsEnough(rows, cols, CV_32F, dst);
+                Net::Impl* netimpl = getNetImpl(this);
+                CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+                netimpl->ensureCudaReady();
+                CV_Assert(netimpl->cudaInfo);
+                cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-                    Net::Impl* netimpl = getNetImpl(this);
-                    CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-                    netimpl->ensureCudaReady();
-                    CV_Assert(netimpl->cudaInfo);
-                    cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+                Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+                Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+                const ArgData& xAd = netimpl->argData(xArg);
+                const ArgData& yAd = netimpl->argData(yArg);
+                CV_Assert(!xAd.shape.empty() && !yAd.shape.empty());
+                cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                    xArg, xAd.shape, CUDNN_DATA_FLOAT);
+                cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                    yArg, yAd.shape, CUDNN_DATA_FLOAT);
 
-                    // Configure cuDNN descriptors directly from N-D Arg metadata
-                    Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
-                    Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
-                    const ArgData& xAd = netimpl->argData(xArg);
-                    const ArgData& yAd = netimpl->argData(yArg);
-                    CV_Assert(!xAd.shape.empty() && !yAd.shape.empty());
-                    cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
-                        xArg, xAd.shape, CUDNN_DATA_FLOAT);
-                    cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
-                        yArg, yAd.shape, CUDNN_DATA_FLOAT);
-
-                    int lid = netimpl->getLayerId(this->name);
-                    cudnnActivationDescriptor_t reluActDesc =
-                        netimpl->activationDescCuDNN(lid,
-                                                      CUDNN_ACTIVATION_RELU,
-                                                      CUDNN_PROPAGATE_NAN,
-                                                      0.0);
-                    cv::dnn::cuda::relu(
-                        cudnnHandle,
-                        reluActDesc,
-                        xDesc,
-                        yDesc,
-                        (const void*)gin0.ptr(),
-                        (void*)dst.ptr());
-                    return;
-                }
+                int lid = netimpl->getLayerId(this->name);
+                cudnnActivationDescriptor_t reluActDesc =
+                    netimpl->activationDescCuDNN(lid,
+                                                 CUDNN_ACTIVATION_RELU,
+                                                 CUDNN_PROPAGATE_NAN,
+                                                 0.0);
+                cv::dnn::cuda::relu(
+                    cudnnHandle,
+                    reluActDesc,
+                    xDesc,
+                    yDesc,
+                    (const void*)gin0.ptr(),
+                    (void*)dst.ptr());
+                return;
             }
         }
 #endif
@@ -330,15 +290,6 @@ public:
             Layer::forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
-
-#ifdef HAVE_CUDA
-        // For non-ReLU functors, if outputs are GPU mats, report not implemented to trigger CPU fallback
-        if (!std::is_same<Func, ReLUFunctor>::value &&
-            outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
-        {
-            CV_Error(Error::StsNotImplemented, "ElementWiseLayer: CUDA path not implemented for this operation");
-        }
-#endif
 
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);

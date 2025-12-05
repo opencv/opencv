@@ -117,15 +117,14 @@ bool Net::Impl::ensureCudaReady()
     return (bool)cudaInfo;
 }
 
-cudnnTensorDescriptor_t Net::Impl::tensorDescNCHW(Arg arg,
-                                                  int N, int C, int H, int W,
-                                                  cudnnDataType_t dtype)
+cudnnTensorDescriptor_t Net::Impl::tensorDesc(Arg arg,
+                                              const MatShape& shp,
+                                              cudnnDataType_t dtype)
 {
 #ifdef HAVE_CUDA
-    MatShape shp({N, C, H, W});
     return argTensorCuDNN(arg, shp, dtype);
 #else
-    CV_UNUSED(arg); CV_UNUSED(N); CV_UNUSED(C); CV_UNUSED(H); CV_UNUSED(W); CV_UNUSED(dtype);
+    CV_UNUSED(arg); CV_UNUSED(shp); CV_UNUSED(dtype);
     return nullptr;
 #endif
 }

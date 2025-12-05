@@ -139,10 +139,10 @@ struct Net::Impl : public detail::NetImplBase
                                            cudnnDataType_t dtype);
     // Initialize CUDA backend (idempotent) and return whether CUDA is ready.
     bool ensureCudaReady();
-    // Convenience wrappers for common contiguous tensor descriptors
-    cudnnTensorDescriptor_t tensorDescNCHW(Arg arg,
-                                           int N, int C, int H, int W,
-                                           cudnnDataType_t dtype);
+    // Convenience wrapper for contiguous tensor descriptors using a MatShape
+    cudnnTensorDescriptor_t tensorDesc(Arg arg,
+                                       const MatShape& shape,
+                                       cudnnDataType_t dtype);
     // Convenience wrapper for flatten-2D views (N x C) with explicit row stride in elements.
     cudnnTensorDescriptor_t tensorDesc2D(Arg arg,
                                          int rows, int cols, int row_stride,
@@ -152,8 +152,10 @@ struct Net::Impl : public detail::NetImplBase
                                             cudnnDataType_t dtype, cudnnTensorFormat_t layout,
                                             int outC, int inC, int kH, int kW);
     cudnnConvolutionDescriptor_t convDescCuDNN(int layerId,
-                                               int padH, int padW, int strideH, int strideW,
-                                               int dilH, int dilW, int groups, cudnnDataType_t computeType);
+                                               const std::vector<size_t>& pads_begin,
+                                               const std::vector<size_t>& strides,
+                                               const std::vector<size_t>& dilations,
+                                               int groups, cudnnDataType_t computeType);
     cudnnActivationDescriptor_t activationDescCuDNN(int layerId,
                                                     cudnnActivationMode_t mode,
                                                     cudnnNanPropagation_t nanOpt,
@@ -165,9 +167,9 @@ struct Net::Impl : public detail::NetImplBase
     cudnnPoolingDescriptor_t poolingDescCuDNN(int layerId,
                                               cudnnPoolingMode_t mode,
                                               cudnnNanPropagation_t nanOpt,
-                                              int kH, int kW,
-                                              int padH, int padW,
-                                              int strideH, int strideW);
+                                              const std::vector<size_t>& kernel_size,
+                                              const std::vector<size_t>& pads_begin,
+                                              const std::vector<size_t>& strides);
 #endif
     void ensureBufferWrapper(int bufidx);
 

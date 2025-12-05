@@ -200,8 +200,10 @@ cudnnFilterDescriptor_t Net::Impl::filterDescCuDNN(int layerId,
 }
 
 cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(int layerId,
-                                                      int padH, int padW, int strideH, int strideW,
-                                                      int dilH, int dilW, int groups, cudnnDataType_t computeType)
+                                                      const std::vector<size_t>& pads_begin,
+                                                      const std::vector<size_t>& strides,
+                                                      const std::vector<size_t>& dilations,
+                                                      int groups, cudnnDataType_t computeType)
 {
     if ((size_t)layerId >= cudnnLayerDescs.size())
         cudnnLayerDescs.resize(layerId + 1);
@@ -210,6 +212,14 @@ cudnnConvolutionDescriptor_t Net::Impl::convDescCuDNN(int layerId,
         cudnnStatus_t st = cudnnCreateConvolutionDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateConvolutionDescriptor failed");
     }
+
+    int padH    = pads_begin.empty()    ? 0 : (int)pads_begin[0];
+    int padW    = pads_begin.size() > 1 ? (int)pads_begin[1] : padH;
+    int strideH = strides.empty()       ? 1 : (int)strides[0];
+    int strideW = strides.size() > 1    ? (int)strides[1] : strideH;
+    int dilH    = dilations.empty()     ? 1 : (int)dilations[0];
+    int dilW    = dilations.size() > 1  ? (int)dilations[1] : dilH;
+
     cudnnStatus_t st = cudnnSetConvolution2dDescriptor(desc, padH, padW, strideH, strideW, dilH, dilW,
                                                        CUDNN_CROSS_CORRELATION, computeType);
     CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetConvolution2dDescriptor failed");
@@ -259,9 +269,9 @@ cudnnOpTensorDescriptor_t Net::Impl::opTensorDescCuDNN(int layerId,
 cudnnPoolingDescriptor_t Net::Impl::poolingDescCuDNN(int layerId,
                                                      cudnnPoolingMode_t mode,
                                                      cudnnNanPropagation_t nanOpt,
-                                                     int kH, int kW,
-                                                     int padH, int padW,
-                                                     int strideH, int strideW)
+                                                     const std::vector<size_t>& kernel_size,
+                                                     const std::vector<size_t>& pads_begin,
+                                                     const std::vector<size_t>& strides)
 {
     if ((size_t)layerId >= cudnnLayerDescs.size())
         cudnnLayerDescs.resize(layerId + 1);
@@ -270,6 +280,14 @@ cudnnPoolingDescriptor_t Net::Impl::poolingDescCuDNN(int layerId,
         cudnnStatus_t st = cudnnCreatePoolingDescriptor(&desc);
         CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreatePoolingDescriptor failed");
     }
+
+    int kH = kernel_size.empty()    ? 1 : (int)kernel_size[0];
+    int kW = kernel_size.size() > 1 ? (int)kernel_size[1] : kH;
+    int padH = pads_begin.empty()   ? 0 : (int)pads_begin[0];
+    int padW = pads_begin.size() > 1 ? (int)pads_begin[1] : padH;
+    int strideH = strides.empty()   ? 1 : (int)strides[0];
+    int strideW = strides.size() > 1 ? (int)strides[1] : strideH;
+
     cudnnStatus_t st = cudnnSetPooling2dDescriptor(desc, mode, nanOpt, kH, kW, padH, padW, strideH, strideW);
     CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetPooling2dDescriptor failed");
     return desc;
@@ -509,7 +527,6 @@ void Net::Impl::allocateLayerGpuOutputs(
                 continue;
             }
 
-            // Backing N-D storage.
             cv::cuda::GpuMatND* ndStorage = nullptr;
             if (ad.kind == DNN_ARG_TEMP) {
                 int b = bufidxs.at(out.idx);
@@ -1098,18 +1115,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                     layer->finalize((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats);
                 }
                 layer->forward((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats, (OutputArrayOfArrays)tempMats);
-                // Safety: ensure Reshape outputs are materialized even if the layer didn't copy
-                if (layer->type == "Reshape") {
-                    size_t copyCount = std::min(noutputs, ninputs);
-                    for (size_t ci = 0; ci < copyCount; ++ci) {
-                        const Mat& src = inpMats[ci];
-                        Mat& dst = outMats[ci];
-                        if (!src.empty() && !dst.empty() && dst.data != src.data) {
-                            Mat reshaped = src.reshape(1, dst.dims, dst.size.p);
-                            reshaped.copyTo(dst);
-                        }
-                    }
-                }
             } catch (const cv::Exception& e) {
                 CV_Error_(Error::StsError, ("DNN: CPU forward failed for layer '%s' (%s): %s", layer->name.c_str(), layer->type.c_str(), e.what()));
             }
@@ -1148,8 +1153,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             adata.type = m.type();
             adata.shape = m.shape();
 #ifdef HAVE_CUDA
-            // If this op ran on CPU (i.e., !(supportGPU && ranOnGPU)), clear any stale GPU storage
-            // so later code doesn't mistakenly prefer old gpuTensors/gpuBuffers.
             if (supportGPU) {
                 if (adata.kind == DNN_ARG_TEMP) {
                     int bufidx_clear = bufidxs.at(out.idx);
@@ -1206,8 +1209,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 #ifdef HAVE_CUDA
         if (supportGPU) {
             try {
-                // Only download from GPU if the host tensor is empty.
-                // If CPU fallback produced this tensor, outm is non-empty and should be preferred.
                 if (outm.empty() &&
                     gpuTensorsND.size() > (size_t)out.idx &&
                     !gpuTensorsND[out.idx].empty()) {
