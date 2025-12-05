@@ -2,7 +2,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
-
 #include <iostream>
 
 using namespace cv;
@@ -33,8 +32,8 @@ int main()
     {
         imwrite("starry_night.png", img);
     }
-    destroyAllWindows(); // Inside the tag
-//! [imsave]
+    destroyAllWindows(); 
+    //! [imsave]
 
     return 0;
 }
