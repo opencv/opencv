@@ -3770,7 +3770,7 @@ back.
 If conversion adds the alpha channel, its value will set to the maximum of corresponding channel
 range: 255 for CV_8U, 65535 for CV_16U, 1 for CV_32F.
 
-@param src input image: 8-bit unsigned, 16-bit unsigned ( CV_16UC... ), or single-precision
+@param src input image: 8-bit unsigned or single-precision
 floating-point.
 @param dst output image of the same size and depth as src.
 @param code color space conversion code (see #ColorConversionCodes).
