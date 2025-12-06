@@ -443,7 +443,12 @@ struct OCVStCallHelper<Impl, std::tuple<Ins...>, std::tuple<Outs...>> :
     template<int... IIs, int... OIs>
     static void call_impl(GCPUContext &ctx, detail::Seq<IIs...>, detail::Seq<OIs...>)
     {
-        auto& st = *ctx.state().get<std::shared_ptr<typename Impl::State>>();
+        auto state_ptr = ctx.state().get<std::shared_ptr<typename Impl::State>>();
+        if (state_ptr == nullptr) {
+            CV_Error(cv::Error::StsNullPtr, "Stateful kernel's state is not initialized. "
+                     "Make sure the setup() function properly initializes the state.");
+        }
+        auto& st = *state_ptr;
         call_and_postprocess<decltype(get_in<Ins>::get(ctx, IIs))...>
             ::call(st, get_in<Ins>::get(ctx, IIs)..., get_out<Outs>::get(ctx, OIs)...);
     }
