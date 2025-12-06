@@ -6,7 +6,8 @@ This sample demonstrates Canny edge detection.
 Usage:
   edge.py [<video source>]
 
-  Trackbars control edge thresholds.
+Trackbars control the Canny edge detection thresholds (values are scaled higher in this sample for better visualization).
+
 
 '''
 
