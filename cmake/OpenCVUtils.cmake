@@ -1667,7 +1667,7 @@ function(ocv_install_used_external_targets)
   if(NOT BUILD_SHARED_LIBS
       AND NOT (CMAKE_VERSION VERSION_LESS "3.13.0")  # upgrade CMake: https://gitlab.kitware.com/cmake/cmake/-/merge_requests/2152
   )
-    foreach(tgt in ${ARGN})
+    foreach(tgt IN LISTS ARGN)
       if(tgt MATCHES "^ocv\.3rdparty\.")
         list(FIND __OPENCV_EXPORTED_EXTERNAL_TARGETS "${tgt}" _found)
         if(_found EQUAL -1)  # don't export target twice
