@@ -5,6 +5,8 @@
 #include "../precomp.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
 #include "cpu_kernels/softmax.hpp"
+#include "cpu_kernels/attn_mask.hpp"
+
 #include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
@@ -12,88 +14,6 @@
 namespace cv { namespace dnn {
 
 using std::tanh;
-
-
-static void mask_bias(
-    Mat &att_weights, const Mat &att_mask,
-    const int seq_len_square, const int seq_len_kv,
-    const float min_val, const bool is_causal
-)
-{
-    const int total = att_mask.total();
-    auto fn = [&](const Range &r) {
-        auto* mask_data = att_mask.ptr<const float>();
-        auto* weights_data = att_weights.ptr<float>();
-        for (int i = r.start; i < r.end; i++)
-        {
-            const int seq_pos = i % seq_len_square;
-            const int q_pos = seq_pos / seq_len_kv;
-            const int k_pos = seq_pos % seq_len_kv;
-            weights_data[i] = (is_causal && k_pos > q_pos) ?
-                            min_val : weights_data[i] + mask_data[i];
-        }
-    };
-    parallel_for_(Range(0, total), fn, total * (1 / 1024.0));
-}
-
-static void mask_bool(
-    Mat &att_weights, const Mat &att_mask,
-    const int seq_len_square, const int seq_len_kv,
-    const float min_val, const bool is_causal
-)
-{
-    const int total = att_mask.total();
-
-    auto fn = [&](const Range &r) {
-        const int elemSize = CV_ELEM_SIZE1(att_mask.depth());  // bytes per element
-        const int depth = att_mask.depth();
-        auto* mask_data = att_mask.ptr<const char>();
-        auto* weights_data = att_weights.ptr<float>();
-        for (int i = 0; i < total; i++)
-        {
-            const char* src = mask_data + i * elemSize;
-            bool mask_val = false;
-            switch (depth)
-            {
-                case CV_Bool:
-                    mask_val = *(reinterpret_cast<const bool*>(src));
-                    break;
-                case CV_8U:
-                    mask_val = (*(reinterpret_cast<const uint8_t*>(src)) != 0);
-                    break;
-                case CV_8S:
-                    mask_val = (*(reinterpret_cast<const int8_t*>(src)) != 0);
-                    break;
-                case CV_16U:
-                    mask_val = (*(reinterpret_cast<const uint16_t*>(src)) != 0);
-                    break;
-                case CV_16S:
-                    mask_val = (*(reinterpret_cast<const int16_t*>(src)) != 0);
-                    break;
-                case CV_32S:
-                    mask_val = (*(reinterpret_cast<const int32_t*>(src)) != 0);
-                    break;
-                case CV_64S:
-                    mask_val = (*(reinterpret_cast<const int64_t*>(src)) != 0);
-                    break;
-                case CV_64U:
-                    mask_val = (*(reinterpret_cast<const uint64_t*>(src)) != 0);
-                    break;
-                default:
-                    CV_Error(Error::StsNotImplemented, "Unsupported depth for boolean mask in attention");
-            }
-            const int seq_pos = i % seq_len_square;
-            const int q_pos = seq_pos / seq_len_kv;
-            const int k_pos = seq_pos % seq_len_kv;
-            if (!mask_val || (is_causal && k_pos > q_pos))
-            {
-                weights_data[i] = min_val;
-            }
-        }
-    };
-    parallel_for_(Range(0, total), fn, total * (1 / 1024.0));
-}
-
 
 // Operator spec: https://onnx.ai/onnx/operators/onnx__Attention.html#attention-23
 class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
@@ -313,39 +233,19 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
                     attention_mask
                 );
             }
-            if (inputs.size() > 3)
-                if (CV_IS_INT_TYPE(inputs[3].depth()))
-                    mask_bool(
-                        attention_prob,
-                        internals[internals.size() - 2],
-                        seq_len_square,
-                        seq_len_kv,
-                        -1e9f,
-                        is_causal
-                    );
-                else
-                    mask_bias(
-                        attention_prob,
-                        internals[internals.size() - 2],
-                        seq_len_square,
-                        seq_len_kv,
-                        -1e9f,
-                        is_causal
-                    );
+            const bool has_mask = inputs.size() > 3;
+            if (has_mask && CV_IS_INT_TYPE(inputs[3].depth()))
+                apply_mask_int(
+                    attention_prob, internals[internals.size() - 2],
+                    seq_len_kv, seq_len_q, -1e9f,
+                    has_mask, is_causal
+                );
             else
-            {
-                Range r(0, attention_prob.total());
-                for (int i = r.start; i < r.end; i++)
-                {
-                    const int seq_pos = i % seq_len_square;
-                    const int q_pos = seq_pos / seq_len_kv;
-                    const int k_pos = seq_pos % seq_len_kv;
-                    if (k_pos > q_pos)
-                    {
-                        attention_prob.ptr<float>()[i] = -1e9f;
-                    }
-                }
-            }
+                apply_mask_float(
+                    attention_prob, internals.size() > 1 ? internals[internals.size() - 2] : Mat(),
+                    seq_len_kv, seq_len_q, -1e9f,
+                    has_mask, is_causal
+                );
         }
 
 
