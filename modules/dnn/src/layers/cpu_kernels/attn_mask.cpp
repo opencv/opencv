@@ -31,7 +31,7 @@ static inline v_float32 load_int_mask_as_f32(const uint16_t* ptr) {
 
 template<typename T>
 inline v_float32 load_int_mask_as_f32(const T* ptr) {
-    return v_setzero_f32();
+    return vx_setall_f32(0.f);
 }
 
 
