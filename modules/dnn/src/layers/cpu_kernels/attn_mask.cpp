@@ -11,22 +11,22 @@ namespace cv { namespace dnn {
 
 static inline v_float32 load_int_mask_as_f32(const int32_t* ptr) {
     v_int32 v = vx_load(ptr);
-    return v_reinterpret_as_f32(v_ne(v, v_setzero_s32()));
+    return v_reinterpret_as_f32(v_ne(v, vx_setall_s32(0)));
 }
 
 static inline v_float32 load_int_mask_as_f32(const uint8_t* ptr) {
     v_uint32 v = vx_load_expand_q(ptr);
-    return v_reinterpret_as_f32(v_ne(v, v_setzero_u32()));
+    return v_reinterpret_as_f32(v_ne(v, vx_setall_u32(0)));
 }
 
 static inline v_float32 load_int_mask_as_f32(const int8_t* ptr) {
     v_int32 v = vx_load_expand_q(ptr);
-    return v_reinterpret_as_f32(v_ne(v, v_setzero_s32()));
+    return v_reinterpret_as_f32(v_ne(v, vx_setall_s32(0)));
 }
 
 static inline v_float32 load_int_mask_as_f32(const uint16_t* ptr) {
     v_uint32 v = vx_load_expand(ptr);
-    return v_reinterpret_as_f32(v_ne(v, v_setzero_u32()));
+    return v_reinterpret_as_f32(v_ne(v, vx_setall_u32(0)));
 }
 
 template<typename T>
