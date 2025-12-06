@@ -49,7 +49,7 @@ static void apply_mask_int_kernel(
         {
             v_float32 v_weight = vx_load(&weights[t]);
             v_float32 v_mask = load_int_mask_as_f32(&mask[t]);
-            v_weight = v_select(v_mask, v_weight, v_setall_f32(min_val));
+            v_weight = v_select(v_mask, v_weight, vx_setall_f32(min_val));
             vx_store(&weights[t], v_weight);
         }
     }
