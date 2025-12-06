@@ -2273,6 +2273,7 @@ static void warpAffine(int src_type,
                 CV_CPU_DISPATCH(warpAffineNearestInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
+            // no default
         }
     }
 
@@ -2326,6 +2327,7 @@ static void warpAffine(int src_type,
                 CV_CPU_DISPATCH(warpAffineLinearInvoker_32FC4, ((const float*)src_data, src_step, src_height, src_width, (float*)dst_data, dst_step, dst_height, dst_width, M, borderType, borderValue), CV_CPU_DISPATCH_MODES_ALL);
                 break;
             }
+            // no default
         }
     }
 
@@ -2349,6 +2351,18 @@ static void warpAffine(int src_type,
 void warpAffineBlocklineNN(double *adelta, double *bdelta, short* xy, double X0, double Y0, int bw)
 {
     int x1 = 0;
+#if CV_SIMD128_64F
+    {
+        v_float64x2 v_X0 = v_setall_f64(X0);
+        v_float64x2 v_Y0 = v_setall_f64(Y0);
+        for (; x1 <= bw - 4; x1 += 4)
+        {
+            v_int32x4 v_X = v_round(v_add(v_X0, v_load(adelta + x1)), v_add(v_X0, v_load(adelta + x1 + 2)));
+            v_int32x4 v_Y = v_round(v_add(v_Y0, v_load(bdelta + x1)), v_add(v_Y0, v_load(bdelta + x1 + 2)));
+            v_store_interleave(xy + x1 * 2, v_pack(v_X, v_Y));
+        }
+    }
+#endif
     for (; x1 < bw; x1++)
     {
         int X = saturate_cast<int>(X0 + adelta[x1]);
@@ -2361,6 +2375,22 @@ void warpAffineBlocklineNN(double *adelta, double *bdelta, short* xy, double X0,
 void warpAffineBlockline(double *adelta, double *bdelta, short* xy, short* alpha, double X0, double Y0, int bw)
 {
     int x1 = 0;
+#if CV_SIMD128_64F
+    {
+        v_float64x2 v_X0 = v_setall_f64(X0), v_Y0 = v_setall_f64(Y0);
+        v_float64x2 v_scale = v_setall_f64((double)INTER_TAB_SIZE);
+        v_int32x4 v_mask = v_setall_s32(INTER_TAB_SIZE - 1);
+        for (; x1 <= bw - 4; x1 += 4)
+        {
+            v_int32x4 v_X = v_round(v_mul(v_add(v_X0, v_load(adelta + x1)), v_scale),
+                                    v_mul(v_add(v_X0, v_load(adelta + x1 + 2)), v_scale));
+            v_int32x4 v_Y = v_round(v_mul(v_add(v_Y0, v_load(bdelta + x1)), v_scale),
+                                    v_mul(v_add(v_Y0, v_load(bdelta + x1 + 2)), v_scale));
+            v_store_interleave(xy + x1 * 2, v_pack(v_shr<INTER_BITS>(v_X), v_shr<INTER_BITS>(v_Y)));
+            v_pack_store(alpha + x1, v_add(v_shl<INTER_BITS>(v_and(v_Y, v_mask)), v_and(v_X, v_mask)));
+        }
+    }
+#endif
     for (; x1 < bw; x1++)
     {
         double fX = X0 + adelta[x1];
