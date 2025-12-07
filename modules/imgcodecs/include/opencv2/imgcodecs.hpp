@@ -556,6 +556,7 @@ It also demonstrates how to save multiple images in a TIFF file:
 @param filename Name of the file.
 @param img (Mat or vector of Mat) Image or Images to be saved.
 @param params Format-specific parameters encoded as pairs (paramId_1, paramValue_1, paramId_2, paramValue_2, ... .) see cv::ImwriteFlags
+@return true if the image is successfully written to the specified file; false otherwise.
 */
 CV_EXPORTS_W bool imwrite( const String& filename, InputArray img,
               const std::vector<int>& params = std::vector<int>());
