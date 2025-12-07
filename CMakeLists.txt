@@ -1721,6 +1721,12 @@ if(WITH_GPHOTO2 OR HAVE_GPHOTO2)
   status("    gPhoto2:"        HAVE_GPHOTO2        THEN "YES"                                 ELSE NO)
 endif()
 
+if(OBSENSOR_USE_ORBBEC_SDK OR HAVE_OBSENSOR_ORBBEC_SDK)
+  status("    Orbbec SDK:" HAVE_OBSENSOR_ORBBEC_SDK  THEN "YES (version ${ORBBEC_SDK_VERSION})" ELSE NO)
+else()
+  status("    Orbbec:" HAVE_OBSENSOR THEN "YES" ELSE NO)
+endif()
+
 if(ANDROID)
   status("   MEDIANDK:"         HAVE_ANDROID_MEDIANDK THEN "YES"                              ELSE NO)
   status("   NDK Camera:"       HAVE_ANDROID_NATIVE_CAMERA THEN "YES"                         ELSE NO)
