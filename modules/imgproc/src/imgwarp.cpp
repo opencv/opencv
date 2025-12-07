@@ -2359,7 +2359,10 @@ void warpAffineBlocklineNN(double *adelta, double *bdelta, short* xy, double X0,
         {
             v_int32x4 v_X = v_round(v_add(v_X0, v_load(adelta + x1)), v_add(v_X0, v_load(adelta + x1 + 2)));
             v_int32x4 v_Y = v_round(v_add(v_Y0, v_load(bdelta + x1)), v_add(v_Y0, v_load(bdelta + x1 + 2)));
-            v_store_interleave(xy + x1 * 2, v_pack(v_X, v_Y));
+            
+            v_int32x4 v_xy_0, v_xy_1;
+            v_zip(v_X, v_Y, v_xy_0, v_xy_1);
+            v_store(xy + x1 * 2, v_pack(v_xy_0, v_xy_1));
         }
     }
 #endif
@@ -2386,7 +2389,11 @@ void warpAffineBlockline(double *adelta, double *bdelta, short* xy, short* alpha
                                     v_mul(v_add(v_X0, v_load(adelta + x1 + 2)), v_scale));
             v_int32x4 v_Y = v_round(v_mul(v_add(v_Y0, v_load(bdelta + x1)), v_scale),
                                     v_mul(v_add(v_Y0, v_load(bdelta + x1 + 2)), v_scale));
-            v_store_interleave(xy + x1 * 2, v_pack(v_shr<INTER_BITS>(v_X), v_shr<INTER_BITS>(v_Y)));
+            
+            v_int32x4 v_xy_0, v_xy_1;
+            v_zip(v_shr<INTER_BITS>(v_X), v_shr<INTER_BITS>(v_Y), v_xy_0, v_xy_1);
+            v_store(xy + x1 * 2, v_pack(v_xy_0, v_xy_1));
+            
             v_pack_store(alpha + x1, v_add(v_shl<INTER_BITS>(v_and(v_Y, v_mask)), v_and(v_X, v_mask)));
         }
     }
