@@ -66,7 +66,7 @@ bool reduceL2size(int& L2size)
 
 int getL1size(int L2Usize, double L1ratio)
 {
-    int L1size = std::floor(L1ratio * L2Usize);
+    int L1size = static_cast<int>(std::floor(L1ratio * L2Usize));
     return (L1size % 2) ? L1size : L1size + 1;
 }
 
@@ -90,7 +90,7 @@ cv::Point2d getSubpixelShift(const cv::Mat& L3,
         if (!reduceL2size(L2size))
             return L3peak - L3mid;
 
-    cv::Mat L2 = L3(cv::Rect(L3peak.x - L2size / 2, L3peak.y - L2size / 2, L2size, L2size));
+    cv::Mat L2 = L3(cv::Rect(static_cast<int>(L3peak.x - L2size / 2), static_cast<int>(L3peak.y - L2size / 2), L2size, L2size));
     cv::Point2d L2peak = getPeakSubpixel(L2);
     cv::Point2d L2mid(L2.cols / 2, L2.rows / 2);
     return L3peak - L3mid + L2peak - L2mid;

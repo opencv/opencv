@@ -17,8 +17,8 @@ Mat GenerateTestImage(Size size)
 {
     Mat image = Mat::zeros(size.height * 2, size.width * 2, CV_32F);
     rectangle(image,
-              Point(size.width * 1.1, size.height * 0.9),
-              Point(size.height * 1.3, size.height * 1.3),
+              Point(static_cast<int>(size.width * 0.1), static_cast<int>(size.height * 0.1)),
+              Point(static_cast<int>(size.width * 0.9), static_cast<int>(size.height * 0.9)),
               Scalar(1),
               -1);
     return image;

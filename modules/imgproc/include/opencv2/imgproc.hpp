@@ -3051,14 +3051,16 @@ peak) and will be smaller when there are multiple peaks.
 CV_EXPORTS_W Point2d phaseCorrelate(InputArray src1, InputArray src2,
                                     InputArray window = noArray(), CV_OUT double* response = 0);
 
-/** @brief The function is used to detect translational shifts that occur between two images.
+/** @brief This function is used to detect translational shifts that occur between two images.
 
 This is an extension of standard @ref phaseCorrelate method that improves sub-pixel accuracy by
-iterative shift refinement in the phase correlation space.
+iterative shift refinement in the phase correlation space, as described in @cite hrazdira2020iterative.
 
 @param src1 Source floating point array (CV_32FC1 or CV_64FC1)
 @param src2 Source floating point array (CV_32FC1 or CV_64FC1)
-@returns detected phase shift (sub-pixel) between the two arrays.
+@returns detected sub-pixel shift between the two arrays.
+
+@sa phaseCorrelate, dft, idft,
  */
 CV_EXPORTS_W Point2d phaseCorrelateIterative(InputArray src1, InputArray src2);
 
