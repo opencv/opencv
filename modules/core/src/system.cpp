@@ -178,6 +178,7 @@ const uint64_t AT_HWCAP = NT_GNU_HWCAP;
   #define _WIN32_WINNT 0x0400  // http://msdn.microsoft.com/en-us/library/ms686857(VS.85).aspx
 #endif
 #include <windows.h>
+#include <combaseapi.h>
 #if (_WIN32_WINNT >= 0x0602)
   #include <synchapi.h>
 #endif
