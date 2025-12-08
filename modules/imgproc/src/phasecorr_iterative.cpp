@@ -150,7 +150,7 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
 
     // run the iterative refinement algorithm using the specified L1 ratio
     // gradually decrease L1 ratio if convergence is not achieved
-    for (double L1ratio = 0.45; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= 0.05)
+    for (double L1ratio = 0.45; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= 0.025)
     {
         Point2d L2Upeak = L2Umid;  // reset the accumulated L2U peak position
         const int L1size = getL1size(L2U.cols, L1ratio);  // calculate the current L1 size
