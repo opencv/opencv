@@ -3051,18 +3051,21 @@ peak) and will be smaller when there are multiple peaks.
 CV_EXPORTS_W Point2d phaseCorrelate(InputArray src1, InputArray src2,
                                     InputArray window = noArray(), CV_OUT double* response = 0);
 
-/** @brief This function is used to detect translational shifts that occur between two images.
+/** @brief Detects translational shifts between two images.
 
-This is an extension of standard @ref phaseCorrelate method that improves sub-pixel accuracy by
-iterative shift refinement in the phase correlation space, as described in @cite hrazdira2020iterative.
+This function extends the standard @ref phaseCorrelate method by improving sub-pixel accuracy
+through iterative shift refinement in the phase-correlation space, as described in
+@cite hrazdira2020iterative.
 
 @param src1 Source floating point array (CV_32FC1 or CV_64FC1)
 @param src2 Source floating point array (CV_32FC1 or CV_64FC1)
+@param L2size The size of the correlation neighborhood used by the iterative shift refinement algorithm.
+@param maxIters The maximum number of iterations the iterative refinement algorithm will run.
 @returns detected sub-pixel shift between the two arrays.
 
-@sa phaseCorrelate, dft, idft,
+@sa phaseCorrelate, dft, idft, createHanningWindow
  */
-CV_EXPORTS_W Point2d phaseCorrelateIterative(InputArray src1, InputArray src2);
+CV_EXPORTS_W Point2d phaseCorrelateIterative(InputArray src1, InputArray src2, int L2size = 7, int maxIters = 10);
 
 /** @brief This function computes a Hanning window coefficients in two dimensions.
 

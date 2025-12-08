@@ -90,7 +90,10 @@ cv::Point2d getSubpixelShift(const cv::Mat& L3,
         if (!reduceL2size(L2size))
             return L3peak - L3mid;
 
-    cv::Mat L2 = L3(cv::Rect(static_cast<int>(L3peak.x - L2size / 2), static_cast<int>(L3peak.y - L2size / 2), L2size, L2size));
+    cv::Mat L2 = L3(cv::Rect(static_cast<int>(L3peak.x - L2size / 2),
+                             static_cast<int>(L3peak.y - L2size / 2),
+                             L2size,
+                             L2size));
     cv::Point2d L2peak = getPeakSubpixel(L2);
     cv::Point2d L2mid(L2.cols / 2, L2.rows / 2);
     return L3peak - L3mid + L2peak - L2mid;
@@ -99,7 +102,7 @@ cv::Point2d getSubpixelShift(const cv::Mat& L3,
 }  // namespace
 
 
-cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2)
+cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int L2size, int maxIters)
 {
     CV_INSTRUMENT_REGION();
 
@@ -132,7 +135,6 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2)
     minMaxLoc(L3, nullptr, nullptr, nullptr, &L3peak);
 
     // reduce the L2size as long as the L2 is out of bounds of L3
-    int L2size = 7;
     while (isOutOfBounds(L3peak, L3, L2size))
         if (!reduceL2size(L2size))
             return Point2d(L3peak) - L3mid;
@@ -146,20 +148,16 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2)
     resize(L2, L2U, {L2Usize, L2Usize}, 0, 0, INTER_LINEAR);
     const Point2d L2Umid(L2U.cols / 2, L2U.rows / 2);
 
-    const int MaxIter = 10;  // maximum number of iterative refinement iterations
-    const double L1ratioBase = 0.45;  // base ratio of L1 size (% of L2Usize)
-    const double L1ratioStep = 0.025;  // reduction step if failed to converge
-
     // run the iterative refinement algorithm using the specified L1 ratio,
     // gradually decrease L1 ratio if convergence is not achieved
-    for (double L1ratio = L1ratioBase; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= L1ratioStep)
+    for (double L1ratio = 0.45; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= 0.05)
     {
         Point2d L2Upeak = L2Umid;  // reset the accumulated L2U peak position
         const int L1size = getL1size(L2U.cols, L1ratio);  // calculate the current L1 size
         const Point2d L1mid(L1size / 2, L1size / 2);  // update the L1 mid position
 
         // perform the iterative refinement algorithm
-        for (int iter = 0; iter < MaxIter; ++iter)
+        for (int iter = 0; iter < maxIters; ++iter)
         {
             // verify that the L1 region is withing the upsampled L2U region
             if (isOutOfBounds(L2Upeak, L2U, L1size))

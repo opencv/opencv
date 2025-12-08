@@ -24,24 +24,6 @@ Mat GenerateTestImage(Size size)
     return image;
 }
 
-
-double Mean(const std::vector<double>& vec)
-{
-    double sum = 0;
-    for (const auto& v : vec)
-        sum += v;
-    return sum / vec.size();
-}
-
-double Stddev(const std::vector<double>& vec)
-{
-    double mean = Mean(vec);
-    double sum = 0;
-    for (const auto& v : vec)
-        sum += std::pow(v - mean, 2);
-    return std::sqrt(sum / vec.size());
-}
-
 void TestPhaseCorrelationIterative(const Size& size, const double maxShift)
 {
     const auto iters = std::max(201., maxShift * 10 + 1);
@@ -67,14 +49,22 @@ void TestPhaseCorrelationIterative(const Size& size, const double maxShift)
             0.5 * std::abs(pcshift.x - shift.y) + 0.5 * std::abs(pcshift.y - shift.x));
         ipcErrors.push_back(
             0.5 * std::abs(ipcshift.x - shift.y) + 0.5 * std::abs(ipcshift.y - shift.x));
+
+        // error should be low
+        EXPECT_NEAR(ipcshift.x - shift.x, 0.0, 0.1);
+        EXPECT_NEAR(ipcshift.y - shift.y, 0.0, 0.1);
     }
 
+    cv::Scalar pcMean, pcStddev, ipcMean, ipcStddev;
+    meanStdDev(ipcErrors, ipcMean, ipcStddev);
+    meanStdDev(pcErrors, pcMean, pcStddev);
+
     // average error should be low
-    ASSERT_LT(Mean(ipcErrors), 0.03);
+    ASSERT_LT(ipcMean[0], 0.03);
     // average error should be less than non-iterative average error
-    ASSERT_LT(Mean(ipcErrors), Mean(pcErrors));
+    ASSERT_LT(ipcMean[0], pcMean[0]);
     // error stddev should be less than non-iterative error stddev
-    ASSERT_LT(Stddev(ipcErrors), Stddev(pcErrors));
+    ASSERT_LT(ipcStddev[0], pcStddev[0]);
 }
 
 
