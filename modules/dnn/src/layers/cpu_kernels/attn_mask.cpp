@@ -4,7 +4,7 @@
 
 
 #include "../../precomp.hpp"
-#include "softmax.hpp"
+#include "attn_mask.hpp"
 
 namespace cv { namespace dnn {
 
