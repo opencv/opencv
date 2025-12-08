@@ -216,8 +216,6 @@ public:
 
     Ptr<FastConv> fastConvImpl;
     bool canUseWinograd = false;
-    // Cache last input shape for CUDA fast path shape derivation
-    MatShape lastInputShape;
 
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNConvSpatial<float> > convolutionOp;
@@ -374,8 +372,6 @@ public:
         BaseConvolutionLayerImpl::finalize(inputs_arr, outputs_arr);
         std::vector<Mat> inputs;
         inputs_arr.getMatVector(inputs);
-        if (!inputs.empty())
-            lastInputShape = shape(inputs[0]);
         // prepare weightsMat where each row is aligned and has enough zero padding on the right to
         // use vectorized (i.e. with intrinsics) loops without tail processing
         if (!blobs.empty())

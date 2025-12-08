@@ -139,9 +139,6 @@ public:
         spatialScale = params.get<float>("spatial_scale", 1);
         avePoolPaddedArea = params.get<bool>("ave_pool_padded_area", true);
     }
-    // Cache last input shape from finalize() to use in GPU fast path
-    MatShape lastInputShape;
-
 #ifdef HAVE_OPENCL
     Ptr<OCL4DNNPool<float> > poolOp;
 #endif
@@ -184,9 +181,6 @@ public:
         poolOp.release();
 #endif
         computeMaxIdx = type == MAX && outputs.size() == 2;
-
-        if (!inputs.empty())
-            lastInputShape = shape(inputs[0]);
     }
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
@@ -348,8 +342,10 @@ public:
 #ifdef HAVE_CUDA
         if ((type == MAX || type == AVE) && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
         {
-            MatShape ish = lastInputShape;
-            bool is2D = ish.size() == 4 && kernel_size.size() == 2 && strides.size() == 2;
+            std::vector<Mat> inputs;
+            inputs_arr.getMatVector(inputs);
+            CV_Assert(!inputs.empty());
+            bool is2D = shape(inputs[0]).size() == 4 && kernel_size.size() == 2 && strides.size() == 2;
 
             if (ceilMode || globalPooling || computeMaxIdx || !is2D)
             {
