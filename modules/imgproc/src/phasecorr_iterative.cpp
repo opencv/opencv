@@ -124,7 +124,7 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
     dft(image1, image1, DFT_COMPLEX_OUTPUT);
     dft(image2, image2, DFT_COMPLEX_OUTPUT);
 
-    // compute the phase correlation landscape (L3)
+    // compute the phase correlation landscape L3
     Mat L3 = calculateCrossPowerSpectrum(image1, image2);
     dft(L3, L3, DFT_INVERSE | DFT_SCALE | DFT_REAL_OUTPUT);
     fftshift(L3);
@@ -134,12 +134,12 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
     Point2i L3peak;
     minMaxLoc(L3, nullptr, nullptr, nullptr, &L3peak);
 
-    // reduce the L2size as long as the L2 is out of bounds of L3
+    // reduce the L2size as long as L2 is out of bounds of L3
     while (isOutOfBounds(L3peak, L3, L2size))
         if (!reduceL2size(L2size))
             return Point2d(L3peak) - L3mid;
 
-    // extract the L2 maximum correlation neighborhood
+    // extract the L2 maximum correlation neighborhood from L3
     Mat L2 = L3(Rect(L3peak.x - L2size / 2, L3peak.y - L2size / 2, L2size, L2size));
 
     // upsample L2 maximum correlation neighborhood to get L2U
@@ -148,7 +148,7 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
     resize(L2, L2U, {L2Usize, L2Usize}, 0, 0, INTER_LINEAR);
     const Point2d L2Umid(L2U.cols / 2, L2U.rows / 2);
 
-    // run the iterative refinement algorithm using the specified L1 ratio,
+    // run the iterative refinement algorithm using the specified L1 ratio
     // gradually decrease L1 ratio if convergence is not achieved
     for (double L1ratio = 0.45; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= 0.05)
     {
@@ -159,11 +159,11 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
         // perform the iterative refinement algorithm
         for (int iter = 0; iter < maxIters; ++iter)
         {
-            // verify that the L1 region is withing the upsampled L2U region
+            // verify that the L1 region is within the L2U region
             if (isOutOfBounds(L2Upeak, L2U, L1size))
                 break;
 
-            // extract the L1 region
+            // extract the L1 region from L2U
             const Mat L1 = L2U(Rect(static_cast<int>(L2Upeak.x - L1size / 2),
                                     static_cast<int>(L2Upeak.y - L1size / 2),
                                     L1size,
@@ -172,8 +172,7 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
             // calculate the centroid location
             const Point2d L1peak = getPeakSubpixel(L1);
 
-            // add the contribution of the current iteration to the accumulated L2U
-            // peak location
+            // add the contribution of the current iteration to the accumulated L2U peak location
             L2Upeak += Point2d(std::round(L1peak.x - L1mid.x), std::round(L1peak.y - L1mid.y));
 
             // check for convergence
@@ -185,6 +184,6 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
         }
     }
 
-    // iterative refinement failed to converge,return non-iterative subpixel shift
+    // iterative refinement failed to converge, return non-iterative subpixel shift
     return getSubpixelShift(L3, Point2d(L3peak), L3mid, L2size);
 }
