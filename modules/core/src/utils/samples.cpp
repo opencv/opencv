@@ -48,8 +48,40 @@ CV_EXPORTS void addSamplesDataSearchSubDirectory(const cv::String& subdir)
     _getDataSearchSubDirectory().push_back(subdir);
 }
 
+
+
+
 cv::String findFile(const cv::String& relative_path, bool required, bool silentMode)
 {
+    // Input validation: empty filename
+if (relative_path.empty())
+{
+    if (required)
+        CV_Error(cv::Error::StsBadArg, "cv::samples::findFile(): relative_path is empty");
+    if (!silentMode)
+        CV_LOG_WARNING(NULL, "cv::samples::findFile(): empty filename provided");
+    return cv::String(); // return empty path
+}
+
+
+// Basic invalid character check (Windows-like)
+#ifdef _WIN32
+const char illegal_chars[] = "<>:\"/\\|?*";
+for (const char c : relative_path)
+{
+    if (strchr(illegal_chars, c))
+    {
+        if (required)
+            CV_Error(cv::Error::StsBadArg, cv::format("cv::samples::findFile(): invalid character '%c' in path '%s'",
+                                                      c, relative_path.c_str()));
+        if (!silentMode)
+            CV_LOG_WARNING(NULL, cv::format("cv::samples::findFile(): invalid character '%c' in path '%s'",
+                                            c, relative_path.c_str()));
+        return cv::String();
+    }
+}
+#endif
+
 #if OPENCV_HAVE_FILESYSTEM_SUPPORT
     CV_LOG_DEBUG(NULL, cv::format("cv::samples::findFile('%s', %s)", relative_path.c_str(), required ? "true" : "false"));
     cv::String result = cv::utils::findDataFile(relative_path,
