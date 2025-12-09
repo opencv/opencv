@@ -2,9 +2,11 @@
  *
  * Copyright (c) 2023 Google LLC
  * Written by Manfred SCHLAEGL, 2022
- *            Dragoș Tiselice <dtiselice@google.com>, May 2023.
- *            Filip Wasil <f.wasil@samsung.com>, March 2025.
- *            Liang Junzhao <junzhao.liang@spacemit.com>, November 2025.
+ * Revised by:
+ *  - Dragoș Tiselice <dtiselice@google.com>, May 2023
+ *  - Filip Wasil <f.wasil@samsung.com>, March 2025
+ *  - Liang Junzhao <junzhao.liang@spacemit.com>, November 2025
+ *  - Alexander Smorkalov <alexander.smorkalov@opencv.ai>, December 2025
  *
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
@@ -173,47 +175,6 @@ png_read_filter_row_avg4_rvv(png_row_infop row_info, png_bytep row,
    png_read_filter_row_avg_rvv(len, 4, row, prev_row);
 
    PNG_UNUSED(prev_row)
-}
-
-#define MIN_CHUNK_LEN 256
-#define MAX_CHUNK_LEN 2048
-
-static inline vuint8m1_t
-prefix_sum(vuint8m1_t chunk, unsigned char* carry, size_t vl,
-    size_t max_chunk_len)
-{
-   size_t r;
-
-   for (r = 1; r < MIN_CHUNK_LEN; r <<= 1)
-   {
-      vbool8_t shift_mask = __riscv_vmsgeu_vx_u8m1_b8(__riscv_vid_v_u8m1(vl), r, vl);
-      chunk = __riscv_vadd_vv_u8m1_mu(shift_mask, chunk, chunk, __riscv_vslideup_vx_u8m1(__riscv_vundefined_u8m1(), chunk, r, vl), vl);
-   }
-
-   for (r = MIN_CHUNK_LEN; r < MAX_CHUNK_LEN && r < max_chunk_len; r <<= 1)
-   {
-      vbool8_t shift_mask = __riscv_vmsgeu_vx_u8m1_b8(__riscv_vid_v_u8m1(vl), r, vl);
-      chunk = __riscv_vadd_vv_u8m1_mu(shift_mask, chunk, chunk, __riscv_vslideup_vx_u8m1(__riscv_vundefined_u8m1(), chunk, r, vl), vl);
-   }
-
-   chunk = __riscv_vadd_vx_u8m1(chunk, *carry, vl);
-   *carry = __riscv_vmv_x_s_u8m1_u8(__riscv_vslidedown_vx_u8m1(chunk, vl - 1, vl));
-
-   return chunk;
-}
-
-static inline vint16m1_t
-abs_diff(vuint16m1_t a, vuint16m1_t b, size_t vl)
-{
-   vint16m1_t diff = __riscv_vreinterpret_v_u16m1_i16m1(__riscv_vsub_vv_u16m1(a, b, vl));
-   vbool16_t mask = __riscv_vmslt_vx_i16m1_b16(diff, 0, vl);
-   return __riscv_vrsub_vx_i16m1_m(mask, diff, 0, vl);
-}
-
-static inline vint16m1_t
-abs_sum(vint16m1_t a, vint16m1_t b, size_t vl)
-{
-   return __riscv_vadd_vv_i16m1(a, b, vl);
 }
 
 static inline void
