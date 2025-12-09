@@ -85,7 +85,9 @@ static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 
 static inline double getCosVectors(Point2f a, Point2f b, Point2f c)
 {
-    return ((a - b).x * (c - b).x + (a - b).y * (c - b).y) / (norm(a - b) * norm(c - b));
+    Vec2f v1 = normalize(Vec2f(a - b));
+    Vec2f v2 = normalize(Vec2f(c - b));
+    return v1[0] * v2[0] + v1[1] * v2[1];
 }
 
 static bool arePointsNearest(Point2f a, Point2f b, float delta = 0.0)
