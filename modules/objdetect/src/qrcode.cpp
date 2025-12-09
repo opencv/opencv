@@ -83,10 +83,12 @@ static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 //    /   |
 //  a/    | c
 
-static inline double getCosVectors(Point2f a, Point2f b, Point2f c)
+static inline double getCosVectors(Point2f a, Point b, Point c)
 {
-    Vec2f v1 = normalize(Vec2f(a - b));
-    Vec2f v2 = normalize(Vec2f(c - b));
+    // CV_DbgCheckNE(a, b, "Angle between vector and point is undetermined");
+    CV_DbgCheckNE(b, c, "Angle between vector and point is undetermined");
+    Vec2d v1 = normalize(Vec2d(Point2d(a) - Point2d(b)));
+    Vec2d v2 = normalize(Vec2d(Point2d(c) - Point2d(b)));
     return v1[0] * v2[0] + v1[1] * v2[1];
 }
 
@@ -770,7 +772,6 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         float y = saturate_cast<float>(integer_hull[i].y);
         hull[i] = Point2f(x, y);
     }
-
     const double experimental_area = fabs(contourArea(hull));
 
     vector<Point2f> result_hull_point(angle_size);
@@ -827,7 +828,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         Point intrsc_line_hull =
         intersectionLines(hull[index_hull], hull[next_index_hull],
                           angle_list[1], angle_list[2]);
-        double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        double temp_norm = min_norm;
+        if (intrsc_line_hull != angle_closest_pnt)
+        {
+            temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        }
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
             norm(angle_list[1] - angle_list[2]) * 0.1)
@@ -865,7 +870,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         Point intrsc_line_hull =
         intersectionLines(hull[index_hull], hull[next_index_hull],
                           angle_list[0], angle_list[1]);
-        double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        double temp_norm = min_norm;
+        if (intrsc_line_hull != angle_closest_pnt)
+        {
+            temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        }
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
             norm(angle_list[0] - angle_list[1]) * 0.05)
