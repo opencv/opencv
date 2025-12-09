@@ -1104,4 +1104,28 @@ TEST(Drawing, contours_filled)
     }
 }
 
+// Test for LINE_4 vs LINE_8 connectivity behavior
+// Regression test for issue #26413
+TEST(Drawing, line_connectivity_regression_26413)
+{
+    Mat img4(10, 10, CV_8UC1, Scalar(0));
+    Mat img8(10, 10, CV_8UC1, Scalar(0));
+
+    // Draw a diagonal line from (0,0) to (9,9)
+    // LINE_4 (4-connected) should produce staircase pattern (no diagonals)
+    // LINE_8 (8-connected) should produce diagonal steps
+    line(img4, Point(0, 0), Point(9, 9), Scalar(255), 1, LINE_4);
+    line(img8, Point(0, 0), Point(9, 9), Scalar(255), 1, LINE_8);
+
+    int count4 = countNonZero(img4);
+    int count8 = countNonZero(img8);
+
+    // LINE_8 for a 10-pixel diagonal should have exactly 10 pixels
+    EXPECT_EQ(10, count8) << "LINE_8 diagonal from (0,0) to (9,9) should have 10 pixels";
+
+    // LINE_4 for a 10-pixel diagonal should have approximately 19 pixels
+    // (needs both horizontal and vertical steps)
+    EXPECT_GT(count4, 15) << "LINE_4 diagonal should have significantly more pixels due to staircase";
+}
+
 }} // namespace
