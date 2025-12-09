@@ -69,10 +69,12 @@
 #include <sanitizer/msan_interface.h>
 #define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) \
 __msan_unpoison(address, size)
+#define CV_ANNOTATE_NO_SANITIZE_MEMORY __attribute__((no_sanitize("memory")))
 #endif
 #endif
 #ifndef CV_ANNOTATE_MEMORY_IS_INITIALIZED
 #define CV_ANNOTATE_MEMORY_IS_INITIALIZED(address, size) do { } while(0)
+#define CV_ANNOTATE_NO_SANITIZE_MEMORY
 #endif
 
 //lapack stores matrices in column-major order so transposing is needed everywhere
@@ -108,8 +110,9 @@ set_value(fptype *dst, size_t dst_ld, fptype value, size_t m, size_t n)
             dst[i*dst_ld + j] = value;
 }
 
+// MSAN can't see that the fortran LAPACK functions initialize `info`
 template <typename fptype> static inline int
-lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
+CV_ANNOTATE_NO_SANITIZE_MEMORY lapack_LU(fptype* a, size_t a_step, int m, fptype* b, size_t b_step, int n, int* info)
 {
 #if defined (ACCELERATE_NEW_LAPACK) && defined (ACCELERATE_LAPACK_ILP64)
     cv::AutoBuffer<long> piv_buff(m);
