@@ -83,13 +83,11 @@ static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 //    /   |
 //  a/    | c
 
-static inline double getCosVectors(Point2f a, Point b, Point c)
+static inline double getCosVectors(Point a, Point b, Point c)
 {
-    // CV_DbgCheckNE(a, b, "Angle between vector and point is undetermined");
+    CV_DbgCheckNE(a, b, "Angle between vector and point is undetermined");
     CV_DbgCheckNE(b, c, "Angle between vector and point is undetermined");
-    Vec2f v1 = normalize(Vec2f(a - Point2f(b)));
-    Vec2f v2 = normalize(Vec2f(Point2f(c) - Point2f(b)));
-    return v1[0] * v2[0] + v1[1] * v2[1];
+    return ((a - b).x * (c - b).x + (a - b).y * (c - b).y) / (norm(a - b) * norm(c - b));
 }
 
 static bool arePointsNearest(Point2f a, Point2f b, float delta = 0.0)
@@ -772,6 +770,7 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         float y = saturate_cast<float>(integer_hull[i].y);
         hull[i] = Point2f(x, y);
     }
+
     const double experimental_area = fabs(contourArea(hull));
 
     vector<Point2f> result_hull_point(angle_size);
