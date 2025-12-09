@@ -30,37 +30,26 @@ namespace
         const Scalar mean_s = Scalar::all(mean);
         const Scalar scale_s = Scalar::all(scale);
 
+        RNG local_rng;
         if (has_seed)
         {
             uint64 seed_u64 = (uint64)std::llround((double)seed);
             if (!seed_u64)
                 seed_u64 = 0x12345678ULL;
+            local_rng = RNG(seed_u64);
+        }
 
-            RNG rng(seed_u64);
-            if (out.isMat())
-            {
-                Mat& m = out.getMatRef();
-                rng.fill(m, RNG::NORMAL, mean_s, scale_s);
-            }
-            else
-            {
-                UMat& u = out.getUMatRef();
-                rng.fill(u, RNG::NORMAL, mean_s, scale_s);
-            }
+        RNG& rng = has_seed ? local_rng : theRNG();
+
+        if (out.isMat())
+        {
+            Mat& m = out.getMatRef();
+            rng.fill(m, RNG::NORMAL, mean_s, scale_s);
         }
         else
         {
-            RNG& rng = theRNG();
-            if (out.isMat())
-            {
-                Mat& m = out.getMatRef();
-                rng.fill(m, RNG::NORMAL, mean_s, scale_s);
-            }
-            else
-            {
-                UMat& u = out.getUMatRef();
-                rng.fill(u, RNG::NORMAL, mean_s, scale_s);
-            }
+            UMat& u = out.getUMatRef();
+            rng.fill(u, RNG::NORMAL, mean_s, scale_s);
         }
     }
 }
@@ -74,7 +63,8 @@ public:
 
         mean = params.get<float>("mean", 0.f);
         scale = params.get<float>("scale", 1.f);
-        output_dtype = params.get<int>("output_dtype", -1);
+        int dt = params.get<int>("output_dtype", -1);
+        outputType = dt >= 0 ? onnxDataTypeToCV(static_cast<OnnxDataType>(dt)) : -1;
         has_seed = params.has("seed");
         seed = has_seed ? params.get<float>("seed") : 0.f;
 
@@ -110,7 +100,7 @@ public:
                   std::vector<MatType>& internals) const CV_OVERRIDE
     {
         CV_Assert(inputs.size() == (size_t)1);
-        int outType = output_dtype >= 0 ? output_dtype : inputs[0];
+        int outType = outputType >= 0 ? outputType : inputs[0];
         outputs.assign(1, outType);
         CV_Assert(requiredInternals == 0);
         internals.clear();
@@ -130,7 +120,7 @@ public:
         Mat inp = inputs_arr.getMat(0);
         MatShape outShape = inp.shape();
 
-        int outType = output_dtype >= 0 ? output_dtype : inp.type();
+        int outType = outputType >= 0 ? outputType : inp.type();
 
         auto kind = outputs_arr.kind();
         if (kind == _InputArray::STD_VECTOR_MAT) {
@@ -149,7 +139,7 @@ public:
     }
 
 private:
-    int output_dtype;
+    int outputType;
 };
 
 Ptr<Layer> RandomNormalLikeLayer::create(const LayerParams& params)
