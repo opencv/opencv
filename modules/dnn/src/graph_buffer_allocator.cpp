@@ -160,7 +160,7 @@ struct BufferAllocator
         for (int i = 0; i < nbufs; i++)
             netimpl->buffers[i] = Mat();
 #ifdef HAVE_CUDA
-        netimpl->gpuBuffers.resize(nbufs);
+        netimpl->gpuBuffersND.resize(nbufs);
 #endif
     }
 

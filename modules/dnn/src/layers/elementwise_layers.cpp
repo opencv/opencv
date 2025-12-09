@@ -237,20 +237,8 @@ public:
 
 #ifdef HAVE_CUDA
         if (std::is_same<Func, ReLUFunctor>::value) {
-            if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+            if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND)
             {
-                std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
-                std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                CV_Assert(gout.size() == 1 && gin.size() == 1);
-
-                cv::cuda::GpuMat& gin0 = gin[0];
-                cv::cuda::GpuMat& dst  = gout[0];
-
-                CV_Assert(!gin0.empty());
-                CV_Assert(gin0.type() == CV_32F && dst.type() == CV_32F);
-                if (dst.empty() || dst.size() != gin0.size())
-                    cv::cuda::ensureSizeIsEnough(gin0.size(), CV_32F, dst);
-
                 Net::Impl* netimpl = getNetImpl(this);
                 CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
                 netimpl->ensureCudaReady();
@@ -272,13 +260,24 @@ public:
                         CUDNN_ACTIVATION_RELU,
                         CUDNN_PROPAGATE_NAN,
                         0.0);
+
+                // Pure GpuMatND IO: inputs and outputs are vectors of GpuMatND.
+                std::vector<cv::cuda::GpuMatND> gin_nd;
+                inputs_arr.getGpuMatNDVector(gin_nd);
+                std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+                CV_Assert(gout_nd.size() == 1 && gin_nd.size() == 1);
+
+                cv::cuda::GpuMatND& gin0_nd = gin_nd[0];
+                cv::cuda::GpuMatND& dst_nd  = gout_nd[0];
+                CV_Assert(!gin0_nd.empty());
+
                 cv::dnn::cuda::relu(
                     cudnnHandle,
                     reluActDesc,
                     xDesc,
                     yDesc,
-                    (const void*)gin0.ptr(),
-                    (void*)dst.ptr());
+                    (const void*)gin0_nd.getDevicePtr(),
+                    (void*)dst_nd.getDevicePtr());
                 return;
             }
         }

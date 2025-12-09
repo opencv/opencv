@@ -553,29 +553,13 @@ public:
                 {
 #if defined(HAVE_CUDA)
                     EngineType engine_forced = getForcedDnnEngine();
-                    if (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT && engine_forced != ENGINE_CLASSIC)
+                    if (engine_forced != ENGINE_CLASSIC &&
+                        outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND)
                     {
-                        std::vector<cv::cuda::GpuMat> gin, gout;
-                        inputs_arr.getGpuMatVector(gin);
-                        outputs_arr.getGpuMatVector(gout);
-                        CV_Assert(gin.size() == gout.size());
-                        cv::cuda::GpuMat& src = gin[i];
-                        cv::cuda::GpuMat& dst = gout[i];
-
-                        CV_Assert(!src.empty());
-                        CV_Assert(src.type() == CV_32F && dst.type() == CV_32F);
-
                         MatShape outShapeNet = outputs_arr.shape((int)i);
                         CV_Assert(outShapeNet.size() >= 2);
                         int N = outShapeNet[0];
                         int M = outShapeNet[1];
-                        if (dst.empty() || dst.rows != N || dst.cols != M)
-                            cv::cuda::ensureSizeIsEnough(N, M, CV_32F, dst);
-
-                        cv::cuda::GpuMat weightsGpuMat, biasGpuMat;
-                        weightsGpuMat.upload(weightsMat);
-                        if (bias && !biasMat.empty())
-                            biasGpuMat.upload(biasMat);
 
                         Net::Impl* netimpl = getNetImpl(this);
                         CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
@@ -589,6 +573,11 @@ public:
                         cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
                             yArg, yShape, CUDNN_DATA_FLOAT);
 
+                        cv::cuda::GpuMat weightsGpuMat, biasGpuMat;
+                        weightsGpuMat.upload(weightsMat);
+                        if (bias && !biasMat.empty())
+                            biasGpuMat.upload(biasMat);
+
                         cudnnTensorDescriptor_t bDesc = nullptr;
                         if (!biasGpuMat.empty())
                         {
@@ -597,6 +586,21 @@ public:
                             bDesc = netimpl->argTensorCuDNN(
                                 bArg, bShape, CUDNN_DATA_FLOAT);
                         }
+
+                        // Pure GpuMatND IO: inputs and outputs are vectors of GpuMatND.
+                        std::vector<cv::cuda::GpuMatND> gin_nd;
+                        inputs_arr.getGpuMatNDVector(gin_nd);
+                        std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+                        CV_Assert(gin_nd.size() == gout_nd.size());
+                        cv::cuda::GpuMatND& src_nd = gin_nd[i];
+                        cv::cuda::GpuMatND& dst_nd = gout_nd[i];
+
+                        CV_Assert(!src_nd.empty());
+
+                        // Create lightweight 2D headers over the same underlying storage.
+                        cv::cuda::GpuMat src = src_nd.createGpuMatHeader();
+                        cv::cuda::GpuMat dst = dst_nd.createGpuMatHeader();
+                        CV_Assert(src.type() == CV_32F && dst.type() == CV_32F);
 
                         cv::dnn::cuda::matMul(
                             blasHandle,
