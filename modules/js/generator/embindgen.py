@@ -523,13 +523,20 @@ class JSWrapperGenerator(object):
 
             # Return type
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
-            if ret_type.startswith('Ptr'): #smart pointer
+            # FIX: Ensure namespaced smart-pointer return types in factory methods, e.g.:
+            #      Ptr<EdgeDrawing> → Ptr<cv::ximgproc::EdgeDrawing>
+            if factory and class_info is not None and ret_type.startswith('Ptr<'):
+                inner = ret_type[len('Ptr<'):-1].strip()
+                if '::' not in inner and inner == class_info.name:
+                    ret_type = 'Ptr<%s>' % class_info.cname
+
+            if ret_type.startswith('Ptr'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
-            for key in type_dict:
-                if key in ret_type:
-                    ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
+                for key in type_dict:
+                    if key in ret_type:
+                        ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:
@@ -708,6 +715,12 @@ class JSWrapperGenerator(object):
             ret_type = 'void' if variant.rettype.strip() == '' else variant.rettype
 
             ret_type = ret_type.strip()
+            # Same namespace fix for factory methods: Ptr<EdgeDrawing> -> Ptr<cv::ximgproc::EdgeDrawing>
+            if factory and class_info is not None and ret_type.startswith('Ptr<'):
+                inner = ret_type[len('Ptr<'):-1].strip()
+                if '::' not in inner and inner == class_info.name:
+                    ret_type = 'Ptr<%s>' % class_info.cname
+
             if ret_type.startswith('Ptr'): #smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
