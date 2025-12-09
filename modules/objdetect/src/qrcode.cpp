@@ -87,8 +87,8 @@ static inline double getCosVectors(Point2f a, Point b, Point c)
 {
     // CV_DbgCheckNE(a, b, "Angle between vector and point is undetermined");
     CV_DbgCheckNE(b, c, "Angle between vector and point is undetermined");
-    Vec2d v1 = normalize(Vec2d(Point2d(a) - Point2d(b)));
-    Vec2d v2 = normalize(Vec2d(Point2d(c) - Point2d(b)));
+    Vec2f v1 = normalize(Vec2f(a - Point2f(b)));
+    Vec2f v2 = normalize(Vec2f(Point2f(c) - Point2f(b)));
     return v1[0] * v2[0] + v1[1] * v2[1];
 }
 
