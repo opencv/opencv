@@ -340,66 +340,58 @@ public:
                        forward_ocl(inputs_arr, outputs_arr, internals_arr))
         }
 #ifdef HAVE_CUDA
-        if ((type == MAX || type == AVE) && outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
+        if ((type == MAX || type == AVE) &&
+            outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND &&
+            inputs_arr.kind()  == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND)
         {
-            std::vector<Mat> inputs;
-            inputs_arr.getMatVector(inputs);
-            CV_Assert(!inputs.empty());
-            bool is2D = shape(inputs[0]).size() == 4 && kernel_size.size() == 2 && strides.size() == 2;
+            Net::Impl* netimpl = getNetImpl(this);
+            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+
+            Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+            const ArgData& xAd = netimpl->argData(xArg);
+            MatShape xShape = xAd.shape;
+            bool is2D = xShape.size() == 4 && kernel_size.size() == 2 && strides.size() == 2;
 
             if (ceilMode || globalPooling || computeMaxIdx || !is2D)
             {
                 CV_Error(Error::StsNotImplemented, "DNN/CUDA: pooling config not supported by cuDNN helper");
             }
 
-            std::vector<cv::cuda::GpuMat>& gout = outputs_arr.getGpuMatVecRef();
-            if (gout.size() == 1)
-            {
-                if (inputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT)
-                {
-                    std::vector<cv::cuda::GpuMat> gin; inputs_arr.getGpuMatVector(gin);
-                    CV_Assert(!gin.empty() && !gin[0].empty());
-                    cv::cuda::GpuMat gin0 = gin[0];
+            std::vector<cv::cuda::GpuMatND> gin_nd;
+            inputs_arr.getGpuMatNDVector(gin_nd);
+            std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+            CV_Assert(!gin_nd.empty() && gin_nd.size() == 1);
+            CV_Assert(gout_nd.size() == 1);
 
-                    cv::cuda::GpuMat& dst = gout[0];
-                    CV_Assert(!dst.empty());
-                    CV_Assert(gin0.type() == CV_32F && dst.type() == CV_32F);
+            cv::cuda::GpuMatND& gin0_nd = gin_nd[0];
+            cv::cuda::GpuMatND& dst_nd  = gout_nd[0];
+            CV_Assert(!gin0_nd.empty());
 
-                    Net::Impl* netimpl = getNetImpl(this);
-                    CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
-                    netimpl->ensureCudaReady();
-                    CV_Assert(netimpl->cudaInfo);
-                    cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+            netimpl->ensureCudaReady();
+            CV_Assert(netimpl->cudaInfo);
+            cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-                    Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
-                    Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
-                    const ArgData& xAd = netimpl->argData(xArg);
-                    const ArgData& yAd = netimpl->argData(yArg);
-                    MatShape xShape = xAd.shape;
-                    MatShape yShape = yAd.shape;
-                    CV_Assert(xShape.size() == 4 && yShape.size() == 4);
+            Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+            const ArgData& yAd = netimpl->argData(yArg);
+            MatShape yShape = yAd.shape;
+            CV_Assert(xShape.size() == 4 && yShape.size() == 4);
 
-                    cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc(
-                        xArg, xShape, CUDNN_DATA_FLOAT);
-                    cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc(
-                        yArg, yShape, CUDNN_DATA_FLOAT);
+            cudnnTensorDescriptor_t xDesc = netimpl->tensorDesc(
+                xArg, xShape, CUDNN_DATA_FLOAT);
+            cudnnTensorDescriptor_t yDesc = netimpl->tensorDesc(
+                yArg, yShape, CUDNN_DATA_FLOAT);
 
-                    cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-                    cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
-                        mode, CUDNN_PROPAGATE_NAN,
-                        kernel_size, pads_begin, strides);
+            cudnnPoolingMode_t mode = (type == MAX) ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+            cudnnPoolingDescriptor_t cudnnPoolDesc = netimpl->poolingDescCuDNN(
+                mode, CUDNN_PROPAGATE_NAN,
+                kernel_size, pads_begin, strides);
 
-                    cv::dnn::cuda::pool(
-                        cudnnHandle,
-                        xDesc, yDesc, cudnnPoolDesc,
-                        (const void*)gin0.ptr(),
-                        (void*)dst.ptr());
-                    return;
-                } else {
-                    forward_fallback(inputs_arr, outputs_arr, internals_arr);
-                    return;
-                }
-            }
+            cv::dnn::cuda::pool(
+                cudnnHandle,
+                xDesc, yDesc, cudnnPoolDesc,
+                (const void*)gin0_nd.getDevicePtr(),
+                (void*)dst_nd.getDevicePtr());
+            return;
         }
 #endif
         if (inputs_arr.depth() == CV_16F)

@@ -105,8 +105,6 @@ struct Net::Impl : public detail::NetImplBase
     int dump_indent;
 
 #ifdef HAVE_CUDA
-    std::vector<cv::cuda::GpuMat>   gpuTensors;
-    std::vector<cv::cuda::GpuMat>   gpuBuffers;
     std::vector<cv::cuda::GpuMatND> gpuTensorsND;
     std::vector<cv::cuda::GpuMatND> gpuBuffersND;
     std::vector<cv::cuda::GpuMatND> layerTempGpuND;
@@ -128,8 +126,6 @@ struct Net::Impl : public detail::NetImplBase
     virtual Ptr<BackendWrapper> wrap(Mat& host);
 
 #ifdef HAVE_CUDA
-    cv::cuda::GpuMat& argGpuMat(Arg arg);
-
     cudnnTensorDescriptor_t argTensorCuDNN(Arg a,
                                            const MatShape& shape,
                                            cudnnDataType_t dtype);
@@ -289,9 +285,7 @@ struct Net::Impl : public detail::NetImplBase
             std::vector<int>& outTypes,
             std::vector<MatShape>& outShapes,
             std::vector<int>& tempTypes,
-            std::vector<MatShape>& tempShapes,
-            std::vector<cv::cuda::GpuMat>& outGpuMats,
-            std::vector<cv::cuda::GpuMat>& tempGpuMats);
+            std::vector<MatShape>& tempShapes);
 #endif
 
 #ifdef HAVE_CUDA

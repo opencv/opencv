@@ -1137,8 +1137,8 @@ public:
 #ifdef HAVE_CUDA
         EngineType engine_forced = getForcedDnnEngine();
         const bool wantGpuIO =
-            (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT) ||
-            (inputs_arr.kind()  == _InputArray::STD_VECTOR_CUDA_GPU_MAT);
+            (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND) &&
+            (inputs_arr.kind()  == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND);
         if (wantGpuIO && !blobs.empty() && engine_forced != ENGINE_CLASSIC)
         {
             if (inputs_arr.depth() != CV_32F || kernel_size.size() != 2)
@@ -1230,16 +1230,18 @@ public:
             CV_Assert(netimpl->cudaInfo);
             cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
 
-            Arg inpArg = this->inputs.empty() ? Arg() : this->inputs[0];
-            cv::cuda::GpuMat& gin0 = netimpl->argGpuMat(inpArg);
+            std::vector<cv::cuda::GpuMatND> gin_nd;
+            inputs_arr.getGpuMatNDVector(gin_nd);
+            CV_Assert(!gin_nd.empty());
+            std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+            CV_Assert(gout_nd.size() == 1);
 
-            const void* xPtr = (const void*)gin0.ptr();
+            cv::cuda::GpuMatND& gin0_nd = gin_nd[0];
+            cv::cuda::GpuMatND& out_nd  = gout_nd[0];
+            CV_Assert(!gin0_nd.empty());
 
-            std::vector<cv::cuda::GpuMat> gout;
-            outputs_arr.getGpuMatVector(gout);
-            CV_Assert(gout.size() == 1);
-            cv::cuda::GpuMat& out_gm = gout[0];
-            void* yPtr = (void*)out_gm.ptr();
+            const void* xPtr = (const void*)gin0_nd.getDevicePtr();
+            void*       yPtr = (void*)out_nd.getDevicePtr();
 
             cuda::convolution(
                 cudnnHandle,
