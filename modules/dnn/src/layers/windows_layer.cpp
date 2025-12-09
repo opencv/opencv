@@ -96,7 +96,33 @@ static void BlackmanWindowFill(Mat& out, int N, double N1, bool useDouble)
         cv::AutoBuffer<float> _w(N);
         float* w = _w.data();
 
-        for (int i = 0; i < N; ++i)
+        int i = 0;
+#if (defined(CV_SIMD_32F) && CV_SIMD_32F) || (defined(CV_SIMD_SCALABLE_32F) && CV_SIMD_SCALABLE_32F)
+        const int nlanes32 = VTraits<v_float32>::vlanes();
+        const int max_nlanes32 = VTraits<v_float32>::max_nlanes;
+        std::array<float, max_nlanes32> index;
+        std::iota(index.data(), index.data() + max_nlanes32, 0.0f);
+        v_float32 vindex = vx_load(index.data());
+        v_float32 delta = vx_setall_f32(nlanes32);
+        v_float32 vcoeff1 = vx_setall_f32(coeff1);
+        v_float32 vcoeff2 = vx_setall_f32(coeff2);
+        v_float32 valpha  = vx_setall_f32(alpha);
+        v_float32 vbeta   = vx_setall_f32(beta);
+        v_float32 vnegHalf = vx_setall_f32(-0.5f);
+
+        for (; i <= N - nlanes32; i += nlanes32)
+        {
+            v_float32 varg1 = v_mul(vcoeff1, vindex);
+            v_float32 varg2 = v_mul(vcoeff2, vindex);
+            v_float32 vc1 = v_cos(varg1);
+            v_float32 vc2 = v_cos(varg2);
+            v_float32 v = v_add(valpha, v_add(v_mul(vc1, vnegHalf), v_mul(vc2, vbeta)));
+            vx_store(w + i, v);
+            vindex = v_add(vindex, delta);
+        }
+#endif
+
+        for (; i < N; ++i)
         {
             float arg1 = coeff1 * i;
             float arg2 = coeff2 * i;
@@ -161,7 +187,27 @@ static void HannWindowFill(Mat& out, int N, double N1, bool useDouble)
         cv::AutoBuffer<float> _w(N);
         float* w = _w.data();
 
-        for (int i = 0; i < N; ++i)
+        int i = 0;
+#if (defined(CV_SIMD_32F) && CV_SIMD_32F) || (defined(CV_SIMD_SCALABLE_32F) && CV_SIMD_SCALABLE_32F)
+        const int nlanes32 = VTraits<v_float32>::vlanes();
+        const int max_nlanes32 = VTraits<v_float32>::max_nlanes;
+        std::array<float, max_nlanes32> index;
+        std::iota(index.data(), index.data() + max_nlanes32, 0.0f);
+        v_float32 vindex = vx_load(index.data());
+        v_float32 delta = vx_setall_f32(nlanes32);
+        v_float32 vcoeff = vx_setall_f32(coeff);
+        v_float32 one = vx_setall_f32(1.0f);
+        v_float32 half = vx_setall_f32(0.5f);
+
+        for (; i <= N - nlanes32; i += nlanes32)
+        {
+            v_float32 v = v_mul(half, v_sub(one, v_cos(v_mul(vcoeff, vindex))));
+            vx_store(w + i, v);
+            vindex = v_add(vindex, delta);
+        }
+#endif
+
+        for (; i < N; ++i)
             w[i] = 0.5f * (1.0f - std::cos(coeff * i));
 
         T* dst = out.ptr<T>();
