@@ -1638,9 +1638,9 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         // cubic equation
         // Normalize coefficients in-place to prevent overflow/instability
         double scale = 1.0 / max_coeff;
-        a0 *= scale; 
-        a1 *= scale; 
-        a2 *= scale; 
+        a0 *= scale;
+        a1 *= scale;
+        a2 *= scale;
         a3 *= scale;
 
         a0 = 1./a0;
@@ -1651,7 +1651,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
         double Qcubed = Q * Q * Q;
-        
+
         /*
           Here we expand expression `Qcubed - R * R` for `d` variable
           to reduce common terms `a1^6 / 729` and `-a1^4 * a2 / 81`

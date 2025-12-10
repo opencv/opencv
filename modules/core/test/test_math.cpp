@@ -2633,8 +2633,8 @@ TEST(Core_SolveCubic, regression_27748)
     int n = solveCubic(coeffs, roots);
 
     // Expecting quadratic behavior (2 roots)
-    EXPECT_GE(n, 2); 
-    
+    EXPECT_GE(n, 2);
+
     // Verify roots satisfy the quadratic part of the equation (since a*x^3 is negligible)
     for(int i = 0; i < n; i++)
     {
