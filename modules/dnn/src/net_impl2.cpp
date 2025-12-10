@@ -679,7 +679,6 @@ void Net::Impl::traceArg(std::ostream& strm_, const char* prefix, size_t i, Arg 
         return;
     strm_ << "  Buf: " << bufidxs.at(arg.idx) << "\n";
     strm_ << "  Type: " << typeToString(adata.type) << " \n";
-
     MatShape shape = !m.empty() ? m.shape() : adata.shape;
     strm_ << "  Shape: " << shape;
     if (constArg && m.total() <= PPRINT_CONST_THRESHOLD) {
@@ -802,7 +801,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
     size_t i, nops = prog.size();
     const std::vector<Arg>& gr_inputs = graph->inputs();
     const std::vector<Arg>& gr_outputs = graph->outputs();
-
     size_t n_gr_inputs = gr_inputs.size(), n_gr_outputs = gr_outputs.size();
     std::vector<Mat> inpMats, outMats, tempMats;
 #ifdef HAVE_CUDA
@@ -901,6 +899,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             }
         }
         bool dynamicOutShapes = layer->dynamicOutputShapes();
+        bool needCpuOutputs = false;
         if (!dynamicOutShapes) {
 #ifdef HAVE_CUDA
             if (supportGPU) {
@@ -920,8 +919,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             } else
 #endif
             {
-                allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
-                                 tempTypes, tempShapes, tempMats, scratchBufs, true);
+                needCpuOutputs = true;
             }
         } else {
             outMats.resize(noutputs);
@@ -1049,17 +1047,9 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 
                         inpMats[ii] = host;
                     }
-                    // Prepare CPU outputs depending on shape mode
+
                     if (!dynamicOutShapes) {
-                        allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
-                                             tempTypes, tempShapes, tempMats, scratchBufs, true);
-                    } else {
-                        outMats.resize(noutputs);
-                        for (size_t i2 = 0; i2 < noutputs; i2++) {
-                            Arg out2 = outputs[i2];
-                            outMats[i2] = argTensor(out2);
-                        }
-                        tempMats = scratchBufs;
+                        needCpuOutputs = true;
                     }
                 }
             }
@@ -1085,14 +1075,12 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
 #endif
         {
             try {
-#ifdef HAVE_CUDA
-                if (!dynamicOutShapes && (supportGPU && !ranOnGPU)) {
-                    if (outMats.empty()) {
-                        allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
-                                             tempTypes, tempShapes, tempMats, scratchBufs, true);
-                    }
+                if (!dynamicOutShapes && needCpuOutputs) {
+                    CV_Assert(outMats.empty());
+                    allocateLayerOutputs(layer, inpTypes, inpShapes, outTypes, outShapes, outOrigData, outMats,
+                                         tempTypes, tempShapes, tempMats, scratchBufs, true);
+                    needCpuOutputs = false;
                 }
-#endif
                 if (finalizeLayers) {
                     layer->finalize((InputArrayOfArrays)inpMats, (OutputArrayOfArrays)outMats);
                 }
@@ -1103,7 +1091,6 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
             CV_Assert(outMats.size() == noutputs);
         }
 
-        // Update host tensor metadata and buffers only for CPU-executed layers.
 #ifdef HAVE_CUDA
         if (!(supportGPU && ranOnGPU))
 #endif

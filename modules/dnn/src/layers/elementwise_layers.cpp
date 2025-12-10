@@ -163,14 +163,12 @@ public:
 
     virtual bool supportBackend(int backendId) CV_OVERRIDE
     {
-#ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
         {
             EngineType engine_forced = getForcedDnnEngine();
             if (engine_forced != ENGINE_CLASSIC)
                 return false;
         }
-#endif
         return func.supportBackend(backendId, this->preferableTarget);
     }
 

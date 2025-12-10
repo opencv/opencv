@@ -1472,6 +1472,9 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
             /* only deconvolution 2d and 3d supported */
             if (kernel_size.size() == 2 || kernel_size.size() == 3)
                 return true;
