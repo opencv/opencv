@@ -69,6 +69,12 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
     while( pnext != end )
     {
+        if (*array[pcur] == *array[pnext])
+        {
+            pnext += incr;
+            stack[stacksize - 1] = pnext;
+            continue;
+        }
         // check the angle p1,p2,p3
         _Tp cury = array[pcur]->y;
         _Tp nexty = array[pnext]->y;
