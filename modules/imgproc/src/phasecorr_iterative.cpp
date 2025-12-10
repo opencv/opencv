@@ -4,7 +4,7 @@
 namespace {
 
 template <typename T>
-void calculateCrossPowerSpectrum_(const cv::Mat& dft1, const cv::Mat& dft2, cv::Mat& cps)
+void calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2, cv::Mat& cps)
 {
     for (int row = 0; row < dft1.rows; ++row)
     {
@@ -26,9 +26,9 @@ cv::Mat calculateCrossPowerSpectrum(const cv::Mat& dft1, const cv::Mat& dft2)
 {
     cv::Mat cps(dft1.rows, dft1.cols, dft1.type());
     if (dft1.type() == CV_32FC2)
-        calculateCrossPowerSpectrum_<float>(dft1, dft2, cps);
+        calculateCrossPowerSpectrum<float>(dft1, dft2, cps);
     else if (dft1.type() == CV_64FC2)
-        calculateCrossPowerSpectrum_<double>(dft1, dft2, cps);
+        calculateCrossPowerSpectrum<double>(dft1, dft2, cps);
     else
         CV_Error(cv::Error::StsNotImplemented, "Only CV_32FC2 and CV_64FC2 types are supported");
     return cps;
@@ -101,8 +101,8 @@ cv::Point2d getSubpixelShift(const cv::Mat& L3,
 
 }  // namespace
 
-
-cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int L2size, int maxIters)
+cv::Point2d
+    cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int L2size, int maxIters)
 {
     CV_INSTRUMENT_REGION();
 
@@ -144,13 +144,15 @@ cv::Point2d cv::phaseCorrelateIterative(InputArray _src1, InputArray _src2, int 
 
     // upsample L2 maximum correlation neighborhood to get L2U
     Mat L2U;
-    const int L2Usize = 357;
+    const int L2Usize = 223;  // empirically determined optimal constant
     resize(L2, L2U, {L2Usize, L2Usize}, 0, 0, INTER_LINEAR);
     const Point2d L2Umid(L2U.cols / 2, L2U.rows / 2);
 
     // run the iterative refinement algorithm using the specified L1 ratio
     // gradually decrease L1 ratio if convergence is not achieved
-    for (double L1ratio = 0.45; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= 0.025)
+    const double L1ratioBase = 0.45;  // empirically determined optimal constant
+    const double L1ratioStep = 0.025;
+    for (double L1ratio = L1ratioBase; getL1size(L2U.cols, L1ratio) > 0; L1ratio -= L1ratioStep)
     {
         Point2d L2Upeak = L2Umid;  // reset the accumulated L2U peak position
         const int L1size = getL1size(L2U.cols, L1ratio);  // calculate the current L1 size
