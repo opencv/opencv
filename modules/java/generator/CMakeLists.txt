@@ -62,6 +62,12 @@ ocv_bindings_generator_populate_preprocessor_definitions(
   opencv_preprocessor_defs
 )
 
+if(ANDROID)
+  set(opencv_supported_cleaners "false")
+else()
+  set(opencv_supported_cleaners "true")
+endif()
+
 set(CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/gen_java.json")
 set(__config_str
 "{
@@ -74,7 +80,8 @@ ${opencv_preprocessor_defs}
   },
   \"files_remap\": [
 ${__remap_config}
-  ]
+  ],
+  \"support_cleaners\": ${opencv_supported_cleaners}
 }
 ")
 if(EXISTS "${CONFIG_FILE}")
