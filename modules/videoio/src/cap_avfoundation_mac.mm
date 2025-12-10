@@ -375,21 +375,23 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         [localpool drain];
         return 0;
     }
-
-    if ( cameraNum < 0 || devices.count <= NSUInteger(cameraNum) ) {
-        fprintf(stderr, "OpenCV: out device of bound (0-%ld): %d\n", devices.count-1, cameraNum);
-        [localpool drain];
-        return 0;
-    }
-
+    
     // Preserve devices ordering on the system
-    // see AVCaptureDevice::uniqueID property documentation for more info
-    devices = [devices
+
+      devices = [devices
         sortedArrayUsingComparator:^NSComparisonResult(AVCaptureDevice *d1,
                                                        AVCaptureDevice *d2) {
             return [d1.uniqueID compare:d2.uniqueID];
         }
     ];
+
+    
+    // Validate camera index AFTER sorting
+    if ( cameraNum < 0 || devices.count <= NSUInteger(cameraNum) ) {
+        fprintf(stderr, "OpenCV: out device of bound (0-%ld): %d\n", devices.count-1, cameraNum);
+        [localpool drain];
+        return 0;
+    }
 
     mCaptureDevice = devices[cameraNum];
 
@@ -411,7 +413,7 @@ int CvCaptureCAM::startCaptureDevice(int cameraNum) {
         mCaptureDeviceInput = nil;
     }
 
-    if (mCaptureVideoDataOutput) {               // 👈 IMPORTANT: this name
+    if (mCaptureVideoDataOutput) {             
         [mCaptureVideoDataOutput release];
         mCaptureVideoDataOutput = nil;
     }
@@ -484,10 +486,10 @@ if (!ok)
     mCapture = nil;
 
     [localpool drain];
-    return 0;   // ← IMPORTANT: report failure
+    return 0;   
 }
 
-// If we reached here, camera is working and delivering frames
+
 [localpool drain];
 return 1;
 
