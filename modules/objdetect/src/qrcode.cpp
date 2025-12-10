@@ -83,8 +83,10 @@ static Point2f intersectionLines(Point2f a1, Point2f a2, Point2f b1, Point2f b2)
 //    /   |
 //  a/    | c
 
-static inline double getCosVectors(Point2f a, Point2f b, Point2f c)
+static inline double getCosVectors(Point a, Point b, Point c)
 {
+    CV_DbgCheckNE(a, b, "Angle between vector and point is undetermined");
+    CV_DbgCheckNE(b, c, "Angle between vector and point is undetermined");
     return ((a - b).x * (c - b).x + (a - b).y * (c - b).y) / (norm(a - b) * norm(c - b));
 }
 
@@ -825,7 +827,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         Point intrsc_line_hull =
         intersectionLines(hull[index_hull], hull[next_index_hull],
                           angle_list[1], angle_list[2]);
-        double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        double temp_norm = min_norm;
+        if (intrsc_line_hull != angle_closest_pnt)
+        {
+            temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        }
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
             norm(angle_list[1] - angle_list[2]) * 0.1)
@@ -863,7 +869,11 @@ vector<Point2f> QRDetect::getQuadrilateral(vector<Point2f> angle_list)
         Point intrsc_line_hull =
         intersectionLines(hull[index_hull], hull[next_index_hull],
                           angle_list[0], angle_list[1]);
-        double temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        double temp_norm = min_norm;
+        if (intrsc_line_hull != angle_closest_pnt)
+        {
+            temp_norm = getCosVectors(hull[index_hull], intrsc_line_hull, angle_closest_pnt);
+        }
         if (min_norm > temp_norm &&
             norm(hull[index_hull] - hull[next_index_hull]) >
             norm(angle_list[0] - angle_list[1]) * 0.05)
