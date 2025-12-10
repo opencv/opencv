@@ -231,8 +231,13 @@ public:
             return sliceRanges.size() == 1 && neg_step_dims.empty();
 #endif
 #ifdef HAVE_CUDA
-        if (backendId == DNN_BACKEND_CUDA)
+        if (backendId == DNN_BACKEND_CUDA){
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC){
+                return false;
+            }
             return !hasSteps && neg_step_dims.empty();
+        }
 #endif
         return backendId == DNN_BACKEND_OPENCV || backendId == DNN_BACKEND_CANN;
     }
