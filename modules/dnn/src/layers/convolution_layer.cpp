@@ -48,6 +48,7 @@
 #include "../op_vkcom.hpp"
 #include "../op_webnn.hpp"
 #include "../op_cann.hpp"
+#include "../net_impl.hpp"
 
 #include <opencv2/core/utils/configuration.private.hpp>
 #include <opencv2/core/utils/logger.hpp>
@@ -65,7 +66,14 @@ using namespace cv::dnn::ocl4dnn;
 #ifdef HAVE_CUDA
 #include "../cuda4dnn/primitives/convolution.hpp"
 #include "../cuda4dnn/primitives/transpose_convolution.hpp"
+#include <opencv2/core/cuda.hpp>
+#include <cudnn.h>
 using namespace cv::dnn::cuda4dnn;
+#endif
+
+#ifdef HAVE_CUDA
+#include "../cuda/layer_cudnn.hpp"
+#include <cuda_runtime.h>
 #endif
 
 #include "cpu_kernels/convolution.hpp"
@@ -257,10 +265,15 @@ public:
 #ifdef HAVE_CUDA
         if (backendId == DNN_BACKEND_CUDA)
         {
-            /* only 1d, 2d and 3d convolutions supported */
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC){
+                if ((dilation.width != 1) || (dilation.height != 1))
+                return false;
+            }
+            if (ksize == 3 && preferableTarget == DNN_TARGET_CUDA_FP16)
+                return false;
             if (ksize > 0 && ksize <= 3)
                 return true;
-
             return false;
         }
 #endif
@@ -1121,12 +1134,133 @@ public:
             return;
         }
 
+#ifdef HAVE_CUDA
+        EngineType engine_forced = getForcedDnnEngine();
+        const bool wantGpuIO =
+            (outputs_arr.kind() == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND) &&
+            (inputs_arr.kind()  == _InputArray::STD_VECTOR_CUDA_GPU_MAT_ND);
+        if (wantGpuIO && !blobs.empty() && engine_forced != ENGINE_CLASSIC)
+        {
+            if (inputs_arr.depth() != CV_32F || kernel_size.size() != 2)
+                CV_Error(Error::StsNotImplemented, "DNN/CUDA: convolution config not supported by cuDNN helper");
+
+            if (!pads_begin.empty() && pads_begin.size() == pads_end.size())
+            {
+                for (size_t i = 0; i < pads_begin.size(); ++i)
+                {
+                    if (pads_begin[i] != pads_end[i])
+                    {
+                        forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                        return;
+                    }
+                }
+            }
+
+            Net::Impl* netimpl = getNetImpl(this);
+            CV_Assert(netimpl && "DNN/CUDA: missing Net::Impl");
+            netimpl->ensureCudaReady();
+
+            Arg xArg = this->inputs.empty() ? Arg() : this->inputs[0];
+            Arg yArg = this->outputs.empty() ? Arg() : this->outputs[0];
+            const ArgData& xAd = netimpl->argData(xArg);
+            const ArgData& yAd = netimpl->argData(yArg);
+            CV_Assert(!xAd.shape.empty() && !yAd.shape.empty());
+
+            MatShape ish = xAd.shape;
+            if (ish.size() != 4)
+            {
+                forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                return;
+            }
+
+            int C_in = ish[1];
+            int expected_C_in = blobs[0].size[1] * groups;
+            if (C_in != expected_C_in)
+            {
+                forward_fallback(inputs_arr, outputs_arr, internals_arr);
+                return;
+            }
+
+            int C_out = blobs[0].size[0];
+            int kH = (int)kernel_size[0];
+            int kW = (int)(kernel_size.size() > 1 ? kernel_size[1] : kernel_size[0]);
+
+            cv::cuda::GpuMatND wdev_nd, bdev_nd;
+            CV_Assert(!blobs.empty());
+            Mat w4d;
+            if (fusedWeights && !weightsMat.empty())
+            {
+                CV_Assert(weightsMat.isContinuous());
+                w4d = weightsMat.reshape(1, blobs[0].size);
+            }
+            else
+            {
+                w4d = blobs[0];
+            }
+            CV_Assert(w4d.type() == CV_32F && "DNN/CUDA: weights must be float32");
+            wdev_nd.upload(w4d);
+
+            if (hasBias() || fusedBias) {
+                Mat b1d(numOutput, 1, CV_32F, biasvec.data());
+                if (countNonZero(b1d) > 0) {
+                    bdev_nd.upload(b1d);
+                }
+            }
+
+            cudnnTensorDescriptor_t xDesc = netimpl->argTensorCuDNN(
+                xArg, xAd.shape, CUDNN_DATA_FLOAT);
+
+            cudnnTensorDescriptor_t yDesc = netimpl->argTensorCuDNN(
+                yArg, yAd.shape, CUDNN_DATA_FLOAT);
+
+            cudnnFilterDescriptor_t cudnnWDesc = netimpl->filterDescCuDNN(
+                CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW,
+                C_out, blobs[0].size[1], kH, kW);
+            cudnnConvolutionDescriptor_t cudnnConvDesc = netimpl->convDescCuDNN(
+                pads_begin, strides, dilations, groups, CUDNN_DATA_FLOAT);
+            cudnnTensorDescriptor_t cudnnBDesc = nullptr;
+            if (hasBias())
+            {
+                Arg bArg = netimpl->getArg(this->name + ":bias");
+                MatShape bShape({1, C_out, 1, 1});
+                cudnnBDesc = netimpl->tensorDesc(
+                    bArg, bShape, CUDNN_DATA_FLOAT);
+            }
+
+            CV_Assert(netimpl->cudaInfo);
+            cudnnHandle_t cudnnHandle = netimpl->cudaInfo->context.cudnn_handle.get();
+
+            std::vector<cv::cuda::GpuMatND> gin_nd;
+            inputs_arr.getGpuMatNDVector(gin_nd);
+            CV_Assert(!gin_nd.empty());
+            std::vector<cv::cuda::GpuMatND>& gout_nd = outputs_arr.getGpuMatNDVecRef();
+            CV_Assert(gout_nd.size() == 1);
+
+            cv::cuda::GpuMatND& gin0_nd = gin_nd[0];
+            cv::cuda::GpuMatND& out_nd  = gout_nd[0];
+            CV_Assert(!gin0_nd.empty());
+
+            const void* xPtr = (const void*)gin0_nd.getDevicePtr();
+            void*       yPtr = (void*)out_nd.getDevicePtr();
+
+            cuda::convolution(
+                cudnnHandle,
+                xDesc, cudnnWDesc, cudnnConvDesc, yDesc,
+                hasBias() ? cudnnBDesc : nullptr,
+                xPtr,
+                (const void*)wdev_nd.getDevicePtr(),
+                hasBias() ? (const void*)bdev_nd.getDevicePtr() : nullptr,
+                yPtr);
+            return;
+        }
+#endif
+
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
 
         int outCn = blobs.empty() ? inputs[1].size[0] : blobs[0].size[0];
-        // Need to align non-const blobs
+
         bool variableWeight = false;
         if (blobs.empty())
         {
@@ -1189,32 +1323,25 @@ public:
             }
         }
 
+        int nstripes = std::max(getNumThreads(), 1);
+        int conv_dim = CONV_2D;
+        if (inputs[0].dims == 3)
+            conv_dim = CONV_1D;
+        if (inputs[0].dims == 5)
+            conv_dim = CONV_3D;
+
+        if (!fastConvImpl || variableWeight)
         {
-            int nstripes = std::max(getNumThreads(), 1);
-            int conv_dim = CONV_2D;
-            if (inputs[0].dims == 3)
-                conv_dim = CONV_1D;
-            if (inputs[0].dims == 5)
-                conv_dim = CONV_3D;
+            int K = outputs[0].size[1];
+            int C = inputs[0].size[1];
 
-            // Initialization of FastCovn2d, pack weight.
-            if (!fastConvImpl || variableWeight)
-            {
-                int K = outputs[0].size[1];
-                int C = inputs[0].size[1];
-
-                CV_Assert(outputs[0].size[1] % ngroups == 0);
-                fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
-                                            dilations, pads_begin, pads_end, conv_dim,
-                                            preferableTarget == DNN_TARGET_CPU_FP16, canUseWinograd);
-                // This is legal to release weightsMat here as this is not used anymore for
-                // OpenCV inference. If network needs to be reinitialized (new shape, new backend)
-                // a new version of weightsMat is created at .finalize() from original weights
-                weightsMat.release();
-            }
-
-            runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
+            CV_Assert(outputs[0].size[1] % ngroups == 0);
+            fastConvImpl = initFastConv(weightsMat, &biasvec[0], ngroups, K, C, kernel_size, strides,
+                                        dilations, pads_begin, pads_end, conv_dim,
+                                        preferableTarget == DNN_TARGET_CPU_FP16, canUseWinograd);
+            weightsMat.release();
         }
+        runFastConv(inputs[0], outputs[0], fastConvImpl, nstripes, activ, reluslope, fusedAdd);
     }
 
 #ifdef HAVE_CUDA
@@ -1345,6 +1472,9 @@ public:
     {
         if (backendId == DNN_BACKEND_CUDA)
         {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
             /* only deconvolution 2d and 3d supported */
             if (kernel_size.size() == 2 || kernel_size.size() == 3)
                 return true;

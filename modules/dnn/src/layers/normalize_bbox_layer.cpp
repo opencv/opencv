@@ -79,6 +79,12 @@ public:
             return startAxis == 1;
         }
 #endif
+        if (backendId == DNN_BACKEND_CUDA)
+        {
+            EngineType engine_forced = getForcedDnnEngine();
+            if (engine_forced != ENGINE_CLASSIC)
+                return false;
+        }
         return backendId == DNN_BACKEND_OPENCV ||
                (backendId == DNN_BACKEND_CUDA && (pnorm == 1 || pnorm == 2));
     }

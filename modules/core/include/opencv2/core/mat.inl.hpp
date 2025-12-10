@@ -106,6 +106,9 @@ inline const int& MatShape::operator [](size_t idx) const
 
 inline Size MatShape::operator()() const
 {
+    // For compatibility with legacy MatSize::operator() this treats
+    // scalar tensors (dims == 0) as a 1x1 "matrix" and only supports
+    // up to 2 explicit dimensions here.
     CV_Assert(dims <= 2);
     int cols = dims > 0 ? p[dims > 1] : int(dims >= 0);
     int rows = dims > 1 ? p[0] : int(dims >= 0);
@@ -218,6 +221,9 @@ inline _InputArray::_InputArray(const std::vector<cuda::GpuMat>& d_mat)
 
 inline _InputArray::_InputArray(const cuda::GpuMatND& d_mat)
 { init(+CUDA_GPU_MATND + ACCESS_READ, &d_mat); }
+
+inline _InputArray::_InputArray(const std::vector<cuda::GpuMatND>& d_mat)
+{ init(+STD_VECTOR_CUDA_GPU_MAT_ND + ACCESS_READ, &d_mat); }
 
 inline _InputArray::_InputArray(const ogl::Buffer& buf)
 { init(+OPENGL_BUFFER + ACCESS_READ, &buf); }
@@ -348,6 +354,9 @@ inline _OutputArray::_OutputArray(std::vector<cuda::GpuMat>& d_mat)
 inline _OutputArray::_OutputArray(cuda::GpuMatND& d_mat)
 { init(+CUDA_GPU_MATND + ACCESS_WRITE, &d_mat); }
 
+inline _OutputArray::_OutputArray(std::vector<cuda::GpuMatND>& d_mat)
+{ init(+STD_VECTOR_CUDA_GPU_MAT_ND + ACCESS_WRITE, &d_mat); }
+
 inline _OutputArray::_OutputArray(ogl::Buffer& buf)
 { init(+OPENGL_BUFFER + ACCESS_WRITE, &buf); }
 
@@ -371,6 +380,9 @@ inline _OutputArray::_OutputArray(const cuda::GpuMat& d_mat)
 
 inline _OutputArray::_OutputArray(const cuda::GpuMatND& d_mat)
 { init(+FIXED_TYPE + FIXED_SIZE + CUDA_GPU_MATND + ACCESS_WRITE, &d_mat); }
+
+inline _OutputArray::_OutputArray(const std::vector<cuda::GpuMatND>& d_mat)
+{ init(FIXED_SIZE + STD_VECTOR_CUDA_GPU_MAT_ND + ACCESS_WRITE, &d_mat); }
 
 inline _OutputArray::_OutputArray(const ogl::Buffer& buf)
 { init(FIXED_TYPE + FIXED_SIZE + OPENGL_BUFFER + ACCESS_WRITE, &buf); }

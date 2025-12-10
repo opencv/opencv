@@ -104,6 +104,83 @@ void Net::Impl::initCUDABackend(const std::vector<LayerPin>& blobsToKeep_)
     }
 }
 
+bool Net::Impl::ensureCudaReady()
+{
+    if (!cudaInfo)
+    {
+        try {
+            initCUDABackend(blobsToKeep);
+        } catch (const cv::Exception& e) {
+            CV_LOG_WARNING(NULL, std::string("DNN/CUDA: initCUDABackend failed: ") + e.what());
+        }
+    }
+    return (bool)cudaInfo;
+}
+
+cudnnTensorDescriptor_t Net::Impl::tensorDesc(Arg arg,
+                                              const MatShape& shp,
+                                              cudnnDataType_t dtype)
+{
+#ifdef HAVE_CUDA
+    return argTensorCuDNN(arg, shp, dtype);
+#else
+    CV_UNUSED(arg); CV_UNUSED(shp); CV_UNUSED(dtype);
+    return nullptr;
+#endif
+}
+
+cudnnTensorDescriptor_t Net::Impl::argTensorCuDNN(Arg arg,
+                                                  const MatShape& shape,
+                                                  cudnnDataType_t dtype)
+{
+#ifdef HAVE_CUDA
+    if (cudnnTensors.size() < args.size())
+        cudnnTensors.resize(args.size(), nullptr);
+
+    CV_Assert((size_t)arg.idx < cudnnTensors.size());
+    if (!cudnnTensors[arg.idx])
+    {
+        cudnnTensorDescriptor_t desc = nullptr;
+        cudnnStatus_t st = cudnnCreateTensorDescriptor(&desc);
+        CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnCreateTensorDescriptor failed in argTensorCuDNN(shape)");
+        cudnnTensors[arg.idx] = desc;
+    }
+
+    int nbDims = (int)shape.size();
+    CV_Assert(nbDims >= 1);
+
+    std::vector<int> dimA(nbDims);
+    std::vector<int> strideA(nbDims);
+    for (int i = 0; i < nbDims; ++i)
+        dimA[i] = shape[i] > 0 ? shape[i] : 1;
+    strideA[nbDims - 1] = 1;
+    for (int i = nbDims - 2; i >= 0; --i)
+        strideA[i] = strideA[i + 1] * dimA[i + 1];
+
+    cudnnStatus_t st = cudnnSetTensorNdDescriptor(
+        cudnnTensors[arg.idx], dtype, nbDims, dimA.data(), strideA.data());
+    CV_Assert(st == CUDNN_STATUS_SUCCESS && "cudnnSetTensorNdDescriptor failed in argTensorCuDNN(shape)");
+    return cudnnTensors[arg.idx];
+#else
+    CV_UNUSED(arg); CV_UNUSED(shape); CV_UNUSED(dtype);
+    return nullptr;
+#endif
+}
+
+cudnnTensorDescriptor_t Net::Impl::tensorDesc2D(Arg arg,
+                                                int rows, int cols, int row_stride,
+                                                cudnnDataType_t dtype)
+{
+#ifdef HAVE_CUDA
+    CV_UNUSED(row_stride); // explicit strides are no longer needed; use contiguous ND layout
+    MatShape shp({rows, cols});
+    return argTensorCuDNN(arg, shp, dtype);
+#else
+    CV_UNUSED(arg); CV_UNUSED(rows); CV_UNUSED(cols); CV_UNUSED(row_stride); CV_UNUSED(dtype);
+    return nullptr;
+#endif
+}
+
 
 CV__DNN_INLINE_NS_END
 }}  // namespace cv::dnn
