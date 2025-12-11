@@ -55,7 +55,16 @@ PERF_TEST_P(ECCPerfTest, findTransformECC,
                          TermCriteria(TermCriteria::COUNT + TermCriteria::EPS, 5, -1));
     }
 
-    SANITY_CHECK(warpMat, 3e-3);
+    if (transform_type == MOTION_HOMOGRAPHY)
+    {
+        // NOTE: for Mac M1 + KleidiCV
+        // ECCPerfTest_findTransformECC.findTransformECC/6, where GetParam() = (MOTION_HOMOGRAPHY, IMREAD_GRAYSCALE)
+        SANITY_CHECK(warpMat, 8.3e-3);
+    }
+    else
+    {
+        SANITY_CHECK(warpMat, 3e-3);
+    }
 }
 
 }  // namespace opencv_test
