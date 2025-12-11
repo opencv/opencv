@@ -821,6 +821,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     UMat src = _src.getUMat();
     int numangle = computeNumangle(min_theta, max_theta, theta);
     int numrho = cvRound(((src.cols + src.rows) * 2 + 1) / rho);
+    float theta_step = (float)((max_theta - min_theta) / numangle);
 
     UMat pointsList;
     UMat counters(1, 2, CV_32SC1, Scalar::all(0));
@@ -840,8 +841,13 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
         return false;
 
     const int pixPerWI = 8;
-    ocl::Kernel getLinesKernel("get_lines", ocl::imgproc::hough_lines_oclsrc,
-                               format("-D GET_LINES"));
+    ocl::Kernel getLinesKernel(
+    "get_lines",
+    ocl::imgproc::hough_lines_oclsrc,
+    format("-D GET_LINES"));
+
+
+
     if (getLinesKernel.empty())
         return false;
 
@@ -849,7 +855,7 @@ static bool ocl_HoughLines(InputArray _src, OutputArray _lines, double rho, doub
     UMat lines(linesMax, 1, CV_32FC2);
 
     getLinesKernel.args(ocl::KernelArg::ReadOnly(accum), ocl::KernelArg::WriteOnlyNoSize(lines),
-                        ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta);
+                        ocl::KernelArg::PtrWriteOnly(counters), linesMax, threshold, (float) rho, (float) theta_step, (float) min_theta, (float) max_theta);
 
     size_t globalThreads[2] = { ((size_t)numrho + pixPerWI - 1)/pixPerWI, (size_t)numangle };
     if (!getLinesKernel.run(2, globalThreads, NULL, false))
