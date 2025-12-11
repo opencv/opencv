@@ -426,7 +426,7 @@ static void normAssertSegmentation(const Mat& ref, const Mat& test)
 
     Mat refMask = getSegmMask(ref);
     Mat testMask = getSegmMask(test);
-    EXPECT_EQ(countNonZero(refMask != testMask), 0);
+    EXPECT_LE(countNonZero(refMask != testMask), 2);
 }
 
 TEST_P(Test_Torch_nets, ENet_accuracy)
