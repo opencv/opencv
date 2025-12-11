@@ -693,6 +693,7 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
         }
         else {
             Ptr<IfLayer> iflayer = layer.dynamicCast<IfLayer>();
+            Ptr<LoopLayer> loopLayer = layer.dynamicCast<LoopLayer>();
             if (iflayer) {
                 int branch = iflayer->branch(inpMats[0]);
                 Ptr<Graph> subgraph = subgraphs->at(branch);
@@ -700,6 +701,89 @@ void Net::Impl::forwardGraph(Ptr<Graph>& graph, InputArrayOfArrays inputs_,
                 if (inpMats.size() > 1)
                     branchInputs.assign(inpMats.begin() + 1, inpMats.end());
                 forwardGraph(subgraph, branchInputs, outMats, false);
+            }
+            else if (loopLayer) {
+                CV_Assert(subgraphs->size() == 1);
+                Ptr<Graph> body = subgraphs->at(0);
+
+                int n_in = (int)inpMats.size();
+                int n_state = n_in - 2;
+                int n_accum = (int)body->outputs().size() - n_state - 1;
+                CV_Assert(n_in >= 2 && n_state >= 0 && n_accum >= 0);
+
+                Mat mIter, mCond, tmp;
+                mIter.create(1, 1, CV_64S);
+                if (inpMats[1].empty())
+                {
+                    mCond.create(1, 1, CV_8U);
+                    mCond.at<uchar>(0) = 1;
+                }
+                else
+                {
+                    mCond = inpMats[1];
+                }
+                int64 iter = 0;
+                int64 max_iter = inpMats[0].empty() ? -1 :
+                                 (inpMats[0].convertTo(tmp, CV_64S), tmp.at<int64>(0));
+                bool active = loopLayer->cond(mCond);
+
+                std::vector<Mat> state(inpMats.begin() + 2, inpMats.end());
+                std::vector<std::vector<Mat> > history(n_accum);
+                std::vector<Mat> inputs(n_in), outputs;
+
+                while (active && (max_iter < 0 || iter < max_iter)) {
+                    mIter.at<int64>(0) = iter++;
+                    inputs[0] = mIter;
+                    inputs[1] = mCond;
+                    std::copy(state.begin(), state.end(), inputs.begin() + 2);
+
+                    forwardGraph(body, inputs, outputs, false);
+
+                    mCond = outputs[0];
+                    active = loopLayer->cond(mCond);
+
+                    for (int i = 0; i < n_state; i++)
+                        state[i] = outputs[1 + i];
+                    for (int i = 0; i < n_accum; i++)
+                        history[i].push_back(outputs[1 + n_state + i].clone());
+                }
+
+                outMats.assign(state.begin(), state.end());
+                outMats.resize(n_state + n_accum);
+
+                for (int i = 0; i < n_accum; ++i) {
+                    const std::vector<Mat>& perIter = history[i];
+                    if (perIter.empty()) {
+                        outMats[n_state + i] = Mat();
+                        continue;
+                    }
+
+                    const Mat& first = perIter[0];
+                    MatShape elemShape = first.shape();
+                    int ndims = elemShape.dims;
+                    CV_Assert(ndims >= 0);
+
+                    MatShape outShape(ndims + 1);
+                    outShape[0] = (int)perIter.size();
+                    for (int d = 0; d < ndims; ++d)
+                        outShape[d + 1] = elemShape[d];
+
+                    Mat stacked;
+                    stacked.create(outShape, first.type());
+
+                    for (size_t k = 0; k < perIter.size(); ++k)
+                    {
+                        const Mat& src = perIter[k];
+                        CV_Assert(src.type() == first.type());
+                        CV_Assert(src.total() == first.total());
+
+                        Mat dst = stacked.reshape(0, (int)perIter.size())
+                                         .row((int)k)
+                                         .reshape(first.channels(), elemShape.dims, &elemShape[0]);
+                        src.copyTo(dst);
+                    }
+                    outMats[n_state + i] = stacked;
+                }
             }
             else {
                 CV_Error_(Error::StsNotImplemented,

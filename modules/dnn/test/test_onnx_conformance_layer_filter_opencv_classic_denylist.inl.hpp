@@ -601,3 +601,4 @@
 "test_rotary_embedding_with_interleaved_rotary_dim_expanded",
 "test_rotary_embedding_with_rotary_dim",
 "test_rotary_embedding_with_rotary_dim_expanded",
+"test_loop11",

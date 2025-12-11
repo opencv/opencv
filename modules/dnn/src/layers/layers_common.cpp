@@ -271,7 +271,7 @@ void tensorToIntVec(const Mat& tensor, std::vector<int>& vec)
     } else {
         int type = tensor.type();
         CV_Assert(type == CV_32S || type == CV_64S);
-        CV_Assert(tensor.dims <= 1);
+        // Accept tensors of any dimensionality; treat them as a flat vector.
         int size = (int)tensor.total();
         vec.resize(size);
         for (int i = 0; i < size; i++) {
@@ -289,7 +289,7 @@ void tensorToFloatVec(const Mat& tensor, std::vector<float>& vec)
         int type = tensor.type();
         MatShape shape = tensor.shape();
         CV_Assert(type == CV_32F || type == CV_16F);
-        CV_Assert(shape.dims <= 1);
+        // Accept tensors of any dimensionality; treat them as a flat vector.
         int size = (int)shape.total();
         vec.resize(size);
         for (int i = 0; i < size; i++) {
