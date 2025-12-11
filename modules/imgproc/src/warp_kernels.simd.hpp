@@ -1212,10 +1212,12 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -1229,7 +1231,8 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1262,7 +1265,8 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1278,11 +1282,15 @@ void warpPerspectiveNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C1, 8U);
                 CV_WARP_SCALAR_STORE(NEAREST, C1, 8U);
+                }
             }
         }
     };
@@ -1299,10 +1307,12 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -1316,7 +1326,8 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1353,7 +1364,8 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1369,11 +1381,15 @@ void warpPerspectiveNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C3, 8U);
                 CV_WARP_SCALAR_STORE(NEAREST, C3, 8U);
+                }
             }
         }
     };
@@ -1390,10 +1406,12 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -1407,7 +1425,8 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1445,7 +1464,8 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             // CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             v_float32 dst_x0 = vx_load(start_indices.data());
             v_float32 dst_x1 = v_add(dst_x0, vx_setall_f32(float(vlanes_32)));
@@ -1475,11 +1495,15 @@ void warpPerspectiveNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C4, 8U);
                 CV_WARP_SCALAR_STORE(NEAREST, C4, 8U);
+                }
             }
         }
     };
@@ -1496,10 +1520,12 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
             saturate_cast<uint16_t>(border_value[1]),
@@ -1513,7 +1539,8 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1546,7 +1573,8 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1562,11 +1590,15 @@ void warpPerspectiveNearestInvoker_16UC1(const uint16_t *src_data, size_t src_st
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C1, 16U);
                 CV_WARP_SCALAR_STORE(NEAREST, C1, 16U);
+                }
             }
         }
     };
@@ -1583,10 +1615,12 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
             saturate_cast<uint16_t>(border_value[1]),
@@ -1600,7 +1634,8 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1637,7 +1672,8 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1653,11 +1689,15 @@ void warpPerspectiveNearestInvoker_16UC3(const uint16_t *src_data, size_t src_st
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C3, 16U);
                 CV_WARP_SCALAR_STORE(NEAREST, C3, 16U);
+                }
             }
         }
     };
@@ -1674,10 +1714,12 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
             saturate_cast<uint16_t>(border_value[1]),
@@ -1691,7 +1733,8 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1729,7 +1772,8 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1752,11 +1796,15 @@ void warpPerspectiveNearestInvoker_16UC4(const uint16_t *src_data, size_t src_st
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C4, 16U);
                 CV_WARP_SCALAR_STORE(NEAREST, C4, 16U);
+                }
             }
         }
     };
@@ -1773,10 +1821,12 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         float bval[] = {
             saturate_cast<float>(border_value[0]),
             saturate_cast<float>(border_value[1]),
@@ -1790,7 +1840,8 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1824,7 +1875,8 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1840,11 +1892,15 @@ void warpPerspectiveNearestInvoker_32FC1(const float *src_data, size_t src_step,
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C1, 32F);
                 CV_WARP_SCALAR_STORE(NEAREST, C1, 32F);
+                }
             }
         }
     };
@@ -1861,10 +1917,12 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         float bval[] = {
             saturate_cast<float>(border_value[0]),
             saturate_cast<float>(border_value[1]),
@@ -1878,7 +1936,8 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -1918,7 +1977,8 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -1934,11 +1994,15 @@ void warpPerspectiveNearestInvoker_32FC3(const float *src_data, size_t src_step,
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C3, 32F);
                 CV_WARP_SCALAR_STORE(NEAREST, C3, 32F);
+                }
             }
         }
     };
@@ -1955,10 +2019,12 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         float bval[] = {
             saturate_cast<float>(border_value[0]),
             saturate_cast<float>(border_value[1]),
@@ -1972,7 +2038,8 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2014,7 +2081,8 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2037,11 +2105,15 @@ void warpPerspectiveNearestInvoker_32FC4(const float *src_data, size_t src_step,
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(NEAREST, C4, 32F);
                 CV_WARP_SCALAR_STORE(NEAREST, C4, 32F);
+                }
             }
         }
     };
@@ -2081,7 +2153,7 @@ void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2116,7 +2188,7 @@ void remapNearestInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2185,7 +2257,7 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2224,7 +2296,7 @@ void remapNearestInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2293,7 +2365,7 @@ void remapNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2333,7 +2405,7 @@ void remapNearestInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2409,7 +2481,7 @@ void remapNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int sr
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2444,7 +2516,7 @@ void remapNearestInvoker_16UC1(const uint16_t *src_data, size_t src_step, int sr
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2513,7 +2585,7 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2552,7 +2624,7 @@ void remapNearestInvoker_16UC3(const uint16_t *src_data, size_t src_step, int sr
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2621,7 +2693,7 @@ void remapNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int sr
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2661,7 +2733,7 @@ void remapNearestInvoker_16UC4(const uint16_t *src_data, size_t src_step, int sr
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2737,7 +2809,7 @@ void remapNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2773,7 +2845,7 @@ void remapNearestInvoker_32FC1(const float *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2842,7 +2914,7 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2884,7 +2956,7 @@ void remapNearestInvoker_32FC3(const float *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -2953,7 +3025,7 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -2997,7 +3069,7 @@ void remapNearestInvoker_32FC4(const float *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4302,10 +4374,12 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -4319,7 +4393,8 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4355,7 +4430,8 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4387,13 +4463,17 @@ void warpPerspectiveLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step,
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 8U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
                 CV_WARP_SCALAR_STORE(LINEAR, C1, 8U);
+                }
             }
         }
     };
@@ -4411,10 +4491,12 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -4428,7 +4510,8 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -4472,7 +4555,8 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4506,13 +4590,17 @@ void warpPerspectiveLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step,
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C3, 8U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C3);
                 CV_WARP_SCALAR_STORE(LINEAR, C3, 8U);
+                }
             }
         }
     };
@@ -4530,10 +4618,12 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -4547,7 +4637,8 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -4587,7 +4678,8 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
             uint8_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4617,13 +4709,17 @@ void warpPerspectiveLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step,
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 8U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
                 CV_WARP_SCALAR_STORE(LINEAR, C4, 8U);
+                }
             }
         }
     };
@@ -4641,10 +4737,12 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
             saturate_cast<uint16_t>(border_value[1]),
@@ -4658,7 +4756,8 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4691,7 +4790,8 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4709,13 +4809,17 @@ void warpPerspectiveLinearInvoker_16UC1(const uint16_t *src_data, size_t src_ste
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 16U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
                 CV_WARP_SCALAR_STORE(LINEAR, C1, 16U);
+                }
             }
         }
     };
@@ -4733,10 +4837,12 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
             saturate_cast<uint16_t>(border_value[1]),
@@ -4750,7 +4856,8 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4787,7 +4894,8 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4805,15 +4913,19 @@ void warpPerspectiveLinearInvoker_16UC3(const uint16_t *src_data, size_t src_ste
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C3, 16U);
 
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C3);
 
                 CV_WARP_SCALAR_STORE(LINEAR, C3, 16U);
+                }
             }
         }
     };
@@ -4831,10 +4943,12 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
         size_t srcstep = src_step/sizeof(uint16_t), dststep = dst_step/sizeof(uint16_t);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint16_t bval[] = {
             saturate_cast<uint16_t>(border_value[0]),
             saturate_cast<uint16_t>(border_value[1]),
@@ -4848,7 +4962,8 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4886,7 +5001,8 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
             uint16_t* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -4916,13 +5032,17 @@ void warpPerspectiveLinearInvoker_16UC4(const uint16_t *src_data, size_t src_ste
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 16U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
                 CV_WARP_SCALAR_STORE(LINEAR, C4, 16U);
+                }
             }
         }
     };
@@ -4940,10 +5060,12 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         float bval[] = {
             saturate_cast<float>(border_value[0]),
             saturate_cast<float>(border_value[1]),
@@ -4957,7 +5079,8 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -4991,7 +5114,8 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5008,13 +5132,17 @@ void warpPerspectiveLinearInvoker_32FC1(const float *src_data, size_t src_step, 
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 32F);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
                 CV_WARP_SCALAR_STORE(LINEAR, C1, 32F);
+                }
             }
         }
     };
@@ -5032,10 +5160,12 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         float bval[] = {
             saturate_cast<float>(border_value[0]),
             saturate_cast<float>(border_value[1]),
@@ -5049,7 +5179,8 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -5089,7 +5220,8 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5106,15 +5238,19 @@ void warpPerspectiveLinearInvoker_32FC3(const float *src_data, size_t src_step, 
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C3, 32F);
 
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C3);
 
                 CV_WARP_SCALAR_STORE(LINEAR, C3, 32F);
+                }
             }
         }
     };
@@ -5132,10 +5268,12 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
         size_t srcstep = src_step/sizeof(float), dststep = dst_step/sizeof(float);
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         float bval[] = {
             saturate_cast<float>(border_value[0]),
             saturate_cast<float>(border_value[1]),
@@ -5149,7 +5287,8 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -5191,7 +5330,8 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
             float* dstptr = dst + y*dststep;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
+        const float* M = M_f;
             CV_WARPPERSPECTIVE_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5220,13 +5360,17 @@ void warpPerspectiveLinearInvoker_32FC4(const float *src_data, size_t src_step, 
 #endif // (CV_SIMD || CV_SIMD_SCALABLE)
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 32F);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
                 CV_WARP_SCALAR_STORE(LINEAR, C4, 32F);
+                }
             }
         }
     };
@@ -5245,10 +5389,12 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -5311,13 +5457,17 @@ void warpPerspectiveLinearApproxInvoker_8UC1(const uint8_t *src_data, size_t src
             }
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C1, 8U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C1);
                 CV_WARP_SCALAR_STORE(LINEAR, C1, 8U);
+                }
             }
         }
     };
@@ -5341,10 +5491,12 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -5417,13 +5569,17 @@ void warpPerspectiveLinearApproxInvoker_8UC3(const uint8_t *src_data, size_t src
             }
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C3, 8U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C3);
                 CV_WARP_SCALAR_STORE(LINEAR, C3, 8U);
+                }
             }
         }
     };
@@ -5447,10 +5603,12 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
         size_t srcstep = src_step, dststep = dst_step;
         int srccols = src_cols, srcrows = src_rows;
         int dstcols = dst_cols;
-        float M[9];
+        double M[9];
         for (int i = 0; i < 9; i++) {
-            M[i] = static_cast<float>(dM[i]);
+            M[i] = dM[i];
         }
+        // FIX: Keep float copy for SIMD blocks (non-RISC-V)
+        float M_f[9]; for(int j=0; j<9; j++) M_f[j] = (float)dM[j];
         uint8_t bval[] = {
             saturate_cast<uint8_t>(border_value[0]),
             saturate_cast<uint8_t>(border_value[1]),
@@ -5525,13 +5683,17 @@ void warpPerspectiveLinearApproxInvoker_8UC4(const uint8_t *src_data, size_t src
             }
 
             for (; x < dstcols; x++) {
-                float w = x*M[6] + y*M[7] + M[8];
-                float sx = (x*M[0] + y*M[1] + M[2]) / w;
-                float sy = (x*M[3] + y*M[4] + M[5]) / w;
+                double w = x*M[6] + y*M[7] + M[8];
+                double sx = (x*M[0] + y*M[1] + M[2]) / w;
+                double sy = (x*M[3] + y*M[4] + M[5]) / w;
 
+                {
+                    float sx_f = (float)sx, sy_f = (float)sy;
+                    float sx = sx_f, sy = sy_f;
                 CV_WARP_SCALAR_SHUFFLE(LINEAR, C4, 8U);
                 CV_WARP_SCALAR_LINEAR_INTER_CALC_F32(C4);
                 CV_WARP_SCALAR_STORE(LINEAR, C4, 8U);
+                }
             }
         }
     };
@@ -5576,7 +5738,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -5614,7 +5776,7 @@ void remapLinearInvoker_8UC1(const uint8_t *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5702,7 +5864,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -5748,7 +5910,7 @@ void remapLinearInvoker_8UC3(const uint8_t *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5838,7 +6000,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_16{VTraits<v_uint16>::max_nlanes};
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
@@ -5880,7 +6042,7 @@ void remapLinearInvoker_8UC4(const uint8_t *src_data, size_t src_step, int src_r
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -5966,7 +6128,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6001,7 +6163,7 @@ void remapLinearInvoker_16UC1(const uint16_t *src_data, size_t src_step, int src
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6075,7 +6237,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6114,7 +6276,7 @@ void remapLinearInvoker_16UC3(const uint16_t *src_data, size_t src_step, int src
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6188,7 +6350,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6228,7 +6390,7 @@ void remapLinearInvoker_16UC4(const uint16_t *src_data, size_t src_step, int src
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6314,7 +6476,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6350,7 +6512,7 @@ void remapLinearInvoker_32FC1(const float *src_data, size_t src_step, int src_ro
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6423,7 +6585,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6465,7 +6627,7 @@ void remapLinearInvoker_32FC3(const float *src_data, size_t src_step, int src_ro
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
@@ -6538,7 +6700,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
                             border_type != BORDER_TRANSPARENT &&
                             srcrows <= 1 ? BORDER_REPLICATE : border_type;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
         constexpr int max_vlanes_32{VTraits<v_float32>::max_nlanes};
         constexpr int max_uf{max_vlanes_32*2};
         int vlanes_32 = VTraits<v_float32>::vlanes();
@@ -6582,7 +6744,7 @@ void remapLinearInvoker_32FC4(const float *src_data, size_t src_step, int src_ro
             const float *sy_data = map2 + y*map2step;
             int x = 0;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
+#if (CV_SIMD || CV_SIMD_SCALABLE) && !defined(__riscv) // FIX: Disable SIMD on RISC-V
             CV_REMAP_VECTOR_COMPUTE_MAPPED_COORD1();
             for (; x <= dstcols - uf; x += uf) {
                 // [TODO] apply halide trick
