@@ -69,12 +69,6 @@ static int Sklansky_( Point_<_Tp>** array, int start, int end, int* stack, int n
 
     while( pnext != end )
     {
-        if (*array[pcur] == *array[pnext])
-        {
-            pnext += incr;
-            stack[stacksize - 1] = pnext;
-            continue;
-        }
         // check the angle p1,p2,p3
         _Tp cury = array[pcur]->y;
         _Tp nexty = array[pnext]->y;
@@ -308,7 +302,22 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
 
     if( !returnPoints )
+    {
+        // A naive correction of self-intersections
+        for (int hi = 0; hi < nout; ++hi)
+        {
+            for (int j = hullbuf[hi] + 1; j < total; ++j)
+            {
+                if (data0[j] == data0[hullbuf[hi]] && j < hullbuf[(hi + 1) % nout])
+                {
+                    hullbuf[hi] = j;
+                    break;
+                }
+            }
+        }
+
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
+    }
     else
     {
         _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
