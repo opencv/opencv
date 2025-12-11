@@ -191,6 +191,7 @@ private:
     void parseElementWise          (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseDepthSpaceOps        (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseRange                (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
+    void parseRandomNormalLike     (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseScatter              (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseTile                 (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
     void parseLayerNorm            (LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto);
@@ -2952,6 +2953,35 @@ void ONNXImporter::parseRange(LayerParams& layerParams, const opencv_onnx::NodeP
     constBlobsExtraInfo.insert(std::make_pair(node_proto.output(0), TensorInfo(1)));
 }
 
+void ONNXImporter::parseRandomNormalLike(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
+{
+    CV_CheckEQ(node_proto.input_size(), 1, "RandomNormalLike: one input is required");
+
+    if (layerParams.has("dtype"))
+    {
+        int onnx_dtype = layerParams.get<int>("dtype");
+        int cvDepth = CV_32F;
+        switch (onnx_dtype)
+        {
+        case opencv_onnx::TensorProto_DataType_FLOAT16: cvDepth = CV_16F; break;
+        case opencv_onnx::TensorProto_DataType_FLOAT:   cvDepth = CV_32F; break;
+        case opencv_onnx::TensorProto_DataType_DOUBLE:  cvDepth = CV_64F; break;
+        case opencv_onnx::TensorProto_DataType_UINT8:   cvDepth = CV_8U;  break;
+        case opencv_onnx::TensorProto_DataType_INT8:    cvDepth = CV_8S;  break;
+        case opencv_onnx::TensorProto_DataType_UINT16:  cvDepth = CV_16U; break;
+        case opencv_onnx::TensorProto_DataType_INT16:   cvDepth = CV_16S; break;
+        case opencv_onnx::TensorProto_DataType_INT32:   cvDepth = CV_32S; break;
+        case opencv_onnx::TensorProto_DataType_INT64:   cvDepth = CV_32S; break;
+        default:
+            cvDepth = CV_32F;
+        }
+        layerParams.set("depth", cvDepth);
+    }
+
+    layerParams.type = "RandomNormalLike";
+    addLayer(layerParams, node_proto);
+}
+
 void ONNXImporter::parseScatter(LayerParams& layerParams, const opencv_onnx::NodeProto& node_proto)
 {
     CV_CheckEQ(node_proto.input_size(), 3, "Scatter: three inputs are required.");
@@ -3958,6 +3988,7 @@ void ONNXImporter::buildDispatchMap_ONNX_AI(int opset_version)
     dispatch["Sum"] = dispatch["Min"] = dispatch["Max"] = dispatch["Mean"] = &ONNXImporter::parseElementWise;
     dispatch["Where"] = &ONNXImporter::parseElementWise;
     dispatch["Range"] = &ONNXImporter::parseRange;
+    dispatch["RandomNormalLike"] = &ONNXImporter::parseRandomNormalLike;
     dispatch["Einsum"] = &ONNXImporter::parseEinsum;
 
     std::vector<std::string> simpleLayers{"Acos", "Acosh", "Asin", "Asinh", "Atan", "Atanh", "Ceil", "Celu", "Cos",
