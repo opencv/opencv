@@ -3235,7 +3235,7 @@ TEST_P(Test_ONNX_layers, TopK) {
 
 TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
 {
-    Net net = readNetFromONNX(_tf("models/random_normal_like.onnx", false));
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
 
     Mat input(2, 3, CV_32F, Scalar(0));
     net.setInput(input);
@@ -3257,7 +3257,7 @@ TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
 
 TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
 {
-    Net net = readNetFromONNX(_tf("models/random_normal_like_complex.onnx", false));
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like_complex.onnx", true));
 
     Mat input(2, 3, CV_32F, Scalar(0));
     net.setInput(input);
