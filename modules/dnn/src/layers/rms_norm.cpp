@@ -45,11 +45,14 @@ public:
         const int normalized_axis = normalize_axis(axis, static_cast<int>(x_shape.size()));
         const int x_ndims = static_cast<int>(x_shape.size());
 
+        CV_CheckTrue(scale_shape.size() == x_ndims - normalized_axis,
+            "RMSNorm: scale shape should match normalized shape");
+
         for (int i = 0; i + normalized_axis < x_ndims; ++i)
         {
             CV_CheckTrue(
-                x_shape[i + normalized_axis] == scale_shape[i] || scale_shape[i] == 1,
-                "RMSNorm: scale should be broadcastable to input shape");
+                x_shape[i + normalized_axis] == scale_shape[i],
+                "RMSNorm: scale shape should match normalized shape");
         }
 
         outputs.assign(1, inputs[0]);
