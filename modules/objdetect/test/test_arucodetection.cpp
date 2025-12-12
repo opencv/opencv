@@ -551,19 +551,7 @@ void placeMarker(Mat &img, const Mat &marker, const Point2f &topLeft)
  * that its computed confidence is close to the ground truth value.
  *
  */
-class CV_ArucoDetectionConfidence : public cvtest::BaseTest {
-    public:
-    // The parameter arucoAlgParam allows switching between detecting normal and inverted markers.
-    CV_ArucoDetectionConfidence(ArucoAlgParams algParam) : arucoAlgParam(algParam) {}
-
-    protected:
-    void run(int);
-    ArucoAlgParams arucoAlgParam;
-};
-
-
-void CV_ArucoDetectionConfidence::run(int) {
-
+static void runArucoDetectionConfidence(ArucoAlgParams arucoAlgParam) {
     aruco::DetectorParameters params;
     // make sure there are no bits have any detection errors
     params.maxErroneousBitsInBorderRate = 0.0;
@@ -618,6 +606,7 @@ void CV_ArucoDetectionConfidence::run(int) {
     // loop over each detector configuration
     for (size_t cfgIdx = 0; cfgIdx < detectorConfigs.size(); cfgIdx++) {
         ArucoConfidenceTestConfig detCfg = detectorConfigs[cfgIdx];
+        SCOPED_TRACE(cv::format("detectorConfig=%zu", cfgIdx));
 
         // update detector parameters
         params.perspectiveRemoveIgnoredMarginPerCell = detCfg.perspectiveRemoveIgnoredMarginPerCell;
@@ -664,38 +653,22 @@ void CV_ArucoDetectionConfidence::run(int) {
         vector<float> markerConfidence;
         detector.detectMarkersWithConfidence(img, corners, ids, markerConfidence, rejected);
 
+        ASSERT_EQ(ids.size(), corners.size());
+        ASSERT_EQ(ids.size(), markerConfidence.size());
+
+        std::map<int, float> confidenceById;
+        for (size_t i = 0; i < ids.size(); i++) {
+            confidenceById[ids[i]] = markerConfidence[i];
+        }
+
         // verify that every marker is detected and its confidence is within tolerance
-        for (size_t m = 0; m < groundTruths.size(); m++) {
-            markerDetectionGT currentGT = groundTruths[m];
+        for (const auto& currentGT : groundTruths) {
+            const bool detected = confidenceById.find(currentGT.id) != confidenceById.end();
+            EXPECT_EQ(currentGT.expectDetection, detected) << "Marker id: " << currentGT.id;
 
-            // check if current marker id is present in detected markers
-            int detectedIdx = -1;
-            for (size_t k = 0; k < ids.size(); k++) {
-                if (currentGT.id == ids[k]) {
-                    detectedIdx = static_cast<int>(ids[k]);
-                    break;
-                }
-            }
-
-            // check if marker was detected or not based on GT
-            const int expectedIdx = currentGT.expectDetection ? currentGT.id : -1;
-            if (detectedIdx != expectedIdx) {
-                ts->printf(cvtest::TS::LOG, "Detected marker id: %d | expected idx: %d (detector config %zu)\n",
-                           detectedIdx, expectedIdx, cfgIdx);
-                ts->set_failed_test_info(cvtest::TS::FAIL_MISMATCH);
-                return;
-            }
-
-            // check confidence if marker detected
-            if(detectedIdx != -1){
-                double gtComputationDiff = fabs(currentGT.confidence - markerConfidence[m]);
-                if (gtComputationDiff > 0.05) {
-                    ts->printf(cvtest::TS::LOG,
-                            "Computed confidence: %.2f | expected confidence: %.2f (diff=%.2f) (Marker id: %d, detector config %zu)\n",
-                            markerConfidence[m], currentGT.confidence, gtComputationDiff, currentGT.id, cfgIdx);
-                    ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
-                    return;
-                }
+            if (currentGT.expectDetection && detected) {
+                EXPECT_NEAR(currentGT.confidence, confidenceById[currentGT.id], 0.05)
+                    << "Marker id: " << currentGT.id;
             }
         }
     }
@@ -931,16 +904,12 @@ TEST(CV_ArucoBitCorrection, algorithmic) {
     test.safe_run();
 }
 
-typedef CV_ArucoDetectionConfidence CV_InvertedArucoDetectionConfidence;
-
 TEST(CV_ArucoDetectionConfidence, algorithmic) {
-    CV_ArucoDetectionConfidence test(ArucoAlgParams::USE_DEFAULT);
-    test.safe_run();
+    runArucoDetectionConfidence(ArucoAlgParams::USE_DEFAULT);
 }
 
 TEST(CV_InvertedArucoDetectionConfidence, algorithmic) {
-    CV_InvertedArucoDetectionConfidence test(ArucoAlgParams::DETECT_INVERTED_MARKER);
-    test.safe_run();
+    runArucoDetectionConfidence(ArucoAlgParams::DETECT_INVERTED_MARKER);
 }
 
 TEST(CV_ArucoDetectMarkers, regression_3192)
