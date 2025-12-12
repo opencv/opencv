@@ -217,7 +217,6 @@ public class OpenCVTestCase extends TestCase {
         gray255_32f_3d.release();
         v1.release();
         v2.release();
-        System.gc();
 
         super.tearDown();
     }
