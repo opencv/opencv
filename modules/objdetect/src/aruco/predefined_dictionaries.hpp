@@ -4,8 +4,6 @@
 
 namespace {
 
-
-
 /**
   * Dictionaries are stored as a list of bytes in its four rotations
   * On each rotation, the marker is divided in bytes assuming a row-major order
