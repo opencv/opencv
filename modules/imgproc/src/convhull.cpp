@@ -308,7 +308,7 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         {
             for (int j = hullbuf[hi] + 1; j < total; ++j)
             {
-                if (data0[j] == data0[hullbuf[hi]] && j < hullbuf[(hi + 1) % nout])
+                if (data0[j] == data0[hullbuf[hi]] && (clockwise && j < hullbuf[(hi + 1) % nout] || !clockwise && j < hullbuf[(hi - 1) % nout]))
                 {
                     hullbuf[hi] = j;
                     break;

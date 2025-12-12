@@ -1283,35 +1283,47 @@ INSTANTIATE_TEST_CASE_P(Imgproc, minAreaRect_of_line,
             std::make_tuple(Point2f(9, 19), Point2f(4, 7), Point2f(6.5, 13), Size2f(0, 13), -22.6198654f)
         ));
 
-typedef testing::TestWithParam<tuple<std::vector<Point>, Mat> > convexHull_monotonous;
+typedef testing::TestWithParam<tuple<tuple<std::vector<Point>, Mat>, bool> > convexHull_monotonous;
 TEST_P(convexHull_monotonous, self_intersecting_contour)
 {
-    std::vector<Point> contour = get<0>(GetParam());
-    const Mat ref = get<1>(GetParam());
+    std::vector<Point> contour = get<0>(get<0>(GetParam()));
+    Mat ref = get<1>(get<0>(GetParam())).clone();
+    bool clockwise = get<1>(GetParam());
+    if (!clockwise)
+    {
+        std::reverse(ref.begin<int>(), ref.end<int>());
+    }
 
     Mat indices;
-    convexHull(contour, indices, true, false);
+    convexHull(contour, indices, clockwise, false);
 
     Point minLoc;
     minMaxLoc(indices, nullptr, nullptr, &minLoc);
     std::rotate(indices.begin<int>(), indices.begin<int>() + minLoc.y, indices.end<int>());
+
+    minMaxLoc(ref, nullptr, nullptr, &minLoc);
+    std::rotate(ref.begin<int>(), ref.begin<int>() + minLoc.y, ref.end<int>());
+
     ASSERT_EQ( cvtest::norm(indices, ref, NORM_INF), 0) << indices;
 }
 INSTANTIATE_TEST_CASE_P(Imgproc, convexHull_monotonous,
-    testing::Values(
-        std::make_tuple(
-            std::vector<Point>{
-                Point(3, 2), Point(3, 4), Point(2, 5), Point(1, 5),
-                Point(2, 5), Point(3, 4), Point(6, 4), Point(6, 2)
-            },
-            (Mat_<int>(5, 1) << 0, 3, 4, 6, 7)
+    testing::Combine(
+        testing::Values(
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(3, 2), Point(3, 4), Point(2, 5), Point(1, 5),
+                    Point(2, 5), Point(3, 4), Point(6, 4), Point(6, 2)
+                },
+                (Mat_<int>(5, 1) << 0, 3, 4, 6, 7)
+            ),
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(1, 1), Point(1, 0), Point(0, 0), Point(1, 0), Point(0, 1)
+                },
+                (Mat_<int>(4, 1) << 0, 1, 2, 4)
+            )
         ),
-        std::make_tuple(
-            std::vector<Point>{
-                Point(1, 1), Point(1, 0), Point(0, 0), Point(1, 0), Point(0, 1)
-            },
-            (Mat_<int>(4, 1) << 0, 1, 2, 4)
-        )
+        testing::Bool()
 ));
 
 }} // namespace
