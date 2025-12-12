@@ -365,7 +365,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
     Mat hull;
     Point2f out[3];
     RotatedRect box;
-    box.angle = -(float)CV_PI / 2;  // default angle for box without rotation and single point
+    double angle = -CV_PI / 2;  // default angle for box without rotation and single point
 
     static const bool clockwise = false;
     convexHull(_points, hull, clockwise, true);
@@ -390,7 +390,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
         if (out[1].x == 0.f && out[1].y > 0.f)
             std::swap(box.size.width, box.size.height);
         else
-            box.angle += (float)atan2( (double)out[1].y, (double)out[1].x );
+            angle = -atan2( (double)out[1].x, (double)out[1].y );
     }
     else if( n == 2 )
     {
@@ -406,12 +406,12 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
         }
         else if (dy < 0)
         {
-            box.angle = (float)atan2( dy, dx );
+            angle = atan2( dy, dx );
             std::swap(box.size.width, box.size.height);
         }
         else if (dy > 0)
         {
-            box.angle += (float)atan2( dy, dx );
+            angle = -atan2( dx, dy );
         }
     }
     else
@@ -420,7 +420,7 @@ cv::RotatedRect cv::minAreaRect( InputArray _points )
             box.center = hpoints[0];
     }
 
-    box.angle = (float)(box.angle*180/CV_PI);
+    box.angle = (float)(angle*180/CV_PI);
     CV_DbgCheckGE(box.angle, -90.0f, "");
     CV_DbgCheckLT(box.angle, 0.0f, "");
     return box;

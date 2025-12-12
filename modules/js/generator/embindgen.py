@@ -534,9 +534,9 @@ class JSWrapperGenerator(object):
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
-            for key in type_dict:
-                if key in ret_type:
-                    ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type) 
+                for key in type_dict:
+                    if key in ret_type:
+                        ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:

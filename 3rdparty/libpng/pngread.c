@@ -3278,7 +3278,7 @@ png_image_read_composite(png_voidp argument)
                            /* Clamp to the valid range to defend against
                             * unforeseen cases where the data might be sRGB
                             * instead of linear premultiplied.
-                            * (Belt-and-suspenders for GitHub Issue #764.)
+                            * (Belt-and-suspenders for CVE-2025-66293.)
                             */
                            if (component > 255*65535)
                               component = 255*65535;
