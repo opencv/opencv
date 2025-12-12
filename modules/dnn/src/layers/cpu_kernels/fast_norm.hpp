@@ -13,7 +13,7 @@ namespace cv { namespace dnn {
 void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_axis = 0, bool normalize_variance = true);
 
 // Normalization speedup by multi-threading with absent bias. Mainly for LayerNormalization.
-void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis = 0);
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis = 0, bool recenter=true);
 
 // Normalization speedup by multi-threading with scale and bias. Mainly for LayerNormalization.
 void fastNorm(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t normalized_axis = 0);
@@ -23,9 +23,6 @@ void fastNormChannel(const Mat &input, const Mat &scale, const Mat &bias, Mat &o
 
 // Group-wise Normalization speedup by multi-threading. Scale and bias should have the same shape (C). Input should have dimension >= 3.
 void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &output, float epsilon, size_t num_groups);
-
-// RMS Normalization speedup by multi-threading
-void fastNormBroadcast(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis = 0);
 
 }} // cv::dnn
 

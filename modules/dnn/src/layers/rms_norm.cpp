@@ -75,7 +75,7 @@ public:
         auto &output = outputs[0];
 
         axis = normalize_axis(axis, input.dims);
-        fastNormBroadcast(input, scale, output, epsilon, static_cast<size_t>(axis));
+        fastNorm(input, scale, output, epsilon, static_cast<size_t>(axis), false);
     }
 private:
     int axis;
