@@ -42,7 +42,7 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
     parallel_for_(Range(0, loops), fn, nstripes);
 }
 
-void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis) {
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis, bool recenter) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
 
@@ -61,7 +61,8 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
-                mean += v;
+                if (recenter)
+                    mean += v;
                 mean_square += v * v;
             }
 
@@ -201,74 +202,6 @@ void fastNormGroup(const Mat &input, const Mat &scale, const Mat &bias, Mat &out
         }
     };
 
-    double nstripes = loops * norm_size * (1 / 1024.0);
-    parallel_for_(Range(0, loops), fn, nstripes);
-}
-
-
-void fastNormBroadcast(
-    const Mat &input,
-    const Mat &scale,
-    Mat &output,
-    float epsilon,
-    size_t normalized_axis
-) {
-    const MatShape& shape_x = shape(input);
-    const MatShape& shape_scale = shape(scale);
-    CV_CheckLT(normalized_axis, shape_x.size(), "fastNorm: axis out of range");
-
-    size_t loops = static_cast<size_t>(total(shape_x, 0, static_cast<int>(normalized_axis))),
-           norm_size = static_cast<size_t>(total(shape_x, static_cast<int>(normalized_axis)));
-    float inv_norm_size = 1.0 / norm_size;
-
-    const int dim_scale = shape_scale.dims;
-    const int dim_x = shape_x.dims;
-    const int l = dim_x - dim_scale;
-
-    std::vector<int> steps_x;
-    for (int i=0; i < dim_x; ++i)
-        steps_x.push_back(static_cast<int>(total(shape_x, i+1)));
-
-    std::vector<int> steps_scale;
-    for (int i=0; i < dim_scale; ++i)
-        steps_scale.push_back(static_cast<int>(total(shape_scale, i+1)));
-
-    auto fn = [&](const Range &r) {
-        const auto *input_data = input.ptr<const float>();
-        const auto *scale_data = scale.ptr<const float>();
-
-        auto *output_data = output.ptr<float>();
-
-        for (int i = r.start; i < r.end; i++) {
-            const auto *x = input_data + norm_size * i;
-            auto *y = output_data + norm_size * i;
-
-            float mean_square = 0.f;
-            for (int j = 0; j < norm_size; j++) {
-                float v = x[j];
-                mean_square += v * v;
-            }
-
-            mean_square = std::sqrt(std::max(0.f, mean_square * inv_norm_size) + epsilon);
-            float inv_stdev = 1.f / mean_square;
-            int rem_i = i* norm_size;
-
-            for (size_t j = 0; j < norm_size; j++) {
-
-                int rem = rem_i + j, cur_offset=0;
-
-                for (int k = 0; k < dim_x; ++k)
-                {
-                    int idx_k = int( rem / steps_x[k] );
-                    rem = rem % steps_x[k];
-                    cur_offset += (k >= l && shape_scale[k -l] != 1) ?
-                            idx_k * steps_scale[k - l] : 0;
-                }
-
-                y[j] = scale_data[cur_offset] * x[j]  * inv_stdev;
-            }
-        }
-    };
     double nstripes = loops * norm_size * (1 / 1024.0);
     parallel_for_(Range(0, loops), fn, nstripes);
 }
