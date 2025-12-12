@@ -4,8 +4,11 @@ import java.lang.ref.Cleaner;
 
 public abstract class CleanableMat {
 
-    protected void registerCleaner() {
-        // Does nothing, finalize() should be called by JVM
+    protected CleanableMat(long obj) {
+        if (obj == 0)
+            throw new UnsupportedOperationException("Native object address is NULL");
+
+        nativeObj = obj;
     }
 
     @Override
@@ -16,5 +19,5 @@ public abstract class CleanableMat {
 
     private static native void n_delete(long nativeObj);
 
-    public long nativeObj;
+    public final long nativeObj;
 }
