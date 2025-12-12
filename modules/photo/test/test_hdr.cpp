@@ -209,6 +209,78 @@ TEST(Photo_MergeRobertson, regression)
     checkEqual(expected, result, eps, "MergeRobertson");
 }
 
+TEST(Photo_MergeDebevec, supports_16u_and_32f)
+{
+    // Synthetic constant images with simple exposure times
+    Size sz(32, 32);
+    vector<Mat> images8(3), images16(3), images32(3);
+    vector<float> times{1.0f / 30.0f, 1.0f / 60.0f, 1.0f / 125.0f};
+
+    for (int i = 0; i < 3; ++i)
+    {
+        Scalar v8(50 * (i + 1), 60 * (i + 1), 70 * (i + 1));
+        images8[i] = Mat(sz, CV_8UC3, v8);
+        images8[i].convertTo(images16[i], CV_16UC3, 257.0);         // map 0..255 -> 0..65535
+        images8[i].convertTo(images32[i], CV_32FC3, 1.0 / 255.0);   // map 0..255 -> 0..1
+    }
+
+    Ptr<MergeDebevec> merge = createMergeDebevec();
+
+    Mat hdr8, hdr16, hdr32;
+    merge->process(images8,  hdr8,  times);
+    merge->process(images16, hdr16, times);
+    merge->process(images32, hdr32, times);
+
+    ASSERT_EQ(hdr16.type(), CV_32FC3);
+    ASSERT_EQ(hdr32.type(), CV_32FC3);
+    ASSERT_EQ(hdr16.size(), sz);
+    ASSERT_EQ(hdr32.size(), sz);
+
+    // Ensure outputs are finite and non-trivial
+    ASSERT_TRUE(checkRange(hdr16));
+    ASSERT_TRUE(checkRange(hdr32));
+
+    Scalar mean16 = mean(hdr16);
+    Scalar mean32 = mean(hdr32);
+    EXPECT_GT(mean16[0] + mean16[1] + mean16[2], 0.0);
+    EXPECT_GT(mean32[0] + mean32[1] + mean32[2], 0.0);
+}
+
+TEST(Photo_MergeRobertson, supports_16u_and_32f)
+{
+    Size sz(32, 32);
+    vector<Mat> images8(3), images16(3), images32(3);
+    vector<float> times{1.0f / 15.0f, 1.0f / 60.0f, 1.0f / 250.0f};
+
+    for (int i = 0; i < 3; ++i)
+    {
+        Scalar v8(40 * (i + 1), 80 * (i + 1), 120 * (i + 1));
+        images8[i] = Mat(sz, CV_8UC3, v8);
+        images8[i].convertTo(images16[i], CV_16UC3, 257.0);         // 0..255 -> 0..65535
+        images8[i].convertTo(images32[i], CV_32FC3, 1.0 / 255.0);   // 0..255 -> 0..1
+    }
+
+    Ptr<MergeRobertson> merge = createMergeRobertson();
+
+    Mat hdr8, hdr16, hdr32;
+    merge->process(images8,  hdr8,  times);
+    merge->process(images16, hdr16, times);
+    merge->process(images32, hdr32, times);
+
+    ASSERT_EQ(hdr16.type(), CV_32FC3);
+    ASSERT_EQ(hdr32.type(), CV_32FC3);
+    ASSERT_EQ(hdr16.size(), sz);
+    ASSERT_EQ(hdr32.size(), sz);
+
+    ASSERT_TRUE(checkRange(hdr16));
+    ASSERT_TRUE(checkRange(hdr32));
+
+    Scalar mean16 = mean(hdr16);
+    Scalar mean32 = mean(hdr32);
+    EXPECT_GT(mean16[0] + mean16[1] + mean16[2], 0.0);
+    EXPECT_GT(mean32[0] + mean32[1] + mean32[2], 0.0);
+}
+
 TEST(Photo_CalibrateDebevec, regression)
 {
     string test_path = string(cvtest::TS::ptr()->get_data_path()) + "hdr/";
