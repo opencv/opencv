@@ -9,6 +9,7 @@
 #include "opencv2/objdetect/aruco_board.hpp"
 #include "apriltag/apriltag_quad_thresh.hpp"
 #include "aruco_utils.hpp"
+#include <algorithm>
 #include <cmath>
 #include <map>
 
@@ -414,12 +415,12 @@ static int _getBorderErrors(const Mat &bits, int markerSize, int borderSize) {
 }
 
 
-/** @brief Given a matrix containing the percentage of white pixels in each marker cell, returns the normalized marker uncertainty [0;1] for the specific id.
- * The uncertainty is defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
+/** @brief Given a matrix containing the percentage of white pixels in each marker cell, returns the normalized marker confidence [0;1].
+ * The confidence is defined as 1 - normalized uncertainty, where 1 describes a pixel perfect detection.
  * The rotation is set to 0,1,2,3 for [0, 90, 180, 270] deg CCW rotations.
  */
 
-static float _getMarkerUnc(const Mat& groundTruthbits, const Mat &cellPixelRatio, const int markerSize, const int borderSize) {
+static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPixelRatio, const int markerSize, const int borderSize) {
 
     CV_Assert(markerSize == groundTruthbits.cols && markerSize == groundTruthbits.rows);
 
@@ -451,10 +452,12 @@ static float _getMarkerUnc(const Mat& groundTruthbits, const Mat &cellPixelRatio
         }
     }
 
-    // Compute the overall normalized marker uncertainty
-    float normalizedMarkerUnc = (tempInnerUnc + tempBorderUnc) / (sizeWithBorders * sizeWithBorders);
+    // Compute the overall normalized marker uncertainty and convert it to confidence
+    const float area = static_cast<float>(sizeWithBorders) * sizeWithBorders;
+    const float normalizedMarkerUnc = (tempInnerUnc + tempBorderUnc) / area;
+    const float normalizedMarkerConfidence = 1.f - normalizedMarkerUnc;
 
-    return normalizedMarkerUnc;
+    return std::max(0.f, std::min(1.f, normalizedMarkerConfidence));
 }
 
 
@@ -467,7 +470,7 @@ static float _getMarkerUnc(const Mat& groundTruthbits, const Mat &cellPixelRatio
 static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _image,
                                      const vector<Point2f>& _corners, int& idx,
                                      const DetectorParameters& params, int& rotation,
-                                     float &markerUnc,
+                                     float &markerConfidence,
                                      const float scale = 1.f) {
     CV_DbgAssert(params.markerBorderBits > 0);
     uint8_t typ=1;
@@ -517,11 +520,11 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
     if(!dictionary.identify(onlyBits, idx, rotation, params.errorCorrectionRate))
         return 0;
 
-    // compute the candidate's uncertainty
+    // compute the candidate's confidence
     Mat groundTruthbits;
     Mat bitsUints = dictionary.getBitsFromByteList(dictionary.bytesList.rowRange(idx, idx + 1), dictionary.markerSize, rotation);
     bitsUints.convertTo(groundTruthbits, CV_32F);
-    markerUnc = _getMarkerUnc(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
+    markerConfidence = _getMarkerConfidence(groundTruthbits, cellPixelRatio, dictionary.markerSize, params.markerBorderBits);
 
     return typ;
 }
@@ -722,7 +725,7 @@ struct ArucoDetector::ArucoDetectorImpl {
      * @brief Detect markers either using multiple or just first dictionary
      */
     void detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,
-            OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices, OutputArray _markersUnc, DictionaryMode dictMode) {
+            OutputArrayOfArrays _rejectedImgPoints, OutputArray _dictIndices, OutputArray _markersConfidence, DictionaryMode dictMode) {
         CV_Assert(!_image.empty());
 
         CV_Assert(detectorParams.markerBorderBits > 0);
@@ -782,7 +785,7 @@ struct ArucoDetector::ArucoDetectorImpl {
         vector<vector<Point2f> > candidates;
         vector<vector<Point> > contours;
         vector<int> ids;
-        vector<float> markersUnc;
+        vector<float> markersConfidence;
 
         /// STEP 2.a Detect marker candidates :: using AprilTag
         if(detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_APRILTAG){
@@ -804,7 +807,7 @@ struct ArucoDetector::ArucoDetectorImpl {
 
             /// STEP 2: Check candidate codification (identify markers)
             identifyCandidates(grey, grey_pyramid, selectedCandidates, candidates, contours,
-                    ids, dictionary, rejectedImgPoints, markersUnc);
+                    ids, dictionary, rejectedImgPoints, markersConfidence);
 
             /// STEP 3: Corner refinement :: use corner subpix
             if (detectorParams.cornerRefinementMethod == (int)CORNER_REFINE_SUBPIX) {
@@ -832,7 +835,7 @@ struct ArucoDetector::ArucoDetectorImpl {
                 // temporary variable to store the current candidates
                 vector<vector<Point2f>> currentCandidates;
                 identifyCandidates(grey, grey_pyramid, candidatesPerDictionarySize.at(currentDictionary.markerSize), currentCandidates, contours,
-                        ids, currentDictionary, rejectedImgPoints, markersUnc);
+                        ids, currentDictionary, rejectedImgPoints, markersConfidence);
                 if (_dictIndices.needed()) {
                     dictIndices.insert(dictIndices.end(), currentCandidates.size(), dictIndex);
                 }
@@ -915,8 +918,8 @@ struct ArucoDetector::ArucoDetectorImpl {
         if (_dictIndices.needed()) {
             Mat(dictIndices).copyTo(_dictIndices);
         }
-        if (_markersUnc.needed()) {
-            Mat(markersUnc).copyTo(_markersUnc);
+        if (_markersConfidence.needed()) {
+            Mat(markersConfidence).copyTo(_markersConfidence);
         }
     }
 
@@ -1051,10 +1054,10 @@ struct ArucoDetector::ArucoDetectorImpl {
      */
     void identifyCandidates(const Mat& grey, const vector<Mat>& image_pyr, vector<MarkerCandidateTree>& selectedContours,
                             vector<vector<Point2f> >& accepted, vector<vector<Point> >& contours,
-                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected, vector<float>& markersUnc) const {
+                            vector<int>& ids, const Dictionary& currentDictionary, vector<vector<Point2f>>& rejected, vector<float>& markersConfidence) const {
         size_t ncandidates = selectedContours.size();
 
-        vector<float> markersUncTmp(ncandidates, 1.f);
+        vector<float> markersConfidenceTmp(ncandidates, 0.f);
         vector<int> idsTmp(ncandidates, -1);
         vector<int> rotated(ncandidates, 0);
         vector<uint8_t> validCandidates(ncandidates, 0);
@@ -1088,11 +1091,11 @@ struct ArucoDetector::ArucoDetectorImpl {
                     }
                     const float scale = detectorParams.useAruco3Detection ? img.cols / static_cast<float>(grey.cols) : 1.f;
 
-                    validCandidates[v] = _identifyOneCandidate(currentDictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], markersUncTmp[v], scale);
+                    validCandidates[v] = _identifyOneCandidate(currentDictionary, img, selectedContours[v].corners, idsTmp[v], detectorParams, rotated[v], markersConfidenceTmp[v], scale);
 
                     if (validCandidates[v] == 0 && checkCloseContours) {
                         for (const MarkerCandidate& closeMarkerCandidate: selectedContours[v].closeContours) {
-                            validCandidates[v] = _identifyOneCandidate(currentDictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], markersUncTmp[v], scale);
+                            validCandidates[v] = _identifyOneCandidate(currentDictionary, img, closeMarkerCandidate.corners, idsTmp[v], detectorParams, rotated[v], markersConfidenceTmp[v], scale);
                             if (validCandidates[v] > 0) {
                                 selectedContours[v].corners = closeMarkerCandidate.corners;
                                 selectedContours[v].contour = closeMarkerCandidate.contour;
@@ -1122,15 +1125,14 @@ struct ArucoDetector::ArucoDetectorImpl {
 
         for (size_t i = 0ull; i < selectedContours.size(); i++) {
             if (validCandidates[i] > 0) {
-                    // shift corner positions to the correct rotation
-                    correctCornerPosition(selectedContours[i].corners, rotated[i]);
+                // shift corner positions to the correct rotation
+                correctCornerPosition(selectedContours[i].corners, rotated[i]);
 
-                    accepted.push_back(selectedContours[i].corners);
-                    contours.push_back(selectedContours[i].contour);
-                    ids.push_back(idsTmp[i]);
-                    markersUnc.push_back(markersUncTmp[i]);
-            }
-            else {
+                accepted.push_back(selectedContours[i].corners);
+                contours.push_back(selectedContours[i].contour);
+                ids.push_back(idsTmp[i]);
+                markersConfidence.push_back(markersConfidenceTmp[i]);
+            } else {
                 rejected.push_back(selectedContours[i].corners);
             }
         }
@@ -1174,9 +1176,9 @@ ArucoDetector::ArucoDetector(const vector<Dictionary> &_dictionaries,
     arucoDetectorImpl = makePtr<ArucoDetectorImpl>(_dictionaries, _detectorParams, _refineParams);
 }
 
-void ArucoDetector::detectMarkersWithUnc(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids, OutputArray _markersUnc,
+void ArucoDetector::detectMarkersWithConfidence(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids, OutputArray _markersConfidence,
                                   OutputArrayOfArrays _rejectedImgPoints) const {
-    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), _markersUnc, DictionaryMode::Single);
+    arucoDetectorImpl->detectMarkers(_image, _corners, _ids, _rejectedImgPoints, noArray(), _markersConfidence, DictionaryMode::Single);
 }
 
 void ArucoDetector::detectMarkers(InputArray _image, OutputArrayOfArrays _corners, OutputArray _ids,

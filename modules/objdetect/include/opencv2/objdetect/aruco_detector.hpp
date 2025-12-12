@@ -318,7 +318,7 @@ public:
     CV_WRAP void detectMarkers(InputArray image, OutputArrayOfArrays corners, OutputArray ids,
                                OutputArrayOfArrays rejectedImgPoints = noArray()) const;
 
-    /** @brief Marker detection with uncertainty computation
+    /** @brief Marker detection with confidence computation
      *
      * @param image input image
      * @param corners vector of detected marker corners. For each marker, its four corners
@@ -327,9 +327,10 @@ public:
      * @param ids vector of identifiers of the detected markers. The identifier is of type int
      * (e.g. std::vector<int>). For N detected markers, the size of ids is also N.
      * The identifiers have the same order than the markers in the imgPoints array.
-     * @param markersUnc contains the normalized uncertainty [0;1] of the markers' detection,
-     * defined as percentage of incorrect pixel detections, with 0 describing a pixel perfect detection.
-     * The uncertainties are of type float (e.g. std::vector<float>)
+     * @param markersConfidence contains the normalized confidence [0;1] of the markers' detection,
+     * defined as 1 minus the normalized uncertainty (percentage of incorrect pixel detections),
+     * with 1 describing a pixel perfect detection. The confidence values are of type float
+     * (e.g. std::vector<float>)
      * @param rejectedImgPoints contains the imgPoints of those squares whose inner code has not a
      * correct codification. Useful for debugging purposes.
      *
@@ -341,7 +342,7 @@ public:
      * input image with corresponding camera model, if camera parameters are known
      * @sa undistort, estimatePoseSingleMarkers,  estimatePoseBoard
      */
-    CV_WRAP void detectMarkersWithUnc(InputArray image, OutputArrayOfArrays corners, OutputArray ids, OutputArray markersUnc,
+    CV_WRAP void detectMarkersWithConfidence(InputArray image, OutputArrayOfArrays corners, OutputArray ids, OutputArray markersConfidence,
                                OutputArrayOfArrays rejectedImgPoints = noArray()) const;
 
     /** @brief Refine not detected markers based on the already detected and the board layout

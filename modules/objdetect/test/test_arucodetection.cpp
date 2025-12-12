@@ -321,9 +321,9 @@ void CV_ArucoDetectionPerspective::run(int) {
     }
 }
 
-// Helper struct and functions for CV_ArucoDetectionUnc
+// Helper struct and functions for CV_ArucoDetectionConfidence
 
-// Inverts a square subregion inside selected cells of a marker to simulate uncertainty
+// Inverts a square subregion inside selected cells of a marker to simulate a confidence drop
 enum class MarkerRegionToTemper {
     BORDER, // Only invert cells within the marker border bits
     INNER,  // Only invert cells in the inner part of the marker (excluding borders)
@@ -337,8 +337,8 @@ struct MarkerTemperingConfig {
     MarkerRegionToTemper markerRegionToTemper; // Which cells to invert (BORDER, INNER, ALL)
 };
 
-// Test configs for CV_ArucoDetectionUnc
-struct ArucoUncTestConfig {
+// Test configs for CV_ArucoDetectionConfidence
+struct ArucoConfidenceTestConfig {
     MarkerTemperingConfig markerTemperingConfig; // Configuration of cells to invert (percentage, number and markerRegionToTemper)
     float perspectiveRemoveIgnoredMarginPerCell; // Width of the margin of pixels on each cell not considered for the marker identification
     int markerBorderBits;                        // Number of bits of the marker border
@@ -355,7 +355,7 @@ enum class markerRot
 
 struct markerDetectionGT {
     int id;               // Marker identification
-    double uncertainty;   // Pixel-based uncertainty defined as inverted area / total area
+    double confidence;    // Pixel-based confidence defined as 1 - (inverted area / total area)
     bool expectDetection; // True if we expect to detect the marker
 };
 
@@ -402,7 +402,7 @@ void distortMarker(Mat &marker, const float distortionRatio)
 }
 
 /**
- * @brief Inverts a square subregion inside selected cells of a marker image to simulate uncertainty.
+ * @brief Inverts a square subregion inside selected cells of a marker image to simulate confidence degradation.
  *
  * The function computes the marker grid parameters and then applies a bitwise inversion
  * on a square markerRegionToTemper inside the chosen cells. The number of cells to be inverted is determined by
@@ -427,7 +427,7 @@ markerDetectionGT applyTemperingToMarkerCells(cv::Mat &marker,
 
     // nothing to invert
     if(cellTempConfig.numCellsToTemper <= 0 || cellTempConfig.cellRatioToTemper <= FLT_EPSILON)
-        return {markerId, 0.0, true};
+        return {markerId, 1.0, true};
 
     // compute the overall grid dimensions.
     const int markerSizeWithBorders = dictionary.markerSize + 2 * params.markerBorderBits;
@@ -444,7 +444,7 @@ markerDetectionGT applyTemperingToMarkerCells(cv::Mat &marker,
 
     // nothing to invert
     if(cellSidePixelsInvert <= 0)
-        return {markerId, 0.0, true};
+        return {markerId, 1.0, true};
 
     int cellsTempered = 0;
     int borderErrors = 0;
@@ -490,25 +490,25 @@ markerDetectionGT applyTemperingToMarkerCells(cv::Mat &marker,
             break;
     }
 
-    // compute the ground-truth uncertainty
+    // compute the ground-truth confidence
     const double invertedArea = cellsTempered * cellSidePixelsInvert * cellSidePixelsInvert;
     const double totalDetectionArea = markerSizeWithBorders * innerCellSizePixels * markerSizeWithBorders * innerCellSizePixels;
-    const double groundTruthUnc = invertedArea / totalDetectionArea;
+    const double groundTruthConfidence = std::max(0.0, 1.0 - invertedArea / totalDetectionArea);
 
     // check if marker is expected to be detected
     const int maximumErrorsInBorder = static_cast<int>(dictionary.markerSize * dictionary.markerSize * params.maxErroneousBitsInBorderRate);
     const int maxCorrectionRecalculed = static_cast<int>(dictionary.maxCorrectionBits * params.errorCorrectionRate);
     const bool expectDetection = static_cast<bool>(borderErrors <= maximumErrorsInBorder && innerCellsErrors <= maxCorrectionRecalculed);
 
-    return {markerId, groundTruthUnc, expectDetection};
+    return {markerId, groundTruthConfidence, expectDetection};
 }
 
 /**
- * @brief Create an image of a marker with inverted (tempered) regions to simulate detection uncertainty
+ * @brief Create an image of a marker with inverted (tempered) regions to simulate detection confidence
  *
  * Applies an optional rotation and an optional perspective warp to simulate a distorted marker.
- * Inverts a square subregion inside selected cells of a marker image to simulate uncertainty.
- * Computes the ground-truth uncertainty as the ratio of inverted area to the total marker area used for identification.
+ * Inverts a square subregion inside selected cells of a marker image to simulate a drop in confidence.
+ * Computes the ground-truth confidence as one minus the ratio of inverted area to the total marker area used for identification.
  *
  */
 markerDetectionGT generateTemperedMarkerImage(Mat &marker, const MarkerCreationConfig &markerConfig, const MarkerTemperingConfig &markerTemperingConfig,
@@ -521,7 +521,7 @@ markerDetectionGT generateTemperedMarkerImage(Mat &marker, const MarkerCreationC
     // rotate marker if necessary
     rotateMarker(marker, markerConfig.rotation);
 
-    // temper with cells to simulate detection uncertainty
+    // temper with cells to simulate detection confidence drops
     markerDetectionGT groundTruth = applyTemperingToMarkerCells(marker, markerConfig.markerSidePixels, markerConfig.id, params, dictionary, markerTemperingConfig);
 
     // apply a distortion (a perspective warp) to simulate a non-ideal capture
@@ -542,19 +542,19 @@ void placeMarker(Mat &img, const Mat &marker, const Point2f &topLeft)
 
 
 /**
- * @brief Test the marker uncertainty computations
+ * @brief Test the marker confidence computations
  *
- * Loops over a set of detector configurations (e.g. expected uncertainty, distortion, DetectorParameters)
+ * Loops over a set of detector configurations (e.g. expected confidence, distortion, DetectorParameters)
  * For each configuration, it creates a synthetic image containing four markers arranged in a 2x2 grid.
  * Each marker is generated with its own configuration (id, size, rotation).
  * Finally, it runs the detector and checks that each marker is detected and
- * that its computed uncertainty is close to the ground truth value.
+ * that its computed confidence is close to the ground truth value.
  *
  */
-class CV_ArucoDetectionUnc : public cvtest::BaseTest {
+class CV_ArucoDetectionConfidence : public cvtest::BaseTest {
     public:
     // The parameter arucoAlgParam allows switching between detecting normal and inverted markers.
-    CV_ArucoDetectionUnc(ArucoAlgParams algParam) : arucoAlgParam(algParam) {}
+    CV_ArucoDetectionConfidence(ArucoAlgParams algParam) : arucoAlgParam(algParam) {}
 
     protected:
     void run(int);
@@ -562,7 +562,7 @@ class CV_ArucoDetectionUnc : public cvtest::BaseTest {
 };
 
 
-void CV_ArucoDetectionUnc::run(int) {
+void CV_ArucoDetectionConfidence::run(int) {
 
     aruco::DetectorParameters params;
     // make sure there are no bits have any detection errors
@@ -575,7 +575,7 @@ void CV_ArucoDetectionUnc::run(int) {
 
     // define several detector configurations to test different settings
     // {{MarkerTemperingConfig}, perspectiveRemoveIgnoredMarginPerCell, markerBorderBits, distortionRatio}
-    vector<ArucoUncTestConfig> detectorConfigs = {
+    vector<ArucoConfidenceTestConfig> detectorConfigs = {
         // No margins, No distortion
         {{0.f,   64, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.f},
         {{0.01f, 64, MarkerRegionToTemper::ALL}, 0.0f, 1, 0.f},
@@ -617,7 +617,7 @@ void CV_ArucoDetectionUnc::run(int) {
 
     // loop over each detector configuration
     for (size_t cfgIdx = 0; cfgIdx < detectorConfigs.size(); cfgIdx++) {
-        ArucoUncTestConfig detCfg = detectorConfigs[cfgIdx];
+        ArucoConfidenceTestConfig detCfg = detectorConfigs[cfgIdx];
 
         // update detector parameters
         params.perspectiveRemoveIgnoredMarginPerCell = detCfg.perspectiveRemoveIgnoredMarginPerCell;
@@ -661,10 +661,10 @@ void CV_ArucoDetectionUnc::run(int) {
         // run detection.
         vector<vector<Point2f>> corners, rejected;
         vector<int> ids;
-        vector<float> markerUnc;
-        detector.detectMarkersWithUnc(img, corners, ids, markerUnc, rejected);
+        vector<float> markerConfidence;
+        detector.detectMarkersWithConfidence(img, corners, ids, markerConfidence, rejected);
 
-        // verify that every marker is detected and its uncertainty is within tolerance
+        // verify that every marker is detected and its confidence is within tolerance
         for (size_t m = 0; m < groundTruths.size(); m++) {
             markerDetectionGT currentGT = groundTruths[m];
 
@@ -686,13 +686,13 @@ void CV_ArucoDetectionUnc::run(int) {
                 return;
             }
 
-            // check uncertainty if marker detected
+            // check confidence if marker detected
             if(detectedIdx != -1){
-                double gtComputationDiff = fabs(currentGT.uncertainty - markerUnc[m]);
+                double gtComputationDiff = fabs(currentGT.confidence - markerConfidence[m]);
                 if (gtComputationDiff > 0.05) {
                     ts->printf(cvtest::TS::LOG,
-                            "Computed uncertainty: %.2f | expected uncertainty: %.2f (diff=%.2f) (Marker id: %d, detector config %zu)\n",
-                            markerUnc[m], currentGT.uncertainty, gtComputationDiff, currentGT.id, cfgIdx);
+                            "Computed confidence: %.2f | expected confidence: %.2f (diff=%.2f) (Marker id: %d, detector config %zu)\n",
+                            markerConfidence[m], currentGT.confidence, gtComputationDiff, currentGT.id, cfgIdx);
                     ts->set_failed_test_info(cvtest::TS::FAIL_BAD_ACCURACY);
                     return;
                 }
@@ -931,15 +931,15 @@ TEST(CV_ArucoBitCorrection, algorithmic) {
     test.safe_run();
 }
 
-typedef CV_ArucoDetectionUnc CV_InvertedArucoDetectionUnc;
+typedef CV_ArucoDetectionConfidence CV_InvertedArucoDetectionConfidence;
 
-TEST(CV_ArucoDetectionUnc, algorithmic) {
-    CV_ArucoDetectionUnc test(ArucoAlgParams::USE_DEFAULT);
+TEST(CV_ArucoDetectionConfidence, algorithmic) {
+    CV_ArucoDetectionConfidence test(ArucoAlgParams::USE_DEFAULT);
     test.safe_run();
 }
 
-TEST(CV_InvertedArucoDetectionUnc, algorithmic) {
-    CV_InvertedArucoDetectionUnc test(ArucoAlgParams::DETECT_INVERTED_MARKER);
+TEST(CV_InvertedArucoDetectionConfidence, algorithmic) {
+    CV_InvertedArucoDetectionConfidence test(ArucoAlgParams::DETECT_INVERTED_MARKER);
     test.safe_run();
 }
 
