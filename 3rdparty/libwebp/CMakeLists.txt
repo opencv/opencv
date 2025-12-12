@@ -21,6 +21,13 @@ if(ANDROID AND ARMEABI_V7A AND NOT NEON)
   endforeach()
 endif()
 
+if(WIN32)
+  foreach(file ${lib_srcs})
+    if("${file}" MATCHES "_avx2.c")
+      set_source_files_properties("${file}" COMPILE_FLAGS "/arch:AVX")
+    endif()
+  endforeach()
+endif()
 
 # ----------------------------------------------------------------------------------
 #         Define the library target:
