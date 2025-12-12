@@ -912,6 +912,75 @@ TEST(CV_InvertedArucoDetectionConfidence, algorithmic) {
     runArucoDetectionConfidence(ArucoAlgParams::DETECT_INVERTED_MARKER);
 }
 
+TEST(CV_InvertedFlagArucoDetectionConfidence, algorithmic) {
+    aruco::DetectorParameters params;
+    params.maxErroneousBitsInBorderRate = 0.0;
+    params.errorCorrectionRate = 0.0;
+    params.perspectiveRemovePixelPerCell = 8;
+    params.detectInvertedMarker = false;
+
+    const aruco::Dictionary dictionary = aruco::getPredefinedDictionary(aruco::DICT_6X6_250);
+
+    // create a blank image large enough to hold 4 markers in a 2x2 grid
+    const int markerSidePixels = 480;
+    const int margin = markerSidePixels / 2;
+    const int imageSize = (markerSidePixels * 2) + margin * 3;
+    Mat img(imageSize, imageSize, CV_8UC1, Scalar(255));
+
+    // place 4 markers into the image
+    for (int row = 0; row < 2; row++) {
+        for (int col = 0; col < 2; col++) {
+            const int id = row * 2 + col;
+            Mat markerImg;
+            aruco::generateImageMarker(dictionary, id, markerSidePixels, markerImg, params.markerBorderBits);
+
+            Point2f topLeft(margin + col * (markerSidePixels + margin),
+                            margin + row * (markerSidePixels + margin));
+            placeMarker(img, markerImg, topLeft);
+        }
+    }
+
+    // run detection with detectInvertedMarker = false (baseline)
+    aruco::ArucoDetector detector(dictionary, params);
+    vector<vector<Point2f>> corners, rejected;
+    vector<int> ids;
+    vector<float> confidenceDefault;
+    detector.detectMarkersWithConfidence(img, corners, ids, confidenceDefault, rejected);
+    ASSERT_EQ(ids.size(), corners.size());
+    ASSERT_EQ(ids.size(), confidenceDefault.size());
+
+    std::map<int, float> confidenceByIdDefault;
+    for (size_t i = 0; i < ids.size(); i++) {
+        confidenceByIdDefault[ids[i]] = confidenceDefault[i];
+    }
+
+    // run detection with detectInvertedMarker = true, without inverting the image
+    params.detectInvertedMarker = true;
+    aruco::ArucoDetector detectorInvertedFlag(dictionary, params);
+    vector<float> confidenceInvertedFlag;
+    detectorInvertedFlag.detectMarkersWithConfidence(img, corners, ids, confidenceInvertedFlag, rejected);
+    ASSERT_EQ(ids.size(), corners.size());
+    ASSERT_EQ(ids.size(), confidenceInvertedFlag.size());
+
+    std::map<int, float> confidenceByIdInvertedFlag;
+    for (size_t i = 0; i < ids.size(); i++) {
+        confidenceByIdInvertedFlag[ids[i]] = confidenceInvertedFlag[i];
+    }
+
+    // detectInvertedMarker should not invert/flip confidence for non-inverted markers.
+    for (int id = 0; id < 4; id++) {
+        ASSERT_NE(confidenceByIdDefault.find(id), confidenceByIdDefault.end()) << "Marker id: " << id;
+        ASSERT_NE(confidenceByIdInvertedFlag.find(id), confidenceByIdInvertedFlag.end()) << "Marker id: " << id;
+
+        const float confDefault = confidenceByIdDefault[id];
+        const float confInvertedFlag = confidenceByIdInvertedFlag[id];
+
+        EXPECT_GT(confDefault, 0.8f) << "Marker id: " << id;
+        EXPECT_GT(confInvertedFlag, 0.8f) << "Marker id: " << id;
+        EXPECT_NEAR(confDefault, confInvertedFlag, 0.2f) << "Marker id: " << id;
+    }
+}
+
 TEST(CV_ArucoDetectMarkers, regression_3192)
 {
     aruco::ArucoDetector detector(aruco::getPredefinedDictionary(aruco::DICT_4X4_50));

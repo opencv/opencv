@@ -448,7 +448,7 @@ static float _getMarkerConfidence(const Mat& groundTruthbits, const Mat &cellPix
     float tempInnerUnc = 0.f;
     for(int y = borderSize; y < markerSize + borderSize; y++) {
         for(int x = borderSize; x < markerSize + borderSize; x++) {
-            tempInnerUnc += abs(groundTruthbits.ptr<float>(y - borderSize)[x - borderSize] - cellPixelRatio.ptr<float>(y)[x]);
+            tempInnerUnc += std::abs(groundTruthbits.ptr<float>(y - borderSize)[x - borderSize] - cellPixelRatio.ptr<float>(y)[x]);
         }
     }
 
@@ -500,9 +500,9 @@ static uint8_t _identifyOneCandidate(const Dictionary& dictionary, const Mat& _i
         // to get from 255 to 1
         Mat invertedImg = ~candidateBits-254;
         int invBError = _getBorderErrors(invertedImg, dictionary.markerSize, params.markerBorderBits);
-        cellPixelRatio = -1.0 * cellPixelRatio + 1;
         // white marker
         if(invBError<borderErrors){
+            cellPixelRatio = 1.f - cellPixelRatio;
             borderErrors = invBError;
             invertedImg.copyTo(candidateBits);
             typ=2;
