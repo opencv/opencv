@@ -1318,6 +1318,13 @@ INSTANTIATE_TEST_CASE_P(Imgproc, convexHull_monotonous,
             ),
             std::make_tuple(
                 std::vector<Point>{
+                    Point(3, -2), Point(3, -4), Point(2, -5), Point(1, -5),
+                    Point(2, -5), Point(3, -4), Point(6, -4), Point(6, -2)
+                },
+                (Mat_<int>(5, 1) << 3, 0, 7, 6, 4)
+            ),
+            std::make_tuple(
+                std::vector<Point>{
                     Point(1, 1), Point(1, 0), Point(0, 0), Point(1, 0), Point(0, 1)
                 },
                 (Mat_<int>(4, 1) << 0, 1, 2, 4)
