@@ -8,7 +8,7 @@ namespace cv
 {
 
 namespace {
-static const char* noneValue = "<none>";
+//static const char* noneValue = "<none>";
 
 static String cat_string(const String& str)
 {
@@ -132,7 +132,7 @@ void CommandLineParser::getByName(const String& name, bool space_delete, Param t
                         v = cat_string(v);
 
                     // the key was neither specified nor has a default value
-                    if((v.empty() && type != Param::STRING) || v == noneValue) {
+                    if((v.empty() && type != Param::STRING) || v == "<none>") {
                         impl->error = true;
                         impl->error_message = impl->error_message + "Missing parameter: '" + name + "'\n";
                         return;
@@ -167,7 +167,7 @@ void CommandLineParser::getByIndex(int index, bool space_delete, Param type, voi
                 if (space_delete == true) v = cat_string(v);
 
                 // the key was neither specified nor has a default value
-                if((v.empty() && type != Param::STRING) || v == noneValue) {
+                if((v.empty() && type != Param::STRING) || v == "<none>") {
                     impl->error = true;
                     impl->error_message = impl->error_message + format("Missing parameter #%d\n", index);
                     return;
@@ -358,7 +358,7 @@ bool CommandLineParser::has(const String& name) const
             if (name == impl->data[i].keys[j])
             {
                 const String v = cat_string(impl->data[i].def_value);
-                return !v.empty() && v != noneValue;
+                return !v.empty() && v != "<none>";
             }
         }
     }
