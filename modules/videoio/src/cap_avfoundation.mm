@@ -1304,7 +1304,7 @@ void CvVideoWriter_AVFoundation::write(cv::InputArray image) {
         } else {
             cv::cvtColor(image, argbimage, cv::COLOR_GRAY2BGRA);
         }
-        
+
         //IplImage -> CGImage conversion
         CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
         NSData *nsData = [NSData dataWithBytes:argbimage.data length:argbimage.total() * argbimage.elemSize()];
