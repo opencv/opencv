@@ -23,6 +23,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 # list of modules + files remap
 config = None
 ROOT_DIR = None
+USE_CLEANERS = True
 FILES_REMAP = {}
 def checkFileRemap(path):
     path = os.path.realpath(path)
@@ -366,6 +367,7 @@ class ClassInfo(GeneralInfo):
                             module = m,
                             name = self.name,
                             jname = self.jname,
+                            jcleaner = "long nativeObjCopy = nativeObj;\n org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy));" if USE_CLEANERS else "",
                             imports = "\n".join(self.getAllImports(M)),
                             docs = self.docstring,
                             annotation = "\n" + "\n".join(self.annotation) if self.annotation else "",
@@ -948,6 +950,7 @@ class JavaWrapperGenerator(object):
                     tail = ")"
                 else:
                     ret_val = "nativeObj = "
+                    tail = ";\n long nativeObjCopy = nativeObj;\n org.opencv.core.Mat.cleaner.register(this, () -> delete(nativeObjCopy))" if USE_CLEANERS else ""
                 ret = ""
             elif self.isWrapped(ret_type): # wrapped class
                 constructor = self.getClass(ret_type).jname + "("
@@ -1214,8 +1217,9 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
                 ci.cpp_code.write("\n".join(fn["cpp_code"]))
 
         if ci.name != self.Module or ci.base:
-            # finalize()
-            ci.j_code.write(
+            # finalize() for old Java
+            if not USE_CLEANERS:
+                ci.j_code.write(
 """
     @Override
     protected void finalize() throws Throwable {
@@ -1225,7 +1229,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
 
             ci.jn_code.write(
 """
-    // native support for java finalize()
+    // native support for java finalize() or cleaner
     private static native void delete(long nativeObj);
 """ )
 
@@ -1233,7 +1237,7 @@ JNIEXPORT $rtype JNICALL Java_org_opencv_${module}_${clazz}_$fname
             ci.cpp_code.write(
 """
 //
-//  native support for java finalize()
+//  native support for java finalize() or cleaner
 //  static void %(cls)s::delete( __int64 self )
 //
 JNIEXPORT void JNICALL Java_org_opencv_%(module)s_%(j_cls)s_delete(JNIEnv*, jclass, jlong);
@@ -1454,6 +1458,12 @@ if __name__ == "__main__":
     FILES_REMAP = { os.path.realpath(os.path.join(ROOT_DIR, f['src'])): f['target'] for f in config['files_remap'] }
     logging.info("\nRemapped configured files (%d):\n%s", len(FILES_REMAP), pformat(FILES_REMAP))
 
+    USE_CLEANERS = config['support_cleaners']
+    if (USE_CLEANERS):
+        logging.info("\nUse Java 9+ cleaners\n")
+    else:
+        logging.info("\nUse old style Java finalize()\n")
+
     dstdir = "./gen"
     jni_path = os.path.join(dstdir, 'cpp'); mkdir_p(jni_path)
     java_base_path = os.path.join(dstdir, 'java'); mkdir_p(java_base_path)
@@ -1543,6 +1553,17 @@ if __name__ == "__main__":
                           preprocessor_definitions)
         else:
             logging.info("No generated code for module: %s", module)
+
+    # Copy Cleaner / finalize() related files
+    if USE_CLEANERS:
+        cleaner_src = os.path.join(SCRIPT_DIR, "src", "java9", "CleanableMat.java")
+    else:
+        cleaner_src = os.path.join(SCRIPT_DIR, "src", "java_classic", "CleanableMat.java")
+
+    cleaner_dst = os.path.join(java_base_path, "org", "opencv", "core", "CleanableMat.java")
+    print("cleaner_dst: ", cleaner_dst)
+    copyfile(cleaner_src, cleaner_dst)
+
     generator.finalize(jni_path)
 
     print('Generated files: %d (updated %d)' % (total_files, updated_files))
