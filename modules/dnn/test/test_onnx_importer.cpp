@@ -3233,6 +3233,49 @@ TEST_P(Test_ONNX_layers, TopK) {
     test("top_k_smallest");
 }
 
+TEST_P(Test_ONNX_layers, RandomNormalLike_basic)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like.onnx", true));
+
+    Mat input(2, 3, CV_32F, Scalar(0));
+    net.setInput(input);
+    Mat out = net.forward();
+
+    EXPECT_EQ(out.rows, 2);
+    EXPECT_EQ(out.cols, 3);
+    EXPECT_EQ(out.type(), CV_32F);
+
+    double minVal, maxVal;
+    minMaxLoc(out, &minVal, &maxVal);
+    EXPECT_NE(minVal, 0.0);
+    EXPECT_NE(maxVal, 0.0);
+    EXPECT_NE(minVal, maxVal);
+
+    Mat out2 = net.forward();
+    EXPECT_EQ(countNonZero(out != out2), 0);
+}
+
+TEST_P(Test_ONNX_layers, RandomNormalLike_complex)
+{
+    Net net = readNetFromONNX(findDataFile("dnn/onnx/models/random_normal_like_complex.onnx", true));
+
+    Mat input(2, 3, CV_32F, Scalar(0));
+    net.setInput(input);
+    Mat out = net.forward();
+
+    EXPECT_EQ(out.rows, 2);
+    EXPECT_EQ(out.cols, 3);
+    EXPECT_EQ(out.type(), CV_32F);
+
+    double minVal, maxVal;
+    minMaxLoc(out, &minVal, &maxVal);
+    EXPECT_NE(minVal, maxVal);
+
+    net.setInput(input);
+    Mat out2 = net.forward();
+    EXPECT_EQ(countNonZero(out != out2), 0);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_ONNX_nets, dnnBackendsAndTargets());
 
 }} // namespace
