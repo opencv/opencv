@@ -302,7 +302,27 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
     }
 
     if( !returnPoints )
+    {
+        // A naive correction of self-intersections
+        for (int hi = 0; hi < nout; ++hi)
+        {
+            for (int j = hullbuf[hi] + 1; j < total; ++j)
+            {
+                if (data0[j] == data0[hullbuf[hi]])
+                {
+                    int prev = hullbuf[(hi == 0 ? nout : hi) - 1];
+                    int next = hullbuf[(hi + 1) % nout];
+                    if ((prev < j && j < next) || (prev > j && j > next))
+                    {
+                        hullbuf[hi] = j;
+                        break;
+                    }
+                }
+            }
+        }
+
         Mat(nout, 1, CV_32S, hullbuf).copyTo(_hull);
+    }
     else
     {
         _hull.create(nout, 1, CV_MAKETYPE(depth, 2));
