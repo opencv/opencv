@@ -1712,8 +1712,13 @@ bool CvCapture_FFMPEG::grabFrame()
                 const AVPacket& packet_raw = packet.data != 0 ? packet : packet_filtered;
                 picture_pts = packet_raw.pts != AV_NOPTS_VALUE_ && packet_raw.pts != 0 ? packet_raw.pts : packet_raw.dts;
                 if (frame_number == 0) dts = packet_raw.dts;
-                if (picture_pts < 0) picture_pts = 0;
+            //    if (picture_pts < 0) picture_pts = 0;
             }
+
+            if (picture_pts < 0) {
+            picture_pts = 0;
+        }
+
 #if LIBAVCODEC_BUILD >= CALC_FFMPEG_VERSION(54, 1, 0) || LIBAVFORMAT_BUILD >= CALC_FFMPEG_VERSION(52, 111, 0)
             AVRational frame_rate = video_st->avg_frame_rate;
 #else
