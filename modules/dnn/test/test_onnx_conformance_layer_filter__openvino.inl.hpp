@@ -2764,6 +2764,44 @@ CASE(test_rotary_embedding_with_rotary_dim)
     SKIP;
 CASE(test_rotary_embedding_with_rotary_dim_expanded)
     SKIP;
+CASE(test_rms_normalization_2d_axis0)
+    SKIP;
+CASE(test_rms_normalization_2d_axis1)
+    SKIP;
+CASE(test_rms_normalization_2d_axis_negative_1)
+    SKIP;
+CASE(test_rms_normalization_2d_axis_negative_2)
+    SKIP;
+CASE(test_rms_normalization_3d_axis0_epsilon)
+    SKIP;
+CASE(test_rms_normalization_3d_axis1_epsilon)
+    SKIP;
+CASE(test_rms_normalization_3d_axis2_epsilon)
+    SKIP;
+CASE(test_rms_normalization_3d_axis_negative_1_epsilon)
+    SKIP;
+CASE(test_rms_normalization_3d_axis_negative_2_epsilon)
+    SKIP;
+CASE(test_rms_normalization_3d_axis_negative_3_epsilon)
+    SKIP;
+CASE(test_rms_normalization_4d_axis0)
+    SKIP;
+CASE(test_rms_normalization_4d_axis1)
+    SKIP;
+CASE(test_rms_normalization_4d_axis2)
+    SKIP;
+CASE(test_rms_normalization_4d_axis3)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_1)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_2)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_3)
+    SKIP;
+CASE(test_rms_normalization_4d_axis_negative_4)
+    SKIP;
+CASE(test_rms_normalization_default_axis)
+    SKIP;
 #if SKIP_SET_1
     SKIP;
 #endif

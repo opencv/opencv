@@ -42,7 +42,7 @@ void fastNorm(const Mat &input, Mat &output, float epsilon, size_t normalized_ax
     parallel_for_(Range(0, loops), fn, nstripes);
 }
 
-void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis) {
+void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, size_t normalized_axis, bool recenter) {
     const auto input_shape = shape(input);
     CV_CheckLT(normalized_axis, input_shape.size(), "fastNorm: axis out of range");
 
@@ -61,7 +61,8 @@ void fastNorm(const Mat &input, const Mat &scale, Mat &output, float epsilon, si
             float mean = 0.f, mean_square = 0.f;
             for (int j = 0; j < norm_size; j++) {
                 float v = x[j];
-                mean += v;
+                if (recenter)
+                    mean += v;
                 mean_square += v * v;
             }
 
