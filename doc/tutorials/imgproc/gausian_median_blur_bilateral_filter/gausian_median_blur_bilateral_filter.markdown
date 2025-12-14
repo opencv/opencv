@@ -1,4 +1,4 @@
-Smoothing Images {#tutorial_gausian_median_blur_bilateral_filter}
+Smoothing Images {#tutorial_gaussian_median_blur_bilateral_filter}
 ================
 
 @tableofcontents
@@ -59,6 +59,7 @@ Applications](http://szeliski.org/Book/) by Richard Szeliski and to *LearningOpe
        \end{bmatrix}\f]
 
 ### Gaussian Filter
+    Gaussian filtering is highly effective in removing Gaussian noise from an image and is commonly used as a preprocessing step to improve image quality before further analysis.
 
 -   Probably the most useful filter (although not the fastest). Gaussian filtering is done by
     convolving each point in the input array with a *Gaussian kernel* and then summing them all to
