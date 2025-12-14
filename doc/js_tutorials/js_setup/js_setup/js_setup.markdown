@@ -36,7 +36,6 @@ Modern versions of Emscripten requires to use `emcmake` / `emmake` launchers:
 emcmake sh -c 'echo ${EMSCRIPTEN}'
 @endcode
 
-
 The version 2.0.10 of emscripten is verified for latest WebAssembly. Please check the version of Emscripten to use the newest features of WebAssembly.
 
 For example:
@@ -84,7 +83,12 @@ Building OpenCV.js from Source
     @endcode
 
     @note
-    It requires `python` and `cmake` installed in your development environment.
+    - It requires `python` and `cmake` installed in your development environment.
+    - To build with Emscripten 4.0.20 or later, append --cmake_option="-DCMAKE_CXX_STANDARD=17" .
+      Embind requires C++17 or later since Emscripten 4.0.20.
+      @code{.bash}
+      emcmake python ./opencv/platforms/js/build_js.py build_js --cmake_option="-DCMAKE_CXX_STANDARD=17"
+      @endcode
 
 -#  [Optional] To build the OpenCV.js loader, append `--build_loader`.
 
