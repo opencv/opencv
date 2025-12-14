@@ -36,6 +36,7 @@ Modern versions of Emscripten requires to use `emcmake` / `emmake` launchers:
 emcmake sh -c 'echo ${EMSCRIPTEN}'
 @endcode
 
+
 The version 2.0.10 of emscripten is verified for latest WebAssembly. Please check the version of Emscripten to use the newest features of WebAssembly.
 
 For example:
