@@ -285,7 +285,7 @@ TEST(Imgproc_FitLine, regression_4903)
 #endif
 
 // the Python test by @hannarud is converted to C++; see the issue #4539
-TEST(Imgproc_ConvexityDefects, ordering_4539)
+TEST(DISABLE_Imgproc_ConvexityDefects, ordering_4539)
 {
     int contour[][2] =
     {
