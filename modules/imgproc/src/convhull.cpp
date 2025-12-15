@@ -268,14 +268,20 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
             {
                 auto prev = pointer[hullbuf[(i == 0 ? nout : i) - 1]];
                 auto next = pointer[hullbuf[(i + 1) % nout]];
+                auto cur = pointer[hullbuf[i]];
+                if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                {
+                    continue;
+                }
                 for (int j = hullbuf[i] + 1; j < total; ++j)
                 {
-                    auto cur = pointer[j];
+                    cur = pointer[j];
                     if (*pointer[hullbuf[i]] == *cur)
                     {
                         if ((prev < cur && cur < next) || (prev > cur && cur > next))
                         {
                             hullbuf[i] = j;
+                            break;
                         }
                     }
                     else

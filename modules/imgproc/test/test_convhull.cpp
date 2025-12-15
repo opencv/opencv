@@ -285,7 +285,7 @@ TEST(Imgproc_FitLine, regression_4903)
 #endif
 
 // the Python test by @hannarud is converted to C++; see the issue #4539
-TEST(DISABLE_Imgproc_ConvexityDefects, ordering_4539)
+TEST(Imgproc_ConvexityDefects, ordering_4539)
 {
     int contour[][2] =
     {
@@ -304,9 +304,11 @@ TEST(DISABLE_Imgproc_ConvexityDefects, ordering_4539)
     vector<int> hull_ind;
     vector<Vec4i> defects;
 
+#if 0  // deprecated behavior
     // first, check the original contour as-is, without intermediate fillPoly/drawContours.
     convexHull(contour_, hull_ind, false, false);
     EXPECT_THROW( convexityDefects(contour_, hull_ind, defects), cv::Exception );
+#endif
 
     int scale = 20;
     contour_ *= (double)scale;
@@ -319,10 +321,12 @@ TEST(DISABLE_Imgproc_ConvexityDefects, ordering_4539)
     findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
     convexHull(contours[0], hull_ind, false, false);
 
+#if 0  // deprecated behavior
     // the original contour contains self-intersections,
     // therefore convexHull does not return a monotonous sequence of points
     // and therefore convexityDefects throws an exception
     EXPECT_THROW( convexityDefects(contours[0], hull_ind, defects), cv::Exception );
+#endif
 
 #if 1
     // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
