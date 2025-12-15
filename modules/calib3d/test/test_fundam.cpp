@@ -621,9 +621,9 @@ void CV_RodriguesTest::get_test_array_types_and_sizes(
 }
 
 
-double CV_RodriguesTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int j )
+double CV_RodriguesTest::get_success_error_level( int /*test_case_idx*/, int /*i*/, int /*j*/ )
 {
-    return j == 4 ? 1e-2 : 1e-2;
+    return 1e-2;
 }
 
 

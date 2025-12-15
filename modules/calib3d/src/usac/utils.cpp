@@ -388,12 +388,12 @@ void Utils::densitySort (const Mat &points, int knn, Mat &sorted_points, std::ve
         sorted_mask[i] = i;
 
     // get neighbors
-    FlannNeighborhoodGraph &graph = *FlannNeighborhoodGraph::create(points, points_size, knn,
+    cv::Ptr<FlannNeighborhoodGraph> graph = FlannNeighborhoodGraph::create(points, points_size, knn,
             true /*get distances */, 6, 1);
 
     std::vector<double> sum_knn_distances (points_size, 0);
     for (int p = 0; p < points_size; p++) {
-        const std::vector<double> &dists = graph.getNeighborsDistances(p);
+        const std::vector<double> &dists = graph->getNeighborsDistances(p);
         for (int k = 0; k < knn; k++)
             sum_knn_distances[p] += dists[k];
     }

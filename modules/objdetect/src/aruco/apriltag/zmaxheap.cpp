@@ -84,7 +84,6 @@ void zmaxheap_destroy(zmaxheap_t *heap)
 {
     free(heap->values);
     free(heap->data);
-    memset(heap, 0, sizeof(zmaxheap_t));
     free(heap);
 }
 

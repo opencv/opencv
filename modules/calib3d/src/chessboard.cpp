@@ -2169,7 +2169,7 @@ cv::Point2f &Chessboard::Board::getCorner(int _row,int _col)
             }
             ++count;
             row_start = row_start->bottom;
-        }while(_row);
+        }while(row_start);
     }
     CV_Error(Error::StsInternal,"cannot find corner");
     // return *top_left->top_left; // never reached

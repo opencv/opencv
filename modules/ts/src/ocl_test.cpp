@@ -104,7 +104,6 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
         {
             cv::Mat cpu_result_roi(cpu_result, *r);
             cpu_result_roi.setTo(1);
-            cpu_result.copyTo(cpu_result);
         }
         int cpu_area = cv::countNonZero(cpu_result > 0);
 
@@ -114,7 +113,6 @@ double TestUtils::checkRectSimilarity(const Size & sz, std::vector<Rect>& ob1, s
         {
             cv::Mat gpu_result_roi(gpu_result, *r2);
             gpu_result_roi.setTo(1);
-            gpu_result.copyTo(gpu_result);
         }
 
         cv::Mat result_;
