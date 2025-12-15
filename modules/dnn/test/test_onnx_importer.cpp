@@ -191,9 +191,8 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight)
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
 
-    // Use OpenCV backend and CPU target for stability with this model
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     for (int i = 0; i < 2; i++)
     {
@@ -241,9 +240,8 @@ TEST_P(Test_ONNX_layers, Convolution_variable_weight_bias)
     Net net = readNetFromONNX(_tf("models/" + basename + ".onnx"));
     ASSERT_FALSE(net.empty());
 
-    // Force stable path for this model
-    net.setPreferableBackend(DNN_BACKEND_OPENCV);
-    net.setPreferableTarget(DNN_TARGET_CPU);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
 
     for (int i = 0; i < 2; i++)
     {
