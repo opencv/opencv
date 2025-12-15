@@ -134,8 +134,9 @@ public:
                 assert(st_i % elemsize[k] == 0);
                 this->shapes[k][i] = sz_i;
                 this->steps[k][i] = st_i;
-                if (this->shapes[k][i] == 0)
-                    return false;
+                // NOTE: Zero-sized dimensions are valid in ONNX graphs and should
+                // propagate through broadcasting instead of being treated as errors.
+
             }
         }
 
