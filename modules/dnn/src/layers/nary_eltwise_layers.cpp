@@ -710,9 +710,14 @@ public:
         }
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
+        {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
+
+        std::vector<Mat> inputs, outputs;
+        inputs_arr.getMatVector(inputs);
+        outputs_arr.getMatVector(outputs);
 
         if (inputs_arr.depth() == CV_16F)
         {
@@ -720,16 +725,12 @@ public:
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
-         
-        std::vector<Mat> inputs, outputs;
-        inputs_arr.getMatVector(inputs);
-        outputs_arr.getMatVector(outputs);
-
+            
         if (inputs.size() == 1) {
             inputs[0].copyTo(outputs[0]);
             return;
         }
-        
+            
         typeDispatch(outputs[0].type(), inputs.size(), inputs, outputs);
     }
 
