@@ -46,10 +46,25 @@ CV_HAL_RVV_FLIP_C1(64UC1, uint64_t, RVV_U64M8)
 #define CV_HAL_RVV_FLIP_INPLACE_C1(name, _Tps, RVV) \
 inline void flip_inplace_##name(uchar* data, size_t step, int width, int height, int flip_mode) { \
     auto new_height = (flip_mode < 0 ? height / 2 : height); \
-    auto new_width = width / 2; \
-    for (int h = 0; h < new_height; h++) { \
+    auto new_width = (flip_mode < 0 ? width : width / 2); \
+    int h; \
+    for (h = 0; h < new_height; h++) { \
         _Tps* row_begin = (_Tps*)(data + step * h); \
-        _Tps* row_end = (_Tps*)(data + step * (flip_mode < 0 ? (new_height - h) : (h + 1))); \
+        _Tps* row_end   = (_Tps*)(data + step * (flip_mode < 0 ? (height - h) : (h + 1))); \
+        int vl; \
+        for (int w = 0; w < new_width; w += vl) { \
+            vl = RVV::setvl(new_width - w); \
+            RVV::VecType indices = __riscv_vrsub(RVV::vid(vl), vl - 1, vl); \
+            auto v_left = RVV::vload(row_begin + w, vl); \
+            auto v_right = RVV::vload(row_end - w - vl, vl); \
+            RVV::vstore(row_begin + w, __riscv_vrgather(v_right, indices, vl), vl); \
+            RVV::vstore(row_end - w - vl, __riscv_vrgather(v_left, indices, vl), vl); \
+        } \
+    } \
+    if (flip_mode == -1 && new_height * 2 != height) { \
+        _Tps* row_begin = (_Tps*)(data + step * h); \
+        _Tps* row_end   = (_Tps*)(data + step * (h + 1)); \
+        new_width /= 2; \
         int vl; \
         for (int w = 0; w < new_width; w += vl) { \
             vl = RVV::setvl(new_width - w); \
@@ -117,10 +132,27 @@ CV_HAL_RVV_FLIP_C3(64UC3, uint64_t, RVV_C3_U64M2)
 #define CV_HAL_RVV_FLIP_INPLACE_C3(name, _Tps, RVV) \
 inline void flip_inplace_##name(uchar* data, size_t step, int width, int height, int flip_mode) { \
     auto new_height = (flip_mode < 0 ? height / 2 : height); \
-    auto new_width = width / 2; \
-    for (int h = 0; h < new_height; h++) { \
+    auto new_width = (flip_mode < 0 ? width : width / 2); \
+    int h; \
+    for (h = 0; h < new_height; h++) { \
         _Tps* row_begin = (_Tps*)(data + step * h); \
-        _Tps* row_end = (_Tps*)(data + step * (flip_mode < 0 ? (new_height - h) : (h + 1))); \
+        _Tps* row_end = (_Tps*)(data + step * (flip_mode < 0 ? (height - h) : (h + 1))); \
+        int vl; \
+        for (int w = 0; w < new_width; w += vl) { \
+            vl = RVV::setvl(new_width - w); \
+            RVV::VecType indices = __riscv_vrsub(RVV::vid(vl), vl - 1, vl); \
+            auto v_left = RVV::vload3(row_begin + 3 * w, vl); \
+            auto flipped_left = RVV::vflip3(v_left, indices, vl); \
+            auto v_right = RVV::vload3(row_end - 3 * (w + vl), vl); \
+            auto flipped_right = RVV::vflip3(v_right, indices, vl); \
+            RVV::vstore3(row_begin + 3 * w, flipped_right, vl); \
+            RVV::vstore3(row_end - 3 * (w + vl), flipped_left, vl); \
+        } \
+    } \
+    if (flip_mode == -1 && new_height * 2 != height) { \
+        _Tps* row_begin = (_Tps*)(data + step * h); \
+        _Tps* row_end   = (_Tps*)(data + step * (h + 1)); \
+        new_width /= 2; \
         int vl; \
         for (int w = 0; w < new_width; w += vl) { \
             vl = RVV::setvl(new_width - w); \
@@ -322,10 +354,8 @@ int flip(int src_type, const uchar* src_data, size_t src_step, int src_width, in
     if (src_width < 0 || src_height < 0 || esz > 32)
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
 
-    // BUG: https://github.com/opencv/opencv/issues/28124
     if (src_data == dst_data) {
-        return CV_HAL_ERROR_NOT_IMPLEMENTED;
-        //return flip_inplace(esz, dst_data, dst_step, src_width, src_height, flip_mode);
+        return flip_inplace(esz, dst_data, dst_step, src_width, src_height, flip_mode);
     }
 
     if (flip_mode == 0)
