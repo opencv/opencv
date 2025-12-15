@@ -134,8 +134,6 @@ public:
                 assert(st_i % elemsize[k] == 0);
                 this->shapes[k][i] = sz_i;
                 this->steps[k][i] = st_i;
-                if (this->shapes[k][i] == 0)
-                    return false;
             }
         }
 
@@ -315,11 +313,15 @@ public:
             {
                 if (shape[i] != outShape[i])
                 {
-                    CV_Assert(shape[i] == 1 || outShape[i] == 1);
-                    outShape[i] = std::max(outShape[i], shape[i]);
+                    if (shape[i] == 0 || outShape[i] == 0) {
+                        outShape[i] = 0;
+                    } else {
+                        CV_Assert(shape[i] == 1 || outShape[i] == 1);
+                        outShape[i] = std::max(outShape[i], shape[i]);
+                    }
                 }
             }
-        }
+	}
 
         return outShape;
     }
@@ -339,7 +341,8 @@ public:
         }
 
         helper.init(inputs, outputs);
-        CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
+        
+	CV_CheckTrue(helper.prepare_for_broadcast_op(), "NaryEltwiseLayer: Preparation for broadcasting failed");
     }
 
     bool getMemoryShapes(const std::vector<MatShape> &inputs,
@@ -707,8 +710,7 @@ public:
         }
     }
 
-    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE
-    {
+    void forward(InputArrayOfArrays inputs_arr, OutputArrayOfArrays outputs_arr, OutputArrayOfArrays internals_arr) CV_OVERRIDE {
         CV_TRACE_FUNCTION();
         CV_TRACE_ARG_VALUE(name, "name", name.c_str());
 
@@ -718,7 +720,7 @@ public:
             forward_fallback(inputs_arr, outputs_arr, internals_arr);
             return;
         }
-
+         
         std::vector<Mat> inputs, outputs;
         inputs_arr.getMatVector(inputs);
         outputs_arr.getMatVector(outputs);
@@ -727,7 +729,7 @@ public:
             inputs[0].copyTo(outputs[0]);
             return;
         }
-
+        
         typeDispatch(outputs[0].type(), inputs.size(), inputs, outputs);
     }
 
