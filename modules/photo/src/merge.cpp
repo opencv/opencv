@@ -98,7 +98,6 @@ public:
 
         Mat response = input_response.getMat();
 
-        bool log_response_ready = false;
         if(response.empty()) {
             response = linearResponse(channels, lutLength);
             response.at<Vec3f>(0) = response.at<Vec3f>(1);

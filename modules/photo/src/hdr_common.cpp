@@ -77,11 +77,6 @@ Mat triangleWeights(int length)
     return w;
 }
 
-Mat triangleWeights()
-{
-    return triangleWeights(LDR_SIZE);
-}
-
 Mat RobertsonWeights(int length)
 {
     CV_Assert(length >= 1);
@@ -97,11 +92,6 @@ Mat RobertsonWeights(int length)
         weight.at<Vec3f>(i) = Vec3f::all(value);
     }
     return weight;
-}
-
-Mat RobertsonWeights()
-{
-    return RobertsonWeights(LDR_SIZE);
 }
 
 void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
@@ -140,11 +130,6 @@ Mat linearResponse(int channels, int length)
         CV_Error(Error::StsBadArg, "Unsupported number of channels in linearResponse");
     }
     return response;
-}
-
-Mat linearResponse(int channels)
-{
-    return linearResponse(channels, LDR_SIZE);
 }
 
 }
