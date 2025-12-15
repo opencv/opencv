@@ -1,7 +1,5 @@
 package org.opencv.core;
 
-import java.lang.ref.Cleaner;
-
 public abstract class CleanableMat {
 
     protected CleanableMat(long obj) {
