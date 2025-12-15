@@ -67,16 +67,22 @@ public:
 
         Mat& out = outputs[0];
 
-        RNG rng = hasSeed ? RNG(seed) : theRNG();
+        RNG seededRng;
+        RNG* rng = &theRNG();
+        if (hasSeed)
+        {
+            seededRng = RNG(static_cast<uint64>(seed));
+            rng = &seededRng;
+        }
 
         if (out.depth() == CV_32F || out.depth() == CV_64F || out.depth() == CV_16F)
         {
-            rng.fill(out, RNG::NORMAL, mean, scale);
+            rng->fill(out, RNG::NORMAL, mean, scale);
         }
         else
         {
             Mat tmp(out.size.dims(), out.size.p, CV_32F);
-            rng.fill(tmp, RNG::NORMAL, mean, scale);
+            rng->fill(tmp, RNG::NORMAL, mean, scale);
             tmp.convertTo(out, out.type());
         }
     }
