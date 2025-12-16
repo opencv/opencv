@@ -58,18 +58,6 @@ struct FractalDetector::FractalDetectorImpl {
 
 };
 
-void FractalArucoMarker::FractalMarkerImpl::draw(cv::InputOutputArray img, const std::vector<Point2f>& detected_points, const cv::Scalar color) {
-    float flineWidth = std::max(1.f, std::min(5.f, float(img.cols()) / 500.f));
-    int lineWidth = (int)round(flineWidth);
-    for (int i = 0; i < 4; i++)
-        cv::line(img, detected_points[i], detected_points[(i + 1) % 4], color, lineWidth);
-
-    cv::Point2f p2(2.f * static_cast<float>(lineWidth), 2.f * static_cast<float>(lineWidth));
-    cv::rectangle(img, detected_points[0] - p2, detected_points[0] + p2, cv::Scalar(0, 0, 255, 255), -1);
-    cv::rectangle(img, detected_points[1] - p2, detected_points[1] + p2, cv::Scalar(0, 255, 0, 255), lineWidth);
-    cv::rectangle(img, detected_points[2] - p2, detected_points[2] + p2, cv::Scalar(255, 0, 0, 255), lineWidth);
-}
-
 // Implementation of FractalMarker methods
 FractalArucoMarker::FractalArucoMarker(int markerId, cv::InputArray m, const std::vector<cv::Point3f>& corners, const std::vector<int>& id_submarkers)
     : impl(makePtr<FractalMarkerImpl>())
@@ -87,10 +75,6 @@ FractalArucoMarker::FractalArucoMarker()
 {
     impl->id = -1;
     impl->_mask = cv::Mat::ones(1, 1, CV_8UC1);
-}
-
-void FractalArucoMarker::draw(cv::InputOutputArray img, const std::vector<Point2f>& detected_points, const cv::Scalar color) {
-    impl->draw(img, detected_points, color);
 }
 
 int FractalArucoMarker::FractalMarkerImpl::nBits() const {
@@ -168,6 +152,40 @@ int FractalArucoMarker::getId() const
 {
     return impl->id;
 }
+
+void drawDetectedFractalMarkers(InputOutputArray image, InputArrayOfArrays corners,
+                                InputArray ids, Scalar color)
+{
+    CV_Assert(image.getMat().total() != 0 &&
+              (image.getMat().channels() == 1 || image.getMat().channels() == 3));
+    CV_Assert((corners.total() == ids.total()) || ids.total() == 0);
+
+    float flineWidth = std::max(1.f, std::min(5.f, float(image.cols()) / 500.f));
+    int lineWidth = (int)round(flineWidth);
+
+    size_t nMarkers = corners.total();
+    for(size_t m = 0; m < nMarkers; m++)
+    {
+        Mat currentMarker = corners.getMat(m);
+        cv::Point2f* detected_points = currentMarker.ptr<cv::Point2f>();
+
+        for (int i = 0; i < 4; i++)
+            cv::line(image, detected_points[i], detected_points[(i + 1) % 4], color, lineWidth);
+
+        cv::Point2f p2(2.f * static_cast<float>(lineWidth), 2.f * static_cast<float>(lineWidth));
+        cv::rectangle(image, detected_points[0] - p2, detected_points[0] + p2, cv::Scalar(0, 0, 255, 255), -1);
+        cv::rectangle(image, detected_points[1] - p2, detected_points[1] + p2, cv::Scalar(0, 255, 0, 255), lineWidth);
+        cv::rectangle(image, detected_points[2] - p2, detected_points[2] + p2, cv::Scalar(255, 0, 0, 255), lineWidth);
+
+
+        std::string idLabel = format("id=%d", ids.getMat().ptr<int>(0)[m]);
+        cv::Point textPos = detected_points[0];
+        textPos.x += 8;
+        textPos.y += 16;
+        cv::putText(image, idLabel, textPos, FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
+    }
+}
+
 
 FractalMarkerDictionary::FractalMarkerDictionary()
     : impl(makePtr<FractalMarkerDictionaryImpl>())
@@ -277,8 +295,8 @@ void FractalDetector::setParams(int minInternalDistSq_, float markerSize) {
 }
 
 bool FractalDetector::detect(cv::InputArray img,
-                             std::vector<int>& marker_ids,
                              std::vector<std::vector<cv::Point2f>>& marker_points,
+                             std::vector<int>& marker_ids,
                              cv::OutputArray p3d,
                              cv::OutputArray p2d)
 {
