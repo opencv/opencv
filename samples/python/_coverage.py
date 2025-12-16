@@ -2,13 +2,14 @@
 
 '''
 Utility for measuring python opencv API coverage by samples.
+
 '''
 
 # Python 2/3 compatibility
 from __future__ import print_function
 
 from glob import glob
-import cv2 as cv
+import cv2 as cv 
 import re
 
 if __name__ == '__main__':
@@ -18,7 +19,7 @@ if __name__ == '__main__':
     for fn in glob('*.py'):
         print(' --- ', fn)
         code = open(fn).read()
-        found |= set(re.findall('cv2?\.\w+', code))
+        found |= set(re.findall(r'cv2?\.\w+', code))
 
     cv2_used = found & cv2_callable
     cv2_unused = cv2_callable - cv2_used
