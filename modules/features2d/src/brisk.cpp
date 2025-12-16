@@ -718,7 +718,22 @@ void
 BRISK_Impl::detectAndCompute( InputArray _image, InputArray _mask, std::vector<KeyPoint>& keypoints,
                               OutputArray _descriptors, bool useProvidedKeypoints)
 {
-  bool doOrientation=true;
+  // Only compute orientation if not using provided keypoints, 
+  // or if provided keypoints don't have valid angles
+  bool doOrientation = true;
+  
+  if (useProvidedKeypoints && !keypoints.empty()) {
+    // Check if any keypoint has a valid angle (angle != -1)
+    // If all keypoints have valid angles, don't recalculate
+    bool hasValidAngles = true;
+    for (size_t i = 0; i < keypoints.size(); i++) {
+      if (keypoints[i].angle == -1) {
+        hasValidAngles = false;
+        break;
+      }
+    }
+    doOrientation = !hasValidAngles;
+  }
 
   // If the user specified cv::noArray(), this will yield false. Otherwise it will return true.
   bool doDescriptors = _descriptors.needed();
