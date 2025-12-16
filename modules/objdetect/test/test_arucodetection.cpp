@@ -636,8 +636,8 @@ static void runArucoDetectionConfidence(ArucoAlgParams arucoAlgParam) {
                 groundTruths.push_back(gt);
 
                 // place marker in the image
-                Point2f topLeft(margin + col * (markerSidePixels + margin),
-                                margin + row * (markerSidePixels + margin));
+                Point2f topLeft(static_cast<float>(margin + col * (markerSidePixels + margin)),
+                                static_cast<float>(margin + row * (markerSidePixels + margin)));
                 placeMarker(img, markerImg, topLeft);
             }
         }
@@ -934,8 +934,8 @@ TEST(CV_InvertedFlagArucoDetectionConfidence, algorithmic) {
             Mat markerImg;
             aruco::generateImageMarker(dictionary, id, markerSidePixels, markerImg, params.markerBorderBits);
 
-            Point2f topLeft(margin + col * (markerSidePixels + margin),
-                            margin + row * (markerSidePixels + margin));
+            Point2f topLeft(static_cast<float>(margin + col * (markerSidePixels + margin)),
+                            static_cast<float>(margin + row * (markerSidePixels + margin)));
             placeMarker(img, markerImg, topLeft);
         }
     }
