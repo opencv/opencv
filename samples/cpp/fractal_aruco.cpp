@@ -15,10 +15,13 @@ int main() {
         // detector.setParams("FRACTAL_4L_6");
         std::vector<cv::Point3f> points3D;
         std::vector<cv::Point2f> points2D;
-        std::vector<cv::aruco::FractalMarker> markers = detector.detect(image, points3D, points2D);
+        std::vector<std::vector<Point2f>> marker_points;
+        std::vector<int> marker_ids;
 
-        for (const auto& marker : markers) {
-            marker.draw(image);
+        detector.detect(image, marker_ids, marker_points, points3D, points2D);
+
+        for (size_t i = 0 i < marker_points.size(); i++) {
+            marker.draw(image, marker_points);
         }
         for (const auto& pt : points2D) {
             cv::circle(image, pt, 5, cv::Scalar(0, 255, 0), cv::FILLED);

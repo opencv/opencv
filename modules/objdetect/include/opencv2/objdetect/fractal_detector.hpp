@@ -38,17 +38,16 @@ public:
     CV_WRAP FractalArucoMarker(int id, InputArray m, const std::vector<Point3f>& corners, const std::vector<int>& id_submarkers);
 
     /**
-     * @brief Draws the marker on the given image.
+     * @brief Draws detected marker on the given image.
      * @param image The image on which to draw the marker.
      * @param color The color to use for drawing (default is red).
      */
-    CV_WRAP void draw(InputOutputArray image, const Scalar color = Scalar(0, 0, 255));
+    CV_WRAP void draw(cv::InputOutputArray img, const std::vector<Point2f>& detected_points, const cv::Scalar color = Scalar(0, 0, 255));
 
-    CV_WRAP int size() const;
-    CV_WRAP cv::Point2f get(int idx);
-    cv::Point2f& operator[](size_t idx);
-
-    void push_back(const cv::Point2f& p);
+    /**
+     * @brief Returns marker id in dictionary
+     */
+    CV_WRAP int getId() const;
 
 protected:
     /**
@@ -109,7 +108,8 @@ public:
      * @param p2d Optional output 2D points (image points).
      * @return true if detection succeeded, false otherwise.
      */
-    CV_WRAP bool detect(InputArray img, CV_OUT std::vector<FractalArucoMarker>& markers, OutputArray p3d = noArray(), OutputArray p2d = noArray());
+    CV_WRAP bool detect(InputArray img, CV_OUT std::vector<int>& marker_ids, CV_OUT std::vector<std::vector<cv::Point2f>>& marker_points,
+                        OutputArray p3d = noArray(), OutputArray p2d = noArray());
 
     /**
      * @brief Sets the parameters for fractal marker detection.

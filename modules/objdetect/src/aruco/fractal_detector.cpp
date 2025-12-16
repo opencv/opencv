@@ -21,7 +21,6 @@ namespace cv {
 namespace aruco {
 
 struct FractalArucoMarker::FractalMarkerImpl {
-    std::vector<Point2f> data;
     int id;
     std::vector<cv::KeyPoint> keypts;
     cv::Mat _M;
@@ -35,7 +34,7 @@ struct FractalArucoMarker::FractalMarkerImpl {
     void addSubFractalMarker(const FractalArucoMarker& submarker);
     float getMarkerSize() const;
     std::vector<cv::KeyPoint> getKeypoints();
-    void draw(cv::InputOutputArray in, const cv::Scalar color);
+    void draw(cv::InputOutputArray img, const std::vector<Point2f>& detected_points, const cv::Scalar color);
 };
 
 struct FractalMarkerDictionary::FractalMarkerDictionaryImpl {
@@ -59,16 +58,16 @@ struct FractalDetector::FractalDetectorImpl {
 
 };
 
-void FractalArucoMarker::FractalMarkerImpl::draw(cv::InputOutputArray in, const cv::Scalar color) {
-    float flineWidth = std::max(1.f, std::min(5.f, float(in.cols()) / 500.f));
+void FractalArucoMarker::FractalMarkerImpl::draw(cv::InputOutputArray img, const std::vector<Point2f>& detected_points, const cv::Scalar color) {
+    float flineWidth = std::max(1.f, std::min(5.f, float(img.cols()) / 500.f));
     int lineWidth = (int)round(flineWidth);
     for (int i = 0; i < 4; i++)
-        cv::line(in, data[i], data[(i + 1) % 4], color, lineWidth);
+        cv::line(img, detected_points[i], detected_points[(i + 1) % 4], color, lineWidth);
 
-    auto p2 = cv::Point2f(2.f * static_cast<float>(lineWidth), 2.f * static_cast<float>(lineWidth));
-    cv::rectangle(in, data[0] - p2, data[0] + p2, cv::Scalar(0, 0, 255, 255), -1);
-    cv::rectangle(in, data[1] - p2, data[1] + p2, cv::Scalar(0, 255, 0, 255), lineWidth);
-    cv::rectangle(in, data[2] - p2, data[2] + p2, cv::Scalar(255, 0, 0, 255), lineWidth);
+    cv::Point2f p2(2.f * static_cast<float>(lineWidth), 2.f * static_cast<float>(lineWidth));
+    cv::rectangle(img, detected_points[0] - p2, detected_points[0] + p2, cv::Scalar(0, 0, 255, 255), -1);
+    cv::rectangle(img, detected_points[1] - p2, detected_points[1] + p2, cv::Scalar(0, 255, 0, 255), lineWidth);
+    cv::rectangle(img, detected_points[2] - p2, detected_points[2] + p2, cv::Scalar(255, 0, 0, 255), lineWidth);
 }
 
 // Implementation of FractalMarker methods
@@ -90,8 +89,8 @@ FractalArucoMarker::FractalArucoMarker()
     impl->_mask = cv::Mat::ones(1, 1, CV_8UC1);
 }
 
-void FractalArucoMarker::draw(cv::InputOutputArray in, const cv::Scalar color) {
-    impl->draw(in, color);
+void FractalArucoMarker::draw(cv::InputOutputArray img, const std::vector<Point2f>& detected_points, const cv::Scalar color) {
+    impl->draw(img, detected_points, color);
 }
 
 int FractalArucoMarker::FractalMarkerImpl::nBits() const {
@@ -165,24 +164,9 @@ std::vector<cv::KeyPoint> FractalArucoMarker::FractalMarkerImpl::getKeypoints() 
     return keypts;
 }
 
-int FractalArucoMarker::size() const
+int FractalArucoMarker::getId() const
 {
-    return (int)impl->data.size();
-}
-
-cv::Point2f FractalArucoMarker::get(int idx)
-{
-    return impl->data[idx];
-}
-
-cv::Point2f& FractalArucoMarker::operator[](size_t idx)
-{
-    return impl->data[idx];
-}
-
-void FractalArucoMarker::push_back(const cv::Point2f& p)
-{
-    impl->data.push_back(p);
+    return impl->id;
 }
 
 FractalMarkerDictionary::FractalMarkerDictionary()
@@ -293,11 +277,14 @@ void FractalDetector::setParams(int minInternalDistSq_, float markerSize) {
 }
 
 bool FractalDetector::detect(cv::InputArray img,
-                            std::vector<FractalArucoMarker>& markers,
-                            cv::OutputArray p3d,
-                            cv::OutputArray p2d)
-    {
-    markers.clear();
+                             std::vector<int>& marker_ids,
+                             std::vector<std::vector<cv::Point2f>>& marker_points,
+                             cv::OutputArray p3d,
+                             cv::OutputArray p2d)
+{
+    marker_ids.clear();
+    marker_points.clear();
+
     cv::Mat bwimage, thresImage;
 
     // Convert to grayscale if needed
@@ -400,12 +387,12 @@ bool FractalDetector::detect(cv::InputArray img,
         // copy back to the markers
         for (unsigned int i = 0; i < candidates.size(); i++)
         {
-            markers.push_back(impl->fractalMarkerDictionary.impl->fractalMarkerCollection[candidates[i].first]);
-            for (int c = 0; c < 4; c++) markers[i].push_back(Corners[i * 4 + c]);
+            marker_ids.push_back(candidates[i].first);
+            marker_points.push_back(std::vector<cv::Point2f>(&Corners[i * 4], &Corners[(i+1) * 4]));
         }
     }
 
-    if (markers.empty()) {
+    if (marker_ids.empty()) {
         return false;
     }
 
@@ -417,12 +404,13 @@ bool FractalDetector::detect(cv::InputArray img,
     // Prepare points for homography
     std::vector<cv::Point2f> imgpoints;
     std::vector<cv::Point3f> objpoints;
-    for (auto& marker : markers) {
-        for (int m = 0; m < marker.size(); m++)
-            imgpoints.push_back(marker[m]);
+
+    for (size_t m = 0; m < marker_points.size(); m++) {
+        for (size_t p = 0; p < marker_points[m].size(); p++)
+            imgpoints.push_back(marker_points[m][p]);
 
         for (int c = 0; c < 4; c++) {
-            cv::KeyPoint kpt = impl->fractalMarkerDictionary.impl->fractalMarkerCollection[marker.impl->id].impl->getKeypoints()[c];
+            cv::KeyPoint kpt = impl->fractalMarkerDictionary.impl->fractalMarkerCollection[marker_ids[m]].impl->getKeypoints()[c];
             objpoints.push_back(cv::Point3f(kpt.pt.x, kpt.pt.y, 0));
         }
     }
@@ -513,20 +501,6 @@ bool FractalDetector::detect(cv::InputArray img,
                             p3d_vec.push_back(cv::Point3f(objPoints[idx].x, objPoints[idx].y, 0));
                         }
                     }
-                }
-            }
-        }
-        else {
-            // If a marker is detected and it is not possible to take all their corners,
-            // at least take the external one!
-            for (auto markerDetected : markers) {
-                if (markerDetected.impl->id == fm.first) {
-                    for (int c = 0; c < 4; c++) {
-                        cv::Point2f pt = markerDetected.impl->keypts[c].pt;
-                        p3d_vec.push_back(cv::Point3f(pt.x, pt.y, 0));
-                        p2d_vec.push_back(markerDetected[c]);
-                    }
-                    break;
                 }
             }
         }

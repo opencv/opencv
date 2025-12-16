@@ -27,9 +27,10 @@ TEST_P(FractalArucoTest, detect)
     aruco::FractalDetector detector(dictionary);
     std::vector<Point3f> points3D;
     std::vector<Point2f> points2D;
-    std::vector<aruco::FractalArucoMarker> markers;
+    std::vector<int> marker_ids;
+    std::vector<std::vector<cv::Point2f>> marker_points;
 
-    bool detected = detector.detect(image, markers, points3D, points2D);
+    bool detected = detector.detect(image, marker_ids, marker_points, points3D, points2D);
 
     std::vector<cv::Point3f> points3D_gt;
     std::vector<cv::Point2f> points2D_gt;
