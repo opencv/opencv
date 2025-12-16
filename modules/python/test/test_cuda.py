@@ -52,9 +52,9 @@ class cuda_test(NewOpenCVTests):
         self.assertTrue(asyncstream.cudaPtr() != 0)
 
     def test_cuda_buffer_pool(self):
+        stream_a = cv.cuda.Stream()
         cv.cuda.setBufferPoolUsage(True)
         cv.cuda.setBufferPoolConfig(cv.cuda.getDevice(), 1024 * 1024 * 64, 2)
-        stream_a = cv.cuda.Stream()
         pool_a = cv.cuda.BufferPool(stream_a)
         cuMat = pool_a.getBuffer(1024, 1024, cv.CV_8UC3)
         cv.cuda.setBufferPoolUsage(False)
@@ -70,7 +70,6 @@ class cuda_test(NewOpenCVTests):
         self.assertTrue(cuMat.step == 0)
         self.assertTrue(cuMat.size() == (0, 0))
 
-    @unittest.skip("failed test")
     def test_cuda_convertTo(self):
         # setup
         npMat_8UC4 = (np.random.random((128, 128, 4)) * 255).astype(np.uint8)
@@ -106,7 +105,6 @@ class cuda_test(NewOpenCVTests):
         stream.waitForCompletion()
         self.assertTrue(np.array_equal(npMat_32FC4, npMat_32FC4_out))
 
-    @unittest.skip("failed test")
     def test_cuda_copyTo(self):
         # setup
         npMat_8UC4 = (np.random.random((128, 128, 4)) * 255).astype(np.uint8)
