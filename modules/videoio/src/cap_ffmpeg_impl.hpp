@@ -1934,12 +1934,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         // Some sws_scale optimizations have some assumptions about alignment of data/step/width/height
         // Also we use coded_width/height to workaround problem with legacy ffmpeg versions (like n0.8)
         int buffer_width = context->coded_width, buffer_height = context->coded_height;
-        buffer_width = video_st->CV_FFMPEG_CODEC_FIELD->width;
-        buffer_height = video_st->CV_FFMPEG_CODEC_FIELD->height;
 
-#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
-        img_convert_ctx = sws_alloc_context();
-#else
         img_convert_ctx = sws_getCachedContext(
                 img_convert_ctx,
                 buffer_width, buffer_height,
@@ -1959,11 +1954,6 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         rgb_picture.format = result_format;
         rgb_picture.width = buffer_width;
         rgb_picture.height = buffer_height;
-        rgb_picture.color_range = AVCOL_RANGE_JPEG;
-        rgb_picture.colorspace = AVCOL_SPC_RGB;
-        // rgb_picture.chroma_location = (AVChromaLocation)0;
-        rgb_picture.color_primaries = sw_picture->color_primaries;
-        rgb_picture.color_trc = sw_picture->color_trc;
         if (0 != av_frame_get_buffer(&rgb_picture, 32))
         {
             CV_WARN("OutOfMemory");
@@ -1983,12 +1973,8 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
         frame.data = rgb_picture.data[0];
         frame.step = rgb_picture.linesize[0];
     }
-<<<<<<< HEAD
 
 #if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(6, 4, 100)
-=======
-#if LIBSWSCALE_BUILD >= CALC_FFMPEG_VERSION(8, 12 ,100)
->>>>>>> 69b751de8b (Try sws_scale_frame)
     sws_scale_frame(img_convert_ctx, &rgb_picture, sw_picture);
 #else
     sws_scale(
