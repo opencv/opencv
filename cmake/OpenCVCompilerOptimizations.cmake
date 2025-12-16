@@ -352,7 +352,7 @@ if(X86 OR X86_64)
     endif()
   endif()
 
-elseif(ARM OR AARCH64)
+elseif((ARM OR AARCH64) AND NOT APPLE)
   ocv_update(CPU_SVE_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_sve.cpp")
   ocv_update(CPU_NEON_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_neon.cpp")
   ocv_update(CPU_FP16_TEST_FILE "${OpenCV_SOURCE_DIR}/cmake/checks/cpu_fp16.cpp")
