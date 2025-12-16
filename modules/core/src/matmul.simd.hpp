@@ -1892,6 +1892,7 @@ perspectiveTransform_( const T* src, T* dst, const double* m, int len, int scn, 
                 w += _m[k]*src[k];
             if( fabs(w) > eps )
             {
+                w = 1./w;
                 _m = m;
                 for( j = 0; j < dcn; j++, _m += scn + 1 )
                 {
