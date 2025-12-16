@@ -42,6 +42,7 @@
 
 #include "precomp.hpp"
 
+#include <cstdint>
 #include <memory>
 
 #ifdef HAVE_PNG
@@ -364,7 +365,7 @@ bool  PngDecoder::readHeader()
     m_color_type = color_type;
     m_bit_depth = bit_depth;
 
-    if (m_is_fcTL_loaded && ((long long int)x0 + w0 > m_width || (long long int)y0 + h0 > m_height || dop > 2 || bop > 1))
+    if (m_is_fcTL_loaded && ((int64_t)x0 + w0 > m_width || (int64_t)y0 + h0 > m_height || dop > 2 || bop > 1))
         return false;
 
     png_color_16p background_color;
@@ -456,7 +457,7 @@ bool  PngDecoder::readData( Mat& img )
                             if (dop == 2)
                                 memcpy(frameNext.getPixels(), frameCur.getPixels(), imagesize);
 
-                            if (x0 + w0 > frameCur.getWidth() || y0 + h0 > frameCur.getHeight())
+                            if ((uint64_t)x0 + w0 > frameCur.getWidth() || (uint64_t)y0 + h0 > frameCur.getHeight())
                             return false;
 
                             compose_frame(frameCur.getRows(), frameRaw.getRows(), bop, x0, y0, w0, h0, mat_cur);
