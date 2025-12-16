@@ -95,6 +95,17 @@ CV__DNN_INLINE_NS_BEGIN
         static Ptr<ConstantOfShapeLayer> create(const LayerParams &params);
     };
 
+    class CV_EXPORTS RandomNormalLikeLayer : public Layer
+    {
+    public:
+        static Ptr<Layer> create(const LayerParams& params);
+
+        float mean;
+        float scale;
+        bool has_seed;
+        float seed;
+    };
+
     //! LSTM recurrent layer
     class CV_EXPORTS LSTMLayer : public Layer
     {

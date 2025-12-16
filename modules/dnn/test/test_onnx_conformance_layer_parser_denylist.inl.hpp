@@ -557,22 +557,6 @@
 "test_roialign_aligned_false",  // Issue:: Parser: Layer does not exist (RoiAlign)
 "test_roialign_aligned_true",  // ---- same as above ---
 "test_roialign_mode_max",
-// "test_rotary_embedding", //type mismatch
-// "test_rotary_embedding_3d_input",
-// "test_rotary_embedding_3d_input_expanded",
-// "test_rotary_embedding_expanded",
-// "test_rotary_embedding_interleaved",
-// "test_rotary_embedding_interleaved_expanded",
-// "test_rotary_embedding_no_position_ids",
-// "test_rotary_embedding_no_position_ids_expanded",
-// "test_rotary_embedding_no_position_ids_interleaved",
-// "test_rotary_embedding_no_position_ids_interleaved_expanded",
-// "test_rotary_embedding_no_position_ids_rotary_dim",
-// "test_rotary_embedding_no_position_ids_rotary_dim_expanded",
-// "test_rotary_embedding_with_interleaved_rotary_dim",
-// "test_rotary_embedding_with_interleaved_rotary_dim_expanded",
-// "test_rotary_embedding_with_rotary_dim",
-// "test_rotary_embedding_with_rotary_dim_expanded",
 "test_scan9_sum",  // Issue:: Parser: 'Graph' is not supported in function 'getLayerParams'
 "test_scan_sum", // ---- same as above ---
 "test_sequence_insert_at_back",  // Issue:: Parser:  typeProto.has_tensor_type() in function 'populateNet'
