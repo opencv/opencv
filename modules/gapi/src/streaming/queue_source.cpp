@@ -67,7 +67,7 @@ cv::GMetaArg QueueSourceBase::descr_of() const {
 
 QueueInput::QueueInput(const cv::GMetaArgs &args) {
     for (auto &&m : args) {
-        m_sources.emplace_back(new cv::gapi::wip::QueueSourceBase(m));
+        m_sources.emplace_back(std::make_shared<cv::gapi::wip::QueueSourceBase>(m));
     }
 }
 
