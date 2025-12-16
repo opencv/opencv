@@ -114,7 +114,7 @@ Links:
 | OPENCV_THREAD_POOL_ACTIVE_WAIT_WORKER | num | 2000 | tune pthreads parallel_for backend |
 | OPENCV_THREAD_POOL_ACTIVE_WAIT_MAIN | num | 10000 | tune pthreads parallel_for backend |
 | OPENCV_THREAD_POOL_ACTIVE_WAIT_THREADS_LIMIT | num | 0 | tune pthreads parallel_for backend |
-| OPENCV_FOR_OPENMP_DYNAMIC_DISABLE | bool | false | use single OpenMP thread |
+| OPENCV_FOR_OPENMP_DYNAMIC_DISABLE | bool | false | Removed in 4.13.0. Use standard [OMP_DYNAMIC](https://www.openmp.org/spec-html/5.0/openmpsu116.html) instead |
 
 
 ## backends

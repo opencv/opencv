@@ -112,7 +112,11 @@ class App:
         webbrowser.open(url)
 
     def on_demo_select(self, evt):
-        name = self.demos_lb.get( self.demos_lb.curselection()[0] )
+        selection = self.demos_lb.curselection()
+        if not selection:
+            return
+
+        name = self.demos_lb.get(selection[0])
         fn = self.samples[name]
 
         descr = ""

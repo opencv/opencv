@@ -95,10 +95,8 @@ parser.add_argument(
 )
 parser.add_argument(
     '--try_cuda',
-    action='store',
-    default=False,
+    action='store_true',
     help="Try to use CUDA. The default value is no. All default values are for CPU mode.",
-    type=bool, dest='try_cuda'
 )
 parser.add_argument(
     '--work_megapix', action='store', default=0.6,

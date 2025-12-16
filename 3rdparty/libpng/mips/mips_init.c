@@ -48,7 +48,7 @@ static int png_have_msa(png_structp png_ptr);
 #include PNG_MIPS_MSA_FILE
 
 #else  /* PNG_MIPS_MSA_FILE */
-#  error "PNG_MIPS_MSA_FILE undefined: no support for run-time MIPS MSA checks"
+#  error PNG_MIPS_MSA_FILE undefined: no support for run-time MIPS MSA checks
 #endif /* PNG_MIPS_MSA_FILE */
 #endif /* PNG_MIPS_MSA_CHECK_SUPPORTED */
 
@@ -66,12 +66,12 @@ static int png_have_mmi();
 #include PNG_MIPS_MMI_FILE
 
 #else  /* PNG_MIPS_MMI_FILE */
-#  error "PNG_MIPS_MMI_FILE undefined: no support for run-time MIPS MMI checks"
+#  error PNG_MIPS_MMI_FILE undefined: no support for run-time MIPS MMI checks
 #endif /* PNG_MIPS_MMI_FILE */
 #endif /* PNG_MIPS_MMI_CHECK_SUPPORTED*/
 
 #ifndef PNG_ALIGNED_MEMORY_SUPPORTED
-#  error "ALIGNED_MEMORY is required; set: -DPNG_ALIGNED_MEMORY_SUPPORTED"
+#  error ALIGNED_MEMORY is required; please define PNG_ALIGNED_MEMORY_SUPPORTED
 #endif
 
 /* MIPS supports two optimizations: MMI and MSA. The appropriate

@@ -56,6 +56,11 @@
     (defined(_M_X64) || defined(_M_IX86))
 #define WEBP_MSC_SSE41  // Visual C++ SSE4.1 targets
 #endif
+
+#if defined(_MSC_VER) && _MSC_VER >= 1700 && \
+    (defined(_M_X64) || defined(_M_IX86))
+#define WEBP_MSC_AVX2  // Visual C++ AVX2 targets
+#endif
 #endif
 
 // WEBP_HAVE_* are used to indicate the presence of the instruction set in dsp
@@ -80,6 +85,26 @@
 #define WEBP_HAVE_SSE41
 #endif
 
+#if (defined(__AVX2__) || defined(WEBP_MSC_AVX2)) && \
+    (!defined(HAVE_CONFIG_H) || defined(WEBP_HAVE_AVX2))
+#define WEBP_USE_AVX2
+#endif
+
+#if defined(WEBP_USE_AVX2) && !defined(WEBP_HAVE_AVX2)
+#define WEBP_HAVE_AVX2
+#endif
+
+#if defined(WEBP_MSC_AVX2) && _MSC_VER <= 1900
+#include <immintrin.h>
+static WEBP_INLINE int _mm256_extract_epi32(__m256i a, const int i) {
+  return a.m256i_i32[i & 7];
+}
+static WEBP_INLINE int _mm256_cvtsi256_si32(__m256i a) {
+  return _mm256_extract_epi32(a, 0);
+}
+#endif
+
+#undef WEBP_MSC_AVX2
 #undef WEBP_MSC_SSE41
 #undef WEBP_MSC_SSE2
 

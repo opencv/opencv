@@ -59,16 +59,17 @@ void checkImageDimensions(const std::vector<Mat>& images)
     }
 }
 
-Mat triangleWeights()
+Mat triangleWeights(int length)
 {
     // hat function
-    Mat w(LDR_SIZE, 1, CV_32F);
-    int half   = LDR_SIZE / 2;
-    int maxVal = LDR_SIZE - 1;
+    CV_Assert(length >= 2);
+    Mat w(length, 1, CV_32F);
+    int half   = length / 2;
+    int maxVal = length - 1;
     float epsilon = 1e-6f;
     w.at<float>(0) = epsilon;
-    w.at<float>(LDR_SIZE-1) = epsilon;
-    for (int i = 1; i < LDR_SIZE-1; i++){
+    w.at<float>(length - 1) = epsilon;
+    for (int i = 1; i < length - 1; i++){
         w.at<float>(i) = (i < half)
             ? static_cast<float>(i)
             : static_cast<float>(maxVal - i);
@@ -76,15 +77,16 @@ Mat triangleWeights()
     return w;
 }
 
-Mat RobertsonWeights()
+Mat RobertsonWeights(int length)
 {
-    Mat weight(LDR_SIZE, 1, CV_32FC3);
-    float q = (LDR_SIZE - 1) / 4.0f;
+    CV_Assert(length >= 1);
+    Mat weight(length, 1, CV_32FC3);
+    float q = (length - 1) / 4.0f;
     float e4 = exp(4.f);
     float scale = e4/(e4 - 1.f);
     float shift = 1 / (1.f - e4);
 
-    for(int i = 0; i < LDR_SIZE; i++) {
+    for(int i = 0; i < length; i++) {
         float value = i / q - 2.0f;
         value = scale*exp(-value * value) + shift;
         weight.at<Vec3f>(i) = Vec3f::all(value);
@@ -104,11 +106,28 @@ void mapLuminance(Mat src, Mat dst, Mat lum, Mat new_lum, float saturation)
     merge(channels, dst);
 }
 
-Mat linearResponse(int channels)
+Mat linearResponse(int channels, int length)
 {
-    Mat response = Mat(LDR_SIZE, 1, CV_MAKETYPE(CV_32F, channels));
-    for(int i = 0; i < LDR_SIZE; i++) {
-        response.at<Vec3f>(i) = Vec3f::all(static_cast<float>(i));
+    CV_Assert(length >= 1);
+    Mat response = Mat(length, 1, CV_MAKETYPE(CV_32F, channels));
+
+    if (channels == 1)
+    {
+        for (int i = 0; i < length; i++)
+        {
+            response.at<float>(i) = static_cast<float>(i);
+        }
+    }
+    else if (channels == 3)
+    {
+        for (int i = 0; i < length; i++)
+        {
+            response.at<Vec3f>(i) = Vec3f::all(static_cast<float>(i));
+        }
+    }
+    else
+    {
+        CV_Error(Error::StsBadArg, "Unsupported number of channels in linearResponse");
     }
     return response;
 }

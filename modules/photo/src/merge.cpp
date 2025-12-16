@@ -66,11 +66,32 @@ public:
 
         CV_Assert(images.size() == times.total());
         checkImageDimensions(images);
-        CV_Assert(images[0].depth() == CV_8U);
+        int depth = images[0].depth();
+        CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_32F);
 
         int channels = images[0].channels();
         Size size = images[0].size();
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+
+        const bool use16bitLUT = (depth == CV_16U || depth == CV_32F);
+        const int lutLength = use16bitLUT ? 65536 : LDR_SIZE;
+
+        std::vector<Mat> lutImages(images.size());
+        if (depth == CV_8U || depth == CV_16U)
+        {
+            lutImages = images;
+        }
+        else
+        {
+            const double scale = static_cast<double>(lutLength - 1);
+            for (size_t i = 0; i < images.size(); ++i)
+            {
+                Mat clipped;
+                cv::max(images[i], 0.0, clipped);
+                cv::min(clipped, 1.0, clipped);
+                clipped.convertTo(lutImages[i], CV_16U, scale);
+            }
+        }
 
         dst.create(images[0].size(), CV_32FCC);
         Mat result = dst.getMat();
@@ -78,13 +99,13 @@ public:
         Mat response = input_response.getMat();
 
         if(response.empty()) {
-            response = linearResponse(channels);
+            response = linearResponse(channels, lutLength);
             response.at<Vec3f>(0) = response.at<Vec3f>(1);
         }
 
         Mat log_response;
         log(response, log_response);
-        CV_Assert(log_response.rows == LDR_SIZE && log_response.cols == 1 &&
+        CV_Assert(log_response.rows == lutLength && log_response.cols == 1 &&
                   log_response.channels() == channels);
 
         Mat exp_values(times.clone());
@@ -95,19 +116,23 @@ public:
         split(result, result_split);
         Mat weight_sum = Mat::zeros(size, CV_32F);
 
+        Mat weights_lut = use16bitLUT
+            ? triangleWeights(lutLength)
+            : weights;
+
         for(size_t i = 0; i < images.size(); i++) {
             std::vector<Mat> splitted;
-            split(images[i], splitted);
+            split(lutImages[i], splitted);
 
             Mat w = Mat::zeros(size, CV_32F);
             for(int c = 0; c < channels; c++) {
-                LUT(splitted[c], weights, splitted[c]);
+                LUT(splitted[c], weights_lut, splitted[c]);
                 w += splitted[c];
             }
             w /= channels;
 
             Mat response_img;
-            LUT(images[i], log_response, response_img);
+            LUT(lutImages[i], log_response, response_img);
             split(response_img, splitted);
             for(int c = 0; c < channels; c++) {
                 result_split[c] += w.mul(splitted[c] - exp_values.at<float>((int)i));
@@ -328,28 +353,52 @@ public:
 
         CV_Assert(images.size() == times.total());
         checkImageDimensions(images);
-        CV_Assert(images[0].depth() == CV_8U);
+        int depth = images[0].depth();
+        CV_Assert(depth == CV_8U || depth == CV_16U || depth == CV_32F);
 
         int channels = images[0].channels();
         int CV_32FCC = CV_MAKETYPE(CV_32F, channels);
+
+        const bool use16bitLUT = (depth == CV_16U || depth == CV_32F);
+        const int lutLength = use16bitLUT ? 65536 : LDR_SIZE;
+
+        // Build LUT index images (see MergeDebevecImpl for details).
+        std::vector<Mat> lutImages(images.size());
+        if (depth == CV_8U || depth == CV_16U)
+        {
+            lutImages = images;
+        }
+        else // CV_32F
+        {
+            const double scale = static_cast<double>(lutLength - 1);
+            for (size_t i = 0; i < images.size(); ++i)
+            {
+                images[i].convertTo(lutImages[i], CV_16U, scale);
+            }
+        }
 
         dst.create(images[0].size(), CV_32FCC);
         Mat result = dst.getMat();
 
         Mat response = input_response.getMat();
         if(response.empty()) {
-            float middle = static_cast<float>(LDR_SIZE) / 2.0f;
-            response = linearResponse(channels) / middle;
+            float middle = static_cast<float>(lutLength) / 2.0f;
+            response = linearResponse(channels, lutLength) / middle;
         }
-        CV_Assert(response.rows == LDR_SIZE && response.cols == 1 &&
+        CV_Assert(response.rows == lutLength && response.cols == 1 &&
                   response.channels() == channels);
 
         result = Mat::zeros(images[0].size(), CV_32FCC);
         Mat wsum = Mat::zeros(images[0].size(), CV_32FCC);
+
+        Mat weight_lut = use16bitLUT
+            ? RobertsonWeights(lutLength)
+            : weight;
+
         for(size_t i = 0; i < images.size(); i++) {
             Mat im, w;
-            LUT(images[i], weight, w);
-            LUT(images[i], response, im);
+            LUT(lutImages[i], weight_lut, w);
+            LUT(lutImages[i], response, im);
 
             result += times.at<float>((int)i) * w.mul(im);
             wsum += times.at<float>((int)i) * times.at<float>((int)i) * w;
