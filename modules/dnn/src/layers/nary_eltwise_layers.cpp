@@ -315,11 +315,18 @@ public:
             {
                 if (shape[i] != outShape[i])
                 {
-                    CV_Assert(shape[i] == 1 || outShape[i] == 1);
-                    outShape[i] = std::max(outShape[i], shape[i]);
-                }
-            }
-        }
+                    // Handle zero dimensions per ONNX broadcasting spec
+                    if (shape[i] == 0 || outShape[i] == 0)
+                    {
+                        outShape[i] = 0;
+                        continue;
+                     }
+            
+                     CV_Assert(shape[i] == 1 || outShape[i] == 1);
+                     outShape[i] = std::max(outShape[i], shape[i]);
+                 }
+             }
+         }
 
         return outShape;
     }
