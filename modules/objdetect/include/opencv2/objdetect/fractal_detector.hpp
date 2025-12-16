@@ -42,6 +42,16 @@ public:
      */
     CV_WRAP int getId() const;
 
+    CV_WRAP void addSubFractalMarker(const FractalArucoMarker& submarker);
+
+    CV_WRAP std::vector<cv::KeyPoint> getKeypoints();
+
+    CV_WRAP cv::Mat getBits() const;
+
+    CV_WRAP cv::Mat getMask() const;
+
+    CV_WRAP std::vector<int> getSubMarkers() const;
+
 protected:
     /**
      * @brief Internal implementation details for FractalMarker (PIMPL idiom).
@@ -50,7 +60,6 @@ protected:
     Ptr<FractalMarkerImpl> impl;
 
     friend class FractalMarkerDictionary;
-    friend class FractalDetector;
 };
 
 enum PredefinedFractalDictionaryType {
@@ -72,10 +81,12 @@ class CV_EXPORTS_W_SIMPLE FractalMarkerDictionary
 {
 public:
     FractalMarkerDictionary();
-    CV_WRAP FractalMarkerDictionary(Mat compressed);
+    CV_WRAP FractalMarkerDictionary(InputArray compressed);
+    CV_WRAP FractalArucoMarker getMarker(int id) const;
 protected:
     struct FractalMarkerDictionaryImpl;
     Ptr<FractalMarkerDictionaryImpl> impl;
+
     friend class FractalDetector;
 };
 
