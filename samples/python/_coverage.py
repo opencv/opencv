@@ -9,7 +9,7 @@ Utility for measuring python opencv API coverage by samples.
 from __future__ import print_function
 
 from glob import glob
-import cv2 as cv 
+import cv2 as cv
 import re
 
 if __name__ == '__main__':
