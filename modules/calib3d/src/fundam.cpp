@@ -856,8 +856,19 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     CV_INSTRUMENT_REGION();
 
     if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
-        return usac::findFundamentalMat(_points1, _points2, method,
-            ransacReprojThreshold, confidence, maxIters, _mask);
+    {
+        UsacParams params;
+        params.method = static_cast<usac::SamplingMethod>(method);
+        params.threshold = ransacReprojThreshold;
+        params.confidence = confidence;
+        params.maxIterations = maxIters;
+
+        // Restore deterministic behavior for legacy findFundamentalMat calls
+        params.randomGeneratorState = 0;
+        params.isParallel = false;
+
+        return cv::findFundamentalMat(_points1, _points2, _mask, params);
+    }
 
     Mat points1 = _points1.getMat(), points2 = _points2.getMat();
     Mat m1, m2, F;
