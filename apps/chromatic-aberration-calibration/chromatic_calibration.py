@@ -671,7 +671,7 @@ def cmd_full(parsed_args: argparse.Namespace) -> None:
     save_calib_result(calib, path=parsed_args.coeffs_file)
     print("Saved coefficients to", parsed_args.coeffs_file)
 
-    FileStorage fs(parsed_args.coeffs_file, FileStorage::READ);
+    fs = cv2.FileStorage(parsed_args.coeffs_file, cv2.FileStorage_READ)
     if not fs.isOpened():
         print(f"Could not calibration coefficients from {parsed_args.coeffs_file}")
         return

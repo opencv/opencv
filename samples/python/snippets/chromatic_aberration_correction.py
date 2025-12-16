@@ -46,13 +46,13 @@ def main(argv=None):
         print(f"ERROR: Could not load input image: {args.input}", file=sys.stderr)
         return 1
 
-    fs = cv.FileStorage(self.test_yaml_file, cv.FileStorage_READ)
+    fs = cv.FileStorage(args.calibration, cv.FileStorage_READ)
     if not fs.isOpened():
         print(f"Could not calibration coefficients from {args.calibration}")
         return 1
 
     try:
-        coeffMat, size, degree = cv2.loadChromaticAberrationParams(fs.root())
+        coeffMat, size, degree = cv.loadChromaticAberrationParams(fs.root())
         corrected = cv.correctChromaticAberration(img, coeffMat, size, degree, args.bayer)
 
         if corrected is None:
