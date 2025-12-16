@@ -858,14 +858,38 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
     if (method >= USAC_DEFAULT && method <= USAC_MAGSAC)
     {
         UsacParams params;
-        params.method = static_cast<usac::SamplingMethod>(method);
         params.threshold = ransacReprojThreshold;
         params.confidence = confidence;
         params.maxIterations = maxIters;
 
-        // Restore deterministic behavior for legacy findFundamentalMat calls
-        params.randomGeneratorState = 0;
+        // Fix for Issue #27388: Restore deterministic behavior
         params.isParallel = false;
+        params.randomGeneratorState = (int)cv::theRNG();
+
+        // Map the legacy 'method' flag to UsacParams settings
+        switch (method)
+        {
+        case USAC_MAGSAC:
+            params.score = SCORE_METHOD_MAGSAC;
+            break;
+        case USAC_ACCURATE:
+            params.score = SCORE_METHOD_MSAC;
+            params.loMethod = LOCAL_OPTIM_GC;
+            break;
+        case USAC_FAST:
+            params.score = SCORE_METHOD_MSAC;
+            params.loIterations = 5;
+            params.loSampleSize = 12;
+            break;
+        case USAC_PROSAC:
+            params.sampler = SAMPLING_PROSAC;
+            params.score = SCORE_METHOD_MSAC;
+            break;
+        default: // USAC_DEFAULT, USAC_PARALLEL, USAC_FM_8PTS
+            params.score = SCORE_METHOD_MSAC;
+            params.sampler = SAMPLING_UNIFORM;
+            break;
+        }
 
         return cv::findFundamentalMat(_points1, _points2, _mask, params);
     }
