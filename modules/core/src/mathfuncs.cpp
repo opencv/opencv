@@ -1636,16 +1636,10 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
     else
     {
         // cubic equation
-        double scale = 1.0 / max_coeff;
-        a0 *= scale;
-        a1 *= scale;
-        a2 *= scale;
-        a3 *= scale;
-
-        a0 = 1./a0;
-        a1 *= a0;
-        a2 *= a0;
-        a3 *= a0;
+        // Simplify math: divide directly by a0 to get monic form x^3 + Ax^2 + Bx + C = 0
+        a1 /= a0;
+        a2 /= a0;
+        a3 /= a0;
 
         double Q = (a1 * a1 - 3 * a2) * (1./9);
         double R = (a1 * (2 * a1 * a1 - 9 * a2) + 27 * a3) * (1./54);
