@@ -112,14 +112,14 @@ std::string getDecoderConfiguration(VideoAccelerationType va_type, AVDictionary 
     case VIDEO_ACCELERATION_ANY: return "d3d11va";
     case VIDEO_ACCELERATION_D3D11: return "d3d11va";
     case VIDEO_ACCELERATION_VAAPI: return "";
-    case VIDEO_ACCELERATION_MFX: return ""; // "qsv" fails if non-Intel D3D11 device
+    case VIDEO_ACCELERATION_MFX: return "";
     }
     return "";
 #else
     switch (va_type)
     {
     case VIDEO_ACCELERATION_NONE: return "";
-    case VIDEO_ACCELERATION_ANY: return "vaapi.iHD";
+    case VIDEO_ACCELERATION_ANY: return "cuda,vaapi.iHD";
     case VIDEO_ACCELERATION_D3D11: return "";
     case VIDEO_ACCELERATION_VAAPI: return "vaapi.iHD";
     case VIDEO_ACCELERATION_MFX: return "qsv.iHD";
@@ -128,6 +128,7 @@ std::string getDecoderConfiguration(VideoAccelerationType va_type, AVDictionary 
     return "";
 #endif
 }
+
 
 static
 std::string getEncoderConfiguration(VideoAccelerationType va_type, AVDictionary *dict)
