@@ -409,7 +409,6 @@ bool AvifEncoder::writeanimation(const Animation& animation,
     images.emplace_back(std::move(avifImg));
   }
 
-
   for (size_t i = 0; i < images.size(); i++)
   {
     OPENCV_AVIF_CHECK_STATUS(
