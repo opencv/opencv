@@ -1590,7 +1590,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
 
     // Fix for Issue #27748: Normalize coefficients to avoid overflow/underflow
     // and correctly detect negligible cubic terms.
-    double max_coeff = std::max(std::max(std::abs(a0), std::abs(a1)), std::max(std::abs(a2), std::abs(a3)));
+    double max_coeff = std::max({std::abs(a0), std::abs(a1), std::abs(a2), std::abs(a3)});
 
     // If max_coeff is effectively zero, the equation is 0=0
     if (max_coeff < std::numeric_limits<double>::epsilon())
@@ -1616,7 +1616,7 @@ int cv::solveCubic( InputArray _coeffs, OutputArray _roots )
             double d = a2*a2 - 4*a1*a3;
             if( d >= 0 )
             {
-                d = sqrt(d);
+                d = std::sqrt(d);
                 double q1 = (-a2 + d) * 0.5;
                 double q2 = (a2 + d) * -0.5;
                 if( std::abs(q1) > std::abs(q2) )

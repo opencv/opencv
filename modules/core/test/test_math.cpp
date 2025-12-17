@@ -2641,7 +2641,7 @@ TEST(Core_SolveCubic, regression_27748)
         double x = roots.at<double>(i);
         double val = b*x*x + c*x + d;
         // Check residual is small
-        EXPECT_LE(std::abs(val), 1e-3) << "Root " << x << " does not satisfy the equation";
+        EXPECT_LE(fabs(val), 1e-6) << "Root " << x << " does not satisfy the equation";
     }
 }
 
