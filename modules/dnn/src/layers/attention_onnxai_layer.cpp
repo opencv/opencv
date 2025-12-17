@@ -4,16 +4,13 @@
 
 #include "../precomp.hpp"
 #include "cpu_kernels/fast_gemm.hpp"
-#include "cpu_kernels/softmax.hpp"
-#include "cpu_kernels/attn_mask.hpp"
+#include "cpu_kernels/fast_attn.hpp"
 
 #include "layers_common.hpp"
 
 #include <opencv2/dnn/shape_utils.hpp>
 
 namespace cv { namespace dnn {
-
-using std::tanh;
 
 // Operator spec: https://onnx.ai/onnx/operators/onnx__Attention.html#attention-23
 class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
@@ -61,11 +58,7 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
         // internals:
         internals.clear();
 
-        if(inputs.size() > 3)
-            // 1 broadcasted attention_mask
-            internals.push_back(inputs[3]);
-
-        // 2. attention_prob
+        // 1. attention_prob
         internals.push_back(inputs[0]);
     }
 
@@ -119,17 +112,6 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
             outputs.push_back(output_shape);
         }
 
-        // internals:
-        // 1. attention_mask (broadcasted input attention mask - B x H_q x T_q x T_kv)
-        // 2. attention_prob (B x H_q x T_q x T_kv)
-
-        // 1. broadcasted attention_mask
-        if (inputs.size() > 3) {
-            MatShape mask_shape{batch_size, nhq, seq_len_q, seq_len_kv};
-            internals.push_back(mask_shape);
-        }
-
-        // 2. attention_prob
         MatShape attention_prob_shape{batch_size , nhq, seq_len_q, seq_len_kv};
         internals.push_back(attention_prob_shape);
 
@@ -181,125 +163,71 @@ class AttentionOnnxAiLayerImpl CV_FINAL : public AttentionOnnxAiLayer {
 
         scale = is_scale_set ? scale : 1.0f / std::sqrt(static_cast<float>(qk_head_size));
 
+        std::vector<size_t> _q_offsets(nhq * batch_size),
+                _k_offsets(nhq * batch_size),
+                _a_offsets(nhq * batch_size),
+                _v_offsets(nhq * batch_size),
+                _o_offsets(nhq * batch_size);
+
+        for (int b = 0; b < batch_size; b++)
+            for (int n = 0; n < nhq; n++){
+                _q_offsets[b * nhq + n] =
+                    b * seq_len_q * qk_head_size * nhq +
+                    (input_dims == 3 ? n * qk_head_size : n * qk_head_size * seq_len_q);
+                _k_offsets[b * nhq + n] =
+                    b * seq_len_kv * qk_head_size * nhkv +
+                    (n / num_gq_groups * qk_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
+                _v_offsets[b * nhq + n] =
+                    b * seq_len_kv * v_head_size * nhkv +
+                    (n / num_gq_groups * v_head_size) * (input_dims == 3 ? 1 : seq_len_kv);
+                _a_offsets[b * nhq + n] =
+                    b * seq_len_square * nhq +
+                    n * seq_len_square;
+                _o_offsets[b * nhq + n] =
+                    b * seq_len_q * v_head_size * nhq +
+                    (input_dims == 3 ? n * v_head_size : n * v_head_size * seq_len_q);
+            }
+
+        const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
+        const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
         auto &attention_prob = internals[internals.size() - 1];
-        {
-            auto *output = attention_prob.ptr<float>();
 
-            auto loops = batch_size * nhq;
-
-            parallel_for_(Range(0, loops), [&] (const Range r) {
-                for (int i = r.start; i < r.end; i++) {
-                    const int _batch_index = i / nhq;
-                    const int _q_head_index = i % nhq;
-                    const int _k_head_index = _q_head_index / num_gq_groups;
-
-                    const int _q_offset = input_dims == 3 ?
-                                _q_head_index * qk_head_size : _q_head_index * qk_head_size * seq_len_q;
-                    const int _k_offset = input_dims == 3 ?
-                                _k_head_index * qk_head_size : _k_head_index * qk_head_size * seq_len_kv;
-
-                    const auto *q = Q + _batch_index * seq_len_q * qk_head_size * nhq +
-                                    _q_offset;
-                    const auto *k = K + _batch_index * seq_len_kv * qk_head_size * nhkv +
-                                    _k_offset;
-                    const int output_offset = i * seq_len_square;
-
-                    const int ldq0 = input_dims == 3 ? qk_head_size * nhq : qk_head_size;
-                    const int ldk0 = input_dims == 3 ? qk_head_size * nhkv : qk_head_size;
-
-                    fastGemm(
-                        false, true,
-                        seq_len_q, qk_head_size,
-                        seq_len_kv, qk_head_size,
-                        scale,
-                        q, ldq0, 1,
-                        k, ldk0, 1,
-                        0.f,
-                        output + output_offset, seq_len_kv,
-                        opt);
-                }
-            }, loops * seq_len_q * seq_len_kv * (1 / 1024.0));
-        }
-
-        // Attention masking
-        if (inputs.size() > 3 || is_causal)
-        {
-            if (internals.size() > 1) {
-                Mat& attention_mask = internals[internals.size() - 2];
-
-                broadcast(
-                    inputs[3],
-                    shape(attention_mask),
-                    attention_mask
-                );
-            }
-            const bool has_mask = inputs.size() > 3;
-            if (has_mask && CV_IS_INT_TYPE(inputs[3].depth()))
-                apply_mask_int(
-                    attention_prob, internals[internals.size() - 2],
-                    seq_len_kv, seq_len_q, -1e9f,
-                    has_mask, is_causal
-                );
-            else
-                apply_mask_float(
-                    attention_prob, internals.size() > 1 ? internals[internals.size() - 2] : Mat(),
-                    seq_len_kv, seq_len_q, -1e9f,
-                    has_mask, is_causal
-                );
-        }
+        fastGemmBatch(
+            batch_size * nhq,
+            _q_offsets.data(), _k_offsets.data(), _a_offsets.data(),
+            seq_len_q, seq_len_kv, qk_head_size , scale,
+            Q, ldq0, 1,
+            K, 1, ldk0,
+            0.f,
+            attention_prob.ptr<float>(), seq_len_kv,
+            opt
+        );
 
 
-        // softcap, if provided
-        if (softcap > 0.f) {
-            float* attn_data = attention_prob.ptr<float>();
-            auto total_elems = attention_prob.total();
-            for (size_t i = 0; i < total_elems; i++) {
-                attn_data[i] = tanh(attn_data[i] / softcap) * softcap;
-            }
-        }
+        fused_softmax_softcap_mask(
+            attention_prob,
+            inputs.size() > 3 ? inputs[3] : Mat(),
+            softcap, softcap > 0.f,
+            9.f,
+            -FLT_MAX,
+            inputs.size() > 3,
+            is_causal
+        );
 
-        // Compute softmax on the last dimension
-        softmax(attention_prob, attention_prob, shape(attention_prob).size() - 1);
-        const auto attn = attention_prob.ptr<const float>();
-        auto *output = outputs[0].ptr<float>();
-        auto loops = batch_size * nhq;
-        parallel_for_(Range(0, loops), [&] (const Range r) {
-            for (int i = r.start; i < r.end; i++) {
-                const int _batch_index = i / nhq;
-                const int _q_head_index = i % nhq;
-                const int _v_head_index = _q_head_index / num_gq_groups;
 
-                const int v_offset = _batch_index * seq_len_kv * v_head_size * nhkv + (
-                    input_dims == 3 ?
-                        _v_head_index * v_head_size :
-                        _v_head_index * v_head_size * seq_len_kv
-                );
+        const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
+        const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
 
-                const int out_offset = _batch_index * seq_len_q * v_head_size * nhq + (
-                    input_dims == 3 ?
-                        _q_head_index * v_head_size :
-                        _q_head_index * v_head_size * seq_len_q
-                );
-
-                const auto att = attn + i * seq_len_square;
-                const auto v = V + v_offset;
-
-                const int ldv0 = input_dims == 3 ? v_head_size * nhkv : v_head_size;
-                const int ldout = input_dims == 3 ? v_head_size * nhq : v_head_size;
-
-                fastGemm(
-                    false, false,
-                    seq_len_q, seq_len_kv,
-                    seq_len_kv, v_head_size,
-                    1.f,
-                    att, seq_len_kv, 1,
-                    v, ldv0, 1,
-                    0.f,
-                    output + out_offset, ldout,
-                    opt);
-            }
-        }, loops * seq_len_square * q_num_heads * (1 / 1024.0));
-
+        fastGemmBatch(
+            batch_size * nhq,
+            _a_offsets.data(), _v_offsets.data(), _o_offsets.data(),
+            seq_len_q, v_head_size, seq_len_kv, 1.f,
+            attention_prob.ptr<float>(), seq_len_kv, 1,
+            V, ldv0, 1,
+            0.f,
+            outputs[0].ptr<float>(), ldout,
+            opt
+        );
     }
 
  private:
