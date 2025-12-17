@@ -2,10 +2,9 @@ Introduction {#intro}
 ============
 
 OpenCV (Open Source Computer Vision Library: <http://opencv.org>) is an open-source
-library that includes several hundreds of computer vision algorithms. The document describes the
-so-called OpenCV 2.x API, which is essentially a C++ API, as opposed to the C-based OpenCV 1.x API
-(C API is deprecated and not tested with "C" compiler since OpenCV 2.4 releases)
-
+library that includes several hundreds of computer vision algorithms. The document describes the modern OpenCV C++ API (OpenCV 4.x and later),
+which replaces the legacy C-based OpenCV 1.x API.
+The C API has been deprecated for a long time and is no longer supported.
 OpenCV has a modular structure, which means that the package includes several shared or static
 libraries. The following modules are available:
 
