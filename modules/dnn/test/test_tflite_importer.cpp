@@ -285,25 +285,20 @@ TEST_P(Test_TFLite, face_blendshapes)
 
 TEST_P(Test_TFLite, maximum)
 {
-    Net net = readNetFromTFLite(
-        findDataFile("dnn/tflite/maximum.tflite"));
+    Net net = readNetFromTFLite(findDataFile("dnn/tflite/maximum.tflite"));
 
     net.setPreferableBackend(backend);
     net.setPreferableTarget(target);
 
-    Mat input_x = blobFromNPY(
-        findDataFile("dnn/tflite/maximum_input_x.npy"));
-    Mat input_y = blobFromNPY(
-        findDataFile("dnn/tflite/maximum_input_y.npy"));
+    Mat input_x = blobFromNPY(findDataFile("dnn/tflite/maximum_input_x.npy"));
+    Mat input_y = blobFromNPY(findDataFile("dnn/tflite/maximum_input_y.npy"));
 
-    net.setInput(input_x, "input_x");
-    net.setInput(input_y, "input_y");
+    net.setInput(input_x, "x");
+    net.setInput(input_y, "y");
 
     Mat out = net.forward();
 
-    Mat ref = blobFromNPY(
-        findDataFile("dnn/tflite/maximum_output.npy"));
-
+    Mat ref = blobFromNPY(findDataFile("dnn/tflite/maximum_output.npy"));
     normAssert(ref, out);
 }
 
