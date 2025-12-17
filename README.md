@@ -34,3 +34,16 @@ Please read the [contribution guidelines](https://github.com/opencv/opencv/wiki/
 * [Follow OpenCV on Mastodon](http://mastodon.social/@opencv) in the Fediverse
 * [Follow OpenCV on Twitter](https://twitter.com/opencvlive)
 * [OpenCV.ai](https://opencv.ai): Computer Vision and AI development services from the OpenCV team.
+
+## How to Build
+
+* [Installation overview](https://docs.opencv.org/4.x/d0/d3d/tutorial_general_install.html) explaining prebuilt packages and building from source
+* [macOS installation guide](https://docs.opencv.org/4.x/d0/db2/tutorial_macos_install.html) for building OpenCV on macOS
+* [Linux installation guide](https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html) for building OpenCV on Linux
+* [Windows installation guide](https://docs.opencv.org/4.x/d3/d52/tutorial_windows_install.html) for building OpenCV on Windows
+
+## Quick Start (Python)
+
+* [OpenCV-Python tutorials](https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html) introducing basic image processing and computer vision workflows in Python
+
+Note: Prebuilt Python wheels are maintained in the `opencv-python` packaging project.
