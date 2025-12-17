@@ -527,7 +527,7 @@ class JSWrapperGenerator(object):
             #      Ptr<EdgeDrawing> → Ptr<cv::ximgproc::EdgeDrawing>
             if factory and class_info is not None and ret_type.startswith('Ptr<'):
                 inner = ret_type[len('Ptr<'):-1].strip()
-                if '::' not in inner and inner == class_info.name:
+                if '::' not in inner:
                     ret_type = 'Ptr<%s>' % class_info.cname
 
             if ret_type.startswith('Ptr'):  # smart pointer
