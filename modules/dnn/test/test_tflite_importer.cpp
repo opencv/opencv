@@ -304,7 +304,7 @@ TEST_P(Test_TFLite, maximum)
 
     if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16)
     {
-        l1 = 1e-3;  
+        l1 = 1e-3;
         lInf = 1e-3;
     }
 
