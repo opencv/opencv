@@ -1,41 +1,39 @@
 #!/usr/bin/env python
 
-'''
-prints OpenCV version
+"""
+Prints OpenCV version and build information.
 
 Usage:
-    opencv_version.py [<params>]
-    params:
-        --build: print complete build info
-        --help:  print this help
-'''
+    opencv_version.py [--build]
 
-# Python 2/3 compatibility
+Options:
+    --build    Print complete build information
+"""
+
 from __future__ import print_function
 
-import numpy as np
+import argparse
 import cv2 as cv
 
+
 def main():
-    import sys
+    parser = argparse.ArgumentParser(
+        description="Print OpenCV version and build information"
+    )
+    parser.add_argument(
+        "--build",
+        action="store_true",
+        help="Print complete build information"
+    )
 
-    try:
-        param = sys.argv[1]
-    except IndexError:
-        param = ""
+    args = parser.parse_args()
 
-    if "--build" == param:
+    print("OpenCV version:", cv.__version__)
+
+    if args.build:
+        print("\nBuild information:\n")
         print(cv.getBuildInformation())
-    elif "--help" == param:
-        print("\t--build\n\t\tprint complete build info")
-        print("\t--help\n\t\tprint this help")
-    else:
-        print("Welcome to OpenCV")
-
-    print('Done')
 
 
-if __name__ == '__main__':
-    print(__doc__)
+if __name__ == "__main__":
     main()
-    cv.destroyAllWindows()
