@@ -17,31 +17,16 @@
 namespace cv {
 namespace aruco {
 
-struct ufrec {
-    // the parent of this node. If a node's parent is its own index,
-    // then it is a root.
-    uint32_t parent;
-
-    // for the root of a connected component, the number of components
-    // connected to it. For intermediate values, it's not meaningful.
-    uint32_t size;
-};
-
-struct Unionfind {
-    Unionfind(uint32_t _maxid)
+struct UnionFind {
+    UnionFind(uint32_t _maxid)
     {
         maxid = _maxid;
-        data = (struct ufrec*) malloc((maxid+1) * sizeof(struct ufrec));
+        data.resize(maxid+1);
         for (unsigned int i = 0; i <= maxid; i++) {
             data[i].size = 1;
             data[i].parent = i;
         }
     };
-
-    ~Unionfind() {
-        if (data)
-            free(data);
-    }
 
     inline uint32_t get_representative(uint32_t id) {
         uint32_t root = id;
@@ -128,8 +113,18 @@ struct Unionfind {
     }
     #undef DO_UNIONFIND
 
+    struct ufrec {
+        // the parent of this node. If a node's parent is its own index,
+        // then it is a root.
+        uint32_t parent;
+
+        // for the root of a connected component, the number of components
+        // connected to it. For intermediate values, it's not meaningful.
+        uint32_t size;
+    };
+
     uint32_t maxid;
-    struct ufrec *data;
+    std::vector<ufrec> data;
 };
 
 }}

@@ -1285,7 +1285,7 @@ zarray_t *apriltag_quad_thresh(const DetectorParameters &parameters, const Mat &
     ////////////////////////////////////////////////////////
     // step 2. find connected components.
 
-    Unionfind uf(w * h);
+    UnionFind uf(w * h);
 
     // TODO PARALLELIZE
     for (int y = 0; y < h - 1; y++) {
