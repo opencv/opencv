@@ -2624,6 +2624,12 @@ static bool setSizeAndSubtype(videoDevice * VD, int attemptWidth, int attemptHei
     //set fps if requested
     if( VD->requestedFrameTime != -1){
         pVih->AvgTimePerFrame = VD->requestedFrameTime;
+                    // FIX for issue #26250: Ensure FPS change is applied by forcefully setting the media type
+            // This prevents caching issues when grab() was called before setting FPS
+            hr = VD->streamConf->SetFormat(VD->pAmMediaType);
+            if(FAILED(hr)) {
+                DebugPrintOut("WARNING: Failed to re-apply FPS setting. FPS caching issue may occur.\n");
+            }
     }
 
     //okay lets try new size
