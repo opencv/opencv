@@ -122,7 +122,14 @@ public:
                 return false;
         }
 
-        cv::Mat(height, width, CV_MAKETYPE(depth, cn), data, step).copyTo(frame);
+        int type=CV_MAKETYPE(depth,cn);
+
+        if(frame.empty() || frame.rows()!=height || frame.cols()!=width || frame.type()!=type){
+            frame.release();
+            frame.create(height,width,type);
+        }
+
+        cv::Mat(height,width,type,data,step).copyTo(frame);
         return true;
     }
     bool open(const cv::String& filename, const cv::VideoCaptureParameters& params)
