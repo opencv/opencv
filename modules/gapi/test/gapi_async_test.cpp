@@ -359,7 +359,7 @@ TYPED_TEST_CASE_P(cancel);
 
 TYPED_TEST_P(cancel, basic)
 {
-#if defined(__GNUC__) && __GNUC__ >= 11
+#if defined(__GNUC__) && __GNUC__ == 11
     // std::vector<TypeParam> requests can't handle type with ctor parameter (SelfCanceling)
     FAIL() << "Test code is not available due to compilation error with GCC 11";
 #else
