@@ -2655,24 +2655,97 @@ mean_(const _Tp* src, const uchar* mask, size_t total, int cn, Scalar& sum, int&
 {
     if( !mask )
     {
-        nz += (int)total;
-        total *= cn;
-        for( size_t i = 0; i < total; i += cn )
-        {
-            for( int c = 0; c < cn; c++ )
-                sum[c] += src[i + c];
+        const _Tp* p = src;
+        nz += static_cast<int>(total); 
+        if (cn == 1) {
+            double s0 = 0;
+            for (int64_t i = 0; i < (int64_t)total; ++i) {
+                s0 += p[0];
+                p += 1;
+            }
+            sum[0] += s0;
+            return;
+        }
+        if (cn == 3) {
+            double s0 = 0, s1 = 0, s2 = 0;
+            for (int64_t i = 0; i < (int64_t)total; ++i) {
+                s0 += p[0]; s1 += p[1]; s2 += p[2];
+                p += 3;
+            }
+            sum[0] += s0; sum[1] += s1; sum[2] += s2;
+            return;
+        }
+        if (cn == 4) {
+            double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+            for (int64_t i = 0; i < (int64_t)total; ++i) {
+                s0 += p[0]; s1 += p[1]; s2 += p[2]; s3 += p[3];
+                p += 4;
+            }
+            sum[0] += s0; sum[1] += s1; sum[2] += s2; sum[3] += s3;
+            return;
+        }
+        for (int64_t i = 0; i < (int64_t)total; ++i) {
+            for (int c = 0; c < cn; ++c) {
+                sum[c] += p[c];
+            }
+            p += cn;
+        }
+        return;
+    }
+    const _Tp* p = src;
+    const unsigned char* m = mask;
+ 
+    int count = 0;
+    if (cn == 1) {
+        double s0 = 0;
+        for (int64_t i = 0; i < (int64_t)total; ++i, ++m) {
+            int mm = (*m != 0);
+            count += mm;
+            s0 += p[0] * static_cast<double>(mm);
+            p += 1;
+        }
+        sum[0] += s0;
+        nz += count;
+        return;
+    }
+    if (cn == 3) {
+        double s0 = 0, s1 = 0, s2 = 0;
+        for (int64_t i = 0; i < (int64_t)total; ++i, ++m) {
+            int mm = (*m != 0);
+            count += mm;
+            double fmm = static_cast<double>(mm);
+            s0 += p[0] * fmm;
+            s1 += p[1] * fmm;
+            s2 += p[2] * fmm;
+            p += 3;
+        }
+        sum[0] += s0; sum[1] += s1; sum[2] += s2;
+        nz += count;
+        return;
+    }
+    if (cn == 4) {
+        double s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+        for (int64_t i = 0; i < (int64_t)total; ++i, ++m) {
+            int mm = (*m != 0);
+            count += mm;
+            double fmm = static_cast<double>(mm);
+            s0 += p[0] * fmm;
+            s1 += p[1] * fmm;
+            s2 += p[2] * fmm;
+            s3 += p[3] * fmm;
+            p += 4;
+        }
+        sum[0] += s0; sum[1] += s1; sum[2] += s2; sum[3] += s3;
+        nz += count;
+        return;
+    }
+    for (int64_t i = 0; i < (int64_t)total; ++i, p += cn, ++m) {
+        if (*m) {
+            ++count;
+            for (int c = 0; c < cn; ++c) sum[c] += p[c];
         }
     }
-    else
-    {
-        for( size_t i = 0; i < total; i++ )
-            if( mask[i] )
-            {
-                nz++;
-                for( int c = 0; c < cn; c++ )
-                    sum[c] += src[i*cn + c];
-            }
-    }
+    nz += count;
 }
 
 Scalar mean(const Mat& src, const Mat& mask)
