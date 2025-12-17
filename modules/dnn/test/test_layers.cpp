@@ -1535,6 +1535,26 @@ TEST_P(Test_DLDT_layers, fused_output)
     LayerFactory::unregisterLayer("Unsupported");
 }
 
+TEST_P(Test_DLDT_layers, ReLU_AllNegativeInput)
+{
+    // Verify that ReLU outputs zeros for purely negative input across backends
+    Mat input = (Mat_<float>(1, 1, 1, 5)
+        << -1.0f, -2.5f, -0.1f, -100.0f, -0.0001f);
+
+    Mat expected = Mat::zeros(input.size(), CV_32F);
+
+    Net net;
+    net.addLayerToPrev("relu", "ReLU", LayerParams());
+
+    net.setInput(input);
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat output = net.forward();
+    normAssert(expected, output);
+}
+
+
 TEST_P(Test_DLDT_layers, multiple_networks)
 {
     Net nets[2];
@@ -2830,5 +2850,7 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outSmall, refSmall, "Small input after large", 0.0, 0.0);
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
+
+
 
 }} // namespace
