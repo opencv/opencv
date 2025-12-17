@@ -212,8 +212,22 @@ static bool halMorph(int op, int src_type, int dst_type,
               int kernel_width, int kernel_height, int anchor_x, int anchor_y,
               int borderType, const double borderValue[4], int iterations, bool isSubmatrix)
 {
+    // Prioritize stateless implementation
+    int res = cv_hal_morph_stateless(op, src_data, src_step, src_type, dst_data, dst_step, dst_type, width, height,
+                                     roi_width, roi_height, roi_x, roi_y, roi_width2, roi_height2, roi_x2, roi_y2,
+                                     kernel_data, kernel_step, kernel_type, kernel_width, kernel_height, anchor_x, anchor_y,
+                                     borderType, borderValue, iterations, isSubmatrix, src_data == dst_data);
+    if (res == CV_HAL_ERROR_OK)
+    {
+        return true;
+    } else if (res != CV_HAL_ERROR_NOT_IMPLEMENTED)
+    {
+        CV_Error_(cv::Error::StsInternal,
+                  ("HAL implementation morph_stateless ==> " CVAUX_STR(cv_hal_morph_stateless) " returned %d (0x%08x)", res, res));
+    }
+
     cvhalFilter2D * ctx;
-    int res = cv_hal_morphInit(&ctx, op, src_type, dst_type, width, height,
+    res = cv_hal_morphInit(&ctx, op, src_type, dst_type, width, height,
                                kernel_type, kernel_data, kernel_step, kernel_width, kernel_height,
                                anchor_x, anchor_y,
                                borderType, borderValue,
