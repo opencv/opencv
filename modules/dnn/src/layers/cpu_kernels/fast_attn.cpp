@@ -87,124 +87,126 @@ void run_fused_softmax(
         if (get_size(3) > 1) mask_step_k = 1;
     }
 
-    size_t offset = 0;
-    size_t mask_offset_b = 0;
-    for (int b = 0; b < batch_size; b++){
-        size_t mask_offset_h = mask_offset_b;
-        for (int h = 0; h < n_heads; h++){
-            size_t mask_offset_q = mask_offset_h;
+    size_t total_tasks = (size_t)batch_size * n_heads;
+
+    parallel_for_(Range(0, (int)total_tasks), [&](const Range &range) {
+        for (int i = range.start; i < range.end; i++) {
+            int b = i / n_heads;
+            int h = i % n_heads;
+
+            size_t offset = (size_t)i * seq_len_q * seq_len_kv;
+            size_t mask_offset_q = b * mask_step_b + h * mask_step_h;
+
             for (int tq = 0; tq < seq_len_q; tq++){
-                const int tmax = is_causal ? std::min(tq + 1, seq_len_kv) : seq_len_kv;
-                float maxVal = -FLT_MAX;
-                int tk = 0;
+            const int tmax = is_causal ? std::min(tq + 1, seq_len_kv) : seq_len_kv;
+            float maxVal = -FLT_MAX;
+            int tk = 0;
 #if CV_SIMD
-                const int w = VTraits<v_float32>::nlanes;
-                v_float32 v_max_val = vx_setall_f32(maxVal);
-                v_float32 v_softcap = vx_setall_f32(softcap);
-                v_float32 v_inv_softcap = vx_setall_f32(1.f / softcap);
-                v_float32 v_threshold = vx_setall_f32(threshold);
-                v_float32 v_minus_threshold = vx_setall_f32(-threshold);
-                v_float32 v_one = vx_setall_f32(1.f);
-                v_float32 v_minus_one = vx_setall_f32(-1.f);
-                v_float32 v_minus_two = vx_setall_f32(-2.f);
-                v_float32 v_min_val = vx_setall_f32(min_val);
+            const int w = VTraits<v_float32>::nlanes;
+            v_float32 v_max_val = vx_setall_f32(maxVal);
+            v_float32 v_softcap = vx_setall_f32(softcap);
+            v_float32 v_inv_softcap = vx_setall_f32(1.f / softcap);
+            v_float32 v_threshold = vx_setall_f32(threshold);
+            v_float32 v_minus_threshold = vx_setall_f32(-threshold);
+            v_float32 v_one = vx_setall_f32(1.f);
+            v_float32 v_minus_one = vx_setall_f32(-1.f);
+            v_float32 v_minus_two = vx_setall_f32(-2.f);
+            v_float32 v_min_val = vx_setall_f32(min_val);
 
-                for (; tk <= tmax - w; tk += w) {
-                    v_float32 v_val = vx_load(&data[offset + tk]);
+            for (; tk <= tmax - w; tk += w) {
+                v_float32 v_val = vx_load(&data[offset + tk]);
 
-                    if (mask_data) {
-                        v_float32 v_mask_val;
-                        if (mask_step_k)
-                            v_mask_val = Policy::load_mask(&mask_data[mask_offset_q + tk]);
-                        else
-                            v_mask_val = Policy::load_mask_scalar(&mask_data[mask_offset_q]);
-                        v_val = Policy::apply(v_val, v_mask_val, v_min_val);
-                    }
-
-                    if (do_softcap) {
-                        v_float32 v_scaled = v_mul(v_val, v_inv_softcap);
-
-                        v_float32 v_mask_pos = v_gt(v_scaled, v_threshold);
-                        v_float32 v_mask_neg = v_lt(v_scaled, v_minus_threshold);
-
-                        v_float32 v_scaled_safe = v_select(v_mask_neg, vx_setall_f32(0.f), v_scaled);
-
-                        v_float32 v_exp_part = v_exp(v_mul(v_minus_two, v_scaled_safe));
-                        v_float32 v_tanh = v_div(v_sub(v_one, v_exp_part), v_add(v_one, v_exp_part));
-
-                        v_float32 v_res = v_select(v_mask_pos, v_one,
-                                            v_select(v_mask_neg, v_minus_one, v_tanh));
-
-                        v_val = v_mul(v_res, v_softcap);
-                    }
-                    vx_store(&data[offset + tk], v_val);
-                    v_max_val = v_max(v_max_val, v_val);
-                }
-                maxVal = v_reduce_max(v_max_val);
-#endif
-                for (; tk < tmax; tk++){
-                    if (threshold) {
-                        size_t mask_idx = mask_offset_q + (mask_step_k ? tk : 0);
-                        data[offset + tk] = Policy::apply_scalar(data[offset + tk], mask_data[mask_idx], min_val);
-                    }
-
-                    if (do_softcap) {
-                        float softcap_val = data[offset + tk] / softcap;
-                        if (softcap_val > threshold)
-                            data[offset + tk ] = 1.f;
-                        else if(softcap_val < -threshold)
-                            data[offset + tk ] = -1.f;
-                        else
-                            data[offset + tk] = (1.f - expf(-2 *softcap_val)) / (1.f + expf(-2 *softcap_val));
-                        data[offset + tk] *= softcap;
-                    }
-                    maxVal = std::max(maxVal, data[offset + tk]);
+                if (mask_data) {
+                    v_float32 v_mask_val;
+                    if (mask_step_k)
+                        v_mask_val = Policy::load_mask(&mask_data[mask_offset_q + tk]);
+                    else
+                        v_mask_val = Policy::load_mask_scalar(&mask_data[mask_offset_q]);
+                    v_val = Policy::apply(v_val, v_mask_val, v_min_val);
                 }
 
-                for (; tk < seq_len_kv; tk++) {
-                    data[offset + tk] = min_val;
-                }
+                if (do_softcap) {
+                    v_float32 v_scaled = v_mul(v_val, v_inv_softcap);
 
-                float sum = 0.f;
-                tk = 0;
-#if CV_SIMD
-                v_float32 v_sum = vx_setzero_f32();
-                v_float32 v_max_val_shift = vx_setall_f32(maxVal);
-                for (; tk <= seq_len_kv - w; tk += w) {
-                    v_float32 v_val = vx_load(&data[offset + tk]);
-                    v_val = v_sub(v_val, v_max_val_shift);
-                    v_val = v_exp(v_val);
-                    v_sum = v_add(v_sum, v_val);
-                    vx_store(&data[offset + tk], v_val);
-                }
-                sum = v_reduce_sum(v_sum);
-#endif
-                for (; tk < seq_len_kv; tk++){
-                    data[offset + tk] = expf(data[offset + tk] - maxVal);
-                    sum += data[offset + tk];
-                }
+                    v_float32 v_mask_pos = v_gt(v_scaled, v_threshold);
+                    v_float32 v_mask_neg = v_lt(v_scaled, v_minus_threshold);
 
-                float inv_sum = 1.f / sum;
-                tk = 0;
-#if CV_SIMD
-                v_float32 v_inv_sum = vx_setall_f32(inv_sum);
-                for (; tk <= seq_len_kv - w; tk += w) {
-                    v_float32 v_val = vx_load(&data[offset + tk]);
-                    v_val = v_mul(v_val, v_inv_sum);
-                    vx_store(&data[offset + tk], v_val);
-                }
-#endif
-                for (; tk < seq_len_kv; tk++){
-                    data[offset + tk] *= inv_sum;
-                }
+                    v_float32 v_scaled_safe = v_select(v_mask_neg, vx_setall_f32(0.f), v_scaled);
 
-                offset += seq_len_kv;
-                mask_offset_q += mask_step_q;
+                    v_float32 v_exp_part = v_exp(v_mul(v_minus_two, v_scaled_safe));
+                    v_float32 v_tanh = v_div(v_sub(v_one, v_exp_part), v_add(v_one, v_exp_part));
+
+                    v_float32 v_res = v_select(v_mask_pos, v_one,
+                                        v_select(v_mask_neg, v_minus_one, v_tanh));
+
+                    v_val = v_mul(v_res, v_softcap);
+                }
+                vx_store(&data[offset + tk], v_val);
+                v_max_val = v_max(v_max_val, v_val);
             }
-            mask_offset_h += mask_step_h;
+            maxVal = v_reduce_max(v_max_val);
+#endif
+            for (; tk < tmax; tk++){
+                if (threshold) {
+                    size_t mask_idx = mask_offset_q + (mask_step_k ? tk : 0);
+                    data[offset + tk] = Policy::apply_scalar(data[offset + tk], mask_data[mask_idx], min_val);
+                }
+
+                if (do_softcap) {
+                    float softcap_val = data[offset + tk] / softcap;
+                    if (softcap_val > threshold)
+                        data[offset + tk ] = 1.f;
+                    else if(softcap_val < -threshold)
+                        data[offset + tk ] = -1.f;
+                    else
+                        data[offset + tk] = (1.f - expf(-2 *softcap_val)) / (1.f + expf(-2 *softcap_val));
+                    data[offset + tk] *= softcap;
+                }
+                maxVal = std::max(maxVal, data[offset + tk]);
+            }
+
+            for (; tk < seq_len_kv; tk++) {
+                data[offset + tk] = min_val;
+            }
+
+            float sum = 0.f;
+            tk = 0;
+#if CV_SIMD
+            v_float32 v_sum = vx_setzero_f32();
+            v_float32 v_max_val_shift = vx_setall_f32(maxVal);
+            for (; tk <= seq_len_kv - w; tk += w) {
+                v_float32 v_val = vx_load(&data[offset + tk]);
+                v_val = v_sub(v_val, v_max_val_shift);
+                v_val = v_exp(v_val);
+                v_sum = v_add(v_sum, v_val);
+                vx_store(&data[offset + tk], v_val);
+            }
+            sum = v_reduce_sum(v_sum);
+#endif
+            for (; tk < seq_len_kv; tk++){
+                data[offset + tk] = expf(data[offset + tk] - maxVal);
+                sum += data[offset + tk];
+            }
+
+            float inv_sum = 1.f / sum;
+            tk = 0;
+#if CV_SIMD
+            v_float32 v_inv_sum = vx_setall_f32(inv_sum);
+            for (; tk <= seq_len_kv - w; tk += w) {
+                v_float32 v_val = vx_load(&data[offset + tk]);
+                v_val = v_mul(v_val, v_inv_sum);
+                vx_store(&data[offset + tk], v_val);
+            }
+#endif
+            for (; tk < seq_len_kv; tk++){
+                data[offset + tk] *= inv_sum;
+            }
+
+            offset += seq_len_kv;
+            mask_offset_q += mask_step_q;
         }
-        mask_offset_b += mask_step_b;
     }
+    });
 }
 
 void fused_softmax_softcap_mask(
