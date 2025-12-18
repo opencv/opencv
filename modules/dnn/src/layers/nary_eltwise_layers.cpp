@@ -134,8 +134,11 @@ public:
                 assert(st_i % elemsize[k] == 0);
                 this->shapes[k][i] = sz_i;
                 this->steps[k][i] = st_i;
-                if (this->shapes[k][i] == 0)
-                    return false;
+                if (this->shapes[k][i] == 0) {
+                    // Treat zero-sized dimensions as valid, propagate them during broadcasting.
+                    this->shapes[k][i] = 1;
+                    this->steps[k][i] = 0; // Zero step size ensures inactivity for this dimension
+                }
             }
         }
 
