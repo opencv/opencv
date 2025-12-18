@@ -77,6 +77,11 @@ __msan_unpoison(address, size)
 #define CV_ANNOTATE_NO_SANITIZE_MEMORY
 #endif
 
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 //lapack stores matrices in column-major order so transposing is needed everywhere
 template <typename fptype> static inline void
 transpose_square_inplace(fptype *src, size_t src_ld, size_t m)
@@ -700,5 +705,9 @@ int lapack_gemm64fc(const double *src1, size_t src1_step, const double *src2, si
         return CV_HAL_ERROR_NOT_IMPLEMENTED;
     return lapack_gemm_c(src1, src1_step, src2, src2_step, alpha, src3, src3_step, beta, dst, dst_step, m, n, k, flags);
 }
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 #endif //HAVE_LAPACK
