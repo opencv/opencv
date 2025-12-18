@@ -19,7 +19,6 @@
 #ifndef _OPENCV_APRIL_QUAD_THRESH_HPP_
 #define _OPENCV_APRIL_QUAD_THRESH_HPP_
 
-#include "unionfind.hpp"
 #include "zmaxheap.hpp"
 #include "zarray.hpp"
 

@@ -1374,7 +1374,7 @@ test_cornerEigenValsVecs( const Mat& src, Mat& eigenv, Mat& ocv_eigenv,
                           int block_size, int _aperture_size, int mode )
 {
     int i, j;
-    int aperture_size = _aperture_size < 0 ? 3 : _aperture_size;
+    int aperture_size = _aperture_size <= 0 ? 3 : _aperture_size;
     Point anchor( aperture_size/2, aperture_size/2 );
 
     CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
