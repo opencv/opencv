@@ -72,11 +72,18 @@ $CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
     $INCLUDES \
     $LIBS
 
+# Build VideoIO fuzzer
+$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
+    fuzz/videoio_fuzzer.cc -o $OUT/videoio_fuzzer \
+    $INCLUDES \
+    $LIBS
+
 # Zip corpus
 zip -j $OUT/imdecode_fuzzer_seed_corpus.zip fuzz/corpus/imdecode/*
 zip -j $OUT/dnn_fuzzer_seed_corpus.zip fuzz/corpus/dnn/*
 zip -j $OUT/filestorage_fuzzer_seed_corpus.zip fuzz/corpus/filestorage/*
 zip -j $OUT/objdetect_fuzzer_seed_corpus.zip fuzz/corpus/objdetect/*
+zip -j $OUT/videoio_fuzzer_seed_corpus.zip fuzz/corpus/videoio/*
 
 
 # Copy dictionary

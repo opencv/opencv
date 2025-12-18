@@ -64,6 +64,9 @@ jobs:
         
         # Compile objdetect_fuzzer
         clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/objdetect_fuzzer.cc -o objdetect_fuzzer $LIBS
+        
+        # Compile videoio_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/videoio_fuzzer.cc -o videoio_fuzzer $LIBS
 
     - name: Quick Run Fuzzers
       run: |
@@ -72,3 +75,4 @@ jobs:
         ./dnn_fuzzer -max_total_time=10
         ./filestorage_fuzzer -max_total_time=10
         ./objdetect_fuzzer -max_total_time=10
+        ./videoio_fuzzer -max_total_time=10
