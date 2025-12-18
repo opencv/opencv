@@ -426,4 +426,3 @@ Module['onRuntimeInitialized'] = function() {
         cv.Mat.prototype.clone = cv.Mat.prototype.mat_clone;
     }
 };
-
