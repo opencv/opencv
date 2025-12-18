@@ -2,7 +2,6 @@
 
 '''
 Utility for measuring python opencv API coverage by samples.
-
 '''
 
 # Python 2/3 compatibility
