@@ -929,8 +929,6 @@ are then saved in a yaml file which can be used with this function to correct la
 @param bayer_pattern Bayer pattern code (e.g. cv::COLOR_BayerBG2BGR) used for
 demosaicing when @p input_image has one channel; ignored otherwise.
 
-@return Corrected BGR image.
-
 @sa loadChromaticAberrationParams, demosaicing
 */
 CV_EXPORTS_W void correctChromaticAberration(InputArray input_image, InputArray coefficients, OutputArray output_image,
@@ -949,6 +947,7 @@ CV_EXPORTS_W void correctChromaticAberration(InputArray input_image, InputArray 
  @param coeffMat   Output 4xN coefficient matrix (CV_32F).
  @param degree     Polynomial degree inferred from N.
  @param calib_size Calibration image size read from file.
+
  @sa correctChromaticAberration
  */
 CV_EXPORTS_W void loadChromaticAberrationParams(
