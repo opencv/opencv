@@ -273,17 +273,6 @@ v_int32 vx_setall(int value) {
 v_uint16 vx_setall(ushort value) {
     return vx_setall_u16(value);
 }
-#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
-inline void v_expand(const v_float32 &a, v_float64 &b0, v_float64 &b1)
-{
-    b0 = v_cvt_f64(a);
-    b1 = v_cvt_f64_high(a);
-}
-inline v_float32 v_pack(const v_float64 &a0, const v_float64 &a1)
-{
-    return v_cvt_f32(a0, a1);
-}
-#endif
 #endif
 
 template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
