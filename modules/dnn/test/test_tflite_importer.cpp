@@ -283,6 +283,34 @@ TEST_P(Test_TFLite, face_blendshapes)
     testModel("face_blendshapes", inp);
 }
 
+TEST_P(Test_TFLite, maximum)
+{
+    Net net = readNetFromTFLite(findDataFile("dnn/tflite/maximum.tflite"));
+
+    net.setPreferableBackend(backend);
+    net.setPreferableTarget(target);
+
+    Mat input_x = blobFromNPY(findDataFile("dnn/tflite/maximum_input_x.npy"));
+    Mat input_y = blobFromNPY(findDataFile("dnn/tflite/maximum_input_y.npy"));
+
+    net.setInput(input_x, "x");
+    net.setInput(input_y, "y");
+
+    Mat out = net.forward();
+    Mat ref = blobFromNPY(findDataFile("dnn/tflite/maximum_output.npy"));
+
+    double l1 = 1e-5;
+    double lInf = 1e-4;
+
+    if (target == DNN_TARGET_CUDA_FP16 || target == DNN_TARGET_OPENCL_FP16)
+    {
+        l1 = 1e-3;
+        lInf = 1e-3;
+    }
+
+    normAssert(ref, out, "", l1, lInf);
+}
+
 INSTANTIATE_TEST_CASE_P(/**/, Test_TFLite, dnnBackendsAndTargets());
 
 }}  // namespace
