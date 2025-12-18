@@ -237,6 +237,13 @@ CV_INLINE int cvFloor( double value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floor(value);
+#elif defined(_M_ARM64) && defined(_MSC_VER)
+    float64x1_t val = vdup_n_f64(value);
+    float64x1_t floored = vrndm_f64(val);
+    double floored_scalar = vget_lane_f64(floored, 0);
+    int result = (int)floored_scalar;
+    if (result > value) result--;
+    return result;
 #elif defined __loongarch64
     int i;
     double tmp;
@@ -362,6 +369,11 @@ CV_INLINE int cvFloor( float value )
 #if defined CV__FASTMATH_ENABLE_GCC_MATH_BUILTINS || \
     defined CV__FASTMATH_ENABLE_CLANG_MATH_BUILTINS
     return (int)__builtin_floorf(value);
+#elif defined(_M_ARM64) && defined(_MSC_VER)
+    float32x2_t val = vdup_n_f32(value);
+    float32x2_t floored = vrndm_f32(val);
+    int32x2_t i_vec = vcvt_s32_f32(floored);
+    return vget_lane_s32(i_vec, 0);
 #elif defined __loongarch__
     int i;
     float tmp;
