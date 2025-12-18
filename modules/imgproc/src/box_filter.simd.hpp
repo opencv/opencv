@@ -261,15 +261,6 @@ public:
 };
 
 #if (CV_SIMD || CV_SIMD_SCALABLE)
-inline void v_expand(const v_float32 &a, v_float64 &b0, v_float64 &b1)
-{
-    b0 = v_cvt_f64(a);
-    b1 = v_cvt_f64_high(a);
-}
-inline v_float32 v_pack(const v_float64 &a0, const v_float64 &a1)
-{
-    return v_cvt_f32(a0, a1);
-}
 v_float64 vx_setall(double value) {
     return vx_setall_f64(value);
 }
@@ -282,6 +273,17 @@ v_int32 vx_setall(int value) {
 v_uint16 vx_setall(ushort value) {
     return vx_setall_u16(value);
 }
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+inline void v_expand(const v_float32 &a, v_float64 &b0, v_float64 &b1)
+{
+    b0 = v_cvt_f64(a);
+    b1 = v_cvt_f64_high(a);
+}
+inline v_float32 v_pack(const v_float64 &a0, const v_float64 &a1)
+{
+    return v_cvt_f32(a0, a1);
+}
+#endif
 #endif
 
 template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
@@ -498,7 +500,7 @@ struct Sum3x3 :
 };
 
 //float
-template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
+template<int SCALE_T, typename ET, typename WET>
 struct Sum3x3_64f :
         public BaseRowColumnFilter
 {
@@ -671,7 +673,7 @@ struct Sum3x3sameType :
     template<typename T = ET>
     typename std::enable_if<!std::is_floating_point<T>::value &&
                            !(std::is_same<T, uint>::value || std::is_same<T, int>::value), void>::type
-    inline scaleVal3x3sameTypeImpl(VET &b0, const v_float32& _v_scale)
+    inline scaleVal3x3sameTypeImpl(VET &, const v_float32&)
     {
         // No scaling for other integer types
     }
@@ -828,18 +830,15 @@ struct Sum5x5 :
     }
     VFT inline scaleVal5x5(VFT &b0, const VFT &v_mulFactor)
     {
-        if (SCALE_T==APPLY_SCALING)
+        if (std::is_floating_point<WET>::value)
+            return v_mul(b0, vx_setall((WET)scale));
+        else
         {
-            if (std::is_floating_point<WET>::value)
-                return v_mul(b0, vx_setall((WET)scale));
-            else
-            {
-                VFT berr = v_shr<2>(b0); // 1/4
-                if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
-                    return v_shr<8>(v_add(v_mul(b0, v_mulFactor), berr));
-                else if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
-                    return v_shr<15>(v_sub(v_mul(b0, v_mulFactor), berr));
-            }
+            VFT berr = v_shr<2>(b0); // 1/4
+            if (std::is_same<ET, uchar>::value || std::is_same<ET, char>::value)
+                return v_shr<8>(v_add(v_mul(b0, v_mulFactor), berr));
+            else if (std::is_same<ET, ushort>::value || std::is_same<ET, short>::value)
+                return v_shr<15>(v_sub(v_mul(b0, v_mulFactor), berr));
         }
     }
 #endif
@@ -974,7 +973,7 @@ struct Sum5x5 :
     double scale;
 };
 
-template<int SCALE_T, typename ET, typename WET, typename VET, typename VFT>
+template<int SCALE_T, typename ET, typename WET>
 struct Sum5x5_64f :
         public BaseRowColumnFilter
 {
@@ -1003,11 +1002,6 @@ struct Sum5x5_64f :
         int cn2 = cn*2;
         int j = v;
 
-#if (CV_SIMD || CV_SIMD_SCALABLE)
-        VFT v_896;
-        WET val_896 = 896;
-        v_896 = vx_setall(val_896);
-#endif
         if(sum.size() < (size_t)len)
             sum.resize(len);
         if(rowSum.size() < (size_t)(len*4))
@@ -1174,7 +1168,7 @@ struct Sum5x5sameType :
     template<typename T = ET>
     typename std::enable_if<!std::is_floating_point<T>::value &&
                            !(std::is_same<T, uint>::value || std::is_same<T, int>::value), void>::type
-    inline scaleValsameTypeImpl(VET &b0, const v_float32& _v_scale)
+    inline scaleValsameTypeImpl(VET &, const v_float32& )
     {
         // No scaling for other integer types
     }
@@ -1741,9 +1735,11 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
                 if( sdepth == CV_32S )
                     return makePtr<Sum3x3sameType<SKIP_SCALING,  int, v_int32> >(ksize, scale);
                 if( sdepth == CV_32F )
-                    return makePtr<Sum3x3_64f<SKIP_SCALING, float, double, v_float32, v_float64> >(ksize, scale);
+                    return makePtr<Sum3x3_64f<SKIP_SCALING, float, double> >(ksize, scale);
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sdepth == CV_64F )
                     return makePtr<Sum3x3sameType<SKIP_SCALING, double,v_float64> >(ksize, scale);
+#endif
             }
             else
             {
@@ -1756,9 +1752,11 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
                 if( sdepth == CV_32S )
                     return makePtr<Sum3x3sameType<APPLY_SCALING, int, v_int32> >(ksize, scale);
                 if( sdepth == CV_32F )
-                    return makePtr<Sum3x3_64f<APPLY_SCALING, float, double, v_float32, v_float64> >(ksize, scale);
+                    return makePtr<Sum3x3_64f<APPLY_SCALING, float, double> >(ksize, scale);
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sdepth == CV_64F )
                     return makePtr<Sum3x3sameType<APPLY_SCALING, double, v_float64> >(ksize, scale);
+#endif
             }
         }
         else if (ksize == 5)
@@ -1774,9 +1772,11 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
                 if( sdepth == CV_32S )
                     return makePtr<Sum5x5sameType<SKIP_SCALING, int, v_int32> >(ksize, scale); //intermediate stored can be stored in int64_t, but matching reference code to avoid output mismatch.
                 if( sdepth == CV_32F )
-                    return makePtr<Sum5x5_64f<SKIP_SCALING, float, double, v_float32, v_float64> >(ksize, scale);
-                if( sdepth == CV_64F )
+                    return makePtr<Sum5x5_64f<SKIP_SCALING, float, double> >(ksize, scale);
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
+                    if( sdepth == CV_64F )
                     return makePtr<Sum5x5sameType<SKIP_SCALING, double, v_float64> >(ksize, scale);
+#endif
             }
             else
             {
@@ -1789,9 +1789,11 @@ Ptr<BaseRowColumnFilter> getRowColumnSumFilter(int srcType, int dstType, int ksi
                 if( sdepth == CV_32S )
                     return makePtr<Sum5x5sameType<APPLY_SCALING, int, v_int32> >(ksize, scale);
                 if( sdepth == CV_32F )
-                    return makePtr<Sum5x5_64f<APPLY_SCALING, float, double, v_float32, v_float64> >(ksize, scale);
+                    return makePtr<Sum5x5_64f<APPLY_SCALING, float, double> >(ksize, scale);
+#if (CV_SIMD_64F || CV_SIMD_SCALABLE_64F)
                 if( sdepth == CV_64F )
                     return makePtr<Sum5x5sameType<APPLY_SCALING, double, v_float64> >(ksize, scale);
+#endif
             }
         }
     }
