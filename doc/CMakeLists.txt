@@ -2,7 +2,7 @@ if(NOT BUILD_DOCS)
   return()
 endif()
 
-# Dependencies scheme (* - optional):
+# Documentation dependency flow (* - optional):
 #
 # javadoc* -> doxygen_javadoc* -> doxygen_cpp ---------> doxygen -> opencv_docs
 #    \                               \                     /        /
