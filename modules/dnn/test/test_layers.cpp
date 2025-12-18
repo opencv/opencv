@@ -2851,6 +2851,4 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
 
-
-
 }} // namespace
