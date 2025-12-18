@@ -11,6 +11,10 @@
 #elif defined(HAVE_LAPACK)
 #include "opencv_lapack.h"
 #endif
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
 namespace cv { namespace usac {
 class PnPMinimalSolver6PtsImpl : public PnPMinimalSolver6Pts {
@@ -412,3 +416,7 @@ Ptr<P3PSolver> P3PSolver::create(const Mat &points_, const Mat &calib_norm_pts, 
     return makePtr<P3PSolverImpl>(points_, calib_norm_pts, K);
 }
 }}
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
