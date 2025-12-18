@@ -287,7 +287,8 @@ TFLiteImporter::DispatchMap TFLiteImporter::buildDispatchMap()
     dispatch["DEPTHWISE_CONV_2D"] = &TFLiteImporter::parseDWConvolution;
     dispatch["ADD"] = dispatch["MUL"] = dispatch["SUB"] =
         dispatch["SQRT"] = dispatch["DIV"] = dispatch["NEG"] =
-        dispatch["RSQRT"] = dispatch["SQUARED_DIFFERENCE"] = &TFLiteImporter::parseEltwise;
+        dispatch["RSQRT"] = dispatch["SQUARED_DIFFERENCE"] =
+        dispatch["MAXIMUM"] = &TFLiteImporter::parseEltwise;
     dispatch["RELU"] = dispatch["PRELU"] = dispatch["HARD_SWISH"] =
         dispatch["LOGISTIC"] = dispatch["LEAKY_RELU"] = &TFLiteImporter::parseActivation;
     dispatch["MAX_POOL_2D"] = dispatch["AVERAGE_POOL_2D"] = &TFLiteImporter::parsePooling;
@@ -577,7 +578,10 @@ void TFLiteImporter::parseEltwise(const Operator& op, const std::string& opcode,
     }
     else if (opcode == "SQRT" && !isOpInt8) {
         layerParams.type = "Sqrt";
-    } else {
+    }
+    else if (opcode == "MAXIMUM" && !isOpInt8) {
+        layerParams.set("operation", "max");
+    }else {
         CV_Error(Error::StsNotImplemented, cv::format("DNN/TFLite: Unknown opcode for %s Eltwise layer '%s'", isOpInt8 ? "INT8" : "FP32", opcode.c_str()));
     }
 
