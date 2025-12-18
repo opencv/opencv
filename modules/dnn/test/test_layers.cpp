@@ -2830,5 +2830,19 @@ TEST(ConvolutionWinograd, Accuracy)
     normAssert(outSmall, refSmall, "Small input after large", 0.0, 0.0);
     normAssert(outLarge, refLarge, "Large input after small", 0.0, 0.0);
 }
+TEST(Layer_Broadcasting, HandleZeroSizedDimensions)
+{
+    cv::Mat input1 = cv::Mat::zeros(0, 3, CV_32F);
+    cv::Mat input2 = cv::Mat::ones(1, 3, CV_32F);
+    cv::Mat output;
 
+    // Expect broadcasting to succeed
+    EXPECT_NO_THROW({
+        cv::add(input1, input2, output);
+    });
+
+    // Output should have a zero-sized dimension propagated
+    EXPECT_EQ(output.rows, 0);
+    EXPECT_EQ(output.cols, 3);
+}
 }} // namespace
