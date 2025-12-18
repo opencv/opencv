@@ -1844,6 +1844,7 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 #if USE_AV_HW_CODECS
     // if hardware frame, copy it to system memory
     if (picture && picture->hw_frames_ctx) {
+        CV_LOG_DEBUG(NULL, "FFmpeg: HW frame detected, transferring to system memory");
         sw_picture = av_frame_alloc();
         if (!sw_picture)
             return false;
@@ -2012,10 +2013,13 @@ bool CvCapture_FFMPEG::retrieveFrame(int flag, unsigned char** data, int* step, 
 bool CvCapture_FFMPEG::retrieveHWFrame(cv::OutputArray output)
 {
 #if USE_AV_HW_CODECS
-    // check that we have HW frame in GPU memory
-    if (!picture || !picture->hw_frames_ctx || !context) {
+    // must be UMat for GPU->GPU copy
+    if (!output.isUMat())
         return false;
-    }
+
+    // check that we have HW frame in GPU memory
+    if (!picture || !picture->hw_frames_ctx || !context)
+        return false;
 
     // GPU color conversion NV12->BGRA, from GPU media buffer to GPU OpenCL buffer
     return hw_copy_frame_to_umat(context->hw_device_ctx, picture, output);
