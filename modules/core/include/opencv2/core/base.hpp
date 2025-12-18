@@ -603,7 +603,25 @@ template<typename _Tp, typename _AccTp> static inline
 _AccTp normInf(const _Tp* a, const _Tp* b, int n)
 {
     _AccTp s = 0;
-    for( int i = 0; i < n; i++ )
+    int i = 0;
+#if CV_ENABLE_UNROLLED
+    for (; i <= n - 8; i += 8)
+    {
+        _AccTp t0 = (_AccTp)std::abs(a[i]  - b[i]);
+        _AccTp t1 = (_AccTp)std::abs(a[i + 1] - b[i + 1]);
+        _AccTp t2 = (_AccTp)std::abs(a[i + 2] - b[i + 2]);
+        _AccTp t3 = (_AccTp)std::abs(a[i + 3] - b[i + 3]);
+        _AccTp t4 = (_AccTp)std::abs(a[i + 4] - b[i + 4]);
+        _AccTp t5 = (_AccTp)std::abs(a[i + 5] - b[i + 5]);
+        _AccTp t6 = (_AccTp)std::abs(a[i + 6] - b[i + 6]);
+        _AccTp t7 = (_AccTp)std::abs(a[i + 7] - b[i + 7]);
+        _AccTp blockMax = std::max(
+        std::max(std::max(t0, t1), std::max(t2, t3)),
+        std::max(std::max(t4, t5), std::max(t6, t7)));
+        s = std::max(s, blockMax);
+    }
+#endif
+    for (; i < n; i++)
     {
         _AccTp v0 = a[i] - b[i];
         s = std::max(s, std::abs(v0));
