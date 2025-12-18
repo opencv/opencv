@@ -173,11 +173,15 @@ namespace
             for (const T* ptr = tile.ptr<T>(0); height--; ptr += sstep)
             {
                 int x = 0;
-                for (; x <= tileROI.width - 4; x += 4)
+                for (; x <= tileROI.width - 8; x += 8)
                 {
                     int t0 = ptr[x], t1 = ptr[x+1];
                     tileHist[t0 >> shift_]++; tileHist[t1 >> shift_]++;
                     t0 = ptr[x+2]; t1 = ptr[x+3];
+                    tileHist[t0 >> shift_]++; tileHist[t1 >> shift_]++;
+                    t0 = ptr[x + 4]; t1 = ptr[x + 5];
+                    tileHist[t0 >> shift_]++; tileHist[t1 >> shift_]++;
+                    t0 = ptr[x + 6]; t1 = ptr[x + 7];
                     tileHist[t0 >> shift_]++; tileHist[t1 >> shift_]++;
                 }
 
@@ -218,7 +222,29 @@ namespace
             // calc Lut
 
             int sum = 0;
-            for (int i = 0; i < histSize_; ++i)
+            int i = 0;
+        #if CV_ENABLE_UNROLLED
+            for (; i + 7 < histSize_; i += 8)
+            {
+                sum += tileHist[i];
+                tileLut[i] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 1];
+                tileLut[i + 1] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 2];
+                tileLut[i + 2] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 3];
+                tileLut[i + 3] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 4];
+                tileLut[i + 4] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 5];
+                tileLut[i + 5] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 6];
+                tileLut[i + 6] = cv::saturate_cast<T>(sum * lutScale_);
+                sum += tileHist[i + 7];
+                tileLut[i + 7] = cv::saturate_cast<T>(sum * lutScale_);
+            }
+        #endif
+            for (; i < histSize_; ++i)
             {
                 sum += tileHist[i];
                 tileLut[i] = cv::saturate_cast<T>(sum * lutScale_);
