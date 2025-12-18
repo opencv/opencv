@@ -208,7 +208,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         typename std::enable_if<cxx_utils::is_forward_iterator<ForwardItr>::value, void>
         ::type resize(ForwardItr start, ForwardItr end) {
             CV_Assert(start != end);
-            CV_Assert(std::distance(start, end) <= CSL_MAX_TENSOR_RANK);
+            const auto rank = std::distance(start, end);
+            if (rank > CSL_MAX_TENSOR_RANK) {
+                CV_Error(cv::Error::StsNotImplemented,
+                        cv::format(
+                            "CUDA DNN backend does not support tensor rank %ld (max supported is %d)",
+                            static_cast<long>(rank),
+                            CSL_MAX_TENSOR_RANK));
+            }
 
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
             auto total = std::accumulate(start, end, 1, std::multiplies<ItrValueType>());
@@ -449,7 +456,14 @@ namespace cv { namespace dnn { namespace cuda4dnn { namespace csl {
         template <class ForwardItr>
         TensorSpan(pointer ptr_, ForwardItr start, ForwardItr end) : ptr{ ptr_ } {
             CV_Assert(start != end);
-            CV_Assert(std::distance(start, end) <= CSL_MAX_TENSOR_RANK);
+            const auto rank = std::distance(start, end);
+            if (rank > CSL_MAX_TENSOR_RANK) {
+                CV_Error(cv::Error::StsNotImplemented,
+                    cv::format(
+                        "CUDA DNN backend does not support tensor rank %ld (max supported is %d)",
+                        static_cast<long>(rank),
+                        CSL_MAX_TENSOR_RANK));
+            }
 
             using ItrValueType = typename std::iterator_traits<ForwardItr>::value_type;
             if (std::any_of(start, end, [](ItrValueType x) { return x <= 0; })) {
