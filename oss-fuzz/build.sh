@@ -42,7 +42,7 @@ cd ..
 # -I. -I./include -I./modules/core/include -I./modules/imgcodecs/include ...
 # Easier to use the installed/built headers if possible, or just add necessary -I
 
-INCLUDES="-Iinclude -Imodules/core/include -Imodules/imgcodecs/include -Imodules/imgproc/include -Imodules/videoio/include -Imodules/highgui/include -Imodules/dnn/include -Ibuild"
+INCLUDES="-Iinclude -Imodules/core/include -Imodules/imgcodecs/include -Imodules/imgproc/include -Imodules/videoio/include -Imodules/highgui/include -Imodules/dnn/include -Imodules/objdetect/include -Ibuild"
 
 # Static libs order is tricky.
 # Using --start-group and --end-group handles circular deps/ordering issues for us (GNU ld specific, but standard in OSS-Fuzz env).
@@ -66,10 +66,17 @@ $CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
     $INCLUDES \
     $LIBS
 
+# Build ObjDetect fuzzer
+$CXX $CXXFLAGS $LIB_FUZZING_ENGINE \
+    fuzz/objdetect_fuzzer.cc -o $OUT/objdetect_fuzzer \
+    $INCLUDES \
+    $LIBS
+
 # Zip corpus
 zip -j $OUT/imdecode_fuzzer_seed_corpus.zip fuzz/corpus/imdecode/*
 zip -j $OUT/dnn_fuzzer_seed_corpus.zip fuzz/corpus/dnn/*
 zip -j $OUT/filestorage_fuzzer_seed_corpus.zip fuzz/corpus/filestorage/*
+zip -j $OUT/objdetect_fuzzer_seed_corpus.zip fuzz/corpus/objdetect/*
 
 
 # Copy dictionary

@@ -39,7 +39,7 @@ jobs:
     - name: Build OpenCV (Minimal)
       run: |
         cd build
-        make -j$(nproc) opencv_core opencv_imgcodecs opencv_dnn opencv_imgproc opencv_videoio opencv_highgui
+        make -j$(nproc) opencv_core opencv_imgcodecs opencv_dnn opencv_imgproc opencv_videoio opencv_highgui opencv_objdetect
 
     - name: Build Fuzzers
       run: |
@@ -48,7 +48,7 @@ jobs:
         # Ubuntu latest usually has clang.
         
         # Determine include paths
-        INCLUDES="-Iinclude -Imodules/core/include -Imodules/imgcodecs/include -Imodules/imgproc/include -Imodules/videoio/include -Imodules/highgui/include -Imodules/dnn/include -Ibuild"
+        INCLUDES="-Iinclude -Imodules/core/include -Imodules/imgcodecs/include -Imodules/imgproc/include -Imodules/videoio/include -Imodules/highgui/include -Imodules/dnn/include -Imodules/objdetect/include -Ibuild"
         
         # Find static libs
         LIBS="-Wl,--start-group $(find build/lib build/3rdparty/lib -name '*.a') -Wl,--end-group -lpthread -ldl -lz"
@@ -61,6 +61,9 @@ jobs:
         
         # Compile filestorage_fuzzer
         clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/filestorage_fuzzer.cc -o filestorage_fuzzer $LIBS
+        
+        # Compile objdetect_fuzzer
+        clang++ -fsanitize=fuzzer,address -g $INCLUDES fuzz/objdetect_fuzzer.cc -o objdetect_fuzzer $LIBS
 
     - name: Quick Run Fuzzers
       run: |
@@ -68,3 +71,4 @@ jobs:
         ./imdecode_fuzzer -max_total_time=10
         ./dnn_fuzzer -max_total_time=10
         ./filestorage_fuzzer -max_total_time=10
+        ./objdetect_fuzzer -max_total_time=10
