@@ -528,15 +528,18 @@ class JSWrapperGenerator(object):
             if factory and class_info is not None and ret_type.startswith('Ptr<'):
                 inner = ret_type[len('Ptr<'):-1].strip()
                 if '::' not in inner:
-                    ret_type = 'Ptr<%s>' % class_info.cname
+                    if inner in self.classes:
+                        ret_type = 'Ptr<%s>' % self.classes[inner].cname
+                    else:
+                        ret_type = 'Ptr<%s>' % class_info.cname
 
-            if ret_type.startswith('Ptr'):  # smart pointer
+            if ret_type.startswith('Ptr<'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
                 if ptr_type in type_dict:
                     ret_type = type_dict[ptr_type]
-                for key in type_dict:
-                    if key in ret_type:
-                        ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
+            for key in type_dict:
+                if key in ret_type:
+                    ret_type = re.sub(r"\b" + key + r"\b", type_dict[key], ret_type)
             arg_types = []
             unwrapped_arg_types = []
             for arg in variant.args:
