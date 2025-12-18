@@ -1372,15 +1372,13 @@ bool DISOpticalFlowImpl::ocl_calc(InputArray I0, InputArray I1, InputOutputArray
     if (flow.sameSize(I0) && flow.depth() == CV_32F && flow.channels() == 2)
         use_input_flow = true;
 
+    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
     if (user_coarsest_scale != -1)
-    {
-        coarsest_scale = user_coarsest_scale;
-    }
+        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
     else
-    {
-        coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                             (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
-    }
+        coarsest_scale = max_possible_scale;
 
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
@@ -1461,16 +1459,14 @@ void DISOpticalFlowImpl::calc(InputArray I0, InputArray I1, InputOutputArray flo
     else
         flow.create(I1Mat.size(), CV_32FC2);
     Mat flowMat = flow.getMat();
-    if (user_coarsest_scale != -1)
-    {
-        coarsest_scale = user_coarsest_scale;
-    }
-    else
-    {
-        coarsest_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
-                             (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
-    }
 
+    int max_possible_scale = min((int)(log(max(I0Mat.cols, I0Mat.rows) / (4.0 * patch_size)) / log(2.0) + 0.5), /* Original code search for maximal movement of width/4 */
+                                 (int)(log(min(I0Mat.cols, I0Mat.rows) / patch_size) / log(2.0)));              /* Deepest pyramid level greater or equal than patch*/
+
+    if (user_coarsest_scale != -1)
+        coarsest_scale = min(user_coarsest_scale, max_possible_scale);
+    else
+        coarsest_scale = max_possible_scale;
     if (coarsest_scale<0)
         CV_Error(cv::Error::StsBadSize, "The input image must have either width or height >= 12");
 
