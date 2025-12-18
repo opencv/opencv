@@ -793,16 +793,13 @@ cvApproxPoly( const void* array, int header_size,
     {
         CvSeq *contour = 0;
 
-        switch (method)
+        if( parameter < 0 )
+            CV_Error( cv::Error::StsOutOfRange, "Accuracy must be non-negative" );
+
+        CV_Assert( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 ||
+                    CV_SEQ_ELTYPE(src_seq) == CV_32FC2 );
+
         {
-        case CV_POLY_APPROX_DP:
-            if( parameter < 0 )
-                CV_Error( cv::Error::StsOutOfRange, "Accuracy must be non-negative" );
-
-            CV_Assert( CV_SEQ_ELTYPE(src_seq) == CV_32SC2 ||
-                      CV_SEQ_ELTYPE(src_seq) == CV_32FC2 );
-
-            {
             int npoints = src_seq->total, nout = 0;
             _buf.allocate(npoints*2);
             cv::Point *src = _buf.data(), *dst = src + npoints;
@@ -817,17 +814,13 @@ cvApproxPoly( const void* array, int header_size,
                 nout = cv::approxPolyDP_(src, npoints, dst, closed, parameter, stack);
             else if( CV_SEQ_ELTYPE(src_seq) == CV_32FC2 )
                 nout = cv::approxPolyDP_((cv::Point2f*)src, npoints,
-                                         (cv::Point2f*)dst, closed, parameter, stack);
+                                            (cv::Point2f*)dst, closed, parameter, stack);
             else
                 CV_Error( cv::Error::StsUnsupportedFormat, "" );
 
             contour = cvCreateSeq( src_seq->flags, header_size,
-                                  src_seq->elem_size, storage );
+                                    src_seq->elem_size, storage );
             cvSeqPushMulti(contour, dst, nout);
-            }
-            break;
-        default:
-            CV_Error( cv::Error::StsBadArg, "Invalid approximation method" );
         }
 
         CV_Assert( contour );
