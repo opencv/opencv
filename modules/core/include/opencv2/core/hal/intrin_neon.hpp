@@ -888,9 +888,10 @@ inline v_uint32x4 v_dotprod_expand_fast(const v_uint8x16& a, const v_uint8x16& b
 
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b)
 {
-    int16x8_t prod = vmull_s8(vget_low_s8(a.val), vget_low_s8(b.val));
-    prod = vmlal_s8(prod, vget_high_s8(a.val), vget_high_s8(b.val));
-    return v_int32x4(vaddl_s16(vget_low_s16(prod), vget_high_s16(prod)));
+    int16x8_t p0 = vmull_s8(vget_low_s8(a.val),  vget_low_s8(b.val));
+    int16x8_t p1 = vmull_s8(vget_high_s8(a.val), vget_high_s8(b.val));
+    int32x4_t s0 = vaddl_s16(vget_low_s16(p0), vget_low_s16(p1));
+    return v_int32x4(vaddq_s32(s0, vaddl_s16(vget_high_s16(p0), vget_high_s16(p1))));
 }
 inline v_int32x4 v_dotprod_expand_fast(const v_int8x16& a, const v_int8x16& b, const v_int32x4& c)
 {
