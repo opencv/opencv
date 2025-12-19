@@ -530,7 +530,12 @@ class JSWrapperGenerator(object):
                 if inner in self.classes:
                     ret_type = f"Ptr<{self.classes[inner].cname}>"
                 else:
-                    ret_type = f"Ptr<{class_info.cname}>"
+                    namespace = class_info.cname.rsplit('::', 1)[0]
+                    fq_inner = f"{namespace}::{inner}"
+                    if fq_inner in self.classes:
+                        ret_type = f"Ptr<{self.classes[fq_inner].cname}>"
+                    else:
+                        ret_type = f"Ptr<{class_info.cname}>"
 
             if ret_type.startswith('Ptr<'):  # smart pointer
                 ptr_type = ret_type.replace('Ptr<', '').replace('>', '')
