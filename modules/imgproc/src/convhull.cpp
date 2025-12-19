@@ -219,9 +219,9 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < tl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[tl_stack[i]] - data0);
+            hullbuf[nout++] = tl_stack[i];
         for( i = tr_count - 1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[tr_stack[i]] - data0);
+            hullbuf[nout++] = tr_stack[i];
         int stop_idx = tr_count > 2 ? tr_stack[1] : tl_count > 2 ? tl_stack[tl_count - 2] : -1;
 
         // lower half
@@ -257,9 +257,43 @@ void convexHull( InputArray _points, OutputArray _hull, bool clockwise, bool ret
         }
 
         for( i = 0; i < bl_count-1; i++ )
-            hullbuf[nout++] = int(pointer[bl_stack[i]] - data0);
+            hullbuf[nout++] = bl_stack[i];
         for( i = br_count-1; i > 0; i-- )
-            hullbuf[nout++] = int(pointer[br_stack[i]] - data0);
+            hullbuf[nout++] = br_stack[i];
+
+        if (!returnPoints)
+        {
+            // Try keep monotonous indices in case of self-intersection.
+            for (i = 0; i < nout; ++i)
+            {
+                auto prev = pointer[hullbuf[(i == 0 ? nout : i) - 1]];
+                auto next = pointer[hullbuf[(i + 1) % nout]];
+                auto cur = pointer[hullbuf[i]];
+                if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                {
+                    continue;
+                }
+                for (int j = hullbuf[i] + 1; j < total; ++j)
+                {
+                    cur = pointer[j];
+                    if (*pointer[hullbuf[i]] == *cur)
+                    {
+                        if ((prev < cur && cur < next) || (prev > cur && cur > next))
+                        {
+                            hullbuf[i] = j;
+                            break;
+                        }
+                    }
+                    else
+                        break;
+                }
+            }
+
+        }
+        for (i = 0; i < nout; ++i)
+        {
+            hullbuf[i] = int(pointer[hullbuf[i]] - data0);
+        }
 
         // try to make the convex hull indices form
         // an ascending or descending sequence by the cyclic
