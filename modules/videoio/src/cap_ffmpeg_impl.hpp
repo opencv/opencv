@@ -2888,33 +2888,39 @@ bool CvVideoWriter_FFMPEG::writeFrame( const unsigned char* data, int step, int 
     return ret;
 }
 
+namespace {
+struct AVFrameDeleter {
+    void operator()(AVFrame* f) const {
+        if(f) av_frame_free(&f);
+    }
+};
+}
+
+using AVFramePtr = std::unique_ptr<AVFrame, decltype(&av_frame_free)>;
+
 bool CvVideoWriter_FFMPEG::writeHWFrame(cv::InputArray input) {
 #if USE_AV_HW_CODECS
     if (!video_st || !context || !context->hw_frames_ctx || !context->hw_device_ctx)
         return false;
 
     // Get hardware frame from frame pool
-    AVFrame* hw_frame = av_frame_alloc();
+    AVFramePtr hw_frame(av_frame_alloc());
     if (!hw_frame) {
         return false;
     }
-    if (av_hwframe_get_buffer(context->hw_frames_ctx, hw_frame, 0) < 0) {
-        av_frame_free(&hw_frame);
+    if (av_hwframe_get_buffer(context->hw_frames_ctx, hw_frame.get(), 0) < 0) {
         return false;
     }
 
     // GPU to GPU copy
-    if (!hw_copy_umat_to_frame(context->hw_device_ctx, input, hw_frame)) {
-        av_frame_free(&hw_frame);
+    if (!hw_copy_umat_to_frame(context->hw_device_ctx, input, hw_frame.get())) {
         return false;
     }
 
     // encode
     hw_frame->pts = frame_idx;
-    icv_av_write_frame_FFMPEG( oc, video_st, context, outbuf, outbuf_size, hw_frame, frame_idx);
+    icv_av_write_frame_FFMPEG( oc, video_st, context, outbuf, outbuf_size, hw_frame.get(), frame_idx);
     frame_idx++;
-
-    av_frame_free(&hw_frame);
 
     return true;
 #else
