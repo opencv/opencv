@@ -265,7 +265,7 @@ int Subdiv2D::newPoint(Point2f pt, bool isvirtual, int firstEdge)
 {
     if( freePoint == 0 )
     {
-        vtx.push_back(Vertex());
+        vtx.emplace_back();
         freePoint = (int)(vtx.size()-1);
     }
     int vidx = freePoint;
@@ -520,8 +520,8 @@ void Subdiv2D::initDelaunay( Rect rect )
     Point2f ppB( rx, ry + big_coord );
     Point2f ppC( rx - big_coord, ry - big_coord );
 
-    vtx.push_back(Vertex());
-    qedges.push_back(QuadEdge());
+    vtx.emplace_back();
+    qedges.emplace_back();
 
     freeQEdge = 0;
     freePoint = 0;
@@ -566,8 +566,8 @@ void Subdiv2D::initDelaunay( Rect2f rect )
     Point2f ppB( rx, ry + big_coord );
     Point2f ppC( rx - big_coord, ry - big_coord );
 
-    vtx.push_back(Vertex());
-    qedges.push_back(QuadEdge());
+    vtx.emplace_back();
+    qedges.emplace_back();
 
     freeQEdge = 0;
     freePoint = 0;
@@ -784,7 +784,7 @@ void Subdiv2D::getEdgeList(std::vector<Vec4f>& edgeList) const
         {
             Point2f org = vtx[qedges[i].pt[0]].pt;
             Point2f dst = vtx[qedges[i].pt[2]].pt;
-            edgeList.push_back(Vec4f(org.x, org.y, dst.x, dst.y));
+            edgeList.emplace_back(org.x, org.y, dst.x, dst.y);
         }
     }
 }
@@ -836,7 +836,7 @@ void Subdiv2D::getTriangleList(std::vector<Vec6f>& triangleList) const
         edgemask[edge_a] = true;
         edgemask[edge_b] = true;
         edgemask[edge_c] = true;
-        triangleList.push_back(Vec6f(a.x, a.y, b.x, b.y, c.x, c.y));
+        triangleList.emplace_back(a.x, a.y, b.x, b.y, c.x, c.y);
     }
 }
 
