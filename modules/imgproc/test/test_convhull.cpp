@@ -304,9 +304,11 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     vector<int> hull_ind;
     vector<Vec4i> defects;
 
+#if 0  // deprecated behavior
     // first, check the original contour as-is, without intermediate fillPoly/drawContours.
     convexHull(contour_, hull_ind, false, false);
     EXPECT_THROW( convexityDefects(contour_, hull_ind, defects), cv::Exception );
+#endif
 
     int scale = 20;
     contour_ *= (double)scale;
@@ -319,10 +321,12 @@ TEST(Imgproc_ConvexityDefects, ordering_4539)
     findContours(canvas_gray, contours, noArray(), RETR_LIST, CHAIN_APPROX_SIMPLE);
     convexHull(contours[0], hull_ind, false, false);
 
+#if 0  // deprecated behavior
     // the original contour contains self-intersections,
     // therefore convexHull does not return a monotonous sequence of points
     // and therefore convexityDefects throws an exception
     EXPECT_THROW( convexityDefects(contours[0], hull_ind, defects), cv::Exception );
+#endif
 
 #if 1
     // one way to eliminate the contour self-intersection in this particular case is to apply dilate(),
@@ -1282,6 +1286,56 @@ INSTANTIATE_TEST_CASE_P(Imgproc, minAreaRect_of_line,
             std::make_tuple(Point2f(10, 20), Point2f(13, 16), Point2f(11.5, 18), Size2f(5, 0), -53.1301041f),
             std::make_tuple(Point2f(9, 19), Point2f(4, 7), Point2f(6.5, 13), Size2f(0, 13), -22.6198654f)
         ));
+
+typedef testing::TestWithParam<tuple<tuple<std::vector<Point>, Mat>, bool> > convexHull_monotonous;
+TEST_P(convexHull_monotonous, self_intersecting_contour)
+{
+    std::vector<Point> contour = get<0>(get<0>(GetParam()));
+    Mat ref = get<1>(get<0>(GetParam())).clone();
+    bool clockwise = get<1>(GetParam());
+    if (!clockwise)
+    {
+        std::reverse(ref.begin<int>(), ref.end<int>());
+    }
+
+    Mat indices;
+    convexHull(contour, indices, clockwise, false);
+
+    Point minLoc;
+    minMaxLoc(indices, nullptr, nullptr, &minLoc);
+    std::rotate(indices.begin<int>(), indices.begin<int>() + minLoc.y, indices.end<int>());
+
+    minMaxLoc(ref, nullptr, nullptr, &minLoc);
+    std::rotate(ref.begin<int>(), ref.begin<int>() + minLoc.y, ref.end<int>());
+
+    ASSERT_EQ( cvtest::norm(indices, ref, NORM_INF), 0) << indices;
+}
+INSTANTIATE_TEST_CASE_P(Imgproc, convexHull_monotonous,
+    testing::Combine(
+        testing::Values(
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(3, 2), Point(3, 4), Point(2, 5), Point(1, 5),
+                    Point(2, 5), Point(3, 4), Point(6, 4), Point(6, 2)
+                },
+                (Mat_<int>(5, 1) << 0, 3, 4, 6, 7)
+            ),
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(3, -2), Point(3, -4), Point(2, -5), Point(1, -5),
+                    Point(2, -5), Point(3, -4), Point(6, -4), Point(6, -2)
+                },
+                (Mat_<int>(5, 1) << 3, 0, 7, 6, 4)
+            ),
+            std::make_tuple(
+                std::vector<Point>{
+                    Point(1, 1), Point(1, 0), Point(0, 0), Point(1, 0), Point(0, 1)
+                },
+                (Mat_<int>(4, 1) << 0, 1, 2, 4)
+            )
+        ),
+        testing::Bool()
+));
 
 }} // namespace
 
